@@ -45,16 +45,8 @@ class SSLContext;
 /**
  * Descriptor Control Block
  *
- * A wrapper for a network descriptor within the gateway, it contains all the
- * state information necessary to allow for the implementation of the asynchronous
- * operation of the protocol and gateway functions. It also provides links to the service
- * and session data that is required to route the information within the gateway.
- *
- * It is important to hold the state information here such that any thread within the
- * gateway may be selected to execute the required actions when a network event occurs.
- *
- * Note that the first few fields (up to and including "entry_is_ready") must
- * precisely match the LIST_ENTRY structure defined in the list manager.
+ * A wrapper for a socket descriptor within MaxScale. For each client
+ * session there will be one ClientDCB and several BackendDCBs.
  */
 class DCB : public MXB_POLL_DATA
 {
