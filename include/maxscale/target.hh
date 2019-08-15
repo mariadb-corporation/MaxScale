@@ -134,7 +134,7 @@ public:
 
     virtual int32_t routeQuery(GWBUF* buffer) = 0;
 
-    virtual int32_t clientReply(GWBUF* buffer, ReplyRoute& down, const mxs::Reply* reply) = 0;
+    virtual int32_t clientReply(GWBUF* buffer, ReplyRoute& down, const mxs::Reply& reply) = 0;
 
     virtual bool handleError(GWBUF* error, Endpoint* down, const mxs::Reply& reply) = 0;
 };

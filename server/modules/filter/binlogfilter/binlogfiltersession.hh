@@ -66,7 +66,7 @@ public:
     int routeQuery(GWBUF* pPacket);
 
     // Handle a reply from server
-    int clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply* reply);
+    int clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
 private:
     // Used in the create function

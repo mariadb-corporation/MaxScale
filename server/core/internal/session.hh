@@ -214,7 +214,7 @@ public:
 
     // Implementation of mxs::Component
     int32_t routeQuery(GWBUF* buffer) override;
-    int32_t clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply* reply) override;
+    int32_t clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override;
     bool    handleError(GWBUF* error, Endpoint* down, const mxs::Reply& reply) override;
 
 private:

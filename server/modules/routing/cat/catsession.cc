@@ -66,13 +66,13 @@ int32_t CatSession::routeQuery(GWBUF* pPacket)
     return rval;
 }
 
-void CatSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply* reply)
+void CatSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     auto& backend = *m_current;
     mxb_assert(backend->backend() == down.back());
     bool send = false;
 
-    if (reply->is_complete())
+    if (reply.is_complete())
     {
         m_completed++;
         m_current++;
@@ -91,9 +91,9 @@ void CatSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const 
 
     if (m_completed == 0)
     {
-        send = reply->state() != mxs::ReplyState::DONE;
+        send = reply.state() != mxs::ReplyState::DONE;
     }
-    else if (reply->state() == mxs::ReplyState::RSET_ROWS
+    else if (reply.state() == mxs::ReplyState::RSET_ROWS
              && mxs_mysql_get_command(pPacket) != MYSQL_REPLY_EOF)
     {
         send = true;

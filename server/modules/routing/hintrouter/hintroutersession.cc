@@ -130,7 +130,7 @@ int32_t HintRouterSession::routeQuery(GWBUF* pPacket)
 }
 
 
-void HintRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply* reply)
+void HintRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     HR_ENTRY();
 

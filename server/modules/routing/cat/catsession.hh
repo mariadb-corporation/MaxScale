@@ -56,7 +56,7 @@ public:
      * @param down    The route the response took
      * @param reply   The reply status
      */
-    void clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply* reply);
+    void clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
     /**
      *

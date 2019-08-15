@@ -586,7 +586,7 @@ bool RWSplitSession::handle_ignorable_error(RWBackend* backend, const mxs::Error
     return ok;
 }
 
-void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, const mxs::Reply* reply)
+void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     RWBackend* backend = static_cast<RWBackend*>(down.back()->get_userdata());
 
@@ -595,7 +595,7 @@ void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
         return;     // Nothing to route, return
     }
 
-    const auto& error = reply->error();
+    const auto& error = reply.error();
 
     if (error.is_unexpected_error())
     {
@@ -619,7 +619,7 @@ void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
     // Track transaction contents and handle ROLLBACK with aggressive transaction load balancing
     manage_transactions(backend, writebuf);
 
-    if (reply->is_complete())
+    if (reply.is_complete())
     {
         backend->ack_write();
 
@@ -1089,7 +1089,7 @@ bool RWSplitSession::handle_error_new_connection(MXS_SESSION* ses, RWBackend* ba
             {
                 // Send an error so that the client knows to proceed.
                 mxs::ReplyRoute route;
-                RouterSession::clientReply(gwbuf_clone(errmsg), route, nullptr);
+                RouterSession::clientReply(gwbuf_clone(errmsg), route, mxs::Reply(m_router->service()));
                 m_current_query.reset();
             }
         }
@@ -1179,5 +1179,5 @@ void RWSplitSession::send_unknown_ps_error(uint32_t stmt_id)
     ss << "Unknown prepared statement handler (" << stmt_id << ") given to MaxScale";
     GWBUF* err = modutil_create_mysql_err_msg(1, 0, ER_UNKNOWN_STMT_HANDLER, "HY000", ss.str().c_str());
     mxs::ReplyRoute route;
-    RouterSession::clientReply(err, route, nullptr);
+    RouterSession::clientReply(err, route, mxs::Reply(m_router->service()));
 }

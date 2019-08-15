@@ -90,7 +90,7 @@ typedef int32_t (* UPSTREAMFUNC)(struct mxs_filter* instance,
                                  struct mxs_filter_session* session,
                                  GWBUF* response,
                                  const mxs::ReplyRoute& down,
-                                 const mxs::Reply* reply);
+                                 const mxs::Reply& reply);
 
 struct Downstream
 {

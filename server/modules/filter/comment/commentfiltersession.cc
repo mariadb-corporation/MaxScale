@@ -67,7 +67,7 @@ int CommentFilterSession::routeQuery(GWBUF* pPacket)
     return pPacket ? mxs::FilterSession::routeQuery(pPacket) : 1;
 }
 
-int CommentFilterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply* reply)
+int CommentFilterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     return mxs::FilterSession::clientReply(pPacket, down, reply);
 }

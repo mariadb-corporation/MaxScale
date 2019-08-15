@@ -21,9 +21,8 @@ int MaxRowsSession::routeQuery(GWBUF* packet)
     return FilterSession::routeQuery(packet);
 }
 
-int MaxRowsSession::clientReply(GWBUF* data, const mxs::ReplyRoute& down, const mxs::Reply* r)
+int MaxRowsSession::clientReply(GWBUF* data, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    auto& reply = *r;
     mxs::Buffer buffer(data);
     int rv = 1;
 
@@ -75,7 +74,7 @@ int MaxRowsSession::clientReply(GWBUF* data, const mxs::ReplyRoute& down, const 
 
     if (reply.is_complete())
     {
-        rv = FilterSession::clientReply(m_buffer.release(), down, r);
+        rv = FilterSession::clientReply(m_buffer.release(), down, reply);
         m_collect = true;
     }
 

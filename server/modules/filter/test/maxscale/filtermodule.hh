@@ -66,9 +66,9 @@ public:
             return m_module.routeQuery(m_pInstance, pFilter_session, pStatement);
         }
 
-        int clientReply(MXS_FILTER_SESSION* pFilter_session, GWBUF* pStatement, const mxs::Reply* pReply)
+        int clientReply(MXS_FILTER_SESSION* pFilter_session, GWBUF* pStatement, const mxs::Reply& reply)
         {
-            return m_module.clientReply(m_pInstance, pFilter_session, pStatement, pReply);
+            return m_module.clientReply(m_pInstance, pFilter_session, pStatement, reply);
         }
 
     private:
@@ -92,9 +92,9 @@ public:
             return m_instance.routeQuery(m_pFilter_session, pStatement);
         }
 
-        int clientReply(GWBUF* pBuffer, const mxs::Reply* pReply)
+        int clientReply(GWBUF* pBuffer, const mxs::Reply& reply)
         {
-            return m_instance.clientReply(m_pFilter_session, pBuffer, pReply);
+            return m_instance.clientReply(m_pFilter_session, pBuffer, reply);
         }
 
     private:
@@ -147,10 +147,10 @@ private:
     int clientReply(MXS_FILTER* pInstance,
                     MXS_FILTER_SESSION* pFilter_session,
                     GWBUF* pStatement,
-                    const mxs::Reply* pReply)
+                    const mxs::Reply& reply)
     {
         mxs::ReplyRoute route;
-        return m_pApi->clientReply(pInstance, pFilter_session, pStatement, route, pReply);
+        return m_pApi->clientReply(pInstance, pFilter_session, pStatement, route, reply);
     }
 
 private:

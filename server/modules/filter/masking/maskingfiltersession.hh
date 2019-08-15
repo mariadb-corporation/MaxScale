@@ -33,7 +33,7 @@ public:
 
     int routeQuery(GWBUF* pPacket);
 
-    int clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply* reply);
+    int clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
 private:
     MaskingFilterSession(MXS_SESSION* pSession, const MaskingFilter* pFilter);

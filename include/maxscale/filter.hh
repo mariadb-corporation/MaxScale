@@ -157,7 +157,7 @@ typedef struct mxs_filter_object
      *         function returns 0.
      */
     int32_t (* clientReply)(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue,
-                            const mxs::ReplyRoute& down, const mxs::Reply* reply);
+                            const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
     /**
      * @brief Called for diagnostic output
@@ -329,7 +329,7 @@ public:
          *
          * @return Whatever the following component returns.
          */
-        int clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply* reply)
+        int clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
         {
             return m_data->clientReply(m_data->instance, m_data->session, pPacket, down, reply);
         }
@@ -382,7 +382,7 @@ public:
      *
      * @return 1 for success, 0 for error
      */
-    int clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply* reply);
+    int clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
     /**
      * Called for obtaining diagnostics about the filter session.
@@ -529,7 +529,7 @@ public:
                            MXS_FILTER_SESSION* pData,
                            GWBUF* pPacket,
                            const mxs::ReplyRoute& down,
-                           const mxs::Reply* reply)
+                           const mxs::Reply& reply)
     {
         FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
 

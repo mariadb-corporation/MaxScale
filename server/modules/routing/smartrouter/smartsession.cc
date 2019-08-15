@@ -244,7 +244,7 @@ int SmartRouterSession::routeQuery(GWBUF* pBuf)
     return ret;
 }
 
-void SmartRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply* reply)
+void SmartRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     mxb_assert(GWBUF_IS_CONTIGUOUS(pPacket));
     Cluster& cluster = *static_cast<Cluster*>(down.back()->get_userdata());

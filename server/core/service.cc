@@ -1705,13 +1705,13 @@ int32_t ServiceEndpoint::upstream_function(MXS_FILTER* instance,
                                            MXS_FILTER_SESSION* session,
                                            GWBUF* buffer,
                                            const mxs::ReplyRoute& down,
-                                           const mxs::Reply* reply)
+                                           const mxs::Reply& reply)
 {
     ServiceEndpoint* self = reinterpret_cast<ServiceEndpoint*>(session);
     return self->send_upstream(buffer, down, reply);
 }
 
-int32_t ServiceEndpoint::send_upstream(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply* reply)
+int32_t ServiceEndpoint::send_upstream(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     mxs::ReplyRoute& d = const_cast<mxs::ReplyRoute&>(down);
     d.push_back(this);
@@ -1851,7 +1851,7 @@ int32_t ServiceEndpoint::routeQuery(GWBUF* buffer)
     return m_head.routeQuery(m_head.instance, m_head.session, buffer);
 }
 
-int32_t ServiceEndpoint::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply* reply)
+int32_t ServiceEndpoint::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     mxb_assert(m_open);
     m_service->router->clientReply(m_service->router_instance, m_router_session, buffer, down, reply);
@@ -1863,7 +1863,8 @@ int32_t ServiceEndpoint::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const
 bool ServiceEndpoint::handleError(GWBUF* error, mxs::Endpoint* down, const mxs::Reply& reply)
 {
     mxb_assert(m_open);
-    bool ok = m_service->router->handleError(m_service->router_instance, m_router_session, error, down, reply);
+    bool ok = m_service->router->handleError(m_service->router_instance, m_router_session,
+                                             error, down, reply);
 
     if (!ok)
     {

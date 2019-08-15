@@ -374,7 +374,7 @@ struct MySQLProtocol : public MXS_PROTOCOL_SESSION
     {
         thread_local mxs::ReplyRoute route;
         route.clear();
-        return m_component->clientReply(buffer, route, &m_reply);
+        return m_component->clientReply(buffer, route, m_reply);
     }
 
     bool do_handleError(GWBUF* buffer)

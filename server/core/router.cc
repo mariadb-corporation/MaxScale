@@ -38,7 +38,7 @@ int32_t RouterSession::routeQuery(GWBUF* pPacket)
     return 0;
 }
 
-void RouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply* reply)
+void RouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     m_pUp->clientReply(m_pUp->instance, m_pUp->session, pPacket, down, reply);
 }

@@ -64,7 +64,7 @@ public:
      * @param pPacket Packet containing results
      * @return 0 on success. This typically depends on the later stages of the reply processing chain.
      */
-    int clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply* reply);
+    int clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
 private:
     // Used in the create function
