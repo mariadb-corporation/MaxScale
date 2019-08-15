@@ -196,6 +196,7 @@ Service::Service(const std::string& name,
                  const std::string& router_name,
                  MXS_CONFIG_PARAMETER* params)
     : SERVICE(name, router_name)
+    , m_rate_limits(config_threadcount())
     , m_config(params)
     , m_params(*params)
 {
