@@ -172,12 +172,13 @@ private:
     class DNSResolver
     {
     public:
-        std::string resolve_server(const std::string& host);
+        using StringSet = std::unordered_set<std::string>;
+        StringSet resolve_server(const std::string& host);
 
     private:
         struct MapElement
         {
-            std::string    address;
+            StringSet   addresses; // A hostname can map to multiple addresses
             mxb::TimePoint timestamp;
         };
 

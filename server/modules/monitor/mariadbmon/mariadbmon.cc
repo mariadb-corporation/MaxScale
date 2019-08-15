@@ -124,21 +124,27 @@ MariaDBServer* MariaDBMonitor::get_server(const EndPoint& search_ep)
     {
         // Phase 2: Was not found with simple string compare. Try DNS resolving for endpoints with
         // matching ports.
-        string target_addr = m_resolver.resolve_server(search_ep.host());
-        if (!target_addr.empty())
+        DNSResolver::StringSet target_addresses = m_resolver.resolve_server(search_ep.host());
+        if (!target_addresses.empty())
         {
             for (auto server : m_servers)
             {
-                if (server->m_server_base->server->port == search_ep.port())
+                SERVER* srv = server->m_server_base->server;
+                if (srv->port == search_ep.port())
                 {
-                    string server_addr = m_resolver.resolve_server(server->m_server_base->server->address);
-                    if (server_addr == target_addr)
+                    auto server_addresses = m_resolver.resolve_server(srv->address);
+                    // The number of elements in the arrays is rarely over 1.
+                    for (auto& address : server_addresses)
                     {
-                        found = server;
-                        break;
+                        if (target_addresses.count(address) > 0)
+                        {
+                            found = server;
+                            goto breakout;
+                        }
                     }
                 }
             }
+            breakout:;
         }
     }
     return found;
