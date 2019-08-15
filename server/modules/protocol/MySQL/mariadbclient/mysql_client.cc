@@ -56,10 +56,6 @@ typedef enum spec_com_res_t
 
 const char WORD_KILL[] = "KILL";
 
-int finish_processing(DCB* dcb, GWBUF* read_buffer, uint64_t capabilities);
-spec_com_res_t process_special_commands(DCB* client_dcb, GWBUF* read_buffer, int nbytes_read);
-
-
 std::string get_version_string(SERVICE* service)
 {
     std::string rval = DEFAULT_VERSION_STRING;
@@ -1075,129 +1071,6 @@ char* handle_variables(MXS_SESSION* session, GWBUF** read_buffer)
 }
 
 /**
- * @brief Client read event, process data, client already authenticated
- *
- * First do some checks and get the router capabilities.  If the router
- * wants to process each individual statement, then the data must be split
- * into individual SQL statements. Any data that is left over is held in the
- * DCB read queue.
- *
- * Finally, the general client data processing function is called.
- *
- * @param dcb           Descriptor control block
- * @param read_buffer   A buffer containing the data read from client
- * @param nbytes_read   The number of bytes of data read
- * @return 0 if succeed, 1 otherwise
- */
-int perform_normal_read(DCB* dcb, GWBUF* read_buffer, int nbytes_read)
-{
-    MXS_SESSION* session;
-    MXS_SESSION::State session_state_value;
-    uint64_t capabilities = 0;
-
-    session = dcb->session();
-    session_state_value = session->state();
-    if (session_state_value != MXS_SESSION::State::STARTED)
-    {
-        if (session_state_value != MXS_SESSION::State::STOPPING)
-        {
-            MXS_ERROR("Session received a query in incorrect state: %s",
-                      session_state_to_string(session_state_value));
-        }
-        gwbuf_free(read_buffer);
-        dcb_close(dcb);
-        return 1;
-    }
-
-    /** Ask what type of input the router/filter chain expects */
-    capabilities = service_get_capabilities(session->service);
-    MySQLProtocol* proto = static_cast<MySQLProtocol*>(dcb->protocol_session());
-
-    /** If the router requires statement input we need to make sure that
-     * a complete SQL packet is read before continuing. The current command
-     * that is tracked by the protocol module is updated in route_by_statement() */
-    if (rcap_type_required(capabilities, RCAP_TYPE_STMT_INPUT)
-        || proto->current_command == MXS_COM_CHANGE_USER)
-    {
-        uint8_t pktlen[MYSQL_HEADER_LEN];
-        size_t n_copied = gwbuf_copy_data(read_buffer, 0, MYSQL_HEADER_LEN, pktlen);
-
-        if (n_copied != sizeof(pktlen)
-            || (uint32_t)nbytes_read < MYSQL_GET_PAYLOAD_LEN(pktlen) + MYSQL_HEADER_LEN)
-        {
-            dcb_readq_append(dcb, read_buffer);
-            return 0;
-        }
-
-        /**
-         * Update the current command, required by KILL command processing.
-         * If a COM_CHANGE_USER is in progress, this must not be done as the client
-         * is sending authentication data that does not have the command byte.
-         */
-        MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol_session();
-
-        if (!proto->changing_user && !session_is_load_active(session))
-        {
-            proto->current_command = (mxs_mysql_cmd_t)mxs_mysql_get_command(read_buffer);
-        }
-
-        char* message = handle_variables(session, &read_buffer);
-
-        if (message)
-        {
-            int rv = dcb->protocol_write(modutil_create_mysql_err_msg(1, 0, 1193, "HY000", message));
-            MXS_FREE(message);
-            return rv;
-        }
-        else
-        {
-            // Must be done whether or not there were any changes, as the query classifier
-            // is thread and not session specific.
-            qc_set_sql_mode(static_cast<qc_sql_mode_t>(session->client_protocol_data));
-        }
-    }
-    /** Update the current protocol command being executed */
-    else if (!process_client_commands(dcb, nbytes_read, &read_buffer))
-    {
-        return 0;
-    }
-
-    /** The query classifier classifies according to the service's server that has
-     * the smallest version number. */
-    qc_set_server_version(service_get_version(session->service, SERVICE_VERSION_MIN));
-
-    spec_com_res_t res = RES_CONTINUE;
-
-    if (!proto->changing_user)
-    {
-        res = process_special_commands(dcb, read_buffer, nbytes_read);
-    }
-
-    int rval = 1;
-    switch (res)
-    {
-    case RES_MORE_DATA:
-        dcb_readq_set(dcb, read_buffer);
-        rval = 0;
-        break;
-
-    case RES_END:
-        // Do not send this packet for routing
-        gwbuf_free(read_buffer);
-        rval = 0;
-        break;
-
-    case RES_CONTINUE:
-        rval = finish_processing(dcb, read_buffer, capabilities);
-        break;
-
-    default:
-        mxb_assert(!true);
-    }
-    return rval;
-}
-
-/**
  * Check if a connection qualifies to be added into the persistent connection pool
  *
  * @param dcb The client DCB to check
@@ -1876,6 +1749,129 @@ spec_com_res_t process_special_commands(DCB* dcb, GWBUF* read_buffer, int nbytes
         {
             rval = handle_query_kill(dcb, read_buffer, rval, is_complete, packet_len);
         }
+    }
+    return rval;
+}
+
+/**
+ * @brief Client read event, process data, client already authenticated
+ *
+ * First do some checks and get the router capabilities.  If the router
+ * wants to process each individual statement, then the data must be split
+ * into individual SQL statements. Any data that is left over is held in the
+ * DCB read queue.
+ *
+ * Finally, the general client data processing function is called.
+ *
+ * @param dcb           Descriptor control block
+ * @param read_buffer   A buffer containing the data read from client
+ * @param nbytes_read   The number of bytes of data read
+ * @return 0 if succeed, 1 otherwise
+ */
+int perform_normal_read(DCB* dcb, GWBUF* read_buffer, int nbytes_read)
+{
+    MXS_SESSION* session;
+    MXS_SESSION::State session_state_value;
+    uint64_t capabilities = 0;
+
+    session = dcb->session();
+    session_state_value = session->state();
+    if (session_state_value != MXS_SESSION::State::STARTED)
+    {
+        if (session_state_value != MXS_SESSION::State::STOPPING)
+        {
+            MXS_ERROR("Session received a query in incorrect state: %s",
+                      session_state_to_string(session_state_value));
+        }
+        gwbuf_free(read_buffer);
+        dcb_close(dcb);
+        return 1;
+    }
+
+    /** Ask what type of input the router/filter chain expects */
+    capabilities = service_get_capabilities(session->service);
+    MySQLProtocol* proto = static_cast<MySQLProtocol*>(dcb->protocol_session());
+
+    /** If the router requires statement input we need to make sure that
+     * a complete SQL packet is read before continuing. The current command
+     * that is tracked by the protocol module is updated in route_by_statement() */
+    if (rcap_type_required(capabilities, RCAP_TYPE_STMT_INPUT)
+        || proto->current_command == MXS_COM_CHANGE_USER)
+    {
+        uint8_t pktlen[MYSQL_HEADER_LEN];
+        size_t n_copied = gwbuf_copy_data(read_buffer, 0, MYSQL_HEADER_LEN, pktlen);
+
+        if (n_copied != sizeof(pktlen)
+            || (uint32_t)nbytes_read < MYSQL_GET_PAYLOAD_LEN(pktlen) + MYSQL_HEADER_LEN)
+        {
+            dcb_readq_append(dcb, read_buffer);
+            return 0;
+        }
+
+        /**
+         * Update the current command, required by KILL command processing.
+         * If a COM_CHANGE_USER is in progress, this must not be done as the client
+         * is sending authentication data that does not have the command byte.
+         */
+        MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol_session();
+
+        if (!proto->changing_user && !session_is_load_active(session))
+        {
+            proto->current_command = (mxs_mysql_cmd_t)mxs_mysql_get_command(read_buffer);
+        }
+
+        char* message = handle_variables(session, &read_buffer);
+
+        if (message)
+        {
+            int rv = dcb->protocol_write(modutil_create_mysql_err_msg(1, 0, 1193, "HY000", message));
+            MXS_FREE(message);
+            return rv;
+        }
+        else
+        {
+            // Must be done whether or not there were any changes, as the query classifier
+            // is thread and not session specific.
+            qc_set_sql_mode(static_cast<qc_sql_mode_t>(session->client_protocol_data));
+        }
+    }
+    /** Update the current protocol command being executed */
+    else if (!process_client_commands(dcb, nbytes_read, &read_buffer))
+    {
+        return 0;
+    }
+
+    /** The query classifier classifies according to the service's server that has
+     * the smallest version number. */
+    qc_set_server_version(service_get_version(session->service, SERVICE_VERSION_MIN));
+
+    spec_com_res_t res = RES_CONTINUE;
+
+    if (!proto->changing_user)
+    {
+        res = process_special_commands(dcb, read_buffer, nbytes_read);
+    }
+
+    int rval = 1;
+    switch (res)
+    {
+    case RES_MORE_DATA:
+        dcb_readq_set(dcb, read_buffer);
+        rval = 0;
+        break;
+
+    case RES_END:
+        // Do not send this packet for routing
+        gwbuf_free(read_buffer);
+        rval = 0;
+        break;
+
+    case RES_CONTINUE:
+        rval = finish_processing(dcb, read_buffer, capabilities);
+        break;
+
+    default:
+        mxb_assert(!true);
     }
     return rval;
 }
