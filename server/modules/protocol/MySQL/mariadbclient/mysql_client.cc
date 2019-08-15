@@ -159,7 +159,7 @@ bool ssl_required_by_dcb(DCB* dcb)
  */
 bool ssl_required_but_not_negotiated(DCB* dcb)
 {
-    return ssl_required_by_dcb(dcb) && SSL_HANDSHAKE_UNKNOWN == dcb->m_ssl_state;
+    return ssl_required_by_dcb(dcb) && DCB::SSLState::HANDSHAKE_UNKNOWN == dcb->ssl_state();
 }
 
 /**
@@ -484,7 +484,7 @@ bool ssl_is_connection_healthy(DCB* dcb)
      * then everything is as we wish. Otherwise, either there is a problem or
      * more to be done.
      */
-    return !dcb->session()->listener->ssl().context() || dcb->m_ssl_state == SSL_ESTABLISHED;
+    return !dcb->session()->listener->ssl().context() || dcb->ssl_state() == DCB::SSLState::ESTABLISHED;
 }
 
 /* Looks to be redundant - can remove include for ioctl too */
@@ -492,7 +492,7 @@ bool ssl_check_data_to_process(DCB* dcb)
 {
     /** SSL authentication is still going on, we need to call DCB::ssl_handshake
      * until it return 1 for success or -1 for error */
-    if (dcb->m_ssl_state == SSL_HANDSHAKE_REQUIRED && 1 == dcb->ssl_handshake())
+    if (dcb->ssl_state() == DCB::SSLState::HANDSHAKE_REQUIRED && 1 == dcb->ssl_handshake())
     {
         int b = 0;
         ioctl(dcb->fd(), FIONREAD, &b);
@@ -543,13 +543,13 @@ int ssl_authenticate_client(DCB* dcb, bool is_capable)
         return SSL_ERROR_CLIENT_NOT_SSL;
     }
     /* Now we know SSL is required and client is capable */
-    if (dcb->m_ssl_state != SSL_HANDSHAKE_DONE && dcb->m_ssl_state != SSL_ESTABLISHED)
+    if (dcb->ssl_state() != DCB::SSLState::HANDSHAKE_DONE && dcb->ssl_state() != DCB::SSLState::ESTABLISHED)
     {
         int return_code;
         /** Do the SSL Handshake */
-        if (SSL_HANDSHAKE_UNKNOWN == dcb->m_ssl_state)
+        if (DCB::SSLState::HANDSHAKE_UNKNOWN == dcb->ssl_state())
         {
-            dcb->m_ssl_state = SSL_HANDSHAKE_REQUIRED;
+            dcb->set_ssl_state(DCB::SSLState::HANDSHAKE_REQUIRED);
         }
         /**
          * Note that this will often fail to achieve its result, because further

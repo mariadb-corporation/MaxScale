@@ -39,29 +39,8 @@ namespace maxscale
 {
 class ClientAuthenticator;
 class BackendAuthenticator;
-}
-
-#define DCBFD_CLOSED -1
-
-#define DCBSTATS_INIT {0}
-
-namespace maxscale
-{
-
 class SSLContext;
 }
-
-/**
- * State of SSL connection
- */
-typedef enum
-{
-    SSL_HANDSHAKE_UNKNOWN,          /*< The DCB has unknown SSL status */
-    SSL_HANDSHAKE_REQUIRED,         /*< SSL handshake is needed */
-    SSL_HANDSHAKE_DONE,             /*< The SSL handshake completed OK */
-    SSL_ESTABLISHED,                /*< The SSL connection is in use */
-    SSL_HANDSHAKE_FAILED            /*< The SSL handshake failed */
-} SSL_STATE;
 
 /**
  * Descriptor Control Block
@@ -80,6 +59,8 @@ typedef enum
 class DCB : public MXB_POLL_DATA
 {
 public:
+    static const int FD_CLOSED = -1;
+
     class Manager
     {
     public:
@@ -135,6 +116,15 @@ public:
         DRAINED,        /*< The write delay queue has drained */
         HIGH_WATER,     /*< Cross high water mark */
         LOW_WATER       /*< Cross low water mark */
+    };
+
+    enum class SSLState
+    {
+        HANDSHAKE_UNKNOWN,   /*< The DCB has unknown SSL status */
+        HANDSHAKE_REQUIRED,  /*< SSL handshake is needed */
+        HANDSHAKE_DONE,      /*< The SSL handshake completed OK */
+        ESTABLISHED,         /*< The SSL connection is in use */
+        HANDSHAKE_FAILED     /*< The SSL handshake failed */
     };
 
     virtual ~DCB();
@@ -200,9 +190,14 @@ public:
         return m_ssl != nullptr;
     }
 
-    SSL_STATE ssl_state() const
+    SSLState ssl_state() const
     {
         return m_ssl_state;
+    }
+
+    void set_ssl_state(SSLState ssl_state)
+    {
+        m_ssl_state = ssl_state;
     }
 
     virtual int ssl_handshake() = 0;
@@ -299,7 +294,6 @@ public:
     };
 
     bool                    m_dcb_errhandle_called = false;     /**< this can be called only once */
-    SSL_STATE               m_ssl_state = SSL_HANDSHAKE_UNKNOWN;/**< Current state of SSL if in use */
     char*                   m_remote = nullptr;                 /**< Address of remote end */
     char*                   m_user = nullptr;                   /**< User name for connection */
     struct sockaddr_storage m_ip;                               /**< remote IPv4/IPv6 address */
@@ -352,6 +346,7 @@ protected:
     State                 m_state = State::ALLOC;       /**< Current state */
     int                   m_fd;                         /**< The descriptor */
     MXS_SESSION*          m_session;                    /**< The owning session */
+    SSLState              m_ssl_state = SSLState::HANDSHAKE_UNKNOWN;/**< Current state of SSL if in use */
     SSL*                  m_ssl = nullptr;              /**< SSL struct for connection */
     bool                  m_ssl_read_want_read = false;
     bool                  m_ssl_read_want_write = false;

@@ -1771,7 +1771,7 @@ static void diagnostics(MXS_ROUTER* router, DCB* dcb)
             {
                 dcb_printf(dcb,
                            "\t\tSlave connected with SSL:                %s\n",
-                           session->dcb->ssl_state() == SSL_ESTABLISHED ?
+                           session->dcb->ssl_state() == DCB::SSLState::ESTABLISHED ?
                            "Established" : "Not connected yet");
             }
             dcb_printf(dcb,

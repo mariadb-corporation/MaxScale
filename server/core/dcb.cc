@@ -467,12 +467,12 @@ int DCB::read(GWBUF** head, int maxbytes)
         nreadtotal = gwbuf_length(*head);
     }
 
-    if (SSL_HANDSHAKE_DONE == m_ssl_state || SSL_ESTABLISHED == m_ssl_state)
+    if (SSLState::HANDSHAKE_DONE == m_ssl_state || SSLState::ESTABLISHED == m_ssl_state)
     {
         return read_SSL(head);
     }
 
-    if (m_fd == DCBFD_CLOSED)
+    if (m_fd == FD_CLOSED)
     {
         MXS_ERROR("Read failed, dcb is closed.");
         return 0;
@@ -634,7 +634,7 @@ int DCB::read_SSL(GWBUF** head)
     int nsingleread = 0, nreadtotal = 0;
     int start_length = *head ? gwbuf_length(*head) : 0;
 
-    if (m_fd == DCBFD_CLOSED)
+    if (m_fd == FD_CLOSED)
     {
         MXS_ERROR("Read failed, dcb is closed.");
         return -1;
@@ -821,7 +821,7 @@ static inline bool dcb_write_parameter_check(DCB* dcb, int fd, GWBUF* queue)
         return false;
     }
 
-    if (fd == DCBFD_CLOSED)
+    if (fd == DCB::FD_CLOSED)
     {
         MXS_ERROR("Write failed, dcb is closed.");
         gwbuf_free(queue);
@@ -950,7 +950,7 @@ void DCB::close(DCB* dcb)
      * dcb_close may be called for freshly created dcb, in which case
      * it only needs to be freed.
      */
-    if (dcb->state() == State::ALLOC && dcb->m_fd == DCBFD_CLOSED)
+    if (dcb->state() == State::ALLOC && dcb->m_fd == FD_CLOSED)
     {
         // A freshly created dcb that was closed before it was taken into use.
         DCB::free(dcb);
@@ -1030,7 +1030,7 @@ void DCB::destroy()
         stop_polling_and_shutdown();
     }
 
-    if (m_fd != DCBFD_CLOSED)
+    if (m_fd != FD_CLOSED)
     {
         // TODO: How could we get this far with a dcb->m_fd <= 0?
 
@@ -1049,7 +1049,7 @@ void DCB::destroy()
             MXS_DEBUG("Closed socket %d on dcb %p.", m_fd, this);
         }
 
-        m_fd = DCBFD_CLOSED;
+        m_fd = FD_CLOSED;
     }
 
     m_state = State::DISCONNECTED;
@@ -1472,7 +1472,7 @@ int DCB::socket_write(GWBUF* writeq, bool* stop_writing)
 
     errno = 0;
 
-    if (fd != DCBFD_CLOSED)
+    if (fd != FD_CLOSED)
     {
         written = ::write(fd, buf, nbytes);
     }
@@ -1841,7 +1841,7 @@ int ClientDCB::ssl_handshake()
     {
     case SSL_ERROR_NONE:
         MXS_DEBUG("SSL_accept done for %s@%s", user, remote);
-        m_ssl_state = SSL_ESTABLISHED;
+        m_ssl_state = SSLState::ESTABLISHED;
         m_ssl_read_want_write = false;
         return 1;
 
@@ -1864,7 +1864,7 @@ int ClientDCB::ssl_handshake()
         MXS_DEBUG("SSL connection SSL_ERROR_SYSCALL error during accept %s@%s", user, remote);
         if (log_errors_SSL(ssl_rval) < 0)
         {
-            m_ssl_state = SSL_HANDSHAKE_FAILED;
+            m_ssl_state = SSLState::HANDSHAKE_FAILED;
             poll_fake_hangup_event(this);
             return -1;
         }
@@ -1877,7 +1877,7 @@ int ClientDCB::ssl_handshake()
         MXS_DEBUG("SSL connection shut down with error during SSL accept %s@%s", user, remote);
         if (log_errors_SSL(ssl_rval) < 0)
         {
-            m_ssl_state = SSL_HANDSHAKE_FAILED;
+            m_ssl_state = SSLState::HANDSHAKE_FAILED;
             poll_fake_hangup_event(this);
             return -1;
         }
@@ -1919,13 +1919,13 @@ int BackendDCB::ssl_handshake()
         mxb_assert((NULL != m_server) && (NULL != m_server->ssl().context()));
         return -1;
     }
-    m_ssl_state = SSL_HANDSHAKE_REQUIRED;
+    m_ssl_state = SSLState::HANDSHAKE_REQUIRED;
     ssl_rval = SSL_connect(m_ssl);
     switch (SSL_get_error(m_ssl, ssl_rval))
     {
     case SSL_ERROR_NONE:
         MXS_DEBUG("SSL_connect done for %s", m_remote);
-        m_ssl_state = SSL_ESTABLISHED;
+        m_ssl_state = SSLState::ESTABLISHED;
         m_ssl_read_want_write = false;
         return_code = 1;
         break;
@@ -1954,7 +1954,7 @@ int BackendDCB::ssl_handshake()
         MXS_DEBUG("SSL connection shut down with SSL_ERROR_SYSCALL during SSL connect %s", m_remote);
         if (log_errors_SSL(ssl_rval) < 0)
         {
-            m_ssl_state = SSL_HANDSHAKE_FAILED;
+            m_ssl_state = SSLState::HANDSHAKE_FAILED;
             poll_fake_hangup_event(this);
             return_code = -1;
         }
@@ -1968,7 +1968,7 @@ int BackendDCB::ssl_handshake()
         MXS_DEBUG("SSL connection shut down with error during SSL connect %s", m_remote);
         if (log_errors_SSL(ssl_rval) < 0)
         {
-            m_ssl_state = SSL_HANDSHAKE_FAILED;
+            m_ssl_state = SSLState::HANDSHAKE_FAILED;
             poll_fake_hangup_event(this);
             return -1;
         }
@@ -2247,7 +2247,7 @@ uint32_t DCB::process_events(DCB* dcb, uint32_t events)
             int return_code = 1;
             /** SSL authentication is still going on, we need to call DCB::ssl_handehake
              * until it return 1 for success or -1 for error */
-            if (dcb->m_ssl_state == SSL_HANDSHAKE_REQUIRED)
+            if (dcb->m_ssl_state == SSLState::HANDSHAKE_REQUIRED)
             {
                 return_code = dcb->ssl_handshake();
             }
@@ -2576,7 +2576,7 @@ bool DCB::enable_events()
 bool DCB::disable_events()
 {
     mxb_assert(m_state == State::POLLING);
-    mxb_assert(m_fd != DCBFD_CLOSED || m_role == DCB::Role::INTERNAL);
+    mxb_assert(m_fd != FD_CLOSED || m_role == DCB::Role::INTERNAL);
 
     bool rv = true;
     RoutingWorker* worker = static_cast<RoutingWorker*>(this->owner);
@@ -2586,8 +2586,8 @@ bool DCB::disable_events()
     m_state = State::NOPOLLING;
 
     // When BLR creates an internal DCB, it will set its state to
-    // State::NOPOLLING and the fd will be DCBFD_CLOSED.
-    if (m_fd != DCBFD_CLOSED)
+    // State::NOPOLLING and the fd will be FD_CLOSED.
+    if (m_fd != FD_CLOSED)
     {
 
         if (!worker->remove_fd(m_fd))
@@ -2808,7 +2808,7 @@ bool ClientDCB::release_from(MXS_SESSION* session)
 
 bool ClientDCB::prepare_for_destruction()
 {
-    mxb_assert(m_fd != DCBFD_CLOSED);
+    mxb_assert(m_fd != FD_CLOSED);
     return true;
 }
 
@@ -2818,7 +2818,7 @@ bool ClientDCB::ready() const
 }
 
 InternalDCB::InternalDCB(MXS_SESSION* session, MXS_PROTOCOL_API protocol_api, DCB::Manager* manager)
-    : ClientDCB(DCBFD_CLOSED, DCB::Role::INTERNAL, session, nullptr, protocol_api, manager)
+    : ClientDCB(FD_CLOSED, DCB::Role::INTERNAL, session, nullptr, protocol_api, manager)
 {
     /**
      * This prevents the actual protocol level closing code from being called that expects
@@ -2864,7 +2864,7 @@ void InternalDCB::shutdown()
 
 bool InternalDCB::prepare_for_destruction()
 {
-    mxb_assert(m_fd == DCBFD_CLOSED);
+    mxb_assert(m_fd == FD_CLOSED);
     return true;
 }
 

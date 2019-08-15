@@ -447,7 +447,7 @@ static int gw_read_backend_event(DCB* plain_dcb)
             gwbuf_free(readbuf);
         }
         else if (proto->protocol_auth_state == MXS_AUTH_STATE_CONNECTED
-                 && dcb->m_ssl_state == SSL_ESTABLISHED)
+                 && dcb->ssl_state() == DCB::SSLState::ESTABLISHED)
         {
             proto->protocol_auth_state = gw_send_backend_auth(dcb);
         }

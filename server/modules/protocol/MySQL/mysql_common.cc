@@ -906,13 +906,13 @@ mxs_auth_state_t gw_send_backend_auth(BackendDCB* dcb)
     if (dcb->session() == NULL
         || (dcb->session()->state() != MXS_SESSION::State::CREATED
             && dcb->session()->state() != MXS_SESSION::State::STARTED)
-        || (dcb->server()->ssl().context() && dcb->m_ssl_state == SSL_HANDSHAKE_FAILED))
+        || (dcb->server()->ssl().context() && dcb->ssl_state() == DCB::SSLState::HANDSHAKE_FAILED))
     {
         return rval;
     }
 
     bool with_ssl = dcb->server()->ssl().context();
-    bool ssl_established = dcb->m_ssl_state == SSL_ESTABLISHED;
+    bool ssl_established = dcb->ssl_state() == DCB::SSLState::ESTABLISHED;
 
     MYSQL_session client;
     gw_get_shared_session_auth_info(dcb->session()->client_dcb, &client);
