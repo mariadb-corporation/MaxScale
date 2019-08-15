@@ -484,8 +484,7 @@ static void gw_reply_on_error(DCB* dcb, mxs_auth_state_t state)
 {
     MySQLProtocol* p = static_cast<MySQLProtocol*>(dcb->protocol_session());
     auto err = mysql_create_custom_error(1, 0, "Authentication with backend failed. Session will be closed.");
-    p->do_clientReply(err);
-    dcb->session()->terminate();
+    dcb->session()->terminate(err);
 }
 
 /**
