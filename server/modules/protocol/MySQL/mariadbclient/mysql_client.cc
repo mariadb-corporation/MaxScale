@@ -56,7 +56,6 @@ typedef enum spec_com_res_t
 
 const char WORD_KILL[] = "KILL";
 
-int route_by_statement(MXS_SESSION*, uint64_t, GWBUF**);
 void handle_authentication_errors(DCB* dcb, int auth_val, int packet_number);
 int perform_authentication(DCB* dcb, GWBUF* read_buffer, int nbytes_read);
 int perform_normal_read(DCB* dcb, GWBUF* read_buffer, int nbytes_read);
@@ -1149,153 +1148,6 @@ void check_pool_candidate(DCB* dcb)
 }
 
 /**
- * @brief Client read event, common processing after single statement handling
- *
- * @param dcb           Descriptor control block
- * @param read_buffer   A buffer containing the data read from client
- * @param capabilities  The router capabilities flags
- * @return 0 if succeed, 1 otherwise
- */
-int finish_processing(DCB* dcb, GWBUF* read_buffer, uint64_t capabilities)
-{
-    MXS_SESSION* session = dcb->session();
-    uint8_t* payload = GWBUF_DATA(read_buffer);
-    MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol_session();
-    int return_code = 0;
-
-    if (rcap_type_required(capabilities, RCAP_TYPE_STMT_INPUT)
-        || proto->current_command == MXS_COM_CHANGE_USER)
-    {
-        /**
-         * Feed each statement completely and separately to router.
-         */
-        return_code = route_by_statement(session, capabilities, &read_buffer) ? 0 : 1;
-
-        if (read_buffer != NULL)
-        {
-            /*
-             * Must have been data left over
-             * Add incomplete mysql packet to read queue
-             */
-
-            dcb_readq_append(dcb, read_buffer);
-        }
-    }
-    else
-    {
-        /** Check if this connection qualifies for the connection pool */
-        check_pool_candidate(dcb);
-
-        /** Feed the whole buffer to the router */
-        return_code = proto->do_routeQuery(read_buffer) ? 0 : 1;
-    }
-    /*
-     * else return_code is still 0 from when it was originally set
-     * Note that read_buffer has been freed or transferred by this point
-     */
-
-    if (return_code != 0)
-    {
-        /** Routing failed, close the client connection */
-        dcb->session()->close_reason = SESSION_CLOSE_ROUTING_FAILED;
-        dcb_close(dcb);
-        MXS_ERROR("Routing the query failed. Session will be closed.");
-    }
-    else if (proto->current_command == MXS_COM_QUIT)
-    {
-        /** Close router session which causes closing of backends */
-        mxb_assert_message(session_valid_for_pool(dcb->session()), "Session should qualify for pooling");
-        dcb_close(dcb);
-    }
-
-    return return_code;
-}
-
-/**
- * @brief Analyse authentication errors and write appropriate log messages
- *
- * @param dcb Request handler DCB connected to the client
- * @param auth_val The type of authentication failure
- * @note Authentication status codes are defined in maxscale/protocol/mysql.h
- */
-void handle_authentication_errors(DCB* dcb, int auth_val, int packet_number)
-{
-    int message_len;
-    char* fail_str = NULL;
-    MYSQL_session* session = (MYSQL_session*)dcb->m_data;
-
-    switch (auth_val)
-    {
-    case MXS_AUTH_NO_SESSION:
-        MXS_DEBUG("session creation failed. fd %d, state = MYSQL_AUTH_NO_SESSION.", dcb->fd());
-
-        /** Send ERR 1045 to client */
-        mysql_send_auth_error(dcb, packet_number, 0, "failed to create new session");
-        break;
-
-    case MXS_AUTH_FAILED_DB:
-        MXS_DEBUG("database specified was not valid. fd %d, state = MYSQL_FAILED_AUTH_DB.", dcb->fd());
-        /** Send error 1049 to client */
-        message_len = 25 + MYSQL_DATABASE_MAXLEN;
-
-        fail_str = (char*)MXS_CALLOC(1, message_len + 1);
-        MXS_ABORT_IF_NULL(fail_str);
-        snprintf(fail_str, message_len, "Unknown database '%s'", session->db);
-
-        modutil_send_mysql_err_packet(dcb, packet_number, 0, 1049, "42000", fail_str);
-        break;
-
-    case MXS_AUTH_FAILED_SSL:
-        MXS_DEBUG("client is "
-                  "not SSL capable for SSL listener. fd %d, "
-                  "state = MYSQL_FAILED_AUTH_SSL.",
-                  dcb->fd());
-
-        /** Send ERR 1045 to client */
-        mysql_send_auth_error(dcb, packet_number, 0, "Access without SSL denied");
-        break;
-
-    case MXS_AUTH_SSL_INCOMPLETE:
-        MXS_DEBUG("unable to complete SSL authentication. fd %d, "
-                  "state = MYSQL_AUTH_SSL_INCOMPLETE.",
-                  dcb->fd());
-
-        /** Send ERR 1045 to client */
-        mysql_send_auth_error(dcb,
-                              packet_number,
-                              0,
-                              "failed to complete SSL authentication");
-        break;
-
-    case MXS_AUTH_FAILED:
-        MXS_DEBUG("authentication failed. fd %d, state = MYSQL_FAILED_AUTH.", dcb->fd());
-        /** Send error 1045 to client */
-        fail_str = create_auth_fail_str(session->user,
-                                        dcb->m_remote,
-                                        session->auth_token_len > 0,
-                                        session->db,
-                                        auth_val);
-        modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "28000", fail_str);
-        break;
-
-    case MXS_AUTH_BAD_HANDSHAKE:
-        modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "08S01", "Bad handshake");
-        break;
-
-    default:
-        MXS_DEBUG("authentication failed. fd %d, state unrecognized.", dcb->fd());
-        /** Send error 1045 to client */
-        fail_str = create_auth_fail_str(session->user,
-                                        dcb->m_remote,
-                                        session->auth_token_len > 0,
-                                        session->db,
-                                        auth_val);
-        modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "28000", fail_str);
-    }
-    MXS_FREE(fail_str);
-}
-
-/**
  * Update protocol tracking information for an individual statement
  *
  * @param dcb    Client DCB
@@ -1572,6 +1424,153 @@ int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF** p_re
 
 return_rc:
     return rc;
+}
+
+/**
+ * @brief Client read event, common processing after single statement handling
+ *
+ * @param dcb           Descriptor control block
+ * @param read_buffer   A buffer containing the data read from client
+ * @param capabilities  The router capabilities flags
+ * @return 0 if succeed, 1 otherwise
+ */
+int finish_processing(DCB* dcb, GWBUF* read_buffer, uint64_t capabilities)
+{
+    MXS_SESSION* session = dcb->session();
+    uint8_t* payload = GWBUF_DATA(read_buffer);
+    MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol_session();
+    int return_code = 0;
+
+    if (rcap_type_required(capabilities, RCAP_TYPE_STMT_INPUT)
+        || proto->current_command == MXS_COM_CHANGE_USER)
+    {
+        /**
+         * Feed each statement completely and separately to router.
+         */
+        return_code = route_by_statement(session, capabilities, &read_buffer) ? 0 : 1;
+
+        if (read_buffer != NULL)
+        {
+            /*
+             * Must have been data left over
+             * Add incomplete mysql packet to read queue
+             */
+
+            dcb_readq_append(dcb, read_buffer);
+        }
+    }
+    else
+    {
+        /** Check if this connection qualifies for the connection pool */
+        check_pool_candidate(dcb);
+
+        /** Feed the whole buffer to the router */
+        return_code = proto->do_routeQuery(read_buffer) ? 0 : 1;
+    }
+    /*
+     * else return_code is still 0 from when it was originally set
+     * Note that read_buffer has been freed or transferred by this point
+     */
+
+    if (return_code != 0)
+    {
+        /** Routing failed, close the client connection */
+        dcb->session()->close_reason = SESSION_CLOSE_ROUTING_FAILED;
+        dcb_close(dcb);
+        MXS_ERROR("Routing the query failed. Session will be closed.");
+    }
+    else if (proto->current_command == MXS_COM_QUIT)
+    {
+        /** Close router session which causes closing of backends */
+        mxb_assert_message(session_valid_for_pool(dcb->session()), "Session should qualify for pooling");
+        dcb_close(dcb);
+    }
+
+    return return_code;
+}
+
+/**
+ * @brief Analyse authentication errors and write appropriate log messages
+ *
+ * @param dcb Request handler DCB connected to the client
+ * @param auth_val The type of authentication failure
+ * @note Authentication status codes are defined in maxscale/protocol/mysql.h
+ */
+void handle_authentication_errors(DCB* dcb, int auth_val, int packet_number)
+{
+    int message_len;
+    char* fail_str = NULL;
+    MYSQL_session* session = (MYSQL_session*)dcb->m_data;
+
+    switch (auth_val)
+    {
+    case MXS_AUTH_NO_SESSION:
+        MXS_DEBUG("session creation failed. fd %d, state = MYSQL_AUTH_NO_SESSION.", dcb->fd());
+
+        /** Send ERR 1045 to client */
+        mysql_send_auth_error(dcb, packet_number, 0, "failed to create new session");
+        break;
+
+    case MXS_AUTH_FAILED_DB:
+        MXS_DEBUG("database specified was not valid. fd %d, state = MYSQL_FAILED_AUTH_DB.", dcb->fd());
+        /** Send error 1049 to client */
+        message_len = 25 + MYSQL_DATABASE_MAXLEN;
+
+        fail_str = (char*)MXS_CALLOC(1, message_len + 1);
+        MXS_ABORT_IF_NULL(fail_str);
+        snprintf(fail_str, message_len, "Unknown database '%s'", session->db);
+
+        modutil_send_mysql_err_packet(dcb, packet_number, 0, 1049, "42000", fail_str);
+        break;
+
+    case MXS_AUTH_FAILED_SSL:
+        MXS_DEBUG("client is "
+                  "not SSL capable for SSL listener. fd %d, "
+                  "state = MYSQL_FAILED_AUTH_SSL.",
+                  dcb->fd());
+
+        /** Send ERR 1045 to client */
+        mysql_send_auth_error(dcb, packet_number, 0, "Access without SSL denied");
+        break;
+
+    case MXS_AUTH_SSL_INCOMPLETE:
+        MXS_DEBUG("unable to complete SSL authentication. fd %d, "
+                  "state = MYSQL_AUTH_SSL_INCOMPLETE.",
+                  dcb->fd());
+
+        /** Send ERR 1045 to client */
+        mysql_send_auth_error(dcb,
+                              packet_number,
+                              0,
+                              "failed to complete SSL authentication");
+        break;
+
+    case MXS_AUTH_FAILED:
+        MXS_DEBUG("authentication failed. fd %d, state = MYSQL_FAILED_AUTH.", dcb->fd());
+        /** Send error 1045 to client */
+        fail_str = create_auth_fail_str(session->user,
+                                        dcb->m_remote,
+                                        session->auth_token_len > 0,
+                                        session->db,
+                                        auth_val);
+        modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "28000", fail_str);
+        break;
+
+    case MXS_AUTH_BAD_HANDSHAKE:
+        modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "08S01", "Bad handshake");
+        break;
+
+    default:
+        MXS_DEBUG("authentication failed. fd %d, state unrecognized.", dcb->fd());
+        /** Send error 1045 to client */
+        fail_str = create_auth_fail_str(session->user,
+                                        dcb->m_remote,
+                                        session->auth_token_len > 0,
+                                        session->db,
+                                        auth_val);
+        modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "28000", fail_str);
+    }
+    MXS_FREE(fail_str);
 }
 
 /**
