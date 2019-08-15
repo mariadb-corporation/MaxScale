@@ -80,6 +80,7 @@ const MXS_ENUM_VALUE require_lock_values[] =
     lock_none,
     lock_majority_running,
     lock_majority_all,
+    {nullptr}
 };
 }
 
