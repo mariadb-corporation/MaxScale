@@ -15,6 +15,7 @@
 #include <maxscale/ccdefs.hh>
 
 #include <time.h>
+#include <sstream>
 
 #include <maxbase/atomic.h>
 #include <maxbase/jansson.h>
@@ -186,6 +187,14 @@ struct MXS_SESSION
      * @param error An optionl error message that is sent to the client before the session is terminated
      */
     void terminate(GWBUF* error = nullptr);
+
+    // Convenience function for client identification
+    std::string user_and_host() const
+    {
+        std::ostringstream ss;
+        ss << "'" << client_dcb->m_user << "'@'" << client_dcb->m_remote << "'";
+        return ss.str();
+    }
 
 protected:
     State    m_state;                   /**< Current descriptor state */
