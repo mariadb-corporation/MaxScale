@@ -56,18 +56,8 @@ typedef enum spec_com_res_t
 
 const char WORD_KILL[] = "KILL";
 
-void handle_authentication_errors(DCB* dcb, int auth_val, int packet_number);
-int perform_authentication(DCB* dcb, GWBUF* read_buffer, int nbytes_read);
-int perform_normal_read(DCB* dcb, GWBUF* read_buffer, int nbytes_read);
 int finish_processing(DCB* dcb, GWBUF* read_buffer, uint64_t capabilities);
 spec_com_res_t process_special_commands(DCB* client_dcb, GWBUF* read_buffer, int nbytes_read);
-spec_com_res_t handle_query_kill(DCB* dcb,
-                                 GWBUF* read_buffer,
-                                 spec_com_res_t current,
-                                 bool is_complete,
-                                 unsigned int packet_len);
-bool parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* kt_out, std::string* user);
-void parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data);
 
 
 std::string get_version_string(SERVICE* service)
@@ -636,6 +626,90 @@ int ssl_authenticate_check_status(DCB* generic_dcb)
         rval = MXS_AUTH_SSL_COMPLETE;
     }
     return rval;
+}
+
+/**
+ * @brief Analyse authentication errors and write appropriate log messages
+ *
+ * @param dcb Request handler DCB connected to the client
+ * @param auth_val The type of authentication failure
+ * @note Authentication status codes are defined in maxscale/protocol/mysql.h
+ */
+void handle_authentication_errors(DCB* dcb, int auth_val, int packet_number)
+{
+    int message_len;
+    char* fail_str = NULL;
+    MYSQL_session* session = (MYSQL_session*)dcb->m_data;
+
+    switch (auth_val)
+    {
+    case MXS_AUTH_NO_SESSION:
+        MXS_DEBUG("session creation failed. fd %d, state = MYSQL_AUTH_NO_SESSION.", dcb->fd());
+
+        /** Send ERR 1045 to client */
+        mysql_send_auth_error(dcb, packet_number, 0, "failed to create new session");
+        break;
+
+    case MXS_AUTH_FAILED_DB:
+        MXS_DEBUG("database specified was not valid. fd %d, state = MYSQL_FAILED_AUTH_DB.", dcb->fd());
+        /** Send error 1049 to client */
+        message_len = 25 + MYSQL_DATABASE_MAXLEN;
+
+        fail_str = (char*)MXS_CALLOC(1, message_len + 1);
+        MXS_ABORT_IF_NULL(fail_str);
+        snprintf(fail_str, message_len, "Unknown database '%s'", session->db);
+
+        modutil_send_mysql_err_packet(dcb, packet_number, 0, 1049, "42000", fail_str);
+        break;
+
+    case MXS_AUTH_FAILED_SSL:
+        MXS_DEBUG("client is "
+                  "not SSL capable for SSL listener. fd %d, "
+                  "state = MYSQL_FAILED_AUTH_SSL.",
+                  dcb->fd());
+
+        /** Send ERR 1045 to client */
+        mysql_send_auth_error(dcb, packet_number, 0, "Access without SSL denied");
+        break;
+
+    case MXS_AUTH_SSL_INCOMPLETE:
+        MXS_DEBUG("unable to complete SSL authentication. fd %d, "
+                  "state = MYSQL_AUTH_SSL_INCOMPLETE.",
+                  dcb->fd());
+
+        /** Send ERR 1045 to client */
+        mysql_send_auth_error(dcb,
+                              packet_number,
+                              0,
+                              "failed to complete SSL authentication");
+        break;
+
+    case MXS_AUTH_FAILED:
+        MXS_DEBUG("authentication failed. fd %d, state = MYSQL_FAILED_AUTH.", dcb->fd());
+        /** Send error 1045 to client */
+        fail_str = create_auth_fail_str(session->user,
+                                        dcb->m_remote,
+                                        session->auth_token_len > 0,
+                                        session->db,
+                                        auth_val);
+        modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "28000", fail_str);
+        break;
+
+    case MXS_AUTH_BAD_HANDSHAKE:
+        modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "08S01", "Bad handshake");
+        break;
+
+    default:
+        MXS_DEBUG("authentication failed. fd %d, state unrecognized.", dcb->fd());
+        /** Send error 1045 to client */
+        fail_str = create_auth_fail_str(session->user,
+                                        dcb->m_remote,
+                                        session->auth_token_len > 0,
+                                        session->db,
+                                        auth_val);
+        modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "28000", fail_str);
+    }
+    MXS_FREE(fail_str);
 }
 
 /**
@@ -1489,238 +1563,6 @@ int finish_processing(DCB* dcb, GWBUF* read_buffer, uint64_t capabilities)
     return return_code;
 }
 
-/**
- * @brief Analyse authentication errors and write appropriate log messages
- *
- * @param dcb Request handler DCB connected to the client
- * @param auth_val The type of authentication failure
- * @note Authentication status codes are defined in maxscale/protocol/mysql.h
- */
-void handle_authentication_errors(DCB* dcb, int auth_val, int packet_number)
-{
-    int message_len;
-    char* fail_str = NULL;
-    MYSQL_session* session = (MYSQL_session*)dcb->m_data;
-
-    switch (auth_val)
-    {
-    case MXS_AUTH_NO_SESSION:
-        MXS_DEBUG("session creation failed. fd %d, state = MYSQL_AUTH_NO_SESSION.", dcb->fd());
-
-        /** Send ERR 1045 to client */
-        mysql_send_auth_error(dcb, packet_number, 0, "failed to create new session");
-        break;
-
-    case MXS_AUTH_FAILED_DB:
-        MXS_DEBUG("database specified was not valid. fd %d, state = MYSQL_FAILED_AUTH_DB.", dcb->fd());
-        /** Send error 1049 to client */
-        message_len = 25 + MYSQL_DATABASE_MAXLEN;
-
-        fail_str = (char*)MXS_CALLOC(1, message_len + 1);
-        MXS_ABORT_IF_NULL(fail_str);
-        snprintf(fail_str, message_len, "Unknown database '%s'", session->db);
-
-        modutil_send_mysql_err_packet(dcb, packet_number, 0, 1049, "42000", fail_str);
-        break;
-
-    case MXS_AUTH_FAILED_SSL:
-        MXS_DEBUG("client is "
-                  "not SSL capable for SSL listener. fd %d, "
-                  "state = MYSQL_FAILED_AUTH_SSL.",
-                  dcb->fd());
-
-        /** Send ERR 1045 to client */
-        mysql_send_auth_error(dcb, packet_number, 0, "Access without SSL denied");
-        break;
-
-    case MXS_AUTH_SSL_INCOMPLETE:
-        MXS_DEBUG("unable to complete SSL authentication. fd %d, "
-                  "state = MYSQL_AUTH_SSL_INCOMPLETE.",
-                  dcb->fd());
-
-        /** Send ERR 1045 to client */
-        mysql_send_auth_error(dcb,
-                              packet_number,
-                              0,
-                              "failed to complete SSL authentication");
-        break;
-
-    case MXS_AUTH_FAILED:
-        MXS_DEBUG("authentication failed. fd %d, state = MYSQL_FAILED_AUTH.", dcb->fd());
-        /** Send error 1045 to client */
-        fail_str = create_auth_fail_str(session->user,
-                                        dcb->m_remote,
-                                        session->auth_token_len > 0,
-                                        session->db,
-                                        auth_val);
-        modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "28000", fail_str);
-        break;
-
-    case MXS_AUTH_BAD_HANDSHAKE:
-        modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "08S01", "Bad handshake");
-        break;
-
-    default:
-        MXS_DEBUG("authentication failed. fd %d, state unrecognized.", dcb->fd());
-        /** Send error 1045 to client */
-        fail_str = create_auth_fail_str(session->user,
-                                        dcb->m_remote,
-                                        session->auth_token_len > 0,
-                                        session->db,
-                                        auth_val);
-        modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "28000", fail_str);
-    }
-    MXS_FREE(fail_str);
-}
-
-/**
- * Some SQL commands/queries need to be detected and handled by the protocol
- * and MaxScale instead of being routed forward as is.
- *
- * @param dcb Client dcb
- * @param read_buffer the current read buffer
- * @param nbytes_read How many bytes were read
- * @return see @c spec_com_res_t
- */
-spec_com_res_t process_special_commands(DCB* dcb, GWBUF* read_buffer, int nbytes_read)
-{
-    spec_com_res_t rval = RES_CONTINUE;
-    unsigned int packet_len = MYSQL_GET_PAYLOAD_LEN((uint8_t*)GWBUF_DATA(read_buffer)) + MYSQL_HEADER_LEN;
-    bool is_complete = gwbuf_length(read_buffer) >= packet_len;
-
-    /**
-     * Handle COM_SET_OPTION. This seems to be only used by some versions of PHP.
-     *
-     * The option is stored as a two byte integer with the values 0 for enabling
-     * multi-statements and 1 for disabling it.
-     */
-    MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol_session();
-    uint8_t opt;
-
-    if (proto->current_command == MXS_COM_SET_OPTION
-        && gwbuf_copy_data(read_buffer, MYSQL_HEADER_LEN + 2, 1, &opt))
-    {
-        if (opt)
-        {
-            proto->client_capabilities &= ~GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS;
-        }
-        else
-        {
-            proto->client_capabilities |= GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS;
-        }
-    }
-    /**
-     * Handle COM_PROCESS_KILL
-     */
-    else if (proto->current_command == MXS_COM_PROCESS_KILL)
-    {
-        /* Make sure we have a complete SQL packet before trying to read the
-         * process id. If not, try again next time. */
-        if (!is_complete)
-        {
-            rval = RES_MORE_DATA;
-        }
-        else
-        {
-            uint8_t bytes[4];
-            if (gwbuf_copy_data(read_buffer, MYSQL_HEADER_LEN + 1, sizeof(bytes), bytes)
-                == sizeof(bytes))
-            {
-                uint64_t process_id = gw_mysql_get_byte4(bytes);
-                mxs_mysql_execute_kill(dcb->session(), process_id, KT_CONNECTION);
-                mxs_mysql_send_ok(dcb, 1, 0, NULL);
-                rval = RES_END;
-            }
-        }
-    }
-    else if (proto->current_command == MXS_COM_QUERY)
-    {
-        /* Limits on the length of the queries in which "KILL" is searched for. Reducing
-         * LONGEST_KILL will reduce overhead but also limit the range of accepted queries. */
-        const int SHORTEST_KILL = sizeof("KILL 1") - 1;
-        const int LONGEST_KILL = sizeof("KILL CONNECTION 12345678901234567890 ;");
-        /* Is length within limits for a kill-type query? */
-        if (packet_len >= (MYSQL_HEADER_LEN + 1 + SHORTEST_KILL)
-            && packet_len <= (MYSQL_HEADER_LEN + 1 + LONGEST_KILL))
-        {
-            rval = handle_query_kill(dcb, read_buffer, rval, is_complete, packet_len);
-        }
-    }
-    return rval;
-}
-
-/**
- * Handle text version of KILL [CONNECTION | QUERY] <process_id>. Only detects
- * commands in the beginning of the packet and with no comments.
- * Increased parsing would slow down the handling of every single query.
- *
- * @param dcb Client dcb
- * @param read_buffer Input buffer
- * @param current Latest value of rval in calling function
- * @param is_complete Is read_buffer a complete sql packet
- * @param packet_len Read from sql header
- * @return Updated (or old) value of rval
- */
-spec_com_res_t handle_query_kill(DCB* dcb,
-                                 GWBUF* read_buffer,
-                                 spec_com_res_t current,
-                                 bool is_complete,
-                                 unsigned int packet_len)
-{
-    spec_com_res_t rval = current;
-    /* First, we need to detect the text "KILL" (ignorecase) in the start
-     * of the packet. Copy just enough characters. */
-    const size_t KILL_BEGIN_LEN = sizeof(WORD_KILL) - 1;
-    char startbuf[KILL_BEGIN_LEN];      // Not 0-terminated, careful...
-    size_t copied_len = gwbuf_copy_data(read_buffer,
-                                        MYSQL_HEADER_LEN + 1,
-                                        KILL_BEGIN_LEN,
-                                        (uint8_t*)startbuf);
-    if (is_complete)
-    {
-        if (strncasecmp(WORD_KILL, startbuf, KILL_BEGIN_LEN) == 0)
-        {
-            /* Good chance that the query is a KILL-query. Copy the entire
-             * buffer and process. */
-            size_t buffer_len = packet_len - (MYSQL_HEADER_LEN + 1);
-            char querybuf[buffer_len + 1];      // 0-terminated
-            copied_len = gwbuf_copy_data(read_buffer,
-                                         MYSQL_HEADER_LEN + 1,
-                                         buffer_len,
-                                         (uint8_t*)querybuf);
-            querybuf[copied_len] = '\0';
-            kill_type_t kt = KT_CONNECTION;
-            uint64_t thread_id = 0;
-            std::string user;
-
-            if (parse_kill_query(querybuf, &thread_id, &kt, &user))
-            {
-                rval = RES_END;
-
-                if (thread_id > 0)
-                {
-                    mxs_mysql_execute_kill(dcb->session(), thread_id, kt);
-                }
-                else if (!user.empty())
-                {
-                    mxs_mysql_execute_kill_user(dcb->session(), user.c_str(), kt);
-                }
-
-                mxs_mysql_send_ok(dcb, 1, 0, NULL);
-            }
-        }
-    }
-    else
-    {
-        /* Look at the start of the query and see if it might contain "KILL" */
-        if (strncasecmp(WORD_KILL, startbuf, copied_len) == 0)
-        {
-            rval = RES_MORE_DATA;
-        }
-    }
-    return rval;
-}
-
 void extract_user(char* token, std::string* user)
 {
     char* end = strchr(token, ';');
@@ -1888,6 +1730,154 @@ bool parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* kt_out,
         *user = tmpuser;
         return true;
     }
+}
+
+/**
+ * Handle text version of KILL [CONNECTION | QUERY] <process_id>. Only detects
+ * commands in the beginning of the packet and with no comments.
+ * Increased parsing would slow down the handling of every single query.
+ *
+ * @param dcb Client dcb
+ * @param read_buffer Input buffer
+ * @param current Latest value of rval in calling function
+ * @param is_complete Is read_buffer a complete sql packet
+ * @param packet_len Read from sql header
+ * @return Updated (or old) value of rval
+ */
+spec_com_res_t handle_query_kill(DCB* dcb,
+                                 GWBUF* read_buffer,
+                                 spec_com_res_t current,
+                                 bool is_complete,
+                                 unsigned int packet_len)
+{
+    spec_com_res_t rval = current;
+    /* First, we need to detect the text "KILL" (ignorecase) in the start
+     * of the packet. Copy just enough characters. */
+    const size_t KILL_BEGIN_LEN = sizeof(WORD_KILL) - 1;
+    char startbuf[KILL_BEGIN_LEN];      // Not 0-terminated, careful...
+    size_t copied_len = gwbuf_copy_data(read_buffer,
+                                        MYSQL_HEADER_LEN + 1,
+                                        KILL_BEGIN_LEN,
+                                        (uint8_t*)startbuf);
+    if (is_complete)
+    {
+        if (strncasecmp(WORD_KILL, startbuf, KILL_BEGIN_LEN) == 0)
+        {
+            /* Good chance that the query is a KILL-query. Copy the entire
+             * buffer and process. */
+            size_t buffer_len = packet_len - (MYSQL_HEADER_LEN + 1);
+            char querybuf[buffer_len + 1];      // 0-terminated
+            copied_len = gwbuf_copy_data(read_buffer,
+                                         MYSQL_HEADER_LEN + 1,
+                                         buffer_len,
+                                         (uint8_t*)querybuf);
+            querybuf[copied_len] = '\0';
+            kill_type_t kt = KT_CONNECTION;
+            uint64_t thread_id = 0;
+            std::string user;
+
+            if (parse_kill_query(querybuf, &thread_id, &kt, &user))
+            {
+                rval = RES_END;
+
+                if (thread_id > 0)
+                {
+                    mxs_mysql_execute_kill(dcb->session(), thread_id, kt);
+                }
+                else if (!user.empty())
+                {
+                    mxs_mysql_execute_kill_user(dcb->session(), user.c_str(), kt);
+                }
+
+                mxs_mysql_send_ok(dcb, 1, 0, NULL);
+            }
+        }
+    }
+    else
+    {
+        /* Look at the start of the query and see if it might contain "KILL" */
+        if (strncasecmp(WORD_KILL, startbuf, copied_len) == 0)
+        {
+            rval = RES_MORE_DATA;
+        }
+    }
+    return rval;
+}
+
+/**
+ * Some SQL commands/queries need to be detected and handled by the protocol
+ * and MaxScale instead of being routed forward as is.
+ *
+ * @param dcb Client dcb
+ * @param read_buffer the current read buffer
+ * @param nbytes_read How many bytes were read
+ * @return see @c spec_com_res_t
+ */
+spec_com_res_t process_special_commands(DCB* dcb, GWBUF* read_buffer, int nbytes_read)
+{
+    spec_com_res_t rval = RES_CONTINUE;
+    unsigned int packet_len = MYSQL_GET_PAYLOAD_LEN((uint8_t*)GWBUF_DATA(read_buffer)) + MYSQL_HEADER_LEN;
+    bool is_complete = gwbuf_length(read_buffer) >= packet_len;
+
+    /**
+     * Handle COM_SET_OPTION. This seems to be only used by some versions of PHP.
+     *
+     * The option is stored as a two byte integer with the values 0 for enabling
+     * multi-statements and 1 for disabling it.
+     */
+    MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol_session();
+    uint8_t opt;
+
+    if (proto->current_command == MXS_COM_SET_OPTION
+        && gwbuf_copy_data(read_buffer, MYSQL_HEADER_LEN + 2, 1, &opt))
+    {
+        if (opt)
+        {
+            proto->client_capabilities &= ~GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS;
+        }
+        else
+        {
+            proto->client_capabilities |= GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS;
+        }
+    }
+    /**
+     * Handle COM_PROCESS_KILL
+     */
+    else if (proto->current_command == MXS_COM_PROCESS_KILL)
+    {
+        /* Make sure we have a complete SQL packet before trying to read the
+         * process id. If not, try again next time. */
+        if (!is_complete)
+        {
+            rval = RES_MORE_DATA;
+        }
+        else
+        {
+            uint8_t bytes[4];
+            if (gwbuf_copy_data(read_buffer, MYSQL_HEADER_LEN + 1, sizeof(bytes), bytes)
+                == sizeof(bytes))
+            {
+                uint64_t process_id = gw_mysql_get_byte4(bytes);
+                mxs_mysql_execute_kill(dcb->session(), process_id, KT_CONNECTION);
+                mxs_mysql_send_ok(dcb, 1, 0, NULL);
+                rval = RES_END;
+            }
+        }
+    }
+    else if (proto->current_command == MXS_COM_QUERY)
+    {
+        /* Limits on the length of the queries in which "KILL" is searched for. Reducing
+         * LONGEST_KILL will reduce overhead but also limit the range of accepted queries. */
+        const int SHORTEST_KILL = sizeof("KILL 1") - 1;
+        const int LONGEST_KILL = sizeof("KILL CONNECTION 12345678901234567890 ;");
+        /* Is length within limits for a kill-type query? */
+        if (packet_len >= (MYSQL_HEADER_LEN + 1 + SHORTEST_KILL)
+            && packet_len <= (MYSQL_HEADER_LEN + 1 + LONGEST_KILL))
+        {
+            rval = handle_query_kill(dcb, read_buffer, rval, is_complete, packet_len);
+        }
+    }
+    return rval;
 }
 
 /*
