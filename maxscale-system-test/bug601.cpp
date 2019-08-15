@@ -136,11 +136,8 @@ void* parall_traffic(void* ptr)
     while (exit_flag == 0)
     {
         conn = Test->maxscales->open_rwsplit_connection(0);
+        sleep(1);
         mysql_close(conn);
-        if (Test->backend_ssl)
-        {
-            sleep(1);
-        }
     }
     return NULL;
 }
