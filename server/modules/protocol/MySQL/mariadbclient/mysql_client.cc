@@ -50,8 +50,6 @@ typedef enum spec_com_res_t
 {
     RES_CONTINUE,   // No special command detected, proceed as normal.
     RES_END,        // Query handling completed, do not send to filters/router.
-    RES_MORE_DATA   // Possible special command, but not enough data to be sure. Must
-    // wait for more data.
 } spec_com_res_t;
 
 const char WORD_KILL[] = "KILL";
@@ -1071,55 +1069,6 @@ char* handle_variables(MXS_SESSION* session, GWBUF** read_buffer)
 }
 
 /**
- * Check if a connection qualifies to be added into the persistent connection pool
- *
- * @param dcb The client DCB to check
- */
-void check_pool_candidate(DCB* dcb)
-{
-    MXS_SESSION* session = dcb->session();
-    MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol_session();
-
-    if (proto->current_command == MXS_COM_QUIT)
-    {
-        /** The client is closing the connection. We know that this will be the
-         * last command the client sends so the backend connections are very likely
-         * to be in an idle state.
-         *
-         * If the client is pipelining the queries (i.e. sending N request as
-         * a batch and then expecting N responses) then it is possible that
-         * the backend connections are not idle when the COM_QUIT is received.
-         * In most cases we can assume that the connections are idle. */
-        session_qualify_for_pool(session);
-    }
-}
-
-/**
- * Update protocol tracking information for an individual statement
- *
- * @param dcb    Client DCB
- * @param buffer Buffer containing a single packet
- */
-void update_current_command(DCB* dcb, GWBUF* buffer)
-{
-    MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol_session();
-    uint8_t cmd = (uint8_t)MXS_COM_QUERY;
-
-    /**
-     * As we are routing individual packets, we can extract the command byte here.
-     * Empty packets are treated as COM_QUERY packets by default.
-     */
-    gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, 1, &cmd);
-    proto->current_command = (mxs_mysql_cmd_t)cmd;
-
-    /**
-     * Now that we have the current command, we can check if this connection
-     * can be a candidate for the connection pool.
-     */
-    check_pool_candidate(dcb);
-}
-
-/**
  * Perform re-authentication of the client
  *
  * @param session   Client session
@@ -1212,230 +1161,87 @@ bool reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf)
     return rval;
 }
 
-/**
- * Detect if buffer includes partial mysql packet or multiple packets.
- * Store partial packet to dcb_readqueue. Send complete packets one by one
- * to router.
- *
- * It is assumed readbuf includes at least one complete packet.
- * Return 1 in success. If the last packet is incomplete return success but
- * leave incomplete packet to readbuf.
- *
- * @param session       Session pointer
- * @param capabilities  The capabilities of the service.
- * @param p_readbuf     Pointer to the address of GWBUF including the query
- *
- * @return 1 if succeed,
- */
-int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF** p_readbuf)
+void track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf)
 {
-    int rc = 1;
-    GWBUF* packetbuf;
-    do
+    mxb_assert(GWBUF_IS_CONTIGUOUS(packetbuf));
+
+    if (session_trx_is_ending(session))
     {
-        // Process client request one packet at a time
-        packetbuf = modutil_get_next_MySQL_packet(p_readbuf);
+        session_set_trx_state(session, SESSION_TRX_INACTIVE);
+    }
 
-        if (packetbuf != NULL)
+    if (mxs_mysql_get_command(packetbuf) == MXS_COM_QUERY)
+    {
+        uint32_t type = qc_get_trx_type_mask(packetbuf);
+
+        if (type & QUERY_TYPE_BEGIN_TRX)
         {
-            // TODO: Do this only when RCAP_TYPE_CONTIGUOUS_INPUT is requested
-            packetbuf = gwbuf_make_contiguous(packetbuf);
-            session_retain_statement(session, packetbuf);
-
-            MySQLProtocol* proto = (MySQLProtocol*)session->client_dcb->protocol_session();
-
-            // Track the command being executed
-            proto->track_query(packetbuf);
-
-            if (!proto->changing_user && !session_is_load_active(session))
+            if (type & QUERY_TYPE_DISABLE_AUTOCOMMIT)
             {
-                // Old command tracking code, still does some important work
-                // TODO: Move pool qualification somewhere else
-                update_current_command(session->client_dcb, packetbuf);
+                session_set_autocommit(session, false);
+                session_set_trx_state(session, SESSION_TRX_INACTIVE);
             }
-
-            if (rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_INPUT))
+            else
             {
-                mxb_assert(GWBUF_IS_CONTIGUOUS(packetbuf));
-                SERVICE* service = session->service;
-
-                if (rcap_type_required(capabilities, RCAP_TYPE_TRANSACTION_TRACKING)
-                    && !service->config().session_track_trx_state
-                    && !session_is_load_active(session))
+                mxs_session_trx_state_t trx_state;
+                if (type & QUERY_TYPE_WRITE)
                 {
-                    if (session_trx_is_ending(session))
-                    {
-                        session_set_trx_state(session, SESSION_TRX_INACTIVE);
-                    }
-
-                    if (mxs_mysql_get_command(packetbuf) == MXS_COM_QUERY)
-                    {
-                        uint32_t type = qc_get_trx_type_mask(packetbuf);
-
-                        if (type & QUERY_TYPE_BEGIN_TRX)
-                        {
-                            if (type & QUERY_TYPE_DISABLE_AUTOCOMMIT)
-                            {
-                                session_set_autocommit(session, false);
-                                session_set_trx_state(session, SESSION_TRX_INACTIVE);
-                            }
-                            else
-                            {
-                                mxs_session_trx_state_t trx_state;
-                                if (type & QUERY_TYPE_WRITE)
-                                {
-                                    trx_state = SESSION_TRX_READ_WRITE;
-                                }
-                                else if (type & QUERY_TYPE_READ)
-                                {
-                                    trx_state = SESSION_TRX_READ_ONLY;
-                                }
-                                else
-                                {
-                                    trx_state = SESSION_TRX_ACTIVE;
-                                }
-
-                                session_set_trx_state(session, trx_state);
-                            }
-                        }
-                        else if ((type & QUERY_TYPE_COMMIT) || (type & QUERY_TYPE_ROLLBACK))
-                        {
-                            uint32_t trx_state = session_get_trx_state(session);
-                            trx_state |= SESSION_TRX_ENDING_BIT;
-                            session_set_trx_state(session, (mxs_session_trx_state_t)trx_state);
-
-                            if (type & QUERY_TYPE_ENABLE_AUTOCOMMIT)
-                            {
-                                session_set_autocommit(session, true);
-                            }
-                        }
-                    }
+                    trx_state = SESSION_TRX_READ_WRITE;
                 }
-            }
-
-            bool changed_user = false;
-
-            if (!proto->changing_user && proto->current_command == MXS_COM_CHANGE_USER)
-            {
-                // Track the COM_CHANGE_USER progress at the session level
-                auto s = (MYSQL_session*)session->client_dcb->m_data;
-                s->changing_user = true;
-
-                changed_user = true;
-                send_auth_switch_request_packet(session->client_dcb);
-
-                // Store the original COM_CHANGE_USER for later
-                proto->stored_query = packetbuf;
-                packetbuf = NULL;
-                rc = 1;
-            }
-            else if (proto->changing_user)
-            {
-                mxb_assert(proto->current_command == MXS_COM_CHANGE_USER);
-                proto->changing_user = false;
-                bool ok = reauthenticate_client(session, packetbuf);
-                gwbuf_free(packetbuf);
-                packetbuf = proto->stored_query;
-                proto->stored_query = NULL;
-
-                if (ok)
+                else if (type & QUERY_TYPE_READ)
                 {
-                    // Authentication was successful, route the original COM_CHANGE_USER
-                    rc = 1;
+                    trx_state = SESSION_TRX_READ_ONLY;
                 }
                 else
                 {
-                    // Authentication failed, close the connection
-                    rc = 0;
-                    gwbuf_free(packetbuf);
-                    packetbuf = NULL;
-                    MXS_ERROR("User reauthentication failed for '%s'@'%s'",
-                              session->client_dcb->m_user,
-                              session->client_dcb->m_remote);
+                    trx_state = SESSION_TRX_ACTIVE;
                 }
-            }
 
-            if (packetbuf)
-            {
-                /** Route query */
-                rc = proto->do_routeQuery(packetbuf);
+                session_set_trx_state(session, trx_state);
             }
-
-            proto->changing_user = changed_user;
         }
-        else
+        else if ((type & QUERY_TYPE_COMMIT) || (type & QUERY_TYPE_ROLLBACK))
         {
-            rc = 1;
-            goto return_rc;
+            uint32_t trx_state = session_get_trx_state(session);
+            trx_state |= SESSION_TRX_ENDING_BIT;
+            session_set_trx_state(session, (mxs_session_trx_state_t)trx_state);
+
+            if (type & QUERY_TYPE_ENABLE_AUTOCOMMIT)
+            {
+                session_set_autocommit(session, true);
+            }
         }
     }
-    while (rc == 1 && *p_readbuf != NULL);
-
-return_rc:
-    return rc;
 }
 
-/**
- * @brief Client read event, common processing after single statement handling
- *
- * @param dcb           Descriptor control block
- * @param read_buffer   A buffer containing the data read from client
- * @param capabilities  The router capabilities flags
- * @return 0 if succeed, 1 otherwise
- */
-int finish_processing(DCB* dcb, GWBUF* read_buffer, uint64_t capabilities)
+bool handle_change_user(MySQLProtocol* proto, bool* changed_user, GWBUF** packetbuf)
 {
-    MXS_SESSION* session = dcb->session();
-    uint8_t* payload = GWBUF_DATA(read_buffer);
-    MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol_session();
-    int return_code = 0;
+    bool ok = true;
 
-    if (rcap_type_required(capabilities, RCAP_TYPE_STMT_INPUT)
-        || proto->current_command == MXS_COM_CHANGE_USER)
+    if (!proto->changing_user && proto->reply().command() == MXS_COM_CHANGE_USER)
     {
-        /**
-         * Feed each statement completely and separately to router.
-         */
-        return_code = route_by_statement(session, capabilities, &read_buffer) ? 0 : 1;
+        // Track the COM_CHANGE_USER progress at the session level
+        auto s = (MYSQL_session*)proto->session()->client_dcb->m_data;
+        s->changing_user = true;
 
-        if (read_buffer != NULL)
-        {
-            /*
-             * Must have been data left over
-             * Add incomplete mysql packet to read queue
-             */
+        *changed_user = true;
+        send_auth_switch_request_packet(proto->session()->client_dcb);
 
-            dcb_readq_append(dcb, read_buffer);
-        }
+        // Store the original COM_CHANGE_USER for later
+        proto->stored_query = *packetbuf;
+        *packetbuf = NULL;
     }
-    else
+    else if (proto->changing_user)
     {
-        /** Check if this connection qualifies for the connection pool */
-        check_pool_candidate(dcb);
-
-        /** Feed the whole buffer to the router */
-        return_code = proto->do_routeQuery(read_buffer) ? 0 : 1;
-    }
-    /*
-     * else return_code is still 0 from when it was originally set
-     * Note that read_buffer has been freed or transferred by this point
-     */
-
-    if (return_code != 0)
-    {
-        /** Routing failed, close the client connection */
-        dcb->session()->close_reason = SESSION_CLOSE_ROUTING_FAILED;
-        dcb_close(dcb);
-        MXS_ERROR("Routing the query failed. Session will be closed.");
-    }
-    else if (proto->current_command == MXS_COM_QUIT)
-    {
-        /** Close router session which causes closing of backends */
-        mxb_assert_message(session_valid_for_pool(dcb->session()), "Session should qualify for pooling");
-        dcb_close(dcb);
+        mxb_assert(proto->reply().command() == MXS_COM_CHANGE_USER);
+        proto->changing_user = false;
+        bool ok = reauthenticate_client(proto->session(), *packetbuf);
+        gwbuf_free(*packetbuf);
+        *packetbuf = proto->stored_query;
+        proto->stored_query = nullptr;
     }
 
-    return return_code;
+    return ok;
 }
 
 void extract_user(char* token, std::string* user)
@@ -1612,20 +1418,15 @@ bool parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* kt_out,
  * commands in the beginning of the packet and with no comments.
  * Increased parsing would slow down the handling of every single query.
  *
- * @param dcb Client dcb
+ * @param dcb         Client dcb
  * @param read_buffer Input buffer
- * @param current Latest value of rval in calling function
- * @param is_complete Is read_buffer a complete sql packet
- * @param packet_len Read from sql header
- * @return Updated (or old) value of rval
+ * @param packet_len  Length of the protocol packet
+ *
+ * @return RES_CONTINUE or RES_END
  */
-spec_com_res_t handle_query_kill(DCB* dcb,
-                                 GWBUF* read_buffer,
-                                 spec_com_res_t current,
-                                 bool is_complete,
-                                 unsigned int packet_len)
+spec_com_res_t handle_query_kill(DCB* dcb, GWBUF* read_buffer, uint32_t packet_len)
 {
-    spec_com_res_t rval = current;
+    spec_com_res_t rval = RES_CONTINUE;
     /* First, we need to detect the text "KILL" (ignorecase) in the start
      * of the packet. Copy just enough characters. */
     const size_t KILL_BEGIN_LEN = sizeof(WORD_KILL) - 1;
@@ -1634,48 +1435,39 @@ spec_com_res_t handle_query_kill(DCB* dcb,
                                         MYSQL_HEADER_LEN + 1,
                                         KILL_BEGIN_LEN,
                                         (uint8_t*)startbuf);
-    if (is_complete)
-    {
-        if (strncasecmp(WORD_KILL, startbuf, KILL_BEGIN_LEN) == 0)
-        {
-            /* Good chance that the query is a KILL-query. Copy the entire
-             * buffer and process. */
-            size_t buffer_len = packet_len - (MYSQL_HEADER_LEN + 1);
-            char querybuf[buffer_len + 1];      // 0-terminated
-            copied_len = gwbuf_copy_data(read_buffer,
-                                         MYSQL_HEADER_LEN + 1,
-                                         buffer_len,
-                                         (uint8_t*)querybuf);
-            querybuf[copied_len] = '\0';
-            kill_type_t kt = KT_CONNECTION;
-            uint64_t thread_id = 0;
-            std::string user;
 
-            if (parse_kill_query(querybuf, &thread_id, &kt, &user))
+    if (strncasecmp(WORD_KILL, startbuf, KILL_BEGIN_LEN) == 0)
+    {
+        /* Good chance that the query is a KILL-query. Copy the entire
+         * buffer and process. */
+        size_t buffer_len = packet_len - (MYSQL_HEADER_LEN + 1);
+        char querybuf[buffer_len + 1];          // 0-terminated
+        copied_len = gwbuf_copy_data(read_buffer,
+                                     MYSQL_HEADER_LEN + 1,
+                                     buffer_len,
+                                     (uint8_t*)querybuf);
+        querybuf[copied_len] = '\0';
+        kill_type_t kt = KT_CONNECTION;
+        uint64_t thread_id = 0;
+        std::string user;
+
+        if (parse_kill_query(querybuf, &thread_id, &kt, &user))
+        {
+            rval = RES_END;
+
+            if (thread_id > 0)
             {
-                rval = RES_END;
-
-                if (thread_id > 0)
-                {
-                    mxs_mysql_execute_kill(dcb->session(), thread_id, kt);
-                }
-                else if (!user.empty())
-                {
-                    mxs_mysql_execute_kill_user(dcb->session(), user.c_str(), kt);
-                }
-
-                mxs_mysql_send_ok(dcb, 1, 0, NULL);
+                mxs_mysql_execute_kill(dcb->session(), thread_id, kt);
             }
+            else if (!user.empty())
+            {
+                mxs_mysql_execute_kill_user(dcb->session(), user.c_str(), kt);
+            }
+
+            mxs_mysql_send_ok(dcb, 1, 0, NULL);
         }
     }
-    else
-    {
-        /* Look at the start of the query and see if it might contain "KILL" */
-        if (strncasecmp(WORD_KILL, startbuf, copied_len) == 0)
-        {
-            rval = RES_MORE_DATA;
-        }
-    }
+
     return rval;
 }
 
@@ -1683,30 +1475,39 @@ spec_com_res_t handle_query_kill(DCB* dcb,
  * Some SQL commands/queries need to be detected and handled by the protocol
  * and MaxScale instead of being routed forward as is.
  *
- * @param dcb Client dcb
- * @param read_buffer the current read buffer
- * @param nbytes_read How many bytes were read
+ * @param dcb         Client dcb
+ * @param read_buffer The current read buffer
+ * @param cmd         Current command being executed
+ *
  * @return see @c spec_com_res_t
  */
-spec_com_res_t process_special_commands(DCB* dcb, GWBUF* read_buffer, int nbytes_read)
+spec_com_res_t process_special_commands(DCB* dcb, GWBUF* read_buffer, uint8_t cmd)
 {
     spec_com_res_t rval = RES_CONTINUE;
-    unsigned int packet_len = MYSQL_GET_PAYLOAD_LEN((uint8_t*)GWBUF_DATA(read_buffer)) + MYSQL_HEADER_LEN;
-    bool is_complete = gwbuf_length(read_buffer) >= packet_len;
 
-    /**
-     * Handle COM_SET_OPTION. This seems to be only used by some versions of PHP.
-     *
-     * The option is stored as a two byte integer with the values 0 for enabling
-     * multi-statements and 1 for disabling it.
-     */
-    MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol_session();
-    uint8_t opt;
-
-    if (proto->current_command == MXS_COM_SET_OPTION
-        && gwbuf_copy_data(read_buffer, MYSQL_HEADER_LEN + 2, 1, &opt))
+    if (cmd == MXS_COM_QUIT)
     {
-        if (opt)
+        /** The client is closing the connection. We know that this will be the
+         * last command the client sends so the backend connections are very likely
+         * to be in an idle state.
+         *
+         * If the client is pipelining the queries (i.e. sending N request as
+         * a batch and then expecting N responses) then it is possible that
+         * the backend connections are not idle when the COM_QUIT is received.
+         * In most cases we can assume that the connections are idle. */
+        session_qualify_for_pool(dcb->session());
+    }
+    else if (cmd == MXS_COM_SET_OPTION)
+    {
+        /**
+         * This seems to be only used by some versions of PHP.
+         *
+         * The option is stored as a two byte integer with the values 0 for enabling
+         * multi-statements and 1 for disabling it.
+         */
+        MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol_session();
+
+        if (GWBUF_DATA(read_buffer)[MYSQL_HEADER_LEN + 2])
         {
             proto->client_capabilities &= ~GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS;
         }
@@ -1715,44 +1516,111 @@ spec_com_res_t process_special_commands(DCB* dcb, GWBUF* read_buffer, int nbytes
             proto->client_capabilities |= GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS;
         }
     }
-    /**
-     * Handle COM_PROCESS_KILL
-     */
-    else if (proto->current_command == MXS_COM_PROCESS_KILL)
+    else if (cmd == MXS_COM_PROCESS_KILL)
     {
-        /* Make sure we have a complete SQL packet before trying to read the
-         * process id. If not, try again next time. */
-        if (!is_complete)
-        {
-            rval = RES_MORE_DATA;
-        }
-        else
-        {
-            uint8_t bytes[4];
-            if (gwbuf_copy_data(read_buffer, MYSQL_HEADER_LEN + 1, sizeof(bytes), bytes)
-                == sizeof(bytes))
-            {
-                uint64_t process_id = gw_mysql_get_byte4(bytes);
-                mxs_mysql_execute_kill(dcb->session(), process_id, KT_CONNECTION);
-                mxs_mysql_send_ok(dcb, 1, 0, NULL);
-                rval = RES_END;
-            }
-        }
+        uint64_t process_id = gw_mysql_get_byte4(GWBUF_DATA(read_buffer) + MYSQL_HEADER_LEN + 1);
+        mxs_mysql_execute_kill(dcb->session(), process_id, KT_CONNECTION);
+        mxs_mysql_send_ok(dcb, 1, 0, NULL);
+        rval = RES_END;
     }
-    else if (proto->current_command == MXS_COM_QUERY)
+    else if (cmd == MXS_COM_QUERY)
     {
         /* Limits on the length of the queries in which "KILL" is searched for. Reducing
          * LONGEST_KILL will reduce overhead but also limit the range of accepted queries. */
         const int SHORTEST_KILL = sizeof("KILL 1") - 1;
         const int LONGEST_KILL = sizeof("KILL CONNECTION 12345678901234567890 ;");
+        auto packet_len = gwbuf_length(read_buffer);
+
         /* Is length within limits for a kill-type query? */
         if (packet_len >= (MYSQL_HEADER_LEN + 1 + SHORTEST_KILL)
             && packet_len <= (MYSQL_HEADER_LEN + 1 + LONGEST_KILL))
         {
-            rval = handle_query_kill(dcb, read_buffer, rval, is_complete, packet_len);
+            rval = handle_query_kill(dcb, read_buffer, packet_len);
         }
     }
+
     return rval;
+}
+
+/**
+ * Detect if buffer includes partial mysql packet or multiple packets.
+ * Store partial packet to dcb_readqueue. Send complete packets one by one
+ * to router.
+ *
+ * It is assumed readbuf includes at least one complete packet.
+ * Return 1 in success. If the last packet is incomplete return success but
+ * leave incomplete packet to readbuf.
+ *
+ * @param session       Session pointer
+ * @param capabilities  The capabilities of the service.
+ * @param p_readbuf     Pointer to the address of GWBUF including the query
+ *
+ * @return 1 if succeed,
+ */
+int route_by_statement(MySQLProtocol* proto, uint64_t capabilities, GWBUF** p_readbuf)
+{
+    int rc = 1;
+    auto session = proto->session();
+    auto dcb = session->client_dcb;
+
+    while (GWBUF* packetbuf = modutil_get_next_MySQL_packet(p_readbuf))
+    {
+        // TODO: Do this only when RCAP_TYPE_CONTIGUOUS_INPUT is requested
+        packetbuf = gwbuf_make_contiguous(packetbuf);
+        session_retain_statement(session, packetbuf);
+
+        // Track the command being executed
+        proto->track_query(packetbuf);
+
+        if (char* message = handle_variables(session, &packetbuf))
+        {
+            rc = dcb->protocol_write(modutil_create_mysql_err_msg(1, 0, 1193, "HY000", message));
+            MXS_FREE(message);
+            continue;
+        }
+
+        // Must be done whether or not there were any changes, as the query classifier
+        // is thread and not session specific.
+        qc_set_sql_mode(static_cast<qc_sql_mode_t>(session->client_protocol_data));
+
+        if (process_special_commands(dcb, packetbuf, proto->reply().command()) == RES_END)
+        {
+            gwbuf_free(packetbuf);
+            continue;
+        }
+
+        if (rcap_type_required(capabilities, RCAP_TYPE_TRANSACTION_TRACKING)
+            && !session->service->config().session_track_trx_state
+            && !session_is_load_active(session))
+        {
+            track_transaction_state(session, packetbuf);
+        }
+
+        bool changed_user = false;
+
+        if (!handle_change_user(proto, &changed_user, &packetbuf))
+        {
+            MXS_ERROR("User reauthentication failed for %s", session->user_and_host().c_str());
+            gwbuf_free(packetbuf);
+            rc = 0;
+            break;
+        }
+
+        if (packetbuf)
+        {
+            /** Route query */
+            rc = proto->do_routeQuery(packetbuf);
+        }
+
+        proto->changing_user = changed_user;
+
+        if (rc != 1)
+        {
+            break;
+        }
+    }
+
+    return rc;
 }
 
 /**
@@ -1770,14 +1638,11 @@ spec_com_res_t process_special_commands(DCB* dcb, GWBUF* read_buffer, int nbytes
  * @param nbytes_read   The number of bytes of data read
  * @return 0 if succeed, 1 otherwise
  */
-int perform_normal_read(DCB* dcb, GWBUF* read_buffer, int nbytes_read)
+int perform_normal_read(DCB* dcb, GWBUF* read_buffer, uint32_t nbytes_read)
 {
-    MXS_SESSION* session;
-    MXS_SESSION::State session_state_value;
-    uint64_t capabilities = 0;
+    MXS_SESSION* session = dcb->session();
+    auto session_state_value = session->state();
 
-    session = dcb->session();
-    session_state_value = session->state();
     if (session_state_value != MXS_SESSION::State::STARTED)
     {
         if (session_state_value != MXS_SESSION::State::STOPPING)
@@ -1790,91 +1655,47 @@ int perform_normal_read(DCB* dcb, GWBUF* read_buffer, int nbytes_read)
         return 1;
     }
 
-    /** Ask what type of input the router/filter chain expects */
-    capabilities = service_get_capabilities(session->service);
-    MySQLProtocol* proto = static_cast<MySQLProtocol*>(dcb->protocol_session());
+    // Make sure that a complete packet is read before continuing
+    uint8_t pktlen[MYSQL_HEADER_LEN];
+    size_t n_copied = gwbuf_copy_data(read_buffer, 0, MYSQL_HEADER_LEN, pktlen);
 
-    /** If the router requires statement input we need to make sure that
-     * a complete SQL packet is read before continuing. The current command
-     * that is tracked by the protocol module is updated in route_by_statement() */
-    if (rcap_type_required(capabilities, RCAP_TYPE_STMT_INPUT)
-        || proto->current_command == MXS_COM_CHANGE_USER)
+    if (n_copied != sizeof(pktlen)
+        || nbytes_read < MYSQL_GET_PAYLOAD_LEN(pktlen) + MYSQL_HEADER_LEN)
     {
-        uint8_t pktlen[MYSQL_HEADER_LEN];
-        size_t n_copied = gwbuf_copy_data(read_buffer, 0, MYSQL_HEADER_LEN, pktlen);
-
-        if (n_copied != sizeof(pktlen)
-            || (uint32_t)nbytes_read < MYSQL_GET_PAYLOAD_LEN(pktlen) + MYSQL_HEADER_LEN)
-        {
-            dcb_readq_append(dcb, read_buffer);
-            return 0;
-        }
-
-        /**
-         * Update the current command, required by KILL command processing.
-         * If a COM_CHANGE_USER is in progress, this must not be done as the client
-         * is sending authentication data that does not have the command byte.
-         */
-        MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol_session();
-
-        if (!proto->changing_user && !session_is_load_active(session))
-        {
-            proto->current_command = (mxs_mysql_cmd_t)mxs_mysql_get_command(read_buffer);
-        }
-
-        char* message = handle_variables(session, &read_buffer);
-
-        if (message)
-        {
-            int rv = dcb->protocol_write(modutil_create_mysql_err_msg(1, 0, 1193, "HY000", message));
-            MXS_FREE(message);
-            return rv;
-        }
-        else
-        {
-            // Must be done whether or not there were any changes, as the query classifier
-            // is thread and not session specific.
-            qc_set_sql_mode(static_cast<qc_sql_mode_t>(session->client_protocol_data));
-        }
-    }
-    /** Update the current protocol command being executed */
-    else if (!process_client_commands(dcb, nbytes_read, &read_buffer))
-    {
+        dcb_readq_append(dcb, read_buffer);
         return 0;
     }
 
-    /** The query classifier classifies according to the service's server that has
-     * the smallest version number. */
+    // The query classifier classifies according to the service's server that has the smallest version number
     qc_set_server_version(service_get_version(session->service, SERVICE_VERSION_MIN));
 
-    spec_com_res_t res = RES_CONTINUE;
+    /**
+     * Feed each statement completely and separately to router.
+     */
+    MySQLProtocol* proto = static_cast<MySQLProtocol*>(dcb->protocol_session());
+    auto capabilities = service_get_capabilities(session->service);
+    int rval = route_by_statement(proto, capabilities, &read_buffer) ? 0 : 1;
 
-    if (!proto->changing_user)
+    if (read_buffer != NULL)
     {
-        res = process_special_commands(dcb, read_buffer, nbytes_read);
+        // Must have been data left over, add incomplete mysql packet to read queue
+        dcb_readq_append(dcb, read_buffer);
     }
 
-    int rval = 1;
-    switch (res)
+    if (rval != 0)
     {
-    case RES_MORE_DATA:
-        dcb_readq_set(dcb, read_buffer);
-        rval = 0;
-        break;
-
-    case RES_END:
-        // Do not send this packet for routing
-        gwbuf_free(read_buffer);
-        rval = 0;
-        break;
-
-    case RES_CONTINUE:
-        rval = finish_processing(dcb, read_buffer, capabilities);
-        break;
-
-    default:
-        mxb_assert(!true);
+        /** Routing failed, close the client connection */
+        dcb->session()->close_reason = SESSION_CLOSE_ROUTING_FAILED;
+        dcb_close(dcb);
+        MXS_ERROR("Routing the query failed. Session will be closed.");
     }
+    else if (proto->reply().command() == MXS_COM_QUIT)
+    {
+        /** Close router session which causes closing of backends */
+        mxb_assert_message(session_valid_for_pool(dcb->session()), "Session should qualify for pooling");
+        dcb_close(dcb);
+    }
+
     return rval;
 }
 
@@ -1938,7 +1759,6 @@ void parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data)
     MXS_DEBUG("trx state:%s", session_trx_state_to_string(ses->trx_state));
     MXS_DEBUG("autcommit:%s", session_is_autocommit(ses) ? "ON" : "OFF");
 }
-
 }
 
 /**
@@ -2203,7 +2023,6 @@ GWBUF* mariadbclient_reject(const char* host)
     ss << "Host '" << host << "' is temporarily blocked due to too many authentication failures.";
     return modutil_create_mysql_err_msg(0, 0, 1129, "HY000", ss.str().c_str());
 }
-
 }
 
 /**
@@ -2249,7 +2068,6 @@ void thread_finish(void)
 {
     mysql_thread_end();
 }
-
 }
 
 /**
@@ -2261,13 +2079,13 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     static MXS_PROTOCOL_API MyObject =
     {
-        mariadbclient_read,                /* EPOLLIN handler                    */
-        mariadbclient_write,               /* Write data from MaxScale to client */
-        mariadbclient_write_ready,         /* EPOLLOUT handler                   */
-        mariadbclient_error,               /* EPOLLERR handler                   */
-        mariadbclient_hangup,              /* EPOLLHUP handler                   */
+        mariadbclient_read,                 /* EPOLLIN handler                    */
+        mariadbclient_write,                /* Write data from MaxScale to client */
+        mariadbclient_write_ready,          /* EPOLLOUT handler                   */
+        mariadbclient_error,                /* EPOLLERR handler                   */
+        mariadbclient_hangup,               /* EPOLLHUP handler                   */
         mariadbclient_new_client_session,
-        NULL,                              /* new_backend_session                */
+        NULL,                               /* new_backend_session                */
         mariadbclient_free_session,
         mariadbclient_init_connection,
         mariadbclient_finish_connection,

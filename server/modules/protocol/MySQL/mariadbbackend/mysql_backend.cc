@@ -310,30 +310,10 @@ mxs_auth_state_t handle_server_response(DCB* generic_dcb, GWBUF* buffer)
  */
 static inline void prepare_for_write(DCB* dcb, GWBUF* buffer)
 {
+    mxb_assert(dcb->session());
+
     MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol_session();
-
-    // The DCB's session is set to null when it is put into the persistent connection pool.
-    if (dcb->session())
-    {
-        uint64_t capabilities = service_get_capabilities(dcb->session()->service);
-
-        /**
-         * Copy the current command being executed to this backend. For statement
-         * based routers, this is tracked by using the current command being executed.
-         * For routers that stream data, the client protocol command tracking data
-         * is used which does not guarantee that the correct command is tracked if
-         * something queues commands internally.
-         */
-        if (rcap_type_required(capabilities, RCAP_TYPE_REQUEST_TRACKING))
-        {
-            proto->track_query(buffer);
-        }
-        else if (dcb->session()->client_dcb && dcb->session()->client_dcb->protocol_session())
-        {
-            MySQLProtocol* client_proto = (MySQLProtocol*)dcb->session()->client_dcb->protocol_session();
-            proto->current_command = client_proto->current_command;
-        }
-    }
+    proto->track_query(buffer);
 
     if (GWBUF_SHOULD_COLLECT_RESULT(buffer))
     {
@@ -542,21 +522,23 @@ static inline bool session_ok_to_route(DCB* dcb)
 
 static inline bool expecting_text_result(MySQLProtocol* proto)
 {
-    return proto->current_command == MXS_COM_QUERY
-           || proto->current_command == MXS_COM_STMT_EXECUTE
-           ||   /**
-                 * The addition of COM_STMT_FETCH to the list of commands that produce
-                 * result sets is slightly wrong. The command can generate complete
-                 * result sets but it can also generate incomplete ones if cursors
-                 * are used. The use of cursors most likely needs to be detected on
-                 * an upper level and the use of this function avoided in those cases.
-                 */
-           proto->current_command == MXS_COM_STMT_FETCH;
+    /**
+     * The addition of COM_STMT_FETCH to the list of commands that produce
+     * result sets is slightly wrong. The command can generate complete
+     * result sets but it can also generate incomplete ones if cursors
+     * are used. The use of cursors most likely needs to be detected on
+     * an upper level and the use of this function avoided in those cases.
+     *
+     * TODO: Revisit this to make sure it's needed.
+     */
+
+    uint8_t cmd = proto->reply().command();
+    return cmd == MXS_COM_QUERY || cmd == MXS_COM_STMT_EXECUTE || cmd == MXS_COM_STMT_FETCH;
 }
 
 static inline bool expecting_ps_response(MySQLProtocol* proto)
 {
-    return proto->current_command == MXS_COM_STMT_PREPARE;
+    return proto->reply().command() == MXS_COM_STMT_PREPARE;
 }
 
 static inline bool complete_ps_response(GWBUF* buffer)
@@ -1149,7 +1131,7 @@ static int gw_MySQLWrite_backend(DCB* plain_dcb, GWBUF* queue)
 
             prepare_for_write(dcb, queue);
 
-            if (backend_protocol->current_command == MXS_COM_CHANGE_USER)
+            if (backend_protocol->reply().command() == MXS_COM_CHANGE_USER)
             {
                 return gw_change_user(dcb, dcb->session(), queue);
             }

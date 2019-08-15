@@ -1562,9 +1562,11 @@ void mxs_mysql_get_session_track_info(GWBUF* buff, MySQLProtocol* proto)
                 mxs_mysql_parse_ok_packet(buff, offset, packet_len);
             }
 
-            if ((proto->current_command == MXS_COM_QUERY
-                 || proto->current_command == MXS_COM_STMT_FETCH
-                 || proto->current_command == MXS_COM_STMT_EXECUTE)
+            uint8_t current_command = proto->reply().command();
+
+            if ((current_command == MXS_COM_QUERY
+                 || current_command == MXS_COM_STMT_FETCH
+                 || current_command == MXS_COM_STMT_EXECUTE)
                 && cmd == MYSQL_REPLY_EOF)
             {
                 proto->num_eof_packets++;

@@ -36,9 +36,9 @@
  */
 typedef enum routing_capability
 {
-    /**< Statements are delivered one per buffer. */
+    /**< Statements are delivered one per buffer (currently always on). */
     RCAP_TYPE_STMT_INPUT = 0x0001,      /* 0b0000000000000001 */
-    /**< Each delivered buffer is contiguous; implies RCAP_TYPE_STMT_INPUT. */
+    /**< Each delivered buffer is contiguous; implies RCAP_TYPE_STMT_INPUT (currently always on). */
     RCAP_TYPE_CONTIGUOUS_INPUT = 0x0003,    /* 0b0000000000000011 */
     /**< The transaction state and autocommit mode of the session are tracked;
      *    implies RCAP_TYPE_CONTIGUOUS_INPUT and RCAP_TYPE_STMT_INPUT. */
