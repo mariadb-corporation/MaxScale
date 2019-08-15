@@ -208,11 +208,6 @@ bool RWSplitSession::route_stored_query()
         decltype(m_query_queue) temp_storage;
         temp_storage.swap(m_query_queue);
 
-        // TODO: Move the handling of queued queries to the client protocol
-        // TODO: module where the command tracking is done automatically.
-        uint8_t cmd = mxs_mysql_get_command(query.get());
-        mysql_protocol_set_current_command(m_session->client_dcb, (mxs_mysql_cmd_t)cmd);
-
         if (!routeQuery(query.release()))
         {
             rval = false;

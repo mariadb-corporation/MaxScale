@@ -74,12 +74,6 @@ const char* gw_mysql_protocol_state2string(int state)
     }
 }
 
-void mysql_protocol_set_current_command(DCB* dcb, mxs_mysql_cmd_t cmd)
-{
-    MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol_session();
-    proto->current_command = cmd;
-}
-
 GWBUF* mysql_create_com_quit(GWBUF* bufparam,
                              int packet_number)
 {
@@ -1213,12 +1207,6 @@ bool mxs_mysql_more_results_after_ok(GWBUF* buffer)
     return rval;
 }
 
-mxs_mysql_cmd_t mxs_mysql_current_command(MXS_SESSION* session)
-{
-    MySQLProtocol* proto = (MySQLProtocol*)session->client_dcb->protocol_session();
-    return proto->current_command;
-}
-
 const char* mxs_mysql_get_current_db(MXS_SESSION* session)
 {
     MYSQL_session* data = (MYSQL_session*)session->client_dcb->m_data;
@@ -2082,11 +2070,10 @@ void MySQLProtocol::track_query(GWBUF* buffer)
             set_reply_state(ReplyState::START);
         }
     }
-    else if (!large_query)
+    else if (!m_large_query)
     {
         m_reply.clear();
         m_reply.set_command(MYSQL_GET_COMMAND(data));
-        current_command = (mxs_mysql_cmd_t) m_reply.command();
 
         MXS_INFO("%02hhx: %s", m_reply.command(), mxs::extract_sql(buffer).c_str());
 
@@ -2115,5 +2102,5 @@ void MySQLProtocol::track_query(GWBUF* buffer)
      * byte extraction for the next packet. This way current_command always
      * contains the latest command executed on this backend.
      */
-    large_query = MYSQL_GET_PAYLOAD_LEN(data) == MYSQL_PACKET_LENGTH_MAX;
+    m_large_query = MYSQL_GET_PAYLOAD_LEN(data) == MYSQL_PACKET_LENGTH_MAX;
 }

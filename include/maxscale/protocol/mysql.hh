@@ -385,7 +385,6 @@ struct MySQLProtocol : public MXS_PROTOCOL_SESSION
     //
     // Legacy public members
     //
-    mxs_mysql_cmd_t        current_command = MXS_COM_UNDEFINED;         /*< Current command being executed */
     mxs_auth_state_t       protocol_auth_state = MXS_AUTH_STATE_INIT;   /*< Authentication state */
     mysql_protocol_state_t protocol_state = MYSQL_PROTOCOL_ACTIVE;      /*< Protocol state */
 
@@ -402,10 +401,6 @@ struct MySQLProtocol : public MXS_PROTOCOL_SESSION
     bool         changing_user = false;
     bool         track_state = false;   /*< Track session state */
     uint32_t     num_eof_packets = 0;   /*< Encountered eof packet number, used for check packet type */
-    bool         large_query = false;   /*< Whether to ignore the command byte of the next packet*/
-
-    size_t client_protocol_packet_length = 0;   /**< protocol packet length */
-    size_t client_protocol_bytes_processed = 0; /**< How many bytes have been read */
 
     //
     // END Legacy public members
@@ -535,16 +530,6 @@ MYSQL_session* mysql_session_alloc();
  * @return String representation of the state
  */
 const char* gw_mysql_protocol_state2string(int state);
-
-/**
- * Set current command being executed
- *
- * @param dcb The DCB whose protocol is modified
- * @param cmd The command being executed
- *
- * @note This function should not be used in normal operation
- */
-void mysql_protocol_set_current_command(DCB* dcb, mxs_mysql_cmd_t cmd);
 
 GWBUF* mysql_create_com_quit(GWBUF* bufparam, int sequence);
 GWBUF* mysql_create_custom_error(int sequence, int affected_rows, const char* msg);
