@@ -64,12 +64,11 @@ static int                   cdc_write_event(DCB* dcb);
 static int                   cdc_write(DCB* dcb, GWBUF* queue);
 static int                   cdc_error(DCB* dcb);
 static int                   cdc_hangup(DCB* dcb);
-static MXS_PROTOCOL_SESSION* cdc_new_client_session(MXS_SESSION*, mxs::Component*);
-static void                  cdc_free_session(MXS_PROTOCOL_SESSION*);
+
 static bool                  cdc_init_connection(DCB*);
 static void                  cdc_finish_connection(DCB* dcb);
 static CDC_protocol*         cdc_protocol_init();
-static void                  cdc_protocol_done(CDC_protocol*);
+
 static int                   do_auth(DCB* dcb, GWBUF* buffer, void* data);
 static void                  write_auth_ack(DCB* dcb);
 static void                  write_auth_err(DCB* dcb);
@@ -77,6 +76,56 @@ static void                  write_auth_err(DCB* dcb);
 static char* cdc_default_auth()
 {
     return const_cast<char*>("CDCPlainAuth");
+}
+
+MXS_PROTOCOL_SESSION* CDC_protocol::create(MXS_SESSION* session, mxs::Component* component)
+{
+    return cdc_protocol_init();
+}
+
+char* CDC_protocol::auth_default()
+{
+    return cdc_default_auth();
+}
+
+int32_t CDC_protocol::read(DCB* dcb)
+{
+    return cdc_read_event(dcb);
+}
+
+int32_t CDC_protocol::write(DCB* dcb, GWBUF* buffer)
+{
+    return cdc_write(dcb, buffer);
+}
+
+int32_t CDC_protocol::write_ready(DCB* dcb)
+{
+    return cdc_write_event(dcb);
+}
+
+int32_t CDC_protocol::error(DCB* dcb)
+{
+    return cdc_error(dcb);
+}
+
+int32_t CDC_protocol::hangup(DCB* dcb)
+{
+    return cdc_hangup(dcb);
+}
+
+bool CDC_protocol::init_connection(DCB* dcb)
+{
+    return cdc_init_connection(dcb);
+}
+
+void CDC_protocol::finish_connection(DCB* dcb)
+{
+    cdc_finish_connection(dcb);
+}
+
+GWBUF* CDC_protocol::reject(const char* host)
+{
+    return nullptr;
 }
 
 extern "C"
@@ -91,24 +140,6 @@ extern "C"
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MXS_PROTOCOL_API MyObject =
-    {
-        cdc_read_event,                /* Read - EPOLLIN handler        */
-        cdc_write,                     /* Write - data from gateway     */
-        cdc_write_event,               /* WriteReady - EPOLLOUT handler */
-        cdc_error,                     /* Error - EPOLLERR handler      */
-        cdc_hangup,                    /* HangUp - EPOLLHUP handler     */
-        cdc_new_client_session,
-        NULL,
-        cdc_free_session,
-        cdc_init_connection,
-        cdc_finish_connection,
-        cdc_default_auth,              /* default authentication        */
-        NULL,
-        NULL,
-        NULL,
-    };
-
     static MXS_MODULE info =
     {
         MXS_MODULE_API_PROTOCOL,
@@ -117,7 +148,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "A Change Data Capture Listener implementation for use in binlog events retrieval",
         "V1.0.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &MyObject,
+        &mxs::ClientProtocolApi<CDC_protocol>::s_api,
         NULL,       /* Process init. */
         NULL,       /* Process finish. */
         NULL,       /* Thread init. */
@@ -291,11 +322,6 @@ static int cdc_hangup(DCB* dcb)
     return 0;
 }
 
-static MXS_PROTOCOL_SESSION* cdc_new_client_session(MXS_SESSION* session, mxs::Component*)
-{
-    return cdc_protocol_init();
-}
-
 static bool cdc_init_connection(DCB* client_dcb)
 {
     bool inited = false;
@@ -330,14 +356,6 @@ static void cdc_finish_connection(DCB* client_dcb)
 {
 }
 
-static void cdc_free_session(MXS_PROTOCOL_SESSION* protocol_session)
-{
-    if (protocol_session)
-    {
-        cdc_protocol_done(static_cast<CDC_protocol*>(protocol_session));
-    }
-}
-
 /**
  * Allocate a new CDC protocol structure
  *
@@ -346,37 +364,13 @@ static void cdc_free_session(MXS_PROTOCOL_SESSION* protocol_session)
  */
 static CDC_protocol* cdc_protocol_init()
 {
-    CDC_protocol* p;
-
-    p = (CDC_protocol*) MXS_CALLOC(1, sizeof(CDC_protocol));
-
-    if (p == NULL)
+    CDC_protocol* p = new (std::nothrow) CDC_protocol();
+    if (p)
     {
-        return NULL;
+        /* memory allocation here */
+        p->state = CDC_STATE_WAIT_FOR_AUTH;
     }
-
-    p->state = CDC_ALLOC;
-
-
-    /* memory allocation here */
-    p->state = CDC_STATE_WAIT_FOR_AUTH;
-
     return p;
-}
-
-/**
- * Free resources in CDC protocol
- *
- * @param dcb    DCB with allocateid protocol
- *
- */
-static void cdc_protocol_done(CDC_protocol* p)
-{
-    /* deallocate memory here */
-
-    p->state = CDC_STATE_CLOSE;
-
-    MXS_FREE(p);
 }
 
 /**

@@ -48,6 +48,7 @@
 #include <maxscale/limits.h>
 #include <maxscale/listener.hh>
 #include <maxscale/poll.hh>
+#include <maxscale/protocol2.hh>
 #include <maxscale/router.hh>
 #include <maxscale/service.hh>
 #include <maxscale/utils.h>

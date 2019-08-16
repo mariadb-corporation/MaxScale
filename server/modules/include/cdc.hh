@@ -18,6 +18,7 @@
 #include <openssl/sha.h>
 
 #include <maxscale/protocol.hh>
+#include <maxscale/protocol2.hh>
 
 #define CDC_SMALL_BUFFER       1024
 #define CDC_METHOD_MAXLEN      128
@@ -55,8 +56,24 @@ struct CDC_session
 /**
  * CDC protocol
  */
-struct CDC_protocol : MXS_PROTOCOL_SESSION
+class CDC_protocol : public mxs::ClientProtocol
 {
+public:
+    static MXS_PROTOCOL_SESSION* create(MXS_SESSION* session, mxs::Component* component);
+    ~CDC_protocol() = default;
+
+    static char* auth_default();
+    static GWBUF* reject(const char* host);
+
+    int32_t read(DCB* dcb) override;
+    int32_t write(DCB* dcb, GWBUF* buffer) override;
+    int32_t write_ready(DCB* dcb) override;
+    int32_t error(DCB* dcb) override;
+    int32_t hangup(DCB* dcb) override;
+
+    bool init_connection(DCB* dcb) override;
+    void finish_connection(DCB* dcb) override;
+
     int  state;                     /*< CDC protocol state          */
     char user[CDC_USER_MAXLEN + 1]; /*< username for authentication */
     char type[CDC_TYPE_LEN + 1];    /*< Request Type            */
