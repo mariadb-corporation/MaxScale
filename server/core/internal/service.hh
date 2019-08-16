@@ -92,6 +92,8 @@ public:
         return m_data->targets;
     }
 
+    uint64_t status() const override;
+
     /**
      * Reload users for all listeners
      *

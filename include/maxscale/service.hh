@@ -123,11 +123,7 @@ public:
 
     virtual const MXS_CONFIG_PARAMETER& params() const = 0;
 
-    uint64_t status() const override
-    {
-        // TODO: Get this from the backend servers
-        return SERVER_RUNNING | SERVER_MASTER;
-    }
+    virtual uint64_t status() const = 0;
 
     bool active() const override
     {

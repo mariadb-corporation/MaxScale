@@ -171,6 +171,33 @@ void service_remove_server(Monitor* pMonitor, SERVER* pServer)
     }
 }
 
+uint64_t Service::status() const
+{
+    uint64_t status = 0;
+
+    for (auto a : m_data->servers)
+    {
+        if (a->is_master())
+        {
+            // Found master, stop searching
+            status = SERVER_RUNNING | SERVER_MASTER;
+            break;
+        }
+
+        if (a->is_running())
+        {
+            status |= SERVER_RUNNING;
+        }
+
+        if (a->is_slave())
+        {
+            status |= SERVER_SLAVE;
+        }
+    }
+
+    return status;
+}
+
 Service::Config::Config(MXS_CONFIG_PARAMETER* params)
     : user(params->get_string(CN_USER))
     , password(params->get_string(CN_PASSWORD))
