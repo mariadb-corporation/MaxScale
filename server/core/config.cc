@@ -3337,7 +3337,7 @@ int create_new_service(CONFIG_CONTEXT* obj)
         {
             for (auto& a : mxs::strtok(servers, ","))
             {
-                if (auto s = ServerManager::find_by_unique_name(a))
+                if (auto s = ServerManager::find_by_unique_name(mxb::trimmed_copy(a)))
                 {
                     service->add_target(s);
                 }
@@ -3353,11 +3353,11 @@ int create_new_service(CONFIG_CONTEXT* obj)
         {
             for (auto& a : mxs::strtok(targets, ","))
             {
-                if (auto s = ServerManager::find_by_unique_name(a))
+                if (auto s = ServerManager::find_by_unique_name(mxb::trimmed_copy(a)))
                 {
                     service->add_target(s);
                 }
-                else if (auto s = service_find(a.c_str()))
+                else if (auto s = service_find(mxb::trimmed_copy(a).c_str()))
                 {
                     service->add_target(s);
                 }
