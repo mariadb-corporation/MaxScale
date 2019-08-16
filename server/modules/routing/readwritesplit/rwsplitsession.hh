@@ -169,7 +169,7 @@ private:
     void send_readonly_error();
 
     GWBUF* handle_causal_read_reply(GWBUF* writebuf, mxs::RWBackend* backend);
-    GWBUF* add_prefix_wait_gtid(SERVER* server, GWBUF* origin);
+    GWBUF* add_prefix_wait_gtid(SERVER::Type type, GWBUF* origin);
     void   correct_packet_sequence(GWBUF* buffer);
     GWBUF* discard_master_wait_gtid_result(GWBUF* buffer);
 

@@ -71,6 +71,13 @@ inline bool server_ref_is_active(const SERVER_REF* ref)
 #define DEFAULT_AUTH_READ_TIMEOUT    1
 #define DEFAULT_AUTH_WRITE_TIMEOUT   2
 
+enum service_version_which_t
+{
+    SERVICE_VERSION_ANY,    /*< Any version of the servers of a service. */
+    SERVICE_VERSION_MIN,    /*< The minimum version. */
+    SERVICE_VERSION_MAX,    /*< The maximum version. */
+};
+
 /**
  * Defines a service within the gateway.
  *
@@ -160,6 +167,15 @@ public:
     }
 
     virtual const Config& config() const = 0;
+
+    /**
+     * Get server version
+     *
+     * @param which Which value to retrieve, the minimum, maximum or any value
+     *
+     * @return The corresponding backend server version
+     */
+    virtual uint64_t get_version(service_version_which_t which) const = 0;
 
     /**
      * Get all servers that are reachable from this service
@@ -280,13 +296,6 @@ static inline uint64_t service_get_capabilities(const SERVICE* service)
 {
     return service->capabilities;
 }
-
-typedef enum service_version_which_t
-{
-    SERVICE_VERSION_ANY,    /*< Any version of the servers of a service. */
-    SERVICE_VERSION_MIN,    /*< The minimum version. */
-    SERVICE_VERSION_MAX,    /*< The maximum version. */
-} service_version_which_t;
 
 /**
  * Return the version of the service. The returned version can be
