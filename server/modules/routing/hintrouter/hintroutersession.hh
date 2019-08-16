@@ -20,7 +20,6 @@
 #include <string>
 
 #include <maxscale/router.hh>
-#include "dcb.hh"
 
 using std::string;
 
@@ -29,16 +28,14 @@ class HintRouter;
 class HintRouterSession : public maxscale::RouterSession
 {
 public:
-    typedef std::unordered_map<string, Dcb> BackendMap;     // All backends, indexed by name
-    typedef std::vector<Dcb>                BackendArray;
-    typedef std::vector<SERVER_REF*>        RefArray;
-    typedef BackendMap::value_type          MapElement;
-    typedef BackendArray::size_type         size_type;
+    using BackendMap = std::unordered_map<string, mxs::Endpoint*>;      // All backends, indexed by name
+    using BackendArray = std::vector<mxs::Endpoint*>;
+    using MapElement = BackendMap::value_type;
+    using size_type = BackendArray::size_type;
 
     HintRouterSession(MXS_SESSION* pSession,
                       HintRouter* pRouter,
-                      const BackendMap& backends
-                      );
+                      const BackendMap& backends);
 
     ~HintRouterSession();
 
@@ -58,10 +55,10 @@ private:
     bool route_to_slave(GWBUF* pPacket, bool print_errors);
     void update_connections();
 
-    HintRouter*  m_router;
-    BackendMap   m_backends;            // all connections
-    Dcb          m_master;              // connection to master
-    BackendArray m_slaves;              // connections to slaves
-    size_type    m_n_routed_to_slave;   // packets routed to a single slave, used for rr
-    size_type    m_surplus_replies;     // how many replies should be ignored
+    HintRouter*    m_router;
+    BackendMap     m_backends;          // all connections
+    mxs::Endpoint* m_master;            // connection to master
+    BackendArray   m_slaves;            // connections to slaves
+    size_type      m_n_routed_to_slave; // packets routed to a single slave, used for rr
+    size_type      m_surplus_replies;   // how many replies should be ignored
 };

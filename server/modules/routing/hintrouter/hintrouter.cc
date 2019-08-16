@@ -18,7 +18,6 @@
 #include <vector>
 
 #include <maxbase/atomic.hh>
-#include "dcb.hh"
 
 static const MXS_ENUM_VALUE default_action_values[] =
 {
@@ -68,45 +67,20 @@ HintRouter* HintRouter::create(SERVICE* pService, MXS_CONFIG_PARAMETER* params)
 
 HintRouterSession* HintRouter::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
 {
-    typedef HintRouterSession::RefArray::size_type array_index;
+    typedef HintRouterSession::BackendArray::size_type array_index;
     HR_ENTRY();
-    Dcb master_Dcb(NULL);
     HintRouterSession::BackendMap all_backends;
     all_backends.rehash(1 + m_max_slaves);
     HintRouterSession::BackendArray slave_arr;
     slave_arr.reserve(m_max_slaves);
 
-    SERVER_REF* master_ref = NULL;
-    HintRouterSession::RefArray slave_refs;
+    mxs::Endpoint* master_ref = NULL;
+    HintRouterSession::BackendArray slave_refs;
     slave_refs.reserve(m_max_slaves);
-
-    /* Go through the server references, find master and slaves */
-    for (SERVER_REF* pSref = pSession->service->dbref; pSref; pSref = pSref->next)
-    {
-        if (server_ref_is_active(pSref))
-        {
-            if (pSref->server->is_master())
-            {
-                if (!master_ref)
-                {
-                    master_ref = pSref;
-                }
-                else
-                {
-                    MXS_WARNING("Found multiple master servers when creating session.\n");
-                }
-            }
-            else if (pSref->server->is_slave())
-            {
-                slave_refs.push_back(pSref);
-            }
-        }
-    }
 
     if (master_ref)
     {
-        // Connect to master
-        master_Dcb = connect_to_backend(pSession, master_ref, &all_backends);
+        connect_to_backend(pSession, master_ref, &all_backends);
     }
 
     /* Different sessions may use different slaves if the 'max_session_slaves'-
@@ -125,11 +99,11 @@ HintRouterSession* HintRouter::newSession(MXS_SESSION* pSession, const Endpoints
              (slave_conns < m_max_slaves) && current != limit;
              current++)
         {
-            SERVER_REF* slave_ref = slave_refs.at(current % size);
-            Dcb slave_conn = connect_to_backend(pSession, slave_ref, &all_backends);
-            if (slave_conn.get())
+            auto slave_ref = slave_refs.at(current % size);
+
+            if (connect_to_backend(pSession, slave_ref, &all_backends))
             {
-                slave_arr.push_back(slave_conn);
+                slave_arr.push_back(slave_ref);
                 slave_conns++;
             }
         }
@@ -190,30 +164,23 @@ json_t* HintRouter::diagnostics_json() const
     return rval;
 }
 
-Dcb HintRouter::connect_to_backend(MXS_SESSION* session,
-                                   SERVER_REF* sref,
-                                   HintRouterSession::BackendMap* all_backends)
+bool HintRouter::connect_to_backend(MXS_SESSION* session,
+                                    mxs::Endpoint* sref,
+                                    HintRouterSession::BackendMap* all_backends)
 {
-    Dcb result(NULL);
-    HR_DEBUG("Connecting to %s.", sref->server->name());
-    mxs::RoutingWorker* worker = static_cast<mxs::RoutingWorker*>(session->client_dcb->owner);
-    mxb_assert(worker == mxs::RoutingWorker::get_current());
+    bool result = false;
 
-    BackendDCB* new_connection = BackendDCB::connect(sref->server, session, worker, nullptr);
-
-    if (new_connection)
+    if (sref->connect())
     {
         HR_DEBUG("Connected.");
-        mxb::atomic::add(&sref->connections, 1, mxb::atomic::RELAXED);
-
-        result = Dcb(new_connection);
-        string name(new_connection->server()->name());
-        all_backends->insert(HintRouterSession::MapElement(name, result));
+        (*all_backends)[sref->target()->name()] = sref;
+        result = true;
     }
     else
     {
         HR_DEBUG("Connection failed.");
     }
+
     return result;
 }
 

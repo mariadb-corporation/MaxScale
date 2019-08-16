@@ -55,7 +55,7 @@ private:
     HintRouter(const HintRouter&);
     HintRouter& operator=(const HintRouter&);
 
-    static Dcb connect_to_backend(MXS_SESSION* session,
-                                  SERVER_REF* sref,
-                                  HintRouterSession::BackendMap* all_backends);
+    static bool connect_to_backend(MXS_SESSION* session,
+                                   mxs::Endpoint* sref,
+                                   HintRouterSession::BackendMap* all_backends);
 };

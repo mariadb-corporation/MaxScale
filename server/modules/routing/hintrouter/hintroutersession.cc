@@ -37,14 +37,13 @@ public:
     bool operator()(HintRouterSession::MapElement& elem)
     {
         bool rv = false;
-        Dcb& dcb = elem.second;
+        auto endpoint = elem.second;
         GWBUF* pPacket = gwbuf_clone(m_pPacket);
 
         if (pPacket)
         {
-            SERVER* pServer = dcb.server();
-            HR_DEBUG("Writing packet to %p %s.", dcb.get(), pServer ? pserver->name() : "(null)");
-            rv = dcb.write(pPacket);
+            HR_DEBUG("Writing packet to %p %s.", endpoint, endpoint->target()->name());
+            rv = endpoint->routeQuery(pPacket);
         }
         return rv;
     }
@@ -78,7 +77,7 @@ HintRouterSession::~HintRouterSession()
 void HintRouterSession::close()
 {
     HR_ENTRY();
-    m_master = Dcb(NULL);
+    m_master = nullptr;
     m_slaves.clear();
     m_backends.clear();
 }
@@ -166,14 +165,14 @@ bool HintRouterSession::route_by_hint(GWBUF* pPacket, HINT* hint, bool print_err
         {
             bool master_ok = false;
             // The master server should be already known, but may have changed
-            if (m_master.get() && m_master.server()->is_master())
+            if (m_master && m_master->target()->is_master())
             {
                 master_ok = true;
             }
             else
             {
                 update_connections();
-                if (m_master.get())
+                if (m_master)
                 {
                     master_ok = true;
                 }
@@ -181,8 +180,8 @@ bool HintRouterSession::route_by_hint(GWBUF* pPacket, HINT* hint, bool print_err
 
             if (master_ok)
             {
-                HR_DEBUG("Writing packet to master: '%s'.", m_master.server()->name());
-                success = m_master.write(pPacket);
+                HR_DEBUG("Writing packet to master: '%s'.", m_master->target()->name());
+                success = m_master->routeQuery(pPacket);
                 if (success)
                 {
                     m_router->m_routed_to_master++;
@@ -210,7 +209,7 @@ bool HintRouterSession::route_by_hint(GWBUF* pPacket, HINT* hint, bool print_err
             if (iter != m_backends.end())
             {
                 HR_DEBUG("Writing packet to %s.", iter->second.server()->name());
-                success = iter->second.write(pPacket);
+                success = iter->second->routeQuery(pPacket);
                 if (success)
                 {
                     m_router->m_routed_to_named++;
@@ -278,11 +277,11 @@ bool HintRouterSession::route_to_slave(GWBUF* pPacket, bool print_errors)
         size_type limit = begin + size;
         for (size_type curr = begin; curr != limit; curr++)
         {
-            Dcb& candidate = m_slaves.at(curr % size);
-            if (candidate.server()->is_slave())
+            auto candidate = m_slaves.at(curr % size);
+            if (candidate->target()->is_slave())
             {
-                HR_DEBUG("Writing packet to slave: '%s'.", candidate.server()->name());
-                success = candidate.write(pPacket);
+                HR_DEBUG("Writing packet to slave: '%s'.", candidate->target()->name());
+                success = candidate->routeQuery(pPacket);
                 if (success)
                 {
                     break;
@@ -308,9 +307,9 @@ bool HintRouterSession::route_to_slave(GWBUF* pPacket, bool print_errors)
             size_type limit = begin + size;
             for (size_type curr = begin; curr != limit; curr++)
             {
-                Dcb& candidate = m_slaves.at(curr % size);
-                HR_DEBUG("Writing packet to slave: '%s'.", candidate.server()->name());
-                success = candidate.write(pPacket);
+                auto candidate = m_slaves.at(curr % size);
+                HR_DEBUG("Writing packet to slave: '%s'.", candidate->target()->name());
+                success = candidate->routeQuery(pPacket);
                 if (success)
                 {
                     break;
@@ -347,16 +346,16 @@ void HintRouterSession::update_connections()
     /* Attempt to rearrange the dcb:s in the session such that the master and
      * slave containers are correct again. Do not try to make new connections,
      * since those would not have the correct session state anyways. */
-    m_master = Dcb(NULL);
+    m_master = nullptr;
     m_slaves.clear();
 
     for (BackendMap::const_iterator iter = m_backends.begin();
          iter != m_backends.end(); iter++)
     {
-        SERVER* server = iter->second.get()->server();
+        auto server = iter->second->target();
         if (server->is_master())
         {
-            if (!m_master.get())
+            if (!m_master)
             {
                 m_master = iter->second;
             }
