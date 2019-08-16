@@ -174,7 +174,7 @@ bool runtime_link_server(Server* server, const char* target)
     {
         if (!service->uses_cluster())
         {
-            if (serviceAddBackend(service, server))
+            if (!service->has_target(server))
             {
                 service->add_target(server);
                 service_serialize(service);
@@ -231,7 +231,6 @@ bool runtime_unlink_server(Server* server, const char* target)
         {
             if (!service->uses_cluster())
             {
-                serviceRemoveBackend(service, server);
                 service->remove_target(server);
                 service_serialize(service);
                 rval = true;

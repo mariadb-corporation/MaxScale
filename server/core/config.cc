@@ -3326,7 +3326,6 @@ int create_new_service(CONFIG_CONTEXT* obj)
 
                 if (auto s = ServerManager::find_by_unique_name(a))
                 {
-                    serviceAddBackend(service, s);
                     service->add_target(s);
                 }
                 else

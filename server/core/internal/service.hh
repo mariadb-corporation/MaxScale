@@ -346,7 +346,6 @@ bool service_launch_all(void);
  */
 bool service_remove_listener(Service* service, const char* target);
 
-void serviceRemoveBackend(Service* service, const SERVER* server);
 
 /**
  * @brief Serialize a service to a file

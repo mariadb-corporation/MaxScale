@@ -40,20 +40,6 @@ struct users;
 #define MAX_SERVICE_WEIGHTBY_LEN 1024
 #define MAX_SERVICE_VERSION_LEN  1024
 
-typedef struct server_ref_t
-{
-    struct server_ref_t* next;          /**< Next server reference */
-    SERVER*              server;        /**< The actual server */
-    double               server_weight; /**< Weight in the range [0..1]. 0 is worst, and a special case. */
-    int                  connections;   /**< Number of connections created through this reference */
-    bool                 active;        /**< Whether this reference is valid and in use*/
-} SERVER_REF;
-
-inline bool server_ref_is_active(const SERVER_REF* ref)
-{
-    return ref->active && ref->server->server_is_active();
-}
-
 /** Value of service timeout if timeout checks are disabled */
 #define SERVICE_NO_SESSION_TIMEOUT 0
 
@@ -126,7 +112,6 @@ public:
     int                client_count {0};            /**< Number of connected clients */
     mxs_router_object* router {nullptr};            /**< The router we are using */
     mxs_router*        router_instance {nullptr};   /**< The router instance for this service */
-    SERVER_REF*        dbref {nullptr};             /**< server references */
     time_t             started {0};                 /**< The time when the service was started */
     uint64_t           capabilities {0};            /**< The capabilities of the service,
                                                      * @see enum routing_capability */
@@ -253,9 +238,6 @@ bool serviceStopListener(SERVICE* service, const char* name);
  * @return True if listener was restarted
  */
 bool serviceStartListener(SERVICE* service, const char* name);
-
-// TODO: Change binlogrouter to use the functions in config_runtime.h
-bool serviceAddBackend(SERVICE* service, SERVER* server);
 
 // Used by authenticators
 void serviceGetUser(SERVICE* service, const char** user, const char** auth);

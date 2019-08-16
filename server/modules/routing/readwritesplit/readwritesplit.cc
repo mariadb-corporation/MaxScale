@@ -355,16 +355,6 @@ void RWSplit::diagnostics(DCB* dcb)
                    "\t\tServer               Target %%    Connections  "
                    "Operations\n");
         dcb_printf(dcb, "\t\t                               Global  Router\n");
-        for (SERVER_REF* ref = service()->dbref; ref; ref = ref->next)
-        {
-            dcb_printf(dcb,
-                       "\t\t%-20s %3.1f%%     %-6d  %-6d  %d\n",
-                       ref->server->name(),
-                       ref->server_weight * 100,
-                       ref->server->stats().n_current,
-                       ref->connections,
-                       ref->server->stats().n_current_ops);
-        }
     }
 
     auto srv_stats = all_server_stats();

@@ -153,7 +153,6 @@ void service_add_server(Monitor* pMonitor, SERVER* pServer)
     {
         if (pService->m_monitor == pMonitor)
         {
-            serviceAddBackend(pService, pServer);
             pService->add_target(pServer);
         }
     }
@@ -167,7 +166,6 @@ void service_remove_server(Monitor* pMonitor, SERVER* pServer)
     {
         if (pService->m_monitor == pMonitor)
         {
-            serviceRemoveBackend(pService, pServer);
             pService->remove_target(pServer);
         }
     }
@@ -243,13 +241,6 @@ Service::~Service()
     if (router && router_instance && router->destroyInstance)
     {
         router->destroyInstance(router_instance);
-    }
-
-    while (SERVER_REF* tmp = dbref)
-    {
-        mxb_assert(!tmp->active || maxscale_teardown_in_progress());
-        dbref = dbref->next;
-        MXS_FREE(tmp);
     }
 }
 
@@ -525,135 +516,6 @@ bool Service::can_be_destroyed() const
 {
     const auto& data = *m_data;
     return listener_find_by_service(this).empty() && data.targets.empty() && data.filters.empty();
-}
-
-/**
- * Allocate a new server reference
- *
- * @param server Server to refer to
- * @return Server reference or NULL on error
- */
-static SERVER_REF* server_ref_create(SERVER* server)
-{
-    SERVER_REF* sref = (SERVER_REF*)MXS_MALLOC(sizeof(SERVER_REF));
-
-    if (sref)
-    {
-        sref->next = NULL;
-        sref->server = server;
-        // all servers have weight 1.0, when weights are not configured.
-        sref->server_weight = 1.0;
-        sref->connections = 0;
-        sref->active = true;
-    }
-
-    return sref;
-}
-
-/**
- * Add a backend database server to a service
- *
- * @param service       The service to add the server to
- * @param server        The server to add
- */
-bool serviceAddBackend(SERVICE* svc, SERVER* server)
-{
-    Service* service = static_cast<Service*>(svc);
-    bool rval = false;
-
-    if (!serviceHasBackend(service, server))
-    {
-        SERVER_REF* new_ref = server_ref_create(server);
-
-        if (new_ref)
-        {
-            rval = true;
-            LockGuard guard(service->lock);
-
-            if (service->dbref)
-            {
-                SERVER_REF* ref = service->dbref;
-                SERVER_REF* prev = ref;
-
-                while (ref)
-                {
-                    if (ref->server == server)
-                    {
-                        ref->active = true;
-                        break;
-                    }
-                    prev = ref;
-                    ref = ref->next;
-                }
-
-                if (ref == NULL)
-                {
-                    /** A new server that hasn't been used by this service */
-                    atomic_synchronize();
-                    prev->next = new_ref;
-                }
-                else
-                {
-                    MXS_FREE(new_ref);
-                }
-            }
-            else
-            {
-                atomic_synchronize();
-                service->dbref = new_ref;
-            }
-        }
-    }
-
-    return rval;
-}
-
-/**
- * @brief Remove a server from a service
- *
- * This function sets the server reference into an inactive state. This does not
- * remove the server from the list or free any of the memory.
- *
- * @param service Service to modify
- * @param server  Server to remove
- */
-void serviceRemoveBackend(Service* service, const SERVER* server)
-{
-    LockGuard guard(service->lock);
-
-    for (SERVER_REF* ref = service->dbref; ref; ref = ref->next)
-    {
-        if (ref->server == server && ref->active)
-        {
-            ref->active = false;
-            break;
-        }
-    }
-}
-
-/**
- * Test if a server is part of a service
- *
- * @param service       The service to add the server to
- * @param server        The server to add
- * @return              Non-zero if the server is already part of the service
- */
-bool serviceHasBackend(Service* service, SERVER* server)
-{
-    SERVER_REF* ptr;
-
-    LockGuard guard(service->lock);
-    ptr = service->dbref;
-    while (ptr)
-    {
-        if (ptr->server == server && ptr->active)
-        {
-            break;
-        }
-        ptr = ptr->next;
-    }
-
-    return ptr != NULL;
 }
 
 /**
