@@ -126,7 +126,8 @@ public:
 
     uint64_t get_version(service_version_which_t which) const
     {
-        return which == SERVICE_VERSION_MAX ? m_data->version_max : m_data->version_min;
+        auto versions = get_versions(m_data->servers);
+        return which == SERVICE_VERSION_MAX ? versions.second : versions.first;
     }
 
     std::unique_ptr<mxs::Endpoint> get_connection(mxs::Component* up, MXS_SESSION* session) override;
@@ -180,9 +181,6 @@ private:
 
     struct Data
     {
-        // Server version numbers, precalculated
-        uint64_t   version_max {std::numeric_limits<uint64_t>::max()};
-        uint64_t   version_min {0};
         FilterList filters;     // Ordered list of filters
 
         // List of servers this service reaches via its direct descendants. All servers are leaf nodes but not
@@ -208,6 +206,9 @@ private:
      * available through this service.
      */
     void targets_updated();
+
+    // Helper for calculating version values
+    std::pair<uint64_t, uint64_t> get_versions(const std::vector<SERVER*>& servers) const;
 };
 
 // A connection to a service

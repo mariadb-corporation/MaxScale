@@ -1788,26 +1788,6 @@ std::unique_ptr<mxs::Endpoint> Service::get_connection(mxs::Component* up, MXS_S
 namespace
 {
 
-// Returns minimum and maximum server versions from the list of servers
-std::pair<uint64_t, uint64_t> get_versions(const std::vector<SERVER*>& servers)
-{
-    uint64_t v_max = 0;
-    uint64_t v_min = 0;
-
-    if (!servers.empty())
-    {
-        v_min = UINT64_MAX;
-
-        for (auto s : servers)
-        {
-            v_min = std::min(s->version().total, v_min);
-            v_max = std::max(s->version().total, v_max);
-        }
-    }
-
-    return {v_min, v_max};
-}
-
 // Returns all servers that are in the given list of targets
 std::vector<SERVER*> get_servers(std::vector<mxs::Target*> targets)
 {
@@ -1833,14 +1813,32 @@ std::vector<SERVER*> get_servers(std::vector<mxs::Target*> targets)
 }
 }
 
+// Returns minimum and maximum server versions from the list of servers
+std::pair<uint64_t, uint64_t> Service::get_versions(const std::vector<SERVER*>& servers) const
+{
+    uint64_t v_max = 0;
+    uint64_t v_min = 0;
+
+    if (!servers.empty())
+    {
+        v_min = UINT64_MAX;
+
+        for (auto s : servers)
+        {
+            v_min = std::min(s->version().total, v_min);
+            v_max = std::max(s->version().total, v_max);
+        }
+    }
+
+    return {v_min, v_max};
+}
+
 void Service::targets_updated()
 {
     auto& data = *m_data;
 
     // Now that we have the new set of targets, recalculate the servers that this service reaches
     data.servers = get_servers(data.targets);
-
-    std::tie(data.version_min, data.version_max) = get_versions(data.servers);
 
     // Update the global value based on the local cached value. Since modifications to services are always
     // done on the same thread, there's no possibility of lost updates.

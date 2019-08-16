@@ -367,7 +367,7 @@ public:
     //
     // Legacy public members
     //
-    mxs_auth_state_t       protocol_auth_state = MXS_AUTH_STATE_INIT;   /*< Authentication state */
+    mxs_auth_state_t protocol_auth_state = MXS_AUTH_STATE_INIT;     /*< Authentication state */
 
     uint8_t  scramble[MYSQL_SCRAMBLE_LEN];  /*< server scramble, created or received */
     uint32_t server_capabilities = 0;       /*< server capabilities, created or received */
@@ -398,6 +398,8 @@ protected:
 
     // Called by the protocol module when routing needs to be done
     mxs::Component* m_component;
+
+    uint64_t m_version;     // Numeric server version
 
     bool   consume_fetched_rows(GWBUF* buffer);
     void   process_reply_start(Iter it, Iter end);
@@ -447,8 +449,8 @@ public:
     int32_t error(DCB* dcb) override;
     int32_t hangup(DCB* dcb) override;
 
-    bool init_connection(DCB* dcb) override;
-    void finish_connection(DCB* dcb) override;
+    bool    init_connection(DCB* dcb) override;
+    void    finish_connection(DCB* dcb) override;
     int32_t connlimit(DCB* dcb, int limit) override;
 
     int64_t capabilities() const override
@@ -456,28 +458,29 @@ public:
         return CAP_BACKEND;
     }
     std::unique_ptr<mxs::BackendProtocol>
-    create_backend_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component) override;
+    create_backend_protocol(MXS_SESSION* session, SERVER* server,
+                            mxs::Component* component) override;
     static bool parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* kt_out,
                                  std::string* user_out);
 
 private:
-    int perform_authentication(DCB* generic_dcb, GWBUF* read_buffer, int nbytes_read);
-    int perform_normal_read(DCB* dcb, GWBUF* read_buffer, uint32_t nbytes_read);
-    void store_client_information(DCB* dcb, GWBUF* buffer);
-    int route_by_statement(uint64_t capabilities, GWBUF** p_readbuf);
+    int            perform_authentication(DCB* generic_dcb, GWBUF* read_buffer, int nbytes_read);
+    int            perform_normal_read(DCB* dcb, GWBUF* read_buffer, uint32_t nbytes_read);
+    void           store_client_information(DCB* dcb, GWBUF* buffer);
+    int            route_by_statement(uint64_t capabilities, GWBUF** p_readbuf);
     spec_com_res_t process_special_commands(DCB* dcb, GWBUF* read_buffer, uint8_t cmd);
-    bool handle_change_user(bool* changed_user, GWBUF** packetbuf);
-    bool reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf);
+    bool           handle_change_user(bool* changed_user, GWBUF** packetbuf);
+    bool           reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf);
     spec_com_res_t handle_query_kill(DCB* dcb, GWBUF* read_buffer, uint32_t packet_len);
-    void handle_authentication_errors(DCB* dcb, int auth_val, int packet_number);
-    int mysql_send_auth_error(DCB* dcb, int packet_number, const char* mysql_message);
-    char* create_auth_fail_str(char* username, char* hostaddr, bool password, char* db, int);
-    int mysql_send_standard_error(DCB* dcb, int sequence, int errnum, const char* msg);
-    GWBUF* mysql_create_standard_error(int sequence, int error_number, const char* msg);
-    bool send_auth_switch_request_packet(DCB* dcb);
-    char* handle_variables(MXS_SESSION* session, GWBUF** read_buffer);
-    void track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf);
-    void parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data);
+    void           handle_authentication_errors(DCB* dcb, int auth_val, int packet_number);
+    int            mysql_send_auth_error(DCB* dcb, int packet_number, const char* mysql_message);
+    char*          create_auth_fail_str(char* username, char* hostaddr, bool password, char* db, int);
+    int            mysql_send_standard_error(DCB* dcb, int sequence, int errnum, const char* msg);
+    GWBUF*         mysql_create_standard_error(int sequence, int error_number, const char* msg);
+    bool           send_auth_switch_request_packet(DCB* dcb);
+    char*          handle_variables(MXS_SESSION* session, GWBUF** read_buffer);
+    void           track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf);
+    void           parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data);
 };
 
 class MySQLBackendProtocol : public MySQLProtocol, public mxs::BackendProtocol
@@ -495,38 +498,38 @@ public:
     int32_t error(DCB* dcb) override;
     int32_t hangup(DCB* dcb) override;
 
-    bool init_connection(DCB* dcb) override;
-    void finish_connection(DCB* dcb) override;
-    bool established(DCB*) override;
+    bool    init_connection(DCB* dcb) override;
+    void    finish_connection(DCB* dcb) override;
+    bool    established(DCB*) override;
     json_t* diagnostics_json(DCB* dcb) override;
 
 private:
-    int gw_read_and_write(DCB* dcb);
-    int  backend_write_delayqueue(DCB* dcb, GWBUF* buffer);
-    void backend_set_delayqueue(DCB* dcb, GWBUF* queue);
-    int gw_change_user(DCB* dcb, MXS_SESSION* session, GWBUF* queue);
-    void gw_reply_on_error(DCB* dcb);
-    int gw_send_change_user_to_backend(DCB* backend);
-    void gw_send_proxy_protocol_header(BackendDCB* backend_dcb);
-    int handle_persistent_connection(BackendDCB* dcb, GWBUF* queue);
-    GWBUF* gw_create_change_user_packet(MYSQL_session* mses);
-    void do_handle_error(DCB* dcb, const char* errmsg);
-    void prepare_for_write(DCB* dcb, GWBUF* buffer);
+    int              gw_read_and_write(DCB* dcb);
+    int              backend_write_delayqueue(DCB* dcb, GWBUF* buffer);
+    void             backend_set_delayqueue(DCB* dcb, GWBUF* queue);
+    int              gw_change_user(DCB* dcb, MXS_SESSION* session, GWBUF* queue);
+    void             gw_reply_on_error(DCB* dcb);
+    int              gw_send_change_user_to_backend(DCB* backend);
+    void             gw_send_proxy_protocol_header(BackendDCB* backend_dcb);
+    int              handle_persistent_connection(BackendDCB* dcb, GWBUF* queue);
+    GWBUF*           gw_create_change_user_packet(MYSQL_session* mses);
+    void             do_handle_error(DCB* dcb, const char* errmsg);
+    void             prepare_for_write(DCB* dcb, GWBUF* buffer);
     mxs_auth_state_t handle_server_response(DCB* generic_dcb, GWBUF* buffer);
-    int mysql_send_com_quit(DCB* dcb, int sequence, GWBUF* buf);
-    bool read_complete_packet(DCB* dcb, GWBUF** readbuf);
-    GWBUF* track_response(GWBUF** buffer);
-    bool mxs_mysql_is_result_set(GWBUF* buffer);
+    int              mysql_send_com_quit(DCB* dcb, int sequence, GWBUF* buf);
+    bool             read_complete_packet(DCB* dcb, GWBUF** readbuf);
+    GWBUF*           track_response(GWBUF** buffer);
+    bool             mxs_mysql_is_result_set(GWBUF* buffer);
     mxs_auth_state_t gw_send_backend_auth(BackendDCB* dcb);
-    bool gw_read_backend_handshake(DCB* dcb, GWBUF* buffer);
-    void handle_error_response(DCB* plain_dcb, GWBUF* buffer);
-    bool session_ok_to_route(DCB* dcb);
-    bool complete_ps_response(GWBUF* buffer);
-    bool handle_auth_change_response(GWBUF* reply, DCB* dcb);
+    bool             gw_read_backend_handshake(DCB* dcb, GWBUF* buffer);
+    void             handle_error_response(DCB* plain_dcb, GWBUF* buffer);
+    bool             session_ok_to_route(DCB* dcb);
+    bool             complete_ps_response(GWBUF* buffer);
+    bool             handle_auth_change_response(GWBUF* reply, DCB* dcb);
 
-    int  m_ignore_replies {0};        /*< How many replies should be discarded */
-    bool m_collect_result {false};    /*< Collect the next result set as one buffer */
-    bool m_track_state {false};       /*< Track session state */
+    int  m_ignore_replies {0};          /*< How many replies should be discarded */
+    bool m_collect_result {false};      /*< Collect the next result set as one buffer */
+    bool m_track_state {false};         /*< Track session state */
 };
 
 struct MXS_PS_RESPONSE

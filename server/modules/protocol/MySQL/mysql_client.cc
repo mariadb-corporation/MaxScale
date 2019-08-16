@@ -1529,7 +1529,7 @@ int MySQLClientProtocol::perform_normal_read(DCB* dcb, GWBUF* read_buffer, uint3
     }
 
     // The query classifier classifies according to the service's server that has the smallest version number
-    qc_set_server_version(service_get_version(session->service, SERVICE_VERSION_MIN));
+    qc_set_server_version(m_version);
 
     /**
      * Feed each statement completely and separately to router.
@@ -1844,10 +1844,11 @@ public:
         return new MySQLProtocolModule();
     }
 
-    std::unique_ptr<mxs::ClientProtocol> create_client_protocol(MXS_SESSION* session, mxs::Component* component)
+    std::unique_ptr<mxs::ClientProtocol> create_client_protocol(MXS_SESSION* session,
+                                                                mxs::Component* component)
     {
         std::unique_ptr<mxs::ClientProtocol> rval;
-        rval.reset(new (std::nothrow) MySQLClientProtocol(session, nullptr, component));
+        rval.reset(new(std::nothrow) MySQLClientProtocol(session, nullptr, component));
         return rval;
     }
 
@@ -1859,14 +1860,14 @@ public:
     GWBUF* reject(const std::string& host)
     {
         std::string message = "Host '" + host
-                              + "' is temporarily blocked due to too many authentication failures.";
+            + "' is temporarily blocked due to too many authentication failures.";
         return modutil_create_mysql_err_msg(0, 0, 1129, "HY000", message.c_str());
     }
 };
 
 MySQLClientProtocol* MySQLClientProtocol::create(MXS_SESSION* session, mxs::Component* component)
 {
-    return new (std::nothrow) MySQLClientProtocol(session, nullptr, component);
+    return new(std::nothrow) MySQLClientProtocol(session, nullptr, component);
 }
 
 MySQLClientProtocol::MySQLClientProtocol(MXS_SESSION* session, SERVER* server, mxs::Component* component)
@@ -1925,7 +1926,7 @@ int MySQLClientProtocol::mysql_send_auth_error(DCB* dcb, int packet_number, cons
     }
 
     mysql_payload_size =
-            sizeof(field_count) + sizeof(mysql_err) + sizeof(mysql_statemsg) + strlen(mysql_error_msg);
+        sizeof(field_count) + sizeof(mysql_err) + sizeof(mysql_statemsg) + strlen(mysql_error_msg);
 
     // allocate memory for packet header + payload
     if ((buf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size)) == NULL)
@@ -2025,7 +2026,7 @@ char* MySQLClientProtocol::create_auth_fail_str(char* username, char* hostaddr, 
         sprintf(errstr, ferrstr, username, hostaddr, password ? "YES" : "NO");
     }
 
-    retblock:
+retblock:
     return errstr;
 }
 
