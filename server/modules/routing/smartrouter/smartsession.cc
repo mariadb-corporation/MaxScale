@@ -468,12 +468,7 @@ bool SmartRouterSession::write_split_packets(GWBUF* pBuf)
 
 void SmartRouterSession::kill_all_others(const Cluster& cluster)
 {
-    // TODO: Find a fix for this
-    // MySQLProtocol* proto = static_cast<MySQLProtocol*>(cluster.pDcb->m_protocol);
-    // int keep_protocol_thread_id = proto->thread_id;
-
-    // mxs_mysql_execute_kill_all_others(cluster.pDcb->session(), cluster.pDcb->session()->id(),
-    //                                   keep_protocol_thread_id, KT_QUERY);
+    mxs_mysql_execute_kill(m_pSession, m_pSession->id(), KT_QUERY);
 }
 
 bool SmartRouterSession::handleError(GWBUF* pPacket, mxs::Endpoint* pProblem, const mxs::Reply& pReply)
