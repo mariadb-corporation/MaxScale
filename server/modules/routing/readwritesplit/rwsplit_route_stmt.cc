@@ -1066,7 +1066,7 @@ bool RWSplitSession::handle_master_is_target(RWBackend** dest)
  * @param origin origin send buffer
  * @return       A new buffer contains wait statement and origin query
  */
-GWBUF* RWSplitSession::add_prefix_wait_gtid(SERVER::Type type, GWBUF* origin)
+GWBUF* RWSplitSession::add_prefix_wait_gtid(uint64_t version, GWBUF* origin)
 {
 
     /**
@@ -1081,8 +1081,11 @@ GWBUF* RWSplitSession::add_prefix_wait_gtid(SERVER::Type type, GWBUF* origin)
      **/
 
     GWBUF* rval = origin;
-    const char* wait_func = (type == SERVER::Type::MARIADB) ? MARIADB_WAIT_GTID_FUNC :
-        MYSQL_WAIT_GTID_FUNC;
+
+    // If the version is not known, assume MariaDB backend
+    const char* wait_func = (version > 50700 && version < 100000) ?
+        MYSQL_WAIT_GTID_FUNC : MARIADB_WAIT_GTID_FUNC;
+
     const char* gtid_wait_timeout = m_config.causal_reads_timeout.c_str();
     const char* gtid_position = m_gtid_pos.c_str();
 
@@ -1150,10 +1153,8 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool 
     if (m_config.causal_reads && cmd == MXS_COM_QUERY && !m_gtid_pos.empty() && target->is_slave())
     {
         // Perform the causal read only when the query is routed to a slave
-        auto server_type = m_router->service()->get_version(SERVICE_VERSION_MIN) > 100009 ?
-            SERVER::Type::MARIADB : SERVER::Type::MYSQL;
 
-        send_buf = add_prefix_wait_gtid(server_type, send_buf);
+        send_buf = add_prefix_wait_gtid(m_router->service()->get_version(SERVICE_VERSION_MIN), send_buf);
         m_wait_gtid = WAITING_FOR_HEADER;
 
         // The storage for causal reads is done inside add_prefix_wait_gtid
