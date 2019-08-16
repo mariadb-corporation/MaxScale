@@ -62,9 +62,9 @@ BinlogFilter* BinlogFilter::create(const char* zName,
 }
 
 // BinlogFilterSession create routine
-BinlogFilterSession* BinlogFilter::newSession(MXS_SESSION* pSession)
+BinlogFilterSession* BinlogFilter::newSession(MXS_SESSION* pSession, SERVICE* pService)
 {
-    return BinlogFilterSession::create(pSession, this);
+    return BinlogFilterSession::create(pSession, pService, this);
 }
 
 // static

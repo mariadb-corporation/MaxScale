@@ -470,7 +470,7 @@ class Reply
 {
 public:
 
-    Reply(mxs::Target* target);
+    explicit Reply(mxs::Target* target);
 
     /**
      * Get the current state

@@ -31,7 +31,9 @@ public:
     void close();
 
     // Create a new filter session
-    static CommentFilterSession* create(MXS_SESSION* pSession, const CommentFilter* pFilter);
+    static CommentFilterSession* create(MXS_SESSION* pSession,
+                                        SERVICE* pService,
+                                        const CommentFilter* pFilter);
 
     // Handle a query from the client
     int routeQuery(GWBUF* pPacket);
@@ -42,7 +44,7 @@ public:
 private:
 
     // Used in the create function
-    CommentFilterSession(MXS_SESSION* pSession, const CommentFilter* pFilter);
+    CommentFilterSession(MXS_SESSION* pSession, SERVICE* pService, const CommentFilter* pFilter);
     const CommentFilter& m_filter;
     std::string parseComment(std::string comment);
 };

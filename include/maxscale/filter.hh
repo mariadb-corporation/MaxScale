@@ -98,6 +98,7 @@ typedef struct mxs_filter_object
      *
      * @param instance Filter instance
      * @param session  Client MXS_SESSION object
+     * @param service  The service in which this filter session is created
      * @param down     Downstream component of the filter chain, route queries here
      * @param up       Upstream component of the filter chain, send replies here
      *
@@ -105,7 +106,7 @@ typedef struct mxs_filter_object
      *
      * @return New filter session or NULL on error
      */
-    MXS_FILTER_SESSION*(*newSession)(MXS_FILTER * instance, MXS_SESSION* session,
+    MXS_FILTER_SESSION*(*newSession)(MXS_FILTER * instance, MXS_SESSION* session, SERVICE* service,
                                      mxs::Downstream* down, mxs::Upstream* up);
 
     /**
@@ -397,7 +398,7 @@ public:
     json_t* diagnostics_json() const;
 
 protected:
-    FilterSession(MXS_SESSION* pSession);
+    FilterSession(MXS_SESSION* pSession, SERVICE* service);
 
     /**
      * To be called by a filter that short-circuits the request processing.
@@ -405,14 +406,16 @@ protected:
      * without passing the request further.
      *
      * @param pResponse  The response to be sent to the client.
+     * @param pTarget    The source of the response
      */
     void set_response(GWBUF* pResponse) const
     {
-        session_set_response(m_pSession, m_up.m_data, pResponse);
+        session_set_response(m_pSession, m_pService, m_up.m_data, pResponse);
     }
 
 protected:
     MXS_SESSION* m_pSession;    /*< The MXS_SESSION this filter session is associated with. */
+    SERVICE*     m_pService;    /*< The service for which this session was created. */
     Downstream   m_down;        /*< The downstream component. */
     Upstream     m_up;          /*< The upstream component. */
 };
@@ -441,7 +444,7 @@ protected:
  *      static MyFilter* create(const char* zName, MXS_CONFIG_PARAMETER* ppParams);
  *
  *      // This creates a new session for a filter instance
- *      MyFilterSession* newSession(MXS_SESSION* pSession);
+ *      MyFilterSession* newSession(MXS_SESSION* pSession, SERVICE* pService);
  *
  *      // Diagnostic function that prints to a DCB
  *      void diagnostics(DCB* pDcb) const;
@@ -479,15 +482,13 @@ public:
         return pFilter;
     }
 
-    static MXS_FILTER_SESSION* newSession(MXS_FILTER* pInstance,
-                                          MXS_SESSION* pSession,
-                                          mxs::Downstream* pDown,
-                                          mxs::Upstream* pUp)
+    static MXS_FILTER_SESSION* newSession(MXS_FILTER* pInstance, MXS_SESSION* pSession, SERVICE* pService,
+                                          mxs::Downstream* pDown, mxs::Upstream* pUp)
     {
         FilterType* pFilter = static_cast<FilterType*>(pInstance);
         FilterSessionType* pFilterSession = NULL;
 
-        MXS_EXCEPTION_GUARD(pFilterSession = pFilter->newSession(pSession));
+        MXS_EXCEPTION_GUARD(pFilterSession = pFilter->newSession(pSession, pService));
 
         if (pFilterSession)
         {

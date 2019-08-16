@@ -17,8 +17,8 @@
 #include "examplefiltersession.hh"
 #include "examplefilter.hh"
 
-ExampleFilterSession::ExampleFilterSession(MXS_SESSION* pSession, ExampleFilter& filter)
-    : mxs::FilterSession(pSession)
+ExampleFilterSession::ExampleFilterSession(MXS_SESSION* pSession, SERVICE* pService, ExampleFilter& filter)
+    : mxs::FilterSession(pSession, pService)
     , m_filter(filter)
     , m_session_id(pSession->id())
 {
@@ -29,9 +29,10 @@ ExampleFilterSession::~ExampleFilterSession()
 }
 
 // static
-ExampleFilterSession* ExampleFilterSession::create(MXS_SESSION* pSession, ExampleFilter& filter)
+ExampleFilterSession* ExampleFilterSession::create(MXS_SESSION* pSession, SERVICE* pService,
+                                                   ExampleFilter& filter)
 {
-    return new ExampleFilterSession(pSession, filter);
+    return new ExampleFilterSession(pSession, pService, filter);
 }
 
 void ExampleFilterSession::close()

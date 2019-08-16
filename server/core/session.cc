@@ -423,7 +423,8 @@ static void session_deliver_response(MXS_SESSION* session)
 
         // TODO: Figure out what to do with the DCB and Reply arguments
         mxs::ReplyRoute route;
-        session->response.up.clientReply(filter_instance, filter_session, buffer, route, nullptr);
+        session->response.up.clientReply(filter_instance, filter_session, buffer, route,
+                                         mxs::Reply(session->response.service));
 
         session->response.up.instance = NULL;
         session->response.up.session = NULL;
@@ -459,7 +460,8 @@ bool mxs_route_query(MXS_SESSION* ses, GWBUF* buffer)
 bool mxs_route_reply(mxs::Upstream* up, GWBUF* buffer, DCB* dcb)
 {
     mxs::ReplyRoute route;
-    return up->clientReply(up->instance, up->session, buffer, route, nullptr);
+    mxs::Reply reply(dcb->session()->listener->service());
+    return up->clientReply(up->instance, up->session, buffer, route, reply);
 }
 
 /**
@@ -786,7 +788,7 @@ bool session_remove_variable(MXS_SESSION* session,
     return pSession->remove_variable(name, context);
 }
 
-void session_set_response(MXS_SESSION* session, const mxs::Upstream* up, GWBUF* buffer)
+void session_set_response(MXS_SESSION* session, SERVICE* service, const mxs::Upstream* up, GWBUF* buffer)
 {
     // Valid arguments.
     mxb_assert(session && up && buffer);
@@ -798,6 +800,7 @@ void session_set_response(MXS_SESSION* session, const mxs::Upstream* up, GWBUF* 
 
     session->response.up = *up;
     session->response.buffer = buffer;
+    session->response.service = service;
 }
 
 void session_set_retain_last_statements(uint32_t n)

@@ -32,6 +32,7 @@
 static MXS_FILTER*         createInstance(const char* name, MXS_CONFIG_PARAMETER* params);
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
                                       MXS_SESSION* session,
+                                      SERVICE* service,
                                       mxs::Downstream* downstream,
                                       mxs::Upstream* upstream);
 static void     closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
@@ -190,6 +191,7 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
  */
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
                                       MXS_SESSION* session,
+                                      SERVICE* service,
                                       mxs::Downstream* downstream,
                                       mxs::Upstream* upstream)
 {

@@ -41,7 +41,7 @@ public:
      * @param pFilter The shared filter object
      * @return A new session or NULL on failure
      */
-    static ExampleFilterSession* create(MXS_SESSION* pSession, ExampleFilter& pFilter);
+    static ExampleFilterSession* create(MXS_SESSION* pSession, SERVICE* pService, ExampleFilter& pFilter);
 
     /**
      * Handle a query from the client. This is called when the client sends a query and the query has not
@@ -68,7 +68,7 @@ public:
 
 private:
     // Used in the create function
-    ExampleFilterSession(MXS_SESSION* pSession, ExampleFilter& filter);
+    ExampleFilterSession(MXS_SESSION* pSession, SERVICE* pService, ExampleFilter& filter);
 
     ExampleFilter& m_filter;    /**< Shared filter data */
 

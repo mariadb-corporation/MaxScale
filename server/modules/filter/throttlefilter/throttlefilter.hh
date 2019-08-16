@@ -53,7 +53,7 @@ public:
     ThrottleFilter(const ThrottleFilter&) = delete;
     ThrottleFilter& operator=(const ThrottleFilter&) = delete;
 
-    ThrottleSession* newSession(MXS_SESSION* mxsSession);
+    ThrottleSession* newSession(MXS_SESSION* mxsSession, SERVICE* service);
 
     void                  diagnostics(DCB* pDcb);
     json_t*               diagnostics_json() const;

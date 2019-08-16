@@ -312,6 +312,7 @@ int test(FilterModule::Instance& filter_instance, const TEST_CASE& tc)
 
 
     auto_ptr<FilterModule::Session> sFilter_session = filter_instance.newSession(&session,
+                                                                                 service,
                                                                                  router_session.as_downstream(),
                                                                                  client.as_upstream());
 

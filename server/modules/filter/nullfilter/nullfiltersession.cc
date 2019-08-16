@@ -14,8 +14,8 @@
 #define MXS_MODULE_NAME "nullfilter"
 #include "nullfiltersession.hh"
 
-NullFilterSession::NullFilterSession(MXS_SESSION* pSession, const NullFilter* pFilter)
-    : maxscale::FilterSession(pSession)
+NullFilterSession::NullFilterSession(MXS_SESSION* pSession, SERVICE* pService, const NullFilter* pFilter)
+    : maxscale::FilterSession(pSession, pService)
     , m_filter(*pFilter)
 {
 }
@@ -25,7 +25,8 @@ NullFilterSession::~NullFilterSession()
 }
 
 // static
-NullFilterSession* NullFilterSession::create(MXS_SESSION* pSession, const NullFilter* pFilter)
+NullFilterSession* NullFilterSession::create(MXS_SESSION* pSession, SERVICE* pService,
+                                             const NullFilter* pFilter)
 {
-    return new NullFilterSession(pSession, pFilter);
+    return new NullFilterSession(pSession, pService, pFilter);
 }

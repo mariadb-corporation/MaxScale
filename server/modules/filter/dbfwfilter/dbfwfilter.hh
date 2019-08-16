@@ -166,7 +166,7 @@ class DbfwSession : public mxs::FilterSession
     DbfwSession& operator=(const DbfwSession&);
 
 public:
-    DbfwSession(Dbfw* instance, MXS_SESSION* session);
+    DbfwSession(Dbfw* instance, MXS_SESSION* session, SERVICE* service);
     ~DbfwSession();
 
     void        set_error(const char* error);
@@ -215,7 +215,7 @@ public:
      *
      * @return New session or NULL on error
      */
-    DbfwSession* newSession(MXS_SESSION* session);
+    DbfwSession* newSession(MXS_SESSION* session, SERVICE* service);
 
     /**
      * Get the action mode of this instance

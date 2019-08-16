@@ -114,9 +114,9 @@ ThrottleFilter* ThrottleFilter::create(const char* zName, MXS_CONFIG_PARAMETER* 
     return filter;
 }
 
-ThrottleSession* ThrottleFilter::newSession(MXS_SESSION* mxsSession)
+ThrottleSession* ThrottleFilter::newSession(MXS_SESSION* mxsSession, SERVICE* service)
 {
-    return new ThrottleSession(mxsSession, *this);
+    return new ThrottleSession(mxsSession, service, *this);
 }
 
 void ThrottleFilter::diagnostics(DCB* pDcb)

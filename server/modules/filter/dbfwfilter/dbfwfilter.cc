@@ -1305,9 +1305,9 @@ Dbfw* Dbfw::create(const char* zName, MXS_CONFIG_PARAMETER* pParams)
     return rval;
 }
 
-DbfwSession* Dbfw::newSession(MXS_SESSION* session)
+DbfwSession* Dbfw::newSession(MXS_SESSION* session, SERVICE* service)
 {
-    return new(std::nothrow) DbfwSession(this, session);
+    return new(std::nothrow) DbfwSession(this, session, service);
 }
 
 fw_actions Dbfw::get_action() const
@@ -1446,8 +1446,8 @@ static std::string get_sql(GWBUF* buffer)
     return rval;
 }
 
-DbfwSession::DbfwSession(Dbfw* instance, MXS_SESSION* session)
-    : mxs::FilterSession::FilterSession(session)
+DbfwSession::DbfwSession(Dbfw* instance, MXS_SESSION* session, SERVICE* service)
+    : mxs::FilterSession::FilterSession(session, service)
     , m_instance(instance)
     , m_session(session)
 {

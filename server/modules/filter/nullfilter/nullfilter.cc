@@ -135,9 +135,9 @@ NullFilter* NullFilter::create(const char* zName, MXS_CONFIG_PARAMETER* pParams)
 }
 
 
-NullFilterSession* NullFilter::newSession(MXS_SESSION* pSession)
+NullFilterSession* NullFilter::newSession(MXS_SESSION* pSession, SERVICE* pService)
 {
-    return NullFilterSession::create(pSession, this);
+    return NullFilterSession::create(pSession, pService, this);
 }
 
 // static

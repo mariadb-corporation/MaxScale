@@ -60,7 +60,7 @@ public:
                     int ovector_size);
     ~RegexHintFilter();
     static RegexHintFilter* create(const char* zName, MXS_CONFIG_PARAMETER* ppParams);
-    RegexHintFSession*      newSession(MXS_SESSION* session);
+    RegexHintFSession*      newSession(MXS_SESSION* session, SERVICE* service);
     void                    diagnostics(DCB* dcb);
     json_t*                 diagnostics_json() const;
     uint64_t                getCapabilities();
@@ -95,6 +95,7 @@ private:
     pcre2_match_data* m_match_data;     /* compiled regex */
 public:
     RegexHintFSession(MXS_SESSION* session,
+                      SERVICE* service,
                       RegexHintFilter& filter,
                       bool active,
                       pcre2_match_data* md);

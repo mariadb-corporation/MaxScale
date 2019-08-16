@@ -49,7 +49,7 @@ public:
                                 MXS_CONFIG_PARAMETER* ppParams);
 
     // Creates a new session for this filter
-    BinlogFilterSession* newSession(MXS_SESSION* pSession);
+    BinlogFilterSession* newSession(MXS_SESSION* pSession, SERVICE* pService);
 
     // Print diagnostics to a DCB
     void diagnostics(DCB* pDcb) const;

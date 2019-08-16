@@ -39,9 +39,9 @@ public:
     MaxRowsSession& operator=(const MaxRowsSession&) = delete;
 
     // Create a new filter session
-    static MaxRowsSession* create(MXS_SESSION* pSession, MaxRows* pFilter)
+    static MaxRowsSession* create(MXS_SESSION* pSession, SERVICE* pService, MaxRows* pFilter)
     {
-        return new(std::nothrow) MaxRowsSession(pSession, pFilter);
+        return new(std::nothrow) MaxRowsSession(pSession, pService, pFilter);
     }
 
     // Handle a query from the client
@@ -52,8 +52,8 @@ public:
 
 private:
     // Used in the create function
-    MaxRowsSession(MXS_SESSION* pSession, MaxRows* pFilter)
-        : FilterSession(pSession)
+    MaxRowsSession(MXS_SESSION* pSession, SERVICE* pService, MaxRows* pFilter)
+        : FilterSession(pSession, pService)
         , m_instance(pFilter)
     {
     }
@@ -94,9 +94,9 @@ public:
     }
 
     // Creates a new session for this filter
-    MaxRowsSession* newSession(MXS_SESSION* session)
+    MaxRowsSession* newSession(MXS_SESSION* session, SERVICE* service)
     {
-        return MaxRowsSession::create(session, this);
+        return MaxRowsSession::create(session, service, this);
     }
 
     // Print diagnostics to a DCB

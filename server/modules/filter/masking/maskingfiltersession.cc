@@ -90,8 +90,10 @@ private:
 };
 }
 
-MaskingFilterSession::MaskingFilterSession(MXS_SESSION* pSession, const MaskingFilter* pFilter)
-    : maxscale::FilterSession(pSession)
+MaskingFilterSession::MaskingFilterSession(MXS_SESSION* pSession,
+                                           SERVICE* pService,
+                                           const MaskingFilter* pFilter)
+    : maxscale::FilterSession(pSession, pService)
     , m_filter(*pFilter)
     , m_state(IGNORING_RESPONSE)
 {
@@ -102,9 +104,11 @@ MaskingFilterSession::~MaskingFilterSession()
 }
 
 // static
-MaskingFilterSession* MaskingFilterSession::create(MXS_SESSION* pSession, const MaskingFilter* pFilter)
+MaskingFilterSession* MaskingFilterSession::create(MXS_SESSION* pSession,
+                                                   SERVICE* pService,
+                                                   const MaskingFilter* pFilter)
 {
-    return new MaskingFilterSession(pSession, pFilter);
+    return new MaskingFilterSession(pSession, pService, pFilter);
 }
 
 bool MaskingFilterSession::check_query(GWBUF* pPacket)

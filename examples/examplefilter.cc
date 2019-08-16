@@ -75,9 +75,9 @@ ExampleFilter* ExampleFilter::create(const char* zName, MXS_CONFIG_PARAMETER* pP
     return new ExampleFilter(pParams);
 }
 
-ExampleFilterSession* ExampleFilter::newSession(MXS_SESSION* pSession)
+ExampleFilterSession* ExampleFilter::newSession(MXS_SESSION* pSession, SERVICE* pService)
 {
-    return ExampleFilterSession::create(pSession, *this);
+    return ExampleFilterSession::create(pSession, pService, *this);
 }
 
 // static

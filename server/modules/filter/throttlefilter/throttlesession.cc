@@ -28,8 +28,8 @@
 
 namespace throttle
 {
-ThrottleSession::ThrottleSession(MXS_SESSION* mxsSession, ThrottleFilter& filter)
-    : maxscale::FilterSession(mxsSession)
+ThrottleSession::ThrottleSession(MXS_SESSION* mxsSession, SERVICE* service, ThrottleFilter& filter)
+    : maxscale::FilterSession(mxsSession, service)
     , m_filter(filter)
     , m_query_count("num-queries", filter.config().sampling_duration)
     , m_delayed_call_id(0)

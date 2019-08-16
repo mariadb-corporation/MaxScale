@@ -179,8 +179,11 @@ bool is_select_statement(GWBUF* pStmt)
 }
 }
 
-CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession, Cache* pCache, char* zDefaultDb)
-    : maxscale::FilterSession(pSession)
+CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession,
+                                       SERVICE* pService,
+                                       Cache* pCache,
+                                       char* zDefaultDb)
+    : maxscale::FilterSession(pSession, pService)
     , m_state(CACHE_EXPECTING_NOTHING)
     , m_pCache(pCache)
     , m_zDefaultDb(zDefaultDb)
@@ -248,7 +251,7 @@ CacheFilterSession::~CacheFilterSession()
 }
 
 // static
-CacheFilterSession* CacheFilterSession::Create(Cache* pCache, MXS_SESSION* pSession)
+CacheFilterSession* CacheFilterSession::Create(Cache* pCache, MXS_SESSION* pSession, SERVICE* pService)
 {
     CacheFilterSession* pCacheFilterSession = NULL;
 
@@ -265,7 +268,7 @@ CacheFilterSession* CacheFilterSession::Create(Cache* pCache, MXS_SESSION* pSess
 
     if ((zDb[0] == 0) || zDefaultDb)
     {
-        pCacheFilterSession = new(std::nothrow) CacheFilterSession(pSession, pCache, zDefaultDb);
+        pCacheFilterSession = new(std::nothrow) CacheFilterSession(pSession, pService, pCache, zDefaultDb);
 
         if (!pCacheFilterSession)
         {

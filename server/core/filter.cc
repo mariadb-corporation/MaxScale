@@ -364,8 +364,9 @@ namespace maxscale
 // FilterSession
 //
 
-FilterSession::FilterSession(MXS_SESSION* pSession)
+FilterSession::FilterSession(MXS_SESSION* pSession, SERVICE* pService)
     : m_pSession(pSession)
+    , m_pService(pService)
 {
 }
 

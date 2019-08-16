@@ -87,10 +87,11 @@ RegexHintFilter::~RegexHintFilter()
 }
 
 RegexHintFSession::RegexHintFSession(MXS_SESSION* session,
+                                     SERVICE* service,
                                      RegexHintFilter& fil_inst,
                                      bool active,
                                      pcre2_match_data* md)
-    : maxscale::FilterSession::FilterSession(session)
+    : maxscale::FilterSession::FilterSession(session, service)
     , m_fil_inst(fil_inst)
     , m_n_diverted(0)
     , m_n_undiverted(0)
@@ -151,7 +152,7 @@ int RegexHintFSession::routeQuery(GWBUF* queue)
  * @param session   The client session to attach to
  * @return a new filter session
  */
-RegexHintFSession* RegexHintFilter::newSession(MXS_SESSION* session)
+RegexHintFSession* RegexHintFilter::newSession(MXS_SESSION* session, SERVICE* service)
 {
     const char* remote = NULL;
     const char* user = NULL;
@@ -181,7 +182,7 @@ RegexHintFSession* RegexHintFilter::newSession(MXS_SESSION* session)
     {
         session_active = false;
     }
-    return new RegexHintFSession(session, *this, session_active, md);
+    return new RegexHintFSession(session, service, *this, session_active, md);
 }
 
 /**

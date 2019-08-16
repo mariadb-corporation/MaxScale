@@ -87,6 +87,7 @@ static int hktask_id = 0;
 static MXS_FILTER*         createInstance(const char* name, MXS_CONFIG_PARAMETER*);
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
                                       MXS_SESSION* session,
+                                      SERVICE* service,
                                       mxs::Downstream* down,
                                       mxs::Upstream* up);
 static void closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
@@ -869,6 +870,7 @@ void pushMessage(MQ_INSTANCE* instance, amqp_basic_properties_t* prop, char* msg
  */
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
                                       MXS_SESSION* session,
+                                      SERVICE* service,
                                       mxs::Downstream* down,
                                       mxs::Upstream* up)
 {

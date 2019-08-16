@@ -31,7 +31,7 @@ public:
     ~MaskingFilter();
     static MaskingFilter* create(const char* zName, MXS_CONFIG_PARAMETER* ppParams);
 
-    MaskingFilterSession* newSession(MXS_SESSION* pSession);
+    MaskingFilterSession* newSession(MXS_SESSION* pSession, SERVICE* pService);
 
     void    diagnostics(DCB* pDcb);
     json_t* diagnostics_json() const;

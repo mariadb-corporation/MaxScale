@@ -20,12 +20,13 @@
 #include <maxscale/modutil.hh>
 
 TeeSession::TeeSession(MXS_SESSION* session,
+                       SERVICE* service,
                        LocalClient* client,
                        pcre2_code* match,
                        pcre2_match_data* md_match,
                        pcre2_code* exclude,
                        pcre2_match_data* md_exclude)
-    : mxs::FilterSession(session)
+    : mxs::FilterSession(session, service)
     , m_client(client)
     , m_match(match)
     , m_md_match(md_match)
@@ -34,7 +35,7 @@ TeeSession::TeeSession(MXS_SESSION* session,
 {
 }
 
-TeeSession* TeeSession::create(Tee* my_instance, MXS_SESSION* session)
+TeeSession* TeeSession::create(Tee* my_instance, MXS_SESSION* session, SERVICE* service)
 {
     LocalClient* client = NULL;
     pcre2_code* match = NULL;
@@ -69,7 +70,8 @@ TeeSession* TeeSession::create(Tee* my_instance, MXS_SESSION* session)
         }
     }
 
-    TeeSession* tee = new(std::nothrow) TeeSession(session, client, match, md_match, exclude, md_exclude);
+    TeeSession* tee = new(std::nothrow) TeeSession(session, service, client,
+                                                   match, md_match, exclude, md_exclude);
 
     if (!tee)
     {

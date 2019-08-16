@@ -50,7 +50,7 @@ public:
      * @param pSession The generic MaxScale session object.
      * @return The new session, or NULL on failure.
      */
-    ExampleFilterSession* newSession(MXS_SESSION* pSession);
+    ExampleFilterSession* newSession(MXS_SESSION* pSession, SERVICE* pService);
 
     /*
      * Print diagnostics to a DCB. This is called when the admin tool MaxAdmin asks for the status of this

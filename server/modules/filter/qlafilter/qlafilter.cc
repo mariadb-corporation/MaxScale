@@ -823,6 +823,7 @@ MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params)
 
 MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
                                MXS_SESSION* session,
+                               SERVICE* service,
                                mxs::Downstream* down,
                                mxs::Upstream* up)
 {

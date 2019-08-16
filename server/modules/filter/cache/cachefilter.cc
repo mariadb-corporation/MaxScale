@@ -195,9 +195,9 @@ CacheFilter* CacheFilter::create(const char* zName, MXS_CONFIG_PARAMETER* ppPara
     return pFilter;
 }
 
-CacheFilterSession* CacheFilter::newSession(MXS_SESSION* pSession)
+CacheFilterSession* CacheFilter::newSession(MXS_SESSION* pSession, SERVICE* pService)
 {
-    return CacheFilterSession::Create(m_sCache.get(), pSession);
+    return CacheFilterSession::Create(m_sCache.get(), pSession, pService);
 }
 
 // static

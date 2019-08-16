@@ -56,7 +56,7 @@ public:
     ~BinlogFilterSession();
 
     // Create a new filter session
-    static BinlogFilterSession* create(MXS_SESSION* pSession,
+    static BinlogFilterSession* create(MXS_SESSION* pSession, SERVICE* pService,
                                        const BinlogFilter* pFilter);
 
     // Called when a client session has been closed
@@ -70,7 +70,7 @@ public:
 
 private:
     // Used in the create function
-    BinlogFilterSession(MXS_SESSION* pSession, const BinlogFilter* pFilter);
+    BinlogFilterSession(MXS_SESSION* pSession, SERVICE* pService, const BinlogFilter* pFilter);
 
     // Reference to Filter instance
     const BinlogFilter& m_filter;

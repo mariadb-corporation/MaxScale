@@ -218,6 +218,7 @@ public:
     {
         mxs::Upstream up;           /*< Upward component to receive buffer. */
         GWBUF*        buffer;       /*< Buffer to deliver to up. */
+        SERVICE*      service;      /*< Service where the response originated */
     }               response;       /*< Shortcircuited response */
     session_close_t close_reason;   /*< Reason why the session was closed */
     bool            load_active;    /*< Data streaming state (for LOAD DATA LOCAL INFILE) */
@@ -230,10 +231,11 @@ public:
  * in the request processing pipeline.
  *
  * @param session  The session.
+ * @param service  The source of the response
  * @param up       The filter that should receive the response.
  * @param buffer   The response.
  */
-void session_set_response(MXS_SESSION* session, const mxs::Upstream* up, GWBUF* buffer);
+void session_set_response(MXS_SESSION* session, SERVICE* service, const mxs::Upstream* up, GWBUF* buffer);
 
 /**
  * Function to be used by protocol module for routing incoming data

@@ -22,7 +22,7 @@ public:
     ~NullFilter();
     static NullFilter* create(const char* zName, MXS_CONFIG_PARAMETER* pParams);
 
-    NullFilterSession* newSession(MXS_SESSION* pSession);
+    NullFilterSession* newSession(MXS_SESSION* pSession, SERVICE* pService);
 
     void    diagnostics(DCB* pDcb);
     json_t* diagnostics_json() const;

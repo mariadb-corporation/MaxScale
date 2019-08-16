@@ -22,8 +22,10 @@
 
 using namespace std;
 
-CommentFilterSession::CommentFilterSession(MXS_SESSION* pSession, const CommentFilter* pFilter)
-    : maxscale::FilterSession(pSession)
+CommentFilterSession::CommentFilterSession(MXS_SESSION* pSession,
+                                           SERVICE* pService,
+                                           const CommentFilter* pFilter)
+    : maxscale::FilterSession(pSession, pService)
     , m_filter(*pFilter)
 {
 }
@@ -33,9 +35,11 @@ CommentFilterSession::~CommentFilterSession()
 }
 
 // static
-CommentFilterSession* CommentFilterSession::create(MXS_SESSION* pSession, const CommentFilter* pFilter)
+CommentFilterSession* CommentFilterSession::create(MXS_SESSION* pSession,
+                                                   SERVICE* pService,
+                                                   const CommentFilter* pFilter)
 {
-    return new CommentFilterSession(pSession, pFilter);
+    return new CommentFilterSession(pSession, pService, pFilter);
 }
 
 void CommentFilterSession::close()

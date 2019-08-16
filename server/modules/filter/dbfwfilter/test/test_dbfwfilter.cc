@@ -789,6 +789,7 @@ int test(FilterModule::Instance& filter_instance, const FW_TEST& t)
             mock::RouterSession router_session(&backend, &session);
 
             auto_ptr<FilterModule::Session> sFilter_session = filter_instance.newSession(&session,
+                                                                                         service,
                                                                                          router_session.as_downstream(),
                                                                                          client.as_upstream());
 

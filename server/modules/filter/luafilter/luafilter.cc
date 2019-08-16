@@ -62,6 +62,7 @@ extern "C"
 static MXS_FILTER*         createInstance(const char* name, MXS_CONFIG_PARAMETER*);
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
                                       MXS_SESSION* session,
+                                      SERVICE* service,
                                       mxs::Downstream* downstream,
                                       mxs::Upstream* upstream);
 static void    closeSession(MXS_FILTER* instance, MXS_FILTER_SESSION* session);
@@ -218,6 +219,7 @@ typedef struct
     MXS_SESSION*     session;
     lua_State*       lua_state;
     GWBUF*           current_query;
+    SERVICE*         service;
     mxs::Downstream* down;
     mxs::Upstream*   up;
 } LUA_SESSION;
@@ -324,6 +326,7 @@ static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params
  */
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
                                       MXS_SESSION* session,
+                                      SERVICE* service,
                                       mxs::Downstream* downstream,
                                       mxs::Upstream* upstream)
 {
@@ -335,6 +338,7 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
         return NULL;
     }
 
+    my_session->service = service;
     my_session->down = downstream;
     my_session->up = upstream;
     my_session->session = session;
@@ -602,7 +606,8 @@ static int32_t routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWB
     {
         gwbuf_free(queue);
         GWBUF* err = modutil_create_mysql_err_msg(1, 0, 1045, "28000", "Access denied.");
-        session_set_response(my_session->session, my_session->up, err);
+        session_set_response(my_session->session, my_session->service,
+                             my_session->up, err);
         rc = 1;
     }
     else

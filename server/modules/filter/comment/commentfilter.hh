@@ -30,7 +30,7 @@ public:
     static CommentFilter* create(const char* zName, MXS_CONFIG_PARAMETER* ppParams);
 
     // Creates a new session for this filter
-    CommentFilterSession* newSession(MXS_SESSION* pSession);
+    CommentFilterSession* newSession(MXS_SESSION* pSession, SERVICE* pService);
 
     // Print diagnostics to a DCB
     void diagnostics(DCB* pDcb) const;

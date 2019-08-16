@@ -64,7 +64,7 @@ public:
      *
      * @return A new instance or NULL if memory allocation fails.
      */
-    static CacheFilterSession* Create(Cache* pCache, MXS_SESSION* pSession);
+    static CacheFilterSession* Create(Cache* pCache, MXS_SESSION* pSession, SERVICE* pService);
 
     /**
      * The session has been closed.
@@ -178,7 +178,7 @@ private:
     void copy_command_header_at_offset(uint8_t* pHeader) const;
 
 private:
-    CacheFilterSession(MXS_SESSION* pSession, Cache* pCache, char* zDefaultDb);
+    CacheFilterSession(MXS_SESSION* pSession, SERVICE* pService, Cache* pCache, char* zDefaultDb);
 
 private:
     cache_session_state_t m_state;          /**< What state is the session in, what data is expected. */

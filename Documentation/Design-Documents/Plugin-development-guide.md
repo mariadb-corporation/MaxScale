@@ -298,7 +298,7 @@ deallocated. It should free any resources claimed by the instance. All sessions
 created by this instance should be closed before calling the destructor.
 
 ```java
-SESSION* newSession(INSTANCE* instance, MXS_SESSION* mxs_session)
+SESSION* newSession(INSTANCE* instance, MXS_SESSION* mxs_session, SERVICE* service)
 void closeSession(INSTANCE* instance, SESSION* session)
 void freeSession(INSTANCE* instance, SESSION* session)
 ```

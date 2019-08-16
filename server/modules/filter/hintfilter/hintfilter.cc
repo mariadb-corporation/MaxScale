@@ -32,9 +32,9 @@ HintInstance* HintInstance::create(const char* zName, MXS_CONFIG_PARAMETER* ppPa
     return new(std::nothrow) HintInstance;
 }
 
-HintSession* HintInstance::newSession(MXS_SESSION* pSession)
+HintSession* HintInstance::newSession(MXS_SESSION* pSession, SERVICE* pService)
 {
-    return new(std::nothrow) HintSession(pSession);
+    return new(std::nothrow) HintSession(pSession, pService);
 }
 
 void HintInstance::diagnostics(DCB* pDcb) const
@@ -51,8 +51,8 @@ uint64_t HintInstance::getCapabilities()
     return RCAP_TYPE_CONTIGUOUS_INPUT;
 }
 
-HintSession::HintSession(MXS_SESSION* session)
-    : mxs::FilterSession(session)
+HintSession::HintSession(MXS_SESSION* session, SERVICE* service)
+    : mxs::FilterSession(session, service)
 {
 }
 

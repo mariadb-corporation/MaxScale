@@ -54,7 +54,7 @@ public:
         pcre2_match_data_free(m_md);
     }
 
-    static CCRSession* create(MXS_SESSION* session, CCRFilter* instance);
+    static CCRSession* create(MXS_SESSION* session, SERVICE* service, CCRFilter* instance);
     int                routeQuery(GWBUF* queue);
 
 private:
@@ -70,8 +70,8 @@ private:
         CCR_HINT_IGNORE
     };
 
-    CCRSession(MXS_SESSION* session, CCRFilter* instance)
-        : maxscale::FilterSession(session)
+    CCRSession(MXS_SESSION* session, SERVICE* service, CCRFilter* instance)
+        : maxscale::FilterSession(session, service)
         , m_instance(*instance)
     {
     }
@@ -116,9 +116,9 @@ public:
         pcre2_code_free(nore);
     }
 
-    CCRSession* newSession(MXS_SESSION* session)
+    CCRSession* newSession(MXS_SESSION* session, SERVICE* service)
     {
-        return CCRSession::create(session, this);
+        return CCRSession::create(session, service, this);
     }
 
     void diagnostics(DCB* dcb) const
@@ -187,9 +187,9 @@ private:
     uint32_t    ovector_size = 0;   /* PCRE2 match data ovector size */
 };
 
-CCRSession* CCRSession::create(MXS_SESSION* session, CCRFilter* instance)
+CCRSession* CCRSession::create(MXS_SESSION* session, SERVICE* service, CCRFilter* instance)
 {
-    CCRSession* new_session = new(std::nothrow) CCRSession(session, instance);
+    CCRSession* new_session = new(std::nothrow) CCRSession(session, service, instance);
     if (new_session)
     {
         auto ovec_size = instance->ovector_size;

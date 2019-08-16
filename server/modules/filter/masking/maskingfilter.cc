@@ -207,9 +207,9 @@ MaskingFilter* MaskingFilter::create(const char* zName, MXS_CONFIG_PARAMETER* pP
 }
 
 
-MaskingFilterSession* MaskingFilter::newSession(MXS_SESSION* pSession)
+MaskingFilterSession* MaskingFilter::newSession(MXS_SESSION* pSession, SERVICE* pService)
 {
-    return MaskingFilterSession::create(pSession, this);
+    return MaskingFilterSession::create(pSession, pService, this);
 }
 
 // static

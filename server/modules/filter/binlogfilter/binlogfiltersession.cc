@@ -62,9 +62,9 @@
  * @param pSession    The calling routing/filter session
  * @param pFilter     Pointer to filter configuration
  */
-BinlogFilterSession::BinlogFilterSession(MXS_SESSION* pSession,
+BinlogFilterSession::BinlogFilterSession(MXS_SESSION* pSession, SERVICE* pService,
                                          const BinlogFilter* pFilter)
-    : mxs::FilterSession(pSession)
+    : mxs::FilterSession(pSession, pService)
     , m_filter(*pFilter)
 {
 }
@@ -84,10 +84,10 @@ BinlogFilterSession::~BinlogFilterSession()
  * @param pFilter     Pointer to filter configuration
  * @return            The new allocated session
  */
-BinlogFilterSession* BinlogFilterSession::create(MXS_SESSION* pSession,
+BinlogFilterSession* BinlogFilterSession::create(MXS_SESSION* pSession, SERVICE* pService,
                                                  const BinlogFilter* pFilter)
 {
-    return new BinlogFilterSession(pSession, pFilter);
+    return new BinlogFilterSession(pSession, pService, pFilter);
 }
 
 static bool is_master_binlog_checksum(GWBUF* buffer)

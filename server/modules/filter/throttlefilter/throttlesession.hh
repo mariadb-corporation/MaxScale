@@ -24,7 +24,7 @@ class ThrottleFilter;
 class ThrottleSession : public maxscale::FilterSession
 {
 public:
-    ThrottleSession(MXS_SESSION* pSession, ThrottleFilter& filter);
+    ThrottleSession(MXS_SESSION* pSession, SERVICE* pService, ThrottleFilter& filter);
     ThrottleSession(const ThrottleSession&) = delete;
     ThrottleSession& operator=(const ThrottleSession&) = delete;
     ~ThrottleSession();

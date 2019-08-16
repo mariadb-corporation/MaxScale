@@ -38,7 +38,7 @@ void RouterSession::set_upstream(FilterModule::Session* pFilter_session)
 
 bool RouterSession::respond()
 {
-    return m_pBackend->respond(this, nullptr);
+    return m_pBackend->respond(this, mxs::Reply(nullptr));
 }
 
 bool RouterSession::idle() const

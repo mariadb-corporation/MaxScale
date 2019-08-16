@@ -87,9 +87,9 @@ Tee* Tee::create(const char* name, MXS_CONFIG_PARAMETER* params)
     return my_instance;
 }
 
-TeeSession* Tee::newSession(MXS_SESSION* pSession)
+TeeSession* Tee::newSession(MXS_SESSION* pSession, SERVICE* pService)
 {
-    return TeeSession::create(this, pSession);
+    return TeeSession::create(this, pSession, pService);
 }
 
 /**

@@ -29,7 +29,7 @@ class TeeSession : public mxs::FilterSession
 
 public:
     ~TeeSession();
-    static TeeSession* create(Tee* my_instance, MXS_SESSION* session);
+    static TeeSession* create(Tee* my_instance, MXS_SESSION* session, SERVICE* service);
 
     void    close();
     int     routeQuery(GWBUF* pPacket);
@@ -38,6 +38,7 @@ public:
 
 private:
     TeeSession(MXS_SESSION* session,
+               SERVICE* service,
                LocalClient* client,
                pcre2_code* match,
                pcre2_match_data* md_match,

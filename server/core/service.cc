@@ -1761,7 +1761,7 @@ bool ServiceEndpoint::connect()
     for (auto it = m_filters.begin(); it != m_filters.end(); ++it)
     {
         auto& f = *it;
-        f.session = f.filter->obj->newSession(f.instance, m_session, &f.down, &f.up);
+        f.session = f.filter->obj->newSession(f.instance, m_session, m_service, &f.down, &f.up);
 
         if (!f.session)
         {
