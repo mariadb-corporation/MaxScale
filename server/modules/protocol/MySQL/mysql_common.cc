@@ -1593,8 +1593,6 @@ void MySQLProtocol::track_query(GWBUF* buffer)
         m_reply.clear();
         m_reply.set_command(MYSQL_GET_COMMAND(data));
 
-        MXS_INFO("%02hhx: %s", m_reply.command(), mxs::extract_sql(buffer).c_str());
-
         if (mxs_mysql_command_will_respond(m_reply.command()))
         {
             set_reply_state(ReplyState::START);
