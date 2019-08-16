@@ -536,6 +536,11 @@ void SchemaRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& dow
         return;
     }
 
+    if (reply.is_complete())
+    {
+        bref->ack_write();
+    }
+
     if (m_state & INIT_MAPPING)
     {
         handle_mapping_reply(bref, &pPacket);
