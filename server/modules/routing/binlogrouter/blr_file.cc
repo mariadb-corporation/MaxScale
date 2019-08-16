@@ -3448,8 +3448,6 @@ int blr_file_write_master_config(ROUTER_INSTANCE* router, char* error)
 #ifdef SS_DEBUG
     const ChangeMasterConfig& current = router->configs[router->config_index];
 
-    mxb_assert(current.host == router->service->dbref->server->address);
-    mxb_assert(current.port == router->service->dbref->server->port);
     mxb_assert(current.user == router->user);
     mxb_assert(current.password == router->password);
 

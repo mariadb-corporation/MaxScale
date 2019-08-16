@@ -271,22 +271,6 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
         return NULL;
     }
 
-    /*
-     * We only support one server behind this router, since the server is
-     * the master from which we replicate binlog records. Therefore check
-     * that only one server has been defined.
-     */
-    if (service->dbref != NULL)
-    {
-        MXS_WARNING("%s: backend database server is provided by master.ini file "
-                    "for use with the binlog router."
-                    " Server section is no longer required.",
-                    service->name());
-
-        MXS_FREE(service->dbref);
-        service->dbref = NULL;
-    }
-
     if ((inst = (ROUTER_INSTANCE*)MXS_CALLOC(1, sizeof(ROUTER_INSTANCE))) == NULL)
     {
         return NULL;
@@ -799,39 +783,6 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
         }
     }
 
-    /* Dynamically allocate master_host server struct, not written in any cnf file */
-    if (service->dbref == NULL)
-    {
-        // Declared in config.cc and needs to be removed if/when blr is refactored
-        extern const MXS_MODULE_PARAM config_server_params[];
-        MXS_CONFIG_PARAMETER params;
-        params.set_from_list({
-            {"address", "_none_"},
-            {"port", "3306"},
-            {"protocol", "mariadbbackend"},
-            {"authenticator", "MySQLBackendAuth"}
-        }, common_server_params());
-
-        Server* server = ServerManager::create_server("binlog_router_master_host", params);
-
-        if (server == NULL)
-        {
-            MXS_ERROR("%s: Error for server_alloc in createInstance",
-                      inst->service->name());
-
-            sqlite3_close_v2(inst->gtid_maps);
-            free_instance(inst);
-            return NULL;
-        }
-
-        /* Add server to service backend list */
-        serviceAddBackend(inst->service, server);
-
-        /* Hide backend server struct */
-        service->dbref->server->is_active = false;
-        service->dbref->active = false;
-    }
-
     /*
      * Check for master.ini file with master connection details
      * If not found a CHANGE MASTER TO is required via mysqsl client.
@@ -871,9 +822,6 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
     else
     {
         inst->master_state = BLRM_UNCONNECTED;
-        /* Set backend server as active */
-        service->dbref->server->is_active = true;
-        service->dbref->active = true;
     }
 
     /**
@@ -918,12 +866,6 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
             MXS_ERROR("%s: Service not started due to lack of binlog directory %s",
                       service->name(),
                       inst->binlogdir);
-
-            if (service->dbref && service->dbref->server)
-            {
-                MXS_FREE(service->dbref);
-                service->dbref = NULL;
-            }
 
             sqlite3_close_v2(inst->gtid_maps);
             free_instance(inst);
@@ -1273,14 +1215,12 @@ static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_sessio
         /*
          * We must be closing the master session.
          */
-        MXS_NOTICE("%s: Master %s disconnected after %ld seconds. "
+        MXS_NOTICE("%s: Master disconnected after %ld seconds. "
                    "%lu events read,",
                    router->service->name(),
-                   router->service->dbref->server->address,
                    time(0) - router->connect_time,
                    router->stats.n_binlogs_ses);
-        MXS_ERROR("Binlog router close session with master server %s",
-                  router->service->dbref->server->name());
+        MXS_ERROR("Binlog router close session with master server");
         blr_master_reconnect(router);
         return;
     }
@@ -1478,14 +1418,6 @@ static void diagnostics(MXS_ROUTER* router, DCB* dcb)
     else
     {
         dcb_printf(dcb, "\tMaster connection DCB:               0x0\n");
-    }
-
-    /* SSL options */
-    const auto& ssl = router_inst->service->dbref->server->ssl();
-
-    if (ssl.enabled())
-    {
-        dcb_printf(dcb, "%s", ssl.config()->to_string().c_str());
     }
 
     /* Binlog Encryption options */
@@ -2345,25 +2277,21 @@ static bool errorReply(MXS_ROUTER* instance,
         pthread_mutex_unlock(&router->lock);
 
         MXS_ERROR("%s: Master connection error %lu '%s' in state '%s', "
-                  "%sattempting reconnect to master [%s]:%d",
+                  "%sattempting reconnect to master",
                   router->service->name(),
                   mysql_errno,
                   errmsg,
                   blrm_states[router->master_state],
-                  msg,
-                  router->service->dbref->server->address,
-                  router->service->dbref->server->port);
+                  msg);
     }
     else
     {
         /* Stopped state, no reconnection */
         MXS_INFO("%s: Master connection has been closed. State is '%s', "
-                 "%snot retrying a new connection to master [%s]:%d",
+                 "%snot retrying a new connection to master",
                  router->service->name(),
                  blrm_states[router->master_state],
-                 msg,
-                 router->service->dbref->server->address,
-                 router->service->dbref->server->port);
+                 msg);
     }
 
     if (errmsg)
@@ -2384,10 +2312,9 @@ static bool errorReply(MXS_ROUTER* instance,
         router->client = NULL;
     }
 
-    MXS_NOTICE("%s: Master %s disconnected after %ld seconds. "
+    MXS_NOTICE("%s: Master disconnected after %ld seconds. "
                "%lu events read.",
                router->service->name(),
-               router->service->dbref->server->address,
                time(0) - router->connect_time,
                router->stats.n_binlogs_ses);
     blr_master_reconnect(router);
@@ -2854,11 +2781,9 @@ static void destroyInstance(MXS_ROUTER* instance)
         }
     }
 
-    MXS_INFO("%s is being stopped by MaxScale shudown. Disconnecting from master [%s]:%d, "
+    MXS_INFO("%s is being stopped by MaxScale shudown. Disconnecting from master, "
              "read up to log %s, pos %lu, transaction safe pos %lu",
              inst->service->name(),
-             inst->service->dbref->server->address,
-             inst->service->dbref->server->port,
              inst->binlog_name,
              inst->current_pos,
              inst->binlog_position);

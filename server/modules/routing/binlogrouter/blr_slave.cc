@@ -1346,8 +1346,6 @@ static int blr_slave_send_slave_status(ROUTER_INSTANCE* router,
     snprintf(column,
              max_column_size,
              "%s",
-             router->service->dbref->server->address ?
-             router->service->dbref->server->address :
              "");
     col_len = strlen(column);
     *ptr++ = col_len;                           // Length of result string
@@ -1365,7 +1363,7 @@ static int blr_slave_send_slave_status(ROUTER_INSTANCE* router,
     ptr += col_len;
 
     // Master_Port
-    sprintf(column, "%d", router->service->dbref->server->port);
+    sprintf(column, "%d", 0);
     col_len = strlen(column);
     *ptr++ = col_len;                           // Length of result string
     memcpy((char*)ptr, column, col_len);        // Result string
@@ -3900,13 +3898,11 @@ static int blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 
     pthread_mutex_unlock(&router->lock);
 
-    MXS_NOTICE("%s: STOP SLAVE executed by %s@%s. Disconnecting from master [%s]:%d, "
+    MXS_NOTICE("%s: STOP SLAVE executed by %s@%s. Disconnecting from master, "
                "read up to log %s, pos %lu, transaction safe pos %lu",
                router->service->name(),
                slave->dcb->m_user,
                slave->dcb->m_remote,
-               router->service->dbref->server->address,
-               router->service->dbref->server->port,
                router->binlog_name,
                router->current_pos,
                router->binlog_position);
@@ -4094,13 +4090,11 @@ static int blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
     /** Start replication from master */
     blr_start_master_in_main(router);
 
-    MXS_NOTICE("%s: START SLAVE executed by %s@%s. Trying connection to master [%s]:%d, "
+    MXS_NOTICE("%s: START SLAVE executed by %s@%s. Trying connection to master, "
                "binlog %s, pos %lu, transaction safe pos %lu",
                router->service->name(),
                slave->dcb->m_user,
                slave->dcb->m_remote,
-               router->service->dbref->server->address,
-               router->service->dbref->server->port,
                router->binlog_name,
                router->current_pos,
                router->binlog_position);
@@ -4651,12 +4645,6 @@ static int blr_set_master_hostname(ROUTER_INSTANCE* router, const char* hostname
     {
         mxb_assert((*hostname != '\'') && (*hostname != '"'));
 
-        router->service->dbref->server->server_update_address(hostname);
-
-        MXS_INFO("%s: New MASTER_HOST is [%s]",
-                 router->service->name(),
-                 router->service->dbref->server->address);
-
         return 1;
     }
 
@@ -4680,12 +4668,6 @@ static int blr_set_master_port(ROUTER_INSTANCE* router, int port)
 {
     if (port > 0)
     {
-        router->service->dbref->server->update_port(port);
-
-        MXS_INFO("%s: New MASTER_PORT is [%i]",
-                 router->service->name(),
-                 router->service->dbref->server->port);
-
         return 1;
     }
 
@@ -4834,8 +4816,6 @@ static char* blr_set_master_logfile(ROUTER_INSTANCE* router,
  */
 static void blr_master_get_config(ROUTER_INSTANCE* router, MasterServerConfig* curr_master)
 {
-    curr_master->port = router->service->dbref->server->port;
-    curr_master->host = router->service->dbref->server->address;
     curr_master->pos = router->current_pos;
     curr_master->safe_pos = router->binlog_position;
     curr_master->logfile = router->binlog_name;
@@ -4843,28 +4823,7 @@ static void blr_master_get_config(ROUTER_INSTANCE* router, MasterServerConfig* c
     curr_master->password = router->password;
     curr_master->filestem = router->fileroot;
     /* SSL options */
-    auto server_ssl = router->service->dbref->server->ssl().config();
 
-    if (server_ssl && !server_ssl->empty())
-    {
-        curr_master->ssl_enabled = router->ssl_enabled;
-        if (router->ssl_version)
-        {
-            curr_master->ssl_version = router->ssl_version;
-        }
-        if (!server_ssl->key.empty())
-        {
-            curr_master->ssl_key = server_ssl->key;
-        }
-        if (!server_ssl->cert.empty())
-        {
-            curr_master->ssl_cert = server_ssl->cert;
-        }
-        if (!server_ssl->ca.empty())
-        {
-            curr_master->ssl_ca = server_ssl->ca;
-        }
-    }
     /* Connect options */
     curr_master->heartbeat = router->heartbeat;
 }
@@ -4878,8 +4837,6 @@ static void blr_master_get_config(ROUTER_INSTANCE* router, MasterServerConfig* c
 static void blr_master_restore_config(ROUTER_INSTANCE* router,
                                       const MasterServerConfig& prev_master)
 {
-    router->service->dbref->server->server_update_address(prev_master.host);
-    router->service->dbref->server->update_port(prev_master.port);
 
     router->ssl_enabled = prev_master.ssl_enabled;
     if (!prev_master.ssl_version.empty())
@@ -4898,8 +4855,6 @@ static void blr_master_restore_config(ROUTER_INSTANCE* router,
  */
 static void blr_master_set_empty_config(ROUTER_INSTANCE* router)
 {
-    router->service->dbref->server->server_update_address("none");
-    router->service->dbref->server->update_port(3306);
 
     router->current_pos = 4;
     router->binlog_position = 4;
@@ -4920,8 +4875,6 @@ static void blr_master_set_empty_config(ROUTER_INSTANCE* router)
  */
 static void blr_master_apply_config(ROUTER_INSTANCE* router, const MasterServerConfig& prev_master)
 {
-    router->service->dbref->server->server_update_address(prev_master.host);
-    router->service->dbref->server->update_port(prev_master.port);
     router->current_pos = prev_master.pos;
     router->binlog_position = prev_master.safe_pos;
     router->current_safe_event = prev_master.safe_pos;
@@ -6367,7 +6320,6 @@ static int blr_set_master_ssl(ROUTER_INSTANCE* router,
         if (ssl)
         {
             updated = 1;
-            router->service->dbref->server->ssl().set_context(std::move(ssl));
         }
         else
         {
@@ -8215,15 +8167,6 @@ static bool blr_handle_admin_stmt(ROUTER_INSTANCE* router,
                         return true;
                     }
 
-                    /* Mark as active the master server struct */
-                    pthread_mutex_lock(&router->lock);
-                    if (!router->service->dbref->server->is_active)
-                    {
-                        router->service->dbref->server->is_active = true;
-                        router->service->dbref->active = true;
-                    }
-                    pthread_mutex_unlock(&router->lock);
-
                     /**
                      * check if router is BLRM_UNCONFIGURED
                      * and change state to BLRM_SLAVE_STOPPED
@@ -9180,7 +9123,7 @@ static void blr_log_config_changes(ROUTER_INSTANCE* router,
     MXS_NOTICE("%s: 'CHANGE MASTER TO executed'. Previous state "
                "MASTER_HOST='%s', MASTER_PORT=%i, MASTER_LOG_FILE='%s', "
                "MASTER_LOG_POS=%lu, MASTER_USER='%s'. "
-               "New state is MASTER_HOST='%s', MASTER_PORT=%i, "
+               "New state is MASTER_HOST='...', MASTER_PORT=..., "
                "MASTER_LOG_FILE='%s', MASTER_LOG_POS=%lu, "
                "MASTER_USER='%s'"
                "%s%s%s",
@@ -9190,8 +9133,6 @@ static void blr_log_config_changes(ROUTER_INSTANCE* router,
                current_master.logfile.c_str(),
                current_master.pos,
                current_master.user.c_str(),
-               router->service->dbref->server->address,
-               router->service->dbref->server->port,
                router->binlog_name,
                router->current_pos,
                router->user,

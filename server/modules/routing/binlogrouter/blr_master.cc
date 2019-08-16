@@ -174,11 +174,10 @@ static void blr_start_master(void* data)
         router->master_state = BLRM_SLAVE_STOPPED;
         pthread_mutex_unlock(&router->lock);
 
-        MXS_ERROR("%s: failure while connecting to master server '%s', "
+        MXS_ERROR("%s: failure while connecting to master server, "
                   "reached %d maximum number of retries. "
                   "Replication is stopped.",
                   router->service->name(),
-                  router->service->dbref->server->name(),
                   router->retry_limit);
         return;
     }
@@ -215,7 +214,7 @@ static void blr_start_master(void* data)
     router->client->m_remote = MXS_STRDUP("127.0.0.1");
 
     /* Fake the client is reading */
-    router->client->enable_events();      /* Fake the client is reading */
+    router->client->enable_events();        /* Fake the client is reading */
 
     /* Create MySQL Athentication from configured user/passwd */
     router->client->m_data = CreateMySQLAuthData(router->user, router->password, "");
@@ -229,30 +228,9 @@ static void blr_start_master(void* data)
         return;
     }
 
-    /* Connect to configured master server */
-    if ((router->master = BackendDCB::connect(router->service->dbref->server,
-                                              router->session, worker, nullptr)) == NULL)
-    {
-        pthread_mutex_lock(&router->lock);
-        router->retry_count++;
-        pthread_mutex_unlock(&router->lock);
-
-        blr_start_master_in_main(router, connect_retry);
-
-        MXS_ERROR("%s: failure while connecting to master server '%s', "
-                  "retrying in %d seconds",
-                  router->service->name(),
-                  router->service->dbref->server->name(),
-                  connect_retry);
-        return;
-    }
-    router->master->m_remote = MXS_STRDUP_A(router->service->dbref->server->address);
-
     MXS_NOTICE("%s: attempting to connect to master"
-               " server [%s]:%d, binlog='%s', pos=%lu%s%s",
+               " server, binlog='%s', pos=%lu%s%s",
                router->service->name(),
-               router->service->dbref->server->address,
-               router->service->dbref->server->port,
                router->binlog_name,
                router->current_pos,
                router->mariadb10_master_gtid ? ", GTID=" : "",
@@ -377,11 +355,10 @@ static void blr_restart_master(ROUTER_INSTANCE* router)
             router->master_state = BLRM_SLAVE_STOPPED;
             pthread_mutex_unlock(&router->lock);
 
-            MXS_ERROR("%s: failed to connect to master server '%s', "
+            MXS_ERROR("%s: failed to connect to master server, "
                       "reached %d maximum number of retries. "
                       "Replication is stopped.",
                       router->service->name(),
-                      router->service->dbref->server->name(),
                       router->retry_limit);
             return;
         }
@@ -412,10 +389,9 @@ static void blr_restart_master(ROUTER_INSTANCE* router)
 
         blr_start_master_in_main(router, connect_retry);
 
-        MXS_ERROR("%s: failed to connect to master server '%s', "
+        MXS_ERROR("%s: failed to connect to master server, "
                   "retrying in %d seconds",
                   router->service->name(),
-                  router->service->dbref->server->name(),
                   connect_retry);
     }
     else
@@ -1490,11 +1466,9 @@ int blr_check_heartbeat(ROUTER_INSTANCE* router)
         if (static_cast<unsigned long>(t_now - router->stats.lastReply)
             > (router->heartbeat + BLR_NET_LATENCY_WAIT_TIME))
         {
-            MXS_ERROR("No event received from master [%s]:%d in heartbeat period (%lu seconds), "
+            MXS_ERROR("No event received from master in heartbeat period (%lu seconds), "
                       "last event (%s %d) received %lu seconds ago. Assuming connection is dead "
                       "and reconnecting.",
-                      router->service->dbref->server->address,
-                      router->service->dbref->server->port,
                       router->heartbeat,
                       event_desc != NULL ? event_desc : "unknown",
                       router->lastEventReceived,
@@ -2333,10 +2307,8 @@ static void blr_register_mxw_tables(ROUTER_INSTANCE* router, GWBUF* buf)
  */
 static void blr_register_getsemisync(ROUTER_INSTANCE* router, GWBUF* buf)
 {
-    MXS_NOTICE("%s: checking Semi-Sync replication capability for master server [%s]:%d",
-               router->service->name(),
-               router->service->dbref->server->address,
-               router->service->dbref->server->port);
+    MXS_NOTICE("%s: checking Semi-Sync replication capability for master server",
+               router->service->name());
 
     // New registration message
     blr_register_send_command(router,
@@ -2368,10 +2340,8 @@ static bool blr_register_setsemisync(ROUTER_INSTANCE* router, GWBUF* buf)
         if (router->master_semi_sync == MASTER_SEMISYNC_NOT_AVAILABLE)
         {
             /* not installed */
-            MXS_NOTICE("%s: master server [%s]:%d doesn't have semi_sync capability",
-                       router->service->name(),
-                       router->service->dbref->server->address,
-                       router->service->dbref->server->port);
+            MXS_NOTICE("%s: master server doesn't have semi_sync capability",
+                       router->service->name());
 
             /* Continue without semisync */
             router->master_state = BLRM_REQUEST_BINLOGDUMP;
@@ -2383,20 +2353,16 @@ static bool blr_register_setsemisync(ROUTER_INSTANCE* router, GWBUF* buf)
             if (router->master_semi_sync == MASTER_SEMISYNC_DISABLED)
             {
                 /* Installed but not enabled, right now */
-                MXS_NOTICE("%s: master server [%s]:%d doesn't have semi_sync"
+                MXS_NOTICE("%s: master server doesn't have semi_sync"
                            " enabled right now, Request Semi-Sync Replication anyway",
-                           router->service->name(),
-                           router->service->dbref->server->address,
-                           router->service->dbref->server->port);
+                           router->service->name());
             }
             else
             {
                 /* Installed and enabled */
-                MXS_NOTICE("%s: master server [%s]:%d has semi_sync enabled,"
+                MXS_NOTICE("%s: master server has semi_sync enabled,"
                            " Requesting Semi-Sync Replication",
-                           router->service->name(),
-                           router->service->dbref->server->address,
-                           router->service->dbref->server->port);
+                           router->service->name());
             }
 
             /* Request semisync */
@@ -2807,12 +2773,10 @@ static void blr_start_master_registration(ROUTER_INSTANCE* router, GWBUF* buf)
         if (router->binlog_name[0])
         {
             MXS_NOTICE("%s: Request binlog records from %s at "
-                       "position %lu from master server [%s]:%d",
+                       "position %lu from master server",
                        router->service->name(),
                        router->binlog_name,
-                       router->current_pos,
-                       router->service->dbref->server->address,
-                       router->service->dbref->server->port);
+                       router->current_pos);
         }
 
         /* Log binlog router identity */
@@ -3189,17 +3153,6 @@ void blr_set_checksum(ROUTER_INSTANCE* inst, GWBUF* buf)
 void blr_master_set_config(ROUTER_INSTANCE* inst, const ChangeMasterConfig& config)
 {
     SERVICE* service = inst->service;
-    SERVER* backend_server = service->dbref->server;
-
-    if (!config.host.empty())
-    {
-        backend_server->server_update_address(config.host);
-    }
-
-    if (config.port)
-    {
-        backend_server->update_port(config.port);
-    }
 
     if (!config.user.empty())
     {

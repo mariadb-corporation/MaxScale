@@ -152,8 +152,6 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    serviceAddBackend(service, server);
-
     inst = static_cast<ROUTER_INSTANCE*>(MXS_CALLOC(1, sizeof(ROUTER_INSTANCE)));
     if (inst == NULL)
     {
