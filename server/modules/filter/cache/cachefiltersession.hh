@@ -96,14 +96,14 @@ public:
     json_t* diagnostics_json() const;
 
 private:
-    int handle_expecting_fields();
-    int handle_expecting_nothing();
-    int handle_expecting_response();
-    int handle_expecting_rows();
-    int handle_expecting_use_response();
-    int handle_ignoring_response();
+    void handle_expecting_fields();
+    void handle_expecting_nothing();
+    void handle_expecting_response();
+    void handle_expecting_rows();
+    void handle_expecting_use_response();
+    void handle_ignoring_response();
 
-    int send_upstream();
+    void send_upstream();
 
     void reset_response_state();
 
@@ -184,6 +184,7 @@ private:
     cache_session_state_t m_state;          /**< What state is the session in, what data is expected. */
     Cache*                m_pCache;         /**< The cache instance the session is associated with. */
     CACHE_RESPONSE_STATE  m_res;            /**< The response state. */
+    GWBUF*                m_next_response;  /**< The next response routed to the client. */
     CACHE_KEY             m_key;            /**< Key storage. */
     char*                 m_zDefaultDb;     /**< The default database. */
     char*                 m_zUseDb;         /**< Pending default database. Needs server response. */

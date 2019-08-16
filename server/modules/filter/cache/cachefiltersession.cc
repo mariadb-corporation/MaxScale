@@ -186,6 +186,7 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession,
     : maxscale::FilterSession(pSession, pService)
     , m_state(CACHE_EXPECTING_NOTHING)
     , m_pCache(pCache)
+    , m_next_response(nullptr)
     , m_zDefaultDb(zDefaultDb)
     , m_zUseDb(NULL)
     , m_refreshing(false)
@@ -357,7 +358,6 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
 
 int CacheFilterSession::clientReply(GWBUF* pData, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    int rv;
 
     if (m_res.pData)
     {
@@ -393,35 +393,44 @@ int CacheFilterSession::clientReply(GWBUF* pData, const mxs::ReplyRoute& down, c
     switch (m_state)
     {
     case CACHE_EXPECTING_FIELDS:
-        rv = handle_expecting_fields();
+        handle_expecting_fields();
         break;
 
     case CACHE_EXPECTING_NOTHING:
-        rv = handle_expecting_nothing();
+        handle_expecting_nothing();
         break;
 
     case CACHE_EXPECTING_RESPONSE:
-        rv = handle_expecting_response();
+        handle_expecting_response();
         break;
 
     case CACHE_EXPECTING_ROWS:
-        rv = handle_expecting_rows();
+        handle_expecting_rows();
         break;
 
     case CACHE_EXPECTING_USE_RESPONSE:
-        rv = handle_expecting_use_response();
+        handle_expecting_use_response();
         break;
 
     case CACHE_IGNORING_RESPONSE:
-        rv = handle_ignoring_response();
+        handle_ignoring_response();
         break;
 
     default:
         MXS_ERROR("Internal cache logic broken, unexpected state: %d", m_state);
         mxb_assert(!true);
-        rv = send_upstream();
+        send_upstream();
         reset_response_state();
         m_state = CACHE_IGNORING_RESPONSE;
+    }
+
+    GWBUF* next_response = m_next_response;
+    m_next_response = nullptr;
+    int rv = 1;
+
+    if (next_response)
+    {
+        rv = FilterSession::clientReply(next_response, down, reply);
     }
 
     return rv;
@@ -448,12 +457,10 @@ json_t* CacheFilterSession::diagnostics_json() const
 /**
  * Called when resultset field information is handled.
  */
-int CacheFilterSession::handle_expecting_fields()
+void CacheFilterSession::handle_expecting_fields()
 {
     mxb_assert(m_state == CACHE_EXPECTING_FIELDS);
     mxb_assert(m_res.pData);
-
-    int rv = 1;
 
     bool insufficient = false;
 
@@ -477,7 +484,7 @@ int CacheFilterSession::handle_expecting_fields()
             case MYSQL_REPLY_EOF:   // The EOF after the fields.
                 m_res.offset += packetlen;
                 m_state = CACHE_EXPECTING_ROWS;
-                rv = handle_expecting_rows();
+                handle_expecting_rows();
                 break;
 
             default:    // Field information.
@@ -493,14 +500,12 @@ int CacheFilterSession::handle_expecting_fields()
             insufficient = true;
         }
     }
-
-    return rv;
 }
 
 /**
  * Called when data is received (even if nothing is expected) from the server.
  */
-int CacheFilterSession::handle_expecting_nothing()
+void CacheFilterSession::handle_expecting_nothing()
 {
     mxb_assert(m_state == CACHE_EXPECTING_NOTHING);
     mxb_assert(m_res.pData);
@@ -527,18 +532,16 @@ int CacheFilterSession::handle_expecting_nothing()
         mxb_assert(!true);
     }
 
-    return send_upstream();
+    send_upstream();
 }
 
 /**
  * Called when a response is received from the server.
  */
-int CacheFilterSession::handle_expecting_response()
+void CacheFilterSession::handle_expecting_response()
 {
     mxb_assert(m_state == CACHE_EXPECTING_RESPONSE);
     mxb_assert(m_res.pData);
-
-    int rv = 1;
 
     size_t buflen = m_res.length;
     mxb_assert(m_res.length == gwbuf_length(m_res.pData));
@@ -556,12 +559,12 @@ int CacheFilterSession::handle_expecting_response()
             store_result();
 
         case MYSQL_REPLY_ERR:
-            rv = send_upstream();
+            send_upstream();
             m_state = CACHE_IGNORING_RESPONSE;
             break;
 
         case MYSQL_REPLY_LOCAL_INFILE:      // GET_MORE_CLIENT_DATA/SEND_MORE_CLIENT_DATA
-            rv = send_upstream();
+            send_upstream();
             m_state = CACHE_IGNORING_RESPONSE;
             break;
 
@@ -570,7 +573,7 @@ int CacheFilterSession::handle_expecting_response()
             {
                 // We've seen the header and have figured out how many fields there are.
                 m_state = CACHE_EXPECTING_FIELDS;
-                rv = handle_expecting_fields();
+                handle_expecting_fields();
             }
             else
             {
@@ -588,7 +591,7 @@ int CacheFilterSession::handle_expecting_response()
                     m_res.offset = MYSQL_HEADER_LEN + n_bytes;
 
                     m_state = CACHE_EXPECTING_FIELDS;
-                    rv = handle_expecting_fields();
+                    handle_expecting_fields();
                 }
                 else
                 {
@@ -598,19 +601,15 @@ int CacheFilterSession::handle_expecting_response()
             break;
         }
     }
-
-    return rv;
 }
 
 /**
  * Called when resultset rows are handled.
  */
-int CacheFilterSession::handle_expecting_rows()
+void CacheFilterSession::handle_expecting_rows()
 {
     mxb_assert(m_state == CACHE_EXPECTING_ROWS);
     mxb_assert(m_res.pData);
-
-    int rv = 1;
 
     bool insufficient = false;
 
@@ -634,7 +633,7 @@ int CacheFilterSession::handle_expecting_rows()
 
                 store_result();
 
-                rv = send_upstream();
+                send_upstream();
                 m_state = CACHE_EXPECTING_NOTHING;
             }
             else
@@ -649,7 +648,7 @@ int CacheFilterSession::handle_expecting_rows()
                     {
                         MXS_NOTICE("Max rows %lu reached, not caching result.", m_res.nRows);
                     }
-                    rv = send_upstream();
+                    send_upstream();
                     m_res.offset = buflen;      // To abort the loop.
                     m_state = CACHE_IGNORING_RESPONSE;
                 }
@@ -661,19 +660,15 @@ int CacheFilterSession::handle_expecting_rows()
             insufficient = true;
         }
     }
-
-    return rv;
 }
 
 /**
  * Called when a response to a "USE db" is received from the server.
  */
-int CacheFilterSession::handle_expecting_use_response()
+void CacheFilterSession::handle_expecting_use_response()
 {
     mxb_assert(m_state == CACHE_EXPECTING_USE_RESPONSE);
     mxb_assert(m_res.pData);
-
-    int rv = 1;
 
     size_t buflen = m_res.length;
     mxb_assert(m_res.length == gwbuf_length(m_res.pData));
@@ -709,39 +704,33 @@ int CacheFilterSession::handle_expecting_use_response()
             m_zUseDb = NULL;
         }
 
-        rv = send_upstream();
+        send_upstream();
         m_state = CACHE_IGNORING_RESPONSE;
     }
-
-    return rv;
 }
 
 /**
  * Called when all data from the server is ignored.
  */
-int CacheFilterSession::handle_ignoring_response()
+void CacheFilterSession::handle_ignoring_response()
 {
     mxb_assert(m_state == CACHE_IGNORING_RESPONSE);
     mxb_assert(m_res.pData);
 
-    return send_upstream();
+    send_upstream();
 }
 
 /**
  * Send data upstream.
  *
- * @return Whatever the upstream returns.
+ * Queues the current response for forwarding to the upstream component.
  */
-int CacheFilterSession::send_upstream()
+void CacheFilterSession::send_upstream()
 {
-    mxb_assert(m_res.pData != NULL);
-
-    // TODO: Fix this
-    mxs::ReplyRoute route;
-    int rv = m_up.clientReply(m_res.pData, route, nullptr);
+    mxb_assert(m_res.pData);
+    mxb_assert(!m_next_response);
+    m_next_response = m_res.pData;
     m_res.pData = NULL;
-
-    return rv;
 }
 
 /**
