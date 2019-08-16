@@ -19,7 +19,7 @@ int main(int argc, char* argv[])
     Test->set_timeout(10);
     Test->maxscales->connect_maxscale(0);
 
-    Test->log_includes(0, "Multiple monitors are monitoring server");
+    Test->log_includes(0, "is already monitored by");
 
     int rval = Test->global_result;
     delete Test;
