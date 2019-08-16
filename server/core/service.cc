@@ -1542,6 +1542,7 @@ const MXS_MODULE_PARAM* common_service_params()
         {CN_ROUTER,             MXS_MODULE_PARAM_STRING,   NULL,       MXS_MODULE_OPT_REQUIRED  },
         {CN_ROUTER_OPTIONS,     MXS_MODULE_PARAM_STRING},
         {CN_SERVERS,            MXS_MODULE_PARAM_STRING},
+        {CN_TARGETS,            MXS_MODULE_PARAM_STRING},
         // Not mandatory due to RCAP_TYPE_NO_AUTH
         {CN_USER,               MXS_MODULE_PARAM_STRING},
         // Not mandatory due to RCAP_TYPE_NO_AUTH

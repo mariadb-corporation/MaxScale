@@ -132,6 +132,7 @@ constexpr char CN_STATEMENT[] = "statement";
 constexpr char CN_STATE[] = "state";
 constexpr char CN_STRIP_DB_ESC[] = "strip_db_esc";
 constexpr char CN_SUBSTITUTE_VARIABLES[] = "substitute_variables";
+constexpr char CN_TARGETS[] = "targets";
 constexpr char CN_THREADS[] = "threads";
 constexpr char CN_THREAD_STACK_SIZE[] = "thread_stack_size";
 constexpr char CN_TICKS[] = "ticks";

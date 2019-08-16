@@ -3273,6 +3273,22 @@ void config_add_module_params_json(const MXS_CONFIG_PARAMETER* parameters,
     }
 }
 
+void log_exclusive_param_error(CONFIG_CONTEXT* obj)
+{
+    std::vector<std::string> types;
+
+    for (auto a : {CN_SERVERS, CN_TARGETS, CN_CLUSTER})
+    {
+        if (obj->m_parameters.contains(a))
+        {
+            types.push_back("'" + std::string(a) + "'");
+        }
+    }
+
+    MXS_ERROR("Service '%s' is configured with mutually exclusive parameters (%s). "
+              "Only one of them is allowed.", obj->name(), mxb::join(types, ", ").c_str());
+}
+
 /**
  * Create a new router for a service
  * @param obj Service configuration context
@@ -3284,12 +3300,12 @@ int create_new_service(CONFIG_CONTEXT* obj)
     mxb_assert(!router.empty());
 
     const string servers = obj->m_parameters.get_string(CN_SERVERS);
+    const string targets = obj->m_parameters.get_string(CN_TARGETS);
     const string cluster = obj->m_parameters.get_string(CN_CLUSTER);
 
-    if (!servers.empty() && !cluster.empty())
+    if (!servers.empty() + !cluster.empty() + !targets.empty() > 1)
     {
-        MXS_ERROR("Service '%s' is configured with both 'servers' and 'cluster'. "
-                  "Only one or the other is allowed.", obj->name());
+        log_exclusive_param_error(obj);
         return 1;
     }
 
@@ -3317,23 +3333,38 @@ int create_new_service(CONFIG_CONTEXT* obj)
 
     if (service)
     {
-
         if (!servers.empty())
         {
             for (auto& a : mxs::strtok(servers, ","))
             {
-                fix_object_name(a);
-
                 if (auto s = ServerManager::find_by_unique_name(a))
                 {
                     service->add_target(s);
                 }
                 else
                 {
-                    MXS_ERROR("Unable to find server '%s' that is configured as part "
-                              "of service '%s'.",
-                              a.c_str(),
-                              obj->name());
+                    MXS_ERROR("Unable to find server '%s' that is configured as part of service '%s'.",
+                              a.c_str(), obj->name());
+                    error_count++;
+                }
+            }
+        }
+        else if (!targets.empty())
+        {
+            for (auto& a : mxs::strtok(targets, ","))
+            {
+                if (auto s = ServerManager::find_by_unique_name(a))
+                {
+                    service->add_target(s);
+                }
+                else if (auto s = service_find(a.c_str()))
+                {
+                    service->add_target(s);
+                }
+                else
+                {
+                    MXS_ERROR("Unable to find target '%s' that is configured as part of service '%s'.",
+                              a.c_str(), obj->name());
                     error_count++;
                 }
             }
