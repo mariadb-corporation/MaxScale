@@ -251,8 +251,7 @@ int64_t RWSplitSession::get_current_rank()
 
 RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
 {
-    thread_local PRWBackends candidates;
-    candidates.clear();
+    PRWBackends candidates;
 
     auto counts = get_slave_counts(m_raw_backends, m_current_master);
     int best_priority {INT_MAX};
@@ -358,8 +357,7 @@ RWBackend* RWSplitSession::get_root_master()
         return m_current_master;
     }
 
-    thread_local PRWBackends candidates;
-    candidates.clear();
+    PRWBackends candidates;
     auto best_rank = std::numeric_limits<int64_t>::max();
 
     for (const auto& backend : m_raw_backends)
@@ -454,8 +452,7 @@ bool RWSplitSession::open_connections()
     int max_nslaves = m_router->max_slave_count();
     mxb_assert(n_slaves <= max_nslaves || max_nslaves == 0);
     auto current_rank = get_current_rank();
-    thread_local PRWBackends candidates;
-    candidates.clear();
+    PRWBackends candidates;
 
     for (auto& backend : m_raw_backends)
     {
