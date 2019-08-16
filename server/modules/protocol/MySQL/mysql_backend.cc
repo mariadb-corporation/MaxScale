@@ -572,7 +572,17 @@ int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
         }
 
         // Store any partial packets in the DCB's read buffer
-        dcb_readq_set(dcb, read_buffer);
+        if (read_buffer)
+        {
+            dcb_readq_set(dcb, read_buffer);
+
+            if (proto->reply().is_complete())
+            {
+                // There must be more than one response in the buffer which we need to process once we've
+                // routed this response.
+                poll_fake_read_event(dcb);
+            }
+        }
 
         if (tmp == NULL)
         {
