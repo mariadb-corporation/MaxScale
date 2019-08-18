@@ -116,7 +116,8 @@ Listener::Listener(SERVICE* service,
                    const std::string& auth_opts,
                    std::unique_ptr<mxs::AuthenticatorModule> auth_instance,
                    std::unique_ptr<mxs::SSLContext> ssl,
-                   const MXS_CONFIG_PARAMETER& params)
+                   const MXS_CONFIG_PARAMETER& params,
+                   qc_sql_mode_t sql_mode)
     : MXB_POLL_DATA{Listener::poll_handler}
     , m_name(name)
     , m_state(CREATED)
@@ -131,6 +132,7 @@ Listener::Listener(SERVICE* service,
     , m_service(service)
     , m_params(params)
     , m_ssl_provider(std::move(ssl))
+    , m_sql_mode(sql_mode)
 {
     if (strcasecmp(service->router_name(), "cli") == 0 || strcasecmp(service->router_name(), "maxinfo") == 0)
     {
@@ -164,6 +166,7 @@ SListener Listener::create(const std::string& name,
 {
     bool port_defined = params.contains(CN_PORT);
     bool socket_defined = params.contains(CN_SOCKET);
+    bool sql_mode_defined = params.contains(CN_SQL_MODE);
     Service* service = static_cast<Service*>(params.get_service(CN_SERVICE));
 
     if (port_defined && socket_defined)
@@ -185,6 +188,34 @@ SListener Listener::create(const std::string& name,
     auto port = port_defined ? params.get_integer(CN_PORT) : 0;
     auto socket = socket_defined ? params.get_string(CN_SOCKET) : "";
     auto address = socket_defined ? params.get_string(CN_SOCKET) : params.get_string(CN_ADDRESS);
+    qc_sql_mode_t sql_mode;
+
+    if (sql_mode_defined)
+    {
+        std::string sql_mode_str = params.get_string(CN_SQL_MODE);
+
+        if (strcasecmp(sql_mode_str.c_str(), "default") == 0)
+        {
+            sql_mode = QC_SQL_MODE_DEFAULT;
+        }
+        else if (strcasecmp(sql_mode_str.c_str(), "oracle") == 0)
+        {
+            sql_mode = QC_SQL_MODE_ORACLE;
+        }
+        else
+        {
+            MXS_ERROR("'%s' is not a valid value for '%s'. Allowed values are 'DEFAULT' and 'ORACLE'.",
+                    sql_mode_str.c_str(), CN_SQL_MODE);
+            return nullptr;
+        }
+    }
+
+    // If listener doesn't configure sql_mode use the sql mode of query classifier.
+    // This is the global configuration of sql_mode or "default" if it is not configured at all.
+    else
+    {
+        sql_mode = qc_get_sql_mode();
+    }
 
     // Remove this once maxadmin is removed
     if (strcasecmp(protocol.c_str(), "maxscaled") == 0 && socket_defined
@@ -268,7 +299,7 @@ SListener Listener::create(const std::string& name,
             service, name, address, port,
             protocol, std::move(protocol_module),
             zauth, authenticator_options, std::move(auth_instance),
-            std::move(ssl_info), params));
+            std::move(ssl_info), params, sql_mode));
 
     if (listener)
     {
@@ -1059,6 +1090,9 @@ const MXS_MODULE_PARAM* common_listener_params()
         },
         {
             CN_SSL_VERIFY_PEER_CERTIFICATE, MXS_MODULE_PARAM_BOOL, "true"
+        },
+        {
+            CN_SQL_MODE, MXS_MODULE_PARAM_STRING, NULL
         },
         {NULL}
     };

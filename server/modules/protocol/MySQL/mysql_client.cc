@@ -802,7 +802,7 @@ int MySQLClientProtocol::perform_authentication(DCB* generic_dcb, GWBUF* read_bu
         {
             mxb_assert(dcb->session()->state() != MXS_SESSION::State::CREATED);
             // For the time being only the sql_mode is stored in MXS_SESSION::client_protocol_data.
-            dcb->session()->client_protocol_data = QC_SQL_MODE_DEFAULT;
+            dcb->session()->client_protocol_data = dcb->session()->listener->sql_mode();
             protocol->protocol_auth_state = MXS_AUTH_STATE_COMPLETE;
             mxs_mysql_send_ok(dcb, next_sequence, 0, NULL);
 

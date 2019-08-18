@@ -186,6 +186,11 @@ public:
         return m_ssl_provider;
     }
 
+    const qc_sql_mode_t sql_mode() const
+    {
+        return m_sql_mode;
+    }
+
 private:
     enum State
     {
@@ -212,6 +217,7 @@ private:
     std::atomic<bool>    m_active;          /**< True if the port has not been deleted */
     MXS_CONFIG_PARAMETER m_params;          /**< Configuration parameters */
     mxs::SSLProvider     m_ssl_provider;
+    qc_sql_mode_t        m_sql_mode;        /**< Default sql mode for the listener */
 
     Type m_type;    /**< The type of the listener */
 
@@ -251,7 +257,8 @@ private:
              const std::string& auth_opts,
              std::unique_ptr<mxs::AuthenticatorModule> auth_instance,
              std::unique_ptr<mxs::SSLContext> ssl,
-             const MXS_CONFIG_PARAMETER& params);
+             const MXS_CONFIG_PARAMETER& params,
+             qc_sql_mode_t sql_mode);
 
     /**
      * Listen on a file descriptor shared between all workers

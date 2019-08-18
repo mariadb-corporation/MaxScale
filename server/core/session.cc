@@ -45,6 +45,7 @@
 #include "internal/filter.hh"
 #include "internal/session.hh"
 #include "internal/service.hh"
+#include "internal/listener.hh"
 
 using std::string;
 using std::stringstream;
@@ -90,7 +91,7 @@ MXS_SESSION::MXS_SESSION(const SListener& listener)
     , service(listener ? listener->service() : nullptr)
     , refcount(1)
     , trx_state(SESSION_TRX_INACTIVE)
-    , autocommit(config_get_global_options()->qc_sql_mode == QC_SQL_MODE_ORACLE ? false : true)
+    , autocommit(listener->sql_mode() == QC_SQL_MODE_ORACLE ? false : true)
     , client_protocol_data(0)
     , qualifies_for_pooling(false)
     , response{}
