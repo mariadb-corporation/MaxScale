@@ -1850,6 +1850,11 @@ Option string given to the authenticator module. The value of this parameter
 should be a comma-separated list of key-value pairs. See authenticator specific
 documentation for more details.
 
+### `sql_mode`
+
+Specify the sql mode for the listener similarly to global `sql_mode` setting.
+If both are used this setting will override the global setting for this listener.
+
 # Available Protocols
 
 The protocols supported by MariaDB MaxScale are implemented as external modules
