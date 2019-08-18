@@ -68,6 +68,69 @@ static bool                  maxscaled_init_connection(DCB*);
 static void                  maxscaled_finish_connection(DCB* dcb);
 static char*                 maxscaled_default_auth();
 
+MXS_PROTOCOL_SESSION* MAXSCALED::create(MXS_SESSION* session, mxs::Component* component)
+{
+    return new (std::nothrow) MAXSCALED();
+}
+
+MAXSCALED::MAXSCALED()
+{
+    pthread_mutex_init(&lock, NULL);
+}
+
+MAXSCALED::~MAXSCALED()
+{
+    if (username)
+    {
+        MXS_FREE(username);
+    }
+}
+
+char* MAXSCALED::auth_default()
+{
+    return maxscaled_default_auth();
+}
+
+int32_t MAXSCALED::read(DCB* dcb)
+{
+    return maxscaled_read_event(dcb);
+}
+
+int32_t MAXSCALED::write(DCB* dcb, GWBUF* buffer)
+{
+    return maxscaled_write(dcb, buffer);
+}
+
+int32_t MAXSCALED::write_ready(DCB* dcb)
+{
+    return maxscaled_write_event(dcb);
+}
+
+int32_t MAXSCALED::error(DCB* dcb)
+{
+    return maxscaled_error(dcb);
+}
+
+int32_t MAXSCALED::hangup(DCB* dcb)
+{
+    return maxscaled_hangup(dcb);
+}
+
+bool MAXSCALED::init_connection(DCB* dcb)
+{
+    return maxscaled_init_connection(dcb);
+}
+
+void MAXSCALED::finish_connection(DCB* dcb)
+{
+    maxscaled_finish_connection(dcb);
+}
+
+GWBUF* MAXSCALED::reject(const char* host)
+{
+    return nullptr;
+}
+
 static bool authenticate_unix_socket(MAXSCALED* protocol, DCB* generic_dcb)
 {
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
@@ -174,24 +237,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
 {
     MXS_INFO("Initialise MaxScaled Protocol module.");
 
-    static MXS_PROTOCOL_API MyObject =
-    {
-        maxscaled_read_event,                /**< Read - EPOLLIN handler        */
-        maxscaled_write,                     /**< Write - data from gateway     */
-        maxscaled_write_event,               /**< WriteReady - EPOLLOUT handler */
-        maxscaled_error,                     /**< Error - EPOLLERR handler      */
-        maxscaled_hangup,                    /**< HangUp - EPOLLHUP handler     */
-        maxscaled_new_client_session,
-        NULL,                                /**< new_backend_session           */
-        maxscaled_free_session,
-        maxscaled_init_connection,
-        maxscaled_finish_connection,
-        maxscaled_default_auth,              /**< Default authenticator         */
-        NULL,                                /**< Connection limit reached      */
-        NULL,
-        NULL,
-    };
-
     static MXS_MODULE info =
     {
         MXS_MODULE_API_PROTOCOL,
@@ -200,7 +245,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "A maxscale protocol for the administration interface",
         "V2.0.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &MyObject,
+        &mxs::ClientProtocolApi<MAXSCALED>::s_api,
         NULL,       /* Process init. */
         NULL,       /* Process finish. */
         NULL,       /* Thread init. */

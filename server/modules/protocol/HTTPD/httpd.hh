@@ -30,8 +30,7 @@
 #include <maxscale/router.hh>
 #include <maxscale/poll.hh>
 #include <maxbase/atomic.h>
-
-MXS_BEGIN_DECLS
+#include <maxscale/protocol2.hh>
 
 #define HTTPD_SMALL_BUFFER       1024
 #define HTTPD_METHOD_MAXLEN      128
@@ -45,8 +44,24 @@ MXS_BEGIN_DECLS
  * HTTPD session specific data
  *
  */
-struct HTTPD_session : MXS_PROTOCOL_SESSION
+class HTTPD_session : public mxs::ClientProtocol
 {
+public:
+    static MXS_PROTOCOL_SESSION* create(MXS_SESSION* session, mxs::Component* component);
+    ~HTTPD_session() = default;
+
+    static char* auth_default();
+    static GWBUF* reject(const char* host);
+
+    int32_t read(DCB* dcb) override;
+    int32_t write(DCB* dcb, GWBUF* buffer) override;
+    int32_t write_ready(DCB* dcb) override;
+    int32_t error(DCB* dcb) override;
+    int32_t hangup(DCB* dcb) override;
+
+    bool init_connection(DCB* dcb) override;
+    void finish_connection(DCB* dcb) override;
+
     char  user[HTTPD_USER_MAXLEN];          /*< username for authentication*/
     char* cookies;                          /*< all input cookies */
     char  hostname[HTTPD_HOSTNAME_MAXLEN];  /*< The hostname */
@@ -59,5 +74,3 @@ struct HTTPD_session : MXS_PROTOCOL_SESSION
                                              * name */
     int headers_received;                   /*< All the headers has been received, if 1 */
 };
-
-MXS_END_DECLS

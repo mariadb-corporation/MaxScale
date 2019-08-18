@@ -58,6 +58,56 @@ static int                   httpd_get_line(int sock, char* buf, int size);
 static void                  httpd_send_headers(DCB* dcb, int final, bool auth_ok);
 static char*                 httpd_default_auth();
 
+MXS_PROTOCOL_SESSION* HTTPD_session::create(MXS_SESSION* session, mxs::Component* component)
+{
+    return new (std::nothrow) HTTPD_session();
+}
+
+char* HTTPD_session::auth_default()
+{
+    return httpd_default_auth();
+}
+
+int32_t HTTPD_session::read(DCB* dcb)
+{
+    return httpd_read_event(dcb);
+}
+
+int32_t HTTPD_session::write(DCB* dcb, GWBUF* buffer)
+{
+    return httpd_write(dcb, buffer);
+}
+
+int32_t HTTPD_session::write_ready(DCB* dcb)
+{
+    return httpd_write_event(dcb);
+}
+
+int32_t HTTPD_session::error(DCB* dcb)
+{
+    return httpd_error(dcb);
+}
+
+int32_t HTTPD_session::hangup(DCB* dcb)
+{
+    return httpd_hangup(dcb);
+}
+
+bool HTTPD_session::init_connection(DCB* dcb)
+{
+    return httpd_init_connection(dcb);
+}
+
+void HTTPD_session::finish_connection(DCB* dcb)
+{
+    httpd_finish_connection(dcb);
+}
+
+GWBUF* HTTPD_session::reject(const char* host)
+{
+    return nullptr;
+}
+
 extern "C"
 {
 /**
@@ -70,24 +120,6 @@ extern "C"
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MXS_PROTOCOL_API MyObject =
-    {
-        httpd_read_event,                /**< Read - EPOLLIN handler        */
-        httpd_write,                     /**< Write - data from gateway     */
-        httpd_write_event,               /**< WriteReady - EPOLLOUT handler */
-        httpd_error,                     /**< Error - EPOLLERR handler      */
-        httpd_hangup,                    /**< HangUp - EPOLLHUP handler     */
-        httpd_new_client_session,
-        NULL,                            /**< new_backend_session           */
-        httpd_free_session,
-        httpd_init_connection,
-        httpd_finish_connection,
-        httpd_default_auth,              /**< Default authenticator         */
-        NULL,                            /**< Connection limit reached      */
-        NULL,
-        NULL,
-    };
-
     static MXS_MODULE info =
     {
         MXS_MODULE_API_PROTOCOL,
@@ -96,7 +128,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "An experimental HTTPD implementation for use in administration",
         "V1.2.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &MyObject,
+        &mxs::ClientProtocolApi<HTTPD_session>::s_api,
         NULL,       /* Process init. */
         NULL,       /* Process finish. */
         NULL,       /* Thread init. */

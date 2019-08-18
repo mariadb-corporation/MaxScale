@@ -16,13 +16,30 @@
  * @file maxscaled.h The maxscaled protocol module header file
  */
 #include <maxscale/ccdefs.hh>
-#include <maxscale/protocol.hh>
+#include <maxscale/protocol2.hh>
 
 /**
  * The maxscaled specific protocol structure to put in the DCB.
  */
-struct MAXSCALED : MXS_PROTOCOL_SESSION
+struct MAXSCALED : public mxs::ClientProtocol
 {
+public:
+    static MXS_PROTOCOL_SESSION* create(MXS_SESSION* session, mxs::Component* component);
+    MAXSCALED();
+    ~MAXSCALED() override;
+
+    static char* auth_default();
+    static GWBUF* reject(const char* host);
+
+    int32_t read(DCB* dcb) override;
+    int32_t write(DCB* dcb, GWBUF* buffer) override;
+    int32_t write_ready(DCB* dcb) override;
+    int32_t error(DCB* dcb) override;
+    int32_t hangup(DCB* dcb) override;
+
+    bool init_connection(DCB* dcb) override;
+    void finish_connection(DCB* dcb) override;
+
     pthread_mutex_t lock;       /**< Protocol structure lock */
     int             state;      /**< The connection state */
     char*           username;   /**< The login name of the user */
