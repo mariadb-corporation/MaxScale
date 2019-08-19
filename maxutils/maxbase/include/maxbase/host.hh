@@ -16,6 +16,7 @@
 
 #include <string>
 #include <iosfwd>
+#include <unordered_set>
 
 /** Host is a streamable class that represents an address and port, or a unix domain socket.
  */
@@ -110,14 +111,15 @@ inline bool operator!=(const Host& l, const Host& r)
 }
 
 /**
- * Perform DNS resolution on a hostname or text-form IP address.
+ * Perform domain name resolution on a hostname or text-form IP address.
  *
  * @param host Hostname to convert.
- * @param addr_out Output buffer. The output is in IPv6-form as returned by "inet_ntop(AF_INET6, ...)".
+ * @param addresses_out Output buffer. The output is in IPv6-form as returned by "inet_ntop(AF_INET6, ...)".
  * @param error_out Error output
  * @return True if successful
  */
-bool name_lookup(const std::string& host, std::string* addr_out, std::string* error_out = nullptr);
+bool name_lookup(const std::string& host, std::unordered_set<std::string>* addresses_out,
+                 std::string* error_out = nullptr);
 
 /**
  * Perform reverse DNS on an IP address. This may involve network communication so can be slow.

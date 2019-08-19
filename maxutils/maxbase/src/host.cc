@@ -227,42 +227,50 @@ std::istream& operator>>(std::istream& is, Host& host)
     return is;
 }
 
-bool name_lookup(const std::string& host, std::string* addr_out, std::string* error_out)
+bool name_lookup(const std::string& host, std::unordered_set<std::string>* addresses_out, std::string* error_out)
 {
     addrinfo hints;
     memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_INET6;     /* Only return IPv6-addresses, possibly mapped from IPv4 */
-    hints.ai_socktype = SOCK_DGRAM; /* Datagram socket */
-    hints.ai_flags = AI_V4MAPPED;   /* Mapped IPv4 */
-    hints.ai_protocol = 0;          /* Any protocol */
-    hints.ai_canonname = NULL;
-    hints.ai_addr = NULL;
-    hints.ai_next = NULL;
+    hints.ai_family = AF_UNSPEC;     /* Return any address type */
+    hints.ai_socktype = SOCK_DGRAM;  /* Datagram socket */
+    hints.ai_flags = 0;              /* Mapped IPv4 */
+    hints.ai_protocol = 0;           /* Any protocol */
+    hints.ai_canonname = nullptr;
+    hints.ai_addr = nullptr;
+    hints.ai_next = nullptr;
 
     addrinfo* results = nullptr;
     bool success = false;
     std::string error_msg;
+
     int rv_addrinfo = getaddrinfo(host.c_str(), nullptr, &hints, &results);
     if (rv_addrinfo == 0)
     {
-        mxb_assert(results);
-        if (results)
+        // getaddrinfo may return multiple result addresses. Save all of them.
+        for (auto iter = results; iter; iter = iter->ai_next)
         {
-            // getaddrinfo may return multiple result addresses. Only consider the first.
-            char buf[INET6_ADDRSTRLEN];
-            in6_addr* addr = &((sockaddr_in6*)results->ai_addr)->sin6_addr;
+            int address_family = iter->ai_family;
+            void* addr = nullptr;
+            char buf[INET6_ADDRSTRLEN]; // Enough for both address types
+            if (iter->ai_family == AF_INET)
+            {
+                auto sa_in = (sockaddr_in*)(iter->ai_addr);
+                addr = &sa_in->sin_addr;
+            }
+            else if (iter->ai_family == AF_INET6)
+            {
+                auto sa_in = (sockaddr_in6*)(iter->ai_addr);
+                addr = &sa_in->sin6_addr;
+            }
 
-            if (inet_ntop(AF_INET6, addr, buf, sizeof(buf)))
+            inet_ntop(address_family, addr, buf, sizeof(buf));
+            if (buf[0])
             {
-                *addr_out = buf;
-                success = true;
+                addresses_out->insert(buf);
+                success = true; // One successful lookup is enough.
             }
-            else
-            {
-                error_msg = mxb::string_printf("inet_ntop() failed: '%s'.", strerror(errno));
-            }
-            freeaddrinfo(results);
         }
+        freeaddrinfo(results);
     }
     else
     {

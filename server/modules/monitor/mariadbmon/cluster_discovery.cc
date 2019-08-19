@@ -1060,34 +1060,32 @@ void MariaDBMonitor::update_cluster_lock_status()
     }
 }
 
-string MariaDBMonitor::DNSResolver::resolve_server(const string& host)
+MariaDBMonitor::DNSResolver::StringSet MariaDBMonitor::DNSResolver::resolve_server(const string& host)
 {
     auto now = mxb::Clock::now();
     const auto MAX_AGE = mxb::Duration((double)5*60); // Refresh interval for cache entries.
     auto recent_time = now - MAX_AGE;
+    DNSResolver::StringSet rval;
 
-    string rval;
     auto iter = m_mapping.find(host);
-
     if (iter == m_mapping.end() || iter->second.timestamp < recent_time)
     {
         // Map did not have a record, or it was too old. In either case, generate a new one.
-        string addr;
+        DNSResolver::StringSet addresses;
         string error_msg;
-        bool dns_success = mxb::name_lookup(host, &addr, &error_msg);
+        bool dns_success = mxb::name_lookup(host, &addresses, &error_msg);
         if (!dns_success)
         {
             MXB_ERROR("Could not resolve host '%s'. %s", host.c_str(), error_msg.c_str());
         }
-        // If dns failed, addr will be empty. Add the element anyway to prevent repeated lookups.
-        MapElement newelem = {addr, now};
-        m_mapping[host] = newelem;
-        rval = addr;
+        // If dns failed, the array will be empty. Add/replace the element anyway to prevent repeated lookups.
+        m_mapping[host] = {addresses, now};
+        rval = std::move(addresses);
     }
     else
     {
         // Return recent value.
-        rval = iter->second.address;
+        rval = iter->second.addresses;
     }
     return rval;
 }
