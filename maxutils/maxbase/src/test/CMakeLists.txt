@@ -26,5 +26,5 @@ target_link_libraries(test_host_class maxbase pthread rt)
 add_test(test_host_class test_host_class)
 
 add_executable(test_name_lookup test_name_lookup.cc)
-target_link_libraries(test_name_lookup maxbase)
+target_link_libraries(test_name_lookup maxbase pthread rt)
 add_test(test_name_lookup test_name_lookup)
