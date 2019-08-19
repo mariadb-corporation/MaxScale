@@ -189,4 +189,121 @@ MXS_PROTOCOL_API ClientProtocolApi<ProtocolImplementation>::s_api =
     &ClientProtocolApi<ProtocolImplementation>::reject,
 };
 
+template<class ProtocolImplementation>
+class BackendProtocolApi
+{
+public:
+    BackendProtocolApi() = delete;
+    BackendProtocolApi(const BackendProtocolApi&) = delete;
+    BackendProtocolApi& operator=(const BackendProtocolApi&) = delete;
+
+    static int32_t read(DCB* dcb)
+    {
+        auto backend_dcb = static_cast<BackendDCB*>(dcb);
+        auto client_protocol = static_cast<BackendProtocol*>(backend_dcb->m_protocol);
+        return client_protocol->read(dcb);
+    }
+
+    static int32_t write(DCB* dcb, GWBUF* buffer)
+    {
+        auto backend_dcb = static_cast<BackendDCB*>(dcb);
+        auto client_protocol = static_cast<BackendProtocol*>(backend_dcb->m_protocol);
+        return client_protocol->write(dcb, buffer);
+    }
+
+    static int32_t write_ready(DCB* dcb)
+    {
+        auto backend_dcb = static_cast<BackendDCB*>(dcb);
+        auto client_protocol = static_cast<BackendProtocol*>(backend_dcb->m_protocol);
+        return client_protocol->write_ready(dcb);
+    }
+
+    static int32_t error(DCB* dcb)
+    {
+        auto backend_dcb = static_cast<BackendDCB*>(dcb);
+        auto client_protocol = static_cast<BackendProtocol*>(backend_dcb->m_protocol);
+        return client_protocol->error(dcb);
+    }
+
+    static int32_t hangup(DCB* dcb)
+    {
+        auto backend_dcb = static_cast<BackendDCB*>(dcb);
+        auto client_protocol = static_cast<BackendProtocol*>(backend_dcb->m_protocol);
+        return client_protocol->hangup(dcb);
+    }
+
+    static json_t* diagnostics_json(DCB* dcb)
+    {
+        auto backend_dcb = static_cast<BackendDCB*>(dcb);
+        auto client_protocol = static_cast<BackendProtocol*>(backend_dcb->m_protocol);
+        return client_protocol->diagnostics_json(dcb);
+    }
+
+    static char* auth_default()
+    {
+        return ProtocolImplementation::auth_default();
+    }
+
+    static GWBUF* reject(const char* host)
+    {
+        return ProtocolImplementation::reject(host);
+    }
+
+    static void free_session(MXS_PROTOCOL_SESSION* protocol_session)
+    {
+        delete protocol_session;
+    }
+
+    static MXS_PROTOCOL_SESSION* create_backend_session(
+            MXS_SESSION* session, SERVER* server, MXS_PROTOCOL_SESSION* client_protocol_session,
+            mxs::Component* component)
+    {
+        return ProtocolImplementation::create_backend_session(session, server, client_protocol_session,
+                                                              component);
+    }
+
+    static bool init_connection(DCB* dcb)
+    {
+        auto backend_dcb = static_cast<BackendDCB*>(dcb);
+        auto client_protocol = static_cast<BackendProtocol*>(backend_dcb->m_protocol);
+        return client_protocol->init_connection(dcb);
+    }
+
+    static void finish_connection(DCB* dcb)
+    {
+        auto backend_dcb = static_cast<BackendDCB*>(dcb);
+        auto client_protocol = static_cast<BackendProtocol*>(backend_dcb->m_protocol);
+        client_protocol->finish_connection(dcb);
+    }
+
+    static bool established(DCB* dcb)
+    {
+        auto backend_dcb = static_cast<BackendDCB*>(dcb);
+        auto client_protocol = static_cast<BackendProtocol*>(backend_dcb->m_protocol);
+        return client_protocol->established(dcb);
+    }
+
+    static MXS_PROTOCOL_API s_api;
+};
+
+template<class ProtocolImplementation>
+MXS_PROTOCOL_API BackendProtocolApi<ProtocolImplementation>::s_api =
+{
+        &BackendProtocolApi<ProtocolImplementation>::read,
+        &BackendProtocolApi<ProtocolImplementation>::write,
+        &BackendProtocolApi<ProtocolImplementation>::write_ready,
+        &BackendProtocolApi<ProtocolImplementation>::error,
+        &BackendProtocolApi<ProtocolImplementation>::hangup,
+        nullptr,
+        &BackendProtocolApi<ProtocolImplementation>::create_backend_session,
+        &BackendProtocolApi<ProtocolImplementation>::free_session,
+        &BackendProtocolApi<ProtocolImplementation>::init_connection,
+        &BackendProtocolApi<ProtocolImplementation>::finish_connection,
+        &BackendProtocolApi<ProtocolImplementation>::auth_default,
+        nullptr,
+        &BackendProtocolApi<ProtocolImplementation>::established,
+        &BackendProtocolApi<ProtocolImplementation>::diagnostics_json,
+        nullptr,
+};
+
 }

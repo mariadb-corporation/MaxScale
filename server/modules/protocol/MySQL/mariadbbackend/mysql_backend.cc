@@ -72,6 +72,73 @@ static bool get_ip_string_and_port(struct sockaddr_storage* sa,
 static bool gw_connection_established(DCB* dcb);
 json_t*     gw_json_diagnostics(DCB* dcb);
 
+MySQLBackendProtocol::MySQLBackendProtocol(MXS_SESSION* session, SERVER* server, mxs::Component* component)
+    : MySQLProtocol(session, server, component)
+{
+}
+
+int32_t MySQLBackendProtocol::read(DCB* dcb)
+{
+    return gw_read_backend_event(dcb);
+}
+
+int32_t MySQLBackendProtocol::write(DCB* dcb, GWBUF* buffer)
+{
+    return gw_MySQLWrite_backend(dcb, buffer);
+}
+
+int32_t MySQLBackendProtocol::write_ready(DCB* dcb)
+{
+    return gw_write_backend_event(dcb);
+}
+
+int32_t MySQLBackendProtocol::error(DCB* dcb)
+{
+    return gw_error_backend_event(dcb);
+}
+
+int32_t MySQLBackendProtocol::hangup(DCB* dcb)
+{
+    return gw_backend_hangup(dcb);
+}
+
+bool MySQLBackendProtocol::init_connection(DCB* dcb)
+{
+    return gw_init_connection(dcb);
+}
+
+void MySQLBackendProtocol::finish_connection(DCB* dcb)
+{
+    gw_finish_connection(dcb);
+}
+
+int32_t MySQLBackendProtocol::connlimit(DCB* dcb, int limit)
+{
+    return 0;
+};
+
+bool MySQLBackendProtocol::established(DCB* dcb)
+{
+    return gw_connection_established(dcb);
+}
+
+char* MySQLBackendProtocol::auth_default()
+{
+    return gw_backend_default_auth();
+}
+
+MXS_PROTOCOL_SESSION* MySQLBackendProtocol::create_backend_session(
+        MXS_SESSION* session, SERVER* server, MXS_PROTOCOL_SESSION* client_protocol_session,
+        mxs::Component* component)
+{
+    return gw_new_backend_session(session, server, client_protocol_session, component);
+}
+
+json_t* MySQLBackendProtocol::diagnostics_json(DCB* dcb)
+{
+    return gw_json_diagnostics(dcb);
+}
+
 extern "C"
 {
 /*
@@ -84,24 +151,6 @@ extern "C"
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MXS_PROTOCOL_API MyObject =
-    {
-        gw_read_backend_event,              /* Read - EPOLLIN handler        */
-        gw_MySQLWrite_backend,              /* Write - data from gateway     */
-        gw_write_backend_event,             /* WriteReady - EPOLLOUT handler */
-        gw_error_backend_event,             /* Error - EPOLLERR handler      */
-        gw_backend_hangup,                  /* HangUp - EPOLLHUP handler     */
-        NULL,                               /* new_client_session            */
-        gw_new_backend_session,             /* New backend connection        */
-        gw_backend_free_session,            /* Close                         */
-        gw_init_connection,                 /* Init backend connection       */
-        gw_finish_connection,
-        gw_backend_default_auth,            /* Default authenticator         */
-        NULL,                               /* Connection limit reached      */
-        gw_connection_established,
-        gw_json_diagnostics,
-    };
-
     static MXS_MODULE info =
     {
         MXS_MODULE_API_PROTOCOL,
@@ -110,7 +159,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "The MySQL to backend server protocol",
         "V2.0.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &MyObject,
+        &mxs::BackendProtocolApi<MySQLBackendProtocol>::s_api,
         NULL,       /* Process init. */
         NULL,       /* Process finish. */
         NULL,       /* Thread init. */
@@ -155,7 +204,7 @@ static MXS_PROTOCOL_SESSION* gw_new_backend_session(MXS_SESSION* session,
                                                     MXS_PROTOCOL_SESSION* client_protocol_session,
                                                     mxs::Component* component)
 {
-    MySQLProtocol* protocol_session = new(std::nothrow) MySQLProtocol(session, server, component);
+    MySQLProtocol* protocol_session = new(std::nothrow) MySQLBackendProtocol(session, server, component);
     MXS_ABORT_IF_NULL(protocol_session);
 
     /** Copy client flags to backend protocol */

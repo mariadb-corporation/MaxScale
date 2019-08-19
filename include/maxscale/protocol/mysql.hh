@@ -465,6 +465,30 @@ private:
     }
 };
 
+// Inherits from the client protocol for now. Will be cleaned up later.
+class MySQLBackendProtocol : public MySQLProtocol
+{
+public:
+    static MXS_PROTOCOL_SESSION* create_backend_session(
+            MXS_SESSION* session, SERVER* server, MXS_PROTOCOL_SESSION* client_protocol_session,
+            mxs::Component* component);
+
+    MySQLBackendProtocol(MXS_SESSION* session, SERVER* server, mxs::Component* component);
+    static char* auth_default();
+
+    int32_t read(DCB* dcb) override;
+    int32_t write(DCB* dcb, GWBUF* buffer) override;
+    int32_t write_ready(DCB* dcb) override;
+    int32_t error(DCB* dcb) override;
+    int32_t hangup(DCB* dcb) override;
+
+    bool init_connection(DCB* dcb) override;
+    void finish_connection(DCB* dcb) override;
+    int32_t connlimit(DCB* dcb, int limit) override;
+    bool established(DCB*) override;
+    json_t* diagnostics_json(DCB* dcb) override;
+};
+
 typedef struct
 {
     uint32_t id;

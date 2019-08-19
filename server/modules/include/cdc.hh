@@ -17,7 +17,6 @@
 
 #include <openssl/sha.h>
 
-#include <maxscale/protocol.hh>
 #include <maxscale/protocol2.hh>
 
 #define CDC_SMALL_BUFFER       1024
@@ -60,6 +59,7 @@ class CDC_protocol : public mxs::ClientProtocol
 {
 public:
     static MXS_PROTOCOL_SESSION* create(MXS_SESSION* session, mxs::Component* component);
+
     ~CDC_protocol() = default;
 
     static char* auth_default();
