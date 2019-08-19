@@ -1897,6 +1897,61 @@ GWBUF* mariadbclient_reject(const char* host)
 }
 }
 
+MXS_PROTOCOL_SESSION* MySQLProtocol::create(MXS_SESSION* session, mxs::Component* component)
+{
+    return new (std::nothrow) MySQLProtocol(session, nullptr, component);
+}
+
+int32_t MySQLProtocol::read(DCB* dcb)
+{
+    return mariadbclient_read(dcb);
+}
+
+int32_t MySQLProtocol::write(DCB* dcb, GWBUF* buffer)
+{
+    return mariadbclient_write(dcb, buffer);
+}
+
+int32_t MySQLProtocol::write_ready(DCB* dcb)
+{
+    return mariadbclient_write_ready(dcb);
+}
+
+int32_t MySQLProtocol::error(DCB* dcb)
+{
+    return mariadbclient_error(dcb);
+}
+
+int32_t MySQLProtocol::hangup(DCB* dcb)
+{
+    return mariadbclient_hangup(dcb);
+}
+
+bool MySQLProtocol::init_connection(DCB* dcb)
+{
+    return mariadbclient_init_connection(dcb);
+}
+
+void MySQLProtocol::finish_connection(DCB* dcb)
+{
+    mariadbclient_finish_connection(dcb);
+}
+
+int32_t MySQLProtocol::connlimit(DCB* dcb, int limit)
+{
+    return mariadbclient_connlimit(dcb, limit);
+};
+
+GWBUF* MySQLProtocol::reject(const char* host)
+{
+    return mariadbclient_reject(host);
+}
+
+char* MySQLProtocol::auth_default()
+{
+    return mariadbclient_auth_default();
+}
+
 /**
  * Module API implementation.
  */
@@ -1949,25 +2004,6 @@ void thread_finish(void)
  */
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MXS_PROTOCOL_API MyObject =
-    {
-        mariadbclient_read,                 /* EPOLLIN handler                    */
-        mariadbclient_write,                /* Write data from MaxScale to client */
-        mariadbclient_write_ready,          /* EPOLLOUT handler                   */
-        mariadbclient_error,                /* EPOLLERR handler                   */
-        mariadbclient_hangup,               /* EPOLLHUP handler                   */
-        mariadbclient_new_client_session,
-        NULL,                               /* new_backend_session                */
-        mariadbclient_free_session,
-        mariadbclient_init_connection,
-        mariadbclient_finish_connection,
-        mariadbclient_auth_default,
-        mariadbclient_connlimit,
-        NULL,
-        NULL,
-        mariadbclient_reject
-    };
-
     static MXS_MODULE info =
     {
         MXS_MODULE_API_PROTOCOL,
@@ -1976,7 +2012,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "The client to MaxScale MySQL protocol implementation",
         "V1.1.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &MyObject,
+        &mxs::ClientProtocolApi<MySQLProtocol>::s_api,
         process_init,
         process_finish,
         thread_init,

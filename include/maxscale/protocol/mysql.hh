@@ -39,6 +39,7 @@
 #include <maxscale/session.hh>
 #include <maxscale/version.h>
 #include <maxscale/target.hh>
+#include <maxscale/protocol2.hh>
 
 // Default version string sent to clients
 #define DEFAULT_VERSION_STRING "5.5.5-10.2.12 " MAXSCALE_VERSION "-maxscale"
@@ -321,11 +322,25 @@ static const char* const MXS_LAST_GTID = "last_gtid";
  *
  * Tracks various parts of the network protocol e.g. the response state
  */
-struct MySQLProtocol : public MXS_PROTOCOL_SESSION
+class MySQLProtocol : public mxs::ClientProtocol
 {
+public:
+    static MXS_PROTOCOL_SESSION* create(MXS_SESSION* session, mxs::Component* component);
     MySQLProtocol(MXS_SESSION* session, SERVER* server, mxs::Component* component);
+    ~MySQLProtocol() override;
 
-    ~MySQLProtocol();
+    static char* auth_default();
+    static GWBUF* reject(const char* host);
+
+    int32_t read(DCB* dcb) override;
+    int32_t write(DCB* dcb, GWBUF* buffer) override;
+    int32_t write_ready(DCB* dcb) override;
+    int32_t error(DCB* dcb) override;
+    int32_t hangup(DCB* dcb) override;
+
+    bool init_connection(DCB* dcb) override;
+    void finish_connection(DCB* dcb) override;
+    int32_t connlimit(DCB* dcb, int limit) override;
 
     /**
      * Track a client query
