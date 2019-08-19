@@ -11,8 +11,7 @@
  * Public License.
  */
 #include <maxbase/host.hh>
-
-#include <algorithm>
+#include <unordered_set>
 
 int main()
 {
