@@ -1177,7 +1177,10 @@ HttpResponse resource_handle_request(const HttpRequest& request)
     mxs::Semaphore sem;
     ResourceTask task(request);
 
-    worker->post(&task, &sem);
+    if (!worker->post(&task, &sem))
+    {
+        return HttpResponse(MHD_HTTP_SERVICE_UNAVAILABLE);
+    }
     sem.wait();
 
     return task.result();
