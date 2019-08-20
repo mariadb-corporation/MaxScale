@@ -53,14 +53,20 @@ MYSQL* open_conn_db_flags(int port,
     // MXS-2568: This fixes mxs1828_double_local_infile
     mysql_optionsv(conn, MYSQL_OPT_LOCAL_INFILE, (void*)"1");
 
-    mysql_real_connect(conn,
-                       ip.c_str(),
-                       user.c_str(),
-                       password.c_str(),
-                       db.c_str(),
-                       port,
-                       NULL,
-                       flag);
+    if (!mysql_real_connect(conn,
+                            ip.c_str(),
+                            user.c_str(),
+                            password.c_str(),
+                            db.c_str(),
+                            port,
+                            NULL,
+                            flag))
+    {
+        fprintf(stdout,
+                "Could not connect to %s:%d with user '%s' and password '%s', "
+                "and default database '%s': %s\n",
+                ip.c_str(), port, user.c_str(), password.c_str(), db.c_str(), mysql_error(conn));
+    }
     return conn;
 }
 
@@ -92,14 +98,20 @@ MYSQL* open_conn_db_timeout(int port,
         set_ssl(conn);
     }
 
-    mysql_real_connect(conn,
-                       ip.c_str(),
-                       user.c_str(),
-                       password.c_str(),
-                       db.c_str(),
-                       port,
-                       NULL,
-                       CLIENT_MULTI_STATEMENTS);
+    if (!mysql_real_connect(conn,
+                            ip.c_str(),
+                            user.c_str(),
+                            password.c_str(),
+                            db.c_str(),
+                            port,
+                            NULL,
+                            CLIENT_MULTI_STATEMENTS))
+    {
+        fprintf(stdout,
+                "Could not connect to %s:%d with user '%s' and password '%s', "
+                "and default database '%s': %s\n",
+                ip.c_str(), port, user.c_str(), password.c_str(), db.c_str(), mysql_error(conn));
+    }
     return conn;
 }
 
