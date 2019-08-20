@@ -84,7 +84,7 @@ int Mariadb_nodes::connect(int i, const std::string& db)
         nodes[i] = open_conn_db_timeout(port[i], IP[i], db.c_str(), user_name, password, 50, ssl);
     }
 
-    if ((nodes[i] != NULL) && (mysql_errno(nodes[i]) != 0))
+    if ((nodes[i] == NULL) || (mysql_errno(nodes[i]) != 0))
     {
         return 1;
     }
@@ -1015,8 +1015,7 @@ bool do_flush_hosts(MYSQL* conn)
 
 int Mariadb_nodes::flush_hosts()
 {
-
-    if (this->nodes[0] == NULL && this->connect())
+    if (this->nodes[0] == NULL && (this->connect() != 0))
     {
         return 1;
     }
