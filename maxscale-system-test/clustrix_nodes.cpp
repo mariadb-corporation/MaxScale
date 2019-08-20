@@ -5,30 +5,170 @@
 
 int Clustrix_nodes::prepare_server(int m)
 {
+    int rv = 1;
     int ec;
     char* clustrix_rpm = ssh_node_output(m, "rpm -qa | grep clustrix-clxnode", true, &ec);
     if (strstr(clustrix_rpm, "clustrix-clxnode") == NULL)
     {
-        printf("%s\n", ssh_node_output(m, CLUSTRIX_DEPS_YUM, true, &ec));
-        printf("%s\n", ssh_node_output(m, WGET_CLUSTRIX, false, &ec));
-        printf("%s\n", ssh_node_output(m, UNPACK_CLUSTRIX, false, &ec));
-        printf("%s\n", ssh_node_output(m, INSTALL_CLUSTRIX, false, &ec));
-        create_users(m);
+        char* str1 = nullptr;
+        char* str2 = nullptr;
+        char* str3 = nullptr;
+        char* str4 = nullptr;
+
+        str1 = ssh_node_output(m, CLUSTRIX_DEPS_YUM, true, &ec);
+        if (ec == 0)
+        {
+            printf("Installed clustrix dependencies on node %d.\n", m);
+            str2 = ssh_node_output(m, WGET_CLUSTRIX, false, &ec);
+            if (ec == 0)
+            {
+                printf("Wgot Clustrix installation package on node %d.\n", m);
+                str3 = ssh_node_output(m, UNPACK_CLUSTRIX, false, &ec);
+                if (ec == 0)
+                {
+                    printf("Unpacked Clustrix package on node %d.\n", m);
+                    str4 = ssh_node_output(m, INSTALL_CLUSTRIX, false, &ec);
+                    if (ec == 0)
+                    {
+                        printf("Successfully installed Clustrix on node %d.\n", m);
+                    }
+                    else
+                    {
+                        printf("Error: Could not install Clustrix package on node %d: %s\n", m, str4);
+                    }
+                }
+                else
+                {
+                    printf("Error: Could not unpack Clustrix package on node %d: %s\n", m, str3);
+                }
+            }
+            else
+            {
+                printf("Error: Could not wget Clustrix installation package on node %d: %s\n", m, str2);
+            }
+        }
+        else
+        {
+            printf("Error: Could not install Clustrix dependencies on node %d: %s\n", m, str1);
+        }
+
+        free(str4);
+        free(str3);
+        free(str2);
+        free(str1);
+    }
+
+    free(clustrix_rpm);
+
+    bool running = false;
+
+    ec = ssh_node(m, "systemctl status clustrix", true);
+
+    if (ec == 0)
+    {
+        printf("Clustrix running on node %d.\n", m);
+
+        ec = ssh_node(m, "mysql -e 'SELECT @@server_id'", true);
+        if (ec == 0)
+        {
+            running = true;
+        }
+        else
+        {
+            printf("Could not connect as root to Clustrix on node %d, restarting.\n", m);
+
+            ec = ssh_node(m, "systemctl restart clustrix", true);
+
+            if (ec == 0)
+            {
+                printf("Successfully restarted Clustrix on node %d.\n", m);
+                running = true;
+            }
+            else
+            {
+                printf("Could not restart Clustrix on node %d.\n", m);
+            }
+        }
     }
     else
     {
-        printf("%s\n", ssh_node_output(m, "systemctl restart clustrix", true, &ec));
+        printf("Clustrix not running on node %d, starting.\n", m);
+
+        ec = ssh_node(m, "systemctl start clustrix", true);
+
+        if (ec == 0)
+        {
+            printf("Successfully started Clustrix on node %d.\n", m);
+            running = true;
+        }
+        else
+        {
+            printf("Could not start Clustrix on node %d.\n", m);
+        }
     }
 
-    return 0;
+    bool check_users = false;
+
+    if (running)
+    {
+        int start = time(NULL);
+        int now;
+
+        do
+        {
+            ec = ssh_node(m, "mysql -e 'SELECT @@server_id'", true);
+            now = time(NULL);
+
+            if (ec != 0)
+            {
+                printf("Could not connect to Clustrix as root on node %d, "
+                       "sleeping a while (totally at most ~1 minute) and retrying.\n", m);
+                sleep(10);
+            }
+        }
+        while (ec != 0 && now - start < 60);
+
+        if (ec == 0)
+        {
+            printf("Could connect as root to Clustrix on node %d.\n", m);
+            check_users = true;
+        }
+        else
+        {
+            printf("Could not connect as root to Clustrix on node %d within given timeframe.\n", m);
+        }
+    }
+
+    if (check_users)
+    {
+        std::string command("mysql ");
+        command += "-u ";
+        command += this->user_name;
+        command += " ";
+        command += "-p";
+        command += this->password;
+
+        ec = ssh_node(m, command.c_str(), false);
+
+        if (ec == 0)
+        {
+            printf("Can access Clustrix using user '%s.\n", this->user_name);
+            rv = 0;
+        }
+        else
+        {
+            printf("Cannot access Clustrix using user '%s', creating users.\n", this->user_name);
+            // TODO: We need an return code here.
+            create_users(m);
+            rv = 0;
+        }
+    }
+
+    return rv;
 }
 
 int Clustrix_nodes::start_replication()
 {
-    for (int i = 0; i < N; i++)
-    {
-        prepare_server(i);
-    }
     std::string lic_filename = std::string(getenv("HOME"))
             + std::string("/.config/mdbci/clustrix_license");
     std::ifstream lic_file;
@@ -75,15 +215,22 @@ std::string Clustrix_nodes::cnf_servers()
 int Clustrix_nodes::check_replication()
 {
     int res = 0;
-    connect();
-    for (int i = 0; i < N; i++)
+    if (connect() == 0)
     {
-        if (execute_query_count_rows(nodes[i], "select * from system.nodeinfo") != N)
+        for (int i = 0; i < N; i++)
         {
-            res = 1;
+            if (execute_query_count_rows(nodes[i], "select * from system.nodeinfo") != N)
+            {
+                res = 1;
+            }
         }
     }
-    close_connections();
+    else
+    {
+        res = 1;
+    }
+
+    close_connections(); // Some might have been created by connect().
 
     return res;
 }
