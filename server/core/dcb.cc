@@ -192,7 +192,7 @@ ClientDCB* ClientDCB::create(int fd, MXS_SESSION* session, DCB::Manager* manager
 
         if (!dcb)
         {
-            protocol_api.free_session(protocol_session);
+            delete protocol_session;
             ::close(fd);
         }
     }
@@ -322,12 +322,12 @@ BackendDCB* BackendDCB::create(SERVER* srv,
                 }
                 else
                 {
-                    protocol_api->free_session(protocol_session);
+                    delete protocol_session;
                 }
             }
             else
             {
-                protocol_api->free_session(protocol_session);
+                delete protocol_session;
             }
         }
         else
@@ -1658,7 +1658,7 @@ void BackendDCB::hangup_cb(MXB_WORKER* worker, const SERVER* server)
                 if (!backend_dcb->m_dcb_errhandle_called)
                 {
                     this_thread.current_dcb = backend_dcb;
-                    backend_dcb->m_protocol_api.hangup(dcb);
+                    backend_dcb->m_protocol->hangup(dcb);
                     backend_dcb->m_dcb_errhandle_called = true;
                 }
             }
@@ -2218,7 +2218,7 @@ uint32_t DCB::process_events(DCB* dcb, uint32_t events)
             if (dcb_session_check(dcb, "write_ready"))
             {
                 DCB_EH_NOTICE("Calling dcb->m_protocol_api.write_ready(%p)", dcb);
-                dcb->protocol_api()->write_ready(dcb);
+                dcb->protocol_session()->write_ready(dcb);
             }
         }
         else
@@ -2255,7 +2255,7 @@ uint32_t DCB::process_events(DCB* dcb, uint32_t events)
             if (1 == return_code)
             {
                 DCB_EH_NOTICE("Calling dcb->m_protocol_api.read(%p)", dcb);
-                dcb->protocol_api()->read(dcb);
+                dcb->protocol_session()->read(dcb);
             }
         }
     }
@@ -2276,7 +2276,7 @@ uint32_t DCB::process_events(DCB* dcb, uint32_t events)
         if (dcb_session_check(dcb, "error"))
         {
             DCB_EH_NOTICE("Calling dcb->m_protocol_api.error(%p)", dcb);
-            dcb->protocol_api()->error(dcb);
+            dcb->protocol_session()->error(dcb);
         }
     }
 
@@ -2299,7 +2299,7 @@ uint32_t DCB::process_events(DCB* dcb, uint32_t events)
             if (dcb_session_check(dcb, "hangup EPOLLHUP"))
             {
                 DCB_EH_NOTICE("Calling dcb->m_protocol_api.hangup(%p)", dcb);
-                dcb->protocol_api()->hangup(dcb);
+                dcb->protocol_session()->hangup(dcb);
             }
 
             dcb->m_dcb_errhandle_called = true;
@@ -2326,7 +2326,7 @@ uint32_t DCB::process_events(DCB* dcb, uint32_t events)
             if (dcb_session_check(dcb, "hangup EPOLLRDHUP"))
             {
                 DCB_EH_NOTICE("Calling dcb->m_protocol_api.hangup(%p)", dcb);
-                dcb->protocol_api()->hangup(dcb);
+                dcb->protocol_session()->hangup(dcb);
             }
 
             dcb->m_dcb_errhandle_called = true;
@@ -2757,7 +2757,7 @@ void ClientDCB::shutdown()
         session_close(m_session);
     }
     m_protocol_api.finish_connection(this);
-    m_protocol_api.free_session(m_protocol);
+    delete m_protocol;
     m_protocol = nullptr;
 }
 
@@ -2826,7 +2826,6 @@ InternalDCB::InternalDCB(MXS_SESSION* session, MXS_PROTOCOL_API protocol_api, DC
      * the dcb->m_protocol pointer to not be NULL.
      */
     m_protocol_api.finish_connection = nullptr;
-    m_protocol_api.free_session = nullptr;
 
     if (DCB_THROTTLING_ENABLED(this))
     {
@@ -2901,7 +2900,7 @@ void BackendDCB::shutdown()
 {
     // Close protocol and router session
     m_protocol_api.finish_connection(this);
-    m_protocol_api.free_session(m_protocol);
+    delete m_protocol;
     m_protocol = nullptr;
 }
 

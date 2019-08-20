@@ -230,14 +230,14 @@ public:
 
     int32_t protocol_write(GWBUF* pData)
     {
-        return protocol_api()->write(this, pData);
+        return protocol_session()->write(this, pData);
     }
 
     json_t* protocol_diagnostics_json() const
     {
         DCB* pThis = const_cast<DCB*>(this);
         auto api = protocol_api();
-        return api->diagnostics_json ? api->diagnostics_json(pThis) : nullptr;
+        return protocol_session()->diagnostics_json(pThis);
     }
 
     // Starts the shutdown process, called when a DCB is closed

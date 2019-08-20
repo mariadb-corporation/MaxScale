@@ -20,26 +20,9 @@ namespace maxscale
 {
 
 /**
- * Base protocol class. Implemented by both client and backend protocols
- */
-class ProtocolSession : public MXS_PROTOCOL_SESSION
-{
-public:
-    virtual int32_t read(DCB* dcb) = 0;
-    virtual int32_t write(DCB* dcb, GWBUF* buffer) = 0;
-    virtual int32_t write_ready(DCB* dcb) = 0;
-    virtual int32_t error(DCB* dcb) = 0;
-    virtual int32_t hangup(DCB* dcb) = 0;
-    virtual json_t* diagnostics_json(DCB* dcb)
-    {
-        return nullptr;
-    }
-};
-
-/**
  * Client protocol class
  */
-class ClientProtocol : public ProtocolSession
+class ClientProtocol : public MXS_PROTOCOL_SESSION
 {
 public:
     virtual ~ClientProtocol() = default;
@@ -59,7 +42,7 @@ public:
 /**
  * Backend protocol class
  */
-class BackendProtocol : public ProtocolSession
+class BackendProtocol : public MXS_PROTOCOL_SESSION
 {
 public:
     virtual ~BackendProtocol() = default;
@@ -76,46 +59,11 @@ public:
     ClientProtocolApi(const ClientProtocolApi&) = delete;
     ClientProtocolApi& operator=(const ClientProtocolApi&) = delete;
 
-    static int32_t read(DCB* dcb)
-    {
-        auto client_dcb = static_cast<ClientDCB*>(dcb);
-        auto client_protocol = static_cast<ClientProtocol*>(client_dcb->m_protocol);
-        return client_protocol->read(dcb);
-    }
-
     static int32_t write(DCB* dcb, GWBUF* buffer)
     {
         auto client_dcb = static_cast<ClientDCB*>(dcb);
         auto client_protocol = static_cast<ClientProtocol*>(client_dcb->m_protocol);
         return client_protocol->write(dcb, buffer);
-    }
-
-    static int32_t write_ready(DCB* dcb)
-    {
-        auto client_dcb = static_cast<ClientDCB*>(dcb);
-        auto client_protocol = static_cast<ClientProtocol*>(client_dcb->m_protocol);
-        return client_protocol->write_ready(dcb);
-    }
-
-    static int32_t error(DCB* dcb)
-    {
-        auto client_dcb = static_cast<ClientDCB*>(dcb);
-        auto client_protocol = static_cast<ClientProtocol*>(client_dcb->m_protocol);
-        return client_protocol->error(dcb);
-    }
-
-    static int32_t hangup(DCB* dcb)
-    {
-        auto client_dcb = static_cast<ClientDCB*>(dcb);
-        auto client_protocol = static_cast<ClientProtocol*>(client_dcb->m_protocol);
-        return client_protocol->hangup(dcb);
-    }
-
-    static json_t* diagnostics_json(DCB* dcb)
-    {
-        auto client_dcb = static_cast<ClientDCB*>(dcb);
-        auto client_protocol = static_cast<ClientProtocol*>(client_dcb->m_protocol);
-        return client_protocol->diagnostics_json(dcb);
     }
 
     static MXS_PROTOCOL_SESSION* create_session(MXS_SESSION* session, mxs::Component* component)
@@ -131,11 +79,6 @@ public:
     static GWBUF* reject(const char* host)
     {
         return ProtocolImplementation::reject(host);
-    }
-
-    static void free_session(MXS_PROTOCOL_SESSION* protocol_session)
-    {
-        delete protocol_session;
     }
 
     static bool init_connection(DCB* dcb)
@@ -172,20 +115,14 @@ public:
 template<class ProtocolImplementation>
 MXS_PROTOCOL_API ClientProtocolApi<ProtocolImplementation>::s_api =
 {
-    &ClientProtocolApi<ProtocolImplementation>::read,
     &ClientProtocolApi<ProtocolImplementation>::write,
-    &ClientProtocolApi<ProtocolImplementation>::write_ready,
-    &ClientProtocolApi<ProtocolImplementation>::error,
-    &ClientProtocolApi<ProtocolImplementation>::hangup,
     &ClientProtocolApi<ProtocolImplementation>::create_session,
     nullptr,
-    &ClientProtocolApi<ProtocolImplementation>::free_session,
     &ClientProtocolApi<ProtocolImplementation>::init_connection,
     &ClientProtocolApi<ProtocolImplementation>::finish_connection,
     &ClientProtocolApi<ProtocolImplementation>::auth_default,
     &ClientProtocolApi<ProtocolImplementation>::connlimit,
     &ClientProtocolApi<ProtocolImplementation>::established,
-    &ClientProtocolApi<ProtocolImplementation>::diagnostics_json,
     &ClientProtocolApi<ProtocolImplementation>::reject,
 };
 
@@ -197,46 +134,11 @@ public:
     BackendProtocolApi(const BackendProtocolApi&) = delete;
     BackendProtocolApi& operator=(const BackendProtocolApi&) = delete;
 
-    static int32_t read(DCB* dcb)
-    {
-        auto backend_dcb = static_cast<BackendDCB*>(dcb);
-        auto client_protocol = static_cast<BackendProtocol*>(backend_dcb->m_protocol);
-        return client_protocol->read(dcb);
-    }
-
     static int32_t write(DCB* dcb, GWBUF* buffer)
     {
         auto backend_dcb = static_cast<BackendDCB*>(dcb);
         auto client_protocol = static_cast<BackendProtocol*>(backend_dcb->m_protocol);
         return client_protocol->write(dcb, buffer);
-    }
-
-    static int32_t write_ready(DCB* dcb)
-    {
-        auto backend_dcb = static_cast<BackendDCB*>(dcb);
-        auto client_protocol = static_cast<BackendProtocol*>(backend_dcb->m_protocol);
-        return client_protocol->write_ready(dcb);
-    }
-
-    static int32_t error(DCB* dcb)
-    {
-        auto backend_dcb = static_cast<BackendDCB*>(dcb);
-        auto client_protocol = static_cast<BackendProtocol*>(backend_dcb->m_protocol);
-        return client_protocol->error(dcb);
-    }
-
-    static int32_t hangup(DCB* dcb)
-    {
-        auto backend_dcb = static_cast<BackendDCB*>(dcb);
-        auto client_protocol = static_cast<BackendProtocol*>(backend_dcb->m_protocol);
-        return client_protocol->hangup(dcb);
-    }
-
-    static json_t* diagnostics_json(DCB* dcb)
-    {
-        auto backend_dcb = static_cast<BackendDCB*>(dcb);
-        auto client_protocol = static_cast<BackendProtocol*>(backend_dcb->m_protocol);
-        return client_protocol->diagnostics_json(dcb);
     }
 
     static char* auth_default()
@@ -247,11 +149,6 @@ public:
     static GWBUF* reject(const char* host)
     {
         return ProtocolImplementation::reject(host);
-    }
-
-    static void free_session(MXS_PROTOCOL_SESSION* protocol_session)
-    {
-        delete protocol_session;
     }
 
     static MXS_PROTOCOL_SESSION* create_backend_session(
@@ -289,20 +186,14 @@ public:
 template<class ProtocolImplementation>
 MXS_PROTOCOL_API BackendProtocolApi<ProtocolImplementation>::s_api =
 {
-        &BackendProtocolApi<ProtocolImplementation>::read,
         &BackendProtocolApi<ProtocolImplementation>::write,
-        &BackendProtocolApi<ProtocolImplementation>::write_ready,
-        &BackendProtocolApi<ProtocolImplementation>::error,
-        &BackendProtocolApi<ProtocolImplementation>::hangup,
         nullptr,
         &BackendProtocolApi<ProtocolImplementation>::create_backend_session,
-        &BackendProtocolApi<ProtocolImplementation>::free_session,
         &BackendProtocolApi<ProtocolImplementation>::init_connection,
         &BackendProtocolApi<ProtocolImplementation>::finish_connection,
         &BackendProtocolApi<ProtocolImplementation>::auth_default,
         nullptr,
         &BackendProtocolApi<ProtocolImplementation>::established,
-        &BackendProtocolApi<ProtocolImplementation>::diagnostics_json,
         nullptr,
 };
 

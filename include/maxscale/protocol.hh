@@ -26,8 +26,60 @@ class SERVER;
 class GWBUF;
 class MXS_SESSION;
 
-struct MXS_PROTOCOL_SESSION
+/**
+ * Base protocol class. Implemented by both client and backend protocols
+ */
+class MXS_PROTOCOL_SESSION
 {
+public:
+    virtual ~MXS_PROTOCOL_SESSION() = default;
+
+    /**
+     * EPOLLIN handler, used to read available data from network socket
+     *
+     * @param dcb DCB to read from
+     * @return 1 on success, 0 on error
+     */
+    virtual int32_t read(DCB* dcb) = 0;
+    virtual int32_t write(DCB* dcb, GWBUF* buffer) = 0;
+
+    /**
+     * EPOLLOUT handler, used to write buffered data
+     *
+     * @param dcb DCB to write to
+     * @return 1 on success, 0 on error
+     * @note Currently the return value is ignored
+     */
+    virtual int32_t write_ready(DCB* dcb) = 0;
+
+    /**
+     * EPOLLERR handler
+     *
+     * @param dcb DCB for which the error occurred
+     * @return 1 on success, 0 on error
+     * @note Currently the return value is ignored
+     */
+    virtual int32_t error(DCB* dcb) = 0;
+
+    /**
+     * EPOLLHUP and EPOLLRDHUP handler
+     *
+     * @param dcb DCB for which the hangup occurred
+     * @return 1 on success, 0 on error
+     * @note Currently the return value is ignored
+     */
+    virtual int32_t hangup(DCB* dcb) = 0;
+
+    /**
+     * Provide JSON formatted diagnostics about a DCB
+     *
+     * @param dcb DCB to diagnose
+     * @return JSON representation of the DCB
+     */
+    virtual json_t* diagnostics_json(DCB* dcb)
+    {
+        return nullptr;
+    }
 };
 
 /**
@@ -35,15 +87,6 @@ struct MXS_PROTOCOL_SESSION
  */
 struct MXS_PROTOCOL_API
 {
-    /**
-     * EPOLLIN handler, used to read available data from network socket
-     *
-     * @param dcb DCB to read from
-     *
-     * @return 1 on success, 0 on error
-     */
-    int32_t (* read)(DCB* dcb);
-
     /**
      * Write data to a network socket
      *
@@ -53,39 +96,6 @@ struct MXS_PROTOCOL_API
      * @return 1 on success, 0 on error
      */
     int32_t (* write)(DCB* dcb, GWBUF* buffer);
-
-    /**
-     * EPOLLOUT handler, used to write buffered data
-     *
-     * @param dcb DCB to write to
-     *
-     * @return 1 on success, 0 on error
-     *
-     * @note Currently the return value is ignored
-     */
-    int32_t (* write_ready)(DCB* dcb);
-
-    /**
-     * EPOLLERR handler
-     *
-     * @param dcb DCB for which the error occurred
-     *
-     * @return 1 on success, 0 on error
-     *
-     * @note Currently the return value is ignored
-     */
-    int32_t (* error)(DCB* dcb);
-
-    /**
-     * EPOLLHUP and EPOLLRDHUP handler
-     *
-     * @param dcb DCB for which the hangup occurred
-     *
-     * @return 1 on success, 0 on error
-     *
-     * @note Currently the return value is ignored
-     */
-    int32_t (* hangup)(DCB* dcb);
 
     /**
      * Allocate new client protocol session
@@ -110,13 +120,6 @@ struct MXS_PROTOCOL_API
                                                   SERVER* server,
                                                   MXS_PROTOCOL_SESSION* client_protocol_session,
                                                   mxs::Component* component);
-
-    /**
-     * Free protocol session
-     *
-     * @param protocol_session  The protocol session to free
-     */
-    void (* free_session)(MXS_PROTOCOL_SESSION* protocol_session);
 
     /**
      * Initialize a connection (client or server).
@@ -163,15 +166,6 @@ struct MXS_PROTOCOL_API
      * @return True if the connection is fully established and can be pooled
      */
     bool (* established)(DCB*);
-
-    /**
-     * Provide JSON formatted diagnostics about a DCB
-     *
-     * @param dcb DCB to diagnose
-     *
-     * @return JSON representation of the DCB
-     */
-    json_t* (* diagnostics_json)(DCB* dcb);
 
     /**
      * Get rejection message
