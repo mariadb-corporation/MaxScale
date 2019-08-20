@@ -37,7 +37,9 @@ class SERVER;
 
 namespace maxscale
 {
+class ClientProtocol;
 class ClientAuthenticator;
+class BackendProtocol;
 class BackendAuthenticator;
 class SSLContext;
 }
@@ -400,7 +402,7 @@ public:
 
     std::unique_ptr<mxs::ClientAuthenticator> m_auth_session;      /**< Client authentication data */
 
-    MXS_PROTOCOL_SESSION* m_protocol;                    /**< The protocol session */
+    mxs::ClientProtocol*  m_protocol;                    /**< The protocol session */
     MXS_PROTOCOL_API      m_protocol_api;                /**< Protocol functions for the DCB */
 
 protected:
@@ -408,14 +410,14 @@ protected:
     ClientDCB(int fd,
               DCB::Role role,
               MXS_SESSION* session,
-              MXS_PROTOCOL_SESSION* protocol,
+              mxs::ClientProtocol* protocol,
               MXS_PROTOCOL_API protocol_api,
               Manager* manager);
 
 private:
     ClientDCB(int fd,
               MXS_SESSION* session,
-              MXS_PROTOCOL_SESSION* protocol,
+              mxs::ClientProtocol* protocol,
               MXS_PROTOCOL_API protocol_api,
               Manager* manager);
 
@@ -474,14 +476,14 @@ public:
 
     std::unique_ptr<mxs::BackendAuthenticator> m_auth_session;   /**< Backend authentication data */
 
-    MXS_PROTOCOL_SESSION* m_protocol;                    /**< The protocol session */
+    mxs::BackendProtocol* m_protocol;                    /**< The protocol session */
     MXS_PROTOCOL_API      m_protocol_api;                /**< Protocol functions for the DCB */
 
 private:
     BackendDCB(SERVER* server,
                int fd,
                MXS_SESSION* session,
-               MXS_PROTOCOL_SESSION* protocol,
+               mxs::BackendProtocol* protocol,
                MXS_PROTOCOL_API protocol_api,
                std::unique_ptr<mxs::BackendAuthenticator> auth_ses,
                Manager* manager);

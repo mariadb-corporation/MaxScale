@@ -62,6 +62,8 @@ using maxscale::RoutingWorker;
 using maxbase::Worker;
 using std::string;
 using mxs::BackendAuthenticator;
+using mxs::ClientProtocol;
+using mxs::BackendProtocol;
 
 // #define DCB_LOG_EVENT_HANDLING
 #if defined (DCB_LOG_EVENT_HANDLING)
@@ -183,9 +185,7 @@ ClientDCB* ClientDCB::create(int fd, MXS_SESSION* session, DCB::Manager* manager
     ClientDCB* dcb = nullptr;
 
     MXS_PROTOCOL_API protocol_api = session->listener->protocol_func();
-    MXS_PROTOCOL_SESSION* protocol_session =
-        protocol_api.new_client_session(session, static_cast<mxs::Session*>(session));
-
+    auto protocol_session = protocol_api.new_client_session(session, static_cast<mxs::Session*>(session));
     if (protocol_session)
     {
         dcb = new(std::nothrow) ClientDCB(fd, session, protocol_session, protocol_api, manager);
@@ -2763,7 +2763,7 @@ void ClientDCB::shutdown()
 
 ClientDCB::ClientDCB(int fd,
                      MXS_SESSION* session,
-                     MXS_PROTOCOL_SESSION* protocol,
+                     ClientProtocol* protocol,
                      MXS_PROTOCOL_API protocol_api,
                      DCB::Manager* manager)
     : ClientDCB(fd, DCB::Role::CLIENT, session, protocol, protocol_api, manager)
@@ -2773,7 +2773,7 @@ ClientDCB::ClientDCB(int fd,
 ClientDCB::ClientDCB(int fd,
                      DCB::Role role,
                      MXS_SESSION* session,
-                     MXS_PROTOCOL_SESSION* protocol_session,
+                     ClientProtocol* protocol_session,
                      MXS_PROTOCOL_API protocol_api,
                      Manager* manager)
     : DCB(fd, role, session, manager)
@@ -2871,7 +2871,7 @@ bool InternalDCB::prepare_for_destruction()
 BackendDCB::BackendDCB(SERVER* server,
                        int fd,
                        MXS_SESSION* session,
-                       MXS_PROTOCOL_SESSION* protocol,
+                       mxs::BackendProtocol* protocol,
                        MXS_PROTOCOL_API protocol_api,
                        std::unique_ptr<mxs::BackendAuthenticator> auth_ses,
                        DCB::Manager* manager)

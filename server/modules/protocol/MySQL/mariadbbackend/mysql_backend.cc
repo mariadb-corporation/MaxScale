@@ -38,7 +38,7 @@ static int                   gw_read_backend_event(DCB* dcb);
 static int                   gw_write_backend_event(DCB* dcb);
 static int                   gw_MySQLWrite_backend(DCB* dcb, GWBUF* queue);
 static int                   gw_error_backend_event(DCB* dcb);
-static MXS_PROTOCOL_SESSION* gw_new_backend_session(MXS_SESSION* session,
+static MySQLBackendProtocol* gw_new_backend_session(MXS_SESSION* session,
                                                     SERVER* server,
                                                     MXS_PROTOCOL_SESSION* client_protocol_session,
                                                     mxs::Component* component);
@@ -122,7 +122,7 @@ char* MySQLBackendProtocol::auth_default()
     return gw_backend_default_auth();
 }
 
-MXS_PROTOCOL_SESSION* MySQLBackendProtocol::create_backend_session(
+MySQLBackendProtocol* MySQLBackendProtocol::create_backend_session(
         MXS_SESSION* session, SERVER* server, MXS_PROTOCOL_SESSION* client_protocol_session,
         mxs::Component* component)
 {
@@ -194,7 +194,7 @@ static char* gw_backend_default_auth()
  *******************************************************************************
  ******************************************************************************/
 
-static MXS_PROTOCOL_SESSION* gw_new_backend_session(MXS_SESSION* session,
+static MySQLBackendProtocol* gw_new_backend_session(MXS_SESSION* session,
                                                     SERVER* server,
                                                     MXS_PROTOCOL_SESSION* client_protocol_session,
                                                     mxs::Component* component)

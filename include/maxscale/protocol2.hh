@@ -66,7 +66,7 @@ public:
         return client_protocol->write(dcb, buffer);
     }
 
-    static MXS_PROTOCOL_SESSION* create_session(MXS_SESSION* session, mxs::Component* component)
+    static mxs::ClientProtocol* create_session(MXS_SESSION* session, mxs::Component* component)
     {
         return ProtocolImplementation::create(session, component);
     }
@@ -151,7 +151,7 @@ public:
         return ProtocolImplementation::reject(host);
     }
 
-    static MXS_PROTOCOL_SESSION* create_backend_session(
+    static mxs::BackendProtocol* create_backend_session(
             MXS_SESSION* session, SERVER* server, MXS_PROTOCOL_SESSION* client_protocol_session,
             mxs::Component* component)
     {

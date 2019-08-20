@@ -1883,7 +1883,7 @@ GWBUF* mariadbclient_reject(const char* host)
 }
 }
 
-MXS_PROTOCOL_SESSION* MySQLClientProtocol::create(MXS_SESSION* session, mxs::Component* component)
+MySQLClientProtocol* MySQLClientProtocol::create(MXS_SESSION* session, mxs::Component* component)
 {
     return new (std::nothrow) MySQLClientProtocol(session, nullptr, component);
 }

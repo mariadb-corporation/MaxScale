@@ -26,6 +26,12 @@ class SERVER;
 class GWBUF;
 class MXS_SESSION;
 
+namespace maxscale
+{
+class ClientProtocol;
+class BackendProtocol;
+}
+
 /**
  * Base protocol class. Implemented by both client and backend protocols
  */
@@ -105,7 +111,7 @@ struct MXS_PROTOCOL_API
      *
      * @return New protocol session or null on error
      */
-    MXS_PROTOCOL_SESSION* (* new_client_session)(MXS_SESSION* session, mxs::Component* component);
+    mxs::ClientProtocol* (* new_client_session)(MXS_SESSION* session, mxs::Component* component);
 
     /**
      * Allocate new backend protocol session
@@ -116,7 +122,7 @@ struct MXS_PROTOCOL_API
      *
      * @return New protocol session or null on error
      */
-    MXS_PROTOCOL_SESSION* (* new_backend_session)(MXS_SESSION* session,
+    mxs::BackendProtocol* (* new_backend_session)(MXS_SESSION* session,
                                                   SERVER* server,
                                                   MXS_PROTOCOL_SESSION* client_protocol_session,
                                                   mxs::Component* component);

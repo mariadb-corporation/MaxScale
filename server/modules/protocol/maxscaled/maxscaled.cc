@@ -68,7 +68,7 @@ static bool                  maxscaled_init_connection(DCB*);
 static void                  maxscaled_finish_connection(DCB* dcb);
 static char*                 maxscaled_default_auth();
 
-MXS_PROTOCOL_SESSION* MAXSCALED::create(MXS_SESSION* session, mxs::Component* component)
+MAXSCALED* MAXSCALED::create(MXS_SESSION* session, mxs::Component* component)
 {
     return new (std::nothrow) MAXSCALED();
 }

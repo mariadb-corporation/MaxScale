@@ -58,7 +58,7 @@ static int                   httpd_get_line(int sock, char* buf, int size);
 static void                  httpd_send_headers(DCB* dcb, int final, bool auth_ok);
 static char*                 httpd_default_auth();
 
-MXS_PROTOCOL_SESSION* HTTPD_session::create(MXS_SESSION* session, mxs::Component* component)
+HTTPD_session* HTTPD_session::create(MXS_SESSION* session, mxs::Component* component)
 {
     return new (std::nothrow) HTTPD_session();
 }

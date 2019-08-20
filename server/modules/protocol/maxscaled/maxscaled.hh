@@ -24,7 +24,7 @@
 struct MAXSCALED : public mxs::ClientProtocol
 {
 public:
-    static MXS_PROTOCOL_SESSION* create(MXS_SESSION* session, mxs::Component* component);
+    static MAXSCALED* create(MXS_SESSION* session, mxs::Component* component);
     MAXSCALED();
     ~MAXSCALED() override;
 

@@ -47,8 +47,7 @@
 class HTTPD_session : public mxs::ClientProtocol
 {
 public:
-    static MXS_PROTOCOL_SESSION* create(MXS_SESSION* session, mxs::Component* component);
-
+    static HTTPD_session* create(MXS_SESSION* session, mxs::Component* component);
     ~HTTPD_session() = default;
 
     static char* auth_default();

@@ -454,7 +454,7 @@ private:
 class MySQLClientProtocol : public MySQLProtocol, public mxs::ClientProtocol
 {
 public:
-    static MXS_PROTOCOL_SESSION* create(MXS_SESSION* session, mxs::Component* component);
+    static MySQLClientProtocol* create(MXS_SESSION* session, mxs::Component* component);
     MySQLClientProtocol(MXS_SESSION* session, SERVER* server, mxs::Component* component);
 
     static char* auth_default();
@@ -475,7 +475,7 @@ public:
 class MySQLBackendProtocol : public MySQLProtocol, public mxs::BackendProtocol
 {
 public:
-    static MXS_PROTOCOL_SESSION* create_backend_session(
+    static MySQLBackendProtocol* create_backend_session(
             MXS_SESSION* session, SERVER* server, MXS_PROTOCOL_SESSION* client_protocol_session,
             mxs::Component* component);
 

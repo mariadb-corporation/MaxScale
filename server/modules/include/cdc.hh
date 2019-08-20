@@ -58,8 +58,7 @@ struct CDC_session
 class CDC_protocol : public mxs::ClientProtocol
 {
 public:
-    static MXS_PROTOCOL_SESSION* create(MXS_SESSION* session, mxs::Component* component);
-
+    static CDC_protocol* create(MXS_SESSION* session, mxs::Component* component);
     ~CDC_protocol() = default;
 
     static char* auth_default();
