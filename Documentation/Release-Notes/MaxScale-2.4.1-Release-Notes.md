@@ -1,6 +1,6 @@
 # MariaDB MaxScale 2.4.1 Release Notes
 
-Release 2.4.1 is a Beta release.
+Release 2.4.1 is a GA release.
 
 This document describes the changes in release 2.4.1, when compared to the
 previous release in the same series.
@@ -10,6 +10,7 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Bug fixes
 
+* [MXS-2633](https://jira.mariadb.org/browse/MXS-2633) Pam authentication doesn't work with server 10.4
 * [MXS-2603](https://jira.mariadb.org/browse/MXS-2603) MaxScale causes connections to break in Percona PXC Cluster
 * [MXS-2598](https://jira.mariadb.org/browse/MXS-2598) memory leak on handling COM_CHANGE_USER
 * [MXS-2597](https://jira.mariadb.org/browse/MXS-2597) MaxScale doesn't handle errors from microhttpd

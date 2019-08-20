@@ -92,6 +92,8 @@ void test_stress(TestConnections& test)
     Connection c = test.maxscales->rwsplit();
     c.connect();
 
+    test.repl->sync_slaves();
+
     Result rows = c.rows("SELECT * FROM sq");
     test.expect(rows.size() == N_THREADS * N_INSERTS,
                 "Expected %lu inserts in total, but found %lu.", N_THREADS * N_INSERTS, rows.size());
