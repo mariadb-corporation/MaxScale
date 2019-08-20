@@ -1,9 +1,13 @@
-add_executable(test_mxb_http test_http.cc)
-target_link_libraries(test_mxb_http
-  maxbase
-  rt
-)
-add_test(test_mxb_http test_mxb_http)
+# On too many platforms curling to a non-existent site
+# does not result in a proper error. Disabled for the
+# time being.
+#
+#add_executable(test_mxb_http test_http.cc)
+#target_link_libraries(test_mxb_http
+#  maxbase
+#  rt
+#)
+#add_test(test_mxb_http test_mxb_http)
 
 add_executable(test_mxb_log test_log.cc)
 target_link_libraries(test_mxb_log maxbase rt)
