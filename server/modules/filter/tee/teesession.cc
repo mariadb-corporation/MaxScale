@@ -56,8 +56,9 @@ TeeSession* TeeSession::create(Tee* my_instance, MXS_SESSION* session)
             return NULL;
         }
 
+        auto protocol = static_cast<MySQLClientProtocol*>(session->client_dcb->protocol_session());
         if ((client = LocalClient::create((MYSQL_session*)session->client_dcb->m_data,
-                                          (MySQLProtocol*)session->client_dcb->protocol_session(),
+                                          protocol,
                                           my_instance->get_service())) == NULL)
         {
             const char* extra = !listener_find_by_service(my_instance->get_service()).empty() ? "" :

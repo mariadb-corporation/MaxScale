@@ -322,25 +322,11 @@ static const char* const MXS_LAST_GTID = "last_gtid";
  *
  * Tracks various parts of the network protocol e.g. the response state
  */
-class MySQLProtocol : public mxs::ClientProtocol
+class MySQLProtocol
 {
 public:
-    static MXS_PROTOCOL_SESSION* create(MXS_SESSION* session, mxs::Component* component);
     MySQLProtocol(MXS_SESSION* session, SERVER* server, mxs::Component* component);
-    ~MySQLProtocol() override;
-
-    static char* auth_default();
-    static GWBUF* reject(const char* host);
-
-    int32_t read(DCB* dcb) override;
-    int32_t write(DCB* dcb, GWBUF* buffer) override;
-    int32_t write_ready(DCB* dcb) override;
-    int32_t error(DCB* dcb) override;
-    int32_t hangup(DCB* dcb) override;
-
-    bool init_connection(DCB* dcb) override;
-    void finish_connection(DCB* dcb) override;
-    int32_t connlimit(DCB* dcb, int limit) override;
+    ~MySQLProtocol();
 
     /**
      * Track a client query
@@ -465,8 +451,28 @@ private:
     }
 };
 
+class MySQLClientProtocol : public MySQLProtocol, public mxs::ClientProtocol
+{
+public:
+    static MXS_PROTOCOL_SESSION* create(MXS_SESSION* session, mxs::Component* component);
+    MySQLClientProtocol(MXS_SESSION* session, SERVER* server, mxs::Component* component);
+
+    static char* auth_default();
+    static GWBUF* reject(const char* host);
+
+    int32_t read(DCB* dcb) override;
+    int32_t write(DCB* dcb, GWBUF* buffer) override;
+    int32_t write_ready(DCB* dcb) override;
+    int32_t error(DCB* dcb) override;
+    int32_t hangup(DCB* dcb) override;
+
+    bool init_connection(DCB* dcb) override;
+    void finish_connection(DCB* dcb) override;
+    int32_t connlimit(DCB* dcb, int limit) override;
+};
+
 // Inherits from the client protocol for now. Will be cleaned up later.
-class MySQLBackendProtocol : public MySQLProtocol
+class MySQLBackendProtocol : public MySQLProtocol, public mxs::BackendProtocol
 {
 public:
     static MXS_PROTOCOL_SESSION* create_backend_session(
@@ -484,7 +490,6 @@ public:
 
     bool init_connection(DCB* dcb) override;
     void finish_connection(DCB* dcb) override;
-    int32_t connlimit(DCB* dcb, int limit) override;
     bool established(DCB*) override;
     json_t* diagnostics_json(DCB* dcb) override;
 };

@@ -293,7 +293,7 @@ int MariaDBClientAuthenticator::authenticate(DCB* dcb)
                   client_data->db);
 
         MariaDBAuthenticatorModule* instance = (MariaDBAuthenticatorModule*)dcb->session()->listener->auth_instance();
-        MySQLProtocol* protocol = static_cast<MySQLProtocol*>(dcb->protocol_session());
+        auto protocol = static_cast<MySQLClientProtocol*>(dcb->protocol_session());
 
         if (!client_data->correct_authenticator)
         {
@@ -391,10 +391,9 @@ int MariaDBClientAuthenticator::authenticate(DCB* dcb)
  */
 bool MariaDBClientAuthenticator::extract(DCB* dcb, GWBUF* buf)
 {
-    MySQLProtocol* protocol = NULL;
     MYSQL_session* client_data = NULL;
     int client_auth_packet_size = 0;
-    protocol = static_cast<MySQLProtocol*>(dcb->protocol_session());
+    auto protocol = static_cast<MySQLClientProtocol*>(dcb->protocol_session());
 
     client_data = (MYSQL_session*)dcb->m_data;
 
@@ -639,9 +638,7 @@ static bool mysql_auth_set_client_data(MYSQL_session* client_data,
  */
 bool MariaDBClientAuthenticator::ssl_capable(DCB* dcb)
 {
-    MySQLProtocol* protocol;
-
-    protocol = static_cast<MySQLProtocol*>(dcb->protocol_session());
+    auto protocol = static_cast<MySQLClientProtocol*>(dcb->protocol_session());
     return (protocol->client_capabilities & (int)GW_MYSQL_CAPABILITIES_SSL) ? true : false;
 }
 

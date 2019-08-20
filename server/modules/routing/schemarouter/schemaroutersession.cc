@@ -52,7 +52,7 @@ SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session,
     , m_load_target(NULL)
 {
     char db[MYSQL_DATABASE_MAXLEN + 1] = "";
-    MySQLProtocol* protocol = (MySQLProtocol*)session->client_dcb->protocol_session();
+    auto protocol = static_cast<MySQLClientProtocol*>(session->client_dcb->protocol_session());
     bool using_db = false;
     bool have_db = false;
     const char* current_db = mxs_mysql_get_current_db(session);

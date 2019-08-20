@@ -917,8 +917,9 @@ mxs_auth_state_t gw_send_backend_auth(BackendDCB* dcb)
     MYSQL_session client;
     gw_get_shared_session_auth_info(dcb->session()->client_dcb, &client);
 
+    auto proto = static_cast<MySQLClientProtocol*>(dcb->protocol_session());
     GWBUF* buffer = gw_generate_auth_response(&client,
-                                              (MySQLProtocol*)dcb->protocol_session(),
+                                              proto,
                                               with_ssl,
                                               ssl_established,
                                               dcb->service()->capabilities);
@@ -941,7 +942,7 @@ mxs_auth_state_t gw_send_backend_auth(BackendDCB* dcb)
 
 int send_mysql_native_password_response(DCB* dcb)
 {
-    MySQLProtocol* proto = (MySQLProtocol*) dcb->protocol_session();
+    auto proto = static_cast<MySQLClientProtocol*>(dcb->protocol_session());
     MYSQL_session local_session;
     gw_get_shared_session_auth_info(dcb, &local_session);
 
@@ -959,7 +960,7 @@ int send_mysql_native_password_response(DCB* dcb)
 
 bool send_auth_switch_request_packet(DCB* dcb)
 {
-    MySQLProtocol* proto = (MySQLProtocol*) dcb->protocol_session();
+    auto proto = static_cast<MySQLClientProtocol*>(dcb->protocol_session());
     const char plugin[] = DEFAULT_MYSQL_AUTH_PLUGIN;
     uint32_t len = 1 + sizeof(plugin) + GW_MYSQL_SCRAMBLE_SIZE;
     GWBUF* buffer = gwbuf_alloc(MYSQL_HEADER_LEN + len);
@@ -1079,7 +1080,7 @@ int gw_decode_mysql_server_handshake(MySQLProtocol* conn, uint8_t* payload)
  */
 bool gw_read_backend_handshake(DCB* dcb, GWBUF* buffer)
 {
-    MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol_session();
+    auto proto = static_cast<MySQLClientProtocol*>(dcb->protocol_session());
     bool rval = false;
     uint8_t* payload = GWBUF_DATA(buffer) + 4;
 
@@ -1270,7 +1271,8 @@ struct KillInfo
     KillInfo(std::string query, MXS_SESSION* ses, DcbCallback callback)
         : origin(mxs_rworker_get_current_id())
         , query_base(query)
-        , protocol(*(MySQLProtocol*)ses->client_dcb->protocol_session())
+        // TODO: this is wrong and buggy. Add copy ctor to MySQLProtocol.
+        , protocol(*static_cast<MySQLClientProtocol*>(ses->client_dcb->protocol_session()))
         , cb(callback)
     {
         gw_get_shared_session_auth_info(ses->client_dcb, &session);
@@ -1315,7 +1317,7 @@ struct UserKillInfo : public KillInfo
 static bool kill_func(DCB* dcb, void* data)
 {
     ConnKillInfo* info = static_cast<ConnKillInfo*>(data);
-    MySQLProtocol* proto = static_cast<MySQLProtocol*>(dcb->protocol_session());
+    auto proto = static_cast<MySQLBackendProtocol*>(dcb->protocol_session());
 
     if (dcb->session()->id() == info->target_id
         && dcb->role() == DCB::Role::BACKEND
