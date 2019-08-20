@@ -117,11 +117,6 @@ bool MySQLBackendProtocol::established(DCB* dcb)
     return gw_connection_established(dcb);
 }
 
-char* MySQLBackendProtocol::auth_default()
-{
-    return gw_backend_default_auth();
-}
-
 MySQLBackendProtocol* MySQLBackendProtocol::create_backend_session(
         MXS_SESSION* session, SERVER* server, MXS_PROTOCOL_SESSION* client_protocol_session,
         mxs::Component* component)

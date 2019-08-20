@@ -26,17 +26,33 @@ class ClientProtocol : public MXS_PROTOCOL_SESSION
 {
 public:
     virtual ~ClientProtocol() = default;
+
+    /**
+     * Initialize a connection.
+     *
+     * @param dcb  The connection to be initialized.
+     * @return True, if the connection could be initialized, false otherwise.
+     */
     virtual bool init_connection(DCB* dcb) = 0;
+
+    /**
+     * Finalize a connection. Called right before the DCB itself is closed.
+     *
+     * @param dcb  The connection to be finalized.
+     */
     virtual void finish_connection(DCB* dcb) = 0;
+
+    /**
+     * Handle connection limits. Currently the return value is ignored.
+     *
+     * @param dcb   DCB to handle
+     * @param limit Maximum number of connections
+     * @return 1 on success, 0 on error
+     */
     virtual int32_t connlimit(DCB* dcb, int limit)
     {
         return 0;
     };
-
-    virtual bool established(DCB*)
-    {
-        return true;
-    }
 };
 
 /**
@@ -46,8 +62,28 @@ class BackendProtocol : public MXS_PROTOCOL_SESSION
 {
 public:
     virtual ~BackendProtocol() = default;
+
+    /**
+     * Initialize a connection.
+     *
+     * @param dcb  The connection to be initialized.
+     * @return True, if the connection could be initialized, false otherwise.
+     */
     virtual bool init_connection(DCB* dcb) = 0;
+
+    /**
+     * Finalize a connection. Called right before the DCB itself is closed.
+     *
+     * @param dcb  The connection to be finalized.
+     */
     virtual void finish_connection(DCB* dcb) = 0;
+
+    /**
+     * Check if the connection has been fully established, used by connection pooling
+     *
+     * @param dcb DCB to check
+     * @return True if the connection is fully established and can be pooled
+     */
     virtual bool established(DCB*) = 0;
 };
 
@@ -58,13 +94,6 @@ public:
     ClientProtocolApi() = delete;
     ClientProtocolApi(const ClientProtocolApi&) = delete;
     ClientProtocolApi& operator=(const ClientProtocolApi&) = delete;
-
-    static int32_t write(DCB* dcb, GWBUF* buffer)
-    {
-        auto client_dcb = static_cast<ClientDCB*>(dcb);
-        auto client_protocol = static_cast<ClientProtocol*>(client_dcb->m_protocol);
-        return client_protocol->write(dcb, buffer);
-    }
 
     static mxs::ClientProtocol* create_session(MXS_SESSION* session, mxs::Component* component)
     {
@@ -81,32 +110,11 @@ public:
         return ProtocolImplementation::reject(host);
     }
 
-    static bool init_connection(DCB* dcb)
-    {
-        auto client_dcb = static_cast<ClientDCB*>(dcb);
-        auto client_protocol = static_cast<ClientProtocol*>(client_dcb->m_protocol);
-        return client_protocol->init_connection(dcb);
-    }
-
     static void finish_connection(DCB* dcb)
     {
         auto client_dcb = static_cast<ClientDCB*>(dcb);
         auto client_protocol = static_cast<ClientProtocol*>(client_dcb->m_protocol);
         client_protocol->finish_connection(dcb);
-    }
-
-    static int32_t connlimit(DCB* dcb, int limit)
-    {
-        auto client_dcb = static_cast<ClientDCB*>(dcb);
-        auto client_protocol = static_cast<ClientProtocol*>(client_dcb->m_protocol);
-        return client_protocol->connlimit(dcb, limit);
-    }
-
-    static bool established(DCB* dcb)
-    {
-        auto client_dcb = static_cast<ClientDCB*>(dcb);
-        auto client_protocol = static_cast<ClientProtocol*>(client_dcb->m_protocol);
-        return client_protocol->established(dcb);
     }
 
     static MXS_PROTOCOL_API s_api;
@@ -115,14 +123,9 @@ public:
 template<class ProtocolImplementation>
 MXS_PROTOCOL_API ClientProtocolApi<ProtocolImplementation>::s_api =
 {
-    &ClientProtocolApi<ProtocolImplementation>::write,
     &ClientProtocolApi<ProtocolImplementation>::create_session,
     nullptr,
-    &ClientProtocolApi<ProtocolImplementation>::init_connection,
-    &ClientProtocolApi<ProtocolImplementation>::finish_connection,
     &ClientProtocolApi<ProtocolImplementation>::auth_default,
-    &ClientProtocolApi<ProtocolImplementation>::connlimit,
-    &ClientProtocolApi<ProtocolImplementation>::established,
     &ClientProtocolApi<ProtocolImplementation>::reject,
 };
 
@@ -133,18 +136,6 @@ public:
     BackendProtocolApi() = delete;
     BackendProtocolApi(const BackendProtocolApi&) = delete;
     BackendProtocolApi& operator=(const BackendProtocolApi&) = delete;
-
-    static int32_t write(DCB* dcb, GWBUF* buffer)
-    {
-        auto backend_dcb = static_cast<BackendDCB*>(dcb);
-        auto client_protocol = static_cast<BackendProtocol*>(backend_dcb->m_protocol);
-        return client_protocol->write(dcb, buffer);
-    }
-
-    static char* auth_default()
-    {
-        return ProtocolImplementation::auth_default();
-    }
 
     static GWBUF* reject(const char* host)
     {
@@ -159,41 +150,15 @@ public:
                                                               component);
     }
 
-    static bool init_connection(DCB* dcb)
-    {
-        auto backend_dcb = static_cast<BackendDCB*>(dcb);
-        auto client_protocol = static_cast<BackendProtocol*>(backend_dcb->m_protocol);
-        return client_protocol->init_connection(dcb);
-    }
-
-    static void finish_connection(DCB* dcb)
-    {
-        auto backend_dcb = static_cast<BackendDCB*>(dcb);
-        auto client_protocol = static_cast<BackendProtocol*>(backend_dcb->m_protocol);
-        client_protocol->finish_connection(dcb);
-    }
-
-    static bool established(DCB* dcb)
-    {
-        auto backend_dcb = static_cast<BackendDCB*>(dcb);
-        auto client_protocol = static_cast<BackendProtocol*>(backend_dcb->m_protocol);
-        return client_protocol->established(dcb);
-    }
-
     static MXS_PROTOCOL_API s_api;
 };
 
 template<class ProtocolImplementation>
 MXS_PROTOCOL_API BackendProtocolApi<ProtocolImplementation>::s_api =
 {
-        &BackendProtocolApi<ProtocolImplementation>::write,
         nullptr,
         &BackendProtocolApi<ProtocolImplementation>::create_backend_session,
-        &BackendProtocolApi<ProtocolImplementation>::init_connection,
-        &BackendProtocolApi<ProtocolImplementation>::finish_connection,
-        &BackendProtocolApi<ProtocolImplementation>::auth_default,
         nullptr,
-        &BackendProtocolApi<ProtocolImplementation>::established,
         nullptr,
 };
 

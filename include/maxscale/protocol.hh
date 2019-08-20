@@ -47,6 +47,14 @@ public:
      * @return 1 on success, 0 on error
      */
     virtual int32_t read(DCB* dcb) = 0;
+
+    /**
+     * Write data to a network socket
+     *
+     * @param dcb    DCB to write to
+     * @param buffer Buffer to write
+     * @return 1 on success, 0 on error
+     */
     virtual int32_t write(DCB* dcb, GWBUF* buffer) = 0;
 
     /**
@@ -94,16 +102,6 @@ public:
 struct MXS_PROTOCOL_API
 {
     /**
-     * Write data to a network socket
-     *
-     * @param dcb    DCB to write to
-     * @param buffer Buffer to write
-     *
-     * @return 1 on success, 0 on error
-     */
-    int32_t (* write)(DCB* dcb, GWBUF* buffer);
-
-    /**
      * Allocate new client protocol session
      *
      * @param session   The session to which the connection belongs to
@@ -128,50 +126,11 @@ struct MXS_PROTOCOL_API
                                                   mxs::Component* component);
 
     /**
-     * Initialize a connection (client or server).
-     *
-     * @param dcb  The connection to be initialized.
-     *
-     * @return True, if the connection could be initialized, false otherwise.
-     */
-    bool (* init_connection)(DCB* dcb);
-
-    /**
-     * Finalize a connection (client or server).
-     *
-     * Called right before the DCB itself is closed.
-     *
-     * @param dcb  The connection to be finalized.
-     */
-    void (* finish_connection)(DCB* dcb);
-
-    /**
      * Returns the name of the default authenticator module for this protocol
      *
      * @return The name of the default authenticator
      */
     char* (* auth_default)();
-
-    /**
-     * Handle connection limits
-     *
-     * @param dcb   DCB to handle
-     * @param limit Maximum number of connections
-     *
-     * @return 1 on success, 0 on error
-     *
-     * @note Currently the return value is ignored
-     */
-    int32_t (* connlimit)(DCB* dcb, int limit);
-
-    /**
-     * Check if the connection has been fully established, used by connection pooling
-     *
-     * @param dcb DCB to check
-     *
-     * @return True if the connection is fully established and can be pooled
-     */
-    bool (* established)(DCB*);
 
     /**
      * Get rejection message

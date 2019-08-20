@@ -281,7 +281,7 @@ private:
      *
      * @return The new DCB or nullptr on error
      */
-    DCB* accept_one_dcb(int fd, const sockaddr_storage* addr, const char* host);
+    ClientDCB* accept_one_dcb(int fd, const sockaddr_storage* addr, const char* host);
 
     /**
      * Accept all available client connections

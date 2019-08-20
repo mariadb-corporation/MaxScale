@@ -176,7 +176,6 @@ public:
     ResultSetDCB(MXS_SESSION* session)
         : ClientDCB(DCB::FD_CLOSED, DCB::Role::CLIENT, session, nullptr, MXS_PROTOCOL_API {}, nullptr)
     {
-        m_protocol_api.write = &ResultSetDCB::write;
     }
 
     GWBUF* create_response() const
@@ -197,11 +196,6 @@ private:
 
         gwbuf_free(pBuffer);
         return 1;
-    }
-
-    static int32_t write(DCB* pDcb, GWBUF* pBuffer)
-    {
-        return static_cast<ResultSetDCB*>(pDcb)->write(pBuffer);
     }
 
     std::vector<char> m_response;

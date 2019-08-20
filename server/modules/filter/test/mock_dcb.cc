@@ -32,8 +32,6 @@ Dcb::Dcb(MXS_SESSION* pSession,
 
     pDcb->m_remote = MXS_STRDUP(zHost);
     pDcb->m_user = MXS_STRDUP(zUser);
-
-    m_protocol_api.write = &Dcb::write;
 }
 
 Dcb::~Dcb()
@@ -68,10 +66,5 @@ int32_t Dcb::write(GWBUF* pData)
     return rv;
 }
 
-// static
-int32_t Dcb::write(DCB* pDcb, GWBUF* pData)
-{
-    return static_cast<Dcb*>(pDcb)->write(pData);
-}
 }
 }

@@ -428,7 +428,7 @@ BackendDCB* BackendDCB::connect(SERVER* srv, MXS_SESSION* session, DCB::Manager*
 
         if (dcb)
         {
-            if (dcb->m_protocol_api.init_connection(dcb) && dcb->enable_events())
+            if (dcb->m_protocol->init_connection(dcb) && dcb->enable_events())
             {
                 // The DCB is now connected and added to epoll set. Authentication is done after the EPOLLOUT
                 // event that is triggered once the connection is established.
@@ -1069,8 +1069,9 @@ bool BackendDCB::maybe_add_persistent(BackendDCB* dcb)
 {
     RoutingWorker* owner = static_cast<RoutingWorker*>(dcb->owner);
     Server* server = static_cast<Server*>(dcb->m_server);
+
     if (dcb->m_user != NULL
-        && (dcb->m_protocol_api.established == NULL || dcb->m_protocol_api.established(dcb))
+        && (dcb->m_protocol->established(dcb))
         && strlen(dcb->m_user)
         && server
         && dcb->session()
@@ -2756,7 +2757,7 @@ void ClientDCB::shutdown()
     {
         session_close(m_session);
     }
-    m_protocol_api.finish_connection(this);
+    m_protocol->finish_connection(this);
     delete m_protocol;
     m_protocol = nullptr;
 }
@@ -2821,12 +2822,6 @@ bool ClientDCB::ready() const
 InternalDCB::InternalDCB(MXS_SESSION* session, MXS_PROTOCOL_API protocol_api, DCB::Manager* manager)
     : ClientDCB(FD_CLOSED, DCB::Role::INTERNAL, session, nullptr, protocol_api, manager)
 {
-    /**
-     * This prevents the actual protocol level closing code from being called that expects
-     * the dcb->m_protocol pointer to not be NULL.
-     */
-    m_protocol_api.finish_connection = nullptr;
-
     if (DCB_THROTTLING_ENABLED(this))
     {
         // Remove the callbacks that ClientDCB added.
@@ -2899,7 +2894,7 @@ bool BackendDCB::ready() const
 void BackendDCB::shutdown()
 {
     // Close protocol and router session
-    m_protocol_api.finish_connection(this);
+    m_protocol->finish_connection(this);
     delete m_protocol;
     m_protocol = nullptr;
 }

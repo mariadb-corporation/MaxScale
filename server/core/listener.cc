@@ -33,7 +33,7 @@
 #include <maxscale/maxadmin.h>
 #include <maxscale/paths.h>
 #include <maxscale/ssl.hh>
-#include <maxscale/protocol.hh>
+#include <maxscale/protocol2.hh>
 #include <maxbase/alloc.h>
 #include <maxscale/users.h>
 #include <maxscale/service.hh>
@@ -782,7 +782,7 @@ static ClientConn accept_one_connection(int fd)
 }
 }
 
-DCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const char* host)
+ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const char* host)
 {
     mxs::Session* session = new(std::nothrow) mxs::Session(m_self);
 
@@ -823,10 +823,7 @@ DCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const char* 
         {
             // TODO: If connections can be queued, this is the place to put the
             // TODO: connection on that queue.
-            if (m_proto_func.connlimit)
-            {
-                m_proto_func.connlimit(client_dcb, m_service->config().max_connections);
-            }
+            client_dcb->m_protocol->connlimit(client_dcb, m_service->config().max_connections);
 
             // TODO: This is never used as the client connection is not up yet
             client_dcb->session()->close_reason = SESSION_CLOSE_TOO_MANY_CONNECTIONS;
@@ -988,9 +985,9 @@ void Listener::accept_connections()
         }
         else if (type() == Type::UNIQUE_TCP)
         {
-            if (DCB* dcb = accept_one_dcb(conn.fd, &conn.addr, conn.host))
+            if (ClientDCB* dcb = accept_one_dcb(conn.fd, &conn.addr, conn.host))
             {
-                if (!m_proto_func.init_connection(dcb))
+                if (!dcb->m_protocol->init_connection(dcb))
                 {
                     dcb_close(dcb);
                 }
@@ -1003,9 +1000,9 @@ void Listener::accept_connections()
                 mxs::RoutingWorker::pick_worker();
 
             worker->execute([this, conn]() {
-                                if (DCB* dcb = accept_one_dcb(conn.fd, &conn.addr, conn.host))
+                                if (ClientDCB* dcb = accept_one_dcb(conn.fd, &conn.addr, conn.host))
                                 {
-                                    if (!m_proto_func.init_connection(dcb))
+                                    if (!dcb->m_protocol->init_connection(dcb))
                                     {
                                         dcb_close(dcb);
                                     }

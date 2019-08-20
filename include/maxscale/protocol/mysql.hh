@@ -480,7 +480,6 @@ public:
             mxs::Component* component);
 
     MySQLBackendProtocol(MXS_SESSION* session, SERVER* server, mxs::Component* component);
-    static char* auth_default();
 
     int32_t read(DCB* dcb) override;
     int32_t write(DCB* dcb, GWBUF* buffer) override;
