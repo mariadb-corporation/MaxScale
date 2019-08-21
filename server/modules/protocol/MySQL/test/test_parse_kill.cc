@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "../mariadbclient/mysql_client.cc"
+#include "../mysql_client.cc"
 
 #define NO_THREAD_ID 0
 

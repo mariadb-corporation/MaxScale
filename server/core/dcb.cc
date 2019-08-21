@@ -289,8 +289,17 @@ BackendDCB* BackendDCB::create(SERVER* srv,
     if (protocol_api)
     {
         auto client_dcb = session->client_dcb;
-        auto* protocol_session =
-            protocol_api->new_backend_session(session, srv, client_dcb->protocol_session(), component);
+        auto client_proto = client_dcb->m_protocol;
+        BackendProtocol* protocol_session = nullptr;
+        if (client_proto->capabilities() & mxs::ClientProtocol::CAP_BACKEND)
+        {
+            protocol_session = client_proto->create_backend_protocol(
+                    session, srv, client_proto, component);
+        }
+        else
+        {
+            MXB_ERROR("Protocol '%s' does not support backend connections.", session->listener->protocol());
+        }
 
         if (protocol_session)
         {

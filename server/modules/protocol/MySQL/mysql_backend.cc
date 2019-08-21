@@ -27,7 +27,7 @@
 #include <maxscale/server.hh>
 #include <maxscale/utils.h>
 // For setting server status through monitor
-#include "../../../../core/internal/monitormanager.hh"
+#include "../../../core/internal/monitormanager.hh"
 
 /*
  * MySQL Protocol module for handling the protocol between the gateway
@@ -127,40 +127,6 @@ MySQLBackendProtocol* MySQLBackendProtocol::create_backend_session(
 json_t* MySQLBackendProtocol::diagnostics_json(DCB* dcb)
 {
     return gw_json_diagnostics(dcb);
-}
-
-extern "C"
-{
-/*
- * The module entry point routine. It is this routine that
- * must populate the structure that is referred to as the
- * "module object", this is a structure with the set of
- * external entry points for this module.
- *
- * @return The module object
- */
-MXS_MODULE* MXS_CREATE_MODULE()
-{
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_PROTOCOL,
-        MXS_MODULE_GA,
-        MXS_PROTOCOL_VERSION,
-        "The MySQL to backend server protocol",
-        "V2.0.0",
-        MXS_NO_MODULE_CAPABILITIES,
-        &mxs::BackendProtocolApi<MySQLBackendProtocol>::s_api,
-        NULL,       /* Process init. */
-        NULL,       /* Process finish. */
-        NULL,       /* Thread init. */
-        NULL,       /* Thread finish. */
-        {
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
-
-    return &info;
-}
 }
 
 /**

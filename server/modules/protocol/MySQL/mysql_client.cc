@@ -1943,6 +1943,13 @@ char* MySQLClientProtocol::auth_default()
     return mariadbclient_auth_default();
 }
 
+mxs::BackendProtocol* MySQLClientProtocol::create_backend_protocol(
+        MXS_SESSION* session, SERVER* server, mxs::ClientProtocol* client_protocol_session,
+        mxs::Component* component)
+{
+    return MySQLBackendProtocol::create_backend_session(session, server, this, component);
+}
+
 /**
  * Module API implementation.
  */

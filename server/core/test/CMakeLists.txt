@@ -54,7 +54,7 @@ target_link_libraries(test_trxcompare maxscale-common)
 target_link_libraries(test_trxtracking maxscale-common)
 target_link_libraries(test_users maxscale-common)
 target_link_libraries(test_utils maxscale-common)
-target_link_libraries(test_session_track mysqlcommon)
+target_link_libraries(test_session_track mariadbclient)
 
 add_test(test_adminusers test_adminusers)
 add_test(test_atomic test_atomic)

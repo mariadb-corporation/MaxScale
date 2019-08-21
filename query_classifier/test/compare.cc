@@ -24,7 +24,7 @@
 #include <maxscale/log.hh>
 #include <maxscale/protocol/mysql.hh>
 #include <maxscale/query_classifier.hh>
-#include "../../server/modules/protocol/MySQL/mariadbclient/setsqlmodeparser.hh"
+#include "../../server/modules/protocol/MySQL/setsqlmodeparser.hh"
 #include "testreader.hh"
 using std::cerr;
 using std::cin;

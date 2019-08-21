@@ -18,6 +18,7 @@
 
 namespace maxscale
 {
+class BackendProtocol;
 
 /**
  * Client protocol class
@@ -25,6 +26,11 @@ namespace maxscale
 class ClientProtocol : public MXS_PROTOCOL_SESSION
 {
 public:
+    enum Capabilities
+    {
+        CAP_BACKEND = (1 << 0) // The protocol supports backend communication
+    };
+
     virtual ~ClientProtocol() = default;
 
     /**
@@ -53,6 +59,19 @@ public:
     {
         return 0;
     };
+
+    virtual int64_t capabilities() const
+    {
+        return 0;
+    }
+
+    virtual BackendProtocol* create_backend_protocol(
+            MXS_SESSION* session, SERVER* server, ClientProtocol* client_protocol_session,
+            mxs::Component* component)
+    {
+        mxb_assert(!true);
+        return nullptr;
+    }
 };
 
 /**
@@ -127,39 +146,6 @@ MXS_PROTOCOL_API ClientProtocolApi<ProtocolImplementation>::s_api =
     nullptr,
     &ClientProtocolApi<ProtocolImplementation>::auth_default,
     &ClientProtocolApi<ProtocolImplementation>::reject,
-};
-
-template<class ProtocolImplementation>
-class BackendProtocolApi
-{
-public:
-    BackendProtocolApi() = delete;
-    BackendProtocolApi(const BackendProtocolApi&) = delete;
-    BackendProtocolApi& operator=(const BackendProtocolApi&) = delete;
-
-    static GWBUF* reject(const char* host)
-    {
-        return ProtocolImplementation::reject(host);
-    }
-
-    static mxs::BackendProtocol* create_backend_session(
-            MXS_SESSION* session, SERVER* server, MXS_PROTOCOL_SESSION* client_protocol_session,
-            mxs::Component* component)
-    {
-        return ProtocolImplementation::create_backend_session(session, server, client_protocol_session,
-                                                              component);
-    }
-
-    static MXS_PROTOCOL_API s_api;
-};
-
-template<class ProtocolImplementation>
-MXS_PROTOCOL_API BackendProtocolApi<ProtocolImplementation>::s_api =
-{
-        nullptr,
-        &BackendProtocolApi<ProtocolImplementation>::create_backend_session,
-        nullptr,
-        nullptr,
 };
 
 }
