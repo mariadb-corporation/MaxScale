@@ -18,7 +18,19 @@
 
 namespace maxscale
 {
+class ClientProtocol;
 class BackendProtocol;
+
+
+class ProtocolModule
+{
+    virtual mxs::ClientProtocol* create_client_protocol(MXS_SESSION* session, mxs::Component* component) = 0;
+    virtual std::string auth_default() const = 0;
+    virtual GWBUF* reject(const std::string& host)
+    {
+        return nullptr;
+    }
+};
 
 /**
  * Client protocol class
@@ -65,9 +77,16 @@ public:
         return 0;
     }
 
-    virtual BackendProtocol* create_backend_protocol(
-            MXS_SESSION* session, SERVER* server, ClientProtocol* client_protocol_session,
-            mxs::Component* component)
+    /**
+     * Allocate new backend protocol session
+     *
+     * @param session  The session to which the connection belongs to
+     * @param server   Server where the connection is made
+     *
+     * @return New protocol session or null on error
+     */
+    virtual BackendProtocol*
+    create_backend_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component)
     {
         mxb_assert(!true);
         return nullptr;
@@ -129,13 +148,6 @@ public:
         return ProtocolImplementation::reject(host);
     }
 
-    static void finish_connection(DCB* dcb)
-    {
-        auto client_dcb = static_cast<ClientDCB*>(dcb);
-        auto client_protocol = static_cast<ClientProtocol*>(client_dcb->m_protocol);
-        client_protocol->finish_connection(dcb);
-    }
-
     static MXS_PROTOCOL_API s_api;
 };
 
@@ -143,7 +155,6 @@ template<class ProtocolImplementation>
 MXS_PROTOCOL_API ClientProtocolApi<ProtocolImplementation>::s_api =
 {
     &ClientProtocolApi<ProtocolImplementation>::create_session,
-    nullptr,
     &ClientProtocolApi<ProtocolImplementation>::auth_default,
     &ClientProtocolApi<ProtocolImplementation>::reject,
 };

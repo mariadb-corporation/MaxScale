@@ -112,20 +112,6 @@ struct MXS_PROTOCOL_API
     mxs::ClientProtocol* (* new_client_session)(MXS_SESSION* session, mxs::Component* component);
 
     /**
-     * Allocate new backend protocol session
-     *
-     * @param session  The session to which the connection belongs to
-     * @param server   Server where the connection is made
-     * @param protocol The client protocol session.
-     *
-     * @return New protocol session or null on error
-     */
-    mxs::BackendProtocol* (* new_backend_session)(MXS_SESSION* session,
-                                                  SERVER* server,
-                                                  MXS_PROTOCOL_SESSION* client_protocol_session,
-                                                  mxs::Component* component);
-
-    /**
      * Returns the name of the default authenticator module for this protocol
      *
      * @return The name of the default authenticator

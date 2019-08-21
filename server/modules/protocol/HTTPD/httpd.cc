@@ -58,6 +58,19 @@ static int                   httpd_get_line(int sock, char* buf, int size);
 static void                  httpd_send_headers(DCB* dcb, int final, bool auth_ok);
 static char*                 httpd_default_auth();
 
+class HTTPDProtocol : public mxs::ProtocolModule
+{
+    mxs::ClientProtocol* create_client_protocol(MXS_SESSION* session, mxs::Component* component)
+    {
+        return new (std::nothrow) HTTPD_session();
+    }
+
+    std::string auth_default() const
+    {
+        return httpd_default_auth();
+    }
+};
+
 HTTPD_session* HTTPD_session::create(MXS_SESSION* session, mxs::Component* component)
 {
     return new (std::nothrow) HTTPD_session();

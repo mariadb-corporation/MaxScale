@@ -78,6 +78,19 @@ static char* cdc_default_auth()
     return const_cast<char*>("CDCPlainAuth");
 }
 
+class CDCProtocol : public mxs::ProtocolModule
+{
+    mxs::ClientProtocol* create_client_protocol(MXS_SESSION* session, mxs::Component* component)
+    {
+        return cdc_protocol_init();
+    }
+
+    std::string auth_default() const
+    {
+        return cdc_default_auth();
+    }
+};
+
 CDC_protocol* CDC_protocol::create(MXS_SESSION* session, mxs::Component* component)
 {
     return cdc_protocol_init();

@@ -188,7 +188,7 @@ ClientDCB* ClientDCB::create(int fd, MXS_SESSION* session, DCB::Manager* manager
     auto protocol_session = protocol_api.new_client_session(session, static_cast<mxs::Session*>(session));
     if (protocol_session)
     {
-        dcb = new(std::nothrow) ClientDCB(fd, session, protocol_session, protocol_api, manager);
+        dcb = new(std::nothrow) ClientDCB(fd, session, protocol_session, manager);
 
         if (!dcb)
         {
@@ -202,9 +202,7 @@ ClientDCB* ClientDCB::create(int fd, MXS_SESSION* session, DCB::Manager* manager
 
 InternalDCB* InternalDCB::create(MXS_SESSION* session, DCB::Manager* manager)
 {
-    MXS_PROTOCOL_API protocol_api = session->listener->protocol_func();
-
-    return new(std::nothrow) InternalDCB(session, protocol_api, manager);
+    return new(std::nothrow) InternalDCB(session, manager);
 }
 
 /**
@@ -294,7 +292,7 @@ BackendDCB* BackendDCB::create(SERVER* srv,
         if (client_proto->capabilities() & mxs::ClientProtocol::CAP_BACKEND)
         {
             protocol_session = client_proto->create_backend_protocol(
-                    session, srv, client_proto, component);
+                    session, srv, component);
         }
         else
         {
@@ -323,7 +321,7 @@ BackendDCB* BackendDCB::create(SERVER* srv,
 
             if (new_backend_auth)
             {
-                dcb = new(std::nothrow) BackendDCB(srv, fd, session, protocol_session, *protocol_api,
+                dcb = new(std::nothrow) BackendDCB(srv, fd, session, protocol_session,
                                                    std::move(new_backend_auth), manager);
                 if (dcb)
                 {
@@ -1819,11 +1817,6 @@ MXS_PROTOCOL_SESSION* ClientDCB::protocol_session() const
     return m_protocol;
 }
 
-const MXS_PROTOCOL_API* ClientDCB::protocol_api() const
-{
-    return &m_protocol_api;
-}
-
 /**
  * Accept a SSL connection and do the SSL authentication handshake.
  * This function accepts a client connection to a DCB. It assumes that the SSL
@@ -1902,11 +1895,6 @@ int ClientDCB::ssl_handshake()
 MXS_PROTOCOL_SESSION* BackendDCB::protocol_session() const
 {
     return m_protocol;
-}
-
-const MXS_PROTOCOL_API* BackendDCB::protocol_api() const
-{
-    return &m_protocol_api;
 }
 
 /**
@@ -2771,24 +2759,18 @@ void ClientDCB::shutdown()
     m_protocol = nullptr;
 }
 
-ClientDCB::ClientDCB(int fd,
-                     MXS_SESSION* session,
-                     ClientProtocol* protocol,
-                     MXS_PROTOCOL_API protocol_api,
-                     DCB::Manager* manager)
-    : ClientDCB(fd, DCB::Role::CLIENT, session, protocol, protocol_api, manager)
+ClientDCB::ClientDCB(int fd, MXS_SESSION* session,
+        ClientProtocol* protocol,
+        DCB::Manager* manager)
+    : ClientDCB(fd, DCB::Role::CLIENT, session, protocol, manager)
 {
 }
 
-ClientDCB::ClientDCB(int fd,
-                     DCB::Role role,
-                     MXS_SESSION* session,
+ClientDCB::ClientDCB(int fd, DCB::Role role, MXS_SESSION* session,
                      ClientProtocol* protocol_session,
-                     MXS_PROTOCOL_API protocol_api,
                      Manager* manager)
     : DCB(fd, role, session, manager)
     , m_protocol(protocol_session)
-    , m_protocol_api(protocol_api)
 {
     if (DCB_THROTTLING_ENABLED(this))
     {
@@ -2828,8 +2810,8 @@ bool ClientDCB::ready() const
     return m_session != nullptr;
 }
 
-InternalDCB::InternalDCB(MXS_SESSION* session, MXS_PROTOCOL_API protocol_api, DCB::Manager* manager)
-    : ClientDCB(FD_CLOSED, DCB::Role::INTERNAL, session, nullptr, protocol_api, manager)
+InternalDCB::InternalDCB(MXS_SESSION* session, DCB::Manager* manager)
+    : ClientDCB(FD_CLOSED, DCB::Role::INTERNAL, session, nullptr, manager)
 {
     if (DCB_THROTTLING_ENABLED(this))
     {
@@ -2872,17 +2854,13 @@ bool InternalDCB::prepare_for_destruction()
     return true;
 }
 
-BackendDCB::BackendDCB(SERVER* server,
-                       int fd,
-                       MXS_SESSION* session,
+BackendDCB::BackendDCB(SERVER* server, int fd, MXS_SESSION* session,
                        mxs::BackendProtocol* protocol,
-                       MXS_PROTOCOL_API protocol_api,
                        std::unique_ptr<mxs::BackendAuthenticator> auth_ses,
                        DCB::Manager* manager)
     : DCB(fd, DCB::Role::BACKEND, session, manager)
     , m_auth_session(std::move(auth_ses))
     , m_protocol(protocol)
-    , m_protocol_api(protocol_api)
     , m_server(server)
 {
     if (DCB_THROTTLING_ENABLED(this))

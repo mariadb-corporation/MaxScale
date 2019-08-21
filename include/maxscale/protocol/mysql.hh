@@ -474,9 +474,8 @@ public:
     {
         return CAP_BACKEND;
     }
-    mxs::BackendProtocol* create_backend_protocol(
-            MXS_SESSION* session, SERVER* server, ClientProtocol* client_protocol_session,
-            mxs::Component* component) override;
+    maxscale::BackendProtocol*
+    create_backend_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component) override;
 };
 
 // Inherits from the client protocol for now. Will be cleaned up later.

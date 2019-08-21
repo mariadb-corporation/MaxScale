@@ -238,7 +238,6 @@ public:
     json_t* protocol_diagnostics_json() const
     {
         DCB* pThis = const_cast<DCB*>(this);
-        auto api = protocol_api();
         return protocol_session()->diagnostics_json(pThis);
     }
 
@@ -330,9 +329,6 @@ protected:
      */
     virtual bool prepare_for_destruction() = 0;
 
-    // Get protocol functions
-    virtual const MXS_PROTOCOL_API* protocol_api() const = 0;
-
     void stop_polling_and_shutdown();
 
     int log_errors_SSL(int ret);
@@ -395,7 +391,7 @@ public:
 
     static ClientDCB* create(int fd, MXS_SESSION* session, DCB::Manager* manager);
     MXS_PROTOCOL_SESSION* protocol_session() const override;
-    const MXS_PROTOCOL_API* protocol_api() const override;
+
     int ssl_handshake() override;
     bool ready() const;
     void shutdown() override;
@@ -403,23 +399,14 @@ public:
     std::unique_ptr<mxs::ClientAuthenticator> m_auth_session;      /**< Client authentication data */
 
     mxs::ClientProtocol*  m_protocol;                    /**< The protocol session */
-    MXS_PROTOCOL_API      m_protocol_api;                /**< Protocol functions for the DCB */
 
 protected:
     // Only for InternalDCB.
-    ClientDCB(int fd,
-              DCB::Role role,
-              MXS_SESSION* session,
-              mxs::ClientProtocol* protocol,
-              MXS_PROTOCOL_API protocol_api,
+    ClientDCB(int fd, DCB::Role role, MXS_SESSION* session, mxs::ClientProtocol* protocol_session,
               Manager* manager);
 
 private:
-    ClientDCB(int fd,
-              MXS_SESSION* session,
-              mxs::ClientProtocol* protocol,
-              MXS_PROTOCOL_API protocol_api,
-              Manager* manager);
+    ClientDCB(int fd, MXS_SESSION* session, mxs::ClientProtocol* protocol, DCB::Manager* manager);
 
     bool release_from(MXS_SESSION* session) override;
     bool prepare_for_destruction() override;
@@ -432,7 +419,6 @@ public:
                                mxs::Component* upstream);
 
     MXS_PROTOCOL_SESSION* protocol_session() const override;
-    const MXS_PROTOCOL_API* protocol_api() const override;
 
     /**
      * Hangup all BackendDCBs connected to a particular server.
@@ -477,16 +463,10 @@ public:
     std::unique_ptr<mxs::BackendAuthenticator> m_auth_session;   /**< Backend authentication data */
 
     mxs::BackendProtocol* m_protocol;                    /**< The protocol session */
-    MXS_PROTOCOL_API      m_protocol_api;                /**< Protocol functions for the DCB */
 
 private:
-    BackendDCB(SERVER* server,
-               int fd,
-               MXS_SESSION* session,
-               mxs::BackendProtocol* protocol,
-               MXS_PROTOCOL_API protocol_api,
-               std::unique_ptr<mxs::BackendAuthenticator> auth_ses,
-               Manager* manager);
+    BackendDCB(SERVER* server, int fd, MXS_SESSION* session, mxs::BackendProtocol* protocol,
+               std::unique_ptr<mxs::BackendAuthenticator> auth_ses, DCB::Manager* manager);
 
     static BackendDCB* create(SERVER* server,
                               int fd,
@@ -523,7 +503,7 @@ public:
     bool disable_events() override;
     void shutdown() override;
 private:
-    InternalDCB(MXS_SESSION* session, MXS_PROTOCOL_API protocol_api, Manager* manager);
+    InternalDCB(MXS_SESSION* session, DCB::Manager* manager);
 
     bool prepare_for_destruction() override;
 };

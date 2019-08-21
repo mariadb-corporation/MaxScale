@@ -1883,6 +1883,25 @@ GWBUF* mariadbclient_reject(const char* host)
 }
 }
 
+class MySQLProtocolModule : public mxs::ProtocolModule
+{
+    mxs::ClientProtocol* create_client_protocol(MXS_SESSION* session, mxs::Component* component)
+    {
+        return new (std::nothrow) MySQLClientProtocol(session, nullptr, component);
+    }
+
+    std::string auth_default() const
+    {
+        return mariadbclient_auth_default();
+    }
+
+    GWBUF* reject(const std::string& host)
+    {
+        return mariadbclient_reject(host.c_str());
+    }
+
+};
+
 MySQLClientProtocol* MySQLClientProtocol::create(MXS_SESSION* session, mxs::Component* component)
 {
     return new (std::nothrow) MySQLClientProtocol(session, nullptr, component);
@@ -1943,9 +1962,8 @@ char* MySQLClientProtocol::auth_default()
     return mariadbclient_auth_default();
 }
 
-mxs::BackendProtocol* MySQLClientProtocol::create_backend_protocol(
-        MXS_SESSION* session, SERVER* server, mxs::ClientProtocol* client_protocol_session,
-        mxs::Component* component)
+maxscale::BackendProtocol* MySQLClientProtocol::create_backend_protocol(MXS_SESSION* session, SERVER* server,
+                                                                        mxs::Component* component)
 {
     return MySQLBackendProtocol::create_backend_session(session, server, this, component);
 }

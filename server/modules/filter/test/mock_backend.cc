@@ -174,7 +174,7 @@ class ResultSetDCB : public ClientDCB
 {
 public:
     ResultSetDCB(MXS_SESSION* session)
-        : ClientDCB(DCB::FD_CLOSED, DCB::Role::CLIENT, session, nullptr, MXS_PROTOCOL_API {}, nullptr)
+        : ClientDCB(DCB::FD_CLOSED, DCB::Role::CLIENT, session, nullptr, nullptr)
     {
     }
 
