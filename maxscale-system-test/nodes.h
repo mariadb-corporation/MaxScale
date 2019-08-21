@@ -14,7 +14,12 @@ typedef std::set<std::string> StringSet;
 class Nodes
 {
 public:
-    Nodes();
+    /**
+     * Sets up the nodes. *Must* be called before instance is used.
+     *
+     * @return True, if the instance could be setup, false otherwise.
+     */
+    virtual bool setup() = 0;
 
     char * IP[256];
     /**
@@ -31,7 +36,7 @@ public:
      * @brief use_ipv6 If true IPv6 addresses will be used to connect Maxscale and backed
      * Also IPv6 addresses go to maxscale.cnf
      */
-    bool use_ipv6;
+    bool use_ipv6 = false;
 
     /**
      * @brief  Path to ssh key for every backend node
@@ -204,6 +209,11 @@ public:
      * @return 0 in case of success
      */
     int stop_vm(int node);
+
+protected:
+    Nodes(const char* pref,
+          const std::string& network_config,
+          bool verbose);
 
 private:
     bool check_node_ssh(int node);
