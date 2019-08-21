@@ -1885,6 +1885,12 @@ GWBUF* mariadbclient_reject(const char* host)
 
 class MySQLProtocolModule : public mxs::ProtocolModule
 {
+public:
+    static MySQLProtocolModule* create()
+    {
+        return new MySQLProtocolModule();
+    }
+
     mxs::ClientProtocol* create_client_protocol(MXS_SESSION* session, mxs::Component* component)
     {
         return new (std::nothrow) MySQLClientProtocol(session, nullptr, component);
@@ -1952,16 +1958,6 @@ int32_t MySQLClientProtocol::connlimit(DCB* dcb, int limit)
     return mariadbclient_connlimit(dcb, limit);
 };
 
-GWBUF* MySQLClientProtocol::reject(const char* host)
-{
-    return mariadbclient_reject(host);
-}
-
-char* MySQLClientProtocol::auth_default()
-{
-    return mariadbclient_auth_default();
-}
-
 maxscale::BackendProtocol* MySQLClientProtocol::create_backend_protocol(MXS_SESSION* session, SERVER* server,
                                                                         mxs::Component* component)
 {
@@ -2028,7 +2024,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "The client to MaxScale MySQL protocol implementation",
         "V1.1.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &mxs::ClientProtocolApi<MySQLClientProtocol>::s_api,
+        &mxs::ClientProtocolApi<MySQLProtocolModule>::s_api,
         process_init,
         process_finish,
         thread_init,

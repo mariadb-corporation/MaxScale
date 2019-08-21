@@ -70,6 +70,12 @@ static char*                 maxscaled_default_auth();
 
 class MAXSCALEDProtocol : public mxs::ProtocolModule
 {
+public:
+    static MAXSCALEDProtocol* create()
+    {
+        return new MAXSCALEDProtocol();
+    }
+
     mxs::ClientProtocol* create_client_protocol(MXS_SESSION* session, mxs::Component* component)
     {
         return new (std::nothrow) MAXSCALED();
@@ -258,7 +264,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "A maxscale protocol for the administration interface",
         "V2.0.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &mxs::ClientProtocolApi<MAXSCALED>::s_api,
+        &mxs::ClientProtocolApi<MAXSCALEDProtocol>::s_api,
         NULL,       /* Process init. */
         NULL,       /* Process finish. */
         NULL,       /* Thread init. */

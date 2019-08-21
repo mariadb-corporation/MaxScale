@@ -60,6 +60,12 @@ static char*                 httpd_default_auth();
 
 class HTTPDProtocol : public mxs::ProtocolModule
 {
+public:
+    static HTTPDProtocol* create()
+    {
+        return new HTTPDProtocol();
+    }
+
     mxs::ClientProtocol* create_client_protocol(MXS_SESSION* session, mxs::Component* component)
     {
         return new (std::nothrow) HTTPD_session();
@@ -141,7 +147,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "An experimental HTTPD implementation for use in administration",
         "V1.2.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &mxs::ClientProtocolApi<HTTPD_session>::s_api,
+        &mxs::ClientProtocolApi<HTTPDProtocol>::s_api,
         NULL,       /* Process init. */
         NULL,       /* Process finish. */
         NULL,       /* Thread init. */

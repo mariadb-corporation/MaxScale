@@ -99,7 +99,6 @@ enum mxs_auth_state_t
 };
 
 std::unique_ptr<mxs::AuthenticatorModule> authenticator_init(const char* authenticator, const char* options);
-const char* get_default_authenticator(const char* protocol);
 
 namespace maxscale
 {

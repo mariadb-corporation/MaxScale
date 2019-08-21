@@ -124,11 +124,6 @@ public:
     const char* protocol() const;
 
     /**
-     * The protocol module entry points
-     */
-    const MXS_PROTOCOL_API& protocol_func() const;
-
-    /**
      * The authenticator instance
      */
     mxs::AuthenticatorModule* auth_instance() const;
@@ -209,12 +204,12 @@ private:
     std::string m_authenticator;    /**< Name of authenticator */
     std::string m_auth_options;     /**< Authenticator options */
 
-    std::unique_ptr<mxs::AuthenticatorModule>  m_auth_instance;   /**< Authenticator instance */
+    std::unique_ptr<mxs::ProtocolModule>      m_proto_module;  /**< Protocol module */
+    std::unique_ptr<mxs::AuthenticatorModule> m_auth_module;   /**< Authenticator module */
 
     struct users*        m_users;           /**< The user data for this listener */
     SERVICE*             m_service;         /**< The service which used by this listener */
     std::atomic<bool>    m_active;          /**< True if the port has not been deleted */
-    MXS_PROTOCOL_API     m_proto_func;      /**< Preloaded protocol functions */
     MXS_CONFIG_PARAMETER m_params;          /**< Configuration parameters */
     mxs::SSLProvider     m_ssl_provider;
 
@@ -248,10 +243,15 @@ private:
      * @param auth_instance The authenticator instance
      * @param ssl           The SSL configuration
      */
-    Listener(SERVICE* service, const std::string& name, const std::string& address, uint16_t port,
-             const std::string& protocol, const std::string& authenticator,
-             const std::string& auth_opts, std::unique_ptr<mxs::AuthenticatorModule> auth_instance,
-             std::unique_ptr<mxs::SSLContext> ssl, const MXS_CONFIG_PARAMETER& params);
+    Listener(SERVICE* service, const std::string& name,
+             const std::string& address, uint16_t port,
+             const std::string& protocol,
+             std::unique_ptr<mxs::ProtocolModule> proto_instance,
+             const std::string& authenticator,
+             const std::string& auth_opts,
+             std::unique_ptr<mxs::AuthenticatorModule> auth_instance,
+             std::unique_ptr<mxs::SSLContext> ssl,
+             const MXS_CONFIG_PARAMETER& params);
 
     /**
      * Listen on a file descriptor shared between all workers

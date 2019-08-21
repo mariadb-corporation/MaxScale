@@ -457,9 +457,6 @@ public:
     static MySQLClientProtocol* create(MXS_SESSION* session, mxs::Component* component);
     MySQLClientProtocol(MXS_SESSION* session, SERVER* server, mxs::Component* component);
 
-    static char* auth_default();
-    static GWBUF* reject(const char* host);
-
     int32_t read(DCB* dcb) override;
     int32_t write(DCB* dcb, GWBUF* buffer) override;
     int32_t write_ready(DCB* dcb) override;

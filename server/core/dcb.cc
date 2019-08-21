@@ -180,21 +180,14 @@ DCB::~DCB()
     MXB_POLL_DATA::owner = reinterpret_cast<MXB_WORKER*>(0xdeadbeef);
 }
 
-ClientDCB* ClientDCB::create(int fd, MXS_SESSION* session, DCB::Manager* manager)
+ClientDCB* ClientDCB::create(int fd, MXS_SESSION* session,
+                             mxs::ClientProtocol* client_protocol, DCB::Manager* manager)
 {
-    ClientDCB* dcb = nullptr;
-
-    MXS_PROTOCOL_API protocol_api = session->listener->protocol_func();
-    auto protocol_session = protocol_api.new_client_session(session, static_cast<mxs::Session*>(session));
-    if (protocol_session)
+    ClientDCB* dcb = new(std::nothrow) ClientDCB(fd, session, client_protocol, manager);
+    if (!dcb)
     {
-        dcb = new(std::nothrow) ClientDCB(fd, session, protocol_session, manager);
-
-        if (!dcb)
-        {
-            delete protocol_session;
-            ::close(fd);
-        }
+        delete client_protocol;
+        ::close(fd);
     }
 
     return dcb;

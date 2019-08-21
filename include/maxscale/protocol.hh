@@ -28,6 +28,7 @@ class MXS_SESSION;
 
 namespace maxscale
 {
+class ProtocolModule;
 class ClientProtocol;
 class BackendProtocol;
 }
@@ -102,32 +103,11 @@ public:
 struct MXS_PROTOCOL_API
 {
     /**
-     * Allocate new client protocol session
+     * Creates a new protocol module instance.
      *
-     * @param session   The session to which the connection belongs to
-     * @param component The component to use for routeQuery
-     *
-     * @return New protocol session or null on error
+     * @return New protocol module instance
      */
-    mxs::ClientProtocol* (* new_client_session)(MXS_SESSION* session, mxs::Component* component);
-
-    /**
-     * Returns the name of the default authenticator module for this protocol
-     *
-     * @return The name of the default authenticator
-     */
-    char* (* auth_default)();
-
-    /**
-     * Get rejection message
-     *
-     * The protocol should return an error indicating that access to MaxScale has been temporarily suspended.
-     *
-     * @param host The host that is blocked
-     *
-     * @return A buffer containing the error message
-     */
-    GWBUF* (* reject)(const char* host);
+    mxs::ProtocolModule* (* create_protocol_module)();
 };
 
 /**
@@ -136,16 +116,3 @@ struct MXS_PROTOCOL_API
  * that define how these numbers should change.
  */
 #define MXS_PROTOCOL_VERSION {3, 1, 0}
-
-/**
- * Specifies capabilities specific for protocol.
- *
- * @see enum routing_capability
- *
- * @note The values of the capabilities here *must* be between 0x010000000000
- *       and 0x800000000000, that is, bits 40 to 47.
- */
-enum protocol_capability_t
-{
-    PCAP_TYPE_NONE = 0x0    // TODO: remove once protocol capabilities are defined
-};

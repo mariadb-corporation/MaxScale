@@ -389,7 +389,9 @@ class ClientDCB : public DCB
 public:
     ~ClientDCB() override;
 
-    static ClientDCB* create(int fd, MXS_SESSION* session, DCB::Manager* manager);
+    static ClientDCB*
+    create(int fd, MXS_SESSION* session, mxs::ClientProtocol* client_protocol,
+           DCB::Manager* manager = nullptr);
     MXS_PROTOCOL_SESSION* protocol_session() const override;
 
     int ssl_handshake() override;

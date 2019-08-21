@@ -24,8 +24,32 @@ class BackendProtocol;
 
 class ProtocolModule
 {
+public:
+    /**
+     * Allocate new client protocol session
+     *
+     * @param session   The session to which the connection belongs to
+     * @param component The component to use for routeQuery
+     *
+     * @return New protocol session or null on error
+     */
     virtual mxs::ClientProtocol* create_client_protocol(MXS_SESSION* session, mxs::Component* component) = 0;
+
+    /**
+     * Get the default authenticator for the protocol.
+     *
+     * @return The default authenticator for the protocol or empty if the protocol
+     * does not provide one
+     */
     virtual std::string auth_default() const = 0;
+
+    /**
+     * Get rejection message. The protocol should return an error indicating that access to MaxScale
+     * has been temporarily suspended.
+     *
+     * @param host The host that is blocked
+     * @return A buffer containing the error message
+     */
     virtual GWBUF* reject(const std::string& host)
     {
         return nullptr;
@@ -133,19 +157,9 @@ public:
     ClientProtocolApi(const ClientProtocolApi&) = delete;
     ClientProtocolApi& operator=(const ClientProtocolApi&) = delete;
 
-    static mxs::ClientProtocol* create_session(MXS_SESSION* session, mxs::Component* component)
+    static mxs::ProtocolModule* create_protocol_module()
     {
-        return ProtocolImplementation::create(session, component);
-    }
-
-    static char* auth_default()
-    {
-        return ProtocolImplementation::auth_default();
-    }
-
-    static GWBUF* reject(const char* host)
-    {
-        return ProtocolImplementation::reject(host);
+        return ProtocolImplementation::create();
     }
 
     static MXS_PROTOCOL_API s_api;
@@ -154,9 +168,7 @@ public:
 template<class ProtocolImplementation>
 MXS_PROTOCOL_API ClientProtocolApi<ProtocolImplementation>::s_api =
 {
-    &ClientProtocolApi<ProtocolImplementation>::create_session,
-    &ClientProtocolApi<ProtocolImplementation>::auth_default,
-    &ClientProtocolApi<ProtocolImplementation>::reject,
+    &ClientProtocolApi<ProtocolImplementation>::create_protocol_module,
 };
 
 }

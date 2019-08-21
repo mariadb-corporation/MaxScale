@@ -73,26 +73,6 @@ std::unique_ptr<AuthenticatorModule> authenticator_init(const char* authenticato
     return rval;
 }
 
-/**
- * @brief Get the default authenticator for a protocol
- *
- * @param protocol Protocol to inspect
- * @return The default authenticator for the protocol or NULL if the protocol
- * does not provide one
- */
-const char* get_default_authenticator(const char* protocol)
-{
-    char* rval = NULL;
-    MXS_PROTOCOL_API* protofuncs = (MXS_PROTOCOL_API*)load_module(protocol, MODULE_PROTOCOL);
-
-    if (protofuncs && protofuncs->auth_default)
-    {
-        rval = protofuncs->auth_default();
-    }
-
-    return rval;
-}
-
 namespace maxscale
 {
 

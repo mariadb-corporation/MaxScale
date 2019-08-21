@@ -111,6 +111,7 @@ Listener::Listener(SERVICE* service,
                    const std::string& address,
                    uint16_t port,
                    const std::string& protocol,
+                   std::unique_ptr<mxs::ProtocolModule> proto_instance,
                    const std::string& authenticator,
                    const std::string& auth_opts,
                    std::unique_ptr<mxs::AuthenticatorModule> auth_instance,
@@ -124,10 +125,10 @@ Listener::Listener(SERVICE* service,
     , m_address(address)
     , m_authenticator(authenticator)
     , m_auth_options(auth_opts)
-    , m_auth_instance(std::move(auth_instance))
+    , m_proto_module(std::move(proto_instance))
+    , m_auth_module(std::move(auth_instance))
     , m_users(nullptr)
     , m_service(service)
-    , m_proto_func(*(MXS_PROTOCOL_API*)load_module(protocol.c_str(), MODULE_PROTOCOL))
     , m_params(params)
     , m_ssl_provider(std::move(ssl))
 {
@@ -228,33 +229,46 @@ SListener Listener::create(const std::string& name,
     auto authenticator_options = params.get_string(CN_AUTHENTICATOR_OPTIONS);
     int net_port = socket_defined ? 0 : port;
 
-
-    const char* auth = !authenticator.empty() ? authenticator.c_str() :
-        get_default_authenticator(protocol.c_str());
-
-    if (!auth)
+    // Add protocol and authenticator capabilities from the listener
+    std::unique_ptr<mxs::ProtocolModule> protocol_module;
+    auto protocol_api = (MXS_PROTOCOL_API*)load_module(protocol.c_str(), MODULE_PROTOCOL);
+    if (protocol_api)
     {
-        MXS_ERROR("No authenticator defined for listener '%s' and could not get "
-                  "default authenticator for protocol '%s'.", name.c_str(), protocol.c_str());
+        protocol_module.reset(protocol_api->create_protocol_module());
+    }
+    if (!protocol_module)
+    {
+        MXS_ERROR("Failed to initialize protocol module '%s' for listener '%s'.",
+                  protocol.c_str(), name.c_str());
         return nullptr;
     }
 
-    auto auth_instance = authenticator_init(auth, authenticator_options.c_str());
+    if (authenticator.empty())
+    {
+        authenticator = protocol_module->auth_default();
+        if (authenticator.empty())
+        {
+            MXS_ERROR("No authenticator defined for listener '%s' and could not get "
+                      "default authenticator for protocol '%s'.", name.c_str(), protocol.c_str());
+            return nullptr;
+        }
+    }
+    const char* zauth = authenticator.c_str();
+    const MXS_MODULE* auth_mod = get_module(zauth, MODULE_AUTHENTICATOR);
+    mxb_assert(auth_mod);
+    auto auth_instance = authenticator_init(zauth, authenticator_options.c_str());
     if (!auth_instance)
     {
         MXS_ERROR("Failed to initialize authenticator module '%s' for listener '%s'.",
-                  auth, name.c_str());
+                  zauth, name.c_str());
         return nullptr;
     }
 
-    // Add protocol and authenticator capabilities from the listener
-    const MXS_MODULE* proto_mod = get_module(protocol.c_str(), MODULE_PROTOCOL);
-    const MXS_MODULE* auth_mod = get_module(auth, MODULE_AUTHENTICATOR);
-    mxb_assert(proto_mod && auth_mod);
-
-    SListener listener(new(std::nothrow) Listener(service, name, address, port, protocol, auth,
-                                                  authenticator_options, std::move(auth_instance),
-                                                  std::move(ssl_info), params));
+    SListener listener(new(std::nothrow) Listener(
+            service, name, address, port,
+            protocol, std::move(protocol_module),
+            zauth, authenticator_options, std::move(auth_instance),
+            std::move(ssl_info), params));
 
     if (listener)
     {
@@ -263,7 +277,7 @@ SListener Listener::create(const std::string& name,
         listener->m_self = listener;
 
         // Note: This isn't good: we modify the service from a listener and the service itself should do this.
-        service->capabilities |= proto_mod->module_capabilities | auth_mod->module_capabilities;
+        service->capabilities |= auth_mod->module_capabilities;
 
         std::lock_guard<std::mutex> guard(listener_lock);
         all_listeners.push_back(listener);
@@ -540,7 +554,7 @@ json_t* Listener::to_json() const
     json_object_set_new(attr, CN_STATE, json_string(state()));
     json_object_set_new(attr, CN_PARAMETERS, param);
 
-    json_t* diag = m_auth_instance->diagnostics_json(this);
+    json_t* diag = m_auth_module->diagnostics_json(this);
     if (diag)
     {
         json_object_set_new(attr, CN_AUTHENTICATOR_DIAGNOSTICS, diag);
@@ -584,14 +598,9 @@ const char* Listener::protocol() const
     return m_protocol.c_str();
 }
 
-const MXS_PROTOCOL_API& Listener::protocol_func() const
-{
-    return m_proto_func;
-}
-
 mxs::AuthenticatorModule* Listener::auth_instance() const
 {
-    return m_auth_instance.get();
+    return m_auth_module.get();
 }
 
 const char* Listener::state() const
@@ -622,13 +631,13 @@ const char* Listener::state() const
 void Listener::print_users(DCB* dcb)
 {
     dcb_printf(dcb, "User names (%s): ", name());
-    m_auth_instance->diagnostics(dcb, this);
+    m_auth_module->diagnostics(dcb, this);
     dcb_printf(dcb, "\n");
 }
 
 int Listener::load_users()
 {
-    return m_auth_instance->load_users(this);
+    return m_auth_module->load_users(this);
 }
 
 struct users* Listener::users() const
@@ -786,6 +795,12 @@ ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const 
 {
     mxs::Session* session = new(std::nothrow) mxs::Session(m_self);
 
+    mxs::ClientProtocol* client_protocol = nullptr;
+    if (session)
+    {
+        client_protocol = m_proto_module->create_client_protocol(session, session);
+    }
+
     if (!session)
     {
         MXS_OOM();
@@ -796,7 +811,7 @@ ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const 
     mxs::RoutingWorker* worker = mxs::RoutingWorker::get_current();
     mxb_assert(worker);
 
-    ClientDCB* client_dcb = ClientDCB::create(fd, session, worker);
+    ClientDCB* client_dcb = ClientDCB::create(fd, session, client_protocol, worker);
 
     if (!client_dcb)
     {
@@ -810,7 +825,7 @@ ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const 
         client_dcb->m_remote = MXS_STRDUP_A(host);
 
         /** Allocate DCB specific authentication data */
-        client_dcb->m_auth_session = m_auth_instance->create_client_authenticator();
+        client_dcb->m_auth_session = m_auth_module->create_client_authenticator();
         if (!client_dcb->m_auth_session)
         {
             MXS_ERROR("Failed to create authenticator session for client DCB");
@@ -914,7 +929,7 @@ bool Listener::listen()
     m_state = FAILED;
 
     /** Load the authentication users before before starting the listener */
-    switch (m_auth_instance->load_users(this))
+    switch (m_auth_module->load_users(this))
     {
     case MXS_AUTH_LOADUSERS_FATAL:
         MXS_ERROR("[%s] Fatal error when loading users for listener '%s', "
@@ -959,16 +974,13 @@ uint32_t Listener::poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_
 
 void Listener::reject_connection(int fd, const char* host)
 {
-    if (m_proto_func.reject)
+    if (GWBUF* buf = m_proto_module->reject(host))
     {
-        if (GWBUF* buf = m_proto_func.reject(host))
+        for (auto b = buf; b; b = b->next)
         {
-            for (auto b = buf; b; b = b->next)
-            {
-                write(fd, GWBUF_DATA(b), GWBUF_LENGTH(b));
-            }
-            gwbuf_free(buf);
+            write(fd, GWBUF_DATA(b), GWBUF_LENGTH(b));
         }
+        gwbuf_free(buf);
     }
 
     close(fd);

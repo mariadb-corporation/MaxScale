@@ -80,6 +80,12 @@ static char* cdc_default_auth()
 
 class CDCProtocol : public mxs::ProtocolModule
 {
+public:
+    static CDCProtocol* create()
+    {
+        return new CDCProtocol();
+    }
+
     mxs::ClientProtocol* create_client_protocol(MXS_SESSION* session, mxs::Component* component)
     {
         return cdc_protocol_init();
@@ -161,7 +167,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "A Change Data Capture Listener implementation for use in binlog events retrieval",
         "V1.0.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &mxs::ClientProtocolApi<CDC_protocol>::s_api,
+        &mxs::ClientProtocolApi<CDCProtocol>::s_api,
         NULL,       /* Process init. */
         NULL,       /* Process finish. */
         NULL,       /* Thread init. */
