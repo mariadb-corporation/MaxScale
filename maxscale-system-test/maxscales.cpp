@@ -4,15 +4,19 @@
 #include <string>
 #include "envv.h"
 
-Maxscales::Maxscales(const char *pref, const char *test_cwd, bool verbose,
-                     std::string network_config)
+Maxscales::Maxscales(const char *pref,
+                     const char *test_cwd,
+                     bool verbose,
+                     const std::string& network_config)
+    : Nodes(pref, network_config, verbose)
+    , valgring_log_num(0)
 {
-    strcpy(prefix, pref);
-    this->verbose = verbose;
-    valgring_log_num = 0;
-    strcpy(test_dir, test_cwd);
-    this->network_config = network_config;
-    read_env();
+    strcpy(this->test_dir, test_cwd);
+}
+
+bool Maxscales::setup()
+{
+    read_env(); // Sets e.g. use_valgrind.
     if (this->use_valgrind)
     {
         for (int i = 0; i < N; i++)
@@ -23,6 +27,7 @@ Maxscales::Maxscales(const char *pref, const char *test_cwd, bool verbose,
             ssh_node_f(i, true, "rm -rf /var/cache/maxscale/maxscale.lock");
         }
     }
+    return true;
 }
 
 int Maxscales::read_env()

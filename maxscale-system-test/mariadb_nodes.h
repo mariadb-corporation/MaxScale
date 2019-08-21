@@ -35,7 +35,9 @@ public:
      * @brief Constructor
      * @param pref  name of backend setup (like 'repl' or 'galera')
      */
-    Mariadb_nodes(const char *pref, const char *test_cwd, bool verbose, std::string network_config);
+    Mariadb_nodes(const char *pref, const char *test_cwd, bool verbose, const std::string& network_config);
+
+    bool setup() override;
 
     virtual ~Mariadb_nodes();
 
@@ -525,8 +527,8 @@ class Galera_nodes : public Mariadb_nodes
 {
 public:
 
-    Galera_nodes(const char *pref, const char *test_cwd, bool verbose, std::string network_config) :
-        Mariadb_nodes(pref, test_cwd, verbose, network_config) { }
+    Galera_nodes(const char *pref, const char *test_cwd, bool verbose, const std::string& network_config)
+        : Mariadb_nodes(pref, test_cwd, verbose, network_config) { }
 
     int start_galera();
 

@@ -371,6 +371,7 @@ TestConnections::TestConnections(int argc, char* argv[])
     if (!no_repl)
     {
         repl = new Mariadb_nodes("node", test_dir, verbose, network_config);
+        repl->setup();
         repl->use_ipv6 = use_ipv6;
         repl->take_snapshot_command = take_snapshot_command;
         repl->revert_snapshot_command = revert_snapshot_command;
@@ -384,7 +385,7 @@ TestConnections::TestConnections(int argc, char* argv[])
     if (!no_galera)
     {
         galera = new Galera_nodes("galera", test_dir, verbose, network_config);
-        //galera->use_ipv6 = use_ipv6;
+        galera->setup();
         galera->use_ipv6 = false;
         galera->take_snapshot_command = take_snapshot_command;
         galera->revert_snapshot_command = revert_snapshot_command;
@@ -398,7 +399,7 @@ TestConnections::TestConnections(int argc, char* argv[])
     if (!no_clustrix)
     {
         clustrix = new Clustrix_nodes("clustrix", test_dir, verbose, network_config);
-        //galera->use_ipv6 = use_ipv6;
+        clustrix->setup();
         clustrix->use_ipv6 = false;
         clustrix->take_snapshot_command = take_snapshot_command;
         clustrix->revert_snapshot_command = revert_snapshot_command;
@@ -410,6 +411,7 @@ TestConnections::TestConnections(int argc, char* argv[])
     }
 
     maxscales = new Maxscales("maxscale", test_dir, verbose, network_config);
+    maxscales->setup();
 
     bool maxscale_ok = maxscales->check_nodes();
     bool repl_ok = no_repl || repl_future.get();

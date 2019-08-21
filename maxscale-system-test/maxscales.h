@@ -21,7 +21,9 @@ public:
     };
 
     Maxscales(const char *pref, const char *test_cwd, bool verbose,
-              std::string network_config);
+              const std::string& network_config);
+
+    bool setup() override;
 
     int read_env();
 

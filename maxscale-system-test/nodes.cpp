@@ -9,8 +9,13 @@
 
 #include "envv.h"
 
-Nodes::Nodes()
+Nodes::Nodes(const char* pref,
+             const std::string& network_config,
+             bool verbose)
+    : network_config(network_config)
+    , verbose(verbose)
 {
+    strcpy(this->prefix, pref);
 }
 
 bool Nodes::check_node_ssh(int node)

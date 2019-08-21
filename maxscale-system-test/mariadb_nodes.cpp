@@ -35,31 +35,37 @@ void Mariadb_nodes::require_gtid(bool value)
     g_require_gtid = value;
 }
 
-Mariadb_nodes::Mariadb_nodes(const char *pref, const char *test_cwd, bool verbose,
-                             std::string network_config):
-    v51(false)
+Mariadb_nodes::Mariadb_nodes(const char* pref,
+                             const char* test_cwd,
+                             bool verbose,
+                             const std::string& network_config)
+    : Nodes(pref, network_config, verbose)
+    , no_set_pos(false)
+    , v51(false)
+    , cnf_server_name(std::string(this->prefix) + std::string("_server"))
 {
-    use_ipv6 = false;
-    strcpy(prefix, pref);
     memset(this->nodes, 0, sizeof(this->nodes));
-    memset(blocked, 0, sizeof(blocked));
-    no_set_pos = false;
-    this->verbose = verbose;
-    this->network_config = network_config;
-    strcpy(test_dir, test_cwd);
+    memset(this->blocked, 0, sizeof(this->blocked));
+    strcpy(this->test_dir, test_cwd);
+
+    if (strcmp(this->prefix, "node") == 0)
+    {
+        cnf_server_name = std::string("server");
+    }
+    if (strcmp(this->prefix, "galera") == 0)
+    {
+        cnf_server_name = std::string("gserver");
+    }
+}
+
+bool Mariadb_nodes::setup()
+{
     read_env();
     truncate_mariadb_logs();
     flush_hosts();
     close_active_connections();
-    cnf_server_name = std::string(prefix) + std::string("_server");
-    if (strcmp(prefix, "node") == 0)
-    {
-        cnf_server_name = std::string("server");
-    }
-    if (strcmp(prefix, "galera") == 0)
-    {
-        cnf_server_name = std::string("gserver");
-    }
+
+    return true;
 }
 
 Mariadb_nodes::~Mariadb_nodes()
