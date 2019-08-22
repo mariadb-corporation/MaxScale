@@ -1,5 +1,19 @@
+/*
+ * Copyright (c) 2016 MariaDB Corporation Ab
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2023-01-01
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
+
 #include <fstream>
 #include <iostream>
+#include <regex>
 #include <sstream>
 #include "clustrix_nodes.h"
 
@@ -167,6 +181,74 @@ int Clustrix_nodes::prepare_server(int m)
     return rv;
 }
 
+namespace
+{
+
+using std::string;
+
+bool license_is_valid(const std::string& license)
+{
+    static const std::regex regex("\"expiration\":\"[^\"]+\"");
+
+    bool is_valid = false;
+
+    std::smatch match;
+
+    if (std::regex_search(license, match, regex))
+    {
+        if (match.size() == 1)
+        {
+            string s = match[0].str();
+
+            s = s.substr(14, 10); // We expect something like '"expiration":"2019-08-21 00:00:00"'
+
+            if (s.length() == 10) // '2019-08-21' (excluding quotes)
+            {
+                int year = atoi(s.substr(0, 4).c_str());  // 2019
+                int month = atoi(s.substr(5, 2).c_str()); // 08
+                int day = atoi(s.substr(8, 2).c_str());   // 21
+
+                time_t timestamp = time(NULL);
+                struct tm now;
+                localtime_r(&timestamp, &now);
+
+                now.tm_year += 1900;
+                now.tm_mon += 1;
+
+                if (year >= now.tm_year
+                    && (month > now.tm_mon || (month == now.tm_mon && day >= now.tm_mday)))
+                {
+                    is_valid = true;
+                }
+                else
+                {
+                    printf("ERROR: The date is %d-%d-%d, but the license in the license file "
+                           "is valid only until %d-%d-%d.\n",
+                           now.tm_year, now.tm_mon, now.tm_mday,
+                           year, month, day);
+                }
+            }
+            else
+            {
+                printf("ERROR: The value of the key 'expiration' does not appear to be valid.\n");
+            }
+        }
+        else
+        {
+            printf("ERROR: The license in the license file either does not contain an "
+                   "'expiration' key or then it contains several.\n");
+        }
+    }
+    else
+    {
+        printf("ERROR: The license file does not seem to contain a valid license.\n");
+    }
+
+    return is_valid;
+}
+
+}
+
 int Clustrix_nodes::start_replication()
 {
     int rv = 1;
@@ -178,33 +260,38 @@ int Clustrix_nodes::start_replication()
 
     if (lic_file.is_open())
     {
+        printf("Using license file '%s'.\n", lic_filename.c_str());
+
         std::stringstream ss;
         ss << lic_file.rdbuf();
         std::string clustrix_license = ss.str();
         lic_file.close();
 
-        execute_query_all_nodes(clustrix_license.c_str());
-
-        std::string cluster_setup_sql = std::string("ALTER CLUSTER ADD '")
-            + std::string(IP_private[1])
-            + std::string("'");
-        for (int i = 2; i < N; i++)
+        if (license_is_valid(clustrix_license))
         {
-            cluster_setup_sql += std::string(",'")
-                + std::string(IP_private[i])
-                + std::string("'");
-        }
-        connect();
-        execute_query(nodes[0], "%s", cluster_setup_sql.c_str());
-        close_connections();
+            execute_query_all_nodes(clustrix_license.c_str());
 
-        rv = 0;
+            std::string cluster_setup_sql = std::string("ALTER CLUSTER ADD '")
+                + std::string(IP_private[1])
+                + std::string("'");
+            for (int i = 2; i < N; i++)
+            {
+                cluster_setup_sql += std::string(",'")
+                    + std::string(IP_private[i])
+                    + std::string("'");
+            }
+            connect();
+            execute_query(nodes[0], "%s", cluster_setup_sql.c_str());
+            close_connections();
+
+            rv = 0;
+        }
     }
     else
     {
         printf("ERROR: The Clustrix license file '%s' does not exist. "
                "It must contain a string \"set global license='{...}';\" using which the "
-               "Clustrix license can be set.",
+               "Clustrix license can be set.\n",
                lic_filename.c_str());
     }
 
