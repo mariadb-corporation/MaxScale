@@ -475,13 +475,12 @@ public:
     create_backend_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component) override;
 };
 
-// Inherits from the client protocol for now. Will be cleaned up later.
 class MySQLBackendProtocol : public MySQLProtocol, public mxs::BackendProtocol
 {
 public:
-    static MySQLBackendProtocol* create_backend_session(
-            MXS_SESSION* session, SERVER* server, MXS_PROTOCOL_SESSION* client_protocol_session,
-            mxs::Component* component);
+    static std::unique_ptr<MySQLBackendProtocol>
+    create(MXS_SESSION* session, SERVER* server, const MySQLClientProtocol& client_protocol,
+           mxs::Component* component);
 
     MySQLBackendProtocol(MXS_SESSION* session, SERVER* server, mxs::Component* component);
 

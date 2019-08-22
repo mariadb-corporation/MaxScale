@@ -23,7 +23,6 @@
 #include <algorithm>
 #include <string>
 #include <vector>
-#include <sstream>
 
 #include <maxbase/alloc.h>
 #include <maxscale/authenticator2.hh>
@@ -1636,10 +1635,7 @@ void parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data)
  * MXS_PROTOCOL_API implementation.
  */
 
-namespace
-{
-
-int mariadbclient_read(DCB* dcb)
+int32_t MySQLClientProtocol::read(DCB* dcb)
 {
     GWBUF* read_buffer = NULL;
     int return_code = 0;
@@ -1652,7 +1648,7 @@ int mariadbclient_read(DCB* dcb)
         return 1;
     }
 
-    auto protocol = static_cast<MySQLClientProtocol*>(dcb->protocol_session());
+    auto protocol = this;
 
     MXS_DEBUG("Protocol state: %s", gw_mysql_protocol_state2string(protocol->protocol_auth_state));
 
@@ -1765,7 +1761,7 @@ int mariadbclient_read(DCB* dcb)
     return return_code;
 }
 
-int mariadbclient_write(DCB* dcb, GWBUF* queue)
+int32_t MySQLClientProtocol::write(DCB* dcb, GWBUF* queue)
 {
     if (GWBUF_IS_REPLY_OK(queue) && dcb->service()->config().session_track_trx_state)
     {
@@ -1774,44 +1770,24 @@ int mariadbclient_write(DCB* dcb, GWBUF* queue)
     return dcb_write(dcb, queue);
 }
 
-int mariadbclient_write_ready(DCB* dcb)
+int32_t MySQLClientProtocol::write_ready(DCB* dcb)
 {
     mxb_assert(dcb->state() != DCB::State::DISCONNECTED);
-    MySQLClientProtocol* protocol;
-    if (dcb == NULL)
-    {
-        goto return_1;
-    }
-
-    if (dcb->state() == DCB::State::DISCONNECTED)
-    {
-        goto return_1;
-    }
-
-    if (dcb->protocol_session() == NULL)
-    {
-        goto return_1;
-    }
-    protocol = static_cast<MySQLClientProtocol*>(dcb->protocol_session());
-
-    if (protocol->protocol_auth_state == MXS_AUTH_STATE_COMPLETE)
+    if ((dcb->state() != DCB::State::DISCONNECTED) && (protocol_auth_state == MXS_AUTH_STATE_COMPLETE))
     {
         dcb_drain_writeq(dcb);
-        goto return_1;
     }
-
-return_1:
     return 1;
 }
 
-int mariadbclient_error(DCB* dcb)
+int32_t MySQLClientProtocol::error(DCB* dcb)
 {
     mxb_assert(dcb->session()->state() != MXS_SESSION::State::STOPPING);
     dcb_close(dcb);
     return 1;
 }
 
-int mariadbclient_hangup(DCB* dcb)
+int32_t MySQLClientProtocol::hangup(DCB* dcb)
 {
     // We simply close the DCB, this will propagate the closure to any
     // backend descriptors and perform the session cleanup.
@@ -1855,32 +1831,19 @@ int mariadbclient_hangup(DCB* dcb)
     return 1;
 }
 
-bool mariadbclient_init_connection(DCB* client_dcb)
+bool MySQLClientProtocol::init_connection(DCB* client_dcb)
 {
-    send_mysql_client_handshake(client_dcb, static_cast<MySQLClientProtocol*>(client_dcb->protocol_session()));
+    send_mysql_client_handshake(client_dcb, this);
     return true;
 }
 
-void mariadbclient_finish_connection(DCB* client_dcb)
+void MySQLClientProtocol::finish_connection(DCB* dcb)
 {
 }
 
-char* mariadbclient_auth_default()
-{
-    return (char*)"mariadbauth";
-}
-
-int mariadbclient_connlimit(DCB* dcb, int limit)
+int32_t MySQLClientProtocol::connlimit(DCB* dcb, int limit)
 {
     return mysql_send_standard_error(dcb, 0, 1040, "Too many connections");
-}
-
-GWBUF* mariadbclient_reject(const char* host)
-{
-    std::stringstream ss;
-    ss << "Host '" << host << "' is temporarily blocked due to too many authentication failures.";
-    return modutil_create_mysql_err_msg(0, 0, 1129, "HY000", ss.str().c_str());
-}
 }
 
 class MySQLProtocolModule : public mxs::ProtocolModule
@@ -1900,14 +1863,15 @@ public:
 
     std::string auth_default() const
     {
-        return mariadbclient_auth_default();
+        return "mariadbauth";
     }
 
     GWBUF* reject(const std::string& host)
     {
-        return mariadbclient_reject(host.c_str());
+        std::string message = "Host '" + host
+                              + "' is temporarily blocked due to too many authentication failures.";
+        return modutil_create_mysql_err_msg(0, 0, 1129, "HY000", message.c_str());
     }
-
 };
 
 MySQLClientProtocol* MySQLClientProtocol::create(MXS_SESSION* session, mxs::Component* component)
@@ -1920,51 +1884,10 @@ MySQLClientProtocol::MySQLClientProtocol(MXS_SESSION* session, SERVER* server, m
 {
 }
 
-int32_t MySQLClientProtocol::read(DCB* dcb)
-{
-    return mariadbclient_read(dcb);
-}
-
-int32_t MySQLClientProtocol::write(DCB* dcb, GWBUF* buffer)
-{
-    return mariadbclient_write(dcb, buffer);
-}
-
-int32_t MySQLClientProtocol::write_ready(DCB* dcb)
-{
-    return mariadbclient_write_ready(dcb);
-}
-
-int32_t MySQLClientProtocol::error(DCB* dcb)
-{
-    return mariadbclient_error(dcb);
-}
-
-int32_t MySQLClientProtocol::hangup(DCB* dcb)
-{
-    return mariadbclient_hangup(dcb);
-}
-
-bool MySQLClientProtocol::init_connection(DCB* dcb)
-{
-    return mariadbclient_init_connection(dcb);
-}
-
-void MySQLClientProtocol::finish_connection(DCB* dcb)
-{
-    mariadbclient_finish_connection(dcb);
-}
-
-int32_t MySQLClientProtocol::connlimit(DCB* dcb, int limit)
-{
-    return mariadbclient_connlimit(dcb, limit);
-};
-
 std::unique_ptr<mxs::BackendProtocol>
 MySQLClientProtocol::create_backend_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component)
 {
-    return std::unique_ptr<mxs::BackendProtocol>(
-            MySQLBackendProtocol::create_backend_session(session, server, this, component));
+    return MySQLBackendProtocol::create(session, server, *this, component);
 }
 
 /**
