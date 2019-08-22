@@ -599,7 +599,7 @@ int ssl_authenticate_check_status(DCB* generic_dcb)
      */
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
     bool health_before = ssl_is_connection_healthy(dcb);
-    int ssl_ret = ssl_authenticate_client(dcb, dcb->m_auth_session->ssl_capable(dcb));
+    int ssl_ret = ssl_authenticate_client(dcb, dcb->m_authenticator->ssl_capable(dcb));
     bool health_after = ssl_is_connection_healthy(dcb);
 
     if (ssl_ret != 0)
@@ -756,14 +756,14 @@ int perform_authentication(DCB* generic_dcb, GWBUF* read_buffer, int nbytes_read
      * authenticate function to carry out the user checks.
      */
     int auth_val = MXS_AUTH_FAILED;
-    if (dcb->m_auth_session->extract(dcb, read_buffer))
+    if (dcb->m_authenticator->extract(dcb, read_buffer))
     {
         auth_val = ssl_authenticate_check_status(dcb);
 
         if (auth_val == MXS_AUTH_SSL_COMPLETE)
         {
             // TLS connection phase complete
-            auth_val = dcb->m_auth_session->authenticate(dcb);
+            auth_val = dcb->m_authenticator->authenticate(dcb);
         }
     }
     else
@@ -952,7 +952,7 @@ bool reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf)
 {
     bool rval = false;
     ClientDCB* client_dcb = session->client_dcb;
-    auto& client_auth = client_dcb->m_auth_session;
+    auto& client_auth = client_dcb->m_authenticator;
     if (client_auth->capabilities() & mxs::AuthenticatorModule::CAP_REAUTHENTICATE)
     {
         auto proto = static_cast<MySQLClientProtocol*>(client_dcb->protocol_session());
@@ -1891,9 +1891,11 @@ public:
         return new MySQLProtocolModule();
     }
 
-    mxs::ClientProtocol* create_client_protocol(MXS_SESSION* session, mxs::Component* component)
+    std::unique_ptr<mxs::ClientProtocol> create_client_protocol(MXS_SESSION* session, mxs::Component* component)
     {
-        return new (std::nothrow) MySQLClientProtocol(session, nullptr, component);
+        std::unique_ptr<mxs::ClientProtocol> rval;
+        rval.reset(new (std::nothrow) MySQLClientProtocol(session, nullptr, component));
+        return rval;
     }
 
     std::string auth_default() const
@@ -1958,10 +1960,11 @@ int32_t MySQLClientProtocol::connlimit(DCB* dcb, int limit)
     return mariadbclient_connlimit(dcb, limit);
 };
 
-maxscale::BackendProtocol* MySQLClientProtocol::create_backend_protocol(MXS_SESSION* session, SERVER* server,
-                                                                        mxs::Component* component)
+std::unique_ptr<mxs::BackendProtocol>
+MySQLClientProtocol::create_backend_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component)
 {
-    return MySQLBackendProtocol::create_backend_session(session, server, this, component);
+    return std::unique_ptr<mxs::BackendProtocol>(
+            MySQLBackendProtocol::create_backend_session(session, server, this, component));
 }
 
 /**

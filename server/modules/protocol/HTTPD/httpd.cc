@@ -66,9 +66,9 @@ public:
         return new HTTPDProtocol();
     }
 
-    mxs::ClientProtocol* create_client_protocol(MXS_SESSION* session, mxs::Component* component)
+    std::unique_ptr<mxs::ClientProtocol> create_client_protocol(MXS_SESSION* session, mxs::Component* component)
     {
-        return new (std::nothrow) HTTPD_session();
+        return std::unique_ptr<mxs::ClientProtocol>(new (std::nothrow) HTTPD_session());
     }
 
     std::string auth_default() const
@@ -295,8 +295,8 @@ static int httpd_read_event(DCB* generic_dcb)
                 {
                     /** The freeing entry point is called automatically when
                      * the client DCB is closed */
-                    dcb->m_auth_session->extract(dcb, auth_data);
-                    auth_ok = dcb->m_auth_session->authenticate(dcb) == MXS_AUTH_SUCCEEDED;
+                    dcb->m_authenticator->extract(dcb, auth_data);
+                    auth_ok = dcb->m_authenticator->authenticate(dcb) == MXS_AUTH_SUCCEEDED;
                     gwbuf_free(auth_data);
                 }
             }

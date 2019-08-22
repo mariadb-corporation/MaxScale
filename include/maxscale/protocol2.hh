@@ -33,7 +33,8 @@ public:
      *
      * @return New protocol session or null on error
      */
-    virtual mxs::ClientProtocol* create_client_protocol(MXS_SESSION* session, mxs::Component* component) = 0;
+    virtual std::unique_ptr<mxs::ClientProtocol>
+    create_client_protocol(MXS_SESSION* session, mxs::Component* component) = 0;
 
     /**
      * Get the default authenticator for the protocol.
@@ -109,7 +110,7 @@ public:
      *
      * @return New protocol session or null on error
      */
-    virtual BackendProtocol*
+    virtual std::unique_ptr<BackendProtocol>
     create_backend_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component)
     {
         mxb_assert(!true);

@@ -86,9 +86,9 @@ public:
         return new CDCProtocol();
     }
 
-    mxs::ClientProtocol* create_client_protocol(MXS_SESSION* session, mxs::Component* component)
+    std::unique_ptr<mxs::ClientProtocol> create_client_protocol(MXS_SESSION* session, mxs::Component* component)
     {
-        return cdc_protocol_init();
+        return std::unique_ptr<mxs::ClientProtocol>(cdc_protocol_init());
     }
 
     std::string auth_default() const
@@ -203,10 +203,10 @@ static int cdc_read_event(DCB* generic_dcb)
         {
         case CDC_STATE_WAIT_FOR_AUTH:
             /* Fill CDC_session from incoming packet */
-            if (dcb->m_auth_session->extract(dcb, head))
+            if (dcb->m_authenticator->extract(dcb, head))
             {
                 /* Call protocol authentication */
-                auth_val = dcb->m_auth_session->authenticate(dcb);
+                auth_val = dcb->m_authenticator->authenticate(dcb);
             }
 
             /* Discard input buffer */

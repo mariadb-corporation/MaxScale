@@ -471,7 +471,7 @@ public:
     {
         return CAP_BACKEND;
     }
-    maxscale::BackendProtocol*
+    std::unique_ptr<mxs::BackendProtocol>
     create_backend_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component) override;
 };
 

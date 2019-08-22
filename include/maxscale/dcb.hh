@@ -390,7 +390,7 @@ public:
     ~ClientDCB() override;
 
     static ClientDCB*
-    create(int fd, MXS_SESSION* session, mxs::ClientProtocol* client_protocol,
+    create(int fd, MXS_SESSION* session, std::unique_ptr<mxs::ClientProtocol> client_protocol,
            DCB::Manager* manager = nullptr);
     MXS_PROTOCOL_SESSION* protocol_session() const override;
 
@@ -398,17 +398,20 @@ public:
     bool ready() const;
     void shutdown() override;
 
-    std::unique_ptr<mxs::ClientAuthenticator> m_auth_session;      /**< Client authentication data */
+    std::unique_ptr<mxs::ClientProtocol>      m_protocol;          /**< The protocol session */
+    std::unique_ptr<mxs::ClientAuthenticator> m_authenticator;     /**< Client authentication data */
 
-    mxs::ClientProtocol*  m_protocol;                    /**< The protocol session */
 
 protected:
     // Only for InternalDCB.
-    ClientDCB(int fd, DCB::Role role, MXS_SESSION* session, mxs::ClientProtocol* protocol_session,
+    ClientDCB(int fd, DCB::Role role, MXS_SESSION* session, std::unique_ptr<mxs::ClientProtocol> protocol_,
               Manager* manager);
 
+    // Only for Mock DCB.
+    ClientDCB(int fd, DCB::Role role, MXS_SESSION* session);
+
 private:
-    ClientDCB(int fd, MXS_SESSION* session, mxs::ClientProtocol* protocol, DCB::Manager* manager);
+    ClientDCB(int fd, MXS_SESSION* session, std::unique_ptr<mxs::ClientProtocol> protocol, DCB::Manager* manager);
 
     bool release_from(MXS_SESSION* session) override;
     bool prepare_for_destruction() override;
@@ -462,13 +465,14 @@ public:
     // TODO: Temporarily public.
     BackendDCB* m_nextpersistent = nullptr;     /**< Next DCB in the persistent pool for SERVER */
 
-    std::unique_ptr<mxs::BackendAuthenticator> m_auth_session;   /**< Backend authentication data */
-
-    mxs::BackendProtocol* m_protocol;                    /**< The protocol session */
+    std::unique_ptr<mxs::BackendProtocol>      m_protocol;       /**< The protocol session */
+    std::unique_ptr<mxs::BackendAuthenticator> m_authenticator;  /**< Backend authentication data */
 
 private:
-    BackendDCB(SERVER* server, int fd, MXS_SESSION* session, mxs::BackendProtocol* protocol,
-               std::unique_ptr<mxs::BackendAuthenticator> auth_ses, DCB::Manager* manager);
+    BackendDCB(SERVER* server, int fd, MXS_SESSION* session,
+               std::unique_ptr<mxs::BackendProtocol> protocol,
+               std::unique_ptr<mxs::BackendAuthenticator> authenticator,
+               DCB::Manager* manager);
 
     static BackendDCB* create(SERVER* server,
                               int fd,

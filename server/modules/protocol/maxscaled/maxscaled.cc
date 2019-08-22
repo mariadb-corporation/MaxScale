@@ -76,9 +76,9 @@ public:
         return new MAXSCALEDProtocol();
     }
 
-    mxs::ClientProtocol* create_client_protocol(MXS_SESSION* session, mxs::Component* component)
+    std::unique_ptr<mxs::ClientProtocol> create_client_protocol(MXS_SESSION* session, mxs::Component* component)
     {
-        return new (std::nothrow) MAXSCALED();
+        return std::unique_ptr<mxs::ClientProtocol>(new (std::nothrow) MAXSCALED());
     }
 
     std::string auth_default() const
@@ -178,8 +178,8 @@ static bool authenticate_unix_socket(MAXSCALED* protocol, DCB* generic_dcb)
             strcpy((char*)GWBUF_DATA(username), protocol->username);
 
             /* Authenticate the user */
-            if (dcb->m_auth_session->extract(dcb, username)
-                && dcb->m_auth_session->authenticate(dcb) == 0)
+            if (dcb->m_authenticator->extract(dcb, username)
+                && dcb->m_authenticator->authenticate(dcb) == 0)
             {
                 dcb_printf(dcb, MAXADMIN_AUTH_SUCCESS_REPLY);
                 protocol->state = MAXSCALED_STATE_DATA;

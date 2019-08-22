@@ -25,6 +25,7 @@
 #include <maxscale/dcb.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/service.hh>
+#include <maxscale/protocol/mysql.hh>
 
 #include "test_utils.hh"
 #include "../internal/service.hh"
@@ -72,7 +73,8 @@ static int test1()
         return 1;
     }
 
-    dcb = ClientDCB::create(fd, session, nullptr);
+    std::unique_ptr<mxs::ClientProtocol> client_protocol(MySQLClientProtocol::create(session, session));
+    dcb = ClientDCB::create(fd, session, std::move(client_protocol));
 
     if (dcb == NULL)
     {
