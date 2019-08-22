@@ -152,7 +152,7 @@ int Clustrix_nodes::prepare_server(int m)
 
         if (ec == 0)
         {
-            printf("Can access Clustrix using user '%s.\n", this->user_name);
+            printf("Can access Clustrix using user '%s'.\n", this->user_name);
             rv = 0;
         }
         else
@@ -169,30 +169,46 @@ int Clustrix_nodes::prepare_server(int m)
 
 int Clustrix_nodes::start_replication()
 {
+    int rv = 1;
+
     std::string lic_filename = std::string(getenv("HOME"))
             + std::string("/.config/mdbci/clustrix_license");
     std::ifstream lic_file;
     lic_file.open(lic_filename.c_str());
-    std::stringstream strStream;
-    strStream << lic_file.rdbuf();
-    std::string clustrix_license = strStream.str();
-    lic_file.close();
 
-    execute_query_all_nodes(clustrix_license.c_str());
+    if (lic_file.is_open())
+    {
+        std::stringstream ss;
+        ss << lic_file.rdbuf();
+        std::string clustrix_license = ss.str();
+        lic_file.close();
 
-    std::string cluster_setup_sql = std::string("ALTER CLUSTER ADD '")
+        execute_query_all_nodes(clustrix_license.c_str());
+
+        std::string cluster_setup_sql = std::string("ALTER CLUSTER ADD '")
             + std::string(IP_private[1])
             + std::string("'");
-    for (int i = 2; i < N; i++)
-    {
-        cluster_setup_sql += std::string(",'")
+        for (int i = 2; i < N; i++)
+        {
+            cluster_setup_sql += std::string(",'")
                 + std::string(IP_private[i])
                 + std::string("'");
+        }
+        connect();
+        execute_query(nodes[0], "%s", cluster_setup_sql.c_str());
+        close_connections();
+
+        rv = 0;
     }
-    connect();
-    execute_query(nodes[0], "%s", cluster_setup_sql.c_str());
-    close_connections();
-    return 0;
+    else
+    {
+        printf("ERROR: The Clustrix license file '%s' does not exist. "
+               "It must contain a string \"set global license='{...}';\" using which the "
+               "Clustrix license can be set.",
+               lic_filename.c_str());
+    }
+
+    return rv;
 }
 
 std::string Clustrix_nodes::cnf_servers()
