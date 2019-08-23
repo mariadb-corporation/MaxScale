@@ -26,16 +26,12 @@ Config::Config(MXS_CONFIG_PARAMETER* conf)
     , ignore_match_data(ignore_regex ? pcre2_match_data_create_from_pattern(ignore_regex, NULL) : NULL)
     , preferred_server(config_get_server(conf, "preferred_server"))
 {
-    ignored_dbs.insert("mysql");
-    ignored_dbs.insert("information_schema");
-    ignored_dbs.insert("performance_schema");
-
     // TODO: Don't process this in the router
     if (MXS_CONFIG_PARAMETER* p = config_get_param(conf, "ignore_databases"))
     {
         for (const auto& a : mxs::strtok(p->value, ", \t"))
         {
-            ignored_dbs.insert(a);
+            ignored_tables.insert(a);
         }
     }
 }
