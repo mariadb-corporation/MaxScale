@@ -494,6 +494,20 @@ public:
     void finish_connection(DCB* dcb) override;
     bool established(DCB*) override;
     json_t* diagnostics_json(DCB* dcb) override;
+
+private:
+    int gw_read_and_write(DCB* dcb);
+    int  backend_write_delayqueue(DCB* dcb, GWBUF* buffer);
+    void backend_set_delayqueue(DCB* dcb, GWBUF* queue);
+    int gw_change_user(DCB* dcb, MXS_SESSION* session, GWBUF* queue);
+    void gw_reply_on_error(DCB* dcb);
+    int gw_send_change_user_to_backend(DCB* backend);
+    void gw_send_proxy_protocol_header(BackendDCB* backend_dcb);
+    int handle_persistent_connection(BackendDCB* dcb, GWBUF* queue);
+    GWBUF* gw_create_change_user_packet(MYSQL_session* mses);
+    void do_handle_error(DCB* dcb, const char* errmsg);
+    void prepare_for_write(DCB* dcb, GWBUF* buffer);
+    mxs_auth_state_t handle_server_response(DCB* generic_dcb, GWBUF* buffer);
 };
 
 typedef struct
