@@ -337,18 +337,6 @@ public:
     void track_query(GWBUF* buffer);
 
     /**
-     * Processe a reply from a backend server
-     *
-     * This method collects all complete packets and updates the internal response state.
-     *
-     * @param buffer Pointer to buffer containing the raw response. Any partial packets will be left in this
-     *               buffer.
-     *
-     * @return All complete packets that were in `buffer`
-     */
-    GWBUF* track_response(GWBUF** buffer);
-
-    /**
      * Get the reply state object
      */
     const mxs::Reply& reply() const
@@ -366,28 +354,10 @@ public:
         return m_session;
     }
 
-    int32_t do_routeQuery(GWBUF* buffer)
-    {
-        return m_component->routeQuery(buffer);
-    }
-
-    int32_t do_clientReply(GWBUF* buffer)
-    {
-        thread_local mxs::ReplyRoute route;
-        route.clear();
-        return m_component->clientReply(buffer, route, m_reply);
-    }
-
-    bool do_handleError(GWBUF* buffer)
-    {
-        return m_component->handleError(buffer, nullptr, m_reply);
-    }
-
     //
     // Legacy public members
     //
     mxs_auth_state_t       protocol_auth_state = MXS_AUTH_STATE_INIT;   /*< Authentication state */
-    mysql_protocol_state_t protocol_state = MYSQL_PROTOCOL_ACTIVE;      /*< Protocol state */
 
     uint8_t  scramble[MYSQL_SCRAMBLE_LEN];  /*< server scramble, created or received */
     uint32_t server_capabilities = 0;       /*< server capabilities, created or received */
@@ -396,11 +366,8 @@ public:
 
     uint64_t     thread_id = 0;             /*< Backend Thread ID */
     unsigned int charset = 0x8;             /*< Connection character set (default latin1 )*/
-    int          ignore_replies = 0;        /*< How many replies should be discarded */
     GWBUF*       stored_query = nullptr;    /*< Temporarily stored queries */
-    bool         collect_result = false;    /*< Collect the next result set as one buffer */
     bool         changing_user = false;
-    bool         track_state = false;   /*< Track session state */
     uint32_t     num_eof_packets = 0;   /*< Encountered eof packet number, used for check packet type */
 
     //
@@ -409,7 +376,7 @@ public:
 
     using Iter = mxs::Buffer::iterator;
 
-private:
+protected:
     MXS_SESSION* m_session;                 /**< The session this protocol session is associated with */
     uint16_t     m_modutil_state;           /**< TODO: This is an ugly hack, replace it */
     bool         m_opening_cursor = false;  /**< Whether we are opening a cursor */
@@ -490,6 +457,14 @@ private:
     bool handle_change_user(bool* changed_user, GWBUF** packetbuf);
     bool reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf);
     spec_com_res_t handle_query_kill(DCB* dcb, GWBUF* read_buffer, uint32_t packet_len);
+    void handle_authentication_errors(DCB* dcb, int auth_val, int packet_number);
+    int mysql_send_auth_error(DCB* dcb, int packet_number, const char* mysql_message);
+    char* create_auth_fail_str(char* username, char* hostaddr, bool password, char* db, int);
+    int mysql_send_standard_error(DCB* dcb, int sequence, int errnum, const char* msg);
+    GWBUF* mysql_create_standard_error(int sequence, int error_number, const char* msg);
+    /** Sends an AuthSwitchRequest packet with the default auth plugin to the DCB */
+    bool send_auth_switch_request_packet(DCB* dcb);
+
 };
 
 class MySQLBackendProtocol : public MySQLProtocol, public mxs::BackendProtocol
@@ -525,6 +500,17 @@ private:
     void do_handle_error(DCB* dcb, const char* errmsg);
     void prepare_for_write(DCB* dcb, GWBUF* buffer);
     mxs_auth_state_t handle_server_response(DCB* generic_dcb, GWBUF* buffer);
+    int mysql_send_com_quit(DCB* dcb, int sequence, GWBUF* buf);
+    bool read_complete_packet(DCB* dcb, GWBUF** readbuf);
+    GWBUF* track_response(GWBUF** buffer);
+    bool mxs_mysql_is_result_set(GWBUF* buffer);
+    mxs_auth_state_t gw_send_backend_auth(BackendDCB* dcb);
+    bool gw_read_backend_handshake(DCB* dcb, GWBUF* buffer);
+
+
+    int  m_ignore_replies {0};        /*< How many replies should be discarded */
+    bool m_collect_result {false};    /*< Collect the next result set as one buffer */
+    bool m_track_state {false};       /*< Track session state */
 };
 
 typedef struct
@@ -610,17 +596,10 @@ const char* gw_mysql_protocol_state2string(int state);
 
 GWBUF* mysql_create_com_quit(GWBUF* bufparam, int sequence);
 GWBUF* mysql_create_custom_error(int sequence, int affected_rows, const char* msg);
-GWBUF* mysql_create_standard_error(int sequence, int error_number, const char* msg);
 
-int mysql_send_com_quit(DCB* dcb, int sequence, GWBUF* buf);
 int mysql_send_custom_error(DCB* dcb, int sequence, int affected_rows, const char* msg);
-int mysql_send_standard_error(DCB* dcb, int sequence, int errnum, const char* msg);
-int mysql_send_auth_error(DCB* dcb, int sequence, int affected_rows, const char* msg);
-
-char* create_auth_fail_str(char* username, char* hostaddr, bool password, char* db, int);
 
 void             init_response_status(GWBUF* buf, uint8_t cmd, int* npackets, size_t* nbytes);
-bool             read_complete_packet(DCB* dcb, GWBUF** readbuf);
 bool             gw_get_shared_session_auth_info(DCB* dcb, MYSQL_session* session);
 void             mxs_mysql_get_session_track_info(GWBUF* buff, MySQLProtocol* proto);
 mysql_tx_state_t parse_trx_state(const char* str);
@@ -653,17 +632,8 @@ GWBUF* gw_generate_auth_response(MYSQL_session* client,
                                  bool ssl_established,
                                  uint64_t service_capabilities);
 
-/** Read the backend server's handshake */
-bool gw_read_backend_handshake(DCB* dcb, GWBUF* buffer);
-
-/** Send the server handshake response packet to the backend server */
-mxs_auth_state_t gw_send_backend_auth(BackendDCB* dcb);
-
 /** Sends a response for an AuthSwitchRequest to the default auth plugin */
 int send_mysql_native_password_response(DCB* dcb);
-
-/** Sends an AuthSwitchRequest packet with the default auth plugin to the DCB */
-bool send_auth_switch_request_packet(DCB* dcb);
 
 /** Write an OK packet to a DCB */
 int mxs_mysql_send_ok(DCB* dcb, int sequence, uint8_t affected_rows, const char* message);
@@ -692,15 +662,6 @@ bool mxs_mysql_is_err_packet(GWBUF* buffer);
  * @return The error code or 0 if the buffer is not an ERR packet
  */
 uint16_t mxs_mysql_get_mysql_errno(GWBUF* buffer);
-
-/**
- * @brief Check if a buffer contains a result set
- *
- * @param buffer Buffer to check
- *
- * @return True if the @c buffer contains the start of a result set
- */
-bool mxs_mysql_is_result_set(GWBUF* buffer);
 
 /**
  * @brief Check if the buffer contains a LOCAL INFILE request

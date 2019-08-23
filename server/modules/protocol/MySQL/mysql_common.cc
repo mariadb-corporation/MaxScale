@@ -23,7 +23,6 @@
 
 #include <maxsql/mariadb.hh>
 #include <maxbase/alloc.h>
-#include <maxscale/clock.h>
 #include <maxscale/modutil.hh>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/protocol/mysql.hh>
@@ -106,38 +105,6 @@ GWBUF* mysql_create_com_quit(GWBUF* bufparam,
     return buf;
 }
 
-int mysql_send_com_quit(DCB* dcb,
-                        int packet_number,
-                        GWBUF* bufparam)
-{
-    GWBUF* buf;
-    int nbytes = 0;
-
-    mxb_assert(packet_number <= 255);
-
-    if (dcb == NULL)
-    {
-        return 0;
-    }
-    if (bufparam == NULL)
-    {
-        buf = mysql_create_com_quit(NULL, packet_number);
-    }
-    else
-    {
-        buf = bufparam;
-    }
-
-    if (buf == NULL)
-    {
-        return 0;
-    }
-    nbytes = dcb->protocol_write(buf);
-
-    return nbytes;
-}
-
-
 GWBUF* mysql_create_custom_error(int packet_number,
                                  int affected_rows,
                                  const char* msg)
@@ -211,87 +178,6 @@ GWBUF* mysql_create_custom_error(int packet_number,
 }
 
 /**
- * @brief Create a standard MariaDB error message, emulating real server
- *
- * Supports the sending to a client of a standard database error, for
- * circumstances where the error is generated within MaxScale but should
- * appear like a backend server error. First introduced to support connection
- * throttling, to send "Too many connections" error.
- *
- * @param packet_number Packet number for header
- * @param error_number  Standard error number as for MariaDB
- * @param error_message Text message to be included
- * @return GWBUF        A buffer containing the error message, ready to send
- */
-GWBUF* mysql_create_standard_error(int packet_number,
-                                   int error_number,
-                                   const char* error_message)
-{
-    uint8_t* outbuf = NULL;
-    uint32_t mysql_payload_size = 0;
-    uint8_t mysql_packet_header[4];
-    uint8_t mysql_error_number[2];
-    uint8_t* mysql_handshake_payload = NULL;
-    GWBUF* buf;
-
-    mysql_payload_size = 1 + sizeof(mysql_error_number) + strlen(error_message);
-
-    // allocate memory for packet header + payload
-    if ((buf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size)) == NULL)
-    {
-        return NULL;
-    }
-    outbuf = GWBUF_DATA(buf);
-
-    // write packet header with mysql_payload_size
-    gw_mysql_set_byte3(mysql_packet_header, mysql_payload_size);
-
-    // write packet number, now is 0
-    mysql_packet_header[3] = packet_number;
-    memcpy(outbuf, mysql_packet_header, sizeof(mysql_packet_header));
-
-    // current buffer pointer
-    mysql_handshake_payload = outbuf + sizeof(mysql_packet_header);
-
-    // write 0xff which is the error indicator
-    *mysql_handshake_payload = 0xff;
-    mysql_handshake_payload++;
-
-    // write error number
-    gw_mysql_set_byte2(mysql_handshake_payload, error_number);
-    mysql_handshake_payload += 2;
-
-    // write error message
-    memcpy(mysql_handshake_payload, error_message, strlen(error_message));
-
-    return buf;
-}
-
-/**
- * @brief Send a standard MariaDB error message, emulating real server
- *
- * Supports the sending to a client of a standard database error, for
- * circumstances where the error is generated within MaxScale but should
- * appear like a backend server error. First introduced to support connection
- * throttling, to send "Too many connections" error.
- *
- * @param dcb           The client DCB to which error is to be sent
- * @param packet_number Packet number for header
- * @param error_number  Standard error number as for MariaDB
- * @param error_message Text message to be included
- * @return      0 on failure, 1 on success
- */
-int mysql_send_standard_error(DCB* dcb,
-                              int packet_number,
-                              int error_number,
-                              const char* error_message)
-{
-    GWBUF* buf;
-    buf = mysql_create_standard_error(packet_number, error_number, error_message);
-    return buf ? dcb->protocol_write(buf) : 0;
-}
-
-/**
  * mysql_send_custom_error
  *
  * Send a MySQL protocol Generic ERR message, to the dcb
@@ -309,207 +195,8 @@ int mysql_send_custom_error(DCB* dcb,
                             int in_affected_rows,
                             const char* mysql_message)
 {
-    GWBUF* buf;
-
-    buf = mysql_create_custom_error(packet_number, in_affected_rows, mysql_message);
-
+    GWBUF* buf = mysql_create_custom_error(packet_number, in_affected_rows, mysql_message);
     return dcb->protocol_write(buf);
-}
-
-/**
- * mysql_send_auth_error
- *
- * Send a MySQL protocol ERR message, for gateway authentication error to the dcb
- *
- * @param dcb descriptor Control Block for the connection to which the OK is sent
- * @param packet_number
- * @param in_affected_rows
- * @param mysql_message
- * @return packet length
- *
- */
-int mysql_send_auth_error(DCB* dcb,
-                          int packet_number,
-                          int in_affected_rows,
-                          const char* mysql_message)
-{
-    uint8_t* outbuf = NULL;
-    uint32_t mysql_payload_size = 0;
-    uint8_t mysql_packet_header[4];
-    uint8_t* mysql_payload = NULL;
-    uint8_t field_count = 0;
-    uint8_t mysql_err[2];
-    uint8_t mysql_statemsg[6];
-    const char* mysql_error_msg = NULL;
-    const char* mysql_state = NULL;
-
-    GWBUF* buf;
-
-    if (dcb->state() != DCB::State::POLLING)
-    {
-        MXS_DEBUG("dcb %p is in a state %s, and it is not in epoll set anymore. Skip error sending.",
-                  dcb,
-                  mxs::to_string(dcb->state()));
-        return 0;
-    }
-    mysql_error_msg = "Access denied!";
-    mysql_state = "28000";
-
-    field_count = 0xff;
-    gw_mysql_set_byte2(mysql_err,    /*mysql_errno */ 1045);
-    mysql_statemsg[0] = '#';
-    memcpy(mysql_statemsg + 1, mysql_state, 5);
-
-    if (mysql_message != NULL)
-    {
-        mysql_error_msg = mysql_message;
-    }
-
-    mysql_payload_size =
-        sizeof(field_count) + sizeof(mysql_err) + sizeof(mysql_statemsg) + strlen(mysql_error_msg);
-
-    // allocate memory for packet header + payload
-    if ((buf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size)) == NULL)
-    {
-        return 0;
-    }
-    outbuf = GWBUF_DATA(buf);
-
-    // write packet header with packet number
-    gw_mysql_set_byte3(mysql_packet_header, mysql_payload_size);
-    mysql_packet_header[3] = packet_number;
-
-    // write header
-    memcpy(outbuf, mysql_packet_header, sizeof(mysql_packet_header));
-
-    mysql_payload = outbuf + sizeof(mysql_packet_header);
-
-    // write field
-    memcpy(mysql_payload, &field_count, sizeof(field_count));
-    mysql_payload = mysql_payload + sizeof(field_count);
-
-    // write errno
-    memcpy(mysql_payload, mysql_err, sizeof(mysql_err));
-    mysql_payload = mysql_payload + sizeof(mysql_err);
-
-    // write sqlstate
-    memcpy(mysql_payload, mysql_statemsg, sizeof(mysql_statemsg));
-    mysql_payload = mysql_payload + sizeof(mysql_statemsg);
-
-    // write err messg
-    memcpy(mysql_payload, mysql_error_msg, strlen(mysql_error_msg));
-
-    // writing data in the Client buffer queue
-    dcb->protocol_write(buf);
-
-    return sizeof(mysql_packet_header) + mysql_payload_size;
-}
-
-/**
- * Create a message error string to send via MySQL ERR packet.
- *
- * @param       username        The MySQL user
- * @param       hostaddr        The client IP
- * @param       password        If client provided a password
- * @param       db              The default database the client requested
- * @param       errcode         Authentication error code
- *
- * @return      Pointer to the allocated string or NULL on failure
- */
-char* create_auth_fail_str(char* username,
-                           char* hostaddr,
-                           bool password,
-                           char* db,
-                           int errcode)
-{
-    char* errstr;
-    const char* ferrstr;
-    int db_len;
-
-    if (db != NULL)
-    {
-        db_len = strlen(db);
-    }
-    else
-    {
-        db_len = 0;
-    }
-
-    if (db_len > 0)
-    {
-        ferrstr = "Access denied for user '%s'@'%s' (using password: %s) to database '%s'";
-    }
-    else if (errcode == MXS_AUTH_FAILED_SSL)
-    {
-        ferrstr = "Access without SSL denied";
-    }
-    else
-    {
-        ferrstr = "Access denied for user '%s'@'%s' (using password: %s)";
-    }
-    errstr = (char*)MXS_MALLOC(strlen(username) + strlen(ferrstr)
-                               + strlen(hostaddr) + strlen("YES") - 6
-                               + db_len + ((db_len > 0) ? (strlen(" to database ") + 2) : 0) + 1);
-
-    if (errstr == NULL)
-    {
-        goto retblock;
-    }
-
-    if (db_len > 0)
-    {
-        sprintf(errstr, ferrstr, username, hostaddr, password ? "YES" : "NO", db);
-    }
-    else if (errcode == MXS_AUTH_FAILED_SSL)
-    {
-        sprintf(errstr, "%s", ferrstr);
-    }
-    else
-    {
-        sprintf(errstr, ferrstr, username, hostaddr, password ? "YES" : "NO");
-    }
-
-retblock:
-    return errstr;
-}
-
-/**
- * @brief Read a complete packet from a DCB
- *
- * Read a complete packet from a connected DCB. If data was read, @c readbuf
- * will point to the head of the read data. If no data was read, @c readbuf will
- * be set to NULL.
- *
- * @param dcb DCB to read from
- * @param readbuf Pointer to a buffer where the data is stored
- * @return True on success, false if an error occurred while data was being read
- */
-bool read_complete_packet(DCB* dcb, GWBUF** readbuf)
-{
-    bool rval = false;
-    GWBUF* localbuf = NULL;
-
-    if (dcb_read(dcb, &localbuf, 0) >= 0)
-    {
-        rval = true;
-        dcb->m_last_read = mxs_clock();
-        GWBUF* packets = modutil_get_complete_packets(&localbuf);
-
-        if (packets)
-        {
-            /** A complete packet was read */
-            *readbuf = packets;
-        }
-
-        if (localbuf)
-        {
-            /** Store any extra data in the DCB's readqueue */
-
-            dcb_readq_append(dcb, localbuf);
-        }
-    }
-
-    return rval;
 }
 
 /**
@@ -893,53 +580,6 @@ GWBUF* gw_generate_auth_response(MYSQL_session* client,
     return buffer;
 }
 
-/**
- * Write MySQL authentication packet to backend server
- *
- * @param dcb  Backend DCB
- * @return Authentication state after sending handshake response
- */
-mxs_auth_state_t gw_send_backend_auth(BackendDCB* dcb)
-{
-    mxs_auth_state_t rval = MXS_AUTH_STATE_FAILED;
-
-    if (dcb->session() == NULL
-        || (dcb->session()->state() != MXS_SESSION::State::CREATED
-            && dcb->session()->state() != MXS_SESSION::State::STARTED)
-        || (dcb->server()->ssl().context() && dcb->ssl_state() == DCB::SSLState::HANDSHAKE_FAILED))
-    {
-        return rval;
-    }
-
-    bool with_ssl = dcb->server()->ssl().context();
-    bool ssl_established = dcb->ssl_state() == DCB::SSLState::ESTABLISHED;
-
-    MYSQL_session client;
-    gw_get_shared_session_auth_info(dcb->session()->client_dcb, &client);
-
-    auto proto = static_cast<MySQLClientProtocol*>(dcb->protocol_session());
-    GWBUF* buffer = gw_generate_auth_response(&client,
-                                              proto,
-                                              with_ssl,
-                                              ssl_established,
-                                              dcb->service()->capabilities);
-    mxb_assert(buffer);
-
-    if (with_ssl && !ssl_established)
-    {
-        if (dcb_write(dcb, buffer) && dcb->ssl_handshake() >= 0)
-        {
-            rval = MXS_AUTH_STATE_CONNECTED;
-        }
-    }
-    else if (dcb_write(dcb, buffer))
-    {
-        rval = MXS_AUTH_STATE_RESPONSE_SENT;
-    }
-
-    return rval;
-}
-
 int send_mysql_native_password_response(DCB* dcb)
 {
     auto proto = static_cast<MySQLClientProtocol*>(dcb->protocol_session());
@@ -956,23 +596,6 @@ int send_mysql_native_password_response(DCB* dcb)
     calculate_hash(proto->scramble, curr_passwd, data + MYSQL_HEADER_LEN);
 
     return dcb_write(dcb, buffer);
-}
-
-bool send_auth_switch_request_packet(DCB* dcb)
-{
-    auto proto = static_cast<MySQLClientProtocol*>(dcb->protocol_session());
-    const char plugin[] = DEFAULT_MYSQL_AUTH_PLUGIN;
-    uint32_t len = 1 + sizeof(plugin) + GW_MYSQL_SCRAMBLE_SIZE;
-    GWBUF* buffer = gwbuf_alloc(MYSQL_HEADER_LEN + len);
-
-    uint8_t* data = GWBUF_DATA(buffer);
-    gw_mysql_set_byte3(data, len);
-    data[3] = 1;    // First response to the COM_CHANGE_USER
-    data[MYSQL_HEADER_LEN] = MYSQL_REPLY_AUTHSWITCHREQUEST;
-    memcpy(data + MYSQL_HEADER_LEN + 1, plugin, sizeof(plugin));
-    memcpy(data + MYSQL_HEADER_LEN + 1 + sizeof(plugin), proto->scramble, GW_MYSQL_SCRAMBLE_SIZE);
-
-    return dcb_write(dcb, buffer) != 0;
 }
 
 /**
@@ -1072,26 +695,6 @@ int gw_decode_mysql_server_handshake(MySQLProtocol* conn, uint8_t* payload)
     return 0;
 }
 
-/**
- * Read the backend server MySQL handshake
- *
- * @param dcb  Backend DCB
- * @return true on success, false on failure
- */
-bool gw_read_backend_handshake(DCB* dcb, GWBUF* buffer)
-{
-    auto proto = static_cast<MySQLClientProtocol*>(dcb->protocol_session());
-    bool rval = false;
-    uint8_t* payload = GWBUF_DATA(buffer) + 4;
-
-    if (gw_decode_mysql_server_handshake(proto, payload) >= 0)
-    {
-        rval = true;
-    }
-
-    return rval;
-}
-
 bool mxs_mysql_is_ok_packet(GWBUF* buffer)
 {
     uint8_t cmd = 0xff;     // Default should differ from the OK packet
@@ -1116,32 +719,6 @@ uint16_t mxs_mysql_get_mysql_errno(GWBUF* buffer)
         // First two bytes after the 0xff byte are the error code
         gwbuf_copy_data(buffer, MYSQL_HEADER_LEN + 1, 2, buf);
         rval = gw_mysql_get_byte2(buf);
-    }
-
-    return rval;
-}
-
-bool mxs_mysql_is_result_set(GWBUF* buffer)
-{
-    bool rval = false;
-    uint8_t cmd;
-
-    if (gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, 1, &cmd))
-    {
-        switch (cmd)
-        {
-
-        case MYSQL_REPLY_OK:
-        case MYSQL_REPLY_ERR:
-        case MYSQL_REPLY_LOCAL_INFILE:
-        case MYSQL_REPLY_EOF:
-            /** Not a result set */
-            break;
-
-        default:
-            rval = true;
-            break;
-        }
     }
 
     return rval;
@@ -1986,62 +1563,6 @@ static inline bool complete_ps_response(GWBUF* buffer)
         MXS_DEBUG("Expecting %u packets, have %u", n_packets, expected_packets);
 
         rval = n_packets == expected_packets;
-    }
-
-    return rval;
-}
-
-
-/**
- * @brief Process a possibly partial response from the backend
- *
- * @param buffer  Buffer containing the response
- */
-GWBUF* MySQLProtocol::track_response(GWBUF** buffer)
-{
-    GWBUF* rval = nullptr;
-
-    if (m_reply.command() == MXS_COM_STMT_FETCH)
-    {
-        // TODO: m_reply.m_error is not updated here.
-        // If the server responded with an error, n_eof > 0
-
-        // COM_STMT_FETCH is used when a COM_STMT_EXECUTE opens a cursor and the result is read in chunks:
-        // https://mariadb.com/kb/en/library/com_stmt_fetch/
-        if (consume_fetched_rows(*buffer))
-        {
-            set_reply_state(ReplyState::DONE);
-        }
-        rval = modutil_get_complete_packets(buffer);
-    }
-    else if (m_reply.command() == MXS_COM_STATISTICS)
-    {
-        // COM_STATISTICS returns a single string and thus requires special handling:
-        // https://mariadb.com/kb/en/library/com_statistics/#response
-        set_reply_state(ReplyState::DONE);
-        rval = modutil_get_complete_packets(buffer);
-    }
-    else if (m_reply.command() == MXS_COM_STMT_PREPARE && mxs_mysql_is_prep_stmt_ok(*buffer))
-    {
-        // Successful COM_STMT_PREPARE responses return a special OK packet:
-        // https://mariadb.com/kb/en/library/com_stmt_prepare/#com_stmt_prepare_ok
-
-        // TODO: Stream this result and don't collect it
-        if (complete_ps_response(*buffer))
-        {
-            rval = modutil_get_complete_packets(buffer);
-            set_reply_state(ReplyState::DONE);
-        }
-    }
-    else
-    {
-        // Normal result, process it one packet at a time
-        rval = process_packets(buffer);
-    }
-
-    if (rval)
-    {
-        m_reply.add_bytes(gwbuf_length(rval));
     }
 
     return rval;

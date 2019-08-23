@@ -615,6 +615,7 @@ int ssl_authenticate_check_status(DCB* generic_dcb)
     }
     return rval;
 }
+}
 
 /**
  * @brief Analyse authentication errors and write appropriate log messages
@@ -623,7 +624,7 @@ int ssl_authenticate_check_status(DCB* generic_dcb)
  * @param auth_val The type of authentication failure
  * @note Authentication status codes are defined in maxscale/protocol/mysql.h
  */
-void handle_authentication_errors(DCB* dcb, int auth_val, int packet_number)
+void MySQLClientProtocol::handle_authentication_errors(DCB* dcb, int auth_val, int packet_number)
 {
     int message_len;
     char* fail_str = NULL;
@@ -635,7 +636,7 @@ void handle_authentication_errors(DCB* dcb, int auth_val, int packet_number)
         MXS_DEBUG("session creation failed. fd %d, state = MYSQL_AUTH_NO_SESSION.", dcb->fd());
 
         /** Send ERR 1045 to client */
-        mysql_send_auth_error(dcb, packet_number, 0, "failed to create new session");
+        mysql_send_auth_error(dcb, packet_number, "failed to create new session");
         break;
 
     case MXS_AUTH_FAILED_DB:
@@ -651,25 +652,19 @@ void handle_authentication_errors(DCB* dcb, int auth_val, int packet_number)
         break;
 
     case MXS_AUTH_FAILED_SSL:
-        MXS_DEBUG("client is "
-                  "not SSL capable for SSL listener. fd %d, "
-                  "state = MYSQL_FAILED_AUTH_SSL.",
+        MXS_DEBUG("client is not SSL capable for SSL listener. fd %d, state = MYSQL_FAILED_AUTH_SSL.",
                   dcb->fd());
 
         /** Send ERR 1045 to client */
-        mysql_send_auth_error(dcb, packet_number, 0, "Access without SSL denied");
+        mysql_send_auth_error(dcb, packet_number, "Access without SSL denied");
         break;
 
     case MXS_AUTH_SSL_INCOMPLETE:
-        MXS_DEBUG("unable to complete SSL authentication. fd %d, "
-                  "state = MYSQL_AUTH_SSL_INCOMPLETE.",
+        MXS_DEBUG("unable to complete SSL authentication. fd %d, state = MYSQL_AUTH_SSL_INCOMPLETE.",
                   dcb->fd());
 
         /** Send ERR 1045 to client */
-        mysql_send_auth_error(dcb,
-                              packet_number,
-                              0,
-                              "failed to complete SSL authentication");
+        mysql_send_auth_error(dcb, packet_number, "failed to complete SSL authentication");
         break;
 
     case MXS_AUTH_FAILED:
@@ -698,7 +693,6 @@ void handle_authentication_errors(DCB* dcb, int auth_val, int packet_number)
         modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "28000", fail_str);
     }
     MXS_FREE(fail_str);
-}
 }
 
 /**
@@ -966,7 +960,7 @@ bool MySQLClientProtocol::reauthenticate_client(MXS_SESSION* session, GWBUF* pac
 
         if (user_end == orig_payload.end())
         {
-            mysql_send_auth_error(client_dcb, 3, 0, "Malformed AuthSwitchRequest packet");
+            mysql_send_auth_error(client_dcb, 3, "Malformed AuthSwitchRequest packet");
             return false;
         }
 
@@ -982,7 +976,7 @@ bool MySQLClientProtocol::reauthenticate_client(MXS_SESSION* session, GWBUF* pac
 
         if (db_end == orig_payload.end())
         {
-            mysql_send_auth_error(client_dcb, 3, 0, "Malformed AuthSwitchRequest packet");
+            mysql_send_auth_error(client_dcb, 3, "Malformed AuthSwitchRequest packet");
             return false;
         }
 
@@ -1448,7 +1442,7 @@ int MySQLClientProtocol::route_by_statement(uint64_t capabilities, GWBUF** p_rea
         session_retain_statement(session, packetbuf);
 
         // Track the command being executed
-        proto->track_query(packetbuf);
+        track_query(packetbuf);
 
         if (char* message = handle_variables(session, &packetbuf))
         {
@@ -1461,7 +1455,7 @@ int MySQLClientProtocol::route_by_statement(uint64_t capabilities, GWBUF** p_rea
         // is thread and not session specific.
         qc_set_sql_mode(static_cast<qc_sql_mode_t>(session->client_protocol_data));
 
-        if (process_special_commands(dcb, packetbuf, proto->reply().command()) == RES_END)
+        if (process_special_commands(dcb, packetbuf, reply().command()) == RES_END)
         {
             gwbuf_free(packetbuf);
             continue;
@@ -1487,10 +1481,10 @@ int MySQLClientProtocol::route_by_statement(uint64_t capabilities, GWBUF** p_rea
         if (packetbuf)
         {
             /** Route query */
-            rc = proto->do_routeQuery(packetbuf);
+            rc = m_component->routeQuery(packetbuf);
         }
 
-        proto->changing_user = changed_user;
+        changing_user = changed_user;
 
         if (rc != 1)
         {
@@ -1900,9 +1894,250 @@ MySQLClientProtocol::create_backend_protocol(MXS_SESSION* session, SERVER* serve
 }
 
 /**
+ * mysql_send_auth_error
+ *
+ * Send a MySQL protocol ERR message, for gateway authentication error to the dcb
+ *
+ * @param dcb descriptor Control Block for the connection to which the OK is sent
+ * @param packet_number
+ * @param mysql_message
+ * @return packet length
+ *
+ */
+int MySQLClientProtocol::mysql_send_auth_error(DCB* dcb, int packet_number, const char* mysql_message)
+{
+    uint8_t* outbuf = NULL;
+    uint32_t mysql_payload_size = 0;
+    uint8_t mysql_packet_header[4];
+    uint8_t* mysql_payload = NULL;
+    uint8_t field_count = 0;
+    uint8_t mysql_err[2];
+    uint8_t mysql_statemsg[6];
+    const char* mysql_error_msg = NULL;
+    const char* mysql_state = NULL;
+
+    GWBUF* buf;
+
+    if (dcb->state() != DCB::State::POLLING)
+    {
+        MXS_DEBUG("dcb %p is in a state %s, and it is not in epoll set anymore. Skip error sending.",
+                  dcb, mxs::to_string(dcb->state()));
+        return 0;
+    }
+    mysql_error_msg = "Access denied!";
+    mysql_state = "28000";
+
+    field_count = 0xff;
+    gw_mysql_set_byte2(mysql_err,    /*mysql_errno */ 1045);
+    mysql_statemsg[0] = '#';
+    memcpy(mysql_statemsg + 1, mysql_state, 5);
+
+    if (mysql_message != NULL)
+    {
+        mysql_error_msg = mysql_message;
+    }
+
+    mysql_payload_size =
+            sizeof(field_count) + sizeof(mysql_err) + sizeof(mysql_statemsg) + strlen(mysql_error_msg);
+
+    // allocate memory for packet header + payload
+    if ((buf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size)) == NULL)
+    {
+        return 0;
+    }
+    outbuf = GWBUF_DATA(buf);
+
+    // write packet header with packet number
+    gw_mysql_set_byte3(mysql_packet_header, mysql_payload_size);
+    mysql_packet_header[3] = packet_number;
+
+    // write header
+    memcpy(outbuf, mysql_packet_header, sizeof(mysql_packet_header));
+
+    mysql_payload = outbuf + sizeof(mysql_packet_header);
+
+    // write field
+    memcpy(mysql_payload, &field_count, sizeof(field_count));
+    mysql_payload = mysql_payload + sizeof(field_count);
+
+    // write errno
+    memcpy(mysql_payload, mysql_err, sizeof(mysql_err));
+    mysql_payload = mysql_payload + sizeof(mysql_err);
+
+    // write sqlstate
+    memcpy(mysql_payload, mysql_statemsg, sizeof(mysql_statemsg));
+    mysql_payload = mysql_payload + sizeof(mysql_statemsg);
+
+    // write err messg
+    memcpy(mysql_payload, mysql_error_msg, strlen(mysql_error_msg));
+
+    // writing data in the Client buffer queue
+    dcb->protocol_write(buf);
+
+    return sizeof(mysql_packet_header) + mysql_payload_size;
+}
+
+/**
+ * Create a message error string to send via MySQL ERR packet.
+ *
+ * @param       username        The MySQL user
+ * @param       hostaddr        The client IP
+ * @param       password        If client provided a password
+ * @param       db              The default database the client requested
+ * @param       errcode         Authentication error code
+ *
+ * @return      Pointer to the allocated string or NULL on failure
+ */
+char* MySQLClientProtocol::create_auth_fail_str(char* username, char* hostaddr, bool password, char* db,
+                                                int errcode)
+{
+    char* errstr;
+    const char* ferrstr;
+    int db_len;
+
+    if (db != NULL)
+    {
+        db_len = strlen(db);
+    }
+    else
+    {
+        db_len = 0;
+    }
+
+    if (db_len > 0)
+    {
+        ferrstr = "Access denied for user '%s'@'%s' (using password: %s) to database '%s'";
+    }
+    else if (errcode == MXS_AUTH_FAILED_SSL)
+    {
+        ferrstr = "Access without SSL denied";
+    }
+    else
+    {
+        ferrstr = "Access denied for user '%s'@'%s' (using password: %s)";
+    }
+    errstr = (char*)MXS_MALLOC(strlen(username) + strlen(ferrstr)
+                               + strlen(hostaddr) + strlen("YES") - 6
+                               + db_len + ((db_len > 0) ? (strlen(" to database ") + 2) : 0) + 1);
+
+    if (errstr == NULL)
+    {
+        goto retblock;
+    }
+
+    if (db_len > 0)
+    {
+        sprintf(errstr, ferrstr, username, hostaddr, password ? "YES" : "NO", db);
+    }
+    else if (errcode == MXS_AUTH_FAILED_SSL)
+    {
+        sprintf(errstr, "%s", ferrstr);
+    }
+    else
+    {
+        sprintf(errstr, ferrstr, username, hostaddr, password ? "YES" : "NO");
+    }
+
+    retblock:
+    return errstr;
+}
+
+/**
+ * @brief Send a standard MariaDB error message, emulating real server
+ *
+ * Supports the sending to a client of a standard database error, for
+ * circumstances where the error is generated within MaxScale but should
+ * appear like a backend server error. First introduced to support connection
+ * throttling, to send "Too many connections" error.
+ *
+ * @param dcb           The client DCB to which error is to be sent
+ * @param packet_number Packet number for header
+ * @param error_number  Standard error number as for MariaDB
+ * @param error_message Text message to be included
+ * @return 0 on failure, 1 on success
+ */
+int MySQLClientProtocol::mysql_send_standard_error(DCB* dcb, int packet_number, int error_number,
+                                                   const char* error_message)
+{
+    GWBUF* buf = mysql_create_standard_error(packet_number, error_number, error_message);
+    return buf ? dcb->protocol_write(buf) : 0;
+}
+
+/**
+ * @brief Create a standard MariaDB error message, emulating real server
+ *
+ * Supports the sending to a client of a standard database error, for
+ * circumstances where the error is generated within MaxScale but should
+ * appear like a backend server error. First introduced to support connection
+ * throttling, to send "Too many connections" error.
+ *
+ * @param packet_number Packet number for header
+ * @param error_number  Standard error number as for MariaDB
+ * @param error_message Text message to be included
+ * @return GWBUF        A buffer containing the error message, ready to send
+ */
+GWBUF* MySQLClientProtocol::mysql_create_standard_error(int packet_number, int error_number,
+                                                        const char* error_message)
+{
+    uint8_t* outbuf = NULL;
+    uint32_t mysql_payload_size = 0;
+    uint8_t mysql_packet_header[4];
+    uint8_t mysql_error_number[2];
+    uint8_t* mysql_handshake_payload = NULL;
+    GWBUF* buf;
+
+    mysql_payload_size = 1 + sizeof(mysql_error_number) + strlen(error_message);
+
+    // allocate memory for packet header + payload
+    if ((buf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size)) == NULL)
+    {
+        return NULL;
+    }
+    outbuf = GWBUF_DATA(buf);
+
+    // write packet header with mysql_payload_size
+    gw_mysql_set_byte3(mysql_packet_header, mysql_payload_size);
+
+    // write packet number, now is 0
+    mysql_packet_header[3] = packet_number;
+    memcpy(outbuf, mysql_packet_header, sizeof(mysql_packet_header));
+
+    // current buffer pointer
+    mysql_handshake_payload = outbuf + sizeof(mysql_packet_header);
+
+    // write 0xff which is the error indicator
+    *mysql_handshake_payload = 0xff;
+    mysql_handshake_payload++;
+
+    // write error number
+    gw_mysql_set_byte2(mysql_handshake_payload, error_number);
+    mysql_handshake_payload += 2;
+
+    // write error message
+    memcpy(mysql_handshake_payload, error_message, strlen(error_message));
+
+    return buf;
+}
+
+bool MySQLClientProtocol::send_auth_switch_request_packet(DCB* dcb)
+{
+    const char plugin[] = DEFAULT_MYSQL_AUTH_PLUGIN;
+    uint32_t len = 1 + sizeof(plugin) + GW_MYSQL_SCRAMBLE_SIZE;
+    GWBUF* buffer = gwbuf_alloc(MYSQL_HEADER_LEN + len);
+
+    uint8_t* data = GWBUF_DATA(buffer);
+    gw_mysql_set_byte3(data, len);
+    data[3] = 1;    // First response to the COM_CHANGE_USER
+    data[MYSQL_HEADER_LEN] = MYSQL_REPLY_AUTHSWITCHREQUEST;
+    memcpy(data + MYSQL_HEADER_LEN + 1, plugin, sizeof(plugin));
+    memcpy(data + MYSQL_HEADER_LEN + 1 + sizeof(plugin), scramble, GW_MYSQL_SCRAMBLE_SIZE);
+
+    return dcb_write(dcb, buffer) != 0;
+}
+
+/**
  * Module API implementation.
  */
-
 namespace
 {
 

@@ -17,6 +17,7 @@
 
 #include <maxbase/alloc.h>
 #include <maxscale/authenticator2.hh>
+#include <maxscale/clock.h>
 #include <maxscale/limits.h>
 #include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
@@ -204,9 +205,9 @@ void MySQLBackendProtocol::prepare_for_write(DCB* dcb, GWBUF* buffer)
     track_query(buffer);
     if (GWBUF_SHOULD_COLLECT_RESULT(buffer))
     {
-        collect_result = true;
+        m_collect_result = true;
     }
-    track_state = GWBUF_SHOULD_TRACK_STATE(buffer);
+    m_track_state = GWBUF_SHOULD_TRACK_STATE(buffer);
 }
 
 /*******************************************************************************
@@ -347,7 +348,7 @@ void MySQLBackendProtocol::do_handle_error(DCB* dcb, const char* errmsg)
     mxb_assert(!dcb->m_dcb_errhandle_called);
     GWBUF* errbuf = mysql_create_custom_error(1, 0, errmsg);
 
-    if (!do_handleError(errbuf))
+    if (!m_component->handleError(errbuf, nullptr, m_reply))
     {
         // A failure to handle an error means that the session must be closed
         MXS_SESSION* session = dcb->session();
@@ -455,12 +456,6 @@ static inline bool complete_ps_response(GWBUF* buffer)
     return rval;
 }
 
-static inline bool collecting_resultset(MySQLProtocol* proto, uint64_t capabilities)
-{
-    return rcap_type_required(capabilities, RCAP_TYPE_RESULTSET_OUTPUT)
-           || proto->collect_result;
-}
-
 /**
  * Helpers for checking OK and ERR packets specific to COM_CHANGE_USER
  */
@@ -558,14 +553,14 @@ int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
 
     if (rcap_type_required(capabilities, RCAP_TYPE_PACKET_OUTPUT)
         || rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_OUTPUT)
-        || proto->collect_result
-        || proto->ignore_replies != 0)
+        || proto->m_collect_result
+        || proto->m_ignore_replies != 0)
     {
         GWBUF* tmp;
 
         if (rcap_type_required(capabilities, RCAP_TYPE_REQUEST_TRACKING)
             && !rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT)
-            && !proto->ignore_replies)
+            && !proto->m_ignore_replies)
         {
             tmp = proto->track_response(&read_buffer);
         }
@@ -589,7 +584,7 @@ int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
          * format so we need to detect and skip them. */
         if (rcap_type_required(capabilities, RCAP_TYPE_SESSION_STATE_TRACKING)
             && !expecting_ps_response(proto)
-            && proto->track_state)
+            && proto->m_track_state)
         {
             mxs_mysql_get_session_track_info(tmp, proto);
         }
@@ -597,8 +592,8 @@ int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
         read_buffer = tmp;
 
         if (rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_OUTPUT)
-            || proto->collect_result
-            || proto->ignore_replies != 0)
+            || proto->m_collect_result
+            || proto->m_ignore_replies != 0)
         {
             if ((tmp = gwbuf_make_contiguous(read_buffer)))
             {
@@ -612,7 +607,9 @@ int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
                 return 0;
             }
 
-            if (collecting_resultset(proto, capabilities))
+            bool collecting_resultset = rcap_type_required(capabilities, RCAP_TYPE_RESULTSET_OUTPUT)
+                                        || m_collect_result;
+            if (collecting_resultset)
             {
                 if (expecting_text_result(proto))
                 {
@@ -628,7 +625,7 @@ int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
                     }
 
                     // Collected the complete result
-                    proto->collect_result = false;
+                    proto->m_collect_result = false;
                     result_collected = true;
                 }
                 else if (expecting_ps_response(proto)
@@ -641,7 +638,7 @@ int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
                 else
                 {
                     // Collected the complete result
-                    proto->collect_result = false;
+                    proto->m_collect_result = false;
                     result_collected = true;
                 }
             }
@@ -673,13 +670,13 @@ int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
         }
     }
 
-    if (proto->ignore_replies > 0)
+    if (proto->m_ignore_replies > 0)
     {
         /** The reply to a COM_CHANGE_USER is in packet */
         GWBUF* query = modutil_get_next_MySQL_packet(&proto->stored_query);
         proto->stored_query = NULL;
-        proto->ignore_replies--;
-        mxb_assert(proto->ignore_replies >= 0);
+        proto->m_ignore_replies--;
+        mxb_assert(proto->m_ignore_replies >= 0);
         GWBUF* reply = modutil_get_next_MySQL_packet(&read_buffer);
 
         while (read_buffer)
@@ -706,7 +703,7 @@ int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
                 /** Store the query until we know the result of the authentication
                  * method switch. */
                 proto->stored_query = query;
-                proto->ignore_replies++;
+                proto->m_ignore_replies++;
 
                 gwbuf_free(reply);
                 return rval;
@@ -808,7 +805,9 @@ int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
                 gwbuf_set_type(stmt, GWBUF_TYPE_RESULT);
             }
 
-            return_code = proto->do_clientReply(stmt);
+            thread_local mxs::ReplyRoute route;
+            route.clear();
+            return_code = proto->m_component->clientReply(stmt, route, m_reply);
         }
         else    /*< session is closing; replying to client isn't possible */
         {
@@ -881,10 +880,10 @@ int MySQLBackendProtocol::handle_persistent_connection(BackendDCB* dcb, GWBUF* q
     {
         mxb_assert(!dcb->m_fakeq && !dcb->m_readq && !dcb->m_delayq && !dcb->m_writeq);
         mxb_assert(!dcb->is_in_persistent_pool());
-        mxb_assert(protocol->ignore_replies >= 0);
+        mxb_assert(protocol->m_ignore_replies >= 0);
 
         dcb->clear_was_persistent();
-        protocol->ignore_replies = 0;
+        protocol->m_ignore_replies = 0;
 
         if (dcb->state() != DCB::State::POLLING || protocol->protocol_auth_state != MXS_AUTH_STATE_COMPLETE)
         {
@@ -923,7 +922,7 @@ int MySQLBackendProtocol::handle_persistent_connection(BackendDCB* dcb, GWBUF* q
         if (dcb_write(dcb, buf))
         {
             MXS_INFO("Sent COM_CHANGE_USER");
-            protocol->ignore_replies++;
+            protocol->m_ignore_replies++;
             protocol->stored_query = queue;
             rc = 1;
         }
@@ -934,7 +933,7 @@ int MySQLBackendProtocol::handle_persistent_connection(BackendDCB* dcb, GWBUF* q
     }
     else
     {
-        mxb_assert(protocol->ignore_replies > 0);
+        mxb_assert(protocol->m_ignore_replies > 0);
 
         if (MYSQL_IS_COM_QUIT((uint8_t*)GWBUF_DATA(queue)))
         {
@@ -974,7 +973,7 @@ int32_t MySQLBackendProtocol::write(DCB* plain_dcb, GWBUF* queue)
     BackendDCB* dcb = static_cast<BackendDCB*>(plain_dcb);
     auto backend_protocol = this;
 
-    if (dcb->was_persistent() || backend_protocol->ignore_replies > 0)
+    if (dcb->was_persistent() || backend_protocol->m_ignore_replies > 0)
     {
         return handle_persistent_connection(dcb, queue);
     }
@@ -1026,8 +1025,8 @@ int32_t MySQLBackendProtocol::write(DCB* plain_dcb, GWBUF* queue)
                 if (GWBUF_IS_IGNORABLE(queue))
                 {
                     /** The response to this command should be ignored */
-                    backend_protocol->ignore_replies++;
-                    mxb_assert(backend_protocol->ignore_replies > 0);
+                    backend_protocol->m_ignore_replies++;
+                    mxb_assert(backend_protocol->m_ignore_replies > 0);
                 }
 
                 /** Write to backend */
@@ -1554,7 +1553,7 @@ bool MySQLBackendProtocol::established(DCB* dcb)
 {
     auto proto = this;
     return proto->protocol_auth_state == MXS_AUTH_STATE_COMPLETE
-           && (proto->ignore_replies == 0)
+           && (proto->m_ignore_replies == 0)
            && !proto->stored_query;
 }
 
@@ -1564,4 +1563,212 @@ json_t* MySQLBackendProtocol::diagnostics_json(DCB* dcb)
     json_t* obj = json_object();
     json_object_set_new(obj, "connection_id", json_integer(proto->thread_id));
     return obj;
+}
+
+int MySQLBackendProtocol::mysql_send_com_quit(DCB* dcb, int packet_number, GWBUF* bufparam)
+{
+    mxb_assert(packet_number <= 255);
+
+    int nbytes = 0;
+    GWBUF* buf = bufparam ? bufparam : mysql_create_com_quit(NULL, packet_number);
+    if (buf)
+    {
+        nbytes = dcb->protocol_write(buf);
+    }
+    return nbytes;
+}
+
+/**
+ * @brief Read a complete packet from a DCB
+ *
+ * Read a complete packet from a connected DCB. If data was read, @c readbuf
+ * will point to the head of the read data. If no data was read, @c readbuf will
+ * be set to NULL.
+ *
+ * @param dcb DCB to read from
+ * @param readbuf Pointer to a buffer where the data is stored
+ * @return True on success, false if an error occurred while data was being read
+ */
+bool MySQLBackendProtocol::read_complete_packet(DCB* dcb, GWBUF** readbuf)
+{
+    bool rval = false;
+    GWBUF* localbuf = NULL;
+
+    if (dcb_read(dcb, &localbuf, 0) >= 0)
+    {
+        rval = true;
+        dcb->m_last_read = mxs_clock();
+        GWBUF* packets = modutil_get_complete_packets(&localbuf);
+
+        if (packets)
+        {
+            /** A complete packet was read */
+            *readbuf = packets;
+        }
+
+        if (localbuf)
+        {
+            /** Store any extra data in the DCB's readqueue */
+
+            dcb_readq_append(dcb, localbuf);
+        }
+    }
+
+    return rval;
+}
+
+/**
+ * @brief Check if a buffer contains a result set
+ *
+ * @param buffer Buffer to check
+ * @return True if the @c buffer contains the start of a result set
+ */
+bool MySQLBackendProtocol::mxs_mysql_is_result_set(GWBUF* buffer)
+{
+    bool rval = false;
+    uint8_t cmd;
+
+    if (gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, 1, &cmd))
+    {
+        switch (cmd)
+        {
+
+            case MYSQL_REPLY_OK:
+            case MYSQL_REPLY_ERR:
+            case MYSQL_REPLY_LOCAL_INFILE:
+            case MYSQL_REPLY_EOF:
+                /** Not a result set */
+                break;
+
+            default:
+                rval = true;
+                break;
+        }
+    }
+
+    return rval;
+}
+
+/**
+ * Process a reply from a backend server. This method collects all complete packets and
+ * updates the internal response state.
+ *
+ * @param buffer Pointer to buffer containing the raw response. Any partial packets will be left in this
+ *               buffer.
+ * @return All complete packets that were in `buffer`
+ */
+GWBUF* MySQLBackendProtocol::track_response(GWBUF** buffer)
+{
+    using mxs::ReplyState;
+    GWBUF* rval = nullptr;
+
+    if (m_reply.command() == MXS_COM_STMT_FETCH)
+    {
+        // TODO: m_reply.m_error is not updated here.
+        // If the server responded with an error, n_eof > 0
+
+        // COM_STMT_FETCH is used when a COM_STMT_EXECUTE opens a cursor and the result is read in chunks:
+        // https://mariadb.com/kb/en/library/com_stmt_fetch/
+        if (consume_fetched_rows(*buffer))
+        {
+            set_reply_state(ReplyState::DONE);
+        }
+        rval = modutil_get_complete_packets(buffer);
+    }
+    else if (m_reply.command() == MXS_COM_STATISTICS)
+    {
+        // COM_STATISTICS returns a single string and thus requires special handling:
+        // https://mariadb.com/kb/en/library/com_statistics/#response
+        set_reply_state(ReplyState::DONE);
+        rval = modutil_get_complete_packets(buffer);
+    }
+    else if (m_reply.command() == MXS_COM_STMT_PREPARE && mxs_mysql_is_prep_stmt_ok(*buffer))
+    {
+        // Successful COM_STMT_PREPARE responses return a special OK packet:
+        // https://mariadb.com/kb/en/library/com_stmt_prepare/#com_stmt_prepare_ok
+
+        // TODO: Stream this result and don't collect it
+        if (complete_ps_response(*buffer))
+        {
+            rval = modutil_get_complete_packets(buffer);
+            set_reply_state(ReplyState::DONE);
+        }
+    }
+    else
+    {
+        // Normal result, process it one packet at a time
+        rval = process_packets(buffer);
+    }
+
+    if (rval)
+    {
+        m_reply.add_bytes(gwbuf_length(rval));
+    }
+
+    return rval;
+}
+
+/**
+ * Write MySQL authentication packet to backend server.
+ *
+ * @param dcb  Backend DCB
+ * @return Authentication state after sending handshake response
+ */
+mxs_auth_state_t MySQLBackendProtocol::gw_send_backend_auth(BackendDCB* dcb)
+{
+    mxs_auth_state_t rval = MXS_AUTH_STATE_FAILED;
+
+    if (dcb->session() == NULL
+        || (dcb->session()->state() != MXS_SESSION::State::CREATED
+            && dcb->session()->state() != MXS_SESSION::State::STARTED)
+        || (dcb->server()->ssl().context() && dcb->ssl_state() == DCB::SSLState::HANDSHAKE_FAILED))
+    {
+        return rval;
+    }
+
+    bool with_ssl = dcb->server()->ssl().context();
+    bool ssl_established = dcb->ssl_state() == DCB::SSLState::ESTABLISHED;
+
+    MYSQL_session client;
+    gw_get_shared_session_auth_info(dcb->session()->client_dcb, &client);
+
+    GWBUF* buffer = gw_generate_auth_response(&client,
+                                              this,
+                                              with_ssl,
+                                              ssl_established,
+                                              dcb->service()->capabilities);
+    mxb_assert(buffer);
+
+    if (with_ssl && !ssl_established)
+    {
+        if (dcb_write(dcb, buffer) && dcb->ssl_handshake() >= 0)
+        {
+            rval = MXS_AUTH_STATE_CONNECTED;
+        }
+    }
+    else if (dcb_write(dcb, buffer))
+    {
+        rval = MXS_AUTH_STATE_RESPONSE_SENT;
+    }
+
+    return rval;
+}
+
+/**
+ * Read the backend server MySQL handshake
+ *
+ * @param dcb  Backend DCB
+ * @return true on success, false on failure
+ */
+bool MySQLBackendProtocol::gw_read_backend_handshake(DCB* dcb, GWBUF* buffer)
+{
+    bool rval = false;
+    uint8_t* payload = GWBUF_DATA(buffer) + 4;
+
+    if (gw_decode_mysql_server_handshake(this, payload) >= 0)
+    {
+        rval = true;
+    }
+
+    return rval;
 }
