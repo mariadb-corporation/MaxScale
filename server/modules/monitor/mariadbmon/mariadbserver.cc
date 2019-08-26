@@ -18,6 +18,8 @@
 #include <iomanip>
 #include <thread>
 #include <set>
+#include <mysql.h>
+#include <mysqld_error.h>
 #include <maxbase/format.hh>
 #include <maxsql/mariadb.hh>
 #include <maxscale/mysql_utils.hh>

@@ -16,6 +16,7 @@
 
 #include <string>
 #include <string.h>
+#include <mysql.h>
 #include <maxbase/format.hh>
 #include <maxscale/jansson.hh>
 #include <maxscale/paths.h>

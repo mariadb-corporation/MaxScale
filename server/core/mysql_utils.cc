@@ -26,6 +26,7 @@
 #include <strings.h>
 #include <stdbool.h>
 #include <errmsg.h>
+#include <mysql.h>
 
 #include <maxbase/atomic.hh>
 #include <maxbase/format.hh>

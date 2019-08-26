@@ -21,8 +21,6 @@
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <mysql.h>
-#include <mysqld_error.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/ioctl.h>
@@ -109,10 +107,23 @@
 
 #define GW_NOINTR_CALL(A) do {errno = 0; A;} while (errno == EINTR)
 #define COM_QUIT_PACKET_SIZE (4 + 1)
+
+/** Defines for response codes */
+#define MYSQL_REPLY_ERR               0xff
+#define MYSQL_REPLY_OK                0x00
+#define MYSQL_REPLY_EOF               0xfe
+#define MYSQL_REPLY_LOCAL_INFILE      0xfb
+#define MYSQL_REPLY_AUTHSWITCHREQUEST 0xfe      /**< Only sent during authentication */
+
+#define MYSQL_GET_ERRCODE(payload)       (gw_mysql_get_byte2(&payload[5]))
+#define MYSQL_GET_STMTOK_NPARAM(payload) (gw_mysql_get_byte2(&payload[9]))
+#define MYSQL_GET_STMTOK_NATTR(payload)  (gw_mysql_get_byte2(&payload[11]))
+#define MYSQL_GET_NATTR(payload)         ((int)payload[4])
+
 class DCB;
 class BackendDCB;
 
-typedef enum
+enum mysql_tx_state_t
 {
     TX_EMPTY         = 0,   ///< "none of the below"
     TX_EXPLICIT      = 1,   ///< an explicit transaction is active
@@ -125,21 +136,13 @@ typedef enum
     TX_RESULT_SET    = 128, ///< result-set was sent
     TX_WITH_SNAPSHOT = 256, ///< WITH CONSISTENT SNAPSHOT was used
     TX_LOCKED_TABLES = 512  ///< LOCK TABLES is active
-} mysql_tx_state_t;
-
-typedef enum
-{
-    MYSQL_PROTOCOL_ALLOC,
-    MYSQL_PROTOCOL_ACTIVE,
-    MYSQL_PROTOCOL_DONE
-} mysql_protocol_state_t;
-
+};
 
 /*
  * MySQL session specific data
  *
  */
-typedef struct mysql_session
+struct MYSQL_session
 {
     uint8_t  client_sha1[MYSQL_SCRAMBLE_LEN];   /*< SHA1(password) */
     char     user[MYSQL_USER_MAXLEN + 1];       /*< username       */
@@ -150,7 +153,7 @@ typedef struct mysql_session
     uint8_t  next_sequence;                     /*< Next packet sequence */
     bool     auth_switch_sent;                  /*< Expecting a response to AuthSwitchRequest? */
     bool     changing_user;                     /*< True if a COM_CHANGE_USER is in progress */
-} MYSQL_session;
+};
 
 /** Protocol packing macros. */
 #define gw_mysql_set_byte2(__buffer, __int) \
@@ -193,7 +196,7 @@ typedef struct mysql_session
      | ((uint64_t)(__buffer)[7] << 56))
 
 /** MySQL protocol constants */
-typedef enum
+enum gw_mysql_capabilities_t
 {
     GW_MYSQL_CAPABILITIES_NONE = 0,
     /** This is sent by pre-10.2 clients */
@@ -256,7 +259,7 @@ typedef enum
         | GW_MYSQL_CAPABILITIES_MULTI_RESULTS
         | GW_MYSQL_CAPABILITIES_PS_MULTI_RESULTS
         | GW_MYSQL_CAPABILITIES_PLUGIN_AUTH),
-} gw_mysql_capabilities_t;
+};
 
 /**
  * Capabilities supported by MariaDB 10.2 and later, stored in the last 4 bytes
@@ -271,7 +274,7 @@ typedef enum
 #define MXS_MARIA_CAP_COM_MULTI            (1 << 1)
 #define MXS_MARIA_CAP_STMT_BULK_OPERATIONS (1 << 2)
 
-typedef enum
+enum mxs_mysql_cmd_t
 {
     MXS_COM_SLEEP = 0,
     MXS_COM_QUIT,
@@ -309,7 +312,7 @@ typedef enum
     MXS_COM_MULTI               = 0xfe,
     MXS_COM_END,
     MXS_COM_UNDEFINED = -1
-} mxs_mysql_cmd_t;
+};
 
 /**
  * A GWBUF property with this name will contain the latest GTID in string form.
@@ -526,20 +529,13 @@ private:
     bool m_track_state {false};       /*< Track session state */
 };
 
-typedef struct
+struct MXS_PS_RESPONSE
 {
     uint32_t id;
     uint16_t columns;
     uint16_t parameters;
     uint16_t warnings;
-} MXS_PS_RESPONSE;
-
-/** Defines for response codes */
-#define MYSQL_REPLY_ERR               0xff
-#define MYSQL_REPLY_OK                0x00
-#define MYSQL_REPLY_EOF               0xfe
-#define MYSQL_REPLY_LOCAL_INFILE      0xfb
-#define MYSQL_REPLY_AUTHSWITCHREQUEST 0xfe      /**< Only sent during authentication */
+};
 
 static inline mxs_mysql_cmd_t MYSQL_GET_COMMAND(const uint8_t* header)
 {
@@ -561,11 +557,6 @@ static inline uint32_t MYSQL_GET_PACKET_LEN(const GWBUF* buffer)
     mxb_assert(buffer);
     return MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(buffer)) + MYSQL_HEADER_LEN;
 }
-
-#define MYSQL_GET_ERRCODE(payload)       (gw_mysql_get_byte2(&payload[5]))
-#define MYSQL_GET_STMTOK_NPARAM(payload) (gw_mysql_get_byte2(&payload[9]))
-#define MYSQL_GET_STMTOK_NATTR(payload)  (gw_mysql_get_byte2(&payload[11]))
-#define MYSQL_GET_NATTR(payload)         ((int)payload[4])
 
 static inline bool MYSQL_IS_ERROR_PACKET(const uint8_t* header)
 {

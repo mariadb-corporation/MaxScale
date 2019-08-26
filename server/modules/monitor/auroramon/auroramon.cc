@@ -18,7 +18,7 @@
 #define MXS_MODULE_NAME "auroramon"
 
 #include "auroramon.hh"
-#include <mysqld_error.h>
+#include <mysql.h>
 #include <maxbase/alloc.h>
 #include <maxbase/assert.h>
 #include <maxscale/modinfo.hh>

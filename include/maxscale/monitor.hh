@@ -27,16 +27,16 @@
 #include <maxbase/iterator.hh>
 #include <maxscale/config.hh>
 #include <maxscale/server.hh>
-#include <maxscale/protocol/mysql.hh>
 
 namespace maxscale
 {
 class Monitor;
 }
 
-struct DCB;
+class DCB;
 struct json_t;
 struct ExternalCmd;
+typedef struct st_mysql MYSQL;
 
 /**
  * @verbatim

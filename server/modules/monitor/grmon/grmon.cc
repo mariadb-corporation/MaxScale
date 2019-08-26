@@ -21,9 +21,8 @@
 
 #include <new>
 #include <string>
-
+#include <mysql.h>
 #include <maxscale/protocol/mysql.hh>
-#include <mysqld_error.h>
 
 using maxscale::MonitorServer;
 

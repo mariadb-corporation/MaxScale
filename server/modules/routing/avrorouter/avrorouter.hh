@@ -19,6 +19,7 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
+#include <mysql.h>
 #include <maxbase/alloc.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/service.hh>

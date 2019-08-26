@@ -2126,50 +2126,6 @@ bool MySQLClientProtocol::send_auth_switch_request_packet(DCB* dcb)
 }
 
 /**
- * Module API implementation.
- */
-namespace
-{
-
-int process_init(void)
-{
-    int rv = mysql_library_init(0, NULL, NULL);
-
-    if (rv != 0)
-    {
-        MXS_ERROR("MySQL initialization failed, MariaDB MaxScale will exit. "
-                  "MySQL Error: %d, %s.",
-                  mysql_errno(NULL),
-                  mysql_error(NULL));
-    }
-
-    return rv;
-}
-
-void process_finish(void)
-{
-    mysql_library_end();
-}
-
-int thread_init(void)
-{
-    int rv = mysql_thread_init();
-
-    if (rv != 0)
-    {
-        MXS_ERROR("MySQL thread initialization failed, the thread will exit.");
-    }
-
-    return rv;
-}
-
-void thread_finish(void)
-{
-    mysql_thread_end();
-}
-}
-
-/**
  * mariadbclient module entry point.
  *
  * @return The module object
@@ -2185,10 +2141,10 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "V1.1.0",
         MXS_NO_MODULE_CAPABILITIES,
         &mxs::ClientProtocolApi<MySQLProtocolModule>::s_api,
-        process_init,
-        process_finish,
-        thread_init,
-        thread_finish,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
         {
             {MXS_END_MODULE_PARAMS}
         }

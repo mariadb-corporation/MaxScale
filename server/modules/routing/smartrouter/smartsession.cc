@@ -11,11 +11,10 @@
  * Public License.
  */
 #include "smartsession.hh"
-#include "smartrouter.hh"
 #include "performance.hh"
-
-#include <maxscale/modutil.hh>
+#include <mysqld_error.h>
 #include <maxsql/mysql_plus.hh>
+#include <maxscale/modutil.hh>
 
 // COPY-PASTED error-extraction functions from rwsplit. TODO move to lib.
 inline void extract_error_state(uint8_t* pBuffer, uint8_t** ppState, uint16_t* pnState)

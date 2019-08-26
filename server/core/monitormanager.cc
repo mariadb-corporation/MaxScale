@@ -13,6 +13,7 @@
 
 #include <maxscale/ccdefs.hh>
 
+#include <fcntl.h>
 #include <maxbase/format.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/paths.h>

@@ -16,6 +16,7 @@
 #include <inttypes.h>
 #include <set>
 #include <sstream>
+#include <mysql.h>
 #include <maxbase/stopwatch.hh>
 #include <maxbase/format.hh>
 #include <maxscale/clock.h>

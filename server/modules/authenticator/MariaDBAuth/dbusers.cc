@@ -23,7 +23,8 @@
 
 #include <algorithm>
 #include <vector>
-
+#include <mysql.h>
+#include <mysqld_error.h>
 #include <maxbase/alloc.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/maxscale.h>

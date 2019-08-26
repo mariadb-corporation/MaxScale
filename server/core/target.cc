@@ -12,7 +12,7 @@
  */
 
 #include <maxscale/target.hh>
-#include <maxscale/protocol/mysql.hh>
+#include <mysqld_error.h>
 
 const MXS_ENUM_VALUE rank_values[] =
 {

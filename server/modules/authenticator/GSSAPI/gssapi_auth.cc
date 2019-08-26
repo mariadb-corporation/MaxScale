@@ -12,6 +12,7 @@
  */
 #include "gssapi_auth.hh"
 
+#include <mysql.h>
 #include <maxbase/alloc.h>
 #include <maxscale/authenticator.hh>
 #include <maxscale/dcb.hh>

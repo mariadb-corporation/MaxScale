@@ -973,7 +973,7 @@ bool QueryClassifier::query_continues_ps(uint8_t cmd, uint32_t stmt_id, GWBUF* b
         // PS execution must be sent to the same server where the data was sent
         rval = true;
     }
-    else if (cmd == COM_STMT_FETCH)
+    else if (cmd == MXS_COM_STMT_FETCH)
     {
         // COM_STMT_FETCH should always go to the same target as the COM_STMT_EXECUTE
         rval = true;

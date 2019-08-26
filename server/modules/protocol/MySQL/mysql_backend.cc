@@ -13,8 +13,9 @@
 
 #define MXS_MODULE_NAME "mariadbbackend"
 
-#include <maxscale/ccdefs.hh>
+#include <maxscale/protocol/mysql.hh>
 
+#include <mysqld_error.h>
 #include <maxbase/alloc.h>
 #include <maxscale/authenticator2.hh>
 #include <maxscale/clock.h>
@@ -23,7 +24,6 @@
 #include <maxscale/modutil.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/protocol.hh>
-#include <maxscale/protocol/mysql.hh>
 #include <maxscale/router.hh>
 #include <maxscale/server.hh>
 #include <maxscale/utils.h>

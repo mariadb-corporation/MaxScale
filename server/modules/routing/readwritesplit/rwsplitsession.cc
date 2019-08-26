@@ -14,7 +14,7 @@
 #include "rwsplitsession.hh"
 
 #include <cmath>
-
+#include <mysqld_error.h>
 #include <maxscale/modutil.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/clock.h>

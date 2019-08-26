@@ -15,17 +15,17 @@
  * MySQL Protocol common routines for client to gateway and gateway to backend
  */
 
-#include <netinet/tcp.h>
+#include <maxscale/protocol/mysql.hh>
 
 #include <set>
 #include <sstream>
 #include <map>
-
+#include <netinet/tcp.h>
+#include <mysql.h>
 #include <maxsql/mariadb.hh>
 #include <maxbase/alloc.h>
 #include <maxscale/modutil.hh>
 #include <maxscale/mysql_utils.hh>
-#include <maxscale/protocol/mysql.hh>
 #include <maxscale/utils.h>
 #include <maxscale/protocol/mariadb_client.hh>
 #include <maxscale/poll.hh>

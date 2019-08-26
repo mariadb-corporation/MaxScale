@@ -12,6 +12,7 @@
  */
 
 #include "clustrix.hh"
+#include <mysql.h>
 #include <maxbase/assert.h>
 
 using maxscale::Monitor;

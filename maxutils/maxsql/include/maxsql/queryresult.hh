@@ -16,7 +16,10 @@
 #include <maxsql/ccdefs.hh>
 #include <string>
 #include <unordered_map>
-#include <mysql.h>
+
+typedef struct st_mysql MYSQL;
+typedef struct st_mysql_res MYSQL_RES;
+typedef char **MYSQL_ROW;
 
 namespace maxsql
 {

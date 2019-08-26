@@ -16,6 +16,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <mysql.h>
 #include "clustrix.hh"
 #include "clustrixmembership.hh"
 

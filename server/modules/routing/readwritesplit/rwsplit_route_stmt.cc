@@ -1147,7 +1147,7 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool 
     uint8_t cmd = mxs_mysql_get_command(querybuf);
     GWBUF* send_buf = gwbuf_clone(querybuf);
 
-    if (m_config.causal_reads && cmd == COM_QUERY && !m_gtid_pos.empty() && target->is_slave())
+    if (m_config.causal_reads && cmd == MXS_COM_QUERY && !m_gtid_pos.empty() && target->is_slave())
     {
         // Perform the causal read only when the query is routed to a slave
         // TODO: Fix this

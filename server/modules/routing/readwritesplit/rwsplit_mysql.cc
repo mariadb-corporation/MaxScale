@@ -18,7 +18,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
-
+#include <mysqld_error.h>
 #include <maxscale/router.hh>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/dcb.hh>

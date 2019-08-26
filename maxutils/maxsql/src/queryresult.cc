@@ -12,6 +12,8 @@
  */
 
 #include <maxsql/queryresult.hh>
+
+#include <mysql.h>
 #include <maxbase/assert.h>
 #include <maxbase/format.hh>
 

@@ -29,6 +29,7 @@
 #include <sys/stat.h>
 #include <vector>
 #include <mutex>
+#include <mysql.h>
 
 #include <maxbase/alloc.h>
 #include <maxscale/clock.h>

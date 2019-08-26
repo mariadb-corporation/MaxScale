@@ -19,6 +19,7 @@
 #include <future>
 #include <inttypes.h>
 #include <sstream>
+#include <mysql.h>
 #include <maxbase/assert.h>
 #include <maxbase/format.hh>
 #include <maxbase/alloc.h>

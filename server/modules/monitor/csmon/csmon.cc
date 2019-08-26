@@ -18,6 +18,7 @@
 #include <regex>
 #include <vector>
 #include <string>
+#include <mysql.h>
 
 #include <maxscale/modinfo.hh>
 #include <maxscale/mysql_utils.hh>

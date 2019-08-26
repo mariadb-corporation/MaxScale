@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <iostream>
+#include <mysql.h>
 #include <maxscale/config.hh>
 #include <maxscale/mysql_utils.hh>
 #include "../internal/server.hh"

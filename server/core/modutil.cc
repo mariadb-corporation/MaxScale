@@ -23,6 +23,7 @@
 #include <mutex>
 #include <functional>
 #include <cctype>
+#include <mysql.h>
 
 #include <maxsql/mariadb.hh>
 #include <maxbase/alloc.h>

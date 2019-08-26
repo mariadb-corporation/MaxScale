@@ -17,6 +17,7 @@
 #include <limits.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <mysql.h>
 #include <blr_constants.hh>
 
 /**

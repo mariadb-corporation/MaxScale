@@ -13,10 +13,11 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
-#include <mysql.h>
 #include <map>
 #include <string>
 #include <vector>
+
+typedef struct st_mysql MYSQL;
 
 namespace maxscale
 {

@@ -15,7 +15,8 @@
 #include <maxsql/ccdefs.hh>
 #include <time.h>
 #include <string>
-#include <mysql.h>
+
+typedef struct st_mysql MYSQL;
 
 namespace maxsql
 {
