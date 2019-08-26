@@ -44,13 +44,6 @@
 namespace
 {
 
-/** Return type of process_special_commands() */
-typedef enum spec_com_res_t
-{
-    RES_CONTINUE,   // No special command detected, proceed as normal.
-    RES_END,        // Query handling completed, do not send to filters/router.
-} spec_com_res_t;
-
 const char WORD_KILL[] = "KILL";
 
 std::string get_version_string(SERVICE* service)
@@ -369,17 +362,17 @@ int get_zstr_len(const char* str, int len)
 
     return slen;
 }
-
+}
 /**
  * @brief Store client connection information into the DCB
  * @param dcb Client DCB
  * @param buffer Buffer containing the handshake response packet
  */
-void store_client_information(DCB* dcb, GWBUF* buffer)
+void MySQLClientProtocol::store_client_information(DCB* dcb, GWBUF* buffer)
 {
     size_t len = gwbuf_length(buffer);
     uint8_t data[len];
-    auto proto = static_cast<MySQLClientProtocol*>(dcb->protocol_session());
+    auto proto = this;
     MYSQL_session* ses = (MYSQL_session*)dcb->m_data;
 
     gwbuf_copy_data(buffer, 0, len, data);
@@ -435,6 +428,8 @@ void store_client_information(DCB* dcb, GWBUF* buffer)
     }
 }
 
+namespace
+{
 /**
  * @brief Debug check function for authentication packets
  *
@@ -704,6 +699,7 @@ void handle_authentication_errors(DCB* dcb, int auth_val, int packet_number)
     }
     MXS_FREE(fail_str);
 }
+}
 
 /**
  * @brief Client read event, process when client not yet authenticated
@@ -713,7 +709,7 @@ void handle_authentication_errors(DCB* dcb, int auth_val, int packet_number)
  * @param nbytes_read   The number of bytes of data read
  * @return 0 if succeed, 1 otherwise
  */
-int perform_authentication(DCB* generic_dcb, GWBUF* read_buffer, int nbytes_read)
+int MySQLClientProtocol::perform_authentication(DCB* generic_dcb, GWBUF* read_buffer, int nbytes_read)
 {
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
     MXB_AT_DEBUG(check_packet(dcb, read_buffer, nbytes_read));
@@ -770,7 +766,7 @@ int perform_authentication(DCB* generic_dcb, GWBUF* read_buffer, int nbytes_read
         auth_val = MXS_AUTH_BAD_HANDSHAKE;
     }
 
-    auto protocol = static_cast<MySQLClientProtocol*>(dcb->protocol_session());
+    auto protocol = this;
 
     /**
      * At this point, if the auth_val return code indicates success
@@ -850,6 +846,8 @@ int perform_authentication(DCB* generic_dcb, GWBUF* read_buffer, int nbytes_read
     return 0;
 }
 
+namespace
+{
 /**
  * Handle relevant variables
  *
@@ -938,6 +936,7 @@ char* handle_variables(MXS_SESSION* session, GWBUF** read_buffer)
 
     return message;
 }
+}
 
 /**
  * Perform re-authentication of the client
@@ -947,14 +946,14 @@ char* handle_variables(MXS_SESSION* session, GWBUF** read_buffer)
  *
  * @return True if the user is allowed access
  */
-bool reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf)
+bool MySQLClientProtocol::reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf)
 {
     bool rval = false;
     ClientDCB* client_dcb = session->client_dcb;
     auto& client_auth = client_dcb->m_authenticator;
     if (client_auth->capabilities() & mxs::AuthenticatorModule::CAP_REAUTHENTICATE)
     {
-        auto proto = static_cast<MySQLClientProtocol*>(client_dcb->protocol_session());
+        auto proto = this;
 
         std::vector<uint8_t> orig_payload;
         uint32_t orig_len = gwbuf_length(proto->stored_query);
@@ -1031,6 +1030,8 @@ bool reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf)
     return rval;
 }
 
+namespace
+{
 void track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf)
 {
     mxb_assert(GWBUF_IS_CONTIGUOUS(packetbuf));
@@ -1083,11 +1084,12 @@ void track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf)
         }
     }
 }
+}
 
-bool handle_change_user(MySQLProtocol* proto, bool* changed_user, GWBUF** packetbuf)
+bool MySQLClientProtocol::handle_change_user(bool* changed_user, GWBUF** packetbuf)
 {
     bool ok = true;
-
+    MySQLProtocol* proto = this;
     if (!proto->changing_user && proto->reply().command() == MXS_COM_CHANGE_USER)
     {
         // Track the COM_CHANGE_USER progress at the session level
@@ -1113,6 +1115,9 @@ bool handle_change_user(MySQLProtocol* proto, bool* changed_user, GWBUF** packet
 
     return ok;
 }
+
+namespace
+{
 
 void extract_user(char* token, std::string* user)
 {
@@ -1282,6 +1287,7 @@ bool parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* kt_out,
         return true;
     }
 }
+}
 
 /**
  * Handle text version of KILL [CONNECTION | QUERY] <process_id>. Only detects
@@ -1294,7 +1300,8 @@ bool parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* kt_out,
  *
  * @return RES_CONTINUE or RES_END
  */
-spec_com_res_t handle_query_kill(DCB* dcb, GWBUF* read_buffer, uint32_t packet_len)
+MySQLClientProtocol::spec_com_res_t
+MySQLClientProtocol::handle_query_kill(DCB* dcb, GWBUF* read_buffer, uint32_t packet_len)
 {
     spec_com_res_t rval = RES_CONTINUE;
     /* First, we need to detect the text "KILL" (ignorecase) in the start
@@ -1351,7 +1358,8 @@ spec_com_res_t handle_query_kill(DCB* dcb, GWBUF* read_buffer, uint32_t packet_l
  *
  * @return see @c spec_com_res_t
  */
-spec_com_res_t process_special_commands(DCB* dcb, GWBUF* read_buffer, uint8_t cmd)
+MySQLClientProtocol::spec_com_res_t
+MySQLClientProtocol::process_special_commands(DCB* dcb, GWBUF* read_buffer, uint8_t cmd)
 {
     spec_com_res_t rval = RES_CONTINUE;
 
@@ -1421,15 +1429,15 @@ spec_com_res_t process_special_commands(DCB* dcb, GWBUF* read_buffer, uint8_t cm
  * Return 1 in success. If the last packet is incomplete return success but
  * leave incomplete packet to readbuf.
  *
- * @param session       Session pointer
  * @param capabilities  The capabilities of the service.
  * @param p_readbuf     Pointer to the address of GWBUF including the query
  *
  * @return 1 if succeed,
  */
-int route_by_statement(MySQLProtocol* proto, uint64_t capabilities, GWBUF** p_readbuf)
+int MySQLClientProtocol::route_by_statement(uint64_t capabilities, GWBUF** p_readbuf)
 {
     int rc = 1;
+    MySQLProtocol* proto = this;
     auto session = proto->session();
     auto dcb = session->client_dcb;
 
@@ -1468,7 +1476,7 @@ int route_by_statement(MySQLProtocol* proto, uint64_t capabilities, GWBUF** p_re
 
         bool changed_user = false;
 
-        if (!handle_change_user(proto, &changed_user, &packetbuf))
+        if (!handle_change_user(&changed_user, &packetbuf))
         {
             MXS_ERROR("User reauthentication failed for %s", session->user_and_host().c_str());
             gwbuf_free(packetbuf);
@@ -1508,7 +1516,7 @@ int route_by_statement(MySQLProtocol* proto, uint64_t capabilities, GWBUF** p_re
  * @param nbytes_read   The number of bytes of data read
  * @return 0 if succeed, 1 otherwise
  */
-int perform_normal_read(DCB* dcb, GWBUF* read_buffer, uint32_t nbytes_read)
+int MySQLClientProtocol::perform_normal_read(DCB* dcb, GWBUF* read_buffer, uint32_t nbytes_read)
 {
     MXS_SESSION* session = dcb->session();
     auto session_state_value = session->state();
@@ -1542,9 +1550,8 @@ int perform_normal_read(DCB* dcb, GWBUF* read_buffer, uint32_t nbytes_read)
     /**
      * Feed each statement completely and separately to router.
      */
-    auto proto = static_cast<MySQLClientProtocol*>(dcb->protocol_session());
     auto capabilities = service_get_capabilities(session->service);
-    int rval = route_by_statement(proto, capabilities, &read_buffer) ? 0 : 1;
+    int rval = route_by_statement(capabilities, &read_buffer) ? 0 : 1;
 
     if (read_buffer != NULL)
     {
@@ -1559,7 +1566,7 @@ int perform_normal_read(DCB* dcb, GWBUF* read_buffer, uint32_t nbytes_read)
         dcb_close(dcb);
         MXS_ERROR("Routing the query failed. Session will be closed.");
     }
-    else if (proto->reply().command() == MXS_COM_QUIT)
+    else if (reply().command() == MXS_COM_QUIT)
     {
         /** Close router session which causes closing of backends */
         mxb_assert_message(session_valid_for_pool(dcb->session()), "Session should qualify for pooling");
@@ -1569,6 +1576,8 @@ int perform_normal_read(DCB* dcb, GWBUF* read_buffer, uint32_t nbytes_read)
     return rval;
 }
 
+namespace
+{
 /*
  * Mapping three session tracker's info to mxs_session_trx_state_t
  * SESSION_TRACK_STATE_CHANGE:

@@ -454,6 +454,13 @@ private:
 class MySQLClientProtocol : public MySQLProtocol, public mxs::ClientProtocol
 {
 public:
+    /** Return type of process_special_commands() */
+    enum spec_com_res_t
+    {
+        RES_CONTINUE,   // No special command detected, proceed as normal.
+        RES_END,        // Query handling completed, do not send to filters/router.
+    };
+
     static MySQLClientProtocol* create(MXS_SESSION* session, mxs::Component* component);
     MySQLClientProtocol(MXS_SESSION* session, SERVER* server, mxs::Component* component);
 
@@ -473,6 +480,16 @@ public:
     }
     std::unique_ptr<mxs::BackendProtocol>
     create_backend_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component) override;
+
+private:
+    int perform_authentication(DCB* generic_dcb, GWBUF* read_buffer, int nbytes_read);
+    int perform_normal_read(DCB* dcb, GWBUF* read_buffer, uint32_t nbytes_read);
+    void store_client_information(DCB* dcb, GWBUF* buffer);
+    int route_by_statement(uint64_t capabilities, GWBUF** p_readbuf);
+    spec_com_res_t process_special_commands(DCB* dcb, GWBUF* read_buffer, uint8_t cmd);
+    bool handle_change_user(bool* changed_user, GWBUF** packetbuf);
+    bool reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf);
+    spec_com_res_t handle_query_kill(DCB* dcb, GWBUF* read_buffer, uint32_t packet_len);
 };
 
 class MySQLBackendProtocol : public MySQLProtocol, public mxs::BackendProtocol
