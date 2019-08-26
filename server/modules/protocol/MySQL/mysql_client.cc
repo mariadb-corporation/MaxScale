@@ -362,74 +362,7 @@ int get_zstr_len(const char* str, int len)
 
     return slen;
 }
-}
-/**
- * @brief Store client connection information into the DCB
- * @param dcb Client DCB
- * @param buffer Buffer containing the handshake response packet
- */
-void MySQLClientProtocol::store_client_information(DCB* dcb, GWBUF* buffer)
-{
-    size_t len = gwbuf_length(buffer);
-    uint8_t data[len];
-    auto proto = this;
-    MYSQL_session* ses = (MYSQL_session*)dcb->m_data;
 
-    gwbuf_copy_data(buffer, 0, len, data);
-    mxb_assert(MYSQL_GET_PAYLOAD_LEN(data) + MYSQL_HEADER_LEN == len
-               || len == MYSQL_AUTH_PACKET_BASE_SIZE);      // For SSL request packet
-
-    // We OR the capability bits in order to retain the starting bits sent
-    // when an SSL connection is opened. Oracle Connector/J 8.0 appears to drop
-    // the SSL capability bit mid-authentication which causes MaxScale to think
-    // that SSL is not used.
-    proto->client_capabilities |= gw_mysql_get_byte4(data + MYSQL_CLIENT_CAP_OFFSET);
-    proto->charset = data[MYSQL_CHARSET_OFFSET];
-
-    /** MariaDB 10.2 compatible clients don't set the first bit to signal that
-     * there are extra capabilities stored in the last 4 bytes of the 23 byte filler. */
-    if ((proto->client_capabilities & GW_MYSQL_CAPABILITIES_CLIENT_MYSQL) == 0)
-    {
-        proto->extra_capabilities = gw_mysql_get_byte4(data + MARIADB_CAP_OFFSET);
-    }
-
-    if (len > MYSQL_AUTH_PACKET_BASE_SIZE)
-    {
-        const char* username = (const char*)data + MYSQL_AUTH_PACKET_BASE_SIZE;
-        int userlen = get_zstr_len(username, len - MYSQL_AUTH_PACKET_BASE_SIZE);
-
-        if (userlen != -1)
-        {
-            if ((int)sizeof(ses->user) > userlen)
-            {
-                strcpy(ses->user, username);
-            }
-
-            // Include the null terminator in the user length
-            userlen++;
-
-            if (proto->client_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB)
-            {
-                /** Client is connecting with a default database */
-                uint8_t authlen = data[MYSQL_AUTH_PACKET_BASE_SIZE + userlen];
-                size_t dboffset = MYSQL_AUTH_PACKET_BASE_SIZE + userlen + authlen + 1;
-
-                if (dboffset < len)
-                {
-                    int dblen = get_zstr_len((const char*)data + dboffset, len - dboffset);
-
-                    if (dblen != -1 && (int)sizeof(ses->db) > dblen)
-                    {
-                        strcpy(ses->db, (const char*)data + dboffset);
-                    }
-                }
-            }
-        }
-    }
-}
-
-namespace
-{
 /**
  * @brief Debug check function for authentication packets
  *
@@ -615,6 +548,85 @@ int ssl_authenticate_check_status(DCB* generic_dcb)
     }
     return rval;
 }
+
+void extract_user(char* token, std::string* user)
+{
+    char* end = strchr(token, ';');
+
+    if (end)
+    {
+        user->assign(token, end - token);
+    }
+    else
+    {
+        user->assign(token);
+    }
+}
+}
+
+/**
+ * @brief Store client connection information into the DCB
+ * @param dcb Client DCB
+ * @param buffer Buffer containing the handshake response packet
+ */
+void MySQLClientProtocol::store_client_information(DCB* dcb, GWBUF* buffer)
+{
+    size_t len = gwbuf_length(buffer);
+    uint8_t data[len];
+    auto proto = this;
+    MYSQL_session* ses = (MYSQL_session*)dcb->m_data;
+
+    gwbuf_copy_data(buffer, 0, len, data);
+    mxb_assert(MYSQL_GET_PAYLOAD_LEN(data) + MYSQL_HEADER_LEN == len
+               || len == MYSQL_AUTH_PACKET_BASE_SIZE);      // For SSL request packet
+
+    // We OR the capability bits in order to retain the starting bits sent
+    // when an SSL connection is opened. Oracle Connector/J 8.0 appears to drop
+    // the SSL capability bit mid-authentication which causes MaxScale to think
+    // that SSL is not used.
+    proto->client_capabilities |= gw_mysql_get_byte4(data + MYSQL_CLIENT_CAP_OFFSET);
+    proto->charset = data[MYSQL_CHARSET_OFFSET];
+
+    /** MariaDB 10.2 compatible clients don't set the first bit to signal that
+     * there are extra capabilities stored in the last 4 bytes of the 23 byte filler. */
+    if ((proto->client_capabilities & GW_MYSQL_CAPABILITIES_CLIENT_MYSQL) == 0)
+    {
+        proto->extra_capabilities = gw_mysql_get_byte4(data + MARIADB_CAP_OFFSET);
+    }
+
+    if (len > MYSQL_AUTH_PACKET_BASE_SIZE)
+    {
+        const char* username = (const char*)data + MYSQL_AUTH_PACKET_BASE_SIZE;
+        int userlen = get_zstr_len(username, len - MYSQL_AUTH_PACKET_BASE_SIZE);
+
+        if (userlen != -1)
+        {
+            if ((int)sizeof(ses->user) > userlen)
+            {
+                strcpy(ses->user, username);
+            }
+
+            // Include the null terminator in the user length
+            userlen++;
+
+            if (proto->client_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB)
+            {
+                /** Client is connecting with a default database */
+                uint8_t authlen = data[MYSQL_AUTH_PACKET_BASE_SIZE + userlen];
+                size_t dboffset = MYSQL_AUTH_PACKET_BASE_SIZE + userlen + authlen + 1;
+
+                if (dboffset < len)
+                {
+                    int dblen = get_zstr_len((const char*)data + dboffset, len - dboffset);
+
+                    if (dblen != -1 && (int)sizeof(ses->db) > dblen)
+                    {
+                        strcpy(ses->db, (const char*)data + dboffset);
+                    }
+                }
+            }
+        }
+    }
 }
 
 /**
@@ -840,8 +852,6 @@ int MySQLClientProtocol::perform_authentication(DCB* generic_dcb, GWBUF* read_bu
     return 0;
 }
 
-namespace
-{
 /**
  * Handle relevant variables
  *
@@ -851,7 +861,7 @@ namespace
  *
  * @return NULL if successful, otherwise dynamically allocated error message.
  */
-char* handle_variables(MXS_SESSION* session, GWBUF** read_buffer)
+char* MySQLClientProtocol::handle_variables(MXS_SESSION* session, GWBUF** read_buffer)
 {
     char* message = NULL;
 
@@ -929,7 +939,6 @@ char* handle_variables(MXS_SESSION* session, GWBUF** read_buffer)
     }
 
     return message;
-}
 }
 
 /**
@@ -1024,9 +1033,7 @@ bool MySQLClientProtocol::reauthenticate_client(MXS_SESSION* session, GWBUF* pac
     return rval;
 }
 
-namespace
-{
-void track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf)
+void MySQLClientProtocol::track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf)
 {
     mxb_assert(GWBUF_IS_CONTIGUOUS(packetbuf));
 
@@ -1078,7 +1085,6 @@ void track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf)
         }
     }
 }
-}
 
 bool MySQLClientProtocol::handle_change_user(bool* changed_user, GWBUF** packetbuf)
 {
@@ -1110,23 +1116,6 @@ bool MySQLClientProtocol::handle_change_user(bool* changed_user, GWBUF** packetb
     return ok;
 }
 
-namespace
-{
-
-void extract_user(char* token, std::string* user)
-{
-    char* end = strchr(token, ';');
-
-    if (end)
-    {
-        user->assign(token, end - token);
-    }
-    else
-    {
-        user->assign(token);
-    }
-}
-
 /**
  * Parse a "KILL [CONNECTION | QUERY] [ <process_id> | USER <username> ]" query.
  * Will modify the argument string even if unsuccessful.
@@ -1134,9 +1123,11 @@ void extract_user(char* token, std::string* user)
  * @param query Query string to parse
  * @paran thread_id_out Thread id output
  * @param kt_out Kill command type output
+ * @param user_out Kill command target user output
  * @return true on success, false on error
  */
-bool parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* kt_out, std::string* user)
+bool MySQLClientProtocol::parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* kt_out,
+                                           std::string* user_out)
 {
     const char WORD_CONNECTION[] = "CONNECTION";
     const char WORD_QUERY[] = "QUERY";
@@ -1277,10 +1268,9 @@ bool parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* kt_out,
     {
         *thread_id_out = thread_id;
         *kt_out = (kill_type_t)kill_type;
-        *user = tmpuser;
+        *user_out = tmpuser;
         return true;
     }
-}
 }
 
 /**
@@ -1570,8 +1560,6 @@ int MySQLClientProtocol::perform_normal_read(DCB* dcb, GWBUF* read_buffer, uint3
     return rval;
 }
 
-namespace
-{
 /*
  * Mapping three session tracker's info to mxs_session_trx_state_t
  * SESSION_TRACK_STATE_CHANGE:
@@ -1586,7 +1574,7 @@ namespace
  *   Get trx characteristics such as read only, read write, snapshot ...
  *
  */
-void parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data)
+void MySQLClientProtocol::parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data)
 {
     char* autocommit = gwbuf_get_property(data, (char*)"autocommit");
 
@@ -1631,7 +1619,6 @@ void parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data)
     }
     MXS_DEBUG("trx state:%s", session_trx_state_to_string(ses->trx_state));
     MXS_DEBUG("autcommit:%s", session_is_autocommit(ses) ? "ON" : "OFF");
-}
 }
 
 /**
@@ -2119,6 +2106,9 @@ GWBUF* MySQLClientProtocol::mysql_create_standard_error(int packet_number, int e
     return buf;
 }
 
+/**
+ * Sends an AuthSwitchRequest packet with the default auth plugin to the DCB.
+ */
 bool MySQLClientProtocol::send_auth_switch_request_packet(DCB* dcb)
 {
     const char plugin[] = DEFAULT_MYSQL_AUTH_PLUGIN;

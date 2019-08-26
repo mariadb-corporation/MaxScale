@@ -1,15 +1,14 @@
 add_executable(test_parse_kill test_parse_kill.cc)
-target_link_libraries(test_parse_kill maxscale-common mariadbclient)
-add_test(test_parse_kill test_parse_kill)
-
 add_executable(test_setparser test_setparser.cc)
 add_executable(test_setsqlmodeparser test_setsqlmodeparser.cc)
 add_executable(test_sqlmodeparser test_sqlmodeparser.cc)
 
+target_link_libraries(test_parse_kill maxscale-common mariadbclient)
 target_link_libraries(test_setsqlmodeparser maxscale-common)
 target_link_libraries(test_setparser maxscale-common)
 target_link_libraries(test_sqlmodeparser maxscale-common)
 
+add_test(test_parse_kill test_parse_kill)
 add_test(test_setparser test_setparser)
 add_test(test_setsqlmodeparser test_setsqlmodeparser)
 add_test(test_sqlmodeparser test_sqlmodeparser)

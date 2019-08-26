@@ -317,10 +317,17 @@ typedef enum
  */
 static const char* const MXS_LAST_GTID = "last_gtid";
 
+/* Type of the kill-command sent by client. */
+enum kill_type_t
+{
+    KT_CONNECTION = (1 << 0),
+    KT_QUERY      = (1 << 1),
+    KT_SOFT       = (1 << 2),
+    KT_HARD       = (1 << 3)
+};
+
 /**
- * MySQL Protocol specific state data.
- *
- * Tracks various parts of the network protocol e.g. the response state
+ * MySQL Protocol specific state data. Tracks various parts of the network protocol e.g. the response state.
  */
 class MySQLProtocol
 {
@@ -447,6 +454,8 @@ public:
     }
     std::unique_ptr<mxs::BackendProtocol>
     create_backend_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component) override;
+    static bool parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* kt_out,
+                                 std::string* user_out);
 
 private:
     int perform_authentication(DCB* generic_dcb, GWBUF* read_buffer, int nbytes_read);
@@ -462,9 +471,10 @@ private:
     char* create_auth_fail_str(char* username, char* hostaddr, bool password, char* db, int);
     int mysql_send_standard_error(DCB* dcb, int sequence, int errnum, const char* msg);
     GWBUF* mysql_create_standard_error(int sequence, int error_number, const char* msg);
-    /** Sends an AuthSwitchRequest packet with the default auth plugin to the DCB */
     bool send_auth_switch_request_packet(DCB* dcb);
-
+    char* handle_variables(MXS_SESSION* session, GWBUF** read_buffer);
+    void track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf);
+    void parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data);
 };
 
 class MySQLBackendProtocol : public MySQLProtocol, public mxs::BackendProtocol
@@ -506,7 +516,10 @@ private:
     bool mxs_mysql_is_result_set(GWBUF* buffer);
     mxs_auth_state_t gw_send_backend_auth(BackendDCB* dcb);
     bool gw_read_backend_handshake(DCB* dcb, GWBUF* buffer);
-
+    void handle_error_response(DCB* plain_dcb, GWBUF* buffer);
+    bool session_ok_to_route(DCB* dcb);
+    bool complete_ps_response(GWBUF* buffer);
+    bool handle_auth_change_response(GWBUF* reply, DCB* dcb);
 
     int  m_ignore_replies {0};        /*< How many replies should be discarded */
     bool m_collect_result {false};    /*< Collect the next result set as one buffer */
@@ -803,15 +816,6 @@ uint32_t mxs_mysql_extract_ps_id(GWBUF* buffer);
  * @return True if a response is expected from the server
  */
 bool mxs_mysql_command_will_respond(uint8_t cmd);
-
-/* Type of the kill-command sent by client. */
-typedef enum kill_type
-{
-    KT_CONNECTION = (1 << 0),
-    KT_QUERY      = (1 << 1),
-    KT_SOFT       = (1 << 2),
-    KT_HARD       = (1 << 3)
-} kill_type_t;
 
 void mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t target_id, kill_type_t type);
 

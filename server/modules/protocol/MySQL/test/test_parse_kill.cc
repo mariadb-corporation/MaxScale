@@ -11,7 +11,11 @@
  * Public License.
  */
 
-#include "../mysql_client.cc"
+#include <maxscale/protocol/mysql.hh>
+
+#include <inttypes.h>
+#include <string>
+#include <maxbase/alloc.h>
 
 #define NO_THREAD_ID 0
 
@@ -32,7 +36,7 @@ int test_one_query(const char* query,
         result_tid = expected_tid;
         result_kt = (kill_type_t)expected_kt;
     }
-    bool success = parse_kill_query(query_copy, &result_tid, &result_kt, &user);
+    bool success = MySQLClientProtocol::parse_kill_query(query_copy, &result_tid, &result_kt, &user);
     MXS_FREE(query_copy);
 
     if (success == should_succeed && result_tid == expected_tid
@@ -86,9 +90,8 @@ int main(int argc, char** argv)
         {" kill connection 1A",                        false, 0,            KT_CONNECTION          },
         {" kill connection 1 A ",                      false, 0,            KT_CONNECTION          },
         {"kill query 7 ; select * ",                   false, 0,            KT_CONNECTION          },
-        {"KIll query 12345678901234567890",            false, 0,            KT_QUERY               },   // 32-bit
-                                                                                                        // integer
-                                                                                                        // overflow
+        // 32-bit integer overflow
+        {"KIll query 12345678901234567890",            false, 0,            KT_QUERY               },
         {"KIll query   \t    \n    \t   21  \n \t   ", true,  21,           KT_QUERY               },
         {"KIll   \t    \n    \t   -6  \n \t   ",       false, 0,            KT_CONNECTION          },
         {"KIll 12345678901234567890123456  \n \t   ",  false, 0,            KT_CONNECTION          },
@@ -114,11 +117,7 @@ int main(int argc, char** argv)
         uint64_t expected_tid = tests[i].correct_id;
         int expected_kt = tests[i].correct_kt;
         std::string expected_user = tests[i].correct_user ? tests[i].correct_user : "";
-        result += test_one_query(query,
-                                 should_succeed,
-                                 expected_tid,
-                                 expected_kt,
-                                 expected_user);
+        result += test_one_query(query, should_succeed, expected_tid, expected_kt, expected_user);
     }
     return result;
 }

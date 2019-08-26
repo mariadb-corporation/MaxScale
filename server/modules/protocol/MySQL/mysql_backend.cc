@@ -109,7 +109,7 @@ bool is_error_response(GWBUF* buffer)
  * @param dcb Backend DCB where authentication failed
  * @param buffer Buffer containing the response from the backend
  */
-static void handle_error_response(DCB* plain_dcb, GWBUF* buffer)
+void MySQLBackendProtocol::handle_error_response(DCB* plain_dcb, GWBUF* buffer)
 {
     mxb_assert(plain_dcb->role() == DCB::Role::BACKEND);
     BackendDCB* dcb = static_cast<BackendDCB*>(plain_dcb);
@@ -376,29 +376,30 @@ void MySQLBackendProtocol::gw_reply_on_error(DCB* dcb)
  * @param Backend DCB
  * @return True if session is ready for reply routing
  */
-static inline bool session_ok_to_route(DCB* dcb)
+bool MySQLBackendProtocol::session_ok_to_route(DCB* dcb)
 {
     bool rval = false;
-
-    if (dcb->session()->state() == MXS_SESSION::State::STARTED
-        && dcb->session()->client_dcb
-        && dcb->session()->client_dcb->state() == DCB::State::POLLING)
+    auto session = dcb->session();
+    if (session->state() == MXS_SESSION::State::STARTED)
     {
-        auto client_protocol =
-                static_cast<MySQLClientProtocol*>(dcb->session()->client_dcb->protocol_session());
-
-        if (client_protocol)
+        ClientDCB* client_dcb = session->client_dcb;
+        if (client_dcb && client_dcb->state() == DCB::State::POLLING)
         {
-            if (client_protocol->protocol_auth_state == MXS_AUTH_STATE_COMPLETE)
+            auto client_protocol = static_cast<MySQLClientProtocol*>(client_dcb->m_protocol.get());
+            if (client_protocol)
+            {
+                if (client_protocol->protocol_auth_state == MXS_AUTH_STATE_COMPLETE)
+                {
+                    rval = true;
+                }
+            }
+            else if (dcb->session()->client_dcb->role() == DCB::Role::INTERNAL)
             {
                 rval = true;
             }
         }
-        else if (dcb->session()->client_dcb->role() == DCB::Role::INTERNAL)
-        {
-            rval = true;
-        }
     }
+
 
     return rval;
 }
@@ -424,7 +425,7 @@ static inline bool expecting_ps_response(MySQLProtocol* proto)
     return proto->reply().command() == MXS_COM_STMT_PREPARE;
 }
 
-static inline bool complete_ps_response(GWBUF* buffer)
+bool MySQLBackendProtocol::complete_ps_response(GWBUF* buffer)
 {
     mxb_assert(GWBUF_IS_CONTIGUOUS(buffer));
     MXS_PS_RESPONSE resp;
@@ -483,7 +484,7 @@ static inline bool auth_change_requested(GWBUF* buf)
            && gwbuf_length(buf) > MYSQL_EOF_PACKET_LEN;
 }
 
-static bool handle_auth_change_response(GWBUF* reply, MySQLProtocol* proto, DCB* dcb)
+bool MySQLBackendProtocol::handle_auth_change_response(GWBUF* reply, DCB* dcb)
 {
     bool rval = false;
 
@@ -500,7 +501,7 @@ static bool handle_auth_change_response(GWBUF* reply, MySQLProtocol* proto, DCB*
         gwbuf_copy_data(reply,
                         5 + strlen(DEFAULT_MYSQL_AUTH_PLUGIN) + 1,
                         GW_MYSQL_SCRAMBLE_SIZE,
-                        proto->scramble);
+                        scramble);
 
         /// ... and use it to send the encrypted password to the server
         rval = send_mysql_native_password_response(dcb);
@@ -648,7 +649,7 @@ int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
     if (proto->changing_user)
     {
         if (auth_change_requested(read_buffer)
-            && handle_auth_change_response(read_buffer, proto, dcb))
+            && handle_auth_change_response(read_buffer, dcb))
         {
             gwbuf_free(read_buffer);
             return 0;
@@ -698,7 +699,7 @@ int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
         }
         else if (auth_change_requested(reply))
         {
-            if (handle_auth_change_response(reply, proto, dcb))
+            if (handle_auth_change_response(reply, dcb))
             {
                 /** Store the query until we know the result of the authentication
                  * method switch. */
