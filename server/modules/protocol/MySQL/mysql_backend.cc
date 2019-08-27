@@ -1783,3 +1783,24 @@ bool MySQLBackendProtocol::gw_read_backend_handshake(DCB* dcb, GWBUF* buffer)
 
     return rval;
 }
+
+/**
+ * Sends a response for an AuthSwitchRequest to the default auth plugin
+ */
+int MySQLBackendProtocol::send_mysql_native_password_response(DCB* dcb)
+{
+    auto proto = static_cast<MySQLClientProtocol*>(dcb->protocol_session());
+    MYSQL_session local_session;
+    gw_get_shared_session_auth_info(dcb, &local_session);
+
+    uint8_t* curr_passwd = memcmp(local_session.client_sha1, null_client_sha1, MYSQL_SCRAMBLE_LEN) ?
+                           local_session.client_sha1 : null_client_sha1;
+
+    GWBUF* buffer = gwbuf_alloc(MYSQL_HEADER_LEN + GW_MYSQL_SCRAMBLE_SIZE);
+    uint8_t* data = GWBUF_DATA(buffer);
+    gw_mysql_set_byte3(data, GW_MYSQL_SCRAMBLE_SIZE);
+    data[3] = 2;    // This is the third packet after the COM_CHANGE_USER
+    mxs_mysql_calculate_hash(proto->scramble, curr_passwd, data + MYSQL_HEADER_LEN);
+
+    return dcb->writeq_append(buffer);
+}

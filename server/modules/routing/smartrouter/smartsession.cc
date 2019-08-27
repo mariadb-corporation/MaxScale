@@ -468,7 +468,8 @@ bool SmartRouterSession::write_split_packets(GWBUF* pBuf)
 
 void SmartRouterSession::kill_all_others(const Cluster& cluster)
 {
-    mxs_mysql_execute_kill(m_pSession, m_pSession->id(), KT_QUERY);
+    auto protocol = static_cast<MySQLClientProtocol*>(m_pClient_dcb->protocol_session());
+    protocol->mxs_mysql_execute_kill(m_pSession, m_pSession->id(), KT_QUERY);
 }
 
 bool SmartRouterSession::handleError(GWBUF* pPacket, mxs::Endpoint* pProblem, const mxs::Reply& pReply)

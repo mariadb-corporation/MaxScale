@@ -462,6 +462,7 @@ public:
                             mxs::Component* component) override;
     static bool parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* kt_out,
                                  std::string* user_out);
+    void mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t target_id, kill_type_t type);
 
 private:
     int            perform_authentication(DCB* generic_dcb, GWBUF* read_buffer, int nbytes_read);
@@ -481,6 +482,9 @@ private:
     char*          handle_variables(MXS_SESSION* session, GWBUF** read_buffer);
     void           track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf);
     void           parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data);
+    void           mxs_mysql_execute_kill_all_others(MXS_SESSION* issuer, uint64_t target_id,
+                                                     uint64_t keep_protocol_thread_id, kill_type_t type);
+    void           mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_type_t type);
 };
 
 class MySQLBackendProtocol : public MySQLProtocol, public mxs::BackendProtocol
@@ -526,6 +530,7 @@ private:
     bool             session_ok_to_route(DCB* dcb);
     bool             complete_ps_response(GWBUF* buffer);
     bool             handle_auth_change_response(GWBUF* reply, DCB* dcb);
+    int              send_mysql_native_password_response(DCB* dcb);
 
     int  m_ignore_replies {0};          /*< How many replies should be discarded */
     bool m_collect_result {false};      /*< Collect the next result set as one buffer */
@@ -638,9 +643,6 @@ GWBUF* gw_generate_auth_response(MYSQL_session* client,
                                  bool with_ssl,
                                  bool ssl_established,
                                  uint64_t service_capabilities);
-
-/** Sends a response for an AuthSwitchRequest to the default auth plugin */
-int send_mysql_native_password_response(DCB* dcb);
 
 /** Write an OK packet to a DCB */
 int mxs_mysql_send_ok(DCB* dcb, int sequence, uint8_t affected_rows, const char* message);
@@ -811,16 +813,13 @@ uint32_t mxs_mysql_extract_ps_id(GWBUF* buffer);
  */
 bool mxs_mysql_command_will_respond(uint8_t cmd);
 
-void mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t target_id, kill_type_t type);
-
-/** Send KILL to all but the keep_protocol_thread_id. If keep_protocol_thread_id==0, kill all.
- *  TODO: The naming: issuer, target_id, protocol_thread_id is not very descriptive,
- *        and really goes to the heart of explaining what the session_id/thread_id means in terms
- *        of a service/server pipeline and the recursiveness of this call.
+/**
+ * Calculates the a hash from a scramble and a password
+ *
+ * The algorithm used is: `SHA1(scramble + SHA1(SHA1(password))) ^ SHA1(password)`
+ *
+ * @param scramble The 20 byte scramble sent by the server
+ * @param passwd   The SHA1(password) sent by the client
+ * @param output   Pointer where the resulting 20 byte hash is stored
  */
-void mxs_mysql_execute_kill_all_others(MXS_SESSION* issuer,
-                                       uint64_t target_id,
-                                       uint64_t keep_protocol_thread_id,
-                                       kill_type_t type);
-
-void mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_type_t type);
+void mxs_mysql_calculate_hash(uint8_t* scramble, uint8_t* passwd, uint8_t* output);
