@@ -982,6 +982,9 @@ add_test_executable(mxs2609_history_replay.cpp mxs2609_history_replay mxs2609_hi
 # MXS-2621: Incorrect SQL if lower_case_table_names is used.
 add_test_executable(mxs2621_lower_case_tables.cpp mxs2621_lower_case_tables mxs2621_lower_case_tables LABELS REPL_BACKEND)
 
+# MXS-2631: Duplicate system tables not ignored
+add_test_executable(mxs2631_ignore_system_tables.cpp mxs2631_ignore_system_tables mxs2631_ignore_system_tables LABELS schemarouter BREAKS_REPL REPL_BACKEND)
+
 ############################################
 # END: Normal tests                        #
 ############################################
