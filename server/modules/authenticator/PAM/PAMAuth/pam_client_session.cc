@@ -62,15 +62,15 @@ bool store_client_password(DCB* dcb, GWBUF* buffer)
 int user_services_cb(void* data, int columns, char** column_vals, char** column_names)
 {
     mxb_assert(columns == 1);
-    PamClientSession::StringVector* results = static_cast<PamClientSession::StringVector*>(data);
+    auto results = static_cast<PamClientSession::StringSet*>(data);
     if (column_vals[0])
     {
-        results->push_back(column_vals[0]);
+        results->insert(column_vals[0]);
     }
     else
     {
         // Empty is a valid value.
-        results->push_back("");
+        results->insert("");
     }
     return 0;
 }
@@ -302,7 +302,7 @@ PamClientSession* PamClientSession::create(const PamInstance& inst)
  * @param services_out Output for services
  */
 void PamClientSession::get_pam_user_services(const DCB* dcb, const MYSQL_session* session,
-                                             StringVector* services_out)
+                                             StringSet* services_out)
 {
     string services_query = string("SELECT authentication_string FROM ") + m_instance.m_tablename + " WHERE "
         + FIELD_USER + " = '" + session->user + "'"
@@ -430,13 +430,13 @@ int PamClientSession::authenticate(DCB* dcb)
              * check is useless if the user services are same as on the first attempt.
              */
             bool authenticated = false;
-            StringVector services_old;
+            StringSet services_old;
             for (int loop = 0; loop < 2 && !authenticated; loop++)
             {
                 if (loop == 0 || service_refresh_users(dcb->service) == 0)
                 {
                     bool try_validate = true;
-                    StringVector services;
+                    StringSet services;
                     get_pam_user_services(dcb, ses, &services);
                     if (loop == 0)
                     {
@@ -448,17 +448,16 @@ int PamClientSession::authenticate(DCB* dcb)
                     }
                     if (try_validate)
                     {
-                        for (StringVector::iterator iter = services.begin();
-                             iter != services.end() && !authenticated;
-                             iter++)
+                        for (auto iter = services.begin(); iter != services.end() && !authenticated; ++iter)
                         {
+                            string pam_service = *iter;
                             // The server PAM plugin uses "mysql" as the default service when authenticating
                             // a user with no service.
-                            if (iter->empty())
+                            if (pam_service.empty())
                             {
-                                *iter = "mysql";
+                                pam_service = "mysql";
                             }
-                            if (validate_pam_password(ses->user, password, *iter, dcb->remote))
+                            if (validate_pam_password(ses->user, password, pam_service, dcb->remote))
                             {
                                 authenticated = true;
                             }

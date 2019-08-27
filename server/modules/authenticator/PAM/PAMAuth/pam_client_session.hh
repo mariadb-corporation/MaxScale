@@ -15,7 +15,7 @@
 
 #include <stdint.h>
 #include <string>
-#include <vector>
+#include <set>
 #include <maxscale/sqlite3.h>
 #include "pam_instance.hh"
 #include "../pam_auth_common.hh"
@@ -26,14 +26,14 @@ class PamClientSession
     PamClientSession(const PamClientSession& orig);
     PamClientSession& operator=(const PamClientSession&);
 public:
-    typedef std::vector<std::string> StringVector;
+    using StringSet = std::set<std::string>;
     static PamClientSession* create(const PamInstance& inst);
     ~PamClientSession();
     int  authenticate(DCB* client);
     bool extract(DCB* dcb, GWBUF* read_buffer);
 private:
     PamClientSession(sqlite3* dbhandle, const PamInstance& instance);
-    void get_pam_user_services(const DCB* dcb, const MYSQL_session* session, StringVector* services_out);
+    void get_pam_user_services(const DCB* dcb, const MYSQL_session* session, StringSet* services_out);
     maxscale::Buffer create_auth_change_packet() const;
 
     enum class State
