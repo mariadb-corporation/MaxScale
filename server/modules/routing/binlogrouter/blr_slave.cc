@@ -4852,24 +4852,24 @@ static void blr_master_get_config(ROUTER_INSTANCE* router, MasterServerConfig* c
     /* SSL options */
     auto server_ssl = router->service->dbref->server->ssl().config();
 
-    if (!server_ssl.empty())
+    if (server_ssl && !server_ssl->empty())
     {
         curr_master->ssl_enabled = router->ssl_enabled;
         if (router->ssl_version)
         {
             curr_master->ssl_version = router->ssl_version;
         }
-        if (!server_ssl.key.empty())
+        if (!server_ssl->key.empty())
         {
-            curr_master->ssl_key = server_ssl.key;
+            curr_master->ssl_key = server_ssl->key;
         }
-        if (!server_ssl.cert.empty())
+        if (!server_ssl->cert.empty())
         {
-            curr_master->ssl_cert = server_ssl.cert;
+            curr_master->ssl_cert = server_ssl->cert;
         }
-        if (!server_ssl.ca.empty())
+        if (!server_ssl->ca.empty())
         {
-            curr_master->ssl_ca = server_ssl.ca;
+            curr_master->ssl_ca = server_ssl->ca;
         }
     }
     /* Connect options */

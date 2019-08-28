@@ -77,6 +77,9 @@ struct SSLConfig
         return ca.empty();
     }
 
+    // Convert to human readable string representation
+    std::string to_string() const;
+
     std::string       key;                              /**< SSL private key */
     std::string       cert;                             /**< SSL certificate */
     std::string       ca;                               /**< SSL CA certificate */
@@ -144,20 +147,16 @@ public:
         return m_context.get();
     }
 
-    // Current configuration
-    const mxs::SSLConfig& config() const;
+    // Current configuration, or null if none is set.
+    const mxs::SSLConfig* config() const;
 
     // The context or nullptr if no context is set
     mxs::SSLContext* context() const;
-
-    // Convert to human readable string representation
-    std::string to_string() const;
 
     // NOTE: Do not use this, required by binlogrouter
     void set_context(std::unique_ptr<mxs::SSLContext> ssl);
 
 private:
     std::unique_ptr<mxs::SSLContext> m_context;     /**< SSL context */
-    mxs::SSLConfig                   m_config;      /**< SSL configuration */
 };
 }

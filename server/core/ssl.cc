@@ -374,29 +374,28 @@ mxs::SSLContext* SSLProvider::context() const
     return m_context.get();
 }
 
-const mxs::SSLConfig& SSLProvider::config() const
+const mxs::SSLConfig* SSLProvider::config() const
 {
-    return m_config;
+    return m_context ? &(m_context->config()) : nullptr;
 }
 
 void SSLProvider::set_context(std::unique_ptr<mxs::SSLContext> ssl)
 {
     mxb_assert(ssl);
     m_context = std::move(ssl);
-    m_config = m_context->config();
 }
 
-std::string SSLProvider::to_string() const
+std::string SSLConfig::to_string() const
 {
     std::ostringstream ss;
 
     ss << "\tSSL initialized:                     yes\n"
-       << "\tSSL method type:                     " << ssl_method_type_to_string(m_config.version) << "\n"
-       << "\tSSL certificate verification depth:  " << m_config.verify_depth << "\n"
-       << "\tSSL peer verification :              " << (m_config.verify_peer ? "true" : "false") << "\n"
-       << "\tSSL certificate:                     " << m_config.cert << "\n"
-       << "\tSSL key:                             " << m_config.key << "\n"
-       << "\tSSL CA certificate:                  " << m_config.ca << "\n";
+       << "\tSSL method type:                     " << ssl_method_type_to_string(version) << "\n"
+       << "\tSSL certificate verification depth:  " << verify_depth << "\n"
+       << "\tSSL peer verification :              " << (verify_peer ? "true" : "false") << "\n"
+       << "\tSSL certificate:                     " << cert << "\n"
+       << "\tSSL key:                             " << key << "\n"
+       << "\tSSL CA certificate:                  " << ca << "\n";
 
     return ss.str();
 }

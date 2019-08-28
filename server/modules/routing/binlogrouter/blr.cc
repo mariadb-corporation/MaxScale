@@ -1481,7 +1481,7 @@ static void diagnostics(MXS_ROUTER* router, DCB* dcb)
 
     if (ssl.enabled())
     {
-        dcb_printf(dcb, "%s", ssl.to_string().c_str());
+        dcb_printf(dcb, "%s", ssl.config()->to_string().c_str());
     }
 
     /* Binlog Encryption options */

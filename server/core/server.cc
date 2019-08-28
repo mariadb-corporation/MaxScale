@@ -527,7 +527,7 @@ void Server::print_to_dcb(DCB* dcb) const
     }
     if (server->ssl().enabled())
     {
-        dcb_printf(dcb, "%s", server->ssl().to_string().c_str());
+        dcb_printf(dcb, "%s", server->ssl().config()->to_string().c_str());
     }
     if (server->proxy_protocol)
     {

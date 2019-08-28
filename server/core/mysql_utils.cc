@@ -36,10 +36,14 @@
 MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, const char* user, const char* passwd)
 {
     auto ssl = server->ssl().config();
-
-    if (!ssl.empty())
+    bool have_ssl = ssl && !ssl->empty();
+    if (have_ssl)
     {
-        mysql_ssl_set(con, ssl.key.c_str(), ssl.cert.c_str(), ssl.ca.c_str(), NULL, NULL);
+        // If an option is empty, a null-pointer should be given to mysql_ssl_set.
+        const char* ssl_key = ssl->key.empty() ? nullptr : ssl->key.c_str();
+        const char* ssl_cert = ssl->cert.empty() ? nullptr : ssl->cert.c_str();
+        const char* ssl_ca = ssl->ca.empty() ? nullptr : ssl->ca.c_str();
+        mysql_ssl_set(con, ssl_key, ssl_cert, ssl_ca, NULL, NULL);
     }
 
     char yes = 1;
@@ -84,7 +88,7 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, const char* user, cons
         mysql_get_character_set_info(mysql, &cs_info);
         server->charset = cs_info.number;
 
-        if (!ssl.empty() && mysql_get_ssl_cipher(con) == NULL)
+        if (have_ssl && mysql_get_ssl_cipher(con) == NULL)
         {
             if (server->warn_ssl_not_enabled)
             {
