@@ -883,7 +883,7 @@ private:
     friend Type;
 
     void insert(Type* pValue);
-    void remove(Type* pValue);
+    void remove(Type* pValue, const std::string& name);
 
 private:
     std::string          m_name;
@@ -946,8 +946,9 @@ protected:
     Type(Configuration* pConfiguration, const Param* pParam);
 
 private:
-    Configuration& m_configuration;
-    const Param&   m_param;
+    Configuration&    m_configuration;
+    const Param&      m_param;
+    const std::string m_name;
 };
 
 /**
