@@ -40,10 +40,6 @@ Config::Config(MXS_CONFIG_PARAMETER* conf)
         ignore_match_data = pcre2_match_data_create_from_pattern(ignore_regex, NULL);
     }
 
-    ignored_dbs.insert("mysql");
-    ignored_dbs.insert("information_schema");
-    ignored_dbs.insert("performance_schema");
-
     std::string ignored_dbs_str = conf->get_string(CN_IGNORE_TABLES);
     if (ignored_dbs_str.empty())
     {
@@ -59,7 +55,7 @@ Config::Config(MXS_CONFIG_PARAMETER* conf)
     {
         for (const auto& a : mxs::strtok(ignored_dbs_str, ", \t"))
         {
-            ignored_dbs.insert(a);
+            ignored_tables.insert(a);
         }
     }
 }
