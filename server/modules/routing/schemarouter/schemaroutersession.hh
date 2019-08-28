@@ -129,7 +129,7 @@ private:
     bool       get_shard_dcb(DCB** dcb, const char* name);
     bool       have_servers();
     bool       handle_default_db();
-    bool       ignore_duplicate_database(const char* data);
+    bool       ignore_duplicate_table(const std::string& data);
     SERVER*    get_query_target(GWBUF* buffer);
     SERVER*    get_ps_target(GWBUF* buffer, uint32_t qtype, qc_query_op_t op);
 

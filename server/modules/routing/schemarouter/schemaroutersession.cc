@@ -1194,11 +1194,12 @@ char* get_lenenc_str(void* data)
 
 static const std::set<std::string> always_ignore = {"mysql", "information_schema", "performance_schema"};
 
-bool SchemaRouterSession::ignore_duplicate_database(const char* data)
+bool SchemaRouterSession::ignore_duplicate_table(const std::string& data)
 {
     bool rval = false;
 
-    if (m_config->ignored_dbs.count(data) || always_ignore.count(data))
+    std::string db = data.substr(0, data.find("."));
+    if (m_config->ignored_tables.count(data) || always_ignore.count(db))
     {
         rval = true;
     }
@@ -1212,7 +1213,7 @@ bool SchemaRouterSession::ignore_duplicate_database(const char* data)
         }
 
         if (pcre2_match(m_config->ignore_regex,
-                        (PCRE2_SPTR) data,
+                        (PCRE2_SPTR) data.c_str(),
                         PCRE2_ZERO_TERMINATED,
                         0,
                         0,
@@ -1304,7 +1305,7 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SSRBackend& bre
             }
             else
             {
-                if (!ignore_duplicate_database(data))
+                if (strchr(data, '.') != NULL && !ignore_duplicate_table(std::string(data)))
                 {
                     duplicate_found = true;
                     SERVER* duplicate = m_shard.get_location(data);

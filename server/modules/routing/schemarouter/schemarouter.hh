@@ -49,9 +49,9 @@ struct Config
     bool refresh_databases;                 /**< Are databases refreshed when
                                              * they are not found in the hashtable */
     bool                  debug;            /**< Enable verbose debug messages to clients */
-    pcre2_code*           ignore_regex;     /**< Regular expression used to ignore databases */
+    pcre2_code*           ignore_regex;     /**< Regular expression used to ignore tables */
     pcre2_match_data*     ignore_match_data;/**< Match data for @c ignore_regex */
-    std::set<std::string> ignored_dbs;      /**< Set of ignored databases */
+    std::set<std::string> ignored_tables;      /**< Set of ignored tables */
     SERVER*               preferred_server; /**< Server to prefer in conflict situations */
 
     Config(MXS_CONFIG_PARAMETER* conf);
