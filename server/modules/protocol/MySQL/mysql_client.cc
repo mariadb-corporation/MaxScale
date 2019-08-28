@@ -156,187 +156,6 @@ bool ssl_required_but_not_negotiated(DCB* dcb)
 }
 
 /**
- * send_mysql_client_handshake
- *
- * @param dcb The descriptor control block to use for sending the handshake request
- * @return      The packet length sent
- */
-int send_mysql_client_handshake(DCB* dcb, MySQLProtocol* protocol)
-{
-    uint8_t* outbuf = NULL;
-    uint32_t mysql_payload_size = 0;
-    uint8_t mysql_packet_header[4];
-    uint8_t mysql_packet_id = 0;
-    /* uint8_t mysql_filler = GW_MYSQL_HANDSHAKE_FILLER; not needed*/
-    uint8_t mysql_protocol_version = GW_MYSQL_PROTOCOL_VERSION;
-    uint8_t* mysql_handshake_payload = NULL;
-    uint8_t mysql_thread_id_num[4];
-    uint8_t mysql_scramble_buf[9] = "";
-    uint8_t mysql_plugin_data[13] = "";
-    uint8_t mysql_server_capabilities_one[2];
-    uint8_t mysql_server_capabilities_two[2];
-    uint8_t mysql_server_language = get_charset(dcb->service());
-    uint8_t mysql_server_status[2];
-    uint8_t mysql_scramble_len = 21;
-    uint8_t mysql_filler_ten[10] = {};
-    /* uint8_t mysql_last_byte = 0x00; not needed */
-    char server_scramble[GW_MYSQL_SCRAMBLE_SIZE + 1] = "";
-    bool is_maria = supports_extended_caps(dcb->service());
-
-    GWBUF* buf;
-    std::string version = get_version_string(dcb->service());
-
-    gw_generate_random_str(server_scramble, GW_MYSQL_SCRAMBLE_SIZE);
-
-    // copy back to the caller
-    memcpy(protocol->scramble, server_scramble, GW_MYSQL_SCRAMBLE_SIZE);
-
-    if (is_maria)
-    {
-        /**
-         * The new 10.2 capability flags are stored in the last 4 bytes of the
-         * 10 byte filler block.
-         */
-        uint32_t new_flags = MXS_MARIA_CAP_STMT_BULK_OPERATIONS;
-        memcpy(mysql_filler_ten + 6, &new_flags, sizeof(new_flags));
-    }
-
-    // Get the equivalent of the server thread id.
-    protocol->thread_id = dcb->session()->id();
-    // Send only the low 32bits in the handshake.
-    gw_mysql_set_byte4(mysql_thread_id_num, (uint32_t)(protocol->thread_id));
-    memcpy(mysql_scramble_buf, server_scramble, 8);
-
-    memcpy(mysql_plugin_data, server_scramble + 8, 12);
-
-    /**
-     * Use the default authentication plugin name in the initial handshake. If the
-     * authenticator needs to change the authentication method, it should send
-     * an AuthSwitchRequest packet to the client.
-     */
-    const char* plugin_name = DEFAULT_MYSQL_AUTH_PLUGIN;
-    int plugin_name_len = strlen(plugin_name);
-
-    mysql_payload_size =
-        sizeof(mysql_protocol_version) + (version.length() + 1) + sizeof(mysql_thread_id_num) + 8
-        + sizeof(    /* mysql_filler */ uint8_t) + sizeof(mysql_server_capabilities_one)
-        + sizeof(mysql_server_language)
-        + sizeof(mysql_server_status) + sizeof(mysql_server_capabilities_two) + sizeof(mysql_scramble_len)
-        + sizeof(mysql_filler_ten) + 12 + sizeof(    /* mysql_last_byte */ uint8_t) + plugin_name_len
-        + sizeof(    /* mysql_last_byte */ uint8_t);
-
-    // allocate memory for packet header + payload
-    if ((buf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size)) == NULL)
-    {
-        mxb_assert(buf != NULL);
-        return 0;
-    }
-    outbuf = GWBUF_DATA(buf);
-
-    // write packet header with mysql_payload_size
-    gw_mysql_set_byte3(mysql_packet_header, mysql_payload_size);
-
-    // write packet number, now is 0
-    mysql_packet_header[3] = mysql_packet_id;
-    memcpy(outbuf, mysql_packet_header, sizeof(mysql_packet_header));
-
-    // current buffer pointer
-    mysql_handshake_payload = outbuf + sizeof(mysql_packet_header);
-
-    // write protocol version
-    memcpy(mysql_handshake_payload, &mysql_protocol_version, sizeof(mysql_protocol_version));
-    mysql_handshake_payload = mysql_handshake_payload + sizeof(mysql_protocol_version);
-
-    // write server version plus 0 filler
-    strcpy((char*)mysql_handshake_payload, version.c_str());
-    mysql_handshake_payload = mysql_handshake_payload + version.length();
-
-    *mysql_handshake_payload = 0x00;
-
-    mysql_handshake_payload++;
-
-    // write thread id
-    memcpy(mysql_handshake_payload, mysql_thread_id_num, sizeof(mysql_thread_id_num));
-    mysql_handshake_payload = mysql_handshake_payload + sizeof(mysql_thread_id_num);
-
-    // write scramble buf
-    memcpy(mysql_handshake_payload, mysql_scramble_buf, 8);
-    mysql_handshake_payload = mysql_handshake_payload + 8;
-    *mysql_handshake_payload = GW_MYSQL_HANDSHAKE_FILLER;
-    mysql_handshake_payload++;
-
-    // write server capabilities part one
-    mysql_server_capabilities_one[0] = (uint8_t)GW_MYSQL_CAPABILITIES_SERVER;
-    mysql_server_capabilities_one[1] = (uint8_t)(GW_MYSQL_CAPABILITIES_SERVER >> 8);
-
-    if (is_maria)
-    {
-        /** A MariaDB 10.2 server doesn't send the CLIENT_MYSQL capability
-         * to signal that it supports extended capabilities */
-        mysql_server_capabilities_one[0] &= ~(uint8_t)GW_MYSQL_CAPABILITIES_CLIENT_MYSQL;
-    }
-
-    if (ssl_required_by_dcb(dcb))
-    {
-        mysql_server_capabilities_one[1] |= (int)GW_MYSQL_CAPABILITIES_SSL >> 8;
-    }
-
-    memcpy(mysql_handshake_payload, mysql_server_capabilities_one, sizeof(mysql_server_capabilities_one));
-    mysql_handshake_payload = mysql_handshake_payload + sizeof(mysql_server_capabilities_one);
-
-    // write server language
-    memcpy(mysql_handshake_payload, &mysql_server_language, sizeof(mysql_server_language));
-    mysql_handshake_payload = mysql_handshake_payload + sizeof(mysql_server_language);
-
-    // write server status
-    mysql_server_status[0] = 2;
-    mysql_server_status[1] = 0;
-    memcpy(mysql_handshake_payload, mysql_server_status, sizeof(mysql_server_status));
-    mysql_handshake_payload = mysql_handshake_payload + sizeof(mysql_server_status);
-
-    // write server capabilities part two
-    mysql_server_capabilities_two[0] = (uint8_t)(GW_MYSQL_CAPABILITIES_SERVER >> 16);
-    mysql_server_capabilities_two[1] = (uint8_t)(GW_MYSQL_CAPABILITIES_SERVER >> 24);
-
-    // Check that we match the old values
-    mxb_assert(mysql_server_capabilities_two[0] == 15);
-    /** NOTE: pre-2.1 versions sent the fourth byte of the capabilities as
-     *  the value 128 even though there's no such capability. */
-
-    memcpy(mysql_handshake_payload, mysql_server_capabilities_two, sizeof(mysql_server_capabilities_two));
-    mysql_handshake_payload = mysql_handshake_payload + sizeof(mysql_server_capabilities_two);
-
-    // write scramble_len
-    memcpy(mysql_handshake_payload, &mysql_scramble_len, sizeof(mysql_scramble_len));
-    mysql_handshake_payload = mysql_handshake_payload + sizeof(mysql_scramble_len);
-
-    // write 10 filler
-    memcpy(mysql_handshake_payload, mysql_filler_ten, sizeof(mysql_filler_ten));
-    mysql_handshake_payload = mysql_handshake_payload + sizeof(mysql_filler_ten);
-
-    // write plugin data
-    memcpy(mysql_handshake_payload, mysql_plugin_data, 12);
-    mysql_handshake_payload = mysql_handshake_payload + 12;
-
-    // write last byte, 0
-    *mysql_handshake_payload = 0x00;
-    mysql_handshake_payload++;
-
-    // to be understanded ????
-    memcpy(mysql_handshake_payload, plugin_name, plugin_name_len);
-    mysql_handshake_payload = mysql_handshake_payload + plugin_name_len;
-
-    // write last byte, 0
-    *mysql_handshake_payload = 0x00;
-
-    // writing data in the Client buffer queue
-    dcb->protocol_write(buf);
-    protocol->protocol_auth_state = MXS_AUTH_STATE_MESSAGE_READ;
-
-    return sizeof(mysql_packet_header) + mysql_payload_size;
-}
-
-/**
  * Get length of a null-terminated string
  *
  * @param str String to measure
@@ -688,6 +507,188 @@ static void worker_func(int thread_id, void* data)
 }
 }
 
+/**
+ * send_mysql_client_handshake
+ *
+ * @param dcb The descriptor control block to use for sending the handshake request
+ * @return      The packet length sent
+ */
+int MySQLClientProtocol::send_mysql_client_handshake(DCB* dcb)
+{
+    auto protocol = this;
+
+    uint8_t* outbuf = NULL;
+    uint32_t mysql_payload_size = 0;
+    uint8_t mysql_packet_header[4];
+    uint8_t mysql_packet_id = 0;
+    /* uint8_t mysql_filler = GW_MYSQL_HANDSHAKE_FILLER; not needed*/
+    uint8_t mysql_protocol_version = GW_MYSQL_PROTOCOL_VERSION;
+    uint8_t* mysql_handshake_payload = NULL;
+    uint8_t mysql_thread_id_num[4];
+    uint8_t mysql_scramble_buf[9] = "";
+    uint8_t mysql_plugin_data[13] = "";
+    uint8_t mysql_server_capabilities_one[2];
+    uint8_t mysql_server_capabilities_two[2];
+    uint8_t mysql_server_language = get_charset(dcb->service());
+    uint8_t mysql_server_status[2];
+    uint8_t mysql_scramble_len = 21;
+    uint8_t mysql_filler_ten[10] = {};
+    /* uint8_t mysql_last_byte = 0x00; not needed */
+    char server_scramble[GW_MYSQL_SCRAMBLE_SIZE + 1] = "";
+    bool is_maria = supports_extended_caps(dcb->service());
+
+    GWBUF* buf;
+    std::string version = get_version_string(dcb->service());
+
+    gw_generate_random_str(server_scramble, GW_MYSQL_SCRAMBLE_SIZE);
+
+    // copy back to the caller
+    memcpy(protocol->scramble, server_scramble, GW_MYSQL_SCRAMBLE_SIZE);
+
+    if (is_maria)
+    {
+        /**
+         * The new 10.2 capability flags are stored in the last 4 bytes of the
+         * 10 byte filler block.
+         */
+        uint32_t new_flags = MXS_MARIA_CAP_STMT_BULK_OPERATIONS;
+        memcpy(mysql_filler_ten + 6, &new_flags, sizeof(new_flags));
+    }
+
+    // Get the equivalent of the server thread id.
+    protocol->thread_id = dcb->session()->id();
+    // Send only the low 32bits in the handshake.
+    gw_mysql_set_byte4(mysql_thread_id_num, (uint32_t)(protocol->thread_id));
+    memcpy(mysql_scramble_buf, server_scramble, 8);
+
+    memcpy(mysql_plugin_data, server_scramble + 8, 12);
+
+    /**
+     * Use the default authentication plugin name in the initial handshake. If the
+     * authenticator needs to change the authentication method, it should send
+     * an AuthSwitchRequest packet to the client.
+     */
+    const char* plugin_name = DEFAULT_MYSQL_AUTH_PLUGIN;
+    int plugin_name_len = strlen(plugin_name);
+
+    mysql_payload_size =
+            sizeof(mysql_protocol_version) + (version.length() + 1) + sizeof(mysql_thread_id_num) + 8
+            + sizeof(    /* mysql_filler */ uint8_t) + sizeof(mysql_server_capabilities_one)
+            + sizeof(mysql_server_language)
+            + sizeof(mysql_server_status) + sizeof(mysql_server_capabilities_two) + sizeof(mysql_scramble_len)
+            + sizeof(mysql_filler_ten) + 12 + sizeof(    /* mysql_last_byte */ uint8_t) + plugin_name_len
+            + sizeof(    /* mysql_last_byte */ uint8_t);
+
+    // allocate memory for packet header + payload
+    if ((buf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size)) == NULL)
+    {
+        mxb_assert(buf != NULL);
+        return 0;
+    }
+    outbuf = GWBUF_DATA(buf);
+
+    // write packet header with mysql_payload_size
+    gw_mysql_set_byte3(mysql_packet_header, mysql_payload_size);
+
+    // write packet number, now is 0
+    mysql_packet_header[3] = mysql_packet_id;
+    memcpy(outbuf, mysql_packet_header, sizeof(mysql_packet_header));
+
+    // current buffer pointer
+    mysql_handshake_payload = outbuf + sizeof(mysql_packet_header);
+
+    // write protocol version
+    memcpy(mysql_handshake_payload, &mysql_protocol_version, sizeof(mysql_protocol_version));
+    mysql_handshake_payload = mysql_handshake_payload + sizeof(mysql_protocol_version);
+
+    // write server version plus 0 filler
+    strcpy((char*)mysql_handshake_payload, version.c_str());
+    mysql_handshake_payload = mysql_handshake_payload + version.length();
+
+    *mysql_handshake_payload = 0x00;
+
+    mysql_handshake_payload++;
+
+    // write thread id
+    memcpy(mysql_handshake_payload, mysql_thread_id_num, sizeof(mysql_thread_id_num));
+    mysql_handshake_payload = mysql_handshake_payload + sizeof(mysql_thread_id_num);
+
+    // write scramble buf
+    memcpy(mysql_handshake_payload, mysql_scramble_buf, 8);
+    mysql_handshake_payload = mysql_handshake_payload + 8;
+    *mysql_handshake_payload = GW_MYSQL_HANDSHAKE_FILLER;
+    mysql_handshake_payload++;
+
+    // write server capabilities part one
+    mysql_server_capabilities_one[0] = (uint8_t)GW_MYSQL_CAPABILITIES_SERVER;
+    mysql_server_capabilities_one[1] = (uint8_t)(GW_MYSQL_CAPABILITIES_SERVER >> 8);
+
+    if (is_maria)
+    {
+        /** A MariaDB 10.2 server doesn't send the CLIENT_MYSQL capability
+         * to signal that it supports extended capabilities */
+        mysql_server_capabilities_one[0] &= ~(uint8_t)GW_MYSQL_CAPABILITIES_CLIENT_MYSQL;
+    }
+
+    if (ssl_required_by_dcb(dcb))
+    {
+        mysql_server_capabilities_one[1] |= (int)GW_MYSQL_CAPABILITIES_SSL >> 8;
+    }
+
+    memcpy(mysql_handshake_payload, mysql_server_capabilities_one, sizeof(mysql_server_capabilities_one));
+    mysql_handshake_payload = mysql_handshake_payload + sizeof(mysql_server_capabilities_one);
+
+    // write server language
+    memcpy(mysql_handshake_payload, &mysql_server_language, sizeof(mysql_server_language));
+    mysql_handshake_payload = mysql_handshake_payload + sizeof(mysql_server_language);
+
+    // write server status
+    mysql_server_status[0] = 2;
+    mysql_server_status[1] = 0;
+    memcpy(mysql_handshake_payload, mysql_server_status, sizeof(mysql_server_status));
+    mysql_handshake_payload = mysql_handshake_payload + sizeof(mysql_server_status);
+
+    // write server capabilities part two
+    mysql_server_capabilities_two[0] = (uint8_t)(GW_MYSQL_CAPABILITIES_SERVER >> 16);
+    mysql_server_capabilities_two[1] = (uint8_t)(GW_MYSQL_CAPABILITIES_SERVER >> 24);
+
+    // Check that we match the old values
+    mxb_assert(mysql_server_capabilities_two[0] == 15);
+    /** NOTE: pre-2.1 versions sent the fourth byte of the capabilities as
+     *  the value 128 even though there's no such capability. */
+
+    memcpy(mysql_handshake_payload, mysql_server_capabilities_two, sizeof(mysql_server_capabilities_two));
+    mysql_handshake_payload = mysql_handshake_payload + sizeof(mysql_server_capabilities_two);
+
+    // write scramble_len
+    memcpy(mysql_handshake_payload, &mysql_scramble_len, sizeof(mysql_scramble_len));
+    mysql_handshake_payload = mysql_handshake_payload + sizeof(mysql_scramble_len);
+
+    // write 10 filler
+    memcpy(mysql_handshake_payload, mysql_filler_ten, sizeof(mysql_filler_ten));
+    mysql_handshake_payload = mysql_handshake_payload + sizeof(mysql_filler_ten);
+
+    // write plugin data
+    memcpy(mysql_handshake_payload, mysql_plugin_data, 12);
+    mysql_handshake_payload = mysql_handshake_payload + 12;
+
+    // write last byte, 0
+    *mysql_handshake_payload = 0x00;
+    mysql_handshake_payload++;
+
+    // to be understanded ????
+    memcpy(mysql_handshake_payload, plugin_name, plugin_name_len);
+    mysql_handshake_payload = mysql_handshake_payload + plugin_name_len;
+
+    // write last byte, 0
+    *mysql_handshake_payload = 0x00;
+
+    // writing data in the Client buffer queue
+    dcb->protocol_write(buf);
+    protocol->protocol_auth_state = MXS_AUTH_STATE_MESSAGE_READ;
+
+    return sizeof(mysql_packet_header) + mysql_payload_size;
+}
 
 /**
  * @brief Store client connection information into the DCB
@@ -1968,7 +1969,7 @@ int32_t MySQLClientProtocol::hangup(DCB* generic_dcb)
 
 bool MySQLClientProtocol::init_connection(DCB* client_dcb)
 {
-    send_mysql_client_handshake(client_dcb, this);
+    send_mysql_client_handshake(client_dcb);
     return true;
 }
 

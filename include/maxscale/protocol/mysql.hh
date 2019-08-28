@@ -367,8 +367,6 @@ public:
     //
     // Legacy public members
     //
-    mxs_auth_state_t protocol_auth_state = MXS_AUTH_STATE_INIT;     /*< Authentication state */
-
     uint8_t  scramble[MYSQL_SCRAMBLE_LEN];  /*< server scramble, created or received */
     uint32_t server_capabilities = 0;       /*< server capabilities, created or received */
     uint32_t client_capabilities = 0;       /*< client capabilities, created or received */
@@ -464,6 +462,9 @@ public:
                                  std::string* user_out);
     void mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t target_id, kill_type_t type);
 
+    // TODO: move to private
+    mxs_auth_state_t protocol_auth_state {MXS_AUTH_STATE_INIT};   /*< Client authentication state */
+
 private:
     int            perform_authentication(DCB* generic_dcb, GWBUF* read_buffer, int nbytes_read);
     int            perform_normal_read(DCB* dcb, GWBUF* read_buffer, uint32_t nbytes_read);
@@ -479,6 +480,7 @@ private:
     int            mysql_send_standard_error(DCB* dcb, int sequence, int errnum, const char* msg);
     GWBUF*         mysql_create_standard_error(int sequence, int error_number, const char* msg);
     bool           send_auth_switch_request_packet(DCB* dcb);
+    int            send_mysql_client_handshake(DCB* dcb);
     char*          handle_variables(MXS_SESSION* session, GWBUF** read_buffer);
     void           track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf);
     void           parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data);
@@ -531,6 +533,10 @@ private:
     bool             complete_ps_response(GWBUF* buffer);
     bool             handle_auth_change_response(GWBUF* reply, DCB* dcb);
     int              send_mysql_native_password_response(DCB* dcb);
+    bool             expecting_text_result();
+    bool             expecting_ps_response();
+
+    mxs_auth_state_t       protocol_auth_state {MXS_AUTH_STATE_INIT};   /*< Backend authentication state */
 
     int  m_ignore_replies {0};          /*< How many replies should be discarded */
     bool m_collect_result {false};      /*< Collect the next result set as one buffer */

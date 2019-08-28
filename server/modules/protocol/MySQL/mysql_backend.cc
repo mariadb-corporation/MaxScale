@@ -404,7 +404,7 @@ bool MySQLBackendProtocol::session_ok_to_route(DCB* dcb)
     return rval;
 }
 
-static inline bool expecting_text_result(MySQLProtocol* proto)
+bool MySQLBackendProtocol::expecting_text_result()
 {
     /**
      * The addition of COM_STMT_FETCH to the list of commands that produce
@@ -416,13 +416,13 @@ static inline bool expecting_text_result(MySQLProtocol* proto)
      * TODO: Revisit this to make sure it's needed.
      */
 
-    uint8_t cmd = proto->reply().command();
+    uint8_t cmd = reply().command();
     return cmd == MXS_COM_QUERY || cmd == MXS_COM_STMT_EXECUTE || cmd == MXS_COM_STMT_FETCH;
 }
 
-static inline bool expecting_ps_response(MySQLProtocol* proto)
+bool MySQLBackendProtocol::expecting_ps_response()
 {
-    return proto->reply().command() == MXS_COM_STMT_PREPARE;
+    return reply().command() == MXS_COM_STMT_PREPARE;
 }
 
 bool MySQLBackendProtocol::complete_ps_response(GWBUF* buffer)
@@ -594,7 +594,7 @@ int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
          * The OK packets sent in response to COM_STMT_PREPARE are of a different
          * format so we need to detect and skip them. */
         if (rcap_type_required(capabilities, RCAP_TYPE_SESSION_STATE_TRACKING)
-            && !expecting_ps_response(proto)
+            && !expecting_ps_response()
             && proto->m_track_state)
         {
             mxs_mysql_get_session_track_info(tmp, proto);
@@ -622,7 +622,7 @@ int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
                                         || m_collect_result;
             if (collecting_resultset)
             {
-                if (expecting_text_result(proto))
+                if (expecting_text_result())
                 {
                     if (mxs_mysql_is_result_set(read_buffer))
                     {
@@ -639,7 +639,7 @@ int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
                     proto->m_collect_result = false;
                     result_collected = true;
                 }
-                else if (expecting_ps_response(proto)
+                else if (expecting_ps_response()
                          && mxs_mysql_is_prep_stmt_ok(read_buffer)
                          && !complete_ps_response(read_buffer))
                 {
@@ -1789,7 +1789,6 @@ bool MySQLBackendProtocol::gw_read_backend_handshake(DCB* dcb, GWBUF* buffer)
  */
 int MySQLBackendProtocol::send_mysql_native_password_response(DCB* dcb)
 {
-    auto proto = static_cast<MySQLClientProtocol*>(dcb->protocol_session());
     MYSQL_session local_session;
     gw_get_shared_session_auth_info(dcb, &local_session);
 
@@ -1800,7 +1799,7 @@ int MySQLBackendProtocol::send_mysql_native_password_response(DCB* dcb)
     uint8_t* data = GWBUF_DATA(buffer);
     gw_mysql_set_byte3(data, GW_MYSQL_SCRAMBLE_SIZE);
     data[3] = 2;    // This is the third packet after the COM_CHANGE_USER
-    mxs_mysql_calculate_hash(proto->scramble, curr_passwd, data + MYSQL_HEADER_LEN);
+    mxs_mysql_calculate_hash(scramble, curr_passwd, data + MYSQL_HEADER_LEN);
 
     return dcb->writeq_append(buffer);
 }
