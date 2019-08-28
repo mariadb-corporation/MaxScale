@@ -247,8 +247,7 @@ BackendDCB* BackendDCB::take_from_connection_pool(SERVER* s, MXS_SESSION* sessio
         if (const char* user = session_get_user(session))
         {
             auto owner = static_cast<RoutingWorker*>(session->client_dcb->owner);
-            auto dcb = server->get_persistent_dcb(user, session->client_dcb->m_remote,
-                                                  server->protocol().c_str(), owner->id());
+            auto dcb = server->get_persistent_dcb(user, session->client_dcb->m_remote, owner->id());
 
             if (dcb)
             {

@@ -28,12 +28,10 @@
 class Server : public SERVER
 {
 public:
-    Server(const std::string& name, const std::string& protocol = "",
-           std::unique_ptr<mxs::SSLContext> ssl = {})
+    Server(const std::string& name, std::unique_ptr<mxs::SSLContext> ssl = {})
         : SERVER(std::move(ssl))
         , m_name(name)
     {
-        m_settings.protocol = protocol;
     }
 
     long persistpoolmax() const
@@ -106,11 +104,6 @@ public:
         return m_name.c_str();
     }
 
-    std::string protocol() const override
-    {
-        return m_settings.protocol;
-    }
-
     int64_t rank() const override
     {
         return m_settings.rank;
@@ -121,15 +114,11 @@ public:
      *
      * @param user        The name of the user needing the connection
      * @param ip          Client IP address
-     * @param protocol    The name of the protocol needed for the connection
      * @param id          Thread ID
      *
      * @return A DCB or NULL if no connection is found
      */
-    BackendDCB* get_persistent_dcb(const std::string& user,
-                                   const std::string& ip,
-                                   const std::string& protocol,
-                                   int id);
+    BackendDCB* get_persistent_dcb(const std::string& user, const std::string& ip, int id);
 
     /**
      * Print server details to a dcb.

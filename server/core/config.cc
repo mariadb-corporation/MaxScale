@@ -1011,8 +1011,8 @@ std::pair<const MXS_MODULE_PARAM*, const MXS_MODULE*> get_module_details(const C
     }
     else if (type == CN_SERVER)
     {
-        auto name = obj->m_parameters.get_string(CN_PROTOCOL);
-        return {common_server_params(), get_module(name.c_str(), MODULE_PROTOCOL)};
+        // Servers do not have an associated module.
+        return {common_server_params(), nullptr};
     }
     else if (type == CN_MONITOR)
     {
@@ -1064,32 +1064,36 @@ std::unordered_set<CONFIG_CONTEXT*> get_dependencies(const std::vector<CONFIG_CO
                                                      const CONFIG_CONTEXT* obj)
 {
     std::unordered_set<CONFIG_CONTEXT*> rval;
-    const MXS_MODULE_PARAM* params;
+    const MXS_MODULE_PARAM* common_params = nullptr;
     const MXS_MODULE* module;
-    std::tie(params, module) = get_module_details(obj);
+    std::tie(common_params, module) = get_module_details(obj);
 
-    // Astyle really hates this style. Could be worked around with --keep-one-line-blocks
-    // but it would keep all one line blocks intact.
-    for (const auto& p :
+    std::string type = obj->m_parameters.get_string(CN_TYPE);
+    bool is_server = (type == CN_SERVER);
+    const MXS_MODULE_PARAM* module_params = nullptr;
+    if (!is_server)
     {
-        params, module->parameters
-    })
+        module_params = module->parameters;
+    }
+
+    for (const auto* p : {common_params, module_params})
     {
-        for (int i = 0; p[i].name; i++)
+        if (p)
         {
-            if (obj->m_parameters.contains(p[i].name))
+            for (int i = 0; p[i].name; i++)
             {
-                if (p[i].type == MXS_MODULE_PARAM_SERVICE
-                    || p[i].type == MXS_MODULE_PARAM_SERVER)
+                if (obj->m_parameters.contains(p[i].name))
                 {
-                    std::string v = obj->m_parameters.get_string(p[i].name);
-                    rval.insert(name_to_object(objects, obj, v));
+                    if (p[i].type == MXS_MODULE_PARAM_SERVICE
+                        || p[i].type == MXS_MODULE_PARAM_SERVER)
+                    {
+                        std::string v = obj->m_parameters.get_string(p[i].name);
+                        rval.insert(name_to_object(objects, obj, v));
+                    }
                 }
             }
         }
     }
-
-    std::string type = obj->m_parameters.get_string(CN_TYPE);
 
     if (type == CN_SERVICE && obj->m_parameters.contains(CN_FILTERS))
     {
@@ -2638,15 +2642,6 @@ const char* param_type_to_str(const MXS_MODULE_PARAM* params, const char* name)
     return "<unknown parameter name>";
 }
 
-static bool wrong_protocol_type(const std::string& type, const std::string& protocol)
-{
-    bool have_server_proto = strcasecmp(protocol.c_str(), "mariadbbackend") == 0
-        || strcasecmp(protocol.c_str(), "mysqlbackend") == 0;
-    bool have_server_type = type == CN_SERVER;
-
-    return have_server_proto != have_server_type;
-}
-
 /**
  * @brief Check that the configuration objects have valid parameters
  *
@@ -2686,16 +2681,10 @@ static bool check_config_objects(CONFIG_CONTEXT* context)
         const MXS_MODULE* mod = nullptr;
         std::tie(param_set, mod) = get_module_details(obj);
 
-        if (!mod)   // Error is logged in load_module
+        // Servers are a special case as they don't have a module.
+        bool is_server = (type == CN_SERVER);
+        if (!is_server && !mod)   // Error is logged in load_module
         {
-            rval = false;
-            continue;
-        }
-
-        // TODO: Separate the listener and server protocol objects, hard-coded checks are not good
-        if (wrong_protocol_type(type, obj->m_parameters.get_string(CN_PROTOCOL)))
-        {
-            MXS_ERROR("Wrong protocol module type for '%s'", obj->m_name.c_str());
             rval = false;
             continue;
         }
@@ -2712,7 +2701,7 @@ static bool check_config_objects(CONFIG_CONTEXT* context)
             {
                 fix_params = param_set;
             }
-            else if (param_in_set(mod->parameters, param_namez))
+            else if (!is_server && param_in_set(mod->parameters, param_namez))
             {
                 fix_params = mod->parameters;
             }
@@ -2720,7 +2709,7 @@ static bool check_config_objects(CONFIG_CONTEXT* context)
             {
                 // Server's "need" to ignore any unknown parameters as they could
                 // be used as weighting parameters
-                if (type != CN_SERVER)
+                if (!is_server)
                 {
                     MXS_ERROR("Unknown parameter '%s' for object '%s' of type '%s'. %s",
                               param_namez, obj->name(), type.c_str(),
@@ -2766,7 +2755,7 @@ static bool check_config_objects(CONFIG_CONTEXT* context)
         }
 
         if (missing_required_parameters(param_set, obj->m_parameters, obj->name())
-            || missing_required_parameters(mod->parameters, obj->m_parameters, obj->name()))
+            || (!is_server && missing_required_parameters(mod->parameters, obj->m_parameters, obj->name())))
         {
             rval = false;
         }
@@ -3259,22 +3248,25 @@ void config_add_module_params_json(const MXS_CONFIG_PARAMETER* parameters,
 {
     for (const auto* param_info : {basic_params, module_params})
     {
-        for (int i = 0; param_info[i].name; i++)
+        if (param_info)
         {
-            const string param_name = param_info[i].name;
-            if (ignored_params.count(param_name) == 0 && !json_object_get(output, param_name.c_str()))
+            for (int i = 0; param_info[i].name; i++)
             {
-                if (parameters->contains(param_name))
+                const string param_name = param_info[i].name;
+                if (ignored_params.count(param_name) == 0 && !json_object_get(output, param_name.c_str()))
                 {
-                    const string value = parameters->get_string(param_name);
-                    json_object_set_new(output, param_name.c_str(),
-                                        param_value_to_json(&param_info[i], param_name, value));
-                }
-                else
-                {
-                    // The parameter was not set in config and does not have a default value.
-                    // Print a null value.
-                    json_object_set_new(output, param_name.c_str(), json_null());
+                    if (parameters->contains(param_name))
+                    {
+                        const string value = parameters->get_string(param_name);
+                        json_object_set_new(output, param_name.c_str(),
+                                            param_value_to_json(&param_info[i], param_name, value));
+                    }
+                    else
+                    {
+                        // The parameter was not set in config and does not have a default value.
+                        // Print a null value.
+                        json_object_set_new(output, param_name.c_str(), json_null());
+                    }
                 }
             }
         }
@@ -3421,19 +3413,6 @@ int create_new_server(CONFIG_CONTEXT* obj)
     bool error = false;
 
     config_add_defaults(&obj->m_parameters, common_server_params());
-
-    auto module = obj->m_parameters.get_string(CN_PROTOCOL);
-    mxb_assert(!module.empty());
-
-    if (const MXS_MODULE* mod = get_module(module.c_str(), MODULE_PROTOCOL))
-    {
-        config_add_defaults(&obj->m_parameters, mod->parameters);
-    }
-    else
-    {
-        MXS_ERROR("Unable to load protocol module '%s'.", module.c_str());
-        return 1;
-    }
 
     bool have_address = obj->m_parameters.contains(CN_ADDRESS);
     bool have_socket = obj->m_parameters.contains(CN_SOCKET);
@@ -4677,18 +4656,21 @@ std::string generate_config_string(const std::string& instance_name, const MXS_C
     // names and values.
     for (auto param_set : {common_param_defs, module_param_defs})
     {
-        for (int i = 0; param_set[i].name; i++)
+        if (param_set)
         {
-            auto param_info = param_set + i;
-            // Do not print deprecated parameters.
-            if ((param_info->options & MXS_MODULE_OPT_DEPRECATED) == 0)
+            for (int i = 0; param_set[i].name; i++)
             {
-                string param_name = param_info->name;
-                if (parameters.contains(param_name))
+                auto param_info = param_set + i;
+                // Do not print deprecated parameters.
+                if ((param_info->options & MXS_MODULE_OPT_DEPRECATED) == 0)
                 {
-                    // Parameter value in the container can be an empty string and still be printed.
-                    string param_value = parameters.get_string(param_name);
-                    output += param_name + "=" + param_value + "\n";
+                    string param_name = param_info->name;
+                    if (parameters.contains(param_name))
+                    {
+                        // Parameter value in the container can be an empty string and still be printed.
+                        string param_value = parameters.get_string(param_name);
+                        output += param_name + "=" + param_value + "\n";
+                    }
                 }
             }
         }
@@ -4879,5 +4861,6 @@ bool param_is_known(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* modul
 bool param_is_valid(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* module,
                     const char* key, const char* value)
 {
-    return config_param_is_valid(basic, key, value, NULL) || config_param_is_valid(module, key, value, NULL);
+    return config_param_is_valid(basic, key, value, NULL)
+        || (module && config_param_is_valid(module, key, value, NULL));
 }

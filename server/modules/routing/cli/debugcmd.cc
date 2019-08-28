@@ -1239,7 +1239,7 @@ static void createServer(DCB* dcb,
 
     if (ServerManager::find_by_unique_name(name) == NULL)
     {
-        if (runtime_create_server(name, address, port, protocol, authenticator))
+        if (runtime_create_server(name, address, port))
         {
             dcb_printf(dcb, "Created server '%s'\n", name);
         }

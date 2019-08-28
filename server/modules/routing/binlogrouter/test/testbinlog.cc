@@ -99,8 +99,6 @@ int main(int argc, char** argv)
 
     set_libdir(MXS_STRDUP_A(".."));
     load_module("binlogrouter", MODULE_ROUTER);
-    set_libdir(MXS_STRDUP_A("../../../protocol/MySQL/mariadbbackend/"));
-    load_module("mariadbbackend", MODULE_PROTOCOL);
     set_libdir(MXS_STRDUP_A("../../../authenticator/MariaDBBackendAuth/"));
     load_module("mysqlbackendauth", MODULE_AUTHENTICATOR);
     set_libdir(MXS_STRDUP_A("../../../../../query_classifier/qc_sqlite/"));

@@ -67,7 +67,6 @@ static NAME_MAPPING name_mappings[] =
 {
     {MODULE_MONITOR,       "mysqlmon",         "mariadbmon",         false},
     {MODULE_PROTOCOL,      "mysqlclient",      "mariadbclient",      false},
-    {MODULE_PROTOCOL,      "mysqlbackend",     "mariadbbackend",     false},
     {MODULE_AUTHENTICATOR, "mysqlauth",        "mariadbauth",        false},
     {MODULE_AUTHENTICATOR, "mysqlbackendauth", "mariadbbackendauth", false}
 };

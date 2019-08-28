@@ -297,8 +297,7 @@ static bool process_argument(const MODULECMD* cmd,
         case MODULECMD_ARG_SERVER:
             if ((arg->value.server = ServerManager::find_by_unique_name((char*)value)))
             {
-                if (MODULECMD_ALLOW_NAME_MISMATCH(type)
-                    || (arg->value.server->protocol() == cmd->domain))
+                if (MODULECMD_ALLOW_NAME_MISMATCH(type))
                 {
                     arg->type.type = MODULECMD_ARG_SERVER;
                     rval = true;

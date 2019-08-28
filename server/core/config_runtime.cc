@@ -267,12 +267,7 @@ bool runtime_unlink_server(Server* server, const char* target)
     return rval;
 }
 
-bool runtime_create_server(const char* name,
-                           const char* address,
-                           const char* port,
-                           const char* protocol,
-                           const char* authenticator,
-                           bool external)
+bool runtime_create_server(const char* name, const char* address, const char* port, bool external)
 {
     std::lock_guard<std::mutex> guard(crt_lock);
     bool rval = false;
@@ -282,50 +277,32 @@ bool runtime_create_server(const char* name,
         std::string reason;
         if (!external || config_is_valid_name(name, &reason))
         {
-            if (protocol == NULL)
+            MXS_CONFIG_PARAMETER parameters;
+            config_add_defaults(&parameters, common_server_params());
+            if (address)
             {
-                protocol = "mariadbbackend";
+                auto param_name = *address == '/' ? CN_SOCKET : CN_ADDRESS;
+                parameters.set(param_name, address);
+            }
+            if (port)
+            {
+                parameters.set(CN_PORT, port);
             }
 
-            MXS_CONFIG_PARAMETER parameters;
-            bool ok;
-            tie(ok, parameters) = load_defaults(protocol, MODULE_PROTOCOL, CN_SERVER);
+            Server* server = ServerManager::create_server(name, parameters);
 
-            if (ok)
+            if (server && (!external || server->serialize()))
             {
-                if (address)
-                {
-                    auto param_name = *address == '/' ? CN_SOCKET : CN_ADDRESS;
-                    parameters.set(param_name, address);
-                }
-                if (port)
-                {
-                    parameters.set(CN_PORT, port);
-                }
-                if (authenticator)
-                {
-                    parameters.set(CN_AUTHENTICATOR, authenticator);
-                }
-
-                Server* server = ServerManager::create_server(name, parameters);
-
-                if (server && (!external || server->serialize()))
-                {
-                    rval = true;
-                    MXS_NOTICE("Created server '%s' at %s:%u",
-                               server->name(),
-                               server->address,
-                               server->port);
-                }
-                else
-                {
-                    config_runtime_error("Failed to create server '%s', see error log for more details",
-                                         name);
-                }
+                rval = true;
+                MXS_NOTICE("Created server '%s' at %s:%u",
+                           server->name(),
+                           server->address,
+                           server->port);
             }
             else
             {
-                config_runtime_error("Server creation failed when loading protocol module '%s'", protocol);
+                config_runtime_error("Failed to create server '%s', see error log for more details",
+                                     name);
             }
         }
         else
@@ -437,8 +414,7 @@ bool runtime_alter_server(Server* server, const char* key, const char* value)
     // Only validate known parameters as custom parameters cannot be validated.
     if (is_normal_parameter)
     {
-        const MXS_MODULE* mod = get_module(server->protocol().c_str(), MODULE_PROTOCOL);
-        if (!param_is_valid(common_server_params(), mod->parameters, key, value))
+        if (!param_is_valid(common_server_params(), nullptr, key, value))
         {
             config_runtime_error("Invalid value for parameter '%s': %s", key, value);
             return false;
@@ -1686,7 +1662,6 @@ static bool server_contains_required_fields(json_t* json)
     json_t* port = mxs_json_pointer(json, MXS_JSON_PTR_PARAM_PORT);
     json_t* address = mxs_json_pointer(json, MXS_JSON_PTR_PARAM_ADDRESS);
     json_t* socket = mxs_json_pointer(json, MXS_JSON_PTR_PARAM_SOCKET);
-    json_t* proto = mxs_json_pointer(json, MXS_JSON_PTR_PARAM_PROTOCOL);
     bool rval = false;
 
     if (!id)
@@ -1726,14 +1701,6 @@ static bool server_contains_required_fields(json_t* json)
     else if (port && !json_is_integer(port))
     {
         config_runtime_error("The '%s' field is not an integer", MXS_JSON_PTR_PARAM_PORT);
-    }
-    else if (!proto)
-    {
-        config_runtime_error("No protocol defined at JSON path '%s'", MXS_JSON_PTR_PARAM_PROTOCOL);
-    }
-    else if (!json_is_string(proto))
-    {
-        config_runtime_error("The '%s' field is not a string", MXS_JSON_PTR_PARAM_PROTOCOL);
     }
     else
     {
@@ -1878,8 +1845,7 @@ bool runtime_create_server_from_json(json_t* json)
         && extract_relations(json, relations, MXS_JSON_PTR_RELATIONSHIPS_MONITORS, server_relation_is_valid))
     {
         const char* name = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
-        const char* protocol = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_PARAM_PROTOCOL));
-        mxb_assert(name && protocol);
+        mxb_assert(name);
 
         if (ServerManager::find_by_unique_name(name))
         {
@@ -1888,30 +1854,24 @@ bool runtime_create_server_from_json(json_t* json)
         else
         {
             MXS_CONFIG_PARAMETER params;
-            bool ok;
-            tie(ok, params) = load_defaults(protocol, MODULE_PROTOCOL, CN_SERVER);
+            config_add_defaults(&params, common_server_params());
+            params.set_multiple(extract_parameters_from_json(json));
 
-            if (ok)
+            if (Server* server = ServerManager::create_server(name, params))
             {
-                params.set_multiple(extract_parameters_from_json(json));
-
-                if (Server* server = ServerManager::create_server(name, params))
+                if (link_server_to_objects(server, relations) && server->serialize())
                 {
-                    if (link_server_to_objects(server, relations) && server->serialize())
-                    {
-                        rval = true;
-                    }
-                    else
-                    {
-                        runtime_destroy_server(server);
-                    }
+                    rval = true;
                 }
-
-                if (!rval)
+                else
                 {
-                    config_runtime_error("Failed to create server '%s', see error log for more details",
-                                         name);
+                    runtime_destroy_server(server);
                 }
+            }
+
+            if (!rval)
+            {
+                config_runtime_error("Failed to create server '%s', see error log for more details", name);
             }
         }
     }

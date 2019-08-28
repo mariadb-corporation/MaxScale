@@ -122,8 +122,7 @@ Server* Server::server_alloc(const char* name, const MXS_CONFIG_PARAMETER& param
         return NULL;
     }
 
-    auto protocol_name = params.get_string(CN_PROTOCOL);
-    Server* server = new(std::nothrow) Server(name, protocol_name, std::move(ssl));
+    Server* server = new(std::nothrow) Server(name, std::move(ssl));
     BackendDCB** persistent = (BackendDCB**)MXS_CALLOC(config_threadcount(), sizeof(*persistent));
 
     if (!server || !persistent)
@@ -182,7 +181,7 @@ Server* Server::create_test_server()
     return new Server(name);
 }
 
-BackendDCB* Server::get_persistent_dcb(const string& user, const string& ip, const string& protocol, int id)
+BackendDCB* Server::get_persistent_dcb(const string& user, const string& ip, int id)
 {
     Server* server = this;
     if (server->persistent[id]
@@ -203,8 +202,7 @@ BackendDCB* Server::get_persistent_dcb(const string& user, const string& ip, con
                 && !ip.empty()
                 && !dcb->m_dcb_errhandle_called
                 && user == dcb->m_user
-                && ip == dcb->m_remote
-                && protocol == dcb->server()->protocol())
+                && ip == dcb->m_remote)
             {
                 if (NULL == previous)
                 {
@@ -232,7 +230,6 @@ void Server::printServer()
 {
     printf("Server %p\n", this);
     printf("\tServer:                       %s\n", address);
-    printf("\tProtocol:                     %s\n", m_settings.protocol.c_str());
     printf("\tPort:                         %d\n", port);
     printf("\tTotal connections:            %d\n", stats().n_connections);
     printf("\tCurrent connections:          %d\n", stats().n_current);
@@ -294,7 +291,6 @@ void Server::print_to_dcb(DCB* dcb) const
     dcb_printf(dcb, "\tServer:                              %s\n", server->address);
     string stat = status_string();
     dcb_printf(dcb, "\tStatus:                              %s\n", stat.c_str());
-    dcb_printf(dcb, "\tProtocol:                            %s\n", server->m_settings.protocol.c_str());
     dcb_printf(dcb, "\tPort:                                %d\n", server->port);
     dcb_printf(dcb, "\tServer Version:                      %s\n", server->version_string().c_str());
 
@@ -519,9 +515,8 @@ bool Server::create_server_config(const char* filename) const
         return false;
     }
 
-    const MXS_MODULE* mod = get_module(m_settings.protocol.c_str(), MODULE_PROTOCOL);
     string config = generate_config_string(name(), m_settings.all_parameters, common_server_params(),
-                                           mod->parameters);
+                                           nullptr);
 
     // Print custom parameters. The generate_config_string()-call doesn't print them.
     {
@@ -578,12 +573,10 @@ json_t* Server::json_attributes() const
     /** Store server parameters in attributes */
     json_t* params = json_object();
 
-    const MXS_MODULE* mod = get_module(m_settings.protocol.c_str(), MODULE_PROTOCOL);
-    config_add_module_params_json(&m_settings.all_parameters,
-                                  {CN_TYPE},
-                                  common_server_params(),
-                                  mod->parameters,
-                                  params);
+    config_add_module_params_json(
+            &m_settings.all_parameters, {CN_TYPE}, common_server_params(),
+            nullptr, // no module-specific parameters
+            params);
 
     // Add weighting parameters that weren't added by config_add_module_params_json
     {
@@ -667,15 +660,7 @@ bool Server::is_custom_parameter(const string& name) const
     auto server_params = common_server_params();
     for (int i = 0; server_params[i].name; i++)
     {
-        if (name == server_params[i].name)
-        {
-            return false;
-        }
-    }
-    auto module_params = get_module(m_settings.protocol.c_str(), MODULE_PROTOCOL)->parameters;
-    for (int i = 0; module_params[i].name; i++)
-    {
-        if (name == module_params[i].name)
+        if (server_params[i].name == name)
         {
             return false;
         }
@@ -735,7 +720,7 @@ const MXS_MODULE_PARAM* common_server_params()
         {CN_TYPE,           MXS_MODULE_PARAM_STRING,   CN_SERVER, MXS_MODULE_OPT_REQUIRED  },
         {CN_ADDRESS,        MXS_MODULE_PARAM_STRING},
         {CN_SOCKET,         MXS_MODULE_PARAM_STRING},
-        {CN_PROTOCOL,       MXS_MODULE_PARAM_STRING,   NULL,      MXS_MODULE_OPT_REQUIRED  },
+        {CN_PROTOCOL,       MXS_MODULE_PARAM_STRING,   NULL,      MXS_MODULE_OPT_DEPRECATED},
         {CN_PORT,           MXS_MODULE_PARAM_COUNT,    "3306"},
         {CN_EXTRA_PORT,     MXS_MODULE_PARAM_COUNT,    "0"},
         {CN_AUTHENTICATOR,  MXS_MODULE_PARAM_STRING,   NULL,      MXS_MODULE_OPT_DEPRECATED},

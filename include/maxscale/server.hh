@@ -155,13 +155,6 @@ public:
      */
     virtual std::string version_string() const = 0;
 
-    /**
-     * Get backend protocol module name.
-     *
-     * @return Backend protocol module name of the server
-     */
-    virtual std::string protocol() const = 0;
-
     /*
      * Update server address. TODO: Move this to internal class once blr is gone.
      *

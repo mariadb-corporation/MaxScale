@@ -109,7 +109,6 @@ void init_test_env(char* __attribute((unused))path = nullptr, uint32_t init_type
     set_libdir(MXS_STRDUP(old_libdir.c_str()));
 
     preload_module("mariadbclient", "server/modules/protocol/MySQL/mariadbclient/", MODULE_PROTOCOL);
-    preload_module("mariadbbackend", "server/modules/protocol/MySQL/mariadbbackend/", MODULE_PROTOCOL);
     preload_module("readconnroute", "server/modules/routing/readconnroute/", MODULE_ROUTER);
     preload_module("mariadbauth", "server/modules/authenticator/MariaDBAuth/", MODULE_AUTHENTICATOR);
     preload_module("mariadbbackendauth", "server/modules/authenticator/MariaDBBackendAuth/", MODULE_AUTHENTICATOR);

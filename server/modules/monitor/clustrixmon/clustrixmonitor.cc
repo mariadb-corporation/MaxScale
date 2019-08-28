@@ -670,8 +670,6 @@ bool ClustrixMonitor::refresh_nodes(MYSQL* pHub_con)
                             if (runtime_create_server(server_name.c_str(),
                                                       ip.c_str(),
                                                       std::to_string(mysql_port).c_str(),
-                                                      "mariadbbackend",
-                                                      "mysqlbackendauth",
                                                       false))
                             {
                                 SERVER* pServer = SERVER::find_by_unique_name(server_name);

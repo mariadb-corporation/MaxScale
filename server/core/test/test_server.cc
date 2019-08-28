@@ -95,7 +95,6 @@ bool test_load_config(const char* input, Server* server)
 
             TEST(strcmp(obj->name(), server->name()) == 0, "Server names differ");
             TEST(param->get_string("address") == server->address, "Server addresses differ");
-            TEST(param->get_string("protocol") == server->protocol(), "Server protocols differ");
             TEST(param->get_integer("port") == server->port, "Server ports differ");
             TEST(ServerManager::create_server(obj->name(), obj->m_parameters),
                  "Failed to create server from loaded config");
