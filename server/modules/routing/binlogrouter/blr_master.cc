@@ -1695,7 +1695,7 @@ bool blr_send_event(blr_thread_role_t role,
                   ROLETOSTR(role),
                   t2.str().c_str(),
                   ROLETOSTR(slave->lsi_sender_role),
-                  gwbuf_length(slave->dcb->m_writeq),
+                  gwbuf_length(slave->dcb->writeq()),
                   slave->dcb,
                   slave->router->stats.n_binlogs);
         return false;

@@ -847,9 +847,9 @@ int32_t MySQLBackendProtocol::write_ready(DCB* dcb)
         uint8_t* data = NULL;
         bool com_quit = false;
 
-        if (dcb->m_writeq)
+        if (dcb->writeq())
         {
-            data = (uint8_t*) GWBUF_DATA(dcb->m_writeq);
+            data = (uint8_t*) GWBUF_DATA(dcb->writeq());
             com_quit = MYSQL_IS_COM_QUIT(data);
         }
 
@@ -890,7 +890,7 @@ int MySQLBackendProtocol::handle_persistent_connection(BackendDCB* dcb, GWBUF* q
 
     if (dcb->was_persistent())
     {
-        mxb_assert(!dcb->m_fakeq && !dcb->m_readq && !dcb->m_delayq && !dcb->m_writeq);
+        mxb_assert(!dcb->m_fakeq && !dcb->m_readq && !dcb->m_delayq && !dcb->writeq());
         mxb_assert(!dcb->is_in_persistent_pool());
         mxb_assert(protocol->m_ignore_replies >= 0);
 

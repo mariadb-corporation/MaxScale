@@ -278,6 +278,13 @@ public:
     int add_callback(Reason, int (*)(DCB*, Reason, void*), void*);
     int remove_callback(Reason, int (*)(DCB*, Reason, void*), void*);
 
+    static void process_timeouts(int thr);
+
+    inline GWBUF* writeq()
+    {
+        return m_writeq;
+    }
+
     struct CALLBACK
     {
         Reason           reason;    /*< The reason for the callback */
@@ -290,8 +297,6 @@ public:
     char*                   m_remote = nullptr;                 /**< Address of remote end */
     char*                   m_user = nullptr;                   /**< User name for connection */
     struct sockaddr_storage m_ip;                               /**< remote IPv4/IPv6 address */
-    uint64_t                m_writeqlen = 0;                    /**< Bytes in writeq */
-    GWBUF*                  m_writeq = nullptr;                 /**< Write Data Queue */
     GWBUF*                  m_delayq = nullptr;                 /**< Delay Backend Write Data Queue */
     GWBUF*                  m_readq = nullptr;                  /**< Read queue for incomplete reads */
     GWBUF*                  m_fakeq = nullptr;                  /**< Fake event queue for generated events */
@@ -349,6 +354,8 @@ protected:
     CALLBACK*             m_callbacks = nullptr;        /**< The list of callbacks for the DCB */
     bool                  m_high_water_reached = false; /** High water mark reached, to determine
                                                          * whether we need to release throttle */
+    uint64_t              m_writeqlen = 0;              /**< Bytes in writeq */
+    GWBUF*                m_writeq = nullptr;           /**< Write Data Queue */
 
 private:
     friend class Manager;
@@ -575,7 +582,6 @@ void dcb_printf(DCB*, const char*, ...) __attribute__ ((format(printf, 2, 3))); 
 int dcb_count_by_role(DCB::Role role);
 
 uint64_t dcb_get_session_id(DCB* dcb);
-void     dcb_process_timeouts(int thr);
 
 /**
  * @brief Append a buffer the DCB's readqueue

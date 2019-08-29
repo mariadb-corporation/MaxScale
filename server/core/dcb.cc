@@ -1991,7 +1991,8 @@ static int dcb_set_socket_option(int sockfd, int level, int optname, void* optva
  * to the socket is greater net_write_timeout the session is also disconnected.
  * The timeouts are disabled by default.
  */
-void dcb_process_timeouts(int thr)
+//static
+void DCB::process_timeouts(int thr)
 {
     if (mxs_clock() >= this_thread.next_timeout_check)
     {

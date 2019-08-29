@@ -645,7 +645,8 @@ RoutingWorker* RoutingWorker::create(int epoll_listener_fd)
 
 void RoutingWorker::epoll_tick()
 {
-    dcb_process_timeouts(m_id);
+    // TODO: The following function should be here, not in DCB.
+    DCB::process_timeouts(m_id);
 
     delete_zombies();
 
