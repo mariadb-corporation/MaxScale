@@ -381,6 +381,11 @@ public:
         return delayq;
     }
 
+    GWBUF* fakeq()
+    {
+        return m_fakeq;
+    }
+
     struct CALLBACK
     {
         Reason           reason;    /*< The reason for the callback */
@@ -393,8 +398,6 @@ public:
     char*                   m_remote = nullptr;                 /**< Address of remote end */
     char*                   m_user = nullptr;                   /**< User name for connection */
     struct sockaddr_storage m_ip;                               /**< remote IPv4/IPv6 address */
-    GWBUF*                  m_fakeq = nullptr;                  /**< Fake event queue for generated events */
-    uint32_t                m_fake_event = 0;                   /**< Fake event to be delivered to handler */
 
     void* m_data = nullptr;                     /**< Client pcol data, owned by client DCB */
 
@@ -452,6 +455,8 @@ protected:
     GWBUF*                m_writeq = nullptr;           /**< Write Data Queue */
     GWBUF*                m_readq = nullptr;            /**< Read queue for incomplete reads */
     GWBUF*                m_delayq = nullptr;           /**< Delay Backend Write Data Queue */
+    GWBUF*                m_fakeq = nullptr;            /**< Fake event queue for generated events */
+    uint32_t              m_fake_event = 0;             /**< Fake event to be delivered to handler */
 
 private:
     friend class Manager;
