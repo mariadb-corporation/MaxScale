@@ -386,6 +386,16 @@ public:
         return m_fakeq;
     }
 
+    int64_t last_read() const
+    {
+        return m_last_read;
+    }
+
+    int64_t last_write() const
+    {
+        return m_last_write;
+    }
+
     struct CALLBACK
     {
         Reason           reason;    /*< The reason for the callback */
@@ -401,8 +411,6 @@ public:
 
     void* m_data = nullptr;                     /**< Client pcol data, owned by client DCB */
 
-    int64_t  m_last_read = 0;                       /**< Last time the DCB received data */
-    int64_t  m_last_write = 0;                      /**< Last time the DCB sent data */
     uint32_t m_nClose = 0;                          /** How many times dcb_close has been called. */
 
 protected:
@@ -457,6 +465,8 @@ protected:
     GWBUF*                m_delayq = nullptr;           /**< Delay Backend Write Data Queue */
     GWBUF*                m_fakeq = nullptr;            /**< Fake event queue for generated events */
     uint32_t              m_fake_event = 0;             /**< Fake event to be delivered to handler */
+    int64_t               m_last_read;                  /**< Last time the DCB received data */
+    int64_t               m_last_write;                 /**< Last time the DCB sent data */
 
 private:
     friend class Manager;

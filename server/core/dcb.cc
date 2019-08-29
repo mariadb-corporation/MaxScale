@@ -118,13 +118,13 @@ static MXB_WORKER* get_dcb_owner()
 
 DCB::DCB(int fd, Role role, MXS_SESSION* session, Manager* manager)
     : MXB_POLL_DATA{&DCB::poll_handler, get_dcb_owner()}
-    , m_last_read(mxs_clock())
-    , m_last_write(mxs_clock())
     , m_uid(this_unit.uid_generator.fetch_add(1, std::memory_order_relaxed))
     , m_high_water(config_writeq_high_water())
     , m_low_water(config_writeq_low_water())
     , m_fd(fd)
     , m_session(session)
+    , m_last_read(mxs_clock())
+    , m_last_write(mxs_clock())
     , m_role(role)
     , m_manager(manager)
 {
@@ -461,9 +461,27 @@ int DCB::read(GWBUF** head, int maxbytes)
         nreadtotal = gwbuf_length(*head);
     }
 
+    if (nreadtotal != 0)
+    {
+        // If we return data from the read or fake queue it is counted as a read.
+        m_last_read = mxs_clock();
+    }
+
     if (SSLState::HANDSHAKE_DONE == m_ssl_state || SSLState::ESTABLISHED == m_ssl_state)
     {
-        return read_SSL(head);
+        int n = read_SSL(head);
+
+        if (n < 0 && nreadtotal != 0)
+        {
+            // TODO: There was something in either m_readq or m_fakeq, but the SSL
+            // TODO: operation failed. We will now return -1 but whatever data was
+            // TODO: in m_readq or m_fakeq is now in head.
+            // TODO: Don't know if this can happen in practice.
+            MXS_ERROR("SSL reading failed when existing data already had been "
+                      "appended to returned buffer.");
+        }
+
+        return n;
     }
 
     while (0 == maxbytes || nreadtotal < maxbytes)
@@ -629,7 +647,6 @@ int DCB::read_SSL(GWBUF** head)
         drain_writeq();
     }
 
-    m_last_read = mxs_clock();
     buffer = basic_read_SSL(&nsingleread);
     if (buffer)
     {

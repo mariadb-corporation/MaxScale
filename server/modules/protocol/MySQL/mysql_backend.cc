@@ -1609,7 +1609,6 @@ bool MySQLBackendProtocol::read_complete_packet(DCB* dcb, GWBUF** readbuf)
     if (dcb_read(dcb, &localbuf, 0) >= 0)
     {
         rval = true;
-        dcb->m_last_read = mxs_clock();
         GWBUF* packets = modutil_get_complete_packets(&localbuf);
 
         if (packets)

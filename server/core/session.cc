@@ -279,7 +279,7 @@ void dprintSession(DCB* dcb, MXS_SESSION* print_session)
 
     if (print_session->client_dcb && print_session->client_dcb->m_remote)
     {
-        double idle = (mxs_clock() - print_session->client_dcb->m_last_read);
+        double idle = (mxs_clock() - print_session->client_dcb->last_read());
         idle = idle > 0 ? idle / 10.f : 0;
         dcb_printf(dcb,
                    "\tClient Address:          %s%s%s\n",
@@ -669,7 +669,7 @@ json_t* session_json_data(const Session* session, const char* host, bool rdns)
 
     if (session->client_dcb->state() == DCB::State::POLLING)
     {
-        double idle = (mxs_clock() - session->client_dcb->m_last_read);
+        double idle = (mxs_clock() - session->client_dcb->last_read());
         idle = idle > 0 ? idle / 10.f : 0;
         json_object_set_new(attr, "idle", json_real(idle));
     }
