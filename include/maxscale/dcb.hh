@@ -285,6 +285,78 @@ public:
         return m_writeq;
     }
 
+    /**
+     * @brief Returns the read queue of the DCB.
+     *
+     * @note The read queue remains the property of the DCB.
+     *
+     * @return A buffer of NULL if there is no read queue.
+     */
+    inline GWBUF* readq()
+    {
+        return m_readq;
+    }
+
+    /**
+     * @brief Append a buffer the DCB's readqueue
+     *
+     * Usually data is stored into the DCB's readqueue when not enough data is
+     * available and the processing needs to be deferred until more data is available.
+     *
+     * @param buffer The buffer to append.
+     */
+    void readq_append(GWBUF* buffer)
+    {
+        m_readq = gwbuf_append(m_readq, buffer);
+    }
+
+    /**
+     * @brief Prepend a buffer the DCB's readqueue
+     *
+     * @param buffer The buffer to prepend
+     */
+    void readq_prepend(GWBUF* buffer)
+    {
+        m_readq = gwbuf_append(buffer, m_readq);
+    }
+
+    /**
+     * @brief Returns the read queue of the DCB and sets the read queue to NULL.
+     *
+     * @note The read queue becomes the property of the caller.
+     *
+     * @return A buffer of NULL if there is no read queue.
+     */
+    GWBUF* readq_release()
+    {
+        GWBUF* readq = m_readq;
+        m_readq = NULL;
+        return readq;
+    }
+
+    /**
+     * @brief Set read queue of a DCB
+     *
+     * The expectation is that there is no readqueue when this is done.
+     * The ownership of the provided buffer moved to the DCB.
+     *
+     * @param buffer The buffer to reset with
+     */
+    void readq_set(GWBUF* buffer)
+    {
+        mxb_assert(!m_readq);
+        if (m_readq)
+        {
+            MXS_ERROR("Read-queue set when there already is a read-queue.");
+            // TODO: Conceptually this should be freed here. However, currently
+            // TODO: the code just assigns without checking, so we do the same
+            // TODO: for now. If this is not set to NULL when it has been consumed,
+            // TODO: we would get a double free.
+            // TODO: gwbuf_free(m_readq);
+        }
+        m_readq = buffer;
+    }
+
     struct CALLBACK
     {
         Reason           reason;    /*< The reason for the callback */
@@ -298,7 +370,6 @@ public:
     char*                   m_user = nullptr;                   /**< User name for connection */
     struct sockaddr_storage m_ip;                               /**< remote IPv4/IPv6 address */
     GWBUF*                  m_delayq = nullptr;                 /**< Delay Backend Write Data Queue */
-    GWBUF*                  m_readq = nullptr;                  /**< Read queue for incomplete reads */
     GWBUF*                  m_fakeq = nullptr;                  /**< Fake event queue for generated events */
     uint32_t                m_fake_event = 0;                   /**< Fake event to be delivered to handler */
 
@@ -356,6 +427,7 @@ protected:
                                                          * whether we need to release throttle */
     uint64_t              m_writeqlen = 0;              /**< Bytes in writeq */
     GWBUF*                m_writeq = nullptr;           /**< Write Data Queue */
+    GWBUF*                m_readq = nullptr;            /**< Read queue for incomplete reads */
 
 private:
     friend class Manager;
@@ -582,101 +654,6 @@ void dcb_printf(DCB*, const char*, ...) __attribute__ ((format(printf, 2, 3))); 
 int dcb_count_by_role(DCB::Role role);
 
 uint64_t dcb_get_session_id(DCB* dcb);
-
-/**
- * @brief Append a buffer the DCB's readqueue
- *
- * Usually data is stored into the DCB's readqueue when not enough data is
- * available and the processing needs to be deferred until more data is available.
- *
- * @param dcb    The DCB to be appended to.
- * @param buffer The buffer to append.
- */
-static inline void dcb_readq_append(DCB* dcb, GWBUF* buffer)
-{
-    dcb->m_readq = gwbuf_append(dcb->m_readq, buffer);
-}
-
-/**
- * @brief Returns the read queue of the DCB.
- *
- * @note The read queue remains the property of the DCB.
- *
- * @return A buffer of NULL if there is no read queue.
- */
-static GWBUF* dcb_readq_get(DCB* dcb)
-{
-    return dcb->m_readq;
-}
-
-/**
- * @brief Returns whether a DCB currently has a read queue.
- *
- * @return True, if the DCB has a read queue, otherwise false.
- */
-static inline bool dcb_readq_has(DCB* dcb)
-{
-    return dcb->m_readq != NULL;
-}
-
-/**
- * @brief Returns the current length of the read queue
- *
- * @return Length of read queue
- */
-static unsigned int dcb_readq_length(DCB* dcb)
-{
-    return dcb->m_readq ? gwbuf_length(dcb->m_readq) : 0;
-}
-
-/**
- * @brief Prepend a buffer the DCB's readqueue
- *
- * @param dcb    The DCB to be prepended to.
- * @param buffer The buffer to prepend
- */
-static inline void dcb_readq_prepend(DCB* dcb, GWBUF* buffer)
-{
-    dcb->m_readq = gwbuf_append(buffer, dcb->m_readq);
-}
-
-/**
- * @brief Returns the read queue of the DCB and sets the read queue to NULL.
- *
- * @note The read queue becomes the property of the caller.
- *
- * @return A buffer of NULL if there is no read queue.
- */
-static GWBUF* dcb_readq_release(DCB* dcb)
-{
-    GWBUF* readq = dcb->m_readq;
-    dcb->m_readq = NULL;
-    return readq;
-}
-
-/**
- * @brief Set read queue of a DCB
- *
- * The expectation is that there is no readqueue when this is done.
- * The ownership of the provided buffer moved to the DCB.
- *
- * @param dcb    The DCB to be reset.
- * @param buffer The buffer to reset with
- */
-static inline void dcb_readq_set(DCB* dcb, GWBUF* buffer)
-{
-    if (dcb->m_readq)
-    {
-        MXS_ERROR("Read-queue set when there already is a read-queue.");
-        // TODO: Conceptually this should be freed here. However, currently
-        // TODO: the code just assigns without checking, so we do the same
-        // TODO: for now. If this is not set to NULL when it has been consumed,
-        // TODO: we would get a double free.
-        // TODO: gwbuf_free(dcb->m_readq);
-        dcb->m_readq = NULL;
-    }
-    dcb->m_readq = buffer;
-}
 
 /**
  * @brief Call a function for each connected DCB

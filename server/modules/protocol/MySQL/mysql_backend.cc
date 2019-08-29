@@ -574,7 +574,7 @@ int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
         // Store any partial packets in the DCB's read buffer
         if (read_buffer)
         {
-            dcb_readq_set(dcb, read_buffer);
+            dcb->readq_set(read_buffer);
 
             if (proto->reply().is_complete())
             {
@@ -631,7 +631,7 @@ int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
                         int eof_cnt = modutil_count_signal_packets(read_buffer, 0, &more, NULL);
                         if (more || eof_cnt % 2 != 0)
                         {
-                            dcb_readq_prepend(dcb, read_buffer);
+                            dcb->readq_prepend(read_buffer);
                             return 0;
                         }
                     }
@@ -644,7 +644,7 @@ int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
                          && mxs_mysql_is_prep_stmt_ok(read_buffer)
                          && !complete_ps_response(read_buffer))
                 {
-                    dcb_readq_prepend(dcb, read_buffer);
+                    dcb->readq_prepend(read_buffer);
                     return 0;
                 }
                 else
@@ -890,7 +890,7 @@ int MySQLBackendProtocol::handle_persistent_connection(BackendDCB* dcb, GWBUF* q
 
     if (dcb->was_persistent())
     {
-        mxb_assert(!dcb->m_fakeq && !dcb->m_readq && !dcb->m_delayq && !dcb->writeq());
+        mxb_assert(!dcb->m_fakeq && !dcb->readq() && !dcb->m_delayq && !dcb->writeq());
         mxb_assert(!dcb->is_in_persistent_pool());
         mxb_assert(protocol->m_ignore_replies >= 0);
 
@@ -1623,7 +1623,7 @@ bool MySQLBackendProtocol::read_complete_packet(DCB* dcb, GWBUF** readbuf)
         {
             /** Store any extra data in the DCB's readqueue */
 
-            dcb_readq_append(dcb, localbuf);
+            dcb->readq_append(localbuf);
         }
     }
 

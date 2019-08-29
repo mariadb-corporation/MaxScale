@@ -812,7 +812,7 @@ int MySQLClientProtocol::perform_authentication(DCB* generic_dcb, GWBUF* read_bu
             protocol->protocol_auth_state = MXS_AUTH_STATE_COMPLETE;
             mxs_mysql_send_ok(dcb, next_sequence, 0, NULL);
 
-            if (dcb->m_readq)
+            if (dcb->readq())
             {
                 // The user has already send more data, process it
                 poll_fake_read_event(dcb);
@@ -1524,7 +1524,7 @@ int MySQLClientProtocol::perform_normal_read(DCB* dcb, GWBUF* read_buffer, uint3
     if (n_copied != sizeof(pktlen)
         || nbytes_read < MYSQL_GET_PAYLOAD_LEN(pktlen) + MYSQL_HEADER_LEN)
     {
-        dcb_readq_append(dcb, read_buffer);
+        dcb->readq_append(read_buffer);
         return 0;
     }
 
@@ -1540,7 +1540,7 @@ int MySQLClientProtocol::perform_normal_read(DCB* dcb, GWBUF* read_buffer, uint3
     if (read_buffer != NULL)
     {
         // Must have been data left over, add incomplete mysql packet to read queue
-        dcb_readq_append(dcb, read_buffer);
+        dcb->readq_append(read_buffer);
     }
 
     if (rval != 0)
@@ -1711,15 +1711,17 @@ int32_t MySQLClientProtocol::read(DCB* dcb)
             || (0 == max_bytes && nbytes_read < MYSQL_GET_PACKET_LEN(read_buffer))
             || (0 != max_bytes && nbytes_read < max_bytes))
         {
-            dcb_readq_append(dcb, read_buffer);
+            dcb->readq_append(read_buffer);
         }
         else
         {
             if (nbytes_read > MYSQL_GET_PACKET_LEN(read_buffer))
             {
                 // We read more data than was needed
-                dcb_readq_append(dcb, read_buffer);
-                read_buffer = modutil_get_next_MySQL_packet(&dcb->m_readq);
+                dcb->readq_append(read_buffer);
+                GWBUF* readq = dcb->readq_release();
+                read_buffer = modutil_get_next_MySQL_packet(&readq);
+                dcb->readq_set(readq);
             }
 
             return_code = perform_authentication(dcb, read_buffer, nbytes_read);
