@@ -213,13 +213,13 @@ MariaDBAuthenticatorModule* MariaDBAuthenticatorModule::create(char** options)
     return instance;
 }
 
-static bool is_localhost_address(struct sockaddr_storage* addr)
+static bool is_localhost_address(const struct sockaddr_storage* addr)
 {
     bool rval = false;
 
     if (addr->ss_family == AF_INET)
     {
-        struct sockaddr_in* ip = (struct sockaddr_in*)addr;
+        const struct sockaddr_in* ip = (const struct sockaddr_in*)addr;
         if (ip->sin_addr.s_addr == INADDR_LOOPBACK)
         {
             rval = true;
@@ -227,7 +227,7 @@ static bool is_localhost_address(struct sockaddr_storage* addr)
     }
     else if (addr->ss_family == AF_INET6)
     {
-        struct sockaddr_in6* ip = (struct sockaddr_in6*)addr;
+        const struct sockaddr_in6* ip = (const struct sockaddr_in6*)addr;
         if (memcmp(&ip->sin6_addr, &in6addr_loopback, sizeof(ip->sin6_addr)) == 0)
         {
             rval = true;
@@ -282,8 +282,10 @@ MariaDBClientAuthenticator::MariaDBClientAuthenticator(MariaDBAuthenticatorModul
  * @return Authentication status
  * @note Authentication status codes are defined in maxscale/protocol/mysql.h
  */
-int MariaDBClientAuthenticator::authenticate(DCB* dcb)
+int MariaDBClientAuthenticator::authenticate(DCB* plain_dcb)
 {
+    mxb_assert(plain_dcb->role() == DCB::Role::CLIENT);
+    ClientDCB* dcb = static_cast<ClientDCB*>(plain_dcb);
     int auth_ret = MXS_AUTH_SSL_COMPLETE;
     MYSQL_session* client_data = (MYSQL_session*)dcb->m_data;
     if (*client_data->user)
@@ -352,10 +354,10 @@ int MariaDBClientAuthenticator::authenticate(DCB* dcb)
                           dcb->service()->name(),
                           client_data->user,
                           dcb->m_remote,
-                          dcb_get_port(dcb),
+                          static_cast<ClientDCB*>(dcb)->port(),
                           extra);
 
-            if (is_localhost_address(&dcb->m_ip) && !dcb->service()->config().localhost_match_wildcard_host)
+            if (is_localhost_address(&dcb->ip()) && !dcb->service()->config().localhost_match_wildcard_host)
             {
                 MXS_NOTICE("If you have a wildcard grant that covers this address, "
                            "try adding 'localhost_match_wildcard_host=true' for "

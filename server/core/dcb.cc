@@ -180,10 +180,13 @@ DCB::~DCB()
     MXB_POLL_DATA::owner = reinterpret_cast<MXB_WORKER*>(0xdeadbeef);
 }
 
-ClientDCB* ClientDCB::create(int fd, MXS_SESSION* session,
-                             std::unique_ptr<mxs::ClientProtocol> client_protocol, DCB::Manager* manager)
+ClientDCB* ClientDCB::create(int fd,
+                             const sockaddr_storage& ip,
+                             MXS_SESSION* session,
+                             std::unique_ptr<mxs::ClientProtocol> client_protocol,
+                             DCB::Manager* manager)
 {
-    ClientDCB* dcb = new(std::nothrow) ClientDCB(fd, session, std::move(client_protocol), manager);
+    ClientDCB* dcb = new(std::nothrow) ClientDCB(fd, ip, session, std::move(client_protocol), manager);
     if (!dcb)
     {
         ::close(fd);
@@ -2144,23 +2147,23 @@ void dcb_foreach_local(bool (* func)(DCB* dcb, void* data), void* data)
     }
 }
 
-int dcb_get_port(const DCB* dcb)
+int ClientDCB::port() const
 {
     int rval = -1;
 
-    if (dcb->m_ip.ss_family == AF_INET)
+    if (m_ip.ss_family == AF_INET)
     {
-        struct sockaddr_in* ip = (struct sockaddr_in*)&dcb->m_ip;
+        struct sockaddr_in* ip = (struct sockaddr_in*)&m_ip;
         rval = ntohs(ip->sin_port);
     }
-    else if (dcb->m_ip.ss_family == AF_INET6)
+    else if (m_ip.ss_family == AF_INET6)
     {
-        struct sockaddr_in6* ip = (struct sockaddr_in6*)&dcb->m_ip;
+        struct sockaddr_in6* ip = (struct sockaddr_in6*)&m_ip;
         rval = ntohs(ip->sin6_port);
     }
     else
     {
-        mxb_assert(dcb->m_ip.ss_family == AF_UNIX);
+        mxb_assert(m_ip.ss_family == AF_UNIX);
     }
 
     return rval;
@@ -2752,18 +2755,24 @@ void ClientDCB::shutdown()
     m_protocol = nullptr;
 }
 
-ClientDCB::ClientDCB(int fd, MXS_SESSION* session,
+ClientDCB::ClientDCB(int fd,
+                     const sockaddr_storage& ip,
+                     MXS_SESSION* session,
                      std::unique_ptr<ClientProtocol> protocol,
                      DCB::Manager* manager)
-    : ClientDCB(fd, DCB::Role::CLIENT, session, std::move(protocol), manager)
+    : ClientDCB(fd, ip, DCB::Role::CLIENT, session, std::move(protocol), manager)
 {
 }
 
-ClientDCB::ClientDCB(int fd, DCB::Role role, MXS_SESSION* session,
+ClientDCB::ClientDCB(int fd,
+                     const sockaddr_storage& ip,
+                     DCB::Role role,
+                     MXS_SESSION* session,
                      std::unique_ptr<ClientProtocol> protocol,
                      Manager* manager)
     : DCB(fd, role, session, manager)
     , m_protocol(std::move(protocol))
+    , m_ip(ip)
 {
     if (DCB_THROTTLING_ENABLED(this))
     {
@@ -2773,7 +2782,7 @@ ClientDCB::ClientDCB(int fd, DCB::Role role, MXS_SESSION* session,
 }
 
 ClientDCB::ClientDCB(int fd, DCB::Role role, MXS_SESSION* session)
-    : ClientDCB(fd, role, session, nullptr, nullptr)
+    : ClientDCB(fd, sockaddr_storage {}, role, session, nullptr, nullptr)
 {
 }
 
@@ -2809,7 +2818,7 @@ bool ClientDCB::ready() const
 }
 
 InternalDCB::InternalDCB(MXS_SESSION* session, DCB::Manager* manager)
-    : ClientDCB(FD_CLOSED, DCB::Role::INTERNAL, session, nullptr, manager)
+    : ClientDCB(FD_CLOSED, sockaddr_storage {}, DCB::Role::INTERNAL, session, nullptr, manager)
 {
     if (DCB_THROTTLING_ENABLED(this))
     {

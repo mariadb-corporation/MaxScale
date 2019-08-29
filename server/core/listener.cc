@@ -842,7 +842,7 @@ ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const 
     mxs::RoutingWorker* worker = mxs::RoutingWorker::get_current();
     mxb_assert(worker);
 
-    ClientDCB* client_dcb = ClientDCB::create(fd, session, std::move(client_protocol), worker);
+    ClientDCB* client_dcb = ClientDCB::create(fd, *addr, session, std::move(client_protocol), worker);
     if (!client_dcb)
     {
         MXS_OOM();
@@ -851,7 +851,6 @@ ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const 
     else
     {
         session->set_client_dcb(client_dcb);
-        memcpy(&client_dcb->m_ip, addr, sizeof(*addr));
         client_dcb->m_remote = MXS_STRDUP_A(host);
 
         /** Allocate DCB specific authentication data */

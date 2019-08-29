@@ -1429,9 +1429,9 @@ void MySQLBackendProtocol::gw_send_proxy_protocol_header(BackendDCB* backend_dcb
 {
     // TODO: Add support for chained proxies. Requires reading the client header.
 
-    const DCB* client_dcb = backend_dcb->session()->client_dcb;
+    const ClientDCB* client_dcb = backend_dcb->session()->client_dcb;
     const int client_fd = client_dcb->fd();
-    const sa_family_t family = client_dcb->m_ip.ss_family;
+    const sa_family_t family = client_dcb->ip().ss_family;
     const char* family_str = NULL;
 
     struct sockaddr_storage sa_peer;

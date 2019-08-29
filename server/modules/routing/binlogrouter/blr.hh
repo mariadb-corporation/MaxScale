@@ -578,7 +578,7 @@ typedef struct slave_encryption_ctx
  */
 typedef struct router_slave
 {
-    DCB*     dcb;               /*< The slave server DCB */
+    ClientDCB* dcb;               /*< The slave server DCB */
     int      state;             /*< The state of this slave */
     uint32_t binlog_pos;        /*< Binlog position for this slave */
     char     binlog_name[BINLOG_FNAMELEN + 1];

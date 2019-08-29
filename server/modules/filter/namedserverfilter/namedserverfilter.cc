@@ -166,13 +166,13 @@ RegexHintFSession* RegexHintFilter::newSession(MXS_SESSION* session, SERVICE* se
     {
         if (m_sources.size() > 0)
         {
-            ip_found = check_source_host(remote, &(session->client_dcb->m_ip));
+            ip_found = check_source_host(remote, &session->client_dcb->ip());
             session_active = ip_found;
         }
         /* Don't check hostnames if ip is already found */
         if (m_hostnames.size() > 0 && ip_found == false)
         {
-            session_active = check_source_hostnames(remote, &(session->client_dcb->m_ip));
+            session_active = check_source_hostnames(remote, &session->client_dcb->ip());
         }
     }
     /* Check client user against 'user' option */

@@ -407,7 +407,6 @@ public:
     bool                    m_dcb_errhandle_called = false;     /**< this can be called only once */
     char*                   m_remote = nullptr;                 /**< Address of remote end */
     char*                   m_user = nullptr;                   /**< User name for connection */
-    struct sockaddr_storage m_ip;                               /**< remote IPv4/IPv6 address */
 
     void* m_data = nullptr;                     /**< Client pcol data, owned by client DCB */
 
@@ -508,9 +507,24 @@ public:
     ~ClientDCB() override;
 
     static ClientDCB*
-    create(int fd, MXS_SESSION* session, std::unique_ptr<mxs::ClientProtocol> client_protocol,
+    create(int fd,
+           const sockaddr_storage& ip,
+           MXS_SESSION* session,
+           std::unique_ptr<mxs::ClientProtocol> client_protocol,
            DCB::Manager* manager = nullptr);
     MXS_PROTOCOL_SESSION* protocol_session() const override;
+
+    const sockaddr_storage& ip() const
+    {
+        return m_ip;
+    }
+
+    /**
+     * @brief Return the port number this DCB is connected to
+     *
+     * @return Port number the DCB is connected to or -1 if information is not available
+     */
+    int port() const;
 
     int ssl_handshake() override;
     bool ready() const;
@@ -522,17 +536,27 @@ public:
 
 protected:
     // Only for InternalDCB.
-    ClientDCB(int fd, DCB::Role role, MXS_SESSION* session, std::unique_ptr<mxs::ClientProtocol> protocol_,
+    ClientDCB(int fd,
+              const sockaddr_storage& ip,
+              DCB::Role role,
+              MXS_SESSION* session,
+              std::unique_ptr<mxs::ClientProtocol> protocol,
               Manager* manager);
 
     // Only for Mock DCB.
     ClientDCB(int fd, DCB::Role role, MXS_SESSION* session);
 
 private:
-    ClientDCB(int fd, MXS_SESSION* session, std::unique_ptr<mxs::ClientProtocol> protocol, DCB::Manager* manager);
+    ClientDCB(int fd,
+              const sockaddr_storage& ip,
+              MXS_SESSION* session,
+              std::unique_ptr<mxs::ClientProtocol> protocol,
+              DCB::Manager* manager);
 
     bool release_from(MXS_SESSION* session) override;
     bool prepare_for_destruction() override;
+
+    sockaddr_storage m_ip; /**< remote IPv4/IPv6 address */
 };
 
 class BackendDCB : public DCB
@@ -719,14 +743,6 @@ bool dcb_foreach(bool (* func)(DCB* dcb, void* data), void* data);
  * @param data User provided data passed as the second parameter to @c func
  */
 void dcb_foreach_local(bool (* func)(DCB* dcb, void* data), void* data);
-
-/**
- * @brief Return the port number this DCB is connected to
- *
- * @param dcb DCB to inspect
- * @return Port number the DCB is connected to or -1 if information is not available
- */
-int dcb_get_port(const DCB* dcb);
 
 /**
  * @brief Return the DCB currently being handled by the calling thread.

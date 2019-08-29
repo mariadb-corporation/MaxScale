@@ -1240,7 +1240,7 @@ static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_sessio
                        "last position %lu",
                        router->service->name(),
                        slave->dcb->m_remote,
-                       dcb_get_port(slave->dcb),
+                       slave->dcb->port(),
                        slave->serverid,
                        time(0) - slave->connect_time,
                        slave->stats.n_queries,
@@ -1692,7 +1692,7 @@ static void diagnostics(MXS_ROUTER* router, DCB* dcb)
             dcb_printf(dcb,
                        "\t\tSlave_host_port:                         [%s]:%d\n",
                        session->dcb->m_remote,
-                       dcb_get_port(session->dcb));
+                       session->dcb->port());
             dcb_printf(dcb,
                        "\t\tUsername:                                %s\n",
                        session->dcb->m_user);
@@ -2100,7 +2100,7 @@ static json_t* diagnostics_json(const MXS_ROUTER* router)
             }
 
             json_object_set_new(rval, "address", json_string(session->dcb->m_remote));
-            json_object_set_new(rval, "port", json_integer(dcb_get_port(session->dcb)));
+            json_object_set_new(rval, "port", json_integer(session->dcb->port()));
             json_object_set_new(rval, "user", json_string(session->dcb->m_user));
             json_object_set_new(rval, "ssl_enabled", json_boolean(session->dcb->ssl_enabled()));
             json_object_set_new(rval, "state", json_string(blrs_states[session->state]));
