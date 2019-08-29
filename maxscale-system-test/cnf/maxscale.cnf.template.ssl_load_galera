@@ -6,7 +6,7 @@ log_warning=1
 type=monitor
 module=galeramon
 servers=server1,server2,server3,server4
-user=maxskysql
+user=skysql
 password=skysql
 root_node_as_master=false
 

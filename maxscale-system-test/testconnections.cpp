@@ -800,7 +800,7 @@ void TestConnections::process_template(int m, const char* template_name, const c
     if (backend_ssl)
     {
         tprintf("Adding ssl settings\n");
-        system("sed -i \"s|type=server|type=server\\nssl=required\\nssl_cert=/###access_homedir###/certs/client-cert.pem\\nssl_key=/###access_homedir###/certs/client-key.pem\\nssl_ca_cert=/###access_homedir###/certs/ca.pem|g\" maxscale.cnf");
+        system("sed -i \"s|type=server|type=server\\nssl=required\\nssl_cert=/###access_homedir###/certs/client-cert.pem\\nssl_key=/###access_homedir###/certs/client-key.pem\\nssl_ca_cert=/###access_homedir###/certs/ca.pem\\nssl_cert_verify_depth=9\\nssl_version=MAX|g\" maxscale.cnf");
     }
 
     sprintf(str, "sed -i \"s/###threads###/%d/\"  maxscale.cnf", threads);
