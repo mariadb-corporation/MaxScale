@@ -114,7 +114,7 @@ std::string get_module_param_name(const std::string& type)
     {
         return CN_ROUTER;
     }
-    else if (type == CN_LISTENER || type == CN_SERVER)
+    else if (type == CN_LISTENER)
     {
         return CN_PROTOCOL;
     }
@@ -123,7 +123,7 @@ std::string get_module_param_name(const std::string& type)
         return CN_MODULE;
     }
 
-    mxb_assert(!true);
+    mxb_assert(!true); // Should not be called for a server.
     return "";
 }
 

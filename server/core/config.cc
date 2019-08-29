@@ -984,7 +984,7 @@ const char* get_missing_module_parameter_name(const CONFIG_CONTEXT* obj)
     {
         return CN_ROUTER;
     }
-    else if ((type == CN_LISTENER || type == CN_SERVER) && !obj->m_parameters.contains(CN_PROTOCOL))
+    else if (type == CN_LISTENER && !obj->m_parameters.contains(CN_PROTOCOL))
     {
         return CN_PROTOCOL;
     }

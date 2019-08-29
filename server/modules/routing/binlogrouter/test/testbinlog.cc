@@ -99,8 +99,6 @@ int main(int argc, char** argv)
 
     set_libdir(MXS_STRDUP_A(".."));
     load_module("binlogrouter", MODULE_ROUTER);
-    set_libdir(MXS_STRDUP_A("../../../authenticator/MariaDBBackendAuth/"));
-    load_module("mysqlbackendauth", MODULE_AUTHENTICATOR);
     set_libdir(MXS_STRDUP_A("../../../../../query_classifier/qc_sqlite/"));
     load_module("qc_sqlite", MODULE_QUERY_CLASSIFIER);
 
@@ -141,8 +139,6 @@ int main(int argc, char** argv)
     params.set_from_list({
         {"address", "_none_"},
         {"port", "3306"},
-        {"protocol", "MariaDBBackend"},
-        {"authenticator", "mariadbbackendauth"}
     }, common_server_params());
 
     Server* server = ServerManager::create_server("binlog_router_master_host", params);

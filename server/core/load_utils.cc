@@ -68,7 +68,6 @@ static NAME_MAPPING name_mappings[] =
     {MODULE_MONITOR,       "mysqlmon",         "mariadbmon",         false},
     {MODULE_PROTOCOL,      "mysqlclient",      "mariadbclient",      false},
     {MODULE_AUTHENTICATOR, "mysqlauth",        "mariadbauth",        false},
-    {MODULE_AUTHENTICATOR, "mysqlbackendauth", "mariadbbackendauth", false}
 };
 
 static const size_t N_NAME_MAPPINGS = sizeof(name_mappings) / sizeof(name_mappings[0]);
