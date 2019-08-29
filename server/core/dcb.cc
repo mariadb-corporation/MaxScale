@@ -437,6 +437,14 @@ BackendDCB* BackendDCB::connect(SERVER* srv, MXS_SESSION* session, DCB::Manager*
 int DCB::read(GWBUF** head, int maxbytes)
 {
     mxb_assert(this->owner == RoutingWorker::get_current());
+    mxb_assert(m_fd != FD_CLOSED);
+
+    if (m_fd == FD_CLOSED)
+    {
+        MXS_ERROR("Read failed, dcb is closed.");
+        return -1;
+    }
+
     int nsingleread = 0;
     int nreadtotal = 0;
 
@@ -456,12 +464,6 @@ int DCB::read(GWBUF** head, int maxbytes)
     if (SSLState::HANDSHAKE_DONE == m_ssl_state || SSLState::ESTABLISHED == m_ssl_state)
     {
         return read_SSL(head);
-    }
-
-    if (m_fd == FD_CLOSED)
-    {
-        MXS_ERROR("Read failed, dcb is closed.");
-        return 0;
     }
 
     while (0 == maxbytes || nreadtotal < maxbytes)
@@ -616,15 +618,11 @@ GWBUF* DCB::basic_read(int bytesavailable, int maxbytes, int nreadtotal, int* ns
  */
 int DCB::read_SSL(GWBUF** head)
 {
+    mxb_assert(m_fd != FD_CLOSED);
+
     GWBUF* buffer;
     int nsingleread = 0, nreadtotal = 0;
     int start_length = *head ? gwbuf_length(*head) : 0;
-
-    if (m_fd == FD_CLOSED)
-    {
-        MXS_ERROR("Read failed, dcb is closed.");
-        return -1;
-    }
 
     if (m_ssl_write_want_read)
     {
