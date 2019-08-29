@@ -314,8 +314,7 @@ int32_t MySQLBackendProtocol::read(DCB* plain_dcb)
             if (proto->protocol_auth_state == MXS_AUTH_STATE_COMPLETE)
             {
                 /** Authentication completed successfully */
-                GWBUF* localq = dcb->m_delayq;
-                dcb->m_delayq = NULL;
+                GWBUF* localq = dcb->delayq_release();
 
                 if (localq)
                 {
@@ -890,7 +889,7 @@ int MySQLBackendProtocol::handle_persistent_connection(BackendDCB* dcb, GWBUF* q
 
     if (dcb->was_persistent())
     {
-        mxb_assert(!dcb->m_fakeq && !dcb->readq() && !dcb->m_delayq && !dcb->writeq());
+        mxb_assert(!dcb->m_fakeq && !dcb->readq() && !dcb->delayq() && !dcb->writeq());
         mxb_assert(!dcb->is_in_persistent_pool());
         mxb_assert(protocol->m_ignore_replies >= 0);
 
@@ -1168,7 +1167,7 @@ int32_t MySQLBackendProtocol::hangup(DCB* dcb)
 void MySQLBackendProtocol::backend_set_delayqueue(DCB* dcb, GWBUF* queue)
 {
     /* Append data */
-    dcb->m_delayq = gwbuf_append(dcb->m_delayq, queue);
+    dcb->delayq_append(queue);
 }
 
 /**

@@ -357,6 +357,30 @@ public:
         m_readq = buffer;
     }
 
+    GWBUF* delayq()
+    {
+        return m_delayq;
+    }
+
+    void delayq_append(GWBUF* buffer)
+    {
+        m_delayq = gwbuf_append(m_delayq, buffer);
+    }
+
+    /**
+     * @brief Returns the read queue of the DCB and sets the read queue to NULL.
+     *
+     * @note The read queue becomes the property of the caller.
+     *
+     * @return A buffer of NULL if there is no read queue.
+     */
+    GWBUF* delayq_release()
+    {
+        GWBUF* delayq = m_delayq;
+        m_delayq = NULL;
+        return delayq;
+    }
+
     struct CALLBACK
     {
         Reason           reason;    /*< The reason for the callback */
@@ -369,7 +393,6 @@ public:
     char*                   m_remote = nullptr;                 /**< Address of remote end */
     char*                   m_user = nullptr;                   /**< User name for connection */
     struct sockaddr_storage m_ip;                               /**< remote IPv4/IPv6 address */
-    GWBUF*                  m_delayq = nullptr;                 /**< Delay Backend Write Data Queue */
     GWBUF*                  m_fakeq = nullptr;                  /**< Fake event queue for generated events */
     uint32_t                m_fake_event = 0;                   /**< Fake event to be delivered to handler */
 
@@ -428,6 +451,7 @@ protected:
     uint64_t              m_writeqlen = 0;              /**< Bytes in writeq */
     GWBUF*                m_writeq = nullptr;           /**< Write Data Queue */
     GWBUF*                m_readq = nullptr;            /**< Read queue for incomplete reads */
+    GWBUF*                m_delayq = nullptr;           /**< Delay Backend Write Data Queue */
 
 private:
     friend class Manager;
