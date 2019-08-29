@@ -385,11 +385,12 @@ void Configuration::insert(Type* pValue)
     m_values.insert(make_pair(pValue->parameter().name(), pValue));
 }
 
-void Configuration::remove(Type* pValue)
+void Configuration::remove(Type* pValue, const std::string& name)
 {
-    auto it = m_values.find(pValue->parameter().name());
+    auto it = m_values.find(name);
 
     mxb_assert(it != m_values.end());
+    mxb_assert(it->second == pValue);
     m_values.erase(it);
 }
 
@@ -409,13 +410,16 @@ size_t Configuration::size() const
 Type::Type(Configuration* pConfiguration, const config::Param* pParam)
     : m_configuration(*pConfiguration)
     , m_param(*pParam)
+    , m_name(pParam->name())
 {
+    // The name is copied, so that we have access to it in the destructor
+    // also in the case that Param happens to be destructed first.
     m_configuration.insert(this);
 }
 
 Type::~Type()
 {
-    m_configuration.remove(this);
+    m_configuration.remove(this, m_name);
 }
 
 const config::Param& Type::parameter() const
