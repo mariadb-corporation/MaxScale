@@ -32,7 +32,8 @@
  * @endverbatim
  */
 
-#define MXS_MODULE_NAME "HTTPD"
+#include <maxscale/protocol/httpd/module_names.hh>
+#define MXS_MODULE_NAME MXS_HTTPD_PROTOCOL_NAME
 
 #include "httpd.hh"
 #include <ctype.h>
@@ -56,7 +57,7 @@ static bool                  httpd_init_connection(DCB* dcb);
 static void                  httpd_finish_connection(DCB* dcb);
 static int                   httpd_get_line(int sock, char* buf, int size);
 static void                  httpd_send_headers(DCB* dcb, int final, bool auth_ok);
-static char*                 httpd_default_auth();
+static std::string           httpd_default_auth();
 
 class HTTPDProtocol : public mxs::ProtocolModule
 {
@@ -66,25 +67,26 @@ public:
         return new HTTPDProtocol();
     }
 
-    std::unique_ptr<mxs::ClientProtocol> create_client_protocol(MXS_SESSION* session, mxs::Component* component)
+    std::unique_ptr<mxs::ClientProtocol>
+    create_client_protocol(MXS_SESSION* session, mxs::Component* component) override
     {
         return std::unique_ptr<mxs::ClientProtocol>(new (std::nothrow) HTTPD_session());
     }
 
-    std::string auth_default() const
+    std::string auth_default() const override
     {
         return httpd_default_auth();
+    }
+
+    std::string name() const override
+    {
+        return MXS_MODULE_NAME;
     }
 };
 
 HTTPD_session* HTTPD_session::create(MXS_SESSION* session, mxs::Component* component)
 {
     return new (std::nothrow) HTTPD_session();
-}
-
-char* HTTPD_session::auth_default()
-{
-    return httpd_default_auth();
 }
 
 int32_t HTTPD_session::read(DCB* dcb)
@@ -160,18 +162,15 @@ MXS_MODULE* MXS_CREATE_MODULE()
     return &info;
 }
 }
-/*lint +e14 */
-
-static const char* default_auth = "httpauth";
 
 /**
  * The default authenticator name for this protocol
  *
  * @return name of authenticator
  */
-static char* httpd_default_auth()
+static std::string httpd_default_auth()
 {
-    return (char*)default_auth;
+    return MXS_HTTPAUTH_AUTHENTICATOR_NAME;
 }
 
 /**

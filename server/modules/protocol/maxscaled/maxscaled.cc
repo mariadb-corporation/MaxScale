@@ -11,7 +11,8 @@
  * Public License.
  */
 
-#define MXS_MODULE_NAME "maxscaled"
+#include <maxscale/protocol/maxscaled/module_names.hh>
+#define MXS_MODULE_NAME MXS_MAXSCALED_PROTOCOL_NAME
 
 #include <maxscale/ccdefs.hh>
 #include <stdio.h>
@@ -66,7 +67,6 @@ static MXS_PROTOCOL_SESSION* maxscaled_new_client_session(MXS_SESSION*, mxs::Com
 static void                  maxscaled_free_session(MXS_PROTOCOL_SESSION*);
 static bool                  maxscaled_init_connection(DCB*);
 static void                  maxscaled_finish_connection(DCB* dcb);
-static char*                 maxscaled_default_auth();
 
 class MAXSCALEDProtocol : public mxs::ProtocolModule
 {
@@ -76,14 +76,20 @@ public:
         return new MAXSCALEDProtocol();
     }
 
-    std::unique_ptr<mxs::ClientProtocol> create_client_protocol(MXS_SESSION* session, mxs::Component* component)
+    std::unique_ptr<mxs::ClientProtocol>
+    create_client_protocol(MXS_SESSION* session, mxs::Component* component) override
     {
         return std::unique_ptr<mxs::ClientProtocol>(new (std::nothrow) MAXSCALED());
     }
 
-    std::string auth_default() const
+    std::string auth_default() const override
     {
-        return maxscaled_default_auth();
+        return MXS_MAXADMINAUTH_AUTHENTICATOR_NAME;
+    }
+
+    std::string name() const override
+    {
+        return MXS_MODULE_NAME;
     }
 };
 
@@ -103,11 +109,6 @@ MAXSCALED::~MAXSCALED()
     {
         MXS_FREE(username);
     }
-}
-
-char* MAXSCALED::auth_default()
-{
-    return maxscaled_default_auth();
 }
 
 int32_t MAXSCALED::read(DCB* dcb)
@@ -276,17 +277,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
     return &info;
 }
-}
-/*lint +e14 */
-
-/**
- * The default authenticator name for this protocol
- *
- * @return name of authenticator
- */
-static char* maxscaled_default_auth()
-{
-    return const_cast<char*>("MaxAdminAuth");
 }
 
 /**

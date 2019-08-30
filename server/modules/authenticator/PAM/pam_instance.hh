@@ -33,6 +33,8 @@ public:
     json_t* diagnostics_json(const Listener* listener) override;
 
     uint64_t capabilities() const override;
+    std::string supported_protocol() const override;
+
     std::unique_ptr<mxs::ClientAuthenticator> create_client_authenticator() override;
 
     const std::string m_dbname;     /**< Name of the in-memory database */

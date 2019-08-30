@@ -11,7 +11,8 @@
  * Public License.
  */
 
-#define MXS_MODULE_NAME "HTTPAuth"
+#include <maxscale/protocol/httpd/module_names.hh>
+#define MXS_MODULE_NAME MXS_HTTPAUTH_AUTHENTICATOR_NAME
 
 #include <maxscale/authenticator2.hh>
 #include <maxscale/modinfo.hh>
@@ -43,6 +44,11 @@ public:
     json_t* diagnostics_json(const Listener* listener) override
     {
         return users_default_diagnostic_json(listener);
+    }
+
+    std::string supported_protocol() const override
+    {
+        return MXS_HTTPD_PROTOCOL_NAME;
     }
 };
 

@@ -30,7 +30,8 @@
  * @endverbatim
  */
 
-#define MXS_MODULE_NAME "CDC"
+#include <maxscale/protocol/cdc/module_names.hh>
+#define MXS_MODULE_NAME MXS_CDC_PROTOCOL_NAME
 
 #include <maxscale/ccdefs.hh>
 #include <cdc.hh>
@@ -73,11 +74,6 @@ static int                   do_auth(DCB* dcb, GWBUF* buffer, void* data);
 static void                  write_auth_ack(DCB* dcb);
 static void                  write_auth_err(DCB* dcb);
 
-static char* cdc_default_auth()
-{
-    return const_cast<char*>("CDCPlainAuth");
-}
-
 class CDCProtocol : public mxs::ProtocolModule
 {
 public:
@@ -86,25 +82,26 @@ public:
         return new CDCProtocol();
     }
 
-    std::unique_ptr<mxs::ClientProtocol> create_client_protocol(MXS_SESSION* session, mxs::Component* component)
+    std::unique_ptr<mxs::ClientProtocol>
+    create_client_protocol(MXS_SESSION* session, mxs::Component* component) override
     {
         return std::unique_ptr<mxs::ClientProtocol>(cdc_protocol_init());
     }
 
-    std::string auth_default() const
+    std::string auth_default() const override
     {
-        return cdc_default_auth();
+        return MXS_CDCPLAINAUTH_AUTHENTICATOR_NAME;
+    }
+
+    std::string name() const override
+    {
+        return MXS_MODULE_NAME;
     }
 };
 
 CDC_protocol* CDC_protocol::create(MXS_SESSION* session, mxs::Component* component)
 {
     return cdc_protocol_init();
-}
-
-char* CDC_protocol::auth_default()
-{
-    return cdc_default_auth();
 }
 
 int32_t CDC_protocol::read(DCB* dcb)

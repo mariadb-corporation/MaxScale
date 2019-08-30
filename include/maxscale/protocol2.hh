@@ -55,6 +55,13 @@ public:
     {
         return nullptr;
     }
+
+    /**
+     * Get protocol module name.
+     *
+     * @return Module name
+     */
+    virtual std::string name() const = 0;
 };
 
 /**

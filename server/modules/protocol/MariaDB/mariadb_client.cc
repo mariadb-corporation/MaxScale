@@ -12,9 +12,10 @@
  * Public License.
  */
 
-#define MXS_MODULE_NAME "mariadbclient"
+#include <maxscale/protocol/mariadb/module_names.hh>
+#define MXS_MODULE_NAME MXS_MARIADB_PROTOCOL_NAME
 
-#include <maxscale/ccdefs.hh>
+#include <maxscale/protocol/mysql.hh>
 
 #include <inttypes.h>
 #include <limits.h>
@@ -31,7 +32,7 @@
 #include <maxscale/poll.hh>
 #include <maxscale/protocol.hh>
 #include <maxscale/protocol/local_client.hh>
-#include <maxscale/protocol/mysql.hh>
+
 #include <maxscale/query_classifier.hh>
 #include <maxscale/router.hh>
 #include <maxscale/routingworker.hh>
@@ -1988,24 +1989,29 @@ public:
         return new MySQLProtocolModule();
     }
 
-    std::unique_ptr<mxs::ClientProtocol> create_client_protocol(MXS_SESSION* session,
-                                                                mxs::Component* component)
+    std::unique_ptr<mxs::ClientProtocol>
+    create_client_protocol(MXS_SESSION* session, mxs::Component* component) override
     {
         std::unique_ptr<mxs::ClientProtocol> rval;
         rval.reset(new(std::nothrow) MySQLClientProtocol(session, nullptr, component));
         return rval;
     }
 
-    std::string auth_default() const
+    std::string auth_default() const override
     {
-        return "mariadbauth";
+        return MXS_MARIADBAUTH_AUTHENTICATOR_NAME;
     }
 
-    GWBUF* reject(const std::string& host)
+    GWBUF* reject(const std::string& host) override
     {
         std::string message = "Host '" + host
             + "' is temporarily blocked due to too many authentication failures.";
         return modutil_create_mysql_err_msg(0, 0, 1129, "HY000", message.c_str());
+    }
+
+    std::string name() const override
+    {
+        return MXS_MODULE_NAME;
     }
 };
 

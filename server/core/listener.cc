@@ -285,13 +285,29 @@ SListener Listener::create(const std::string& name,
         }
     }
     const char* zauth = authenticator.c_str();
-    const MXS_MODULE* auth_mod = get_module(zauth, MODULE_AUTHENTICATOR);
-    mxb_assert(auth_mod);
-    auto auth_instance = authenticator_init(zauth, authenticator_options.c_str());
+    const MXS_MODULE* auth_mod = get_module(zauth, MODULE_AUTHENTICATOR); // TODO:cleanup
+    std::unique_ptr<mxs::AuthenticatorModule> auth_instance;
+    if (auth_mod)
+    {
+        auth_instance = authenticator_init(zauth, authenticator_options.c_str());
+    }
     if (!auth_instance)
     {
         MXS_ERROR("Failed to initialize authenticator module '%s' for listener '%s'.",
                   zauth, name.c_str());
+        return nullptr;
+    }
+
+    // Check that the authenticator supports the protocol. Use case-insensitive comparison.
+    // TODO: Extend to routers/filters.
+    auto supported_protocol = auth_instance->supported_protocol();
+    if (strcasecmp(protocol_module->name().c_str(), supported_protocol.c_str()) != 0)
+    {
+        // When printing protocol name, print the name user gave in configuration file,
+        // not the effective name.
+        MXB_ERROR("Authenticator module '%s' of listener '%s' expects to be paired with protocol '%s', "
+                  "not with '%s'.",
+                  zauth, name.c_str(), supported_protocol.c_str(), protocol.c_str());
         return nullptr;
     }
 

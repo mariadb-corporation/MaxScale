@@ -18,6 +18,7 @@
 #include <maxscale/dcb.hh>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/protocol/mysql.hh>
+#include <maxscale/protocol/mariadb/module_names.hh>
 #include <maxscale/secrets.h>
 #include <maxscale/service.hh>
 #include <maxscale/sqlite3.h>
@@ -97,6 +98,11 @@ json_t* GSSAPIAuthenticatorModule::diagnostics_json(const Listener* listener)
 uint64_t GSSAPIAuthenticatorModule::capabilities() const
 {
     return CAP_BACKEND_AUTH;
+}
+
+std::string GSSAPIAuthenticatorModule::supported_protocol() const
+{
+    return MXS_MARIADB_PROTOCOL_NAME;
 }
 
 /**

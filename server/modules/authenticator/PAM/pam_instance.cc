@@ -20,6 +20,7 @@
 #include <maxbase/format.hh>
 #include <maxscale/jansson.hh>
 #include <maxscale/paths.h>
+#include <maxscale/protocol/mariadb/module_names.hh>
 #include <maxscale/secrets.h>
 #include <maxscale/mysql_utils.hh>
 
@@ -518,6 +519,11 @@ json_t* PamAuthenticatorModule::diagnostics_json(const Listener* listener)
 uint64_t PamAuthenticatorModule::capabilities() const
 {
     return AuthenticatorModule::CAP_BACKEND_AUTH;
+}
+
+std::string PamAuthenticatorModule::supported_protocol() const
+{
+    return MXS_MARIADB_PROTOCOL_NAME;
 }
 
 std::unique_ptr<mxs::ClientAuthenticator> PamAuthenticatorModule::create_client_authenticator()

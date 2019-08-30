@@ -900,6 +900,11 @@ std::unique_ptr<mxs::ClientAuthenticator> MariaDBAuthenticatorModule::create_cli
     return std::unique_ptr<mxs::ClientAuthenticator>(new(std::nothrow) MariaDBClientAuthenticator(this));
 }
 
+std::string MariaDBAuthenticatorModule::supported_protocol() const
+{
+    return MXS_MARIADB_PROTOCOL_NAME;
+}
+
 bool MariaDBBackendSession::extract(DCB* backend, GWBUF* buffer)
 {
     bool rval = false;

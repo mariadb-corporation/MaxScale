@@ -48,6 +48,7 @@ public:
     void diagnostics(DCB* output, Listener* listener) override;
     json_t* diagnostics_json(const Listener* listener) override;
     uint64_t capabilities() const override;
+    std::string supported_protocol() const override;
 
     char*    principal_name {nullptr}; /**< Service principal name given to the client */
 

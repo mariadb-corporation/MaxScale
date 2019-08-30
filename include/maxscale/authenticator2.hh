@@ -68,6 +68,13 @@ public:
      * @return Capabilities as a bitfield
      */
     virtual uint64_t capabilities() const;
+
+    /**
+     * Get name of supported protocol module.
+     *
+     * @return Supported protocol
+     */
+    virtual std::string supported_protocol() const = 0;
 };
 
 /**

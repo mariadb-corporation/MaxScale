@@ -26,7 +26,8 @@
  * @endverbatim
  */
 
-#define MXS_MODULE_NAME "MaxAdminAuth"
+#include <maxscale/protocol/maxscaled/module_names.hh>
+#define MXS_MODULE_NAME MXS_MAXADMINAUTH_AUTHENTICATOR_NAME
 
 #include <maxscale/authenticator2.hh>
 #include <maxbase/alloc.h>
@@ -67,6 +68,11 @@ public:
     json_t* diagnostics_json(const Listener* listener) override
     {
         return users_default_diagnostic_json(listener);
+    }
+
+    std::string supported_protocol() const override
+    {
+        return MXS_MAXSCALED_PROTOCOL_NAME;
     }
 };
 

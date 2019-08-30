@@ -50,7 +50,6 @@ public:
     static HTTPD_session* create(MXS_SESSION* session, mxs::Component* component);
     ~HTTPD_session() = default;
 
-    static char* auth_default();
     static GWBUF* reject(const char* host);
 
     int32_t read(DCB* dcb) override;

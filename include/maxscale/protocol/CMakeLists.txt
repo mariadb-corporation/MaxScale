@@ -3,3 +3,8 @@ foreach(var ${HEADERS})
   get_filename_component(header ${var} NAME)
   install_custom_file(${header} ${CMAKE_INSTALL_INCLUDEDIR}/maxscale/protocol devel)
 endforeach()
+
+add_subdirectory(cdc)
+add_subdirectory(httpd)
+add_subdirectory(mariadb)
+add_subdirectory(maxscaled)

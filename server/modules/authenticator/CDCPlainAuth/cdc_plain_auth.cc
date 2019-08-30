@@ -25,7 +25,8 @@
  * @endverbatim
  */
 
-#define MXS_MODULE_NAME "CDCPlainAuth"
+#include <maxscale/protocol/cdc/module_names.hh>
+#define MXS_MODULE_NAME MXS_CDCPLAINAUTH_AUTHENTICATOR_NAME
 
 #include <maxscale/authenticator2.hh>
 #include <fcntl.h>
@@ -93,6 +94,11 @@ public:
     json_t* diagnostics_json(const Listener* listener) override
     {
         return users_default_diagnostic_json(listener);
+    }
+
+    std::string supported_protocol() const override
+    {
+        return MXS_CDC_PROTOCOL_NAME;
     }
 };
 

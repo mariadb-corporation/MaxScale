@@ -28,7 +28,6 @@ public:
     MAXSCALED();
     ~MAXSCALED() override;
 
-    static char* auth_default();
     static GWBUF* reject(const char* host);
 
     int32_t read(DCB* dcb) override;

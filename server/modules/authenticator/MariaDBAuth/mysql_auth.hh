@@ -12,7 +12,8 @@
  */
 #pragma once
 
-#define MXS_MODULE_NAME "MariaDBAuth"
+#include <maxscale/protocol/mariadb/module_names.hh>
+#define MXS_MODULE_NAME MXS_MARIADBAUTH_AUTHENTICATOR_NAME
 
 #include <maxscale/ccdefs.hh>
 
@@ -113,6 +114,7 @@ public:
     void diagnostics(DCB* output, Listener* listener) override;
     json_t* diagnostics_json(const Listener* listener) override;
     uint64_t capabilities() const override;
+    virtual std::string supported_protocol() const override;
 
     sqlite3** handles {nullptr};              /**< SQLite3 database handle */
     char*     cache_dir {nullptr};            /**< Custom cache directory location */
