@@ -718,16 +718,6 @@ inline int dcb_drain_writeq(DCB* dcb)
     return dcb->writeq_drain();
 }
 
-/**
- * @brief Close DCB in the thread that owns it.
- *
- * @param dcb The dcb to be closed.
- *
- * @note Even if the calling thread owns the dcb, the closing will
- *       still be made via the event loop.
- */
-void dcb_close_in_owning_thread(DCB* dcb);
-
 void printAllDCBs();                                                            /* Debug to print all DCB in
                                                                                  * the system */
 void printDCB(DCB*);                                                            /* Debug print routine */

@@ -1153,4 +1153,14 @@ bool blr_handle_one_event(MXS_ROUTER* instance,
                           uint32_t len,
                           int semi_sync_send_ack);
 
+/**
+ * @brief Close DCB in the thread that owns it.
+ *
+ * @param dcb The dcb to be closed.
+ *
+ * @note Even if the calling thread owns the dcb, the closing will
+ *       still be made via the event loop.
+ */
+void close_dcb_in_owning_thread(DCB* dcb);
+
 #endif

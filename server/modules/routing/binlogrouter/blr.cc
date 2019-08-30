@@ -3094,3 +3094,31 @@ void blr_log_disabled_heartbeat(const ROUTER_INSTANCE* inst)
                 "MASTER_HEARTBEAT_PERIOD has been set to 0 (disabled): "
                 "a master network inactivity will not be handled.");
 }
+
+static void cb_close_dcb_in_owning_thread(MXB_WORKER*, void* data)
+{
+    DCB* dcb = static_cast<DCB*>(data);
+    mxb_assert(dcb);
+
+    DCB::close(dcb);
+}
+
+void close_dcb_in_owning_thread(DCB* dcb)
+{
+    // TODO: If someone now calls DCB::close(dcb) from the owning thread while
+    // TODO: the dcb is being delivered to the owning thread, there will be a
+    // TODO: crash when DCB::close(dcb) is called anew. Also dcbs should be
+    // TODO: reference counted, so that we could addref before posting, thus
+    // TODO: preventing too early a deletion.
+
+    MXB_WORKER* worker = static_cast<MXB_WORKER*>(dcb->owner);      // The owning worker
+    mxb_assert(worker);
+
+    intptr_t arg1 = (intptr_t)cb_close_dcb_in_owning_thread;
+    intptr_t arg2 = (intptr_t)dcb;
+
+    if (!mxb_worker_post_message(worker, MXB_WORKER_MSG_CALL, arg1, arg2))
+    {
+        MXS_ERROR("Could not post dcb for closing to the owning thread..");
+    }
+}

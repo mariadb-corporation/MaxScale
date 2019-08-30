@@ -3610,7 +3610,7 @@ static int blr_slave_disconnect_server(ROUTER_INSTANCE* router,
                                                    1);
 
             sptr->state = BLRS_UNREGISTERED;
-            dcb_close_in_owning_thread(sptr->dcb);
+            close_dcb_in_owning_thread(sptr->dcb);
 
             break;
         }
@@ -3732,7 +3732,7 @@ static int blr_slave_disconnect_all(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave
             mxs_route_reply(slave->up, pkt, nullptr);
 
             sptr->state = BLRS_UNREGISTERED;
-            dcb_close_in_owning_thread(sptr->dcb);
+            close_dcb_in_owning_thread(sptr->dcb);
         }
         sptr = sptr->next;
     }
