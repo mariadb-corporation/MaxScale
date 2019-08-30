@@ -401,6 +401,11 @@ public:
         return m_nClose != 0;
     }
 
+    bool hanged_up() const
+    {
+        return m_hanged_up;
+    }
+
     struct CALLBACK
     {
         Reason           reason;    /*< The reason for the callback */
@@ -409,7 +414,6 @@ public:
         struct CALLBACK* next;      /*< Next callback for this DCB */
     };
 
-    bool                    m_hanged_up = false;                /**< this can be called only once */
     char*                   m_remote = nullptr;                 /**< Address of remote end */
     char*                   m_user = nullptr;                   /**< User name for connection */
 
@@ -459,7 +463,7 @@ protected:
     bool                  m_ssl_write_want_write = false;
     Stats                 m_stats;                      /**< DCB related statistics */
     CALLBACK*             m_callbacks = nullptr;        /**< The list of callbacks for the DCB */
-    bool                  m_high_water_reached = false; /** High water mark reached, to determine
+    bool                  m_high_water_reached = false; /**< High water mark reached, to determine
                                                          * whether we need to release throttle */
     uint64_t              m_writeqlen = 0;              /**< Bytes in writeq */
     GWBUF*                m_writeq = nullptr;           /**< Write Data Queue */
@@ -469,7 +473,8 @@ protected:
     uint32_t              m_fake_event = 0;             /**< Fake event to be delivered to handler */
     int64_t               m_last_read;                  /**< Last time the DCB received data */
     int64_t               m_last_write;                 /**< Last time the DCB sent data */
-    uint32_t              m_nClose = 0;                 /** How many times dcb_close has been called. */
+    uint32_t              m_nClose = 0;                 /**< How many times dcb_close has been called. */
+    bool                  m_hanged_up = false;          /**< Has thethis can be called only once */
 
 private:
     friend class Manager;
