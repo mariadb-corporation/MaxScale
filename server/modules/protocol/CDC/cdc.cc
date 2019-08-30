@@ -244,7 +244,7 @@ static int cdc_read_event(DCB* generic_dcb)
                           client_data->user);
 
                 /* force the client connection close */
-                dcb_close(dcb);
+                DCB::close(dcb);
             }
             break;
 
@@ -265,7 +265,7 @@ static int cdc_read_event(DCB* generic_dcb)
                 gwbuf_free(head);
 
                 /* right now, just force the client connection close */
-                dcb_close(dcb);
+                DCB::close(dcb);
             }
             else
             {
@@ -328,7 +328,7 @@ static int cdc_write(DCB* dcb, GWBUF* queue)
  */
 static int cdc_error(DCB* dcb)
 {
-    dcb_close(dcb);
+    DCB::close(dcb);
     return 0;
 }
 
@@ -339,7 +339,7 @@ static int cdc_error(DCB* dcb)
  */
 static int cdc_hangup(DCB* dcb)
 {
-    dcb_close(dcb);
+    DCB::close(dcb);
     return 0;
 }
 

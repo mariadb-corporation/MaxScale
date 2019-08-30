@@ -1083,7 +1083,7 @@ int32_t MySQLBackendProtocol::error(DCB* dcb)
             MXS_ERROR("EPOLLERR event on a non-persistent DCB with no session. "
                       "Closing connection.");
         }
-        dcb_close(dcb);
+        DCB::close(dcb);
     }
     else if (dcb->state() != DCB::State::POLLING || session->state() != MXS_SESSION::State::STARTED)
     {

@@ -134,7 +134,7 @@ static void blr_start_master(void* data)
     if (router->client)
     {
         MXS_FREE(router->client->protocol_data_release());
-        dcb_close(router->client);
+        DCB::close(router->client);
         router->client = NULL;
     }
 
@@ -454,7 +454,7 @@ void blr_master_reconnect(ROUTER_INSTANCE* router)
  */
 void blr_master_close(ROUTER_INSTANCE* router)
 {
-    dcb_close(router->master);
+    DCB::close(router->master);
     router->master = NULL;
 
     pthread_mutex_lock(&router->lock);
@@ -1374,7 +1374,7 @@ void blr_stop_start_master(ROUTER_INSTANCE* router)
             && router->client->state() == DCB::State::POLLING)
         {
             // Is this dead code? dcb->m_fd for internal DCBs is always -1
-            dcb_close(router->client);
+            DCB::close(router->client);
             router->client = NULL;
         }
     }

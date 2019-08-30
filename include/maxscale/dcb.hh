@@ -717,10 +717,6 @@ inline int dcb_drain_writeq(DCB* dcb)
 {
     return dcb->writeq_drain();
 }
-inline void dcb_close(DCB* dcb)
-{
-    DCB::close(dcb);
-}
 
 /**
  * @brief Close DCB in the thread that owns it.

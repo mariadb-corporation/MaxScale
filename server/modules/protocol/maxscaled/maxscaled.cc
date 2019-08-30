@@ -403,7 +403,7 @@ static int maxscaled_error(DCB* dcb)
  */
 static int maxscaled_hangup(DCB* dcb)
 {
-    dcb_close(dcb);
+    DCB::close(dcb);
     return 0;
 }
 

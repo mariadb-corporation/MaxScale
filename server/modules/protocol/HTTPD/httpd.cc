@@ -353,7 +353,7 @@ static int httpd_read_event(DCB* generic_dcb)
     }
 
     /* force the client connecton close */
-    dcb_close(dcb);
+    DCB::close(dcb);
 
     return 0;
 }
@@ -392,7 +392,7 @@ static int httpd_write(DCB* dcb, GWBUF* queue)
  */
 static int httpd_error(DCB* dcb)
 {
-    dcb_close(dcb);
+    DCB::close(dcb);
     return 0;
 }
 
@@ -403,7 +403,7 @@ static int httpd_error(DCB* dcb)
  */
 static int httpd_hangup(DCB* dcb)
 {
-    dcb_close(dcb);
+    DCB::close(dcb);
     return 0;
 }
 

@@ -735,7 +735,7 @@ int MySQLClientProtocol::perform_authentication(DCB* generic_dcb, GWBUF* read_bu
 
         if (!data)
         {
-            dcb_close(dcb);
+            DCB::close(dcb);
             return 1;
         }
 
@@ -807,7 +807,7 @@ int MySQLClientProtocol::perform_authentication(DCB* generic_dcb, GWBUF* read_bu
             MYSQL_session* ses = (MYSQL_session*)dcb->protocol_data();
             if ((dcb->m_user = MXS_STRDUP(ses->user)) == NULL)
             {
-                dcb_close(dcb);
+                DCB::close(dcb);
                 gwbuf_free(read_buffer);
                 return 0;
             }
@@ -862,7 +862,7 @@ int MySQLClientProtocol::perform_authentication(DCB* generic_dcb, GWBUF* read_bu
         /**
          * Close DCB and which will release MYSQL_session
          */
-        dcb_close(dcb);
+        DCB::close(dcb);
     }
     /* One way or another, the buffer is now fully processed */
     gwbuf_free(read_buffer);
@@ -1530,7 +1530,7 @@ int MySQLClientProtocol::perform_normal_read(DCB* dcb, GWBUF* read_buffer, uint3
                       session_state_to_string(session_state_value));
         }
         gwbuf_free(read_buffer);
-        dcb_close(dcb);
+        DCB::close(dcb);
         return 1;
     }
 
@@ -1564,14 +1564,14 @@ int MySQLClientProtocol::perform_normal_read(DCB* dcb, GWBUF* read_buffer, uint3
     {
         /** Routing failed, close the client connection */
         dcb->session()->close_reason = SESSION_CLOSE_ROUTING_FAILED;
-        dcb_close(dcb);
+        DCB::close(dcb);
         MXS_ERROR("Routing the query failed. Session will be closed.");
     }
     else if (reply().command() == MXS_COM_QUIT)
     {
         /** Close router session which causes closing of backends */
         mxb_assert_message(session_valid_for_pool(dcb->session()), "Session should qualify for pooling");
-        dcb_close(dcb);
+        DCB::close(dcb);
     }
 
     return rval;
@@ -1687,7 +1687,7 @@ int32_t MySQLClientProtocol::read(DCB* dcb)
 
     if (return_code < 0)
     {
-        dcb_close(dcb);
+        DCB::close(dcb);
     }
 
     if (read_buffer)
@@ -1792,7 +1792,7 @@ int32_t MySQLClientProtocol::write_ready(DCB* dcb)
 int32_t MySQLClientProtocol::error(DCB* dcb)
 {
     mxb_assert(dcb->session()->state() != MXS_SESSION::State::STOPPING);
-    dcb_close(dcb);
+    DCB::close(dcb);
     return 1;
 }
 
@@ -1838,7 +1838,7 @@ int32_t MySQLClientProtocol::hangup(DCB* generic_dcb)
         modutil_send_mysql_err_packet(dcb, seqno, 0, 1927, "08S01", errmsg.c_str());
     }
 
-    dcb_close(dcb);
+    DCB::close(dcb);
 
     return 1;
 }

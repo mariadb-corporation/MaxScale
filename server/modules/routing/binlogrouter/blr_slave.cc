@@ -418,7 +418,7 @@ int blr_slave_request(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, GWBUF* queue
                                         slave,
                                         BLR_SLAVE_HAS_MARIADB10_GTID))
         {
-            dcb_close(slave->dcb);
+            DCB::close(slave->dcb);
             return 1;
         }
 
@@ -1934,7 +1934,7 @@ static int blr_slave_binlog_dump(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, G
         MXS_ERROR("blr_slave_binlog_dump expected a COM_BINLOG_DUMP but received %d",
                   *(ptr - 1));
         slave->state = BLRS_ERRORED;
-        dcb_close(slave->dcb);
+        DCB::close(slave->dcb);
         return 1;
     }
 
@@ -1989,7 +1989,7 @@ static int blr_slave_binlog_dump(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, G
             blr_slave_abort_dump_request(slave, errmsg);
 
             slave->state = BLRS_ERRORED;
-            dcb_close(slave->dcb);
+            DCB::close(slave->dcb);
             return 1;
         }
 
@@ -2012,7 +2012,7 @@ static int blr_slave_binlog_dump(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, G
         {
             // ERROR
             slave->state = BLRS_ERRORED;
-            dcb_close(slave->dcb);
+            DCB::close(slave->dcb);
             return 1;
         }
     }
@@ -2062,7 +2062,7 @@ static int blr_slave_binlog_dump(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, G
              * Close the slave session and socket
              * The slave will try to reconnect
              */
-            dcb_close(slave->dcb);
+            DCB::close(slave->dcb);
 
             return 1;
         }
@@ -2093,7 +2093,7 @@ static int blr_slave_binlog_dump(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, G
         blr_slave_abort_dump_request(slave, errmsg);
 
         slave->state = BLRS_ERRORED;
-        dcb_close(slave->dcb);
+        DCB::close(slave->dcb);
         return 1;
     }
 
@@ -2122,7 +2122,7 @@ static int blr_slave_binlog_dump(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, G
         // ERROR
         blr_slave_abort_dump_request(slave, errmsg);
         slave->state = BLRS_ERRORED;
-        dcb_close(slave->dcb);
+        DCB::close(slave->dcb);
         return 1;
     }
 
@@ -2148,7 +2148,7 @@ static int blr_slave_binlog_dump(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, G
         // ERROR
         blr_slave_abort_dump_request(slave, errmsg);
         slave->state = BLRS_ERRORED;
-        dcb_close(slave->dcb);
+        DCB::close(slave->dcb);
         return 1;
     }
 
@@ -2169,7 +2169,7 @@ static int blr_slave_binlog_dump(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, G
             // ERROR
             blr_slave_abort_dump_request(slave, errmsg);
             slave->state = BLRS_ERRORED;
-            dcb_close(slave->dcb);
+            DCB::close(slave->dcb);
             gwbuf_free(fde);
             return 1;
         }
@@ -2214,7 +2214,7 @@ static int blr_slave_binlog_dump(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, G
             // ERROR
             blr_slave_abort_dump_request(slave, errmsg);
             slave->state = BLRS_ERRORED;
-            dcb_close(slave->dcb);
+            DCB::close(slave->dcb);
             gwbuf_free(fde);
             return 1;
         }
@@ -2432,7 +2432,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
                                   "HY000",
                                   BINLOG_FATAL_ERROR_READING);
 
-            dcb_close(slave->dcb);
+            DCB::close(slave->dcb);
             return 0;
         }
     }
@@ -2630,7 +2630,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
                 record = NULL;
 
                 slave->state = BLRS_ERRORED;
-                dcb_close(slave->dcb);
+                DCB::close(slave->dcb);
 
                 return 0;
             }
@@ -2675,7 +2675,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
             blr_close_binlog(router, file);
 #endif
             slave->state = BLRS_ERRORED;
-            dcb_close(slave->dcb);
+            DCB::close(slave->dcb);
             return 0;
         }
 
@@ -2744,7 +2744,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
              * Close the slave session and socket
              * The slave will try to reconnect
              */
-            dcb_close(slave->dcb);
+            DCB::close(slave->dcb);
 
 #ifndef BLFILE_IN_SLAVE
             blr_close_binlog(router, file);
@@ -2779,7 +2779,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
                                   "HY000",
                                   BINLOG_FATAL_ERROR_READING);
 
-            dcb_close(slave->dcb);
+            DCB::close(slave->dcb);
 #ifndef BLFILE_IN_SLAVE
             blr_close_binlog(router, file);
 #endif
@@ -2999,7 +2999,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
                         blr_close_binlog(router, file);
 #endif
                         /* Disconnect client */
-                        dcb_close(slave->dcb);
+                        DCB::close(slave->dcb);
 
                         return 0;
                     }
@@ -3083,7 +3083,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
                     /* Set ERROR */
                     slave->state = BLRS_ERRORED;
                     /* Disconnect client */
-                    dcb_close(slave->dcb);
+                    DCB::close(slave->dcb);
 #ifndef BLFILE_IN_SLAVE
                     /* Close file */
                     blr_close_binlog(router, file);
@@ -3887,7 +3887,7 @@ static int blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
             && router->client->state() == DCB::State::POLLING)
         {
             // Is this dead code? dcb->m_fd for internal DCBs is always -1
-            dcb_close(router->client);
+            DCB::close(router->client);
             router->client = NULL;
         }
     }

@@ -74,7 +74,7 @@ static void test1()
 
     // TODO, fix this for workers: poll_shutdown();
     fprintf(stderr, "\t..done\nTidy up.");
-    dcb_close(dcb);
+    DCB::close(dcb);
     fprintf(stderr, "\t..done\n");
 }
 

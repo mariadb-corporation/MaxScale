@@ -873,13 +873,13 @@ ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const 
             // TODO: This is never used as the client connection is not up yet
             client_dcb->session()->close_reason = SESSION_CLOSE_TOO_MANY_CONNECTIONS;
 
-            dcb_close(client_dcb);
+            DCB::close(client_dcb);
             client_dcb = NULL;
         }
         else if (!client_dcb->enable_events())
         {
             MXS_ERROR("Failed to add dcb %p for fd %d to epoll set.", client_dcb, fd);
-            dcb_close(client_dcb);
+            DCB::close(client_dcb);
             client_dcb = NULL;
         }
     }
@@ -1031,7 +1031,7 @@ void Listener::accept_connections()
             {
                 if (!dcb->protocol()->init_connection(dcb))
                 {
-                    dcb_close(dcb);
+                    DCB::close(dcb);
                 }
             }
         }
@@ -1046,7 +1046,7 @@ void Listener::accept_connections()
                                 {
                                     if (!dcb->protocol()->init_connection(dcb))
                                     {
-                                        dcb_close(dcb);
+                                        DCB::close(dcb);
                                     }
                                 }
                             }, mxs::RoutingWorker::EXECUTE_AUTO);

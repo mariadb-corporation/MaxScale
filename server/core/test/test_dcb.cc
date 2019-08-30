@@ -65,7 +65,7 @@ static void test1()
     fprintf(stderr, "\t..done\n");
     dcb->enable_events();   // Makes state DCB_STATE_POLLING;
     this_thread.current_dcb = dcb;
-    dcb_close(dcb);
+    DCB::close(dcb);
     fprintf(stderr, "Freed original dcb");
     fprintf(stderr, "\t..done\n");
 }

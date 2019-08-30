@@ -781,7 +781,7 @@ bool ServerEndpoint::connect()
 
 void ServerEndpoint::close()
 {
-    dcb_close(m_dcb);
+    DCB::close(m_dcb);
     m_dcb = nullptr;
 }
 

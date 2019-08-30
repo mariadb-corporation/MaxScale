@@ -120,7 +120,7 @@ void MXS_SESSION::terminate(GWBUF* error)
             client_dcb->protocol_write(error);
         }
 
-        dcb_close(client_dcb);
+        DCB::close(client_dcb);
     }
 }
 

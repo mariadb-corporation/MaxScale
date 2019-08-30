@@ -950,7 +950,7 @@ void DCB::close(DCB* dcb)
     RoutingWorker* owner = static_cast<RoutingWorker*>(dcb->owner);
     if (current && (current != owner))
     {
-        MXS_ALERT("dcb_close(%p) called by %d, owned by %d.",
+        MXS_ALERT("DCB::close(%p) called by %d, owned by %d.",
                   dcb,
                   current->id(),
                   owner->id());
@@ -959,7 +959,7 @@ void DCB::close(DCB* dcb)
 #endif
 
     /**
-     * dcb_close may be called for freshly created dcb, in which case
+     * DCB::close may be called for freshly created dcb, in which case
      * it only needs to be freed.
      */
     if (dcb->state() == State::ALLOC && dcb->m_fd == FD_CLOSED)
@@ -987,7 +987,7 @@ void DCB::close(DCB* dcb)
         {
             ++dcb->m_nClose;
             // TODO: Will this happen on a regular basis?
-            MXS_WARNING("dcb_close(%p) called %u times.", dcb, dcb->m_nClose);
+            MXS_WARNING("DCB::close(%p) called %u times.", dcb, dcb->m_nClose);
             mxb_assert(!true);
         }
     }
@@ -998,14 +998,14 @@ static void cb_dcb_close_in_owning_thread(MXB_WORKER*, void* data)
     DCB* dcb = static_cast<DCB*>(data);
     mxb_assert(dcb);
 
-    dcb_close(dcb);
+    DCB::close(dcb);
 }
 
 void dcb_close_in_owning_thread(DCB* dcb)
 {
-    // TODO: If someone now calls dcb_close(dcb) from the owning thread while
+    // TODO: If someone now calls DCB::close(dcb) from the owning thread while
     // TODO: the dcb is being delivered to the owning thread, there will be a
-    // TODO: crash when dcb_close(dcb) is called anew. Also dcbs should be
+    // TODO: crash when DCB::close(dcb) is called anew. Also dcbs should be
     // TODO: reference counted, so that we could addref before posting, thus
     // TODO: preventing too early a deletion.
 
@@ -1754,7 +1754,7 @@ int BackendDCB::persistent_clean_count(BackendDCB* dcb, int id, bool cleanall)
             {
                 disposals->stop_polling_and_shutdown();
             }
-            dcb_close(disposals);
+            DCB::close(disposals);
             disposals = nextdcb;
         }
     }

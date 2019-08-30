@@ -63,7 +63,7 @@ int AvroSession::routeQuery(GWBUF* queue)
             state = AVRO_CLIENT_ERRORED;
             dcb_printf(dcb, "ERR, code 12, msg: Registration failed\n");
             /* force disconnection */
-            dcb_close(dcb);
+            DCB::close(dcb);
             rval = 0;
         }
         else

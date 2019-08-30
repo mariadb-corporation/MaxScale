@@ -2303,12 +2303,12 @@ static bool errorReply(MXS_ROUTER* instance,
     {
         router->master = NULL;
     }
-    dcb_close(backend_dcb);
+    DCB::close(backend_dcb);
 
     /* Force Fake Client DCB close */
     if (router->client)
     {
-        dcb_close(router->client);
+        DCB::close(router->client);
         router->client = NULL;
     }
 
@@ -2776,7 +2776,7 @@ static void destroyInstance(MXS_ROUTER* instance)
     {
         if (inst->client->state() == DCB::State::POLLING)
         {
-            dcb_close(inst->client);
+            DCB::close(inst->client);
             inst->client = NULL;
         }
     }
