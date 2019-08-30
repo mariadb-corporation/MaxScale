@@ -651,7 +651,7 @@ int DCB::read_SSL(GWBUF** head)
 
     if (m_ssl_write_want_read)
     {
-        drain_writeq();
+        writeq_drain();
     }
 
     buffer = basic_read_SSL(&nsingleread);
@@ -709,7 +709,7 @@ GWBUF* DCB::basic_read_SSL(int* nsingleread)
         {
             m_ssl_read_want_write = false;
             m_ssl_read_want_read = false;
-            drain_writeq();
+            writeq_drain();
         }
         break;
 
@@ -790,7 +790,7 @@ int DCB::log_errors_SSL(int ret)
     return -1;
 }
 
-bool DCB::write(GWBUF* queue)
+bool DCB::writeq_append(GWBUF* queue, Drain drain)
 {
     mxb_assert(this->owner == RoutingWorker::get_current());
     m_writeqlen += gwbuf_length(queue);
@@ -802,7 +802,11 @@ bool DCB::write(GWBUF* queue)
 
     m_writeq = gwbuf_append(m_writeq, queue);
     m_stats.n_buffered++;
-    drain_writeq();
+
+    if (drain == Drain::YES)
+    {
+        writeq_drain();
+    }
 
     if (DCB_ABOVE_HIGH_WATER(this) && !m_high_water_reached)
     {
@@ -860,7 +864,7 @@ static inline bool dcb_write_parameter_check(DCB* dcb, int fd, GWBUF* queue)
     return true;
 }
 
-int DCB::drain_writeq()
+int DCB::writeq_drain()
 {
     mxb_assert(this->owner == RoutingWorker::get_current());
 

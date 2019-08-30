@@ -1409,7 +1409,7 @@ MySQLBackendProtocol::gw_send_change_user_to_backend(DCB* backend)
     GWBUF* buffer = gw_create_change_user_packet(mses);
 
     int rc = 0;
-    if (backend->write(buffer))
+    if (backend->writeq_append(buffer))
     {
         changing_user = true;
         rc = 1;

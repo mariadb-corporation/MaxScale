@@ -214,10 +214,17 @@ public:
      * Write data to the DCB.
      *
      * @param pData  The GWBUF to write.
+     * @param drain  Whether the writeq should be drained or not.
      *
      * @return False on failure, true on success.
      */
-    bool write(GWBUF* pData);
+    enum class Drain
+    {
+        YES, // Drain the writeq.
+        NO   // Do not drain the writeq.
+    };
+
+    bool writeq_append(GWBUF* pData, Drain drain = Drain::YES);
 
     /**
      * Drain the write queue of the DCB.
@@ -228,7 +235,7 @@ public:
      *
      * @return The number of bytes written.
      */
-    int drain_writeq();
+    int writeq_drain();
 
     int32_t protocol_write(GWBUF* pData)
     {
@@ -702,7 +709,7 @@ const char* to_string(DCB::Role role);
 
 inline bool dcb_write(DCB* dcb, GWBUF* queue)
 {
-    return dcb->write(queue);
+    return dcb->writeq_append(queue);
 }
 
 inline int dcb_read(DCB* dcb, GWBUF** head, int maxbytes)
@@ -715,7 +722,7 @@ inline int dcb_bytes_readable(DCB* dcb)
 }
 inline int dcb_drain_writeq(DCB* dcb)
 {
-    return dcb->drain_writeq();
+    return dcb->writeq_drain();
 }
 inline void dcb_close(DCB* dcb)
 {
