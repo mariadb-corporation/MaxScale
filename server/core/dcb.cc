@@ -280,7 +280,7 @@ BackendDCB* BackendDCB::create(SERVER* srv,
                                mxs::Component* component)
 {
     auto client_dcb = session->client_dcb;
-    auto& client_proto = client_dcb->m_protocol;
+    auto client_proto = client_dcb->protocol();
     std::unique_ptr<BackendProtocol> protocol_session;
     if (client_proto->capabilities() & mxs::ClientProtocol::CAP_BACKEND)
     {
@@ -299,7 +299,7 @@ BackendDCB* BackendDCB::create(SERVER* srv,
     BackendDCB* dcb = nullptr;
     if (protocol_session)
     {
-        auto& client_auth = client_dcb->m_authenticator;
+        auto client_auth = client_dcb->authenticator();
         // Allocate DCB specific backend-authentication data from the client session.
         std::unique_ptr<BackendAuthenticator> new_backend_auth;
         if (client_auth->capabilities() & mxs::AuthenticatorModule::CAP_BACKEND_AUTH)
@@ -2770,9 +2770,9 @@ ClientDCB::ClientDCB(int fd,
                      std::unique_ptr<ClientAuthenticator> authenticator,
                      Manager* manager)
     : DCB(fd, role, session, manager)
+    , m_ip(ip)
     , m_protocol(std::move(protocol))
     , m_authenticator(std::move(authenticator))
-    , m_ip(ip)
 {
     if (DCB_THROTTLING_ENABLED(this))
     {

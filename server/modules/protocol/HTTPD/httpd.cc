@@ -295,8 +295,8 @@ static int httpd_read_event(DCB* generic_dcb)
                 {
                     /** The freeing entry point is called automatically when
                      * the client DCB is closed */
-                    dcb->m_authenticator->extract(dcb, auth_data);
-                    auth_ok = dcb->m_authenticator->authenticate(dcb) == MXS_AUTH_SUCCEEDED;
+                    dcb->authenticator()->extract(dcb, auth_data);
+                    auth_ok = dcb->authenticator()->authenticate(dcb) == MXS_AUTH_SUCCEEDED;
                     gwbuf_free(auth_data);
                 }
             }

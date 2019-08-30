@@ -385,7 +385,7 @@ bool MySQLBackendProtocol::session_ok_to_route(DCB* dcb)
         ClientDCB* client_dcb = session->client_dcb;
         if (client_dcb && client_dcb->state() == DCB::State::POLLING)
         {
-            auto client_protocol = static_cast<MySQLClientProtocol*>(client_dcb->m_protocol.get());
+            auto client_protocol = static_cast<MySQLClientProtocol*>(client_dcb->protocol());
             if (client_protocol)
             {
                 if (client_protocol->protocol_auth_state == MXS_AUTH_STATE_COMPLETE)

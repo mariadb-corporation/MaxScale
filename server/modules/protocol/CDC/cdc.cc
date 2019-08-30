@@ -205,10 +205,10 @@ static int cdc_read_event(DCB* generic_dcb)
         {
         case CDC_STATE_WAIT_FOR_AUTH:
             /* Fill CDC_session from incoming packet */
-            if (dcb->m_authenticator->extract(dcb, head))
+            if (dcb->authenticator()->extract(dcb, head))
             {
                 /* Call protocol authentication */
-                auth_val = dcb->m_authenticator->authenticate(dcb);
+                auth_val = dcb->authenticator()->authenticate(dcb);
             }
 
             /* Discard input buffer */

@@ -868,7 +868,7 @@ ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const 
         {
             // TODO: If connections can be queued, this is the place to put the
             // TODO: connection on that queue.
-            client_dcb->m_protocol->connlimit(client_dcb, m_service->config().max_connections);
+            client_dcb->protocol()->connlimit(client_dcb, m_service->config().max_connections);
 
             // TODO: This is never used as the client connection is not up yet
             client_dcb->session()->close_reason = SESSION_CLOSE_TOO_MANY_CONNECTIONS;
@@ -1029,7 +1029,7 @@ void Listener::accept_connections()
         {
             if (ClientDCB* dcb = accept_one_dcb(conn.fd, &conn.addr, conn.host))
             {
-                if (!dcb->m_protocol->init_connection(dcb))
+                if (!dcb->protocol()->init_connection(dcb))
                 {
                     dcb_close(dcb);
                 }
@@ -1044,7 +1044,7 @@ void Listener::accept_connections()
             worker->execute([this, conn]() {
                                 if (ClientDCB* dcb = accept_one_dcb(conn.fd, &conn.addr, conn.host))
                                 {
-                                    if (!dcb->m_protocol->init_connection(dcb))
+                                    if (!dcb->protocol()->init_connection(dcb))
                                     {
                                         dcb_close(dcb);
                                     }

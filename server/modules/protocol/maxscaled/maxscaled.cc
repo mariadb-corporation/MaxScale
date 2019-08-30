@@ -178,8 +178,8 @@ static bool authenticate_unix_socket(MAXSCALED* protocol, DCB* generic_dcb)
             strcpy((char*)GWBUF_DATA(username), protocol->username);
 
             /* Authenticate the user */
-            if (dcb->m_authenticator->extract(dcb, username)
-                && dcb->m_authenticator->authenticate(dcb) == 0)
+            if (dcb->authenticator()->extract(dcb, username)
+                && dcb->authenticator()->authenticate(dcb) == 0)
             {
                 dcb_printf(dcb, MAXADMIN_AUTH_SUCCESS_REPLY);
                 protocol->state = MAXSCALED_STATE_DATA;

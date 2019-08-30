@@ -528,7 +528,7 @@ int ssl_authenticate_check_status(DCB* generic_dcb)
      * data needs to be read from the socket.
      */
     bool health_before = ssl_is_connection_healthy(dcb);
-    int ssl_ret = ssl_authenticate_client(dcb, dcb->m_authenticator->ssl_capable(dcb));
+    int ssl_ret = ssl_authenticate_client(dcb, dcb->authenticator()->ssl_capable(dcb));
     bool health_after = ssl_is_connection_healthy(dcb);
 
     if (ssl_ret != 0)
@@ -774,14 +774,14 @@ int MySQLClientProtocol::perform_authentication(DCB* generic_dcb, GWBUF* read_bu
      * authenticate function to carry out the user checks.
      */
     int auth_val = MXS_AUTH_FAILED;
-    if (dcb->m_authenticator->extract(dcb, read_buffer))
+    if (dcb->authenticator()->extract(dcb, read_buffer))
     {
         auth_val = ssl_authenticate_check_status(dcb);
 
         if (auth_val == MXS_AUTH_SSL_COMPLETE)
         {
             // TLS connection phase complete
-            auth_val = dcb->m_authenticator->authenticate(dcb);
+            auth_val = dcb->authenticator()->authenticate(dcb);
         }
     }
     else
@@ -970,7 +970,7 @@ bool MySQLClientProtocol::reauthenticate_client(MXS_SESSION* session, GWBUF* pac
 {
     bool rval = false;
     ClientDCB* client_dcb = session->client_dcb;
-    auto& client_auth = client_dcb->m_authenticator;
+    auto client_auth = client_dcb->authenticator();
     if (client_auth->capabilities() & mxs::AuthenticatorModule::CAP_REAUTHENTICATE)
     {
         auto proto = this;

@@ -535,6 +535,16 @@ public:
      */
     int port() const;
 
+    mxs::ClientProtocol* protocol()
+    {
+        return m_protocol.get();
+    }
+
+    mxs::ClientAuthenticator* authenticator()
+    {
+        return m_authenticator.get();
+    }
+
     void* protocol_data() const
     {
         return m_data;
@@ -556,9 +566,6 @@ public:
     int ssl_handshake() override;
     bool ready() const;
     void shutdown() override;
-
-    std::unique_ptr<mxs::ClientProtocol>      m_protocol;          /**< The protocol session */
-    std::unique_ptr<mxs::ClientAuthenticator> m_authenticator;     /**< Client authentication data */
 
 protected:
     // Only for InternalDCB.
@@ -584,9 +591,10 @@ private:
     bool release_from(MXS_SESSION* session) override;
     bool prepare_for_destruction() override;
 
-    sockaddr_storage m_ip;              /**< remote IPv4/IPv6 address */
-    void*            m_data = nullptr;  /**< Protocol data */
-
+    sockaddr_storage                          m_ip;             /**< remote IPv4/IPv6 address */
+    std::unique_ptr<mxs::ClientProtocol>      m_protocol;       /**< The protocol session */
+    std::unique_ptr<mxs::ClientAuthenticator> m_authenticator;  /**< Client authentication data */
+    void*                                     m_data = nullptr; /**< Protocol data */
 };
 
 class BackendDCB : public DCB
