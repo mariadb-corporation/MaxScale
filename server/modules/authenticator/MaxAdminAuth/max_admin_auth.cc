@@ -150,8 +150,11 @@ MXS_MODULE* MXS_CREATE_MODULE()
  * @param dcb Request handler DCB connected to the client
  * @return Authentication status - always 0 to denote success
  */
-static int max_admin_auth_authenticate(DCB* dcb)
+static int max_admin_auth_authenticate(DCB* generic_dcb)
 {
+    mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
+    auto dcb = static_cast<ClientDCB*>(generic_dcb);
+
     return (dcb->m_data != NULL && ((ADMIN_session*)dcb->m_data)->validated) ? 0 : 1;
 }
 
@@ -165,8 +168,11 @@ static int max_admin_auth_authenticate(DCB* dcb)
  * @param buffer Pointer to pointer to buffers containing data from client
  * @return Authentication status - true for success, false for failure
  */
-static bool max_admin_auth_set_protocol_data(DCB* dcb, GWBUF* buf)
+static bool max_admin_auth_set_protocol_data(DCB* generic_dcb, GWBUF* buf)
 {
+    mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
+    auto dcb = static_cast<ClientDCB*>(generic_dcb);
+
     ADMIN_session* session_data;
 
     max_admin_auth_free_client_data(dcb);
@@ -212,5 +218,6 @@ static bool max_admin_auth_is_client_ssl_capable(DCB* dcb)
  */
 static void max_admin_auth_free_client_data(DCB* dcb)
 {
-    MXS_FREE(dcb->m_data);
+    mxb_assert(dcb->role() == DCB::Role::CLIENT);
+    MXS_FREE(static_cast<ClientDCB*>(dcb)->m_data);
 }

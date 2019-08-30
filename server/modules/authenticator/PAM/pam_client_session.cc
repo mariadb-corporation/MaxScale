@@ -34,8 +34,11 @@ namespace
  *
  * @return True on success, false if memory allocation failed
  */
-bool store_client_password(DCB* dcb, GWBUF* buffer)
+bool store_client_password(DCB* generic_dcb, GWBUF* buffer)
 {
+    mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
+    auto dcb = static_cast<ClientDCB*>(generic_dcb);
+
     bool rval = false;
     uint8_t header[MYSQL_HEADER_LEN];
 
@@ -266,8 +269,11 @@ Buffer PamClientAuthenticator::create_auth_change_packet() const
     return buffer;
 }
 
-int PamClientAuthenticator::authenticate(DCB* dcb)
+int PamClientAuthenticator::authenticate(DCB* generic_dcb)
 {
+    mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
+    auto dcb = static_cast<ClientDCB*>(generic_dcb);
+
     int rval = MXS_AUTH_SSL_COMPLETE;
     MYSQL_session* ses = static_cast<MYSQL_session*>(dcb->m_data);
     if (*ses->user)
@@ -386,8 +392,11 @@ bool PamClientAuthenticator::ssl_capable(DCB* client)
     return protocol->client_capabilities & GW_MYSQL_CAPABILITIES_SSL;
 }
 
-void PamClientAuthenticator::free_data(DCB* client)
+void PamClientAuthenticator::free_data(DCB* dcb)
 {
+    mxb_assert(dcb->role() == DCB::Role::CLIENT);
+    auto client = static_cast<ClientDCB*>(dcb);
+
     if (client->m_data)
     {
         MYSQL_session* ses = (MYSQL_session*)client->m_data;

@@ -294,8 +294,11 @@ static int cdc_auth_check(DCB* dcb,
  * @return Authentication status
  * @note Authentication status codes are defined in cdc.h
  */
-static int cdc_auth_authenticate(DCB* dcb)
+static int cdc_auth_authenticate(DCB* generic_dcb)
 {
+    mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
+    auto dcb = static_cast<ClientDCB*>(generic_dcb);
+
     CDC_protocol* protocol = static_cast<CDC_protocol*>(dcb->protocol_session());
     CDC_session* client_data = (CDC_session*)dcb->m_data;
     int auth_ret;
@@ -354,8 +357,11 @@ static int cdc_auth_authenticate(DCB* dcb)
  * @param buffer Pointer to pointer to buffer containing data from client
  * @return True on success, false on error
  */
-static bool cdc_auth_set_protocol_data(DCB* dcb, GWBUF* buf)
+static bool cdc_auth_set_protocol_data(DCB* generic_dcb, GWBUF* buf)
 {
+    mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
+    auto dcb = static_cast<ClientDCB*>(generic_dcb);
+
     uint8_t* client_auth_packet = GWBUF_DATA(buf);
     CDC_protocol* protocol = NULL;
     CDC_session* client_data = NULL;
@@ -478,7 +484,8 @@ static bool cdc_auth_is_client_ssl_capable(DCB* dcb)
  */
 static void cdc_auth_free_client_data(DCB* dcb)
 {
-    MXS_FREE(dcb->m_data);
+    mxb_assert(dcb->role() == DCB::Role::CLIENT);
+    MXS_FREE(static_cast<ClientDCB*>(dcb)->m_data);
 }
 
 /*

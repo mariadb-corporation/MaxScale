@@ -212,9 +212,10 @@ bool gw_get_shared_session_auth_info(DCB* dcb, MYSQL_session* session)
 
     if (dcb->role() == DCB::Role::CLIENT)
     {
+        auto client_dcb = static_cast<ClientDCB*>(dcb);
         // The shared session data can be extracted at any time if the client DCB is used.
-        mxb_assert(dcb->m_data);
-        memcpy(session, dcb->m_data, sizeof(MYSQL_session));
+        mxb_assert(client_dcb->m_data);
+        memcpy(session, client_dcb->m_data, sizeof(MYSQL_session));
     }
     else if (dcb->session()->state() != MXS_SESSION::State::CREATED)
     {

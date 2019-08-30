@@ -417,8 +417,6 @@ public:
     char*                   m_remote = nullptr;                 /**< Address of remote end */
     char*                   m_user = nullptr;                   /**< User name for connection */
 
-    void* m_data = nullptr;                     /**< Client pcol data, owned by client DCB */
-
 protected:
     DCB(int fd, Role role, MXS_SESSION* session, Manager* manager);
 
@@ -542,6 +540,7 @@ public:
     std::unique_ptr<mxs::ClientProtocol>      m_protocol;          /**< The protocol session */
     std::unique_ptr<mxs::ClientAuthenticator> m_authenticator;     /**< Client authentication data */
 
+    void* m_data = nullptr;                     /**< Client pcol data, owned by client DCB */
 
 protected:
     // Only for InternalDCB.

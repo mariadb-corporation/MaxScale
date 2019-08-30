@@ -189,7 +189,9 @@ MXS_MODULE* MXS_CREATE_MODULE()
  */
 static int cdc_read_event(DCB* generic_dcb)
 {
-    ClientDCB* dcb = static_cast<ClientDCB*>(generic_dcb);
+    mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
+    auto dcb = static_cast<ClientDCB*>(generic_dcb);
+
     MXS_SESSION* session = dcb->session();
     CDC_protocol* protocol = (CDC_protocol*) dcb->protocol_session();
     int n, rc = 0;
@@ -341,8 +343,11 @@ static int cdc_hangup(DCB* dcb)
     return 0;
 }
 
-static bool cdc_init_connection(DCB* client_dcb)
+static bool cdc_init_connection(DCB* generic_dcb)
 {
+    mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
+    auto client_dcb = static_cast<ClientDCB*>(generic_dcb);
+
     bool inited = false;
 
     CDC_protocol* protocol = static_cast<CDC_protocol*>(client_dcb->protocol_session());

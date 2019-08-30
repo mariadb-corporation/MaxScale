@@ -236,8 +236,11 @@ static GWBUF* create_auth_change_packet(GSSAPIAuthenticatorModule* instance, GSS
  * @param buffer Buffer containing the key
  * @return True on success, false if memory allocation failed
  */
-bool GSSAPIClientAuthenticator::store_client_token(DCB* dcb, GWBUF* buffer)
+bool GSSAPIClientAuthenticator::store_client_token(DCB* generic_dcb, GWBUF* buffer)
 {
+    mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
+    auto dcb = static_cast<ClientDCB*>(generic_dcb);
+
     bool rval = false;
     uint8_t hdr[MYSQL_HEADER_LEN];
 
@@ -481,8 +484,11 @@ static bool validate_user(GSSAPIClientAuthenticator* auth, DCB* dcb, MYSQL_sessi
  * if authentication was successfully completed or MXS_AUTH_FAILED if authentication
  * has failed.
  */
-int GSSAPIClientAuthenticator::authenticate(DCB* dcb)
+int GSSAPIClientAuthenticator::authenticate(DCB* generic_dcb)
 {
+    mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
+    auto dcb = static_cast<ClientDCB*>(generic_dcb);
+
     int rval = MXS_AUTH_FAILED;
     auto auth = this;
     GSSAPIAuthenticatorModule* instance = (GSSAPIAuthenticatorModule*)dcb->session()->listener->auth_instance();
@@ -525,8 +531,11 @@ int GSSAPIClientAuthenticator::authenticate(DCB* dcb)
  *
  * @param dcb DCB to free
  */
-void GSSAPIClientAuthenticator::free_data(DCB* dcb)
+void GSSAPIClientAuthenticator::free_data(DCB* generic_dcb)
 {
+    mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
+    auto dcb = static_cast<ClientDCB*>(generic_dcb);
+
     if (dcb->m_data)
     {
         MYSQL_session* ses = static_cast<MYSQL_session*>(dcb->m_data);

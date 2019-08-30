@@ -518,13 +518,15 @@ int ssl_authenticate_client(DCB* dcb, bool is_capable)
 
 int ssl_authenticate_check_status(DCB* generic_dcb)
 {
+    mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
+    auto dcb = static_cast<ClientDCB*>(generic_dcb);
+
     int rval = MXS_AUTH_FAILED;
     /**
      * We record the SSL status before and after ssl authentication. This allows
      * us to detect if the SSL handshake is immediately completed, which means more
      * data needs to be read from the socket.
      */
-    auto dcb = static_cast<ClientDCB*>(generic_dcb);
     bool health_before = ssl_is_connection_healthy(dcb);
     int ssl_ret = ssl_authenticate_client(dcb, dcb->m_authenticator->ssl_capable(dcb));
     bool health_after = ssl_is_connection_healthy(dcb);
@@ -569,8 +571,11 @@ void extract_user(char* token, std::string* user)
  * @param dcb Client DCB
  * @param buffer Buffer containing the handshake response packet
  */
-void MySQLClientProtocol::store_client_information(DCB* dcb, GWBUF* buffer)
+void MySQLClientProtocol::store_client_information(DCB* generic_dcb, GWBUF* buffer)
 {
+    mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
+    auto dcb = static_cast<ClientDCB*>(generic_dcb);
+
     size_t len = gwbuf_length(buffer);
     uint8_t data[len];
     auto proto = this;
@@ -636,8 +641,11 @@ void MySQLClientProtocol::store_client_information(DCB* dcb, GWBUF* buffer)
  * @param auth_val The type of authentication failure
  * @note Authentication status codes are defined in maxscale/protocol/mysql.h
  */
-void MySQLClientProtocol::handle_authentication_errors(DCB* dcb, int auth_val, int packet_number)
+void MySQLClientProtocol::handle_authentication_errors(DCB* generic_dcb, int auth_val, int packet_number)
 {
+    mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
+    auto dcb = static_cast<ClientDCB*>(generic_dcb);
+
     int message_len;
     char* fail_str = NULL;
     MYSQL_session* session = (MYSQL_session*)dcb->m_data;
@@ -1779,8 +1787,11 @@ int32_t MySQLClientProtocol::error(DCB* dcb)
     return 1;
 }
 
-int32_t MySQLClientProtocol::hangup(DCB* dcb)
+int32_t MySQLClientProtocol::hangup(DCB* generic_dcb)
 {
+    mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
+    auto dcb = static_cast<ClientDCB*>(generic_dcb);
+
     // We simply close the DCB, this will propagate the closure to any
     // backend descriptors and perform the session cleanup.
 

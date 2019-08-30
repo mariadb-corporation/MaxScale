@@ -282,10 +282,11 @@ MariaDBClientAuthenticator::MariaDBClientAuthenticator(MariaDBAuthenticatorModul
  * @return Authentication status
  * @note Authentication status codes are defined in maxscale/protocol/mysql.h
  */
-int MariaDBClientAuthenticator::authenticate(DCB* plain_dcb)
+int MariaDBClientAuthenticator::authenticate(DCB* generic_dcb)
 {
-    mxb_assert(plain_dcb->role() == DCB::Role::CLIENT);
-    ClientDCB* dcb = static_cast<ClientDCB*>(plain_dcb);
+    mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
+    auto dcb = static_cast<ClientDCB*>(generic_dcb);
+
     int auth_ret = MXS_AUTH_SSL_COMPLETE;
     MYSQL_session* client_data = (MYSQL_session*)dcb->m_data;
     if (*client_data->user)
@@ -391,8 +392,11 @@ int MariaDBClientAuthenticator::authenticate(DCB* plain_dcb)
  * @param buffer Pointer to pointer to buffer containing data from client
  * @return True on success, false on error
  */
-bool MariaDBClientAuthenticator::extract(DCB* dcb, GWBUF* buf)
+bool MariaDBClientAuthenticator::extract(DCB* generic_dcb, GWBUF* buf)
 {
+    mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
+    auto dcb = static_cast<ClientDCB*>(generic_dcb);
+
     MYSQL_session* client_data = NULL;
     int client_auth_packet_size = 0;
     auto protocol = static_cast<MySQLClientProtocol*>(dcb->protocol_session());
@@ -658,7 +662,8 @@ bool MariaDBClientAuthenticator::ssl_capable(DCB* dcb)
  */
 void MariaDBClientAuthenticator::free_data(DCB* dcb)
 {
-    MXS_FREE(dcb->m_data);
+    mxb_assert(dcb->role() == DCB::Role::CLIENT);
+    MXS_FREE(static_cast<ClientDCB*>(dcb)->m_data);
 }
 
 /**
@@ -789,10 +794,14 @@ int MariaDBAuthenticatorModule::load_users(Listener* port)
     return rc;
 }
 
-int MariaDBClientAuthenticator::reauthenticate(DCB* dcb, const char* user, uint8_t* token, size_t token_len,
+int MariaDBClientAuthenticator::reauthenticate(DCB* generic_dcb,
+                                               const char* user, uint8_t* token, size_t token_len,
                                                uint8_t* scramble, size_t scramble_len,
                                                uint8_t* output_token, size_t output_token_len)
 {
+    mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
+    auto dcb = static_cast<ClientDCB*>(generic_dcb);
+
     MYSQL_session* client_data = (MYSQL_session*)dcb->m_data;
     MYSQL_session temp;
     int rval = 1;
