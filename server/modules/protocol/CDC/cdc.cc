@@ -199,7 +199,7 @@ static int cdc_read_event(DCB* generic_dcb)
     int auth_val = CDC_STATE_AUTH_FAILED;
     CDC_session* client_data = (CDC_session*) dcb->protocol_data();
 
-    if ((n = dcb_read(dcb, &head, 0)) > 0)
+    if ((n = dcb->read(&head, 0)) > 0)
     {
         switch (protocol->state)
         {

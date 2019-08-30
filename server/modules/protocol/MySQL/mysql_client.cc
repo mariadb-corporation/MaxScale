@@ -1683,7 +1683,7 @@ int32_t MySQLClientProtocol::read(DCB* dcb)
     }
 
     const uint32_t max_single_read = GW_MYSQL_MAX_PACKET_LEN + MYSQL_HEADER_LEN;
-    return_code = dcb_read(dcb, &read_buffer, max_bytes > 0 ? max_bytes : max_single_read);
+    return_code = dcb->read(&read_buffer, max_bytes > 0 ? max_bytes : max_single_read);
 
     if (return_code < 0)
     {

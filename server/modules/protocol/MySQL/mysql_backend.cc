@@ -524,7 +524,7 @@ int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
     int return_code = 0;
 
     /* read available backend data */
-    return_code = dcb_read(dcb, &read_buffer, 0);
+    return_code = dcb->read(&read_buffer, 0);
 
     if (return_code < 0)
     {
@@ -1606,7 +1606,7 @@ bool MySQLBackendProtocol::read_complete_packet(DCB* dcb, GWBUF** readbuf)
     bool rval = false;
     GWBUF* localbuf = NULL;
 
-    if (dcb_read(dcb, &localbuf, 0) >= 0)
+    if (dcb->read(&localbuf, 0) >= 0)
     {
         rval = true;
         GWBUF* packets = modutil_get_complete_packets(&localbuf);

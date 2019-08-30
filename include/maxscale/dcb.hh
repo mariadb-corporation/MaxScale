@@ -207,6 +207,8 @@ public:
      *
      * @return -1 on error, otherwise the total length of the GWBUF. That is, not only
      *         the amount of data appended to the GWBUF.
+     *
+     * @note The read operation will return data from the readq, fakeq and the network.
      */
     int read(GWBUF** ppHead, int maxbytes);
 
@@ -707,10 +709,6 @@ namespace maxscale
 const char* to_string(DCB::Role role);
 }
 
-inline int dcb_read(DCB* dcb, GWBUF** head, int maxbytes)
-{
-    return dcb->read(head, maxbytes);
-}
 inline int dcb_bytes_readable(DCB* dcb)
 {
     return dcb->bytes_readable();

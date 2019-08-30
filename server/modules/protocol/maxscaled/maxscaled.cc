@@ -301,7 +301,7 @@ static int maxscaled_read_event(DCB* dcb)
     GWBUF* head = NULL;
     MAXSCALED* maxscaled = (MAXSCALED*)dcb->protocol_session();
 
-    if ((n = dcb_read(dcb, &head, 0)) != -1)
+    if ((n = dcb->read(&head, 0)) != -1)
     {
         if (head)
         {
