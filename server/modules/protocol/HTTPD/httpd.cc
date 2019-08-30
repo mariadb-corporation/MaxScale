@@ -381,7 +381,7 @@ static int httpd_write_event(DCB* dcb)
 static int httpd_write(DCB* dcb, GWBUF* queue)
 {
     int rc;
-    rc = dcb_write(dcb, queue);
+    rc = dcb->writeq_append(queue);
     return rc;
 }
 

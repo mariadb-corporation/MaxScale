@@ -707,11 +707,6 @@ namespace maxscale
 const char* to_string(DCB::Role role);
 }
 
-inline bool dcb_write(DCB* dcb, GWBUF* queue)
-{
-    return dcb->writeq_append(queue);
-}
-
 inline int dcb_read(DCB* dcb, GWBUF** head, int maxbytes)
 {
     return dcb->read(head, maxbytes);

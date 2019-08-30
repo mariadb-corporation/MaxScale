@@ -596,7 +596,7 @@ int send_mysql_native_password_response(DCB* dcb)
     data[3] = 2;    // This is the third packet after the COM_CHANGE_USER
     calculate_hash(proto->scramble, curr_passwd, data + MYSQL_HEADER_LEN);
 
-    return dcb_write(dcb, buffer);
+    return dcb->writeq_append(buffer);
 }
 
 /**

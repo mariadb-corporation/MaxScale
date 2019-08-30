@@ -45,7 +45,7 @@ bool GSSAPIBackendAuthenticator::send_new_auth_token(DCB* dcb)
         *data++ = ++auth->sequence;
         memcpy(data, ses->auth_token, ses->auth_token_len);
 
-        if (dcb_write(dcb, buffer))
+        if (dcb->writeq_append(buffer))
         {
             rval = true;
         }

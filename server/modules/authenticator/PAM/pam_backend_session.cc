@@ -153,7 +153,7 @@ bool PamBackendAuthenticator::send_client_password(DCB* dcb)
     gw_mysql_set_byte3(bufferdata, ses->auth_token_len);
     bufferdata[MYSQL_SEQ_OFFSET] = m_sequence;
     memcpy(bufferdata + MYSQL_HEADER_LEN, ses->auth_token, ses->auth_token_len);
-    return dcb_write(dcb, gwbuf_alloc_and_load(buflen, bufferdata));
+    return dcb->writeq_append(gwbuf_alloc_and_load(buflen, bufferdata));
 }
 
 bool PamBackendAuthenticator::extract(DCB* dcb, GWBUF* buffer)

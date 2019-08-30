@@ -1776,7 +1776,7 @@ int32_t MySQLClientProtocol::write(DCB* dcb, GWBUF* queue)
     {
         parse_and_set_trx_state(dcb->session(), queue);
     }
-    return dcb_write(dcb, queue);
+    return dcb->writeq_append(queue);
 }
 
 int32_t MySQLClientProtocol::write_ready(DCB* dcb)
@@ -2145,7 +2145,7 @@ bool MySQLClientProtocol::send_auth_switch_request_packet(DCB* dcb)
     memcpy(data + MYSQL_HEADER_LEN + 1, plugin, sizeof(plugin));
     memcpy(data + MYSQL_HEADER_LEN + 1 + sizeof(plugin), scramble, GW_MYSQL_SCRAMBLE_SIZE);
 
-    return dcb_write(dcb, buffer) != 0;
+    return dcb->writeq_append(buffer) != 0;
 }
 
 /**

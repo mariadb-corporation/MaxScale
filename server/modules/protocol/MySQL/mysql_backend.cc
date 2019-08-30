@@ -930,7 +930,7 @@ int MySQLBackendProtocol::handle_persistent_connection(BackendDCB* dcb, GWBUF* q
         auto mysqlses = static_cast<MYSQL_session*>(dcb->session()->client_dcb->protocol_data());
         GWBUF* buf = gw_create_change_user_packet(mysqlses);
 
-        if (dcb_write(dcb, buf))
+        if (dcb->writeq_append(buf))
         {
             MXS_INFO("Sent COM_CHANGE_USER");
             protocol->m_ignore_replies++;
@@ -1042,7 +1042,7 @@ int32_t MySQLBackendProtocol::write(DCB* plain_dcb, GWBUF* queue)
                 }
 
                 /** Write to backend */
-                rc = dcb_write(dcb, queue);
+                rc = dcb->writeq_append(queue);
             }
         }
         break;
@@ -1205,7 +1205,7 @@ int MySQLBackendProtocol::backend_write_delayqueue(DCB* plain_dcb, GWBUF* buffer
     }
     else
     {
-        rc = dcb_write(dcb, buffer);
+        rc = dcb->writeq_append(buffer);
     }
 
     if (rc == 0)
@@ -1510,7 +1510,7 @@ void MySQLBackendProtocol::gw_send_proxy_protocol_header(BackendDCB* backend_dcb
         MXS_INFO("Sending proxy-protocol header '%s' to backend %s.",
                  proxy_header,
                  backend_dcb->server()->name());
-        if (!dcb_write(backend_dcb, headerbuf))
+        if (!backend_dcb->writeq_append(headerbuf))
         {
             gwbuf_free(headerbuf);
         }
@@ -1752,12 +1752,12 @@ mxs_auth_state_t MySQLBackendProtocol::gw_send_backend_auth(BackendDCB* dcb)
 
     if (with_ssl && !ssl_established)
     {
-        if (dcb_write(dcb, buffer) && dcb->ssl_handshake() >= 0)
+        if (dcb->writeq_append(buffer) && dcb->ssl_handshake() >= 0)
         {
             rval = MXS_AUTH_STATE_CONNECTED;
         }
     }
-    else if (dcb_write(dcb, buffer))
+    else if (dcb->writeq_append(buffer))
     {
         rval = MXS_AUTH_STATE_RESPONSE_SENT;
     }

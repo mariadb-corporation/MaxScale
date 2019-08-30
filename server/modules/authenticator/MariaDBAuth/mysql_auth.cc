@@ -302,7 +302,7 @@ int MariaDBClientAuthenticator::authenticate(DCB* generic_dcb)
         {
             // Client is attempting to use wrong authenticator, send switch request packet.
             GWBUF* switch_packet = gen_auth_switch_request_packet(protocol, client_data);
-            if (dcb_write(dcb, switch_packet))
+            if (dcb->writeq_append(switch_packet))
             {
                 client_data->auth_switch_sent = true;
                 return MXS_AUTH_INCOMPLETE;
