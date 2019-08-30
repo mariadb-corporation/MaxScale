@@ -396,6 +396,11 @@ public:
         return m_last_write;
     }
 
+    bool is_closed() const
+    {
+        return m_nClose != 0;
+    }
+
     struct CALLBACK
     {
         Reason           reason;    /*< The reason for the callback */
@@ -409,8 +414,6 @@ public:
     char*                   m_user = nullptr;                   /**< User name for connection */
 
     void* m_data = nullptr;                     /**< Client pcol data, owned by client DCB */
-
-    uint32_t m_nClose = 0;                          /** How many times dcb_close has been called. */
 
 protected:
     DCB(int fd, Role role, MXS_SESSION* session, Manager* manager);
@@ -466,6 +469,7 @@ protected:
     uint32_t              m_fake_event = 0;             /**< Fake event to be delivered to handler */
     int64_t               m_last_read;                  /**< Last time the DCB received data */
     int64_t               m_last_write;                 /**< Last time the DCB sent data */
+    uint32_t              m_nClose = 0;                 /** How many times dcb_close has been called. */
 
 private:
     friend class Manager;

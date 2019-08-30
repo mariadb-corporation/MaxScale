@@ -2379,23 +2379,6 @@ uint32_t DCB::poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t eve
     return rval;
 }
 
-static bool dcb_is_still_valid(DCB* target, const RoutingWorker& worker)
-{
-    bool rval = false;
-
-    const auto& dcbs = worker.dcbs();
-
-    if (dcbs.count(target) != 0)
-    {
-        if (target->m_nClose == 0)
-        {
-            rval = true;
-        }
-    }
-
-    return rval;
-}
-
 class DCB::FakeEventTask : public Worker::DisposableTask
 {
 public:
@@ -2415,7 +2398,11 @@ public:
         mxb_assert(&worker == RoutingWorker::get_current());
 
         RoutingWorker& rworker = static_cast<RoutingWorker&>(worker);
-        if (dcb_is_still_valid(m_dcb, rworker) && m_dcb->m_uid == m_uid)
+
+        if (rworker.dcbs().count(m_dcb) != 0  // If the dcb is found in the book-keeping,
+            && !m_dcb->is_closed()            // it has not been closed, and
+            && m_dcb->uid() == m_uid)         // it really is the one (not another one that just
+                                              // happened to get the same address).
         {
             mxb_assert(m_dcb->owner == RoutingWorker::get_current());
             m_dcb->m_fakeq = m_buffer;

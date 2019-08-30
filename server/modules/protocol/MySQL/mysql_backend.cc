@@ -1125,7 +1125,7 @@ int32_t MySQLBackendProtocol::error(DCB* dcb)
  */
 int32_t MySQLBackendProtocol::hangup(DCB* dcb)
 {
-    mxb_assert(dcb->m_nClose == 0);
+    mxb_assert(!dcb->is_closed());
     MXS_SESSION* session = dcb->session();
 
     BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);

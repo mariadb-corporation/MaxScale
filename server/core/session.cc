@@ -111,7 +111,7 @@ void MXS_SESSION::terminate(GWBUF* error)
 {
     if (m_state == State::STARTED)
     {
-        mxb_assert(client_dcb->m_nClose == 0);
+        mxb_assert(!client_dcb->is_closed());
         m_state = State::STOPPING;
 
         if (error)
