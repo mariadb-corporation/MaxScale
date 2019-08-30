@@ -14,6 +14,7 @@
 #include "maxscale/mock/backend.hh"
 #include <algorithm>
 #include <vector>
+#include <maxscale/authenticator2.hh>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/protocol/mysql.hh>
 #include <iostream>
@@ -174,7 +175,8 @@ class ResultSetDCB : public ClientDCB
 {
 public:
     ResultSetDCB(MXS_SESSION* session)
-        : ClientDCB(DCB::FD_CLOSED, sockaddr_storage {}, DCB::Role::CLIENT, session, nullptr, nullptr)
+        : ClientDCB(DCB::FD_CLOSED, sockaddr_storage {}, DCB::Role::CLIENT, session,
+                    nullptr, nullptr, nullptr)
     {
     }
 

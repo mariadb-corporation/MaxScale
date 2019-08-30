@@ -839,10 +839,20 @@ ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const 
         return nullptr;
     }
 
+    auto client_authenticator = m_auth_module->create_client_authenticator();
+    if (!client_authenticator)
+    {
+        delete session;
+        return nullptr;
+    }
+
     mxs::RoutingWorker* worker = mxs::RoutingWorker::get_current();
     mxb_assert(worker);
 
-    ClientDCB* client_dcb = ClientDCB::create(fd, *addr, session, std::move(client_protocol), worker);
+    ClientDCB* client_dcb = ClientDCB::create(fd, *addr, session,
+                                              std::move(client_protocol),
+                                              std::move(client_authenticator),
+                                              worker);
     if (!client_dcb)
     {
         MXS_OOM();
@@ -852,15 +862,6 @@ ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const 
     {
         session->set_client_dcb(client_dcb);
         client_dcb->m_remote = MXS_STRDUP_A(host);
-
-        /** Allocate DCB specific authentication data */
-        client_dcb->m_authenticator = m_auth_module->create_client_authenticator();
-        if (!client_dcb->m_authenticator)
-        {
-            MXS_ERROR("Failed to create authenticator session for client DCB");
-            dcb_close(client_dcb);
-            return NULL;
-        }
 
         if (m_service->config().max_connections
             && m_service->client_count >= m_service->config().max_connections)

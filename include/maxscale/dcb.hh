@@ -517,8 +517,10 @@ public:
     create(int fd,
            const sockaddr_storage& ip,
            MXS_SESSION* session,
-           std::unique_ptr<mxs::ClientProtocol> client_protocol,
+           std::unique_ptr<mxs::ClientProtocol> protocol,
+           std::unique_ptr<mxs::ClientAuthenticator> authenticator,
            DCB::Manager* manager = nullptr);
+
     MXS_PROTOCOL_SESSION* protocol_session() const override;
 
     const sockaddr_storage& ip() const
@@ -565,6 +567,7 @@ protected:
               DCB::Role role,
               MXS_SESSION* session,
               std::unique_ptr<mxs::ClientProtocol> protocol,
+              std::unique_ptr<mxs::ClientAuthenticator> authenticator,
               Manager* manager);
 
     // Only for Mock DCB.
@@ -575,6 +578,7 @@ private:
               const sockaddr_storage& ip,
               MXS_SESSION* session,
               std::unique_ptr<mxs::ClientProtocol> protocol,
+              std::unique_ptr<mxs::ClientAuthenticator> authenticator,
               DCB::Manager* manager);
 
     bool release_from(MXS_SESSION* session) override;

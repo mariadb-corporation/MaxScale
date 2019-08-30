@@ -62,6 +62,7 @@ using maxscale::RoutingWorker;
 using maxbase::Worker;
 using std::string;
 using mxs::BackendAuthenticator;
+using mxs::ClientAuthenticator;
 using mxs::ClientProtocol;
 using mxs::BackendProtocol;
 
@@ -183,10 +184,13 @@ DCB::~DCB()
 ClientDCB* ClientDCB::create(int fd,
                              const sockaddr_storage& ip,
                              MXS_SESSION* session,
-                             std::unique_ptr<mxs::ClientProtocol> client_protocol,
+                             std::unique_ptr<ClientProtocol> protocol,
+                             std::unique_ptr<ClientAuthenticator> authenticator,
                              DCB::Manager* manager)
 {
-    ClientDCB* dcb = new(std::nothrow) ClientDCB(fd, ip, session, std::move(client_protocol), manager);
+    ClientDCB* dcb = new(std::nothrow) ClientDCB(fd, ip, session,
+                                                 std::move(protocol), std::move(authenticator),
+                                                 manager);
     if (!dcb)
     {
         ::close(fd);
@@ -2746,8 +2750,15 @@ ClientDCB::ClientDCB(int fd,
                      const sockaddr_storage& ip,
                      MXS_SESSION* session,
                      std::unique_ptr<ClientProtocol> protocol,
+                     std::unique_ptr<ClientAuthenticator> authenticator,
                      DCB::Manager* manager)
-    : ClientDCB(fd, ip, DCB::Role::CLIENT, session, std::move(protocol), manager)
+    : ClientDCB(fd,
+                ip,
+                DCB::Role::CLIENT,
+                session,
+                std::move(protocol),
+                std::move(authenticator),
+                manager)
 {
 }
 
@@ -2756,9 +2767,11 @@ ClientDCB::ClientDCB(int fd,
                      DCB::Role role,
                      MXS_SESSION* session,
                      std::unique_ptr<ClientProtocol> protocol,
+                     std::unique_ptr<ClientAuthenticator> authenticator,
                      Manager* manager)
     : DCB(fd, role, session, manager)
     , m_protocol(std::move(protocol))
+    , m_authenticator(std::move(authenticator))
     , m_ip(ip)
 {
     if (DCB_THROTTLING_ENABLED(this))
@@ -2769,7 +2782,7 @@ ClientDCB::ClientDCB(int fd,
 }
 
 ClientDCB::ClientDCB(int fd, DCB::Role role, MXS_SESSION* session)
-    : ClientDCB(fd, sockaddr_storage {}, role, session, nullptr, nullptr)
+    : ClientDCB(fd, sockaddr_storage {}, role, session, nullptr, nullptr, nullptr)
 {
 }
 
@@ -2805,7 +2818,7 @@ bool ClientDCB::ready() const
 }
 
 InternalDCB::InternalDCB(MXS_SESSION* session, DCB::Manager* manager)
-    : ClientDCB(FD_CLOSED, sockaddr_storage {}, DCB::Role::INTERNAL, session, nullptr, manager)
+    : ClientDCB(FD_CLOSED, sockaddr_storage {}, DCB::Role::INTERNAL, session, nullptr, nullptr, manager)
 {
     if (DCB_THROTTLING_ENABLED(this))
     {

@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <maxscale/authenticator2.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/service.hh>
@@ -59,7 +60,7 @@ static void test1()
     mxb_assert(fd >= 0);
 
     std::unique_ptr<mxs::ClientProtocol> client_protocol(MySQLClientProtocol::create(session, session));
-    auto dcb = ClientDCB::create(fd, sockaddr_storage {}, session, std::move(client_protocol));
+    auto dcb = ClientDCB::create(fd, sockaddr_storage {}, session, std::move(client_protocol), nullptr);
 
     mxb_assert(dcb);
     mxb_assert(dcb->enable_events());
