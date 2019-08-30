@@ -200,7 +200,7 @@ BackendDCB* Server::get_persistent_dcb(const string& user, const string& ip, int
             if (dcb->m_user
                 && dcb->m_remote
                 && !ip.empty()
-                && !dcb->m_dcb_errhandle_called
+                && !dcb->m_hanged_up
                 && user == dcb->m_user
                 && ip == dcb->m_remote)
             {

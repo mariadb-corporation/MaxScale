@@ -1081,7 +1081,7 @@ bool BackendDCB::maybe_add_persistent(BackendDCB* dcb)
         && session_valid_for_pool(dcb->session())
         && server->persistpoolmax()
         && server->is_running()
-        && !dcb->m_dcb_errhandle_called
+        && !dcb->m_hanged_up
         && persistent_clean_count(dcb, owner->id(), false) < server->persistpoolmax())
     {
         if (!mxb::atomic::add_limited(&server->pool_stats.n_persistent, 1, (int)server->persistpoolmax()))
@@ -1659,11 +1659,11 @@ void BackendDCB::hangup_cb(MXB_WORKER* worker, const SERVER* server)
 
             if (backend_dcb->m_server == server && backend_dcb->m_nClose == 0)
             {
-                if (!backend_dcb->m_dcb_errhandle_called)
+                if (!backend_dcb->m_hanged_up)
                 {
                     this_thread.current_dcb = backend_dcb;
                     backend_dcb->m_protocol->hangup(dcb);
-                    backend_dcb->m_dcb_errhandle_called = true;
+                    backend_dcb->m_hanged_up = true;
                 }
             }
         }
@@ -1708,7 +1708,7 @@ int BackendDCB::persistent_clean_count(BackendDCB* dcb, int id, bool cleanall)
         {
             nextdcb = persistentdcb->m_nextpersistent;
             if (cleanall
-                || persistentdcb->m_dcb_errhandle_called
+                || persistentdcb->m_hanged_up
                 || count >= server->persistpoolmax()
                 || persistentdcb->m_server == NULL
                 || !(persistentdcb->m_server->status() & SERVER_RUNNING)
@@ -2289,7 +2289,7 @@ uint32_t DCB::process_events(DCB* dcb, uint32_t events)
                   strerror_r(eno, errbuf, sizeof(errbuf)));
         rc |= MXB_POLL_HUP;
 
-        if (!dcb->m_dcb_errhandle_called)
+        if (!dcb->m_hanged_up)
         {
             if (dcb_session_check(dcb, "hangup EPOLLHUP"))
             {
@@ -2297,7 +2297,7 @@ uint32_t DCB::process_events(DCB* dcb, uint32_t events)
                 dcb->protocol_session()->hangup(dcb);
             }
 
-            dcb->m_dcb_errhandle_called = true;
+            dcb->m_hanged_up = true;
         }
     }
 
@@ -2316,7 +2316,7 @@ uint32_t DCB::process_events(DCB* dcb, uint32_t events)
                   strerror_r(eno, errbuf, sizeof(errbuf)));
         rc |= MXB_POLL_HUP;
 
-        if (!dcb->m_dcb_errhandle_called)
+        if (!dcb->m_hanged_up)
         {
             if (dcb_session_check(dcb, "hangup EPOLLRDHUP"))
             {
@@ -2324,7 +2324,7 @@ uint32_t DCB::process_events(DCB* dcb, uint32_t events)
                 dcb->protocol_session()->hangup(dcb);
             }
 
-            dcb->m_dcb_errhandle_called = true;
+            dcb->m_hanged_up = true;
         }
     }
 #endif
@@ -2898,7 +2898,7 @@ bool BackendDCB::prepare_for_destruction()
         // TODO: persistent pool - or server_get_persistent() - get a dcb from the persistent
         // TODO: pool - is called. There is no reason not to just remove this dcb from the
         // TODO: persistent pool here and now, and then close it immediately.
-        m_dcb_errhandle_called = true;
+        m_hanged_up = true;
 
         prepared = false;
     }

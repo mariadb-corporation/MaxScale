@@ -409,7 +409,7 @@ public:
         struct CALLBACK* next;      /*< Next callback for this DCB */
     };
 
-    bool                    m_dcb_errhandle_called = false;     /**< this can be called only once */
+    bool                    m_hanged_up = false;                /**< this can be called only once */
     char*                   m_remote = nullptr;                 /**< Address of remote end */
     char*                   m_user = nullptr;                   /**< User name for connection */
 

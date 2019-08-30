@@ -345,7 +345,7 @@ int32_t MySQLBackendProtocol::read(DCB* plain_dcb)
 
 void MySQLBackendProtocol::do_handle_error(DCB* dcb, const char* errmsg)
 {
-    mxb_assert(!dcb->m_dcb_errhandle_called);
+    mxb_assert(!dcb->m_hanged_up);
     GWBUF* errbuf = mysql_create_custom_error(1, 0, errmsg);
 
     if (!m_component->handleError(errbuf, nullptr, m_reply))
