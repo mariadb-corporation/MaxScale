@@ -214,12 +214,12 @@ bool gw_get_shared_session_auth_info(DCB* dcb, MYSQL_session* session)
     {
         auto client_dcb = static_cast<ClientDCB*>(dcb);
         // The shared session data can be extracted at any time if the client DCB is used.
-        mxb_assert(client_dcb->m_data);
-        memcpy(session, client_dcb->m_data, sizeof(MYSQL_session));
+        mxb_assert(client_dcb->protocol_data());
+        memcpy(session, client_dcb->protocol_data(), sizeof(MYSQL_session));
     }
     else if (dcb->session()->state() != MXS_SESSION::State::CREATED)
     {
-        memcpy(session, dcb->session()->client_dcb->m_data, sizeof(MYSQL_session));
+        memcpy(session, dcb->session()->client_dcb->protocol_data(), sizeof(MYSQL_session));
     }
     else
     {
@@ -783,13 +783,13 @@ bool mxs_mysql_more_results_after_ok(GWBUF* buffer)
 
 const char* mxs_mysql_get_current_db(MXS_SESSION* session)
 {
-    MYSQL_session* data = (MYSQL_session*)session->client_dcb->m_data;
+    MYSQL_session* data = (MYSQL_session*)session->client_dcb->protocol_data();
     return data->db;
 }
 
 void mxs_mysql_set_current_db(MXS_SESSION* session, const char* db)
 {
-    MYSQL_session* data = (MYSQL_session*)session->client_dcb->m_data;
+    MYSQL_session* data = (MYSQL_session*)session->client_dcb->protocol_data();
     snprintf(data->db, sizeof(data->db), "%s", db);
 }
 

@@ -46,7 +46,7 @@ uint32_t mysql_extract_ps_id(GWBUF* buffer)
 // TODO: The current database should somehow be available in a generic fashion.
 const char* qc_mysql_get_current_db(MXS_SESSION* session)
 {
-    MYSQL_session* data = (MYSQL_session*)session->client_dcb->m_data;
+    MYSQL_session* data = (MYSQL_session*)session->client_dcb->protocol_data();
     return data->db;
 }
 

@@ -155,7 +155,7 @@ static int max_admin_auth_authenticate(DCB* generic_dcb)
     mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
 
-    return (dcb->m_data != NULL && ((ADMIN_session*)dcb->m_data)->validated) ? 0 : 1;
+    return (dcb->protocol_data() != NULL && ((ADMIN_session*)dcb->protocol_data())->validated) ? 0 : 1;
 }
 
 /**
@@ -182,7 +182,7 @@ static bool max_admin_auth_set_protocol_data(DCB* generic_dcb, GWBUF* buf)
         int user_len = (GWBUF_LENGTH(buf) > ADMIN_USER_MAXLEN) ? ADMIN_USER_MAXLEN : GWBUF_LENGTH(buf);
         memcpy(session_data->user, GWBUF_DATA(buf), user_len);
         session_data->validated = false;
-        dcb->m_data = (void*)session_data;
+        dcb->protocol_data_set((void*)session_data);
 
         /* Check for existance of the user */
         if (admin_linux_account_enabled(session_data->user))
@@ -219,5 +219,5 @@ static bool max_admin_auth_is_client_ssl_capable(DCB* dcb)
 static void max_admin_auth_free_client_data(DCB* dcb)
 {
     mxb_assert(dcb->role() == DCB::Role::CLIENT);
-    MXS_FREE(static_cast<ClientDCB*>(dcb)->m_data);
+    MXS_FREE(static_cast<ClientDCB*>(dcb)->protocol_data_release());
 }

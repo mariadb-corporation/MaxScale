@@ -197,7 +197,7 @@ static int cdc_read_event(DCB* generic_dcb)
     int n, rc = 0;
     GWBUF* head = NULL;
     int auth_val = CDC_STATE_AUTH_FAILED;
-    CDC_session* client_data = (CDC_session*) dcb->m_data;
+    CDC_session* client_data = (CDC_session*) dcb->protocol_data();
 
     if ((n = dcb_read(dcb, &head, 0)) > 0)
     {
@@ -361,7 +361,7 @@ static bool cdc_init_connection(DCB* generic_dcb)
     CDC_session* client_data = (CDC_session*) MXS_CALLOC(1, sizeof(CDC_session));
     if (client_data)
     {
-        client_dcb->m_data = client_data;
+        client_dcb->protocol_data_set(client_data);
 
         /* client protocol state change to CDC_STATE_WAIT_FOR_AUTH */
         protocol->state = CDC_STATE_WAIT_FOR_AUTH;

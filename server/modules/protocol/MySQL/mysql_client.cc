@@ -579,7 +579,7 @@ void MySQLClientProtocol::store_client_information(DCB* generic_dcb, GWBUF* buff
     size_t len = gwbuf_length(buffer);
     uint8_t data[len];
     auto proto = this;
-    MYSQL_session* ses = (MYSQL_session*)dcb->m_data;
+    MYSQL_session* ses = (MYSQL_session*)dcb->protocol_data();
 
     gwbuf_copy_data(buffer, 0, len, data);
     mxb_assert(MYSQL_GET_PAYLOAD_LEN(data) + MYSQL_HEADER_LEN == len
@@ -648,7 +648,7 @@ void MySQLClientProtocol::handle_authentication_errors(DCB* generic_dcb, int aut
 
     int message_len;
     char* fail_str = NULL;
-    MYSQL_session* session = (MYSQL_session*)dcb->m_data;
+    MYSQL_session* session = (MYSQL_session*)dcb->protocol_data();
 
     switch (auth_val)
     {
@@ -729,10 +729,19 @@ int MySQLClientProtocol::perform_authentication(DCB* generic_dcb, GWBUF* read_bu
     MXB_AT_DEBUG(check_packet(dcb, read_buffer, nbytes_read));
 
     /** Allocate the shared session structure */
-    if (dcb->m_data == NULL && (dcb->m_data = mysql_session_alloc()) == NULL)
+    if (dcb->protocol_data() == NULL)
     {
-        dcb_close(dcb);
-        return 1;
+        MYSQL_session* data = mysql_session_alloc();
+
+        if (!data)
+        {
+            dcb_close(dcb);
+            return 1;
+        }
+
+        // TODO: Why can't this be provided when the ClientDCB is created
+        // TODO: or be part of the client protocol?
+        dcb->protocol_data_set(data);
     }
 
     /** Read the client's packet sequence and increment that by one */
@@ -753,7 +762,7 @@ int MySQLClientProtocol::perform_authentication(DCB* generic_dcb, GWBUF* read_bu
     }
 
     next_sequence++;
-    ((MYSQL_session*)(dcb->m_data))->next_sequence = next_sequence;
+    ((MYSQL_session*)(dcb->protocol_data()))->next_sequence = next_sequence;
 
     /**
      * The first step in the authentication process is to extract the
@@ -795,7 +804,7 @@ int MySQLClientProtocol::perform_authentication(DCB* generic_dcb, GWBUF* read_bu
         if (dcb->m_user == NULL)
         {
             /** User authentication complete, copy the username to the DCB */
-            MYSQL_session* ses = (MYSQL_session*)dcb->m_data;
+            MYSQL_session* ses = (MYSQL_session*)dcb->protocol_data();
             if ((dcb->m_user = MXS_STRDUP(ses->user)) == NULL)
             {
                 dcb_close(dcb);
@@ -1006,7 +1015,7 @@ bool MySQLClientProtocol::reauthenticate_client(MXS_SESSION* session, GWBUF* pac
         proto->charset |= (*it++) << 8;
 
         // Copy the new username to the session data
-        MYSQL_session* data = (MYSQL_session*)client_dcb->m_data;
+        MYSQL_session* data = (MYSQL_session*)client_dcb->protocol_data();
         strcpy(data->user, user.c_str());
         strcpy(data->db, db.c_str());
 
@@ -1101,7 +1110,7 @@ bool MySQLClientProtocol::handle_change_user(bool* changed_user, GWBUF** packetb
     if (!proto->changing_user && proto->reply().command() == MXS_COM_CHANGE_USER)
     {
         // Track the COM_CHANGE_USER progress at the session level
-        auto s = (MYSQL_session*)proto->session()->client_dcb->m_data;
+        auto s = (MYSQL_session*)proto->session()->client_dcb->protocol_data();
         s->changing_user = true;
 
         *changed_user = true;
@@ -1820,7 +1829,7 @@ int32_t MySQLClientProtocol::hangup(DCB* generic_dcb)
 
         int seqno = 1;
 
-        if (dcb->m_data && ((MYSQL_session*)dcb->m_data)->changing_user)
+        if (dcb->protocol_data() && ((MYSQL_session*)dcb->protocol_data())->changing_user)
         {
             // In case a COM_CHANGE_USER is in progress, we need to send the error with the seqno 3
             seqno = 3;

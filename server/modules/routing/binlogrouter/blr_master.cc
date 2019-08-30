@@ -133,8 +133,7 @@ static void blr_start_master(void* data)
 
     if (router->client)
     {
-        MXS_FREE(router->client->m_data);
-        router->client->m_data = NULL;
+        MXS_FREE(router->client->protocol_data_release());
         dcb_close(router->client);
         router->client = NULL;
     }
@@ -217,7 +216,7 @@ static void blr_start_master(void* data)
     router->client->enable_events();        /* Fake the client is reading */
 
     /* Create MySQL Athentication from configured user/passwd */
-    router->client->m_data = CreateMySQLAuthData(router->user, router->password, "");
+    router->client->protocol_data_set(CreateMySQLAuthData(router->user, router->password, ""));
     router->client->m_user = MXS_STRDUP(router->user);
     router->session->client_dcb = router->client;
 

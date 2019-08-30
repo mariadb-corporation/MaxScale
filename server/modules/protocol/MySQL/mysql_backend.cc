@@ -676,7 +676,7 @@ int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
             GWBUF_DATA(read_buffer)[3] = 0x3;
             proto->changing_user = false;
 
-            auto s = (MYSQL_session*)session->client_dcb->m_data;
+            auto s = (MYSQL_session*)session->client_dcb->protocol_data();
             s->changing_user = false;
         }
     }
@@ -927,7 +927,7 @@ int MySQLBackendProtocol::handle_persistent_connection(BackendDCB* dcb, GWBUF* q
             return 1;
         }
 
-        auto mysqlses = static_cast<MYSQL_session*>(dcb->session()->client_dcb->m_data);
+        auto mysqlses = static_cast<MYSQL_session*>(dcb->session()->client_dcb->protocol_data());
         GWBUF* buf = gw_create_change_user_packet(mysqlses);
 
         if (dcb_write(dcb, buf))
@@ -1229,7 +1229,7 @@ int MySQLBackendProtocol::backend_write_delayqueue(DCB* plain_dcb, GWBUF* buffer
 int MySQLBackendProtocol::gw_change_user(DCB* backend, MXS_SESSION* in_session, GWBUF* queue)
 {
     gwbuf_free(queue);
-    auto current_session = static_cast<MYSQL_session*>(in_session->client_dcb->m_data);
+    auto current_session = static_cast<MYSQL_session*>(in_session->client_dcb->protocol_data());
     return gw_send_change_user_to_backend(
             backend);
 }
@@ -1405,7 +1405,7 @@ GWBUF* MySQLBackendProtocol::gw_create_change_user_packet(MYSQL_session* mses)
 int
 MySQLBackendProtocol::gw_send_change_user_to_backend(DCB* backend)
 {
-    MYSQL_session* mses = (MYSQL_session*)session()->client_dcb->m_data;;
+    MYSQL_session* mses = (MYSQL_session*)session()->client_dcb->protocol_data();;
     GWBUF* buffer = gw_create_change_user_packet(mses);
 
     int rc = 0;

@@ -288,7 +288,7 @@ int MariaDBClientAuthenticator::authenticate(DCB* generic_dcb)
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
 
     int auth_ret = MXS_AUTH_SSL_COMPLETE;
-    MYSQL_session* client_data = (MYSQL_session*)dcb->m_data;
+    MYSQL_session* client_data = (MYSQL_session*)dcb->protocol_data();
     if (*client_data->user)
     {
         MXS_DEBUG("Receiving connection from '%s' to database '%s'.",
@@ -401,7 +401,7 @@ bool MariaDBClientAuthenticator::extract(DCB* generic_dcb, GWBUF* buf)
     int client_auth_packet_size = 0;
     auto protocol = static_cast<MySQLClientProtocol*>(dcb->protocol_session());
 
-    client_data = (MYSQL_session*)dcb->m_data;
+    client_data = (MYSQL_session*)dcb->protocol_data();
 
     client_auth_packet_size = gwbuf_length(buf);
 
@@ -663,7 +663,7 @@ bool MariaDBClientAuthenticator::ssl_capable(DCB* dcb)
 void MariaDBClientAuthenticator::free_data(DCB* dcb)
 {
     mxb_assert(dcb->role() == DCB::Role::CLIENT);
-    MXS_FREE(static_cast<ClientDCB*>(dcb)->m_data);
+    MXS_FREE(static_cast<ClientDCB*>(dcb)->protocol_data_release());
 }
 
 /**
@@ -802,7 +802,7 @@ int MariaDBClientAuthenticator::reauthenticate(DCB* generic_dcb,
     mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
 
-    MYSQL_session* client_data = (MYSQL_session*)dcb->m_data;
+    MYSQL_session* client_data = (MYSQL_session*)dcb->protocol_data();
     MYSQL_session temp;
     int rval = 1;
 

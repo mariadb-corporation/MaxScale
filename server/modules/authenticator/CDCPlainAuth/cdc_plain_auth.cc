@@ -300,7 +300,7 @@ static int cdc_auth_authenticate(DCB* generic_dcb)
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
 
     CDC_protocol* protocol = static_cast<CDC_protocol*>(dcb->protocol_session());
-    CDC_session* client_data = (CDC_session*)dcb->m_data;
+    CDC_session* client_data = (CDC_session*)dcb->protocol_data();
     int auth_ret;
 
     if (0 == strlen(client_data->user))
@@ -368,17 +368,17 @@ static bool cdc_auth_set_protocol_data(DCB* generic_dcb, GWBUF* buf)
     int client_auth_packet_size = 0;
 
     protocol = static_cast<CDC_protocol*>(dcb->protocol_session());
-    if (dcb->m_data == NULL)
+    if (dcb->protocol_data() == NULL)
     {
         if (NULL == (client_data = (CDC_session*)MXS_CALLOC(1, sizeof(CDC_session))))
         {
             return false;
         }
-        dcb->m_data = client_data;
+        dcb->protocol_data_set(client_data);
     }
     else
     {
-        client_data = (CDC_session*)dcb->m_data;
+        client_data = (CDC_session*)dcb->protocol_data();
     }
 
     client_auth_packet_size = gwbuf_length(buf);
@@ -485,7 +485,7 @@ static bool cdc_auth_is_client_ssl_capable(DCB* dcb)
 static void cdc_auth_free_client_data(DCB* dcb)
 {
     mxb_assert(dcb->role() == DCB::Role::CLIENT);
-    MXS_FREE(static_cast<ClientDCB*>(dcb)->m_data);
+    MXS_FREE(static_cast<ClientDCB*>(dcb)->protocol_data_release());
 }
 
 /*

@@ -41,7 +41,7 @@ SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session,
     : mxs::RouterSession(session)
     , m_closed(false)
     , m_client(session->client_dcb)
-    , m_mysql_session((MYSQL_session*)session->client_dcb->m_data)
+    , m_mysql_session((MYSQL_session*)session->client_dcb->protocol_data())
     , m_backends(std::move(backends))
     , m_config(router->m_config)
     , m_router(router)
