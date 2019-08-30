@@ -713,10 +713,6 @@ inline int dcb_bytes_readable(DCB* dcb)
 {
     return dcb->bytes_readable();
 }
-inline int dcb_drain_writeq(DCB* dcb)
-{
-    return dcb->writeq_drain();
-}
 
 void printAllDCBs();                                                            /* Debug to print all DCB in
                                                                                  * the system */

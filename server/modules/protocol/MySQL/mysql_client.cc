@@ -1784,7 +1784,7 @@ int32_t MySQLClientProtocol::write_ready(DCB* dcb)
     mxb_assert(dcb->state() != DCB::State::DISCONNECTED);
     if ((dcb->state() != DCB::State::DISCONNECTED) && (protocol_auth_state == MXS_AUTH_STATE_COMPLETE))
     {
-        dcb_drain_writeq(dcb);
+        dcb->writeq_drain();
     }
     return 1;
 }

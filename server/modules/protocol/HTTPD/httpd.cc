@@ -366,7 +366,7 @@ static int httpd_read_event(DCB* generic_dcb)
  */
 static int httpd_write_event(DCB* dcb)
 {
-    return dcb_drain_writeq(dcb);
+    return dcb->writeq_drain();
 }
 
 /**

@@ -367,7 +367,7 @@ static int maxscaled_read_event(DCB* dcb)
  */
 static int maxscaled_write_event(DCB* dcb)
 {
-    return dcb_drain_writeq(dcb);
+    return dcb->writeq_drain();
 }
 
 /**

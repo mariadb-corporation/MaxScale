@@ -302,7 +302,7 @@ static int cdc_read_event(DCB* generic_dcb)
  */
 static int cdc_write_event(DCB* dcb)
 {
-    return dcb_drain_writeq(dcb);
+    return dcb->writeq_drain();
 }
 
 /**

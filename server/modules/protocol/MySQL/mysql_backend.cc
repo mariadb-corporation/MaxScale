@@ -875,7 +875,7 @@ int32_t MySQLBackendProtocol::write_ready(DCB* dcb)
     else
     {
         mxb_assert(protocol_auth_state != MXS_AUTH_STATE_PENDING_CONNECT);
-        dcb_drain_writeq(dcb);
+        dcb->writeq_drain();
         MXS_DEBUG("wrote to dcb %p fd %d, return %d", dcb, dcb->fd(), rc);
     }
 
