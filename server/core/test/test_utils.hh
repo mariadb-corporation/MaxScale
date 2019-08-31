@@ -94,6 +94,11 @@ void init_test_env(char* __attribute((unused))path = nullptr, uint32_t init_type
 
     config_get_global_options()->n_threads = 1;
 
+    utils_init();
+    SSL_library_init();
+    SSL_load_error_strings();
+    OPENSSL_add_all_algorithms_noconf();
+
     if (!mxs_log_init(NULL, NULL, MXS_LOG_TARGET_STDOUT))
     {
         exit(1);
@@ -108,8 +113,15 @@ void init_test_env(char* __attribute((unused))path = nullptr, uint32_t init_type
     maxscale::RoutingWorker::init();
     set_libdir(MXS_STRDUP(old_libdir.c_str()));
 
-    preload_module("mariadbclient", "server/modules/protocol/MySQL/mariadbclient/", MODULE_PROTOCOL);
+    preload_module("mariadbclient", "server/modules/protocol/MySQL/", MODULE_PROTOCOL);
     preload_module("readconnroute", "server/modules/routing/readconnroute/", MODULE_ROUTER);
     preload_module("mariadbauth", "server/modules/authenticator/MariaDBAuth/", MODULE_AUTHENTICATOR);
-    preload_module("mariadbbackendauth", "server/modules/authenticator/MariaDBBackendAuth/", MODULE_AUTHENTICATOR);
+
+    mxs::RoutingWorker::start_workers();
+}
+
+void run_unit_test(std::function<void ()> func)
+{
+    init_test_env();
+    mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN)->call(func, mxs::RoutingWorker::EXECUTE_AUTO);
 }

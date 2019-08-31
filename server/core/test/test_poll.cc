@@ -36,16 +36,10 @@
  *
  */
 
-static int test1()
+static void test1()
 {
-    DCB* dcb;
-    int eno = 0;
-
     /* Poll tests */
-    fprintf(stderr,
-            "testpoll : Initialise the polling system.");
-    init_test_env(NULL);
-    fprintf(stderr, "\t..done\nAdd a DCB");
+    fprintf(stderr, "Add a DCB");
     MXS_CONFIG_PARAMETER parameters;
     parameters.set(CN_MAX_RETRY_INTERVAL, "10s");
     parameters.set(CN_CONNECTION_TIMEOUT, "10s");
@@ -62,59 +56,29 @@ static int test1()
 
     auto session = new mxs::Session(listener);
     int fd = socket(AF_UNIX, SOCK_STREAM, 0);
-
-    if (fd < 0)
-    {
-        char errbuf[MXS_STRERROR_BUFLEN];
-        fprintf(stderr,
-                "\nError on function call: socket() returned %d: %s\n",
-                errno,
-                strerror_r(errno, errbuf, sizeof(errbuf)));
-        return 1;
-    }
+    mxb_assert(fd >= 0);
 
     std::unique_ptr<mxs::ClientProtocol> client_protocol(MySQLClientProtocol::create(session, session));
-    dcb = ClientDCB::create(fd, session, std::move(client_protocol));
+    auto dcb = ClientDCB::create(fd, session, std::move(client_protocol));
 
-    if (dcb == NULL)
-    {
-        fprintf(stderr, "\nError on function call: ClientDCB::create() returned NULL.\n");
-        return 1;
-    }
+    mxb_assert(dcb);
+    mxb_assert(dcb->enable_events());
+    mxb_assert(dcb->disable_events());
+    mxb_assert(dcb->enable_events());
 
-    if (!dcb->enable_events())
-    {
-        fprintf(stderr, "\nError on function call: DCB::enable_events() failed\n");
-        return 1;
-    }
 
-    if (!dcb->disable_events())
-    {
-        fprintf(stderr, "\nError on function call: DCB::disable_events() failed.\n");
-        return 1;
-    }
+    // This part is pointless as there will be no events for the DCB
+    // fprintf(stderr, "\t..done\nStart wait for events.");
+    // sleep(10);
 
-    if (!dcb->enable_events())
-    {
-        fprintf(stderr, "\nError on function call: DCB::enable_events() failed.\n");
-        return 1;
-    }
-
-    fprintf(stderr, "\t..done\nStart wait for events.");
-    sleep(10);
     // TODO, fix this for workers: poll_shutdown();
     fprintf(stderr, "\t..done\nTidy up.");
     dcb_close(dcb);
     fprintf(stderr, "\t..done\n");
-
-    return 0;
 }
 
 int main(int argc, char** argv)
 {
-    int result = 0;
-
-    result += test1();
-
-    exit(result);
+    run_unit_test(test1);
+    return 0;
 }

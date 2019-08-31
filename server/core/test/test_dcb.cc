@@ -34,7 +34,7 @@
  * test1    Allocate a dcb and do lots of other things
  *
  */
-static int test1()
+static void test1()
 {
     DCB* dcb;
     /* Single buffer tests */
@@ -63,22 +63,15 @@ static int test1()
     // TODO: Some kind of test environment with workers would be needed.
     // printAllDCBs();
     fprintf(stderr, "\t..done\n");
-    dcb->enable_events(); // Makes state DCB_STATE_POLLING;
+    dcb->enable_events();   // Makes state DCB_STATE_POLLING;
     this_thread.current_dcb = dcb;
     dcb_close(dcb);
     fprintf(stderr, "Freed original dcb");
     fprintf(stderr, "\t..done\n");
-
-    return 0;
 }
 
 int main(int argc, char** argv)
 {
-    int result = 0;
-
-    init_test_env(NULL);
-
-    result += test1();
-
-    exit(result);
+    run_unit_test(test1);
+    return 0;
 }
