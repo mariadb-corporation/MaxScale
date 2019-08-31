@@ -2819,7 +2819,7 @@ bool InternalDCB::enable_events()
 
 bool InternalDCB::disable_events()
 {
-    mxb_assert(m_state == State::NOPOLLING);
+    mxb_assert(m_state == State::POLLING);
     m_state = State::NOPOLLING;
 
     return true;
