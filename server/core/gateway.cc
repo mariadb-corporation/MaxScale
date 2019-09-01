@@ -43,9 +43,11 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/sysinfo.h> 
 
 #include <maxbase/maxbase.hh>
 #include <maxbase/stacktrace.hh>
+#include <maxbase/format.hh>
 #include <maxsql/mariadb.hh>
 #include <maxbase/alloc.h>
 #include <maxscale/adminusers.h>
@@ -2060,6 +2062,16 @@ int main(int argc, char** argv)
         rc = MAXSCALE_INTERNALERROR;
         goto return_main;
     }
+
+    struct utsname name;
+    uname(&name);
+    MXS_NOTICE("Running OS: %s@%s, %s, %s with %lu processor cores.",
+                name.sysname, name.release, name.version, name.machine, get_processor_count());
+
+    struct sysinfo info;
+    sysinfo(&info);
+    MXS_NOTICE("Total usable main memory: %s.",
+         mxb::to_binary_size(info.mem_unit * info.totalram).c_str());
 
     MXS_NOTICE("MariaDB MaxScale %s started (Commit: %s)", MAXSCALE_VERSION, MAXSCALE_COMMIT);
     MXS_NOTICE("MaxScale is running in process %i", getpid());
