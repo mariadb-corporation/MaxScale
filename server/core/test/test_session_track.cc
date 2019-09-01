@@ -6,8 +6,35 @@
 #include <maxscale/buffer.hh>
 #include <maxscale/protocol/mysql.hh>
 
-uint8_t hack[128] = {};     // Avoids having to allocate services, sessions and DCBs just to test the protocol
-MySQLProtocol proto((MXS_SESSION*)hack, (SERVER*)hack, (mxs::Component*)hack);
+#include "test_utils.hh"
+#include "../internal/service.hh"
+#include "../internal/session.hh"
+#include "../internal/server.hh"
+
+SERVICE* service;
+SListener listener;
+mxs::Session* session;
+std::unique_ptr<MySQLProtocol> proto;
+Server* server;
+
+void create_test_objects()
+{
+    MXS_CONFIG_PARAMETER parameters;
+    parameters.set(CN_MAX_RETRY_INTERVAL, "10s");
+    parameters.set(CN_CONNECTION_TIMEOUT, "10s");
+    parameters.set(CN_NET_WRITE_TIMEOUT, "10s");
+    service = service_alloc("service", "readconnroute", &parameters);
+
+    MXS_CONFIG_PARAMETER listener_params;
+    listener_params.set(CN_ADDRESS, "0.0.0.0");
+    listener_params.set(CN_PORT, "3306");
+    listener_params.set(CN_PROTOCOL, "mariadbclient");
+    listener_params.set(CN_SERVICE, service->name());
+
+    listener = Listener::create("listener", "mariadbclient", listener_params);
+    session = new mxs::Session(listener);
+    server = new Server("server1");
+}
 
 static const uint8_t resultset1[] =
 {
@@ -167,51 +194,52 @@ static const uint8_t resultset3[] =
 /* functional test , test packet by packet */
 void test1()
 {
+    proto.reset(new MySQLProtocol(session, server, nullptr));
+    proto->server_capabilities |= GW_MYSQL_CAPABILITIES_SESSION_TRACK;
     GWBUF* buffer;
-    proto.server_capabilities = GW_MYSQL_CAPABILITIES_SESSION_TRACK;
-    proto.num_eof_packets = 0;
     fprintf(stderr, "test_session_track : Functional tests.\n");
     // BEGIN
     buffer = gwbuf_alloc_and_load(PACKET_1_LEN, resultset1 + PACKET_1_IDX);
-    mxs_mysql_get_session_track_info(buffer, &proto);
+    mxs_mysql_get_session_track_info(buffer, proto.get());
+    mxb_assert(gwbuf_get_property(buffer, (char*)"trx_state"));
     mxb_assert(strncmp(gwbuf_get_property(buffer, (char*)"trx_state"), "T_______", 8) == 0);
     gwbuf_free(buffer);
     // COMMIT
     buffer = gwbuf_alloc_and_load(PACKET_2_LEN, resultset1 + PACKET_2_IDX);
-    mxs_mysql_get_session_track_info(buffer, &proto);
+    mxs_mysql_get_session_track_info(buffer, proto.get());
     mxb_assert(strncmp(gwbuf_get_property(buffer, (char*)"trx_state"), "________", 8) == 0);
     gwbuf_free(buffer);
     // START TRANSACTION
     buffer = gwbuf_alloc_and_load(PACKET_3_LEN, resultset1 + PACKET_3_IDX);
-    mxs_mysql_get_session_track_info(buffer, &proto);
+    mxs_mysql_get_session_track_info(buffer, proto.get());
     mxb_assert(strncmp(gwbuf_get_property(buffer, (char*)"trx_state"), "T_______", 8) == 0);
     gwbuf_free(buffer);
     // START TRANSACTION READ ONLY
     buffer = gwbuf_alloc_and_load(PACKET_4_LEN, resultset1 + PACKET_4_IDX);
-    mxs_mysql_get_session_track_info(buffer, &proto);
+    mxs_mysql_get_session_track_info(buffer, proto.get());
     mxb_assert(strncmp(gwbuf_get_property(buffer, (char*)"trx_characteristics"),
                        "START TRANSACTION READ ONLY;",
                        28) == 0);
     gwbuf_free(buffer);
     // COMMIT
     buffer = gwbuf_alloc_and_load(PACKET_5_LEN, resultset1 + PACKET_5_IDX);
-    mxs_mysql_get_session_track_info(buffer, &proto);
+    mxs_mysql_get_session_track_info(buffer, proto.get());
     mxb_assert(gwbuf_get_property(buffer, (char*)"trx_characteristics") == NULL);
     mxb_assert(gwbuf_get_property(buffer, (char*)"trx_state") == NULL);
     gwbuf_free(buffer);
     // SET AUTOCOMMIT=0;
     buffer = gwbuf_alloc_and_load(PACKET_6_LEN, resultset1 + PACKET_6_IDX);
-    mxs_mysql_get_session_track_info(buffer, &proto);
+    mxs_mysql_get_session_track_info(buffer, proto.get());
     mxb_assert(strncmp(gwbuf_get_property(buffer, (char*)"autocommit"), "OFF", 3) == 0);
     gwbuf_free(buffer);
     // INSERT INTO t1 VALUES(1);
     buffer = gwbuf_alloc_and_load(PACKET_7_LEN, resultset1 + PACKET_7_IDX);
-    mxs_mysql_get_session_track_info(buffer, &proto);
+    mxs_mysql_get_session_track_info(buffer, proto.get());
     mxb_assert(strncmp(gwbuf_get_property(buffer, (char*)"trx_state"), "I___W___", 8) == 0);
     gwbuf_free(buffer);
     // COMMIT
     buffer = gwbuf_alloc_and_load(PACKET_8_LEN, resultset1 + PACKET_8_IDX);
-    mxs_mysql_get_session_track_info(buffer, &proto);
+    mxs_mysql_get_session_track_info(buffer, proto.get());
     mxb_assert(strncmp(gwbuf_get_property(buffer, (char*)"trx_state"), "________", 8) == 0);
     gwbuf_free(buffer);
 }
@@ -219,32 +247,35 @@ void test1()
 /* multi results combine in one buffer, test for check boundary handle properly */
 void test2()
 {
+    proto.reset(new MySQLProtocol(session, server, nullptr));
+    proto->server_capabilities |= GW_MYSQL_CAPABILITIES_SESSION_TRACK;
     GWBUF* buffer;
     fprintf(stderr, "test_session_track: multi results test\n");
-    proto.server_capabilities = GW_MYSQL_CAPABILITIES_SESSION_TRACK;
-    proto.num_eof_packets = 0;
     buffer = gwbuf_alloc_and_load(sizeof(resultset2), resultset2);
-    mxs_mysql_get_session_track_info(buffer, &proto);
+    mxs_mysql_get_session_track_info(buffer, proto.get());
     mxb_assert(strncmp(gwbuf_get_property(buffer, (char*)"trx_state"), "I_R_W___", 8) == 0);
     gwbuf_free(buffer);
 }
 
 void test3()
 {
+    proto.reset(new MySQLProtocol(session, server, nullptr));
+    proto->server_capabilities |= GW_MYSQL_CAPABILITIES_SESSION_TRACK;
     GWBUF* buffer;
-    proto.server_capabilities = GW_MYSQL_CAPABILITIES_SESSION_TRACK;
-    proto.num_eof_packets = 0;
     fprintf(stderr, "test_session_track: protocol state test\n");
     buffer = gwbuf_alloc_and_load(sizeof(resultset2), resultset2);
-    mxs_mysql_get_session_track_info(buffer, &proto);
+    mxs_mysql_get_session_track_info(buffer, proto.get());
     mxb_assert(strncmp(gwbuf_get_property(buffer, (char*)"trx_state"), "I_R_W___", 8) == 0);
     gwbuf_free(buffer);
 }
 
 int main(int argc, char** argv)
 {
-    test1();
-    test2();
-    test3();
+    run_unit_test([]() {
+                      create_test_objects();
+                      test1();
+                      test2();
+                      test3();
+                  });
     return 0;
 }
