@@ -1700,7 +1700,7 @@ int32_t MySQLClientProtocol::read(DCB* dcb)
         return return_code;
     }
 
-    if (nbytes_read == max_single_read && dcb_bytes_readable(dcb) > 0)
+    if (nbytes_read == max_single_read && dcb->socket_bytes_readable() > 0)
     {
         // We read a maximally long packet, route it first. This is done in case there's a lot more data
         // waiting and we have to start throttling the reads.

@@ -709,11 +709,6 @@ namespace maxscale
 const char* to_string(DCB::Role role);
 }
 
-inline int dcb_bytes_readable(DCB* dcb)
-{
-    return dcb->socket_bytes_readable();
-}
-
 void printAllDCBs();                                                            /* Debug to print all DCB in
                                                                                  * the system */
 void printDCB(DCB*);                                                            /* Debug print routine */
