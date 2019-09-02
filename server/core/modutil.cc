@@ -46,13 +46,6 @@ static const char* sub_percent = ".*";
 static const char* sub_single = "$1.";
 static const char* sub_escape = "\\.";
 
-static void modutil_reply_routing_error(DCB* backend_dcb,
-                                        int error,
-                                        const char* state,
-                                        char* errstr,
-                                        uint32_t flags);
-
-
 /**
  * Check if a GWBUF structure is a MySQL COM_QUERY packet
  *
@@ -771,73 +764,6 @@ int modutil_count_signal_packets(GWBUF* reply, int n_found, bool* more_out, modu
     }
 
     return total;
-}
-
-/**
- * Create parse error and EPOLLIN event to event queue of the backend DCB.
- * When event is notified the error message is processed as error reply and routed
- * upstream to client.
- *
- * @param backend_dcb   DCB where event is added
- * @param errstr        Plain-text string error
- * @param flags         GWBUF type flags
- */
-void modutil_reply_parse_error(DCB* backend_dcb,
-                               char* errstr,
-                               uint32_t flags)
-{
-    modutil_reply_routing_error(backend_dcb, 1064, "42000", errstr, flags);
-}
-
-/**
- * Create authentication error and EPOLLIN event to event queue of the backend DCB.
- * When event is notified the error message is processed as error reply and routed
- * upstream to client.
- *
- * @param backend_dcb   DCB where event is added
- * @param errstr        Plain-text string error
- * @param flags         GWBUF type flags
- */
-void modutil_reply_auth_error(DCB* backend_dcb,
-                              char* errstr,
-                              uint32_t flags)
-{
-    modutil_reply_routing_error(backend_dcb, 1045, "28000", errstr, flags);
-}
-
-
-/**
- * Create error message and EPOLLIN event to event queue of the backend DCB.
- * When event is notified the message is processed as error reply and routed
- * upstream to client.
- *
- * @param backend_dcb   DCB where event is added
- * @param error         SQL error number
- * @param state         SQL state
- * @param errstr        Plain-text string error
- * @param flags         GWBUF type flags
- */
-static void modutil_reply_routing_error(DCB* backend_dcb,
-                                        int error,
-                                        const char* state,
-                                        char* errstr,
-                                        uint32_t flags)
-{
-    GWBUF* buf;
-
-    buf = modutil_create_mysql_err_msg(1, 0, error, state, errstr);
-    MXS_FREE(errstr);
-
-    if (buf == NULL)
-    {
-        MXS_ERROR("Creating routing error message failed.");
-        return;
-    }
-    /** Set flags that help router to process reply correctly */
-    gwbuf_set_type(buf, flags);
-    /** Create an incoming event for backend DCB */
-    poll_add_epollin_event_to_dcb(backend_dcb, buf);
-    return;
 }
 
 /**

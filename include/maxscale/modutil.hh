@@ -45,8 +45,6 @@ extern int    modutil_send_mysql_err_packet(DCB*, int, int, int, const char*, co
 GWBUF*        modutil_get_next_MySQL_packet(GWBUF** p_readbuf);
 GWBUF*        modutil_get_complete_packets(GWBUF** p_readbuf);
 int           modutil_MySQL_query_len(GWBUF* buf, int* nbytes_missing);
-void          modutil_reply_parse_error(DCB* backend_dcb, char* errstr, uint32_t flags);
-void          modutil_reply_auth_error(DCB* backend_dcb, char* errstr, uint32_t flags);
 int           modutil_count_statements(GWBUF* buffer);
 int           modutil_count_packets(GWBUF* buffer);
 
