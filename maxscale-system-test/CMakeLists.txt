@@ -1007,6 +1007,10 @@ add_test_executable(mxs2621_lower_case_tables.cpp mxs2621_lower_case_tables mxs2
 # MXS-2631: Duplicate system tables not ignored
 add_test_executable(mxs2631_ignore_system_tables.cpp mxs2631_ignore_system_tables mxs2631_ignore_system_tables LABELS schemarouter BREAKS_REPL REPL_BACKEND)
 
+# Service-to-Service routing with readwritesplit
+add_test_executable(sts_readwritesplit.cpp sts_readwritesplit sts_readwritesplit LABELS readwritesplit REPL_BACKEND)
+
+
 ############################################
 # END: Normal tests                        #
 ############################################
