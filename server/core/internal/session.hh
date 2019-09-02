@@ -51,7 +51,7 @@ typedef enum
  * @param session  The session to link with the dcb
  * @param dcb      The backend DCB to be linked
  */
-void session_link_backend_dcb(MXS_SESSION* session, DCB* dcb);
+void session_link_backend_dcb(MXS_SESSION* session, BackendDCB* dcb);
 
 /**
  * Unlink a session to a backend DCB.

@@ -130,7 +130,7 @@ bool session_start(MXS_SESSION* ses)
     return session->start();
 }
 
-void session_link_backend_dcb(MXS_SESSION* session, DCB* dcb)
+void session_link_backend_dcb(MXS_SESSION* session, BackendDCB* dcb)
 {
     mxb_assert(dcb->owner == session->client_dcb->owner);
     mxb_assert(dcb->role() == DCB::Role::BACKEND);

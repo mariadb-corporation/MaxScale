@@ -277,10 +277,6 @@ public:
 
     // BEGIN: Temporarily here, do not use.
     static void close(DCB* dcb);
-    void set_session(MXS_SESSION* s)
-    {
-        m_session = s;
-    }
     // END
 
     int add_callback(Reason, int (*)(DCB*, Reason, void*), void*);
@@ -639,6 +635,11 @@ class BackendDCB : public DCB
 public:
     static BackendDCB* connect(SERVER* server, MXS_SESSION* session, DCB::Manager* manager,
                                mxs::Component* upstream);
+
+    void set_session(MXS_SESSION* s)
+    {
+        m_session = s;
+    }
 
     MXS_PROTOCOL_SESSION* protocol_session() const override;
 
