@@ -250,6 +250,13 @@ private:
                            });
     }
 
+    inline bool is_last_backend(mxs::RWBackend* backend)
+    {
+        return std::none_of(m_raw_backends.begin(), m_raw_backends.end(), [&](mxs::RWBackend* b) {
+                                return b->in_use() && b != backend;
+                            });
+    }
+
     inline bool is_large_query(GWBUF* buf)
     {
         uint32_t buflen = gwbuf_length(buf);
