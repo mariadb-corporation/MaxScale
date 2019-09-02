@@ -697,7 +697,7 @@ void BinlogFilterSession::filterError(GWBUF* pPacket)
 {
     /* Abort client connection on copy failure */
     m_state = ERRORED;
-    poll_fake_hangup_event(m_pSession->client_dcb);
+    m_pSession->client_dcb->trigger_hangup_event();
     gwbuf_free(pPacket);
 }
 

@@ -246,7 +246,7 @@ int32_t MySQLBackendProtocol::read(DCB* plain_dcb)
     {
         /** If a DCB gets a read event when it's in the persistent pool, it is
          * treated as if it were an error. */
-        poll_fake_hangup_event(dcb);
+        dcb->trigger_hangup_event();
         return 0;
     }
 
@@ -614,7 +614,7 @@ int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
             {
                 /** Failed to make the buffer contiguous */
                 gwbuf_free(read_buffer);
-                poll_fake_hangup_event(dcb);
+                dcb->trigger_hangup_event();
                 return 0;
             }
 
@@ -724,7 +724,7 @@ int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
                 /** The server requested a change to something other than
                  * the default auth plugin */
                 gwbuf_free(query);
-                poll_fake_hangup_event(dcb);
+                dcb->trigger_hangup_event();
 
                 // TODO: Use the authenticators to handle COM_CHANGE_USER responses
                 MXS_ERROR("Received AuthSwitchRequest to '%s' when '%s' was expected",
@@ -754,7 +754,7 @@ int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
             }
 
             gwbuf_free(query);
-            poll_fake_hangup_event(dcb);
+            dcb->trigger_hangup_event();
         }
 
         gwbuf_free(reply);
@@ -952,7 +952,7 @@ int MySQLBackendProtocol::handle_persistent_connection(BackendDCB* dcb, GWBUF* q
              * closing. */
             MXS_INFO("COM_QUIT received while COM_CHANGE_USER is in progress, closing pooled connection");
             gwbuf_free(queue);
-            poll_fake_hangup_event(dcb);
+            dcb->trigger_hangup_event();
         }
         else
         {

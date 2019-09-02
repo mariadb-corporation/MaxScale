@@ -914,7 +914,7 @@ public:
             if (m_down.routeQuery(m_down.instance, m_down.session, buffer) == 0)
             {
                 // Routing failed, send a hangup to the client.
-                poll_fake_hangup_event(m_session->client_dcb);
+                m_session->client_dcb->trigger_hangup_event();
             }
         }
     }

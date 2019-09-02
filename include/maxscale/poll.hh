@@ -48,15 +48,6 @@ typedef enum
  */
 int64_t poll_get_stat(POLL_STAT stat);
 
-/*
- * Insert a fake hangup event for a DCB into the polling queue.
- *
- * This is used when a monitor detects that a server is not responding.
- *
- * @param dcb   DCB to emulate an EPOLLOUT event for
- */
-void poll_fake_hangup_event(DCB* dcb);
-
 /**
  * Add given GWBUF to DCB's readqueue and add a pending EPOLLIN event for DCB.
  * The event pretends that there is something to read for the DCB. Actually

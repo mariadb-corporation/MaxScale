@@ -491,7 +491,7 @@ void SchemaRouterSession::handle_mapping_reply(SRBackend* bref, GWBUF** pPacket)
 
     if (rc == -1)
     {
-        poll_fake_hangup_event(m_client);
+        m_client->trigger_hangup_event();
     }
 }
 

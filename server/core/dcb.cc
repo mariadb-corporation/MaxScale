@@ -715,7 +715,7 @@ GWBUF* DCB::basic_read_SSL(int* nsingleread)
 
     case SSL_ERROR_ZERO_RETURN:
         /* react to the SSL connection being closed */
-        poll_fake_hangup_event(this);
+        trigger_hangup_event();
         *nsingleread = 0;
         break;
 
@@ -1401,7 +1401,7 @@ int DCB::socket_write_SSL(GWBUF* writeq, bool* stop_writing)
     case SSL_ERROR_ZERO_RETURN:
         /* react to the SSL connection being closed */
         *stop_writing = true;
-        poll_fake_hangup_event(this);
+        trigger_hangup_event();
         break;
 
     case SSL_ERROR_WANT_READ:
@@ -1422,7 +1422,7 @@ int DCB::socket_write_SSL(GWBUF* writeq, bool* stop_writing)
         *stop_writing = true;
         if (log_errors_SSL(written) < 0)
         {
-            poll_fake_hangup_event(this);
+            trigger_hangup_event();
         }
         break;
 
@@ -1431,7 +1431,7 @@ int DCB::socket_write_SSL(GWBUF* writeq, bool* stop_writing)
         *stop_writing = true;
         if (log_errors_SSL(written) < 0)
         {
-            poll_fake_hangup_event(this);
+            trigger_hangup_event();
         }
         break;
     }
@@ -1837,7 +1837,7 @@ int ClientDCB::ssl_handshake()
     case SSL_ERROR_ZERO_RETURN:
         MXS_DEBUG("SSL error, shut down cleanly during SSL accept %s@%s", user, remote);
         log_errors_SSL(0);
-        poll_fake_hangup_event(this);
+        trigger_hangup_event();
         return 0;
 
     case SSL_ERROR_SYSCALL:
@@ -1845,7 +1845,7 @@ int ClientDCB::ssl_handshake()
         if (log_errors_SSL(ssl_rval) < 0)
         {
             m_ssl_state = SSLState::HANDSHAKE_FAILED;
-            poll_fake_hangup_event(this);
+            trigger_hangup_event();
             return -1;
         }
         else
@@ -1858,7 +1858,7 @@ int ClientDCB::ssl_handshake()
         if (log_errors_SSL(ssl_rval) < 0)
         {
             m_ssl_state = SSLState::HANDSHAKE_FAILED;
-            poll_fake_hangup_event(this);
+            trigger_hangup_event();
             return -1;
         }
         else
@@ -1920,7 +1920,7 @@ int BackendDCB::ssl_handshake()
         MXS_DEBUG("SSL error, shut down cleanly during SSL connect %s", m_remote);
         if (log_errors_SSL(0) < 0)
         {
-            poll_fake_hangup_event(this);
+            trigger_hangup_event();
         }
         return_code = 0;
         break;
@@ -1930,7 +1930,7 @@ int BackendDCB::ssl_handshake()
         if (log_errors_SSL(ssl_rval) < 0)
         {
             m_ssl_state = SSLState::HANDSHAKE_FAILED;
-            poll_fake_hangup_event(this);
+            trigger_hangup_event();
             return_code = -1;
         }
         else
@@ -1944,7 +1944,7 @@ int BackendDCB::ssl_handshake()
         if (log_errors_SSL(ssl_rval) < 0)
         {
             m_ssl_state = SSLState::HANDSHAKE_FAILED;
-            poll_fake_hangup_event(this);
+            trigger_hangup_event();
             return -1;
         }
         else
@@ -2020,7 +2020,7 @@ void DCB::process_timeouts(int thr)
                                     dcb->m_remote ? dcb->m_remote : "<unknown>",
                                     (float)idle / 10.f);
                         dcb->session()->close_reason = SESSION_CLOSE_TIMEOUT;
-                        poll_fake_hangup_event(dcb);
+                        dcb->trigger_hangup_event();
                     }
                 }
 
@@ -2035,7 +2035,7 @@ void DCB::process_timeouts(int thr)
                                     dcb->m_user ? dcb->m_user : "<unknown>",
                                     dcb->m_remote ? dcb->m_remote : "<unknown>");
                         dcb->session()->close_reason = SESSION_CLOSE_TIMEOUT;
-                        poll_fake_hangup_event(dcb);
+                        dcb->trigger_hangup_event();
                     }
                 }
             }
@@ -2449,14 +2449,14 @@ void DCB::trigger_read_event()
     DCB::add_event(this, NULL, EPOLLIN);
 }
 
-void poll_fake_hangup_event(DCB* dcb)
+void DCB::trigger_hangup_event()
 {
 #ifdef EPOLLRDHUP
     uint32_t ev = EPOLLRDHUP;
 #else
     uint32_t ev = EPOLLHUP;
 #endif
-    DCB::add_event(dcb, NULL, ev);
+    DCB::add_event(this, NULL, ev);
 }
 
 void DCB::trigger_write_event()
@@ -2604,7 +2604,7 @@ static int upstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* userda
             MXS_ERROR("Could not re-enable I/O events for client connection whose I/O events "
                       "earlier were disabled due to the high water mark having been hit. "
                       "Closing session.");
-            poll_fake_hangup_event(client_dcb);
+            client_dcb->trigger_hangup_event();
         }
     }
 
@@ -2644,7 +2644,7 @@ bool backend_dcb_add_func(DCB* dcb, void* data)
             MXS_ERROR("Could not re-enable I/O events for backend connection whose I/O events "
                       "earlier were disabled due to the high water mark having been hit. "
                       "Closing session.");
-            poll_fake_hangup_event(client_dcb);
+            client_dcb->trigger_hangup_event();
         }
     }
 
