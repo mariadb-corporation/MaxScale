@@ -176,7 +176,6 @@ DCB::~DCB()
     gwbuf_free(m_delayq);
     gwbuf_free(m_writeq);
     gwbuf_free(m_readq);
-    gwbuf_free(m_fakeq);
 
     MXB_POLL_DATA::owner = reinterpret_cast<MXB_WORKER*>(0xdeadbeef);
 }
@@ -461,12 +460,6 @@ int DCB::read(GWBUF** head, int maxbytes)
         m_readq = NULL;
         nreadtotal = gwbuf_length(*head);
     }
-    else if (m_fakeq)
-    {
-        *head = gwbuf_append(*head, m_fakeq);
-        m_fakeq = NULL;
-        nreadtotal = gwbuf_length(*head);
-    }
 
     if (nreadtotal != 0)
     {
@@ -480,9 +473,9 @@ int DCB::read(GWBUF** head, int maxbytes)
 
         if (n < 0 && nreadtotal != 0)
         {
-            // TODO: There was something in either m_readq or m_fakeq, but the SSL
+            // TODO: There was something in m_readq, but the SSL
             // TODO: operation failed. We will now return -1 but whatever data was
-            // TODO: in m_readq or m_fakeq is now in head.
+            // TODO: in m_readq is now in head.
             // TODO: Don't know if this can happen in practice.
             MXS_ERROR("SSL reading failed when existing data already had been "
                       "appended to returned buffer.");
@@ -1083,11 +1076,9 @@ bool BackendDCB::maybe_add_persistent(BackendDCB* dcb)
         }
 
         /** Free all buffered data */
-        gwbuf_free(dcb->m_fakeq);
         gwbuf_free(dcb->m_readq);
         gwbuf_free(dcb->m_delayq);
         gwbuf_free(dcb->m_writeq);
-        dcb->m_fakeq = NULL;
         dcb->m_readq = NULL;
         dcb->m_delayq = NULL;
         dcb->m_writeq = NULL;
@@ -2323,10 +2314,10 @@ uint32_t DCB::event_handler(DCB* dcb, uint32_t events)
     // may lead to the addition of another fake event we loop until
     // there is no fake event or the dcb has been closed.
 
-    while ((dcb->m_nClose == 0) && (dcb->m_fake_event != 0))
+    while ((dcb->m_nClose == 0) && (dcb->m_triggered_event != 0))
     {
-        events = dcb->m_fake_event;
-        dcb->m_fake_event = 0;
+        events = dcb->m_triggered_event;
+        dcb->m_triggered_event = 0;
 
         rv |= DCB::process_events(dcb, events);
     }
@@ -2365,9 +2356,8 @@ public:
     FakeEventTask(const FakeEventTask&) = delete;
     FakeEventTask& operator=(const FakeEventTask&) = delete;
 
-    FakeEventTask(DCB* dcb, GWBUF* buf, uint32_t ev)
+    FakeEventTask(DCB* dcb, uint32_t ev)
         : m_dcb(dcb)
-        , m_buffer(buf)
         , m_ev(ev)
         , m_uid(dcb->uid())
     {
@@ -2385,51 +2375,36 @@ public:
                                               // happened to get the same address).
         {
             mxb_assert(m_dcb->owner == RoutingWorker::get_current());
-            m_dcb->m_fakeq = m_buffer;
             DCB::event_handler(m_dcb, m_ev);
-        }
-        else
-        {
-            gwbuf_free(m_buffer);
         }
     }
 
 private:
     DCB*     m_dcb;
-    GWBUF*   m_buffer;
     uint32_t m_ev;
     uint64_t m_uid;     /**< DCB UID guarantees we deliver the event to the correct DCB */
 };
 
-// static
-void DCB::add_event(DCB* dcb, GWBUF* buf, uint32_t ev)
+void DCB::add_event(uint32_t ev)
 {
-    if (dcb == this_thread.current_dcb)
+    if (this == this_thread.current_dcb)
     {
-        mxb_assert(dcb->owner == RoutingWorker::get_current());
+        mxb_assert(this->owner == RoutingWorker::get_current());
         // If the fake event is added to the current DCB, we arrange for
         // it to be handled immediately in DCB::event_handler() when the handling
         // of the current events are done...
 
-        if (dcb->m_fake_event != 0)
-        {
-            MXS_WARNING("Events have already been injected to current DCB, discarding existing.");
-            gwbuf_free(dcb->m_fakeq);
-            dcb->m_fake_event = 0;
-        }
-
-        dcb->m_fakeq = buf;
-        dcb->m_fake_event = ev;
+        m_triggered_event = ev;
     }
     else
     {
         // ... otherwise we post the fake event using the messaging mechanism.
 
-        FakeEventTask* task = new(std::nothrow) FakeEventTask(dcb, buf, ev);
+        FakeEventTask* task = new(std::nothrow) FakeEventTask(this, ev);
 
         if (task)
         {
-            RoutingWorker* worker = static_cast<RoutingWorker*>(dcb->owner);
+            RoutingWorker* worker = static_cast<RoutingWorker*>(this->owner);
             worker->execute(std::unique_ptr<FakeEventTask>(task), Worker::EXECUTE_QUEUED);
         }
         else
@@ -2441,7 +2416,7 @@ void DCB::add_event(DCB* dcb, GWBUF* buf, uint32_t ev)
 
 void DCB::trigger_read_event()
 {
-    DCB::add_event(this, NULL, EPOLLIN);
+    add_event(EPOLLIN);
 }
 
 void DCB::trigger_hangup_event()
@@ -2451,12 +2426,12 @@ void DCB::trigger_hangup_event()
 #else
     uint32_t ev = EPOLLHUP;
 #endif
-    DCB::add_event(this, NULL, ev);
+    add_event(ev);
 }
 
 void DCB::trigger_write_event()
 {
-    DCB::add_event(this, NULL, EPOLLOUT);
+    add_event(EPOLLOUT);
 }
 
 /**

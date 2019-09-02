@@ -208,7 +208,7 @@ public:
      * @return -1 on error, otherwise the total length of the GWBUF. That is, not only
      *         the amount of data appended to the GWBUF.
      *
-     * @note The read operation will return data from the readq, fakeq and the network.
+     * @note The read operation will return data from the readq and the network.
      */
     int read(GWBUF** ppHead, int maxbytes);
 
@@ -281,7 +281,6 @@ public:
     {
         m_session = s;
     }
-    static void add_event(DCB* dcb, GWBUF* buf, uint32_t ev);
     // END
 
     int add_callback(Reason, int (*)(DCB*, Reason, void*), void*);
@@ -388,11 +387,6 @@ public:
         GWBUF* delayq = m_delayq;
         m_delayq = NULL;
         return delayq;
-    }
-
-    GWBUF* fakeq()
-    {
-        return m_fakeq;
     }
 
     int64_t last_read() const
@@ -509,8 +503,7 @@ protected:
     GWBUF*                m_writeq = nullptr;           /**< Write Data Queue */
     GWBUF*                m_readq = nullptr;            /**< Read queue for incomplete reads */
     GWBUF*                m_delayq = nullptr;           /**< Delay Backend Write Data Queue */
-    GWBUF*                m_fakeq = nullptr;            /**< Fake event queue for generated events */
-    uint32_t              m_fake_event = 0;             /**< Fake event to be delivered to handler */
+    uint32_t              m_triggered_event = 0;        /**< Triggered event to be delivered to handler */
     int64_t               m_last_read;                  /**< Last time the DCB received data */
     int64_t               m_last_write;                 /**< Last time the DCB sent data */
     uint32_t              m_nClose = 0;                 /**< How many times dcb_close has been called. */
@@ -538,6 +531,8 @@ private:
     friend class FakeEventTask;
 
     void call_callback(Reason reason);
+
+    void add_event(uint32_t ev);
 
 private:
     Role     m_role;        /**< The role of the DCB */

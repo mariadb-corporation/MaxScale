@@ -889,7 +889,7 @@ int MySQLBackendProtocol::handle_persistent_connection(BackendDCB* dcb, GWBUF* q
 
     if (dcb->was_persistent())
     {
-        mxb_assert(!dcb->fakeq() && !dcb->readq() && !dcb->delayq() && !dcb->writeq());
+        mxb_assert(!dcb->readq() && !dcb->delayq() && !dcb->writeq());
         mxb_assert(!dcb->is_in_persistent_pool());
         mxb_assert(protocol->m_ignore_replies >= 0);
 
