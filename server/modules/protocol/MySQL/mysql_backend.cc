@@ -579,7 +579,7 @@ int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
             {
                 // There must be more than one response in the buffer which we need to process once we've
                 // routed this response.
-                poll_fake_read_event(dcb);
+                dcb->trigger_read_event();
             }
         }
 

@@ -871,7 +871,7 @@ int DCB::writeq_drain()
     if (m_ssl_read_want_write)
     {
         /** The SSL library needs to write more data */
-        poll_fake_read_event(this);
+        this->trigger_read_event();
     }
 
     int total_written = 0;
@@ -2444,9 +2444,9 @@ void poll_add_epollin_event_to_dcb(DCB* dcb, GWBUF* buf)
     DCB::add_event(dcb, buf, EPOLLIN);
 }
 
-void poll_fake_read_event(DCB* dcb)
+void DCB::trigger_read_event()
 {
-    DCB::add_event(dcb, NULL, EPOLLIN);
+    DCB::add_event(this, NULL, EPOLLIN);
 }
 
 void poll_fake_hangup_event(DCB* dcb)

@@ -832,7 +832,7 @@ int MySQLClientProtocol::perform_authentication(DCB* generic_dcb, GWBUF* read_bu
             if (dcb->readq())
             {
                 // The user has already send more data, process it
-                poll_fake_read_event(dcb);
+                dcb->trigger_read_event();
             }
         }
         else
@@ -1704,7 +1704,7 @@ int32_t MySQLClientProtocol::read(DCB* dcb)
     {
         // We read a maximally long packet, route it first. This is done in case there's a lot more data
         // waiting and we have to start throttling the reads.
-        poll_fake_read_event(dcb);
+        dcb->trigger_read_event();
     }
 
     return_code = 0;

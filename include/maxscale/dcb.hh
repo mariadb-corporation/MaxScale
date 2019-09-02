@@ -416,6 +416,17 @@ public:
     }
 
     /**
+     * Will cause an EPOLLIN event to be delivered when the current
+     * event handling finishes, just before the the control returns
+     * back to epoll_wait().
+     *
+     * @note During one callback, only one event can be triggered.
+     *       If there are multiple trigger_...()-calls, only the
+     *       last one will be honoured.
+     */
+    void trigger_read_event();
+
+    /**
      * Will cause an EPOLLOUT event to be delivered when the current
      * event handling finishes, just before the the control returns
      * back to epoll_wait().
