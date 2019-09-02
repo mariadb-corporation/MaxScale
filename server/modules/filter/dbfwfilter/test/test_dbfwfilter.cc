@@ -944,30 +944,12 @@ int run()
 
     if (sModule.get())
     {
-        if (maxscale::Module::process_init())
+        rv = 0;
+        rv += test(*sModule.get());
+
+        if ((rv == 0) || !config.stop_at_first_error)
         {
-            if (maxscale::Module::thread_init())
-            {
-                rv = 0;
-                rv += test(*sModule.get());
-
-                if ((rv == 0) || !config.stop_at_first_error)
-                {
-                    rv += test_on_queries(*sModule.get());
-                }
-
-                maxscale::Module::thread_finish();
-            }
-            else
-            {
-                cerr << "error: Could not perform thread initialization." << endl;
-            }
-
-            maxscale::Module::process_finish();
-        }
-        else
-        {
-            cerr << "error: Could not perform process initialization." << endl;
+            rv += test_on_queries(*sModule.get());
         }
     }
     else
@@ -1008,10 +990,11 @@ int main(int argc, char* argv[])
 
     if (rv == 0)
     {
-        init_test_env(nullptr, QC_INIT_SELF);
-        preload_module("dbfwfilter", "server/modules/filter/dbfwfilter/", MODULE_FILTER);
-
-        rv = run();
+        run_unit_test(
+            [&]() {
+                preload_module("dbfwfilter", "server/modules/filter/dbfwfilter/", MODULE_FILTER);
+                rv = run();
+            });
 
         cout << rv << " failures." << endl;
 
