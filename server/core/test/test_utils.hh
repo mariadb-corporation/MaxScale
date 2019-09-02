@@ -31,6 +31,12 @@
 #include "../internal/poll.hh"
 #include "../internal/modules.hh"
 
+/**
+ * Preload a module
+ *
+ * If the test uses code that is not a part of the core, the module must be preloaded before the test is
+ * started. In most cases this is only required for module-level unit tests (e.g. dbfwfilter).
+ */
 void preload_module(const char* name, const char* path, const char* type)
 {
     std::string old_libdir = get_libdir();
@@ -82,6 +88,12 @@ static int set_signal(int sig, void (* handler)(int))
     return rc;
 }
 
+/**
+ * Initialize test environment
+ *
+ * This initializes all libraries required to run unit tests. If worker related functionality is required, use
+ *`run_unit_test` instead.
+ */
 void init_test_env(char* __attribute((unused))path = nullptr, uint32_t init_type = QC_INIT_BOTH)
 {
     set_signal(SIGSEGV, sigfatal_handler);
@@ -118,6 +130,12 @@ void init_test_env(char* __attribute((unused))path = nullptr, uint32_t init_type
     preload_module("mariadbauth", "server/modules/authenticator/MariaDBAuth/", MODULE_AUTHENTICATOR);
 }
 
+/**
+ * Runs the function on a worker thread after preparing the test environment
+ *
+ * This function should be used if any of the core objects (sessions, services etc.) are needed. If only
+ * library functions are tested, `init_test_env` is sufficient.
+ */
 void run_unit_test(std::function<void ()> func)
 {
     init_test_env();
