@@ -542,7 +542,7 @@ int ssl_authenticate_check_status(DCB* generic_dcb)
     else if (!health_before && health_after)
     {
         rval = MXS_AUTH_SSL_INCOMPLETE;
-        poll_add_epollin_event_to_dcb(dcb, NULL);
+        dcb->trigger_read_event();
     }
     else if (health_before && health_after)
     {

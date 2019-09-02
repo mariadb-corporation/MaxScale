@@ -71,8 +71,9 @@ enum ds_state
 /**
  * The session structure for this regex filter
  */
-typedef struct
+struct DS_SESSION : public MXS_FILTER_SESSION
 {
+    MXS_SESSION*     session;                                       /**< The session */
     mxs::Downstream* down;                                          /**< Downstream filter */
     mxs::Upstream*   up;                                            /**< Upstream filter*/
     GWBUF*           queue;                                         /**< Queue containing a stored
@@ -86,7 +87,7 @@ typedef struct
     enum ds_state state;                                            /**< The current state of the
                                                                      * stream */
     char target[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 1];    /**< Current target table */
-} DS_SESSION;
+};
 
 extern "C"
 {
@@ -200,6 +201,7 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
 
     if ((my_session = static_cast<DS_SESSION*>(MXS_CALLOC(1, sizeof(DS_SESSION)))) != NULL)
     {
+        my_session->session = session;
         my_session->down = downstream;
         my_session->up = upstream;
         my_session->target[0] = '\0';
@@ -472,7 +474,12 @@ static int32_t clientReply(MXS_FILTER* instance,
             my_session->packet_num++;
         }
 
-        poll_add_epollin_event_to_dcb(my_session->client_dcb, queue);
+        mxs::Downstream down;
+        down.instance = instance;
+        down.routeQuery = routeQuery;
+        down.session = my_session;
+
+        session_delay_routing(my_session->session, down, queue, 0);
     }
     else
     {
