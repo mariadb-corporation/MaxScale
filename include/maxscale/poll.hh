@@ -48,15 +48,4 @@ typedef enum
  */
 int64_t poll_get_stat(POLL_STAT stat);
 
-/**
- * Add given GWBUF to DCB's readqueue and add a pending EPOLLIN event for DCB.
- * The event pretends that there is something to read for the DCB. Actually
- * the incoming data is stored in the DCB's readqueue where it is read.
- *
- * @param dcb   DCB where the event and data are added
- * @param buf   GWBUF including the data
- *
- */
-void poll_add_epollin_event_to_dcb(DCB* dcb, GWBUF* buf);
-
 MXS_END_DECLS

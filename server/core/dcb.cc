@@ -2439,11 +2439,6 @@ void DCB::add_event(DCB* dcb, GWBUF* buf, uint32_t ev)
     }
 }
 
-void poll_add_epollin_event_to_dcb(DCB* dcb, GWBUF* buf)
-{
-    DCB::add_event(dcb, buf, EPOLLIN);
-}
-
 void DCB::trigger_read_event()
 {
     DCB::add_event(this, NULL, EPOLLIN);
