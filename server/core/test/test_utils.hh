@@ -116,12 +116,11 @@ void init_test_env(char* __attribute((unused))path = nullptr, uint32_t init_type
     preload_module("mariadbclient", "server/modules/protocol/MySQL/", MODULE_PROTOCOL);
     preload_module("readconnroute", "server/modules/routing/readconnroute/", MODULE_ROUTER);
     preload_module("mariadbauth", "server/modules/authenticator/MariaDBAuth/", MODULE_AUTHENTICATOR);
-
-    mxs::RoutingWorker::start_workers();
 }
 
 void run_unit_test(std::function<void ()> func)
 {
     init_test_env();
+    mxs::RoutingWorker::start_workers();
     mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN)->call(func, mxs::RoutingWorker::EXECUTE_AUTO);
 }

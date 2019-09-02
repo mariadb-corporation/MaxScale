@@ -26,7 +26,7 @@
 
 #include "test_utils.hh"
 
-static int test1()
+static void test1()
 {
     USERS* users;
     bool rv;
@@ -64,16 +64,10 @@ static int test1()
     fprintf(stderr, "\t..done\nFree user table.");
     users_free(users);
     fprintf(stderr, "\t..done\n");
-
-    return 0;
 }
 
 int main(int argc, char** argv)
 {
-    int result = 0;
-
-    init_test_env(nullptr);
-    result += test1();
-
-    exit(result);
+    run_unit_test(test1);
+    return 0;
 }
