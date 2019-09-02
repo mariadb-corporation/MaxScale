@@ -58,21 +58,6 @@ int64_t poll_get_stat(POLL_STAT stat);
 void poll_fake_hangup_event(DCB* dcb);
 
 /*
- * Insert a fake write completion event for a DCB into the polling
- * queue.
- *
- * This is used to trigger transmission activity on another DCB from
- * within the event processing routine of a DCB. or to allow a DCB
- * to defer some further output processing, to allow for other DCBs
- * to receive a slice of the processing time. Fake events are added
- * to the tail of the event queue, in the same way that real events
- * are, so maintain the "fairness" of processing.
- *
- * @param dcb   DCB to emulate an EPOLLOUT event for
- */
-void poll_fake_write_event(DCB* dcb);
-
-/*
  * Insert a fake read completion event for a DCB into the polling
  * queue.
  *

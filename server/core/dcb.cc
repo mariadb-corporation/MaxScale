@@ -2444,11 +2444,6 @@ void poll_add_epollin_event_to_dcb(DCB* dcb, GWBUF* buf)
     DCB::add_event(dcb, buf, EPOLLIN);
 }
 
-void poll_fake_write_event(DCB* dcb)
-{
-    DCB::add_event(dcb, NULL, EPOLLOUT);
-}
-
 void poll_fake_read_event(DCB* dcb)
 {
     DCB::add_event(dcb, NULL, EPOLLIN);
@@ -2462,6 +2457,11 @@ void poll_fake_hangup_event(DCB* dcb)
     uint32_t ev = EPOLLHUP;
 #endif
     DCB::add_event(dcb, NULL, ev);
+}
+
+void DCB::trigger_write_event()
+{
+    DCB::add_event(this, NULL, EPOLLOUT);
 }
 
 /**

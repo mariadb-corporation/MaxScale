@@ -2235,7 +2235,7 @@ static int blr_slave_binlog_dump(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, G
                (unsigned long)slave->binlog_pos);
 
     /* Force the slave to call catchup routine */
-    poll_fake_write_event(slave->dcb);
+    slave->dcb->trigger_write_event();
 
     gwbuf_free(fde);
     return 1;
@@ -2363,7 +2363,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
         slave->cstate &= ~CS_BUSY;
         slave->cstate |= CS_EXPECTCB;
         pthread_mutex_unlock(&slave->catch_lock);
-        poll_fake_write_event(slave->dcb);
+        slave->dcb->trigger_write_event();
 
         return 0;
     }
@@ -2395,7 +2395,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
                 slave->cstate |= CS_EXPECTCB;
                 slave->cstate &= ~CS_BUSY;
                 pthread_mutex_unlock(&slave->catch_lock);
-                poll_fake_write_event(slave->dcb);
+                slave->dcb->trigger_write_event();
                 return rval;
             }
 
@@ -2590,7 +2590,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
                     slave->cstate |= CS_EXPECTCB;
                     slave->cstate &= ~CS_BUSY;
                     pthread_mutex_unlock(&slave->catch_lock);
-                    poll_fake_write_event(slave->dcb);
+                    slave->dcb->trigger_write_event();
                     return rval;
                 }
 
@@ -2840,7 +2840,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
             pthread_mutex_unlock(&router->binlog_lock);
 
             /* Force slave to read events via catchup routine */
-            poll_fake_write_event(slave->dcb);
+            slave->dcb->trigger_write_event();
         }
         else
         {
@@ -3102,7 +3102,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
             pthread_mutex_lock(&slave->catch_lock);
             slave->cstate |= CS_EXPECTCB;
             pthread_mutex_unlock(&slave->catch_lock);
-            poll_fake_write_event(slave->dcb);
+            slave->dcb->trigger_write_event();
         }
     }
 
@@ -6345,7 +6345,7 @@ bool blr_notify_waiting_slave(ROUTER_SLAVE* slave)
     {
         ret = true;
         /* Add fake event that will call the blr_slave_callback routine */
-        poll_fake_write_event(slave->dcb);
+        slave->dcb->trigger_write_event();
         slave->cstate &= ~CS_WAIT_DATA;
     }
     pthread_mutex_unlock(&slave->catch_lock);
