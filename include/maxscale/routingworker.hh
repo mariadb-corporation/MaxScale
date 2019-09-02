@@ -288,6 +288,13 @@ public:
     static bool start_workers();
 
     /**
+     * Returns whether worker threads are running
+     *
+     * @return True if worker threads are running
+     */
+    static bool is_running();
+
+    /**
      * Waits for all routing workers.
      */
     static void join_workers();
@@ -652,7 +659,7 @@ private:
     LocalData    m_local_data;      /*< Data local to this worker */
     DataDeleters m_data_deleters;   /*< Delete functions for the local data */
 
-    DCBs         m_dcbs;
+    DCBs m_dcbs;
 
     RoutingWorker();
     virtual ~RoutingWorker();
