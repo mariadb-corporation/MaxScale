@@ -196,7 +196,7 @@ public:
 
     virtual int ssl_handshake() = 0;
 
-    int bytes_readable() const;
+    int socket_bytes_readable() const;
 
     /**
      * Read data from the DCB.
@@ -711,7 +711,7 @@ const char* to_string(DCB::Role role);
 
 inline int dcb_bytes_readable(DCB* dcb)
 {
-    return dcb->bytes_readable();
+    return dcb->socket_bytes_readable();
 }
 
 void printAllDCBs();                                                            /* Debug to print all DCB in

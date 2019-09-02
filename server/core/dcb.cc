@@ -495,7 +495,7 @@ int DCB::read(GWBUF** head, int maxbytes)
     {
         int bytes_available;
 
-        bytes_available = bytes_readable();
+        bytes_available = socket_bytes_readable();
         if (bytes_available <= 0)
         {
             return bytes_available < 0 ? -1
@@ -537,7 +537,7 @@ int DCB::read(GWBUF** head, int maxbytes)
  *
  * @return          -1 on error, otherwise the total number of bytes available
  */
-int DCB::bytes_readable() const
+int DCB::socket_bytes_readable() const
 {
     int bytesavailable;
 
