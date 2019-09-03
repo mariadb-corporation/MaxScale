@@ -124,7 +124,8 @@ int32_t RWSplitSession::routeQuery(GWBUF* querybuf)
 
     if (m_is_replay_active && !GWBUF_IS_REPLAYED(querybuf))
     {
-        MXS_INFO("New query received while transaction replay is active: %s",
+        MXS_INFO("New %s received while transaction replay is active: %s",
+                 STRPACKETTYPE(GWBUF_DATA(querybuf)[4]),
                  mxs::extract_sql(querybuf).c_str());
         m_query_queue.emplace_back(querybuf);
         return 1;
