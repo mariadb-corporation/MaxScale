@@ -994,7 +994,8 @@ int TestConnections::copy_all_logs()
 
     return rv;
 }
-int TestConnections::copy_maxscale_logs(double timestamp)
+
+void TestConnections::copy_one_maxscale_log(int i, double timestamp)
 {
     char log_dir[PATH_MAX + 1024];
     char log_dir_i[sizeof(log_dir) + 1024];
@@ -1007,41 +1008,58 @@ int TestConnections::copy_maxscale_logs(double timestamp)
     {
         sprintf(log_dir, "LOGS/%s/%04f", test_name, timestamp);
     }
+
+    sprintf(log_dir_i, "%s/%03d", log_dir, i);
+    sprintf(sys, "mkdir -p %s", log_dir_i);
+    call_system(sys);
+
+    if (strcmp(maxscales->IP[i], "127.0.0.1") != 0)
+    {
+        int rc = maxscales->ssh_node_f(i, true,
+                                       "rm -rf %s/logs;"
+                                       "mkdir %s/logs;"
+                                       "cp %s/*.log %s/logs/;"
+                                       "cp /tmp/core* %s/logs/ >& /dev/null;"
+                                       "cp %s %s/logs/;"
+                                       "chmod 777 -R %s/logs;"
+                                       "ls /tmp/core* >& /dev/null && exit 42;",
+                                       maxscales->access_homedir[i],
+                                       maxscales->access_homedir[i],
+                                       maxscales->maxscale_log_dir[i],
+                                       maxscales->access_homedir[i],
+                                       maxscales->access_homedir[i],
+                                       maxscales->maxscale_cnf[i],
+                                       maxscales->access_homedir[i],
+                                       maxscales->access_homedir[i]);
+        sprintf(sys, "%s/logs/*", maxscales->access_homedir[i]);
+        maxscales->copy_from_node(i, sys, log_dir_i);
+        expect(rc != 42, "Test should not generate core files");
+    }
+    else
+    {
+        maxscales->ssh_node_f(i, true, "cp %s/*.logs %s/", maxscales->maxscale_log_dir[i], log_dir_i);
+        maxscales->ssh_node_f(i, true, "cp /tmp/core* %s/", log_dir_i);
+        maxscales->ssh_node_f(i, true, "cp %s %s/", maxscales->maxscale_cnf[i], log_dir_i);
+        maxscales->ssh_node_f(i, true, "chmod a+r -R %s", log_dir_i);
+    }
+}
+
+int TestConnections::copy_maxscale_logs(double timestamp)
+{
+    std::vector<std::thread> threads;
+
     for (int i = 0; i < maxscales->N; i++)
     {
-        sprintf(log_dir_i, "%s/%03d", log_dir, i);
-        sprintf(sys, "mkdir -p %s", log_dir_i);
-        call_system(sys);
-        if (strcmp(maxscales->IP[i], "127.0.0.1") != 0)
-        {
-            int rc = maxscales->ssh_node_f(i, true,
-                                           "rm -rf %s/logs;"
-                                           "mkdir %s/logs;"
-                                           "cp %s/*.log %s/logs/;"
-                                           "cp /tmp/core* %s/logs/;"
-                                           "cp %s %s/logs/;"
-                                           "chmod 777 -R %s/logs;"
-                                           "ls /tmp/core* && exit 42;",
-                                           maxscales->access_homedir[i],
-                                           maxscales->access_homedir[i],
-                                           maxscales->maxscale_log_dir[i],
-                                           maxscales->access_homedir[i],
-                                           maxscales->access_homedir[i],
-                                           maxscales->maxscale_cnf[i],
-                                           maxscales->access_homedir[i],
-                                           maxscales->access_homedir[i]);
-            sprintf(sys, "%s/logs/*", maxscales->access_homedir[i]);
-            maxscales->copy_from_node(i, sys, log_dir_i);
-            expect(rc != 42, "Test should not generate core files");
-        }
-        else
-        {
-            maxscales->ssh_node_f(i, true, "cp %s/*.logs %s/", maxscales->maxscale_log_dir[i], log_dir_i);
-            maxscales->ssh_node_f(i, true, "cp /tmp/core* %s/", log_dir_i);
-            maxscales->ssh_node_f(i, true, "cp %s %s/", maxscales->maxscale_cnf[i], log_dir_i);
-            maxscales->ssh_node_f(i, true, "chmod a+r -R %s", log_dir_i);
-        }
+        threads.emplace_back([this, i, timestamp]() {
+                                 copy_one_maxscale_log(i, timestamp);
+                             });
     }
+
+    for (auto& a : threads)
+    {
+        a.join();
+    }
+
     return 0;
 }
 

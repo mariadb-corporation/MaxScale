@@ -16,7 +16,9 @@ Maxscales::Maxscales(const char *pref,
 
 bool Maxscales::setup()
 {
-    read_env(); // Sets e.g. use_valgrind.
+    read_env();     // Sets e.g. use_valgrind.
+    Nodes::init_ssh_masters();
+
     if (this->use_valgrind)
     {
         for (int i = 0; i < N; i++)
