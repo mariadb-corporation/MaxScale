@@ -19,6 +19,21 @@ namespace maxscale
 namespace mock
 {
 
+int32_t Session::Endpoint::routeQuery(GWBUF* buffer)
+{
+    return m_session.routeQuery(buffer);
+}
+
+int32_t Session::Endpoint::clientReply(GWBUF* buffer, ReplyRoute& down, const mxs::Reply& reply)
+{
+    return 0;
+}
+
+bool Session::Endpoint::handleError(GWBUF* error, mxs::Endpoint* down, const mxs::Reply& reply)
+{
+    return true;
+}
+
 Session::Session(Client* pClient, const SListener& listener)
     : mxs::Session(listener)
     , m_client(*pClient)
@@ -36,6 +51,7 @@ Session::Session(Client* pClient, const SListener& listener)
 
 Session::~Session()
 {
+    m_down->close();
     // This prevents the protocol module from freeing the data
     m_client_dcb.protocol_data_release();
     refcount = 0;
@@ -46,5 +62,11 @@ Client& Session::client() const
 {
     return m_client;
 }
+
+void Session::set_downstream(FilterModule::Session* pSession)
+{
+    m_down = std::unique_ptr<mxs::Endpoint>(new Endpoint(pSession));
+}
+
 }
 }

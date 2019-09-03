@@ -74,7 +74,46 @@ public:
         return mxs_route_query(this, pBuffer);
     }
 
+    void set_downstream(FilterModule::Session* pSession);
+
 private:
+    class Endpoint final : public mxs::Endpoint
+    {
+    public:
+        Endpoint(FilterModule::Session* pSession)
+            : m_session(*pSession)
+        {
+        }
+
+        int32_t routeQuery(GWBUF* buffer) override;
+        int32_t clientReply(GWBUF* buffer, ReplyRoute& down, const mxs::Reply& reply) override;
+        bool handleError(GWBUF* error, mxs::Endpoint* down, const mxs::Reply& reply) override;
+
+        bool connect() override
+        {
+            return true;
+        }
+
+        void close() override
+        {
+            m_open = false;
+        }
+
+        bool is_open() const override
+        {
+            return m_open;
+        }
+
+        mxs::Target* target() const
+        {
+            return nullptr;
+        }
+
+    private:
+        FilterModule::Session& m_session;
+        bool                   m_open = true;
+    };
+
     Client&       m_client;
     Dcb           m_client_dcb;
     MYSQL_session m_mysql_session;

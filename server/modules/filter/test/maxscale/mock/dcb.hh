@@ -67,13 +67,71 @@ public:
      */
     Handler* set_handler(Handler* pHandler);
 
-private:
-    int32_t write(GWBUF* pData);
+    MXS_PROTOCOL_SESSION* protocol_session() const override
+    {
+        return &m_protocol_session;
+    }
 
 private:
-    std::string m_user;
-    std::string m_host;
-    Handler*    m_pHandler;
+    class ProtocolSession : public MXS_PROTOCOL_SESSION
+    {
+    public:
+        ProtocolSession(Handler* pHandler)
+            : m_pHandler(pHandler)
+        {
+        }
+
+        Handler* handler() const
+        {
+            return m_pHandler;
+        }
+
+        Handler* set_handler(Handler* pHandler)
+        {
+            Handler* p = m_pHandler;
+            m_pHandler = pHandler;
+            return p;
+        }
+
+        int32_t read(DCB*) override
+        {
+            mxb_assert(!true);
+            return 0;
+        }
+
+        int32_t write(DCB* dcb, GWBUF* buffer) override;
+
+        int32_t write_ready(DCB*) override
+        {
+            mxb_assert(!true);
+            return 0;
+        }
+
+        int32_t error(DCB*) override
+        {
+            mxb_assert(!true);
+            return 0;
+        }
+
+        int32_t hangup(DCB*) override
+        {
+            mxb_assert(!true);
+            return 0;
+        }
+
+        json_t* diagnostics_json(DCB*) override
+        {
+            return nullptr;
+        }
+
+    private:
+        Handler* m_pHandler;
+    };
+
+private:
+    std::string             m_user;
+    std::string             m_host;
+    mutable ProtocolSession m_protocol_session;
 };
 }
 }

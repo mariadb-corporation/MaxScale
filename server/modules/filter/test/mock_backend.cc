@@ -177,12 +177,18 @@ public:
     ResultSetDCB(MXS_SESSION* session)
         : ClientDCB(DCB::FD_CLOSED, sockaddr_storage {}, DCB::Role::CLIENT, session,
                     nullptr, nullptr, nullptr)
+        , m_protocol_session(this)
     {
     }
 
     GWBUF* create_response() const
     {
         return gwbuf_alloc_and_load(m_response.size(), &m_response.front());
+    }
+
+    MXS_PROTOCOL_SESSION* protocol_session() const override
+    {
+        return &m_protocol_session;
     }
 
 private:
@@ -200,7 +206,56 @@ private:
         return 1;
     }
 
-    std::vector<char> m_response;
+    class ProtocolSession : public MXS_PROTOCOL_SESSION
+    {
+    public:
+        ProtocolSession(ResultSetDCB* pOwner)
+            : m_owner(*pOwner)
+        {
+        }
+
+        int32_t read(DCB*) override
+        {
+            mxb_assert(!true);
+            return 0;
+        }
+
+        int32_t write(DCB*, GWBUF* pBuffer) override
+        {
+            return m_owner.write(pBuffer);
+        }
+
+        int32_t write_ready(DCB*) override
+        {
+            mxb_assert(!true);
+            return 0;
+        }
+
+        int32_t error(DCB*) override
+        {
+            mxb_assert(!true);
+            return 0;
+        }
+
+        int32_t hangup(DCB*) override
+        {
+            mxb_assert(!true);
+            return 0;
+        }
+
+        json_t* diagnostics_json(DCB*) override
+        {
+            return nullptr;
+        }
+
+    private:
+        ResultSetDCB& m_owner;
+    };
+
+    friend class ProtocolSession;
+
+    mutable ProtocolSession m_protocol_session;
+    std::vector<char>       m_response;
 };
 }
 

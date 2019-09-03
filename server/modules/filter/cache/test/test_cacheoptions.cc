@@ -310,7 +310,6 @@ int test(FilterModule::Instance& filter_instance, const TEST_CASE& tc)
     mock::ResultSetBackend backend;
     mock::RouterSession router_session(&backend, &session);
 
-
     auto_ptr<FilterModule::Session> sFilter_session = filter_instance.newSession(&session,
                                                                                  service,
                                                                                  router_session.as_downstream(),
@@ -318,6 +317,7 @@ int test(FilterModule::Instance& filter_instance, const TEST_CASE& tc)
 
     if (sFilter_session.get())
     {
+        session.set_downstream(sFilter_session.get());
         router_session.set_upstream(sFilter_session.get());
 
         rv += test(session, *sFilter_session.get(), router_session, tc);
@@ -362,43 +362,25 @@ int run()
 
     if (sModule.get())
     {
-        if (maxscale::Module::process_init())
+        rv = 0;
+
+        for (size_t i = 0; i < N_TEST_CASES; ++i)
         {
-            if (maxscale::Module::thread_init())
+            const TEST_CASE& tc = TEST_CASES[i];
+
+            cout << "CIT: " << tc.cit
+                 << ", TRX_STATE: " << tc.trx_state
+                 << ", should use: " << tc.should_use
+                 << endl;
+
+            rv += test(*sModule.get(), tc);
+
+            cout << endl;
+
+            if ((rv != 0) && settings.stop_at_first_error)
             {
-                rv = 0;
-
-                for (size_t i = 0; i < N_TEST_CASES; ++i)
-                {
-                    const TEST_CASE& tc = TEST_CASES[i];
-
-                    cout << "CIT: " << tc.cit
-                         << ", TRX_STATE: " << tc.trx_state
-                         << ", should use: " << tc.should_use
-                         << endl;
-
-                    rv += test(*sModule.get(), tc);
-
-                    cout << endl;
-
-                    if ((rv != 0) && settings.stop_at_first_error)
-                    {
-                        break;
-                    }
-                }
-
-                maxscale::Module::thread_finish();
+                break;
             }
-            else
-            {
-                cerr << "error: Could not perform thread initialization." << endl;
-            }
-
-            maxscale::Module::process_finish();
-        }
-        else
-        {
-            cerr << "error: Could not perform process initialization." << endl;
         }
     }
     else
@@ -439,11 +421,12 @@ int main(int argc, char* argv[])
 
     if (rv == 0)
     {
-        init_test_env(nullptr, QC_INIT_SELF);
-        set_libdir(MXS_STRDUP(TEST_DIR "/server/modules/filter/cache/storage/storage_inmemory"));
-        preload_module("cache", "server/modules/filter/cache/", MODULE_FILTER);
+        run_unit_test([&]() {
+                set_libdir(MXS_STRDUP(TEST_DIR "/server/modules/filter/cache/storage/storage_inmemory"));
+                preload_module("cache", "server/modules/filter/cache/", MODULE_FILTER);
 
-        rv = run();
+                rv = run();
+            });
 
         cout << rv << " failures." << endl;
 
