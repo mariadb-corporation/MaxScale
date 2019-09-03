@@ -456,10 +456,7 @@ TestConnections::TestConnections(int argc, char* argv[])
     // Stop MaxScale to prevent it from interfering with the replication setup process
     if (!maxscale::manual_debug)
     {
-        for (int i = 0; i < maxscales->N; i++)
-        {
-            maxscales->stop(i);
-        }
+        maxscales->stop_all();
     }
 
     if ((maxscale::restart_galera) && (galera))
