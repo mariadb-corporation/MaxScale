@@ -124,14 +124,14 @@ public:
     {
     public:
         // Required by cluster operations
-        std::string replication_user;         /**< Username for CHANGE MASTER TO-commands */
-        std::string replication_password;     /**< Password for CHANGE MASTER TO-commands */
-        bool        replication_ssl {false};  /**< Set MASTER_SSL = 1 in CHANGE MASTER TO-commands */
+        std::string replication_user;           /**< Username for CHANGE MASTER TO-commands */
+        std::string replication_password;       /**< Password for CHANGE MASTER TO-commands */
+        bool        replication_ssl {false};    /**< Set MASTER_SSL = 1 in CHANGE MASTER TO-commands */
 
-        std::string promotion_sql_file;  /**< File with sql commands which are ran to a server being
-                                       *  promoted. */
-        std::string demotion_sql_file;   /**< File with sql commands which are ran to a server being
-                                       *  demoted. */
+        std::string promotion_sql_file;     /**< File with sql commands which are ran to a server being
+                                             *  promoted. */
+        std::string demotion_sql_file;      /**< File with sql commands which are ran to a server being
+                                             *  demoted. */
 
         /* Should failover/switchover enable/disable any scheduled events on the servers during
          * promotion/demotion? */
@@ -168,10 +168,10 @@ public:
      * 'update_replication_settings' before use. */
     ReplicationSettings m_rpl_settings;
 
-    EventNameSet m_enabled_events;               /* Enabled scheduled events */
-    bool         m_print_update_errormsg {true}; /* Should an update error be printed? */
+    EventNameSet m_enabled_events;              /* Enabled scheduled events */
+    bool         m_print_update_errormsg {true};/* Should an update error be printed? */
 
-    const SharedSettings& m_settings; /* Settings required for various operations */
+    const SharedSettings& m_settings;   /* Settings required for various operations */
 
 
 

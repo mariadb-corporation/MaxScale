@@ -333,71 +333,73 @@ MariaDBServer* MariaDBMonitor::find_topology_master_server(RequireRunning req_ru
     // Helper function for finding normal master candidates.
     auto search_outside_cycles = [this, &master_candidates](RequireRunning req_running,
                                                             DelimitedPrinter& topo_messages) {
-        for (MariaDBServer* server : servers())
-        {
-            if (server->m_node.parents.empty())
+            for (MariaDBServer* server : servers())
             {
-                string why_not;
-                if (is_candidate_valid(server, req_running, &why_not))
+                if (server->m_node.parents.empty())
                 {
-                    master_candidates.push_back(server);
-                }
-                else
-                {
-                    topo_messages.cat(why_not);
+                    string why_not;
+                    if (is_candidate_valid(server, req_running, &why_not))
+                    {
+                        master_candidates.push_back(server);
+                    }
+                    else
+                    {
+                        topo_messages.cat(why_not);
+                    }
                 }
             }
-        }
-    };
+        };
 
     // Helper function for finding master candidates inside cycles.
     auto search_inside_cycles = [this, &master_candidates](RequireRunning req_running,
                                                            DelimitedPrinter& topo_messages) {
-        // For each cycle, it's enough to take one sample server, as all members of a cycle have the
-        // same reach. The sample server needs to be valid, though.
-        for (auto& iter : m_cycles)
-        {
-            ServerArray& cycle_members = iter.second;
-            // Check that no server in the cycle is replicating from outside the cycle. This requirement is
-            // analogous with the same requirement for non-cycle servers.
-            if (!cycle_has_master_server(cycle_members))
+            // For each cycle, it's enough to take one sample server, as all members of a cycle have the
+            // same reach. The sample server needs to be valid, though.
+            for (auto& iter : m_cycles)
             {
-                // Find a valid candidate from the cycle.
-                MariaDBServer* cycle_cand = nullptr;
-                for (MariaDBServer* elem : cycle_members)
+                ServerArray& cycle_members = iter.second;
+                // Check that no server in the cycle is replicating from outside the cycle. This requirement
+                // is
+                // analogous with the same requirement for non-cycle servers.
+                if (!cycle_has_master_server(cycle_members))
                 {
-                    mxb_assert(elem->m_node.cycle != NodeData::CYCLE_NONE);
-                    if (is_candidate_valid(elem, req_running))
-                    {
-                        cycle_cand = elem;
-                        break;
-                    }
-                }
-                if (cycle_cand)
-                {
-                    master_candidates.push_back(cycle_cand);
-                }
-                else
-                {
-                    // No single server in the cycle was viable. Go through the cycle again and construct
-                    // a message explaining why.
-                    string server_names = monitored_servers_to_string(cycle_members);
-                    string msg_start = string_printf("No valid master server could be found in the cycle with "
-                                                     "servers %s:", server_names.c_str());
-                    DelimitedPrinter cycle_invalid_msg("\n");
-                    cycle_invalid_msg.cat(msg_start);
+                    // Find a valid candidate from the cycle.
+                    MariaDBServer* cycle_cand = nullptr;
                     for (MariaDBServer* elem : cycle_members)
                     {
-                        string server_msg;
-                        is_candidate_valid(elem, req_running, &server_msg);
-                        cycle_invalid_msg.cat(server_msg);
+                        mxb_assert(elem->m_node.cycle != NodeData::CYCLE_NONE);
+                        if (is_candidate_valid(elem, req_running))
+                        {
+                            cycle_cand = elem;
+                            break;
+                        }
                     }
-                    cycle_invalid_msg.cat(""); // Adds a linebreak
-                    topo_messages.cat(cycle_invalid_msg.message());
+                    if (cycle_cand)
+                    {
+                        master_candidates.push_back(cycle_cand);
+                    }
+                    else
+                    {
+                        // No single server in the cycle was viable. Go through the cycle again and construct
+                        // a message explaining why.
+                        string server_names = monitored_servers_to_string(cycle_members);
+                        string msg_start = string_printf("No valid master server could be found in the cycle with "
+                                                         "servers %s:",
+                                                         server_names.c_str());
+                        DelimitedPrinter cycle_invalid_msg("\n");
+                        cycle_invalid_msg.cat(msg_start);
+                        for (MariaDBServer* elem : cycle_members)
+                        {
+                            string server_msg;
+                            is_candidate_valid(elem, req_running, &server_msg);
+                            cycle_invalid_msg.cat(server_msg);
+                        }
+                        cycle_invalid_msg.cat("");  // Adds a linebreak
+                        topo_messages.cat(cycle_invalid_msg.message());
+                    }
                 }
             }
-        }
-    };
+        };
 
     // Normally, do not accept downed servers as master.
     DelimitedPrinter topo_messages_reject_down("\n");
@@ -833,7 +835,6 @@ void MariaDBMonitor::update_topology()
     {
         update_master();
     }
-
 }
 void MariaDBMonitor::update_master()
 {
@@ -1063,7 +1064,7 @@ void MariaDBMonitor::update_cluster_lock_status()
 MariaDBMonitor::DNSResolver::StringSet MariaDBMonitor::DNSResolver::resolve_server(const string& host)
 {
     auto now = mxb::Clock::now();
-    const auto MAX_AGE = mxb::Duration((double)5*60); // Refresh interval for cache entries.
+    const auto MAX_AGE = mxb::Duration((double)5 * 60);     // Refresh interval for cache entries.
     auto recent_time = now - MAX_AGE;
     DNSResolver::StringSet rval;
 

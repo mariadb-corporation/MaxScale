@@ -385,7 +385,8 @@ bool MariaDBMonitor::manual_reset_replication(SERVER* master_server, json_t** er
                 {
                     SERVER* new_master_srv = new_master->server;
                     SlaveStatus::Settings new_conn("", new_master_srv);
-                    GeneralOpData general(error_out, mxb::Duration(0.0)); // Expect this to complete quickly.
+                    GeneralOpData general(error_out, mxb::Duration(0.0));   // Expect this to complete
+                                                                            // quickly.
                     size_t slave_conns_started = 0;
                     for (auto slave : slaves)
                     {
@@ -1143,8 +1144,9 @@ MariaDBMonitor::select_promotion_target(MariaDBServer* demotion_target, Operatio
                 if (id_missing_count > 0)
                 {
                     MXS_WARNING("Guessed domain id %" PRIi64 ", which is missing on %i candidates. "
-                                "This may cause faulty promotion target selection.",
-                                gtid_domain, id_missing_count);
+                                                             "This may cause faulty promotion target selection.",
+                                gtid_domain,
+                                id_missing_count);
                 }
                 else
                 {
@@ -1319,7 +1321,7 @@ unique_ptr<MariaDBMonitor::FailoverParams> MariaDBMonitor::failover_prepare(Log 
     // that master can be promoted. TODO: add support for demoting a relay server.
     MariaDBServer* demotion_target = NULL;
     auto failover_mode = m_settings.enforce_simple_topology ? MariaDBServer::FailoverType::RISKY :
-                                                              MariaDBServer::FailoverType::SAFE;
+        MariaDBServer::FailoverType::SAFE;
     // Autoselect current master as demotion target.
     string demotion_msg;
     if (m_master == NULL)
@@ -1825,9 +1827,9 @@ bool MariaDBMonitor::lock_status_is_ok(json_t** error_out) const
     if (require_server_locks() && !m_have_lock_majority)
     {
         const char locks_taken[] =
-                "Cannot perform cluster operation because this MaxScale does not have exclusive locks "
-                "on a majority of servers. Run \"SELECT IS_USED_LOCK('%s');\" on the servers to find out "
-                "which connection has the locks.";
+            "Cannot perform cluster operation because this MaxScale does not have exclusive locks "
+            "on a majority of servers. Run \"SELECT IS_USED_LOCK('%s');\" on the servers to find out "
+            "which connection has the locks.";
         auto err_msg = string_printf(locks_taken, LOCK_NAME);
         PRINT_MXS_JSON_ERROR(error_out, "%s", err_msg.c_str());
         return false;
@@ -1893,10 +1895,10 @@ int64_t MariaDBMonitor::guess_gtid_domain(MariaDBServer* demotion_target, const 
     // Because gtid:s can be complicated, this guess is not an exact science. In most cases, however, the
     // correct answer is obvious. As a general rule, select the domain id which is in most candidates.
     using IdToCount = std::map<int64_t, int>;
-    IdToCount id_to_count; // How many of each domain id was found.
+    IdToCount id_to_count;      // How many of each domain id was found.
     for (const auto& cand : candidates)
     {
-        auto& gtid_io_pos = cand->slave_connection_status(demotion_target)->gtid_io_pos; // Must exist.
+        auto& gtid_io_pos = cand->slave_connection_status(demotion_target)->gtid_io_pos;    // Must exist.
         GtidList::DomainList domains = gtid_io_pos.domains();
         for (auto domain : domains)
         {

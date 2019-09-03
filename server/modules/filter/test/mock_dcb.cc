@@ -65,6 +65,5 @@ int32_t Dcb::write(GWBUF* pData)
 
     return rv;
 }
-
 }
 }
