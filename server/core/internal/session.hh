@@ -217,6 +217,9 @@ public:
     int32_t clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override;
     bool    handleError(GWBUF* error, Endpoint* down, const mxs::Reply& reply) override;
 
+protected:
+    std::unique_ptr<mxs::Endpoint> m_down;
+
 private:
     FilterList        m_filters;
     SessionVarsByName m_variables;
@@ -225,8 +228,6 @@ private:
     DCBSet            m_dcb_set;                /*< Set of associated backend DCBs */
     uint32_t          m_retain_last_statements; /*< How many statements be retained */
     Log               m_log;                    /*< Session specific in-memory log */
-
-    std::unique_ptr<mxs::Endpoint> m_down;
 };
 }
 
