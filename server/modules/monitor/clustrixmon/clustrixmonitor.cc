@@ -51,25 +51,24 @@ cluster_monitor_interval(&specification,
                          std::chrono::milliseconds(DEFAULT_CLUSTER_MONITOR_INTERVAL));
 
 config::ParamCount
-health_check_threshold(&specification,
-                       "health_check_threshold",
-                       "How many failed health port pings before node is assumed to be down.",
-                       DEFAULT_HEALTH_CHECK_THRESHOLD,
-                       1, std::numeric_limits<uint32_t>::max()); // min, max
+    health_check_threshold(&specification,
+                           "health_check_threshold",
+                           "How many failed health port pings before node is assumed to be down.",
+                           DEFAULT_HEALTH_CHECK_THRESHOLD,
+                           1, std::numeric_limits<uint32_t>::max());// min, max
 
 config::ParamBool
-dynamic_node_detection(&specification,
-                       "dynamic_node_detection",
-                       "Should cluster configuration be figured out at runtime.",
-                       DEFAULT_DYNAMIC_NODE_DETECTION);
+    dynamic_node_detection(&specification,
+                           "dynamic_node_detection",
+                           "Should cluster configuration be figured out at runtime.",
+                           DEFAULT_DYNAMIC_NODE_DETECTION);
 
 config::ParamInteger
-health_check_port(&specification,
-                  "health_check_port",
-                  "Port number for Clustrix health check.",
-                  DEFAULT_HEALTH_CHECK_PORT,
-                  0, std::numeric_limits<uint16_t>::max()); // min, max
-
+    health_check_port(&specification,
+                      "health_check_port",
+                      "Port number for Clustrix health check.",
+                      DEFAULT_HEALTH_CHECK_PORT,
+                      0, std::numeric_limits<uint16_t>::max()); // min, max
 }
 
 const int DEFAULT_MYSQL_PORT = 3306;
@@ -204,7 +203,7 @@ ClustrixMonitor::Config::Config(const std::string& name)
 {
 }
 
-//static
+// static
 void ClustrixMonitor::Config::populate(MXS_MODULE& module)
 {
     clustrixmon::specification.populate(module);
@@ -288,7 +287,7 @@ bool ClustrixMonitor::configure(const MXS_CONFIG_PARAMETER* pParams)
     m_nodes_by_id.clear();
 
     // Since they were validated above, failure should not be an option now.
-    MXB_AT_DEBUG(bool configured=) m_config.configure(*pParams);
+    MXB_AT_DEBUG(bool configured = ) m_config.configure(*pParams);
     mxb_assert(configured);
 
     return true;

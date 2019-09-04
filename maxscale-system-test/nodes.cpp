@@ -1,5 +1,6 @@
 #include "nodes.h"
 #include <string>
+#include <sstream>
 #include <cstring>
 #include <iostream>
 #include <future>
@@ -16,6 +17,14 @@ Nodes::Nodes(const char* pref,
     , verbose(verbose)
 {
     strcpy(this->prefix, pref);
+}
+
+Nodes::~Nodes()
+{
+    for (auto a : m_ssh_connections)
+    {
+        pclose(a);
+    }
 }
 
 bool Nodes::check_node_ssh(int node)
@@ -65,7 +74,15 @@ void Nodes::generate_ssh_cmd(char* cmd, int node, const char* ssh, bool sudo)
         if (sudo)
         {
             sprintf(cmd,
-                    "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s '%s %s\'",
+                    "ssh -i %s "
+                    "-o UserKnownHostsFile=/dev/null "
+                    "-o CheckHostIP=no "
+                    "-o ControlMaster=auto "
+                    "-o ControlPath=./maxscale-test-%%r@%%h:%%p "
+                    "-o ControlPersist=yes "
+                    "-o StrictHostKeyChecking=no "
+                    "-o LogLevel=quiet "
+                    "%s@%s '%s %s\'",
                     sshkey[node],
                     access_user[node],
                     IP[node],
@@ -75,7 +92,15 @@ void Nodes::generate_ssh_cmd(char* cmd, int node, const char* ssh, bool sudo)
         else
         {
             sprintf(cmd,
-                    "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s '%s'",
+                    "ssh -i %s "
+                    "-o UserKnownHostsFile=/dev/null "
+                    "-o CheckHostIP=no "
+                    "-o ControlMaster=auto "
+                    "-o ControlPath=./maxscale-test-%%r@%%h:%%p "
+                    "-o ControlPersist=yes "
+                    "-o StrictHostKeyChecking=no "
+                    "-o LogLevel=quiet "
+                    "%s@%s '%s'",
                     sshkey[node],
                     access_user[node],
                     IP[node],
@@ -148,33 +173,41 @@ char* Nodes::ssh_node_output(int node, const char* ssh, bool sudo, int* exit_cod
     return result;
 }
 
-
-int Nodes::ssh_node(int node, const char* ssh, bool sudo)
+FILE* Nodes::open_ssh_connection(int node)
 {
-    char* cmd = (char*)malloc(strlen(ssh) + 1024);
+    std::ostringstream ss;
 
     if (strcmp(IP[node], "127.0.0.1") == 0)
     {
-        printf("starting bash\n");
-        sprintf(cmd, "bash");
+        ss << "bash";
     }
     else
     {
-        sprintf(cmd,
-                "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet %s@%s%s",
-                sshkey[node],
-                access_user[node],
-                IP[node],
-                verbose ? "" :  " > /dev/null");
+        ss << "ssh -i " << sshkey[node] << " "
+           << "-o UserKnownHostsFile=/dev/null "
+           << "-o StrictHostKeyChecking=no "
+           << "-o LogLevel=quiet "
+           << "-o CheckHostIP=no "
+           << "-o ControlMaster=auto "
+           << "-o ControlPath=./maxscale-test-%r@%h:%p "
+           << "-o ControlPersist=yes "
+           << access_user[node] << "@"
+           << IP[node]
+           << (verbose ? "" :  " > /dev/null");
     }
 
+    return popen(ss.str().c_str(), "w");
+}
+
+int Nodes::ssh_node(int node, const char* ssh, bool sudo)
+{
     if (verbose)
     {
         std::cout << ssh << std::endl;
     }
 
     int rc = 1;
-    FILE* in = popen(cmd, "w");
+    FILE* in = open_ssh_connection(node);
 
     if (in)
     {
@@ -187,9 +220,6 @@ int Nodes::ssh_node(int node, const char* ssh, bool sudo)
         fprintf(in, "%s\n", ssh);
         rc = pclose(in);
     }
-
-
-    free(cmd);
 
     if (WIFEXITED(rc))
     {
@@ -204,6 +234,25 @@ int Nodes::ssh_node(int node, const char* ssh, bool sudo)
     {
         std::cout << strerror(errno) << std::endl;
         return 256;
+    }
+}
+
+void Nodes::init_ssh_masters()
+{
+    std::vector<std::thread> threads;
+    m_ssh_connections.resize(N);
+
+    for (int i = 0; i < N; i++)
+    {
+        threads.emplace_back(
+            [this, i]() {
+                m_ssh_connections[i] = open_ssh_connection(i);
+            });
+    }
+
+    for (auto& a : threads)
+    {
+        a.join();
     }
 }
 
@@ -248,8 +297,15 @@ int Nodes::copy_to_node(int i, const char* src, const char* dest)
     else
     {
         sprintf(sys,
-                "scp -q -r -i %s -o UserKnownHostsFile=/dev/null "
-                "-o StrictHostKeyChecking=no -o LogLevel=quiet %s %s@%s:%s",
+                "scp -q -r -i %s "
+                "-o UserKnownHostsFile=/dev/null "
+                "-o CheckHostIP=no "
+                "-o ControlMaster=auto "
+                "-o ControlPath=./maxscale-test-%%r@%%h:%%p "
+                "-o ControlPersist=yes "
+                "-o StrictHostKeyChecking=no "
+                "-o LogLevel=quiet "
+                "%s %s@%s:%s",
                 sshkey[i],
                 src,
                 access_user[i],
@@ -289,7 +345,13 @@ int Nodes::copy_from_node(int i, const char* src, const char* dest)
     {
         sprintf(sys,
                 "scp -q -r -i %s -o UserKnownHostsFile=/dev/null "
-                "-o StrictHostKeyChecking=no -o LogLevel=quiet %s@%s:%s %s",
+                "-o StrictHostKeyChecking=no "
+                "-o LogLevel=quiet "
+                "-o CheckHostIP=no "
+                "-o ControlMaster=auto "
+                "-o ControlPath=./maxscale-test-%%r@%%h:%%p "
+                "-o ControlPersist=yes "
+                "%s@%s:%s %s",
                 sshkey[i],
                 access_user[i],
                 IP[i],

@@ -36,6 +36,7 @@
 #include <maxscale/authenticator.hh>
 #include <maxscale/monitor.hh>
 #include <maxscale/query_classifier.hh>
+#include <maxscale/routingworker.hh>
 
 #include "internal/modules.hh"
 #include "internal/config.hh"
@@ -259,6 +260,22 @@ void* load_module(const char* module, const char* type)
         }
 
         MXS_NOTICE("Loaded module %s: %s from %s", module, mod_info->version, fname);
+
+        if (mxs::RoutingWorker::is_running())
+        {
+            if (mod_info->process_init)
+            {
+                mod_info->process_init();
+            }
+
+            if (mod_info->thread_init)
+            {
+                mxs::RoutingWorker::broadcast(
+                    [mod_info]() {
+                        mod_info->thread_init();
+                    }, mxs::RoutingWorker::EXECUTE_AUTO);
+            }
+        }
     }
 
     return mod->modobj;

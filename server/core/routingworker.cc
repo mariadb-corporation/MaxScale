@@ -64,11 +64,12 @@ struct this_unit
     // DEPRECATED in 2.3, remove in 2.4.
     int number_poll_spins;      // Maximum non-block polls
     // DEPRECATED in 2.3, remove in 2.4.
-    int max_poll_sleep;     // Maximum block time
-    int epoll_listener_fd;  // Shared epoll descriptor for listening descriptors.
-    int id_main_worker;     // The id of the worker running in the main thread.
-    int id_min_worker;      // The smallest routing worker id.
-    int id_max_worker;      // The largest routing worker id.
+    int  max_poll_sleep;    // Maximum block time
+    int  epoll_listener_fd; // Shared epoll descriptor for listening descriptors.
+    int  id_main_worker;    // The id of the worker running in the main thread.
+    int  id_min_worker;     // The smallest routing worker id.
+    int  id_max_worker;     // The largest routing worker id.
+    bool running;           // True if worker threads are running
 } this_unit =
 {
     false,              // initialized
@@ -81,6 +82,7 @@ struct this_unit
     WORKER_ABSENT_ID,   // id_main_worker
     WORKER_ABSENT_ID,   // id_min_worker
     WORKER_ABSENT_ID,   // id_max_worker
+    false,
 };
 
 int next_worker_id()
@@ -502,7 +504,18 @@ bool RoutingWorker::start_workers()
         }
     }
 
+    if (rv)
+    {
+        this_unit.running = true;
+    }
+
     return rv;
+}
+
+// static
+bool RoutingWorker::is_running()
+{
+    return this_unit.running;
 }
 
 // static
@@ -515,6 +528,8 @@ void RoutingWorker::join_workers()
 
         pWorker->join();
     }
+
+    this_unit.running = false;
 }
 
 // static

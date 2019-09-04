@@ -182,17 +182,17 @@ private:
     private:
         struct MapElement
         {
-            StringSet   addresses; // A hostname can map to multiple addresses
+            StringSet      addresses;   // A hostname can map to multiple addresses
             mxb::TimePoint timestamp;
         };
 
-        std::unordered_map<std::string, MapElement> m_mapping; // hostname -> address cache
+        std::unordered_map<std::string, MapElement> m_mapping;      // hostname -> address cache
     };
 
     mxs::MonitorServer*
     create_server(SERVER* server, const mxs::MonitorServer::SharedSettings& shared) override;
 
-    const ServerArray& servers() const; /* Hides base class function. */
+    const ServerArray& servers() const;     /* Hides base class function. */
 
     ManualCommand m_manual_cmd;     /* Communicates manual commands and results */
     IdToServerMap m_servers_by_id;  /* Map from server id:s to MariaDBServer */
@@ -229,8 +229,8 @@ private:
     bool m_warn_cannot_rejoin {true};           /* Print warning if auto_rejoin fails because of invalid
                                                  * gtid:s? */
 
-    mxb::StopWatch m_last_lock_update;  /* Time since last lock status update */
-    bool m_have_lock_majority {false};  /* Does the monitor have lock majority? */
+    mxb::StopWatch m_last_lock_update;          /* Time since last lock status update */
+    bool           m_have_lock_majority {false};/* Does the monitor have lock majority? */
 
     // MariaDB-Monitor specific settings. These are only written to when configuring the monitor.
     class Settings
@@ -241,18 +241,18 @@ private:
 
         // Replication topology detection settings.
 
-        bool detect_stale_master {true};      /* Allow stale masters. TODO: Remove this */
-        bool detect_stale_slave {true};       /* Allow stale slaves: a running slave behind a downed
-                                               * master/relay is still a valid slave */
-        bool detect_standalone_master {true}; /* Allow writes to a master without any slaves.
-                                               * TODO: think about removing */
-        bool ignore_external_masters {false}; /* Ignore masters outside of the monitor configuration.
-                                               * TODO: requires work */
-        bool assume_unique_hostnames {true};  /* Are server hostnames consistent between MaxScale and
-                                               * servers */
+        bool detect_stale_master {true};        /* Allow stale masters. TODO: Remove this */
+        bool detect_stale_slave {true};         /* Allow stale slaves: a running slave behind a downed
+                                                 * master/relay is still a valid slave */
+        bool detect_standalone_master {true};   /* Allow writes to a master without any slaves.
+                                                 * TODO: think about removing */
+        bool ignore_external_masters {false};   /* Ignore masters outside of the monitor configuration.
+                                                 * TODO: requires work */
+        bool assume_unique_hostnames {true};    /* Are server hostnames consistent between MaxScale and
+                                                 * servers */
 
-        int failcount {1};  /* Number of ticks master must be down before it's considered
-                             * totally down, allowing failover or master change. */
+        int failcount {1};      /* Number of ticks master must be down before it's considered
+                                 * totally down, allowing failover or master change. */
 
         // Cluster operations activation settings
 
@@ -271,15 +271,15 @@ private:
         RequireLocks require_server_locks {RequireLocks::NONE};
 
         // Cluster operations additional settings
-        int  failover_timeout {10};            /* Time limit in seconds for failover */
-        int  switchover_timeout {10};          /* Time limit in seconds for switchover */
-        bool verify_master_failure {true};     /* Is master failure is verified via slaves? */
-        int  master_failure_timeout {10};      /* Master failure verification (via slaves) time in seconds */
+        int  failover_timeout {10};             /* Time limit in seconds for failover */
+        int  switchover_timeout {10};           /* Time limit in seconds for switchover */
+        bool verify_master_failure {true};      /* Is master failure is verified via slaves? */
+        int  master_failure_timeout {10};       /* Master failure verification (via slaves) time in seconds */
 
-        ServerArray excluded_servers;          /* Servers which cannot be autoselected when deciding which
-                                                * slave to promote during failover switchover. */
+        ServerArray excluded_servers;           /* Servers which cannot be autoselected when deciding which
+                                                 * slave to promote during failover switchover. */
 
-        MariaDBServer::SharedSettings shared;  /* Settings required by MariaDBServer objects */
+        MariaDBServer::SharedSettings shared;   /* Settings required by MariaDBServer objects */
     };
 
     Settings m_settings;
@@ -372,8 +372,8 @@ private:
                            ServerArray* redirected_to_promo,
                            ServerArray* redirected_to_demo);
 
-    void        wait_cluster_stabilization(GeneralOpData& op, const ServerArray& slaves,
-                                           const MariaDBServer* new_master);
+    void wait_cluster_stabilization(GeneralOpData& op, const ServerArray& slaves,
+                                    const MariaDBServer* new_master);
 
     // Rejoin methods
     bool     cluster_can_be_joined();

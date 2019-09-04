@@ -63,6 +63,5 @@ int32_t Dcb::ProtocolSession::write(DCB*, GWBUF* pData)
 
     return rv;
 }
-
 }
 }

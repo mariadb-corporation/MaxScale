@@ -33,15 +33,13 @@
  * test1    Allocate a service and do lots of other things
  *
  */
-static int test1()
+static void test1()
 {
     Service* service;
     MXS_SESSION* session;
     DCB* dcb;
     int result;
     int argc = 3;
-
-    init_test_env(NULL);
 
     set_libdir(MXS_STRDUP_A("../../modules/authenticator/MySQLAuth/"));
     load_module("mysqlauth", MODULE_AUTHENTICATOR);
@@ -78,15 +76,10 @@ static int test1()
                        "Add Protocol should succeed");
     mxb_assert_message(service_find_listener(service, "", "localhost", 9876),
                        "Service should have new protocol as requested");
-
-    return 0;
 }
 
 int main(int argc, char** argv)
 {
-    int result = 0;
-
-    result += test1();
-
-    exit(result);
+    run_unit_test(test1);
+    return 0;
 }

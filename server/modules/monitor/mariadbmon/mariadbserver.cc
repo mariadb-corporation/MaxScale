@@ -1214,28 +1214,27 @@ const SlaveStatus* MariaDBServer::slave_connection_status_host_port(const MariaD
 bool MariaDBServer::enable_events(BinlogMode binlog_mode, const EventNameSet& event_names, json_t** error_out)
 {
     EventStatusMapper mapper = [&event_names](const EventInfo& event) {
-        string rval;
-        if (event_names.count(event.name) > 0
-            && (event.status == "SLAVESIDE_DISABLED" || event.status == "DISABLED"))
-        {
-            rval = "ENABLE";
-        }
-        return rval;
-    };
+            string rval;
+            if (event_names.count(event.name) > 0
+                && (event.status == "SLAVESIDE_DISABLED" || event.status == "DISABLED"))
+            {
+                rval = "ENABLE";
+            }
+            return rval;
+        };
     return alter_events(binlog_mode, mapper, error_out);
-
 }
 
 bool MariaDBServer::disable_events(BinlogMode binlog_mode, json_t** error_out)
 {
     EventStatusMapper mapper = [](const EventInfo& event) {
-        string rval;
-        if (event.status == "ENABLED")
-        {
-            rval = "DISABLE ON SLAVE";
-        }
-        return rval;
-    };
+            string rval;
+            if (event.status == "ENABLED")
+            {
+                rval = "DISABLE ON SLAVE";
+            }
+            return rval;
+        };
     return alter_events(binlog_mode, mapper, error_out);
 }
 
@@ -1269,17 +1268,17 @@ MariaDBServer::alter_events(BinlogMode binlog_mode, const EventStatusMapper& map
     int events_altered = 0;
     // Helper function which alters an event depending on the mapper-function.
     EventManipulator alterer = [this, &target_events, &events_altered, &mapper](const EventInfo& event,
-                                                                               json_t** error_out) {
-        string target_state = mapper(event);
-        if (!target_state.empty())
-        {
-            target_events++;
-            if (alter_event(event, target_state, error_out))
+                                                                                json_t** error_out) {
+            string target_state = mapper(event);
+            if (!target_state.empty())
             {
-                events_altered++;
+                target_events++;
+                if (alter_event(event, target_state, error_out))
+                {
+                    events_altered++;
+                }
             }
-        }
-    };
+        };
 
     bool rval = false;
     // TODO: For better error handling, this function should try to re-enable any disabled events if a later
@@ -1909,9 +1908,9 @@ bool MariaDBServer::merge_slave_conns(GeneralOpData& op, const SlaveStatusArray&
                         accepted = false;
                         const auto& endpoint = slave_conn.settings.master_endpoint;
                         ignore_reason = string_printf(
-                                "its Master_Host (%s) and Master_Port (%i) match an existing "
-                                "slave connection on %s.",
-                                endpoint.host().c_str(), endpoint.port(), name());
+                            "its Master_Host (%s) and Master_Port (%i) match an existing "
+                            "slave connection on %s.",
+                            endpoint.host().c_str(), endpoint.port(), name());
                     }
                 }
             }
@@ -2268,13 +2267,13 @@ bool MariaDBServer::kick_out_super_users(GeneralOpData& op)
     auto error_out = op.error_out;
     // Only select unique rows...
     string get_ids_query = "SELECT DISTINCT * FROM ("
-                           // select conn id and username from live connections ...
+        // select conn id and username from live connections ...
                            "SELECT P.id,P.user FROM information_schema.PROCESSLIST as P "
-                           // match with user information ...
+        // match with user information ...
                            "INNER JOIN mysql.user as U ON (U.user = P.user) WHERE "
-                           // where the user has super-privileges, is not replicating ...
+        // where the user has super-privileges, is not replicating ...
                            "(U.Super_priv = 'Y' AND P.COMMAND != 'Binlog Dump' "
-                           // and is not the current user.
+        // and is not the current user.
                            "AND P.id != (SELECT CONNECTION_ID()))) as I;";
 
     string error_msg;

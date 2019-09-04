@@ -4,6 +4,7 @@
 #include <string>
 #include "mariadb_func.h"
 #include <set>
+#include <vector>
 #include <string>
 
 #include <maxbase/ccdefs.hh>
@@ -14,6 +15,8 @@ typedef std::set<std::string> StringSet;
 class Nodes
 {
 public:
+    virtual ~Nodes();
+
     /**
      * Sets up the nodes. *Must* be called before instance is used.
      *
@@ -215,6 +218,13 @@ protected:
           const std::string& network_config,
           bool verbose);
 
+    void init_ssh_masters();
+
 private:
     bool check_node_ssh(int node);
+
+    // The returned handle must be closed with pclose
+    FILE* open_ssh_connection(int node);
+
+    std::vector<FILE*> m_ssh_connections;
 };

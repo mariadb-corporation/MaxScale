@@ -61,6 +61,7 @@ Mariadb_nodes::Mariadb_nodes(const char* pref,
 bool Mariadb_nodes::setup()
 {
     read_env();
+    Nodes::init_ssh_masters();
     truncate_mariadb_logs();
     flush_hosts();
     close_active_connections();

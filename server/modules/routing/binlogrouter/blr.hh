@@ -578,10 +578,10 @@ typedef struct slave_encryption_ctx
  */
 typedef struct router_slave
 {
-    ClientDCB* dcb;               /*< The slave server DCB */
-    int      state;             /*< The state of this slave */
-    uint32_t binlog_pos;        /*< Binlog position for this slave */
-    char     binlog_name[BINLOG_FNAMELEN + 1];
+    ClientDCB* dcb;             /*< The slave server DCB */
+    int        state;           /*< The state of this slave */
+    uint32_t   binlog_pos;      /*< Binlog position for this slave */
+    char       binlog_name[BINLOG_FNAMELEN + 1];
     /*< Current binlog file for this slave */
     char* uuid;             /*< Slave UUID */
 #ifdef BLFILE_IN_SLAVE

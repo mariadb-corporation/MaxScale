@@ -196,7 +196,7 @@ public:
     std::string to_string() const;
 
 private:
-    mxb::Host   m_host;  /* Address and port */
+    mxb::Host m_host;   /* Address and port */
 };
 
 
@@ -230,14 +230,14 @@ public:
          */
         std::string to_string() const;
 
-        std::string name;             /* Slave connection name. Must be unique for the server. */
-        EndPoint    master_endpoint;  /* Master server address & port */
+        std::string name;               /* Slave connection name. Must be unique for the server. */
+        EndPoint    master_endpoint;    /* Master server address & port */
 
     private:
-        std::string m_owner;          /* Name of the owning server. Used for logging. */
+        std::string m_owner;            /* Name of the owning server. Used for logging. */
     };
 
-    Settings settings;  /* User-defined settings for the slave connection. */
+    Settings settings;      /* User-defined settings for the slave connection. */
 
     /* If the master is a monitored server, it's written here. */
     const MariaDBServer* master_server {nullptr};
@@ -275,7 +275,7 @@ enum class OperationType
     SWITCHOVER,
     FAILOVER,
     REJOIN,
-    UNDO_DEMOTION // Performed when switchover fails in its first stages.
+    UNDO_DEMOTION   // Performed when switchover fails in its first stages.
 };
 
 class GeneralOpData

@@ -1083,6 +1083,13 @@ bool RWSplitSession::handle_error_new_connection(MXS_SESSION* ses, RWBackend* ba
             // The backend was busy executing command and the client is expecting a response.
             if (m_current_query.get() && m_config.retry_failed_reads)
             {
+                if (!m_config.delayed_retry && is_last_backend(backend))
+                {
+                    MXS_INFO("Cannot retry failed read as there are no candidates to "
+                             "try it on and delayed_retry is not enabled");
+                    return false;
+                }
+
                 MXS_INFO("Re-routing failed read after server '%s' failed", backend->name());
                 route_stored = false;
                 retry_query(m_current_query.release(), 0);

@@ -1,6 +1,9 @@
 #pragma once
 
 #include <string>
+#include <thread>
+#include <vector>
+
 #include "nodes.h"
 #include "mariadb_func.h"
 #include "mariadb_nodes.h"
@@ -279,9 +282,18 @@ public:
     // Helper for stopping all maxscales
     void stop_all()
     {
+        std::vector<std::thread> thr;
+
         for (int i = 0; i < N; i++)
         {
-            stop(i);
+            thr.emplace_back([this, i]() {
+                                 stop(i);
+                             });
+        }
+
+        for (auto& a : thr)
+        {
+            a.join();
         }
     }
 

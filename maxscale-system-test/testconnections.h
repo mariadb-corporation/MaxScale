@@ -709,6 +709,7 @@ public:
 private:
     void report_result(const char* format, va_list argp);
     void copy_one_mariadb_log(Mariadb_nodes* nrepl, int i, std::string filename);
+    void copy_one_maxscale_log(int i, double timestamp);
 
     bool too_many_maxscales() const
     {
