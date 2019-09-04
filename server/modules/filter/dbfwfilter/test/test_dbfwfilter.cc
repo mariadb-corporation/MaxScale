@@ -795,6 +795,7 @@ int test(FilterModule::Instance& filter_instance, const FW_TEST& t)
 
             if (sFilter_session.get())
             {
+                session.set_downstream(sFilter_session.get());
                 router_session.set_upstream(sFilter_session.get());
 
                 rv += test(client, *sFilter_session.get(), router_session, c);
