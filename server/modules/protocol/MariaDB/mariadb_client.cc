@@ -30,7 +30,7 @@
 #include <maxscale/modutil.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/protocol.hh>
-#include <maxscale/protocol/mariadb_client.hh>
+#include <maxscale/protocol/local_client.hh>
 #include <maxscale/protocol/mysql.hh>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/router.hh>

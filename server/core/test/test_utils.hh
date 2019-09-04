@@ -125,7 +125,7 @@ void init_test_env(char* __attribute((unused))path = nullptr, uint32_t init_type
     maxscale::RoutingWorker::init();
     set_libdir(MXS_STRDUP(old_libdir.c_str()));
 
-    preload_module("mariadbclient", "server/modules/protocol/MySQL/", MODULE_PROTOCOL);
+    preload_module("mariadbclient", "server/modules/protocol/MariaDB/", MODULE_PROTOCOL);
     preload_module("readconnroute", "server/modules/routing/readconnroute/", MODULE_ROUTER);
     preload_module("mariadbauth", "server/modules/authenticator/MariaDBAuth/", MODULE_AUTHENTICATOR);
 }

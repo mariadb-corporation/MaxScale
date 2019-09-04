@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include <maxscale/protocol/mariadb_client.hh>
+#include <maxscale/protocol/local_client.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/utils.h>
 #include <maxbase/host.hh>

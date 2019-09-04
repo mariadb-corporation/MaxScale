@@ -43,7 +43,7 @@ static void test1()
 
     set_libdir(MXS_STRDUP_A("../../modules/authenticator/MySQLAuth/"));
     load_module("mysqlauth", MODULE_AUTHENTICATOR);
-    set_libdir(MXS_STRDUP_A("../../modules/protocol/MySQL/mariadbclient/"));
+    set_libdir(MXS_STRDUP_A("../../modules/protocol/MariaDB/mariadbclient/"));
     load_module("mariadbclient", MODULE_PROTOCOL);
     set_libdir(MXS_STRDUP_A("../../modules/routing/readconnroute/"));
     load_module("readconnroute", MODULE_ROUTER);
