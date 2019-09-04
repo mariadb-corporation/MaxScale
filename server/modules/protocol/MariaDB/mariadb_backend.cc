@@ -92,8 +92,45 @@ void MySQLBackendProtocol::finish_connection(DCB* dcb)
 
 bool MySQLBackendProtocol::reuse_connection(BackendDCB* dcb)
 {
-    mxb_assert(!true);
-    return false;
+    bool rv = false;
+    mxb_assert(!dcb->readq() && !dcb->delayq() && !dcb->writeq());
+    mxb_assert(!dcb->is_in_persistent_pool());
+    mxb_assert(m_ignore_replies >= 0);
+
+    if (dcb->state() != DCB::State::POLLING || this->protocol_auth_state != MXS_AUTH_STATE_COMPLETE)
+    {
+        MXS_INFO("DCB and protocol state do not qualify for pooling: %s, %s",
+                 mxs::to_string(dcb->state()), mxs::to_string(this->protocol_auth_state));
+    }
+    else
+    {
+        m_ignore_replies = 0;
+
+        /**
+         * This is a DCB that was just taken out of the persistent connection pool.
+         * We need to sent a COM_CHANGE_USER query to the backend to reset the
+         * session state.
+         */
+        if (this->stored_query)
+        {
+            /** It is possible that the client DCB is closed before the COM_CHANGE_USER
+             * response is received. */
+            gwbuf_free(this->stored_query);
+            this->stored_query = nullptr;
+        }
+
+        auto mysqlses = static_cast<MYSQL_session*>(dcb->session()->client_dcb->protocol_data());
+        GWBUF* buf = gw_create_change_user_packet(mysqlses);
+
+        if (dcb->writeq_append(buf))
+        {
+            MXS_INFO("Sent COM_CHANGE_USER");
+            m_ignore_replies++;
+            rv = true;
+        }
+    }
+
+    return rv;
 }
 
 /**
