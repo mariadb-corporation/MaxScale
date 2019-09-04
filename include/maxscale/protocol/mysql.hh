@@ -506,6 +506,7 @@ public:
 
     bool    init_connection(DCB* dcb) override;
     void    finish_connection(DCB* dcb) override;
+    bool    reuse_connection(BackendDCB* dcb) override;
     bool    established(DCB*) override;
     json_t* diagnostics_json(DCB* dcb) override;
 

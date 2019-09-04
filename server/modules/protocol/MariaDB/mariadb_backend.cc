@@ -90,6 +90,12 @@ void MySQLBackendProtocol::finish_connection(DCB* dcb)
     dcb->writeq_append(mysql_create_com_quit(nullptr, 0));
 }
 
+bool MySQLBackendProtocol::reuse_connection(BackendDCB* dcb)
+{
+    mxb_assert(!true);
+    return false;
+}
+
 /**
  * @brief Check if the response contain an error
  *

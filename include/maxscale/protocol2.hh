@@ -142,6 +142,17 @@ public:
     virtual void finish_connection(DCB* dcb) = 0;
 
     /**
+     * Reuse a connection. The connection was in the persistent pool
+     * and will now be taken into use again.
+     *
+     * @param dcb  The connection to be reused.
+     *
+     * @return True, if the connection can be reused, false otherwise.
+     *         If @c false is returned, the @c dcb should be closed.
+     */
+    virtual bool reuse_connection(BackendDCB* dcb) = 0;
+
+    /**
      * Check if the connection has been fully established, used by connection pooling
      *
      * @param dcb DCB to check
