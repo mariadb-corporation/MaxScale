@@ -92,6 +92,7 @@ Here are detailed documents about the filters MariaDB MaxScale offers. They cont
  - [RabbitMQ Filter](Filters/RabbitMQ-Filter.md)
  - [Regex Filter](Filters/Regex-Filter.md)
  - [Tee Filter](Filters/Tee-Filter.md)
+ - [Throttle Filter](Filters/Throttle.md)
  - [Top N Filter](Filters/Top-N-Filter.md)
  - [Transaction Performance Monitoring Filter](Filters/Transaction-Performance-Monitoring-Filter.md)
  - [Binlog Filter](Filters/BinlogFilter.md)
