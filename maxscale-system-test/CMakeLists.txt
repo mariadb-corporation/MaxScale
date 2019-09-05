@@ -246,7 +246,7 @@ add_test_executable(mysqlmon_switchover.cpp mysqlmon_switchover mysqlmon_switcho
 # MySQL Monitor switchover with bad master
 add_test_executable(mysqlmon_switchover_bad_master.cpp mysqlmon_switchover_bad_master mysqlmon_switchover_bad_master LABELS mysqlmon REPL_BACKEND)
 
-# MySQL Monitor manual failover with no valid slaves, uses config of mysqlmon_failover_auto
+# MySQL Monitor manual failover with no valid slaves, uses config of mysqlmon_failover_auto. Also MXS-2652.
 add_test_executable(mysqlmon_failover_no_slaves.cpp mysqlmon_failover_no_slaves mysqlmon_failover_auto LABELS mysqlmon REPL_BACKEND)
 
 # MySQL Monitor Rejoin (good) Test
