@@ -1424,7 +1424,8 @@ int Mariadb_nodes::prepare_server(int i)
     // Note: These should be done by MDBCI
     ssh_node(i, "test -d /etc/apparmor.d/ && "
                 "ln -s /etc/apparmor.d/usr.sbin.mysqld /etc/apparmor.d/disable/usr.sbin.mysqld && "
-                "sudo service apparmor restart", true);
+                "sudo service apparmor restart && "
+                "chmod a+r -R /etc/my.cnf.d/*", true);
 
     int ec;
     char* version = ssh_node_output(i, "/usr/sbin/mysqld --version", false, &ec);
