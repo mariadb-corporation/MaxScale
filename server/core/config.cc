@@ -1103,6 +1103,14 @@ std::unordered_set<CONFIG_CONTEXT*> get_dependencies(const std::vector<CONFIG_CO
         }
     }
 
+    if (type == CN_SERVICE && obj->m_parameters.contains(CN_TARGETS))
+    {
+        for (auto name : mxs::strtok(obj->m_parameters.get_string(CN_TARGETS), ","))
+        {
+            rval.insert(name_to_object(objects, obj, name));
+        }
+    }
+
     if (type == CN_SERVICE && obj->m_parameters.contains(CN_CLUSTER))
     {
         rval.insert(name_to_object(objects, obj, obj->m_parameters.get_string(CN_CLUSTER)));
