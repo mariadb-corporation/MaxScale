@@ -393,21 +393,18 @@ struct KillInfo
     typedef  bool (* DcbCallback)(DCB* dcb, void* data);
 
     KillInfo(std::string query, MXS_SESSION* ses, DcbCallback callback)
-            : origin(mxs_rworker_get_current_id())
-              , query_base(query)
-            // TODO: this is wrong and buggy. Add copy ctor to MySQLProtocol.
-              , protocol(*static_cast<MySQLClientProtocol*>(ses->client_dcb->protocol_session()))
-              , cb(callback)
+        : origin(mxs_rworker_get_current_id())
+        , session(ses)
+        , query_base(query)
+        , cb(callback)
     {
-        gw_get_shared_session_auth_info(ses->client_dcb, &session);
     }
 
-    int           origin;
-    std::string   query_base;
-    MYSQL_session session;
-    MySQLProtocol protocol;
-    DcbCallback   cb;
-    TargetList    targets;
+    int          origin;
+    MXS_SESSION* session;
+    std::string  query_base;
+    DcbCallback  cb;
+    TargetList   targets;
 };
 
 static bool kill_func(DCB* dcb, void* data);
@@ -415,9 +412,9 @@ static bool kill_func(DCB* dcb, void* data);
 struct ConnKillInfo : public KillInfo
 {
     ConnKillInfo(uint64_t id, std::string query, MXS_SESSION* ses, uint64_t keep_thread_id)
-            : KillInfo(query, ses, kill_func)
-              , target_id(id)
-              , keep_thread_id(keep_thread_id)
+        : KillInfo(query, ses, kill_func)
+        , target_id(id)
+        , keep_thread_id(keep_thread_id)
     {
     }
 
@@ -430,8 +427,8 @@ static bool kill_user_func(DCB* dcb, void* data);
 struct UserKillInfo : public KillInfo
 {
     UserKillInfo(std::string name, std::string query, MXS_SESSION* ses)
-            : KillInfo(query, ses, kill_user_func)
-              , user(name)
+        : KillInfo(query, ses, kill_user_func)
+        , user(name)
     {
     }
 
@@ -494,8 +491,9 @@ static void worker_func(int thread_id, void* data)
     for (TargetList::iterator it = info->targets.begin();
          it != info->targets.end(); it++)
     {
-        LocalClient* client = LocalClient::create(&info->session, &info->protocol, it->first);
+        LocalClient* client = LocalClient::create(info->session, it->first);
         GWBUF* buffer = modutil_create_query(it->second.c_str());
+        client->connect();
         client->queue_query(buffer);
         gwbuf_free(buffer);
 

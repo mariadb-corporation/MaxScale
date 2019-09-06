@@ -22,7 +22,7 @@
 #include <maxscale/protocol/mysql.hh>
 
 /** A DCB-like client abstraction which ignores responses */
-class LocalClient : public MXB_POLL_DATA
+class LocalClient : public mxs::Component
 {
     LocalClient(const LocalClient&);
     LocalClient& operator=(const LocalClient&);
@@ -34,12 +34,18 @@ public:
      * Create a local client for a service
      *
      * @param session Client session
-     * @param service Service to connect to
+     * @param service Target to connect to
      *
      * @return New virtual client or NULL on error
      */
-    static LocalClient* create(MYSQL_session* session, MySQLProtocol* proto, SERVICE* service);
-    static LocalClient* create(MYSQL_session* session, MySQLProtocol* proto, SERVER* server);
+    static LocalClient* create(MXS_SESSION* session, mxs::Target* target);
+
+    /**
+     * Connect to the target
+     *
+     * @return True on success, false on error
+     */
+    bool connect();
 
     /**
      * Queue a new query for execution
@@ -57,31 +63,18 @@ public:
      */
     void self_destruct();
 
+    //
+    // API function implementations for mxs::Component
+    //
+    int32_t routeQuery(GWBUF* buffer) override;
+
+    int32_t clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override;
+
+    bool handleError(GWBUF* error, mxs::Endpoint* down, const mxs::Reply& reply) override;
+
 private:
-    static LocalClient* create(MYSQL_session* session, MySQLProtocol* proto, const char* ip, uint64_t port);
-    LocalClient(MYSQL_session* session, MySQLProtocol* proto, int fd);
-    static uint32_t poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
-    void            process(uint32_t events);
-    GWBUF*          read_complete_packet();
-    void            drain_queue();
-    void            error();
-    void            close();
+    LocalClient() = default;
 
-    /** Client states */
-    enum vc_state
-    {
-        VC_WAITING_HANDSHAKE,   // Initial state
-        VC_RESPONSE_SENT,       // Handshake received and response sent
-        VC_OK,                  // Authentication is complete, ready for queries
-        VC_ERROR                // Something went wrong
-    };
-
-    vc_state                m_state;
-    int                     m_sock;
-    mxs::Buffer             m_partial;
-    size_t                  m_expected_bytes;
-    std::deque<mxs::Buffer> m_queue;
-    MYSQL_session           m_client;
-    MySQLProtocol           m_protocol;
-    bool                    m_self_destruct;
+    bool                           m_self_destruct {false};
+    std::unique_ptr<mxs::Endpoint> m_down;
 };

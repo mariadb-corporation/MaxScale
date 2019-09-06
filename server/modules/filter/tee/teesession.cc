@@ -57,10 +57,13 @@ TeeSession* TeeSession::create(Tee* my_instance, MXS_SESSION* session, SERVICE* 
             return NULL;
         }
 
-        auto protocol = static_cast<MySQLClientProtocol*>(session->client_dcb->protocol_session());
-        if ((client = LocalClient::create((MYSQL_session*)session->client_dcb->protocol_data(),
-                                          protocol,
-                                          my_instance->get_service())) == NULL)
+        client = LocalClient::create(session, my_instance->get_service());
+
+        if (client)
+        {
+            client->connect();
+        }
+        else
         {
             const char* extra = !listener_find_by_service(my_instance->get_service()).empty() ? "" :
                 ": Service has no network listeners";
