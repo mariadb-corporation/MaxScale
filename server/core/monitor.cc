@@ -2181,17 +2181,11 @@ void MonitorWorkerSimple::tick()
                  * the server state bits. This would allow clearing the state by
                  * zeroing it out.
                  */
-                const uint64_t bits_to_clear = ~SERVER_WAS_MASTER;
-
-                pMs->clear_pending_status(bits_to_clear);
+                pMs->clear_pending_status(MonitorServer::SERVER_DOWN_CLEAR_BITS);
 
                 if (mysql_errno(pMs->con) == ER_ACCESS_DENIED_ERROR)
                 {
                     pMs->set_pending_status(SERVER_AUTH_ERROR);
-                }
-                else
-                {
-                    pMs->clear_pending_status(SERVER_AUTH_ERROR);
                 }
 
                 if (pMs->status_changed() && pMs->should_print_fail_status())
