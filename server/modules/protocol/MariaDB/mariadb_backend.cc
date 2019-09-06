@@ -87,8 +87,7 @@ void MySQLBackendProtocol::finish_connection(DCB* dcb)
 {
     mxb_assert(dcb->ready());
     /** Send COM_QUIT to the backend being closed */
-    GWBUF* quitbuf = mysql_create_com_quit(NULL, 0);
-    mysql_send_com_quit(dcb, 0, quitbuf);
+    dcb->writeq_append(mysql_create_com_quit(nullptr, 0));
 }
 
 /**

@@ -2828,7 +2828,7 @@ bool BackendDCB::ready() const
 {
     // A BackendDCB with a session or residing in the persistent pool
     // can receive events.
-    return m_session || m_persistentstart > 0;
+    return m_session || m_persistentstart != 0;
 }
 
 void BackendDCB::shutdown()
