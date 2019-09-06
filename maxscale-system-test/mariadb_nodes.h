@@ -270,6 +270,12 @@ public:
 
 
     /**
+     * @brief Block all nodes for this cluster
+     * @return 0 in case of success
+     */
+    int block_all_nodes();
+
+    /**
      * @brief Unblock all nodes for this cluster
      * @return 0 in case of success
      */

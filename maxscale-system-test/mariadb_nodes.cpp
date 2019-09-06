@@ -545,6 +545,26 @@ int Mariadb_nodes::unblock_node(int node)
     return local_result;
 }
 
+int Mariadb_nodes::block_all_nodes()
+{
+    int rval = 0;
+    std::vector<std::thread> threads;
+
+    for (int i = 0; i < this->N; i++)
+    {
+        threads.emplace_back([&, i]() {
+                                 rval += this->block_node(i);
+                             });
+    }
+
+    for (auto& a : threads)
+    {
+        a.join();
+    }
+
+    return rval;
+}
+
 
 int Mariadb_nodes::unblock_all_nodes()
 {

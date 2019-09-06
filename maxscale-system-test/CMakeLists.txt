@@ -1010,6 +1010,9 @@ add_test_executable(mxs2631_ignore_system_tables.cpp mxs2631_ignore_system_table
 # Service-to-Service routing with readwritesplit
 add_test_executable(sts_readwritesplit.cpp sts_readwritesplit sts_readwritesplit LABELS readwritesplit REPL_BACKEND)
 
+# Service-to-Service routing with readconnroute
+add_test_executable(sts_readconnroute.cpp sts_readconnroute sts_readconnroute LABELS readconnroute REPL_BACKEND)
+
 # Test that masking filter can handle multi-statements.
 add_test_executable(mxs1719.cpp mxs1719 mxs1719 LABELS masking REPL_BACKEND)
 
