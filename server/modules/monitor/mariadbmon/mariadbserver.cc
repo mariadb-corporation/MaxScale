@@ -2231,9 +2231,9 @@ void MariaDBServer::update_server(bool time_to_update_disk_space,
     }
     else
     {
-        /* The current server is not running. Clear all but the stale master bit as it is used to detect
-         * masters that went down but came up. */
-        server->clear_status(~SERVER_WAS_MASTER);
+        /* The current server is not running. Clear some of the bits. User-set bits and some long-term bits
+         * can stay. */
+        server->clear_status(MonitorServer::SERVER_DOWN_CLEAR_BITS);
         auto conn_errno = mysql_errno(conn);
         if (conn_errno == ER_ACCESS_DENIED_ERROR || conn_errno == ER_ACCESS_DENIED_NO_PASSWORD_ERROR)
         {
