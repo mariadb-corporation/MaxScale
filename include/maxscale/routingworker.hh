@@ -794,6 +794,7 @@ private:
     T* get_local_value() const
     {
         auto worker = RoutingWorker::get_current();
+        mxb_assert(worker);
         T* my_value = static_cast<T*>(worker->get_data(m_handle));
 
         if (my_value == nullptr)
