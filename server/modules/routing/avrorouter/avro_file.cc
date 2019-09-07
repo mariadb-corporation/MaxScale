@@ -370,33 +370,11 @@ static GWBUF* read_event_data(Avro* router, REP_HEADER* hdr, uint64_t pos)
     return result;
 }
 
-bool notify_cb(DCB* dcb, void* data)
-{
-    SERVICE* service = static_cast<SERVICE*>(data);
-
-    if (dcb->service() == service && dcb->role() == DCB::Role::CLIENT)
-    {
-        // TODO: figure this out
-        // auto session = (AvroSession*)dcb->session()->router_session;
-        // session->queue_client_callback();
-    }
-
-    return true;
-}
-
-void notify_all_clients(SERVICE* service)
-{
-    auto worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
-    worker->execute([service]() {
-                        dcb_foreach(notify_cb, service);
-                    }, mxs::RoutingWorker::EXECUTE_AUTO);
-}
-
 void do_checkpoint(Avro* router)
 {
     router->handler.flush();
     avro_save_conversion_state(router);
-    notify_all_clients(router->service);
+    AvroSession::notify_all_clients(router->service);
     router->row_count = router->trx_count = 0;
 }
 

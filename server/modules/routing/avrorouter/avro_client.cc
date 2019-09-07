@@ -244,10 +244,10 @@ bool file_in_dir(const char* dir, const char* file)
  */
 void AvroSession::queue_client_callback()
 {
-    auto worker = static_cast<mxs::RoutingWorker*>(dcb->owner);
-    worker->execute([this]() {
-                        client_callback();
-                    }, mxs::RoutingWorker::EXECUTE_QUEUED);
+    mxs::RoutingWorker::get_current()->execute(
+        [this]() {
+            client_callback();
+        }, mxs::RoutingWorker::EXECUTE_QUEUED);
 }
 
 /**
@@ -737,6 +737,25 @@ void AvroSession::client_callback()
     }
 }
 
+thread_local std::vector<AvroSession*> client_sessions;
+
+// static
+void AvroSession::notify_all_clients(SERVICE* service)
+{
+    mxs::RoutingWorker::broadcast(
+        [service]() {
+            for (auto a : client_sessions)
+            {
+                MXS_INFO("%p", a);
+
+                if (a->router->service == service)
+                {
+                    a->queue_client_callback();
+                }
+            }
+        }, mxs::RoutingWorker::EXECUTE_AUTO);
+}
+
 // static
 AvroSession* AvroSession::create(Avro* inst, MXS_SESSION* session)
 {
@@ -753,9 +772,11 @@ AvroSession::AvroSession(Avro* instance, MXS_SESSION* session)
     , connect_time(time(NULL))
     , requested_gtid(false)
 {
+    client_sessions.push_back(this);
 }
 
 AvroSession::~AvroSession()
 {
+    client_sessions.erase(std::find(client_sessions.begin(), client_sessions.end(), this));
     maxavro_file_close(file_handle);
 }

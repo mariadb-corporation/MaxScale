@@ -177,6 +177,8 @@ public:
 
     void queue_client_callback();
 
+    static void notify_all_clients(SERVICE* router);
+
 private:
     AvroSession(Avro* instance, MXS_SESSION* session);
 
@@ -222,6 +224,5 @@ REP_HEADER        construct_header(uint8_t* ptr);
 bool              avro_save_conversion_state(Avro* router);
 bool              avro_load_conversion_state(Avro* router);
 void              avro_load_metadata_from_schemas(Avro* router);
-void              notify_all_clients(SERVICE* router);
 
 MXS_END_DECLS
