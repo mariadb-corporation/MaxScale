@@ -183,20 +183,17 @@ int main(int argc, char* argv[])
     TestConnections::check_nodes(false);
     Test = new TestConnections(argc, argv);
 
-    Test->set_timeout(600);
-    // Remove old data files
-    Test->maxscales->ssh_node_f(0, true, "rm -rf /var/lib/maxscale/avro;");
-    Test->replicate_from_master();
-
     Test->set_timeout(60);
     Test->repl->connect();
+    Test->try_query(Test->repl->nodes[0], "RESET MASTER");
     create_t1(Test->repl->nodes[0]);
     execute_query(Test->repl->nodes[0], (char*) "INSERT INTO t1 VALUES (111, 222)");
     Test->repl->close_connections();
 
     Test->tprintf("Waiting for binlogs to be processed...");
+    Test->maxscales->start();
     Test->stop_timeout();
-    sleep(15);
+    sleep(10);
 
     Test->set_timeout(120);
 
@@ -228,6 +225,10 @@ void* query_thread(void* ptr)
             sprintf(str, "INSERT INTO t1 VALUES (%d, %d)", insert_val, insert_val + 100);
             insert_val = 0;
             execute_query(Test->repl->nodes[0], "%s", str);
+        }
+        else
+        {
+            sleep(1);
         }
     }
 

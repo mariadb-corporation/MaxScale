@@ -12,13 +12,16 @@ int main(int argc, char** argv)
     TestConnections::check_nodes(false);
     TestConnections test(argc, argv);
 
-    test.replicate_from_master();
 
     test.repl->connect();
+    execute_query(test.repl->nodes[0], "RESET MASTER");
     execute_query(test.repl->nodes[0],
                   "CREATE OR REPLACE TABLE t1 (data varchar(30) NOT NULL) DEFAULT CHARSET=utf16");
     execute_query(test.repl->nodes[0],
                   "INSERT INTO t1 VALUES ('Hello World'), ('Բարեւ աշխարհ'), ('こんにちは世界'), ('你好，世界'), ('Привет мир')");
+
+    test.maxscales->start();
+
 
     // Wait for the data to be processed
     const char* logmsg = "Waiting until more data is written";
@@ -39,6 +42,5 @@ int main(int argc, char** argv)
            "o-------------------------------------------------------------------o\n"
            "\n");
 
-    test.revert_replicate_from_master();
     return test.global_result;
 }

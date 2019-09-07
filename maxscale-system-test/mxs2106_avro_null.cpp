@@ -11,10 +11,8 @@ int main(int argc, char** argv)
     TestConnections::check_nodes(false);
     TestConnections test(argc, argv);
 
-    test.set_timeout(120);
-    test.replicate_from_master(0);
-
     test.repl->connect();
+    execute_query(test.repl->nodes[0], "RESET MASTER");
     execute_query(test.repl->nodes[0],
                   "CREATE OR REPLACE TABLE `test`.`test1` ("
                   "  `test1_id` int(10) unsigned NOT NULL AUTO_INCREMENT,"
@@ -31,6 +29,7 @@ int main(int argc, char** argv)
 
     /** Give avrorouter some time to process the events */
     test.stop_timeout();
+    test.maxscales->start();
     sleep(10);
     test.set_timeout(120);
 

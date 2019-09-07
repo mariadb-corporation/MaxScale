@@ -224,6 +224,11 @@ bool run_test(TestConnections& test)
 {
     bool rval = true;
 
+    test.repl->connect();
+    execute_query(test.repl->nodes[0], "RESET MASTER");
+    test.repl->close_connections();
+    test.maxscales->start();
+
     test.tprintf("Inserting data");
     for (int x = 0; test_set[x].types; x++)
     {
@@ -299,15 +304,12 @@ int main(int argc, char* argv[])
     TestConnections::check_nodes(false);
     TestConnections test(argc, argv);
 
-    test.replicate_from_master();
-
     if (!run_test(test))
     {
         test.add_result(1, "Test failed");
     }
 
     test.check_maxscale_processes(0, 1);
-    test.revert_replicate_from_master();
 
     return test.global_result;
 }

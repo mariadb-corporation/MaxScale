@@ -12,9 +12,8 @@ int main(int argc, char** argv)
     TestConnections::check_nodes(false);
     TestConnections test(argc, argv);
 
-    test.replicate_from_master();
-
     test.repl->connect();
+    execute_query(test.repl->nodes[0], "RESET MASTER");
     execute_query(test.repl->nodes[0], "CREATE OR REPLACE TABLE t1 (data VARCHAR(30))");
     execute_query(test.repl->nodes[0], "INSERT INTO t1 VALUES ('ROW')");
     execute_query(test.repl->nodes[0], "SET binlog_format=STATEMENT");
@@ -25,10 +24,9 @@ int main(int argc, char** argv)
     execute_query(test.repl->nodes[0], "INSERT INTO t1 VALUES ('ROW2')");
 
     // Wait for the avrorouter to process the data
+    test.maxscales->start();
     sleep(10);
     test.log_includes(0, "Possible STATEMENT or MIXED");
-
-    test.revert_replicate_from_master();
 
     return test.global_result;
 }
