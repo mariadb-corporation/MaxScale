@@ -9,18 +9,14 @@
 
 int main(int argc, char* argv[])
 {
-    int exit_code;
     TestConnections::skip_maxscale_start(true);
-    TestConnections::check_nodes(false);
     TestConnections test(argc, argv);
-    test.set_timeout(600);
-    test.maxscales->ssh_node(0, (char*) "rm -rf /var/lib/maxscale/avro", true);
-
-    /** Start master to binlogrouter replication */
-    test.replicate_from_master();
 
     test.set_timeout(120);
     test.repl->connect();
+
+    // This makes sure the binlogs don't have anything else
+    execute_query(test.repl->nodes[0], "RESET MASTER");
 
     // Execute two events for each version of the schema
     execute_query_silent(test.repl->nodes[0], "DROP TABLE test.t1");
@@ -41,6 +37,7 @@ int main(int argc, char* argv[])
     execute_query(test.repl->nodes[0], "DELETE FROM test.t1");
 
     test.repl->close_connections();
+    test.maxscales->start();
 
     /** Give avrorouter some time to process the events */
     test.stop_timeout();
@@ -51,6 +48,7 @@ int main(int argc, char* argv[])
     {
         std::stringstream cmd;
         cmd << "maxavrocheck -d /var/lib/maxscale/avro/test.t1.00000" << i << ".avro";
+        int exit_code;
         char* rows = test.maxscales->ssh_node_output(0, cmd.str().c_str(), true, &exit_code);
         int nrows = 0;
         std::istringstream iss;
@@ -70,16 +68,12 @@ int main(int argc, char* argv[])
         const int nchanges = 2;
         test.add_result(nrows != nchanges,
                         "Expected %d line in file number %d, got %d: %s",
-                        nchanges,
-                        i,
-                        nrows,
-                        rows);
+                        nchanges, i, nrows, rows);
         free(rows);
     }
 
     test.stop_timeout();
     execute_query(test.repl->nodes[0], "DROP TABLE test.t1;RESET MASTER");
-    test.revert_replicate_from_master();
 
     return test.global_result;
 }

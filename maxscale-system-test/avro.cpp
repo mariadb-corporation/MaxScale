@@ -8,33 +8,21 @@
 
 
 #include "testconnections.h"
-#include "maxadmin_operations.h"
 #include "sql_t1.h"
-
-#include "test_binlog_fnc.h"
-#include <jansson.h>
 #include "maxinfo_func.h"
 
 #include <sstream>
-#include <iostream>
-
-using std::cout;
-using std::endl;
 
 int main(int argc, char* argv[])
 {
-    int exit_code;
     TestConnections::skip_maxscale_start(true);
-    TestConnections::check_nodes(false);
     TestConnections test(argc, argv);
-    test.set_timeout(600);
-    test.maxscales->ssh_node(0, (char*) "rm -rf /var/lib/maxscale/avro", true);
-
-    /** Start master to binlogrouter replication */
-    test.replicate_from_master();
 
     test.set_timeout(120);
     test.repl->connect();
+
+    // This makes sure the binlogs don't have anything else
+    execute_query(test.repl->nodes[0], "RESET MASTER");
 
     // MXS-2095: Crash on GRANT CREATE TABLE
     execute_query(test.repl->nodes[0], "CREATE USER test IDENTIFIED BY 'test'");
@@ -46,16 +34,17 @@ int main(int argc, char* argv[])
     execute_query(test.repl->nodes[0], "FLUSH LOGS");
 
     test.repl->close_connections();
+    test.maxscales->start();
 
     /** Give avrorouter some time to process the events */
     test.stop_timeout();
     sleep(10);
     test.set_timeout(120);
 
+    int exit_code;
     char* output = test.maxscales->ssh_node_output(0,
                                                    "maxavrocheck -d /var/lib/maxscale/avro/test.t1.000001.avro",
-                                                   true,
-                                                   &exit_code);
+                                                   true, &exit_code);
 
     std::istringstream iss;
     iss.str(output);
@@ -71,12 +60,8 @@ int main(int argc, char* argv[])
 
         if (x1 != x1_exp || fl != fl_exp)
         {
-            test.add_result(1,
-                            "Output:x1 %lld, fl %lld, Expected: x1 %d, fl %d",
-                            x1,
-                            fl,
-                            x1_exp,
-                            fl_exp);
+            test.add_result(1, "Output:x1 %lld, fl %lld, Expected: x1 %d, fl %d",
+                            x1, fl, x1_exp, fl_exp);
             break;
         }
 
@@ -96,7 +81,6 @@ int main(int argc, char* argv[])
 
     execute_query(test.repl->nodes[0], "DROP TABLE test.t1");
     test.stop_timeout();
-    test.revert_replicate_from_master();
 
     return test.global_result;
 }
