@@ -717,7 +717,7 @@ void TestConnections::read_env()
     no_maxscale_log_copy = readenv_bool("no_maxscale_log_copy", false);
     use_ipv6 = readenv_bool("use_ipv6", false);
     backend_ssl = readenv_bool("backend_ssl", false);
-    smoke = readenv_bool("smoke", false);
+    smoke = readenv_bool("smoke", true);
     threads = readenv_int("threads", 4);
     use_snapshots = readenv_bool("use_snapshots", false);
     take_snapshot_command = readenv("take_snapshot_command",
