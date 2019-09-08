@@ -228,6 +228,9 @@ private:
     DCBSet            m_dcb_set;                /*< Set of associated backend DCBs */
     uint32_t          m_retain_last_statements; /*< How many statements be retained */
     Log               m_log;                    /*< Session specific in-memory log */
+
+    // Delivers a provided response to the upstream filter that should receive it
+    void deliver_response();
 };
 }
 

@@ -403,44 +403,38 @@ const char* session_get_remote(const MXS_SESSION* session)
     return NULL;
 }
 
-/**
- * Delivers a provided response to the upstream filter that should
- * receive it.
- *
- * @param session  The session.
- */
-static void session_deliver_response(MXS_SESSION* session)
+void Session::deliver_response()
 {
-    MXS_FILTER* filter_instance = session->response.up.instance;
+    MXS_FILTER* filter_instance = response.up.instance;
 
     if (filter_instance)
     {
-        MXS_FILTER_SESSION* filter_session = session->response.up.session;
-        GWBUF* buffer = session->response.buffer;
+        MXS_FILTER_SESSION* filter_session = response.up.session;
+        GWBUF* buffer = response.buffer;
 
         mxb_assert(filter_session);
         mxb_assert(buffer);
 
-        // TODO: Figure out what to do with the DCB and Reply arguments
+        // The reply will always be complete
         mxs::ReplyRoute route;
-        session->response.up.clientReply(filter_instance, filter_session, buffer, route,
-                                         mxs::Reply(session->response.service));
+        mxs::Reply reply(response.service);
+        response.up.clientReply(filter_instance, filter_session, buffer, route, reply);
 
-        session->response.up.instance = NULL;
-        session->response.up.session = NULL;
-        session->response.up.clientReply = NULL;
-        session->response.buffer = NULL;
+        response.up.instance = NULL;
+        response.up.session = NULL;
+        response.up.clientReply = NULL;
+        response.buffer = NULL;
 
         // If some filter short-circuits the routing, then there will
         // be no response from a server and we need to ensure that
         // subsequent book-keeping targets the right statement.
-        static_cast<Session*>(session)->book_last_as_complete();
+        book_last_as_complete();
     }
 
-    mxb_assert(!session->response.up.instance);
-    mxb_assert(!session->response.up.session);
-    mxb_assert(!session->response.up.clientReply);
-    mxb_assert(!session->response.buffer);
+    mxb_assert(!response.up.instance);
+    mxb_assert(!response.up.session);
+    mxb_assert(!response.up.clientReply);
+    mxb_assert(!response.buffer);
 }
 
 bool mxs_route_query(MXS_SESSION* ses, GWBUF* buffer)
@@ -449,10 +443,6 @@ bool mxs_route_query(MXS_SESSION* ses, GWBUF* buffer)
     mxb_assert(session);
 
     bool rv = session->routeQuery(buffer);
-
-    // In case some filter has short-circuited the request processing we need
-    // to deliver that now to the client.
-    session_deliver_response(session);
 
     return rv;
 }
@@ -1520,7 +1510,15 @@ void Session::dump_session_log()
 
 int32_t Session::routeQuery(GWBUF* buffer)
 {
-    return m_down->routeQuery(buffer);
+    auto rv = m_down->routeQuery(buffer);
+
+    if (response.buffer)
+    {
+        // Something interrupted the routing and queued a response
+        deliver_response();
+    }
+
+    return rv;
 }
 
 int32_t Session::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
