@@ -373,10 +373,6 @@ add_test_executable(mxs1751_available_when_donor_crash.cpp mxs1751_available_whe
 # Persistant connection test
 add_test_executable(pers_01.cpp pers_01 pers_01 LABELS maxscale REPL_BACKEND readwritesplit GALERA_BACKEND)
 
-# MXS-1980: Support Galera cluster nodes as masters for Binlog Router
-# https://jira.mariadb.org/browse/MXS-1980
-add_test_executable(mxs1980_blr_galera_server_ids.cpp mxs1980_blr_galera_server_ids mxs1980_blr_galera_server_ids LABELS binlogrouter GALERA_BACKEND REPL_BACKEND)
-
 ############################################
 # END: Galera tests                        #
 ############################################
@@ -1026,6 +1022,10 @@ add_test_executable(mxs2057_systemd_watchdog.cpp mxs2057_systemd_watchdog mxs205
 ############################################
 # BEGIN: binlogrouter and avrorouter tests #
 ############################################
+
+# MXS-1980: Support Galera cluster nodes as masters for Binlog Router
+# https://jira.mariadb.org/browse/MXS-1980
+#add_test_executable(mxs1980_blr_galera_server_ids.cpp mxs1980_blr_galera_server_ids mxs1980_blr_galera_server_ids LABELS binlogrouter GALERA_BACKEND REPL_BACKEND)
 
 # Binlogrouter tests, these heavily alter the replication so they are run last
 add_test_executable(avro.cpp avro avro LABELS avrorouter binlogrouter LIGHT BREAKS_REPL REPL_BACKEND)
