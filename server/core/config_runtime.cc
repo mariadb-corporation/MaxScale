@@ -1276,7 +1276,7 @@ static bool runtime_create_service(const char* name, const char* router, MXS_CON
                     parameters.set_multiple(*params);
                 }
 
-                if ((service = service_alloc(name, router, &parameters)) == nullptr)
+                if ((service = Service::create(name, router, &parameters)) == nullptr)
                 {
                     config_runtime_error("Could not create service '%s' with module '%s'", name, router);
                 }

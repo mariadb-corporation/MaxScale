@@ -23,7 +23,7 @@ void create_test_objects()
     parameters.set(CN_MAX_RETRY_INTERVAL, "10s");
     parameters.set(CN_CONNECTION_TIMEOUT, "10s");
     parameters.set(CN_NET_WRITE_TIMEOUT, "10s");
-    service = service_alloc("service", "readconnroute", &parameters);
+    service = Service::create("service", "readconnroute", &parameters);
 
     MXS_CONFIG_PARAMETER listener_params;
     listener_params.set(CN_ADDRESS, "0.0.0.0");

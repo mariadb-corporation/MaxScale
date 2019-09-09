@@ -82,7 +82,7 @@ static struct
 
 static bool service_refresh_users_cb(void* svc);
 
-Service* service_alloc(const char* name, const char* router, MXS_CONFIG_PARAMETER* params)
+Service* Service::create(const char* name, const char* router, MXS_CONFIG_PARAMETER* params)
 {
     MXS_ROUTER_OBJECT* router_api = (MXS_ROUTER_OBJECT*)load_module(router, MODULE_ROUTER);
 

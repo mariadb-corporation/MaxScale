@@ -43,7 +43,7 @@ static void test1()
     parameters.set("max_retry_interval", "10s");
     parameters.set("connection_timeout", "10s");
     parameters.set("net_write_timeout", "10s");
-    auto service = service_alloc("service", "readconnroute", &parameters);
+    auto service = Service::create("service", "readconnroute", &parameters);
 
     MXS_CONFIG_PARAMETER listener_params;
     listener_params.set(CN_ADDRESS, "0.0.0.0");

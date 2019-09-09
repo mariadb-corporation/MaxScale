@@ -44,7 +44,16 @@ public:
     using FilterList = std::vector<SFilterDef>;
     using RateLimits = std::vector<LastUserLoad>;
 
-    Service(const std::string& name, const std::string& router, MXS_CONFIG_PARAMETER* params);
+    /**
+     * @brief Allocate a new service
+     *
+     * @param name   The service name
+     * @param router The router module this service uses
+     * @param params Service parameters
+     *
+     * @return The newly created service or NULL if an error occurred
+     */
+    static Service* create(const char* name, const char* router, MXS_CONFIG_PARAMETER* params);
 
     ~Service();
 
@@ -199,6 +208,8 @@ private:
 
     MXS_CONFIG_PARAMETER m_params;
 
+    Service(const std::string& name, const std::string& router, MXS_CONFIG_PARAMETER* params);
+
     /**
      * Recalculate internal data
      *
@@ -280,17 +291,6 @@ private:
  *
  * These functions should only be called by the MaxScale core.
  */
-
-/**
- * @brief Allocate a new service
- *
- * @param name   The service name
- * @param router The router module this service uses
- * @param params Service parameters
- *
- * @return The newly created service or NULL if an error occurred
- */
-Service* service_alloc(const char* name, const char* router, MXS_CONFIG_PARAMETER* params);
 
 /**
  * Free a service
