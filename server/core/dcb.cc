@@ -2134,8 +2134,7 @@ int ClientDCB::port() const
 
 uint32_t DCB::process_events(uint32_t events)
 {
-    RoutingWorker* owner = static_cast<RoutingWorker*>(this->owner);
-    mxb_assert(owner == RoutingWorker::get_current());
+    mxb_assert(static_cast<RoutingWorker*>(this->owner) == RoutingWorker::get_current());
 
     uint32_t rc = MXB_POLL_NOP;
 
@@ -2145,15 +2144,12 @@ uint32_t DCB::process_events(uint32_t events)
      */
     if (State::DISCONNECTED == m_state)
     {
+        mxb_assert(!true);
         return rc;
     }
 
     if (m_nClose != 0)
     {
-        MXS_WARNING("Events reported for dcb(%p), owned by %d, that has been closed %" PRIu32 " times.",
-                    this,
-                    owner->id(),
-                    m_nClose);
         mxb_assert(!true);
         return rc;
     }
@@ -2176,29 +2172,12 @@ uint32_t DCB::process_events(uint32_t events)
 
             protocol_session()->write_ready(this);
         }
-        else
-        {
-            char errbuf[MXS_STRERROR_BUFLEN];
-            MXS_DEBUG("%lu [poll_waitevents] "
-                      "EPOLLOUT due %d, %s. "
-                      "dcb %p, fd %i",
-                      pthread_self(),
-                      eno,
-                      strerror_r(eno, errbuf, sizeof(errbuf)),
-                      this,
-                      m_fd);
-        }
     }
 
     if ((events & EPOLLIN) && (m_nClose == 0))
     {
         mxb_assert(ready());
 
-        MXS_DEBUG("%lu [poll_waitevents] "
-                  "Read in dcb %p fd %d",
-                  pthread_self(),
-                  this,
-                  m_fd);
         rc |= MXB_POLL_READ;
 
         int return_code = 1;
@@ -2218,16 +2197,6 @@ uint32_t DCB::process_events(uint32_t events)
     {
         mxb_assert(ready());
 
-        int eno = gw_getsockerrno(m_fd);
-        if (eno != 0)
-        {
-            char errbuf[MXS_STRERROR_BUFLEN];
-            MXS_DEBUG("%lu [poll_waitevents] "
-                      "EPOLLERR due %d, %s.",
-                      pthread_self(),
-                      eno,
-                      strerror_r(eno, errbuf, sizeof(errbuf)));
-        }
         rc |= MXB_POLL_ERROR;
 
         protocol_session()->error(this);
@@ -2237,16 +2206,6 @@ uint32_t DCB::process_events(uint32_t events)
     {
         mxb_assert(ready());
 
-        MXB_AT_DEBUG(int eno = gw_getsockerrno(m_fd));
-        MXB_AT_DEBUG(char errbuf[MXS_STRERROR_BUFLEN]);
-        MXS_DEBUG("%lu [poll_waitevents] "
-                  "EPOLLHUP on dcb %p, fd %d. "
-                  "Errno %d, %s.",
-                  pthread_self(),
-                  this,
-                  m_fd,
-                  eno,
-                  strerror_r(eno, errbuf, sizeof(errbuf)));
         rc |= MXB_POLL_HUP;
 
         if (!m_hanged_up)
@@ -2262,16 +2221,6 @@ uint32_t DCB::process_events(uint32_t events)
     {
         mxb_assert(ready());
 
-        MXB_AT_DEBUG(int eno = gw_getsockerrno(m_fd));
-        MXB_AT_DEBUG(char errbuf[MXS_STRERROR_BUFLEN]);
-        MXS_DEBUG("%lu [poll_waitevents] "
-                  "EPOLLRDHUP on dcb %p, fd %d. "
-                  "Errno %d, %s.",
-                  pthread_self(),
-                  this,
-                  m_fd,
-                  eno,
-                  strerror_r(eno, errbuf, sizeof(errbuf)));
         rc |= MXB_POLL_HUP;
 
         if (!m_hanged_up)
