@@ -16,7 +16,7 @@
 #include <maxbase/alloc.h>
 #include <maxscale/modutil.hh>
 #include <maxscale/query_classifier.hh>
-#include <maxscale/protocol/mysql.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 
 namespace
 {

@@ -20,7 +20,7 @@
 #include <maxscale/backend.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/response_stat.hh>
-#include <maxscale/protocol/mysql.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 
 using Endpoints = std::vector<mxs::Endpoint*>;
 

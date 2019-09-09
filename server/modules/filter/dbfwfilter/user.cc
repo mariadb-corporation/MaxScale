@@ -15,7 +15,7 @@
 
 #include <maxbase/alloc.h>
 #include <maxscale/modutil.hh>
-#include <maxscale/protocol/mysql.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 
 User::User(std::string name)
     : m_name(name)

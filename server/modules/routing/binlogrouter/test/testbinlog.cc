@@ -43,7 +43,7 @@
 #include "../../../../core/internal/config.hh"
 #include "../../../../core/internal/servermanager.hh"
 
-#include <maxscale/protocol/mysql.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 #include <ini.h>
 #include <sys/stat.h>
 #include <getopt.h>

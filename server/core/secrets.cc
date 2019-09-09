@@ -20,7 +20,7 @@
 
 #include <maxbase/alloc.h>
 #include <maxscale/paths.h>
-#include <maxscale/protocol/mysql.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/random.h>
 #include <maxscale/utils.h>
 

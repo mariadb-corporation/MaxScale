@@ -22,7 +22,7 @@
 #include <string>
 
 #include <maxscale/buffer.hh>
-#include <maxscale/protocol/mysql.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 
 typedef enum cache_result_bits
 {

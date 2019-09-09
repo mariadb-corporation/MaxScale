@@ -33,7 +33,7 @@
 
 #include <maxscale/buffer.hh>
 #include <maxscale/dcb.hh>
-#include <maxscale/protocol/mysql.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/router.hh>
 #include <maxscale/secrets.h>
 #include <maxscale/service.hh>

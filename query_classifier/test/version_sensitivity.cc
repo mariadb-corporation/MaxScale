@@ -16,7 +16,7 @@
 #include <maxscale/paths.h>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/server.hh>
-#include <maxscale/protocol/mysql.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 
 using namespace std;
 

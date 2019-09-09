@@ -17,7 +17,7 @@
 #include <maxscale/authenticator.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/mysql_utils.hh>
-#include <maxscale/protocol/mysql.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/module_names.hh>
 #include <maxscale/secrets.h>
 #include <maxscale/service.hh>

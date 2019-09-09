@@ -19,7 +19,7 @@
 #include "../internal/query_classifier.hh"
 #include <maxbase/alloc.h>
 #include <maxscale/paths.h>
-#include <maxscale/protocol/mysql.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 #include "../../../query_classifier/test/testreader.hh"
 
 using namespace std;

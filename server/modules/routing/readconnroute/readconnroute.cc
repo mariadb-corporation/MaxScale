@@ -36,7 +36,7 @@
 
 #include "readconnroute.hh"
 
-#include <maxscale/protocol/mysql.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/modutil.hh>
 
 /**

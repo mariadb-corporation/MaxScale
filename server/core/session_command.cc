@@ -14,7 +14,7 @@
 #include <maxscale/session_command.hh>
 
 #include <maxscale/modutil.hh>
-#include <maxscale/protocol/mysql.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 
 namespace maxscale
 {

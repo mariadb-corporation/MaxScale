@@ -22,7 +22,7 @@
 #include <new>
 #include <string>
 #include <mysql.h>
-#include <maxscale/protocol/mysql.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 
 using maxscale::MonitorServer;
 

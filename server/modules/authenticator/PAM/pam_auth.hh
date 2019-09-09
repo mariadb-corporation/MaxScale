@@ -24,7 +24,7 @@
 #include <maxbase/alloc.h>
 #include <maxscale/buffer.hh>
 #include <maxscale/dcb.hh>
-#include <maxscale/protocol/mysql.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 
 using std::string;
 

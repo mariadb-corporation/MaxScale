@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include <maxscale/protocol/local_client.hh>
+#include <maxscale/protocol/mariadb/local_client.hh>
 #include <maxscale/routingworker.hh>
 
 LocalClient::~LocalClient()

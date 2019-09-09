@@ -19,7 +19,7 @@
 #include <maxbase/poll.h>
 #include <maxscale/buffer.hh>
 #include <maxscale/service.hh>
-#include <maxscale/protocol/mysql.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 
 /** A DCB-like client abstraction which ignores responses */
 class LocalClient : public mxs::Component

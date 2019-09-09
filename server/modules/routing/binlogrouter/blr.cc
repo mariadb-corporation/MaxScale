@@ -41,7 +41,7 @@
 #include <maxscale/config.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/housekeeper.h>
-#include <maxscale/protocol/mysql.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/router.hh>
 #include <maxscale/secrets.h>
 #include <maxscale/server.hh>

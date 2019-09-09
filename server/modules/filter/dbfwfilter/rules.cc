@@ -18,7 +18,7 @@
 #include <maxbase/alloc.h>
 #include <maxscale/buffer.hh>
 #include <maxscale/modutil.hh>
-#include <maxscale/protocol/mysql.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 
 static inline bool query_is_sql(GWBUF* query)
 {

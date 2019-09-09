@@ -4,7 +4,7 @@
 
 #include <maxbase/alloc.h>
 #include <maxscale/buffer.hh>
-#include <maxscale/protocol/mysql.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 
 #include "test_utils.hh"
 #include "../internal/service.hh"

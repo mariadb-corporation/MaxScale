@@ -17,7 +17,7 @@
 #include <stdint.h>
 #include <maxsql/mariadb.hh>
 #include <maxsql/queryresult.hh>
-#include <maxscale/protocol/mysql.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/server.hh>
 
 /**

@@ -21,7 +21,7 @@
 #include <maxscale/buffer.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/mysql_binlog.h>
-#include <maxscale/protocol/mysql.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 
 /**
  * Send the field count packet in a response packet sequence.

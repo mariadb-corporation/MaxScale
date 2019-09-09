@@ -15,7 +15,7 @@
 
 #include <maxbase/alloc.h>
 #include <maxscale/dcb.hh>
-#include <maxscale/protocol/mysql.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/server.hh>
 
 GSSAPIBackendAuthenticator::~GSSAPIBackendAuthenticator()

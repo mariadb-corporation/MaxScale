@@ -13,7 +13,7 @@
 #include "cat.hh"
 #include "catsession.hh"
 
-#include <maxscale/protocol/mysql.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/modutil.hh>
 
 using namespace maxscale;

@@ -35,7 +35,7 @@
 #include <maxscale/dcb.hh>
 #include <maxscale/modulecmd.hh>
 #include <maxscale/paths.h>
-#include <maxscale/protocol/mysql.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/random.h>
 #include <maxscale/router.hh>
 #include <maxscale/server.hh>

@@ -13,7 +13,7 @@
 
 #define MXS_MODULE_NAME "mariadbbackend"
 
-#include <maxscale/protocol/mysql.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 
 #include <mysqld_error.h>
 #include <maxbase/alloc.h>

@@ -30,7 +30,7 @@
 #include <maxscale/pcre2.hh>
 #include <maxscale/service.hh>
 #include <maxscale/backend.hh>
-#include <maxscale/protocol/rwbackend.hh>
+#include <maxscale/protocol/mariadb/rwbackend.hh>
 
 const char* const CN_IGNORE_DATABASES = "ignore_databases";
 const char* const CN_IGNORE_DATABASES_REGEX = "ignore_databases_regex";

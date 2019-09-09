@@ -12,7 +12,7 @@
  */
 
 #include "pam_backend_session.hh"
-#include <maxscale/protocol/mysql.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/server.hh>
 
 /**

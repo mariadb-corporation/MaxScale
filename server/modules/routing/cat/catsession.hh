@@ -14,7 +14,7 @@
 
 #include "cat.hh"
 
-#include <maxscale/protocol/rwbackend.hh>
+#include <maxscale/protocol/mariadb/rwbackend.hh>
 
 class Cat;
 

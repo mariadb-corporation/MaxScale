@@ -22,7 +22,7 @@
 #include <sstream>
 #include <maxscale/paths.h>
 #include <maxscale/log.hh>
-#include <maxscale/protocol/mysql.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/query_classifier.hh>
 #include "../../server/modules/protocol/MariaDB/setsqlmodeparser.hh"
 #include "testreader.hh"

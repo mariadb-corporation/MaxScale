@@ -22,7 +22,7 @@
 #include <maxscale/buffer.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/queryclassifier.hh>
-#include <maxscale/protocol/rwbackend.hh>
+#include <maxscale/protocol/mariadb/rwbackend.hh>
 
 #define TARGET_IS_MASTER(t)       maxscale::QueryClassifier::target_is_master(t)
 #define TARGET_IS_SLAVE(t)        maxscale::QueryClassifier::target_is_slave(t)

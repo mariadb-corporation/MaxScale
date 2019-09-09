@@ -29,7 +29,7 @@
 #include <cdc.hh>
 #include <maxavro.hh>
 #include <binlog_common.hh>
-#include <maxscale/protocol/mysql.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 #include <blr_constants.hh>
 
 #include "rpl.hh"

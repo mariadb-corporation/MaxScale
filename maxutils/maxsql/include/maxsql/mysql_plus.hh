@@ -21,7 +21,7 @@
 #include <maxsql/mariadb.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/mysql_utils.hh>
-#include <maxscale/protocol/mysql.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 
 namespace maxsql
 {
