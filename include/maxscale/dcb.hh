@@ -475,7 +475,7 @@ public:
     char*                   m_user = nullptr;                   /**< User name for connection */
 
 protected:
-    DCB(int fd, Role role, MXS_SESSION* session, Manager* manager);
+    DCB(int fd, Role role, MXS_SESSION* session, Handler* handler, Manager* manager);
 
     int create_SSL(mxs::SSLContext* ssl);
 
@@ -510,6 +510,7 @@ protected:
     State                 m_state = State::ALLOC;       /**< Current state */
     int                   m_fd;                         /**< The descriptor */
     MXS_SESSION*          m_session;                    /**< The owning session */
+    Handler*              m_handler;
     SSLState              m_ssl_state = SSLState::HANDSHAKE_UNKNOWN;/**< Current state of SSL if in use */
     SSL*                  m_ssl = nullptr;              /**< SSL struct for connection */
     bool                  m_ssl_read_want_read = false;

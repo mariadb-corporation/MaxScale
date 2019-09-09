@@ -109,13 +109,14 @@ static MXB_WORKER* get_dcb_owner()
     return RoutingWorker::get_current();
 }
 
-DCB::DCB(int fd, Role role, MXS_SESSION* session, Manager* manager)
+DCB::DCB(int fd, Role role, MXS_SESSION* session, Handler* handler, Manager* manager)
     : MXB_POLL_DATA{&DCB::poll_handler, get_dcb_owner()}
     , m_uid(this_unit.uid_generator.fetch_add(1, std::memory_order_relaxed))
     , m_high_water(config_writeq_high_water())
     , m_low_water(config_writeq_low_water())
     , m_fd(fd)
     , m_session(session)
+    , m_handler(handler)
     , m_last_read(mxs_clock())
     , m_last_write(mxs_clock())
     , m_role(role)
@@ -2170,7 +2171,7 @@ uint32_t DCB::process_events(uint32_t events)
         {
             rc |= MXB_POLL_WRITE;
 
-            protocol_session()->write_ready(this);
+            m_handler->write_ready(this);
         }
     }
 
@@ -2189,7 +2190,7 @@ uint32_t DCB::process_events(uint32_t events)
         }
         if (1 == return_code)
         {
-            protocol_session()->ready_for_reading(this);
+            m_handler->ready_for_reading(this);
         }
     }
 
@@ -2199,7 +2200,7 @@ uint32_t DCB::process_events(uint32_t events)
 
         rc |= MXB_POLL_ERROR;
 
-        protocol_session()->error(this);
+        m_handler->error(this);
     }
 
     if ((events & EPOLLHUP) && (m_nClose == 0))
@@ -2210,7 +2211,7 @@ uint32_t DCB::process_events(uint32_t events)
 
         if (!m_hanged_up)
         {
-            protocol_session()->hangup(this);
+            m_handler->hangup(this);
 
             m_hanged_up = true;
         }
@@ -2225,7 +2226,7 @@ uint32_t DCB::process_events(uint32_t events)
 
         if (!m_hanged_up)
         {
-            protocol_session()->hangup(this);
+            m_handler->hangup(this);
 
             m_hanged_up = true;
         }
@@ -2623,7 +2624,7 @@ ClientDCB::ClientDCB(int fd,
                      std::unique_ptr<ClientProtocol> protocol,
                      std::unique_ptr<ClientAuthenticator> authenticator,
                      Manager* manager)
-    : DCB(fd, role, session, manager)
+    : DCB(fd, role, session, protocol.get(), manager)
     , m_ip(ip)
     , m_protocol(std::move(protocol))
     , m_authenticator(std::move(authenticator))
@@ -2719,7 +2720,7 @@ BackendDCB::BackendDCB(SERVER* server, int fd, MXS_SESSION* session,
                        std::unique_ptr<mxs::BackendProtocol> protocol,
                        std::unique_ptr<mxs::BackendAuthenticator> authenticator,
                        DCB::Manager* manager)
-    : DCB(fd, DCB::Role::BACKEND, session, manager)
+    : DCB(fd, DCB::Role::BACKEND, session, protocol.get(), manager)
     , m_protocol(std::move(protocol))
     , m_authenticator(std::move(authenticator))
     , m_server(server)
