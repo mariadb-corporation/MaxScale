@@ -22,7 +22,8 @@ int main(int argc, char* argv[])
                     "BEGIN NOT ATOMIC "
                     "  DECLARE v1 INT DEFAULT 5; "
                     "  CREATE OR REPLACE TABLE test.t1(id INT); "
-                    "  WHILE v1 <> 0 DO "
+                    "  SET @a = NOW();"
+                    "  WHILE TIME_TO_SEC(TIMEDIFF(NOW(), @a)) < 30 DO "
                     "    INSERT INTO test.t1 VALUES (1); "
                     "    SET v1 = (SELECT COUNT(*) FROM test.t1); "
                     "  END WHILE;"
@@ -34,7 +35,7 @@ int main(int argc, char* argv[])
 
                 const char* expected = "Query execution was interrupted";
                 test.expect(strstr(a.error(), expected),
-                            "Alter should fail with '%s' but it failed with '%s'",
+                            "Query should fail with '%s' but it failed with '%s'",
                             expected, a.error());
             });
 
