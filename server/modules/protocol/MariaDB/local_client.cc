@@ -28,7 +28,7 @@ bool LocalClient::queue_query(GWBUF* buffer)
 
     if (m_down->is_open())
     {
-        rval = m_down->routeQuery(gwbuf_deep_clone(buffer));
+        rval = m_down->routeQuery(buffer);
     }
 
     return rval;
@@ -81,10 +81,9 @@ bool do_self_destruct(mxs::RoutingWorker::Call::action_t action, LocalClient* da
 
 bool LocalClient::handleError(GWBUF* error, mxs::Endpoint* down, const mxs::Reply& reply)
 {
-    gwbuf_free(error);
-
     if (m_self_destruct)
     {
+        // Queue the self-desctruction so that the object remains valid after the handleError call
         mxs::RoutingWorker::get_current()->delayed_call(1, do_self_destruct, this);
     }
 

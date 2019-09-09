@@ -103,7 +103,7 @@ int TeeSession::routeQuery(GWBUF* queue)
 {
     if (m_client && query_matches(queue))
     {
-        m_client->queue_query(queue);
+        m_client->queue_query(gwbuf_deep_clone(queue));
     }
 
     return mxs::FilterSession::routeQuery(queue);
