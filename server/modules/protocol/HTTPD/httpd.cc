@@ -89,7 +89,7 @@ HTTPD_session* HTTPD_session::create(MXS_SESSION* session, mxs::Component* compo
     return new (std::nothrow) HTTPD_session();
 }
 
-int32_t HTTPD_session::read(DCB* dcb)
+int32_t HTTPD_session::ready_for_reading(DCB* dcb)
 {
     return httpd_read_event(dcb);
 }

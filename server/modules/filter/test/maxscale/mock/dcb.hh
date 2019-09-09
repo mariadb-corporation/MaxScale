@@ -93,7 +93,7 @@ private:
             return p;
         }
 
-        int32_t read(DCB*) override
+        int32_t ready_for_reading(DCB*) override
         {
             mxb_assert(!true);
             return 0;

@@ -111,7 +111,7 @@ MAXSCALED::~MAXSCALED()
     }
 }
 
-int32_t MAXSCALED::read(DCB* dcb)
+int32_t MAXSCALED::ready_for_reading(DCB* dcb)
 {
     return maxscaled_read_event(dcb);
 }

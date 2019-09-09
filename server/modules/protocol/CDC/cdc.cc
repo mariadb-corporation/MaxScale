@@ -104,7 +104,7 @@ CDC_protocol* CDC_protocol::create(MXS_SESSION* session, mxs::Component* compone
     return cdc_protocol_init();
 }
 
-int32_t CDC_protocol::read(DCB* dcb)
+int32_t CDC_protocol::ready_for_reading(DCB* dcb)
 {
     return cdc_read_event(dcb);
 }

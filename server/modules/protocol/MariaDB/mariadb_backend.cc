@@ -279,7 +279,7 @@ void MySQLBackendProtocol::prepare_for_write(DCB* dcb, GWBUF* buffer)
  * @param dcb   The backend Descriptor Control Block
  * @return 1 on operation, 0 for no action
  */
-int32_t MySQLBackendProtocol::read(DCB* plain_dcb)
+int32_t MySQLBackendProtocol::ready_for_reading(DCB* plain_dcb)
 {
     mxb_assert(plain_dcb->role() == DCB::Role::BACKEND);
     BackendDCB* dcb = static_cast<BackendDCB*>(plain_dcb);

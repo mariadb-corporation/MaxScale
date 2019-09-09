@@ -52,7 +52,7 @@ public:
 
     static GWBUF* reject(const char* host);
 
-    int32_t read(DCB* dcb) override;
+    int32_t ready_for_reading(DCB* dcb) override;
     int32_t write(DCB* dcb, GWBUF* buffer) override;
     int32_t write_ready(DCB* dcb) override;
     int32_t error(DCB* dcb) override;

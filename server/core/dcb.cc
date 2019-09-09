@@ -2189,7 +2189,7 @@ uint32_t DCB::process_events(uint32_t events)
         }
         if (1 == return_code)
         {
-            protocol_session()->read(this);
+            protocol_session()->ready_for_reading(this);
         }
     }
 

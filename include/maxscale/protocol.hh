@@ -47,7 +47,7 @@ public:
      * @param dcb DCB to read from
      * @return 1 on success, 0 on error
      */
-    virtual int32_t read(DCB* dcb) = 0;
+    virtual int32_t ready_for_reading(DCB* dcb) = 0;
 
     /**
      * Write data to a network socket

@@ -1765,7 +1765,7 @@ void MySQLClientProtocol::parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data)
  * MXS_PROTOCOL_API implementation.
  */
 
-int32_t MySQLClientProtocol::read(DCB* dcb)
+int32_t MySQLClientProtocol::ready_for_reading(DCB* dcb)
 {
     GWBUF* read_buffer = NULL;
     int return_code = 0;
