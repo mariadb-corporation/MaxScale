@@ -29,6 +29,7 @@
 #include <maxbase/atomic.hh>
 #include <maxbase/format.hh>
 #include <maxbase/stopwatch.hh>
+#include <maxbase/log.hh>
 
 #include <maxscale/config.hh>
 #include <maxscale/session.hh>
@@ -775,12 +776,14 @@ mxs::Target* ServerEndpoint::target() const
 
 bool ServerEndpoint::connect()
 {
+    mxb::LogScope scope(m_server->name());
     m_dcb = BackendDCB::connect(m_server, m_session, mxs::RoutingWorker::get_current(), this);
     return m_dcb != nullptr;
 }
 
 void ServerEndpoint::close()
 {
+    mxb::LogScope scope(m_server->name());
     DCB::close(m_dcb);
     m_dcb = nullptr;
 }
@@ -792,17 +795,20 @@ bool ServerEndpoint::is_open() const
 
 int32_t ServerEndpoint::routeQuery(GWBUF* buffer)
 {
+    mxb::LogScope scope(m_server->name());
     return m_dcb->protocol_write(buffer);
 }
 
 int32_t ServerEndpoint::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
+    mxb::LogScope scope(m_server->name());
     down.push_back(this);
     return m_up->clientReply(buffer, down, reply);
 }
 
 bool ServerEndpoint::handleError(GWBUF* error, mxs::Endpoint* down, const mxs::Reply& reply)
 {
+    mxb::LogScope scope(m_server->name());
     return m_up->handleError(error, this, reply);
 }
 

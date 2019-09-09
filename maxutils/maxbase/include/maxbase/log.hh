@@ -71,4 +71,36 @@ public:
         mxb_log_finish();
     }
 };
+
+// RAII class for setting and clearing the "scope" of the log messages. Adds the given object name to log
+// messages as long as the object is alive.
+class LogScope
+{
+public:
+    LogScope(const LogScope&) = delete;
+    LogScope& operator=(const LogScope&) = delete;
+
+    explicit LogScope(const char* name)
+        : m_prev_scope(s_current_scope)
+        , m_name(name)
+    {
+        s_current_scope = this;
+    }
+
+    ~LogScope()
+    {
+        s_current_scope = m_prev_scope;
+    }
+
+    static const char* current_scope()
+    {
+        return s_current_scope ? s_current_scope->m_name : nullptr;
+    }
+
+private:
+    LogScope*   m_prev_scope;
+    const char* m_name;
+
+    static thread_local LogScope* s_current_scope;
+};
 }

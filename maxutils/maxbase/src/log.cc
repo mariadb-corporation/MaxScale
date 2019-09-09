@@ -12,6 +12,7 @@
  */
 
 #include <maxbase/log.h>
+#include <maxbase/log.hh>
 
 #include <sys/time.h>
 #include <syslog.h>
@@ -760,6 +761,13 @@ int mxb_log_message(int priority,
 
             int modname_len = modname ? strlen(modname) + 3 : 0;    // +3 due to "[...] "
 
+            // If we know the actual object name, use that instead
+            if (auto scope = mxb::LogScope::current_scope())
+            {
+                modname_len = strlen(scope) + 3;
+                modname = scope;
+            }
+
             static const char SUPPRESSION[] =
                 " (subsequent similar messages suppressed for %lu milliseconds)";
             int suppression_len = 0;
@@ -916,4 +924,9 @@ int mxb_log_message(int priority,
 int mxb_log_oom(const char* message)
 {
     return this_unit.sLogger->write(message, strlen(message)) ? 0 : -1;
+}
+
+namespace maxbase
+{
+thread_local LogScope* LogScope::s_current_scope {nullptr};
 }

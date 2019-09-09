@@ -39,6 +39,7 @@
 #include <maxscale/authenticator2.hh>
 #include <maxscale/service.hh>
 #include <maxbase/alloc.h>
+#include <maxbase/log.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/paths.h>
 #include <maxscale/poll.hh>
@@ -1620,6 +1621,7 @@ mxs::Target* ServiceEndpoint::target() const
 
 bool ServiceEndpoint::connect()
 {
+    mxb::LogScope scope(m_service->name());
     std::vector<mxs::Endpoint*> endpoints;
     endpoints.reserve(m_down.size());
     std::transform(m_down.begin(), m_down.end(), std::back_inserter(endpoints),
@@ -1703,6 +1705,7 @@ bool ServiceEndpoint::connect()
 
 void ServiceEndpoint::close()
 {
+    mxb::LogScope scope(m_service->name());
     mxb_assert(m_open);
     m_service->router->closeSession(m_service->router_instance, m_router_session);
 
@@ -1737,12 +1740,14 @@ bool ServiceEndpoint::is_open() const
 
 int32_t ServiceEndpoint::routeQuery(GWBUF* buffer)
 {
+    mxb::LogScope scope(m_service->name());
     mxb_assert(m_open);
     return m_head.routeQuery(m_head.instance, m_head.session, buffer);
 }
 
 int32_t ServiceEndpoint::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
+    mxb::LogScope scope(m_service->name());
     mxb_assert(m_open);
     m_service->router->clientReply(m_service->router_instance, m_router_session, buffer, down, reply);
 
@@ -1752,6 +1757,7 @@ int32_t ServiceEndpoint::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const
 
 bool ServiceEndpoint::handleError(GWBUF* error, mxs::Endpoint* down, const mxs::Reply& reply)
 {
+    mxb::LogScope scope(m_service->name());
     mxb_assert(m_open);
     bool ok = m_service->router->handleError(m_service->router_instance, m_router_session,
                                              error, down, reply);
