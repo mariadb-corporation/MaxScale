@@ -1306,7 +1306,7 @@ void MonitorServer::log_connect_error(ConnectResult rval)
 
 void MonitorServer::log_state_change()
 {
-    string prev = Target::status_to_string(mon_prev_status, server->stats().n_connections);
+    string prev = Target::status_to_string(mon_prev_status, server->stats().n_current);
     string next = server->status_string();
     MXS_NOTICE("Server changed state: %s[%s:%u]: %s. [%s] -> [%s]",
                server->name(), server->address, server->port,

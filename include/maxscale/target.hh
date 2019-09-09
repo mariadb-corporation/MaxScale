@@ -257,7 +257,7 @@ public:
      */
     std::string status_string() const
     {
-        return status_to_string(status(), stats().n_connections);
+        return status_to_string(status(), stats().n_current);
     }
 
     // Converts status bits to strings
