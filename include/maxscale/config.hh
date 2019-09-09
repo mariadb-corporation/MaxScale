@@ -212,6 +212,25 @@ public:
     T get_duration(const std::string& key) const = delete;
 
     /**
+     * @brief Get a target value
+     *
+     * @param key Parameter name
+     *
+     * @return Pointer to target
+     */
+    mxs::Target* get_target(const std::string& key) const;
+
+
+    /**
+     * Get a list of targets
+     *
+     * @param key Parameter name
+     *
+     * @return List of found servers
+     */
+    std::vector<mxs::Target*> get_target_list(const std::string& key) const;
+
+    /**
      * @brief Get a service value
      *
      * @param key Parameter name

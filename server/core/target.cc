@@ -12,6 +12,9 @@
  */
 
 #include <maxscale/target.hh>
+#include <maxscale/service.hh>
+#include <maxscale/server.hh>
+
 #include <mysqld_error.h>
 
 const MXS_ENUM_VALUE rank_values[] =
@@ -25,6 +28,19 @@ const char* DEFAULT_RANK = "primary";
 
 namespace maxscale
 {
+
+// static
+Target* Target::find(const std::string& name)
+{
+    mxs::Target* rval = SERVER::find_by_unique_name(name.c_str());
+
+    if (!rval)
+    {
+        rval = service_find(name.c_str());
+    }
+
+    return rval;
+}
 
 // static
 std::string Target::status_to_string(uint64_t flags, int n_connections)

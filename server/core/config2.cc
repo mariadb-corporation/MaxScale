@@ -719,6 +719,67 @@ std::string ParamServer::to_string(value_type value) const
 }
 
 /**
+ * ParamTarget
+ */
+std::string ParamTarget::type() const
+{
+    return "target";
+}
+
+std::string ParamTarget::default_to_string() const
+{
+    return "";
+}
+
+bool ParamTarget::validate(const std::string& value_as_string, std::string* pMessage) const
+{
+    value_type value;
+    return from_string(value_as_string, &value, pMessage);
+}
+
+bool ParamTarget::set(Type& value, const std::string& value_as_string) const
+{
+    mxb_assert(&value.parameter() == this);
+
+    Target& target_value = static_cast<Target&>(value);
+
+    value_type x;
+    bool valid = from_string(value_as_string, &x);
+
+    if (valid)
+    {
+        target_value.set(x);
+    }
+
+    return valid;
+}
+
+bool ParamTarget::from_string(const std::string& value_as_string,
+                              value_type* pValue,
+                              std::string* pMessage) const
+{
+    *pValue = SERVER::find_by_unique_name(value_as_string);
+
+    if (!*pValue)
+    {
+        *pValue = service_find(value_as_string.c_str());
+    }
+
+    if (!*pValue && pMessage)
+    {
+        *pMessage = "Unknown target: ";
+        *pMessage += value_as_string;
+    }
+
+    return *pValue;
+}
+
+std::string ParamTarget::to_string(value_type value) const
+{
+    return value->name();
+}
+
+/**
  * ParamSize
  */
 std::string ParamSize::type() const

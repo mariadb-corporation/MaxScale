@@ -259,6 +259,15 @@ public:
     static std::string status_to_string(uint64_t flags, int n_connections);
 
     /**
+     * Find a target by name
+     *
+     * @param name Name of the target to find
+     *
+     * @return The target or nullptr if target was not found
+     */
+    static Target* find(const std::string& name);
+
+    /**
      * Get target statistics
      */
     const Stats& stats() const

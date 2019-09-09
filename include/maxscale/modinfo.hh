@@ -80,7 +80,9 @@ enum mxs_module_param_type
     MXS_MODULE_PARAM_PATH,          /**< Path to a file or a directory */
     MXS_MODULE_PARAM_SERVICE,       /**< Service name */
     MXS_MODULE_PARAM_SERVER,        /**< Server name */
+    MXS_MODULE_PARAM_TARGET,        /**< Target name (server or service) */
     MXS_MODULE_PARAM_SERVERLIST,    /**< List of server names, separated by ',' */
+    MXS_MODULE_PARAM_TARGETLIST,    /**< List of target names, separated by ',' */
     MXS_MODULE_PARAM_REGEX,         /**< A regex string enclosed in '/' */
     MXS_MODULE_PARAM_DURATION,      /**< Duration in milliseconds */
 };
@@ -259,6 +261,9 @@ static inline const char* mxs_module_param_type_to_string(enum mxs_module_param_
 
     case MXS_MODULE_PARAM_SERVERLIST:
         return "serverlist";
+
+    case MXS_MODULE_PARAM_TARGETLIST:
+        return "list of targets";
 
     case MXS_MODULE_PARAM_REGEX:
         return "regular expression";

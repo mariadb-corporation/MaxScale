@@ -695,6 +695,34 @@ public:
 };
 
 /**
+ * ParamTarget
+ */
+class ParamTarget : public Param
+{
+public:
+    using value_type = mxs::Target *;
+
+    ParamTarget(Specification* pSpecification,
+                const char* zName,
+                const char* zDescription)
+        : Param(pSpecification, zName, zDescription, Param::MANDATORY, MXS_MODULE_PARAM_TARGET)
+    {
+    }
+
+    std::string type() const override;
+
+    std::string default_to_string() const override;
+
+    bool validate(const std::string& value_as_string, std::string* pMessage) const override;
+
+    bool set(Type& value, const std::string& value_as_string) const override;
+
+    bool from_string(const std::string& value, value_type* pValue,
+                     std::string* pMessage = nullptr) const;
+    std::string to_string(value_type value) const;
+};
+
+/**
  * ParamSize
  */
 class ParamSize : public Param
@@ -1296,6 +1324,18 @@ class Server : public ConcreteType<Server, ParamServer>
 public:
     Server(Configuration* pConfiguration, const ParamServer* pParam)
         : ConcreteType<Server, ParamServer>(pConfiguration, pParam)
+    {
+    }
+};
+
+/**
+ * Target
+ */
+class Target : public ConcreteType<Target, ParamTarget>
+{
+public:
+    Target(Configuration* pConfiguration, const ParamTarget* pParam)
+        : ConcreteType<Target, ParamTarget>(pConfiguration, pParam)
     {
     }
 };

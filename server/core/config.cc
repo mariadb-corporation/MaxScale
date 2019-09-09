@@ -1085,7 +1085,8 @@ std::unordered_set<CONFIG_CONTEXT*> get_dependencies(const std::vector<CONFIG_CO
                 if (obj->m_parameters.contains(p[i].name))
                 {
                     if (p[i].type == MXS_MODULE_PARAM_SERVICE
-                        || p[i].type == MXS_MODULE_PARAM_SERVER)
+                        || p[i].type == MXS_MODULE_PARAM_SERVER
+                        || p[i].type == MXS_MODULE_PARAM_TARGET)
                     {
                         std::string v = obj->m_parameters.get_string(p[i].name);
                         rval.insert(name_to_object(objects, obj, v));
@@ -1501,6 +1502,24 @@ std::vector<SERVER*> MXS_CONFIG_PARAMETER::get_server_list(const string& key, st
         }
     }
     return server_arr;
+}
+
+mxs::Target* MXS_CONFIG_PARAMETER::get_target(const string& key) const
+{
+    return mxs::Target::find(get_string(key));
+}
+
+std::vector<mxs::Target*> MXS_CONFIG_PARAMETER::get_target_list(const string& key) const
+{
+    std::vector<mxs::Target*> targets;
+
+    for (auto t : mxb::strtok(get_string(key), ", "))
+    {
+        targets.push_back(mxs::Target::find(t));
+        mxb_assert(targets.back());
+    }
+
+    return targets;
 }
 
 char* MXS_CONFIG_PARAMETER::get_c_str_copy(const string& key) const
@@ -2633,8 +2652,14 @@ const char* param_type_to_str(const MXS_MODULE_PARAM* params, const char* name)
             case MXS_MODULE_PARAM_SERVER:
                 return "a server name";
 
+            case MXS_MODULE_PARAM_TARGET:
+                return "a target name";
+
             case MXS_MODULE_PARAM_SERVERLIST:
                 return "a comma-separated list of server names";
+
+            case MXS_MODULE_PARAM_TARGETLIST:
+                return "a comma-separated list of target names";
 
             case MXS_MODULE_PARAM_PATH:
                 return "a path to a file";
@@ -3748,10 +3773,12 @@ void config_fix_param(const MXS_MODULE_PARAM* params, const string& name, string
             {
             case MXS_MODULE_PARAM_SERVER:
             case MXS_MODULE_PARAM_SERVICE:
+            case MXS_MODULE_PARAM_TARGET:
                 fix_object_name(temp_value);
                 break;
 
             case MXS_MODULE_PARAM_SERVERLIST:
+            case MXS_MODULE_PARAM_TARGETLIST:
                 fix_serverlist(temp_value);
                 break;
 
@@ -3968,6 +3995,14 @@ bool config_param_is_valid(const MXS_MODULE_PARAM* params,
                 }
                 break;
 
+            case MXS_MODULE_PARAM_TARGET:
+                if (context && (config_contains_type(context, fixed_value, CN_SERVER)
+                                || config_contains_type(context, fixed_value, CN_SERVICE)))
+                {
+                    valid = true;
+                }
+                break;
+
             case MXS_MODULE_PARAM_SERVERLIST:
                 if (context)
                 {
@@ -3988,6 +4023,26 @@ bool config_param_is_valid(const MXS_MODULE_PARAM* params,
                     break;
                 }
 
+            case MXS_MODULE_PARAM_TARGETLIST:
+                if (context)
+                {
+                    auto server_names = config_break_list_string(value);
+                    if (!server_names.empty())
+                    {
+                        valid = true;
+                        /* Check that every server name in the list is found in the config. */
+                        for (auto elem : server_names)
+                        {
+                            if (!config_contains_type(context, elem.c_str(), CN_SERVER)
+                                && !config_contains_type(context, elem.c_str(), CN_SERVICE))
+                            {
+                                valid = false;
+                                break;
+                            }
+                        }
+                    }
+                    break;
+                }
 
             case MXS_MODULE_PARAM_PATH:
                 valid = check_path_parameter(&params[i], value);
