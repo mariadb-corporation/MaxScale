@@ -47,7 +47,7 @@ int main(int argc, char** argv)
         cout << "Disks-plugin installed and gtid_strict_mode enabled on all servers. "
                 "Starting MaxScale.\n";
         test.start_maxscale();
-        test.maxscales->wait_for_monitor(1);
+        test.maxscales->wait_for_monitor(2);
         disks_plugin_loaded = true;
     }
     else
