@@ -63,8 +63,6 @@ static int                   maxscaled_write_event(DCB* dcb);
 static int                   maxscaled_write(DCB* dcb, GWBUF* queue);
 static int                   maxscaled_error(DCB* dcb);
 static int                   maxscaled_hangup(DCB* dcb);
-static MXS_PROTOCOL_SESSION* maxscaled_new_client_session(MXS_SESSION*, mxs::Component*);
-static void                  maxscaled_free_session(MXS_PROTOCOL_SESSION*);
 static bool                  maxscaled_init_connection(DCB*);
 static void                  maxscaled_finish_connection(DCB* dcb);
 
@@ -395,34 +393,6 @@ static int maxscaled_hangup(DCB* dcb)
 {
     DCB::close(dcb);
     return 0;
-}
-
-static MXS_PROTOCOL_SESSION* maxscaled_new_client_session(MXS_SESSION* session, mxs::Component*)
-{
-    MAXSCALED* maxscaled_protocol = (MAXSCALED*)calloc(1, sizeof(MAXSCALED));
-
-    if (maxscaled_protocol)
-    {
-        pthread_mutex_init(&maxscaled_protocol->lock, NULL);
-    }
-
-    return maxscaled_protocol;
-}
-
-static void maxscaled_free_session(MXS_PROTOCOL_SESSION* protocol_session)
-{
-    MAXSCALED* maxscaled = static_cast<MAXSCALED*>(protocol_session);
-
-    if (maxscaled)
-    {
-        if (maxscaled->username)
-        {
-            MXS_FREE(maxscaled->username);
-            maxscaled->username = NULL;
-        }
-
-        MXS_FREE(maxscaled);
-    }
 }
 
 static bool maxscaled_init_connection(DCB* client_dcb)

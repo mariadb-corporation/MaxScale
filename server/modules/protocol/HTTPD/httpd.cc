@@ -51,8 +51,6 @@ static int                   httpd_write_event(DCB* dcb);
 static int                   httpd_write(DCB* dcb, GWBUF* queue);
 static int                   httpd_error(DCB* dcb);
 static int                   httpd_hangup(DCB* dcb);
-static MXS_PROTOCOL_SESSION* httpd_new_client_session(MXS_SESSION* session, mxs::Component*);
-static void                  httpd_free_session(MXS_PROTOCOL_SESSION* protocol_session);
 static bool                  httpd_init_connection(DCB* dcb);
 static void                  httpd_finish_connection(DCB* dcb);
 static int                   httpd_get_line(int sock, char* buf, int size);
@@ -406,11 +404,6 @@ static int httpd_hangup(DCB* dcb)
     return 0;
 }
 
-static MXS_PROTOCOL_SESSION* httpd_new_client_session(MXS_SESSION*, mxs::Component*)
-{
-    return static_cast<HTTPD_session*>(MXS_CALLOC(1, sizeof(HTTPD_session)));
-}
-
 static bool httpd_init_connection(DCB* client_dcb)
 {
     return session_start(client_dcb->session());
@@ -418,11 +411,6 @@ static bool httpd_init_connection(DCB* client_dcb)
 
 static void httpd_finish_connection(DCB* client_dcb)
 {
-}
-
-static void httpd_free_session(MXS_PROTOCOL_SESSION* protocol_session)
-{
-    MXS_FREE(protocol_session);
 }
 
 /**
