@@ -30,11 +30,12 @@ public:
 
     static GWBUF* reject(const char* host);
 
-    int32_t ready_for_reading(DCB* dcb) override;
+    void ready_for_reading(DCB* dcb) override;
+    void write_ready(DCB* dcb) override;
+    void error(DCB* dcb) override;
+    void hangup(DCB* dcb) override;
+
     int32_t write(DCB* dcb, GWBUF* buffer) override;
-    int32_t write_ready(DCB* dcb) override;
-    int32_t error(DCB* dcb) override;
-    int32_t hangup(DCB* dcb) override;
 
     bool init_connection(DCB* dcb) override;
     void finish_connection(DCB* dcb) override;

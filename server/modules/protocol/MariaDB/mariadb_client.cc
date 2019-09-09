@@ -1765,7 +1765,7 @@ void MySQLClientProtocol::parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data)
  * MXS_PROTOCOL_API implementation.
  */
 
-int32_t MySQLClientProtocol::ready_for_reading(DCB* dcb)
+void MySQLClientProtocol::ready_for_reading(DCB* dcb)
 {
     GWBUF* read_buffer = NULL;
     int return_code = 0;
@@ -1775,7 +1775,7 @@ int32_t MySQLClientProtocol::ready_for_reading(DCB* dcb)
     if (dcb->role() != DCB::Role::CLIENT)
     {
         MXS_ERROR("DCB must be a client handler for MySQL client protocol.");
-        return 1;
+        return;
     }
 
     auto protocol = this;
@@ -1820,7 +1820,7 @@ int32_t MySQLClientProtocol::ready_for_reading(DCB* dcb)
 
     if (nbytes_read == 0)
     {
-        return return_code;
+        return;
     }
 
     if (nbytes_read == max_single_read && dcb->socket_bytes_readable() > 0)
@@ -1890,7 +1890,7 @@ int32_t MySQLClientProtocol::ready_for_reading(DCB* dcb)
         break;
     }
 
-    return return_code;
+    return;
 }
 
 int32_t MySQLClientProtocol::write(DCB* dcb, GWBUF* queue)
@@ -1902,24 +1902,22 @@ int32_t MySQLClientProtocol::write(DCB* dcb, GWBUF* queue)
     return dcb->writeq_append(queue);
 }
 
-int32_t MySQLClientProtocol::write_ready(DCB* dcb)
+void MySQLClientProtocol::write_ready(DCB* dcb)
 {
     mxb_assert(dcb->state() != DCB::State::DISCONNECTED);
     if ((dcb->state() != DCB::State::DISCONNECTED) && (protocol_auth_state == MXS_AUTH_STATE_COMPLETE))
     {
         dcb->writeq_drain();
     }
-    return 1;
 }
 
-int32_t MySQLClientProtocol::error(DCB* dcb)
+void MySQLClientProtocol::error(DCB* dcb)
 {
     mxb_assert(dcb->session()->state() != MXS_SESSION::State::STOPPING);
     DCB::close(dcb);
-    return 1;
 }
 
-int32_t MySQLClientProtocol::hangup(DCB* generic_dcb)
+void MySQLClientProtocol::hangup(DCB* generic_dcb)
 {
     mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
@@ -1962,8 +1960,6 @@ int32_t MySQLClientProtocol::hangup(DCB* generic_dcb)
     }
 
     DCB::close(dcb);
-
-    return 1;
 }
 
 bool MySQLClientProtocol::init_connection(DCB* client_dcb)

@@ -214,33 +214,29 @@ private:
         {
         }
 
-        int32_t ready_for_reading(DCB*) override
+        void ready_for_reading(DCB*) override
         {
             mxb_assert(!true);
-            return 0;
+        }
+
+        void write_ready(DCB*) override
+        {
+            mxb_assert(!true);
+        }
+
+        void error(DCB*) override
+        {
+            mxb_assert(!true);
+        }
+
+        void hangup(DCB*) override
+        {
+            mxb_assert(!true);
         }
 
         int32_t write(DCB*, GWBUF* pBuffer) override
         {
             return m_owner.write(pBuffer);
-        }
-
-        int32_t write_ready(DCB*) override
-        {
-            mxb_assert(!true);
-            return 0;
-        }
-
-        int32_t error(DCB*) override
-        {
-            mxb_assert(!true);
-            return 0;
-        }
-
-        int32_t hangup(DCB*) override
-        {
-            mxb_assert(!true);
-            return 0;
         }
 
         json_t* diagnostics_json(DCB*) override

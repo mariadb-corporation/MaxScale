@@ -61,37 +61,30 @@ public:
         /**
          * EPOLLIN handler, used to read available data from network socket
          *
-         * @param dcb DCB to read from
-         * @return 1 on success, 0 on error
+         * @param dcb  DCB to read from.
          */
-        virtual int32_t ready_for_reading(DCB* dcb) = 0;
+        virtual void ready_for_reading(DCB* dcb) = 0;
 
         /**
          * EPOLLOUT handler, used to write buffered data
          *
-         * @param dcb DCB to write to
-         * @return 1 on success, 0 on error
-         * @note Currently the return value is ignored
+         * @param dcb  DCB to write to.
          */
-        virtual int32_t write_ready(DCB* dcb) = 0;
+        virtual void write_ready(DCB* dcb) = 0;
 
         /**
          * EPOLLERR handler
          *
-         * @param dcb DCB for which the error occurred
-         * @return 1 on success, 0 on error
-         * @note Currently the return value is ignored
+         * @param dcb  DCB for which the error occurred.
          */
-        virtual int32_t error(DCB* dcb) = 0;
+        virtual void error(DCB* dcb) = 0;
 
         /**
          * EPOLLHUP and EPOLLRDHUP handler
          *
-         * @param dcb DCB for which the hangup occurred
-         * @return 1 on success, 0 on error
-         * @note Currently the return value is ignored
+         * @param dcb  DCB for which the hangup occurred.
          */
-        virtual int32_t hangup(DCB* dcb) = 0;
+        virtual void hangup(DCB* dcb) = 0;
     };
 
     class Manager

@@ -111,9 +111,9 @@ MAXSCALED::~MAXSCALED()
     }
 }
 
-int32_t MAXSCALED::ready_for_reading(DCB* dcb)
+void MAXSCALED::ready_for_reading(DCB* dcb)
 {
-    return maxscaled_read_event(dcb);
+    maxscaled_read_event(dcb);
 }
 
 int32_t MAXSCALED::write(DCB* dcb, GWBUF* buffer)
@@ -121,19 +121,19 @@ int32_t MAXSCALED::write(DCB* dcb, GWBUF* buffer)
     return maxscaled_write(dcb, buffer);
 }
 
-int32_t MAXSCALED::write_ready(DCB* dcb)
+void MAXSCALED::write_ready(DCB* dcb)
 {
-    return maxscaled_write_event(dcb);
+    maxscaled_write_event(dcb);
 }
 
-int32_t MAXSCALED::error(DCB* dcb)
+void MAXSCALED::error(DCB* dcb)
 {
-    return maxscaled_error(dcb);
+    maxscaled_error(dcb);
 }
 
-int32_t MAXSCALED::hangup(DCB* dcb)
+void MAXSCALED::hangup(DCB* dcb)
 {
-    return maxscaled_hangup(dcb);
+    maxscaled_hangup(dcb);
 }
 
 bool MAXSCALED::init_connection(DCB* dcb)

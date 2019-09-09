@@ -279,7 +279,7 @@ void MySQLBackendProtocol::prepare_for_write(DCB* dcb, GWBUF* buffer)
  * @param dcb   The backend Descriptor Control Block
  * @return 1 on operation, 0 for no action
  */
-int32_t MySQLBackendProtocol::ready_for_reading(DCB* plain_dcb)
+void MySQLBackendProtocol::ready_for_reading(DCB* plain_dcb)
 {
     mxb_assert(plain_dcb->role() == DCB::Role::BACKEND);
     BackendDCB* dcb = static_cast<BackendDCB*>(plain_dcb);
@@ -289,7 +289,7 @@ int32_t MySQLBackendProtocol::ready_for_reading(DCB* plain_dcb)
         /** If a DCB gets a read event when it's in the persistent pool, it is
          * treated as if it were an error. */
         dcb->trigger_hangup_event();
-        return 0;
+        return;
     }
 
     mxb_assert(dcb->session());
@@ -302,10 +302,9 @@ int32_t MySQLBackendProtocol::ready_for_reading(DCB* plain_dcb)
               proto->protocol_auth_state,
               mxs::to_string(proto->protocol_auth_state));
 
-    int rc = 0;
     if (proto->protocol_auth_state == MXS_AUTH_STATE_COMPLETE)
     {
-        rc = gw_read_and_write(dcb);
+        gw_read_and_write(dcb);
     }
     else
     {
@@ -363,7 +362,7 @@ int32_t MySQLBackendProtocol::ready_for_reading(DCB* plain_dcb)
                     localq = gwbuf_make_contiguous(localq);
                     /** Send the queued commands to the backend */
                     prepare_for_write(dcb, localq);
-                    rc = backend_write_delayqueue(dcb, localq);
+                    backend_write_delayqueue(dcb, localq);
                 }
             }
             else if (proto->protocol_auth_state == MXS_AUTH_STATE_FAILED
@@ -382,7 +381,7 @@ int32_t MySQLBackendProtocol::ready_for_reading(DCB* plain_dcb)
         }
     }
 
-    return rc;
+    return;
 }
 
 void MySQLBackendProtocol::do_handle_error(DCB* dcb, const char* errmsg)
@@ -878,10 +877,8 @@ int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
  * @param dcb   The descriptor control block
  * @return      1 in success, 0 in case of failure,
  */
-int32_t MySQLBackendProtocol::write_ready(DCB* dcb)
+void MySQLBackendProtocol::write_ready(DCB* dcb)
 {
-    int rc = 1;
-
     if (dcb->state() != DCB::State::POLLING)
     {
         /** Don't write to backend if backend_dcb is not in poll set anymore */
@@ -896,8 +893,6 @@ int32_t MySQLBackendProtocol::write_ready(DCB* dcb)
 
         if (data)
         {
-            rc = 0;
-
             if (!com_quit)
             {
                 mysql_send_custom_error(dcb->session()->client_dcb, 1, 0,
@@ -918,10 +913,9 @@ int32_t MySQLBackendProtocol::write_ready(DCB* dcb)
     {
         mxb_assert(protocol_auth_state != MXS_AUTH_STATE_PENDING_CONNECT);
         dcb->writeq_drain();
-        MXS_DEBUG("wrote to dcb %p fd %d, return %d", dcb, dcb->fd(), rc);
     }
 
-    return rc;
+    return;
 }
 
 int MySQLBackendProtocol::handle_persistent_connection(BackendDCB* dcb, GWBUF* queue)
@@ -1112,7 +1106,7 @@ int32_t MySQLBackendProtocol::write(DCB* plain_dcb, GWBUF* queue)
  * closed and call DCB close function which triggers closing router session
  * and related backends (if any exists.
  */
-int32_t MySQLBackendProtocol::error(DCB* dcb)
+void MySQLBackendProtocol::error(DCB* dcb)
 {
     MXS_SESSION* session = dcb->session();
     if (!session)
@@ -1151,8 +1145,6 @@ int32_t MySQLBackendProtocol::error(DCB* dcb)
     {
         do_handle_error(dcb, "Lost connection to backend server.");
     }
-
-    return 1;
 }
 
 /**
@@ -1165,7 +1157,7 @@ int32_t MySQLBackendProtocol::error(DCB* dcb)
  * @param dcb The current Backend DCB
  * @return 1 always
  */
-int32_t MySQLBackendProtocol::hangup(DCB* dcb)
+void MySQLBackendProtocol::hangup(DCB* dcb)
 {
     mxb_assert(!dcb->is_closed());
     MXS_SESSION* session = dcb->session();
@@ -1193,8 +1185,6 @@ int32_t MySQLBackendProtocol::hangup(DCB* dcb)
             do_handle_error(dcb, "Lost connection to backend server.");
         }
     }
-
-    return 1;
 }
 
 /**

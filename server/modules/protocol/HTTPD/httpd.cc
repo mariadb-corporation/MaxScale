@@ -89,9 +89,9 @@ HTTPD_session* HTTPD_session::create(MXS_SESSION* session, mxs::Component* compo
     return new (std::nothrow) HTTPD_session();
 }
 
-int32_t HTTPD_session::ready_for_reading(DCB* dcb)
+void HTTPD_session::ready_for_reading(DCB* dcb)
 {
-    return httpd_read_event(dcb);
+    httpd_read_event(dcb);
 }
 
 int32_t HTTPD_session::write(DCB* dcb, GWBUF* buffer)
@@ -99,19 +99,19 @@ int32_t HTTPD_session::write(DCB* dcb, GWBUF* buffer)
     return httpd_write(dcb, buffer);
 }
 
-int32_t HTTPD_session::write_ready(DCB* dcb)
+void HTTPD_session::write_ready(DCB* dcb)
 {
-    return httpd_write_event(dcb);
+    httpd_write_event(dcb);
 }
 
-int32_t HTTPD_session::error(DCB* dcb)
+void HTTPD_session::error(DCB* dcb)
 {
-    return httpd_error(dcb);
+    httpd_error(dcb);
 }
 
-int32_t HTTPD_session::hangup(DCB* dcb)
+void HTTPD_session::hangup(DCB* dcb)
 {
-    return httpd_hangup(dcb);
+    httpd_hangup(dcb);
 }
 
 bool HTTPD_session::init_connection(DCB* dcb)

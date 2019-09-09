@@ -104,9 +104,9 @@ CDC_protocol* CDC_protocol::create(MXS_SESSION* session, mxs::Component* compone
     return cdc_protocol_init();
 }
 
-int32_t CDC_protocol::ready_for_reading(DCB* dcb)
+void CDC_protocol::ready_for_reading(DCB* dcb)
 {
-    return cdc_read_event(dcb);
+    cdc_read_event(dcb);
 }
 
 int32_t CDC_protocol::write(DCB* dcb, GWBUF* buffer)
@@ -114,19 +114,19 @@ int32_t CDC_protocol::write(DCB* dcb, GWBUF* buffer)
     return cdc_write(dcb, buffer);
 }
 
-int32_t CDC_protocol::write_ready(DCB* dcb)
+void CDC_protocol::write_ready(DCB* dcb)
 {
-    return cdc_write_event(dcb);
+    cdc_write_event(dcb);
 }
 
-int32_t CDC_protocol::error(DCB* dcb)
+void CDC_protocol::error(DCB* dcb)
 {
-    return cdc_error(dcb);
+    cdc_error(dcb);
 }
 
-int32_t CDC_protocol::hangup(DCB* dcb)
+void CDC_protocol::hangup(DCB* dcb)
 {
-    return cdc_hangup(dcb);
+    cdc_hangup(dcb);
 }
 
 bool CDC_protocol::init_connection(DCB* dcb)
