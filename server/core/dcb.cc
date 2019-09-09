@@ -101,7 +101,6 @@ static inline bool dcb_write_parameter_check(DCB* dcb, int fd, GWBUF* queue);
 static int         dcb_read_no_bytes_available(DCB* dcb, int fd, int nreadtotal);
 static int         dcb_set_socket_option(int sockfd, int level, int optname, void* optval, socklen_t optlen);
 
-static bool dcb_session_check(DCB* dcb, const char*);
 static int  upstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* userdata);
 static int  downstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* userdata);
 
@@ -2180,7 +2179,8 @@ uint32_t DCB::process_events(uint32_t events)
         {
             rc |= MXB_POLL_WRITE;
 
-            if (dcb_session_check(this, "write_ready"))
+            mxb_assert(ready());
+            if (ready())
             {
                 DCB_EH_NOTICE("Calling dcb->m_protocol_api.write_ready(%p)", this);
                 protocol_session()->write_ready(this);
@@ -2199,6 +2199,7 @@ uint32_t DCB::process_events(uint32_t events)
                       m_fd);
         }
     }
+
     if ((events & EPOLLIN) && (m_nClose == 0))
     {
         MXS_DEBUG("%lu [poll_waitevents] "
@@ -2208,7 +2209,8 @@ uint32_t DCB::process_events(uint32_t events)
                   m_fd);
         rc |= MXB_POLL_READ;
 
-        if (dcb_session_check(this, "read"))
+        mxb_assert(ready());
+        if (ready())
         {
             int return_code = 1;
             /** SSL authentication is still going on, we need to call DCB::ssl_handehake
@@ -2224,6 +2226,7 @@ uint32_t DCB::process_events(uint32_t events)
             }
         }
     }
+
     if ((events & EPOLLERR) && (m_nClose == 0))
     {
         int eno = gw_getsockerrno(m_fd);
@@ -2238,7 +2241,8 @@ uint32_t DCB::process_events(uint32_t events)
         }
         rc |= MXB_POLL_ERROR;
 
-        if (dcb_session_check(this, "error"))
+        mxb_assert(ready());
+        if (ready())
         {
             DCB_EH_NOTICE("Calling dcb->m_protocol_api.error(%p)", this);
             protocol_session()->error(this);
@@ -2261,7 +2265,8 @@ uint32_t DCB::process_events(uint32_t events)
 
         if (!m_hanged_up)
         {
-            if (dcb_session_check(this, "hangup EPOLLHUP"))
+            mxb_assert(ready());
+            if (ready())
             {
                 DCB_EH_NOTICE("Calling dcb->m_protocol_api.hangup(%p)", this);
                 protocol_session()->hangup(this);
@@ -2288,7 +2293,8 @@ uint32_t DCB::process_events(uint32_t events)
 
         if (!m_hanged_up)
         {
-            if (dcb_session_check(this, "hangup EPOLLRDHUP"))
+            mxb_assert(ready());
+            if (ready())
             {
                 DCB_EH_NOTICE("Calling dcb->m_protocol_api.hangup(%p)", this);
                 protocol_session()->hangup(this);
@@ -2431,30 +2437,6 @@ void DCB::trigger_hangup_event()
 void DCB::trigger_write_event()
 {
     add_event(EPOLLOUT);
-}
-
-/**
- * Check that the DCB has a session link before processing.
- * If not, log an error.  Processing will be bypassed
- *
- * @param   dcb         The DCB to check
- * @param   function    The name of the function about to be called
- * @return  bool        Does the DCB have a non-null session link
- */
-static bool dcb_session_check(DCB* dcb, const char* function)
-{
-    if (dcb->ready())
-    {
-        return true;
-    }
-    else
-    {
-        MXS_ERROR("The dcb %p that was about to be processed by %s is not "
-                  "ready for events.",
-                  dcb,
-                  function);
-        return false;
-    }
 }
 
 static bool add_fd_to_routing_workers(int fd, uint32_t events, MXB_POLL_DATA* data)
