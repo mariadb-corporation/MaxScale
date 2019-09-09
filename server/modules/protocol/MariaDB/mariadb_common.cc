@@ -646,10 +646,9 @@ mysql_tx_state_t parse_trx_state(const char* str)
     return (mysql_tx_state_t)s;
 }
 
-MySQLProtocol::MySQLProtocol(MXS_SESSION* session, SERVER* server, mxs::Component* component)
+MySQLProtocol::MySQLProtocol(MXS_SESSION* session, SERVER* server)
     : m_session(session)
     , m_reply(server)
-    , m_component(component)
     , m_version(service_get_version(session->service, SERVICE_VERSION_MIN))
 {
 }

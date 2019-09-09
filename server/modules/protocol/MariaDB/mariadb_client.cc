@@ -442,12 +442,13 @@ static bool kill_func(DCB* dcb, void* data)
 {
     ConnKillInfo* info = static_cast<ConnKillInfo*>(data);
     auto proto = static_cast<MySQLBackendProtocol*>(dcb->protocol_session());
+    uint64_t backend_thread_id = proto->thread_id();
 
     if (dcb->session()->id() == info->target_id
         && dcb->role() == DCB::Role::BACKEND
-        && (info->keep_thread_id == 0 || proto->thread_id != info->keep_thread_id))
+        && (info->keep_thread_id == 0 || backend_thread_id != info->keep_thread_id))
     {
-        if (proto->thread_id)
+        if (backend_thread_id)
         {
             // TODO: Isn't it from the context clear that dcb is a backend dcb, that is
             // TODO: perhaps that could be in the function prototype?
@@ -455,7 +456,7 @@ static bool kill_func(DCB* dcb, void* data)
 
             // DCB is connected and we know the thread ID so we can kill it
             std::stringstream ss;
-            ss << info->query_base << proto->thread_id;
+            ss << info->query_base << backend_thread_id;
 
             std::lock_guard<std::mutex> guard(info->lock);
             info->targets[backend_dcb->server()] = ss.str();
@@ -537,10 +538,9 @@ int MySQLClientProtocol::send_mysql_client_handshake(DCB* dcb)
         memcpy(mysql_filler_ten + 6, &new_flags, sizeof(new_flags));
     }
 
-    // Get the equivalent of the server thread id.
-    protocol->thread_id = dcb->session()->id();
-    // Send only the low 32bits in the handshake.
-    gw_mysql_set_byte4(mysql_thread_id_num, (uint32_t)(protocol->thread_id));
+    // Send the session id as the server thread id. Only the low 32bits are sent in the handshake.
+    auto thread_id = dcb->session()->id();
+    gw_mysql_set_byte4(mysql_thread_id_num, (uint32_t)(thread_id));
     memcpy(mysql_scramble_buf, server_scramble, 8);
 
     memcpy(mysql_plugin_data, server_scramble + 8, 12);
@@ -1212,7 +1212,7 @@ void MySQLClientProtocol::track_transaction_state(MXS_SESSION* session, GWBUF* p
 bool MySQLClientProtocol::handle_change_user(bool* changed_user, GWBUF** packetbuf)
 {
     bool ok = true;
-    MySQLProtocol* proto = this;
+    auto proto = this;
     if (!proto->changing_user && proto->reply().command() == MXS_COM_CHANGE_USER)
     {
         // Track the COM_CHANGE_USER progress at the session level
@@ -1544,8 +1544,7 @@ MySQLClientProtocol::process_special_commands(DCB* dcb, GWBUF* read_buffer, uint
 int MySQLClientProtocol::route_by_statement(uint64_t capabilities, GWBUF** p_readbuf)
 {
     int rc = 1;
-    MySQLProtocol* proto = this;
-    auto session = proto->session();
+    auto session = this->session();
     auto dcb = session->client_dcb;
 
     while (GWBUF* packetbuf = modutil_get_next_MySQL_packet(p_readbuf))
@@ -2000,7 +1999,8 @@ MySQLClientProtocol* MySQLClientProtocol::create(MXS_SESSION* session, mxs::Comp
 }
 
 MySQLClientProtocol::MySQLClientProtocol(MXS_SESSION* session, SERVER* server, mxs::Component* component)
-    : MySQLProtocol(session, server, component)
+    : MySQLProtocol(session, server)
+    , m_component(component)
 {
 }
 

@@ -337,7 +337,7 @@ struct KillInfo;
 class MySQLProtocol
 {
 public:
-    MySQLProtocol(MXS_SESSION* session, SERVER* server, mxs::Component* component);
+    MySQLProtocol(MXS_SESSION* session, SERVER* server);
     ~MySQLProtocol();
 
     /**
@@ -370,15 +370,12 @@ public:
     // Legacy public members
     //
     uint8_t  scramble[MYSQL_SCRAMBLE_LEN];  /*< server scramble, created or received */
-    uint32_t server_capabilities = 0;       /*< server capabilities, created or received */
     uint32_t client_capabilities = 0;       /*< client capabilities, created or received */
     uint32_t extra_capabilities = 0;        /*< MariaDB 10.2 capabilities */
 
-    uint64_t     thread_id = 0;             /*< Backend Thread ID */
     unsigned int charset = 0x8;             /*< Connection character set (default latin1 )*/
     GWBUF*       stored_query = nullptr;    /*< Temporarily stored queries */
     bool         changing_user = false;
-    uint32_t     num_eof_packets = 0;   /*< Encountered eof packet number, used for check packet type */
 
     //
     // END Legacy public members
@@ -388,28 +385,12 @@ public:
 
 protected:
     MXS_SESSION* m_session;                 /**< The session this protocol session is associated with */
-    uint16_t     m_modutil_state;           /**< TODO: This is an ugly hack, replace it */
     bool         m_opening_cursor = false;  /**< Whether we are opening a cursor */
     uint32_t     m_expected_rows = 0;       /**< Number of rows a COM_STMT_FETCH is retrieving */
-    uint64_t     m_num_coldefs = 0;
     bool         m_large_query = false;
-    bool         m_skip_next = false;
     mxs::Reply   m_reply;
 
-    // Called by the protocol module when routing needs to be done
-    mxs::Component* m_component;
-
     uint64_t m_version;     // Numeric server version
-
-    inline bool is_opening_cursor() const
-    {
-        return m_opening_cursor;
-    }
-
-    inline void set_cursor_opened()
-    {
-        m_opening_cursor = false;
-    }
 
     inline void set_reply_state(mxs::ReplyState state)
     {
@@ -445,9 +426,10 @@ public:
     {
         return CAP_BACKEND;
     }
+
     std::unique_ptr<mxs::BackendProtocol>
-    create_backend_protocol(MXS_SESSION* session, SERVER* server,
-                            mxs::Component* component) override;
+    create_backend_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component) override;
+
     static bool parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* kt_out,
                                  std::string* user_out);
     void mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t target_id, kill_type_t type);
@@ -478,6 +460,8 @@ private:
                                                      uint64_t keep_protocol_thread_id, kill_type_t type);
     void           mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_type_t type);
     void           execute_kill(MXS_SESSION* issuer, std::shared_ptr<KillInfo> info);
+
+    mxs::Component* m_component {nullptr}; /**< Downstream component, the session */
 };
 
 class MySQLBackendProtocol : public MySQLProtocol, public mxs::BackendProtocol
@@ -508,6 +492,9 @@ public:
      *  @param buff Buffer, may contain multiple complete packets
      */
     void mxs_mysql_get_session_track_info(GWBUF* buff);
+
+    uint64_t thread_id() const;
+    uint32_t server_capabilities {0};   /**< Server capabilities TODO: private */
 
 private:
     int              gw_read_and_write(DCB* dcb);
@@ -546,11 +533,17 @@ private:
     void             update_error(mxs::Buffer::iterator it, mxs::Buffer::iterator end);
     bool             consume_fetched_rows(GWBUF* buffer);
 
-    mxs_auth_state_t protocol_auth_state {MXS_AUTH_STATE_INIT};   /*< Backend authentication state */
+    mxs_auth_state_t protocol_auth_state {MXS_AUTH_STATE_INIT};   /**< Backend authentication state */
+    mxs::Component*  m_component {nullptr}; /**< Upstream component, typically a router */
 
-    int  m_ignore_replies {0};          /*< How many replies should be discarded */
-    bool m_collect_result {false};      /*< Collect the next result set as one buffer */
-    bool m_track_state {false};         /*< Track session state */
+    uint64_t m_thread_id {0};           /**< Backend thread id, received in backend handshake */
+    uint16_t m_modutil_state;           /**< TODO: This is an ugly hack, replace it */
+    int      m_ignore_replies {0};      /**< How many replies should be discarded */
+    bool     m_collect_result {false};  /**< Collect the next result set as one buffer */
+    bool     m_track_state {false};     /**< Track session state */
+    bool     m_skip_next {false};
+    uint64_t m_num_coldefs {0};
+    uint32_t m_num_eof_packets {0};     /**< Encountered eof packet number, used for check packet type */
 };
 
 struct MXS_PS_RESPONSE

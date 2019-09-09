@@ -40,7 +40,8 @@ static bool get_ip_string_and_port(struct sockaddr_storage* sa,
                                    in_port_t* port_out);
 
 MySQLBackendProtocol::MySQLBackendProtocol(MXS_SESSION* session, SERVER* server, mxs::Component* component)
-    : MySQLProtocol(session, server, component)
+    : MySQLProtocol(session, server)
+    , m_component(component)
 {
 }
 
@@ -1615,7 +1616,7 @@ json_t* MySQLBackendProtocol::diagnostics_json(DCB* dcb)
 {
     auto proto = this;
     json_t* obj = json_object();
-    json_object_set_new(obj, "connection_id", json_integer(proto->thread_id));
+    json_object_set_new(obj, "connection_id", json_integer(proto->m_thread_id));
     return obj;
 }
 
@@ -1857,7 +1858,7 @@ void MySQLBackendProtocol::mxs_mysql_get_session_track_info(GWBUF* buff)
             uint8_t cmd = header_and_command[MYSQL_COM_OFFSET];
 
             if (packet_len > MYSQL_OK_PACKET_MIN_LEN && cmd == MYSQL_REPLY_OK
-                && (proto->num_eof_packets % 2) == 0)
+                && (proto->m_num_eof_packets % 2) == 0)
             {
                 buff->gwbuf_type |= GWBUF_TYPE_REPLY_OK;
                 mxs_mysql_parse_ok_packet(buff, offset, packet_len);
@@ -1868,7 +1869,7 @@ void MySQLBackendProtocol::mxs_mysql_get_session_track_info(GWBUF* buff)
             if ((current_command == MXS_COM_QUERY || current_command == MXS_COM_STMT_FETCH
                  || current_command == MXS_COM_STMT_EXECUTE) && cmd == MYSQL_REPLY_EOF)
             {
-                proto->num_eof_packets++;
+                proto->m_num_eof_packets++;
             }
             offset += packet_len;
         }
@@ -2006,7 +2007,7 @@ int MySQLBackendProtocol::gw_decode_mysql_server_handshake(uint8_t* payload)
 
     /* TODO: Correct value of thread id could be queried later from backend if
      * there is any worry it might be larger than 32bit allows. */
-    conn->thread_id = tid;
+    conn->m_thread_id = tid;
 
     payload += 4;
 
@@ -2315,10 +2316,10 @@ void MySQLBackendProtocol::process_one_packet(Iter it, Iter end, uint32_t len)
             mxb_assert(cmd == MYSQL_REPLY_EOF && len == MYSQL_EOF_PACKET_LEN - MYSQL_HEADER_LEN);
             set_reply_state(ReplyState::RSET_ROWS);
 
-            if (is_opening_cursor())
+            if (m_opening_cursor)
             {
-                set_cursor_opened();
-                        MXS_INFO("Cursor successfully opened");
+                m_opening_cursor = false;
+                MXS_INFO("Cursor successfully opened");
                 set_reply_state(ReplyState::DONE);
             }
             break;
@@ -2439,4 +2440,9 @@ bool MySQLBackendProtocol::consume_fetched_rows(GWBUF* buffer)
     }
 
     return rval;
+}
+
+uint64_t MySQLBackendProtocol::thread_id() const
+{
+    return m_thread_id;
 }
