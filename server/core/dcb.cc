@@ -2140,10 +2140,9 @@ int ClientDCB::port() const
     return rval;
 }
 
-// static
-uint32_t DCB::process_events(DCB* dcb, uint32_t events)
+uint32_t DCB::process_events(uint32_t events)
 {
-    RoutingWorker* owner = static_cast<RoutingWorker*>(dcb->owner);
+    RoutingWorker* owner = static_cast<RoutingWorker*>(this->owner);
     mxb_assert(owner == RoutingWorker::get_current());
 
     uint32_t rc = MXB_POLL_NOP;
@@ -2152,17 +2151,17 @@ uint32_t DCB::process_events(DCB* dcb, uint32_t events)
      * It isn't obvious that this is impossible
      * mxb_assert(dcb->state() != State::DISCONNECTED);
      */
-    if (State::DISCONNECTED == dcb->state())
+    if (State::DISCONNECTED == m_state)
     {
         return rc;
     }
 
-    if (dcb->m_nClose != 0)
+    if (m_nClose != 0)
     {
         MXS_WARNING("Events reported for dcb(%p), owned by %d, that has been closed %" PRIu32 " times.",
-                    dcb,
+                    this,
                     owner->id(),
-                    dcb->m_nClose);
+                    m_nClose);
         mxb_assert(!true);
         return rc;
     }
@@ -2172,19 +2171,19 @@ uint32_t DCB::process_events(DCB* dcb, uint32_t events)
      * must be checked after each callback invocation.
      */
 
-    if ((events & EPOLLOUT) && (dcb->m_nClose == 0))
+    if ((events & EPOLLOUT) && (m_nClose == 0))
     {
         int eno = 0;
-        eno = gw_getsockerrno(dcb->m_fd);
+        eno = gw_getsockerrno(m_fd);
 
         if (eno == 0)
         {
             rc |= MXB_POLL_WRITE;
 
-            if (dcb_session_check(dcb, "write_ready"))
+            if (dcb_session_check(this, "write_ready"))
             {
-                DCB_EH_NOTICE("Calling dcb->m_protocol_api.write_ready(%p)", dcb);
-                dcb->protocol_session()->write_ready(dcb);
+                DCB_EH_NOTICE("Calling dcb->m_protocol_api.write_ready(%p)", this);
+                protocol_session()->write_ready(this);
             }
         }
         else
@@ -2196,38 +2195,38 @@ uint32_t DCB::process_events(DCB* dcb, uint32_t events)
                       pthread_self(),
                       eno,
                       strerror_r(eno, errbuf, sizeof(errbuf)),
-                      dcb,
-                      dcb->m_fd);
+                      this,
+                      m_fd);
         }
     }
-    if ((events & EPOLLIN) && (dcb->m_nClose == 0))
+    if ((events & EPOLLIN) && (m_nClose == 0))
     {
         MXS_DEBUG("%lu [poll_waitevents] "
                   "Read in dcb %p fd %d",
                   pthread_self(),
-                  dcb,
-                  dcb->m_fd);
+                  this,
+                  m_fd);
         rc |= MXB_POLL_READ;
 
-        if (dcb_session_check(dcb, "read"))
+        if (dcb_session_check(this, "read"))
         {
             int return_code = 1;
             /** SSL authentication is still going on, we need to call DCB::ssl_handehake
              * until it return 1 for success or -1 for error */
-            if (dcb->m_ssl_state == SSLState::HANDSHAKE_REQUIRED)
+            if (m_ssl_state == SSLState::HANDSHAKE_REQUIRED)
             {
-                return_code = dcb->ssl_handshake();
+                return_code = ssl_handshake();
             }
             if (1 == return_code)
             {
-                DCB_EH_NOTICE("Calling dcb->m_protocol_api.read(%p)", dcb);
-                dcb->protocol_session()->read(dcb);
+                DCB_EH_NOTICE("Calling dcb->m_protocol_api.read(%p)", this);
+                protocol_session()->read(this);
             }
         }
     }
-    if ((events & EPOLLERR) && (dcb->m_nClose == 0))
+    if ((events & EPOLLERR) && (m_nClose == 0))
     {
-        int eno = gw_getsockerrno(dcb->m_fd);
+        int eno = gw_getsockerrno(m_fd);
         if (eno != 0)
         {
             char errbuf[MXS_STRERROR_BUFLEN];
@@ -2239,63 +2238,63 @@ uint32_t DCB::process_events(DCB* dcb, uint32_t events)
         }
         rc |= MXB_POLL_ERROR;
 
-        if (dcb_session_check(dcb, "error"))
+        if (dcb_session_check(this, "error"))
         {
-            DCB_EH_NOTICE("Calling dcb->m_protocol_api.error(%p)", dcb);
-            dcb->protocol_session()->error(dcb);
+            DCB_EH_NOTICE("Calling dcb->m_protocol_api.error(%p)", this);
+            protocol_session()->error(this);
         }
     }
 
-    if ((events & EPOLLHUP) && (dcb->m_nClose == 0))
+    if ((events & EPOLLHUP) && (m_nClose == 0))
     {
-        MXB_AT_DEBUG(int eno = gw_getsockerrno(dcb->m_fd));
+        MXB_AT_DEBUG(int eno = gw_getsockerrno(m_fd));
         MXB_AT_DEBUG(char errbuf[MXS_STRERROR_BUFLEN]);
         MXS_DEBUG("%lu [poll_waitevents] "
                   "EPOLLHUP on dcb %p, fd %d. "
                   "Errno %d, %s.",
                   pthread_self(),
-                  dcb,
-                  dcb->m_fd,
+                  this,
+                  m_fd,
                   eno,
                   strerror_r(eno, errbuf, sizeof(errbuf)));
         rc |= MXB_POLL_HUP;
 
-        if (!dcb->m_hanged_up)
+        if (!m_hanged_up)
         {
-            if (dcb_session_check(dcb, "hangup EPOLLHUP"))
+            if (dcb_session_check(this, "hangup EPOLLHUP"))
             {
-                DCB_EH_NOTICE("Calling dcb->m_protocol_api.hangup(%p)", dcb);
-                dcb->protocol_session()->hangup(dcb);
+                DCB_EH_NOTICE("Calling dcb->m_protocol_api.hangup(%p)", this);
+                protocol_session()->hangup(this);
             }
 
-            dcb->m_hanged_up = true;
+            m_hanged_up = true;
         }
     }
 
 #ifdef EPOLLRDHUP
-    if ((events & EPOLLRDHUP) && (dcb->m_nClose == 0))
+    if ((events & EPOLLRDHUP) && (m_nClose == 0))
     {
-        MXB_AT_DEBUG(int eno = gw_getsockerrno(dcb->m_fd));
+        MXB_AT_DEBUG(int eno = gw_getsockerrno(m_fd));
         MXB_AT_DEBUG(char errbuf[MXS_STRERROR_BUFLEN]);
         MXS_DEBUG("%lu [poll_waitevents] "
                   "EPOLLRDHUP on dcb %p, fd %d. "
                   "Errno %d, %s.",
                   pthread_self(),
-                  dcb,
-                  dcb->m_fd,
+                  this,
+                  m_fd,
                   eno,
                   strerror_r(eno, errbuf, sizeof(errbuf)));
         rc |= MXB_POLL_HUP;
 
-        if (!dcb->m_hanged_up)
+        if (!m_hanged_up)
         {
-            if (dcb_session_check(dcb, "hangup EPOLLRDHUP"))
+            if (dcb_session_check(this, "hangup EPOLLRDHUP"))
             {
-                DCB_EH_NOTICE("Calling dcb->m_protocol_api.hangup(%p)", dcb);
-                dcb->protocol_session()->hangup(dcb);
+                DCB_EH_NOTICE("Calling dcb->m_protocol_api.hangup(%p)", this);
+                protocol_session()->hangup(this);
             }
 
-            dcb->m_hanged_up = true;
+            m_hanged_up = true;
         }
     }
 #endif
@@ -2307,7 +2306,7 @@ uint32_t DCB::process_events(DCB* dcb, uint32_t events)
 uint32_t DCB::event_handler(DCB* dcb, uint32_t events)
 {
     this_thread.current_dcb = dcb;
-    uint32_t rv = DCB::process_events(dcb, events);
+    uint32_t rv = dcb->process_events(events);
 
     // When all I/O events have been handled, we will immediately
     // process an added fake event. As the handling of a fake event
@@ -2319,7 +2318,7 @@ uint32_t DCB::event_handler(DCB* dcb, uint32_t events)
         events = dcb->m_triggered_event;
         dcb->m_triggered_event = 0;
 
-        rv |= DCB::process_events(dcb, events);
+        rv |= dcb->process_events(events);
     }
 
     this_thread.current_dcb = NULL;

@@ -521,7 +521,7 @@ private:
 
     static uint32_t poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
     static uint32_t event_handler(DCB* dcb, uint32_t events);
-    static uint32_t process_events(DCB* dcb, uint32_t events);
+    uint32_t process_events(uint32_t events);
 
     class FakeEventTask;
     friend class FakeEventTask;
