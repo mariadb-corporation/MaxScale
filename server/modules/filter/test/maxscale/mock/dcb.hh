@@ -14,6 +14,7 @@
 
 #include "mock.hh"
 #include <maxscale/dcb.hh>
+#include <maxscale/protocol.hh>
 #include <maxscale/session.hh>
 
 namespace maxscale
@@ -76,19 +77,19 @@ private:
     class ProtocolSession : public MXS_PROTOCOL_SESSION
     {
     public:
-        ProtocolSession(Handler* pHandler)
+        ProtocolSession(Dcb::Handler* pHandler)
             : m_pHandler(pHandler)
         {
         }
 
-        Handler* handler() const
+        Dcb::Handler* handler() const
         {
             return m_pHandler;
         }
 
-        Handler* set_handler(Handler* pHandler)
+        Dcb::Handler* set_handler(Dcb::Handler* pHandler)
         {
-            Handler* p = m_pHandler;
+            Dcb::Handler* p = m_pHandler;
             m_pHandler = pHandler;
             return p;
         }
@@ -125,7 +126,7 @@ private:
         }
 
     private:
-        Handler* m_pHandler;
+        Dcb::Handler* m_pHandler;
     };
 
 private:

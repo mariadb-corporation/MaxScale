@@ -2824,3 +2824,15 @@ const char* to_string(DCB::State state)
     }
 }
 }
+
+int32_t DCB::protocol_write(GWBUF* pData)
+{
+    return protocol_session()->write(this, pData);
+}
+
+json_t* DCB::protocol_diagnostics_json() const
+{
+    DCB* pThis = const_cast<DCB*>(this);
+    return protocol_session()->diagnostics_json(pThis);
+}
+

@@ -19,6 +19,7 @@
  */
 
 #include <maxscale/ccdefs.hh>
+#include <maxscale/dcb.hh>
 #include <maxscale/target.hh>
 
 class DCB;
@@ -36,18 +37,10 @@ class BackendProtocol;
 /**
  * Base protocol class. Implemented by both client and backend protocols
  */
-class MXS_PROTOCOL_SESSION
+class MXS_PROTOCOL_SESSION : public DCB::Handler
 {
 public:
     virtual ~MXS_PROTOCOL_SESSION() = default;
-
-    /**
-     * EPOLLIN handler, used to read available data from network socket
-     *
-     * @param dcb DCB to read from
-     * @return 1 on success, 0 on error
-     */
-    virtual int32_t ready_for_reading(DCB* dcb) = 0;
 
     /**
      * Write data to a network socket
@@ -57,33 +50,6 @@ public:
      * @return 1 on success, 0 on error
      */
     virtual int32_t write(DCB* dcb, GWBUF* buffer) = 0;
-
-    /**
-     * EPOLLOUT handler, used to write buffered data
-     *
-     * @param dcb DCB to write to
-     * @return 1 on success, 0 on error
-     * @note Currently the return value is ignored
-     */
-    virtual int32_t write_ready(DCB* dcb) = 0;
-
-    /**
-     * EPOLLERR handler
-     *
-     * @param dcb DCB for which the error occurred
-     * @return 1 on success, 0 on error
-     * @note Currently the return value is ignored
-     */
-    virtual int32_t error(DCB* dcb) = 0;
-
-    /**
-     * EPOLLHUP and EPOLLRDHUP handler
-     *
-     * @param dcb DCB for which the hangup occurred
-     * @return 1 on success, 0 on error
-     * @note Currently the return value is ignored
-     */
-    virtual int32_t hangup(DCB* dcb) = 0;
 
     /**
      * Provide JSON formatted diagnostics about a DCB

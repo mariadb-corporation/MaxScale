@@ -25,15 +25,15 @@
 #include <maxscale/authenticator.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/modinfo.hh>
-#include <maxscale/protocol.hh>
 #include <maxscale/target.hh>
 
 #include <memory>
 
 class DCB;
-class SERVICE;
+class MXS_PROTOCOL_SESSION;
 class MXS_SESSION;
 class SERVER;
+class SERVICE;
 
 namespace maxscale
 {
@@ -54,6 +54,45 @@ class DCB : public MXB_POLL_DATA
 {
 public:
     static const int FD_CLOSED = -1;
+
+    class Handler
+    {
+    public:
+        /**
+         * EPOLLIN handler, used to read available data from network socket
+         *
+         * @param dcb DCB to read from
+         * @return 1 on success, 0 on error
+         */
+        virtual int32_t ready_for_reading(DCB* dcb) = 0;
+
+        /**
+         * EPOLLOUT handler, used to write buffered data
+         *
+         * @param dcb DCB to write to
+         * @return 1 on success, 0 on error
+         * @note Currently the return value is ignored
+         */
+        virtual int32_t write_ready(DCB* dcb) = 0;
+
+        /**
+         * EPOLLERR handler
+         *
+         * @param dcb DCB for which the error occurred
+         * @return 1 on success, 0 on error
+         * @note Currently the return value is ignored
+         */
+        virtual int32_t error(DCB* dcb) = 0;
+
+        /**
+         * EPOLLHUP and EPOLLRDHUP handler
+         *
+         * @param dcb DCB for which the hangup occurred
+         * @return 1 on success, 0 on error
+         * @note Currently the return value is ignored
+         */
+        virtual int32_t hangup(DCB* dcb) = 0;
+    };
 
     class Manager
     {
@@ -239,16 +278,9 @@ public:
      */
     int writeq_drain();
 
-    int32_t protocol_write(GWBUF* pData)
-    {
-        return protocol_session()->write(this, pData);
-    }
+    int32_t protocol_write(GWBUF* pData);
 
-    json_t* protocol_diagnostics_json() const
-    {
-        DCB* pThis = const_cast<DCB*>(this);
-        return protocol_session()->diagnostics_json(pThis);
-    }
+    json_t* protocol_diagnostics_json() const;
 
     // Starts the shutdown process, called when a DCB is closed
     virtual void shutdown() = 0;
