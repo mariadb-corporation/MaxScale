@@ -66,13 +66,6 @@ using mxs::ClientAuthenticator;
 using mxs::ClientProtocol;
 using mxs::BackendProtocol;
 
-// #define DCB_LOG_EVENT_HANDLING
-#if defined (DCB_LOG_EVENT_HANDLING)
-#define DCB_EH_NOTICE(s, p) MXS_NOTICE(s, p)
-#else
-#define DCB_EH_NOTICE(s, p)
-#endif
-
 #define DCB_BELOW_LOW_WATER(x)    ((x)->m_low_water && (x)->m_writeqlen < (x)->m_low_water)
 #define DCB_ABOVE_HIGH_WATER(x)   ((x)->m_high_water && (x)->m_writeqlen > (x)->m_high_water)
 #define DCB_THROTTLING_ENABLED(x) ((x)->m_high_water && (x)->m_low_water)
@@ -2182,7 +2175,6 @@ uint32_t DCB::process_events(uint32_t events)
             mxb_assert(ready());
             if (ready())
             {
-                DCB_EH_NOTICE("Calling dcb->m_protocol_api.write_ready(%p)", this);
                 protocol_session()->write_ready(this);
             }
         }
@@ -2221,7 +2213,6 @@ uint32_t DCB::process_events(uint32_t events)
             }
             if (1 == return_code)
             {
-                DCB_EH_NOTICE("Calling dcb->m_protocol_api.read(%p)", this);
                 protocol_session()->read(this);
             }
         }
@@ -2244,7 +2235,6 @@ uint32_t DCB::process_events(uint32_t events)
         mxb_assert(ready());
         if (ready())
         {
-            DCB_EH_NOTICE("Calling dcb->m_protocol_api.error(%p)", this);
             protocol_session()->error(this);
         }
     }
@@ -2268,7 +2258,6 @@ uint32_t DCB::process_events(uint32_t events)
             mxb_assert(ready());
             if (ready())
             {
-                DCB_EH_NOTICE("Calling dcb->m_protocol_api.hangup(%p)", this);
                 protocol_session()->hangup(this);
             }
 
@@ -2296,7 +2285,6 @@ uint32_t DCB::process_events(uint32_t events)
             mxb_assert(ready());
             if (ready())
             {
-                DCB_EH_NOTICE("Calling dcb->m_protocol_api.hangup(%p)", this);
                 protocol_session()->hangup(this);
             }
 
