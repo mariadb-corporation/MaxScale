@@ -2165,6 +2165,8 @@ uint32_t DCB::process_events(uint32_t events)
 
     if ((events & EPOLLOUT) && (m_nClose == 0))
     {
+        mxb_assert(ready());
+
         int eno = 0;
         eno = gw_getsockerrno(m_fd);
 
@@ -2172,11 +2174,7 @@ uint32_t DCB::process_events(uint32_t events)
         {
             rc |= MXB_POLL_WRITE;
 
-            mxb_assert(ready());
-            if (ready())
-            {
-                protocol_session()->write_ready(this);
-            }
+            protocol_session()->write_ready(this);
         }
         else
         {
@@ -2194,6 +2192,8 @@ uint32_t DCB::process_events(uint32_t events)
 
     if ((events & EPOLLIN) && (m_nClose == 0))
     {
+        mxb_assert(ready());
+
         MXS_DEBUG("%lu [poll_waitevents] "
                   "Read in dcb %p fd %d",
                   pthread_self(),
@@ -2201,25 +2201,23 @@ uint32_t DCB::process_events(uint32_t events)
                   m_fd);
         rc |= MXB_POLL_READ;
 
-        mxb_assert(ready());
-        if (ready())
+        int return_code = 1;
+        /** SSL authentication is still going on, we need to call DCB::ssl_handehake
+         * until it return 1 for success or -1 for error */
+        if (m_ssl_state == SSLState::HANDSHAKE_REQUIRED)
         {
-            int return_code = 1;
-            /** SSL authentication is still going on, we need to call DCB::ssl_handehake
-             * until it return 1 for success or -1 for error */
-            if (m_ssl_state == SSLState::HANDSHAKE_REQUIRED)
-            {
-                return_code = ssl_handshake();
-            }
-            if (1 == return_code)
-            {
-                protocol_session()->read(this);
-            }
+            return_code = ssl_handshake();
+        }
+        if (1 == return_code)
+        {
+            protocol_session()->read(this);
         }
     }
 
     if ((events & EPOLLERR) && (m_nClose == 0))
     {
+        mxb_assert(ready());
+
         int eno = gw_getsockerrno(m_fd);
         if (eno != 0)
         {
@@ -2232,15 +2230,13 @@ uint32_t DCB::process_events(uint32_t events)
         }
         rc |= MXB_POLL_ERROR;
 
-        mxb_assert(ready());
-        if (ready())
-        {
-            protocol_session()->error(this);
-        }
+        protocol_session()->error(this);
     }
 
     if ((events & EPOLLHUP) && (m_nClose == 0))
     {
+        mxb_assert(ready());
+
         MXB_AT_DEBUG(int eno = gw_getsockerrno(m_fd));
         MXB_AT_DEBUG(char errbuf[MXS_STRERROR_BUFLEN]);
         MXS_DEBUG("%lu [poll_waitevents] "
@@ -2255,11 +2251,7 @@ uint32_t DCB::process_events(uint32_t events)
 
         if (!m_hanged_up)
         {
-            mxb_assert(ready());
-            if (ready())
-            {
-                protocol_session()->hangup(this);
-            }
+            protocol_session()->hangup(this);
 
             m_hanged_up = true;
         }
@@ -2268,6 +2260,8 @@ uint32_t DCB::process_events(uint32_t events)
 #ifdef EPOLLRDHUP
     if ((events & EPOLLRDHUP) && (m_nClose == 0))
     {
+        mxb_assert(ready());
+
         MXB_AT_DEBUG(int eno = gw_getsockerrno(m_fd));
         MXB_AT_DEBUG(char errbuf[MXS_STRERROR_BUFLEN]);
         MXS_DEBUG("%lu [poll_waitevents] "
@@ -2282,11 +2276,7 @@ uint32_t DCB::process_events(uint32_t events)
 
         if (!m_hanged_up)
         {
-            mxb_assert(ready());
-            if (ready())
-            {
-                protocol_session()->hangup(this);
-            }
+            protocol_session()->hangup(this);
 
             m_hanged_up = true;
         }
