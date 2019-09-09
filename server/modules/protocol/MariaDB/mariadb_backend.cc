@@ -1779,7 +1779,7 @@ mxs_auth_state_t MySQLBackendProtocol::gw_send_backend_auth(BackendDCB* dcb)
                                               this,
                                               with_ssl,
                                               ssl_established,
-                                              dcb->service()->capabilities);
+                                              dcb->service()->capabilities());
     mxb_assert(buffer);
 
     if (with_ssl && !ssl_established)

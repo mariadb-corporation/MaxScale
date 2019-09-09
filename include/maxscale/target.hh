@@ -223,6 +223,11 @@ public:
     virtual int64_t replication_lag() const = 0;
 
     /**
+     * Get the routing capabilities required by this target
+     */
+    virtual uint64_t capabilities() const = 0;
+
+    /**
      * Get a connection handle to this target
      */
     virtual std::unique_ptr<Endpoint> get_connection(Component* up, MXS_SESSION* session) = 0;

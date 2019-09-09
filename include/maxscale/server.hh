@@ -208,6 +208,11 @@ public:
         return rlag;
     }
 
+    uint64_t capabilities() const override
+    {
+        return 0;
+    }
+
     /**
      * Find a server with the specified name.
      *

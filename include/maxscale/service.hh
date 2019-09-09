@@ -113,8 +113,6 @@ public:
     mxs_router_object* router {nullptr};            /**< The router we are using */
     mxs_router*        router_instance {nullptr};   /**< The router instance for this service */
     time_t             started {0};                 /**< The time when the service was started */
-    uint64_t           capabilities {0};            /**< The capabilities of the service,
-                                                     * @see enum routing_capability */
 
     const char* name() const override
     {
@@ -141,6 +139,8 @@ public:
     }
 
     virtual int64_t replication_lag() const = 0;
+
+    virtual uint64_t capabilities() const = 0;
 
     const char* router_name() const
     {
@@ -174,6 +174,8 @@ protected:
     {
     }
 
+    uint64_t m_capabilities {0};    /**< The capabilities of the service,
+                                     * @see enum routing_capability */
 private:
     const std::string m_name;
     const std::string m_router_name;
@@ -272,7 +274,7 @@ int  serviceSessionCountAll(void);
  */
 static inline uint64_t service_get_capabilities(const SERVICE* service)
 {
-    return service->capabilities;
+    return service->capabilities();
 }
 
 /**

@@ -119,7 +119,7 @@ Service* Service::create(const char* name, const char* router, MXS_CONFIG_PARAME
 
     if (router_api->getCapabilities)
     {
-        service->capabilities |= router_api->getCapabilities(service->router_instance);
+        service->m_capabilities |= router_api->getCapabilities(service->router_instance);
     }
 
     LockGuard guard(this_unit.lock);
@@ -230,7 +230,7 @@ Service::Service(const std::string& name,
     mxb_assert(load_module(router_name.c_str(), MODULE_ROUTER) == module->module_object);
 
     router = (MXS_ROUTER_OBJECT*)module->module_object;
-    capabilities = module->module_capabilities;
+    m_capabilities = module->module_capabilities;
 
     /**
      * At service start last update is set to config->users_refresh_time seconds earlier.
@@ -594,7 +594,7 @@ bool Service::set_filters(const std::vector<std::string>& filters)
     {
         m_data->filters = flist;
         m_data.assign(*m_data);
-        capabilities |= my_capabilities;
+        m_capabilities |= my_capabilities;
     }
 
     return rval;
@@ -1811,6 +1811,19 @@ std::vector<SERVER*> get_servers(std::vector<mxs::Target*> targets)
 
     return rval;
 }
+
+// Recursively get routing capabilities
+uint64_t get_capabilities(std::vector<mxs::Target*> targets)
+{
+    uint64_t rval = 0;
+
+    for (auto a : targets)
+    {
+        rval |= a->capabilities() | get_capabilities(a->get_children());
+    }
+
+    return rval;
+}
 }
 
 // Returns minimum and maximum server versions from the list of servers
@@ -1837,8 +1850,10 @@ void Service::targets_updated()
 {
     auto& data = *m_data;
 
-    // Now that we have the new set of targets, recalculate the servers that this service reaches
+    // Now that we have the new set of targets, recalculate the servers that this service reaches as well as
+    // the new routing capabilities.
     data.servers = get_servers(data.targets);
+    data.target_capabilities = get_capabilities(data.targets);
 
     // Update the global value based on the local cached value. Since modifications to services are always
     // done on the same thread, there's no possibility of lost updates.

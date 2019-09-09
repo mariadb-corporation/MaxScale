@@ -143,6 +143,11 @@ public:
 
     int64_t replication_lag() const override;
 
+    uint64_t capabilities() const override
+    {
+        return m_capabilities | m_data->target_capabilities;
+    }
+
     // Adds a routing target to this service
     void add_target(mxs::Target* target);
 
@@ -200,6 +205,9 @@ private:
 
         // The targets that this service points to i.e. the children of this node in the routing tree.
         std::vector<mxs::Target*> targets;
+
+        // Combined capabilities of all of the services that this service connects to
+        uint64_t target_capabilities {0};
     };
 
     mxs::rworker_local<Data>   m_data;

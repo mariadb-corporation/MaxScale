@@ -324,7 +324,8 @@ SListener Listener::create(const std::string& name,
         listener->m_self = listener;
 
         // Note: This isn't good: we modify the service from a listener and the service itself should do this.
-        service->capabilities |= auth_mod->module_capabilities;
+        // TODO: Currently unused, remove if no longer needed
+        // service->capabilities |= auth_mod->module_capabilities;
 
         std::lock_guard<std::mutex> guard(listener_lock);
         all_listeners.push_back(listener);

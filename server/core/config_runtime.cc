@@ -602,7 +602,7 @@ bool runtime_alter_service(Service* service, const char* zKey, const char* zValu
     }
     else
     {
-        if (service->router->configureInstance && service->capabilities & RCAP_TYPE_RUNTIME_CONFIG)
+        if (service->router->configureInstance && service->capabilities() & RCAP_TYPE_RUNTIME_CONFIG)
         {
             // Stash the old value in case the reconfiguration fails.
             std::string old_value = service->params().get_string(key);
