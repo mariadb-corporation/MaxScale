@@ -15,8 +15,10 @@
 
 #include <maxscale/protocol/mariadb/mysql.hh>
 
+#include <mysql.h>
 #include <mysqld_error.h>
 #include <maxbase/alloc.h>
+#include <maxsql/mariadb.hh>
 #include <maxscale/authenticator2.hh>
 #include <maxscale/clock.h>
 #include <maxscale/limits.h>
@@ -638,7 +640,7 @@ int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
             && !expecting_ps_response()
             && proto->m_track_state)
         {
-            mxs_mysql_get_session_track_info(tmp, proto);
+            mxs_mysql_get_session_track_info(tmp);
         }
 
         read_buffer = tmp;
@@ -1775,10 +1777,7 @@ mxs_auth_state_t MySQLBackendProtocol::gw_send_backend_auth(BackendDCB* dcb)
     MYSQL_session client;
     gw_get_shared_session_auth_info(dcb->session()->client_dcb, &client);
 
-    GWBUF* buffer = gw_generate_auth_response(&client,
-                                              this,
-                                              with_ssl,
-                                              ssl_established,
+    GWBUF* buffer = gw_generate_auth_response(&client, with_ssl, ssl_established,
                                               dcb->service()->capabilities());
     mxb_assert(buffer);
 
@@ -1808,7 +1807,7 @@ bool MySQLBackendProtocol::gw_read_backend_handshake(DCB* dcb, GWBUF* buffer)
     bool rval = false;
     uint8_t* payload = GWBUF_DATA(buffer) + 4;
 
-    if (gw_decode_mysql_server_handshake(this, payload) >= 0)
+    if (gw_decode_mysql_server_handshake(payload) >= 0)
     {
         rval = true;
     }
@@ -1834,4 +1833,327 @@ int MySQLBackendProtocol::send_mysql_native_password_response(DCB* dcb)
     mxs_mysql_calculate_hash(scramble, curr_passwd, data + MYSQL_HEADER_LEN);
 
     return dcb->writeq_append(buffer);
+}
+
+void MySQLBackendProtocol::mxs_mysql_get_session_track_info(GWBUF* buff)
+{
+    auto proto = this;
+    size_t offset = 0;
+    uint8_t header_and_command[MYSQL_HEADER_LEN + 1];
+    if (proto->server_capabilities & GW_MYSQL_CAPABILITIES_SESSION_TRACK)
+    {
+        while (gwbuf_copy_data(buff, offset, MYSQL_HEADER_LEN + 1, header_and_command)
+               == (MYSQL_HEADER_LEN + 1))
+        {
+            size_t packet_len = gw_mysql_get_byte3(header_and_command) + MYSQL_HEADER_LEN;
+            uint8_t cmd = header_and_command[MYSQL_COM_OFFSET];
+
+            if (packet_len > MYSQL_OK_PACKET_MIN_LEN && cmd == MYSQL_REPLY_OK
+                && (proto->num_eof_packets % 2) == 0)
+            {
+                buff->gwbuf_type |= GWBUF_TYPE_REPLY_OK;
+                mxs_mysql_parse_ok_packet(buff, offset, packet_len);
+            }
+
+            uint8_t current_command = proto->reply().command();
+
+            if ((current_command == MXS_COM_QUERY || current_command == MXS_COM_STMT_FETCH
+                 || current_command == MXS_COM_STMT_EXECUTE) && cmd == MYSQL_REPLY_EOF)
+            {
+                proto->num_eof_packets++;
+            }
+            offset += packet_len;
+        }
+    }
+}
+
+/**
+ *  Parse ok packet to get session track info, save to buff properties
+ *  @param buff           Buffer contain multi compelte packets
+ *  @param packet_offset  Ok packet offset in this buff
+ *  @param packet_len     Ok packet lengh
+ */
+void MySQLBackendProtocol::mxs_mysql_parse_ok_packet(GWBUF* buff, size_t packet_offset, size_t packet_len)
+{
+    uint8_t local_buf[packet_len];
+    uint8_t* ptr = local_buf;
+    char* trx_info, * var_name, * var_value;
+
+    gwbuf_copy_data(buff, packet_offset, packet_len, local_buf);
+    ptr += (MYSQL_HEADER_LEN + 1);  // Header and Command type
+    mxq::leint_consume(&ptr);       // Affected rows
+    mxq::leint_consume(&ptr);       // Last insert-id
+    uint16_t server_status = gw_mysql_get_byte2(ptr);
+    ptr += 2;   // status
+    ptr += 2;   // number of warnings
+
+    if (ptr < (local_buf + packet_len))
+    {
+        size_t size;
+        mxq::lestr_consume(&ptr, &size);    // info
+
+        if (server_status & SERVER_SESSION_STATE_CHANGED)
+        {
+            MXB_AT_DEBUG(uint64_t data_size = ) mxq::leint_consume(&ptr);   // total
+            // SERVER_SESSION_STATE_CHANGED
+            // length
+            mxb_assert(data_size == packet_len - (ptr - local_buf));
+
+            while (ptr < (local_buf + packet_len))
+            {
+                enum_session_state_type type = (enum enum_session_state_type)mxq::leint_consume(&ptr);
+#if defined (SS_DEBUG)
+                mxb_assert(type <= SESSION_TRACK_TRANSACTION_TYPE);
+#endif
+                switch (type)
+                {
+                    case SESSION_TRACK_STATE_CHANGE:
+                    case SESSION_TRACK_SCHEMA:
+                        size = mxq::leint_consume(&ptr);    // Length of the overall entity.
+                        ptr += size;
+                        break;
+
+                    case SESSION_TRACK_GTIDS:
+                        mxq::leint_consume(&ptr);   // Length of the overall entity.
+                        mxq::leint_consume(&ptr);   // encoding specification
+                        var_value = mxq::lestr_consume_dup(&ptr);
+                        gwbuf_add_property(buff, MXS_LAST_GTID, var_value);
+                        MXS_FREE(var_value);
+                        break;
+
+                    case SESSION_TRACK_TRANSACTION_CHARACTERISTICS:
+                        mxq::leint_consume(&ptr);   // length
+                        var_value = mxq::lestr_consume_dup(&ptr);
+                        gwbuf_add_property(buff, "trx_characteristics", var_value);
+                        MXS_FREE(var_value);
+                        break;
+
+                    case SESSION_TRACK_SYSTEM_VARIABLES:
+                        mxq::leint_consume(&ptr);   // lenth
+                        // system variables like autocommit, schema, charset ...
+                        var_name = mxq::lestr_consume_dup(&ptr);
+                        var_value = mxq::lestr_consume_dup(&ptr);
+                        gwbuf_add_property(buff, var_name, var_value);
+                                MXS_DEBUG("SESSION_TRACK_SYSTEM_VARIABLES, name:%s, value:%s", var_name, var_value);
+                        MXS_FREE(var_name);
+                        MXS_FREE(var_value);
+                        break;
+
+                    case SESSION_TRACK_TRANSACTION_TYPE:
+                        mxq::leint_consume(&ptr);   // length
+                        trx_info = mxq::lestr_consume_dup(&ptr);
+                                MXS_DEBUG("get trx_info:%s", trx_info);
+                        gwbuf_add_property(buff, (char*)"trx_state", trx_info);
+                        MXS_FREE(trx_info);
+                        break;
+
+                    default:
+                        mxq::lestr_consume(&ptr, &size);
+                                MXS_WARNING("recieved unexpecting session track type:%d", type);
+                        break;
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Decode mysql server handshake
+ *
+ * @param payload The bytes just read from the net
+ * @return 0 on success, < 0 on failure
+ *
+ */
+int MySQLBackendProtocol::gw_decode_mysql_server_handshake(uint8_t* payload)
+{
+    auto conn = this;
+    uint8_t* server_version_end = NULL;
+    uint16_t mysql_server_capabilities_one = 0;
+    uint16_t mysql_server_capabilities_two = 0;
+    uint8_t scramble_data_1[GW_SCRAMBLE_LENGTH_323] = "";
+    uint8_t scramble_data_2[GW_MYSQL_SCRAMBLE_SIZE - GW_SCRAMBLE_LENGTH_323] = "";
+    uint8_t capab_ptr[4] = "";
+    int scramble_len = 0;
+    uint8_t mxs_scramble[GW_MYSQL_SCRAMBLE_SIZE] = "";
+    int protocol_version = 0;
+
+    protocol_version = payload[0];
+
+    if (protocol_version != GW_MYSQL_PROTOCOL_VERSION)
+    {
+        return -1;
+    }
+
+    payload++;
+
+    // Get server version (string)
+    server_version_end = (uint8_t*) gw_strend((char*) payload);
+
+    payload = server_version_end + 1;
+
+    // get ThreadID: 4 bytes
+    uint32_t tid = gw_mysql_get_byte4(payload);
+
+            MXS_INFO("Connected to '%s' with thread id %u", conn->reply().target()->name(), tid);
+
+    /* TODO: Correct value of thread id could be queried later from backend if
+     * there is any worry it might be larger than 32bit allows. */
+    conn->thread_id = tid;
+
+    payload += 4;
+
+    // scramble_part 1
+    memcpy(scramble_data_1, payload, GW_SCRAMBLE_LENGTH_323);
+    payload += GW_SCRAMBLE_LENGTH_323;
+
+    // 1 filler
+    payload++;
+
+    mysql_server_capabilities_one = gw_mysql_get_byte2(payload);
+
+    // Get capabilities_part 1 (2 bytes) + 1 language + 2 server_status
+    payload += 5;
+
+    mysql_server_capabilities_two = gw_mysql_get_byte2(payload);
+
+    conn->server_capabilities = mysql_server_capabilities_one | mysql_server_capabilities_two << 16;
+
+    // 2 bytes shift
+    payload += 2;
+
+    // get scramble len
+    if (payload[0] > 0)
+    {
+        scramble_len = payload[0] - 1;
+        mxb_assert(scramble_len > GW_SCRAMBLE_LENGTH_323);
+        mxb_assert(scramble_len <= GW_MYSQL_SCRAMBLE_SIZE);
+
+        if ((scramble_len < GW_SCRAMBLE_LENGTH_323)
+            || scramble_len > GW_MYSQL_SCRAMBLE_SIZE)
+        {
+            /* log this */
+            return -2;
+        }
+    }
+    else
+    {
+        scramble_len = GW_MYSQL_SCRAMBLE_SIZE;
+    }
+    // skip 10 zero bytes
+    payload += 11;
+
+    // copy the second part of the scramble
+    memcpy(scramble_data_2, payload, scramble_len - GW_SCRAMBLE_LENGTH_323);
+
+    memcpy(mxs_scramble, scramble_data_1, GW_SCRAMBLE_LENGTH_323);
+    memcpy(mxs_scramble + GW_SCRAMBLE_LENGTH_323, scramble_data_2, scramble_len - GW_SCRAMBLE_LENGTH_323);
+
+    // full 20 bytes scramble is ready
+    memcpy(conn->scramble, mxs_scramble, GW_MYSQL_SCRAMBLE_SIZE);
+
+    return 0;
+}
+
+/**
+ * Create a response to the server handshake
+ *
+ * @param client               Shared session data
+ * @param with_ssl             Whether to create an SSL response or a normal response packet
+ * @param ssl_established      Set to true if the SSL response has been sent
+ * @param service_capabilities Capabilities of the connecting service
+ *
+ * @return Generated response packet
+ */
+GWBUF* MySQLBackendProtocol::gw_generate_auth_response(MYSQL_session* client, bool with_ssl,
+                                                       bool ssl_established,
+                                                       uint64_t service_capabilities)
+{
+    auto conn = this;
+    uint8_t client_capabilities[4] = {0, 0, 0, 0};
+    uint8_t* curr_passwd = NULL;
+
+    if (memcmp(client->client_sha1, null_client_sha1, MYSQL_SCRAMBLE_LEN) != 0)
+    {
+        curr_passwd = client->client_sha1;
+    }
+
+    uint32_t capabilities = create_capabilities(conn, with_ssl, client->db[0], service_capabilities);
+    gw_mysql_set_byte4(client_capabilities, capabilities);
+
+    /**
+     * Use the default authentication plugin name. If the server is using a
+     * different authentication mechanism, it will send an AuthSwitchRequest
+     * packet.
+     */
+    const char* auth_plugin_name = DEFAULT_MYSQL_AUTH_PLUGIN;
+
+    long bytes = response_length(with_ssl,
+                                 ssl_established,
+                                 client->user,
+                                 curr_passwd,
+                                 client->db,
+                                 auth_plugin_name);
+
+    // allocating the GWBUF
+    GWBUF* buffer = gwbuf_alloc(bytes);
+    uint8_t* payload = GWBUF_DATA(buffer);
+
+    // clearing data
+    memset(payload, '\0', bytes);
+
+    // put here the paylod size: bytes to write - 4 bytes packet header
+    gw_mysql_set_byte3(payload, (bytes - 4));
+
+    // set packet # = 1
+    payload[3] = ssl_established ? '\x02' : '\x01';
+    payload += 4;
+
+    // set client capabilities
+    memcpy(payload, client_capabilities, 4);
+
+    // set now the max-packet size
+    payload += 4;
+    gw_mysql_set_byte4(payload, 16777216);
+
+    // set the charset
+    payload += 4;
+    *payload = conn->charset;
+
+    payload++;
+
+    // 19 filler bytes of 0
+    payload += 19;
+
+    // Either MariaDB 10.2 extra capabilities or 4 bytes filler
+    memcpy(payload, &conn->extra_capabilities, sizeof(conn->extra_capabilities));
+    payload += 4;
+
+    if (!with_ssl || ssl_established)
+    {
+        // 4 + 4 + 4 + 1 + 23 = 36, this includes the 4 bytes packet header
+        memcpy(payload, client->user, strlen(client->user));
+        payload += strlen(client->user);
+        payload++;
+
+        if (curr_passwd)
+        {
+            payload = load_hashed_password(conn->scramble, payload, curr_passwd);
+        }
+        else
+        {
+            payload++;
+        }
+
+        // if the db is not NULL append it
+        if (client->db[0])
+        {
+            memcpy(payload, client->db, strlen(client->db));
+            payload += strlen(client->db);
+            payload++;
+        }
+
+        memcpy(payload, auth_plugin_name, strlen(auth_plugin_name));
+    }
+
+    return buffer;
 }

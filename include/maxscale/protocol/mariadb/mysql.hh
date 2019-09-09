@@ -489,8 +489,8 @@ private:
     void           parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data);
     void           mxs_mysql_execute_kill_all_others(MXS_SESSION* issuer, uint64_t target_id,
                                                      uint64_t keep_protocol_thread_id, kill_type_t type);
-    void mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_type_t type);
-    void execute_kill(MXS_SESSION* issuer, std::shared_ptr<KillInfo> info);
+    void           mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_type_t type);
+    void           execute_kill(MXS_SESSION* issuer, std::shared_ptr<KillInfo> info);
 };
 
 class MySQLBackendProtocol : public MySQLProtocol, public mxs::BackendProtocol
@@ -514,6 +514,13 @@ public:
     bool    reuse_connection(BackendDCB* dcb) override;
     bool    established(DCB*) override;
     json_t* diagnostics_json(DCB* dcb) override;
+
+    /**
+     *  Check every packet type, if is ok packet then parse it
+     *
+     *  @param buff Buffer, may contain multiple complete packets
+     */
+    void mxs_mysql_get_session_track_info(GWBUF* buff);
 
 private:
     int              gw_read_and_write(DCB* dcb);
@@ -541,8 +548,12 @@ private:
     int              send_mysql_native_password_response(DCB* dcb);
     bool             expecting_text_result();
     bool             expecting_ps_response();
+    void             mxs_mysql_parse_ok_packet(GWBUF* buff, size_t packet_offset, size_t packet_len);
+    int              gw_decode_mysql_server_handshake(uint8_t* payload);
+    GWBUF*           gw_generate_auth_response(MYSQL_session* client, bool with_ssl, bool ssl_established,
+                                               uint64_t service_capabilities);
 
-    mxs_auth_state_t       protocol_auth_state {MXS_AUTH_STATE_INIT};   /*< Backend authentication state */
+    mxs_auth_state_t protocol_auth_state {MXS_AUTH_STATE_INIT};   /*< Backend authentication state */
 
     int  m_ignore_replies {0};          /*< How many replies should be discarded */
     bool m_collect_result {false};      /*< Collect the next result set as one buffer */
@@ -625,36 +636,8 @@ int mysql_send_custom_error(DCB* dcb, int sequence, int affected_rows, const cha
 
 void             init_response_status(GWBUF* buf, uint8_t cmd, int* npackets, size_t* nbytes);
 bool             gw_get_shared_session_auth_info(DCB* dcb, MYSQL_session* session);
-void             mxs_mysql_get_session_track_info(GWBUF* buff, MySQLProtocol* proto);
+
 mysql_tx_state_t parse_trx_state(const char* str);
-
-/**
- * Decode server handshake
- *
- * @param conn    The MySQLProtocol structure
- * @param payload The handshake payload without the network header
- *
- * @return 0 on success, -1 on failure
- *
- */
-int gw_decode_mysql_server_handshake(MySQLProtocol* conn, uint8_t* payload);
-
-/**
- * Create a response to the server handshake
- *
- * @param client               Shared session data
- * @param conn                 MySQL Protocol object for this connection
- * @param with_ssl             Whether to create an SSL response or a normal response packet
- * @param ssl_established      Set to true if the SSL response has been sent
- * @param service_capabilities Capabilities of the connecting service
- *
- * @return Generated response packet
- */
-GWBUF* gw_generate_auth_response(MYSQL_session* client,
-                                 MySQLProtocol* conn,
-                                 bool with_ssl,
-                                 bool ssl_established,
-                                 uint64_t service_capabilities);
 
 /** Write an OK packet to a DCB */
 int mxs_mysql_send_ok(DCB* dcb, int sequence, uint8_t affected_rows, const char* message);
@@ -835,3 +818,11 @@ bool mxs_mysql_command_will_respond(uint8_t cmd);
  * @param output   Pointer where the resulting 20 byte hash is stored
  */
 void mxs_mysql_calculate_hash(uint8_t* scramble, uint8_t* passwd, uint8_t* output);
+
+uint32_t create_capabilities(MySQLProtocol* conn, bool with_ssl, bool db_specified,
+                             uint64_t capabilities);
+
+int response_length(bool with_ssl, bool ssl_established, char* user, uint8_t* passwd, char* dbname,
+                    const char* auth_module);
+
+uint8_t* load_hashed_password(uint8_t* scramble, uint8_t* payload, uint8_t* passwd);
