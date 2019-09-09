@@ -43,7 +43,7 @@ public:
 
         bool configure(const MXS_CONFIG_PARAMETER& params);
 
-        SERVER* master() const
+        mxs::Target* master() const
         {
             return m_master.get();
         }
@@ -57,7 +57,7 @@ public:
         bool post_configure(const MXS_CONFIG_PARAMETER& params) override;
 
     private:
-        config::Server m_master;
+        config::Target m_master;
         config::Bool   m_persist_performance_data;
     };
 

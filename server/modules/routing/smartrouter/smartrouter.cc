@@ -25,7 +25,7 @@ namespace smartrouter
 
 config::Specification specification(MXS_MODULE_NAME, config::Specification::ROUTER);
 
-config::ParamServer
+config::ParamTarget
     master(&specification,
            "master",
            "The server/cluster to be treated as master, that is, the one where updates are sent.");
@@ -91,49 +91,18 @@ bool SmartRouter::Config::configure(const MXS_CONFIG_PARAMETER& params)
 bool SmartRouter::Config::post_configure(const MXS_CONFIG_PARAMETER& params)
 {
     bool rv = true;
-
     auto servers = params.get_server_list(CN_SERVERS);
+    auto targets = params.get_target_list(CN_TARGETS);
 
-    bool master_found = false;
-
-    for (SERVER* pServer : servers)
-    {
-        if (pServer == m_master.get())
-        {
-            master_found = true;
-        }
-
-        if (pServer->address[0] != '/')
-        {
-            if (strcmp(pServer->address, "127.0.0.1") == 0 || strcmp(pServer->address, "localhost") == 0)
-            {
-                MXS_WARNING("The server %s, used by the smartrouter %s, is currently accessed "
-                            "using a TCP/IP socket (%s:%d). For better performance, a Unix "
-                            "domain socket should be used. See the 'socket' argument.",
-                            pServer->name(), name().c_str(), pServer->address, pServer->port);
-            }
-        }
-    }
-
-    if (rv && !master_found)
+    if (std::find(targets.begin(), targets.end(), m_master.get()) == targets.end()
+        && std::find(servers.begin(), servers.end(), m_master.get()) == servers.end())
     {
         rv = false;
-
-        std::string s;
-
-        for (auto server : servers)
-        {
-            if (!s.empty())
-            {
-                s += ", ";
-            }
-
-            s += server->name();
-        }
-
         MXS_ERROR("The master server %s of the smartrouter %s, is not one of the "
-                  "servers (%s) of the service.",
-                  m_master.get()->name(), name().c_str(), s.c_str());
+                  "servers (%s) or targets (%s) of the service.",
+                  m_master.get()->name(), name().c_str(),
+                  params.get_string(CN_SERVERS).c_str(),
+                  params.get_string(CN_TARGETS).c_str());
     }
 
     return rv;

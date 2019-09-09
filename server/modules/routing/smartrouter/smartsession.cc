@@ -125,6 +125,10 @@ SmartRouterSession::SmartRouterSession(SmartRouter* pRouter,
     , m_clusters(std::move(clusters))
     , m_qc(this, pSession, TYPE_ALL)
 {
+    for (auto& a : m_clusters)
+    {
+        a.pBackend->set_userdata(&a);
+    }
 }
 
 SmartRouterSession::~SmartRouterSession()
