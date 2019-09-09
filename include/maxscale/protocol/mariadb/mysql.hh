@@ -401,19 +401,6 @@ protected:
 
     uint64_t m_version;     // Numeric server version
 
-    bool   consume_fetched_rows(GWBUF* buffer);
-    void   process_reply_start(Iter it, Iter end);
-    void   process_one_packet(Iter it, Iter end, uint32_t len);
-    GWBUF* process_packets(GWBUF** result);
-
-    /**
-     * Update @c m_error.
-     *
-     * @param it   Iterator that points to the first byte of the error code in an error packet.
-     * @param end  Iterator pointing one past the end of the error packet.
-     */
-    void update_error(mxs::Buffer::iterator it, mxs::Buffer::iterator end);
-
     inline bool is_opening_cursor() const
     {
         return m_opening_cursor;
@@ -552,6 +539,12 @@ private:
     int              gw_decode_mysql_server_handshake(uint8_t* payload);
     GWBUF*           gw_generate_auth_response(MYSQL_session* client, bool with_ssl, bool ssl_established,
                                                uint64_t service_capabilities);
+    uint32_t         create_capabilities(bool with_ssl, bool db_specified, uint64_t capabilities);
+    GWBUF*           process_packets(GWBUF** result);
+    void             process_one_packet(Iter it, Iter end, uint32_t len);
+    void             process_reply_start(Iter it, Iter end);
+    void             update_error(mxs::Buffer::iterator it, mxs::Buffer::iterator end);
+    bool             consume_fetched_rows(GWBUF* buffer);
 
     mxs_auth_state_t protocol_auth_state {MXS_AUTH_STATE_INIT};   /*< Backend authentication state */
 
@@ -819,10 +812,11 @@ bool mxs_mysql_command_will_respond(uint8_t cmd);
  */
 void mxs_mysql_calculate_hash(uint8_t* scramble, uint8_t* passwd, uint8_t* output);
 
-uint32_t create_capabilities(MySQLProtocol* conn, bool with_ssl, bool db_specified,
-                             uint64_t capabilities);
-
 int response_length(bool with_ssl, bool ssl_established, char* user, uint8_t* passwd, char* dbname,
                     const char* auth_module);
 
 uint8_t* load_hashed_password(uint8_t* scramble, uint8_t* payload, uint8_t* passwd);
+
+bool is_last_ok(MySQLProtocol::Iter it);
+bool is_last_eof(MySQLProtocol::Iter it);
+uint64_t get_encoded_int(MySQLProtocol::Iter it);

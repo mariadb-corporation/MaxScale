@@ -32,6 +32,8 @@
 // For setting server status through monitor
 #include "../../../core/internal/monitormanager.hh"
 
+using mxs::ReplyState;
+
 static bool get_ip_string_and_port(struct sockaddr_storage* sa,
                                    char* ip,
                                    int iplen,
@@ -2077,7 +2079,7 @@ GWBUF* MySQLBackendProtocol::gw_generate_auth_response(MYSQL_session* client, bo
         curr_passwd = client->client_sha1;
     }
 
-    uint32_t capabilities = create_capabilities(conn, with_ssl, client->db[0], service_capabilities);
+    uint32_t capabilities = create_capabilities(with_ssl, client->db[0], service_capabilities);
     gw_mysql_set_byte4(client_capabilities, capabilities);
 
     /**
@@ -2156,4 +2158,279 @@ GWBUF* MySQLBackendProtocol::gw_generate_auth_response(MYSQL_session* client, bo
     }
 
     return buffer;
+}
+
+/**
+ * @brief Computes the capabilities bit mask for connecting to backend DB
+ *
+ * We start by taking the default bitmask and removing any bits not set in
+ * the bitmask contained in the connection structure. Then add SSL flag if
+ * the connection requires SSL (set from the MaxScale configuration). The
+ * compression flag may be set, although compression is NOT SUPPORTED. If a
+ * database name has been specified in the function call, the relevant flag
+ * is set.
+ *
+ * @param db_specified Whether the connection request specified a database
+ * @param compress Whether compression is requested - NOT SUPPORTED
+ * @return Bit mask (32 bits)
+ * @note Capability bits are defined in maxscale/protocol/mysql.h
+ */
+uint32_t MySQLBackendProtocol::create_capabilities(bool with_ssl, bool db_specified, uint64_t capabilities)
+{
+    uint32_t final_capabilities;
+
+    /** Copy client's flags to backend but with the known capabilities mask */
+    final_capabilities = (client_capabilities & (uint32_t)GW_MYSQL_CAPABILITIES_CLIENT);
+
+    if (with_ssl)
+    {
+        final_capabilities |= (uint32_t)GW_MYSQL_CAPABILITIES_SSL;
+        /*
+         * Unclear whether we should include this
+         * Maybe it should depend on whether CA certificate is provided
+         * final_capabilities |= (uint32_t)GW_MYSQL_CAPABILITIES_SSL_VERIFY_SERVER_CERT;
+         */
+    }
+
+    if (rcap_type_required(capabilities, RCAP_TYPE_SESSION_STATE_TRACKING))
+    {
+        /** add session track */
+        final_capabilities |= (uint32_t)GW_MYSQL_CAPABILITIES_SESSION_TRACK;
+    }
+
+    /** support multi statments  */
+    final_capabilities |= (uint32_t)GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS;
+
+    if (db_specified)
+    {
+        /* With database specified */
+        final_capabilities |= (int)GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB;
+    }
+    else
+    {
+        /* Without database specified */
+        final_capabilities &= ~(int)GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB;
+    }
+
+    final_capabilities |= (int)GW_MYSQL_CAPABILITIES_PLUGIN_AUTH;
+
+    return final_capabilities;
+}
+
+GWBUF* MySQLBackendProtocol::process_packets(GWBUF** result)
+{
+    mxs::Buffer buffer(*result);
+    auto it = buffer.begin();
+    size_t total_bytes = buffer.length();
+    size_t bytes_used = 0;
+
+    while (it != buffer.end())
+    {
+        size_t bytes_left = total_bytes - bytes_used;
+
+        if (bytes_left < MYSQL_HEADER_LEN)
+        {
+            // Partial header
+            break;
+        }
+
+        // Extract packet length and command byte
+        uint32_t len = *it++;
+        len |= (*it++) << 8;
+        len |= (*it++) << 16;
+        ++it;   // Skip the sequence
+
+        if (bytes_left < len + MYSQL_HEADER_LEN)
+        {
+            // Partial packet payload
+            break;
+        }
+
+        bytes_used += len + MYSQL_HEADER_LEN;
+
+        mxb_assert(it != buffer.end());
+        auto end = it;
+        end.advance(len);
+
+        // Ignore the tail end of a large packet large packet. Only resultsets can generate packets this large
+        // and we don't care what the contents are and thus it is safe to ignore it.
+        bool skip_next = m_skip_next;
+        m_skip_next = len == GW_MYSQL_MAX_PACKET_LEN;
+
+        if (!skip_next)
+        {
+            process_one_packet(it, end, len);
+        }
+
+        it = end;
+    }
+
+    buffer.release();
+    return gwbuf_split(result, bytes_used);
+}
+
+void MySQLBackendProtocol::process_one_packet(Iter it, Iter end, uint32_t len)
+{
+    uint8_t cmd = *it;
+    switch (m_reply.state())
+    {
+        case ReplyState::START:
+            process_reply_start(it, end);
+            break;
+
+        case ReplyState::DONE:
+            if (cmd == MYSQL_REPLY_ERR)
+            {
+                update_error(++it, end);
+            }
+            else
+            {
+                // This should never happen
+                MXS_ERROR("Unexpected result state. cmd: 0x%02hhx, len: %u server: %s",
+                          cmd, len, m_reply.target()->name());
+                session_dump_statements(session());
+                session_dump_log(session());
+                mxb_assert(!true);
+            }
+            break;
+
+        case ReplyState::RSET_COLDEF:
+            mxb_assert(m_num_coldefs > 0);
+            --m_num_coldefs;
+
+            if (m_num_coldefs == 0)
+            {
+                set_reply_state(ReplyState::RSET_COLDEF_EOF);
+                // Skip this state when DEPRECATE_EOF capability is supported
+            }
+            break;
+
+        case ReplyState::RSET_COLDEF_EOF:
+            mxb_assert(cmd == MYSQL_REPLY_EOF && len == MYSQL_EOF_PACKET_LEN - MYSQL_HEADER_LEN);
+            set_reply_state(ReplyState::RSET_ROWS);
+
+            if (is_opening_cursor())
+            {
+                set_cursor_opened();
+                        MXS_INFO("Cursor successfully opened");
+                set_reply_state(ReplyState::DONE);
+            }
+            break;
+
+        case ReplyState::RSET_ROWS:
+            if (cmd == MYSQL_REPLY_EOF && len == MYSQL_EOF_PACKET_LEN - MYSQL_HEADER_LEN)
+            {
+                set_reply_state(is_last_eof(it) ? ReplyState::DONE : ReplyState::START);
+            }
+            else if (cmd == MYSQL_REPLY_ERR)
+            {
+                ++it;
+                update_error(it, end);
+                set_reply_state(ReplyState::DONE);
+            }
+            else
+            {
+                m_reply.add_rows(1);
+            }
+            break;
+    }
+}
+
+void MySQLBackendProtocol::process_reply_start(Iter it, Iter end)
+{
+    uint8_t cmd = *it;
+
+    switch (cmd)
+    {
+        case MYSQL_REPLY_OK:
+            if (is_last_ok(it))
+            {
+                // No more results
+                set_reply_state(ReplyState::DONE);
+            }
+            break;
+
+        case MYSQL_REPLY_LOCAL_INFILE:
+            // The client will send a request after this with the contents of the file which the server will
+            // respond to with either an OK or an ERR packet
+            session_set_load_active(m_session, true);
+            set_reply_state(ReplyState::DONE);
+            break;
+
+        case MYSQL_REPLY_ERR:
+            // Nothing ever follows an error packet
+            ++it;
+            update_error(it, end);
+            set_reply_state(ReplyState::DONE);
+            break;
+
+        case MYSQL_REPLY_EOF:
+            // EOF packets are never expected as the first response
+            mxb_assert(!true);
+            break;
+
+        default:
+            if (m_reply.command() == MXS_COM_FIELD_LIST)
+            {
+                // COM_FIELD_LIST sends a strange kind of a result set that doesn't have field definitions
+                set_reply_state(ReplyState::RSET_ROWS);
+            }
+            else
+            {
+                // Start of a result set
+                m_num_coldefs = get_encoded_int(it);
+                m_reply.add_field_count(m_num_coldefs);
+                set_reply_state(ReplyState::RSET_COLDEF);
+            }
+
+            break;
+    }
+}
+
+/**
+ * Update @c m_error.
+ *
+ * @param it   Iterator that points to the first byte of the error code in an error packet.
+ * @param end  Iterator pointing one past the end of the error packet.
+ */
+void MySQLBackendProtocol::update_error(Iter it, Iter end)
+{
+    uint16_t code = 0;
+    code |= (*it++);
+    code |= (*it++) << 8;
+    ++it;
+    auto sql_state_begin = it;
+    it.advance(5);
+    auto sql_state_end = it;
+    auto message_begin = sql_state_end;
+    auto message_end = end;
+
+    m_reply.set_error(code, sql_state_begin, sql_state_end, message_begin, message_end);
+}
+
+bool MySQLBackendProtocol::consume_fetched_rows(GWBUF* buffer)
+{
+    // TODO: Get rid of this and do COM_STMT_FETCH processing properly by iterating over the packets and
+    //       splitting them
+
+    bool rval = false;
+    bool more = false;
+    int n_eof = modutil_count_signal_packets(buffer, 0, &more, (modutil_state*)&m_modutil_state);
+    int num_packets = modutil_count_packets(buffer);
+
+    // If the server responded with an error, n_eof > 0
+    if (n_eof > 0)
+    {
+        m_reply.add_rows(num_packets - 1);
+        rval = true;
+    }
+    else
+    {
+        m_reply.add_rows(num_packets);
+        m_expected_rows -= num_packets;
+        mxb_assert(m_expected_rows >= 0);
+        rval = m_expected_rows == 0;
+    }
+
+    return rval;
 }
