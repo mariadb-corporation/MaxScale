@@ -448,6 +448,19 @@ uint64_t session_get_next_id();
 void session_close(MXS_SESSION* session);
 
 /**
+ * @brief Get a session reference
+ *
+ * This creates an additional reference to a session which allows it to live
+ * as long as it is needed.
+ *
+ * @param session Session reference to get
+ * @return Reference to a MXS_SESSION
+ *
+ * @note The caller must free the session reference by calling session_put_ref
+ */
+MXS_SESSION* session_get_ref(MXS_SESSION* sessoin);
+
+/**
  * @brief Release a session reference
  *
  * This function is public only because the tee-filter uses it.

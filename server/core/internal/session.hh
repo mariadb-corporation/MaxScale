@@ -69,19 +69,6 @@ void dprintAllSessions(DCB*);
 void dprintSession(DCB*, MXS_SESSION*);
 void dListSessions(DCB*);
 
-/**
- * @brief Get a session reference
- *
- * This creates an additional reference to a session which allows it to live
- * as long as it is needed.
- *
- * @param session Session reference to get
- * @return Reference to a MXS_SESSION
- *
- * @note The caller must free the session reference by calling session_put_ref
- */
-MXS_SESSION* session_get_ref(MXS_SESSION* sessoin);
-
 MXS_END_DECLS
 
 namespace maxscale

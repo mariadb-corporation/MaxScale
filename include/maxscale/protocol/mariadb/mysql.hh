@@ -329,6 +329,8 @@ enum kill_type_t
     KT_HARD       = (1 << 3)
 };
 
+struct KillInfo;
+
 /**
  * MySQL Protocol specific state data. Tracks various parts of the network protocol e.g. the response state.
  */
@@ -487,7 +489,8 @@ private:
     void           parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data);
     void           mxs_mysql_execute_kill_all_others(MXS_SESSION* issuer, uint64_t target_id,
                                                      uint64_t keep_protocol_thread_id, kill_type_t type);
-    void           mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_type_t type);
+    void mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_type_t type);
+    void execute_kill(MXS_SESSION* issuer, std::shared_ptr<KillInfo> info);
 };
 
 class MySQLBackendProtocol : public MySQLProtocol, public mxs::BackendProtocol

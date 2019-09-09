@@ -385,6 +385,7 @@ void extract_user(char* token, std::string* user)
         user->assign(token);
     }
 }
+}
 
 // Servers and queries to execute on them
 typedef std::map<SERVER*, std::string> TargetList;
@@ -406,6 +407,7 @@ struct KillInfo
     std::string  query_base;
     DcbCallback  cb;
     TargetList   targets;
+    std::mutex   lock;
 };
 
 static bool kill_func(DCB* dcb, void* data);
@@ -454,6 +456,8 @@ static bool kill_func(DCB* dcb, void* data)
             // DCB is connected and we know the thread ID so we can kill it
             std::stringstream ss;
             ss << info->query_base << proto->thread_id;
+
+            std::lock_guard<std::mutex> guard(info->lock);
             info->targets[backend_dcb->server()] = ss.str();
         }
         else
@@ -478,32 +482,11 @@ static bool kill_user_func(DCB* dcb, void* data)
         // TODO: perhaps that could be in the function prototype?
         BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
 
+        std::lock_guard<std::mutex> guard(info->lock);
         info->targets[backend_dcb->server()] = info->query_base;
     }
 
     return true;
-}
-
-static void worker_func(int thread_id, void* data)
-{
-    KillInfo* info = static_cast<KillInfo*>(data);
-    dcb_foreach_local(info->cb, info);
-
-    for (TargetList::iterator it = info->targets.begin();
-         it != info->targets.end(); it++)
-    {
-        LocalClient* client = LocalClient::create(info->session, it->first);
-        GWBUF* buffer = modutil_create_query(it->second.c_str());
-        client->connect();
-        client->queue_query(buffer);
-        gwbuf_free(buffer);
-
-        // The LocalClient needs to delete itself once the queries are done
-        client->self_destruct();
-    }
-
-    delete info;
-}
 }
 
 /**
@@ -2272,6 +2255,39 @@ bool MySQLClientProtocol::send_auth_switch_request_packet(DCB* dcb)
     return dcb->writeq_append(buffer) != 0;
 }
 
+void MySQLClientProtocol::execute_kill(MXS_SESSION* issuer, std::shared_ptr<KillInfo> info)
+{
+    MXS_SESSION* ref = session_get_ref(issuer);
+    auto origin = mxs::RoutingWorker::get_current();
+
+    auto func = [info, ref, origin]() {
+            // First, gather the list of servers where the KILL should be sent
+            mxs::RoutingWorker::execute_concurrently(
+                [info, ref]() {
+                    dcb_foreach_local(info->cb, info.get());
+                });
+
+            // Then move execution back to the original worker to keep all connections on the same thread
+            origin->call(
+                [info, ref]() {
+                    for (const auto& a : info->targets)
+                    {
+                        LocalClient* client = LocalClient::create(info->session, a.first);
+                        client->connect();
+                        // TODO: There can be multiple connections to the same server
+                        client->queue_query(modutil_create_query(a.second.c_str()));
+
+                        // The LocalClient needs to delete itself once the queries are done
+                        client->self_destruct();
+                    }
+
+                    session_put_ref(ref);
+                }, mxs::RoutingWorker::EXECUTE_AUTO);
+        };
+
+    std::thread(func).detach();
+}
+
 void MySQLClientProtocol::mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t target_id, kill_type_t type)
 {
     mxs_mysql_execute_kill_all_others(issuer, target_id, 0, type);
@@ -2283,26 +2299,18 @@ void MySQLClientProtocol::mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t t
  *       and really goes to the heart of explaining what the session_id/thread_id means in terms
  *       of a service/server pipeline and the recursiveness of this call.
  */
-void MySQLClientProtocol::mxs_mysql_execute_kill_all_others(
-        MXS_SESSION* issuer, uint64_t target_id, uint64_t keep_protocol_thread_id, kill_type_t type)
+void MySQLClientProtocol::mxs_mysql_execute_kill_all_others(MXS_SESSION* issuer,
+                                                            uint64_t target_id,
+                                                            uint64_t keep_protocol_thread_id,
+                                                            kill_type_t type)
 {
     const char* hard = (type & KT_HARD) ? "HARD " : (type & KT_SOFT) ? "SOFT " : "";
     const char* query = (type & KT_QUERY) ? "QUERY " : "";
     std::stringstream ss;
     ss << "KILL " << hard << query;
 
-    for (int i = 0; i < config_threadcount(); i++)
-    {
-        MXB_WORKER* worker = mxs_rworker_get(i);
-        mxb_assert(worker);
-        mxb_worker_post_message(worker,
-                                MXB_WORKER_MSG_CALL,
-                                (intptr_t)worker_func,
-                                (intptr_t) new ConnKillInfo(target_id,
-                                                            ss.str(),
-                                                            issuer,
-                                                            keep_protocol_thread_id));
-    }
+    auto info = std::make_shared<ConnKillInfo>(target_id, ss.str(), issuer, keep_protocol_thread_id);
+    execute_kill(issuer, info);
 }
 
 void MySQLClientProtocol::mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_type_t type)
@@ -2312,15 +2320,8 @@ void MySQLClientProtocol::mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const
     std::stringstream ss;
     ss << "KILL " << hard << query << "USER " << user;
 
-    for (int i = 0; i < config_threadcount(); i++)
-    {
-        MXB_WORKER* worker = mxs_rworker_get(i);
-        mxb_assert(worker);
-        mxb_worker_post_message(worker,
-                                MXB_WORKER_MSG_CALL,
-                                (intptr_t)worker_func,
-                                (intptr_t) new UserKillInfo(user, ss.str(), issuer));
-    }
+    auto info = std::make_shared<UserKillInfo>(user, ss.str(), issuer);
+    execute_kill(issuer, info);
 }
 
 /**

@@ -87,5 +87,5 @@ bool LocalClient::handleError(GWBUF* error, mxs::Endpoint* down, const mxs::Repl
         mxs::RoutingWorker::get_current()->delayed_call(1, do_self_destruct, this);
     }
 
-    return false;
+    return true;
 }
