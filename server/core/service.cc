@@ -827,6 +827,7 @@ void dListListeners(DCB* dcb)
 
 bool Service::refresh_users()
 {
+    mxb::LogScope scope(name());
     mxs::WatchdogWorkaround workaround;
     bool ret = true;
     int self = mxs_rworker_get_current_id();
@@ -864,10 +865,8 @@ bool Service::refresh_users()
     {
         if (!m_rate_limits[self].warned)
         {
-            MXS_WARNING("[%s] Refresh rate limit (once every %ld seconds) exceeded for "
-                        "load of users' table.",
-                        name(),
-                        config->users_refresh_time);
+            MXS_WARNING("Refresh rate limit (once every %ld seconds) exceeded for "
+                        "load of users' table.", config->users_refresh_time);
             m_rate_limits[self].warned = true;
         }
     }
@@ -883,18 +882,14 @@ bool Service::refresh_users()
             switch (listener->load_users())
             {
             case MXS_AUTH_LOADUSERS_FATAL:
-                MXS_ERROR("[%s] Fatal error when loading users for listener '%s',"
-                          " authentication will not work.",
-                          name(),
-                          listener->name());
+                MXS_ERROR("Fatal error when loading users for listener '%s',"
+                          " authentication will not work.", listener->name());
                 ret = false;
                 break;
 
             case MXS_AUTH_LOADUSERS_ERROR:
-                MXS_WARNING("[%s] Failed to load users for listener '%s', authentication"
-                            " might not work.",
-                            name(),
-                            listener->name());
+                MXS_WARNING("Failed to load users for listener '%s', authentication"
+                            " might not work.", listener->name());
                 ret = false;
                 break;
 

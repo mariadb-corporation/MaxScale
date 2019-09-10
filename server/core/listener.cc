@@ -29,6 +29,7 @@
 #include <string>
 #include <unordered_set>
 
+#include <maxbase/log.hh>
 #include <maxscale/authenticator2.hh>
 #include <maxscale/maxadmin.h>
 #include <maxscale/paths.h>
@@ -164,6 +165,7 @@ SListener Listener::create(const std::string& name,
                            const std::string& protocol,
                            const MXS_CONFIG_PARAMETER& params)
 {
+    mxb::LogScope scope(name.c_str());
     bool port_defined = params.contains(CN_PORT);
     bool socket_defined = params.contains(CN_SOCKET);
     bool sql_mode_defined = params.contains(CN_SQL_MODE);
@@ -378,6 +380,7 @@ static bool execute_and_check(const std::function<bool ()>& func)
 
 bool Listener::stop()
 {
+    mxb::LogScope scope(name());
     bool rval = (m_state == STOPPED);
 
     if (m_state == STARTED)
@@ -408,6 +411,7 @@ bool Listener::stop()
 
 bool Listener::start()
 {
+    mxb::LogScope scope(name());
     bool rval = (m_state == STARTED);
 
     if (m_state == STOPPED)
@@ -685,6 +689,7 @@ void Listener::print_users(DCB* dcb)
 
 int Listener::load_users()
 {
+    mxb::LogScope scope(name());
     return m_auth_module->load_users(this);
 }
 
@@ -930,7 +935,7 @@ bool Listener::listen_shared()
     }
     else
     {
-        MXS_ERROR("[%s] Failed to listen on [%s]:%u", m_service->name(), m_address.c_str(), m_port);
+        MXS_ERROR("Failed to listen on [%s]:%u", m_address.c_str(), m_port);
     }
 
     return rval;
@@ -964,8 +969,7 @@ bool Listener::listen_unique()
     if (!rval)
     {
         close_all_fds();
-        MXS_ERROR("[%s] One or more workers failed to listen on '[%s]:%u'.", m_service->name(),
-                  m_address.c_str(), m_port);
+        MXS_ERROR("One or more workers failed to listen on '[%s]:%u'.", m_address.c_str(), m_port);
     }
 
     return rval;
@@ -973,19 +977,18 @@ bool Listener::listen_unique()
 
 bool Listener::listen()
 {
+    mxb::LogScope scope(name());
     m_state = FAILED;
 
     /** Load the authentication users before before starting the listener */
     switch (m_auth_module->load_users(this))
     {
     case MXS_AUTH_LOADUSERS_FATAL:
-        MXS_ERROR("[%s] Fatal error when loading users for listener '%s', "
-                  "service is not started.", m_service->name(), name());
+        MXS_ERROR("Fatal error when loading users, service is not started.");
         return false;
 
     case MXS_AUTH_LOADUSERS_ERROR:
-        MXS_WARNING("[%s] Failed to load users for listener '%s', authentication"
-                    " might not work.", m_service->name(), name());
+        MXS_WARNING("Failed to load users, authentication might not work.");
         break;
 
     default:
@@ -1035,9 +1038,10 @@ void Listener::reject_connection(int fd, const char* host)
 
 void Listener::accept_connections()
 {
+    mxb::LogScope scope(name());
+
     for (ClientConn conn = accept_one_connection(fd()); conn.fd != -1; conn = accept_one_connection(fd()))
     {
-
         if (rate_limit.is_blocked(conn.host))
         {
             reject_connection(conn.fd, conn.host);
