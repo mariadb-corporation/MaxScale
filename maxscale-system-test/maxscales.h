@@ -181,6 +181,14 @@ public:
     }
 
     /**
+     * Get a Connection to a specific port
+     */
+    Connection get_connection(int port, int m = 0, const std::string& db = "test")
+    {
+        return Connection(IP[m], port, user_name, password, db, ssl);
+    }
+
+    /**
      * @brief OpenReadMasterConn    Opens new connections to ReadConn master and returns MYSQL struct
      * To close connection mysql_close() have to be called
      * @return MYSQL struct

@@ -146,6 +146,58 @@ void test_hints(TestConnections& test, std::vector<std::string> ids)
     test.expect(!id.empty() && id == ids[0], "Master should reply");
 }
 
+void test_services(TestConnections& test, std::vector<std::string> ids)
+{
+    test.log_printf("Test that rank works with services");
+
+    test.check_maxctrl("alter server server1 rank primary");
+    test.check_maxctrl("alter server server2 rank primary");
+    test.check_maxctrl("alter server server3 rank primary");
+    test.check_maxctrl("alter server server4 rank primary");
+
+    Connection c = test.maxscales->get_connection(4009);
+
+    test.check_maxctrl("alter service service1 rank primary");
+    test.check_maxctrl("alter service service2 rank secondary");
+    test.check_maxctrl("alter service service3 rank secondary");
+
+    // service1 uses server1 and server2
+    c.connect();
+    test.expect(c.field("SELECT @@server_id") == ids[1], "Second slave should reply");
+
+    test.check_maxctrl("alter service service1 rank secondary");
+    test.check_maxctrl("alter service service2 rank primary");
+    test.check_maxctrl("alter service service3 rank secondary");
+
+    // service2 uses server1 and server3
+    c.connect();
+    test.expect(c.field("SELECT @@server_id") == ids[2], "Third slave should reply");
+
+    test.check_maxctrl("alter service service1 rank secondary");
+    test.check_maxctrl("alter service service2 rank secondary");
+    test.check_maxctrl("alter service service3 rank primary");
+
+    // service3 uses server1 and server4
+    c.connect();
+    test.expect(c.field("SELECT @@server_id") == ids[3], "Fourth slave should reply");
+
+    // Set all serviecs to the same rank
+    test.check_maxctrl("alter service service1 rank secondary");
+    test.check_maxctrl("alter service service2 rank secondary");
+    test.check_maxctrl("alter service service3 rank secondary");
+
+    c.connect();
+    std::set<std::string> id_set(ids.begin() + 1, ids.end());
+    test.expect(id_set.count(c.field("SELECT @@server_id")), "Any slave should reply");
+
+    test.check_maxctrl("alter service service1 rank primary");
+    test.check_maxctrl("alter service service2 rank primary");
+    test.check_maxctrl("alter service service3 rank primary");
+
+    c.connect();
+    test.expect(id_set.count(c.field("SELECT @@server_id")), "Any slave should reply");
+}
+
 int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
@@ -168,6 +220,7 @@ int main(int argc, char* argv[])
     test_rwsplit(test, ids);
     test_readconnroute(test, ids);
     test_hints(test, ids);
+    test_services(test, ids);
 
     return test.global_result;
 }
