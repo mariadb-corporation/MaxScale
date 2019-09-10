@@ -1243,6 +1243,24 @@ filters=counter | QLA
 The requests pass through the filters from left to right in the order defined in
 the configuration parameter.
 
+### `targets`
+
+The `targets` parameter is a comma separated list of server and/or service names
+that comprise the routing targets of the service. This parameter was added in
+MaxScale 2.5.0.
+
+```
+targets=My-Service,server2
+```
+
+This parameter allows nested service configurations to be defined without having
+to configure listeners for all services. For example, one use-case is to use
+multiple readwritesplit services behind a schemarouter service to have both the
+sharding of schemarouter with the high-availability of readwritesplit.
+
+**NOTE:** The `targets` parameter is mutually exclusive with the `cluster` and
+  `servers` parameters.
+
 ### `servers`
 
 The servers parameter in a service definition provides a comma separated list of
@@ -1253,7 +1271,8 @@ in the name section of a block with a type parameter of server (see below).
 servers=server1,server2,server3
 ```
 
-*NOTE* The `servers` parameter is mutually exclusive with the `cluster` parameter.
+**NOTE:** The `servers` parameter is mutually exclusive with the `cluster` and
+  `targets` parameters.
 
 ### `cluster`
 
@@ -1265,7 +1284,8 @@ cluster=TheMonitor
 
 ```
 
-*NOTE* The `clusters` parameter is mutually exclusive with the `servers` parameter.
+**NOTE:** The `cluster` parameter is mutually exclusive with the `servers` and
+  `targets` parameters.
 
 ### `user`
 
