@@ -136,7 +136,7 @@ int RWSplit::max_slave_count() const
     int conf_max_nslaves = m_config->max_slave_connections > 0 ?
         m_config->max_slave_connections :
         (router_nservers * m_config->rw_max_slave_conn_percent) / 100;
-    return MXS_MAX(1, MXS_MIN(router_nservers - 1, conf_max_nslaves));
+    return MXS_MAX(1, MXS_MIN(router_nservers, conf_max_nslaves));
 }
 
 bool RWSplit::have_enough_servers() const
