@@ -106,6 +106,8 @@ public:
         bool strip_db_esc;      /**< Remove the '\' characters from database names when querying them from
                                  * the server. MySQL Workbench seems to escape at least the underscore
                                  * character. */
+
+        int64_t rank;   /*< The ranking of this service */
     };
 
     State              state {State::ALLOC};        /**< The service state */

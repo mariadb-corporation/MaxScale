@@ -215,6 +215,7 @@ Service::Config::Config(MXS_CONFIG_PARAMETER* params)
     , net_write_timeout(params->get_duration<std::chrono::seconds>(CN_NET_WRITE_TIMEOUT).count())
     , retain_last_statements(params->get_integer(CN_RETAIN_LAST_STATEMENTS))
     , strip_db_esc(params->get_bool(CN_STRIP_DB_ESC))
+    , rank(params->get_enum(CN_RANK, rank_values))
 {
 }
 
@@ -1518,7 +1519,8 @@ bool Service::is_basic_parameter(const std::string& name)
         CN_VERSION_STRING,
         CN_WEIGHTBY,
         CN_FILTERS,
-        CN_RETAIN_LAST_STATEMENTS
+        CN_RETAIN_LAST_STATEMENTS,
+        CN_RANK
     };
 
     return names.find(name) != names.end();
@@ -1566,6 +1568,9 @@ const MXS_MODULE_PARAM* common_service_params()
         },
         {CN_SESSION_TRACE,      MXS_MODULE_PARAM_BOOL,     "false"},
         {CN_CLUSTER,            MXS_MODULE_PARAM_STRING},
+        {
+            CN_RANK, MXS_MODULE_PARAM_ENUM, DEFAULT_RANK, MXS_MODULE_OPT_ENUM_UNIQUE, rank_values
+        },
         {NULL}
     };
     return config_service_params;

@@ -141,6 +141,11 @@ public:
 
     std::unique_ptr<mxs::Endpoint> get_connection(mxs::Component* up, MXS_SESSION* session) override;
 
+    int64_t rank() const override
+    {
+        return m_config->rank;
+    }
+
     int64_t replication_lag() const override;
 
     uint64_t capabilities() const override
