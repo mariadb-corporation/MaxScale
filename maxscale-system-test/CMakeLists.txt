@@ -1009,6 +1009,9 @@ add_test_executable(sts_readwritesplit.cpp sts_readwritesplit sts_readwritesplit
 # Service-to-Service routing with readconnroute
 add_test_executable(sts_readconnroute.cpp sts_readconnroute sts_readconnroute LABELS readconnroute REPL_BACKEND)
 
+# Service-to-Service routing with smartrouter
+add_test_executable(sts_smartrouter.cpp sts_smartrouter sts_smartrouter LABELS smartrouter REPL_BACKEND)
+
 # Test that masking filter can handle multi-statements.
 add_test_executable(mxs1719.cpp mxs1719 mxs1719 LABELS masking REPL_BACKEND)
 
