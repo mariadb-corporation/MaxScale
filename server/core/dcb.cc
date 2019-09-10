@@ -53,6 +53,7 @@
 #include <maxscale/service.hh>
 #include <maxscale/utils.h>
 #include <maxscale/routingworker.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 
 #include "internal/modules.hh"
 #include "internal/server.hh"
@@ -234,7 +235,7 @@ void DCB::stop_polling_and_shutdown()
 }
 
 // static
-BackendDCB* BackendDCB::take_from_connection_pool(SERVER* s, MXS_SESSION* session)
+BackendDCB* BackendDCB::take_from_connection_pool(SERVER* s, MXS_SESSION* session, mxs::Component* upstream)
 {
     Server* server = static_cast<Server*>(s);
 
@@ -256,6 +257,9 @@ BackendDCB* BackendDCB::take_from_connection_pool(SERVER* s, MXS_SESSION* sessio
                 dcb->m_was_persistent = true;
                 dcb->m_last_read = mxs_clock();
                 dcb->m_last_write = mxs_clock();
+                dcb->m_session = session;
+                MySQLBackendProtocol* protocol = static_cast<MySQLBackendProtocol*>(dcb->m_protocol.get());
+                protocol->set_session_and_component(session, upstream);
                 mxb::atomic::add(&server->pool_stats.n_from_pool, 1, mxb::atomic::RELAXED);
                 return dcb;
             }
@@ -396,7 +400,7 @@ BackendDCB* BackendDCB::connect(SERVER* srv, MXS_SESSION* session, DCB::Manager*
     // - remove the DCB from its manager when moved to the pool and assign a new one when it is
     //   taken out from the pool, or
     // - also consider the manager when deciding whether a DCB in the pool can be used or not.
-    if (auto dcb = take_from_connection_pool(server, session))
+    if (auto dcb = take_from_connection_pool(server, session, component))
     {
         // TODO: For now, we ignore the problem.
         return static_cast<BackendDCB*>(dcb);       // Reusing a DCB from the connection pool

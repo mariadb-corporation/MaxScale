@@ -724,7 +724,9 @@ private:
                               DCB::Manager* manager,
                               mxs::Component* upstream);
 
-    static BackendDCB* take_from_connection_pool(SERVER* server, MXS_SESSION* session);
+    static BackendDCB* take_from_connection_pool(SERVER* server,
+                                                 MXS_SESSION* session,
+                                                 mxs::Component* upstream);
 
     static bool maybe_add_persistent(BackendDCB* dcb);
 
