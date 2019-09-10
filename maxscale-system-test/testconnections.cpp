@@ -13,6 +13,7 @@
 #include <fstream>
 #include <iostream>
 #include <future>
+#include <regex>
 #include <maxbase/stacktrace.hh>
 
 #include "mariadb_func.h"
@@ -247,18 +248,23 @@ TestConnections::TestConnections(int argc, char* argv[])
 
         case 'l':
             {
-                const char* local_ip = optarg ? optarg : "127.0.0.1";
-                printf(
-                    "MaxScale assumed to be running locally; not started and logs not downloaded. IP: %s\n",
-                    local_ip);
+                printf("MaxScale assumed to be running locally; "
+                       "not started and logs not downloaded.");
 
+                maxscale::start = false;
+                maxscale::manual_debug = true;
                 maxscale_init = false;
+
                 no_maxscale_log_copy = true;
                 local_maxscale = true;
 
-                setenv("maxscale_IP", local_ip, true);
-                setenv("maxscale_network", local_ip, true);
-                setenv("maxscale_private_ip", local_ip, true);
+                std::regex regex1("maxscale_000_network=[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+");
+                std::string replace1("maxscale_000_network=127.0.0.1");
+                network_config = regex_replace(network_config, regex1, replace1);
+
+                std::regex regex2("maxscale_000_private_ip=[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+");
+                std::string replace2("maxscale_000_private_ip=127.0.0.1");
+                network_config = regex_replace(network_config, regex2, replace2);
             }
             break;
 
