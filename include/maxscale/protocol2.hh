@@ -152,12 +152,13 @@ public:
      * Reuse a connection. The connection was in the persistent pool
      * and will now be taken into use again.
      *
-     * @param dcb  The connection to be reused.
+     * @param dcb       The connection to be reused.
+     * @param upstream  The upstream component.
      *
      * @return True, if the connection can be reused, false otherwise.
      *         If @c false is returned, the @c dcb should be closed.
      */
-    virtual bool reuse_connection(BackendDCB* dcb) = 0;
+    virtual bool reuse_connection(BackendDCB* dcb, mxs::Component* upstream) = 0;
 
     /**
      * Check if the connection has been fully established, used by connection pooling

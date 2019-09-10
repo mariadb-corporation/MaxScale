@@ -258,9 +258,20 @@ BackendDCB* BackendDCB::take_from_connection_pool(SERVER* s, MXS_SESSION* sessio
                 dcb->m_last_read = mxs_clock();
                 dcb->m_last_write = mxs_clock();
                 dcb->m_session = session;
-                MySQLBackendProtocol* protocol = static_cast<MySQLBackendProtocol*>(dcb->m_protocol.get());
-                protocol->set_session_and_component(session, upstream);
-                mxb::atomic::add(&server->pool_stats.n_from_pool, 1, mxb::atomic::RELAXED);
+
+                if (dcb->m_protocol->reuse_connection(dcb, upstream))
+                {
+                    mxb::atomic::add(&server->pool_stats.n_from_pool, 1, mxb::atomic::RELAXED);
+                }
+                else
+                {
+                    // TODO: There will now be only one attempt to get a persistent
+                    // TODO: connection. There should be more than one attempts, but the
+                    // TODO: reponsibilities between DCB and Server needs to be sorted out.
+                    MXS_WARNING("Failed to reuse a persistent connection.");
+                    DCB::close(dcb);
+                    dcb = nullptr;
+                }
                 return dcb;
             }
         }

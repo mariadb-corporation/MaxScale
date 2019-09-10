@@ -386,12 +386,6 @@ public:
 
     using Iter = mxs::Buffer::iterator;
 
-    void set_session_and_component(MXS_SESSION* session, mxs::Component* component)
-    {
-        m_session = session;
-        m_component = component;
-    }
-
 protected:
     MXS_SESSION* m_session;                 /**< The session this protocol session is associated with */
     uint16_t     m_modutil_state;           /**< TODO: This is an ugly hack, replace it */
@@ -504,7 +498,7 @@ public:
 
     bool    init_connection(DCB* dcb) override;
     void    finish_connection(DCB* dcb) override;
-    bool    reuse_connection(BackendDCB* dcb) override;
+    bool    reuse_connection(BackendDCB* dcb, mxs::Component* upstream) override;
     bool    established(DCB*) override;
     json_t* diagnostics_json(DCB* dcb) override;
 

@@ -94,8 +94,13 @@ void MySQLBackendProtocol::finish_connection(DCB* dcb)
     dcb->writeq_append(mysql_create_com_quit(nullptr, 0));
 }
 
-bool MySQLBackendProtocol::reuse_connection(BackendDCB* dcb)
+bool MySQLBackendProtocol::reuse_connection(BackendDCB* dcb, mxs::Component* upstream)
 {
+    m_session = dcb->session();
+    m_component = upstream;
+    return true;
+
+#ifdef NOT_DEF
     bool rv = false;
     mxb_assert(!dcb->readq() && !dcb->delayq() && !dcb->writeq());
     mxb_assert(!dcb->is_in_persistent_pool());
@@ -135,6 +140,7 @@ bool MySQLBackendProtocol::reuse_connection(BackendDCB* dcb)
     }
 
     return rv;
+#endif
 }
 
 /**
