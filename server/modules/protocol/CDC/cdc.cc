@@ -132,11 +132,10 @@ void CDCClientProtocol::ready_for_reading(DCB* generic_dcb)
     CDCClientProtocol* protocol = this;
     GWBUF* head = NULL;
     int auth_val = CDC_STATE_AUTH_FAILED;
-    CDC_session* client_data = (CDC_session*) dcb->protocol_data();
 
     if (dcb->read(&head, 0) > 0)
     {
-        switch (protocol->state)
+        switch (protocol->m_state)
         {
         case CDC_STATE_WAIT_FOR_AUTH:
             /* Fill CDC_session from incoming packet */
@@ -153,14 +152,9 @@ void CDCClientProtocol::ready_for_reading(DCB* generic_dcb)
             {
                 if (session_start(dcb->session()))
                 {
-                    protocol->state = CDC_STATE_HANDLE_REQUEST;
+                    protocol->m_state = CDC_STATE_HANDLE_REQUEST;
 
                     write_auth_ack(dcb);
-
-                    MXS_INFO("%s: Client [%s] authenticated with user [%s]",
-                             dcb->service()->name(),
-                             dcb->m_remote != NULL ? dcb->m_remote : "",
-                             client_data->user);
                 }
                 else
                 {
@@ -170,14 +164,9 @@ void CDCClientProtocol::ready_for_reading(DCB* generic_dcb)
 
             if (auth_val != CDC_STATE_AUTH_OK)
             {
-                protocol->state = CDC_STATE_AUTH_ERR;
+                protocol->m_state = CDC_STATE_AUTH_ERR;
 
                 write_auth_err(dcb);
-                MXS_ERROR("%s: authentication failure from [%s], user [%s]",
-                          dcb->service()->name(),
-                          dcb->m_remote != NULL ? dcb->m_remote : "",
-                          client_data->user);
-
                 /* force the client connection close */
                 DCB::close(dcb);
             }
@@ -219,7 +208,7 @@ void CDCClientProtocol::ready_for_reading(DCB* generic_dcb)
             MXS_INFO("%s: Client [%s] in unknown state %d",
                      dcb->service()->name(),
                      dcb->m_remote != NULL ? dcb->m_remote : "",
-                     protocol->state);
+                     protocol->m_state);
             gwbuf_free(head);
 
             break;
@@ -276,30 +265,15 @@ bool CDCClientProtocol::init_connection(DCB* generic_dcb)
 {
     mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
     auto client_dcb = static_cast<ClientDCB*>(generic_dcb);
-
-    bool inited = false;
     mxb_assert(client_dcb->session());
 
-    /*
-     * create the session data for CDC
-     * this coud be done in anothe routine, let's keep it here for now
-     */
-    CDC_session* client_data = (CDC_session*) MXS_CALLOC(1, sizeof(CDC_session));
-    if (client_data)
-    {
-        client_dcb->protocol_data_set(client_data);
+    /* client protocol state change to CDC_STATE_WAIT_FOR_AUTH */
+    m_state = CDC_STATE_WAIT_FOR_AUTH;
 
-        /* client protocol state change to CDC_STATE_WAIT_FOR_AUTH */
-        state = CDC_STATE_WAIT_FOR_AUTH;
-
-        MXS_NOTICE("%s: new connection from [%s]",
-                   client_dcb->service()->name(),
-                   client_dcb->m_remote != NULL ? client_dcb->m_remote : "");
-
-        inited = true;
-    }
-
-    return inited;
+    MXS_NOTICE("%s: new connection from [%s]",
+               client_dcb->service()->name(),
+               client_dcb->m_remote != NULL ? client_dcb->m_remote : "");
+    return true;
 }
 
 void CDCClientProtocol::finish_connection(DCB* dcb)

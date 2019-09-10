@@ -40,17 +40,6 @@
 
 #define CDC_UUID_LEN 32
 #define CDC_TYPE_LEN 16
-/**
- * CDC session specific data
- */
-struct CDC_session
-{
-    char         user[CDC_USER_MAXLEN + 1];     /*< username for authentication */
-    char         uuid[CDC_UUID_LEN + 1];        /*< client uuid in registration */
-    unsigned int flags[2];                      /*< Received flags              */
-    uint8_t      auth_data[SHA_DIGEST_LENGTH];  /*< Password Hash               */
-    int          state;                         /*< CDC protocol state          */
-};
 
 /**
  * CDC protocol
@@ -74,5 +63,5 @@ public:
     void finish_connection(DCB* dcb) override;
 
 private:
-    int  state {CDC_STATE_WAIT_FOR_AUTH}; /*< CDC protocol state */
+    int  m_state {CDC_STATE_WAIT_FOR_AUTH}; /*< CDC protocol state */
 };

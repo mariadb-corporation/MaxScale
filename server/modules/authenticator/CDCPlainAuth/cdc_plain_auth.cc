@@ -11,31 +11,16 @@
  * Public License.
  */
 
-/**
- * @file cdc_auth.c
- *
- * CDC Authentication module for handling the checking of clients credentials
- * in the CDC protocol.
- *
- * @verbatim
- * Revision History
- * Date         Who                     Description
- * 11/03/2016   Massimiliano Pinto      Initial version
- *
- * @endverbatim
- */
-
 #include <maxscale/protocol/cdc/module_names.hh>
 #define MXS_MODULE_NAME MXS_CDCPLAINAUTH_AUTHENTICATOR_NAME
 
 #include <maxscale/authenticator2.hh>
+
 #include <fcntl.h>
-#include <sys/stat.h>
-#include <maxscale/protocol/cdc/cdc.hh>
 #include <maxbase/alloc.h>
+#include <maxscale/protocol/cdc/cdc.hh>
 #include <maxscale/event.hh>
 #include <maxscale/modulecmd.hh>
-#include <maxscale/modutil.hh>
 #include <maxscale/paths.h>
 #include <maxscale/secrets.h>
 #include <maxscale/users.h>
@@ -48,26 +33,10 @@
 
 const char CDC_USERS_FILENAME[] = "cdcusers";
 
-static bool cdc_auth_set_protocol_data(DCB* dcb, GWBUF* buf);
-static bool cdc_auth_is_client_ssl_capable(DCB* dcb);
-static int  cdc_auth_authenticate(DCB* dcb);
-static void cdc_auth_free_client_data(DCB* dcb);
-
 static int cdc_set_service_user(Listener* listener);
 static int cdc_replace_users(Listener* listener);
 
-static int cdc_auth_check(DCB* dcb,
-                          CDCClientProtocol* protocol,
-                          char* username,
-                          uint8_t* auth_data,
-                          unsigned int* flags
-                          );
-
-static bool cdc_auth_set_client_data(CDC_session* client_data,
-                                     CDCClientProtocol* protocol,
-                                     uint8_t* client_auth_packet,
-                                     int client_auth_packet_size
-                                     );
+static int cdc_auth_check(DCB* dcb, char* username, uint8_t* auth_data);
 
 class CDCAuthenticatorModule : public mxs::AuthenticatorModule
 {
@@ -111,27 +80,24 @@ public:
     }
 
     ~CDCClientAuthenticator() override = default;
-    bool extract(DCB* client, GWBUF* buffer) override
-    {
-        return cdc_auth_set_protocol_data(client, buffer);
-    }
+    bool extract(DCB* client, GWBUF* buffer) override;
 
     bool ssl_capable(DCB* client) override
     {
-        return cdc_auth_is_client_ssl_capable(client);
+        return false;
     }
 
-    int authenticate(DCB* client) override
-    {
-        return cdc_auth_authenticate(client);
-    }
+    int authenticate(DCB* client) override;
 
     void free_data(DCB* client) override
     {
-        cdc_auth_free_client_data(client);
     }
 
-    // No fields, data is contained in protocol.
+private:
+    bool set_client_data(uint8_t* client_auth_packet, int client_auth_packet_size);
+
+    char    m_user[CDC_USER_MAXLEN + 1] {'\0'}; /*< username for authentication */
+    uint8_t m_auth_data[SHA_DIGEST_LENGTH] {0}; /*< Password Hash               */
 };
 
 std::unique_ptr<mxs::ClientAuthenticator> CDCAuthenticatorModule::create_client_authenticator()
@@ -261,17 +227,12 @@ MXS_MODULE* MXS_CREATE_MODULE()
  * @brief Function to easily call authentication check.
  *
  * @param dcb Request handler DCB connected to the client
- * @param protocol  The protocol structure for the connection
  * @param username  String containing username
  * @param auth_data  The encrypted password for authentication
  * @return Authentication status
  * @note Authentication status codes are defined in cdc.h
  */
-static int cdc_auth_check(DCB* dcb,
-                          CDCClientProtocol* protocol,
-                          char* username,
-                          uint8_t* auth_data,
-                          unsigned int* flags)
+static int cdc_auth_check(DCB* dcb, char* username, uint8_t* auth_data)
 {
     int rval = CDC_STATE_AUTH_FAILED;
 
@@ -296,53 +257,50 @@ static int cdc_auth_check(DCB* dcb,
 /**
  * @brief Authenticates a CDC user who is a client to MaxScale.
  *
- * @param dcb Request handler DCB connected to the client
+ * @param generic_dcb Request handler DCB connected to the client
  * @return Authentication status
  * @note Authentication status codes are defined in cdc.h
  */
-static int cdc_auth_authenticate(DCB* generic_dcb)
+int CDCClientAuthenticator::authenticate(DCB* generic_dcb)
 {
     mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
 
-    CDCClientProtocol* protocol = static_cast<CDCClientProtocol*>(dcb->protocol_session());
-    CDC_session* client_data = (CDC_session*)dcb->protocol_data();
     int auth_ret;
 
-    if (0 == strlen(client_data->user))
+    if (0 == strlen(m_user))
     {
         auth_ret = CDC_STATE_AUTH_ERR;
     }
     else
     {
-        MXS_DEBUG("Receiving connection from '%s'",
-                  client_data->user);
+        MXS_DEBUG("Receiving connection from '%s'", m_user);
 
-        auth_ret =
-            cdc_auth_check(dcb, protocol, client_data->user, client_data->auth_data, client_data->flags);
+        auth_ret = cdc_auth_check(dcb, m_user, m_auth_data);
 
         /* On failed authentication try to reload users and authenticate again */
         if (CDC_STATE_AUTH_OK != auth_ret
             && cdc_replace_users(dcb->session()->listener.get()) == MXS_AUTH_LOADUSERS_OK)
         {
-            auth_ret = cdc_auth_check(dcb,
-                                      protocol,
-                                      client_data->user,
-                                      client_data->auth_data,
-                                      client_data->flags);
+            auth_ret = cdc_auth_check(dcb, m_user, m_auth_data);
         }
 
         /* on successful authentication, set user into dcb field */
         if (CDC_STATE_AUTH_OK == auth_ret)
         {
-            dcb->m_user = MXS_STRDUP_A(client_data->user);
+            dcb->m_user = MXS_STRDUP_A(m_user);
+            MXS_INFO("%s: Client [%s] authenticated with user [%s]",
+                     dcb->service()->name(),
+                     dcb->m_remote != NULL ? dcb->m_remote : "",
+                     m_user);
         }
         else if (dcb->service()->config().log_auth_warnings)
         {
             MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE,
-                          "%s: login attempt for user '%s', authentication failed.",
+                          "%s: login attempt for user '%s' from [%s], authentication failed.",
                           dcb->service()->name(),
-                          client_data->user);
+                          m_user,
+                          dcb->m_remote != NULL ? dcb->m_remote : "");
         }
     }
 
@@ -363,36 +321,12 @@ static int cdc_auth_authenticate(DCB* generic_dcb)
  * @param buffer Pointer to pointer to buffer containing data from client
  * @return True on success, false on error
  */
-static bool cdc_auth_set_protocol_data(DCB* generic_dcb, GWBUF* buf)
+bool CDCClientAuthenticator::extract(DCB* generic_dcb, GWBUF* buf)
 {
     mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
-    auto dcb = static_cast<ClientDCB*>(generic_dcb);
-
     uint8_t* client_auth_packet = GWBUF_DATA(buf);
-    CDCClientProtocol* protocol = NULL;
-    CDC_session* client_data = NULL;
-    int client_auth_packet_size = 0;
-
-    protocol = static_cast<CDCClientProtocol*>(dcb->protocol_session());
-    if (dcb->protocol_data() == NULL)
-    {
-        if (NULL == (client_data = (CDC_session*)MXS_CALLOC(1, sizeof(CDC_session))))
-        {
-            return false;
-        }
-        dcb->protocol_data_set(client_data);
-    }
-    else
-    {
-        client_data = (CDC_session*)dcb->protocol_data();
-    }
-
-    client_auth_packet_size = gwbuf_length(buf);
-
-    return cdc_auth_set_client_data(client_data,
-                                    protocol,
-                                    client_auth_packet,
-                                    client_auth_packet_size);
+    int client_auth_packet_size = gwbuf_length(buf);
+    return set_client_data(client_auth_packet, client_auth_packet_size);
 }
 
 /**
@@ -402,16 +336,11 @@ static bool cdc_auth_set_protocol_data(DCB* generic_dcb, GWBUF* buf)
  * function fills in the details. If problems are found with the data, the
  * return code indicates failure.
  *
- * @param client_data The data structure for the DCB
- * @param protocol The protocol structure for this connection
  * @param client_auth_packet The data from the buffer received from client
  * @param client_auth_packet size An integer giving the size of the data
  * @return True on success, false on error
  */
-static bool cdc_auth_set_client_data(CDC_session* client_data,
-                                     CDCClientProtocol* protocol,
-                                     uint8_t* client_auth_packet,
-                                     int client_auth_packet_size)
+bool CDCClientAuthenticator::set_client_data(uint8_t* client_auth_packet, int client_auth_packet_size)
 {
     if (client_auth_packet_size % 2 != 0)
     {
@@ -426,9 +355,7 @@ static bool cdc_auth_set_client_data(CDC_session* client_data,
     /* decode input data */
     if (client_auth_packet_size <= CDC_USER_MAXLEN)
     {
-        gw_hex2bin((uint8_t*)decoded_buffer,
-                   (const char*)client_auth_packet,
-                   client_auth_packet_size);
+        gw_hex2bin((uint8_t*)decoded_buffer, (const char*)client_auth_packet, client_auth_packet_size);
         decoded_buffer[decoded_size] = '\0';
         char* tmp_ptr = strchr(decoded_buffer, ':');
 
@@ -440,8 +367,8 @@ static bool cdc_auth_set_client_data(CDC_session* client_data,
 
             if (user_len <= CDC_USER_MAXLEN && auth_len == SHA_DIGEST_LENGTH)
             {
-                strcpy(client_data->user, decoded_buffer);
-                memcpy(client_data->auth_data, tmp_ptr, auth_len);
+                strcpy(m_user, decoded_buffer);
+                memcpy(m_auth_data, tmp_ptr, auth_len);
                 rval = true;
             }
         }
@@ -459,39 +386,6 @@ static bool cdc_auth_set_client_data(CDC_session* client_data,
     }
 
     return rval;
-}
-
-/**
- * @brief Determine whether the client is SSL capable
- *
- * The authentication request from the client will indicate whether the client
- * is expecting to make an SSL connection. The information has been extracted
- * in the previous functions.
- *
- * @param dcb Request handler DCB connected to the client
- * @return Boolean indicating whether client is SSL capable
- */
-static bool cdc_auth_is_client_ssl_capable(DCB* dcb)
-{
-    return false;
-}
-
-/**
- * @brief Free the client data pointed to by the passed DCB.
- *
- * Currently all that is required is to free the storage pointed to by
- * dcb->m_data.  But this is intended to be implemented as part of the
- * authentication API at which time this code will be moved into the
- * CDC authenticator.  If the data structure were to become more complex
- * the mechanism would still work and be the responsibility of the authenticator.
- * The DCB should not know authenticator implementation details.
- *
- * @param dcb Request handler DCB connected to the client
- */
-static void cdc_auth_free_client_data(DCB* dcb)
-{
-    mxb_assert(dcb->role() == DCB::Role::CLIENT);
-    MXS_FREE(static_cast<ClientDCB*>(dcb)->protocol_data_release());
 }
 
 /*
