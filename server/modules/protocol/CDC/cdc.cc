@@ -34,58 +34,37 @@
 #define MXS_MODULE_NAME MXS_CDC_PROTOCOL_NAME
 
 #include <maxscale/ccdefs.hh>
-#include <cdc.hh>
+#include <maxscale/protocol/cdc/cdc.hh>
 #include <maxbase/alloc.h>
 #include <maxscale/modinfo.hh>
 #include <maxscale/protocol.hh>
-#include <maxscale/modinfo.hh>
-#include <maxscale/poll.hh>
-#include <errno.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
 #include <maxscale/authenticator2.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/service.hh>
 #include <maxscale/session.hh>
-#include <maxscale/poll.hh>
-#include <maxbase/atomic.h>
 #include <maxscale/protocol2.hh>
 
 #define ISspace(x) isspace((int)(x))
 #define CDC_SERVER_STRING "MaxScale(c) v.1.0.0"
 
-static int                   cdc_read_event(DCB* dcb);
-static int                   cdc_write_event(DCB* dcb);
-static int                   cdc_write(DCB* dcb, GWBUF* queue);
-static int                   cdc_error(DCB* dcb);
-static int                   cdc_hangup(DCB* dcb);
+static void write_auth_ack(DCB* dcb);
+static void write_auth_err(DCB* dcb);
 
-static bool                  cdc_init_connection(DCB*);
-static void                  cdc_finish_connection(DCB* dcb);
-static CDC_protocol*         cdc_protocol_init();
-
-static int                   do_auth(DCB* dcb, GWBUF* buffer, void* data);
-static void                  write_auth_ack(DCB* dcb);
-static void                  write_auth_err(DCB* dcb);
-
-class CDCProtocol : public mxs::ProtocolModule
+class CDCProtocolModule : public mxs::ProtocolModule
 {
 public:
-    static CDCProtocol* create()
+    static CDCProtocolModule* create()
     {
-        return new CDCProtocol();
+        return new CDCProtocolModule();
     }
 
     std::unique_ptr<mxs::ClientProtocol>
     create_client_protocol(MXS_SESSION* session, mxs::Component* component) override
     {
-        return std::unique_ptr<mxs::ClientProtocol>(cdc_protocol_init());
+        return std::unique_ptr<mxs::ClientProtocol>(CDCClientProtocol::create());
     }
 
     std::string auth_default() const override
@@ -99,47 +78,7 @@ public:
     }
 };
 
-CDC_protocol* CDC_protocol::create(MXS_SESSION* session, mxs::Component* component)
-{
-    return cdc_protocol_init();
-}
-
-void CDC_protocol::ready_for_reading(DCB* dcb)
-{
-    cdc_read_event(dcb);
-}
-
-int32_t CDC_protocol::write(DCB* dcb, GWBUF* buffer)
-{
-    return cdc_write(dcb, buffer);
-}
-
-void CDC_protocol::write_ready(DCB* dcb)
-{
-    cdc_write_event(dcb);
-}
-
-void CDC_protocol::error(DCB* dcb)
-{
-    cdc_error(dcb);
-}
-
-void CDC_protocol::hangup(DCB* dcb)
-{
-    cdc_hangup(dcb);
-}
-
-bool CDC_protocol::init_connection(DCB* dcb)
-{
-    return cdc_init_connection(dcb);
-}
-
-void CDC_protocol::finish_connection(DCB* dcb)
-{
-    cdc_finish_connection(dcb);
-}
-
-GWBUF* CDC_protocol::reject(const char* host)
+GWBUF* CDCClientProtocol::reject(const char* host)
 {
     return nullptr;
 }
@@ -164,7 +103,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "A Change Data Capture Listener implementation for use in binlog events retrieval",
         "V1.0.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &mxs::ClientProtocolApi<CDCProtocol>::s_api,
+        &mxs::ClientProtocolApi<CDCProtocolModule>::s_api,
         NULL,       /* Process init. */
         NULL,       /* Process finish. */
         NULL,       /* Thread init. */
@@ -184,19 +123,18 @@ MXS_MODULE* MXS_CREATE_MODULE()
  * @param generic_dcb    The descriptor control block
  * @return
  */
-static int cdc_read_event(DCB* generic_dcb)
+void CDCClientProtocol::ready_for_reading(DCB* generic_dcb)
 {
     mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
 
     MXS_SESSION* session = dcb->session();
-    CDC_protocol* protocol = (CDC_protocol*) dcb->protocol_session();
-    int n, rc = 0;
+    CDCClientProtocol* protocol = this;
     GWBUF* head = NULL;
     int auth_val = CDC_STATE_AUTH_FAILED;
     CDC_session* client_data = (CDC_session*) dcb->protocol_data();
 
-    if ((n = dcb->read(&head, 0)) > 0)
+    if (dcb->read(&head, 0) > 0)
     {
         switch (protocol->state)
         {
@@ -273,7 +211,7 @@ static int cdc_read_event(DCB* generic_dcb)
                          (char*)GWBUF_DATA(head));
 
                 // gwbuf_set_type(head, GWBUF_TYPE_CDC);
-                rc = mxs_route_query(session, head);
+                mxs_route_query(session, head);
             }
             break;
 
@@ -287,8 +225,6 @@ static int cdc_read_event(DCB* generic_dcb)
             break;
         }
     }
-
-    return rc;
 }
 
 /**
@@ -297,9 +233,9 @@ static int cdc_read_event(DCB* generic_dcb)
  * @param dcb    The descriptor control block
  * @return
  */
-static int cdc_write_event(DCB* dcb)
+void CDCClientProtocol::write_ready(DCB* dcb)
 {
-    return dcb->writeq_drain();
+    dcb->writeq_drain();
 }
 
 /**
@@ -311,11 +247,9 @@ static int cdc_write_event(DCB* dcb)
  * @param dcb   Descriptor Control Block for the socket
  * @param queue Linked list of buffes to write
  */
-static int cdc_write(DCB* dcb, GWBUF* queue)
+int32_t CDCClientProtocol::write(DCB* dcb, GWBUF* buffer)
 {
-    int rc;
-    rc = dcb->writeq_append(queue);
-    return rc;
+    return dcb->writeq_append(buffer);
 }
 
 /**
@@ -323,10 +257,9 @@ static int cdc_write(DCB* dcb, GWBUF* queue)
  *
  * @param dcb    The descriptor control block
  */
-static int cdc_error(DCB* dcb)
+void CDCClientProtocol::error(DCB* dcb)
 {
     DCB::close(dcb);
-    return 0;
 }
 
 /**
@@ -334,21 +267,17 @@ static int cdc_error(DCB* dcb)
  *
  * @param dcb    The descriptor control block
  */
-static int cdc_hangup(DCB* dcb)
+void CDCClientProtocol::hangup(DCB* dcb)
 {
     DCB::close(dcb);
-    return 0;
 }
 
-static bool cdc_init_connection(DCB* generic_dcb)
+bool CDCClientProtocol::init_connection(DCB* generic_dcb)
 {
     mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
     auto client_dcb = static_cast<ClientDCB*>(generic_dcb);
 
     bool inited = false;
-
-    CDC_protocol* protocol = static_cast<CDC_protocol*>(client_dcb->protocol_session());
-
     mxb_assert(client_dcb->session());
 
     /*
@@ -361,7 +290,7 @@ static bool cdc_init_connection(DCB* generic_dcb)
         client_dcb->protocol_data_set(client_data);
 
         /* client protocol state change to CDC_STATE_WAIT_FOR_AUTH */
-        protocol->state = CDC_STATE_WAIT_FOR_AUTH;
+        state = CDC_STATE_WAIT_FOR_AUTH;
 
         MXS_NOTICE("%s: new connection from [%s]",
                    client_dcb->service()->name(),
@@ -373,7 +302,7 @@ static bool cdc_init_connection(DCB* generic_dcb)
     return inited;
 }
 
-static void cdc_finish_connection(DCB* client_dcb)
+void CDCClientProtocol::finish_connection(DCB* dcb)
 {
 }
 
@@ -383,15 +312,9 @@ static void cdc_finish_connection(DCB* client_dcb)
  * @return        New allocated protocol or NULL on errors
  *
  */
-static CDC_protocol* cdc_protocol_init()
+CDCClientProtocol* CDCClientProtocol::create()
 {
-    CDC_protocol* p = new (std::nothrow) CDC_protocol();
-    if (p)
-    {
-        /* memory allocation here */
-        p->state = CDC_STATE_WAIT_FOR_AUTH;
-    }
-    return p;
+    return new (std::nothrow) CDCClientProtocol();
 }
 
 /**

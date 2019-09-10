@@ -26,7 +26,7 @@
 #include <maxscale/mysql_binlog.h>
 #include <maxscale/users.h>
 #include <maxscale/router.hh>
-#include <cdc.hh>
+#include <maxscale/protocol/cdc/cdc.hh>
 #include <maxavro.hh>
 #include <binlog_common.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>

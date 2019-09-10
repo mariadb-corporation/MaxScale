@@ -31,7 +31,7 @@
 #include <maxscale/authenticator2.hh>
 #include <fcntl.h>
 #include <sys/stat.h>
-#include <cdc.hh>
+#include <maxscale/protocol/cdc/cdc.hh>
 #include <maxbase/alloc.h>
 #include <maxscale/event.hh>
 #include <maxscale/modulecmd.hh>
@@ -57,14 +57,14 @@ static int cdc_set_service_user(Listener* listener);
 static int cdc_replace_users(Listener* listener);
 
 static int cdc_auth_check(DCB* dcb,
-                          CDC_protocol* protocol,
+                          CDCClientProtocol* protocol,
                           char* username,
                           uint8_t* auth_data,
                           unsigned int* flags
                           );
 
 static bool cdc_auth_set_client_data(CDC_session* client_data,
-                                     CDC_protocol* protocol,
+                                     CDCClientProtocol* protocol,
                                      uint8_t* client_auth_packet,
                                      int client_auth_packet_size
                                      );
@@ -268,7 +268,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
  * @note Authentication status codes are defined in cdc.h
  */
 static int cdc_auth_check(DCB* dcb,
-                          CDC_protocol* protocol,
+                          CDCClientProtocol* protocol,
                           char* username,
                           uint8_t* auth_data,
                           unsigned int* flags)
@@ -305,7 +305,7 @@ static int cdc_auth_authenticate(DCB* generic_dcb)
     mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
 
-    CDC_protocol* protocol = static_cast<CDC_protocol*>(dcb->protocol_session());
+    CDCClientProtocol* protocol = static_cast<CDCClientProtocol*>(dcb->protocol_session());
     CDC_session* client_data = (CDC_session*)dcb->protocol_data();
     int auth_ret;
 
@@ -369,11 +369,11 @@ static bool cdc_auth_set_protocol_data(DCB* generic_dcb, GWBUF* buf)
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
 
     uint8_t* client_auth_packet = GWBUF_DATA(buf);
-    CDC_protocol* protocol = NULL;
+    CDCClientProtocol* protocol = NULL;
     CDC_session* client_data = NULL;
     int client_auth_packet_size = 0;
 
-    protocol = static_cast<CDC_protocol*>(dcb->protocol_session());
+    protocol = static_cast<CDCClientProtocol*>(dcb->protocol_session());
     if (dcb->protocol_data() == NULL)
     {
         if (NULL == (client_data = (CDC_session*)MXS_CALLOC(1, sizeof(CDC_session))))
@@ -409,7 +409,7 @@ static bool cdc_auth_set_protocol_data(DCB* generic_dcb, GWBUF* buf)
  * @return True on success, false on error
  */
 static bool cdc_auth_set_client_data(CDC_session* client_data,
-                                     CDC_protocol* protocol,
+                                     CDCClientProtocol* protocol,
                                      uint8_t* client_auth_packet,
                                      int client_auth_packet_size)
 {

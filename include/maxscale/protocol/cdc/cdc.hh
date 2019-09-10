@@ -55,11 +55,11 @@ struct CDC_session
 /**
  * CDC protocol
  */
-class CDC_protocol : public mxs::ClientProtocol
+class CDCClientProtocol : public mxs::ClientProtocol
 {
 public:
-    static CDC_protocol* create(MXS_SESSION* session, mxs::Component* component);
-    ~CDC_protocol() = default;
+    static CDCClientProtocol* create();
+    ~CDCClientProtocol() = default;
 
     static GWBUF* reject(const char* host);
 
@@ -73,7 +73,6 @@ public:
     bool init_connection(DCB* dcb) override;
     void finish_connection(DCB* dcb) override;
 
-    int  state;                     /*< CDC protocol state          */
-    char user[CDC_USER_MAXLEN + 1]; /*< username for authentication */
-    char type[CDC_TYPE_LEN + 1];    /*< Request Type            */
+private:
+    int  state {CDC_STATE_WAIT_FOR_AUTH}; /*< CDC protocol state */
 };
