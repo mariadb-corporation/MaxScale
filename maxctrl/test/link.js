@@ -65,5 +65,22 @@ describe("Link/Unlink Commands", function() {
             .should.be.rejected
     })
 
+    it('link service to a service', function() {
+        return verifyCommand('link service Read-Connection-Router RW-Split-Router',
+                             'services/Read-Connection-Router')
+            .then(function(res) {
+                res.data.relationships.services.data.length.should.equal(1)
+                res.data.relationships.services.data[0].id.should.equal("RW-Split-Router")
+            })
+    })
+
+    it('unlink service from a service', function() {
+        return verifyCommand('unlink service Read-Connection-Router RW-Split-Router',
+                             'services/Read-Connection-Router')
+            .then(function(res) {
+                res.data.relationships.services.data.length.should.be.empty
+            })
+    })
+
     after(stopMaxScale)
 });

@@ -78,6 +78,42 @@ describe("Service", function() {
             })
     });
 
+    it("add service→service relationship", function() {
+        return request.get(base_url + "/services/RW-Split-Router")
+            .then(function(resp) {
+                var svc = JSON.parse(resp)
+
+                svc.data.relationships.services = {
+                    data: [ {id: "SchemaRouter-Router", type: "services"} ]
+                }
+
+                return request.patch(base_url + "/services/RW-Split-Router", {json: svc})
+            })
+            .then(function(resp) {
+                return request.get(base_url + "/services/RW-Split-Router")
+            })
+            .then(function(resp) {
+                var svc = JSON.parse(resp)
+                svc.data.relationships.services.data[0].id.should.be.equal("SchemaRouter-Router")
+            })
+    });
+
+    it("remove service→service relationship", function() {
+        return request.get(base_url + "/services/RW-Split-Router")
+            .then(function(resp) {
+                var svc = JSON.parse(resp)
+                svc.data.relationships.services.data = null
+                return request.patch(base_url + "/services/RW-Split-Router", {json: svc})
+            })
+            .then(function(resp) {
+                return request.get(base_url + "/services/RW-Split-Router")
+            })
+            .then(function(resp) {
+                var svc = JSON.parse(resp)
+                svc.data.relationships.services.data.should.be.empty
+            })
+    });
+
     it("bad request body with `relationships` endpoint should be rejected", function() {
         return request.patch(base_url + "/services/RW-Split-Router/relationships/servers", {json: {servers: null}})
             .should.be.rejected
@@ -116,12 +152,32 @@ describe("Service", function() {
             })
     });
 
+    it("add service→service relationship via `relationships` endpoint", function() {
+        return request.patch(base_url + "/services/RW-Split-Router/relationships/services",
+                             { json: { data: [
+                                 {id: "SchemaRouter-Router", type: "services"},
+                             ]}})
+            .then(() => request.get(base_url + "/services/RW-Split-Router", { json: true}))
+            .then((res) => {
+                res.data.relationships.services.data.should.have.lengthOf(1)
+            })
+    });
+
     it("remove service→filter relationship via `relationships` endpoint", function() {
         return request.patch(base_url + "/services/RW-Split-Router/relationships/filters",
                              { json: { data: null}})
             .then(() => request.get(base_url + "/services/RW-Split-Router", { json: true}))
             .then((res) => {
                 res.data.relationships.should.not.have.keys("filters")
+            })
+    });
+
+    it("remove service→service relationship via `relationships` endpoint", function() {
+        return request.patch(base_url + "/services/RW-Split-Router/relationships/services",
+                             { json: { data: null}})
+            .then(() => request.get(base_url + "/services/RW-Split-Router", { json: true}))
+            .then((res) => {
+                res.data.relationships.services.data.should.be.empty
             })
     });
 
