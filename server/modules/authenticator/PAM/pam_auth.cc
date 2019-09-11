@@ -14,7 +14,7 @@
 
 #include <string>
 #include <maxscale/authenticator.hh>
-#include <maxscale/users.h>
+#include <maxscale/users.hh>
 #include <maxbase/format.hh>
 
 #include "pam_instance.hh"

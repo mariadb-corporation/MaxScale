@@ -32,7 +32,7 @@
 #include <maxscale/json_api.hh>
 #include <maxscale/paths.h>
 #include <maxscale/router.hh>
-#include <maxscale/users.h>
+#include <maxscale/users.hh>
 
 #include "internal/config.hh"
 #include "internal/filter.hh"
@@ -2774,7 +2774,7 @@ bool validate_user_json(json_t* json)
     {
         config_runtime_error("The '%s' field is not a string", MXS_JSON_PTR_ACCOUNT);
     }
-    else if (json_to_account_type(account) == USER_ACCOUNT_UNKNOWN)
+    else if (json_to_account_type(account) == mxs::USER_ACCOUNT_UNKNOWN)
     {
         config_runtime_error("The '%s' field is not a valid account value", MXS_JSON_PTR_ACCOUNT);
     }
@@ -2819,7 +2819,7 @@ bool runtime_create_user_from_json(json_t* json)
         const char* user = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
         const char* password = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_PASSWORD));
         std::string strtype = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_TYPE));
-        user_account_type type = json_to_account_type(mxs_json_pointer(json, MXS_JSON_PTR_ACCOUNT));
+        auto type = json_to_account_type(mxs_json_pointer(json, MXS_JSON_PTR_ACCOUNT));
         const char* err = NULL;
 
         if (strtype == CN_INET && (err = admin_add_inet_user(user, password, type)) == ADMIN_SUCCESS)

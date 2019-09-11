@@ -46,7 +46,7 @@
 #include <maxscale/secrets.h>
 #include <maxscale/server.hh>
 #include <maxscale/service.hh>
-#include <maxscale/users.h>
+#include <maxscale/users.hh>
 #include <maxscale/utils.h>
 #include <maxscale/utils.hh>
 #include <maxscale/paths.h>

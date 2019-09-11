@@ -46,7 +46,7 @@
 #include <maxscale/version.h>
 #include <maxscale/resultset.hh>
 #include <maxscale/secrets.h>
-#include <maxscale/users.h>
+#include <maxscale/users.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 
 #include "../../../core/internal/modules.hh"

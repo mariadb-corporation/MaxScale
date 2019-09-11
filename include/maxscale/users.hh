@@ -16,14 +16,15 @@
  * @file users.h The functions to manipulate a set of administrative users
  */
 
-#include <maxscale/cdefs.h>
+#include <maxscale/ccdefs.hh>
+#include <openssl/sha.h>
 #include <maxbase/jansson.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/service.hh>
-#include <openssl/sha.h>
 
-MXS_BEGIN_DECLS
+namespace maxscale
+{
 
 /** User account types */
 enum user_account_type
@@ -33,6 +34,54 @@ enum user_account_type
     USER_ACCOUNT_ADMIN      /**< Allows complete access */
 };
 
+struct UserInfo
+{
+    UserInfo() = default;
+    UserInfo(std::string pw, user_account_type perm)
+        : password(pw)
+        , permissions(perm)
+    {
+    }
+
+    std::string       password;
+    user_account_type permissions {USER_ACCOUNT_BASIC};
+};
+
+
+class Users
+{
+public:
+    Users(const Users&) = delete;
+    Users& operator=(const Users&) = delete;
+    Users() = default;
+    static Users* from_json(json_t* json);
+
+    bool add(const std::string& user, const std::string& password, user_account_type perm);
+    bool remove(std::string user);
+    bool get(std::string user, UserInfo* output = NULL) const;
+    bool authenticate(const std::string& user, const std::string& password);
+    int  admin_count() const;
+    bool check_permissions(const std::string& user, const std::string& password,
+                           user_account_type perm) const;
+    bool    set_permissions(std::string user, user_account_type perm);
+    json_t* diagnostic_json() const;
+    void    diagnostic(DCB* dcb) const;
+    bool    empty() const;
+    json_t* to_json() const;
+
+private:
+    using UserMap = std::unordered_map<std::string, UserInfo>;
+    static bool is_admin(const UserMap::value_type& value);
+
+    bool        add_hashed(const std::string& user, const std::string& password, user_account_type perm);
+    void        load_json(json_t* json);
+    std::string hash(const std::string& password);
+    std::string old_hash(const std::string& password);
+
+    mutable std::mutex m_lock;
+    UserMap            m_data;
+};
+}
 /**
  * An opaque users object
  */
@@ -64,7 +113,7 @@ void users_free(USERS* users);
  *
  * @return True if user was added
  */
-bool users_add(USERS* users, const char* user, const char* password, enum user_account_type type);
+bool users_add(USERS* users, const char* user, const char* password, mxs::user_account_type type);
 
 /**
  * Delete a user from the user table.
@@ -197,7 +246,7 @@ json_t* users_diagnostic_json(USERS* users);
  *
  * @return String representation of @c type
  */
-const char* account_type_to_str(enum user_account_type type);
+const char* account_type_to_str(mxs::user_account_type type);
 
 /**
  * Convert JSON value to account_type value
@@ -206,6 +255,4 @@ const char* account_type_to_str(enum user_account_type type);
  *
  * @return Enum value of @c json
  */
-enum user_account_type json_to_account_type(json_t* json);
-
-MXS_END_DECLS
+mxs::user_account_type json_to_account_type(json_t* json);

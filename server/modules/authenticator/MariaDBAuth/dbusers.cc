@@ -35,7 +35,7 @@
 #include <maxscale/router.hh>
 #include <maxscale/secrets.h>
 #include <maxscale/service.hh>
-#include <maxscale/users.h>
+#include <maxscale/users.hh>
 #include <maxscale/utils.h>
 #include <maxscale/routingworker.hh>
 

@@ -50,7 +50,7 @@
 #include <maxbase/format.hh>
 #include <maxsql/mariadb.hh>
 #include <maxbase/alloc.h>
-#include <maxscale/adminusers.h>
+#include <maxscale/adminusers.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/housekeeper.h>
 #include <maxscale/mainworker.hh>

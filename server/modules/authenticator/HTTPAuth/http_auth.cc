@@ -16,7 +16,7 @@
 
 #include <maxscale/authenticator2.hh>
 #include <maxscale/modinfo.hh>
-#include <maxscale/users.h>
+#include <maxscale/users.hh>
 
 class HTTPAuthenticatorModule : public mxs::AuthenticatorModule
 {

@@ -24,7 +24,7 @@
 #include <maxscale/dcb.hh>
 #include <maxscale/service.hh>
 #include <maxscale/mysql_binlog.h>
-#include <maxscale/users.h>
+#include <maxscale/users.hh>
 #include <maxscale/router.hh>
 #include <maxscale/protocol/cdc/cdc.hh>
 #include <maxavro.hh>

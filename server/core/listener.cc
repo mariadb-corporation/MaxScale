@@ -36,7 +36,7 @@
 #include <maxscale/ssl.hh>
 #include <maxscale/protocol2.hh>
 #include <maxbase/alloc.h>
-#include <maxscale/users.h>
+#include <maxscale/users.hh>
 #include <maxscale/service.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/routingworker.hh>

@@ -34,8 +34,8 @@
 #include <maxscale/modinfo.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/buffer.hh>
-#include <maxscale/adminusers.h>
-#include <maxscale/users.h>
+#include <maxscale/adminusers.hh>
+#include <maxscale/users.hh>
 
 class MaxAdminAuthenticatorModule : public mxs::AuthenticatorModule
 {

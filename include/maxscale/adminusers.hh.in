@@ -13,14 +13,11 @@
  */
 
 /**
- * @file adminusers.h - Administration users support routines
+ * @file adminusers.hh - Administration users support routines
  */
 
-#include <maxscale/cdefs.h>
-#include <maxscale/dcb.hh>
-#include <maxscale/users.h>
-
-MXS_BEGIN_DECLS
+#include <maxscale/ccdefs.hh>
+#include <maxscale/users.hh>
 
 /* Max length of fields in for admin users */
 #define ADMIN_USER_MAXLEN       128
@@ -56,11 +53,11 @@ enum user_type
 
 void admin_users_init();
 
-const char* admin_enable_linux_account(const char *uname, enum user_account_type type);
+const char* admin_enable_linux_account(const char *uname, mxs::user_account_type type);
 const char* admin_disable_linux_account(const char *uname);
 bool admin_linux_account_enabled(const char *uname);
 
-const char* admin_add_inet_user(const char *uname, const char *password, enum user_account_type type);
+const char* admin_add_inet_user(const char *uname, const char *password, mxs::user_account_type type);
 const char* admin_alter_inet_user(const char* uname, const char* password);
 const char* admin_remove_inet_user(const char* uname);
 bool admin_inet_user_exists(const char *uname);
@@ -103,8 +100,6 @@ json_t* admin_user_to_json(const char* host, const char* user, enum user_type ty
  * @return True if user & password logged in successfully
  */
 bool admin_user_is_pam_account(const std::string& username, const std::string& password,
-                               user_account_type min_acc_type = USER_ACCOUNT_BASIC);
+                               mxs::user_account_type min_acc_type = mxs::USER_ACCOUNT_BASIC);
 
 void dcb_PrintAdminUsers(DCB *dcb);
-
-MXS_END_DECLS

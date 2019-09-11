@@ -23,7 +23,7 @@
 #include <maxscale/modulecmd.hh>
 #include <maxscale/paths.h>
 #include <maxscale/secrets.h>
-#include <maxscale/users.h>
+#include <maxscale/users.hh>
 #include <maxscale/utils.h>
 
 /* Allowed time interval (in seconds) after last update*/
@@ -37,6 +37,8 @@ static int cdc_set_service_user(Listener* listener);
 static int cdc_replace_users(Listener* listener);
 
 static int cdc_auth_check(DCB* dcb, char* username, uint8_t* auth_data);
+
+using mxs::USER_ACCOUNT_ADMIN;
 
 class CDCAuthenticatorModule : public mxs::AuthenticatorModule
 {

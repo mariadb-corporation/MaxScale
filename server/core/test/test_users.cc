@@ -22,9 +22,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <maxscale/users.h>
+#include <maxscale/users.hh>
 
 #include "test_utils.hh"
+
+using mxs::USER_ACCOUNT_ADMIN;
 
 static void test1()
 {

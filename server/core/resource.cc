@@ -16,7 +16,7 @@
 #include <map>
 #include <sstream>
 
-#include <maxscale/adminusers.h>
+#include <maxscale/adminusers.hh>
 #include <maxbase/alloc.h>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/housekeeper.h>

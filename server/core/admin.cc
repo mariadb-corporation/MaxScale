@@ -32,7 +32,7 @@
 #include <maxscale/config.hh>
 #include <maxscale/clock.h>
 #include <maxscale/http.hh>
-#include <maxscale/adminusers.h>
+#include <maxscale/adminusers.hh>
 
 #include "internal/resource.hh"
 

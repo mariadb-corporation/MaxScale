@@ -41,7 +41,7 @@
 
 #include <maxbase/atomic.hh>
 #include <maxbase/format.hh>
-#include <maxscale/adminusers.h>
+#include <maxscale/adminusers.hh>
 #include <maxbase/alloc.h>
 #include <maxscale/clock.h>
 #include <maxscale/housekeeper.h>

@@ -22,7 +22,7 @@
 #include <maxscale/secrets.h>
 #include <maxscale/service.hh>
 #include <maxscale/sqlite3.h>
-#include <maxscale/users.h>
+#include <maxscale/users.hh>
 #include <maxscale/authenticator2.hh>
 
 

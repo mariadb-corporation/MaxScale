@@ -19,7 +19,7 @@
 #include <maxscale/mysql_utils.hh>
 #include <stdlib.h>
 #include <string.h>
-#include <maxscale/users.h>
+#include <maxscale/users.hh>
 #include <strings.h>
 #include <math.h>
 

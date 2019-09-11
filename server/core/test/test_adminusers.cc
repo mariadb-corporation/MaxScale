@@ -22,10 +22,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <maxscale/paths.h>
-#include <maxscale/adminusers.h>
+#include <maxscale/adminusers.hh>
 #include <maxbase/alloc.h>
 #include <maxscale/utils.h>
-#include <maxscale/users.h>
+#include <maxscale/users.hh>
+
+using mxs::USER_ACCOUNT_ADMIN;
 
 /**
  * test1    default user

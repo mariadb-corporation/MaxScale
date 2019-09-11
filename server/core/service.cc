@@ -48,7 +48,7 @@
 #include <maxscale/router.hh>
 #include <maxscale/server.hh>
 #include <maxscale/session.hh>
-#include <maxscale/users.h>
+#include <maxscale/users.hh>
 #include <maxscale/utils.h>
 #include <maxscale/utils.hh>
 #include <maxscale/version.h>

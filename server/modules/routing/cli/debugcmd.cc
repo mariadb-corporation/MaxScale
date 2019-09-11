@@ -36,7 +36,7 @@
 #include <telnetd.hh>
 
 #include <maxbase/atomic.h>
-#include <maxscale/adminusers.h>
+#include <maxscale/adminusers.hh>
 #include <maxbase/alloc.h>
 #include <maxscale/buffer.hh>
 #include <maxscale/config.hh>
@@ -49,7 +49,7 @@
 #include <maxscale/routingworker.hh>
 #include <maxscale/server.hh>
 #include <maxscale/service.hh>
-#include <maxscale/users.h>
+#include <maxscale/users.hh>
 #include <maxscale/utils.h>
 #include <maxscale/version.h>
 
@@ -81,6 +81,8 @@
 #define ARG_TYPE_OBJECT_NAME 11     // A string where whitespace is replaced with hyphens
 
 using maxscale::Monitor;
+using maxscale::USER_ACCOUNT_ADMIN;
+using maxscale::USER_ACCOUNT_BASIC;
 
 /**
  * The subcommand structure
@@ -2510,7 +2512,7 @@ static void reload_dbusers(DCB* dcb, SERVICE* service)
  * @param user The user name
  * @param user The user password
  */
-static void do_inet_add_user(DCB* dcb, char* user, char* password, enum user_account_type type)
+static void do_inet_add_user(DCB* dcb, char* user, char* password, mxs::user_account_type type)
 {
     const char* err;
 
@@ -2872,7 +2874,7 @@ static void disable_maxlog()
  * @param dcb  The DCB for messages
  * @param user The Linux user name
  */
-static void do_enable_account(DCB* dcb, char* user, enum user_account_type type)
+static void do_enable_account(DCB* dcb, char* user, mxs::user_account_type type)
 {
     const char* err;
 

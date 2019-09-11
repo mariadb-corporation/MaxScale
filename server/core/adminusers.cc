@@ -22,10 +22,10 @@
 #include <sys/stat.h>
 #include <string>
 
-#include <maxscale/adminusers.h>
+#include <maxscale/adminusers.hh>
 #include <maxbase/alloc.h>
 #include <maxscale/cn_strings.hh>
-#include <maxscale/users.h>
+#include <maxscale/users.hh>
 #include <maxbase/pam_utils.hh>
 #include <maxscale/paths.h>
 #include <maxscale/json_api.hh>
@@ -47,6 +47,11 @@ static const int LINELEN = 80;
 
 static const char LINUX_USERS_FILE_NAME[] = "maxadmin-users";
 static const char INET_USERS_FILE_NAME[] = "passwd";
+
+using mxs::user_account_type;
+using mxs::USER_ACCOUNT_UNKNOWN;
+using mxs::USER_ACCOUNT_ADMIN;
+using mxs::USER_ACCOUNT_BASIC;
 
 /**
  * Admin Users initialisation

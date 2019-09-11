@@ -29,7 +29,7 @@
 #include <maxscale/buffer.hh>
 #include <maxscale/session.hh>
 #include <maxscale/router.hh>
-#include <maxscale/adminusers.h>
+#include <maxscale/adminusers.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/maxadmin.h>
 
