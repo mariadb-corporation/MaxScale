@@ -57,7 +57,6 @@ These tutorials are for specific use cases and module combinations.
 Here are tutorials on monitoring and managing MariaDB MaxScale in cluster environments.
 
  - [MariaDB MaxScale HA with Lsyncd](Tutorials/MaxScale-HA-with-lsyncd.md)
- - [Nagios Plugins for MariaDB MaxScale Tutorial](Tutorials/Nagios-Plugins.md)
  - [REST API Tutorial](Tutorials/REST-API-Tutorial.md)
 
 ## Routers
