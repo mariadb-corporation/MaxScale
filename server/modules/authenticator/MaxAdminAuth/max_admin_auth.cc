@@ -37,11 +37,6 @@
 #include <maxscale/adminusers.h>
 #include <maxscale/users.h>
 
-static bool max_admin_auth_set_protocol_data(DCB* dcb, GWBUF* buf);
-static bool max_admin_auth_is_client_ssl_capable(DCB* dcb);
-static int  max_admin_auth_authenticate(DCB* dcb);
-static void max_admin_auth_free_client_data(DCB* dcb);
-
 class MaxAdminAuthenticatorModule : public mxs::AuthenticatorModule
 {
 public:
@@ -62,7 +57,6 @@ public:
     void diagnostics(DCB* output, Listener* listener) override
     {
         users_default_diagnostic(output, listener);
-
     }
 
     json_t* diagnostics_json(const Listener* listener) override
@@ -85,27 +79,21 @@ public:
     }
 
     ~MaxAdminClientAuthenticator() override = default;
-    bool extract(DCB* client, GWBUF* buffer) override
-    {
-        return max_admin_auth_set_protocol_data(client, buffer);
-    }
+    bool extract(DCB* dcb, GWBUF* buffer) override;
 
     bool ssl_capable(DCB* client) override
     {
-        return max_admin_auth_is_client_ssl_capable(client);
+        return false;
     }
 
-    int authenticate(DCB* client) override
-    {
-        return max_admin_auth_authenticate(client);
-    }
+    int authenticate(DCB* client) override;
 
     void free_data(DCB* client) override
     {
-        max_admin_auth_free_client_data(client);
     }
 
-    // No fields, data is contained in protocol.
+private:
+    std::string m_user; /**< username */
 };
 
 std::unique_ptr<mxs::ClientAuthenticator> MaxAdminAuthenticatorModule::create_client_authenticator()
@@ -113,8 +101,6 @@ std::unique_ptr<mxs::ClientAuthenticator> MaxAdminAuthenticatorModule::create_cl
     return std::unique_ptr<mxs::ClientAuthenticator>(new(std::nothrow) MaxAdminClientAuthenticator(this));
 }
 
-extern "C"
-{
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -123,7 +109,7 @@ extern "C"
  *
  * @return The module object
  */
-MXS_MODULE* MXS_CREATE_MODULE()
+extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     static MXS_MODULE info =
     {
@@ -145,23 +131,17 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
     return &info;
 }
-/*lint +e14 */
-}
 
 /**
  * @brief Authentication of a user/password combination.
  *
- * The validation is already done, the result is returned.
- *
- * @param dcb Request handler DCB connected to the client
+ * @param client Request handler DCB connected to the client
  * @return Authentication status - always 0 to denote success
  */
-static int max_admin_auth_authenticate(DCB* generic_dcb)
+int MaxAdminClientAuthenticator::authenticate(DCB* client)
 {
-    mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
-    auto dcb = static_cast<ClientDCB*>(generic_dcb);
-
-    return (dcb->protocol_data() != NULL && ((ADMIN_session*)dcb->protocol_data())->validated) ? 0 : 1;
+    /* Check for existence of the user */
+    return admin_linux_account_enabled(m_user.c_str()) ? 0 : 1;
 }
 
 /**
@@ -171,59 +151,15 @@ static int max_admin_auth_authenticate(DCB* generic_dcb)
  * username in the first buffer and the password in the second buffer.
  *
  * @param dcb Request handler DCB connected to the client
- * @param buffer Pointer to pointer to buffers containing data from client
+ * @param buf Pointer to pointer to buffers containing data from client
  * @return Authentication status - true for success, false for failure
  */
-static bool max_admin_auth_set_protocol_data(DCB* generic_dcb, GWBUF* buf)
+bool MaxAdminClientAuthenticator::extract(DCB* client, GWBUF* buf)
 {
-    mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
-    auto dcb = static_cast<ClientDCB*>(generic_dcb);
-
-    ADMIN_session* session_data;
-
-    max_admin_auth_free_client_data(dcb);
-
-    if ((session_data = (ADMIN_session*)MXS_CALLOC(1, sizeof(ADMIN_session))) != NULL)
-    {
-        int user_len = (GWBUF_LENGTH(buf) > ADMIN_USER_MAXLEN) ? ADMIN_USER_MAXLEN : GWBUF_LENGTH(buf);
-        memcpy(session_data->user, GWBUF_DATA(buf), user_len);
-        session_data->validated = false;
-        dcb->protocol_data_set((void*)session_data);
-
-        /* Check for existance of the user */
-        if (admin_linux_account_enabled(session_data->user))
-        {
-            session_data->validated = true;
-            return true;
-        }
-    }
-    return false;
-}
-
-/**
- * @brief Determine whether the client is SSL capable
- *
- * Always say that client is not SSL capable. Support for SSL is not yet
- * available.
- *
- * @param dcb Request handler DCB connected to the client
- * @return Boolean indicating whether client is SSL capable - false
- */
-static bool max_admin_auth_is_client_ssl_capable(DCB* dcb)
-{
-    return false;
-}
-
-/**
- * @brief Free the client data pointed to by the passed DCB.
- *
- * The max_admin authenticator uses a simple structure that can be freed with
- * a single call to MXS_FREE().
- *
- * @param dcb Request handler DCB connected to the client
- */
-static void max_admin_auth_free_client_data(DCB* dcb)
-{
-    mxb_assert(dcb->role() == DCB::Role::CLIENT);
-    MXS_FREE(static_cast<ClientDCB*>(dcb)->protocol_data_release());
+    // Buffer may not be 0-terminated.
+    int used_buf_len = (GWBUF_LENGTH(buf) > ADMIN_USER_MAXLEN) ? ADMIN_USER_MAXLEN : GWBUF_LENGTH(buf);
+    auto user_name = (const char*)(GWBUF_DATA(buf));
+    int user_name_len = strnlen(user_name, used_buf_len);
+    m_user.assign(user_name, user_name_len);
+    return true;
 }

@@ -54,16 +54,6 @@ enum user_type
     USER_TYPE_UNIX  // Linux accounts
 };
 
-/*
- * MySQL session specific data
- *
- */
-typedef struct admin_session
-{
-    char user[ADMIN_USER_MAXLEN + 1];               /*< username       */
-    bool validated;                                 /* Was user validated? */
-} ADMIN_session;
-
 void admin_users_init();
 
 const char* admin_enable_linux_account(const char *uname, enum user_account_type type);
