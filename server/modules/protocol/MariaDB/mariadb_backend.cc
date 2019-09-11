@@ -97,15 +97,12 @@ void MySQLBackendProtocol::finish_connection(DCB* dcb)
 
 bool MySQLBackendProtocol::reuse_connection(BackendDCB* dcb, mxs::Component* upstream)
 {
-    m_session = dcb->session();
-    m_component = upstream;
-    return true;
-
-#ifdef NOT_DEF
     bool rv = false;
+
     mxb_assert(!dcb->readq() && !dcb->delayq() && !dcb->writeq());
     mxb_assert(!dcb->is_in_persistent_pool());
     mxb_assert(m_ignore_replies >= 0);
+    mxb_assert(dcb->was_persistent());
 
     if (dcb->state() != DCB::State::POLLING || this->protocol_auth_state != MXS_AUTH_STATE_COMPLETE)
     {
@@ -114,6 +111,14 @@ bool MySQLBackendProtocol::reuse_connection(BackendDCB* dcb, mxs::Component* ups
     }
     else
     {
+        dcb->clear_was_persistent();
+
+        MXS_SESSION* session = m_session;
+        mxs::Component* component = m_component;
+
+        m_session = dcb->session();
+        m_component = upstream;
+
         m_ignore_replies = 0;
 
         /**
@@ -138,10 +143,16 @@ bool MySQLBackendProtocol::reuse_connection(BackendDCB* dcb, mxs::Component* ups
             m_ignore_replies++;
             rv = true;
         }
+
+        if (!rv)
+        {
+            // Restore situation
+            m_session = session;
+            m_component = component;
+        }
     }
 
     return rv;
-#endif
 }
 
 /**
@@ -944,85 +955,29 @@ int MySQLBackendProtocol::handle_persistent_connection(BackendDCB* dcb, GWBUF* q
     auto protocol = this;
     int rc = 0;
 
-    if (dcb->was_persistent())
+    mxb_assert(!dcb->was_persistent());
+
+    mxb_assert(protocol->m_ignore_replies > 0);
+
+    if (MYSQL_IS_COM_QUIT((uint8_t*)GWBUF_DATA(queue)))
     {
-        mxb_assert(!dcb->readq() && !dcb->delayq() && !dcb->writeq());
-        mxb_assert(!dcb->is_in_persistent_pool());
-        mxb_assert(protocol->m_ignore_replies >= 0);
-
-        dcb->clear_was_persistent();
-        protocol->m_ignore_replies = 0;
-
-        if (dcb->state() != DCB::State::POLLING || protocol->protocol_auth_state != MXS_AUTH_STATE_COMPLETE)
-        {
-            MXS_INFO("DCB and protocol state do not qualify for pooling: %s, %s",
-                     mxs::to_string(dcb->state()), mxs::to_string(protocol->protocol_auth_state));
-            gwbuf_free(queue);
-            return 0;
-        }
-
-        /**
-         * This is a DCB that was just taken out of the persistent connection pool.
-         * We need to sent a COM_CHANGE_USER query to the backend to reset the
-         * session state.
-         */
-        if (protocol->stored_query)
-        {
-            /** It is possible that the client DCB is closed before the COM_CHANGE_USER
-             * response is received. */
-            gwbuf_free(protocol->stored_query);
-            protocol->stored_query = nullptr;
-        }
-
-        if (MYSQL_IS_COM_QUIT(GWBUF_DATA(queue)))
-        {
-            /** The connection is being closed before the first write to this
-             * backend was done. The COM_QUIT is ignored and the DCB will be put
-             * back into the pool once it's closed. */
-            MXS_INFO("COM_QUIT received as the first write, ignoring and sending the DCB back to the pool.");
-            gwbuf_free(queue);
-            return 1;
-        }
-
-        auto mysqlses = static_cast<MYSQL_session*>(dcb->session()->client_dcb->protocol_data());
-        GWBUF* buf = gw_create_change_user_packet(mysqlses);
-
-        if (dcb->writeq_append(buf))
-        {
-            MXS_INFO("Sent COM_CHANGE_USER");
-            protocol->m_ignore_replies++;
-            protocol->stored_query = queue;
-            rc = 1;
-        }
-        else
-        {
-            gwbuf_free(queue);
-        }
+        /** The COM_CHANGE_USER was already sent but the session is already
+         * closing. */
+        MXS_INFO("COM_QUIT received while COM_CHANGE_USER is in progress, closing pooled connection");
+        gwbuf_free(queue);
+        dcb->trigger_hangup_event();
     }
     else
     {
-        mxb_assert(protocol->m_ignore_replies > 0);
-
-        if (MYSQL_IS_COM_QUIT((uint8_t*)GWBUF_DATA(queue)))
-        {
-            /** The COM_CHANGE_USER was already sent but the session is already
-             * closing. */
-            MXS_INFO("COM_QUIT received while COM_CHANGE_USER is in progress, closing pooled connection");
-            gwbuf_free(queue);
-            dcb->trigger_hangup_event();
-        }
-        else
-        {
-            /**
-             * We're still waiting on the reply to the COM_CHANGE_USER, append the
-             * buffer to the stored query. This is possible if the client sends
-             * BLOB data on the first command or is sending multiple COM_QUERY
-             * packets at one time.
-             */
-            MXS_INFO("COM_CHANGE_USER in progress, appending query to queue");
-            protocol->stored_query = gwbuf_append(protocol->stored_query, queue);
-            rc = 1;
-        }
+        /**
+         * We're still waiting on the reply to the COM_CHANGE_USER, append the
+         * buffer to the stored query. This is possible if the client sends
+         * BLOB data on the first command or is sending multiple COM_QUERY
+         * packets at one time.
+         */
+        MXS_INFO("COM_CHANGE_USER in progress, appending query to queue");
+        protocol->stored_query = gwbuf_append(protocol->stored_query, queue);
+        rc = 1;
     }
 
     return rc;
@@ -1041,7 +996,9 @@ int32_t MySQLBackendProtocol::write(DCB* plain_dcb, GWBUF* queue)
     BackendDCB* dcb = static_cast<BackendDCB*>(plain_dcb);
     auto backend_protocol = this;
 
-    if (dcb->was_persistent() || backend_protocol->m_ignore_replies > 0)
+    mxb_assert(!dcb->was_persistent());
+
+    if (backend_protocol->m_ignore_replies > 0)
     {
         return handle_persistent_connection(dcb, queue);
     }
