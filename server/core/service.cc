@@ -607,13 +607,14 @@ const Service::FilterList& Service::get_filters() const
     return m_data->filters;
 }
 
-Service* service_internal_find(const char* name)
+// static
+Service* Service::find(const std::string& name)
 {
     LockGuard guard(this_unit.lock);
 
     for (Service* s : this_unit.services)
     {
-        if (strcmp(s->name(), name) == 0 && s->active())
+        if (s->name() == name && s->active())
         {
             return s;
         }
@@ -645,7 +646,7 @@ Service* service_uses_monitor(mxs::Monitor* monitor)
  */
 SERVICE* service_find(const char* servname)
 {
-    return service_internal_find(servname);
+    return Service::find(servname);
 }
 
 /**
@@ -1143,24 +1144,19 @@ bool Service::dump_config(const char* filename) const
     return true;
 }
 
-bool service_serialize(const Service* service)
+bool Service::serialize() const
 {
     bool rval = false;
     char filename[PATH_MAX];
-    snprintf(filename,
-             sizeof(filename),
-             "%s/%s.cnf.tmp",
-             get_config_persistdir(),
-             service->name());
+    snprintf(filename, sizeof(filename), "%s/%s.cnf.tmp",
+             get_config_persistdir(), name());
 
     if (unlink(filename) == -1 && errno != ENOENT)
     {
         MXS_ERROR("Failed to remove temporary service configuration at '%s': %d, %s",
-                  filename,
-                  errno,
-                  mxs_strerror(errno));
+                  filename, errno, mxs_strerror(errno));
     }
-    else if (service->dump_config(filename))
+    else if (dump_config(filename))
     {
         char final_filename[PATH_MAX];
         strcpy(final_filename, filename);
@@ -1176,9 +1172,7 @@ bool service_serialize(const Service* service)
         else
         {
             MXS_ERROR("Failed to rename temporary service configuration at '%s': %d, %s",
-                      filename,
-                      errno,
-                      mxs_strerror(errno));
+                      filename, errno, mxs_strerror(errno));
         }
     }
 

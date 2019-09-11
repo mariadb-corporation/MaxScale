@@ -626,7 +626,7 @@ bool runtime_alter_service(Service* service, const char* zKey, const char* zValu
 
     if (rval)
     {
-        service_serialize(service);
+        service->serialize();
         MXS_NOTICE("Updated service '%s': %s=%s", service->name(), key.c_str(), value.c_str());
     }
 
@@ -1240,7 +1240,7 @@ static bool runtime_create_service(const char* name, const char* router, MXS_CON
 {
     bool rval = false;
 
-    if (service_internal_find(name) == NULL)
+    if (Service::find(name) == NULL)
     {
         Service* service = NULL;
         MXS_CONFIG_PARAMETER parameters;
@@ -1261,7 +1261,7 @@ static bool runtime_create_service(const char* name, const char* router, MXS_CON
                 {
                     config_runtime_error("Could not create service '%s' with module '%s'", name, router);
                 }
-                else if (!service_serialize(service))
+                else if (!service->serialize())
                 {
                     config_runtime_error("Failed to serialize service '%s'", name);
                 }
@@ -1689,13 +1689,13 @@ static bool server_contains_required_fields(json_t* json)
 
 static bool server_relation_is_valid(const std::string& type, const std::string& value)
 {
-    return (type == CN_SERVICES && service_internal_find(value.c_str()))
+    return (type == CN_SERVICES && Service::find(value.c_str()))
            || (type == CN_MONITORS && MonitorManager::find_monitor(value.c_str()));
 }
 
 static bool filter_to_service_relation_is_valid(const std::string& type, const std::string& value)
 {
-    return type == CN_SERVICES && service_internal_find(value.c_str());
+    return type == CN_SERVICES && Service::find(value.c_str());
 }
 
 static bool service_to_filter_relation_is_valid(const std::string& type, const std::string& value)
@@ -2266,7 +2266,7 @@ Service* runtime_create_service_from_json(json_t* json)
 
         if (runtime_create_service(name, router, &params))
         {
-            rval = service_internal_find(name);
+            rval = Service::find(name);
             mxb_assert(rval);
 
             // Performing an alter right after creation takes care of server relationships

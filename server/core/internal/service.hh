@@ -45,6 +45,15 @@ public:
     using RateLimits = std::vector<LastUserLoad>;
 
     /**
+     * Find a service by name
+     *
+     * @param Name of the service to find
+     *
+     * @return Pointer to service or nullptr if not found
+     */
+    static Service* find(const std::string& name);
+
+    /**
      * @brief Allocate a new service
      *
      * @param name   The service name
@@ -195,6 +204,16 @@ public:
     {
         m_params.set(key, value);
     }
+
+    /**
+     * @brief Serialize a service to a file
+     *
+     * This converts @c service into an INI format file.
+     *
+     * @param service Service to serialize
+     * @return False if the serialization of the service fails, true if it was successful
+     */
+    bool serialize() const;
 
 private:
 
@@ -362,20 +381,6 @@ bool service_launch_all(void);
  */
 bool service_remove_listener(Service* service, const char* target);
 
-
-/**
- * @brief Serialize a service to a file
- *
- * This converts @c service into an INI format file.
- *
- * NOTE: This does not persist the complete service configuration and requires
- * that an existing service configuration is in the main configuration file.
- *
- * @param service Service to serialize
- * @return False if the serialization of the service fails, true if it was successful
- */
-bool service_serialize(const Service* service);
-
 /**
  * Internal utility functions
  */
@@ -397,9 +402,6 @@ bool service_server_in_use(const SERVER* server);
  * @return True if at least one service uses the filter
  */
 bool service_filter_in_use(const SFilterDef& filter);
-
-// Internal search function
-Service* service_internal_find(const char* name);
 
 /**
  * @brief Check if a service uses a server
