@@ -49,8 +49,6 @@ typedef std::vector<std::string> StringVector;
 using std::tie;
 using maxscale::Monitor;
 
-static std::mutex crt_lock;
-
 #define RUNTIME_ERRMSG_BUFSIZE 512
 thread_local std::vector<std::string> runtime_errmsg;
 
@@ -123,7 +121,7 @@ std::string get_module_param_name(const std::string& type)
         return CN_MODULE;
     }
 
-    mxb_assert(!true); // Should not be called for a server.
+    mxb_assert(!true);      // Should not be called for a server.
     return "";
 }
 
@@ -164,8 +162,6 @@ static std::pair<bool, MXS_CONFIG_PARAMETER> load_defaults(const char* name,
 
 bool runtime_link_server(Server* server, const char* target)
 {
-    std::lock_guard<std::mutex> guard(crt_lock);
-
     bool rval = false;
     Service* service = service_internal_find(target);
     Monitor* monitor = service ? NULL : MonitorManager::find_monitor(target);
@@ -219,8 +215,6 @@ bool runtime_link_server(Server* server, const char* target)
 
 bool runtime_unlink_server(Server* server, const char* target)
 {
-    std::lock_guard<std::mutex> guard(crt_lock);
-
     bool rval = false;
     Service* service = service_internal_find(target);
     Monitor* monitor = service ? NULL : MonitorManager::find_monitor(target);
@@ -268,7 +262,6 @@ bool runtime_unlink_server(Server* server, const char* target)
 
 bool runtime_create_server(const char* name, const char* address, const char* port, bool external)
 {
-    std::lock_guard<std::mutex> guard(crt_lock);
     bool rval = false;
 
     if (ServerManager::find_by_unique_name(name) == NULL)
@@ -319,7 +312,6 @@ bool runtime_create_server(const char* name, const char* address, const char* po
 
 bool runtime_destroy_server(Server* server)
 {
-    std::lock_guard<std::mutex> guard(crt_lock);
     bool rval = false;
 
     if (service_server_in_use(server) || MonitorManager::server_is_monitored(server))
@@ -419,8 +411,6 @@ bool runtime_alter_server(Server* server, const char* key, const char* value)
             return false;
         }
     }
-
-    std::lock_guard<std::mutex> guard(crt_lock);
 
     bool setting_changed = false;
     if (is_normal_parameter)
@@ -593,7 +583,6 @@ bool runtime_alter_service(Service* service, const char* zKey, const char* zValu
         return false;
     }
 
-    std::lock_guard<std::mutex> guard(crt_lock);
     bool rval = true;
 
     if (service->is_basic_parameter(key))
@@ -649,8 +638,6 @@ bool runtime_alter_maxscale(const char* name, const char* value)
     MXS_CONFIG& cnf = *config_get_global_options();
     std::string key = name;
     bool rval = false;
-
-    std::lock_guard<std::mutex> guard(crt_lock);
 
     if (key == CN_AUTH_CONNECT_TIMEOUT)
     {
@@ -1029,7 +1016,6 @@ bool runtime_create_listener(Service* service,
     unsigned short u_port = atoi(port);
     bool rval = false;
 
-    std::lock_guard<std::mutex> guard(crt_lock);
     std::string reason;
 
     SListener old_listener = use_socket ?
@@ -1088,7 +1074,6 @@ bool runtime_destroy_listener(Service* service, const char* name)
     char filename[PATH_MAX];
     snprintf(filename, sizeof(filename), "%s/%s.cnf", get_config_persistdir(), name);
 
-    std::lock_guard<std::mutex> guard(crt_lock);
 
     if (unlink(filename) == -1)
     {
@@ -1128,7 +1113,6 @@ bool runtime_destroy_listener(Service* service, const char* name)
 
 bool runtime_create_monitor(const char* name, const char* module, MXS_CONFIG_PARAMETER* params)
 {
-    std::lock_guard<std::mutex> guard(crt_lock);
     bool rval = false;
 
     if (MonitorManager::find_monitor(name) == NULL)
@@ -1180,7 +1164,6 @@ bool runtime_create_monitor(const char* name, const char* module, MXS_CONFIG_PAR
 
 bool runtime_create_filter(const char* name, const char* module, MXS_CONFIG_PARAMETER* params)
 {
-    std::lock_guard<std::mutex> guard(crt_lock);
     bool rval = false;
 
     if (!filter_find(name))
@@ -1237,7 +1220,6 @@ bool runtime_destroy_filter(const SFilterDef& filter)
 {
     mxb_assert(filter);
     bool rval = false;
-    std::lock_guard<std::mutex> guard(crt_lock);
 
     if (filter_can_be_destroyed(filter))
     {
@@ -1256,7 +1238,6 @@ bool runtime_destroy_filter(const SFilterDef& filter)
 
 static bool runtime_create_service(const char* name, const char* router, MXS_CONFIG_PARAMETER* params)
 {
-    std::lock_guard<std::mutex> guard(crt_lock);
     bool rval = false;
 
     if (service_internal_find(name) == NULL)
@@ -1307,7 +1288,6 @@ static bool runtime_create_service(const char* name, const char* router, MXS_CON
 bool runtime_destroy_service(Service* service)
 {
     bool rval = false;
-    std::lock_guard<std::mutex> guard(crt_lock);
     mxb_assert(service && service->active());
 
     if (service->can_be_destroyed())
@@ -1338,8 +1318,6 @@ bool runtime_destroy_monitor(Monitor* monitor)
     {
         char filename[PATH_MAX];
         snprintf(filename, sizeof(filename), "%s/%s.cnf", get_config_persistdir(), monitor->name());
-
-        std::lock_guard<std::mutex> guard(crt_lock);
 
         if (unlink(filename) == -1 && errno != ENOENT)
         {
