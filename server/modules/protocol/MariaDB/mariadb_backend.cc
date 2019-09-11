@@ -102,7 +102,6 @@ bool MySQLBackendProtocol::reuse_connection(BackendDCB* dcb, mxs::Component* ups
     mxb_assert(!dcb->readq() && !dcb->delayq() && !dcb->writeq());
     mxb_assert(!dcb->is_in_persistent_pool());
     mxb_assert(m_ignore_replies >= 0);
-    mxb_assert(dcb->was_persistent());
 
     if (dcb->state() != DCB::State::POLLING || this->protocol_auth_state != MXS_AUTH_STATE_COMPLETE)
     {
@@ -111,8 +110,6 @@ bool MySQLBackendProtocol::reuse_connection(BackendDCB* dcb, mxs::Component* ups
     }
     else
     {
-        dcb->clear_was_persistent();
-
         MXS_SESSION* session = m_session;
         mxs::Component* component = m_component;
 
@@ -955,8 +952,6 @@ int MySQLBackendProtocol::handle_persistent_connection(BackendDCB* dcb, GWBUF* q
     auto protocol = this;
     int rc = 0;
 
-    mxb_assert(!dcb->was_persistent());
-
     mxb_assert(protocol->m_ignore_replies > 0);
 
     if (MYSQL_IS_COM_QUIT((uint8_t*)GWBUF_DATA(queue)))
@@ -995,8 +990,6 @@ int32_t MySQLBackendProtocol::write(DCB* plain_dcb, GWBUF* queue)
     mxb_assert(plain_dcb->role() == DCB::Role::BACKEND);
     BackendDCB* dcb = static_cast<BackendDCB*>(plain_dcb);
     auto backend_protocol = this;
-
-    mxb_assert(!dcb->was_persistent());
 
     if (backend_protocol->m_ignore_replies > 0)
     {
@@ -1194,7 +1187,6 @@ int MySQLBackendProtocol::backend_write_delayqueue(DCB* plain_dcb, GWBUF* buffer
     BackendDCB* dcb = static_cast<BackendDCB*>(plain_dcb);
     mxb_assert(buffer);
     mxb_assert(!dcb->is_in_persistent_pool());
-    mxb_assert(!dcb->was_persistent());
 
     if (MYSQL_IS_CHANGE_USER(((uint8_t*)GWBUF_DATA(buffer))))
     {

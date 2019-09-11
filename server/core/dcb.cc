@@ -254,7 +254,6 @@ BackendDCB* BackendDCB::take_from_connection_pool(SERVER* s, MXS_SESSION* sessio
                 MXS_DEBUG("Reusing a persistent connection, user %s, dcb %p", user, dcb);
                 session_link_backend_dcb(session, dcb);
                 dcb->m_persistentstart = 0;
-                dcb->m_was_persistent = true;
                 dcb->m_last_read = mxs_clock();
                 dcb->m_last_write = mxs_clock();
                 dcb->m_session = session;
@@ -1072,7 +1071,6 @@ bool BackendDCB::maybe_add_persistent(BackendDCB* dcb)
 
         CALLBACK* loopcallback;
         MXS_DEBUG("Adding DCB to persistent pool, user %s.", dcb->m_user);
-        dcb->m_was_persistent = false;
         dcb->m_persistentstart = time(NULL);
         session_unlink_backend_dcb(dcb->session(), dcb);
         dcb->m_session = nullptr;

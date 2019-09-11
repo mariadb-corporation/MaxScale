@@ -694,16 +694,6 @@ public:
         return m_persistentstart > 0;
     }
 
-    bool was_persistent() const
-    {
-        return m_was_persistent;
-    }
-
-    void clear_was_persistent()
-    {
-        m_was_persistent = false;
-    }
-
     static int persistent_clean_count(BackendDCB* dcb, int id, bool cleanall);
 
     // TODO: Temporarily public.
@@ -741,7 +731,6 @@ private:
                                          *      -1: Evicted from the persistent pool and being closed.
                                          *   non-0: Time when placed in the persistent pool.
                                          */
-    bool m_was_persistent = false;      /**< Whether this DCB was in the persistent pool */
 };
 
 class InternalDCB : public ClientDCB
