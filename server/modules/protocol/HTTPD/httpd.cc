@@ -22,53 +22,36 @@
  * In the first instance it is intended to allow a debug connection to access
  * internal data structures, however it may also be used to manage the
  * configuration of the gateway via REST interface.
- *
- * @verbatim
- * Revision History
- * Date         Who                     Description
- * 08/07/2013   Massimiliano Pinto      Initial version
- * 09/07/2013   Massimiliano Pinto      Added /show?dcb|session for all dcbs|sessions
- *
- * @endverbatim
  */
 
 #include <maxscale/protocol/httpd/module_names.hh>
 #define MXS_MODULE_NAME MXS_HTTPD_PROTOCOL_NAME
 
 #include "httpd.hh"
-#include <ctype.h>
+#include <cctype>
 #include <maxbase/alloc.h>
 #include <maxscale/authenticator2.hh>
-#include <maxscale/protocol.hh>
 #include <maxscale/modinfo.hh>
-#include <maxscale/resultset.hh>
 
 #define ISspace(x) isspace((int)(x))
 #define HTTP_SERVER_STRING "MaxScale(c) v.1.0.0"
 
-static int                   httpd_read_event(DCB* dcb);
-static int                   httpd_write_event(DCB* dcb);
-static int                   httpd_write(DCB* dcb, GWBUF* queue);
-static int                   httpd_error(DCB* dcb);
-static int                   httpd_hangup(DCB* dcb);
-static bool                  httpd_init_connection(DCB* dcb);
-static void                  httpd_finish_connection(DCB* dcb);
 static int                   httpd_get_line(int sock, char* buf, int size);
 static void                  httpd_send_headers(DCB* dcb, int final, bool auth_ok);
 static std::string           httpd_default_auth();
 
-class HTTPDProtocol : public mxs::ProtocolModule
+class HTTPDProtocolModule : public mxs::ProtocolModule
 {
 public:
-    static HTTPDProtocol* create()
+    static HTTPDProtocolModule* create()
     {
-        return new HTTPDProtocol();
+        return new HTTPDProtocolModule();
     }
 
     std::unique_ptr<mxs::ClientProtocol>
     create_client_protocol(MXS_SESSION* session, mxs::Component* component) override
     {
-        return std::unique_ptr<mxs::ClientProtocol>(new (std::nothrow) HTTPD_session());
+        return std::unique_ptr<mxs::ClientProtocol>(new (std::nothrow) HTTPDClientProtocol());
     }
 
     std::string auth_default() const override
@@ -81,51 +64,6 @@ public:
         return MXS_MODULE_NAME;
     }
 };
-
-HTTPD_session* HTTPD_session::create(MXS_SESSION* session, mxs::Component* component)
-{
-    return new (std::nothrow) HTTPD_session();
-}
-
-void HTTPD_session::ready_for_reading(DCB* dcb)
-{
-    httpd_read_event(dcb);
-}
-
-int32_t HTTPD_session::write(DCB* dcb, GWBUF* buffer)
-{
-    return httpd_write(dcb, buffer);
-}
-
-void HTTPD_session::write_ready(DCB* dcb)
-{
-    httpd_write_event(dcb);
-}
-
-void HTTPD_session::error(DCB* dcb)
-{
-    httpd_error(dcb);
-}
-
-void HTTPD_session::hangup(DCB* dcb)
-{
-    httpd_hangup(dcb);
-}
-
-bool HTTPD_session::init_connection(DCB* dcb)
-{
-    return httpd_init_connection(dcb);
-}
-
-void HTTPD_session::finish_connection(DCB* dcb)
-{
-    httpd_finish_connection(dcb);
-}
-
-GWBUF* HTTPD_session::reject(const char* host)
-{
-    return nullptr;
-}
 
 extern "C"
 {
@@ -147,7 +85,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "An experimental HTTPD implementation for use in administration",
         "V1.2.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &mxs::ClientProtocolApi<HTTPDProtocol>::s_api,
+        &mxs::ClientProtocolApi<HTTPDProtocolModule>::s_api,
         NULL,       /* Process init. */
         NULL,       /* Process finish. */
         NULL,       /* Thread init. */
@@ -177,7 +115,7 @@ static std::string httpd_default_auth()
  * @param generic_dcb   The descriptor control block
  * @return
  */
-static int httpd_read_event(DCB* generic_dcb)
+void HTTPDClientProtocol::ready_for_reading(DCB* generic_dcb)
 {
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
     MXS_SESSION* session = dcb->session();
@@ -188,11 +126,6 @@ static int httpd_read_event(DCB* generic_dcb)
     char method[HTTPD_METHOD_MAXLEN - 1] = "";
     char url[HTTPD_SMALL_BUFFER] = "";
     size_t i, j;
-    int headers_read = 0;
-    HTTPD_session* client_data = NULL;
-    GWBUF* uri;
-
-    client_data = reinterpret_cast<HTTPD_session*>(dcb->protocol_session());
 
     /**
      * get the request line
@@ -211,13 +144,11 @@ static int httpd_read_event(DCB* generic_dcb)
     }
     method[i] = '\0';
 
-    strcpy(client_data->method, method);
-
     /* check allowed http methods */
     if (strcasecmp(method, "GET") && strcasecmp(method, "POST"))
     {
         // httpd_unimplemented(dcb->m_fd);
-        return 0;
+        return;
     }
 
     i = 0;
@@ -274,15 +205,6 @@ static int httpd_read_event(DCB* generic_dcb)
             end = &value[strlen(value) - 1];
             *end = '\0';
 
-            if (strncasecmp(buf, "Hostname", 6) == 0)
-            {
-                strcpy(client_data->hostname, value);
-            }
-            if (strncasecmp(buf, "useragent", 9) == 0)
-            {
-                strcpy(client_data->useragent, value);
-            }
-
             if (strcmp(buf, "Authorization") == 0)
             {
                 GWBUF* auth_data = gwbuf_alloc_and_load(strlen(value), value);
@@ -298,12 +220,6 @@ static int httpd_read_event(DCB* generic_dcb)
                 }
             }
         }
-    }
-
-    if (numchars)
-    {
-        headers_read = 1;
-        memcpy(&client_data->headers_received, &headers_read, sizeof(int));
     }
 
     /**
@@ -342,6 +258,7 @@ static int httpd_read_event(DCB* generic_dcb)
         }
     }
 #endif
+    GWBUF* uri;
     if (auth_ok && (uri = gwbuf_alloc(strlen(url) + 1)) != NULL)
     {
         strcpy((char*)GWBUF_DATA(uri), url);
@@ -351,8 +268,7 @@ static int httpd_read_event(DCB* generic_dcb)
 
     /* force the client connecton close */
     DCB::close(dcb);
-
-    return 0;
+    return;
 }
 
 /**
@@ -361,9 +277,9 @@ static int httpd_read_event(DCB* generic_dcb)
  * @param dcb   The descriptor control block
  * @return
  */
-static int httpd_write_event(DCB* dcb)
+void HTTPDClientProtocol::write_ready(DCB* dcb)
 {
-    return dcb->writeq_drain();
+    dcb->writeq_drain();
 }
 
 /**
@@ -375,11 +291,9 @@ static int httpd_write_event(DCB* dcb)
  * @param dcb   Descriptor Control Block for the socket
  * @param queue Linked list of buffes to write
  */
-static int httpd_write(DCB* dcb, GWBUF* queue)
+int32_t HTTPDClientProtocol::write(DCB* dcb, GWBUF* queue)
 {
-    int rc;
-    rc = dcb->writeq_append(queue);
-    return rc;
+    return dcb->writeq_append(queue);
 }
 
 /**
@@ -387,10 +301,9 @@ static int httpd_write(DCB* dcb, GWBUF* queue)
  *
  * @param dcb   The descriptor control block
  */
-static int httpd_error(DCB* dcb)
+void HTTPDClientProtocol::error(DCB* dcb)
 {
     DCB::close(dcb);
-    return 0;
 }
 
 /**
@@ -398,18 +311,17 @@ static int httpd_error(DCB* dcb)
  *
  * @param dcb   The descriptor control block
  */
-static int httpd_hangup(DCB* dcb)
+void HTTPDClientProtocol::hangup(DCB* dcb)
 {
     DCB::close(dcb);
-    return 0;
 }
 
-static bool httpd_init_connection(DCB* client_dcb)
+bool HTTPDClientProtocol::init_connection(DCB* dcb)
 {
-    return session_start(client_dcb->session());
+    return session_start(dcb->session());
 }
 
-static void httpd_finish_connection(DCB* client_dcb)
+void HTTPDClientProtocol::finish_connection(DCB* dcb)
 {
 }
 
