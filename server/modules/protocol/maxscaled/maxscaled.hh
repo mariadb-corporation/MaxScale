@@ -12,24 +12,21 @@
  * Public License.
  */
 
-/**
- * @file maxscaled.h The maxscaled protocol module header file
- */
 #include <maxscale/ccdefs.hh>
+#include <string>
 #include <maxscale/protocol2.hh>
+
+
+#define MAXSCALED_STATE_LOGIN  1    /**< Waiting for user */
+#define MAXSCALED_STATE_PASSWD 2    /**< Waiting for password */
+#define MAXSCALED_STATE_DATA   3    /**< User logged in */
 
 /**
  * The maxscaled specific protocol structure to put in the DCB.
  */
-struct MAXSCALED : public mxs::ClientProtocol
+class MAXSCALEDClientProtocol : public mxs::ClientProtocol
 {
 public:
-    static MAXSCALED* create(MXS_SESSION* session, mxs::Component* component);
-    MAXSCALED();
-    ~MAXSCALED() override;
-
-    static GWBUF* reject(const char* host);
-
     void ready_for_reading(DCB* dcb) override;
     void write_ready(DCB* dcb) override;
     void error(DCB* dcb) override;
@@ -40,11 +37,10 @@ public:
     bool init_connection(DCB* dcb) override;
     void finish_connection(DCB* dcb) override;
 
-    pthread_mutex_t lock;       /**< Protocol structure lock */
-    int             state;      /**< The connection state */
-    char*           username;   /**< The login name of the user */
-};
+private:
+    bool authenticate_socket(DCB* dcb);
+    bool authenticate_unix_socket(DCB* generic_dcb);
 
-#define MAXSCALED_STATE_LOGIN  1    /**< Waiting for user */
-#define MAXSCALED_STATE_PASSWD 2    /**< Waiting for password */
-#define MAXSCALED_STATE_DATA   3    /**< User logged in */
+    int         m_state {MAXSCALED_STATE_LOGIN};/**< The connection state */
+    std::string m_username;                     /**< The login name of the user */
+};

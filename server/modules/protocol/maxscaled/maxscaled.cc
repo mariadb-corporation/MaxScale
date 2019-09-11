@@ -14,70 +14,39 @@
 #include <maxscale/protocol/maxscaled/module_names.hh>
 #define MXS_MODULE_NAME MXS_MAXSCALED_PROTOCOL_NAME
 
-#include <maxscale/ccdefs.hh>
-#include <stdio.h>
+#include "maxscaled.hh"
+
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include <maxscale/authenticator2.hh>
-#include <maxscale/dcb.hh>
-#include <maxscale/buffer.hh>
-#include <maxscale/protocol.hh>
-#include <maxscale/service.hh>
-#include <maxscale/session.hh>
-#include <sys/ioctl.h>
 #include <errno.h>
 #include <pwd.h>
 #include <sys/socket.h>
-#include <sys/types.h>
-#include <sys/un.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+
+#include <maxbase/alloc.h>
+#include <maxscale/authenticator2.hh>
+#include <maxscale/dcb.hh>
+#include <maxscale/buffer.hh>
+#include <maxscale/session.hh>
 #include <maxscale/router.hh>
-#include <maxscale/poll.hh>
-#include <maxbase/atomic.h>
 #include <maxscale/adminusers.h>
 #include <maxscale/modinfo.hh>
-#include "maxscaled.hh"
 #include <maxscale/maxadmin.h>
-#include <maxbase/alloc.h>
-
-/**
- * @file maxscaled.c - MaxScale administration protocol
- *
- *
- * @verbatim
- * Revision History
- * Date         Who                     Description
- * 13/06/2014   Mark Riddoch            Initial implementation
- * 07/07/2015   Martin Brampton         Correct failure handling
- * 17/05/2016   Massimiliano Pinto      Check for UNIX socket address
- *
- * @endverbatim
- */
 
 #define GETPWUID_BUF_LEN 255
 
-static int                   maxscaled_read_event(DCB* dcb);
-static int                   maxscaled_write_event(DCB* dcb);
-static int                   maxscaled_write(DCB* dcb, GWBUF* queue);
-static int                   maxscaled_error(DCB* dcb);
-static int                   maxscaled_hangup(DCB* dcb);
-static bool                  maxscaled_init_connection(DCB*);
-static void                  maxscaled_finish_connection(DCB* dcb);
-
-class MAXSCALEDProtocol : public mxs::ProtocolModule
+class MAXSCALEDProtocolModule : public mxs::ProtocolModule
 {
 public:
-    static MAXSCALEDProtocol* create()
+    static MAXSCALEDProtocolModule* create()
     {
-        return new MAXSCALEDProtocol();
+        return new MAXSCALEDProtocolModule();
     }
 
     std::unique_ptr<mxs::ClientProtocol>
     create_client_protocol(MXS_SESSION* session, mxs::Component* component) override
     {
-        return std::unique_ptr<mxs::ClientProtocol>(new (std::nothrow) MAXSCALED());
+        return std::unique_ptr<mxs::ClientProtocol>(new (std::nothrow) MAXSCALEDClientProtocol());
     }
 
     std::string auth_default() const override
@@ -91,65 +60,7 @@ public:
     }
 };
 
-MAXSCALED* MAXSCALED::create(MXS_SESSION* session, mxs::Component* component)
-{
-    return new (std::nothrow) MAXSCALED();
-}
-
-MAXSCALED::MAXSCALED()
-{
-    pthread_mutex_init(&lock, NULL);
-}
-
-MAXSCALED::~MAXSCALED()
-{
-    if (username)
-    {
-        MXS_FREE(username);
-    }
-}
-
-void MAXSCALED::ready_for_reading(DCB* dcb)
-{
-    maxscaled_read_event(dcb);
-}
-
-int32_t MAXSCALED::write(DCB* dcb, GWBUF* buffer)
-{
-    return maxscaled_write(dcb, buffer);
-}
-
-void MAXSCALED::write_ready(DCB* dcb)
-{
-    maxscaled_write_event(dcb);
-}
-
-void MAXSCALED::error(DCB* dcb)
-{
-    maxscaled_error(dcb);
-}
-
-void MAXSCALED::hangup(DCB* dcb)
-{
-    maxscaled_hangup(dcb);
-}
-
-bool MAXSCALED::init_connection(DCB* dcb)
-{
-    return maxscaled_init_connection(dcb);
-}
-
-void MAXSCALED::finish_connection(DCB* dcb)
-{
-    maxscaled_finish_connection(dcb);
-}
-
-GWBUF* MAXSCALED::reject(const char* host)
-{
-    return nullptr;
-}
-
-static bool authenticate_unix_socket(MAXSCALED* protocol, DCB* generic_dcb)
+bool MAXSCALEDClientProtocol::authenticate_unix_socket(DCB* generic_dcb)
 {
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
     bool authenticated = false;
@@ -167,22 +78,18 @@ static bool authenticate_unix_socket(MAXSCALED* protocol, DCB* generic_dcb)
         /* Fetch username from UID */
         if (getpwuid_r(ucred.uid, &pw_entry, buf, sizeof(buf), &pw_tmp) == 0)
         {
-            GWBUF* username;
-
             /* Set user in protocol */
-            protocol->username = strdup(pw_entry.pw_name);
+            m_username = pw_entry.pw_name;
+            GWBUF* username = gwbuf_alloc(m_username.length() + 1);
 
-            username = gwbuf_alloc(strlen(protocol->username) + 1);
-
-            strcpy((char*)GWBUF_DATA(username), protocol->username);
+            strcpy((char*)GWBUF_DATA(username), m_username.c_str());
 
             /* Authenticate the user */
-            if (dcb->authenticator()->extract(dcb, username)
-                && dcb->authenticator()->authenticate(dcb) == 0)
+            if (dcb->authenticator()->extract(dcb, username) && dcb->authenticator()->authenticate(dcb) == 0)
             {
                 dcb_printf(dcb, MAXADMIN_AUTH_SUCCESS_REPLY);
-                protocol->state = MAXSCALED_STATE_DATA;
-                dcb->m_user = strdup(protocol->username);
+                m_state = MAXSCALED_STATE_DATA;
+                dcb->m_user = strdup(m_username.c_str());
             }
             else
             {
@@ -190,13 +97,11 @@ static bool authenticate_unix_socket(MAXSCALED* protocol, DCB* generic_dcb)
             }
 
             gwbuf_free(username);
-
             authenticated = true;
         }
         else
         {
-            MXS_ERROR("Failed to get UNIX user %ld details for 'MaxScale Admin'",
-                      (unsigned long)ucred.uid);
+            MXS_ERROR("Failed to get UNIX user %ld details for 'MaxScale Admin'", (unsigned long)ucred.uid);
         }
     }
     else
@@ -208,13 +113,13 @@ static bool authenticate_unix_socket(MAXSCALED* protocol, DCB* generic_dcb)
 }
 
 
-static bool authenticate_inet_socket(MAXSCALED* protocol, DCB* dcb)
+static bool authenticate_inet_socket(DCB* dcb)
 {
     dcb_printf(dcb, MAXADMIN_AUTH_USER_PROMPT);
     return true;
 }
 
-static bool authenticate_socket(MAXSCALED* protocol, DCB* dcb)
+bool MAXSCALEDClientProtocol::authenticate_socket(DCB* dcb)
 {
     bool authenticated = false;
 
@@ -225,11 +130,11 @@ static bool authenticate_socket(MAXSCALED* protocol, DCB* dcb)
     {
         if (address.sa_family == AF_UNIX)
         {
-            authenticated = authenticate_unix_socket(protocol, dcb);
+            authenticated = authenticate_unix_socket(dcb);
         }
         else
         {
-            authenticated = authenticate_inet_socket(protocol, dcb);
+            authenticated = authenticate_inet_socket(dcb);
         }
     }
     else
@@ -263,7 +168,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "A maxscale protocol for the administration interface",
         "V2.0.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &mxs::ClientProtocolApi<MAXSCALEDProtocol>::s_api,
+        &mxs::ClientProtocolApi<MAXSCALEDProtocolModule>::s_api,
         NULL,       /* Process init. */
         NULL,       /* Process finish. */
         NULL,       /* Thread init. */
@@ -283,19 +188,16 @@ MXS_MODULE* MXS_CREATE_MODULE()
  * @param dcb   The descriptor control block
  * @return
  */
-static int maxscaled_read_event(DCB* dcb)
+void MAXSCALEDClientProtocol::ready_for_reading(DCB* dcb)
 {
-    int n;
     GWBUF* head = NULL;
-    MAXSCALED* maxscaled = (MAXSCALED*)dcb->protocol_session();
-
-    if ((n = dcb->read(&head, 0)) != -1)
+    if (dcb->read(&head, 0) != -1)
     {
         if (head)
         {
             if (GWBUF_LENGTH(head))
             {
-                switch (maxscaled->state)
+                switch (m_state)
                 {
                 case MAXSCALED_STATE_LOGIN:
                     {
@@ -303,9 +205,9 @@ static int maxscaled_read_event(DCB* dcb)
                         char user[len + 1];
                         memcpy(user, GWBUF_DATA(head), len);
                         user[len] = '\0';
-                        maxscaled->username = MXS_STRDUP_A(user);
+                        m_username = user;
                         dcb->m_user = MXS_STRDUP_A(user);
-                        maxscaled->state = MAXSCALED_STATE_PASSWD;
+                        m_state = MAXSCALED_STATE_PASSWD;
                         dcb_printf(dcb, MAXADMIN_AUTH_PASSWORD_PROMPT);
                         gwbuf_free(head);
                     }
@@ -314,15 +216,15 @@ static int maxscaled_read_event(DCB* dcb)
                 case MAXSCALED_STATE_PASSWD:
                     {
                         char* password = strndup((char*)GWBUF_DATA(head), GWBUF_LENGTH(head));
-                        if (admin_verify_inet_user(maxscaled->username, password))
+                        if (admin_verify_inet_user(m_username.c_str(), password))
                         {
                             dcb_printf(dcb, MAXADMIN_AUTH_SUCCESS_REPLY);
-                            maxscaled->state = MAXSCALED_STATE_DATA;
+                            m_state = MAXSCALED_STATE_DATA;
                         }
                         else
                         {
                             dcb_printf(dcb, MAXADMIN_AUTH_FAILED_REPLY);
-                            maxscaled->state = MAXSCALED_STATE_LOGIN;
+                            m_state = MAXSCALED_STATE_LOGIN;
                         }
                         gwbuf_free(head);
                         free(password);
@@ -344,7 +246,6 @@ static int maxscaled_read_event(DCB* dcb)
             }
         }
     }
-    return n;
 }
 
 /**
@@ -353,9 +254,9 @@ static int maxscaled_read_event(DCB* dcb)
  * @param dcb   The descriptor control block
  * @return
  */
-static int maxscaled_write_event(DCB* dcb)
+void MAXSCALEDClientProtocol::write_ready(DCB* dcb)
 {
-    return dcb->writeq_drain();
+    dcb->writeq_drain();
 }
 
 /**
@@ -367,11 +268,9 @@ static int maxscaled_write_event(DCB* dcb)
  * @param dcb   Descriptor Control Block for the socket
  * @param queue Linked list of buffes to write
  */
-static int maxscaled_write(DCB* dcb, GWBUF* queue)
+int32_t MAXSCALEDClientProtocol::write(DCB* dcb, GWBUF* queue)
 {
-    int rc;
-    rc = dcb->writeq_append(queue);
-    return rc;
+    return dcb->writeq_append(queue);
 }
 
 /**
@@ -379,9 +278,8 @@ static int maxscaled_write(DCB* dcb, GWBUF* queue)
  *
  * @param dcb   The descriptor control block
  */
-static int maxscaled_error(DCB* dcb)
+void MAXSCALEDClientProtocol::error(DCB* dcb)
 {
-    return 0;
 }
 
 /**
@@ -389,26 +287,15 @@ static int maxscaled_error(DCB* dcb)
  *
  * @param dcb   The descriptor control block
  */
-static int maxscaled_hangup(DCB* dcb)
+void MAXSCALEDClientProtocol::hangup(DCB* dcb)
 {
     DCB::close(dcb);
-    return 0;
 }
 
-static bool maxscaled_init_connection(DCB* client_dcb)
+bool MAXSCALEDClientProtocol::init_connection(DCB* client_dcb)
 {
     bool rv = true;
-    socklen_t len = sizeof(struct ucred);
-    struct ucred ucred;
-
-    MAXSCALED* maxscaled_protocol = static_cast<MAXSCALED*>(client_dcb->protocol_session());
-
-    maxscaled_protocol->username = NULL;
-    maxscaled_protocol->state = MAXSCALED_STATE_LOGIN;
-
-    bool authenticated = false;
-
-    if (authenticate_socket(maxscaled_protocol, client_dcb))
+    if (authenticate_socket(client_dcb))
     {
         if (session_start(client_dcb->session()))
         {
@@ -419,6 +306,6 @@ static bool maxscaled_init_connection(DCB* client_dcb)
     return rv;
 }
 
-static void maxscaled_finish_connection(DCB*)
+void MAXSCALEDClientProtocol::finish_connection(DCB* dcb)
 {
 }
