@@ -14,19 +14,32 @@ require('./common.js')()
 
 function addServer(argv, path, targets) {
     maxctrl(argv, function(host){
-        return doRequest(host, path, function(res) {
-            var servers =_.get(res, 'data.relationships.servers.data', [])
+        var srvs
 
-            targets.forEach(function(i){
-                servers.push({id: i, type: 'servers'})
+        return getJson(host, 'servers')
+            .then((r) => {
+                srvs = r
+                return getJson(host, path)
             })
+            .then((res) => {
+                var servers =_.get(res, 'data.relationships.servers.data', [])
+                var services =_.get(res, 'data.relationships.services.data', [])
 
-            // Update relationships and remove unnecessary parts
-            _.set(res, 'data.relationships.servers.data', servers)
-            delete res.data.attributes
+                targets.forEach(function(i){
+                    if (srvs.data.find((e) => e.id == i)) {
+                        servers.push({id: i, type: 'servers'})
+                    } else {
+                        services.push({id: i, type: 'services'})
+                    }
+                })
 
-            return doAsyncRequest(host, path, null, {method: 'PATCH', body: res})
-        })
+                // Update relationships and remove unnecessary parts
+                _.set(res, 'data.relationships.servers.data', servers)
+                _.set(res, 'data.relationships.services.data', services)
+                delete res.data.attributes
+
+                return doAsyncRequest(host, path, null, {method: 'PATCH', body: res})
+            })
     })
 }
 
@@ -35,16 +48,16 @@ exports.desc = 'Link objects'
 exports.handler = function() {}
 exports.builder = function(yargs) {
     yargs
-        .command('service <name> <server...>', 'Link servers to a service', function(yargs) {
-            return yargs.epilog('This command links servers to a service, making them available ' +
+        .command('service <name> <target...>', 'Link targets to a service', function(yargs) {
+            return yargs.epilog('This command links targets to a service, making them available ' +
                                 'for any connections that use the service. Before a server is ' +
                                 'linked to a service, it should be linked to a monitor so that ' +
-                                'the server state is up to date. Newly linked server are only ' +
+                                'the server state is up to date. Newly linked targets are only ' +
                                 'available to new connections, existing connections will use the ' +
-                                'old list of servers.')
-                .usage('Usage: link service <name> <server...>')
+                                'old list of targets.')
+                .usage('Usage: link service <name> <target...>')
         }, function(argv) {
-            addServer(argv, 'services/' + argv.name, argv.server)
+            addServer(argv, 'services/' + argv.name, argv.target)
         })
         .command('monitor <name> <server...>', 'Link servers to a monitor', function(yargs) {
             return yargs.epilog('Linking a server to a monitor will add it to the list of servers ' +
