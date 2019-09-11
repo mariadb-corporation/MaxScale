@@ -112,13 +112,11 @@ public:
     /**
      * Get a DCB from the persistent connection pool, if possible
      *
-     * @param user        The name of the user needing the connection
-     * @param ip          Client IP address
      * @param id          Thread ID
      *
      * @return A DCB or NULL if no connection is found
      */
-    BackendDCB* get_persistent_dcb(const std::string& user, const std::string& ip, int id);
+    BackendDCB* get_persistent_dcb(int id);
 
     /**
      * Print server details to a dcb.

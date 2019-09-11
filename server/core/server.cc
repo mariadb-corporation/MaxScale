@@ -182,7 +182,7 @@ Server* Server::create_test_server()
     return new Server(name);
 }
 
-BackendDCB* Server::get_persistent_dcb(const string& user, const string& ip, int id)
+BackendDCB* Server::get_persistent_dcb(int id)
 {
     Server* server = this;
     if (server->persistent[id]
@@ -198,12 +198,7 @@ BackendDCB* Server::get_persistent_dcb(const string& user, const string& ip, int
             mxb_assert(dcb->role() == DCB::Role::BACKEND);
             mxb_assert(dcb->server());
 
-            if (dcb->m_user
-                && dcb->m_remote
-                && !ip.empty()
-                && !dcb->hanged_up()
-                && user == dcb->m_user
-                && ip == dcb->m_remote)
+            if (!dcb->hanged_up())
             {
                 if (NULL == previous)
                 {
@@ -213,8 +208,6 @@ BackendDCB* Server::get_persistent_dcb(const string& user, const string& ip, int
                 {
                     previous->m_nextpersistent = dcb->m_nextpersistent;
                 }
-                MXS_FREE(dcb->m_user);
-                dcb->m_user = NULL;
                 mxb::atomic::add(&server->pool_stats.n_persistent, -1);
                 mxb::atomic::add(&server->stats().n_current, 1, mxb::atomic::RELAXED);
                 return dcb;

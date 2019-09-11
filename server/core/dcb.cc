@@ -247,7 +247,7 @@ BackendDCB* BackendDCB::take_from_connection_pool(SERVER* s, MXS_SESSION* sessio
         if (const char* user = session_get_user(session))
         {
             auto owner = static_cast<RoutingWorker*>(session->client_dcb->owner);
-            auto dcb = server->get_persistent_dcb(user, session->client_dcb->m_remote, owner->id());
+            auto dcb = server->get_persistent_dcb(owner->id());
 
             if (dcb)
             {
@@ -1053,9 +1053,7 @@ bool BackendDCB::maybe_add_persistent(BackendDCB* dcb)
     RoutingWorker* owner = static_cast<RoutingWorker*>(dcb->owner);
     Server* server = static_cast<Server*>(dcb->m_server);
 
-    if (dcb->m_user != NULL
-        && (dcb->m_protocol->established(dcb))
-        && strlen(dcb->m_user)
+    if ((dcb->m_protocol->established(dcb))
         && server
         && dcb->session()
         && session_valid_for_pool(dcb->session())
@@ -1070,7 +1068,7 @@ bool BackendDCB::maybe_add_persistent(BackendDCB* dcb)
         }
 
         CALLBACK* loopcallback;
-        MXS_DEBUG("Adding DCB to persistent pool, user %s.", dcb->m_user);
+        MXS_DEBUG("Adding DCB to persistent pool.");
         dcb->m_persistentstart = time(NULL);
         session_unlink_backend_dcb(dcb->session(), dcb);
         dcb->m_session = nullptr;
