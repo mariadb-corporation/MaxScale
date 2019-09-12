@@ -206,9 +206,6 @@ add_test_executable(lots_of_rows.cpp lots_of_rows galera LABELS readwritesplit H
 # Prepearing and execution statements in the loop
 add_test_executable(mxs244_prepared_stmt_loop.cpp mxs244_prepared_stmt_loop galera LABELS readwritesplit readconnroute LIGHT GALERA_BACKEND)
 
-# Tries prepared stmt 'SELECT 1,1,1,1...." with different nu,ber of '1'
-add_test_executable(mxs314.cpp mxs314 galera LABELS MySQLProtocol readwritesplit LIGHT GALERA_BACKEND)
-
 # Playing with blocking and unblocking nodes under INSERT load
 add_test_executable(mxs564_big_dump.cpp mxs564_big_dump galera_mxs564 LABELS readwritesplit readconnroute GALERA_BACKEND)
 
@@ -1020,6 +1017,9 @@ add_test_executable(mxs1719.cpp mxs1719 mxs1719 LABELS masking REPL_BACKEND)
 
 # MXS-2057 systemd watchdog
 add_test_executable(mxs2057_systemd_watchdog.cpp mxs2057_systemd_watchdog mxs2057_systemd_watchdog LABELS REPL_BACKEND)
+
+# Tries prepared stmt 'SELECT 1,1,1,1...." with different nu,ber of '1'
+add_test_executable(mxs314.cpp mxs314 replication LABELS readwritesplit LIGHT REPL_BACKEND)
 
 ############################################
 # END: Normal tests                        #

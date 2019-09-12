@@ -5,37 +5,32 @@
  */
 
 #include "testconnections.h"
-
-using namespace std;
+#include <sstream>
 
 int main(int argc, char** argv)
 {
-    TestConnections::require_galera(true);
     TestConnections test(argc, argv);
-    string query = "select 1";
-
-    for (int i = 0; i < 300; i++)
-    {
-        query += ",1";
-    }
+    std::ostringstream ss;
+    ss << "SELECT 1";
 
     test.maxscales->connect();
 
     MYSQL_STMT* stmt = mysql_stmt_init(test.maxscales->conn_rwsplit[0]);
 
-    for (int i = 300; i < 500; i++)
+    for (int i = 0; i < 50; i++)
     {
+        auto query = ss.str();
         test.set_timeout(30);
         test.add_result(mysql_stmt_prepare(stmt, query.c_str(), query.length()),
-                        "Failed at %d: %s\n",
-                        i,
+                        "Failed at %d: %s\n", i,
                         mysql_error(test.maxscales->conn_rwsplit[0]));
-        test.add_result(mysql_stmt_reset(stmt),
-                        "Failed at %d: %s\n",
-                        i,
+        test.add_result(mysql_stmt_reset(stmt), "Failed at %d: %s\n", i,
                         mysql_error(test.maxscales->conn_rwsplit[0]));
 
-        query += ",1";
+        for (int x = 0; x < 17; x++)
+        {
+            ss << "," << i;
+        }
     }
 
     test.set_timeout(20);
