@@ -2613,7 +2613,6 @@ void ClientDCB::shutdown()
         session_close(m_session);
     }
     m_protocol->finish_connection(this);
-    m_protocol = nullptr;
 }
 
 ClientDCB::ClientDCB(int fd,
@@ -2759,7 +2758,6 @@ void BackendDCB::shutdown()
 {
     // Close protocol and router session
     m_protocol->finish_connection(this);
-    m_protocol = nullptr;
 }
 
 bool BackendDCB::release_from(MXS_SESSION* session)
