@@ -134,24 +134,6 @@ if [ "`echo -e "3.7.1\n$cmake_version"|sort -V|head -n 1`" != "3.7.1" ] ; then
     cd ..
 fi
 
-# RabbitMQ C client
-mkdir rabbit
-cd rabbit
-git clone https://github.com/alanxz/rabbitmq-c.git
-
-if [ $? != 0 ]
-then
-    echo "Error cloning rabbitmq-c"
-    sudo rm -rf $tmpdir
-    exit 1
-fi
-
-cd rabbitmq-c
-git checkout v0.7.1
-cmake .  -DCMAKE_C_FLAGS=-fPIC -DBUILD_SHARED_LIBS=N  -DCMAKE_INSTALL_PREFIX=/usr
-sudo make install
-cd ../../
-
 # TCL
 # Methods allow to compare software versions according to semantic versioning
 verlte() {

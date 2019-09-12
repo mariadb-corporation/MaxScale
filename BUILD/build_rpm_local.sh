@@ -73,16 +73,4 @@ then
     done
 fi
 
-if [ "$BUILD_RABBITMQ" == "yes" ] ; then
-  cmake ../rabbitmq_consumer/  $cmake_flags
-  sudo make package
-  res=$?
-  if [ $res != 0 ] ; then
-        exit $res
-  fi
-  cd ..
-  cp _build/*.rpm .
-  cp _build/*.gz .
-fi
-
 sudo rpm -i maxscale*.rpm

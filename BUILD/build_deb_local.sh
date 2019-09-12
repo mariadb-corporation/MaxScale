@@ -66,17 +66,5 @@ then
     done
 fi
 
-if [ "$BUILD_RABBITMQ" == "yes" ] ; then
-  cmake ../rabbitmq_consumer/  $cmake_flags
-  sudo make package
-  res=$?
-  if [ $res != 0 ] ; then
-        exit $res
-  fi
-  cp _CPack_Packages/Linux/DEB/*.deb ../
-  cd ..
-  cp _build/*.deb .
-  cp *.deb ..
-fi
 sudo dpkg -i ../maxscale*.deb
 set +x
