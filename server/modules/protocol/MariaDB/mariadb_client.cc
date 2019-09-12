@@ -441,31 +441,33 @@ struct UserKillInfo : public KillInfo
 static bool kill_func(DCB* dcb, void* data)
 {
     ConnKillInfo* info = static_cast<ConnKillInfo*>(data);
-    auto proto = static_cast<MySQLBackendProtocol*>(dcb->protocol_session());
-    uint64_t backend_thread_id = proto->thread_id();
 
-    if (dcb->session()->id() == info->target_id
-        && dcb->role() == DCB::Role::BACKEND
-        && (info->keep_thread_id == 0 || backend_thread_id != info->keep_thread_id))
+    if (dcb->session()->id() == info->target_id && dcb->role() == DCB::Role::BACKEND)
     {
-        if (backend_thread_id)
-        {
-            // TODO: Isn't it from the context clear that dcb is a backend dcb, that is
-            // TODO: perhaps that could be in the function prototype?
-            BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
+        auto proto = static_cast<MySQLBackendProtocol*>(dcb->protocol_session());
+        uint64_t backend_thread_id = proto->thread_id();
 
-            // DCB is connected and we know the thread ID so we can kill it
-            std::stringstream ss;
-            ss << info->query_base << backend_thread_id;
-
-            std::lock_guard<std::mutex> guard(info->lock);
-            info->targets[backend_dcb->server()] = ss.str();
-        }
-        else
+        if (info->keep_thread_id == 0 || backend_thread_id != info->keep_thread_id)
         {
-            // DCB is not yet connected, send a hangup to forcibly close it
-            dcb->session()->close_reason = SESSION_CLOSE_KILLED;
-            dcb->trigger_hangup_event();
+            if (backend_thread_id)
+            {
+                // TODO: Isn't it from the context clear that dcb is a backend dcb, that is
+                // TODO: perhaps that could be in the function prototype?
+                BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
+
+                // DCB is connected and we know the thread ID so we can kill it
+                std::stringstream ss;
+                ss << info->query_base << backend_thread_id;
+
+                std::lock_guard<std::mutex> guard(info->lock);
+                info->targets[backend_dcb->server()] = ss.str();
+            }
+            else
+            {
+                // DCB is not yet connected, send a hangup to forcibly close it
+                dcb->session()->close_reason = SESSION_CLOSE_KILLED;
+                dcb->trigger_hangup_event();
+            }
         }
     }
 
