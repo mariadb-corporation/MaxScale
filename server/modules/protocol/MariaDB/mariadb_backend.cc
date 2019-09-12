@@ -479,7 +479,6 @@ bool MySQLBackendProtocol::expecting_ps_response()
 
 bool MySQLBackendProtocol::complete_ps_response(GWBUF* buffer)
 {
-    mxb_assert(GWBUF_IS_CONTIGUOUS(buffer));
     MXS_PS_RESPONSE resp;
     bool rval = false;
 
