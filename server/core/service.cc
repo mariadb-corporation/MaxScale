@@ -1100,6 +1100,7 @@ bool Service::dump_config(const char* filename) const
     // The next text-mode parameter may not be up-to-date, print them manually. TODO: Fix
     params_to_print.remove(CN_FILTERS);
     params_to_print.remove(CN_SERVERS);
+    params_to_print.remove(CN_TARGETS);
 
     string config = generate_config_string(name(), params_to_print, common_service_params(), mod->parameters);
     if (dprintf(file, "%s", config.c_str()) == -1)
@@ -1129,7 +1130,7 @@ bool Service::dump_config(const char* filename) const
 
     if (!data.targets.empty())
     {
-        dprintf(file, "%s=", CN_SERVERS);
+        dprintf(file, "%s=", CN_TARGETS);
         const char* sep = "";
 
         for (const auto& s : data.targets)
