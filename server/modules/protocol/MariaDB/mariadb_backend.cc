@@ -670,11 +670,22 @@ int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
                 return 0;
             }
 
-            bool collecting_resultset = rcap_type_required(capabilities, RCAP_TYPE_RESULTSET_OUTPUT)
-                                        || m_collect_result;
-            if (collecting_resultset)
+            if (rcap_type_required(capabilities, RCAP_TYPE_RESULTSET_OUTPUT) || m_collect_result)
             {
-                if (expecting_text_result())
+                if (rcap_type_required(capabilities, RCAP_TYPE_REQUEST_TRACKING))
+                {
+                    m_collectq.append(read_buffer);
+
+                    if (!m_reply.is_complete())
+                    {
+                        return 0;
+                    }
+
+                    read_buffer = m_collectq.release();
+                    proto->m_collect_result = false;
+                    result_collected = true;
+                }
+                else if (expecting_text_result())
                 {
                     if (mxs_mysql_is_result_set(read_buffer))
                     {

@@ -526,24 +526,26 @@ private:
     int              gw_decode_mysql_server_handshake(uint8_t* payload);
     GWBUF*           gw_generate_auth_response(MYSQL_session* client, bool with_ssl, bool ssl_established,
                                                uint64_t service_capabilities);
-    uint32_t         create_capabilities(bool with_ssl, bool db_specified, uint64_t capabilities);
-    GWBUF*           process_packets(GWBUF** result);
-    void             process_one_packet(Iter it, Iter end, uint32_t len);
-    void             process_reply_start(Iter it, Iter end);
-    void             update_error(mxs::Buffer::iterator it, mxs::Buffer::iterator end);
-    bool             consume_fetched_rows(GWBUF* buffer);
 
-    mxs_auth_state_t protocol_auth_state {MXS_AUTH_STATE_INIT};   /**< Backend authentication state */
-    mxs::Component*  m_component {nullptr}; /**< Upstream component, typically a router */
+    uint32_t create_capabilities(bool with_ssl, bool db_specified, uint64_t capabilities);
+    GWBUF*   process_packets(GWBUF** result);
+    void     process_one_packet(Iter it, Iter end, uint32_t len);
+    void     process_reply_start(Iter it, Iter end);
+    void     update_error(mxs::Buffer::iterator it, mxs::Buffer::iterator end);
+    bool     consume_fetched_rows(GWBUF* buffer);
 
-    uint64_t m_thread_id {0};           /**< Backend thread id, received in backend handshake */
-    uint16_t m_modutil_state;           /**< TODO: This is an ugly hack, replace it */
-    int      m_ignore_replies {0};      /**< How many replies should be discarded */
-    bool     m_collect_result {false};  /**< Collect the next result set as one buffer */
-    bool     m_track_state {false};     /**< Track session state */
-    bool     m_skip_next {false};
-    uint64_t m_num_coldefs {0};
-    uint32_t m_num_eof_packets {0};     /**< Encountered eof packet number, used for check packet type */
+    mxs_auth_state_t protocol_auth_state {MXS_AUTH_STATE_INIT}; /**< Backend authentication state */
+    mxs::Component*  m_component {nullptr};                     /**< Upstream component, typically a router */
+
+    uint64_t    m_thread_id {0};            /**< Backend thread id, received in backend handshake */
+    uint16_t    m_modutil_state;            /**< TODO: This is an ugly hack, replace it */
+    int         m_ignore_replies {0};       /**< How many replies should be discarded */
+    bool        m_collect_result {false};   /**< Collect the next result set as one buffer */
+    bool        m_track_state {false};      /**< Track session state */
+    bool        m_skip_next {false};
+    uint64_t    m_num_coldefs {0};
+    uint32_t    m_num_eof_packets {0};  /**< Encountered eof packet number, used for check packet type */
+    mxs::Buffer m_collectq;             /**< Used to collect results when resultset collection is requested */
 };
 
 struct MXS_PS_RESPONSE
