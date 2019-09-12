@@ -2,6 +2,7 @@
  * Test smartrouter routing to readwritesplit services
  */
 #include "testconnections.h"
+#include <sstream>
 
 int main(int argc, char* argv[])
 {
@@ -44,20 +45,29 @@ int main(int argc, char* argv[])
     test.set_timeout(200);
 
     test.expect(conn.connect(), "Reconnection should work: %s", conn.error());
-    test.expect(conn.query("CREATE TABLE test.t2(id INT) ENGINE=MyISAM"), "CREATE failed: %s", conn.error());
+    test.expect(conn.query("CREATE OR REPLACE TABLE test.t2(id INT) ENGINE=MyISAM"), "CREATE failed: %s", conn.error());
 
-    for (int i = 0; i < 10000; i++)
+    std::ostringstream ss;
+    ss << "INSERT INTO test.t2 VALUES (0) ";
+
+    for (int i = 1; i < 5000; i++)
     {
-        test.expect(conn.query("INSERT INTO test.t2 VALUES (1)"), "INSERT failed: %s", conn.error());
+        ss << ", (" << i << ")";
     }
+
+    test.expect(conn.query(ss.str()), "INSERT failed: %s", conn.error());
+
+    test.repl->sync_slaves();
 
     auto srv = test.repl->get_connection(2);
     srv.connect();
-    srv.query("DELETE FROM test.t2");
+    srv.query("TRUNCATE test.t2");
     srv.query("INSERT INTO test.t2 VALUES (2)");
 
     test.expect(conn.connect(), "Reconnection should work: %s", conn.error());
-    auto response = conn.field("SELECT @@server_id, id FROM test.t2", 0);
+
+    // This is pretty much guaranteed to never complete on any of the servers except the one where the truncated the table
+    auto response = conn.field("SELECT @@server_id, a.id + b.id FROM test.t2 AS a JOIN test.t2 AS b WHERE a.id <= b.id", 0);
 
     test.expect(response == ids[2],
                 "@@server_id mismatch: %s (response) != %s (server3) [%s]",
