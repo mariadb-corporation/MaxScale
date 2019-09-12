@@ -58,156 +58,6 @@ add_test_executable(config_test.cpp config_test replication LABELS CONFIG)
 
 add_subdirectory(cdc_datatypes)
 
-# Routing sanity check. Also acts as the regression test case the following issues:
-#
-# MXS-127
-# MXS-47
-# MXS-682
-# MXS-957
-# MXS-1786
-add_test_executable(sanity_check.cpp sanity_check replication LABELS LIGHT REPL_BACKEND)
-
-# Repeatedly connect to maxscale while the backends reject all connections, expect no crash
-add_test_executable(backend_auth_fail.cpp backend_auth_fail replication LABELS readconnroute REPL_BACKEND)
-
-# Regression case for the bug "MaxScale ignores host in user authentication"
-add_test_executable(bug143.cpp bug143 replication LABELS MySQLAuth REPL_BACKEND)
-
-# Regression case for the bug "Wildcard in host column of mysql.user table don't work properly"
-add_test_executable(bug448.cpp bug448 replication LABELS MySQLAuth LIGHT REPL_BACKEND)
-
-# Regression case for the bug "Routing Hints route to server sometimes doesn't work"
-add_test_executable(bug471.cpp bug471 bug471 LABELS readwritesplit hintfilter REPL_BACKEND)
-
-# Regression case for the bugs "malformed hints cause crash"
-add_test_executable(bug473.cpp bug473 hints LABELS readwritesplit hintfilter REPL_BACKEND)
-
-# Regression case for the bug "The end comment tag in hints isn't properly detected"
-add_test_executable(bug475.cpp bug475 hints LABELS readwritesplit hintfilter REPL_BACKEND)
-
-# Checks "SELECT * INTO OUTFILE" and "LOAD DATA LOCAL INFILE"
-add_test_executable(bug519.cpp bug519 replication LABELS readwritesplit REPL_BACKEND)
-
-# Regression case for the bug "'Current no. of conns' not going down"
-add_test_executable(bug529.cpp bug529 replication LABELS readwritesplit readconnroute maxscale REPL_BACKEND)
-
-# Regression case for the bugs "get_dcb fails if slaves are not available" and "Maxscale fails to start without anything in the logs if there is no slave available"
-add_test_executable(bug547.cpp bug547 replication LABELS readwritesplit REPL_BACKEND)
-
-# Regression case for the bug "crash if max_slave_connections=10% and 4 or less backends are configured"
-add_test_executable(bug681.cpp bug681 bug681 LABELS readwritesplit REPL_BACKEND)
-
-# Regression case for the bug ""Different error messages from MariaDB and Maxscale"
-add_test_executable(error_messages.cpp error_messages replication LABELS MySQLAuth REPL_BACKEND)
-
-# TODO: Remove this once MXS-2174 is fixed
-set_tests_properties(error_messages PROPERTIES WILL_FAIL TRUE)
-
-# Regression case for the bug "Wrong error message for Access denied error"
-add_test_script(bug562.sh bug562.sh replication LABELS MySQLAuth REPL_BACKEND)
-
-# Regression case for the bug "Wrong charset settings"
-add_test_script(bug564.sh bug564.sh replication LABELS MySQLProtocol REPL_BACKEND)
-
-# Regression case for the bug "Clients CLIENT_FOUND_ROWS setting is ignored by maxscale"
-add_test_executable(bug565.cpp bug565 replication LABELS MySQLProtocol REPL_BACKEND)
-
-# Regression case for the bug "Crash if files from /dev/shm/ removed"
-add_test_script(bug567.sh bug567.sh bug567 LABELS maxscale REPL_BACKEND)
-
-# Regression case for the bug "Using regex filter hangs MaxScale"
-add_test_executable(bug571.cpp bug571 bug571 LABELS regexfilter REPL_BACKEND)
-
-# Attempt to use GRANT with wrong IP, expect no crash or hangs
-add_test_executable(bug572.cpp bug572 replication LABELS readwritesplit REPL_BACKEND)
-
-# Regression cases for the bug "Hint filter don't work if listed before regex filter in configuration file"
-# (different filter sequence and configuration, but the same test, see .cnf for details)
-add_test_derived(bug585 bug587 bug585 LABELS regexfilter REPL_BACKEND)
-add_test_executable(bug587.cpp bug587 bug587 LABELS regexfilter hintfilter REPL_BACKEND)
-add_test_derived(bug587_1 bug587 bug587_1 LABELS regexfilter hintfilter REPL_BACKEND)
-
-# Tries to connect Maxscale when all slaves stopped
-add_test_executable(bug592.cpp bug592 replication LABELS MySQLAuth readwritesplit REPL_BACKEND)
-
-# Tries to do change user in the loop, checks that autorization is still ok
-add_test_executable(bug601.cpp bug601 bug601 LABELS MySQLAuth MySQLProtocol REPL_BACKEND)
-
-# Simple test with enable_root_user=true
-add_test_executable(bug620.cpp bug620 bug620 LABELS MySQLAuth MySQLProtocol REPL_BACKEND)
-
-# Regression case for the bug "Crash when user define with old password style (before 4.1 protocol)"
-add_test_executable(bug626.cpp bug626 replication LABELS MySQLAuth MySQLProtocol REPL_BACKEND)
-
-# Crash when host name for some user in mysql.user is very long
-add_test_executable(bug653.cpp bug653 replication LABELS MySQLAuth MySQLProtocol REPL_BACKEND)
-
-# Crash with malformed Maxadmin command
-add_test_executable(bug654.cpp bug654 replication LABELS maxscale REPL_BACKEND)
-
-# Block backends (master or all slaves) and tries to connect Maxscale
-add_test_executable(bug658.cpp bug658 replication LABELS readwritesplit readconnroute maxscale REPL_BACKEND)
-
-# Block all backends
-add_test_executable(bug662.cpp bug662 bug662 LABELS readwritesplit readconnroute maxscale REPL_BACKEND)
-
-# Bad TEE filter configuration
-add_test_executable(bug664.cpp bug664 bug664 LABELS MySQLAuth MySQLProtocol REPL_BACKEND)
-
-# Regression case for the bug "MaxScale crashes if "Users table data" is empty and "show dbusers" is executed in maxadmin"
-add_test_executable(bug673.cpp bug673 bug673 LABELS MySQLAuth REPL_BACKEND)
-
-# Wrong processing of 'SET GLOBAL sql_mode="ANSI"'
-add_test_executable(bug705.cpp bug705 bug705 LABELS MySQLAuth REPL_BACKEND)
-
-# Prepared statement from PHP application
-add_test_executable(bug729.cpp bug729 replication LABELS readwritesplit LIGHT REPL_BACKEND)
-
-# Regression case for the bug "Regex filter and shorter than original replacement queries MaxScale" (crash)
-add_test_executable(bug730.cpp bug730 bug730 LABELS regexfilter REPL_BACKEND)
-
-# Test MariaDB 10.2 bulk inserts
-add_test_executable(bulk_insert.cpp bulk_insert bulk_insert LABELS MySQLProtocol REPL_BACKEND 10.2)
-
-# Tests for the CCRFilter module
-add_test_executable(ccrfilter.cpp ccrfilter_test ccrfilter LABELS ccrfilter LIGHT REPL_BACKEND)
-
-# Tries to reconfigure replication setup to use another node as a Master
-add_test_executable(change_master_during_session.cpp change_master_during_session replication LABELS readwritesplit mysqlmon REPL_BACKEND)
-
-# Executes change_user command in the loop
-add_test_executable(change_user.cpp change_user replication LABELS MySQLAuth readwritesplit MySQLProtocol LIGHT REPL_BACKEND)
-
-# Tries to connect to non existing DB, expects no crash
-add_test_executable(connect_to_nonexisting_db.cpp connect_to_nonexisting_db replication LABELS MySQLAuth MySQLProtoco LIGHT REPL_BACKEND)
-
-# check if max_connections parameter works
-add_test_executable(connection_limit.cpp connection_limit connection_limit LABELS maxscale LIGHT REPL_BACKEND)
-
-# Tries to open to many connections, expect no crash
-add_test_executable(crash_out_of_files.cpp crash_out_of_files load LABELS maxscale HEAVY REPL_BACKEND)
-
-# Tries INSERTs with size close to 0x0ffffff * N
-add_test_executable(different_size_rwsplit.cpp different_size_rwsplit replication LABELS readwritesplit HEAVY REPL_BACKEND)
-
-# Tries to use 'maxkeys', 'maxpasswrd'
-add_test_executable(encrypted_passwords.cpp encrypted_passwords replication LABELS maxscale LIGHT REPL_BACKEND)
-
-# Basic MaxCtrl test
-add_test_executable(maxctrl_basic.cpp maxctrl_basic maxctrl_basic LABELS maxctrl REPL_BACKEND)
-
-# MXS-2167: Monitors should be able to use extra_port
-add_test_executable(mxs2167_extra_port.cpp mxs2167_extra_port mxs2167_extra_port LABELS REPL_BACKEND)
-
-# Test KILL QUERY functionality
-add_test_executable(kill_query.cpp kill_query kill_query LABELS REPL_BACKEND)
-
-# MXS-2250: DESCRIBE on temporary table should work.
-add_test_executable(mxs2250_describe_temp_table.cpp mxs2250_describe_temp_table mxs2250_describe_temp_table LABELS REPL_BACKEND)
-
-# MXS-2355: Try to log in using a different authentication plugin
-add_test_executable(mxs2355_wrong_auth.cpp mxs2355_wrong_auth maxctrl LABELS REPL_BACKEND)
-
 ############################################
 # BEGIN: Tests that require GTID           #
 ############################################
@@ -392,6 +242,156 @@ add_test_executable(csmon_test.cpp csmon_test csmon_test LABELS csmon CS_BACKEND
 ############################################
 # BEGIN: Normal tests                      #
 ############################################
+
+# Routing sanity check. Also acts as the regression test case the following issues:
+#
+# MXS-127
+# MXS-47
+# MXS-682
+# MXS-957
+# MXS-1786
+add_test_executable(sanity_check.cpp sanity_check replication LABELS LIGHT REPL_BACKEND)
+
+# Repeatedly connect to maxscale while the backends reject all connections, expect no crash
+add_test_executable(backend_auth_fail.cpp backend_auth_fail replication LABELS readconnroute REPL_BACKEND)
+
+# Regression case for the bug "MaxScale ignores host in user authentication"
+add_test_executable(bug143.cpp bug143 replication LABELS MySQLAuth REPL_BACKEND)
+
+# Regression case for the bug "Wildcard in host column of mysql.user table don't work properly"
+add_test_executable(bug448.cpp bug448 replication LABELS MySQLAuth LIGHT REPL_BACKEND)
+
+# Regression case for the bug "Routing Hints route to server sometimes doesn't work"
+add_test_executable(bug471.cpp bug471 bug471 LABELS readwritesplit hintfilter REPL_BACKEND)
+
+# Regression case for the bugs "malformed hints cause crash"
+add_test_executable(bug473.cpp bug473 hints LABELS readwritesplit hintfilter REPL_BACKEND)
+
+# Regression case for the bug "The end comment tag in hints isn't properly detected"
+add_test_executable(bug475.cpp bug475 hints LABELS readwritesplit hintfilter REPL_BACKEND)
+
+# Checks "SELECT * INTO OUTFILE" and "LOAD DATA LOCAL INFILE"
+add_test_executable(bug519.cpp bug519 replication LABELS readwritesplit REPL_BACKEND)
+
+# Regression case for the bug "'Current no. of conns' not going down"
+add_test_executable(bug529.cpp bug529 replication LABELS readwritesplit readconnroute maxscale REPL_BACKEND)
+
+# Regression case for the bugs "get_dcb fails if slaves are not available" and "Maxscale fails to start without anything in the logs if there is no slave available"
+add_test_executable(bug547.cpp bug547 replication LABELS readwritesplit REPL_BACKEND)
+
+# Regression case for the bug "crash if max_slave_connections=10% and 4 or less backends are configured"
+add_test_executable(bug681.cpp bug681 bug681 LABELS readwritesplit REPL_BACKEND)
+
+# Regression case for the bug ""Different error messages from MariaDB and Maxscale"
+add_test_executable(error_messages.cpp error_messages replication LABELS MySQLAuth REPL_BACKEND)
+
+# TODO: Remove this once MXS-2174 is fixed
+set_tests_properties(error_messages PROPERTIES WILL_FAIL TRUE)
+
+# Regression case for the bug "Wrong error message for Access denied error"
+add_test_script(bug562.sh bug562.sh replication LABELS MySQLAuth REPL_BACKEND)
+
+# Regression case for the bug "Wrong charset settings"
+add_test_script(bug564.sh bug564.sh replication LABELS MySQLProtocol REPL_BACKEND)
+
+# Regression case for the bug "Clients CLIENT_FOUND_ROWS setting is ignored by maxscale"
+add_test_executable(bug565.cpp bug565 replication LABELS MySQLProtocol REPL_BACKEND)
+
+# Regression case for the bug "Crash if files from /dev/shm/ removed"
+add_test_script(bug567.sh bug567.sh bug567 LABELS maxscale REPL_BACKEND)
+
+# Regression case for the bug "Using regex filter hangs MaxScale"
+add_test_executable(bug571.cpp bug571 bug571 LABELS regexfilter REPL_BACKEND)
+
+# Attempt to use GRANT with wrong IP, expect no crash or hangs
+add_test_executable(bug572.cpp bug572 replication LABELS readwritesplit REPL_BACKEND)
+
+# Regression cases for the bug "Hint filter don't work if listed before regex filter in configuration file"
+# (different filter sequence and configuration, but the same test, see .cnf for details)
+add_test_derived(bug585 bug587 bug585 LABELS regexfilter REPL_BACKEND)
+add_test_executable(bug587.cpp bug587 bug587 LABELS regexfilter hintfilter REPL_BACKEND)
+add_test_derived(bug587_1 bug587 bug587_1 LABELS regexfilter hintfilter REPL_BACKEND)
+
+# Tries to connect Maxscale when all slaves stopped
+add_test_executable(bug592.cpp bug592 replication LABELS MySQLAuth readwritesplit REPL_BACKEND)
+
+# Tries to do change user in the loop, checks that autorization is still ok
+add_test_executable(bug601.cpp bug601 bug601 LABELS MySQLAuth MySQLProtocol REPL_BACKEND)
+
+# Simple test with enable_root_user=true
+add_test_executable(bug620.cpp bug620 bug620 LABELS MySQLAuth MySQLProtocol REPL_BACKEND)
+
+# Regression case for the bug "Crash when user define with old password style (before 4.1 protocol)"
+add_test_executable(bug626.cpp bug626 replication LABELS MySQLAuth MySQLProtocol REPL_BACKEND)
+
+# Crash when host name for some user in mysql.user is very long
+add_test_executable(bug653.cpp bug653 replication LABELS MySQLAuth MySQLProtocol REPL_BACKEND)
+
+# Crash with malformed Maxadmin command
+add_test_executable(bug654.cpp bug654 replication LABELS maxscale REPL_BACKEND)
+
+# Block backends (master or all slaves) and tries to connect Maxscale
+add_test_executable(bug658.cpp bug658 replication LABELS readwritesplit readconnroute maxscale REPL_BACKEND)
+
+# Block all backends
+add_test_executable(bug662.cpp bug662 bug662 LABELS readwritesplit readconnroute maxscale REPL_BACKEND)
+
+# Bad TEE filter configuration
+add_test_executable(bug664.cpp bug664 bug664 LABELS MySQLAuth MySQLProtocol REPL_BACKEND)
+
+# Regression case for the bug "MaxScale crashes if "Users table data" is empty and "show dbusers" is executed in maxadmin"
+add_test_executable(bug673.cpp bug673 bug673 LABELS MySQLAuth REPL_BACKEND)
+
+# Wrong processing of 'SET GLOBAL sql_mode="ANSI"'
+add_test_executable(bug705.cpp bug705 bug705 LABELS MySQLAuth REPL_BACKEND)
+
+# Prepared statement from PHP application
+add_test_executable(bug729.cpp bug729 replication LABELS readwritesplit LIGHT REPL_BACKEND)
+
+# Regression case for the bug "Regex filter and shorter than original replacement queries MaxScale" (crash)
+add_test_executable(bug730.cpp bug730 bug730 LABELS regexfilter REPL_BACKEND)
+
+# Test MariaDB 10.2 bulk inserts
+add_test_executable(bulk_insert.cpp bulk_insert bulk_insert LABELS MySQLProtocol REPL_BACKEND 10.2)
+
+# Tests for the CCRFilter module
+add_test_executable(ccrfilter.cpp ccrfilter_test ccrfilter LABELS ccrfilter LIGHT REPL_BACKEND)
+
+# Tries to reconfigure replication setup to use another node as a Master
+add_test_executable(change_master_during_session.cpp change_master_during_session replication LABELS readwritesplit mysqlmon REPL_BACKEND)
+
+# Executes change_user command in the loop
+add_test_executable(change_user.cpp change_user replication LABELS MySQLAuth readwritesplit MySQLProtocol LIGHT REPL_BACKEND)
+
+# Tries to connect to non existing DB, expects no crash
+add_test_executable(connect_to_nonexisting_db.cpp connect_to_nonexisting_db replication LABELS MySQLAuth MySQLProtoco LIGHT REPL_BACKEND)
+
+# check if max_connections parameter works
+add_test_executable(connection_limit.cpp connection_limit connection_limit LABELS maxscale LIGHT REPL_BACKEND)
+
+# Tries to open to many connections, expect no crash
+add_test_executable(crash_out_of_files.cpp crash_out_of_files load LABELS maxscale HEAVY REPL_BACKEND)
+
+# Tries INSERTs with size close to 0x0ffffff * N
+add_test_executable(different_size_rwsplit.cpp different_size_rwsplit replication LABELS readwritesplit HEAVY REPL_BACKEND)
+
+# Tries to use 'maxkeys', 'maxpasswrd'
+add_test_executable(encrypted_passwords.cpp encrypted_passwords replication LABELS maxscale LIGHT REPL_BACKEND)
+
+# Basic MaxCtrl test
+add_test_executable(maxctrl_basic.cpp maxctrl_basic maxctrl_basic LABELS maxctrl REPL_BACKEND)
+
+# MXS-2167: Monitors should be able to use extra_port
+add_test_executable(mxs2167_extra_port.cpp mxs2167_extra_port mxs2167_extra_port LABELS REPL_BACKEND)
+
+# Test KILL QUERY functionality
+add_test_executable(kill_query.cpp kill_query kill_query LABELS REPL_BACKEND)
+
+# MXS-2250: DESCRIBE on temporary table should work.
+add_test_executable(mxs2250_describe_temp_table.cpp mxs2250_describe_temp_table mxs2250_describe_temp_table LABELS REPL_BACKEND)
+
+# MXS-2355: Try to log in using a different authentication plugin
+add_test_executable(mxs2355_wrong_auth.cpp mxs2355_wrong_auth maxctrl LABELS REPL_BACKEND)
 
 # Test monitor state change events when manually clearing server bits
 add_test_executable(false_monitor_state_change.cpp false_monitor_state_change replication LABELS mysqlmon REPL_BACKEND)
