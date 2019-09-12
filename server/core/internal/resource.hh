@@ -17,7 +17,7 @@
 #include <maxscale/ccdefs.hh>
 
 #include <string>
-#include <deque>
+#include <vector>
 
 #include <maxscale/server.hh>
 #include <maxscale/http.hh>
@@ -32,18 +32,22 @@ typedef HttpResponse (* ResourceCallback)(const HttpRequest& request);
 
 class Resource
 {
-    Resource(const Resource&);
-    Resource& operator=(const Resource&);
 public:
-
     enum resource_constraint
     {
         NONE         = 0,
         REQUIRE_BODY = (1 << 0)
     };
 
-    Resource(ResourceCallback cb, int components, ...);
-    ~Resource();
+    template<class ... Args>
+    Resource(ResourceCallback cb, Args... args)
+        : m_cb(cb)
+        , m_is_glob(false)
+        , m_constraints(NONE)
+        , m_path({args ...})
+    {
+        m_is_glob = std::find(m_path.begin(), m_path.end(), "?") != m_path.end();
+    }
 
     /**
      * @brief Check if a request matches this resource
@@ -81,10 +85,10 @@ private:
 
     bool matching_variable_path(const std::string& path, const std::string& target) const;
 
-    ResourceCallback        m_cb;           /**< Resource handler callback */
-    std::deque<std::string> m_path;         /**< Path components */
-    bool                    m_is_glob;      /**< Does this path glob? */
-    uint32_t                m_constraints;  /**< Resource constraints */
+    ResourceCallback         m_cb;          /**< Resource handler callback */
+    bool                     m_is_glob;     /**< Does this path glob? */
+    uint32_t                 m_constraints; /**< Resource constraints */
+    std::vector<std::string> m_path;        /**< Path components */
 };
 
 /**

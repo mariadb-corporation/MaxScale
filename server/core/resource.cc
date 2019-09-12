@@ -12,7 +12,7 @@
  */
 #include "internal/resource.hh"
 
-#include <list>
+#include <vector>
 #include <map>
 #include <sstream>
 
@@ -37,35 +37,10 @@
 #include "internal/service.hh"
 #include "internal/session.hh"
 
-using std::list;
 using std::map;
 using std::string;
 using std::stringstream;
 using maxscale::Monitor;
-
-Resource::Resource(ResourceCallback cb, int components, ...)
-    : m_cb(cb)
-    , m_is_glob(false)
-    , m_constraints(NONE)
-{
-    va_list args;
-    va_start(args, components);
-
-    for (int i = 0; i < components; i++)
-    {
-        string part = va_arg(args, const char*);
-        m_path.push_back(part);
-        if (part == "?")
-        {
-            m_is_glob = true;
-        }
-    }
-    va_end(args);
-}
-
-Resource::~Resource()
-{
-}
 
 bool Resource::match(const HttpRequest& request) const
 {
@@ -964,8 +939,7 @@ class RootResource
     RootResource(const RootResource&);
     RootResource& operator=(const RootResource&);
 public:
-    typedef std::shared_ptr<Resource> SResource;
-    typedef list<SResource>           ResourceList;
+    using ResourceList = std::vector<Resource>;
 
     /**
      * Create REST API resources
@@ -982,78 +956,62 @@ public:
     RootResource()
     {
         // Special resources required by OPTION etc.
-        m_get.push_back(SResource(new Resource(cb_send_ok, 0)));
-        m_get.push_back(SResource(new Resource(cb_send_ok, 1, "*")));
+        m_get.emplace_back(cb_send_ok);
+        m_get.emplace_back(cb_send_ok, "*");
 
-        m_get.push_back(SResource(new Resource(cb_all_servers, 1, "servers")));
-        m_get.push_back(SResource(new Resource(cb_get_server, 2, "servers", ":server")));
+        m_get.emplace_back(cb_all_servers, "servers");
+        m_get.emplace_back(cb_get_server, "servers", ":server");
 
-        m_get.push_back(SResource(new Resource(cb_all_services, 1, "services")));
-        m_get.push_back(SResource(new Resource(cb_get_service, 2, "services", ":service")));
-        m_get.push_back(SResource(new Resource(cb_get_all_service_listeners,
-                                               3,
-                                               "services",
-                                               ":service",
-                                               "listeners")));
-        m_get.push_back(SResource(new Resource(cb_get_service_listener,
-                                               4,
-                                               "services",
-                                               ":service",
-                                               "listeners",
-                                               "?")));
+        m_get.emplace_back(cb_all_services, "services");
+        m_get.emplace_back(cb_get_service, "services", ":service");
+        m_get.emplace_back(cb_get_all_service_listeners, "services", ":service", "listeners");
+        m_get.emplace_back(cb_get_service_listener, "services", ":service", "listeners", "?");
 
-        m_get.push_back(SResource(new Resource(cb_all_filters, 1, "filters")));
-        m_get.push_back(SResource(new Resource(cb_get_filter, 2, "filters", ":filter")));
+        m_get.emplace_back(cb_all_filters, "filters");
+        m_get.emplace_back(cb_get_filter, "filters", ":filter");
 
-        m_get.push_back(SResource(new Resource(cb_all_monitors, 1, "monitors")));
-        m_get.push_back(SResource(new Resource(cb_get_monitor, 2, "monitors", ":monitor")));
+        m_get.emplace_back(cb_all_monitors, "monitors");
+        m_get.emplace_back(cb_get_monitor, "monitors", ":monitor");
 
-        m_get.push_back(SResource(new Resource(cb_all_sessions, 1, "sessions")));
-        m_get.push_back(SResource(new Resource(cb_get_session, 2, "sessions", ":session")));
+        m_get.emplace_back(cb_all_sessions, "sessions");
+        m_get.emplace_back(cb_get_session, "sessions", ":session");
 
-        m_get.push_back(SResource(new Resource(cb_maxscale, 1, "maxscale")));
-        m_get.push_back(SResource(new Resource(cb_qc, 2, "maxscale", "query_classifier")));
-        m_get.push_back(SResource(new Resource(cb_qc_classify, 3,
-                                               "maxscale", "query_classifier", "classify")));
-        m_get.push_back(SResource(new Resource(cb_qc_cache, 3,
-                                               "maxscale", "query_classifier", "cache")));
-        m_get.push_back(SResource(new Resource(cb_all_threads, 2, "maxscale", "threads")));
-        m_get.push_back(SResource(new Resource(cb_thread, 3, "maxscale", "threads", ":thread")));
-        m_get.push_back(SResource(new Resource(cb_logs, 2, "maxscale", "logs")));
-        m_get.push_back(SResource(new Resource(cb_tasks, 2, "maxscale", "tasks")));
-        m_get.push_back(SResource(new Resource(cb_all_modules, 2, "maxscale", "modules")));
-        m_get.push_back(SResource(new Resource(cb_module, 3, "maxscale", "modules", ":module")));
+        m_get.emplace_back(cb_maxscale, "maxscale");
+        m_get.emplace_back(cb_qc, "maxscale", "query_classifier");
+        m_get.emplace_back(cb_qc_classify, "maxscale", "query_classifier", "classify");
+        m_get.emplace_back(cb_qc_cache, "maxscale", "query_classifier", "cache");
+        m_get.emplace_back(cb_all_threads, "maxscale", "threads");
+        m_get.emplace_back(cb_thread, "maxscale", "threads", ":thread");
+        m_get.emplace_back(cb_logs, "maxscale", "logs");
+        m_get.emplace_back(cb_tasks, "maxscale", "tasks");
+        m_get.emplace_back(cb_all_modules, "maxscale", "modules");
+        m_get.emplace_back(cb_module, "maxscale", "modules", ":module");
 
         /** For all read-only module commands */
-        m_get.push_back(SResource(new Resource(cb_modulecmd, 4, "maxscale", "modules", ":module", "?")));
+        m_get.emplace_back(cb_modulecmd, "maxscale", "modules", ":module", "?");
 
-        m_get.push_back(SResource(new Resource(cb_all_users, 1, "users")));
-        m_get.push_back(SResource(new Resource(cb_all_inet_users, 2, "users", "inet")));
-        m_get.push_back(SResource(new Resource(cb_all_unix_users, 2, "users", "unix")));
-        m_get.push_back(SResource(new Resource(cb_inet_user, 3, "users", "inet", ":inetuser")));
-        m_get.push_back(SResource(new Resource(cb_unix_user, 3, "users", "unix", ":unixuser")));
+        m_get.emplace_back(cb_all_users, "users");
+        m_get.emplace_back(cb_all_inet_users, "users", "inet");
+        m_get.emplace_back(cb_all_unix_users, "users", "unix");
+        m_get.emplace_back(cb_inet_user, "users", "inet", ":inetuser");
+        m_get.emplace_back(cb_unix_user, "users", "unix", ":unixuser");
 
         /** Debug utility endpoints */
-        m_get.push_back(SResource(new Resource(cb_monitor_wait, 3, "maxscale", "debug", "monitor_wait")));
+        m_get.emplace_back(cb_monitor_wait, "maxscale", "debug", "monitor_wait");
 
         /** Create new resources */
-        m_post.push_back(SResource(new Resource(cb_create_server, 1, "servers")));
-        m_post.push_back(SResource(new Resource(cb_create_monitor, 1, "monitors")));
-        m_post.push_back(SResource(new Resource(cb_create_filter, 1, "filters")));
-        m_post.push_back(SResource(new Resource(cb_create_service, 1, "services")));
-        m_post.push_back(SResource(new Resource(cb_create_service_listener,
-                                                3,
-                                                "services",
-                                                ":service",
-                                                "listeners")));
-        m_post.push_back(SResource(new Resource(cb_create_user, 2, "users", "inet")));
-        m_post.push_back(SResource(new Resource(cb_create_user, 2, "users", "unix")));
+        m_post.emplace_back(cb_create_server, "servers");
+        m_post.emplace_back(cb_create_monitor, "monitors");
+        m_post.emplace_back(cb_create_filter, "filters");
+        m_post.emplace_back(cb_create_service, "services");
+        m_post.emplace_back(cb_create_service_listener, "services", ":service", "listeners");
+        m_post.emplace_back(cb_create_user, "users", "inet");
+        m_post.emplace_back(cb_create_user, "users", "unix");
 
         /** All of the above require a request body */
-        for (ResourceList::iterator it = m_post.begin(); it != m_post.end(); it++)
+        for (auto& r : m_post)
         {
-            SResource& r = *it;
-            r->add_constraint(Resource::REQUIRE_BODY);
+            r.add_constraint(Resource::REQUIRE_BODY);
         }
 
         /**
@@ -1061,61 +1019,36 @@ public:
          */
 
         /** For all module commands that modify state/data */
-        m_post.push_back(SResource(new Resource(cb_modulecmd, 4, "maxscale", "modules", ":module", "?")));
-        m_post.push_back(SResource(new Resource(cb_flush, 3, "maxscale", "logs", "flush")));
+        m_post.emplace_back(cb_modulecmd, "maxscale", "modules", ":module", "?");
+        m_post.emplace_back(cb_flush, "maxscale", "logs", "flush");
 
         /** Update resources */
-        m_patch.push_back(SResource(new Resource(cb_alter_server, 2, "servers", ":server")));
-        m_patch.push_back(SResource(new Resource(cb_alter_monitor, 2, "monitors", ":monitor")));
-        m_patch.push_back(SResource(new Resource(cb_alter_service, 2, "services", ":service")));
-        m_patch.push_back(SResource(new Resource(cb_alter_logs, 2, "maxscale", "logs")));
-        m_patch.push_back(SResource(new Resource(cb_alter_maxscale, 1, "maxscale")));
-        m_patch.push_back(SResource(new Resource(cb_alter_qc, 2, "maxscale", "query_classifier")));
-        m_patch.push_back(SResource(new Resource(cb_alter_user, 3, "users", "inet", ":inetuser")));
+        m_patch.emplace_back(cb_alter_server, "servers", ":server");
+        m_patch.emplace_back(cb_alter_monitor, "monitors", ":monitor");
+        m_patch.emplace_back(cb_alter_service, "services", ":service");
+        m_patch.emplace_back(cb_alter_logs, "maxscale", "logs");
+        m_patch.emplace_back(cb_alter_maxscale, "maxscale");
+        m_patch.emplace_back(cb_alter_qc, "maxscale", "query_classifier");
+        m_patch.emplace_back(cb_alter_user, "users", "inet", ":inetuser");
 
         /** Update resource relationships directly */
-        m_patch.push_back(SResource(new Resource(cb_alter_server_service_relationship,
-                                                 4,
-                                                 "servers",
-                                                 ":server",
-                                                 "relationships",
-                                                 "services")));
-        m_patch.push_back(SResource(new Resource(cb_alter_server_monitor_relationship,
-                                                 4,
-                                                 "servers",
-                                                 ":server",
-                                                 "relationships",
-                                                 "monitors")));
-        m_patch.push_back(SResource(new Resource(cb_alter_monitor_server_relationship,
-                                                 4,
-                                                 "monitors",
-                                                 ":monitor",
-                                                 "relationships",
-                                                 "servers")));
-        m_patch.push_back(SResource(new Resource(cb_alter_service_server_relationship,
-                                                 4,
-                                                 "services",
-                                                 ":service",
-                                                 "relationships",
-                                                 "servers")));
-        m_patch.push_back(SResource(new Resource(cb_alter_service_service_relationship,
-                                                 4,
-                                                 "services",
-                                                 ":service",
-                                                 "relationships",
-                                                 "services")));
-        m_patch.push_back(SResource(new Resource(cb_alter_service_filter_relationship,
-                                                 4,
-                                                 "services",
-                                                 ":service",
-                                                 "relationships",
-                                                 "filters")));
+        m_patch.emplace_back(cb_alter_server_service_relationship,
+                             "servers", ":server", "relationships", "services");
+        m_patch.emplace_back(cb_alter_server_monitor_relationship,
+                             "servers", ":server", "relationships", "monitors");
+        m_patch.emplace_back(cb_alter_monitor_server_relationship,
+                             "monitors", ":monitor", "relationships", "servers");
+        m_patch.emplace_back(cb_alter_service_server_relationship,
+                             "services", ":service", "relationships", "servers");
+        m_patch.emplace_back(cb_alter_service_service_relationship,
+                             "services", ":service", "relationships", "services");
+        m_patch.emplace_back(cb_alter_service_filter_relationship,
+                             "services", ":service", "relationships", "filters");
 
         /** All patch resources require a request body */
-        for (ResourceList::iterator it = m_patch.begin(); it != m_patch.end(); it++)
+        for (auto& r : m_patch)
         {
-            SResource& r = *it;
-            r->add_constraint(Resource::REQUIRE_BODY);
+            r.add_constraint(Resource::REQUIRE_BODY);
         }
 
         /**
@@ -1123,30 +1056,21 @@ public:
          */
 
         /** Change resource states */
-        m_put.push_back(SResource(new Resource(cb_stop_monitor, 3, "monitors", ":monitor", "stop")));
-        m_put.push_back(SResource(new Resource(cb_start_monitor, 3, "monitors", ":monitor", "start")));
-        m_put.push_back(SResource(new Resource(cb_stop_service, 3, "services", ":service", "stop")));
-        m_put.push_back(SResource(new Resource(cb_start_service, 3, "services", ":service", "start")));
-        m_put.push_back(SResource(new Resource(cb_set_server, 3, "servers", ":server", "set")));
-        m_put.push_back(SResource(new Resource(cb_clear_server, 3, "servers", ":server", "clear")));
+        m_put.emplace_back(cb_stop_monitor, "monitors", ":monitor", "stop");
+        m_put.emplace_back(cb_start_monitor, "monitors", ":monitor", "start");
+        m_put.emplace_back(cb_stop_service, "services", ":service", "stop");
+        m_put.emplace_back(cb_start_service, "services", ":service", "start");
+        m_put.emplace_back(cb_set_server, "servers", ":server", "set");
+        m_put.emplace_back(cb_clear_server, "servers", ":server", "clear");
 
-        m_delete.push_back(SResource(new Resource(cb_delete_server, 2, "servers", ":server")));
-        m_delete.push_back(SResource(new Resource(cb_delete_monitor, 2, "monitors", ":monitor")));
-        m_delete.push_back(SResource(new Resource(cb_delete_service, 2, "services", ":service")));
-        m_delete.push_back(SResource(new Resource(cb_delete_filter, 2, "filters", ":filter")));
+        m_delete.emplace_back(cb_delete_server, "servers", ":server");
+        m_delete.emplace_back(cb_delete_monitor, "monitors", ":monitor");
+        m_delete.emplace_back(cb_delete_service, "services", ":service");
+        m_delete.emplace_back(cb_delete_filter, "filters", ":filter");
+        m_delete.emplace_back(cb_delete_listener, "services", ":service", "listeners", "?");
 
-        m_delete.push_back(SResource(new Resource(cb_delete_user, 3, "users", "inet", ":inetuser")));
-        m_delete.push_back(SResource(new Resource(cb_delete_user, 3, "users", "unix", ":unixuser")));
-
-        /** The wildcard for listener name isn't a good solution as it adds
-         * a burden to the callback and requires it to do the checking but it'll
-         * do for the time being */
-        m_delete.push_back(SResource(new Resource(cb_delete_listener,
-                                                  4,
-                                                  "services",
-                                                  ":service",
-                                                  "listeners",
-                                                  "?")));
+        m_delete.emplace_back(cb_delete_user, "users", "inet", ":inetuser");
+        m_delete.emplace_back(cb_delete_user, "users", "unix", ":unixuser");
     }
 
     ~RootResource()
@@ -1157,9 +1081,7 @@ public:
     {
         for (ResourceList::const_iterator it = list.begin(); it != list.end(); it++)
         {
-            Resource& r = *(*it);
-
-            if (r.match(request))
+            if (it->match(request))
             {
                 return it;
             }
@@ -1174,14 +1096,12 @@ public:
 
         if (it != list.end())
         {
-            Resource& r = *(*it);
-
-            if (r.requires_body() && request.get_json() == NULL)
+            if (it->requires_body() && request.get_json() == NULL)
             {
                 return HttpResponse(MHD_HTTP_FORBIDDEN, mxs_json_error("Missing request body"));
             }
 
-            return r.call(request);
+            return it->call(request);
         }
 
         return HttpResponse(MHD_HTTP_NOT_FOUND);
@@ -1189,7 +1109,7 @@ public:
 
     string get_supported_methods(const HttpRequest& request)
     {
-        list<string> l;
+        std::vector<string> l;
 
         if (find_resource(m_get, request) != m_get.end())
         {
@@ -1208,20 +1128,7 @@ public:
             l.push_back(MHD_HTTP_METHOD_DELETE);
         }
 
-        stringstream rval;
-
-        if (l.size() > 0)
-        {
-            rval << l.front();
-            l.pop_front();
-        }
-
-        for (list<string>::iterator it = l.begin(); it != l.end(); it++)
-        {
-            rval << ", " << *it;
-        }
-
-        return rval.str();
+        return mxb::join(l, ", ");
     }
 
     HttpResponse process_request(const HttpRequest& request)
