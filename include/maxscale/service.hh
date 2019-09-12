@@ -135,10 +135,7 @@ public:
         m_active = false;
     }
 
-    int64_t rank() const override
-    {
-        return RANK_PRIMARY;
-    }
+    virtual int64_t rank() const = 0;
 
     virtual int64_t replication_lag() const = 0;
 
