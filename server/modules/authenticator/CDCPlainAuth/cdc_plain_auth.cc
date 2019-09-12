@@ -33,11 +33,6 @@
 
 const char CDC_USERS_FILENAME[] = "cdcusers";
 
-static int cdc_set_service_user(Listener* listener);
-static int cdc_replace_users(Listener* listener);
-
-static int cdc_auth_check(DCB* dcb, char* username, uint8_t* auth_data);
-
 using mxs::USER_ACCOUNT_ADMIN;
 
 class CDCAuthenticatorModule : public mxs::AuthenticatorModule
@@ -52,25 +47,38 @@ public:
 
     std::unique_ptr<mxs::ClientAuthenticator> create_client_authenticator() override;
 
-    int load_users(Listener* listener) override
-    {
-        return cdc_replace_users(listener);
-    }
+    int load_users(Listener* listener) override;
 
     void diagnostics(DCB* output, Listener* listener) override
     {
-        users_default_diagnostic(output, listener);
+        m_userdata.diagnostic(output);
     }
 
     json_t* diagnostics_json(const Listener* listener) override
     {
-        return users_default_diagnostic_json(listener);
+        return m_userdata.diagnostic_json();
     }
 
     std::string supported_protocol() const override
     {
         return MXS_CDC_PROTOCOL_NAME;
     }
+
+    /**
+     * Check user & pw.
+     *
+     * @param username  String containing username
+     * @param auth_data  The encrypted password for authentication
+     * @return Authentication status
+     * @note Authentication status codes are defined in cdc.h
+     */
+    int cdc_auth_check(char* username, uint8_t* auth_data);
+
+private:
+    int set_service_user(Listener* listener);
+    mxs::Users read_users(char* usersfile);
+
+    mxs::Users m_userdata; // lock-protected user-info
 };
 
 class CDCClientAuthenticator : public mxs::ClientAuthenticatorT<CDCAuthenticatorModule>
@@ -225,35 +233,16 @@ MXS_MODULE* MXS_CREATE_MODULE()
 }
 }
 
-/**
- * @brief Function to easily call authentication check.
- *
- * @param dcb Request handler DCB connected to the client
- * @param username  String containing username
- * @param auth_data  The encrypted password for authentication
- * @return Authentication status
- * @note Authentication status codes are defined in cdc.h
- */
-static int cdc_auth_check(DCB* dcb, char* username, uint8_t* auth_data)
+int CDCAuthenticatorModule::cdc_auth_check(char* username, uint8_t* auth_data)
 {
-    int rval = CDC_STATE_AUTH_FAILED;
+    /* compute SHA1 of auth_data */
+    uint8_t sha1_step1[SHA_DIGEST_LENGTH] = "";
+    char hex_step1[2 * SHA_DIGEST_LENGTH + 1] = "";
 
-    if (dcb->session()->listener->users())
-    {
-        /* compute SHA1 of auth_data */
-        uint8_t sha1_step1[SHA_DIGEST_LENGTH] = "";
-        char hex_step1[2 * SHA_DIGEST_LENGTH + 1] = "";
+    gw_sha1_str(auth_data, SHA_DIGEST_LENGTH, sha1_step1);
+    gw_bin2hex(hex_step1, sha1_step1, SHA_DIGEST_LENGTH);
 
-        gw_sha1_str(auth_data, SHA_DIGEST_LENGTH, sha1_step1);
-        gw_bin2hex(hex_step1, sha1_step1, SHA_DIGEST_LENGTH);
-
-        if (users_auth(dcb->session()->listener->users(), username, hex_step1))
-        {
-            rval = CDC_STATE_AUTH_OK;
-        }
-    }
-
-    return rval;
+    return m_userdata.authenticate(username, hex_step1) ? CDC_STATE_AUTH_OK : CDC_STATE_AUTH_FAILED;
 }
 
 /**
@@ -278,13 +267,13 @@ int CDCClientAuthenticator::authenticate(DCB* generic_dcb)
     {
         MXS_DEBUG("Receiving connection from '%s'", m_user);
 
-        auth_ret = cdc_auth_check(dcb, m_user, m_auth_data);
+        auth_ret = m_module.cdc_auth_check(m_user, m_auth_data);
 
         /* On failed authentication try to reload users and authenticate again */
         if (CDC_STATE_AUTH_OK != auth_ret
-            && cdc_replace_users(dcb->session()->listener.get()) == MXS_AUTH_LOADUSERS_OK)
+            && service_refresh_users(dcb->session()->service) == MXS_AUTH_LOADUSERS_OK)
         {
-            auth_ret = cdc_auth_check(dcb, m_user, m_auth_data);
+            auth_ret = m_module.cdc_auth_check(m_user, m_auth_data);
         }
 
         /* on successful authentication, set user into dcb field */
@@ -397,42 +386,32 @@ bool CDCClientAuthenticator::set_client_data(uint8_t* client_auth_packet, int cl
  * @param service   The current service
  * @return      0 on success, 1 on failure
  */
-static int cdc_set_service_user(Listener* listener)
+int CDCAuthenticatorModule::set_service_user(Listener* listener)
 {
     SERVICE* service = listener->service();
-    char* dpwd = NULL;
-    char* newpasswd = NULL;
+
     const char* service_user = NULL;
     const char* service_passwd = NULL;
-
     serviceGetUser(service, &service_user, &service_passwd);
-    dpwd = decrypt_password(service_passwd);
 
+    char* dpwd = decrypt_password(service_passwd);
     if (!dpwd)
     {
         MXS_ERROR("decrypt password failed for service user %s, service %s",
-                  service_user,
-                  service->name());
-
+                  service_user, service->name());
         return 1;
     }
 
-    newpasswd = create_hex_sha1_sha1_passwd(dpwd);
-
+    char* newpasswd = create_hex_sha1_sha1_passwd(dpwd);
     if (!newpasswd)
     {
-        MXS_ERROR("create hex_sha1_sha1_password failed for service user %s",
-                  service_user);
-
+        MXS_ERROR("create hex_sha1_sha1_password failed for service user %s", service_user);
         MXS_FREE(dpwd);
         return 1;
     }
 
     /* add service user */
-    const char* user;
-    const char* password;
-    serviceGetUser(service, &user, &password);
-    users_add(listener->users(), user, newpasswd, USER_ACCOUNT_ADMIN);
+    m_userdata.add(service_user, newpasswd, USER_ACCOUNT_ADMIN);
 
     MXS_FREE(newpasswd);
     MXS_FREE(dpwd);
@@ -443,12 +422,11 @@ static int cdc_set_service_user(Listener* listener)
 /**
  * Load the AVRO users
  *
- * @param service    Current service
  * @param usersfile  File with users
  * @return -1 on error or users loaded (including 0)
  */
 
-static int cdc_read_users(USERS* users, char* usersfile)
+mxs::Users CDCAuthenticatorModule::read_users(char* usersfile)
 {
     FILE* fp;
     int loaded = 0;
@@ -461,9 +439,10 @@ static int cdc_read_users(USERS* users, char* usersfile)
 
     if ((fp = fopen(usersfile, "r")) == NULL)
     {
-        return -1;
+        return mxs::Users();
     }
 
+    mxs::Users rval;
     while (!feof(fp))
     {
         if (fgets(read_buffer, max_line_size, fp) != NULL)
@@ -481,16 +460,14 @@ static int cdc_read_users(USERS* users, char* usersfile)
                 }
 
                 /* add user */
-                users_add(users, avro_user, user_passwd, USER_ACCOUNT_ADMIN);
-
+                rval.add(avro_user, user_passwd, USER_ACCOUNT_ADMIN);
                 loaded++;
             }
         }
     }
 
     fclose(fp);
-
-    return loaded;
+    return rval;
 }
 
 /**
@@ -498,48 +475,22 @@ static int cdc_read_users(USERS* users, char* usersfile)
  *
  * @param service The current service
  */
-int cdc_replace_users(Listener* listener)
+int CDCAuthenticatorModule::load_users(Listener* listener)
 {
     int rc = MXS_AUTH_LOADUSERS_ERROR;
-    USERS* newusers = users_alloc();
+    char path[PATH_MAX + 1];
+    snprintf(path, PATH_MAX, "%s/%s/%s",
+             get_datadir(), listener->service()->name(), CDC_USERS_FILENAME);
 
-    if (newusers)
+    auto new_users = read_users(path);
+    if (!new_users.empty())
     {
-        char path[PATH_MAX + 1];
-        snprintf(path,
-                 PATH_MAX,
-                 "%s/%s/%s",
-                 get_datadir(),
-                 listener->service()->name(),
-                 CDC_USERS_FILENAME);
-
-        int i = cdc_read_users(newusers, path);
-        USERS* oldusers = NULL;
-
-        if (i > 0)
-        {
-            /** Successfully loaded at least one user */
-            oldusers = listener->users();
-            listener->set_users(newusers);
-            rc = MXS_AUTH_LOADUSERS_OK;
-        }
-        else if (listener->users())
-        {
-            /** Failed to load users, use the old users table */
-            users_free(newusers);
-        }
-        else
-        {
-            /** No existing users, use the new empty users table */
-            listener->set_users(newusers);
-        }
-
-        cdc_set_service_user(listener);
-
-        if (oldusers)
-        {
-            users_free(oldusers);
-        }
+        /** Successfully loaded at least one user */
+        // TODO: separate failed user load and no user data cases.
+        m_userdata = std::move(new_users);
+        rc = MXS_AUTH_LOADUSERS_OK;
     }
+
+    set_service_user(listener);
     return rc;
 }

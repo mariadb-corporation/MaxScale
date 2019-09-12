@@ -51,9 +51,14 @@ struct UserInfo
 class Users
 {
 public:
-    Users(const Users&) = delete;
-    Users& operator=(const Users&) = delete;
+    using UserMap = std::unordered_map<std::string, UserInfo>;
+
     Users() = default;
+    Users(const Users& rhs);
+    Users(Users&& rhs) noexcept;
+    Users& operator=(const Users& rhs);
+    Users& operator=(Users&& rhs) noexcept;
+
     static Users* from_json(json_t* json);
 
     bool add(const std::string& user, const std::string& password, user_account_type perm);
@@ -69,8 +74,14 @@ public:
     bool    empty() const;
     json_t* to_json() const;
 
+    /**
+     * Return a copy of the data.
+     *
+     * @return Data copy
+     */
+    UserMap copy_contents() const;
+
 private:
-    using UserMap = std::unordered_map<std::string, UserInfo>;
     static bool is_admin(const UserMap::value_type& value);
 
     bool        add_hashed(const std::string& user, const std::string& password, user_account_type perm);

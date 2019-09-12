@@ -157,7 +157,7 @@ public:
         return m_module.capabilities();
     }
 
-private:
+protected:
     AuthModule& m_module;
 };
 

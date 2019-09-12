@@ -43,6 +43,33 @@ constexpr const char* OLD_ADMIN_SALT = "$1$MXS";
 
 namespace maxscale
 {
+
+Users::Users(const Users& rhs)
+    : m_data(rhs.copy_contents())
+{
+}
+
+Users& Users::operator=(const Users& rhs)
+{
+    // Get a copy of the rhs.data to avoid locking both mutexes simultaneously.
+    auto rhs_data = rhs.copy_contents();
+    std::lock_guard<std::mutex> guard(m_lock);
+    m_data = std::move(rhs_data);
+    return *this;
+}
+
+Users::Users(Users&& rhs) noexcept
+    : m_data(std::move(rhs.m_data)) // rhs should be a temporary, and no other thread can access it. No lock.
+{
+}
+
+Users& Users::operator=(Users&& rhs) noexcept
+{
+    std::lock_guard<std::mutex> guard(m_lock);
+    m_data = std::move(rhs.m_data); // same as above
+    return *this;
+}
+
 bool Users::add(const std::string& user, const std::string& password, user_account_type perm)
 {
     return add_hashed(user, hash(password), perm);
@@ -173,6 +200,12 @@ bool Users::empty() const
 {
     std::lock_guard<std::mutex> guard(m_lock);
     return m_data.size() > 0;
+}
+
+Users::UserMap Users::copy_contents() const
+{
+    std::lock_guard<std::mutex> guard(m_lock);
+    return m_data;
 }
 
 json_t* Users::to_json() const
