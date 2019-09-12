@@ -160,87 +160,43 @@ static std::pair<bool, MXS_CONFIG_PARAMETER> load_defaults(const char* name,
     return {rval, params};
 }
 
-bool runtime_link_server(Server* server, const char* target)
+bool runtime_link_target(const std::string& subject, const std::string& target)
 {
     bool rval = false;
-    Service* service = service_internal_find(target);
-    Monitor* monitor = service ? NULL : MonitorManager::find_monitor(target);
 
-    if (service)
+    if (auto service = Service::find(target))
     {
-        if (!service->uses_cluster())
-        {
-            if (!service->has_target(server))
-            {
-                service->add_target(server);
-                service_serialize(service);
-                rval = true;
-            }
-            else
-            {
-                config_runtime_error("Service '%s' already uses server '%s'",
-                                     service->name(),
-                                     server->name());
-            }
-        }
-        else
+        if (service->uses_cluster())
         {
             config_runtime_error("The servers of the service '%s' are defined by the monitor '%s'. "
                                  "Servers cannot explicitly be added to the service.",
-                                 service->name(),
-                                 service->m_monitor->name());
+                                 service->name(), service->m_monitor->name());
         }
-    }
-    else if (monitor)
-    {
-        std::string error_msg;
-        if (MonitorManager::add_server_to_monitor(monitor, server, &error_msg))
+        else if (auto tgt = mxs::Target::find(subject))
         {
-            rval = true;
-        }
-        else
-        {
-            config_runtime_error("%s", error_msg.c_str());
-        }
-    }
-
-    if (rval)
-    {
-        const char* type = service ? "service" : "monitor";
-        MXS_NOTICE("Added server '%s' to %s '%s'", server->name(), type, target);
-    }
-
-    return rval;
-}
-
-bool runtime_unlink_server(Server* server, const char* target)
-{
-    bool rval = false;
-    Service* service = service_internal_find(target);
-    Monitor* monitor = service ? NULL : MonitorManager::find_monitor(target);
-
-    if (service || monitor)
-    {
-        if (service)
-        {
-            if (!service->uses_cluster())
+            if (!service->has_target(tgt))
             {
-                service->remove_target(server);
-                service_serialize(service);
+                service->add_target(tgt);
+                service->serialize();
                 rval = true;
             }
             else
             {
-                config_runtime_error("The servers of the service '%s' are defined by the monitor '%s'. "
-                                     "Servers cannot explicitly be removed from the service.",
-                                     service->name(),
-                                     service->m_monitor->name());
+                config_runtime_error("Service '%s' already uses target '%s'",
+                                     service->name(), subject.c_str());
             }
         }
-        else if (monitor)
+        else
+        {
+            config_runtime_error("Could not find target with name '%s'", subject.c_str());
+        }
+    }
+    else if (auto monitor = MonitorManager::find_monitor(target.c_str()))
+    {
+        if (auto srv = ServerManager::find_by_unique_name(subject))
         {
             std::string error_msg;
-            if (MonitorManager::remove_server_from_monitor(monitor, server, &error_msg))
+            if (MonitorManager::add_server_to_monitor(monitor, srv, &error_msg))
             {
                 rval = true;
             }
@@ -249,12 +205,75 @@ bool runtime_unlink_server(Server* server, const char* target)
                 config_runtime_error("%s", error_msg.c_str());
             }
         }
-
-        if (rval)
+        else
         {
-            const char* type = service ? "service" : "monitor";
-            MXS_NOTICE("Removed server '%s' from %s '%s'", server->name(), type, target);
+            config_runtime_error("No server named '%s' found", subject.c_str());
         }
+    }
+    else
+    {
+        config_runtime_error("No monitor or service named '%s' found", target.c_str());
+    }
+
+    if (rval)
+    {
+        MXS_NOTICE("Added '%s' to '%s'", subject.c_str(), target.c_str());
+    }
+
+    return rval;
+}
+
+bool runtime_unlink_target(const std::string& subject, const std::string& target)
+{
+    bool rval = false;
+
+    if (auto service = Service::find(target))
+    {
+        if (service->uses_cluster())
+        {
+            config_runtime_error("The servers of the service '%s' are defined by the monitor '%s'. "
+                                 "Servers cannot explicitly be removed from the service.",
+                                 service->name(), service->m_monitor->name());
+        }
+        else if (auto tgt = mxs::Target::find(subject))
+        {
+
+            service->remove_target(tgt);
+            service->serialize();
+            rval = true;
+        }
+        else
+        {
+            config_runtime_error("Target '%s' not found", subject.c_str());
+        }
+    }
+    else if (auto monitor = MonitorManager::find_monitor(target.c_str()))
+    {
+        if (auto srv = ServerManager::find_by_unique_name(subject))
+        {
+            std::string error_msg;
+            if (MonitorManager::remove_server_from_monitor(monitor, srv, &error_msg))
+            {
+                rval = true;
+            }
+            else
+            {
+                config_runtime_error("%s", error_msg.c_str());
+            }
+        }
+        else
+        {
+            config_runtime_error("No server named '%s' found", subject.c_str());
+        }
+    }
+    else
+    {
+        config_runtime_error("No monitor or service named '%s' found", target.c_str());
+    }
+
+    if (rval)
+    {
+        MXS_NOTICE("Removed '%s' from '%s'", subject.c_str(), target.c_str());
     }
 
     return rval;
@@ -1703,13 +1722,13 @@ static bool service_to_filter_relation_is_valid(const std::string& type, const s
     return type == CN_FILTERS && filter_find(value.c_str());
 }
 
-static bool unlink_server_from_objects(Server* server, StringSet& relations)
+static bool unlink_target_from_objects(const std::string& target, StringSet& relations)
 {
     bool rval = true;
 
-    for (StringSet::iterator it = relations.begin(); it != relations.end(); it++)
+    for (const auto& rel : relations)
     {
-        if (!runtime_unlink_server(server, it->c_str()))
+        if (!runtime_unlink_target(target, rel))
         {
             rval = false;
         }
@@ -1718,15 +1737,15 @@ static bool unlink_server_from_objects(Server* server, StringSet& relations)
     return rval;
 }
 
-static bool link_server_to_objects(Server* server, StringSet& relations)
+static bool link_target_to_objects(const std::string& target, StringSet& relations)
 {
     bool rval = true;
 
-    for (StringSet::iterator it = relations.begin(); it != relations.end(); it++)
+    for (const auto& rel : relations)
     {
-        if (!runtime_link_server(server, it->c_str()))
+        if (!runtime_link_target(target, rel))
         {
-            unlink_server_from_objects(server, relations);
+            unlink_target_from_objects(target, relations);
             rval = false;
             break;
         }
@@ -1836,7 +1855,7 @@ bool runtime_create_server_from_json(json_t* json)
 
             if (Server* server = ServerManager::create_server(name, params))
             {
-                if (link_server_to_objects(server, relations) && server->serialize())
+                if (link_target_to_objects(server->name(), relations) && server->serialize())
                 {
                     rval = true;
                 }
@@ -1914,8 +1933,8 @@ bool server_to_object_relations(Server* server, json_t* old_json, json_t* new_js
                             old_relations.end(),
                             std::inserter(added_relations, added_relations.begin()));
 
-        if (!unlink_server_from_objects(server, removed_relations)
-            || !link_server_to_objects(server, added_relations))
+        if (!unlink_target_from_objects(server->name(), removed_relations)
+            || !link_target_to_objects(server->name(), added_relations))
         {
             rval = false;
         }
@@ -2125,15 +2144,13 @@ bool server_relationship_to_parameter(json_t* json, MXS_CONFIG_PARAMETER* params
     return rval;
 }
 
-static bool unlink_object_from_servers(const char* target, StringSet& relations)
+static bool unlink_object_from_targets(const std::string& target, StringSet& relations)
 {
     bool rval = true;
 
-    for (StringSet::iterator it = relations.begin(); it != relations.end(); it++)
+    for (const auto& rel : relations)
     {
-        auto server = ServerManager::find_by_unique_name(*it);
-
-        if (!server || !runtime_unlink_server(server, target))
+        if (!runtime_unlink_target(rel, target))
         {
             rval = false;
             break;
@@ -2143,17 +2160,15 @@ static bool unlink_object_from_servers(const char* target, StringSet& relations)
     return rval;
 }
 
-static bool link_object_to_servers(const char* target, StringSet& relations)
+static bool link_object_to_targets(const std::string& target, StringSet& relations)
 {
     bool rval = true;
 
-    for (StringSet::iterator it = relations.begin(); it != relations.end(); it++)
+    for (const auto& rel : relations)
     {
-        auto server = ServerManager::find_by_unique_name(*it);
-
-        if (!server || !runtime_link_server(server, target))
+        if (!runtime_link_target(rel, target))
         {
-            unlink_server_from_objects(server, relations);
+            unlink_target_from_objects(rel, relations);
             rval = false;
             break;
         }

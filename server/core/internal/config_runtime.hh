@@ -66,31 +66,34 @@ bool runtime_create_server(const char* name, const char* address, const char* po
  */
 bool runtime_destroy_server(Server* server);
 
-/**
- * @brief Link a server to an object
- *
- * This function links the server to another object. The target can be either
- * a monitor or a service.
- *
- * @param server Server to link
- * @param target The monitor or service where the server is added
- * @return True if the object was found and the server was linked to it, false
- * if no object matching @c target was found
- */
-bool runtime_link_server(Server* server, const char* target);
 
 /**
- * @brief Unlink a server from an object
+ * Link a target from an object
  *
- * This function unlinks the server from another object. The target can be either
+ * This function links the target to another object. The target can be either
  * a monitor or a service.
  *
- * @param server Server to unlink
- * @param target The monitor or service from which the server is removed
- * @return True if the object was found and the server was unlinked from it, false
- * if no object matching @c target was found
+ * @param subject The object to link
+ * @param target  The target object to which the subject is linked
+ *
+ * @return True if the object was found and the subject was linked to it, false
+ *         if an error occurred.
  */
-bool runtime_unlink_server(Server* server, const char* target);
+bool runtime_link_target(const std::string& subject, const std::string& target);
+
+/**
+ * Unlink a target from an object
+ *
+ * This function unlinks the target from another object. The target can be either
+ * a monitor or a service.
+ *
+ * @param subject The object to unlink
+ * @param target  The target object from which the subject is unlinked
+ *
+ * @return True if the object was found and the subject was unlinked from it, false
+ *         if an error occurred.
+ */
+bool runtime_unlink_target(const std::string& subject, const std::string& target);
 
 /**
  * @brief Alter server parameters

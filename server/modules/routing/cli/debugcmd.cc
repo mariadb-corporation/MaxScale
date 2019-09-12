@@ -962,7 +962,7 @@ static void cmd_AddServer(DCB* dcb, Server* server,
 
     for (int i = 0; i < items && values[i]; i++)
     {
-        if (runtime_link_server(server, values[i]))
+        if (runtime_link_target(server->name(), values[i]))
         {
             dcb_printf(dcb, "Added server '%s' to '%s'\n", server->name(), values[i]);
         }
@@ -1072,7 +1072,7 @@ static void cmd_RemoveServer(DCB* dcb, Server* server,
 
     for (int i = 0; i < items && values[i]; i++)
     {
-        if (runtime_unlink_server(server, values[i]))
+        if (runtime_unlink_target(server->name(), values[i]))
         {
             dcb_printf(dcb, "Removed server '%s' from '%s'\n", server->name(), values[i]);
         }
