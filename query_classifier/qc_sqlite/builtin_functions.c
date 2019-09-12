@@ -87,7 +87,7 @@ static const char* BUILTIN_FUNCTIONS[] =
     "subtime",
     "sysdate",
     "time",
-    "timediff"
+    "timediff",
     "timestamp",
     "timestampadd",
     "timestampdiff",
