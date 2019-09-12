@@ -48,7 +48,6 @@ These tutorials are for specific use cases and module combinations.
  - [Replication Proxy with the Binlog Router Tutorial](Tutorials/Replication-Proxy-Binlog-Router-Tutorial.md)
  - [Simple Schema Sharding Tutorial](Tutorials/Simple-Sharding-Tutorial.md)
  - [Filter Tutorial](Tutorials/Filter-Tutorial.md)
- - [MySQL Cluster Setup](Tutorials/MySQL-Cluster-Setup.md)
  - [RabbitMQ and Tee Filter Data Archiving Tutorial](Tutorials/RabbitMQ-And-Tee-Archiving.md)
  - [RabbitMQ Setup and MariaDB MaxScale Integration Tutorial](Tutorials/RabbitMQ-Setup-And-MaxScale-Integration.md)
  - [Clustrix Monitor Tutorial](Tutorials/Configuring-Clustrix-Monitor.md)
