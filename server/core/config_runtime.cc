@@ -2353,6 +2353,11 @@ bool object_to_server_relations(const std::string& target, json_t* old_json, jso
     return update_object_relations(target, object_to_server, old_json, new_json);
 }
 
+bool service_to_service_relations(const std::string& target, json_t* old_json, json_t* new_json)
+{
+    return update_object_relations(target, service_to_service, old_json, new_json);
+}
+
 bool service_to_filter_relations(Service* service, json_t* old_json, json_t* new_json)
 {
     if (mxs_json_pointer(new_json, MXS_JSON_PTR_RELATIONSHIPS) == NULL)
@@ -2447,6 +2452,10 @@ bool runtime_alter_service_relationships_from_json(Service* service, const char*
         {
             rval = object_to_server_relations(service->name(), old_json.get(), j.get());
         }
+        else if (strcmp(type, CN_SERVICES) == 0)
+        {
+            rval = service_to_service_relations(service->name(), old_json.get(), j.get());
+        }
         else
         {
             mxb_assert(strcmp(type, CN_FILTERS) == 0);
@@ -2478,6 +2487,7 @@ bool runtime_alter_service_from_json(Service* service, json_t* new_json)
 
     if (is_valid_resource_body(new_json)
         && object_to_server_relations(service->name(), old_json.get(), new_json)
+        && service_to_service_relations(service->name(), old_json.get(), new_json)
         && service_to_filter_relations(service, old_json.get(), new_json))
     {
         rval = true;

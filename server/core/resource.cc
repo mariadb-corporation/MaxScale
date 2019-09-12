@@ -448,6 +448,19 @@ HttpResponse cb_alter_service_server_relationship(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
 }
 
+HttpResponse cb_alter_service_service_relationship(const HttpRequest& request)
+{
+    Service* service = Service::find(request.uri_part(1).c_str());
+    mxb_assert(service && request.get_json());
+
+    if (runtime_alter_service_relationships_from_json(service, CN_SERVICES, request.get_json()))
+    {
+        return HttpResponse(MHD_HTTP_NO_CONTENT);
+    }
+
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+}
+
 HttpResponse cb_alter_service_filter_relationship(const HttpRequest& request)
 {
     Service* service = Service::find(request.uri_part(1).c_str());
@@ -1085,6 +1098,12 @@ public:
                                                  ":service",
                                                  "relationships",
                                                  "servers")));
+        m_patch.push_back(SResource(new Resource(cb_alter_service_service_relationship,
+                                                 4,
+                                                 "services",
+                                                 ":service",
+                                                 "relationships",
+                                                 "services")));
         m_patch.push_back(SResource(new Resource(cb_alter_service_filter_relationship,
                                                  4,
                                                  "services",
