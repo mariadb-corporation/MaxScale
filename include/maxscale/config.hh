@@ -435,6 +435,20 @@ public:
     bool contains(const std::string& key) const;
 
     /**
+     * Check if any of the given keys are defined
+     *
+     * @param keys The keys to check
+     *
+     * @return True if at least one of the keys is defined
+     */
+    bool contains_any(const std::initializer_list<std::string>& keys) const
+    {
+        return std::any_of(keys.begin(), keys.end(), [this](const std::string& a) {
+                               return contains(a);
+                           });
+    }
+
+    /**
      * Set a key-value combination. If the key doesn't exist, it is added. The function is static
      * to handle the special case of params being empty. This is needed until the config management
      * has been properly refactored.
