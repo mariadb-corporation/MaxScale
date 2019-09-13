@@ -299,6 +299,12 @@ TestConnections::TestConnections(int argc, char* argv[])
 
     mdbci_labels = get_mdbci_lables(labels);
 
+    if (check_label(std::string(labels), "BACKEND_SSL"))
+    {
+        backend_ssl = true;
+        tprintf("Test has BACKEND_SSL label");
+    }
+
     std::string delimiter = std::string (",");
     size_t pos_start = 0, pos_end, delim_len = delimiter.length();
     std::string label;

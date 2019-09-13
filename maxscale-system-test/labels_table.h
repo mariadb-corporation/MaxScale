@@ -29,3 +29,11 @@ const labels_table_t labels_table [] __attribute__((unused)) =
  * @return Labels string in the 'mdbci up' --labels parameter format
  */
 std::string get_mdbci_lables(const char * labels_string);
+
+/**
+ * @brief check_label Checks if givel lable belogs to current test labels
+ * @param labels String with all labels of the test
+ * @param label Labels to find
+ * @return true if label present
+ */
+bool check_label(std::string labels, std::string label);

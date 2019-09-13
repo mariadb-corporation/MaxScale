@@ -22,3 +22,10 @@ std::string get_mdbci_lables(const char *labels_string)
     }
     return mdbci_labels;
 }
+
+bool check_label(std::string labels, std::string label)
+{
+    std::string labels_ext = std::string(";") + labels + std::string(";");
+    std::string label_ext = std::string(";") + label + std::string(";");
+    return (labels_ext.find(label_ext, 0) != std::string::npos);
+}

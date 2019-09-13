@@ -569,7 +569,7 @@ add_test_executable(mxs922_restart.cpp mxs922_restart mxs922 LABELS maxscale REP
 add_test_executable(mxs922_scaling.cpp mxs922_scaling mxs922_base LABELS maxscale REPL_BACKEND)
 
 # Dynamic listener SSL test
-add_test_executable(mxs922_listener_ssl.cpp mxs922_listener_ssl mxs922_base LABELS maxscale REPL_BACKEND)
+add_test_executable(mxs922_listener_ssl.cpp mxs922_listener_ssl mxs922_base LABELS maxscale BACKEND_SSL REPL_BACKEND)
 
 # Alter routers at runtime
 add_test_executable(alter_router.cpp alter_router alter_router LABELS maxscale REPL_BACKEND)
@@ -813,7 +813,7 @@ add_test_executable(sharding_load_data.cpp sharding_load_data sharding LABELS sc
 add_test_executable(short_sessions.cpp short_sessions replication LABELS readwritesplit readconnroute REPL_BACKEND)
 
 # Do short sessions (open conn, short query, close conn) in the loop, client ssl is ON
-add_test_derived(short_sessions_ssl short_sessions ssl LABELS readwritesplit readconnroute REPL_BACKEND)
+add_test_derived(short_sessions_ssl short_sessions ssl LABELS readwritesplit readconnroute BACKEND_SSL REPL_BACKEND)
 
 # Regression case for crash if maxadmin 'show monitors' command is issued, but no monitor is not running
 add_test_executable(show_monitor_crash.cpp show_monitor_crash show_monitor_crash LABELS maxscale REPL_BACKEND)
@@ -853,7 +853,7 @@ add_test_executable(test_hints.cpp test_hints hints2 LABELS hintfilter readwrite
 # works only with yum-based distributions
 # TODO: make it working with zypper and apt, move part of KDC setup to MDBCI
 add_test_executable(kerberos_setup.cpp kerberos_setup kerberos LABELS HEAVY gssapi REPL_BACKEND)
-add_test_derived(kerberos_setup_ssl kerberos_setup kerberos_ssl LABELS HEAVY gssapi REPL_BACKEND)
+add_test_derived(kerberos_setup_ssl kerberos_setup kerberos_ssl LABELS HEAVY gssapi BACKEND_SSL REPL_BACKEND)
 
 # Configures 'keepalived' on two Maxscale machines and tried failover
 add_test_executable(keepalived.cpp keepalived keepalived LABELS REPL_BACKEND TWO_MAXSCALES)
@@ -1012,6 +1012,16 @@ add_test_executable(mxs2631_ignore_system_tables.cpp mxs2631_ignore_system_table
 
 ############################################
 # END: Normal tests                        #
+############################################
+
+############################################
+# BEGIN: backend SSL tests                 #
+############################################
+
+add_test_derived(sql_queries_ssl sql_queries ssl LABELS readwritesplit REPL_BACKEND BACKEND_SSL)
+
+############################################
+# END: backend SSL  tests                  #
 ############################################
 
 ############################################
