@@ -122,16 +122,6 @@ public:
 
     virtual const MXS_CONFIG_PARAMETER& params() const = 0;
 
-    virtual uint64_t status() const = 0;
-
-    virtual bool active() const = 0;
-
-    virtual int64_t rank() const = 0;
-
-    virtual int64_t replication_lag() const = 0;
-
-    virtual uint64_t capabilities() const = 0;
-
     const char* router_name() const
     {
         return m_router_name.c_str();
