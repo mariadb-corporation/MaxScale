@@ -49,12 +49,12 @@ public:
 
     int load_users(Listener* listener) override;
 
-    void diagnostics(DCB* output, Listener* listener) override
+    void diagnostics(DCB* output) override
     {
         m_userdata.diagnostic(output);
     }
 
-    json_t* diagnostics_json(const Listener* listener) override
+    json_t* diagnostics_json() override
     {
         return m_userdata.diagnostic_json();
     }

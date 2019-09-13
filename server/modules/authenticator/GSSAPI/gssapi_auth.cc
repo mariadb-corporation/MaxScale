@@ -85,14 +85,15 @@ static int db_flags = SQLITE_OPEN_READWRITE
     | SQLITE_OPEN_URI
     | SQLITE_OPEN_SHAREDCACHE;
 
-void GSSAPIAuthenticatorModule::diagnostics(DCB* output, Listener* listener)
+void GSSAPIAuthenticatorModule::diagnostics(DCB* output)
 {
-    users_default_diagnostic(output, listener);
+    // TODO: implement
+    // GSSAPI users are saved in an sqlite-db.
 }
 
-json_t* GSSAPIAuthenticatorModule::diagnostics_json(const Listener* listener)
+json_t* GSSAPIAuthenticatorModule::diagnostics_json()
 {
-    return users_default_diagnostic_json(listener);
+    return json_array(); // TODO: implement
 }
 
 uint64_t GSSAPIAuthenticatorModule::capabilities() const

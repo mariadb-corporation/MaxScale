@@ -38,9 +38,6 @@ using SListener = std::shared_ptr<Listener>;
 class Listener : public MXB_POLL_DATA
 {
 public:
-
-    ~Listener();
-
     enum class Type
     {
         UNIX_SOCKET,    // UNIX domain socket shared between workers
@@ -173,8 +170,6 @@ public:
 
     // Functions that are temporarily public
     bool          create_listener_config(const char* filename);
-    struct users* users() const;
-    void          set_users(struct users* u);
 
     const mxs::SSLProvider& ssl() const
     {
@@ -212,9 +207,7 @@ private:
     std::unique_ptr<mxs::ProtocolModule>      m_proto_module;  /**< Protocol module */
     std::unique_ptr<mxs::AuthenticatorModule> m_auth_module;   /**< Authenticator module */
 
-    struct users*        m_users;           /**< The user data for this listener */
     SERVICE*             m_service;         /**< The service which used by this listener */
-    std::atomic<bool>    m_active;          /**< True if the port has not been deleted */
     MXS_CONFIG_PARAMETER m_params;          /**< Configuration parameters */
     mxs::SSLProvider     m_ssl_provider;
     qc_sql_mode_t        m_sql_mode;        /**< Default sql mode for the listener */

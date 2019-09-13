@@ -364,26 +364,6 @@ json_t* users_diagnostic_json(USERS* users)
     return u->diagnostic_json();
 }
 
-void users_default_diagnostic(DCB* dcb, Listener* port)
-{
-    if (port->users())
-    {
-        users_diagnostic(dcb, port->users());
-    }
-}
-
-json_t* users_default_diagnostic_json(const Listener* port)
-{
-    return port->users() ? users_diagnostic_json(port->users()) : json_array();
-}
-
-int users_default_loadusers(Listener* port)
-{
-    users_free(port->users());
-    port->set_users(users_alloc());
-    return MXS_AUTH_LOADUSERS_OK;
-}
-
 const char* account_type_to_str(mxs::user_account_type type)
 {
     switch (type)

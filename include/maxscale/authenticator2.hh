@@ -48,7 +48,7 @@ public:
     virtual int load_users(Listener* listener) = 0;
 
     // Print diagnostic output to a DCB.
-    virtual void diagnostics(DCB* output, Listener* listener) = 0;
+    virtual void diagnostics(DCB* output) = 0;
 
     /**
      * @brief Return diagnostic information about the authenticator
@@ -56,11 +56,9 @@ public:
      * The authenticator module should return information about its internal
      * state when this function is called.
      *
-     * @params Listener object
-     * @return JSON representation of the listener
-     * @see jansson.h
+     * @return JSON representation of the authenticator
      */
-    virtual json_t* diagnostics_json(const Listener* listener) = 0;
+    virtual json_t* diagnostics_json() = 0;
 
     /**
      * Get module runtime capabilities. Returns 0 by default.

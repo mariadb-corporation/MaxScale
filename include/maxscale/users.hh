@@ -209,31 +209,6 @@ json_t* users_to_json(USERS* users);
 USERS* users_from_json(json_t* json);
 
 /**
- * @brief Default user loading function
- *
- * A generic key-value user table is allocated for the service.
- *
- * @param port Listener configuration
- * @return Always AUTH_LOADUSERS_OK
- */
-int users_default_loadusers(Listener* port);
-
-/**
- * @brief Default authenticator diagnostic function
- *
- * @param dcb DCB where data is printed
- * @param port Port whose data is to be printed
- */
-void users_default_diagnostic(DCB* dcb, Listener* port);
-
-/**
- * @brief Default authenticator diagnostic function
- *
- * @param port Port whose data is to be printed
- */
-json_t* users_default_diagnostic_json(const Listener* port);
-
-/**
  * Print users to a DCB
  *
  * @param dcb   DCB where users are printed

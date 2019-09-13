@@ -111,8 +111,8 @@ public:
     ~MariaDBAuthenticatorModule() override = default;
     std::unique_ptr<mxs::ClientAuthenticator> create_client_authenticator() override;
     int load_users(Listener* listener) override;
-    void diagnostics(DCB* output, Listener* listener) override;
-    json_t* diagnostics_json(const Listener* listener) override;
+    void diagnostics(DCB* output) override;
+    json_t* diagnostics_json() override;
     uint64_t capabilities() const override;
     virtual std::string supported_protocol() const override;
 

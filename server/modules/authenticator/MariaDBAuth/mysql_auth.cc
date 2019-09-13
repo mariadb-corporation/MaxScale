@@ -840,7 +840,7 @@ int diag_cb(void* data, int columns, char** row, char** field_names)
     return 0;
 }
 
-void MariaDBAuthenticatorModule::diagnostics(DCB* dcb, Listener* listener)
+void MariaDBAuthenticatorModule::diagnostics(DCB* dcb)
 {
     MariaDBAuthenticatorModule* instance = this;
     sqlite3* handle = get_handle(instance);
@@ -869,7 +869,7 @@ int diag_cb_json(void* data, int columns, char** row, char** field_names)
     return 0;
 }
 
-json_t* MariaDBAuthenticatorModule::diagnostics_json(const Listener* listener)
+json_t* MariaDBAuthenticatorModule::diagnostics_json()
 {
     json_t* rval = json_array();
 

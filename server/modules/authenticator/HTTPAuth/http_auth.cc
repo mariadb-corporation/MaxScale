@@ -32,18 +32,16 @@ public:
 
     int load_users(Listener* listener) override
     {
-        return users_default_loadusers(listener);
+        return MXS_AUTH_LOADUSERS_OK;
     }
 
-    void diagnostics(DCB* output, Listener* listener) override
+    void diagnostics(DCB* output) override
     {
-        users_default_diagnostic(output, listener);
-
     }
 
-    json_t* diagnostics_json(const Listener* listener) override
+    json_t* diagnostics_json() override
     {
-        return users_default_diagnostic_json(listener);
+        return json_array();
     }
 
     std::string supported_protocol() const override
@@ -73,7 +71,7 @@ public:
 
     int authenticate(DCB* client) override
     {
-        return 0;
+        return MXS_AUTH_SUCCEEDED;
     }
 
     void free_data(DCB* client) override

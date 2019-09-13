@@ -129,7 +129,6 @@ Listener::Listener(SERVICE* service,
     , m_auth_options(auth_opts)
     , m_proto_module(std::move(proto_instance))
     , m_auth_module(std::move(auth_instance))
-    , m_users(nullptr)
     , m_service(service)
     , m_params(params)
     , m_ssl_provider(std::move(ssl))
@@ -150,14 +149,6 @@ Listener::Listener(SERVICE* service,
     else
     {
         m_type = Type::SHARED_TCP;
-    }
-}
-
-Listener::~Listener()
-{
-    if (m_users)
-    {
-        users_free(m_users);
     }
 }
 
@@ -606,7 +597,7 @@ json_t* Listener::to_json() const
     json_object_set_new(attr, CN_STATE, json_string(state()));
     json_object_set_new(attr, CN_PARAMETERS, param);
 
-    json_t* diag = m_auth_module->diagnostics_json(this);
+    json_t* diag = m_auth_module->diagnostics_json();
     if (diag)
     {
         json_object_set_new(attr, CN_AUTHENTICATOR_DIAGNOSTICS, diag);
@@ -683,7 +674,7 @@ const char* Listener::state() const
 void Listener::print_users(DCB* dcb)
 {
     dcb_printf(dcb, "User names (%s): ", name());
-    m_auth_module->diagnostics(dcb, this);
+    m_auth_module->diagnostics(dcb);
     dcb_printf(dcb, "\n");
 }
 
@@ -693,16 +684,6 @@ int Listener::load_users()
     return m_auth_module->load_users(this);
 }
 
-struct users* Listener::users() const
-{
-    return m_users;
-}
-
-
-void Listener::set_users(struct users* u)
-{
-    m_users = u;
-}
 
 namespace
 {

@@ -465,9 +465,9 @@ void PamAuthenticatorModule::fill_user_arrays(QResult user_res, QResult db_res, 
     m_sqlite->exec("COMMIT");
 }
 
-void PamAuthenticatorModule::diagnostics(DCB* dcb, Listener* listener)
+void PamAuthenticatorModule::diagnostics(DCB* dcb)
 {
-    json_t* array = diagnostics_json(nullptr);
+    json_t* array = diagnostics_json();
     mxb_assert(json_is_array(array));
 
     string result, separator;
@@ -505,7 +505,7 @@ static int diag_cb_json(json_t* data, int columns, char** row, char** field_name
     return 0;
 }
 
-json_t* PamAuthenticatorModule::diagnostics_json(const Listener* listener)
+json_t* PamAuthenticatorModule::diagnostics_json()
 {
     json_t* rval = json_array();
     string select = "SELECT * FROM " + TABLE_USER + ";";
