@@ -147,7 +147,6 @@ enum server_category_t
     SERVER_CLUSTRIX
 };
 
-static int    get_users(Listener* listener, bool skip_local, SERVER** srv);
 static MYSQL* gw_mysql_init(void);
 static int    gw_mysql_set_timeouts(MYSQL* handle);
 static char*  mysql_format_user_entry(void* data);
@@ -259,12 +258,6 @@ static char* get_users_query(const SERVER::Version& version, bool include_root, 
     return rval;
 }
 
-int replace_mysql_users(Listener* listener, bool skip_local, SERVER** srv)
-{
-    int i = get_users(listener, skip_local, srv);
-    return i;
-}
-
 static bool check_password(const char* output,
                            uint8_t* token,
                            size_t token_len,
@@ -325,14 +318,14 @@ static int database_cb(void* data, int columns, char** rows, char** row_names)
     return 0;
 }
 
-static bool check_database(MariaDBAuthenticatorModule* instance, sqlite3* handle, const char* database)
+bool MariaDBClientAuthenticator::check_database(sqlite3* handle, const char* database)
 {
     bool rval = true;
 
     if (*database)
     {
         rval = false;
-        const char* query = instance->lower_case_table_names ?
+        const char* query = m_module.m_lower_case_table_names ?
             mysqlauth_validate_database_query_lower :
             mysqlauth_validate_database_query;
         size_t len = strlen(query) + strlen(database) + 1;
@@ -374,16 +367,12 @@ static int auth_cb(void* data, int columns, char** rows, char** row_names)
     return 0;
 }
 
-int validate_mysql_user(MariaDBAuthenticatorModule* instance,
-                        DCB* dcb,
-                        MYSQL_session* session,
-                        uint8_t* scramble,
-                        size_t scramble_len)
+int MariaDBClientAuthenticator::validate_mysql_user(DCB* dcb, MYSQL_session* session, uint8_t* scramble,
+                                                    size_t scramble_len)
 {
-    sqlite3* handle = get_handle(instance);
-    const char* validate_query = instance->lower_case_table_names ?
-        mysqlauth_validate_user_query_lower :
-        mysqlauth_validate_user_query;
+    sqlite3* handle = m_module.get_handle();
+    const char* validate_query = m_module.m_lower_case_table_names ?
+        mysqlauth_validate_user_query_lower : mysqlauth_validate_user_query;
     size_t len = snprintf(NULL, 0, validate_query,
                           session->user,
                           dcb->m_remote,
@@ -394,7 +383,7 @@ int validate_mysql_user(MariaDBAuthenticatorModule* instance,
     int rval = MXS_AUTH_FAILED;
     char* err;
 
-    if (instance->skip_auth)
+    if (m_module.m_skip_auth)
     {
         sprintf(sql, mysqlauth_skip_auth_query, session->user, session->db, session->db);
     }
@@ -473,7 +462,7 @@ int validate_mysql_user(MariaDBAuthenticatorModule* instance,
                               session->client_sha1))
         {
             /** Password is OK, check that the database exists */
-            if (check_database(instance, handle, session->db))
+            if (check_database(handle, session->db))
             {
                 rval = MXS_AUTH_SUCCEEDED;
             }
@@ -1148,7 +1137,7 @@ bool query_and_process_users(const char* query, MYSQL* con, SERVICE* service, in
     return rval;
 }
 
-int get_users_from_server(MYSQL* con, SERVER* server, SERVICE* service, Listener* listener)
+int MariaDBAuthenticatorModule::get_users_from_server(MYSQL* con, SERVER* server, SERVICE* service)
 {
     auto server_version = server->version();
     if (server_version.total == 0)      // No monitor or the monitor hasn't ran yet.
@@ -1173,7 +1162,6 @@ int get_users_from_server(MYSQL* con, SERVER* server, SERVICE* service, Listener
 
     char* query = get_users_query(server_version, service->config().enable_root, category);
 
-    MariaDBAuthenticatorModule* instance = (MariaDBAuthenticatorModule*)listener->auth_instance();
     int users = 0;
     std::vector<User> userlist;
     std::vector<std::string> dblist;
@@ -1221,8 +1209,8 @@ int get_users_from_server(MYSQL* con, SERVER* server, SERVICE* service, Listener
 
     if (rv)
     {
-        auto func = [instance, userlist, dblist]() {
-                sqlite3* handle = get_handle(instance);
+        auto func = [this, userlist, dblist]() {
+                sqlite3* handle = get_handle();
 
                 for (const auto& user : userlist)
                 {
@@ -1268,14 +1256,12 @@ static std::vector<SERVER*> get_candidates(SERVICE* service, bool skip_local)
  * environment.
  *
  * @param service   The current service
- * @param users     The users table into which to load the users
  * @return          -1 on any error or the number of users inserted
  */
-static int get_users(Listener* listener, bool skip_local, SERVER** srv)
+int MariaDBAuthenticatorModule::get_users(SERVICE* service, bool skip_local, SERVER** srv)
 {
     const char* service_user = NULL;
     const char* service_passwd = NULL;
-    SERVICE* service = listener->service();
 
     serviceGetUser(service, &service_user, &service_passwd);
 
@@ -1287,8 +1273,7 @@ static int get_users(Listener* listener, bool skip_local, SERVER** srv)
     }
 
     /** Delete the old users */
-    MariaDBAuthenticatorModule* instance = (MariaDBAuthenticatorModule*)listener->auth_instance();
-    sqlite3* handle = get_handle(instance);
+    sqlite3* handle = get_handle();
     delete_mysql_users(handle);
 
     int total_users = -1;
@@ -1308,7 +1293,7 @@ static int get_users(Listener* listener, bool skip_local, SERVER** srv)
             else
             {
                 /** Successfully connected to a server */
-                int users = get_users_from_server(con, server, service, listener);
+                int users = get_users_from_server(con, server, service);
 
                 if (users > total_users)
                 {

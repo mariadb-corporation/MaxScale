@@ -19,7 +19,7 @@
 
 #include <stdint.h>
 #include <arpa/inet.h>
-
+#include <mysql.h>
 #include <maxscale/authenticator2.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/buffer.hh>
@@ -107,21 +107,34 @@ class MariaDBAuthenticatorModule : public mxs::AuthenticatorModule
 {
 public:
     static MariaDBAuthenticatorModule* create(char** options);
-
     ~MariaDBAuthenticatorModule() override = default;
-    std::unique_ptr<mxs::ClientAuthenticator> create_client_authenticator() override;
-    int load_users(Listener* listener) override;
-    void diagnostics(DCB* output) override;
-    json_t* diagnostics_json() override;
-    uint64_t capabilities() const override;
-    virtual std::string supported_protocol() const override;
 
-    sqlite3** handles {nullptr};              /**< SQLite3 database handle */
-    char*     cache_dir {nullptr};            /**< Custom cache directory location */
-    bool      inject_service_user {true};     /**< Inject the service user into the list of users */
-    bool      skip_auth {false};              /**< Authentication will always be successful */
-    bool      check_permissions {true};
-    bool      lower_case_table_names {false}; /**< Disable database case-sensitivity */
+    std::unique_ptr<mxs::ClientAuthenticator> create_client_authenticator() override;
+
+    int         load_users(Listener* listener) override;
+    void        diagnostics(DCB* output) override;
+    json_t*     diagnostics_json() override;
+    uint64_t    capabilities() const override;
+    std::string supported_protocol() const override;
+
+    /**
+     * @brief Get the thread-specific SQLite handle
+     *
+     * @return The thread-specific handle
+     */
+    sqlite3* get_handle();
+
+    sqlite3** m_handles {nullptr};              /**< SQLite3 database handle */
+    char*     m_cache_dir {nullptr};            /**< Custom cache directory location */
+    bool      m_inject_service_user {true};     /**< Inject the service user into the list of users */
+    bool      m_skip_auth {false};              /**< Authentication will always be successful */
+    bool      m_check_permissions {true};
+    bool      m_lower_case_table_names {false}; /**< Disable database case-sensitivity */
+
+private:
+    int  get_users(SERVICE* service, bool skip_local, SERVER** srv);
+    int  get_users_from_server(MYSQL* con, SERVER* server, SERVICE* service);
+    bool add_service_user(SERVICE* service);
 };
 
 class MariaDBClientAuthenticator : public mxs::ClientAuthenticatorT<MariaDBAuthenticatorModule>
@@ -129,15 +142,30 @@ class MariaDBClientAuthenticator : public mxs::ClientAuthenticatorT<MariaDBAuthe
 public:
     MariaDBClientAuthenticator(MariaDBAuthenticatorModule* module);
     ~MariaDBClientAuthenticator() override = default;
+
     bool extract(DCB* client, GWBUF* buffer) override;
     bool ssl_capable(DCB* client) override;
-    int authenticate(DCB* client) override;
+    int  authenticate(DCB* client) override;
     void free_data(DCB* client) override;
-    int reauthenticate(DCB* client, const char* user, uint8_t* token, size_t token_len,
-                       uint8_t* scramble, size_t scramble_len,
-                       uint8_t* output, size_t output_len) override;
+    int  reauthenticate(DCB* client, const char* user, uint8_t* token, size_t token_len,
+                        uint8_t* scramble, size_t scramble_len,
+                        uint8_t* output, size_t output_len) override;
 
     std::unique_ptr<mxs::BackendAuthenticator> create_backend_authenticator() override;
+
+private:
+    /**
+     * @brief Verify the user has access to the database
+     *
+     * @param dcb          Client DCB
+     * @param session      Shared MySQL session
+     * @param scramble     The scramble sent to the client in the initial handshake
+     * @param scramble_len Length of @c scramble
+     *
+     * @return MXS_AUTH_SUCCEEDED if the user has access to the database
+     */
+    int  validate_mysql_user(DCB* dcb, MYSQL_session* session, uint8_t* scramble, size_t scramble_len);
+    bool check_database(sqlite3* handle, const char* database);
     // No fields, as authentication data is managed by the protocol.
 };
 
@@ -149,7 +177,7 @@ public:
 
     bool extract(DCB* backend, GWBUF* buffer) override;
     bool ssl_capable(DCB* backend) override;
-    int authenticate(DCB* backend) override;
+    int  authenticate(DCB* backend) override;
 
 private:
     /** Authentication states */
@@ -162,15 +190,6 @@ private:
 
     State state {State::NEED_OK};   /**< Authentication state */
 };
-
-/**
- * @brief Get the thread-specific SQLite handle
- *
- * @param instance Authenticator instance
- *
- * @return The thread-specific handle
- */
-sqlite3* get_handle(MariaDBAuthenticatorModule* instance);
 
 /**
  * @brief Add new MySQL user to the internal user database
@@ -201,50 +220,3 @@ void add_mysql_user(sqlite3* handle,
  * if permissions are missing or if an error occurred.
  */
 bool check_service_permissions(SERVICE* service);
-
-/**
- * Load users from persisted database
- *
- * @param dest Open SQLite handle where contents are loaded
- *
- * @return True on success
- */
-bool dbusers_load(sqlite3* handle, const char* filename);
-
-/**
- * Save users to persisted database
- *
- * @param dest Open SQLite handle where contents are stored
- *
- * @return True on success
- */
-bool dbusers_save(sqlite3* src, const char* filename);
-
-/**
- * Reload and replace the currently loaded database users
- *
- * @param service    The current service
- * @param skip_local Skip loading of users on local MaxScale services
- * @param srv        Server where the users were loaded from (output)
- *
- * @return -1 on any error or the number of users inserted (0 means no users at all)
- */
-int replace_mysql_users(Listener* listener, bool skip_local, SERVER** srv);
-
-/**
- * @brief Verify the user has access to the database
- *
- * @param instance     MySQLAuth instance
- * @param dcb          Client DCB
- * @param session      Shared MySQL session
- * @param scramble     The scramble sent to the client in the initial handshake
- * @param scramble_len Length of @c scramble
- *
- * @return MXS_AUTH_SUCCEEDED if the user has access to the database
- */
-int validate_mysql_user(MariaDBAuthenticatorModule* instance,
-                        DCB* dcb,
-                        MYSQL_session* session,
-                        uint8_t* scramble,
-                        size_t scramble_len);
-
