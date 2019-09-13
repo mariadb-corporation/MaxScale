@@ -62,13 +62,13 @@ public:
     static Users* from_json(json_t* json);
 
     bool add(const std::string& user, const std::string& password, user_account_type perm);
-    bool remove(std::string user);
-    bool get(std::string user, UserInfo* output = NULL) const;
+    bool remove(const std::string& user);
+    bool get(const std::string& user, UserInfo* output = NULL) const;
     bool authenticate(const std::string& user, const std::string& password);
     int  admin_count() const;
     bool check_permissions(const std::string& user, const std::string& password,
                            user_account_type perm) const;
-    bool    set_permissions(std::string user, user_account_type perm);
+    bool    set_permissions(const std::string& user, user_account_type perm);
     json_t* diagnostic_json() const;
     void    diagnostic(DCB* dcb) const;
     bool    empty() const;

@@ -20,25 +20,23 @@
 #include <string>
 #include <unordered_map>
 
-#include <maxscale/adminusers.hh>
-#include <maxbase/pam_utils.hh>
-#include <maxscale/authenticator.hh>
 #include <maxscale/cn_strings.hh>
-#include <maxscale/event.hh>
 #include <maxscale/jansson.hh>
 #include <maxscale/users.hh>
 
 namespace
 {
 
-static const char STR_BASIC[] = "basic";
-static const char STR_ADMIN[] = "admin";
+const char STR_BASIC[] = "basic";
+const char STR_ADMIN[] = "admin";
 
 // Generates SHA2-512 hashes
 constexpr const char* ADMIN_SALT = "$6$MXS";
 
 // Generates MD5 hashes, only used for authentication of old users
 constexpr const char* OLD_ADMIN_SALT = "$1$MXS";
+
+using Guard = std::lock_guard<std::mutex>;
 }
 
 namespace maxscale
@@ -53,7 +51,7 @@ Users& Users::operator=(const Users& rhs)
 {
     // Get a copy of the rhs.data to avoid locking both mutexes simultaneously.
     auto rhs_data = rhs.copy_contents();
-    std::lock_guard<std::mutex> guard(m_lock);
+    Guard guard(m_lock);
     m_data = std::move(rhs_data);
     return *this;
 }
@@ -65,7 +63,7 @@ Users::Users(Users&& rhs) noexcept
 
 Users& Users::operator=(Users&& rhs) noexcept
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    Guard guard(m_lock);
     m_data = std::move(rhs.m_data); // same as above
     return *this;
 }
@@ -75,12 +73,12 @@ bool Users::add(const std::string& user, const std::string& password, user_accou
     return add_hashed(user, hash(password), perm);
 }
 
-bool Users::remove(std::string user)
+bool Users::remove(const std::string& user)
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    Guard guard(m_lock);
     bool rval = false;
-    UserMap::iterator it = m_data.find(user);
 
+    auto it = m_data.find(user);
     if (it != m_data.end())
     {
         m_data.erase(it);
@@ -90,16 +88,15 @@ bool Users::remove(std::string user)
     return rval;
 }
 
-bool Users::get(std::string user, UserInfo* output) const
+bool Users::get(const std::string& user, UserInfo* output) const
 {
-    std::lock_guard<std::mutex> guard(m_lock);
-    UserMap::const_iterator it = m_data.find(user);
+    Guard guard(m_lock);
+    auto it = m_data.find(user);
     bool rval = false;
 
     if (it != m_data.end())
     {
         rval = true;
-
         if (output)
         {
             *output = it->second;
@@ -132,8 +129,8 @@ int Users::admin_count() const
 bool
 Users::check_permissions(const std::string& user, const std::string& password, user_account_type perm) const
 {
-    std::lock_guard<std::mutex> guard(m_lock);
-    UserMap::const_iterator it = m_data.find(user);
+    Guard guard(m_lock);
+    auto it = m_data.find(user);
     bool rval = false;
 
     if (it != m_data.end() && it->second.permissions == perm)
@@ -144,10 +141,10 @@ Users::check_permissions(const std::string& user, const std::string& password, u
     return rval;
 }
 
-bool Users::set_permissions(std::string user, user_account_type perm)
+bool Users::set_permissions(const std::string& user, user_account_type perm)
 {
-    std::lock_guard<std::mutex> guard(m_lock);
-    UserMap::iterator it = m_data.find(user);
+    Guard guard(m_lock);
+    auto it = m_data.find(user);
     bool rval = false;
 
     if (it != m_data.end())
@@ -161,14 +158,14 @@ bool Users::set_permissions(std::string user, user_account_type perm)
 
 json_t* Users::diagnostic_json() const
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    Guard guard(m_lock);
     json_t* rval = json_array();
 
-    for (UserMap::const_iterator it = m_data.begin(); it != m_data.end(); it++)
+    for (const auto& elem : m_data)
     {
         json_t* obj = json_object();
-        json_object_set_new(obj, CN_NAME, json_string(it->first.c_str()));
-        json_object_set_new(obj, CN_ACCOUNT, json_string(account_type_to_str(it->second.permissions)));
+        json_object_set_new(obj, CN_NAME, json_string(elem.first.c_str()));
+        json_object_set_new(obj, CN_ACCOUNT, json_string(account_type_to_str(elem.second.permissions)));
         json_array_append_new(rval, obj);
     }
 
@@ -177,15 +174,15 @@ json_t* Users::diagnostic_json() const
 
 void Users::diagnostic(DCB* dcb) const
 {
-    std::lock_guard<std::mutex> guard(m_lock);
-    if (m_data.size())
+    Guard guard(m_lock);
+    if (!m_data.empty())
     {
         const char* sep = "";
         std::set<std::string> users;
 
-        for (UserMap::const_iterator it = m_data.begin(); it != m_data.end(); it++)
+        for (const auto& elem : m_data)
         {
-            users.insert(it->first);
+            users.insert(elem.first);
         }
 
         for (const auto& a : users)
@@ -198,27 +195,27 @@ void Users::diagnostic(DCB* dcb) const
 
 bool Users::empty() const
 {
-    std::lock_guard<std::mutex> guard(m_lock);
-    return m_data.size() > 0;
+    Guard guard(m_lock);
+    return m_data.empty();
 }
 
 Users::UserMap Users::copy_contents() const
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    Guard guard(m_lock);
     return m_data;
 }
 
 json_t* Users::to_json() const
 {
     json_t* arr = json_array();
-    std::lock_guard<std::mutex> guard(m_lock);
+    Guard guard(m_lock);
 
-    for (UserMap::const_iterator it = m_data.begin(); it != m_data.end(); it++)
+    for (const auto& elem : m_data)
     {
         json_t* obj = json_object();
-        json_object_set_new(obj, CN_NAME, json_string(it->first.c_str()));
-        json_object_set_new(obj, CN_ACCOUNT, json_string(account_type_to_str(it->second.permissions)));
-        json_object_set_new(obj, CN_PASSWORD, json_string(it->second.password.c_str()));
+        json_object_set_new(obj, CN_NAME, json_string(elem.first.c_str()));
+        json_object_set_new(obj, CN_ACCOUNT, json_string(account_type_to_str(elem.second.permissions)));
+        json_object_set_new(obj, CN_PASSWORD, json_string(elem.second.password.c_str()));
         json_array_append_new(arr, obj);
     }
 
@@ -234,7 +231,7 @@ Users* Users::from_json(json_t* json)
 
 bool Users::add_hashed(const std::string& user, const std::string& password, user_account_type perm)
 {
-    std::lock_guard<std::mutex> guard(m_lock);
+    Guard guard(m_lock);
     return m_data.insert(std::make_pair(user, UserInfo(password, perm))).second;
 }
 
