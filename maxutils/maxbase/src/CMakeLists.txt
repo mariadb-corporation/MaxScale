@@ -18,6 +18,7 @@ add_library(maxbase STATIC
   average.cc
   random.cc
   host.cc
+  shareddata.cc
   )
 
 if(HAVE_SYSTEMD)
