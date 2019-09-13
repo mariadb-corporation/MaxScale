@@ -111,7 +111,6 @@ public:
     };
 
     State              state {State::ALLOC};        /**< The service state */
-    int                client_count {0};            /**< Number of connected clients */
     mxs_router_object* router {nullptr};            /**< The router we are using */
     mxs_router*        router_instance {nullptr};   /**< The router instance for this service */
     time_t             started {0};                 /**< The time when the service was started */
@@ -125,15 +124,7 @@ public:
 
     virtual uint64_t status() const = 0;
 
-    bool active() const override
-    {
-        return m_active;
-    }
-
-    void deactivate()
-    {
-        m_active = false;
-    }
+    virtual bool active() const = 0;
 
     virtual int64_t rank() const = 0;
 
@@ -164,6 +155,14 @@ public:
      */
     virtual std::vector<SERVER*> reachable_servers() const = 0;
 
+    /**
+     * Has a connection limit been reached?
+     */
+    bool has_too_many_connections() const
+    {
+        return config().max_connections && stats().n_current >= config().max_connections;
+    }
+
 protected:
     SERVICE(const std::string& name,
             const std::string& router_name)
@@ -178,7 +177,6 @@ protected:
 private:
     const std::string m_name;
     const std::string m_router_name;
-    bool              m_active {true};
 };
 
 typedef enum count_spec_t

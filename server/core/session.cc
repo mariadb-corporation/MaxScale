@@ -155,23 +155,6 @@ void session_close(MXS_SESSION* ses)
     session->close();
 }
 
-class ServiceDestroyTask : public Worker::DisposableTask
-{
-public:
-    ServiceDestroyTask(Service* service)
-        : m_service(service)
-    {
-    }
-
-    void execute(Worker& worker) override
-    {
-        service_free(m_service);
-    }
-
-private:
-    Service* m_service;
-};
-
 /**
  * Deallocate the specified session
  *
@@ -183,16 +166,6 @@ static void session_free(MXS_SESSION* session)
     Service* service = static_cast<Service*>(session->service);
 
     delete static_cast<Session*>(session);
-
-    bool should_destroy = !service->active();
-
-    if (mxb::atomic::add(&service->client_count, -1) == 1 && should_destroy)
-    {
-        // Destroy the service in the main routing worker thread
-        mxs::RoutingWorker* main_worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
-        main_worker->execute(std::unique_ptr<ServiceDestroyTask>(new ServiceDestroyTask(service)),
-                             Worker::EXECUTE_AUTO);
-    }
 }
 
 /**

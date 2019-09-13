@@ -64,6 +64,15 @@ public:
      */
     static Service* create(const char* name, const char* router, MXS_CONFIG_PARAMETER* params);
 
+    /**
+     * Destroy a service
+     *
+     * Deletes the service after all client connections have been closed.
+     *
+     * @param service Service to destroy
+     */
+    static void destroy(Service* service);
+
     ~Service();
 
     /**
@@ -215,6 +224,15 @@ public:
      */
     bool serialize() const;
 
+    void incref();
+
+    void decref();
+
+    bool active() const override
+    {
+        return m_active;
+    }
+
 private:
 
     struct Data
@@ -237,6 +255,8 @@ private:
     mxs::rworker_local<Data>   m_data;
     RateLimits                 m_rate_limits;   // User reload rate limits
     mxs::rworker_local<Config> m_config;
+    std::atomic<int64_t>       m_refcount {1};
+    bool                       m_active {true};
 
     MXS_CONFIG_PARAMETER m_params;
 
@@ -323,25 +343,6 @@ private:
  *
  * These functions should only be called by the MaxScale core.
  */
-
-/**
- * Free a service
- *
- * @note Must not be called if the service has any active client connections or
- *       active listeners
- *
- * @param service Service to free
- */
-void service_free(Service* service);
-
-/**
- * Mark a service for destruction
- *
- * Once the service reference count drops down to zero, the service is destroyed.
- *
- * @param service Service to destroy
- */
-void service_destroy(Service* service);
 
 /**
  * @brief Shut all services down

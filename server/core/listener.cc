@@ -885,8 +885,7 @@ ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const 
         session->set_client_dcb(client_dcb);
         client_dcb->m_remote = MXS_STRDUP_A(host);
 
-        if (m_service->config().max_connections
-            && m_service->client_count >= m_service->config().max_connections)
+        if (m_service->has_too_many_connections())
         {
             // TODO: If connections can be queued, this is the place to put the
             // TODO: connection on that queue.
@@ -904,11 +903,6 @@ ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const 
             DCB::close(client_dcb);
             client_dcb = NULL;
         }
-    }
-
-    if (client_dcb)
-    {
-        mxb::atomic::add(&m_service->client_count, 1);
     }
 
     return client_dcb;

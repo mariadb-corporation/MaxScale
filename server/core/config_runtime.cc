@@ -1380,7 +1380,7 @@ bool runtime_destroy_service(Service* service)
 
     if (service->can_be_destroyed())
     {
-        service_destroy(service);
+        Service::destroy(service);
         rval = true;
     }
     else
