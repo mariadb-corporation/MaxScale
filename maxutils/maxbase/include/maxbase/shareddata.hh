@@ -162,7 +162,8 @@ private:
 //      instantiated GCWorker for update ordering.
 extern CachelineAtomic<int64_t> shareddata_timestamp_generator;
 extern CachelineAtomic<int64_t> num_shareddata_updater_blocks;
-extern CachelineAtomic<int64_t> num_shareddata_worker_blocks;
+extern CachelineAtomic<int64_t> num_shareddata_worker_blocks;   // <-- Rapid growth means something is wrong
+extern CachelineAtomic<int64_t> num_gcupdater_cap_waits;        // <-- Rapid growth means something is wrong
 
 template<typename Data, typename Update>
 SharedData<Data, Update>::SharedData(Data* pData, int max_updates)
@@ -236,7 +237,6 @@ void SharedData<Data, Update>::send_update(const Update& update)
             m_queue.push_back(iu);
             done = true;
         }
-
         m_atomic_flag.clear(std::memory_order_acq_rel);
     }
 }

@@ -12,8 +12,7 @@
  */
 #pragma once
 
-#include "shareddata.hh"
-
+#include <maxbase/shareddata.hh>
 #include <vector>
 #include <numeric>
 #include <algorithm>
@@ -75,7 +74,7 @@ namespace maxbase
  *  public:
  *   CacheUpdater(int num_workers)
  *   {
- *       initialize_shared_data(new CacheContainer(), num_workers, 10000);
+ *       initialize_shared_data(new CacheContainer(), num_workers, 10000, 2);
  *   }
  *  private:
  *
@@ -172,16 +171,28 @@ public:
     typename SharedDataType::DataType* get_pLatest();
 
 protected:
-    // The subclass constructor must create an initial copy of the data and call this function. Later
-    // new copies are created when this class calls the pure virtual create_new_copy().
-    void initialize_shared_data(typename SharedDataType::DataType* initial_copy,
+    /**
+     * @brief This function is part of a GCUpdater initialization and should be called by the
+     *        subclass constructor.
+     *
+     * @param pInitialData the initial DataType instance.
+     * @param num_clients number of SharedData
+     * @param queue_max the max queue length in a SharedData
+     * @param cap_copies Maximum number of simultaneous copies of SharedDataType::DataType
+     *                   if <= 0, the number of copies is unlimited
+     * @param order_updates when true, process updates in order of creation
+     */
+    void initialize_shared_data(typename SharedDataType::DataType* pInitialData,
                                 int num_clients,
                                 int queue_max,
+                                int cap_copies = 0,
                                 bool order_updates = true);
 
 private:
     int  gc();
     void read_clients(std::vector<int> clients);
+
+    std::vector<const typename SD::DataType*> get_in_use_ptrs();
 
     bool                               m_initialed = false;
     std::atomic<bool>                  m_running {false};
@@ -189,6 +200,7 @@ private:
 
     bool   m_order_updates;
     size_t m_queue_max;     // of a SharedData instance
+    int    m_cap_copies;
 
     std::vector<SharedDataType>                           m_shared_data;
     std::vector<const typename SharedDataType::DataType*> m_all_ptrs;
@@ -202,15 +214,22 @@ private:
                               std::vector<typename SharedDataType::InternalUpdate>& queue) = 0;
 };
 
+/// IMPLEMENTATION
+///
+
 template<typename SD>
 void GCUpdater<SD>::initialize_shared_data(typename SD::DataType* initial_copy,
                                            int num_clients,
                                            int queue_max,
+                                           int cap_copies,
                                            bool order_updates)
 {
+    mxb_assert(cap_copies != 1);
+
     m_pLatest_data = initial_copy;
     m_all_ptrs.push_back(m_pLatest_data);
     m_queue_max = queue_max;
+    m_cap_copies = cap_copies;
     m_order_updates = order_updates;
 
     for (int i = 0; i < num_clients; ++i)
@@ -243,6 +262,25 @@ void GCUpdater<SD>::read_clients(std::vector<int> clients)
 }
 
 template<typename SD>
+std::vector<const typename SD::DataType*> GCUpdater<SD>::get_in_use_ptrs()
+{
+    std::vector<const typename SharedDataType::DataType*> in_use_ptrs;
+    in_use_ptrs.reserve(2 * m_shared_data.size());
+    for (auto& c : m_shared_data)
+    {
+        auto ptrs = c.get_ptrs();
+        in_use_ptrs.push_back(ptrs.first);
+        in_use_ptrs.push_back(ptrs.second);
+    }
+
+    std::sort(begin(in_use_ptrs), end(in_use_ptrs));
+    in_use_ptrs.erase(std::unique(begin(in_use_ptrs), end(in_use_ptrs)), end(in_use_ptrs));
+
+    return in_use_ptrs;
+}
+
+
+template<typename SD>
 void GCUpdater<SD>::run()
 {
     mxb_assert(m_initialed);
@@ -264,7 +302,7 @@ void GCUpdater<SD>::run()
 
         read_clients(client_indices);
 
-        assert(m_local_queue.size() < 2 * num_clients * m_queue_max);
+        mxb_assert(m_local_queue.size() < 2 * num_clients * m_queue_max);
 
         if (m_local_queue.empty())
         {
@@ -307,6 +345,14 @@ void GCUpdater<SD>::run()
             }
         }
 
+        while (m_cap_copies > 0
+               && int(get_in_use_ptrs().size()) >= m_cap_copies
+               && m_running.load(std::memory_order_relaxed))
+        {
+            num_gcupdater_cap_waits.fetch_add(1, std::memory_order_relaxed);
+            std::this_thread::sleep_for(std::chrono::microseconds(100));
+        }
+
         m_pLatest_data = create_new_copy(m_pLatest_data);
 
         m_all_ptrs.push_back(m_pLatest_data);
@@ -320,7 +366,8 @@ void GCUpdater<SD>::run()
             s.set_new_data(m_pLatest_data);
         }
 
-        if (gc_ptr_count > 1)       // TODO, how many? Maybe just defer to the subclass.
+        // TODO, how many? Maybe just defer to the subclass, m_cap_copies also affects this.
+        if (gc_ptr_count > 1)
         {
             gc();
         }
@@ -346,28 +393,13 @@ template<typename SD>
 int GCUpdater<SD>::gc()
 {
     // Get the ptrs that are in use right now
-    std::vector<const typename SharedDataType::DataType*> in_use_ptrs;
-    in_use_ptrs.reserve(2 * m_shared_data.size());
-    for (auto& c : m_shared_data)
-    {
-        auto ptrs = c.get_ptrs();
-        if (ptrs.first)
-        {
-            in_use_ptrs.push_back(ptrs.first);
-        }
-        if (ptrs.second && ptrs.second != ptrs.first)
-        {
-            in_use_ptrs.push_back(ptrs.second);
-        }
-    }
-
-    std::sort(begin(in_use_ptrs), end(in_use_ptrs));
-    in_use_ptrs.erase(std::unique(begin(in_use_ptrs), end(in_use_ptrs)), end(in_use_ptrs));
+    auto in_use_ptrs {get_in_use_ptrs()};
 
     std::sort(begin(m_all_ptrs), end(m_all_ptrs));
     m_all_ptrs.erase(std::unique(begin(m_all_ptrs), end(m_all_ptrs)), end(m_all_ptrs));
 
-    std::vector<const typename SharedDataType::DataType*> garbage;
+    decltype(in_use_ptrs) garbage;
+
     garbage.reserve(m_all_ptrs.size());
 
     std::set_difference(begin(m_all_ptrs), end(m_all_ptrs),
