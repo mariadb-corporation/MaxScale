@@ -494,6 +494,13 @@ static int ini_handler(void* userdata, const char* section, const char* name, co
         cntxt->m_next = ptr;
     }
 
+    if (ptr && !ptr->m_was_persisted && is_persisted_config)
+    {
+        MXS_NOTICE("Found persisted configuration for '%s'.", ptr->name());
+        ptr->m_was_persisted = true;
+        ptr->m_parameters.clear();
+    }
+
     if (ptr->m_parameters.contains(name))
     {
         /** The values in the persisted configurations are updated versions of
