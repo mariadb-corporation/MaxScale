@@ -2341,7 +2341,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "The client to MaxScale MySQL protocol implementation",
         "V1.1.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &mxs::ClientProtocolApi<MySQLProtocolModule>::s_api,
+        &mxs::ProtocolApiGenerator<MySQLProtocolModule>::s_api,
         nullptr,
         nullptr,
         nullptr,

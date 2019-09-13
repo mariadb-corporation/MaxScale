@@ -168,7 +168,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "A maxscale protocol for the administration interface",
         "V2.0.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &mxs::ClientProtocolApi<MAXSCALEDProtocolModule>::s_api,
+        &mxs::ProtocolApiGenerator<MAXSCALEDProtocolModule>::s_api,
         NULL,       /* Process init. */
         NULL,       /* Process finish. */
         NULL,       /* Thread init. */

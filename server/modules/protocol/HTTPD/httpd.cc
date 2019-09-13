@@ -85,7 +85,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "An experimental HTTPD implementation for use in administration",
         "V1.2.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &mxs::ClientProtocolApi<HTTPDProtocolModule>::s_api,
+        &mxs::ProtocolApiGenerator<HTTPDProtocolModule>::s_api,
         NULL,       /* Process init. */
         NULL,       /* Process finish. */
         NULL,       /* Thread init. */

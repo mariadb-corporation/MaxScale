@@ -181,28 +181,28 @@ public:
     virtual int authenticate(DCB* client) = 0;
 };
 
-template<class AuthImplementation>
-class AuthenticatorApi
+template<class AuthenticatorImplementation>
+class AuthenticatorApiGenerator
 {
 public:
-    AuthenticatorApi() = delete;
-    AuthenticatorApi(const AuthenticatorApi&) = delete;
-    AuthenticatorApi& operator=(const AuthenticatorApi&) = delete;
+    AuthenticatorApiGenerator() = delete;
+    AuthenticatorApiGenerator(const AuthenticatorApiGenerator&) = delete;
+    AuthenticatorApiGenerator& operator=(const AuthenticatorApiGenerator&) = delete;
 
     static AuthenticatorModule* createInstance(char** options)
     {
         AuthenticatorModule* instance = nullptr;
-        MXS_EXCEPTION_GUARD(instance = AuthImplementation::create(options));
+        MXS_EXCEPTION_GUARD(instance = AuthenticatorImplementation::create(options));
         return instance;
     }
 
     static AUTHENTICATOR_API s_api;
 };
 
-template<class AuthImplementation>
-AUTHENTICATOR_API AuthenticatorApi<AuthImplementation>::s_api =
+template<class AuthenticatorImplementation>
+AUTHENTICATOR_API AuthenticatorApiGenerator<AuthenticatorImplementation>::s_api =
 {
-    &AuthenticatorApi<AuthImplementation>::createInstance
+    &AuthenticatorApiGenerator<AuthenticatorImplementation>::createInstance
 };
 
 }

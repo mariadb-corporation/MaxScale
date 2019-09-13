@@ -219,7 +219,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "The CDC client to MaxScale authenticator implementation",
         "V1.1.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &mxs::AuthenticatorApi<CDCAuthenticatorModule>::s_api,
+        &mxs::AuthenticatorApiGenerator<CDCAuthenticatorModule>::s_api,
         NULL,       /* Process init. */
         NULL,       /* Process finish. */
         NULL,       /* Thread init. */

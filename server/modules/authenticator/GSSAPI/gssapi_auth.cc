@@ -723,7 +723,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "GSSAPI authenticator",
         "V1.0.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &mxs::AuthenticatorApi<GSSAPIAuthenticatorModule>::s_api,
+        &mxs::AuthenticatorApiGenerator<GSSAPIAuthenticatorModule>::s_api,
         NULL,       /* Process init. */
         NULL,       /* Process finish. */
         NULL,       /* Thread init. */

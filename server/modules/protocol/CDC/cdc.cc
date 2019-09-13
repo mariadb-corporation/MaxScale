@@ -103,7 +103,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "A Change Data Capture Listener implementation for use in binlog events retrieval",
         "V1.0.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &mxs::ClientProtocolApi<CDCProtocolModule>::s_api,
+        &mxs::ProtocolApiGenerator<CDCProtocolModule>::s_api,
         NULL,       /* Process init. */
         NULL,       /* Process finish. */
         NULL,       /* Thread init. */

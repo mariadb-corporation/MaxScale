@@ -74,7 +74,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "The MySQL client to MaxScale authenticator implementation",
         "V1.1.0",
         MXS_NO_MODULE_CAPABILITIES, // Authenticator capabilities are in the instance object
-        &mxs::AuthenticatorApi<MariaDBAuthenticatorModule>::s_api,
+        &mxs::AuthenticatorApiGenerator<MariaDBAuthenticatorModule>::s_api,
         NULL,       /* Process init. */
         NULL,       /* Process finish. */
         NULL,       /* Thread init. */

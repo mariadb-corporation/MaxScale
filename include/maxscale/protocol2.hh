@@ -170,12 +170,12 @@ public:
 };
 
 template<class ProtocolImplementation>
-class ClientProtocolApi
+class ProtocolApiGenerator
 {
 public:
-    ClientProtocolApi() = delete;
-    ClientProtocolApi(const ClientProtocolApi&) = delete;
-    ClientProtocolApi& operator=(const ClientProtocolApi&) = delete;
+    ProtocolApiGenerator() = delete;
+    ProtocolApiGenerator(const ProtocolApiGenerator&) = delete;
+    ProtocolApiGenerator& operator=(const ProtocolApiGenerator&) = delete;
 
     static mxs::ProtocolModule* create_protocol_module()
     {
@@ -186,9 +186,9 @@ public:
 };
 
 template<class ProtocolImplementation>
-MXS_PROTOCOL_API ClientProtocolApi<ProtocolImplementation>::s_api =
+MXS_PROTOCOL_API ProtocolApiGenerator<ProtocolImplementation>::s_api =
 {
-    &ClientProtocolApi<ProtocolImplementation>::create_protocol_module,
+    &ProtocolApiGenerator<ProtocolImplementation>::create_protocol_module,
 };
 
 }

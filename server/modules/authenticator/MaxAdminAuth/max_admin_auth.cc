@@ -120,7 +120,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "The MaxScale Admin client authenticator implementation",
         "V2.1.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &mxs::AuthenticatorApi<MaxAdminAuthenticatorModule>::s_api,
+        &mxs::AuthenticatorApiGenerator<MaxAdminAuthenticatorModule>::s_api,
         NULL,       /* Process init. */
         NULL,       /* Process finish. */
         NULL,       /* Thread init. */

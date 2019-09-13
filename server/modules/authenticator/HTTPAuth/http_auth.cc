@@ -96,7 +96,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "The MaxScale HTTP authenticator (does nothing)",
         "V2.0.0",
         MXS_NO_MODULE_CAPABILITIES,
-        &mxs::AuthenticatorApi<HTTPAuthenticatorModule>::s_api,
+        &mxs::AuthenticatorApiGenerator<HTTPAuthenticatorModule>::s_api,
         NULL,       /* Process init. */
         NULL,       /* Process finish. */
         NULL,       /* Thread init. */
