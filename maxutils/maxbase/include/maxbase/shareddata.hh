@@ -14,10 +14,13 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxbase/assert.h>
+#include <maxbase/stopwatch.hh>
 
 #include <functional>
 #include <atomic>
 #include <thread>
+#include <mutex>
+#include <condition_variable>
 #include <vector>
 
 namespace maxbase
@@ -95,7 +98,7 @@ struct alignas (CachelineAlignment) CachelineAtomic : public std::atomic<T>
  *
  */
 template<typename Data, typename Update>
-class alignas (CachelineAlignment)SharedData
+class alignas (CachelineAlignment) SharedData
 {
 public:
     using DataType = Data;
@@ -109,12 +112,24 @@ public:
      *                    This number should by high enough that send_update() never blocks, or, does not
      *                    block under sensible load conditions.
      */
-    explicit SharedData(Data * pData, int max_updates);
+    SharedData(Data * pData,
+               int max_updates,
+               std::condition_variable* updater_wakeup,
+               bool* pData_rdy);
 
     /**
      * @brief A reader/worker thread should call this each loop to get a ptr to a fresh copy of DataType.
      *
      * @return Pointer to the latest copy of DataType.
+     *
+     * TODO. If there is a cap on the number of copies (in the updater), it is important to call reader_rdy()
+     *       when the worker has done work, rather than doing it only "at the top of the thread loop".
+     *       Make a RAII class for use in "worker functions", e.g. SmartRouter, will need reader_rdy() at
+     *       entry and exit of routeQuery(). Hm, maybe even make this private and a friend of the RAII class.
+     *
+     * TODO. When the number of cores increases, at some point "threads = auto" should start less workers
+     *       than cores. With 96 cores, save 1-3 cores (really depending on what is expected to run
+     *       in non-worker threads).
      */
     const Data* reader_ready();
 
@@ -126,8 +141,8 @@ public:
      */
     void send_update(const Update& update);
 
-    // InternalUpdate adds a timestamp (order of creation) to UpdateType, for use by a GCUpdater and
-    // it's subclasses.
+    // InternalUpdate adds a timestamp (order of creation) to UpdateType, for use by a
+    // GCUpdater and it's subclasses.
     struct InternalUpdate
     {
         UpdateType update;
@@ -142,17 +157,24 @@ private:
     friend class GCUpdater;
 
     void set_new_data(const Data* pData);
-    bool get_updates(std::vector<InternalUpdate>& swap_me);
+    bool wait_for_updates(maxbase::Duration timeout);
+    bool get_updates(std::vector<InternalUpdate>& swap_me, bool block);
     void reset_ptrs();
+    void shutdown();
 
     std::pair<const Data*, const Data*> get_ptrs() const;
 
+    std::atomic<const Data*>    m_pCurrent;
+    std::atomic<const Data*>    m_pNew;
     std::vector<InternalUpdate> m_queue;
     size_t                      m_queue_max;
 
-    std::atomic<const Data*> m_pCurrent;
-    std::atomic<const Data*> m_pNew;
-    std::atomic_flag         m_atomic_flag {0};     // spinlock for get_updates() and send_update()
+    std::mutex               m_mutex;
+    std::condition_variable* m_pUpdater_wakeup;
+    bool*                    m_pData_rdy;
+
+    std::condition_variable m_worker_wakeup;
+    bool                    m_data_swapped_out = false;
 };
 
 /// IMPLEMENTATION
@@ -166,8 +188,14 @@ extern CachelineAtomic<int64_t> num_shareddata_worker_blocks;   // <-- Rapid gro
 extern CachelineAtomic<int64_t> num_gcupdater_cap_waits;        // <-- Rapid growth means something is wrong
 
 template<typename Data, typename Update>
-SharedData<Data, Update>::SharedData(Data* pData, int max_updates)
+SharedData<Data, Update>::SharedData(Data* pData,
+                                     int max_updates,
+                                     std::condition_variable* updater_wakeup,
+                                     bool* pData_rdy)
     : m_queue_max(max_updates)
+    , m_pUpdater_wakeup(updater_wakeup)
+    , m_pData_rdy(pData_rdy)
+
 {
     m_queue.reserve(m_queue_max);
     m_pCurrent.store(pData, std::memory_order_relaxed);
@@ -176,11 +204,12 @@ SharedData<Data, Update>::SharedData(Data* pData, int max_updates)
 
 template<typename Data, typename Update>
 SharedData<Data, Update>::SharedData(SharedData&& rhs)
-    : m_queue(std::move(rhs.m_queue))
-    , m_queue_max(rhs.m_queue_max)
-    , m_pCurrent(rhs.m_pCurrent.load())
+    : m_pCurrent(rhs.m_pCurrent.load())
     , m_pNew(rhs.m_pNew.load())
-    , m_atomic_flag {0}
+    , m_queue(std::move(rhs.m_queue))
+    , m_queue_max(rhs.m_queue_max)
+    , m_pUpdater_wakeup(rhs.m_pUpdater_wakeup)
+    , m_pData_rdy(rhs.m_pData_rdy)
 {
 }
 
@@ -200,15 +229,59 @@ std::pair<const Data*, const Data*> SharedData<Data, Update>::get_ptrs() const
 }
 
 template<typename Data, typename Update>
-bool SharedData<Data, Update>::get_updates(std::vector<InternalUpdate>& swap_me)
+bool SharedData<Data, Update>::wait_for_updates(maxbase::Duration timeout)
 {
-    if (m_atomic_flag.test_and_set(std::memory_order_acq_rel))
+    // The updater can call this on any instance of its SharedDatas
+    std::unique_lock<std::mutex> guard(m_mutex);
+
+    bool ret_got_data = false;
+    if (m_queue.empty())
+    {
+        *m_pData_rdy = false;
+        auto pred = [this]() {
+                return *m_pData_rdy;
+            };
+
+        if (timeout.count() != 0)
+        {
+            ret_got_data = m_pUpdater_wakeup->wait_for(guard, timeout, pred);
+        }
+        else
+        {
+            m_pUpdater_wakeup->wait(guard, pred);
+            ret_got_data = true;
+        }
+    }
+
+    return ret_got_data;
+}
+
+// TODO don't know if there is any performance advantage with "block", which when false means that the
+// function will only try_lock(), and immediately return if try_lock() failed. Intuitively it seems there
+// would be an advantage: imagine 96 cores and the first ten calls happen to block, meaning we make a trip
+// to the kernel (or hopefully only spin for a while), rather than just stay in userland and be able to
+// speed through and pick up updates where they are not locked. GCUpdater calls with block==true, when the
+// remaining count of SharedData to read becomes "low" (it reads all SharedData instances each cycle).
+template<typename Data, typename Update>
+bool SharedData<Data, Update>::get_updates(std::vector<InternalUpdate>& swap_me, bool block)
+{
+    std::unique_lock<std::mutex> guard(m_mutex, std::defer_lock);
+
+    if (block)
+    {
+        guard.lock();
+    }
+    else if (!guard.try_lock())
     {
         num_shareddata_updater_blocks.fetch_add(1, std::memory_order_relaxed);
         return false;
     }
+
     swap_me.swap(m_queue);
-    m_atomic_flag.clear(std::memory_order_acq_rel);
+
+    m_data_swapped_out = true;
+    m_worker_wakeup.notify_one();
+
     return true;
 }
 
@@ -222,22 +295,27 @@ void SharedData<Data, Update>::reset_ptrs()
 template<typename Data, typename Update>
 void SharedData<Data, Update>::send_update(const Update& update)
 {
-    bool done = false;
     InternalUpdate iu {update, shareddata_timestamp_generator.fetch_add(1, std::memory_order_release)};
-    while (!done)
-    {
-        while (m_atomic_flag.test_and_set(std::memory_order_acq_rel))
-        {
-            num_shareddata_worker_blocks.fetch_add(1, std::memory_order_relaxed);
-            std::this_thread::yield();
-        }
 
+    std::unique_lock<std::mutex> guard(m_mutex);
+
+    for (bool done = false; !done;)
+    {
         if (m_queue.size() < m_queue_max)
         {
             m_queue.push_back(iu);
+            *m_pData_rdy = true;
+            m_pUpdater_wakeup->notify_one();
             done = true;
         }
-        m_atomic_flag.clear(std::memory_order_acq_rel);
+        else
+        {
+            num_shareddata_worker_blocks.fetch_add(1, std::memory_order_relaxed);
+            m_data_swapped_out = false;
+            m_worker_wakeup.wait(guard, [this]() {
+                                     return m_data_swapped_out;
+                                 });
+        }
     }
 }
 
@@ -247,5 +325,16 @@ const Data* SharedData<Data, Update>::reader_ready()
     const Data* new_ptr = m_pNew.load(std::memory_order_acquire);
     m_pCurrent.store(new_ptr, std::memory_order_release);
     return new_ptr;
+}
+
+template<typename Data, typename Update>
+void SharedData<Data, Update>::shutdown()
+{
+    // The workers have already stopped and their threads joined. The gcupdater can get stuck
+    // because of that, so GCUpdater<SD>::stop() calls this on one (any) SharedData instance.
+    std::unique_lock<std::mutex> guard(m_mutex);
+
+    *m_pData_rdy = true;
+    m_pUpdater_wakeup->notify_one();
 }
 }
