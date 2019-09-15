@@ -6,7 +6,10 @@ if (BUILD_MAXCTRL)
 
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/lib/version.js.in ${CMAKE_CURRENT_BINARY_DIR}/lib/version.js @ONLY)
 
+    file(GLOB_RECURSE MAXCTRL_SOURCES lib/*)
+
     add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/maxctrl/maxctrl
+      DEPENDS ${MAXCTRL_SOURCES} maxctrl.js
       COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/build.sh ${CMAKE_SOURCE_DIR}
       WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
     add_custom_target(maxctrl ALL DEPENDS ${CMAKE_BINARY_DIR}/maxctrl/maxctrl)
