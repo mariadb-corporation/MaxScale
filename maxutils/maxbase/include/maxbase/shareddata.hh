@@ -115,7 +115,8 @@ public:
     SharedData(Data * pData,
                int max_updates,
                std::condition_variable* updater_wakeup,
-               bool* pData_rdy);
+               bool* pData_rdy,
+               std::atomic<int64_t>* timestamp_generator);
 
     /**
      * @brief A reader/worker thread should call this each loop to get a ptr to a fresh copy of DataType.
@@ -175,14 +176,13 @@ private:
 
     std::condition_variable m_worker_wakeup;
     bool                    m_data_swapped_out = false;
+
+    std::atomic<int64_t>* m_pTimestamp_generator;
 };
 
 /// IMPLEMENTATION
 ///
 
-// TODO there needs to be one timestamp (integer sequence) generator per
-//      instantiated GCWorker for update ordering.
-extern CachelineAtomic<int64_t> shareddata_timestamp_generator;
 extern CachelineAtomic<int64_t> num_shareddata_updater_blocks;
 extern CachelineAtomic<int64_t> num_shareddata_worker_blocks;   // <-- Rapid growth means something is wrong
 extern CachelineAtomic<int64_t> num_gcupdater_cap_waits;        // <-- Rapid growth means something is wrong
@@ -191,11 +191,12 @@ template<typename Data, typename Update>
 SharedData<Data, Update>::SharedData(Data* pData,
                                      int max_updates,
                                      std::condition_variable* updater_wakeup,
-                                     bool* pData_rdy)
+                                     bool* pData_rdy,
+                                     std::atomic<int64_t>* timestamp_generator)
     : m_queue_max(max_updates)
     , m_pUpdater_wakeup(updater_wakeup)
     , m_pData_rdy(pData_rdy)
-
+    , m_pTimestamp_generator(timestamp_generator)
 {
     m_queue.reserve(m_queue_max);
     m_pCurrent.store(pData, std::memory_order_relaxed);
@@ -210,6 +211,7 @@ SharedData<Data, Update>::SharedData(SharedData&& rhs)
     , m_queue_max(rhs.m_queue_max)
     , m_pUpdater_wakeup(rhs.m_pUpdater_wakeup)
     , m_pData_rdy(rhs.m_pData_rdy)
+    , m_pTimestamp_generator(rhs.m_pTimestamp_generator)
 {
 }
 
@@ -295,7 +297,7 @@ void SharedData<Data, Update>::reset_ptrs()
 template<typename Data, typename Update>
 void SharedData<Data, Update>::send_update(const Update& update)
 {
-    InternalUpdate iu {update, shareddata_timestamp_generator.fetch_add(1, std::memory_order_release)};
+    InternalUpdate iu {update, (*m_pTimestamp_generator).fetch_add(1, std::memory_order_release)};
 
     std::unique_lock<std::mutex> guard(m_mutex);
 
