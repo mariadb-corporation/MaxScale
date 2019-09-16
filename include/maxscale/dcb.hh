@@ -472,7 +472,6 @@ public:
     };
 
     char*                   m_remote = nullptr;                 /**< Address of remote end */
-    char*                   m_user = nullptr;                   /**< User name for connection */
 
 protected:
     DCB(int fd, Role role, MXS_SESSION* session, Handler* handler, Manager* manager);

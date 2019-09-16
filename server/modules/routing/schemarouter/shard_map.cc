@@ -200,7 +200,7 @@ Shard ShardManager::get_shard(std::string user, double max_interval)
     return iter->second;
 }
 
-void ShardManager::update_shard(Shard& shard, std::string user)
+void ShardManager::update_shard(Shard& shard, const std::string& user)
 {
     std::lock_guard<std::mutex> guard(m_lock);
     ShardMap::iterator iter = m_maps.find(user);

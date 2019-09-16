@@ -37,8 +37,10 @@ bool Session::Endpoint::handleError(GWBUF* error, mxs::Endpoint* down, const mxs
 Session::Session(Client* pClient, const SListener& listener)
     : mxs::Session(listener)
     , m_client(*pClient)
-    , m_client_dcb(this, pClient->user(), pClient->host(), pClient)
+    , m_client_dcb(this, pClient->host(), pClient)
 {
+    set_user(pClient->user());
+
     m_state = MXS_SESSION::State::CREATED;
     client_dcb = &m_client_dcb;
 

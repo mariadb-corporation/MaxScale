@@ -42,12 +42,10 @@ public:
      * Constructor
      *
      * @param pSession  The session object of the DCB.
-     * @param zUser     The client of the connection.
      * @param zHost     The host of the connection.
      * @param pHandler  Optional handler.
      */
     Dcb(MXS_SESSION* pSession,
-        const char* zUser,
         const char* zHost,
         Handler* pHandler = NULL);
     ~Dcb();
@@ -126,7 +124,6 @@ private:
     };
 
 private:
-    std::string             m_user;
     std::string             m_host;
     mutable ProtocolSession m_protocol_session;
 };

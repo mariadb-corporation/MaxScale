@@ -89,7 +89,7 @@ bool MAXSCALEDClientProtocol::authenticate_unix_socket(DCB* generic_dcb)
             {
                 dcb_printf(dcb, MAXADMIN_AUTH_SUCCESS_REPLY);
                 m_state = MAXSCALED_STATE_DATA;
-                dcb->m_user = strdup(m_username.c_str());
+                dcb->session()->set_user(m_username);
             }
             else
             {
@@ -206,7 +206,7 @@ void MAXSCALEDClientProtocol::ready_for_reading(DCB* dcb)
                         memcpy(user, GWBUF_DATA(head), len);
                         user[len] = '\0';
                         m_username = user;
-                        dcb->m_user = MXS_STRDUP_A(user);
+                        dcb->session()->set_user(user);
                         m_state = MAXSCALED_STATE_PASSWD;
                         dcb_printf(dcb, MAXADMIN_AUTH_PASSWORD_PROMPT);
                         gwbuf_free(head);

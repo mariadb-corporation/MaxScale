@@ -293,7 +293,7 @@ int MariaDBClientAuthenticator::authenticate(DCB* generic_dcb)
         if (auth_ret == MXS_AUTH_SUCCEEDED)
         {
             auth_ret = MXS_AUTH_SUCCEEDED;
-            dcb->m_user = MXS_STRDUP_A(client_data->user);
+            dcb->session()->set_user(client_data->user);
             /** Send an OK packet to the client */
         }
         else if (dcb->service()->config().log_auth_warnings)

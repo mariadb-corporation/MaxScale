@@ -1959,20 +1959,20 @@ static void free_arg(int arg_type, void* value)
     }
 }
 
-static bool user_is_authorized(DCB* dcb)
+static bool user_is_authorized(MXS_SESSION* session, DCB* dcb)
 {
     bool rval = true;
 
     if (strcmp(dcb->m_remote, "localhost") == 0)
     {
-        if (!admin_user_is_unix_admin(dcb->m_user))
+        if (!admin_user_is_unix_admin(session->user().c_str()))
         {
             rval = false;
         }
     }
     else
     {
-        if (!admin_user_is_inet_admin(dcb->m_user, nullptr))
+        if (!admin_user_is_inet_admin(session->user().c_str(), nullptr))
         {
             rval = false;
         }
@@ -2151,7 +2151,7 @@ int execute_cmd(CLI_SESSION* cli)
                         found = 1;      /**< command and sub-command match */
 
                         if (command_requires_admin_privileges(cmds[i].cmd)
-                            && !user_is_authorized(dcb))
+                            && !user_is_authorized(cli->session, dcb))
                         {
                             dcb_printf(dcb, "Access denied, administrative privileges required.\n");
                             break;

@@ -724,14 +724,14 @@ static int blr_slave_query(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, GWBUF* 
     if (unexpected)
     {
         MXS_ERROR("Unexpected query from '%s'@'%s': %s",
-                  slave->dcb->m_user,
+                  router->session->user().c_str(),
                   slave->dcb->m_remote,
                   query_text);
     }
     else
     {
         MXS_INFO("Unexpected query from '%s'@'%s', possibly a 10.1 slave: %s",
-                 slave->dcb->m_user,
+                 slave->dcb->session()->user().c_str(),
                  slave->dcb->m_remote,
                  query_text);
     }
@@ -3600,7 +3600,7 @@ static int blr_slave_disconnect_server(ROUTER_INSTANCE* router,
                        router->service->name(),
                        sptr->dcb->m_remote,
                        server_id,
-                       slave->dcb->m_user,
+                       router->session->user().c_str(),
                        slave->dcb->m_remote);
 
             /* send server_id with disconnect state to client */
@@ -3714,7 +3714,7 @@ static int blr_slave_disconnect_all(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave
                        router->service->name(),
                        sptr->dcb->m_remote,
                        sptr->serverid,
-                       slave->dcb->m_user,
+                       router->session->user().c_str(),
                        slave->dcb->m_remote);
 
             ptr = GWBUF_DATA(pkt);
@@ -3901,7 +3901,7 @@ static int blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
     MXS_NOTICE("%s: STOP SLAVE executed by %s@%s. Disconnecting from master, "
                "read up to log %s, pos %lu, transaction safe pos %lu",
                router->service->name(),
-               slave->dcb->m_user,
+               router->session->user().c_str(),
                slave->dcb->m_remote,
                router->binlog_name,
                router->current_pos,
@@ -4093,7 +4093,7 @@ static int blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
     MXS_NOTICE("%s: START SLAVE executed by %s@%s. Trying connection to master, "
                "binlog %s, pos %lu, transaction safe pos %lu",
                router->service->name(),
-               slave->dcb->m_user,
+               router->session->user().c_str(),
                slave->dcb->m_remote,
                router->binlog_name,
                router->current_pos,
@@ -6546,7 +6546,7 @@ static bool blr_handle_simple_select_stmt(ROUTER_INSTANCE* router,
         snprintf(user_host,
                  sizeof(user_host),
                  "%s@%s",
-                 slave->dcb->m_user,
+                 router->session->user().c_str(),
                  slave->dcb->m_remote);
 
         blr_slave_send_var_value(router,

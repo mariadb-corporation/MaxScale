@@ -271,7 +271,7 @@ bool ssl_check_data_to_process(DCB* dcb)
  */
 int ssl_authenticate_client(DCB* dcb, bool is_capable)
 {
-    const char* user = dcb->m_user ? dcb->m_user : "";
+    const std::string& user = dcb->session()->user();
     const char* remote = dcb->m_remote ? dcb->m_remote : "";
     const char* service = (dcb->service() && dcb->service()->name()) ? dcb->service()->name() : "";
 
@@ -285,7 +285,7 @@ int ssl_authenticate_client(DCB* dcb, bool is_capable)
     {
         /* Should be SSL, but client is not SSL capable */
         MXS_INFO("User %s@%s connected to service '%s' without SSL when SSL was required.",
-                 user,
+                 user.c_str(),
                  remote,
                  service);
         return SSL_ERROR_CLIENT_NOT_SSL;
@@ -311,7 +311,7 @@ int ssl_authenticate_client(DCB* dcb, bool is_capable)
         if (return_code < 0)
         {
             MXS_INFO("User %s@%s failed to connect to service '%s' with SSL.",
-                     user,
+                     user.c_str(),
                      remote,
                      service);
             return SSL_ERROR_ACCEPT_FAILED;
@@ -321,14 +321,14 @@ int ssl_authenticate_client(DCB* dcb, bool is_capable)
             if (1 == return_code)
             {
                 MXS_INFO("User %s@%s connected to service '%s' with SSL.",
-                         user,
+                         user.c_str(),
                          remote,
                          service);
             }
             else
             {
                 MXS_INFO("User %s@%s connect to service '%s' with SSL in progress.",
-                         user,
+                         user.c_str(),
                          remote,
                          service);
             }
@@ -479,7 +479,7 @@ static bool kill_user_func(DCB* dcb, void* data)
     UserKillInfo* info = (UserKillInfo*)data;
 
     if (dcb->role() == DCB::Role::BACKEND
-        && strcasecmp(dcb->session()->client_dcb->m_user, info->user.c_str()) == 0)
+        && strcasecmp(dcb->session()->user().c_str(), info->user.c_str()) == 0)
     {
         // TODO: Isn't it from the context clear that dcb is a backend dcb, that is
         // TODO: perhaps that could be in the function prototype?
@@ -909,17 +909,9 @@ int MySQLClientProtocol::perform_authentication(DCB* generic_dcb, GWBUF* read_bu
      */
     if (MXS_AUTH_SUCCEEDED == auth_val)
     {
-        if (dcb->m_user == NULL)
-        {
-            /** User authentication complete, copy the username to the DCB */
-            MYSQL_session* ses = (MYSQL_session*)dcb->protocol_data();
-            if ((dcb->m_user = MXS_STRDUP(ses->user)) == NULL)
-            {
-                DCB::close(dcb);
-                gwbuf_free(read_buffer);
-                return 0;
-            }
-        }
+        /** User authentication complete, copy the username to the DCB */
+        MYSQL_session* ses = (MYSQL_session*)dcb->protocol_data();
+        dcb->session()->set_user(ses->user);
 
         protocol->protocol_auth_state = MXS_AUTH_STATE_RESPONSE_SENT;
         /**

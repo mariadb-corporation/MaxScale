@@ -1695,7 +1695,7 @@ static void diagnostics(MXS_ROUTER* router, DCB* dcb)
                        session->dcb->port());
             dcb_printf(dcb,
                        "\t\tUsername:                                %s\n",
-                       session->dcb->m_user);
+                       session->dcb->session()->user().c_str());
             dcb_printf(dcb,
                        "\t\tSlave DCB:                               %p\n",
                        session->dcb);
@@ -2101,7 +2101,7 @@ static json_t* diagnostics_json(const MXS_ROUTER* router)
 
             json_object_set_new(rval, "address", json_string(session->dcb->m_remote));
             json_object_set_new(rval, "port", json_integer(session->dcb->port()));
-            json_object_set_new(rval, "user", json_string(session->dcb->m_user));
+            json_object_set_new(rval, "user", json_string(session->dcb->session()->user().c_str()));
             json_object_set_new(rval, "ssl_enabled", json_boolean(session->dcb->ssl_enabled()));
             json_object_set_new(rval, "state", json_string(blrs_states[session->state]));
             json_object_set_new(rval, "next_sequence", json_integer(session->seqno));

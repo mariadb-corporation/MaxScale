@@ -20,18 +20,15 @@ namespace mock
 {
 
 Dcb::Dcb(MXS_SESSION* pSession,
-         const char* zUser,
          const char* zHost,
          Handler* pHandler)
     : ClientDCB(DCB::FD_CLOSED, DCB::Role::CLIENT, pSession)
-    , m_user(zUser)
     , m_host(zHost)
     , m_protocol_session(pHandler)
 {
     DCB* pDcb = this;
 
     pDcb->m_remote = MXS_STRDUP(zHost);
-    pDcb->m_user = MXS_STRDUP(zUser);
 }
 
 Dcb::~Dcb()

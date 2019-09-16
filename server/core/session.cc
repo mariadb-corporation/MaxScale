@@ -255,9 +255,8 @@ void dprintSession(DCB* dcb, MXS_SESSION* print_session)
         double idle = (mxs_clock() - print_session->client_dcb->last_read());
         idle = idle > 0 ? idle / 10.f : 0;
         dcb_printf(dcb,
-                   "\tClient Address:          %s%s%s\n",
-                   print_session->client_dcb->m_user ? print_session->client_dcb->m_user : "",
-                   print_session->client_dcb->m_user ? "@" : "",
+                   "\tClient Address:          %s@%s\n",
+                   print_session->user().c_str(),
                    print_session->client_dcb->m_remote);
         dcb_printf(dcb,
                    "\tConnected:               %s\n",
@@ -436,7 +435,7 @@ bool mxs_route_reply(mxs::Upstream* up, GWBUF* buffer, DCB* dcb)
  */
 const char* session_get_user(const MXS_SESSION* session)
 {
-    return (session && session->client_dcb) ? session->client_dcb->m_user : NULL;
+    return session ? session->user().c_str() : NULL;
 }
 
 bool dcb_iter_cb(DCB* dcb, void* data)
@@ -602,9 +601,9 @@ json_t* session_json_data(const Session* session, const char* host, bool rdns)
     json_t* attr = json_object();
     json_object_set_new(attr, "state", json_string(session_state_to_string(session->state())));
 
-    if (session->client_dcb->m_user)
+    if (!session->user().empty())
     {
-        json_object_set_new(attr, CN_USER, json_string(session->client_dcb->m_user));
+        json_object_set_new(attr, CN_USER, json_string(session->user().c_str()));
     }
 
     if (session->client_dcb->m_remote)
@@ -1443,7 +1442,7 @@ bool Session::start()
 
         MXS_INFO("Started %s client session [%" PRIu64 "] for '%s' from %s",
                  service->name(), id(),
-                 client_dcb->m_user ? client_dcb->m_user : "<no user>",
+                 !m_user.empty() ? m_user.c_str() : "<no user>",
                  client_dcb->m_remote);
     }
 

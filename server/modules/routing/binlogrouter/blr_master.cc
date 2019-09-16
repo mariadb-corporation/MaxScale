@@ -217,7 +217,6 @@ static void blr_start_master(void* data)
 
     /* Create MySQL Athentication from configured user/passwd */
     router->client->protocol_data_set(CreateMySQLAuthData(router->user, router->password, ""));
-    router->client->m_user = MXS_STRDUP(router->user);
     router->session->client_dcb = router->client;
 
     /* Create a session for dummy client DCB */

@@ -129,10 +129,6 @@ DCB::DCB(int fd, Role role, MXS_SESSION* session, Handler* handler, Manager* man
         {
             m_remote = MXS_STRDUP_A(client->m_remote);
         }
-        if (client->m_user)
-        {
-            m_user = MXS_STRDUP_A(client->m_user);
-        }
     }
 
     if (m_manager)
@@ -166,7 +162,6 @@ DCB::~DCB()
     }
 
     MXS_FREE(m_remote);
-    MXS_FREE(m_user);
     gwbuf_free(m_delayq);
     gwbuf_free(m_writeq);
     gwbuf_free(m_readq);
@@ -1185,10 +1180,6 @@ std::string DCB::diagnostics() const
     {
         ss << "\tConnected to:       " << m_remote << "\n";
     }
-    if (m_user)
-    {
-        ss << "\tUsername:           " << m_user << "\n";
-    }
     if (m_session->listener)
     {
         ss << "\tProtocol:           " << m_session->listener->protocol() << "\n";
@@ -1808,7 +1799,7 @@ int ClientDCB::ssl_handshake()
     }
 
     MXB_AT_DEBUG(const char* remote = m_remote ? m_remote : "");
-    MXB_AT_DEBUG(const char* user = m_user ? m_user : "");
+    MXB_AT_DEBUG(const char* user = "");//m_user ? m_user : "");
 
     int ssl_rval = SSL_accept(m_ssl);
 
@@ -2011,7 +2002,7 @@ void DCB::process_timeouts(int thr)
                     if (idle > timeout)
                     {
                         MXS_WARNING("Timing out '%s'@%s, idle for %.1f seconds",
-                                    dcb->m_user ? dcb->m_user : "<unknown>",
+                                    dcb->session()->user().c_str(),
                                     dcb->m_remote ? dcb->m_remote : "<unknown>",
                                     (float)idle / 10.f);
                         dcb->session()->close_reason = SESSION_CLOSE_TIMEOUT;
@@ -2027,7 +2018,7 @@ void DCB::process_timeouts(int thr)
                     if (idle > dcb->service()->config().net_write_timeout * 10)
                     {
                         MXS_WARNING("network write timed out for '%s'@%s, ",
-                                    dcb->m_user ? dcb->m_user : "<unknown>",
+                                    dcb->session()->user().c_str(),
                                     dcb->m_remote ? dcb->m_remote : "<unknown>");
                         dcb->session()->close_reason = SESSION_CLOSE_TIMEOUT;
                         dcb->trigger_hangup_event();
@@ -2480,14 +2471,14 @@ static int upstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* userda
     if (reason == DCB::Reason::HIGH_WATER)
     {
         MXS_INFO("High water mark hit for '%s'@'%s', not reading data until low water mark is hit",
-                 client_dcb->m_user, client_dcb->m_remote);
+                 client_dcb->session()->user().c_str(), client_dcb->m_remote);
 
         client_dcb->disable_events();
     }
     else if (reason == DCB::Reason::LOW_WATER)
     {
-        MXS_INFO("Low water mark hit for '%s'@'%s', accepting new data", client_dcb->m_user,
-                 client_dcb->m_remote);
+        MXS_INFO("Low water mark hit for '%s'@'%s', accepting new data",
+                 client_dcb->session()->user().c_str(), client_dcb->m_remote);
 
         if (!client_dcb->enable_events())
         {
@@ -2510,7 +2501,8 @@ bool backend_dcb_remove_func(DCB* dcb, void* data)
         BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
         DCB* client_dcb = dcb->session()->client_dcb;
         MXS_INFO("High water mark hit for connection to '%s' from %s'@'%s', not reading data until low water "
-                 "mark is hit", backend_dcb->server()->name(), client_dcb->m_user, client_dcb->m_remote);
+                 "mark is hit", backend_dcb->server()->name(),
+                 client_dcb->session()->user().c_str(), client_dcb->m_remote);
 
         dcb->disable_events();
     }
@@ -2527,7 +2519,8 @@ bool backend_dcb_add_func(DCB* dcb, void* data)
         BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
         DCB* client_dcb = dcb->session()->client_dcb;
         MXS_INFO("Low water mark hit for connection to '%s' from '%s'@'%s', accepting new data",
-                 backend_dcb->server()->name(), client_dcb->m_user, client_dcb->m_remote);
+                 backend_dcb->server()->name(),
+                 client_dcb->session()->user().c_str(), client_dcb->m_remote);
 
         if (!dcb->enable_events())
         {
@@ -2783,14 +2776,6 @@ bool BackendDCB::prepare_for_destruction()
              && m_persistentstart == 0      // Not already in (> 0) or being evicted from (-1) from the pool.
              && m_server)                   // And has a server.
     {
-        /* May be a candidate for persistence, so save user name */
-        const char* user;
-        user = session_get_user(m_session);
-        if (user && strlen(user) && !m_user)
-        {
-            m_user = MXS_STRDUP_A(user);
-        }
-
         if (maybe_add_persistent(this))
         {
             // Added to the pool, so we pretend close from never having been called

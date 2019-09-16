@@ -139,7 +139,7 @@ public:
      * @param shard New version of the shard
      * @param user  The user whose shard this is
      */
-    void update_shard(Shard& shard, std::string user);
+    void update_shard(Shard& shard, const std::string& user);
 
 private:
     mutable std::mutex m_lock;

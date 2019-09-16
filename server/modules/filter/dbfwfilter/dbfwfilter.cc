@@ -1477,7 +1477,7 @@ void DbfwSession::clear_error()
 
 std::string DbfwSession::user() const
 {
-    return m_session->client_dcb->m_user;
+    return m_session->user();
 }
 
 std::string DbfwSession::remote() const

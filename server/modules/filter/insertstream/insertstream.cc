@@ -216,7 +216,7 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
         }
 
         if (my_instance->user
-            && strcmp(session->client_dcb->m_user, my_instance->user) != 0)
+            && strcmp(session->user().c_str(), my_instance->user) != 0)
         {
             my_session->active = false;
         }

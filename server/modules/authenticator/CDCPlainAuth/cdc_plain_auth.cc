@@ -279,7 +279,7 @@ int CDCClientAuthenticator::authenticate(DCB* generic_dcb)
         /* on successful authentication, set user into dcb field */
         if (CDC_STATE_AUTH_OK == auth_ret)
         {
-            dcb->m_user = MXS_STRDUP_A(m_user);
+            dcb->session()->set_user(m_user);
             MXS_INFO("%s: Client [%s] authenticated with user [%s]",
                      dcb->service()->name(),
                      dcb->m_remote != NULL ? dcb->m_remote : "",

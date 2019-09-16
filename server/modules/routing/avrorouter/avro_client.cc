@@ -498,7 +498,7 @@ bool AvroSession::seek_to_gtid()
                                  gtid.domain,
                                  gtid.server_id,
                                  gtid.seq,
-                                 dcb->m_user,
+                                 dcb->session()->user().c_str(),
                                  dcb->m_remote);
                         seeking = false;
                     }
@@ -649,7 +649,7 @@ void AvroSession::rotate_avro_file(std::string fullname)
     else
     {
         MXS_INFO("Rotated '%s'@'%s' to file: %s",
-                 dcb->m_user,
+                 dcb->session()->user().c_str(),
                  dcb->m_remote,
                  fullname.c_str());
     }

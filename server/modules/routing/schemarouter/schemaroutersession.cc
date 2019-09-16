@@ -45,7 +45,7 @@ SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session,
     , m_backends(std::move(backends))
     , m_config(router->m_config)
     , m_router(router)
-    , m_shard(m_router->m_shard_manager.get_shard(m_client->m_user, m_config->refresh_min_interval))
+    , m_shard(m_router->m_shard_manager.get_shard(session->user(), m_config->refresh_min_interval))
     , m_state(0)
     , m_sent_sescmd(0)
     , m_replied_sescmd(0)
@@ -628,7 +628,7 @@ bool SchemaRouterSession::handleError(GWBUF* pMessage, mxs::Endpoint* pProblem, 
 void SchemaRouterSession::synchronize_shards()
 {
     m_router->m_stats.shmap_cache_miss++;
-    m_router->m_shard_manager.update_shard(m_shard, m_client->m_user);
+    m_router->m_shard_manager.update_shard(m_shard, m_client->session()->user());
 }
 
 /**
@@ -1233,7 +1233,7 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SRBackend* bref
                               data,
                               target->name(),
                               duplicate->name(),
-                              m_client->m_user,
+                              m_client->session()->user().c_str(),
                               m_client->m_remote);
                 }
                 else if (m_config->preferred_server == target)

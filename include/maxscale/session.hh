@@ -180,6 +180,16 @@ struct MXS_SESSION
         return m_id;
     }
 
+    const std::string& user() const
+    {
+        return m_user;
+    }
+
+    void set_user(const std::string& user)
+    {
+        m_user = user;
+    }
+
     /**
      * Abruptly stop the session
      *
@@ -193,13 +203,14 @@ struct MXS_SESSION
     std::string user_and_host() const
     {
         std::ostringstream ss;
-        ss << "'" << client_dcb->m_user << "'@'" << client_dcb->m_remote << "'";
+        ss << "'" << m_user << "'@'" << client_dcb->m_remote << "'";
         return ss.str();
     }
 
 protected:
-    State    m_state;                   /**< Current descriptor state */
-    uint64_t m_id;                      /**< Unique session identifier */
+    State       m_state;                   /**< Current descriptor state */
+    uint64_t    m_id;                      /**< Unique session identifier */
+    std::string m_user;                    /**< The session user. */
 
 public:
 

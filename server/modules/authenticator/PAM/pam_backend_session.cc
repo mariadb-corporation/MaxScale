@@ -188,7 +188,7 @@ bool PamBackendAuthenticator::extract(DCB* dcb, GWBUF* buffer)
     {
         m_servername = srv_name;
         auto client_dcb = dcb->session()->client_dcb;
-        m_clienthost = client_dcb->m_user + (std::string)"@" + client_dcb->m_remote;
+        m_clienthost = client_dcb->session()->user() + (std::string)"@" + client_dcb->m_remote;
     }
 
     // Smallest buffer that is parsed, header + (cmd-byte/msg-type + message).
@@ -292,7 +292,8 @@ bool PamBackendAuthenticator::extract(DCB* dcb, GWBUF* buffer)
 
     if (unexpected_data)
     {
-        MXS_ERROR("Failed to read data from '%s' when authenticating user '%s'.", srv_name, dcb->m_user);
+        MXS_ERROR("Failed to read data from '%s' when authenticating user '%s'.",
+                  srv_name, dcb->session()->user().c_str());
     }
     return success;
 }
