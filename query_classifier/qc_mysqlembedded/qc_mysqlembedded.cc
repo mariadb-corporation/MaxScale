@@ -1665,26 +1665,30 @@ int32_t qc_mysql_query_has_clause(GWBUF* buf, int32_t* has_clause)
 
             if (lex)
             {
+                int cmd = lex->sql_command;
+
                 if (!lex->describe
-                    && !is_show_command(lex->sql_command)
-                    && (lex->sql_command != SQLCOM_ALTER_PROCEDURE)
-                    && (lex->sql_command != SQLCOM_ALTER_TABLE)
-                    && (lex->sql_command != SQLCOM_CALL)
-                    && (lex->sql_command != SQLCOM_CREATE_PROCEDURE)
-                    && (lex->sql_command != SQLCOM_CREATE_TABLE)
-                    && (lex->sql_command != SQLCOM_DROP_FUNCTION)
-                    && (lex->sql_command != SQLCOM_DROP_PROCEDURE)
-                    && (lex->sql_command != SQLCOM_DROP_TABLE)
-                    && (lex->sql_command != SQLCOM_DROP_VIEW)
-                    && (lex->sql_command != SQLCOM_FLUSH)
-                    && (lex->sql_command != SQLCOM_ROLLBACK)
+                    && !is_show_command(cmd)
+                    && (cmd != SQLCOM_ALTER_PROCEDURE)
+                    && (cmd != SQLCOM_ALTER_TABLE)
+                    && (cmd != SQLCOM_CALL)
+                    && (cmd != SQLCOM_CREATE_PROCEDURE)
+                    && (cmd != SQLCOM_CREATE_TABLE)
+                    && (cmd != SQLCOM_DROP_FUNCTION)
+                    && (cmd != SQLCOM_DROP_PROCEDURE)
+                    && (cmd != SQLCOM_DROP_TABLE)
+                    && (cmd != SQLCOM_DROP_VIEW)
+                    && (cmd != SQLCOM_FLUSH)
+                    && (cmd != SQLCOM_ROLLBACK)
                     )
                 {
                     SELECT_LEX* current = lex->all_selects_list;
 
                     while (current && !*has_clause)
                     {
-                        if (current->where || current->having || current->select_limit)
+                        if (current->where || current->having ||
+                            ((cmd == SQLCOM_SELECT || cmd == SQLCOM_DELETE || cmd == SQLCOM_UPDATE)
+                             && current->select_limit))
                         {
                             *has_clause = true;
                         }
