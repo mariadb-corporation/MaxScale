@@ -1904,6 +1904,11 @@ bool runtime_create_server_from_json(json_t* json)
             config_add_defaults(&params, common_server_params());
             params.set_multiple(extract_parameters_from_json(json));
 
+            if (params.contains_any({CN_SSL_KEY, CN_SSL_CERT, CN_SSL_CA_CERT}))
+            {
+                params.set(CN_SSL, "true");
+            }
+
             if (Server* server = ServerManager::create_server(name, params))
             {
                 if (link_target_to_objects(server->name(), relations) && server->serialize())
