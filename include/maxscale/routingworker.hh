@@ -742,25 +742,35 @@ public:
     /**
      * Assign a value
      *
-     * Sets the master value and triggers an update on all workers. The value is updated instantly
-     * if the calling thread is a worker thread.
+     * Sets the master value and triggers an update on all workers. The value will be updated on all worker
+     * threads once the function returns.
+     *
+     * This function can only be called from one thread at a time (currently mxs::RoutingWorker::MAIN) as it
+     * will wait for the other routing workers to apply the update.
      *
      * @param t The new value to assign
      */
     void assign(const T& t)
     {
+        mxb_assert_message(RoutingWorker::get_current() == RoutingWorker::get(RoutingWorker::MAIN),
+                           "this method must be called from the main worker thread");
+
+        // Update the value of the master copy
         std::unique_lock<std::mutex> guard(m_lock);
         m_value = t;
         guard.unlock();
 
-        // Update the value on all workers
-        mxs_rworker_broadcast(update_value, this);
+        // Update the local value of all workers from the master copy
+        mxs::RoutingWorker::execute_concurrently(
+            [this]() {
+                update_local_value();
+            });
     }
 
     /**
      * Get all local values
      *
-     * Note: this method must be called from the main worker thread.
+     * Note: This method must only be called from one thread at a time.
      *
      * @return A vector containing the individual values for each worker
      */
@@ -770,16 +780,13 @@ public:
                            "this method must be called from the main worker thread");
         std::vector<T> rval;
         std::mutex lock;
-        mxb::Semaphore sem;
 
-        auto n = RoutingWorker::broadcast([&]() {
-                                              std::lock_guard<std::mutex> guard(lock);
-                                              rval.push_back(*get_local_value());
-                                          },
-                                          &sem,
-                                          RoutingWorker::EXECUTE_AUTO);
+        mxs::RoutingWorker::execute_concurrently(
+            [&]() {
+                std::lock_guard<std::mutex> guard(lock);
+                rval.push_back(*get_local_value());
+            });
 
-        sem.wait_n(n);
         return rval;
     }
 
@@ -819,11 +826,6 @@ private:
 
         std::lock_guard<std::mutex> guard(m_lock);
         *my_value = m_value;
-    }
-
-    static void update_value(void* data)
-    {
-        static_cast<rworker_local<T>*>(data)->update_local_value();
     }
 
     static void destroy_value(void* data)
