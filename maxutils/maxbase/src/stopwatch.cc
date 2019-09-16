@@ -17,6 +17,7 @@
 #include <iostream>
 #include <sstream>
 #include <ctime>
+#include <thread>
 
 namespace maxbase
 {
@@ -45,6 +46,42 @@ Duration StopWatch::restart()
     Duration split = now - m_start;
     m_start = m_lap = now;
     return split;
+}
+
+Timer::Timer(Duration tick_duration)
+    : m_dur(tick_duration)
+{
+}
+
+int64_t Timer::alarm() const
+{
+    auto total_ticks = (Clock::now() - m_start) / m_dur;
+    int64_t ticks = total_ticks - m_last_alarm_ticks;
+    m_last_alarm_ticks += ticks;
+
+    return ticks;
+}
+
+int64_t Timer::wait_alarm() const
+{
+    auto now = Clock::now();
+    auto total_ticks = (now - m_start) / m_dur;
+    int64_t ticks = total_ticks - m_last_alarm_ticks;
+
+    if (!ticks)
+    {
+        Duration d = (total_ticks + 1) * m_dur - (now - m_start);
+        std::this_thread::sleep_for(d);
+    }
+
+    // This while loop is for the case when sleep_for() returns too early (clock resolution, rouding error).
+    // Hypothetical, could not get this to trigger in testing.
+    while ((ticks = alarm()) == 0)
+    {
+        std::this_thread::sleep_for(std::chrono::microseconds(1));
+    }
+
+    return ticks;
 }
 
 IntervalTimer::IntervalTimer()

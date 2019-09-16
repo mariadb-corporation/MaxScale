@@ -30,7 +30,7 @@ using Clock = std::chrono::steady_clock;
 /**
  *  @class Duration
  *
- *  Duration behaves exactly like Clock::duration, but adds ADL and, a
+ *  Duration behaves exactly like Clock::duration, but adds ADL and a
  *  conveniece constructor and function secs() for seconds as a double.
  */
 struct Duration : public Clock::duration
@@ -101,6 +101,42 @@ public:
 private:
     TimePoint m_start;
     TimePoint m_lap;
+};
+
+/**
+ *  @class Timer
+ *
+ * This class is primarily meant for doing something periodically, e.g. output something every 5 seconds.
+ */
+class Timer
+{
+public:
+    /** Tick_duration determines the timer frequency. To reset the Timer, or change the tick, just
+     *  assign my_timer = Timer(std::chrono::seconds(5)).
+     */
+    Timer(Duration tick_duration);
+
+    /** Returns the number of ticks since the last alarm point. If called continuously, a Timer will
+     *  return '1' at tick_duration rate. If the Timer is not called for some time, it returns the
+     *  number of ticks since the last alarm point, i.e. it returns 1 + number_of_missed_ticks.
+     */
+    int64_t alarm() const;
+
+    /** Same as alarm(), but sleeps until the next alarm if it has not already happened.
+     */
+    int64_t wait_alarm() const;
+
+    /** The duration of tick(s). Calling my_timer.tick_duration(my_timer.alarm()) can be handy when
+     *  a duration, rather than ticks is needed.
+     */
+    Duration tick_duration(int64_t ticks = 1) const
+    {
+        return m_dur * ticks;
+    }
+private:
+    const Duration  m_dur;
+    const TimePoint m_start = Clock::now();
+    mutable int64_t m_last_alarm_ticks = 0;
 };
 
 /** IntervalTimer for accumulating intervals (i.e. durations). Do not expect many very short
