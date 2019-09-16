@@ -152,6 +152,11 @@ Listener::Listener(SERVICE* service,
     }
 }
 
+Listener::~Listener()
+{
+    MXS_INFO("Destroying '%s'", m_name.c_str());
+}
+
 SListener Listener::create(const std::string& name,
                            const std::string& protocol,
                            const MXS_CONFIG_PARAMETER& params)
@@ -198,7 +203,7 @@ SListener Listener::create(const std::string& name,
         else
         {
             MXS_ERROR("'%s' is not a valid value for '%s'. Allowed values are 'DEFAULT' and 'ORACLE'.",
-                    sql_mode_str.c_str(), CN_SQL_MODE);
+                      sql_mode_str.c_str(), CN_SQL_MODE);
             return nullptr;
         }
     }
@@ -278,7 +283,7 @@ SListener Listener::create(const std::string& name,
         }
     }
     const char* zauth = authenticator.c_str();
-    const MXS_MODULE* auth_mod = get_module(zauth, MODULE_AUTHENTICATOR); // TODO:cleanup
+    const MXS_MODULE* auth_mod = get_module(zauth, MODULE_AUTHENTICATOR);   // TODO:cleanup
     std::unique_ptr<mxs::AuthenticatorModule> auth_instance;
     if (auth_mod)
     {
@@ -305,10 +310,10 @@ SListener Listener::create(const std::string& name,
     }
 
     SListener listener(new(std::nothrow) Listener(
-            service, name, address, port,
-            protocol, std::move(protocol_module),
-            zauth, authenticator_options, std::move(auth_instance),
-            std::move(ssl_info), params, sql_mode));
+                           service, name, address, port,
+                           protocol, std::move(protocol_module),
+                           zauth, authenticator_options, std::move(auth_instance),
+                           std::move(ssl_info), params, sql_mode));
 
     if (listener)
     {

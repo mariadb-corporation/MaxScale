@@ -278,6 +278,8 @@ Service::~Service()
     auto it = std::remove(this_unit.services.begin(), this_unit.services.end(), this);
     mxb_assert(it != this_unit.services.end());
     this_unit.services.erase(it);
+
+    MXS_INFO("Destroying '%s'", name());
 }
 
 // static

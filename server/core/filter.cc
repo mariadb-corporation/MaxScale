@@ -120,6 +120,8 @@ FilterDef::~FilterDef()
     {
         obj->destroyInstance(filter);
     }
+
+    MXS_INFO("Destroying '%s'", name.c_str());
 }
 
 /**

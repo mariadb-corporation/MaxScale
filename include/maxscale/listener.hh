@@ -46,6 +46,8 @@ public:
         MAIN_WORKER,    // Listener that always moves the execution to the main worker
     };
 
+    ~Listener();
+
     /**
      * Create a new listener
      *
@@ -169,7 +171,7 @@ public:
     void mark_auth_as_failed(const std::string& remote);
 
     // Functions that are temporarily public
-    bool          create_listener_config(const char* filename);
+    bool create_listener_config(const char* filename);
 
     const mxs::SSLProvider& ssl() const
     {
@@ -204,8 +206,8 @@ private:
     std::string m_authenticator;    /**< Name of authenticator */
     std::string m_auth_options;     /**< Authenticator options */
 
-    std::unique_ptr<mxs::ProtocolModule>      m_proto_module;  /**< Protocol module */
-    std::unique_ptr<mxs::AuthenticatorModule> m_auth_module;   /**< Authenticator module */
+    std::unique_ptr<mxs::ProtocolModule>      m_proto_module;   /**< Protocol module */
+    std::unique_ptr<mxs::AuthenticatorModule> m_auth_module;    /**< Authenticator module */
 
     SERVICE*             m_service;         /**< The service which used by this listener */
     MXS_CONFIG_PARAMETER m_params;          /**< Configuration parameters */
