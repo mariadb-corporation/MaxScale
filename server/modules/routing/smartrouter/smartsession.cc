@@ -15,7 +15,7 @@
 #include "performance.hh"
 
 #include <maxscale/modutil.hh>
-#include <maxsql/mysql_plus.hh>
+#include <maxscale/mysql_plus.hh>
 
 // COPY-PASTED error-extraction functions from rwsplit. TODO move to lib.
 inline void extract_error_state(uint8_t* pBuffer, uint8_t** ppState, uint16_t* pnState)

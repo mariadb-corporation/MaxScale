@@ -1,6 +1,5 @@
 add_library(maxsql STATIC
   mariadb.cc
-  packet_tracker.cc
   queryresult.cc
   )
 
