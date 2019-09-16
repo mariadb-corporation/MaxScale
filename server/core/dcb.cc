@@ -1749,25 +1749,25 @@ int dcb_count_by_role(DCB::Role role)
  * This function creates the SSL structure for the given SSL context.
  * This context should be the context of the service.
  * @param       dcb
- * @return      -1 on error, 0 otherwise.
+ * @return      True on success, false on error.
  */
-int DCB::create_SSL(mxs::SSLContext* ssl)
+bool DCB::create_SSL(mxs::SSLContext* ssl)
 {
     m_ssl = ssl->open();
 
     if (!m_ssl)
     {
         MXS_ERROR("Failed to initialize SSL for connection.");
-        return -1;
+        return false;
     }
 
     if (SSL_set_fd(m_ssl, m_fd) == 0)
     {
         MXS_ERROR("Failed to set file descriptor for SSL connection.");
-        return -1;
+        return false;
     }
 
-    return 0;
+    return true;
 }
 
 MXS_PROTOCOL_SESSION* ClientDCB::protocol_session() const
@@ -1789,7 +1789,7 @@ MXS_PROTOCOL_SESSION* ClientDCB::protocol_session() const
 int ClientDCB::ssl_handshake()
 {
     if (!m_session->listener->ssl().context()
-        || (!m_ssl && create_SSL(m_session->listener->ssl().context()) != 0))
+        || (!m_ssl && !create_SSL(m_session->listener->ssl().context())))
     {
         return -1;
     }
@@ -1872,7 +1872,7 @@ int BackendDCB::ssl_handshake()
     int return_code;
 
     if ((NULL == m_server || NULL == m_server->ssl().context())
-        || (NULL == m_ssl && create_SSL(m_server->ssl().context()) != 0))
+        || (NULL == m_ssl && !create_SSL(m_server->ssl().context())))
     {
         mxb_assert((NULL != m_server) && (NULL != m_server->ssl().context()));
         return -1;

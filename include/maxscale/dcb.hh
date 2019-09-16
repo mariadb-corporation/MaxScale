@@ -484,7 +484,7 @@ protected:
         Handler* handler,
         Manager* manager);
 
-    int create_SSL(mxs::SSLContext* ssl);
+    bool create_SSL(mxs::SSLContext* ssl);
 
     static void destroy(DCB* dcb)
     {
