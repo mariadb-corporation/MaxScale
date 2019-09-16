@@ -324,9 +324,6 @@ add_test_executable(bug626.cpp bug626 replication LABELS MySQLAuth MySQLProtocol
 # Crash when host name for some user in mysql.user is very long
 add_test_executable(bug653.cpp bug653 replication LABELS MySQLAuth MySQLProtocol REPL_BACKEND)
 
-# Crash with malformed Maxadmin command
-add_test_executable(bug654.cpp bug654 replication LABELS maxscale REPL_BACKEND)
-
 # Block backends (master or all slaves) and tries to connect Maxscale
 add_test_executable(bug658.cpp bug658 replication LABELS readwritesplit readconnroute maxscale REPL_BACKEND)
 
@@ -335,9 +332,6 @@ add_test_executable(bug662.cpp bug662 bug662 LABELS readwritesplit readconnroute
 
 # Bad TEE filter configuration
 add_test_executable(bug664.cpp bug664 bug664 LABELS MySQLAuth MySQLProtocol REPL_BACKEND)
-
-# Regression case for the bug "MaxScale crashes if "Users table data" is empty and "show dbusers" is executed in maxadmin"
-add_test_executable(bug673.cpp bug673 bug673 LABELS MySQLAuth REPL_BACKEND)
 
 # Wrong processing of 'SET GLOBAL sql_mode="ANSI"'
 add_test_executable(bug705.cpp bug705 bug705 LABELS MySQLAuth REPL_BACKEND)
