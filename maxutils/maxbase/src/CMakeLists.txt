@@ -19,6 +19,7 @@ add_library(maxbase STATIC
   random.cc
   host.cc
   shareddata.cc
+  pretty_print.cc
   )
 
 if(HAVE_SYSTEMD)
