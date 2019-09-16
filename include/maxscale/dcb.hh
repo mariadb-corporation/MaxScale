@@ -737,7 +737,7 @@ private:
     static void hangup_cb(MXB_WORKER* worker, const SERVER* server);
 
 
-    SERVER* m_server;                   /**< The associated backend server */
+    SERVER* const m_server;             /**< The associated backend server */
     time_t  m_persistentstart = 0;      /**<    0: Not in the persistent pool.
                                          *      -1: Evicted from the persistent pool and being closed.
                                          *   non-0: Time when placed in the persistent pool.

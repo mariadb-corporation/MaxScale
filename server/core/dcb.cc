@@ -1094,8 +1094,6 @@ std::string BackendDCB::diagnostics() const
 {
     std::stringstream ss(DCB::diagnostics());
 
-    mxb_assert(m_server);
-
     if (m_server->address)
     {
         ss << "\tServer name/IP:     " << m_server->address << "\n";
@@ -1658,7 +1656,7 @@ void BackendDCB::hangup(const SERVER* server)
 int BackendDCB::persistent_clean_count(BackendDCB* dcb, int id, bool cleanall)
 {
     int count = 0;
-    if (dcb && dcb->m_server)
+    if (dcb)
     {
         Server* server = static_cast<Server*>(dcb->m_server);
         BackendDCB* previousdcb = NULL;
@@ -1672,7 +1670,6 @@ int BackendDCB::persistent_clean_count(BackendDCB* dcb, int id, bool cleanall)
             if (cleanall
                 || persistentdcb->m_hanged_up
                 || count >= server->persistpoolmax()
-                || persistentdcb->m_server == NULL
                 || !(persistentdcb->m_server->status() & SERVER_RUNNING)
                 || (time(NULL) - persistentdcb->m_persistentstart) > server->persistmaxtime())
             {
@@ -1871,10 +1868,9 @@ int BackendDCB::ssl_handshake()
     int ssl_rval;
     int return_code;
 
-    if ((NULL == m_server || NULL == m_server->ssl().context())
-        || (NULL == m_ssl && !create_SSL(m_server->ssl().context())))
+    if (!m_server->ssl().context() || (!m_ssl && !create_SSL(m_server->ssl().context())))
     {
-        mxb_assert((NULL != m_server) && (NULL != m_server->ssl().context()));
+        mxb_assert(m_server->ssl().context());
         return -1;
     }
     m_ssl_state = SSLState::HANDSHAKE_REQUIRED;
@@ -2729,6 +2725,8 @@ BackendDCB::BackendDCB(SERVER* server, int fd, MXS_SESSION* session,
     , m_authenticator(std::move(authenticator))
     , m_server(server)
 {
+    mxb_assert(m_server);
+
     if (DCB_THROTTLING_ENABLED(this))
     {
         // Register upstream throttling callbacks
@@ -2774,8 +2772,7 @@ bool BackendDCB::prepare_for_destruction()
         prepared = false;
     }
     else if (m_state == State::POLLING      // Being polled
-             && m_persistentstart == 0      // Not already in (> 0) or being evicted from (-1) from the pool.
-             && m_server)                   // And has a server.
+             && m_persistentstart == 0)      // Not already in (> 0) or being evicted from (-1) from the pool.
     {
         if (maybe_add_persistent(this))
         {
