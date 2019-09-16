@@ -1893,6 +1893,11 @@ bool runtime_create_server_from_json(json_t* json)
             {
                 params.set_multiple(extract_parameters_from_json(json));
 
+                if (params.contains_any({CN_SSL_KEY, CN_SSL_CERT, CN_SSL_CA_CERT}))
+                {
+                    params.set(CN_SSL, "true");
+                }
+
                 if (Server* server = Server::server_alloc(name, params))
                 {
                     if (link_server_to_objects(server, relations) && server->serialize())

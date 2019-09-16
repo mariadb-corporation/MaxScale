@@ -135,6 +135,8 @@ extern void maxscaleUse(Parse*, Token*);
 extern void maxscale_update_function_info(const char* name, const Expr* pExpr);
 extern void maxscale_set_type_mask(unsigned int type_mask);
 
+static Expr* maxscale_create_pseudo_limit(Parse* pParse, Token* pToken, ExprSpan* pLimit);
+
 // Exposed utility functions
 void exposed_sqlite3ExprDelete(sqlite3 *db, Expr *pExpr)
 {
@@ -1528,12 +1530,14 @@ cmd ::= with(C) DELETE FROM fullname(X) indexed_opt(I) where_opt(W)
   sqlite3WithPush(pParse, C, 1);
   sqlite3SrcListIndexedBy(pParse, X, &I);
 #ifdef MAXSCALE
-  // We are not interested in the order by or limit information.
-  // Thus we simply delete it. sqlite also has some limitations, which
-  // will not bother us if we hide the information from it.
-  sqlite3ExprListDelete(pParse->db, O);
-  sqlite3ExprDelete(pParse->db, L.pLimit);
-  sqlite3ExprDelete(pParse->db, L.pOffset);
+  Token token;
+  ExprSpan limit;
+  if (O && !L.pLimit) {
+    L.pLimit = maxscale_create_pseudo_limit(pParse, &token, &limit);
+    sqlite3ExprDelete(pParse->db, L.pOffset);
+    L.pOffset = 0;
+  }
+  W = sqlite3LimitWhere(pParse, X, W, O, L.pLimit, L.pOffset, "DELETE");
   mxs_sqlite3DeleteFrom(pParse,X,W,0);
 #else
   W = sqlite3LimitWhere(pParse, X, W, O, L.pLimit, L.pOffset, "DELETE");
@@ -1690,12 +1694,15 @@ cmd ::= with(C) UPDATE orconf(R) fullname(X) indexed_opt(I) SET setlist(Y)
   sqlite3SrcListIndexedBy(pParse, X, &I);
   sqlite3ExprListCheckLength(pParse,Y,"set list"); 
 #ifdef MAXSCALE
-  // We are not interested in the order by or limit information.
-  // Thus we simply delete it. sqlite also has some limitations, which
-  // will not bother us if we hide the information from it.
-  sqlite3ExprListDelete(pParse->db, O);
-  sqlite3ExprDelete(pParse->db, L.pLimit);
-  sqlite3ExprDelete(pParse->db, L.pOffset);
+  Token token;
+  ExprSpan limit;
+  if (O && !L.pLimit) {
+    L.pLimit = maxscale_create_pseudo_limit(pParse, &token, &limit);
+    sqlite3ExprDelete(pParse->db, L.pOffset);
+    L.pOffset = 0;
+  }
+
+  W = sqlite3LimitWhere(pParse, X, W, O, L.pLimit, L.pOffset, "UPDATE");
   mxs_sqlite3Update(pParse,X,Y,W,R);
 #else
   W = sqlite3LimitWhere(pParse, X, W, O, L.pLimit, L.pOffset, "UPDATE");
@@ -3525,3 +3532,21 @@ cmd ::= DECLARE. {
 }
 
 %endif
+
+%include {
+
+static Expr* maxscale_create_pseudo_limit(Parse* pParse, Token* pToken, ExprSpan* pLimit)
+{
+    // sqlite3 does not accept a ORDER BY without LIMIT, but MariaDB
+    // does. Thus, to make sqlite3LimitWhere return non-NULL we need
+    // to inject a LIMIT if there is none. We use a value of -1 to
+    // tell update_field_infos_from_select() that this LIMIT should
+    // not be counted as a limiting clause.
+    static char one[] = "-1";
+    pToken->z = one;
+    pToken->n = 1;
+    spanExpr(pLimit, pParse, TK_INTEGER, pToken);
+    return pLimit->pExpr;
+}
+
+}

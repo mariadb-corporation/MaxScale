@@ -25,6 +25,10 @@ SELECT IS_USED_LOCK('lock1');
 SELECT RELEASE_LOCK('lock1');
 deallocate prepare select_stmt;
 SELECT a FROM tbl FOR UPDATE;
-SELECT a INTO OUTFILE 'out.txt'
-SELECT a INTO DUMPFILE 'dump.txt'
+SELECT a INTO OUTFILE 'out.txt';
+SELECT a INTO DUMPFILE 'dump.txt';
 SELECT a INTO @var;
+select timediff(cast('2004-12-30 12:00:00' as time), '12:00:00');
+(select 1 as a from t1) union all (select 1 from dual) limit 1;
+SET @saved_cs_client= @@character_set_client;
+SELECT 1 AS c1 FROM t1 ORDER BY ( SELECT 1 AS c2 FROM t1 GROUP BY GREATEST(LAST_INSERT_ID(), t1.a) ORDER BY GREATEST(LAST_INSERT_ID(), t1.a) LIMIT 1);
