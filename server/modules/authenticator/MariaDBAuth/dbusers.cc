@@ -375,8 +375,8 @@ int MariaDBClientAuthenticator::validate_mysql_user(DCB* dcb, MYSQL_session* ses
         mysqlauth_validate_user_query_lower : mysqlauth_validate_user_query;
     size_t len = snprintf(NULL, 0, validate_query,
                           session->user,
-                          dcb->m_remote,
-                          dcb->m_remote,
+                          dcb->remote().c_str(),
+                          dcb->remote().c_str(),
                           session->db,
                           session->db);
     char sql[len + 1];
@@ -392,8 +392,8 @@ int MariaDBClientAuthenticator::validate_mysql_user(DCB* dcb, MYSQL_session* ses
         sprintf(sql,
                 validate_query,
                 session->user,
-                dcb->m_remote,
-                dcb->m_remote,
+                dcb->remote().c_str(),
+                dcb->remote().c_str(),
                 session->db,
                 session->db);
     }
@@ -407,9 +407,9 @@ int MariaDBClientAuthenticator::validate_mysql_user(DCB* dcb, MYSQL_session* ses
     }
 
     /** Check for IPv6 mapped IPv4 address */
-    if (!res.ok && strchr(dcb->m_remote, ':') && strchr(dcb->m_remote, '.'))
+    if (!res.ok && strchr(dcb->remote().c_str(), ':') && strchr(dcb->remote().c_str(), '.'))
     {
-        const char* ipv4 = strrchr(dcb->m_remote, ':') + 1;
+        const char* ipv4 = strrchr(dcb->remote().c_str(), ':') + 1;
         sprintf(sql,
                 validate_query,
                 session->user,
@@ -995,10 +995,10 @@ static bool get_hostname(DCB* dcb, char* client_hostname, size_t size)
     hint.ai_flags = AI_ALL;
     int rc;
 
-    if ((rc = getaddrinfo(dcb->m_remote, NULL, &hint, &ai)) != 0)
+    if ((rc = getaddrinfo(dcb->remote().c_str(), NULL, &hint, &ai)) != 0)
     {
         MXS_ERROR("Failed to obtain address for host %s, %s",
-                  dcb->m_remote,
+                  dcb->remote().c_str(),
                   gai_strerror(rc));
         return false;
     }
@@ -1018,7 +1018,7 @@ static bool get_hostname(DCB* dcb, char* client_hostname, size_t size)
     if (lookup_result != 0 && lookup_result != EAI_NONAME)
     {
         MXS_WARNING("Client hostname lookup failed for '%s', getnameinfo() returned: '%s'.",
-                    dcb->m_remote,
+                    dcb->remote().c_str(),
                     gai_strerror(lookup_result));
     }
 

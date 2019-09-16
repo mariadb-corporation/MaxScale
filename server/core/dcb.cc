@@ -110,8 +110,14 @@ static MXB_WORKER* get_dcb_owner()
     return RoutingWorker::get_current();
 }
 
-DCB::DCB(int fd, Role role, MXS_SESSION* session, Handler* handler, Manager* manager)
+DCB::DCB(int fd,
+         const std::string& remote,
+         Role role,
+         MXS_SESSION* session,
+         Handler* handler,
+         Manager* manager)
     : MXB_POLL_DATA{&DCB::poll_handler, get_dcb_owner()}
+    , m_remote(remote)
     , m_uid(this_unit.uid_generator.fetch_add(1, std::memory_order_relaxed))
     , m_high_water(config_writeq_high_water())
     , m_low_water(config_writeq_low_water())
@@ -123,14 +129,6 @@ DCB::DCB(int fd, Role role, MXS_SESSION* session, Handler* handler, Manager* man
     , m_role(role)
     , m_manager(manager)
 {
-    if (DCB* client = session->client_dcb)
-    {
-        if (client->m_remote)
-        {
-            m_remote = MXS_STRDUP_A(client->m_remote);
-        }
-    }
-
     if (m_manager)
     {
         m_manager->add(this);
@@ -161,7 +159,6 @@ DCB::~DCB()
         SSL_free(m_ssl);
     }
 
-    MXS_FREE(m_remote);
     gwbuf_free(m_delayq);
     gwbuf_free(m_writeq);
     gwbuf_free(m_readq);
@@ -170,13 +167,14 @@ DCB::~DCB()
 }
 
 ClientDCB* ClientDCB::create(int fd,
+                             const std::string& remote,
                              const sockaddr_storage& ip,
                              MXS_SESSION* session,
                              std::unique_ptr<ClientProtocol> protocol,
                              std::unique_ptr<ClientAuthenticator> authenticator,
                              DCB::Manager* manager)
 {
-    ClientDCB* dcb = new(std::nothrow) ClientDCB(fd, ip, session,
+    ClientDCB* dcb = new(std::nothrow) ClientDCB(fd, remote, ip, session,
                                                  std::move(protocol), std::move(authenticator),
                                                  manager);
     if (!dcb)
@@ -1176,10 +1174,9 @@ std::string DCB::diagnostics() const
     {
         ss << "\tService:            " << m_session->service->name() << "\n";
     }
-    if (m_remote)
-    {
-        ss << "\tConnected to:       " << m_remote << "\n";
-    }
+
+    ss << "\tConnected to:       " << m_remote << "\n";
+
     if (m_session->listener)
     {
         ss << "\tProtocol:           " << m_session->listener->protocol() << "\n";
@@ -1267,8 +1264,8 @@ static bool dlist_dcbs_cb(DCB* dcb, void* data)
                " %-16p | %-26s | %-18s | %s\n",
                dcb,
                mxs::to_string(dcb->state()),
-               ((dcb->session() && dcb->session()->service) ? dcb->session()->service->name() : ""),
-               (dcb->m_remote ? dcb->m_remote : ""));
+               dcb->session()->service->name(),
+               dcb->remote().c_str());
     return true;
 }
 
@@ -1300,10 +1297,9 @@ static bool dlist_clients_cb(DCB* dcb, void* data)
     {
         dcb_printf(pdcb,
                    " %-15s | %16p | %-20s | %10p\n",
-                   (dcb->m_remote ? dcb->m_remote : ""),
+                   dcb->remote().c_str(),
                    dcb,
-                   (dcb->session()->service ?
-                    dcb->session()->service->name() : ""),
+                   dcb->session()->service->name(),
                    dcb->session());
     }
 
@@ -1458,7 +1454,7 @@ int DCB::socket_write(GWBUF* writeq, bool* stop_writing)
         {
             MXS_ERROR("Write to %s %s in state %s failed: %d, %s",
                       mxs::to_string(m_role),
-                      m_remote,
+                      m_remote.c_str(),
                       mxs::to_string(m_state),
                       saved_errno,
                       mxs_strerror(saved_errno));
@@ -1798,36 +1794,36 @@ int ClientDCB::ssl_handshake()
         return -1;
     }
 
-    MXB_AT_DEBUG(const char* remote = m_remote ? m_remote : "");
-    MXB_AT_DEBUG(const char* user = "");//m_user ? m_user : "");
+    MXB_AT_DEBUG(std::string user = m_session->user());
 
     int ssl_rval = SSL_accept(m_ssl);
 
     switch (SSL_get_error(m_ssl, ssl_rval))
     {
     case SSL_ERROR_NONE:
-        MXS_DEBUG("SSL_accept done for %s@%s", user, remote);
+        MXS_DEBUG("SSL_accept done for %s@%s", user.c_str(), m_remote.c_str());
         m_ssl_state = SSLState::ESTABLISHED;
         m_ssl_read_want_write = false;
         return 1;
 
     case SSL_ERROR_WANT_READ:
-        MXS_DEBUG("SSL_accept ongoing want read for %s@%s", user, remote);
+        MXS_DEBUG("SSL_accept ongoing want read for %s@%s", user.c_str(), m_remote.c_str());
         return 0;
 
     case SSL_ERROR_WANT_WRITE:
-        MXS_DEBUG("SSL_accept ongoing want write for %s@%s", user, remote);
+        MXS_DEBUG("SSL_accept ongoing want write for %s@%s", user.c_str(), m_remote.c_str());
         m_ssl_read_want_write = true;
         return 0;
 
     case SSL_ERROR_ZERO_RETURN:
-        MXS_DEBUG("SSL error, shut down cleanly during SSL accept %s@%s", user, remote);
+        MXS_DEBUG("SSL error, shut down cleanly during SSL accept %s@%s", user.c_str(), m_remote.c_str());
         log_errors_SSL(0);
         trigger_hangup_event();
         return 0;
 
     case SSL_ERROR_SYSCALL:
-        MXS_DEBUG("SSL connection SSL_ERROR_SYSCALL error during accept %s@%s", user, remote);
+        MXS_DEBUG("SSL connection SSL_ERROR_SYSCALL error during accept %s@%s",
+                  user.c_str(), m_remote.c_str());
         if (log_errors_SSL(ssl_rval) < 0)
         {
             m_ssl_state = SSLState::HANDSHAKE_FAILED;
@@ -1840,7 +1836,8 @@ int ClientDCB::ssl_handshake()
         }
 
     default:
-        MXS_DEBUG("SSL connection shut down with error during SSL accept %s@%s", user, remote);
+        MXS_DEBUG("SSL connection shut down with error during SSL accept %s@%s",
+                  user.c_str(), m_remote.c_str());
         if (log_errors_SSL(ssl_rval) < 0)
         {
             m_ssl_state = SSLState::HANDSHAKE_FAILED;
@@ -1885,25 +1882,25 @@ int BackendDCB::ssl_handshake()
     switch (SSL_get_error(m_ssl, ssl_rval))
     {
     case SSL_ERROR_NONE:
-        MXS_DEBUG("SSL_connect done for %s", m_remote);
+        MXS_DEBUG("SSL_connect done for %s", m_remote.c_str());
         m_ssl_state = SSLState::ESTABLISHED;
         m_ssl_read_want_write = false;
         return_code = 1;
         break;
 
     case SSL_ERROR_WANT_READ:
-        MXS_DEBUG("SSL_connect ongoing want read for %s", m_remote);
+        MXS_DEBUG("SSL_connect ongoing want read for %s", m_remote.c_str());
         return_code = 0;
         break;
 
     case SSL_ERROR_WANT_WRITE:
-        MXS_DEBUG("SSL_connect ongoing want write for %s", m_remote);
+        MXS_DEBUG("SSL_connect ongoing want write for %s", m_remote.c_str());
         m_ssl_read_want_write = true;
         return_code = 0;
         break;
 
     case SSL_ERROR_ZERO_RETURN:
-        MXS_DEBUG("SSL error, shut down cleanly during SSL connect %s", m_remote);
+        MXS_DEBUG("SSL error, shut down cleanly during SSL connect %s", m_remote.c_str());
         if (log_errors_SSL(0) < 0)
         {
             trigger_hangup_event();
@@ -1912,7 +1909,7 @@ int BackendDCB::ssl_handshake()
         break;
 
     case SSL_ERROR_SYSCALL:
-        MXS_DEBUG("SSL connection shut down with SSL_ERROR_SYSCALL during SSL connect %s", m_remote);
+        MXS_DEBUG("SSL connection shut down with SSL_ERROR_SYSCALL during SSL connect %s", m_remote.c_str());
         if (log_errors_SSL(ssl_rval) < 0)
         {
             m_ssl_state = SSLState::HANDSHAKE_FAILED;
@@ -1926,7 +1923,7 @@ int BackendDCB::ssl_handshake()
         break;
 
     default:
-        MXS_DEBUG("SSL connection shut down with error during SSL connect %s", m_remote);
+        MXS_DEBUG("SSL connection shut down with error during SSL connect %s", m_remote.c_str());
         if (log_errors_SSL(ssl_rval) < 0)
         {
             m_ssl_state = SSLState::HANDSHAKE_FAILED;
@@ -2003,7 +2000,7 @@ void DCB::process_timeouts(int thr)
                     {
                         MXS_WARNING("Timing out '%s'@%s, idle for %.1f seconds",
                                     dcb->session()->user().c_str(),
-                                    dcb->m_remote ? dcb->m_remote : "<unknown>",
+                                    dcb->m_remote.c_str(),
                                     (float)idle / 10.f);
                         dcb->session()->close_reason = SESSION_CLOSE_TIMEOUT;
                         dcb->trigger_hangup_event();
@@ -2017,9 +2014,9 @@ void DCB::process_timeouts(int thr)
                     // to the 100 millisecond tics.
                     if (idle > dcb->service()->config().net_write_timeout * 10)
                     {
-                        MXS_WARNING("network write timed out for '%s'@%s, ",
+                        MXS_WARNING("network write timed out for '%s'@%s.",
                                     dcb->session()->user().c_str(),
-                                    dcb->m_remote ? dcb->m_remote : "<unknown>");
+                                    dcb->m_remote.c_str());
                         dcb->session()->close_reason = SESSION_CLOSE_TIMEOUT;
                         dcb->trigger_hangup_event();
                     }
@@ -2471,14 +2468,14 @@ static int upstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* userda
     if (reason == DCB::Reason::HIGH_WATER)
     {
         MXS_INFO("High water mark hit for '%s'@'%s', not reading data until low water mark is hit",
-                 client_dcb->session()->user().c_str(), client_dcb->m_remote);
+                 client_dcb->session()->user().c_str(), client_dcb->remote().c_str());
 
         client_dcb->disable_events();
     }
     else if (reason == DCB::Reason::LOW_WATER)
     {
         MXS_INFO("Low water mark hit for '%s'@'%s', accepting new data",
-                 client_dcb->session()->user().c_str(), client_dcb->m_remote);
+                 client_dcb->session()->user().c_str(), client_dcb->remote().c_str());
 
         if (!client_dcb->enable_events())
         {
@@ -2502,7 +2499,7 @@ bool backend_dcb_remove_func(DCB* dcb, void* data)
         DCB* client_dcb = dcb->session()->client_dcb;
         MXS_INFO("High water mark hit for connection to '%s' from %s'@'%s', not reading data until low water "
                  "mark is hit", backend_dcb->server()->name(),
-                 client_dcb->session()->user().c_str(), client_dcb->m_remote);
+                 client_dcb->session()->user().c_str(), client_dcb->remote().c_str());
 
         dcb->disable_events();
     }
@@ -2520,7 +2517,7 @@ bool backend_dcb_add_func(DCB* dcb, void* data)
         DCB* client_dcb = dcb->session()->client_dcb;
         MXS_INFO("Low water mark hit for connection to '%s' from '%s'@'%s', accepting new data",
                  backend_dcb->server()->name(),
-                 client_dcb->session()->user().c_str(), client_dcb->m_remote);
+                 client_dcb->session()->user().c_str(), client_dcb->remote().c_str());
 
         if (!dcb->enable_events())
         {
@@ -2605,12 +2602,14 @@ void ClientDCB::shutdown()
 }
 
 ClientDCB::ClientDCB(int fd,
+                     const std::string& remote,
                      const sockaddr_storage& ip,
                      MXS_SESSION* session,
                      std::unique_ptr<ClientProtocol> protocol,
                      std::unique_ptr<ClientAuthenticator> authenticator,
                      DCB::Manager* manager)
     : ClientDCB(fd,
+                remote,
                 ip,
                 DCB::Role::CLIENT,
                 session,
@@ -2621,13 +2620,14 @@ ClientDCB::ClientDCB(int fd,
 }
 
 ClientDCB::ClientDCB(int fd,
+                     const std::string& remote,
                      const sockaddr_storage& ip,
                      DCB::Role role,
                      MXS_SESSION* session,
                      std::unique_ptr<ClientProtocol> protocol,
                      std::unique_ptr<ClientAuthenticator> authenticator,
                      Manager* manager)
-    : DCB(fd, role, session, protocol.get(), manager)
+    : DCB(fd, remote, role, session, protocol.get(), manager)
     , m_ip(ip)
     , m_protocol(std::move(protocol))
     , m_authenticator(std::move(authenticator))
@@ -2639,8 +2639,8 @@ ClientDCB::ClientDCB(int fd,
     }
 }
 
-ClientDCB::ClientDCB(int fd, DCB::Role role, MXS_SESSION* session)
-    : ClientDCB(fd, sockaddr_storage {}, role, session, nullptr, nullptr, nullptr)
+ClientDCB::ClientDCB(int fd, const std::string& remote, DCB::Role role, MXS_SESSION* session)
+    : ClientDCB(fd, remote, sockaddr_storage {}, role, session, nullptr, nullptr, nullptr)
 {
 }
 
@@ -2676,7 +2676,8 @@ bool ClientDCB::ready() const
 }
 
 InternalDCB::InternalDCB(MXS_SESSION* session, DCB::Manager* manager)
-    : ClientDCB(FD_CLOSED, sockaddr_storage {}, DCB::Role::INTERNAL, session, nullptr, nullptr, manager)
+    : ClientDCB(FD_CLOSED, "127.0.0.1",sockaddr_storage {},
+                DCB::Role::INTERNAL, session, nullptr, nullptr, manager)
 {
     if (DCB_THROTTLING_ENABLED(this))
     {
@@ -2723,7 +2724,7 @@ BackendDCB::BackendDCB(SERVER* server, int fd, MXS_SESSION* session,
                        std::unique_ptr<mxs::BackendProtocol> protocol,
                        std::unique_ptr<mxs::BackendAuthenticator> authenticator,
                        DCB::Manager* manager)
-    : DCB(fd, DCB::Role::BACKEND, session, protocol.get(), manager)
+    : DCB(fd, server->address, DCB::Role::BACKEND, session, protocol.get(), manager)
     , m_protocol(std::move(protocol))
     , m_authenticator(std::move(authenticator))
     , m_server(server)
@@ -2830,4 +2831,3 @@ json_t* DCB::protocol_diagnostics_json() const
     DCB* pThis = const_cast<DCB*>(this);
     return protocol_session()->diagnostics_json(pThis);
 }
-

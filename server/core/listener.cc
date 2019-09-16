@@ -852,7 +852,7 @@ ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const 
     mxs::RoutingWorker* worker = mxs::RoutingWorker::get_current();
     mxb_assert(worker);
 
-    ClientDCB* client_dcb = ClientDCB::create(fd, *addr, session,
+    ClientDCB* client_dcb = ClientDCB::create(fd, host, *addr, session,
                                               std::move(client_protocol),
                                               std::move(client_authenticator),
                                               worker);
@@ -864,7 +864,6 @@ ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const 
     else
     {
         session->set_client_dcb(client_dcb);
-        client_dcb->m_remote = MXS_STRDUP_A(host);
 
         if (m_service->has_too_many_connections())
         {

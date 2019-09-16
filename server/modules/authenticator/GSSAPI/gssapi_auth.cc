@@ -438,7 +438,7 @@ static bool validate_user(GSSAPIClientAuthenticator* auth, DCB* dcb, MYSQL_sessi
 {
     mxb_assert(princ);
     size_t len = sizeof(gssapi_auth_query) + strlen(session->user) * 2
-        + strlen(session->db) * 2 + strlen(dcb->m_remote) + strlen(princ) * 2;
+        + strlen(session->db) * 2 + dcb->remote().length() + strlen(princ) * 2;
     char sql[len + 1];
     bool rval = false;
     char* err;
@@ -454,7 +454,7 @@ static bool validate_user(GSSAPIClientAuthenticator* auth, DCB* dcb, MYSQL_sessi
     sprintf(sql,
             gssapi_auth_query,
             session->user,
-            dcb->m_remote,
+            dcb->remote().c_str(),
             session->db,
             session->db,
             princ_user,

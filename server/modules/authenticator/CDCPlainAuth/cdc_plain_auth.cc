@@ -282,7 +282,7 @@ int CDCClientAuthenticator::authenticate(DCB* generic_dcb)
             dcb->session()->set_user(m_user);
             MXS_INFO("%s: Client [%s] authenticated with user [%s]",
                      dcb->service()->name(),
-                     dcb->m_remote != NULL ? dcb->m_remote : "",
+                     dcb->remote().c_str(),
                      m_user);
         }
         else if (dcb->service()->config().log_auth_warnings)
@@ -291,7 +291,7 @@ int CDCClientAuthenticator::authenticate(DCB* generic_dcb)
                           "%s: login attempt for user '%s' from [%s], authentication failed.",
                           dcb->service()->name(),
                           m_user,
-                          dcb->m_remote != NULL ? dcb->m_remote : "");
+                          dcb->remote().c_str());
         }
     }
 

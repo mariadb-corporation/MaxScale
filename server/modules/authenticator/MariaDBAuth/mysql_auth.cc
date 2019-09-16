@@ -314,7 +314,7 @@ int MariaDBClientAuthenticator::authenticate(DCB* generic_dcb)
                           "%s: login attempt for user '%s'@[%s]:%d, authentication failed. %s",
                           dcb->service()->name(),
                           client_data->user,
-                          dcb->m_remote,
+                          dcb->remote().c_str(),
                           static_cast<ClientDCB*>(dcb)->port(),
                           extra);
 
@@ -550,7 +550,7 @@ static bool mysql_auth_set_client_data(MYSQL_session* client_data,
                                     // logged at once.
                                     MXS_INFO("Client '%s'@[%s] is using an unsupported authenticator "
                                              "plugin '%s'. Trying to switch to '%s'.",
-                                             client_data->user, client_dcb->m_remote, plugin_name,
+                                             client_data->user, client_dcb->remote().c_str(), plugin_name,
                                              DEFAULT_MYSQL_AUTH_PLUGIN);
                                 }
                             }

@@ -74,7 +74,7 @@ int AvroSession::routeQuery(GWBUF* queue)
             state = AVRO_CLIENT_REGISTERED;
             MXS_INFO("%s: Client [%s] has completed REGISTRATION action",
                      dcb->service()->name(),
-                     dcb->m_remote != NULL ? dcb->m_remote : "");
+                     dcb->remote().c_str());
         }
         break;
 
@@ -499,7 +499,7 @@ bool AvroSession::seek_to_gtid()
                                  gtid.server_id,
                                  gtid.seq,
                                  dcb->session()->user().c_str(),
-                                 dcb->m_remote);
+                                 dcb->remote().c_str());
                         seeking = false;
                     }
                 }
@@ -650,7 +650,7 @@ void AvroSession::rotate_avro_file(std::string fullname)
     {
         MXS_INFO("Rotated '%s'@'%s' to file: %s",
                  dcb->session()->user().c_str(),
-                 dcb->m_remote,
+                 dcb->remote().c_str(),
                  fullname.c_str());
     }
 }

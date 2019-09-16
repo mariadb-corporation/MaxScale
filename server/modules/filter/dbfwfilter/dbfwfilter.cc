@@ -1482,7 +1482,7 @@ std::string DbfwSession::user() const
 
 std::string DbfwSession::remote() const
 {
-    return m_session->client_dcb->m_remote;
+    return m_session->client_dcb->remote();
 }
 
 QuerySpeed* DbfwSession::query_speed()

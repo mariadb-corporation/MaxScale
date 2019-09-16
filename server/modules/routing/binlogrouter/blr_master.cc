@@ -210,7 +210,6 @@ static void blr_start_master(void* data)
 
     router->client = InternalDCB::create(router->session, worker);
     mxb_assert(router->client);
-    router->client->m_remote = MXS_STRDUP("127.0.0.1");
 
     /* Fake the client is reading */
     router->client->enable_events();        /* Fake the client is reading */
@@ -1684,7 +1683,7 @@ bool blr_send_event(blr_thread_role_t role,
                   "thread %s in the role of %s could not send the event, "
                   "the event has already been sent by thread %s in the role of %s. "
                   "%u bytes buffered for writing in DCB %p. %lu events received from master.",
-                  slave->dcb->m_remote,
+                  slave->dcb->remote().c_str(),
                   slave->dcb->port(),
                   slave->serverid,
                   binlog_name,
@@ -1749,7 +1748,7 @@ bool blr_send_event(blr_thread_role_t role,
     {
         MXS_ERROR("Failed to send an event of %u bytes to slave at [%s]:%d.",
                   hdr->event_size,
-                  slave->dcb->m_remote,
+                  slave->dcb->remote().c_str(),
                   slave->dcb->port());
     }
     return rval;

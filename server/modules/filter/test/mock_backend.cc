@@ -175,7 +175,7 @@ class ResultSetDCB : public ClientDCB
 {
 public:
     ResultSetDCB(MXS_SESSION* session)
-        : ClientDCB(DCB::FD_CLOSED, sockaddr_storage {}, DCB::Role::CLIENT, session,
+        : ClientDCB(DCB::FD_CLOSED, "127.0.0.1", sockaddr_storage {}, DCB::Role::CLIENT, session,
                     nullptr, nullptr, nullptr)
         , m_protocol_session(this)
     {

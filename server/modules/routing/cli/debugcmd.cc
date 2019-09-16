@@ -1963,7 +1963,7 @@ static bool user_is_authorized(MXS_SESSION* session, DCB* dcb)
 {
     bool rval = true;
 
-    if (strcmp(dcb->m_remote, "localhost") == 0)
+    if (dcb->remote() == "localhost")
     {
         if (!admin_user_is_unix_admin(session->user().c_str()))
         {

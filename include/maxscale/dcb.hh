@@ -176,6 +176,11 @@ public:
         return m_fd;
     }
 
+    const std::string& remote() const
+    {
+        return m_remote;
+    }
+
     Role role() const
     {
         return m_role;
@@ -471,10 +476,13 @@ public:
         struct CALLBACK* next;      /*< Next callback for this DCB */
     };
 
-    char*                   m_remote = nullptr;                 /**< Address of remote end */
-
 protected:
-    DCB(int fd, Role role, MXS_SESSION* session, Handler* handler, Manager* manager);
+    DCB(int fd,
+        const std::string& remote,
+        Role role,
+        MXS_SESSION* session,
+        Handler* handler,
+        Manager* manager);
 
     int create_SSL(mxs::SSLContext* ssl);
 
@@ -503,6 +511,7 @@ protected:
 
     int log_errors_SSL(int ret);
 
+    const std::string     m_remote;                     /**< The remote host */
     const uint64_t        m_uid;                        /**< Unique identifier for this DCB */
     const uint64_t        m_high_water;                 /**< High water mark of write queue */
     const uint64_t        m_low_water;                  /**< Low water mark of write queue */
@@ -573,6 +582,7 @@ public:
 
     static ClientDCB*
     create(int fd,
+           const std::string& remote,
            const sockaddr_storage& ip,
            MXS_SESSION* session,
            std::unique_ptr<mxs::ClientProtocol> protocol,
@@ -628,6 +638,7 @@ public:
 protected:
     // Only for InternalDCB.
     ClientDCB(int fd,
+              const std::string& remote,
               const sockaddr_storage& ip,
               DCB::Role role,
               MXS_SESSION* session,
@@ -636,10 +647,11 @@ protected:
               Manager* manager);
 
     // Only for Mock DCB.
-    ClientDCB(int fd, DCB::Role role, MXS_SESSION* session);
+    ClientDCB(int fd, const std::string& remote, DCB::Role role, MXS_SESSION* session);
 
 private:
     ClientDCB(int fd,
+              const std::string& remote,
               const sockaddr_storage& ip,
               MXS_SESSION* session,
               std::unique_ptr<mxs::ClientProtocol> protocol,

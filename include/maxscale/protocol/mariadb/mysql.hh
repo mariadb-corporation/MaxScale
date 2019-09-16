@@ -448,7 +448,8 @@ private:
     spec_com_res_t handle_query_kill(DCB* dcb, GWBUF* read_buffer, uint32_t packet_len);
     void           handle_authentication_errors(DCB* dcb, int auth_val, int packet_number);
     int            mysql_send_auth_error(DCB* dcb, int packet_number, const char* mysql_message);
-    char*          create_auth_fail_str(char* username, char* hostaddr, bool password, char* db, int);
+    char*          create_auth_fail_str(const char* username, const char* hostaddr,
+                                        bool password, const char* db, int);
     int            mysql_send_standard_error(DCB* dcb, int sequence, int errnum, const char* msg);
     GWBUF*         mysql_create_standard_error(int sequence, int error_number, const char* msg);
     bool           send_auth_switch_request_packet(DCB* dcb);

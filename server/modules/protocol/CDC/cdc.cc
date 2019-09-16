@@ -179,7 +179,7 @@ void CDCClientProtocol::ready_for_reading(DCB* generic_dcb)
             {
                 MXS_INFO("%s: Client [%s] has requested CLOSE action",
                          dcb->service()->name(),
-                         dcb->m_remote != NULL ? dcb->m_remote : "");
+                         dcb->remote().c_str());
 
                 // gwbuf_set_type(head, GWBUF_TYPE_CDC);
                 // the router will close the client connection
@@ -195,7 +195,7 @@ void CDCClientProtocol::ready_for_reading(DCB* generic_dcb)
             {
                 MXS_INFO("%s: Client [%s] requested [%.*s] action",
                          dcb->service()->name(),
-                         dcb->m_remote != NULL ? dcb->m_remote : "",
+                         dcb->remote().c_str(),
                          (int)GWBUF_LENGTH(head),
                          (char*)GWBUF_DATA(head));
 
@@ -207,7 +207,7 @@ void CDCClientProtocol::ready_for_reading(DCB* generic_dcb)
         default:
             MXS_INFO("%s: Client [%s] in unknown state %d",
                      dcb->service()->name(),
-                     dcb->m_remote != NULL ? dcb->m_remote : "",
+                     dcb->remote().c_str(),
                      protocol->m_state);
             gwbuf_free(head);
 
@@ -272,7 +272,7 @@ bool CDCClientProtocol::init_connection(DCB* generic_dcb)
 
     MXS_NOTICE("%s: new connection from [%s]",
                client_dcb->service()->name(),
-               client_dcb->m_remote != NULL ? client_dcb->m_remote : "");
+               client_dcb->remote().c_str());
     return true;
 }
 

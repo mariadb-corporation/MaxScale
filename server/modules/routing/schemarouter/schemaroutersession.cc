@@ -1234,7 +1234,7 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SRBackend* bref
                               target->name(),
                               duplicate->name(),
                               m_client->session()->user().c_str(),
-                              m_client->m_remote);
+                              m_client->remote().c_str());
                 }
                 else if (m_config->preferred_server == target)
                 {

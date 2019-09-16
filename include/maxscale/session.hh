@@ -203,7 +203,7 @@ struct MXS_SESSION
     std::string user_and_host() const
     {
         std::ostringstream ss;
-        ss << "'" << m_user << "'@'" << client_dcb->m_remote << "'";
+        ss << "'" << m_user << "'@'" << client_dcb->remote() << "'";
         return ss.str();
     }
 

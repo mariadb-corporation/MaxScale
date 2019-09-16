@@ -272,7 +272,7 @@ bool ssl_check_data_to_process(DCB* dcb)
 int ssl_authenticate_client(DCB* dcb, bool is_capable)
 {
     const std::string& user = dcb->session()->user();
-    const char* remote = dcb->m_remote ? dcb->m_remote : "";
+    const std::string& remote = dcb->remote();
     const char* service = (dcb->service() && dcb->service()->name()) ? dcb->service()->name() : "";
 
     if (!dcb->session()->listener->ssl().context())
@@ -286,7 +286,7 @@ int ssl_authenticate_client(DCB* dcb, bool is_capable)
         /* Should be SSL, but client is not SSL capable */
         MXS_INFO("User %s@%s connected to service '%s' without SSL when SSL was required.",
                  user.c_str(),
-                 remote,
+                 remote.c_str(),
                  service);
         return SSL_ERROR_CLIENT_NOT_SSL;
     }
@@ -312,7 +312,7 @@ int ssl_authenticate_client(DCB* dcb, bool is_capable)
         {
             MXS_INFO("User %s@%s failed to connect to service '%s' with SSL.",
                      user.c_str(),
-                     remote,
+                     remote.c_str(),
                      service);
             return SSL_ERROR_ACCEPT_FAILED;
         }
@@ -322,14 +322,14 @@ int ssl_authenticate_client(DCB* dcb, bool is_capable)
             {
                 MXS_INFO("User %s@%s connected to service '%s' with SSL.",
                          user.c_str(),
-                         remote,
+                         remote.c_str(),
                          service);
             }
             else
             {
                 MXS_INFO("User %s@%s connect to service '%s' with SSL in progress.",
                          user.c_str(),
-                         remote,
+                         remote.c_str(),
                          service);
             }
         }
@@ -799,7 +799,7 @@ void MySQLClientProtocol::handle_authentication_errors(DCB* generic_dcb, int aut
         MXS_DEBUG("authentication failed. fd %d, state = MYSQL_FAILED_AUTH.", dcb->fd());
         /** Send error 1045 to client */
         fail_str = create_auth_fail_str(session->user,
-                                        dcb->m_remote,
+                                        dcb->remote().c_str(),
                                         session->auth_token_len > 0,
                                         session->db,
                                         auth_val);
@@ -814,7 +814,7 @@ void MySQLClientProtocol::handle_authentication_errors(DCB* generic_dcb, int aut
         MXS_DEBUG("authentication failed. fd %d, state unrecognized.", dcb->fd());
         /** Send error 1045 to client */
         fail_str = create_auth_fail_str(session->user,
-                                        dcb->m_remote,
+                                        dcb->remote().c_str(),
                                         session->auth_token_len > 0,
                                         session->db,
                                         auth_val);
@@ -956,7 +956,7 @@ int MySQLClientProtocol::perform_authentication(DCB* generic_dcb, GWBUF* read_bu
         // MXS_AUTH_NO_SESSION is for failure to start session, not authentication failure
         if (auth_val != MXS_AUTH_NO_SESSION)
         {
-            dcb->session()->listener->mark_auth_as_failed(dcb->m_remote);
+            dcb->session()->listener->mark_auth_as_failed(dcb->remote());
         }
 
         /**
@@ -2099,7 +2099,10 @@ int MySQLClientProtocol::mysql_send_auth_error(DCB* dcb, int packet_number, cons
  *
  * @return      Pointer to the allocated string or NULL on failure
  */
-char* MySQLClientProtocol::create_auth_fail_str(char* username, char* hostaddr, bool password, char* db,
+char* MySQLClientProtocol::create_auth_fail_str(const char* username,
+                                                const char* hostaddr,
+                                                bool password,
+                                                const char* db,
                                                 int errcode)
 {
     char* errstr;

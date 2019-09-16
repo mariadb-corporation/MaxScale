@@ -78,7 +78,7 @@ int CommentFilterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& dow
 // TODO this probably should be refactored in some way in case we add more variables
 string CommentFilterSession::parseComment(string comment)
 {
-    string ip = m_pSession->client_dcb->m_remote;
+    string ip = m_pSession->client_dcb->remote();
     string parsedComment = std::regex_replace(comment, std::regex("\\$IP"), ip);
     return parsedComment;
 }

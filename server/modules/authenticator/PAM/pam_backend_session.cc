@@ -188,7 +188,7 @@ bool PamBackendAuthenticator::extract(DCB* dcb, GWBUF* buffer)
     {
         m_servername = srv_name;
         auto client_dcb = dcb->session()->client_dcb;
-        m_clienthost = client_dcb->session()->user() + (std::string)"@" + client_dcb->m_remote;
+        m_clienthost = client_dcb->session()->user() + std::string("@") + client_dcb->remote();
     }
 
     // Smallest buffer that is parsed, header + (cmd-byte/msg-type + message).

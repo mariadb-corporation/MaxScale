@@ -22,13 +22,9 @@ namespace mock
 Dcb::Dcb(MXS_SESSION* pSession,
          const char* zHost,
          Handler* pHandler)
-    : ClientDCB(DCB::FD_CLOSED, DCB::Role::CLIENT, pSession)
-    , m_host(zHost)
+    : ClientDCB(DCB::FD_CLOSED, zHost, DCB::Role::CLIENT, pSession)
     , m_protocol_session(pHandler)
 {
-    DCB* pDcb = this;
-
-    pDcb->m_remote = MXS_STRDUP(zHost);
 }
 
 Dcb::~Dcb()

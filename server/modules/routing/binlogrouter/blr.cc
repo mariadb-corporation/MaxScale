@@ -1239,7 +1239,7 @@ static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_sessio
                        "%d SQL commands, %d events sent (%lu bytes), binlog '%s', "
                        "last position %lu",
                        router->service->name(),
-                       slave->dcb->m_remote,
+                       slave->dcb->remote().c_str(),
                        slave->dcb->port(),
                        slave->serverid,
                        time(0) - slave->connect_time,
@@ -1254,7 +1254,7 @@ static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_sessio
             MXS_NOTICE("%s: Slave %s, server id %d, disconnected after %ld seconds. "
                        "%d SQL commands",
                        router->service->name(),
-                       slave->dcb->m_remote,
+                       slave->dcb->remote().c_str(),
                        slave->serverid,
                        time(0) - slave->connect_time,
                        slave->stats.n_queries);
@@ -1691,7 +1691,7 @@ static void diagnostics(MXS_ROUTER* router, DCB* dcb)
             }
             dcb_printf(dcb,
                        "\t\tSlave_host_port:                         [%s]:%d\n",
-                       session->dcb->m_remote,
+                       session->dcb->remote().c_str(),
                        session->dcb->port());
             dcb_printf(dcb,
                        "\t\tUsername:                                %s\n",
@@ -2099,7 +2099,7 @@ static json_t* diagnostics_json(const MXS_ROUTER* router)
                 json_object_set_new(rval, "uuid", json_string(session->uuid));
             }
 
-            json_object_set_new(rval, "address", json_string(session->dcb->m_remote));
+            json_object_set_new(rval, "address", json_string(session->dcb->remote().c_str()));
             json_object_set_new(rval, "port", json_integer(session->dcb->port()));
             json_object_set_new(rval, "user", json_string(session->dcb->session()->user().c_str()));
             json_object_set_new(rval, "ssl_enabled", json_boolean(session->dcb->ssl_enabled()));

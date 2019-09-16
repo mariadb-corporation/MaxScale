@@ -250,14 +250,14 @@ void dprintSession(DCB* dcb, MXS_SESSION* print_session)
     dcb_printf(dcb, "\tState:               %s\n", session_state_to_string(print_session->state()));
     dcb_printf(dcb, "\tService:             %s\n", print_session->service->name());
 
-    if (print_session->client_dcb && print_session->client_dcb->m_remote)
+    if (print_session->client_dcb)
     {
         double idle = (mxs_clock() - print_session->client_dcb->last_read());
         idle = idle > 0 ? idle / 10.f : 0;
         dcb_printf(dcb,
                    "\tClient Address:          %s@%s\n",
                    print_session->user().c_str(),
-                   print_session->client_dcb->m_remote);
+                   print_session->client_dcb->remote().c_str());
         dcb_printf(dcb,
                    "\tConnected:               %s\n",
                    asctime_r(localtime_r(&print_session->stats.connect, &result), buf));
@@ -285,8 +285,7 @@ bool dListSessions_cb(DCB* dcb, void* data)
         dcb_printf(out_dcb,
                    "%-16" PRIu64 " | %-15s | %-14s | %s\n",
                    session->id(),
-                   session->client_dcb && session->client_dcb->m_remote ?
-                   session->client_dcb->m_remote : "",
+                   session->client_dcb ? session->client_dcb->remote().c_str() : "",
                    session->service && session->service->name() ?
                    session->service->name() : "",
                    session_state_to_string(session->state()));
@@ -370,7 +369,7 @@ const char* session_get_remote(const MXS_SESSION* session)
 {
     if (session && session->client_dcb)
     {
-        return session->client_dcb->m_remote;
+        return session->client_dcb->remote().c_str();
     }
     return NULL;
 }
@@ -447,7 +446,7 @@ bool dcb_iter_cb(DCB* dcb, void* data)
         char buf[20];
         snprintf(buf, sizeof(buf), "%p", ses);
 
-        set->add_row({buf, ses->client_dcb->m_remote, ses->service->name(),
+        set->add_row({buf, ses->client_dcb->remote().c_str(), ses->service->name(),
                       session_state_to_string(ses->state())});
     }
 
@@ -606,20 +605,18 @@ json_t* session_json_data(const Session* session, const char* host, bool rdns)
         json_object_set_new(attr, CN_USER, json_string(session->user().c_str()));
     }
 
-    if (session->client_dcb->m_remote)
+    string result_address;
+    auto remote = session->client_dcb->remote();
+    if (rdns)
     {
-        string result_address;
-        auto remote = session->client_dcb->m_remote;
-        if (rdns)
-        {
-            maxbase::reverse_name_lookup(remote, &result_address);
-        }
-        else
-        {
-            result_address = remote;
-        }
-        json_object_set_new(attr, "remote", json_string(result_address.c_str()));
+        maxbase::reverse_name_lookup(remote, &result_address);
     }
+    else
+    {
+        result_address = remote;
+    }
+
+    json_object_set_new(attr, "remote", json_string(result_address.c_str()));
 
     struct tm result;
     char buf[60];
@@ -1443,7 +1440,7 @@ bool Session::start()
         MXS_INFO("Started %s client session [%" PRIu64 "] for '%s' from %s",
                  service->name(), id(),
                  !m_user.empty() ? m_user.c_str() : "<no user>",
-                 client_dcb->m_remote);
+                 client_dcb->remote().c_str());
     }
 
     return rval;

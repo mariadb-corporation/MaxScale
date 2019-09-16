@@ -124,7 +124,6 @@ private:
     };
 
 private:
-    std::string             m_host;
     mutable ProtocolSession m_protocol_session;
 };
 }

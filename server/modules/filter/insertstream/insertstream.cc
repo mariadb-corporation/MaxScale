@@ -209,14 +209,12 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
         my_session->active = true;
         my_session->client_dcb = session->client_dcb;
 
-        if (my_instance->source
-            && strcmp(session->client_dcb->m_remote, my_instance->source) != 0)
+        if (my_instance->source && session->client_dcb->remote() != my_instance->source)
         {
             my_session->active = false;
         }
 
-        if (my_instance->user
-            && strcmp(session->user().c_str(), my_instance->user) != 0)
+        if (my_instance->user && session->user() != my_instance->user)
         {
             my_session->active = false;
         }

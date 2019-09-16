@@ -725,14 +725,14 @@ static int blr_slave_query(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, GWBUF* 
     {
         MXS_ERROR("Unexpected query from '%s'@'%s': %s",
                   router->session->user().c_str(),
-                  slave->dcb->m_remote,
+                  slave->dcb->remote().c_str(),
                   query_text);
     }
     else
     {
         MXS_INFO("Unexpected query from '%s'@'%s', possibly a 10.1 slave: %s",
                  slave->dcb->session()->user().c_str(),
-                 slave->dcb->m_remote,
+                 slave->dcb->remote().c_str(),
                  query_text);
     }
 
@@ -2048,7 +2048,7 @@ static int blr_slave_binlog_dump(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, G
                       "Requested binlog position %lu. Position is unsafe so disconnecting. "
                       "Latest safe position %lu, end of binlog file %lu",
                       router->service->name(),
-                      slave->dcb->m_remote,
+                      slave->dcb->remote().c_str(),
                       slave->dcb->port(),
                       slave->serverid,
                       slave->binlog_name,
@@ -2071,7 +2071,7 @@ static int blr_slave_binlog_dump(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, G
     MXS_DEBUG("%s: Slave %s:%i, COM_BINLOG_DUMP: binlog name '%s', length %lu, "
               "from position %lu.",
               router->service->name(),
-              slave->dcb->m_remote,
+              slave->dcb->remote().c_str(),
               slave->dcb->port(),
               slave->binlog_name,
               strlen(slave->binlog_name),
@@ -2228,7 +2228,7 @@ static int blr_slave_binlog_dump(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, G
 
     MXS_NOTICE("%s: Slave [%s]:%d, server id %d requested binlog file %s from position %lu",
                router->service->name(),
-               slave->dcb->m_remote,
+               slave->dcb->remote().c_str(),
                slave->dcb->port(),
                slave->serverid,
                slave->binlog_name,
@@ -2410,7 +2410,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
 
             MXS_ERROR("Slave %s:%i, server-id %d, binlog '%s%s': blr_slave_catchup "
                       "failed to open binlog file.",
-                      slave->dcb->m_remote,
+                      slave->dcb->remote().c_str(),
                       slave->dcb->port(),
                       slave->serverid,
                       t_prefix,
@@ -2605,7 +2605,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
 
                 MXS_ERROR("Slave %s:%i, server-id %d, binlog '%s%s': blr_slave_catchup "
                           "failed to open binlog file in rotate event",
-                          slave->dcb->m_remote,
+                          slave->dcb->remote().c_str(),
                           slave->dcb->port(),
                           slave->serverid,
                           t_prefix,
@@ -2665,7 +2665,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
             MXS_WARNING("Slave %s:%i, server-id %d, binlog '%s%s', position %u: "
                         "Slave-thread could not send event to slave, "
                         "closing connection.",
-                        slave->dcb->m_remote,
+                        slave->dcb->remote().c_str(),
                         slave->dcb->port(),
                         slave->serverid,
                         t_prefix,
@@ -2721,7 +2721,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
         {
             MXS_ERROR("%s Slave %s:%i, server-id %d, binlog '%s%s', %s",
                       router->service->name(),
-                      slave->dcb->m_remote,
+                      slave->dcb->remote().c_str(),
                       slave->dcb->port(),
                       slave->serverid,
                       t_prefix,
@@ -2733,7 +2733,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
         {
             MXS_ERROR("%s Slave %s:%i, server-id %d, binlog '%s%s', %s",
                       router->service->name(),
-                      slave->dcb->m_remote,
+                      slave->dcb->remote().c_str(),
                       slave->dcb->port(),
                       slave->serverid,
                       t_prefix,
@@ -2756,7 +2756,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
         {
             MXS_ERROR("%s Slave %s:%i, server-id %d, binlog '%s%s', %s",
                       router->service->name(),
-                      slave->dcb->m_remote,
+                      slave->dcb->remote().c_str(),
                       slave->dcb->port(),
                       slave->serverid,
                       t_prefix,
@@ -2792,7 +2792,7 @@ int blr_slave_catchup(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, bool large)
             MXS_NOTICE("%s: Slave %s:%i, server-id %d, binlog '%s%s', read %d events, "
                        "current committed transaction event being sent: %lu, %s",
                        router->service->name(),
-                       slave->dcb->m_remote,
+                       slave->dcb->remote().c_str(),
                        slave->dcb->port(),
                        slave->serverid,
                        t_prefix,
@@ -3298,7 +3298,7 @@ static GWBUF* blr_slave_read_fde(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
         {
             MXS_ERROR("Slave %s:%i, server-id %d, binlog '%s', "
                       "blr_read_binlog failure: %s",
-                      slave->dcb->m_remote,
+                      slave->dcb->remote().c_str(),
                       slave->dcb->port(),
                       slave->serverid,
                       slave->binlog_name,
@@ -3598,10 +3598,10 @@ static int blr_slave_disconnect_server(ROUTER_INSTANCE* router,
             server_found = 1;
             MXS_NOTICE("%s: Slave %s, server id %d, disconnected by %s@%s",
                        router->service->name(),
-                       sptr->dcb->m_remote,
+                       sptr->dcb->remote().c_str(),
                        server_id,
                        router->session->user().c_str(),
-                       slave->dcb->m_remote);
+                       slave->dcb->remote().c_str());
 
             /* send server_id with disconnect state to client */
             n = blr_slave_send_disconnected_server(router,
@@ -3698,7 +3698,7 @@ static int blr_slave_disconnect_all(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave
             {
                 MXS_ERROR("gwbuf memory allocation in "
                           "DISCONNECT ALL for [%s], server_id [%d]",
-                          sptr->dcb->m_remote,
+                          sptr->dcb->remote().c_str(),
                           sptr->serverid);
 
                 pthread_mutex_unlock(&router->lock);
@@ -3712,10 +3712,10 @@ static int blr_slave_disconnect_all(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave
 
             MXS_NOTICE("%s: Slave %s, server id %d, disconnected by %s@%s",
                        router->service->name(),
-                       sptr->dcb->m_remote,
+                       sptr->dcb->remote().c_str(),
                        sptr->serverid,
                        router->session->user().c_str(),
-                       slave->dcb->m_remote);
+                       slave->dcb->remote().c_str());
 
             ptr = GWBUF_DATA(pkt);
             encode_value(ptr, len - MYSQL_HEADER_LEN, 24);          // Add length of data packet
@@ -3902,7 +3902,7 @@ static int blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
                "read up to log %s, pos %lu, transaction safe pos %lu",
                router->service->name(),
                router->session->user().c_str(),
-               slave->dcb->m_remote,
+               slave->dcb->remote().c_str(),
                router->binlog_name,
                router->current_pos,
                router->binlog_position);
@@ -4094,7 +4094,7 @@ static int blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
                "binlog %s, pos %lu, transaction safe pos %lu",
                router->service->name(),
                router->session->user().c_str(),
-               slave->dcb->m_remote,
+               slave->dcb->remote().c_str(),
                router->binlog_name,
                router->current_pos,
                router->binlog_position);
@@ -6397,7 +6397,7 @@ static int blr_slave_read_ste(ROUTER_INSTANCE* router,
         {
             MXS_ERROR("Slave %s:%i, server-id %d, binlog '%s', "
                       "blr_read_binlog failure: %s",
-                      slave->dcb->m_remote,
+                      slave->dcb->remote().c_str(),
                       slave->dcb->port(),
                       slave->serverid,
                       slave->binlog_name,
@@ -6547,7 +6547,7 @@ static bool blr_handle_simple_select_stmt(ROUTER_INSTANCE* router,
                  sizeof(user_host),
                  "%s@%s",
                  router->session->user().c_str(),
-                 slave->dcb->m_remote);
+                 slave->dcb->remote().c_str());
 
         blr_slave_send_var_value(router,
                                  slave,
@@ -8333,7 +8333,7 @@ static void blr_slave_skip_empty_files(ROUTER_INSTANCE* router,
         // Log skipped file
         MXS_INFO("Slave %s:%i, skip reading empty file '%s' "
                  "(0 or 4 bytes size).",
-                 slave->dcb->m_remote,
+                 slave->dcb->remote().c_str(),
                  slave->dcb->port(),
                  binlog_file);
 
@@ -9210,7 +9210,7 @@ static bool blr_check_connecting_slave(const ROUTER_INSTANCE* router,
     default:
         MXS_WARNING("%s: Slave %s: Unkwon status check %d.",
                     router->service->name(),
-                    slave->dcb->m_remote,
+                    slave->dcb->remote().c_str(),
                     check);
         break;
     }
@@ -9231,7 +9231,7 @@ static bool blr_check_connecting_slave(const ROUTER_INSTANCE* router,
                               err_code);
         MXS_ERROR("%s: Slave %s: %s%s",
                   router->service->name(),
-                  slave->dcb->m_remote,
+                  slave->dcb->remote().c_str(),
                   err_msg,
                   msg_detail);
     }
@@ -9683,7 +9683,7 @@ static void blr_slave_log_next_file_action(const ROUTER_INSTANCE* router,
                     "Current master binlog is [%s%s] at %lu, replication state is [%s]. "
                     "Now rotating to new file [%s%s]",
                     router->service->name(),
-                    slave->dcb->m_remote,
+                    slave->dcb->remote().c_str(),
                     slave->dcb->port(),
                     slave->serverid,
                     c_prefix,
@@ -9703,7 +9703,7 @@ static void blr_slave_log_next_file_action(const ROUTER_INSTANCE* router,
                   "end of file for '%s%s' and next file to read%s%s%s%s "
                   "is not %s. Force replication abort after %d retries.",
                   router->service->name(),
-                  slave->dcb->m_remote,
+                  slave->dcb->remote().c_str(),
                   slave->dcb->port(),
                   slave->serverid,
                   c_prefix,
@@ -9728,7 +9728,7 @@ static void blr_slave_log_next_file_action(const ROUTER_INSTANCE* router,
                     "[%s%s] at %lu and replication state is [%s]. "
                     "The slave server is now in '%s' state.",
                     router->service->name(),
-                    slave->dcb->m_remote,
+                    slave->dcb->remote().c_str(),
                     slave->dcb->port(),
                     slave->serverid,
                     c_prefix,

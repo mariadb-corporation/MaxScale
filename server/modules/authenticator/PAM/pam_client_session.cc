@@ -165,7 +165,7 @@ void PamClientAuthenticator::get_pam_user_services(const DCB* dcb, const MYSQL_s
                                                    StringVector* services_out)
 {
     const char* user = session->user;
-    const char* host = dcb->m_remote;
+    const std::string& host = dcb->remote();
     const string db = session->db;
     // First search for a normal matching user.
     const string columns = FIELD_HOST + ", " + FIELD_AUTHSTR + ", " + FIELD_DEF_ROLE + ", " + FIELD_ANYDB;
@@ -174,7 +174,7 @@ void PamClientAuthenticator::get_pam_user_services(const DCB* dcb, const MYSQL_s
     const string users_query_fmt = "SELECT " + columns + " FROM " + TABLE_USER + " WHERE "
             + users_filter + ";";
 
-    string users_query = mxb::string_printf(users_query_fmt.c_str(), user, host);
+    string users_query = mxb::string_printf(users_query_fmt.c_str(), user, host.c_str());
     UserDataArr matching_users;
     m_sqlite->exec(users_query, user_data_cb, &matching_users);
 
@@ -192,13 +192,13 @@ void PamClientAuthenticator::get_pam_user_services(const DCB* dcb, const MYSQL_s
             || (!best_entry.default_role.empty() && role_can_access_db(best_entry.default_role, db)))
         {
             MXS_INFO("Found matching PAM user '%s'@'%s' for client '%s'@'%s' with sufficient privileges.",
-                     user, best_entry.host.c_str(), user, host);
+                     user, best_entry.host.c_str(), user, host.c_str());
             services_out->push_back(best_entry.authentication_string);
         }
         else
         {
             MXS_INFO("Found matching PAM user '%s'@'%s' for client '%s'@'%s' but user does not have "
-                     "sufficient privileges.", user, best_entry.host.c_str(), user, host);
+                     "sufficient privileges.", user, best_entry.host.c_str(), user, host.c_str());
         }
     }
     else
@@ -211,20 +211,20 @@ void PamClientAuthenticator::get_pam_user_services(const DCB* dcb, const MYSQL_s
                                    + FIELD_HAS_PROXY + " = '1')";
         const string anon_query_fmt = "SELECT " + anon_columns + " FROM " + TABLE_USER
                                       + " WHERE " + anon_filter + ";";
-        string anon_query = mxb::string_printf(anon_query_fmt.c_str(), host);
+        string anon_query = mxb::string_printf(anon_query_fmt.c_str(), host.c_str());
         MXS_DEBUG("PAM proxy user services search sql: '%s'.", anon_query.c_str());
 
         UserDataArr anon_entries;
         m_sqlite->exec(anon_query, anon_user_data_cb, &anon_entries);
         if (anon_entries.empty())
         {
-            MXB_INFO("Found no matching PAM user for client '%s'@'%s'.", user, host);
+            MXB_INFO("Found no matching PAM user for client '%s'@'%s'.", user, host.c_str());
         }
         else
         {
             auto best_entry = *std::min_element(anon_entries.begin(), anon_entries.end(), UserData::compare);
             MXB_INFO("Found matching anonymous PAM user ''@'%s' for client '%s'@'%s'.",
-                     best_entry.host.c_str(), user, host);
+                     best_entry.host.c_str(), user, host.c_str());
             services_out->push_back(best_entry.authentication_string);
         }
     }
@@ -331,7 +331,8 @@ int PamClientAuthenticator::authenticate(DCB* generic_dcb)
                                 service = "mysql";
                             }
 
-                            mxb::PamResult res = mxb::pam_authenticate(ses->user, password, dcb->m_remote,
+                            mxb::PamResult res = mxb::pam_authenticate(ses->user, password,
+                                                                       dcb->remote().c_str(),
                                                                        service, PASSWORD);
                             if (res.type == mxb::PamResult::Result::SUCCESS)
                             {
