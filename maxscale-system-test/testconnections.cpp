@@ -299,7 +299,7 @@ TestConnections::TestConnections(int argc, char* argv[])
 
     mdbci_labels = get_mdbci_lables(labels);
 
-    if (check_label(std::string(labels), "BACKEND_SSL"))
+    if (has_label(std::string(labels), "BACKEND_SSL"))
     {
         backend_ssl = true;
         tprintf("Test has BACKEND_SSL label");

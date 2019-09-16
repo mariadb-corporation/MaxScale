@@ -36,4 +36,4 @@ std::string get_mdbci_lables(const char * labels_string);
  * @param label Labels to find
  * @return true if label present
  */
-bool check_label(std::string labels, std::string label);
+bool has_label(std::string labels, std::string label);
