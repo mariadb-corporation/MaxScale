@@ -1930,8 +1930,14 @@ void TestConnections::log_printf(const char* format, ...)
     vsnprintf(buf, sizeof(buf), format, argp);
     va_end(argp);
 
-    maxscales->ssh_node_f(0, true, "echo '--- %s ---' >> /var/log/maxscale/maxscale.log", buf);
     tprintf("%s", buf);
+
+    while (char* c = strchr(buf, '\''))
+    {
+        *c = '^';
+    }
+
+    maxscales->ssh_node_f(0, true, "echo '--- %s ---' >> /var/log/maxscale/maxscale.log", buf);
 }
 
 int TestConnections::get_master_server_id(int m)
