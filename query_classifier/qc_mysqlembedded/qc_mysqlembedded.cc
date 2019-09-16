@@ -1807,13 +1807,30 @@ int32_t qc_mysql_query_has_clause(GWBUF* buf, int32_t* has_clause)
 
             if (lex)
             {
-                if (!lex->describe && !is_show_command(lex->sql_command))
+                int cmd = lex->sql_command;
+
+                if (!lex->describe
+                    && !is_show_command(cmd)
+                    && (cmd != SQLCOM_ALTER_PROCEDURE)
+                    && (cmd != SQLCOM_ALTER_TABLE)
+                    && (cmd != SQLCOM_CALL)
+                    && (cmd != SQLCOM_CREATE_PROCEDURE)
+                    && (cmd != SQLCOM_CREATE_TABLE)
+                    && (cmd != SQLCOM_DROP_FUNCTION)
+                    && (cmd != SQLCOM_DROP_PROCEDURE)
+                    && (cmd != SQLCOM_DROP_TABLE)
+                    && (cmd != SQLCOM_DROP_VIEW)
+                    && (cmd != SQLCOM_FLUSH)
+                    && (cmd != SQLCOM_ROLLBACK)
+                    )
                 {
                     SELECT_LEX* current = lex->all_selects_list;
 
                     while (current && !*has_clause)
                     {
-                        if (current->where || current->having)
+                        if (current->where || current->having ||
+                            ((cmd == SQLCOM_SELECT || cmd == SQLCOM_DELETE || cmd == SQLCOM_UPDATE)
+                             && current->select_limit))
                         {
                             *has_clause = true;
                         }
@@ -2934,6 +2951,7 @@ typedef enum collect_source
     COLLECT_WHERE,
     COLLECT_HAVING,
     COLLECT_GROUP_BY,
+    COLLECT_ORDER_BY
 } collect_source_t;
 
 static void update_field_infos(parsing_info_t* pi,
@@ -2974,6 +2992,7 @@ static bool should_function_be_ignored(parsing_info_t* pi, const char* func_name
         || (strcasecmp(func_name, "get_user_var") == 0)
         || (strcasecmp(func_name, "get_system_var") == 0)
         || (strcasecmp(func_name, "not") == 0)
+        || (strcasecmp(func_name, "collate") == 0)
         || (strcasecmp(func_name, "set_user_var") == 0)
         || (strcasecmp(func_name, "set_system_var") == 0))
     {
@@ -3322,6 +3341,19 @@ static void update_field_infos(parsing_info_t* pi,
             Item* item = *order->item;
 
             update_field_infos(pi, select, COLLECT_GROUP_BY, item, &select->item_list);
+
+            order = order->next;
+        }
+    }
+
+    if (select->order_list.first)
+    {
+        ORDER* order = select->order_list.first;
+        while (order)
+        {
+            Item* item = *order->item;
+
+            update_field_infos(pi, select, COLLECT_ORDER_BY, item, &select->item_list);
 
             order = order->next;
         }

@@ -79,8 +79,4 @@ then
     cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale_logrotate /etc/logrotate.d/maxscale_logrotate
 fi
 
-# This will allow us to install the Perl scripts as executable files
-# without adding the Perl dependencies
-find @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/plugins/nagios -name '*.pl' -exec chmod ug+x {} \;
-
 /sbin/ldconfig
