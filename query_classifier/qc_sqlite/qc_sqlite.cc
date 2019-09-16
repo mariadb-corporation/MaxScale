@@ -1264,6 +1264,18 @@ public:
                                         const ExprList* pExclude,
                                         compound_approach_t compound_approach = ANALYZE_COMPOUND_SELECTS)
     {
+        if (pSelect->pLimit)
+        {
+            // In case there is an ORDER BY statement without a LIMIT, which is
+            // not accepted by sqlite, a pseudo LIMIT with the value of -1 is injected.
+            // We need to detect that so as not to incorrectly claim that there is
+            // a clause. See maxscale_create_pseudo_limit() in parse.y.
+            if (pSelect->pLimit->op != TK_INTEGER || pSelect->pLimit->u.iValue != -1)
+            {
+                m_has_clause = true;
+            }
+        }
+
         if (pSelect->pSrc)
         {
             const SrcList* pSrc = pSelect->pSrc;
@@ -1328,6 +1340,14 @@ public:
             // mentioned. Consequently, they need not be collected.
             update_field_infos(aliases, 0, pSelect->pHaving, 0, QC_TOKEN_MIDDLE, pSelect->pEList);
 #endif
+        }
+
+        if (pSelect->pOrderBy)
+        {
+            update_field_infos_from_exprlist(&aliases,
+                                             context,
+                                             pSelect->pOrderBy,
+                                             pSelect->pEList);
         }
 
         if (pSelect->pWith)
@@ -1872,6 +1892,9 @@ public:
             QcAliases aliases;
             uint32_t context = 0;
             update_field_infos_from_select(aliases, context, pSelect, NULL);
+
+            // Non-sensical to claim that a "CREATE ... SELECT ... WHERE ..." statement has a clause.
+            m_has_clause = false;
         }
         else if (pOldTable)
         {
@@ -2038,7 +2061,7 @@ public:
             m_type_mask = QUERY_TYPE_WRITE;
             m_operation = QUERY_OP_UPDATE;
             update_names_from_srclist(&aliases, pTabList);
-            m_has_clause = (pWhere ? true : false);
+            m_has_clause = ((pWhere && pWhere->op != TK_IN) ? true : false);
 
             if (pChanges)
             {

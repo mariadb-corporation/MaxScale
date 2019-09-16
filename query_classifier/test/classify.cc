@@ -76,6 +76,10 @@ char* get_types_as_string(uint32_t types)
     {
         s = append(s, "QUERY_TYPE_SESSION_WRITE", &len);
     }
+    if (types & QUERY_TYPE_USERVAR_WRITE)
+    {
+        s = append(s, "QUERY_TYPE_USERVAR_WRITE", &len);
+    }
     if (types & QUERY_TYPE_USERVAR_READ)
     {
         s = append(s, "QUERY_TYPE_USERVAR_READ", &len);
