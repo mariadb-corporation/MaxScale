@@ -20,6 +20,10 @@ int main(int argc, char** argv)
         std::ofstream cnf(filename);
         cnf << "[RW-Split-Router]" << endl
             << "type=service" << endl
+            << "router=readwritesplit" << endl
+            << "user=maxskysql" << endl
+            << "password=skysql" << endl
+            << "servers=server1" << endl
             << "version_string=" << endl;
     }
 
