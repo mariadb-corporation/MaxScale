@@ -504,9 +504,6 @@ add_test_executable(mxs716.cpp mxs716 replication LABELS MySQLAuth LIGHT REPL_BA
 # MaxScale configuration check functionality test (maxscale -c)
 add_test_executable(mxs722.cpp mxs722 mxs722 LABELS maxscale LIGHT REPL_BACKEND)
 
-# Test of 'maxadmin' user Unix accounts enable/disable
-add_test_executable(mxs729_maxadmin.cpp mxs729_maxadmin replication LABELS MaxAdminAuth LIGHT REPL_BACKEND)
-
 # Simple connect test in bash, checks that defined in cmd line DB is selected
 add_test_script(mxs791.sh mxs791.sh replication LABELS UNSTABLE HEAVY REPL_BACKEND)
 
