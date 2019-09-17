@@ -14,7 +14,6 @@
 
 #include "testconnections.h"
 #include "get_com_select_insert.h"
-#include "maxadmin_operations.h"
 
 /**
  * @brief check_com_select Checks if COM_SELECT increase takes place only on one slave node and there is no
@@ -141,7 +140,7 @@ int main(int argc, char* argv[])
 
     for (i = 0; i < Test->maxscales->N; i++)
     {
-        Test->maxscales->execute_maxadmin_command(i, (char*) "shutdown monitor MySQL-Monitor");
+        Test->maxctrl("stop monitor MySQL-Monitor", i);
     }
 
     get_global_status_allnodes(&selects[0], &inserts[0], Test->repl, silent);

@@ -83,6 +83,11 @@ public:
         return *this;
     }
 
+    void maxctrl(const std::string& s)
+    {
+        TestConnections::maxctrl(s);
+    }
+
     void connect_maxscale(int m = 0)
     {
         if (maxscales->connect_maxscale(m) != 0)
@@ -132,7 +137,7 @@ public:
 void list_servers(XTestConnections& test)
 {
     cout << endl;
-    test.maxscales->execute_maxadmin_command_print(0, (char*)"list servers");
+    test.maxctrl("list servers");
 }
 }
 

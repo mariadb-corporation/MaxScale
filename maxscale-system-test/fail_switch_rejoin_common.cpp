@@ -13,25 +13,23 @@ const int bufsize = 512;
 void get_output(TestConnections& test)
 {
     int ec;
-    test.tprintf("Maxadmin output:");
-    char* output = test.maxscales->ssh_node_output(0, "maxadmin list servers", true, &ec);
-    test.tprintf("%s", output);
-    free(output);
+    test.tprintf("maxctrl output:");
+    test.print_maxctrl("list servers");
 
     if (test.verbose)
     {
         test.tprintf("MaxScale output:");
     }
-    output = test.maxscales->ssh_node_output(0,
-                                             "cat /var/log/maxscale/maxscale.log | sudo tee -a /var/log/maxscale/maxscale_backup.log && "
-                                             "sudo truncate -s 0 /var/log/maxscale/maxscale.log",
-                                             true,
-                                             &ec);
+    char* str = test.maxscales->ssh_node_output(0,
+                                                "cat /var/log/maxscale/maxscale.log | sudo tee -a /var/log/maxscale/maxscale_backup.log && "
+                                                "sudo truncate -s 0 /var/log/maxscale/maxscale.log",
+                                                true,
+                                                &ec);
     if (test.verbose)
     {
-        test.tprintf("%s", output);
+        test.tprintf("%s", str);
     }
-    free(output);
+    free(str);
 }
 
 void check(TestConnections& test)

@@ -101,7 +101,7 @@ int main(int argc, char** argv)
     {
         // If ok so far, change the disk space threshold to something really small to force a switchover.
         cout << "Changing disk space threshold for the monitor, should cause a switchover.\n";
-        test.maxscales->execute_maxadmin_command(0, "alter monitor MySQL-Monitor disk_space_threshold=/:1");
+        test.maxctrl("alter monitor MySQL-Monitor disk_space_threshold=/:1");
         sleep(2);   // The disk space is checked depending on wall clock time.
         test.maxscales->wait_for_monitor(2);
 
@@ -122,8 +122,7 @@ int main(int argc, char** argv)
         print_gtids(test);
 
         cout << "Changing disk space threshold for the monitor, should prevent low disk switchovers.\n";
-        test.maxscales->execute_maxadmin_command(0, "alter monitor MySQL-Monitor "
-                                                    "disk_space_threshold=/:100");
+        test.maxctrl("alter monitor MySQL-Monitor disk_space_threshold=/:100");
         sleep(2);   // To update disk space status
         test.maxscales->wait_for_monitor(1);
         get_output(test);
@@ -131,8 +130,7 @@ int main(int argc, char** argv)
 
     // Use the reset-replication command to fix the situation.
     cout << "Running reset-replication to fix the situation.\n";
-    test.maxscales->execute_maxadmin_command(0, "call command mariadbmon reset-replication "
-                                                "MySQL-Monitor server1");
+    test.maxctrl("call command mariadbmon reset-replication MySQL-Monitor server1");
     sleep(2);
     test.maxscales->wait_for_monitor(2);
     get_output(test);

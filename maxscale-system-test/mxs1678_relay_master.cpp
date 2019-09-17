@@ -26,10 +26,7 @@ int main(int argc, char** argv)
     StringSet relay_master_only = {"Relay Master", "Running"};
 
     test.tprintf("Checking before stopping IO thread");
-    int exit_code;
-    char* output = test.maxscales->ssh_node_output(0, "maxadmin list servers", true, &exit_code);
-    test.tprintf("%s", output);
-    free(output);
+    test.print_maxctrl("list servers");
 
     test.add_result(test.maxscales->get_server_status("server1") != master, "server1 is not a master");
     test.add_result(test.maxscales->get_server_status("server2") != slave, "server2 is not a slave");
@@ -41,9 +38,7 @@ int main(int argc, char** argv)
     sleep(10);
 
     test.tprintf("Checking after stopping IO thread");
-    output = test.maxscales->ssh_node_output(0, "maxadmin list servers", true, &exit_code);
-    test.tprintf("%s", output);
-    free(output);
+    test.print_maxctrl("list servers");
     test.add_result(test.maxscales->get_server_status("server1") != master, "server1 is not a master");
     test.add_result(test.maxscales->get_server_status("server2") != slave, "server2 is not a slave");
     test.add_result(test.maxscales->get_server_status("server3") != running, "server3 is not only running");

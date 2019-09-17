@@ -154,9 +154,7 @@ int main(int argc, char** argv)
     {
         // Some of the following tests depend on manipulating backends during the same monitor tick or
         // between ticks. Slow down the monitor to make this more likely. Not fool-proof in the slightest.
-        int rval = test.maxscales->execute_maxadmin_command(0, "alter monitor MariaDB-Monitor "
-                                                               "monitor_interval=4000");
-        test.expect(rval == 0, "MaxAdmin command failed.");
+        test.check_maxctrl("alter monitor MariaDB-Monitor monitor_interval=4000");
     }
 
     if (test.ok())
@@ -219,7 +217,6 @@ int main(int argc, char** argv)
     {
         test.try_query(test.repl->nodes[i], drop_query);
     }
-    test.maxscales->execute_maxadmin_command(0, "call command mariadbmon reset-replication "
-                                                "MariaDB-Monitor server1");
+    test.maxctrl("call command mariadbmon reset-replication MariaDB-Monitor server1");
     return test.global_result;
 }

@@ -11,7 +11,6 @@
 #include <cstdlib>
 #include <string>
 #include "testconnections.h"
-#include "maxadmin_operations.h"
 
 void test_all_ok(TestConnections* Test)
 {

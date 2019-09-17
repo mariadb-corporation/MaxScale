@@ -10,7 +10,6 @@
  */
 
 #include "testconnections.h"
-#include "maxadmin_operations.h"
 
 int main(int argc, char* argv[])
 {
@@ -28,9 +27,8 @@ int main(int argc, char* argv[])
     Test->tprintf("Restarting MaxScale");
     Test->maxscales->restart_maxscale(0);
 
-    Test->tprintf("Checking if MaxScale is alive by connecting to MaxAdmin\n");
-    Test->add_result(Test->maxscales->execute_maxadmin_command(0, (char*) "show servers"),
-                     "Maxadmin execution failed.\n");
+    Test->tprintf("Checking if MaxScale is alive by connecting to with maxctrl\n");
+    Test->check_maxctrl("show servers");
 
     for (int i = 0; i < Test->repl->N; i++)
     {

@@ -193,12 +193,3 @@ they are availve from [mariadb_func.h](mariadb_func.h)
 |IP_private[ ]|private IP of the node (for AWS nodes)|node_private_XXX <br> galera_private_XXX|
 |port[ ]|MariaDB port for the node|node_port_XXX <br> galera_port_XXX|
 |nodes[ ]|MYSQL handler| - |
-
-### Maxadmin operations functions
-[maxadmin_operations.h](maxadmin_operations.h) contains fuctions to communicate to Maxscale via MaxAdmin interface
-
-|Function|Short description|
-|----|---|
-|execute_maxadmin_command()|send MaxAdmin command to Maxscale|
-|execute_maxadmin_command_print()|send MaxAdmin command to Maxscale and print reply|
-|get_maxadmin_param()|send MaxAdmin command to Maxscale and try to find the value of given parameter in output|

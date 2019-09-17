@@ -5,7 +5,6 @@
 
 #include <iostream>
 #include "testconnections.h"
-#include "maxadmin_operations.h"
 #include "sql_t1.h"
 
 #include "test_binlog_fnc.h"

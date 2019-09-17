@@ -101,8 +101,7 @@ int main(int argc, char** argv)
     {
         // Use the reset-replication command to magically fix the situation.
         cout << "Running reset-replication to fix the situation.\n";
-        test.maxscales->execute_maxadmin_command(0, "call command mariadbmon reset-replication "
-                                                    "MySQL-Monitor server2");
+        test.maxctrl("call command mariadbmon reset-replication MySQL-Monitor server2");
         test.maxscales->wait_for_monitor(1);
         // Add another event to force gtid forward.
         maxconn = test.maxscales->open_rwsplit_connection(0);
@@ -128,7 +127,7 @@ int main(int argc, char** argv)
 
         // Finally, switchover back and erase table
         cout << "Running switchover.\n";
-        test.maxscales->execute_maxadmin_command(0, "call command mariadbmon switchover MySQL-Monitor");
+        test.maxctrl("call command mariadbmon switchover MySQL-Monitor");
         test.maxscales->wait_for_monitor(1);
         get_output(test);
         expect_server_status(server_names[0], master);

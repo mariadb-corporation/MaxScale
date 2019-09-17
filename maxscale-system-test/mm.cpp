@@ -6,24 +6,23 @@
  * - start 2 nodes
  * - execute SET MASTER TO on node0 to point to node1 and on node1 to point to node0
  * - execute SET GLOBAL READ_ONLY=ON on node0
- * - check server status using maxadmin interface, expect Master on node1 and Slave on node0
+ * - check server status using maxctrl, expect Master on node1 and Slave on node0
  * - put data to DB using RWSplit, check data using RWSplit and directrly from backend nodes
  * - block node0 (slave)
- * - check server status using maxadmin interface, expect node0 Down
+ * - check server status using maxctrl, expect node0 Down
  * - put data and check it
  * - unblock node0
  * - block node1 (master)
- * - check server status using maxadmin interface, expect node1 Down
+ * - check server status using maxctrl, expect node1 Down
  * - execute SET GLOBAL READ_ONLY=OFF on node0
  * - unblock node0
  * - execute SET GLOBAL READ_ONLY=ON on node1
- * - check server status using maxadmin interface, expect Master on node0 and Slave on node1
+ * - check server status using maxctrl, expect Master on node0 and Slave on node1
  */
 
 
 #include <iostream>
 #include "testconnections.h"
-#include "maxadmin_operations.h"
 #include "sql_t1.h"
 
 int check_conf(TestConnections& test, int blocked_node)

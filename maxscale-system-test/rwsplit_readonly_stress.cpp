@@ -10,7 +10,6 @@
 #include <cstdlib>
 #include <string>
 #include "testconnections.h"
-#include "maxadmin_operations.h"
 
 #define THREADS 16
 

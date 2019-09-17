@@ -662,8 +662,14 @@ public:
         expect(result.first == 0, "Command '%s' should work: %s", cmd.c_str(), result.second.c_str());
     }
 
+    void print_maxctrl(std::string cmd, int m = 0, bool sudo = true)
+    {
+        tprintf("\n%s", maxctrl(cmd, m, sudo).second.c_str());
+    }
+
     void check_current_operations(int m, int value);
     void check_current_connections(int m, int value);
+    void check_current_persistent_connections(int m, int node, int value);
     int  stop_maxscale(int m = 0);
     int  start_maxscale(int m = 0);
     void process_template(const char* src, const char* dest = "/etc/maxscale.cnf");

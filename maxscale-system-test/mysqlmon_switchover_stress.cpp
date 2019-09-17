@@ -400,7 +400,7 @@ namespace
 
 void list_servers(TestConnections& test)
 {
-    test.maxscales->execute_maxadmin_command_print(0, (char*)"list servers");
+    test.print_maxctrl("list servers");
 }
 
 void sleep(int s)
@@ -551,7 +551,7 @@ void switchover(TestConnections& test, int next_master_id, int current_master_id
 
     cout << "\nCommand: " << command << endl;
 
-    test.maxscales->execute_maxadmin_command_print(0, (char*)command.c_str());
+    test.print_maxctrl(command);
 
     sleep(1);
     list_servers(test);

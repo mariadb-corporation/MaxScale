@@ -173,7 +173,7 @@ int main(int argc, char** argv)
     };
 
     auto update_users = [&test]() {
-        test.maxscales->execute_maxadmin_command(0, "reload dbusers RWSplit-Router");
+        test.maxscales->restart();
     };
 
     const char create_pam_user_fmt[] = "CREATE OR REPLACE USER '%s'@'%%' IDENTIFIED VIA pam USING '%s';";

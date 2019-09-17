@@ -1,7 +1,6 @@
 #include <iostream>
 #include <ctime>
 #include "testconnections.h"
-#include "maxadmin_operations.h"
 #include "sql_t1.h"
 
 int main(int argc, char* argv[])

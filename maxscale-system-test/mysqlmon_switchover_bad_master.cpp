@@ -195,7 +195,7 @@ void run(TestConnections& test)
 
     cout << "\nTrying to do manual switchover to server4" << endl;
     const char* zCommand = "call command mysqlmon switchover MySQL-Monitor server4 server2";
-    test.maxscales->execute_maxadmin_command_print(0, (char*)zCommand);
+    test.maxctrl(zCommand);
 
     test.maxscales->wait_for_monitor();
 

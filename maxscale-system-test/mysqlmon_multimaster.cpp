@@ -20,33 +20,21 @@
 
 #include <iostream>
 #include "testconnections.h"
-#include "maxadmin_operations.h"
+
 #include "sql_t1.h"
 #include <jansson.h>
 #include <string>
+#include <maxbase/string.hh>
 
 using std::cout;
 using std::string;
 
 void check_status(TestConnections& test, const char* server, const char* status)
 {
-    char cmd[256];
-    char maxadmin_result[1024];
-
-    sprintf(cmd, "show server %s", server);
-    test.maxscales->get_maxadmin_param(0, cmd, (char*)"Status:", maxadmin_result);
-
-    if (maxadmin_result == NULL)
-    {
-        test.add_result(1, "maxadmin execution error\n");
-        return;
-    }
-
-    if (strstr(maxadmin_result, status) == NULL)
-    {
-        test.add_result(1, "Test failed, server '%s' status is '%s', expected '%s'\n",
-                        server, maxadmin_result, status);
-    }
+    auto srv_status = test.get_server_status(server);
+    test.expect(srv_status.count(status),
+                "Test failed, server '%s' status is '%s', expected '%s'",
+                server, mxb::join(srv_status, ", ").c_str(), status);
 }
 
 json_t* get_json_data(TestConnections& test, const char* query)

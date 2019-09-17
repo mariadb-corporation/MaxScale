@@ -83,7 +83,7 @@ namespace
 
 void list_servers(TestConnections& test)
 {
-    test.maxscales->execute_maxadmin_command_print(0, (char*)"list servers");
+    test.print_maxctrl("list servers");
 }
 
 void create_table(TestConnections& test)
@@ -133,7 +133,7 @@ void run(TestConnections& test)
 
     cout << "\nPerforming failover... " << endl;
     test.maxscales->wait_for_monitor();
-    test.maxscales->execute_maxadmin_command_print(0, (char*)"call command mysqlmon failover MySQL-Monitor");
+    test.print_maxctrl("call command mysqlmon failover MySQL-Monitor");
 
     list_servers(test);
 

@@ -14,10 +14,11 @@
 #include <iostream>
 #include <future>
 #include <regex>
+#include <limits.h>
 #include <maxbase/stacktrace.hh>
+#include <maxbase/string.hh>
 
 #include "mariadb_func.h"
-#include "maxadmin_operations.h"
 #include "sql_t1.h"
 #include "testconnections.h"
 #include "labels_table.h"
@@ -745,7 +746,6 @@ void TestConnections::print_env()
     printf("Maxscale User name\t%s\n", maxscales->user_name);
     printf("Maxscale Password\t%s\n", maxscales->password);
     printf("Maxscale SSH key\t%s\n", maxscales->sshkey[0]);
-    printf("Maxadmin password\t%s\n", maxscales->maxadmin_password[0]);
     printf("Access user\t%s\n", maxscales->access_user[0]);
     if (repl)
     {
@@ -2216,32 +2216,39 @@ int TestConnections::list_dirs(int m)
 
 void TestConnections::check_current_operations(int m, int value)
 {
-    char value_str[512];
-    sprintf(value_str, "%d", value);
-
     for (int i = 0; i < repl->N; i++)
     {
-        char command[512];
-        sprintf(command, "show server server%d", i + 1);
-        add_result(maxscales->check_maxadmin_param(m, command, "Current no. of operations:", value_str),
-                   "Current no. of operations is not %s",
-                   value_str);
+        auto res = maxctrl("api get servers/server"
+                           + std::to_string(i + 1)
+                           + " data.attributes.statistics.active_operations", m);
+
+        expect(std::stoi(res.second) == value,
+               "Current no. of operations is not %d for server%d", value, i + 1);
     }
 }
 
 void TestConnections::check_current_connections(int m, int value)
 {
-    char value_str[512];
-    sprintf(value_str, "%d", value);
-
     for (int i = 0; i < repl->N; i++)
     {
-        char command[512];
-        sprintf(command, "show server server%d", i + 1);
-        add_result(maxscales->check_maxadmin_param(m, command, "Current no. of conns:", value_str),
-                   "Current no. of conns is not %s",
-                   value_str);
+        auto res = maxctrl("api get servers/server"
+                           + std::to_string(i + 1)
+                           + " data.attributes.statistics.connections", m);
+
+        expect(std::stoi(res.second) == value,
+               "Current no. of conns is not %d for server%d", value, i + 1);
     }
+}
+
+void TestConnections::check_current_persistent_connections(int m, int i, int value)
+{
+    auto res = maxctrl("api get servers/server"
+                       + std::to_string(i + 1)
+                       + " data.attributes.statistics.connections", m);
+
+    expect(std::stoi(res.second) == value,
+           "Current no. of persistent conns is not %d for server%d",
+           value, i + 1);
 }
 
 int TestConnections::take_snapshot(char* snapshot_name)

@@ -92,7 +92,7 @@ int main(int argc, char** argv)
 
         test.tprintf("Switching back old master %s.", master_name.c_str());
         string switchover = "call command mariadbmon switchover MariaDB-Monitor " + master_name;
-        test.maxscales->execute_maxadmin_command(0, switchover.c_str());
+        test.maxctrl(switchover);
         test.maxscales->wait_for_monitor(2);
         new_master_id = get_master_server_id(test);
         test.expect(new_master_id == server_ids[master_ind], "Switchover to original master failed.");

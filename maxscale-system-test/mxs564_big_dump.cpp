@@ -48,11 +48,15 @@ int main(int argc, char* argv[])
 {
     TestConnections::require_galera(true);
     TestConnections test(argc, argv);
+    std::set<int> slaves;
 
-    int master = test.maxscales->find_master_maxadmin(test.galera);
-    test.tprintf("Master: %d", master);
-    std::set<int> slaves {0, 1, 2, 3};
-    slaves.erase(master);
+    for (int i = 0; i < 4; i++)
+    {
+        if (test.get_server_status(("server" + std::to_string(i + 1)).c_str()).count("Slave"))
+        {
+            slaves.insert(i);
+        }
+    }
 
     test.maxscales->connect();
     test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE IF EXISTS t1");

@@ -125,7 +125,7 @@ void* kill_vm_thread(void* ptr)
         sleep(2);
         if (restart_flag == 0)
         {
-            Test->maxscales->execute_maxadmin_command(0, (char*) "restart service \"RW Split Router\"");
+            Test->maxctrl("start service RW-Split-Router");
         }
         else
         {

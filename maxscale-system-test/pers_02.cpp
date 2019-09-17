@@ -13,8 +13,6 @@
 
 
 #include "testconnections.h"
-#include "maxadmin_operations.h"
-
 
 int main(int argc, char* argv[])
 {

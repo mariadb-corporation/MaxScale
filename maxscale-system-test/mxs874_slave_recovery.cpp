@@ -43,23 +43,13 @@ int main(int argc, char* argv[])
     sleep(5);
     test.set_timeout(20);
 
-    int retries;
-
-    for (retries = 0; retries < 10; retries++)
+    for (int retries = 0; test.get_server_status("server2").count("Running") == 0 && retries < 10; retries++)
     {
-        char server1_status[256];
-        test.maxscales->get_maxadmin_param(0,
-                                           (char*) "show server server2",
-                                           (char*) "Status",
-                                           server1_status);
-        if (strstr(server1_status, "Running"))
-        {
-            break;
-        }
-        sleep(1);
     }
 
-    test.add_result(retries == 10, "Slave is not recovered, slave status is not Running\n");
+    auto status = test.get_server_status("server2");
+    test.add_result(status.count("Slave") == 0,
+                    "Slave is not recovered, slave status is not Running: %s", mxb::join(status).c_str());
 
     test.repl->connect();
     int real_id = test.repl->get_server_id(1);

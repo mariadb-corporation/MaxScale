@@ -172,7 +172,7 @@ void set_event_state(TestConnections& test, const string& event_name, const stri
 void switchover(TestConnections& test, const string& new_master)
 {
     string switch_cmd = "call command mysqlmon switchover MySQL-Monitor " + new_master;
-    test.maxscales->execute_maxadmin_command_print(0, switch_cmd.c_str());
+    test.maxctrl(switch_cmd.c_str());
     test.maxscales->wait_for_monitor(2);
     // Check success.
     auto new_master_status = test.get_server_status(new_master.c_str());

@@ -397,7 +397,7 @@ namespace
 
 void list_servers(TestConnections& test)
 {
-    test.maxscales->execute_maxadmin_command_print(0, (char*)"list servers");
+    test.print_maxctrl("list servers");
 }
 
 void sleep(int s)
