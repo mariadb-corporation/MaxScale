@@ -56,9 +56,20 @@ static void write_auth_err(DCB* dcb);
 class CDCProtocolModule : public mxs::ProtocolModule
 {
 public:
-    static CDCProtocolModule* create()
+    static CDCProtocolModule* create(const std::string& auth_name, const std::string& auth_opts)
     {
-        return new CDCProtocolModule();
+        CDCProtocolModule* protocol_module = nullptr;
+        // This protocol only has one authenticator. TODO: merge modules
+        auto authenticator_module = mxs::authenticator_init(MXS_CDCPLAINAUTH_AUTHENTICATOR_NAME, nullptr);
+        if (authenticator_module)
+        {
+            protocol_module = new (std::nothrow) CDCProtocolModule();
+            if (protocol_module)
+            {
+                protocol_module->m_auth_module = std::move(authenticator_module);
+            }
+        }
+        return protocol_module;
     }
 
     std::unique_ptr<mxs::ClientProtocol>

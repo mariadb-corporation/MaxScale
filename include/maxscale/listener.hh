@@ -206,8 +206,7 @@ private:
     std::string m_authenticator;    /**< Name of authenticator */
     std::string m_auth_options;     /**< Authenticator options */
 
-    std::unique_ptr<mxs::ProtocolModule>      m_proto_module;   /**< Protocol module */
-    std::unique_ptr<mxs::AuthenticatorModule> m_auth_module;    /**< Authenticator module */
+    std::unique_ptr<mxs::ProtocolModule> m_proto_module;    /**< Protocol module */
 
     SERVICE*             m_service;         /**< The service which used by this listener */
     MXS_CONFIG_PARAMETER m_params;          /**< Configuration parameters */
@@ -241,7 +240,6 @@ private:
      * @param protocol      The protocol module to use
      * @param authenticator The authenticator module to use
      * @param auth_opts     Options for the authenticator
-     * @param auth_instance The authenticator instance
      * @param ssl           The SSL configuration
      */
     Listener(SERVICE* service, const std::string& name,
@@ -250,7 +248,6 @@ private:
              std::unique_ptr<mxs::ProtocolModule> proto_instance,
              const std::string& authenticator,
              const std::string& auth_opts,
-             std::unique_ptr<mxs::AuthenticatorModule> auth_instance,
              std::unique_ptr<mxs::SSLContext> ssl,
              const MXS_CONFIG_PARAMETER& params,
              qc_sql_mode_t sql_mode);

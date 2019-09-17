@@ -98,10 +98,8 @@ enum mxs_auth_state_t
     MXS_AUTH_STATE_COMPLETE         /**< Authentication is complete */
 };
 
-std::unique_ptr<mxs::AuthenticatorModule> authenticator_init(const char* authenticator, const char* options);
-
 namespace maxscale
 {
-
+std::unique_ptr<mxs::AuthenticatorModule> authenticator_init(const char* authenticator, const char* options);
 const char* to_string(mxs_auth_state_t state);
 }

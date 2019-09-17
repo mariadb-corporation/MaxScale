@@ -114,7 +114,6 @@ Listener::Listener(SERVICE* service,
                    std::unique_ptr<mxs::ProtocolModule> proto_instance,
                    const std::string& authenticator,
                    const std::string& auth_opts,
-                   std::unique_ptr<mxs::AuthenticatorModule> auth_instance,
                    std::unique_ptr<mxs::SSLContext> ssl,
                    const MXS_CONFIG_PARAMETER& params,
                    qc_sql_mode_t sql_mode)
@@ -127,7 +126,6 @@ Listener::Listener(SERVICE* service,
     , m_authenticator(authenticator)
     , m_auth_options(auth_opts)
     , m_proto_module(std::move(proto_instance))
-    , m_auth_module(std::move(auth_instance))
     , m_service(service)
     , m_params(params)
     , m_ssl_provider(std::move(ssl))
@@ -253,7 +251,7 @@ SListener Listener::create(const std::string& name,
     auto protocol_api = (MXS_PROTOCOL_API*)load_module(protocol.c_str(), MODULE_PROTOCOL);
     if (protocol_api)
     {
-        protocol_module.reset(protocol_api->create_protocol_module());
+        protocol_module.reset(protocol_api->create_protocol_module(authenticator, authenticator_options));
     }
     if (!protocol_module)
     {
@@ -273,36 +271,12 @@ SListener Listener::create(const std::string& name,
         }
     }
     const char* zauth = authenticator.c_str();
-    const MXS_MODULE* auth_mod = get_module(zauth, MODULE_AUTHENTICATOR);   // TODO:cleanup
-    std::unique_ptr<mxs::AuthenticatorModule> auth_instance;
-    if (auth_mod)
-    {
-        auth_instance = authenticator_init(zauth, authenticator_options.c_str());
-    }
-    if (!auth_instance)
-    {
-        MXS_ERROR("Failed to initialize authenticator module '%s' for listener '%s'.",
-                  zauth, name.c_str());
-        return nullptr;
-    }
 
-    // Check that the authenticator supports the protocol. Use case-insensitive comparison.
-    // TODO: Extend to routers/filters.
-    auto supported_protocol = auth_instance->supported_protocol();
-    if (strcasecmp(protocol_module->name().c_str(), supported_protocol.c_str()) != 0)
-    {
-        // When printing protocol name, print the name user gave in configuration file,
-        // not the effective name.
-        MXB_ERROR("Authenticator module '%s' of listener '%s' expects to be paired with protocol '%s', "
-                  "not with '%s'.",
-                  zauth, name.c_str(), supported_protocol.c_str(), protocol.c_str());
-        return nullptr;
-    }
 
     SListener listener(new(std::nothrow) Listener(
                            service, name, address, port,
                            protocol, std::move(protocol_module),
-                           zauth, authenticator_options, std::move(auth_instance),
+                           zauth, authenticator_options,
                            std::move(ssl_info), params, sql_mode));
 
     if (listener)
@@ -592,7 +566,7 @@ json_t* Listener::to_json() const
     json_object_set_new(attr, CN_STATE, json_string(state()));
     json_object_set_new(attr, CN_PARAMETERS, param);
 
-    json_t* diag = m_auth_module->diagnostics_json();
+    json_t* diag = m_proto_module->m_auth_module->diagnostics_json();
     if (diag)
     {
         json_object_set_new(attr, CN_AUTHENTICATOR_DIAGNOSTICS, diag);
@@ -638,7 +612,7 @@ const char* Listener::protocol() const
 
 mxs::AuthenticatorModule* Listener::auth_instance() const
 {
-    return m_auth_module.get();
+    return m_proto_module->m_auth_module.get();
 }
 
 const char* Listener::state() const
@@ -669,14 +643,14 @@ const char* Listener::state() const
 void Listener::print_users(DCB* dcb)
 {
     dcb_printf(dcb, "User names (%s): ", name());
-    m_auth_module->diagnostics(dcb);
+    m_proto_module->m_auth_module->diagnostics(dcb);
     dcb_printf(dcb, "\n");
 }
 
 int Listener::load_users()
 {
     mxb::LogScope scope(name());
-    return m_auth_module->load_users(m_service);
+    return m_proto_module->m_auth_module->load_users(m_service);
 }
 
 
@@ -837,7 +811,7 @@ ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const 
         return nullptr;
     }
 
-    auto client_authenticator = m_auth_module->create_client_authenticator();
+    auto client_authenticator = m_proto_module->m_auth_module->create_client_authenticator();
     if (!client_authenticator)
     {
         delete session;
@@ -950,7 +924,7 @@ bool Listener::listen()
     m_state = FAILED;
 
     /** Load the authentication users before before starting the listener */
-    switch (m_auth_module->load_users(m_service))
+    switch (m_proto_module->m_auth_module->load_users(m_service))
     {
     case MXS_AUTH_LOADUSERS_FATAL:
         MXS_ERROR("Fatal error when loading users, service is not started.");

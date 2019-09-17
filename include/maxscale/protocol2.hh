@@ -23,7 +23,7 @@ namespace maxscale
 {
 class ClientProtocol;
 class BackendProtocol;
-
+class AuthenticatorModule;
 
 class ProtocolModule
 {
@@ -65,6 +65,9 @@ public:
      * @return Module name
      */
     virtual std::string name() const = 0;
+
+    // Authenticator module. Will be cleaned up in later commits.
+    std::unique_ptr<mxs::AuthenticatorModule> m_auth_module;
 };
 
 /**
@@ -180,9 +183,10 @@ public:
     ProtocolApiGenerator(const ProtocolApiGenerator&) = delete;
     ProtocolApiGenerator& operator=(const ProtocolApiGenerator&) = delete;
 
-    static mxs::ProtocolModule* create_protocol_module()
+    static mxs::ProtocolModule* create_protocol_module(const std::string& auth_name,
+                                                       const std::string& auth_opts)
     {
-        return ProtocolImplementation::create();
+        return ProtocolImplementation::create(auth_name, auth_opts);
     }
 
     static MXS_PROTOCOL_API s_api;

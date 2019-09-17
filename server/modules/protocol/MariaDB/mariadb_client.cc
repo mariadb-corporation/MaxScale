@@ -1956,9 +1956,50 @@ int32_t MySQLClientProtocol::connlimit(DCB* dcb, int limit)
 class MySQLProtocolModule : public mxs::ProtocolModule
 {
 public:
-    static MySQLProtocolModule* create()
+    static MySQLProtocolModule* create(const std::string& auth_name, const std::string& auth_opts)
     {
-        return new MySQLProtocolModule();
+        MySQLProtocolModule* protocol_module = nullptr;
+        // TODO: Add support for multiple authenticators.
+
+        const char* auth_namez {nullptr};
+        const char* auth_optsz {nullptr};
+        if (!auth_name.empty())
+        {
+            auth_namez = auth_name.c_str();
+            auth_optsz = auth_opts.c_str();
+        }
+        else
+        {
+            auth_namez = MXS_MARIADBAUTH_AUTHENTICATOR_NAME;
+        }
+
+        auto authenticator_module = mxs::authenticator_init(auth_namez, auth_optsz);
+        if (authenticator_module)
+        {
+            // Check that the authenticator supports the protocol. Use case-insensitive comparison.
+            auto supported_protocol = authenticator_module->supported_protocol();
+            if (strcasecmp(MXS_MODULE_NAME, supported_protocol.c_str()) == 0)
+            {
+                protocol_module = new (std::nothrow) MySQLProtocolModule();
+                if (protocol_module)
+                {
+                    protocol_module->m_auth_module = std::move(authenticator_module);
+                }
+            }
+            else
+            {
+                // When printing protocol name, print the name user gave in configuration file,
+                // not the effective name.
+                MXB_ERROR("Authenticator module '%s' expects to be paired with protocol '%s', "
+                          "not with '%s'.",
+                          auth_namez, supported_protocol.c_str(), MXS_MODULE_NAME);
+            }
+        }
+        else
+        {
+            MXB_ERROR("Failed to initialize authenticator module '%s'.", auth_namez);
+        }
+        return protocol_module;
     }
 
     std::unique_ptr<mxs::ClientProtocol>

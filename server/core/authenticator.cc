@@ -24,6 +24,9 @@
 
 using mxs::AuthenticatorModule;
 
+namespace maxscale
+{
+
 /**
  * @brief Initialize an authenticator module
  *
@@ -72,9 +75,6 @@ std::unique_ptr<AuthenticatorModule> authenticator_init(const char* authenticato
     }
     return rval;
 }
-
-namespace maxscale
-{
 
 const char* to_string(mxs_auth_state_t state)
 {
