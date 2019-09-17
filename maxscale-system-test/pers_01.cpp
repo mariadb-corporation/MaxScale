@@ -31,11 +31,11 @@
 
 #include "testconnections.h"
 
-void check_pers_conn(TestConnections* Test, int pers_conn_expected[], char* server)
+void check_pers_conn(TestConnections* Test, int pers_conn_expected[], const std::string& server)
 {
     for (int i = 0; i < 4; i++)
     {
-        Test->check_current_persistent_connections(0, i, pers_conn_expected[i]);
+        Test->check_current_persistent_connections(0, server + std::to_string(i + 1), pers_conn_expected[i]);
     }
 }
 

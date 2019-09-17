@@ -611,6 +611,7 @@ json_t* Server::json_attributes() const
     /** Store statistics */
     json_t* statistics = json_object();
 
+    cleanup_persistent_connections(this);
     json_object_set_new(statistics, "connections", json_integer(stats().n_current));
     json_object_set_new(statistics, "total_connections", json_integer(stats().n_connections));
     json_object_set_new(statistics, "persistent_connections", json_integer(pool_stats.n_persistent));
