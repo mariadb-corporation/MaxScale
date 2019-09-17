@@ -173,7 +173,7 @@ namespace maxscale
 {
 
 class RoutingWorker : public mxb::Worker
-                    , public DCB::Manager
+                    , public BackendDCB::Manager
                     , private MXB_POLL_DATA
 {
     RoutingWorker(const RoutingWorker&) = delete;
@@ -644,6 +644,8 @@ private:
     void add(DCB* pDcb) override;
     void remove(DCB* pDcb) override;
     void destroy(DCB* pDcb) override;
+    // BackendDCB::Manager
+    bool can_be_destroyed(BackendDCB* dcb) override;
 
 private:
     class WatchdogNotifier;

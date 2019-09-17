@@ -400,7 +400,9 @@ static bool connect_backend(const char* host, int port, int* fd)
  *
  * @return The new allocated dcb or NULL on error
  */
-BackendDCB* BackendDCB::connect(SERVER* srv, MXS_SESSION* session, DCB::Manager* manager,
+BackendDCB* BackendDCB::connect(SERVER* srv,
+                                MXS_SESSION* session,
+                                BackendDCB::Manager* manager,
                                 mxs::Component* component)
 {
     Server* server = static_cast<Server*>(srv);

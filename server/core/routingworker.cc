@@ -583,6 +583,13 @@ void RoutingWorker::remove(DCB* pDcb)
     m_dcbs.erase(it);
 }
 
+bool RoutingWorker::can_be_destroyed(BackendDCB* dcb)
+{
+    mxb_assert(!true);
+    // TODO: Move backend DCB persistency management here.
+    return true;
+}
+
 bool RoutingWorker::pre_run()
 {
     this_thread.current_worker_id = m_id;

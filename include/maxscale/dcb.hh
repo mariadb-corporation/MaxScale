@@ -670,7 +670,26 @@ private:
 class BackendDCB : public DCB
 {
 public:
-    static BackendDCB* connect(SERVER* server, MXS_SESSION* session, DCB::Manager* manager,
+    class Manager : public DCB::Manager
+    {
+    public:
+        /**
+         * Called by BackendDCB when it is about to be destroyed.
+         *
+         * @param dcb  The dcb about to be destroyed.
+         *
+         * @return True, if the dcb can be destroyed, false otherwise.
+         *
+         * If @c false is returned, the state of the DCB will be
+         * changed to what it would be if @close() had never been
+         * called.
+         */
+        virtual bool can_be_destroyed(BackendDCB* dcb) = 0;
+    };
+
+    static BackendDCB* connect(SERVER* server,
+                               MXS_SESSION* session,
+                               BackendDCB::Manager* manager,
                                mxs::Component* upstream);
 
     void set_session(MXS_SESSION* s)
