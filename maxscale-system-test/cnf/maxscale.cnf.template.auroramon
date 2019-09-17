@@ -21,17 +21,7 @@ servers=server1,server2,server3,server4
 user=skysql
 password=skysqlrds
 
-[CLI]
-type=service
-router=cli
-
 # Listeners
-
-[CLI-Listener]
-type=listener
-service=CLI
-protocol=maxscaled
-socket=default
 
 [RW-Split-Listener]
 type=listener

@@ -61,16 +61,6 @@ throttling_duration = 10000
 sampling_duration = 250
 continuous_duration = 2000
 
-[MaxAdmin-Service]
-type = service
-router = cli
-
-[MaxAdmin-Unix-Listener]
-type = listener
-service = MaxAdmin-Service
-protocol = maxscaled
-socket = default
-
 [server1]
 type = server
 address = ###node_server_IP_1###

@@ -58,16 +58,6 @@ service=RW-Split-Router-Galera
 protocol=MySQLClient
 port=4016
 
-[CLI]
-type=service
-router=cli
-
-[CLI-Listener]
-type=listener
-service=CLI
-protocol=maxscaled
-#address=localhost
-socket=default
 
 [server1]
 type=server

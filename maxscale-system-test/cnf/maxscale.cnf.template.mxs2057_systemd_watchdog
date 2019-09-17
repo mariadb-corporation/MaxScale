@@ -29,16 +29,6 @@ type = filter
 module = luafilter
 session_script=/home/vagrant/infinite_loop.lua
 
-[MaxAdmin-Service]
-type = service
-router = cli
-
-[MaxAdmin-Unix-Listener]
-type = listener
-service = MaxAdmin-Service
-protocol = maxscaled
-socket = default
-
 [server1]
 type = server
 address = ###node_server_IP_1###

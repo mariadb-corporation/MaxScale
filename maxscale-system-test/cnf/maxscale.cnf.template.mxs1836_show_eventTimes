@@ -1,16 +1,6 @@
 [maxscale]
 threads=1
 
-[MaxAdmin]
-type=service
-router=cli
-
-[MaxAdmin-Listener]
-type=listener
-service=MaxAdmin
-protocol=maxscaled
-socket=default
-
 [MaxInfo]
 type=service
 router=maxinfo

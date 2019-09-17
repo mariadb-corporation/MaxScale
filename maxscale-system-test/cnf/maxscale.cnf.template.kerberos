@@ -64,16 +64,6 @@ authenticator=GSSAPIAuth
 authenticator_options=principal_name=mariadb/maxscale.test@MAXSCALE.TEST
 
 
-[CLI]
-type=service
-router=cli
-
-[CLI-Listener]
-type=listener
-service=CLI
-protocol=maxscaled
-#address=localhost
-socket=default
 
 [server1]
 type=server

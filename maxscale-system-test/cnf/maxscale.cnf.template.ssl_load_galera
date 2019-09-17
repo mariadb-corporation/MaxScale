@@ -69,16 +69,6 @@ ssl_key=/###access_homedir###/certs/server-key.pem
 ssl_ca_cert=/###access_homedir###/certs/ca.pem
 ssl_version=TLSv12
 
-[CLI]
-type=service
-router=cli
-
-[CLI-Listener]
-type=listener
-service=CLI
-protocol=maxscaled
-
-socket=default
 
 [server1]
 type=server

@@ -53,16 +53,6 @@ protocol=MySQLClient
 port=4008
 authenticator_options=skip_authentication=true
 
-[CLI]
-type=service
-router=cli
-
-[CLI-Listener]
-type=listener
-service=CLI
-protocol=maxscaled
-socket=default
-
 [server1]
 type=server
 address=###node_server_IP_1###

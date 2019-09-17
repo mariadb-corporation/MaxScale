@@ -45,16 +45,6 @@ service=Read-Connection-Router-Slave
 protocol=MySQLClient
 port=4009
 
-[CLI]
-type=service
-router=cli
-
-[CLI-Listener]
-type=listener
-service=CLI
-protocol=maxscaled
-socket=default
-
 [Read-Connection-Listener-Master]
 type=listener
 service=Read-Connection-Router-Master

@@ -73,16 +73,6 @@ append=false
 flush=true
 filebase=/tmp/qla.log
 
-[CLI]
-type=service
-router=cli
-
-[Read-Connection-Listener]
-type=listener
-service=Read-Connection-Router
-protocol=MySQLClient
-port=4008
-
 [RW-Split-Listener]
 type=listener
 service=RW-Split-Router
@@ -100,12 +90,6 @@ type=listener
 service=RW-Split-Hint-Router
 protocol=MySQLClient
 port=4009
-
-[CLI-Listener]
-type=listener
-service=CLI
-protocol=maxscaled
-socket=default
 
 [server1]
 type=server

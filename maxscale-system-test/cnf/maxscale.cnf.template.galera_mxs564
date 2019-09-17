@@ -76,13 +76,3 @@ address=###galera_server_IP_4###
 port=###galera_server_port_4###
 protocol=MySQLBackend
 
-[CLI]
-type=service
-router=cli
-
-[CLI-Listener]
-type=listener
-service=CLI
-protocol=maxscaled
-#address=localhost
-socket=default

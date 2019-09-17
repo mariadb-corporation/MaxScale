@@ -118,13 +118,6 @@ port=4442
 type=service
 router=cli
 
-[CLI Listener]
-type=listener
-service=CLI Service
-protocol=maxscaled
-address=localhost
-socket=default
-
 
 # EOF.
 

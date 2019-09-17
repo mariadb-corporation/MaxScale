@@ -64,16 +64,6 @@ servers=server1,server2,server3,server4
 user=maxskysql
 password=skysql
 
-[CLI]
-type=service
-router=cli
-
-[RW-Split-Listener]
-type=listener
-service=RW-Split-Router
-protocol=MySQLClient
-port=4006
-authenticator=GSSAPIAuth
 authenticator_options=principal_name=mariadb/maxscale.test@MAXSCALE.TEST
 ssl=required
 ssl_cert=/###access_homedir###/certs/server-cert.pem
@@ -104,9 +94,3 @@ ssl=required
 ssl_cert=/###access_homedir###/certs/server-cert.pem
 ssl_key=/###access_homedir###/certs/server-key.pem
 ssl_ca_cert=/###access_homedir###/certs/ca.pem
-
-[CLI-Listener]
-type=listener
-service=CLI
-protocol=maxscaled
-socket=default

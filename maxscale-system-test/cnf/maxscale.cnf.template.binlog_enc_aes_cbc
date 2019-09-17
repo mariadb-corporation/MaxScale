@@ -15,12 +15,3 @@ service=Binlog_Service
 protocol=MySQLClient
 port=5306
 
-[CLI]
-type=service
-router=cli
-
-[CLI-Listener]
-type=listener
-service=CLI
-protocol=maxscaled
-socket=default

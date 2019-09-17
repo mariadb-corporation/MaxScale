@@ -66,16 +66,6 @@ user=skysql
 password=skysql
 filters=duplicate
 
-[CLI]
-type=service
-router=cli
-
-[CLI-Listener]
-type=listener
-service=CLI
-protocol=maxscaled
-socket=default
-
 [RW-Split-Listener]
 type=listener
 service=RW-Split-Router
