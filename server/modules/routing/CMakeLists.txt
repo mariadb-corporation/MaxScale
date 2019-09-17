@@ -6,7 +6,6 @@ if(BUILD_BINLOG)
 endif()
 
 add_subdirectory(cat)
-add_subdirectory(cli)
 add_subdirectory(hintrouter)
 add_subdirectory(maxinfo)
 add_subdirectory(readconnroute)
