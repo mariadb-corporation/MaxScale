@@ -79,12 +79,26 @@ void Config::destroy_server(int num)
 void Config::create_server(int num)
 {
     test_->set_timeout(120);
+    char ssl_line[200 + 3 * strlen(test_->maxscales->access_homedir[0])] = "";
+    if (test_->backend_ssl)
+    {
+        sprintf(ssl_line,
+                " --tls-key=/%s/certs/client-key.pem "
+                " --tls-cert=/%s/certs/client-cert.pem "
+                " --tls-ca-cert=/%s/certs/ca.pem "
+                " --tls-version=MAX "
+                " --tls-cert-verify-depth=9",
+                test_->maxscales->access_homedir[0],
+                test_->maxscales->access_homedir[0],
+                test_->maxscales->access_homedir[0]);
+    }
     test_->maxscales->ssh_node_f(0,
                                  true,
-                                 "maxadmin create server server%d %s %d",
+                                 "maxctrl create server server%d %s %d %s",
                                  num,
                                  test_->repl->IP[num],
-                                 test_->repl->port[num]);
+                                 test_->repl->port[num],
+                                 ssl_line);
     created_servers_.insert(num);
     test_->stop_timeout();
 }
@@ -176,12 +190,15 @@ void Config::create_ssl_listener(Config::Service service)
     test_->maxscales->ssh_node_f(0,
                                  true,
                                  "maxadmin create listener %s %s default %d default default default "
-                                 "/home/vagrant/certs/server-key.pem "
-                                 "/home/vagrant/certs/server-cert.pem "
-                                 "/home/vagrant/certs/ca.pem ",
+                                 "/%s/certs/server-key.pem "
+                                 "/%s/certs/server-cert.pem "
+                                 "/%s/certs/ca.pem ",
                                  services[i].service,
                                  services[i].listener,
-                                 services[i].port);
+                                 services[i].port,
+                                 test_->maxscales->access_homedir[0],
+                                 test_->maxscales->access_homedir[0],
+                                 test_->maxscales->access_homedir[0]);
     test_->stop_timeout();
 }
 

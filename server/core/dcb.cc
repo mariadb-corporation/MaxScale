@@ -250,6 +250,13 @@ BackendDCB* BackendDCB::take_from_connection_pool(SERVER* s, MXS_SESSION* sessio
                 dcb->m_last_read = mxs_clock();
                 dcb->m_last_write = mxs_clock();
                 dcb->m_session = session;
+                /* All callbacks were removed when the dcb was put into the pool. */
+                if (DCB_THROTTLING_ENABLED(dcb))
+                {
+                    // Register upstream throttling callbacks
+                    dcb->add_callback(Reason::HIGH_WATER, upstream_throttle_callback, NULL);
+                    dcb->add_callback(Reason::LOW_WATER, upstream_throttle_callback, NULL);
+                }
 
                 if (dcb->m_protocol->reuse_connection(dcb, upstream))
                 {
