@@ -62,7 +62,7 @@ int main(int argc, char** argv)
 
     if (test.ok())
     {
-        test.maxscales->ssh_node_f(0, true, "maxadmin set server %s maintenance", server_name.c_str());
+        test.maxctrl("set server " + server_name + " maintenance");
         test.maxscales->wait_for_monitor();
         expect_running(test, server_name, true);
         expect_maintenance(test, server_name, true);
@@ -95,7 +95,7 @@ int main(int argc, char** argv)
     test.repl->stop_node(2);
     test.repl->restore_server_settings(2);
     test.repl->start_node(2, (char*) "");
-    test.maxscales->ssh_node_f(0, true, "maxadmin clear server %s maintenance", server_name.c_str());
+    test.maxctrl("clear server " + server_name + " maintenance");
 
     test.repl->fix_replication();
     return test.global_result;

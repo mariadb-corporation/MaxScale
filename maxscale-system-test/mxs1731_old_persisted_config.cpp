@@ -44,7 +44,7 @@ int main(int argc, char** argv)
     test.expect(rc == 0,
                 "Generated configuration should have version_string defined and MaxScale should ignore it.");
 
-    test.maxscales->ssh_node_f(0, true, "maxadmin alter service RW-Split-Router enable_root_user=false");
+    test.check_maxctrl("alter service RW-Split-Router enable_root_user false");
 
     test.maxscales->restart();
     test.check_maxscale_alive();

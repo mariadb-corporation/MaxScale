@@ -13,16 +13,12 @@
 void add_servers(TestConnections* test)
 {
     test->tprintf("Adding the servers");
-
-    for (int i = 0; i < 4; i++)
-    {
-        test->set_timeout(120);
-        test->maxscales->ssh_node_f(0, true, "maxadmin add server server%d " MONITOR_NAME, i + 1);
-        test->maxscales->ssh_node_f(0, true, "maxadmin add server server%d " SERVICE_NAME1, i + 1);
-        test->maxscales->ssh_node_f(0, true, "maxadmin add server server%d " SERVICE_NAME2, i + 1);
-        test->maxscales->ssh_node_f(0, true, "maxadmin add server server%d " SERVICE_NAME3, i + 1);
-        test->stop_timeout();
-    }
+    test->set_timeout(120);
+    test->maxctrl("link monitor " MONITOR_NAME " server1 server2 server3 server4 ");
+    test->maxctrl("link service " SERVICE_NAME1 " server1 server2 server3 server4 ");
+    test->maxctrl("link service " SERVICE_NAME2 " server1 server2 server3 server4 ");
+    test->maxctrl("link service " SERVICE_NAME3 " server1 server2 server3 server4");
+    test->stop_timeout();
 }
 
 void do_query(TestConnections* test, bool should_fail)
@@ -52,7 +48,7 @@ int main(int argc, char* argv[])
 
     for (int i = 0; i < 4; i++)
     {
-        test->maxscales->ssh_node_f(0, true, "maxadmin create server server%d %s", i + 1, test->repl->IP[i]);
+        test->maxctrl("create server server" + std::to_string(i + 1) + " " + std::string(test->repl->IP[i]));
     }
 
     /**  Add the servers again */

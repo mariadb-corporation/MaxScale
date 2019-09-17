@@ -10,7 +10,7 @@
 void list_servers(TestConnections& test)
 {
     int rc;
-    char* output = test.maxscales->ssh_node_output_f(0, true, &rc, "maxadmin list servers");
+    char* output = test.maxscales->ssh_node_output_f(0, true, &rc, "maxctrl list servers");
     test.tprintf("%s", output);
     free(output);
 }

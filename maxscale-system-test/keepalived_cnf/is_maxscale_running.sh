@@ -1,15 +1,15 @@
 #!/bin/bash
-fileName="maxadmin_output.txt"
+fileName="maxctrl_output.txt"
 rm $fileName
-timeout 2s maxadmin list servers > $fileName
+timeout 2s maxctrl list servers > $fileName
 to_result=$?
 if [ $to_result -ge 1 ]
 then
   echo Timed out or error, timeout returned $to_result
   exit 3
 else
-  echo MaxAdmin success, rval is $to_result
-  echo Checking maxadmin output sanity
+  echo MaxCtrl success, rval is $to_result
+  echo Checking maxctrl output sanity
   grep1=$(grep server1 $fileName)
   grep2=$(grep server2 $fileName)
 

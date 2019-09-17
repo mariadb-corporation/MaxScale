@@ -101,7 +101,7 @@ int main(int argc, char** argv)
     {
         // If ok so far, change the disk space threshold to something really small to force a switchover.
         cout << "Changing disk space threshold for the monitor, should cause a switchover.\n";
-        test.maxctrl("alter monitor MySQL-Monitor disk_space_threshold=/:1");
+        test.maxctrl("alter monitor MySQL-Monitor disk_space_threshold /:1");
         sleep(2);   // The disk space is checked depending on wall clock time.
         test.maxscales->wait_for_monitor(2);
 
@@ -122,7 +122,7 @@ int main(int argc, char** argv)
         print_gtids(test);
 
         cout << "Changing disk space threshold for the monitor, should prevent low disk switchovers.\n";
-        test.maxctrl("alter monitor MySQL-Monitor disk_space_threshold=/:100");
+        test.maxctrl("alter monitor MySQL-Monitor disk_space_threshold /:100");
         sleep(2);   // To update disk space status
         test.maxscales->wait_for_monitor(1);
         get_output(test);

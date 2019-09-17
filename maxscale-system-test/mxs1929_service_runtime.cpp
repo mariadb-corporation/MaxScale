@@ -12,11 +12,7 @@ using namespace std;
 
 int main(int argc, char** argv)
 {
-    TestConnections::skip_maxscale_start(true);
     TestConnections test(argc, argv);
-
-    // We need to do this since we don't have maxadmin enabled
-    test.maxscales->restart();
 
     auto maxctrl = [&](string cmd, bool print = true) {
             test.set_timeout(60);

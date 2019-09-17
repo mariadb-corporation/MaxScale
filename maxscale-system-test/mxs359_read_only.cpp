@@ -22,11 +22,11 @@ TestConnections* global_test;
 void change_master(int next, int current)
 {
     TestConnections& test = *global_test;
-    test.maxscales->ssh_node_f(0, true, "maxadmin shutdown monitor MySQL-Monitor");
+    test.maxctrl("stop monitor MySQL-Monitor");
     test.repl->connect();
     test.repl->change_master(next, current);
     test.repl->close_connections();
-    test.maxscales->ssh_node_f(0, true, "maxadmin restart monitor MySQL-Monitor");
+    test.maxctrl("start monitor MySQL-Monitor");
 }
 
 void test_replaced_master(TestConnections& test, std::ostream& out)

@@ -44,18 +44,9 @@ int main(int argc, char* argv[])
 
     test.tprintf("Remove all servers from all services");
 
-    for (int i = 3; i > -1; i--)
-    {
-        test.maxscales->ssh_node_f(0, true, "maxadmin remove server server%d \"RW Split Router\"", i);
-        test.maxscales->ssh_node_f(0,
-                                   true,
-                                   "maxadmin remove server server%d \"Read Connection Router Slave\"",
-                                   i);
-        test.maxscales->ssh_node_f(0,
-                                   true,
-                                   "maxadmin remove server server%d \"Read Connection Router Master\"",
-                                   i);
-    }
+    test.maxctrl("unlink service RW-Split-Router server1 server2 server3 server4");
+    test.maxctrl("unlink service Read-Connection-Router-Slave server1 server2 server3 server4");
+    test.maxctrl("unlink service Read-Connection-Router-Master server1 server2 server3 server4");
 
     sleep(5);
 
@@ -66,18 +57,9 @@ int main(int argc, char* argv[])
 
     test.tprintf("Add all servers to all services");
 
-    for (int i = 3; i > -1; i--)
-    {
-        test.maxscales->ssh_node_f(0, true, "maxadmin add server server%d \"RW Split Router\"", i);
-        test.maxscales->ssh_node_f(0,
-                                   true,
-                                   "maxadmin add server server%d \"Read Connection Router Slave\"",
-                                   i);
-        test.maxscales->ssh_node_f(0,
-                                   true,
-                                   "maxadmin add server server%d \"Read Connection Router Master\"",
-                                   i);
-    }
+    test.maxctrl("link service RW-Split-Router server1 server2 server3 server4");
+    test.maxctrl("link service Read-Connection-Router-Slave server1 server2 server3 server4");
+    test.maxctrl("link service Read-Connection-Router-Master server1 server2 server3 server4");
 
     test.check_maxscale_alive(0);
 

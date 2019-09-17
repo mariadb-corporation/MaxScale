@@ -88,7 +88,7 @@ int main(int argc, char** argv)
         return test.global_result;
     }
     cout << "Sending rejoin commands for servers 3 & 4. Server 4 should not rejoin the cluster.\n";
-    const string REJOIN_CMD = "maxadmin call command mariadbmon rejoin MySQL-Monitor";
+    const string REJOIN_CMD = "maxctrl call command mariadbmon rejoin MySQL-Monitor";
     int ec;
     string rejoin_s3 = REJOIN_CMD + " server3";
     string rejoin_s4 = REJOIN_CMD + " server4";
@@ -131,7 +131,7 @@ int main(int argc, char** argv)
     {
         int ec;
         test.maxscales->ssh_node_output(0,
-                                        "maxadmin call command mysqlmon switchover MySQL-Monitor server1 server4",
+                                        "maxctrl call command mysqlmon switchover MySQL-Monitor server1 server4",
                                         true,
                                         &ec);
         test.maxscales->wait_for_monitor();

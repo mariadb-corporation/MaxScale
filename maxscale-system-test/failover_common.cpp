@@ -28,7 +28,7 @@ void reset_replication(TestConnections& test)
         get_output(test);
         int ec;
         stringstream switchover;
-        switchover << "maxadmin call command mysqlmon switchover MySQL-Monitor server1 server" << master_id;
+        switchover << "maxctrl call command mysqlmon switchover MySQL-Monitor server1 server" << master_id;
         test.maxscales->ssh_node_output(0, switchover.str().c_str(), true, &ec);
         test.maxscales->wait_for_monitor(2);
         master_id = get_master_server_id(test);

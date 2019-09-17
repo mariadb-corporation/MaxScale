@@ -32,7 +32,7 @@ int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
 
-    test.maxscales->ssh_node_f(0, true, "maxadmin enable log-priority info");
+    test.maxctrl("enable log-priority info");
 
     test.maxscales->connect();
 

@@ -15,7 +15,7 @@ int main(int argc, char* argv[])
     test.maxscales->wait_for_monitor();
 
     test.tprintf("Clear master status");
-    test.maxscales->ssh_node(0, "maxadmin clear server server1 master", true);
+    test.maxctrl("clear server server1 master");
     test.maxscales->wait_for_monitor();
 
     test.repl->unblock_node(0);

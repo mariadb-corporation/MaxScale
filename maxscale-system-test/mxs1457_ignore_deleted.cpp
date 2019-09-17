@@ -21,7 +21,7 @@ int main(int argc, char* argv[])
      * The monitor needs to be stopped before the slaves are stopped to prevent
      * it from detecting the broken replication.
      */
-    test.maxscales->ssh_node(0, "maxadmin shutdown monitor MySQL-Monitor", true);
+    test.maxctrl("stop monitor MySQL-Monitor");
     // Stop slaves and drop the user on the master
     test.repl->stop_slaves();
     test.repl->connect();
@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
     test.add_result(mysql_errno(conn) == 0, "Connection with users from master should fail");
     mysql_close(conn);
 
-    test.maxscales->ssh_node(0, "maxadmin remove server server1 RW-Split-Router", true);
+    test.maxctrl("unlink service RW-Split-Router server1");
     conn = open_conn_db(test.maxscales->rwsplit_port[0],
                         test.maxscales->ip(0),
                         "test",
