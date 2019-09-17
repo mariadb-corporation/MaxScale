@@ -411,6 +411,12 @@ DCB* dcb_connect(SERVER* server, MXS_SESSION* session, const char* protocol)
             dcb->was_persistent = true;
             dcb->last_read = mxs_clock();
             mxb::atomic::add(&server->stats.n_from_pool, 1, mxb::atomic::RELAXED);
+            /* All callbacks were removed when the dcb was put into the pool. */
+            if (DCB_THROTTLING_ENABLED(dcb))
+            {
+                dcb_add_callback(dcb, DCB_REASON_HIGH_WATER, upstream_throttle_callback, NULL);
+                dcb_add_callback(dcb, DCB_REASON_LOW_WATER, upstream_throttle_callback, NULL);
+            }
             return dcb;
         }
         else
