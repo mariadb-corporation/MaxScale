@@ -196,7 +196,8 @@ bool MariaDBMonitor::set_replication_credentials(const MXS_CONFIG_PARAMETER* par
     // Because runtime modifications are performed 1-by-1, we must be less strict here and allow
     // partial setups. Password is not required even if username is set. This is contrary to the
     // general monitor username & pw, which are both required. Even this assumes that the username
-    // is given first in a "maxadmin alter monitor"-command.
+    // is given first in a "alter monitor"-command. Note: This is obsolete now that multi-parameter updates
+    // are possible.
 
     string repl_user;
     string repl_pw;

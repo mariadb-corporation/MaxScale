@@ -49,7 +49,6 @@
 #include <maxscale/json_api.hh>
 #include <maxscale/limits.h>
 #include <maxscale/maxscale.h>
-#include <maxscale/maxadmin.h>
 #include <maxscale/paths.h>
 #include <maxscale/pcre2.hh>
 #include <maxscale/router.hh>
@@ -2723,7 +2722,7 @@ static bool check_config_objects(CONFIG_CONTEXT* context)
 
         // Servers are a special case as they don't have a module.
         bool is_server = (type == CN_SERVER);
-        if (!is_server && !mod)   // Error is logged in load_module
+        if (!is_server && !mod)     // Error is logged in load_module
         {
             rval = false;
             continue;
@@ -4962,5 +4961,5 @@ bool param_is_valid(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* modul
                     const char* key, const char* value)
 {
     return config_param_is_valid(basic, key, value, NULL)
-        || (module && config_param_is_valid(module, key, value, NULL));
+           || (module && config_param_is_valid(module, key, value, NULL));
 }

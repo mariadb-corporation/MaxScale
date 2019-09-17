@@ -31,7 +31,6 @@
 
 #include <maxbase/log.hh>
 #include <maxscale/authenticator2.hh>
-#include <maxscale/maxadmin.h>
 #include <maxscale/paths.h>
 #include <maxscale/ssl.hh>
 #include <maxscale/protocol2.hh>
@@ -213,15 +212,6 @@ SListener Listener::create(const std::string& name,
     else
     {
         sql_mode = qc_get_sql_mode();
-    }
-
-    // Remove this once maxadmin is removed
-    if (strcasecmp(protocol.c_str(), "maxscaled") == 0 && socket_defined
-        && socket == MAXADMIN_CONFIG_DEFAULT_SOCKET_TAG)
-    {
-        socket_defined = true;
-        address = MAXADMIN_DEFAULT_SOCKET;
-        socket = address;
     }
 
     mxb_assert(!address.empty());

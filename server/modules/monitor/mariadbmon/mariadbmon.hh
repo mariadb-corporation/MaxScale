@@ -158,7 +158,7 @@ private:
         ServerArray cycle_members;
     };
 
-    /* Structure used to communicate commands and results between the MaxAdmin and monitor threads.
+    /* Structure used to communicate commands and results between the admin and monitor threads.
      * The monitor can only process one manual command at a time, which is already enforced by
      * the admin thread. */
     struct ManualCommand
