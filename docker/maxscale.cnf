@@ -3,16 +3,3 @@
 
 # Complete list of configuration options:
 # https://github.com/mariadb-corporation/MaxScale/blob/2.2/Documentation/Getting-Started/Configuration-Guide.md
-
-# This service enables the use of the MaxAdmin interface
-# MaxScale administration guide:
-# https://github.com/mariadb-corporation/MaxScale/blob/2.2/Documentation/Reference/MaxAdmin.md
-[MaxAdmin-Service]
-type=service
-router=cli
-
-[MaxAdmin-Listener]
-type=listener
-service=MaxAdmin-Service
-protocol=maxscaled
-socket=default

@@ -108,13 +108,3 @@ type=listener
 service=RW-Split-Hint-Router
 protocol=MariaDBClient
 port=5009
-
-[CLI]
-type=service
-router=cli
-
-[CLI-Listener]
-type=listener
-service=CLI
-protocol=maxscaled
-socket=/tmp/maxadmin2.sock

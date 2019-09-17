@@ -12,7 +12,6 @@ test -z "$MAXSCALE_DIR" && exit 1
 rm -r $maxscaledir/lib/maxscale
 rm -r $maxscaledir/cache/maxscale
 rm -r $maxscaledir/run/maxscale
-test -f /tmp/maxadmin.sock && rm /tmp/maxadmin.sock
 
 mkdir -m 0755 -p $maxscaledir/lib/maxscale/maxscale.cnf.d
 mkdir -m 0755 -p $maxscaledir/cache/maxscale
