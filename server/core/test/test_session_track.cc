@@ -5,6 +5,7 @@
 #include <maxbase/alloc.h>
 #include <maxscale/buffer.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
+#include <maxscale/authenticator2.hh>
 
 #include "test_utils.hh"
 #include "../internal/service.hh"
@@ -14,7 +15,6 @@
 SERVICE* service;
 SListener listener;
 mxs::Session* session;
-std::unique_ptr<MySQLBackendProtocol> proto;
 Server* server;
 
 void create_test_objects()
@@ -191,11 +191,40 @@ static const uint8_t resultset3[] =
     0x00, 0x07, 0xFE, 0x00, 0x00, 0x21, 0x00
 };
 
+// Define an empty authenticator to use when generating protocol.
+class DummyAuthenticator : public mxs::BackendAuthenticator
+{
+public:
+    bool extract(DCB* client, GWBUF* buffer) override
+    {
+        return true;
+    }
+
+    bool ssl_capable(DCB* client) override
+    {
+        return false;
+    }
+
+    // Carry out the authentication.
+    int authenticate(DCB* client) override
+    {
+        return 0;
+    }
+};
+
+std::unique_ptr<MySQLBackendProtocol> generate_protocol()
+{
+    std::unique_ptr<DummyAuthenticator> auth;
+    std::unique_ptr<MySQLBackendProtocol> proto(
+            new MySQLBackendProtocol(session, server, nullptr, std::move(auth)));
+    proto->server_capabilities |= GW_MYSQL_CAPABILITIES_SESSION_TRACK;
+    return proto;
+}
+
 /* functional test , test packet by packet */
 void test1()
 {
-    proto.reset(new MySQLBackendProtocol(session, server, nullptr));
-    proto->server_capabilities |= GW_MYSQL_CAPABILITIES_SESSION_TRACK;
+    std::unique_ptr<MySQLBackendProtocol> proto = generate_protocol();
     GWBUF* buffer;
     fprintf(stderr, "test_session_track : Functional tests.\n");
     // BEGIN
@@ -247,8 +276,7 @@ void test1()
 /* multi results combine in one buffer, test for check boundary handle properly */
 void test2()
 {
-    proto.reset(new MySQLBackendProtocol(session, server, nullptr));
-    proto->server_capabilities |= GW_MYSQL_CAPABILITIES_SESSION_TRACK;
+    std::unique_ptr<MySQLBackendProtocol> proto = generate_protocol();
     GWBUF* buffer;
     fprintf(stderr, "test_session_track: multi results test\n");
     buffer = gwbuf_alloc_and_load(sizeof(resultset2), resultset2);
@@ -259,8 +287,7 @@ void test2()
 
 void test3()
 {
-    proto.reset(new MySQLBackendProtocol(session, server, nullptr));
-    proto->server_capabilities |= GW_MYSQL_CAPABILITIES_SESSION_TRACK;
+    std::unique_ptr<MySQLBackendProtocol> proto = generate_protocol();
     GWBUF* buffer;
     fprintf(stderr, "test_session_track: protocol state test\n");
     buffer = gwbuf_alloc_and_load(sizeof(resultset2), resultset2);

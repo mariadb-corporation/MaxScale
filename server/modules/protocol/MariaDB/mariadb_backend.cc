@@ -39,9 +39,11 @@ static bool get_ip_string_and_port(struct sockaddr_storage* sa,
                                    int iplen,
                                    in_port_t* port_out);
 
-MySQLBackendProtocol::MySQLBackendProtocol(MXS_SESSION* session, SERVER* server, mxs::Component* component)
+MySQLBackendProtocol::MySQLBackendProtocol(MXS_SESSION* session, SERVER* server, mxs::Component* component,
+                                           std::unique_ptr<mxs::BackendAuthenticator> authenticator)
     : MySQLProtocol(session, server)
     , m_component(component)
+    , m_authenticator(std::move(authenticator))
 {
 }
 
@@ -60,10 +62,11 @@ MySQLBackendProtocol::MySQLBackendProtocol(MXS_SESSION* session, SERVER* server,
 
 std::unique_ptr<MySQLBackendProtocol>
 MySQLBackendProtocol::create(MXS_SESSION* session, SERVER* server,
-                             const MySQLClientProtocol& client_protocol, mxs::Component* component)
+                             const MySQLClientProtocol& client_protocol, mxs::Component* component,
+                             std::unique_ptr<mxs::BackendAuthenticator> authenticator)
 {
     std::unique_ptr<MySQLBackendProtocol> protocol_session(
-            new(std::nothrow) MySQLBackendProtocol(session, server, component));
+            new(std::nothrow) MySQLBackendProtocol(session, server, component, std::move(authenticator)));
     if (protocol_session)
     {
         /** Copy client flags to backend protocol */
@@ -230,9 +233,9 @@ mxs_auth_state_t MySQLBackendProtocol::handle_server_response(DCB* generic_dcb, 
     mxs_auth_state_t rval = protocol_auth_state == MXS_AUTH_STATE_CONNECTED ?
         MXS_AUTH_STATE_HANDSHAKE_FAILED : MXS_AUTH_STATE_FAILED;
 
-    if (dcb->m_authenticator->extract(dcb, buffer))
+    if (m_authenticator->extract(dcb, buffer))
     {
-        switch (dcb->m_authenticator->authenticate(dcb))
+        switch (m_authenticator->authenticate(dcb))
         {
         case MXS_AUTH_INCOMPLETE:
         case MXS_AUTH_SSL_INCOMPLETE:

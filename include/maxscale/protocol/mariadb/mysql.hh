@@ -409,7 +409,8 @@ public:
     };
 
     static MySQLClientProtocol* create(MXS_SESSION* session, mxs::Component* component);
-    MySQLClientProtocol(MXS_SESSION* session, SERVER* server, mxs::Component* component);
+    MySQLClientProtocol(MXS_SESSION* session, SERVER* server, mxs::Component* component,
+                        std::unique_ptr<mxs::ClientAuthenticator> authenticator);
 
     void ready_for_reading(DCB* dcb) override;
     void write_ready(DCB* dcb) override;
@@ -461,8 +462,10 @@ private:
                                                      uint64_t keep_protocol_thread_id, kill_type_t type);
     void           mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_type_t type);
     void           execute_kill(MXS_SESSION* issuer, std::shared_ptr<KillInfo> info);
+    int            ssl_authenticate_check_status(DCB* generic_dcb);
 
     mxs::Component* m_component {nullptr}; /**< Downstream component, the session */
+    std::unique_ptr<mxs::ClientAuthenticator> m_authenticator;  /**< Client authentication data */
 };
 
 class MySQLBackendProtocol : public MySQLProtocol, public mxs::BackendProtocol
@@ -470,9 +473,10 @@ class MySQLBackendProtocol : public MySQLProtocol, public mxs::BackendProtocol
 public:
     static std::unique_ptr<MySQLBackendProtocol>
     create(MXS_SESSION* session, SERVER* server, const MySQLClientProtocol& client_protocol,
-           mxs::Component* component);
+           mxs::Component* component, std::unique_ptr<mxs::BackendAuthenticator> authenticator);
 
-    MySQLBackendProtocol(MXS_SESSION* session, SERVER* server, mxs::Component* component);
+    MySQLBackendProtocol(MXS_SESSION* session, SERVER* server, mxs::Component* component,
+                         std::unique_ptr<mxs::BackendAuthenticator> authenticator);
 
     void ready_for_reading(DCB* dcb) override;
     void write_ready(DCB* dcb) override;
@@ -537,6 +541,8 @@ private:
 
     mxs_auth_state_t protocol_auth_state {MXS_AUTH_STATE_INIT}; /**< Backend authentication state */
     mxs::Component*  m_component {nullptr};                     /**< Upstream component, typically a router */
+
+    std::unique_ptr<mxs::BackendAuthenticator> m_authenticator;  /**< Backend authentication data */
 
     uint64_t    m_thread_id {0};            /**< Backend thread id, received in backend handshake */
     uint16_t    m_modutil_state;            /**< TODO: This is an ugly hack, replace it */

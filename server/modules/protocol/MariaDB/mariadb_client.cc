@@ -337,7 +337,23 @@ int ssl_authenticate_client(DCB* dcb, bool is_capable)
     return SSL_AUTH_CHECKS_OK;
 }
 
-int ssl_authenticate_check_status(DCB* generic_dcb)
+void extract_user(char* token, std::string* user)
+{
+    char* end = strchr(token, ';');
+
+    if (end)
+    {
+        user->assign(token, end - token);
+    }
+    else
+    {
+        user->assign(token);
+    }
+}
+
+}
+
+int MySQLClientProtocol::ssl_authenticate_check_status(DCB* generic_dcb)
 {
     mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
@@ -349,7 +365,7 @@ int ssl_authenticate_check_status(DCB* generic_dcb)
      * data needs to be read from the socket.
      */
     bool health_before = ssl_is_connection_healthy(dcb);
-    int ssl_ret = ssl_authenticate_client(dcb, dcb->authenticator()->ssl_capable(dcb));
+    int ssl_ret = ssl_authenticate_client(dcb, m_authenticator->ssl_capable(dcb));
     bool health_after = ssl_is_connection_healthy(dcb);
 
     if (ssl_ret != 0)
@@ -370,21 +386,6 @@ int ssl_authenticate_check_status(DCB* generic_dcb)
         rval = MXS_AUTH_SSL_COMPLETE;
     }
     return rval;
-}
-
-void extract_user(char* token, std::string* user)
-{
-    char* end = strchr(token, ';');
-
-    if (end)
-    {
-        user->assign(token, end - token);
-    }
-    else
-    {
-        user->assign(token);
-    }
-}
 }
 
 // Servers and queries to execute on them
@@ -882,14 +883,14 @@ int MySQLClientProtocol::perform_authentication(DCB* generic_dcb, GWBUF* read_bu
      * authenticate function to carry out the user checks.
      */
     int auth_val = MXS_AUTH_FAILED;
-    if (dcb->authenticator()->extract(dcb, read_buffer))
+    if (m_authenticator->extract(dcb, read_buffer))
     {
         auth_val = ssl_authenticate_check_status(dcb);
 
         if (auth_val == MXS_AUTH_SSL_COMPLETE)
         {
             // TLS connection phase complete
-            auth_val = dcb->authenticator()->authenticate(dcb);
+            auth_val = m_authenticator->authenticate(dcb);
         }
     }
     else
@@ -1070,7 +1071,7 @@ bool MySQLClientProtocol::reauthenticate_client(MXS_SESSION* session, GWBUF* pac
 {
     bool rval = false;
     ClientDCB* client_dcb = session->client_dcb;
-    auto client_auth = client_dcb->authenticator();
+    auto client_auth = m_authenticator.get();
     if (client_auth->capabilities() & mxs::AuthenticatorModule::CAP_REAUTHENTICATE)
     {
         auto proto = this;
@@ -2005,9 +2006,15 @@ public:
     std::unique_ptr<mxs::ClientProtocol>
     create_client_protocol(MXS_SESSION* session, mxs::Component* component) override
     {
-        std::unique_ptr<mxs::ClientProtocol> rval;
-        rval.reset(new(std::nothrow) MySQLClientProtocol(session, nullptr, component));
-        return rval;
+        std::unique_ptr<mxs::ClientProtocol> new_client_proto;
+        auto authenticator = m_auth_module->create_client_authenticator();
+        if (authenticator)
+        {
+            new_client_proto = std::unique_ptr<mxs::ClientProtocol>(
+                    new (std::nothrow) MySQLClientProtocol(session, nullptr, component,
+                                                           std::move(authenticator)));
+        }
+        return new_client_proto;
     }
 
     std::string auth_default() const override
@@ -2045,19 +2052,42 @@ public:
 
 MySQLClientProtocol* MySQLClientProtocol::create(MXS_SESSION* session, mxs::Component* component)
 {
-    return new(std::nothrow) MySQLClientProtocol(session, nullptr, component);
+    return new(std::nothrow) MySQLClientProtocol(session, nullptr, component, nullptr);
 }
 
-MySQLClientProtocol::MySQLClientProtocol(MXS_SESSION* session, SERVER* server, mxs::Component* component)
+MySQLClientProtocol::MySQLClientProtocol(MXS_SESSION* session, SERVER* server, mxs::Component* component,
+                                         std::unique_ptr<mxs::ClientAuthenticator> authenticator)
     : MySQLProtocol(session, server)
     , m_component(component)
+    , m_authenticator(std::move(authenticator))
 {
 }
 
 std::unique_ptr<mxs::BackendProtocol>
 MySQLClientProtocol::create_backend_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component)
 {
-    return MySQLBackendProtocol::create(session, server, *this, component);
+    // Allocate DCB specific backend-authentication data from the client session.
+    std::unique_ptr<mxs::BackendAuthenticator> new_backend_auth;
+    if (m_authenticator->capabilities() & mxs::AuthenticatorModule::CAP_BACKEND_AUTH)
+    {
+        new_backend_auth = m_authenticator->create_backend_authenticator();
+        if (!new_backend_auth)
+        {
+            MXS_ERROR("Failed to create backend authenticator session.");
+        }
+    }
+    else
+    {
+        MXS_ERROR("%s does not support backend authentication. Cannot create backend connection.",
+                  session->listener->authenticator());
+    }
+
+    std::unique_ptr<mxs::BackendProtocol> rval;
+    if (new_backend_auth)
+    {
+        rval = MySQLBackendProtocol::create(session, server, *this, component, std::move(new_backend_auth));
+    }
+    return rval;
 }
 
 /**

@@ -591,7 +591,6 @@ public:
            const sockaddr_storage& ip,
            MXS_SESSION* session,
            std::unique_ptr<mxs::ClientProtocol> protocol,
-           std::unique_ptr<mxs::ClientAuthenticator> authenticator,
            DCB::Manager* manager = nullptr);
 
     const sockaddr_storage& ip() const
@@ -607,11 +606,6 @@ public:
     int port() const;
 
     mxs::ClientProtocol* protocol() const override;
-
-    mxs::ClientAuthenticator* authenticator()
-    {
-        return m_authenticator.get();
-    }
 
     void* protocol_data() const
     {
@@ -643,7 +637,6 @@ protected:
               DCB::Role role,
               MXS_SESSION* session,
               std::unique_ptr<mxs::ClientProtocol> protocol,
-              std::unique_ptr<mxs::ClientAuthenticator> authenticator,
               Manager* manager);
 
     // Only for Mock DCB.
@@ -655,7 +648,6 @@ private:
               const sockaddr_storage& ip,
               MXS_SESSION* session,
               std::unique_ptr<mxs::ClientProtocol> protocol,
-              std::unique_ptr<mxs::ClientAuthenticator> authenticator,
               DCB::Manager* manager);
 
     bool release_from(MXS_SESSION* session) override;
@@ -737,12 +729,10 @@ public:
     BackendDCB* m_nextpersistent = nullptr;     /**< Next DCB in the persistent pool for SERVER */
 
     std::unique_ptr<mxs::BackendProtocol>      m_protocol;       /**< The protocol session */
-    std::unique_ptr<mxs::BackendAuthenticator> m_authenticator;  /**< Backend authentication data */
 
 private:
     BackendDCB(SERVER* server, int fd, MXS_SESSION* session,
                std::unique_ptr<mxs::BackendProtocol> protocol,
-               std::unique_ptr<mxs::BackendAuthenticator> authenticator,
                DCB::Manager* manager);
 
     static BackendDCB* create(SERVER* server,

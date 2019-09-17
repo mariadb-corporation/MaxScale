@@ -64,7 +64,14 @@ public:
     std::unique_ptr<mxs::ClientProtocol>
     create_client_protocol(MXS_SESSION* session, mxs::Component* component) override
     {
-        return std::unique_ptr<mxs::ClientProtocol>(new (std::nothrow) HTTPDClientProtocol());
+        std::unique_ptr<mxs::ClientProtocol> new_client_proto;
+        auto authenticator = m_auth_module->create_client_authenticator();
+        if (authenticator)
+        {
+            new_client_proto = std::unique_ptr<mxs::ClientProtocol>(
+                    new (std::nothrow) HTTPDClientProtocol(std::move(authenticator)));
+        }
+        return new_client_proto;
     }
 
     std::string auth_default() const override
@@ -242,8 +249,8 @@ void HTTPDClientProtocol::ready_for_reading(DCB* generic_dcb)
                 {
                     /** The freeing entry point is called automatically when
                      * the client DCB is closed */
-                    dcb->authenticator()->extract(dcb, auth_data);
-                    auth_ok = dcb->authenticator()->authenticate(dcb) == MXS_AUTH_SUCCEEDED;
+                    m_authenticator->extract(dcb, auth_data);
+                    auth_ok = m_authenticator->authenticate(dcb) == MXS_AUTH_SUCCEEDED;
                     gwbuf_free(auth_data);
                 }
             }
@@ -350,6 +357,11 @@ bool HTTPDClientProtocol::init_connection(DCB* dcb)
 }
 
 void HTTPDClientProtocol::finish_connection(DCB* dcb)
+{
+}
+
+HTTPDClientProtocol::HTTPDClientProtocol(std::unique_ptr<mxs::ClientAuthenticator> authenticator)
+    : m_authenticator(std::move(authenticator))
 {
 }
 

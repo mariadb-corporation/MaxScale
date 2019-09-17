@@ -819,20 +819,10 @@ ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const 
         return nullptr;
     }
 
-    auto client_authenticator = m_proto_module->m_auth_module->create_client_authenticator();
-    if (!client_authenticator)
-    {
-        delete session;
-        return nullptr;
-    }
-
     mxs::RoutingWorker* worker = mxs::RoutingWorker::get_current();
     mxb_assert(worker);
 
-    ClientDCB* client_dcb = ClientDCB::create(fd, host, *addr, session,
-                                              std::move(client_protocol),
-                                              std::move(client_authenticator),
-                                              worker);
+    ClientDCB* client_dcb = ClientDCB::create(fd, host, *addr, session, std::move(client_protocol), worker);
     if (!client_dcb)
     {
         MXS_OOM();

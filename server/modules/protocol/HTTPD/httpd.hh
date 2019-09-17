@@ -15,6 +15,7 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/protocol2.hh>
+#include <maxscale/authenticator2.hh>
 
 #define HTTPD_SMALL_BUFFER       1024
 #define HTTPD_METHOD_MAXLEN      128
@@ -27,6 +28,8 @@
 class HTTPDClientProtocol : public mxs::ClientProtocol
 {
 public:
+    HTTPDClientProtocol(std::unique_ptr<mxs::ClientAuthenticator> authenticator);
+
     void ready_for_reading(DCB* dcb) override;
     void write_ready(DCB* dcb) override;
     void error(DCB* dcb) override;
@@ -36,4 +39,7 @@ public:
 
     bool init_connection(DCB* dcb) override;
     void finish_connection(DCB* dcb) override;
+
+private:
+    std::unique_ptr<mxs::ClientAuthenticator> m_authenticator;  /**< Client authentication data */
 };

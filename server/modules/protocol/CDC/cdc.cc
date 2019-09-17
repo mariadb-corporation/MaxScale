@@ -75,7 +75,14 @@ public:
     std::unique_ptr<mxs::ClientProtocol>
     create_client_protocol(MXS_SESSION* session, mxs::Component* component) override
     {
-        return std::unique_ptr<mxs::ClientProtocol>(CDCClientProtocol::create());
+        std::unique_ptr<mxs::ClientProtocol> new_client_proto;
+        auto authenticator = m_auth_module->create_client_authenticator();
+        if (authenticator)
+        {
+            new_client_proto = std::unique_ptr<mxs::ClientProtocol>(
+                    new (std::nothrow) CDCClientProtocol(std::move(authenticator)));
+        }
+        return new_client_proto;
     }
 
     std::string auth_default() const override
@@ -165,10 +172,10 @@ void CDCClientProtocol::ready_for_reading(DCB* generic_dcb)
         {
         case CDC_STATE_WAIT_FOR_AUTH:
             /* Fill CDC_session from incoming packet */
-            if (dcb->authenticator()->extract(dcb, head))
+            if (m_authenticator->extract(dcb, head))
             {
                 /* Call protocol authentication */
-                auth_val = dcb->authenticator()->authenticate(dcb);
+                auth_val = m_authenticator->authenticate(dcb);
             }
 
             /* Discard input buffer */
@@ -306,15 +313,9 @@ void CDCClientProtocol::finish_connection(DCB* dcb)
 {
 }
 
-/**
- * Allocate a new CDC protocol structure
- *
- * @return        New allocated protocol or NULL on errors
- *
- */
-CDCClientProtocol* CDCClientProtocol::create()
+CDCClientProtocol::CDCClientProtocol(std::unique_ptr<mxs::ClientAuthenticator> authenticator)
+    : m_authenticator(std::move(authenticator))
 {
-    return new (std::nothrow) CDCClientProtocol();
 }
 
 /**

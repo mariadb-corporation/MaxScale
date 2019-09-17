@@ -166,12 +166,9 @@ ClientDCB* ClientDCB::create(int fd,
                              const sockaddr_storage& ip,
                              MXS_SESSION* session,
                              std::unique_ptr<ClientProtocol> protocol,
-                             std::unique_ptr<ClientAuthenticator> authenticator,
                              DCB::Manager* manager)
 {
-    ClientDCB* dcb = new(std::nothrow) ClientDCB(fd, remote, ip, session,
-                                                 std::move(protocol), std::move(authenticator),
-                                                 manager);
+    ClientDCB* dcb = new(std::nothrow) ClientDCB(fd, remote, ip, session, std::move(protocol), manager);
     if (!dcb)
     {
         ::close(fd);
@@ -289,8 +286,7 @@ BackendDCB* BackendDCB::create(SERVER* srv,
     std::unique_ptr<BackendProtocol> protocol_session;
     if (client_proto->capabilities() & mxs::ClientProtocol::CAP_BACKEND)
     {
-        protocol_session = client_proto->create_backend_protocol(
-                session, srv, component);
+        protocol_session = client_proto->create_backend_protocol(session, srv, component);
         if (!protocol_session)
         {
             MXS_ERROR("Failed to create protocol session for backend DCB.");
@@ -304,32 +300,10 @@ BackendDCB* BackendDCB::create(SERVER* srv,
     BackendDCB* dcb = nullptr;
     if (protocol_session)
     {
-        auto client_auth = client_dcb->authenticator();
-        // Allocate DCB specific backend-authentication data from the client session.
-        std::unique_ptr<BackendAuthenticator> new_backend_auth;
-        if (client_auth->capabilities() & mxs::AuthenticatorModule::CAP_BACKEND_AUTH)
+        dcb = new(std::nothrow) BackendDCB(srv, fd, session, std::move(protocol_session), manager);
+        if (dcb)
         {
-            new_backend_auth = client_auth->create_backend_authenticator();
-            if (!new_backend_auth)
-            {
-                MXS_ERROR("Failed to create authenticator session for backend DCB.");
-            }
-        }
-        else
-        {
-            MXS_ERROR("The authenticator of listener '%s' (%s) does not support backend authentication. "
-                      "Cannot create backend connection.",
-                      session->listener->name(), session->listener->authenticator());
-        }
-
-        if (new_backend_auth)
-        {
-            dcb = new(std::nothrow) BackendDCB(srv, fd, session, std::move(protocol_session),
-                                               std::move(new_backend_auth), manager);
-            if (dcb)
-            {
-                session_link_backend_dcb(session, dcb);
-            }
+            session_link_backend_dcb(session, dcb);
         }
     }
 
@@ -2589,7 +2563,6 @@ ClientDCB::ClientDCB(int fd,
                      const sockaddr_storage& ip,
                      MXS_SESSION* session,
                      std::unique_ptr<ClientProtocol> protocol,
-                     std::unique_ptr<ClientAuthenticator> authenticator,
                      DCB::Manager* manager)
     : ClientDCB(fd,
                 remote,
@@ -2597,7 +2570,6 @@ ClientDCB::ClientDCB(int fd,
                 DCB::Role::CLIENT,
                 session,
                 std::move(protocol),
-                std::move(authenticator),
                 manager)
 {
 }
@@ -2608,12 +2580,10 @@ ClientDCB::ClientDCB(int fd,
                      DCB::Role role,
                      MXS_SESSION* session,
                      std::unique_ptr<ClientProtocol> protocol,
-                     std::unique_ptr<ClientAuthenticator> authenticator,
                      Manager* manager)
     : DCB(fd, remote, role, session, protocol.get(), manager)
     , m_ip(ip)
     , m_protocol(std::move(protocol))
-    , m_authenticator(std::move(authenticator))
 {
     if (DCB_THROTTLING_ENABLED(this))
     {
@@ -2623,16 +2593,13 @@ ClientDCB::ClientDCB(int fd,
 }
 
 ClientDCB::ClientDCB(int fd, const std::string& remote, DCB::Role role, MXS_SESSION* session)
-    : ClientDCB(fd, remote, sockaddr_storage {}, role, session, nullptr, nullptr, nullptr)
+    : ClientDCB(fd, remote, sockaddr_storage {}, role, session, nullptr, nullptr)
 {
 }
 
 ClientDCB::~ClientDCB()
 {
-    if (m_data)
-    {
-        m_authenticator->free_data(this);
-    }
+    // TODO: move m_data to authenticators so it's freed
 }
 
 bool ClientDCB::release_from(MXS_SESSION* session)
@@ -2659,8 +2626,7 @@ bool ClientDCB::ready() const
 }
 
 InternalDCB::InternalDCB(MXS_SESSION* session, DCB::Manager* manager)
-    : ClientDCB(FD_CLOSED, "127.0.0.1",sockaddr_storage {},
-                DCB::Role::INTERNAL, session, nullptr, nullptr, manager)
+    : ClientDCB(FD_CLOSED, "127.0.0.1",sockaddr_storage {}, DCB::Role::INTERNAL, session, nullptr, manager)
 {
     if (DCB_THROTTLING_ENABLED(this))
     {
@@ -2705,11 +2671,9 @@ bool InternalDCB::prepare_for_destruction()
 
 BackendDCB::BackendDCB(SERVER* server, int fd, MXS_SESSION* session,
                        std::unique_ptr<mxs::BackendProtocol> protocol,
-                       std::unique_ptr<mxs::BackendAuthenticator> authenticator,
                        DCB::Manager* manager)
     : DCB(fd, server->address, DCB::Role::BACKEND, session, protocol.get(), manager)
     , m_protocol(std::move(protocol))
-    , m_authenticator(std::move(authenticator))
     , m_server(server)
 {
     mxb_assert(m_server);
