@@ -2157,47 +2157,9 @@ int TestConnections::try_query_all(int m, const char* sql)
            + try_query(maxscales->conn_slave[m], "%s", sql);
 }
 
-StringSet TestConnections::get_server_status(const char* name)
+StringSet TestConnections::get_server_status(const std::string& name, int m)
 {
-    std::set<std::string> rval;
-    int rc;
-    char* res = maxscales->ssh_node_output_f(0, true, &rc, "maxadmin list servers|grep \'%s\'", name);
-    char* pipe = strrchr(res, '|');
-
-    if (res && pipe)
-    {
-        pipe++;
-        char* tok = strtok(pipe, ",");
-
-        while (tok)
-        {
-            char* p = tok;
-            char* end = strchr(tok, '\n');
-            if (!end)
-            {
-                end = strchr(tok, '\0');
-            }
-
-            // Trim leading whitespace
-            while (p < end && isspace(*p))
-            {
-                p++;
-            }
-
-            // Trim trailing whitespace
-            while (end > tok && isspace(*end))
-            {
-                *end-- = '\0';
-            }
-
-            rval.insert(p);
-            tok = strtok(NULL, ",\n");
-        }
-
-        free(res);
-    }
-
-    return rval;
+    return maxscales->get_server_status(name, m);
 }
 
 int TestConnections::list_dirs(int m)
@@ -2240,15 +2202,14 @@ void TestConnections::check_current_connections(int m, int value)
     }
 }
 
-void TestConnections::check_current_persistent_connections(int m, int i, int value)
+void TestConnections::check_current_persistent_connections(int m, const std::string& name, int value)
 {
-    auto res = maxctrl("api get servers/server"
-                       + std::to_string(i + 1)
-                       + " data.attributes.statistics.connections", m);
+    auto res = maxctrl("api get servers/" + name
+                       + " data.attributes.statistics.persistent_connections", m);
 
-    expect(std::stoi(res.second) == value,
-           "Current no. of persistent conns is not %d for server%d",
-           value, i + 1);
+    expect(atoi(res.second.c_str()) == value,
+           "Current no. of persistent conns is '%s' not '%d' for %s",
+           res.second.c_str(), value, name.c_str());
 }
 
 int TestConnections::take_snapshot(char* snapshot_name)

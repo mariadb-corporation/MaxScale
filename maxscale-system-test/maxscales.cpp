@@ -2,10 +2,11 @@
 #include <sstream>
 #include <unordered_map>
 #include <string>
+#include <maxbase/string.hh>
 #include "envv.h"
 
-Maxscales::Maxscales(const char *pref,
-                     const char *test_cwd,
+Maxscales::Maxscales(const char* pref,
+                     const char* test_cwd,
                      bool verbose,
                      const std::string& network_config)
     : Nodes(pref, network_config, verbose)
@@ -51,9 +52,6 @@ int Maxscales::read_env()
             sprintf(env_name, "%s_%03d_binlog_dir", prefix, i);
             maxscale_binlog_dir[i] = readenv(env_name, DEFAULT_MAXSCALE_BINLOG_DIR);
 
-            sprintf(env_name, "%s_%03d_maxadmin_password", prefix, i);
-            maxadmin_password[i] = readenv(env_name, DEFAULT_MAXADMIN_PASSWORD);
-
             rwsplit_port[i] = 4006;
             readconn_master_port[i] = 4008;
             readconn_slave_port[i] = 4009;
@@ -82,20 +80,20 @@ int Maxscales::connect_rwsplit(int m, const std::string& db)
     if (use_ipv6)
     {
         conn_rwsplit[m] = open_conn_db(rwsplit_port[m],
-                                    IP6[m],
-                                    db,
-                                    user_name,
-                                    password,
-                                    ssl);
+                                       IP6[m],
+                                       db,
+                                       user_name,
+                                       password,
+                                       ssl);
     }
     else
     {
         conn_rwsplit[m] = open_conn_db(rwsplit_port[m],
-                                    IP[m],
-                                    db,
-                                    user_name,
-                                    password,
-                                    ssl);
+                                       IP[m],
+                                       db,
+                                       user_name,
+                                       password,
+                                       ssl);
     }
     routers[m][0] = conn_rwsplit[m];
 
@@ -119,20 +117,20 @@ int Maxscales::connect_readconn_master(int m, const std::string& db)
     if (use_ipv6)
     {
         conn_master[m] = open_conn_db(readconn_master_port[m],
-                                   IP6[m],
-                                   db,
-                                   user_name,
-                                   password,
-                                   ssl);
+                                      IP6[m],
+                                      db,
+                                      user_name,
+                                      password,
+                                      ssl);
     }
     else
     {
         conn_master[m] = open_conn_db(readconn_master_port[m],
-                                   IP[m],
-                                   db,
-                                   user_name,
-                                   password,
-                                   ssl);
+                                      IP[m],
+                                      db,
+                                      user_name,
+                                      password,
+                                      ssl);
     }
     routers[m][1] = conn_master[m];
 
@@ -156,20 +154,20 @@ int Maxscales::connect_readconn_slave(int m, const std::string& db)
     if (use_ipv6)
     {
         conn_slave[m] = open_conn_db(readconn_slave_port[m],
-                                  IP6[m],
-                                  db,
-                                  user_name,
-                                  password,
-                                  ssl);
+                                     IP6[m],
+                                     db,
+                                     user_name,
+                                     password,
+                                     ssl);
     }
     else
     {
         conn_slave[m] = open_conn_db(readconn_slave_port[m],
-                                  IP[m],
-                                  db,
-                                  user_name,
-                                  password,
-                                  ssl);
+                                     IP[m],
+                                     db,
+                                     user_name,
+                                     password,
+                                     ssl);
     }
     routers[m][2] = conn_slave[m];
 
@@ -245,7 +243,7 @@ int Maxscales::start_maxscale(int m)
     }
     else
     {
-        res =ssh_node(m, "service maxscale restart", true);
+        res = ssh_node(m, "service maxscale restart", true);
     }
     fflush(stdout);
     return res;
@@ -270,110 +268,6 @@ int Maxscales::stop_maxscale(int m)
     return res;
 }
 
-int Maxscales::execute_maxadmin_command(int m, const char* cmd)
-{
-    return ssh_node_f(m, true, "maxadmin %s", cmd);
-}
-int Maxscales::execute_maxadmin_command_print(int m, const char* cmd)
-{
-    int exit_code;
-    printf("%s\n", ssh_node_output_f(m, true, &exit_code, "maxadmin %s", cmd));
-    return exit_code;
-}
-
-int Maxscales::check_maxadmin_param(int m, const char* command, const char* param, const char* value)
-{
-    char result[1024];
-    int rval = 1;
-
-    if (get_maxadmin_param(m, (char*)command, (char*)param, (char*)result) == 0)
-    {
-        char* end = strchr(result, '\0') - 1;
-
-        while (isspace(*end))
-        {
-            *end-- = '\0';
-        }
-
-        char* start = result;
-
-        while (isspace(*start))
-        {
-            start++;
-        }
-
-        if (strcmp(start, value) == 0)
-        {
-            rval = 0;
-        }
-        else
-        {
-            printf("Expected %s, got %s\n", value, start);
-        }
-    }
-
-    return rval;
-}
-
-int Maxscales::get_maxadmin_param(int m, const char* command, const char* param, char* result)
-{
-    char* buf;
-    int exit_code;
-
-    buf = ssh_node_output_f(m, true, &exit_code, "maxadmin %s", command);
-
-    // printf("%s\n", buf);
-
-    char* x = strstr(buf, param);
-
-    if (x == NULL)
-    {
-        return 1;
-    }
-
-    x += strlen(param);
-
-    // Skip any trailing parts of the parameter name
-    while (!isspace(*x))
-    {
-        x++;
-    }
-
-    // Trim leading whitespace
-    while (!isspace(*x))
-    {
-        x++;
-    }
-
-    char* end = strchr(x, '\n');
-
-    // Trim trailing whitespace
-    while (isspace(*end))
-    {
-        *end-- = '\0';
-    }
-
-    strcpy(result, x);
-
-    return exit_code;
-}
-
-int Maxscales::get_backend_servers_num(int m, const char* service)
-{
-    char* buf;
-    int exit_code;
-    int i = 0;
-
-    buf = ssh_node_output_f(m, true, &exit_code, "maxadmin show service %s | grep Name: | grep Protocol: | wc -l", service);
-    if (buf && !exit_code)
-    {
-        sscanf(buf, "%d", &i);
-    }
-    return i;
-}
-
-
-
 long unsigned Maxscales::get_maxscale_memsize(int m)
 {
     int exit_code;
@@ -384,94 +278,19 @@ long unsigned Maxscales::get_maxscale_memsize(int m)
     return mem;
 }
 
-
-int Maxscales::find_master_maxadmin(Mariadb_nodes* nodes, int m)
+StringSet Maxscales::get_server_status(const std::string& name, int m)
 {
-    bool found = false;
-    int master = -1;
+    StringSet rval;
+    auto res = maxctrl("api get servers/" + name + " data.attributes.state", m);
 
-    for (int i = 0; i < nodes->N; i++)
+    if (res.first == 0 && res.second.length() > 2)
     {
-        char show_server[256];
-        char res[256];
-        sprintf(show_server, "show server server%d", i + 1);
-        get_maxadmin_param(m, show_server, (char*) "Status", res);
+        auto status = res.second.substr(1, res.second.length() - 2);
 
-        if (strstr(res, "Master"))
+        for (auto a : mxb::strtok(status, ","))
         {
-            if (found)
-            {
-                master = -1;
-            }
-            else
-            {
-                master = i;
-                found = true;
-            }
+            rval.insert(mxb::trimmed_copy(a));
         }
-    }
-
-    return master;
-}
-
-int Maxscales::find_slave_maxadmin(Mariadb_nodes* nodes, int m)
-{
-    int slave = -1;
-
-    for (int i = 0; i < nodes->N; i++)
-    {
-        char show_server[256];
-        char res[256];
-        sprintf(show_server, "show server server%d", i + 1);
-        get_maxadmin_param(m, show_server, (char*) "Status", res);
-
-        if (strstr(res, "Slave"))
-        {
-            slave = i;
-        }
-    }
-
-    return slave;
-}
-
-StringSet Maxscales::get_server_status(const char* name, int m)
-{
-    std::set<std::string> rval;
-    int exit_code;
-    char* res = ssh_node_output_f(m, true, &exit_code, "maxadmin list servers|grep \'%s\'", name);
-    char* pipe = strrchr(res, '|');
-
-    if (res && pipe)
-    {
-        pipe++;
-        char* tok = strtok(pipe, ",");
-
-        while (tok)
-        {
-            char* p = tok;
-            char* end = strchr(tok, '\n');
-            if (!end)
-            {
-                end = strchr(tok, '\0');
-            }
-
-            // Trim leading whitespace
-            while (p < end && isspace(*p))
-            {
-                p++;
-            }
-
-            // Trim trailing whitespace
-            while (end > tok && isspace(*end))
-            {
-                *end-- = '\0';
-            }
-
-            rval.insert(p);
-            tok = strtok(NULL, ",\n");
-        }
-
-        free(res);
     }
 
     return rval;
@@ -495,5 +314,7 @@ int Maxscales::port(enum service type, int m) const
 
 void Maxscales::wait_for_monitor(int intervals, int m)
 {
-    ssh_node_f(m, false, "for ((i=0;i<%d;i++)); do maxctrl api get maxscale/debug/monitor_wait; done", intervals);
+    ssh_node_f(m, false,
+               "for ((i=0;i<%d;i++)); do maxctrl api get maxscale/debug/monitor_wait; done",
+               intervals);
 }

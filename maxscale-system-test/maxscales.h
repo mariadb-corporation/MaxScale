@@ -11,7 +11,6 @@
 #define DEFAULT_MAXSCALE_CNF "/etc/maxscale.cnf"
 #define DEFAULT_MAXSCALE_LOG_DIR "/var/log/maxscale/"
 #define DEFAULT_MAXSCALE_BINLOG_DIR "/var/lib/maxscale/Binlog_Service/"
-#define DEFAULT_MAXADMIN_PASSWORD "mariadb"
 
 class Maxscales: public Nodes
 {
@@ -84,11 +83,6 @@ public:
      * @brief ports of 3 int which contains copies of rwsplit_port, readconn_master_port, readconn_slave_port
      */
     int ports[256][3];
-
-    /**
-     * @brief maxadmin_Password Password to access Maxadmin tool
-     */
-    char * maxadmin_password[256];
 
     /**
       * @brief maxscale_cnf full name of Maxscale configuration file
@@ -304,19 +298,19 @@ public:
             a.join();
         }
     }
-
-    int execute_maxadmin_command(int m, const char* cmd);
-    int execute_maxadmin_command_print(int m, const char* cmd);
-    int check_maxadmin_param(int m, const char* command, const char* param, const char* value);
-    int get_maxadmin_param(int m, const char* command, const char* param, char* result);
-
     /**
-     * @brief get_backend_servers_num Gets number of backend servers configure for service
-     * @param m Number of Maxscale node
-     * @param service Name of service to ask
-     * @return number of backend servers
+     * Execute a MaxCtrl command
+     *
+     * @param cmd  Command to execute, without the `maxctrl` part
+     * @param m    MaxScale node to execute the command on
+     * @param sudo Run the command as root
+     *
+     * @return The exit code and output of MaxCtrl
      */
-    int get_backend_servers_num(int m, const char* service);
+    std::pair<int, std::string> maxctrl(std::string cmd, int m = 0, bool sudo = true)
+    {
+        return ssh_output("maxctrl " + cmd, m, sudo);
+    }
 
     /**
      * @brief get_maxscale_memsize Gets size of the memory consumed by Maxscale process
@@ -326,24 +320,15 @@ public:
     long unsigned get_maxscale_memsize(int m = 0);
 
     /**
-     * @brief find_master_maxadmin Tries to find node with 'Master' status using Maxadmin connand 'show
-     * server'
-     * @param nodes Mariadb_nodes object
-     * @return node index if one master found, -1 if no master found or several masters found
-     */
-    int find_master_maxadmin(Mariadb_nodes* nodes, int m = 0);
-    int find_slave_maxadmin(Mariadb_nodes* nodes, int m = 0);
-
-    /**
      * @brief Get the set of labels that are assigned to server @c name
      *
-     * @param name The name of the server that must be present in the output `maxadmin list servers`
+     * @param name The name of the server
      *
      * @param m Number of Maxscale node
      *
      * @return A set of string labels assigned to this server
      */
-    StringSet get_server_status(const char* name, int m = 0);
+    StringSet get_server_status(const std::string& name, int m = 0);
 
     /**
      * Wait until the monitors have performed at least one monitoring operation

@@ -595,11 +595,11 @@ public:
     /**
      * @brief Get the set of labels that are assigned to server @c name
      *
-     * @param name The name of the server that must be present in the output `maxadmin list servers`
+     * @param name The name of the server that must be present in the output `list servers`
      *
      * @return A set of string labels assigned to this server
      */
-    StringSet get_server_status(const char* name);
+    StringSet get_server_status(const std::string& name, int m = 0);
 
     /**
      * @brief check_maxscale_processes Check if number of running Maxscale processes is equal to 'expected'
@@ -653,7 +653,7 @@ public:
      */
     std::pair<int, std::string> maxctrl(std::string cmd, int m = 0, bool sudo = true)
     {
-        return maxscales->ssh_output("maxctrl " + cmd, m, sudo);
+        return maxscales->maxctrl(cmd, m, sudo);
     }
 
     void check_maxctrl(std::string cmd, int m = 0, bool sudo = true)
@@ -669,7 +669,7 @@ public:
 
     void check_current_operations(int m, int value);
     void check_current_connections(int m, int value);
-    void check_current_persistent_connections(int m, int node, int value);
+    void check_current_persistent_connections(int m, const std::string& name, int value);
     int  stop_maxscale(int m = 0);
     int  start_maxscale(int m = 0);
     void process_template(const char* src, const char* dest = "/etc/maxscale.cnf");

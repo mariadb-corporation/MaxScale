@@ -8,6 +8,7 @@
 #include <string>
 
 #include <maxbase/ccdefs.hh>
+#include <maxbase/string.hh>
 
 typedef std::set<std::string> StringSet;
 
@@ -139,6 +140,7 @@ public:
         int rc;
         char* out = ssh_node_output(node, ssh.c_str(), sudo, &rc);
         std::string rval(out);
+        mxb::rtrim(rval);
         free(out);
         return {rc, rval};
     }
