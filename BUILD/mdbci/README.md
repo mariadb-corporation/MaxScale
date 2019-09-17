@@ -50,8 +50,8 @@ Upgrade test includes installation of old version of Maxscale from [production r
 
 The old version can be defined in `old_target` variable.
 
-Upgrade test starts Maxscale with only one service - `CLI` and tries to execute 'maxadmin' command.
-If this command exits with success ('0') upgrade test reports PASSED.
+Upgrade test tries to execute a 'maxctrl' command. If this command exits with
+success ('0') upgrade test reports PASSED.
 
 ## Build with AWS VM
 

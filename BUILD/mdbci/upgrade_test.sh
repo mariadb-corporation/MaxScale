@@ -8,7 +8,7 @@ export script_dir="$(dirname $(readlink -f $0))"
 # load all needed variables
 . ${script_dir}/set_build_variables.sh
 
-export maxadmin_command=${maxadmin_command:-"sudo maxadmin show services"}
+export maxctrl_command=${maxctrl_command:-"sudo maxctrl show services"}
 
 export old_target=${old_target:-"2.1.9"}
 export old_target=`echo $old_target | sed "s/?//g"`
@@ -84,7 +84,7 @@ pid_to_kill=$!
 for  i in {1..10}
 do
     sleep 5
-    ssh $sshopt $maxadmin_command
+    ssh $sshopt $maxctrl_command
     maxadm_exit=$?
     if [ $maxadm_exit == 0 ] ; then
         break
@@ -92,21 +92,11 @@ do
 done
 
 if [ $maxadm_exit != 0 ] ; then
-	echo "Maxadmin executing error"
+	echo "Maxctrl executing error"
 	res=1
 fi
 
-maxadmin_out=`ssh $sshopt $maxadmin_command`
-echo $maxadmin_out | grep "CLI"
-if [ $? != 0 ] ; then
-	echo "CLI service is not found in maxadmin output"
-        res=1
-fi
-echo $maxadmin_out | grep "Started"
-if [ $? != 0 ] ; then
-	echo "'Started' is not found in the CLI service description"
-        res=1
-fi
+maxctrl_out=`ssh $sshopt $maxctrl_command`
 
 mkdir -p $logs_publish_dir
 scp $scpopt $sshuser@$IP:/var/log/maxscale/* $logs_publish_dir
