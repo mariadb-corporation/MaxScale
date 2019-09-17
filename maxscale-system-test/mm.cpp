@@ -67,44 +67,44 @@ int main(int argc, char* argv[])
     TestConnections test(argc, argv);
 
     test.set_timeout(120);
-    char maxadmin_result[1024];
 
     test.repl->set_repl_user();
 
     test.start_mm(0);   // first node - slave, second - master
 
     test.set_timeout(120);
-    test.maxscales->get_maxadmin_param(0, (char*) "show server server1", (char*) "Status:", maxadmin_result);
-    test.tprintf("node0 %s\n", maxadmin_result);
-    if (strstr(maxadmin_result, "Slave, Running") == NULL)
+    auto res = test.maxctrl("api get servers/server1 data.attributes.state").second;
+
+    if (strstr(res.c_str(), "Slave, Running") == NULL)
     {
-        test.add_result(1, "Node0 is not slave, status is %s\n", maxadmin_result);
+        test.add_result(1, "Node0 is not slave, status is %s\n", res.c_str());
     }
+
     test.set_timeout(120);
-    test.maxscales->get_maxadmin_param(0, (char*) "show server server2", (char*) "Status:", maxadmin_result);
-    test.tprintf("node1 %s\n", maxadmin_result);
-    if (strstr(maxadmin_result, "Master, Running") == NULL)
+
+    res = test.maxctrl("api get servers/server2 data.attributes.state").second;
+
+    if (strstr(res.c_str(), "Master, Running") == NULL)
     {
-        test.add_result(1, "Node1 is not master, status is %s\n", maxadmin_result);
+        test.add_result(1, "Node1 is not master, status is %s\n", res.c_str());
     }
+
     test.set_timeout(120);
-//    printf("Put some data and check\n");
-//    test.add_result(check_conf(test, 2), "Configuration broken\n");
+
     test.set_timeout(120);
     test.tprintf("Block slave\n");
     test.repl->block_node(0);
     test.stop_timeout();
     test.maxscales->wait_for_monitor();
     test.set_timeout(120);
-    test.maxscales->get_maxadmin_param(0, (char*) "show server server1", (char*) "Status:", maxadmin_result);
-    printf("node0 %s\n", maxadmin_result);
-    if (strstr(maxadmin_result, "Down") == NULL)
+
+    res = test.maxctrl("api get servers/server1 data.attributes.state").second;
+
+    if (strstr(res.c_str(), "Down") == NULL)
     {
-        test.add_result(1, "Node0 is not down, status is %s\n", maxadmin_result);
+        test.add_result(1, "Node0 is not down, status is %s\n", res.c_str());
     }
     test.set_timeout(120);
-//    test.tprintf("Put some data and check\n");
-//    test.add_result(check_conf(test, 0), "configuration broken\n");
 
     test.set_timeout(120);
     test.tprintf("Unlock slave\n");
@@ -115,11 +115,12 @@ int main(int argc, char* argv[])
     test.tprintf("Block master\n");
     test.repl->block_node(1);
     test.maxscales->wait_for_monitor();
-    test.maxscales->get_maxadmin_param(0, (char*) "show server server2", (char*) "Status:", maxadmin_result);
-    printf("node1 %s\n", maxadmin_result);
-    if (strstr(maxadmin_result, "Down") == NULL)
+
+    res = test.maxctrl("api get servers/server2 data.attributes.state").second;
+
+    if (strstr(res.c_str(), "Down") == NULL)
     {
-        test.add_result(1, "Node1 is not down, status is %s\n", maxadmin_result);
+        test.add_result(1, "Node1 is not down, status is %s\n", res.c_str());
     }
     test.tprintf("Make node 1 master\n");
 
@@ -130,8 +131,6 @@ int main(int argc, char* argv[])
 
     test.maxscales->wait_for_monitor();
     test.set_timeout(120);
- //   test.tprintf("Put some data and check\n");
- //   test.add_result(check_conf(test, 1), "configuration broken\n");
 
     printf("Unlock slave\n");
     test.repl->unblock_node(1);
@@ -145,22 +144,21 @@ int main(int argc, char* argv[])
     test.maxscales->wait_for_monitor();
 
     test.set_timeout(120);
-//    printf("Put some data and check\n");
-//    test.add_result(check_conf(test, 2), "Configuration broken\n");
 
     test.set_timeout(60);
-    test.maxscales->get_maxadmin_param(0, (char*) "show server server2", (char*) "Status:", maxadmin_result);
-    printf("node1 %s\n", maxadmin_result);
-    if (strstr(maxadmin_result, "Slave, Running") == NULL)
+    res = test.maxctrl("api get servers/server2 data.attributes.state").second;
+
+    if (strstr(res.c_str(), "Slave, Running") == NULL)
     {
-        test.add_result(1, "Node1 is not slave, status is %s\n", maxadmin_result);
+        test.add_result(1, "Node1 is not slave, status is %s\n", res.c_str());
     }
     test.set_timeout(60);
-    test.maxscales->get_maxadmin_param(0, (char*) "show server server1", (char*) "Status:", maxadmin_result);
-    test.tprintf("node0 %s\n", maxadmin_result);
-    if (strstr(maxadmin_result, "Master, Running") == NULL)
+
+    res = test.maxctrl("api get servers/server1 data.attributes.state").second;
+
+    if (strstr(res.c_str(), "Master, Running") == NULL)
     {
-        test.add_result(1, "Node0 is not master, status is %s\n", maxadmin_result);
+        test.add_result(1, "Node0 is not master, status is %s\n", res.c_str());
     }
 
     return test.global_result;
