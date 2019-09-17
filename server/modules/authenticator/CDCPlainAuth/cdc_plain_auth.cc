@@ -47,7 +47,7 @@ public:
 
     std::unique_ptr<mxs::ClientAuthenticator> create_client_authenticator() override;
 
-    int load_users(Listener* listener) override;
+    int load_users(SERVICE* service) override;
 
     void diagnostics(DCB* output) override
     {
@@ -75,7 +75,7 @@ public:
     int cdc_auth_check(char* username, uint8_t* auth_data);
 
 private:
-    int set_service_user(Listener* listener);
+    int set_service_user(SERVICE* service);
     mxs::Users read_users(char* usersfile);
 
     mxs::Users m_userdata; // lock-protected user-info
@@ -386,10 +386,8 @@ bool CDCClientAuthenticator::set_client_data(uint8_t* client_auth_packet, int cl
  * @param service   The current service
  * @return      0 on success, 1 on failure
  */
-int CDCAuthenticatorModule::set_service_user(Listener* listener)
+int CDCAuthenticatorModule::set_service_user(SERVICE* service)
 {
-    SERVICE* service = listener->service();
-
     const char* service_user = NULL;
     const char* service_passwd = NULL;
     serviceGetUser(service, &service_user, &service_passwd);
@@ -475,12 +473,12 @@ mxs::Users CDCAuthenticatorModule::read_users(char* usersfile)
  *
  * @param service The current service
  */
-int CDCAuthenticatorModule::load_users(Listener* listener)
+int CDCAuthenticatorModule::load_users(SERVICE* service)
 {
     int rc = MXS_AUTH_LOADUSERS_ERROR;
     char path[PATH_MAX + 1];
     snprintf(path, PATH_MAX, "%s/%s/%s",
-             get_datadir(), listener->service()->name(), CDC_USERS_FILENAME);
+             get_datadir(), service->name(), CDC_USERS_FILENAME);
 
     auto new_users = read_users(path);
     if (!new_users.empty())
@@ -491,6 +489,6 @@ int CDCAuthenticatorModule::load_users(Listener* listener)
         rc = MXS_AUTH_LOADUSERS_OK;
     }
 
-    set_service_user(listener);
+    set_service_user(service);
     return rc;
 }

@@ -634,23 +634,23 @@ static void add_gssapi_user(sqlite3* handle,
  * Loading the list of database users that use the 'gssapi' plugin allows us to
  * give more precise error messages to the clients when authentication fails.
  *
- * @param listener Listener definition
+ * @param service Service definition
  * @return MXS_AUTH_LOADUSERS_OK on success, MXS_AUTH_LOADUSERS_ERROR on error
  */
-int GSSAPIAuthenticatorModule::load_users(Listener* listener)
+int GSSAPIAuthenticatorModule::load_users(SERVICE* service)
 {
     const char* user;
     const char* password;
     int rval = MXS_AUTH_LOADUSERS_ERROR;
     auto inst = this;
-    serviceGetUser(listener->service(), &user, &password);
+    serviceGetUser(service, &user, &password);
     char* pw;
 
     if ((pw = decrypt_password(password)))
     {
         bool no_active_servers = true;
 
-        for (SERVER* server : listener->service()->reachable_servers())
+        for (SERVER* server : service->reachable_servers())
         {
             no_active_servers = false;
             MYSQL* mysql = mysql_init(NULL);

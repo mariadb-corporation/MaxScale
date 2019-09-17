@@ -31,7 +31,9 @@
 #include <cctype>
 #include <maxbase/alloc.h>
 #include <maxscale/authenticator2.hh>
+#include <maxscale/listener.hh>
 #include <maxscale/modinfo.hh>
+#include <maxscale/session.hh>
 
 #define ISspace(x) isspace((int)(x))
 #define HTTP_SERVER_STRING "MaxScale(c) v.1.0.0"

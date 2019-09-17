@@ -30,7 +30,7 @@ public:
 
     std::unique_ptr<mxs::ClientAuthenticator> create_client_authenticator() override;
 
-    int load_users(Listener* listener) override
+    int load_users(SERVICE* service) override
     {
         return MXS_AUTH_LOADUSERS_OK;
     }

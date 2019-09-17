@@ -264,11 +264,9 @@ void PamAuthenticatorModule::delete_old_users()
  *
  * @return MXS_AUTH_LOADUSERS_OK on success, MXS_AUTH_LOADUSERS_ERROR on error
  */
-int PamAuthenticatorModule::load_users(Listener* listener)
+int PamAuthenticatorModule::load_users(SERVICE* service)
 {
-    SERVICE* service = listener->service();
     /** Query that gets all users that authenticate via the pam plugin */
-
     string users_query, db_query, role_query;
     auto prepare_queries = [&users_query, &db_query, &role_query](bool using_roles) {
         string user_cols = "user, host, select_priv, insert_priv, update_priv, delete_priv, "

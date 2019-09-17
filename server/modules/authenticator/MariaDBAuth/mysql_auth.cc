@@ -673,14 +673,13 @@ static bool service_has_servers(SERVICE* service)
  *
  * This function loads MySQL users from the backend database.
  *
- * @param port Listener definition
+ * @param service Service definition
  * @return MXS_AUTH_LOADUSERS_OK on success, MXS_AUTH_LOADUSERS_ERROR and
  * MXS_AUTH_LOADUSERS_FATAL on fatal error
  */
-int MariaDBAuthenticatorModule::load_users(Listener* port)
+int MariaDBAuthenticatorModule::load_users(SERVICE* service)
 {
     int rc = MXS_AUTH_LOADUSERS_OK;
-    SERVICE* service = port->service();
     bool first_load = false;
 
     if (m_check_permissions)
@@ -703,11 +702,7 @@ int MariaDBAuthenticatorModule::load_users(Listener* port)
     {
         if (loaded < 0)
         {
-            MXS_ERROR("[%s] Unable to load users for listener %s listening at [%s]:%d.",
-                      service->name(),
-                      port->name(),
-                      *port->address() ? port->address() : "::",
-                      port->port());
+            MXB_ERROR("Unable to load users for service %s.", service->name());
         }
 
         if (m_inject_service_user)
@@ -744,8 +739,8 @@ int MariaDBAuthenticatorModule::load_users(Listener* port)
     else if (loaded > 0 && first_load)
     {
         mxb_assert(srv);
-        MXS_NOTICE("[%s] Loaded %d MySQL users for listener %s from server %s.",
-                   service->name(), loaded, port->name(), srv->name());
+        MXS_NOTICE("Loaded %d MySQL users for service %s from server %s.",
+                   loaded, service->name(), srv->name());
     }
 
     return rc;

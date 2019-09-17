@@ -28,7 +28,7 @@ public:
 
     static PamAuthenticatorModule* create(char** options);
 
-    int load_users(Listener* listener) override;
+    int load_users(SERVICE* service) override;
     void diagnostics(DCB* dcb) override;
     json_t* diagnostics_json() override;
 

@@ -14,7 +14,6 @@
 
 #include <maxscale/authenticator.hh>
 #include <maxscale/dcb.hh>
-#include <maxscale/listener.hh>
 
 namespace maxscale
 {
@@ -45,7 +44,7 @@ public:
     virtual std::unique_ptr<ClientAuthenticator> create_client_authenticator() = 0;
 
     // Load or update authenticator user data
-    virtual int load_users(Listener* listener) = 0;
+    virtual int load_users(SERVICE* service) = 0;
 
     // Print diagnostic output to a DCB.
     virtual void diagnostics(DCB* output) = 0;

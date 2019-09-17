@@ -676,7 +676,7 @@ void Listener::print_users(DCB* dcb)
 int Listener::load_users()
 {
     mxb::LogScope scope(name());
-    return m_auth_module->load_users(this);
+    return m_auth_module->load_users(m_service);
 }
 
 
@@ -950,7 +950,7 @@ bool Listener::listen()
     m_state = FAILED;
 
     /** Load the authentication users before before starting the listener */
-    switch (m_auth_module->load_users(this))
+    switch (m_auth_module->load_users(m_service))
     {
     case MXS_AUTH_LOADUSERS_FATAL:
         MXS_ERROR("Fatal error when loading users, service is not started.");

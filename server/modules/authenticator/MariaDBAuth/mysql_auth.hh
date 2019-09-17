@@ -111,7 +111,7 @@ public:
 
     std::unique_ptr<mxs::ClientAuthenticator> create_client_authenticator() override;
 
-    int         load_users(Listener* listener) override;
+    int         load_users(SERVICE* service) override;
     void        diagnostics(DCB* output) override;
     json_t*     diagnostics_json() override;
     uint64_t    capabilities() const override;
