@@ -61,10 +61,12 @@ struct alignas (CachelineAlignment) CachelineAtomic : public std::atomic<T>
  *
  *  SharedData contains two pointers to some data type, the current and the new pointer. Each Reader
  *  has its own copy of SharedData and can always read the current data without any locks by following
- *  the simple protocol of calling Data* ptr = reader_ready() at the top of their loop. All that
- *  reader_ready() does is to unconditionally copy the new pointer to the current pointer, and return
- *  the current pointer. Technically reader_ready() can be called at any time, but it is a safer practice
- *  to only call it once at the top of the loop (and store it to a member variable if needed).
+ *  the simple protocol of calling Data* ptr = reader_ready() at the top and bottom of their loop.
+ *  All that reader_ready() does is to unconditionally copy the new pointer to the current pointer, and
+ *  return the current pointer. Whenever capping number of copies of DataType is used (assume always)
+ *  reader_ready() should be called at least at the top and bottom of the loop or function that uses
+ *  the pointer.
+ *  NOTE: Use the RAII SharedDataPtr class to make sure reader_ready() is called properly.
  *
  *  Updates to "data" are handled by a specialized GCUpdater. A worker makes an update using the
  *  ShareDataType::send_update() function. The associated GCUpdater will do what a regular a CAS
@@ -120,19 +122,16 @@ public:
 
     /**
      * @brief A reader/worker thread should call this each loop to get a ptr to a fresh copy of DataType.
+     *        Since the number of copies of DataType* can be capped, it is important that reader_ready() is
+     *        called before and after work is done. See SharedDataPtr.
      *
      * @return Pointer to the latest copy of DataType.
-     *
-     * TODO. If there is a cap on the number of copies (in the updater), it is important to call reader_rdy()
-     *       when the worker has done work, rather than doing it only "at the top of the thread loop".
-     *       Make a RAII class for use in "worker functions", e.g. SmartRouter, will need reader_rdy() at
-     *       entry and exit of routeQuery(). Hm, maybe even make this private and a friend of the RAII class.
      *
      * TODO. When the number of cores increases, at some point "threads = auto" should start less workers
      *       than cores. With 96 cores, save 1-3 cores (really depending on what is expected to run
      *       in non-worker threads).
      */
-    const Data* reader_ready();
+    const DataType* reader_ready();
 
     /**
      * @brief A reader/worker calls this function to update DataType. The actual update will happen at some
@@ -179,6 +178,58 @@ private:
 
     std::atomic<int64_t>* m_pTimestamp_generator;
 };
+
+/**
+ *  @class SharedDataPtr
+ *
+ *  SharedDataPtr is a RAII class to make reader_ready() calls in construction and destruction,
+ *  and every pointer access if it is acceptable for the client that the contents
+ *  of DataType* may change from call to call. This is acceptable in almost all cases.
+ *  - Use SharedDataPtr whenever possible.
+ *  - Do not make SharedDataPtr a member of any class that outlives the thread loop,
+ *    or the function where DataType* is needed.
+ *  - Do not save the DataType* retrieved from SharedDataPtr if it can be avoided.
+ *
+ */
+template<typename SD>
+class SharedDataPtr
+{
+public:
+    using SharedDataType = SD;
+    using DataType = typename SharedDataType::DataType;
+
+    /**
+     * @brief Constructor
+     *
+     * @param SharedDataType the instance to wrap.
+     * @param stable_read true means DataType* will only be read once, by calling reader_ready().
+     *                    false means that reader_ready() is called every time the DataType* is accessed.
+     *                    stable_read = false is almost always the correct solution
+     */
+    SharedDataPtr(SharedDataType* shared_data, bool stable_read = false);
+    SharedDataPtr(SharedDataPtr&& rhs) = default;
+    SharedDataPtr& operator=(SharedDataPtr&& rhs) = default;
+
+    // Ptr to DataType
+    const DataType* operator->();
+
+    // Ptr to DataType
+    const DataType* get();
+
+    ~SharedDataPtr();
+private:
+    SharedDataType* m_shared_data;
+    DataType*       m_pCurrentData;
+    const bool      m_stable_read;
+};
+
+// Convenience maker of SharedDataPtr
+template<typename SD>
+SharedDataPtr<SD> make_shared_data_ptr(SD* sd, bool stable_read = false)
+{
+    return SharedDataPtr<SD>(sd, stable_read);
+}
+
 
 /// IMPLEMENTATION
 ///
@@ -338,5 +389,36 @@ void SharedData<Data, Update>::shutdown()
 
     *m_pData_rdy = true;
     m_pUpdater_wakeup->notify_one();
+}
+
+
+template<typename SD>
+SharedDataPtr<SD>::SharedDataPtr(SD* shared_data, bool stable_read)
+    : m_shared_data{shared_data}
+    , m_pCurrentData(const_cast<typename SD::DataType*>(shared_data->reader_ready()))
+    , m_stable_read(stable_read)
+{
+}
+
+template<typename SD>
+const typename SD::DataType* SharedDataPtr<SD>::operator->()
+{
+    return get();
+}
+
+template<typename SD>
+const typename SD::DataType* SharedDataPtr<SD>::get()
+{
+    if (!m_stable_read)
+    {
+        m_pCurrentData = const_cast<typename SD::DataType*>(m_shared_data->reader_ready());
+    }
+    return m_pCurrentData;
+}
+
+template<typename SD>
+SharedDataPtr<SD>::~SharedDataPtr()
+{
+    m_shared_data->reader_ready();
 }
 }
