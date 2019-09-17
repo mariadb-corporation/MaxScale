@@ -1,11 +1,9 @@
 /**
- * @file mxs812_1.cpp - Checks "Current no. of conns" maxadmin output after long blob inserting
  * - set global max_allowed_packet=10000000
  * - pretare statement INSERT INTO long_blob_table(x, b) VALUES(1, ?)
  * - load chunks
  * - execute statement
  * - wait 5 seconds
- * - check "Current no. of conns" maxadmin output, expect 0
  * - repeat test 2 times
  */
 

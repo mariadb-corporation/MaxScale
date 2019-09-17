@@ -464,7 +464,7 @@ add_test_executable(mxs359_error_on_write.cpp mxs359_error_on_write mxs359_error
 add_test_executable(binary_ps.cpp binary_ps replication LABELS readwritesplit LIGHT REPL_BACKEND)
 add_test_executable(binary_ps_cursor.cpp binary_ps_cursor replication LABELS readwritesplit LIGHT REPL_BACKEND)
 
-# Creates and closes a lot of connections, checks that 'maxadmin list servers' shows 0 connections at the end
+# Creates and closes a lot of connections, checks that 'list servers' shows 0 connections at the end
 add_test_executable(mxs321.cpp mxs321 replication LABELS maxscale readwritesplit REPL_BACKEND)
 
 # Crash with Galera and backend restart when persistant cfonnections are in use
@@ -510,10 +510,10 @@ add_test_script(mxs791.sh mxs791.sh replication LABELS UNSTABLE HEAVY REPL_BACKE
 # Simple connect test in bash, checks that defined in cmd line DB is selected (Galera backend)
 add_test_script(mxs791_galera.sh mxs791.sh galera LABELS UNSTABLE HEAVY GALERA_BACKEND)
 
-# Checks "Current no. of conns" maxadmin output after long blob inserting
+# Checks "Current no. of conns" output after long blob inserting
 add_test_executable(mxs812_1.cpp mxs812_1 longblob LABELS readwritesplit REPL_BACKEND)
 
-# Checks "Current no. of conns" maxadmin output after long blob inserting
+# Checks "Current no. of conns" output after long blob inserting
 add_test_executable(mxs812_2.cpp mxs812_2 replication LABELS readwritesplit REPL_BACKEND)
 
 # Tests maxpasswd
@@ -796,7 +796,7 @@ add_test_executable(short_sessions.cpp short_sessions replication LABELS readwri
 # Do short sessions (open conn, short query, close conn) in the loop, client ssl is ON
 add_test_derived(short_sessions_ssl short_sessions ssl LABELS readwritesplit readconnroute BACKEND_SSL REPL_BACKEND)
 
-# Regression case for crash if maxadmin 'show monitors' command is issued, but no monitor is not running
+# Regression case for crash if 'show monitors' command is issued, but no monitor is not running
 add_test_executable(show_monitor_crash.cpp show_monitor_crash show_monitor_crash LABELS maxscale REPL_BACKEND)
 
 # Check how Maxscale works in case of one slave failure, only one slave is configured

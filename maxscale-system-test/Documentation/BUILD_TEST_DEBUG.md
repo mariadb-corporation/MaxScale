@@ -124,7 +124,7 @@ Upgrade test is executed on a separate VM.
 * then upgrade to recently built version is executed,
 * then Maxscale is started with minimum configuration (only CLI service is
   configured, no backend at all), and
-* finally, _maxadmin_ is executed to check that Maxscale is running and available.
+* finally, _maxctrl_ is executed to check that Maxscale is running and available.
 
 ### Regular automatic builds
 

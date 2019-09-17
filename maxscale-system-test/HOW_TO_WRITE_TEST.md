@@ -52,7 +52,7 @@ Template can contain following varables:
 ## Class TestConnections
 
 This class contains all information about Maxscale node and about all backend nodes as well as a set of functions
-to handle Maxscale and backends, interact with Maxscale routers and Maxadmin.
+to handle Maxscale and backends, interact with Maxscale routers.
 Here is only list of main functions, for all details see Doxygen comments in [testconnections.h](testconnections.h)
 
 Currently two backend sets are supported (represented by Mariadb_nodes class objects): 'repl' and 'galera'
@@ -143,7 +143,6 @@ they are availve from [mariadb_func.h](mariadb_func.h)
 |maxscale_IP|IP address of Maxscale machine|maxscale_IP|
 |maxscale_user|DB user name to access via Maxscale|maxscale_user|
 |maxscale_password|password for MaxscaleDB user|maxscale_password|
-|maxadmin_password|password for MaxAdmin interface (user name is hard coded 'admin')|maxadmin_password|
 |conn_rwsplit|MYSQL handler of connections to RWSplit router| - |
 |conn_master|MYSQL handler of connections to ReadConn router in master mode| - |
 |conn_slave|MYSQL handler of connections to ReadConn router in master mode| - |

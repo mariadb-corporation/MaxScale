@@ -36,8 +36,6 @@ export node_password="skysql"
 export maxscale_user="skysql"
 export maxscale_password="skysql"
 
-export maxadmin_password="mariadb"
-
 #for prefix in "node" "galera"
 for prefix in "node"
 do

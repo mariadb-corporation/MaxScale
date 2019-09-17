@@ -17,7 +17,7 @@ TestConnections* Test;
 pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 int exit_flag = 0;
 int start_flag = 0;
-int restart_flag = 0;   // 0 - maxadmin restart service, 1 - restart maxscale
+int restart_flag = 0;   // 0 - restart service, 1 - restart maxscale
 unsigned int old_slave;
 void* kill_vm_thread(void* ptr);
 
@@ -77,7 +77,7 @@ int main(int argc, char* argv[])
     }
     Test->repl->close_connections();
 
-    Test->tprintf("Creating query load with %d threads and use maxadmin service restart...\n", threads_num);
+    Test->tprintf("Creating query load with %d threads and use service restart...\n", threads_num);
     Test->set_timeout(1200);
     load(&new_inserts[0],
          &new_selects[0],

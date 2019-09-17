@@ -2,7 +2,6 @@
  * @file mysqlmon_detect_standalone_master.cpp MySQL Monitor Standalone Master Test
  * - block all nodes, but one
  * - wait for monitor (monitor_interval), monitor should select remaining node as master
- * - check maxadmin output
  * - check that queries work
  * - unblock backend nodes
  * - wait for monitor

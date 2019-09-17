@@ -1,10 +1,10 @@
 /**
- * @file mx321.cpp regression case for bug MXS-321 ("Incorrect number of connections in maxadmin list view")
+ * @file mx321.cpp regression case for bug MXS-321 ("Incorrect number of connections in list view")
  *
  * - Set max_connections to 100
  * - Create 200 connections
  * - Close connections
- * - Check that maxadmin list servers shows 0 connections
+ * - Check that list servers shows 0 connections
  */
 
 
