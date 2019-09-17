@@ -44,6 +44,7 @@ int main(int argc, char** argv)
     test.expect(rc == 0,
                 "Generated configuration should have version_string defined and MaxScale should ignore it.");
 
+    test.check_maxctrl("alter service RW-Split-Router enable_root_user true");
     test.check_maxctrl("alter service RW-Split-Router enable_root_user false");
 
     test.maxscales->restart();
