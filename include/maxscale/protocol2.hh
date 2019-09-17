@@ -18,6 +18,7 @@
 class BackendDCB;
 class ClientDCB;
 class DCB;
+class SERVICE;
 
 namespace maxscale
 {
@@ -65,6 +66,28 @@ public:
      * @return Module name
      */
     virtual std::string name() const = 0;
+
+    /**
+     * Load users for all authenticators.
+     *
+     * @param service The service to load from
+     * @return MXS_AUTH_LOADUSERS_OK on success
+     */
+    virtual int load_auth_users(SERVICE* service) = 0;
+
+    /**
+     * Print a list of authenticator users to DCB.
+     *
+     * @param output Output DCB
+     */
+    virtual void print_auth_users(DCB* output) = 0;
+
+    /**
+     * Print a list of authenticator users to json.
+     *
+     * @return JSON user list
+     */
+    virtual json_t* print_auth_users_json() = 0;
 
     // Authenticator module. Will be cleaned up in later commits.
     std::unique_ptr<mxs::AuthenticatorModule> m_auth_module;

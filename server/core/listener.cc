@@ -566,7 +566,7 @@ json_t* Listener::to_json() const
     json_object_set_new(attr, CN_STATE, json_string(state()));
     json_object_set_new(attr, CN_PARAMETERS, param);
 
-    json_t* diag = m_proto_module->m_auth_module->diagnostics_json();
+    json_t* diag = m_proto_module->print_auth_users_json();
     if (diag)
     {
         json_object_set_new(attr, CN_AUTHENTICATOR_DIAGNOSTICS, diag);
@@ -643,14 +643,14 @@ const char* Listener::state() const
 void Listener::print_users(DCB* dcb)
 {
     dcb_printf(dcb, "User names (%s): ", name());
-    m_proto_module->m_auth_module->diagnostics(dcb);
+    m_proto_module->print_auth_users(dcb);
     dcb_printf(dcb, "\n");
 }
 
 int Listener::load_users()
 {
     mxb::LogScope scope(name());
-    return m_proto_module->m_auth_module->load_users(m_service);
+    return m_proto_module->load_auth_users(m_service); // TODO: Move this call inside protocol
 }
 
 
@@ -924,7 +924,7 @@ bool Listener::listen()
     m_state = FAILED;
 
     /** Load the authentication users before before starting the listener */
-    switch (m_proto_module->m_auth_module->load_users(m_service))
+    switch (m_proto_module->load_auth_users(m_service))
     {
     case MXS_AUTH_LOADUSERS_FATAL:
         MXS_ERROR("Fatal error when loading users, service is not started.");

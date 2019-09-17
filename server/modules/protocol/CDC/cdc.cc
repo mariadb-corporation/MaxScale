@@ -87,6 +87,21 @@ public:
     {
         return MXS_MODULE_NAME;
     }
+
+    int load_auth_users(SERVICE* service) override
+    {
+        return m_auth_module->load_users(service);
+    }
+
+    void print_auth_users(DCB* output) override
+    {
+        m_auth_module->diagnostics(output);
+    }
+
+    json_t* print_auth_users_json() override
+    {
+        return m_auth_module->diagnostics_json();
+    }
 };
 
 GWBUF* CDCClientProtocol::reject(const char* host)
