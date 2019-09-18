@@ -13,8 +13,11 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
-#include <maxscale/dcb.hh>
 #include <maxscale/protocol.hh>
+
+class BackendDCB;
+class ClientDCB;
+class DCB;
 
 namespace maxscale
 {

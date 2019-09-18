@@ -24,7 +24,9 @@
 #include <maxbase/poll.h>
 #include <maxscale/authenticator.hh>
 #include <maxscale/buffer.hh>
+#include <maxscale/dcbhandler.hh>
 #include <maxscale/modinfo.hh>
+#include <maxscale/protocol2.hh>
 #include <maxscale/target.hh>
 
 #include <memory>
@@ -55,37 +57,7 @@ class DCB : public MXB_POLL_DATA
 public:
     static const int FD_CLOSED = -1;
 
-    class Handler
-    {
-    public:
-        /**
-         * EPOLLIN handler, used to read available data from network socket
-         *
-         * @param dcb  DCB to read from.
-         */
-        virtual void ready_for_reading(DCB* dcb) = 0;
-
-        /**
-         * EPOLLOUT handler, used to write buffered data
-         *
-         * @param dcb  DCB to write to.
-         */
-        virtual void write_ready(DCB* dcb) = 0;
-
-        /**
-         * EPOLLERR handler
-         *
-         * @param dcb  DCB for which the error occurred.
-         */
-        virtual void error(DCB* dcb) = 0;
-
-        /**
-         * EPOLLHUP and EPOLLRDHUP handler
-         *
-         * @param dcb  DCB for which the hangup occurred.
-         */
-        virtual void hangup(DCB* dcb) = 0;
-    };
+    using Handler = DCBHandler;
 
     class Manager
     {
@@ -221,7 +193,7 @@ public:
         return m_stats;
     }
 
-    virtual MXS_PROTOCOL_SESSION* protocol_session() const = 0;
+    virtual MXS_PROTOCOL_SESSION* protocol() const = 0;
 
     bool ssl_enabled() const
     {
@@ -623,8 +595,6 @@ public:
            std::unique_ptr<mxs::ClientAuthenticator> authenticator,
            DCB::Manager* manager = nullptr);
 
-    MXS_PROTOCOL_SESSION* protocol_session() const override;
-
     const sockaddr_storage& ip() const
     {
         return m_ip;
@@ -637,10 +607,7 @@ public:
      */
     int port() const;
 
-    mxs::ClientProtocol* protocol()
-    {
-        return m_protocol.get();
-    }
+    mxs::ClientProtocol* protocol() const override;
 
     mxs::ClientAuthenticator* authenticator()
     {
@@ -731,7 +698,7 @@ public:
         m_session = s;
     }
 
-    MXS_PROTOCOL_SESSION* protocol_session() const override;
+    mxs::BackendProtocol* protocol() const override;
 
     /**
      * Hangup all BackendDCBs connected to a particular server.

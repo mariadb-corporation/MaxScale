@@ -389,7 +389,7 @@ bool PamClientAuthenticator::extract(DCB* dcb, GWBUF* buffer)
 
 bool PamClientAuthenticator::ssl_capable(DCB* client)
 {
-    auto protocol = static_cast<MySQLClientProtocol*>(client->protocol_session());
+    auto protocol = static_cast<MySQLClientProtocol*>(client->protocol());
     return protocol->client_capabilities & GW_MYSQL_CAPABILITIES_SSL;
 }
 

@@ -23,7 +23,7 @@ Dcb::Dcb(MXS_SESSION* pSession,
          const char* zHost,
          Handler* pHandler)
     : ClientDCB(DCB::FD_CLOSED, zHost, DCB::Role::CLIENT, pSession)
-    , m_protocol_session(pHandler)
+    , m_protocol(pHandler)
 {
 }
 
@@ -33,15 +33,15 @@ Dcb::~Dcb()
 
 Dcb::Handler* Dcb::handler() const
 {
-    return m_protocol_session.handler();
+    return m_protocol.handler();
 }
 
 Dcb::Handler* Dcb::set_handler(Handler* pHandler)
 {
-    return m_protocol_session.set_handler(pHandler);
+    return m_protocol.set_handler(pHandler);
 }
 
-int32_t Dcb::ProtocolSession::write(DCB*, GWBUF* pData)
+int32_t Dcb::Protocol::write(DCB*, GWBUF* pData)
 {
     int32_t rv = 1;
 

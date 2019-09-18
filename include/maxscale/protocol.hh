@@ -19,7 +19,7 @@
  */
 
 #include <maxscale/ccdefs.hh>
-#include <maxscale/dcb.hh>
+#include <maxscale/dcbhandler.hh>
 #include <maxscale/target.hh>
 
 class DCB;
@@ -37,7 +37,7 @@ class BackendProtocol;
 /**
  * Base protocol class. Implemented by both client and backend protocols
  */
-class MXS_PROTOCOL_SESSION : public DCB::Handler
+class MXS_PROTOCOL_SESSION : public DCBHandler
 {
 public:
     virtual ~MXS_PROTOCOL_SESSION() = default;

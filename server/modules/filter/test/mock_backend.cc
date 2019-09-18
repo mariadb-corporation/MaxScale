@@ -177,7 +177,7 @@ public:
     ResultSetDCB(MXS_SESSION* session)
         : ClientDCB(DCB::FD_CLOSED, "127.0.0.1", sockaddr_storage {}, DCB::Role::CLIENT, session,
                     nullptr, nullptr, nullptr)
-        , m_protocol_session(this)
+        , m_protocol(this)
     {
     }
 
@@ -186,32 +186,24 @@ public:
         return gwbuf_alloc_and_load(m_response.size(), &m_response.front());
     }
 
-    MXS_PROTOCOL_SESSION* protocol_session() const override
-    {
-        return &m_protocol_session;
-    }
-
 private:
-    int32_t write(GWBUF* pBuffer)
-    {
-        pBuffer = gwbuf_make_contiguous(pBuffer);
-        mxb_assert(pBuffer);
-
-        unsigned char* begin = GWBUF_DATA(pBuffer);
-        unsigned char* end = begin + GWBUF_LENGTH(pBuffer);
-
-        m_response.insert(m_response.end(), begin, end);
-
-        gwbuf_free(pBuffer);
-        return 1;
-    }
-
-    class ProtocolSession : public MXS_PROTOCOL_SESSION
+    class Protocol : public mxs::ClientProtocol
     {
     public:
-        ProtocolSession(ResultSetDCB* pOwner)
+        Protocol(ResultSetDCB* pOwner)
             : m_owner(*pOwner)
         {
+        }
+
+        bool init_connection(DCB*)
+        {
+            mxb_assert(!true);
+            return false;
+        }
+
+        void finish_connection(DCB*)
+        {
+            mxb_assert(!true);
         }
 
         void ready_for_reading(DCB*) override
@@ -248,10 +240,31 @@ private:
         ResultSetDCB& m_owner;
     };
 
-    friend class ProtocolSession;
+    friend class Protocol;
 
-    mutable ProtocolSession m_protocol_session;
-    std::vector<char>       m_response;
+public:
+    Protocol* protocol() const override
+    {
+        return &m_protocol;
+    }
+
+private:
+    int32_t write(GWBUF* pBuffer)
+    {
+        pBuffer = gwbuf_make_contiguous(pBuffer);
+        mxb_assert(pBuffer);
+
+        unsigned char* begin = GWBUF_DATA(pBuffer);
+        unsigned char* end = begin + GWBUF_LENGTH(pBuffer);
+
+        m_response.insert(m_response.end(), begin, end);
+
+        gwbuf_free(pBuffer);
+        return 1;
+    }
+
+    mutable Protocol  m_protocol;
+    std::vector<char> m_response;
 };
 }
 

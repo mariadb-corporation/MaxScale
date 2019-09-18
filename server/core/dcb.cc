@@ -1747,7 +1747,7 @@ bool DCB::create_SSL(mxs::SSLContext* ssl)
     return true;
 }
 
-MXS_PROTOCOL_SESSION* ClientDCB::protocol_session() const
+mxs::ClientProtocol* ClientDCB::protocol() const
 {
     return m_protocol.get();
 }
@@ -1828,7 +1828,7 @@ int ClientDCB::ssl_handshake()
     }
 }
 
-MXS_PROTOCOL_SESSION* BackendDCB::protocol_session() const
+mxs::BackendProtocol* BackendDCB::protocol() const
 {
     return m_protocol.get();
 }
@@ -2800,11 +2800,11 @@ const char* to_string(DCB::State state)
 
 int32_t DCB::protocol_write(GWBUF* pData)
 {
-    return protocol_session()->write(this, pData);
+    return protocol()->write(this, pData);
 }
 
 json_t* DCB::protocol_diagnostics_json() const
 {
     DCB* pThis = const_cast<DCB*>(this);
-    return protocol_session()->diagnostics_json(pThis);
+    return protocol()->diagnostics_json(pThis);
 }

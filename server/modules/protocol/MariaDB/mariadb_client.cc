@@ -444,7 +444,7 @@ static bool kill_func(DCB* dcb, void* data)
 
     if (dcb->session()->id() == info->target_id && dcb->role() == DCB::Role::BACKEND)
     {
-        auto proto = static_cast<MySQLBackendProtocol*>(dcb->protocol_session());
+        auto proto = static_cast<MySQLBackendProtocol*>(dcb->protocol());
         uint64_t backend_thread_id = proto->thread_id();
 
         if (info->keep_thread_id == 0 || backend_thread_id != info->keep_thread_id)
@@ -1484,7 +1484,7 @@ MySQLClientProtocol::process_special_commands(DCB* dcb, GWBUF* read_buffer, uint
          * The option is stored as a two byte integer with the values 0 for enabling
          * multi-statements and 1 for disabling it.
          */
-        auto proto = static_cast<MySQLClientProtocol*>(dcb->protocol_session());
+        auto proto = static_cast<MySQLClientProtocol*>(dcb->protocol());
 
         if (GWBUF_DATA(read_buffer)[MYSQL_HEADER_LEN + 2])
         {

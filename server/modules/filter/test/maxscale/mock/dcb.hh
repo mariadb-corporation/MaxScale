@@ -66,16 +66,11 @@ public:
      */
     Handler* set_handler(Handler* pHandler);
 
-    MXS_PROTOCOL_SESSION* protocol_session() const override
-    {
-        return &m_protocol_session;
-    }
-
 private:
-    class ProtocolSession : public MXS_PROTOCOL_SESSION
+    class Protocol : public mxs::ClientProtocol
     {
     public:
-        ProtocolSession(Dcb::Handler* pHandler)
+        Protocol(Dcb::Handler* pHandler)
             : m_pHandler(pHandler)
         {
         }
@@ -90,6 +85,17 @@ private:
             Dcb::Handler* p = m_pHandler;
             m_pHandler = pHandler;
             return p;
+        }
+
+        bool init_connection(DCB*)
+        {
+            mxb_assert(!true);
+            return false;
+        }
+
+        void finish_connection(DCB*)
+        {
+            mxb_assert(!true);
         }
 
         void ready_for_reading(DCB*) override
@@ -123,8 +129,14 @@ private:
         Dcb::Handler* m_pHandler;
     };
 
+public:
+    Protocol* protocol() const override
+    {
+        return &m_protocol;
+    }
+
 private:
-    mutable ProtocolSession m_protocol_session;
+    mutable Protocol m_protocol;
 };
 }
 }
