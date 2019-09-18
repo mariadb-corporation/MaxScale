@@ -185,6 +185,20 @@ InternalDCB* InternalDCB::create(MXS_SESSION* session, DCB::Manager* manager)
     return new(std::nothrow) InternalDCB(session, manager);
 }
 
+void DCB::reset(MXS_SESSION* session)
+{
+    gwbuf_free(m_readq);
+    gwbuf_free(m_delayq);
+    gwbuf_free(m_writeq);
+    m_readq = NULL;
+    m_delayq = NULL;
+    m_writeq = NULL;
+
+    remove_callbacks();
+
+    m_session = session;
+}
+
 /**
  * Free a DCB and remove it from the chain of all DCBs
  *
@@ -1067,17 +1081,8 @@ bool BackendDCB::maybe_add_persistent(BackendDCB* dcb)
         MXS_DEBUG("Adding DCB to persistent pool.");
         dcb->m_persistentstart = time(NULL);
         session_unlink_backend_dcb(dcb->session(), dcb);
-        dcb->m_session = nullptr;
 
-        dcb->remove_callbacks();
-
-        /** Free all buffered data */
-        gwbuf_free(dcb->m_readq);
-        gwbuf_free(dcb->m_delayq);
-        gwbuf_free(dcb->m_writeq);
-        dcb->m_readq = NULL;
-        dcb->m_delayq = NULL;
-        dcb->m_writeq = NULL;
+        dcb->reset(nullptr);
 
         dcb->m_nextpersistent = server->persistent[owner->id()];
         server->persistent[owner->id()] = dcb;

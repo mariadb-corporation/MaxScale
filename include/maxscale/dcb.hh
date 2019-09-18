@@ -191,6 +191,13 @@ public:
         return m_state;
     }
 
+    /**
+     * Resets the DCB; all queues and callbacks are freed.
+     *
+     * @param session  The new session pointer.
+     */
+    void reset(MXS_SESSION* session);
+
     virtual std::string diagnostics() const;
 
     virtual json_t* to_json() const;
