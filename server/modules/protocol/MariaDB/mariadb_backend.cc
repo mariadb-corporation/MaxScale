@@ -679,7 +679,8 @@ int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
 
             if (rcap_type_required(capabilities, RCAP_TYPE_RESULTSET_OUTPUT) || m_collect_result)
             {
-                if (rcap_type_required(capabilities, RCAP_TYPE_REQUEST_TRACKING))
+                if (rcap_type_required(capabilities, RCAP_TYPE_REQUEST_TRACKING)
+                    && !rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT))
                 {
                     m_collectq.append(read_buffer);
 
