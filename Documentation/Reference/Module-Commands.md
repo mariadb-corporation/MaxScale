@@ -2,10 +2,10 @@
 
 Introduced in MaxScale 2.1, the module commands are special, module-specific
 commands. They allow the modules to expand beyond the capabilities of the module
-API. Currently, only MaxAdmin implements an interface to the module commands.
+API. Currently, only MaxCtrl implements an interface to the module commands.
 
-All registered module commands can be shown with `maxadmin list commands` and
-they can be executed with `maxadmin call command <module> <name> ARGS...` where
+All registered module commands can be shown with `maxctrl list commands` and
+they can be executed with `maxctrl call command <module> <name> ARGS...` where
 _<module>_ is the name of the module and _<name>_ is the name of the command.
 _ARGS_ is a command specific list of arguments.
 

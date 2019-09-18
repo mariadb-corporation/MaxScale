@@ -289,7 +289,6 @@ of that server is no longer updated. The server will not be taken out of
 maintanance mode even if more disk space becomes available. The maintenance
 flag must be removed manually:
 ```
-maxadmin clear server server2 Maint
 maxctrl clear server server2 Maint
 ```
 
@@ -326,7 +325,7 @@ being demoted or promoted by cluster manipulation commands. See the sections on
 The monitor can manipulate scheduled server events when promoting or demoting a
 server. See the section on `handle_server_events` for more information.
 
-All cluster operations can be activated manually through MaxAdmin/MaxCtrl. See
+All cluster operations can be activated manually through MaxCtrl. See
 section [Manual activation](#manual-activation) for more details.
 
 ### Operation details
@@ -413,10 +412,10 @@ operations.
 
 ### Manual activation
 
-Cluster operations can be activated manually through the REST API, MaxCtrl or
-MaxAdmin. The commands are only performed when MaxScale is in active mode. The
-commands generally match their automatic versions. The exception is _rejoin_, in
-which the manual command allows rejoining even when the joining server has empty
+Cluster operations can be activated manually through the REST API or MaxCtrl.
+The commands are only performed when MaxScale is in active mode. The commands
+generally match their automatic versions. The exception is _rejoin_, in which
+the manual command allows rejoining even when the joining server has empty
 gtid:s. This rule allows the user to force a rejoin on a server without binary
 logs.
 
@@ -457,11 +456,10 @@ with manual ones.
 
 If a switchover or failover fails, automatic failover is disabled to prevent
 master changes to a possibly malfunctioning cluster. Automatic failover can be
-turned on manually via the REST API or MaxAdmin. Example commands are listed
+turned on manually via the REST API or with MaxCtrl. Example commands are listed
 below.
 
 ```
-maxadmin alter monitor MariaDB-Monitor auto_failover=true
 maxctrl alter monitor MariaDB-Monitor auto_failover true
 ```
 
@@ -475,7 +473,7 @@ or _reset-replication_.
 - `<monitor-instance>` is the monitor section name from the MaxScale
 configuration file.
 - `<server-param1>` and `<server-param2>` are server parameters as described
-above for MaxAdmin. Only _switchover_ accepts both, _failover_ doesn't need any
+above for MaxCtrl. Only _switchover_ accepts both, _failover_ doesn't need any
 and both _rejoin_ and _reset-replication_ accept one.
 
 Given a MaxScale configuration file like
@@ -845,7 +843,7 @@ settings of the monitor should help. Another settings to look at are `query_retr
 
 ### Slave detection shows external masters
 
-If a slave is shown in _maxadmin_ or _maxctrl_ as "Slave of External Server" instead of
+If a slave is shown in _maxctrl_ as "Slave of External Server" instead of
 "Slave", the reason is likely that the "Master_Host"-setting of the replication connection
 does not match the MaxScale server definition. As of 2.3.2, the MariaDB Monitor by default
 assumes that the slave connections (as shown by `SHOW ALL SLAVES STATUS`) use the exact

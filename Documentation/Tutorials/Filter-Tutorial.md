@@ -76,35 +76,6 @@ In the definition above we have defined two filter specific parameters, the coun
 
 The filter keeps track of every statement that is executed, monitors the time it takes for a response to come back and uses this as the measure of execution time for the statement. If the time is longer than the other statements that have been recorded, then this is added to the ordered list within the filter. Once 30 statements have been recorded those statements that have been recorded with the least time are discarded from the list. The result is that at any time the filter has a list of the 30 longest running statements in each session.
 
-It is possible to see what is in the current list by using the maxadmin tool to view the state of the filter by looking at the session data. First you need to find the session id for the session of interest, this can be done using commands such as list sessions. You can then use the show session command to see the details for a particular session.
-```
-MaxScale> show session 0x736680
-
-Session 0x736680
-State:    		Session ready for routing
-Service:		Split Service (0x719f60)
-Client DCB:		0x7361a0
-Client Address:	127.0.0.1
-Connected:		Thu Jun 26 10:10:44 2014
-
-Filter: top30
-Report size			30
-Logging to file /var/log/DBSessions/top30.1.
-Current Top 30:
-
-1 place:
-Execution time: 23.826 seconds
-SQL: select sum(salary), year(from_date) from salaries s, (select distinct year(from_date) as y1 from salaries) y where (makedate(y.y1, 1) between s.from_date and s.to_date) group by y.y1 ("1988-08-01?
-
-2 place:
-Execution time: 5.251 seconds
-SQL: select d.dept_name as "Department", y.y1 as "Year", count(*) as "Count" from departments d, dept_emp de, (select distinct year(from_date) as y1 from dept_emp order by 1) y where d.dept_no = de.dept_no and (makedate(y.y1, 1) between de.from_date and de.to_date) group by y.y1, d.dept_name order by 1, 2
-
-3 place:
-Execution time: 2.903 seconds
-SQL: select year(now()) - year(birth_date) as age, gender, avg(salary) as "Average Salary" from employees e, salaries s where e.emp_no = s.emp_no and ("1988-08-01"  between from_date AND to_date) group by year(now()) - year(birth_date), gender order by 1,2
-```
-
 When the session ends a report will be written for the session into the logfile defined. That report will include the top 30 longest running statements, plus summary data for the session;
 
 * The time the connection was opened.

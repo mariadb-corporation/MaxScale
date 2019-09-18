@@ -84,10 +84,10 @@ log_file=/tmp/regexfilter.log
 
 The optional log_trace parameter toggles the logging of non-matching and
 matching queries with their replacements into the log file on the *info* level.
-This is the preferred method of diagnosing the matching of queries since the
-log level can be changed at runtime. For more details about logging levels and
-session specific logging, please read the [Configuration Guide](../Getting-Started/Configuration-Guide.md#global-settings)
-and the [MaxAdmin](../Reference/MaxAdmin.md#change-maxscale-logging-options) documentation on changing the logging levels.
+This is the preferred method of diagnosing the matching of queries since the log
+level can be changed at runtime. For more details about logging levels and
+session specific logging, please read the
+[Configuration Guide](../Getting-Started/Configuration-Guide.md#global-settings).
 
 ```
 log_trace=true

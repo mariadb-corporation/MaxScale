@@ -119,32 +119,19 @@ The administation of MaxScale can be divided in two parts:
 * Writing the MaxScale configuration file, which is described in the following
   [section](#configuration).
 * Performing runtime modifications using [MaxCtrl](../Reference/MaxCtrl.md)
-  or [MaxAdmin](../Reference/MaxAdmin.md).
 
-For detailed information about _MaxAdmin_ and _MaxCtrl_ please refer to the
-specific documentation referred to above. In the following it will only be
-explained how MaxAdmin and MaxCtrl relate to each other, as far as user
-credentials go.
+For detailed information about _MaxCtrl_ please refer to the specific
+documentation referred to above. In the following it will only be explained how
+MaxCtrl relate to each other, as far as user credentials go.
 
-MaxAdmin can connect to MaxScale either using Unix (domain) sockets or
-TCP/IP sockets. In the former case, the user is identified using her
-Linux credentials and by default `root` can access.
+MaxCtrl can connect using TCP/IP sockets. When connecting with MaxCtrl using
+TCP/IP sockets, the user and password must be provided and are checked against a
+separate user credentials database. By default, that database contains the user
+`admin` whose password is `mariadb`.
 
-MaxCtrl can only connect using TCP/IP sockets. When connecting with
-MaxCtrl or with MaxAdmin using TCP/IP sockets, the user and password
-must be provided and are checked against a separate user credentials
-database. By default, that database contains the user `admin` whose
-password is `mariadb`.
-
-Note that the database is shared between MaxAdmin and MaxCtrl, that is,
-if a user is deleted via MaxAdmin, then it will also no longer be possible
-to use that user with MaxCtrl. Similarly, a user created using MaxAdmin
-or MaxCtrl can be used with either MaxAdmin or MaxCtrl.
-
-Note that if MaxAdmin (when used over a TCP/IP socket) or MaxCtrl are
-invoked without explicitly providing a user and password then they will
-by default use `admin` and `mariadb`. That means that when the default
-user is removed, the credentials must always be provded.
+Note that if MaxCtrl is invoked without explicitly providing a user and password
+then it will by default use `admin` and `mariadb`. That means that when the
+default user is removed, the credentials must always be provded.
 
 ## Static Configuration Parameters
 
@@ -746,7 +733,7 @@ connector_plugindir=/usr/lib/plugin/
 ### `persistdir`
 
 Configure the directory where persisted configurations are stored. When a new
-server is created via MaxAdmin, it will be stored in this directory. Do not use
+server is created via MaxCtrl, it will be stored in this directory. Do not use
 or modify the contents of this directory, use _/etc/maxscale.cnf.d/_ instead.
 
 ```
@@ -925,8 +912,7 @@ the authentication of a user fails, MaxScale assumes it is because a new
 user has been created and will thus refresh the users. By default, MaxScale
 will do that at most once per 30 seconds and with this configuration option
 that can be changed. A value of 0 allows infinite refreshes and a negative
-value disables the refreshing entirely. Note that using `maxadmin` it is
-possible to explicitly cause the users of a service to be reloaded.
+value disables the refreshing entirely.
 
 ```
 users_refresh_time=120s
@@ -1075,9 +1061,7 @@ Enable REST API authentication using HTTP Basic Access
 authentication. This is not a secure method of authentication without HTTPS but
 it does add a small layer of security. This option is enabled by default.
 
-The admin interface authentication uses the same user as MaxAdmin network
-interface. This means that new users can be added with both MaxAdmin and the
-REST API. The default credentials for the interface are `admin:mariadb`.
+For more information, read the [REST API documentation](../REST-API/API.md).
 
 ### `admin_ssl_key`
 
@@ -1680,7 +1664,7 @@ a given IP. MaxScale requires normal connections to backends for monitoring and
 authentication data queries, which would be blocked. To bypass this restriction,
 the server monitor needs to be disabled and the service listener needs to be
 configured to disregard authentication errors (`skip_authentication=true`).
-Server states also need to be set manually in MaxAdmin. These steps are *not*
+Server states also need to be set manually in MaxCtrl. These steps are *not*
 required for MariaDB 10.3, since its implementation is more flexible and allows
 both PROXY-headered and headerless connections from a proxy-enabled IP.
 
@@ -1896,13 +1880,6 @@ MariaDB MaxScale uses to connect to the backend MariaDB, MySQL and Percona
 Server databases. This implementation is tailored for the MariaDB MaxScale to
 MySQL Database traffic and is not a general purpose implementation of the MySQL
 protocol.
-
-## `maxscaled`
-
-*Note:* This module is deprecated.
-
-The protocol used used by the maxadmin client application in order to connect to
-MariaDB MaxScale and access the command line interface.
 
 ## `HTTPD`
 
@@ -2153,9 +2130,6 @@ configuration at runtime.
   * [`alter`](../Reference/MaxCtrl.md#alter)
 
 * [REST API](../REST-API/API.md) documentation
-
-* MaxAdmin (deprecated)
-  * [Runtime Configuration Changes](../Reference/MaxAdmin.md#runtime-configuration-changes)
 
 All changes to the configuration are persisted as individual configuration files
 in `/var/lib/maxscale/maxscale.cnf.d/`. These files are applied after the main

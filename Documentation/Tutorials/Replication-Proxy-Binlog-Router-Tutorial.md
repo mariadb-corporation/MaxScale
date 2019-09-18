@@ -360,9 +360,6 @@ Examples with SSL options:
 
  - SHOW SLAVE STATUS displays all the options but MASTER_TLS_VERSION value.
 
- - Maxadmin, 'show services' or 'show service $binlog_service' displays all the
-   options when SSL is on.
-
  - STOP SLAVE is required for CHANGE MASTER TO command (any option)
 
  - START SLAVE will use new SSL options for Master SSL communication setup.
@@ -409,13 +406,13 @@ Be sure that `log_bin_compress` is not set in any MariaDB 10.2 server.
 #  MariaDB MaxScale Replication Diagnostics
 
 The binlog router module of MariaDB MaxScale produces diagnostic output that can
-be viewed via the `maxadmin` client application. Running the maxadmin command
+be viewed via the `maxctrl` client application. Running the maxctrl command
 and issuing a show service command will produce output that will show both the
 master connection status and statistics and also a block for each of the slaves
 currently connected.
 
 ```
--bash-4.1$ maxadmin show service Replication
+-bash-4.1$ maxctrl show service Replication
     Service 0x1567ef0
         Service:                Replication
         Router:                 binlogrouter (0x7f4ceb96a820)

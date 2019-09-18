@@ -149,25 +149,25 @@ vrrp_instance VI_1 {
 ```
 
 An example script, *is_maxscale_running.sh*, is listed below. The script uses
-MaxAdmin to try to contact the locally running MaxScale and request a server
+Maxctrl to try to contact the locally running MaxScale and request a server
 list, then check that the list has at least some expected elements. The timeout
-command ensures the MaxAdmin call exits in reasonable time. The script detects
+command ensures the Maxctrl call exits in reasonable time. The script detects
 if MaxScale has crashed, is stuck or is totally overburdened and no longer
 responds to connections.
 
 ```
 #!/bin/bash
-fileName="maxadmin_output.txt"
+fileName="maxctrl_output.txt"
 rm $fileName
-timeout 2s maxadmin list servers > $fileName
+timeout 2s maxctrl list servers > $fileName
 to_result=$?
 if [ $to_result -ge 1 ]
 then
   echo Timed out or error, timeout returned $to_result
   exit 3
 else
-  echo MaxAdmin success, rval is $to_result
-  echo Checking maxadmin output sanity
+  echo Maxctrl success, rval is $to_result
+  echo Checking maxctrl output sanity
   grep1=$(grep server1 $fileName)
   grep2=$(grep server2 $fileName)
 
@@ -195,11 +195,11 @@ When using multiple MaxScales with replication cluster management features
 (failover, switchover, rejoin), only one MaxScale instance should be allowed to
 modify the cluster at any given time. This instance should be the one with
 MASTER Keepalived status. MaxScale itself does not know its state, but MaxCtrl
-(a replacement for MaxAdmin) can set a MaxScale instance to passive mode. As of
-version 2.2.2, a passive MaxScale behaves similar to an active one with the
-distinction that it won't perform failover, switchover or rejoin. Even manual
-versions of these commands will end in error. The passive/active mode
-differences may be expanded in the future.
+can set a MaxScale instance to passive mode. As of version 2.2.2, a passive
+MaxScale behaves similar to an active one with the distinction that it won't
+perform failover, switchover or rejoin. Even manual versions of these commands
+will end in error. The passive/active mode differences may be expanded in the
+future.
 
 To have Keepalived modify the MaxScale operating mode, a notify script is
 needed. This script is ran whenever Keepalived changes its state. The script

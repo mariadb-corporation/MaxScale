@@ -30,7 +30,7 @@ section of the configuration guide for more details on how to configure the REST
 
 The MaxScale REST API uses [HTTP Basic Access](https://tools.ietf.org/html/rfc2617#section-2)
 authentication with the MaxScale administrative interface users. The default
-user is `admin:mariadb`, the same as the MaxAdmin network user.
+user is `admin:mariadb`.
 
 It is highly recommended to enable HTTPS on the MaxScale REST API to make the
 communication between the client and MaxScale secure. Without it, the passwords
@@ -39,7 +39,7 @@ can be intercepted from the network traffic. Refer to the
 details on how to enable HTTPS for the MaxScale REST API.
 
 For more details on how administrative interface users are created and managed,
-refer to the [MaxAdmin](../Reference/MaxAdmin.md) documentation as well as the
+refer to the [MaxCtrl](../Reference/MaxCtrl.md) documentation as well as the
 documentation of the [users](Resources-User.md) resource.
 
 ## Resources
@@ -148,10 +148,7 @@ by this API.
 
 Credentials for authentication. This header should consist of a HTTP Basic
 Access authentication type payload which is the base64 encoded value of the
-username and password joined by a colon e.g. `Base64("maxuser:maxpwd")`. The
-REST API uses the same users as the MaxAdmin network interface. For more details
-about MaxScale administrative users, refer to the
-[MaxAdmin](../Reference/MaxAdmin.md) documentation.
+username and password joined by a colon e.g. `Base64("maxuser:maxpwd")`.
 
 #### Content-Type
 

@@ -282,7 +282,7 @@ conversion process, delete these two files and restart MaxScale.
 ## Resetting the Conversion Process
 
 To reset the binlog conversion process, issue the `purge` module command by
-executing it via MaxAdmin and stop MaxScale. If manually created schema files
+executing it via MaxCtrl and stop MaxScale. If manually created schema files
 were used, they need to be recreated once MaxScale is stopped. After stopping
 MaxScale and optionally creating the schema files, the conversion process can be
 started by starting MaxScale.

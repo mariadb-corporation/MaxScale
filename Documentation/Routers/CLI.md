@@ -1,5 +1,8 @@
 # CLI
 
+Note: **This module has been removed** along with MaxAdmin as of MaxScale
+2.5.0. Use [MaxCtrl](../Reference/MaxCtrl.md) instead.
+
 The command line interface as used by `maxadmin`. The _CLI_ router requires the
 use of the `maxscaled` protocol.
 

@@ -1,9 +1,8 @@
 # MaxInfo Plugin
-The maxinfo plugin is a special router plugin similar to the one used for
-implementing the server side component of the MaxAdmin interface. The plugin
-is designed to return data regarding the internals of MariaDB MaxScale, it
-provides an information schema approach to monitoring the internals of
-MariaDB MaxScale itself.
+
+The maxinfo plugin is a special router plugin that is designed to return data
+regarding the internals of MariaDB MaxScale. It provides a virtual table similar
+to INFORMATION_SCHEMA for monitoring the internals of MariaDB MaxScale itself.
 
 The plugin is capable of returning data in one of two ways, either as MySQL
 result sets or as JSON encoded data. The choice of which mechanism used to
@@ -99,8 +98,7 @@ of show commands are available and will be described in the following
 sections.
 
 Maxinfo also supports the `FLUSH LOGS`, `SET SERVER <name> <status>` and
-`CLEAR SERVER <name> <status>` commands. These behave the same as their
-MaxAdmin counterpart.
+`CLEAR SERVER <name> <status>` commands.
 
 ## Show variables
 

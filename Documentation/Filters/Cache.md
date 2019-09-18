@@ -921,7 +921,7 @@ created, under which the actual instance specific cache directories are created.
 #### `collect_statistics`
 
 Specifies whether RocksDB should collect statistics that later can be queried
-using `maxadmin`. It should be noted, though, that collecting RocksDB statistics
+using `maxctrl`. It should be noted, though, that collecting RocksDB statistics
 is not without a cost.
 From the [RocksDB Documentation](https://github.com/facebook/rocksdb/wiki/Statistics)
 

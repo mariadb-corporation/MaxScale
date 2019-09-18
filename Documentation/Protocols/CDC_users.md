@@ -20,10 +20,10 @@ password=cdc_password
 
 ## Creating new CDC users
 
-Starting with MaxScale 2.1, users can also be created through MaxAdmin:
+Starting with MaxScale 2.1, users can also be created through maxctrl:
 
 ```
-maxadmin call command cdc add_user <service> <name> <password>
+maxctrl call command cdc add_user <service> <name> <password>
 ```
 
 The _<name>_ should be the service name where the user is created. Older

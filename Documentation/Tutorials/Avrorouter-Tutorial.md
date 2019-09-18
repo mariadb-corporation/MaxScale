@@ -67,17 +67,6 @@ type=listener
 service=avro-service
 protocol=CDC
 port=4001
-
-# The MaxAdmin service and listener for MaxScale administration
-[CLI]
-type=service
-router=cli
-
-[CLI-Listener]
-type=listener
-service=CLI
-protocol=maxscaled
-socket=default
 ```
 
 The `source` parameter in the _avro-service_ points to the _replication-service_
@@ -163,10 +152,10 @@ INSERT INTO test.t1 VALUES (1), (2), (3), (4), (5), (6), (7), (8), (9), (10);
 ```
 
 To use the _cdc.py_ command line client to connect to the CDC service, we must first
-create a user. This can be done via maxadmin by executing the following command.
+create a user. This can be done via maxctrl by executing the following command.
 
 ```
-maxadmin call command cdc add_user avro-service maxuser maxpwd
+maxctrl call command cdc add_user avro-service maxuser maxpwd
 ```
 
 This will create the _maxuser:maxpwd_ credentials which can then be used to
