@@ -12,9 +12,9 @@
  */
 
 #include <maxscale/protocol/cdc/module_names.hh>
-#define MXS_MODULE_NAME MXS_CDCPLAINAUTH_AUTHENTICATOR_NAME
+#define MXS_MODULE_NAME MXS_CDC_PROTOCOL_NAME
 
-#include <maxscale/authenticator2.hh>
+#include "cdc_plain_auth.hh"
 
 #include <fcntl.h>
 #include <maxbase/alloc.h>
@@ -35,84 +35,9 @@ const char CDC_USERS_FILENAME[] = "cdcusers";
 
 using mxs::USER_ACCOUNT_ADMIN;
 
-class CDCAuthenticatorModule : public mxs::AuthenticatorModule
+std::unique_ptr<CDCClientAuthenticator> CDCAuthenticatorModule::create_client_authenticator()
 {
-public:
-    static CDCAuthenticatorModule* create(char** options)
-    {
-        return new(std::nothrow) CDCAuthenticatorModule();
-    }
-
-    ~CDCAuthenticatorModule() override = default;
-
-    std::unique_ptr<mxs::ClientAuthenticator> create_client_authenticator() override;
-
-    int load_users(SERVICE* service) override;
-
-    void diagnostics(DCB* output) override
-    {
-        m_userdata.diagnostic(output);
-    }
-
-    json_t* diagnostics_json() override
-    {
-        return m_userdata.diagnostic_json();
-    }
-
-    std::string supported_protocol() const override
-    {
-        return MXS_CDC_PROTOCOL_NAME;
-    }
-
-    /**
-     * Check user & pw.
-     *
-     * @param username  String containing username
-     * @param auth_data  The encrypted password for authentication
-     * @return Authentication status
-     * @note Authentication status codes are defined in cdc.h
-     */
-    int cdc_auth_check(char* username, uint8_t* auth_data);
-
-private:
-    int set_service_user(SERVICE* service);
-    mxs::Users read_users(char* usersfile);
-
-    mxs::Users m_userdata; // lock-protected user-info
-};
-
-class CDCClientAuthenticator : public mxs::ClientAuthenticatorT<CDCAuthenticatorModule>
-{
-public:
-    CDCClientAuthenticator(CDCAuthenticatorModule* module)
-        : ClientAuthenticatorT(module)
-    {
-    }
-
-    ~CDCClientAuthenticator() override = default;
-    bool extract(DCB* client, GWBUF* buffer) override;
-
-    bool ssl_capable(DCB* client) override
-    {
-        return false;
-    }
-
-    int authenticate(DCB* client) override;
-
-    void free_data(DCB* client) override
-    {
-    }
-
-private:
-    bool set_client_data(uint8_t* client_auth_packet, int client_auth_packet_size);
-
-    char    m_user[CDC_USER_MAXLEN + 1] {'\0'}; /*< username for authentication */
-    uint8_t m_auth_data[SHA_DIGEST_LENGTH] {0}; /*< Password Hash               */
-};
-
-std::unique_ptr<mxs::ClientAuthenticator> CDCAuthenticatorModule::create_client_authenticator()
-{
-    return std::unique_ptr<mxs::ClientAuthenticator>(new(std::nothrow) CDCClientAuthenticator(this));
+    return std::unique_ptr<CDCClientAuthenticator>(new(std::nothrow) CDCClientAuthenticator(*this));
 }
 
 /**
@@ -124,7 +49,7 @@ std::unique_ptr<mxs::ClientAuthenticator> CDCAuthenticatorModule::create_client_
  * @param args Arguments for this command
  * @return True if user was successfully added
  */
-static bool cdc_add_new_user(const MODULECMD_ARG* args, json_t** output)
+bool cdc_add_new_user(const MODULECMD_ARG* args, json_t** output)
 {
     const char* user = args->argv[1].value.string;
     size_t userlen = strlen(user);
@@ -182,55 +107,6 @@ static bool cdc_add_new_user(const MODULECMD_ARG* args, json_t** output)
     }
 
     return rval;
-}
-
-extern "C"
-{
-/**
- * The module entry point routine. It is this routine that
- * must populate the structure that is referred to as the
- * "module object", this is a structure with the set of
- * external entry points for this module.
- *
- * @return The module object
- */
-MXS_MODULE* MXS_CREATE_MODULE()
-{
-    static modulecmd_arg_type_t args[] =
-    {
-        {MODULECMD_ARG_SERVICE, "Service where the user is added"},
-        {MODULECMD_ARG_STRING,  "User to add"                    },
-        {MODULECMD_ARG_STRING,  "Password of the user"           }
-    };
-
-    modulecmd_register_command("cdc",
-                               "add_user",
-                               MODULECMD_TYPE_ACTIVE,
-                               cdc_add_new_user,
-                               3,
-                               args,
-                               "Add a new CDC user");
-
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_AUTHENTICATOR,
-        MXS_MODULE_GA,
-        MXS_AUTHENTICATOR_VERSION,
-        "The CDC client to MaxScale authenticator implementation",
-        "V1.1.0",
-        MXS_NO_MODULE_CAPABILITIES,
-        &mxs::AuthenticatorApiGenerator<CDCAuthenticatorModule>::s_api,
-        NULL,       /* Process init. */
-        NULL,       /* Process finish. */
-        NULL,       /* Thread init. */
-        NULL,       /* Thread finish. */
-        {
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
-
-    return &info;
-}
 }
 
 int CDCAuthenticatorModule::cdc_auth_check(char* username, uint8_t* auth_data)

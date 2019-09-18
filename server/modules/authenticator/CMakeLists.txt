@@ -1,7 +1,3 @@
-if(BUILD_CDC)
-  add_subdirectory(CDCPlainAuth)
-endif()
-
 add_subdirectory(GSSAPI)
 add_subdirectory(HTTPAuth)
 add_subdirectory(MariaDBAuth)

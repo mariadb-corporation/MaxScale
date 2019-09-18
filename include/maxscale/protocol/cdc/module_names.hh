@@ -18,4 +18,3 @@
  * not be included here.
  */
 #define MXS_CDC_PROTOCOL_NAME "CDC"
-#define MXS_CDCPLAINAUTH_AUTHENTICATOR_NAME "CDCPlainAuth"

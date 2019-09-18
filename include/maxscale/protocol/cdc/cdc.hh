@@ -17,9 +17,6 @@
 
 #include <openssl/sha.h>
 
-#include <maxscale/protocol2.hh>
-#include <maxscale/authenticator2.hh>
-
 #define CDC_SMALL_BUFFER       1024
 #define CDC_METHOD_MAXLEN      128
 #define CDC_USER_MAXLEN        128
@@ -41,31 +38,3 @@
 
 #define CDC_UUID_LEN 32
 #define CDC_TYPE_LEN 16
-
-/**
- * CDC protocol
- */
-class CDCClientProtocol : public mxs::ClientProtocol
-{
-public:
-    CDCClientProtocol(std::unique_ptr<mxs::ClientAuthenticator> authenticator);
-    ~CDCClientProtocol() = default;
-
-    static GWBUF* reject(const char* host);
-
-    void ready_for_reading(DCB* dcb) override;
-    void write_ready(DCB* dcb) override;
-    void error(DCB* dcb) override;
-    void hangup(DCB* dcb) override;
-
-    int32_t write(DCB* dcb, GWBUF* buffer) override;
-
-    bool init_connection(DCB* dcb) override;
-    void finish_connection(DCB* dcb) override;
-
-private:
-    int  m_state {CDC_STATE_WAIT_FOR_AUTH}; /*< CDC protocol state */
-
-    std::unique_ptr<mxs::ClientAuthenticator> m_authenticator;  /**< Client authentication data */
-
-};

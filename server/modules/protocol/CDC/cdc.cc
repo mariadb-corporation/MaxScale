@@ -34,18 +34,17 @@
 #define MXS_MODULE_NAME MXS_CDC_PROTOCOL_NAME
 
 #include <maxscale/ccdefs.hh>
-#include <maxscale/protocol/cdc/cdc.hh>
-#include <maxbase/alloc.h>
-#include <maxscale/modinfo.hh>
-#include <maxscale/protocol.hh>
 #include <stdio.h>
 #include <string.h>
-#include <maxscale/authenticator2.hh>
+#include <maxbase/alloc.h>
+#include <maxscale/protocol/cdc/cdc.hh>
+#include <maxscale/modinfo.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/service.hh>
 #include <maxscale/session.hh>
 #include <maxscale/protocol2.hh>
+#include "cdc_plain_auth.hh"
 
 #define ISspace(x) isspace((int)(x))
 #define CDC_SERVER_STRING "MaxScale(c) v.1.0.0"
@@ -53,41 +52,51 @@
 static void write_auth_ack(DCB* dcb);
 static void write_auth_err(DCB* dcb);
 
+/**
+ * CDC protocol
+ */
+class CDCClientProtocol : public mxs::ClientProtocol
+{
+public:
+    CDCClientProtocol(CDCAuthenticatorModule& auth_module);
+    ~CDCClientProtocol() = default;
+
+    void ready_for_reading(DCB* dcb) override;
+    void write_ready(DCB* dcb) override;
+    void error(DCB* dcb) override;
+    void hangup(DCB* dcb) override;
+
+    int32_t write(DCB* dcb, GWBUF* buffer) override;
+
+    bool init_connection(DCB* dcb) override;
+    void finish_connection(DCB* dcb) override;
+
+private:
+    int  m_state {CDC_STATE_WAIT_FOR_AUTH}; /*< CDC protocol state */
+
+    CDCClientAuthenticator m_authenticator;  /**< Client authentication data */
+
+};
+
 class CDCProtocolModule : public mxs::ProtocolModule
 {
 public:
     static CDCProtocolModule* create(const std::string& auth_name, const std::string& auth_opts)
     {
-        CDCProtocolModule* protocol_module = nullptr;
-        // This protocol only has one authenticator. TODO: merge modules
-        auto authenticator_module = mxs::authenticator_init(MXS_CDCPLAINAUTH_AUTHENTICATOR_NAME, nullptr);
-        if (authenticator_module)
-        {
-            protocol_module = new (std::nothrow) CDCProtocolModule();
-            if (protocol_module)
-            {
-                protocol_module->m_auth_module = std::move(authenticator_module);
-            }
-        }
-        return protocol_module;
+        return new (std::nothrow) CDCProtocolModule();
     }
 
     std::unique_ptr<mxs::ClientProtocol>
     create_client_protocol(MXS_SESSION* session, mxs::Component* component) override
     {
-        std::unique_ptr<mxs::ClientProtocol> new_client_proto;
-        auto authenticator = m_auth_module->create_client_authenticator();
-        if (authenticator)
-        {
-            new_client_proto = std::unique_ptr<mxs::ClientProtocol>(
-                    new (std::nothrow) CDCClientProtocol(std::move(authenticator)));
-        }
+        std::unique_ptr<mxs::ClientProtocol> new_client_proto(
+            new(std::nothrow) CDCClientProtocol(m_auth_module));
         return new_client_proto;
     }
 
     std::string auth_default() const override
     {
-        return MXS_CDCPLAINAUTH_AUTHENTICATOR_NAME;
+        return "CDCPlainAuth";
     }
 
     std::string name() const override
@@ -97,27 +106,22 @@ public:
 
     int load_auth_users(SERVICE* service) override
     {
-        return m_auth_module->load_users(service);
+        return m_auth_module.load_users(service);
     }
 
     void print_auth_users(DCB* output) override
     {
-        m_auth_module->diagnostics(output);
+        m_auth_module.diagnostics(output);
     }
 
     json_t* print_auth_users_json() override
     {
-        return m_auth_module->diagnostics_json();
+        return m_auth_module.diagnostics_json();
     }
 
 private:
-    std::unique_ptr<mxs::AuthenticatorModule> m_auth_module;
+    CDCAuthenticatorModule m_auth_module;
 };
-
-GWBUF* CDCClientProtocol::reject(const char* host)
-{
-    return nullptr;
-}
 
 extern "C"
 {
@@ -131,6 +135,16 @@ extern "C"
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
+    static modulecmd_arg_type_t args[] =
+    {
+            {MODULECMD_ARG_SERVICE, "Service where the user is added"},
+            {MODULECMD_ARG_STRING,  "User to add"                    },
+            {MODULECMD_ARG_STRING,  "Password of the user"           }
+    };
+
+    modulecmd_register_command("cdc", "add_user", MODULECMD_TYPE_ACTIVE, cdc_add_new_user,
+                               3, args, "Add a new CDC user");
+
     static MXS_MODULE info =
     {
         MXS_MODULE_API_PROTOCOL,
@@ -175,10 +189,10 @@ void CDCClientProtocol::ready_for_reading(DCB* generic_dcb)
         {
         case CDC_STATE_WAIT_FOR_AUTH:
             /* Fill CDC_session from incoming packet */
-            if (m_authenticator->extract(dcb, head))
+            if (m_authenticator.extract(dcb, head))
             {
                 /* Call protocol authentication */
-                auth_val = m_authenticator->authenticate(dcb);
+                auth_val = m_authenticator.authenticate(dcb);
             }
 
             /* Discard input buffer */
@@ -316,8 +330,8 @@ void CDCClientProtocol::finish_connection(DCB* dcb)
 {
 }
 
-CDCClientProtocol::CDCClientProtocol(std::unique_ptr<mxs::ClientAuthenticator> authenticator)
-    : m_authenticator(std::move(authenticator))
+CDCClientProtocol::CDCClientProtocol(CDCAuthenticatorModule& auth_module)
+    : m_authenticator(auth_module)
 {
 }
 
