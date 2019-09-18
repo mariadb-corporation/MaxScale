@@ -185,7 +185,7 @@ InternalDCB* InternalDCB::create(MXS_SESSION* session, DCB::Manager* manager)
     return new(std::nothrow) InternalDCB(session, manager);
 }
 
-void DCB::reset(MXS_SESSION* session)
+void DCB::clear()
 {
     gwbuf_free(m_readq);
     gwbuf_free(m_delayq);
@@ -196,7 +196,7 @@ void DCB::reset(MXS_SESSION* session)
 
     remove_callbacks();
 
-    m_session = session;
+    m_session = nullptr;
 }
 
 /**
@@ -255,17 +255,7 @@ BackendDCB* BackendDCB::take_from_connection_pool(SERVER* s, MXS_SESSION* sessio
             {
                 MXS_DEBUG("Reusing a persistent connection, user %s, dcb %p", user, dcb);
                 session_link_backend_dcb(session, dcb);
-                dcb->m_persistentstart = 0;
-                dcb->m_last_read = mxs_clock();
-                dcb->m_last_write = mxs_clock();
-                dcb->m_session = session;
-                /* All callbacks were removed when the dcb was put into the pool. */
-                if (DCB_THROTTLING_ENABLED(dcb))
-                {
-                    // Register upstream throttling callbacks
-                    dcb->add_callback(Reason::HIGH_WATER, upstream_throttle_callback, NULL);
-                    dcb->add_callback(Reason::LOW_WATER, upstream_throttle_callback, NULL);
-                }
+                dcb->reset(session);
 
                 if (dcb->m_protocol->reuse_connection(dcb, upstream))
                 {
@@ -1082,7 +1072,7 @@ bool BackendDCB::maybe_add_persistent(BackendDCB* dcb)
         dcb->m_persistentstart = time(NULL);
         session_unlink_backend_dcb(dcb->session(), dcb);
 
-        dcb->reset(nullptr);
+        dcb->clear();
 
         dcb->m_nextpersistent = server->persistent[owner->id()];
         server->persistent[owner->id()] = dcb;
@@ -1092,6 +1082,23 @@ bool BackendDCB::maybe_add_persistent(BackendDCB* dcb)
     }
 
     return false;
+}
+
+void BackendDCB::reset(MXS_SESSION* session)
+{
+    clear();
+
+    m_persistentstart = 0;
+    m_last_read = mxs_clock();
+    m_last_write = mxs_clock();
+    m_session = session;
+
+    if (DCB_THROTTLING_ENABLED(this))
+    {
+        // Register upstream throttling callbacks
+        add_callback(Reason::HIGH_WATER, upstream_throttle_callback, NULL);
+        add_callback(Reason::LOW_WATER, upstream_throttle_callback, NULL);
+    }
 }
 
 std::string BackendDCB::diagnostics() const

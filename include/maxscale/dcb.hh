@@ -164,11 +164,10 @@ public:
     }
 
     /**
-     * Resets the DCB; all queues and callbacks are freed.
-     *
-     * @param session  The new session pointer.
+     * Clears the DCB; all queues and callbacks are freed and the session
+     * pointer is set to null.
      */
-    void reset(MXS_SESSION* session);
+    void clear();
 
     virtual std::string diagnostics() const;
 
@@ -697,6 +696,13 @@ public:
     {
         m_session = s;
     }
+
+    /**
+     * Resets the BackendDCB so that it can be reused.
+     *
+     * @param session  The new session for the DCB.
+     */
+    void reset(MXS_SESSION* session);
 
     mxs::BackendProtocol* protocol() const override;
 
