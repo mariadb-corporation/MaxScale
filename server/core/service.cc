@@ -817,16 +817,9 @@ bool Service::refresh_users()
     time_t now = time(NULL);
 
     auto listeners = listener_find_by_service(this);
-    bool concurrent_update = true;
+    bool concurrent_update = false;
     // All listeners must support concurrent updating for it to be used.
-    for (const auto& listener : listeners)
-    {
-        if ((listener->auth_instance()->capabilities() & mxs::AuthenticatorModule::CAP_CONC_LOAD_USERS) == 0)
-        {
-            concurrent_update = false;
-            break;
-        }
-    }
+    // TODO: readd or implement elsewhere
 
     // Use unique_lock instead of lock_guard to make the locking conditional
     UniqueLock guard(lock, std::defer_lock);

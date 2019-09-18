@@ -109,6 +109,9 @@ public:
     {
         return m_auth_module->diagnostics_json();
     }
+
+private:
+    std::unique_ptr<mxs::AuthenticatorModule> m_auth_module;
 };
 
 GWBUF* CDCClientProtocol::reject(const char* host)

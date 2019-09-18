@@ -618,11 +618,6 @@ const char* Listener::protocol() const
     return m_protocol.c_str();
 }
 
-mxs::AuthenticatorModule* Listener::auth_instance() const
-{
-    return m_proto_module->m_auth_module.get();
-}
-
 const char* Listener::state() const
 {
     switch (m_state)

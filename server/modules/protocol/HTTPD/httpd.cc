@@ -98,6 +98,9 @@ public:
     {
         return m_auth_module->diagnostics_json();
     }
+
+private:
+    std::unique_ptr<mxs::AuthenticatorModule> m_auth_module;
 };
 
 extern "C"

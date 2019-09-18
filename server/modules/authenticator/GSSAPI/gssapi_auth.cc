@@ -498,14 +498,13 @@ int GSSAPIClientAuthenticator::authenticate(DCB* generic_dcb)
 
     int rval = MXS_AUTH_FAILED;
     auto auth = this;
-    GSSAPIAuthenticatorModule* instance = (GSSAPIAuthenticatorModule*)dcb->session()->listener->auth_instance();
 
     if (state == GSSAPI_AUTH_INIT)
     {
         /** We need to send the authentication switch packet to change the
          * authentication to something other than the 'mysql_native_password'
          * method */
-        GWBUF* buffer = create_auth_change_packet(instance, auth);
+        GWBUF* buffer = create_auth_change_packet(&m_module, auth);
 
         if (buffer && dcb->protocol_write(buffer))
         {
@@ -521,7 +520,7 @@ int GSSAPIClientAuthenticator::authenticate(DCB* generic_dcb)
         MYSQL_session* ses = (MYSQL_session*)dcb->protocol_data();
         char* princ = NULL;
 
-        if (validate_gssapi_token(instance->principal_name, ses->auth_token, ses->auth_token_len, &princ)
+        if (validate_gssapi_token(m_module.principal_name, ses->auth_token, ses->auth_token_len, &princ)
             && validate_user(auth, dcb, ses, princ))
         {
             rval = MXS_AUTH_SUCCEEDED;

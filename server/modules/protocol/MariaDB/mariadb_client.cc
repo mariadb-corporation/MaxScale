@@ -2048,6 +2048,9 @@ public:
     {
         return m_auth_module->diagnostics_json();
     }
+
+private:
+    std::unique_ptr<mxs::AuthenticatorModule> m_auth_module;
 };
 
 MySQLClientProtocol* MySQLClientProtocol::create(MXS_SESSION* session, mxs::Component* component)

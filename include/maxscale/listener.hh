@@ -123,11 +123,6 @@ public:
     const char* protocol() const;
 
     /**
-     * The authenticator instance
-     */
-    mxs::AuthenticatorModule* auth_instance() const;
-
-    /**
      * The state of the listener
      */
     const char* state() const;
