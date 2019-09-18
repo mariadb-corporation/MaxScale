@@ -309,8 +309,35 @@ public:
     static void close(DCB* dcb);
     // END
 
-    int add_callback(Reason, int (*)(DCB*, Reason, void*), void*);
-    int remove_callback(Reason, int (*)(DCB*, Reason, void*), void*);
+    /**
+     * Add a callback to the DCB.
+     *
+     * @reason     When the callback should be called.
+     * @cb         The callback.
+     * @user_data  The data to provide to the callback when called.
+     *
+     * @return True, if the callback was added, false otherwise. False will
+     *         be returned if the callback could not be added or if the callback
+     *         has been added already.
+     */
+    bool add_callback(Reason reason, int (*cb)(DCB*, Reason, void*), void* user_data);
+
+    /**
+     * Remove a callback from the DCB.
+     *
+     * @reason     The reason provided when the callback was added
+     * @cb         The callback provided when the callback was added.
+     * @user_data  The user_data provided when the callback was added.
+     *
+     * @return True, if the callback could be removed, false if the callback
+     *         was not amongst the added ones.
+     */
+    bool remove_callback(Reason reason, int (*cb)(DCB*, Reason, void*), void* user_data);
+
+    /**
+     * Remove all callbacks
+     */
+    void remove_callbacks();
 
     static void process_timeouts(int thr);
 

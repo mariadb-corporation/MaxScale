@@ -147,12 +147,7 @@ DCB::~DCB()
         m_manager->remove(this);
     }
 
-    while (m_callbacks)
-    {
-        CALLBACK* tmp = m_callbacks;
-        m_callbacks = m_callbacks->next;
-        MXS_FREE(tmp);
-    }
+    remove_callbacks();
 
     if (m_ssl)
     {
@@ -1069,17 +1064,12 @@ bool BackendDCB::maybe_add_persistent(BackendDCB* dcb)
             return false;
         }
 
-        CALLBACK* loopcallback;
         MXS_DEBUG("Adding DCB to persistent pool.");
         dcb->m_persistentstart = time(NULL);
         session_unlink_backend_dcb(dcb->session(), dcb);
         dcb->m_session = nullptr;
 
-        while ((loopcallback = dcb->m_callbacks) != NULL)
-        {
-            dcb->m_callbacks = loopcallback->next;
-            MXS_FREE(loopcallback);
-        }
+        dcb->remove_callbacks();
 
         /** Free all buffered data */
         gwbuf_free(dcb->m_readq);
@@ -1475,24 +1465,9 @@ int DCB::socket_write(GWBUF* writeq, bool* stop_writing)
     return written > 0 ? written : 0;
 }
 
-/**
- * Add a callback
- *
- * Duplicate registrations are not allowed, therefore an error will be
- * returned if the specific function, reason and userdata triple
- * are already registered.
- * An error will also be returned if the is insufficient memeory available to
- * create the registration.
- *
- * @param dcb           The DCB to add the callback to
- * @param reason        The callback reason
- * @param callback      The callback function to call
- * @param userdata      User data to send in the call
- * @return              Non-zero (true) if the callback was added
- */
-int DCB::add_callback(Reason reason,
-                      int (* callback)(DCB*, Reason, void*),
-                      void* userdata)
+bool DCB::add_callback(Reason reason,
+                       int (* callback)(DCB*, Reason, void*),
+                       void* userdata)
 {
     CALLBACK* cb;
     CALLBACK* ptr;
@@ -1500,7 +1475,7 @@ int DCB::add_callback(Reason reason,
 
     if ((ptr = (CALLBACK*)MXS_MALLOC(sizeof(CALLBACK))) == NULL)
     {
-        return 0;
+        return false;
     }
     ptr->reason = reason;
     ptr->cb = callback;
@@ -1515,7 +1490,7 @@ int DCB::add_callback(Reason reason,
         {
             /* Callback is a duplicate, abandon it */
             MXS_FREE(ptr);
-            return 0;
+            return false;
         }
         lastcb = cb;
         cb = cb->next;
@@ -1529,61 +1504,52 @@ int DCB::add_callback(Reason reason,
         lastcb->next = ptr;
     }
 
-    return 1;
+    return true;
 }
 
-/**
- * Remove a callback from the callback list for the DCB
- *
- * Searches down the linked list to find the callback with a matching reason, function
- * and userdata.
- *
- * @param dcb           The DCB to add the callback to
- * @param reason        The callback reason
- * @param callback      The callback function to call
- * @param userdata      User data to send in the call
- * @return              Non-zero (true) if the callback was removed
- */
-int DCB::remove_callback(Reason reason,
-                         int (* callback)(DCB*, Reason, void*),
-                         void* userdata)
+bool DCB::remove_callback(Reason reason,
+                          int (* callback)(DCB*, Reason, void*),
+                          void* userdata)
 {
-    CALLBACK* cb;
+    bool rval = false;
+
     CALLBACK* pcb = NULL;
-    int rval = 0;
-    cb = m_callbacks;
+    CALLBACK* cb = m_callbacks;
 
-    if (cb == NULL)
+    while (cb)
     {
-        rval = 0;
-    }
-    else
-    {
-        while (cb)
+        if (cb->reason == reason
+            && cb->cb == callback
+            && cb->userdata == userdata)
         {
-            if (cb->reason == reason
-                && cb->cb == callback
-                && cb->userdata == userdata)
+            if (pcb != NULL)
             {
-                if (pcb != NULL)
-                {
-                    pcb->next = cb->next;
-                }
-                else
-                {
-                    m_callbacks = cb->next;
-                }
-
-                MXS_FREE(cb);
-                rval = 1;
-                break;
+                pcb->next = cb->next;
             }
-            pcb = cb;
-            cb = cb->next;
+            else
+            {
+                m_callbacks = cb->next;
+            }
+
+            MXS_FREE(cb);
+            rval = true;
+            break;
         }
+        pcb = cb;
+        cb = cb->next;
     }
 
     return rval;
+}
+
+void DCB::remove_callbacks()
+{
+    while (m_callbacks)
+    {
+        CALLBACK* cb = m_callbacks;
+        m_callbacks = m_callbacks->next;
+        MXS_FREE(cb);
+    }
 }
 
 /**
