@@ -41,6 +41,7 @@
 
 #include <maxbase/atomic.hh>
 #include <maxbase/format.hh>
+#include <maxbase/pretty_print.hh>
 #include <maxscale/adminusers.hh>
 #include <maxbase/alloc.h>
 #include <maxscale/clock.h>
@@ -954,7 +955,7 @@ bool config_load_global(const char* filename)
     else
     {
         MXS_NOTICE("Using up to %s of memory for query classifier cache",
-                   mxb::to_binary_size(gateway.qc_cache_properties.max_size).c_str());
+                   mxb::pretty_size(gateway.qc_cache_properties.max_size).c_str());
     }
 
     return rval == 0;

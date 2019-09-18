@@ -20,6 +20,7 @@
 #include <maxbase/alloc.h>
 #include <maxbase/atomic.h>
 #include <maxbase/format.hh>
+#include <maxbase/pretty_print.hh>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/config.hh>
 #include <maxscale/json_api.hh>
@@ -449,7 +450,7 @@ bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
             {
                 int64_t size_per_thr = cache_max_size / config_get_global_options()->n_threads;
                 MXS_NOTICE("Query classification results are cached and reused. "
-                           "Memory used per thread: %s", mxb::to_binary_size(size_per_thr).c_str());
+                           "Memory used per thread: %s", mxb::pretty_size(size_per_thr).c_str());
             }
             else
             {

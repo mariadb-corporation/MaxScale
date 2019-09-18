@@ -43,11 +43,12 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <sys/sysinfo.h> 
+#include <sys/sysinfo.h>
 
 #include <maxbase/maxbase.hh>
 #include <maxbase/stacktrace.hh>
 #include <maxbase/format.hh>
+#include <maxbase/pretty_print.hh>
 #include <maxsql/mariadb.hh>
 #include <maxbase/alloc.h>
 #include <maxscale/adminusers.hh>
@@ -2066,12 +2067,12 @@ int main(int argc, char** argv)
     struct utsname name;
     uname(&name);
     MXS_NOTICE("Running OS: %s@%s, %s, %s with %lu processor cores.",
-                name.sysname, name.release, name.version, name.machine, get_processor_count());
+               name.sysname, name.release, name.version, name.machine, get_processor_count());
 
     struct sysinfo info;
     sysinfo(&info);
     MXS_NOTICE("Total usable main memory: %s.",
-         mxb::to_binary_size(info.mem_unit * info.totalram).c_str());
+               mxb::pretty_size(info.mem_unit * info.totalram).c_str());
 
     MXS_NOTICE("MariaDB MaxScale %s started (Commit: %s)", MAXSCALE_VERSION, MAXSCALE_COMMIT);
     MXS_NOTICE("MaxScale is running in process %i", getpid());
@@ -2279,7 +2280,7 @@ int main(int argc, char** argv)
     RoutingWorker::join_workers();
     MXS_NOTICE("All workers have shut down.");
 
-    set_admin_worker(nullptr); // Main worker has quit, re-assign to non-worker.
+    set_admin_worker(nullptr);      // Main worker has quit, re-assign to non-worker.
 
     /*< Destroy all monitors */
     MonitorManager::destroy_all_monitors();

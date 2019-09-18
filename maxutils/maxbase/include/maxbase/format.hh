@@ -22,15 +22,6 @@ namespace maxbase
 {
 
 /**
- * Convert a number into the IEC human readable representation
- *
- * @param size Value to convert
- *
- * @return Value as a human readable size e.g. 5.01MiB
- */
-std::string to_binary_size(size_t size);
-
-/**
  * Format parameters to a string. Uses printf-formatting.
  *
  * @param format Format string

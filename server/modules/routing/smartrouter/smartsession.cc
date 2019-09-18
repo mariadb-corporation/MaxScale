@@ -15,6 +15,7 @@
 #include <mysqld_error.h>
 #include <maxscale/mysql_plus.hh>
 #include <maxscale/modutil.hh>
+#include <maxbase/pretty_print.hh>
 
 // COPY-PASTED error-extraction functions from rwsplit. TODO move to lib.
 inline void extract_error_state(uint8_t* pBuffer, uint8_t** ppState, uint16_t* pnState)
@@ -66,54 +67,6 @@ std::string extract_error(GWBUF* buffer)
     }
 
     return rval;
-}
-
-// TODO Another thing to move to maxutils
-static std::array<const char*, 7> size_suffix {"B", "KB", "MB", "GB", "TB", "PB", "EB"};
-constexpr size_t KiloByte {1024};
-
-/** return a pair {double_value, suffix} for humanizing a size.
- *  Example: pretty_size_split(2000) => {1.953125, "KB"}
- */
-std::pair<double, const char*> pretty_size_split(size_t sz)
-{
-    double dsize = sz;
-    size_t i {0};
-
-    for (; i < size_suffix.size() && dsize >= KiloByte; ++i, dsize /= KiloByte)
-    {
-    }
-
-    return {dsize, size_suffix[i]};
-}
-
-/** Pretty string from a size_t, e.g pretty_size(2000) => "1.95KB"
- */
-std::string pretty_size(size_t sz, const char* separator = "")
-{
-    char buf[64];
-    double dsize;
-    const char* suffix;
-
-    std::tie(dsize, suffix) = pretty_size_split(sz);
-
-    // format with two decimals
-    auto len = std::sprintf(buf, "%.2f", dsize);
-
-    // remove trailing 0-decimals
-    char* ptr = buf + len - 1;
-    for (; *ptr == '0'; --ptr)
-    {
-    }
-    if (*ptr != '.')
-    {
-        ++ptr;
-    }
-
-    // append suffix
-    sprintf(ptr, "%s%s", separator, suffix);
-
-    return buf;
 }
 
 SmartRouterSession::SmartRouterSession(SmartRouter* pRouter,
@@ -187,7 +140,7 @@ int SmartRouterSession::routeQuery(GWBUF* pBuf)
 {
     bool ret = false;
 
-    MXS_SDEBUG("routeQuery() buffer size " << pretty_size(gwbuf_length(pBuf)));
+    MXS_SDEBUG("routeQuery() buffer size " << maxbase::pretty_size(gwbuf_length(pBuf)));
 
     if (expecting_request_packets())
     {
