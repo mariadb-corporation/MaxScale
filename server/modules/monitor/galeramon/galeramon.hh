@@ -79,4 +79,5 @@ private:
     mxs::MonitorServer* get_candidate_master();
     void                set_galera_cluster();
     void                update_sst_donor_nodes(int is_cluster);
+    void                calculate_cluster();
 };

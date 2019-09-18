@@ -328,6 +328,31 @@ void GaleraMonitor::update_server_status(MonitorServer* monitored_server)
     {
         monitored_server->mon_report_query_error();
     }
+
+    calculate_cluster();
+}
+
+void GaleraMonitor::calculate_cluster()
+{
+    std::unordered_map<std::string, int> clusters;
+
+    for (const auto& a : m_info)
+    {
+        clusters[a.second.cluster_uuid]++;
+    }
+
+    auto it = std::max_element(
+        clusters.begin(), clusters.end(),
+        [](const typename decltype(clusters)::value_type& a,
+           const typename decltype(clusters)::value_type& b) {
+            return a.second == b.second ? a.first < b.first : a.second < b.second;
+        });
+
+    if (it != clusters.end())
+    {
+        m_cluster_uuid = it->first;
+        m_cluster_size = it->second;
+    }
 }
 
 void GaleraMonitor::pre_tick()
@@ -813,22 +838,9 @@ static int compare_node_priority(const void* a, const void* b)
  */
 void GaleraMonitor::set_galera_cluster()
 {
-    int cluster_size = 0;
-    std::string cluster_uuid;
-
     for (auto it = m_info.begin(); it != m_info.end(); it++)
     {
-        if (it->second.joined && it->second.cluster_size > cluster_size)
-        {
-            // Use the UUID of the largest cluster
-            cluster_size = it->second.cluster_size;
-            cluster_uuid = it->second.cluster_uuid;
-        }
-    }
-
-    for (auto it = m_info.begin(); it != m_info.end(); it++)
-    {
-        if (it->second.joined)
+        if (it->second.joined && it->second.cluster_uuid == m_cluster_uuid)
         {
             it->first->set_pending_status(SERVER_JOINED);
         }
