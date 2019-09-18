@@ -13,7 +13,7 @@
 #include "smartsession.hh"
 #include "performance.hh"
 #include <mysqld_error.h>
-#include <maxsql/mysql_plus.hh>
+#include <maxscale/mysql_plus.hh>
 #include <maxscale/modutil.hh>
 
 // COPY-PASTED error-extraction functions from rwsplit. TODO move to lib.

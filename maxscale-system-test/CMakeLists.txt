@@ -31,7 +31,8 @@ add_library(testcore SHARED testconnections.cpp nodes.cpp mariadb_nodes.cpp maxs
   labels_table.cpp envv.cpp clustrix_nodes.cpp maxrest.cc
   # Include the CDC connector in the core library
   ${CMAKE_SOURCE_DIR}/connectors/cdc-connector/cdc_connector.cpp)
-target_link_libraries(testcore ${MARIADB_CONNECTOR_LIBRARIES} ${JANSSON_LIBRARIES} z m pthread ssl dl rt crypto crypt maxbase)
+target_link_libraries(testcore
+        ${MARIADB_CONNECTOR_LIBRARIES} ${JANSSON_LIBRARIES} maxbase maxsql z m pthread ssl dl rt crypto crypt)
 install(TARGETS testcore DESTINATION system-test)
 add_dependencies(testcore connector-c jansson maxbase)
 
@@ -139,6 +140,9 @@ add_test_executable(mysqlmon_failover_readonly.cpp mysqlmon_failover_readonly my
 
 # MariaDB-Monitor enforce_simple_topology
 add_test_executable(mysqlmon_enforce_simple.cpp mysqlmon_enforce_simple mysqlmon_enforce_simple LABELS mysqlmon REPL_BACKEND)
+
+# MariaDB-Monitor multimaster failover/switchover
+add_test_executable(mysqlmon_fail_switch_multi.cpp mysqlmon_fail_switch_multi mysqlmon_fail_switch_multi LABELS mysqlmon REPL_BACKEND)
 
 # MXS-1506: Delayed query retry
 # https://jira.mariadb.org/browse/MXS-1506

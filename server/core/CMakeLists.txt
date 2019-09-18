@@ -29,6 +29,7 @@ add_library(maxscale-common SHARED
   monitormanager.cc
   mysql_binlog.cc
   mysql_utils.cc
+  packet_tracker.cc
   paths.cc
   poll.cc
   queryclassifier.cc
