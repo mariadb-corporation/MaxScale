@@ -9,6 +9,7 @@ In order to use the tarball, the following libraries are required:
 - libcurl
 - libaio
 - OpenSSL
+- gnutls
 
 The tarball has been built with the assumption that it will be installed in `/usr/local`.
 However, it is possible to install it in any directory, but in that case MariaDB MaxScale
