@@ -738,8 +738,8 @@ SRWBackend RWSplitSession::get_master_backend()
         else
         {
             MXS_ERROR("Cannot choose server '%s' as the master because it is not "
-                      "in use and a new connection to it cannot be created.",
-                      master->name());
+                      "in use and a new connection to it cannot be created. Connection status: %s",
+                      master->name(), master->get_verbose_status().c_str());
         }
     }
 
