@@ -23,12 +23,11 @@
 
 /**
  * HTTPD session specific data
- *
  */
 class HTTPDClientProtocol : public mxs::ClientProtocol
 {
 public:
-    HTTPDClientProtocol(std::unique_ptr<mxs::ClientAuthenticator> authenticator);
+    HTTPDClientProtocol();
 
     void ready_for_reading(DCB* dcb) override;
     void write_ready(DCB* dcb) override;
@@ -39,7 +38,5 @@ public:
 
     bool init_connection(DCB* dcb) override;
     void finish_connection(DCB* dcb) override;
-
-private:
-    std::unique_ptr<mxs::ClientAuthenticator> m_authenticator;  /**< Client authentication data */
 };
+

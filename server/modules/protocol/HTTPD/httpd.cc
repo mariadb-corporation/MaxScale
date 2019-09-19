@@ -47,30 +47,14 @@ class HTTPDProtocolModule : public mxs::ProtocolModule
 public:
     static HTTPDProtocolModule* create(const std::string& auth_name, const std::string& auth_opts)
     {
-        HTTPDProtocolModule* protocol_module = nullptr;
-        // This protocol only has one authenticator. TODO: merge modules
-        auto authenticator_module = mxs::authenticator_init(httpd_default_auth().c_str(), nullptr);
-        if (authenticator_module)
-        {
-            protocol_module = new (std::nothrow) HTTPDProtocolModule();
-            if (protocol_module)
-            {
-                protocol_module->m_auth_module = std::move(authenticator_module);
-            }
-        }
-        return protocol_module;
+        return new (std::nothrow) HTTPDProtocolModule();
     }
 
     std::unique_ptr<mxs::ClientProtocol>
     create_client_protocol(MXS_SESSION* session, mxs::Component* component) override
     {
         std::unique_ptr<mxs::ClientProtocol> new_client_proto;
-        auto authenticator = m_auth_module->create_client_authenticator();
-        if (authenticator)
-        {
-            new_client_proto = std::unique_ptr<mxs::ClientProtocol>(
-                    new (std::nothrow) HTTPDClientProtocol(std::move(authenticator)));
-        }
+        new_client_proto = std::unique_ptr<mxs::ClientProtocol>(new(std::nothrow) HTTPDClientProtocol());
         return new_client_proto;
     }
 
@@ -86,21 +70,17 @@ public:
 
     int load_auth_users(SERVICE* service) override
     {
-        return m_auth_module->load_users(service);
+        return MXS_AUTH_LOADUSERS_OK;
     }
 
     void print_auth_users(DCB* output) override
     {
-        m_auth_module->diagnostics(output);
     }
 
     json_t* print_auth_users_json() override
     {
-        return m_auth_module->diagnostics_json();
+        return json_array();
     }
-
-private:
-    std::unique_ptr<mxs::AuthenticatorModule> m_auth_module;
 };
 
 extern "C"
@@ -225,7 +205,7 @@ void HTTPDClientProtocol::ready_for_reading(DCB* generic_dcb)
     /** If listener->authenticator is the default authenticator, it means that
      * we don't need to check the user credentials. All other authenticators
      * cause a 401 Unauthorized to be returned on the first try. */
-    bool auth_ok = httpd_default_auth() == std::string(dcb->session()->listener->authenticator());
+    bool auth_ok = true;
 
     /**
      * Get the request headers
@@ -242,21 +222,6 @@ void HTTPDClientProtocol::ready_for_reading(DCB* generic_dcb)
             value++;
             end = &value[strlen(value) - 1];
             *end = '\0';
-
-            if (strcmp(buf, "Authorization") == 0)
-            {
-                GWBUF* auth_data = gwbuf_alloc_and_load(strlen(value), value);
-                MXS_OOM_IFNULL(auth_data);
-
-                if (auth_data)
-                {
-                    /** The freeing entry point is called automatically when
-                     * the client DCB is closed */
-                    m_authenticator->extract(dcb, auth_data);
-                    auth_ok = m_authenticator->authenticate(dcb) == MXS_AUTH_SUCCEEDED;
-                    gwbuf_free(auth_data);
-                }
-            }
         }
     }
 
@@ -363,8 +328,7 @@ void HTTPDClientProtocol::finish_connection(DCB* dcb)
 {
 }
 
-HTTPDClientProtocol::HTTPDClientProtocol(std::unique_ptr<mxs::ClientAuthenticator> authenticator)
-    : m_authenticator(std::move(authenticator))
+HTTPDClientProtocol::HTTPDClientProtocol()
 {
 }
 
