@@ -1254,25 +1254,17 @@ bool RWSplitSession::handle_error_new_connection(DCB* backend_dcb, GWBUF* errmsg
         route_stored_query();
     }
 
-    bool succp = false;
+    bool ok = can_recover_servers() || can_continue_session();
 
-    if (!can_recover_servers())
+    if (!ok)
     {
-        succp = can_continue_session();
-
-        if (!succp)
-        {
-            MXS_ERROR("Unable to continue session as all connections have failed, "
-                      "last server to fail was '%s'.", backend->name());
-        }
-    }
-    else
-    {
-        // Try to replace failed connections
-        succp = open_connections();
+        MXS_ERROR("Unable to continue session as all connections have failed and "
+                  "new connections cannot be created. Last server to fail was '%s'.",
+                  backend->name());
+        MXS_INFO("Connection status: %s", get_verbose_status().c_str());
     }
 
-    return succp;
+    return ok;
 }
 
 /**

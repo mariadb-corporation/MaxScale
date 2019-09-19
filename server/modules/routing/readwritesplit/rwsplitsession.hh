@@ -262,6 +262,19 @@ private:
                            });
     }
 
+    std::string get_verbose_status()
+    {
+        std::string status;
+
+        for (const auto& a : m_backends)
+        {
+            status += "\n";
+            status += a->get_verbose_status();
+        }
+
+        return status;
+    }
+
     inline bool is_large_query(GWBUF* buf)
     {
         uint32_t buflen = gwbuf_length(buf);
