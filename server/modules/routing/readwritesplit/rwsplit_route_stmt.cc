@@ -591,16 +591,9 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
     }
     else
     {
-        std::string status;
-        for (const auto& a : m_backends)
-        {
-            status += "\n";
-            status += a->get_verbose_status();
-        }
-
-        MXS_ERROR("Could not route session command: %s. Connection information: %s",
+        MXS_ERROR("Could not route session command: %s. Connection status: %s",
                   attempted_write ? "Write to all backends failed" : "All connections have failed",
-                  status.c_str());
+                  get_verbose_status().c_str());
     }
 
     return nsucc;
@@ -739,7 +732,7 @@ SRWBackend RWSplitSession::get_master_backend()
         {
             MXS_ERROR("Cannot choose server '%s' as the master because it is not "
                       "in use and a new connection to it cannot be created. Connection status: %s",
-                      master->name(), master->get_verbose_status().c_str());
+                      master->name(), get_verbose_status().c_str());
         }
     }
 

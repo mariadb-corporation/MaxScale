@@ -1182,6 +1182,7 @@ bool RWSplitSession::handle_error_new_connection(DCB* backend_dcb, GWBUF* errmsg
         MXS_ERROR("Unable to continue session as all connections have failed and "
                   "new connections cannot be created. Last server to fail was '%s'.",
                   backend->name());
+        MXS_INFO("Connection status: %s", get_verbose_status().c_str());
     }
 
     return ok;
