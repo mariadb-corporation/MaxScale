@@ -192,6 +192,12 @@ SListener Listener::create(const std::string& name,
         address = MAXADMIN_DEFAULT_SOCKET;
         socket = address;
     }
+    else if (port == 0 && socket[0] != '/')
+    {
+        MXS_ERROR("Invalid path given for listener '%s' for parameter '%s': %s",
+                  name.c_str(), CN_SOCKET, socket.c_str());
+        return nullptr;
+    }
 
     mxb_assert(!address.empty());
 
