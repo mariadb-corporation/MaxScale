@@ -113,11 +113,6 @@ public:
     SERVICE* service() const;
 
     /**
-     * The authenticator module name
-     */
-    const char* authenticator() const;
-
-    /**
      * The protocol module name
      */
     const char* protocol() const;
@@ -198,8 +193,6 @@ private:
     std::string m_protocol;         /**< Protocol module to load */
     uint16_t    m_port;             /**< Port to listen on */
     std::string m_address;          /**< Address to listen with */
-    std::string m_authenticator;    /**< Name of authenticator */
-    std::string m_auth_options;     /**< Authenticator options */
 
     std::unique_ptr<mxs::ProtocolModule> m_proto_module;    /**< Protocol module */
 
@@ -233,16 +226,12 @@ private:
      * @param address       The address where the listener listens
      * @param port          The port on which the listener listens
      * @param protocol      The protocol module to use
-     * @param authenticator The authenticator module to use
-     * @param auth_opts     Options for the authenticator
      * @param ssl           The SSL configuration
      */
     Listener(SERVICE* service, const std::string& name,
              const std::string& address, uint16_t port,
              const std::string& protocol,
              std::unique_ptr<mxs::ProtocolModule> proto_instance,
-             const std::string& authenticator,
-             const std::string& auth_opts,
              std::unique_ptr<mxs::SSLContext> ssl,
              const MXS_CONFIG_PARAMETER& params,
              qc_sql_mode_t sql_mode);

@@ -38,6 +38,7 @@
 #include <maxscale/version.h>
 #include <maxscale/target.hh>
 #include <maxscale/protocol2.hh>
+#include <maxscale/authenticator2.hh>
 
 // Default version string sent to clients
 #define DEFAULT_VERSION_STRING "5.5.5-10.2.12 " MAXSCALE_VERSION "-maxscale"

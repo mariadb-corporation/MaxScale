@@ -43,7 +43,6 @@
 #include <maxbase/alloc.h>
 #include <maxbase/atomic.h>
 #include <maxbase/atomic.hh>
-#include <maxscale/authenticator2.hh>
 #include <maxscale/clock.h>
 #include <maxscale/limits.h>
 #include <maxscale/listener.hh>
@@ -62,8 +61,6 @@
 using maxscale::RoutingWorker;
 using maxbase::Worker;
 using std::string;
-using mxs::BackendAuthenticator;
-using mxs::ClientAuthenticator;
 using mxs::ClientProtocol;
 using mxs::BackendProtocol;
 

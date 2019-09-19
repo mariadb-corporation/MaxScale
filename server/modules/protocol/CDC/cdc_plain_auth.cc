@@ -35,11 +35,6 @@ const char CDC_USERS_FILENAME[] = "cdcusers";
 
 using mxs::USER_ACCOUNT_ADMIN;
 
-std::unique_ptr<CDCClientAuthenticator> CDCAuthenticatorModule::create_client_authenticator()
-{
-    return std::unique_ptr<CDCClientAuthenticator>(new(std::nothrow) CDCClientAuthenticator(*this));
-}
-
 /**
  * @brief Add a new CDC user
  *

@@ -24,7 +24,6 @@ namespace maxscale
 {
 class ClientProtocol;
 class BackendProtocol;
-class AuthenticatorModule;
 
 class ProtocolModule
 {
@@ -88,9 +87,6 @@ public:
      * @return JSON user list
      */
     virtual json_t* print_auth_users_json() = 0;
-
-    // Authenticator module. Will be cleaned up in later commits.
-    std::unique_ptr<mxs::AuthenticatorModule> m_auth_module;
 };
 
 /**

@@ -36,7 +36,6 @@
 #include <maxbase/atomic.hh>
 #include <maxbase/jansson.h>
 
-#include <maxscale/authenticator2.hh>
 #include <maxscale/service.hh>
 #include <maxbase/alloc.h>
 #include <maxbase/log.hh>

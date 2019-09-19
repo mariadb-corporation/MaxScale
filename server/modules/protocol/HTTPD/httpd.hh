@@ -15,7 +15,6 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/protocol2.hh>
-#include <maxscale/authenticator2.hh>
 
 #define HTTPD_SMALL_BUFFER       1024
 #define HTTPD_METHOD_MAXLEN      128

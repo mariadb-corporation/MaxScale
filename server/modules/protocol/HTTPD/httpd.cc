@@ -30,7 +30,6 @@
 #include "httpd.hh"
 #include <cctype>
 #include <maxbase/alloc.h>
-#include <maxscale/authenticator2.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/session.hh>

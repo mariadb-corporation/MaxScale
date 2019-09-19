@@ -40,9 +40,7 @@ class SERVICE;
 namespace maxscale
 {
 class ClientProtocol;
-class ClientAuthenticator;
 class BackendProtocol;
-class BackendAuthenticator;
 class SSLContext;
 }
 
@@ -655,7 +653,6 @@ private:
 
     sockaddr_storage                          m_ip;             /**< remote IPv4/IPv6 address */
     std::unique_ptr<mxs::ClientProtocol>      m_protocol;       /**< The protocol session */
-    std::unique_ptr<mxs::ClientAuthenticator> m_authenticator;  /**< Client authentication data */
     void*                                     m_data = nullptr; /**< Protocol data */
 };
 

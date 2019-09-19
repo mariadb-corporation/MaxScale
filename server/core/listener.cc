@@ -30,7 +30,6 @@
 #include <unordered_set>
 
 #include <maxbase/log.hh>
-#include <maxscale/authenticator2.hh>
 #include <maxscale/paths.h>
 #include <maxscale/ssl.hh>
 #include <maxscale/protocol2.hh>
@@ -112,8 +111,6 @@ Listener::Listener(SERVICE* service,
                    uint16_t port,
                    const std::string& protocol,
                    std::unique_ptr<mxs::ProtocolModule> proto_instance,
-                   const std::string& authenticator,
-                   const std::string& auth_opts,
                    std::unique_ptr<mxs::SSLContext> ssl,
                    const MXS_CONFIG_PARAMETER& params,
                    qc_sql_mode_t sql_mode)
@@ -123,8 +120,6 @@ Listener::Listener(SERVICE* service,
     , m_protocol(protocol)
     , m_port(port)
     , m_address(address)
-    , m_authenticator(authenticator)
-    , m_auth_options(auth_opts)
     , m_proto_module(std::move(proto_instance))
     , m_service(service)
     , m_params(params)
@@ -252,7 +247,6 @@ SListener Listener::create(const std::string& name,
     // authenticators that are specific to each protocol module
     auto authenticator = params.get_string(CN_AUTHENTICATOR);
     auto authenticator_options = params.get_string(CN_AUTHENTICATOR_OPTIONS);
-    int net_port = socket_defined ? 0 : port;
 
     // Add protocol and authenticator capabilities from the listener
     std::unique_ptr<mxs::ProtocolModule> protocol_module;
@@ -268,23 +262,9 @@ SListener Listener::create(const std::string& name,
         return nullptr;
     }
 
-    if (authenticator.empty())
-    {
-        authenticator = protocol_module->auth_default();
-        if (authenticator.empty())
-        {
-            MXS_ERROR("No authenticator defined for listener '%s' and could not get "
-                      "default authenticator for protocol '%s'.", name.c_str(), protocol.c_str());
-            return nullptr;
-        }
-    }
-    const char* zauth = authenticator.c_str();
-
-
     SListener listener(new(std::nothrow) Listener(
                            service, name, address, port,
                            protocol, std::move(protocol_module),
-                           zauth, authenticator_options,
                            std::move(ssl_info), params, sql_mode));
 
     if (listener)
@@ -606,11 +586,6 @@ uint16_t Listener::port() const
 SERVICE* Listener::service() const
 {
     return m_service;
-}
-
-const char* Listener::authenticator() const
-{
-    return m_authenticator.c_str();
 }
 
 const char* Listener::protocol() const

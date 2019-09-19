@@ -11,7 +11,6 @@
  * Public License.
  */
 
-#include <maxscale/authenticator2.hh>
 #include <maxscale/users.hh>
 #include <maxscale/protocol/cdc/cdc.hh>
 #include <maxscale/modulecmd.hh>
@@ -27,8 +26,6 @@ public:
     }
 
     ~CDCAuthenticatorModule() = default;
-
-    std::unique_ptr<CDCClientAuthenticator> create_client_authenticator();
 
     int load_users(SERVICE* service);
 
