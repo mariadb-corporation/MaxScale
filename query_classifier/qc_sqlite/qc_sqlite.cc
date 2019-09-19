@@ -2651,6 +2651,7 @@ public:
             case TK_SET:
                 m_status = QC_QUERY_TOKENIZED;
                 m_type_mask = QUERY_TYPE_GSYSVAR_WRITE;
+                m_operation = QUERY_OP_SET;
                 break;
 
             case TK_SHOW:
@@ -2883,6 +2884,7 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = QC_QUERY_PARSED;
+        m_operation = QUERY_OP_SET; // There will be no SET in case of Oracle's "var := 1".
         m_type_mask = 0;    // Reset what was set in maxscaleKeyword
 
         switch (kind)

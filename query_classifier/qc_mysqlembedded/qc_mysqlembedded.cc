@@ -2065,6 +2065,10 @@ int32_t qc_mysql_get_operation(GWBUF* querybuf, int32_t* operation)
                         *operation = QUERY_OP_REVOKE;
                         break;
 
+                    case SQLCOM_SET_OPTION:
+                        *operation = QUERY_OP_SET;
+                        break;
+
                     case SQLCOM_SHOW_CREATE:
                     case SQLCOM_SHOW_CREATE_DB:
                     case SQLCOM_SHOW_CREATE_FUNC:

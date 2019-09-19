@@ -129,3 +129,6 @@ XA PREPARE 'xid';
 XA COMMIT 'xid';
 XA ROLLBACK 'xid'
 XA RECOVER 'xid';
+
+# MXS-2688
+SET @saved_cs_client= @@character_set_client;
