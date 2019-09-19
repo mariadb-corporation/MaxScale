@@ -18,7 +18,7 @@
  * @file Smart Router. Routes queries to the best router for the type of query.
  */
 
-#include "performance.hh"
+#include "perf_info.hh"
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/config2.hh>

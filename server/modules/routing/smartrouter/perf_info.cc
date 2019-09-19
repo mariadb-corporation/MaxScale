@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "performance.hh"
+#include "perf_info.hh"
 
 std::string show_some(const std::string& str, int nchars)
 {

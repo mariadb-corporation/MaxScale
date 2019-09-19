@@ -1,7 +1,8 @@
 add_library(smartrouter SHARED
 smartrouter.cc
 smartsession.cc
-performance.cc
+perf_info.cc
+perf_updater.cc
 )
 
 target_link_libraries(smartrouter maxscale-common mariadbclient)

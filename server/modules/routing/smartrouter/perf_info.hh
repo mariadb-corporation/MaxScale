@@ -15,6 +15,7 @@
 #include <maxscale/ccdefs.hh>
 
 #include <maxbase/stopwatch.hh>
+#include <maxbase/shareddata.hh>
 #include <maxscale/target.hh>
 #include <unordered_map>
 
@@ -56,6 +57,17 @@ private:
 
     maxbase::TimePoint m_creation_time = maxbase::Clock::now();
 };
+
+// Update to the SharedData. Container updates are currently always InsertUpdate.
+struct PerformanceInfoUpdate
+{
+    std::string     key;
+    PerformanceInfo value;
+};
+
+// The container and SharedData types of PerformanceInfo.
+using PerformanceInfoContainer = std::unordered_map<std::string, PerformanceInfo>;
+using SharedPerformanceInfo = maxbase::SharedData<PerformanceInfoContainer, PerformanceInfoUpdate>;
 
 // For logging. Shortens str to nchars and adds "..." TODO move somewhere more appropriate
 std::string show_some(const std::string& str, int nchars = 70);

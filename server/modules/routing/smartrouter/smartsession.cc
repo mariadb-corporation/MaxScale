@@ -11,7 +11,7 @@
  * Public License.
  */
 #include "smartsession.hh"
-#include "performance.hh"
+#include "perf_info.hh"
 #include <mysqld_error.h>
 #include <maxscale/mysql_plus.hh>
 #include <maxscale/modutil.hh>
