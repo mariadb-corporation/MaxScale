@@ -157,7 +157,7 @@ void dump_stacktrace(std::function<void(const char*, const char*)> handler)
     int count = backtrace(addrs, 128);
     char** symbols = backtrace_symbols(addrs, count);
 
-    int rc = system("/bin/test -f /bin/nm -a -f /bin/addr2line");
+    int rc = system("command -v nm > /dev/null && command -v addr2line > /dev/null");
     bool do_extract = WIFEXITED(rc) && WEXITSTATUS(rc) == 0;
 
     if (symbols)
