@@ -625,9 +625,18 @@ return_here:
  * Consequently, we just look at the string and deduce whether it is a
  * set [ROLE|NAMES|PASSWORD|CHARACTER] statement.
  */
-bool is_set_specific(const char* s)
+enum set_type_t
 {
-    bool rv = false;
+    SET_TYPE_CHARACTER,
+    SET_TYPE_NAMES,
+    SET_TYPE_PASSWORD,
+    SET_TYPE_ROLE,
+    SET_TYPE_UNKNOWN
+};
+
+set_type_t get_set_type(const char* s)
+{
+    set_type_t rv = SET_TYPE_UNKNOWN;
 
     // Remove space from the beginning.
     while (isspace(*s))
@@ -665,7 +674,7 @@ bool is_set_specific(const char* s)
                 if (strncasecmp(token, "role", 4) == 0)
                 {
                     // YES it was!
-                    rv = true;
+                    rv = SET_TYPE_ROLE;
                 }
             }
             else if (s - token == 5)    // Might be "names"
@@ -673,7 +682,7 @@ bool is_set_specific(const char* s)
                 if (strncasecmp(token, "names", 5) == 0)
                 {
                     // YES it was!
-                    rv = true;
+                    rv = SET_TYPE_NAMES;
                 }
             }
             else if (s - token == 8)    // Might be "password
@@ -681,7 +690,7 @@ bool is_set_specific(const char* s)
                 if (strncasecmp(token, "password", 8) == 0)
                 {
                     // YES it was!
-                    rv = true;
+                    rv = SET_TYPE_PASSWORD;
                 }
             }
             else if (s - token == 9)    // Might be "character"
@@ -689,7 +698,7 @@ bool is_set_specific(const char* s)
                 if (strncasecmp(token, "character", 9) == 0)
                 {
                     // YES it was!
-                    rv = true;
+                    rv = SET_TYPE_CHARACTER;
                 }
             }
         }
@@ -807,6 +816,7 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
          */
         else if (lex->sql_command == SQLCOM_SET_OPTION)
         {
+            type |= QUERY_TYPE_SESSION_WRITE;
             type |= QUERY_TYPE_GSYSVAR_WRITE;
         }
 
@@ -844,13 +854,11 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
          */
         else if (lex->sql_command == SQLCOM_SET_OPTION)
         {
-            /** Either user- or system variable write */
-            if (is_set_specific(pi->pi_query_plain_str))
+            type |= QUERY_TYPE_SESSION_WRITE;
+
+            if (get_set_type(pi->pi_query_plain_str) == SET_TYPE_UNKNOWN)
             {
-                type |= QUERY_TYPE_GSYSVAR_WRITE;
-            }
-            else
-            {
+                /** Either user- or system variable write */
                 List_iterator<set_var_base> ilist(lex->var_list);
                 size_t n = 0;
 
@@ -969,6 +977,11 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
 
     case SQLCOM_PREPARE:
         type |= QUERY_TYPE_PREPARE_NAMED_STMT;
+        goto return_qtype;
+        break;
+
+    case SQLCOM_SET_OPTION:
+        type |= QUERY_TYPE_SESSION_WRITE;
         goto return_qtype;
         break;
 

@@ -2650,7 +2650,7 @@ public:
 
             case TK_SET:
                 m_status = QC_QUERY_TOKENIZED;
-                m_type_mask = QUERY_TYPE_GSYSVAR_WRITE;
+                m_type_mask = QUERY_TYPE_SESSION_WRITE;
                 m_operation = QUERY_OP_SET;
                 break;
 
@@ -2884,20 +2884,21 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = QC_QUERY_PARSED;
-        m_operation = QUERY_OP_SET; // There will be no SET in case of Oracle's "var := 1".
-        m_type_mask = 0;    // Reset what was set in maxscaleKeyword
+        // The following must be set anew as there will be no SET in case of
+        // Oracle's "var := 1", in which case maxscaleKeyword() is never called.
+        m_type_mask = QUERY_TYPE_SESSION_WRITE;
+        m_operation = QUERY_OP_SET;
 
         switch (kind)
         {
         case MXS_SET_TRANSACTION:
             if ((scope == TK_GLOBAL) || (scope == TK_SESSION))
             {
-                m_type_mask = QUERY_TYPE_GSYSVAR_WRITE;
+                m_type_mask |= QUERY_TYPE_GSYSVAR_WRITE;
             }
             else
             {
                 mxb_assert(scope == 0);
-                m_type_mask = QUERY_TYPE_WRITE;
             }
             break;
 
@@ -2911,7 +2912,7 @@ public:
                     {
                     case TK_CHARACTER:
                     case TK_NAMES:
-                        m_type_mask |= QUERY_TYPE_GSYSVAR_WRITE;
+                        i = pList->nExpr;
                         break;
 
                     case TK_EQ:
@@ -2924,8 +2925,19 @@ public:
                             // then pEq->pLeft->pLeft is either TK_VARIABLE or TK_ID and pEq->pLeft->pRight
                             // is either TK_DOT, TK_VARIABLE or TK_ID.
 
-                            // Find the left-most part.
                             pVariable = pEq->pLeft;
+
+                            // But first we explicitly check for the case "SET PASSWORD ..."
+                            if (i == 0
+                                && pVariable->op == TK_ID
+                                && strcasecmp(pVariable->u.zToken, "password") == 0)
+                            {
+                                // Ok, it was, so we break out.
+                                i = pList->nExpr;
+                                break;
+                            }
+
+                            // Now find the left-most part.
                             while (pVariable->op == TK_DOT)
                             {
                                 pVariable = pVariable->pLeft;
