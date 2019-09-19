@@ -183,6 +183,14 @@ SListener Listener::create(const std::string& name,
     auto port = port_defined ? params.get_integer(CN_PORT) : 0;
     auto socket = socket_defined ? params.get_string(CN_SOCKET) : "";
     auto address = socket_defined ? params.get_string(CN_SOCKET) : params.get_string(CN_ADDRESS);
+
+    if (port == 0 && socket[0] != '/')
+    {
+        MXS_ERROR("Invalid path given for listener '%s' for parameter '%s': %s",
+                  name.c_str(), CN_SOCKET, socket.c_str());
+        return nullptr;
+    }
+
     qc_sql_mode_t sql_mode;
 
     if (sql_mode_defined)
