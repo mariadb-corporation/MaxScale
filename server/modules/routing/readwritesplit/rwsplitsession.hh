@@ -293,6 +293,14 @@ private:
         return !m_config.disable_sescmd_history || m_recv_sescmd == 0;
     }
 
+    inline bool have_open_connections() const
+    {
+        return std::any_of(
+            m_backends.begin(), m_backends.end(), [](const mxs::SRWBackend& b) {
+                return b->in_use();
+            });
+    }
+
     inline bool is_large_query(GWBUF* buf)
     {
         uint32_t buflen = gwbuf_length(buf);

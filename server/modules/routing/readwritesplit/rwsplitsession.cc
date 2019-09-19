@@ -1175,39 +1175,16 @@ bool RWSplitSession::handle_error_new_connection(DCB* backend_dcb, GWBUF* errmsg
         route_stored_query();
     }
 
-    bool succp = false;
-    /**
-     * Try to get replacement slave or at least the minimum
-     * number of slave connections for router session.
-     */
-    if (m_recv_sescmd > 0 && m_config.disable_sescmd_history)
-    {
-        for (const auto& a : m_backends)
-        {
-            if (a->in_use())
-            {
-                succp = true;
-                break;
-            }
-        }
+    bool ok = can_recover_servers() || have_open_connections();
 
-        if (!succp)
-        {
-            MXS_ERROR("Unable to continue session as all connections have failed, "
-                      "last server to fail was '%s'.", backend->name());
-        }
-    }
-    else
+    if (!ok)
     {
-        succp = m_router->select_connect_backend_servers(ses,
-                                                         m_backends,
-                                                         m_current_master,
-                                                         &m_sescmd_list,
-                                                         &m_expected_responses,
-                                                         connection_type::SLAVE);
+        MXS_ERROR("Unable to continue session as all connections have failed and "
+                  "new connections cannot be created. Last server to fail was '%s'.",
+                  backend->name());
     }
 
-    return succp;
+    return ok;
 }
 
 /**
