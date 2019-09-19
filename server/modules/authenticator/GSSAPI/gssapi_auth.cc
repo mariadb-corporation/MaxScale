@@ -19,6 +19,7 @@
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/module_names.hh>
+#include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include <maxscale/secrets.h>
 #include <maxscale/service.hh>
 #include <maxscale/sqlite3.h>

@@ -15,7 +15,7 @@
 #include <maxscale/protocol/mariadb/module_names.hh>
 #define MXS_MODULE_NAME MXS_MARIADB_PROTOCOL_NAME
 
-#include <maxscale/protocol/mariadb/mysql.hh>
+#include <maxscale/protocol/mariadb/protocol_classes.hh>
 
 #include <inttypes.h>
 #include <limits.h>
@@ -32,7 +32,7 @@
 #include <maxscale/poll.hh>
 #include <maxscale/protocol.hh>
 #include <maxscale/protocol/mariadb/local_client.hh>
-
+#include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/router.hh>
 #include <maxscale/routingworker.hh>

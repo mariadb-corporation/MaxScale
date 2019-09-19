@@ -16,6 +16,7 @@
 #include <maxscale/mysql_plus.hh>
 #include <maxscale/modutil.hh>
 #include <maxbase/pretty_print.hh>
+#include <maxscale/protocol/mariadb/protocol_classes.hh>
 
 // COPY-PASTED error-extraction functions from rwsplit. TODO move to lib.
 inline void extract_error_state(uint8_t* pBuffer, uint8_t** ppState, uint16_t* pnState)

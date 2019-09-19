@@ -23,6 +23,7 @@
 #include <maxscale/poll.hh>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/resultset.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 
 namespace schemarouter
 {

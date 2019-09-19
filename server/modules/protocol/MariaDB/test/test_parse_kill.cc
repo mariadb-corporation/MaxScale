@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include <maxscale/protocol/mariadb/mysql.hh>
+#include <maxscale/protocol/mariadb/protocol_classes.hh>
 
 #include <inttypes.h>
 #include <string>

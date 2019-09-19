@@ -19,6 +19,7 @@
 #include <maxscale/sqlite3.h>
 #include "pam_backend_session.hh"
 #include "pam_auth_common.hh"
+#include <maxscale/protocol/mariadb/protocol_classes.hh>
 
 class PamAuthenticatorModule;
 

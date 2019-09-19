@@ -29,13 +29,10 @@
 #include <maxscale/protocol/cdc/cdc.hh>
 #include <maxavro.hh>
 #include <binlog_common.hh>
-#include <maxscale/protocol/mariadb/mysql.hh>
 #include <blr_constants.hh>
 
 #include "rpl.hh"
 #include "replicator.hh"
-
-MXS_BEGIN_DECLS
 
 /** Name of the file where the binlog to Avro conversion progress is stored */
 #define AVRO_PROGRESS_FILE "avro-conversion.ini"
@@ -224,5 +221,3 @@ REP_HEADER        construct_header(uint8_t* ptr);
 bool              avro_save_conversion_state(Avro* router);
 bool              avro_load_conversion_state(Avro* router);
 void              avro_load_metadata_from_schemas(Avro* router);
-
-MXS_END_DECLS

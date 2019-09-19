@@ -25,7 +25,7 @@
 #include <maxscale/buffer.hh>
 #include <maxscale/service.hh>
 #include <maxscale/sqlite3.h>
-#include <maxscale/protocol/mariadb/mysql.hh>
+#include <maxscale/protocol/mariadb/protocol_classes.hh>
 
 /** Cache directory and file names */
 static const char DBUSERS_DIR[] = "cache";

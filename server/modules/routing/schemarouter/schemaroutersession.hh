@@ -17,7 +17,7 @@
 #include <string>
 #include <list>
 
-#include <maxscale/protocol/mariadb/mysql.hh>
+#include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include <maxscale/router.hh>
 #include <maxscale/session_command.hh>
 

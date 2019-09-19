@@ -13,11 +13,9 @@
 #pragma once
 
 #include "mock.hh"
-#include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/listener.hh>
-#include <maxscale/protocol/mariadb/mysql.hh>
 #include "client.hh"
-
+#include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include "../../../core/internal/session.hh"
 
 namespace maxscale

@@ -15,7 +15,7 @@
  * MySQL Protocol common routines for client to gateway and gateway to backend
  */
 
-#include <maxscale/protocol/mariadb/mysql.hh>
+#include <maxscale/protocol/mariadb/protocol_classes.hh>
 
 #include <set>
 #include <sstream>

@@ -27,6 +27,7 @@
 #include <maxscale/listener.hh>
 #include <maxscale/service.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
+#include <maxscale/protocol/mariadb/protocol_classes.hh>
 
 #include "test_utils.hh"
 #include "../internal/service.hh"
