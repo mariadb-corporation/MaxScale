@@ -43,12 +43,9 @@ uint32_t mysql_extract_ps_id(GWBUF* buffer)
     return rval;
 }
 
-// Copied from mysql_common.c
-// TODO: The current database should somehow be available in a generic fashion.
-const char* qc_mysql_get_current_db(MXS_SESSION* session)
+std::string qc_mysql_get_current_db(MXS_SESSION* session)
 {
-    MYSQL_session* data = (MYSQL_session*)session->client_dcb->protocol_data();
-    return data->db;
+    return session->client_dcb->protocol()->current_db();
 }
 
 // Copied from mysql_common.c
@@ -191,7 +188,7 @@ bool foreach_table(QueryClassifier& qc,
 
     for (int i = 0; i < n_tables; i++)
     {
-        const char* db = qc_mysql_get_current_db(pSession);
+        auto db = qc_mysql_get_current_db(pSession);
         std::string table;
 
         if (strchr(tables[i], '.') == NULL)
@@ -810,7 +807,7 @@ void QueryClassifier::check_create_tmp_table(GWBUF* querybuf, uint32_t type)
 
                 if (strchr(tblname[i], '.') == NULL)
                 {
-                    const char* db = qc_mysql_get_current_db(session());
+                    auto db = qc_mysql_get_current_db(session());
                     table = db;
                     table += ".";
                     table += tblname[i];

@@ -33,7 +33,8 @@ bool GSSAPIBackendAuthenticator::send_new_auth_token(DCB* dcb)
 {
     bool rval = false;
     auto auth = this;
-    MYSQL_session* ses = (MYSQL_session*)dcb->session()->client_dcb->protocol_data();
+    auto proto = static_cast<MySQLClientProtocol*>(dcb->session()->client_dcb->protocol());
+    MYSQL_session* ses = proto->session_data();
     GWBUF* buffer = gwbuf_alloc(MYSQL_HEADER_LEN + ses->auth_token_len);
 
     // This function actually just forwards the client's token to the backend server

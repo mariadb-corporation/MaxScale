@@ -37,13 +37,6 @@ using mxs::ReplyState;
 
 uint8_t null_client_sha1[MYSQL_SCRAMBLE_LEN] = "";
 
-MYSQL_session* mysql_session_alloc()
-{
-    MYSQL_session* ses = (MYSQL_session*)MXS_CALLOC(1, sizeof(MYSQL_session));
-    ses->changing_user = false;
-    return ses;
-}
-
 const char* gw_mysql_protocol_state2string(int state)
 {
     switch (state)
@@ -201,39 +194,6 @@ int mysql_send_custom_error(DCB* dcb,
 }
 
 /**
- * Copy shared session authentication info
- *
- * @param dcb A backend DCB
- * @param session Destination where authentication data is copied
- * @return bool true = success, false = fail
- */
-bool gw_get_shared_session_auth_info(DCB* dcb, MYSQL_session* session)
-{
-    bool rval = true;
-
-    if (dcb->role() == DCB::Role::CLIENT)
-    {
-        auto client_dcb = static_cast<ClientDCB*>(dcb);
-        // The shared session data can be extracted at any time if the client DCB is used.
-        mxb_assert(client_dcb->protocol_data());
-        memcpy(session, client_dcb->protocol_data(), sizeof(MYSQL_session));
-    }
-    else if (dcb->session()->state() != MXS_SESSION::State::CREATED)
-    {
-        memcpy(session, dcb->session()->client_dcb->protocol_data(), sizeof(MYSQL_session));
-    }
-    else
-    {
-        mxb_assert(false);
-        MXS_ERROR("Couldn't get session authentication info. Session in wrong state: %s.",
-                  session_state_to_string(dcb->session()->state()));
-        rval = false;
-    }
-
-    return rval;
-}
-
-/**
  * @brief Send a MySQL protocol OK message to the dcb (client)
  *
  * @param dcb DCB where packet is written
@@ -333,7 +293,7 @@ int mxs_mysql_send_ok(DCB* dcb, int sequence, uint8_t affected_rows, const char*
  *
  * @return The length of the response packet
  */
-int response_length(bool with_ssl, bool ssl_established, char* user, uint8_t* passwd, char* dbname,
+int response_length(bool with_ssl, bool ssl_established, const char* user, uint8_t* passwd, char* dbname,
                     const char* auth_module)
 {
     long bytes;
@@ -499,13 +459,14 @@ bool mxs_mysql_more_results_after_ok(GWBUF* buffer)
 
 const char* mxs_mysql_get_current_db(MXS_SESSION* session)
 {
-    MYSQL_session* data = (MYSQL_session*)session->client_dcb->protocol_data();
-    return data->db;
+    auto proto = static_cast<MySQLClientProtocol*>(session->client_dcb->protocol());
+    return proto->session_data()->db;
 }
 
 void mxs_mysql_set_current_db(MXS_SESSION* session, const char* db)
 {
-    MYSQL_session* data = (MYSQL_session*)session->client_dcb->protocol_data();
+    auto proto = static_cast<MySQLClientProtocol*>(session->client_dcb->protocol());
+    MYSQL_session* data = proto->session_data();
     snprintf(data->db, sizeof(data->db), "%s", db);
 }
 

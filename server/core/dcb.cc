@@ -251,7 +251,7 @@ BackendDCB* BackendDCB::take_from_connection_pool(SERVER* s, MXS_SESSION* sessio
                 session_link_backend_dcb(session, dcb);
                 dcb->reset(session);
 
-                if (dcb->m_protocol->reuse_connection(dcb, upstream))
+                if (dcb->m_protocol->reuse_connection(dcb, upstream, session->client_dcb->protocol()))
                 {
                     mxb::atomic::add(&server->pool_stats.n_from_pool, 1, mxb::atomic::RELAXED);
                 }

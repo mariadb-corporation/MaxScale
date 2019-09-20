@@ -44,18 +44,13 @@ Session::Session(Client* pClient, const SListener& listener)
     m_state = MXS_SESSION::State::CREATED;
     client_dcb = &m_client_dcb;
 
-    memset(&m_mysql_session, 0, sizeof(m_mysql_session));
-
     strcpy(m_mysql_session.db, "dummy");
-
-    m_client_dcb.protocol_data_set(&m_mysql_session);
 }
 
 Session::~Session()
 {
     m_down->close();
     // This prevents the protocol module from freeing the data
-    m_client_dcb.protocol_data_release();
     refcount = 0;
     client_dcb = nullptr;
 }

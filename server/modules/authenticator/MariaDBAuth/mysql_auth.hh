@@ -164,9 +164,14 @@ private:
      *
      * @return MXS_AUTH_SUCCEEDED if the user has access to the database
      */
-    int  validate_mysql_user(DCB* dcb, MYSQL_session* session, uint8_t* scramble, size_t scramble_len);
+    int validate_mysql_user(DCB* dcb, MYSQL_session* session, uint8_t* scramble,
+                            size_t scramble_len);
     bool check_database(sqlite3* handle, const char* database);
-    // No fields, as authentication data is managed by the protocol.
+    bool set_client_data(MYSQL_session* client_data, MySQLProtocol* protocol, DCB* client_dcb,
+                         GWBUF* buffer);
+
+    bool m_correct_authenticator {false};  /*< Is session using mysql_native_password? */
+    bool m_auth_switch_sent {false};       /*< Expecting a response to AuthSwitchRequest? */
 };
 
 /** Structure representing the authentication state */

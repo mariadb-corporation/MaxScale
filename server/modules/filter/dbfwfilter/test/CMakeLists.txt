@@ -14,6 +14,6 @@ add_executable(test_dbfwfilter
   ../../test/module.cc
   ../../test/queryclassifiermodule.cc
 )
-target_link_libraries(test_dbfwfilter maxscale-common)
+target_link_libraries(test_dbfwfilter maxscale-common mariadbclient)
 
 add_test(test_dbfwfilter test_dbfwfilter)

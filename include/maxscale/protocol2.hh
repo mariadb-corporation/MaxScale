@@ -148,6 +148,16 @@ public:
         mxb_assert(!true);
         return nullptr;
     }
+
+    /**
+     * Return current database. Only required by query classifier.
+     *
+     * @return Current database
+     */
+    virtual std::string current_db() const
+    {
+        return "";
+    }
 };
 
 /**
@@ -177,13 +187,15 @@ public:
      * Reuse a connection. The connection was in the persistent pool
      * and will now be taken into use again.
      *
-     * @param dcb       The connection to be reused.
-     * @param upstream  The upstream component.
+     * @param dcb               The connection to be reused.
+     * @param upstream          The upstream component.
+     * @param client_protocol   The new client protocol this backend protocol should be associated with
      *
      * @return True, if the connection can be reused, false otherwise.
      *         If @c false is returned, the @c dcb should be closed.
      */
-    virtual bool reuse_connection(BackendDCB* dcb, mxs::Component* upstream) = 0;
+    virtual bool
+    reuse_connection(BackendDCB* dcb, mxs::Component* upstream, mxs::ClientProtocol* client_protocol) = 0;
 
     /**
      * Check if the connection has been fully established, used by connection pooling

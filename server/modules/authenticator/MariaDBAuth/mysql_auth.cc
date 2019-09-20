@@ -23,12 +23,6 @@
 #include <maxscale/utils.h>
 #include <maxscale/routingworker.hh>
 
-static bool mysql_auth_set_client_data(MYSQL_session* client_data,
-                                       MySQLProtocol* protocol,
-                                       DCB* client_dcb,
-                                       GWBUF* buffer);
-
-
 extern "C"
 {
 /**
@@ -249,22 +243,21 @@ int MariaDBClientAuthenticator::authenticate(DCB* generic_dcb)
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
 
     int auth_ret = MXS_AUTH_SSL_COMPLETE;
-    MYSQL_session* client_data = (MYSQL_session*)dcb->protocol_data();
+    auto protocol = static_cast<MySQLClientProtocol*>(dcb->protocol());
+    MYSQL_session* client_data = protocol->session_data();
     if (*client_data->user)
     {
         MXS_DEBUG("Receiving connection from '%s' to database '%s'.",
                   client_data->user,
                   client_data->db);
 
-        auto protocol = static_cast<MySQLClientProtocol*>(dcb->protocol());
-
-        if (!client_data->correct_authenticator)
+        if (!m_correct_authenticator)
         {
             // Client is attempting to use wrong authenticator, send switch request packet.
             GWBUF* switch_packet = gen_auth_switch_request_packet(protocol, client_data);
             if (dcb->writeq_append(switch_packet))
             {
-                client_data->auth_switch_sent = true;
+                m_auth_switch_sent = true;
                 return MXS_AUTH_INCOMPLETE;
             }
             else
@@ -357,13 +350,9 @@ bool MariaDBClientAuthenticator::extract(DCB* generic_dcb, GWBUF* buf)
     mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
 
-    MYSQL_session* client_data = NULL;
-    int client_auth_packet_size = 0;
+    int client_auth_packet_size = gwbuf_length(buf);
     auto protocol = static_cast<MySQLClientProtocol*>(dcb->protocol());
-
-    client_data = (MYSQL_session*)dcb->protocol_data();
-
-    client_auth_packet_size = gwbuf_length(buf);
+    MYSQL_session* client_data = protocol->session_data();
 
     /* For clients supporting CLIENT_PROTOCOL_41
      * the Handshake Response Packet is:
@@ -382,13 +371,13 @@ bool MariaDBClientAuthenticator::extract(DCB* generic_dcb, GWBUF* buf)
      * contain required data. If the buffer is unexpectedly large (likely an erroneous or malicious client),
      * discard the packet as parsing it may cause overflow. The limit is just a guess, but it seems the
      * packets from most plugins are < 100 bytes. */
-    if ((!client_data->auth_switch_sent
+    if ((!m_auth_switch_sent
          && (client_auth_packet_size >= MYSQL_AUTH_PACKET_BASE_SIZE && client_auth_packet_size < 1028))
         // If the client is replying to an AuthSwitchRequest, the length is predetermined.
-        || (client_data->auth_switch_sent
+        || (m_auth_switch_sent
             && (client_auth_packet_size == MYSQL_HEADER_LEN + MYSQL_SCRAMBLE_LEN)))
     {
-        return mysql_auth_set_client_data(client_data, protocol, dcb, buf);
+        return set_client_data(client_data, protocol, dcb, buf);
     }
     else
     {
@@ -444,10 +433,10 @@ static bool read_zstr(const uint8_t* client_auth_packet, size_t client_auth_pack
  * @param buffer The authentication data.
  * @return True on success, false on error
  */
-static bool mysql_auth_set_client_data(MYSQL_session* client_data,
-                                       MySQLProtocol* protocol,
-                                       DCB* client_dcb,
-                                       GWBUF* buffer)
+bool MariaDBClientAuthenticator::set_client_data(MYSQL_session* client_data,
+                                                 MySQLProtocol* protocol,
+                                                 DCB* client_dcb,
+                                                 GWBUF* buffer)
 {
     int client_auth_packet_size = gwbuf_length(buffer);
     uint8_t client_auth_packet[client_auth_packet_size];
@@ -459,7 +448,7 @@ static bool mysql_auth_set_client_data(MYSQL_session* client_data,
     client_data->auth_token_len = 0;
     MXS_FREE((client_data->auth_token));
     client_data->auth_token = NULL;
-    client_data->correct_authenticator = false;
+    m_correct_authenticator = false;
 
     if (client_auth_packet_size > MYSQL_AUTH_PACKET_BASE_SIZE)
     {
@@ -543,7 +532,7 @@ static bool mysql_auth_set_client_data(MYSQL_session* client_data,
                                 // Check that the plugin is as expected. If not, make a note so the
                                 // authentication function switches the plugin.
                                 bool correct_auth = strcmp(plugin_name, DEFAULT_MYSQL_AUTH_PLUGIN) == 0;
-                                client_data->correct_authenticator = correct_auth;
+                                m_correct_authenticator = correct_auth;
                                 if (!correct_auth)
                                 {
                                     // The switch attempt is done later but the message is clearest if
@@ -558,7 +547,7 @@ static bool mysql_auth_set_client_data(MYSQL_session* client_data,
                     }
                     else
                     {
-                        client_data->correct_authenticator = true;
+                        m_correct_authenticator = true;
                     }
                 }
             }
@@ -568,7 +557,7 @@ static bool mysql_auth_set_client_data(MYSQL_session* client_data,
             return false;
         }
     }
-    else if (client_data->auth_switch_sent)
+    else if (m_auth_switch_sent)
     {
         // Client is replying to an AuthSwitch request. The packet should contain the authentication token.
         // Length has already been checked.
@@ -585,7 +574,7 @@ static bool mysql_auth_set_client_data(MYSQL_session* client_data,
             client_data->auth_token = auth_token;
             client_data->auth_token_len = MYSQL_SCRAMBLE_LEN;
             // Assume that correct authenticator is now used. If this is not the case, authentication fails.
-            client_data->correct_authenticator = true;
+            m_correct_authenticator = true;
         }
     }
 
@@ -622,8 +611,6 @@ bool MariaDBClientAuthenticator::ssl_capable(DCB* dcb)
  */
 void MariaDBClientAuthenticator::free_data(DCB* dcb)
 {
-    mxb_assert(dcb->role() == DCB::Role::CLIENT);
-    MXS_FREE(static_cast<ClientDCB*>(dcb)->protocol_data_release());
 }
 
 /**
@@ -753,12 +740,11 @@ int MariaDBClientAuthenticator::reauthenticate(DCB* generic_dcb,
 {
     mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
-
-    MYSQL_session* client_data = (MYSQL_session*)dcb->protocol_data();
-    MYSQL_session temp;
+    auto proto = static_cast<MySQLClientProtocol*>(dcb->protocol());
+    MYSQL_session* client_data = proto->session_data();
+    MYSQL_session temp(*client_data);
     int rval = 1;
 
-    memcpy(&temp, client_data, sizeof(*client_data));
     strcpy(temp.user, user);
     temp.auth_token = token;
     temp.auth_token_len = token_len;

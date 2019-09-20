@@ -45,7 +45,8 @@ bool store_client_password(DCB* generic_dcb, GWBUF* buffer)
     if (gwbuf_copy_data(buffer, 0, MYSQL_HEADER_LEN, header) == MYSQL_HEADER_LEN)
     {
         size_t plen = gw_mysql_get_byte3(header);
-        MYSQL_session* ses = (MYSQL_session*)dcb->protocol_data();
+        auto protocol = static_cast<MySQLClientProtocol*>(dcb->protocol());
+        MYSQL_session* ses = protocol->session_data();
         ses->auth_token = (uint8_t*)MXS_CALLOC(plen, sizeof(uint8_t));
         if (ses->auth_token)
         {
@@ -275,7 +276,8 @@ int PamClientAuthenticator::authenticate(DCB* generic_dcb)
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
 
     int rval = MXS_AUTH_SSL_COMPLETE;
-    MYSQL_session* ses = static_cast<MYSQL_session*>(dcb->protocol_data());
+    auto protocol = static_cast<MySQLClientProtocol*>(dcb->protocol());
+    MYSQL_session* ses = protocol->session_data();
     if (*ses->user)
     {
         rval = MXS_AUTH_FAILED;
@@ -395,15 +397,6 @@ bool PamClientAuthenticator::ssl_capable(DCB* client)
 
 void PamClientAuthenticator::free_data(DCB* dcb)
 {
-    mxb_assert(dcb->role() == DCB::Role::CLIENT);
-    auto client = static_cast<ClientDCB*>(dcb);
-
-    if (client->protocol_data())
-    {
-        MYSQL_session* ses = (MYSQL_session*)client->protocol_data_release();
-        MXS_FREE(ses->auth_token);
-        MXS_FREE(ses);
-    }
 }
 
 std::unique_ptr<mxs::BackendAuthenticator> PamClientAuthenticator::create_backend_authenticator()

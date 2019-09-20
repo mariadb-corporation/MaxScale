@@ -42,7 +42,6 @@ SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session,
     : mxs::RouterSession(session)
     , m_closed(false)
     , m_client(session->client_dcb)
-    , m_mysql_session((MYSQL_session*)session->client_dcb->protocol_data())
     , m_backends(std::move(backends))
     , m_config(router->m_config)
     , m_router(router)
@@ -54,6 +53,7 @@ SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session,
 {
     char db[MYSQL_DATABASE_MAXLEN + 1] = "";
     auto protocol = static_cast<MySQLClientProtocol*>(session->client_dcb->protocol());
+    m_mysql_session = protocol->session_data();
     bool using_db = false;
     bool have_db = false;
     const char* current_db = mxs_mysql_get_current_db(session);

@@ -41,7 +41,7 @@ add_executable(test_cacheoptions
   ../../test/module.cc
   ../../test/queryclassifiermodule.cc
   )
-target_link_libraries(test_cacheoptions maxscale-common)
+target_link_libraries(test_cacheoptions maxscale-common mariadbclient)
 
 add_test(test_cache_rules testrules)
 

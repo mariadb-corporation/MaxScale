@@ -40,7 +40,8 @@ static bool get_ip_string_and_port(struct sockaddr_storage* sa,
                                    int iplen,
                                    in_port_t* port_out);
 
-MySQLBackendProtocol::MySQLBackendProtocol(MXS_SESSION* session, SERVER* server, mxs::Component* component,
+MySQLBackendProtocol::MySQLBackendProtocol(MXS_SESSION* session, SERVER* server,
+                                           mxs::Component* component,
                                            std::unique_ptr<mxs::BackendAuthenticator> authenticator)
     : MySQLProtocol(session, server)
     , m_component(component)
@@ -63,19 +64,25 @@ MySQLBackendProtocol::MySQLBackendProtocol(MXS_SESSION* session, SERVER* server,
 
 std::unique_ptr<MySQLBackendProtocol>
 MySQLBackendProtocol::create(MXS_SESSION* session, SERVER* server,
-                             const MySQLClientProtocol& client_protocol, mxs::Component* component,
+                             MySQLClientProtocol& client_protocol, mxs::Component* component,
                              std::unique_ptr<mxs::BackendAuthenticator> authenticator)
 {
     std::unique_ptr<MySQLBackendProtocol> protocol_session(
             new(std::nothrow) MySQLBackendProtocol(session, server, component, std::move(authenticator)));
     if (protocol_session)
     {
-        /** Copy client flags to backend protocol */
-        protocol_session->client_capabilities = client_protocol.client_capabilities;
-        protocol_session->charset = client_protocol.charset;
-        protocol_session->extra_capabilities = client_protocol.extra_capabilities;
+        protocol_session->set_client_data(client_protocol);
         protocol_session->protocol_auth_state = MXS_AUTH_STATE_CONNECTED;
     }
+    return protocol_session;
+}
+
+std::unique_ptr<MySQLBackendProtocol>
+MySQLBackendProtocol::create_test_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component,
+                                           std::unique_ptr<mxs::BackendAuthenticator> authenticator)
+{
+    std::unique_ptr<MySQLBackendProtocol> protocol_session(
+            new(std::nothrow) MySQLBackendProtocol(session, server, component, std::move(authenticator)));
     return protocol_session;
 }
 
@@ -99,7 +106,8 @@ void MySQLBackendProtocol::finish_connection(DCB* dcb)
     dcb->writeq_append(mysql_create_com_quit(nullptr, 0));
 }
 
-bool MySQLBackendProtocol::reuse_connection(BackendDCB* dcb, mxs::Component* upstream)
+bool MySQLBackendProtocol::reuse_connection(BackendDCB* dcb, mxs::Component* upstream,
+                                            mxs::ClientProtocol* client_protocol)
 {
     bool rv = false;
 
@@ -114,6 +122,8 @@ bool MySQLBackendProtocol::reuse_connection(BackendDCB* dcb, mxs::Component* ups
     }
     else
     {
+        auto mysql_client = static_cast<MySQLClientProtocol*>(client_protocol);
+        set_client_data(*mysql_client);
         MXS_SESSION* session = m_session;
         mxs::Component* component = m_component;
 
@@ -135,9 +145,7 @@ bool MySQLBackendProtocol::reuse_connection(BackendDCB* dcb, mxs::Component* ups
             this->stored_query = nullptr;
         }
 
-        auto mysqlses = static_cast<MYSQL_session*>(dcb->session()->client_dcb->protocol_data());
-        GWBUF* buf = gw_create_change_user_packet(mysqlses);
-
+        GWBUF* buf = gw_create_change_user_packet(m_client_data);
         if (dcb->writeq_append(buf))
         {
             MXS_INFO("Sent COM_CHANGE_USER");
@@ -750,9 +758,7 @@ int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
              */
             GWBUF_DATA(read_buffer)[3] = 0x3;
             proto->changing_user = false;
-
-            auto s = (MYSQL_session*)session->client_dcb->protocol_data();
-            s->changing_user = false;
+            m_client_data->changing_user = false;
         }
     }
 
@@ -1196,10 +1202,8 @@ int MySQLBackendProtocol::backend_write_delayqueue(DCB* plain_dcb, GWBUF* buffer
     if (MYSQL_IS_CHANGE_USER(((uint8_t*)GWBUF_DATA(buffer))))
     {
         /** Recreate the COM_CHANGE_USER packet with the scramble the backend sent to us */
-        MYSQL_session mses;
-        gw_get_shared_session_auth_info(dcb, &mses);
         gwbuf_free(buffer);
-        buffer = gw_create_change_user_packet(&mses);
+        buffer = gw_create_change_user_packet(m_client_data);
     }
 
     int rc = 1;
@@ -1236,9 +1240,7 @@ int MySQLBackendProtocol::backend_write_delayqueue(DCB* plain_dcb, GWBUF* buffer
 int MySQLBackendProtocol::gw_change_user(DCB* backend, MXS_SESSION* in_session, GWBUF* queue)
 {
     gwbuf_free(queue);
-    auto current_session = static_cast<MYSQL_session*>(in_session->client_dcb->protocol_data());
-    return gw_send_change_user_to_backend(
-            backend);
+    return gw_send_change_user_to_backend(backend);
 }
 
 /**
@@ -1248,24 +1250,21 @@ int MySQLBackendProtocol::gw_change_user(DCB* backend, MXS_SESSION* in_session, 
  * @return GWBUF buffer consisting of COM_CHANGE_USER packet
  * @note the function doesn't fail
  */
-GWBUF* MySQLBackendProtocol::gw_create_change_user_packet(MYSQL_session* mses)
+GWBUF* MySQLBackendProtocol::gw_create_change_user_packet(const MYSQL_session* mses)
 {
     MySQLProtocol* protocol = this;
-    char* db;
-    char* user;
-    uint8_t* pwd;
     GWBUF* buffer;
     uint8_t* payload = NULL;
     uint8_t* payload_start = NULL;
     long bytes;
     char dbpass[MYSQL_USER_MAXLEN + 1] = "";
-    char* curr_db = NULL;
-    uint8_t* curr_passwd = NULL;
+    const char* curr_db = NULL;
+    const uint8_t* curr_passwd = NULL;
     unsigned int charset;
 
-    db = mses->db;
-    user = mses->user;
-    pwd = mses->client_sha1;
+    const char* db = mses->db;
+    const char* user = m_client_data->user;
+    const uint8_t* pwd = mses->client_sha1;
 
     if (strlen(db) > 0)
     {
@@ -1412,9 +1411,7 @@ GWBUF* MySQLBackendProtocol::gw_create_change_user_packet(MYSQL_session* mses)
 int
 MySQLBackendProtocol::gw_send_change_user_to_backend(DCB* backend)
 {
-    MYSQL_session* mses = (MYSQL_session*)session()->client_dcb->protocol_data();;
-    GWBUF* buffer = gw_create_change_user_packet(mses);
-
+    GWBUF* buffer = gw_create_change_user_packet(m_client_data);
     int rc = 0;
     if (backend->writeq_append(buffer))
     {
@@ -1747,11 +1744,7 @@ mxs_auth_state_t MySQLBackendProtocol::gw_send_backend_auth(BackendDCB* dcb)
     bool with_ssl = dcb->server()->ssl().context();
     bool ssl_established = dcb->ssl_state() == DCB::SSLState::ESTABLISHED;
 
-    MYSQL_session client;
-    gw_get_shared_session_auth_info(dcb->session()->client_dcb, &client);
-
-    GWBUF* buffer = gw_generate_auth_response(&client, with_ssl, ssl_established,
-                                              dcb->service()->capabilities());
+    GWBUF* buffer = gw_generate_auth_response(with_ssl, ssl_established, dcb->service()->capabilities());
     mxb_assert(buffer);
 
     if (with_ssl && !ssl_established)
@@ -1793,11 +1786,8 @@ bool MySQLBackendProtocol::gw_read_backend_handshake(DCB* dcb, GWBUF* buffer)
  */
 int MySQLBackendProtocol::send_mysql_native_password_response(DCB* dcb)
 {
-    MYSQL_session local_session;
-    gw_get_shared_session_auth_info(dcb, &local_session);
-
-    uint8_t* curr_passwd = memcmp(local_session.client_sha1, null_client_sha1, MYSQL_SCRAMBLE_LEN) ?
-                           local_session.client_sha1 : null_client_sha1;
+    uint8_t* curr_passwd = memcmp(m_client_data->client_sha1, null_client_sha1, MYSQL_SCRAMBLE_LEN) ?
+                           m_client_data->client_sha1 : null_client_sha1;
 
     GWBUF* buffer = gwbuf_alloc(MYSQL_HEADER_LEN + GW_MYSQL_SCRAMBLE_SIZE);
     uint8_t* data = GWBUF_DATA(buffer);
@@ -2030,18 +2020,17 @@ int MySQLBackendProtocol::gw_decode_mysql_server_handshake(uint8_t* payload)
 /**
  * Create a response to the server handshake
  *
- * @param client               Shared session data
  * @param with_ssl             Whether to create an SSL response or a normal response packet
  * @param ssl_established      Set to true if the SSL response has been sent
  * @param service_capabilities Capabilities of the connecting service
  *
  * @return Generated response packet
  */
-GWBUF* MySQLBackendProtocol::gw_generate_auth_response(MYSQL_session* client, bool with_ssl,
-                                                       bool ssl_established,
+GWBUF* MySQLBackendProtocol::gw_generate_auth_response(bool with_ssl, bool ssl_established,
                                                        uint64_t service_capabilities)
 {
     auto conn = this;
+    auto client = m_client_data;
     uint8_t client_capabilities[4] = {0, 0, 0, 0};
     uint8_t* curr_passwd = NULL;
 
@@ -2060,9 +2049,10 @@ GWBUF* MySQLBackendProtocol::gw_generate_auth_response(MYSQL_session* client, bo
      */
     const char* auth_plugin_name = DEFAULT_MYSQL_AUTH_PLUGIN;
 
+    const std::string& username = m_client_data->user;
     long bytes = response_length(with_ssl,
                                  ssl_established,
-                                 client->user,
+                                 username.c_str(),
                                  curr_passwd,
                                  client->db,
                                  auth_plugin_name);
@@ -2104,8 +2094,8 @@ GWBUF* MySQLBackendProtocol::gw_generate_auth_response(MYSQL_session* client, bo
     if (!with_ssl || ssl_established)
     {
         // 4 + 4 + 4 + 1 + 23 = 36, this includes the 4 bytes packet header
-        memcpy(payload, client->user, strlen(client->user));
-        payload += strlen(client->user);
+        memcpy(payload, username.c_str(), username.length());
+        payload += username.length();
         payload++;
 
         if (curr_passwd)
@@ -2410,3 +2400,14 @@ uint64_t MySQLBackendProtocol::thread_id() const
 {
     return m_thread_id;
 }
+
+void MySQLBackendProtocol::set_client_data(MySQLClientProtocol& client_protocol)
+{
+    /** Copy client flags to backend protocol */
+    client_capabilities = client_protocol.client_capabilities;
+    charset = client_protocol.charset;
+    extra_capabilities = client_protocol.extra_capabilities;
+    m_client_data = client_protocol.session_data();
+    // TODO: authenticators may also need data swapping
+}
+

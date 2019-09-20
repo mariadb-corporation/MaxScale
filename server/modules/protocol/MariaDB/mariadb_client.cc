@@ -683,12 +683,11 @@ int MySQLClientProtocol::send_mysql_client_handshake(DCB* dcb)
 void MySQLClientProtocol::store_client_information(DCB* generic_dcb, GWBUF* buffer)
 {
     mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
-    auto dcb = static_cast<ClientDCB*>(generic_dcb);
 
     size_t len = gwbuf_length(buffer);
     uint8_t data[len];
     auto proto = this;
-    MYSQL_session* ses = (MYSQL_session*)dcb->protocol_data();
+    MYSQL_session* ses = &m_shared_data;
 
     gwbuf_copy_data(buffer, 0, len, data);
     mxb_assert(MYSQL_GET_PAYLOAD_LEN(data) + MYSQL_HEADER_LEN == len
@@ -715,9 +714,9 @@ void MySQLClientProtocol::store_client_information(DCB* generic_dcb, GWBUF* buff
 
         if (userlen != -1)
         {
-            if ((int)sizeof(ses->user) > userlen)
+            if ((int)sizeof(m_shared_data.user) > userlen)
             {
-                strcpy(ses->user, username);
+                strcpy(m_shared_data.user, username);
             }
 
             // Include the null terminator in the user length
@@ -757,7 +756,7 @@ void MySQLClientProtocol::handle_authentication_errors(DCB* generic_dcb, int aut
 
     int message_len;
     char* fail_str = NULL;
-    MYSQL_session* session = (MYSQL_session*)dcb->protocol_data();
+    MYSQL_session* session = &m_shared_data;
 
     switch (auth_val)
     {
@@ -799,7 +798,7 @@ void MySQLClientProtocol::handle_authentication_errors(DCB* generic_dcb, int aut
     case MXS_AUTH_FAILED:
         MXS_DEBUG("authentication failed. fd %d, state = MYSQL_FAILED_AUTH.", dcb->fd());
         /** Send error 1045 to client */
-        fail_str = create_auth_fail_str(session->user,
+        fail_str = create_auth_fail_str(m_shared_data.user,
                                         dcb->remote().c_str(),
                                         session->auth_token_len > 0,
                                         session->db,
@@ -814,7 +813,7 @@ void MySQLClientProtocol::handle_authentication_errors(DCB* generic_dcb, int aut
     default:
         MXS_DEBUG("authentication failed. fd %d, state unrecognized.", dcb->fd());
         /** Send error 1045 to client */
-        fail_str = create_auth_fail_str(session->user,
+        fail_str = create_auth_fail_str(m_shared_data.user,
                                         dcb->remote().c_str(),
                                         session->auth_token_len > 0,
                                         session->db,
@@ -837,22 +836,6 @@ int MySQLClientProtocol::perform_authentication(DCB* generic_dcb, GWBUF* read_bu
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
     MXB_AT_DEBUG(check_packet(dcb, read_buffer, nbytes_read));
 
-    /** Allocate the shared session structure */
-    if (dcb->protocol_data() == NULL)
-    {
-        MYSQL_session* data = mysql_session_alloc();
-
-        if (!data)
-        {
-            DCB::close(dcb);
-            return 1;
-        }
-
-        // TODO: Why can't this be provided when the ClientDCB is created
-        // TODO: or be part of the client protocol?
-        dcb->protocol_data_set(data);
-    }
-
     /** Read the client's packet sequence and increment that by one */
     uint8_t next_sequence;
     gwbuf_copy_data(read_buffer, MYSQL_SEQ_OFFSET, 1, &next_sequence);
@@ -871,7 +854,7 @@ int MySQLClientProtocol::perform_authentication(DCB* generic_dcb, GWBUF* read_bu
     }
 
     next_sequence++;
-    ((MYSQL_session*)(dcb->protocol_data()))->next_sequence = next_sequence;
+    m_shared_data.next_sequence = next_sequence;
 
     /**
      * The first step in the authentication process is to extract the
@@ -911,8 +894,7 @@ int MySQLClientProtocol::perform_authentication(DCB* generic_dcb, GWBUF* read_bu
     if (MXS_AUTH_SUCCEEDED == auth_val)
     {
         /** User authentication complete, copy the username to the DCB */
-        MYSQL_session* ses = (MYSQL_session*)dcb->protocol_data();
-        dcb->session()->set_user(ses->user);
+        dcb->session()->set_user(m_shared_data.user);
 
         protocol->protocol_auth_state = MXS_AUTH_STATE_RESPONSE_SENT;
         /**
@@ -1116,8 +1098,8 @@ bool MySQLClientProtocol::reauthenticate_client(MXS_SESSION* session, GWBUF* pac
         proto->charset |= (*it++) << 8;
 
         // Copy the new username to the session data
-        MYSQL_session* data = (MYSQL_session*)client_dcb->protocol_data();
-        strcpy(data->user, user.c_str());
+        MYSQL_session* data = &m_shared_data;
+        strcpy(m_shared_data.user, user.c_str());
         strcpy(data->db, db.c_str());
 
         std::vector<uint8_t> payload;
@@ -1126,8 +1108,8 @@ bool MySQLClientProtocol::reauthenticate_client(MXS_SESSION* session, GWBUF* pac
         gwbuf_copy_data(packetbuf, MYSQL_HEADER_LEN, payloadlen, &payload[0]);
 
         int rc = client_auth->reauthenticate(
-            client_dcb, data->user, &payload[0], payload.size(),
-            proto->scramble, sizeof(proto->scramble), data->client_sha1, sizeof(data->client_sha1));
+                client_dcb, m_shared_data.user, &payload[0], payload.size(),
+                proto->scramble, sizeof(proto->scramble), data->client_sha1, sizeof(data->client_sha1));
 
         if (rc == MXS_AUTH_SUCCEEDED)
         {
@@ -1211,8 +1193,7 @@ bool MySQLClientProtocol::handle_change_user(bool* changed_user, GWBUF** packetb
     if (!proto->changing_user && proto->reply().command() == MXS_COM_CHANGE_USER)
     {
         // Track the COM_CHANGE_USER progress at the session level
-        auto s = (MYSQL_session*)proto->session()->client_dcb->protocol_data();
-        s->changing_user = true;
+        m_shared_data.changing_user = true;
 
         *changed_user = true;
         send_auth_switch_request_packet(proto->session()->client_dcb);
@@ -1927,7 +1908,7 @@ void MySQLClientProtocol::hangup(DCB* generic_dcb)
 
         int seqno = 1;
 
-        if (dcb->protocol_data() && ((MYSQL_session*)dcb->protocol_data())->changing_user)
+        if (m_shared_data.changing_user)
         {
             // In case a COM_CHANGE_USER is in progress, we need to send the error with the seqno 3
             seqno = 3;
@@ -2410,6 +2391,33 @@ void MySQLClientProtocol::mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const
 
     auto info = std::make_shared<UserKillInfo>(user, ss.str(), issuer);
     execute_kill(issuer, info);
+}
+
+MYSQL_session* MySQLClientProtocol::session_data()
+{
+    return &m_shared_data;
+}
+
+std::string MySQLClientProtocol::current_db() const
+{
+    return m_shared_data.db;
+}
+
+MYSQL_session::MYSQL_session(const MYSQL_session& rhs)
+{
+    memcpy(client_sha1, rhs.client_sha1, sizeof(client_sha1));
+    memcpy(user, rhs.user, sizeof(user));
+    memcpy(db, rhs.db, sizeof(db));
+    auth_token = new uint8_t[auth_token_len];
+    memcpy(auth_token, rhs.auth_token, rhs.auth_token_len);
+    auth_token_len = rhs.auth_token_len;
+    next_sequence = rhs.next_sequence;
+    changing_user = rhs.changing_user;
+}
+
+MYSQL_session::~MYSQL_session()
+{
+    delete auth_token;
 }
 
 /**
