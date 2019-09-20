@@ -15,6 +15,7 @@
 #include <maxscale/ccdefs.hh>
 
 #include <atomic>
+#include <list>
 #include <mutex>
 #include <type_traits>
 #include <unordered_map>
@@ -639,6 +640,8 @@ public:
         return m_dcbs;
     }
 
+    BackendDCB* get_backend_dcb(SERVER* pServer);
+
 private:
     // DCB::Manager
     void add(DCB* pDcb) override;
@@ -676,6 +679,8 @@ private:
     void check_systemd_watchdog();
     void start_watchdog_workaround();
     void stop_watchdog_workaround();
+    void evict_expired_dcbs();
+    int evict_expired_dcbs(SERVER*);
 
     static uint32_t epoll_instance_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
     uint32_t        handle_epoll_events(uint32_t events);
@@ -685,6 +690,43 @@ private:
     std::atomic<bool>         m_alive;              /*< Set to true in epoll_tick(), false on
                                                      * notification. */
     WatchdogNotifier* m_pWatchdog_notifier;         /*< Watchdog notifier, if systemd enabled. */
+
+    class PersistentEntry
+    {
+    public:
+        PersistentEntry(BackendDCB* pDcb);
+        ~PersistentEntry();
+
+        PersistentEntry(const PersistentEntry&) = delete;
+        PersistentEntry& operator = (const PersistentEntry&) = delete;
+
+        bool hanged_up() const
+        {
+            return m_pDcb->hanged_up();
+        }
+
+        time_t created() const
+        {
+            return m_created;
+        }
+
+        BackendDCB* release_dcb()
+        {
+            BackendDCB* pDcb = m_pDcb;
+            m_pDcb = nullptr;
+            return pDcb;
+        }
+
+    private:
+        time_t      m_created; /*< Time when entry was created. */
+        BackendDCB* m_pDcb;
+    };
+
+    using PersistentEntries         = std::list<PersistentEntry>;
+    using PersistentEntriesByServer = std::map<SERVER*, PersistentEntries>;
+
+    PersistentEntriesByServer       m_persistent_entries_by_server;
+    std::unordered_set<BackendDCB*> m_being_evicted;
 };
 
 using WatchdogWorkaround = RoutingWorker::WatchdogWorkaround;
