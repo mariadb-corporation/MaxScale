@@ -130,6 +130,9 @@ XA COMMIT 'xid';
 XA ROLLBACK 'xid'
 XA RECOVER 'xid';
 
+# MXS-2688
+SET @saved_cs_client= @@character_set_client;
+
 # MXS-2432
 RESET QUERY CACHE;
 RESET MASTER;

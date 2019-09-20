@@ -894,6 +894,9 @@ const char* qc_op_to_string(qc_query_op_t op)
     case QUERY_OP_SELECT:
         return "QUERY_OP_SELECT";
 
+    case QUERY_OP_SET:
+        return "QUERY_OP_SET";
+
     case QUERY_OP_SHOW:
         return "QUERY_OP_SHOW";
 

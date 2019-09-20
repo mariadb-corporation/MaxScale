@@ -120,6 +120,7 @@ enum qc_query_op_t
     QUERY_OP_LOAD,
     QUERY_OP_REVOKE,
     QUERY_OP_SELECT,
+    QUERY_OP_SET,
     QUERY_OP_SHOW,
     QUERY_OP_TRUNCATE,
     QUERY_OP_UPDATE,
