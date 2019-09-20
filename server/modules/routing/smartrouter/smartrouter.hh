@@ -19,18 +19,23 @@
  */
 
 #include "perf_info.hh"
+#include "perf_updater.hh"
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/config2.hh>
 #include <maxscale/router.hh>
 
+#include <future>
+
 class SmartRouterSession;
 
-/** class Smartrouter. Contains and manages the performance info.
+/** class Smartrouter. Manages the performance info reads and updates.
  */
 class SmartRouter : public mxs::Router<SmartRouter, SmartRouterSession>
 {
 public:
+    ~SmartRouter();
+
     class Config : public config::Configuration
     {
     public:
@@ -77,21 +82,19 @@ public:
         return m_config;
     }
 
-    /** Thread safe find a PerformanceInfo. Some entry expiration handling is done here.
+    /** Find a PerformanceInfo, if not found returns a default initialized PerformanceInfo.
      */
     PerformanceInfo perf_find(const std::string& canonical);
 
-    /** Thread safe update/insert a PerformanceInfo. Some entry expiration handling is done here.
+    /** Update SharedData
      */
-    void perf_update(const std::string& canonical, const PerformanceInfo& perf);
+    void perf_update(const std::string& canonical, PerformanceInfo perf);
 
 private:
     SmartRouter(SERVICE* service);
 
     Config m_config;
 
-    using Perfs = std::unordered_map<std::string, PerformanceInfo>;
-
-    std::mutex m_perf_mutex;
-    Perfs      m_perfs;
+    PerformanceInfoUpdater m_updater;
+    std::future<void>      m_updater_future;
 };

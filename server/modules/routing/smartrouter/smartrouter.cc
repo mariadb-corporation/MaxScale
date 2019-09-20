@@ -128,6 +128,13 @@ SmartRouter::SmartRouter(SERVICE* service)
     : mxs::Router<SmartRouter, SmartRouterSession>(service)
     , m_config(service->name())
 {
+    m_updater_future = std::async(std::launch::async, &PerformanceInfoUpdater::run, &m_updater);
+}
+
+SmartRouter::~SmartRouter()
+{
+    m_updater.stop();
+    m_updater_future.get();
 }
 
 SmartRouterSession* SmartRouter::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
@@ -185,34 +192,56 @@ static std::array<maxbase::Duration, 4> eviction_schedules =
 
 PerformanceInfo SmartRouter::perf_find(const std::string& canonical)
 {
-    std::unique_lock<std::mutex> guard(m_perf_mutex);
+    using namespace maxbase;
 
-    auto perf_it = m_perfs.find(canonical);
-    if (perf_it != end(m_perfs) && !perf_it->second.is_updating())
+    auto pShared_data = m_updater.get_shared_data_by_order(mxs_rworker_get_current_id());
+    auto sShared_ptr = make_shared_data_ptr(pShared_data);
+
+    auto pContainer = sShared_ptr.get();
+    auto perf_it = pContainer->find(canonical);
+
+    PerformanceInfo ret;
+
+    if (perf_it != end(*pContainer))
     {
-        if (perf_it->second.age() > eviction_schedules[perf_it->second.eviction_schedule()])
+        if (not perf_it->second.is_updating()
+            && perf_it->second.age() > eviction_schedules[perf_it->second.eviction_schedule()])
         {
+            PerformanceInfo updt_entry = perf_it->second;
+
+            // Only trigger this worker to re-measure. Since the update is SharedData, multiple
+            // workers may still re-measure if they get the same canonical at about the same time.
+            // The return value is the default constructed ret.
+            updt_entry.set_updating(true);
+
             MXS_SINFO("Trigger re-measure, schedule "
-                      << eviction_schedules[perf_it->second.eviction_schedule()]
-                      << ", perf: " << perf_it->second.target()->name()
-                      << ", " << perf_it->second.duration() << ", "
+                      << eviction_schedules[updt_entry.eviction_schedule()]
+                      << ", perf: " << updt_entry.target()->name()
+                      << ", " << updt_entry.duration() << ", "
                       << show_some(canonical));
 
-            // Not actually evicting, but trigger a re-measure only for this caller (this worker).
-            perf_it->second.set_updating(true);
-            perf_it = end(m_perfs);
+            pShared_data->send_update({canonical, updt_entry});
+        }
+        else
+        {
+            ret = perf_it->second;
         }
     }
 
-    return perf_it != end(m_perfs) ? perf_it->second : PerformanceInfo();
+    return ret;
 }
 
-void SmartRouter::perf_update(const std::string& canonical, const PerformanceInfo& perf)
+void SmartRouter::perf_update(const std::string& canonical, PerformanceInfo perf)
 {
-    std::unique_lock<std::mutex> guard(m_perf_mutex);
+    using namespace maxbase;
 
-    auto perf_it = m_perfs.find(canonical);
-    if (perf_it != end(m_perfs))
+    auto pShared_data = m_updater.get_shared_data_by_order(mxs_rworker_get_current_id());
+    auto sShared_ptr = make_shared_data_ptr(pShared_data);
+
+    auto pContainer = sShared_ptr.get();
+    auto perf_it = pContainer->find(canonical);
+
+    if (perf_it != end(*pContainer))
     {
         MXS_SINFO("Update perf: from "
                   << perf_it->second.target()->name() << ", " << perf_it->second.duration()
@@ -220,14 +249,14 @@ void SmartRouter::perf_update(const std::string& canonical, const PerformanceInf
                   << ", " << show_some(canonical));
 
         size_t schedule = perf_it->second.eviction_schedule();
-        perf_it->second = perf;
-        perf_it->second.set_eviction_schedule(std::min(++schedule, eviction_schedules.size() - 1));
-        perf_it->second.set_updating(false);
+        perf.set_eviction_schedule(std::min(++schedule, eviction_schedules.size() - 1));
+        perf.set_updating(false);
+        pShared_data->send_update({canonical, perf});
     }
     else
     {
-        m_perfs.insert({canonical, perf});
-        MXS_SDEBUG("Stored new perf: " << perf.target()->name() << ", " << perf.duration()
-                                       << ", " << show_some(canonical));
+        pShared_data->send_update({canonical, perf});
+        MXS_SDEBUG("Sent new perf: " << perf.target()->name() << ", " << perf.duration()
+                                     << ", " << show_some(canonical));
     }
 }
