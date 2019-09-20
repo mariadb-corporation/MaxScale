@@ -342,7 +342,7 @@ static unsigned int dcb_readq_length(DCB* dcb)
  */
 static inline void dcb_readq_prepend(DCB* dcb, GWBUF* buffer)
 {
-    dcb->readq = gwbuf_append(buffer, dcb->readq);
+    dcb->readq = dcb->readq ? gwbuf_append(buffer, dcb->readq) : buffer;
 }
 
 /**
