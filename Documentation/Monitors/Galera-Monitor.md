@@ -1,6 +1,6 @@
 # Galera Monitor
 
-[[TOC]]
+[TOC]
 
 ## Overview
 
