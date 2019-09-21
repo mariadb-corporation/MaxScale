@@ -148,7 +148,9 @@ MessageQueue* MessageQueue::create(Handler* pHandler)
          */
         if (fcntl(fds[0], F_SETPIPE_SZ, this_unit.pipe_max_size) == -1)
         {
-            MXB_WARNING("Failed to increase pipe buffer size to '%d': %d, %s",
+            MXB_WARNING("Failed to increase pipe buffer size to '%d': %d, %s. "
+                        "Increase pipe-user-pages-soft (sysctl fs.pipe-user-pages-soft) "
+                        "or reduce pipe-max-size (sysctl fs.pipe-max-size).",
                         this_unit.pipe_max_size, errno, mxb_strerror(errno));
         }
         else
