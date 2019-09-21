@@ -17,10 +17,12 @@
 #include <string.h>
 #include <unistd.h>
 #include <fstream>
+#include <mutex>
 #include <maxbase/assert.h>
 #include <maxbase/log.h>
 #include <maxbase/string.h>
 #include <maxbase/worker.hh>
+#include <maxbase/format.hh>
 
 namespace
 {
@@ -147,9 +149,20 @@ MessageQueue* MessageQueue::create(Handler* pHandler)
         if (fcntl(fds[0], F_SETPIPE_SZ, this_unit.pipe_max_size) == -1)
         {
             MXB_WARNING("Failed to increase pipe buffer size to '%d': %d, %s",
-                        this_unit.pipe_max_size,
-                        errno,
-                        mxb_strerror(errno));
+                        this_unit.pipe_max_size, errno, mxb_strerror(errno));
+        }
+        else
+        {
+            static int current_pipe_max_size = 0;
+            static std::mutex pipe_size_lock;
+            std::lock_guard<std::mutex> guard(pipe_size_lock);
+
+            if (current_pipe_max_size == 0)
+            {
+                current_pipe_max_size = this_unit.pipe_max_size;
+                MXB_NOTICE("Worker message queue size: %s",
+                           mxb::to_binary_size(this_unit.pipe_max_size).c_str());
+            }
         }
 #endif
         pThis = new(std::nothrow) MessageQueue(pHandler, read_fd, write_fd);
@@ -219,7 +232,8 @@ bool MessageQueue::post(const Message& message) const
 
         if (n == -1)
         {
-            MXB_ERROR("Failed to write message: %d, %s", errno, mxb_strerror(errno));
+            MXB_ERROR("Failed to write message to worker %d: %d, %s",
+                      m_pWorker->id(), errno, mxb_strerror(errno));
 
             static bool warn_pipe_buffer_size = true;
 

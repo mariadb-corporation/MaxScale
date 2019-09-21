@@ -103,7 +103,7 @@ public:
      *
      * @return The id of the routing worker.
      */
-    int id() const
+    int id() const override
     {
         return m_id;
     }
