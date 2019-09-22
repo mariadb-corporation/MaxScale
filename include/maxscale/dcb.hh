@@ -354,7 +354,7 @@ public:
      */
     void readq_prepend(GWBUF* buffer)
     {
-        m_readq = gwbuf_append(buffer, m_readq);
+        m_readq = m_readq ? gwbuf_append(buffer, m_readq) : buffer;
     }
 
     /**
