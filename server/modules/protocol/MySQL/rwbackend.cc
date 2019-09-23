@@ -388,7 +388,11 @@ void RWBackend::process_packets(GWBUF* result)
  */
 void RWBackend::process_reply(GWBUF* buffer)
 {
-    if (current_command() == MXS_COM_STMT_FETCH)
+    if (current_command() == MXS_COM_BINLOG_DUMP)
+    {
+        // Treat COM_BINLOG_DUMP like a response that never ends
+    }
+    else if (current_command() == MXS_COM_STMT_FETCH)
     {
         // If the server responded with an error, n_eof > 0
         if (consume_fetched_rows(buffer))
