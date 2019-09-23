@@ -123,8 +123,8 @@ DCB::DCB(int fd,
     , m_handler(handler)
     , m_last_read(mxs_clock())
     , m_last_write(mxs_clock())
-    , m_role(role)
     , m_manager(manager)
+    , m_role(role)
 {
     if (m_manager)
     {
@@ -237,13 +237,13 @@ BackendDCB* BackendDCB::take_from_connection_pool(SERVER* s, MXS_SESSION* sessio
 
     DCB* dcb = nullptr;
 
-    if (server->persistent_conns_enabled())
+    if (server->persistent_conns_enabled() && server->is_running())
     {
         // TODO: figure out if this can even be NULL
         if (const char* user = session_get_user(session))
         {
-            auto owner = static_cast<RoutingWorker*>(session->client_dcb->owner);
-            auto dcb = server->get_persistent_dcb(owner->id());
+            auto worker = static_cast<RoutingWorker*>(session->client_dcb->owner);
+            auto dcb = worker->get_backend_dcb(server);
 
             if (dcb)
             {
@@ -1012,49 +1012,6 @@ void DCB::destroy()
     DCB::free(this);
 }
 
-/**
- * Add DCB to persistent pool if it qualifies, close otherwise
- *
- * @param dcb   The DCB to go to persistent pool or be closed
- * @return      bool - whether the DCB was added to the pool
- *
- */
-// static
-bool BackendDCB::maybe_add_persistent(BackendDCB* dcb)
-{
-    RoutingWorker* owner = static_cast<RoutingWorker*>(dcb->owner);
-    Server* server = static_cast<Server*>(dcb->m_server);
-
-    if ((dcb->m_protocol->established(dcb))
-        && server
-        && dcb->session()
-        && session_valid_for_pool(dcb->session())
-        && server->persistpoolmax()
-        && server->is_running()
-        && !dcb->m_hanged_up
-        && persistent_clean_count(dcb, owner->id(), false) < server->persistpoolmax())
-    {
-        if (!mxb::atomic::add_limited(&server->pool_stats.n_persistent, 1, (int)server->persistpoolmax()))
-        {
-            return false;
-        }
-
-        MXS_DEBUG("Adding DCB to persistent pool.");
-        dcb->m_persistentstart = time(NULL);
-        session_unlink_backend_dcb(dcb->session(), dcb);
-
-        dcb->clear();
-
-        dcb->m_nextpersistent = server->persistent[owner->id()];
-        server->persistent[owner->id()] = dcb;
-        MXB_AT_DEBUG(int rc = ) mxb::atomic::add(&server->stats().n_current, -1, mxb::atomic::RELAXED);
-        mxb_assert(rc > 0);
-        return true;
-    }
-
-    return false;
-}
-
 void BackendDCB::reset(MXS_SESSION* session)
 {
     clear();
@@ -1600,74 +1557,6 @@ void BackendDCB::hangup(const SERVER* server)
     intptr_t arg2 = (intptr_t)server;
 
     RoutingWorker::broadcast_message(MXB_WORKER_MSG_CALL, arg1, arg2);
-}
-
-/**
- * Check persistent pool for expiry or excess size and count
- *
- * @param dcb           The DCB being closed.
- * @param id            Thread ID
- * @param cleanall      Boolean, if true the whole pool is cleared for the
- *                      server related to the given DCB
- * @return              A count of the DCBs remaining in the pool
- */
-int BackendDCB::persistent_clean_count(BackendDCB* dcb, int id, bool cleanall)
-{
-    int count = 0;
-    if (dcb)
-    {
-        Server* server = static_cast<Server*>(dcb->m_server);
-        BackendDCB* previousdcb = NULL;
-        BackendDCB* persistentdcb, * nextdcb;
-        BackendDCB* disposals = NULL;
-
-        persistentdcb = server->persistent[id];
-        while (persistentdcb)
-        {
-            nextdcb = persistentdcb->m_nextpersistent;
-            if (cleanall
-                || persistentdcb->m_hanged_up
-                || count >= server->persistpoolmax()
-                || !(persistentdcb->m_server->status() & SERVER_RUNNING)
-                || (time(NULL) - persistentdcb->m_persistentstart) > server->persistmaxtime())
-            {
-                /* Remove from persistent pool */
-                if (previousdcb)
-                {
-                    previousdcb->m_nextpersistent = nextdcb;
-                }
-                else
-                {
-                    server->persistent[id] = nextdcb;
-                }
-                /* Add removed DCBs to disposal list for processing outside spinlock */
-                persistentdcb->m_nextpersistent = disposals;
-                disposals = persistentdcb;
-                mxb::atomic::add(&server->pool_stats.n_persistent, -1);
-            }
-            else
-            {
-                count++;
-                previousdcb = persistentdcb;
-            }
-            persistentdcb = nextdcb;
-        }
-        server->persistmax = MXS_MAX(server->persistmax, count);
-
-        /** Call possible callback for this DCB in case of close */
-        while (disposals)
-        {
-            nextdcb = disposals->m_nextpersistent;
-            disposals->m_persistentstart = -1;
-            if (State::POLLING == disposals->state())
-            {
-                disposals->stop_polling_and_shutdown();
-            }
-            DCB::close(disposals);
-            disposals = nextdcb;
-        }
-    }
-    return count;
 }
 
 struct dcb_role_count
@@ -2706,34 +2595,13 @@ bool BackendDCB::prepare_for_destruction()
 {
     bool prepared = true;
 
-    if (m_persistentstart > 0)
+    if (m_manager)
     {
-        // A DCB in the persistent pool.
+        prepared = static_cast<BackendDCB::Manager*>(m_manager)->can_be_destroyed(this);
 
-        // TODO: This dcb will now actually be closed when DCB::persistent_clean_count() is
-        // TODO: called by either maybe_add_persistent() - another dcb is added to the
-        // TODO: persistent pool - or server_get_persistent() - get a dcb from the persistent
-        // TODO: pool - is called. There is no reason not to just remove this dcb from the
-        // TODO: persistent pool here and now, and then close it immediately.
-        m_hanged_up = true;
-
-        prepared = false;
-    }
-    else if (m_state == State::POLLING      // Being polled
-             && m_persistentstart == 0)      // Not already in (> 0) or being evicted from (-1) from the pool.
-    {
-        if (maybe_add_persistent(this))
+        if (!prepared)
         {
-            // Added to the pool, so we pretend close from never having been called
-            // and prevent the instance from being destructed.
             m_nClose = 0;
-            prepared = false;
-        }
-        else
-        {
-            MXB_AT_DEBUG(int rc = ) mxb::atomic::add(&m_server->stats().n_current, -1,
-                                                     mxb::atomic::RELAXED);
-            mxb_assert(rc > 0);
         }
     }
 

@@ -110,15 +110,6 @@ public:
     }
 
     /**
-     * Get a DCB from the persistent connection pool, if possible
-     *
-     * @param id          Thread ID
-     *
-     * @return A DCB or NULL if no connection is found
-     */
-    BackendDCB* get_persistent_dcb(int id);
-
-    /**
      * Print server details to a dcb.
      *
      * @param dcb Dcb to print to

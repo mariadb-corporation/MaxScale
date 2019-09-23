@@ -541,6 +541,7 @@ protected:
     int64_t               m_last_write;                 /**< Last time the DCB sent data */
     uint32_t              m_nClose = 0;                 /**< How many times dcb_close has been called. */
     bool                  m_hanged_up = false;          /**< Has thethis can be called only once */
+    Manager*              m_manager;                    /**< The DCB manager to use */
 
 private:
     friend class Manager;
@@ -568,8 +569,7 @@ private:
     void add_event(uint32_t ev);
 
 private:
-    Role     m_role;        /**< The role of the DCB */
-    Manager* m_manager;     /**< The DCB manager to use */
+    Role m_role;        /**< The role of the DCB */
 };
 
 namespace maxscale
@@ -701,11 +701,6 @@ public:
         return m_persistentstart > 0;
     }
 
-    static int persistent_clean_count(BackendDCB* dcb, int id, bool cleanall);
-
-    // TODO: Temporarily public.
-    BackendDCB* m_nextpersistent = nullptr;     /**< Next DCB in the persistent pool for SERVER */
-
     std::unique_ptr<mxs::BackendProtocol>      m_protocol;       /**< The protocol session */
 
 private:
@@ -723,8 +718,6 @@ private:
                                                  MXS_SESSION* session,
                                                  mxs::Component* upstream);
 
-    static bool maybe_add_persistent(BackendDCB* dcb);
-
     bool release_from(MXS_SESSION* session) override;
     bool prepare_for_destruction() override;
 
@@ -732,6 +725,7 @@ private:
 
 
     SERVER* const m_server;             /**< The associated backend server */
+public: // Temporarily public
     time_t  m_persistentstart = 0;      /**<    0: Not in the persistent pool.
                                          *      -1: Evicted from the persistent pool and being closed.
                                          *   non-0: Time when placed in the persistent pool.

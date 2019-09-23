@@ -182,44 +182,6 @@ Server* Server::create_test_server()
     return new Server(name);
 }
 
-BackendDCB* Server::get_persistent_dcb(int id)
-{
-    Server* server = this;
-    if (server->persistent[id]
-        && BackendDCB::persistent_clean_count(server->persistent[id], id, false)
-        && server->persistent[id]   // Check after cleaning
-        && server->is_running())
-    {
-        BackendDCB* dcb = server->persistent[id];
-        BackendDCB* previous = nullptr;
-
-        while (dcb)
-        {
-            mxb_assert(dcb->role() == DCB::Role::BACKEND);
-            mxb_assert(dcb->server());
-
-            if (!dcb->hanged_up())
-            {
-                if (NULL == previous)
-                {
-                    server->persistent[id] = dcb->m_nextpersistent;
-                }
-                else
-                {
-                    previous->m_nextpersistent = dcb->m_nextpersistent;
-                }
-                mxb::atomic::add(&server->pool_stats.n_persistent, -1);
-                mxb::atomic::add(&server->stats().n_current, 1, mxb::atomic::RELAXED);
-                return dcb;
-            }
-
-            previous = dcb;
-            dcb = dcb->m_nextpersistent;
-        }
-    }
-    return NULL;
-}
-
 void Server::printServer()
 {
     printf("Server %p\n", this);
@@ -247,8 +209,7 @@ public:
         RoutingWorker& rworker = static_cast<RoutingWorker&>(worker);
         mxb_assert(&rworker == RoutingWorker::get_current());
 
-        int thread_id = rworker.id();
-        BackendDCB::persistent_clean_count(m_server->persistent[thread_id], thread_id, false);
+        rworker.evict_dcbs(const_cast<Server*>(m_server), RoutingWorker::Evict::EXPIRED);
     }
 
 private:

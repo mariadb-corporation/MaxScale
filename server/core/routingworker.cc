@@ -607,7 +607,7 @@ BackendDCB* RoutingWorker::get_backend_dcb(SERVER* pS)
 
     if (pServer->persistent_conns_enabled())
     {
-        evict_expired_dcbs(pServer);
+        evict_dcbs(pServer, Evict::EXPIRED);
 
         PersistentEntries& persistent_entries = m_persistent_entries_by_server[pServer];
 
@@ -615,6 +615,9 @@ BackendDCB* RoutingWorker::get_backend_dcb(SERVER* pS)
         {
             pDcb = persistent_entries.front().release_dcb();
             persistent_entries.pop_front();
+
+            mxb::atomic::add(&pServer->pool_stats.n_persistent, -1);
+            mxb::atomic::add(&pServer->stats().n_current, 1, mxb::atomic::RELAXED);
         }
     }
 
@@ -632,13 +635,14 @@ bool RoutingWorker::can_be_destroyed(BackendDCB* pDcb)
         Server* pServer = static_cast<Server*>(pDcb->server());
         int persistpoolmax = pServer->persistpoolmax();
 
-        if (pDcb->protocol()->established(pDcb)
+        if (pDcb->state() == DCB::State::POLLING
+            && pDcb->protocol()->established(pDcb)
             && pDcb->session()
             && session_valid_for_pool(pDcb->session())
             && persistpoolmax > 0
             && pServer->is_running()
             && !pDcb->hanged_up()
-            && evict_expired_dcbs(pServer) < persistpoolmax)
+            && evict_dcbs(pServer, Evict::EXPIRED) < persistpoolmax)
         {
             if (mxb::atomic::add_limited(&pServer->pool_stats.n_persistent, 1, persistpoolmax))
             {
@@ -646,6 +650,7 @@ bool RoutingWorker::can_be_destroyed(BackendDCB* pDcb)
 
                 PersistentEntries& persistent_entries = m_persistent_entries_by_server[pServer];
 
+                pDcb->m_persistentstart = time(nullptr);
                 persistent_entries.emplace_back(pDcb);
 
                 MXB_AT_DEBUG(int rc =)mxb::atomic::add(&pServer->stats().n_current, -1, mxb::atomic::RELAXED);
@@ -659,15 +664,15 @@ bool RoutingWorker::can_be_destroyed(BackendDCB* pDcb)
     return rv;
 }
 
-void RoutingWorker::evict_expired_dcbs()
+void RoutingWorker::evict_dcbs(Evict evict)
 {
     for (auto& i : m_persistent_entries_by_server)
     {
-        evict_expired_dcbs(i.first);
+        evict_dcbs(i.first, evict);
     }
 }
 
-int RoutingWorker::evict_expired_dcbs(SERVER* pS)
+int RoutingWorker::evict_dcbs(SERVER* pS, Evict evict)
 {
     mxb_assert(m_being_evicted.empty());
 
@@ -690,7 +695,7 @@ int RoutingWorker::evict_expired_dcbs(SERVER* pS)
             PersistentEntry& entry = *j;
 
             bool hanged_up = entry.hanged_up();
-            bool expired = now - entry.created() > persistmaxtime;
+            bool expired = (evict == Evict::ALL) || (now - entry.created() > persistmaxtime);
             bool too_many = (count > persistpoolmax);
 
             if (hanged_up || expired || too_many)
@@ -726,6 +731,7 @@ int RoutingWorker::evict_expired_dcbs(SERVER* pS)
         }
         // This will cause can_be_destroyed() to be called. It will not be considered
         // for the pool since it will be found in m_being_evicted.
+        pDcb->m_persistentstart = -1;
         DCB::close(pDcb);
     }
 
@@ -751,6 +757,8 @@ bool RoutingWorker::pre_run()
 
 void RoutingWorker::post_run()
 {
+    evict_dcbs(Evict::ALL);
+
     modules_thread_finish();
     qc_thread_end(QC_INIT_SELF);
     // TODO: Add service_thread_finish().

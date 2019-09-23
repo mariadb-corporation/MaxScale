@@ -642,6 +642,15 @@ public:
 
     BackendDCB* get_backend_dcb(SERVER* pServer);
 
+    enum class Evict
+    {
+        EXPIRED,
+        ALL
+    };
+
+    void evict_dcbs(Evict evict);
+    int evict_dcbs(SERVER* server, Evict evict);
+
 private:
     // DCB::Manager
     void add(DCB* pDcb) override;
@@ -679,8 +688,6 @@ private:
     void check_systemd_watchdog();
     void start_watchdog_workaround();
     void stop_watchdog_workaround();
-    void evict_expired_dcbs();
-    int evict_expired_dcbs(SERVER*);
 
     static uint32_t epoll_instance_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
     uint32_t        handle_epoll_events(uint32_t events);

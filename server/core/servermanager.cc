@@ -19,6 +19,7 @@
 #include <maxbase/format.hh>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/json_api.hh>
+#include <maxscale/routingworker.hh>
 
 #include "internal/monitormanager.hh"
 #include "internal/service.hh"
@@ -84,23 +85,17 @@ Server* ServerManager::create_server(const char* name, const MXS_CONFIG_PARAMETE
     return server;
 }
 
-
 void ServerManager::server_free(Server* server)
 {
     mxb_assert(server);
     this_unit.erase(server);
 
-    /* Clean up session and free the memory */
-    if (server->persistent)
-    {
-        int nthr = config_threadcount();
+    mxs::RoutingWorker::execute_concurrently([server](){
+            mxs::RoutingWorker* worker = mxs::RoutingWorker::get_current();
+            mxb_assert(worker);
 
-        for (int i = 0; i < nthr; i++)
-        {
-            BackendDCB::persistent_clean_count(server->persistent[i], i, true);
-        }
-        MXS_FREE(server->persistent);
-    }
+            worker->evict_dcbs(server, mxs::RoutingWorker::Evict::ALL);
+        });
 
     delete server;
 }
