@@ -61,8 +61,10 @@ static void test1()
     mxb_assert(fd >= 0);
 
     std::unique_ptr<mxs::ClientProtocol> client_protocol(MySQLClientProtocol::create(session, session));
+    auto pProtocol = client_protocol.get();
     auto dcb = ClientDCB::create(fd, "127.0.0.1", sockaddr_storage {},
                                  session, std::move(client_protocol), nullptr);
+    pProtocol->set_dcb(dcb);
 
     mxb_assert(dcb);
     mxb_assert(dcb->enable_events());

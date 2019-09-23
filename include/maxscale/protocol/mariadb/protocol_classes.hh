@@ -100,6 +100,8 @@ public:
     std::unique_ptr<mxs::BackendProtocol>
     create_backend_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component) override;
 
+    void set_dcb(DCB* dcb) override;
+
     static bool parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* kt_out,
                                  std::string* user_out);
     void mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t target_id, kill_type_t type);
@@ -144,6 +146,7 @@ private:
     bool          m_large_query {false};
     uint64_t      m_version {0};    /**< Numeric server version */
     mxs::Buffer   m_stored_query;   /**< Temporarily stored queries */
+    ClientDCB*    m_dcb {nullptr};  /**< Dcb used by this protocol connection */
 };
 
 class MySQLBackendProtocol : public MySQLProtocol, public mxs::BackendProtocol
@@ -188,6 +191,8 @@ public:
      * @param client_protocol New associated client protocol
      */
     void set_client_data(MySQLClientProtocol& client_protocol);
+
+    void set_dcb(DCB* dcb) override;
 
     uint64_t thread_id() const;
     uint32_t server_capabilities {0};   /**< Server capabilities TODO: private */
@@ -260,6 +265,7 @@ private:
     MXS_SESSION*   m_session {nullptr};     /**< Generic session */
     MYSQL_session* m_client_data {nullptr}; /**< Client-session shared data */
     GWBUF*         m_stored_query;          /*< Temporarily stored queries */
+    BackendDCB*    m_dcb {nullptr};         /**< Dcb used by this protocol connection */
 };
 
 bool     is_last_ok(MySQLBackendProtocol::Iter it);

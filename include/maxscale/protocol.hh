@@ -61,6 +61,8 @@ public:
     {
         return nullptr;
     }
+
+    virtual void set_dcb(DCB* dcb) = 0;
 };
 
 /**

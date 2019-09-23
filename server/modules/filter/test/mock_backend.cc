@@ -236,6 +236,11 @@ private:
             return nullptr;
         }
 
+        void set_dcb(DCB* dcb) override
+        {
+            // m_owner is set in ctor
+        }
+
     private:
         ResultSetDCB& m_owner;
     };

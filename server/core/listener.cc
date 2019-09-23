@@ -792,6 +792,7 @@ ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const 
     mxs::RoutingWorker* worker = mxs::RoutingWorker::get_current();
     mxb_assert(worker);
 
+    auto pProtocol = client_protocol.get();
     ClientDCB* client_dcb = ClientDCB::create(fd, host, *addr, session, std::move(client_protocol), worker);
     if (!client_dcb)
     {
@@ -801,6 +802,7 @@ ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const 
     else
     {
         session->set_client_dcb(client_dcb);
+        pProtocol->set_dcb(client_dcb);
 
         if (m_service->has_too_many_connections())
         {

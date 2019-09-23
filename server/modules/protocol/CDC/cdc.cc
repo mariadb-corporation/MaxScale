@@ -71,11 +71,13 @@ public:
     bool init_connection(DCB* dcb) override;
     void finish_connection(DCB* dcb) override;
 
+    void set_dcb(DCB* dcb) override;
+
 private:
     int  m_state {CDC_STATE_WAIT_FOR_AUTH}; /*< CDC protocol state */
 
     CDCClientAuthenticator m_authenticator;  /**< Client authentication data */
-
+    ClientDCB*             m_dcb {nullptr};  /**< Dcb used by this protocol connection */
 };
 
 class CDCProtocolModule : public mxs::ProtocolModule
@@ -167,16 +169,10 @@ MXS_MODULE* MXS_CREATE_MODULE()
 }
 }
 
-/**
- * Read event for EPOLLIN on the CDC protocol module.
- *
- * @param generic_dcb    The descriptor control block
- * @return
- */
-void CDCClientProtocol::ready_for_reading(DCB* generic_dcb)
+void CDCClientProtocol::ready_for_reading(DCB* event_dcb)
 {
-    mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
-    auto dcb = static_cast<ClientDCB*>(generic_dcb);
+    mxb_assert(m_dcb == event_dcb); // The protocol should only handle its own events.
+    auto dcb = m_dcb;
 
     MXS_SESSION* session = dcb->session();
     CDCClientProtocol* protocol = this;
@@ -266,15 +262,10 @@ void CDCClientProtocol::ready_for_reading(DCB* generic_dcb)
     }
 }
 
-/**
- * EPOLLOUT handler for the CDC protocol module.
- *
- * @param dcb    The descriptor control block
- * @return
- */
-void CDCClientProtocol::write_ready(DCB* dcb)
+void CDCClientProtocol::write_ready(DCB* event_dcb)
 {
-    dcb->writeq_drain();
+    mxb_assert(m_dcb == event_dcb);
+    m_dcb->writeq_drain();
 }
 
 /**
@@ -291,24 +282,16 @@ int32_t CDCClientProtocol::write(DCB* dcb, GWBUF* buffer)
     return dcb->writeq_append(buffer);
 }
 
-/**
- * Handler for the EPOLLERR event.
- *
- * @param dcb    The descriptor control block
- */
-void CDCClientProtocol::error(DCB* dcb)
+void CDCClientProtocol::error(DCB* event_dcb)
 {
-    DCB::close(dcb);
+    mxb_assert(m_dcb == event_dcb);
+    DCB::close(m_dcb);
 }
 
-/**
- * Handler for the EPOLLHUP event.
- *
- * @param dcb    The descriptor control block
- */
-void CDCClientProtocol::hangup(DCB* dcb)
+void CDCClientProtocol::hangup(DCB* event_dcb)
 {
-    DCB::close(dcb);
+    mxb_assert(m_dcb == event_dcb);
+    DCB::close(m_dcb);
 }
 
 bool CDCClientProtocol::init_connection(DCB* generic_dcb)
@@ -333,6 +316,11 @@ void CDCClientProtocol::finish_connection(DCB* dcb)
 CDCClientProtocol::CDCClientProtocol(CDCAuthenticatorModule& auth_module)
     : m_authenticator(auth_module)
 {
+}
+
+void CDCClientProtocol::set_dcb(DCB* dcb)
+{
+    m_dcb = static_cast<ClientDCB*>(dcb);
 }
 
 /**

@@ -1923,10 +1923,12 @@ BackendDCB* BackendDCB::create(SERVER* srv,
     BackendDCB* dcb = nullptr;
     if (protocol_session)
     {
+        auto pProtocol = protocol_session.get();
         dcb = new(std::nothrow) BackendDCB(srv, fd, session, std::move(protocol_session), manager);
         if (dcb)
         {
             session_link_backend_dcb(session, dcb);
+            pProtocol->set_dcb(dcb);
         }
     }
 

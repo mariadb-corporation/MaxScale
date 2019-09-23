@@ -125,8 +125,14 @@ private:
             return nullptr;
         }
 
+        void set_dcb(DCB* dcb) override
+        {
+            m_dcb = static_cast<Dcb*>(dcb);
+        }
+
     private:
         Dcb::Handler* m_pHandler;
+        Dcb*          m_dcb {nullptr};
     };
 
 public:

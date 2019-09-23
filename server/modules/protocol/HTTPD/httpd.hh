@@ -37,5 +37,10 @@ public:
 
     bool init_connection(DCB* dcb) override;
     void finish_connection(DCB* dcb) override;
+
+    void set_dcb(DCB* dcb) override;
+
+private:
+    ClientDCB* m_dcb {nullptr}; /**< Dcb used by this protocol connection */
 };
 

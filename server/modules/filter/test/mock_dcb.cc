@@ -25,6 +25,7 @@ Dcb::Dcb(MXS_SESSION* pSession,
     : ClientDCB(DCB::FD_CLOSED, zHost, DCB::Role::CLIENT, pSession)
     , m_protocol(pHandler)
 {
+    m_protocol.set_dcb(this);
 }
 
 Dcb::~Dcb()

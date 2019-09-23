@@ -1722,21 +1722,16 @@ void MySQLClientProtocol::parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data)
  * MXS_PROTOCOL_API implementation.
  */
 
-void MySQLClientProtocol::ready_for_reading(DCB* dcb)
+void MySQLClientProtocol::ready_for_reading(DCB* event_dcb)
 {
+    mxb_assert(m_dcb == event_dcb); // The protocol should only handle its own events.
     GWBUF* read_buffer = NULL;
     int return_code = 0;
     uint32_t nbytes_read = 0;
     uint32_t max_bytes = 0;
 
-    if (dcb->role() != DCB::Role::CLIENT)
-    {
-        MXS_ERROR("DCB must be a client handler for MySQL client protocol.");
-        return;
-    }
-
+    auto dcb = m_dcb;
     auto protocol = this;
-
     MXS_DEBUG("Protocol state: %s", gw_mysql_protocol_state2string(protocol->protocol_auth_state));
 
     /**
@@ -1859,25 +1854,27 @@ int32_t MySQLClientProtocol::write(DCB* dcb, GWBUF* queue)
     return dcb->writeq_append(queue);
 }
 
-void MySQLClientProtocol::write_ready(DCB* dcb)
+void MySQLClientProtocol::write_ready(DCB* event_dcb)
 {
-    mxb_assert(dcb->state() != DCB::State::DISCONNECTED);
-    if ((dcb->state() != DCB::State::DISCONNECTED) && (protocol_auth_state == MXS_AUTH_STATE_COMPLETE))
+    mxb_assert(m_dcb == event_dcb);
+    mxb_assert(m_dcb->state() != DCB::State::DISCONNECTED);
+    if ((m_dcb->state() != DCB::State::DISCONNECTED) && (protocol_auth_state == MXS_AUTH_STATE_COMPLETE))
     {
-        dcb->writeq_drain();
+        m_dcb->writeq_drain();
     }
 }
 
-void MySQLClientProtocol::error(DCB* dcb)
+void MySQLClientProtocol::error(DCB* event_dcb)
 {
-    mxb_assert(dcb->session()->state() != MXS_SESSION::State::STOPPING);
-    DCB::close(dcb);
+    mxb_assert(m_dcb == event_dcb);
+    mxb_assert(m_dcb->session()->state() != MXS_SESSION::State::STOPPING);
+    DCB::close(m_dcb);
 }
 
-void MySQLClientProtocol::hangup(DCB* generic_dcb)
+void MySQLClientProtocol::hangup(DCB* event_dcb)
 {
-    mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
-    auto dcb = static_cast<ClientDCB*>(generic_dcb);
+    mxb_assert(m_dcb == event_dcb);
+    auto dcb = m_dcb;
 
     // We simply close the DCB, this will propagate the closure to any
     // backend descriptors and perform the session cleanup.
@@ -2424,6 +2421,11 @@ void MySQLClientProtocol::track_current_command(GWBUF* buffer)
      * contains the latest command executed on this backend.
      */
     m_large_query = MYSQL_GET_PAYLOAD_LEN(data) == MYSQL_PACKET_LENGTH_MAX;
+}
+
+void MySQLClientProtocol::set_dcb(DCB* dcb)
+{
+    m_dcb = static_cast<ClientDCB*>(dcb);
 }
 
 MYSQL_session::MYSQL_session(const MYSQL_session& rhs)

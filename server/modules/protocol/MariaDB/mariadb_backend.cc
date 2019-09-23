@@ -305,15 +305,10 @@ void MySQLBackendProtocol::prepare_for_write(DCB* dcb, GWBUF* buffer)
  *******************************************************************************
  ******************************************************************************/
 
-/**
- * Backend Read Event for EPOLLIN on the MySQL backend protocol module
- * @param dcb   The backend Descriptor Control Block
- * @return 1 on operation, 0 for no action
- */
-void MySQLBackendProtocol::ready_for_reading(DCB* plain_dcb)
+void MySQLBackendProtocol::ready_for_reading(DCB* event_dcb)
 {
-    mxb_assert(plain_dcb->role() == DCB::Role::BACKEND);
-    BackendDCB* dcb = static_cast<BackendDCB*>(plain_dcb);
+    mxb_assert(m_dcb == event_dcb); // The protocol should only handle its own events.
+    auto dcb = m_dcb;
 
     mxb_assert(dcb->session());
 
@@ -903,14 +898,10 @@ int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
     return return_code;
 }
 
-/*
- * EPOLLOUT handler for the MySQL Backend protocol module.
- *
- * @param dcb   The descriptor control block
- * @return      1 in success, 0 in case of failure,
- */
-void MySQLBackendProtocol::write_ready(DCB* dcb)
+void MySQLBackendProtocol::write_ready(DCB* event_dcb)
 {
+    mxb_assert(m_dcb == event_dcb);
+    auto dcb = m_dcb;
     if (dcb->state() != DCB::State::POLLING)
     {
         /** Don't write to backend if backend_dcb is not in poll set anymore */
@@ -1080,8 +1071,10 @@ int32_t MySQLBackendProtocol::write(DCB* plain_dcb, GWBUF* queue)
  * closed and call DCB close function which triggers closing router session
  * and related backends (if any exists.
  */
-void MySQLBackendProtocol::error(DCB* dcb)
+void MySQLBackendProtocol::error(DCB* event_dcb)
 {
+    mxb_assert(m_dcb == event_dcb);
+    auto dcb = m_dcb;
     MXS_SESSION* session = dcb->session();
     mxb_assert(session);
 
@@ -1118,22 +1111,21 @@ void MySQLBackendProtocol::error(DCB* dcb)
  * closed and call DCB close function which triggers closing router session
  * and related backends (if any exists.
  *
- * @param dcb The current Backend DCB
+ * @param event_dcb The current Backend DCB
  * @return 1 always
  */
-void MySQLBackendProtocol::hangup(DCB* dcb)
+void MySQLBackendProtocol::hangup(DCB* event_dcb)
 {
-    mxb_assert(!dcb->is_closed());
-    MXS_SESSION* session = dcb->session();
+    mxb_assert(m_dcb == event_dcb);
+    mxb_assert(!m_dcb->is_closed());
+    MXS_SESSION* session = m_dcb->session();
     mxb_assert(session);
-
-    BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
 
     if (session->state() != MXS_SESSION::State::STARTED)
     {
         int error;
         int len = sizeof(error);
-        if (getsockopt(dcb->fd(), SOL_SOCKET, SO_ERROR, &error, (socklen_t*) &len) == 0)
+        if (getsockopt(m_dcb->fd(), SOL_SOCKET, SO_ERROR, &error, (socklen_t*) &len) == 0)
         {
             if (error != 0 && session->state() != MXS_SESSION::State::STOPPING)
             {
@@ -1145,7 +1137,7 @@ void MySQLBackendProtocol::hangup(DCB* dcb)
     }
     else
     {
-        do_handle_error(dcb, "Lost connection to backend server.");
+        do_handle_error(m_dcb, "Lost connection to backend server.");
     }
 }
 
@@ -2418,3 +2410,8 @@ MySQLBackendProtocol::~MySQLBackendProtocol()
 {
     gwbuf_free(m_stored_query);
 }
+void MySQLBackendProtocol::set_dcb(DCB* dcb)
+{
+    m_dcb = static_cast<BackendDCB*>(dcb);
+}
+

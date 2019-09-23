@@ -126,15 +126,10 @@ static std::string httpd_default_auth()
     return MXS_HTTPAUTH_AUTHENTICATOR_NAME;
 }
 
-/**
- * Read event for EPOLLIN on the httpd protocol module.
- *
- * @param generic_dcb   The descriptor control block
- * @return
- */
-void HTTPDClientProtocol::ready_for_reading(DCB* generic_dcb)
+void HTTPDClientProtocol::ready_for_reading(DCB* event_dcb)
 {
-    auto dcb = static_cast<ClientDCB*>(generic_dcb);
+    mxb_assert(m_dcb == event_dcb); // The protocol should only handle its own events.
+    auto dcb = m_dcb;
     MXS_SESSION* session = dcb->session();
 
     int numchars = 1;
@@ -244,15 +239,10 @@ void HTTPDClientProtocol::ready_for_reading(DCB* generic_dcb)
     return;
 }
 
-/**
- * EPOLLOUT handler for the HTTPD protocol module.
- *
- * @param dcb   The descriptor control block
- * @return
- */
-void HTTPDClientProtocol::write_ready(DCB* dcb)
+void HTTPDClientProtocol::write_ready(DCB* event_dcb)
 {
-    dcb->writeq_drain();
+    mxb_assert(m_dcb == event_dcb);
+    m_dcb->writeq_drain();
 }
 
 /**
@@ -269,24 +259,16 @@ int32_t HTTPDClientProtocol::write(DCB* dcb, GWBUF* queue)
     return dcb->writeq_append(queue);
 }
 
-/**
- * Handler for the EPOLLERR event.
- *
- * @param dcb   The descriptor control block
- */
-void HTTPDClientProtocol::error(DCB* dcb)
+void HTTPDClientProtocol::error(DCB* event_dcb)
 {
-    DCB::close(dcb);
+    mxb_assert(m_dcb == event_dcb);
+    DCB::close(m_dcb);
 }
 
-/**
- * Handler for the EPOLLHUP event.
- *
- * @param dcb   The descriptor control block
- */
-void HTTPDClientProtocol::hangup(DCB* dcb)
+void HTTPDClientProtocol::hangup(DCB* event_dcb)
 {
-    DCB::close(dcb);
+    mxb_assert(m_dcb == event_dcb);
+    DCB::close(m_dcb);
 }
 
 bool HTTPDClientProtocol::init_connection(DCB* dcb)
@@ -300,6 +282,11 @@ void HTTPDClientProtocol::finish_connection(DCB* dcb)
 
 HTTPDClientProtocol::HTTPDClientProtocol()
 {
+}
+
+void HTTPDClientProtocol::set_dcb(DCB* dcb)
+{
+    m_dcb = static_cast<ClientDCB*>(dcb);
 }
 
 /**
