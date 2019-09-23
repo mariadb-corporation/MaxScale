@@ -320,8 +320,6 @@ public:
 
     int32_t protocol_write(GWBUF* pData);
 
-    json_t* protocol_diagnostics_json() const;
-
     // TODO: Should probably be made protected.
     virtual void shutdown() = 0;
 

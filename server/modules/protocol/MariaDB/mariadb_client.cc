@@ -1844,13 +1844,13 @@ void MySQLClientProtocol::ready_for_reading(DCB* event_dcb)
     return;
 }
 
-int32_t MySQLClientProtocol::write(DCB* dcb, GWBUF* queue)
+int32_t MySQLClientProtocol::write(GWBUF* queue)
 {
-    if (GWBUF_IS_REPLY_OK(queue) && dcb->service()->config().session_track_trx_state)
+    if (GWBUF_IS_REPLY_OK(queue) && m_dcb->service()->config().session_track_trx_state)
     {
-        parse_and_set_trx_state(dcb->session(), queue);
+        parse_and_set_trx_state(m_dcb->session(), queue);
     }
-    return dcb->writeq_append(queue);
+    return m_dcb->writeq_append(queue);
 }
 
 void MySQLClientProtocol::write_ready(DCB* event_dcb)
@@ -1915,19 +1915,19 @@ void MySQLClientProtocol::hangup(DCB* event_dcb)
     DCB::close(dcb);
 }
 
-bool MySQLClientProtocol::init_connection(DCB* client_dcb)
+bool MySQLClientProtocol::init_connection()
 {
-    send_mysql_client_handshake(client_dcb);
+    send_mysql_client_handshake(m_dcb);
     return true;
 }
 
-void MySQLClientProtocol::finish_connection(DCB* dcb)
+void MySQLClientProtocol::finish_connection()
 {
 }
 
-int32_t MySQLClientProtocol::connlimit(DCB* dcb, int limit)
+int32_t MySQLClientProtocol::connlimit(int limit)
 {
-    return mysql_send_standard_error(dcb, 0, 1040, "Too many connections");
+    return mysql_send_standard_error(m_dcb, 0, 1040, "Too many connections");
 }
 
 MySQLProtocolModule* MySQLProtocolModule::create(const std::string& auth_name, const std::string& auth_opts)

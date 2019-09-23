@@ -87,31 +87,27 @@ MySQLBackendProtocol::create_test_protocol(MXS_SESSION* session, SERVER* server,
     return protocol_session;
 }
 
-bool MySQLBackendProtocol::init_connection(DCB* dcb)
+bool MySQLBackendProtocol::init_connection()
 {
-    mxb_assert(dcb->role() == DCB::Role::BACKEND);
-    BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
-    if (backend_dcb->server()->proxy_protocol)
+    if (m_dcb->server()->proxy_protocol)
     {
         // TODO: The following function needs a return value.
-        gw_send_proxy_protocol_header(backend_dcb);
+        gw_send_proxy_protocol_header(m_dcb);
     }
-
     return true;
 }
 
-void MySQLBackendProtocol::finish_connection(DCB* dcb)
+void MySQLBackendProtocol::finish_connection()
 {
-    mxb_assert(dcb->handler());
+    mxb_assert(m_dcb->handler());
     /** Send COM_QUIT to the backend being closed */
-    dcb->writeq_append(mysql_create_com_quit(nullptr, 0));
+    m_dcb->writeq_append(mysql_create_com_quit(nullptr, 0));
 }
 
 bool MySQLBackendProtocol::reuse_connection(BackendDCB* dcb, mxs::Component* upstream,
                                             mxs::ClientProtocol* client_protocol)
 {
     bool rv = false;
-
     mxb_assert(dcb->session() && !dcb->readq() && !dcb->delayq() && !dcb->writeq());
     mxb_assert(m_ignore_replies >= 0);
 
@@ -129,7 +125,7 @@ bool MySQLBackendProtocol::reuse_connection(BackendDCB* dcb, mxs::Component* ups
 
         m_session = dcb->session();
         m_component = upstream;
-
+        m_dcb = dcb;
         m_ignore_replies = 0;
 
         /**
@@ -975,14 +971,12 @@ int MySQLBackendProtocol::handle_persistent_connection(BackendDCB* dcb, GWBUF* q
 /*
  * Write function for backend DCB. Store command to protocol.
  *
- * @param dcb   The DCB of the backend
  * @param queue Queue of buffers to write
  * @return      0 on failure, 1 on success
  */
-int32_t MySQLBackendProtocol::write(DCB* plain_dcb, GWBUF* queue)
+int32_t MySQLBackendProtocol::write(GWBUF* queue)
 {
-    mxb_assert(plain_dcb->role() == DCB::Role::BACKEND);
-    BackendDCB* dcb = static_cast<BackendDCB*>(plain_dcb);
+    BackendDCB* dcb = m_dcb;
     auto backend_protocol = this;
 
     if (backend_protocol->m_ignore_replies > 0)
@@ -1537,7 +1531,7 @@ static bool get_ip_string_and_port(struct sockaddr_storage* sa,
     return success;
 }
 
-bool MySQLBackendProtocol::established(DCB* dcb)
+bool MySQLBackendProtocol::established()
 {
     auto proto = this;
     return proto->protocol_auth_state == MXS_AUTH_STATE_COMPLETE
@@ -1545,7 +1539,7 @@ bool MySQLBackendProtocol::established(DCB* dcb)
            && !proto->m_stored_query;
 }
 
-json_t* MySQLBackendProtocol::diagnostics_json(DCB* dcb)
+json_t* MySQLBackendProtocol::diagnostics_json()
 {
     auto proto = this;
     json_t* obj = json_object();

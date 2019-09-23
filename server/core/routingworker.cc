@@ -714,7 +714,7 @@ bool RoutingWorker::can_be_destroyed(BackendDCB* pDcb)
         int persistpoolmax = pServer->persistpoolmax();
 
         if (pDcb->state() == DCB::State::POLLING
-            && pDcb->protocol()->established(pDcb)
+            && pDcb->protocol()->established()
             && pDcb->session()
             && session_valid_for_pool(pDcb->session())
             && persistpoolmax > 0

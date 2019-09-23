@@ -105,26 +105,22 @@ public:
     /**
      * Initialize a connection.
      *
-     * @param dcb  The connection to be initialized.
      * @return True, if the connection could be initialized, false otherwise.
      */
-    virtual bool init_connection(DCB* dcb) = 0;
+    virtual bool init_connection() = 0;
 
     /**
      * Finalize a connection. Called right before the DCB itself is closed.
-     *
-     * @param dcb  The connection to be finalized.
      */
-    virtual void finish_connection(DCB* dcb) = 0;
+    virtual void finish_connection() = 0;
 
     /**
      * Handle connection limits. Currently the return value is ignored.
      *
-     * @param dcb   DCB to handle
      * @param limit Maximum number of connections
      * @return 1 on success, 0 on error
      */
-    virtual int32_t connlimit(DCB* dcb, int limit)
+    virtual int32_t connlimit(int limit)
     {
         return 0;
     }
@@ -182,17 +178,14 @@ public:
     /**
      * Initialize a connection.
      *
-     * @param dcb  The connection to be initialized.
      * @return True, if the connection could be initialized, false otherwise.
      */
-    virtual bool init_connection(DCB* dcb) = 0;
+    virtual bool init_connection() = 0;
 
     /**
      * Finalize a connection. Called right before the DCB itself is closed.
-     *
-     * @param dcb  The connection to be finalized.
      */
-    virtual void finish_connection(DCB* dcb) = 0;
+    virtual void finish_connection() = 0;
 
     /**
      * Reuse a connection. The connection was in the persistent pool
@@ -211,10 +204,9 @@ public:
     /**
      * Check if the connection has been fully established, used by connection pooling
      *
-     * @param dcb DCB to check
      * @return True if the connection is fully established and can be pooled
      */
-    virtual bool established(DCB*) = 0;
+    virtual bool established() = 0;
 };
 
 template<class ProtocolImplementation>

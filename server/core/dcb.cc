@@ -844,8 +844,7 @@ json_t* DCB::to_json() const
     snprintf(buf, sizeof(buf), "%p", this);
     json_object_set_new(obj, "id", json_string(buf));
 
-    json_t* json = protocol_diagnostics_json();
-
+    json_t* json = protocol()->diagnostics_json();
     if (json)
     {
         json_object_set_new(obj, "protocol_diagnostics", json);
@@ -1691,13 +1690,7 @@ SERVICE* DCB::service() const
 
 int32_t DCB::protocol_write(GWBUF* pData)
 {
-    return protocol()->write(this, pData);
-}
-
-json_t* DCB::protocol_diagnostics_json() const
-{
-    DCB* pThis = const_cast<DCB*>(this);
-    return protocol()->diagnostics_json(pThis);
+    return protocol()->write(pData);
 }
 
 /**
@@ -1711,7 +1704,7 @@ void ClientDCB::shutdown()
     {
         session_close(m_session);
     }
-    m_protocol->finish_connection(this);
+    m_protocol->finish_connection();
 }
 
 ClientDCB::ClientDCB(int fd,
@@ -2014,7 +2007,7 @@ BackendDCB* BackendDCB::connect(SERVER* srv,
 
         if (dcb)
         {
-            if (dcb->m_protocol->init_connection(dcb) && dcb->enable_events())
+            if (dcb->m_protocol->init_connection() && dcb->enable_events())
             {
                 // The DCB is now connected and added to epoll set. Authentication is done after the EPOLLOUT
                 // event that is triggered once the connection is established.
@@ -2232,7 +2225,7 @@ BackendDCB::BackendDCB(SERVER* server, int fd, MXS_SESSION* session,
 void BackendDCB::shutdown()
 {
     // Close protocol and router session
-    m_protocol->finish_connection(this);
+    m_protocol->finish_connection();
 }
 
 bool BackendDCB::release_from(MXS_SESSION* session)

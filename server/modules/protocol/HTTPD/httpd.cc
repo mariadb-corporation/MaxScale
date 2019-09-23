@@ -245,18 +245,9 @@ void HTTPDClientProtocol::write_ready(DCB* event_dcb)
     m_dcb->writeq_drain();
 }
 
-/**
- * Write routine for the HTTPD protocol module.
- *
- * Writes the content of the buffer queue to the socket
- * observing the non-blocking principles of the gateway.
- *
- * @param dcb   Descriptor Control Block for the socket
- * @param queue Linked list of buffes to write
- */
-int32_t HTTPDClientProtocol::write(DCB* dcb, GWBUF* queue)
+int32_t HTTPDClientProtocol::write(GWBUF* queue)
 {
-    return dcb->writeq_append(queue);
+    return m_dcb->writeq_append(queue);
 }
 
 void HTTPDClientProtocol::error(DCB* event_dcb)
@@ -271,12 +262,12 @@ void HTTPDClientProtocol::hangup(DCB* event_dcb)
     DCB::close(m_dcb);
 }
 
-bool HTTPDClientProtocol::init_connection(DCB* dcb)
+bool HTTPDClientProtocol::init_connection()
 {
-    return session_start(dcb->session());
+    return session_start(m_dcb->session());
 }
 
-void HTTPDClientProtocol::finish_connection(DCB* dcb)
+void HTTPDClientProtocol::finish_connection()
 {
 }
 

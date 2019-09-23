@@ -42,7 +42,7 @@ Dcb::Handler* Dcb::set_handler(Handler* pHandler)
     return m_protocol.set_handler(pHandler);
 }
 
-int32_t Dcb::Protocol::write(DCB*, GWBUF* pData)
+int32_t Dcb::Protocol::write(GWBUF* pData)
 {
     int32_t rv = 1;
 

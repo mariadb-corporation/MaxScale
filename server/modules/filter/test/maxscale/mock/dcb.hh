@@ -87,13 +87,13 @@ private:
             return p;
         }
 
-        bool init_connection(DCB*)
+        bool init_connection() override
         {
             mxb_assert(!true);
             return false;
         }
 
-        void finish_connection(DCB*)
+        void finish_connection() override
         {
             mxb_assert(!true);
         }
@@ -118,9 +118,9 @@ private:
             mxb_assert(!true);
         }
 
-        int32_t write(DCB* dcb, GWBUF* buffer) override;
+        int32_t write(GWBUF* buffer) override;
 
-        json_t* diagnostics_json(DCB*) override
+        json_t* diagnostics_json() override
         {
             return nullptr;
         }

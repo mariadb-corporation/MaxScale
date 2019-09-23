@@ -45,19 +45,17 @@ public:
     /**
      * Write data to a network socket
      *
-     * @param dcb    DCB to write to
      * @param buffer Buffer to write
      * @return 1 on success, 0 on error
      */
-    virtual int32_t write(DCB* dcb, GWBUF* buffer) = 0;
+    virtual int32_t write(GWBUF* buffer) = 0;
 
     /**
-     * Provide JSON formatted diagnostics about a DCB
+     * Print connection diagnostics to json.
      *
-     * @param dcb DCB to diagnose
-     * @return JSON representation of the DCB
+     * @return JSON representation of the connection
      */
-    virtual json_t* diagnostics_json(DCB* dcb)
+    virtual json_t* diagnostics_json()
     {
         return nullptr;
     }

@@ -82,11 +82,11 @@ public:
     void error(DCB* dcb) override;
     void hangup(DCB* dcb) override;
 
-    int32_t write(DCB* dcb, GWBUF* buffer) override;
+    int32_t write(GWBUF* buffer) override;
 
-    bool    init_connection(DCB* dcb) override;
-    void    finish_connection(DCB* dcb) override;
-    int32_t connlimit(DCB* dcb, int limit) override;
+    bool init_connection() override;
+    void finish_connection() override;
+    int32_t connlimit(int limit) override;
 
     int64_t capabilities() const override
     {
@@ -165,14 +165,14 @@ public:
     void error(DCB* dcb) override;
     void hangup(DCB* dcb) override;
 
-    int32_t write(DCB* dcb, GWBUF* buffer) override;
+    int32_t write(GWBUF* buffer) override;
 
-    bool init_connection(DCB* dcb) override;
-    void finish_connection(DCB* dcb) override;
+    bool init_connection() override;
+    void finish_connection() override;
     bool reuse_connection(BackendDCB* dcb, mxs::Component* upstream,
                           mxs::ClientProtocol* client_protocol) override;
-    bool    established(DCB*) override;
-    json_t* diagnostics_json(DCB* dcb) override;
+    bool established() override;
+    json_t* diagnostics_json() override;
 
     /**
      *  Check every packet type, if is ok packet then parse it

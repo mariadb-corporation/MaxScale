@@ -66,10 +66,10 @@ public:
     void error(DCB* dcb) override;
     void hangup(DCB* dcb) override;
 
-    int32_t write(DCB* dcb, GWBUF* buffer) override;
+    int32_t write(GWBUF* buffer) override;
 
-    bool init_connection(DCB* dcb) override;
-    void finish_connection(DCB* dcb) override;
+    bool init_connection() override;
+    void finish_connection() override;
 
 private:
     int  m_state {CDC_STATE_WAIT_FOR_AUTH}; /*< CDC protocol state */
@@ -265,18 +265,9 @@ void CDCClientProtocol::write_ready(DCB* event_dcb)
     m_dcb->writeq_drain();
 }
 
-/**
- * Write routine for the CDC protocol module.
- *
- * Writes the content of the buffer queue to the socket
- * observing the non-blocking principles of the gateway.
- *
- * @param dcb   Descriptor Control Block for the socket
- * @param queue Linked list of buffes to write
- */
-int32_t CDCClientProtocol::write(DCB* dcb, GWBUF* buffer)
+int32_t CDCClientProtocol::write(GWBUF* buffer)
 {
-    return dcb->writeq_append(buffer);
+    return m_dcb->writeq_append(buffer);
 }
 
 void CDCClientProtocol::error(DCB* event_dcb)
@@ -291,22 +282,18 @@ void CDCClientProtocol::hangup(DCB* event_dcb)
     DCB::close(m_dcb);
 }
 
-bool CDCClientProtocol::init_connection(DCB* generic_dcb)
+bool CDCClientProtocol::init_connection()
 {
-    mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
-    auto client_dcb = static_cast<ClientDCB*>(generic_dcb);
-    mxb_assert(client_dcb->session());
+    mxb_assert(m_dcb->session());
 
     /* client protocol state change to CDC_STATE_WAIT_FOR_AUTH */
     m_state = CDC_STATE_WAIT_FOR_AUTH;
 
-    MXS_NOTICE("%s: new connection from [%s]",
-               client_dcb->service()->name(),
-               client_dcb->remote().c_str());
+    MXS_NOTICE("%s: new connection from [%s]", m_dcb->service()->name(), m_dcb->remote().c_str());
     return true;
 }
 
-void CDCClientProtocol::finish_connection(DCB* dcb)
+void CDCClientProtocol::finish_connection()
 {
 }
 
