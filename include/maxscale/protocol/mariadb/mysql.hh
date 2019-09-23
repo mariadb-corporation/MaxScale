@@ -96,9 +96,9 @@
 
 
 /* Max length of fields in the mysql.user table */
-#define MYSQL_PASSWORD_LEN    41
-#define MYSQL_HOST_MAXLEN     60
-#define MYSQL_TABLE_MAXLEN    64
+#define MYSQL_PASSWORD_LEN 41
+#define MYSQL_HOST_MAXLEN  60
+#define MYSQL_TABLE_MAXLEN 64
 
 #define GW_NOINTR_CALL(A) do {errno = 0; A;} while (errno == EINTR)
 #define COM_QUIT_PACKET_SIZE (4 + 1)
@@ -365,7 +365,7 @@ GWBUF* mysql_create_custom_error(int sequence, int affected_rows, const char* ms
 
 int mysql_send_custom_error(DCB* dcb, int sequence, int affected_rows, const char* msg);
 
-void             init_response_status(GWBUF* buf, uint8_t cmd, int* npackets, size_t* nbytes);
+void init_response_status(GWBUF* buf, uint8_t cmd, int* npackets, size_t* nbytes);
 
 mysql_tx_state_t parse_trx_state(const char* str);
 

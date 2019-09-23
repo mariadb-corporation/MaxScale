@@ -179,6 +179,55 @@ void test3(TestConnections& test)
                     server_id, buffer);
 }
 
+void test4(TestConnections& test)
+{
+    test.maxscales->connect_maxscale(0);
+    test.set_timeout(20);
+
+    test.try_query(test.maxscales->conn_rwsplit[0], "CREATE OR REPLACE TABLE test.t1(id VARCHAR(200))");
+
+    for (int i = 0; i < 100; i++)
+    {
+        test.try_query(test.maxscales->conn_rwsplit[0], "INSERT INTO test.t1 VALUES ('test4')");
+    }
+
+    MYSQL_STMT* stmt = mysql_stmt_init(test.maxscales->conn_rwsplit[0]);
+    const char* query = "SELECT * FROM test.t1";
+    char buffer[100] = "";
+    my_bool err = false;
+    my_bool isnull = false;
+    MYSQL_BIND bind[1] = {};
+
+    bind[0].buffer_length = sizeof(buffer);
+    bind[0].buffer = buffer;
+    bind[0].error = &err;
+    bind[0].is_null = &isnull;
+
+    test.add_result(mysql_stmt_prepare(stmt, query, strlen(query)), "Failed to prepare");
+
+    unsigned long cursor_type = CURSOR_TYPE_READ_ONLY;
+    unsigned long rows = 5;
+    test.add_result(mysql_stmt_attr_set(stmt, STMT_ATTR_CURSOR_TYPE, &cursor_type),
+                    "Failed to set attributes");
+    test.add_result(mysql_stmt_attr_set(stmt, STMT_ATTR_PREFETCH_ROWS, &rows), "Failed to set attributes");
+
+    cout << "Execute" << endl;
+    test.add_result(mysql_stmt_execute(stmt), "Failed to execute");
+    test.add_result(mysql_stmt_bind_result(stmt, bind), "Failed to bind result");
+
+    while (mysql_stmt_fetch(stmt) == 0)
+    {
+        test.add_result(strcmp(buffer, "test4") != 0, "Expected result buffer to not be empty");
+        memset(buffer, 0, sizeof(buffer));
+    }
+
+    mysql_stmt_close(stmt);
+
+    test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE test.t1");
+
+    test.maxscales->close_maxscale_connections(0);
+}
+
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
@@ -193,6 +242,10 @@ int main(int argc, char** argv)
 
     cout << "Test 3: Testing transactions with cursors" << endl;
     test3(test);
+    cout << "Done" << endl << endl;
+
+    cout << "Test 4: Testing multiple rows in one fetch" << endl;
+    test4(test);
     cout << "Done" << endl << endl;
 
     return test.global_result;

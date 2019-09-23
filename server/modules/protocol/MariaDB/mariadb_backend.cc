@@ -68,7 +68,7 @@ MySQLBackendProtocol::create(MXS_SESSION* session, SERVER* server,
                              std::unique_ptr<mxs::BackendAuthenticator> authenticator)
 {
     std::unique_ptr<MySQLBackendProtocol> protocol_session(
-            new(std::nothrow) MySQLBackendProtocol(session, server, component, std::move(authenticator)));
+        new(std::nothrow) MySQLBackendProtocol(session, server, component, std::move(authenticator)));
     if (protocol_session)
     {
         protocol_session->set_client_data(client_protocol);
@@ -82,7 +82,7 @@ MySQLBackendProtocol::create_test_protocol(MXS_SESSION* session, SERVER* server,
                                            std::unique_ptr<mxs::BackendAuthenticator> authenticator)
 {
     std::unique_ptr<MySQLBackendProtocol> protocol_session(
-            new(std::nothrow) MySQLBackendProtocol(session, server, component, std::move(authenticator)));
+        new(std::nothrow) MySQLBackendProtocol(session, server, component, std::move(authenticator)));
     return protocol_session;
 }
 
@@ -1648,16 +1648,16 @@ bool MySQLBackendProtocol::mxs_mysql_is_result_set(GWBUF* buffer)
         switch (cmd)
         {
 
-            case MYSQL_REPLY_OK:
-            case MYSQL_REPLY_ERR:
-            case MYSQL_REPLY_LOCAL_INFILE:
-            case MYSQL_REPLY_EOF:
-                /** Not a result set */
-                break;
+        case MYSQL_REPLY_OK:
+        case MYSQL_REPLY_ERR:
+        case MYSQL_REPLY_LOCAL_INFILE:
+        case MYSQL_REPLY_EOF:
+            /** Not a result set */
+            break;
 
-            default:
-                rval = true;
-                break;
+        default:
+            rval = true;
+            break;
         }
     }
 
@@ -1677,20 +1677,8 @@ GWBUF* MySQLBackendProtocol::track_response(GWBUF** buffer)
     using mxs::ReplyState;
     GWBUF* rval = nullptr;
 
-    if (m_reply.command() == MXS_COM_STMT_FETCH)
-    {
-        // TODO: m_reply.m_error is not updated here.
-        // If the server responded with an error, n_eof > 0
 
-        // COM_STMT_FETCH is used when a COM_STMT_EXECUTE opens a cursor and the result is read in chunks:
-        // https://mariadb.com/kb/en/library/com_stmt_fetch/
-        if (consume_fetched_rows(*buffer))
-        {
-            set_reply_state(ReplyState::DONE);
-        }
-        rval = modutil_get_complete_packets(buffer);
-    }
-    else if (m_reply.command() == MXS_COM_STATISTICS)
+    if (m_reply.command() == MXS_COM_STATISTICS)
     {
         // COM_STATISTICS returns a single string and thus requires special handling:
         // https://mariadb.com/kb/en/library/com_statistics/#response
@@ -1787,7 +1775,7 @@ bool MySQLBackendProtocol::gw_read_backend_handshake(DCB* dcb, GWBUF* buffer)
 int MySQLBackendProtocol::send_mysql_native_password_response(DCB* dcb)
 {
     uint8_t* curr_passwd = memcmp(m_client_data->client_sha1, null_client_sha1, MYSQL_SCRAMBLE_LEN) ?
-                           m_client_data->client_sha1 : null_client_sha1;
+        m_client_data->client_sha1 : null_client_sha1;
 
     GWBUF* buffer = gwbuf_alloc(MYSQL_HEADER_LEN + GW_MYSQL_SCRAMBLE_SIZE);
     uint8_t* data = GWBUF_DATA(buffer);
@@ -1870,50 +1858,50 @@ void MySQLBackendProtocol::mxs_mysql_parse_ok_packet(GWBUF* buff, size_t packet_
 #endif
                 switch (type)
                 {
-                    case SESSION_TRACK_STATE_CHANGE:
-                    case SESSION_TRACK_SCHEMA:
-                        size = mxq::leint_consume(&ptr);    // Length of the overall entity.
-                        ptr += size;
-                        break;
+                case SESSION_TRACK_STATE_CHANGE:
+                case SESSION_TRACK_SCHEMA:
+                    size = mxq::leint_consume(&ptr);        // Length of the overall entity.
+                    ptr += size;
+                    break;
 
-                    case SESSION_TRACK_GTIDS:
-                        mxq::leint_consume(&ptr);   // Length of the overall entity.
-                        mxq::leint_consume(&ptr);   // encoding specification
-                        var_value = mxq::lestr_consume_dup(&ptr);
-                        gwbuf_add_property(buff, MXS_LAST_GTID, var_value);
-                        MXS_FREE(var_value);
-                        break;
+                case SESSION_TRACK_GTIDS:
+                    mxq::leint_consume(&ptr);       // Length of the overall entity.
+                    mxq::leint_consume(&ptr);       // encoding specification
+                    var_value = mxq::lestr_consume_dup(&ptr);
+                    gwbuf_add_property(buff, MXS_LAST_GTID, var_value);
+                    MXS_FREE(var_value);
+                    break;
 
-                    case SESSION_TRACK_TRANSACTION_CHARACTERISTICS:
-                        mxq::leint_consume(&ptr);   // length
-                        var_value = mxq::lestr_consume_dup(&ptr);
-                        gwbuf_add_property(buff, "trx_characteristics", var_value);
-                        MXS_FREE(var_value);
-                        break;
+                case SESSION_TRACK_TRANSACTION_CHARACTERISTICS:
+                    mxq::leint_consume(&ptr);       // length
+                    var_value = mxq::lestr_consume_dup(&ptr);
+                    gwbuf_add_property(buff, "trx_characteristics", var_value);
+                    MXS_FREE(var_value);
+                    break;
 
-                    case SESSION_TRACK_SYSTEM_VARIABLES:
-                        mxq::leint_consume(&ptr);   // lenth
-                        // system variables like autocommit, schema, charset ...
-                        var_name = mxq::lestr_consume_dup(&ptr);
-                        var_value = mxq::lestr_consume_dup(&ptr);
-                        gwbuf_add_property(buff, var_name, var_value);
-                                MXS_DEBUG("SESSION_TRACK_SYSTEM_VARIABLES, name:%s, value:%s", var_name, var_value);
-                        MXS_FREE(var_name);
-                        MXS_FREE(var_value);
-                        break;
+                case SESSION_TRACK_SYSTEM_VARIABLES:
+                    mxq::leint_consume(&ptr);       // lenth
+                    // system variables like autocommit, schema, charset ...
+                    var_name = mxq::lestr_consume_dup(&ptr);
+                    var_value = mxq::lestr_consume_dup(&ptr);
+                    gwbuf_add_property(buff, var_name, var_value);
+                    MXS_DEBUG("SESSION_TRACK_SYSTEM_VARIABLES, name:%s, value:%s", var_name, var_value);
+                    MXS_FREE(var_name);
+                    MXS_FREE(var_value);
+                    break;
 
-                    case SESSION_TRACK_TRANSACTION_TYPE:
-                        mxq::leint_consume(&ptr);   // length
-                        trx_info = mxq::lestr_consume_dup(&ptr);
-                                MXS_DEBUG("get trx_info:%s", trx_info);
-                        gwbuf_add_property(buff, (char*)"trx_state", trx_info);
-                        MXS_FREE(trx_info);
-                        break;
+                case SESSION_TRACK_TRANSACTION_TYPE:
+                    mxq::leint_consume(&ptr);       // length
+                    trx_info = mxq::lestr_consume_dup(&ptr);
+                    MXS_DEBUG("get trx_info:%s", trx_info);
+                    gwbuf_add_property(buff, (char*)"trx_state", trx_info);
+                    MXS_FREE(trx_info);
+                    break;
 
-                    default:
-                        mxq::lestr_consume(&ptr, &size);
-                                MXS_WARNING("recieved unexpecting session track type:%d", type);
-                        break;
+                default:
+                    mxq::lestr_consume(&ptr, &size);
+                    MXS_WARNING("recieved unexpecting session track type:%d", type);
+                    break;
                 }
             }
         }
@@ -1957,7 +1945,7 @@ int MySQLBackendProtocol::gw_decode_mysql_server_handshake(uint8_t* payload)
     // get ThreadID: 4 bytes
     uint32_t tid = gw_mysql_get_byte4(payload);
 
-            MXS_INFO("Connected to '%s' with thread id %u", conn->reply().target()->name(), tid);
+    MXS_INFO("Connected to '%s' with thread id %u", conn->reply().target()->name(), tid);
 
     /* TODO: Correct value of thread id could be queried later from backend if
      * there is any worry it might be larger than 32bit allows. */
@@ -2235,65 +2223,65 @@ void MySQLBackendProtocol::process_one_packet(Iter it, Iter end, uint32_t len)
     uint8_t cmd = *it;
     switch (m_reply.state())
     {
-        case ReplyState::START:
-            process_reply_start(it, end);
-            break;
+    case ReplyState::START:
+        process_reply_start(it, end);
+        break;
 
-        case ReplyState::DONE:
-            if (cmd == MYSQL_REPLY_ERR)
-            {
-                update_error(++it, end);
-            }
-            else
-            {
-                // This should never happen
-                MXS_ERROR("Unexpected result state. cmd: 0x%02hhx, len: %u server: %s",
-                          cmd, len, m_reply.target()->name());
-                session_dump_statements(session());
-                session_dump_log(session());
-                mxb_assert(!true);
-            }
-            break;
+    case ReplyState::DONE:
+        if (cmd == MYSQL_REPLY_ERR)
+        {
+            update_error(++it, end);
+        }
+        else
+        {
+            // This should never happen
+            MXS_ERROR("Unexpected result state. cmd: 0x%02hhx, len: %u server: %s",
+                      cmd, len, m_reply.target()->name());
+            session_dump_statements(session());
+            session_dump_log(session());
+            mxb_assert(!true);
+        }
+        break;
 
-        case ReplyState::RSET_COLDEF:
-            mxb_assert(m_num_coldefs > 0);
-            --m_num_coldefs;
+    case ReplyState::RSET_COLDEF:
+        mxb_assert(m_num_coldefs > 0);
+        --m_num_coldefs;
 
-            if (m_num_coldefs == 0)
-            {
-                set_reply_state(ReplyState::RSET_COLDEF_EOF);
-                // Skip this state when DEPRECATE_EOF capability is supported
-            }
-            break;
+        if (m_num_coldefs == 0)
+        {
+            set_reply_state(ReplyState::RSET_COLDEF_EOF);
+            // Skip this state when DEPRECATE_EOF capability is supported
+        }
+        break;
 
-        case ReplyState::RSET_COLDEF_EOF:
-            mxb_assert(cmd == MYSQL_REPLY_EOF && len == MYSQL_EOF_PACKET_LEN - MYSQL_HEADER_LEN);
-            set_reply_state(ReplyState::RSET_ROWS);
+    case ReplyState::RSET_COLDEF_EOF:
+        mxb_assert(cmd == MYSQL_REPLY_EOF && len == MYSQL_EOF_PACKET_LEN - MYSQL_HEADER_LEN);
+        set_reply_state(ReplyState::RSET_ROWS);
 
-            if (m_opening_cursor)
-            {
-                m_opening_cursor = false;
-                MXS_INFO("Cursor successfully opened");
-                set_reply_state(ReplyState::DONE);
-            }
-            break;
+        if (m_opening_cursor)
+        {
+            m_opening_cursor = false;
+            MXS_INFO("Cursor successfully opened");
+            set_reply_state(ReplyState::DONE);
+        }
+        break;
 
-        case ReplyState::RSET_ROWS:
-            if (cmd == MYSQL_REPLY_EOF && len == MYSQL_EOF_PACKET_LEN - MYSQL_HEADER_LEN)
-            {
-                set_reply_state(is_last_eof(it) ? ReplyState::DONE : ReplyState::START);
-            }
-            else if (cmd == MYSQL_REPLY_ERR)
-            {
-                ++it;
-                update_error(it, end);
-                set_reply_state(ReplyState::DONE);
-            }
-            else
-            {
-                m_reply.add_rows(1);
-            }
-            break;
+    case ReplyState::RSET_ROWS:
+        if (cmd == MYSQL_REPLY_EOF && len == MYSQL_EOF_PACKET_LEN - MYSQL_HEADER_LEN)
+        {
+            set_reply_state(is_last_eof(it) ? ReplyState::DONE : ReplyState::START);
+        }
+        else if (cmd == MYSQL_REPLY_ERR)
+        {
+            ++it;
+            update_error(it, end);
+            set_reply_state(ReplyState::DONE);
+        }
+        else
+        {
+            m_reply.add_rows(1);
+        }
+        break;
     }
 }
 
@@ -2303,48 +2291,48 @@ void MySQLBackendProtocol::process_reply_start(Iter it, Iter end)
 
     switch (cmd)
     {
-        case MYSQL_REPLY_OK:
-            if (is_last_ok(it))
-            {
-                // No more results
-                set_reply_state(ReplyState::DONE);
-            }
-            break;
-
-        case MYSQL_REPLY_LOCAL_INFILE:
-            // The client will send a request after this with the contents of the file which the server will
-            // respond to with either an OK or an ERR packet
-            session_set_load_active(m_session, true);
+    case MYSQL_REPLY_OK:
+        if (is_last_ok(it))
+        {
+            // No more results
             set_reply_state(ReplyState::DONE);
-            break;
+        }
+        break;
 
-        case MYSQL_REPLY_ERR:
-            // Nothing ever follows an error packet
-            ++it;
-            update_error(it, end);
-            set_reply_state(ReplyState::DONE);
-            break;
+    case MYSQL_REPLY_LOCAL_INFILE:
+        // The client will send a request after this with the contents of the file which the server will
+        // respond to with either an OK or an ERR packet
+        session_set_load_active(m_session, true);
+        set_reply_state(ReplyState::DONE);
+        break;
 
-        case MYSQL_REPLY_EOF:
-            // EOF packets are never expected as the first response
-            mxb_assert(!true);
-            break;
+    case MYSQL_REPLY_ERR:
+        // Nothing ever follows an error packet
+        ++it;
+        update_error(it, end);
+        set_reply_state(ReplyState::DONE);
+        break;
 
-        default:
-            if (m_reply.command() == MXS_COM_FIELD_LIST)
-            {
-                // COM_FIELD_LIST sends a strange kind of a result set that doesn't have field definitions
-                set_reply_state(ReplyState::RSET_ROWS);
-            }
-            else
-            {
-                // Start of a result set
-                m_num_coldefs = get_encoded_int(it);
-                m_reply.add_field_count(m_num_coldefs);
-                set_reply_state(ReplyState::RSET_COLDEF);
-            }
+    case MYSQL_REPLY_EOF:
+        // EOF packets are never expected as the first response
+        mxb_assert(!true);
+        break;
 
-            break;
+    default:
+        if (m_reply.command() == MXS_COM_FIELD_LIST)
+        {
+            // COM_FIELD_LIST sends a strange kind of a result set that doesn't have field definitions
+            set_reply_state(ReplyState::RSET_ROWS);
+        }
+        else
+        {
+            // Start of a result set
+            m_num_coldefs = get_encoded_int(it);
+            m_reply.add_field_count(m_num_coldefs);
+            set_reply_state(ReplyState::RSET_COLDEF);
+        }
+
+        break;
     }
 }
 
@@ -2369,33 +2357,6 @@ void MySQLBackendProtocol::update_error(Iter it, Iter end)
     m_reply.set_error(code, sql_state_begin, sql_state_end, message_begin, message_end);
 }
 
-bool MySQLBackendProtocol::consume_fetched_rows(GWBUF* buffer)
-{
-    // TODO: Get rid of this and do COM_STMT_FETCH processing properly by iterating over the packets and
-    //       splitting them
-
-    bool rval = false;
-    bool more = false;
-    int n_eof = modutil_count_signal_packets(buffer, 0, &more, (modutil_state*)&m_modutil_state);
-    int num_packets = modutil_count_packets(buffer);
-
-    // If the server responded with an error, n_eof > 0
-    if (n_eof > 0)
-    {
-        m_reply.add_rows(num_packets - 1);
-        rval = true;
-    }
-    else
-    {
-        m_reply.add_rows(num_packets);
-        m_expected_rows -= num_packets;
-        mxb_assert(m_expected_rows >= 0);
-        rval = m_expected_rows == 0;
-    }
-
-    return rval;
-}
-
 uint64_t MySQLBackendProtocol::thread_id() const
 {
     return m_thread_id;
@@ -2410,4 +2371,3 @@ void MySQLBackendProtocol::set_client_data(MySQLClientProtocol& client_protocol)
     m_client_data = client_protocol.session_data();
     // TODO: authenticators may also need data swapping
 }
-

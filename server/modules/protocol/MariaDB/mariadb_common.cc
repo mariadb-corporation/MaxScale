@@ -770,8 +770,7 @@ void MySQLProtocol::track_query(GWBUF* buffer)
         }
         else if (m_reply.command() == MXS_COM_STMT_FETCH)
         {
-            // Number of rows to fetch is a 4 byte integer after the ID
-            m_expected_rows = gw_mysql_get_byte4(data + MYSQL_PS_ID_OFFSET + MYSQL_PS_ID_SIZE);
+            set_reply_state(ReplyState::RSET_ROWS);
         }
     }
 
