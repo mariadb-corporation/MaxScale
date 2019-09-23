@@ -424,7 +424,7 @@ template<typename SD>
 int GCUpdater<SD>::gc()
 {
     // Get the ptrs that are in use right now
-    auto in_use_ptrs {get_in_use_ptrs()};
+    auto in_use_ptrs = get_in_use_ptrs();
 
     std::sort(begin(m_all_ptrs), end(m_all_ptrs));
     m_all_ptrs.erase(std::unique(begin(m_all_ptrs), end(m_all_ptrs)), end(m_all_ptrs));
