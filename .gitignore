@@ -37,12 +37,6 @@ depend.mk
 .*.swp
 /build/
 
-# Reviewboard configuration file
-*.reviewboardrc
-
-# Netbeans Project files
-nbproject/
-
 # CMake directories
 build/
 CMakeFiles/*
@@ -57,6 +51,9 @@ Makefile
 # Netbeans Project files
 nbproject/
 /build/
+
+CLion project files
+/.idea
 
 # RBCommons
 .reviewboardrc
