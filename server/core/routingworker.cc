@@ -659,8 +659,8 @@ bool RoutingWorker::can_be_destroyed(BackendDCB* pDcb)
 {
     bool rv = true;
 
-    // Is pDcb being evicted from the pool?
-    if (m_being_evicted.find(pDcb) == m_being_evicted.end())
+    // Are dcbs being evicted from the pool?
+    if (!m_evicting)
     {
         // No, so it can potentially be added to the pool.
         Server* pServer = static_cast<Server*>(pDcb->server());
@@ -707,7 +707,9 @@ void RoutingWorker::evict_dcbs(Evict evict)
 
 int RoutingWorker::evict_dcbs(SERVER* pS, Evict evict)
 {
-    mxb_assert(m_being_evicted.empty());
+    mxb_assert(!m_evicting);
+
+    m_evicting = true;
 
     int count = 0;
 
@@ -716,66 +718,64 @@ int RoutingWorker::evict_dcbs(SERVER* pS, Evict evict)
     Server* pServer = static_cast<Server*>(pS);
     PersistentEntries& persistent_entries = m_persistent_entries_by_server[pServer];
 
-    if (pServer->status() & SERVER_RUNNING)
+    vector<BackendDCB*> to_be_evicted;
+
+    if (!(pServer->status() & SERVER_RUNNING))
     {
-        auto persistmaxtime = pServer->persistmaxtime();
-        auto persistpoolmax = pServer->persistpoolmax();
-
-        auto j = persistent_entries.begin();
-
-        while (j != persistent_entries.end())
-        {
-            PersistentEntry& entry = *j;
-
-            bool hanged_up = entry.hanged_up();
-            bool expired = (evict == Evict::ALL) || (now - entry.created() > persistmaxtime);
-            bool too_many = (count > persistpoolmax);
-
-            if (hanged_up || expired || too_many)
-            {
-                // Expired
-                m_being_evicted.insert(entry.release_dcb());
-                j = persistent_entries.erase(j);
-                mxb::atomic::add(&pServer->pool_stats.n_persistent, -1);
-            }
-            else
-            {
-                ++count;
-                ++j;
-            }
-        }
-
-        pServer->persistmax = MXS_MAX(pServer->persistmax, count);
+        // The server is not running => unconditionally evict all related dcbs.
+        evict = Evict::ALL;
     }
-    else
+
+    auto persistmaxtime = pServer->persistmaxtime();
+    auto persistpoolmax = pServer->persistpoolmax();
+
+    auto j = persistent_entries.begin();
+
+    while (j != persistent_entries.end())
     {
-        for (auto& entry : persistent_entries)
+        PersistentEntry& entry = *j;
+
+        bool hanged_up = entry.hanged_up();
+        bool expired = (evict == Evict::ALL) || (now - entry.created() > persistmaxtime);
+        bool too_many = (count > persistpoolmax);
+
+        if (hanged_up || expired || too_many)
         {
-            m_being_evicted.insert(entry.release_dcb());
+            to_be_evicted.push_back(entry.release_dcb());
+            j = persistent_entries.erase(j);
+            mxb::atomic::add(&pServer->pool_stats.n_persistent, -1);
+        }
+        else
+        {
+            ++count;
+            ++j;
         }
     }
 
-    for (BackendDCB* pDcb : m_being_evicted)
+    pServer->persistmax = MXS_MAX(pServer->persistmax, count);
+
+    for (BackendDCB* pDcb : to_be_evicted)
     {
         if (pDcb->state() == DCB::State::POLLING)
         {
             pDcb->disable_events();
             pDcb->shutdown();
         }
-        // This will cause can_be_destroyed() to be called. It will not be considered
-        // for the pool since it will be found in m_being_evicted.
+        // This will cause can_be_destroyed() to be called. The dcb will not be
+        // considered for the pool since m_evicting is now true.
         DCB::close(pDcb);
     }
 
-    m_being_evicted.clear();
+    m_evicting = false;
 
     return count;
 }
 
 void RoutingWorker::evict_dcb(BackendDCB* pDcb)
 {
-    // TODO: Replace set with flag.
-    mxb_assert(m_being_evicted.size() == 0);
+    mxb_assert(!m_evicting);
+
+    m_evicting = true;
 
     PersistentEntries& persistent_entries = m_persistent_entries_by_server[pDcb->server()];
 
@@ -790,7 +790,6 @@ void RoutingWorker::evict_dcb(BackendDCB* pDcb)
 
     i->release_dcb();
     persistent_entries.erase(i);
-    m_being_evicted.insert(pDcb);
 
     if (pDcb->state() == DCB::State::POLLING)
     {
@@ -800,7 +799,7 @@ void RoutingWorker::evict_dcb(BackendDCB* pDcb)
 
     DCB::close(pDcb);
 
-    m_being_evicted.clear();
+    m_evicting = false;
 }
 
 bool RoutingWorker::pre_run()

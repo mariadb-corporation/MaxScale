@@ -759,7 +759,7 @@ private:
     using PersistentEntriesByServer = std::map<SERVER*, PersistentEntries>;
 
     PersistentEntriesByServer       m_persistent_entries_by_server;
-    std::unordered_set<BackendDCB*> m_being_evicted;
+    bool                            m_evicting = false;
     DCBHandler                      m_pool_handler;
 };
 
