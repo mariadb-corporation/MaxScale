@@ -692,7 +692,7 @@ void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
     {
         /** Process the reply to an executed session command. This function can
          * close the backend if it's a slave. */
-        process_sescmd_response(backend, &writebuf);
+        process_sescmd_response(backend, &writebuf, reply);
     }
     else if (m_is_replay_active)
     {
@@ -730,24 +730,29 @@ void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
         m_can_replay_trx = true;
     }
 
-    if (backend->in_use() && backend->has_session_commands())
+    if (reply.is_complete())
     {
-        // Backend is still in use and has more session commands to execute
-        if (backend->execute_session_command() && backend->is_waiting_result())
+        if (backend->in_use() && backend->has_session_commands())
         {
-            MXS_INFO("%lu session commands left on '%s'", backend->session_command_count(), backend->name());
-            m_expected_responses++;
+            // Backend is still in use and has more session commands to execute
+            if (backend->execute_session_command() && backend->is_waiting_result())
+            {
+                MXS_INFO("%lu session commands left on '%s'",
+                         backend->session_command_count(),
+                         backend->name());
+                m_expected_responses++;
+            }
         }
-    }
-    else if (m_expected_responses == 0 && !m_query_queue.empty()
-             && (!m_is_replay_active || processed_sescmd))
-    {
-        /**
-         * All replies received, route any stored queries. This should be done
-         * even when transaction replay is active as long as we just completed
-         * a session command.
-         */
-        route_stored_query();
+        else if (m_expected_responses == 0 && !m_query_queue.empty()
+                 && (!m_is_replay_active || processed_sescmd))
+        {
+            /**
+             * All replies received, route any stored queries. This should be done
+             * even when transaction replay is active as long as we just completed
+             * a session command.
+             */
+            route_stored_query();
+        }
     }
 
     if (writebuf)
@@ -1116,7 +1121,7 @@ bool RWSplitSession::handle_error_new_connection(MXS_SESSION* ses, RWBackend* ba
         route_stored_query();
     }
 
-    bool ok = can_recover_servers() || can_continue_session();
+    bool ok = can_recover_servers() || have_open_connections();
 
     if (!ok)
     {

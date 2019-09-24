@@ -105,13 +105,14 @@ bool RWSplitSession::prepare_target(RWBackend* target, route_target_t route_targ
     return rval;
 }
 
-bool RWSplitSession::create_one_connection()
+bool RWSplitSession::create_one_connection_for_sescmd()
 {
     // Try to first find a master
     for (auto backend : m_raw_backends)
     {
         if (backend->can_connect() && backend->is_master())
         {
+            m_sescmd_replier = backend;
             return prepare_target(backend, TARGET_MASTER);
         }
     }
@@ -121,6 +122,7 @@ bool RWSplitSession::create_one_connection()
     {
         if (backend->can_connect() && backend->is_slave())
         {
+            m_sescmd_replier = backend;
             return prepare_target(backend, TARGET_SLAVE);
         }
     }
@@ -496,10 +498,9 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
     int nsucc = 0;
     uint64_t lowest_pos = id;
 
-    if (expecting_response)
-    {
-        gwbuf_set_type(querybuf, GWBUF_TYPE_COLLECT_RESULT);
-    }
+    // Reset the replier pointer. This needs to be done for each session command as the server from which the
+    // response is returned can change over time.
+    m_sescmd_replier = nullptr;
 
     if (qc_query_is_type(type, QUERY_TYPE_PREPARE_NAMED_STMT)
         || qc_query_is_type(type, QUERY_TYPE_PREPARE_STMT))
@@ -541,6 +542,11 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
                 if (expecting_response)
                 {
                     m_expected_responses++;
+                }
+
+                if (!m_sescmd_replier || backend == m_current_master)
+                {
+                    m_sescmd_replier = backend;
                 }
 
                 MXS_INFO("Route query to %s: %s",
@@ -599,7 +605,7 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
     if (m_config.lazy_connect && !attempted_write && nsucc == 0)
     {
         // If no connections are open, create one and execute the session command on it
-        if (create_one_connection())
+        if (create_one_connection_for_sescmd())
         {
             nsucc = 1;
         }

@@ -59,109 +59,110 @@ std::string extract_error(GWBUF* buffer)
  * Discards the slave connection if its response differs from the master's response
  *
  * @param backend    The slave Backend
- * @param master_cmd Master's reply
- * @param slave_cmd  Slave's reply
+ * @param master_ok  Master's reply was OK
+ * @param slave_ok   Slave's reply was OK
+ * @param sescmd     The executed session command
  */
-static void discard_if_response_differs(RWBackend* backend,
-                                        uint8_t master_response,
-                                        uint8_t slave_response,
+static void discard_if_response_differs(RWBackend* backend, bool master_ok, bool slave_ok,
                                         SSessionCommand sescmd)
 {
-    if (master_response != slave_response)
+    if (master_ok != slave_ok)
     {
         uint8_t cmd = sescmd->get_command();
         std::string query = sescmd->to_string();
-        MXS_WARNING("Slave server '%s': response (0x%02hhx) differs "
-                    "from master's response (0x%02hhx) to %s: `%s`. "
+        MXS_WARNING("Slave server '%s': response (%s) differs from master's response (%s) to %s: `%s`. "
                     "Closing slave connection due to inconsistent session state.",
-                    backend->name(),
-                    slave_response,
-                    master_response,
-                    STRPACKETTYPE(cmd),
-                    query.empty() ? "<no query>" : query.c_str());
+                    backend->name(), slave_ok ? "OK" : "ERROR", master_ok ? "OK" : "ERROR",
+                    STRPACKETTYPE(cmd), query.empty() ? "<no query>" : query.c_str());
         backend->close(mxs::Backend::CLOSE_FATAL);
         backend->set_close_reason("Invalid response to: " + query);
     }
 }
 
-void RWSplitSession::process_sescmd_response(RWBackend* backend, GWBUF** ppPacket)
+void RWSplitSession::process_sescmd_response(RWBackend* backend, GWBUF** ppPacket, const mxs::Reply& reply)
 {
     if (backend->has_session_commands())
     {
-        mxb_assert(GWBUF_IS_COLLECTED_RESULT(*ppPacket));
-        uint8_t cmd;
-        gwbuf_copy_data(*ppPacket, MYSQL_HEADER_LEN, 1, &cmd);
-        uint8_t command = backend->next_session_command()->get_command();
-        mxs::SSessionCommand sescmd = backend->next_session_command();
-        uint64_t id = backend->complete_session_command();
-        MXS_PS_RESPONSE resp = {};
         bool discard = true;
+        mxs::SSessionCommand sescmd = backend->next_session_command();
+        uint8_t command = sescmd->get_command();
+        uint64_t id = sescmd->get_position();
 
-        if (command == MXS_COM_STMT_PREPARE && cmd != MYSQL_REPLY_ERR)
+        if (command == MXS_COM_STMT_PREPARE && !reply.error())
         {
-            // This should never fail or the backend protocol is broken
-            MXB_AT_DEBUG(bool b = ) mxs_mysql_extract_ps_response(*ppPacket, &resp);
-            mxb_assert(b);
-            backend->add_ps_handle(id, resp.id);
+            backend->add_ps_handle(id, reply.generated_id());
         }
 
         if (m_recv_sescmd < m_sent_sescmd && id == m_recv_sescmd + 1)
         {
-            if (!m_current_master || !m_current_master->in_use()// Session doesn't have a master
-                || m_current_master == backend)                 // This is the master's response
+            mxb_assert_message(m_sescmd_replier, "New session commands must have a pre-assigned replier");
+
+            if (m_sescmd_replier == backend)
             {
-                /** First reply to this session command, route it to the client */
-                ++m_recv_sescmd;
                 discard = false;
 
-                /** Store the master's response so that the slave responses can
-                 * be compared to it */
-                m_sescmd_responses[id] = cmd;
-
-                if (cmd == MYSQL_REPLY_ERR)
+                if (reply.is_complete())
                 {
-                    MXS_INFO("Session command no. %lu failed: %s",
-                             id,
-                             extract_error(*ppPacket).c_str());
-                }
-                else if (command == MXS_COM_STMT_PREPARE)
-                {
-                    /** Map the returned response to the internal ID */
-                    MXS_INFO("PS ID %u maps to internal ID %lu", resp.id, id);
-                    m_qc.ps_store_response(id, *ppPacket);
-                }
+                    /** First reply to this session command, route it to the client */
+                    ++m_recv_sescmd;
 
-                // Discard any slave connections that did not return the same result
-                for (SlaveResponseList::iterator it = m_slave_responses.begin();
-                     it != m_slave_responses.end(); it++)
-                {
-                    discard_if_response_differs(it->first, cmd, it->second, sescmd);
-                }
+                    /** Store the master's response so that the slave responses can be compared to it */
+                    m_sescmd_responses[id] = std::make_pair(backend, !reply.error());
 
-                m_slave_responses.clear();
+                    if (reply.error())
+                    {
+                        MXS_INFO("Session command no. %lu returned an error: %s",
+                                 id, reply.error().message().c_str());
+                    }
+                    else if (command == MXS_COM_STMT_PREPARE)
+                    {
+                        /** Map the returned response to the internal ID */
+                        MXS_INFO("PS ID %u maps to internal ID %lu", reply.generated_id(), id);
+                        m_qc.ps_store_response(id, reply.generated_id(), reply.param_count());
+                    }
+
+                    // Discard any slave connections that did not return the same result
+                    for (auto& a : m_slave_responses)
+                    {
+                        discard_if_response_differs(a.first, m_sescmd_responses[id].second, a.second, sescmd);
+                    }
+
+                    m_slave_responses.clear();
+                }
+                else
+                {
+                    MXS_INFO("Session command response from %s not yet complete", backend->name());
+                }
             }
             else
             {
                 /** Record slave command so that the response can be validated
                  * against the master's response when it arrives. */
-                m_slave_responses.push_back(std::make_pair(backend, cmd));
+                m_slave_responses.push_back(std::make_pair(backend, !reply.error()));
             }
         }
         else
         {
-            if (cmd == MYSQL_REPLY_ERR && m_sescmd_responses[id] != MYSQL_REPLY_ERR)
+            if (reply.error() && m_sescmd_responses[id].second)
             {
-                MXS_WARNING("Session command failed on slave '%s': %s",
-                            backend->name(), extract_error(*ppPacket).c_str());
+                MXS_WARNING("Session command returned an error on slave '%s': %s",
+                            backend->name(), reply.error().message().c_str());
             }
 
-            discard_if_response_differs(backend, m_sescmd_responses[id], cmd, sescmd);
+            discard_if_response_differs(backend, m_sescmd_responses[id].second, !reply.error(), sescmd);
         }
 
         if (discard)
         {
             gwbuf_free(*ppPacket);
             *ppPacket = NULL;
+        }
+
+        if (reply.is_complete() && backend->in_use())
+        {
+            // The backend can be closed in discard_if_response_differs if the response differs which is why
+            // we need to check it again here
+            backend->complete_session_command();
         }
 
         if (m_expected_responses == 0 && !m_config.disable_sescmd_history
@@ -177,7 +178,7 @@ void RWSplitSession::process_sescmd_response(RWBackend* backend, GWBUF** ppPacke
              * with the expected response to it.
              */
             SSessionCommand latest = m_sescmd_list.back();
-            cmd = m_sescmd_responses[latest->get_position()];
+            auto cmd = m_sescmd_responses[latest->get_position()];
 
             m_sescmd_list.clear();
             m_sescmd_responses.clear();

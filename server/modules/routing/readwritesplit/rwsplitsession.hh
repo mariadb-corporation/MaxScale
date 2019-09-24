@@ -31,13 +31,14 @@
 #define TARGET_IS_RLAG_MAX(t)     maxscale::QueryClassifier::target_is_rlag_max(t)
 #define TARGET_IS_LAST_USED(t)    maxscale::QueryClassifier::target_is_last_used(t)
 
-typedef std::map<uint32_t, uint32_t> ClientHandleMap;   /** External ID to internal ID */
+// External ID to internal ID
+typedef std::map<uint32_t, uint32_t> ClientHandleMap;
 
-typedef std::unordered_set<std::string> TableSet;
-typedef std::map<uint64_t, uint8_t>     ResponseMap;
+// Records of the backend who responded to the session commands and whether it succeeded
+typedef std::map<uint64_t, std::pair<mxs::RWBackend*, bool>> ResponseMap;
 
-/** List of slave responses that arrived before the master */
-typedef std::list<std::pair<mxs::RWBackend*, uint8_t>> SlaveResponseList;
+/** List of slave responses that arrived before the master and whether they succeeded */
+typedef std::list<std::pair<mxs::RWBackend*, bool>> SlaveResponseList;
 
 /** Map of COM_STMT_EXECUTE targets by internal ID */
 typedef std::unordered_map<uint32_t, mxs::RWBackend*> ExecMap;
@@ -123,7 +124,7 @@ private:
     RWSplitSession(RWSplit* instance, MXS_SESSION* session, mxs::SRWBackends backends);
 
     bool open_connections();
-    void process_sescmd_response(mxs::RWBackend* backend, GWBUF** ppPacket);
+    void process_sescmd_response(mxs::RWBackend* backend, GWBUF** ppPacket, const mxs::Reply& reply);
     void compress_history(mxs::SSessionCommand& sescmd);
 
     void prune_to_position(uint64_t pos);
@@ -152,7 +153,7 @@ private:
     void            handle_connection_keepalive(mxs::RWBackend* target);
     bool            prepare_target(mxs::RWBackend* target, route_target_t route_target);
     bool            prepare_connection(mxs::RWBackend* target);
-    bool            create_one_connection();
+    bool            create_one_connection_for_sescmd();
     void            retry_query(GWBUF* querybuf, int delay = 1);
 
     bool trx_is_starting();
@@ -243,7 +244,7 @@ private:
         return !m_config.disable_sescmd_history || m_recv_sescmd == 0;
     }
 
-    inline bool can_continue_session() const
+    inline bool have_open_connections() const
     {
         return std::any_of(m_raw_backends.begin(), m_raw_backends.end(), [](mxs::RWBackend* b) {
                                return b->in_use();
@@ -337,6 +338,7 @@ private:
     RWSplit*                m_router;           /**< The router instance */
     mxs::SessionCommandList m_sescmd_list;      /**< List of executed session commands */
     ResponseMap             m_sescmd_responses; /**< Response to each session command */
+    mxs::RWBackend*         m_sescmd_replier {nullptr};
     SlaveResponseList       m_slave_responses;  /**< Slaves that replied before the master */
     uint64_t                m_sent_sescmd;      /**< ID of the last sent session command*/
     uint64_t                m_recv_sescmd;      /**< ID of the most recently completed session
