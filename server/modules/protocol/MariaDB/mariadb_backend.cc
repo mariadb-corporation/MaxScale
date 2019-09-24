@@ -111,8 +111,7 @@ bool MySQLBackendProtocol::reuse_connection(BackendDCB* dcb, mxs::Component* ups
 {
     bool rv = false;
 
-    mxb_assert(!dcb->readq() && !dcb->delayq() && !dcb->writeq());
-    mxb_assert(!dcb->is_in_persistent_pool());
+    mxb_assert(dcb->session() && !dcb->readq() && !dcb->delayq() && !dcb->writeq());
     mxb_assert(m_ignore_replies >= 0);
 
     if (dcb->state() != DCB::State::POLLING || this->protocol_auth_state != MXS_AUTH_STATE_COMPLETE)
@@ -314,14 +313,6 @@ void MySQLBackendProtocol::ready_for_reading(DCB* plain_dcb)
 {
     mxb_assert(plain_dcb->role() == DCB::Role::BACKEND);
     BackendDCB* dcb = static_cast<BackendDCB*>(plain_dcb);
-
-    if (dcb->is_in_persistent_pool())
-    {
-        /** If a DCB gets a read event when it's in the persistent pool, it is
-         * treated as if it were an error. */
-        dcb->trigger_hangup_event();
-        return;
-    }
 
     mxb_assert(dcb->session());
 
@@ -1091,19 +1082,9 @@ int32_t MySQLBackendProtocol::write(DCB* plain_dcb, GWBUF* queue)
 void MySQLBackendProtocol::error(DCB* dcb)
 {
     MXS_SESSION* session = dcb->session();
-    if (!session)
-    {
-        BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
+    mxb_assert(session);
 
-        if (!backend_dcb->is_in_persistent_pool())
-        {
-            /** Not a persistent connection, something is wrong. */
-            MXS_ERROR("EPOLLERR event on a non-persistent DCB with no session. "
-                      "Closing connection.");
-        }
-        DCB::close(dcb);
-    }
-    else if (dcb->state() != DCB::State::POLLING || session->state() != MXS_SESSION::State::STARTED)
+    if (dcb->state() != DCB::State::POLLING || session->state() != MXS_SESSION::State::STARTED)
     {
         int error;
         int len = sizeof(error);
@@ -1143,29 +1124,27 @@ void MySQLBackendProtocol::hangup(DCB* dcb)
 {
     mxb_assert(!dcb->is_closed());
     MXS_SESSION* session = dcb->session();
+    mxb_assert(session);
 
     BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
 
-    if (!backend_dcb->is_in_persistent_pool())
+    if (session->state() != MXS_SESSION::State::STARTED)
     {
-        if (session->state() != MXS_SESSION::State::STARTED)
+        int error;
+        int len = sizeof(error);
+        if (getsockopt(dcb->fd(), SOL_SOCKET, SO_ERROR, &error, (socklen_t*) &len) == 0)
         {
-            int error;
-            int len = sizeof(error);
-            if (getsockopt(dcb->fd(), SOL_SOCKET, SO_ERROR, &error, (socklen_t*) &len) == 0)
+            if (error != 0 && session->state() != MXS_SESSION::State::STOPPING)
             {
-                if (error != 0 && session->state() != MXS_SESSION::State::STOPPING)
-                {
-                    MXS_ERROR("Hangup in session that is not ready for routing, "
-                              "Error reported is '%s'.",
-                              mxs_strerror(errno));
-                }
+                MXS_ERROR("Hangup in session that is not ready for routing, "
+                          "Error reported is '%s'.",
+                          mxs_strerror(errno));
             }
         }
-        else
-        {
-            do_handle_error(dcb, "Lost connection to backend server.");
-        }
+    }
+    else
+    {
+        do_handle_error(dcb, "Lost connection to backend server.");
     }
 }
 
@@ -1196,8 +1175,8 @@ int MySQLBackendProtocol::backend_write_delayqueue(DCB* plain_dcb, GWBUF* buffer
 {
     mxb_assert(plain_dcb->role() == DCB::Role::BACKEND);
     BackendDCB* dcb = static_cast<BackendDCB*>(plain_dcb);
+    mxb_assert(dcb->session());
     mxb_assert(buffer);
-    mxb_assert(!dcb->is_in_persistent_pool());
 
     if (MYSQL_IS_CHANGE_USER(((uint8_t*)GWBUF_DATA(buffer))))
     {

@@ -697,11 +697,6 @@ public:
 
     int ssl_handshake() override;
 
-    bool is_in_persistent_pool() const
-    {
-        return m_persistentstart > 0;
-    }
-
     std::unique_ptr<mxs::BackendProtocol>      m_protocol;       /**< The protocol session */
 
 private:
@@ -726,11 +721,6 @@ private:
 
 
     SERVER* const m_server;             /**< The associated backend server */
-public: // Temporarily public
-    time_t  m_persistentstart = 0;      /**<    0: Not in the persistent pool.
-                                         *      -1: Evicted from the persistent pool and being closed.
-                                         *   non-0: Time when placed in the persistent pool.
-                                         */
 };
 
 class InternalDCB : public ClientDCB

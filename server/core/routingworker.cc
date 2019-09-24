@@ -266,11 +266,39 @@ RoutingWorker::PersistentEntry::~PersistentEntry()
     mxb_assert(!m_pDcb);
 }
 
+RoutingWorker::DCBHandler::DCBHandler(RoutingWorker* pOwner)
+    : m_owner(*pOwner)
+{
+}
+
+// Any activity on a backend DCB that is in the persistent pool, will
+// cause the dcb to be evicted.
+void RoutingWorker::DCBHandler::ready_for_reading(DCB* pDcb)
+{
+    m_owner.evict_dcb(static_cast<BackendDCB*>(pDcb));
+}
+
+void RoutingWorker::DCBHandler::write_ready(DCB* pDcb)
+{
+    m_owner.evict_dcb(static_cast<BackendDCB*>(pDcb));
+}
+
+void RoutingWorker::DCBHandler::error(DCB* pDcb)
+{
+    m_owner.evict_dcb(static_cast<BackendDCB*>(pDcb));
+}
+
+void RoutingWorker::DCBHandler::hangup(DCB* pDcb)
+{
+    m_owner.evict_dcb(static_cast<BackendDCB*>(pDcb));
+}
+
 
 RoutingWorker::RoutingWorker()
     : m_id(next_worker_id())
     , m_alive(true)
     , m_pWatchdog_notifier(nullptr)
+    , m_pool_handler(this)
 {
     MXB_POLL_DATA::handler = &RoutingWorker::epoll_instance_handler;
     MXB_POLL_DATA::owner = this;
@@ -616,6 +644,9 @@ BackendDCB* RoutingWorker::get_backend_dcb(SERVER* pS)
             pDcb = persistent_entries.front().release_dcb();
             persistent_entries.pop_front();
 
+            // Put back the origininal handler.
+            pDcb->set_handler(pDcb->protocol());
+
             mxb::atomic::add(&pServer->pool_stats.n_persistent, -1);
             mxb::atomic::add(&pServer->stats().n_current, 1, mxb::atomic::RELAXED);
         }
@@ -647,10 +678,12 @@ bool RoutingWorker::can_be_destroyed(BackendDCB* pDcb)
             if (mxb::atomic::add_limited(&pServer->pool_stats.n_persistent, 1, persistpoolmax))
             {
                 pDcb->clear();
+                // Change the handler to one that will close the DCB in case there
+                // is any activity on it.
+                pDcb->set_handler(&m_pool_handler);
 
                 PersistentEntries& persistent_entries = m_persistent_entries_by_server[pServer];
 
-                pDcb->m_persistentstart = time(nullptr);
                 persistent_entries.emplace_back(pDcb);
 
                 MXB_AT_DEBUG(int rc =)mxb::atomic::add(&pServer->stats().n_current, -1, mxb::atomic::RELAXED);
@@ -731,13 +764,43 @@ int RoutingWorker::evict_dcbs(SERVER* pS, Evict evict)
         }
         // This will cause can_be_destroyed() to be called. It will not be considered
         // for the pool since it will be found in m_being_evicted.
-        pDcb->m_persistentstart = -1;
         DCB::close(pDcb);
     }
 
     m_being_evicted.clear();
 
     return count;
+}
+
+void RoutingWorker::evict_dcb(BackendDCB* pDcb)
+{
+    // TODO: Replace set with flag.
+    mxb_assert(m_being_evicted.size() == 0);
+
+    PersistentEntries& persistent_entries = m_persistent_entries_by_server[pDcb->server()];
+
+    // TODO: An issue that we need to do a linear search?
+    auto i = std::find_if(persistent_entries.begin(),
+                          persistent_entries.end(),
+                          [pDcb](const PersistentEntry& entry) {
+                              return entry.dcb() == pDcb;
+                          });
+
+    mxb_assert(i != persistent_entries.end());
+
+    i->release_dcb();
+    persistent_entries.erase(i);
+    m_being_evicted.insert(pDcb);
+
+    if (pDcb->state() == DCB::State::POLLING)
+    {
+        pDcb->disable_events();
+        pDcb->shutdown();
+    }
+
+    DCB::close(pDcb);
+
+    m_being_evicted.clear();
 }
 
 bool RoutingWorker::pre_run()

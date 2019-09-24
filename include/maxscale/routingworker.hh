@@ -659,6 +659,8 @@ private:
     // BackendDCB::Manager
     bool can_be_destroyed(BackendDCB* dcb) override;
 
+    void evict_dcb(BackendDCB* pDcb);
+
 private:
     class WatchdogNotifier;
     friend WatchdogNotifier;
@@ -717,6 +719,11 @@ private:
             return m_created;
         }
 
+        BackendDCB* dcb() const
+        {
+            return m_pDcb;
+        }
+
         BackendDCB* release_dcb()
         {
             BackendDCB* pDcb = m_pDcb;
@@ -729,11 +736,31 @@ private:
         BackendDCB* m_pDcb;
     };
 
+    class DCBHandler : public DCB::Handler
+    {
+    public:
+        DCBHandler(const DCBHandler&) = delete;
+        DCBHandler& operator = (const DCBHandler&) = delete;
+
+        DCBHandler(RoutingWorker* pOwner);
+
+        void ready_for_reading(DCB* pDcb) override;
+        void write_ready(DCB* pDcb) override;
+        void error(DCB* dcb) override;
+        void hangup(DCB* dcb) override;
+
+    private:
+        RoutingWorker& m_owner;
+    };
+
+    friend class PoolHandler;
+
     using PersistentEntries         = std::list<PersistentEntry>;
     using PersistentEntriesByServer = std::map<SERVER*, PersistentEntries>;
 
     PersistentEntriesByServer       m_persistent_entries_by_server;
     std::unordered_set<BackendDCB*> m_being_evicted;
+    DCBHandler                      m_pool_handler;
 };
 
 using WatchdogWorkaround = RoutingWorker::WatchdogWorkaround;

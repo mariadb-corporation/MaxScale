@@ -1016,7 +1016,6 @@ void BackendDCB::reset(MXS_SESSION* session)
 {
     clear();
 
-    m_persistentstart = 0;
     m_last_read = mxs_clock();
     m_last_write = mxs_clock();
     m_session = session;
