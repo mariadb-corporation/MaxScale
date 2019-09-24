@@ -35,5 +35,16 @@ int main(int argc, char* argv[])
     test.expect(c.query("COMMIT"), "COMMIT command should work");
     c.disconnect();
 
+    test.expect(c.connect(), "Connection should work");
+    test.expect(c.query("SET @a = 1"), "Session command should work");
+
+    test.repl->block_all_nodes();
+    test.maxscales->wait_for_monitor();
+    test.repl->unblock_all_nodes();
+    test.maxscales->wait_for_monitor();
+
+    test.expect(c.query("SET @a = 1"), "Session command should work: %s", c.error());
+    c.disconnect();
+
     return test.global_result;
 }
