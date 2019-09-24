@@ -235,6 +235,7 @@ private:
     GWBUF*   process_packets(GWBUF** result);
     void     process_one_packet(Iter it, Iter end, uint32_t len);
     void     process_reply_start(Iter it, Iter end);
+    void     process_result_start(Iter it, Iter end);
     void     update_error(mxs::Buffer::iterator it, mxs::Buffer::iterator end);
     bool     consume_fetched_rows(GWBUF* buffer);
     void     track_query(GWBUF* buffer);

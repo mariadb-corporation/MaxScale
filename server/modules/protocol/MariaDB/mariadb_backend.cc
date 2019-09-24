@@ -1649,19 +1649,7 @@ GWBUF* MySQLBackendProtocol::track_response(GWBUF** buffer)
     using mxs::ReplyState;
     GWBUF* rval = nullptr;
 
-    if (m_reply.command() == MXS_COM_BINLOG_DUMP)
-    {
-        // Treat COM_BINLOG_DUMP like a response that never ends
-        rval = modutil_get_complete_packets(buffer);
-    }
-    else if (m_reply.command() == MXS_COM_STATISTICS)
-    {
-        // COM_STATISTICS returns a single string and thus requires special handling:
-        // https://mariadb.com/kb/en/library/com_statistics/#response
-        set_reply_state(ReplyState::DONE);
-        rval = modutil_get_complete_packets(buffer);
-    }
-    else if (m_reply.command() == MXS_COM_STMT_PREPARE && mxs_mysql_is_prep_stmt_ok(*buffer))
+    if (m_reply.command() == MXS_COM_STMT_PREPARE && mxs_mysql_is_prep_stmt_ok(*buffer))
     {
         // Successful COM_STMT_PREPARE responses return a special OK packet:
         // https://mariadb.com/kb/en/library/com_stmt_prepare/#com_stmt_prepare_ok
@@ -2263,6 +2251,29 @@ void MySQLBackendProtocol::process_one_packet(Iter it, Iter end, uint32_t len)
 
 void MySQLBackendProtocol::process_reply_start(Iter it, Iter end)
 {
+    if (m_reply.command() == MXS_COM_BINLOG_DUMP)
+    {
+        // Treat COM_BINLOG_DUMP like a response that never ends
+    }
+    else if (m_reply.command() == MXS_COM_STATISTICS)
+    {
+        // COM_STATISTICS returns a single string and thus requires special handling:
+        // https://mariadb.com/kb/en/library/com_statistics/#response
+        set_reply_state(ReplyState::DONE);
+    }
+    else if (m_reply.command() == MXS_COM_FIELD_LIST)
+    {
+        // COM_FIELD_LIST sends a strange kind of a result set that doesn't have field definitions
+        set_reply_state(ReplyState::RSET_ROWS);
+    }
+    else
+    {
+        process_result_start(it, end);
+    }
+}
+
+void MySQLBackendProtocol::process_result_start(Iter it, Iter end)
+{
     uint8_t cmd = *it;
 
     switch (cmd)
@@ -2295,19 +2306,10 @@ void MySQLBackendProtocol::process_reply_start(Iter it, Iter end)
         break;
 
     default:
-        if (m_reply.command() == MXS_COM_FIELD_LIST)
-        {
-            // COM_FIELD_LIST sends a strange kind of a result set that doesn't have field definitions
-            set_reply_state(ReplyState::RSET_ROWS);
-        }
-        else
-        {
-            // Start of a result set
-            m_num_coldefs = get_encoded_int(it);
-            m_reply.add_field_count(m_num_coldefs);
-            set_reply_state(ReplyState::RSET_COLDEF);
-        }
-
+        // Start of a result set
+        m_num_coldefs = get_encoded_int(it);
+        m_reply.add_field_count(m_num_coldefs);
+        set_reply_state(ReplyState::RSET_COLDEF);
         break;
     }
 }
