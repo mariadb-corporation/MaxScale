@@ -406,7 +406,11 @@ void RWBackend::process_reply(GWBUF* buffer)
 {
     m_error.clear();
 
-    if (current_command() == MXS_COM_STMT_FETCH)
+    if (current_command() == MXS_COM_BINLOG_DUMP)
+    {
+        // Treat COM_BINLOG_DUMP like a response that never ends
+    }
+    else if (current_command() == MXS_COM_STMT_FETCH)
     {
         // TODO: m_error is not updated here.
         // If the server responded with an error, n_eof > 0
