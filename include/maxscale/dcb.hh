@@ -665,11 +665,6 @@ public:
                                BackendDCB::Manager* manager,
                                mxs::Component* upstream);
 
-    void set_session(MXS_SESSION* s)
-    {
-        m_session = s;
-    }
-
     /**
      * Resets the BackendDCB so that it can be reused.
      *

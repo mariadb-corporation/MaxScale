@@ -136,7 +136,7 @@ void session_link_backend_dcb(MXS_SESSION* session, BackendDCB* dcb)
     mxb_assert(dcb->role() == DCB::Role::BACKEND);
 
     mxb::atomic::add(&session->refcount, 1);
-    dcb->set_session(session);
+    dcb->reset(session);
 
     Session* ses = static_cast<Session*>(session);
     ses->link_backend_dcb(dcb);

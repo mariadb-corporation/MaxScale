@@ -249,7 +249,6 @@ BackendDCB* BackendDCB::take_from_connection_pool(SERVER* s, MXS_SESSION* sessio
             {
                 MXS_DEBUG("Reusing a persistent connection, user %s, dcb %p", user, dcb);
                 session_link_backend_dcb(session, dcb);
-                dcb->reset(session);
 
                 if (dcb->m_protocol->reuse_connection(dcb, upstream, session->client_dcb->protocol()))
                 {
