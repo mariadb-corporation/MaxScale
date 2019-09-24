@@ -335,6 +335,16 @@ public:
 
     virtual ~Worker();
 
+    /**
+     * Returns the id of the worker
+     *
+     * @return The address of the worker cast to an int
+     */
+    virtual int id() const
+    {
+        return (intptr_t)this;
+    }
+
     int load(Load::counter_t counter)
     {
         return m_load.percentage(counter);

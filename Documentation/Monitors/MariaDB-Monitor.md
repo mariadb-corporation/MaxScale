@@ -328,6 +328,9 @@ server. See the section on `handle_server_events` for more information.
 All cluster operations can be activated manually through MaxCtrl. See
 section [Manual activation](#manual-activation) for more details.
 
+See [Limitations and requirements](#limitations-and-requirements) for
+information on possible issues with failover and switchover.
+
 ### Operation details
 
 **Failover** replaces a failed master with a running slave. It does the
@@ -550,8 +553,14 @@ Failover may lose events. If a master goes down before sending new events to at
 least one slave, those events are lost when a new master is chosen. If the old
 master comes back online, the other servers have likely moved on with a
 diverging history and the old master can no longer join the replication cluster.
-To minimize the chance for this happening, use
+To reduce the chance for this happening, use
 [semisynchronous replication](https://mariadb.com/kb/en/library/semisynchronous-replication/).
+Even a controlled shutdown of the master may lose events. The server does not by
+default wait for all data to be replicated to the slaves when shutting down and
+instead simply closes all connections. When shutting down the master with the
+intention of having a slave promoted, run *switchover* first to ensure that all
+data is replicated. For more information on server shutdown, see
+[Binary Log Dump Threads and the Shutdown Process](https://mariadb.com/kb/en/library/replication-threads/#binary-log-dump-threads-and-the-shutdown-process).
 
 Switchover requires that the cluster is "frozen" for the duration of the
 operation. This means that no data modifying statements such as INSERT or UPDATE
