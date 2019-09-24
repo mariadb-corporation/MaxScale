@@ -666,16 +666,20 @@ uint32_t QueryClassifier::ps_id_internal_get(GWBUF* pBuffer)
     return internal_id;
 }
 
-void QueryClassifier::ps_store_response(uint32_t internal_id, GWBUF* buffer)
+void QueryClassifier::ps_store_response(uint32_t internal_id, uint32_t external_id, uint16_t param_count)
 {
-    auto external_id = qc_mysql_extract_ps_id(buffer);
     m_prev_ps_id = external_id;
     m_ps_handles[external_id] = internal_id;
 
-    if (auto param_count = qc_extract_ps_param_count(buffer))
+    if (param_count)
     {
         m_sPs_manager->set_param_count(internal_id, param_count);
     }
+}
+
+void QueryClassifier::ps_store_response(uint32_t internal_id, GWBUF* buffer)
+{
+    ps_store_response(internal_id, qc_mysql_extract_ps_id(buffer), qc_extract_ps_param_count(buffer));
 }
 
 void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype)
@@ -1078,12 +1082,6 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
         {
             /** The session is locked to the master */
             route_target = TARGET_MASTER;
-
-            if (qc_query_is_type(type_mask, QUERY_TYPE_PREPARE_NAMED_STMT)
-                || qc_query_is_type(type_mask, QUERY_TYPE_PREPARE_STMT))
-            {
-                gwbuf_set_type(pBuffer, GWBUF_TYPE_COLLECT_RESULT);
-            }
         }
         else
         {

@@ -473,11 +473,12 @@ private:
 
 enum class ReplyState
 {
-    START,              /**< Query sent to backend */
-    DONE,               /**< Complete reply received */
-    RSET_COLDEF,        /**< Resultset response, waiting for column definitions */
-    RSET_COLDEF_EOF,    /**< Resultset response, waiting for EOF for column definitions */
-    RSET_ROWS           /**< Resultset response, waiting for rows */
+    START,          /**< Query sent to backend */
+    DONE,           /**< Complete reply received */
+    RSET_COLDEF,    /**< Resultset response, waiting for column definitions */
+    RSET_COLDEF_EOF,/**< Resultset response, waiting for EOF for column definitions */
+    RSET_ROWS,      /**< Resultset response, waiting for rows */
+    PREPARE,        /**< COM_STMT_PREPARE response */
 };
 
 class Reply
@@ -544,6 +545,16 @@ public:
      */
     const std::vector<uint64_t>& field_counts() const;
 
+    /**
+     * The server-generated ID for a prepared statement if one was created
+     */
+    uint32_t generated_id() const;
+
+    /**
+     * The number of input parameters the prepared statement has
+     */
+    uint16_t param_count() const;
+
     //
     // Setters
     //
@@ -557,6 +568,10 @@ public:
     void add_bytes(uint64_t size);
 
     void add_field_count(uint64_t field_count);
+
+    void set_generated_id(uint32_t id);
+
+    void set_param_count(uint16_t id);
 
     void clear();
 
@@ -573,6 +588,8 @@ private:
     Error                 m_error;
     uint64_t              m_row_count {0};
     uint64_t              m_size {0};
+    uint32_t              m_generated_id {0};
+    uint16_t              m_param_count {0};
     std::vector<uint64_t> m_field_counts;
 };
 }

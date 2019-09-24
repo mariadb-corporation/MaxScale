@@ -95,7 +95,6 @@ bool Backend::execute_session_command()
     case MXS_COM_QUERY:
     default:
         // We want the complete response in one packet
-        gwbuf_set_type(buffer, GWBUF_TYPE_COLLECT_RESULT);
         rval = write(buffer, EXPECT_RESPONSE);
         mxb_assert(is_waiting_result());
         break;

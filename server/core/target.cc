@@ -272,6 +272,9 @@ std::string Reply::to_string() const
     case ReplyState::RSET_ROWS:
         return "ROWS";
 
+    case ReplyState::PREPARE:
+        return "PREPARE";
+
     default:
         mxb_assert(!true);
         return "UNKNOWN";
@@ -347,6 +350,16 @@ const std::vector<uint64_t>& Reply::field_counts() const
     return m_field_counts;
 }
 
+uint32_t Reply::generated_id() const
+{
+    return m_generated_id;
+}
+
+uint16_t Reply::param_count() const
+{
+    return m_param_count;
+}
+
 void Reply::set_command(uint8_t command)
 {
     m_command = command;
@@ -372,6 +385,16 @@ void Reply::add_field_count(uint64_t field_count)
     m_field_counts.push_back(field_count);
 }
 
+void Reply::set_generated_id(uint32_t id)
+{
+    m_generated_id = id;
+}
+
+void Reply::set_param_count(uint16_t count)
+{
+    m_param_count = count;
+}
+
 void Reply::clear()
 {
     m_command = 0;
@@ -379,6 +402,8 @@ void Reply::clear()
     m_error.clear();
     m_row_count = 0;
     m_size = 0;
+    m_generated_id = 0;
+    m_param_count = 0;
     m_field_counts.clear();
 }
 }

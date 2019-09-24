@@ -272,6 +272,7 @@ public:
      * @param buffer      The buffer containing the OK response to a COM_STMT_PREPARE
      */
     void ps_store_response(uint32_t internal_id, GWBUF* buffer);
+    void ps_store_response(uint32_t internal_id, uint32_t id, uint16_t param_count);
 
     /**
      * @brief Update the current RouteInfo.

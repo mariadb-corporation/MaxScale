@@ -236,6 +236,7 @@ private:
     void     process_one_packet(Iter it, Iter end, uint32_t len);
     void     process_reply_start(Iter it, Iter end);
     void     process_result_start(Iter it, Iter end);
+    void     process_ps_response(Iter it, Iter end);
     void     update_error(mxs::Buffer::iterator it, mxs::Buffer::iterator end);
     bool     consume_fetched_rows(GWBUF* buffer);
     void     track_query(GWBUF* buffer);
@@ -258,7 +259,8 @@ private:
     bool           m_skip_next {false};
     uint64_t       m_num_coldefs {0};
     uint32_t       m_num_eof_packets {0};   /**< Encountered eof packet number, used for check packet type */
-    mxs::Buffer    m_collectq;              /**< Used when resultset collection is requested */
+    mxs::Buffer    m_collectq;              /**< Used to collect results when resultset collection is requested */
+    int64_t        m_ps_packets {0};
     bool           m_opening_cursor = false;/**< Whether we are opening a cursor */
     uint32_t       m_expected_rows = 0;     /**< Number of rows a COM_STMT_FETCH is retrieving */
     bool           m_large_query = false;
