@@ -161,6 +161,16 @@ public:
         return m_state;
     }
 
+    Handler* handler() const
+    {
+        return m_handler;
+    }
+
+    void set_handler(Handler* pHandler)
+    {
+        m_handler = pHandler;
+    }
+
     /**
      * Clears the DCB; all queues and callbacks are freed and the session
      * pointer is set to null.
@@ -170,13 +180,6 @@ public:
     virtual std::string diagnostics() const;
 
     virtual json_t* to_json() const;
-
-    /**
-     * Is the DCB ready for event handling.
-     *
-     * @return True if ready, false otherwise.
-     */
-    virtual bool ready() const = 0;
 
     MXS_SESSION* session() const
     {
@@ -606,7 +609,7 @@ public:
     mxs::ClientProtocol* protocol() const override;
 
     int ssl_handshake() override;
-    bool ready() const;
+
     void shutdown() override;
 
 protected:
@@ -693,8 +696,6 @@ public:
     }
 
     int ssl_handshake() override;
-
-    bool ready() const;
 
     bool is_in_persistent_pool() const
     {

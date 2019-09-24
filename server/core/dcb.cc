@@ -2004,7 +2004,7 @@ uint32_t DCB::process_events(uint32_t events)
 
     if ((events & EPOLLOUT) && (m_nClose == 0))
     {
-        mxb_assert(ready());
+        mxb_assert(m_handler);
 
         int eno = 0;
         eno = gw_getsockerrno(m_fd);
@@ -2019,7 +2019,7 @@ uint32_t DCB::process_events(uint32_t events)
 
     if ((events & EPOLLIN) && (m_nClose == 0))
     {
-        mxb_assert(ready());
+        mxb_assert(m_handler);
 
         rc |= MXB_POLL_READ;
 
@@ -2038,7 +2038,7 @@ uint32_t DCB::process_events(uint32_t events)
 
     if ((events & EPOLLERR) && (m_nClose == 0))
     {
-        mxb_assert(ready());
+        mxb_assert(m_handler);
 
         rc |= MXB_POLL_ERROR;
 
@@ -2047,7 +2047,7 @@ uint32_t DCB::process_events(uint32_t events)
 
     if ((events & EPOLLHUP) && (m_nClose == 0))
     {
-        mxb_assert(ready());
+        mxb_assert(m_handler);
 
         rc |= MXB_POLL_HUP;
 
@@ -2062,7 +2062,7 @@ uint32_t DCB::process_events(uint32_t events)
 #ifdef EPOLLRDHUP
     if ((events & EPOLLRDHUP) && (m_nClose == 0))
     {
-        mxb_assert(ready());
+        mxb_assert(m_handler);
 
         rc |= MXB_POLL_HUP;
 
@@ -2506,11 +2506,6 @@ bool ClientDCB::prepare_for_destruction()
     return true;
 }
 
-bool ClientDCB::ready() const
-{
-    return m_session != nullptr;
-}
-
 InternalDCB::InternalDCB(MXS_SESSION* session, DCB::Manager* manager)
     : ClientDCB(FD_CLOSED, "127.0.0.1",sockaddr_storage {}, DCB::Role::INTERNAL, session, nullptr, manager)
 {
@@ -2570,13 +2565,6 @@ BackendDCB::BackendDCB(SERVER* server, int fd, MXS_SESSION* session,
         add_callback(Reason::HIGH_WATER, upstream_throttle_callback, NULL);
         add_callback(Reason::LOW_WATER, upstream_throttle_callback, NULL);
     }
-}
-
-bool BackendDCB::ready() const
-{
-    // A BackendDCB with a session or residing in the persistent pool
-    // can receive events.
-    return m_session || m_persistentstart != 0;
 }
 
 void BackendDCB::shutdown()

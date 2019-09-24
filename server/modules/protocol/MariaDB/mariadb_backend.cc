@@ -101,7 +101,7 @@ bool MySQLBackendProtocol::init_connection(DCB* dcb)
 
 void MySQLBackendProtocol::finish_connection(DCB* dcb)
 {
-    mxb_assert(dcb->ready());
+    mxb_assert(dcb->handler());
     /** Send COM_QUIT to the backend being closed */
     dcb->writeq_append(mysql_create_com_quit(nullptr, 0));
 }
