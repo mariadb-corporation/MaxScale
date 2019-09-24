@@ -39,6 +39,7 @@
 #include "internal/poll.hh"
 #include "internal/server.hh"
 #include "internal/service.hh"
+#include "internal/session.hh"
 
 #define WORKER_ABSENT_ID -1
 
@@ -625,7 +626,7 @@ void RoutingWorker::remove(DCB* pDcb)
     m_dcbs.erase(it);
 }
 
-BackendDCB* RoutingWorker::get_backend_dcb(SERVER* pS)
+BackendDCB* RoutingWorker::get_backend_dcb(SERVER* pS, MXS_SESSION* pSession, mxs::Component* pUpstream)
 {
     Server* pServer = static_cast<Server*>(pS);
 
@@ -633,22 +634,40 @@ BackendDCB* RoutingWorker::get_backend_dcb(SERVER* pS)
 
     BackendDCB* pDcb = nullptr;
 
-    if (pServer->persistent_conns_enabled())
+    evict_dcbs(pServer, Evict::EXPIRED);
+
+    PersistentEntries& persistent_entries = m_persistent_entries_by_server[pServer];
+
+    while (!pDcb && !persistent_entries.empty())
     {
-        evict_dcbs(pServer, Evict::EXPIRED);
+        pDcb = persistent_entries.front().release_dcb();
+        persistent_entries.pop_front();
+        mxb::atomic::add(&pServer->pool_stats.n_persistent, -1);
 
-        PersistentEntries& persistent_entries = m_persistent_entries_by_server[pServer];
+        // Put back the origininal handler.
+        pDcb->set_handler(pDcb->protocol());
+        session_link_backend_dcb(pSession, pDcb);
 
-        if (!persistent_entries.empty())
+        if (pDcb->m_protocol->reuse_connection(pDcb, pUpstream, pSession->client_dcb->protocol()))
         {
-            pDcb = persistent_entries.front().release_dcb();
-            persistent_entries.pop_front();
-
-            // Put back the origininal handler.
-            pDcb->set_handler(pDcb->protocol());
-
-            mxb::atomic::add(&pServer->pool_stats.n_persistent, -1);
+            mxb::atomic::add(&pServer->pool_stats.n_from_pool, 1, mxb::atomic::RELAXED);
             mxb::atomic::add(&pServer->stats().n_current, 1, mxb::atomic::RELAXED);
+        }
+        else
+        {
+            MXS_WARNING("Failed to reuse a persistent connection.");
+            m_evicting = true;
+
+            if (pDcb->state() == DCB::State::POLLING)
+            {
+                pDcb->disable_events();
+                pDcb->shutdown();
+            }
+
+            DCB::close(pDcb);
+            pDcb = nullptr;
+
+            m_evicting = false;
         }
     }
 

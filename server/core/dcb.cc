@@ -235,40 +235,15 @@ BackendDCB* BackendDCB::take_from_connection_pool(SERVER* s, MXS_SESSION* sessio
 {
     Server* server = static_cast<Server*>(s);
 
-    DCB* dcb = nullptr;
+    BackendDCB* dcb = nullptr;
 
     if (server->persistent_conns_enabled() && server->is_running())
     {
-        // TODO: figure out if this can even be NULL
-        if (const char* user = session_get_user(session))
-        {
-            auto worker = static_cast<RoutingWorker*>(session->client_dcb->owner);
-            auto dcb = worker->get_backend_dcb(server);
-
-            if (dcb)
-            {
-                MXS_DEBUG("Reusing a persistent connection, user %s, dcb %p", user, dcb);
-                session_link_backend_dcb(session, dcb);
-
-                if (dcb->m_protocol->reuse_connection(dcb, upstream, session->client_dcb->protocol()))
-                {
-                    mxb::atomic::add(&server->pool_stats.n_from_pool, 1, mxb::atomic::RELAXED);
-                }
-                else
-                {
-                    // TODO: There will now be only one attempt to get a persistent
-                    // TODO: connection. There should be more than one attempts, but the
-                    // TODO: reponsibilities between DCB and Server needs to be sorted out.
-                    MXS_WARNING("Failed to reuse a persistent connection.");
-                    DCB::close(dcb);
-                    dcb = nullptr;
-                }
-                return dcb;
-            }
-        }
+        auto worker = static_cast<RoutingWorker*>(session->client_dcb->owner);
+        dcb = worker->get_backend_dcb(server, session, upstream);
     }
 
-    return nullptr;
+    return dcb;
 }
 
 BackendDCB* BackendDCB::create(SERVER* srv,

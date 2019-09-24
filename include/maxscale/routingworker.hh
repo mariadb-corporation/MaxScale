@@ -640,7 +640,7 @@ public:
         return m_dcbs;
     }
 
-    BackendDCB* get_backend_dcb(SERVER* pServer);
+    BackendDCB* get_backend_dcb(SERVER* pServer, MXS_SESSION* pSession, mxs::Component* upstream);
 
     enum class Evict
     {
