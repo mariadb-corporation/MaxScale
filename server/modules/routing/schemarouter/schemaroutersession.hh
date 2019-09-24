@@ -119,7 +119,7 @@ private:
 
     /** Routing functions */
     bool         route_session_write(GWBUF* querybuf, uint8_t command);
-    void         process_sescmd_response(SRBackend* bref, GWBUF** ppPacket);
+    void         process_sescmd_response(SRBackend* bref, GWBUF** ppPacket, const mxs::Reply& reply);
     mxs::Target* resolve_query_target(GWBUF* pPacket,
                                       uint32_t type,
                                       uint8_t command,
@@ -152,5 +152,6 @@ private:
     uint64_t               m_sent_sescmd;   /**< The latest session command being executed */
     uint64_t               m_replied_sescmd;/**< The last session command reply that was sent to the client */
     mxs::Target*           m_load_target;   /**< Target for LOAD DATA LOCAL INFILE */
+    SRBackend*             m_sescmd_replier {nullptr};
 };
 }

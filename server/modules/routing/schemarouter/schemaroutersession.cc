@@ -496,34 +496,37 @@ void SchemaRouterSession::handle_mapping_reply(SRBackend* bref, GWBUF** pPacket)
     }
 }
 
-void SchemaRouterSession::process_sescmd_response(SRBackend* bref, GWBUF** ppPacket)
+void SchemaRouterSession::process_sescmd_response(SRBackend* bref, GWBUF** ppPacket, const mxs::Reply& reply)
 {
-    mxb_assert(GWBUF_IS_COLLECTED_RESULT(*ppPacket));
     uint8_t command = bref->next_session_command()->get_command();
-    uint64_t id = bref->complete_session_command();
-    MXS_PS_RESPONSE resp = {};
+    uint64_t id = bref->next_session_command()->get_position();
 
-    if (m_replied_sescmd < m_sent_sescmd && id == m_replied_sescmd + 1)
+    if (m_replied_sescmd < m_sent_sescmd && id == m_replied_sescmd + 1 && m_sescmd_replier == bref)
     {
-        if (command == MXS_COM_STMT_PREPARE)
+        if (reply.is_complete())
         {
-            mxs_mysql_extract_ps_response(*ppPacket, &resp);
-            MXS_INFO("ID: %lu HANDLE: %lu", (unsigned long)id, (unsigned long)resp.id);
-            m_shard.add_ps_handle(id, resp.id);
-            MXS_INFO("STMT SERVER: %s", bref->name());
-            m_shard.add_statement(id, bref->target());
-            uint8_t* ptr = GWBUF_DATA(*ppPacket) + MYSQL_PS_ID_OFFSET;
-            gw_mysql_set_byte4(ptr, id);
+            if (command == MXS_COM_STMT_PREPARE)
+            {
+                MXS_INFO("SERVER: %s ID: %lu HANDLE: %u", bref->name(), id, reply.generated_id());
+                m_shard.add_ps_handle(id, reply.generated_id());
+                m_shard.add_statement(id, bref->target());
+                uint8_t* ptr = GWBUF_DATA(*ppPacket) + MYSQL_PS_ID_OFFSET;
+                gw_mysql_set_byte4(ptr, id);
+            }
+            /** First reply to this session command, route it to the client */
+            ++m_replied_sescmd;
         }
-        /** First reply to this session command, route it to the client */
-        ++m_replied_sescmd;
     }
     else
     {
-        /** The reply to this session command has already been sent to
-         * the client, discard it */
+        // The reply to this session command is already being sent to the client, discard it
         gwbuf_free(*ppPacket);
         *ppPacket = NULL;
+    }
+
+    if (reply.is_complete())
+    {
+        bref->complete_session_command();
     }
 }
 
@@ -573,7 +576,7 @@ void SchemaRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& dow
     {
         if (bref->has_session_commands())
         {
-            process_sescmd_response(bref, &pPacket);
+            process_sescmd_response(bref, &pPacket, reply);
         }
 
         if (bref->has_session_commands() && bref->execute_session_command())
@@ -726,6 +729,7 @@ bool SchemaRouterSession::route_session_write(GWBUF* querybuf, uint8_t command)
             {
                 if (b->execute_session_command())
                 {
+                    m_sescmd_replier = b.get();
                     succp = true;
                     mxb::atomic::add(&b->target()->stats().packets, 1, mxb::atomic::RELAXED);
                 }
@@ -1492,6 +1496,7 @@ bool SchemaRouterSession::handle_statement(GWBUF* querybuf, SRBackend* bref, uin
         {
             if (bref->execute_session_command())
             {
+                m_sescmd_replier = bref;
                 succp = true;
                 mxb::atomic::add(&bref->target()->stats().packets, 1, mxb::atomic::RELAXED);
             }
