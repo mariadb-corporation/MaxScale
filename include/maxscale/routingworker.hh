@@ -662,6 +662,7 @@ private:
     bool can_be_destroyed(BackendDCB* dcb) override;
 
     void evict_dcb(BackendDCB* pDcb);
+    void close_pooled_dcb(BackendDCB* pDcb);
 
 private:
     class WatchdogNotifier;

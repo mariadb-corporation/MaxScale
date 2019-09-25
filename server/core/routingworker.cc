@@ -692,6 +692,13 @@ BackendDCB* RoutingWorker::get_backend_dcb_from_pool(SERVER* pS,
         }
     }
 
+    if (pDcb)
+    {
+        // Put the dcb back to the regular book-keeping.
+        mxb_assert(m_dcbs.find(pDcb) == m_dcbs.end());
+        m_dcbs.insert(pDcb);
+    }
+
     return pDcb;
 }
 
@@ -725,6 +732,11 @@ bool RoutingWorker::can_be_destroyed(BackendDCB* pDcb)
                 PersistentEntries& persistent_entries = m_persistent_entries_by_server[pServer];
 
                 persistent_entries.emplace_back(pDcb);
+
+                // Remove the dcb from the regular book-keeping.
+                auto it = m_dcbs.find(pDcb);
+                mxb_assert(it != m_dcbs.end());
+                m_dcbs.erase(it);
 
                 MXB_AT_DEBUG(int rc =)mxb::atomic::add(&pServer->stats().n_current, -1, mxb::atomic::RELAXED);
                 mxb_assert(rc > 0);
@@ -796,14 +808,7 @@ int RoutingWorker::evict_dcbs(SERVER* pS, Evict evict)
 
     for (BackendDCB* pDcb : to_be_evicted)
     {
-        if (pDcb->state() == DCB::State::POLLING)
-        {
-            pDcb->disable_events();
-            pDcb->shutdown();
-        }
-        // This will cause can_be_destroyed() to be called. The dcb will not be
-        // considered for the pool since m_evicting is now true.
-        DCB::close(pDcb);
+        close_pooled_dcb(pDcb);
     }
 
     m_evicting = false;
@@ -831,15 +836,28 @@ void RoutingWorker::evict_dcb(BackendDCB* pDcb)
     i->release_dcb();
     persistent_entries.erase(i);
 
+    close_pooled_dcb(pDcb);
+
+    m_evicting = false;
+}
+
+void RoutingWorker::close_pooled_dcb(BackendDCB* pDcb)
+{
+    mxb_assert(m_evicting);
+
+    // Put the DCB back into the regular book-keeping.
+    mxb_assert(m_dcbs.find(pDcb) == m_dcbs.end());
+    m_dcbs.insert(pDcb);
+
     if (pDcb->state() == DCB::State::POLLING)
     {
         pDcb->disable_events();
         pDcb->shutdown();
     }
 
+    // This will cause can_be_destroyed() to be called. However, the dcb will
+    // not be considered for the pool since m_evicting is currently true.
     DCB::close(pDcb);
-
-    m_evicting = false;
 }
 
 bool RoutingWorker::pre_run()
