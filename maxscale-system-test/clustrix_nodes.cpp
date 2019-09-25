@@ -21,58 +21,6 @@ int Clustrix_nodes::prepare_server(int m)
 {
     int rv = 1;
     int ec;
-    char* clustrix_rpm = ssh_node_output(m, "rpm -qa | grep clustrix-clxnode", true, &ec);
-    if (strstr(clustrix_rpm, "clustrix-clxnode") == NULL)
-    {
-        char* str1 = nullptr;
-        char* str2 = nullptr;
-        char* str3 = nullptr;
-        char* str4 = nullptr;
-
-        str1 = ssh_node_output(m, CLUSTRIX_DEPS_YUM, true, &ec);
-        if (ec == 0)
-        {
-            printf("Installed clustrix dependencies on node %d.\n", m);
-            str2 = ssh_node_output(m, WGET_CLUSTRIX, false, &ec);
-            if (ec == 0)
-            {
-                printf("Wgot Clustrix installation package on node %d.\n", m);
-                str3 = ssh_node_output(m, UNPACK_CLUSTRIX, false, &ec);
-                if (ec == 0)
-                {
-                    printf("Unpacked Clustrix package on node %d.\n", m);
-                    str4 = ssh_node_output(m, INSTALL_CLUSTRIX, false, &ec);
-                    if (ec == 0)
-                    {
-                        printf("Successfully installed Clustrix on node %d.\n", m);
-                    }
-                    else
-                    {
-                        printf("Error: Could not install Clustrix package on node %d: %s\n", m, str4);
-                    }
-                }
-                else
-                {
-                    printf("Error: Could not unpack Clustrix package on node %d: %s\n", m, str3);
-                }
-            }
-            else
-            {
-                printf("Error: Could not wget Clustrix installation package on node %d: %s\n", m, str2);
-            }
-        }
-        else
-        {
-            printf("Error: Could not install Clustrix dependencies on node %d: %s\n", m, str1);
-        }
-
-        free(str4);
-        free(str3);
-        free(str2);
-        free(str1);
-    }
-
-    free(clustrix_rpm);
 
     bool running = false;
 

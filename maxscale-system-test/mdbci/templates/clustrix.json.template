@@ -338,6 +338,10 @@
         "hostname" : "clustrix000",
         "box" : "centos_7_aws_large",
         "memory_size" : "16192",
+        "product" : {
+                "name" : "clustrix",
+                "version": "9.1.4"
+        },
         "labels" : [
                 "CLUSTRIX_BACKEND"
         ]
@@ -348,6 +352,10 @@
         "hostname" : "clustrix001",
         "box" : "centos_7_aws_large",
         "memory_size" : "16192",
+        "product" : {
+                "name" : "clustrix",
+                "version": "9.1.4"
+        },
         "labels" : [
                 "CLUSTRIX_BACKEND"
         ]
@@ -358,6 +366,10 @@
         "hostname" : "clustrix002",
         "box" : "centos_7_aws_large",
         "memory_size" : "16192",
+        "product" : {
+                "name" : "clustrix",
+                "version": "9.1.4"
+        },
         "labels" : [
                 "CLUSTRIX_BACKEND"
         ]
@@ -367,6 +379,10 @@
   {
         "hostname" : "clustrix003",
         "memory_size" : "16192",
+        "product" : {
+                "name" : "clustrix",
+                "version": "9.1.4"
+        },
         "box" : "centos_7_aws_large",
         "labels" : [
                 "CLUSTRIX_BACKEND"
