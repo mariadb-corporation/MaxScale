@@ -174,11 +174,6 @@ ClientDCB* ClientDCB::create(int fd,
     return dcb;
 }
 
-InternalDCB* InternalDCB::create(MXS_SESSION* session, DCB::Manager* manager)
-{
-    return new(std::nothrow) InternalDCB(session, manager);
-}
-
 void DCB::clear()
 {
     gwbuf_free(m_readq);
@@ -2448,50 +2443,6 @@ bool ClientDCB::release_from(MXS_SESSION* session)
 bool ClientDCB::prepare_for_destruction()
 {
     mxb_assert(m_fd != FD_CLOSED);
-    return true;
-}
-
-InternalDCB::InternalDCB(MXS_SESSION* session, DCB::Manager* manager)
-    : ClientDCB(FD_CLOSED, "127.0.0.1",sockaddr_storage {}, DCB::Role::INTERNAL, session, nullptr, manager)
-{
-    if (DCB_THROTTLING_ENABLED(this))
-    {
-        // Remove the callbacks that ClientDCB added.
-        remove_callback(Reason::HIGH_WATER, downstream_throttle_callback, NULL);
-        remove_callback(Reason::LOW_WATER, downstream_throttle_callback, NULL);
-    }
-}
-
-int InternalDCB::ssl_handshake()
-{
-    mxb_assert(!true);
-    return -1;
-}
-
-bool InternalDCB::enable_events()
-{
-    mxb_assert(m_state == State::ALLOC || m_state == State::NOPOLLING);
-    m_state = State::POLLING;
-
-    return true;
-}
-
-bool InternalDCB::disable_events()
-{
-    mxb_assert(m_state == State::POLLING);
-    m_state = State::NOPOLLING;
-
-    return true;
-}
-
-void InternalDCB::shutdown()
-{
-    // Nothing to do, Internal DCB does not have a protocol nor manages the session.
-}
-
-bool InternalDCB::prepare_for_destruction()
-{
-    mxb_assert(m_fd == FD_CLOSED);
     return true;
 }
 

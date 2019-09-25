@@ -40,6 +40,22 @@
 #include <maxscale/sqlite3.h>
 #include <maxscale/mysql_binlog.h>
 
+class InternalDCB : public ClientDCB
+{
+public:
+    static InternalDCB* create(MXS_SESSION* session, DCB::Manager* manager);
+
+    int ssl_handshake() override;
+
+    bool enable_events() override;
+    bool disable_events() override;
+    void shutdown() override;
+private:
+    InternalDCB(MXS_SESSION* session, DCB::Manager* manager);
+
+    bool prepare_for_destruction() override;
+};
+
 #define BINLOG_FNAMELEN   255
 #define BINLOG_MAGIC      {0xfe, 0x62, 0x69, 0x6e}
 #define BINLOG_MAGIC_SIZE 4

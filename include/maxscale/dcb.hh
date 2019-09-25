@@ -714,22 +714,6 @@ private:
     SERVER* const m_server;             /**< The associated backend server */
 };
 
-class InternalDCB : public ClientDCB
-{
-public:
-    static InternalDCB* create(MXS_SESSION* session, DCB::Manager* manager);
-
-    int ssl_handshake() override;
-
-    bool enable_events() override;
-    bool disable_events() override;
-    void shutdown() override;
-private:
-    InternalDCB(MXS_SESSION* session, DCB::Manager* manager);
-
-    bool prepare_for_destruction() override;
-};
-
 namespace maxscale
 {
 
