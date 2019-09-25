@@ -231,35 +231,6 @@ void HTTPDClientProtocol::ready_for_reading(DCB* generic_dcb)
     /* send all the basic headers and close with \r\n */
     httpd_send_headers(dcb, 1, auth_ok);
 
-#if 0
-    /**
-     * ToDO: launch proper content handling based on the requested URI, later REST interface
-     *
-     */
-    if (strcmp(url, "/show") == 0)
-    {
-        if (query_string && strlen(query_string))
-        {
-            if (strcmp(query_string, "dcb") == 0)
-            {
-                dprintAllDCBs(dcb);
-            }
-            if (strcmp(query_string, "session") == 0)
-            {
-                dprintAllSessions(dcb);
-            }
-        }
-    }
-    if (strcmp(url, "/services") == 0)
-    {
-        ResultSet* set, * seviceGetList();
-        if ((set = serviceGetList()) != NULL)
-        {
-            resultset_stream_json(set, dcb);
-            resultset_free(set);
-        }
-    }
-#endif
     GWBUF* uri;
     if (auth_ok && (uri = gwbuf_alloc(strlen(url) + 1)) != NULL)
     {

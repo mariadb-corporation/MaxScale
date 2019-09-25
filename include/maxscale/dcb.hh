@@ -800,14 +800,6 @@ const char* to_string(DCB::Role role);
 void printAllDCBs();                                                            /* Debug to print all DCB in
                                                                                  * the system */
 void printDCB(DCB*);                                                            /* Debug print routine */
-void dprintDCBList(DCB*);                                                       /* Debug print DCB list
-                                                                                 * statistics */
-void dprintAllDCBs(DCB*);                                                       /* Debug to print all DCB in
-                                                                                 * the system */
-void dprintOneDCB(DCB*, DCB*);                                                  /* Debug to print one DCB */
-void dListDCBs(DCB*);                                                           /* List all DCBs in the system
-                                                                                 * */
-void dListClients(DCB*);                                                        /* List al the client DCBs */
 void dcb_printf(DCB*, const char*, ...) __attribute__ ((format(printf, 2, 3))); /* DCB version of printf */
 
 /**
