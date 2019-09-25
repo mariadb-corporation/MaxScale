@@ -196,17 +196,17 @@ public:
 
     bool ssl_enabled() const
     {
-        return m_ssl != nullptr;
+        return m_ssl.handle != nullptr;
     }
 
     SSLState ssl_state() const
     {
-        return m_ssl_state;
+        return m_ssl.state;
     }
 
     void set_ssl_state(SSLState ssl_state)
     {
-        m_ssl_state = ssl_state;
+        m_ssl.state = ssl_state;
     }
 
     virtual int ssl_handshake() = 0;
@@ -516,6 +516,16 @@ protected:
 
     int log_errors_SSL(int ret);
 
+    struct SSL
+    {
+        ::SSL*   handle = nullptr;                    /**< SSL handle for connection */
+        SSLState state = SSLState::HANDSHAKE_UNKNOWN; /**< Current state of SSL if in use */
+        bool     read_want_read = false;
+        bool     read_want_write = false;
+        bool     write_want_read = false;
+        bool     write_want_write = false;
+    };
+
     const uint64_t    m_uid;                        /**< Unique identifier for this DCB */
     int               m_fd;                         /**< The descriptor */
     const std::string m_remote;                     /**< The remote host */
@@ -528,12 +538,7 @@ protected:
     const uint64_t    m_high_water;                 /**< High water mark of write queue */
     const uint64_t    m_low_water;                  /**< Low water mark of write queue */
     State             m_state = State::ALLOC;       /**< Current state */
-    SSLState          m_ssl_state = SSLState::HANDSHAKE_UNKNOWN;/**< Current state of SSL if in use */
-    SSL*              m_ssl = nullptr;              /**< SSL struct for connection */
-    bool              m_ssl_read_want_read = false;
-    bool              m_ssl_read_want_write = false;
-    bool              m_ssl_write_want_read = false;
-    bool              m_ssl_write_want_write = false;
+    SSL               m_ssl;
     Stats             m_stats;                      /**< DCB related statistics */
     CALLBACK*         m_callbacks = nullptr;        /**< The list of callbacks for the DCB */
     bool              m_high_water_reached = false; /**< High water mark reached, to determine
