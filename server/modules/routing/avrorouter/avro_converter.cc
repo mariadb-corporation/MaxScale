@@ -100,9 +100,8 @@ static const char* column_type_to_avro_type(uint8_t type)
     {
     case TABLE_COL_TYPE_TINY:
     case TABLE_COL_TYPE_SHORT:
-    case TABLE_COL_TYPE_LONG:
-    case TABLE_COL_TYPE_INT24:
     case TABLE_COL_TYPE_BIT:
+    case TABLE_COL_TYPE_INT24:
         return "int";
 
     case TABLE_COL_TYPE_FLOAT:
@@ -115,6 +114,7 @@ static const char* column_type_to_avro_type(uint8_t type)
     case TABLE_COL_TYPE_NULL:
         return "null";
 
+    case TABLE_COL_TYPE_LONG:
     case TABLE_COL_TYPE_LONGLONG:
         return "long";
 
@@ -414,43 +414,52 @@ bool AvroConverter::commit(const gtid_pos_t& gtid)
     return rval;
 }
 
-void AvroConverter::column(int i, int32_t value)
+void AvroConverter::column_int(int i, int32_t value)
 {
     set_active(i);
     avro_value_set_int(&m_field, value);
 }
 
-void AvroConverter::column(int i, int64_t value)
+void AvroConverter::column_long(int i, int64_t value)
 {
     set_active(i);
-    avro_value_set_long(&m_field, value);
+
+    if (avro_value_get_type(&m_field) == AVRO_INT32)
+    {
+        // Pre-2.4.3 versions use int for 32-bit integers whereas 2.4.3 and newer use long
+        avro_value_set_int(&m_field, value);
+    }
+    else
+    {
+        avro_value_set_long(&m_field, value);
+    }
 }
 
-void AvroConverter::column(int i, float value)
+void AvroConverter::column_float(int i, float value)
 {
     set_active(i);
     avro_value_set_float(&m_field, value);
 }
 
-void AvroConverter::column(int i, double value)
+void AvroConverter::column_double(int i, double value)
 {
     set_active(i);
     avro_value_set_double(&m_field, value);
 }
 
-void AvroConverter::column(int i, std::string value)
+void AvroConverter::column_string(int i, const std::string& value)
 {
     set_active(i);
     avro_value_set_string(&m_field, value.c_str());
 }
 
-void AvroConverter::column(int i, uint8_t* value, int len)
+void AvroConverter::column_bytes(int i, uint8_t* value, int len)
 {
     set_active(i);
     avro_value_set_bytes(&m_field, value, len);
 }
 
-void AvroConverter::column(int i)
+void AvroConverter::column_null(int i)
 {
     set_active(i);
     avro_value_set_branch(&m_union_value, 0, &m_field);

@@ -202,26 +202,26 @@ public:
     // Called once all columns are processed
     virtual bool commit(const gtid_pos_t& gtid) = 0;
 
-    // 32-bit integer handler
-    virtual void column(int i, int32_t value) = 0;
+    // Integer handler for short types (less than 32 bits)
+    virtual void column_int(int i, int32_t value) = 0;
 
-    // 64-bit integer handler
-    virtual void column(int i, int64_t value) = 0;
+    // Integer handler for long integer types
+    virtual void column_long(int i, int64_t value) = 0;
 
     // Float handler
-    virtual void column(int i, float value) = 0;
+    virtual void column_float(int i, float value) = 0;
 
     // Double handler
-    virtual void column(int i, double value) = 0;
+    virtual void column_double(int i, double value) = 0;
 
     // String handler
-    virtual void column(int i, std::string value) = 0;
+    virtual void column_string(int i, const std::string& value) = 0;
 
     // Bytes handler
-    virtual void column(int i, uint8_t* value, int len) = 0;
+    virtual void column_bytes(int i, uint8_t* value, int len) = 0;
 
     // Empty (NULL) value type handler
-    virtual void column(int i) = 0;
+    virtual void column_null(int i) = 0;
 };
 
 typedef std::auto_ptr<RowEventHandler> SRowEventHandler;

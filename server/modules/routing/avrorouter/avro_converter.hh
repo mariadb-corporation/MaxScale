@@ -53,13 +53,13 @@ public:
     void flush_tables();
     void prepare_row(const gtid_pos_t& gtid, const REP_HEADER& hdr, int event_type);
     bool commit(const gtid_pos_t& gtid);
-    void column(int i, int32_t value);
-    void column(int i, int64_t value);
-    void column(int i, float value);
-    void column(int i, double value);
-    void column(int i, std::string value);
-    void column(int i, uint8_t* value, int len);
-    void column(int i);
+    void column_int(int i, int32_t value);
+    void column_long(int i, int64_t value);
+    void column_float(int i, float value);
+    void column_double(int i, double value);
+    void column_string(int i, const std::string& value);
+    void column_bytes(int i, uint8_t* value, int len);
+    void column_null(int i);
 
 private:
     avro_value_iface_t* m_writer_iface;
