@@ -1677,8 +1677,12 @@ GWBUF* MySQLBackendProtocol::track_response(GWBUF** buffer)
     using mxs::ReplyState;
     GWBUF* rval = nullptr;
 
-
-    if (m_reply.command() == MXS_COM_STATISTICS)
+    if (m_reply.command() == MXS_COM_BINLOG_DUMP)
+    {
+        // Treat COM_BINLOG_DUMP like a response that never ends
+        rval = modutil_get_complete_packets(buffer);
+    }
+    else if (m_reply.command() == MXS_COM_STATISTICS)
     {
         // COM_STATISTICS returns a single string and thus requires special handling:
         // https://mariadb.com/kb/en/library/com_statistics/#response
