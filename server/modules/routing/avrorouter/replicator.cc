@@ -287,7 +287,7 @@ std::string to_gtid_string(const MARIADB_RPL_EVENT& event)
 bool Replicator::Imp::load_gtid_state()
 {
     bool rval = false;
-    std::string filename = m_cnf.statedir + STATEFILE_NAME;
+    std::string filename = m_cnf.statedir + "/" + STATEFILE_NAME;
     std::ifstream statefile(filename);
     std::string gtid;
     statefile >> gtid;
