@@ -77,6 +77,7 @@ json_t* Column::to_json() const
     json_object_set_new(obj, "name", json_string(name.c_str()));
     json_object_set_new(obj, "type", json_string(type.c_str()));
     json_object_set_new(obj, "length", json_integer(length));
+    json_object_set_new(obj, "is_unsigned", json_boolean(is_unsigned));
     return obj;
 }
 
@@ -85,14 +86,24 @@ Column Column::from_json(json_t* json)
     json_t* name = json_object_get(json, "name");
     json_t* type = json_object_get(json, "type");
     json_t* length = json_object_get(json, "length");
+    json_t* is_unsigned = json_object_get(json, "is_unsigned");
 
     if (name && json_is_string(name)
         && type && json_is_string(type)
         && length && json_is_integer(length))
     {
+        // is_unsigned was added in 2.4.3
+        bool sign = false;
+
+        if (is_unsigned && json_is_boolean(is_unsigned))
+        {
+            sign = json_boolean_value(is_unsigned);
+        }
+
         return Column(json_string_value(name),
                       json_string_value(type),
-                      json_integer_value(length));
+                      json_integer_value(length),
+                      sign);
     }
 
     // Invalid JSON, return empty Column
@@ -411,7 +422,7 @@ static const char* extract_field_name(const char* ptr, char* dest, size_t size)
     return ptr;
 }
 
-int extract_type_length(const char* ptr, char* dest)
+int extract_type_length_sign(const char* ptr, char* dest, bool* is_unsigned)
 {
     /** Skip any leading whitespace */
     while (*ptr && (isspace(*ptr) || *ptr == '`'))
@@ -455,7 +466,24 @@ int extract_type_length(const char* ptr, char* dest)
         if (*end == ')')
         {
             rval = val;
+            ptr = end + 1;
         }
+    }
+
+    /** Skip whitespace */
+    while (*ptr && isspace(*ptr))
+    {
+        ptr++;
+    }
+
+    const char UNSIGNED[] = "unsigned";
+    const char ZEROFILL[] = "zerofill";
+
+    // Start of integer sign definition: https://mariadb.com/kb/en/library/int/
+    if (strncasecmp(ptr, UNSIGNED, sizeof(UNSIGNED) - 1) == 0
+        || strncasecmp(ptr, ZEROFILL, sizeof(ZEROFILL) - 1) == 0)
+    {
+        *is_unsigned = true;
     }
 
     return rval;
@@ -486,10 +514,11 @@ static void process_column_definition(const char* nameptr, std::vector<Column>& 
     while ((nameptr = extract_field_name(nameptr, colname, sizeof(colname))))
     {
         char type[100] = "";
-        int len = extract_type_length(nameptr, type);
+        bool is_unsigned = false;
+        int len = extract_type_length_sign(nameptr, type, &is_unsigned);
         nameptr = next_field_definition(nameptr);
         fix_reserved_word(colname);
-        columns.emplace_back(colname, type, len);
+        columns.emplace_back(colname, type, len, is_unsigned);
     }
 }
 
@@ -1302,10 +1331,11 @@ bool Rpl::table_create_alter(STableCreateEvent create, const char* sql, const ch
                     if (is_new)
                     {
                         char field_type[200] = "";      // Enough to hold all types
-                        int field_length = extract_type_length(tok + len, field_type);
+                        bool is_unsigned = false;
+                        int field_length = extract_type_length_sign(tok + len, field_type, &is_unsigned);
                         create->columns.emplace_back(std::string(avro_token),
                                                      std::string(field_type),
-                                                     field_length);
+                                                     field_length, is_unsigned);
                         updates++;
                     }
                     tok = get_next_def(tok, end);
@@ -1338,10 +1368,14 @@ bool Rpl::table_create_alter(STableCreateEvent create, const char* sql, const ch
                                 char avro_token[len + 1];
                                 make_avro_token(avro_token, tok, len);
                                 char field_type[200] = "";      // Enough to hold all types
-                                int field_length = extract_type_length(tok + len, field_type);
+                                bool is_unsigned = false;
+                                int field_length = extract_type_length_sign(tok + len,
+                                                                            field_type,
+                                                                            &is_unsigned);
                                 it->name = avro_token;
                                 it->type = field_type;
                                 it->length = field_length;
+                                it->is_unsigned = is_unsigned;
                                 updates++;
                             }
                         }

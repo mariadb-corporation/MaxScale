@@ -56,16 +56,18 @@ struct gtid_pos_t
 /** A single column in a CREATE TABLE statement */
 struct Column
 {
-    Column(std::string name, std::string type = "unknown", int length = -1)
+    Column(std::string name, std::string type = "unknown", int length = -1, bool is_unsigned = false)
         : name(name)
         , type(type)
         , length(length)
+        , is_unsigned(is_unsigned)
     {
     }
 
     std::string name;
     std::string type;
     int         length;
+    bool        is_unsigned;
 
     json_t*       to_json() const;
     static Column from_json(json_t* json);

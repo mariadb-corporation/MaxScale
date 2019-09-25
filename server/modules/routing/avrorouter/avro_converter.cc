@@ -231,7 +231,7 @@ char* json_new_schema_from_table(const STableMapEvent& map, const STableCreateEv
         json_array_append_new(array,
                               json_pack_ex(&err,
                                            0,
-                                           "{s:s, s:[s, s], s:s, s:i}",
+                                           "{s:s, s:[s, s], s:s, s:i, s:b}",
                                            "name",
                                            create->columns[i].name.c_str(),
                                            "type",
@@ -240,7 +240,9 @@ char* json_new_schema_from_table(const STableMapEvent& map, const STableCreateEv
                                            "real_type",
                                            create->columns[i].type.c_str(),
                                            "length",
-                                           create->columns[i].length));
+                                           create->columns[i].length,
+                                           "unsigned",
+                                           create->columns[i].is_unsigned));
     }
     json_object_set_new(schema, "fields", array);
     char* rval = json_dumps(schema, JSON_PRESERVE_ORDER);
