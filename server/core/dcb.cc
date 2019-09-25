@@ -139,9 +139,9 @@ DCB::~DCB()
 
     remove_callbacks();
 
-    if (m_ssl.handle)
+    if (m_encryption.handle)
     {
-        SSL_free(m_ssl.handle);
+        SSL_free(m_encryption.handle);
     }
 
     gwbuf_free(m_delayq);
@@ -229,7 +229,7 @@ int DCB::read(GWBUF** head, int maxbytes)
         m_last_read = mxs_clock();
     }
 
-    if (SSLState::HANDSHAKE_DONE == m_ssl.state || SSLState::ESTABLISHED == m_ssl.state)
+    if (SSLState::HANDSHAKE_DONE == m_encryption.state || SSLState::ESTABLISHED == m_encryption.state)
     {
         int n = read_SSL(head);
 
@@ -397,7 +397,7 @@ int DCB::read_SSL(GWBUF** head)
     int nsingleread = 0, nreadtotal = 0;
     int start_length = *head ? gwbuf_length(*head) : 0;
 
-    if (m_ssl.write_want_read)
+    if (m_encryption.write_want_read)
     {
         writeq_drain();
     }
@@ -439,11 +439,11 @@ GWBUF* DCB::basic_read_SSL(int* nsingleread)
     unsigned char temp_buffer[MXS_SO_RCVBUF_SIZE];
     GWBUF* buffer = NULL;
 
-    *nsingleread = SSL_read(m_ssl.handle, temp_buffer, MXS_SO_RCVBUF_SIZE);
+    *nsingleread = SSL_read(m_encryption.handle, temp_buffer, MXS_SO_RCVBUF_SIZE);
 
     m_stats.n_reads++;
 
-    switch (SSL_get_error(m_ssl.handle, *nsingleread))
+    switch (SSL_get_error(m_encryption.handle, *nsingleread))
     {
     case SSL_ERROR_NONE:
         /* Successful read */
@@ -453,10 +453,10 @@ GWBUF* DCB::basic_read_SSL(int* nsingleread)
             return NULL;
         }
         /* If we were in a retry situation, need to clear flag and attempt write */
-        if (m_ssl.read_want_write || m_ssl.read_want_read)
+        if (m_encryption.read_want_write || m_encryption.read_want_read)
         {
-            m_ssl.read_want_write = false;
-            m_ssl.read_want_read = false;
+            m_encryption.read_want_write = false;
+            m_encryption.read_want_read = false;
             writeq_drain();
         }
         break;
@@ -469,15 +469,15 @@ GWBUF* DCB::basic_read_SSL(int* nsingleread)
 
     case SSL_ERROR_WANT_READ:
         /* Prevent SSL I/O on connection until retried, return to poll loop */
-        m_ssl.read_want_write = false;
-        m_ssl.read_want_read = true;
+        m_encryption.read_want_write = false;
+        m_encryption.read_want_read = true;
         *nsingleread = 0;
         break;
 
     case SSL_ERROR_WANT_WRITE:
         /* Prevent SSL I/O on connection until retried, return to poll loop */
-        m_ssl.read_want_write = true;
-        m_ssl.read_want_read = false;
+        m_encryption.read_want_write = true;
+        m_encryption.read_want_read = false;
         *nsingleread = 0;
         break;
 
@@ -616,7 +616,7 @@ int DCB::writeq_drain()
 {
     mxb_assert(this->owner == RoutingWorker::get_current());
 
-    if (m_ssl.read_want_write)
+    if (m_encryption.read_want_write)
     {
         /** The SSL library needs to write more data */
         this->trigger_read_event();
@@ -631,7 +631,7 @@ int DCB::writeq_drain()
         int written;
         bool stop_writing = false;
         /* The value put into written will be >= 0 */
-        if (m_ssl.handle)
+        if (m_encryption.handle)
         {
             written = socket_write_SSL(local_writeq, &stop_writing);
         }
@@ -868,15 +868,15 @@ int DCB::socket_write_SSL(GWBUF* writeq, bool* stop_writing)
 {
     int written;
 
-    written = SSL_write(m_ssl.handle, GWBUF_DATA(writeq), GWBUF_LENGTH(writeq));
+    written = SSL_write(m_encryption.handle, GWBUF_DATA(writeq), GWBUF_LENGTH(writeq));
 
     *stop_writing = false;
-    switch ((SSL_get_error(m_ssl.handle, written)))
+    switch ((SSL_get_error(m_encryption.handle, written)))
     {
     case SSL_ERROR_NONE:
         /* Successful write */
-        m_ssl.write_want_read = false;
-        m_ssl.write_want_write = false;
+        m_encryption.write_want_read = false;
+        m_encryption.write_want_write = false;
         break;
 
     case SSL_ERROR_ZERO_RETURN:
@@ -888,15 +888,15 @@ int DCB::socket_write_SSL(GWBUF* writeq, bool* stop_writing)
     case SSL_ERROR_WANT_READ:
         /* Prevent SSL I/O on connection until retried, return to poll loop */
         *stop_writing = true;
-        m_ssl.write_want_read = true;
-        m_ssl.write_want_write = false;
+        m_encryption.write_want_read = true;
+        m_encryption.write_want_write = false;
         break;
 
     case SSL_ERROR_WANT_WRITE:
         /* Prevent SSL I/O on connection until retried, return to poll loop */
         *stop_writing = true;
-        m_ssl.write_want_read = false;
-        m_ssl.write_want_write = true;
+        m_encryption.write_want_read = false;
+        m_encryption.write_want_write = true;
         break;
 
     case SSL_ERROR_SYSCALL:
@@ -1108,15 +1108,15 @@ bool count_by_role_cb(DCB* dcb, void* data)
  */
 bool DCB::create_SSL(mxs::SSLContext* ssl)
 {
-    m_ssl.handle = ssl->open();
+    m_encryption.handle = ssl->open();
 
-    if (!m_ssl.handle)
+    if (!m_encryption.handle)
     {
         MXS_ERROR("Failed to initialize SSL for connection.");
         return false;
     }
 
-    if (SSL_set_fd(m_ssl.handle, m_fd) == 0)
+    if (SSL_set_fd(m_encryption.handle, m_fd) == 0)
     {
         MXS_ERROR("Failed to set file descriptor for SSL connection.");
         return false;
@@ -1315,7 +1315,7 @@ uint32_t DCB::process_events(uint32_t events)
         int return_code = 1;
         /** SSL authentication is still going on, we need to call DCB::ssl_handehake
          * until it return 1 for success or -1 for error */
-        if (m_ssl.state == SSLState::HANDSHAKE_REQUIRED)
+        if (m_encryption.state == SSLState::HANDSHAKE_REQUIRED)
         {
             return_code = ssl_handshake();
         }
@@ -1811,21 +1811,21 @@ mxs::ClientProtocol* ClientDCB::protocol() const
 int ClientDCB::ssl_handshake()
 {
     if (!m_session->listener->ssl().context()
-        || (!m_ssl.handle && !create_SSL(m_session->listener->ssl().context())))
+        || (!m_encryption.handle && !create_SSL(m_session->listener->ssl().context())))
     {
         return -1;
     }
 
     MXB_AT_DEBUG(std::string user = m_session->user());
 
-    int ssl_rval = SSL_accept(m_ssl.handle);
+    int ssl_rval = SSL_accept(m_encryption.handle);
 
-    switch (SSL_get_error(m_ssl.handle, ssl_rval))
+    switch (SSL_get_error(m_encryption.handle, ssl_rval))
     {
     case SSL_ERROR_NONE:
         MXS_DEBUG("SSL_accept done for %s@%s", user.c_str(), m_remote.c_str());
-        m_ssl.state = SSLState::ESTABLISHED;
-        m_ssl.read_want_write = false;
+        m_encryption.state = SSLState::ESTABLISHED;
+        m_encryption.read_want_write = false;
         return 1;
 
     case SSL_ERROR_WANT_READ:
@@ -1834,7 +1834,7 @@ int ClientDCB::ssl_handshake()
 
     case SSL_ERROR_WANT_WRITE:
         MXS_DEBUG("SSL_accept ongoing want write for %s@%s", user.c_str(), m_remote.c_str());
-        m_ssl.read_want_write = true;
+        m_encryption.read_want_write = true;
         return 0;
 
     case SSL_ERROR_ZERO_RETURN:
@@ -1848,7 +1848,7 @@ int ClientDCB::ssl_handshake()
                   user.c_str(), m_remote.c_str());
         if (log_errors_SSL(ssl_rval) < 0)
         {
-            m_ssl.state = SSLState::HANDSHAKE_FAILED;
+            m_encryption.state = SSLState::HANDSHAKE_FAILED;
             trigger_hangup_event();
             return -1;
         }
@@ -1862,7 +1862,7 @@ int ClientDCB::ssl_handshake()
                   user.c_str(), m_remote.c_str());
         if (log_errors_SSL(ssl_rval) < 0)
         {
-            m_ssl.state = SSLState::HANDSHAKE_FAILED;
+            m_encryption.state = SSLState::HANDSHAKE_FAILED;
             trigger_hangup_event();
             return -1;
         }
@@ -2143,19 +2143,19 @@ int BackendDCB::ssl_handshake()
     int ssl_rval;
     int return_code;
 
-    if (!m_server->ssl().context() || (!m_ssl.handle && !create_SSL(m_server->ssl().context())))
+    if (!m_server->ssl().context() || (!m_encryption.handle && !create_SSL(m_server->ssl().context())))
     {
         mxb_assert(m_server->ssl().context());
         return -1;
     }
-    m_ssl.state = SSLState::HANDSHAKE_REQUIRED;
-    ssl_rval = SSL_connect(m_ssl.handle);
-    switch (SSL_get_error(m_ssl.handle, ssl_rval))
+    m_encryption.state = SSLState::HANDSHAKE_REQUIRED;
+    ssl_rval = SSL_connect(m_encryption.handle);
+    switch (SSL_get_error(m_encryption.handle, ssl_rval))
     {
     case SSL_ERROR_NONE:
         MXS_DEBUG("SSL_connect done for %s", m_remote.c_str());
-        m_ssl.state = SSLState::ESTABLISHED;
-        m_ssl.read_want_write = false;
+        m_encryption.state = SSLState::ESTABLISHED;
+        m_encryption.read_want_write = false;
         return_code = 1;
         break;
 
@@ -2166,7 +2166,7 @@ int BackendDCB::ssl_handshake()
 
     case SSL_ERROR_WANT_WRITE:
         MXS_DEBUG("SSL_connect ongoing want write for %s", m_remote.c_str());
-        m_ssl.read_want_write = true;
+        m_encryption.read_want_write = true;
         return_code = 0;
         break;
 
@@ -2183,7 +2183,7 @@ int BackendDCB::ssl_handshake()
         MXS_DEBUG("SSL connection shut down with SSL_ERROR_SYSCALL during SSL connect %s", m_remote.c_str());
         if (log_errors_SSL(ssl_rval) < 0)
         {
-            m_ssl.state = SSLState::HANDSHAKE_FAILED;
+            m_encryption.state = SSLState::HANDSHAKE_FAILED;
             trigger_hangup_event();
             return_code = -1;
         }
@@ -2197,7 +2197,7 @@ int BackendDCB::ssl_handshake()
         MXS_DEBUG("SSL connection shut down with error during SSL connect %s", m_remote.c_str());
         if (log_errors_SSL(ssl_rval) < 0)
         {
-            m_ssl.state = SSLState::HANDSHAKE_FAILED;
+            m_encryption.state = SSLState::HANDSHAKE_FAILED;
             trigger_hangup_event();
             return -1;
         }

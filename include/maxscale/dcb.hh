@@ -233,7 +233,7 @@ public:
      */
     bool ssl_enabled() const
     {
-        return m_ssl.handle != nullptr;
+        return m_encryption.handle != nullptr;
     }
 
     /**
@@ -241,12 +241,12 @@ public:
      */
     SSLState ssl_state() const
     {
-        return m_ssl.state;
+        return m_encryption.state;
     }
 
     void set_ssl_state(SSLState ssl_state)
     {
-        m_ssl.state = ssl_state;
+        m_encryption.state = ssl_state;
     }
 
     /**
@@ -578,9 +578,9 @@ protected:
 
     int log_errors_SSL(int ret);
 
-    struct SSL
+    struct Encryption
     {
-        ::SSL*   handle = nullptr;                    /**< SSL handle for connection */
+        SSL*     handle = nullptr;                    /**< SSL handle for connection */
         SSLState state = SSLState::HANDSHAKE_UNKNOWN; /**< Current state of SSL if in use */
         bool     read_want_read = false;
         bool     read_want_write = false;
@@ -600,7 +600,7 @@ protected:
     const uint64_t    m_high_water;                 /**< High water mark of write queue */
     const uint64_t    m_low_water;                  /**< Low water mark of write queue */
     State             m_state = State::CREATED;     /**< Current state */
-    SSL               m_ssl;
+    Encryption        m_encryption;                 /**< Encryption state */
     Stats             m_stats;                      /**< DCB related statistics */
     CALLBACK*         m_callbacks = nullptr;        /**< The list of callbacks for the DCB */
     bool              m_high_water_reached = false; /**< High water mark reached, to determine
