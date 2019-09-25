@@ -95,11 +95,6 @@ static int         dcb_set_socket_option(int sockfd, int level, int optname, voi
 static int  upstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* userdata);
 static int  downstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* userdata);
 
-uint64_t dcb_get_session_id(DCB* dcb)
-{
-    return (dcb && dcb->session()) ? dcb->session()->id() : 0;
-}
-
 static MXB_WORKER* get_dcb_owner()
 {
     /** The DCB is owned by the thread that allocates it */
@@ -156,22 +151,6 @@ DCB::~DCB()
     MXB_POLL_DATA::owner = reinterpret_cast<MXB_WORKER*>(0xdeadbeef);
 }
 
-ClientDCB* ClientDCB::create(int fd,
-                             const std::string& remote,
-                             const sockaddr_storage& ip,
-                             MXS_SESSION* session,
-                             std::unique_ptr<ClientProtocol> protocol,
-                             DCB::Manager* manager)
-{
-    ClientDCB* dcb = new(std::nothrow) ClientDCB(fd, remote, ip, session, std::move(protocol), manager);
-    if (!dcb)
-    {
-        ::close(fd);
-    }
-
-    return dcb;
-}
-
 void DCB::clear()
 {
     gwbuf_free(m_readq);
@@ -221,141 +200,6 @@ void DCB::stop_polling_and_shutdown()
 {
     disable_events();
     shutdown();
-}
-
-BackendDCB* BackendDCB::create(SERVER* srv,
-                               int fd,
-                               MXS_SESSION* session,
-                               DCB::Manager* manager,
-                               mxs::Component* component)
-{
-    auto client_dcb = session->client_dcb;
-    auto client_proto = client_dcb->protocol();
-    std::unique_ptr<BackendProtocol> protocol_session;
-    if (client_proto->capabilities() & mxs::ClientProtocol::CAP_BACKEND)
-    {
-        protocol_session = client_proto->create_backend_protocol(session, srv, component);
-        if (!protocol_session)
-        {
-            MXS_ERROR("Failed to create protocol session for backend DCB.");
-        }
-    }
-    else
-    {
-        MXB_ERROR("Protocol '%s' does not support backend connections.", session->listener->protocol());
-    }
-
-    BackendDCB* dcb = nullptr;
-    if (protocol_session)
-    {
-        dcb = new(std::nothrow) BackendDCB(srv, fd, session, std::move(protocol_session), manager);
-        if (dcb)
-        {
-            session_link_backend_dcb(session, dcb);
-        }
-    }
-
-    if (!dcb)
-    {
-        ::close(fd);
-    }
-
-    return dcb;
-}
-
-/**
- * Connect to a server
- *
- * @param host The host to connect to
- * @param port The port to connect to
- * @param fd   FD is stored in this pointer
- *
- * @return True on success, false on error
- */
-static bool connect_backend(const char* host, int port, int* fd)
-{
-    bool ok = false;
-    struct sockaddr_storage addr = {};
-    int so;
-    size_t sz;
-
-    if (host[0] == '/')
-    {
-        so = open_unix_socket(MXS_SOCKET_NETWORK, (struct sockaddr_un*)&addr, host);
-        sz = sizeof(sockaddr_un);
-    }
-    else
-    {
-        so = open_network_socket(MXS_SOCKET_NETWORK, &addr, host, port);
-        sz = sizeof(sockaddr_storage);
-    }
-
-    if (so != -1)
-    {
-        if (connect(so, (struct sockaddr*)&addr, sz) == -1 && errno != EINPROGRESS)
-        {
-            MXS_ERROR("Failed to connect backend server [%s]:%d due to: %d, %s.",
-                      host, port, errno, mxs_strerror(errno));
-            close(so);
-        }
-        else
-        {
-            *fd = so;
-            ok = true;
-        }
-    }
-    else
-    {
-        MXS_ERROR("Establishing connection to backend server [%s]:%d failed.", host, port);
-    }
-
-    return ok;
-}
-
-/**
- * Connect to a backend server
- *
- * @param srv      The server to connect to
- * @param session  The session this connection is being made for
- * @param manager The DCB manager to use
- *
- * @return The new allocated dcb or NULL on error
- */
-BackendDCB* BackendDCB::connect(SERVER* srv,
-                                MXS_SESSION* session,
-                                BackendDCB::Manager* manager,
-                                mxs::Component* component)
-{
-    Server* server = static_cast<Server*>(srv);
-
-    BackendDCB* dcb = nullptr;
-    int fd = 0;
-
-    if (connect_backend(server->address, server->port, &fd))
-    {
-        dcb = create(server, fd, session, manager, component);
-
-        if (dcb)
-        {
-            if (dcb->m_protocol->init_connection(dcb) && dcb->enable_events())
-            {
-                // The DCB is now connected and added to epoll set. Authentication is done after the EPOLLOUT
-                // event that is triggered once the connection is established.
-
-                mxb::atomic::add(&server->stats().n_connections, 1, mxb::atomic::RELAXED);
-                mxb::atomic::add(&server->stats().n_current, 1, mxb::atomic::RELAXED);
-            }
-            else
-            {
-                session_unlink_backend_dcb(dcb->session(), dcb);
-
-                DCB::destroy(dcb);
-                dcb = nullptr;
-            }
-        }
-    }
-
-    return dcb;
 }
 
 int DCB::read(GWBUF** head, int maxbytes)
@@ -944,93 +788,6 @@ void DCB::destroy()
     DCB::free(this);
 }
 
-void BackendDCB::reset(MXS_SESSION* session)
-{
-    clear();
-
-    m_last_read = mxs_clock();
-    m_last_write = mxs_clock();
-    m_session = session;
-
-    if (DCB_THROTTLING_ENABLED(this))
-    {
-        // Register upstream throttling callbacks
-        add_callback(Reason::HIGH_WATER, upstream_throttle_callback, NULL);
-        add_callback(Reason::LOW_WATER, upstream_throttle_callback, NULL);
-    }
-}
-
-std::string BackendDCB::diagnostics() const
-{
-    std::stringstream ss(DCB::diagnostics());
-
-    if (m_server->address)
-    {
-        ss << "\tServer name/IP:     " << m_server->address << "\n";
-    }
-    if (m_server->port)
-    {
-        ss << "\tPort number:        " << m_server->port << "\n";
-    }
-
-    string statusname = m_server->status_string();
-    if (!statusname.empty())
-    {
-        ss << "\tServer status:            " << statusname << "\n";
-    }
-
-    return ss.str();
-}
-
-json_t* BackendDCB::to_json() const
-{
-    json_t* json = DCB::to_json();
-
-    if (json)
-    {
-        json_object_set_new(json, "server", json_string(m_server->name()));
-    }
-
-    return json;
-}
-
-/**
- * Diagnostic to print a DCB
- *
- * @param dcb   The DCB to print
- *
- */
-void printDCB(DCB* dcb)
-{
-    printf("%s", dcb->diagnostics().c_str());
-}
-/**
- * Display an entry from the spinlock statistics data
- *
- * @param       dcb     The DCB to print to
- * @param       desc    Description of the statistic
- * @param       value   The statistic value
- */
-static void spin_reporter(void* dcb, char* desc, int value)
-{
-    dcb_printf((DCB*)dcb, "\t\t%-40s  %d\n", desc, value);
-}
-
-bool printAllDCBs_cb(DCB* dcb, void* data)
-{
-    printDCB(dcb);
-    return true;
-}
-
-/**
- * Diagnostic to print all DCB allocated in the system
- *
- */
-void printAllDCBs()
-{
-    dcb_foreach(printAllDCBs_cb, NULL);
-}
-
 std::string DCB::diagnostics() const
 {
     std::stringstream ss;
@@ -1095,35 +852,6 @@ json_t* DCB::to_json() const
     }
 
     return obj;
-}
-
-/**
- * A  DCB based wrapper for printf. Allows formatting printing to
- * a descriptor control block.
- *
- * @param dcb   Descriptor to write to
- * @param fmt   A printf format string
- * @param ...   Variable arguments for the print format
- */
-void dcb_printf(DCB* dcb, const char* fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    int n = vsnprintf(nullptr, 0, fmt, args);
-    va_end(args);
-
-    GWBUF* buf = gwbuf_alloc(n + 1);
-
-    if (buf)
-    {
-        va_start(args, fmt);
-        vsnprintf((char*)GWBUF_DATA(buf), n + 1, fmt, args);
-        va_end(args);
-
-        // Remove the trailing null character
-        GWBUF_RTRIM(buf, 1);
-        dcb->protocol_write(buf);
-    }
 }
 
 /**
@@ -1353,46 +1081,6 @@ void DCB::call_callback(Reason reason)
     }
 }
 
-// static
-void BackendDCB::hangup_cb(MXB_WORKER* worker, const SERVER* server)
-{
-    RoutingWorker* rworker = static_cast<RoutingWorker*>(worker);
-    DCB* old_current = this_thread.current_dcb;
-
-    for (DCB* dcb : rworker->dcbs())
-    {
-        if (dcb->state() == State::POLLING && dcb->role() == Role::BACKEND)
-        {
-            // TODO: Remove the need for downcast.
-            BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
-
-            if (backend_dcb->m_server == server && backend_dcb->m_nClose == 0)
-            {
-                if (!backend_dcb->m_hanged_up)
-                {
-                    this_thread.current_dcb = backend_dcb;
-                    backend_dcb->m_protocol->hangup(dcb);
-                    backend_dcb->m_hanged_up = true;
-                }
-            }
-        }
-    }
-
-    this_thread.current_dcb = old_current;
-}
-
-/**
- * Call all the callbacks on all DCB's that match the server and the reason given
- */
-// static
-void BackendDCB::hangup(const SERVER* server)
-{
-    intptr_t arg1 = (intptr_t)&BackendDCB::hangup_cb;
-    intptr_t arg2 = (intptr_t)server;
-
-    RoutingWorker::broadcast_message(MXB_WORKER_MSG_CALL, arg1, arg2);
-}
-
 struct dcb_role_count
 {
     int       count;
@@ -1409,17 +1097,6 @@ bool count_by_role_cb(DCB* dcb, void* data)
     }
 
     return true;
-}
-
-int dcb_count_by_role(DCB::Role role)
-{
-    struct dcb_role_count val = {};
-    val.count = 0;
-    val.role = role;
-
-    dcb_foreach(count_by_role_cb, &val);
-
-    return val.count;
 }
 
 /**
@@ -1446,174 +1123,6 @@ bool DCB::create_SSL(mxs::SSLContext* ssl)
     }
 
     return true;
-}
-
-mxs::ClientProtocol* ClientDCB::protocol() const
-{
-    return m_protocol.get();
-}
-
-/**
- * Accept a SSL connection and do the SSL authentication handshake.
- * This function accepts a client connection to a DCB. It assumes that the SSL
- * structure has the underlying method of communication set and this method is ready
- * for usage. It then proceeds with the SSL handshake and stops only if an error
- * occurs or the client has not yet written enough data to complete the handshake.
- * @param dcb DCB which should accept the SSL connection
- * @return 1 if the handshake was successfully completed, 0 if the handshake is
- * still ongoing and another call to dcb_SSL_accept should be made or -1 if an
- * error occurred during the handshake and the connection should be terminated.
- */
-int ClientDCB::ssl_handshake()
-{
-    if (!m_session->listener->ssl().context()
-        || (!m_ssl.handle && !create_SSL(m_session->listener->ssl().context())))
-    {
-        return -1;
-    }
-
-    MXB_AT_DEBUG(std::string user = m_session->user());
-
-    int ssl_rval = SSL_accept(m_ssl.handle);
-
-    switch (SSL_get_error(m_ssl.handle, ssl_rval))
-    {
-    case SSL_ERROR_NONE:
-        MXS_DEBUG("SSL_accept done for %s@%s", user.c_str(), m_remote.c_str());
-        m_ssl.state = SSLState::ESTABLISHED;
-        m_ssl.read_want_write = false;
-        return 1;
-
-    case SSL_ERROR_WANT_READ:
-        MXS_DEBUG("SSL_accept ongoing want read for %s@%s", user.c_str(), m_remote.c_str());
-        return 0;
-
-    case SSL_ERROR_WANT_WRITE:
-        MXS_DEBUG("SSL_accept ongoing want write for %s@%s", user.c_str(), m_remote.c_str());
-        m_ssl.read_want_write = true;
-        return 0;
-
-    case SSL_ERROR_ZERO_RETURN:
-        MXS_DEBUG("SSL error, shut down cleanly during SSL accept %s@%s", user.c_str(), m_remote.c_str());
-        log_errors_SSL(0);
-        trigger_hangup_event();
-        return 0;
-
-    case SSL_ERROR_SYSCALL:
-        MXS_DEBUG("SSL connection SSL_ERROR_SYSCALL error during accept %s@%s",
-                  user.c_str(), m_remote.c_str());
-        if (log_errors_SSL(ssl_rval) < 0)
-        {
-            m_ssl.state = SSLState::HANDSHAKE_FAILED;
-            trigger_hangup_event();
-            return -1;
-        }
-        else
-        {
-            return 0;
-        }
-
-    default:
-        MXS_DEBUG("SSL connection shut down with error during SSL accept %s@%s",
-                  user.c_str(), m_remote.c_str());
-        if (log_errors_SSL(ssl_rval) < 0)
-        {
-            m_ssl.state = SSLState::HANDSHAKE_FAILED;
-            trigger_hangup_event();
-            return -1;
-        }
-        else
-        {
-            return 0;
-        }
-    }
-}
-
-mxs::BackendProtocol* BackendDCB::protocol() const
-{
-    return m_protocol.get();
-}
-
-/**
- * Initiate an SSL client connection to a server
- *
- * This functions starts an SSL client connection to a server which is expecting
- * an SSL handshake. The DCB should already have a TCP connection to the server and
- * this connection should be in a state that expects an SSL handshake.
- * THIS CODE IS UNUSED AND UNTESTED as at 4 Jan 2016
- * @param dcb DCB to connect
- * @return 1 on success, -1 on error and 0 if the SSL handshake is still ongoing
- */
-int BackendDCB::ssl_handshake()
-{
-    int ssl_rval;
-    int return_code;
-
-    if (!m_server->ssl().context() || (!m_ssl.handle && !create_SSL(m_server->ssl().context())))
-    {
-        mxb_assert(m_server->ssl().context());
-        return -1;
-    }
-    m_ssl.state = SSLState::HANDSHAKE_REQUIRED;
-    ssl_rval = SSL_connect(m_ssl.handle);
-    switch (SSL_get_error(m_ssl.handle, ssl_rval))
-    {
-    case SSL_ERROR_NONE:
-        MXS_DEBUG("SSL_connect done for %s", m_remote.c_str());
-        m_ssl.state = SSLState::ESTABLISHED;
-        m_ssl.read_want_write = false;
-        return_code = 1;
-        break;
-
-    case SSL_ERROR_WANT_READ:
-        MXS_DEBUG("SSL_connect ongoing want read for %s", m_remote.c_str());
-        return_code = 0;
-        break;
-
-    case SSL_ERROR_WANT_WRITE:
-        MXS_DEBUG("SSL_connect ongoing want write for %s", m_remote.c_str());
-        m_ssl.read_want_write = true;
-        return_code = 0;
-        break;
-
-    case SSL_ERROR_ZERO_RETURN:
-        MXS_DEBUG("SSL error, shut down cleanly during SSL connect %s", m_remote.c_str());
-        if (log_errors_SSL(0) < 0)
-        {
-            trigger_hangup_event();
-        }
-        return_code = 0;
-        break;
-
-    case SSL_ERROR_SYSCALL:
-        MXS_DEBUG("SSL connection shut down with SSL_ERROR_SYSCALL during SSL connect %s", m_remote.c_str());
-        if (log_errors_SSL(ssl_rval) < 0)
-        {
-            m_ssl.state = SSLState::HANDSHAKE_FAILED;
-            trigger_hangup_event();
-            return_code = -1;
-        }
-        else
-        {
-            return_code = 0;
-        }
-        break;
-
-    default:
-        MXS_DEBUG("SSL connection shut down with error during SSL connect %s", m_remote.c_str());
-        if (log_errors_SSL(ssl_rval) < 0)
-        {
-            m_ssl.state = SSLState::HANDSHAKE_FAILED;
-            trigger_hangup_event();
-            return -1;
-        }
-        else
-        {
-            return 0;
-        }
-        break;
-    }
-    return return_code;
 }
 
 /**
@@ -1754,60 +1263,6 @@ private:
     void* m_data;
     int   m_more;
 };
-
-bool dcb_foreach(bool (* func)(DCB* dcb, void* data), void* data)
-{
-    mxb_assert(RoutingWorker::get_current() == RoutingWorker::get(RoutingWorker::MAIN));
-    SerialDcbTask task(func, data);
-    RoutingWorker::execute_serially(task);
-    return task.more();
-}
-
-void dcb_foreach_local(bool (* func)(DCB* dcb, void* data), void* data)
-{
-    RoutingWorker* worker = RoutingWorker::get_current();
-    const auto& dcbs = worker->dcbs();
-
-    for (DCB* dcb : dcbs)
-    {
-        if (dcb->session())
-        {
-            if (!func(dcb, data))
-            {
-                break;
-            }
-        }
-        else
-        {
-            /**
-             *  TODO: Fix this. m_persistentstart is now in BackendDCB.
-             *  mxb_assert_message(dcb->m_persistentstart > 0, "The DCB must be in a connection pool");
-             */
-        }
-    }
-}
-
-int ClientDCB::port() const
-{
-    int rval = -1;
-
-    if (m_ip.ss_family == AF_INET)
-    {
-        struct sockaddr_in* ip = (struct sockaddr_in*)&m_ip;
-        rval = ntohs(ip->sin_port);
-    }
-    else if (m_ip.ss_family == AF_INET6)
-    {
-        struct sockaddr_in6* ip = (struct sockaddr_in6*)&m_ip;
-        rval = ntohs(ip->sin6_port);
-    }
-    else
-    {
-        mxb_assert(m_ip.ss_family == AF_UNIX);
-    }
-
-    return rval;
-}
 
 uint32_t DCB::process_events(uint32_t events)
 {
@@ -2117,11 +1572,6 @@ bool DCB::disable_events()
     return rv;
 }
 
-DCB* dcb_get_current()
-{
-    return this_thread.current_dcb;
-}
-
 /**
  * @brief DCB callback for upstream throtting
  * Called by any backend dcb when its writeq is above high water mark or
@@ -2234,39 +1684,25 @@ static int downstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* user
     return 0;
 }
 
-json_t* dcb_to_json(DCB* dcb)
-{
-    return dcb->to_json();
-}
-
-namespace maxscale
-{
-
-const char* to_string(DCB::Role role)
-{
-    switch (role)
-    {
-    case DCB::Role::CLIENT:
-        return "Client DCB";
-
-    case DCB::Role::BACKEND:
-        return "Backend DCB";
-
-    case DCB::Role::INTERNAL:
-        return "Internal DCB";
-
-    default:
-        mxb_assert(!true);
-        return "Unknown DCB";
-    }
-}
-}
-
 SERVICE* DCB::service() const
 {
     return m_session->service;
 }
 
+int32_t DCB::protocol_write(GWBUF* pData)
+{
+    return protocol()->write(this, pData);
+}
+
+json_t* DCB::protocol_diagnostics_json() const
+{
+    DCB* pThis = const_cast<DCB*>(this);
+    return protocol()->diagnostics_json(pThis);
+}
+
+/**
+ * ClientDCB
+ */
 void ClientDCB::shutdown()
 {
     // Close protocol and router session
@@ -2340,6 +1776,440 @@ bool ClientDCB::prepare_for_destruction()
     return true;
 }
 
+ClientDCB* ClientDCB::create(int fd,
+                             const std::string& remote,
+                             const sockaddr_storage& ip,
+                             MXS_SESSION* session,
+                             std::unique_ptr<ClientProtocol> protocol,
+                             DCB::Manager* manager)
+{
+    ClientDCB* dcb = new(std::nothrow) ClientDCB(fd, remote, ip, session, std::move(protocol), manager);
+    if (!dcb)
+    {
+        ::close(fd);
+    }
+
+    return dcb;
+}
+
+mxs::ClientProtocol* ClientDCB::protocol() const
+{
+    return m_protocol.get();
+}
+
+/**
+ * Accept a SSL connection and do the SSL authentication handshake.
+ * This function accepts a client connection to a DCB. It assumes that the SSL
+ * structure has the underlying method of communication set and this method is ready
+ * for usage. It then proceeds with the SSL handshake and stops only if an error
+ * occurs or the client has not yet written enough data to complete the handshake.
+ * @param dcb DCB which should accept the SSL connection
+ * @return 1 if the handshake was successfully completed, 0 if the handshake is
+ * still ongoing and another call to dcb_SSL_accept should be made or -1 if an
+ * error occurred during the handshake and the connection should be terminated.
+ */
+int ClientDCB::ssl_handshake()
+{
+    if (!m_session->listener->ssl().context()
+        || (!m_ssl.handle && !create_SSL(m_session->listener->ssl().context())))
+    {
+        return -1;
+    }
+
+    MXB_AT_DEBUG(std::string user = m_session->user());
+
+    int ssl_rval = SSL_accept(m_ssl.handle);
+
+    switch (SSL_get_error(m_ssl.handle, ssl_rval))
+    {
+    case SSL_ERROR_NONE:
+        MXS_DEBUG("SSL_accept done for %s@%s", user.c_str(), m_remote.c_str());
+        m_ssl.state = SSLState::ESTABLISHED;
+        m_ssl.read_want_write = false;
+        return 1;
+
+    case SSL_ERROR_WANT_READ:
+        MXS_DEBUG("SSL_accept ongoing want read for %s@%s", user.c_str(), m_remote.c_str());
+        return 0;
+
+    case SSL_ERROR_WANT_WRITE:
+        MXS_DEBUG("SSL_accept ongoing want write for %s@%s", user.c_str(), m_remote.c_str());
+        m_ssl.read_want_write = true;
+        return 0;
+
+    case SSL_ERROR_ZERO_RETURN:
+        MXS_DEBUG("SSL error, shut down cleanly during SSL accept %s@%s", user.c_str(), m_remote.c_str());
+        log_errors_SSL(0);
+        trigger_hangup_event();
+        return 0;
+
+    case SSL_ERROR_SYSCALL:
+        MXS_DEBUG("SSL connection SSL_ERROR_SYSCALL error during accept %s@%s",
+                  user.c_str(), m_remote.c_str());
+        if (log_errors_SSL(ssl_rval) < 0)
+        {
+            m_ssl.state = SSLState::HANDSHAKE_FAILED;
+            trigger_hangup_event();
+            return -1;
+        }
+        else
+        {
+            return 0;
+        }
+
+    default:
+        MXS_DEBUG("SSL connection shut down with error during SSL accept %s@%s",
+                  user.c_str(), m_remote.c_str());
+        if (log_errors_SSL(ssl_rval) < 0)
+        {
+            m_ssl.state = SSLState::HANDSHAKE_FAILED;
+            trigger_hangup_event();
+            return -1;
+        }
+        else
+        {
+            return 0;
+        }
+    }
+}
+
+int ClientDCB::port() const
+{
+    int rval = -1;
+
+    if (m_ip.ss_family == AF_INET)
+    {
+        struct sockaddr_in* ip = (struct sockaddr_in*)&m_ip;
+        rval = ntohs(ip->sin_port);
+    }
+    else if (m_ip.ss_family == AF_INET6)
+    {
+        struct sockaddr_in6* ip = (struct sockaddr_in6*)&m_ip;
+        rval = ntohs(ip->sin6_port);
+    }
+    else
+    {
+        mxb_assert(m_ip.ss_family == AF_UNIX);
+    }
+
+    return rval;
+}
+
+/**
+ * BackendDCB
+ */
+BackendDCB* BackendDCB::create(SERVER* srv,
+                               int fd,
+                               MXS_SESSION* session,
+                               DCB::Manager* manager,
+                               mxs::Component* component)
+{
+    auto client_dcb = session->client_dcb;
+    auto client_proto = client_dcb->protocol();
+    std::unique_ptr<BackendProtocol> protocol_session;
+    if (client_proto->capabilities() & mxs::ClientProtocol::CAP_BACKEND)
+    {
+        protocol_session = client_proto->create_backend_protocol(session, srv, component);
+        if (!protocol_session)
+        {
+            MXS_ERROR("Failed to create protocol session for backend DCB.");
+        }
+    }
+    else
+    {
+        MXB_ERROR("Protocol '%s' does not support backend connections.", session->listener->protocol());
+    }
+
+    BackendDCB* dcb = nullptr;
+    if (protocol_session)
+    {
+        dcb = new(std::nothrow) BackendDCB(srv, fd, session, std::move(protocol_session), manager);
+        if (dcb)
+        {
+            session_link_backend_dcb(session, dcb);
+        }
+    }
+
+    if (!dcb)
+    {
+        ::close(fd);
+    }
+
+    return dcb;
+}
+
+/**
+ * Connect to a server
+ *
+ * @param host The host to connect to
+ * @param port The port to connect to
+ * @param fd   FD is stored in this pointer
+ *
+ * @return True on success, false on error
+ */
+static bool connect_backend(const char* host, int port, int* fd)
+{
+    bool ok = false;
+    struct sockaddr_storage addr = {};
+    int so;
+    size_t sz;
+
+    if (host[0] == '/')
+    {
+        so = open_unix_socket(MXS_SOCKET_NETWORK, (struct sockaddr_un*)&addr, host);
+        sz = sizeof(sockaddr_un);
+    }
+    else
+    {
+        so = open_network_socket(MXS_SOCKET_NETWORK, &addr, host, port);
+        sz = sizeof(sockaddr_storage);
+    }
+
+    if (so != -1)
+    {
+        if (connect(so, (struct sockaddr*)&addr, sz) == -1 && errno != EINPROGRESS)
+        {
+            MXS_ERROR("Failed to connect backend server [%s]:%d due to: %d, %s.",
+                      host, port, errno, mxs_strerror(errno));
+            close(so);
+        }
+        else
+        {
+            *fd = so;
+            ok = true;
+        }
+    }
+    else
+    {
+        MXS_ERROR("Establishing connection to backend server [%s]:%d failed.", host, port);
+    }
+
+    return ok;
+}
+
+/**
+ * Connect to a backend server
+ *
+ * @param srv      The server to connect to
+ * @param session  The session this connection is being made for
+ * @param manager The DCB manager to use
+ *
+ * @return The new allocated dcb or NULL on error
+ */
+BackendDCB* BackendDCB::connect(SERVER* srv,
+                                MXS_SESSION* session,
+                                BackendDCB::Manager* manager,
+                                mxs::Component* component)
+{
+    Server* server = static_cast<Server*>(srv);
+
+    BackendDCB* dcb = nullptr;
+    int fd = 0;
+
+    if (connect_backend(server->address, server->port, &fd))
+    {
+        dcb = create(server, fd, session, manager, component);
+
+        if (dcb)
+        {
+            if (dcb->m_protocol->init_connection(dcb) && dcb->enable_events())
+            {
+                // The DCB is now connected and added to epoll set. Authentication is done after the EPOLLOUT
+                // event that is triggered once the connection is established.
+
+                mxb::atomic::add(&server->stats().n_connections, 1, mxb::atomic::RELAXED);
+                mxb::atomic::add(&server->stats().n_current, 1, mxb::atomic::RELAXED);
+            }
+            else
+            {
+                session_unlink_backend_dcb(dcb->session(), dcb);
+
+                DCB::destroy(dcb);
+                dcb = nullptr;
+            }
+        }
+    }
+
+    return dcb;
+}
+
+void BackendDCB::reset(MXS_SESSION* session)
+{
+    clear();
+
+    m_last_read = mxs_clock();
+    m_last_write = mxs_clock();
+    m_session = session;
+
+    if (DCB_THROTTLING_ENABLED(this))
+    {
+        // Register upstream throttling callbacks
+        add_callback(Reason::HIGH_WATER, upstream_throttle_callback, NULL);
+        add_callback(Reason::LOW_WATER, upstream_throttle_callback, NULL);
+    }
+}
+
+std::string BackendDCB::diagnostics() const
+{
+    std::stringstream ss(DCB::diagnostics());
+
+    if (m_server->address)
+    {
+        ss << "\tServer name/IP:     " << m_server->address << "\n";
+    }
+    if (m_server->port)
+    {
+        ss << "\tPort number:        " << m_server->port << "\n";
+    }
+
+    string statusname = m_server->status_string();
+    if (!statusname.empty())
+    {
+        ss << "\tServer status:            " << statusname << "\n";
+    }
+
+    return ss.str();
+}
+
+json_t* BackendDCB::to_json() const
+{
+    json_t* json = DCB::to_json();
+
+    if (json)
+    {
+        json_object_set_new(json, "server", json_string(m_server->name()));
+    }
+
+    return json;
+}
+
+// static
+void BackendDCB::hangup_cb(MXB_WORKER* worker, const SERVER* server)
+{
+    RoutingWorker* rworker = static_cast<RoutingWorker*>(worker);
+    DCB* old_current = this_thread.current_dcb;
+
+    for (DCB* dcb : rworker->dcbs())
+    {
+        if (dcb->state() == State::POLLING && dcb->role() == Role::BACKEND)
+        {
+            // TODO: Remove the need for downcast.
+            BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
+
+            if (backend_dcb->m_server == server && backend_dcb->m_nClose == 0)
+            {
+                if (!backend_dcb->m_hanged_up)
+                {
+                    this_thread.current_dcb = backend_dcb;
+                    backend_dcb->m_protocol->hangup(dcb);
+                    backend_dcb->m_hanged_up = true;
+                }
+            }
+        }
+    }
+
+    this_thread.current_dcb = old_current;
+}
+
+/**
+ * Call all the callbacks on all DCB's that match the server and the reason given
+ */
+// static
+void BackendDCB::hangup(const SERVER* server)
+{
+    intptr_t arg1 = (intptr_t)&BackendDCB::hangup_cb;
+    intptr_t arg2 = (intptr_t)server;
+
+    RoutingWorker::broadcast_message(MXB_WORKER_MSG_CALL, arg1, arg2);
+}
+
+mxs::BackendProtocol* BackendDCB::protocol() const
+{
+    return m_protocol.get();
+}
+
+/**
+ * Initiate an SSL client connection to a server
+ *
+ * This functions starts an SSL client connection to a server which is expecting
+ * an SSL handshake. The DCB should already have a TCP connection to the server and
+ * this connection should be in a state that expects an SSL handshake.
+ * THIS CODE IS UNUSED AND UNTESTED as at 4 Jan 2016
+ * @param dcb DCB to connect
+ * @return 1 on success, -1 on error and 0 if the SSL handshake is still ongoing
+ */
+int BackendDCB::ssl_handshake()
+{
+    int ssl_rval;
+    int return_code;
+
+    if (!m_server->ssl().context() || (!m_ssl.handle && !create_SSL(m_server->ssl().context())))
+    {
+        mxb_assert(m_server->ssl().context());
+        return -1;
+    }
+    m_ssl.state = SSLState::HANDSHAKE_REQUIRED;
+    ssl_rval = SSL_connect(m_ssl.handle);
+    switch (SSL_get_error(m_ssl.handle, ssl_rval))
+    {
+    case SSL_ERROR_NONE:
+        MXS_DEBUG("SSL_connect done for %s", m_remote.c_str());
+        m_ssl.state = SSLState::ESTABLISHED;
+        m_ssl.read_want_write = false;
+        return_code = 1;
+        break;
+
+    case SSL_ERROR_WANT_READ:
+        MXS_DEBUG("SSL_connect ongoing want read for %s", m_remote.c_str());
+        return_code = 0;
+        break;
+
+    case SSL_ERROR_WANT_WRITE:
+        MXS_DEBUG("SSL_connect ongoing want write for %s", m_remote.c_str());
+        m_ssl.read_want_write = true;
+        return_code = 0;
+        break;
+
+    case SSL_ERROR_ZERO_RETURN:
+        MXS_DEBUG("SSL error, shut down cleanly during SSL connect %s", m_remote.c_str());
+        if (log_errors_SSL(0) < 0)
+        {
+            trigger_hangup_event();
+        }
+        return_code = 0;
+        break;
+
+    case SSL_ERROR_SYSCALL:
+        MXS_DEBUG("SSL connection shut down with SSL_ERROR_SYSCALL during SSL connect %s", m_remote.c_str());
+        if (log_errors_SSL(ssl_rval) < 0)
+        {
+            m_ssl.state = SSLState::HANDSHAKE_FAILED;
+            trigger_hangup_event();
+            return_code = -1;
+        }
+        else
+        {
+            return_code = 0;
+        }
+        break;
+
+    default:
+        MXS_DEBUG("SSL connection shut down with error during SSL connect %s", m_remote.c_str());
+        if (log_errors_SSL(ssl_rval) < 0)
+        {
+            m_ssl.state = SSLState::HANDSHAKE_FAILED;
+            trigger_hangup_event();
+            return -1;
+        }
+        else
+        {
+            return 0;
+        }
+        break;
+    }
+    return return_code;
+}
+
 BackendDCB::BackendDCB(SERVER* server, int fd, MXS_SESSION* session,
                        std::unique_ptr<mxs::BackendProtocol> protocol,
                        DCB::Manager* manager)
@@ -2386,8 +2256,30 @@ bool BackendDCB::prepare_for_destruction()
     return prepared;
 }
 
+/**
+ * Free Functions
+ */
 namespace maxscale
 {
+
+const char* to_string(DCB::Role role)
+{
+    switch (role)
+    {
+    case DCB::Role::CLIENT:
+        return "Client DCB";
+
+    case DCB::Role::BACKEND:
+        return "Backend DCB";
+
+    case DCB::Role::INTERNAL:
+        return "Internal DCB";
+
+    default:
+        mxb_assert(!true);
+        return "Unknown DCB";
+    }
+}
 
 const char* to_string(DCB::State state)
 {
@@ -2412,13 +2304,97 @@ const char* to_string(DCB::State state)
 }
 }
 
-int32_t DCB::protocol_write(GWBUF* pData)
+bool printAllDCBs_cb(DCB* dcb, void* data)
 {
-    return protocol()->write(this, pData);
+    printDCB(dcb);
+    return true;
 }
 
-json_t* DCB::protocol_diagnostics_json() const
+void printAllDCBs()
 {
-    DCB* pThis = const_cast<DCB*>(this);
-    return protocol()->diagnostics_json(pThis);
+    dcb_foreach(printAllDCBs_cb, NULL);
+}
+
+void printDCB(DCB* dcb)
+{
+    printf("%s", dcb->diagnostics().c_str());
+}
+
+void dcb_printf(DCB* dcb, const char* fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    int n = vsnprintf(nullptr, 0, fmt, args);
+    va_end(args);
+
+    GWBUF* buf = gwbuf_alloc(n + 1);
+
+    if (buf)
+    {
+        va_start(args, fmt);
+        vsnprintf((char*)GWBUF_DATA(buf), n + 1, fmt, args);
+        va_end(args);
+
+        // Remove the trailing null character
+        GWBUF_RTRIM(buf, 1);
+        dcb->protocol_write(buf);
+    }
+}
+
+int dcb_count_by_role(DCB::Role role)
+{
+    struct dcb_role_count val = {};
+    val.count = 0;
+    val.role = role;
+
+    dcb_foreach(count_by_role_cb, &val);
+
+    return val.count;
+}
+
+uint64_t dcb_get_session_id(DCB* dcb)
+{
+    return (dcb && dcb->session()) ? dcb->session()->id() : 0;
+}
+
+bool dcb_foreach(bool (* func)(DCB* dcb, void* data), void* data)
+{
+    mxb_assert(RoutingWorker::get_current() == RoutingWorker::get(RoutingWorker::MAIN));
+    SerialDcbTask task(func, data);
+    RoutingWorker::execute_serially(task);
+    return task.more();
+}
+
+void dcb_foreach_local(bool (* func)(DCB* dcb, void* data), void* data)
+{
+    RoutingWorker* worker = RoutingWorker::get_current();
+    const auto& dcbs = worker->dcbs();
+
+    for (DCB* dcb : dcbs)
+    {
+        if (dcb->session())
+        {
+            if (!func(dcb, data))
+            {
+                break;
+            }
+        }
+        else
+        {
+            /**
+             *  TODO: Fix this. m_persistentstart is now in BackendDCB.
+             *  mxb_assert_message(dcb->m_persistentstart > 0, "The DCB must be in a connection pool");
+             */
+        }
+    }
+}
+
+DCB* dcb_get_current()
+{
+    return this_thread.current_dcb;
+}
+
+json_t* dcb_to_json(DCB* dcb)
+{
+    return dcb->to_json();
 }

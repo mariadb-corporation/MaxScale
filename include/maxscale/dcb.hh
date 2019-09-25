@@ -639,12 +639,6 @@ private:
     void add_event(uint32_t ev);
 };
 
-namespace maxscale
-{
-
-const char* to_string(DCB::State state);
-}
-
 class ClientDCB : public DCB
 {
 public:
@@ -795,12 +789,30 @@ namespace maxscale
 {
 
 const char* to_string(DCB::Role role);
+const char* to_string(DCB::State state);
 }
 
-void printAllDCBs();                                                            /* Debug to print all DCB in
-                                                                                 * the system */
-void printDCB(DCB*);                                                            /* Debug print routine */
-void dcb_printf(DCB*, const char*, ...) __attribute__ ((format(printf, 2, 3))); /* DCB version of printf */
+/**
+ * Debug printing all DCBs from within a debugger.
+ */
+void printAllDCBs();
+
+/**
+ * Debug printing a DCB from within a debugger.
+ *
+ * @param dcb   The DCB to print
+ */
+void printDCB(DCB*);
+
+/**
+ * A  DCB based wrapper for printf. Allows formatting printing to
+ * a descriptor control block.
+ *
+ * @param dcb   Descriptor to write to
+ * @param fmt   A printf format string
+ * @param ...   Variable arguments for the print format
+ */
+void dcb_printf(DCB*, const char*, ...) __attribute__ ((format(printf, 2, 3)));
 
 /**
  * Return DCB counts filtered by role
