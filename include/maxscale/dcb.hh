@@ -31,7 +31,6 @@
 
 #include <memory>
 
-class DCB;
 class MXS_PROTOCOL_SESSION;
 class MXS_SESSION;
 class SERVER;
@@ -517,34 +516,35 @@ protected:
 
     int log_errors_SSL(int ret);
 
-    const std::string     m_remote;                     /**< The remote host */
-    const uint64_t        m_uid;                        /**< Unique identifier for this DCB */
-    const uint64_t        m_high_water;                 /**< High water mark of write queue */
-    const uint64_t        m_low_water;                  /**< Low water mark of write queue */
-    State                 m_state = State::ALLOC;       /**< Current state */
-    int                   m_fd;                         /**< The descriptor */
-    MXS_SESSION*          m_session;                    /**< The owning session */
-    Handler*              m_handler;
-    SSLState              m_ssl_state = SSLState::HANDSHAKE_UNKNOWN;/**< Current state of SSL if in use */
-    SSL*                  m_ssl = nullptr;              /**< SSL struct for connection */
-    bool                  m_ssl_read_want_read = false;
-    bool                  m_ssl_read_want_write = false;
-    bool                  m_ssl_write_want_read = false;
-    bool                  m_ssl_write_want_write = false;
-    Stats                 m_stats;                      /**< DCB related statistics */
-    CALLBACK*             m_callbacks = nullptr;        /**< The list of callbacks for the DCB */
-    bool                  m_high_water_reached = false; /**< High water mark reached, to determine
+    const uint64_t    m_uid;                        /**< Unique identifier for this DCB */
+    int               m_fd;                         /**< The descriptor */
+    const std::string m_remote;                     /**< The remote host */
+    const Role        m_role;                       /**< The role of the DCB */
+    MXS_SESSION*      m_session;                    /**< The owning session */
+    Handler*          m_handler;                    /**< The event handler of the DCB */
+    Manager*          m_manager;                    /**< The DCB manager to use */
+    int64_t           m_last_read;                  /**< Last time the DCB received data */
+    int64_t           m_last_write;                 /**< Last time the DCB sent data */
+    const uint64_t    m_high_water;                 /**< High water mark of write queue */
+    const uint64_t    m_low_water;                  /**< Low water mark of write queue */
+    State             m_state = State::ALLOC;       /**< Current state */
+    SSLState          m_ssl_state = SSLState::HANDSHAKE_UNKNOWN;/**< Current state of SSL if in use */
+    SSL*              m_ssl = nullptr;              /**< SSL struct for connection */
+    bool              m_ssl_read_want_read = false;
+    bool              m_ssl_read_want_write = false;
+    bool              m_ssl_write_want_read = false;
+    bool              m_ssl_write_want_write = false;
+    Stats             m_stats;                      /**< DCB related statistics */
+    CALLBACK*         m_callbacks = nullptr;        /**< The list of callbacks for the DCB */
+    bool              m_high_water_reached = false; /**< High water mark reached, to determine
                                                          * whether we need to release throttle */
-    uint64_t              m_writeqlen = 0;              /**< Bytes in writeq */
-    GWBUF*                m_writeq = nullptr;           /**< Write Data Queue */
-    GWBUF*                m_readq = nullptr;            /**< Read queue for incomplete reads */
-    GWBUF*                m_delayq = nullptr;           /**< Delay Backend Write Data Queue */
-    uint32_t              m_triggered_event = 0;        /**< Triggered event to be delivered to handler */
-    int64_t               m_last_read;                  /**< Last time the DCB received data */
-    int64_t               m_last_write;                 /**< Last time the DCB sent data */
-    uint32_t              m_nClose = 0;                 /**< How many times dcb_close has been called. */
-    bool                  m_hanged_up = false;          /**< Has thethis can be called only once */
-    Manager*              m_manager;                    /**< The DCB manager to use */
+    uint64_t          m_writeqlen = 0;              /**< Bytes in writeq */
+    GWBUF*            m_writeq = nullptr;           /**< Write Data Queue */
+    GWBUF*            m_readq = nullptr;            /**< Read queue for incomplete reads */
+    GWBUF*            m_delayq = nullptr;           /**< Delay Backend Write Data Queue */
+    uint32_t          m_triggered_event = 0;        /**< Triggered event to be delivered to handler */
+    uint32_t          m_nClose = 0;                 /**< How many times dcb_close has been called. */
+    bool              m_hanged_up = false;          /**< Has thethis can be called only once */
 
 private:
     friend class Manager;
@@ -570,9 +570,6 @@ private:
     void call_callback(Reason reason);
 
     void add_event(uint32_t ev);
-
-private:
-    Role m_role;        /**< The role of the DCB */
 };
 
 namespace maxscale

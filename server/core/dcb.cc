@@ -114,17 +114,15 @@ DCB::DCB(int fd,
          Handler* handler,
          Manager* manager)
     : MXB_POLL_DATA{&DCB::poll_handler, get_dcb_owner()}
-    , m_remote(remote)
     , m_uid(this_unit.uid_generator.fetch_add(1, std::memory_order_relaxed))
-    , m_high_water(config_writeq_high_water())
-    , m_low_water(config_writeq_low_water())
     , m_fd(fd)
+    , m_remote(remote)
+    , m_role(role)
     , m_session(session)
     , m_handler(handler)
-    , m_last_read(mxs_clock())
-    , m_last_write(mxs_clock())
     , m_manager(manager)
-    , m_role(role)
+    , m_high_water(config_writeq_high_water())
+    , m_low_water(config_writeq_low_water())
 {
     if (m_manager)
     {
