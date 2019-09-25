@@ -374,6 +374,13 @@ bool Replicator::Imp::process_one_event(SQL::Event& event)
         break;
 
     case QUERY_EVENT:
+        if (strncasecmp(event->event.query.statement.str, "commit",
+                        event->event.query.statement.length) == 0)
+        {
+            commit = true;
+        }
+
+    /* fallthrough */
     case USER_VAR_EVENT:
         if (m_implicit_commit)
         {
