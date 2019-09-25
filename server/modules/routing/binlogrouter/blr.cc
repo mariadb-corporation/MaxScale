@@ -3143,7 +3143,7 @@ int InternalDCB::ssl_handshake()
 
 bool InternalDCB::enable_events()
 {
-    mxb_assert(m_state == State::ALLOC || m_state == State::NOPOLLING);
+    mxb_assert(m_state == State::CREATED || m_state == State::NOPOLLING);
     m_state = State::POLLING;
 
     return true;

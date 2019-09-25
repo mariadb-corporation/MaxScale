@@ -100,7 +100,7 @@ public:
 
     enum class State
     {
-        ALLOC,          /*< Created but not added to the poll instance */
+        CREATED,        /*< Created but not added to the poll instance */
         POLLING,        /*< Added to the poll instance */
         DISCONNECTED,   /*< Socket closed */
         NOPOLLING       /*< Removed from the poll instance */
@@ -122,7 +122,14 @@ public:
         HANDSHAKE_FAILED     /*< The SSL handshake failed */
     };
 
-    virtual ~DCB();
+    /**
+     * Close the DCB. The called should treat the DCB as having been
+     * deleted although in practice the actual deletion may take place
+     * at a later point in time.
+     *
+     * @param dcb  The dcb to be closed.
+     */
+    static void close(DCB* dcb);
 
     /**
      * @return The unique identifier of the DCB.
@@ -136,7 +143,8 @@ public:
      * File descriptor of DCB.
      *
      * Accessing and using the file descriptor directly should only be
-     * used as a last resort, as it may break the assumptions of the DCB.
+     * used as a last resort, as external usage may break the assumptions
+     * of the DCB.
      *
      * @return The file descriptor.
      */
@@ -145,30 +153,60 @@ public:
         return m_fd;
     }
 
+    /**
+     * @return The remote host of the DCB.
+     */
     const std::string& remote() const
     {
         return m_remote;
     }
 
+    /**
+     * @return The role of the DCB.
+     */
     Role role() const
     {
         return m_role;
     }
 
-    State state() const
+    /**
+     * @return The session of the DCB.
+     */
+    MXS_SESSION* session() const
     {
-        return m_state;
+        return m_session;
     }
 
+    /**
+     * @return The event handler of the DCB.
+     */
     Handler* handler() const
     {
         return m_handler;
     }
 
-    void set_handler(Handler* pHandler)
+    /**
+     * Set the handler of the DCB.
+     *
+     * @param handler  The new handler of the DCB.
+     */
+    void set_handler(Handler* handler)
     {
-        m_handler = pHandler;
+        m_handler = handler;
     }
+
+    /**
+     * @return The state of the DCB.
+     */
+    State state() const
+    {
+        return m_state;
+    }
+
+    /**
+     * @return The protocol of the DCB.
+     */
+    virtual MXS_PROTOCOL_SESSION* protocol() const = 0;
 
     /**
      * Clears the DCB; all queues and callbacks are freed and the session
@@ -180,25 +218,27 @@ public:
 
     virtual json_t* to_json() const;
 
-    MXS_SESSION* session() const
-    {
-        return m_session;
-    }
-
     SERVICE* service() const;
 
+    /**
+     * @return DCB statistics.
+     */
     const Stats& stats() const
     {
         return m_stats;
     }
 
-    virtual MXS_PROTOCOL_SESSION* protocol() const = 0;
-
+    /**
+     * @return True, if SSL has been enabled, false otherwise.
+     */
     bool ssl_enabled() const
     {
         return m_ssl.handle != nullptr;
     }
 
+    /**
+     * @return The current SSL state.
+     */
     SSLState ssl_state() const
     {
         return m_ssl.state;
@@ -209,8 +249,23 @@ public:
         m_ssl.state = ssl_state;
     }
 
+    /**
+     * Perform SSL handshake.
+     *
+     * @return -1 if an error occurred,
+     *          0 if the handshaking is still ongoing and another call to ssl_handshake() is needed, and
+     *          1 if the handshaking succeeded
+     *
+     * @see ClientDCB::ssl_handshake
+     * @see BackendDCB::ssl_handshake
+     */
     virtual int ssl_handshake() = 0;
 
+    /**
+     * Find the number of bytes available on the socket.
+     *
+     * @return -1 in case of error, otherwise the total number of bytes available.
+     */
     int socket_bytes_readable() const;
 
     /**
@@ -241,7 +296,16 @@ public:
         NO   // Do not drain the writeq.
     };
 
-    bool writeq_append(GWBUF* pData, Drain drain = Drain::YES);
+    /**
+     * Append data to the write queue.
+     *
+     * @param data   The data to be appended to the write queue.
+     * @param drain  Whether the write queue should be drained, that is,
+     *               written to the socket.
+     *
+     * @return True if the data could be appended, false otherwise.
+     */
+    bool writeq_append(GWBUF* data, Drain drain = Drain::YES);
 
     /**
      * Drain the write queue of the DCB.
@@ -258,7 +322,7 @@ public:
 
     json_t* protocol_diagnostics_json() const;
 
-    // Starts the shutdown process, called when a DCB is closed
+    // TODO: Should probably be made protected.
     virtual void shutdown() = 0;
 
     /**
@@ -282,10 +346,6 @@ public:
      * @return True on success, false on error.
      */
     virtual bool disable_events();
-
-    // BEGIN: Temporarily here, do not use.
-    static void close(DCB* dcb);
-    // END
 
     /**
      * Add a callback to the DCB.
@@ -489,6 +549,8 @@ protected:
         Handler* handler,
         Manager* manager);
 
+    virtual ~DCB();
+
     bool create_SSL(mxs::SSLContext* ssl);
 
     static void destroy(DCB* dcb)
@@ -537,7 +599,7 @@ protected:
     int64_t           m_last_write;                 /**< Last time the DCB sent data */
     const uint64_t    m_high_water;                 /**< High water mark of write queue */
     const uint64_t    m_low_water;                  /**< Low water mark of write queue */
-    State             m_state = State::ALLOC;       /**< Current state */
+    State             m_state = State::CREATED;     /**< Current state */
     SSL               m_ssl;
     Stats             m_stats;                      /**< DCB related statistics */
     CALLBACK*         m_callbacks = nullptr;        /**< The list of callbacks for the DCB */
@@ -610,6 +672,13 @@ public:
 
     mxs::ClientProtocol* protocol() const override;
 
+    /**
+     * Accept an SSL connection and perform the SSL authentication handshake.
+     *
+     * @return -1 if an error occurred,
+     *          0 if the handshaking is still ongoing and another call to ssl_handshake() is needed, and
+     *          1 if the handshaking succeeded
+     */
     int ssl_handshake() override;
 
     void shutdown() override;
@@ -692,9 +761,14 @@ public:
         return m_server;
     }
 
+    /**
+     * Initate an SSL handshake with a server.
+     *
+     * @return -1 if an error occurred,
+     *          0 if the handshaking is still ongoing and another call to ssl_handshake() is needed, and
+     *          1 if the handshaking succeeded
+     */
     int ssl_handshake() override;
-
-    std::unique_ptr<mxs::BackendProtocol>      m_protocol;       /**< The protocol session */
 
 private:
     BackendDCB(SERVER* server, int fd, MXS_SESSION* session,
@@ -713,7 +787,8 @@ private:
     static void hangup_cb(MXB_WORKER* worker, const SERVER* server);
 
 
-    SERVER* const m_server;             /**< The associated backend server */
+    SERVER* const                         m_server;   /**< The associated backend server */
+    std::unique_ptr<mxs::BackendProtocol> m_protocol; /**< The protocol session */
 };
 
 namespace maxscale

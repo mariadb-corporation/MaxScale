@@ -194,7 +194,7 @@ void DCB::clear()
 // static
 void DCB::free(DCB* dcb)
 {
-    mxb_assert(dcb->m_state == State::DISCONNECTED || dcb->m_state == State::ALLOC);
+    mxb_assert(dcb->m_state == State::DISCONNECTED || dcb->m_state == State::CREATED);
 
     if (dcb->m_session)
     {
@@ -441,13 +441,6 @@ int DCB::read(GWBUF** head, int maxbytes)
     return nreadtotal;
 }
 
-/**
- * Find the number of bytes available for the DCB's socket
- *
- * @param dcb       The DCB to read from
- *
- * @return          -1 on error, otherwise the total number of bytes available
- */
 int DCB::socket_bytes_readable() const
 {
     int bytesavailable;
@@ -761,7 +754,7 @@ static inline bool dcb_write_parameter_check(DCB* dcb, int fd, GWBUF* queue)
          * before router's closeSession is called and that tells that DCB may
          * still be writable.
          */
-        if (dcb->state() != DCB::State::ALLOC
+        if (dcb->state() != DCB::State::CREATED
             && dcb->state() != DCB::State::POLLING
             && dcb->state() != DCB::State::NOPOLLING)
         {
@@ -873,7 +866,7 @@ void DCB::close(DCB* dcb)
      * DCB::close may be called for freshly created dcb, in which case
      * it only needs to be freed.
      */
-    if (dcb->state() == State::ALLOC && dcb->m_fd == FD_CLOSED)
+    if (dcb->state() == State::CREATED && dcb->m_fd == FD_CLOSED)
     {
         // A freshly created dcb that was closed before it was taken into use.
         DCB::free(dcb);
@@ -2180,7 +2173,7 @@ static bool add_fd_to_routing_workers(int fd, uint32_t events, MXB_POLL_DATA* da
 
 bool DCB::enable_events()
 {
-    mxb_assert(m_state == State::ALLOC || m_state == State::NOPOLLING);
+    mxb_assert(m_state == State::CREATED || m_state == State::NOPOLLING);
 
     bool rv = false;
     RoutingWorker* worker = static_cast<RoutingWorker*>(this->owner);
@@ -2448,8 +2441,8 @@ BackendDCB::BackendDCB(SERVER* server, int fd, MXS_SESSION* session,
                        std::unique_ptr<mxs::BackendProtocol> protocol,
                        DCB::Manager* manager)
     : DCB(fd, server->address, DCB::Role::BACKEND, session, protocol.get(), manager)
-    , m_protocol(std::move(protocol))
     , m_server(server)
+    , m_protocol(std::move(protocol))
 {
     mxb_assert(m_server);
 
@@ -2497,8 +2490,8 @@ const char* to_string(DCB::State state)
 {
     switch (state)
     {
-    case DCB::State::ALLOC:
-        return "DCB::State::ALLOC";
+    case DCB::State::CREATED:
+        return "DCB::State::CREATED";
 
     case DCB::State::POLLING:
         return "DCB::State::POLLING";
