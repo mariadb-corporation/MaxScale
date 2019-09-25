@@ -630,6 +630,27 @@ BackendDCB* RoutingWorker::get_backend_dcb(SERVER* pS, MXS_SESSION* pSession, mx
 {
     Server* pServer = static_cast<Server*>(pS);
 
+    BackendDCB* pDcb = nullptr;
+
+    if (pServer->persistent_conns_enabled() && pServer->is_running())
+    {
+        pDcb = get_backend_dcb_from_pool(pS, pSession, pUpstream);
+    }
+
+    if (!pDcb)
+    {
+        pDcb = BackendDCB::connect(pServer, pSession, this, pUpstream);
+    }
+
+    return pDcb;
+}
+
+BackendDCB* RoutingWorker::get_backend_dcb_from_pool(SERVER* pS,
+                                                     MXS_SESSION* pSession,
+                                                     mxs::Component* pUpstream)
+{
+    Server* pServer = static_cast<Server*>(pS);
+
     mxb_assert(pServer);
 
     BackendDCB* pDcb = nullptr;

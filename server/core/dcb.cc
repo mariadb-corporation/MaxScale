@@ -230,22 +230,6 @@ void DCB::stop_polling_and_shutdown()
     shutdown();
 }
 
-// static
-BackendDCB* BackendDCB::take_from_connection_pool(SERVER* s, MXS_SESSION* session, mxs::Component* upstream)
-{
-    Server* server = static_cast<Server*>(s);
-
-    BackendDCB* dcb = nullptr;
-
-    if (server->persistent_conns_enabled() && server->is_running())
-    {
-        auto worker = static_cast<RoutingWorker*>(session->client_dcb->owner);
-        dcb = worker->get_backend_dcb(server, session, upstream);
-    }
-
-    return dcb;
-}
-
 BackendDCB* BackendDCB::create(SERVER* srv,
                                int fd,
                                MXS_SESSION* session,
@@ -351,18 +335,6 @@ BackendDCB* BackendDCB::connect(SERVER* srv,
 {
     Server* server = static_cast<Server*>(srv);
 
-    // TODO: Either
-    // - ignore that the provided manager may be different that the one used,
-    // - remove the DCB from its manager when moved to the pool and assign a new one when it is
-    //   taken out from the pool, or
-    // - also consider the manager when deciding whether a DCB in the pool can be used or not.
-    if (auto dcb = take_from_connection_pool(server, session, component))
-    {
-        // TODO: For now, we ignore the problem.
-        return static_cast<BackendDCB*>(dcb);       // Reusing a DCB from the connection pool
-    }
-
-    // Could not find a reusable DCB, allocate a new one
     BackendDCB* dcb = nullptr;
     int fd = 0;
 

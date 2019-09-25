@@ -642,6 +642,8 @@ public:
 
     BackendDCB* get_backend_dcb(SERVER* pServer, MXS_SESSION* pSession, mxs::Component* upstream);
 
+    BackendDCB* get_backend_dcb_from_pool(SERVER* pServer, MXS_SESSION* pSession, mxs::Component* upstream);
+
     enum class Evict
     {
         EXPIRED,

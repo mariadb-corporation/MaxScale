@@ -732,7 +732,8 @@ mxs::Target* ServerEndpoint::target() const
 bool ServerEndpoint::connect()
 {
     mxb::LogScope scope(m_server->name());
-    m_dcb = BackendDCB::connect(m_server, m_session, mxs::RoutingWorker::get_current(), this);
+    auto worker = mxs::RoutingWorker::get_current();
+    m_dcb = worker->get_backend_dcb(m_server, m_session, this);
     return m_dcb != nullptr;
 }
 

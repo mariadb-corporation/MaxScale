@@ -705,10 +705,6 @@ private:
                               DCB::Manager* manager,
                               mxs::Component* upstream);
 
-    static BackendDCB* take_from_connection_pool(SERVER* server,
-                                                 MXS_SESSION* session,
-                                                 mxs::Component* upstream);
-
     bool release_from(MXS_SESSION* session) override;
     bool prepare_for_destruction() override;
 
