@@ -416,13 +416,10 @@ uint8_t* process_row_event_data(STableMapEvent map,
             else if (column_is_temporal(map->column_types[i]))
             {
                 char buf[80];
-                struct tm tm;
-                ptr += unpack_temporal_value(map->column_types[i],
-                                             ptr,
+                ptr += unpack_temporal_value(map->column_types[i], ptr,
                                              &metadata[metadata_offset],
                                              create->columns[i].length,
-                                             &tm);
-                format_temporal_value(buf, sizeof(buf), map->column_types[i], &tm);
+                                             buf, sizeof(buf));
                 conv->column_string(i, buf);
                 sprintf(trace[i], "[%ld] %s: %s", i, column_type_to_string(map->column_types[i]), buf);
                 check_overflow(ptr <= end);
