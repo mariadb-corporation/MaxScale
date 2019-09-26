@@ -1873,9 +1873,14 @@ idlist(A) ::= nm(Y).
 }
 
 expr(A) ::= term(X).             {A = X;}
+%ifndef MAXSCALE
 expr(A) ::= LP(B) expr(X) RP(E). {A.pExpr = X.pExpr; spanSet(&A,&B,&E);}
+%endif
 %ifdef MAXSCALE
-expr(A) ::= LP expr(X) COMMA(OP) expr(Y) RP. {spanBinaryExpr(&A,pParse,@OP,&X,&Y);}
+%type exprs {ExprSpan}
+exprs(A) ::= expr(X). { A = X; }
+exprs(A) ::= exprs(X) COMMA(OP) expr(Y). {spanBinaryExpr(&A,pParse,@OP,&X,&Y);}
+expr(A) ::= LP(B) exprs(X) RP(E). {A.pExpr = X.pExpr; spanSet(&A,&B,&E);}
 term(A) ::= DEFAULT(X).          {spanExpr(&A, pParse, @X, &X);}
 %endif
 term(A) ::= NULL(X).             {spanExpr(&A, pParse, @X, &X);}
