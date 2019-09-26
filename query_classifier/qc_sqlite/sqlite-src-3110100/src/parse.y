@@ -1926,6 +1926,13 @@ expr(A) ::= VARIABLE(X).     {
   spanSet(&A, &X, &X);
 }
 %ifdef MAXSCALE
+expr(A) ::= id(X) INTEGER(Y). {
+  // The sole purpose of this is to interpret something like '_utf8mb4 0xD091D092D093'
+  // as a string. It does not matter that any identifier followed by an integer will
+  // be interpreted as a string, as invalid usage will be caught by the server.
+  A.pExpr = sqlite3PExpr(pParse, TK_STRING, 0, 0, &Y);
+  spanSet(&A, &X, &Y);
+}
 expr(A) ::= VARIABLE(X) variable_tail(Y).     {
   // As we won't be executing any queries, we do not need to do
   // the things that are done above.
