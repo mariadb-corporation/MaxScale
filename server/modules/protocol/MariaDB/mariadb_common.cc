@@ -607,19 +607,7 @@ mysql_tx_state_t parse_trx_state(const char* str)
     return (mysql_tx_state_t)s;
 }
 
-MySQLProtocol::MySQLProtocol(MXS_SESSION* session, SERVER* server)
-    : m_session(session)
-    , m_reply(server)
-    , m_version(service_get_version(session->service, SERVICE_VERSION_MIN))
-{
-}
-
-MySQLProtocol::~MySQLProtocol()
-{
-    gwbuf_free(stored_query);
-}
-
-using Iter = MySQLProtocol::Iter;
+using Iter = MySQLBackendProtocol::Iter;
 
 uint64_t get_encoded_int(Iter it)
 {
@@ -728,56 +716,4 @@ static inline bool complete_ps_response(GWBUF* buffer)
     }
 
     return rval;
-}
-
-void MySQLProtocol::track_query(GWBUF* buffer)
-{
-    mxb_assert(gwbuf_is_contiguous(buffer));
-    uint8_t* data = GWBUF_DATA(buffer);
-
-    if (changing_user)
-    {
-        // User reauthentication in progress, ignore the contents
-        return;
-    }
-
-    if (session_is_load_active(m_session))
-    {
-        if (MYSQL_GET_PAYLOAD_LEN(data) == 0)
-        {
-            MXS_INFO("Load data ended");
-            session_set_load_active(m_session, false);
-            set_reply_state(ReplyState::START);
-        }
-    }
-    else if (!m_large_query)
-    {
-        m_reply.clear();
-        m_reply.set_command(MYSQL_GET_COMMAND(data));
-
-        if (mxs_mysql_command_will_respond(m_reply.command()))
-        {
-            set_reply_state(ReplyState::START);
-        }
-
-        if (m_reply.command() == MXS_COM_STMT_EXECUTE)
-        {
-            // Extract the flag byte after the statement ID
-            uint8_t flags = data[MYSQL_PS_ID_OFFSET + MYSQL_PS_ID_SIZE];
-
-            // Any non-zero flag value means that we have an open cursor
-            m_opening_cursor = flags != 0;
-        }
-        else if (m_reply.command() == MXS_COM_STMT_FETCH)
-        {
-            set_reply_state(ReplyState::RSET_ROWS);
-        }
-    }
-
-    /**
-     * If the buffer contains a large query, we have to skip the command
-     * byte extraction for the next packet. This way current_command always
-     * contains the latest command executed on this backend.
-     */
-    m_large_query = MYSQL_GET_PAYLOAD_LEN(data) == MYSQL_PACKET_LENGTH_MAX;
 }

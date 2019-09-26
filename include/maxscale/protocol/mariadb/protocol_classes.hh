@@ -37,65 +37,12 @@ enum kill_type_t
 class MySQLProtocol
 {
 public:
-    MySQLProtocol(MXS_SESSION* session, SERVER* server);
-    ~MySQLProtocol();
-
-    /**
-     * Track a client query
-     *
-     * Inspects the query and tracks the current command being executed. Also handles detection of
-     * multi-packet requests and the special handling that various commands need.
-     */
-    void track_query(GWBUF* buffer);
-
-    /**
-     * Get the reply state object
-     */
-    const mxs::Reply& reply() const
-    {
-        return m_reply;
-    }
-
-    /**
-     * Get the session the protocol data is associated with.
-     *
-     * @return A session.
-     */
-    MXS_SESSION* session() const
-    {
-        return m_session;
-    }
-
-    //
-    // Legacy public members
-    //
     uint8_t  scramble[MYSQL_SCRAMBLE_LEN];  /*< server scramble, created or received */
     uint32_t client_capabilities = 0;       /*< client capabilities, created or received */
     uint32_t extra_capabilities = 0;        /*< MariaDB 10.2 capabilities */
 
     unsigned int charset = 0x8;             /*< Connection character set (default latin1 )*/
-    GWBUF*       stored_query = nullptr;    /*< Temporarily stored queries */
     bool         changing_user = false;
-
-    //
-    // END Legacy public members
-    //
-
-    using Iter = mxs::Buffer::iterator;
-
-protected:
-    MXS_SESSION* m_session;                 /**< The session this protocol session is associated with */
-    bool         m_opening_cursor = false;  /**< Whether we are opening a cursor */
-    uint32_t     m_expected_rows = 0;       /**< Number of rows a COM_STMT_FETCH is retrieving */
-    bool         m_large_query = false;
-    mxs::Reply   m_reply;
-
-    uint64_t m_version;     // Numeric server version
-
-    inline void set_reply_state(mxs::ReplyState state)
-    {
-        m_reply.set_reply_state(state);
-    }
 };
 
 /*
@@ -127,7 +74,7 @@ public:
     };
 
     static MySQLClientProtocol* create(MXS_SESSION* session, mxs::Component* component);
-    MySQLClientProtocol(MXS_SESSION* session, SERVER* server, mxs::Component* component,
+    MySQLClientProtocol(MXS_SESSION* session, mxs::Component* component,
                         std::unique_ptr<mxs::ClientAuthenticator> authenticator);
 
     void ready_for_reading(DCB* dcb) override;
@@ -185,16 +132,25 @@ private:
     void mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_type_t type);
     void execute_kill(MXS_SESSION* issuer, std::shared_ptr<KillInfo> info);
     int  ssl_authenticate_check_status(DCB* generic_dcb);
+    void track_current_command(GWBUF* buf);
 
     mxs::Component*                           m_component {nullptr};/**< Downstream component, the session */
     std::unique_ptr<mxs::ClientAuthenticator> m_authenticator;      /**< Client authentication data */
 
-    MYSQL_session m_shared_data;    /**< Shared session-level data. Used by authenticators, routers etc */
+    MXS_SESSION*  m_session {nullptr};  /**< Generic session */
+    MYSQL_session m_shared_data;        /**< Shared session-level data. Used by authenticators, routers etc */
+    uint8_t       m_command {0};
+    bool          m_changing_user {false};
+    bool          m_large_query {false};
+    uint64_t      m_version {0};    /**< Numeric server version */
+    mxs::Buffer   m_stored_query;   /**< Temporarily stored queries */
 };
 
 class MySQLBackendProtocol : public MySQLProtocol, public mxs::BackendProtocol
 {
 public:
+    using Iter = mxs::Buffer::iterator;
+
     static std::unique_ptr<MySQLBackendProtocol>
     create(MXS_SESSION* session, SERVER* server, MySQLClientProtocol& client_protocol,
            mxs::Component* component, std::unique_ptr<mxs::BackendAuthenticator> authenticator);
@@ -202,6 +158,8 @@ public:
     static std::unique_ptr<MySQLBackendProtocol>
     create_test_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component,
                          std::unique_ptr<mxs::BackendAuthenticator> authenticator);
+
+    ~MySQLBackendProtocol() override;
 
     void ready_for_reading(DCB* dcb) override;
     void write_ready(DCB* dcb) override;
@@ -274,25 +232,36 @@ private:
     void     process_reply_start(Iter it, Iter end);
     void     update_error(mxs::Buffer::iterator it, mxs::Buffer::iterator end);
     bool     consume_fetched_rows(GWBUF* buffer);
+    void     track_query(GWBUF* buffer);
+
+    inline void set_reply_state(mxs::ReplyState state)
+    {
+        m_reply.set_reply_state(state);
+    }
 
     mxs_auth_state_t protocol_auth_state {MXS_AUTH_STATE_INIT}; /**< Backend authentication state */
     mxs::Component*  m_component {nullptr};                     /**< Upstream component, typically a router */
 
     std::unique_ptr<mxs::BackendAuthenticator> m_authenticator;     /**< Backend authentication data */
 
-    uint64_t    m_thread_id {0};            /**< Backend thread id, received in backend handshake */
-    uint16_t    m_modutil_state;            /**< TODO: This is an ugly hack, replace it */
-    int         m_ignore_replies {0};       /**< How many replies should be discarded */
-    bool        m_collect_result {false};   /**< Collect the next result set as one buffer */
-    bool        m_track_state {false};      /**< Track session state */
-    bool        m_skip_next {false};
-    uint64_t    m_num_coldefs {0};
-    uint32_t    m_num_eof_packets {0};  /**< Encountered eof packet number, used for check packet type */
-    mxs::Buffer m_collectq;             /**< Used to collect results when resultset collection is requested */
-
-    MYSQL_session* m_client_data {nullptr};     /**< Client-session shared data */
+    uint64_t       m_thread_id {0};         /**< Backend thread id, received in backend handshake */
+    uint16_t       m_modutil_state;         /**< TODO: This is an ugly hack, replace it */
+    int            m_ignore_replies {0};    /**< How many replies should be discarded */
+    bool           m_collect_result {false};/**< Collect the next result set as one buffer */
+    bool           m_track_state {false};   /**< Track session state */
+    bool           m_skip_next {false};
+    uint64_t       m_num_coldefs {0};
+    uint32_t       m_num_eof_packets {0};   /**< Encountered eof packet number, used for check packet type */
+    mxs::Buffer    m_collectq;              /**< Used when resultset collection is requested */
+    bool           m_opening_cursor = false;/**< Whether we are opening a cursor */
+    uint32_t       m_expected_rows = 0;     /**< Number of rows a COM_STMT_FETCH is retrieving */
+    bool           m_large_query = false;
+    mxs::Reply     m_reply;
+    MXS_SESSION*   m_session {nullptr};     /**< Generic session */
+    MYSQL_session* m_client_data {nullptr}; /**< Client-session shared data */
+    GWBUF*         m_stored_query;          /*< Temporarily stored queries */
 };
 
-bool     is_last_ok(MySQLProtocol::Iter it);
-bool     is_last_eof(MySQLProtocol::Iter it);
-uint64_t get_encoded_int(MySQLProtocol::Iter it);
+bool     is_last_ok(MySQLBackendProtocol::Iter it);
+bool     is_last_eof(MySQLBackendProtocol::Iter it);
+uint64_t get_encoded_int(MySQLBackendProtocol::Iter it);

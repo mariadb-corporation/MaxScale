@@ -43,9 +43,10 @@ static bool get_ip_string_and_port(struct sockaddr_storage* sa,
 MySQLBackendProtocol::MySQLBackendProtocol(MXS_SESSION* session, SERVER* server,
                                            mxs::Component* component,
                                            std::unique_ptr<mxs::BackendAuthenticator> authenticator)
-    : MySQLProtocol(session, server)
-    , m_component(component)
+    : m_component(component)
     , m_authenticator(std::move(authenticator))
+    , m_reply(server)
+    , m_session(session)
 {
 }
 
@@ -136,12 +137,12 @@ bool MySQLBackendProtocol::reuse_connection(BackendDCB* dcb, mxs::Component* ups
          * We need to sent a COM_CHANGE_USER query to the backend to reset the
          * session state.
          */
-        if (this->stored_query)
+        if (m_stored_query)
         {
             /** It is possible that the client DCB is closed before the COM_CHANGE_USER
              * response is received. */
-            gwbuf_free(this->stored_query);
-            this->stored_query = nullptr;
+            gwbuf_free(m_stored_query);
+            m_stored_query = nullptr;
         }
 
         GWBUF* buf = gw_create_change_user_packet(m_client_data);
@@ -479,13 +480,13 @@ bool MySQLBackendProtocol::expecting_text_result()
      * TODO: Revisit this to make sure it's needed.
      */
 
-    uint8_t cmd = reply().command();
+    uint8_t cmd = m_reply.command();
     return cmd == MXS_COM_QUERY || cmd == MXS_COM_STMT_EXECUTE || cmd == MXS_COM_STMT_FETCH;
 }
 
 bool MySQLBackendProtocol::expecting_ps_response()
 {
-    return reply().command() == MXS_COM_STMT_PREPARE;
+    return m_reply.command() == MXS_COM_STMT_PREPARE;
 }
 
 bool MySQLBackendProtocol::complete_ps_response(GWBUF* buffer)
@@ -637,7 +638,7 @@ int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
         {
             dcb->readq_set(read_buffer);
 
-            if (proto->reply().is_complete())
+            if (m_reply.is_complete())
             {
                 // There must be more than one response in the buffer which we need to process once we've
                 // routed this response.
@@ -756,8 +757,8 @@ int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
     if (proto->m_ignore_replies > 0)
     {
         /** The reply to a COM_CHANGE_USER is in packet */
-        GWBUF* query = modutil_get_next_MySQL_packet(&proto->stored_query);
-        proto->stored_query = NULL;
+        GWBUF* query = modutil_get_next_MySQL_packet(&proto->m_stored_query);
+        proto->m_stored_query = NULL;
         proto->m_ignore_replies--;
         mxb_assert(proto->m_ignore_replies >= 0);
         GWBUF* reply = modutil_get_next_MySQL_packet(&read_buffer);
@@ -785,7 +786,7 @@ int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
             {
                 /** Store the query until we know the result of the authentication
                  * method switch. */
-                proto->stored_query = query;
+                proto->m_stored_query = query;
                 proto->m_ignore_replies++;
 
                 gwbuf_free(reply);
@@ -973,7 +974,7 @@ int MySQLBackendProtocol::handle_persistent_connection(BackendDCB* dcb, GWBUF* q
          * packets at one time.
          */
         MXS_INFO("COM_CHANGE_USER in progress, appending query to queue");
-        protocol->stored_query = gwbuf_append(protocol->stored_query, queue);
+        protocol->m_stored_query = gwbuf_append(protocol->m_stored_query, queue);
         rc = 1;
     }
 
@@ -1031,7 +1032,7 @@ int32_t MySQLBackendProtocol::write(DCB* plain_dcb, GWBUF* queue)
             queue = gwbuf_make_contiguous(queue);
             prepare_for_write(dcb, queue);
 
-            if (backend_protocol->reply().command() == MXS_COM_CHANGE_USER)
+            if (m_reply.command() == MXS_COM_CHANGE_USER)
             {
                 return gw_change_user(dcb, dcb->session(), queue);
             }
@@ -1549,7 +1550,7 @@ bool MySQLBackendProtocol::established(DCB* dcb)
     auto proto = this;
     return proto->protocol_auth_state == MXS_AUTH_STATE_COMPLETE
            && (proto->m_ignore_replies == 0)
-           && !proto->stored_query;
+           && !proto->m_stored_query;
 }
 
 json_t* MySQLBackendProtocol::diagnostics_json(DCB* dcb)
@@ -1789,7 +1790,7 @@ void MySQLBackendProtocol::mxs_mysql_get_session_track_info(GWBUF* buff)
                 mxs_mysql_parse_ok_packet(buff, offset, packet_len);
             }
 
-            uint8_t current_command = proto->reply().command();
+            uint8_t current_command = m_reply.command();
 
             if ((current_command == MXS_COM_QUERY || current_command == MXS_COM_STMT_FETCH
                  || current_command == MXS_COM_STMT_EXECUTE) && cmd == MYSQL_REPLY_EOF)
@@ -1928,7 +1929,7 @@ int MySQLBackendProtocol::gw_decode_mysql_server_handshake(uint8_t* payload)
     // get ThreadID: 4 bytes
     uint32_t tid = gw_mysql_get_byte4(payload);
 
-    MXS_INFO("Connected to '%s' with thread id %u", conn->reply().target()->name(), tid);
+    MXS_INFO("Connected to '%s' with thread id %u", m_reply.target()->name(), tid);
 
     /* TODO: Correct value of thread id could be queried later from backend if
      * there is any worry it might be larger than 32bit allows. */
@@ -2220,8 +2221,8 @@ void MySQLBackendProtocol::process_one_packet(Iter it, Iter end, uint32_t len)
             // This should never happen
             MXS_ERROR("Unexpected result state. cmd: 0x%02hhx, len: %u server: %s",
                       cmd, len, m_reply.target()->name());
-            session_dump_statements(session());
-            session_dump_log(session());
+            session_dump_statements(m_session);
+            session_dump_log(m_session);
             mxb_assert(!true);
         }
         break;
@@ -2353,4 +2354,67 @@ void MySQLBackendProtocol::set_client_data(MySQLClientProtocol& client_protocol)
     extra_capabilities = client_protocol.extra_capabilities;
     m_client_data = client_protocol.session_data();
     // TODO: authenticators may also need data swapping
+}
+
+/**
+ * Track a client query
+ *
+ * Inspects the query and tracks the current command being executed. Also handles detection of
+ * multi-packet requests and the special handling that various commands need.
+ */
+void MySQLBackendProtocol::track_query(GWBUF* buffer)
+{
+    mxb_assert(gwbuf_is_contiguous(buffer));
+    uint8_t* data = GWBUF_DATA(buffer);
+
+    if (changing_user)
+    {
+        // User reauthentication in progress, ignore the contents
+        return;
+    }
+
+    if (session_is_load_active(m_session))
+    {
+        if (MYSQL_GET_PAYLOAD_LEN(data) == 0)
+        {
+            MXS_INFO("Load data ended");
+            session_set_load_active(m_session, false);
+            set_reply_state(ReplyState::START);
+        }
+    }
+    else if (!m_large_query)
+    {
+        m_reply.clear();
+        m_reply.set_command(MYSQL_GET_COMMAND(data));
+
+        if (mxs_mysql_command_will_respond(m_reply.command()))
+        {
+            set_reply_state(ReplyState::START);
+        }
+
+        if (m_reply.command() == MXS_COM_STMT_EXECUTE)
+        {
+            // Extract the flag byte after the statement ID
+            uint8_t flags = data[MYSQL_PS_ID_OFFSET + MYSQL_PS_ID_SIZE];
+
+            // Any non-zero flag value means that we have an open cursor
+            m_opening_cursor = flags != 0;
+        }
+        else if (m_reply.command() == MXS_COM_STMT_FETCH)
+        {
+            set_reply_state(ReplyState::RSET_ROWS);
+        }
+    }
+
+    /**
+     * If the buffer contains a large query, we have to skip the command
+     * byte extraction for the next packet. This way current_command always
+     * contains the latest command executed on this backend.
+     */
+    m_large_query = MYSQL_GET_PAYLOAD_LEN(data) == MYSQL_PACKET_LENGTH_MAX;
+}
+
+MySQLBackendProtocol::~MySQLBackendProtocol()
+{
+    gwbuf_free(m_stored_query);
 }

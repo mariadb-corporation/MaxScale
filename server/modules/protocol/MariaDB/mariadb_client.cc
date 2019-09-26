@@ -1059,9 +1059,9 @@ bool MySQLClientProtocol::reauthenticate_client(MXS_SESSION* session, GWBUF* pac
         auto proto = this;
 
         std::vector<uint8_t> orig_payload;
-        uint32_t orig_len = gwbuf_length(proto->stored_query);
+        uint32_t orig_len = m_stored_query.length();
         orig_payload.resize(orig_len);
-        gwbuf_copy_data(proto->stored_query, 0, orig_len, orig_payload.data());
+        gwbuf_copy_data(m_stored_query.get(), 0, orig_len, orig_payload.data());
 
         auto it = orig_payload.begin();
         it += MYSQL_HEADER_LEN + 1;     // Skip header and command byte
@@ -1190,26 +1190,25 @@ bool MySQLClientProtocol::handle_change_user(bool* changed_user, GWBUF** packetb
 {
     bool ok = true;
     auto proto = this;
-    if (!proto->changing_user && proto->reply().command() == MXS_COM_CHANGE_USER)
+    if (!proto->changing_user && m_command == MXS_COM_CHANGE_USER)
     {
         // Track the COM_CHANGE_USER progress at the session level
         m_shared_data.changing_user = true;
 
         *changed_user = true;
-        send_auth_switch_request_packet(proto->session()->client_dcb);
+        send_auth_switch_request_packet(m_session->client_dcb);
 
         // Store the original COM_CHANGE_USER for later
-        proto->stored_query = *packetbuf;
+        m_stored_query = mxs::Buffer(*packetbuf);
         *packetbuf = NULL;
     }
     else if (proto->changing_user)
     {
-        mxb_assert(proto->reply().command() == MXS_COM_CHANGE_USER);
+        mxb_assert(m_command == MXS_COM_CHANGE_USER);
         proto->changing_user = false;
-        bool ok = reauthenticate_client(proto->session(), *packetbuf);
+        bool ok = reauthenticate_client(m_session, *packetbuf);
         gwbuf_free(*packetbuf);
-        *packetbuf = proto->stored_query;
-        proto->stored_query = nullptr;
+        *packetbuf = m_stored_query.release();
     }
 
     return ok;
@@ -1520,7 +1519,7 @@ MySQLClientProtocol::process_special_commands(DCB* dcb, GWBUF* read_buffer, uint
 int MySQLClientProtocol::route_by_statement(uint64_t capabilities, GWBUF** p_readbuf)
 {
     int rc = 1;
-    auto session = this->session();
+    auto session = m_session;
     auto dcb = session->client_dcb;
 
     while (GWBUF* packetbuf = modutil_get_next_MySQL_packet(p_readbuf))
@@ -1530,7 +1529,7 @@ int MySQLClientProtocol::route_by_statement(uint64_t capabilities, GWBUF** p_rea
         session_retain_statement(session, packetbuf);
 
         // Track the command being executed
-        track_query(packetbuf);
+        track_current_command(packetbuf);
 
         if (char* message = handle_variables(session, &packetbuf))
         {
@@ -1543,7 +1542,7 @@ int MySQLClientProtocol::route_by_statement(uint64_t capabilities, GWBUF** p_rea
         // is thread and not session specific.
         qc_set_sql_mode(static_cast<qc_sql_mode_t>(session->client_protocol_data));
 
-        if (process_special_commands(dcb, packetbuf, reply().command()) == RES_END)
+        if (process_special_commands(dcb, packetbuf, m_command) == RES_END)
         {
             gwbuf_free(packetbuf);
             continue;
@@ -1648,7 +1647,7 @@ int MySQLClientProtocol::perform_normal_read(DCB* dcb, GWBUF* read_buffer, uint3
         DCB::close(dcb);
         MXS_ERROR("Routing the query failed. Session will be closed.");
     }
-    else if (reply().command() == MXS_COM_QUIT)
+    else if (m_command == MXS_COM_QUIT)
     {
         /** Close router session which causes closing of backends */
         mxb_assert_message(session_valid_for_pool(dcb->session()), "Session should qualify for pooling");
@@ -1992,8 +1991,7 @@ public:
         if (authenticator)
         {
             new_client_proto = std::unique_ptr<mxs::ClientProtocol>(
-                    new (std::nothrow) MySQLClientProtocol(session, nullptr, component,
-                                                           std::move(authenticator)));
+                new(std::nothrow) MySQLClientProtocol(session, component, std::move(authenticator)));
         }
         return new_client_proto;
     }
@@ -2036,14 +2034,15 @@ private:
 
 MySQLClientProtocol* MySQLClientProtocol::create(MXS_SESSION* session, mxs::Component* component)
 {
-    return new(std::nothrow) MySQLClientProtocol(session, nullptr, component, nullptr);
+    return new(std::nothrow) MySQLClientProtocol(session, component, nullptr);
 }
 
-MySQLClientProtocol::MySQLClientProtocol(MXS_SESSION* session, SERVER* server, mxs::Component* component,
+MySQLClientProtocol::MySQLClientProtocol(MXS_SESSION* session, mxs::Component* component,
                                          std::unique_ptr<mxs::ClientAuthenticator> authenticator)
-    : MySQLProtocol(session, server)
-    , m_component(component)
+    : m_component(component)
     , m_authenticator(std::move(authenticator))
+    , m_session(session)
+    , m_version(service_get_version(session->service, SERVICE_VERSION_MIN))
 {
 }
 
@@ -2401,6 +2400,30 @@ MYSQL_session* MySQLClientProtocol::session_data()
 std::string MySQLClientProtocol::current_db() const
 {
     return m_shared_data.db;
+}
+
+void MySQLClientProtocol::track_current_command(GWBUF* buffer)
+{
+    mxb_assert(gwbuf_is_contiguous(buffer));
+    uint8_t* data = GWBUF_DATA(buffer);
+
+    if (m_changing_user)
+    {
+        // User reauthentication in progress, ignore the contents.
+        return;
+    }
+
+    if (!m_large_query)
+    {
+        m_command = MYSQL_GET_COMMAND(data);
+    }
+
+    /**
+     * If the buffer contains a large query, we have to skip the command
+     * byte extraction for the next packet. This way current_command always
+     * contains the latest command executed on this backend.
+     */
+    m_large_query = MYSQL_GET_PAYLOAD_LEN(data) == MYSQL_PACKET_LENGTH_MAX;
 }
 
 MYSQL_session::MYSQL_session(const MYSQL_session& rhs)
