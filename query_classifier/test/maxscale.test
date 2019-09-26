@@ -132,3 +132,6 @@ XA RECOVER 'xid';
 
 # MXS-2688
 SET @saved_cs_client= @@character_set_client;
+
+# MXS-2699
+SELECT NEXTVAL(id_generator), context FROM t1 WHERE (a,b,c) >= (1,2,3);
