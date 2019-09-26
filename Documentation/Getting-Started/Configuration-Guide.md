@@ -815,6 +815,17 @@ amount of memory available for each thread, divide the cache size with the value
 of `threads`. If statements are evicted from the cache (visible in the
 diagnostic output), consider increasing the cache size.
 
+Using `maxctrl show threads` it is possible to check what the actual size of
+the cache is and to see performance statistics.
+
+Key|Meaning
+---|-------
+QC cache size|The current size of the cache (bytes).
+QC cache inserts|How many entries have been inserted into the cache.
+QC cache hits|How many times the classification result has been found from the cache.
+QC cache misses|How many times the classification result has not been found from the cache, but the classification had to be performed.
+QC cache evictions|How many times a cache entry has had to be removed from the cache, in order to make place for another.
+
 ### `query_classifier_args`
 
 Arguments for the query classifier. What arguments are accepted depends on the
