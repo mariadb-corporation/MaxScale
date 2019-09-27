@@ -133,6 +133,10 @@ XA RECOVER 'xid';
 # MXS-2688
 SET @saved_cs_client= @@character_set_client;
 
+# MXS-2699
+SELECT NEXTVAL(id_generator), context FROM t1 WHERE (a,b,c) >= (1,2,3);
+select soundex(_utf8mb4 0xD091D092D093) as vx, gray_user_tag from user_extends where user_id > last_insert_id();
+
 # MXS-2432
 RESET QUERY CACHE;
 RESET MASTER;
