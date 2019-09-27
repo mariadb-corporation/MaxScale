@@ -55,7 +55,7 @@ static void write_auth_err(DCB* dcb);
 /**
  * CDC protocol
  */
-class CDCClientProtocol : public mxs::ClientProtocol
+class CDCClientProtocol : public mxs::ClientProtocolBase
 {
 public:
     CDCClientProtocol(CDCAuthenticatorModule& auth_module);
@@ -71,13 +71,10 @@ public:
     bool init_connection(DCB* dcb) override;
     void finish_connection(DCB* dcb) override;
 
-    void set_dcb(DCB* dcb) override;
-
 private:
     int  m_state {CDC_STATE_WAIT_FOR_AUTH}; /*< CDC protocol state */
 
     CDCClientAuthenticator m_authenticator;  /**< Client authentication data */
-    ClientDCB*             m_dcb {nullptr};  /**< Dcb used by this protocol connection */
 };
 
 class CDCProtocolModule : public mxs::ProtocolModule
@@ -316,11 +313,6 @@ void CDCClientProtocol::finish_connection(DCB* dcb)
 CDCClientProtocol::CDCClientProtocol(CDCAuthenticatorModule& auth_module)
     : m_authenticator(auth_module)
 {
-}
-
-void CDCClientProtocol::set_dcb(DCB* dcb)
-{
-    m_dcb = static_cast<ClientDCB*>(dcb);
 }
 
 /**

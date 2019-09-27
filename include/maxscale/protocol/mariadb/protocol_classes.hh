@@ -63,7 +63,7 @@ struct MYSQL_session
     ~MYSQL_session();
 };
 
-class MySQLClientProtocol : public MySQLProtocol, public mxs::ClientProtocol
+class MySQLClientProtocol : public MySQLProtocol, public mxs::ClientProtocolBase
 {
 public:
     /** Return type of process_special_commands() */
@@ -99,8 +99,6 @@ public:
 
     std::unique_ptr<mxs::BackendProtocol>
     create_backend_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component) override;
-
-    void set_dcb(DCB* dcb) override;
 
     static bool parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* kt_out,
                                  std::string* user_out);
@@ -146,7 +144,6 @@ private:
     bool          m_large_query {false};
     uint64_t      m_version {0};    /**< Numeric server version */
     mxs::Buffer   m_stored_query;   /**< Temporarily stored queries */
-    ClientDCB*    m_dcb {nullptr};  /**< Dcb used by this protocol connection */
 };
 
 class MySQLBackendProtocol : public MySQLProtocol, public mxs::BackendProtocol

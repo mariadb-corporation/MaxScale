@@ -2400,3 +2400,8 @@ json_t* dcb_to_json(DCB* dcb)
 {
     return dcb->to_json();
 }
+
+void mxs::ClientProtocolBase::set_dcb(DCB* dcb)
+{
+    m_dcb = static_cast<ClientDCB*>(dcb);
+}

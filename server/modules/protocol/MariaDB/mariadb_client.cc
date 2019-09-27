@@ -2423,11 +2423,6 @@ void MySQLClientProtocol::track_current_command(GWBUF* buffer)
     m_large_query = MYSQL_GET_PAYLOAD_LEN(data) == MYSQL_PACKET_LENGTH_MAX;
 }
 
-void MySQLClientProtocol::set_dcb(DCB* dcb)
-{
-    m_dcb = static_cast<ClientDCB*>(dcb);
-}
-
 MYSQL_session::MYSQL_session(const MYSQL_session& rhs)
 {
     memcpy(client_sha1, rhs.client_sha1, sizeof(client_sha1));

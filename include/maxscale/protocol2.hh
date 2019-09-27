@@ -97,7 +97,7 @@ class ClientProtocol : public MXS_PROTOCOL_SESSION
 public:
     enum Capabilities
     {
-        CAP_BACKEND = (1 << 0) // The protocol supports backend communication
+        CAP_BACKEND = (1 << 0)      // The protocol supports backend communication
     };
 
     virtual ~ClientProtocol() = default;
@@ -127,7 +127,7 @@ public:
     virtual int32_t connlimit(DCB* dcb, int limit)
     {
         return 0;
-    };
+    }
 
     virtual int64_t capabilities() const
     {
@@ -158,6 +158,17 @@ public:
     {
         return "";
     }
+};
+
+/**
+ * Partial client protocol implementation. More fields and functions may follow.
+ */
+class ClientProtocolBase : public ClientProtocol
+{
+public:
+    void set_dcb(DCB* dcb) override;
+protected:
+    ClientDCB* m_dcb {nullptr};     /**< Dcb used by this protocol connection */
 };
 
 /**
@@ -228,5 +239,4 @@ MXS_PROTOCOL_API ProtocolApiGenerator<ProtocolImplementation>::s_api =
 {
     &ProtocolApiGenerator<ProtocolImplementation>::create_protocol_module,
 };
-
 }

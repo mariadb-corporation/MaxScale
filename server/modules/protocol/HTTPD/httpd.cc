@@ -284,11 +284,6 @@ HTTPDClientProtocol::HTTPDClientProtocol()
 {
 }
 
-void HTTPDClientProtocol::set_dcb(DCB* dcb)
-{
-    m_dcb = static_cast<ClientDCB*>(dcb);
-}
-
 /**
  * HTTPD get line from client
  */
