@@ -128,6 +128,23 @@ SmartRouter::SmartRouter(SERVICE* service)
     : mxs::Router<SmartRouter, SmartRouterSession>(service)
     , m_config(service->name())
 {
+    using namespace maxscale;
+    using namespace maxbase;
+
+    auto shared_ptrs = m_updater.get_shared_data_pointers();
+
+    for (size_t id = 0; id != shared_ptrs.size(); ++id)
+    {
+        RoutingWorker* pRworker = RoutingWorker::get(id);
+        auto pShared = shared_ptrs[id];
+        pRworker->execute([pRworker, pShared]() {
+                              pRworker->register_epoll_tick_func(std::bind(&SharedPerformanceInfo::
+                                                                           reader_ready,
+                                                                           pShared));
+                          },
+                          Worker::EXECUTE_AUTO);
+    }
+
     m_updater_future = std::async(std::launch::async, &PerformanceInfoUpdater::run, &m_updater);
 }
 

@@ -615,7 +615,7 @@ void RoutingWorker::delete_zombies()
 
 void RoutingWorker::add(DCB* pDcb)
 {
-    MXB_AT_DEBUG(auto rv =) m_dcbs.insert(pDcb);
+    MXB_AT_DEBUG(auto rv = ) m_dcbs.insert(pDcb);
     mxb_assert(rv.second);
 }
 
@@ -945,6 +945,11 @@ void RoutingWorker::epoll_tick()
     delete_zombies();
 
     check_systemd_watchdog();
+
+    for (auto& func : m_epoll_tick_funcs)
+    {
+        func();
+    }
 }
 
 /**
@@ -1475,6 +1480,11 @@ void RoutingWorker::check_systemd_watchdog()
             }
         }
     }
+}
+
+void maxscale::RoutingWorker::register_epoll_tick_func(std::function<void ()> func)
+{
+    m_epoll_tick_funcs.push_back(func);
 }
 }
 

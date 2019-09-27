@@ -21,6 +21,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <functional>
 
 #include <maxbase/atomic.hh>
 #include <maxbase/semaphore.hh>
@@ -651,7 +652,12 @@ public:
     };
 
     void evict_dcbs(Evict evict);
-    int evict_dcbs(SERVER* server, Evict evict);
+    int  evict_dcbs(SERVER* server, Evict evict);
+
+    /**
+     * Register a function to be called every epoll_tick.
+     */
+    void register_epoll_tick_func(std::function<void(void)> func);
 
 private:
     // DCB::Manager
@@ -710,7 +716,7 @@ private:
         ~PersistentEntry();
 
         PersistentEntry(const PersistentEntry&) = delete;
-        PersistentEntry& operator = (const PersistentEntry&) = delete;
+        PersistentEntry& operator=(const PersistentEntry&) = delete;
 
         bool hanged_up() const
         {
@@ -735,7 +741,7 @@ private:
         }
 
     private:
-        time_t      m_created; /*< Time when entry was created. */
+        time_t      m_created;  /*< Time when entry was created. */
         BackendDCB* m_pDcb;
     };
 
@@ -743,7 +749,7 @@ private:
     {
     public:
         DCBHandler(const DCBHandler&) = delete;
-        DCBHandler& operator = (const DCBHandler&) = delete;
+        DCBHandler& operator=(const DCBHandler&) = delete;
 
         DCBHandler(RoutingWorker* pOwner);
 
@@ -758,12 +764,14 @@ private:
 
     friend class PoolHandler;
 
-    using PersistentEntries         = std::list<PersistentEntry>;
+    using PersistentEntries = std::list<PersistentEntry>;
     using PersistentEntriesByServer = std::map<SERVER*, PersistentEntries>;
 
-    PersistentEntriesByServer       m_persistent_entries_by_server;
-    bool                            m_evicting = false;
-    DCBHandler                      m_pool_handler;
+    PersistentEntriesByServer m_persistent_entries_by_server;
+    bool                      m_evicting = false;
+    DCBHandler                m_pool_handler;
+
+    std::vector<std::function<void()>> m_epoll_tick_funcs;
 };
 
 using WatchdogWorkaround = RoutingWorker::WatchdogWorkaround;
