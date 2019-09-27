@@ -45,8 +45,7 @@ bool store_client_password(DCB* generic_dcb, GWBUF* buffer)
     if (gwbuf_copy_data(buffer, 0, MYSQL_HEADER_LEN, header) == MYSQL_HEADER_LEN)
     {
         size_t plen = gw_mysql_get_byte3(header);
-        auto protocol = static_cast<MySQLClientProtocol*>(dcb->protocol());
-        MYSQL_session* ses = protocol->session_data();
+        auto ses = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
         ses->auth_token = (uint8_t*)MXS_CALLOC(plen, sizeof(uint8_t));
         if (ses->auth_token)
         {
@@ -276,8 +275,7 @@ int PamClientAuthenticator::authenticate(DCB* generic_dcb)
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
 
     int rval = MXS_AUTH_SSL_COMPLETE;
-    auto protocol = static_cast<MySQLClientProtocol*>(dcb->protocol());
-    MYSQL_session* ses = protocol->session_data();
+    auto ses = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
     if (*ses->user)
     {
         rval = MXS_AUTH_FAILED;

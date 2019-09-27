@@ -244,7 +244,7 @@ int MariaDBClientAuthenticator::authenticate(DCB* generic_dcb)
 
     int auth_ret = MXS_AUTH_SSL_COMPLETE;
     auto protocol = static_cast<MySQLClientProtocol*>(dcb->protocol());
-    MYSQL_session* client_data = protocol->session_data();
+    auto client_data = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
     if (*client_data->user)
     {
         MXS_DEBUG("Receiving connection from '%s' to database '%s'.",
@@ -352,7 +352,7 @@ bool MariaDBClientAuthenticator::extract(DCB* generic_dcb, GWBUF* buf)
 
     int client_auth_packet_size = gwbuf_length(buf);
     auto protocol = static_cast<MySQLClientProtocol*>(dcb->protocol());
-    MYSQL_session* client_data = protocol->session_data();
+    auto client_data = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
 
     /* For clients supporting CLIENT_PROTOCOL_41
      * the Handshake Response Packet is:
@@ -740,8 +740,7 @@ int MariaDBClientAuthenticator::reauthenticate(DCB* generic_dcb,
 {
     mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
-    auto proto = static_cast<MySQLClientProtocol*>(dcb->protocol());
-    MYSQL_session* client_data = proto->session_data();
+    auto client_data = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
     MYSQL_session temp(*client_data);
     int rval = 1;
 

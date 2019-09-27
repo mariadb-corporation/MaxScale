@@ -124,6 +124,16 @@ void MXS_SESSION::terminate(GWBUF* error)
     }
 }
 
+MXS_SESSION::ProtocolData* MXS_SESSION::protocol_data() const
+{
+    return m_protocol_data.get();
+}
+
+void MXS_SESSION::set_protocol_data(std::unique_ptr<ProtocolData> new_data)
+{
+    m_protocol_data = std::move(new_data);
+}
+
 bool session_start(MXS_SESSION* ses)
 {
     Session* session = static_cast<Session*>(ses);

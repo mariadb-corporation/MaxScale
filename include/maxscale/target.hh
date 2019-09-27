@@ -22,7 +22,7 @@
 #include <maxscale/buffer.hh>
 #include <maxbase/average.hh>
 
-struct MXS_SESSION;
+class MXS_SESSION;
 
 constexpr int RANK_PRIMARY = 1;
 constexpr int RANK_SECONDARY = 2;

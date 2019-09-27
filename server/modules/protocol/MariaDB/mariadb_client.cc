@@ -350,7 +350,6 @@ void extract_user(char* token, std::string* user)
         user->assign(token);
     }
 }
-
 }
 
 int MySQLClientProtocol::ssl_authenticate_check_status(DCB* generic_dcb)
@@ -687,7 +686,7 @@ void MySQLClientProtocol::store_client_information(DCB* generic_dcb, GWBUF* buff
     size_t len = gwbuf_length(buffer);
     uint8_t data[len];
     auto proto = this;
-    MYSQL_session* ses = &m_shared_data;
+    MYSQL_session* ses = m_session_data;
 
     gwbuf_copy_data(buffer, 0, len, data);
     mxb_assert(MYSQL_GET_PAYLOAD_LEN(data) + MYSQL_HEADER_LEN == len
@@ -714,9 +713,9 @@ void MySQLClientProtocol::store_client_information(DCB* generic_dcb, GWBUF* buff
 
         if (userlen != -1)
         {
-            if ((int)sizeof(m_shared_data.user) > userlen)
+            if ((int)sizeof(ses->user) > userlen)
             {
-                strcpy(m_shared_data.user, username);
+                strcpy(ses->user, username);
             }
 
             // Include the null terminator in the user length
@@ -756,7 +755,7 @@ void MySQLClientProtocol::handle_authentication_errors(DCB* generic_dcb, int aut
 
     int message_len;
     char* fail_str = NULL;
-    MYSQL_session* session = &m_shared_data;
+    MYSQL_session* session = m_session_data;
 
     switch (auth_val)
     {
@@ -798,7 +797,7 @@ void MySQLClientProtocol::handle_authentication_errors(DCB* generic_dcb, int aut
     case MXS_AUTH_FAILED:
         MXS_DEBUG("authentication failed. fd %d, state = MYSQL_FAILED_AUTH.", dcb->fd());
         /** Send error 1045 to client */
-        fail_str = create_auth_fail_str(m_shared_data.user,
+        fail_str = create_auth_fail_str(session->user,
                                         dcb->remote().c_str(),
                                         session->auth_token_len > 0,
                                         session->db,
@@ -813,7 +812,7 @@ void MySQLClientProtocol::handle_authentication_errors(DCB* generic_dcb, int aut
     default:
         MXS_DEBUG("authentication failed. fd %d, state unrecognized.", dcb->fd());
         /** Send error 1045 to client */
-        fail_str = create_auth_fail_str(m_shared_data.user,
+        fail_str = create_auth_fail_str(session->user,
                                         dcb->remote().c_str(),
                                         session->auth_token_len > 0,
                                         session->db,
@@ -854,7 +853,7 @@ int MySQLClientProtocol::perform_authentication(DCB* generic_dcb, GWBUF* read_bu
     }
 
     next_sequence++;
-    m_shared_data.next_sequence = next_sequence;
+    m_session_data->next_sequence = next_sequence;
 
     /**
      * The first step in the authentication process is to extract the
@@ -894,7 +893,7 @@ int MySQLClientProtocol::perform_authentication(DCB* generic_dcb, GWBUF* read_bu
     if (MXS_AUTH_SUCCEEDED == auth_val)
     {
         /** User authentication complete, copy the username to the DCB */
-        dcb->session()->set_user(m_shared_data.user);
+        dcb->session()->set_user(m_session_data->user);
 
         protocol->protocol_auth_state = MXS_AUTH_STATE_RESPONSE_SENT;
         /**
@@ -1098,8 +1097,8 @@ bool MySQLClientProtocol::reauthenticate_client(MXS_SESSION* session, GWBUF* pac
         proto->charset |= (*it++) << 8;
 
         // Copy the new username to the session data
-        MYSQL_session* data = &m_shared_data;
-        strcpy(m_shared_data.user, user.c_str());
+        MYSQL_session* data = m_session_data;
+        strcpy(data->user, user.c_str());
         strcpy(data->db, db.c_str());
 
         std::vector<uint8_t> payload;
@@ -1108,8 +1107,8 @@ bool MySQLClientProtocol::reauthenticate_client(MXS_SESSION* session, GWBUF* pac
         gwbuf_copy_data(packetbuf, MYSQL_HEADER_LEN, payloadlen, &payload[0]);
 
         int rc = client_auth->reauthenticate(
-                client_dcb, m_shared_data.user, &payload[0], payload.size(),
-                proto->scramble, sizeof(proto->scramble), data->client_sha1, sizeof(data->client_sha1));
+            client_dcb, data->user, &payload[0], payload.size(),
+            proto->scramble, sizeof(proto->scramble), data->client_sha1, sizeof(data->client_sha1));
 
         if (rc == MXS_AUTH_SUCCEEDED)
         {
@@ -1193,7 +1192,7 @@ bool MySQLClientProtocol::handle_change_user(bool* changed_user, GWBUF** packetb
     if (!proto->changing_user && m_command == MXS_COM_CHANGE_USER)
     {
         // Track the COM_CHANGE_USER progress at the session level
-        m_shared_data.changing_user = true;
+        m_session_data->changing_user = true;
 
         *changed_user = true;
         send_auth_switch_request_packet(m_session->client_dcb);
@@ -1724,7 +1723,7 @@ void MySQLClientProtocol::parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data)
 
 void MySQLClientProtocol::ready_for_reading(DCB* event_dcb)
 {
-    mxb_assert(m_dcb == event_dcb); // The protocol should only handle its own events.
+    mxb_assert(m_dcb == event_dcb);     // The protocol should only handle its own events.
     GWBUF* read_buffer = NULL;
     int return_code = 0;
     uint32_t nbytes_read = 0;
@@ -1904,7 +1903,7 @@ void MySQLClientProtocol::hangup(DCB* event_dcb)
 
         int seqno = 1;
 
-        if (m_shared_data.changing_user)
+        if (m_session_data->changing_user)
         {
             // In case a COM_CHANGE_USER is in progress, we need to send the error with the seqno 3
             seqno = 3;
@@ -1931,107 +1930,97 @@ int32_t MySQLClientProtocol::connlimit(DCB* dcb, int limit)
     return mysql_send_standard_error(dcb, 0, 1040, "Too many connections");
 }
 
-class MySQLProtocolModule : public mxs::ProtocolModule
+MySQLProtocolModule* MySQLProtocolModule::create(const std::string& auth_name, const std::string& auth_opts)
 {
-public:
-    static MySQLProtocolModule* create(const std::string& auth_name, const std::string& auth_opts)
+    MySQLProtocolModule* protocol_module = nullptr;
+    // TODO: Add support for multiple authenticators.
+
+    const char* auth_namez {nullptr};
+    const char* auth_optsz {nullptr};
+    if (!auth_name.empty())
     {
-        MySQLProtocolModule* protocol_module = nullptr;
-        // TODO: Add support for multiple authenticators.
+        auth_namez = auth_name.c_str();
+        auth_optsz = auth_opts.c_str();
+    }
+    else
+    {
+        auth_namez = MXS_MARIADBAUTH_AUTHENTICATOR_NAME;
+    }
 
-        const char* auth_namez {nullptr};
-        const char* auth_optsz {nullptr};
-        if (!auth_name.empty())
+    auto authenticator_module = mxs::authenticator_init(auth_namez, auth_optsz);
+    if (authenticator_module)
+    {
+        // Check that the authenticator supports the protocol. Use case-insensitive comparison.
+        auto supported_protocol = authenticator_module->supported_protocol();
+        if (strcasecmp(MXS_MODULE_NAME, supported_protocol.c_str()) == 0)
         {
-            auth_namez = auth_name.c_str();
-            auth_optsz = auth_opts.c_str();
-        }
-        else
-        {
-            auth_namez = MXS_MARIADBAUTH_AUTHENTICATOR_NAME;
-        }
-
-        auto authenticator_module = mxs::authenticator_init(auth_namez, auth_optsz);
-        if (authenticator_module)
-        {
-            // Check that the authenticator supports the protocol. Use case-insensitive comparison.
-            auto supported_protocol = authenticator_module->supported_protocol();
-            if (strcasecmp(MXS_MODULE_NAME, supported_protocol.c_str()) == 0)
+            protocol_module = new(std::nothrow) MySQLProtocolModule();
+            if (protocol_module)
             {
-                protocol_module = new (std::nothrow) MySQLProtocolModule();
-                if (protocol_module)
-                {
-                    protocol_module->m_auth_module = std::move(authenticator_module);
-                }
-            }
-            else
-            {
-                // When printing protocol name, print the name user gave in configuration file,
-                // not the effective name.
-                MXB_ERROR("Authenticator module '%s' expects to be paired with protocol '%s', "
-                          "not with '%s'.",
-                          auth_namez, supported_protocol.c_str(), MXS_MODULE_NAME);
+                protocol_module->m_auth_module = std::move(authenticator_module);
             }
         }
         else
         {
-            MXB_ERROR("Failed to initialize authenticator module '%s'.", auth_namez);
+            // When printing protocol name, print the name user gave in configuration file,
+            // not the effective name.
+            MXB_ERROR("Authenticator module '%s' expects to be paired with protocol '%s', "
+                      "not with '%s'.",
+                      auth_namez, supported_protocol.c_str(), MXS_MODULE_NAME);
         }
-        return protocol_module;
     }
-
-    std::unique_ptr<mxs::ClientProtocol>
-    create_client_protocol(MXS_SESSION* session, mxs::Component* component) override
+    else
     {
-        std::unique_ptr<mxs::ClientProtocol> new_client_proto;
-        auto authenticator = m_auth_module->create_client_authenticator();
-        if (authenticator)
-        {
-            new_client_proto = std::unique_ptr<mxs::ClientProtocol>(
-                new(std::nothrow) MySQLClientProtocol(session, component, std::move(authenticator)));
-        }
-        return new_client_proto;
+        MXB_ERROR("Failed to initialize authenticator module '%s'.", auth_namez);
     }
+    return protocol_module;
+}
 
-    std::string auth_default() const override
-    {
-        return MXS_MARIADBAUTH_AUTHENTICATOR_NAME;
-    }
-
-    GWBUF* reject(const std::string& host) override
-    {
-        std::string message = "Host '" + host
-            + "' is temporarily blocked due to too many authentication failures.";
-        return modutil_create_mysql_err_msg(0, 0, 1129, "HY000", message.c_str());
-    }
-
-    std::string name() const override
-    {
-        return MXS_MODULE_NAME;
-    }
-
-    int load_auth_users(SERVICE* service) override
-    {
-        return m_auth_module->load_users(service);
-    }
-
-    void print_auth_users(DCB* output) override
-    {
-        m_auth_module->diagnostics(output);
-    }
-
-    json_t* print_auth_users_json() override
-    {
-        return m_auth_module->diagnostics_json();
-    }
-
-private:
-    std::unique_ptr<mxs::AuthenticatorModule> m_auth_module;
-};
-
-MySQLClientProtocol* MySQLClientProtocol::create(MXS_SESSION* session, mxs::Component* component)
+std::unique_ptr<mxs::ClientProtocol>
+MySQLProtocolModule::create_client_protocol(MXS_SESSION* session, mxs::Component* component)
 {
-    return new(std::nothrow) MySQLClientProtocol(session, component, nullptr);
+    std::unique_ptr<mxs::ClientProtocol> new_client_proto;
+    auto authenticator = m_auth_module->create_client_authenticator();
+    std::unique_ptr<MXS_SESSION::ProtocolData> session_data(new(std::nothrow) MYSQL_session());
+    if (authenticator && session_data)
+    {
+        session->set_protocol_data(std::move(session_data));
+        new_client_proto = std::unique_ptr<mxs::ClientProtocol>(
+            new(std::nothrow) MySQLClientProtocol(session, component, std::move(authenticator)));
+    }
+    return new_client_proto;
+}
+
+std::string MySQLProtocolModule::auth_default() const
+{
+    return MXS_MARIADBAUTH_AUTHENTICATOR_NAME;
+}
+
+GWBUF* MySQLProtocolModule::reject(const std::string& host)
+{
+    std::string message = "Host '" + host
+        + "' is temporarily blocked due to too many authentication failures.";
+    return modutil_create_mysql_err_msg(0, 0, 1129, "HY000", message.c_str());
+}
+
+std::string MySQLProtocolModule::name() const
+{
+    return MXS_MODULE_NAME;
+}
+
+int MySQLProtocolModule::load_auth_users(SERVICE* service)
+{
+    return m_auth_module->load_users(service);
+}
+
+void MySQLProtocolModule::print_auth_users(DCB* output)
+{
+    m_auth_module->diagnostics(output);
+}
+
+json_t* MySQLProtocolModule::print_auth_users_json()
+{
+    return m_auth_module->diagnostics_json();
 }
 
 MySQLClientProtocol::MySQLClientProtocol(MXS_SESSION* session, mxs::Component* component,
@@ -2039,6 +2028,7 @@ MySQLClientProtocol::MySQLClientProtocol(MXS_SESSION* session, mxs::Component* c
     : m_component(component)
     , m_authenticator(std::move(authenticator))
     , m_session(session)
+    , m_session_data(static_cast<MYSQL_session*>(session->protocol_data()))
     , m_version(service_get_version(session->service, SERVICE_VERSION_MIN))
 {
 }
@@ -2389,14 +2379,9 @@ void MySQLClientProtocol::mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const
     execute_kill(issuer, info);
 }
 
-MYSQL_session* MySQLClientProtocol::session_data()
-{
-    return &m_shared_data;
-}
-
 std::string MySQLClientProtocol::current_db() const
 {
-    return m_shared_data.db;
+    return m_session_data->db;
 }
 
 void MySQLClientProtocol::track_current_command(GWBUF* buffer)

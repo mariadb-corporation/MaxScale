@@ -15,12 +15,12 @@
 #include <maxscale/ccdefs.hh>
 #include <maxscale/authenticator2.hh>
 #include <maxscale/protocol2.hh>
+#include <maxscale/session.hh>
 #include <maxscale/target.hh>
 #include <maxscale/protocol/mariadb/common_constants.hh>
 
 class GWBUF;
 struct KillInfo;
-struct MYSQL_session;
 
 /* Type of the kill-command sent by client. */
 enum kill_type_t
@@ -48,8 +48,9 @@ public:
 /*
  * Data shared with authenticators
  */
-struct MYSQL_session
+class MYSQL_session : public MXS_SESSION::ProtocolData
 {
+public:
     uint8_t  client_sha1[MYSQL_SCRAMBLE_LEN] {0};   /*< SHA1(password) */
     char     user[MYSQL_USER_MAXLEN + 1] {'\0'};    /*< username       */
     char     db[MYSQL_DATABASE_MAXLEN + 1] {'\0'};  /*< database       */
@@ -73,7 +74,6 @@ public:
         RES_END,        // Query handling completed, do not send to filters/router.
     };
 
-    static MySQLClientProtocol* create(MXS_SESSION* session, mxs::Component* component);
     MySQLClientProtocol(MXS_SESSION* session, mxs::Component* component,
                         std::unique_ptr<mxs::ClientAuthenticator> authenticator);
 
@@ -92,8 +92,6 @@ public:
     {
         return CAP_BACKEND;
     }
-
-    MYSQL_session* session_data();
 
     std::string current_db() const override;
 
@@ -137,13 +135,14 @@ private:
     mxs::Component*                           m_component {nullptr};/**< Downstream component, the session */
     std::unique_ptr<mxs::ClientAuthenticator> m_authenticator;      /**< Client authentication data */
 
-    MXS_SESSION*  m_session {nullptr};  /**< Generic session */
-    MYSQL_session m_shared_data;        /**< Shared session-level data. Used by authenticators, routers etc */
-    uint8_t       m_command {0};
-    bool          m_changing_user {false};
-    bool          m_large_query {false};
-    uint64_t      m_version {0};    /**< Numeric server version */
-    mxs::Buffer   m_stored_query;   /**< Temporarily stored queries */
+    MXS_SESSION*   m_session {nullptr};     /**< Generic session */
+    MYSQL_session* m_session_data {nullptr};
+
+    uint8_t     m_command {0};
+    bool        m_changing_user {false};
+    bool        m_large_query {false};
+    uint64_t    m_version {0};      /**< Numeric server version */
+    mxs::Buffer m_stored_query;     /**< Temporarily stored queries */
 };
 
 class MySQLBackendProtocol : public MySQLProtocol, public mxs::BackendProtocol
@@ -271,3 +270,26 @@ private:
 bool     is_last_ok(MySQLBackendProtocol::Iter it);
 bool     is_last_eof(MySQLBackendProtocol::Iter it);
 uint64_t get_encoded_int(MySQLBackendProtocol::Iter it);
+
+class MySQLProtocolModule : public mxs::ProtocolModule
+{
+public:
+    static MySQLProtocolModule* create(const std::string& auth_name, const std::string& auth_opts);
+
+    std::unique_ptr<mxs::ClientProtocol>
+    create_client_protocol(MXS_SESSION* session, mxs::Component* component) override;
+
+    std::string auth_default() const override;
+    GWBUF*      reject(const std::string& host) override;
+
+
+    std::string name() const override;
+
+    int  load_auth_users(SERVICE* service) override;
+    void print_auth_users(DCB* output) override;
+
+    json_t* print_auth_users_json() override;
+
+private:
+    std::unique_ptr<mxs::AuthenticatorModule> m_auth_module;
+};

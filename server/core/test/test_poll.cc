@@ -60,7 +60,8 @@ static void test1()
     int fd = socket(AF_UNIX, SOCK_STREAM, 0);
     mxb_assert(fd >= 0);
 
-    std::unique_ptr<mxs::ClientProtocol> client_protocol(MySQLClientProtocol::create(session, session));
+    std::unique_ptr<mxs::ProtocolModule> protocol_module(MySQLProtocolModule::create("", ""));
+    auto client_protocol = protocol_module->create_client_protocol(session, session);
     auto pProtocol = client_protocol.get();
     auto dcb = ClientDCB::create(fd, "127.0.0.1", sockaddr_storage {},
                                  session, std::move(client_protocol), nullptr);

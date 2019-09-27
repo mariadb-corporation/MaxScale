@@ -156,8 +156,9 @@ typedef char* (* session_variable_handler_t)(void* context,
  * Note that the first few fields (up to and including "entry_is_ready") must
  * precisely match the LIST_ENTRY structure defined in the list manager.
  */
-struct MXS_SESSION
+class MXS_SESSION
 {
+public:
     enum class State
     {
         CREATED,    /*< Session created but not started */
@@ -165,6 +166,13 @@ struct MXS_SESSION
         STOPPING,   /*< Session and router are being closed */
         FAILED,     /*< Creation failed */
         FREE,       /*< The session is freed, only for completeness sake */
+    };
+
+    /**
+     * If a protocol wants to define custom session-level data, the data should inherit from this class.
+     */
+    class ProtocolData
+    {
     };
 
     MXS_SESSION(const SListener& listener);
@@ -233,6 +241,12 @@ public:
     }               response;       /*< Shortcircuited response */
     session_close_t close_reason;   /*< Reason why the session was closed */
     bool            load_active;    /*< Data streaming state (for LOAD DATA LOCAL INFILE) */
+
+    ProtocolData* protocol_data() const;
+    void          set_protocol_data(std::unique_ptr<ProtocolData> new_data);
+
+private:
+    std::unique_ptr<ProtocolData> m_protocol_data;
 };
 
 /**

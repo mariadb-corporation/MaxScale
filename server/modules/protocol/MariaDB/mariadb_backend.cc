@@ -307,7 +307,7 @@ void MySQLBackendProtocol::prepare_for_write(DCB* dcb, GWBUF* buffer)
 
 void MySQLBackendProtocol::ready_for_reading(DCB* event_dcb)
 {
-    mxb_assert(m_dcb == event_dcb); // The protocol should only handle its own events.
+    mxb_assert(m_dcb == event_dcb);     // The protocol should only handle its own events.
     auto dcb = m_dcb;
 
     mxb_assert(dcb->session());
@@ -2397,7 +2397,7 @@ void MySQLBackendProtocol::set_client_data(MySQLClientProtocol& client_protocol)
     client_capabilities = client_protocol.client_capabilities;
     charset = client_protocol.charset;
     extra_capabilities = client_protocol.extra_capabilities;
-    m_client_data = client_protocol.session_data();
+    m_client_data = static_cast<MYSQL_session*>(m_session->protocol_data());
     // TODO: authenticators may also need data swapping
 }
 
@@ -2463,8 +2463,8 @@ MySQLBackendProtocol::~MySQLBackendProtocol()
 {
     gwbuf_free(m_stored_query);
 }
+
 void MySQLBackendProtocol::set_dcb(DCB* dcb)
 {
     m_dcb = static_cast<BackendDCB*>(dcb);
 }
-

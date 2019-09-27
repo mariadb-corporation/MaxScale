@@ -26,7 +26,7 @@ class SERVER;
 struct DCB;
 struct GWBUF;
 struct json_t;
-struct MXS_SESSION;
+class MXS_SESSION;
 
 /**
  * The MXS_AUTHENTICATOR version data. The following should be updated whenever

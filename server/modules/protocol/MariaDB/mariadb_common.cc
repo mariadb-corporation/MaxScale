@@ -459,14 +459,12 @@ bool mxs_mysql_more_results_after_ok(GWBUF* buffer)
 
 const char* mxs_mysql_get_current_db(MXS_SESSION* session)
 {
-    auto proto = static_cast<MySQLClientProtocol*>(session->client_dcb->protocol());
-    return proto->session_data()->db;
+    return static_cast<MYSQL_session*>(session->protocol_data())->db;
 }
 
 void mxs_mysql_set_current_db(MXS_SESSION* session, const char* db)
 {
-    auto proto = static_cast<MySQLClientProtocol*>(session->client_dcb->protocol());
-    MYSQL_session* data = proto->session_data();
+    auto data = static_cast<MYSQL_session*>(session->protocol_data());
     snprintf(data->db, sizeof(data->db), "%s", db);
 }
 

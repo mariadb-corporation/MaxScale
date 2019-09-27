@@ -254,9 +254,7 @@ bool GSSAPIClientAuthenticator::store_client_token(DCB* generic_dcb, GWBUF* buff
     if (gwbuf_copy_data(buffer, 0, MYSQL_HEADER_LEN, hdr) == MYSQL_HEADER_LEN)
     {
         size_t plen = gw_mysql_get_byte3(hdr);
-        auto proto = static_cast<MySQLClientProtocol*>(dcb->protocol());
-        MYSQL_session* ses = proto->session_data();
-
+        auto ses = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
         if ((ses->auth_token = static_cast<uint8_t*>(MXS_MALLOC(plen))))
         {
             gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, plen, ses->auth_token);
@@ -517,8 +515,7 @@ int GSSAPIClientAuthenticator::authenticate(DCB* generic_dcb)
     {
         /** We sent the principal name and the client responded with the GSSAPI
          * token that we must validate */
-        auto proto = static_cast<MySQLClientProtocol*>(dcb->protocol());
-        MYSQL_session* ses = proto->session_data();
+        auto ses = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
         char* princ = NULL;
 
         if (validate_gssapi_token(m_module.principal_name, ses->auth_token, ses->auth_token_len, &princ)
