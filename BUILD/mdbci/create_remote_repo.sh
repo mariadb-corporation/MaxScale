@@ -34,8 +34,10 @@ if [ $? != 0 ] ; then
 	exit 1
 fi
 
-echo "cleaning ${unsorted_repo_dir}/$target/$box/"
-rm -rf ${unsorted_repo_dir}/$target/$box/*
+echo "cleaning ${unsorted_repo_dir}/$target/$box"
+rm -rf ${unsorted_repo_dir}/$target/$box
+echo "cleaning ${pre_repo_dir}/$target/$box"
+rm -rf ${pre_repo_dir}/$target/$box
 
 echo "copying repo from $box"
 mkdir -p ${unsorted_repo_dir}/$target/$box
