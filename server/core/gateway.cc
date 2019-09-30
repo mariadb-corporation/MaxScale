@@ -1867,7 +1867,7 @@ int main(int argc, char** argv)
     uint64_t systemd_interval;      // in microseconds
     if (sd_watchdog_enabled(false, &systemd_interval) > 0)
     {
-        RoutingWorker::set_watchdog_interval(systemd_interval);
+        MainWorker::set_watchdog_interval(systemd_interval);
     }
 #endif
 

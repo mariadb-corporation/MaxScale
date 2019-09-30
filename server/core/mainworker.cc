@@ -33,6 +33,9 @@ static struct ThisUnit
 namespace maxscale
 {
 
+// static
+maxbase::Duration MainWorker::s_watchdog_interval {0};
+
 MainWorker::MainWorker()
 {
     mxb_assert(!this_unit.pCurrent_main);
@@ -64,6 +67,24 @@ MainWorker& MainWorker::get()
     mxb_assert(this_unit.pCurrent_main);
 
     return *this_unit.pCurrent_main;
+}
+
+// static
+void MainWorker::set_watchdog_interval(uint64_t microseconds)
+{
+    // Do not call anything from here, assume nothing has been initialized (like logging).
+
+    // The internal timeout is 2/3 of the systemd configured interval.
+    double seconds = 1.0 * microseconds / 2000000;
+
+    s_watchdog_interval = maxbase::Duration(seconds);
+    // TODO: s_watchdog_next_check = maxbase::Clock::now();
+
+    if (s_watchdog_interval.count() != 0)
+    {
+        MXS_NOTICE("The systemd watchdog is Enabled. Internal timeout = %s\n",
+                   to_string(s_watchdog_interval).c_str());
+    }
 }
 
 void MainWorker::add_task(const std::string& name, TASKFN func, void* pData, int frequency)

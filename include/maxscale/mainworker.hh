@@ -14,6 +14,7 @@
 
 #include <maxscale/ccdefs.hh>
 #include <unordered_set>
+#include <maxbase/stopwatch.hh>
 #include <maxbase/worker.hh>
 #include <maxscale/housekeeper.h>
 
@@ -52,6 +53,21 @@ public:
      * @return The main worker.
      */
     static MainWorker& get();
+
+    /**
+     * To be called from the initial (parent) thread if the systemd watchdog is on.
+     *
+     * @param microseconds  The interval in microseconds.
+     */
+    static void set_watchdog_interval(uint64_t microseconds);
+
+    /**
+     * @return The watchdog interval. A value of 0 means no watchdog notifications.
+     */
+    static const mxb::Duration& watchdog_interval()
+    {
+        return s_watchdog_interval;
+    }
 
     void add_task(const std::string& name, TASKFN func, void* pData, int frequency);
     void remove_task(const std::string& name);
@@ -99,5 +115,7 @@ private:
     std::unordered_set<MaxScaleWorker*> m_workers;
     std::mutex                          m_workers_lock;
     std::map<std::string, Task>         m_tasks_by_name;
+
+    static maxbase::Duration            s_watchdog_interval;  /*< Duration between notifications, if any. */
 };
 }

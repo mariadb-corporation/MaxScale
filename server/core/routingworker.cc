@@ -31,6 +31,7 @@
 #include <maxscale/config.hh>
 #include <maxscale/clock.h>
 #include <maxscale/limits.h>
+#include <maxscale/mainworker.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/utils.hh>
 #include <maxscale/statistics.hh>
@@ -171,9 +172,7 @@ namespace maxscale
 {
 
 // static
-maxbase::Duration RoutingWorker::s_watchdog_interval {0};
-// static
-maxbase::TimePoint RoutingWorker::s_watchdog_next_check;
+maxbase::TimePoint RoutingWorker::s_watchdog_next_check = maxbase::Clock::now();
 
 class RoutingWorker::WatchdogNotifier
 {
@@ -187,7 +186,7 @@ public:
         , m_terminate(false)
     {
         m_thread = std::thread([this] {
-                                   uint32_t interval = mxs::RoutingWorker::s_watchdog_interval.secs();
+                                   uint32_t interval = mxs::MainWorker::watchdog_interval().secs();
                                    timespec timeout = {interval, 0};
 
                                    while (!mxb::atomic::load(&m_terminate, mxb::atomic::RELAXED))
@@ -304,7 +303,7 @@ RoutingWorker::RoutingWorker(MainWorker* pMain)
     MXB_POLL_DATA::handler = &RoutingWorker::epoll_instance_handler;
     MXB_POLL_DATA::owner = this;
 
-    if (s_watchdog_interval.count() != 0)
+    if (MainWorker::watchdog_interval().count() != 0)
     {
         m_pWatchdog_notifier = new WatchdogNotifier(this);
     }
@@ -408,15 +407,6 @@ bool RoutingWorker::init(MainWorker* pMain)
     else
     {
         MXS_ALERT("Could not allocate an epoll instance.");
-    }
-
-    if (this_unit.initialized)
-    {
-        if (s_watchdog_interval.count() != 0)
-        {
-            MXS_NOTICE("The systemd watchdog is Enabled. Internal timeout = %s\n",
-                       to_string(s_watchdog_interval).c_str());
-        }
     }
 
     return this_unit.initialized;
@@ -1410,18 +1400,6 @@ RoutingWorker* RoutingWorker::pick_worker()
     return get(id);
 }
 
-// static
-void maxscale::RoutingWorker::set_watchdog_interval(uint64_t microseconds)
-{
-    // Do not call anything from here, assume nothing has been initialized (like logging).
-
-    // The internal timeout is 2/3 of the systemd configured interval.
-    double seconds = 1.0 * microseconds / 2000000;
-
-    s_watchdog_interval = maxbase::Duration(seconds);
-    s_watchdog_next_check = maxbase::Clock::now();
-}
-
 void maxscale::RoutingWorker::start_watchdog_workaround()
 {
     if (m_pWatchdog_notifier)
@@ -1445,7 +1423,7 @@ void maxscale::RoutingWorker::stop_watchdog_workaround()
 // Release-acquire would fix that, but is an unneccesary expense.
 void RoutingWorker::check_systemd_watchdog()
 {
-    if (s_watchdog_interval.count() == 0)   // not turned on
+    if (MainWorker::watchdog_interval().count() == 0)   // not turned on
     {
         return;
     }
@@ -1462,7 +1440,7 @@ void RoutingWorker::check_systemd_watchdog()
                                          });
             if (all_alive)
             {
-                s_watchdog_next_check = now + s_watchdog_interval;
+                s_watchdog_next_check = now + MainWorker::watchdog_interval();
 #ifdef HAVE_SYSTEMD
                 MXS_DEBUG("systemd watchdog keep-alive ping: sd_notify(false, \"WATCHDOG=1\")");
                 sd_notify(false, "WATCHDOG=1");

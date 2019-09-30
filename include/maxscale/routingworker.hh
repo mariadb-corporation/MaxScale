@@ -574,11 +574,6 @@ public:
      */
     static std::unique_ptr<json_t> get_qc_stats_as_json(const char* zHost, int id);
 
-    /**
-     * To be called from the initial (parent) thread if the systemd watchdog is on.
-     */
-    static void set_watchdog_interval(uint64_t microseconds);
-
     class WatchdogWorkaround;
     friend WatchdogWorkaround;
 
