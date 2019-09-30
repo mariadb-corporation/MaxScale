@@ -1384,6 +1384,38 @@ bool Rpl::table_create_alter(STableCreateEvent create, const char* sql, const ch
                     tok = get_next_def(tok, end);
                     len = 0;
                 }
+                else if (tok_eq(ptok, "rename", plen))
+                {
+                    if (tok_eq(tok, "to", len))
+                    {
+                        // Skip the optional TO keyword
+                        tok = get_tok(tok + len, &len, end);
+                    }
+
+                    char new_name[len + 1];
+                    make_avro_token(new_name, tok, len);
+
+                    auto old_id = create->id();
+
+                    if (char* p = strchr(new_name, '.'))
+                    {
+                        *p++ = '\0';
+                        create->database = new_name;
+                        create->table = p;
+                    }
+                    else
+                    {
+                        create->table = new_name;
+                    }
+
+                    create->version = 1;
+                    create->was_used = false;
+
+                    rename_table_create(create, old_id);
+
+                    tok = get_next_def(tok, end);
+                    len = 0;
+                }
             }
             else
             {

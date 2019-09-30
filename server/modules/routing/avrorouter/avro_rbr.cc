@@ -841,6 +841,27 @@ bool Rpl::save_and_replace_table_create(STableCreateEvent created)
     return m_handler->create_table(created);
 }
 
+bool Rpl::rename_table_create(STableCreateEvent created, const std::string& old_id)
+{
+    auto it = m_created_tables.find(old_id);
+
+    if (it != m_created_tables.end())
+    {
+        auto tm_it = m_table_maps.find(old_id);
+
+        if (tm_it != m_table_maps.end())
+        {
+            m_active_maps.erase(tm_it->second->id);
+            m_table_maps.erase(tm_it);
+        }
+    }
+
+    m_created_tables.erase(old_id);
+    m_created_tables[created->id()] = created;
+    mxb_assert(created->columns.size() > 0);
+    return m_handler->create_table(created);
+}
+
 void unify_whitespace(char* sql, int len)
 {
     for (int i = 0; i < len; i++)

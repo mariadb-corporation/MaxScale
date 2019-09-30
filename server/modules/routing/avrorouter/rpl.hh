@@ -290,6 +290,7 @@ private:
     bool              handle_row_event(REP_HEADER* hdr, uint8_t* ptr);
     STableCreateEvent table_create_copy(const char* sql, size_t len, const char* db);
     bool              save_and_replace_table_create(STableCreateEvent created);
+    bool              rename_table_create(STableCreateEvent created, const std::string& old_id);
     bool              table_create_alter(STableCreateEvent create, const char* sql, const char* end);
     bool              table_matches(const std::string& ident);
 };
