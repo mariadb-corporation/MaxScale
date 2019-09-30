@@ -241,6 +241,16 @@ private:
             // m_owner is set in ctor
         }
 
+        ClientDCB* dcb() override
+        {
+            return &m_owner;
+        }
+
+        const ClientDCB* dcb() const override
+        {
+            return &m_owner;
+        }
+
     private:
         ResultSetDCB& m_owner;
     };

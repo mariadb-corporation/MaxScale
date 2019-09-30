@@ -179,6 +179,10 @@ public:
     int32_t clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override;
     bool    handleError(GWBUF* error, mxs::Endpoint* down, const mxs::Reply& reply) override;
 
+    mxs::ClientProtocol* client_connection() override;
+    const mxs::ClientProtocol* client_connection() const override;
+    void set_client_connection(mxs::ClientProtocol* client_conn) override;
+
 protected:
     std::unique_ptr<mxs::Endpoint> m_down;
 
@@ -200,6 +204,8 @@ private:
     DCBSet            m_dcb_set;                /*< Set of associated backend DCBs */
     uint32_t          m_retain_last_statements; /*< How many statements be retained */
     Log               m_log;                    /*< Session specific in-memory log */
+
+    mxs::ClientProtocol* m_client_conn {nullptr};
 
     // Delivers a provided response to the upstream filter that should receive it
     void deliver_response();

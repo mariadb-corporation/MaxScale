@@ -802,6 +802,7 @@ ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const 
     else
     {
         session->set_client_dcb(client_dcb);
+        session->set_client_connection(pProtocol);
         pProtocol->set_dcb(client_dcb);
 
         if (m_service->has_too_many_connections())

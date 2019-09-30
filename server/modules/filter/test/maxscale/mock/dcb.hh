@@ -130,6 +130,16 @@ private:
             m_dcb = static_cast<Dcb*>(dcb);
         }
 
+        ClientDCB* dcb() override
+        {
+            return m_dcb;
+        }
+
+        const ClientDCB* dcb() const override
+        {
+            return m_dcb;
+        }
+
     private:
         Dcb::Handler* m_pHandler;
         Dcb*          m_dcb {nullptr};

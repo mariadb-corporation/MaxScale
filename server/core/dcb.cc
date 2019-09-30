@@ -1585,8 +1585,8 @@ bool DCB::disable_events()
  */
 static int upstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* userdata)
 {
-    DCB* client_dcb = dcb->session()->client_dcb;
-    mxb::Worker* worker = static_cast<mxb::Worker*>(client_dcb->owner);
+    auto session = dcb->session();
+    auto client_dcb = session->client_connection()->dcb();
 
     // The fd is removed manually here due to the fact that poll_add_dcb causes the DCB to be added to the
     // worker's list of DCBs but poll_remove_dcb doesn't remove it from it. This is due to the fact that the
@@ -1594,14 +1594,14 @@ static int upstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* userda
     if (reason == DCB::Reason::HIGH_WATER)
     {
         MXS_INFO("High water mark hit for '%s'@'%s', not reading data until low water mark is hit",
-                 client_dcb->session()->user().c_str(), client_dcb->remote().c_str());
+                 session->user().c_str(), client_dcb->remote().c_str());
 
         client_dcb->disable_events();
     }
     else if (reason == DCB::Reason::LOW_WATER)
     {
         MXS_INFO("Low water mark hit for '%s'@'%s', accepting new data",
-                 client_dcb->session()->user().c_str(), client_dcb->remote().c_str());
+                 session->user().c_str(), client_dcb->remote().c_str());
 
         if (!client_dcb->enable_events())
         {
@@ -1622,12 +1622,11 @@ bool backend_dcb_remove_func(DCB* dcb, void* data)
     if (dcb->session() == session && dcb->role() == DCB::Role::BACKEND)
     {
         BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
-        DCB* client_dcb = dcb->session()->client_dcb;
         MXS_INFO("High water mark hit for connection to '%s' from %s'@'%s', not reading data until low water "
                  "mark is hit", backend_dcb->server()->name(),
-                 client_dcb->session()->user().c_str(), client_dcb->remote().c_str());
+                 session->user().c_str(), session->client_remote());
 
-        dcb->disable_events();
+        backend_dcb->disable_events();
     }
 
     return true;
@@ -1640,12 +1639,12 @@ bool backend_dcb_add_func(DCB* dcb, void* data)
     if (dcb->session() == session && dcb->role() == DCB::Role::BACKEND)
     {
         BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
-        DCB* client_dcb = dcb->session()->client_dcb;
+        auto client_dcb = session->client_connection()->dcb();
         MXS_INFO("Low water mark hit for connection to '%s' from '%s'@'%s', accepting new data",
                  backend_dcb->server()->name(),
-                 client_dcb->session()->user().c_str(), client_dcb->remote().c_str());
+                 session->user().c_str(), client_dcb->remote().c_str());
 
-        if (!dcb->enable_events())
+        if (!backend_dcb->enable_events())
         {
             MXS_ERROR("Could not re-enable I/O events for backend connection whose I/O events "
                       "earlier were disabled due to the high water mark having been hit. "
@@ -1897,7 +1896,7 @@ BackendDCB* BackendDCB::create(SERVER* srv,
                                DCB::Manager* manager,
                                mxs::Component* component)
 {
-    auto client_dcb = session->client_dcb;
+    auto client_dcb = session->client_connection()->dcb();
     auto client_proto = client_dcb->protocol();
     std::unique_ptr<BackendProtocol> protocol_session;
     if (client_proto->capabilities() & mxs::ClientProtocol::CAP_BACKEND)
@@ -2397,4 +2396,14 @@ json_t* dcb_to_json(DCB* dcb)
 void mxs::ClientProtocolBase::set_dcb(DCB* dcb)
 {
     m_dcb = static_cast<ClientDCB*>(dcb);
+}
+
+ClientDCB* mxs::ClientProtocolBase::dcb()
+{
+    return m_dcb;
+}
+
+const ClientDCB* mxs::ClientProtocolBase::dcb() const
+{
+    return m_dcb;
 }

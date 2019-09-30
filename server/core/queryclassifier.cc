@@ -45,7 +45,7 @@ uint32_t mysql_extract_ps_id(GWBUF* buffer)
 
 std::string qc_mysql_get_current_db(MXS_SESSION* session)
 {
-    return session->client_dcb->protocol()->current_db();
+    return session->client_connection()->current_db();
 }
 
 // Copied from mysql_common.c
@@ -112,7 +112,7 @@ bool check_for_sp_call(GWBUF* buf, uint8_t packet_type)
 bool are_multi_statements_allowed(MXS_SESSION* pSession)
 {
     // TODO: This is not really nice.
-    auto pPcol = static_cast<MySQLClientProtocol*>(pSession->client_dcb->protocol());
+    auto pPcol = static_cast<MySQLClientProtocol*>(pSession->client_connection());
 
     if (pPcol->client_capabilities & GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS)
     {

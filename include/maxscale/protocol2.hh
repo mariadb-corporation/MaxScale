@@ -154,6 +154,9 @@ public:
     {
         return "";
     }
+
+    virtual ClientDCB* dcb() = 0;
+    virtual const ClientDCB* dcb() const = 0;
 };
 
 /**
@@ -163,6 +166,8 @@ class ClientProtocolBase : public ClientProtocol
 {
 public:
     void set_dcb(DCB* dcb) override;
+    ClientDCB* dcb() override;
+    const ClientDCB* dcb() const override;
 protected:
     ClientDCB* m_dcb {nullptr};     /**< Dcb used by this protocol connection */
 };

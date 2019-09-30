@@ -73,15 +73,6 @@ struct
 };
 }
 
-/**
- * The clientReply of the session.
- *
- * @param inst     In reality an MXS_SESSION*.
- * @param session  In reality an MXS_SESSION*.
- * @param data     The data to send to the client.
- */
-static int session_reply(MXS_FILTER* inst, MXS_FILTER_SESSION* session, GWBUF* data, DCB* dcb);
-
 MXS_SESSION::MXS_SESSION(const SListener& listener)
     : m_state(MXS_SESSION::State::CREATED)
     , m_id(session_get_next_id())
@@ -134,6 +125,16 @@ void MXS_SESSION::set_protocol_data(std::unique_ptr<ProtocolData> new_data)
     m_protocol_data = std::move(new_data);
 }
 
+const char* MXS_SESSION::client_remote() const
+{
+    auto conn = client_connection();
+    if (conn)
+    {
+        return conn->dcb()->remote().c_str();
+    }
+    return nullptr;
+}
+
 bool session_start(MXS_SESSION* ses)
 {
     Session* session = static_cast<Session*>(ses);
@@ -142,7 +143,7 @@ bool session_start(MXS_SESSION* ses)
 
 void session_link_backend_dcb(MXS_SESSION* session, BackendDCB* dcb)
 {
-    mxb_assert(dcb->owner == session->client_dcb->owner);
+    mxb_assert(dcb->owner == session->client_connection()->dcb()->owner);
     mxb_assert(dcb->role() == DCB::Role::BACKEND);
 
     mxb::atomic::add(&session->refcount, 1);
@@ -191,7 +192,7 @@ void printSession(MXS_SESSION* session)
     printf("Session %p\n", session);
     printf("\tState:        %s\n", session_state_to_string(session->state()));
     printf("\tService:      %s (%p)\n", session->service->name(), session->service);
-    printf("\tClient DCB:   %p\n", session->client_dcb);
+    printf("\tClient DCB:   %p\n", session->client_connection()->dcb());
     printf("\tConnected:    %s\n",
            asctime_r(localtime_r(&session->stats.connect, &result), timebuf));
 }
@@ -260,18 +261,18 @@ void dprintSession(DCB* dcb, MXS_SESSION* print_session)
     dcb_printf(dcb, "\tState:               %s\n", session_state_to_string(print_session->state()));
     dcb_printf(dcb, "\tService:             %s\n", print_session->service->name());
 
-    if (print_session->client_dcb)
+    if (print_session->client_connection())
     {
-        double idle = (mxs_clock() - print_session->client_dcb->last_read());
+        auto client_dcb = print_session->client_connection()->dcb();
+        double idle = (mxs_clock() - client_dcb->last_read());
         idle = idle > 0 ? idle / 10.f : 0;
         dcb_printf(dcb,
                    "\tClient Address:          %s@%s\n",
-                   print_session->user().c_str(),
-                   print_session->client_dcb->remote().c_str());
+                   print_session->user().c_str(), client_dcb->remote().c_str());
         dcb_printf(dcb,
                    "\tConnected:               %s\n",
                    asctime_r(localtime_r(&print_session->stats.connect, &result), buf));
-        if (print_session->client_dcb->state() == DCB::State::POLLING)
+        if (client_dcb->state() == DCB::State::POLLING)
         {
             dcb_printf(dcb, "\tIdle:                %.0f seconds\n", idle);
         }
@@ -295,7 +296,7 @@ bool dListSessions_cb(DCB* dcb, void* data)
         dcb_printf(out_dcb,
                    "%-16" PRIu64 " | %-15s | %-14s | %s\n",
                    session->id(),
-                   session->client_dcb ? session->client_dcb->remote().c_str() : "",
+                   session->client_remote(),
                    session->service && session->service->name() ?
                    session->service->name() : "",
                    session_state_to_string(session->state()));
@@ -353,35 +354,13 @@ const char* session_state_to_string(MXS_SESSION::State state)
 }
 
 /**
- * Entry point for the final element in the upstream filter, i.e. the writing
- * of the data to the client.
- *
- * Looks like a filter `clientReply`, but in this case both the instance and
- * the session argument will be a MXS_SESSION*.
- *
- * @param       instance        The "instance" data
- * @param       session         The session
- * @param       data            The buffer chain to write
- */
-int session_reply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* data, DCB* dcb)
-{
-    MXS_SESSION* the_session = (MXS_SESSION*)session;
-
-    return the_session->client_dcb->protocol_write(data);
-}
-
-/**
  * Return the client connection address or name
  *
  * @param session       The session whose client address to return
  */
 const char* session_get_remote(const MXS_SESSION* session)
 {
-    if (session && session->client_dcb)
-    {
-        return session->client_dcb->remote().c_str();
-    }
-    return NULL;
+    return session ? session->client_remote() : nullptr;
 }
 
 void Session::deliver_response()
@@ -456,7 +435,7 @@ bool dcb_iter_cb(DCB* dcb, void* data)
         char buf[20];
         snprintf(buf, sizeof(buf), "%p", ses);
 
-        set->add_row({buf, ses->client_dcb->remote().c_str(), ses->service->name(),
+        set->add_row({buf, ses->client_remote(), ses->service->name(),
                       session_state_to_string(ses->state())});
     }
 
@@ -616,7 +595,8 @@ json_t* session_json_data(const Session* session, const char* host, bool rdns)
     }
 
     string result_address;
-    auto remote = session->client_dcb->remote();
+    auto client_dcb = session->client_connection()->dcb();
+    auto& remote = client_dcb->remote();
     if (rdns)
     {
         maxbase::reverse_name_lookup(remote, &result_address);
@@ -636,17 +616,15 @@ json_t* session_json_data(const Session* session, const char* host, bool rdns)
 
     json_object_set_new(attr, "connected", json_string(buf));
 
-    if (session->client_dcb->state() == DCB::State::POLLING)
+    if (client_dcb->state() == DCB::State::POLLING)
     {
-        double idle = (mxs_clock() - session->client_dcb->last_read());
+        double idle = (mxs_clock() - client_dcb->last_read());
         idle = idle > 0 ? idle / 10.f : 0;
         json_object_set_new(attr, "idle", json_real(idle));
     }
 
     json_t* dcb_arr = json_array();
-    const Session* pSession = static_cast<const Session*>(session);
-
-    for (auto d : pSession->dcb_set())
+    for (auto d : session->dcb_set())
     {
         json_array_append_new(dcb_arr, dcb_to_json(d));
     }
@@ -883,7 +861,7 @@ public:
             if (m_down.routeQuery(m_down.instance, m_down.session, buffer) == 0)
             {
                 // Routing failed, send a hangup to the client.
-                m_session->client_dcb->trigger_hangup_event();
+                m_session->client_connection()->dcb()->trigger_hangup_event();
             }
         }
     }
@@ -912,7 +890,7 @@ bool session_delay_routing(MXS_SESSION* session, mxs::Downstream down, GWBUF* bu
     try
     {
         Worker* worker = Worker::get_current();
-        mxb_assert(worker == session->client_dcb->owner);
+        mxb_assert(worker == session->client_connection()->dcb()->owner);
         std::unique_ptr<DelayedRoutingTask> task(new DelayedRoutingTask(session, down, buffer));
 
         // Delay the routing for at least a millisecond
@@ -1512,3 +1490,19 @@ bool Session::handleError(GWBUF* error, Endpoint* down, const mxs::Reply& reply)
     terminate();
     return false;
 }
+
+mxs::ClientProtocol* Session::client_connection()
+{
+    return m_client_conn;
+}
+
+const mxs::ClientProtocol* Session::client_connection() const
+{
+    return m_client_conn;
+}
+
+void Session::set_client_connection(mxs::ClientProtocol* client_conn)
+{
+    m_client_conn = client_conn;
+}
+

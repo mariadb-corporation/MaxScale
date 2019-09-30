@@ -66,6 +66,7 @@ static void test1()
     auto dcb = ClientDCB::create(fd, "127.0.0.1", sockaddr_storage {},
                                  session, std::move(client_protocol), nullptr);
     pProtocol->set_dcb(dcb);
+    session->set_client_connection(pProtocol);
 
     mxb_assert(dcb);
     mxb_assert(dcb->enable_events());
