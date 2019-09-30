@@ -669,7 +669,6 @@ private:
     void epoll_tock() override;
 
     void delete_zombies();
-    void check_systemd_watchdog();
 
     static uint32_t epoll_instance_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
     uint32_t        handle_epoll_events(uint32_t events);

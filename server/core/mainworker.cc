@@ -14,11 +14,16 @@
 #include <maxscale/mainworker.hh>
 
 #include <signal.h>
+#ifdef HAVE_SYSTEMD
+#include <systemd/sd-daemon.h>
+#endif
 #include <maxscale/cn_strings.hh>
 #include <maxscale/config.hh>
+#include <maxscale/maxscaleworker.hh>
 
 using std::lock_guard;
 using std::mutex;
+using std::unique_lock;
 
 namespace
 {
@@ -220,6 +225,42 @@ void MainWorker::post_run()
 
 void MainWorker::epoll_tick()
 {
+    if (s_watchdog_interval.count() != 0)
+    {
+        check_systemd_watchdog();
+    }
+}
+
+void MainWorker::check_systemd_watchdog()
+{
+    mxb::TimePoint now = mxb::Clock::now();
+
+    if (now > s_watchdog_next_check)
+    {
+        unique_lock<mutex> guard(m_workers_lock);
+
+        bool all_alive = std::all_of(m_workers.begin(), m_workers.end(), [](MaxScaleWorker* pWorker) {
+                return pWorker->is_alive();
+            });
+
+        if (all_alive)
+        {
+            std::for_each(m_workers.begin(), m_workers.end(), [](MaxScaleWorker* pWorker) {
+                    pWorker->mark_dead();
+                });
+        }
+
+        guard.unlock();
+
+        if (all_alive)
+        {
+            s_watchdog_next_check = now + MainWorker::watchdog_interval();
+#ifdef HAVE_SYSTEMD
+            MXS_DEBUG("systemd watchdog keep-alive ping: sd_notify(false, \"WATCHDOG=1\")");
+            sd_notify(false, "WATCHDOG=1");
+#endif
+        }
+    }
 }
 
 bool MainWorker::call_task(Worker::Call::action_t action, MainWorker::Task* pTask)

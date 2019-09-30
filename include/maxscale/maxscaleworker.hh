@@ -93,8 +93,7 @@ public:
     };
 
 
-// TODO: Temporaily public
-public:
+private:
     friend class MainWorker;
 
     bool is_alive() const
@@ -122,8 +121,6 @@ public:
 
 protected:
     MaxScaleWorker(MainWorker* pMain);
-
-    virtual void check_systemd_watchdog() = 0;
 
     /**
      * Called once per epoll loop from epoll_tick().

@@ -42,8 +42,8 @@ public:
                                             // If MaxScale is not going down...
                                            do
                                            {
-                                                // we check the systemd watchdog...
-                                               m_owner.check_systemd_watchdog();
+                                                // we ensure the worker appears alive
+                                               m_owner.resurrect_if_dead();
                                            }
                                            while (!m_sem_stop.timedwait(timeout));
                                             // until the semaphore is actually posted, which it will be
@@ -134,7 +134,7 @@ void MaxScaleWorker::stop_watchdog_workaround()
 
 void MaxScaleWorker::epoll_tick()
 {
-    check_systemd_watchdog();
+    resurrect_if_dead();
 
     epoll_tock();
 }

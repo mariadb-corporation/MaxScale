@@ -88,6 +88,8 @@ private:
     void post_run() override;
     void epoll_tick() override;
 
+    void check_systemd_watchdog();
+
     struct Task
     {
     public:

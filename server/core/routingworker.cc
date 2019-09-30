@@ -18,9 +18,6 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <unistd.h>
-#ifdef HAVE_SYSTEMD
-#include <systemd/sd-daemon.h>
-#endif
 #include <vector>
 #include <sstream>
 
@@ -1310,52 +1307,11 @@ RoutingWorker* RoutingWorker::pick_worker()
     return get(id);
 }
 
-// A note about the below code. While the main worker is turning the "m_alive" values to false,
-// it is a possibility that another RoutingWorker sees the old value of "s_watchdog_next_check"
-// but its new "m_alive==false" value, marks itself alive and promptly hangs. This would cause a
-// watchdog kill delay of about "s_watchdog_interval" time.
-// Release-acquire would fix that, but is an unneccesary expense.
-void RoutingWorker::check_systemd_watchdog()
-{
-    if (MainWorker::watchdog_interval().count() == 0)   // not turned on
-    {
-        return;
-    }
-
-    maxbase::TimePoint now = maxbase::Clock::now();
-    if (now > s_watchdog_next_check)
-    {
-        if (m_id == this_unit.id_main_worker)
-        {
-            mark_alive();
-            bool all_alive = std::all_of(this_unit.ppWorkers, this_unit.ppWorkers + this_unit.nWorkers,
-                                         [](RoutingWorker* rw) {
-                                             return rw->is_alive();
-                                         });
-            if (all_alive)
-            {
-                s_watchdog_next_check = now + MainWorker::watchdog_interval();
-#ifdef HAVE_SYSTEMD
-                MXS_DEBUG("systemd watchdog keep-alive ping: sd_notify(false, \"WATCHDOG=1\")");
-                sd_notify(false, "WATCHDOG=1");
-#endif
-                std::for_each(this_unit.ppWorkers, this_unit.ppWorkers + this_unit.nWorkers,
-                              [](RoutingWorker* rw) {
-                                  rw->mark_dead();
-                              });
-            }
-        }
-        else
-        {
-            resurrect_if_dead();
-        }
-    }
-}
-
 void maxscale::RoutingWorker::register_epoll_tick_func(std::function<void ()> func)
 {
     m_epoll_tick_funcs.push_back(func);
 }
+
 }
 
 size_t mxs_rworker_broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2)
