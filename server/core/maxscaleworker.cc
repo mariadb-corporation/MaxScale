@@ -134,7 +134,8 @@ void MaxScaleWorker::stop_watchdog_workaround()
 
 void MaxScaleWorker::epoll_tick()
 {
-    // TODO: Add watchdog functionality.
+    check_systemd_watchdog();
+
     epoll_tock();
 }
 

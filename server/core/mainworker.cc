@@ -35,6 +35,8 @@ namespace maxscale
 
 // static
 maxbase::Duration MainWorker::s_watchdog_interval {0};
+// static
+maxbase::TimePoint MainWorker::s_watchdog_next_check;
 
 MainWorker::MainWorker()
 {
@@ -78,7 +80,7 @@ void MainWorker::set_watchdog_interval(uint64_t microseconds)
     double seconds = 1.0 * microseconds / 2000000;
 
     s_watchdog_interval = maxbase::Duration(seconds);
-    // TODO: s_watchdog_next_check = maxbase::Clock::now();
+    s_watchdog_next_check = maxbase::Clock::now();
 
     if (s_watchdog_interval.count() != 0)
     {

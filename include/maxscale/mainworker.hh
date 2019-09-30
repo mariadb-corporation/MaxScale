@@ -116,6 +116,8 @@ private:
     std::mutex                          m_workers_lock;
     std::map<std::string, Task>         m_tasks_by_name;
 
-    static maxbase::Duration            s_watchdog_interval;  /*< Duration between notifications, if any. */
+    static maxbase::Duration  s_watchdog_interval;   /*< Duration between notifications, if any. */
+    static maxbase::TimePoint s_watchdog_next_check; /*< Next time to notify systemd. */
+
 };
 }

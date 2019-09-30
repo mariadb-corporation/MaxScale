@@ -847,8 +847,6 @@ void RoutingWorker::epoll_tock()
 
     delete_zombies();
 
-    check_systemd_watchdog();
-
     for (auto& func : m_epoll_tick_funcs)
     {
         func();
