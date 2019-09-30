@@ -98,19 +98,19 @@ private:
 
     bool is_ticking() const
     {
-        return m_ticking.load(std::memory_order_relaxed);
+        return m_ticking.load(std::memory_order_acquire);
     }
 
     void mark_not_ticking()
     {
-        m_ticking.store(false, std::memory_order_relaxed);
+        m_ticking.store(false, std::memory_order_release);
     }
 
     void mark_ticking_if_currently_not()
     {
-        if (m_ticking.load(std::memory_order_relaxed) == false)
+        if (m_ticking.load(std::memory_order_acquire) == false)
         {
-            m_ticking.store(true, std::memory_order_relaxed);
+            m_ticking.store(true, std::memory_order_release);
         }
     }
 
