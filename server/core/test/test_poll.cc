@@ -56,7 +56,7 @@ static void test1()
 
     auto listener = Listener::create("listener", "mariadbclient", listener_params);
 
-    auto session = new mxs::Session(listener);
+    auto session = new Session(listener);
     int fd = socket(AF_UNIX, SOCK_STREAM, 0);
     mxb_assert(fd >= 0);
 

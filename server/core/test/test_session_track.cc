@@ -15,7 +15,7 @@
 
 SERVICE* service;
 SListener listener;
-mxs::Session* session;
+Session* session;
 Server* server;
 
 void create_test_objects()
@@ -33,7 +33,7 @@ void create_test_objects()
     listener_params.set(CN_SERVICE, service->name());
 
     listener = Listener::create("listener", "mariadbclient", listener_params);
-    session = new mxs::Session(listener);
+    session = new Session(listener);
     server = new Server("server1");
 }
 

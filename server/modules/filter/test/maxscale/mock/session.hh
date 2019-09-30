@@ -28,7 +28,7 @@ namespace mock
  * The class Session provides a mock MXS_SESSION that can be used when
  * testing.
  */
-class Session : public mxs::Session
+class Session : public ::Session
 {
     Session(const Session&);
     Session& operator=(Session&);

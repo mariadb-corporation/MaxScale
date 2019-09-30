@@ -29,21 +29,15 @@
 #include "filter.hh"
 #include "service.hh"
 
-#define SESSION_STATS_INIT  {0}
-#define SESSION_FILTER_INIT {0}
+// The following may be called from a debugger session so use C-linkage to preserve names.
+extern "C" {
 
-#define SESSION_PROTOCOL(x, type) DCB_PROTOCOL((x)->client_dcb, type)
+void printAllSessions();
+void dprintAllSessions(DCB*);
+void dprintSession(DCB*, MXS_SESSION*);
+void dListSessions(DCB*);
 
-MXS_BEGIN_DECLS
-
-/**
- * Filter type for the sessionGetList call
- */
-typedef enum
-{
-    SESSION_LIST_ALL,
-    SESSION_LIST_CONNECTION
-} SESSIONLISTFILTER;
+}
 
 /**
  * Link a session to a backend DCB.
@@ -61,27 +55,9 @@ void session_link_backend_dcb(MXS_SESSION* session, BackendDCB* dcb);
  */
 void session_unlink_backend_dcb(MXS_SESSION* session, DCB* dcb);
 
-void printAllSessions();
 void printSession(MXS_SESSION*);
 
-void dprintSessionList(DCB* pdcb);
-void dprintAllSessions(DCB*);
-void dprintSession(DCB*, MXS_SESSION*);
-void dListSessions(DCB*);
 
-MXS_END_DECLS
-
-namespace maxscale
-{
-
-typedef struct SESSION_VARIABLE
-{
-    session_variable_handler_t handler;
-    void*                      context;
-} SESSION_VARIABLE;
-
-typedef std::unordered_map<std::string, SESSION_VARIABLE> SessionVarsByName;
-typedef std::unordered_set<DCB*>                          DCBSet;
 
 // Class that holds the session specific filter data
 class SessionFilter
@@ -145,9 +121,8 @@ public:
         bool                    m_complete = false; /*< Is this information complete? */
     };
 
-    typedef std::deque<QueryInfo> QueryInfos;
-    using Log = std::deque<std::string>;
     using FilterList = std::vector<SessionFilter>;
+    using DCBSet = std::unordered_set<DCB*>;
 
     Session(const SListener& listener);
     ~Session();
@@ -202,12 +177,22 @@ public:
     // Implementation of mxs::Component
     int32_t routeQuery(GWBUF* buffer) override;
     int32_t clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override;
-    bool    handleError(GWBUF* error, Endpoint* down, const mxs::Reply& reply) override;
+    bool    handleError(GWBUF* error, mxs::Endpoint* down, const mxs::Reply& reply) override;
 
 protected:
     std::unique_ptr<mxs::Endpoint> m_down;
 
 private:
+    struct SESSION_VARIABLE
+    {
+        session_variable_handler_t handler;
+        void*                      context;
+    };
+
+    using SessionVarsByName = std::unordered_map<std::string, SESSION_VARIABLE>;
+    using QueryInfos = std::deque<QueryInfo>;
+    using Log = std::deque<std::string>;
+
     FilterList        m_filters;
     SessionVarsByName m_variables;
     QueryInfos        m_last_queries;           /*< The N last queries by the client */
@@ -219,6 +204,5 @@ private:
     // Delivers a provided response to the upstream filter that should receive it
     void deliver_response();
 };
-}
 
 std::unique_ptr<ResultSet> sessionGetList();
