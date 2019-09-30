@@ -358,21 +358,7 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
 
 int CacheFilterSession::clientReply(GWBUF* pData, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-
-    if (m_res.pData)
-    {
-        gwbuf_append(m_res.pData, pData);
-        m_res.pData_last = pData;
-        m_res.offset_last = m_res.length;
-        m_res.length += gwbuf_length(pData);    // pData may be a chain, so not GWBUF_LENGTH().
-    }
-    else
-    {
-        m_res.pData = pData;
-        m_res.pData_last = pData;
-        m_res.offset_last = 0;
-        m_res.length = gwbuf_length(pData);
-    }
+    m_res = m_res ? gwbuf_append(m_res, pData) : pData;
 
     if (m_state == CACHE_EXPECTING_RESPONSE)
     {
@@ -388,20 +374,8 @@ int CacheFilterSession::clientReply(GWBUF* pData, const mxs::ReplyRoute& down, c
 
     switch (m_state)
     {
-    case CACHE_EXPECTING_FIELDS:
-        handle_expecting_fields();
-        break;
-
     case CACHE_EXPECTING_NOTHING:
         handle_expecting_nothing(reply);
-        break;
-
-    case CACHE_EXPECTING_RESPONSE:
-        handle_expecting_response();
-        break;
-
-    case CACHE_EXPECTING_ROWS:
-        handle_expecting_rows();
         break;
 
     case CACHE_EXPECTING_USE_RESPONSE:
@@ -455,60 +429,12 @@ json_t* CacheFilterSession::diagnostics_json() const
 }
 
 /**
- * Called when resultset field information is handled.
- */
-void CacheFilterSession::handle_expecting_fields()
-{
-    mxb_assert(m_state == CACHE_EXPECTING_FIELDS);
-    mxb_assert(m_res.pData);
-
-    bool insufficient = false;
-
-    size_t buflen = m_res.length;
-    mxb_assert(m_res.length == gwbuf_length(m_res.pData));
-
-    while (!insufficient && (buflen - m_res.offset >= MYSQL_HEADER_LEN))
-    {
-        uint8_t header[MYSQL_HEADER_LEN + 1];
-        copy_command_header_at_offset(header);
-
-        size_t packetlen = MYSQL_HEADER_LEN + MYSQL_GET_PAYLOAD_LEN(header);
-
-        if (m_res.offset + packetlen <= buflen)
-        {
-            // We have at least one complete packet.
-            int command = (int)MYSQL_GET_COMMAND(header);
-
-            switch (command)
-            {
-            case MYSQL_REPLY_EOF:   // The EOF after the fields.
-                m_res.offset += packetlen;
-                m_state = CACHE_EXPECTING_ROWS;
-                handle_expecting_rows();
-                break;
-
-            default:    // Field information.
-                m_res.offset += packetlen;
-                ++m_res.nFields;
-                mxb_assert(m_res.nFields <= m_res.nTotalFields);
-                break;
-            }
-        }
-        else
-        {
-            // We need more data
-            insufficient = true;
-        }
-    }
-}
-
-/**
  * Called when data is received (even if nothing is expected) from the server.
  */
 void CacheFilterSession::handle_expecting_nothing(const mxs::Reply& reply)
 {
     mxb_assert(m_state == CACHE_EXPECTING_NOTHING);
-    mxb_assert(m_res.pData);
+    mxb_assert(m_res);
 
     if (reply.error())
     {
@@ -524,139 +450,12 @@ void CacheFilterSession::handle_expecting_nothing(const mxs::Reply& reply)
 }
 
 /**
- * Called when a response is received from the server.
- */
-void CacheFilterSession::handle_expecting_response()
-{
-    mxb_assert(m_state == CACHE_EXPECTING_RESPONSE);
-    mxb_assert(m_res.pData);
-
-    size_t buflen = m_res.length;
-    mxb_assert(m_res.length == gwbuf_length(m_res.pData));
-
-    if (buflen >= MYSQL_HEADER_LEN + 1)     // We need the command byte.
-    {
-        // Reserve enough space to accomodate for the largest length encoded integer,
-        // which is type field + 8 bytes.
-        uint8_t header[MYSQL_HEADER_LEN + 1 + 8];
-        copy_data(0, MYSQL_HEADER_LEN + 1, header);
-
-        switch ((int)MYSQL_GET_COMMAND(header))
-        {
-        case MYSQL_REPLY_OK:
-            store_result();
-
-        case MYSQL_REPLY_ERR:
-            send_upstream();
-            m_state = CACHE_IGNORING_RESPONSE;
-            break;
-
-        case MYSQL_REPLY_LOCAL_INFILE:      // GET_MORE_CLIENT_DATA/SEND_MORE_CLIENT_DATA
-            send_upstream();
-            m_state = CACHE_IGNORING_RESPONSE;
-            break;
-
-        default:
-            if (m_res.nTotalFields != 0)
-            {
-                // We've seen the header and have figured out how many fields there are.
-                m_state = CACHE_EXPECTING_FIELDS;
-                handle_expecting_fields();
-            }
-            else
-            {
-                // mxs_leint_bytes() returns the length of the int type field + the size of the
-                // integer.
-                size_t n_bytes = mxq::leint_bytes(&header[4]);
-
-                if (MYSQL_HEADER_LEN + n_bytes <= buflen)
-                {
-                    // Now we can figure out how many fields there are, but first we
-                    // need to copy some more data.
-                    copy_data(MYSQL_HEADER_LEN + 1, n_bytes - 1, &header[MYSQL_HEADER_LEN + 1]);
-
-                    m_res.nTotalFields = mxq::leint_value(&header[4]);
-                    m_res.offset = MYSQL_HEADER_LEN + n_bytes;
-
-                    m_state = CACHE_EXPECTING_FIELDS;
-                    handle_expecting_fields();
-                }
-                else
-                {
-                    // We need more data. We will be called again, when data is available.
-                }
-            }
-            break;
-        }
-    }
-}
-
-/**
- * Called when resultset rows are handled.
- */
-void CacheFilterSession::handle_expecting_rows()
-{
-    mxb_assert(m_state == CACHE_EXPECTING_ROWS);
-    mxb_assert(m_res.pData);
-
-    bool insufficient = false;
-
-    size_t buflen = m_res.length;
-    mxb_assert(m_res.length == gwbuf_length(m_res.pData));
-
-    while (!insufficient && (buflen - m_res.offset >= MYSQL_HEADER_LEN))
-    {
-        uint8_t header[MYSQL_HEADER_LEN + 1];
-        copy_command_header_at_offset(header);
-
-        size_t packetlen = MYSQL_HEADER_LEN + MYSQL_GET_PAYLOAD_LEN(header);
-
-        if (m_res.offset + packetlen <= buflen)
-        {
-            if ((packetlen == MYSQL_EOF_PACKET_LEN) && (MYSQL_GET_COMMAND(header) == MYSQL_REPLY_EOF))
-            {
-                // The last EOF packet
-                m_res.offset += packetlen;
-                mxb_assert(m_res.offset == buflen);
-
-                store_result();
-
-                send_upstream();
-                m_state = CACHE_EXPECTING_NOTHING;
-            }
-            else
-            {
-                // Length encode strings, 0xfb denoting NULL.
-                m_res.offset += packetlen;
-                ++m_res.nRows;
-
-                if (cache_max_resultset_rows_exceeded(m_pCache->config(), m_res.nRows))
-                {
-                    if (log_decisions())
-                    {
-                        MXS_NOTICE("Max rows %lu reached, not caching result.", m_res.nRows);
-                    }
-                    send_upstream();
-                    m_res.offset = buflen;      // To abort the loop.
-                    m_state = CACHE_IGNORING_RESPONSE;
-                }
-            }
-        }
-        else
-        {
-            // We need more data
-            insufficient = true;
-        }
-    }
-}
-
-/**
  * Called when a response to a "USE db" is received from the server.
  */
 void CacheFilterSession::handle_expecting_use_response(const mxs::Reply& reply)
 {
     mxb_assert(m_state == CACHE_EXPECTING_USE_RESPONSE);
-    mxb_assert(m_res.pData);
+    mxb_assert(m_res);
     mxb_assert(reply.is_complete());
 
     if (reply.error())
@@ -667,7 +466,7 @@ void CacheFilterSession::handle_expecting_use_response(const mxs::Reply& reply)
     }
     else
     {
-        mxb_assert(mxs_mysql_get_command(m_res.pData) == MYSQL_REPLY_OK);
+        mxb_assert(mxs_mysql_get_command(m_res) == MYSQL_REPLY_OK);
         // In case m_zUseDb could not be allocated in routeQuery(), we will
         // in fact reset the default db here. That's ok as it will prevent broken
         // entries in the cache.
@@ -686,7 +485,7 @@ void CacheFilterSession::handle_expecting_use_response(const mxs::Reply& reply)
 void CacheFilterSession::handle_storing_response(const mxs::Reply& reply)
 {
     mxb_assert(m_state == CACHE_STORING_RESPONSE);
-    mxb_assert(m_res.pData);
+    mxb_assert(m_res);
 
     if (cache_max_resultset_size_exceeded(m_pCache->config(), reply.size()))
     {
@@ -729,7 +528,7 @@ void CacheFilterSession::handle_storing_response(const mxs::Reply& reply)
 void CacheFilterSession::handle_ignoring_response()
 {
     mxb_assert(m_state == CACHE_IGNORING_RESPONSE);
-    mxb_assert(m_res.pData);
+    mxb_assert(m_res);
 
     send_upstream();
 }
@@ -741,10 +540,10 @@ void CacheFilterSession::handle_ignoring_response()
  */
 void CacheFilterSession::send_upstream()
 {
-    mxb_assert(m_res.pData);
+    mxb_assert(m_res);
     mxb_assert(!m_next_response);
-    m_next_response = m_res.pData;
-    m_res.pData = NULL;
+    m_next_response = m_res;
+    m_res = NULL;
 }
 
 /**
@@ -752,14 +551,7 @@ void CacheFilterSession::send_upstream()
  */
 void CacheFilterSession::reset_response_state()
 {
-    m_res.pData = NULL;
-    m_res.length = 0;
-    m_res.pData_last = NULL;
-    m_res.offset_last = 0;
-    m_res.nTotalFields = 0;
-    m_res.nFields = 0;
-    m_res.nRows = 0;
-    m_res.offset = 0;
+    m_res = NULL;
 }
 
 /**
@@ -769,15 +561,15 @@ void CacheFilterSession::reset_response_state()
  */
 void CacheFilterSession::store_result()
 {
-    mxb_assert(m_res.pData);
+    mxb_assert(m_res);
 
-    GWBUF* pData = gwbuf_make_contiguous(m_res.pData);
+    GWBUF* pData = gwbuf_make_contiguous(m_res);
 
     if (pData)
     {
-        m_res.pData = pData;
+        m_res = pData;
 
-        cache_result_t result = m_pCache->put_value(m_key, m_res.pData);
+        cache_result_t result = m_pCache->put_value(m_key, m_res);
 
         if (!CACHE_RESULT_IS_OK(result))
         {
@@ -1418,26 +1210,4 @@ char* CacheFilterSession::set_cache_hard_ttl(void* pContext,
     CacheFilterSession* pThis = static_cast<CacheFilterSession*>(pContext);
 
     return pThis->set_cache_hard_ttl(zName, pValue_begin, pValue_end);
-}
-
-void CacheFilterSession::copy_data(size_t offset, size_t nBytes, uint8_t* pTo) const
-{
-    if (offset >= m_res.offset_last)
-    {
-        gwbuf_copy_data(m_res.pData_last,
-                        offset - m_res.offset_last,
-                        nBytes,
-                        pTo);
-    }
-    else
-    {
-        // We do not expect this to happen.
-        mxb_assert(!true);
-        gwbuf_copy_data(m_res.pData, offset, nBytes, pTo);
-    }
-}
-
-void CacheFilterSession::copy_command_header_at_offset(uint8_t* pHeader) const
-{
-    copy_data(m_res.offset, MYSQL_HEADER_LEN + 1, pHeader);
 }

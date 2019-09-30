@@ -28,24 +28,10 @@ public:
     enum cache_session_state_t
     {
         CACHE_EXPECTING_RESPONSE,       // A select has been sent, and we are waiting for the response.
-        CACHE_EXPECTING_FIELDS,         // A select has been sent, and we want more fields.
-        CACHE_EXPECTING_ROWS,           // A select has been sent, and we want more rows.
         CACHE_EXPECTING_NOTHING,        // We are not expecting anything from the server.
         CACHE_EXPECTING_USE_RESPONSE,   // A "USE DB" was issued.
         CACHE_STORING_RESPONSE,         // A select has been sent, and we are storing the data.
         CACHE_IGNORING_RESPONSE,        // We are not interested in the data received from the server.
-    };
-
-    struct CACHE_RESPONSE_STATE
-    {
-        GWBUF* pData;       /**< Response data, possibly incomplete. */
-        size_t offset;      /**< Where we are in the response buffer. */
-        size_t length;      /**< Length of pData. */
-        GWBUF* pData_last;  /**< Last data received. */
-        size_t offset_last; /**< Offset of last data. */
-        size_t nTotalFields;/**< The number of fields a resultset contains. */
-        size_t nFields;     /**< How many fields we have received, <= n_totalfields. */
-        size_t nRows;       /**< How many rows we have received. */
     };
 
     /**
@@ -97,10 +83,7 @@ public:
     json_t* diagnostics_json() const;
 
 private:
-    void handle_expecting_fields();
     void handle_expecting_nothing(const mxs::Reply& reply);
-    void handle_expecting_response();
-    void handle_expecting_rows();
     void handle_expecting_use_response(const mxs::Reply& reply);
     void handle_storing_response(const mxs::Reply& reply);
     void handle_ignoring_response();
@@ -175,17 +158,13 @@ private:
                                     const char* pValue_begin,
                                     const char* pValue_end);
 
-    void copy_data(size_t offset, size_t nBytes, uint8_t* pTo) const;
-
-    void copy_command_header_at_offset(uint8_t* pHeader) const;
-
 private:
     CacheFilterSession(MXS_SESSION* pSession, SERVICE* pService, Cache* pCache, char* zDefaultDb);
 
 private:
     cache_session_state_t m_state;          /**< What state is the session in, what data is expected. */
     Cache*                m_pCache;         /**< The cache instance the session is associated with. */
-    CACHE_RESPONSE_STATE  m_res;            /**< The response state. */
+    GWBUF*                m_res;            /**< The response buffer. */
     GWBUF*                m_next_response;  /**< The next response routed to the client. */
     CACHE_KEY             m_key;            /**< Key storage. */
     char*                 m_zDefaultDb;     /**< The default database. */
