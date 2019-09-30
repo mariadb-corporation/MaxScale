@@ -264,7 +264,7 @@ private:
     mxs::Reply     m_reply;
     MXS_SESSION*   m_session {nullptr};     /**< Generic session */
     MYSQL_session* m_client_data {nullptr}; /**< Client-session shared data */
-    GWBUF*         m_stored_query;          /*< Temporarily stored queries */
+    GWBUF*         m_stored_query {nullptr};/*< Temporarily stored queries */
     BackendDCB*    m_dcb {nullptr};         /**< Dcb used by this protocol connection */
 };
 
