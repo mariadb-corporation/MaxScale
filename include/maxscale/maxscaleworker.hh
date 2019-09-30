@@ -31,6 +31,26 @@ class MaxScaleWorker : public mxb::Worker
 public:
     ~MaxScaleWorker();
 
+    /**
+     * Starts the watchdog workaround that will ensure that the systemd
+     * watchdog is notified, even if the worker would perform a lengthy
+     * synchronous operation.
+     *
+     * It is persmissible to call this function multiple times, but
+     * each call should be matched with a call to
+     * @c stop_watchdog_workaround().
+     *
+     * @note This should be considered as the last resort, the right
+     *       approach is to replace the synchronous operation with
+     *       an asynchronous one.
+     */
+    void start_watchdog_workaround();
+
+    /**
+     * Stops the watchdog workaround.
+     */
+    void stop_watchdog_workaround();
+
 // TODO: Temporaily public
 public:
     friend class MainWorker;
@@ -61,6 +81,8 @@ public:
 protected:
     MaxScaleWorker(MainWorker* pMain);
 
+    virtual void check_systemd_watchdog() = 0;
+
     /**
      * Called once per epoll loop from epoll_tick().
      */
@@ -69,9 +91,13 @@ protected:
     MainWorker& m_main;
 
 private:
+    class WatchdogNotifier;
+    friend WatchdogNotifier;
+
     void epoll_tick() override final;
 
     std::atomic<bool> m_alive;
+    WatchdogNotifier* m_pWatchdog_notifier { nullptr }; /*< Watchdog notifier, if systemd enabled. */
 };
 
 }
