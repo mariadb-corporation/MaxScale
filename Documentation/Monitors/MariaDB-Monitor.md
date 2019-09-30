@@ -120,12 +120,14 @@ password=mypwd
 From MaxScale 2.2.1 onwards, the module name is `mariadbmon` instead of
 `mysqlmon`. The old name can still be used.
 
-The `user` requires the REPLICATION CLIENT privilege to successfully monitor the
-state of the servers. SUPER privilege is required for cluster manipulation
-features such as failover.
+The `user` requires privileges depending on which monitor features are used.
+REPLICATION CLIENT allows the monitor to list slave (replication) connections,
+and is always required. See
+[Cluster manipulation operations](#cluster-manipulation-operations) for more
+information on required privileges.
 
 ```
-MariaDB [(none)]> grant replication client on *.* to 'maxscale'@'maxscalehost';
+MariaDB [(none)]> grant replication client on *.* to 'myuser'@'maxscalehost';
 Query OK, 0 rows affected (0.00 sec)
 ```
 
@@ -309,7 +311,13 @@ privileges:
 - REPLICATION CLIENT, to list slave connections
 - RELOAD, to flush binary logs
 - PROCESS, to check if the *event\_scheduler* process is running
-- SHOW DATABASES and EVENTS, to list and modify server events
+- SHOW DATABASES and EVENT, to list and modify server events
+
+```
+MariaDB [(none)]> grant super, replication client, reload, process, show databases,
+event on *.* to 'myuser'@'maxscalehost';
+Query OK, 0 rows affected (0.00 sec)
+```
 
 In addition, the monitor needs to know which username and password a
 slave should use when starting replication. These are given in
