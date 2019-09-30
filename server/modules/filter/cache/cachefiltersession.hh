@@ -32,6 +32,7 @@ public:
         CACHE_EXPECTING_ROWS,           // A select has been sent, and we want more rows.
         CACHE_EXPECTING_NOTHING,        // We are not expecting anything from the server.
         CACHE_EXPECTING_USE_RESPONSE,   // A "USE DB" was issued.
+        CACHE_STORING_RESPONSE,         // A select has been sent, and we are storing the data.
         CACHE_IGNORING_RESPONSE,        // We are not interested in the data received from the server.
     };
 
@@ -97,10 +98,11 @@ public:
 
 private:
     void handle_expecting_fields();
-    void handle_expecting_nothing();
+    void handle_expecting_nothing(const mxs::Reply& reply);
     void handle_expecting_response();
     void handle_expecting_rows();
-    void handle_expecting_use_response();
+    void handle_expecting_use_response(const mxs::Reply& reply);
+    void handle_storing_response(const mxs::Reply& reply);
     void handle_ignoring_response();
 
     void send_upstream();

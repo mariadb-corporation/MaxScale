@@ -31,6 +31,7 @@ namespace
 {
 
 static char VERSION_STRING[] = "V1.0.0";
+constexpr uint64_t CAPABILITIES = RCAP_TYPE_TRANSACTION_TRACKING | RCAP_TYPE_REQUEST_TRACKING;
 
 /**
  * Implement "call command cache show ..."
@@ -121,7 +122,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         MXS_FILTER_VERSION,
         "A caching filter that is capable of caching and returning cached data.",
         VERSION_STRING,
-        RCAP_TYPE_TRANSACTION_TRACKING,
+        CAPABILITIES,
         &CacheFilter::s_object,
         cache_process_init, /* Process init. */
         NULL,               /* Process finish. */
@@ -214,5 +215,5 @@ json_t* CacheFilter::diagnostics_json() const
 
 uint64_t CacheFilter::getCapabilities()
 {
-    return RCAP_TYPE_NONE;
+    return CAPABILITIES;
 }

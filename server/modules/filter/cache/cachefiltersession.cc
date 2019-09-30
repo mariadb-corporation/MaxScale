@@ -15,6 +15,7 @@
 #include "cachefiltersession.hh"
 #include <new>
 #include <maxbase/alloc.h>
+#include <maxbase/pretty_print.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/query_classifier.hh>
@@ -373,18 +374,14 @@ int CacheFilterSession::clientReply(GWBUF* pData, const mxs::ReplyRoute& down, c
         m_res.length = gwbuf_length(pData);
     }
 
-    if (m_state != CACHE_IGNORING_RESPONSE)
+    if (m_state == CACHE_EXPECTING_RESPONSE)
     {
-        if (cache_max_resultset_size_exceeded(m_pCache->config(), m_res.length))
+        if (reply.is_resultset())
         {
-            if (log_decisions())
-            {
-                MXS_NOTICE("Current size %luB of resultset, at least as much "
-                           "as maximum allowed size %luKiB. Not caching.",
-                           m_res.length,
-                           m_pCache->config().max_resultset_size / 1024);
-            }
-
+            m_state = CACHE_STORING_RESPONSE;
+        }
+        else
+        {
             m_state = CACHE_IGNORING_RESPONSE;
         }
     }
@@ -396,7 +393,7 @@ int CacheFilterSession::clientReply(GWBUF* pData, const mxs::ReplyRoute& down, c
         break;
 
     case CACHE_EXPECTING_NOTHING:
-        handle_expecting_nothing();
+        handle_expecting_nothing(reply);
         break;
 
     case CACHE_EXPECTING_RESPONSE:
@@ -408,7 +405,11 @@ int CacheFilterSession::clientReply(GWBUF* pData, const mxs::ReplyRoute& down, c
         break;
 
     case CACHE_EXPECTING_USE_RESPONSE:
-        handle_expecting_use_response();
+        handle_expecting_use_response(reply);
+        break;
+
+    case CACHE_STORING_RESPONSE:
+        handle_storing_response(reply);
         break;
 
     case CACHE_IGNORING_RESPONSE:
@@ -504,30 +505,18 @@ void CacheFilterSession::handle_expecting_fields()
 /**
  * Called when data is received (even if nothing is expected) from the server.
  */
-void CacheFilterSession::handle_expecting_nothing()
+void CacheFilterSession::handle_expecting_nothing(const mxs::Reply& reply)
 {
     mxb_assert(m_state == CACHE_EXPECTING_NOTHING);
     mxb_assert(m_res.pData);
-    unsigned long msg_size = gwbuf_length(m_res.pData);
 
-    if ((int)MYSQL_GET_COMMAND(GWBUF_DATA(m_res.pData)) == 0xff)
+    if (reply.error())
     {
-        /**
-         * Error text message is after:
-         * MYSQL_HEADER_LEN offset + status flag (1) + error code (2) +
-         * 6 bytes message status = MYSQL_HEADER_LEN + 9
-         */
-        MXS_INFO("Error packet received from backend "
-                 "(possibly a server shut down ?): [%.*s].",
-                 (int)msg_size - (MYSQL_HEADER_LEN + 9),
-                 GWBUF_DATA(m_res.pData) + MYSQL_HEADER_LEN + 9);
+        MXS_INFO("Error packet received from backend: %s", reply.error().message().c_str());
     }
     else
     {
-        MXS_WARNING("Received data from the backend although "
-                    "filter is expecting nothing. "
-                    "Packet size is %lu bytes long.",
-                    msg_size);
+        MXS_WARNING("Received data from the backend although filter is expecting nothing.");
         mxb_assert(!true);
     }
 
@@ -664,47 +653,73 @@ void CacheFilterSession::handle_expecting_rows()
 /**
  * Called when a response to a "USE db" is received from the server.
  */
-void CacheFilterSession::handle_expecting_use_response()
+void CacheFilterSession::handle_expecting_use_response(const mxs::Reply& reply)
 {
     mxb_assert(m_state == CACHE_EXPECTING_USE_RESPONSE);
     mxb_assert(m_res.pData);
+    mxb_assert(reply.is_complete());
 
-    size_t buflen = m_res.length;
-    mxb_assert(m_res.length == gwbuf_length(m_res.pData));
-
-    if (buflen >= MYSQL_HEADER_LEN + 1)     // We need the command byte.
+    if (reply.error())
     {
-        uint8_t command;
-        copy_data(MYSQL_HEADER_LEN, 1, &command);
+        // The USE failed which means the default database did not change
+        MXS_FREE(m_zUseDb);
+        m_zUseDb = NULL;
+    }
+    else
+    {
+        mxb_assert(mxs_mysql_get_command(m_res.pData) == MYSQL_REPLY_OK);
+        // In case m_zUseDb could not be allocated in routeQuery(), we will
+        // in fact reset the default db here. That's ok as it will prevent broken
+        // entries in the cache.
+        MXS_FREE(m_zDefaultDb);
+        m_zDefaultDb = m_zUseDb;
+        m_zUseDb = NULL;
+    }
 
-        switch (command)
+    send_upstream();
+    m_state = CACHE_IGNORING_RESPONSE;
+}
+
+/**
+ * Called when a resultset is being collected.
+ */
+void CacheFilterSession::handle_storing_response(const mxs::Reply& reply)
+{
+    mxb_assert(m_state == CACHE_STORING_RESPONSE);
+    mxb_assert(m_res.pData);
+
+    if (cache_max_resultset_size_exceeded(m_pCache->config(), reply.size()))
+    {
+        if (log_decisions())
         {
-        case MYSQL_REPLY_OK:
-            // In case m_zUseDb could not be allocated in routeQuery(), we will
-            // in fact reset the default db here. That's ok as it will prevent broken
-            // entries in the cache.
-            MXS_FREE(m_zDefaultDb);
-            m_zDefaultDb = m_zUseDb;
-            m_zUseDb = NULL;
-            break;
-
-        case MYSQL_REPLY_ERR:
-            MXS_FREE(m_zUseDb);
-            m_zUseDb = NULL;
-            break;
-
-        default:
-            MXS_ERROR("\"USE %s\" received unexpected server response %d.",
-                      m_zUseDb ? m_zUseDb : "<db>",
-                      command);
-            MXS_FREE(m_zDefaultDb);
-            MXS_FREE(m_zUseDb);
-            m_zDefaultDb = NULL;
-            m_zUseDb = NULL;
+            MXS_NOTICE("Current resultset size exceeds maximum allowed size %s. Not caching.",
+                       mxb::pretty_size(m_pCache->config().max_resultset_size.get()).c_str());
         }
 
         send_upstream();
         m_state = CACHE_IGNORING_RESPONSE;
+    }
+    else if (cache_max_resultset_rows_exceeded(m_pCache->config(), reply.rows_read()))
+    {
+        if (log_decisions())
+        {
+            MXS_NOTICE("Max rows %lu reached, not caching result.", reply.rows_read());
+        }
+
+        send_upstream();
+        m_state = CACHE_IGNORING_RESPONSE;
+    }
+    else if (reply.is_complete())
+    {
+        if (log_decisions())
+        {
+            MXS_NOTICE("Result collected, rows: %lu, size: %s", reply.rows_read(),
+                       mxb::pretty_size(reply.size()).c_str());
+        }
+
+        store_result();
+        send_upstream();
+        m_state = CACHE_EXPECTING_NOTHING;
     }
 }
 
