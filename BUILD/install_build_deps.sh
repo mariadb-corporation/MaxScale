@@ -203,7 +203,7 @@ sudo make install
 cd ../../
 
 # Avro C API
-wget -q -r -l1 -nH --cut-dirs=2 --no-parent -A.tar.gz --no-directories http://mirror.netinch.com/pub/apache/avro/stable/c
+wget -q -r -l1 -nH --cut-dirs=2 --no-parent -A.tar.gz --no-directories https://www-eu.apache.org/dist/avro/stable/c
 if [ $? != 0 ]
 then
     echo "Error getting avro-c"
