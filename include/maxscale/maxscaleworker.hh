@@ -51,6 +51,48 @@ public:
      */
     void stop_watchdog_workaround();
 
+    /**
+     * @class WatchdogWorkaround
+     *
+     * RAII-class using which the systemd watchdog notification can be
+     * handled during synchronous worker activity that causes the epoll
+     * event handling to be stalled.
+     *
+     * The constructor turns on the workaround and the destructor
+     * turns it off.
+     */
+    class WatchdogWorkaround
+    {
+    public:
+        WatchdogWorkaround(const WatchdogWorkaround&) = delete;
+        WatchdogWorkaround& operator=(const WatchdogWorkaround&) = delete;
+
+        /**
+         * Turns on the watchdog workaround for a specific worker.
+         *
+         * @param pWorker  The worker for which the systemd notification
+         *                 should be arranged. Need not be the calling worker.
+         */
+        WatchdogWorkaround(MaxScaleWorker* pWorker)
+            : m_worker(*pWorker)
+        {
+            mxb_assert(pWorker);
+            m_worker.start_watchdog_workaround();
+        }
+
+        /**
+         * Turns off the watchdog workaround.
+         */
+        ~WatchdogWorkaround()
+        {
+            m_worker.stop_watchdog_workaround();
+        }
+
+    private:
+        MaxScaleWorker& m_worker;
+    };
+
+
 // TODO: Temporaily public
 public:
     friend class MainWorker;

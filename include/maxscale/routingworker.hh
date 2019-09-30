@@ -574,20 +574,7 @@ public:
      */
     static std::unique_ptr<json_t> get_qc_stats_as_json(const char* zHost, int id);
 
-    class WatchdogWorkaround;
-    friend WatchdogWorkaround;
-
-    /**
-     * @class WatchdogWorkaround
-     *
-     * RAII-class using which the systemd watchdog notification can be
-     * handled during synchronous worker activity that causes the epoll
-     * event handling to be stalled.
-     *
-     * The constructor turns on the workaround and the destructor
-     * turns it off.
-     */
-    class WatchdogWorkaround
+    class WatchdogWorkaround : public MaxScaleWorker::WatchdogWorkaround
     {
         WatchdogWorkaround(const WatchdogWorkaround&);
         WatchdogWorkaround& operator=(const WatchdogWorkaround&);
@@ -600,30 +587,17 @@ public:
          *                 should be arranged. Need not be the calling worker.
          */
         WatchdogWorkaround(RoutingWorker* pWorker)
-            : m_pWorker(pWorker)
+            : MaxScaleWorker::WatchdogWorkaround(pWorker)
         {
-            mxb_assert(pWorker);
-            m_pWorker->start_watchdog_workaround();
         }
 
         /**
          * Turns on the watchdog workaround for the calling worker.
          */
         WatchdogWorkaround()
-            : WatchdogWorkaround(RoutingWorker::get_current())
+            : MaxScaleWorker::WatchdogWorkaround(RoutingWorker::get_current())
         {
         }
-
-        /**
-         * Turns off the watchdog workaround.
-         */
-        ~WatchdogWorkaround()
-        {
-            m_pWorker->stop_watchdog_workaround();
-        }
-
-    private:
-        RoutingWorker* m_pWorker;
     };
 
     using DCBs = std::unordered_set<DCB*>;
@@ -700,9 +674,7 @@ private:
     static uint32_t epoll_instance_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
     uint32_t        handle_epoll_events(uint32_t events);
 
-    static maxbase::Duration  s_watchdog_interval;  /*< Duration between notifications, if any. */
     static maxbase::TimePoint s_watchdog_next_check;/*< Next time to notify systemd. */
-    WatchdogNotifier* m_pWatchdog_notifier;         /*< Watchdog notifier, if systemd enabled. */
 
     class PersistentEntry
     {
