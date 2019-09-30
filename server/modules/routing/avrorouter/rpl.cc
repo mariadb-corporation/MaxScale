@@ -934,7 +934,7 @@ static const char* get_tok(const char* sql, int* toklen, const char* end)
     int depth = 0;
     while (start + len < end)
     {
-        if (isspace(start[len]) && depth == 0)
+        if (depth == 0 && (isspace(start[len]) || start[len] == ','))
         {
             *toklen = len;
             return start;
@@ -1427,6 +1427,59 @@ bool Rpl::table_create_alter(STableCreateEvent create, const char* sql, const ch
     }
 
     return true;
+}
+
+void Rpl::table_create_rename(const std::string& db, const char* sql, const char* end)
+{
+    const char* tbl = strcasestr(sql, "table");
+
+    if (const char* def = strchr(tbl, ' '))
+    {
+        int len = 0;
+        const char* tok = def;
+
+        while (tok && (tok = get_tok(tok + len, &len, end)))
+        {
+            char old_name[len + 1];
+            make_avro_token(old_name, tok, len);
+
+            // Skip over the TO keyword
+            tok = get_tok(tok + len, &len, end);
+            tok = get_tok(tok + len, &len, end);
+
+            char new_name[len + 1];
+            make_avro_token(new_name, tok, len);
+
+            std::string from = strchr(old_name, '.') ? old_name : db + "." + old_name;
+            auto it = m_created_tables.find(from);
+
+            if (it != m_created_tables.end())
+            {
+                auto& create = it->second;
+
+                if (char* p = strchr(new_name, '.'))
+                {
+                    *p++ = '\0';
+                    create->database = new_name;
+                    create->table = p;
+                }
+                else
+                {
+                    create->database = db;
+                    create->table = new_name;
+                }
+
+                MXS_INFO("Renamed '%s' to '%s'", from.c_str(), create->id().c_str());
+
+                create->version = ++m_versions[create->id()];
+                create->was_used = false;
+                rename_table_create(create, from);
+            }
+
+            tok = get_next_def(tok, end);
+            len = 0;
+        }
+    }
 }
 
 bool Rpl::table_matches(const std::string& ident)

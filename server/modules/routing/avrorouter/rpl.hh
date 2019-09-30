@@ -294,5 +294,6 @@ private:
     bool              save_and_replace_table_create(STableCreateEvent created);
     bool              rename_table_create(STableCreateEvent created, const std::string& old_id);
     bool              table_create_alter(STableCreateEvent create, const char* sql, const char* end);
+    void              table_create_rename(const std::string& db, const char* sql, const char* end);
     bool              table_matches(const std::string& ident);
 };

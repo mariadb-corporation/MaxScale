@@ -804,6 +804,13 @@ bool is_alter_table_statement(pcre2_code* alter_table_re, char* ptr, size_t len)
     return rc > 0;
 }
 
+bool is_rename_table_statement(const char* sql)
+{
+    int err = 0;
+    const char* pattern = "(?i)^\\s*rename\\s*table\\s*";
+    return mxs_pcre2_simple_match(pattern, sql, 0, &err) == MXS_PCRE2_MATCH;
+}
+
 /** Database name offset */
 #define DBNM_OFF 8
 
@@ -1006,7 +1013,10 @@ void Rpl::handle_query_event(REP_HEADER* hdr, uint8_t* ptr)
             MXS_ERROR("Alter statement to table '%s' has no preceding create statement.", ident);
         }
     }
-    // TODO: Add COMMIT handling for non-transactional tables
+    else if (is_rename_table_statement(sql))
+    {
+        table_create_rename(db, sql, sql + len);
+    }
 
     MXS_FREE(tmp);
 }
