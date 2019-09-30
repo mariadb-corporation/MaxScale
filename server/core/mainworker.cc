@@ -17,6 +17,9 @@
 #include <maxscale/cn_strings.hh>
 #include <maxscale/config.hh>
 
+using std::lock_guard;
+using std::mutex;
+
 namespace
 {
 
@@ -42,6 +45,9 @@ MainWorker::MainWorker()
 MainWorker::~MainWorker()
 {
     mxb_assert(this_unit.pCurrent_main);
+
+    lock_guard<mutex> guard(m_workers_lock);
+    mxb_assert(m_workers.size() == 0);
 
     this_unit.pCurrent_main = nullptr;
 }
@@ -153,6 +159,25 @@ json_t* MainWorker::tasks_to_json(const char* zHost) const
                 EXECUTE_AUTO);
 
     return pResult;
+}
+
+void MainWorker::add(MaxScaleWorker* pWorker)
+{
+    lock_guard<mutex> guard(m_workers_lock);
+
+    mxb_assert(m_workers.find(pWorker) == m_workers.end());
+
+    m_workers.insert(pWorker);
+}
+
+void MainWorker::remove(MaxScaleWorker* pWorker)
+{
+    lock_guard<mutex> guard(m_workers_lock);
+
+    auto it = m_workers.find(pWorker);
+    mxb_assert(it != m_workers.end());
+
+    m_workers.erase(it);
 }
 
 // static

@@ -29,7 +29,7 @@ class MainWorker;
 class MaxScaleWorker : public mxb::Worker
 {
 public:
-
+    ~MaxScaleWorker();
 
 // TODO: Temporaily public
 public:

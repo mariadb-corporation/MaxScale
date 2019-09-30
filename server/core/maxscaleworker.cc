@@ -11,6 +11,7 @@
  * Public License.
  */
 #include <maxscale/maxscaleworker.hh>
+#include <maxscale/mainworker.hh>
 
 namespace maxscale
 {
@@ -19,6 +20,12 @@ MaxScaleWorker::MaxScaleWorker(MainWorker* pMain)
     : m_main(*pMain)
     , m_alive(true)
 {
+    m_main.add(this);
+}
+
+MaxScaleWorker::~MaxScaleWorker()
+{
+    m_main.remove(this);
 }
 
 void MaxScaleWorker::epoll_tick()

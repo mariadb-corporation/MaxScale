@@ -13,12 +13,14 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
-
+#include <unordered_set>
 #include <maxbase/worker.hh>
 #include <maxscale/housekeeper.h>
 
 namespace maxscale
 {
+
+class MaxScaleWorker;
 
 class MainWorker : public mxb::Worker
 {
@@ -60,6 +62,12 @@ public:
     static int64_t ticks();
 
 private:
+    friend class MaxScaleWorker;
+
+    void add(MaxScaleWorker* pWorker);
+    void remove(MaxScaleWorker* pWorker);
+
+private:
     bool pre_run() override;
     void post_run() override;
     void epoll_tick() override;
@@ -88,6 +96,8 @@ private:
     bool        call_task(Worker::Call::action_t action, Task* pTask);
     static bool inc_ticks(Worker::Call::action_t action);
 
-    std::map<std::string, Task> m_tasks_by_name;
+    std::unordered_set<MaxScaleWorker*> m_workers;
+    std::mutex                          m_workers_lock;
+    std::map<std::string, Task>         m_tasks_by_name;
 };
 }
