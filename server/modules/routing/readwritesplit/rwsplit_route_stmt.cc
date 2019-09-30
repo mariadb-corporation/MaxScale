@@ -107,23 +107,34 @@ bool RWSplitSession::prepare_target(RWBackend* target, route_target_t route_targ
 
 bool RWSplitSession::create_one_connection_for_sescmd()
 {
+    mxb_assert(m_config.lazy_connect);
+
     // Try to first find a master
     for (auto backend : m_raw_backends)
     {
         if (backend->can_connect() && backend->is_master())
         {
             m_sescmd_replier = backend;
-            return prepare_target(backend, TARGET_MASTER);
+            if (prepare_target(backend, TARGET_MASTER))
+            {
+                if (!m_current_master)
+                {
+                    MXS_INFO("Chose '%s' as master due to session write", backend->name());
+                    m_current_master = backend;
+                }
+
+                return true;
+            }
         }
     }
 
     // If no master was found, find a slave
     for (auto backend : m_raw_backends)
     {
-        if (backend->can_connect() && backend->is_slave())
+        if (backend->can_connect() && backend->is_slave() && prepare_target(backend, TARGET_SLAVE))
         {
             m_sescmd_replier = backend;
-            return prepare_target(backend, TARGET_SLAVE);
+            return true;
         }
     }
 

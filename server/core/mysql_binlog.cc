@@ -278,6 +278,18 @@ size_t datetime_sizes[] =
     8   // DATETIME(6)
 };
 
+static inline int64_t unpack(uint8_t* ptr, uint8_t n_bytes)
+{
+    int64_t rval = 0;
+
+    for (uint8_t i = 0; i < n_bytes; i++)
+    {
+        rval += *ptr++ << (n_bytes - 1 - i) * 8;
+    }
+
+    return rval;
+}
+
 /**
  * @brief Unpack a DATETIME
  *
@@ -338,7 +350,7 @@ static inline uint64_t unpack5(uint8_t* data)
  * @param val Value read from the binary log
  * @param dest Pointer where the unpacked value is stored
  */
-static void unpack_datetime2(uint8_t* ptr, uint8_t decimals, struct tm* dest)
+static void unpack_datetime2(uint8_t* ptr, uint8_t decimals, char* buf, size_t buflen)
 {
     int64_t unpacked = unpack5(ptr) - DATETIME2_OFFSET;
     if (unpacked < 0)
@@ -350,19 +362,42 @@ static void unpack_datetime2(uint8_t* ptr, uint8_t decimals, struct tm* dest)
     uint64_t yearmonth = date >> 5;
     uint64_t time = unpacked % (1 << 17);
 
-    memset(dest, 0, sizeof(*dest));
-    dest->tm_sec = time % (1 << 6);
-    dest->tm_min = (time >> 6) % (1 << 6);
-    dest->tm_hour = time >> 12;
-    dest->tm_mday = date % (1 << 5);
-    dest->tm_mon = (yearmonth % 13) - 1;
+    struct tm tm;
+    memset(&tm, 0, sizeof(tm));
+    tm.tm_sec = time % (1 << 6);
+    tm.tm_min = (time >> 6) % (1 << 6);
+    tm.tm_hour = time >> 12;
+    tm.tm_mday = date % (1 << 5);
+    tm.tm_mon = (yearmonth % 13) - 1;
 
     /** struct tm stores the year as: Year - 1900 */
-    dest->tm_year = (yearmonth / 13) - 1900;
+    tm.tm_year = (yearmonth / 13) - 1900;
+
+    char tmp[80];
+    strftime(tmp, sizeof(tmp), "%Y-%m-%d %H:%M:%S", &tm);
+
+    if (decimals)
+    {
+        int bytes = (decimals + 1) / 2;
+        int64_t raw = unpack(ptr + 5, bytes);
+        int us = raw * log_10_values[6 - decimals];
+        snprintf(buf, buflen, "%s.%06d", tmp, us);
+    }
+    else
+    {
+        strcpy(buf, tmp);
+    }
 }
 
 /** Unpack a "reverse" byte order value */
 #define unpack4(data) (data[3] + (data[2] << 8) + (data[1] << 16) + (data[0] << 24))
+
+static bool is_zero_date(struct tm* tm)
+{
+    // Detects 1970-01-01 00:00:00
+    return tm->tm_sec == 0 && tm->tm_min == 0 && tm->tm_hour == 0
+           && tm->tm_mday == 1 && tm->tm_mon == 0 && tm->tm_year == 70;
+}
 
 /**
  * @brief Unpack a TIMESTAMP
@@ -371,18 +406,38 @@ static void unpack_datetime2(uint8_t* ptr, uint8_t decimals, struct tm* dest)
  * @param val The stored value
  * @param dest Destination where the result is stored
  */
-static void unpack_timestamp(uint8_t* ptr, uint8_t decimals, struct tm* dest)
+static void unpack_timestamp(uint8_t* ptr, uint8_t decimals, char* buf, size_t buflen)
 {
+    struct tm tm;
     time_t t = unpack4(ptr);
 
     if (t == 0)
     {
         // Use GMT date to detect zero date timestamps
-        gmtime_r(&t, dest);
+        gmtime_r(&t, &tm);
     }
     else
     {
-        localtime_r(&t, dest);
+        localtime_r(&t, &tm);
+    }
+
+    if (is_zero_date(&tm))
+    {
+        strcpy(buf, "0-00-00 00:00:00");
+    }
+    else
+    {
+        strftime(buf, buflen, "%Y-%m-%d %H:%M:%S", &tm);
+    }
+
+    if (decimals)
+    {
+        int bytes = (decimals + 1) / 2;
+        int64_t raw = unpack(ptr + 4, bytes);
+        int us = raw * log_10_values[6 - decimals];
+        char tmp[80];
+        snprintf(tmp, sizeof(tmp), ".%06d", us);
+        strcat(buf, tmp);
     }
 }
 
@@ -428,13 +483,26 @@ static void unpack_time(uint8_t* ptr, struct tm* dest)
  * @param val  Value read from the binary log
  * @param dest Pointer where the unpacked value is stored
  */
-static void unpack_time2(uint8_t* ptr, uint8_t decimals, struct tm* dest)
+static void unpack_time2(uint8_t* ptr, uint8_t decimals, char* buf, size_t buflen)
 {
     uint64_t val = unpack3(ptr) - DATETIME2_OFFSET;
-    memset(dest, 0, sizeof(struct tm));
-    dest->tm_hour = (val >> 12) % (1 << 10);
-    dest->tm_min = (val >> 6) % (1 << 6);
-    dest->tm_sec = val % (1 << 6);
+    struct tm tm;
+    memset(&tm, 0, sizeof(tm));
+    tm.tm_hour = (val >> 12) % (1 << 10);
+    tm.tm_min = (val >> 6) % (1 << 6);
+    tm.tm_sec = val % (1 << 6);
+
+    strftime(buf, buflen, "%H:%M:%S", &tm);
+
+    if (decimals)
+    {
+        int bytes = (decimals + 1) / 2;
+        int64_t raw = unpack(ptr + 3, bytes);
+        int us = raw * log_10_values[6 - decimals];
+        char tmp[80];
+        snprintf(tmp, sizeof(tmp), ".%06d", us);
+        strcat(buf, tmp);
+    }
 }
 
 /**
@@ -538,42 +606,55 @@ static size_t temporal_field_size(uint8_t type, uint8_t* decimals, int length)
  * @brief Unpack a temporal value
  *
  * MariaDB and MySQL both store temporal values in a special format. This function
- * unpacks them from the storage format and into a common, usable format.
- * @param type Column type
- * @param val Extracted packed value
- * @param tm Pointer where the unpacked temporal value is stored
+ * unpacks them from the storage format into a human-readable format.
+ *
+ * @param type     Column type
+ * @param val      Pointer to raw data
+ * @param metadata Value metadata
+ * @param length   Length of the value (e.g. TIME(3))
+ * @param buf      Output buffer
+ * @param buflen   Size of the output buffer
+ *
+ * @return Number of bytes consumed
  */
-size_t unpack_temporal_value(uint8_t type, uint8_t* ptr, uint8_t* metadata, int length, struct tm* tm)
+size_t unpack_temporal_value(uint8_t type, uint8_t* ptr, uint8_t* metadata,
+                             int length, char* buf, size_t buflen)
 {
+    struct tm tm;
+
     switch (type)
     {
     case TABLE_COL_TYPE_YEAR:
-        unpack_year(ptr, tm);
+        unpack_year(ptr, &tm);
+        strftime(buf, buflen, "%Y", &tm);
         break;
 
     case TABLE_COL_TYPE_DATETIME:
-        unpack_datetime(ptr, length, tm);
+        unpack_datetime(ptr, length, &tm);
+        strftime(buf, buflen, "%Y-%m-%d %H:%M:%S", &tm);
         break;
 
     case TABLE_COL_TYPE_DATETIME2:
-        unpack_datetime2(ptr, *metadata, tm);
+        unpack_datetime2(ptr, *metadata, buf, buflen);
         break;
 
     case TABLE_COL_TYPE_TIME:
-        unpack_time(ptr, tm);
+        unpack_time(ptr, &tm);
+        strftime(buf, buflen, "%H:%M:%S", &tm);
         break;
 
     case TABLE_COL_TYPE_TIME2:
-        unpack_time2(ptr, *metadata, tm);
+        unpack_time2(ptr, *metadata, buf, buflen);
         break;
 
     case TABLE_COL_TYPE_DATE:
-        unpack_date(ptr, tm);
+        unpack_date(ptr, &tm);
+        strftime(buf, buflen, "%Y-%m-%d", &tm);
         break;
 
     case TABLE_COL_TYPE_TIMESTAMP:
     case TABLE_COL_TYPE_TIMESTAMP2:
-        unpack_timestamp(ptr, *metadata, tm);
+        unpack_timestamp(ptr, *metadata, buf, buflen);
         break;
 
     default:
@@ -581,55 +662,6 @@ size_t unpack_temporal_value(uint8_t type, uint8_t* ptr, uint8_t* metadata, int 
         break;
     }
     return temporal_field_size(type, metadata, length);
-}
-
-static bool is_zero_date(struct tm* tm)
-{
-    // Detects 1970-01-01 00:00:00
-    return tm->tm_sec == 0 && tm->tm_min == 0 && tm->tm_hour == 0
-           && tm->tm_mday == 1 && tm->tm_mon == 0 && tm->tm_year == 70;
-}
-
-void format_temporal_value(char* str, size_t size, uint8_t type, struct tm* tm)
-{
-    const char* format = "";
-
-    switch (type)
-    {
-    case TABLE_COL_TYPE_DATETIME:
-    case TABLE_COL_TYPE_DATETIME2:
-    case TABLE_COL_TYPE_TIMESTAMP:
-    case TABLE_COL_TYPE_TIMESTAMP2:
-        format = "%Y-%m-%d %H:%M:%S";
-        break;
-
-    case TABLE_COL_TYPE_TIME:
-    case TABLE_COL_TYPE_TIME2:
-        format = "%H:%M:%S";
-        break;
-
-    case TABLE_COL_TYPE_DATE:
-        format = "%Y-%m-%d";
-        break;
-
-    case TABLE_COL_TYPE_YEAR:
-        format = "%Y";
-        break;
-
-    default:
-        MXS_ERROR("Unexpected temporal type: %x %s", type, column_type_to_string(type));
-        mxb_assert(false);
-        break;
-    }
-
-    if ((type == TABLE_COL_TYPE_TIMESTAMP || type == TABLE_COL_TYPE_TIMESTAMP2) && is_zero_date(tm))
-    {
-        strcpy(str, "0-00-00 00:00:00");
-    }
-    else
-    {
-        strftime(str, size, format, tm);
-    }
 }
 
 /**

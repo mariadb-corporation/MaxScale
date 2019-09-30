@@ -102,6 +102,11 @@ bool json_extract_field_names(const char* filename, std::vector<Column>& columns
                             {
                                 MXS_WARNING("No \"length\" value defined. Treating as default length field.");
                             }
+
+                            if ((value = json_object_get(val, "unsigned")) && json_is_boolean(value))
+                            {
+                                columns.back().is_unsigned = json_boolean_value(value);
+                            }
                         }
                     }
                     else

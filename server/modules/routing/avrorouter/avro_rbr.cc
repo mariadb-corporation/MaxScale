@@ -76,56 +76,78 @@ void set_numeric_field_value(SRowEventHandler& conv,
                              int idx,
                              uint8_t type,
                              uint8_t* metadata,
-                             uint8_t* value)
+                             uint8_t* value,
+                             bool is_unsigned)
 {
     switch (type)
     {
     case TABLE_COL_TYPE_TINY:
+        if (is_unsigned)
         {
-            char c = *value;
-            conv->column(idx, c);
-            break;
+            uint8_t c = *value;
+            conv->column_int(idx, c);
         }
+        else
+        {
+            int8_t c = *value;
+            conv->column_int(idx, c);
+        }
+        break;
 
     case TABLE_COL_TYPE_SHORT:
+        if (is_unsigned)
         {
-            short s = gw_mysql_get_byte2(value);
-            conv->column(idx, s);
-            break;
+            uint16_t s = gw_mysql_get_byte2(value);
+            conv->column_int(idx, s);
         }
+        else
+        {
+            int16_t s = gw_mysql_get_byte2(value);
+            conv->column_int(idx, s);
+        }
+        break;
 
     case TABLE_COL_TYPE_INT24:
+        if (is_unsigned)
         {
-            int x = gw_mysql_get_byte3(value);
+            uint32_t x = gw_mysql_get_byte3(value);
+            conv->column_int(idx, x);
+        }
+        else
+        {
+            int32_t x = gw_mysql_get_byte3(value);
 
             if (x & 0x800000)
             {
                 x = -((0xffffff & (~x)) + 1);
             }
 
-            conv->column(idx, x);
-            break;
+            conv->column_int(idx, (int64_t)x);
         }
+        break;
 
     case TABLE_COL_TYPE_LONG:
+        if (is_unsigned)
         {
-            int x = gw_mysql_get_byte4(value);
-            conv->column(idx, x);
-            break;
+            uint32_t x = gw_mysql_get_byte4(value);
+            conv->column_long(idx, x);
         }
+        else
+        {
+            int32_t x = gw_mysql_get_byte4(value);
+            conv->column_long(idx, x);
+        }
+        break;
 
     case TABLE_COL_TYPE_LONGLONG:
-        {
-            long l = gw_mysql_get_byte8(value);
-            conv->column(idx, l);
-            break;
-        }
+        conv->column_long(idx, gw_mysql_get_byte8(value));
+        break;
 
     case TABLE_COL_TYPE_FLOAT:
         {
             float f = 0;
             memcpy(&f, value, 4);
-            conv->column(idx, f);
+            conv->column_float(idx, f);
             break;
         }
 
@@ -133,7 +155,7 @@ void set_numeric_field_value(SRowEventHandler& conv,
         {
             double d = 0;
             memcpy(&d, value, 8);
-            conv->column(idx, d);
+            conv->column_double(idx, d);
             break;
         }
 
@@ -270,7 +292,7 @@ uint8_t* process_row_event_data(STableMapEvent map,
             if (bit_is_set(null_bitmap, ncolumns, i))
             {
                 sprintf(trace[i], "[%ld] NULL", i);
-                conv->column(i);
+                conv->column_null(i);
             }
             else if (column_is_fixed_string(map->column_types[i]))
             {
@@ -282,7 +304,7 @@ uint8_t* process_row_event_data(STableMapEvent map,
                     uint64_t bytes = unpack_enum(ptr, &metadata[metadata_offset], val);
                     char strval[bytes * 2 + 1];
                     gw_bin2hex(strval, val, bytes);
-                    conv->column(i, strval);
+                    conv->column_string(i, strval);
                     sprintf(trace[i], "[%ld] ENUM: %lu bytes", i, bytes);
                     ptr += bytes;
                     check_overflow(ptr <= end);
@@ -319,7 +341,7 @@ uint8_t* process_row_event_data(STableMapEvent map,
                     char str[bytes + 1];
                     memcpy(str, ptr, bytes);
                     str[bytes] = '\0';
-                    conv->column(i, str);
+                    conv->column_string(i, str);
                     ptr += bytes;
                     check_overflow(ptr <= end);
                 }
@@ -336,7 +358,7 @@ uint8_t* process_row_event_data(STableMapEvent map,
                     warn_bit = true;
                     MXS_WARNING("BIT is not currently supported, values are stored as 0.");
                 }
-                conv->column(i, 0);
+                conv->column_int(i, 0);
                 sprintf(trace[i], "[%ld] BIT", i);
                 ptr += bytes;
                 check_overflow(ptr <= end);
@@ -345,7 +367,7 @@ uint8_t* process_row_event_data(STableMapEvent map,
             {
                 double f_value = 0.0;
                 ptr += unpack_decimal_field(ptr, metadata + metadata_offset, &f_value);
-                conv->column(i, f_value);
+                conv->column_double(i, f_value);
                 sprintf(trace[i], "[%ld] DECIMAL", i);
                 check_overflow(ptr <= end);
             }
@@ -369,7 +391,7 @@ uint8_t* process_row_event_data(STableMapEvent map,
                 memcpy(buf, ptr, sz);
                 buf[sz] = '\0';
                 ptr += sz;
-                conv->column(i, buf);
+                conv->column_string(i, buf);
                 check_overflow(ptr <= end);
             }
             else if (column_is_blob(map->column_types[i]))
@@ -381,27 +403,24 @@ uint8_t* process_row_event_data(STableMapEvent map,
                 sprintf(trace[i], "[%ld] BLOB: field: %d bytes, data: %lu bytes", i, bytes, len);
                 if (len)
                 {
-                    conv->column(i, ptr, len);
+                    conv->column_bytes(i, ptr, len);
                     ptr += len;
                 }
                 else
                 {
                     uint8_t nullvalue = 0;
-                    conv->column(i, &nullvalue, 1);
+                    conv->column_bytes(i, &nullvalue, 1);
                 }
                 check_overflow(ptr <= end);
             }
             else if (column_is_temporal(map->column_types[i]))
             {
                 char buf[80];
-                struct tm tm;
-                ptr += unpack_temporal_value(map->column_types[i],
-                                             ptr,
+                ptr += unpack_temporal_value(map->column_types[i], ptr,
                                              &metadata[metadata_offset],
                                              create->columns[i].length,
-                                             &tm);
-                format_temporal_value(buf, sizeof(buf), map->column_types[i], &tm);
-                conv->column(i, buf);
+                                             buf, sizeof(buf));
+                conv->column_string(i, buf);
                 sprintf(trace[i], "[%ld] %s: %s", i, column_type_to_string(map->column_types[i]), buf);
                 check_overflow(ptr <= end);
             }
@@ -414,7 +433,8 @@ uint8_t* process_row_event_data(STableMapEvent map,
                                             map->column_types[i],
                                             &metadata[metadata_offset],
                                             lval);
-                set_numeric_field_value(conv, i, map->column_types[i], &metadata[metadata_offset], lval);
+                set_numeric_field_value(conv, i, map->column_types[i], &metadata[metadata_offset], lval,
+                                        create->columns[i].is_unsigned);
                 sprintf(trace[i], "[%ld] %s", i, column_type_to_string(map->column_types[i]));
                 check_overflow(ptr <= end);
             }
@@ -816,7 +836,29 @@ bool Rpl::save_and_replace_table_create(STableCreateEvent created)
         }
     }
 
+    created->version = ++m_versions[created->id()];
     m_created_tables[table_ident] = created;
+    mxb_assert(created->columns.size() > 0);
+    return m_handler->create_table(created);
+}
+
+bool Rpl::rename_table_create(STableCreateEvent created, const std::string& old_id)
+{
+    auto it = m_created_tables.find(old_id);
+
+    if (it != m_created_tables.end())
+    {
+        auto tm_it = m_table_maps.find(old_id);
+
+        if (tm_it != m_table_maps.end())
+        {
+            m_active_maps.erase(tm_it->second->id);
+            m_table_maps.erase(tm_it);
+        }
+    }
+
+    m_created_tables.erase(old_id);
+    m_created_tables[created->id()] = created;
     mxb_assert(created->columns.size() > 0);
     return m_handler->create_table(created);
 }

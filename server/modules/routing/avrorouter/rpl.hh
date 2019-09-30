@@ -56,16 +56,18 @@ struct gtid_pos_t
 /** A single column in a CREATE TABLE statement */
 struct Column
 {
-    Column(std::string name, std::string type = "unknown", int length = -1)
+    Column(std::string name, std::string type = "unknown", int length = -1, bool is_unsigned = false)
         : name(name)
         , type(type)
         , length(length)
+        , is_unsigned(is_unsigned)
     {
     }
 
     std::string name;
     std::string type;
     int         length;
+    bool        is_unsigned;
 
     json_t*       to_json() const;
     static Column from_json(json_t* json);
@@ -200,26 +202,26 @@ public:
     // Called once all columns are processed
     virtual bool commit(const gtid_pos_t& gtid) = 0;
 
-    // 32-bit integer handler
-    virtual void column(int i, int32_t value) = 0;
+    // Integer handler for short types (less than 32 bits)
+    virtual void column_int(int i, int32_t value) = 0;
 
-    // 64-bit integer handler
-    virtual void column(int i, int64_t value) = 0;
+    // Integer handler for long integer types
+    virtual void column_long(int i, int64_t value) = 0;
 
     // Float handler
-    virtual void column(int i, float value) = 0;
+    virtual void column_float(int i, float value) = 0;
 
     // Double handler
-    virtual void column(int i, double value) = 0;
+    virtual void column_double(int i, double value) = 0;
 
     // String handler
-    virtual void column(int i, std::string value) = 0;
+    virtual void column_string(int i, const std::string& value) = 0;
 
     // Bytes handler
-    virtual void column(int i, uint8_t* value, int len) = 0;
+    virtual void column_bytes(int i, uint8_t* value, int len) = 0;
 
     // Empty (NULL) value type handler
-    virtual void column(int i) = 0;
+    virtual void column_null(int i) = 0;
 };
 
 typedef std::auto_ptr<RowEventHandler> SRowEventHandler;
@@ -281,11 +283,14 @@ private:
     pcre2_match_data* m_md_match;
     pcre2_match_data* m_md_exclude;
 
+    std::unordered_map<std::string, int> m_versions;    // Table version numbers per identifier
+
     void              handle_query_event(REP_HEADER* hdr, uint8_t* ptr);
     bool              handle_table_map_event(REP_HEADER* hdr, uint8_t* ptr);
     bool              handle_row_event(REP_HEADER* hdr, uint8_t* ptr);
     STableCreateEvent table_create_copy(const char* sql, size_t len, const char* db);
     bool              save_and_replace_table_create(STableCreateEvent created);
+    bool              rename_table_create(STableCreateEvent created, const std::string& old_id);
     bool              table_create_alter(STableCreateEvent create, const char* sql, const char* end);
     bool              table_matches(const std::string& ident);
 };

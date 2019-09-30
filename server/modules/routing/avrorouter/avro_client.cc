@@ -246,7 +246,10 @@ void AvroSession::queue_client_callback()
 {
     mxs::RoutingWorker::get_current()->execute(
         [this]() {
-            client_callback();
+            if (state == AVRO_CLIENT_REQUEST_DATA)
+            {
+                client_callback();
+            }
         }, mxs::RoutingWorker::EXECUTE_QUEUED);
 }
 
@@ -690,6 +693,8 @@ static std::string get_next_filename(std::string file, std::string dir)
 
 void AvroSession::client_callback()
 {
+    mxb_assert(state == AVRO_CLIENT_REQUEST_DATA);
+
     if (last_sent_pos == 0)
     {
         // TODO: Don't use DCB callbacks to stream the data

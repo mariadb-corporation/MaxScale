@@ -93,12 +93,6 @@ static const char* binary_values[] =
 static const char* datetime_types[] =
 {
     "DATETIME",
-    "DATETIME(1)",
-    "DATETIME(2)",
-    "DATETIME(3)",
-    "DATETIME(4)",
-    "DATETIME(5)",
-    "DATETIME(6)",
     NULL
 };
 
@@ -106,6 +100,25 @@ static const char* datetime_values[] =
 {
     "'2018-01-01 11:11:11'",
     "'0-00-00 00:00:00'",
+    "NULL",
+    NULL
+};
+
+static const char* datetime2_types[] =
+{
+    "DATETIME(6)",
+    NULL
+};
+
+static const char* datetime2_values[] =
+{
+    "'2018-01-01 11:11:11.000001'",
+    "'2018-01-01 11:11:11.000010'",
+    "'2018-01-01 11:11:11.000100'",
+    "'2018-01-01 11:11:11.001000'",
+    "'2018-01-01 11:11:11.010000'",
+    "'2018-01-01 11:11:11.100000'",
+    "'0-00-00 00:00:00.000000'",
     "NULL",
     NULL
 };
@@ -120,6 +133,24 @@ static const char* timestamp_values[] =
 {
     "'2018-01-01 11:11:11'",
     "'0-00-00 00:00:00'",
+    NULL
+};
+
+static const char* timestamp2_types[] =
+{
+    "TIMESTAMP(6)",
+    NULL
+};
+
+static const char* timestamp2_values[] =
+{
+    "'2018-01-01 11:11:11.000001'",
+    "'2018-01-01 11:11:11.000010'",
+    "'2018-01-01 11:11:11.000100'",
+    "'2018-01-01 11:11:11.001000'",
+    "'2018-01-01 11:11:11.010000'",
+    "'2018-01-01 11:11:11.100000'",
+    "'0-00-00 00:00:00.000000'",
     NULL
 };
 
@@ -140,18 +171,30 @@ static const char* date_values[] =
 static const char* time_types[] =
 {
     "TIME",
-    "TIME(1)",
-    "TIME(2)",
-    "TIME(3)",
-    "TIME(4)",
-    "TIME(5)",
-    "TIME(6)",
     NULL
 };
 
 static const char* time_values[] =
 {
     "'12:00:00'",
+    "NULL",
+    NULL
+};
+
+static const char* time2_types[] =
+{
+    "TIME(6)",
+    NULL
+};
+
+static const char* time2_values[] =
+{
+    "'12:00:00.000001'",
+    "'12:00:00.000010'",
+    "'12:00:00.000100'",
+    "'12:00:00.001000'",
+    "'12:00:00.010000'",
+    "'12:00:00.100000'",
     "NULL",
     NULL
 };
@@ -170,6 +213,9 @@ struct
     {timestamp_types, timestamp_values},
     {date_types, date_values},
     {time_types, time_values},
+    {datetime2_types, datetime2_values},
+    {timestamp2_types, timestamp2_values},
+    {time2_types, time2_values},
     {0, 0}
 };
 
@@ -197,7 +243,21 @@ std::string type_to_table_name(const char* type)
 
     if (offset != std::string::npos)
     {
-        name = name.substr(0, offset);
+        name[offset] = '_';
+
+        offset = name.find(')');
+
+        if (offset != std::string::npos)
+        {
+            name = name.substr(0, offset);
+        }
+
+        offset = name.find(',');
+
+        if (offset != std::string::npos)
+        {
+            name = name.substr(0, offset);
+        }
     }
 
     offset = name.find(' ');

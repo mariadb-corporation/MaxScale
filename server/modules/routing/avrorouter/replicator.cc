@@ -292,7 +292,7 @@ std::string to_gtid_string(const MARIADB_RPL_EVENT& event)
 bool Replicator::Imp::load_gtid_state()
 {
     bool rval = false;
-    std::string filename = m_cnf.statedir + STATEFILE_NAME;
+    std::string filename = m_cnf.statedir + "/" + STATEFILE_NAME;
     std::ifstream statefile(filename);
     std::string gtid;
     statefile >> gtid;
@@ -379,6 +379,13 @@ bool Replicator::Imp::process_one_event(SQL::Event& event)
         break;
 
     case QUERY_EVENT:
+        if (strncasecmp(event->event.query.statement.str, "commit",
+                        event->event.query.statement.length) == 0)
+        {
+            commit = true;
+        }
+
+    /* fallthrough */
     case USER_VAR_EVENT:
         if (m_implicit_commit)
         {
