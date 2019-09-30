@@ -13,17 +13,18 @@
  */
 
 #include <maxscale/ccdefs.hh>
+#include <maxbase/alloc.h>
 #include <maxbase/maxbase.hh>
+#include <maxbase/stacktrace.hh>
 #include <maxscale/cn_strings.hh>
+#include <maxscale/config.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/housekeeper.h>
-#include <maxscale/maxscale_test.h>
 #include <maxscale/log.hh>
-#include <maxscale/config.hh>
-#include <maxscale/query_classifier.hh>
+#include <maxscale/mainworker.hh>
+#include <maxscale/maxscale_test.h>
 #include <maxscale/paths.h>
-#include <maxbase/alloc.h>
-#include <maxbase/stacktrace.hh>
+#include <maxscale/query_classifier.hh>
 #include <maxscale/routingworker.hh>
 
 #include <sys/stat.h>
@@ -88,6 +89,8 @@ static int set_signal(int sig, void (* handler)(int))
     return rc;
 }
 
+static maxscale::MainWorker* main_worker = nullptr;
+
 /**
  * Initialize test environment
  *
@@ -122,7 +125,8 @@ void init_test_env(char* __attribute((unused))path = nullptr, uint32_t init_type
     qc_process_init(init_type);
     poll_init();
     maxbase::init();
-    maxscale::RoutingWorker::init();
+    main_worker = new maxscale::MainWorker;
+    maxscale::RoutingWorker::init(main_worker);
     set_libdir(MXS_STRDUP(old_libdir.c_str()));
 
     preload_module("mariadbclient", "server/modules/protocol/MariaDB/", MODULE_PROTOCOL);

@@ -295,9 +295,9 @@ void RoutingWorker::DCBHandler::hangup(DCB* pDcb)
 }
 
 
-RoutingWorker::RoutingWorker()
-    : m_id(next_worker_id())
-    , m_alive(true)
+RoutingWorker::RoutingWorker(MainWorker* pMain)
+    : MaxScaleWorker(pMain)
+    , m_id(next_worker_id())
     , m_pWatchdog_notifier(nullptr)
     , m_pool_handler(this)
 {
@@ -327,7 +327,7 @@ RoutingWorker::~RoutingWorker()
 }
 
 // static
-bool RoutingWorker::init()
+bool RoutingWorker::init(MainWorker* pMain)
 {
     mxb_assert(!this_unit.initialized);
 
@@ -351,7 +351,7 @@ bool RoutingWorker::init()
             int i;
             for (i = 0; i < nWorkers; ++i)
             {
-                RoutingWorker* pWorker = RoutingWorker::create(this_unit.epoll_listener_fd);
+                RoutingWorker* pWorker = RoutingWorker::create(pMain, this_unit.epoll_listener_fd);
 
                 if (pWorker)
                 {
@@ -891,15 +891,16 @@ void RoutingWorker::post_run()
  * - Creates a pipe.
  * - Adds the read descriptor to the polling mechanism.
  *
+ * @param pMain              The main worker.
  * @param epoll_listener_fd  The file descriptor of the epoll set to which listening
  *                           sockets will be placed.
  *
  * @return A worker instance if successful, otherwise NULL.
  */
 // static
-RoutingWorker* RoutingWorker::create(int epoll_listener_fd)
+RoutingWorker* RoutingWorker::create(MainWorker* pMain, int epoll_listener_fd)
 {
-    RoutingWorker* pThis = new(std::nothrow) RoutingWorker();
+    RoutingWorker* pThis = new(std::nothrow) RoutingWorker(pMain);
 
     if (pThis)
     {
@@ -937,7 +938,7 @@ RoutingWorker* RoutingWorker::create(int epoll_listener_fd)
     return pThis;
 }
 
-void RoutingWorker::epoll_tick()
+void RoutingWorker::epoll_tock()
 {
     // TODO: The following function should be here, not in DCB.
     DCB::process_timeouts(m_id);
@@ -1454,10 +1455,10 @@ void RoutingWorker::check_systemd_watchdog()
     {
         if (m_id == this_unit.id_main_worker)
         {
-            m_alive.store(true, std::memory_order_relaxed);
+            mark_alive();
             bool all_alive = std::all_of(this_unit.ppWorkers, this_unit.ppWorkers + this_unit.nWorkers,
                                          [](RoutingWorker* rw) {
-                                             return rw->m_alive.load(std::memory_order_relaxed);
+                                             return rw->is_alive();
                                          });
             if (all_alive)
             {
@@ -1468,16 +1469,13 @@ void RoutingWorker::check_systemd_watchdog()
 #endif
                 std::for_each(this_unit.ppWorkers, this_unit.ppWorkers + this_unit.nWorkers,
                               [](RoutingWorker* rw) {
-                                  rw->m_alive.store(false, std::memory_order_relaxed);
+                                  rw->mark_dead();
                               });
             }
         }
         else
         {
-            if (m_alive.load(std::memory_order_relaxed) == false)
-            {
-                m_alive.store(true, std::memory_order_relaxed);
-            }
+            resurrect_if_dead();
         }
     }
 }

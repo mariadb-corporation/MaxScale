@@ -28,6 +28,7 @@
 #include <maxbase/stopwatch.hh>
 #include <maxbase/worker.hh>
 #include <maxscale/dcb.hh>
+#include <maxscale/maxscaleworker.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/session.hh>
@@ -174,7 +175,7 @@ MXS_END_DECLS
 namespace maxscale
 {
 
-class RoutingWorker : public mxb::Worker
+class RoutingWorker : public MaxScaleWorker
                     , public BackendDCB::Manager
                     , private MXB_POLL_DATA
 {
@@ -199,9 +200,12 @@ public:
      * To be called once at process startup. This will cause as many workers
      * to be created as the number of threads defined.
      *
+     * @param pMain  The main worker. Must remain alive for the lifetime of
+     *               the routing worker.
+     *
      * @return True if the initialization succeeded, false otherwise.
      */
-    static bool init();
+    static bool init(MainWorker* pMain);
 
     /**
      * Finalize the worker mechanism.
@@ -686,14 +690,14 @@ private:
 
     DCBs m_dcbs;
 
-    RoutingWorker();
+    RoutingWorker(MainWorker* pMain);
     virtual ~RoutingWorker();
 
-    static RoutingWorker* create(int epoll_listener_fd);
+    static RoutingWorker* create(MainWorker* pMain, int epoll_listener_fd);
 
     bool pre_run() override;
     void post_run() override;
-    void epoll_tick() override;
+    void epoll_tock() override;
 
     void delete_zombies();
     void check_systemd_watchdog();
@@ -705,8 +709,6 @@ private:
 
     static maxbase::Duration  s_watchdog_interval;  /*< Duration between notifications, if any. */
     static maxbase::TimePoint s_watchdog_next_check;/*< Next time to notify systemd. */
-    std::atomic<bool>         m_alive;              /*< Set to true in epoll_tick(), false on
-                                                     * notification. */
     WatchdogNotifier* m_pWatchdog_notifier;         /*< Watchdog notifier, if systemd enabled. */
 
     class PersistentEntry

@@ -2219,7 +2219,7 @@ int main(int argc, char** argv)
         goto return_main;
     }
 
-    if (!RoutingWorker::init())
+    if (!RoutingWorker::init(main_worker))
     {
         MXS_ERROR("Failed to initialize routing workers.");
         rc = MAXSCALE_INTERNALERROR;
