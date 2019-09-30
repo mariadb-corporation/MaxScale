@@ -836,6 +836,7 @@ bool Rpl::save_and_replace_table_create(STableCreateEvent created)
         }
     }
 
+    created->version = ++m_versions[created->id()];
     m_created_tables[table_ident] = created;
     mxb_assert(created->columns.size() > 0);
     return m_handler->create_table(created);

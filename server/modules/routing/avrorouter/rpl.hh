@@ -285,6 +285,8 @@ private:
     pcre2_match_data* m_md_match;
     pcre2_match_data* m_md_exclude;
 
+    std::unordered_map<std::string, int> m_versions;    // Table version numbers per identifier
+
     void              handle_query_event(REP_HEADER* hdr, uint8_t* ptr);
     bool              handle_table_map_event(REP_HEADER* hdr, uint8_t* ptr);
     bool              handle_row_event(REP_HEADER* hdr, uint8_t* ptr);

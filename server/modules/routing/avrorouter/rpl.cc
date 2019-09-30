@@ -522,21 +522,6 @@ static void process_column_definition(const char* nameptr, std::vector<Column>& 
     }
 }
 
-int resolve_table_version(const char* db, const char* table)
-{
-    int version = 0;
-    char buf[PATH_MAX + 1];
-
-    do
-    {
-        version++;
-        snprintf(buf, sizeof(buf), "%s.%s.%06d.avsc", db, table, version);
-    }
-    while (access(buf, F_OK) == 0);
-
-    return version;
-}
-
 /**
  * @brief Handle a query event which contains a CREATE TABLE statement
  *
@@ -569,8 +554,7 @@ STableCreateEvent table_create_alloc(char* ident, const char* sql, int len)
 
     if (!columns.empty())
     {
-        int version = resolve_table_version(database, table);
-        rval.reset(new(std::nothrow) TableCreateEvent(database, table, version, std::move(columns)));
+        rval.reset(new(std::nothrow) TableCreateEvent(database, table, 0, std::move(columns)));
     }
     else
     {
@@ -686,6 +670,7 @@ void Rpl::add_create(STableCreateEvent create)
     if (it == m_created_tables.end() || create->version > it->second->version)
     {
         m_created_tables[create->id()] = create;
+        m_versions[create->id()] = create->version;
     }
 }
 
@@ -1408,7 +1393,7 @@ bool Rpl::table_create_alter(STableCreateEvent create, const char* sql, const ch
                         create->table = new_name;
                     }
 
-                    create->version = 1;
+                    create->version = ++m_versions[create->id()];
                     create->was_used = false;
 
                     rename_table_create(create, old_id);
