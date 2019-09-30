@@ -42,8 +42,8 @@ public:
                                             // If MaxScale is not going down...
                                            do
                                            {
-                                                // we ensure the worker appears alive
-                                               m_owner.resurrect_if_dead();
+                                                // we ensure the worker appears to be ticking
+                                               m_owner.mark_ticking_if_currently_not();
                                            }
                                            while (!m_sem_stop.timedwait(timeout));
                                             // until the semaphore is actually posted, which it will be
@@ -99,7 +99,7 @@ private:
 
 MaxScaleWorker::MaxScaleWorker(MainWorker* pMain)
     : m_main(*pMain)
-    , m_alive(true)
+    , m_ticking(true)
 {
     if (MainWorker::watchdog_interval().count() != 0)
     {
@@ -134,7 +134,7 @@ void MaxScaleWorker::stop_watchdog_workaround()
 
 void MaxScaleWorker::epoll_tick()
 {
-    resurrect_if_dead();
+    mark_ticking_if_currently_not();
 
     epoll_tock();
 }

@@ -96,26 +96,21 @@ public:
 private:
     friend class MainWorker;
 
-    bool is_alive() const
+    bool is_ticking() const
     {
-        return m_alive.load(std::memory_order_relaxed);
+        return m_ticking.load(std::memory_order_relaxed);
     }
 
-    void mark_alive()
+    void mark_not_ticking()
     {
-        m_alive.store(true, std::memory_order_relaxed);
+        m_ticking.store(false, std::memory_order_relaxed);
     }
 
-    void mark_dead()
+    void mark_ticking_if_currently_not()
     {
-        m_alive.store(false, std::memory_order_relaxed);
-    }
-
-    void resurrect_if_dead()
-    {
-        if (m_alive.load(std::memory_order_relaxed) == false)
+        if (m_ticking.load(std::memory_order_relaxed) == false)
         {
-            m_alive.store(true, std::memory_order_relaxed);
+            m_ticking.store(true, std::memory_order_relaxed);
         }
     }
 
@@ -135,7 +130,7 @@ private:
 
     void epoll_tick() override final;
 
-    std::atomic<bool> m_alive;
+    std::atomic<bool> m_ticking;
     WatchdogNotifier* m_pWatchdog_notifier { nullptr }; /*< Watchdog notifier, if systemd enabled. */
 };
 

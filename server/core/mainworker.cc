@@ -239,20 +239,20 @@ void MainWorker::check_systemd_watchdog()
     {
         unique_lock<mutex> guard(m_workers_lock);
 
-        bool all_alive = std::all_of(m_workers.begin(), m_workers.end(), [](MaxScaleWorker* pWorker) {
-                return pWorker->is_alive();
+        bool all_ticking = std::all_of(m_workers.begin(), m_workers.end(), [](MaxScaleWorker* pWorker) {
+                return pWorker->is_ticking();
             });
 
-        if (all_alive)
+        if (all_ticking)
         {
             std::for_each(m_workers.begin(), m_workers.end(), [](MaxScaleWorker* pWorker) {
-                    pWorker->mark_dead();
+                    pWorker->mark_not_ticking();
                 });
         }
 
         guard.unlock();
 
-        if (all_alive)
+        if (all_ticking)
         {
             s_watchdog_next_check = now + MainWorker::watchdog_interval();
 #ifdef HAVE_SYSTEMD
