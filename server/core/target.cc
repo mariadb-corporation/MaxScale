@@ -281,65 +281,41 @@ std::string Reply::to_string() const
     }
 }
 
-/**
- * The latest command that was executed
- */
 uint8_t Reply::command() const
 {
     return m_command;
 }
 
-/**
- * The original target where the response came from
- */
 Target* Reply::target() const
 {
     return m_target;
 }
 
-/**
- * Get latest error
- *
- * Evaluates to false if the response has no errors.
- *
- * @return The current error state.
- */
 const Error& Reply::error() const
 {
     return m_error;
 }
 
-/**
- * Check whether the response from the server is complete
- *
- * @return True if no more results are expected from this server
- */
 bool Reply::is_complete() const
 {
     return m_reply_state == ReplyState::DONE;
 }
 
-/**
- * Check if a partial response has been received from the backend
- *
- * @return True if some parts of the reply have been received
- */
 bool Reply::has_started() const
 {
     return m_reply_state != ReplyState::START && m_reply_state != ReplyState::DONE;
 }
 
-/**
- * Number of rows read from the result
- */
+bool Reply::is_resultset() const
+{
+    return !m_field_counts.empty();
+}
+
 uint64_t Reply::rows_read() const
 {
     return m_row_count;
 }
 
-/**
- * Number of bytes received
- */
 uint64_t Reply::size() const
 {
     return m_size;

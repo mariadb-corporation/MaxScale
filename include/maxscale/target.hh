@@ -531,6 +531,13 @@ public:
     bool has_started() const;
 
     /**
+     * Is the reply a resultset?
+     *
+     * @return True if the reply is a resultset
+     */
+    bool is_resultset() const;
+
+    /**
      * Number of rows read from the result
      */
     uint64_t rows_read() const;
