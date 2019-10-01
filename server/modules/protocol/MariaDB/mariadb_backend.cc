@@ -2460,3 +2460,8 @@ void MySQLBackendProtocol::set_dcb(DCB* dcb)
 {
     m_dcb = static_cast<BackendDCB*>(dcb);
 }
+
+BackendDCB* MySQLBackendProtocol::dcb() const
+{
+    return m_dcb;
+}

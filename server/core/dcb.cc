@@ -1919,7 +1919,8 @@ BackendDCB* BackendDCB::create(SERVER* srv,
         dcb = new(std::nothrow) BackendDCB(srv, fd, session, std::move(protocol_session), manager);
         if (dcb)
         {
-            session_link_backend_dcb(session, dcb);
+            auto ses = static_cast<Session*>(session);
+            ses->link_backend_dcb(dcb);
             pProtocol->set_dcb(dcb);
         }
     }
@@ -2016,7 +2017,8 @@ BackendDCB* BackendDCB::connect(SERVER* srv,
             }
             else
             {
-                session_unlink_backend_dcb(dcb->session(), dcb);
+                auto ses = static_cast<Session*>(session);
+                ses->unlink_backend_dcb(dcb);
 
                 DCB::destroy(dcb);
                 dcb = nullptr;
@@ -2229,7 +2231,8 @@ void BackendDCB::shutdown()
 
 bool BackendDCB::release_from(MXS_SESSION* session)
 {
-    session_unlink_backend_dcb(session, this);
+    auto ses = static_cast<Session*>(session);
+    ses->unlink_backend_dcb(this);
     return true;
 }
 
@@ -2386,11 +2389,6 @@ void dcb_foreach_local(bool (* func)(DCB* dcb, void* data), void* data)
 DCB* dcb_get_current()
 {
     return this_thread.current_dcb;
-}
-
-json_t* dcb_to_json(DCB* dcb)
-{
-    return dcb->to_json();
 }
 
 void mxs::ClientProtocolBase::set_dcb(DCB* dcb)

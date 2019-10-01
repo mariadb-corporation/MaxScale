@@ -141,23 +141,20 @@ bool session_start(MXS_SESSION* ses)
     return session->start();
 }
 
-void session_link_backend_dcb(MXS_SESSION* session, BackendDCB* dcb)
+void Session::link_backend_dcb(BackendDCB* dcb)
 {
-    mxb_assert(dcb->owner == session->client_connection()->dcb()->owner);
+    mxb_assert(dcb->owner == m_client_conn->dcb()->owner);
     mxb_assert(dcb->role() == DCB::Role::BACKEND);
 
-    mxb::atomic::add(&session->refcount, 1);
-    dcb->reset(session);
-
-    Session* ses = static_cast<Session*>(session);
-    ses->link_backend_dcb(dcb);
+    mxb::atomic::add(&refcount, 1);
+    dcb->reset(this);
+    add_backend_conn(dcb->protocol());
 }
 
-void session_unlink_backend_dcb(MXS_SESSION* session, DCB* dcb)
+void Session::unlink_backend_dcb(BackendDCB* dcb)
 {
-    Session* ses = static_cast<Session*>(session);
-    ses->unlink_backend_dcb(dcb);
-    session_put_ref(session);
+    remove_backend_conn(dcb->protocol());
+    session_put_ref(this);
 }
 
 void session_close(MXS_SESSION* ses)
@@ -624,9 +621,9 @@ json_t* session_json_data(const Session* session, const char* host, bool rdns)
     }
 
     json_t* dcb_arr = json_array();
-    for (auto d : session->dcb_set())
+    for (auto d : session->backend_connections())
     {
-        json_array_append_new(dcb_arr, dcb_to_json(d));
+        json_array_append_new(dcb_arr, d->dcb()->to_json());
     }
 
     json_object_set_new(attr, "connections", dcb_arr);
@@ -1504,5 +1501,18 @@ const mxs::ClientProtocol* Session::client_connection() const
 void Session::set_client_connection(mxs::ClientProtocol* client_conn)
 {
     m_client_conn = client_conn;
+}
+
+void Session::add_backend_conn(mxs::BackendProtocol* conn)
+{
+    mxb_assert(std::find(m_backends_conns.begin(), m_backends_conns.end(), conn) == m_backends_conns.end());
+    m_backends_conns.push_back(conn);
+}
+
+void Session::remove_backend_conn(mxs::BackendProtocol* conn)
+{
+    auto iter = std::find(m_backends_conns.begin(), m_backends_conns.end(), conn);
+    mxb_assert(iter != m_backends_conns.end());
+    m_backends_conns.erase(iter);
 }
 

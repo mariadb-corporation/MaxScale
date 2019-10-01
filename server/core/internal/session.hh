@@ -21,8 +21,8 @@
 #include <vector>
 
 #include <maxscale/buffer.hh>
-#include <maxscale/session.hh>
 #include <maxscale/resultset.hh>
+#include <maxscale/session.hh>
 #include <maxscale/utils.hh>
 #include <maxscale/target.hh>
 
@@ -39,25 +39,7 @@ void dListSessions(DCB*);
 
 }
 
-/**
- * Link a session to a backend DCB.
- *
- * @param session  The session to link with the dcb
- * @param dcb      The backend DCB to be linked
- */
-void session_link_backend_dcb(MXS_SESSION* session, BackendDCB* dcb);
-
-/**
- * Unlink a session to a backend DCB.
- *
- * @param session  The session to unlink with the dcb
- * @param dcb      The backend DCB to be unlinked
- */
-void session_unlink_backend_dcb(MXS_SESSION* session, DCB* dcb);
-
 void printSession(MXS_SESSION*);
-
-
 
 // Class that holds the session specific filter data
 class SessionFilter
@@ -123,6 +105,7 @@ public:
 
     using FilterList = std::vector<SessionFilter>;
     using DCBSet = std::unordered_set<DCB*>;
+    using BackendConnectionVector = std::vector<mxs::BackendProtocol*>;
 
     Session(const SListener& listener);
     ~Session();
@@ -132,8 +115,6 @@ public:
 
     // Links a client DCB to a session
     void set_client_dcb(ClientDCB* dcb);
-
-    bool setup_filters(Service* service);
 
     const FilterList& get_filters() const
     {
@@ -157,21 +138,23 @@ public:
     json_t* queries_as_json() const;
     json_t* log_as_json() const;
 
-    void link_backend_dcb(DCB* dcb)
-    {
-        mxb_assert(m_dcb_set.count(dcb) == 0);
-        m_dcb_set.insert(dcb);
-    }
+    /**
+     * Link a session to a backend DCB.
+     *
+     * @param dcb The backend DCB to be linked
+     */
+    void link_backend_dcb(BackendDCB* dcb);
 
-    void unlink_backend_dcb(DCB* dcb)
-    {
-        mxb_assert(m_dcb_set.count(dcb) == 1);
-        m_dcb_set.erase(dcb);
-    }
+    /**
+     * Unlink a session from a backend DCB.
+     *
+     * @param dcb The backend DCB to be unlinked
+     */
+    void unlink_backend_dcb(BackendDCB* dcb);
 
-    const DCBSet& dcb_set() const
+    const BackendConnectionVector& backend_connections() const
     {
-        return m_dcb_set;
+        return m_backends_conns;
     }
 
     // Implementation of mxs::Component
@@ -187,6 +170,9 @@ protected:
     std::unique_ptr<mxs::Endpoint> m_down;
 
 private:
+    void add_backend_conn(mxs::BackendProtocol* conn);
+    void remove_backend_conn(mxs::BackendProtocol* conn);
+
     struct SESSION_VARIABLE
     {
         session_variable_handler_t handler;
@@ -201,10 +187,10 @@ private:
     SessionVarsByName m_variables;
     QueryInfos        m_last_queries;           /*< The N last queries by the client */
     int               m_current_query = -1;     /*< The index of the current query */
-    DCBSet            m_dcb_set;                /*< Set of associated backend DCBs */
     uint32_t          m_retain_last_statements; /*< How many statements be retained */
     Log               m_log;                    /*< Session specific in-memory log */
 
+    BackendConnectionVector m_backends_conns; /*< Backend connections, in creation order */
     mxs::ClientProtocol* m_client_conn {nullptr};
 
     // Delivers a provided response to the upstream filter that should receive it

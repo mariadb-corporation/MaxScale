@@ -856,12 +856,3 @@ void dcb_foreach_local(bool (* func)(DCB* dcb, void* data), void* data);
  *         a DCB or if the calling thread is not a polling/worker thread.
  */
 DCB* dcb_get_current();
-
-/**
- * Get JSON representation of the DCB
- *
- * @param dcb DCB to convert to JSON
- *
- * @return The JSON representation
- */
-json_t* dcb_to_json(DCB* dcb);

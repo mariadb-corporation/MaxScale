@@ -566,7 +566,8 @@ BackendDCB* RoutingWorker::get_backend_dcb_from_pool(SERVER* pS,
 
         // Put back the origininal handler.
         pDcb->set_handler(pDcb->protocol());
-        session_link_backend_dcb(pSession, pDcb);
+        auto ses = static_cast<Session*>(pSession);
+        ses->link_backend_dcb(pDcb);
 
         if (pDcb->protocol()->reuse_connection(pDcb, pUpstream, pSession->client_connection()))
         {

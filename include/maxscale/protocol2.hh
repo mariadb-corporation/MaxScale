@@ -212,6 +212,8 @@ public:
      * @return True if the connection is fully established and can be pooled
      */
     virtual bool established() = 0;
+
+    virtual const BackendDCB* dcb() const = 0;
 };
 
 template<class ProtocolImplementation>

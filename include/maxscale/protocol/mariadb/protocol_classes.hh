@@ -189,6 +189,7 @@ public:
     void set_client_data(MySQLClientProtocol& client_protocol);
 
     void set_dcb(DCB* dcb) override;
+    BackendDCB* dcb() const override;
 
     uint64_t thread_id() const;
     uint32_t server_capabilities {0};   /**< Server capabilities TODO: private */
