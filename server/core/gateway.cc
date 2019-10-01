@@ -175,10 +175,13 @@ static void  usage(void);
 static char* get_expanded_pathname(char** abs_path,
                                    const char* input_path,
                                    const char* fname);
-static void print_log_n_stderr(bool do_log,
-                               bool do_stderr,
-                               const char* str,
-                               int eno);
+static void print_stderr(int eno, const char* message);
+inline void print_stderr(const char* message)
+{
+    print_stderr(0, message);
+}
+static void log_startup_error(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
+static void log_startup_error(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
 static bool resolve_maxscale_conf_fname(char** cnf_full_path,
                                         const char* home_dir,
                                         char* cnf_file_arg);
@@ -674,9 +677,7 @@ static bool resolve_maxscale_conf_fname(char** cnf_full_path,
 
         if (!realpath(cnf_file_arg, *cnf_full_path))
         {
-            const char* logstr = "Failed to open read access to configuration file.";
-            int eno = errno;
-            print_log_n_stderr(true, true, logstr, eno);
+            log_startup_error(errno, "Failed to open read access to configuration file");
             MXS_FREE(*cnf_full_path);
             *cnf_full_path = NULL;
         }
@@ -770,41 +771,72 @@ static bool init_log()
 }
 
 /**
- * @node Provides error printing for non-formatted error strings.
+ * Print message to stderr
  *
- * @param do_log Specifies whether printing to log is enabled
- *
- * @param do_stderr Specifies whether printing to stderr is enabled
- *
- * @param str String to be printed
- *
- * @param eno Errno, if it is set, zero, otherwise
+ * @param eno      Errno value, ignored if 0.
+ * @param message  Message to be printed.
  */
-static void print_log_n_stderr(bool do_log,         /*< is printing to log enabled */
-                               bool do_stderr,      /*< is printing to stderr enabled */
-                               const char* str,     /*< string to be printed */
-                               int eno)             /*< errno, if it is set, zero, otherwise */
+static void print_stderr(int eno, const char* message)
 {
-    if (do_log)
+    fprintf(stderr,
+            "* Error: %s%s%s%s\n",
+            message,
+            eno == 0 ? "" : ": ",
+            eno == 0 ? "" : mxs_strerror(eno),
+            eno == 0 ? "" : ".");
+}
+
+static void log_startup_error(int eno, const char* format, va_list ap)
+{
+    int len = vsnprintf(nullptr, 0, format, ap);
+    char message[len + 1];
+    vsnprintf(message, sizeof(message), format, ap);
+
+    if (mxb_log_inited() || init_log())
     {
-        if (mxb_log_inited() || init_log())
-        {
-            MXS_ERROR("%s%s%s%s",
-                      str,
-                      eno == 0 ? "" : " (",
-                      eno == 0 ? "" : mxs_strerror(eno),
-                      eno == 0 ? "" : ")");
-        }
+        MXS_ALERT("%s%s%s%s",
+                  message,
+                  eno == 0 ? "" : ": ",
+                  eno == 0 ? "" : mxs_strerror(eno),
+                  eno == 0 ? "" : ".");
     }
-    if (do_stderr)
-    {
-        fprintf(stderr,
-                "* Error: %s%s%s%s\n",
-                str,
-                eno == 0 ? "" : " (",
-                eno == 0 ? "" : mxs_strerror(eno),
-                eno == 0 ? "" : ")");
-    }
+
+    print_stderr(eno, message);
+}
+
+/**
+ * Log startup error.
+ *
+ * - If possible, log message as an error to the log.
+ * - Always print the message to stdeerr.
+ *
+ * @param eno     Errno value, ignored if 0.
+ * @param format  Printf format string.
+ * @param ...     Arguments according to @c format.
+ */
+static void log_startup_error(int eno, const char* format, ...)
+{
+    va_list ap;
+    va_start(ap, format);
+    log_startup_error(eno, format, ap);
+    va_end(ap);
+}
+
+/**
+ * Log startup error.
+ *
+ * - If possible, log message as an error to the log.
+ * - Always print the message to stdeerr.
+ *
+ * @param format  Printf format string.
+ * @param ...     Arguments according to @c format.
+ */
+static void log_startup_error(const char* format, ...)
+{
+    va_list ap;
+    va_start(ap, format);
+    log_startup_error(0, format, ap);
+    va_end(ap);
 }
 
 /**
@@ -830,20 +862,12 @@ static bool is_file_and_readable(const char* absolute_pathname)
         }
         else
         {
-            const char FORMAT[] = "'%s' does not refer to a regular file.";
-            char buff[sizeof(FORMAT) + strlen(absolute_pathname)];
-            snprintf(buff, sizeof(buff), FORMAT, absolute_pathname);
-            print_log_n_stderr(true, true, buff, 0);
+            log_startup_error("'%s' does not refer to a regular file.", absolute_pathname);
         }
     }
     else
     {
-        int eno = errno;
-        errno = 0;
-        const char FORMAT[] = "Could not access '%s'.";
-        char buff[sizeof(FORMAT) + strlen(absolute_pathname)];
-        snprintf(buff, sizeof(buff), FORMAT, absolute_pathname);
-        print_log_n_stderr(true, true, buff, eno);
+        log_startup_error(errno, "Could not access '%s'", absolute_pathname);
     }
 
     return rv;
@@ -860,11 +884,7 @@ static bool path_is_readable(const char* absolute_pathname)
 
     if (access(absolute_pathname, R_OK) != 0)
     {
-        int eno = errno;
-        errno = 0;
-        char buff[PATH_MAX + 100];
-        snprintf(buff, sizeof(buff), "Opening file '%s' for reading failed.", absolute_pathname);
-        print_log_n_stderr(true, true, buff, eno);
+        log_startup_error(errno, "Opening file '%s' for reading failed", absolute_pathname);
         succp = false;
     }
     return succp;
@@ -881,11 +901,7 @@ static bool path_is_writable(const char* absolute_pathname)
 
     if (access(absolute_pathname, W_OK) != 0)
     {
-        int eno = errno;
-        errno = 0;
-        char buff[PATH_MAX + 100];
-        snprintf(buff, sizeof(buff), "Opening file '%s' for writing failed.", absolute_pathname);
-        print_log_n_stderr(true, true, buff, eno);
+        log_startup_error(errno, "Opening file '%s' for writing failed.", absolute_pathname);
         succp = false;
     }
     return succp;
@@ -938,12 +954,7 @@ static char* get_expanded_pathname(char** output_path,
      */
     if (realpath(relative_path, expanded_path) == NULL)
     {
-        int eno = errno;
-        errno = 0;
-        char buff[PATH_MAX + 100];
-
-        snprintf(buff, sizeof(buff), "Failed to read the directory '%s'.", relative_path);
-        print_log_n_stderr(true, true, buff, eno);
+        log_startup_error(errno, "Failed to read the directory '%s'.", relative_path);
 
         MXS_FREE(expanded_path);
         if (output_path)
@@ -1105,15 +1116,7 @@ static bool delete_signal(sigset_t* sigset, int signum, const char* signame)
 
     if (rc != 0)
     {
-        int e = errno;
-        errno = 0;
-
-        static const char FORMAT[] = "Failed to delete signal %s from the signal set of MaxScale. Exiting.";
-        char message[sizeof(FORMAT) + 16];      // Enough for any "SIG..." string.
-
-        sprintf(message, FORMAT, signame);
-
-        print_log_n_stderr(true, true, message, e);
+        log_startup_error(errno, "Failed to delete signal %s from the signal set of MaxScale", signame);
     }
 
     return rc == 0;
@@ -1130,10 +1133,7 @@ bool disable_signals(void)
 
     if (sigfillset(&sigset) != 0)
     {
-        int e = errno;
-        errno = 0;
-        static const char message[] = "Failed to initialize set the signal set for MaxScale. Exiting.";
-        print_log_n_stderr(true, true, message, e);
+        log_startup_error(errno, "Failed to initialize set the signal set for MaxScale");
         return false;
     }
 
@@ -1186,10 +1186,7 @@ bool disable_signals(void)
 
     if (sigprocmask(SIG_SETMASK, &sigset, NULL) != 0)
     {
-        int e = errno;
-        errno = 0;
-        static const char message[] = "Failed to set the signal set for MaxScale. Exiting";
-        print_log_n_stderr(true, true, message, e);
+        log_startup_error(errno, "Failed to set the signal set for MaxScale");
         return false;
     }
 
@@ -1211,12 +1208,7 @@ static bool configure_signal(int signum, const char* signame, void (* handler)(i
 
     if (rc != 0)
     {
-        static const char FORMAT[] = "Failed to set signal handler for %s. Exiting.";
-        char message[sizeof(FORMAT) + 16];      // Enough for any "SIG..." string.
-
-        sprintf(message, FORMAT, signame);
-
-        print_log_n_stderr(true, true, message, 0);
+        log_startup_error("Failed to set signal handler for %s.", signame);
     }
 
     return rc == 0;
@@ -1433,13 +1425,9 @@ int main(int argc, char** argv)
     auto do_startup = [&]() {
             if (!config_load(cnf_file_path))
             {
-                const char* fprerr =
-                    "Failed to open, read or process the MaxScale configuration "
-                    "file. Exiting. See the error log for details.";
-                print_log_n_stderr(false, true, fprerr, 0);
-                MXS_ERROR("Failed to open, read or process the MaxScale configuration file %s. "
-                          "Exiting.",
-                          cnf_file_path);
+                print_stderr("Failed to open, read or process the MaxScale configuration "
+                             "file. See the error log for details.");
+                MXS_ALERT("Failed to open, read or process the MaxScale configuration file %s.", cnf_file_path);
                 rc = MAXSCALE_BADCONFIG;
                 maxscale_shutdown();
                 return;
@@ -1477,8 +1465,7 @@ int main(int argc, char** argv)
                 }
                 else
                 {
-                    const char* logerr = "Failed to initialize admin interface";
-                    print_log_n_stderr(true, true, logerr, 0);
+                    log_startup_error("Failed to initialize admin interface.");
                     rc = MAXSCALE_INTERNALERROR;
                     maxscale_shutdown();
                     return;
@@ -1487,8 +1474,7 @@ int main(int argc, char** argv)
 
             if (!service_launch_all())
             {
-                const char* logerr = "Failed to start all MaxScale services. Exiting.";
-                print_log_n_stderr(true, true, logerr, 0);
+                log_startup_error("Failed to start all MaxScale services.");
                 rc = MAXSCALE_NOSERVICES;
                 maxscale_shutdown();
             }
@@ -1553,13 +1539,9 @@ int main(int argc, char** argv)
             }
             if (cnf_file_arg == NULL)
             {
-                const char* logerr =
-                    "Configuration file argument "
-                    "identifier \'-f\' was specified but "
-                    "the argument didn't specify\n  a valid "
-                    "configuration file or the argument "
-                    "was missing.";
-                print_log_n_stderr(true, true, logerr, 0);
+                log_startup_error("Configuration file argument identifier \'-f\' was specified but "
+                                  "the argument didn't specify a valid configuration file or the "
+                                  "argument was missing.");
                 usage();
                 succp = false;
             }
@@ -1600,13 +1582,9 @@ int main(int argc, char** argv)
             }
             else
             {
-                const char* logerr =
-                    "Configuration file argument "
-                    "identifier \'-l\' was specified but "
-                    "the argument didn't specify\n  a valid "
-                    "configuration file or the argument "
-                    "was missing.";
-                print_log_n_stderr(true, true, logerr, 0);
+                log_startup_error("Configuration file argument identifier \'-l\' was specified but "
+                                  "the argument didn't specify a valid configuration file or the "
+                                  "argument was missing.");
                 usage();
                 succp = false;
             }
@@ -1910,15 +1888,13 @@ int main(int argc, char** argv)
 
             if (nread == -1)
             {
-                const char* logerr = "Failed to read data from child process pipe.";
-                print_log_n_stderr(true, true, logerr, errno);
+                log_startup_error(errno, "Failed to read data from child process pipe");
                 exit(MAXSCALE_INTERNALERROR);
             }
             else if (nread == 0)
             {
                 /** Child process has exited or closed write pipe */
-                const char* logerr = "No data read from child process pipe.";
-                print_log_n_stderr(true, true, logerr, 0);
+                log_startup_error("No data read from child process pipe.");
                 exit(MAXSCALE_INTERNALERROR);
             }
 
@@ -1934,9 +1910,7 @@ int main(int argc, char** argv)
      */
     if (!configure_signals())
     {
-        static const char* logerr = "Failed to configure signal handlers. Exiting.";
-
-        print_log_n_stderr(true, true, logerr, 0);
+        log_startup_error("Failed to configure signal handlers.");
         rc = MAXSCALE_INTERNALERROR;
         goto return_main;
     }
@@ -1944,16 +1918,14 @@ int main(int argc, char** argv)
 
     if (eno != 0)
     {
-        const char* logerr = "Failed to initialise signal mask for MaxScale. Exiting.";
-        print_log_n_stderr(true, true, logerr, eno);
+        log_startup_error(eno, "Failed to initialise signal mask for MaxScale");
         rc = MAXSCALE_INTERNALERROR;
         goto return_main;
     }
 
     if (!utils_init())
     {
-        const char* logerr = "Failed to initialise utility library.";
-        print_log_n_stderr(true, true, logerr, eno);
+        log_startup_error("Failed to initialise utility library.");
         rc = MAXSCALE_INTERNALERROR;
         goto return_main;
     }
@@ -1961,8 +1933,7 @@ int main(int argc, char** argv)
     /** OpenSSL initialization */
     if (!HAVE_OPENSSL_THREADS)
     {
-        const char* logerr = "OpenSSL library does not support multi-threading";
-        print_log_n_stderr(true, true, logerr, eno);
+        log_startup_error("OpenSSL library does not support multi-threading.");
         rc = MAXSCALE_INTERNALERROR;
         goto return_main;
     }
@@ -2053,7 +2024,7 @@ int main(int argc, char** argv)
 
     if (!init_sqlite3())
     {
-        MXS_ERROR("Could not initialize sqlite3, exiting.");
+        log_startup_error("Could not initialize sqlite3.");
         rc = MAXSCALE_INTERNALERROR;
         goto return_main;
     }
@@ -2085,11 +2056,7 @@ int main(int argc, char** argv)
         }
         else
         {
-            char errbuf[MXS_STRERROR_BUFLEN];
-            MXS_ERROR("Cannot create data directory '%s': %d %s\n",
-                      datadir,
-                      errno,
-                      strerror_r(errno, errbuf, sizeof(errbuf)));
+            log_startup_error(errno, "Cannot create data directory '%s'", datadir);
             goto return_main;
         }
     }
@@ -2122,7 +2089,7 @@ int main(int argc, char** argv)
 
     if (!maxbase::init())
     {
-        MXS_ERROR("Failed to initialize MaxScale base library.");
+        log_startup_error("Failed to initialize MaxScale base library.");
         rc = MAXSCALE_INTERNALERROR;
         goto return_main;
     }
@@ -2132,8 +2099,7 @@ int main(int argc, char** argv)
 
     if (!qc_setup(&cnf->qc_cache_properties, cnf->qc_sql_mode, cnf->qc_name, cnf->qc_args))
     {
-        const char* logerr = "Failed to initialise query classifier library.";
-        print_log_n_stderr(true, true, logerr, eno);
+        log_startup_error("Failed to initialise query classifier library.");
         rc = MAXSCALE_INTERNALERROR;
         goto return_main;
     }
@@ -2174,17 +2140,15 @@ int main(int argc, char** argv)
         {
             if (!freopen(redirect_output_to.c_str(), "a", stderr))
             {
-                const char* logstr = "Failed to redirect stderr to file.";
-                // No point logging to stderr as its state is now not known.
-                print_log_n_stderr(true, false, logstr, errno);
+                // The state of stderr is now somewhat unclear. We log nonetheless.
+                log_startup_error(errno, "Failed to redirect stderr to file");
                 rc = MAXSCALE_INTERNALERROR;
                 goto return_main;
             }
         }
         else
         {
-            const char* logstr = "Failed to redirect stdout to file.";
-            print_log_n_stderr(true, true, logstr, errno);
+            log_startup_error(errno, "Failed to redirect stdout to file");
             rc = MAXSCALE_INTERNALERROR;
             goto return_main;
         }
@@ -2201,7 +2165,7 @@ int main(int argc, char** argv)
      */
     if (!qc_process_init(QC_INIT_SELF))
     {
-        MXS_ERROR("Failed to initialize the internal query classifier.");
+        log_startup_error("Failed to initialize the internal query classifier.");
         rc = MAXSCALE_INTERNALERROR;
         goto return_main;
     }
@@ -2215,7 +2179,7 @@ int main(int argc, char** argv)
 
     if (!RoutingWorker::init(main_worker))
     {
-        MXS_ERROR("Failed to initialize routing workers.");
+        log_startup_error("Failed to initialize routing workers.");
         rc = MAXSCALE_INTERNALERROR;
         goto return_main;
     }
@@ -2233,7 +2197,7 @@ int main(int argc, char** argv)
     /* Init MaxScale modules */
     if (!modules_process_init())
     {
-        MXS_ERROR("Failed to initialize all modules at startup. Exiting.");
+        log_startup_error("Failed to initialize all modules at startup");
         rc = MAXSCALE_BADCONFIG;
         goto return_main;
     }
@@ -2243,8 +2207,7 @@ int main(int argc, char** argv)
      */
     if (!RoutingWorker::start_workers())
     {
-        const char* logerr = "Failed to start routing workers.";
-        print_log_n_stderr(true, true, logerr, 0);
+        log_startup_error("Failed to start routing workers.");
         rc = MAXSCALE_INTERNALERROR;
         goto return_main;
     }
@@ -2260,8 +2223,7 @@ int main(int argc, char** argv)
     set_admin_worker(worker);
     if (!worker->execute(do_startup, RoutingWorker::EXECUTE_QUEUED))
     {
-        const char* logerr = "Failed to queue startup task.";
-        print_log_n_stderr(true, true, logerr, 0);
+        log_startup_error("Failed to queue startup task.");
         rc = MAXSCALE_INTERNALERROR;
         goto return_main;
     }
@@ -2346,10 +2308,7 @@ static void unlock_pidfile()
     {
         if (flock(pidfd, LOCK_UN | LOCK_NB) != 0)
         {
-            char logbuf[STRING_BUFFER_SIZE + PATH_MAX];
-            const char* logerr = "Failed to unlock PID file '%s'.";
-            snprintf(logbuf, sizeof(logbuf), logerr, pidfile);
-            print_log_n_stderr(true, true, logbuf, errno);
+            log_startup_error(errno, "Failed to unlock PID file '%s'", pidfile);
         }
         close(pidfd);
     }
@@ -2421,18 +2380,14 @@ bool pid_file_exists()
 
         if ((fd = open(pathbuf, O_RDWR)) == -1)
         {
-            const char* logerr = "Failed to open PID file '%s'.";
-            snprintf(logbuf, sizeof(logbuf), logerr, pathbuf);
-            print_log_n_stderr(true, true, logbuf, errno);
+            log_startup_error(errno, "Failed to open PID file '%s'", pathbuf);
             return true;
         }
         if (flock(fd, LOCK_EX | LOCK_NB))
         {
             if (errno != EWOULDBLOCK)
             {
-                const char* logerr = "Failed to lock PID file '%s'.";
-                snprintf(logbuf, sizeof(logbuf), logerr, pathbuf);
-                print_log_n_stderr(true, true, logbuf, errno);
+                log_startup_error(errno, "Failed to lock PID file '%s'", pathbuf);
                 close(fd);
                 return true;
             }
@@ -2444,21 +2399,16 @@ bool pid_file_exists()
 
         if (b == -1)
         {
-            const char* logerr = "Failed to read from PID file '%s'.";
-            snprintf(logbuf, sizeof(logbuf), logerr, pathbuf);
-            print_log_n_stderr(true, true, logbuf, errno);
+            log_startup_error(errno, "Failed to read from PID file '%s'", pathbuf);
             unlock_pidfile();
             return true;
         }
         else if (b == 0)
         {
             /** Empty file */
-            const char* logerr =
-                "PID file read from '%s'. File was empty.\n"
-                "If the file is the correct PID file and no other MaxScale processes "
-                "are running, please remove it manually and start MaxScale again.";
-            snprintf(logbuf, sizeof(logbuf), logerr, pathbuf);
-            print_log_n_stderr(true, true, logbuf, errno);
+            log_startup_error("PID file read from '%s'. File was empty. If the file is the "
+                              "correct PID file and no other MaxScale processes are running, "
+                              "please remove it manually and start MaxScale again.", pathbuf);
             unlock_pidfile();
             return true;
         }
@@ -2469,24 +2419,18 @@ bool pid_file_exists()
         if (pid < 1)
         {
             /** Bad PID */
-            const char* logerr =
-                "PID file read from '%s'. File contents not valid.\n"
-                "If the file is the correct PID file and no other MaxScale processes "
-                "are running, please remove it manually and start MaxScale again.";
-            snprintf(logbuf, sizeof(logbuf), logerr, pathbuf);
-            print_log_n_stderr(true, true, logbuf, errno);
+            log_startup_error("PID file read from '%s'. File contents not valid. If the file "
+                              "is the correct PID file and no other MaxScale processes are "
+                              "running, please remove it manually and start MaxScale again.", pathbuf);
             unlock_pidfile();
             return true;
         }
 
         if (pid_is_maxscale(pid))
         {
-            const char* logerr =
-                "MaxScale is already running. Process id: %d. "
-                "Use another location for the PID file to run multiple "
-                "instances of MaxScale on the same machine.";
-            snprintf(logbuf, sizeof(logbuf), logerr, pid);
-            print_log_n_stderr(true, true, logbuf, 0);
+            log_startup_error("MaxScale is already running. Process id: %d. "
+                              "Use another location for the PID file to run multiple "
+                              "instances of MaxScale on the same machine.", pid);
             unlock_pidfile();
         }
         else
@@ -2494,12 +2438,9 @@ bool pid_file_exists()
             /** no such process, old PID file */
             if (lock_failed)
             {
-                const char* logerr =
-                    "Locking the PID file '%s' failed. "
-                    "Read PID from file and no process found with PID %d. "
-                    "Confirm that no other process holds the lock on the PID file.";
-                snprintf(logbuf, sizeof(logbuf), logerr, pathbuf, pid);
-                print_log_n_stderr(true, true, logbuf, 0);
+                log_startup_error("Locking the PID file '%s' failed. Read PID from file "
+                                  "and no process found with PID %d. Confirm that no other "
+                                  "process holds the lock on the PID file.", pidfile, pid);
                 close(fd);
             }
             return lock_failed;
@@ -2507,11 +2448,9 @@ bool pid_file_exists()
     }
     else
     {
-        const char* logerr =
-            "Cannot open PID file '%s', no read permissions. "
-            "Please confirm that the user running MaxScale has read permissions on the file.";
-        snprintf(logbuf, sizeof(logbuf), logerr, pathbuf);
-        print_log_n_stderr(true, true, logbuf, errno);
+        log_startup_error("Cannot open PID file '%s', no read permissions. Please confirm "
+                          "that the user running MaxScale has read permissions on the file.",
+                          pathbuf);
     }
     return true;
 }
@@ -2544,9 +2483,7 @@ static int write_pid_file()
         fd = open(pidfile, O_WRONLY | O_CREAT, 0777);
         if (fd == -1)
         {
-            const char* logerr = "Failed to open PID file '%s'.";
-            snprintf(logbuf, sizeof(logbuf), logerr, pidfile);
-            print_log_n_stderr(true, true, logbuf, errno);
+            log_startup_error(errno, "Failed to open PID file '%s'", pidfile);
             return -1;
         }
 
@@ -2554,18 +2491,15 @@ static int write_pid_file()
         {
             if (errno == EWOULDBLOCK)
             {
-                snprintf(logbuf,
-                         sizeof(logbuf),
-                         "Failed to lock PID file '%s', another process is holding a lock on it. "
-                         "Please confirm that no other MaxScale process is using the same "
-                         "PID file location.",
-                         pidfile);
+                log_startup_error("Failed to lock PID file '%s', another process is holding a lock on it. "
+                                  "Please confirm that no other MaxScale process is using the same "
+                                  "PID file location.",
+                                  pidfile);
             }
             else
             {
-                snprintf(logbuf, sizeof(logbuf), "Failed to lock PID file '%s'.", pidfile);
+                log_startup_error("Failed to lock PID file '%s'.", pidfile);
             }
-            print_log_n_stderr(true, true, logbuf, errno);
             close(fd);
             return -1;
         }
@@ -2575,9 +2509,7 @@ static int write_pid_file()
     /* truncate pidfile content */
     if (ftruncate(pidfd, 0))
     {
-        const char* logerr = "MaxScale failed to truncate PID file '%s'.";
-        snprintf(logbuf, sizeof(logbuf), logerr, pidfile);
-        print_log_n_stderr(true, true, logbuf, errno);
+        log_startup_error("MaxScale failed to truncate PID file '%s'.", pidfile);
         unlock_pidfile();
         return -1;
     }
@@ -2586,9 +2518,7 @@ static int write_pid_file()
 
     if (pwrite(pidfd, pidstr, strlen(pidstr), 0) != (ssize_t)strlen(pidstr))
     {
-        const char* logerr = "MaxScale failed to write into PID file '%s'.";
-        snprintf(logbuf, sizeof(logbuf), logerr, pidfile);
-        print_log_n_stderr(true, true, logbuf, errno);
+        log_startup_error(errno, "MaxScale failed to write into PID file '%s'", pidfile);
         unlock_pidfile();
         return -1;
     }
@@ -2627,7 +2557,7 @@ bool handle_path_arg(char** dest, const char* path, const char* arg, bool rd, bo
         }
         else
         {
-            print_log_n_stderr(true, true, errstr, 0);
+            log_startup_error("%s", errstr);
             MXS_FREE(errstr);
             errstr = NULL;
         }
@@ -3079,7 +3009,7 @@ static bool sniff_configuration(const char* filepath)
             snprintf(errorbuffer, sizeof(errorbuffer), FORMAT_MALLOC, filepath);
         }
 
-        print_log_n_stderr(false, true, errorbuffer, 0);
+        print_stderr(errorbuffer);
     }
 
     return rv == 0;
@@ -3215,12 +3145,7 @@ static bool handle_debug_args(char* args)
         }
         if (!found)
         {
-            const char UNRECOG_P1[] = "Unrecognized debug setting: '";
-            const char UNRECOG_P2[] = "'.";
-            size_t unrecog_msg_len = sizeof(UNRECOG_P1) + strlen(token) + sizeof(UNRECOG_P2);
-            char unrecog_msg[unrecog_msg_len];
-            snprintf(unrecog_msg, unrecog_msg_len, "%s%s%s", UNRECOG_P1, token, UNRECOG_P2);
-            print_log_n_stderr(true, true, unrecog_msg, 0);
+            log_startup_error("Unrecognized debug setting: '%s'.", token);
             arg_error = true;
         }
         token = strtok_r(NULL, ",", &endptr);
@@ -3248,20 +3173,10 @@ static bool handle_debug_args(char* args)
                 strcat(arglist, ", ");
             }
         }
-        const char DEBUG_ERROR_P1[] =
-            "Debug argument identifier '-g' or '--debug' was specified "
-            "but no arguments were found or one of them was invalid. Supported "
-            "arguments are: ";
-        const char DEBUG_ERROR_P2[] = ".";
-        size_t arg_error_msg_len = sizeof(DEBUG_ERROR_P1) + total_len + sizeof(DEBUG_ERROR_P2);
-        char arg_error_msg[arg_error_msg_len];
-        snprintf(arg_error_msg,
-                 arg_error_msg_len,
-                 "%s%s%s",
-                 DEBUG_ERROR_P1,
-                 arglist,
-                 DEBUG_ERROR_P2);
-        print_log_n_stderr(true, true, arg_error_msg, 0);
+        log_startup_error("Debug argument identifier '-g' or '--debug' was specified "
+                          "but no arguments were found or one of them was invalid. Supported "
+                          "arguments are: %s.",
+                          arglist);
     }
     return !arg_error;
 }
