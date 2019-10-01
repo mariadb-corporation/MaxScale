@@ -256,7 +256,7 @@ CacheFilterSession* CacheFilterSession::Create(Cache* pCache, MXS_SESSION* pSess
 {
     CacheFilterSession* pCacheFilterSession = NULL;
 
-    mxb_assert(pSession->client_dcb);
+    mxb_assert(pSession->client_connection());
 
     const char* zDb = mxs_mysql_get_current_db(pSession);
     char* zDefaultDb = NULL;

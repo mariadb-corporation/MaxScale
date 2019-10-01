@@ -364,7 +364,7 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
             /** Call the newSession entry point */
             lua_getglobal(my_session->lua_state, "newSession");
             lua_pushstring(my_session->lua_state, session->user().c_str());
-            lua_pushstring(my_session->lua_state, session->client_dcb->remote().c_str());
+            lua_pushstring(my_session->lua_state, session->client_remote());
 
             if (lua_pcall(my_session->lua_state, 2, 0, 0))
             {
@@ -382,7 +382,7 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
 
         lua_getglobal(my_instance->global_lua_state, "newSession");
         lua_pushstring(my_instance->global_lua_state, session->user().c_str());
-        lua_pushstring(my_instance->global_lua_state, session->client_dcb->remote().c_str());
+        lua_pushstring(my_instance->global_lua_state, session->client_remote());
 
         if (lua_pcall(my_instance->global_lua_state, 2, 0, 0))
         {
@@ -528,8 +528,7 @@ static int32_t routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWB
 {
     LUA_SESSION* my_session = (LUA_SESSION*) session;
     LUA_INSTANCE* my_instance = (LUA_INSTANCE*) instance;
-    DCB* dcb = my_session->session->client_dcb;
-    char* fullquery = NULL, * ptr;
+    char* fullquery = NULL;
     bool route = true;
     GWBUF* forward = queue;
     int rc = 0;

@@ -15,7 +15,6 @@
 #include <maxscale/ccdefs.hh>
 
 #include <time.h>
-#include <sstream>
 
 #include <maxbase/atomic.h>
 #include <maxbase/jansson.h>
@@ -24,13 +23,13 @@
 #include <maxscale/utils.hh>
 #include "query_classifier.hh"
 
-struct DCB;
+class DCB;
 class SERVICE;
 struct mxs_filter_def;
 struct mxs_filter;
 struct mxs_filter_session;
 struct mxs_router_session;
-struct SERVER;
+class SERVER;
 class Listener;
 using SListener = std::shared_ptr<Listener>;
 
@@ -210,9 +209,7 @@ public:
     // Convenience function for client identification
     std::string user_and_host() const
     {
-        std::ostringstream ss;
-        ss << "'" << m_user << "'@'" << client_dcb->remote() << "'";
-        return ss.str();
+        return "'" + m_user + "'@'" + client_remote() + "'";
     }
 
     const char* client_remote() const;

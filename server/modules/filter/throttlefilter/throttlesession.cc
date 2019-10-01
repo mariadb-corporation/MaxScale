@@ -113,7 +113,7 @@ bool ThrottleSession::delayed_routeQuery(maxbase::Worker::Call::action_t action,
     case maxbase::Worker::Call::EXECUTE:
         if (!real_routeQuery(buffer, true))
         {
-            m_pSession->client_dcb->trigger_hangup_event();
+            m_pSession->client_connection()->dcb()->trigger_hangup_event();
         }
         break;
 

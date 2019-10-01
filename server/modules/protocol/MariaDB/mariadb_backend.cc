@@ -437,7 +437,7 @@ bool MySQLBackendProtocol::session_ok_to_route(DCB* dcb)
     auto session = dcb->session();
     if (session->state() == MXS_SESSION::State::STARTED)
     {
-        ClientDCB* client_dcb = session->client_dcb;
+        ClientDCB* client_dcb = session->client_connection()->dcb();
         if (client_dcb && client_dcb->state() == DCB::State::POLLING)
         {
             auto client_protocol = static_cast<MySQLClientProtocol*>(client_dcb->protocol());
@@ -448,7 +448,7 @@ bool MySQLBackendProtocol::session_ok_to_route(DCB* dcb)
                     rval = true;
                 }
             }
-            else if (dcb->session()->client_dcb->role() == DCB::Role::INTERNAL)
+            else if (client_dcb->role() == DCB::Role::INTERNAL)
             {
                 rval = true;
             }
@@ -914,18 +914,16 @@ void MySQLBackendProtocol::write_ready(DCB* event_dcb)
         {
             if (!com_quit)
             {
-                mysql_send_custom_error(dcb->session()->client_dcb, 1, 0,
+                mysql_send_custom_error(dcb->session()->client_connection()->dcb(), 1, 0,
                                         "Writing to backend failed due invalid Maxscale state.");
-                MXS_ERROR("Attempt to write buffered data to backend "
-                          "failed due internal inconsistent state: %s",
-                          mxs::to_string(dcb->state()));
+                MXS_ERROR("Attempt to write buffered data to backend failed due internal inconsistent "
+                          "state: %s", mxs::to_string(dcb->state()));
             }
         }
         else
         {
             MXS_DEBUG("Dcb %p in state %s but there's nothing to write either.",
-                      dcb,
-                      mxs::to_string(dcb->state()));
+                      dcb, mxs::to_string(dcb->state()));
         }
     }
     else
@@ -1399,13 +1397,13 @@ void MySQLBackendProtocol::gw_send_proxy_protocol_header(BackendDCB* backend_dcb
 {
     // TODO: Add support for chained proxies. Requires reading the client header.
 
-    const ClientDCB* client_dcb = backend_dcb->session()->client_dcb;
+    const ClientDCB* client_dcb = backend_dcb->session()->client_connection()->dcb();
     const int client_fd = client_dcb->fd();
     const sa_family_t family = client_dcb->ip().ss_family;
-    const char* family_str = NULL;
+    const char* family_str = nullptr;
 
-    struct sockaddr_storage sa_peer;
-    struct sockaddr_storage sa_local;
+    sockaddr_storage sa_peer {};
+    sockaddr_storage sa_local {};
     socklen_t sa_peer_len = sizeof(sa_peer);
     socklen_t sa_local_len = sizeof(sa_local);
 

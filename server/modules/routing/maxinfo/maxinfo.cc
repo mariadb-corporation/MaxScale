@@ -187,7 +187,7 @@ static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance,
         return NULL;
     }
     client->session = session;
-    client->dcb = session->client_dcb;
+    client->dcb = session->client_connection()->dcb();
     client->queue = NULL;
 
     pthread_mutex_lock(&inst->lock);

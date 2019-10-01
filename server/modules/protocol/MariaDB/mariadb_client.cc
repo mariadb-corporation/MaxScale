@@ -1051,7 +1051,6 @@ char* MySQLClientProtocol::handle_variables(MXS_SESSION* session, GWBUF** read_b
 bool MySQLClientProtocol::reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf)
 {
     bool rval = false;
-    ClientDCB* client_dcb = session->client_dcb;
     auto client_auth = m_authenticator.get();
     if (client_auth->capabilities() & mxs::AuthenticatorModule::CAP_REAUTHENTICATE)
     {
@@ -1068,7 +1067,7 @@ bool MySQLClientProtocol::reauthenticate_client(MXS_SESSION* session, GWBUF* pac
 
         if (user_end == orig_payload.end())
         {
-            mysql_send_auth_error(client_dcb, 3, "Malformed AuthSwitchRequest packet");
+            mysql_send_auth_error(m_dcb, 3, "Malformed AuthSwitchRequest packet");
             return false;
         }
 
@@ -1084,7 +1083,7 @@ bool MySQLClientProtocol::reauthenticate_client(MXS_SESSION* session, GWBUF* pac
 
         if (db_end == orig_payload.end())
         {
-            mysql_send_auth_error(client_dcb, 3, "Malformed AuthSwitchRequest packet");
+            mysql_send_auth_error(m_dcb, 3, "Malformed AuthSwitchRequest packet");
             return false;
         }
 
@@ -1107,7 +1106,7 @@ bool MySQLClientProtocol::reauthenticate_client(MXS_SESSION* session, GWBUF* pac
         gwbuf_copy_data(packetbuf, MYSQL_HEADER_LEN, payloadlen, &payload[0]);
 
         int rc = client_auth->reauthenticate(
-            client_dcb, data->user, &payload[0], payload.size(),
+            m_dcb, data->user, &payload[0], payload.size(),
             proto->scramble, sizeof(proto->scramble), data->client_sha1, sizeof(data->client_sha1));
 
         if (rc == MXS_AUTH_SUCCEEDED)
@@ -1125,7 +1124,7 @@ bool MySQLClientProtocol::reauthenticate_client(MXS_SESSION* session, GWBUF* pac
              * First packet is COM_CHANGE_USER, the second is AuthSwitchRequest,
              * third is the response and the fourth is the following error.
              */
-            handle_authentication_errors(client_dcb, rc, 3);
+            handle_authentication_errors(m_dcb, rc, 3);
         }
     }
 
@@ -1195,7 +1194,7 @@ bool MySQLClientProtocol::handle_change_user(bool* changed_user, GWBUF** packetb
         m_session_data->changing_user = true;
 
         *changed_user = true;
-        send_auth_switch_request_packet(m_session->client_dcb);
+        send_auth_switch_request_packet(m_dcb);
 
         // Store the original COM_CHANGE_USER for later
         m_stored_query = mxs::Buffer(*packetbuf);
@@ -1519,7 +1518,6 @@ int MySQLClientProtocol::route_by_statement(uint64_t capabilities, GWBUF** p_rea
 {
     int rc = 1;
     auto session = m_session;
-    auto dcb = session->client_dcb;
 
     while (GWBUF* packetbuf = modutil_get_next_MySQL_packet(p_readbuf))
     {
@@ -1532,7 +1530,7 @@ int MySQLClientProtocol::route_by_statement(uint64_t capabilities, GWBUF** p_rea
 
         if (char* message = handle_variables(session, &packetbuf))
         {
-            rc = dcb->protocol_write(modutil_create_mysql_err_msg(1, 0, 1193, "HY000", message));
+            rc = write(modutil_create_mysql_err_msg(1, 0, 1193, "HY000", message));
             MXS_FREE(message);
             continue;
         }
@@ -1541,7 +1539,7 @@ int MySQLClientProtocol::route_by_statement(uint64_t capabilities, GWBUF** p_rea
         // is thread and not session specific.
         qc_set_sql_mode(static_cast<qc_sql_mode_t>(session->client_protocol_data));
 
-        if (process_special_commands(dcb, packetbuf, m_command) == RES_END)
+        if (process_special_commands(m_dcb, packetbuf, m_command) == RES_END)
         {
             gwbuf_free(packetbuf);
             continue;

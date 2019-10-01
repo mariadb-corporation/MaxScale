@@ -768,7 +768,7 @@ AvroSession* AvroSession::create(Avro* inst, MXS_SESSION* session)
 }
 
 AvroSession::AvroSession(Avro* instance, MXS_SESSION* session)
-    : dcb(session->client_dcb)
+    : dcb(session->client_connection()->dcb())
     , state(AVRO_CLIENT_UNREGISTERED)
     , format(AVRO_FORMAT_UNDEFINED)
     , router(instance)

@@ -207,9 +207,9 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
         my_session->target[0] = '\0';
         my_session->state = DS_STREAM_CLOSED;
         my_session->active = true;
-        my_session->client_dcb = session->client_dcb;
+        my_session->client_dcb = session->client_connection()->dcb(); // TODO: Change to ClientProtocol
 
-        if (my_instance->source && session->client_dcb->remote() != my_instance->source)
+        if (my_instance->source && session->client_connection()->dcb()->remote() != my_instance->source)
         {
             my_session->active = false;
         }

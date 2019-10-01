@@ -102,13 +102,13 @@ void MXS_SESSION::terminate(GWBUF* error)
 {
     if (m_state == State::STARTED)
     {
-        mxb_assert(!client_dcb->is_closed());
+        mxb_assert(!client_connection()->dcb()->is_closed());
         m_state = State::STOPPING;
 
         if (error)
         {
             // Write the error to the client before closing the DCB
-            client_dcb->protocol_write(error);
+            client_connection()->write(error);
         }
 
         DCB::close(client_dcb);
@@ -1428,7 +1428,7 @@ bool Session::start()
         MXS_INFO("Started %s client session [%" PRIu64 "] for '%s' from %s",
                  service->name(), id(),
                  !m_user.empty() ? m_user.c_str() : "<no user>",
-                 client_dcb->remote().c_str());
+                 m_client_conn->dcb()->remote().c_str());
     }
 
     return rval;
@@ -1480,7 +1480,7 @@ int32_t Session::routeQuery(GWBUF* buffer)
 
 int32_t Session::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    return client_dcb->protocol_write(buffer);
+    return m_client_conn->write(buffer);
 }
 
 bool Session::handleError(GWBUF* error, Endpoint* down, const mxs::Reply& reply)

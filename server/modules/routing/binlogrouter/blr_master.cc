@@ -214,7 +214,7 @@ static void blr_start_master(void* data)
     router->client->enable_events();        /* Fake the client is reading */
 
     /* Create MySQL Athentication from configured user/passwd */
-    router->session->client_dcb = router->client;
+    //router->session->client_dcb = router->client; TODO: broken
 
     /* Create a session for dummy client DCB */
     if (!session_start(router->session))

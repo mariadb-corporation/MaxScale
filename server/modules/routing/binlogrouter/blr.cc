@@ -1092,7 +1092,7 @@ static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance,
     slave->uuid = NULL;
     slave->hostname = NULL;
     pthread_mutex_init(&slave->catch_lock, NULL);
-    slave->dcb = session->client_dcb;
+    slave->dcb = session->client_connection()->dcb();
     slave->router = inst;
 #ifdef BLFILE_IN_SLAVE
     slave->file = NULL;

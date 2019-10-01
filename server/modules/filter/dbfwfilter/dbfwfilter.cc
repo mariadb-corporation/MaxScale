@@ -1482,7 +1482,7 @@ std::string DbfwSession::user() const
 
 std::string DbfwSession::remote() const
 {
-    return m_session->client_dcb->remote();
+    return m_session->client_remote();
 }
 
 QuerySpeed* DbfwSession::query_speed()
@@ -1497,7 +1497,7 @@ fw_actions DbfwSession::get_action() const
 
 int DbfwSession::send_error()
 {
-    mxb_assert(m_session && m_session->client_dcb);
+    mxb_assert(m_session && m_session->client_connection());
     const char* db = mxs_mysql_get_current_db(m_session);
     std::stringstream ss;
     ss << "Access denied for user '" << user() << "'@'" << remote() << "'";

@@ -75,7 +75,7 @@ SmartRouterSession::SmartRouterSession(SmartRouter* pRouter,
                                        Clusters clusters)
     : mxs::RouterSession(pSession)
     , m_router(*pRouter)
-    , m_pClient_dcb(pSession->client_dcb)
+    , m_pClient_dcb(pSession->client_connection()->dcb())
     , m_clusters(std::move(clusters))
     , m_qc(this, pSession, TYPE_ALL)
 {
