@@ -123,7 +123,6 @@ void init_test_env(char* __attribute((unused))path = nullptr, uint32_t init_type
     set_libdir(MXS_STRDUP(TEST_DIR "/query_classifier/qc_sqlite/"));
     qc_setup(NULL, QC_SQL_MODE_DEFAULT, NULL, NULL);
     qc_process_init(init_type);
-    poll_init();
     maxbase::init();
     main_worker = new maxscale::MainWorker;
     maxscale::RoutingWorker::init(main_worker);

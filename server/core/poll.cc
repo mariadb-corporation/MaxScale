@@ -41,18 +41,6 @@
 using maxbase::Worker;
 using maxscale::RoutingWorker;
 
-static int n_threads;                       /*< Number of threads */
-
-/**
- * Initialise the polling system we are using for the gateway.
- *
- * In this case we are using the Linux epoll mechanism
- */
-void poll_init()
-{
-    n_threads = config_threadcount();
-}
-
 /**
  * Display an entry from the spinlock statistics data
  *

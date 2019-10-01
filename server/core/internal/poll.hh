@@ -20,7 +20,4 @@
 #include <maxscale/poll.hh>
 #include <maxscale/resultset.hh>
 
-void poll_init();
-// void          poll_finish(); // TODO: Add this.
-
 std::unique_ptr<ResultSet> eventTimesGetList();
