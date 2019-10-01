@@ -205,6 +205,9 @@ void test4(TestConnections& test)
 
     test.add_result(mysql_stmt_prepare(stmt, query, strlen(query)), "Failed to prepare");
 
+    // Wait for some time to make sure that the slave has had enough time to execute the session command.
+    sleep(3);
+
     unsigned long cursor_type = CURSOR_TYPE_READ_ONLY;
     unsigned long rows = 5;
     test.add_result(mysql_stmt_attr_set(stmt, STMT_ATTR_CURSOR_TYPE, &cursor_type),
