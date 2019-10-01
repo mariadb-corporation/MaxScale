@@ -28,7 +28,7 @@
 #include <maxbase/stopwatch.hh>
 #include <maxbase/worker.hh>
 #include <maxscale/dcb.hh>
-#include <maxscale/maxscaleworker.hh>
+#include <maxscale/watchedworker.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/session.hh>
@@ -175,7 +175,7 @@ MXS_END_DECLS
 namespace maxscale
 {
 
-class RoutingWorker : public MaxScaleWorker
+class RoutingWorker : public WatchedWorker
                     , public BackendDCB::Manager
                     , private MXB_POLL_DATA
 {
@@ -574,7 +574,7 @@ public:
      */
     static std::unique_ptr<json_t> get_qc_stats_as_json(const char* zHost, int id);
 
-    class WatchdogWorkaround : public MaxScaleWorker::WatchdogWorkaround
+    class WatchdogWorkaround : public WatchedWorker::WatchdogWorkaround
     {
         WatchdogWorkaround(const WatchdogWorkaround&);
         WatchdogWorkaround& operator=(const WatchdogWorkaround&);
@@ -587,7 +587,7 @@ public:
          *                 should be arranged. Need not be the calling worker.
          */
         WatchdogWorkaround(RoutingWorker* pWorker)
-            : MaxScaleWorker::WatchdogWorkaround(pWorker)
+            : WatchedWorker::WatchdogWorkaround(pWorker)
         {
         }
 
@@ -595,7 +595,7 @@ public:
          * Turns on the watchdog workaround for the calling worker.
          */
         WatchdogWorkaround()
-            : MaxScaleWorker::WatchdogWorkaround(RoutingWorker::get_current())
+            : WatchedWorker::WatchdogWorkaround(RoutingWorker::get_current())
         {
         }
     };

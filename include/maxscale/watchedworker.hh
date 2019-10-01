@@ -22,21 +22,24 @@ namespace maxscale
 class MainWorker;
 
 /**
- * Base-class for all MaxScale workers, with the exception of MainWorker.
- * This class provides all functionality needed for being able to notify
- * the systemd watchdog in a timely manner.
+ * Base-class for workers that should be watched, that is, monitored
+ * to ensure that they are processing epoll events.
+ *
+ * In case a watched worker stops processing events that will cause
+ * systemd watchdog notifiation *not* to be generated, with the effect
+ * that MaxScale is killed and restarted.
  */
-class MaxScaleWorker : public mxb::Worker
+class WatchedWorker : public mxb::Worker
 {
 public:
-    ~MaxScaleWorker();
+    ~WatchedWorker();
 
     /**
      * Starts the watchdog workaround that will ensure that the systemd
      * watchdog is notified, even if the worker would perform a lengthy
      * synchronous operation.
      *
-     * It is persmissible to call this function multiple times, but
+     * It is permissible to call this function multiple times, but
      * each call should be matched with a call to
      * @c stop_watchdog_workaround().
      *
@@ -73,7 +76,7 @@ public:
          * @param pWorker  The worker for which the systemd notification
          *                 should be arranged. Need not be the calling worker.
          */
-        WatchdogWorkaround(MaxScaleWorker* pWorker)
+        WatchdogWorkaround(WatchedWorker* pWorker)
             : m_worker(*pWorker)
         {
             mxb_assert(pWorker);
@@ -89,7 +92,7 @@ public:
         }
 
     private:
-        MaxScaleWorker& m_worker;
+        WatchedWorker& m_worker;
     };
 
 
@@ -115,7 +118,7 @@ private:
     }
 
 protected:
-    MaxScaleWorker(MainWorker* pMain);
+    WatchedWorker(MainWorker* pMain);
 
     /**
      * Called once per epoll loop from epoll_tick().

@@ -212,7 +212,7 @@ void RoutingWorker::DCBHandler::hangup(DCB* pDcb)
 
 
 RoutingWorker::RoutingWorker(MainWorker* pMain)
-    : MaxScaleWorker(pMain)
+    : WatchedWorker(pMain)
     , m_id(next_worker_id())
     , m_pool_handler(this)
 {

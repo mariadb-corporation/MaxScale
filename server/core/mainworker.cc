@@ -19,7 +19,7 @@
 #endif
 #include <maxscale/cn_strings.hh>
 #include <maxscale/config.hh>
-#include <maxscale/maxscaleworker.hh>
+#include <maxscale/watchedworker.hh>
 
 using std::lock_guard;
 using std::mutex;
@@ -189,7 +189,7 @@ json_t* MainWorker::tasks_to_json(const char* zHost) const
     return pResult;
 }
 
-void MainWorker::add(MaxScaleWorker* pWorker)
+void MainWorker::add(WatchedWorker* pWorker)
 {
     lock_guard<mutex> guard(m_workers_lock);
 
@@ -198,7 +198,7 @@ void MainWorker::add(MaxScaleWorker* pWorker)
     m_workers.insert(pWorker);
 }
 
-void MainWorker::remove(MaxScaleWorker* pWorker)
+void MainWorker::remove(WatchedWorker* pWorker)
 {
     lock_guard<mutex> guard(m_workers_lock);
 
@@ -239,13 +239,13 @@ void MainWorker::check_systemd_watchdog()
     {
         unique_lock<mutex> guard(m_workers_lock);
 
-        bool all_ticking = std::all_of(m_workers.begin(), m_workers.end(), [](MaxScaleWorker* pWorker) {
+        bool all_ticking = std::all_of(m_workers.begin(), m_workers.end(), [](WatchedWorker* pWorker) {
                 return pWorker->is_ticking();
             });
 
         if (all_ticking)
         {
-            std::for_each(m_workers.begin(), m_workers.end(), [](MaxScaleWorker* pWorker) {
+            std::for_each(m_workers.begin(), m_workers.end(), [](WatchedWorker* pWorker) {
                     pWorker->mark_not_ticking();
                 });
         }

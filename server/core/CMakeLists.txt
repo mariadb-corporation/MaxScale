@@ -22,7 +22,6 @@ add_library(maxscale-common SHARED
   mainworker.cc
   mariadb.cc
   maxscale_pcre2.cc
-  maxscaleworker.cc
   misc.cc
   modulecmd.cc
   modutil.cc
@@ -33,8 +32,8 @@ add_library(maxscale-common SHARED
   packet_tracker.cc
   paths.cc
   poll.cc
-  queryclassifier.cc
   query_classifier.cc
+  queryclassifier.cc
   random.cc
   resource.cc
   response_stat.cc
@@ -47,11 +46,12 @@ add_library(maxscale-common SHARED
   service.cc
   session.cc
   session_command.cc
+  session_stats.cc
   ssl.cc
   target.cc
   users.cc
   utils.cc
-  session_stats.cc
+  watchedworker.cc
   )
 
 target_link_libraries(maxscale-common

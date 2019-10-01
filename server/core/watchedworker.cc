@@ -10,19 +10,19 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-#include <maxscale/maxscaleworker.hh>
+#include <maxscale/watchedworker.hh>
 #include <maxscale/mainworker.hh>
 
 namespace maxscale
 {
 
-class MaxScaleWorker::WatchdogNotifier
+class WatchedWorker::WatchdogNotifier
 {
     WatchdogNotifier(const WatchdogNotifier&) = delete;
     WatchdogNotifier& operator=(const WatchdogNotifier&) = delete;
 
 public:
-    WatchdogNotifier(mxs::MaxScaleWorker* pOwner)
+    WatchdogNotifier(mxs::WatchedWorker* pOwner)
         : m_owner(*pOwner)
         , m_nClients(0)
         , m_terminate(false)
@@ -87,17 +87,17 @@ public:
 private:
     using Guard = std::lock_guard<std::mutex>;
 
-    mxs::MaxScaleWorker& m_owner;
-    int                  m_nClients;
-    bool                 m_terminate;
-    std::thread          m_thread;
-    std::mutex           m_lock;
-    mxb::Semaphore       m_sem_start;
-    mxb::Semaphore       m_sem_stop;
+    mxs::WatchedWorker& m_owner;
+    int                 m_nClients;
+    bool                m_terminate;
+    std::thread         m_thread;
+    std::mutex          m_lock;
+    mxb::Semaphore      m_sem_start;
+    mxb::Semaphore      m_sem_stop;
 };
 
 
-MaxScaleWorker::MaxScaleWorker(MainWorker* pMain)
+WatchedWorker::WatchedWorker(MainWorker* pMain)
     : m_main(*pMain)
     , m_ticking(true)
 {
@@ -109,14 +109,14 @@ MaxScaleWorker::MaxScaleWorker(MainWorker* pMain)
     m_main.add(this);
 }
 
-MaxScaleWorker::~MaxScaleWorker()
+WatchedWorker::~WatchedWorker()
 {
     m_main.remove(this);
 
     delete m_pWatchdog_notifier;
 }
 
-void MaxScaleWorker::start_watchdog_workaround()
+void WatchedWorker::start_watchdog_workaround()
 {
     if (m_pWatchdog_notifier)
     {
@@ -124,7 +124,7 @@ void MaxScaleWorker::start_watchdog_workaround()
     }
 }
 
-void MaxScaleWorker::stop_watchdog_workaround()
+void WatchedWorker::stop_watchdog_workaround()
 {
     if (m_pWatchdog_notifier)
     {
@@ -132,7 +132,7 @@ void MaxScaleWorker::stop_watchdog_workaround()
     }
 }
 
-void MaxScaleWorker::epoll_tick()
+void WatchedWorker::epoll_tick()
 {
     mark_ticking_if_currently_not();
 

@@ -21,7 +21,7 @@
 namespace maxscale
 {
 
-class MaxScaleWorker;
+class WatchedWorker;
 
 class MainWorker : public mxb::Worker
 {
@@ -78,10 +78,10 @@ public:
     static int64_t ticks();
 
 private:
-    friend class MaxScaleWorker;
+    friend class WatchedWorker;
 
-    void add(MaxScaleWorker* pWorker);
-    void remove(MaxScaleWorker* pWorker);
+    void add(WatchedWorker* pWorker);
+    void remove(WatchedWorker* pWorker);
 
 private:
     bool pre_run() override;
@@ -114,9 +114,9 @@ private:
     bool        call_task(Worker::Call::action_t action, Task* pTask);
     static bool inc_ticks(Worker::Call::action_t action);
 
-    std::unordered_set<MaxScaleWorker*> m_workers;
-    std::mutex                          m_workers_lock;
-    std::map<std::string, Task>         m_tasks_by_name;
+    std::unordered_set<WatchedWorker*> m_workers;
+    std::mutex                         m_workers_lock;
+    std::map<std::string, Task>        m_tasks_by_name;
 
     static maxbase::Duration  s_watchdog_interval;   /*< Duration between notifications, if any. */
     static maxbase::TimePoint s_watchdog_next_check; /*< Next time to notify systemd. */
