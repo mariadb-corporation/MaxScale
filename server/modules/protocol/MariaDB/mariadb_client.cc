@@ -1187,8 +1187,7 @@ void MySQLClientProtocol::track_transaction_state(MXS_SESSION* session, GWBUF* p
 bool MySQLClientProtocol::handle_change_user(bool* changed_user, GWBUF** packetbuf)
 {
     bool ok = true;
-    auto proto = this;
-    if (!proto->changing_user && m_command == MXS_COM_CHANGE_USER)
+    if (!m_changing_user && m_command == MXS_COM_CHANGE_USER)
     {
         // Track the COM_CHANGE_USER progress at the session level
         m_session_data->changing_user = true;
@@ -1200,10 +1199,10 @@ bool MySQLClientProtocol::handle_change_user(bool* changed_user, GWBUF** packetb
         m_stored_query = mxs::Buffer(*packetbuf);
         *packetbuf = NULL;
     }
-    else if (proto->changing_user)
+    else if (m_changing_user)
     {
         mxb_assert(m_command == MXS_COM_CHANGE_USER);
-        proto->changing_user = false;
+        m_changing_user = false;
         bool ok = reauthenticate_client(m_session, *packetbuf);
         gwbuf_free(*packetbuf);
         *packetbuf = m_stored_query.release();
@@ -1568,7 +1567,7 @@ int MySQLClientProtocol::route_by_statement(uint64_t capabilities, GWBUF** p_rea
             rc = m_component->routeQuery(packetbuf);
         }
 
-        changing_user = changed_user;
+        m_changing_user = changed_user;
 
         if (rc != 1)
         {
@@ -2411,9 +2410,14 @@ MYSQL_session::MYSQL_session(const MYSQL_session& rhs)
     memcpy(client_sha1, rhs.client_sha1, sizeof(client_sha1));
     memcpy(user, rhs.user, sizeof(user));
     memcpy(db, rhs.db, sizeof(db));
-    auth_token = new uint8_t[auth_token_len];
-    memcpy(auth_token, rhs.auth_token, rhs.auth_token_len);
+
+    // TODO: Clean up the auth token handling
+    auth_token = (uint8_t*)MXS_CALLOC(rhs.auth_token_len, sizeof(uint8_t));
     auth_token_len = rhs.auth_token_len;
+    if (rhs.auth_token)
+    {
+        memcpy(auth_token, rhs.auth_token, rhs.auth_token_len);
+    }
     next_sequence = rhs.next_sequence;
     changing_user = rhs.changing_user;
 }

@@ -722,7 +722,7 @@ int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
         }
     }
 
-    if (proto->changing_user)
+    if (m_changing_user)
     {
         if (auth_change_requested(read_buffer)
             && handle_auth_change_response(read_buffer, dcb))
@@ -740,7 +740,7 @@ int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
              * of 3 for the final response to a COM_CHANGE_USER.
              */
             GWBUF_DATA(read_buffer)[3] = 0x3;
-            proto->changing_user = false;
+            m_changing_user = false;
             m_client_data->changing_user = false;
         }
     }
@@ -1379,7 +1379,7 @@ MySQLBackendProtocol::gw_send_change_user_to_backend(DCB* backend)
     int rc = 0;
     if (backend->writeq_append(buffer))
     {
-        changing_user = true;
+        m_changing_user = true;
         rc = 1;
     }
     return rc;
@@ -2404,7 +2404,7 @@ void MySQLBackendProtocol::track_query(GWBUF* buffer)
     mxb_assert(gwbuf_is_contiguous(buffer));
     uint8_t* data = GWBUF_DATA(buffer);
 
-    if (changing_user)
+    if (m_changing_user)
     {
         // User reauthentication in progress, ignore the contents
         return;

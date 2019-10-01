@@ -42,7 +42,6 @@ public:
     uint32_t extra_capabilities = 0;        /*< MariaDB 10.2 capabilities */
 
     unsigned int charset = 0x8;             /*< Connection character set (default latin1 )*/
-    bool         changing_user = false;
 };
 
 /*
@@ -261,6 +260,8 @@ private:
     bool           m_opening_cursor = false;/**< Whether we are opening a cursor */
     uint32_t       m_expected_rows = 0;     /**< Number of rows a COM_STMT_FETCH is retrieving */
     bool           m_large_query = false;
+    bool           m_changing_user {false};
+
     mxs::Reply     m_reply;
     MXS_SESSION*   m_session {nullptr};     /**< Generic session */
     MYSQL_session* m_client_data {nullptr}; /**< Client-session shared data */
