@@ -161,9 +161,6 @@ static bool  lock_directories();
 static void  unlock_directories();
 static void  unlink_pidfile(void);  /* remove pidfile */
 static void  unlock_pidfile();
-static bool  file_write_header(FILE* outfile);
-static bool  file_write_footer(FILE* outfile);
-static void  write_footer(void);
 static int   ntfw_cb(const char*, const struct stat*, int, struct FTW*);
 static bool  is_file_and_readable(const char* absolute_pathname);
 static bool  path_is_readable(const char* absolute_pathname);
@@ -597,73 +594,6 @@ void cleanup_old_process_datadirs()
     int depth = 1;
     int flags = FTW_CHDIR | FTW_DEPTH | FTW_MOUNT;
     nftw(get_datadir(), ntfw_cb, depth, flags);
-}
-
-static void write_footer(void)
-{
-    file_write_footer(stdout);
-}
-
-static bool file_write_footer(FILE* outfile)
-{
-    bool succp = false;
-    size_t len1;
-    const char* header_buf1;
-
-    header_buf1 = "------------------------------------------------------"
-                  "\n\n";
-    len1 = strlen(header_buf1);
-    fwrite((void*)header_buf1, len1, 1, outfile);
-
-    succp = true;
-
-    return succp;
-}
-
-// Documentation says 26 bytes is enough, but 32 is a nice round number.
-#define ASCTIME_BUF_LEN 32
-static bool file_write_header(FILE* outfile)
-{
-    bool succp = false;
-    size_t len1;
-    size_t len2;
-    size_t len3;
-    const char* header_buf1;
-    char header_buf2[ASCTIME_BUF_LEN];
-    const char* header_buf3;
-    time_t t;
-    struct tm tm;
-#if defined (LAPTOP_TEST)
-    struct timespec ts1;
-    ts1.tv_sec = 0;
-    ts1.tv_nsec = DISKWRITE_LATENCY * 1000000;
-#endif
-
-#if !defined (SS_DEBUG)
-    return true;
-#endif
-
-    t = time(NULL);
-    localtime_r(&t, &tm);
-
-    header_buf1 = "\n\nMariaDB Corporation MaxScale " MAXSCALE_VERSION "\t";
-    asctime_r(&tm, header_buf2);
-    header_buf3 = "------------------------------------------------------\n";
-
-    len1 = strlen(header_buf1);
-    len2 = strlen(header_buf2);
-    len3 = strlen(header_buf3);
-#if defined (LAPTOP_TEST)
-    nanosleep(&ts1, NULL);
-#else
-    fwrite((void*)header_buf1, len1, 1, outfile);
-    fwrite((void*)header_buf2, len2, 1, outfile);
-    fwrite((void*)header_buf3, len3, 1, outfile);
-#endif
-
-    succp = true;
-
-    return succp;
 }
 
 static bool resolve_maxscale_conf_fname(char** cnf_full_path,
