@@ -83,7 +83,6 @@ bool RWSplitSession::prepare_connection(RWBackend* target)
             mxb_assert_message(!m_sescmd_list.empty() && target->has_session_commands(),
                                "Session command list must not be empty and target "
                                "should have unfinished session commands.");
-            m_expected_responses++;
         }
     }
 
@@ -509,10 +508,6 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
     int nsucc = 0;
     uint64_t lowest_pos = id;
 
-    // Reset the replier pointer. This needs to be done for each session command as the server from which the
-    // response is returned can change over time.
-    m_sescmd_replier = nullptr;
-
     if (qc_query_is_type(type, QUERY_TYPE_PREPARE_NAMED_STMT)
         || qc_query_is_type(type, QUERY_TYPE_PREPARE_STMT))
     {
@@ -543,19 +538,18 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
                 lowest_pos = current_pos;
             }
 
-            if (backend->execute_session_command())
+            if (backend->is_waiting_result())
+            {
+                MXS_INFO("Queuing session command on '%s'", backend->name());
+            }
+            else if (backend->execute_session_command())
             {
                 nsucc += 1;
                 mxb::atomic::add(&backend->target()->stats().packets, 1, mxb::atomic::RELAXED);
                 m_server_stats[backend->target()].total++;
                 m_server_stats[backend->target()].read++;
 
-                if (expecting_response)
-                {
-                    m_expected_responses++;
-                }
-
-                if (!m_sescmd_replier || backend == m_current_master)
+                if (expecting_response && (!m_sescmd_replier || backend == m_current_master))
                 {
                     m_sescmd_replier = backend;
                 }
@@ -570,6 +564,13 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
                           backend->name());
             }
         }
+    }
+
+    if (m_sescmd_replier)
+    {
+        mxb_assert(nsucc);
+        m_expected_responses++;
+        mxb_assert(m_expected_responses == 1);
     }
 
     if (m_config.max_sescmd_history > 0 && m_sescmd_list.size() >= m_config.max_sescmd_history

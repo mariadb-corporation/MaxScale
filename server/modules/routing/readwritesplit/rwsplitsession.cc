@@ -157,12 +157,12 @@ int32_t RWSplitSession::routeQuery(GWBUF* querybuf)
         MXS_INFO("Storing query (len: %d cmd: %0x), expecting %d replies to current command: %s",
                  gwbuf_length(querybuf), GWBUF_DATA(querybuf)[4], m_expected_responses,
                  mxs::extract_sql(querybuf, 1024).c_str());
-        mxb_assert(m_expected_responses > 0 || !m_query_queue.empty());
+        mxb_assert(m_expected_responses == 1 || !m_query_queue.empty());
 
         m_query_queue.emplace_back(querybuf);
         querybuf = NULL;
         rval = 1;
-        mxb_assert(m_expected_responses != 0);
+        mxb_assert(m_expected_responses == 1);
     }
 
     if (querybuf != NULL)
@@ -547,8 +547,14 @@ bool is_wsrep_error(const mxs::Error& error)
 
 bool RWSplitSession::handle_ignorable_error(RWBackend* backend, const mxs::Error& error)
 {
+    if (backend->has_session_commands())
+    {
+        // Never bypass errors for session commands. TODO: Check whether it would make sense to do so.
+        return false;
+    }
+
     mxb_assert(session_trx_is_active(m_pSession) || can_retry_query());
-    mxb_assert(m_expected_responses > 0);
+    mxb_assert(m_expected_responses == 1);
 
     bool ok = false;
 
@@ -626,7 +632,11 @@ void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
         backend->ack_write();
 
         /** Got a complete reply, decrement expected response count */
-        m_expected_responses--;
+        if (!backend->has_session_commands() || backend == m_sescmd_replier)
+        {
+            m_expected_responses--;
+            mxb_assert(m_expected_responses == 0);
+        }
 
         // TODO: This would make more sense if it was done at the client protocol level
         session_book_server_response(m_pSession, (SERVER*)backend->target(), m_expected_responses == 0);
@@ -734,13 +744,13 @@ void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
     {
         if (backend->in_use() && backend->has_session_commands())
         {
+            mxb_assert(backend != m_sescmd_replier);
+
             // Backend is still in use and has more session commands to execute
             if (backend->execute_session_command() && backend->is_waiting_result())
             {
                 MXS_INFO("%lu session commands left on '%s'",
-                         backend->session_command_count(),
-                         backend->name());
-                m_expected_responses++;
+                         backend->session_command_count(), backend->name());
             }
         }
         else if (m_expected_responses == 0 && !m_query_queue.empty()
@@ -877,6 +887,7 @@ bool RWSplitSession::retry_master_query(RWBackend* backend)
         // was expected failed: try to route the session command again. If the master is not available,
         // the response will be returned from one of the slaves if the configuration allows it.
 
+        mxb_assert(m_sescmd_replier == backend);
         mxb_assert(backend->next_session_command()->get_position() == m_recv_sescmd + 1);
         mxb_assert(m_qc.current_route_info().target() == TARGET_ALL);
         mxb_assert(!m_current_query.get());
@@ -884,6 +895,9 @@ bool RWSplitSession::retry_master_query(RWBackend* backend)
         mxb_assert(m_sescmd_count >= 2);
         MXS_INFO("Retrying session command due to master failure: %s",
                  backend->next_session_command()->to_string().c_str());
+
+        // Reset the replier pointer in case there's another master available
+        m_sescmd_replier = nullptr;
 
         // MXS-2609: Maxscale crash in RWSplitSession::retry_master_query()
         // To prevent a crash from happening, we make sure the session command list is not empty before
@@ -968,7 +982,7 @@ bool RWSplitSession::handleError(GWBUF* errmsgbuf, mxs::Endpoint* endpoint, cons
         else
         {
             // We were expecting a response but we aren't going to get one
-            mxb_assert(m_expected_responses > 0);
+            mxb_assert(m_expected_responses == 1);
             errmsg += " Lost connection to master server while waiting for a result.";
 
             if (can_retry_query())
@@ -1077,14 +1091,14 @@ bool RWSplitSession::handle_error_new_connection(MXS_SESSION* ses, RWBackend* ba
 
     if (backend->is_waiting_result())
     {
-        mxb_assert(m_expected_responses > 0);
-        m_expected_responses--;
-
         // Route stored queries if this was the last server we expected a response from
         route_stored = m_expected_responses == 0;
 
         if (!backend->has_session_commands())
         {
+            mxb_assert(m_expected_responses == 1);
+            m_expected_responses--;
+
             // The backend was busy executing command and the client is expecting a response.
             if (m_current_query.get() && m_config.retry_failed_reads)
             {
@@ -1105,6 +1119,7 @@ bool RWSplitSession::handle_error_new_connection(MXS_SESSION* ses, RWBackend* ba
                 mxs::ReplyRoute route;
                 RouterSession::clientReply(gwbuf_clone(errmsg), route, mxs::Reply(m_router->service()));
                 m_current_query.reset();
+                route_stored = true;
             }
         }
     }

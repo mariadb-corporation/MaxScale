@@ -105,6 +105,7 @@ void RWSplitSession::process_sescmd_response(RWBackend* backend, GWBUF** ppPacke
                 {
                     /** First reply to this session command, route it to the client */
                     ++m_recv_sescmd;
+                    m_sescmd_replier = nullptr;
 
                     /** Store the master's response so that the slave responses can be compared to it */
                     m_sescmd_responses[id] = std::make_pair(backend, !reply.error());
