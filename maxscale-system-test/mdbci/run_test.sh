@@ -80,6 +80,9 @@ fi
 if [ ! -z "${named_test}" ] ; then
     eval ${named_test}
 else
+    echo "===Full test list begin==="
+    ctest ${test_set} --show-only
+    echo "===Full test list end==="
     ctest -VV ${test_set}
 fi
 cp core.* ${logs_publish_dir}
