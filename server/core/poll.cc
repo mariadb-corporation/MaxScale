@@ -54,32 +54,6 @@ void poll_init()
 }
 
 /**
- * Set the number of non-blocking poll cycles that will be done before
- * a blocking poll will take place. Whenever an event arrives on a thread
- * or the thread sees a pending event to execute it will reset it's
- * poll_spin coutn to zero and will then poll with a 0 timeout until the
- * poll_spin value is greater than the value set here.
- *
- * @param nbpolls       Number of non-block polls to perform before blocking
- */
-void poll_set_nonblocking_polls(unsigned int nbpolls)
-{
-    RoutingWorker::set_nonblocking_polls(nbpolls);
-}
-
-/**
- * Set the maximum amount of time, in milliseconds, the polling thread
- * will block before it will wake and check the event queue for work
- * that may have been added by another thread.
- *
- * @param maxwait       Maximum wait time in milliseconds
- */
-void poll_set_maxwait(unsigned int maxwait)
-{
-    RoutingWorker::set_maxwait(maxwait);
-}
-
-/**
  * Display an entry from the spinlock statistics data
  *
  * @param       dcb     The DCB to print to

@@ -1745,17 +1745,6 @@ size_t config_thread_stack_size()
     return gateway.thread_stack_size;
 }
 
-/**
- * Return the number of non-blocking polls to be done before a blocking poll
- * is issued.
- *
- * @return The number of blocking poll calls to make before a blocking call
- */
-unsigned int config_nbpolls()
-{
-    return gateway.n_nbpoll;
-}
-
 uint32_t config_writeq_high_water()
 {
     return mxb::atomic::load(&gateway.writeq_high_water, mxb::atomic::RELAXED);
@@ -1790,17 +1779,6 @@ bool config_set_writeq_low_water(uint32_t size)
     }
 
     return rval;
-}
-
-/**
- * Return the configured number of milliseconds for which we wait when we do
- * a blocking poll call.
- *
- * @return The number of milliseconds to sleep in a blocking poll call
- */
-unsigned int config_pollsleep()
-{
-    return gateway.pollsleep;
 }
 
 static struct
@@ -1884,20 +1862,6 @@ static int handle_global_item(const char* name, const char* value)
         MXS_WARNING("%s is ignored and has been deprecated. If you need to explicitly "
                     "set the stack size, do so with 'ulimit -s' before starting MaxScale.",
                     CN_THREAD_STACK_SIZE);
-    }
-    else if (strcmp(name, CN_NON_BLOCKING_POLLS) == 0)
-    {
-        // DEPRECATED in 2.3, remove in 2.4
-        MXS_WARNING("The configuration option '%s' has no meaning and has been deprecated.",
-                    CN_NON_BLOCKING_POLLS);
-        gateway.n_nbpoll = atoi(value);
-    }
-    else if (strcmp(name, CN_POLL_SLEEP) == 0)
-    {
-        // DEPRECATED in 2.3, remove in 2.4
-        MXS_WARNING("The configuration option '%s' has no meaning and has been deprecated.",
-                    CN_POLL_SLEEP);
-        gateway.pollsleep = atoi(value);
     }
     else if (strcmp(name, CN_MS_TIMESTAMP) == 0)
     {
@@ -2365,8 +2329,6 @@ bool config_can_modify_at_runtime(const char* name)
         "sql_mode",
         CN_QUERY_CLASSIFIER_ARGS,
         CN_QUERY_CLASSIFIER,
-        CN_POLL_SLEEP,
-        CN_NON_BLOCKING_POLLS,
         CN_THREAD_STACK_SIZE,
         CN_THREADS
     };
@@ -2433,8 +2395,6 @@ void config_set_global_defaults()
     struct utsname uname_data;
     gateway.config_check = false;
     gateway.n_threads = DEFAULT_NTHREADS;
-    gateway.n_nbpoll = DEFAULT_NBPOLLS;
-    gateway.pollsleep = DEFAULT_POLLSLEEP;
     gateway.auth_conn_timeout = DEFAULT_AUTH_CONNECT_TIMEOUT;
     gateway.auth_read_timeout = DEFAULT_AUTH_READ_TIMEOUT;
     gateway.auth_write_timeout = DEFAULT_AUTH_WRITE_TIMEOUT;

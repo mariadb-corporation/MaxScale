@@ -61,10 +61,6 @@ struct this_unit
     int             nWorkers;           // How many routing workers there are.
     RoutingWorker** ppWorkers;          // Array of routing worker instances.
     int             next_worker_id;     // Next worker id
-    // DEPRECATED in 2.3, remove in 2.4.
-    int number_poll_spins;      // Maximum non-block polls
-    // DEPRECATED in 2.3, remove in 2.4.
-    int  max_poll_sleep;    // Maximum block time
     int  epoll_listener_fd; // Shared epoll descriptor for listening descriptors.
     int  id_main_worker;    // The id of the worker running in the main thread.
     int  id_min_worker;     // The smallest routing worker id.
@@ -76,8 +72,6 @@ struct this_unit
     0,                  // nWorkers
     NULL,               // ppWorkers
     0,                  // next_worker_id
-    0,                  // number_poll_spins
-    0,                  // max_poll_sleep
     -1,                 // epoll_listener_fd
     WORKER_ABSENT_ID,   // id_main_worker
     WORKER_ABSENT_ID,   // id_min_worker
@@ -238,9 +232,6 @@ RoutingWorker::~RoutingWorker()
 bool RoutingWorker::init(MainWorker* pMain)
 {
     mxb_assert(!this_unit.initialized);
-
-    this_unit.number_poll_spins = config_nbpolls();
-    this_unit.max_poll_sleep = config_pollsleep();
 
     this_unit.epoll_listener_fd = epoll_create(MAX_EVENTS);
 
@@ -472,18 +463,6 @@ void RoutingWorker::join_workers()
     }
 
     this_unit.running = false;
-}
-
-// static
-void RoutingWorker::set_nonblocking_polls(unsigned int nbpolls)
-{
-    this_unit.number_poll_spins = nbpolls;
-}
-
-// static
-void RoutingWorker::set_maxwait(unsigned int maxwait)
-{
-    this_unit.max_poll_sleep = maxwait;
 }
 
 RoutingWorker::SessionsById& RoutingWorker::session_registry()

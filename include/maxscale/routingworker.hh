@@ -306,16 +306,6 @@ public:
     static void join_workers();
 
     /**
-     * Deprecated
-     */
-    static void set_nonblocking_polls(unsigned int nbpolls);
-
-    /**
-     * Deprecated
-     */
-    static void set_maxwait(unsigned int maxwait);
-
-    /**
      * Posts a task to all workers for execution.
      *
      * @param pTask  The task to be executed.

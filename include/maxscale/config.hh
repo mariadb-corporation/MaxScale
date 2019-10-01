@@ -392,8 +392,6 @@ struct MXS_CONFIG
     char    sysname[SYSNAME_LEN];                       /**< The OS name of the system */
     uint8_t mac_sha1[SHA_DIGEST_LENGTH];                /**< The SHA1 digest of an interface MAC address */
 
-    unsigned int n_nbpoll;                              /**< Tune number of non-blocking polls */
-    unsigned int pollsleep;                             /**< Wait time in blocking polls */
     int          syslog;                                /**< Log to syslog */
     int          maxlog;                                /**< Log to MaxScale's own logs */
     time_t       auth_conn_timeout;                     /**< Connection timeout for the user
@@ -507,20 +505,6 @@ int config_threadcount(void);
  */
 size_t config_thread_stack_size(void);
 
-
-/**
- * @brief Get number of non-blocking polls
- *
- * @return Number of non-blocking polls
- */
-unsigned int config_nbpolls(void);
-
-/**
- * @brief Get poll sleep interval
- *
- * @return The time each thread waits for a blocking poll
- */
-unsigned int config_pollsleep(void);
 
 /**
  * @brief List all path parameters as JSON

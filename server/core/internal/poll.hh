@@ -30,9 +30,6 @@ enum poll_message
 void poll_init();
 // void          poll_finish(); // TODO: Add this.
 
-void poll_set_maxwait(unsigned int);
-void poll_set_nonblocking_polls(unsigned int);
-
 void dprintPollStats(DCB*);
 void dShowThreads(DCB* dcb);
 void dShowEventQ(DCB* dcb);

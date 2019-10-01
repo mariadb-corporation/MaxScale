@@ -761,8 +761,6 @@ static struct
     {"basedir",            VT_STRING, (STATSFUNC)getMaxScaleHome       },
     {"MAXSCALE_VERSION",   VT_STRING, (STATSFUNC)getVersion            },
     {"MAXSCALE_THREADS",   VT_INT,    (STATSFUNC)config_threadcount    },
-    {"MAXSCALE_NBPOLLS",   VT_INT,    (STATSFUNC)config_nbpolls        },
-    {"MAXSCALE_POLLSLEEP", VT_INT,    (STATSFUNC)config_pollsleep      },
     {"MAXSCALE_UPTIME",    VT_INT,    (STATSFUNC)maxscale_uptime       },
     {"MAXSCALE_SESSIONS",  VT_INT,    (STATSFUNC)serviceSessionCountAll},
     {NULL,                 0,         NULL                             }
