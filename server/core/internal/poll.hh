@@ -20,19 +20,7 @@
 #include <maxscale/poll.hh>
 #include <maxscale/resultset.hh>
 
-struct mxs_worker;
-
-enum poll_message
-{
-    POLL_MSG_CLEAN_PERSISTENT = 0x01
-};
-
 void poll_init();
 // void          poll_finish(); // TODO: Add this.
-
-void dprintPollStats(DCB*);
-void dShowThreads(DCB* dcb);
-void dShowEventQ(DCB* dcb);
-void dShowEventStats(DCB* dcb);
 
 std::unique_ptr<ResultSet> eventTimesGetList();
