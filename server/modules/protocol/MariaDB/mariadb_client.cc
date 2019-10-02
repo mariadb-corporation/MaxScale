@@ -799,7 +799,7 @@ void MySQLClientProtocol::handle_authentication_errors(DCB* generic_dcb, int aut
         /** Send error 1045 to client */
         fail_str = create_auth_fail_str(session->user,
                                         dcb->remote().c_str(),
-                                        session->auth_token_len > 0,
+                                        !session->auth_token.empty(),
                                         session->db,
                                         auth_val);
         modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "28000", fail_str);
@@ -814,7 +814,7 @@ void MySQLClientProtocol::handle_authentication_errors(DCB* generic_dcb, int aut
         /** Send error 1045 to client */
         fail_str = create_auth_fail_str(session->user,
                                         dcb->remote().c_str(),
-                                        session->auth_token_len > 0,
+                                        !session->auth_token.empty(),
                                         session->db,
                                         auth_val);
         modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "28000", fail_str);
@@ -1105,10 +1105,8 @@ bool MySQLClientProtocol::reauthenticate_client(MXS_SESSION* session, GWBUF* pac
         payload.resize(payloadlen);
         gwbuf_copy_data(packetbuf, MYSQL_HEADER_LEN, payloadlen, &payload[0]);
 
-        int rc = client_auth->reauthenticate(
-            m_dcb, data->user, &payload[0], payload.size(),
-            proto->scramble, sizeof(proto->scramble), data->client_sha1, sizeof(data->client_sha1));
-
+        int rc = client_auth->reauthenticate(m_dcb, proto->scramble, sizeof(proto->scramble),
+                                             payload, data->client_sha1);
         if (rc == MXS_AUTH_SUCCEEDED)
         {
             // Re-authentication successful, route the original COM_CHANGE_USER
@@ -2403,28 +2401,6 @@ void MySQLClientProtocol::track_current_command(GWBUF* buffer)
      * contains the latest command executed on this backend.
      */
     m_large_query = MYSQL_GET_PAYLOAD_LEN(data) == MYSQL_PACKET_LENGTH_MAX;
-}
-
-MYSQL_session::MYSQL_session(const MYSQL_session& rhs)
-{
-    memcpy(client_sha1, rhs.client_sha1, sizeof(client_sha1));
-    memcpy(user, rhs.user, sizeof(user));
-    memcpy(db, rhs.db, sizeof(db));
-
-    // TODO: Clean up the auth token handling
-    auth_token = (uint8_t*)MXS_CALLOC(rhs.auth_token_len, sizeof(uint8_t));
-    auth_token_len = rhs.auth_token_len;
-    if (rhs.auth_token)
-    {
-        memcpy(auth_token, rhs.auth_token, rhs.auth_token_len);
-    }
-    next_sequence = rhs.next_sequence;
-    changing_user = rhs.changing_user;
-}
-
-MYSQL_session::~MYSQL_session()
-{
-    delete auth_token;
 }
 
 /**

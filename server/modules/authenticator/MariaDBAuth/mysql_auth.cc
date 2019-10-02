@@ -266,20 +266,16 @@ int MariaDBClientAuthenticator::authenticate(DCB* generic_dcb)
             }
         }
 
-        auth_ret = validate_mysql_user(
-                dcb,
-                client_data,
-                protocol->scramble,
-                sizeof(protocol->scramble));
+        auth_ret = validate_mysql_user(dcb, client_data,
+                                       protocol->scramble, sizeof(protocol->scramble),
+                                       client_data->auth_token, client_data->client_sha1);
 
         if (auth_ret != MXS_AUTH_SUCCEEDED
             && service_refresh_users(dcb->service()))
         {
-            auth_ret = validate_mysql_user(
-                    dcb,
-                    client_data,
-                    protocol->scramble,
-                    sizeof(protocol->scramble));
+            auth_ret = validate_mysql_user(dcb, client_data,
+                                           protocol->scramble, sizeof(protocol->scramble),
+                                           client_data->auth_token, client_data->client_sha1);
         }
 
         /* on successful authentication, set user into dcb field */
@@ -320,12 +316,7 @@ int MariaDBClientAuthenticator::authenticate(DCB* generic_dcb)
             }
         }
 
-        /* let's free the auth_token now */
-        if (client_data->auth_token)
-        {
-            MXS_FREE(client_data->auth_token);
-            client_data->auth_token = NULL;
-        }
+        client_data->auth_token.clear();
     }
 
     return auth_ret;
@@ -444,10 +435,7 @@ bool MariaDBClientAuthenticator::set_client_data(MYSQL_session* client_data,
 
     int packet_length_used = 0;
 
-    /* Make authentication token length 0 and token null in case none is provided */
-    client_data->auth_token_len = 0;
-    MXS_FREE((client_data->auth_token));
-    client_data->auth_token = NULL;
+    client_data->auth_token.clear(); // Usually no-op
     m_correct_authenticator = false;
 
     if (client_auth_packet_size > MYSQL_AUTH_PACKET_BASE_SIZE)
@@ -477,79 +465,69 @@ bool MariaDBClientAuthenticator::set_client_data(MYSQL_session* client_data,
              * We should find an authentication token next
              * One byte of packet is the length of authentication token
              */
-            client_data->auth_token_len = client_auth_packet[packet_length_used];
+            int auth_token_len = client_auth_packet[packet_length_used];
             packet_length_used++;
 
-            if (client_auth_packet_size
-                < (packet_length_used + client_data->auth_token_len))
+            if (client_auth_packet_size < (packet_length_used + auth_token_len))
             {
                 /* Packet was too small to contain authentication token */
                 return false;
             }
             else
             {
-                client_data->auth_token = (uint8_t*)MXS_MALLOC(client_data->auth_token_len);
-                if (!client_data->auth_token)
-                {
-                    /* Failed to allocate space for authentication token string */
-                    return false;
-                }
-                else
-                {
-                    memcpy(client_data->auth_token,
-                           client_auth_packet + packet_length_used,
-                           client_data->auth_token_len);
-                    packet_length_used += client_data->auth_token_len;
+                uint8_t* copy_begin = client_auth_packet + packet_length_used;
+                uint8_t* copy_end = copy_begin + auth_token_len;
+                client_data->auth_token.assign(copy_begin, copy_end);
+                packet_length_used += auth_token_len;
 
-                    // Database name may be next. It has already been read and is skipped.
-                    if (protocol->client_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB)
+                // Database name may be next. It has already been read and is skipped.
+                if (protocol->client_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB)
+                {
+                    if (!read_zstr(client_auth_packet, client_auth_packet_size,
+                                   &packet_length_used, NULL))
                     {
-                        if (!read_zstr(client_auth_packet, client_auth_packet_size,
-                                       &packet_length_used, NULL))
-                        {
-                            return false;
-                        }
+                        return false;
                     }
+                }
 
-                    // Authentication plugin name.
-                    if (protocol->client_capabilities & GW_MYSQL_CAPABILITIES_PLUGIN_AUTH)
+                // Authentication plugin name.
+                if (protocol->client_capabilities & GW_MYSQL_CAPABILITIES_PLUGIN_AUTH)
+                {
+                    int bytes_left = client_auth_packet_size - packet_length_used;
+                    if (bytes_left < 1)
                     {
-                        int bytes_left = client_auth_packet_size - packet_length_used;
-                        if (bytes_left < 1)
+                        return false;
+                    }
+                    else
+                    {
+                        char plugin_name[bytes_left];
+                        if (!read_zstr(client_auth_packet, client_auth_packet_size,
+                                       &packet_length_used, plugin_name))
                         {
                             return false;
                         }
                         else
                         {
-                            char plugin_name[bytes_left];
-                            if (!read_zstr(client_auth_packet, client_auth_packet_size,
-                                           &packet_length_used, plugin_name))
+                            // Check that the plugin is as expected. If not, make a note so the
+                            // authentication function switches the plugin.
+                            bool correct_auth = strcmp(plugin_name, DEFAULT_MYSQL_AUTH_PLUGIN) == 0;
+                            m_correct_authenticator = correct_auth;
+                            if (!correct_auth)
                             {
-                                return false;
-                            }
-                            else
-                            {
-                                // Check that the plugin is as expected. If not, make a note so the
-                                // authentication function switches the plugin.
-                                bool correct_auth = strcmp(plugin_name, DEFAULT_MYSQL_AUTH_PLUGIN) == 0;
-                                m_correct_authenticator = correct_auth;
-                                if (!correct_auth)
-                                {
-                                    // The switch attempt is done later but the message is clearest if
-                                    // logged at once.
-                                    MXS_INFO("Client '%s'@[%s] is using an unsupported authenticator "
-                                             "plugin '%s'. Trying to switch to '%s'.",
-                                             client_data->user, client_dcb->remote().c_str(), plugin_name,
-                                             DEFAULT_MYSQL_AUTH_PLUGIN);
-                                }
+                                // The switch attempt is done later but the message is clearest if
+                                // logged at once.
+                                MXS_INFO("Client '%s'@[%s] is using an unsupported authenticator "
+                                         "plugin '%s'. Trying to switch to '%s'.",
+                                         client_data->user, client_dcb->remote().c_str(), plugin_name,
+                                         DEFAULT_MYSQL_AUTH_PLUGIN);
                             }
                         }
                     }
+                }
                     else
                     {
                         m_correct_authenticator = true;
                     }
-                }
             }
         }
         else
@@ -562,20 +540,11 @@ bool MariaDBClientAuthenticator::set_client_data(MYSQL_session* client_data,
         // Client is replying to an AuthSwitch request. The packet should contain the authentication token.
         // Length has already been checked.
         mxb_assert(client_auth_packet_size == MYSQL_HEADER_LEN + MYSQL_SCRAMBLE_LEN);
-        uint8_t* auth_token = (uint8_t*)(MXS_MALLOC(MYSQL_SCRAMBLE_LEN));
-        if (!auth_token)
-        {
-            /* Failed to allocate space for authentication token string */
-            return false;
-        }
-        else
-        {
-            memcpy(auth_token, client_auth_packet + MYSQL_HEADER_LEN, MYSQL_SCRAMBLE_LEN);
-            client_data->auth_token = auth_token;
-            client_data->auth_token_len = MYSQL_SCRAMBLE_LEN;
-            // Assume that correct authenticator is now used. If this is not the case, authentication fails.
-            m_correct_authenticator = true;
-        }
+        uint8_t* copy_begin = client_auth_packet + MYSQL_HEADER_LEN;
+        uint8_t* copy_end = copy_begin + MYSQL_SCRAMBLE_LEN;
+        client_data->auth_token.assign(copy_begin, copy_end);
+        // Assume that correct authenticator is now used. If this is not the case, authentication fails.
+        m_correct_authenticator = true;
     }
 
     return true;
@@ -733,31 +702,25 @@ int MariaDBAuthenticatorModule::load_users(SERVICE* service)
     return rc;
 }
 
-int MariaDBClientAuthenticator::reauthenticate(DCB* generic_dcb,
-                                               const char* user, uint8_t* token, size_t token_len,
-                                               uint8_t* scramble, size_t scramble_len,
-                                               uint8_t* output_token, size_t output_token_len)
+int MariaDBClientAuthenticator::reauthenticate(DCB* generic_dcb, uint8_t* scramble, size_t scramble_len,
+                                               const ByteVec& auth_token, uint8_t* output_token)
 {
     mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
     auto client_data = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
-    MYSQL_session temp(*client_data);
     int rval = 1;
 
-    strcpy(temp.user, user);
-    temp.auth_token = token;
-    temp.auth_token_len = token_len;
-
-    int rc = validate_mysql_user(dcb, &temp, scramble, scramble_len);
+    uint8_t phase2_scramble[MYSQL_SCRAMBLE_LEN];
+    int rc = validate_mysql_user(dcb, client_data, scramble, scramble_len, auth_token, phase2_scramble);
 
     if (rc != MXS_AUTH_SUCCEEDED && service_refresh_users(dcb->service()))
     {
-        rc = validate_mysql_user(dcb, &temp, scramble, scramble_len);
+        rc = validate_mysql_user(dcb, client_data, scramble, scramble_len, auth_token, phase2_scramble);
     }
 
     if (rc == MXS_AUTH_SUCCEEDED)
     {
-        memcpy(output_token, temp.client_sha1, output_token_len);
+        memcpy(output_token, phase2_scramble, sizeof(phase2_scramble));
         rval = 0;
     }
 

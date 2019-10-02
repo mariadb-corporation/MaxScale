@@ -258,12 +258,9 @@ static char* get_users_query(const SERVER::Version& version, bool include_root, 
     return rval;
 }
 
-static bool check_password(const char* output,
-                           uint8_t* token,
-                           size_t token_len,
-                           uint8_t* scramble,
-                           size_t scramble_len,
-                           uint8_t* phase2_scramble)
+static bool
+check_password(const char* output, const uint8_t* scramble, size_t scramble_len,
+               const mxs::ClientAuthenticator::ByteVec& auth_token, uint8_t* phase2_scramble_out)
 {
     uint8_t stored_token[SHA_DIGEST_LENGTH] = {};
     size_t stored_token_len = sizeof(stored_token);
@@ -296,11 +293,11 @@ static bool check_password(const char* output,
     /** Next, extract the SHA1 of the real password by XOR'ing it with
      * the output of the previous calculation */
     uint8_t step2[SHA_DIGEST_LENGTH] = {};
-    gw_str_xor(step2, token, step1, token_len);
+    gw_str_xor(step2, auth_token.data(), step1, auth_token.size());
 
     /** The phase 2 scramble needs to be copied to the shared data structure as it
      * is required when the backend authentication is done. */
-    memcpy(phase2_scramble, step2, SHA_DIGEST_LENGTH);
+    memcpy(phase2_scramble_out, step2, SHA_DIGEST_LENGTH);
 
     /** Finally, calculate the SHA1 of the hashed real password */
     uint8_t final_step[SHA_DIGEST_LENGTH];
@@ -367,38 +364,39 @@ static int auth_cb(void* data, int columns, char** rows, char** row_names)
     return 0;
 }
 
-int MariaDBClientAuthenticator::validate_mysql_user(DCB* dcb, MYSQL_session* session, uint8_t* scramble,
-                                                    size_t scramble_len)
+int MariaDBClientAuthenticator::validate_mysql_user(DCB* dcb, const MYSQL_session* session,
+                                                    uint8_t* scramble, size_t scramble_len,
+                                                    const mxs::ClientAuthenticator::ByteVec& auth_token,
+                                                    uint8_t* phase2_scramble_out)
 {
+    const char* user = session->user;
+    const char* database = session->db;
+    const char* remote = dcb->remote().c_str();
+
     sqlite3* handle = m_module.get_handle();
     const char* validate_query = m_module.m_lower_case_table_names ?
         mysqlauth_validate_user_query_lower : mysqlauth_validate_user_query;
-    size_t len = snprintf(NULL, 0, validate_query,
-                          session->user,
-                          dcb->remote().c_str(),
-                          dcb->remote().c_str(),
-                          session->db,
-                          session->db);
+    size_t len = snprintf(nullptr, 0, validate_query,
+                          user,
+                          remote, remote,
+                          database, database);
     char sql[len + 1];
     int rval = MXS_AUTH_FAILED;
     char* err;
 
     if (m_module.m_skip_auth)
     {
-        sprintf(sql, mysqlauth_skip_auth_query, session->user, session->db, session->db);
+        sprintf(sql, mysqlauth_skip_auth_query, user, database, database);
     }
     else
     {
-        sprintf(sql,
-                validate_query,
-                session->user,
-                dcb->remote().c_str(),
-                dcb->remote().c_str(),
-                session->db,
-                session->db);
+        sprintf(sql, validate_query,
+                user,
+                remote, remote,
+                database, database);
     }
 
-    struct user_query_result res = {};
+    user_query_result res = {};
 
     if (sqlite3_exec(handle, sql, auth_cb, &res, &err) != SQLITE_OK)
     {
@@ -407,16 +405,13 @@ int MariaDBClientAuthenticator::validate_mysql_user(DCB* dcb, MYSQL_session* ses
     }
 
     /** Check for IPv6 mapped IPv4 address */
-    if (!res.ok && strchr(dcb->remote().c_str(), ':') && strchr(dcb->remote().c_str(), '.'))
+    if (!res.ok && strchr(remote, ':') && strchr(remote, '.'))
     {
-        const char* ipv4 = strrchr(dcb->remote().c_str(), ':') + 1;
-        sprintf(sql,
-                validate_query,
-                session->user,
-                ipv4,
-                ipv4,
-                session->db,
-                session->db);
+        const char* ipv4 = strrchr(remote, ':') + 1;
+        sprintf(sql, validate_query,
+                user,
+                ipv4, ipv4,
+                database, database);
 
         if (sqlite3_exec(handle, sql, auth_cb, &res, &err) != SQLITE_OK)
         {
@@ -434,13 +429,11 @@ int MariaDBClientAuthenticator::validate_mysql_user(DCB* dcb, MYSQL_session* ses
         char client_hostname[MYSQL_HOST_MAXLEN] = "";
         get_hostname(dcb, client_hostname, sizeof(client_hostname) - 1);
 
-        sprintf(sql,
-                validate_query,
-                session->user,
+        sprintf(sql, validate_query,
+                user,
                 client_hostname,
                 client_hostname,
-                session->db,
-                session->db);
+                database, database);
 
         if (sqlite3_exec(handle, sql, auth_cb, &res, &err) != SQLITE_OK)
         {
@@ -453,16 +446,13 @@ int MariaDBClientAuthenticator::validate_mysql_user(DCB* dcb, MYSQL_session* ses
     {
         /** Found a matching row */
 
-        if (no_password_required(res.output, session->auth_token_len)
+        if (no_password_required(res.output, session->auth_token.size())
             || check_password(res.output,
-                              session->auth_token,
-                              session->auth_token_len,
-                              scramble,
-                              scramble_len,
-                              session->client_sha1))
+                              scramble, scramble_len, auth_token,
+                              phase2_scramble_out))
         {
             /** Password is OK, check that the database exists */
-            if (check_database(handle, session->db))
+            if (check_database(handle, database))
             {
                 rval = MXS_AUTH_SUCCEEDED;
             }

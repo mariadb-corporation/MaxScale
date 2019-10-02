@@ -147,9 +147,8 @@ public:
     bool ssl_capable(DCB* client) override;
     int  authenticate(DCB* client) override;
     void free_data(DCB* client) override;
-    int  reauthenticate(DCB* client, const char* user, uint8_t* token, size_t token_len,
-                        uint8_t* scramble, size_t scramble_len,
-                        uint8_t* output, size_t output_len) override;
+    int  reauthenticate(DCB* generic_dcb, uint8_t* scramble, size_t scramble_len, const ByteVec& auth_token,
+                        uint8_t* output_token) override;
 
     std::unique_ptr<mxs::BackendAuthenticator> create_backend_authenticator() override;
 
@@ -161,17 +160,21 @@ private:
      * @param session      Shared MySQL session
      * @param scramble     The scramble sent to the client in the initial handshake
      * @param scramble_len Length of @c scramble
+     * @param auth_token   Authentication token from client
+     * @param phase2_scramble_out Output for backend token
      *
      * @return MXS_AUTH_SUCCEEDED if the user has access to the database
      */
-    int validate_mysql_user(DCB* dcb, MYSQL_session* session, uint8_t* scramble,
-                            size_t scramble_len);
+    int validate_mysql_user(DCB* dcb, const MYSQL_session* session,
+                            uint8_t* scramble, size_t scramble_len,
+                            const mxs::ClientAuthenticator::ByteVec& auth_token,
+                            uint8_t* phase2_scramble_out);
     bool check_database(sqlite3* handle, const char* database);
     bool set_client_data(MYSQL_session* client_data, MySQLProtocol* protocol, DCB* client_dcb,
                          GWBUF* buffer);
 
-    bool m_correct_authenticator {false};  /*< Is session using mysql_native_password? */
-    bool m_auth_switch_sent {false};       /*< Expecting a response to AuthSwitchRequest? */
+    bool m_correct_authenticator {false};   /*< Is session using mysql_native_password? */
+    bool m_auth_switch_sent {false};        /*< Expecting a response to AuthSwitchRequest? */
 };
 
 /** Structure representing the authentication state */

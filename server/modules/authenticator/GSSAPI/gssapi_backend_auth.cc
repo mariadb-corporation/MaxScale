@@ -34,16 +34,17 @@ bool GSSAPIBackendAuthenticator::send_new_auth_token(DCB* dcb)
     bool rval = false;
     auto auth = this;
     auto ses = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
-    GWBUF* buffer = gwbuf_alloc(MYSQL_HEADER_LEN + ses->auth_token_len);
+    auto auth_token_len = ses->auth_token.size();
+    GWBUF* buffer = gwbuf_alloc(MYSQL_HEADER_LEN + auth_token_len);
 
     // This function actually just forwards the client's token to the backend server
     if (buffer)
     {
         uint8_t* data = (uint8_t*)GWBUF_DATA(buffer);
-        gw_mysql_set_byte3(data, ses->auth_token_len);
+        gw_mysql_set_byte3(data, auth_token_len);
         data += 3;
         *data++ = ++auth->sequence;
-        memcpy(data, ses->auth_token, ses->auth_token_len);
+        memcpy(data, ses->auth_token.data(), auth_token_len);
 
         if (dcb->writeq_append(buffer))
         {

@@ -36,7 +36,6 @@
 #include <maxscale/session.hh>
 #include <maxscale/version.h>
 #include <maxscale/protocol2.hh>
-#include <maxscale/authenticator2.hh>
 #include <maxscale/protocol/mariadb/common_constants.hh>
 
 // Default version string sent to clients

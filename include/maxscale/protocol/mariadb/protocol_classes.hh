@@ -53,14 +53,11 @@ public:
     uint8_t  client_sha1[MYSQL_SCRAMBLE_LEN] {0};   /*< SHA1(password) */
     char     user[MYSQL_USER_MAXLEN + 1] {'\0'};    /*< username       */
     char     db[MYSQL_DATABASE_MAXLEN + 1] {'\0'};  /*< database       */
-    int      auth_token_len {0};                    /*< token length   */
-    uint8_t* auth_token {nullptr};                  /*< token          */
     uint8_t  next_sequence {0};                     /*< Next packet sequence */
     bool     changing_user {false};                 /*< True if a COM_CHANGE_USER is in progress */
 
-    MYSQL_session() = default;
-    MYSQL_session(const MYSQL_session& rhs);
-    ~MYSQL_session();
+    // Authentication token storage. Used by different authenticators.
+    mxs::ClientAuthenticator::ByteVec auth_token;
 };
 
 class MySQLClientProtocol : public MySQLProtocol, public mxs::ClientProtocolBase

@@ -126,9 +126,8 @@ uint64_t AuthenticatorModule::capabilities() const
     return 0;
 }
 
-int ClientAuthenticator::reauthenticate(DCB* client, const char* user, uint8_t* token, size_t token_len,
-                                        uint8_t* scramble, size_t scramble_len,
-                                        uint8_t* output, size_t output_len)
+int ClientAuthenticator::reauthenticate(DCB* client, uint8_t* scramble, size_t scramble_len,
+                                        const ByteVec& auth_token, uint8_t* output)
 {
     return MXS_AUTH_STATE_FAILED;
 }

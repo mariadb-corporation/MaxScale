@@ -46,12 +46,9 @@ bool store_client_password(DCB* generic_dcb, GWBUF* buffer)
     {
         size_t plen = gw_mysql_get_byte3(header);
         auto ses = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
-        ses->auth_token = (uint8_t*)MXS_CALLOC(plen, sizeof(uint8_t));
-        if (ses->auth_token)
-        {
-            ses->auth_token_len = gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, plen, ses->auth_token);
-            rval = true;
-        }
+        ses->auth_token.resize(plen);
+        gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, plen, ses->auth_token.data());
+        rval = true;
     }
     return rval;
 }
@@ -296,7 +293,7 @@ int PamClientAuthenticator::authenticate(DCB* generic_dcb)
             /** We sent the authentication change packet + plugin name and the client
              * responded with the password. Try to continue authentication without more
              * messages to client. */
-            string password((char*)ses->auth_token, ses->auth_token_len);
+            string password((char*)ses->auth_token.data(), ses->auth_token.size());
             /*
              * Authentication may be attempted twice: first with old user account info and then with
              * updated info. Updating may fail if it has been attempted too often lately. The second password

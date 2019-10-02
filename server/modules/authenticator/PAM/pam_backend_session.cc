@@ -149,11 +149,12 @@ PamBackendAuthenticator::PamBackendAuthenticator()
 bool PamBackendAuthenticator::send_client_password(DCB* dcb)
 {
     auto ses = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
-    size_t buflen = MYSQL_HEADER_LEN + ses->auth_token_len;
+    auto auth_token_len = ses->auth_token.size();
+    size_t buflen = MYSQL_HEADER_LEN + auth_token_len;
     uint8_t bufferdata[buflen];
-    gw_mysql_set_byte3(bufferdata, ses->auth_token_len);
+    gw_mysql_set_byte3(bufferdata, auth_token_len);
     bufferdata[MYSQL_SEQ_OFFSET] = m_sequence;
-    memcpy(bufferdata + MYSQL_HEADER_LEN, ses->auth_token, ses->auth_token_len);
+    memcpy(bufferdata + MYSQL_HEADER_LEN, ses->auth_token.data(), auth_token_len);
     return dcb->writeq_append(gwbuf_alloc_and_load(buflen, bufferdata));
 }
 

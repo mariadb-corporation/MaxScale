@@ -255,12 +255,9 @@ bool GSSAPIClientAuthenticator::store_client_token(DCB* generic_dcb, GWBUF* buff
     {
         size_t plen = gw_mysql_get_byte3(hdr);
         auto ses = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
-        if ((ses->auth_token = static_cast<uint8_t*>(MXS_MALLOC(plen))))
-        {
-            gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, plen, ses->auth_token);
-            ses->auth_token_len = plen;
-            rval = true;
-        }
+        ses->auth_token.resize(plen);
+        gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, plen, ses->auth_token.data());
+        rval = true;
     }
 
     return rval;
@@ -518,7 +515,7 @@ int GSSAPIClientAuthenticator::authenticate(DCB* generic_dcb)
         auto ses = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
         char* princ = NULL;
 
-        if (validate_gssapi_token(m_module.principal_name, ses->auth_token, ses->auth_token_len, &princ)
+        if (validate_gssapi_token(m_module.principal_name, ses->auth_token.data(), ses->auth_token.size(), &princ)
             && validate_user(auth, dcb, ses, princ))
         {
             rval = MXS_AUTH_SUCCEEDED;

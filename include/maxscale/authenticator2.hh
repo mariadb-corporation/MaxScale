@@ -80,6 +80,8 @@ public:
 class ClientAuthenticator
 {
 public:
+    using ByteVec = std::vector<uint8_t>;
+
     ClientAuthenticator(const ClientAuthenticator&) = delete;
     ClientAuthenticator& operator=(const ClientAuthenticator&) = delete;
 
@@ -112,18 +114,14 @@ public:
      * directly when a COM_CHANGE_USER command is executed. Not implemented by most authenticators.
      *
      * @param dcb The connection
-     * @param user Username
-     * @param token Client auth token
-     * @param token_len Auth token length
      * @param scramble Scramble sent by MaxScale to client
      * @param scramble_len Scramble length
+     * @param auth_token Authentication token sent by client
      * @param output Hashed client password used by backend protocols
-     * @param output_len Hash length
      * @return 0 on success
      */
-    virtual int reauthenticate(DCB* client, const char* user, uint8_t* token, size_t token_len,
-                               uint8_t* scramble, size_t scramble_len,
-                               uint8_t* output, size_t output_len);
+    virtual int reauthenticate(DCB* client, uint8_t* scramble, size_t scramble_len,
+                               const ByteVec& auth_token, uint8_t* output);
 
     /**
      * Create a new backend session linked to the client session. Should only be implemented by
