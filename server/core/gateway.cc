@@ -897,31 +897,20 @@ static bool path_is_writable(const char* absolute_pathname)
 static char* get_expanded_pathname(const char* relative_path,
                                    const char* fname)
 {
+    mxb_assert(relative_path);
+    mxb_assert(fname);
+
     char* cnf_file_buf = NULL;
-    char* expanded_path;
-
-    if (relative_path == NULL)
-    {
-        goto return_cnf_file_buf;
-    }
-
-    expanded_path = (char*)MXS_MALLOC(PATH_MAX);
-
-    if (!expanded_path)
-    {
-        goto return_cnf_file_buf;
-    }
 
     /*<
      * Expand possible relative pathname to absolute path
      */
+    char expanded_path[PATH_MAX];
     if (realpath(relative_path, expanded_path) == NULL)
     {
         log_startup_error(errno, "Failed to read the directory '%s'.", relative_path);
-        goto return_cnf_file_buf;
     }
-
-    if (fname != NULL)
+    else
     {
         /*<
          * Concatenate an absolute filename and test its existence and
@@ -931,33 +920,18 @@ static char* get_expanded_pathname(const char* relative_path,
             + 1 + strnlen(fname, PATH_MAX) + 1;
         cnf_file_buf = (char*)MXS_MALLOC(pathlen);
 
-        if (cnf_file_buf == NULL)
+        if (cnf_file_buf)
         {
-            goto return_cnf_file_buf;
-        }
-        snprintf(cnf_file_buf, pathlen, "%s/%s", expanded_path, fname);
+            snprintf(cnf_file_buf, pathlen, "%s/%s", expanded_path, fname);
 
-        if (!path_is_readable(cnf_file_buf))
-        {
-            MXS_FREE(cnf_file_buf);
-            cnf_file_buf = NULL;
-            goto return_cnf_file_buf;
-        }
-    }
-    else
-    {
-        /*<
-         * If only directory was provided, check that it is
-         * readable.
-         */
-        if (!path_is_readable(expanded_path))
-        {
-            goto return_cnf_file_buf;
+            if (!path_is_readable(cnf_file_buf))
+            {
+                MXS_FREE(cnf_file_buf);
+                cnf_file_buf = NULL;
+            }
         }
     }
 
-return_cnf_file_buf:
-    MXS_FREE(expanded_path);
     return cnf_file_buf;
 }
 
