@@ -386,8 +386,8 @@ bool PamClientAuthenticator::extract(DCB* dcb, GWBUF* buffer)
 
 bool PamClientAuthenticator::ssl_capable(DCB* client)
 {
-    auto protocol = static_cast<MySQLClientProtocol*>(client->protocol());
-    return protocol->client_capabilities & GW_MYSQL_CAPABILITIES_SSL;
+    auto mariadbses = static_cast<MYSQL_session*>(client->session()->protocol_data());
+    return mariadbses->ssl_capable();
 }
 
 std::unique_ptr<mxs::BackendAuthenticator> PamClientAuthenticator::create_backend_authenticator()

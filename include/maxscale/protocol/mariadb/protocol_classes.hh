@@ -31,36 +31,46 @@ enum kill_type_t
     KT_HARD       = (1 << 3)
 };
 
-/**
- * MySQL Protocol specific state data. Tracks various parts of the network protocol e.g. the response state.
- */
-class MySQLProtocol
-{
-public:
-    uint8_t  scramble[MYSQL_SCRAMBLE_LEN];  /*< server scramble, created or received */
-    uint32_t client_capabilities = 0;       /*< client capabilities, created or received */
-    uint32_t extra_capabilities = 0;        /*< MariaDB 10.2 capabilities */
-
-    unsigned int charset = 0x8;             /*< Connection character set (default latin1 )*/
-};
-
 /*
  * Data shared with authenticators
  */
 class MYSQL_session : public MXS_SESSION::ProtocolData
 {
 public:
-    uint8_t  client_sha1[MYSQL_SCRAMBLE_LEN] {0};   /*< SHA1(password) */
-    char     user[MYSQL_USER_MAXLEN + 1] {'\0'};    /*< username       */
-    char     db[MYSQL_DATABASE_MAXLEN + 1] {'\0'};  /*< database       */
-    uint8_t  next_sequence {0};                     /*< Next packet sequence */
-    bool     changing_user {false};                 /*< True if a COM_CHANGE_USER is in progress */
+
+    /**
+     * Contains client capabilities. The client sends this data in the handshake response-packet, and the
+     * same data is sent to backends. Usually only the client protocol should write to these.
+     */
+    class ClientInfo
+    {
+    public:
+        uint32_t m_client_capabilities {0};     /*< Basic client capabilities */
+        uint32_t m_extra_capabilities {0};      /*< MariaDB 10.2 capabilities */
+
+        /**
+         * Connection character set (default latin1 ). Usually just one byte is needed. COM_CHANGE_USER
+         * sends two. */
+        uint16_t m_charset {0x8};
+    };
+
+    bool     ssl_capable() const;
+    uint32_t client_capabilities() const;
+    uint32_t extra_capabilitites() const;
+
+    uint8_t client_sha1[MYSQL_SCRAMBLE_LEN] {0};    /*< SHA1(password) */
+    char    user[MYSQL_USER_MAXLEN + 1] {'\0'};     /*< username       */
+    char    db[MYSQL_DATABASE_MAXLEN + 1] {'\0'};   /*< database       */
+    uint8_t next_sequence {0};                      /*< Next packet sequence */
+    bool    changing_user {false};                  /*< True if a COM_CHANGE_USER is in progress */
+
+    ClientInfo client_info;     /**< Client capabilities from handshake response packet */
 
     // Authentication token storage. Used by different authenticators.
     mxs::ClientAuthenticator::ByteVec auth_token;
 };
 
-class MySQLClientProtocol : public MySQLProtocol, public mxs::ClientProtocolBase
+class MySQLClientProtocol : public mxs::ClientProtocolBase
 {
 public:
     /** Return type of process_special_commands() */
@@ -80,8 +90,8 @@ public:
 
     int32_t write(GWBUF* buffer) override;
 
-    bool init_connection() override;
-    void finish_connection() override;
+    bool    init_connection() override;
+    void    finish_connection() override;
     int32_t connlimit(int limit) override;
 
     int64_t capabilities() const override
@@ -96,7 +106,8 @@ public:
 
     static bool parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* kt_out,
                                  std::string* user_out);
-    void mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t target_id, kill_type_t type);
+    void           mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t target_id, kill_type_t type);
+    const uint8_t* scramble() const;
 
     // TODO: move to private
     mxs_auth_state_t protocol_auth_state {MXS_AUTH_STATE_INIT};     /*< Client authentication state */
@@ -116,7 +127,7 @@ private:
                                         bool password, const char* db, int);
     int    mysql_send_standard_error(DCB* dcb, int sequence, int errnum, const char* msg);
     GWBUF* mysql_create_standard_error(int sequence, int error_number, const char* msg);
-    bool   send_auth_switch_request_packet(DCB* dcb);
+    bool   send_auth_switch_request_packet();
     int    send_mysql_client_handshake(DCB* dcb);
     char*  handle_variables(MXS_SESSION* session, GWBUF** read_buffer);
     void   track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf);
@@ -137,11 +148,12 @@ private:
     uint8_t     m_command {0};
     bool        m_changing_user {false};
     bool        m_large_query {false};
-    uint64_t    m_version {0};      /**< Numeric server version */
-    mxs::Buffer m_stored_query;     /**< Temporarily stored queries */
+    uint64_t    m_version {0};                  /**< Numeric server version */
+    mxs::Buffer m_stored_query;                 /**< Temporarily stored queries */
+    uint8_t     m_scramble[MYSQL_SCRAMBLE_LEN]; /**< Created server scramble */
 };
 
-class MySQLBackendProtocol : public MySQLProtocol, public mxs::BackendProtocol
+class MySQLBackendProtocol : public mxs::BackendProtocol
 {
 public:
     using Iter = mxs::Buffer::iterator;
@@ -167,7 +179,7 @@ public:
     void finish_connection() override;
     bool reuse_connection(BackendDCB* dcb, mxs::Component* upstream,
                           mxs::ClientProtocol* client_protocol) override;
-    bool established() override;
+    bool    established() override;
     json_t* diagnostics_json() override;
 
     /**
@@ -184,7 +196,7 @@ public:
      */
     void set_client_data(MySQLClientProtocol& client_protocol);
 
-    void set_dcb(DCB* dcb) override;
+    void        set_dcb(DCB* dcb) override;
     BackendDCB* dcb() const override;
 
     uint64_t thread_id() const;
@@ -244,20 +256,20 @@ private:
 
     std::unique_ptr<mxs::BackendAuthenticator> m_authenticator;     /**< Backend authentication data */
 
-    uint64_t       m_thread_id {0};         /**< Backend thread id, received in backend handshake */
-    uint16_t       m_modutil_state;         /**< TODO: This is an ugly hack, replace it */
-    int            m_ignore_replies {0};    /**< How many replies should be discarded */
-    bool           m_collect_result {false};/**< Collect the next result set as one buffer */
-    bool           m_track_state {false};   /**< Track session state */
-    bool           m_skip_next {false};
-    uint64_t       m_num_coldefs {0};
-    uint32_t       m_num_eof_packets {0};   /**< Encountered eof packet number, used for check packet type */
-    mxs::Buffer    m_collectq;              /**< Used to collect results when resultset collection is requested */
-    int64_t        m_ps_packets {0};
-    bool           m_opening_cursor = false;/**< Whether we are opening a cursor */
-    uint32_t       m_expected_rows = 0;     /**< Number of rows a COM_STMT_FETCH is retrieving */
-    bool           m_large_query = false;
-    bool           m_changing_user {false};
+    uint64_t    m_thread_id {0};                /**< Backend thread id, received in backend handshake */
+    uint8_t     m_scramble[MYSQL_SCRAMBLE_LEN]; /**< Server scramble, received in backend handshake */
+    int         m_ignore_replies {0};           /**< How many replies should be discarded */
+    bool        m_collect_result {false};       /**< Collect the next result set as one buffer */
+    bool        m_track_state {false};          /**< Track session state */
+    bool        m_skip_next {false};
+    uint64_t    m_num_coldefs {0};
+    uint32_t    m_num_eof_packets {0};  /**< Encountered eof packet number, used for check packet type */
+    mxs::Buffer m_collectq;             /**< Used to collect results when resultset collection is requested */
+    int64_t     m_ps_packets {0};
+    bool        m_opening_cursor = false;   /**< Whether we are opening a cursor */
+    uint32_t    m_expected_rows = 0;        /**< Number of rows a COM_STMT_FETCH is retrieving */
+    bool        m_large_query = false;
+    bool        m_changing_user {false};
 
     mxs::Reply     m_reply;
     MXS_SESSION*   m_session {nullptr};     /**< Generic session */

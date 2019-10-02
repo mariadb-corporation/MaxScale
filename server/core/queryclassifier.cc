@@ -111,17 +111,8 @@ bool check_for_sp_call(GWBUF* buf, uint8_t packet_type)
 
 bool are_multi_statements_allowed(MXS_SESSION* pSession)
 {
-    // TODO: This is not really nice.
-    auto pPcol = static_cast<MySQLClientProtocol*>(pSession->client_connection());
-
-    if (pPcol->client_capabilities & GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS)
-    {
-        return true;
-    }
-    else
-    {
-        return false;
-    }
+    auto ses = static_cast<MYSQL_session*>(pSession->protocol_data());
+    return (ses->client_info.m_client_capabilities & GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS) != 0;
 }
 
 uint32_t get_prepare_type(GWBUF* buffer)

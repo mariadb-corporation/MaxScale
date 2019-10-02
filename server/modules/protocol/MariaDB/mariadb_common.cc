@@ -338,7 +338,7 @@ int response_length(bool with_ssl, bool ssl_established, const char* user, uint8
     return bytes;
 }
 
-void mxs_mysql_calculate_hash(uint8_t* scramble, uint8_t* passwd, uint8_t* output)
+void mxs_mysql_calculate_hash(const uint8_t* scramble, uint8_t* passwd, uint8_t* output)
 {
     uint8_t hash1[GW_MYSQL_SCRAMBLE_SIZE] = "";
     uint8_t hash2[GW_MYSQL_SCRAMBLE_SIZE] = "";
@@ -365,7 +365,7 @@ void mxs_mysql_calculate_hash(uint8_t* scramble, uint8_t* passwd, uint8_t* outpu
  *
  * @return Address of the next byte after the end of the stored password
  */
-uint8_t* load_hashed_password(uint8_t* scramble, uint8_t* payload, uint8_t* passwd)
+uint8_t* load_hashed_password(const uint8_t* scramble, uint8_t* payload, uint8_t* passwd)
 {
     *payload++ = GW_MYSQL_SCRAMBLE_SIZE;
     mxs_mysql_calculate_hash(scramble, passwd, payload);
@@ -714,4 +714,19 @@ static inline bool complete_ps_response(GWBUF* buffer)
     }
 
     return rval;
+}
+
+bool MYSQL_session::ssl_capable() const
+{
+    return (client_info.m_client_capabilities & GW_MYSQL_CAPABILITIES_SSL) != 0;
+}
+
+uint32_t MYSQL_session::client_capabilities() const
+{
+    return client_info.m_client_capabilities;
+}
+
+uint32_t MYSQL_session::extra_capabilitites() const
+{
+    return client_info.m_extra_capabilities;
 }

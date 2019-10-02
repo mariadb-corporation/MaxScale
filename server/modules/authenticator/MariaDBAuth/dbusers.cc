@@ -365,7 +365,7 @@ static int auth_cb(void* data, int columns, char** rows, char** row_names)
 }
 
 int MariaDBClientAuthenticator::validate_mysql_user(DCB* dcb, const MYSQL_session* session,
-                                                    uint8_t* scramble, size_t scramble_len,
+                                                    const uint8_t* scramble, size_t scramble_len,
                                                     const mxs::ClientAuthenticator::ByteVec& auth_token,
                                                     uint8_t* phase2_scramble_out)
 {

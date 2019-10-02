@@ -528,7 +528,7 @@ int MySQLClientProtocol::send_mysql_client_handshake(DCB* dcb)
     gw_generate_random_str(server_scramble, GW_MYSQL_SCRAMBLE_SIZE);
 
     // copy back to the caller
-    memcpy(protocol->scramble, server_scramble, GW_MYSQL_SCRAMBLE_SIZE);
+    memcpy(m_scramble, server_scramble, GW_MYSQL_SCRAMBLE_SIZE);
 
     if (is_maria)
     {
@@ -696,14 +696,14 @@ void MySQLClientProtocol::store_client_information(DCB* generic_dcb, GWBUF* buff
     // when an SSL connection is opened. Oracle Connector/J 8.0 appears to drop
     // the SSL capability bit mid-authentication which causes MaxScale to think
     // that SSL is not used.
-    proto->client_capabilities |= gw_mysql_get_byte4(data + MYSQL_CLIENT_CAP_OFFSET);
-    proto->charset = data[MYSQL_CHARSET_OFFSET];
+    ses->client_info.m_client_capabilities |= gw_mysql_get_byte4(data + MYSQL_CLIENT_CAP_OFFSET);
+    ses->client_info.m_charset = data[MYSQL_CHARSET_OFFSET];
 
     /** MariaDB 10.2 compatible clients don't set the first bit to signal that
      * there are extra capabilities stored in the last 4 bytes of the 23 byte filler. */
-    if ((proto->client_capabilities & GW_MYSQL_CAPABILITIES_CLIENT_MYSQL) == 0)
+    if ((ses->client_info.m_client_capabilities & GW_MYSQL_CAPABILITIES_CLIENT_MYSQL) == 0)
     {
-        proto->extra_capabilities = gw_mysql_get_byte4(data + MARIADB_CAP_OFFSET);
+        ses->client_info.m_extra_capabilities = gw_mysql_get_byte4(data + MARIADB_CAP_OFFSET);
     }
 
     if (len > MYSQL_AUTH_PACKET_BASE_SIZE)
@@ -721,7 +721,7 @@ void MySQLClientProtocol::store_client_information(DCB* generic_dcb, GWBUF* buff
             // Include the null terminator in the user length
             userlen++;
 
-            if (proto->client_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB)
+            if (ses->client_info.m_client_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB)
             {
                 /** Client is connecting with a default database */
                 uint8_t authlen = data[MYSQL_AUTH_PACKET_BASE_SIZE + userlen];
@@ -1092,8 +1092,9 @@ bool MySQLClientProtocol::reauthenticate_client(MXS_SESSION* session, GWBUF* pac
         it = db_end;
         ++it;
 
-        proto->charset = *it++;
-        proto->charset |= (*it++) << 8;
+        unsigned int client_charset = *it++;
+        client_charset |= ((unsigned int)(*it++) << 8u);
+        m_session_data->client_info.m_charset = client_charset;
 
         // Copy the new username to the session data
         MYSQL_session* data = m_session_data;
@@ -1105,7 +1106,7 @@ bool MySQLClientProtocol::reauthenticate_client(MXS_SESSION* session, GWBUF* pac
         payload.resize(payloadlen);
         gwbuf_copy_data(packetbuf, MYSQL_HEADER_LEN, payloadlen, &payload[0]);
 
-        int rc = client_auth->reauthenticate(m_dcb, proto->scramble, sizeof(proto->scramble),
+        int rc = client_auth->reauthenticate(m_dcb, m_scramble, sizeof(m_scramble),
                                              payload, data->client_sha1);
         if (rc == MXS_AUTH_SUCCEEDED)
         {
@@ -1191,7 +1192,7 @@ bool MySQLClientProtocol::handle_change_user(bool* changed_user, GWBUF** packetb
         m_session_data->changing_user = true;
 
         *changed_user = true;
-        send_auth_switch_request_packet(m_dcb);
+        send_auth_switch_request_packet();
 
         // Store the original COM_CHANGE_USER for later
         m_stored_query = mxs::Buffer(*packetbuf);
@@ -1460,15 +1461,13 @@ MySQLClientProtocol::process_special_commands(DCB* dcb, GWBUF* read_buffer, uint
          * The option is stored as a two byte integer with the values 0 for enabling
          * multi-statements and 1 for disabling it.
          */
-        auto proto = static_cast<MySQLClientProtocol*>(dcb->protocol());
-
         if (GWBUF_DATA(read_buffer)[MYSQL_HEADER_LEN + 2])
         {
-            proto->client_capabilities &= ~GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS;
+            m_session_data->client_info.m_client_capabilities &= ~GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS;
         }
         else
         {
-            proto->client_capabilities |= GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS;
+            m_session_data->client_info.m_client_capabilities |= GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS;
         }
     }
     else if (cmd == MXS_COM_PROCESS_KILL)
@@ -2287,9 +2286,9 @@ GWBUF* MySQLClientProtocol::mysql_create_standard_error(int packet_number, int e
 }
 
 /**
- * Sends an AuthSwitchRequest packet with the default auth plugin to the DCB.
+ * Sends an AuthSwitchRequest packet with the default auth plugin to the client.
  */
-bool MySQLClientProtocol::send_auth_switch_request_packet(DCB* dcb)
+bool MySQLClientProtocol::send_auth_switch_request_packet()
 {
     const char plugin[] = DEFAULT_MYSQL_AUTH_PLUGIN;
     uint32_t len = 1 + sizeof(plugin) + GW_MYSQL_SCRAMBLE_SIZE;
@@ -2300,9 +2299,9 @@ bool MySQLClientProtocol::send_auth_switch_request_packet(DCB* dcb)
     data[3] = 1;    // First response to the COM_CHANGE_USER
     data[MYSQL_HEADER_LEN] = MYSQL_REPLY_AUTHSWITCHREQUEST;
     memcpy(data + MYSQL_HEADER_LEN + 1, plugin, sizeof(plugin));
-    memcpy(data + MYSQL_HEADER_LEN + 1 + sizeof(plugin), scramble, GW_MYSQL_SCRAMBLE_SIZE);
+    memcpy(data + MYSQL_HEADER_LEN + 1 + sizeof(plugin), m_scramble, GW_MYSQL_SCRAMBLE_SIZE);
 
-    return dcb->writeq_append(buffer) != 0;
+    return m_dcb->writeq_append(buffer) != 0;
 }
 
 void MySQLClientProtocol::execute_kill(MXS_SESSION* issuer, std::shared_ptr<KillInfo> info)
@@ -2406,6 +2405,11 @@ void MySQLClientProtocol::track_current_command(GWBUF* buffer)
      * contains the latest command executed on this backend.
      */
     m_large_query = MYSQL_GET_PAYLOAD_LEN(data) == MYSQL_PACKET_LENGTH_MAX;
+}
+
+const uint8_t* MySQLClientProtocol::scramble() const
+{
+    return m_scramble;
 }
 
 /**

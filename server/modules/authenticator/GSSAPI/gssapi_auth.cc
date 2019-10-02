@@ -313,8 +313,8 @@ bool GSSAPIClientAuthenticator::extract(DCB* dcb, GWBUF* read_buffer)
  */
 bool GSSAPIClientAuthenticator::ssl_capable(DCB* dcb)
 {
-    auto protocol = static_cast<MySQLClientProtocol*>(dcb->protocol());
-    return protocol->client_capabilities & GW_MYSQL_CAPABILITIES_SSL;
+    auto mariadbses = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
+    return mariadbses->ssl_capable();
 }
 
 static gss_name_t server_name = GSS_C_NO_NAME;

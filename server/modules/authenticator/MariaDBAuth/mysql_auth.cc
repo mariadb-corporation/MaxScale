@@ -193,7 +193,7 @@ static bool is_localhost_address(const struct sockaddr_storage* addr)
 }
 
 // Helper function for generating an AuthSwitchRequest packet.
-static GWBUF* gen_auth_switch_request_packet(MySQLProtocol* proto, MYSQL_session* client_data)
+static GWBUF* gen_auth_switch_request_packet(MYSQL_session* client_data, const uint8_t* scramble)
 {
     /**
      * The AuthSwitchRequest packet:
@@ -216,7 +216,7 @@ static GWBUF* gen_auth_switch_request_packet(MySQLProtocol* proto, MYSQL_session
     *bufdata++ = MYSQL_REPLY_AUTHSWITCHREQUEST;     // AuthSwitchRequest command
     memcpy(bufdata, plugin, sizeof(plugin));
     bufdata += sizeof(plugin);
-    memcpy(bufdata, proto->scramble, GW_MYSQL_SCRAMBLE_SIZE);
+    memcpy(bufdata, scramble, GW_MYSQL_SCRAMBLE_SIZE);
     bufdata += GW_MYSQL_SCRAMBLE_SIZE;
     *bufdata = '\0';
     return buffer;
@@ -254,7 +254,7 @@ int MariaDBClientAuthenticator::authenticate(DCB* generic_dcb)
         if (!m_correct_authenticator)
         {
             // Client is attempting to use wrong authenticator, send switch request packet.
-            GWBUF* switch_packet = gen_auth_switch_request_packet(protocol, client_data);
+            GWBUF* switch_packet = gen_auth_switch_request_packet(client_data, protocol->scramble());
             if (dcb->writeq_append(switch_packet))
             {
                 m_auth_switch_sent = true;
@@ -267,14 +267,13 @@ int MariaDBClientAuthenticator::authenticate(DCB* generic_dcb)
         }
 
         auth_ret = validate_mysql_user(dcb, client_data,
-                                       protocol->scramble, sizeof(protocol->scramble),
+                                       protocol->scramble(), MYSQL_SCRAMBLE_LEN,
                                        client_data->auth_token, client_data->client_sha1);
 
-        if (auth_ret != MXS_AUTH_SUCCEEDED
-            && service_refresh_users(dcb->service()))
+        if (auth_ret != MXS_AUTH_SUCCEEDED && service_refresh_users(dcb->service()))
         {
             auth_ret = validate_mysql_user(dcb, client_data,
-                                           protocol->scramble, sizeof(protocol->scramble),
+                                           protocol->scramble(), MYSQL_SCRAMBLE_LEN,
                                            client_data->auth_token, client_data->client_sha1);
         }
 
@@ -342,7 +341,6 @@ bool MariaDBClientAuthenticator::extract(DCB* generic_dcb, GWBUF* buf)
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
 
     int client_auth_packet_size = gwbuf_length(buf);
-    auto protocol = static_cast<MySQLClientProtocol*>(dcb->protocol());
     auto client_data = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
 
     /* For clients supporting CLIENT_PROTOCOL_41
@@ -368,7 +366,7 @@ bool MariaDBClientAuthenticator::extract(DCB* generic_dcb, GWBUF* buf)
         || (m_auth_switch_sent
             && (client_auth_packet_size == MYSQL_HEADER_LEN + MYSQL_SCRAMBLE_LEN)))
     {
-        return set_client_data(client_data, protocol, dcb, buf);
+        return set_client_data(client_data, dcb, buf);
     }
     else
     {
@@ -419,15 +417,11 @@ static bool read_zstr(const uint8_t* client_auth_packet, size_t client_auth_pack
  * return code indicates failure.
  *
  * @param client_data The data structure for the DCB
- * @param protocol The protocol structure for this connection
  * @param client_dcb The client DCB.
  * @param buffer The authentication data.
  * @return True on success, false on error
  */
-bool MariaDBClientAuthenticator::set_client_data(MYSQL_session* client_data,
-                                                 MySQLProtocol* protocol,
-                                                 DCB* client_dcb,
-                                                 GWBUF* buffer)
+bool MariaDBClientAuthenticator::set_client_data(MYSQL_session* client_data, DCB* client_dcb, GWBUF* buffer)
 {
     int client_auth_packet_size = gwbuf_length(buffer);
     uint8_t client_auth_packet[client_auth_packet_size];
@@ -480,8 +474,9 @@ bool MariaDBClientAuthenticator::set_client_data(MYSQL_session* client_data,
                 client_data->auth_token.assign(copy_begin, copy_end);
                 packet_length_used += auth_token_len;
 
+                auto client_capabilities = client_data->client_capabilities();
                 // Database name may be next. It has already been read and is skipped.
-                if (protocol->client_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB)
+                if (client_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB)
                 {
                     if (!read_zstr(client_auth_packet, client_auth_packet_size,
                                    &packet_length_used, NULL))
@@ -491,7 +486,7 @@ bool MariaDBClientAuthenticator::set_client_data(MYSQL_session* client_data,
                 }
 
                 // Authentication plugin name.
-                if (protocol->client_capabilities & GW_MYSQL_CAPABILITIES_PLUGIN_AUTH)
+                if (client_capabilities & GW_MYSQL_CAPABILITIES_PLUGIN_AUTH)
                 {
                     int bytes_left = client_auth_packet_size - packet_length_used;
                     if (bytes_left < 1)
@@ -562,8 +557,8 @@ bool MariaDBClientAuthenticator::set_client_data(MYSQL_session* client_data,
  */
 bool MariaDBClientAuthenticator::ssl_capable(DCB* dcb)
 {
-    auto protocol = static_cast<MySQLClientProtocol*>(dcb->protocol());
-    return (protocol->client_capabilities & (int)GW_MYSQL_CAPABILITIES_SSL) ? true : false;
+    auto mariadbses = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
+    return mariadbses->ssl_capable();
 }
 
 /**

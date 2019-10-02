@@ -552,10 +552,7 @@ bool MySQLBackendProtocol::handle_auth_change_response(GWBUF* reply, DCB* dcb)
          */
 
         // Load the new scramble into the protocol...
-        gwbuf_copy_data(reply,
-                        5 + strlen(DEFAULT_MYSQL_AUTH_PLUGIN) + 1,
-                        GW_MYSQL_SCRAMBLE_SIZE,
-                        scramble);
+        gwbuf_copy_data(reply, 5 + strlen(DEFAULT_MYSQL_AUTH_PLUGIN) + 1, MYSQL_SCRAMBLE_LEN, m_scramble);
 
         /// ... and use it to send the encrypted password to the server
         rval = send_mysql_native_password_response(dcb);
@@ -1216,7 +1213,6 @@ int MySQLBackendProtocol::gw_change_user(DCB* backend, MXS_SESSION* in_session, 
  */
 GWBUF* MySQLBackendProtocol::gw_create_change_user_packet(const MYSQL_session* mses)
 {
-    MySQLProtocol* protocol = this;
     GWBUF* buffer;
     uint8_t* payload = NULL;
     uint8_t* payload_start = NULL;
@@ -1224,7 +1220,6 @@ GWBUF* MySQLBackendProtocol::gw_create_change_user_packet(const MYSQL_session* m
     char dbpass[MYSQL_USER_MAXLEN + 1] = "";
     const char* curr_db = NULL;
     const uint8_t* curr_passwd = NULL;
-    unsigned int charset;
 
     const char* db = mses->db;
     const char* user = m_client_data->user;
@@ -1239,9 +1234,6 @@ GWBUF* MySQLBackendProtocol::gw_create_change_user_packet(const MYSQL_session* m
     {
         curr_passwd = pwd;
     }
-
-    /* get charset the client sent and use it for connection auth */
-    charset = protocol->charset;
 
     /**
      * Protocol MySQL COM_CHANGE_USER for CLIENT_PROTOCOL_41
@@ -1317,11 +1309,7 @@ GWBUF* MySQLBackendProtocol::gw_create_change_user_packet(const MYSQL_session* m
         gw_bin2hex(dbpass, hash2, GW_MYSQL_SCRAMBLE_SIZE);
 
         /** new_sha is the SHA1(CONCAT(scramble, hash2) */
-        gw_sha1_2_str(protocol->scramble,
-                      GW_MYSQL_SCRAMBLE_SIZE,
-                      hash2,
-                      GW_MYSQL_SCRAMBLE_SIZE,
-                      new_sha);
+        gw_sha1_2_str(m_scramble, MYSQL_SCRAMBLE_LEN, hash2, MYSQL_SCRAMBLE_LEN, new_sha);
 
         /** compute the xor in client_scramble */
         gw_str_xor(client_scramble,
@@ -1351,10 +1339,10 @@ GWBUF* MySQLBackendProtocol::gw_create_change_user_packet(const MYSQL_session* m
         payload += strlen(curr_db);
     }
     payload++;
-    /** set the charset, 2 bytes */
-    *payload = charset;
+    /** Set the charset, 2 bytes. Use the value sent by client. */
+    *payload = mses->client_info.m_charset;
     payload++;
-    *payload = '\x00';
+    *payload = '\x00'; // Discards second byte from client?
     payload++;
     memcpy(payload, "mysql_native_password", strlen("mysql_native_password"));
     /*
@@ -1718,7 +1706,7 @@ int MySQLBackendProtocol::send_mysql_native_password_response(DCB* dcb)
     uint8_t* data = GWBUF_DATA(buffer);
     gw_mysql_set_byte3(data, GW_MYSQL_SCRAMBLE_SIZE);
     data[3] = 2;    // This is the third packet after the COM_CHANGE_USER
-    mxs_mysql_calculate_hash(scramble, curr_passwd, data + MYSQL_HEADER_LEN);
+    mxs_mysql_calculate_hash(m_scramble, curr_passwd, data + MYSQL_HEADER_LEN);
 
     return dcb->writeq_append(buffer);
 }
@@ -1937,8 +1925,7 @@ int MySQLBackendProtocol::gw_decode_mysql_server_handshake(uint8_t* payload)
     memcpy(mxs_scramble + GW_SCRAMBLE_LENGTH_323, scramble_data_2, scramble_len - GW_SCRAMBLE_LENGTH_323);
 
     // full 20 bytes scramble is ready
-    memcpy(conn->scramble, mxs_scramble, GW_MYSQL_SCRAMBLE_SIZE);
-
+    memcpy(m_scramble, mxs_scramble, GW_MYSQL_SCRAMBLE_SIZE);
     return 0;
 }
 
@@ -1954,7 +1941,6 @@ int MySQLBackendProtocol::gw_decode_mysql_server_handshake(uint8_t* payload)
 GWBUF* MySQLBackendProtocol::gw_generate_auth_response(bool with_ssl, bool ssl_established,
                                                        uint64_t service_capabilities)
 {
-    auto conn = this;
     auto client = m_client_data;
     uint8_t client_capabilities[4] = {0, 0, 0, 0};
     uint8_t* curr_passwd = NULL;
@@ -2005,7 +1991,7 @@ GWBUF* MySQLBackendProtocol::gw_generate_auth_response(bool with_ssl, bool ssl_e
 
     // set the charset
     payload += 4;
-    *payload = conn->charset;
+    *payload = m_client_data->client_info.m_charset;
 
     payload++;
 
@@ -2013,7 +1999,8 @@ GWBUF* MySQLBackendProtocol::gw_generate_auth_response(bool with_ssl, bool ssl_e
     payload += 19;
 
     // Either MariaDB 10.2 extra capabilities or 4 bytes filler
-    memcpy(payload, &conn->extra_capabilities, sizeof(conn->extra_capabilities));
+    uint32_t extra_capabilities = m_client_data->extra_capabilitites();
+    memcpy(payload, &extra_capabilities, sizeof(extra_capabilities));
     payload += 4;
 
     if (!with_ssl || ssl_established)
@@ -2025,7 +2012,7 @@ GWBUF* MySQLBackendProtocol::gw_generate_auth_response(bool with_ssl, bool ssl_e
 
         if (curr_passwd)
         {
-            payload = load_hashed_password(conn->scramble, payload, curr_passwd);
+            payload = load_hashed_password(m_scramble, payload, curr_passwd);
         }
         else
         {
@@ -2066,7 +2053,7 @@ uint32_t MySQLBackendProtocol::create_capabilities(bool with_ssl, bool db_specif
     uint32_t final_capabilities;
 
     /** Copy client's flags to backend but with the known capabilities mask */
-    final_capabilities = (client_capabilities & (uint32_t)GW_MYSQL_CAPABILITIES_CLIENT);
+    final_capabilities = (m_client_data->client_capabilities() & (uint32_t)GW_MYSQL_CAPABILITIES_CLIENT);
 
     if (with_ssl)
     {
@@ -2385,10 +2372,6 @@ uint64_t MySQLBackendProtocol::thread_id() const
 
 void MySQLBackendProtocol::set_client_data(MySQLClientProtocol& client_protocol)
 {
-    /** Copy client flags to backend protocol */
-    client_capabilities = client_protocol.client_capabilities;
-    charset = client_protocol.charset;
-    extra_capabilities = client_protocol.extra_capabilities;
     m_client_data = static_cast<MYSQL_session*>(m_session->protocol_data());
     // TODO: authenticators may also need data swapping
 }

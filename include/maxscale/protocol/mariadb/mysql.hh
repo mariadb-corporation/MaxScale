@@ -546,9 +546,9 @@ bool mxs_mysql_command_will_respond(uint8_t cmd);
  * @param passwd   The SHA1(password) sent by the client
  * @param output   Pointer where the resulting 20 byte hash is stored
  */
-void mxs_mysql_calculate_hash(uint8_t* scramble, uint8_t* passwd, uint8_t* output);
+void mxs_mysql_calculate_hash(const uint8_t* scramble, uint8_t* passwd, uint8_t* output);
 
 int response_length(bool with_ssl, bool ssl_established, const char* user, uint8_t* passwd, char* dbname,
                     const char* auth_module);
 
-uint8_t* load_hashed_password(uint8_t* scramble, uint8_t* payload, uint8_t* passwd);
+uint8_t* load_hashed_password(const uint8_t* scramble, uint8_t* payload, uint8_t* passwd);
