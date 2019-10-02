@@ -5,11 +5,9 @@
 
 #include "testconnections.h"
 
-int main(int argc, char* argv[])
+void run_test(TestConnections& test, const char* query)
 {
-    TestConnections test(argc, argv);
-
-    test.maxscales->connect();
+    test.maxscales->connect_rwsplit();
     std::thread thr([&]() {
                         sleep(5);
                         test.tprintf("block node 0");
@@ -20,7 +18,6 @@ int main(int argc, char* argv[])
                         test.repl->unblock_node(0);
                     });
 
-    constexpr const char* query = "SET @a = (SELECT SLEEP(10))";
     test.set_timeout(60);
     test.tprintf("%s", query);
     test.try_query(test.maxscales->conn_rwsplit[0], query);
@@ -30,6 +27,20 @@ int main(int argc, char* argv[])
     test.maxscales->disconnect();
     test.tprintf("join");
     thr.join();
+}
+
+int main(int argc, char* argv[])
+{
+    TestConnections test(argc, argv);
+
+    run_test(test, "SET @a = (SELECT SLEEP(10))");
+
+    test.repl->connect();
+    auto master_id = test.repl->get_server_id_str(0);
+    test.repl->disconnect();
+
+    std::string query = "SET @a = (SELECT SLEEP(CASE @@server_id WHEN " + master_id + " THEN 10 ELSE 0 END))";
+    run_test(test, query.c_str());
 
     return test.global_result;
 }
