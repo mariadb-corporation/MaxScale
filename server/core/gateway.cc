@@ -411,22 +411,13 @@ static void sigfatal_handler(int i)
 
     MXS_CONFIG* cnf = config_get_global_options();
     fprintf(stderr,
-            "Fatal: MaxScale " MAXSCALE_VERSION " received fatal signal %d. "
-                                                "Attempting backtrace.\n",
-            i);
-    fprintf(stderr,
+            "Fatal: MaxScale %s received fatal signal %d. "
             "Commit ID: %s System name: %s Release string: %s\n\n",
-            maxscale_commit,
-            cnf->sysname,
-            cnf->release_string);
+            MAXSCALE_VERSION, i, maxscale_commit, cnf->sysname, cnf->release_string);
 
-    MXS_ALERT("Fatal: MaxScale " MAXSCALE_VERSION " received fatal signal %d. "
-                                                  "Attempting backtrace.",
-              i);
-    MXS_ALERT("Commit ID: %s System name: %s Release string: %s",
-              maxscale_commit,
-              cnf->sysname,
-              cnf->release_string);
+    MXS_ALERT("Fatal: MaxScale %s received fatal signal %d. "
+              "Commit ID: %s System name: %s Release string: %s",
+              MAXSCALE_VERSION, i, maxscale_commit, cnf->sysname, cnf->release_string);
 
     if (DCB* dcb = dcb_get_current())
     {
@@ -437,11 +428,18 @@ static void sigfatal_handler(int i)
         }
     }
 
+    thread_local char msg[4096] = "";
+    msg[0] = '\0';
+
     auto cb = [](const char* symbol, const char* cmd) {
-            MXS_ALERT("  %s: %s", symbol, cmd);
+            char buf[512];
+            snprintf(buf, sizeof(buf), "  %s: %s\n", symbol, cmd);
+            strcat(msg, buf);
         };
 
     mxb::dump_stacktrace(cb);
+
+    MXS_ALERT("\n%s", msg);
 
     /* re-raise signal to enforce core dump */
     fprintf(stderr, "\n\nWriting core dump\n");
