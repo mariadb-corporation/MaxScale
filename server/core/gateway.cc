@@ -167,9 +167,7 @@ bool         handle_path_arg(char** dest, const char* path, const char* arg, boo
 static bool  handle_debug_args(char* args);
 static void  set_log_augmentation(const char* value);
 static void  usage(void);
-static char* get_expanded_pathname(char** abs_path,
-                                   const char* input_path,
-                                   const char* fname);
+static char* get_expanded_pathname(const char* input_path, const char* fname);
 static void print_alert(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
 static void print_alert(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
 static void print_info(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
@@ -610,7 +608,7 @@ static bool resolve_maxscale_conf_fname(char** cnf_full_path,
     }
     else    /*< default config file name is used */
     {
-        *cnf_full_path = get_expanded_pathname(NULL, home_dir, default_cnf_fname);
+        *cnf_full_path = get_expanded_pathname(home_dir, default_cnf_fname);
     }
 
     return *cnf_full_path && is_file_and_readable(*cnf_full_path);
@@ -888,20 +886,15 @@ static bool path_is_writable(const char* absolute_pathname)
  * its readability is tested.
  *
  * Parameters:
- * @param output_path memory address where expanded path is stored,
- * if output_path != NULL
  *
  * @param relative_path path to be expanded
- *
  * @param fname file name to be concatenated to the path, may be NULL
  *
  * @return expanded path and if fname was NULL, absolute pathname of it.
- * Both return value and *output_path are NULL in case of failure.
- *
+ * Return value is NULL in case of failure.
  *
  */
-static char* get_expanded_pathname(char** output_path,
-                                   const char* relative_path,
+static char* get_expanded_pathname(const char* relative_path,
                                    const char* fname)
 {
     char* cnf_file_buf = NULL;
@@ -916,10 +909,6 @@ static char* get_expanded_pathname(char** output_path,
 
     if (!expanded_path)
     {
-        if (output_path)
-        {
-            *output_path = NULL;
-        }
         goto return_cnf_file_buf;
     }
 
@@ -929,12 +918,6 @@ static char* get_expanded_pathname(char** output_path,
     if (realpath(relative_path, expanded_path) == NULL)
     {
         log_startup_error(errno, "Failed to read the directory '%s'.", relative_path);
-
-        MXS_FREE(expanded_path);
-        if (output_path)
-        {
-            *output_path = NULL;
-        }
         goto return_cnf_file_buf;
     }
 
@@ -950,17 +933,13 @@ static char* get_expanded_pathname(char** output_path,
 
         if (cnf_file_buf == NULL)
         {
-            MXS_FREE(expanded_path);
-            expanded_path = NULL;
             goto return_cnf_file_buf;
         }
         snprintf(cnf_file_buf, pathlen, "%s/%s", expanded_path, fname);
 
         if (!path_is_readable(cnf_file_buf))
         {
-            MXS_FREE(expanded_path);
             MXS_FREE(cnf_file_buf);
-            expanded_path = NULL;
             cnf_file_buf = NULL;
             goto return_cnf_file_buf;
         }
@@ -973,23 +952,12 @@ static char* get_expanded_pathname(char** output_path,
          */
         if (!path_is_readable(expanded_path))
         {
-            MXS_FREE(expanded_path);
-            expanded_path = NULL;
             goto return_cnf_file_buf;
         }
     }
 
-    if (output_path == NULL)
-    {
-        MXS_FREE(expanded_path);
-    }
-    else
-    {
-        *output_path = expanded_path;
-    }
-
 return_cnf_file_buf:
-
+    MXS_FREE(expanded_path);
     return cnf_file_buf;
 }
 
