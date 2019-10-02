@@ -85,10 +85,8 @@ using namespace maxscale;
 #  define _GNU_SOURCE
 #endif
 
-#if defined (OPENSSL_THREADS)
-#define HAVE_OPENSSL_THREADS 1
-#else
-#define HAVE_OPENSSL_THREADS 0
+#if !defined (OPENSSL_THREADS)
+#error OpenSSL library does not support multi-threading.
 #endif
 
 extern char* program_invocation_name;
@@ -1899,13 +1897,6 @@ int main(int argc, char** argv)
         goto return_main;
     }
 
-    /** OpenSSL initialization */
-    if (!HAVE_OPENSSL_THREADS)
-    {
-        log_startup_error("OpenSSL library does not support multi-threading.");
-        rc = MAXSCALE_INTERNALERROR;
-        goto return_main;
-    }
     SSL_library_init();
     SSL_load_error_strings();
     OPENSSL_add_all_algorithms_noconf();
