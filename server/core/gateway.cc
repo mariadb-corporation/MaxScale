@@ -1890,40 +1890,6 @@ int main(int argc, char** argv)
         goto return_main;
     }
 
-    if (!utils_init())
-    {
-        log_startup_error("Failed to initialise utility library.");
-        rc = MAXSCALE_INTERNALERROR;
-        goto return_main;
-    }
-
-    SSL_library_init();
-    SSL_load_error_strings();
-    OPENSSL_add_all_algorithms_noconf();
-
-#ifndef OPENSSL_1_1
-    numlocks = CRYPTO_num_locks();
-    if ((ssl_locks = (pthread_mutex_t*)MXS_MALLOC(sizeof(pthread_mutex_t) * (numlocks + 1))) == NULL)
-    {
-        rc = MAXSCALE_INTERNALERROR;
-        goto return_main;
-    }
-
-    for (int i = 0; i < numlocks + 1; i++)
-    {
-        pthread_mutex_init(&ssl_locks[i], NULL);
-    }
-    CRYPTO_set_locking_callback(ssl_locking_function);
-    CRYPTO_set_dynlock_create_callback(ssl_create_dynlock);
-    CRYPTO_set_dynlock_destroy_callback(ssl_free_dynlock);
-    CRYPTO_set_dynlock_lock_callback(ssl_lock_dynlock);
-#ifdef OPENSSL_1_0
-    CRYPTO_THREADID_set_callback(maxscale_ssl_id);
-#else
-    CRYPTO_set_id_callback(pthread_self);
-#endif
-#endif
-
     /**
      * Resolve the full pathname for configuration file and check for
      * read accessibility.
@@ -1967,6 +1933,54 @@ int main(int argc, char** argv)
         goto return_main;
     }
 
+    SSL_library_init();
+    SSL_load_error_strings();
+    OPENSSL_add_all_algorithms_noconf();
+
+#ifndef OPENSSL_1_1
+    numlocks = CRYPTO_num_locks();
+    if ((ssl_locks = (pthread_mutex_t*)MXS_MALLOC(sizeof(pthread_mutex_t) * (numlocks + 1))) == NULL)
+    {
+        rc = MAXSCALE_INTERNALERROR;
+        goto return_main;
+    }
+
+    for (int i = 0; i < numlocks + 1; i++)
+    {
+        pthread_mutex_init(&ssl_locks[i], NULL);
+    }
+    CRYPTO_set_locking_callback(ssl_locking_function);
+    CRYPTO_set_dynlock_create_callback(ssl_create_dynlock);
+    CRYPTO_set_dynlock_destroy_callback(ssl_free_dynlock);
+    CRYPTO_set_dynlock_lock_callback(ssl_lock_dynlock);
+#ifdef OPENSSL_1_0
+    CRYPTO_THREADID_set_callback(maxscale_ssl_id);
+#else
+    CRYPTO_set_id_callback(pthread_self);
+#endif
+#endif
+
+    if (!init_sqlite3())
+    {
+        log_startup_error("Could not initialize sqlite3.");
+        rc = MAXSCALE_INTERNALERROR;
+        goto return_main;
+    }
+
+    if (!utils_init())
+    {
+        log_startup_error("Failed to initialise utility library.");
+        rc = MAXSCALE_INTERNALERROR;
+        goto return_main;
+    }
+
+    if (!maxbase::init())
+    {
+        log_startup_error("Failed to initialize MaxScale base library.");
+        rc = MAXSCALE_INTERNALERROR;
+        goto return_main;
+    }
+
     if (!config_load_global(cnf_file_path))
     {
         rc = MAXSCALE_BADCONFIG;
@@ -1980,13 +1994,6 @@ int main(int argc, char** argv)
             rc = MAXSCALE_INTERNALERROR;
             goto return_main;
         }
-    }
-
-    if (!init_sqlite3())
-    {
-        log_startup_error("Could not initialize sqlite3.");
-        rc = MAXSCALE_INTERNALERROR;
-        goto return_main;
     }
 
     struct utsname name;
@@ -2046,13 +2053,6 @@ int main(int argc, char** argv)
     MXS_NOTICE("Data directory: %s", get_datadir());
     MXS_NOTICE("Module directory: %s", get_libdir());
     MXS_NOTICE("Service cache: %s", get_cachedir());
-
-    if (!maxbase::init())
-    {
-        log_startup_error("Failed to initialize MaxScale base library.");
-        rc = MAXSCALE_INTERNALERROR;
-        goto return_main;
-    }
 
     if (!qc_setup(&cnf->qc_cache_properties, cnf->qc_sql_mode, cnf->qc_name, cnf->qc_args))
     {
@@ -2114,7 +2114,7 @@ int main(int argc, char** argv)
     /** Load the admin users */
     admin_users_init();
 
-    // Initialize the internal query classifier. The actuak plugin will be
+    // Initialize the internal query classifier. The actual plugin will be
     // initialized via the module initialization below.
     if (qc_process_init(QC_INIT_SELF))
     {
