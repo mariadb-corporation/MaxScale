@@ -172,11 +172,12 @@ static void  usage(void);
 static char* get_expanded_pathname(char** abs_path,
                                    const char* input_path,
                                    const char* fname);
-static void print_stderr(int eno, const char* message);
-inline void print_stderr(const char* message)
-{
-    print_stderr(0, message);
-}
+static void print_alert(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
+static void print_alert(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
+static void print_info(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
+static void print_info(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
+static void print_warning(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
+static void print_warning(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
 static void log_startup_error(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
 static void log_startup_error(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
 static bool resolve_maxscale_conf_fname(char** cnf_full_path,
@@ -411,12 +412,12 @@ static void sigfatal_handler(int i)
     signal_set(i, SIG_DFL);
 
     MXS_CONFIG* cnf = config_get_global_options();
-    fprintf(stderr,
-            "Fatal: MaxScale %s received fatal signal %d. "
-            "Commit ID: %s System name: %s Release string: %s\n\n",
-            MAXSCALE_VERSION, i, maxscale_commit, cnf->sysname, cnf->release_string);
 
-    MXS_ALERT("Fatal: MaxScale %s received fatal signal %d. "
+    print_alert("MaxScale %s received fatal signal %d. "
+                "Commit ID: %s System name: %s Release string: %s\n\n",
+                MAXSCALE_VERSION, i, maxscale_commit, cnf->sysname, cnf->release_string);
+
+    MXS_ALERT("MaxScale %s received fatal signal %d. "
               "Commit ID: %s System name: %s Release string: %s",
               MAXSCALE_VERSION, i, maxscale_commit, cnf->sysname, cnf->release_string);
 
@@ -436,14 +437,14 @@ static void sigfatal_handler(int i)
             char buf[512];
             snprintf(buf, sizeof(buf), "  %s: %s\n", symbol, cmd);
             strcat(msg, buf);
-        };
+    };
 
     mxb::dump_stacktrace(cb);
 
     MXS_ALERT("\n%s", msg);
 
     /* re-raise signal to enforce core dump */
-    fprintf(stderr, "\n\nWriting core dump\n");
+    print_alert("Writing core dump.");
     raise(i);
 }
 
@@ -513,9 +514,8 @@ static bool create_datadir(const char* base, char* datadir)
             }
             else
             {
-                MXS_ERROR("Cannot create data directory '%s': %d %s\n",
+                MXS_ERROR("Cannot create data directory '%s': %s",
                           datadir,
-                          errno,
                           mxs_strerror(errno));
             }
         }
@@ -524,11 +524,9 @@ static bool create_datadir(const char* base, char* datadir)
     {
         if (len < PATH_MAX)
         {
-            fprintf(stderr,
-                    "Error: Cannot create data directory '%s': %d %s\n",
-                    datadir,
-                    errno,
-                    mxs_strerror(errno));
+            MXS_ERROR("Cannot create data directory '%s': %s",
+                      datadir,
+                      mxs_strerror(errno));
         }
         else
         {
@@ -681,15 +679,10 @@ static bool init_log()
 
     if (!cnf->config_check && mkdir(get_logdir(), 0777) != 0 && errno != EEXIST)
     {
-        fprintf(stderr,
-                "Error: Cannot create log directory '%s': %d, %s\n",
-                default_logdir,
-                errno,
-                strerror(errno));
+        print_alert(errno, "Cannot create log directory '%s'", default_logdir);
     }
     else if (mxs_log_init(NULL, get_logdir(), cnf->log_target))
     {
-
         mxs_log_set_syslog_enabled(cnf->syslog);
         mxs_log_set_maxlog_enabled(cnf->maxlog);
 
@@ -700,20 +693,73 @@ static bool init_log()
     return rval;
 }
 
+static void print_message(const char* tag, int eno, const char* format, va_list ap)
+{
+    int len = vsnprintf(nullptr, 0, format, ap);
+    char message[len + 1];
+    vsnprintf(message, sizeof(message), format, ap);
+
+    fprintf(stderr,
+            "%s: %s%s%s%s\n",
+            tag,
+            message,
+            eno == 0 ? "" : ": ",
+            eno == 0 ? "" : mxs_strerror(eno),
+            eno == 0 ? "" : ".");
+}
+
 /**
  * Print message to stderr
  *
  * @param eno      Errno value, ignored if 0.
  * @param message  Message to be printed.
  */
-static void print_stderr(int eno, const char* message)
+static void print_alert(int eno, const char* format, ...)
 {
-    fprintf(stderr,
-            "* Error: %s%s%s%s\n",
-            message,
-            eno == 0 ? "" : ": ",
-            eno == 0 ? "" : mxs_strerror(eno),
-            eno == 0 ? "" : ".");
+    va_list ap;
+    va_start(ap, format);
+    print_message("alert  ", eno, format, ap);
+    va_end(ap);
+}
+
+static void print_alert(const char* format, ...)
+{
+    va_list ap;
+    va_start(ap, format);
+    print_message("alert  ", 0, format, ap);
+    va_end(ap);
+}
+
+static void print_info(int eno, const char* format, ...)
+{
+    va_list ap;
+    va_start(ap, format);
+    print_message("info   ", eno, format, ap);
+    va_end(ap);
+}
+
+static void print_info(const char* format, ...)
+{
+    va_list ap;
+    va_start(ap, format);
+    print_message("info   ", 0, format, ap);
+    va_end(ap);
+}
+
+static void print_warning(int eno, const char* format, ...)
+{
+    va_list ap;
+    va_start(ap, format);
+    print_message("warning", eno, format, ap);
+    va_end(ap);
+}
+
+static void print_warning(const char* format, ...)
+{
+    va_list ap;
+    va_start(ap, format);
+    print_message("warning", 0, format, ap);
+    va_end(ap);
 }
 
 static void log_startup_error(int eno, const char* format, va_list ap)
@@ -731,7 +777,7 @@ static void log_startup_error(int eno, const char* format, va_list ap)
                   eno == 0 ? "" : ".");
     }
 
-    print_stderr(eno, message);
+    print_alert(eno, "%s", message);
 }
 
 /**
@@ -1355,9 +1401,10 @@ int main(int argc, char** argv)
     auto do_startup = [&]() {
             if (!config_load(cnf_file_path))
             {
-                print_stderr("Failed to open, read or process the MaxScale configuration "
-                             "file. See the error log for details.");
-                MXS_ALERT("Failed to open, read or process the MaxScale configuration file %s.", cnf_file_path);
+                print_alert("Failed to open, read or process the MaxScale configuration "
+                            "file. See the error log for details.");
+                MXS_ALERT("Failed to open, read or process the MaxScale configuration file %s.",
+                          cnf_file_path);
                 rc = MAXSCALE_BADCONFIG;
                 maxscale_shutdown();
                 return;
@@ -1775,22 +1822,17 @@ int main(int argc, char** argv)
 
     if (!daemon_mode)
     {
-        fprintf(stderr,
-                "Info : MaxScale will be run in the terminal process.\n");
+        print_info("MaxScale will be run in the terminal process.");
 #if defined (SS_DEBUG)
         fprintf(stderr,
-                "\tSee "
-                "the log from the following log files : \n\n");
+                "\tSee the log from the following log files : \n\n");
 #endif
     }
     else
     {
         if (pipe(daemon_pipe) == -1)
         {
-            fprintf(stderr,
-                    "Error: Failed to create pipe for inter-process communication: %d %s",
-                    errno,
-                    strerror(errno));
+            log_startup_error(errno, "Failed to create pipe for inter-process communication");
             rc = MAXSCALE_INTERNALERROR;
             goto return_main;
         }
@@ -2008,7 +2050,7 @@ int main(int argc, char** argv)
 
     if (!(*syslog_enabled) && !(*maxlog_enabled))
     {
-        fprintf(stderr, "warning: Both MaxScale and Syslog logging disabled.\n");
+        print_warning("Both MaxScale and Syslog logging disabled.");
     }
 
     MXS_NOTICE("Configuration file: %s", cnf_file_path);
@@ -2250,11 +2292,7 @@ static void unlink_pidfile(void)
     {
         if (unlink(pidfile))
         {
-            fprintf(stderr,
-                    "MaxScale failed to remove pidfile %s: error %d, %s\n",
-                    pidfile,
-                    errno,
-                    mxs_strerror(errno));
+            MXS_WARNING("Failed to remove pidfile %s: %s", pidfile, mxs_strerror(errno));
         }
     }
 }
@@ -2868,19 +2906,20 @@ static bool daemonize(void)
 
     if (pid < 0)
     {
-        fprintf(stderr, "fork() error %s\n", mxs_strerror(errno));
+        log_startup_error(errno, "Forking MaxScale failed, the process cannot be turned into a daemon");
         exit(1);
     }
 
     if (pid != 0)
     {
-        /* exit from main */
+        // The parent process
         return true;
     }
 
+    // The child process
     if (setsid() < 0)
     {
-        fprintf(stderr, "setsid() error %s\n", mxs_strerror(errno));
+        log_startup_error(errno, "Creating a new session for the daemonized MaxScale process failed");
         exit(1);
     }
     return false;
@@ -2902,41 +2941,30 @@ static bool sniff_configuration(const char* filepath)
 
     if (rv != 0)
     {
-        const char FORMAT_CUSTOM[] =
-            "Failed to pre-parse configuration file %s. Error on line %d. %s";
-        const char FORMAT_SYNTAX[] =
-            "Failed to pre-parse configuration file %s. Error on line %d.";
-        const char FORMAT_OPEN[] =
-            "Failed to pre-parse configuration file %s. Failed to open file.";
-        const char FORMAT_MALLOC[] =
-            "Failed to pre-parse configuration file %s. Memory allocation failed.";
-
-        size_t extra = strlen(filepath) + UINTLEN(abs(rv)) + (s ? strlen(s) : 0);
-        // We just use the largest one.
-        char errorbuffer[sizeof(FORMAT_MALLOC) + extra];
-
         if (rv > 0)
         {
             if (s)
             {
-                snprintf(errorbuffer, sizeof(errorbuffer), FORMAT_CUSTOM, filepath, rv, s);
+                print_alert("Failed to pre-parse configuration file %s. Error on line %d. %s",
+                            filepath, rv, s);
                 MXS_FREE(s);
             }
             else
             {
-                snprintf(errorbuffer, sizeof(errorbuffer), FORMAT_SYNTAX, filepath, rv);
+                print_alert("Failed to pre-parse configuration file %s. Error on line %d.",
+                            filepath, rv);
             }
         }
         else if (rv == -1)
         {
-            snprintf(errorbuffer, sizeof(errorbuffer), FORMAT_OPEN, filepath);
+            print_alert("Failed to pre-parse configuration file %s. Failed to open file.",
+                        filepath);
         }
         else
         {
-            snprintf(errorbuffer, sizeof(errorbuffer), FORMAT_MALLOC, filepath);
+            print_alert("Failed to pre-parse configuration file %s. Memory allocation failed.",
+                        filepath);
         }
-
-        print_stderr(errorbuffer);
     }
 
     return rv == 0;
@@ -3129,7 +3157,7 @@ static bool user_is_acceptable(const char* specified_user)
             }
             else
             {
-                fprintf(stderr, "Error: MaxScale cannot be run as root.\n");
+                log_startup_error("MaxScale cannot be run as root.");
             }
         }
         else
@@ -3139,9 +3167,7 @@ static bool user_is_acceptable(const char* specified_user)
     }
     else
     {
-        fprintf(stderr,
-                "Error: Could not obtain user information, MaxScale will not run: %s",
-                strerror(errno));
+        log_startup_error(errno, "Could not obtain user information, MaxScale will not run");
     }
 
     return acceptable;
