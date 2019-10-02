@@ -34,7 +34,6 @@ public:
     bool extract(DCB* dcb, GWBUF* read_buffer) override;
 
     bool ssl_capable(DCB* client) override;
-    void free_data(DCB* client) override;
 
     std::unique_ptr<mxs::BackendAuthenticator> create_backend_authenticator() override;
 

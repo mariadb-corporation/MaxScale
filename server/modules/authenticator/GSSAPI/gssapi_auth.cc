@@ -527,15 +527,6 @@ int GSSAPIClientAuthenticator::authenticate(DCB* generic_dcb)
     return rval;
 }
 
-/**
- * @brief Free authenticator data from a DCB
- *
- * @param dcb DCB to free
- */
-void GSSAPIClientAuthenticator::free_data(DCB* generic_dcb)
-{
-}
-
 std::unique_ptr<mxs::BackendAuthenticator> GSSAPIClientAuthenticator::create_backend_authenticator()
 {
     return std::unique_ptr<mxs::BackendAuthenticator>(

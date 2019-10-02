@@ -390,10 +390,6 @@ bool PamClientAuthenticator::ssl_capable(DCB* client)
     return protocol->client_capabilities & GW_MYSQL_CAPABILITIES_SSL;
 }
 
-void PamClientAuthenticator::free_data(DCB* dcb)
-{
-}
-
 std::unique_ptr<mxs::BackendAuthenticator> PamClientAuthenticator::create_backend_authenticator()
 {
     return std::unique_ptr<mxs::BackendAuthenticator>(new(std::nothrow) PamBackendAuthenticator());

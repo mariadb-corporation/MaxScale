@@ -567,22 +567,6 @@ bool MariaDBClientAuthenticator::ssl_capable(DCB* dcb)
 }
 
 /**
- * @brief Free the client data pointed to by the passed DCB.
- *
- * Currently all that is required is to free the storage pointed to by
- * dcb->m_data.  But this is intended to be implemented as part of the
- * authentication API at which time this code will be moved into the
- * MySQL authenticator.  If the data structure were to become more complex
- * the mechanism would still work and be the responsibility of the authenticator.
- * The DCB should not know authenticator implementation details.
- *
- * @param dcb Request handler DCB connected to the client
- */
-void MariaDBClientAuthenticator::free_data(DCB* dcb)
-{
-}
-
-/**
  * @brief Inject the service user into the cache
  *
  * @return True on success, false on error

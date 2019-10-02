@@ -146,7 +146,7 @@ public:
     bool extract(DCB* client, GWBUF* buffer) override;
     bool ssl_capable(DCB* client) override;
     int  authenticate(DCB* client) override;
-    void free_data(DCB* client) override;
+
     int  reauthenticate(DCB* generic_dcb, uint8_t* scramble, size_t scramble_len, const ByteVec& auth_token,
                         uint8_t* output_token) override;
 

@@ -95,8 +95,14 @@ public:
      */
     virtual uint64_t capabilities() const = 0;
 
-    // Extract client or backend data from a buffer and place it in a structure shared at the session
-    // level, stored in `dcb->data`. Typically, this is called just before the authenticate-entrypoint.
+    /**
+     * Extract client from a buffer and place it in a structure shared at the session level.
+     * Typically, this is called just before the authenticate-entrypoint.
+     *
+     * @param client Client dcb
+     * @param buffer Packet from client
+     * @return True on success
+     */
     virtual bool extract(DCB* client, GWBUF* buffer) = 0;
 
     // Determine whether the connection can support SSL.
@@ -104,10 +110,6 @@ public:
 
     // Carry out the authentication.
     virtual int authenticate(DCB* client) = 0;
-
-    // Free extracted data. This is only called for the client side authenticators so backend
-    // authenticators should not implement it.
-    virtual void free_data(DCB* client) = 0;
 
     /**
      * This entry point was added to avoid calling authenticator functions
@@ -124,12 +126,12 @@ public:
                                const ByteVec& auth_token, uint8_t* output);
 
     /**
-     * Create a new backend session linked to the client session. Should only be implemented by
-     * authenticators which also support backend authentication.
+     * Create a new backend authenticator linked to the client authenticator. Should only be implemented by
+     * authenticator modules which also support backend authentication.
      *
-     * @return Backend session
+     * @return Backend authenticator
      */
-    virtual std::unique_ptr<BackendAuthenticator> create_backend_authenticator();
+    virtual std::unique_ptr<BackendAuthenticator> create_backend_authenticator() = 0;
 };
 
 // Helper template which stores the module reference.

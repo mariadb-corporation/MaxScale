@@ -132,9 +132,4 @@ int ClientAuthenticator::reauthenticate(DCB* client, uint8_t* scramble, size_t s
     return MXS_AUTH_STATE_FAILED;
 }
 
-std::unique_ptr<BackendAuthenticator> ClientAuthenticator::create_backend_authenticator()
-{
-    return nullptr;
-}
-
 }
