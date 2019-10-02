@@ -76,6 +76,7 @@
 #include "internal/service.hh"
 
 using namespace maxscale;
+using std::string;
 
 #define STRING_BUFFER_SIZE 1024
 #define PIDFD_CLOSED       -1
@@ -167,7 +168,7 @@ bool         handle_path_arg(char** dest, const char* path, const char* arg, boo
 static bool  handle_debug_args(char* args);
 static void  set_log_augmentation(const char* value);
 static void  usage(void);
-static char* get_expanded_pathname(const char* input_path, const char* fname);
+static string get_absolute_fname(const char* relative_path, const char* fname);
 static void print_alert(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
 static void print_alert(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
 static void print_info(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
@@ -176,9 +177,9 @@ static void print_warning(int eno, const char* format, ...) mxb_attribute((forma
 static void print_warning(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
 static void log_startup_error(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
 static void log_startup_error(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
-static bool resolve_maxscale_conf_fname(char** cnf_full_path,
+static bool resolve_maxscale_conf_fname(string* cnf_full_path,
                                         const char* home_dir,
-                                        char* cnf_file_arg);
+                                        const char* cnf_file_arg);
 
 static char* check_dir_access(char* dirname, bool, bool);
 static int   set_user(const char* user);
@@ -590,28 +591,30 @@ void cleanup_old_process_datadirs()
     nftw(get_datadir(), ntfw_cb, depth, flags);
 }
 
-static bool resolve_maxscale_conf_fname(char** cnf_full_path,
+static bool resolve_maxscale_conf_fname(string* cnf_full_path,
                                         const char* home_dir,
-                                        char* cnf_file_arg)
+                                        const char* cnf_file_arg)
 {
+    cnf_full_path->clear();
+
     if (cnf_file_arg)
     {
-        *cnf_full_path = (char*)MXS_MALLOC(PATH_MAX + 1);
-        MXS_ABORT_IF_NULL(*cnf_full_path);
-
-        if (!realpath(cnf_file_arg, *cnf_full_path))
+        char resolved_path[PATH_MAX + 1];
+        if (realpath(cnf_file_arg, resolved_path) == nullptr)
         {
             log_startup_error(errno, "Failed to open read access to configuration file");
-            MXS_FREE(*cnf_full_path);
-            *cnf_full_path = NULL;
+        }
+        else
+        {
+            *cnf_full_path = resolved_path;
         }
     }
     else    /*< default config file name is used */
     {
-        *cnf_full_path = get_expanded_pathname(home_dir, default_cnf_fname);
+        *cnf_full_path = get_absolute_fname(home_dir, default_cnf_fname);
     }
 
-    return *cnf_full_path && is_file_and_readable(*cnf_full_path);
+    return !cnf_full_path->empty() && is_file_and_readable(cnf_full_path->c_str());
 }
 
 /**
@@ -881,26 +884,21 @@ static bool path_is_writable(const char* absolute_pathname)
 
 
 /**
- * @node Expand path expression and if fname is provided, concatenate
- * it to path to for an absolute pathname. If fname is provided
- * its readability is tested.
+ * Get absolute pathname, given a relative path and a filename.
  *
- * Parameters:
+ * @param relative_path  Relative path.
+ * @param fname          File name to be concatenated to the path.
  *
- * @param relative_path path to be expanded
- * @param fname file name to be concatenated to the path, may be NULL
- *
- * @return expanded path and if fname was NULL, absolute pathname of it.
- * Return value is NULL in case of failure.
- *
+ * @return Absolute path if resulting path exists and the file is
+ *         readable, otherwise an empty string.
  */
-static char* get_expanded_pathname(const char* relative_path,
-                                   const char* fname)
+static string get_absolute_fname(const char* relative_path,
+                                 const char* fname)
 {
     mxb_assert(relative_path);
     mxb_assert(fname);
 
-    char* cnf_file_buf = NULL;
+    string absolute_fname;
 
     /*<
      * Expand possible relative pathname to absolute path
@@ -916,23 +914,18 @@ static char* get_expanded_pathname(const char* relative_path,
          * Concatenate an absolute filename and test its existence and
          * readability.
          */
-        size_t pathlen = strnlen(expanded_path, PATH_MAX)
-            + 1 + strnlen(fname, PATH_MAX) + 1;
-        cnf_file_buf = (char*)MXS_MALLOC(pathlen);
 
-        if (cnf_file_buf)
+        absolute_fname += expanded_path;
+        absolute_fname += "/";
+        absolute_fname += fname;
+
+        if (!path_is_readable(absolute_fname.c_str()))
         {
-            snprintf(cnf_file_buf, pathlen, "%s/%s", expanded_path, fname);
-
-            if (!path_is_readable(cnf_file_buf))
-            {
-                MXS_FREE(cnf_file_buf);
-                cnf_file_buf = NULL;
-            }
+            absolute_fname.clear();
         }
     }
 
-    return cnf_file_buf;
+    return absolute_fname;
 }
 
 static void usage(void)
@@ -1307,8 +1300,8 @@ int main(int argc, char** argv)
     int opt;
     int daemon_pipe[2] = {-1, -1};
     bool parent_process;
-    char* cnf_file_path = NULL;         /*< conf file, to be freed */
-    char* cnf_file_arg = NULL;          /*< conf filename from cmd-line arg */
+    string cnf_file_path; /*< conf file */
+    string cnf_file_arg;  /*< conf filename from cmd-line arg */
     char* tmp_path;
     int option_index;
     MXS_CONFIG* cnf = config_get_global_options();
@@ -1335,12 +1328,12 @@ int main(int argc, char** argv)
      * the order of the events would be the way they appear to be.
      */
     auto do_startup = [&]() {
-            if (!config_load(cnf_file_path))
+            if (!config_load(cnf_file_path.c_str()))
             {
                 print_alert("Failed to open, read or process the MaxScale configuration "
                             "file. See the error log for details.");
                 MXS_ALERT("Failed to open, read or process the MaxScale configuration file %s.",
-                          cnf_file_path);
+                          cnf_file_path.c_str());
                 rc = MAXSCALE_BADCONFIG;
                 maxscale_shutdown();
                 return;
@@ -1448,9 +1441,9 @@ int main(int argc, char** argv)
              */
             if (optarg[0] != '-')
             {
-                cnf_file_arg = strndup(optarg, PATH_MAX);
+                cnf_file_arg = optarg;
             }
-            if (cnf_file_arg == NULL)
+            if (cnf_file_arg.empty())
             {
                 log_startup_error("Configuration file argument identifier \'-f\' was specified but "
                                   "the argument didn't specify a valid configuration file or the "
@@ -1844,13 +1837,13 @@ int main(int argc, char** argv)
         strcat(pathbuf, "/");
     }
 
-    if (!resolve_maxscale_conf_fname(&cnf_file_path, pathbuf, cnf_file_arg))
+    if (!resolve_maxscale_conf_fname(&cnf_file_path, pathbuf, cnf_file_arg.c_str()))
     {
         rc = MAXSCALE_BADCONFIG;
         goto return_main;
     }
 
-    if (!sniff_configuration(cnf_file_path))
+    if (!sniff_configuration(cnf_file_path.c_str()))
     {
         rc = MAXSCALE_BADCONFIG;
         goto return_main;
@@ -1923,7 +1916,7 @@ int main(int argc, char** argv)
         goto return_main;
     }
 
-    if (!config_load_global(cnf_file_path))
+    if (!config_load_global(cnf_file_path.c_str()))
     {
         rc = MAXSCALE_BADCONFIG;
         goto return_main;
@@ -1978,7 +1971,7 @@ int main(int argc, char** argv)
                 "Data directory     : %s\n"
                 "Module directory   : %s\n"
                 "Service cache      : %s\n\n",
-                cnf_file_path,
+                cnf_file_path.c_str(),
                 get_logdir(),
                 get_datadir(),
                 get_libdir(),
@@ -1990,7 +1983,7 @@ int main(int argc, char** argv)
         print_warning("Both MaxScale and Syslog logging disabled.");
     }
 
-    MXS_NOTICE("Configuration file: %s", cnf_file_path);
+    MXS_NOTICE("Configuration file: %s", cnf_file_path.c_str());
     MXS_NOTICE("Log directory: %s", get_logdir());
     MXS_NOTICE("Data directory: %s", get_datadir());
     MXS_NOTICE("Module directory: %s", get_libdir());
@@ -2179,13 +2172,6 @@ return_main:
     {
         /** Notify the parent process that an error has occurred */
         write_child_exit_code(daemon_pipe[1], rc);
-    }
-
-    MXS_FREE(cnf_file_arg);
-
-    if (cnf_file_path)
-    {
-        MXS_FREE(cnf_file_path);
     }
 
     config_finish();
