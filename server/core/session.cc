@@ -1480,13 +1480,13 @@ int32_t Session::routeQuery(GWBUF* buffer)
 
 int32_t Session::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    return client_dcb->protocol_write(gwbuf_clone(buffer));
+    return client_dcb->protocol_write(buffer);
 }
 
 bool Session::handleError(GWBUF* error, Endpoint* down, const mxs::Reply& reply)
 {
     mxs::ReplyRoute route;
-    clientReply(error, route, reply);
+    clientReply(gwbuf_clone(error), route, reply);
     terminate();
     return false;
 }
