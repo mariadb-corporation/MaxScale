@@ -1363,12 +1363,10 @@ bool set_dirs(const char* basedir)
 int main(int argc, char** argv)
 {
     int rc = MAXSCALE_SHUTDOWN;
-    int n_services;
     int eno = 0;    /*< local variable for errno */
     int opt;
     int daemon_pipe[2] = {-1, -1};
     bool parent_process;
-    int child_status;
     char* cnf_file_path = NULL;         /*< conf file, to be freed */
     char* cnf_file_arg = NULL;          /*< conf filename from cmd-line arg */
     char* tmp_path;
@@ -1383,7 +1381,6 @@ int main(int argc, char** argv)
     bool pid_file_created = false;
     const char* specified_user = NULL;
     char export_cnf[PATH_MAX + 1] = "";
-    maxscale::MainWorker* main_worker = nullptr;
 
     /**
      * The following lambda function is executed as the first event on the main worker. This is what starts
@@ -1854,6 +1851,7 @@ int main(int argc, char** argv)
         if (parent_process)
         {
             close(daemon_pipe[1]);
+            int child_status;
             int nread = read(daemon_pipe[0], (void*)&child_status, sizeof(int));
             close(daemon_pipe[0]);
 
@@ -2065,9 +2063,6 @@ int main(int argc, char** argv)
         goto return_main;
     }
 
-    // Initialize the housekeeper
-    main_worker = new maxscale::MainWorker;
-
     if (!qc_setup(&cnf->qc_cache_properties, cnf->qc_sql_mode, cnf->qc_name, cnf->qc_args))
     {
         log_startup_error("Failed to initialise query classifier library.");
@@ -2135,7 +2130,9 @@ int main(int argc, char** argv)
         // Before we start the workers we need to check if a shutdown signal has been received
         if (!maxscale_is_shutting_down())
         {
-            if (RoutingWorker::init(main_worker))
+            MainWorker main_worker;
+
+            if (RoutingWorker::init(&main_worker))
             {
                 // If a shutdown signal was received while we were initializing the workers,
                 // we need to exit. After this point, the shutdown will be driven by the workers.
@@ -2158,7 +2155,7 @@ int main(int argc, char** argv)
                             if (worker->execute(do_startup, RoutingWorker::EXECUTE_QUEUED))
                             {
                                 // This call will block until MaxScale is shut down.
-                                main_worker->run();
+                                main_worker.run();
                                 MXS_NOTICE("MaxScale is shutting down.");
 
                                 // Shutting down started, wait for all routing workers.
@@ -2259,9 +2256,6 @@ return_main:
     }
 
     config_finish();
-
-    delete main_worker;
-    main_worker = nullptr;
 
     return rc;
 }   /*< End of main */
