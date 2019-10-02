@@ -632,7 +632,7 @@ void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
         backend->ack_write();
 
         /** Got a complete reply, decrement expected response count */
-        if (!backend->has_session_commands() || backend == m_sescmd_replier)
+        if (!backend->has_session_commands())
         {
             m_expected_responses--;
             mxb_assert(m_expected_responses == 0);
@@ -744,8 +744,6 @@ void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
     {
         if (backend->in_use() && backend->has_session_commands())
         {
-            mxb_assert(backend != m_sescmd_replier);
-
             // Backend is still in use and has more session commands to execute
             if (backend->execute_session_command() && backend->is_waiting_result())
             {
@@ -893,11 +891,6 @@ bool RWSplitSession::retry_master_query(RWBackend* backend)
         mxb_assert(!m_current_query.get());
         mxb_assert(!m_sescmd_list.empty());
         mxb_assert(m_sescmd_count >= 2);
-        MXS_INFO("Retrying session command due to master failure: %s",
-                 backend->next_session_command()->to_string().c_str());
-
-        // Reset the replier pointer in case there's another master available
-        m_sescmd_replier = nullptr;
 
         // MXS-2609: Maxscale crash in RWSplitSession::retry_master_query()
         // To prevent a crash from happening, we make sure the session command list is not empty before
@@ -909,12 +902,36 @@ bool RWSplitSession::retry_master_query(RWBackend* backend)
             return false;
         }
 
-        // Before routing it, pop the failed session command off the list and decrement the number of
-        // executed session commands. This "overwrites" the existing command and prevents history duplication.
-        m_sescmd_list.pop_back();
-        --m_sescmd_count;
+        for (auto b : m_raw_backends)
+        {
+            if (b != backend && b->in_use() && b->is_waiting_result())
+            {
+                MXS_INFO("Master failed, electing '%s' as the replier to session command %lu",
+                         b->name(), b->next_session_command()->get_position());
+                m_sescmd_replier = b;
+                m_expected_responses++;
+                break;
+            }
+        }
 
-        retry_query(backend->next_session_command()->deep_copy_buffer());
+        if (m_sescmd_replier == backend)
+        {
+            // All of the slaves delivered their response before the master failed. This means that we don't
+            // have the result of the session command available and to get it we have to execute it again.
+            // This could be avoided if one of the slave responses was stored up until the master returned its
+            // response.
+
+            // Before routing it, pop the failed session command off the list and decrement the number of
+            // executed session commands. This "overwrites" the existing command and prevents history
+            // duplication.
+            m_sescmd_list.pop_back();
+            --m_sescmd_count;
+            retry_query(backend->next_session_command()->deep_copy_buffer());
+
+            MXS_INFO("Master failed, retrying session command %lu",
+                     backend->next_session_command()->get_position());
+        }
+
         can_continue = true;
     }
     else if (m_current_query.get())

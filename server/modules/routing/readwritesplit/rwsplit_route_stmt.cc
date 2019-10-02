@@ -113,7 +113,6 @@ bool RWSplitSession::create_one_connection_for_sescmd()
     {
         if (backend->can_connect() && backend->is_master())
         {
-            m_sescmd_replier = backend;
             if (prepare_target(backend, TARGET_MASTER))
             {
                 if (!m_current_master)
@@ -132,7 +131,6 @@ bool RWSplitSession::create_one_connection_for_sescmd()
     {
         if (backend->can_connect() && backend->is_slave() && prepare_target(backend, TARGET_SLAVE))
         {
-            m_sescmd_replier = backend;
             return true;
         }
     }
@@ -519,13 +517,21 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
         m_qc.ps_erase(querybuf);
     }
 
+    // If no connections are open, create one and execute the session command on it
+    if (m_config.lazy_connect && !have_open_connections())
+    {
+        create_one_connection_for_sescmd();
+    }
+
     MXS_INFO("Session write, routing to all servers.");
     bool attempted_write = false;
 
-    for (auto it = m_raw_backends.begin(); it != m_raw_backends.end(); it++)
-    {
-        RWBackend* backend = *it;
+    // Pick a new replier for each new session command. This allows the source server to change over
+    // the course of the session. The replier will usually be the current master server.
+    m_sescmd_replier = nullptr;
 
+    for (RWBackend* backend : m_raw_backends)
+    {
         if (backend->in_use())
         {
             attempted_write = true;
@@ -538,19 +544,16 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
                 lowest_pos = current_pos;
             }
 
-            if (backend->is_waiting_result())
-            {
-                MXS_INFO("Queuing session command on '%s'", backend->name());
-            }
-            else if (backend->execute_session_command())
+            if (backend->is_waiting_result() || backend->execute_session_command())
             {
                 nsucc += 1;
                 mxb::atomic::add(&backend->target()->stats().packets, 1, mxb::atomic::RELAXED);
                 m_server_stats[backend->target()].total++;
                 m_server_stats[backend->target()].read++;
 
-                if (expecting_response && (!m_sescmd_replier || backend == m_current_master))
+                if (!m_sescmd_replier || backend == m_current_master)
                 {
+                    // Return the result from this backend to the client
                     m_sescmd_replier = backend;
                 }
 
@@ -571,6 +574,7 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
         mxb_assert(nsucc);
         m_expected_responses++;
         mxb_assert(m_expected_responses == 1);
+        MXS_INFO("Will return response from '%s' to the client", m_sescmd_replier->name());
     }
 
     if (m_config.max_sescmd_history > 0 && m_sescmd_list.size() >= m_config.max_sescmd_history
@@ -612,15 +616,6 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
     {
         compress_history(sescmd);
         m_sescmd_list.push_back(sescmd);
-    }
-
-    if (m_config.lazy_connect && !attempted_write && nsucc == 0)
-    {
-        // If no connections are open, create one and execute the session command on it
-        if (create_one_connection_for_sescmd())
-        {
-            nsucc = 1;
-        }
     }
 
     if (nsucc)
