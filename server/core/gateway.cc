@@ -1381,7 +1381,6 @@ int main(int argc, char** argv)
     sigset_t saved_mask;
     int numlocks = 0;
     bool pid_file_created = false;
-    mxb::Worker* worker;
     const char* specified_user = NULL;
     char export_cnf[PATH_MAX + 1] = "";
     maxscale::MainWorker* main_worker = nullptr;
@@ -1825,7 +1824,7 @@ int main(int argc, char** argv)
         print_info("MaxScale will be run in the terminal process.");
 #if defined (SS_DEBUG)
         fprintf(stderr,
-                "\tSee the log from the following log files : \n\n");
+                "\n\nSee the log from the following log files : \n\n");
 #endif
     }
     else
@@ -2129,112 +2128,109 @@ int main(int argc, char** argv)
     /** Load the admin users */
     admin_users_init();
 
-    /* Initialize the internal query classifier. The plugin will be initialized
-     * via the module initialization below.
-     */
-    if (!qc_process_init(QC_INIT_SELF))
+    // Initialize the internal query classifier. The actuak plugin will be
+    // initialized via the module initialization below.
+    if (qc_process_init(QC_INIT_SELF))
+    {
+        // Before we start the workers we need to check if a shutdown signal has been received
+        if (!maxscale_is_shutting_down())
+        {
+            if (RoutingWorker::init(main_worker))
+            {
+                // If a shutdown signal was received while we were initializing the workers,
+                // we need to exit. After this point, the shutdown will be driven by the workers.
+                if (!maxscale_is_shutting_down())
+                {
+                    if (modules_process_init())
+                    {
+                        // Start the routing workers, each in a thread of its own.
+                        if (RoutingWorker::start_workers())
+                        {
+                            MXS_NOTICE("MaxScale started with %d worker threads, each with a stack "
+                                       "size of %lu bytes.",
+                                       config_threadcount(),
+                                       config_thread_stack_size());
+
+                            auto worker = RoutingWorker::get(RoutingWorker::MAIN);
+                            mxb_assert(worker);
+
+                            set_admin_worker(worker);
+                            if (worker->execute(do_startup, RoutingWorker::EXECUTE_QUEUED))
+                            {
+                                // This call will block until MaxScale is shut down.
+                                main_worker->run();
+                                MXS_NOTICE("MaxScale is shutting down.");
+
+                                // Shutting down started, wait for all routing workers.
+                                RoutingWorker::join_workers();
+                                MXS_NOTICE("All workers have shut down.");
+
+                                // No admin routing worker anymore.
+                                set_admin_worker(nullptr);
+
+                                MonitorManager::destroy_all_monitors();
+
+                                maxscale_start_teardown();
+                                service_destroy_instances();
+                                filter_destroy_instances();
+
+                                MXS_NOTICE("MaxScale shutdown completed.");
+                            }
+                            else
+                            {
+                                log_startup_error("Failed to queue startup task.");
+                                rc = MAXSCALE_INTERNALERROR;
+                            }
+                        }
+                        else
+                        {
+                            log_startup_error("Failed to start routing workers.");
+                            rc = MAXSCALE_INTERNALERROR;
+                        }
+
+                        modules_process_finish();
+                    }
+                    else
+                    {
+                        log_startup_error("Failed to initialize all modules at startup");
+                        rc = MAXSCALE_BADCONFIG;
+                    }
+                }
+                else
+                {
+                    rc = MAXSCALE_SHUTDOWN;
+                }
+
+                RoutingWorker::finish();
+            }
+            else
+            {
+                log_startup_error("Failed to initialize routing workers.");
+                rc = MAXSCALE_INTERNALERROR;
+            }
+        }
+        else
+        {
+            rc = MAXSCALE_SHUTDOWN;
+        }
+
+        // Finalize the internal query classifier. The actual plugin was finalized
+        // via the module finalizarion above.
+        qc_process_end(QC_INIT_SELF);
+    }
+    else
     {
         log_startup_error("Failed to initialize the internal query classifier.");
         rc = MAXSCALE_INTERNALERROR;
-        goto return_main;
     }
-
-    // Before we start the workers we need to check if a shutdown signal has been received
-    if (maxscale_is_shutting_down())
-    {
-        rc = MAXSCALE_SHUTDOWN;
-        goto return_main;
-    }
-
-    if (!RoutingWorker::init(main_worker))
-    {
-        log_startup_error("Failed to initialize routing workers.");
-        rc = MAXSCALE_INTERNALERROR;
-        goto return_main;
-    }
-
-    /**
-     * If a shutdown signal was received while we were initializing the workers, we need to exit.
-     * After this point, the shutdown will be driven by the workers.
-     */
-    if (maxscale_is_shutting_down())
-    {
-        rc = MAXSCALE_SHUTDOWN;
-        goto return_main;
-    }
-
-    /* Init MaxScale modules */
-    if (!modules_process_init())
-    {
-        log_startup_error("Failed to initialize all modules at startup");
-        rc = MAXSCALE_BADCONFIG;
-        goto return_main;
-    }
-
-    /*<
-     * Start the routing workers running in their own thread.
-     */
-    if (!RoutingWorker::start_workers())
-    {
-        log_startup_error("Failed to start routing workers.");
-        rc = MAXSCALE_INTERNALERROR;
-        goto return_main;
-    }
-
-    MXS_NOTICE("MaxScale started with %d worker threads, each with a stack size of %lu bytes.",
-               config_threadcount(),
-               config_thread_stack_size());
-
-    worker = RoutingWorker::get(RoutingWorker::MAIN);
-    mxb_assert(worker);
-
-    // Configuration read and items created. Changes should now come through the main routing worker.
-    set_admin_worker(worker);
-    if (!worker->execute(do_startup, RoutingWorker::EXECUTE_QUEUED))
-    {
-        log_startup_error("Failed to queue startup task.");
-        rc = MAXSCALE_INTERNALERROR;
-        goto return_main;
-    }
-
-    main_worker->run();
-
-    /*<
-     * Wait for worker threads to exit.
-     */
-    RoutingWorker::join_workers();
-    MXS_NOTICE("All workers have shut down.");
-
-    set_admin_worker(nullptr);      // Main worker has quit, re-assign to non-worker.
-
-    /*< Destroy all monitors */
-    MonitorManager::destroy_all_monitors();
-
-    maxscale_start_teardown();
-
-    /*<
-     * Destroy the router and filter instances of all services.
-     */
-    service_destroy_instances();
-    filter_destroy_instances();
-
-    RoutingWorker::finish();
-    maxbase::finish();
-
-    /*< Call finish on all modules. */
-    modules_process_finish();
-
-    /* Finalize the internal query classifier. The plugin was finalized
-     * via the module finalizarion above.
-     */
-    qc_process_end(QC_INIT_SELF);
 
     log_exit_status();
-    MXS_NOTICE("MaxScale is shutting down.");
 
     utils_end();
-    MXS_NOTICE("MaxScale shutdown completed.");
 
+    maxbase::finish();
+
+return_main:
     if (unload_modules_at_exit)
     {
         unload_all_modules();
@@ -2243,7 +2239,6 @@ int main(int argc, char** argv)
     ERR_free_strings();
     EVP_cleanup();
 
-return_main:
     if (pid_file_created)
     {
         unlock_pidfile();
