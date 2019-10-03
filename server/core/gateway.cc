@@ -1369,7 +1369,6 @@ int main(int argc, char** argv)
     MXS_CONFIG* cnf = config_get_global_options();
     mxb_assert(cnf);
     int numlocks = 0;
-    bool pid_file_created = false;
     const char* specified_user = NULL;
     char export_cnf[PATH_MAX + 1] = "";
 
@@ -1969,7 +1968,7 @@ int main(int argc, char** argv)
             goto return_main;
         }
 
-        pid_file_created = true;
+        atexit(unlink_pidfile);
 
         if (!lock_directories())
         {
@@ -2109,12 +2108,6 @@ return_main:
         unload_all_modules();
     }
 
-    if (pid_file_created)
-    {
-        unlock_pidfile();
-        unlink_pidfile();
-    }
-
     config_finish();
 
     return rc;
@@ -2137,6 +2130,8 @@ static void unlock_pidfile()
  */
 static void unlink_pidfile(void)
 {
+    unlock_pidfile();
+
     if (strlen(pidfile))
     {
         if (unlink(pidfile))
