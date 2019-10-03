@@ -1881,7 +1881,7 @@ int main(int argc, char** argv)
     if (!config_load_global(cnf_file_path.c_str()))
     {
         rc = MAXSCALE_BADCONFIG;
-        goto return_main;
+        return rc;
     }
 
     if (daemon_mode)
@@ -1889,7 +1889,7 @@ int main(int argc, char** argv)
         if (!change_cwd())
         {
             rc = MAXSCALE_INTERNALERROR;
-            goto return_main;
+            return rc;
         }
     }
 
@@ -1921,7 +1921,8 @@ int main(int argc, char** argv)
         else
         {
             log_startup_error(errno, "Cannot create data directory '%s'", datadir);
-            goto return_main;
+            rc = MAXSCALE_BADCONFIG;
+            return rc;
         }
     }
 
@@ -1955,7 +1956,7 @@ int main(int argc, char** argv)
     {
         log_startup_error("Failed to initialise query classifier library.");
         rc = MAXSCALE_INTERNALERROR;
-        goto return_main;
+        return rc;
     }
 
     if (!cnf->config_check)
@@ -1967,14 +1968,14 @@ int main(int argc, char** argv)
              * Assuming that this is an already running MaxScale process, we
              * should exit with an error code.  */
             rc = MAXSCALE_ALREADYRUNNING;
-            goto return_main;
+            return rc;
         }
 
         /* Write process pid into MaxScale pidfile */
         if (write_pid_file() != 0)
         {
             rc = MAXSCALE_ALREADYRUNNING;
-            goto return_main;
+            return rc;
         }
 
         atexit(unlink_pidfile);
@@ -1982,7 +1983,7 @@ int main(int argc, char** argv)
         if (!lock_directories())
         {
             rc = MAXSCALE_ALREADYRUNNING;
-            goto return_main;
+            return rc;
         }
 
         atexit(unlock_directories);
@@ -2098,8 +2099,6 @@ int main(int argc, char** argv)
         rc = MAXSCALE_INTERNALERROR;
     }
 
-
-return_main:
     return rc;
 }   /*< End of main */
 
