@@ -109,8 +109,6 @@ static bool daemon_mode = true;
 
 static const char* maxscale_commit = MAXSCALE_COMMIT;
 
-const char* progname = NULL;
-
 #ifdef HAVE_GLIBC
 // getopt_long is a GNU extension
 static struct option long_options[] =
@@ -933,7 +931,7 @@ static string get_absolute_fname(const char* relative_path,
     return absolute_fname;
 }
 
-static void usage(void)
+static void usage()
 {
     fprintf(stderr,
             "\nUsage : %s [OPTION]...\n\n"
@@ -966,7 +964,7 @@ static void usage(void)
             "                              where the message was logged (default: 0)\n"
             "  -p, --passive               start MaxScale as a passive standby\n"
             "  -g, --debug=arg1,arg2,...   enable or disable debug features. Supported arguments:\n",
-            progname);
+            program_invocation_short_name);
     for (int i = 0; debug_arguments[i].action != NULL; i++)
     {
         fprintf(stderr,
@@ -1369,30 +1367,22 @@ private:
 int main(int argc, char** argv)
 {
     int rc = MAXSCALE_SHUTDOWN;
-    int eno = 0;    /*< local variable for errno */
-    int child_pipe = -1;
-    bool parent_process;
-    string cnf_file_path; /*< conf file */
-    string cnf_file_arg;  /*< conf filename from cmd-line arg */
-    char* tmp_path;
-    MXS_CONFIG* cnf = config_get_global_options();
-    mxb_assert(cnf);
-    int numlocks = 0;
-    const char* specified_user = NULL;
-    char export_cnf[PATH_MAX + 1] = "";
 
     config_set_global_defaults();
-    mxb_assert(cnf);
-
     maxscale_reset_starttime();
 
-    progname = *argv;
     snprintf(datadir, PATH_MAX, "%s", default_datadir);
     datadir[PATH_MAX] = '\0';
 
     // Option string for getopt
     const char accepted_opts[] = "dnce:f:g:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:H:p";
 
+    MXS_CONFIG* cnf = config_get_global_options();
+    mxb_assert(cnf);
+    const char* specified_user = NULL;
+    char export_cnf[PATH_MAX + 1] = "";
+    string cnf_file_arg;  /*< conf filename from cmd-line arg */
+    char* tmp_path;
     int opt;
 #ifdef HAVE_GLIBC
     int option_index;
@@ -1729,6 +1719,7 @@ int main(int argc, char** argv)
     }
 #endif
 
+    int child_pipe = -1;
     if (!daemon_mode)
     {
         print_info("MaxScale will be run in the terminal process.");
@@ -1758,6 +1749,7 @@ int main(int argc, char** argv)
         return rc;
     }
 
+    string cnf_file_path;
     if (!resolve_maxscale_conf_fname(&cnf_file_path, cnf_file_arg))
     {
         rc = MAXSCALE_BADCONFIG;
