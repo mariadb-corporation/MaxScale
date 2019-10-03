@@ -1822,26 +1822,23 @@ int main(int argc, char** argv)
     // This RAII class ensures that the parent is notified at process exit.
     ChildExit child_exit(child_pipe, &rc);
 
+    // NOTE: From here on, rc *must* be assigned the return value, before returning.
     if (!setup_signals())
     {
         rc = MAXSCALE_INTERNALERROR;
-        goto return_main;
+        return rc;
     }
 
-    /**
-     * Resolve the full pathname for configuration file and check for
-     * read accessibility.
-     */
     if (!resolve_maxscale_conf_fname(&cnf_file_path, cnf_file_arg))
     {
         rc = MAXSCALE_BADCONFIG;
-        goto return_main;
+        return rc;
     }
 
     if (!sniff_configuration(cnf_file_path.c_str()))
     {
         rc = MAXSCALE_BADCONFIG;
-        goto return_main;
+        return rc;
     }
 
     if (mxb_log_inited())
@@ -1860,7 +1857,7 @@ int main(int argc, char** argv)
     if (!init_log())
     {
         rc = MAXSCALE_BADCONFIG;
-        goto return_main;
+        return rc;
     }
 
     SSL_library_init();
