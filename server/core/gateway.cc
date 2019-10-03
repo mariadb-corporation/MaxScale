@@ -1180,6 +1180,35 @@ bool configure_signals(void)
     return true;
 }
 
+bool setup_signals()
+{
+    bool rv = false;
+
+    if (!configure_signals())
+    {
+        log_startup_error("Failed to configure signal handlers.");
+    }
+    else
+    {
+        sigset_t sigpipe_mask;
+        sigemptyset(&sigpipe_mask);
+        sigaddset(&sigpipe_mask, SIGPIPE);
+        sigset_t saved_mask;
+        int eno = pthread_sigmask(SIG_BLOCK, &sigpipe_mask, &saved_mask);
+
+        if (eno != 0)
+        {
+            log_startup_error(eno, "Failed to initialise signal mask for MaxScale");
+        }
+        else
+        {
+            rv = true;
+        }
+    }
+
+    return rv;
+}
+
 bool set_runtime_dirs(const char* basedir)
 {
     bool rv = true;
@@ -1306,8 +1335,6 @@ int main(int argc, char** argv)
     mxb_assert(cnf);
     int* syslog_enabled = &cnf->syslog;     /** Log to syslog */
     int* maxlog_enabled = &cnf->maxlog;     /** Log with MaxScale */
-    sigset_t sigpipe_mask;
-    sigset_t saved_mask;
     int numlocks = 0;
     bool pid_file_created = false;
     const char* specified_user = NULL;
@@ -1399,8 +1426,6 @@ int main(int argc, char** argv)
 
     maxscale_reset_starttime();
 
-    sigemptyset(&sigpipe_mask);
-    sigaddset(&sigpipe_mask, SIGPIPE);
     progname = *argv;
     snprintf(datadir, PATH_MAX, "%s", default_datadir);
     datadir[PATH_MAX] = '\0';
@@ -1766,20 +1791,8 @@ int main(int argc, char** argv)
     // NOTE: From this point onward, no direct returns, but the end must be
     // NOTE: reached, where the child exit code is written.
 
-    /*<
-     * Set signal handlers for SIGHUP, SIGTERM, SIGINT and critical signals like SIGSEGV.
-     */
-    if (!configure_signals())
+    if (!setup_signals())
     {
-        log_startup_error("Failed to configure signal handlers.");
-        rc = MAXSCALE_INTERNALERROR;
-        goto return_main;
-    }
-    eno = pthread_sigmask(SIG_BLOCK, &sigpipe_mask, &saved_mask);
-
-    if (eno != 0)
-    {
-        log_startup_error(eno, "Failed to initialise signal mask for MaxScale");
         rc = MAXSCALE_INTERNALERROR;
         goto return_main;
     }
