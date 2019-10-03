@@ -197,6 +197,7 @@ static bool  user_is_acceptable(const char* specified_user);
 static bool  init_sqlite3();
 static bool  init_base_libraries();
 static void  finish_base_libraries();
+static bool  redirect_stdout_and_stderr(const std::string& path);
 
 struct DEBUG_ARGUMENT
 {
@@ -1981,21 +1982,10 @@ int main(int argc, char** argv)
 
     if (!redirect_output_to.empty())
     {
-        if (freopen(redirect_output_to.c_str(), "a", stdout))
+        if (!redirect_stdout_and_stderr(redirect_output_to))
         {
-            if (!freopen(redirect_output_to.c_str(), "a", stderr))
-            {
-                // The state of stderr is now somewhat unclear. We log nonetheless.
-                log_startup_error(errno, "Failed to redirect stderr to file");
-                rc = MAXSCALE_INTERNALERROR;
-                goto return_main;
-            }
-        }
-        else
-        {
-            log_startup_error(errno, "Failed to redirect stdout to file");
             rc = MAXSCALE_INTERNALERROR;
-            goto return_main;
+            return rc;
         }
     }
 
@@ -3264,4 +3254,29 @@ static void finish_base_libraries()
     utils_end();
     // No finalization of sqlite3
     finish_ssl();
+}
+
+static bool redirect_stdout_and_stderr(const std::string& path)
+{
+    bool rv = false;
+
+    if (freopen(path.c_str(), "a", stdout))
+    {
+        if (freopen(path.c_str(), "a", stderr))
+        {
+            rv = true;
+        }
+        else
+        {
+            // The state of stderr is now somewhat unclear. We log nonetheless.
+            log_startup_error(errno, "Failed to redirect stderr to file");
+        }
+    }
+    else
+    {
+        log_startup_error(errno,
+                          "Failed to redirect stdout (and will not attempt to redirect stderr) to file");
+    }
+
+    return rv;
 }
