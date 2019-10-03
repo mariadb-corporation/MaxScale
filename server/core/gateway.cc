@@ -1381,87 +1381,6 @@ int main(int argc, char** argv)
     const char* specified_user = NULL;
     char export_cnf[PATH_MAX + 1] = "";
 
-    /**
-     * The following lambda function is executed as the first event on the main worker. This is what starts
-     * up the listeners for all services.
-     *
-     * Due to the fact that the main thread runs a worker thread we have to queue the starting
-     * of the listeners to happen after all workers have started. This allows worker messages to be used
-     * when listeners are being started.
-     *
-     * Once the main worker is dedicated to doing work other than handling traffic the code could be executed
-     * immediately after the worker thread have been started. This would make the startup logic clearer as
-     * the order of the events would be the way they appear to be.
-     */
-    auto do_startup = [&]() {
-            if (!config_load(cnf_file_path.c_str()))
-            {
-                print_alert("Failed to open, read or process the MaxScale configuration "
-                            "file. See the error log for details.");
-                MXS_ALERT("Failed to open, read or process the MaxScale configuration file %s.",
-                          cnf_file_path.c_str());
-                rc = MAXSCALE_BADCONFIG;
-                maxscale_shutdown();
-                return;
-            }
-
-            if (cnf->config_check)
-            {
-                MXS_NOTICE("Configuration was successfully verified.");
-
-                if (*export_cnf && export_config_file(export_cnf))
-                {
-                    MXS_NOTICE("Configuration exported to '%s'", export_cnf);
-                }
-
-                rc = MAXSCALE_SHUTDOWN;
-                maxscale_shutdown();
-                return;
-            }
-
-            if (cnf->admin_enabled)
-            {
-                bool success = mxs_admin_init();
-
-                if (!success && strcmp(cnf->admin_host, "::") == 0)
-                {
-                    MXS_WARNING("Failed to bind on address '::', attempting to "
-                                "bind on IPv4 address '0.0.0.0'.");
-                    strcpy(cnf->admin_host, "0.0.0.0");
-                    success = mxs_admin_init();
-                }
-
-                if (success)
-                {
-                    MXS_NOTICE("Started REST API on [%s]:%u", cnf->admin_host, cnf->admin_port);
-                }
-                else
-                {
-                    log_startup_error("Failed to initialize admin interface.");
-                    rc = MAXSCALE_INTERNALERROR;
-                    maxscale_shutdown();
-                    return;
-                }
-            }
-
-            if (!service_launch_all())
-            {
-                log_startup_error("Failed to start all MaxScale services.");
-                rc = MAXSCALE_NOSERVICES;
-                maxscale_shutdown();
-            }
-            else
-            {
-                if (daemon_mode)
-                {
-                    // Successful start, notify the parent process that it can exit.
-                    write_child_exit_code(child_pipe, rc);
-                }
-                /** Start all monitors */
-                MonitorManager::start_all_monitors();
-            }
-        };
-
     config_set_global_defaults();
     mxb_assert(cnf);
 
@@ -2000,6 +1919,87 @@ int main(int argc, char** argv)
 
     /** Load the admin users */
     admin_users_init();
+
+    /**
+     * The following lambda function is executed as the first event on the main worker. This is what starts
+     * up the listeners for all services.
+     *
+     * Due to the fact that the main thread runs a worker thread we have to queue the starting
+     * of the listeners to happen after all workers have started. This allows worker messages to be used
+     * when listeners are being started.
+     *
+     * Once the main worker is dedicated to doing work other than handling traffic the code could be executed
+     * immediately after the worker thread have been started. This would make the startup logic clearer as
+     * the order of the events would be the way they appear to be.
+     */
+    auto do_startup = [&]() {
+            if (!config_load(cnf_file_path.c_str()))
+            {
+                print_alert("Failed to open, read or process the MaxScale configuration "
+                            "file. See the error log for details.");
+                MXS_ALERT("Failed to open, read or process the MaxScale configuration file %s.",
+                          cnf_file_path.c_str());
+                rc = MAXSCALE_BADCONFIG;
+                maxscale_shutdown();
+                return;
+            }
+
+            if (cnf->config_check)
+            {
+                MXS_NOTICE("Configuration was successfully verified.");
+
+                if (*export_cnf && export_config_file(export_cnf))
+                {
+                    MXS_NOTICE("Configuration exported to '%s'", export_cnf);
+                }
+
+                rc = MAXSCALE_SHUTDOWN;
+                maxscale_shutdown();
+                return;
+            }
+
+            if (cnf->admin_enabled)
+            {
+                bool success = mxs_admin_init();
+
+                if (!success && strcmp(cnf->admin_host, "::") == 0)
+                {
+                    MXS_WARNING("Failed to bind on address '::', attempting to "
+                                "bind on IPv4 address '0.0.0.0'.");
+                    strcpy(cnf->admin_host, "0.0.0.0");
+                    success = mxs_admin_init();
+                }
+
+                if (success)
+                {
+                    MXS_NOTICE("Started REST API on [%s]:%u", cnf->admin_host, cnf->admin_port);
+                }
+                else
+                {
+                    log_startup_error("Failed to initialize admin interface.");
+                    rc = MAXSCALE_INTERNALERROR;
+                    maxscale_shutdown();
+                    return;
+                }
+            }
+
+            if (!service_launch_all())
+            {
+                log_startup_error("Failed to start all MaxScale services.");
+                rc = MAXSCALE_NOSERVICES;
+                maxscale_shutdown();
+            }
+            else
+            {
+                if (daemon_mode)
+                {
+                    // Successful start, notify the parent process that it can exit.
+                    write_child_exit_code(child_pipe, rc);
+                }
+                /** Start all monitors */
+                MonitorManager::start_all_monitors();
+            }
+        };
 
     // Initialize the internal query classifier. The actual plugin will be
     // initialized via the module initialization below.
