@@ -177,10 +177,7 @@ static void print_warning(int eno, const char* format, ...) mxb_attribute((forma
 static void print_warning(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
 static void log_startup_error(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
 static void log_startup_error(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
-static bool resolve_maxscale_conf_fname(string* cnf_full_path,
-                                        const char* home_dir,
-                                        const char* cnf_file_arg);
-
+static bool resolve_maxscale_conf_fname(string* cnf_full_path, const string& cnf_file_arg);
 static char* check_dir_access(char* dirname, bool, bool);
 static int   set_user(const char* user);
 bool         pid_file_exists();
@@ -591,16 +588,14 @@ void cleanup_old_process_datadirs()
     nftw(get_datadir(), ntfw_cb, depth, flags);
 }
 
-static bool resolve_maxscale_conf_fname(string* cnf_full_path,
-                                        const char* home_dir,
-                                        const char* cnf_file_arg)
+static bool resolve_maxscale_conf_fname(string* cnf_full_path, const string& cnf_file_arg)
 {
     cnf_full_path->clear();
 
-    if (cnf_file_arg)
+    if (!cnf_file_arg.empty())
     {
         char resolved_path[PATH_MAX + 1];
-        if (realpath(cnf_file_arg, resolved_path) == nullptr)
+        if (realpath(cnf_file_arg.c_str(), resolved_path) == nullptr)
         {
             log_startup_error(errno, "Failed to open read access to configuration file");
         }
@@ -611,7 +606,14 @@ static bool resolve_maxscale_conf_fname(string* cnf_full_path,
     }
     else    /*< default config file name is used */
     {
-        *cnf_full_path = get_absolute_fname(home_dir, default_cnf_fname);
+        string home_dir = get_configdir();
+
+        if (home_dir.empty() || home_dir.back() != '/')
+        {
+            home_dir += '/';
+        }
+
+        *cnf_full_path = get_absolute_fname(home_dir.c_str(), default_cnf_fname);
     }
 
     return !cnf_full_path->empty() && is_file_and_readable(cnf_full_path->c_str());
@@ -1830,15 +1832,7 @@ int main(int argc, char** argv)
      * Resolve the full pathname for configuration file and check for
      * read accessibility.
      */
-    char pathbuf[PATH_MAX + 1];
-    snprintf(pathbuf, PATH_MAX, "%s", get_configdir());
-    pathbuf[PATH_MAX] = '\0';
-    if (pathbuf[strlen(pathbuf) - 1] != '/')
-    {
-        strcat(pathbuf, "/");
-    }
-
-    if (!resolve_maxscale_conf_fname(&cnf_file_path, pathbuf, cnf_file_arg.c_str()))
+    if (!resolve_maxscale_conf_fname(&cnf_file_path, cnf_file_arg))
     {
         rc = MAXSCALE_BADCONFIG;
         goto return_main;
