@@ -1327,6 +1327,14 @@ public:
             write_child_exit_code(m_child_pipe, m_rc);
             ::close(m_child_pipe);
         }
+
+        if (unload_modules_at_exit)
+        {
+            unload_all_modules();
+        }
+
+        log_exit_status();
+        config_finish();
     }
 
 private:
@@ -2090,16 +2098,8 @@ int main(int argc, char** argv)
         rc = MAXSCALE_INTERNALERROR;
     }
 
-    log_exit_status();
 
 return_main:
-    if (unload_modules_at_exit)
-    {
-        unload_all_modules();
-    }
-
-    config_finish();
-
     return rc;
 }   /*< End of main */
 
