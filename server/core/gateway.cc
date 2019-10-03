@@ -187,7 +187,7 @@ bool         pid_file_exists();
 void         write_child_exit_code(int fd, int code);
 static bool  change_cwd();
 static void  log_exit_status();
-static bool  daemonize();
+static int   daemonize();
 static bool  sniff_configuration(const char* filepath);
 static bool  modules_process_init();
 static void  modules_process_finish();
@@ -1297,7 +1297,7 @@ int main(int argc, char** argv)
 {
     int rc = MAXSCALE_SHUTDOWN;
     int eno = 0;    /*< local variable for errno */
-    int daemon_pipe[2] = {-1, -1};
+    int child_pipe = -1;
     bool parent_process;
     string cnf_file_path; /*< conf file */
     string cnf_file_arg;  /*< conf filename from cmd-line arg */
@@ -1387,7 +1387,7 @@ int main(int argc, char** argv)
                 if (daemon_mode)
                 {
                     // Successful start, notify the parent process that it can exit.
-                    write_child_exit_code(daemon_pipe[1], rc);
+                    write_child_exit_code(child_pipe, rc);
                 }
                 /** Start all monitors */
                 MonitorManager::start_all_monitors();
@@ -1754,51 +1754,13 @@ int main(int argc, char** argv)
     }
     else
     {
-        if (pipe(daemon_pipe) == -1)
-        {
-            log_startup_error(errno, "Failed to create pipe for inter-process communication");
-            return MAXSCALE_INTERNALERROR;
-        }
+        // If the function returns, we are in the child.
+        child_pipe = daemonize();
 
-        /*<
-         * Maxscale must be daemonized before opening files, initializing
-         * embedded MariaDB and in general, as early as possible.
-         */
-
-        if (!disable_signals())
+        if (child_pipe == -1)
         {
             return MAXSCALE_INTERNALERROR;
         }
-
-        /** Daemonize the process and wait for the child process to notify
-         * the parent process of its exit status. */
-        parent_process = daemonize();
-
-        if (parent_process)
-        {
-            close(daemon_pipe[1]);
-            int child_status;
-            int nread = read(daemon_pipe[0], (void*)&child_status, sizeof(int));
-            close(daemon_pipe[0]);
-
-            if (nread == -1)
-            {
-                log_startup_error(errno, "Failed to read data from child process pipe");
-                exit(MAXSCALE_INTERNALERROR);
-            }
-            else if (nread == 0)
-            {
-                /** Child process has exited or closed write pipe */
-                log_startup_error("No data read from child process pipe.");
-                exit(MAXSCALE_INTERNALERROR);
-            }
-
-            _exit(child_status);
-        }
-
-        /** This is the child process and we can close the read end of
-         * the pipe. */
-        close(daemon_pipe[0]);
     }
 
     // NOTE: From this point onward, no direct returns, but the end must be
@@ -2168,7 +2130,7 @@ return_main:
     if (daemon_mode && rc != MAXSCALE_SHUTDOWN)
     {
         /** Notify the parent process that an error has occurred */
-        write_child_exit_code(daemon_pipe[1], rc);
+        write_child_exit_code(child_pipe, rc);
     }
 
     config_finish();
@@ -2800,34 +2762,74 @@ static void log_exit_status()
  * Daemonize the process by forking and putting the process into the
  * background.
  *
- * @return True if context is that of the parent process, false if that of the
- *         child process.
+ * @return File descriptor the child process should write its exit
+           code to. -1 if the daemonization failed.
  */
-static bool daemonize(void)
+static int daemonize(void)
 {
-    pid_t pid;
+    int child_pipe = -1;
 
-    pid = fork();
-
-    if (pid < 0)
+    int daemon_pipe[2] = {-1, -1};
+    if (pipe(daemon_pipe) == -1)
     {
-        log_startup_error(errno, "Forking MaxScale failed, the process cannot be turned into a daemon");
-        exit(1);
+        log_startup_error(errno, "Failed to create pipe for inter-process communication");
+    }
+    else
+    {
+        if (!disable_signals())
+        {
+            log_startup_error("Failed to disable signals.");
+        }
+        else
+        {
+            pid_t pid = fork();
+
+            if (pid < 0)
+            {
+                log_startup_error(errno,
+                                  "Forking MaxScale failed, the process cannot be turned into a daemon");
+            }
+            else if (pid != 0)
+            {
+                // The parent.
+                close(daemon_pipe[1]);
+                int child_status;
+                int nread = read(daemon_pipe[0], (void*)&child_status, sizeof(int));
+                close(daemon_pipe[0]);
+
+                if (nread == -1)
+                {
+                    log_startup_error(errno, "Failed to read data from child process pipe");
+                    exit(MAXSCALE_INTERNALERROR);
+                }
+                else if (nread == 0)
+                {
+                    /** Child process has exited or closed write pipe */
+                    log_startup_error("No data read from child process pipe.");
+                    exit(MAXSCALE_INTERNALERROR);
+                }
+
+                _exit(child_status);
+            }
+            else
+            {
+                // The child.
+                close(daemon_pipe[0]);
+                if (setsid() < 0)
+                {
+                    log_startup_error(errno,
+                                      "Creating a new session for the daemonized MaxScale process failed");
+                    close(daemon_pipe[1]);
+                }
+                else
+                {
+                    child_pipe = daemon_pipe[1];
+                }
+            }
+        }
     }
 
-    if (pid != 0)
-    {
-        // The parent process
-        return true;
-    }
-
-    // The child process
-    if (setsid() < 0)
-    {
-        log_startup_error(errno, "Creating a new session for the daemonized MaxScale process failed");
-        exit(1);
-    }
-    return false;
+    return child_pipe;
 }
 
 /**
