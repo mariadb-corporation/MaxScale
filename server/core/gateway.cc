@@ -1333,8 +1333,6 @@ int main(int argc, char** argv)
     char* tmp_path;
     MXS_CONFIG* cnf = config_get_global_options();
     mxb_assert(cnf);
-    int* syslog_enabled = &cnf->syslog;     /** Log to syslog */
-    int* maxlog_enabled = &cnf->maxlog;     /** Log with MaxScale */
     int numlocks = 0;
     bool pid_file_created = false;
     const char* specified_user = NULL;
@@ -1668,13 +1666,13 @@ int main(int argc, char** argv)
                     tok++;
                     if (tok)
                     {
-                        *maxlog_enabled = config_truth_value(tok);
+                        cnf->maxlog = config_truth_value(tok);
                         maxlog_configured = true;
                     }
                 }
                 else
                 {
-                    *maxlog_enabled = config_truth_value(optarg);
+                    cnf->maxlog = config_truth_value(optarg);
                     maxlog_configured = true;
                 }
             }
@@ -1688,13 +1686,13 @@ int main(int argc, char** argv)
                     tok++;
                     if (tok)
                     {
-                        *syslog_enabled = config_truth_value(tok);
+                        cnf->syslog = config_truth_value(tok);
                         syslog_configured = true;
                     }
                 }
                 else
                 {
-                    *syslog_enabled = config_truth_value(optarg);
+                    cnf->syslog = config_truth_value(optarg);
                     syslog_configured = true;
                 }
             }
@@ -1950,7 +1948,7 @@ int main(int argc, char** argv)
                 get_cachedir());
     }
 
-    if (!(*syslog_enabled) && !(*maxlog_enabled))
+    if (!cnf->syslog && !cnf->maxlog)
     {
         print_warning("Both MaxScale and Syslog logging disabled.");
     }
