@@ -894,10 +894,9 @@ bool runtime_alter_maxscale(const char* name, const char* value)
     }
     else if (key == CN_RETAIN_LAST_STATEMENTS)
     {
-        int intval = get_positive_int(value);
-        if (intval)
+        if (is_valid_integer(value))
         {
-            session_set_retain_last_statements(intval);
+            session_set_retain_last_statements(atoi(value));
             rval = true;
         }
         else
