@@ -195,6 +195,8 @@ static void  disable_statement_logging(const char* arg);
 static void  redirect_output_to_file(const char* arg);
 static bool  user_is_acceptable(const char* specified_user);
 static bool  init_sqlite3();
+static bool  init_base_libraries();
+static void  finish_base_libraries();
 
 struct DEBUG_ARGUMENT
 {
@@ -1860,53 +1862,13 @@ int main(int argc, char** argv)
         return rc;
     }
 
-    SSL_library_init();
-    SSL_load_error_strings();
-    OPENSSL_add_all_algorithms_noconf();
-
-#ifndef OPENSSL_1_1
-    numlocks = CRYPTO_num_locks();
-    if ((ssl_locks = (pthread_mutex_t*)MXS_MALLOC(sizeof(pthread_mutex_t) * (numlocks + 1))) == NULL)
+    if (!init_base_libraries())
     {
         rc = MAXSCALE_INTERNALERROR;
-        goto return_main;
+        return rc;
     }
 
-    for (int i = 0; i < numlocks + 1; i++)
-    {
-        pthread_mutex_init(&ssl_locks[i], NULL);
-    }
-    CRYPTO_set_locking_callback(ssl_locking_function);
-    CRYPTO_set_dynlock_create_callback(ssl_create_dynlock);
-    CRYPTO_set_dynlock_destroy_callback(ssl_free_dynlock);
-    CRYPTO_set_dynlock_lock_callback(ssl_lock_dynlock);
-#ifdef OPENSSL_1_0
-    CRYPTO_THREADID_set_callback(maxscale_ssl_id);
-#else
-    CRYPTO_set_id_callback(pthread_self);
-#endif
-#endif
-
-    if (!init_sqlite3())
-    {
-        log_startup_error("Could not initialize sqlite3.");
-        rc = MAXSCALE_INTERNALERROR;
-        goto return_main;
-    }
-
-    if (!utils_init())
-    {
-        log_startup_error("Failed to initialise utility library.");
-        rc = MAXSCALE_INTERNALERROR;
-        goto return_main;
-    }
-
-    if (!maxbase::init())
-    {
-        log_startup_error("Failed to initialize MaxScale base library.");
-        rc = MAXSCALE_INTERNALERROR;
-        goto return_main;
-    }
+    atexit(finish_base_libraries);
 
     if (!config_load_global(cnf_file_path.c_str()))
     {
@@ -2141,18 +2103,11 @@ int main(int argc, char** argv)
 
     log_exit_status();
 
-    utils_end();
-
-    maxbase::finish();
-
 return_main:
     if (unload_modules_at_exit)
     {
         unload_all_modules();
     }
-
-    ERR_free_strings();
-    EVP_cleanup();
 
     if (pid_file_created)
     {
@@ -3202,4 +3157,116 @@ static void unlock_directories()
                       close(pair.second);
                       unlink(pair.first.c_str());
                   });
+}
+
+static bool init_ssl()
+{
+    bool initialized = true;
+
+#ifndef OPENSSL_1_1
+    int numlocks = CRYPTO_num_locks();
+    if ((ssl_locks = (pthread_mutex_t*)MXS_MALLOC(sizeof(pthread_mutex_t) * (numlocks + 1))) != NULL)
+    {
+        for (int i = 0; i < numlocks + 1; i++)
+        {
+            pthread_mutex_init(&ssl_locks[i], NULL);
+        }
+    }
+    else
+    {
+        initialized = false;
+    }
+#endif
+
+    if (initialized)
+    {
+        SSL_library_init();
+        SSL_load_error_strings();
+        OPENSSL_add_all_algorithms_noconf();
+
+#ifndef OPENSSL_1_1
+        CRYPTO_set_locking_callback(ssl_locking_function);
+        CRYPTO_set_dynlock_create_callback(ssl_create_dynlock);
+        CRYPTO_set_dynlock_destroy_callback(ssl_free_dynlock);
+        CRYPTO_set_dynlock_lock_callback(ssl_lock_dynlock);
+#ifdef OPENSSL_1_0
+        CRYPTO_THREADID_set_callback(maxscale_ssl_id);
+#else
+        CRYPTO_set_id_callback(pthread_self);
+#endif
+#endif
+    }
+
+    return initialized;
+}
+
+static void finish_ssl()
+{
+    ERR_free_strings();
+    EVP_cleanup();
+
+#ifndef OPENSSL_1_1
+    int numlocks = CRYPTO_num_locks();
+    for (int i = 0; i < numlocks + 1; i++)
+    {
+        pthread_mutex_destroy(&ssl_locks[i]);
+    }
+
+    MXS_FREE(ssl_locks);
+    ssl_locks = nullptr;
+#endif
+}
+
+static bool init_base_libraries()
+{
+    bool initialized = false;
+
+    if (init_ssl())
+    {
+        if (init_sqlite3())
+        {
+            if (utils_init())
+            {
+                if (maxbase::init())
+                {
+                    initialized = true;
+                }
+                else
+                {
+                    log_startup_error("Failed to initialize MaxScale base library.");
+
+                    utils_end();
+                    // No finalization of sqlite3
+                    finish_ssl();
+                }
+            }
+            else
+            {
+                log_startup_error("Failed to initialize utility library.");
+
+                // No finalization of sqlite3
+                finish_ssl();
+            }
+        }
+        else
+        {
+            log_startup_error("Failed to initialize sqlite3.");
+
+            finish_ssl();
+        }
+    }
+    else
+    {
+        log_startup_error("Failed to initialize SSL.");
+    }
+
+    return initialized;
+}
+
+static void finish_base_libraries()
+{
+    maxbase::finish();
+    utils_end();
+    // No finalization of sqlite3
+    finish_ssl();
 }
