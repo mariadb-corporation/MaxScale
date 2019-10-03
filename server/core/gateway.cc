@@ -87,19 +87,24 @@ const int PIDFD_CLOSED = -1;
 extern char* program_invocation_name;
 extern char* program_invocation_short_name;
 
-/* The data directory we created for this gateway instance */
-static char datadir[PATH_MAX + 1] = "";
-static bool datadir_defined = false;    /*< If the datadir was already set */
-/* The data directory we created for this gateway instance */
-static char pidfile[PATH_MAX + 1] = "";
-static int pidfd = PIDFD_CLOSED;
-/* Map containing paths to directory locks with their fds */
-static std::map<std::string, int> directory_locks;
-
-/**
- * If MaxScale is started to run in daemon process the value is true.
- */
-static bool daemon_mode = true;
+static struct ThisUnit
+{
+    char datadir[PATH_MAX + 1] = "";    /* Data directory created for this gateway instance */
+    bool datadir_defined       = false; /*< If the datadir was already set */
+    char pidfile[PATH_MAX + 1] = "";
+    int pidfd                  = PIDFD_CLOSED;
+    std::map<std::string, int> directory_locks;
+    bool daemon_mode           = true;
+    bool syslog_configured     = false;
+    bool maxlog_configured     = false;
+    volatile sig_atomic_t last_signal = 0;
+    bool unload_modules_at_exit = true;
+    std::string redirect_output_to;
+#ifndef OPENSSL_1_1
+    /** SSL multi-threading functions and structures */
+    pthread_mutex_t* ssl_locks = nullptr;
+#endif
+} this_unit;
 
 static const char* maxscale_commit = MAXSCALE_COMMIT;
 
@@ -138,12 +143,6 @@ static struct option long_options[] =
     {0,                     0,                 0, 0  }
 };
 #endif
-
-static bool syslog_configured = false;
-static bool maxlog_configured = false;
-static volatile sig_atomic_t last_signal = 0;
-static bool unload_modules_at_exit = true;
-static std::string redirect_output_to;
 
 static int   cnf_preparser(void* data, const char* section, const char* name, const char* value);
 static int   write_pid_file();  /* write MaxScale pidfile */
@@ -230,17 +229,15 @@ const DEBUG_ARGUMENT debug_arguments[] =
 #ifndef OPENSSL_1_1
 /** SSL multi-threading functions and structures */
 
-static pthread_mutex_t* ssl_locks;
-
 static void ssl_locking_function(int mode, int n, const char* file, int line)
 {
     if (mode & CRYPTO_LOCK)
     {
-        pthread_mutex_lock(&ssl_locks[n]);
+        pthread_mutex_lock(&this_unit.ssl_locks[n]);
     }
     else
     {
-        pthread_mutex_unlock(&ssl_locks[n]);
+        pthread_mutex_unlock(&this_unit.ssl_locks[n]);
     }
 }
 /**
@@ -338,12 +335,12 @@ static const char patience_msg[] =
 
 static void sigterm_handler(int i)
 {
-    last_signal = i;
+    this_unit.last_signal = i;
     int n_shutdowns = maxscale_shutdown();
 
     if (n_shutdowns == 1)
     {
-        if (!daemon_mode)
+        if (!this_unit.daemon_mode)
         {
             if (write(STDERR_FILENO, shutdown_msg, sizeof(shutdown_msg) - 1) == -1)
             {
@@ -359,12 +356,12 @@ static void sigterm_handler(int i)
 
 static void sigint_handler(int i)
 {
-    last_signal = i;
+    this_unit.last_signal = i;
     int n_shutdowns = maxscale_shutdown();
 
     if (n_shutdowns == 1)
     {
-        if (!daemon_mode)
+        if (!this_unit.daemon_mode)
         {
             if (write(STDERR_FILENO, shutdown_msg, sizeof(shutdown_msg) - 1) == -1)
             {
@@ -374,7 +371,7 @@ static void sigint_handler(int i)
     }
     else if (n_shutdowns == 2)
     {
-        if (!daemon_mode)
+        if (!this_unit.daemon_mode)
         {
             if (write(STDERR_FILENO, patience_msg, sizeof(patience_msg) - 1) == -1)
             {
@@ -1320,7 +1317,7 @@ public:
             ::close(m_child_pipe);
         }
 
-        if (unload_modules_at_exit)
+        if (this_unit.unload_modules_at_exit)
         {
             unload_all_modules();
         }
@@ -1365,8 +1362,8 @@ int main(int argc, char** argv)
     config_set_global_defaults();
     maxscale_reset_starttime();
 
-    snprintf(datadir, PATH_MAX, "%s", default_datadir);
-    datadir[PATH_MAX] = '\0';
+    snprintf(this_unit.datadir, PATH_MAX, "%s", default_datadir);
+    this_unit.datadir[PATH_MAX] = '\0';
 
     // Option string for getopt
     const char accepted_opts[] = "dnce:f:g:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:H:p";
@@ -1395,12 +1392,12 @@ int main(int argc, char** argv)
         {
         case 'n':
             /*< Daemon mode, MaxScale forks and parent exits. */
-            daemon_mode = true;
+            this_unit.daemon_mode = true;
             break;
 
         case 'd':
             /*< Non-daemon mode, MaxScale does not fork. */
-            daemon_mode = false;
+            this_unit.daemon_mode = false;
             break;
 
         case 'f':
@@ -1497,10 +1494,10 @@ int main(int argc, char** argv)
             break;
 
         case 'D':
-            snprintf(datadir, PATH_MAX, "%s", optarg);
-            datadir[PATH_MAX] = '\0';
+            snprintf(this_unit.datadir, PATH_MAX, "%s", optarg);
+            this_unit.datadir[PATH_MAX] = '\0';
             set_datadir(MXS_STRDUP_A(optarg));
-            datadir_defined = true;
+            this_unit.datadir_defined = true;
             break;
 
         case 'C':
@@ -1613,13 +1610,13 @@ int main(int argc, char** argv)
                     if (tok)
                     {
                         cnf->maxlog = config_truth_value(tok);
-                        maxlog_configured = true;
+                        this_unit.maxlog_configured = true;
                     }
                 }
                 else
                 {
                     cnf->maxlog = config_truth_value(optarg);
-                    maxlog_configured = true;
+                    this_unit.maxlog_configured = true;
                 }
             }
             break;
@@ -1633,13 +1630,13 @@ int main(int argc, char** argv)
                     if (tok)
                     {
                         cnf->syslog = config_truth_value(tok);
-                        syslog_configured = true;
+                        this_unit.syslog_configured = true;
                     }
                 }
                 else
                 {
                     cnf->syslog = config_truth_value(optarg);
-                    syslog_configured = true;
+                    this_unit.syslog_configured = true;
                 }
             }
             break;
@@ -1700,7 +1697,7 @@ int main(int argc, char** argv)
 
     if (cnf->config_check)
     {
-        daemon_mode = false;
+        this_unit.daemon_mode = false;
         cnf->log_target = MXB_LOG_TARGET_STDOUT;
     }
 
@@ -1714,7 +1711,7 @@ int main(int argc, char** argv)
 #endif
 
     int child_pipe = -1;
-    if (!daemon_mode)
+    if (!this_unit.daemon_mode)
     {
         print_info("MaxScale will be run in the terminal process.");
 #if defined (SS_DEBUG)
@@ -1764,7 +1761,7 @@ int main(int argc, char** argv)
         mxs_log_finish();
     }
 
-    if (cnf->log_target != MXB_LOG_TARGET_STDOUT && daemon_mode)
+    if (cnf->log_target != MXB_LOG_TARGET_STDOUT && this_unit.daemon_mode)
     {
         mxs_log_redirect_stdout(true);
     }
@@ -1789,7 +1786,7 @@ int main(int argc, char** argv)
         return rc;
     }
 
-    if (daemon_mode)
+    if (this_unit.daemon_mode)
     {
         if (!change_cwd())
         {
@@ -1818,20 +1815,20 @@ int main(int argc, char** argv)
          * Set the data directory. We use a unique directory name to avoid conflicts
          * if multiple instances of MaxScale are being run on the same machine.
          */
-        if (create_datadir(get_datadir(), datadir))
+        if (create_datadir(get_datadir(), this_unit.datadir))
         {
-            set_process_datadir(datadir);
+            set_process_datadir(this_unit.datadir);
             atexit(cleanup_process_datadir);
         }
         else
         {
-            log_startup_error(errno, "Cannot create data directory '%s'", datadir);
+            log_startup_error(errno, "Cannot create data directory '%s'", this_unit.datadir);
             rc = MAXSCALE_BADCONFIG;
             return rc;
         }
     }
 
-    if (!daemon_mode)
+    if (!this_unit.daemon_mode)
     {
         fprintf(stderr,
                 "Configuration file : %s\n"
@@ -1894,9 +1891,9 @@ int main(int argc, char** argv)
         atexit(unlock_directories);
     }
 
-    if (!redirect_output_to.empty())
+    if (!this_unit.redirect_output_to.empty())
     {
-        if (!redirect_stdout_and_stderr(redirect_output_to))
+        if (!redirect_stdout_and_stderr(this_unit.redirect_output_to))
         {
             rc = MAXSCALE_INTERNALERROR;
             return rc;
@@ -1977,7 +1974,7 @@ int main(int argc, char** argv)
             }
             else
             {
-                if (daemon_mode)
+                if (this_unit.daemon_mode)
                 {
                     // Successful start, notify the parent process that it can exit.
                     write_child_exit_code(child_pipe, rc);
@@ -2090,13 +2087,14 @@ int main(int argc, char** argv)
 
 static void unlock_pidfile()
 {
-    if (pidfd != PIDFD_CLOSED)
+    if (this_unit.pidfd != PIDFD_CLOSED)
     {
-        if (flock(pidfd, LOCK_UN | LOCK_NB) != 0)
+        if (flock(this_unit.pidfd, LOCK_UN | LOCK_NB) != 0)
         {
-            log_startup_error(errno, "Failed to unlock PID file '%s'", pidfile);
+            log_startup_error(errno, "Failed to unlock PID file '%s'", this_unit.pidfile);
         }
-        close(pidfd);
+        close(this_unit.pidfd);
+        this_unit.pidfd = PIDFD_CLOSED;
     }
 }
 
@@ -2107,11 +2105,11 @@ static void unlink_pidfile(void)
 {
     unlock_pidfile();
 
-    if (strlen(pidfile))
+    if (strlen(this_unit.pidfile))
     {
-        if (unlink(pidfile))
+        if (unlink(this_unit.pidfile))
         {
-            MXS_WARNING("Failed to remove pidfile %s: %s", pidfile, mxs_strerror(errno));
+            MXS_WARNING("Failed to remove pidfile %s: %s", this_unit.pidfile, mxs_strerror(errno));
         }
     }
 }
@@ -2179,7 +2177,7 @@ bool pid_file_exists()
             lock_failed = true;
         }
 
-        pidfd = fd;
+        this_unit.pidfd = fd;
         b = read(fd, pidbuf, sizeof(pidbuf));
 
         if (b == -1)
@@ -2225,7 +2223,8 @@ bool pid_file_exists()
             {
                 log_startup_error("Locking the PID file '%s' failed. Read PID from file "
                                   "and no process found with PID %d. Confirm that no other "
-                                  "process holds the lock on the PID file.", pidfile, pid);
+                                  "process holds the lock on the PID file.",
+                                  this_unit.pidfile, pid);
                 close(fd);
             }
             return lock_failed;
@@ -2256,16 +2255,16 @@ static int write_pid_file()
         return 1;
     }
 
-    snprintf(pidfile, PATH_MAX, "%s/maxscale.pid", get_piddir());
+    snprintf(this_unit.pidfile, PATH_MAX, "%s/maxscale.pid", get_piddir());
 
-    if (pidfd == PIDFD_CLOSED)
+    if (this_unit.pidfd == PIDFD_CLOSED)
     {
         int fd = -1;
 
-        fd = open(pidfile, O_WRONLY | O_CREAT, 0777);
+        fd = open(this_unit.pidfile, O_WRONLY | O_CREAT, 0777);
         if (fd == -1)
         {
-            log_startup_error(errno, "Failed to open PID file '%s'", pidfile);
+            log_startup_error(errno, "Failed to open PID file '%s'", this_unit.pidfile);
             return -1;
         }
 
@@ -2276,22 +2275,22 @@ static int write_pid_file()
                 log_startup_error("Failed to lock PID file '%s', another process is holding a lock on it. "
                                   "Please confirm that no other MaxScale process is using the same "
                                   "PID file location.",
-                                  pidfile);
+                                  this_unit.pidfile);
             }
             else
             {
-                log_startup_error("Failed to lock PID file '%s'.", pidfile);
+                log_startup_error("Failed to lock PID file '%s'.", this_unit.pidfile);
             }
             close(fd);
             return -1;
         }
-        pidfd = fd;
+        this_unit.pidfd = fd;
     }
 
     /* truncate pidfile content */
-    if (ftruncate(pidfd, 0))
+    if (ftruncate(this_unit.pidfd, 0))
     {
-        log_startup_error("MaxScale failed to truncate PID file '%s'.", pidfile);
+        log_startup_error("MaxScale failed to truncate PID file '%s'.", this_unit.pidfile);
         unlock_pidfile();
         return -1;
     }
@@ -2299,9 +2298,9 @@ static int write_pid_file()
     string pidstr = std::to_string(getpid());
     ssize_t len = pidstr.length();
 
-    if (pwrite(pidfd, pidstr.c_str(), len, 0) != len)
+    if (pwrite(this_unit.pidfd, pidstr.c_str(), len, 0) != len)
     {
-        log_startup_error(errno, "MaxScale failed to write into PID file '%s'", pidfile);
+        log_startup_error(errno, "MaxScale failed to write into PID file '%s'", this_unit.pidfile);
         unlock_pidfile();
         return -1;
     }
@@ -2451,14 +2450,14 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         }
         else if (strcmp(name, CN_DATADIR) == 0)
         {
-            if (!datadir_defined)
+            if (!this_unit.datadir_defined)
             {
                 if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
                 {
-                    snprintf(datadir, PATH_MAX, "%s", tmp);
-                    datadir[PATH_MAX] = '\0';
+                    snprintf(this_unit.datadir, PATH_MAX, "%s", tmp);
+                    this_unit.datadir[PATH_MAX] = '\0';
                     set_datadir(tmp);
-                    datadir_defined = true;
+                    this_unit.datadir_defined = true;
                 }
                 else
                 {
@@ -2552,14 +2551,14 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         }
         else if (strcmp(name, CN_SYSLOG) == 0)
         {
-            if (!syslog_configured)
+            if (!this_unit.syslog_configured)
             {
                 cnf->syslog = config_truth_value((char*)value);
             }
         }
         else if (strcmp(name, CN_MAXLOG) == 0)
         {
-            if (!maxlog_configured)
+            if (!this_unit.maxlog_configured)
             {
                 cnf->maxlog = config_truth_value((char*)value);
             }
@@ -2694,7 +2693,7 @@ static bool change_cwd()
  */
 static void log_exit_status()
 {
-    switch (last_signal)
+    switch (this_unit.last_signal)
     {
     case SIGTERM:
         MXS_NOTICE("MaxScale received signal SIGTERM. Exiting.");
@@ -2896,12 +2895,12 @@ static void modules_process_finish()
 
 static void enable_module_unloading(const char* arg)
 {
-    unload_modules_at_exit = true;
+    this_unit.unload_modules_at_exit = true;
 }
 
 static void disable_module_unloading(const char* arg)
 {
-    unload_modules_at_exit = false;
+    this_unit.unload_modules_at_exit = false;
 }
 
 static void enable_statement_logging(const char* arg)
@@ -2918,7 +2917,7 @@ static void redirect_output_to_file(const char* arg)
 {
     if (arg)
     {
-        redirect_output_to = arg;
+        this_unit.redirect_output_to = arg;
     }
 }
 
@@ -3107,7 +3106,7 @@ static bool lock_dir(const std::string& path)
         return false;
     }
 
-    directory_locks.insert(std::pair<std::string, int>(lock, fd));
+    this_unit.directory_locks.insert(std::pair<std::string, int>(lock, fd));
 
     return true;
 }
@@ -3120,8 +3119,8 @@ bool lock_directories()
 
 static void unlock_directories()
 {
-    std::for_each(directory_locks.begin(),
-                  directory_locks.end(),
+    std::for_each(this_unit.directory_locks.begin(),
+                  this_unit.directory_locks.end(),
                   [&](std::pair<std::string, int> pair) {
                       close(pair.second);
                       unlink(pair.first.c_str());
@@ -3134,11 +3133,13 @@ static bool init_ssl()
 
 #ifndef OPENSSL_1_1
     int numlocks = CRYPTO_num_locks();
-    if ((ssl_locks = (pthread_mutex_t*)MXS_MALLOC(sizeof(pthread_mutex_t) * (numlocks + 1))) != NULL)
+    this_unit.ssl_locks = (pthread_mutex_t*)MXS_MALLOC(sizeof(pthread_mutex_t) * (numlocks + 1));
+
+    if (this_unit.ssl_locks != NULL)
     {
         for (int i = 0; i < numlocks + 1; i++)
         {
-            pthread_mutex_init(&ssl_locks[i], NULL);
+            pthread_mutex_init(&this_unit.ssl_locks[i], NULL);
         }
     }
     else
@@ -3178,11 +3179,11 @@ static void finish_ssl()
     int numlocks = CRYPTO_num_locks();
     for (int i = 0; i < numlocks + 1; i++)
     {
-        pthread_mutex_destroy(&ssl_locks[i]);
+        pthread_mutex_destroy(&this_unit.ssl_locks[i]);
     }
 
-    MXS_FREE(ssl_locks);
-    ssl_locks = nullptr;
+    MXS_FREE(this_unit.ssl_locks);
+    this_unit.ssl_locks = nullptr;
 #endif
 }
 
