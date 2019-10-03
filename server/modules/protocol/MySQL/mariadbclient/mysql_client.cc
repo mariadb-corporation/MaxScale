@@ -1735,7 +1735,6 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
         {
             // TODO: Do this only when RCAP_TYPE_CONTIGUOUS_INPUT is requested
             packetbuf = gwbuf_make_contiguous(packetbuf);
-            session_retain_statement(session, packetbuf);
 
             MySQLProtocol* proto = (MySQLProtocol*)session->client_dcb->protocol;
 
@@ -1745,6 +1744,11 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
             if (!proto->changing_user && !session_is_load_active(session))
             {
                 update_current_command(session->client_dcb, packetbuf);
+
+                if (mxs_mysql_command_will_respond(proto->current_command))
+                {
+                    session_retain_statement(session, packetbuf);
+                }
             }
 
             if (rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_INPUT))
