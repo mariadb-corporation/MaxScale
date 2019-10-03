@@ -1297,13 +1297,11 @@ int main(int argc, char** argv)
 {
     int rc = MAXSCALE_SHUTDOWN;
     int eno = 0;    /*< local variable for errno */
-    int opt;
     int daemon_pipe[2] = {-1, -1};
     bool parent_process;
     string cnf_file_path; /*< conf file */
     string cnf_file_arg;  /*< conf filename from cmd-line arg */
     char* tmp_path;
-    int option_index;
     MXS_CONFIG* cnf = config_get_global_options();
     mxb_assert(cnf);
     int* syslog_enabled = &cnf->syslog;     /** Log to syslog */
@@ -1410,7 +1408,9 @@ int main(int argc, char** argv)
     // Option string for getopt
     const char accepted_opts[] = "dnce:f:g:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:H:p";
 
+    int opt;
 #ifdef HAVE_GLIBC
+    int option_index;
     while ((opt = getopt_long(argc,
                               argv,
                               accepted_opts,
@@ -1454,12 +1454,10 @@ int main(int argc, char** argv)
             break;
 
         case 'v':
-            rc = EXIT_SUCCESS;
             printf("MaxScale %s\n", MAXSCALE_VERSION);
-            goto return_main;
+            return EXIT_SUCCESS;
 
         case 'V':
-            rc = EXIT_SUCCESS;
             printf("MaxScale %s - %s\n", MAXSCALE_VERSION, maxscale_commit);
 
             // MAXSCALE_SOURCE is two values separated by a space, see CMakeLists.txt
@@ -1475,7 +1473,7 @@ int main(int argc, char** argv)
             {
                 printf("Jenkins build: %s\n", MAXSCALE_JENKINS_BUILD_TAG);
             }
-            goto return_main;
+            return EXIT_SUCCESS;
 
         case 'l':
             if (strncasecmp(optarg, "file", PATH_MAX) == 0)
@@ -1691,8 +1689,7 @@ int main(int argc, char** argv)
 
         case '?':
             usage();
-            rc = EXIT_SUCCESS;
-            goto return_main;
+            return EXIT_SUCCESS;
 
         case 'c':
             cnf->config_check = true;
@@ -1722,16 +1719,14 @@ int main(int argc, char** argv)
 
         if (!succp)
         {
-            rc = MAXSCALE_BADARG;
-            goto return_main;
+            return MAXSCALE_BADARG;
         }
     }
 
     if (!user_is_acceptable(specified_user))
     {
         // Error was logged in user_is_acceptable().
-        rc = MAXSCALE_INTERNALERROR;
-        goto return_main;
+        return EXIT_FAILURE;
     }
 
     if (cnf->config_check)
@@ -1762,8 +1757,7 @@ int main(int argc, char** argv)
         if (pipe(daemon_pipe) == -1)
         {
             log_startup_error(errno, "Failed to create pipe for inter-process communication");
-            rc = MAXSCALE_INTERNALERROR;
-            goto return_main;
+            return MAXSCALE_INTERNALERROR;
         }
 
         /*<
@@ -1773,8 +1767,7 @@ int main(int argc, char** argv)
 
         if (!disable_signals())
         {
-            rc = MAXSCALE_INTERNALERROR;
-            goto return_main;
+            return MAXSCALE_INTERNALERROR;
         }
 
         /** Daemonize the process and wait for the child process to notify
@@ -1807,6 +1800,10 @@ int main(int argc, char** argv)
          * the pipe. */
         close(daemon_pipe[0]);
     }
+
+    // NOTE: From this point onward, no direct returns, but the end must be
+    // NOTE: reached, where the child exit code is written.
+
     /*<
      * Set signal handlers for SIGHUP, SIGTERM, SIGINT and critical signals like SIGSEGV.
      */
