@@ -40,13 +40,16 @@ static bool get_ip_string_and_port(struct sockaddr_storage* sa,
                                    int iplen,
                                    in_port_t* port_out);
 
-MySQLBackendProtocol::MySQLBackendProtocol(MXS_SESSION* session, SERVER* server,
-                                           mxs::Component* component,
+/**
+ * Construct a detached backend connection. Session attached separately.
+ *
+ * @param server Backend server
+ * @param authenticator Backend authenticator
+ */
+MySQLBackendProtocol::MySQLBackendProtocol(SERVER* server,
                                            std::unique_ptr<mxs::BackendAuthenticator> authenticator)
-    : m_component(component)
-    , m_authenticator(std::move(authenticator))
+    : m_authenticator(std::move(authenticator))
     , m_reply(server)
-    , m_session(session)
 {
 }
 
@@ -64,27 +67,29 @@ MySQLBackendProtocol::MySQLBackendProtocol(MXS_SESSION* session, SERVER* server,
  ******************************************************************************/
 
 std::unique_ptr<MySQLBackendProtocol>
-MySQLBackendProtocol::create(MXS_SESSION* session, SERVER* server,
-                             MySQLClientProtocol& client_protocol, mxs::Component* component,
+MySQLBackendProtocol::create(MXS_SESSION* session, SERVER* server, mxs::Component* component,
                              std::unique_ptr<mxs::BackendAuthenticator> authenticator)
 {
-    std::unique_ptr<MySQLBackendProtocol> protocol_session(
-        new(std::nothrow) MySQLBackendProtocol(session, server, component, std::move(authenticator)));
-    if (protocol_session)
+    std::unique_ptr<MySQLBackendProtocol> backend_conn(
+        new(std::nothrow) MySQLBackendProtocol(server, std::move(authenticator)));
+    if (backend_conn)
     {
-        protocol_session->set_client_data(client_protocol);
-        protocol_session->protocol_auth_state = MXS_AUTH_STATE_CONNECTED;
+        backend_conn->assign_session(session, component);
     }
-    return protocol_session;
+    return backend_conn;
 }
 
 std::unique_ptr<MySQLBackendProtocol>
 MySQLBackendProtocol::create_test_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component,
                                            std::unique_ptr<mxs::BackendAuthenticator> authenticator)
 {
-    std::unique_ptr<MySQLBackendProtocol> protocol_session(
-        new(std::nothrow) MySQLBackendProtocol(session, server, component, std::move(authenticator)));
-    return protocol_session;
+    std::unique_ptr<MySQLBackendProtocol> backend_conn(
+        new(std::nothrow) MySQLBackendProtocol(server, std::move(authenticator)));
+    if (backend_conn)
+    {
+        backend_conn->assign_session(session, component);
+    }
+    return backend_conn;
 }
 
 bool MySQLBackendProtocol::init_connection()
@@ -104,8 +109,7 @@ void MySQLBackendProtocol::finish_connection()
     m_dcb->writeq_append(mysql_create_com_quit(nullptr, 0));
 }
 
-bool MySQLBackendProtocol::reuse_connection(BackendDCB* dcb, mxs::Component* upstream,
-                                            mxs::ClientProtocol* client_protocol)
+bool MySQLBackendProtocol::reuse_connection(BackendDCB* dcb, mxs::Component* upstream)
 {
     bool rv = false;
     mxb_assert(dcb->session() && !dcb->readq() && !dcb->delayq() && !dcb->writeq());
@@ -118,13 +122,10 @@ bool MySQLBackendProtocol::reuse_connection(BackendDCB* dcb, mxs::Component* ups
     }
     else
     {
-        auto mysql_client = static_cast<MySQLClientProtocol*>(client_protocol);
-        set_client_data(*mysql_client);
-        MXS_SESSION* session = m_session;
-        mxs::Component* component = m_component;
+        MXS_SESSION* orig_session = m_session;
+        mxs::Component* orig_upstream = m_upstream;
 
-        m_session = dcb->session();
-        m_component = upstream;
+        assign_session(dcb->session(), upstream);
         m_dcb = dcb;
         m_ignore_replies = 0;
 
@@ -152,8 +153,7 @@ bool MySQLBackendProtocol::reuse_connection(BackendDCB* dcb, mxs::Component* ups
         if (!rv)
         {
             // Restore situation
-            m_session = session;
-            m_component = component;
+            assign_session(orig_session, orig_upstream);
         }
     }
 
@@ -403,7 +403,7 @@ void MySQLBackendProtocol::do_handle_error(DCB* dcb, const char* errmsg)
     mxb_assert(!dcb->hanged_up());
     GWBUF* errbuf = mysql_create_custom_error(1, 0, errmsg);
 
-    if (!m_component->handleError(errbuf, nullptr, m_reply))
+    if (!m_upstream->handleError(errbuf, nullptr, m_reply))
     {
         // A failure to handle an error means that the session must be closed
         MXS_SESSION* session = dcb->session();
@@ -879,7 +879,7 @@ int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
 
             thread_local mxs::ReplyRoute route;
             route.clear();
-            return_code = proto->m_component->clientReply(stmt, route, m_reply);
+            return_code = proto->m_upstream->clientReply(stmt, route, m_reply);
         }
         else    /*< session is closing; replying to client isn't possible */
         {
@@ -2370,9 +2370,11 @@ uint64_t MySQLBackendProtocol::thread_id() const
     return m_thread_id;
 }
 
-void MySQLBackendProtocol::set_client_data(MySQLClientProtocol& client_protocol)
+void MySQLBackendProtocol::assign_session(MXS_SESSION* session, mxs::Component* upstream)
 {
+    m_session = session;
     m_client_data = static_cast<MYSQL_session*>(m_session->protocol_data());
+    m_upstream = upstream;
     // TODO: authenticators may also need data swapping
 }
 
@@ -2447,4 +2449,9 @@ void MySQLBackendProtocol::set_dcb(DCB* dcb)
 BackendDCB* MySQLBackendProtocol::dcb() const
 {
     return m_dcb;
+}
+
+void MySQLBackendProtocol::set_reply_state(mxs::ReplyState state)
+{
+    m_reply.set_reply_state(state);
 }

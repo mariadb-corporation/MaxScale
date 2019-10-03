@@ -139,11 +139,11 @@ private:
     int  ssl_authenticate_check_status(DCB* generic_dcb);
     void track_current_command(GWBUF* buf);
 
-    mxs::Component*                           m_component {nullptr};/**< Downstream component, the session */
     std::unique_ptr<mxs::ClientAuthenticator> m_authenticator;      /**< Client authentication data */
 
-    MXS_SESSION*   m_session {nullptr};     /**< Generic session */
-    MYSQL_session* m_session_data {nullptr};
+    mxs::Component* m_downstream {nullptr}; /**< Downstream component, the session */
+    MXS_SESSION*    m_session {nullptr};    /**< Generic session */
+    MYSQL_session*  m_session_data {nullptr};
 
     uint8_t     m_command {0};
     bool        m_changing_user {false};
@@ -159,8 +159,8 @@ public:
     using Iter = mxs::Buffer::iterator;
 
     static std::unique_ptr<MySQLBackendProtocol>
-    create(MXS_SESSION* session, SERVER* server, MySQLClientProtocol& client_protocol,
-           mxs::Component* component, std::unique_ptr<mxs::BackendAuthenticator> authenticator);
+    create(MXS_SESSION* session, SERVER* server, mxs::Component* component,
+           std::unique_ptr<mxs::BackendAuthenticator> authenticator);
 
     static std::unique_ptr<MySQLBackendProtocol>
     create_test_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component,
@@ -175,10 +175,9 @@ public:
 
     int32_t write(GWBUF* buffer) override;
 
-    bool init_connection() override;
-    void finish_connection() override;
-    bool reuse_connection(BackendDCB* dcb, mxs::Component* upstream,
-                          mxs::ClientProtocol* client_protocol) override;
+    bool    init_connection() override;
+    void    finish_connection() override;
+    bool    reuse_connection(BackendDCB* dcb, mxs::Component* upstream) override;
     bool    established() override;
     json_t* diagnostics_json() override;
 
@@ -189,13 +188,6 @@ public:
      */
     void mxs_mysql_get_session_track_info(GWBUF* buff);
 
-    /**
-     * Set associated client protocol session.
-     *
-     * @param client_protocol New associated client protocol
-     */
-    void set_client_data(MySQLClientProtocol& client_protocol);
-
     void        set_dcb(DCB* dcb) override;
     BackendDCB* dcb() const override;
 
@@ -203,8 +195,7 @@ public:
     uint32_t server_capabilities {0};   /**< Server capabilities TODO: private */
 
 private:
-    MySQLBackendProtocol(MXS_SESSION* session, SERVER* server, mxs::Component* component,
-                         std::unique_ptr<mxs::BackendAuthenticator> authenticator);
+    MySQLBackendProtocol(SERVER* server, std::unique_ptr<mxs::BackendAuthenticator> authenticator);
 
     int    gw_read_and_write(DCB* dcb);
     int    backend_write_delayqueue(DCB* dcb, GWBUF* buffer);
@@ -245,14 +236,18 @@ private:
     void     update_error(mxs::Buffer::iterator it, mxs::Buffer::iterator end);
     bool     consume_fetched_rows(GWBUF* buffer);
     void     track_query(GWBUF* buffer);
+    void     set_reply_state(mxs::ReplyState state);
 
-    inline void set_reply_state(mxs::ReplyState state)
-    {
-        m_reply.set_reply_state(state);
-    }
+    /**
+     * Set associated client protocol session and upstream. Should be called after creation or when swapping
+     * sessions.
+     *
+     * @param session The new session to read client data from
+     * @param upstream The new upstream to send server replies to
+     */
+    void assign_session(MXS_SESSION* session, mxs::Component* upstream);
 
-    mxs_auth_state_t protocol_auth_state {MXS_AUTH_STATE_INIT}; /**< Backend authentication state */
-    mxs::Component*  m_component {nullptr};                     /**< Upstream component, typically a router */
+    mxs_auth_state_t protocol_auth_state {MXS_AUTH_STATE_CONNECTED}; /**< Backend authentication state */
 
     std::unique_ptr<mxs::BackendAuthenticator> m_authenticator;     /**< Backend authentication data */
 
@@ -270,12 +265,13 @@ private:
     uint32_t    m_expected_rows = 0;        /**< Number of rows a COM_STMT_FETCH is retrieving */
     bool        m_large_query = false;
     bool        m_changing_user {false};
+    mxs::Reply  m_reply;
 
-    mxs::Reply     m_reply;
-    MXS_SESSION*   m_session {nullptr};     /**< Generic session */
-    MYSQL_session* m_client_data {nullptr}; /**< Client-session shared data */
-    GWBUF*         m_stored_query {nullptr};/*< Temporarily stored queries */
-    BackendDCB*    m_dcb {nullptr};         /**< Dcb used by this protocol connection */
+    mxs::Component* m_upstream {nullptr};       /**< Upstream component, typically a router */
+    MXS_SESSION*    m_session {nullptr};        /**< Generic session */
+    MYSQL_session*  m_client_data {nullptr};    /**< Client-session shared data */
+    GWBUF*          m_stored_query {nullptr};   /*< Temporarily stored queries */
+    BackendDCB*     m_dcb {nullptr};            /**< Dcb used by this protocol connection */
 };
 
 bool     is_last_ok(MySQLBackendProtocol::Iter it);

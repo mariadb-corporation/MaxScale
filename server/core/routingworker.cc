@@ -548,7 +548,7 @@ BackendDCB* RoutingWorker::get_backend_dcb_from_pool(SERVER* pS,
         auto ses = static_cast<Session*>(pSession);
         ses->link_backend_dcb(pDcb);
 
-        if (pDcb->protocol()->reuse_connection(pDcb, pUpstream, pSession->client_connection()))
+        if (pDcb->protocol()->reuse_connection(pDcb, pUpstream))
         {
             mxb::atomic::add(&pServer->pool_stats.n_from_pool, 1, mxb::atomic::RELAXED);
             mxb::atomic::add(&pServer->stats().n_current, 1, mxb::atomic::RELAXED);

@@ -198,13 +198,11 @@ public:
      *
      * @param dcb               The connection to be reused.
      * @param upstream          The upstream component.
-     * @param client_protocol   The new client protocol this backend protocol should be associated with
      *
      * @return True, if the connection can be reused, false otherwise.
      *         If @c false is returned, the @c dcb should be closed.
      */
-    virtual bool
-    reuse_connection(BackendDCB* dcb, mxs::Component* upstream, mxs::ClientProtocol* client_protocol) = 0;
+    virtual bool reuse_connection(BackendDCB* dcb, mxs::Component* upstream) = 0;
 
     /**
      * Check if the connection has been fully established, used by connection pooling

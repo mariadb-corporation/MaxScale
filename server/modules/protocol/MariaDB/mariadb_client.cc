@@ -1561,7 +1561,7 @@ int MySQLClientProtocol::route_by_statement(uint64_t capabilities, GWBUF** p_rea
         if (packetbuf)
         {
             /** Route query */
-            rc = m_component->routeQuery(packetbuf);
+            rc = m_downstream->routeQuery(packetbuf);
         }
 
         m_changing_user = changed_user;
@@ -2019,8 +2019,8 @@ json_t* MySQLProtocolModule::print_auth_users_json()
 
 MySQLClientProtocol::MySQLClientProtocol(MXS_SESSION* session, mxs::Component* component,
                                          std::unique_ptr<mxs::ClientAuthenticator> authenticator)
-    : m_component(component)
-    , m_authenticator(std::move(authenticator))
+    : m_authenticator(std::move(authenticator))
+    , m_downstream(component)
     , m_session(session)
     , m_session_data(static_cast<MYSQL_session*>(session->protocol_data()))
     , m_version(service_get_version(session->service, SERVICE_VERSION_MIN))
@@ -2051,7 +2051,7 @@ MySQLClientProtocol::create_backend_protocol(MXS_SESSION* session, SERVER* serve
     std::unique_ptr<mxs::BackendProtocol> rval;
     if (new_backend_auth)
     {
-        rval = MySQLBackendProtocol::create(session, server, *this, component, std::move(new_backend_auth));
+        rval = MySQLBackendProtocol::create(session, server, component, std::move(new_backend_auth));
     }
     return rval;
 }
