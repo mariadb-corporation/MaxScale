@@ -13,6 +13,7 @@ A minimal configuration is below.
 [MyLogFilter]
 type=filter
 module=qlafilter
+filebase=/tmp/SqlQueryLog
 
 [MyService]
 type=service
