@@ -740,12 +740,20 @@ static void check_packet(DCB* dcb, GWBUF* buf, int bytes)
  */
 static int gw_read_do_authentication(DCB* dcb, GWBUF* read_buffer, int nbytes_read)
 {
+    // If this function fails and dcb is closed, the service client count must be decremented manually.
+    // After authentication, the session closing code decrements the count.
+    auto decrement_and_close = [](DCB* dcb)
+    {
+        mxb::atomic::add(&dcb->service->client_count, -1);
+        dcb_close(dcb);
+    };
+
     MXB_AT_DEBUG(check_packet(dcb, read_buffer, nbytes_read));
 
     /** Allocate the shared session structure */
     if (dcb->data == NULL && (dcb->data = mysql_session_alloc()) == NULL)
     {
-        dcb_close(dcb);
+        decrement_and_close(dcb);
         return 1;
     }
 
@@ -812,7 +820,7 @@ static int gw_read_do_authentication(DCB* dcb, GWBUF* read_buffer, int nbytes_re
             MYSQL_session* ses = (MYSQL_session*)dcb->data;
             if ((dcb->user = MXS_STRDUP(ses->user)) == NULL)
             {
-                dcb_close(dcb);
+                decrement_and_close(dcb);
                 gwbuf_free(read_buffer);
                 return 0;
             }
@@ -865,7 +873,7 @@ static int gw_read_do_authentication(DCB* dcb, GWBUF* read_buffer, int nbytes_re
         /**
          * Close DCB and which will release MYSQL_session
          */
-        dcb_close(dcb);
+        decrement_and_close(dcb);
     }
     /* One way or another, the buffer is now fully processed */
     gwbuf_free(read_buffer);
