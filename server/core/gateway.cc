@@ -1299,6 +1299,37 @@ bool set_dirs(const char* basedir)
 }
 
 /**
+ * A RAII class that at construction time takes overship of pipe
+ * handle and at destruction time notifies parent if there is
+ * a need for that.
+ */
+class ChildExit
+{
+public:
+    ChildExit(const ChildExit&) = delete;
+    ChildExit& operator=(const ChildExit&) = delete;
+
+    ChildExit(int child_pipe, int* pRc)
+        : m_child_pipe(child_pipe)
+        , m_rc(*pRc)
+    {
+    }
+
+    ~ChildExit()
+    {
+        if (m_child_pipe != -1 && m_rc != MAXSCALE_SHUTDOWN)
+        {
+            write_child_exit_code(m_child_pipe, m_rc);
+            ::close(m_child_pipe);
+        }
+    }
+
+private:
+    int        m_child_pipe;
+    const int& m_rc;
+};
+
+/**
  * @mainpage
  * The main entry point into MaxScale
  *
@@ -1786,8 +1817,8 @@ int main(int argc, char** argv)
         }
     }
 
-    // NOTE: From this point onward, no direct returns, but the end must be
-    // NOTE: reached, where the child exit code is written.
+    // This RAII class ensures that the parent is notified at process exit.
+    ChildExit child_exit(child_pipe, &rc);
 
     if (!setup_signals())
     {
@@ -2136,12 +2167,6 @@ return_main:
     {
         unlock_pidfile();
         unlink_pidfile();
-    }
-
-    if (daemon_mode && rc != MAXSCALE_SHUTDOWN)
-    {
-        /** Notify the parent process that an error has occurred */
-        write_child_exit_code(child_pipe, rc);
     }
 
     config_finish();
