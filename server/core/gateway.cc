@@ -75,20 +75,14 @@
 #include "internal/poll.hh"
 #include "internal/service.hh"
 
-using namespace maxscale;
-using std::string;
-
-#define STRING_BUFFER_SIZE 1024
-#define PIDFD_CLOSED       -1
-
-/** for procname */
-#if !defined (_GNU_SOURCE)
-#  define _GNU_SOURCE
-#endif
-
 #if !defined (OPENSSL_THREADS)
 #error OpenSSL library does not support multi-threading.
 #endif
+
+using namespace maxscale;
+using std::string;
+
+const int PIDFD_CLOSED = -1;
 
 extern char* program_invocation_name;
 extern char* program_invocation_short_name;
@@ -2150,9 +2144,10 @@ bool pid_is_maxscale(int pid)
  */
 bool pid_file_exists()
 {
+    const int PIDSTR_SIZE = 1024;
+
     char pathbuf[PATH_MAX + 1];
-    char logbuf[STRING_BUFFER_SIZE + PATH_MAX];
-    char pidbuf[STRING_BUFFER_SIZE];
+    char pidbuf[PIDSTR_SIZE];
     pid_t pid;
     bool lock_failed = false;
 
@@ -2261,9 +2256,6 @@ static int write_pid_file()
         return 1;
     }
 
-    char logbuf[STRING_BUFFER_SIZE + PATH_MAX];
-    char pidstr[STRING_BUFFER_SIZE];
-
     snprintf(pidfile, PATH_MAX, "%s/maxscale.pid", get_piddir());
 
     if (pidfd == PIDFD_CLOSED)
@@ -2304,9 +2296,10 @@ static int write_pid_file()
         return -1;
     }
 
-    snprintf(pidstr, sizeof(pidstr) - 1, "%d", getpid());
+    string pidstr = std::to_string(getpid());
+    ssize_t len = pidstr.length();
 
-    if (pwrite(pidfd, pidstr, strlen(pidstr), 0) != (ssize_t)strlen(pidstr))
+    if (pwrite(pidfd, pidstr.c_str(), len, 0) != len)
     {
         log_startup_error(errno, "MaxScale failed to write into PID file '%s'", pidfile);
         unlock_pidfile();
