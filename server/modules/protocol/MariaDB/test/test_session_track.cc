@@ -1,41 +1,25 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+/*
+ * Copyright (c) 2019 MariaDB Corporation Ab
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2026-01-01
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
 
+#include <string>
 #include <maxbase/alloc.h>
 #include <maxscale/buffer.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include <maxscale/authenticator2.hh>
+#include <maxbase/logger.hh>
 
-#include "test_utils.hh"
-#include "../internal/service.hh"
-#include "../internal/session.hh"
-#include "../internal/server.hh"
-
-SERVICE* service;
-SListener listener;
-Session* session;
-Server* server;
-
-void create_test_objects()
-{
-    MXS_CONFIG_PARAMETER parameters;
-    parameters.set(CN_MAX_RETRY_INTERVAL, "10s");
-    parameters.set(CN_CONNECTION_TIMEOUT, "10s");
-    parameters.set(CN_NET_WRITE_TIMEOUT, "10s");
-    service = Service::create("service", "readconnroute", &parameters);
-
-    MXS_CONFIG_PARAMETER listener_params;
-    listener_params.set(CN_ADDRESS, "0.0.0.0");
-    listener_params.set(CN_PORT, "3306");
-    listener_params.set(CN_PROTOCOL, "mariadbclient");
-    listener_params.set(CN_SERVICE, service->name());
-
-    listener = Listener::create("listener", "mariadbclient", listener_params);
-    session = new Session(listener);
-    server = new Server("server1");
-}
+using std::string;
 
 static const uint8_t resultset1[] =
 {
@@ -192,117 +176,139 @@ static const uint8_t resultset3[] =
     0x00, 0x07, 0xFE, 0x00, 0x00, 0x21, 0x00
 };
 
-// Define an empty authenticator to use when generating protocol.
-class DummyAuthenticator : public mxs::BackendAuthenticator
-{
-public:
-    bool extract(DCB* client, GWBUF* buffer) override
-    {
-        return true;
-    }
-
-    bool ssl_capable(DCB* client) override
-    {
-        return false;
-    }
-
-    // Carry out the authentication.
-    int authenticate(DCB* client) override
-    {
-        return 0;
-    }
-};
-
 std::unique_ptr<MySQLBackendProtocol> generate_protocol()
 {
+    // Define an empty authenticator to use when generating protocol.
+    class DummyAuthenticator : public mxs::BackendAuthenticator
+    {
+    public:
+        bool extract(DCB* client, GWBUF* buffer) override
+        {
+            return true;
+        }
+
+        bool ssl_capable(DCB* client) override
+        {
+            return false;
+        }
+
+        // Carry out the authentication.
+        int authenticate(DCB* client) override
+        {
+            return 0;
+        }
+    };
+
     std::unique_ptr<DummyAuthenticator> auth;
     auto proto = MySQLBackendProtocol::create_test_protocol(std::move(auth));
     proto->server_capabilities |= GW_MYSQL_CAPABILITIES_SESSION_TRACK;
     return proto;
 }
 
-/* functional test , test packet by packet */
-void test1()
+std::unique_ptr<MySQLBackendProtocol> proto = generate_protocol();
+const string trx_state = "trx_state";
+
+int check_property(GWBUF* buffer, const string& property_name, const string& expected)
 {
-    std::unique_ptr<MySQLBackendProtocol> proto = generate_protocol();
-    GWBUF* buffer;
+    int rval = 1;
+    auto prop_namez = property_name.c_str();
+    auto expected_valz = expected.c_str();
+    char* property_val = gwbuf_get_property(buffer, property_name.c_str());
+
+    if (expected.empty())
+    {
+        // Empty "expected" means null.
+        if (property_val)
+        {
+            printf("Property '%s' had value '%s' when none was expected.\n", prop_namez, property_val);
+        }
+        else
+        {
+            rval = 0;
+        }
+    }
+    else if (!property_val)
+    {
+        printf("Property '%s' did not have a value when '%s' was expected.\n", prop_namez, expected_valz);
+    }
+    else if (property_val != expected)
+    {
+        printf("Property '%s' had value '%s' when '%s' was expected.\n",
+               prop_namez, property_val, expected_valz);
+    }
+    else
+    {
+        rval = 0;
+    }
+    return rval;
+}
+
+int test_item(const uint8_t* resultset, int packet_size, int data_offset,
+              const string& prop_name, const string& expected)
+{
+    GWBUF* buffer = gwbuf_alloc_and_load(packet_size, resultset + data_offset);
+    proto->mxs_mysql_get_session_track_info(buffer);
+    int rval = check_property(buffer, prop_name, expected);
+    gwbuf_free(buffer);
+    return rval;
+}
+
+/* functional test , test packet by packet */
+int test1()
+{
+    int rval = 0;
     fprintf(stderr, "test_session_track : Functional tests.\n");
+
+    auto test_rs1 = [](int packet_size, int data_offset, const string& prop_name, const string& expected)
+    {
+        return test_item(resultset1, packet_size, data_offset, prop_name, expected);
+    };
+
     // BEGIN
-    buffer = gwbuf_alloc_and_load(PACKET_1_LEN, resultset1 + PACKET_1_IDX);
-    proto->mxs_mysql_get_session_track_info(buffer);
-    mxb_assert(gwbuf_get_property(buffer, (char*)"trx_state"));
-    mxb_assert(strncmp(gwbuf_get_property(buffer, (char*)"trx_state"), "T_______", 8) == 0);
-    gwbuf_free(buffer);
+    rval += test_rs1(PACKET_1_LEN, PACKET_1_IDX, trx_state, "T_______");
+
     // COMMIT
-    buffer = gwbuf_alloc_and_load(PACKET_2_LEN, resultset1 + PACKET_2_IDX);
-    proto->mxs_mysql_get_session_track_info(buffer);
-    mxb_assert(strncmp(gwbuf_get_property(buffer, (char*)"trx_state"), "________", 8) == 0);
-    gwbuf_free(buffer);
+    rval += test_rs1(PACKET_2_LEN, PACKET_2_IDX, trx_state, "________");
+
     // START TRANSACTION
-    buffer = gwbuf_alloc_and_load(PACKET_3_LEN, resultset1 + PACKET_3_IDX);
-    proto->mxs_mysql_get_session_track_info(buffer);
-    mxb_assert(strncmp(gwbuf_get_property(buffer, (char*)"trx_state"), "T_______", 8) == 0);
-    gwbuf_free(buffer);
+    rval += test_rs1(PACKET_3_LEN, PACKET_3_IDX, trx_state, "T_______");
+
     // START TRANSACTION READ ONLY
-    buffer = gwbuf_alloc_and_load(PACKET_4_LEN, resultset1 + PACKET_4_IDX);
-    proto->mxs_mysql_get_session_track_info(buffer);
-    mxb_assert(strncmp(gwbuf_get_property(buffer, (char*)"trx_characteristics"),
-                       "START TRANSACTION READ ONLY;",
-                       28) == 0);
-    gwbuf_free(buffer);
+    rval += test_rs1(PACKET_4_LEN, PACKET_4_IDX, "trx_characteristics", "START TRANSACTION READ ONLY;");
+
     // COMMIT
-    buffer = gwbuf_alloc_and_load(PACKET_5_LEN, resultset1 + PACKET_5_IDX);
-    proto->mxs_mysql_get_session_track_info(buffer);
-    mxb_assert(gwbuf_get_property(buffer, (char*)"trx_characteristics") == NULL);
-    mxb_assert(gwbuf_get_property(buffer, (char*)"trx_state") == NULL);
-    gwbuf_free(buffer);
+    rval += test_rs1(PACKET_5_LEN, PACKET_5_IDX, "trx_characteristics", "");
+    rval += test_rs1(PACKET_5_LEN, PACKET_5_IDX, trx_state, "");
+
     // SET AUTOCOMMIT=0;
-    buffer = gwbuf_alloc_and_load(PACKET_6_LEN, resultset1 + PACKET_6_IDX);
-    proto->mxs_mysql_get_session_track_info(buffer);
-    mxb_assert(strncmp(gwbuf_get_property(buffer, (char*)"autocommit"), "OFF", 3) == 0);
-    gwbuf_free(buffer);
+    rval += test_rs1(PACKET_6_LEN, PACKET_6_IDX, "autocommit", "OFF");
+
     // INSERT INTO t1 VALUES(1);
-    buffer = gwbuf_alloc_and_load(PACKET_7_LEN, resultset1 + PACKET_7_IDX);
-    proto->mxs_mysql_get_session_track_info(buffer);
-    mxb_assert(strncmp(gwbuf_get_property(buffer, (char*)"trx_state"), "I___W___", 8) == 0);
-    gwbuf_free(buffer);
+    rval += test_rs1(PACKET_7_LEN, PACKET_7_IDX, trx_state, "I___W___");
+
     // COMMIT
-    buffer = gwbuf_alloc_and_load(PACKET_8_LEN, resultset1 + PACKET_8_IDX);
-    proto->mxs_mysql_get_session_track_info(buffer);
-    mxb_assert(strncmp(gwbuf_get_property(buffer, (char*)"trx_state"), "________", 8) == 0);
-    gwbuf_free(buffer);
+    rval += test_rs1(PACKET_8_LEN, PACKET_8_IDX, trx_state, "________");
+    return rval;
 }
 
 /* multi results combine in one buffer, test for check boundary handle properly */
-void test2()
+int test2()
 {
-    std::unique_ptr<MySQLBackendProtocol> proto = generate_protocol();
-    GWBUF* buffer;
     fprintf(stderr, "test_session_track: multi results test\n");
-    buffer = gwbuf_alloc_and_load(sizeof(resultset2), resultset2);
-    proto->mxs_mysql_get_session_track_info(buffer);
-    mxb_assert(strncmp(gwbuf_get_property(buffer, (char*)"trx_state"), "I_R_W___", 8) == 0);
-    gwbuf_free(buffer);
+    return test_item(resultset2, sizeof(resultset2), 0, trx_state, "I_R_W___");
 }
 
-void test3()
+int test3()
 {
-    std::unique_ptr<MySQLBackendProtocol> proto = generate_protocol();
-    GWBUF* buffer;
     fprintf(stderr, "test_session_track: protocol state test\n");
-    buffer = gwbuf_alloc_and_load(sizeof(resultset2), resultset2);
-    proto->mxs_mysql_get_session_track_info(buffer);
-    mxb_assert(strncmp(gwbuf_get_property(buffer, (char*)"trx_state"), "I_R_W___", 8) == 0);
-    gwbuf_free(buffer);
+    return test_item(resultset3, sizeof(resultset3), 0, trx_state, "I_R_W___");
 }
 
 int main(int argc, char** argv)
 {
-    run_unit_test([]() {
-                      create_test_objects();
-                      test1();
-                      test2();
-                      test3();
-                  });
-    return 0;
+    int rval = 0;
+    test1();
+    rval += test2();
+    // rval += test3(); // test3 was already disabled
+    return rval;
 }
