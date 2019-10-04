@@ -383,25 +383,6 @@ void closed_session_reply(GWBUF* querybuf);
 bool send_readonly_error(DCB* dcb);
 
 /**
- * See if the current master is still a valid TARGET_MASTER candidate
- *
- * The master is valid if it's in `Master, Running` state or if it is still in but in maintenance mode while a
- * transaction is open. If a transaction is open to a master in maintenance mode, the connection is closed on
- * the next COMMIT or ROLLBACK.
- *
- * @see RWSplitSession::close_stale_connections()
- */
-inline bool can_continue_using_master(const mxs::RWBackend* current_master, MXS_SESSION* session)
-{
-    constexpr uint64_t bits = SERVER_MASTER | SERVER_RUNNING | SERVER_MAINT;
-    auto server = current_master->target();
-
-    return server->is_master() || (current_master->in_use()
-                                   && (server->status() & bits) == bits
-                                   && session_trx_is_active(session));
-}
-
-/**
  * Get total slave count and connected slave count
  *
  * @param backends List of backend servers

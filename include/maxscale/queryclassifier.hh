@@ -176,7 +176,7 @@ public:
      *
      * @return The current RouteInfo.
      */
-    const RouteInfo& current_route_info()
+    const RouteInfo& current_route_info() const
     {
         return m_route_info;
     }

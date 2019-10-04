@@ -156,7 +156,13 @@ private:
     bool            create_one_connection_for_sescmd();
     void            retry_query(GWBUF* querybuf, int delay = 1);
 
-    bool trx_is_starting();
+    // Transaction state helpers
+    bool trx_is_starting() const;
+    bool trx_is_read_only() const;
+    bool trx_is_open() const;
+    bool trx_is_ending() const;
+
+    bool can_continue_using_master(const mxs::RWBackend* master);
     bool should_replace_master(mxs::RWBackend* target);
     void replace_master(mxs::RWBackend* target);
     bool should_migrate_trx(mxs::RWBackend* target);
@@ -178,7 +184,7 @@ private:
     int get_max_replication_lag();
 
     bool retry_master_query(mxs::RWBackend* backend);
-    bool handle_error_new_connection(MXS_SESSION* ses, mxs::RWBackend* backend, GWBUF* errmsg);
+    bool handle_error_new_connection(mxs::RWBackend* backend, GWBUF* errmsg);
     void manage_transactions(mxs::RWBackend* backend, GWBUF* writebuf);
 
     void trx_replay_next_stmt();
@@ -231,7 +237,7 @@ private:
          */
         return m_config.delayed_retry
                && m_retry_duration < m_config.delayed_retry_timeout
-               && !session_trx_is_active(m_session);
+               && !trx_is_open();
     }
 
     // Whether a transaction replay can remain active
@@ -313,7 +319,7 @@ private:
 
     void update_trx_statistics()
     {
-        if (session_trx_is_ending(m_session))
+        if (trx_is_ending())
         {
             mxb::atomic::add(m_qc.is_trx_still_read_only() ?
                              &m_router->stats().n_ro_trx :

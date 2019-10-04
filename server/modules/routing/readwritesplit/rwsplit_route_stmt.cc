@@ -209,7 +209,7 @@ bool RWSplitSession::track_optimistic_trx(GWBUF** buffer)
 {
     bool store_stmt = true;
 
-    if (session_trx_is_ending(m_session))
+    if (trx_is_ending())
     {
         m_otrx_state = OTRX_INACTIVE;
     }
@@ -274,9 +274,8 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
             replace_master(next_master);
         }
 
-        if (m_qc.is_trx_starting()                      // A transaction is starting
-            && !session_trx_is_read_only(m_session)     // Not explicitly read-only
-            && should_try_trx_on_slave(route_target))   // Qualifies for speculative routing
+        if (m_qc.is_trx_starting() && !trx_is_read_only()   // A normal transaction is starting
+            && should_try_trx_on_slave(route_target))       // Qualifies for speculative routing
         {
             // Speculatively start routing the transaction to a slave
             m_otrx_state = OTRX_STARTING;
@@ -668,7 +667,7 @@ RWBackend* RWSplitSession::get_master_backend()
         if (master->in_use()
             || (m_config.master_reconnection && master->can_connect() && can_recover_servers()))
         {
-            if (can_continue_using_master(master, m_session))
+            if (can_continue_using_master(master))
             {
                 rval = master;
             }
@@ -711,7 +710,7 @@ RWBackend* RWSplitSession::get_target_backend(backend_type_t btype,
                                               int max_rlag)
 {
     /** Check whether using target_node as target SLAVE */
-    if (m_target_node && session_trx_is_read_only(m_session))
+    if (m_target_node && trx_is_read_only())
     {
         return m_target_node;
     }
@@ -950,10 +949,25 @@ void RWSplitSession::log_master_routing_failure(bool found,
                 errmsg);
 }
 
-bool RWSplitSession::trx_is_starting()
+bool RWSplitSession::trx_is_starting() const
 {
     return session_trx_is_active(m_session)
            && qc_query_is_type(m_qc.current_route_info().type_mask(), QUERY_TYPE_BEGIN_TRX);
+}
+
+bool RWSplitSession::trx_is_read_only() const
+{
+    return session_trx_is_read_only(m_session);
+}
+
+bool RWSplitSession::trx_is_open() const
+{
+    return session_trx_is_active(m_session);
+}
+
+bool RWSplitSession::trx_is_ending() const
+{
+    return session_trx_is_ending(m_session);
 }
 
 bool RWSplitSession::should_replace_master(RWBackend* target)
@@ -962,7 +976,7 @@ bool RWSplitSession::should_replace_master(RWBackend* target)
            &&   // We have a target server and it's not the current master
            target && target != m_current_master
            &&   // We are not inside a transaction (also checks for autocommit=1)
-           (!session_trx_is_active(m_session) || trx_is_starting() || m_is_replay_active)
+           (!trx_is_open() || trx_is_starting() || m_is_replay_active)
            &&   // We are not locked to the old master
            !is_locked_to_master();
 }
@@ -982,7 +996,7 @@ bool RWSplitSession::should_migrate_trx(RWBackend* target)
            &&   // Transaction replay is not active (replay is only attempted once)
            !m_is_replay_active
            &&   // We have an open transaction
-           session_trx_is_active(m_session)
+           trx_is_open()
            &&   // The transaction can be replayed
            m_can_replay_trx;
 }
@@ -1144,7 +1158,7 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool 
 
     MXS_INFO("Route query to %s: %s <", target->is_master() ? "master" : "slave", target->name());
 
-    if (!m_target_node && session_trx_is_read_only(m_session))
+    if (!m_target_node && trx_is_read_only())
     {
         // Lock the session to this node until the read-only transaction ends
         m_target_node = target;
@@ -1227,9 +1241,7 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool 
         // Store the current target
         m_prev_target = target;
 
-        if (m_target_node
-            && session_trx_is_read_only(m_session)
-            && session_trx_is_ending(m_session))
+        if (m_target_node && trx_is_read_only() && trx_is_ending())
         {
             // Read-only transaction is over, stop routing queries to a specific node
             m_target_node = nullptr;

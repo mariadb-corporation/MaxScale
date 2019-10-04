@@ -407,8 +407,7 @@ void RWSplitSession::manage_transactions(RWBackend* backend, GWBUF* writebuf)
             m_session->terminate();
         }
     }
-    else if (m_config.transaction_replay && m_can_replay_trx
-             && session_trx_is_active(m_session))
+    else if (m_config.transaction_replay && m_can_replay_trx && trx_is_open())
     {
         if (!backend->has_session_commands())
         {
@@ -510,8 +509,8 @@ void RWSplitSession::close_stale_connections()
             if (!server->is_usable())
             {
                 if (backend == m_current_master
-                    && can_continue_using_master(m_current_master, m_session)
-                    && !session_trx_is_ending(m_session))
+                    && can_continue_using_master(m_current_master)
+                    && !trx_is_ending())
                 {
                     MXS_INFO("Keeping connection to '%s' open until transaction ends", backend->name());
                 }
@@ -545,7 +544,7 @@ bool RWSplitSession::handle_ignorable_error(RWBackend* backend, const mxs::Error
         return false;
     }
 
-    mxb_assert(session_trx_is_active(m_pSession) || can_retry_query());
+    mxb_assert(trx_is_open() || can_retry_query());
     mxb_assert(m_expected_responses == 1);
 
     bool ok = false;
@@ -554,7 +553,7 @@ bool RWSplitSession::handle_ignorable_error(RWBackend* backend, const mxs::Error
              "Server triggered transaction rollback, replaying transaction" :
              "WSREP not ready, retrying query", error.message().c_str());
 
-    if (session_trx_is_active(m_pSession))
+    if (trx_is_open())
     {
         ok = start_trx_replay();
     }
@@ -722,7 +721,7 @@ void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
             return;
         }
     }
-    else if (m_config.transaction_replay && session_trx_is_ending(m_session))
+    else if (m_config.transaction_replay && trx_is_ending())
     {
         MXS_INFO("Transaction complete");
         m_trx.close();
@@ -837,7 +836,7 @@ bool RWSplitSession::start_trx_replay()
         }
         else
         {
-            mxb_assert_message(!session_is_autocommit(m_session) || session_trx_is_ending(m_session),
+            mxb_assert_message(!session_is_autocommit(m_session) || trx_is_ending(),
                                "Session should have autocommit disabled or transaction just ended if the "
                                "transaction had no statements and no query was interrupted");
         }
@@ -942,7 +941,6 @@ bool RWSplitSession::retry_master_query(RWBackend* backend)
 
 bool RWSplitSession::handleError(GWBUF* errmsgbuf, mxs::Endpoint* endpoint, const mxs::Reply& reply)
 {
-    MXS_SESSION* session = m_session;
     RWBackend* backend = static_cast<RWBackend*>(endpoint->get_userdata());
     mxb_assert(backend && backend->in_use());
 
@@ -1005,7 +1003,7 @@ bool RWSplitSession::handleError(GWBUF* errmsgbuf, mxs::Endpoint* endpoint, cons
             }
         }
 
-        if (session_trx_is_active(session) && m_otrx_state == OTRX_INACTIVE)
+        if (trx_is_open() && m_otrx_state == OTRX_INACTIVE)
         {
             can_continue = start_trx_replay();
             errmsg += " A transaction is active and cannot be replayed.";
@@ -1035,7 +1033,7 @@ bool RWSplitSession::handleError(GWBUF* errmsgbuf, mxs::Endpoint* endpoint, cons
     {
         MXS_INFO("Slave '%s' failed: %s", backend->name(), extract_error(errmsgbuf).c_str());
         if (m_target_node && m_target_node == backend
-            && session_trx_is_read_only(session))
+            && trx_is_read_only())
         {
             // We're no longer locked to this server as it failed
             m_target_node = nullptr;
@@ -1060,7 +1058,7 @@ bool RWSplitSession::handleError(GWBUF* errmsgbuf, mxs::Endpoint* endpoint, cons
              * on the master.
              */
 
-            mxb_assert(session_trx_is_active(session));
+            mxb_assert(trx_is_open());
             m_otrx_state = OTRX_INACTIVE;
             can_continue = start_trx_replay();
             backend->close();
@@ -1069,7 +1067,7 @@ bool RWSplitSession::handleError(GWBUF* errmsgbuf, mxs::Endpoint* endpoint, cons
         else
         {
             /** Try to replace the failed connection with a new one */
-            can_continue = handle_error_new_connection(session, backend, errmsgbuf);
+            can_continue = handle_error_new_connection(backend, errmsgbuf);
         }
     }
 
@@ -1091,7 +1089,7 @@ bool RWSplitSession::handleError(GWBUF* errmsgbuf, mxs::Endpoint* endpoint, cons
  * @return true if there are enough backend connections to continue, false if
  * not
  */
-bool RWSplitSession::handle_error_new_connection(MXS_SESSION* ses, RWBackend* backend, GWBUF* errmsg)
+bool RWSplitSession::handle_error_new_connection(RWBackend* backend, GWBUF* errmsg)
 {
     bool route_stored = false;
 
@@ -1207,4 +1205,19 @@ void RWSplitSession::send_unknown_ps_error(uint32_t stmt_id)
     GWBUF* err = modutil_create_mysql_err_msg(1, 0, ER_UNKNOWN_STMT_HANDLER, "HY000", ss.str().c_str());
     mxs::ReplyRoute route;
     RouterSession::clientReply(err, route, mxs::Reply());
+}
+
+/**
+ * See if the current master is still a valid TARGET_MASTER candidate
+ *
+ * The master is valid if it's a master state or it is in maintenance mode while a transaction is open. If a
+ * transaction is open to a master in maintenance mode, the connection is closed on the next COMMIT or
+ * ROLLBACK.
+ *
+ * @see RWSplitSession::close_stale_connections()
+ */
+bool RWSplitSession::can_continue_using_master(const mxs::RWBackend* master)
+{
+    auto tgt = master->target();
+    return tgt->is_master() || (master->in_use() && tgt->is_in_maint() && trx_is_open());
 }
