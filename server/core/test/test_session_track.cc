@@ -216,7 +216,7 @@ public:
 std::unique_ptr<MySQLBackendProtocol> generate_protocol()
 {
     std::unique_ptr<DummyAuthenticator> auth;
-    auto proto = MySQLBackendProtocol::create_test_protocol(session, server, nullptr, std::move(auth));
+    auto proto = MySQLBackendProtocol::create_test_protocol(std::move(auth));
     proto->server_capabilities |= GW_MYSQL_CAPABILITIES_SESSION_TRACK;
     return proto;
 }

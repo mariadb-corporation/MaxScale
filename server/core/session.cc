@@ -374,7 +374,7 @@ void Session::deliver_response()
 
         // The reply will always be complete
         mxs::ReplyRoute route;
-        mxs::Reply reply(response.service);
+        mxs::Reply reply;
         response.up.clientReply(filter_instance, filter_session, buffer, route, reply);
 
         response.up.instance = NULL;
@@ -407,7 +407,7 @@ bool mxs_route_query(MXS_SESSION* ses, GWBUF* buffer)
 bool mxs_route_reply(mxs::Upstream* up, GWBUF* buffer, DCB* dcb)
 {
     mxs::ReplyRoute route;
-    mxs::Reply reply(dcb->session()->listener->service());
+    mxs::Reply reply;
     return up->clientReply(up->instance, up->session, buffer, route, reply);
 }
 

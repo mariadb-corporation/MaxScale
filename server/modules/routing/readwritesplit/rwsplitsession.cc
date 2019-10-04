@@ -1134,7 +1134,7 @@ bool RWSplitSession::handle_error_new_connection(MXS_SESSION* ses, RWBackend* ba
             {
                 // Send an error so that the client knows to proceed.
                 mxs::ReplyRoute route;
-                RouterSession::clientReply(gwbuf_clone(errmsg), route, mxs::Reply(m_router->service()));
+                RouterSession::clientReply(gwbuf_clone(errmsg), route, mxs::Reply());
                 m_current_query.reset();
                 route_stored = true;
             }
@@ -1217,5 +1217,5 @@ void RWSplitSession::send_unknown_ps_error(uint32_t stmt_id)
     ss << "Unknown prepared statement handler (" << stmt_id << ") given to MaxScale";
     GWBUF* err = modutil_create_mysql_err_msg(1, 0, ER_UNKNOWN_STMT_HANDLER, "HY000", ss.str().c_str());
     mxs::ReplyRoute route;
-    RouterSession::clientReply(err, route, mxs::Reply(m_router->service()));
+    RouterSession::clientReply(err, route, mxs::Reply());
 }

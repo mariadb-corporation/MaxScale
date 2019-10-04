@@ -484,9 +484,6 @@ enum class ReplyState
 class Reply
 {
 public:
-
-    explicit Reply(mxs::Target* target);
-
     /**
      * Get the current state
      */
@@ -501,11 +498,6 @@ public:
      * The command that the reply is for
      */
     uint8_t command() const;
-
-    /**
-     * The original target where the response came from
-     */
-    mxs::Target* target() const;
 
     /**
      * Get latest error
@@ -589,7 +581,6 @@ public:
     }
 
 private:
-    mxs::Target*          m_target {nullptr};
     uint8_t               m_command {0};
     ReplyState            m_reply_state {ReplyState::DONE};
     Error                 m_error;

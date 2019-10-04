@@ -159,12 +159,11 @@ public:
     using Iter = mxs::Buffer::iterator;
 
     static std::unique_ptr<MySQLBackendProtocol>
-    create(MXS_SESSION* session, SERVER* server, mxs::Component* component,
+    create(MXS_SESSION* session, mxs::Component* component,
            std::unique_ptr<mxs::BackendAuthenticator> authenticator);
 
     static std::unique_ptr<MySQLBackendProtocol>
-    create_test_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component,
-                         std::unique_ptr<mxs::BackendAuthenticator> authenticator);
+    create_test_protocol(std::unique_ptr<mxs::BackendAuthenticator> authenticator);
 
     ~MySQLBackendProtocol() override;
 
@@ -195,7 +194,7 @@ public:
     uint32_t server_capabilities {0};   /**< Server capabilities TODO: private */
 
 private:
-    MySQLBackendProtocol(SERVER* server, std::unique_ptr<mxs::BackendAuthenticator> authenticator);
+    MySQLBackendProtocol(std::unique_ptr<mxs::BackendAuthenticator> authenticator);
 
     int    gw_read_and_write(DCB* dcb);
     int    backend_write_delayqueue(DCB* dcb, GWBUF* buffer);

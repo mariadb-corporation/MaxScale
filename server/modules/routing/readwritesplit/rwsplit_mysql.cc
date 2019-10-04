@@ -73,7 +73,7 @@ bool RWSplitSession::handle_target_is_all(route_target_t route_target,
                                                 "See the error log for further details.");
 
         mxs::ReplyRoute route;
-        RouterSession::clientReply(err, route, mxs::Reply(m_router->service()));
+        RouterSession::clientReply(err, route, mxs::Reply());
 
         result = true;
         MXS_FREE(query_str);
@@ -112,5 +112,5 @@ void RWSplitSession::send_readonly_error()
                          " option so it cannot execute this statement";
     GWBUF* err = modutil_create_mysql_err_msg(1, 0, ER_OPTION_PREVENTS_STATEMENT, "HY000", errmsg);
     mxs::ReplyRoute route;
-    RouterSession::clientReply(err, route, mxs::Reply(m_router->service()));
+    RouterSession::clientReply(err, route, mxs::Reply());
 }

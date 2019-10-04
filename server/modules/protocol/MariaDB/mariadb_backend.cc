@@ -43,13 +43,10 @@ static bool get_ip_string_and_port(struct sockaddr_storage* sa,
 /**
  * Construct a detached backend connection. Session attached separately.
  *
- * @param server Backend server
  * @param authenticator Backend authenticator
  */
-MySQLBackendProtocol::MySQLBackendProtocol(SERVER* server,
-                                           std::unique_ptr<mxs::BackendAuthenticator> authenticator)
+MySQLBackendProtocol::MySQLBackendProtocol(std::unique_ptr<mxs::BackendAuthenticator> authenticator)
     : m_authenticator(std::move(authenticator))
-    , m_reply(server)
 {
 }
 
@@ -67,11 +64,11 @@ MySQLBackendProtocol::MySQLBackendProtocol(SERVER* server,
  ******************************************************************************/
 
 std::unique_ptr<MySQLBackendProtocol>
-MySQLBackendProtocol::create(MXS_SESSION* session, SERVER* server, mxs::Component* component,
+MySQLBackendProtocol::create(MXS_SESSION* session, mxs::Component* component,
                              std::unique_ptr<mxs::BackendAuthenticator> authenticator)
 {
     std::unique_ptr<MySQLBackendProtocol> backend_conn(
-        new(std::nothrow) MySQLBackendProtocol(server, std::move(authenticator)));
+        new(std::nothrow) MySQLBackendProtocol(std::move(authenticator)));
     if (backend_conn)
     {
         backend_conn->assign_session(session, component);
@@ -80,15 +77,10 @@ MySQLBackendProtocol::create(MXS_SESSION* session, SERVER* server, mxs::Componen
 }
 
 std::unique_ptr<MySQLBackendProtocol>
-MySQLBackendProtocol::create_test_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component,
-                                           std::unique_ptr<mxs::BackendAuthenticator> authenticator)
+MySQLBackendProtocol::create_test_protocol(std::unique_ptr<mxs::BackendAuthenticator> authenticator)
 {
     std::unique_ptr<MySQLBackendProtocol> backend_conn(
-        new(std::nothrow) MySQLBackendProtocol(server, std::move(authenticator)));
-    if (backend_conn)
-    {
-        backend_conn->assign_session(session, component);
-    }
+        new(std::nothrow) MySQLBackendProtocol(std::move(authenticator)));
     return backend_conn;
 }
 
@@ -1870,7 +1862,7 @@ int MySQLBackendProtocol::gw_decode_mysql_server_handshake(uint8_t* payload)
     // get ThreadID: 4 bytes
     uint32_t tid = gw_mysql_get_byte4(payload);
 
-    MXS_INFO("Connected to '%s' with thread id %u", m_reply.target()->name(), tid);
+    MXS_INFO("Connected to '%s' with thread id %u", m_dcb->server()->name(), tid);
 
     /* TODO: Correct value of thread id could be queried later from backend if
      * there is any worry it might be larger than 32bit allows. */
@@ -2160,7 +2152,7 @@ void MySQLBackendProtocol::process_one_packet(Iter it, Iter end, uint32_t len)
         {
             // This should never happen
             MXS_ERROR("Unexpected result state. cmd: 0x%02hhx, len: %u server: %s",
-                      cmd, len, m_reply.target()->name());
+                      cmd, len, m_dcb->server()->name());
             session_dump_statements(m_session);
             session_dump_log(m_session);
             mxb_assert(!true);

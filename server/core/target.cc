@@ -243,11 +243,6 @@ void Error::clear()
     m_message.clear();
 }
 
-Reply::Reply(mxs::Target* target)
-    : m_target(target)
-{
-}
-
 ReplyState Reply::state() const
 {
     return m_reply_state;
@@ -284,11 +279,6 @@ std::string Reply::to_string() const
 uint8_t Reply::command() const
 {
     return m_command;
-}
-
-Target* Reply::target() const
-{
-    return m_target;
 }
 
 const Error& Reply::error() const

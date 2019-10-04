@@ -2051,7 +2051,7 @@ MySQLClientProtocol::create_backend_protocol(MXS_SESSION* session, SERVER* serve
     std::unique_ptr<mxs::BackendProtocol> rval;
     if (new_backend_auth)
     {
-        rval = MySQLBackendProtocol::create(session, server, component, std::move(new_backend_auth));
+        rval = MySQLBackendProtocol::create(session, component, std::move(new_backend_auth));
     }
     return rval;
 }
