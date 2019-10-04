@@ -190,6 +190,16 @@ static bool  init_base_libraries();
 static void  finish_base_libraries();
 static bool  redirect_stdout_and_stderr(const std::string& path);
 
+#define VA_MESSAGE(message, format)\
+    va_list ap ## __LINE__;\
+    va_start(ap ## __LINE__, format);\
+    int len ## __LINE__ = vsnprintf(nullptr, 0, format, ap ## __LINE__);\
+    va_end(ap ## __LINE__);\
+    char message[len ## __LINE__ + 1];\
+    va_start(ap ## __LINE__, format);\
+    vsnprintf(message, sizeof(message), format, ap ## __LINE__);\
+    va_end(ap ## __LINE__);
+
 struct DEBUG_ARGUMENT
 {
     const char* name;                       /**< The name of the debug argument */
@@ -686,12 +696,8 @@ static bool init_log()
     return rval;
 }
 
-static void print_message(const char* tag, int eno, const char* format, va_list ap)
+static void print_message(const char* tag, int eno, const char* message)
 {
-    int len = vsnprintf(nullptr, 0, format, ap);
-    char message[len + 1];
-    vsnprintf(message, sizeof(message), format, ap);
-
     fprintf(stderr,
             "%s: %s%s%s%s\n",
             tag,
@@ -709,58 +715,48 @@ static void print_message(const char* tag, int eno, const char* format, va_list 
  */
 static void print_alert(int eno, const char* format, ...)
 {
-    va_list ap;
-    va_start(ap, format);
-    print_message("alert  ", eno, format, ap);
-    va_end(ap);
+    VA_MESSAGE(message, format);
+
+    print_message("alert  ", eno, message);
 }
 
 static void print_alert(const char* format, ...)
 {
-    va_list ap;
-    va_start(ap, format);
-    print_message("alert  ", 0, format, ap);
-    va_end(ap);
+    VA_MESSAGE(message, format);
+
+    print_message("alert  ", 0, message);
 }
 
 static void print_info(int eno, const char* format, ...)
 {
-    va_list ap;
-    va_start(ap, format);
-    print_message("info   ", eno, format, ap);
-    va_end(ap);
+    VA_MESSAGE(message, format);
+
+    print_message("info   ", eno, message);
 }
 
 static void print_info(const char* format, ...)
 {
-    va_list ap;
-    va_start(ap, format);
-    print_message("info   ", 0, format, ap);
-    va_end(ap);
+    VA_MESSAGE(message, format);
+
+    print_message("info   ", 0, message);
 }
 
 static void print_warning(int eno, const char* format, ...)
 {
-    va_list ap;
-    va_start(ap, format);
-    print_message("warning", eno, format, ap);
-    va_end(ap);
+    VA_MESSAGE(message, format);
+
+    print_message("warning", eno, message);
 }
 
 static void print_warning(const char* format, ...)
 {
-    va_list ap;
-    va_start(ap, format);
-    print_message("warning", 0, format, ap);
-    va_end(ap);
+    VA_MESSAGE(message, format);
+
+    print_message("warning", 0, message);
 }
 
-static void log_startup_error(int eno, const char* format, va_list ap)
+static void log_startup_message(int eno, const char* message)
 {
-    int len = vsnprintf(nullptr, 0, format, ap);
-    char message[len + 1];
-    vsnprintf(message, sizeof(message), format, ap);
-
     if (mxb_log_inited() || init_log())
     {
         MXS_ALERT("%s%s%s%s",
@@ -785,10 +781,9 @@ static void log_startup_error(int eno, const char* format, va_list ap)
  */
 static void log_startup_error(int eno, const char* format, ...)
 {
-    va_list ap;
-    va_start(ap, format);
-    log_startup_error(eno, format, ap);
-    va_end(ap);
+    VA_MESSAGE(message, format);
+
+    log_startup_message(eno, message);
 }
 
 /**
@@ -802,10 +797,9 @@ static void log_startup_error(int eno, const char* format, ...)
  */
 static void log_startup_error(const char* format, ...)
 {
-    va_list ap;
-    va_start(ap, format);
-    log_startup_error(0, format, ap);
-    va_end(ap);
+    VA_MESSAGE(message, format);
+
+    log_startup_message(0, message);
 }
 
 /**
