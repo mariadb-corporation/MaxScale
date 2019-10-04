@@ -393,7 +393,7 @@ void RWSplitSession::trx_replay_next_stmt()
     }
 }
 
-void RWSplitSession::manage_transactions(RWBackend* backend, GWBUF* writebuf)
+void RWSplitSession::manage_transactions(RWBackend* backend, GWBUF* writebuf, const mxs::Reply& reply)
 {
     if (m_otrx_state == OTRX_ROLLBACK)
     {
@@ -432,6 +432,11 @@ void RWSplitSession::manage_transactions(RWBackend* backend, GWBUF* writebuf)
 
                 if (m_current_query.get())
                 {
+                    if (m_qc.current_route_info().target() == TARGET_ALL)
+                    {
+                        m_trx_sescmd.emplace_back(m_current_query, mxs::Buffer(gwbuf_clone(writebuf)), reply);
+                    }
+
                     // Add the statement to the transaction once the first part of the result is received.
                     m_trx.add_stmt(m_current_query.release());
                 }
@@ -441,6 +446,7 @@ void RWSplitSession::manage_transactions(RWBackend* backend, GWBUF* writebuf)
                 MXS_INFO("Transaction is too big (%lu bytes), can't replay if it fails.", size);
                 m_current_query.reset();
                 m_trx.close();
+                m_trx_sescmd.clear();
                 m_can_replay_trx = false;
             }
         }
@@ -604,6 +610,44 @@ bool RWSplitSession::finish_causal_read()
     return rval;
 }
 
+void RWSplitSession::finish_transaction(mxs::RWBackend* backend)
+{
+    MXS_INFO("Transaction complete");
+    m_trx.close();
+    m_can_replay_trx = true;
+
+    for (auto& a : m_trx_sescmd)
+    {
+        auto sescmd = create_sescmd(a.statement.release());
+
+        // Add it to the history list so that it will be executed on reconnection
+        m_sescmd_list.push_back(sescmd);
+
+        // Add it to all backends so that existing connections apply it
+        for (auto a : m_raw_backends)
+        {
+            a->append_session_command(sescmd);
+
+            // Execute it on all the other servers
+            if (a != backend && a->in_use() && !a->is_waiting_result())
+            {
+                a->execute_session_command();
+            }
+        }
+
+        // Make this backend the pre-assigned replier and complete the session command with the stored result
+        m_sescmd_replier = backend;
+        ++m_sent_sescmd;
+        ++m_expected_responses;
+
+        GWBUF* buf = a.result.release();
+        process_sescmd_response(backend, &buf, a.reply);
+        gwbuf_free(buf);
+    }
+
+    m_trx_sescmd.clear();
+}
+
 void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     RWBackend* backend = static_cast<RWBackend*>(down.back()->get_userdata());
@@ -635,7 +679,7 @@ void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
     }
 
     // Track transaction contents and handle ROLLBACK with aggressive transaction load balancing
-    manage_transactions(backend, writebuf);
+    manage_transactions(backend, writebuf, reply);
 
     if (reply.is_complete())
     {
@@ -719,9 +763,7 @@ void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
     }
     else if (m_config.transaction_replay && trx_is_ending())
     {
-        MXS_INFO("Transaction complete");
-        m_trx.close();
-        m_can_replay_trx = true;
+        finish_transaction(backend);
     }
 
     if (reply.is_complete())
@@ -808,6 +850,7 @@ bool RWSplitSession::start_trx_replay()
             m_replayed_trx = m_trx;
             m_replayed_trx.finalize();
             m_trx.close();
+            m_trx_sescmd.clear();
 
             if (m_replayed_trx.have_stmts())
             {

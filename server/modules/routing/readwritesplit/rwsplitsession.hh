@@ -187,7 +187,8 @@ private:
 
     bool retry_master_query(mxs::RWBackend* backend);
     bool handle_error_new_connection(mxs::RWBackend* backend, GWBUF* errmsg);
-    void manage_transactions(mxs::RWBackend* backend, GWBUF* writebuf);
+    void manage_transactions(mxs::RWBackend* backend, GWBUF* writebuf, const mxs::Reply& reply);
+    void finish_transaction(mxs::RWBackend* backend);
 
     void trx_replay_next_stmt();
 
@@ -228,6 +229,21 @@ private:
     bool is_locked_to_master() const;
     bool supports_hint(HINT_TYPE hint_type) const;
     bool handle_ignorable_error(mxs::RWBackend* backend, const mxs::Error& error);
+
+    // Struct for holding the results of session commands that are executed inside transactions
+    struct SescmdResp
+    {
+        SescmdResp(const mxs::Buffer& stmt, const mxs::Buffer& res, const mxs::Reply& rep)
+            : statement(stmt)
+            , result(res)
+            , reply(rep)
+        {
+        }
+
+        mxs::Buffer statement;
+        mxs::Buffer result;
+        mxs::Reply  reply;
+    };
 
     inline bool can_retry_query() const
     {
@@ -369,6 +385,8 @@ private:
     Trx         m_orig_trx;                     /**< The backup of the transaction we're replaying */
     mxs::Buffer m_orig_stmt;                    /**< The backup of the statement that was interrupted */
     int64_t     m_num_trx_replays = 0;          /**< How many times trx replay has been attempted */
+
+    std::vector<SescmdResp> m_trx_sescmd;   /**< Session commands executed during the transaction */
 
     otrx_state m_otrx_state = OTRX_INACTIVE;    /**< Optimistic trx state*/
 

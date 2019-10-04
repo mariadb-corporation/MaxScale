@@ -252,8 +252,14 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
     uint8_t command = info.command();
     uint32_t qtype = info.type_mask();
     route_target_t route_target = info.target();
-
     RWBackend* target = nullptr;
+
+    if (trx_is_open() && m_config.transaction_replay && TARGET_IS_ALL(route_target))
+    {
+        // Route session commands inside transactions to the master. These will be recorded alongside the
+        // transaction and will be applied on the slaves once the transaction is over.
+        route_target = TARGET_MASTER;
+    }
 
     if (TARGET_IS_ALL(route_target))
     {
