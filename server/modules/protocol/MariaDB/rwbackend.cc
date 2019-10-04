@@ -32,6 +32,10 @@ RWBackend::RWBackend(mxs::Endpoint* ref)
 
 RWBackend::~RWBackend()
 {
+    if (m_response_stat.make_valid())
+    {
+        target()->response_time_add(m_response_stat.average().secs(), m_response_stat.num_samples());
+    }
 }
 
 bool RWBackend::execute_session_command()
@@ -112,11 +116,6 @@ void RWBackend::close(close_type type)
     mxs::Backend::close(type);
 }
 
-ResponseStat& RWBackend::response_stat()
-{
-    return m_response_stat;
-}
-
 mxs::SRWBackends RWBackend::from_endpoints(const Endpoints& endpoints)
 {
     SRWBackends backends;
@@ -128,5 +127,25 @@ mxs::SRWBackends RWBackend::from_endpoints(const Endpoints& endpoints)
     }
 
     return backends;
+}
+
+void RWBackend::select_started()
+{
+    Backend::select_started();
+    m_response_stat.query_started();
+}
+
+void RWBackend::select_ended()
+{
+    Backend::select_ended();
+
+    m_response_stat.query_ended();
+
+    if (m_response_stat.is_valid()
+        && (m_response_stat.sync_time_reached() || target()->response_time_num_samples() == 0))
+    {
+        target()->response_time_add(m_response_stat.average().secs(), m_response_stat.num_samples());
+        m_response_stat.reset();
+    }
 }
 }

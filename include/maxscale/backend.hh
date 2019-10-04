@@ -304,8 +304,8 @@ public:
         return m_backend->target()->name();
     }
 
-    void select_started();
-    void select_ended();
+    virtual void select_started();
+    virtual void select_ended();
 
     int64_t                       num_selects() const;
     const maxbase::StopWatch&     session_timer() const;

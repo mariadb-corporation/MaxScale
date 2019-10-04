@@ -65,6 +65,9 @@ public:
     bool execute_session_command();
     bool continue_session_command(GWBUF* buffer);
 
+    void select_started() override;
+    void select_ended() override;
+
     /**
      * Write a query to the backend
      *
@@ -80,9 +83,6 @@ public:
     bool write(GWBUF* buffer, response_type type = EXPECT_RESPONSE);
 
     void close(close_type type = CLOSE_NORMAL);
-
-    // Controlled by the session
-    ResponseStat& response_stat();
 
     std::chrono::steady_clock::time_point last_write() const
     {

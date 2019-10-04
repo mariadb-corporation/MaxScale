@@ -103,14 +103,6 @@ void RWSplitSession::close()
 
     for (auto& backend : m_raw_backends)
     {
-        ResponseStat& stat = backend->response_stat();
-
-        if (stat.make_valid())
-        {
-            backend->target()->response_time_add(stat.average().secs(), stat.num_samples());
-        }
-        backend->response_stat().reset();
-
         m_server_stats[backend->target()].end_session(backend->session_timer().split(),
                                                       backend->select_timer().total(),
                                                       backend->num_selects());
@@ -659,15 +651,6 @@ void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
 
             // Stop the response processing early
             return;
-        }
-
-        ResponseStat& stat = backend->response_stat();
-        stat.query_ended();
-        if (stat.is_valid() && (stat.sync_time_reached()
-                                || backend->target()->response_time_num_samples() == 0))
-        {
-            backend->target()->response_time_add(stat.average().secs(), stat.num_samples());
-            stat.reset();
         }
 
         if (m_config.causal_reads)
