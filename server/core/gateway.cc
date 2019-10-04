@@ -1785,6 +1785,15 @@ int main(int argc, char** argv)
         return rc;
     }
 
+    if (!this_unit.redirect_output_to.empty())
+    {
+        if (!redirect_stdout_and_stderr(this_unit.redirect_output_to))
+        {
+            rc = MAXSCALE_INTERNALERROR;
+            return rc;
+        }
+    }
+
     if (!cnf->config_check)
     {
         if (is_maxscale_already_running())
@@ -1794,15 +1803,12 @@ int main(int argc, char** argv)
         }
     }
 
-    if (this_unit.daemon_mode)
+    if (!cnf->syslog && !cnf->maxlog)
     {
-        if (!change_cwd())
-        {
-            rc = MAXSCALE_INTERNALERROR;
-            return rc;
-        }
+        print_warning("Both MaxScale and Syslog logging disabled.");
     }
 
+    // Config successfully read and we are a unique MaxScale, time to log some info.
     struct utsname name;
     uname(&name);
     MXS_NOTICE("Running OS: %s@%s, %s, %s with %lu processor cores.",
@@ -1812,9 +1818,39 @@ int main(int argc, char** argv)
     sysinfo(&info);
     MXS_NOTICE("Total usable main memory: %s.",
                mxb::pretty_size(info.mem_unit * info.totalram).c_str());
-
     MXS_NOTICE("MariaDB MaxScale %s started (Commit: %s)", MAXSCALE_VERSION, MAXSCALE_COMMIT);
     MXS_NOTICE("MaxScale is running in process %i", getpid());
+
+    if (!this_unit.daemon_mode)
+    {
+        fprintf(stderr,
+                "\n"
+                "Configuration file : %s\n"
+                "Log directory      : %s\n"
+                "Data directory     : %s\n"
+                "Module directory   : %s\n"
+                "Service cache      : %s\n\n",
+                cnf_file_path.c_str(),
+                get_logdir(),
+                get_datadir(),
+                get_libdir(),
+                get_cachedir());
+    }
+
+    MXS_NOTICE("Configuration file: %s", cnf_file_path.c_str());
+    MXS_NOTICE("Log directory: %s", get_logdir());
+    MXS_NOTICE("Data directory: %s", get_datadir());
+    MXS_NOTICE("Module directory: %s", get_libdir());
+    MXS_NOTICE("Service cache: %s", get_cachedir());
+
+    if (this_unit.daemon_mode)
+    {
+        if (!change_cwd())
+        {
+            rc = MAXSCALE_INTERNALERROR;
+            return rc;
+        }
+    }
 
     cleanup_old_process_datadirs();
     if (!cnf->config_check)
@@ -1836,50 +1872,11 @@ int main(int argc, char** argv)
         }
     }
 
-    if (!this_unit.daemon_mode)
-    {
-#if defined (SS_DEBUG)
-        fprintf(stderr,
-                "\nSee the log from the following log files : \n\n");
-#endif
-        fprintf(stderr,
-                "Configuration file : %s\n"
-                "Log directory      : %s\n"
-                "Data directory     : %s\n"
-                "Module directory   : %s\n"
-                "Service cache      : %s\n\n",
-                cnf_file_path.c_str(),
-                get_logdir(),
-                get_datadir(),
-                get_libdir(),
-                get_cachedir());
-    }
-
-    if (!cnf->syslog && !cnf->maxlog)
-    {
-        print_warning("Both MaxScale and Syslog logging disabled.");
-    }
-
-    MXS_NOTICE("Configuration file: %s", cnf_file_path.c_str());
-    MXS_NOTICE("Log directory: %s", get_logdir());
-    MXS_NOTICE("Data directory: %s", get_datadir());
-    MXS_NOTICE("Module directory: %s", get_libdir());
-    MXS_NOTICE("Service cache: %s", get_cachedir());
-
     if (!qc_setup(&cnf->qc_cache_properties, cnf->qc_sql_mode, cnf->qc_name, cnf->qc_args))
     {
         log_startup_error("Failed to initialise query classifier library.");
         rc = MAXSCALE_INTERNALERROR;
         return rc;
-    }
-
-    if (!this_unit.redirect_output_to.empty())
-    {
-        if (!redirect_stdout_and_stderr(this_unit.redirect_output_to))
-        {
-            rc = MAXSCALE_INTERNALERROR;
-            return rc;
-        }
     }
 
     /** Load the admin users */
