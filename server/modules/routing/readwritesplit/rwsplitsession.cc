@@ -432,11 +432,7 @@ void RWSplitSession::manage_transactions(RWBackend* backend, GWBUF* writebuf)
 
                 if (m_current_query.get())
                 {
-                    // TODO: Don't replay transactions interrupted mid-result. Currently
-                    // the client will receive a `Packets out of order` error if this happens.
-
-                    // Add the statement to the transaction once the first part
-                    // of the result is received.
+                    // Add the statement to the transaction once the first part of the result is received.
                     m_trx.add_stmt(m_current_query.release());
                 }
             }
