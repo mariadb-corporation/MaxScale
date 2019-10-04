@@ -586,6 +586,29 @@ bool RWSplitSession::handle_ignorable_error(RWBackend* backend, const mxs::Error
     return ok;
 }
 
+bool RWSplitSession::finish_causal_read()
+{
+    bool rval = true;
+
+    if (m_config.causal_reads)
+    {
+        if (m_wait_gtid == RETRYING_ON_MASTER)
+        {
+            // Retry the query on the master
+            GWBUF* buf = m_current_query.release();
+            buf->hint = hint_create_route(buf->hint, HINT_ROUTE_TO_MASTER, NULL);
+            retry_query(buf, 0);
+            rval = false;
+        }
+
+        // The reply should never be complete while we are still waiting for the header.
+        mxb_assert(m_wait_gtid != WAITING_FOR_HEADER);
+        m_wait_gtid = NONE;
+    }
+
+    return rval;
+}
+
 void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     RWBackend* backend = static_cast<RWBackend*>(down.back()->get_userdata());
@@ -621,6 +644,7 @@ void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
 
     if (reply.is_complete())
     {
+        MXS_INFO("Reply complete, last reply from %s", backend->name());
         backend->ack_write();
 
         /** Got a complete reply, decrement expected response count */
@@ -634,33 +658,15 @@ void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
         session_book_server_response(m_pSession, (SERVER*)backend->target(), m_expected_responses == 0);
 
         mxb_assert(m_expected_responses >= 0);
-        MXS_INFO("Reply complete, last reply from %s", backend->name());
-
-        if (m_wait_gtid == RETRYING_ON_MASTER)
-        {
-            m_wait_gtid = NONE;
-
-            // Discard the error
-            gwbuf_free(writebuf);
-            writebuf = NULL;
-
-            // Retry the query on the master
-            GWBUF* buf = m_current_query.release();
-            buf->hint = hint_create_route(buf->hint, HINT_ROUTE_TO_MASTER, NULL);
-            retry_query(buf, 0);
-
-            // Stop the response processing early
-            return;
-        }
-
-        if (m_config.causal_reads)
-        {
-            // The reply should never be complete while we are still waiting for the header.
-            mxb_assert(m_wait_gtid != WAITING_FOR_HEADER);
-            m_wait_gtid = NONE;
-        }
 
         backend->select_ended();
+
+        if (!finish_causal_read())
+        {
+            // The query timed out on the slave, retry it on the master
+            gwbuf_free(writebuf);
+            return;
+        }
 
         if (m_otrx_state == OTRX_ROLLBACK)
         {
