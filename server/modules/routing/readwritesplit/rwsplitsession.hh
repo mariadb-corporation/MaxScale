@@ -127,6 +127,8 @@ private:
     void process_sescmd_response(mxs::RWBackend* backend, GWBUF** ppPacket, const mxs::Reply& reply);
     void compress_history(mxs::SSessionCommand& sescmd);
 
+    mxs::SSessionCommand create_sescmd(GWBUF* buffer);
+
     void prune_to_position(uint64_t pos);
     bool route_session_write(GWBUF* querybuf, uint8_t command, uint32_t type);
     void continue_large_session_write(GWBUF* querybuf, uint32_t type);

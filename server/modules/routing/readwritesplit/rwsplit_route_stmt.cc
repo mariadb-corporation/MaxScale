@@ -457,6 +457,46 @@ void RWSplitSession::prune_to_position(uint64_t pos)
     }
 }
 
+mxs::SSessionCommand RWSplitSession::create_sescmd(GWBUF* buffer)
+{
+    uint8_t cmd = m_qc.current_route_info().command();
+
+    if (mxs_mysql_is_ps_command(cmd))
+    {
+        if (cmd == MXS_COM_STMT_CLOSE)
+        {
+            // Remove the command from the PS mapping
+            m_qc.ps_erase(buffer);
+            m_exec_map.erase(m_qc.current_route_info().stmt_id());
+        }
+
+        /**
+         * Replace the ID with our internal one, the backends will replace it with their own ID
+         * when the packet is being written. We use the internal ID when we store the command
+         * to remove the need for extra conversions from external to internal form when the command
+         * is being replayed on a server.
+         */
+        replace_binary_ps_id(buffer, m_qc.current_route_info().stmt_id());
+    }
+
+    /** The SessionCommand takes ownership of the buffer */
+    mxs::SSessionCommand sescmd(new mxs::SessionCommand(buffer, m_sescmd_count++));
+    auto type = m_qc.current_route_info().type_mask();
+
+    if (qc_query_is_type(type, QUERY_TYPE_PREPARE_NAMED_STMT)
+        || qc_query_is_type(type, QUERY_TYPE_PREPARE_STMT))
+    {
+        m_qc.ps_store(buffer, sescmd->get_position());
+    }
+    else if (qc_query_is_type(type, QUERY_TYPE_DEALLOC_PREPARE))
+    {
+        mxb_assert(!mxs_mysql_is_ps_command(m_qc.current_route_info().command()));
+        m_qc.ps_erase(buffer);
+    }
+
+    return sescmd;
+}
+
 /**
  * Execute in backends used by current router session.
  * Save session variable commands to router session property
@@ -478,41 +518,12 @@ void RWSplitSession::prune_to_position(uint64_t pos)
  */
 bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint32_t type)
 {
-    if (mxs_mysql_is_ps_command(m_qc.current_route_info().command()))
-    {
-        if (command == MXS_COM_STMT_CLOSE)
-        {
-            // Remove the command from the PS mapping
-            m_qc.ps_erase(querybuf);
-            m_exec_map.erase(m_qc.current_route_info().stmt_id());
-        }
-
-        /**
-         * Replace the ID with our internal one, the backends will replace it with their own ID
-         * when the packet is being written. We use the internal ID when we store the command
-         * to remove the need for extra conversions from external to internal form when the command
-         * is being replayed on a server.
-         */
-        replace_binary_ps_id(querybuf, m_qc.current_route_info().stmt_id());
-    }
-
     /** The SessionCommand takes ownership of the buffer */
-    uint64_t id = m_sescmd_count++;
-    mxs::SSessionCommand sescmd(new mxs::SessionCommand(querybuf, id));
+    auto sescmd = create_sescmd(querybuf);
+    uint64_t id = sescmd->get_position();
     bool expecting_response = mxs_mysql_command_will_respond(command);
     int nsucc = 0;
     uint64_t lowest_pos = id;
-
-    if (qc_query_is_type(type, QUERY_TYPE_PREPARE_NAMED_STMT)
-        || qc_query_is_type(type, QUERY_TYPE_PREPARE_STMT))
-    {
-        m_qc.ps_store(querybuf, id);
-    }
-    else if (qc_query_is_type(type, QUERY_TYPE_DEALLOC_PREPARE))
-    {
-        mxb_assert(!mxs_mysql_is_ps_command(m_qc.current_route_info().command()));
-        m_qc.ps_erase(querybuf);
-    }
 
     // If no connections are open, create one and execute the session command on it
     if (m_config.lazy_connect && !have_open_connections())
