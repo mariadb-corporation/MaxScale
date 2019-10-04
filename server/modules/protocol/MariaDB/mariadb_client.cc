@@ -2393,6 +2393,11 @@ void MySQLClientProtocol::track_current_command(GWBUF* buffer)
     if (!m_large_query)
     {
         m_command = MYSQL_GET_COMMAND(data);
+
+        if (mxs_mysql_command_will_respond(m_command))
+        {
+            session_retain_statement(m_session, buffer);
+        }
     }
 
     /**
