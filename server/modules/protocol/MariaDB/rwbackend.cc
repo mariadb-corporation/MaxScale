@@ -40,6 +40,7 @@ RWBackend::~RWBackend()
 
 bool RWBackend::execute_session_command()
 {
+    MXS_INFO("Execute sescmd on '%s': %s", name(), next_session_command()->to_string().c_str());
     m_last_write = Clock::now();
     return mxs::Backend::execute_session_command();
 }
