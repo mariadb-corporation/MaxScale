@@ -689,7 +689,15 @@ static bool init_log()
         mxs_log_set_syslog_enabled(cnf->syslog);
         mxs_log_set_maxlog_enabled(cnf->maxlog);
 
-        atexit(mxs_log_finish);
+        // Since init_log() may be called more than once, we need to ensure
+        // that the cleanup-function is not registered more than once.
+        static bool atexit_registered = false;
+
+        if (!atexit_registered)
+        {
+            atexit(mxs_log_finish);
+            atexit_registered = true;
+        }
         rval = true;
     }
 
@@ -1710,7 +1718,7 @@ int main(int argc, char** argv)
         print_info("MaxScale will be run in the terminal process.");
 #if defined (SS_DEBUG)
         fprintf(stderr,
-                "\n\nSee the log from the following log files : \n\n");
+                "\nSee the log from the following log files : \n\n");
 #endif
     }
     else
