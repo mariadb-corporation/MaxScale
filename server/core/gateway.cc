@@ -189,6 +189,7 @@ static bool  init_sqlite3();
 static bool  init_base_libraries();
 static void  finish_base_libraries();
 static bool  redirect_stdout_and_stderr(const std::string& path);
+static bool  is_maxscale_already_running();
 
 #define VA_MESSAGE(message, format)\
     va_list ap ## __LINE__;\
@@ -1865,32 +1866,11 @@ int main(int argc, char** argv)
 
     if (!cnf->config_check)
     {
-        /** Check if a MaxScale process is already running */
-        if (pid_file_exists())
-        {
-            /** There is a process with the PID of the maxscale.pid file running.
-             * Assuming that this is an already running MaxScale process, we
-             * should exit with an error code.  */
-            rc = MAXSCALE_ALREADYRUNNING;
-            return rc;
-        }
-
-        /* Write process pid into MaxScale pidfile */
-        if (write_pid_file() != 0)
+        if (is_maxscale_already_running())
         {
             rc = MAXSCALE_ALREADYRUNNING;
             return rc;
         }
-
-        atexit(unlink_pidfile);
-
-        if (!lock_directories())
-        {
-            rc = MAXSCALE_ALREADYRUNNING;
-            return rc;
-        }
-
-        atexit(unlock_directories);
     }
 
     if (!this_unit.redirect_output_to.empty())
@@ -3263,6 +3243,28 @@ static bool redirect_stdout_and_stderr(const std::string& path)
     {
         log_startup_error(errno,
                           "Failed to redirect stdout (and will not attempt to redirect stderr) to file");
+    }
+
+    return rv;
+}
+
+static bool is_maxscale_already_running()
+{
+    bool rv = true;
+
+    if (!pid_file_exists())
+    {
+        if (write_pid_file() == 0)
+        {
+            atexit(unlink_pidfile);
+
+            if (lock_directories())
+            {
+                atexit(unlock_directories);
+
+                rv = false;
+            }
+        }
     }
 
     return rv;
