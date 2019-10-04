@@ -1717,10 +1717,6 @@ int main(int argc, char** argv)
     if (!this_unit.daemon_mode)
     {
         print_info("MaxScale will be run in the terminal process.");
-#if defined (SS_DEBUG)
-        fprintf(stderr,
-                "\nSee the log from the following log files : \n\n");
-#endif
     }
     else
     {
@@ -1789,6 +1785,15 @@ int main(int argc, char** argv)
         return rc;
     }
 
+    if (!cnf->config_check)
+    {
+        if (is_maxscale_already_running())
+        {
+            rc = MAXSCALE_ALREADYRUNNING;
+            return rc;
+        }
+    }
+
     if (this_unit.daemon_mode)
     {
         if (!change_cwd())
@@ -1833,6 +1838,10 @@ int main(int argc, char** argv)
 
     if (!this_unit.daemon_mode)
     {
+#if defined (SS_DEBUG)
+        fprintf(stderr,
+                "\nSee the log from the following log files : \n\n");
+#endif
         fprintf(stderr,
                 "Configuration file : %s\n"
                 "Log directory      : %s\n"
@@ -1862,15 +1871,6 @@ int main(int argc, char** argv)
         log_startup_error("Failed to initialise query classifier library.");
         rc = MAXSCALE_INTERNALERROR;
         return rc;
-    }
-
-    if (!cnf->config_check)
-    {
-        if (is_maxscale_already_running())
-        {
-            rc = MAXSCALE_ALREADYRUNNING;
-            return rc;
-        }
     }
 
     if (!this_unit.redirect_output_to.empty())
