@@ -70,7 +70,7 @@ public:
     mxs::ClientAuthenticator::ByteVec auth_token;
 };
 
-class MySQLClientProtocol : public mxs::ClientProtocolBase
+class MariaDBClientConnection : public mxs::ClientConnectionBase
 {
 public:
     /** Return type of process_special_commands() */
@@ -80,8 +80,8 @@ public:
         RES_END,        // Query handling completed, do not send to filters/router.
     };
 
-    MySQLClientProtocol(MXS_SESSION* session, mxs::Component* component,
-                        std::unique_ptr<mxs::ClientAuthenticator> authenticator);
+    MariaDBClientConnection(MXS_SESSION* session, mxs::Component* component,
+                            std::unique_ptr<mxs::ClientAuthenticator> authenticator);
 
     void ready_for_reading(DCB* dcb) override;
     void write_ready(DCB* dcb) override;
@@ -101,7 +101,7 @@ public:
 
     std::string current_db() const override;
 
-    std::unique_ptr<mxs::BackendProtocol>
+    std::unique_ptr<mxs::BackendConnection>
     create_backend_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component) override;
 
     static bool parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* kt_out,
@@ -153,19 +153,19 @@ private:
     uint8_t     m_scramble[MYSQL_SCRAMBLE_LEN]; /**< Created server scramble */
 };
 
-class MySQLBackendProtocol : public mxs::BackendProtocol
+class MariaDBBackendConnection : public mxs::BackendConnection
 {
 public:
     using Iter = mxs::Buffer::iterator;
 
-    static std::unique_ptr<MySQLBackendProtocol>
+    static std::unique_ptr<MariaDBBackendConnection>
     create(MXS_SESSION* session, mxs::Component* component,
            std::unique_ptr<mxs::BackendAuthenticator> authenticator);
 
-    static std::unique_ptr<MySQLBackendProtocol>
+    static std::unique_ptr<MariaDBBackendConnection>
     create_test_protocol(std::unique_ptr<mxs::BackendAuthenticator> authenticator);
 
-    ~MySQLBackendProtocol() override;
+    ~MariaDBBackendConnection() override;
 
     void ready_for_reading(DCB* dcb) override;
     void write_ready(DCB* dcb) override;
@@ -194,7 +194,7 @@ public:
     uint32_t server_capabilities {0};   /**< Server capabilities TODO: private */
 
 private:
-    MySQLBackendProtocol(std::unique_ptr<mxs::BackendAuthenticator> authenticator);
+    MariaDBBackendConnection(std::unique_ptr<mxs::BackendAuthenticator> authenticator);
 
     int    gw_read_and_write(DCB* dcb);
     int    backend_write_delayqueue(DCB* dcb, GWBUF* buffer);
@@ -273,16 +273,16 @@ private:
     BackendDCB*     m_dcb {nullptr};            /**< Dcb used by this protocol connection */
 };
 
-bool     is_last_ok(MySQLBackendProtocol::Iter it);
-bool     is_last_eof(MySQLBackendProtocol::Iter it);
-uint64_t get_encoded_int(MySQLBackendProtocol::Iter it);
+bool     is_last_ok(MariaDBBackendConnection::Iter it);
+bool     is_last_eof(MariaDBBackendConnection::Iter it);
+uint64_t get_encoded_int(MariaDBBackendConnection::Iter it);
 
 class MySQLProtocolModule : public mxs::ProtocolModule
 {
 public:
     static MySQLProtocolModule* create(const std::string& auth_name, const std::string& auth_opts);
 
-    std::unique_ptr<mxs::ClientProtocol>
+    std::unique_ptr<mxs::ClientConnection>
     create_client_protocol(MXS_SESSION* session, mxs::Component* component) override;
 
     std::string auth_default() const override;

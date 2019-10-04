@@ -30,17 +30,16 @@ class MXS_SESSION;
 namespace maxscale
 {
 class ProtocolModule;
-class ClientProtocol;
-class BackendProtocol;
-}
+class ClientConnection;
+class BackendConnection;
 
 /**
  * Base protocol class. Implemented by both client and backend protocols
  */
-class MXS_PROTOCOL_SESSION : public DCBHandler
+class ProtocolConnection : public DCBHandler
 {
 public:
-    virtual ~MXS_PROTOCOL_SESSION() = default;
+    virtual ~ProtocolConnection() = default;
 
     /**
      * Write data to a network socket
@@ -62,7 +61,7 @@ public:
 
     virtual void set_dcb(DCB* dcb) = 0;
 };
-
+}
 /**
  * Protocol module API
  */

@@ -243,7 +243,7 @@ int MariaDBClientAuthenticator::authenticate(DCB* generic_dcb)
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
 
     int auth_ret = MXS_AUTH_SSL_COMPLETE;
-    auto protocol = static_cast<MySQLClientProtocol*>(dcb->protocol());
+    auto protocol = static_cast<MariaDBClientConnection*>(dcb->protocol());
     auto client_data = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
     if (*client_data->user)
     {

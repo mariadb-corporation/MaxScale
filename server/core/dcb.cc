@@ -61,8 +61,8 @@
 using maxscale::RoutingWorker;
 using maxbase::Worker;
 using std::string;
-using mxs::ClientProtocol;
-using mxs::BackendProtocol;
+using mxs::ClientConnection;
+using mxs::BackendConnection;
 
 #define DCB_BELOW_LOW_WATER(x)    ((x)->m_low_water && (x)->m_writeqlen < (x)->m_low_water)
 #define DCB_ABOVE_HIGH_WATER(x)   ((x)->m_high_water && (x)->m_writeqlen > (x)->m_high_water)
@@ -1710,7 +1710,7 @@ ClientDCB::ClientDCB(int fd,
                      const std::string& remote,
                      const sockaddr_storage& ip,
                      MXS_SESSION* session,
-                     std::unique_ptr<ClientProtocol> protocol,
+                     std::unique_ptr<ClientConnection> protocol,
                      DCB::Manager* manager)
     : ClientDCB(fd,
                 remote,
@@ -1727,7 +1727,7 @@ ClientDCB::ClientDCB(int fd,
                      const sockaddr_storage& ip,
                      DCB::Role role,
                      MXS_SESSION* session,
-                     std::unique_ptr<ClientProtocol> protocol,
+                     std::unique_ptr<ClientConnection> protocol,
                      Manager* manager)
     : DCB(fd, remote, role, session, protocol.get(), manager)
     , m_ip(ip)
@@ -1772,7 +1772,7 @@ ClientDCB* ClientDCB::create(int fd,
                              const std::string& remote,
                              const sockaddr_storage& ip,
                              MXS_SESSION* session,
-                             std::unique_ptr<ClientProtocol> protocol,
+                             std::unique_ptr<ClientConnection> protocol,
                              DCB::Manager* manager)
 {
     ClientDCB* dcb = new(std::nothrow) ClientDCB(fd, remote, ip, session, std::move(protocol), manager);
@@ -1784,7 +1784,7 @@ ClientDCB* ClientDCB::create(int fd,
     return dcb;
 }
 
-mxs::ClientProtocol* ClientDCB::protocol() const
+mxs::ClientConnection* ClientDCB::protocol() const
 {
     return m_protocol.get();
 }
@@ -1898,8 +1898,8 @@ BackendDCB* BackendDCB::create(SERVER* srv,
 {
     auto client_dcb = session->client_connection()->dcb();
     auto client_proto = client_dcb->protocol();
-    std::unique_ptr<BackendProtocol> protocol_session;
-    if (client_proto->capabilities() & mxs::ClientProtocol::CAP_BACKEND)
+    std::unique_ptr<BackendConnection> protocol_session;
+    if (client_proto->capabilities() & mxs::ClientConnection::CAP_BACKEND)
     {
         protocol_session = client_proto->create_backend_protocol(session, srv, component);
         if (!protocol_session)
@@ -2119,7 +2119,7 @@ void BackendDCB::hangup(const SERVER* server)
     RoutingWorker::broadcast_message(MXB_WORKER_MSG_CALL, arg1, arg2);
 }
 
-mxs::BackendProtocol* BackendDCB::protocol() const
+mxs::BackendConnection* BackendDCB::protocol() const
 {
     return m_protocol.get();
 }
@@ -2207,7 +2207,7 @@ int BackendDCB::ssl_handshake()
 }
 
 BackendDCB::BackendDCB(SERVER* server, int fd, MXS_SESSION* session,
-                       std::unique_ptr<mxs::BackendProtocol> protocol,
+                       std::unique_ptr<mxs::BackendConnection> protocol,
                        DCB::Manager* manager)
     : DCB(fd, server->address, DCB::Role::BACKEND, session, protocol.get(), manager)
     , m_server(server)
@@ -2391,17 +2391,17 @@ DCB* dcb_get_current()
     return this_thread.current_dcb;
 }
 
-void mxs::ClientProtocolBase::set_dcb(DCB* dcb)
+void mxs::ClientConnectionBase::set_dcb(DCB* dcb)
 {
     m_dcb = static_cast<ClientDCB*>(dcb);
 }
 
-ClientDCB* mxs::ClientProtocolBase::dcb()
+ClientDCB* mxs::ClientConnectionBase::dcb()
 {
     return m_dcb;
 }
 
-const ClientDCB* mxs::ClientProtocolBase::dcb() const
+const ClientDCB* mxs::ClientConnectionBase::dcb() const
 {
     return m_dcb;
 }

@@ -214,9 +214,9 @@ public:
 
     const char* client_remote() const;
 
-    virtual mxs::ClientProtocol* client_connection() = 0;
-    virtual const mxs::ClientProtocol* client_connection() const = 0;
-    virtual void set_client_connection(mxs::ClientProtocol* client_conn) = 0;
+    virtual mxs::ClientConnection* client_connection() = 0;
+    virtual const mxs::ClientConnection* client_connection() const = 0;
+    virtual void set_client_connection(mxs::ClientConnection* client_conn) = 0;
 
 protected:
     State       m_state;                   /**< Current descriptor state */

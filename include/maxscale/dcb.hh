@@ -38,8 +38,8 @@ class SERVICE;
 
 namespace maxscale
 {
-class ClientProtocol;
-class BackendProtocol;
+class ClientConnection;
+class BackendConnection;
 class SSLContext;
 }
 
@@ -206,7 +206,7 @@ public:
     /**
      * @return The protocol of the DCB.
      */
-    virtual MXS_PROTOCOL_SESSION* protocol() const = 0;
+    virtual mxs::ProtocolConnection* protocol() const = 0;
 
     /**
      * Clears the DCB; all queues and callbacks are freed and the session
@@ -647,7 +647,7 @@ public:
            const std::string& remote,
            const sockaddr_storage& ip,
            MXS_SESSION* session,
-           std::unique_ptr<mxs::ClientProtocol> protocol,
+           std::unique_ptr<mxs::ClientConnection> protocol,
            DCB::Manager* manager = nullptr);
 
     const sockaddr_storage& ip() const
@@ -662,7 +662,7 @@ public:
      */
     int port() const;
 
-    mxs::ClientProtocol* protocol() const override;
+    mxs::ClientConnection* protocol() const override;
 
     /**
      * Accept an SSL connection and perform the SSL authentication handshake.
@@ -682,7 +682,7 @@ protected:
               const sockaddr_storage& ip,
               DCB::Role role,
               MXS_SESSION* session,
-              std::unique_ptr<mxs::ClientProtocol> protocol,
+              std::unique_ptr<mxs::ClientConnection> protocol,
               Manager* manager);
 
     // Only for Mock DCB.
@@ -693,14 +693,14 @@ private:
               const std::string& remote,
               const sockaddr_storage& ip,
               MXS_SESSION* session,
-              std::unique_ptr<mxs::ClientProtocol> protocol,
+              std::unique_ptr<mxs::ClientConnection> protocol,
               DCB::Manager* manager);
 
     bool release_from(MXS_SESSION* session) override;
     bool prepare_for_destruction() override;
 
     sockaddr_storage                          m_ip;             /**< remote IPv4/IPv6 address */
-    std::unique_ptr<mxs::ClientProtocol>      m_protocol;       /**< The protocol session */
+    std::unique_ptr<mxs::ClientConnection>      m_protocol;       /**< The protocol session */
 };
 
 class BackendDCB : public DCB
@@ -735,7 +735,7 @@ public:
      */
     void reset(MXS_SESSION* session);
 
-    mxs::BackendProtocol* protocol() const override;
+    mxs::BackendConnection* protocol() const override;
 
     /**
      * Hangup all BackendDCBs connected to a particular server.
@@ -764,7 +764,7 @@ public:
 
 private:
     BackendDCB(SERVER* server, int fd, MXS_SESSION* session,
-               std::unique_ptr<mxs::BackendProtocol> protocol,
+               std::unique_ptr<mxs::BackendConnection> protocol,
                DCB::Manager* manager);
 
     static BackendDCB* create(SERVER* server,
@@ -780,7 +780,7 @@ private:
 
 
     SERVER* const                         m_server;   /**< The associated backend server */
-    std::unique_ptr<mxs::BackendProtocol> m_protocol; /**< The protocol session */
+    std::unique_ptr<mxs::BackendConnection> m_protocol; /**< The protocol session */
 };
 
 namespace maxscale

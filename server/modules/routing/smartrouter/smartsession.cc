@@ -426,7 +426,7 @@ bool SmartRouterSession::write_split_packets(GWBUF* pBuf)
 
 void SmartRouterSession::kill_all_others(const Cluster& cluster)
 {
-    auto protocol = static_cast<MySQLClientProtocol*>(m_pClient_dcb->protocol());
+    auto protocol = static_cast<MariaDBClientConnection*>(m_pClient_dcb->protocol());
     protocol->mxs_mysql_execute_kill(m_pSession, m_pSession->id(), KT_QUERY);
 }
 

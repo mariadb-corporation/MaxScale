@@ -605,7 +605,7 @@ mysql_tx_state_t parse_trx_state(const char* str)
     return (mysql_tx_state_t)s;
 }
 
-using Iter = MySQLBackendProtocol::Iter;
+using Iter = MariaDBBackendConnection::Iter;
 
 uint64_t get_encoded_int(Iter it)
 {

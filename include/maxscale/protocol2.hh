@@ -22,8 +22,8 @@ class SERVICE;
 
 namespace maxscale
 {
-class ClientProtocol;
-class BackendProtocol;
+class ClientConnection;
+class BackendConnection;
 
 class ProtocolModule
 {
@@ -36,7 +36,7 @@ public:
      *
      * @return New protocol session or null on error
      */
-    virtual std::unique_ptr<mxs::ClientProtocol>
+    virtual std::unique_ptr<mxs::ClientConnection>
     create_client_protocol(MXS_SESSION* session, mxs::Component* component) = 0;
 
     /**
@@ -90,9 +90,9 @@ public:
 };
 
 /**
- * Client protocol class
+ * Client protocol connection interface. All protocols must implement this.
  */
-class ClientProtocol : public MXS_PROTOCOL_SESSION
+class ClientConnection : public ProtocolConnection
 {
 public:
     enum Capabilities
@@ -100,7 +100,7 @@ public:
         CAP_BACKEND = (1 << 0)      // The protocol supports backend communication
     };
 
-    virtual ~ClientProtocol() = default;
+    virtual ~ClientConnection() = default;
 
     /**
      * Initialize a connection.
@@ -138,7 +138,7 @@ public:
      *
      * @return New protocol session or null on error
      */
-    virtual std::unique_ptr<BackendProtocol>
+    virtual std::unique_ptr<BackendConnection>
     create_backend_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component)
     {
         mxb_assert(!true);
@@ -160,9 +160,9 @@ public:
 };
 
 /**
- * Partial client protocol implementation. More fields and functions may follow.
+ * Partial client protocol implementation. More fields and functions may be added later.
  */
-class ClientProtocolBase : public ClientProtocol
+class ClientConnectionBase : public ClientConnection
 {
 public:
     void set_dcb(DCB* dcb) override;
@@ -173,12 +173,12 @@ protected:
 };
 
 /**
- * Backend protocol class
+ * Backend protocol connection interface. Only protocols with backend support need to implement this.
  */
-class BackendProtocol : public MXS_PROTOCOL_SESSION
+class BackendConnection : public mxs::ProtocolConnection
 {
 public:
-    virtual ~BackendProtocol() = default;
+    virtual ~BackendConnection() = default;
 
     /**
      * Initialize a connection.

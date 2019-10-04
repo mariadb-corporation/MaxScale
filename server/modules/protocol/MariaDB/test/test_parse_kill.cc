@@ -36,7 +36,7 @@ int test_one_query(const char* query,
         result_tid = expected_tid;
         result_kt = (kill_type_t)expected_kt;
     }
-    bool success = MySQLClientProtocol::parse_kill_query(query_copy, &result_tid, &result_kt, &user);
+    bool success = MariaDBClientConnection::parse_kill_query(query_copy, &result_tid, &result_kt, &user);
     MXS_FREE(query_copy);
 
     if (success == should_succeed && result_tid == expected_tid

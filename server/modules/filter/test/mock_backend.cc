@@ -187,7 +187,7 @@ public:
     }
 
 private:
-    class Protocol : public mxs::ClientProtocol
+    class Protocol : public mxs::ClientConnection
     {
     public:
         Protocol(ResultSetDCB* pOwner)

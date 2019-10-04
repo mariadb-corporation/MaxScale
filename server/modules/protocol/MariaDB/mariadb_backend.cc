@@ -45,7 +45,7 @@ static bool get_ip_string_and_port(struct sockaddr_storage* sa,
  *
  * @param authenticator Backend authenticator
  */
-MySQLBackendProtocol::MySQLBackendProtocol(std::unique_ptr<mxs::BackendAuthenticator> authenticator)
+MariaDBBackendConnection::MariaDBBackendConnection(std::unique_ptr<mxs::BackendAuthenticator> authenticator)
     : m_authenticator(std::move(authenticator))
 {
 }
@@ -63,12 +63,12 @@ MySQLBackendProtocol::MySQLBackendProtocol(std::unique_ptr<mxs::BackendAuthentic
  *******************************************************************************
  ******************************************************************************/
 
-std::unique_ptr<MySQLBackendProtocol>
-MySQLBackendProtocol::create(MXS_SESSION* session, mxs::Component* component,
-                             std::unique_ptr<mxs::BackendAuthenticator> authenticator)
+std::unique_ptr<MariaDBBackendConnection>
+MariaDBBackendConnection::create(MXS_SESSION* session, mxs::Component* component,
+                                 std::unique_ptr<mxs::BackendAuthenticator> authenticator)
 {
-    std::unique_ptr<MySQLBackendProtocol> backend_conn(
-        new(std::nothrow) MySQLBackendProtocol(std::move(authenticator)));
+    std::unique_ptr<MariaDBBackendConnection> backend_conn(
+        new(std::nothrow) MariaDBBackendConnection(std::move(authenticator)));
     if (backend_conn)
     {
         backend_conn->assign_session(session, component);
@@ -76,15 +76,15 @@ MySQLBackendProtocol::create(MXS_SESSION* session, mxs::Component* component,
     return backend_conn;
 }
 
-std::unique_ptr<MySQLBackendProtocol>
-MySQLBackendProtocol::create_test_protocol(std::unique_ptr<mxs::BackendAuthenticator> authenticator)
+std::unique_ptr<MariaDBBackendConnection>
+MariaDBBackendConnection::create_test_protocol(std::unique_ptr<mxs::BackendAuthenticator> authenticator)
 {
-    std::unique_ptr<MySQLBackendProtocol> backend_conn(
-        new(std::nothrow) MySQLBackendProtocol(std::move(authenticator)));
+    std::unique_ptr<MariaDBBackendConnection> backend_conn(
+        new(std::nothrow) MariaDBBackendConnection(std::move(authenticator)));
     return backend_conn;
 }
 
-bool MySQLBackendProtocol::init_connection()
+bool MariaDBBackendConnection::init_connection()
 {
     if (m_dcb->server()->proxy_protocol)
     {
@@ -94,14 +94,14 @@ bool MySQLBackendProtocol::init_connection()
     return true;
 }
 
-void MySQLBackendProtocol::finish_connection()
+void MariaDBBackendConnection::finish_connection()
 {
     mxb_assert(m_dcb->handler());
     /** Send COM_QUIT to the backend being closed */
     m_dcb->writeq_append(mysql_create_com_quit(nullptr, 0));
 }
 
-bool MySQLBackendProtocol::reuse_connection(BackendDCB* dcb, mxs::Component* upstream)
+bool MariaDBBackendConnection::reuse_connection(BackendDCB* dcb, mxs::Component* upstream)
 {
     bool rv = false;
     mxb_assert(dcb->session() && !dcb->readq() && !dcb->delayq() && !dcb->writeq());
@@ -170,7 +170,7 @@ bool is_error_response(GWBUF* buffer)
  * @param dcb Backend DCB where authentication failed
  * @param buffer Buffer containing the response from the backend
  */
-void MySQLBackendProtocol::handle_error_response(DCB* plain_dcb, GWBUF* buffer)
+void MariaDBBackendConnection::handle_error_response(DCB* plain_dcb, GWBUF* buffer)
 {
     mxb_assert(plain_dcb->role() == DCB::Role::BACKEND);
     BackendDCB* dcb = static_cast<BackendDCB*>(plain_dcb);
@@ -224,7 +224,7 @@ void MySQLBackendProtocol::handle_error_response(DCB* plain_dcb, GWBUF* buffer)
  * @param buffer Buffer containing the server's complete handshake
  * @return MXS_AUTH_STATE_HANDSHAKE_FAILED on failure.
  */
-mxs_auth_state_t MySQLBackendProtocol::handle_server_response(DCB* generic_dcb, GWBUF* buffer)
+mxs_auth_state_t MariaDBBackendConnection::handle_server_response(DCB* generic_dcb, GWBUF* buffer)
 {
     auto dcb = static_cast<BackendDCB*>(generic_dcb);
     mxs_auth_state_t rval = protocol_auth_state == MXS_AUTH_STATE_CONNECTED ?
@@ -259,7 +259,7 @@ mxs_auth_state_t MySQLBackendProtocol::handle_server_response(DCB* generic_dcb, 
  * @param dcb    The backend DCB to write to
  * @param buffer Buffer that will be written
  */
-void MySQLBackendProtocol::prepare_for_write(DCB* dcb, GWBUF* buffer)
+void MariaDBBackendConnection::prepare_for_write(DCB* dcb, GWBUF* buffer)
 {
     mxb_assert(dcb->session());
 
@@ -293,7 +293,7 @@ void MySQLBackendProtocol::prepare_for_write(DCB* dcb, GWBUF* buffer)
  *******************************************************************************
  ******************************************************************************/
 
-void MySQLBackendProtocol::ready_for_reading(DCB* event_dcb)
+void MariaDBBackendConnection::ready_for_reading(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);     // The protocol should only handle its own events.
     auto dcb = m_dcb;
@@ -390,7 +390,7 @@ void MySQLBackendProtocol::ready_for_reading(DCB* event_dcb)
     return;
 }
 
-void MySQLBackendProtocol::do_handle_error(DCB* dcb, const char* errmsg)
+void MariaDBBackendConnection::do_handle_error(DCB* dcb, const char* errmsg)
 {
     mxb_assert(!dcb->hanged_up());
     GWBUF* errbuf = mysql_create_custom_error(1, 0, errmsg);
@@ -411,7 +411,7 @@ void MySQLBackendProtocol::do_handle_error(DCB* dcb, const char* errmsg)
  *
  * @param dcb               Descriptor control block for backend server
  */
-void MySQLBackendProtocol::gw_reply_on_error(DCB* dcb)
+void MariaDBBackendConnection::gw_reply_on_error(DCB* dcb)
 {
     auto err = mysql_create_custom_error(1, 0, "Authentication with backend failed. Session will be closed.");
     dcb->session()->terminate(err);
@@ -423,7 +423,7 @@ void MySQLBackendProtocol::gw_reply_on_error(DCB* dcb)
  * @param Backend DCB
  * @return True if session is ready for reply routing
  */
-bool MySQLBackendProtocol::session_ok_to_route(DCB* dcb)
+bool MariaDBBackendConnection::session_ok_to_route(DCB* dcb)
 {
     bool rval = false;
     auto session = dcb->session();
@@ -432,7 +432,7 @@ bool MySQLBackendProtocol::session_ok_to_route(DCB* dcb)
         ClientDCB* client_dcb = session->client_connection()->dcb();
         if (client_dcb && client_dcb->state() == DCB::State::POLLING)
         {
-            auto client_protocol = static_cast<MySQLClientProtocol*>(client_dcb->protocol());
+            auto client_protocol = static_cast<MariaDBClientConnection*>(client_dcb->protocol());
             if (client_protocol)
             {
                 if (client_protocol->protocol_auth_state == MXS_AUTH_STATE_COMPLETE)
@@ -451,7 +451,7 @@ bool MySQLBackendProtocol::session_ok_to_route(DCB* dcb)
     return rval;
 }
 
-bool MySQLBackendProtocol::expecting_text_result()
+bool MariaDBBackendConnection::expecting_text_result()
 {
     /**
      * The addition of COM_STMT_FETCH to the list of commands that produce
@@ -467,12 +467,12 @@ bool MySQLBackendProtocol::expecting_text_result()
     return cmd == MXS_COM_QUERY || cmd == MXS_COM_STMT_EXECUTE || cmd == MXS_COM_STMT_FETCH;
 }
 
-bool MySQLBackendProtocol::expecting_ps_response()
+bool MariaDBBackendConnection::expecting_ps_response()
 {
     return m_reply.command() == MXS_COM_STMT_PREPARE;
 }
 
-bool MySQLBackendProtocol::complete_ps_response(GWBUF* buffer)
+bool MariaDBBackendConnection::complete_ps_response(GWBUF* buffer)
 {
     MXS_PS_RESPONSE resp;
     bool rval = false;
@@ -530,7 +530,7 @@ static inline bool auth_change_requested(GWBUF* buf)
            && gwbuf_length(buf) > MYSQL_EOF_PACKET_LEN;
 }
 
-bool MySQLBackendProtocol::handle_auth_change_response(GWBUF* reply, DCB* dcb)
+bool MariaDBBackendConnection::handle_auth_change_response(GWBUF* reply, DCB* dcb)
 {
     bool rval = false;
 
@@ -559,7 +559,7 @@ bool MySQLBackendProtocol::handle_auth_change_response(GWBUF* reply, DCB* dcb)
  * @param dcb           Descriptor control block for backend server
  * @return 0 is fail, 1 is success
  */
-int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
+int MariaDBBackendConnection::gw_read_and_write(DCB* dcb)
 {
     GWBUF* read_buffer = NULL;
     MXS_SESSION* session = dcb->session();
@@ -883,7 +883,7 @@ int MySQLBackendProtocol::gw_read_and_write(DCB* dcb)
     return return_code;
 }
 
-void MySQLBackendProtocol::write_ready(DCB* event_dcb)
+void MariaDBBackendConnection::write_ready(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);
     auto dcb = m_dcb;
@@ -924,7 +924,7 @@ void MySQLBackendProtocol::write_ready(DCB* event_dcb)
     return;
 }
 
-int MySQLBackendProtocol::handle_persistent_connection(BackendDCB* dcb, GWBUF* queue)
+int MariaDBBackendConnection::handle_persistent_connection(BackendDCB* dcb, GWBUF* queue)
 {
     auto protocol = this;
     int rc = 0;
@@ -961,7 +961,7 @@ int MySQLBackendProtocol::handle_persistent_connection(BackendDCB* dcb, GWBUF* q
  * @param queue Queue of buffers to write
  * @return      0 on failure, 1 on success
  */
-int32_t MySQLBackendProtocol::write(GWBUF* queue)
+int32_t MariaDBBackendConnection::write(GWBUF* queue)
 {
     BackendDCB* dcb = m_dcb;
     auto backend_protocol = this;
@@ -1052,7 +1052,7 @@ int32_t MySQLBackendProtocol::write(GWBUF* queue)
  * closed and call DCB close function which triggers closing router session
  * and related backends (if any exists.
  */
-void MySQLBackendProtocol::error(DCB* event_dcb)
+void MariaDBBackendConnection::error(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);
     auto dcb = m_dcb;
@@ -1095,7 +1095,7 @@ void MySQLBackendProtocol::error(DCB* event_dcb)
  * @param event_dcb The current Backend DCB
  * @return 1 always
  */
-void MySQLBackendProtocol::hangup(DCB* event_dcb)
+void MariaDBBackendConnection::hangup(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);
     mxb_assert(!m_dcb->is_closed());
@@ -1131,7 +1131,7 @@ void MySQLBackendProtocol::hangup(DCB* event_dcb)
  * @param dcb   The current backend DCB
  * @param queue Input data in the GWBUF struct
  */
-void MySQLBackendProtocol::backend_set_delayqueue(DCB* dcb, GWBUF* queue)
+void MariaDBBackendConnection::backend_set_delayqueue(DCB* dcb, GWBUF* queue)
 {
     /* Append data */
     dcb->delayq_append(queue);
@@ -1145,7 +1145,7 @@ void MySQLBackendProtocol::backend_set_delayqueue(DCB* dcb, GWBUF* queue)
  * @param dcb The current backend DCB
  * @return The dcb_write status
  */
-int MySQLBackendProtocol::backend_write_delayqueue(DCB* plain_dcb, GWBUF* buffer)
+int MariaDBBackendConnection::backend_write_delayqueue(DCB* plain_dcb, GWBUF* buffer)
 {
     mxb_assert(plain_dcb->role() == DCB::Role::BACKEND);
     BackendDCB* dcb = static_cast<BackendDCB*>(plain_dcb);
@@ -1190,7 +1190,7 @@ int MySQLBackendProtocol::backend_write_delayqueue(DCB* plain_dcb, GWBUF* buffer
  * @param queue         The GWBUF containing the COM_CHANGE_USER receveid
  * @return 1 on success and 0 on failure
  */
-int MySQLBackendProtocol::gw_change_user(DCB* backend, MXS_SESSION* in_session, GWBUF* queue)
+int MariaDBBackendConnection::gw_change_user(DCB* backend, MXS_SESSION* in_session, GWBUF* queue)
 {
     gwbuf_free(queue);
     return gw_send_change_user_to_backend(backend);
@@ -1203,7 +1203,7 @@ int MySQLBackendProtocol::gw_change_user(DCB* backend, MXS_SESSION* in_session, 
  * @return GWBUF buffer consisting of COM_CHANGE_USER packet
  * @note the function doesn't fail
  */
-GWBUF* MySQLBackendProtocol::gw_create_change_user_packet(const MYSQL_session* mses)
+GWBUF* MariaDBBackendConnection::gw_create_change_user_packet(const MYSQL_session* mses)
 {
     GWBUF* buffer;
     uint8_t* payload = NULL;
@@ -1353,7 +1353,7 @@ GWBUF* MySQLBackendProtocol::gw_create_change_user_packet(const MYSQL_session* m
  * @return 1 on success, 0 on failure
  */
 int
-MySQLBackendProtocol::gw_send_change_user_to_backend(DCB* backend)
+MariaDBBackendConnection::gw_send_change_user_to_backend(DCB* backend)
 {
     GWBUF* buffer = gw_create_change_user_packet(m_client_data);
     int rc = 0;
@@ -1373,7 +1373,7 @@ MySQLBackendProtocol::gw_send_change_user_to_backend(DCB* backend)
  *
  * @param backend_dcb The target dcb.
  */
-void MySQLBackendProtocol::gw_send_proxy_protocol_header(BackendDCB* backend_dcb)
+void MariaDBBackendConnection::gw_send_proxy_protocol_header(BackendDCB* backend_dcb)
 {
     // TODO: Add support for chained proxies. Requires reading the client header.
 
@@ -1509,7 +1509,7 @@ static bool get_ip_string_and_port(struct sockaddr_storage* sa,
     return success;
 }
 
-bool MySQLBackendProtocol::established()
+bool MariaDBBackendConnection::established()
 {
     auto proto = this;
     return proto->protocol_auth_state == MXS_AUTH_STATE_COMPLETE
@@ -1517,7 +1517,7 @@ bool MySQLBackendProtocol::established()
            && !proto->m_stored_query;
 }
 
-json_t* MySQLBackendProtocol::diagnostics_json()
+json_t* MariaDBBackendConnection::diagnostics_json()
 {
     auto proto = this;
     json_t* obj = json_object();
@@ -1525,7 +1525,7 @@ json_t* MySQLBackendProtocol::diagnostics_json()
     return obj;
 }
 
-int MySQLBackendProtocol::mysql_send_com_quit(DCB* dcb, int packet_number, GWBUF* bufparam)
+int MariaDBBackendConnection::mysql_send_com_quit(DCB* dcb, int packet_number, GWBUF* bufparam)
 {
     mxb_assert(packet_number <= 255);
 
@@ -1549,7 +1549,7 @@ int MySQLBackendProtocol::mysql_send_com_quit(DCB* dcb, int packet_number, GWBUF
  * @param readbuf Pointer to a buffer where the data is stored
  * @return True on success, false if an error occurred while data was being read
  */
-bool MySQLBackendProtocol::read_complete_packet(DCB* dcb, GWBUF** readbuf)
+bool MariaDBBackendConnection::read_complete_packet(DCB* dcb, GWBUF** readbuf)
 {
     bool rval = false;
     GWBUF* localbuf = NULL;
@@ -1582,7 +1582,7 @@ bool MySQLBackendProtocol::read_complete_packet(DCB* dcb, GWBUF** readbuf)
  * @param buffer Buffer to check
  * @return True if the @c buffer contains the start of a result set
  */
-bool MySQLBackendProtocol::mxs_mysql_is_result_set(GWBUF* buffer)
+bool MariaDBBackendConnection::mxs_mysql_is_result_set(GWBUF* buffer)
 {
     bool rval = false;
     uint8_t cmd;
@@ -1616,7 +1616,7 @@ bool MySQLBackendProtocol::mxs_mysql_is_result_set(GWBUF* buffer)
  *               buffer.
  * @return All complete packets that were in `buffer`
  */
-GWBUF* MySQLBackendProtocol::track_response(GWBUF** buffer)
+GWBUF* MariaDBBackendConnection::track_response(GWBUF** buffer)
 {
     GWBUF* rval = process_packets(buffer);
 
@@ -1634,7 +1634,7 @@ GWBUF* MySQLBackendProtocol::track_response(GWBUF** buffer)
  * @param dcb  Backend DCB
  * @return Authentication state after sending handshake response
  */
-mxs_auth_state_t MySQLBackendProtocol::gw_send_backend_auth(BackendDCB* dcb)
+mxs_auth_state_t MariaDBBackendConnection::gw_send_backend_auth(BackendDCB* dcb)
 {
     mxs_auth_state_t rval = MXS_AUTH_STATE_FAILED;
 
@@ -1673,7 +1673,7 @@ mxs_auth_state_t MySQLBackendProtocol::gw_send_backend_auth(BackendDCB* dcb)
  * @param dcb  Backend DCB
  * @return true on success, false on failure
  */
-bool MySQLBackendProtocol::gw_read_backend_handshake(DCB* dcb, GWBUF* buffer)
+bool MariaDBBackendConnection::gw_read_backend_handshake(DCB* dcb, GWBUF* buffer)
 {
     bool rval = false;
     uint8_t* payload = GWBUF_DATA(buffer) + 4;
@@ -1689,7 +1689,7 @@ bool MySQLBackendProtocol::gw_read_backend_handshake(DCB* dcb, GWBUF* buffer)
 /**
  * Sends a response for an AuthSwitchRequest to the default auth plugin
  */
-int MySQLBackendProtocol::send_mysql_native_password_response(DCB* dcb)
+int MariaDBBackendConnection::send_mysql_native_password_response(DCB* dcb)
 {
     uint8_t* curr_passwd = memcmp(m_client_data->client_sha1, null_client_sha1, MYSQL_SCRAMBLE_LEN) ?
         m_client_data->client_sha1 : null_client_sha1;
@@ -1703,7 +1703,7 @@ int MySQLBackendProtocol::send_mysql_native_password_response(DCB* dcb)
     return dcb->writeq_append(buffer);
 }
 
-void MySQLBackendProtocol::mxs_mysql_get_session_track_info(GWBUF* buff)
+void MariaDBBackendConnection::mxs_mysql_get_session_track_info(GWBUF* buff)
 {
     auto proto = this;
     size_t offset = 0;
@@ -1741,7 +1741,7 @@ void MySQLBackendProtocol::mxs_mysql_get_session_track_info(GWBUF* buff)
  *  @param packet_offset  Ok packet offset in this buff
  *  @param packet_len     Ok packet lengh
  */
-void MySQLBackendProtocol::mxs_mysql_parse_ok_packet(GWBUF* buff, size_t packet_offset, size_t packet_len)
+void MariaDBBackendConnection::mxs_mysql_parse_ok_packet(GWBUF* buff, size_t packet_offset, size_t packet_len)
 {
     uint8_t local_buf[packet_len];
     uint8_t* ptr = local_buf;
@@ -1832,7 +1832,7 @@ void MySQLBackendProtocol::mxs_mysql_parse_ok_packet(GWBUF* buff, size_t packet_
  * @return 0 on success, < 0 on failure
  *
  */
-int MySQLBackendProtocol::gw_decode_mysql_server_handshake(uint8_t* payload)
+int MariaDBBackendConnection::gw_decode_mysql_server_handshake(uint8_t* payload)
 {
     auto conn = this;
     uint8_t* server_version_end = NULL;
@@ -1930,8 +1930,8 @@ int MySQLBackendProtocol::gw_decode_mysql_server_handshake(uint8_t* payload)
  *
  * @return Generated response packet
  */
-GWBUF* MySQLBackendProtocol::gw_generate_auth_response(bool with_ssl, bool ssl_established,
-                                                       uint64_t service_capabilities)
+GWBUF* MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool ssl_established,
+                                                           uint64_t service_capabilities)
 {
     auto client = m_client_data;
     uint8_t client_capabilities[4] = {0, 0, 0, 0};
@@ -2040,7 +2040,7 @@ GWBUF* MySQLBackendProtocol::gw_generate_auth_response(bool with_ssl, bool ssl_e
  * @return Bit mask (32 bits)
  * @note Capability bits are defined in maxscale/protocol/mysql.h
  */
-uint32_t MySQLBackendProtocol::create_capabilities(bool with_ssl, bool db_specified, uint64_t capabilities)
+uint32_t MariaDBBackendConnection::create_capabilities(bool with_ssl, bool db_specified, uint64_t capabilities)
 {
     uint32_t final_capabilities;
 
@@ -2082,7 +2082,7 @@ uint32_t MySQLBackendProtocol::create_capabilities(bool with_ssl, bool db_specif
     return final_capabilities;
 }
 
-GWBUF* MySQLBackendProtocol::process_packets(GWBUF** result)
+GWBUF* MariaDBBackendConnection::process_packets(GWBUF** result)
 {
     mxs::Buffer buffer(*result);
     auto it = buffer.begin();
@@ -2134,7 +2134,7 @@ GWBUF* MySQLBackendProtocol::process_packets(GWBUF** result)
     return gwbuf_split(result, bytes_used);
 }
 
-void MySQLBackendProtocol::process_one_packet(Iter it, Iter end, uint32_t len)
+void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t len)
 {
     uint8_t cmd = *it;
     switch (m_reply.state())
@@ -2227,7 +2227,7 @@ void MySQLBackendProtocol::process_one_packet(Iter it, Iter end, uint32_t len)
  * @param it  Start of the packet payload
  * @param end Past-the-end iterator of the payload
  */
-void MySQLBackendProtocol::process_ps_response(Iter it, Iter end)
+void MariaDBBackendConnection::process_ps_response(Iter it, Iter end)
 {
     mxb_assert(*it == MYSQL_REPLY_OK);
     ++it;
@@ -2267,7 +2267,7 @@ void MySQLBackendProtocol::process_ps_response(Iter it, Iter end)
     set_reply_state(m_ps_packets == 0 ? ReplyState::DONE : ReplyState::PREPARE);
 }
 
-void MySQLBackendProtocol::process_reply_start(Iter it, Iter end)
+void MariaDBBackendConnection::process_reply_start(Iter it, Iter end)
 {
     if (m_reply.command() == MXS_COM_BINLOG_DUMP)
     {
@@ -2290,7 +2290,7 @@ void MySQLBackendProtocol::process_reply_start(Iter it, Iter end)
     }
 }
 
-void MySQLBackendProtocol::process_result_start(Iter it, Iter end)
+void MariaDBBackendConnection::process_result_start(Iter it, Iter end)
 {
     uint8_t cmd = *it;
 
@@ -2342,7 +2342,7 @@ void MySQLBackendProtocol::process_result_start(Iter it, Iter end)
  * @param it   Iterator that points to the first byte of the error code in an error packet.
  * @param end  Iterator pointing one past the end of the error packet.
  */
-void MySQLBackendProtocol::update_error(Iter it, Iter end)
+void MariaDBBackendConnection::update_error(Iter it, Iter end)
 {
     uint16_t code = 0;
     code |= (*it++);
@@ -2357,12 +2357,12 @@ void MySQLBackendProtocol::update_error(Iter it, Iter end)
     m_reply.set_error(code, sql_state_begin, sql_state_end, message_begin, message_end);
 }
 
-uint64_t MySQLBackendProtocol::thread_id() const
+uint64_t MariaDBBackendConnection::thread_id() const
 {
     return m_thread_id;
 }
 
-void MySQLBackendProtocol::assign_session(MXS_SESSION* session, mxs::Component* upstream)
+void MariaDBBackendConnection::assign_session(MXS_SESSION* session, mxs::Component* upstream)
 {
     m_session = session;
     m_client_data = static_cast<MYSQL_session*>(m_session->protocol_data());
@@ -2376,7 +2376,7 @@ void MySQLBackendProtocol::assign_session(MXS_SESSION* session, mxs::Component* 
  * Inspects the query and tracks the current command being executed. Also handles detection of
  * multi-packet requests and the special handling that various commands need.
  */
-void MySQLBackendProtocol::track_query(GWBUF* buffer)
+void MariaDBBackendConnection::track_query(GWBUF* buffer)
 {
     mxb_assert(gwbuf_is_contiguous(buffer));
     uint8_t* data = GWBUF_DATA(buffer);
@@ -2428,22 +2428,22 @@ void MySQLBackendProtocol::track_query(GWBUF* buffer)
     m_large_query = MYSQL_GET_PAYLOAD_LEN(data) == MYSQL_PACKET_LENGTH_MAX;
 }
 
-MySQLBackendProtocol::~MySQLBackendProtocol()
+MariaDBBackendConnection::~MariaDBBackendConnection()
 {
     gwbuf_free(m_stored_query);
 }
 
-void MySQLBackendProtocol::set_dcb(DCB* dcb)
+void MariaDBBackendConnection::set_dcb(DCB* dcb)
 {
     m_dcb = static_cast<BackendDCB*>(dcb);
 }
 
-BackendDCB* MySQLBackendProtocol::dcb() const
+BackendDCB* MariaDBBackendConnection::dcb() const
 {
     return m_dcb;
 }
 
-void MySQLBackendProtocol::set_reply_state(mxs::ReplyState state)
+void MariaDBBackendConnection::set_reply_state(mxs::ReplyState state)
 {
     m_reply.set_reply_state(state);
 }

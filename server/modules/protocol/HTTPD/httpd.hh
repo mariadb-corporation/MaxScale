@@ -23,10 +23,10 @@
 /**
  * HTTPD session specific data
  */
-class HTTPDClientProtocol : public mxs::ClientProtocolBase
+class HTTPDClientConnection : public mxs::ClientConnectionBase
 {
 public:
-    HTTPDClientProtocol();
+    HTTPDClientConnection();
 
     void ready_for_reading(DCB* dcb) override;
     void write_ready(DCB* dcb) override;

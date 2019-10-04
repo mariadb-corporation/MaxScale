@@ -49,11 +49,11 @@ public:
         return new (std::nothrow) HTTPDProtocolModule();
     }
 
-    std::unique_ptr<mxs::ClientProtocol>
+    std::unique_ptr<mxs::ClientConnection>
     create_client_protocol(MXS_SESSION* session, mxs::Component* component) override
     {
-        std::unique_ptr<mxs::ClientProtocol> new_client_proto;
-        new_client_proto = std::unique_ptr<mxs::ClientProtocol>(new(std::nothrow) HTTPDClientProtocol());
+        std::unique_ptr<mxs::ClientConnection> new_client_proto;
+        new_client_proto = std::unique_ptr<mxs::ClientConnection>(new(std::nothrow) HTTPDClientConnection());
         return new_client_proto;
     }
 
@@ -126,7 +126,7 @@ static std::string httpd_default_auth()
     return MXS_HTTPAUTH_AUTHENTICATOR_NAME;
 }
 
-void HTTPDClientProtocol::ready_for_reading(DCB* event_dcb)
+void HTTPDClientConnection::ready_for_reading(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb); // The protocol should only handle its own events.
     auto dcb = m_dcb;
@@ -239,39 +239,39 @@ void HTTPDClientProtocol::ready_for_reading(DCB* event_dcb)
     return;
 }
 
-void HTTPDClientProtocol::write_ready(DCB* event_dcb)
+void HTTPDClientConnection::write_ready(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);
     m_dcb->writeq_drain();
 }
 
-int32_t HTTPDClientProtocol::write(GWBUF* queue)
+int32_t HTTPDClientConnection::write(GWBUF* queue)
 {
     return m_dcb->writeq_append(queue);
 }
 
-void HTTPDClientProtocol::error(DCB* event_dcb)
+void HTTPDClientConnection::error(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);
     DCB::close(m_dcb);
 }
 
-void HTTPDClientProtocol::hangup(DCB* event_dcb)
+void HTTPDClientConnection::hangup(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);
     DCB::close(m_dcb);
 }
 
-bool HTTPDClientProtocol::init_connection()
+bool HTTPDClientConnection::init_connection()
 {
     return session_start(m_dcb->session());
 }
 
-void HTTPDClientProtocol::finish_connection()
+void HTTPDClientConnection::finish_connection()
 {
 }
 
-HTTPDClientProtocol::HTTPDClientProtocol()
+HTTPDClientConnection::HTTPDClientConnection()
 {
 }
 

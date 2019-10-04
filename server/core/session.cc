@@ -1488,28 +1488,28 @@ bool Session::handleError(GWBUF* error, Endpoint* down, const mxs::Reply& reply)
     return false;
 }
 
-mxs::ClientProtocol* Session::client_connection()
+mxs::ClientConnection* Session::client_connection()
 {
     return m_client_conn;
 }
 
-const mxs::ClientProtocol* Session::client_connection() const
+const mxs::ClientConnection* Session::client_connection() const
 {
     return m_client_conn;
 }
 
-void Session::set_client_connection(mxs::ClientProtocol* client_conn)
+void Session::set_client_connection(mxs::ClientConnection* client_conn)
 {
     m_client_conn = client_conn;
 }
 
-void Session::add_backend_conn(mxs::BackendProtocol* conn)
+void Session::add_backend_conn(mxs::BackendConnection* conn)
 {
     mxb_assert(std::find(m_backends_conns.begin(), m_backends_conns.end(), conn) == m_backends_conns.end());
     m_backends_conns.push_back(conn);
 }
 
-void Session::remove_backend_conn(mxs::BackendProtocol* conn)
+void Session::remove_backend_conn(mxs::BackendConnection* conn)
 {
     auto iter = std::find(m_backends_conns.begin(), m_backends_conns.end(), conn);
     mxb_assert(iter != m_backends_conns.end());

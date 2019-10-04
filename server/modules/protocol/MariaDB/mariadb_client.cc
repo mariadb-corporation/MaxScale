@@ -352,7 +352,7 @@ void extract_user(char* token, std::string* user)
 }
 }
 
-int MySQLClientProtocol::ssl_authenticate_check_status(DCB* generic_dcb)
+int MariaDBClientConnection::ssl_authenticate_check_status(DCB* generic_dcb)
 {
     mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
@@ -444,7 +444,7 @@ static bool kill_func(DCB* dcb, void* data)
 
     if (dcb->session()->id() == info->target_id && dcb->role() == DCB::Role::BACKEND)
     {
-        auto proto = static_cast<MySQLBackendProtocol*>(dcb->protocol());
+        auto proto = static_cast<MariaDBBackendConnection*>(dcb->protocol());
         uint64_t backend_thread_id = proto->thread_id();
 
         if (info->keep_thread_id == 0 || backend_thread_id != info->keep_thread_id)
@@ -498,7 +498,7 @@ static bool kill_user_func(DCB* dcb, void* data)
  * @param dcb The descriptor control block to use for sending the handshake request
  * @return      The packet length sent
  */
-int MySQLClientProtocol::send_mysql_client_handshake(DCB* dcb)
+int MariaDBClientConnection::send_mysql_client_handshake(DCB* dcb)
 {
     auto protocol = this;
 
@@ -679,7 +679,7 @@ int MySQLClientProtocol::send_mysql_client_handshake(DCB* dcb)
  * @param dcb Client DCB
  * @param buffer Buffer containing the handshake response packet
  */
-void MySQLClientProtocol::store_client_information(DCB* generic_dcb, GWBUF* buffer)
+void MariaDBClientConnection::store_client_information(DCB* generic_dcb, GWBUF* buffer)
 {
     mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
 
@@ -748,7 +748,7 @@ void MySQLClientProtocol::store_client_information(DCB* generic_dcb, GWBUF* buff
  * @param auth_val The type of authentication failure
  * @note Authentication status codes are defined in maxscale/protocol/mysql.h
  */
-void MySQLClientProtocol::handle_authentication_errors(DCB* generic_dcb, int auth_val, int packet_number)
+void MariaDBClientConnection::handle_authentication_errors(DCB* generic_dcb, int auth_val, int packet_number)
 {
     mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
@@ -830,7 +830,7 @@ void MySQLClientProtocol::handle_authentication_errors(DCB* generic_dcb, int aut
  * @param nbytes_read   The number of bytes of data read
  * @return 0 if succeed, 1 otherwise
  */
-int MySQLClientProtocol::perform_authentication(DCB* generic_dcb, GWBUF* read_buffer, int nbytes_read)
+int MariaDBClientConnection::perform_authentication(DCB* generic_dcb, GWBUF* read_buffer, int nbytes_read)
 {
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
     MXB_AT_DEBUG(check_packet(dcb, read_buffer, nbytes_read));
@@ -960,7 +960,7 @@ int MySQLClientProtocol::perform_authentication(DCB* generic_dcb, GWBUF* read_bu
  *
  * @return NULL if successful, otherwise dynamically allocated error message.
  */
-char* MySQLClientProtocol::handle_variables(MXS_SESSION* session, GWBUF** read_buffer)
+char* MariaDBClientConnection::handle_variables(MXS_SESSION* session, GWBUF** read_buffer)
 {
     char* message = NULL;
 
@@ -1048,7 +1048,7 @@ char* MySQLClientProtocol::handle_variables(MXS_SESSION* session, GWBUF** read_b
  *
  * @return True if the user is allowed access
  */
-bool MySQLClientProtocol::reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf)
+bool MariaDBClientConnection::reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf)
 {
     bool rval = false;
     auto client_auth = m_authenticator.get();
@@ -1130,7 +1130,7 @@ bool MySQLClientProtocol::reauthenticate_client(MXS_SESSION* session, GWBUF* pac
     return rval;
 }
 
-void MySQLClientProtocol::track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf)
+void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf)
 {
     mxb_assert(GWBUF_IS_CONTIGUOUS(packetbuf));
 
@@ -1183,7 +1183,7 @@ void MySQLClientProtocol::track_transaction_state(MXS_SESSION* session, GWBUF* p
     }
 }
 
-bool MySQLClientProtocol::handle_change_user(bool* changed_user, GWBUF** packetbuf)
+bool MariaDBClientConnection::handle_change_user(bool* changed_user, GWBUF** packetbuf)
 {
     bool ok = true;
     if (!m_changing_user && m_command == MXS_COM_CHANGE_USER)
@@ -1220,8 +1220,8 @@ bool MySQLClientProtocol::handle_change_user(bool* changed_user, GWBUF** packetb
  * @param user_out Kill command target user output
  * @return true on success, false on error
  */
-bool MySQLClientProtocol::parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* kt_out,
-                                           std::string* user_out)
+bool MariaDBClientConnection::parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* kt_out,
+                                               std::string* user_out)
 {
     const char WORD_CONNECTION[] = "CONNECTION";
     const char WORD_QUERY[] = "QUERY";
@@ -1378,8 +1378,8 @@ bool MySQLClientProtocol::parse_kill_query(char* query, uint64_t* thread_id_out,
  *
  * @return RES_CONTINUE or RES_END
  */
-MySQLClientProtocol::spec_com_res_t
-MySQLClientProtocol::handle_query_kill(DCB* dcb, GWBUF* read_buffer, uint32_t packet_len)
+MariaDBClientConnection::spec_com_res_t
+MariaDBClientConnection::handle_query_kill(DCB* dcb, GWBUF* read_buffer, uint32_t packet_len)
 {
     spec_com_res_t rval = RES_CONTINUE;
     /* First, we need to detect the text "KILL" (ignorecase) in the start
@@ -1436,8 +1436,8 @@ MySQLClientProtocol::handle_query_kill(DCB* dcb, GWBUF* read_buffer, uint32_t pa
  *
  * @return see @c spec_com_res_t
  */
-MySQLClientProtocol::spec_com_res_t
-MySQLClientProtocol::process_special_commands(DCB* dcb, GWBUF* read_buffer, uint8_t cmd)
+MariaDBClientConnection::spec_com_res_t
+MariaDBClientConnection::process_special_commands(DCB* dcb, GWBUF* read_buffer, uint8_t cmd)
 {
     spec_com_res_t rval = RES_CONTINUE;
 
@@ -1510,7 +1510,7 @@ MySQLClientProtocol::process_special_commands(DCB* dcb, GWBUF* read_buffer, uint
  *
  * @return 1 if succeed,
  */
-int MySQLClientProtocol::route_by_statement(uint64_t capabilities, GWBUF** p_readbuf)
+int MariaDBClientConnection::route_by_statement(uint64_t capabilities, GWBUF** p_readbuf)
 {
     int rc = 1;
     auto session = m_session;
@@ -1590,7 +1590,7 @@ int MySQLClientProtocol::route_by_statement(uint64_t capabilities, GWBUF** p_rea
  * @param nbytes_read   The number of bytes of data read
  * @return 0 if succeed, 1 otherwise
  */
-int MySQLClientProtocol::perform_normal_read(DCB* dcb, GWBUF* read_buffer, uint32_t nbytes_read)
+int MariaDBClientConnection::perform_normal_read(DCB* dcb, GWBUF* read_buffer, uint32_t nbytes_read)
 {
     MXS_SESSION* session = dcb->session();
     auto session_state_value = session->state();
@@ -1664,7 +1664,7 @@ int MySQLClientProtocol::perform_normal_read(DCB* dcb, GWBUF* read_buffer, uint3
  *   Get trx characteristics such as read only, read write, snapshot ...
  *
  */
-void MySQLClientProtocol::parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data)
+void MariaDBClientConnection::parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data)
 {
     char* autocommit = gwbuf_get_property(data, (char*)"autocommit");
 
@@ -1715,7 +1715,7 @@ void MySQLClientProtocol::parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data)
  * MXS_PROTOCOL_API implementation.
  */
 
-void MySQLClientProtocol::ready_for_reading(DCB* event_dcb)
+void MariaDBClientConnection::ready_for_reading(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);     // The protocol should only handle its own events.
     GWBUF* read_buffer = NULL;
@@ -1838,7 +1838,7 @@ void MySQLClientProtocol::ready_for_reading(DCB* event_dcb)
     return;
 }
 
-int32_t MySQLClientProtocol::write(GWBUF* queue)
+int32_t MariaDBClientConnection::write(GWBUF* queue)
 {
     if (GWBUF_IS_REPLY_OK(queue) && m_dcb->service()->config().session_track_trx_state)
     {
@@ -1847,7 +1847,7 @@ int32_t MySQLClientProtocol::write(GWBUF* queue)
     return m_dcb->writeq_append(queue);
 }
 
-void MySQLClientProtocol::write_ready(DCB* event_dcb)
+void MariaDBClientConnection::write_ready(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);
     mxb_assert(m_dcb->state() != DCB::State::DISCONNECTED);
@@ -1857,14 +1857,14 @@ void MySQLClientProtocol::write_ready(DCB* event_dcb)
     }
 }
 
-void MySQLClientProtocol::error(DCB* event_dcb)
+void MariaDBClientConnection::error(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);
     mxb_assert(m_dcb->session()->state() != MXS_SESSION::State::STOPPING);
     DCB::close(m_dcb);
 }
 
-void MySQLClientProtocol::hangup(DCB* event_dcb)
+void MariaDBClientConnection::hangup(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);
     auto dcb = m_dcb;
@@ -1909,17 +1909,17 @@ void MySQLClientProtocol::hangup(DCB* event_dcb)
     DCB::close(dcb);
 }
 
-bool MySQLClientProtocol::init_connection()
+bool MariaDBClientConnection::init_connection()
 {
     send_mysql_client_handshake(m_dcb);
     return true;
 }
 
-void MySQLClientProtocol::finish_connection()
+void MariaDBClientConnection::finish_connection()
 {
 }
 
-int32_t MySQLClientProtocol::connlimit(int limit)
+int32_t MariaDBClientConnection::connlimit(int limit)
 {
     return mysql_send_standard_error(m_dcb, 0, 1040, "Too many connections");
 }
@@ -1970,17 +1970,17 @@ MySQLProtocolModule* MySQLProtocolModule::create(const std::string& auth_name, c
     return protocol_module;
 }
 
-std::unique_ptr<mxs::ClientProtocol>
+std::unique_ptr<mxs::ClientConnection>
 MySQLProtocolModule::create_client_protocol(MXS_SESSION* session, mxs::Component* component)
 {
-    std::unique_ptr<mxs::ClientProtocol> new_client_proto;
+    std::unique_ptr<mxs::ClientConnection> new_client_proto;
     auto authenticator = m_auth_module->create_client_authenticator();
     std::unique_ptr<MXS_SESSION::ProtocolData> session_data(new(std::nothrow) MYSQL_session());
     if (authenticator && session_data)
     {
         session->set_protocol_data(std::move(session_data));
-        new_client_proto = std::unique_ptr<mxs::ClientProtocol>(
-            new(std::nothrow) MySQLClientProtocol(session, component, std::move(authenticator)));
+        new_client_proto = std::unique_ptr<mxs::ClientConnection>(
+            new(std::nothrow) MariaDBClientConnection(session, component, std::move(authenticator)));
     }
     return new_client_proto;
 }
@@ -2017,8 +2017,8 @@ json_t* MySQLProtocolModule::print_auth_users_json()
     return m_auth_module->diagnostics_json();
 }
 
-MySQLClientProtocol::MySQLClientProtocol(MXS_SESSION* session, mxs::Component* component,
-                                         std::unique_ptr<mxs::ClientAuthenticator> authenticator)
+MariaDBClientConnection::MariaDBClientConnection(MXS_SESSION* session, mxs::Component* component,
+                                                 std::unique_ptr<mxs::ClientAuthenticator> authenticator)
     : m_authenticator(std::move(authenticator))
     , m_downstream(component)
     , m_session(session)
@@ -2027,8 +2027,8 @@ MySQLClientProtocol::MySQLClientProtocol(MXS_SESSION* session, mxs::Component* c
 {
 }
 
-std::unique_ptr<mxs::BackendProtocol>
-MySQLClientProtocol::create_backend_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component)
+std::unique_ptr<mxs::BackendConnection>
+MariaDBClientConnection::create_backend_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component)
 {
     // Allocate DCB specific backend-authentication data from the client session.
     std::unique_ptr<mxs::BackendAuthenticator> new_backend_auth;
@@ -2048,10 +2048,10 @@ MySQLClientProtocol::create_backend_protocol(MXS_SESSION* session, SERVER* serve
                   "Cannot create backend connection.", session->listener->name());
     }
 
-    std::unique_ptr<mxs::BackendProtocol> rval;
+    std::unique_ptr<mxs::BackendConnection> rval;
     if (new_backend_auth)
     {
-        rval = MySQLBackendProtocol::create(session, component, std::move(new_backend_auth));
+        rval = MariaDBBackendConnection::create(session, component, std::move(new_backend_auth));
     }
     return rval;
 }
@@ -2067,7 +2067,7 @@ MySQLClientProtocol::create_backend_protocol(MXS_SESSION* session, SERVER* serve
  * @return packet length
  *
  */
-int MySQLClientProtocol::mysql_send_auth_error(DCB* dcb, int packet_number, const char* mysql_message)
+int MariaDBClientConnection::mysql_send_auth_error(DCB* dcb, int packet_number, const char* mysql_message)
 {
     uint8_t* outbuf = NULL;
     uint32_t mysql_payload_size = 0;
@@ -2151,11 +2151,11 @@ int MySQLClientProtocol::mysql_send_auth_error(DCB* dcb, int packet_number, cons
  *
  * @return      Pointer to the allocated string or NULL on failure
  */
-char* MySQLClientProtocol::create_auth_fail_str(const char* username,
-                                                const char* hostaddr,
-                                                bool password,
-                                                const char* db,
-                                                int errcode)
+char* MariaDBClientConnection::create_auth_fail_str(const char* username,
+                                                    const char* hostaddr,
+                                                    bool password,
+                                                    const char* db,
+                                                    int errcode)
 {
     char* errstr;
     const char* ferrstr;
@@ -2222,8 +2222,8 @@ retblock:
  * @param error_message Text message to be included
  * @return 0 on failure, 1 on success
  */
-int MySQLClientProtocol::mysql_send_standard_error(DCB* dcb, int packet_number, int error_number,
-                                                   const char* error_message)
+int MariaDBClientConnection::mysql_send_standard_error(DCB* dcb, int packet_number, int error_number,
+                                                       const char* error_message)
 {
     GWBUF* buf = mysql_create_standard_error(packet_number, error_number, error_message);
     return buf ? dcb->protocol_write(buf) : 0;
@@ -2242,8 +2242,8 @@ int MySQLClientProtocol::mysql_send_standard_error(DCB* dcb, int packet_number, 
  * @param error_message Text message to be included
  * @return GWBUF        A buffer containing the error message, ready to send
  */
-GWBUF* MySQLClientProtocol::mysql_create_standard_error(int packet_number, int error_number,
-                                                        const char* error_message)
+GWBUF* MariaDBClientConnection::mysql_create_standard_error(int packet_number, int error_number,
+                                                            const char* error_message)
 {
     uint8_t* outbuf = NULL;
     uint32_t mysql_payload_size = 0;
@@ -2288,7 +2288,7 @@ GWBUF* MySQLClientProtocol::mysql_create_standard_error(int packet_number, int e
 /**
  * Sends an AuthSwitchRequest packet with the default auth plugin to the client.
  */
-bool MySQLClientProtocol::send_auth_switch_request_packet()
+bool MariaDBClientConnection::send_auth_switch_request_packet()
 {
     const char plugin[] = DEFAULT_MYSQL_AUTH_PLUGIN;
     uint32_t len = 1 + sizeof(plugin) + GW_MYSQL_SCRAMBLE_SIZE;
@@ -2304,7 +2304,7 @@ bool MySQLClientProtocol::send_auth_switch_request_packet()
     return m_dcb->writeq_append(buffer) != 0;
 }
 
-void MySQLClientProtocol::execute_kill(MXS_SESSION* issuer, std::shared_ptr<KillInfo> info)
+void MariaDBClientConnection::execute_kill(MXS_SESSION* issuer, std::shared_ptr<KillInfo> info)
 {
     MXS_SESSION* ref = session_get_ref(issuer);
     auto origin = mxs::RoutingWorker::get_current();
@@ -2337,7 +2337,7 @@ void MySQLClientProtocol::execute_kill(MXS_SESSION* issuer, std::shared_ptr<Kill
     std::thread(func).detach();
 }
 
-void MySQLClientProtocol::mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t target_id, kill_type_t type)
+void MariaDBClientConnection::mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t target_id, kill_type_t type)
 {
     mxs_mysql_execute_kill_all_others(issuer, target_id, 0, type);
 }
@@ -2348,10 +2348,10 @@ void MySQLClientProtocol::mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t t
  *       and really goes to the heart of explaining what the session_id/thread_id means in terms
  *       of a service/server pipeline and the recursiveness of this call.
  */
-void MySQLClientProtocol::mxs_mysql_execute_kill_all_others(MXS_SESSION* issuer,
-                                                            uint64_t target_id,
-                                                            uint64_t keep_protocol_thread_id,
-                                                            kill_type_t type)
+void MariaDBClientConnection::mxs_mysql_execute_kill_all_others(MXS_SESSION* issuer,
+                                                                uint64_t target_id,
+                                                                uint64_t keep_protocol_thread_id,
+                                                                kill_type_t type)
 {
     const char* hard = (type & KT_HARD) ? "HARD " : (type & KT_SOFT) ? "SOFT " : "";
     const char* query = (type & KT_QUERY) ? "QUERY " : "";
@@ -2362,7 +2362,7 @@ void MySQLClientProtocol::mxs_mysql_execute_kill_all_others(MXS_SESSION* issuer,
     execute_kill(issuer, info);
 }
 
-void MySQLClientProtocol::mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_type_t type)
+void MariaDBClientConnection::mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_type_t type)
 {
     const char* hard = (type & KT_HARD) ? "HARD " : (type & KT_SOFT) ? "SOFT " : "";
     const char* query = (type & KT_QUERY) ? "QUERY " : "";
@@ -2373,12 +2373,12 @@ void MySQLClientProtocol::mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const
     execute_kill(issuer, info);
 }
 
-std::string MySQLClientProtocol::current_db() const
+std::string MariaDBClientConnection::current_db() const
 {
     return m_session_data->db;
 }
 
-void MySQLClientProtocol::track_current_command(GWBUF* buffer)
+void MariaDBClientConnection::track_current_command(GWBUF* buffer)
 {
     mxb_assert(gwbuf_is_contiguous(buffer));
     uint8_t* data = GWBUF_DATA(buffer);
@@ -2407,7 +2407,7 @@ void MySQLClientProtocol::track_current_command(GWBUF* buffer)
     m_large_query = MYSQL_GET_PAYLOAD_LEN(data) == MYSQL_PACKET_LENGTH_MAX;
 }
 
-const uint8_t* MySQLClientProtocol::scramble() const
+const uint8_t* MariaDBClientConnection::scramble() const
 {
     return m_scramble;
 }

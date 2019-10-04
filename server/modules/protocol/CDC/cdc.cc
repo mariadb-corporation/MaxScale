@@ -55,11 +55,11 @@ static void write_auth_err(DCB* dcb);
 /**
  * CDC protocol
  */
-class CDCClientProtocol : public mxs::ClientProtocolBase
+class CDCClientConnection : public mxs::ClientConnectionBase
 {
 public:
-    CDCClientProtocol(CDCAuthenticatorModule& auth_module);
-    ~CDCClientProtocol() = default;
+    CDCClientConnection(CDCAuthenticatorModule& auth_module);
+    ~CDCClientConnection() = default;
 
     void ready_for_reading(DCB* dcb) override;
     void write_ready(DCB* dcb) override;
@@ -85,11 +85,11 @@ public:
         return new (std::nothrow) CDCProtocolModule();
     }
 
-    std::unique_ptr<mxs::ClientProtocol>
+    std::unique_ptr<mxs::ClientConnection>
     create_client_protocol(MXS_SESSION* session, mxs::Component* component) override
     {
-        std::unique_ptr<mxs::ClientProtocol> new_client_proto(
-            new(std::nothrow) CDCClientProtocol(m_auth_module));
+        std::unique_ptr<mxs::ClientConnection> new_client_proto(
+            new(std::nothrow) CDCClientConnection(m_auth_module));
         return new_client_proto;
     }
 
@@ -166,13 +166,13 @@ MXS_MODULE* MXS_CREATE_MODULE()
 }
 }
 
-void CDCClientProtocol::ready_for_reading(DCB* event_dcb)
+void CDCClientConnection::ready_for_reading(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb); // The protocol should only handle its own events.
     auto dcb = m_dcb;
 
     MXS_SESSION* session = dcb->session();
-    CDCClientProtocol* protocol = this;
+    CDCClientConnection* protocol = this;
     GWBUF* head = NULL;
     int auth_val = CDC_STATE_AUTH_FAILED;
 
@@ -259,30 +259,30 @@ void CDCClientProtocol::ready_for_reading(DCB* event_dcb)
     }
 }
 
-void CDCClientProtocol::write_ready(DCB* event_dcb)
+void CDCClientConnection::write_ready(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);
     m_dcb->writeq_drain();
 }
 
-int32_t CDCClientProtocol::write(GWBUF* buffer)
+int32_t CDCClientConnection::write(GWBUF* buffer)
 {
     return m_dcb->writeq_append(buffer);
 }
 
-void CDCClientProtocol::error(DCB* event_dcb)
+void CDCClientConnection::error(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);
     DCB::close(m_dcb);
 }
 
-void CDCClientProtocol::hangup(DCB* event_dcb)
+void CDCClientConnection::hangup(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);
     DCB::close(m_dcb);
 }
 
-bool CDCClientProtocol::init_connection()
+bool CDCClientConnection::init_connection()
 {
     mxb_assert(m_dcb->session());
 
@@ -293,11 +293,11 @@ bool CDCClientProtocol::init_connection()
     return true;
 }
 
-void CDCClientProtocol::finish_connection()
+void CDCClientConnection::finish_connection()
 {
 }
 
-CDCClientProtocol::CDCClientProtocol(CDCAuthenticatorModule& auth_module)
+CDCClientConnection::CDCClientConnection(CDCAuthenticatorModule& auth_module)
     : m_authenticator(auth_module)
 {
 }

@@ -105,7 +105,7 @@ public:
 
     using FilterList = std::vector<SessionFilter>;
     using DCBSet = std::unordered_set<DCB*>;
-    using BackendConnectionVector = std::vector<mxs::BackendProtocol*>;
+    using BackendConnectionVector = std::vector<mxs::BackendConnection*>;
 
     Session(const SListener& listener);
     ~Session();
@@ -162,16 +162,16 @@ public:
     int32_t clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply) override;
     bool    handleError(GWBUF* error, mxs::Endpoint* down, const mxs::Reply& reply) override;
 
-    mxs::ClientProtocol* client_connection() override;
-    const mxs::ClientProtocol* client_connection() const override;
-    void set_client_connection(mxs::ClientProtocol* client_conn) override;
+    mxs::ClientConnection* client_connection() override;
+    const mxs::ClientConnection* client_connection() const override;
+    void set_client_connection(mxs::ClientConnection* client_conn) override;
 
 protected:
     std::unique_ptr<mxs::Endpoint> m_down;
 
 private:
-    void add_backend_conn(mxs::BackendProtocol* conn);
-    void remove_backend_conn(mxs::BackendProtocol* conn);
+    void add_backend_conn(mxs::BackendConnection* conn);
+    void remove_backend_conn(mxs::BackendConnection* conn);
 
     struct SESSION_VARIABLE
     {
@@ -191,7 +191,7 @@ private:
     Log               m_log;                    /*< Session specific in-memory log */
 
     BackendConnectionVector m_backends_conns; /*< Backend connections, in creation order */
-    mxs::ClientProtocol* m_client_conn {nullptr};
+    mxs::ClientConnection* m_client_conn {nullptr};
 
     // Delivers a provided response to the upstream filter that should receive it
     void deliver_response();

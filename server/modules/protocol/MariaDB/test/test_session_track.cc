@@ -176,7 +176,7 @@ static const uint8_t resultset3[] =
     0x00, 0x07, 0xFE, 0x00, 0x00, 0x21, 0x00
 };
 
-std::unique_ptr<MySQLBackendProtocol> generate_protocol()
+std::unique_ptr<MariaDBBackendConnection> generate_protocol()
 {
     // Define an empty authenticator to use when generating protocol.
     class DummyAuthenticator : public mxs::BackendAuthenticator
@@ -200,12 +200,12 @@ std::unique_ptr<MySQLBackendProtocol> generate_protocol()
     };
 
     std::unique_ptr<DummyAuthenticator> auth;
-    auto proto = MySQLBackendProtocol::create_test_protocol(std::move(auth));
+    auto proto = MariaDBBackendConnection::create_test_protocol(std::move(auth));
     proto->server_capabilities |= GW_MYSQL_CAPABILITIES_SESSION_TRACK;
     return proto;
 }
 
-std::unique_ptr<MySQLBackendProtocol> proto = generate_protocol();
+std::unique_ptr<MariaDBBackendConnection> proto = generate_protocol();
 const string trx_state = "trx_state";
 
 int check_property(GWBUF* buffer, const string& property_name, const string& expected)

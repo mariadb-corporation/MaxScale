@@ -67,7 +67,7 @@ public:
     Handler* set_handler(Handler* pHandler);
 
 private:
-    class Protocol : public mxs::ClientProtocol
+    class Protocol : public mxs::ClientConnection
     {
     public:
         Protocol(Dcb::Handler* pHandler)
