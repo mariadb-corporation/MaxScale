@@ -20,7 +20,7 @@ void run_test(TestConnections& test, const char* query)
 
     test.set_timeout(60);
     test.tprintf("%s", query);
-    test.try_query(test.maxscales->conn_rwsplit[0], query);
+    test.try_query(test.maxscales->conn_rwsplit[0], "%s", query);
     test.stop_timeout();
 
     test.tprintf("disconnect");
