@@ -48,6 +48,10 @@ void test_routing(TestConnections& test)
     // Test that reads are routed to slaves
     char buf[1024] = "-1";
     test.try_query(test.maxscales->conn_rwsplit[0], "PREPARE ps1 FROM 'SELECT @@server_id'");
+
+    // Sleep so that the slave has time to execute the prepare
+    sleep(3);
+
     test.add_result(find_field(test.maxscales->conn_rwsplit[0], "EXECUTE ps1", "@@server_id", buf),
                     "Execute should succeed");
     int res = atoi(buf);
