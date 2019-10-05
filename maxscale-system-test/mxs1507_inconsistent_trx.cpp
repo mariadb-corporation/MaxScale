@@ -30,7 +30,7 @@ int main(int argc, char** argv)
         };
 
     // Create a table and insert one value
-    test.maxscales->connect();
+    test.maxscales->connect_rwsplit();
     ok("CREATE OR REPLACE TABLE test.t1 (id INT)");
     ok("INSERT INTO test.t1 VALUES (1)");
 
@@ -55,7 +55,7 @@ int main(int argc, char** argv)
     err("COMMIT");
     test.maxscales->disconnect();
 
-    test.maxscales->connect();
+    test.maxscales->connect_rwsplit();
     ok("DROP TABLE test.t1");
     test.maxscales->disconnect();
 

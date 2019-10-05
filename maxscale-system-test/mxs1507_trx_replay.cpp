@@ -233,7 +233,7 @@ int main(int argc, char** argv)
     });
 
     // Create a table for testing
-    test.maxscales->connect();
+    test.maxscales->connect_rwsplit();
     test.try_query(test.maxscales->conn_rwsplit[0], "CREATE OR REPLACE TABLE test.t1(id INT)");
     test.maxscales->disconnect();
 
@@ -244,7 +244,7 @@ int main(int argc, char** argv)
         test.set_timeout(90);
         test.tprintf("%d: %s", i++, a.description.c_str());
 
-        test.maxscales->connect();
+        test.maxscales->connect_rwsplit();
         for (auto& f : a.pre)
         {
             f();
@@ -266,7 +266,7 @@ int main(int argc, char** argv)
         test.repl->sync_slaves();
         test.repl->disconnect();
 
-        test.maxscales->connect();
+        test.maxscales->connect_rwsplit();
         for (auto& f : a.check)
         {
             f();
@@ -274,12 +274,12 @@ int main(int argc, char** argv)
         test.maxscales->disconnect();
 
         // Clear the table at the end of the test
-        test.maxscales->connect();
+        test.maxscales->connect_rwsplit();
         test.try_query(test.maxscales->conn_rwsplit[0], "TRUNCATE TABLE test.t1");
         test.maxscales->disconnect();
     }
 
-    test.maxscales->connect();
+    test.maxscales->connect_rwsplit();
     test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE test.t1");
     test.maxscales->disconnect();
 

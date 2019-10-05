@@ -48,7 +48,7 @@ int main(int argc, char** argv)
         };
 
     // Create a table, insert a value and make sure it's replicated to all slaves
-    test.maxscales->connect();
+    test.maxscales->connect_rwsplit();
     ok("CREATE OR REPLACE TABLE test.t1 (id INT)");
     ok("INSERT INTO test.t1 VALUES (1)");
     test.repl->connect();
@@ -56,7 +56,7 @@ int main(int argc, char** argv)
     test.maxscales->disconnect();
 
     cout << "Commit transaction" << endl;
-    test.maxscales->connect();
+    test.maxscales->connect_rwsplit();
     ok("START TRANSACTION");
     ok("SELECT id FROM test.t1 WHERE id = 1 FOR UPDATE");
     switchover();
@@ -67,7 +67,7 @@ int main(int argc, char** argv)
     test.maxscales->disconnect();
 
     cout << "Rollback transaction" << endl;
-    test.maxscales->connect();
+    test.maxscales->connect_rwsplit();
     ok("START TRANSACTION");
     ok("UPDATE test.t1 SET id = 1");
     switchover();
@@ -76,14 +76,14 @@ int main(int argc, char** argv)
     test.maxscales->disconnect();
 
     cout << "Read-only transaction" << endl;
-    test.maxscales->connect();
+    test.maxscales->connect_rwsplit();
     ok("START TRANSACTION READ ONLY");
     ok("SELECT @@server_id");   // This causes a checksum mismatch if the transaction is migrated
     switchover();
     ok("COMMIT");
     test.maxscales->disconnect();
 
-    test.maxscales->connect();
+    test.maxscales->connect_rwsplit();
     ok("DROP TABLE test.t1");
     test.maxscales->disconnect();
 

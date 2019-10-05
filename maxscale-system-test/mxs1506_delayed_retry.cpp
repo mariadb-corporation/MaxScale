@@ -36,7 +36,7 @@ int main(int argc, char** argv)
 
     auto check = [&test, &compare](string q, string res) {
             test.repl->sync_slaves();
-            test.maxscales->connect();
+            test.maxscales->connect_rwsplit();
             compare(q, res);
             test.maxscales->disconnect();
         };
@@ -158,7 +158,7 @@ int main(int argc, char** argv)
     });
 
     cout << "Create table for testing" << endl;
-    test.maxscales->connect();
+    test.maxscales->connect_rwsplit();
     ok("DROP TABLE IF EXISTS test.t1");
     ok("CREATE TABLE test.t1 (id INT)");
     test.maxscales->disconnect();
@@ -166,7 +166,7 @@ int main(int argc, char** argv)
     for (auto a : tests)
     {
         cout << a.description << endl;
-        test.maxscales->connect();
+        test.maxscales->connect_rwsplit();
         a.pre();
         thread thr(a.block);
         a.main();
@@ -175,7 +175,7 @@ int main(int argc, char** argv)
         a.check();
     }
 
-    test.maxscales->connect();
+    test.maxscales->connect_rwsplit();
     query("DROP TABLE test.t1");
     test.maxscales->disconnect();
 
