@@ -586,9 +586,12 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
     if (m_sescmd_replier)
     {
         mxb_assert(nsucc);
-        m_expected_responses++;
-        mxb_assert(m_expected_responses == 1);
-        MXS_INFO("Will return response from '%s' to the client", m_sescmd_replier->name());
+        if (expecting_response)
+        {
+            m_expected_responses++;
+            mxb_assert(m_expected_responses == 1);
+            MXS_INFO("Will return response from '%s' to the client", m_sescmd_replier->name());
+        }
     }
 
     if (m_config.max_sescmd_history > 0 && m_sescmd_list.size() >= m_config.max_sescmd_history
