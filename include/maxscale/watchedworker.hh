@@ -128,13 +128,13 @@ protected:
     MainWorker& m_main;
 
 private:
-    class WatchdogNotifier;
-    friend WatchdogNotifier;
+    class WatchdogTicker;
+    friend WatchdogTicker;
 
     void epoll_tick() override final;
 
     std::atomic<bool> m_ticking;
-    WatchdogNotifier* m_pWatchdog_notifier { nullptr }; /*< Watchdog notifier, if systemd enabled. */
+    WatchdogTicker* m_pWatchdog_ticker { nullptr }; /*< Watchdog ticker, if systemd enabled. */
 };
 
 }

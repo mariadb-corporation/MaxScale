@@ -16,13 +16,13 @@
 namespace maxscale
 {
 
-class WatchedWorker::WatchdogNotifier
+class WatchedWorker::WatchdogTicker
 {
-    WatchdogNotifier(const WatchdogNotifier&) = delete;
-    WatchdogNotifier& operator=(const WatchdogNotifier&) = delete;
+    WatchdogTicker(const WatchdogTicker&) = delete;
+    WatchdogTicker& operator=(const WatchdogTicker&) = delete;
 
 public:
-    WatchdogNotifier(mxs::WatchedWorker* pOwner)
+    WatchdogTicker(mxs::WatchedWorker* pOwner)
         : m_owner(*pOwner)
         , m_nClients(0)
         , m_terminate(false)
@@ -53,7 +53,7 @@ public:
                                });
     }
 
-    ~WatchdogNotifier()
+    ~WatchdogTicker()
     {
         mxb_assert(m_nClients == 0);
         mxb::atomic::store(&m_terminate, true, mxb::atomic::RELAXED);
@@ -103,7 +103,7 @@ WatchedWorker::WatchedWorker(MainWorker* pMain)
 {
     if (MainWorker::watchdog_interval().count() != 0)
     {
-        m_pWatchdog_notifier = new WatchdogNotifier(this);
+        m_pWatchdog_ticker = new WatchdogTicker(this);
     }
 
     m_main.add(this);
@@ -113,22 +113,22 @@ WatchedWorker::~WatchedWorker()
 {
     m_main.remove(this);
 
-    delete m_pWatchdog_notifier;
+    delete m_pWatchdog_ticker;
 }
 
 void WatchedWorker::start_watchdog_workaround()
 {
-    if (m_pWatchdog_notifier)
+    if (m_pWatchdog_ticker)
     {
-        m_pWatchdog_notifier->start();
+        m_pWatchdog_ticker->start();
     }
 }
 
 void WatchedWorker::stop_watchdog_workaround()
 {
-    if (m_pWatchdog_notifier)
+    if (m_pWatchdog_ticker)
     {
-        m_pWatchdog_notifier->stop();
+        m_pWatchdog_ticker->stop();
     }
 }
 
