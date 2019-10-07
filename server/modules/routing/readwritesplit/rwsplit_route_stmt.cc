@@ -446,7 +446,7 @@ void RWSplitSession::continue_large_session_write(GWBUF* querybuf, uint32_t type
     }
 }
 
-void RWSplitSession::prune_to_position(uint64_t pos)
+void RWSplitSession::discard_responses(uint64_t pos)
 {
     /** Prune all completed responses before a certain position */
     ResponseMap::iterator it = m_sescmd_responses.lower_bound(pos);
@@ -460,6 +460,29 @@ void RWSplitSession::prune_to_position(uint64_t pos)
     {
         // All responses are older than the requested position
         m_sescmd_responses.clear();
+    }
+}
+
+void RWSplitSession::discard_old_history(uint64_t lowest_pos)
+{
+    if (m_sescmd_prune_pos)
+    {
+        if (m_sescmd_prune_pos < lowest_pos)
+        {
+            discard_responses(m_sescmd_prune_pos);
+        }
+
+        auto it = std::find_if(m_sescmd_list.begin(), m_sescmd_list.end(),
+                               [this](const SSessionCommand& s) {
+                                   return s->get_position() > m_sescmd_prune_pos;
+                               });
+
+        if (it != m_sescmd_list.begin() && it != m_sescmd_list.end())
+        {
+            MXS_INFO("Pruning from %lu to %lu", m_sescmd_prune_pos, it->get()->get_position());
+            m_sescmd_list.erase(m_sescmd_list.begin(), it);
+            m_sescmd_prune_pos = 0;
+        }
     }
 }
 
@@ -621,16 +644,17 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
         && m_sescmd_list.size() >= m_config.max_sescmd_history)
     {
         // Close to the history limit, remove the oldest command
-        prune_to_position(m_sescmd_list.front()->get_position());
+        discard_responses(std::min(m_sescmd_list.front()->get_position(), lowest_pos));
         m_sescmd_list.pop_front();
     }
 
     if (m_config.disable_sescmd_history)
     {
-        prune_to_position(lowest_pos);
+        discard_responses(lowest_pos);
     }
     else
     {
+        discard_old_history(lowest_pos);
         compress_history(sescmd);
         m_sescmd_list.push_back(sescmd);
     }

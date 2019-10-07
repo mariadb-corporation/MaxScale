@@ -129,7 +129,12 @@ private:
 
     mxs::SSessionCommand create_sescmd(GWBUF* buffer);
 
-    void prune_to_position(uint64_t pos);
+    // Discards master response history to position @c pos
+    void discard_responses(uint64_t pos);
+
+    // Discards history that happened before a connection reset
+    void discard_old_history(uint64_t lowest_pos);
+
     bool route_session_write(GWBUF* querybuf, uint8_t command, uint32_t type);
     void continue_large_session_write(GWBUF* querybuf, uint32_t type);
     bool route_single_stmt(GWBUF* querybuf);
@@ -368,8 +373,10 @@ private:
     uint64_t                m_sent_sescmd;      /**< ID of the last sent session command*/
     uint64_t                m_recv_sescmd;      /**< ID of the most recently completed session
                                                  * command */
-    ExecMap m_exec_map;                         /**< Map of COM_STMT_EXECUTE statement IDs to
-                                                 * Backends */
+    uint64_t m_sescmd_prune_pos {0};
+
+    ExecMap m_exec_map;     /**< Map of COM_STMT_EXECUTE statement IDs to Backends */
+
     std::string          m_gtid_pos;            /**< Gtid position for causal read */
     wait_gtid_state      m_wait_gtid;           /**< State of MASTER_GTID_WAIT reply */
     uint32_t             m_next_seq;            /**< Next packet's sequence number */

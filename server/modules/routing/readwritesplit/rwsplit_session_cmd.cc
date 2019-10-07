@@ -130,6 +130,14 @@ void RWSplitSession::process_sescmd_response(RWBackend* backend, GWBUF** ppPacke
                     }
 
                     m_slave_responses.clear();
+
+                    if (!m_config.disable_sescmd_history
+                        && (command == MXS_COM_CHANGE_USER || command == MXS_COM_RESET_CONNECTION))
+                    {
+                        mxb_assert_message(!m_sescmd_list.empty(), "Must have stored session commands");
+                        MXS_INFO("Resetting session command history to position %lu", id);
+                        m_sescmd_prune_pos = id;
+                    }
                 }
                 else
                 {
@@ -165,34 +173,6 @@ void RWSplitSession::process_sescmd_response(RWBackend* backend, GWBUF** ppPacke
             // The backend can be closed in discard_if_response_differs if the response differs which is why
             // we need to check it again here
             backend->complete_session_command();
-        }
-
-        if (m_expected_responses == 0 && !m_config.disable_sescmd_history
-            && (command == MXS_COM_CHANGE_USER || command == MXS_COM_RESET_CONNECTION))
-        {
-            mxb_assert_message(!m_sescmd_list.empty(), "Must have stored session commands");
-            mxb_assert_message(m_slave_responses.empty(), "All responses should've been processed");
-            // This is the last session command to finish that resets the session state, reset the history
-            MXS_INFO("Resetting session command history (length: %lu)", m_sescmd_list.size());
-
-            /**
-             * Since new connections need to perform the COM_CHANGE_USER, pop it off the list along
-             * with the expected response to it.
-             */
-            SSessionCommand latest = m_sescmd_list.back();
-            auto cmd = m_sescmd_responses[latest->get_position()];
-
-            m_sescmd_list.clear();
-            m_sescmd_responses.clear();
-
-            // Push the response back as the first executed session command
-            m_sescmd_list.push_back(latest);
-            m_sescmd_responses[latest->get_position()] = cmd;
-
-            // Adjust counters to match the number of stored session commands
-            m_recv_sescmd = 1;
-            m_sent_sescmd = 1;
-            m_sescmd_count = 2;
         }
     }
 }
