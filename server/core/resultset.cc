@@ -208,6 +208,24 @@ void ResultSet::write(DCB* dcb)
     mysql_send_eof(dcb, seqno);
 }
 
+json_t* ResultSet::get_json_value(const std::string& s)
+{
+    json_t* js;
+    char* end;
+    long l = strtol(s.c_str(), &end, 10);
+
+    if (end != s.c_str() && *end == '\0')
+    {
+        js = json_integer(l);
+    }
+    else
+    {
+        js = json_string(s.c_str());
+    }
+
+    return js;
+}
+
 void ResultSet::write_as_json(DCB* dcb)
 {
     json_t* arr = json_array();
@@ -218,7 +236,7 @@ void ResultSet::write_as_json(DCB* dcb)
 
         for (size_t i = 0; i < row.size(); i++)
         {
-            json_object_set_new(obj, m_columns[i].c_str(), json_string(row[i].c_str()));
+            json_object_set_new(obj, m_columns[i].c_str(), get_json_value(row[i]));
         }
 
         json_array_append_new(arr, obj);
