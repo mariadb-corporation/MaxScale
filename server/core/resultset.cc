@@ -245,4 +245,6 @@ void ResultSet::write_as_json(DCB* dcb)
     char* js = json_dumps(arr, JSON_INDENT(4));
     dcb_printf(dcb, "%s", js);
     MXS_FREE(js);
+
+    json_decref(arr);
 }
