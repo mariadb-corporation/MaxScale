@@ -2743,6 +2743,13 @@ public:
                 }
                 break;
 
+            case TK_SET:
+                if (m_keyword_2 == TK_PASSWORD)
+                {
+                    m_type_mask = QUERY_TYPE_WRITE;
+                }
+                break;
+
             case TK_START:
                 switch (m_keyword_2)
                 {
@@ -2962,6 +2969,9 @@ public:
                                 && pVariable->op == TK_ID
                                 && strcasecmp(pVariable->u.zToken, "password") == 0)
                             {
+                                // Even though SET PASSWORD looks like a session command it
+                                // is not, the password change will be replicated to slaves.
+                                m_type_mask = QUERY_TYPE_WRITE;
                                 // Ok, it was, so we break out.
                                 i = pList->nExpr;
                                 break;
