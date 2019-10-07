@@ -620,13 +620,13 @@ json_t* session_json_data(const Session* session, const char* host, bool rdns)
         json_object_set_new(attr, "idle", json_real(idle));
     }
 
-    json_t* dcb_arr = json_array();
-    for (auto d : session->backend_connections())
+    json_t* connection_arr = json_array();
+    for (auto conn : session->backend_connections())
     {
-        json_array_append_new(dcb_arr, d->dcb()->to_json());
+        json_array_append_new(connection_arr, conn->diagnostics_json());
     }
 
-    json_object_set_new(attr, "connections", dcb_arr);
+    json_object_set_new(attr, "connections", connection_arr);
 
     json_t* queries = session->queries_as_json();
     json_object_set_new(attr, "queries", queries);

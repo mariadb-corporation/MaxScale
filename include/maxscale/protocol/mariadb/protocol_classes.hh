@@ -178,7 +178,7 @@ public:
     void    finish_connection() override;
     bool    reuse_connection(BackendDCB* dcb, mxs::Component* upstream) override;
     bool    established() override;
-    json_t* diagnostics_json() override;
+    json_t* diagnostics_json() const override;
 
     /**
      *  Check every packet type, if is ok packet then parse it

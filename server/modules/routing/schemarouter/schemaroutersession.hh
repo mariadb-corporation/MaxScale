@@ -137,8 +137,9 @@ private:
     bool                 handle_statement(GWBUF* querybuf, SRBackend* bref, uint8_t command, uint32_t type);
 
     /** Member variables */
-    bool                   m_closed;        /**< True if session closed */
-    DCB*                   m_client;        /**< The client DCB */
+    bool                     m_closed;          /**< True if session closed */
+    MariaDBClientConnection* m_client {nullptr};/**< Client connection */
+
     MYSQL_session*         m_mysql_session; /**< Session client data (username, password, SHA1). */
     SRBackendList          m_backends;      /**< Backend references */
     SConfig                m_config;        /**< Session specific configuration */

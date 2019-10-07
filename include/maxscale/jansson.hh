@@ -102,4 +102,5 @@ static inline std::string json_to_string(json_t* json)
 
     return ss.str();
 }
+
 }

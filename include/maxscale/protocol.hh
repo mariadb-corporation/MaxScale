@@ -54,10 +54,7 @@ public:
      *
      * @return JSON representation of the connection
      */
-    virtual json_t* diagnostics_json()
-    {
-        return nullptr;
-    }
+    virtual json_t* diagnostics_json() const = 0;
 
     virtual void set_dcb(DCB* dcb) = 0;
 };

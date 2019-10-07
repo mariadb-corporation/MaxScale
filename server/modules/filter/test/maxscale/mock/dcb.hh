@@ -120,7 +120,7 @@ private:
 
         int32_t write(GWBUF* buffer) override;
 
-        json_t* diagnostics_json() override
+        json_t* diagnostics_json() const override
         {
             return nullptr;
         }

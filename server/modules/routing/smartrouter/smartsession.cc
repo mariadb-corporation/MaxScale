@@ -75,7 +75,6 @@ SmartRouterSession::SmartRouterSession(SmartRouter* pRouter,
                                        Clusters clusters)
     : mxs::RouterSession(pSession)
     , m_router(*pRouter)
-    , m_pClient_dcb(pSession->client_connection()->dcb())
     , m_clusters(std::move(clusters))
     , m_qc(this, pSession, TYPE_ALL)
 {
@@ -170,7 +169,7 @@ int SmartRouterSession::routeQuery(GWBUF* pBuf)
             ret = write_to_all(pBuf, Mode::Query);
         }
         else if (m_qc.target_is_master(route_info.target())
-                 || session_trx_is_active(m_pClient_dcb->session()))
+                 || session_trx_is_active(m_pSession))
         {
             MXS_SDEBUG("Write to master");
             ret = write_to_master(pBuf);
@@ -239,7 +238,7 @@ void SmartRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down
             MXS_SERROR("clientReply(): Lost connection to " << cluster.pBackend->target()->name()
                                                             << " Error code=" << err_code
                                                             << ' ' << extract_error(pPacket));
-            m_pClient_dcb->session()->terminate();
+            m_pSession->terminate();
             return;
         }
     }
@@ -249,7 +248,7 @@ void SmartRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down
         MXS_SERROR("ProtocolTracker from state " << tracker_state_before
                                                  << " to state " << cluster.tracker.state()
                                                  << ". Disconnect.");
-        m_pClient_dcb->session()->terminate();
+        m_pSession->terminate();
         return;
     }
 
@@ -426,7 +425,7 @@ bool SmartRouterSession::write_split_packets(GWBUF* pBuf)
 
 void SmartRouterSession::kill_all_others(const Cluster& cluster)
 {
-    auto protocol = static_cast<MariaDBClientConnection*>(m_pClient_dcb->protocol());
+    auto protocol = static_cast<MariaDBClientConnection*>(m_pSession->client_connection());
     protocol->mxs_mysql_execute_kill(m_pSession, m_pSession->id(), KT_QUERY);
 }
 
@@ -437,7 +436,7 @@ bool SmartRouterSession::handleError(GWBUF* pPacket, mxs::Endpoint* pProblem, co
                << pProblem->target()->name() << " Error code=" << err_code << " "
                << extract_error(pPacket));
 
-    m_pClient_dcb->session()->terminate(gwbuf_clone(pPacket));
+    m_pSession->terminate(gwbuf_clone(pPacket));
     return false;
 }
 

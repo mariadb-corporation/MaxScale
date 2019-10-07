@@ -94,7 +94,6 @@ private:
     Mode   m_mode = Mode::Idle;
     GWBUF* m_pDelayed_packet = nullptr;
 
-    DCB*                 m_pClient_dcb;
     Clusters             m_clusters;
     mxs::QueryClassifier m_qc;
     struct Measurement

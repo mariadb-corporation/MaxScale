@@ -216,8 +216,6 @@ public:
 
     virtual std::string diagnostics() const;
 
-    virtual json_t* to_json() const;
-
     SERVICE* service() const;
 
     /**
@@ -745,8 +743,6 @@ public:
     static void hangup(const SERVER* server);
     void shutdown() override;
     std::string diagnostics() const override;
-
-    json_t* to_json() const override;
 
     SERVER* server() const
     {

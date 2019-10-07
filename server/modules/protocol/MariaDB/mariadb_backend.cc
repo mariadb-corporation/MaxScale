@@ -1517,12 +1517,9 @@ bool MariaDBBackendConnection::established()
            && !proto->m_stored_query;
 }
 
-json_t* MariaDBBackendConnection::diagnostics_json()
+json_t* MariaDBBackendConnection::diagnostics_json() const
 {
-    auto proto = this;
-    json_t* obj = json_object();
-    json_object_set_new(obj, "connection_id", json_integer(proto->m_thread_id));
-    return obj;
+    return json_pack("{siss}", "connection_id", m_thread_id, "server", m_dcb->server()->name());
 }
 
 int MariaDBBackendConnection::mysql_send_com_quit(DCB* dcb, int packet_number, GWBUF* bufparam)

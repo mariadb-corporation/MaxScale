@@ -34,14 +34,15 @@ enum route_target get_shard_route_target(uint32_t qtype);
 bool              change_current_db(std::string& dest, Shard& shard, GWBUF* buf);
 bool              extract_database(GWBUF* buf, char* str);
 bool              detect_show_shards(GWBUF* query);
-void              write_error_to_client(DCB* dcb, int errnum, const char* mysqlstate, const char* errmsg);
+void              write_error_to_client(MariaDBClientConnection* conn, int errnum,
+                                        const char* mysqlstate, const char* errmsg);
 
 SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session,
                                          SchemaRouter* router,
                                          SRBackendList backends)
     : mxs::RouterSession(session)
     , m_closed(false)
-    , m_client(session->client_connection()->dcb())
+    , m_client(static_cast<MariaDBClientConnection*>(session->client_connection()))
     , m_backends(std::move(backends))
     , m_config(router->m_config)
     , m_router(router)
@@ -108,7 +109,7 @@ void SchemaRouterSession::close()
         {
             m_router->m_stats.longest_sescmd = m_stats.longest_sescmd;
         }
-        double ses_time = difftime(time(NULL), m_client->session()->stats.connect);
+        double ses_time = difftime(time(NULL), m_pSession->stats.connect);
         if (m_router->m_stats.ses_longest < ses_time)
         {
             m_router->m_stats.ses_longest = ses_time;
@@ -354,15 +355,10 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
 
                 if (m_config->debug)
                 {
-                    sprintf(errbuf + strlen(errbuf),
-                            " ([%" PRIu64 "]: DB change failed)",
-                            m_client->session()->id());
+                    sprintf(errbuf + strlen(errbuf), " ([%" PRIu64 "]: DB change failed)", m_pSession->id());
                 }
 
-                write_error_to_client(m_client,
-                                      SCHEMA_ERR_DBNOTFOUND,
-                                      SCHEMA_ERRSTR_DBNOTFOUND,
-                                      errbuf);
+                write_error_to_client(m_client, SCHEMA_ERR_DBNOTFOUND, SCHEMA_ERRSTR_DBNOTFOUND, errbuf);
                 return 1;
             }
 
@@ -489,7 +485,7 @@ void SchemaRouterSession::handle_mapping_reply(SRBackend* bref, GWBUF** pPacket)
 
     if (rc == -1)
     {
-        m_client->trigger_hangup_event();
+        m_client->dcb()->trigger_hangup_event();
     }
 }
 
@@ -548,9 +544,7 @@ void SchemaRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& dow
     }
     else if (m_state & INIT_USE_DB)
     {
-        MXS_DEBUG("Reply to USE '%s' received for session %p",
-                  m_connect_db.c_str(),
-                  m_client->session());
+        MXS_DEBUG("Reply to USE '%s' received for session %p", m_connect_db.c_str(), m_pSession);
         m_state &= ~INIT_USE_DB;
         m_current_db = m_connect_db;
         mxb_assert(m_state == INIT_READY);
@@ -629,7 +623,7 @@ bool SchemaRouterSession::handleError(GWBUF* pMessage, mxs::Endpoint* pProblem, 
 void SchemaRouterSession::synchronize_shards()
 {
     m_router->m_stats.shmap_cache_miss++;
-    m_router->m_shard_manager.update_shard(m_shard, m_client->session()->user());
+    m_router->m_shard_manager.update_shard(m_shard, m_pSession->user());
 }
 
 /**
@@ -826,24 +820,18 @@ bool SchemaRouterSession::send_shards()
         set->add_row({a.first, a.second->name()});
     }
 
-    set->write(m_client);
+    set->write(m_client->dcb());
 
     return true;
 }
 
-/**
- *
- * @param dcb
- * @param errnum
- * @param mysqlstate
- * @param errmsg
- */
-void write_error_to_client(DCB* dcb, int errnum, const char* mysqlstate, const char* errmsg)
+void
+write_error_to_client(MariaDBClientConnection* conn, int errnum, const char* mysqlstate, const char* errmsg)
 {
     GWBUF* errbuff = modutil_create_mysql_err_msg(1, 0, errnum, mysqlstate, errmsg);
     if (errbuff)
     {
-        if (dcb->protocol_write(errbuff) != 1)
+        if (conn->write(errbuff) != 1)
         {
             MXS_ERROR("Failed to write error packet to client.");
         }
@@ -903,14 +891,9 @@ bool SchemaRouterSession::handle_default_db()
         sprintf(errmsg, "Unknown database '%s'", m_connect_db.c_str());
         if (m_config->debug)
         {
-            sprintf(errmsg + strlen(errmsg),
-                    " ([%" PRIu64 "]: DB not found on connect)",
-                    m_client->session()->id());
+            sprintf(errmsg + strlen(errmsg), " ([%" PRIu64 "]: DB not found on connect)", m_pSession->id());
         }
-        write_error_to_client(m_client,
-                              SCHEMA_ERR_DBNOTFOUND,
-                              SCHEMA_ERRSTR_DBNOTFOUND,
-                              errmsg);
+        write_error_to_client(m_client, SCHEMA_ERR_DBNOTFOUND, SCHEMA_ERRSTR_DBNOTFOUND, errmsg);
     }
 
     return rval;
@@ -923,9 +906,7 @@ void SchemaRouterSession::route_queued_query()
 
 #ifdef SS_DEBUG
     char* querystr = modutil_get_SQL(tmp);
-    MXS_DEBUG("Sending queued buffer for session %p: %s",
-              m_client->session(),
-              querystr);
+    MXS_DEBUG("Sending queued buffer for session %p: %s", m_pSession, querystr);
     MXS_FREE(querystr);
 #endif
 
@@ -1235,8 +1216,8 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SRBackend* bref
                               data,
                               target->name(),
                               duplicate->name(),
-                              m_client->session()->user().c_str(),
-                              m_client->remote().c_str());
+                              m_pSession->user().c_str(),
+                              m_pSession->client_remote());
                 }
                 else if (m_config->preferred_server == target)
                 {
@@ -1472,7 +1453,7 @@ void SchemaRouterSession::send_databases()
         set->add_row({name});
     }
 
-    set->write(m_client);
+    set->write(m_client->dcb());
 }
 
 bool SchemaRouterSession::handle_statement(GWBUF* querybuf, SRBackend* bref, uint8_t command, uint32_t type)

@@ -58,7 +58,7 @@ const session_fields = [
     {'Connected': 'attributes.connected'},
     {'Idle': 'attributes.idle'},
     {'Connections': 'attributes.connections[].server'},
-    {'Connection IDs': 'attributes.connections[].protocol_diagnostics.connection_id'},
+    {'Connection IDs': 'attributes.connections[].connection_id'},
     {'Queries': 'attributes.queries[].statement'},
     {'Log': 'attributes.log'}
 ]

@@ -836,23 +836,6 @@ std::string DCB::diagnostics() const
     return ss.str();
 }
 
-json_t* DCB::to_json() const
-{
-    json_t* obj = json_object();
-
-    char buf[25];
-    snprintf(buf, sizeof(buf), "%p", this);
-    json_object_set_new(obj, "id", json_string(buf));
-
-    json_t* json = protocol()->diagnostics_json();
-    if (json)
-    {
-        json_object_set_new(obj, "protocol_diagnostics", json);
-    }
-
-    return obj;
-}
-
 /**
  * Write data to a DCB socket through an SSL structure. The SSL structure is
  * linked from the DCB. All communication is encrypted and done via the SSL
@@ -2067,18 +2050,6 @@ std::string BackendDCB::diagnostics() const
     return ss.str();
 }
 
-json_t* BackendDCB::to_json() const
-{
-    json_t* json = DCB::to_json();
-
-    if (json)
-    {
-        json_object_set_new(json, "server", json_string(m_server->name()));
-    }
-
-    return json;
-}
-
 // static
 void BackendDCB::hangup_cb(MXB_WORKER* worker, const SERVER* server)
 {
@@ -2405,3 +2376,10 @@ const ClientDCB* mxs::ClientConnectionBase::dcb() const
 {
     return m_dcb;
 }
+
+json_t* maxscale::ClientConnectionBase::diagnostics_json() const
+{
+    json_t* rval = json_object(); // This is not currently used.
+    return rval;
+}
+
