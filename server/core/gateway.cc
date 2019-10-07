@@ -1704,12 +1704,12 @@ int main(int argc, char** argv)
         cnf->log_target = MXB_LOG_TARGET_STDOUT;
     }
 
+    uint64_t systemd_interval = 0; // in microseconds
 #ifdef HAVE_SYSTEMD
     // Systemd watchdog. Must be called in the initial thread */
-    uint64_t systemd_interval;      // in microseconds
-    if (sd_watchdog_enabled(false, &systemd_interval) > 0)
+    if (sd_watchdog_enabled(false, &systemd_interval) <= 0)
     {
-        MainWorker::set_watchdog_interval(systemd_interval);
+        systemd_interval = 0; // Disabled
     }
 #endif
 
@@ -1877,6 +1877,11 @@ int main(int argc, char** argv)
         log_startup_error("Failed to initialise query classifier library.");
         rc = MAXSCALE_INTERNALERROR;
         return rc;
+    }
+
+    if (systemd_interval > 0)
+    {
+        MainWorker::set_watchdog_interval(systemd_interval);
     }
 
     /** Load the admin users */
