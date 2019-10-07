@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
         test.set_timeout(60);
 
         // Interleaved session commands, reads and "writes" (`SELECT @@last_insert_id` is treated as a master-only read)
-        test.expect(conn.query("SET @a = 1"), "Query failed: %s", conn.error());
+        test.expect(conn.query("SET @a = (SELECT SLEEP(case @@server_id when 1 then 0 else 0.01 end))"), "Query failed: %s", conn.error());
         test.expect(conn.query("USE test"), "Query failed: %s", conn.error());
         test.expect(conn.query("SET SQL_MODE=''"), "Query failed: %s", conn.error());
         test.expect(conn.query("USE test"), "Query failed: %s", conn.error());
@@ -58,6 +58,17 @@ int main(int argc, char *argv[])
 
         test.expect(conn.reset_connection(), "Connection reset failed: %s", conn.error());
     }
+
+    // Wait for the slaves to complete the session commands
+    test.tprintf("Waiting for slaves to complete session commands");
+    test.stop_timeout();
+    sleep(5);
+
+    auto slave_response = conn.field("SELECT @a", 0);
+    auto master_response = conn.field("SELECT @a, @@last_insert_id", 0);
+
+    test.expect(slave_response == master_response, "Slave value '%s' is different from master value '%s'",
+                slave_response.c_str(), master_response.c_str());
 
     test.log_excludes(0, "Router session exceeded session command history limit");
     test.log_includes(0, "Resetting session command history");
