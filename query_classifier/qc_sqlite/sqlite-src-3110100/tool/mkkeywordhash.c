@@ -380,6 +380,7 @@ static Keyword aKeywordTable[] = {
 #ifdef MAXSCALE
   { "PARTITION",        "TK_PARTITION",    ALWAYS                 },
   { "PARTITIONS",       "TK_PARTITIONS",   ALWAYS                 },
+  { "PASSWORD",         "TK_PASSWORD",     ALWAYS                 },
   { "PERSISTENT",       "TK_PERSISTENT",   ALWAYS                 },
 #endif
 #ifndef MAXSCALE

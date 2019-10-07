@@ -854,31 +854,41 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
          */
         else if (lex->sql_command == SQLCOM_SET_OPTION)
         {
-            type |= QUERY_TYPE_SESSION_WRITE;
-
-            if (get_set_type(pi->pi_query_plain_str) == SET_TYPE_UNKNOWN)
+            switch (get_set_type(pi->pi_query_plain_str))
             {
-                /** Either user- or system variable write */
-                List_iterator<set_var_base> ilist(lex->var_list);
-                size_t n = 0;
+            case SET_TYPE_PASSWORD:
+                type |= QUERY_TYPE_WRITE;
+                break;
 
-                while (set_var_base* var = ilist++)
+            case SET_TYPE_UNKNOWN:
                 {
-                    if (var->is_system())
+                    type |= QUERY_TYPE_SESSION_WRITE;
+                    /** Either user- or system variable write */
+                    List_iterator<set_var_base> ilist(lex->var_list);
+                    size_t n = 0;
+
+                    while (set_var_base* var = ilist++)
+                    {
+                        if (var->is_system())
+                        {
+                            type |= QUERY_TYPE_GSYSVAR_WRITE;
+                        }
+                        else
+                        {
+                            type |= QUERY_TYPE_USERVAR_WRITE;
+                        }
+                        ++n;
+                    }
+
+                    if (n == 0)
                     {
                         type |= QUERY_TYPE_GSYSVAR_WRITE;
                     }
-                    else
-                    {
-                        type |= QUERY_TYPE_USERVAR_WRITE;
-                    }
-                    ++n;
                 }
+                break;
 
-                if (n == 0)
-                {
-                    type |= QUERY_TYPE_GSYSVAR_WRITE;
-                }
+            default:
+                type |= QUERY_TYPE_SESSION_WRITE;
             }
         }
         else
