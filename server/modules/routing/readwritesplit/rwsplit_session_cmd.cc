@@ -81,98 +81,96 @@ static void discard_if_response_differs(RWBackend* backend, bool master_ok, bool
 
 void RWSplitSession::process_sescmd_response(RWBackend* backend, GWBUF** ppPacket, const mxs::Reply& reply)
 {
-    if (backend->has_session_commands())
+    mxb_assert(backend->has_session_commands());
+    bool discard = true;
+    mxs::SSessionCommand sescmd = backend->next_session_command();
+    uint8_t command = sescmd->get_command();
+    uint64_t id = sescmd->get_position();
+
+    if (command == MXS_COM_STMT_PREPARE && !reply.error())
     {
-        bool discard = true;
-        mxs::SSessionCommand sescmd = backend->next_session_command();
-        uint8_t command = sescmd->get_command();
-        uint64_t id = sescmd->get_position();
+        backend->add_ps_handle(id, reply.generated_id());
+    }
 
-        if (command == MXS_COM_STMT_PREPARE && !reply.error())
+    if (m_recv_sescmd < m_sent_sescmd && id == m_recv_sescmd + 1)
+    {
+        mxb_assert_message(m_sescmd_replier, "New session commands must have a pre-assigned replier");
+
+        if (m_sescmd_replier == backend)
         {
-            backend->add_ps_handle(id, reply.generated_id());
-        }
+            discard = false;
 
-        if (m_recv_sescmd < m_sent_sescmd && id == m_recv_sescmd + 1)
-        {
-            mxb_assert_message(m_sescmd_replier, "New session commands must have a pre-assigned replier");
-
-            if (m_sescmd_replier == backend)
+            if (reply.is_complete())
             {
-                discard = false;
+                /** First reply to this session command, route it to the client */
+                ++m_recv_sescmd;
+                --m_expected_responses;
+                mxb_assert(m_expected_responses == 0);
 
-                if (reply.is_complete())
+                /** Store the master's response so that the slave responses can be compared to it */
+                m_sescmd_responses[id] = std::make_pair(backend, !reply.error());
+
+                if (reply.error())
                 {
-                    /** First reply to this session command, route it to the client */
-                    ++m_recv_sescmd;
-                    m_expected_responses--;
-                    mxb_assert(m_expected_responses == 0);
-
-                    /** Store the master's response so that the slave responses can be compared to it */
-                    m_sescmd_responses[id] = std::make_pair(backend, !reply.error());
-
-                    if (reply.error())
-                    {
-                        MXS_INFO("Session command no. %lu returned an error: %s",
-                                 id, reply.error().message().c_str());
-                    }
-                    else if (command == MXS_COM_STMT_PREPARE)
-                    {
-                        /** Map the returned response to the internal ID */
-                        MXS_INFO("PS ID %u maps to internal ID %lu", reply.generated_id(), id);
-                        m_qc.ps_store_response(id, reply.generated_id(), reply.param_count());
-                    }
-
-                    // Discard any slave connections that did not return the same result
-                    for (auto& a : m_slave_responses)
-                    {
-                        discard_if_response_differs(a.first, m_sescmd_responses[id].second, a.second, sescmd);
-                    }
-
-                    m_slave_responses.clear();
-
-                    if (!m_config.disable_sescmd_history
-                        && (command == MXS_COM_CHANGE_USER || command == MXS_COM_RESET_CONNECTION))
-                    {
-                        mxb_assert_message(!m_sescmd_list.empty(), "Must have stored session commands");
-                        MXS_INFO("Resetting session command history to position %lu", id);
-                        m_sescmd_prune_pos = id;
-                    }
+                    MXS_INFO("Session command no. %lu returned an error: %s",
+                             id, reply.error().message().c_str());
                 }
-                else
+                else if (command == MXS_COM_STMT_PREPARE)
                 {
-                    MXS_INFO("Session command response from %s not yet complete", backend->name());
+                    /** Map the returned response to the internal ID */
+                    MXS_INFO("PS ID %u maps to internal ID %lu", reply.generated_id(), id);
+                    m_qc.ps_store_response(id, reply.generated_id(), reply.param_count());
+                }
+
+                // Discard any slave connections that did not return the same result
+                for (auto& a : m_slave_responses)
+                {
+                    discard_if_response_differs(a.first, m_sescmd_responses[id].second, a.second, sescmd);
+                }
+
+                m_slave_responses.clear();
+
+                if (!m_config.disable_sescmd_history
+                    && (command == MXS_COM_CHANGE_USER || command == MXS_COM_RESET_CONNECTION))
+                {
+                    mxb_assert_message(!m_sescmd_list.empty(), "Must have stored session commands");
+                    MXS_INFO("Resetting session command history to position %lu", id);
+                    m_sescmd_prune_pos = id;
                 }
             }
             else
             {
-                /** Record slave command so that the response can be validated
-                 * against the master's response when it arrives. */
-                m_slave_responses.push_back(std::make_pair(backend, !reply.error()));
+                MXS_INFO("Session command response from %s not yet complete", backend->name());
             }
         }
         else
         {
-            if (reply.error() && m_sescmd_responses[id].second)
-            {
-                MXS_WARNING("Session command returned an error on slave '%s': %s",
-                            backend->name(), reply.error().message().c_str());
-            }
-
-            discard_if_response_differs(backend, m_sescmd_responses[id].second, !reply.error(), sescmd);
+            /** Record slave command so that the response can be validated
+             * against the master's response when it arrives. */
+            m_slave_responses.push_back(std::make_pair(backend, !reply.error()));
         }
-
-        if (discard)
+    }
+    else
+    {
+        if (reply.error() && m_sescmd_responses[id].second)
         {
-            gwbuf_free(*ppPacket);
-            *ppPacket = NULL;
+            MXS_WARNING("Session command returned an error on slave '%s': %s",
+                        backend->name(), reply.error().message().c_str());
         }
 
-        if (reply.is_complete() && backend->in_use())
-        {
-            // The backend can be closed in discard_if_response_differs if the response differs which is why
-            // we need to check it again here
-            backend->complete_session_command();
-        }
+        discard_if_response_differs(backend, m_sescmd_responses[id].second, !reply.error(), sescmd);
+    }
+
+    if (discard)
+    {
+        gwbuf_free(*ppPacket);
+        *ppPacket = NULL;
+    }
+
+    if (reply.is_complete() && backend->in_use())
+    {
+        // The backend can be closed in discard_if_response_differs if the response differs which is why
+        // we need to check it again here
+        backend->complete_session_command();
     }
 }
