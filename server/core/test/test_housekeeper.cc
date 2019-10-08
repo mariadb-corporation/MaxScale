@@ -92,7 +92,7 @@ int main(int argc, char** argv)
 
     init_test_env();
 
-    maxscale::MainWorker mw;
+    maxscale::MainWorker mw(watchdog_notifier);
     mw.start();
 
     rc = test();

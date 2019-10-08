@@ -17,13 +17,12 @@
 #include <maxbase/stopwatch.hh>
 #include <maxbase/worker.hh>
 #include <maxscale/housekeeper.h>
+#include <maxscale/watchedworker.hh>
 
 namespace maxscale
 {
 
-class WatchedWorker;
-
-class MainWorker : public mxb::Worker
+class MainWorker : public WatchedWorker
 {
     MainWorker(const MainWorker&) = delete;
     MainWorker& operator=(const MainWorker&) = delete;
@@ -32,9 +31,11 @@ public:
     /**
      * Construct the main worker.
      *
+     * @param pNotifier The watchdog notifier.
+     *
      * @note There can be exactly one instance of @c MainWorker.
      */
-    MainWorker();
+    MainWorker(WatchdogNotifier* pNotifier);
 
     ~MainWorker();
 

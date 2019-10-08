@@ -32,4 +32,8 @@ void WatchedWorker::epoll_tick()
     epoll_tock();
 }
 
+void WatchedWorker::epoll_tock()
+{
+}
+
 }

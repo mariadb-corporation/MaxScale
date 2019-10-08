@@ -1975,7 +1975,7 @@ int main(int argc, char** argv)
         // Before we start the workers we need to check if a shutdown signal has been received
         if (!maxscale_is_shutting_down())
         {
-            MainWorker main_worker;
+            MainWorker main_worker(&watchdog_notifier);
 
             if (RoutingWorker::init(&watchdog_notifier))
             {

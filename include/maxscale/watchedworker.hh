@@ -40,7 +40,7 @@ protected:
     /**
      * Called once per epoll loop from epoll_tick().
      */
-    virtual void epoll_tock() = 0;
+    virtual void epoll_tock();
 
 private:
     void epoll_tick() override final;

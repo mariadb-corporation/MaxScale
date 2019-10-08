@@ -39,6 +39,7 @@
 #include <maxbase/alloc.h>
 #include <maxscale/mainworker.hh>
 #include <maxscale/utils.hh>
+#include <maxscale/watchdognotifier.hh>
 #include "../../../../core/internal/modules.hh"
 #include "../../../../core/internal/config.hh"
 #include "../../../../core/internal/servermanager.hh"
@@ -103,7 +104,8 @@ int main(int argc, char** argv)
     load_module("qc_sqlite", MODULE_QUERY_CLASSIFIER);
 
     maxbase::MaxBase initer;
-    maxscale::MainWorker mw;
+    maxscale::WatchdogNotifier wn(0);
+    maxscale::MainWorker mw(&wn);
     mw.start();
     qc_init(NULL, QC_SQL_MODE_DEFAULT, NULL, NULL);
 
