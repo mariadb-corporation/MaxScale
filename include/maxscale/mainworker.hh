@@ -54,21 +54,6 @@ public:
      */
     static MainWorker& get();
 
-    /**
-     * To be called from the initial (parent) thread if the systemd watchdog is on.
-     *
-     * @param microseconds  The interval in microseconds.
-     */
-    static void set_watchdog_interval(uint64_t microseconds);
-
-    /**
-     * @return The watchdog interval. A value of 0 means no watchdog notifications.
-     */
-    static const mxb::Duration& watchdog_interval()
-    {
-        return s_watchdog_interval;
-    }
-
     void add_task(const std::string& name, TASKFN func, void* pData, int frequency);
     void remove_task(const std::string& name);
 
@@ -78,17 +63,8 @@ public:
     static int64_t ticks();
 
 private:
-    friend class WatchedWorker;
-
-    void add(WatchedWorker* pWorker);
-    void remove(WatchedWorker* pWorker);
-
-private:
     bool pre_run() override;
     void post_run() override;
-    void epoll_tick() override;
-
-    void check_systemd_watchdog();
 
     struct Task
     {
@@ -114,12 +90,6 @@ private:
     bool        call_task(Worker::Call::action_t action, Task* pTask);
     static bool inc_ticks(Worker::Call::action_t action);
 
-    std::unordered_set<WatchedWorker*> m_workers;
-    std::mutex                         m_workers_lock;
     std::map<std::string, Task>        m_tasks_by_name;
-
-    static maxbase::Duration  s_watchdog_interval;   /*< Duration between notifications, if any. */
-    static maxbase::TimePoint s_watchdog_next_check; /*< Next time to notify systemd. */
-
 };
 }

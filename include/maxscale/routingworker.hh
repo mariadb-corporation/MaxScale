@@ -200,12 +200,12 @@ public:
      * To be called once at process startup. This will cause as many workers
      * to be created as the number of threads defined.
      *
-     * @param pMain  The main worker. Must remain alive for the lifetime of
-     *               the routing worker.
+     * @param pNotifier  The watchdog notifier. Must remain alive for the
+     *                   lifetime of the routing worker.
      *
      * @return True if the initialization succeeded, false otherwise.
      */
-    static bool init(MainWorker* pMain);
+    static bool init(WatchdogNotifier* pNotifier);
 
     /**
      * Finalize the worker mechanism.
@@ -564,7 +564,7 @@ public:
      */
     static std::unique_ptr<json_t> get_qc_stats_as_json(const char* zHost, int id);
 
-    class WatchdogWorkaround : public WatchedWorker::WatchdogWorkaround
+    class WatchdogWorkaround : public WatchdogNotifier::Dependent::WatchdogWorkaround
     {
         WatchdogWorkaround(const WatchdogWorkaround&);
         WatchdogWorkaround& operator=(const WatchdogWorkaround&);
@@ -577,7 +577,7 @@ public:
          *                 should be arranged. Need not be the calling worker.
          */
         WatchdogWorkaround(RoutingWorker* pWorker)
-            : WatchedWorker::WatchdogWorkaround(pWorker)
+            : Dependent::WatchdogWorkaround(pWorker)
         {
         }
 
@@ -585,7 +585,7 @@ public:
          * Turns on the watchdog workaround for the calling worker.
          */
         WatchdogWorkaround()
-            : WatchedWorker::WatchdogWorkaround(RoutingWorker::get_current())
+            : Dependent::WatchdogWorkaround(RoutingWorker::get_current())
         {
         }
     };
@@ -634,9 +634,6 @@ private:
     void close_pooled_dcb(BackendDCB* pDcb);
 
 private:
-    class WatchdogNotifier;
-    friend WatchdogNotifier;
-
     const int    m_id;              /*< The id of the worker. */
     SessionsById m_sessions;        /*< A mapping of session_id->MXS_SESSION. The map
                                      *  should contain sessions exclusive to this
@@ -649,10 +646,10 @@ private:
 
     DCBs m_dcbs;
 
-    RoutingWorker(MainWorker* pMain);
+    RoutingWorker(WatchdogNotifier* pNotifier);
     virtual ~RoutingWorker();
 
-    static RoutingWorker* create(MainWorker* pMain, int epoll_listener_fd);
+    static RoutingWorker* create(WatchdogNotifier* pNotifier, int epoll_listener_fd);
 
     bool pre_run() override;
     void post_run() override;

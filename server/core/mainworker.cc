@@ -19,11 +19,6 @@
 #endif
 #include <maxscale/cn_strings.hh>
 #include <maxscale/config.hh>
-#include <maxscale/watchedworker.hh>
-
-using std::lock_guard;
-using std::mutex;
-using std::unique_lock;
 
 namespace
 {
@@ -38,11 +33,6 @@ static struct ThisUnit
 namespace maxscale
 {
 
-// static
-maxbase::Duration MainWorker::s_watchdog_interval {0};
-// static
-maxbase::TimePoint MainWorker::s_watchdog_next_check;
-
 MainWorker::MainWorker()
 {
     mxb_assert(!this_unit.pCurrent_main);
@@ -55,9 +45,6 @@ MainWorker::MainWorker()
 MainWorker::~MainWorker()
 {
     mxb_assert(this_unit.pCurrent_main);
-
-    lock_guard<mutex> guard(m_workers_lock);
-    mxb_assert(m_workers.size() == 0);
 
     this_unit.pCurrent_main = nullptr;
 }
@@ -74,24 +61,6 @@ MainWorker& MainWorker::get()
     mxb_assert(this_unit.pCurrent_main);
 
     return *this_unit.pCurrent_main;
-}
-
-// static
-void MainWorker::set_watchdog_interval(uint64_t microseconds)
-{
-    // Do not call anything from here, assume nothing has been initialized (like logging).
-
-    // The internal timeout is 2/3 of the systemd configured interval.
-    double seconds = 1.0 * microseconds / 2000000;
-
-    s_watchdog_interval = maxbase::Duration(seconds);
-    s_watchdog_next_check = maxbase::Clock::now();
-
-    if (s_watchdog_interval.count() != 0)
-    {
-        MXS_NOTICE("The systemd watchdog is Enabled. Internal timeout = %s\n",
-                   to_string(s_watchdog_interval).c_str());
-    }
 }
 
 void MainWorker::add_task(const std::string& name, TASKFN func, void* pData, int frequency)
@@ -189,25 +158,6 @@ json_t* MainWorker::tasks_to_json(const char* zHost) const
     return pResult;
 }
 
-void MainWorker::add(WatchedWorker* pWorker)
-{
-    lock_guard<mutex> guard(m_workers_lock);
-
-    mxb_assert(m_workers.find(pWorker) == m_workers.end());
-
-    m_workers.insert(pWorker);
-}
-
-void MainWorker::remove(WatchedWorker* pWorker)
-{
-    lock_guard<mutex> guard(m_workers_lock);
-
-    auto it = m_workers.find(pWorker);
-    mxb_assert(it != m_workers.end());
-
-    m_workers.erase(it);
-}
-
 // static
 int64_t MainWorker::ticks()
 {
@@ -221,46 +171,6 @@ bool MainWorker::pre_run()
 
 void MainWorker::post_run()
 {
-}
-
-void MainWorker::epoll_tick()
-{
-    if (s_watchdog_interval.count() != 0)
-    {
-        check_systemd_watchdog();
-    }
-}
-
-void MainWorker::check_systemd_watchdog()
-{
-    mxb::TimePoint now = mxb::Clock::now();
-
-    if (now > s_watchdog_next_check)
-    {
-        unique_lock<mutex> guard(m_workers_lock);
-
-        bool all_ticking = std::all_of(m_workers.begin(), m_workers.end(), [](WatchedWorker* pWorker) {
-                return pWorker->is_ticking();
-            });
-
-        if (all_ticking)
-        {
-            std::for_each(m_workers.begin(), m_workers.end(), [](WatchedWorker* pWorker) {
-                    pWorker->mark_not_ticking();
-                });
-        }
-
-        guard.unlock();
-
-        if (all_ticking)
-        {
-            s_watchdog_next_check = now + MainWorker::watchdog_interval();
-#ifdef HAVE_SYSTEMD
-            MXS_DEBUG("systemd watchdog keep-alive ping: sd_notify(false, \"WATCHDOG=1\")");
-            sd_notify(false, "WATCHDOG=1");
-#endif
-        }
-    }
 }
 
 bool MainWorker::call_task(Worker::Call::action_t action, MainWorker::Task* pTask)

@@ -21,11 +21,11 @@
 #include <maxscale/dcb.hh>
 #include <maxscale/housekeeper.h>
 #include <maxscale/log.hh>
-#include <maxscale/mainworker.hh>
 #include <maxscale/maxscale_test.h>
 #include <maxscale/paths.h>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/routingworker.hh>
+#include <maxscale/watchdognotifier.hh>
 
 #include <sys/stat.h>
 
@@ -89,7 +89,7 @@ static int set_signal(int sig, void (* handler)(int))
     return rc;
 }
 
-static maxscale::MainWorker* main_worker = nullptr;
+static maxscale::WatchdogNotifier* watchdog_notifier = nullptr;
 
 /**
  * Initialize test environment
@@ -124,8 +124,8 @@ void init_test_env(char* __attribute((unused))path = nullptr, uint32_t init_type
     qc_setup(NULL, QC_SQL_MODE_DEFAULT, NULL, NULL);
     qc_process_init(init_type);
     maxbase::init();
-    main_worker = new maxscale::MainWorker;
-    maxscale::RoutingWorker::init(main_worker);
+    watchdog_notifier = new maxscale::WatchdogNotifier(0);
+    maxscale::RoutingWorker::init(watchdog_notifier);
     set_libdir(MXS_STRDUP(old_libdir.c_str()));
 
     preload_module("mariadbclient", "server/modules/protocol/MariaDB/", MODULE_PROTOCOL);

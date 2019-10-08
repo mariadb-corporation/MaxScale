@@ -59,13 +59,14 @@
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/paths.h>
 #include <maxscale/query_classifier.hh>
-#include <maxscale/server.hh>
-#include <maxscale/sqlite3.h>
-#include <maxscale/session.hh>
-#include <maxscale/utils.h>
-#include <maxscale/version.h>
 #include <maxscale/random.h>
 #include <maxscale/routingworker.hh>
+#include <maxscale/server.hh>
+#include <maxscale/session.hh>
+#include <maxscale/sqlite3.h>
+#include <maxscale/utils.h>
+#include <maxscale/version.h>
+#include <maxscale/watchdognotifier.hh>
 
 #include "internal/admin.hh"
 #include "internal/config.hh"
@@ -1879,11 +1880,6 @@ int main(int argc, char** argv)
         return rc;
     }
 
-    if (systemd_interval > 0)
-    {
-        MainWorker::set_watchdog_interval(systemd_interval);
-    }
-
     /** Load the admin users */
     admin_users_init();
 
@@ -1968,6 +1964,10 @@ int main(int argc, char** argv)
             }
         };
 
+    WatchdogNotifier watchdog_notifier(systemd_interval);
+
+    watchdog_notifier.start();
+
     // Initialize the internal query classifier. The actual plugin will be
     // initialized via the module initialization below.
     if (qc_process_init(QC_INIT_SELF))
@@ -1977,7 +1977,7 @@ int main(int argc, char** argv)
         {
             MainWorker main_worker;
 
-            if (RoutingWorker::init(&main_worker))
+            if (RoutingWorker::init(&watchdog_notifier))
             {
                 // If a shutdown signal was received while we were initializing the workers,
                 // we need to exit. After this point, the shutdown will be driven by the workers.
@@ -2065,6 +2065,8 @@ int main(int argc, char** argv)
         log_startup_error("Failed to initialize the internal query classifier.");
         rc = MAXSCALE_INTERNALERROR;
     }
+
+    watchdog_notifier.stop();
 
     return rc;
 }   /*< End of main */
