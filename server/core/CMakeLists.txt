@@ -51,6 +51,7 @@ add_library(maxscale-common SHARED
   target.cc
   users.cc
   utils.cc
+  watchdognotifier.cc
   watchedworker.cc
   )
 
