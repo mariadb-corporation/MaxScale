@@ -16,7 +16,7 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
-#include <maxscale/sqlite3.h>
+#include <maxsql/sqlite.hh>
 #include "pam_backend_session.hh"
 #include "pam_auth_common.hh"
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
@@ -38,7 +38,7 @@ public:
     std::unique_ptr<mxs::BackendAuthenticator> create_backend_authenticator() override;
 
 private:
-    PamClientAuthenticator(PamAuthenticatorModule* instance, SQLite::SSQLite sqlite);
+    PamClientAuthenticator(PamAuthenticatorModule* instance);
     void get_pam_user_services(const DCB* dcb,
                                const MYSQL_session* session,
                                StringVector* services_out);
@@ -55,7 +55,7 @@ private:
         DONE
     };
 
-    SQLite::SSQLite const m_sqlite;   /**< SQLite3 database handle */
+    SQLite m_sqlite;   /**< SQLite3 database handle */
 
     State    m_state {State::INIT};   /**< Authentication state */
     uint8_t  m_sequence {0};          /**< The next packet seqence number */

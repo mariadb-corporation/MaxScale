@@ -49,36 +49,36 @@ PamAuthenticatorModule* PamAuthenticatorModule::create(char** options)
     /* This handle may be used from multiple threads, set full mutex. */
     int db_flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE |
                    SQLITE_OPEN_SHAREDCACHE | SQLITE_OPEN_FULLMUTEX;
-    string sqlite_error;
-    PamAuthenticatorModule* instance = nullptr;
-    auto sqlite = SQLite::create(pam_db_fname, db_flags, &sqlite_error);
-    if (sqlite)
+
+    PamAuthenticatorModule* rval = nullptr;
+    std::unique_ptr<PamAuthenticatorModule> new_instance(
+        new(std::nothrow) PamAuthenticatorModule(pam_db_fname));
+    if (new_instance)
     {
-        instance = new PamAuthenticatorModule(std::move(sqlite), pam_db_fname);
-        if (!instance->prepare_tables())
+        string sqlite_error;
+        if (new_instance->m_sqlite.open(pam_db_fname, db_flags, &sqlite_error))
         {
-            delete instance;
-            instance = nullptr;
+            if (new_instance->prepare_tables())
+            {
+                rval = new_instance.release();
+            }
+        }
+        else
+        {
+            MXB_ERROR("Could not create PAM authenticator: %s", sqlite_error.c_str());
         }
     }
-    else
-    {
-        MXB_ERROR("Could not create PAM authenticator: %s", sqlite_error.c_str());
-    }
-
-    return instance;
+    return rval;
 }
 
 /**
  * Constructor.
  *
- * @param dbhandle Database handle
  * @param dbname Text-form name of @c dbhandle
  * @param tablename Name of table where authentication data is saved
  */
-PamAuthenticatorModule::PamAuthenticatorModule(SQLite::SSQLite dbhandle, const string& dbname)
+PamAuthenticatorModule::PamAuthenticatorModule(const string& dbname)
     : m_dbname(dbname)
-    , m_sqlite(std::move(dbhandle))
 {
 }
 
@@ -160,7 +160,7 @@ bool PamAuthenticatorModule::prepare_tables()
                                       {FIELD_ROLE, Type::TEXT}};
 
     bool rval = false;
-    auto sqlite = m_sqlite.get();
+    auto sqlite = &m_sqlite;
     if (drop_recreate_table(sqlite, TABLE_USER, users_coldef)
         && drop_recreate_table(sqlite, TABLE_DB, dbs_coldef)
         && drop_recreate_table(sqlite, TABLE_ROLES_MAPPING, roles_coldef))
@@ -226,7 +226,7 @@ void PamAuthenticatorModule::add_pam_user(const char* user, const char* host, co
             service_str.c_str(),
             proxy ? "1" : "0");
 
-    if (m_sqlite->exec(insert_sql))
+    if (m_sqlite.exec(insert_sql))
     {
         if (proxy)
         {
@@ -240,7 +240,7 @@ void PamAuthenticatorModule::add_pam_user(const char* user, const char* host, co
     }
     else
     {
-        MXB_ERROR("Failed to insert user: %s", m_sqlite->error());
+        MXB_ERROR("Failed to insert user: %s", m_sqlite.error());
     }
 }
 
@@ -251,9 +251,9 @@ void PamAuthenticatorModule::delete_old_users()
 {
     /** Delete query used to clean up the database before loading new users */
     const string delete_query = "DELETE FROM " + TABLE_USER + ";";
-    if (!m_sqlite->exec(delete_query))
+    if (!m_sqlite.exec(delete_query))
     {
-        MXB_ERROR("Failed to delete old users: %s", m_sqlite->error());
+        MXB_ERROR("Failed to delete old users: %s", m_sqlite.error());
     }
 }
 
@@ -385,13 +385,13 @@ int PamAuthenticatorModule::load_users(SERVICE* service)
 
 void PamAuthenticatorModule::fill_user_arrays(QResult user_res, QResult db_res, QResult roles_mapping_res)
 {
-    m_sqlite->exec("BEGIN");
+    m_sqlite.exec("BEGIN");
     // Delete any previous data.
     const char delete_fmt[] = "DELETE FROM %s;";
     for (const auto& tbl : {TABLE_USER, TABLE_DB, TABLE_ROLES_MAPPING})
     {
         string query = mxb::string_printf(delete_fmt, tbl.c_str());
-        m_sqlite->exec(query);
+        m_sqlite.exec(query);
     }
 
     // TODO: use prepared stmt:s
@@ -429,7 +429,7 @@ void PamAuthenticatorModule::fill_user_arrays(QResult user_res, QResult db_res, 
             string default_role = user_res->get_string(7);
             bool is_role = get_bool_enum(8);
 
-            m_sqlite->exec(mxb::string_printf(insert_fmt.c_str(), username.c_str(), host.c_str(),
+            m_sqlite.exec(mxb::string_printf(insert_fmt.c_str(), username.c_str(), host.c_str(),
                                               auth_string.c_str(), default_role.c_str(), has_global_priv,
                                               is_role));
         }
@@ -443,7 +443,7 @@ void PamAuthenticatorModule::fill_user_arrays(QResult user_res, QResult db_res, 
             auto username = db_res->get_string(0);
             auto host = db_res->get_string(1);
             auto datab = db_res->get_string(2);
-            m_sqlite->exec(mxb::string_printf(insert_db_fmt.c_str(),
+            m_sqlite.exec(mxb::string_printf(insert_db_fmt.c_str(),
                            username.c_str(), host.c_str(), datab.c_str()));
         }
     }
@@ -456,11 +456,11 @@ void PamAuthenticatorModule::fill_user_arrays(QResult user_res, QResult db_res, 
             auto username = roles_mapping_res->get_string(0);
             auto host = roles_mapping_res->get_string(1);
             auto role = roles_mapping_res->get_string(2);
-            m_sqlite->exec(mxb::string_printf(insert_roles_fmt.c_str(),
+            m_sqlite.exec(mxb::string_printf(insert_roles_fmt.c_str(),
                                               username.c_str(), host.c_str(), role.c_str()));
         }
     }
-    m_sqlite->exec("COMMIT");
+    m_sqlite.exec("COMMIT");
 }
 
 void PamAuthenticatorModule::diagnostics(DCB* dcb)
@@ -507,9 +507,9 @@ json_t* PamAuthenticatorModule::diagnostics_json()
 {
     json_t* rval = json_array();
     string select = "SELECT * FROM " + TABLE_USER + ";";
-    if (!m_sqlite->exec(select, diag_cb_json, rval))
+    if (!m_sqlite.exec(select, diag_cb_json, rval))
     {
-        MXS_ERROR("Failed to print users: %s", m_sqlite->error());
+        MXS_ERROR("Failed to print users: %s", m_sqlite.error());
     }
     return rval;
 }
@@ -576,7 +576,7 @@ bool PamAuthenticatorModule::fetch_anon_proxy_users(SERVER* server, MYSQL* conn)
                     {
                         string update_query = mxb::string_printf(update_query_fmt.c_str(),
                                                                  entry_host.c_str());
-                        m_sqlite->exec(update_query);
+                        m_sqlite.exec(update_query);
                         break;
                     }
                 }

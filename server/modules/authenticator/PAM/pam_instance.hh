@@ -39,11 +39,10 @@ public:
 
     const std::string m_dbname;     /**< Name of the in-memory database */
 
-
 private:
     using QResult = std::unique_ptr<mxq::QueryResult>;
 
-    PamAuthenticatorModule(SQLite::SSQLite dbhandle, const std::string& dbname);
+    PamAuthenticatorModule(const string& dbname);
     bool prepare_tables();
 
     void add_pam_user(const char* user, const char* host, const char* db, bool anydb,
@@ -51,5 +50,6 @@ private:
     void delete_old_users();
     bool fetch_anon_proxy_users(SERVER* server, MYSQL* conn);
     void fill_user_arrays(QResult user_res, QResult db_res, QResult roles_mapping_res);
-    SQLite::SSQLite const m_sqlite;      /**< SQLite3 database handle */
+
+    SQLite m_sqlite;      /**< SQLite3 database handle */
 };

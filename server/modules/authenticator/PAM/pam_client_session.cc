@@ -22,8 +22,6 @@
 using maxscale::Buffer;
 using std::string;
 
-using SSQLite = SQLite::SSQLite;
-
 namespace
 {
 /**
@@ -125,9 +123,8 @@ int row_count_cb(int* data, int columns, char** column_vals, char** column_names
 
 }
 
-PamClientAuthenticator::PamClientAuthenticator(PamAuthenticatorModule* instance, SSQLite sqlite)
+PamClientAuthenticator::PamClientAuthenticator(PamAuthenticatorModule* instance)
     : ClientAuthenticatorT(instance)
-      , m_sqlite(std::move(sqlite))
 {
 }
 
@@ -138,15 +135,18 @@ std::unique_ptr<mxs::ClientAuthenticator> PamClientAuthenticator::create(PamAuth
     // This handle is only used from one thread, can define no_mutex.
     int db_flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_SHAREDCACHE | SQLITE_OPEN_NOMUTEX;
     string sqlite_error;
-    auto sqlite = SQLite::create(inst->m_dbname, db_flags, &sqlite_error);
-    if (sqlite)
+    std::unique_ptr<PamClientAuthenticator> new_auth(new(std::nothrow) PamClientAuthenticator(inst));
+    if (new_auth)
     {
-        sqlite->set_timeout(1000);
-        rval.reset(new(std::nothrow) PamClientAuthenticator(inst, std::move(sqlite)));
-    }
-    else
-    {
-        MXB_ERROR("Could not create PAM authenticator session: %s", sqlite_error.c_str());
+        if (new_auth->m_sqlite.open(inst->m_dbname, db_flags, &sqlite_error))
+        {
+            new_auth->m_sqlite.set_timeout(1000);
+            rval = std::move(new_auth);
+        }
+        else
+        {
+            MXB_ERROR("Could not create PAM authenticator session: %s", sqlite_error.c_str());
+        }
     }
     return rval;
 }
@@ -173,7 +173,7 @@ void PamClientAuthenticator::get_pam_user_services(const DCB* dcb, const MYSQL_s
 
     string users_query = mxb::string_printf(users_query_fmt.c_str(), user, host.c_str());
     UserDataArr matching_users;
-    m_sqlite->exec(users_query, user_data_cb, &matching_users);
+    m_sqlite.exec(users_query, user_data_cb, &matching_users);
 
     if (!matching_users.empty())
     {
@@ -212,7 +212,7 @@ void PamClientAuthenticator::get_pam_user_services(const DCB* dcb, const MYSQL_s
         MXS_DEBUG("PAM proxy user services search sql: '%s'.", anon_query.c_str());
 
         UserDataArr anon_entries;
-        m_sqlite->exec(anon_query, anon_user_data_cb, &anon_entries);
+        m_sqlite.exec(anon_query, anon_user_data_cb, &anon_entries);
         if (anon_entries.empty())
         {
             MXB_INFO("Found no matching PAM user for client '%s'@'%s'.", user, host.c_str());
@@ -416,7 +416,7 @@ bool PamClientAuthenticator::role_can_access_db(const std::string& role, const s
         // First, check if role has global privilege.
         int count = 0;
         string role_anydb_query = mxb::string_printf(role_anydb_query_fmt.c_str(), current_role.c_str());
-        m_sqlite->exec(role_anydb_query.c_str(), row_count_cb, &count);
+        m_sqlite.exec(role_anydb_query.c_str(), row_count_cb, &count);
         if (count > 0)
         {
             privilege_found = true;
@@ -431,7 +431,7 @@ bool PamClientAuthenticator::role_can_access_db(const std::string& role, const s
             // The current role does not have access to db. Add linked roles to the open set.
             string role_map_query = mxb::string_printf(role_map_query_fmt.c_str(), current_role.c_str());
             StringVector linked_roles;
-            m_sqlite->exec(role_map_query, string_cb, &linked_roles);
+            m_sqlite.exec(role_map_query, string_cb, &linked_roles);
             for (const auto& linked_role : linked_roles)
             {
                 if (open_set.count(linked_role) == 0 && closed_set.count(linked_role) == 0)
@@ -454,6 +454,6 @@ bool PamClientAuthenticator::user_can_access_db(const std::string& user, const s
             + " WHERE (user = '%s' AND host = '%s' AND db = '%s');";
     string sql = mxb::string_printf(sql_fmt.c_str(), user.c_str(), host.c_str(), target_db.c_str());
     int result = 0;
-    m_sqlite->exec(sql, row_count_cb, &result);
+    m_sqlite.exec(sql, row_count_cb, &result);
     return result > 0;
 }
