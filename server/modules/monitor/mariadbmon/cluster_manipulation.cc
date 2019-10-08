@@ -243,6 +243,7 @@ bool MariaDBMonitor::manual_reset_replication(SERVER* master_server, json_t** er
         }
     }
 
+    m_state = State::RESET_REPLICATION;
     // Also record the previous master, needed for scheduled events.
     MariaDBServer* old_master = (m_master && m_master->is_master()) ? m_master : nullptr;
 
@@ -425,6 +426,7 @@ bool MariaDBMonitor::manual_reset_replication(SERVER* master_server, json_t** er
         }
         rval = !error;
     }
+    m_state = State::IDLE;
     return rval;
 }
 
@@ -571,6 +573,7 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t**
     const char* master_name = master_server->name();
     uint32_t servers_joined = 0;
     bool rejoin_error = false;
+    m_state = State::REJOIN;
     if (!joinable_servers.empty())
     {
         for (MariaDBServer* joinable : joinable_servers)
@@ -626,6 +629,7 @@ uint32_t MariaDBMonitor::do_rejoin(const ServerArray& joinable_servers, json_t**
         }
     }
 
+    m_state = State::IDLE;
     if (rejoin_error)
     {
         delay_auto_cluster_ops();
@@ -790,6 +794,7 @@ bool MariaDBMonitor::switchover_perform(SwitchoverParams& op)
 
     bool rval = false;
     // Step 1: Set read-only to on, flush logs, update gtid:s.
+    m_state = State::DEMOTE;
     if (demotion_target->demote(op.general, op.demotion, OperationType::SWITCHOVER))
     {
         m_cluster_modified = true;
@@ -798,10 +803,12 @@ bool MariaDBMonitor::switchover_perform(SwitchoverParams& op)
         // Step 2: Wait for the promotion target to catch up with the demotion target. Disregard the other
         // slaves of the promotion target to avoid needless waiting.
         // The gtid:s of the demotion target were updated at the end of demotion.
+        m_state = State::WAIT_FOR_TARGET_CATCHUP;
         if (promotion_target->catchup_to_master(op.general, demotion_target->m_gtid_binlog_pos))
         {
             MXS_INFO("Switchover: Catchup took %.1f seconds.", timer.lap().secs());
             // Step 3: On new master: remove slave connections, set read-only to OFF etc.
+            m_state = State::PROMOTE_TARGET;
             if (promotion_target->promote(op.general, op.promotion, type, demotion_target))
             {
                 // Point of no return. Even if following steps fail, do not try to undo.
@@ -815,6 +822,7 @@ bool MariaDBMonitor::switchover_perform(SwitchoverParams& op)
                 }
 
                 // Step 4: Start replication on old master and redirect slaves.
+                m_state = State::REJOIN;
                 ServerArray redirected_to_promo_target;
                 if (demotion_target->copy_slave_conns(op.general, op.demotion.conns_to_copy,
                                                       promotion_target))
@@ -834,6 +842,7 @@ bool MariaDBMonitor::switchover_perform(SwitchoverParams& op)
                 {
                     timer.restart();
                     // Step 5: Finally, check that slaves are replicating.
+                    m_state = State::CONFIRM_REPLICATION;
                     wait_cluster_stabilization(op.general, redirected_to_promo_target, promotion_target);
                     wait_cluster_stabilization(op.general, redirected_to_demo_target, demotion_target);
                     auto step6_duration = timer.lap();
@@ -863,6 +872,7 @@ bool MariaDBMonitor::switchover_perform(SwitchoverParams& op)
             }
         }
     }
+    m_state = State::IDLE;
     return rval;
 }
 
@@ -881,6 +891,7 @@ bool MariaDBMonitor::failover_perform(FailoverParams& op)
 
     bool rval = false;
     // Step 1: Stop and reset slave, set read-only to OFF.
+    m_state = State::PROMOTE_TARGET;
     if (promotion_target->promote(op.general, op.promotion, type, demotion_target))
     {
         // Point of no return. Even if following steps fail, do not try to undo. Failover considered
@@ -894,6 +905,7 @@ bool MariaDBMonitor::failover_perform(FailoverParams& op)
         }
 
         // Step 2: Redirect slaves.
+        m_state = State::REJOIN;
         ServerArray redirected_slaves;
         redirect_slaves_ex(op.general, type, promotion_target, demotion_target, &redirected_slaves, NULL);
         if (!redirected_slaves.empty())
@@ -902,12 +914,14 @@ bool MariaDBMonitor::failover_perform(FailoverParams& op)
             /* Step 3: Finally, check that slaves are connected to the new master. Even if
              * time is out at this point, wait_cluster_stabilization() will check the slaves
              * once so that latest status is printed. */
+            m_state = State::CONFIRM_REPLICATION;
             wait_cluster_stabilization(op.general, redirected_slaves, promotion_target);
             MXS_INFO("Failover: slave replication confirmation took %.1f seconds with "
                      "%.1f seconds to spare.",
                      timer.lap().secs(), op.general.time_remaining.secs());
         }
     }
+    m_state = State::IDLE;
     return rval;
 }
 

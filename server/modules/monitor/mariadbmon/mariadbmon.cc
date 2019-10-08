@@ -400,6 +400,42 @@ json_t* MariaDBMonitor::diagnostics_json() const
     return to_json();
 }
 
+json_t* MariaDBMonitor::to_json(State op)
+{
+    switch (op)
+    {
+    case State::IDLE:
+        return json_string("Idle");
+
+    case State::MONITOR:
+        return json_string("Monitoring servers");
+
+    case State::EXECUTE_SCRIPTS:
+        return json_string("Executing scripts");
+
+    case State::DEMOTE:
+        return json_string("Demoting old master");
+
+    case State::WAIT_FOR_TARGET_CATCHUP:
+        return json_string("Waiting for candidate master to catch up");
+
+    case State::PROMOTE_TARGET:
+        return json_string("Promoting candidate master");
+
+    case State::REJOIN:
+        return json_string("Rejoining slave servers");
+
+    case State::CONFIRM_REPLICATION:
+        return json_string("Confirming that replication works");
+
+    case State::RESET_REPLICATION:
+        return json_string("Resetting replication on all servers");
+    }
+
+    mxb_assert(!true);
+    return nullptr;
+}
+
 json_t* MariaDBMonitor::to_json() const
 {
     json_t* rval = MonitorWorker::diagnostics_json();
@@ -411,6 +447,7 @@ json_t* MariaDBMonitor::to_json() const
                         "master_gtid_domain_id",
                         m_master_gtid_domain == GTID_DOMAIN_UNKNOWN ? json_null() :
                         json_integer(m_master_gtid_domain));
+    json_object_set_new(rval, "state", to_json(m_state));
 
     json_t* server_info = json_array();
     for (MariaDBServer* server : servers())
@@ -449,6 +486,7 @@ void MariaDBMonitor::pre_loop()
 
 void MariaDBMonitor::tick()
 {
+    m_state = State::MONITOR;
     check_maintenance_requests();
 
     /* Update MonitorServer->pending_status. This is where the monitor loop writes it's findings.
@@ -541,10 +579,12 @@ void MariaDBMonitor::tick()
     process_state_changes();
     hangup_failed_servers();
     store_server_journal(m_master);
+    m_state = State::IDLE;
 }
 
 void MariaDBMonitor::process_state_changes()
 {
+    m_state = State::EXECUTE_SCRIPTS;
     MonitorWorker::process_state_changes();
 
     m_cluster_modified = false;
@@ -602,6 +642,8 @@ void MariaDBMonitor::process_state_changes()
             handle_low_disk_space_master();
         }
     }
+
+    m_state = State::MONITOR;
 }
 
 /**

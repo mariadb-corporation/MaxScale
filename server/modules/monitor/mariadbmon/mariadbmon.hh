@@ -129,6 +129,19 @@ private:
         OPTIONAL
     };
 
+    enum class State
+    {
+        IDLE,
+        MONITOR,
+        EXECUTE_SCRIPTS,
+        DEMOTE,
+        WAIT_FOR_TARGET_CATCHUP,
+        PROMOTE_TARGET,
+        REJOIN,
+        CONFIRM_REPLICATION,
+        RESET_REPLICATION,
+    };
+
     class SwitchoverParams
     {
     public:
@@ -196,6 +209,9 @@ private:
 
     ManualCommand m_manual_cmd;     /* Communicates manual commands and results */
     IdToServerMap m_servers_by_id;  /* Map from server id:s to MariaDBServer */
+
+    /* The current state of a cluster modifying operation */
+    std::atomic<State> m_state {State::IDLE};
 
     // Topology related fields
     MariaDBServer* m_master = NULL;         /* The most "master-like" server in the cluster. Is the only
@@ -296,8 +312,9 @@ private:
     bool require_server_locks() const;
     bool check_lock_status_this_tick();
 
-    std::string diagnostics_to_string() const;
-    json_t*     to_json() const;
+    std::string    diagnostics_to_string() const;
+    json_t*        to_json() const;
+    static json_t* to_json(State op);
 
     MariaDBServer* get_server(const EndPoint& search_ep);
     MariaDBServer* get_server(int64_t id);
