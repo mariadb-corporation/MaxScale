@@ -412,6 +412,24 @@ module.exports = function() {
     this.error = function(err) {
         return Promise.reject(colors.red('Error: ') +  err)
     }
+
+    this.fieldDescriptions = function(fields) {
+        var t = new Table({chars: {
+            'top' : '', 'top-mid': '', 'top-left': '', 'top-right': '', 'left': ' ', 'right': '',
+            'left-mid': '' , 'mid': '' , 'mid-mid': '', 'right-mid': '' , 'middle': '',
+            'bottom' : '', 'bottom-mid': '', 'bottom-left': '', 'bottom-right': '',
+        }})
+
+        t.push(['Field', 'Description'])
+        t.push(['-----', '-----------'])
+
+
+        for (f of fields) {
+            t.push([f.name, f.description])
+        }
+
+        return '\n\n' + t.toString()
+    }
 }
 
 
@@ -431,8 +449,6 @@ var tsvopts = {
         'padding-right': 0,
         compact: true
     },
-
-
 }
 
 function getList() {
