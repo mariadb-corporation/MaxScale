@@ -252,10 +252,6 @@ const thread_fields = [
         path: 'attributes.stats.errors',
     },
     {
-        name: 'Blocking polls',
-        path: 'attributes.stats.blocking_polls',
-    },
-    {
         name: 'Avg event queue length',
         path: 'attributes.stats.avg_event_queue_length',
     },
