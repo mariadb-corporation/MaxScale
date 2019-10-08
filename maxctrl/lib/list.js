@@ -13,6 +13,200 @@
 
 require('./common.js')()
 
+const list_servers_fields = [
+    {
+        name: 'Server',
+        path: 'id',
+    },
+    {
+        name: 'Address',
+        path: 'attributes.parameters.address',
+    },
+    {
+        name: 'Port',
+        path: 'attributes.parameters.port',
+    },
+    {
+        name: 'Connections',
+        path: 'attributes.statistics.connections',
+    },
+    {
+        name: 'State',
+        path: 'attributes.state',
+    },
+    {
+        name: 'GTID',
+        path: 'attributes.gtid_current_pos',
+    }
+]
+
+const list_services_fields = [
+    {
+        name: 'Service',
+        path: 'id',
+    },
+    {
+        name: 'Router',
+        path: 'attributes.router',
+    },
+    {
+        name: 'Connections',
+        path: 'attributes.connections',
+    },
+    {
+        name: 'Total Connections',
+        path: 'attributes.total_connections',
+    },
+    {
+        name: 'Servers',
+        path: 'relationships.servers.data[].id',
+    }
+]
+
+const list_listeners_fields = [
+    {
+        name: 'Name',
+        path: 'id',
+    },
+    {
+        name: 'Port',
+        path: 'attributes.parameters.port',
+    },
+    {
+        name: 'Host',
+        path: 'attributes.parameters.host',
+    },
+    {
+        name: 'State',
+        path: 'attributes.state',
+    }
+]
+
+const list_monitors_fields = [
+    {
+        name: 'Monitor',
+        path: 'id',
+    },
+    {
+        name: 'State',
+        path: 'attributes.state',
+    },
+    {
+        name: 'Servers',
+        path: 'relationships.servers.data[].id',
+    }
+]
+
+const list_sessions_fields = [
+    {
+        name: 'Id',
+        path: 'id',
+    },
+    {
+        name: 'User',
+        path: 'attributes.user',
+    },
+    {
+        name: 'Host',
+        path: 'attributes.remote',
+    },
+    {
+        name: 'Connected',
+        path: 'attributes.connected',
+    },
+    {
+        name: 'Idle',
+        path: 'attributes.idle',
+    },
+    {
+        name: 'Service',
+        path: 'relationships.services.data[].id',
+    }
+]
+
+const list_filters_fields = [
+    {
+        name: 'Filter',
+        path: 'id',
+    },
+    {
+        name: 'Service',
+        path: 'relationships.services.data[].id',
+    },
+    {
+        name: 'Module',
+        path: 'attributes.module',
+    }
+]
+
+const list_modules_fields = [
+    {
+        name: 'Module',
+        path: 'id',
+    },
+    {
+        name: 'Type',
+        path: 'attributes.module_type',
+    },
+    {
+        name: 'Version',
+        path: 'attributes.version',
+    }
+]
+
+const list_threads_fields = [
+    {
+        name: 'Id',
+        path: 'id',
+    },
+    {
+        name: 'Current FDs',
+        path: 'attributes.stats.current_descriptors',
+    },
+    {
+        name: 'Total FDs',
+        path: 'attributes.stats.total_descriptors',
+    },
+    {
+        name: 'Load (1s)',
+        path: 'attributes.stats.load.last_second',
+    },
+    {
+        name: 'Load (1m)',
+        path: 'attributes.stats.load.last_minute',
+    },
+    {
+        name: 'Load (1h)',
+        path: 'attributes.stats.load.last_hour',
+    }
+]
+
+const list_users_fields = [
+    {
+        name: 'Name',
+        path: 'id',
+    },
+    {
+        name: 'Type',
+        path: 'type',
+    },
+    {
+        name: 'Privileges',
+        path: 'attributes.account',
+    },
+]
+
+const list_commands_fields = [
+    {
+        name: 'Module',
+        path: 'id',
+    },
+    {
+        name: 'Commands',
+        path: 'attributes.commands[].id',
+    }
+]
+
 exports.command = 'list <command>'
 exports.desc = 'List objects'
 exports.handler = function() {}
@@ -23,14 +217,6 @@ exports.builder = function(yargs) {
                 .usage('Usage: list servers')
         }, function(argv) {
             maxctrl(argv, function(host) {
-                fields = [
-                    {'Server': 'id'},
-                    {'Address': 'attributes.parameters.address'},
-                    {'Port': 'attributes.parameters.port'},
-                    {'Connections': 'attributes.statistics.connections'},
-                    {'State': 'attributes.state'},
-                    {'GTID': 'attributes.gtid_current_pos'}
-                ]
 
                 // First, get the list of all servers
                 return getJson(host, 'servers')
@@ -68,8 +254,8 @@ exports.builder = function(yargs) {
                                     }
                                 })
                             })
-                            .then(() => filterResource(res, fields))
-                            .then((res) => rawCollectionAsTable(res, fields))
+                            .then(() => filterResource(res, list_servers_fields))
+                            .then((res) => rawCollectionAsTable(res, list_servers_fields))
                     })
             })
         })
@@ -78,13 +264,7 @@ exports.builder = function(yargs) {
                 .usage('Usage: list services')
         }, function(argv) {
             maxctrl(argv, function(host) {
-                return getCollection(host, 'services',[
-                    {'Service': 'id'},
-                    {'Router': 'attributes.router'},
-                    {'Connections': 'attributes.connections'},
-                    {'Total Connections': 'attributes.total_connections'},
-                    {'Servers': 'relationships.servers.data[].id'}
-                ])
+                return getCollection(host, 'services', list_services_fields)
             })
         })
         .command('listeners <service>', 'List listeners of a service', function(yargs) {
@@ -92,12 +272,7 @@ exports.builder = function(yargs) {
                 .usage('Usage: list listeners <service>')
         }, function(argv) {
             maxctrl(argv, function(host) {
-                return getSubCollection(host, 'services/' + argv.service, 'attributes.listeners', [
-                    {'Name': 'id'},
-                    {'Port': 'attributes.parameters.port'},
-                    {'Host': 'attributes.parameters.host'},
-                    {'State': 'attributes.state'}
-                ])
+                return getSubCollection(host, 'services/' + argv.service, 'attributes.listeners', list_listeners_fields)
             })
         })
         .command('monitors', 'List monitors', function(yargs) {
@@ -105,11 +280,7 @@ exports.builder = function(yargs) {
                 .usage('Usage: list monitors')
         }, function(argv) {
             maxctrl(argv, function(host) {
-                return getCollection(host, 'monitors', [
-                    {'Monitor': 'id'},
-                    {'State': 'attributes.state'},
-                    {'Servers': 'relationships.servers.data[].id'}
-                ])
+                return getCollection(host, 'monitors', list_monitors_fields)
             })
         })
         .command('sessions', 'List sessions', function(yargs) {
@@ -117,14 +288,7 @@ exports.builder = function(yargs) {
                 .usage('Usage: list sessions')
         }, function(argv) {
             maxctrl(argv, function(host) {
-                return getCollection(host, 'sessions',[
-                    {'Id': 'id'},
-                    {'User': 'attributes.user'},
-                    {'Host': 'attributes.remote'},
-                    {'Connected': 'attributes.connected'},
-                    {'Idle': 'attributes.idle'},
-                    {'Service': 'relationships.services.data[].id'}
-                ])
+                return getCollection(host, 'sessions', list_sessions_fields)
             })
         })
         .command('filters', 'List filters', function(yargs) {
@@ -132,11 +296,7 @@ exports.builder = function(yargs) {
                 .usage('Usage: list filters')
         }, function(argv) {
             maxctrl(argv, function(host) {
-                return getCollection(host, 'filters', [
-                    {'Filter': 'id'},
-                    {'Service': 'relationships.services.data[].id'},
-                    {'Module': 'attributes.module'}
-                ])
+                return getCollection(host, 'filters', list_filters_fields)
             })
         })
         .command('modules', 'List loaded modules', function(yargs) {
@@ -144,11 +304,7 @@ exports.builder = function(yargs) {
                 .usage('Usage: list modules')
         }, function(argv) {
             maxctrl(argv, function(host) {
-                return getCollection(host, 'maxscale/modules',[
-                    {'Module':'id'},
-                    {'Type':'attributes.module_type'},
-                    {'Version': 'attributes.version'}
-                ])
+                return getCollection(host, 'maxscale/modules', list_modules_fields)
             })
         })
         .command('threads', 'List threads', function(yargs) {
@@ -156,26 +312,16 @@ exports.builder = function(yargs) {
                 .usage('Usage: list threads')
         }, function(argv) {
             maxctrl(argv, function(host) {
-                return getCollection(host, 'maxscale/threads', [
-                    {'Id': 'id'},
-                    {'Current FDs': 'attributes.stats.current_descriptors'},
-                    {'Total FDs': 'attributes.stats.total_descriptors'},
-                    {'Load (1s)': 'attributes.stats.load.last_second'},
-                    {'Load (1m)': 'attributes.stats.load.last_minute'},
-                    {'Load (1h)': 'attributes.stats.load.last_hour'}
-                ])
+                return getCollection(host, 'maxscale/threads', list_threads_fields)
             })
         })
         .command('users', 'List created users', function(yargs) {
-            return yargs.epilog('List network the users that can be used to connect to the MaxScale REST API as well as enabled local accounts.')
+            return yargs.epilog('List network the users that can be used to connect to the MaxScale REST API' +
+                                ' as well as enabled local accounts.')
                 .usage('Usage: list users')
         }, function(argv) {
             maxctrl(argv, function(host) {
-                return getCollection(host, 'users',[
-                    {'Name':'id'},
-                    {'Type':'type'},
-                    {'Privileges':'attributes.account'},
-                ])
+                return getCollection(host, 'users', list_users_fields)
             })
         })
         .command('commands', 'List module commands', function(yargs) {
@@ -183,10 +329,7 @@ exports.builder = function(yargs) {
                 .usage('Usage: list commands')
         }, function(argv) {
             maxctrl(argv, function(host) {
-                return getCollection(host, 'maxscale/modules',[
-                    {'Module':'id'},
-                    {'Commands': 'attributes.commands[].id'}
-                ])
+                return getCollection(host, 'maxscale/modules', list_commands_fields)
             })
         })
         .usage('Usage: list <command>')

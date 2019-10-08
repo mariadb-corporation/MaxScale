@@ -14,94 +14,360 @@
 require('./common.js')()
 
 const server_fields = [
-    {'Server': 'id'},
-    {'Address': 'attributes.parameters.address'},
-    {'Port': 'attributes.parameters.port'},
-    {'State': 'attributes.state'},
-    {'Last Event': 'attributes.last_event'},
-    {'Triggered At': 'attributes.triggered_at'},
-    {'Services': 'relationships.services.data[].id'},
-    {'Monitors': 'relationships.monitors.data[].id'},
-    {'Master ID': 'attributes.master_id'},
-    {'Node ID': 'attributes.node_id'},
-    {'Slave Server IDs': 'attributes.slaves'},
-    {'Statistics': 'attributes.statistics'},
-    {'Parameters': 'attributes.parameters'}
+    {
+        name: 'Server',
+        path: 'id',
+    },
+    {
+        name: 'Address',
+        path: 'attributes.parameters.address',
+    },
+    {
+        name: 'Port',
+        path: 'attributes.parameters.port',
+    },
+    {
+        name: 'State',
+        path: 'attributes.state',
+    },
+    {
+        name: 'Last Event',
+        path: 'attributes.last_event',
+    },
+    {
+        name: 'Triggered At',
+        path: 'attributes.triggered_at',
+    },
+    {
+        name: 'Services',
+        path: 'relationships.services.data[].id',
+    },
+    {
+        name: 'Monitors',
+        path: 'relationships.monitors.data[].id',
+    },
+    {
+        name: 'Master ID',
+        path: 'attributes.master_id',
+    },
+    {
+        name: 'Node ID',
+        path: 'attributes.node_id',
+    },
+    {
+        name: 'Slave Server IDs',
+        path: 'attributes.slaves',
+    },
+    {
+        name: 'Statistics',
+        path: 'attributes.statistics',
+    },
+    {
+        name: 'Parameters',
+        path: 'attributes.parameters',
+}
 ]
 
 const service_fields = [
-    {'Service': 'id'},
-    {'Router': 'attributes.router'},
-    {'State': 'attributes.state'},
-    {'Started At': 'attributes.started'},
-    {'Current Connections': 'attributes.connections'},
-    {'Total Connections': 'attributes.total_connections'},
-    {'Servers': 'relationships.servers.data[].id'},
-    {'Parameters': 'attributes.parameters'},
-    {'Router Diagnostics': 'attributes.router_diagnostics'}
+    {
+        name: 'Service',
+        path: 'id',
+    },
+    {
+        name: 'Router',
+        path: 'attributes.router',
+    },
+    {
+        name: 'State',
+        path: 'attributes.state',
+    },
+    {
+        name: 'Started At',
+        path: 'attributes.started',
+    },
+    {
+        name: 'Current Connections',
+        path: 'attributes.connections',
+    },
+    {
+        name: 'Total Connections',
+        path: 'attributes.total_connections',
+    },
+    {
+        name: 'Servers',
+        path: 'relationships.servers.data[].id',
+    },
+    {
+        name: 'Parameters',
+        path: 'attributes.parameters',
+    },
+    {
+        name: 'Router Diagnostics',
+        path: 'attributes.router_diagnostics',
+    }
 ]
 
 const monitor_fields = [
-    {'Monitor': 'id'},
-    {'State': 'attributes.state'},
-    {'Servers': 'relationships.servers.data[].id'},
-    {'Parameters': 'attributes.parameters'},
-    {'Monitor Diagnostics': 'attributes.monitor_diagnostics'}
+    {
+        name: 'Monitor',
+        path: 'id',
+    },
+    {
+        name: 'State',
+        path: 'attributes.state',
+    },
+    {
+        name: 'Servers',
+        path: 'relationships.servers.data[].id',
+    },
+    {
+        name: 'Parameters',
+        path: 'attributes.parameters',
+    },
+    {
+        name: 'Monitor Diagnostics',
+        path: 'attributes.monitor_diagnostics',}
 ]
 
 const session_fields = [
-    {'Id': 'id'},
-    {'Service': 'relationships.services.data[].id'},
-    {'State': 'attributes.state'},
-    {'User': 'attributes.user'},
-    {'Host': 'attributes.remote'},
-    {'Connected': 'attributes.connected'},
-    {'Idle': 'attributes.idle'},
-    {'Connections': 'attributes.connections[].server'},
-    {'Connection IDs': 'attributes.connections[].protocol_diagnostics.connection_id'},
-    {'Queries': 'attributes.queries[].statement'},
-    {'Log': 'attributes.log'}
+    {
+        name: 'Id',
+        path: 'id',
+    },
+    {
+        name: 'Service',
+        path: 'relationships.services.data[].id',
+    },
+    {
+        name: 'State',
+        path: 'attributes.state',
+    },
+    {
+        name: 'User',
+        path: 'attributes.user',
+    },
+    {
+        name: 'Host',
+        path: 'attributes.remote',
+    },
+    {
+        name: 'Connected',
+        path: 'attributes.connected',
+    },
+    {
+        name: 'Idle',
+        path: 'attributes.idle',
+    },
+    {
+        name: 'Connections',
+        path: 'attributes.connections[].server',
+    },
+    {
+        name: 'Connection IDs',
+        path: 'attributes.connections[].protocol_diagnostics.connection_id',
+    },
+    {
+        name: 'Queries',
+        path: 'attributes.queries[].statement',
+    },
+    {
+        name: 'Log',
+        path: 'attributes.log',
+}
 ]
 
 const filter_fields = [
-    {'Filter': 'id'},
-    {'Module': 'attributes.module'},
-    {'Services': 'relationships.services.data[].id'},
-    {'Parameters': 'attributes.parameters'}
+    {
+        name: 'Filter',
+        path: 'id',
+    },
+    {
+        name: 'Module',
+        path: 'attributes.module',
+    },
+    {
+        name: 'Services',
+        path: 'relationships.services.data[].id',
+    },
+    {
+        name: 'Parameters',
+        path: 'attributes.parameters',
+    }
 ]
 
 const module_fields = [
-    {'Module': 'id'},
-    {'Type': 'attributes.module_type'},
-    {'Version': 'attributes.version'},
-    {'Maturity': 'attributes.maturity'},
-    {'Description': 'attributes.description'},
-    {'Parameters': 'attributes.parameters'},
-    {'Commands': 'attributes.commands'}
+    {
+        name: 'Module',
+        path: 'id',
+    },
+    {
+        name: 'Type',
+        path: 'attributes.module_type',
+    },
+    {
+        name: 'Version',
+        path: 'attributes.version',
+    },
+    {
+        name: 'Maturity',
+        path: 'attributes.maturity',
+    },
+    {
+        name: 'Description',
+        path: 'attributes.description',
+    },
+    {
+        name: 'Parameters',
+        path: 'attributes.parameters',
+    },
+    {
+        name: 'Commands',
+        path: 'attributes.commands',
+    }
 ]
 
 const thread_fields = [
-    {'Id': 'id'},
-    {'Accepts': 'attributes.stats.accepts'},
-    {'Reads': 'attributes.stats.reads'},
-    {'Writes': 'attributes.stats.writes'},
-    {'Hangups': 'attributes.stats.hangups'},
-    {'Errors': 'attributes.stats.errors'},
-    {'Blocking polls': 'attributes.stats.blocking_polls'},
-    {'Avg event queue length': 'attributes.stats.avg_event_queue_length'},
-    {'Max event queue length': 'attributes.stats.max_event_queue_length'},
-    {'Max exec time': 'attributes.stats.max_exec_time'},
-    {'Max queue time': 'attributes.stats.max_queue_time'},
-    {'Current FDs': 'attributes.stats.current_descriptors'},
-    {'Total FDs': 'attributes.stats.total_descriptors'},
-    {'Load (1s)': 'attributes.stats.load.last_second'},
-    {'Load (1m)': 'attributes.stats.load.last_minute'},
-    {'Load (1h)': 'attributes.stats.load.last_hour'},
-    {'QC cache size': 'attributes.stats.query_classifier_cache.size'},
-    {'QC cache inserts': 'attributes.stats.query_classifier_cache.inserts'},
-    {'QC cache hits': 'attributes.stats.query_classifier_cache.hits'},
-    {'QC cache misses': 'attributes.stats.query_classifier_cache.misses'},
-    {'QC cache evictions': 'attributes.stats.query_classifier_cache.evictions'},
+    {
+        name: 'Id',
+        path: 'id',
+    },
+    {
+        name: 'Accepts',
+        path: 'attributes.stats.accepts',
+    },
+    {
+        name: 'Reads',
+        path: 'attributes.stats.reads',
+    },
+    {
+        name: 'Writes',
+        path: 'attributes.stats.writes',
+    },
+    {
+        name: 'Hangups',
+        path: 'attributes.stats.hangups',
+    },
+    {
+        name: 'Errors',
+        path: 'attributes.stats.errors',
+    },
+    {
+        name: 'Blocking polls',
+        path: 'attributes.stats.blocking_polls',
+    },
+    {
+        name: 'Avg event queue length',
+        path: 'attributes.stats.avg_event_queue_length',
+    },
+    {
+        name: 'Max event queue length',
+        path: 'attributes.stats.max_event_queue_length',
+    },
+    {
+        name: 'Max exec time',
+        path: 'attributes.stats.max_exec_time',
+    },
+    {
+        name: 'Max queue time',
+        path: 'attributes.stats.max_queue_time',
+    },
+    {
+        name: 'Current FDs',
+        path: 'attributes.stats.current_descriptors',
+    },
+    {
+        name: 'Total FDs',
+        path: 'attributes.stats.total_descriptors',
+    },
+    {
+        name: 'Load (1s)',
+        path: 'attributes.stats.load.last_second',
+    },
+    {
+        name: 'Load (1m)',
+        path: 'attributes.stats.load.last_minute',
+    },
+    {
+        name: 'Load (1h)',
+        path: 'attributes.stats.load.last_hour',
+    },
+    {
+        name: 'QC cache size',
+        path: 'attributes.stats.query_classifier_cache.size',
+    },
+    {
+        name: 'QC cache inserts',
+        path: 'attributes.stats.query_classifier_cache.inserts',
+    },
+    {
+        name: 'QC cache hits',
+        path: 'attributes.stats.query_classifier_cache.hits',
+    },
+    {
+        name: 'QC cache misses',
+        path: 'attributes.stats.query_classifier_cache.misses',
+    },
+    {
+        name: 'QC cache evictions',
+        path: 'attributes.stats.query_classifier_cache.evictions',
+    },
+]
+
+const show_maxscale_fields = [
+    {
+        name: 'Version',
+        path: 'attributes.version',
+    },
+    {
+        name: 'Commit',
+        path: 'attributes.commit',
+    },
+    {
+        name: 'Started At',
+        path: 'attributes.started_at',
+    },
+    {
+        name: 'Activated At',
+        path: 'attributes.activated_at',
+    },
+    {
+        name: 'Uptime',
+        path: 'attributes.uptime',
+    },
+    {
+        name: 'Parameters',
+        path: 'attributes.parameters',
+    }
+]
+
+const show_logging_fields = [
+    {
+        name: 'Current Log File',
+        path: 'attributes.log_file',
+    },
+    {
+        name: 'Enabled Log Levels',
+        path: 'attributes.log_priorities',
+    },
+    {
+        name: 'Parameters',
+        path: 'attributes.parameters',
+    }
+]
+
+const show_commands_fields = [
+    {
+        name: 'Command',
+        path: 'id',
+    },
+    {
+        name: 'Parameters',
+        path: 'attributes.parameters[].type',
+    },
+    {
+        name: 'Descriptions',
+        path: 'attributes.parameters[].description',
+    }
 ]
 
 exports.command = 'show <command>'
@@ -228,14 +494,7 @@ exports.builder = function(yargs) {
                 .usage('Usage: show maxscale')
         }, function(argv) {
             maxctrl(argv, function(host) {
-                return getResource(host, 'maxscale', [
-                    {'Version': 'attributes.version'},
-                    {'Commit': 'attributes.commit'},
-                    {'Started At': 'attributes.started_at'},
-                    {'Activated At': 'attributes.activated_at'},
-                    {'Uptime': 'attributes.uptime'},
-                    {'Parameters': 'attributes.parameters'}
-                ])
+                return getResource(host, 'maxscale', show_maxscale_fields)
             })
         })
         .command('thread <thread>', 'Show thread', function(yargs) {
@@ -260,11 +519,7 @@ exports.builder = function(yargs) {
                 .usage('Usage: show logging')
         }, function(argv) {
             maxctrl(argv, function(host) {
-                return getResource(host, 'maxscale/logs', [
-                    {'Current Log File': 'attributes.log_file'},
-                    {'Enabled Log Levels': 'attributes.log_priorities'},
-                    {'Parameters': 'attributes.parameters'}
-                ])
+                return getResource(host, 'maxscale/logs', show_logging_fields)
             })
         })
         .command('commands <module>', 'Show module commands of a module', function(yargs) {
@@ -273,11 +528,8 @@ exports.builder = function(yargs) {
                 .usage('Usage: show commands <module>')
         }, function(argv) {
             maxctrl(argv, function(host) {
-                return getSubCollection(host, 'maxscale/modules/' + argv.module, 'attributes.commands', [
-                    {'Command': 'id'},
-                    {'Parameters': 'attributes.parameters[].type'},
-                    {'Descriptions': 'attributes.parameters[].description'}
-                ])
+                return getSubCollection(host, 'maxscale/modules/' + argv.module, 'attributes.commands',
+                                        show_commands_fields)
             })
         })
         .usage('Usage: show <command>')
