@@ -2478,7 +2478,7 @@ int blr_ping(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, GWBUF* queue)
 
 
 /**
- * mysql_send_custom_error
+ * blr_send_custom_error
  *
  * Send a MySQL protocol Generic ERR message, to the dcb
  *

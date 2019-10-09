@@ -99,50 +99,28 @@ GWBUF* mysql_create_com_quit(GWBUF* bufparam,
     return buf;
 }
 
-GWBUF* mysql_create_custom_error(int packet_number,
-                                 int affected_rows,
-                                 const char* msg)
+GWBUF* mysql_create_custom_error(int packet_number, int affected_rows, uint16_t errnum, const char* errmsg)
 {
-    uint8_t* outbuf = NULL;
-    uint32_t mysql_payload_size = 0;
     uint8_t mysql_packet_header[4];
-    uint8_t* mysql_payload = NULL;
-    uint8_t field_count = 0;
+    uint8_t field_count = 0xff;
     uint8_t mysql_err[2];
     uint8_t mysql_statemsg[6];
-    const char* mysql_error_msg = NULL;
-    const char* mysql_state = NULL;
+    const char* mysql_state = "HY000";
 
-    GWBUF* errbuf = NULL;
-
-    mysql_error_msg = "An errorr occurred ...";
-    mysql_state = "HY000";
-
-    field_count = 0xff;
-    gw_mysql_set_byte2(mysql_err,    /* mysql_errno */ 2003);
+    gw_mysql_set_byte2(mysql_err, errnum);
     mysql_statemsg[0] = '#';
     memcpy(mysql_statemsg + 1, mysql_state, 5);
 
-    if (msg != NULL)
-    {
-        mysql_error_msg = msg;
-    }
 
-    mysql_payload_size =
+    uint32_t mysql_payload_size =
         sizeof(field_count)
         + sizeof(mysql_err)
         + sizeof(mysql_statemsg)
-        + strlen(mysql_error_msg);
+        + strlen(errmsg);
 
     /** allocate memory for packet header + payload */
-    errbuf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size);
-    mxb_assert(errbuf != NULL);
-
-    if (errbuf == NULL)
-    {
-        return 0;
-    }
-    outbuf = GWBUF_DATA(errbuf);
+    GWBUF* errbuf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size);
+    uint8_t* outbuf = GWBUF_DATA(errbuf);
 
     /** write packet header and packet number */
     gw_mysql_set_byte3(mysql_packet_header, mysql_payload_size);
@@ -151,7 +129,7 @@ GWBUF* mysql_create_custom_error(int packet_number,
     /** write header */
     memcpy(outbuf, mysql_packet_header, sizeof(mysql_packet_header));
 
-    mysql_payload = outbuf + sizeof(mysql_packet_header);
+    uint8_t* mysql_payload = outbuf + sizeof(mysql_packet_header);
 
     /** write field */
     memcpy(mysql_payload, &field_count, sizeof(field_count));
@@ -166,31 +144,9 @@ GWBUF* mysql_create_custom_error(int packet_number,
     mysql_payload = mysql_payload + sizeof(mysql_statemsg);
 
     /** write error message */
-    memcpy(mysql_payload, mysql_error_msg, strlen(mysql_error_msg));
+    memcpy(mysql_payload, errmsg, strlen(errmsg));
 
     return errbuf;
-}
-
-/**
- * mysql_send_custom_error
- *
- * Send a MySQL protocol Generic ERR message, to the dcb
- * Note the errno and state are still fixed now
- *
- * @param dcb Owner_Dcb Control Block for the connection to which the OK is sent
- * @param packet_number
- * @param in_affected_rows
- * @param mysql_message
- * @return 1 Non-zero if data was sent
- *
- */
-int mysql_send_custom_error(DCB* dcb,
-                            int packet_number,
-                            int in_affected_rows,
-                            const char* mysql_message)
-{
-    GWBUF* buf = mysql_create_custom_error(packet_number, in_affected_rows, mysql_message);
-    return dcb->protocol_write(buf);
 }
 
 GWBUF* mxs_mysql_create_ok(int sequence, uint8_t affected_rows, const char* message)

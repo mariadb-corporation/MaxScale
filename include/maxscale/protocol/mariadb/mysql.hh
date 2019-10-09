@@ -360,10 +360,8 @@ extern uint8_t null_client_sha1[MYSQL_SCRAMBLE_LEN];
 const char* gw_mysql_protocol_state2string(int state);
 
 GWBUF* mysql_create_com_quit(GWBUF* bufparam, int sequence);
-GWBUF* mysql_create_custom_error(int sequence, int affected_rows, const char* msg);
+GWBUF* mysql_create_custom_error(int sequence, int affected_rows, uint16_t errnum, const char* errmsg);
 GWBUF* mxs_mysql_create_ok(int sequence, uint8_t affected_rows, const char* message);
-
-int mysql_send_custom_error(DCB* dcb, int sequence, int affected_rows, const char* msg);
 
 void init_response_status(GWBUF* buf, uint8_t cmd, int* npackets, size_t* nbytes);
 

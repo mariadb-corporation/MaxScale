@@ -393,7 +393,7 @@ void MariaDBBackendConnection::ready_for_reading(DCB* event_dcb)
 void MariaDBBackendConnection::do_handle_error(DCB* dcb, const char* errmsg)
 {
     mxb_assert(!dcb->hanged_up());
-    GWBUF* errbuf = mysql_create_custom_error(1, 0, errmsg);
+    GWBUF* errbuf = mysql_create_custom_error(1, 0, 2003, errmsg);
 
     if (!m_upstream->handleError(errbuf, nullptr, m_reply))
     {
@@ -903,8 +903,6 @@ void MariaDBBackendConnection::write_ready(DCB* event_dcb)
         {
             if (!com_quit)
             {
-                mysql_send_custom_error(dcb->session()->client_connection()->dcb(), 1, 0,
-                                        "Writing to backend failed due invalid Maxscale state.");
                 MXS_ERROR("Attempt to write buffered data to backend failed due internal inconsistent "
                           "state: %s", mxs::to_string(dcb->state()));
             }
