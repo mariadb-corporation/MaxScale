@@ -193,18 +193,7 @@ int mysql_send_custom_error(DCB* dcb,
     return dcb->protocol_write(buf);
 }
 
-/**
- * @brief Send a MySQL protocol OK message to the dcb (client)
- *
- * @param dcb DCB where packet is written
- * @param sequence Packet sequence number
- * @param affected_rows Number of affected rows
- * @param message SQL message
- * @return 1 on success, 0 on error
- *
- * @todo Support more than 255 affected rows
- */
-int mxs_mysql_send_ok(DCB* dcb, int sequence, uint8_t affected_rows, const char* message)
+GWBUF* mxs_mysql_create_ok(int sequence, uint8_t affected_rows, const char* message)
 {
     uint8_t* outbuf = NULL;
     uint32_t mysql_payload_size = 0;
@@ -271,10 +260,13 @@ int mxs_mysql_send_ok(DCB* dcb, int sequence, uint8_t affected_rows, const char*
         memcpy(mysql_payload, message, strlen(message));
     }
 
-    // writing data in the Client buffer queue
-    return dcb->protocol_write(buf);
+    return buf;
 }
 
+int mxs_mysql_send_ok(DCB* dcb, int sequence, uint8_t affected_rows, const char* message)
+{
+    return dcb->protocol_write(mxs_mysql_create_ok(sequence, affected_rows, message));
+}
 /**
  * @brief Computes the size of the response to the DB initial handshake
  *
