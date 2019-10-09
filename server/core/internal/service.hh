@@ -44,6 +44,7 @@ class Service : public SERVICE
 public:
     using FilterList = std::vector<SFilterDef>;
     using RateLimits = std::vector<LastUserLoad>;
+    using SAccountManager = std::unique_ptr<mxs::UserAccountManager>;
 
     /**
      * Find a service by name
@@ -234,6 +235,14 @@ public:
         return m_active;
     }
 
+    mxs::UserAccountManager* user_account_manager();
+
+    /**
+     * Set service protocol module. Should only be called once.
+     *
+     * @param protocol_module The protocol this service will use
+     */
+    void set_user_account_manager(SAccountManager protocol_module);
 private:
 
     struct Data
@@ -273,6 +282,9 @@ private:
 
     // Helper for calculating version values
     std::pair<uint64_t, uint64_t> get_versions(const std::vector<SERVER*>& servers) const;
+
+    // Userdata manager. Ownership shared with listeners. Must be set before accepting clients.
+    SAccountManager m_usermanager;
 };
 
 // A connection to a service

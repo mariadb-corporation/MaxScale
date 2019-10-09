@@ -262,13 +262,54 @@ SListener Listener::create(const std::string& name,
         return nullptr;
     }
 
-    SListener listener(new(std::nothrow) Listener(
-                           service, name, address, port,
-                           protocol, std::move(protocol_module),
-                           std::move(ssl_info), params, sql_mode));
+    // If the current protocol implements a user data manager, create one and set to service.
+    // If the service already has one, check that both are meant for the same protocol.
+    std::unique_ptr<mxs::UserAccountManager> new_user_manager;
+    if (protocol_module->capabilities() & mxs::ProtocolModule::CAP_AUTHDATA)
+    {
+        new_user_manager = protocol_module->create_user_data_manager();
+        if (new_user_manager)
+        {
+            auto service_usermanager = service->user_account_manager();
+            if (service_usermanager)
+            {
+                // This name comparison needs to be done by querying the modules themselves since
+                // the actual setting value has aliases.
+                if (service_usermanager->protocol_name() == new_user_manager->protocol_name())
+                {
+                    // Ok, service has only one backend protocol. If ever multiple backend protocols
+                    // need to be supported on the same service, multiple usermanagers are also needed.
+                    new_user_manager = nullptr;     // discard the just generated usermanager
+                }
+                else
+                {
+                    MXB_ERROR("The protocol of listener '%s' ('%s') differs from the protocol in the target "
+                              "service '%s' ('%s') when both protocols implement partial authentication. "
+                              "Cannot create listener.",
+                              name.c_str(), protocol_module->name().c_str(),
+                              service->name(), service_usermanager->protocol_name().c_str());
+                    return nullptr;
+                }
+            }
+        }
+        else
+        {
+            MXB_ERROR("Failed to create an authentication data manager for protocol '%s'.",
+                      protocol_module->name().c_str());
+            return nullptr;
+        }
+    }
 
+    SListener listener(new(std::nothrow) Listener(service, name, address, port,
+                                                  protocol, std::move(protocol_module),
+                                                  std::move(ssl_info), params, sql_mode));
     if (listener)
     {
+        if (new_user_manager)
+        {
+            service->set_user_account_manager(std::move(new_user_manager));
+        }
+
         // Storing a self-reference to the listener makes it possible to easily
         // increment the reference count when new connections are accepted.
         listener->m_self = listener;
@@ -628,7 +669,7 @@ void Listener::print_users(DCB* dcb)
 int Listener::load_users()
 {
     mxb::LogScope scope(name());
-    return m_proto_module->load_auth_users(m_service); // TODO: Move this call inside protocol
+    return m_proto_module->load_auth_users(m_service);      // TODO: Move this call inside protocol
 }
 
 

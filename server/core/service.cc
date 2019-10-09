@@ -1884,3 +1884,19 @@ void Service::decref()
             }, mxs::RoutingWorker::EXECUTE_AUTO);
     }
 }
+
+UserAccountManager* Service::user_account_manager()
+{
+    return m_usermanager.get();
+}
+
+void Service::set_user_account_manager(Service::SAccountManager protocol_module)
+{
+    // Once the object is set, it can not change as this would indicate a change in service
+    // backend protocol.
+    mxb_assert(!m_usermanager);
+    if (!m_usermanager)
+    {
+        m_usermanager = std::move(protocol_module);
+    }
+}

@@ -24,10 +24,16 @@ namespace maxscale
 {
 class ClientConnection;
 class BackendConnection;
+class UserAccountManager;
 
 class ProtocolModule
 {
 public:
+    enum Capabilities
+    {
+        CAP_AUTHDATA = (1u << 0)        // The protocol implements an authentication data manager
+    };
+
     /**
      * Allocate new client protocol session
      *
@@ -87,6 +93,16 @@ public:
      * @return JSON user list
      */
     virtual json_t* print_auth_users_json() = 0;
+
+    virtual std::unique_ptr<UserAccountManager> create_user_data_manager()
+    {
+        return nullptr;
+    }
+
+    virtual uint64_t capabilities() const
+    {
+        return 0;
+    }
 };
 
 /**
@@ -214,6 +230,47 @@ public:
 
     virtual const BackendDCB* dcb() const = 0;
     virtual BackendDCB*       dcb() = 0;
+};
+
+/**
+ * An interface which a user account manager class must implement. So far, this is just
+ * a draft and more features will be added as clarity increases.
+ */
+class UserAccountManager
+{
+public:
+    /**
+     * Check if user@host exists and can access the requested database. Does not check password or
+     * any other authentication credentials.
+     *
+     * @param user Client username
+     * @param host Client hostname
+     * @param requested_db Database requested by client. May be empty.
+     * @return True if user account is valid
+     */
+    virtual bool
+    check_user(const std::string& user, const std::string& host, const std::string& requested_db) = 0;
+
+    /**
+     * Notify the manager that its data should be updated. The updating may happen
+     * in a separate thread.
+     */
+    virtual void update_user_accounts() = 0;
+
+    /**
+     * Set the username and password the manager should use when accessing backends.
+     *
+     * @param user Username
+     * @param pw Password, possibly encrypted
+     */
+    virtual void set_credentials(const std::string& user, const std::string& pw) = 0;
+
+    /**
+     * Which protocol this manager can be used with. Currently, it's assumed that the user data managers
+     * do not have listener-specific settings. If multiple listeners with the same protocol name feed
+     * the same service, only one manager is required.
+     */
+    virtual std::string protocol_name() const = 0;
 };
 
 template<class ProtocolImplementation>
