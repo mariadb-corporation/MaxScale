@@ -205,7 +205,7 @@ private:
     void   gw_send_proxy_protocol_header(BackendDCB* backend_dcb);
     int    handle_persistent_connection(BackendDCB* dcb, GWBUF* queue);
     GWBUF* gw_create_change_user_packet(const MYSQL_session* mses);
-    void   do_handle_error(DCB* dcb, const char* errmsg);
+    void   do_handle_error(DCB* dcb, const char* errmsg, uint16_t errnum = 2003);
     void   prepare_for_write(DCB* dcb, GWBUF* buffer);
     int    mysql_send_com_quit(DCB* dcb, int sequence, GWBUF* buf);
     bool   read_complete_packet(DCB* dcb, GWBUF** readbuf);

@@ -994,6 +994,14 @@ bool RWSplitSession::handleError(GWBUF* errmsgbuf, mxs::Endpoint* endpoint, cons
         return false;
     }
 
+    auto failure_type = RWBackend::CLOSE_NORMAL;
+
+    if (mxs_mysql_get_mysql_errno(errmsgbuf) == ER_ACCESS_DENIED_ERROR)
+    {
+        MXS_INFO("Authentication with backend '%s' failed, permanently closing connection", backend->name());
+        failure_type = RWBackend::CLOSE_FATAL;
+    }
+
     std::string errmsg;
     bool can_continue = false;
 
@@ -1065,21 +1073,21 @@ bool RWSplitSession::handleError(GWBUF* errmsgbuf, mxs::Endpoint* endpoint, cons
             m_expected_responses--;
         }
 
-        backend->close();
+        backend->close(failure_type);
         backend->set_close_reason("Master connection failed: " + extract_error(errmsgbuf));
     }
     else
     {
         MXS_INFO("Slave '%s' failed: %s", backend->name(), extract_error(errmsgbuf).c_str());
-        if (m_target_node && m_target_node == backend
-            && trx_is_read_only())
+
+        if (m_target_node && m_target_node == backend && trx_is_read_only())
         {
             // We're no longer locked to this server as it failed
             m_target_node = nullptr;
 
             // Try to replay the transaction on another node
             can_continue = start_trx_replay();
-            backend->close();
+            backend->close(failure_type);
             backend->set_close_reason("Read-only trx failed: " + extract_error(errmsgbuf));
 
             if (!can_continue)
@@ -1100,13 +1108,13 @@ bool RWSplitSession::handleError(GWBUF* errmsgbuf, mxs::Endpoint* endpoint, cons
             mxb_assert(trx_is_open());
             m_otrx_state = OTRX_INACTIVE;
             can_continue = start_trx_replay();
-            backend->close();
+            backend->close(failure_type);
             backend->set_close_reason("Optimistic trx failed: " + extract_error(errmsgbuf));
         }
         else
         {
             /** Try to replace the failed connection with a new one */
-            can_continue = handle_error_new_connection(backend, errmsgbuf);
+            can_continue = handle_error_new_connection(backend, errmsgbuf, failure_type);
         }
     }
 
@@ -1128,7 +1136,8 @@ bool RWSplitSession::handleError(GWBUF* errmsgbuf, mxs::Endpoint* endpoint, cons
  * @return true if there are enough backend connections to continue, false if
  * not
  */
-bool RWSplitSession::handle_error_new_connection(RWBackend* backend, GWBUF* errmsg)
+bool RWSplitSession::handle_error_new_connection(RWBackend* backend, GWBUF* errmsg,
+                                                 RWBackend::close_type failure_type)
 {
     bool route_stored = false;
 
@@ -1171,7 +1180,7 @@ bool RWSplitSession::handle_error_new_connection(RWBackend* backend, GWBUF* errm
      * of the stored queries. If we route a stored query before the connection
      * is closed, it's possible that the routing logic will pick the failed
      * server as the target. */
-    backend->close();
+    backend->close(failure_type);
     backend->set_close_reason("Slave connection failed: " + extract_error(errmsg));
 
     if (route_stored)

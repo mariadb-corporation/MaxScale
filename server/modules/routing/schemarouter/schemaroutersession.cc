@@ -25,6 +25,8 @@
 #include <maxscale/resultset.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 
+#include <mysqld_error.h>
+
 namespace schemarouter
 {
 
@@ -599,7 +601,8 @@ bool SchemaRouterSession::handleError(GWBUF* pMessage, mxs::Endpoint* pProblem, 
         RouterSession::clientReply(gwbuf_clone(pMessage), route, mxs::Reply());
     }
 
-    bref->close();
+    bref->close(mxs_mysql_get_mysql_errno(pMessage) == ER_ACCESS_DENIED_ERROR ?
+                Backend::CLOSE_FATAL : Backend::CLOSE_NORMAL);
 
     return have_servers();
 }

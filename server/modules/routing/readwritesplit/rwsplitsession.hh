@@ -191,7 +191,8 @@ private:
     int get_max_replication_lag();
 
     bool retry_master_query(mxs::RWBackend* backend);
-    bool handle_error_new_connection(mxs::RWBackend* backend, GWBUF* errmsg);
+    bool handle_error_new_connection(mxs::RWBackend* backend, GWBUF* errmsg,
+                                     mxs::RWBackend::close_type failure_type);
     void manage_transactions(mxs::RWBackend* backend, GWBUF* writebuf, const mxs::Reply& reply);
     void finish_transaction(mxs::RWBackend* backend);
 

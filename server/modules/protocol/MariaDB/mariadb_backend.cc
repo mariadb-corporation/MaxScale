@@ -182,10 +182,7 @@ void MariaDBBackendConnection::handle_error_response(DCB* plain_dcb, GWBUF* buff
     bufstr[len - 3] = '\0';
 
     MXS_ERROR("Invalid authentication message from backend '%s'. Error code: %d, "
-              "Msg : %s",
-              dcb->server()->name(),
-              errcode,
-              bufstr);
+              "Msg : %s", dcb->server()->name(), errcode, bufstr);
 
     /** If the error is ER_HOST_IS_BLOCKED put the server into maintenance mode.
      * This will prevent repeated authentication failures. */
@@ -204,13 +201,6 @@ void MariaDBBackendConnection::handle_error_response(DCB* plain_dcb, GWBUF* buff
                   dcb->server()->name(),
                   dcb->server()->address,
                   dcb->server()->port);
-    }
-    else if (errcode == ER_ACCESS_DENIED_ERROR
-             || errcode == ER_DBACCESS_DENIED_ERROR
-             || errcode == ER_ACCESS_DENIED_NO_PASSWORD_ERROR)
-    {
-        // Authentication failed, reload users
-        service_refresh_users(dcb->service());
     }
 }
 
@@ -390,10 +380,10 @@ void MariaDBBackendConnection::ready_for_reading(DCB* event_dcb)
     return;
 }
 
-void MariaDBBackendConnection::do_handle_error(DCB* dcb, const char* errmsg)
+void MariaDBBackendConnection::do_handle_error(DCB* dcb, const char* errmsg, uint16_t errnum)
 {
     mxb_assert(!dcb->hanged_up());
-    GWBUF* errbuf = mysql_create_custom_error(1, 0, 2003, errmsg);
+    GWBUF* errbuf = mysql_create_custom_error(1, 0, errnum, errmsg);
 
     if (!m_upstream->handleError(errbuf, nullptr, m_reply))
     {
@@ -413,8 +403,7 @@ void MariaDBBackendConnection::do_handle_error(DCB* dcb, const char* errmsg)
  */
 void MariaDBBackendConnection::gw_reply_on_error(DCB* dcb)
 {
-    auto err = mysql_create_custom_error(1, 0, "Authentication with backend failed. Session will be closed.");
-    dcb->session()->terminate(err);
+    do_handle_error(dcb, "Authentication with backend failed.", ER_ACCESS_DENIED_ERROR);
 }
 
 /**
@@ -1332,7 +1321,7 @@ GWBUF* MariaDBBackendConnection::gw_create_change_user_packet(const MYSQL_sessio
     /** Set the charset, 2 bytes. Use the value sent by client. */
     *payload = mses->client_info.m_charset;
     payload++;
-    *payload = '\x00'; // Discards second byte from client?
+    *payload = '\x00';      // Discards second byte from client?
     payload++;
     memcpy(payload, "mysql_native_password", strlen("mysql_native_password"));
     /*
@@ -2035,7 +2024,8 @@ GWBUF* MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool s
  * @return Bit mask (32 bits)
  * @note Capability bits are defined in maxscale/protocol/mysql.h
  */
-uint32_t MariaDBBackendConnection::create_capabilities(bool with_ssl, bool db_specified, uint64_t capabilities)
+uint32_t MariaDBBackendConnection::create_capabilities(bool with_ssl, bool db_specified,
+                                                       uint64_t capabilities)
 {
     uint32_t final_capabilities;
 
