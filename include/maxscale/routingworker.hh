@@ -628,6 +628,7 @@ private:
     void post_run() override;
     void epoll_tick() override;
 
+    void process_timeouts();
     void delete_zombies();
 
     static uint32_t epoll_instance_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
@@ -694,6 +695,7 @@ private:
     PersistentEntriesByServer m_persistent_entries_by_server;
     bool                      m_evicting = false;
     DCBHandler                m_pool_handler;
+    long                      m_next_timeout_check = 0;
 
     std::vector<std::function<void()>> m_epoll_tick_funcs;
 };

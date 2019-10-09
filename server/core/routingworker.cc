@@ -474,6 +474,65 @@ void RoutingWorker::destroy(DCB* pDcb)
     m_zombies.push_back(pDcb);
 }
 
+/**
+ * Close sessions that have been idle or write to the socket has taken for too long.
+ *
+ * If the time since a session last sent data is greater than the set connection_timeout
+ * value in the service, it is disconnected. If the time since last write
+ * to the socket is greater net_write_timeout the session is also disconnected.
+ * The timeouts are disabled by default.
+ */
+void RoutingWorker::process_timeouts()
+{
+    if (mxs_clock() >= m_next_timeout_check)
+    {
+        /** Because the resolutions of the timeouts is one second, we only need to
+         * check them once per second. One heartbeat is 100 milliseconds. */
+        m_next_timeout_check = mxs_clock() + 10;
+
+        for (DCB* pDcb : m_dcbs)
+        {
+            if (pDcb->role() == DCB::Role::CLIENT && pDcb->state() == DCB::State::POLLING)
+            {
+                SERVICE* service = pDcb->session()->service;
+
+                if (service->config().conn_idle_timeout)
+                {
+                    int64_t idle = mxs_clock() - pDcb->last_read();
+                    // Multiply by 10 to match conn_idle_timeout resolution
+                    // to the 100 millisecond tics.
+                    int64_t timeout = service->config().conn_idle_timeout * 10;
+
+                    if (idle > timeout)
+                    {
+                        MXS_WARNING("Timing out '%s'@%s, idle for %.1f seconds",
+                                    pDcb->session()->user().c_str(),
+                                    pDcb->remote().c_str(),
+                                    (float)idle / 10.f);
+                        pDcb->session()->close_reason = SESSION_CLOSE_TIMEOUT;
+                        pDcb->trigger_hangup_event();
+                    }
+                }
+
+                if (service->config().net_write_timeout && pDcb->writeq_len() > 0)
+                {
+                    int64_t idle = mxs_clock() - pDcb->last_write();
+                    // Multiply by 10 to match net_write_timeout resolution
+                    // to the 100 millisecond tics.
+                    if (idle > pDcb->service()->config().net_write_timeout * 10)
+                    {
+                        MXS_WARNING("network write timed out for '%s'@%s.",
+                                    pDcb->session()->user().c_str(),
+                                    pDcb->remote().c_str());
+                        pDcb->session()->close_reason = SESSION_CLOSE_TIMEOUT;
+                        pDcb->trigger_hangup_event();
+                    }
+                }
+            }
+        }
+    }
+}
+
 void RoutingWorker::delete_zombies()
 {
     // An algorithm cannot be used, as the final closing of a DCB may cause
@@ -816,8 +875,7 @@ RoutingWorker* RoutingWorker::create(mxb::WatchdogNotifier* pNotifier, int epoll
 
 void RoutingWorker::epoll_tick()
 {
-    // TODO: The following function should be here, not in DCB.
-    DCB::process_timeouts(m_id);
+    process_timeouts();
 
     delete_zombies();
 

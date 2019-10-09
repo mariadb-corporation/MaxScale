@@ -316,6 +316,14 @@ public:
      */
     int writeq_drain();
 
+    /**
+     * @return The current length of the writeq.
+     */
+    uint64_t writeq_len() const
+    {
+        return m_writeqlen;
+    }
+
     int32_t protocol_write(GWBUF* pData);
 
     // TODO: Should probably be made protected.
@@ -372,8 +380,6 @@ public:
      * Remove all callbacks
      */
     void remove_callbacks();
-
-    static void process_timeouts(int thr);
 
     inline GWBUF* writeq()
     {

@@ -83,7 +83,6 @@ static struct THIS_UNIT
 
 static thread_local struct
 {
-    long next_timeout_check;/** When to next check for idle sessions. */
     DCB* current_dcb;       /** The DCB currently being handled by event handlers. */
 } this_thread;
 }
@@ -1130,68 +1129,6 @@ static int dcb_set_socket_option(int sockfd, int level, int optname, void* optva
         return -1;
     }
     return 0;
-}
-
-/**
- * Close sessions that have been idle or write to the socket has taken for too long.
- *
- * If the time since a session last sent data is greater than the set connection_timeout
- * value in the service, it is disconnected. If the time since last write
- * to the socket is greater net_write_timeout the session is also disconnected.
- * The timeouts are disabled by default.
- */
-//static
-void DCB::process_timeouts(int thr)
-{
-    if (mxs_clock() >= this_thread.next_timeout_check)
-    {
-        /** Because the resolutions of the timeouts is one second, we only need to
-         * check them once per second. One heartbeat is 100 milliseconds. */
-        this_thread.next_timeout_check = mxs_clock() + 10;
-
-        RoutingWorker* rworker = RoutingWorker::get_current();
-
-        for (DCB* dcb : rworker->dcbs())
-        {
-            if (dcb->role() == DCB::Role::CLIENT && dcb->state() == DCB::State::POLLING)
-            {
-                SERVICE* service = dcb->session()->service;
-
-                if (service->config().conn_idle_timeout)
-                {
-                    int64_t idle = mxs_clock() - dcb->m_last_read;
-                    // Multiply by 10 to match conn_idle_timeout resolution
-                    // to the 100 millisecond tics.
-                    int64_t timeout = service->config().conn_idle_timeout * 10;
-
-                    if (idle > timeout)
-                    {
-                        MXS_WARNING("Timing out '%s'@%s, idle for %.1f seconds",
-                                    dcb->session()->user().c_str(),
-                                    dcb->m_remote.c_str(),
-                                    (float)idle / 10.f);
-                        dcb->session()->close_reason = SESSION_CLOSE_TIMEOUT;
-                        dcb->trigger_hangup_event();
-                    }
-                }
-
-                if (service->config().net_write_timeout && dcb->m_writeqlen > 0)
-                {
-                    int64_t idle = mxs_clock() - dcb->m_last_write;
-                    // Multiply by 10 to match net_write_timeout resolution
-                    // to the 100 millisecond tics.
-                    if (idle > dcb->service()->config().net_write_timeout * 10)
-                    {
-                        MXS_WARNING("network write timed out for '%s'@%s.",
-                                    dcb->session()->user().c_str(),
-                                    dcb->m_remote.c_str());
-                        dcb->session()->close_reason = SESSION_CLOSE_TIMEOUT;
-                        dcb->trigger_hangup_event();
-                    }
-                }
-            }
-        }
-    }
 }
 
 /** Helper class for serial iteration over all DCBs */
