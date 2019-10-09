@@ -1447,7 +1447,7 @@ std::string get_canonical(GWBUF* querybuf)
         else if (*it == '\\')
         {
             // Jump over any escaped values
-            rval[i++] += *it++;
+            rval[i++] = *it++;
 
             if (it != buf.end())
             {
