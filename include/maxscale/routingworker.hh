@@ -564,32 +564,6 @@ public:
      */
     static std::unique_ptr<json_t> get_qc_stats_as_json(const char* zHost, int id);
 
-    class WatchdogWorkaround : public WatchdogNotifier::Dependent::WatchdogWorkaround
-    {
-        WatchdogWorkaround(const WatchdogWorkaround&);
-        WatchdogWorkaround& operator=(const WatchdogWorkaround&);
-
-    public:
-        /**
-         * Turns on the watchdog workaround for a specific worker.
-         *
-         * @param pWorker  The worker for which the systemd notification
-         *                 should be arranged. Need not be the calling worker.
-         */
-        WatchdogWorkaround(RoutingWorker* pWorker)
-            : Dependent::WatchdogWorkaround(pWorker)
-        {
-        }
-
-        /**
-         * Turns on the watchdog workaround for the calling worker.
-         */
-        WatchdogWorkaround()
-            : Dependent::WatchdogWorkaround(RoutingWorker::get_current())
-        {
-        }
-    };
-
     using DCBs = std::unordered_set<DCB*>;
     /**
      * Access all DCBs of the routing worker.
@@ -726,8 +700,6 @@ private:
 
     std::vector<std::function<void()>> m_epoll_tick_funcs;
 };
-
-using WatchdogWorkaround = RoutingWorker::WatchdogWorkaround;
 
 // Data local to a routing worker
 template<class T>

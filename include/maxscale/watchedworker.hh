@@ -29,7 +29,7 @@ namespace maxscale
  * that MaxScale is killed and restarted.
  */
 class WatchedWorker : public mxb::Worker,
-                      protected WatchdogNotifier::Dependent
+                      public WatchdogNotifier::Dependent
 {
 public:
     ~WatchedWorker();

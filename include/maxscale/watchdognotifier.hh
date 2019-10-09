@@ -36,6 +36,8 @@ namespace maxscale
 class WatchdogNotifier
 {
 public:
+    class Workaround;
+
     /**
      * @class Dependent
      *
@@ -46,47 +48,6 @@ public:
     class Dependent
     {
     public:
-        /**
-         * @class WatchdogWorkaround
-         *
-         * RAII-class using which the systemd watchdog notification can be
-         * handled during synchronous worker activity that causes the epoll
-         * event handling to be stalled.
-         *
-         * The constructor turns on the workaround and the destructor
-         * turns it off.
-         */
-        class WatchdogWorkaround
-        {
-        public:
-            WatchdogWorkaround(const WatchdogWorkaround&) = delete;
-            WatchdogWorkaround& operator=(const WatchdogWorkaround&) = delete;
-
-            /**
-             * Turns on the watchdog workaround for a specific dependent.
-             *
-             * @param pDependent  The dependent for which the systemd notification
-             *                    should be arranged.
-             */
-            WatchdogWorkaround(Dependent* pDependent)
-                : m_dependent(*pDependent)
-            {
-                mxb_assert(pDependent);
-                m_dependent.start_watchdog_workaround();
-            }
-
-            /**
-             * Turns off the watchdog workaround.
-             */
-            ~WatchdogWorkaround()
-            {
-                m_dependent.stop_watchdog_workaround();
-            }
-
-        private:
-            Dependent& m_dependent;
-        };
-
         virtual ~Dependent();
 
         const WatchdogNotifier& notifier() const
@@ -153,6 +114,47 @@ public:
         Ticker*           m_pTicker { nullptr }; /*< Watchdog ticker, if systemd enabled. */
     };
 
+    /**
+     * @class Workaround
+     *
+     * RAII-class using which the systemd watchdog notification can be
+     * handled during synchronous worker activity that causes the epoll
+     * event handling to be stalled.
+     *
+     * The constructor turns on the workaround and the destructor
+     * turns it off.
+     */
+    class Workaround
+    {
+    public:
+        Workaround(const Workaround&) = delete;
+        Workaround& operator=(const Workaround&) = delete;
+
+        /**
+         * Turns on the watchdog workaround for a specific dependent.
+         *
+         * @param pDependent  The dependent for which the systemd notification
+         *                    should be arranged.
+         */
+        Workaround(Dependent* pDependent)
+            : m_dependent(*pDependent)
+        {
+            mxb_assert(pDependent);
+            m_dependent.start_watchdog_workaround();
+        }
+
+        /**
+         * Turns off the watchdog workaround.
+         */
+        ~Workaround()
+        {
+            m_dependent.stop_watchdog_workaround();
+        }
+
+    private:
+        Dependent& m_dependent;
+    };
+
     WatchdogNotifier(const WatchdogNotifier&) = delete;
     WatchdogNotifier& operator=(const WatchdogNotifier&) = delete;
 
@@ -170,8 +172,15 @@ public:
         return m_interval;
     }
 
+    /**
+     * Start the watchdog notifier. Multiple calls without intervening
+     * call to @c stop() is not permissible.
+     */
     void start();
 
+    /**
+     * Stop the watchdog notifier.
+     */
     void stop();
 
 private:
