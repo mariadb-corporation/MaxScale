@@ -52,7 +52,7 @@ public:
         , m_terminate(false)
     {
         m_thread = std::thread([this] {
-                                   uint32_t interval = m_owner.notifier().interval().secs();
+                                   uint32_t interval = m_owner.notifier().interval().count();
                                    timespec timeout = {interval, 0};
 
                                    while (!mxb::atomic::load(&m_terminate, mxb::atomic::RELAXED))
@@ -156,8 +156,9 @@ void WatchdogNotifier::Dependent::stop_watchdog_workaround()
 }
 
 WatchdogNotifier::WatchdogNotifier(uint64_t usecs)
-    // The internal timeout is 1/2 of the systemd configured interval.
-    : m_interval(maxbase::Duration(1.0 * usecs / 2000000))
+    // The internal timeout is 1/2 of the systemd configured interval. Note that
+    // the argument is in usecs, but the interval is stored in secs.
+    : m_interval(usecs / 2000000)
 {
     mxb_assert(this_unit.pNotifier == nullptr);
     this_unit.pNotifier = this;
@@ -222,6 +223,9 @@ void WatchdogNotifier::run()
 
     time_t secs = m_interval.count();
     long nsecs = 0;
+
+    // When started, we immediately make one notification.
+    notify_systemd_watchdog();
 
     while (m_sem.timedwait(secs, nsecs, mxb::Semaphore::IGNORE_SIGNALS) == false)
     {

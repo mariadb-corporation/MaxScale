@@ -167,7 +167,7 @@ public:
     WatchdogNotifier(uint64_t usec);
     ~WatchdogNotifier();
 
-    const mxb::Duration& interval() const
+    const std::chrono::seconds& interval() const
     {
         return m_interval;
     }
@@ -197,7 +197,7 @@ private:
 
     std::thread                    m_thread;
     mxb::Semaphore                 m_sem;
-    mxb::Duration                  m_interval;        /*< Duration between notifications, if any. */
+    std::chrono::seconds           m_interval;        /*< Duration between notifications, if any. */
     std::unordered_set<Dependent*> m_dependents;
     std::mutex                     m_dependents_lock;
 };
