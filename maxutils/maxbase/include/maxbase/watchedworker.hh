@@ -12,24 +12,26 @@
  */
 #pragma once
 
-#include <maxscale/ccdefs.hh>
+#include <maxbase/ccdefs.hh>
 #include <atomic>
 #include <maxbase/worker.hh>
 #include <maxbase/watchdognotifier.hh>
 
-namespace maxscale
+namespace maxbase
 {
 
 /**
+ * @class WatchedWorker
+ *
  * Base-class for workers that should be watched, that is, monitored
  * to ensure that they are processing epoll events.
  *
- * In case a watched worker stops processing events that will cause
- * systemd watchdog notifiation *not* to be generated, with the effect
- * that MaxScale is killed and restarted.
+ * If a watched worker stops processing events it will cause the systemd
+ * watchdog notification *not* to be generated, with the effect that the
+ * process is killed and restarted.
  */
-class WatchedWorker : public mxb::Worker,
-                      public mxb::WatchdogNotifier::Dependent
+class WatchedWorker : public Worker,
+                      public WatchdogNotifier::Dependent
 {
 public:
     ~WatchedWorker();

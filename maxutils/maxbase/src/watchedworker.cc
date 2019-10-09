@@ -10,14 +10,13 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-#include <maxscale/watchedworker.hh>
-#include <maxscale/mainworker.hh>
+#include <maxbase/watchedworker.hh>
 
-namespace maxscale
+namespace maxbase
 {
 
-WatchedWorker::WatchedWorker(mxb::WatchdogNotifier* pNotifier)
-    : mxb::WatchdogNotifier::Dependent(pNotifier)
+WatchedWorker::WatchedWorker(WatchdogNotifier* pNotifier)
+    : WatchdogNotifier::Dependent(pNotifier)
 {
 }
 

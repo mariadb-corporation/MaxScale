@@ -203,7 +203,7 @@ void RoutingWorker::DCBHandler::hangup(DCB* pDcb)
 
 
 RoutingWorker::RoutingWorker(mxb::WatchdogNotifier* pNotifier)
-    : WatchedWorker(pNotifier)
+    : mxb::WatchedWorker(pNotifier)
     , m_id(next_worker_id())
     , m_pool_handler(this)
 {

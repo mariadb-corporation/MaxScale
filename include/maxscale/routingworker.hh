@@ -26,9 +26,8 @@
 #include <maxbase/atomic.hh>
 #include <maxbase/semaphore.hh>
 #include <maxbase/stopwatch.hh>
-#include <maxbase/worker.hh>
+#include <maxbase/watchedworker.hh>
 #include <maxscale/dcb.hh>
-#include <maxscale/watchedworker.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/session.hh>
@@ -175,7 +174,7 @@ MXS_END_DECLS
 namespace maxscale
 {
 
-class RoutingWorker : public WatchedWorker
+class RoutingWorker : public mxb::WatchedWorker
                     , public BackendDCB::Manager
                     , private MXB_POLL_DATA
 {

@@ -15,14 +15,13 @@
 #include <maxscale/ccdefs.hh>
 #include <unordered_set>
 #include <maxbase/stopwatch.hh>
-#include <maxbase/worker.hh>
+#include <maxbase/watchedworker.hh>
 #include <maxscale/housekeeper.h>
-#include <maxscale/watchedworker.hh>
 
 namespace maxscale
 {
 
-class MainWorker : public WatchedWorker
+class MainWorker : public mxb::WatchedWorker
 {
     MainWorker(const MainWorker&) = delete;
     MainWorker& operator=(const MainWorker&) = delete;

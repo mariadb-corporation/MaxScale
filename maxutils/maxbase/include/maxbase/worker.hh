@@ -239,6 +239,8 @@ private:
 };
 
 /**
+ * @class Worker
+ *
  * A Worker is a class capable of asynchronously processing events
  * associated with file descriptors. Internally Worker has a thread
  * and an epoll-instance of its own.
