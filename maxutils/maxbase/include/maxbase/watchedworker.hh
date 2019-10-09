@@ -39,13 +39,8 @@ public:
 protected:
     WatchedWorker(mxb::WatchdogNotifier* pNotifier);
 
-    /**
-     * Called once per epoll loop from epoll_tick().
-     */
-    virtual void epoll_tock();
-
 private:
-    void epoll_tick() override final;
+    void call_epoll_tick() override final;
 };
 
 }

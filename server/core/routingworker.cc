@@ -814,7 +814,7 @@ RoutingWorker* RoutingWorker::create(mxb::WatchdogNotifier* pNotifier, int epoll
     return pThis;
 }
 
-void RoutingWorker::epoll_tock()
+void RoutingWorker::epoll_tick()
 {
     // TODO: The following function should be here, not in DCB.
     DCB::process_timeouts(m_id);

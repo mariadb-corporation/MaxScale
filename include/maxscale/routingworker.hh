@@ -626,7 +626,7 @@ private:
 
     bool pre_run() override;
     void post_run() override;
-    void epoll_tock() override;
+    void epoll_tick() override;
 
     void delete_zombies();
 

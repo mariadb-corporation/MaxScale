@@ -731,6 +731,13 @@ protected:
     /**
      * Called by Worker::run() once per epoll loop.
      *
+     * Default implementation calls @c epoll_tick().
+     */
+    virtual void call_epoll_tick();
+
+    /**
+     * Called by Worker::run() once per epoll loop.
+     *
      * Default implementation does nothing.
      */
     virtual void epoll_tick();

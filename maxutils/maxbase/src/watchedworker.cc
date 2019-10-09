@@ -24,15 +24,11 @@ WatchedWorker::~WatchedWorker()
 {
 }
 
-void WatchedWorker::epoll_tick()
+void WatchedWorker::call_epoll_tick()
 {
     mark_ticking_if_currently_not();
 
-    epoll_tock();
-}
-
-void WatchedWorker::epoll_tock()
-{
+    epoll_tick();
 }
 
 }

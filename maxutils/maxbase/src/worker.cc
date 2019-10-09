@@ -690,6 +690,11 @@ void Worker::post_run()
 {
 }
 
+void Worker::call_epoll_tick()
+{
+    epoll_tick();
+}
+
 void Worker::epoll_tick()
 {
 }
@@ -895,7 +900,7 @@ void Worker::poll_waitevents()
             m_statistics.maxexectime = std::max(m_statistics.maxexectime, qtime);
         }
 
-        epoll_tick();
+        call_epoll_tick();
     }   /*< while(1) */
 }
 
