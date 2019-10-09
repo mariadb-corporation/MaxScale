@@ -1992,6 +1992,12 @@ When this feature is enabled, the certificate sent by the peer is verified
 against the configured Certificate Authority. If you are using self-signed
 certificates, set `ssl_verify_peer_certificate=false`.
 
+### `ssl_crl`
+
+A string giving a file path that identifies an existing readable file. The file
+must be a Certificate Revocation List in the PEM format that defines the revoked
+certificates. This parameter is only accepted by services.
+
 #### Example SSL enabled server configuration
 
 ```

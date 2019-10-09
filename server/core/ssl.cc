@@ -205,6 +205,7 @@ SSLConfig::SSLConfig(const MXS_CONFIG_PARAMETER& params)
     : key(params.get_string(CN_SSL_KEY))
     , cert(params.get_string(CN_SSL_CERT))
     , ca(params.get_string(CN_SSL_CA_CERT))
+    , crl(params.get_string(CN_SSL_CRL))
     , version((ssl_method_type_t)params.get_enum(CN_SSL_VERSION, ssl_version_values))
     , verify_depth(params.get_integer(CN_SSL_CERT_VERIFY_DEPTH))
     , verify_peer(params.get_bool(CN_SSL_VERIFY_PEER_CERTIFICATE))
@@ -321,6 +322,41 @@ bool SSLContext::init()
     {
         MXS_ERROR("Failed to set Certificate Authority file");
         return false;
+    }
+
+    if (!m_cfg.crl.empty())
+    {
+        X509_STORE* store = SSL_CTX_get_cert_store(m_ctx);
+
+        if (FILE* fp = fopen(m_cfg.crl.c_str(), "rb"))
+        {
+            X509_CRL* crl = nullptr;
+
+            if (!PEM_read_X509_CRL(fp, &crl, nullptr, nullptr))
+            {
+                MXS_ERROR("Failed to process CRL file: %s", get_ssl_errors());
+                fclose(fp);
+                return false;
+            }
+            else if (!X509_STORE_add_crl(store, crl))
+            {
+                MXS_ERROR("Failed to set CRL: %s", get_ssl_errors());
+                fclose(fp);
+                return false;
+            }
+            else
+            {
+                X509_VERIFY_PARAM* param = X509_VERIFY_PARAM_new();
+                X509_VERIFY_PARAM_set_flags(param, X509_V_FLAG_CRL_CHECK);
+                SSL_CTX_set1_param(m_ctx, param);
+                X509_VERIFY_PARAM_free(param);
+            }
+        }
+        else
+        {
+            MXS_ERROR("Failed to load CRL file: %d, %s", errno, mxs_strerror(errno));
+            return false;
+        }
     }
 
     if (!m_cfg.cert.empty() && !m_cfg.key.empty())

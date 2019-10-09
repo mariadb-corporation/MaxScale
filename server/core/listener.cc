@@ -1017,6 +1017,7 @@ const MXS_MODULE_PARAM* common_listener_params()
         {CN_SSL_CERT,      MXS_MODULE_PARAM_PATH,    NULL,        MXS_MODULE_OPT_PATH_R_OK},
         {CN_SSL_KEY,       MXS_MODULE_PARAM_PATH,    NULL,        MXS_MODULE_OPT_PATH_R_OK},
         {CN_SSL_CA_CERT,   MXS_MODULE_PARAM_PATH,    NULL,        MXS_MODULE_OPT_PATH_R_OK},
+        {CN_SSL_CRL,       MXS_MODULE_PARAM_PATH,    NULL,        MXS_MODULE_OPT_PATH_R_OK},
         {
             CN_SSL_VERSION, MXS_MODULE_PARAM_ENUM, "MAX", MXS_MODULE_OPT_ENUM_UNIQUE, ssl_version_values
         },
