@@ -15,7 +15,7 @@
 #include <maxscale/ccdefs.hh>
 #include <atomic>
 #include <maxbase/worker.hh>
-#include <maxscale/watchdognotifier.hh>
+#include <maxbase/watchdognotifier.hh>
 
 namespace maxscale
 {
@@ -29,13 +29,13 @@ namespace maxscale
  * that MaxScale is killed and restarted.
  */
 class WatchedWorker : public mxb::Worker,
-                      public WatchdogNotifier::Dependent
+                      public mxb::WatchdogNotifier::Dependent
 {
 public:
     ~WatchedWorker();
 
 protected:
-    WatchedWorker(WatchdogNotifier* pNotifier);
+    WatchedWorker(mxb::WatchdogNotifier* pNotifier);
 
     /**
      * Called once per epoll loop from epoll_tick().

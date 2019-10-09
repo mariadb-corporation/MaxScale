@@ -1297,7 +1297,7 @@ HttpResponse resource_handle_request(const HttpRequest& request)
 
     HttpResponse response;
     worker->call([&request, &response, worker]() {
-                     mxs::WatchdogNotifier::Workaround workaround(worker);
+                     mxb::WatchdogNotifier::Workaround workaround(worker);
                      response = handle_request(request);
                  },
                  mxb::Worker::EXECUTE_AUTO);

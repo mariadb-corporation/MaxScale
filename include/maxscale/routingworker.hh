@@ -205,7 +205,7 @@ public:
      *
      * @return True if the initialization succeeded, false otherwise.
      */
-    static bool init(WatchdogNotifier* pNotifier);
+    static bool init(mxb::WatchdogNotifier* pNotifier);
 
     /**
      * Finalize the worker mechanism.
@@ -620,10 +620,10 @@ private:
 
     DCBs m_dcbs;
 
-    RoutingWorker(WatchdogNotifier* pNotifier);
+    RoutingWorker(mxb::WatchdogNotifier* pNotifier);
     virtual ~RoutingWorker();
 
-    static RoutingWorker* create(WatchdogNotifier* pNotifier, int epoll_listener_fd);
+    static RoutingWorker* create(mxb::WatchdogNotifier* pNotifier, int epoll_listener_fd);
 
     bool pre_run() override;
     void post_run() override;
@@ -633,8 +633,6 @@ private:
 
     static uint32_t epoll_instance_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
     uint32_t        handle_epoll_events(uint32_t events);
-
-    static maxbase::TimePoint s_watchdog_next_check;/*< Next time to notify systemd. */
 
     class PersistentEntry
     {

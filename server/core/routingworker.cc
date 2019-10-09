@@ -162,9 +162,6 @@ void modules_thread_finish()
 namespace maxscale
 {
 
-// static
-maxbase::TimePoint RoutingWorker::s_watchdog_next_check = maxbase::Clock::now();
-
 RoutingWorker::PersistentEntry::PersistentEntry(BackendDCB* pDcb)
     : m_created(time(nullptr))
     , m_pDcb(pDcb)
@@ -205,7 +202,7 @@ void RoutingWorker::DCBHandler::hangup(DCB* pDcb)
 }
 
 
-RoutingWorker::RoutingWorker(WatchdogNotifier* pNotifier)
+RoutingWorker::RoutingWorker(mxb::WatchdogNotifier* pNotifier)
     : WatchedWorker(pNotifier)
     , m_id(next_worker_id())
     , m_pool_handler(this)
@@ -229,7 +226,7 @@ RoutingWorker::~RoutingWorker()
 }
 
 // static
-bool RoutingWorker::init(WatchdogNotifier* pNotifier)
+bool RoutingWorker::init(mxb::WatchdogNotifier* pNotifier)
 {
     mxb_assert(!this_unit.initialized);
 
@@ -777,7 +774,7 @@ void RoutingWorker::post_run()
  * @return A worker instance if successful, otherwise NULL.
  */
 // static
-RoutingWorker* RoutingWorker::create(WatchdogNotifier* pNotifier, int epoll_listener_fd)
+RoutingWorker* RoutingWorker::create(mxb::WatchdogNotifier* pNotifier, int epoll_listener_fd)
 {
     RoutingWorker* pThis = new(std::nothrow) RoutingWorker(pNotifier);
 

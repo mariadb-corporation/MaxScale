@@ -35,7 +35,7 @@ public:
      *
      * @note There can be exactly one instance of @c MainWorker.
      */
-    MainWorker(WatchdogNotifier* pNotifier);
+    MainWorker(mxb::WatchdogNotifier* pNotifier);
 
     ~MainWorker();
 

@@ -1,25 +1,26 @@
 add_library(maxbase STATIC
   alloc.cc
   atomic.cc
+  average.cc
   eventcount.cc
   format.cc
+  host.cc
   http.cc
   log.cc
   logger.cc
   maxbase.cc
   messagequeue.cc
   pam_utils.cc
+  pretty_print.cc
+  random.cc
   semaphore.cc
+  shareddata.cc
+  stacktrace.cc
   stopwatch.cc
   string.cc
-  stacktrace.cc
+  watchdognotifier.cc
   worker.cc
   workertask.cc
-  average.cc
-  random.cc
-  host.cc
-  shareddata.cc
-  pretty_print.cc
   )
 
 if(HAVE_SYSTEMD)

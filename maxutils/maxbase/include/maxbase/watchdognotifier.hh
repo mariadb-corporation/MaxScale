@@ -12,7 +12,7 @@
  */
 #pragma once
 
-#include <maxscale/ccdefs.hh>
+#include <maxbase/ccdefs.hh>
 #include <atomic>
 #include <mutex>
 #include <thread>
@@ -22,7 +22,7 @@
 #include <maxbase/semaphore.hh>
 #include <maxbase/stopwatch.hh>
 
-namespace maxscale
+namespace maxbase
 {
 
 /**
@@ -43,7 +43,7 @@ public:
      *
      * The liveness of an instance of a class derived from
      * WatchdogNotifier::Dependent will be considered when deciding whether
-     * MaxScale itself is alive.
+     * the process itself is alive.
      */
     class Dependent
     {

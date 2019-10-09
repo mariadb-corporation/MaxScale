@@ -33,7 +33,7 @@ static struct ThisUnit
 namespace maxscale
 {
 
-MainWorker::MainWorker(WatchdogNotifier* pNotifier)
+MainWorker::MainWorker(mxb::WatchdogNotifier* pNotifier)
     : WatchedWorker(pNotifier)
 {
     mxb_assert(!this_unit.pCurrent_main);

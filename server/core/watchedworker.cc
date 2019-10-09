@@ -16,8 +16,8 @@
 namespace maxscale
 {
 
-WatchedWorker::WatchedWorker(WatchdogNotifier* pNotifier)
-    : WatchdogNotifier::Dependent(pNotifier)
+WatchedWorker::WatchedWorker(mxb::WatchdogNotifier* pNotifier)
+    : mxb::WatchdogNotifier::Dependent(pNotifier)
 {
 }
 

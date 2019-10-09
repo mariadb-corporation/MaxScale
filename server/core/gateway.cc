@@ -49,6 +49,7 @@
 #include <maxbase/stacktrace.hh>
 #include <maxbase/format.hh>
 #include <maxbase/pretty_print.hh>
+#include <maxbase/watchdognotifier.hh>
 #include <maxsql/mariadb.hh>
 #include <maxbase/alloc.h>
 #include <maxscale/adminusers.hh>
@@ -66,7 +67,6 @@
 #include <maxscale/sqlite3.h>
 #include <maxscale/utils.h>
 #include <maxscale/version.h>
-#include <maxscale/watchdognotifier.hh>
 
 #include "internal/admin.hh"
 #include "internal/config.hh"
@@ -1964,7 +1964,7 @@ int main(int argc, char** argv)
             }
         };
 
-    WatchdogNotifier watchdog_notifier(systemd_interval);
+    mxb::WatchdogNotifier watchdog_notifier(systemd_interval);
 
     watchdog_notifier.start();
 

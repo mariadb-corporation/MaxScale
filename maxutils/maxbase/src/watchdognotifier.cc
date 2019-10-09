@@ -10,7 +10,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-#include <maxscale/watchdognotifier.hh>
+#include <maxbase/watchdognotifier.hh>
+#include <algorithm>
 #ifdef HAVE_SYSTEMD
 #include <systemd/sd-daemon.h>
 #endif
@@ -24,12 +25,12 @@ namespace
 
 static struct ThisUnit
 {
-    maxscale::WatchdogNotifier* pNotifier = nullptr;
+    maxbase::WatchdogNotifier* pNotifier = nullptr;
 } this_unit;
 
 }
 
-namespace maxscale
+namespace maxbase
 {
 
 /**
@@ -57,12 +58,12 @@ public:
                                    while (!mxb::atomic::load(&m_terminate, mxb::atomic::RELAXED))
                                    {
                                         // We will wakeup when someone wants the notifier to run,
-                                        // or when MaxScale is going down.
+                                        // or when the process is going down.
                                        m_sem_start.wait();
 
                                        if (!mxb::atomic::load(&m_terminate, mxb::atomic::RELAXED))
                                        {
-                                            // If MaxScale is not going down...
+                                            // If the process is not going down...
                                            do
                                            {
                                                 // we ensure the worker appears to be ticking
@@ -155,7 +156,7 @@ void WatchdogNotifier::Dependent::stop_watchdog_workaround()
 }
 
 WatchdogNotifier::WatchdogNotifier(uint64_t usecs)
-    // The internal timeout is 1/3 of the systemd configured interval.
+    // The internal timeout is 1/2 of the systemd configured interval.
     : m_interval(maxbase::Duration(1.0 * usecs / 2000000))
 {
     mxb_assert(this_unit.pNotifier == nullptr);
@@ -163,7 +164,7 @@ WatchdogNotifier::WatchdogNotifier(uint64_t usecs)
 
     if (m_interval.count() != 0)
     {
-        MXS_NOTICE("The systemd watchdog is Enabled. Internal timeout = %s\n",
+        MXB_NOTICE("The systemd watchdog is Enabled. Internal timeout = %s\n",
                    to_string(m_interval).c_str());
     }
 }
@@ -250,7 +251,7 @@ void WatchdogNotifier::notify_systemd_watchdog()
     if (all_ticking)
     {
 #ifdef HAVE_SYSTEMD
-        MXS_DEBUG("systemd watchdog keep-alive ping: sd_notify(false, \"WATCHDOG=1\")");
+        MXB_DEBUG("systemd watchdog keep-alive ping: sd_notify(false, \"WATCHDOG=1\")");
         sd_notify(false, "WATCHDOG=1");
 #endif
     }

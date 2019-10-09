@@ -809,7 +809,7 @@ void dListListeners(DCB* dcb)
 bool Service::refresh_users()
 {
     mxb::LogScope scope(name());
-    mxs::WatchdogNotifier::Workaround workaround(RoutingWorker::get_current());
+    mxb::WatchdogNotifier::Workaround workaround(RoutingWorker::get_current());
     bool ret = true;
     int self = mxs_rworker_get_current_id();
     mxb_assert(self >= 0);
