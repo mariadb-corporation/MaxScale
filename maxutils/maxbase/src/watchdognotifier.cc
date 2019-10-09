@@ -55,13 +55,13 @@ public:
                                    uint32_t interval = m_owner.notifier().interval().count();
                                    timespec timeout = {interval, 0};
 
-                                   while (!mxb::atomic::load(&m_terminate, mxb::atomic::RELAXED))
+                                   while (!m_terminate.load(std::memory_order_acquire))
                                    {
                                         // We will wakeup when someone wants the notifier to run,
                                         // or when the process is going down.
                                        m_sem_start.wait();
 
-                                       if (!mxb::atomic::load(&m_terminate, mxb::atomic::RELAXED))
+                                       if (!m_terminate.load(std::memory_order_acquire))
                                        {
                                             // If the process is not going down...
                                            do
@@ -80,7 +80,7 @@ public:
     ~Ticker()
     {
         mxb_assert(m_nClients == 0);
-        mxb::atomic::store(&m_terminate, true, mxb::atomic::RELAXED);
+        m_terminate.store(true, std::memory_order_release);
         m_sem_start.post();
         m_thread.join();
     }
@@ -88,7 +88,7 @@ public:
     void start()
     {
         Guard guard(m_lock);
-        mxb::atomic::add(&m_nClients, 1, mxb::atomic::RELAXED);
+        ++m_nClients;
 
         if (m_nClients == 1)
         {
@@ -99,7 +99,7 @@ public:
     void stop()
     {
         Guard guard(m_lock);
-        mxb::atomic::add(&m_nClients, -1, mxb::atomic::RELAXED);
+        --m_nClients;
         mxb_assert(m_nClients >= 0);
 
         if (m_nClients == 0)
@@ -111,13 +111,13 @@ public:
 private:
     using Guard = std::lock_guard<std::mutex>;
 
-    Dependent&     m_owner;
-    int            m_nClients;
-    bool           m_terminate;
-    std::thread    m_thread;
-    std::mutex     m_lock;
-    mxb::Semaphore m_sem_start;
-    mxb::Semaphore m_sem_stop;
+    Dependent&        m_owner;
+    int               m_nClients;
+    std::atomic<bool> m_terminate;
+    std::thread       m_thread;
+    std::mutex        m_lock;
+    mxb::Semaphore    m_sem_start;
+    mxb::Semaphore    m_sem_stop;
 };
 
 WatchdogNotifier::Dependent::Dependent(WatchdogNotifier* pNotifier)
