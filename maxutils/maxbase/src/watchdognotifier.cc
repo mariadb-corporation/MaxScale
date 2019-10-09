@@ -51,30 +51,7 @@ public:
         , m_nClients(0)
         , m_terminate(false)
     {
-        m_thread = std::thread([this] {
-                                   uint32_t interval = m_owner.notifier().interval().count();
-                                   timespec timeout = {interval, 0};
-
-                                   while (!m_terminate.load(std::memory_order_acquire))
-                                   {
-                                        // We will wakeup when someone wants the notifier to run,
-                                        // or when the process is going down.
-                                       m_sem_start.wait();
-
-                                       if (!m_terminate.load(std::memory_order_acquire))
-                                       {
-                                            // If the process is not going down...
-                                           do
-                                           {
-                                                // we ensure the worker appears to be ticking
-                                               m_owner.mark_ticking_if_currently_not();
-                                           }
-                                           while (!m_sem_stop.timedwait(timeout));
-                                            // until the semaphore is actually posted, which it will be
-                                            // once the notification should stop.
-                                       }
-                                   }
-                               });
+        m_thread = std::thread(&Ticker::run, this);
     }
 
     ~Ticker()
@@ -109,6 +86,33 @@ public:
     }
 
 private:
+    // Run in thread created in constructor.
+    void run()
+    {
+        uint32_t interval = m_owner.notifier().interval().count();
+        timespec timeout = {interval, 0};
+
+        while (!m_terminate.load(std::memory_order_acquire))
+        {
+            // We will wakeup when someone wants the notifier to run,
+            // or when the process is going down.
+            m_sem_start.wait();
+
+            if (!m_terminate.load(std::memory_order_acquire))
+            {
+                // If the process is not going down...
+                do
+                {
+                    // we ensure the worker appears to be ticking
+                    m_owner.mark_ticking_if_currently_not();
+                }
+                while (!m_sem_stop.timedwait(timeout));
+                // until the semaphore is actually posted, which it will be
+                // once the notification should stop.
+            }
+        }
+    }
+
     using Guard = std::lock_guard<std::mutex>;
 
     Dependent&        m_owner;
