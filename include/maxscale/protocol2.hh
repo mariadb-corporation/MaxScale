@@ -31,7 +31,8 @@ class ProtocolModule
 public:
     enum Capabilities
     {
-        CAP_AUTHDATA = (1u << 0)        // The protocol implements an authentication data manager
+        CAP_AUTHDATA = (1u << 0),        // The protocol implements an authentication data manager
+        CAP_BACKEND = (1u << 1),     // The protocol supports backend communication
     };
 
     /**
@@ -44,6 +45,21 @@ public:
      */
     virtual std::unique_ptr<mxs::ClientConnection>
     create_client_protocol(MXS_SESSION* session, mxs::Component* component) = 0;
+
+    /**
+     * Allocate new backend protocol session
+     *
+     * @param session  The session to which the connection belongs to
+     * @param server   Server where the connection is made
+     *
+     * @return New protocol session or null on error
+     */
+    virtual std::unique_ptr<BackendConnection>
+    create_backend_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component)
+    {
+        mxb_assert(!true);
+        return nullptr;
+    }
 
     /**
      * Get the default authenticator for the protocol.
@@ -111,11 +127,6 @@ public:
 class ClientConnection : public ProtocolConnection
 {
 public:
-    enum Capabilities
-    {
-        CAP_BACKEND = (1 << 0)      // The protocol supports backend communication
-    };
-
     virtual ~ClientConnection() = default;
 
     /**
@@ -139,26 +150,6 @@ public:
     virtual int32_t connlimit(int limit)
     {
         return 0;
-    }
-
-    virtual int64_t capabilities() const
-    {
-        return 0;
-    }
-
-    /**
-     * Allocate new backend protocol session
-     *
-     * @param session  The session to which the connection belongs to
-     * @param server   Server where the connection is made
-     *
-     * @return New protocol session or null on error
-     */
-    virtual std::unique_ptr<BackendConnection>
-    create_backend_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component)
-    {
-        mxb_assert(!true);
-        return nullptr;
     }
 
     /**

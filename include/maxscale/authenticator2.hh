@@ -43,6 +43,14 @@ public:
     // Create a client session.
     virtual std::unique_ptr<ClientAuthenticator> create_client_authenticator() = 0;
 
+    /**
+     * Create a new backend authenticator linked to the client authenticator. Should only be implemented by
+     * authenticator modules which also support backend authentication.
+     *
+     * @return Backend authenticator
+     */
+    virtual std::unique_ptr<BackendAuthenticator> create_backend_authenticator() = 0;
+
     // Load or update authenticator user data
     virtual int load_users(SERVICE* service) = 0;
 
@@ -124,14 +132,6 @@ public:
      */
     virtual int reauthenticate(DCB* client, uint8_t* scramble, size_t scramble_len,
                                const ByteVec& auth_token, uint8_t* output);
-
-    /**
-     * Create a new backend authenticator linked to the client authenticator. Should only be implemented by
-     * authenticator modules which also support backend authentication.
-     *
-     * @return Backend authenticator
-     */
-    virtual std::unique_ptr<BackendAuthenticator> create_backend_authenticator() = 0;
 };
 
 // Helper template which stores the module reference.

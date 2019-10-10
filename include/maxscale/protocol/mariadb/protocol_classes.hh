@@ -94,15 +94,7 @@ public:
     void    finish_connection() override;
     int32_t connlimit(int limit) override;
 
-    int64_t capabilities() const override
-    {
-        return CAP_BACKEND;
-    }
-
     std::string current_db() const override;
-
-    std::unique_ptr<mxs::BackendConnection>
-    create_backend_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component) override;
 
     static bool parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* kt_out,
                                  std::string* user_out);
@@ -286,9 +278,13 @@ public:
     std::unique_ptr<mxs::ClientConnection>
     create_client_protocol(MXS_SESSION* session, mxs::Component* component) override;
 
+    std::unique_ptr<mxs::BackendConnection>
+    create_backend_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component) override;
+
     std::string auth_default() const override;
     GWBUF*      reject(const std::string& host) override;
 
+    uint64_t capabilities() const override;
 
     std::string name() const override;
 

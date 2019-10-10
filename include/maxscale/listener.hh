@@ -195,7 +195,7 @@ private:
     uint16_t    m_port;             /**< Port to listen on */
     std::string m_address;          /**< Address to listen with */
 
-    // Protocol module. Ownership shared with sessions.
+    // Protocol module. Ownership shared with sessions created from this listener.
     std::shared_ptr<mxs::ProtocolModule> m_proto_module;
 
     SERVICE*             m_service;         /**< The service which used by this listener */

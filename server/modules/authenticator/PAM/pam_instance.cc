@@ -529,6 +529,11 @@ std::unique_ptr<mxs::ClientAuthenticator> PamAuthenticatorModule::create_client_
     return PamClientAuthenticator::create(this);
 }
 
+std::unique_ptr<mxs::BackendAuthenticator> PamAuthenticatorModule::create_backend_authenticator()
+{
+    return std::unique_ptr<mxs::BackendAuthenticator>(new(std::nothrow) PamBackendAuthenticator());
+}
+
 bool PamAuthenticatorModule::fetch_anon_proxy_users(SERVER* server, MYSQL* conn)
 {
     bool success = true;

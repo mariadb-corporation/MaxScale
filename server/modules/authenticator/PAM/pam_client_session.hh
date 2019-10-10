@@ -35,8 +35,6 @@ public:
 
     bool ssl_capable(DCB* client) override;
 
-    std::unique_ptr<mxs::BackendAuthenticator> create_backend_authenticator() override;
-
 private:
     PamClientAuthenticator(PamAuthenticatorModule* instance);
     void get_pam_user_services(const DCB* dcb,

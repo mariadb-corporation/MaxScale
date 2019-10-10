@@ -43,7 +43,9 @@ class GSSAPIAuthenticatorModule : public mxs::AuthenticatorModule
 public:
     static GSSAPIAuthenticatorModule* create(char** options);
     ~GSSAPIAuthenticatorModule() override = default;
+
     std::unique_ptr<mxs::ClientAuthenticator> create_client_authenticator() override;
+    std::unique_ptr<mxs::BackendAuthenticator> create_backend_authenticator() override;
 
     int         load_users(SERVICE* service) override;
     void        diagnostics(DCB* output) override;
@@ -65,8 +67,6 @@ public:
     bool extract(DCB* client, GWBUF* buffer) override;
     bool ssl_capable(DCB* client) override;
     int  authenticate(DCB* client) override;
-
-    std::unique_ptr<mxs::BackendAuthenticator> create_backend_authenticator() override;
 
     sqlite3* handle {nullptr};              /**< SQLite3 database handle */
     uint8_t  sequence {0};                  /**< The next packet seqence number */

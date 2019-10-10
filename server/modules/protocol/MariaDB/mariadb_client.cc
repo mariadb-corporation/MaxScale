@@ -2028,15 +2028,13 @@ MariaDBClientConnection::MariaDBClientConnection(MXS_SESSION* session, mxs::Comp
 }
 
 std::unique_ptr<mxs::BackendConnection>
-MariaDBClientConnection::create_backend_protocol(MXS_SESSION* session,
-                                                 SERVER* server,
-                                                 mxs::Component* component)
+MySQLProtocolModule::create_backend_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component)
 {
     // Allocate DCB specific backend-authentication data from the client session.
     std::unique_ptr<mxs::BackendAuthenticator> new_backend_auth;
-    if (m_authenticator->capabilities() & mxs::AuthenticatorModule::CAP_BACKEND_AUTH)
+    if (m_auth_module->capabilities() & mxs::AuthenticatorModule::CAP_BACKEND_AUTH)
     {
-        new_backend_auth = m_authenticator->create_backend_authenticator();
+        new_backend_auth = m_auth_module->create_backend_authenticator();
         if (!new_backend_auth)
         {
             MXS_ERROR("Failed to create backend authenticator session.");
@@ -2056,6 +2054,11 @@ MariaDBClientConnection::create_backend_protocol(MXS_SESSION* session,
         rval = MariaDBBackendConnection::create(session, component, std::move(new_backend_auth));
     }
     return rval;
+}
+
+uint64_t MySQLProtocolModule::capabilities() const
+{
+    return mxs::ProtocolModule::CAP_BACKEND;
 }
 
 /**

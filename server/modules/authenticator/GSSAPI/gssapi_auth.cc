@@ -527,10 +527,9 @@ int GSSAPIClientAuthenticator::authenticate(DCB* generic_dcb)
     return rval;
 }
 
-std::unique_ptr<mxs::BackendAuthenticator> GSSAPIClientAuthenticator::create_backend_authenticator()
+std::unique_ptr<mxs::BackendAuthenticator> GSSAPIAuthenticatorModule::create_backend_authenticator()
 {
-    return std::unique_ptr<mxs::BackendAuthenticator>(
-            new (std::nothrow) GSSAPIBackendAuthenticator());
+    return std::unique_ptr<mxs::BackendAuthenticator>(new (std::nothrow) GSSAPIBackendAuthenticator());
 }
 
 /**

@@ -110,6 +110,7 @@ public:
     ~MariaDBAuthenticatorModule() override = default;
 
     std::unique_ptr<mxs::ClientAuthenticator> create_client_authenticator() override;
+    std::unique_ptr<mxs::BackendAuthenticator> create_backend_authenticator() override;
 
     int         load_users(SERVICE* service) override;
     void        diagnostics(DCB* output) override;
@@ -149,8 +150,6 @@ public:
 
     int  reauthenticate(DCB* generic_dcb, uint8_t* scramble, size_t scramble_len, const ByteVec& auth_token,
                         uint8_t* output_token) override;
-
-    std::unique_ptr<mxs::BackendAuthenticator> create_backend_authenticator() override;
 
 private:
     /**

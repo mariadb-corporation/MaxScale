@@ -706,7 +706,7 @@ int MariaDBClientAuthenticator::reauthenticate(DCB* generic_dcb, uint8_t* scramb
     return rval;
 }
 
-std::unique_ptr<mxs::BackendAuthenticator> MariaDBClientAuthenticator::create_backend_authenticator()
+std::unique_ptr<mxs::BackendAuthenticator> MariaDBAuthenticatorModule::create_backend_authenticator()
 {
     return std::unique_ptr<mxs::BackendAuthenticator>(new(std::nothrow) MariaDBBackendSession());
 }

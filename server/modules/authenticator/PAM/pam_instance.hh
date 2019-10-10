@@ -36,6 +36,7 @@ public:
     std::string supported_protocol() const override;
 
     std::unique_ptr<mxs::ClientAuthenticator> create_client_authenticator() override;
+    std::unique_ptr<mxs::BackendAuthenticator> create_backend_authenticator() override;
 
     const std::string m_dbname;     /**< Name of the in-memory database */
 

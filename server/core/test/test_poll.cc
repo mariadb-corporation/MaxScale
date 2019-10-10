@@ -56,11 +56,12 @@ static void test1()
 
     auto listener = Listener::create("listener", "mariadbclient", listener_params);
 
-    auto session = new Session(listener);
+    std::shared_ptr<mxs::ProtocolModule> protocol_module(MySQLProtocolModule::create("", ""));
+    auto session = new Session(listener, protocol_module);
     int fd = socket(AF_UNIX, SOCK_STREAM, 0);
     mxb_assert(fd >= 0);
 
-    std::unique_ptr<mxs::ProtocolModule> protocol_module(MySQLProtocolModule::create("", ""));
+
     auto client_protocol = protocol_module->create_client_protocol(session, session);
     auto pProtocol = client_protocol.get();
     auto dcb = ClientDCB::create(fd, "127.0.0.1", sockaddr_storage {},

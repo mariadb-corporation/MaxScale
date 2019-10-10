@@ -920,9 +920,10 @@ const char* session_get_close_reason(const MXS_SESSION* session)
     }
 }
 
-Session::Session(const SListener& listener)
+Session::Session(const SListener& listener, std::shared_ptr<mxs::ProtocolModule> protocol)
     : MXS_SESSION(listener)
     , m_down(static_cast<Service*>(listener->service())->get_connection(this, this))
+    , m_protocol(std::move(protocol))
 {
     if (service->config().retain_last_statements != -1)         // Explicitly set for the service
     {
@@ -1510,12 +1511,10 @@ void Session::remove_backend_conn(mxs::BackendConnection* conn)
 BackendDCB*
 Session::create_backend_connection(Server* server, BackendDCB::Manager* manager, mxs::Component* upstream)
 {
-    auto client_dcb = client_connection()->dcb();
-    auto client_proto = client_dcb->protocol();
     std::unique_ptr<BackendConnection> conn;
-    if (client_proto->capabilities() & mxs::ClientConnection::CAP_BACKEND)
+    if (m_protocol->capabilities() & mxs::ProtocolModule::CAP_BACKEND)
     {
-        conn = client_proto->create_backend_protocol(this, server, upstream);
+        conn = m_protocol->create_backend_protocol(this, server, upstream);
         if (!conn)
         {
             MXS_ERROR("Failed to create protocol session for backend DCB.");
@@ -1523,7 +1522,7 @@ Session::create_backend_connection(Server* server, BackendDCB::Manager* manager,
     }
     else
     {
-        MXB_ERROR("Protocol '%s' does not support backend connections.", listener->protocol());
+        MXB_ERROR("Protocol '%s' does not support backend connections.", m_protocol->name().c_str());
     }
 
     BackendDCB* dcb = nullptr;

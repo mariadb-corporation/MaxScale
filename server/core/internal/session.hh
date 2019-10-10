@@ -107,7 +107,7 @@ public:
     using DCBSet = std::unordered_set<DCB*>;
     using BackendConnectionVector = std::vector<mxs::BackendConnection*>;
 
-    Session(const SListener& listener);
+    Session(const SListener& listener, std::shared_ptr<mxs::ProtocolModule> protocol);
     ~Session();
 
     bool start();
@@ -178,6 +178,9 @@ private:
     void add_backend_conn(mxs::BackendConnection* conn);
     void remove_backend_conn(mxs::BackendConnection* conn);
 
+    // Delivers a provided response to the upstream filter that should receive it
+    void deliver_response();
+
     struct SESSION_VARIABLE
     {
         session_variable_handler_t handler;
@@ -198,8 +201,10 @@ private:
     BackendConnectionVector m_backends_conns;   /*< Backend connections, in creation order */
     mxs::ClientConnection*  m_client_conn {nullptr};
 
-    // Delivers a provided response to the upstream filter that should receive it
-    void deliver_response();
+    // Protocol module, used for creating backend connections. Ownership shared with the listener that
+    // created this session.
+    std::shared_ptr<mxs::ProtocolModule> m_protocol;
+
 };
 
 std::unique_ptr<ResultSet> sessionGetList();

@@ -815,7 +815,7 @@ static ClientConn accept_one_connection(int fd)
 
 ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const char* host)
 {
-    auto* session = new(std::nothrow) Session(m_self);
+    auto* session = new(std::nothrow) Session(m_self, m_proto_module);
     if (!session)
     {
         MXS_OOM();

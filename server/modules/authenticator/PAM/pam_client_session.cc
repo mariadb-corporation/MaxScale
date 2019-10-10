@@ -390,11 +390,6 @@ bool PamClientAuthenticator::ssl_capable(DCB* client)
     return mariadbses->ssl_capable();
 }
 
-std::unique_ptr<mxs::BackendAuthenticator> PamClientAuthenticator::create_backend_authenticator()
-{
-    return std::unique_ptr<mxs::BackendAuthenticator>(new(std::nothrow) PamBackendAuthenticator());
-}
-
 bool PamClientAuthenticator::role_can_access_db(const std::string& role, const std::string& target_db)
 {
     // Roles are tricky since one role may have access to other roles and so on. May need to perform
