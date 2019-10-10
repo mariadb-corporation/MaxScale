@@ -186,8 +186,6 @@ public:
 private:
     friend Dependent;
 
-    friend class Dependent;
-
     void add(Dependent* pDependent);
     void remove(Dependent* pDependent);
 
