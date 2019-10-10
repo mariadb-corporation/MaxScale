@@ -18,58 +18,6 @@
 #include <maxbase/pretty_print.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 
-// COPY-PASTED error-extraction functions from rwsplit. TODO move to lib.
-inline void extract_error_state(uint8_t* pBuffer, uint8_t** ppState, uint16_t* pnState)
-{
-    mxb_assert(MYSQL_IS_ERROR_PACKET(pBuffer));
-
-    // The payload starts with a one byte command followed by a two byte error code,
-    // followed by a 1 byte sql state marker and 5 bytes of sql state. In this context
-    // the marker and the state itself are combined.
-    *ppState = pBuffer + MYSQL_HEADER_LEN + 1 + 2;
-    *pnState = 6;
-}
-
-inline void extract_error_message(uint8_t* pBuffer, uint8_t** ppMessage, uint16_t* pnMessage)
-{
-    mxb_assert(MYSQL_IS_ERROR_PACKET(pBuffer));
-
-    int packet_len = MYSQL_HEADER_LEN + MYSQL_GET_PAYLOAD_LEN(pBuffer);
-
-    // The payload starts with a one byte command followed by a two byte error code,
-    // followed by a 1 byte sql state marker and 5 bytes of sql state, followed by
-    // a message until the end of the packet.
-    *ppMessage = pBuffer + MYSQL_HEADER_LEN + 1 + 2 + 1 + 5;
-    *pnMessage = packet_len - MYSQL_HEADER_LEN - 1 - 2 - 1 - 5;
-}
-
-std::string extract_error(GWBUF* buffer)
-{
-    std::string rval;
-
-    if (MYSQL_IS_ERROR_PACKET(((uint8_t*)GWBUF_DATA(buffer))))
-    {
-        size_t replylen = MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(buffer)) + MYSQL_HEADER_LEN;
-        uint8_t replybuf[replylen];
-        gwbuf_copy_data(buffer, 0, sizeof(replybuf), replybuf);
-
-        uint8_t* pState;
-        uint16_t nState;
-        extract_error_state(replybuf, &pState, &nState);
-
-        uint8_t* pMessage;
-        uint16_t nMessage;
-        extract_error_message(replybuf, &pMessage, &nMessage);
-
-        std::string err(reinterpret_cast<const char*>(pState), nState);
-        std::string msg(reinterpret_cast<const char*>(pMessage), nMessage);
-
-        rval = err + ": " + msg;
-    }
-
-    return rval;
-}
-
 SmartRouterSession::SmartRouterSession(SmartRouter* pRouter,
                                        MXS_SESSION* pSession,
                                        Clusters clusters)
@@ -237,7 +185,7 @@ void SmartRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down
         case ER_CONNECTION_KILLED:      // there might be more error codes needing to be caught here
             MXS_SERROR("clientReply(): Lost connection to " << cluster.pBackend->target()->name()
                                                             << " Error code=" << err_code
-                                                            << ' ' << extract_error(pPacket));
+                                                            << ' ' << mxs::extract_error(pPacket));
             m_pSession->terminate();
             return;
         }
@@ -437,7 +385,7 @@ bool SmartRouterSession::handleError(mxs::ErrorType type,
     auto err_code = mxs_mysql_get_mysql_errno(pPacket);
     MXS_SERROR("handleError(): Lost connection to "
                << pProblem->target()->name() << " Error code=" << err_code << " "
-               << extract_error(pPacket));
+               << mxs::extract_error(pPacket));
 
     m_pSession->terminate(gwbuf_clone(pPacket));
     return false;

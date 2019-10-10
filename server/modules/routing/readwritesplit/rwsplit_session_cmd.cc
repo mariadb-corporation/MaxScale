@@ -25,37 +25,6 @@
 using namespace maxscale;
 
 /**
- * Functions for session command handling
- */
-
-std::string extract_error(GWBUF* buffer)
-{
-    std::string rval;
-
-    if (MYSQL_IS_ERROR_PACKET(((uint8_t*)GWBUF_DATA(buffer))))
-    {
-        size_t replylen = MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(buffer)) + MYSQL_HEADER_LEN;
-        uint8_t replybuf[replylen];
-        gwbuf_copy_data(buffer, 0, sizeof(replybuf), replybuf);
-
-        uint8_t* pState;
-        uint16_t nState;
-        extract_error_state(replybuf, &pState, &nState);
-
-        uint8_t* pMessage;
-        uint16_t nMessage;
-        extract_error_message(replybuf, &pMessage, &nMessage);
-
-        std::string err(reinterpret_cast<const char*>(pState), nState);
-        std::string msg(reinterpret_cast<const char*>(pMessage), nMessage);
-
-        rval = err + ": " + msg;
-    }
-
-    return rval;
-}
-
-/**
  * Discards the slave connection if its response differs from the master's response
  *
  * @param backend    The slave Backend

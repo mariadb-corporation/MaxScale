@@ -987,7 +987,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
     if (reply.has_started())
     {
         MXS_ERROR("Server '%s' was lost in the middle of a resultset, cannot continue the session: %s",
-                  backend->name(), extract_error(errmsgbuf).c_str());
+                  backend->name(), mxs::extract_error(errmsgbuf).c_str());
 
         // This effectively causes an instant termination of the client connection and prevents any errors
         // from being sent to the client (MXS-2562).
@@ -1008,7 +1008,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
 
     if (m_current_master && m_current_master->in_use() && m_current_master == backend)
     {
-        MXS_INFO("Master '%s' failed: %s", backend->name(), extract_error(errmsgbuf).c_str());
+        MXS_INFO("Master '%s' failed: %s", backend->name(), mxs::extract_error(errmsgbuf).c_str());
         /** The connection to the master has failed */
 
         bool expected_response = !reply.is_complete();
@@ -1063,7 +1063,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
             int idle = duration_cast<seconds>(steady_clock::now() - backend->last_write()).count();
             MXS_ERROR("Lost connection to the master server, closing session.%s "
                       "Connection has been idle for %d seconds. Error caused by: %s",
-                      errmsg.c_str(), idle, extract_error(errmsgbuf).c_str());
+                      errmsg.c_str(), idle, mxs::extract_error(errmsgbuf).c_str());
         }
 
         // Decrement the expected response count only if we know we can continue the sesssion.
@@ -1075,11 +1075,11 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
         }
 
         backend->close(failure_type);
-        backend->set_close_reason("Master connection failed: " + extract_error(errmsgbuf));
+        backend->set_close_reason("Master connection failed: " + mxs::extract_error(errmsgbuf));
     }
     else
     {
-        MXS_INFO("Slave '%s' failed: %s", backend->name(), extract_error(errmsgbuf).c_str());
+        MXS_INFO("Slave '%s' failed: %s", backend->name(), mxs::extract_error(errmsgbuf).c_str());
 
         if (m_target_node && m_target_node == backend && trx_is_read_only())
         {
@@ -1089,7 +1089,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
             // Try to replay the transaction on another node
             can_continue = start_trx_replay();
             backend->close(failure_type);
-            backend->set_close_reason("Read-only trx failed: " + extract_error(errmsgbuf));
+            backend->set_close_reason("Read-only trx failed: " + mxs::extract_error(errmsgbuf));
 
             if (!can_continue)
             {
@@ -1110,7 +1110,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
             m_otrx_state = OTRX_INACTIVE;
             can_continue = start_trx_replay();
             backend->close(failure_type);
-            backend->set_close_reason("Optimistic trx failed: " + extract_error(errmsgbuf));
+            backend->set_close_reason("Optimistic trx failed: " + mxs::extract_error(errmsgbuf));
         }
         else
         {
@@ -1182,7 +1182,7 @@ bool RWSplitSession::handle_error_new_connection(RWBackend* backend, GWBUF* errm
      * is closed, it's possible that the routing logic will pick the failed
      * server as the target. */
     backend->close(failure_type);
-    backend->set_close_reason("Slave connection failed: " + extract_error(errmsg));
+    backend->set_close_reason("Slave connection failed: " + mxs::extract_error(errmsg));
 
     if (route_stored)
     {
