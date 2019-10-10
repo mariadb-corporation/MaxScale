@@ -52,6 +52,7 @@ add_library(maxscale-common SHARED
   target.cc
   users.cc
   utils.cc
+  workerlocal.cc
   )
 
 target_link_libraries(maxscale-common

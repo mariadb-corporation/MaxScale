@@ -15,6 +15,7 @@
 #include <maxscale/service.hh>
 #include <maxscale/resultset.hh>
 #include <maxscale/router.hh>
+#include <maxscale/workerlocal.hh>
 
 #include <mutex>
 #include <string>

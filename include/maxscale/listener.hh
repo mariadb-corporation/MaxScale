@@ -24,6 +24,7 @@
 #include <maxscale/ssl.hh>
 #include <maxscale/service.hh>
 #include <maxscale/routingworker.hh>
+#include <maxscale/workerlocal.hh>
 
 struct DCB;
 class SERVICE;
