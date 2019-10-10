@@ -68,6 +68,19 @@ public:
      */
     static bool is_main_worker();
 
+    /**
+     * @return The indexed storage of this worker.
+     */
+    IndexedStorage& storage()
+    {
+        return m_storage;
+    }
+
+    const IndexedStorage& storage() const
+    {
+        return m_storage;
+    }
+
 private:
     bool pre_run() override;
     void post_run() override;
@@ -96,6 +109,7 @@ private:
     bool        call_task(Worker::Call::action_t action, Task* pTask);
     static bool inc_ticks(Worker::Call::action_t action);
 
-    std::map<std::string, Task>        m_tasks_by_name;
+    std::map<std::string, Task> m_tasks_by_name;
+    IndexedStorage              m_storage;
 };
 }

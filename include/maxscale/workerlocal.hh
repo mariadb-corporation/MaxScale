@@ -102,6 +102,8 @@ public:
         m_value = t;
         guard.unlock();
 
+        update_local_value();
+
         // Update the local value of all workers from the master copy
         mxs::RoutingWorker::execute_concurrently(
             [this]() {
@@ -142,13 +144,24 @@ private:
     /**
      * Get the local value
      *
-     * @note: This method must only be called from a routing worker.
+     * @note: This method must only be called from the MainWorker or a routing worker.
      */
     T* get_local_value() const
     {
-        auto worker = RoutingWorker::get_current();
-        mxb_assert(worker);
-        T* my_value = static_cast<T*>(worker->storage().get_data(m_handle));
+        IndexedStorage* storage = nullptr;
+
+        if (MainWorker::is_main_worker())
+        {
+            storage = &MainWorker::get().storage();
+        }
+        else
+        {
+            auto worker = RoutingWorker::get_current();
+            mxb_assert(worker);
+            storage = &worker->storage();
+        }
+
+        T* my_value = static_cast<T*>(storage->get_data(m_handle));
 
         if (my_value == nullptr)
         {
@@ -157,7 +170,7 @@ private:
             my_value = new T(m_value);
             guard.unlock();
 
-            worker->storage().set_data(m_handle, my_value, destroy_value);
+            storage->set_data(m_handle, my_value, destroy_value);
         }
 
         mxb_assert(my_value);
