@@ -13,37 +13,11 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
+#include <maxscale/indexedstorage.hh>
 #include <maxscale/routingworker.hh>
 
-/**
- * Initialize a globally unique data identifier
- *
- * The value returned by this function is used with the other data commands.
- * The value is a unique handle to thread-local storage.
- *
- * @return The data identifier usable for worker local data storage
- */
-uint64_t mxs_rworker_create_key();
-
-/**
- * Set local worker data on current worker
- *
- * @param key      Key acquired with create_data
- * @param data     Data to store
- * @param callback Callback used to delete the data, NULL if no deletion is
- *                 required. This function is called by mxs_rworker_delete_data
- *                 when the data is deleted.
- */
-void mxs_rworker_set_data(uint64_t key, void* data, void (* callback)(void*));
-
-/**
- * Get local data from current worker
- *
- * @param key    Key to use
- *
- * @return Data previously stored or NULL if no data was previously stored
- */
-void* mxs_rworker_get_data(uint64_t key);
+namespace maxscale
+{
 
 /**
  * Deletes local data from all workers
@@ -52,10 +26,7 @@ void* mxs_rworker_get_data(uint64_t key);
  *
  * @param key      Key to remove
  */
-void mxs_rworker_delete_data(uint64_t key);
-
-namespace maxscale
-{
+void worker_local_delete_data(uint64_t key);
 
 // Data local to a routing worker
 template<class T>
@@ -68,21 +39,21 @@ public:
 
     // Default initialized
     rworker_local()
-        : m_handle(mxs_rworker_create_key())
+        : m_handle(IndexedStorage::create_key())
     {
     }
 
     // Forwarding constructor
     template<typename ... Args>
     rworker_local(Args&& ... args)
-        : m_handle(mxs_rworker_create_key())
+        : m_handle(IndexedStorage::create_key())
         , m_value(std::forward<Args>(args)...)
     {
     }
 
     ~rworker_local()
     {
-        mxs_rworker_delete_data(m_handle);
+        worker_local_delete_data(m_handle);
     }
 
     // Converts to a T reference

@@ -35,22 +35,10 @@ protected:
 
 }
 
-uint64_t mxs_rworker_create_key()
+namespace maxscale
 {
-    return mxs::IndexedStorage::create_key();
-}
 
-void mxs_rworker_set_data(uint64_t key, void* data, void (* callback)(void*))
-{
-    mxs::RoutingWorker::get_current()->storage().set_data(key, data, callback);
-}
-
-void* mxs_rworker_get_data(uint64_t key)
-{
-    return mxs::RoutingWorker::get_current()->storage().get_data(key);
-}
-
-void mxs_rworker_delete_data(uint64_t key)
+void worker_local_delete_data(uint64_t key)
 {
     auto func = [key]() {
         mxs::RoutingWorker::get_current()->storage().delete_data(key);
@@ -58,4 +46,6 @@ void mxs_rworker_delete_data(uint64_t key)
 
     std::unique_ptr<FunctionTask> task(new FunctionTask(func));
     mxs::RoutingWorker::broadcast(std::move(task));
+}
+
 }
