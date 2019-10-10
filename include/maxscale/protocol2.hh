@@ -155,7 +155,7 @@ public:
         return "";
     }
 
-    virtual ClientDCB* dcb() = 0;
+    virtual ClientDCB*       dcb() = 0;
     virtual const ClientDCB* dcb() const = 0;
 };
 
@@ -165,9 +165,9 @@ public:
 class ClientConnectionBase : public ClientConnection
 {
 public:
-    json_t* diagnostics_json() const override;
-    void set_dcb(DCB* dcb) override;
-    ClientDCB* dcb() override;
+    json_t*          diagnostics_json() const override;
+    void             set_dcb(DCB* dcb) override;
+    ClientDCB*       dcb() override;
     const ClientDCB* dcb() const override;
 protected:
     ClientDCB* m_dcb {nullptr};     /**< Dcb used by this protocol connection */
@@ -213,6 +213,7 @@ public:
     virtual bool established() = 0;
 
     virtual const BackendDCB* dcb() const = 0;
+    virtual BackendDCB*       dcb() = 0;
 };
 
 template<class ProtocolImplementation>

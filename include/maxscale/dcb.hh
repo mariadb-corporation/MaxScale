@@ -31,7 +31,6 @@
 
 #include <memory>
 
-class MXS_PROTOCOL_SESSION;
 class MXS_SESSION;
 class SERVER;
 class SERVICE;
@@ -764,22 +763,19 @@ public:
      */
     int ssl_handshake() override;
 
+    void set_connection(std::unique_ptr<mxs::BackendConnection> conn);
+
 private:
     BackendDCB(SERVER* server, int fd, MXS_SESSION* session,
-               std::unique_ptr<mxs::BackendConnection> protocol,
                DCB::Manager* manager);
 
-    static BackendDCB* create(SERVER* server,
-                              int fd,
-                              MXS_SESSION* session,
-                              DCB::Manager* manager,
-                              mxs::Component* upstream);
+    static BackendDCB* create(SERVER* server, int fd, MXS_SESSION* session, DCB::Manager* manager);
 
     bool release_from(MXS_SESSION* session) override;
     bool prepare_for_destruction() override;
 
     static void hangup_cb(MXB_WORKER* worker, const SERVER* server);
-
+    static bool connect_backend(const char* host, int port, int* fd);
 
     SERVER* const                         m_server;   /**< The associated backend server */
     std::unique_ptr<mxs::BackendConnection> m_protocol; /**< The protocol session */

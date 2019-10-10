@@ -187,8 +187,9 @@ public:
      */
     void mxs_mysql_get_session_track_info(GWBUF* buff);
 
-    void        set_dcb(DCB* dcb) override;
-    BackendDCB* dcb() const override;
+    void              set_dcb(DCB* dcb) override;
+    const BackendDCB* dcb() const override;
+    BackendDCB*       dcb() override;
 
     uint64_t thread_id() const;
     uint32_t server_capabilities {0};   /**< Server capabilities TODO: private */

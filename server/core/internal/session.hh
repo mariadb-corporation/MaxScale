@@ -139,18 +139,18 @@ public:
     json_t* log_as_json() const;
 
     /**
-     * Link a session to a backend DCB.
+     * Link a session to a backend connection.
      *
-     * @param dcb The backend DCB to be linked
+     * @param conn The backend connection to link
      */
-    void link_backend_dcb(BackendDCB* dcb);
+    void link_backend_conn(mxs::BackendConnection* conn);
 
     /**
-     * Unlink a session from a backend DCB.
+     * Unlink a session from a backend connection.
      *
-     * @param dcb The backend DCB to be unlinked
+     * @param conn The backend connection to unlink
      */
-    void unlink_backend_dcb(BackendDCB* dcb);
+    void unlink_backend_connection(mxs::BackendConnection* conn);
 
     const BackendConnectionVector& backend_connections() const
     {

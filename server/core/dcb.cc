@@ -1810,46 +1810,13 @@ int ClientDCB::port() const
 /**
  * BackendDCB
  */
-BackendDCB* BackendDCB::create(SERVER* srv,
-                               int fd,
-                               MXS_SESSION* session,
-                               DCB::Manager* manager,
-                               mxs::Component* component)
+BackendDCB* BackendDCB::create(SERVER* srv, int fd, MXS_SESSION* session, DCB::Manager* manager)
 {
-    auto client_dcb = session->client_connection()->dcb();
-    auto client_proto = client_dcb->protocol();
-    std::unique_ptr<BackendConnection> protocol_session;
-    if (client_proto->capabilities() & mxs::ClientConnection::CAP_BACKEND)
-    {
-        protocol_session = client_proto->create_backend_protocol(session, srv, component);
-        if (!protocol_session)
-        {
-            MXS_ERROR("Failed to create protocol session for backend DCB.");
-        }
-    }
-    else
-    {
-        MXB_ERROR("Protocol '%s' does not support backend connections.", session->listener->protocol());
-    }
-
-    BackendDCB* dcb = nullptr;
-    if (protocol_session)
-    {
-        auto pProtocol = protocol_session.get();
-        dcb = new(std::nothrow) BackendDCB(srv, fd, session, std::move(protocol_session), manager);
-        if (dcb)
-        {
-            auto ses = static_cast<Session*>(session);
-            ses->link_backend_dcb(dcb);
-            pProtocol->set_dcb(dcb);
-        }
-    }
-
+    auto dcb = new(std::nothrow) BackendDCB(srv, fd, session, manager);
     if (!dcb)
     {
         ::close(fd);
     }
-
     return dcb;
 }
 
@@ -1862,7 +1829,7 @@ BackendDCB* BackendDCB::create(SERVER* srv,
  *
  * @return True on success, false on error
  */
-static bool connect_backend(const char* host, int port, int* fd)
+bool BackendDCB::connect_backend(const char* host, int port, int* fd)
 {
     bool ok = false;
     struct sockaddr_storage addr = {};
@@ -1882,11 +1849,11 @@ static bool connect_backend(const char* host, int port, int* fd)
 
     if (so != -1)
     {
-        if (connect(so, (struct sockaddr*)&addr, sz) == -1 && errno != EINPROGRESS)
+        if (::connect(so, (struct sockaddr*)&addr, sz) == -1 && errno != EINPROGRESS)
         {
             MXS_ERROR("Failed to connect backend server [%s]:%d due to: %d, %s.",
                       host, port, errno, mxs_strerror(errno));
-            close(so);
+            ::close(so);
         }
         else
         {
@@ -1916,36 +1883,54 @@ BackendDCB* BackendDCB::connect(SERVER* srv,
                                 BackendDCB::Manager* manager,
                                 mxs::Component* component)
 {
-    Server* server = static_cast<Server*>(srv);
+    auto client_dcb = session->client_connection()->dcb();
+    auto client_proto = client_dcb->protocol();
+    std::unique_ptr<BackendConnection> conn;
+    if (client_proto->capabilities() & mxs::ClientConnection::CAP_BACKEND)
+    {
+        conn = client_proto->create_backend_protocol(session, srv, component);
+        if (!conn)
+        {
+            MXS_ERROR("Failed to create protocol session for backend DCB.");
+        }
+    }
+    else
+    {
+        MXB_ERROR("Protocol '%s' does not support backend connections.", session->listener->protocol());
+    }
 
     BackendDCB* dcb = nullptr;
-    int fd = 0;
-
-    if (connect_backend(server->address, server->port, &fd))
+    if (conn)
     {
-        dcb = create(server, fd, session, manager, component);
-
-        if (dcb)
+        Server* server = static_cast<Server*>(srv);
+        int fd = 0;
+        if (connect_backend(server->address, server->port, &fd))
         {
-            if (dcb->m_protocol->init_connection() && dcb->enable_events())
+            dcb = create(server, fd, session, manager);
+            if (dcb)
             {
-                // The DCB is now connected and added to epoll set. Authentication is done after the EPOLLOUT
-                // event that is triggered once the connection is established.
-
-                mxb::atomic::add(&server->stats().n_connections, 1, mxb::atomic::RELAXED);
-                mxb::atomic::add(&server->stats().n_current, 1, mxb::atomic::RELAXED);
-            }
-            else
-            {
+                conn->set_dcb(dcb);
+                auto pConn = conn.get();
                 auto ses = static_cast<Session*>(session);
-                ses->unlink_backend_dcb(dcb);
+                ses->link_backend_conn(pConn);
+                dcb->set_connection(std::move(conn));
 
-                DCB::destroy(dcb);
-                dcb = nullptr;
+                if (pConn->init_connection() && dcb->enable_events())
+                {
+                    // The DCB is now connected and added to epoll set. Authentication is done after the EPOLLOUT
+                    // event that is triggered once the connection is established.
+                    mxb::atomic::add(&server->stats().n_connections, 1, mxb::atomic::RELAXED);
+                    mxb::atomic::add(&server->stats().n_current, 1, mxb::atomic::RELAXED);
+                }
+                else
+                {
+                    ses->unlink_backend_connection(pConn);
+                    DCB::destroy(dcb);
+                    dcb = nullptr;
+                }
             }
         }
     }
-
     return dcb;
 }
 
@@ -2115,11 +2100,9 @@ int BackendDCB::ssl_handshake()
 }
 
 BackendDCB::BackendDCB(SERVER* server, int fd, MXS_SESSION* session,
-                       std::unique_ptr<mxs::BackendConnection> protocol,
                        DCB::Manager* manager)
-    : DCB(fd, server->address, DCB::Role::BACKEND, session, protocol.get(), manager)
+    : DCB(fd, server->address, DCB::Role::BACKEND, session, nullptr, manager)
     , m_server(server)
-    , m_protocol(std::move(protocol))
 {
     mxb_assert(m_server);
 
@@ -2140,7 +2123,7 @@ void BackendDCB::shutdown()
 bool BackendDCB::release_from(MXS_SESSION* session)
 {
     auto ses = static_cast<Session*>(session);
-    ses->unlink_backend_dcb(this);
+    ses->unlink_backend_connection(m_protocol.get());
     return true;
 }
 
@@ -2159,6 +2142,12 @@ bool BackendDCB::prepare_for_destruction()
     }
 
     return prepared;
+}
+
+void BackendDCB::set_connection(std::unique_ptr<mxs::BackendConnection> conn)
+{
+    m_handler = conn.get();
+    m_protocol = std::move(conn);
 }
 
 /**

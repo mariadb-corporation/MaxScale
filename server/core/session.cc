@@ -142,19 +142,20 @@ bool session_start(MXS_SESSION* ses)
     return session->start();
 }
 
-void Session::link_backend_dcb(BackendDCB* dcb)
+void Session::link_backend_conn(mxs::BackendConnection* conn)
 {
+    auto dcb = conn->dcb();
     mxb_assert(dcb->owner == m_client_conn->dcb()->owner);
     mxb_assert(dcb->role() == DCB::Role::BACKEND);
 
     mxb::atomic::add(&refcount, 1);
     dcb->reset(this);
-    add_backend_conn(dcb->protocol());
+    add_backend_conn(conn);
 }
 
-void Session::unlink_backend_dcb(BackendDCB* dcb)
+void Session::unlink_backend_connection(mxs::BackendConnection* conn)
 {
-    remove_backend_conn(dcb->protocol());
+    remove_backend_conn(conn);
     session_put_ref(this);
 }
 

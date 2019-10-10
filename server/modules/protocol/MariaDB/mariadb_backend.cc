@@ -2407,7 +2407,12 @@ void MariaDBBackendConnection::set_dcb(DCB* dcb)
     m_dcb = static_cast<BackendDCB*>(dcb);
 }
 
-BackendDCB* MariaDBBackendConnection::dcb() const
+const BackendDCB* MariaDBBackendConnection::dcb() const
+{
+    return m_dcb;
+}
+
+BackendDCB* MariaDBBackendConnection::dcb()
 {
     return m_dcb;
 }
