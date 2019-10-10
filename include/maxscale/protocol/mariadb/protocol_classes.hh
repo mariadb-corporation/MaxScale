@@ -200,12 +200,12 @@ private:
     int    backend_write_delayqueue(DCB* dcb, GWBUF* buffer);
     void   backend_set_delayqueue(DCB* dcb, GWBUF* queue);
     int    gw_change_user(DCB* dcb, MXS_SESSION* session, GWBUF* queue);
-    void   gw_reply_on_error(DCB* dcb);
     int    gw_send_change_user_to_backend(DCB* backend);
     void   gw_send_proxy_protocol_header(BackendDCB* backend_dcb);
     int    handle_persistent_connection(BackendDCB* dcb, GWBUF* queue);
     GWBUF* gw_create_change_user_packet(const MYSQL_session* mses);
-    void   do_handle_error(DCB* dcb, const char* errmsg, mxs::ErrorType type = mxs::ErrorType::TRANSIENT);
+    void   do_handle_error(DCB* dcb, const std::string& errmsg,
+                           mxs::ErrorType type = mxs::ErrorType::TRANSIENT);
     void   prepare_for_write(DCB* dcb, GWBUF* buffer);
     int    mysql_send_com_quit(DCB* dcb, int sequence, GWBUF* buf);
     bool   read_complete_packet(DCB* dcb, GWBUF** readbuf);

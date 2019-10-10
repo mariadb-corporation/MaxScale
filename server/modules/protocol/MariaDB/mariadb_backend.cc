@@ -174,33 +174,29 @@ void MariaDBBackendConnection::handle_error_response(DCB* plain_dcb, GWBUF* buff
 {
     mxb_assert(plain_dcb->role() == DCB::Role::BACKEND);
     BackendDCB* dcb = static_cast<BackendDCB*>(plain_dcb);
-    uint8_t* data = (uint8_t*)GWBUF_DATA(buffer);
-    size_t len = MYSQL_GET_PAYLOAD_LEN(data);
-    uint16_t errcode = MYSQL_GET_ERRCODE(data);
-    char bufstr[len];
-    memcpy(bufstr, data + 7, len - 3);
-    bufstr[len - 3] = '\0';
+    uint16_t errcode = mxs_mysql_get_mysql_errno(buffer);
 
-    MXS_ERROR("Invalid authentication message from backend '%s'. Error code: %d, "
-              "Msg : %s", dcb->server()->name(), errcode, bufstr);
+    if (m_session->service->config().log_auth_warnings)
+    {
+        MXS_ERROR("Invalid authentication message from backend '%s'. Error code: %d, "
+                  "Msg : %s", dcb->server()->name(), errcode, mxs::extract_error(buffer).c_str());
+    }
 
     /** If the error is ER_HOST_IS_BLOCKED put the server into maintenance mode.
      * This will prevent repeated authentication failures. */
     if (errcode == ER_HOST_IS_BLOCKED)
     {
         auto main_worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
-        auto target_server = dcb->server();
-        main_worker->execute([target_server]() {
-                                 MonitorManager::set_server_status(target_server, SERVER_MAINT);
+        auto server = dcb->server();
+        main_worker->execute([server]() {
+                                 MonitorManager::set_server_status(server, SERVER_MAINT);
                              }, mxb::Worker::EXECUTE_AUTO);
 
         MXS_ERROR("Server %s has been put into maintenance mode due to the server blocking connections "
                   "from MaxScale. Run 'mysqladmin -h %s -P %d flush-hosts' on this server before taking "
                   "this server out of maintenance mode. To avoid this problem in the future, set "
                   "'max_connect_errors' to a larger value in the backend server.",
-                  dcb->server()->name(),
-                  dcb->server()->address,
-                  dcb->server()->port);
+                  server->name(), server->address, server->port);
     }
 }
 
@@ -305,11 +301,12 @@ void MariaDBBackendConnection::ready_for_reading(DCB* event_dcb)
     else
     {
         GWBUF* readbuf = NULL;
+        std::ostringstream errmsg("Authentication with backend failed.");
 
         if (!read_complete_packet(dcb, &readbuf))
         {
             proto->protocol_auth_state = MXS_AUTH_STATE_FAILED;
-            gw_reply_on_error(dcb);
+            do_handle_error(dcb, errmsg.str(), mxs::ErrorType::PERMANENT);
         }
         else if (readbuf)
         {
@@ -323,6 +320,8 @@ void MariaDBBackendConnection::ready_for_reading(DCB* event_dcb)
             if (is_error_response(readbuf))
             {
                 /** The server responded with an error */
+                errmsg << "Invalid authentication message from backend '" << m_dcb->server()->name() << "': "
+                       << mxs_mysql_get_mysql_errno(readbuf) << ", " << mxs::extract_error(readbuf);
                 proto->protocol_auth_state = MXS_AUTH_STATE_FAILED;
                 handle_error_response(dcb, readbuf);
             }
@@ -365,7 +364,7 @@ void MariaDBBackendConnection::ready_for_reading(DCB* event_dcb)
                      || proto->protocol_auth_state == MXS_AUTH_STATE_HANDSHAKE_FAILED)
             {
                 /** Authentication failed */
-                gw_reply_on_error(dcb);
+                do_handle_error(dcb, errmsg.str(), mxs::ErrorType::PERMANENT);
             }
 
             gwbuf_free(readbuf);
@@ -378,10 +377,10 @@ void MariaDBBackendConnection::ready_for_reading(DCB* event_dcb)
     }
 }
 
-void MariaDBBackendConnection::do_handle_error(DCB* dcb, const char* errmsg, mxs::ErrorType type)
+void MariaDBBackendConnection::do_handle_error(DCB* dcb, const std::string& errmsg, mxs::ErrorType type)
 {
     mxb_assert(!dcb->hanged_up());
-    GWBUF* errbuf = mysql_create_custom_error(1, 0, 2003, errmsg);
+    GWBUF* errbuf = mysql_create_custom_error(1, 0, 2003, errmsg.c_str());
 
     if (!m_upstream->handleError(type, errbuf, nullptr, m_reply))
     {
@@ -389,16 +388,6 @@ void MariaDBBackendConnection::do_handle_error(DCB* dcb, const char* errmsg, mxs
     }
 
     gwbuf_free(errbuf);
-}
-
-/**
- * Authentication of backend - read the reply, or handle an error
- *
- * @param dcb               Descriptor control block for backend server
- */
-void MariaDBBackendConnection::gw_reply_on_error(DCB* dcb)
-{
-    do_handle_error(dcb, "Authentication with backend failed.", mxs::ErrorType::PERMANENT);
 }
 
 /**

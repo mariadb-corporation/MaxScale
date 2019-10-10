@@ -995,13 +995,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
         return false;
     }
 
-    auto failure_type = RWBackend::CLOSE_NORMAL;
-
-    if (type == mxs::ErrorType::PERMANENT)
-    {
-        MXS_INFO("Authentication with backend '%s' failed, permanently closing connection", backend->name());
-        failure_type = RWBackend::CLOSE_FATAL;
-    }
+    auto failure_type = type == mxs::ErrorType::PERMANENT ? RWBackend::CLOSE_FATAL : RWBackend::CLOSE_NORMAL;
 
     std::string errmsg;
     bool can_continue = false;
