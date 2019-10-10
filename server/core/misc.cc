@@ -64,20 +64,15 @@ int maxscale_shutdown()
     if (n == 0)
     {
         auto func = []() {
-                if (mxs::MainWorker::created())
-                {
-                    mxs::MainWorker::get().shutdown();
-                }
-
-                /*< Stop all monitors */
                 MonitorManager::stop_all_monitors();
 
                 mxs_admin_shutdown();
                 mxs::RoutingWorker::shutdown_all();
             };
 
-        auto w = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
-        w->execute(func, nullptr, mxs::RoutingWorker::EXECUTE_QUEUED);
+        auto& main_worker = mxs::MainWorker::get();
+        main_worker.execute(func, nullptr, mxs::RoutingWorker::EXECUTE_QUEUED);
+        main_worker.shutdown();
     }
 
     return n + 1;

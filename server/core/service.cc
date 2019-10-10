@@ -1834,7 +1834,7 @@ void Service::targets_updated()
 
     // Update the global value based on the local cached value. Since modifications to services are always
     // done on the same thread, there's no possibility of lost updates.
-    mxb_assert(mxs::RoutingWorker::get_current() == mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN));
+    mxb_assert(mxs::MainWorker::is_main_worker());
     m_data.assign(data);
 }
 

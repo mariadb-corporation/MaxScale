@@ -21,6 +21,7 @@
 #include <maxscale/cn_strings.hh>
 #include <maxscale/housekeeper.h>
 #include <maxscale/http.hh>
+#include <maxscale/mainworker.hh>
 #include <maxscale/jansson.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/modulecmd.hh>
@@ -1293,11 +1294,11 @@ static HttpResponse handle_request(const HttpRequest& request)
 
 HttpResponse resource_handle_request(const HttpRequest& request)
 {
-    mxs::RoutingWorker* worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
+    mxb::WatchedWorker& worker = mxs::MainWorker::get();
 
     HttpResponse response;
-    worker->call([&request, &response, worker]() {
-                     mxb::WatchdogNotifier::Workaround workaround(worker);
+    worker.call([&request, &response, &worker]() {
+                     mxb::WatchdogNotifier::Workaround workaround(&worker);
                      response = handle_request(request);
                  },
                  mxb::Worker::EXECUTE_AUTO);

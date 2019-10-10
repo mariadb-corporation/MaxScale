@@ -24,6 +24,7 @@
 #include <maxbase/format.hh>
 #include <maxbase/alloc.h>
 #include <maxscale/dcb.hh>
+#include <maxscale/mainworker.hh>
 #include <maxscale/modulecmd.hh>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/routingworker.hh>
@@ -396,7 +397,7 @@ string MariaDBMonitor::diagnostics_to_string() const
 
 json_t* MariaDBMonitor::diagnostics_json() const
 {
-    mxb_assert(mxs_rworker_get_current() == mxs_rworker_get(MXS_RWORKER_MAIN));
+    mxb_assert(mxs::MainWorker::is_main_worker());
     return to_json();
 }
 
