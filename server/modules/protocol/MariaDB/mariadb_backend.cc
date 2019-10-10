@@ -376,8 +376,6 @@ void MariaDBBackendConnection::ready_for_reading(DCB* event_dcb)
             proto->protocol_auth_state = gw_send_backend_auth(dcb);
         }
     }
-
-    return;
 }
 
 void MariaDBBackendConnection::do_handle_error(DCB* dcb, const char* errmsg, mxs::ErrorType type)
@@ -387,10 +385,7 @@ void MariaDBBackendConnection::do_handle_error(DCB* dcb, const char* errmsg, mxs
 
     if (!m_upstream->handleError(type, errbuf, nullptr, m_reply))
     {
-        // A failure to handle an error means that the session must be closed
-        MXS_SESSION* session = dcb->session();
-        session->close_reason = SESSION_CLOSE_HANDLEERROR_FAILED;
-        session->terminate();
+        mxb_assert(m_session->state() == MXS_SESSION::State::STOPPING);
     }
 
     gwbuf_free(errbuf);

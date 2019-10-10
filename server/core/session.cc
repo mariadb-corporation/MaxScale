@@ -104,6 +104,7 @@ void MXS_SESSION::terminate(GWBUF* error)
     {
         mxb_assert(!client_connection()->dcb()->is_closed());
         m_state = State::STOPPING;
+        close_reason = SESSION_CLOSE_HANDLEERROR_FAILED;
 
         if (error)
         {
