@@ -126,6 +126,13 @@ class Endpoint;
 // The route along which the reply arrived
 using ReplyRoute = std::vector<Endpoint*>;
 
+// The type of error that handleError is dealing with
+enum class ErrorType
+{
+    TRANSIENT,  // Temporary problem, Endpoint may be used again
+    PERMANENT   // Systematic problem, Endpoint should not be used again
+};
+
 // A routing component
 class Component
 {
@@ -136,7 +143,7 @@ public:
 
     virtual int32_t clientReply(GWBUF* buffer, ReplyRoute& down, const mxs::Reply& reply) = 0;
 
-    virtual bool handleError(GWBUF* error, Endpoint* down, const mxs::Reply& reply) = 0;
+    virtual bool handleError(ErrorType type, GWBUF* error, Endpoint* down, const mxs::Reply& reply) = 0;
 };
 
 // A connectable routing endpoint (a service or a server)

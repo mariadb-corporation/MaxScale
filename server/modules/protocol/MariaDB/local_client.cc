@@ -79,7 +79,7 @@ bool do_self_destruct(mxs::RoutingWorker::Call::action_t action, LocalClient* da
     return false;
 }
 
-bool LocalClient::handleError(GWBUF* error, mxs::Endpoint* down, const mxs::Reply& reply)
+bool LocalClient::handleError(mxs::ErrorType type, GWBUF* error, mxs::Endpoint* down, const mxs::Reply& reply)
 {
     if (m_self_destruct)
     {

@@ -241,6 +241,7 @@ static void clientReply(MXS_ROUTER* instance,
  */
 static bool errorReply(MXS_ROUTER* instance,
                        MXS_ROUTER_SESSION* router_session,
+                       mxs::ErrorType type,
                        GWBUF* message,
                        mxs::Endpoint* backend_dcb,
                        const mxs::Reply& reply)

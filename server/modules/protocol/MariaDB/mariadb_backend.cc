@@ -380,12 +380,12 @@ void MariaDBBackendConnection::ready_for_reading(DCB* event_dcb)
     return;
 }
 
-void MariaDBBackendConnection::do_handle_error(DCB* dcb, const char* errmsg, uint16_t errnum)
+void MariaDBBackendConnection::do_handle_error(DCB* dcb, const char* errmsg, mxs::ErrorType type)
 {
     mxb_assert(!dcb->hanged_up());
-    GWBUF* errbuf = mysql_create_custom_error(1, 0, errnum, errmsg);
+    GWBUF* errbuf = mysql_create_custom_error(1, 0, 2003, errmsg);
 
-    if (!m_upstream->handleError(errbuf, nullptr, m_reply))
+    if (!m_upstream->handleError(type, errbuf, nullptr, m_reply))
     {
         // A failure to handle an error means that the session must be closed
         MXS_SESSION* session = dcb->session();
@@ -403,7 +403,7 @@ void MariaDBBackendConnection::do_handle_error(DCB* dcb, const char* errmsg, uin
  */
 void MariaDBBackendConnection::gw_reply_on_error(DCB* dcb)
 {
-    do_handle_error(dcb, "Authentication with backend failed.", ER_ACCESS_DENIED_ERROR);
+    do_handle_error(dcb, "Authentication with backend failed.", mxs::ErrorType::PERMANENT);
 }
 
 /**

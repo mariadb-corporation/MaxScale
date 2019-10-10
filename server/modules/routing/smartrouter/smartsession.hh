@@ -43,7 +43,7 @@ public:
 
     int  routeQuery(GWBUF* pBuf);
     void clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
-    bool handleError(GWBUF* pPacket, mxs::Endpoint* pProblem, const mxs::Reply& pReply);
+    bool handleError(mxs::ErrorType type, GWBUF* pPacket, mxs::Endpoint* pProblem, const mxs::Reply& pReply);
 
 private:
     enum class Mode {Idle, Query, MeasureQuery, CollectResults};

@@ -978,7 +978,8 @@ bool RWSplitSession::retry_master_query(RWBackend* backend)
     return can_continue;
 }
 
-bool RWSplitSession::handleError(GWBUF* errmsgbuf, mxs::Endpoint* endpoint, const mxs::Reply& reply)
+bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::Endpoint* endpoint,
+                                 const mxs::Reply& reply)
 {
     RWBackend* backend = static_cast<RWBackend*>(endpoint->get_userdata());
     mxb_assert(backend && backend->in_use());
@@ -996,7 +997,7 @@ bool RWSplitSession::handleError(GWBUF* errmsgbuf, mxs::Endpoint* endpoint, cons
 
     auto failure_type = RWBackend::CLOSE_NORMAL;
 
-    if (mxs_mysql_get_mysql_errno(errmsgbuf) == ER_ACCESS_DENIED_ERROR)
+    if (type == mxs::ErrorType::PERMANENT)
     {
         MXS_INFO("Authentication with backend '%s' failed, permanently closing connection", backend->name());
         failure_type = RWBackend::CLOSE_FATAL;

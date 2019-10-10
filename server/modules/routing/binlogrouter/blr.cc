@@ -73,6 +73,7 @@ static void    clientReply(MXS_ROUTER* instance,
                            const mxs::Reply& reply);
 static bool errorReply(MXS_ROUTER* instance,
                        MXS_ROUTER_SESSION* router_session,
+                       mxs::ErrorType type,
                        GWBUF* message,
                        mxs::Endpoint*,
                        const mxs::Reply& reply);
@@ -2232,6 +2233,7 @@ static char* extract_message(GWBUF* errpkt)
  */
 static bool errorReply(MXS_ROUTER* instance,
                        MXS_ROUTER_SESSION* router_session,
+                       mxs::ErrorType type,
                        GWBUF* message,
                        mxs::Endpoint* endpoint,
                        const mxs::Reply& reply)

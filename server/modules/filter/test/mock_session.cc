@@ -29,7 +29,10 @@ int32_t Session::Endpoint::clientReply(GWBUF* buffer, ReplyRoute& down, const mx
     return 0;
 }
 
-bool Session::Endpoint::handleError(GWBUF* error, mxs::Endpoint* down, const mxs::Reply& reply)
+bool Session::Endpoint::handleError(mxs::ErrorType type,
+                                    GWBUF* error,
+                                    mxs::Endpoint* down,
+                                    const mxs::Reply& reply)
 {
     return true;
 }

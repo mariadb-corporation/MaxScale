@@ -112,7 +112,10 @@ void CatSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const 
     }
 }
 
-bool CatSession::handleError(GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& pReply)
+bool CatSession::handleError(mxs::ErrorType type,
+                             GWBUF* pMessage,
+                             mxs::Endpoint* pProblem,
+                             const mxs::Reply& pReply)
 {
     /**
      * The simples thing to do here is to close the connection. Anything else

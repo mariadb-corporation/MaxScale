@@ -1725,16 +1725,17 @@ int32_t ServiceEndpoint::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const
     return 1;
 }
 
-bool ServiceEndpoint::handleError(GWBUF* error, mxs::Endpoint* down, const mxs::Reply& reply)
+bool ServiceEndpoint::handleError(mxs::ErrorType type, GWBUF* error,
+                                  mxs::Endpoint* down, const mxs::Reply& reply)
 {
     mxb::LogScope scope(m_service->name());
     mxb_assert(m_open);
     bool ok = m_service->router->handleError(m_service->router_instance, m_router_session,
-                                             error, down, reply);
+                                             type, error, down, reply);
 
     if (!ok)
     {
-        ok = m_up->handleError(error, this, reply);
+        ok = m_up->handleError(type, error, this, reply);
     }
 
     return ok;

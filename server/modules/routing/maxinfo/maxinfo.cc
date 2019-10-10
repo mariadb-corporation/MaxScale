@@ -74,6 +74,7 @@ static json_t*  diagnostics_json(const MXS_ROUTER* instance);
 static uint64_t getCapabilities(MXS_ROUTER* instance);
 static bool     handleError(MXS_ROUTER* instance,
                             MXS_ROUTER_SESSION* router_session,
+                            mxs::ErrorType type,
                             GWBUF* errbuf,
                             mxs::Endpoint* backend_dcb,
                             const mxs::Reply& reply);
@@ -255,6 +256,7 @@ static void freeSession(MXS_ROUTER* router_instance,
  */
 static bool handleError(MXS_ROUTER* instance,
                         MXS_ROUTER_SESSION* router_session,
+                        mxs::ErrorType type,
                         GWBUF* errbuf,
                         mxs::Endpoint* backend_dcb,
                         const mxs::Reply& reply)

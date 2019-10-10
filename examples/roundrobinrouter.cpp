@@ -108,7 +108,7 @@ public:
     void    close();
     int32_t routeQuery(GWBUF* buffer);
     void    clientReply(GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply);
-    bool    handleError(GWBUF* message, mxs::Endpoint* down, const mxs::Reply& reply);
+    bool    handleError(mxs::ErrorType type, GWBUF* message, mxs::Endpoint* down, const mxs::Reply& reply);
 
 private:
     bool         m_closed;              /* true when closeSession is called */
@@ -410,7 +410,10 @@ void RRRouterSession::clientReply(GWBUF* buf, const mxs::ReplyRoute& down, const
     }
 }
 
-bool RRRouterSession::handleError(GWBUF* message, mxs::Endpoint* down, const mxs::Reply& reply)
+bool RRRouterSession::handleError(mxs::ErrorType type,
+                                  GWBUF* message,
+                                  mxs::Endpoint* down,
+                                  const mxs::Reply& reply)
 {
     down->close();
     return std::any_of(m_backends.begin(), m_backends.end(), std::mem_fn(&mxs::Endpoint::is_open));

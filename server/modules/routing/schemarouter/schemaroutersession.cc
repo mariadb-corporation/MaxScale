@@ -589,7 +589,10 @@ void SchemaRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& dow
     }
 }
 
-bool SchemaRouterSession::handleError(GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& pReply)
+bool SchemaRouterSession::handleError(mxs::ErrorType type,
+                                      GWBUF* pMessage,
+                                      mxs::Endpoint* pProblem,
+                                      const mxs::Reply& pReply)
 {
     SRBackend* bref = static_cast<SRBackend*>(pProblem->get_userdata());
     mxb_assert(bref);
@@ -601,8 +604,7 @@ bool SchemaRouterSession::handleError(GWBUF* pMessage, mxs::Endpoint* pProblem, 
         RouterSession::clientReply(gwbuf_clone(pMessage), route, mxs::Reply());
     }
 
-    bref->close(mxs_mysql_get_mysql_errno(pMessage) == ER_ACCESS_DENIED_ERROR ?
-                Backend::CLOSE_FATAL : Backend::CLOSE_NORMAL);
+    bref->close(type == mxs::ErrorType::PERMANENT ? Backend::CLOSE_FATAL : Backend::CLOSE_NORMAL);
 
     return have_servers();
 }
