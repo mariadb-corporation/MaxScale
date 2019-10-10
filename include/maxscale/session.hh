@@ -365,7 +365,6 @@ public:
     MXS_SESSION_STATS stats;                    /*< Session statistics */
     SERVICE*          service;                  /*< The service this session is using */
     int               refcount;                 /*< Reference count on the session */
-    intptr_t          client_protocol_data;     /*< Owned and managed by the client protocol. */
     bool              qualifies_for_pooling;    /*< Whether this session qualifies for the connection pool */
     struct
     {

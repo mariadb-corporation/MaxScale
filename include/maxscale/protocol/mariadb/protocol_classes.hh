@@ -136,6 +136,7 @@ private:
     mxs::Component* m_downstream {nullptr}; /**< Downstream component, the session */
     MXS_SESSION*    m_session {nullptr};    /**< Generic session */
     MYSQL_session*  m_session_data {nullptr};
+    qc_sql_mode_t   m_sql_mode {QC_SQL_MODE_DEFAULT};   /**< SQL-mode setting */
 
     uint8_t     m_command {0};
     bool        m_changing_user {false};

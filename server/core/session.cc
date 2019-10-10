@@ -82,7 +82,6 @@ MXS_SESSION::MXS_SESSION(const SListener& listener)
     , stats{time(0)}
     , service(listener ? listener->service() : nullptr)
     , refcount(1)
-    , client_protocol_data(0)
     , qualifies_for_pooling(false)
     , response{}
     , close_reason(SESSION_CLOSE_NONE)

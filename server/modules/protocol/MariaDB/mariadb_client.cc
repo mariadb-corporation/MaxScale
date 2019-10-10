@@ -907,7 +907,7 @@ int MariaDBClientConnection::perform_authentication(DCB* generic_dcb, GWBUF* rea
         {
             mxb_assert(dcb->session()->state() != MXS_SESSION::State::CREATED);
             // For the time being only the sql_mode is stored in MXS_SESSION::client_protocol_data.
-            dcb->session()->client_protocol_data = dcb->session()->listener->sql_mode();
+            m_sql_mode = m_session->listener->sql_mode();
             protocol->protocol_auth_state = MXS_AUTH_STATE_COMPLETE;
             mxs_mysql_send_ok(dcb, next_sequence, 0, NULL);
 
@@ -987,12 +987,12 @@ char* MariaDBClientConnection::handle_variables(MXS_SESSION* session, GWBUF** re
                 {
                 case SqlModeParser::ORACLE:
                     session->set_autocommit(false);
-                    session->client_protocol_data = QC_SQL_MODE_ORACLE;
+                    m_sql_mode = QC_SQL_MODE_ORACLE;
                     break;
 
                 case SqlModeParser::DEFAULT:
                     session->set_autocommit(true);
-                    session->client_protocol_data = QC_SQL_MODE_DEFAULT;
+                    m_sql_mode = QC_SQL_MODE_DEFAULT;
                     break;
 
                 case SqlModeParser::SOMETHING:
@@ -1533,7 +1533,7 @@ int MariaDBClientConnection::route_by_statement(uint64_t capabilities, GWBUF** p
 
         // Must be done whether or not there were any changes, as the query classifier
         // is thread and not session specific.
-        qc_set_sql_mode(static_cast<qc_sql_mode_t>(session->client_protocol_data));
+        qc_set_sql_mode(m_sql_mode);
 
         if (process_special_commands(m_dcb, packetbuf, m_command) == RES_END)
         {
