@@ -15,6 +15,7 @@ add_library(maxscale-common SHARED
   hint.cc
   httprequest.cc
   httpresponse.cc
+  indexedstorage.cc
   json_api.cc
   listener.cc
   load_utils.cc

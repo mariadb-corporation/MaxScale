@@ -28,6 +28,7 @@
 #include <maxbase/stopwatch.hh>
 #include <maxbase/watchedworker.hh>
 #include <maxscale/dcb.hh>
+#include <maxscale/indexedstorage.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/session.hh>
@@ -175,6 +176,7 @@ namespace maxscale
 {
 
 class RoutingWorker : public mxb::WatchedWorker
+                    , public IndexedStorage
                     , public BackendDCB::Manager
                     , private MXB_POLL_DATA
 {
@@ -462,76 +464,6 @@ public:
     static RoutingWorker* pick_worker();
 
     /**
-     * Worker local storage
-     */
-
-    /**
-     * Initialize a globally unique data identifier
-     *
-     * @return The data identifier usable for worker local data storage
-     */
-    static uint64_t create_key()
-    {
-        static std::atomic<uint64_t> id_generator {0};
-        return id_generator.fetch_add(1, std::memory_order_relaxed);
-    }
-
-    /**
-     * Set local data
-     *
-     * @param key  Key acquired with create_local_data
-     * @param data Data to store
-     */
-    void set_data(uint64_t key, void* data, void (* callback)(void*))
-    {
-        if (m_local_data.size() <= key)
-        {
-            m_local_data.resize(key + 1, nullptr);
-            m_data_deleters.resize(key + 1, nullptr);
-        }
-
-        if (callback)
-        {
-            m_data_deleters[key] = callback;
-        }
-
-        m_local_data[key] = data;
-    }
-
-    /**
-     * Get local data
-     *
-     * @param key Key to use
-     *
-     * @return Data previously stored
-     */
-    void* get_data(uint64_t key) const
-    {
-        return key < m_local_data.size() ? m_local_data[key] : nullptr;
-    }
-
-    /**
-     * Deletes local data
-     *
-     * If a callback was passed when the data was set, it will be called.
-     *
-     * @param key Key to remove
-     */
-    void delete_data(uint64_t key)
-    {
-        if (key < m_local_data.size())
-        {
-            if (auto deleter = m_data_deleters[key])
-            {
-                deleter(m_local_data[key]);
-            }
-
-            m_data_deleters[key] = nullptr;
-            m_local_data[key] = nullptr;
-        }
-    }
-
-    /**
      * Provides QC statistics of one workers
      *
      * @param id[in]       Id of worker.
@@ -614,8 +546,6 @@ private:
                                      *  it's up to the protocol to decide whether a new
                                      *  session is added to the map. */
     Zombies      m_zombies;         /*< DCBs to be deleted. */
-    LocalData    m_local_data;      /*< Data local to this worker */
-    DataDeleters m_data_deleters;   /*< Delete functions for the local data */
 
     DCBs m_dcbs;
 
