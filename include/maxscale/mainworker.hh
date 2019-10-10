@@ -17,6 +17,7 @@
 #include <maxbase/stopwatch.hh>
 #include <maxbase/watchedworker.hh>
 #include <maxscale/housekeeper.h>
+#include <maxscale/indexedstorage.hh>
 
 namespace maxscale
 {

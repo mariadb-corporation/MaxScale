@@ -14,6 +14,7 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/indexedstorage.hh>
+#include <maxscale/mainworker.hh>
 #include <maxscale/routingworker.hh>
 
 namespace maxscale
@@ -83,17 +84,17 @@ public:
     /**
      * Assign a value
      *
-     * Sets the master value and triggers an update on all workers. The value will be updated on all worker
-     * threads once the function returns.
+     * Sets the master value and triggers an update on all routing workers.
+     * The value will be updated on all routing worker threads once the
+     * function returns.
      *
-     * This function can only be called from one thread at a time (currently mxs::RoutingWorker::MAIN) as it
-     * will wait for the other routing workers to apply the update.
+     * @note: This function must only be called from the MainWorker.
      *
      * @param t The new value to assign
      */
     void assign(const T& t)
     {
-        mxb_assert_message(RoutingWorker::get_current() == RoutingWorker::get(RoutingWorker::MAIN),
+        mxb_assert_message(MainWorker::is_main_worker(),
                            "this method must be called from the main worker thread");
 
         // Update the value of the master copy
@@ -111,13 +112,13 @@ public:
     /**
      * Get all local values
      *
-     * Note: This method must only be called from one thread at a time.
+     * @note: This method must only be called from the MainWorker.
      *
-     * @return A vector containing the individual values for each worker
+     * @return A vector containing the individual values for each routing worker
      */
     std::vector<T> values() const
     {
-        mxb_assert_message(RoutingWorker::get_current() == RoutingWorker::get(RoutingWorker::MAIN),
+        mxb_assert_message(MainWorker::is_main_worker(),
                            "this method must be called from the main worker thread");
         std::vector<T> rval;
         std::mutex lock;
@@ -138,7 +139,11 @@ private:
     mutable std::mutex                  m_lock;     // Protects the master value
 
 private:
-
+    /**
+     * Get the local value
+     *
+     * @note: This method must only be called from a routing worker.
+     */
     T* get_local_value() const
     {
         auto worker = RoutingWorker::get_current();
