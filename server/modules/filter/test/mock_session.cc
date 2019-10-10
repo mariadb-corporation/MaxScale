@@ -17,7 +17,6 @@ namespace
 {
 
 SERVICE dummy_service;
-
 }
 
 namespace maxscale
@@ -44,6 +43,7 @@ Session::Session(Client* pClient)
     strcpy(m_mysql_session.db, "dummy");
 
     m_client_dcb.data = &m_mysql_session;
+    service = &dummy_service;
 }
 
 Session::~Session()
