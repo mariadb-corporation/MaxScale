@@ -44,6 +44,7 @@
 
 #include "internal/filter.hh"
 #include "internal/session.hh"
+#include "internal/server.hh"
 #include "internal/service.hh"
 #include "internal/listener.hh"
 
@@ -1520,3 +1521,52 @@ void Session::remove_backend_conn(mxs::BackendConnection* conn)
     mxb_assert(iter != m_backends_conns.end());
     m_backends_conns.erase(iter);
 }
+
+BackendDCB*
+Session::create_backend_connection(Server* server, BackendDCB::Manager* manager, mxs::Component* upstream)
+{
+    auto client_dcb = client_connection()->dcb();
+    auto client_proto = client_dcb->protocol();
+    std::unique_ptr<BackendConnection> conn;
+    if (client_proto->capabilities() & mxs::ClientConnection::CAP_BACKEND)
+    {
+        conn = client_proto->create_backend_protocol(this, server, upstream);
+        if (!conn)
+        {
+            MXS_ERROR("Failed to create protocol session for backend DCB.");
+        }
+    }
+    else
+    {
+        MXB_ERROR("Protocol '%s' does not support backend connections.", listener->protocol());
+    }
+
+    BackendDCB* dcb = nullptr;
+    if (conn)
+    {
+        dcb = BackendDCB::connect(server, this, manager);
+        if (dcb)
+        {
+            conn->set_dcb(dcb);
+            auto pConn = conn.get();
+            link_backend_conn(pConn);
+            dcb->set_connection(std::move(conn));
+
+            if (pConn->init_connection() && dcb->enable_events())
+            {
+                // The DCB is now connected and added to epoll set. Authentication is done after the EPOLLOUT
+                // event that is triggered once the connection is established.
+                mxb::atomic::add(&server->stats().n_connections, 1, mxb::atomic::RELAXED);
+                mxb::atomic::add(&server->stats().n_current, 1, mxb::atomic::RELAXED);
+            }
+            else
+            {
+                unlink_backend_connection(pConn);
+                DCB::destroy(dcb);
+                dcb = nullptr;
+            }
+        }
+    }
+    return dcb;
+}
+

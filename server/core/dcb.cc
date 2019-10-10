@@ -85,6 +85,48 @@ static thread_local struct
 {
     DCB* current_dcb;       /** The DCB currently being handled by event handlers. */
 } this_thread;
+
+/**
+ * Create a low level connection to a server.
+ *
+ * @param host The host to connect to
+ * @param port The port to connect to
+ *
+ * @return File descriptor. Negative on failure.
+ */
+int connect_socket(const char* host, int port)
+{
+    struct sockaddr_storage addr = {};
+    int so;
+    size_t sz;
+
+    if (host[0] == '/')
+    {
+        so = open_unix_socket(MXS_SOCKET_NETWORK, (struct sockaddr_un*)&addr, host);
+        sz = sizeof(sockaddr_un);
+    }
+    else
+    {
+        so = open_network_socket(MXS_SOCKET_NETWORK, &addr, host, port);
+        sz = sizeof(sockaddr_storage);
+    }
+
+    if (so != -1)
+    {
+        if (::connect(so, (struct sockaddr*)&addr, sz) == -1 && errno != EINPROGRESS)
+        {
+            MXS_ERROR("Failed to connect backend server [%s]:%d due to: %d, %s.",
+                      host, port, errno, mxs_strerror(errno));
+            ::close(so);
+            so = -1;
+        }
+    }
+    else
+    {
+        MXS_ERROR("Establishing connection to backend server [%s]:%d failed.", host, port);
+    }
+    return so;
+}
 }
 
 static inline bool dcb_write_parameter_check(DCB* dcb, int fd, GWBUF* queue);
@@ -1810,128 +1852,19 @@ int ClientDCB::port() const
 /**
  * BackendDCB
  */
-BackendDCB* BackendDCB::create(SERVER* srv, int fd, MXS_SESSION* session, DCB::Manager* manager)
+BackendDCB* BackendDCB::connect(SERVER* server, MXS_SESSION* session, DCB::Manager* manager)
 {
-    auto dcb = new(std::nothrow) BackendDCB(srv, fd, session, manager);
-    if (!dcb)
+    BackendDCB* rval = nullptr;
+    int fd = connect_socket(server->address, server->port);
+    if (fd >= 0)
     {
-        ::close(fd);
-    }
-    return dcb;
-}
-
-/**
- * Connect to a server
- *
- * @param host The host to connect to
- * @param port The port to connect to
- * @param fd   FD is stored in this pointer
- *
- * @return True on success, false on error
- */
-bool BackendDCB::connect_backend(const char* host, int port, int* fd)
-{
-    bool ok = false;
-    struct sockaddr_storage addr = {};
-    int so;
-    size_t sz;
-
-    if (host[0] == '/')
-    {
-        so = open_unix_socket(MXS_SOCKET_NETWORK, (struct sockaddr_un*)&addr, host);
-        sz = sizeof(sockaddr_un);
-    }
-    else
-    {
-        so = open_network_socket(MXS_SOCKET_NETWORK, &addr, host, port);
-        sz = sizeof(sockaddr_storage);
-    }
-
-    if (so != -1)
-    {
-        if (::connect(so, (struct sockaddr*)&addr, sz) == -1 && errno != EINPROGRESS)
+        rval = new(std::nothrow) BackendDCB(server, fd, session, manager);
+        if (!rval)
         {
-            MXS_ERROR("Failed to connect backend server [%s]:%d due to: %d, %s.",
-                      host, port, errno, mxs_strerror(errno));
-            ::close(so);
-        }
-        else
-        {
-            *fd = so;
-            ok = true;
+            ::close(fd);
         }
     }
-    else
-    {
-        MXS_ERROR("Establishing connection to backend server [%s]:%d failed.", host, port);
-    }
-
-    return ok;
-}
-
-/**
- * Connect to a backend server
- *
- * @param srv      The server to connect to
- * @param session  The session this connection is being made for
- * @param manager The DCB manager to use
- *
- * @return The new allocated dcb or NULL on error
- */
-BackendDCB* BackendDCB::connect(SERVER* srv,
-                                MXS_SESSION* session,
-                                BackendDCB::Manager* manager,
-                                mxs::Component* component)
-{
-    auto client_dcb = session->client_connection()->dcb();
-    auto client_proto = client_dcb->protocol();
-    std::unique_ptr<BackendConnection> conn;
-    if (client_proto->capabilities() & mxs::ClientConnection::CAP_BACKEND)
-    {
-        conn = client_proto->create_backend_protocol(session, srv, component);
-        if (!conn)
-        {
-            MXS_ERROR("Failed to create protocol session for backend DCB.");
-        }
-    }
-    else
-    {
-        MXB_ERROR("Protocol '%s' does not support backend connections.", session->listener->protocol());
-    }
-
-    BackendDCB* dcb = nullptr;
-    if (conn)
-    {
-        Server* server = static_cast<Server*>(srv);
-        int fd = 0;
-        if (connect_backend(server->address, server->port, &fd))
-        {
-            dcb = create(server, fd, session, manager);
-            if (dcb)
-            {
-                conn->set_dcb(dcb);
-                auto pConn = conn.get();
-                auto ses = static_cast<Session*>(session);
-                ses->link_backend_conn(pConn);
-                dcb->set_connection(std::move(conn));
-
-                if (pConn->init_connection() && dcb->enable_events())
-                {
-                    // The DCB is now connected and added to epoll set. Authentication is done after the EPOLLOUT
-                    // event that is triggered once the connection is established.
-                    mxb::atomic::add(&server->stats().n_connections, 1, mxb::atomic::RELAXED);
-                    mxb::atomic::add(&server->stats().n_current, 1, mxb::atomic::RELAXED);
-                }
-                else
-                {
-                    ses->unlink_backend_connection(pConn);
-                    DCB::destroy(dcb);
-                    dcb = nullptr;
-                }
-            }
-        }
-    }
-    return dcb;
+    return rval;
 }
 
 void BackendDCB::reset(MXS_SESSION* session)

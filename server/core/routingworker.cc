@@ -553,17 +553,17 @@ void RoutingWorker::remove(DCB* pDcb)
 BackendDCB* RoutingWorker::get_backend_dcb(SERVER* pS, MXS_SESSION* pSession, mxs::Component* pUpstream)
 {
     Server* pServer = static_cast<Server*>(pS);
-
+    auto pSes = static_cast<Session*>(pSession);
     BackendDCB* pDcb = nullptr;
 
     if (pServer->persistent_conns_enabled() && pServer->is_running())
     {
-        pDcb = get_backend_dcb_from_pool(pS, pSession, pUpstream);
+        pDcb = get_backend_dcb_from_pool(pS, pSes, pUpstream);
     }
 
     if (!pDcb)
     {
-        pDcb = BackendDCB::connect(pServer, pSession, this, pUpstream);
+        pDcb = pSes->create_backend_connection(pServer, this, pUpstream);
     }
 
     return pDcb;

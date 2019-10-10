@@ -542,6 +542,11 @@ public:
         struct CALLBACK* next;      /*< Next callback for this DCB */
     };
 
+    static void destroy(DCB* dcb)
+    {
+        dcb->destroy();
+    }
+
 protected:
     DCB(int fd,
         const std::string& remote,
@@ -553,11 +558,6 @@ protected:
     virtual ~DCB();
 
     bool create_SSL(mxs::SSLContext* ssl);
-
-    static void destroy(DCB* dcb)
-    {
-        dcb->destroy();
-    }
 
     /**
      * Release the instance from the associated session.
@@ -706,6 +706,7 @@ private:
     std::unique_ptr<mxs::ClientConnection>      m_protocol;       /**< The protocol session */
 };
 
+class Session;
 class BackendDCB : public DCB
 {
 public:
@@ -726,10 +727,7 @@ public:
         virtual bool can_be_destroyed(BackendDCB* dcb) = 0;
     };
 
-    static BackendDCB* connect(SERVER* server,
-                               MXS_SESSION* session,
-                               BackendDCB::Manager* manager,
-                               mxs::Component* upstream);
+    static BackendDCB* connect(SERVER* server, MXS_SESSION* session, DCB::Manager* manager);
 
     /**
      * Resets the BackendDCB so that it can be reused.
@@ -769,13 +767,10 @@ private:
     BackendDCB(SERVER* server, int fd, MXS_SESSION* session,
                DCB::Manager* manager);
 
-    static BackendDCB* create(SERVER* server, int fd, MXS_SESSION* session, DCB::Manager* manager);
-
     bool release_from(MXS_SESSION* session) override;
     bool prepare_for_destruction() override;
 
     static void hangup_cb(MXB_WORKER* worker, const SERVER* server);
-    static bool connect_backend(const char* host, int port, int* fd);
 
     SERVER* const                         m_server;   /**< The associated backend server */
     std::unique_ptr<mxs::BackendConnection> m_protocol; /**< The protocol session */

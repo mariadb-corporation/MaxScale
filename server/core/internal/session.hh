@@ -36,10 +36,10 @@ void printAllSessions();
 void dprintAllSessions(DCB*);
 void dprintSession(DCB*, MXS_SESSION*);
 void dListSessions(DCB*);
-
 }
 
 void printSession(MXS_SESSION*);
+class Server;
 
 // Class that holds the session specific filter data
 class SessionFilter
@@ -152,6 +152,9 @@ public:
      */
     void unlink_backend_connection(mxs::BackendConnection* conn);
 
+    BackendDCB* create_backend_connection(Server* server, BackendDCB::Manager* manager,
+                                          mxs::Component* upstream);
+
     const BackendConnectionVector& backend_connections() const
     {
         return m_backends_conns;
@@ -163,8 +166,9 @@ public:
     bool    handleError(mxs::ErrorType type, GWBUF* error, mxs::Endpoint* down,
                         const mxs::Reply& reply) override;
 
-    mxs::ClientConnection* client_connection() override;
+    mxs::ClientConnection*       client_connection() override;
     const mxs::ClientConnection* client_connection() const override;
+
     void set_client_connection(mxs::ClientConnection* client_conn) override;
 
 protected:
@@ -191,8 +195,8 @@ private:
     uint32_t          m_retain_last_statements; /*< How many statements be retained */
     Log               m_log;                    /*< Session specific in-memory log */
 
-    BackendConnectionVector m_backends_conns; /*< Backend connections, in creation order */
-    mxs::ClientConnection* m_client_conn {nullptr};
+    BackendConnectionVector m_backends_conns;   /*< Backend connections, in creation order */
+    mxs::ClientConnection*  m_client_conn {nullptr};
 
     // Delivers a provided response to the upstream filter that should receive it
     void deliver_response();
