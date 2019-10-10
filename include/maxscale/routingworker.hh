@@ -176,7 +176,6 @@ namespace maxscale
 {
 
 class RoutingWorker : public mxb::WatchedWorker
-                    , public IndexedStorage
                     , public BackendDCB::Manager
                     , private MXB_POLL_DATA
 {
@@ -527,6 +526,19 @@ public:
      */
     void register_epoll_tick_func(std::function<void(void)> func);
 
+    /**
+     * @return The indexed storage of this worker.
+     */
+    IndexedStorage& storage()
+    {
+        return m_storage;
+    }
+
+    const IndexedStorage& storage() const
+    {
+        return m_storage;
+    }
+
 private:
     // DCB::Manager
     void add(DCB* pDcb) override;
@@ -539,15 +551,15 @@ private:
     void close_pooled_dcb(BackendDCB* pDcb);
 
 private:
-    const int    m_id;              /*< The id of the worker. */
-    SessionsById m_sessions;        /*< A mapping of session_id->MXS_SESSION. The map
-                                     *  should contain sessions exclusive to this
-                                     *  worker and not e.g. listener sessions. For now,
-                                     *  it's up to the protocol to decide whether a new
-                                     *  session is added to the map. */
-    Zombies      m_zombies;         /*< DCBs to be deleted. */
-
-    DCBs m_dcbs;
+    const int      m_id;              /*< The id of the worker. */
+    SessionsById   m_sessions;        /*< A mapping of session_id->MXS_SESSION. The map
+                                       *  should contain sessions exclusive to this
+                                       *  worker and not e.g. listener sessions. For now,
+                                       *  it's up to the protocol to decide whether a new
+                                       *  session is added to the map. */
+    Zombies        m_zombies;         /*< DCBs to be deleted. */
+    IndexedStorage m_storage;         /*< The storage of this worker. */
+    DCBs           m_dcbs;            /*< DCBs managed by this worker. */
 
     RoutingWorker(mxb::WatchdogNotifier* pNotifier);
     virtual ~RoutingWorker();
@@ -745,7 +757,7 @@ private:
     {
         auto worker = RoutingWorker::get_current();
         mxb_assert(worker);
-        T* my_value = static_cast<T*>(worker->get_data(m_handle));
+        T* my_value = static_cast<T*>(worker->storage().get_data(m_handle));
 
         if (my_value == nullptr)
         {
@@ -754,7 +766,7 @@ private:
             my_value = new T(m_value);
             guard.unlock();
 
-            worker->set_data(m_handle, my_value, destroy_value);
+            worker->storage().set_data(m_handle, my_value, destroy_value);
         }
 
         mxb_assert(my_value);

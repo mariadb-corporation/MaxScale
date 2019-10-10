@@ -1499,23 +1499,23 @@ size_t mxs_rworker_broadcast(void (* cb)(void* data), void* data)
 
 uint64_t mxs_rworker_create_key()
 {
-    return RoutingWorker::create_key();
+    return IndexedStorage::create_key();
 }
 
 void mxs_rworker_set_data(uint64_t key, void* data, void (* callback)(void*))
 {
-    RoutingWorker::get_current()->set_data(key, data, callback);
+    RoutingWorker::get_current()->storage().set_data(key, data, callback);
 }
 
 void* mxs_rworker_get_data(uint64_t key)
 {
-    return RoutingWorker::get_current()->get_data(key);
+    return RoutingWorker::get_current()->storage().get_data(key);
 }
 
 void mxs_rworker_delete_data(uint64_t key)
 {
     auto func = [key]() {
-            RoutingWorker::get_current()->delete_data(key);
+            RoutingWorker::get_current()->storage().delete_data(key);
         };
 
     std::unique_ptr<FunctionTask> task(new FunctionTask(func));
