@@ -25,9 +25,15 @@ namespace
 
 static struct ThisUnit
 {
-    maxscale::MainWorker* pCurrent_main;
+    maxscale::MainWorker* pMain;
     int64_t               clock_ticks;
 } this_unit;
+
+thread_local struct ThisThread
+{
+    maxscale::MainWorker* pMain;
+} this_thread;
+
 }
 
 namespace maxscale
@@ -36,32 +42,34 @@ namespace maxscale
 MainWorker::MainWorker(mxb::WatchdogNotifier* pNotifier)
     : mxb::WatchedWorker(pNotifier)
 {
-    mxb_assert(!this_unit.pCurrent_main);
+    mxb_assert(!this_unit.pMain);
 
-    this_unit.pCurrent_main = this;
+    this_unit.pMain = this;
+    this_thread.pMain = this;
 
     delayed_call(100, &MainWorker::inc_ticks);
 }
 
 MainWorker::~MainWorker()
 {
-    mxb_assert(this_unit.pCurrent_main);
+    mxb_assert(this_unit.pMain);
 
-    this_unit.pCurrent_main = nullptr;
+    this_thread.pMain = nullptr;
+    this_unit.pMain = nullptr;
 }
 
 // static
 bool MainWorker::created()
 {
-    return this_unit.pCurrent_main ? true : false;
+    return this_unit.pMain ? true : false;
 }
 
 // static
 MainWorker& MainWorker::get()
 {
-    mxb_assert(this_unit.pCurrent_main);
+    mxb_assert(this_unit.pMain);
 
-    return *this_unit.pCurrent_main;
+    return *this_unit.pMain;
 }
 
 void MainWorker::add_task(const std::string& name, TASKFN func, void* pData, int frequency)
@@ -163,6 +171,12 @@ json_t* MainWorker::tasks_to_json(const char* zHost) const
 int64_t MainWorker::ticks()
 {
     return mxb::atomic::load(&this_unit.clock_ticks, mxb::atomic::RELAXED);
+}
+
+//static
+bool MainWorker::is_main_worker()
+{
+    return this_thread.pMain != nullptr;
 }
 
 bool MainWorker::pre_run()

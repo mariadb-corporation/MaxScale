@@ -62,6 +62,11 @@ public:
 
     static int64_t ticks();
 
+    /**
+     * @return True, if the calling thread is the main worker.
+     */
+    static bool is_main_worker();
+
 private:
     bool pre_run() override;
     void post_run() override;
