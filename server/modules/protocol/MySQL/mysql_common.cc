@@ -1419,13 +1419,15 @@ static void worker_func(int thread_id, void* data)
     for (TargetList::iterator it = info->targets.begin();
          it != info->targets.end(); it++)
     {
-        LocalClient* client = LocalClient::create(&info->session, &info->protocol, it->first);
-        GWBUF* buffer = modutil_create_query(it->second.c_str());
-        client->queue_query(buffer);
-        gwbuf_free(buffer);
+        if (LocalClient* client = LocalClient::create(&info->session, &info->protocol, it->first))
+        {
+            GWBUF* buffer = modutil_create_query(it->second.c_str());
+            client->queue_query(buffer);
+            gwbuf_free(buffer);
 
-        // The LocalClient needs to delete itself once the queries are done
-        client->self_destruct();
+            // The LocalClient needs to delete itself once the queries are done
+            client->self_destruct();
+        }
     }
 
     delete info;

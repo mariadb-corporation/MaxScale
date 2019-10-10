@@ -62,7 +62,7 @@ struct
     uint64_t                  next_session_id;
     uint32_t                  retain_last_statements;
     session_dump_statements_t dump_statements;
-    uint32_t session_trace;
+    uint32_t                  session_trace;
 } this_unit =
 {
     1,
@@ -160,7 +160,6 @@ bool session_start(MXS_SESSION* session)
 
     session->state = SESSION_STATE_STARTED;
     mxb::atomic::add(&session->service->stats.n_sessions, 1, mxb::atomic::RELAXED);
-    mxb::atomic::add(&session->service->stats.n_current, 1, mxb::atomic::RELAXED);
 
     MXS_INFO("Started %s client session [%" PRIu64 "] for '%s' from %s",
              session->service->name(), session->ses_id,
@@ -278,8 +277,6 @@ static void session_final_free(MXS_SESSION* ses)
     mxb_assert(session->refcount == 0);
 
     session->state = SESSION_STATE_TO_BE_FREED;
-
-    mxb::atomic::add(&session->service->stats.n_current, -1, mxb::atomic::RELAXED);
 
     if (session->client_dcb)
     {
@@ -1162,6 +1159,9 @@ Session::Session(const SListener& listener)
     {
         m_retain_last_statements = this_unit.retain_last_statements;
     }
+
+    mxb::atomic::add(&service->stats.n_current, 1, mxb::atomic::RELAXED);
+    mxb_assert(service->stats.n_current >= 0);
 }
 
 Session::~Session()
@@ -1176,6 +1176,9 @@ Session::~Session()
         f.filter->obj->closeSession(f.instance, f.session);
         f.filter->obj->freeSession(f.instance, f.session);
     }
+
+    mxb::atomic::add(&service->stats.n_current, -1, mxb::atomic::RELAXED);
+    mxb_assert(service->stats.n_current >= 0);
 }
 
 void Session::set_client_dcb(DCB* dcb)
@@ -1696,6 +1699,6 @@ void Session::dump_session_log()
             log += s;
         }
 
-        MXS_NOTICE("Session log for session (%" PRIu64"): \n%s ", ses_id, log.c_str());
+        MXS_NOTICE("Session log for session (%" PRIu64 "): \n%s ", ses_id, log.c_str());
     }
 }

@@ -26,8 +26,6 @@ Session::Session(Client* pClient, const SListener& listener)
 {
     MXS_SESSION* pSession = this;
 
-    memset((void*)pSession, 0, sizeof(MXS_SESSION));
-
     pSession->state = SESSION_STATE_CREATED;
 
     pSession->client_dcb = &m_client_dcb;

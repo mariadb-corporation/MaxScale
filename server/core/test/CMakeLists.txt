@@ -1,4 +1,5 @@
 add_executable(profile_trxboundaryparser profile_trxboundaryparser.cc)
+add_executable(profile_get_canonical profile_get_canonical.cc)
 add_executable(test_adminusers test_adminusers.cc)
 add_executable(test_atomic test_atomic.cc)
 add_executable(test_buffer test_buffer.cc)
@@ -28,6 +29,7 @@ add_executable(test_utils test_utils.cc)
 add_executable(test_session_track test_session_track.cc)
 
 target_link_libraries(profile_trxboundaryparser maxscale-common)
+target_link_libraries(profile_get_canonical maxscale-common)
 target_link_libraries(test_adminusers maxscale-common)
 target_link_libraries(test_atomic maxscale-common)
 target_link_libraries(test_buffer maxscale-common)

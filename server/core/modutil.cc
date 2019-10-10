@@ -1259,7 +1259,7 @@ mxs_pcre2_result_t modutil_mysql_wildcard_match(const char* pattern, const char*
     return rval;
 }
 
-static inline bool is_next(mxs::Buffer::iterator it, mxs::Buffer::iterator end, const std::string& str)
+static inline bool is_next(uint8_t* it, uint8_t* end, const std::string& str)
 {
     mxb_assert(it != end);
     for (auto s_it = str.begin(); s_it != str.end(); ++s_it, ++it)
@@ -1316,12 +1316,11 @@ static const LUT is_special([](uint8_t c) {
                                     c) != std::string::npos;
                             });
 
-static std::pair<bool, mxs::Buffer::iterator> probe_number(mxs::Buffer::iterator it,
-                                                           mxs::Buffer::iterator end)
+static inline std::pair<bool, uint8_t*> probe_number(uint8_t* it, uint8_t* end)
 {
     mxb_assert(it != end);
     mxb_assert(is_digit(*it));
-    std::pair<bool, mxs::Buffer::iterator> rval = std::make_pair(true, it);
+    std::pair<bool, uint8_t*> rval = std::make_pair(true, it);
     bool is_hex = *it == '0';
     bool allow_hex = false;
 
@@ -1348,7 +1347,7 @@ static std::pair<bool, mxs::Buffer::iterator> probe_number(mxs::Buffer::iterator
             else if (*it == 'e')
             {
                 // Possible scientific notation number
-                auto next_it = std::next(it);
+                auto next_it = it + 1;
 
                 if (next_it == end || (!is_digit(*next_it) && *next_it != '-'))
                 {
@@ -1365,7 +1364,7 @@ static std::pair<bool, mxs::Buffer::iterator> probe_number(mxs::Buffer::iterator
             else if (*it == '.')
             {
                 // Possible decimal number
-                auto next_it = std::next(it);
+                auto next_it = it + 1;
 
                 if (next_it != end && !is_digit(*next_it))
                 {
@@ -1415,7 +1414,7 @@ static inline bool is_negation(const std::string& str, int i)
     return rval;
 }
 
-mxs::Buffer::iterator find_char(mxs::Buffer::iterator it, const mxs::Buffer::iterator& end, char c)
+static inline uint8_t* find_char(uint8_t* it, uint8_t* end, char c)
 {
     for (; it != end; ++it)
     {
@@ -1440,13 +1439,13 @@ namespace maxscale
 
 std::string get_canonical(GWBUF* querybuf)
 {
-    std::string rval;
+    mxb_assert(GWBUF_IS_CONTIGUOUS(querybuf));
+    uint8_t* it = GWBUF_DATA(querybuf) + MYSQL_HEADER_LEN + 1;
+    uint8_t* end = GWBUF_DATA(querybuf) + gwbuf_length(querybuf);
+    std::string rval(end - it, 0);
     int i = 0;
-    rval.resize(gwbuf_length(querybuf) - MYSQL_HEADER_LEN + 1);
-    mxs::Buffer buf(querybuf);
 
-    for (auto it = std::next(buf.begin(), MYSQL_HEADER_LEN + 1);    // Skip packet header and command
-         it != buf.end(); ++it)
+    for (; it != end; ++it)
     {
         if (!is_special(*it))
         {
@@ -1456,9 +1455,9 @@ std::string get_canonical(GWBUF* querybuf)
         else if (*it == '\\')
         {
             // Jump over any escaped values
-            rval[i++] += *it++;
+            rval[i++] = *it++;
 
-            if (it != buf.end())
+            if (it != end)
             {
                 rval[i++] = *it;
             }
@@ -1479,19 +1478,19 @@ std::string get_canonical(GWBUF* querybuf)
                 rval[i++] = ' ';
             }
         }
-        else if (*it == '/' && is_next(it, buf.end(), "/*"))
+        else if (*it == '/' && is_next(it, end, "/*"))
         {
             auto comment_start = std::next(it, 2);
-            if (comment_start == buf.end())
+            if (comment_start == end)
             {
                 break;
             }
             else if (*comment_start != '!' && *comment_start != 'M')
             {
                 // Non-executable comment
-                while (it != buf.end())
+                while (it != end)
                 {
-                    if (is_next(it, buf.end(), "*/"))
+                    if (is_next(it, end, "*/"))
                     {
                         // Comment end marker, return to normal parsing
                         ++it;
@@ -1500,7 +1499,7 @@ std::string get_canonical(GWBUF* querybuf)
                     ++it;
                 }
 
-                if (it == buf.end())
+                if (it == end)
                 {
                     break;
                 }
@@ -1512,10 +1511,10 @@ std::string get_canonical(GWBUF* querybuf)
             }
         }
         else if ((*it == '#' || *it == '-')
-                 && (is_next(it, buf.end(), "# ") || is_next(it, buf.end(), "-- ")))
+                 && (is_next(it, end, "# ") || is_next(it, end, "-- ")))
         {
             // End-of-line comment, jump to the next line if one exists
-            while (it != buf.end())
+            while (it != end)
             {
                 if (*it == '\n')
                 {
@@ -1523,7 +1522,7 @@ std::string get_canonical(GWBUF* querybuf)
                 }
                 else if (*it == '\r')
                 {
-                    if ((is_next(it, buf.end(), "\r\n")))
+                    if ((is_next(it, end, "\r\n")))
                     {
                         ++it;
                     }
@@ -1533,14 +1532,14 @@ std::string get_canonical(GWBUF* querybuf)
                 ++it;
             }
 
-            if (it == buf.end())
+            if (it == end)
             {
                 break;
             }
         }
         else if (is_digit(*it) && (i == 0 || (!is_alnum(rval[i - 1]) && rval[i - 1] != '_')))
         {
-            auto num_end = probe_number(it, buf.end());
+            auto num_end = probe_number(it, end);
 
             if (num_end.first)
             {
@@ -1556,7 +1555,7 @@ std::string get_canonical(GWBUF* querybuf)
         else if (*it == '\'' || *it == '"')
         {
             char c = *it;
-            if ((it = find_char(std::next(it), buf.end(), c)) == buf.end())
+            if ((it = find_char(it + 1, end, c)) == end)
             {
                 break;
             }
@@ -1565,7 +1564,7 @@ std::string get_canonical(GWBUF* querybuf)
         else if (*it == '`')
         {
             auto start = it;
-            if ((it = find_char(std::next(it), buf.end(), '`')) == buf.end())
+            if ((it = find_char(it + 1, end, '`')) == end)
             {
                 break;
             }
@@ -1578,7 +1577,7 @@ std::string get_canonical(GWBUF* querybuf)
             rval[i++] = *it;
         }
 
-        mxb_assert(it != buf.end());
+        mxb_assert(it != end);
     }
 
     // Remove trailing whitespace
@@ -1589,8 +1588,6 @@ std::string get_canonical(GWBUF* querybuf)
 
     // Shrink the buffer so that the internal bookkeeping of std::string remains up to date
     rval.resize(i);
-
-    buf.release();
 
     return rval;
 }

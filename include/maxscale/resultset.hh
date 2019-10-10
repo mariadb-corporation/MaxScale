@@ -64,4 +64,5 @@ private:
     std::vector<std::vector<std::string>> m_rows;
 
     ResultSet(std::initializer_list<std::string> names);
+    json_t* get_json_value(const std::string& s);
 };
