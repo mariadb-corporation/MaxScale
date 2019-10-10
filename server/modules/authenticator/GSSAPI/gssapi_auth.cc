@@ -683,6 +683,11 @@ int GSSAPIAuthenticatorModule::load_users(SERVICE* service)
     return rval;
 }
 
+std::string GSSAPIAuthenticatorModule::name() const
+{
+    return MXS_MODULE_NAME;
+}
+
 extern "C"
 {
 /**

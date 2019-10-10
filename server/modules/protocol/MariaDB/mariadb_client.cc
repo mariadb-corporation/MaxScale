@@ -2042,10 +2042,8 @@ MySQLProtocolModule::create_backend_protocol(MXS_SESSION* session, SERVER* serve
     }
     else
     {
-        // TODO: Get the authentication module name from the module itself or change authenticator api
-        // to always require backend support.
-        MXS_ERROR("The authenticator of listener '%s' does not support backend authentication. "
-                  "Cannot create backend connection.", session->listener->name());
+        MXS_ERROR("Authenticator '%s' does not support backend authentication. "
+                  "Cannot create backend connection.", m_auth_module->name().c_str());
     }
 
     std::unique_ptr<mxs::BackendConnection> rval;

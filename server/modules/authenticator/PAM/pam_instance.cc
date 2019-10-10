@@ -591,3 +591,8 @@ bool PamAuthenticatorModule::fetch_anon_proxy_users(SERVER* server, MYSQL* conn)
 
     return success;
 }
+
+std::string PamAuthenticatorModule::name() const
+{
+    return MXS_MODULE_NAME;
+}

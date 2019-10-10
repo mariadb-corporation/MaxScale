@@ -52,6 +52,7 @@ public:
     json_t*     diagnostics_json() override;
     uint64_t    capabilities() const override;
     std::string supported_protocol() const override;
+    std::string name() const override;
 
     char* principal_name {nullptr};     /**< Service principal name given to the client */
 

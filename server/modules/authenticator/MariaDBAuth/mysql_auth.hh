@@ -117,6 +117,7 @@ public:
     json_t*     diagnostics_json() override;
     uint64_t    capabilities() const override;
     std::string supported_protocol() const override;
+    std::string name() const override;
 
     /**
      * @brief Get the thread-specific SQLite handle

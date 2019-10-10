@@ -781,6 +781,11 @@ std::string MariaDBAuthenticatorModule::supported_protocol() const
     return MXS_MARIADB_PROTOCOL_NAME;
 }
 
+std::string MariaDBAuthenticatorModule::name() const
+{
+    return MXS_MODULE_NAME;
+}
+
 bool MariaDBBackendSession::extract(DCB* backend, GWBUF* buffer)
 {
     bool rval = false;

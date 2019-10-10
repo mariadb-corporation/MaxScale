@@ -31,9 +31,9 @@ public:
     int load_users(SERVICE* service) override;
     void diagnostics(DCB* dcb) override;
     json_t* diagnostics_json() override;
-
     uint64_t capabilities() const override;
     std::string supported_protocol() const override;
+    std::string name() const override;
 
     std::unique_ptr<mxs::ClientAuthenticator> create_client_authenticator() override;
     std::unique_ptr<mxs::BackendAuthenticator> create_backend_authenticator() override;

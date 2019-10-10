@@ -40,12 +40,16 @@ public:
     AuthenticatorModule() = default;
     virtual ~AuthenticatorModule() = default;
 
-    // Create a client session.
+    /**
+     * Create a client authenticator.
+     *
+     * @return Client authenticator
+     */
     virtual std::unique_ptr<ClientAuthenticator> create_client_authenticator() = 0;
 
     /**
-     * Create a new backend authenticator linked to the client authenticator. Should only be implemented by
-     * authenticator modules which also support backend authentication.
+     * Create a new backend authenticator. Should only be implemented by authenticator modules which
+     * also support backend authentication.
      *
      * @return Backend authenticator
      */
@@ -80,6 +84,13 @@ public:
      * @return Supported protocol
      */
     virtual std::string supported_protocol() const = 0;
+
+    /**
+     * Get the module name.
+     *
+     * @return Module name
+     */
+    virtual std::string name() const = 0;
 };
 
 /**
