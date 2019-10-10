@@ -244,7 +244,6 @@ static MXS_SESSION* session_alloc_body(SERVICE* service,
                  session->client_dcb->remote);
     }
     mxb::atomic::add(&service->stats.n_sessions, 1, mxb::atomic::RELAXED);
-    mxb::atomic::add(&service->stats.n_current, 1, mxb::atomic::RELAXED);
 
     // Store the session in the client DCB even if the session creation fails.
     // It will be freed later on when the DCB is closed.
@@ -382,9 +381,6 @@ static void session_final_free(MXS_SESSION* ses)
     mxb_assert(session->refcount == 0);
 
     session->state = SESSION_STATE_TO_BE_FREED;
-
-    mxb::atomic::add(&session->service->stats.n_current, -1, mxb::atomic::RELAXED);
-    mxb_assert(session->service->stats.n_current >= 0);
 
     if (session->client_dcb)
     {
@@ -1265,6 +1261,9 @@ Session::Session(SERVICE* service)
     {
         m_retain_last_statements = this_unit.retain_last_statements;
     }
+
+    mxb::atomic::add(&service->stats.n_current, 1, mxb::atomic::RELAXED);
+    mxb_assert(service->stats.n_current >= 0);
 }
 
 Session::~Session()
@@ -1279,6 +1278,9 @@ Session::~Session()
         f.filter->obj->closeSession(f.instance, f.session);
         f.filter->obj->freeSession(f.instance, f.session);
     }
+
+    mxb::atomic::add(&service->stats.n_current, -1, mxb::atomic::RELAXED);
+    mxb_assert(service->stats.n_current >= 0);
 }
 
 namespace
