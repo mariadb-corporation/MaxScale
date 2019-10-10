@@ -384,6 +384,7 @@ static void session_final_free(MXS_SESSION* ses)
     session->state = SESSION_STATE_TO_BE_FREED;
 
     mxb::atomic::add(&session->service->stats.n_current, -1, mxb::atomic::RELAXED);
+    mxb_assert(session->service->stats.n_current >= 0);
 
     if (session->client_dcb)
     {
