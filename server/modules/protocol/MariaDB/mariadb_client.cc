@@ -556,12 +556,12 @@ int MariaDBClientConnection::send_mysql_client_handshake(DCB* dcb)
     int plugin_name_len = strlen(plugin_name);
 
     mysql_payload_size =
-            sizeof(mysql_protocol_version) + (version.length() + 1) + sizeof(mysql_thread_id_num) + 8
-            + sizeof(    /* mysql_filler */ uint8_t) + sizeof(mysql_server_capabilities_one)
-            + sizeof(mysql_server_language)
-            + sizeof(mysql_server_status) + sizeof(mysql_server_capabilities_two) + sizeof(mysql_scramble_len)
-            + sizeof(mysql_filler_ten) + 12 + sizeof(    /* mysql_last_byte */ uint8_t) + plugin_name_len
-            + sizeof(    /* mysql_last_byte */ uint8_t);
+        sizeof(mysql_protocol_version) + (version.length() + 1) + sizeof(mysql_thread_id_num) + 8
+        + sizeof(    /* mysql_filler */ uint8_t) + sizeof(mysql_server_capabilities_one)
+        + sizeof(mysql_server_language)
+        + sizeof(mysql_server_status) + sizeof(mysql_server_capabilities_two) + sizeof(mysql_scramble_len)
+        + sizeof(mysql_filler_ten) + 12 + sizeof(    /* mysql_last_byte */ uint8_t) + plugin_name_len
+        + sizeof(    /* mysql_last_byte */ uint8_t);
 
     // allocate memory for packet header + payload
     if ((buf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size)) == NULL)
@@ -2028,7 +2028,9 @@ MariaDBClientConnection::MariaDBClientConnection(MXS_SESSION* session, mxs::Comp
 }
 
 std::unique_ptr<mxs::BackendConnection>
-MariaDBClientConnection::create_backend_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component)
+MariaDBClientConnection::create_backend_protocol(MXS_SESSION* session,
+                                                 SERVER* server,
+                                                 mxs::Component* component)
 {
     // Allocate DCB specific backend-authentication data from the client session.
     std::unique_ptr<mxs::BackendAuthenticator> new_backend_auth;
@@ -2321,13 +2323,15 @@ void MariaDBClientConnection::execute_kill(MXS_SESSION* issuer, std::shared_ptr<
                 [info, ref]() {
                     for (const auto& a : info->targets)
                     {
-                        LocalClient* client = LocalClient::create(info->session, a.first);
-                        client->connect();
-                        // TODO: There can be multiple connections to the same server
-                        client->queue_query(modutil_create_query(a.second.c_str()));
+                        if (LocalClient* client = LocalClient::create(info->session, a.first))
+                        {
+                            client->connect();
+                            // TODO: There can be multiple connections to the same server
+                            client->queue_query(modutil_create_query(a.second.c_str()));
 
-                        // The LocalClient needs to delete itself once the queries are done
-                        client->self_destruct();
+                            // The LocalClient needs to delete itself once the queries are done
+                            client->self_destruct();
+                        }
                     }
 
                     session_put_ref(ref);
@@ -2337,7 +2341,8 @@ void MariaDBClientConnection::execute_kill(MXS_SESSION* issuer, std::shared_ptr<
     std::thread(func).detach();
 }
 
-void MariaDBClientConnection::mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t target_id, kill_type_t type)
+void MariaDBClientConnection::mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t target_id,
+                                                     kill_type_t type)
 {
     mxs_mysql_execute_kill_all_others(issuer, target_id, 0, type);
 }
@@ -2362,7 +2367,9 @@ void MariaDBClientConnection::mxs_mysql_execute_kill_all_others(MXS_SESSION* iss
     execute_kill(issuer, info);
 }
 
-void MariaDBClientConnection::mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_type_t type)
+void MariaDBClientConnection::mxs_mysql_execute_kill_user(MXS_SESSION* issuer,
+                                                          const char* user,
+                                                          kill_type_t type)
 {
     const char* hard = (type & KT_HARD) ? "HARD " : (type & KT_SOFT) ? "SOFT " : "";
     const char* query = (type & KT_QUERY) ? "QUERY " : "";

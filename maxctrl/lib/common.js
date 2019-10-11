@@ -112,7 +112,7 @@ module.exports = function() {
             row = []
 
             fields.forEach(function(p) {
-                var v = _.getPath(i, p[Object.keys(p)[0]], '')
+                var v = _.getPath(i, p.path, '')
 
                 if (Array.isArray(v)) {
                     v = v.join(', ')
@@ -162,7 +162,7 @@ module.exports = function() {
         var header = []
 
         fields.forEach(function(i) {
-            header.push(Object.keys(i))
+            header.push(i.name)
         })
 
         var table = getTable(header)
@@ -188,7 +188,7 @@ module.exports = function() {
             var header = []
 
             fields.forEach(function(i) {
-                header.push(Object.keys(i))
+                header.push(i.name)
             })
 
             var table = getTable(header)
@@ -197,7 +197,7 @@ module.exports = function() {
                 row = []
 
                 fields.forEach(function(p) {
-                    var v = _.getPath(i, p[Object.keys(p)[0]], '')
+                    var v = _.getPath(i, p[p.name], '')
 
                     if (Array.isArray(v) && typeof(v[0]) != 'object') {
                         v = v.join(', ')
@@ -229,7 +229,7 @@ module.exports = function() {
             separator = '\n'
             var max_field_length = 0
             fields.forEach(function (i) {
-                var k = Object.keys(i)[0]
+                var k = i.name
                 if (k.length > max_field_length) {
                     max_field_length = k.length
                 }
@@ -244,8 +244,8 @@ module.exports = function() {
         }
 
         fields.forEach(function(i) {
-            var k = Object.keys(i)[0]
-            var path = i[k]
+            var k = i.name
+            var path = i.path
             var v = _.getPath(data, path, '')
 
             if (Array.isArray(v) && typeof(v[0]) != 'object') {
@@ -422,6 +422,24 @@ module.exports = function() {
             default: false
         }
     }
+
+    this.fieldDescriptions = function(fields) {
+        var t = new Table({chars: {
+            'top' : '', 'top-mid': '', 'top-left': '', 'top-right': '', 'left': ' ', 'right': '',
+            'left-mid': '' , 'mid': '' , 'mid-mid': '', 'right-mid': '' , 'middle': '',
+            'bottom' : '', 'bottom-mid': '', 'bottom-left': '', 'bottom-right': '',
+        }})
+
+        t.push(['Field', 'Description'])
+        t.push(['-----', '-----------'])
+
+
+        for (f of fields) {
+            t.push([f.name, f.description])
+        }
+
+        return '\n\n' + t.toString()
+    }
 }
 
 
@@ -441,8 +459,6 @@ var tsvopts = {
         'padding-right': 0,
         compact: true
     },
-
-
 }
 
 function getList() {

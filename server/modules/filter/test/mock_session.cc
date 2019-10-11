@@ -67,6 +67,5 @@ void Session::set_downstream(FilterModule::Session* pSession)
 {
     m_down = std::unique_ptr<mxs::Endpoint>(new Endpoint(pSession));
 }
-
 }
 }

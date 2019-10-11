@@ -14,94 +14,438 @@
 require('./common.js')()
 
 const server_fields = [
-    {'Server': 'id'},
-    {'Address': 'attributes.parameters.address'},
-    {'Port': 'attributes.parameters.port'},
-    {'State': 'attributes.state'},
-    {'Last Event': 'attributes.last_event'},
-    {'Triggered At': 'attributes.triggered_at'},
-    {'Services': 'relationships.services.data[].id'},
-    {'Monitors': 'relationships.monitors.data[].id'},
-    {'Master ID': 'attributes.master_id'},
-    {'Node ID': 'attributes.node_id'},
-    {'Slave Server IDs': 'attributes.slaves'},
-    {'Statistics': 'attributes.statistics'},
-    {'Parameters': 'attributes.parameters'}
+    {
+        name: 'Server',
+        path: 'id',
+        description: 'Server name'
+    },
+    {
+        name: 'Address',
+        path: 'attributes.parameters.address',
+        description: 'Address where the server listens'
+    },
+    {
+        name: 'Port',
+        path: 'attributes.parameters.port',
+        description: 'The port on which the server listens'
+    },
+    {
+        name: 'State',
+        path: 'attributes.state',
+        description: 'Server state'
+    },
+    {
+        name: 'Last Event',
+        path: 'attributes.last_event',
+        description: 'The type of the latest event'
+    },
+    {
+        name: 'Triggered At',
+        path: 'attributes.triggered_at',
+        description: 'Time when the latest event was triggered at'
+    },
+    {
+        name: 'Services',
+        path: 'relationships.services.data[].id',
+        description: 'Services that use this server'
+    },
+    {
+        name: 'Monitors',
+        path: 'relationships.monitors.data[].id',
+        description: 'Monitors that monitor this server'
+    },
+    {
+        name: 'Master ID',
+        path: 'attributes.master_id',
+        description: 'The server ID of the master'
+    },
+    {
+        name: 'Node ID',
+        path: 'attributes.node_id',
+        description: 'The node ID of this server'
+    },
+    {
+        name: 'Slave Server IDs',
+        path: 'attributes.slaves',
+        description: 'List of slave server IDs'
+    },
+    {
+        name: 'Statistics',
+        path: 'attributes.statistics',
+        description: 'Server statistics'
+    },
+    {
+        name: 'Parameters',
+        path: 'attributes.parameters',
+        description: 'Server parameters'
+    }
 ]
 
 const service_fields = [
-    {'Service': 'id'},
-    {'Router': 'attributes.router'},
-    {'State': 'attributes.state'},
-    {'Started At': 'attributes.started'},
-    {'Current Connections': 'attributes.connections'},
-    {'Total Connections': 'attributes.total_connections'},
-    {'Servers': 'relationships.servers.data[].id'},
-    {'Parameters': 'attributes.parameters'},
-    {'Router Diagnostics': 'attributes.router_diagnostics'}
+    {
+        name: 'Service',
+        path: 'id',
+        description: 'Service name'
+    },
+    {
+        name: 'Router',
+        path: 'attributes.router',
+        description: 'Router that the service uses'
+    },
+    {
+        name: 'State',
+        path: 'attributes.state',
+        description: 'Service state'
+    },
+    {
+        name: 'Started At',
+        path: 'attributes.started',
+        description: 'When the service was started'
+    },
+    {
+        name: 'Current Connections',
+        path: 'attributes.connections',
+        description: 'Current connection count'
+    },
+    {
+        name: 'Total Connections',
+        path: 'attributes.total_connections',
+        description: 'Total connection count'
+    },
+    {
+        name: 'Servers',
+        path: 'relationships.servers.data[].id',
+        description: 'Servers that the service uses'
+    },
+    {
+        name: 'Parameters',
+        path: 'attributes.parameters',
+        description: 'Service parameter'
+    },
+    {
+        name: 'Router Diagnostics',
+        path: 'attributes.router_diagnostics',
+        description: 'Diagnostics provided by the router module'
+    }
 ]
 
 const monitor_fields = [
-    {'Monitor': 'id'},
-    {'State': 'attributes.state'},
-    {'Servers': 'relationships.servers.data[].id'},
-    {'Parameters': 'attributes.parameters'},
-    {'Monitor Diagnostics': 'attributes.monitor_diagnostics'}
+    {
+        name: 'Monitor',
+        path: 'id',
+        description: 'Monitor name'
+    },
+    {
+        name: 'State',
+        path: 'attributes.state',
+        description: 'Monitor state'
+    },
+    {
+        name: 'Servers',
+        path: 'relationships.servers.data[].id',
+        description: 'The servers that this monitor monitors'
+    },
+    {
+        name: 'Parameters',
+        path: 'attributes.parameters',
+        description: 'Monitor parameters'
+    },
+    {
+        name: 'Monitor Diagnostics',
+        path: 'attributes.monitor_diagnostics',
+        description: 'Diagnostics provided by the monitor module'
+    }
 ]
 
 const session_fields = [
-    {'Id': 'id'},
-    {'Service': 'relationships.services.data[].id'},
-    {'State': 'attributes.state'},
-    {'User': 'attributes.user'},
-    {'Host': 'attributes.remote'},
-    {'Connected': 'attributes.connected'},
-    {'Idle': 'attributes.idle'},
-    {'Connections': 'attributes.connections[].server'},
-    {'Connection IDs': 'attributes.connections[].connection_id'},
-    {'Queries': 'attributes.queries[].statement'},
-    {'Log': 'attributes.log'}
+    {
+        name: 'Id',
+        path: 'id',
+        description: 'Session ID'
+    },
+    {
+        name: 'Service',
+        path: 'relationships.services.data[].id',
+        description: 'The service where the session connected'
+    },
+    {
+        name: 'State',
+        path: 'attributes.state',
+        description: 'Session state'
+    },
+    {
+        name: 'User',
+        path: 'attributes.user',
+        description: 'Username'
+    },
+    {
+        name: 'Host',
+        path: 'attributes.remote',
+        description: 'Client host address'
+    },
+    {
+        name: 'Connected',
+        path: 'attributes.connected',
+        description: 'Time when the session started'
+    },
+    {
+        name: 'Idle',
+        path: 'attributes.idle',
+        description: 'How long the session has been idle, in seconds'
+    },
+    {
+        name: 'Connections',
+        path: 'attributes.connections[].server',
+        description: 'Ordered list of backend connections'
+    },
+    {
+        name: 'Connection IDs',
+        path: 'attributes.connections[].connection_id',
+        description: 'Thread IDs for the backend connections'
+    },
+    {
+        name: 'Queries',
+        path: 'attributes.queries[].statement',
+        description: 'Query history'
+    },
+    {
+        name: 'Log',
+        path: 'attributes.log',
+        description: 'Per-session log messages'
+    }
 ]
 
 const filter_fields = [
-    {'Filter': 'id'},
-    {'Module': 'attributes.module'},
-    {'Services': 'relationships.services.data[].id'},
-    {'Parameters': 'attributes.parameters'}
+    {
+        name: 'Filter',
+        path: 'id',
+        description: 'Filter name'
+    },
+    {
+        name: 'Module',
+        path: 'attributes.module',
+        description: 'The module that the filter uses'
+    },
+    {
+        name: 'Services',
+        path: 'relationships.services.data[].id',
+        description: 'Services that use the filter'
+    },
+    {
+        name: 'Parameters',
+        path: 'attributes.parameters',
+        description: 'Filter parameters'
+    }
 ]
 
 const module_fields = [
-    {'Module': 'id'},
-    {'Type': 'attributes.module_type'},
-    {'Version': 'attributes.version'},
-    {'Maturity': 'attributes.maturity'},
-    {'Description': 'attributes.description'},
-    {'Parameters': 'attributes.parameters'},
-    {'Commands': 'attributes.commands'}
+    {
+        name: 'Module',
+        path: 'id',
+        description: 'Module name'
+    },
+    {
+        name: 'Type',
+        path: 'attributes.module_type',
+        description: 'Module type'
+    },
+    {
+        name: 'Version',
+        path: 'attributes.version',
+        description: 'Module version'
+    },
+    {
+        name: 'Maturity',
+        path: 'attributes.maturity',
+        description: 'Module maturity'
+    },
+    {
+        name: 'Description',
+        path: 'attributes.description',
+        description: 'Short description about the module'
+    },
+    {
+        name: 'Parameters',
+        path: 'attributes.parameters',
+        description: 'All the parameters that the module accepts'
+    },
+    {
+        name: 'Commands',
+        path: 'attributes.commands',
+        description: 'Commands that the module provides'
+    }
 ]
 
 const thread_fields = [
-    {'Id': 'id'},
-    {'Accepts': 'attributes.stats.accepts'},
-    {'Reads': 'attributes.stats.reads'},
-    {'Writes': 'attributes.stats.writes'},
-    {'Hangups': 'attributes.stats.hangups'},
-    {'Errors': 'attributes.stats.errors'},
-    {'Blocking polls': 'attributes.stats.blocking_polls'},
-    {'Avg event queue length': 'attributes.stats.avg_event_queue_length'},
-    {'Max event queue length': 'attributes.stats.max_event_queue_length'},
-    {'Max exec time': 'attributes.stats.max_exec_time'},
-    {'Max queue time': 'attributes.stats.max_queue_time'},
-    {'Current FDs': 'attributes.stats.current_descriptors'},
-    {'Total FDs': 'attributes.stats.total_descriptors'},
-    {'Load (1s)': 'attributes.stats.load.last_second'},
-    {'Load (1m)': 'attributes.stats.load.last_minute'},
-    {'Load (1h)': 'attributes.stats.load.last_hour'},
-    {'QC cache size': 'attributes.stats.query_classifier_cache.size'},
-    {'QC cache inserts': 'attributes.stats.query_classifier_cache.inserts'},
-    {'QC cache hits': 'attributes.stats.query_classifier_cache.hits'},
-    {'QC cache misses': 'attributes.stats.query_classifier_cache.misses'},
-    {'QC cache evictions': 'attributes.stats.query_classifier_cache.evictions'},
+    {
+        name: 'Id',
+        path: 'id',
+        description: 'Thread ID'
+    },
+    {
+        name: 'Accepts',
+        path: 'attributes.stats.accepts',
+        description: 'Number of TCP accepts done by this thread'
+    },
+    {
+        name: 'Reads',
+        path: 'attributes.stats.reads',
+        description: 'Number of EPOLLIN events'
+    },
+    {
+        name: 'Writes',
+        path: 'attributes.stats.writes',
+        description: 'Number of EPOLLOUT events'
+    },
+    {
+        name: 'Hangups',
+        path: 'attributes.stats.hangups',
+        description: 'Number of EPOLLHUP and EPOLLRDUP events'
+    },
+    {
+        name: 'Errors',
+        path: 'attributes.stats.errors',
+        description: 'Number of EPOLLERR events'
+    },
+    {
+        name: 'Avg event queue length',
+        path: 'attributes.stats.avg_event_queue_length',
+        description: 'Average number of events returned by one epoll_wait call'
+    },
+    {
+        name: 'Max event queue length',
+        path: 'attributes.stats.max_event_queue_length',
+        description: 'Maximum number of events returned by one epoll_wait call'
+    },
+    {
+        name: 'Max exec time',
+        path: 'attributes.stats.max_exec_time',
+        description: 'The longest time spent processing events returned by a epoll_wait call'
+    },
+    {
+        name: 'Max queue time',
+        path: 'attributes.stats.max_queue_time',
+        description: 'The longest time an event had to wait before it was processed'
+    },
+    {
+        name: 'Current FDs',
+        path: 'attributes.stats.current_descriptors',
+        description: 'Current number of managed file descriptors'
+    },
+    {
+        name: 'Total FDs',
+        path: 'attributes.stats.total_descriptors',
+        description: 'Total number of managed file descriptors'
+    },
+    {
+        name: 'Load (1s)',
+        path: 'attributes.stats.load.last_second',
+        description: 'Load percentage over the last second'
+    },
+    {
+        name: 'Load (1m)',
+        path: 'attributes.stats.load.last_minute',
+        description: 'Load percentage over the last minute'
+    },
+    {
+        name: 'Load (1h)',
+        path: 'attributes.stats.load.last_hour',
+        description: 'Load percentage over the last hour'
+    },
+    {
+        name: 'QC cache size',
+        path: 'attributes.stats.query_classifier_cache.size',
+        description: 'Query classifier size'
+    },
+    {
+        name: 'QC cache inserts',
+        path: 'attributes.stats.query_classifier_cache.inserts',
+        description: 'Number of times a new query was added into the query classification cache'
+    },
+    {
+        name: 'QC cache hits',
+        path: 'attributes.stats.query_classifier_cache.hits',
+        description: 'How many times a query classification was found in the query classification cache'
+    },
+    {
+        name: 'QC cache misses',
+        path: 'attributes.stats.query_classifier_cache.misses',
+        description: 'How many times a query classification was not found in the query classification cache'
+    },
+    {
+        name: 'QC cache evictions',
+        path: 'attributes.stats.query_classifier_cache.evictions',
+        description: 'How many times a query classification result was evicted from the query classification cache'
+    },
+]
+
+const show_maxscale_fields = [
+    {
+        name: 'Version',
+        path: 'attributes.version',
+        description: 'MaxScale version'
+    },
+    {
+        name: 'Commit',
+        path: 'attributes.commit',
+        description: 'MaxScale commit ID'
+    },
+    {
+        name: 'Started At',
+        path: 'attributes.started_at',
+        description: 'Time when MaxScale was started'
+    },
+    {
+        name: 'Activated At',
+        path: 'attributes.activated_at',
+        description: 'Time when MaxScale left passive mode'
+    },
+    {
+        name: 'Uptime',
+        path: 'attributes.uptime',
+        description: 'Time MaxScale has been running'
+    },
+    {
+        name: 'Parameters',
+        path: 'attributes.parameters',
+        description: 'Global MaxScale parameters'
+    }
+]
+
+const show_logging_fields = [
+    {
+        name: 'Current Log File',
+        path: 'attributes.log_file',
+        description: 'The current log file MaxScale is logging into'
+    },
+    {
+        name: 'Enabled Log Levels',
+        path: 'attributes.log_priorities',
+        description: 'List of log levels enabled in MaxScale'
+    },
+    {
+        name: 'Parameters',
+        path: 'attributes.parameters',
+        description: 'Logging parameters'
+    }
+]
+
+const show_commands_fields = [
+    {
+        name: 'Command',
+        path: 'id',
+        description: 'Command name'
+    },
+    {
+        name: 'Parameters',
+        path: 'attributes.parameters[].type',
+        description: 'Parameters the command supports'
+    },
+    {
+        name: 'Descriptions',
+        path: 'attributes.parameters[].description',
+        description: 'Parameter descriptions'
+    }
 ]
 
 exports.command = 'show <command>'
@@ -113,7 +457,7 @@ exports.builder = function(yargs) {
             return yargs.epilog('Show detailed information about a server. The `Parameters` ' +
                                 'field contains the currently configured parameters for this ' +
                                 'server. See `help alter server` for more details about altering ' +
-                                'server parameters.')
+                                'server parameters.' + fieldDescriptions(server_fields))
                 .usage('Usage: show server <server>')
         }, function(argv) {
             maxctrl(argv, function(host) {
@@ -121,7 +465,8 @@ exports.builder = function(yargs) {
             })
         })
         .command('servers', 'Show all servers', function(yargs) {
-            return yargs.epilog('Show detailed information about all servers.')
+            return yargs.epilog('Show detailed information about all servers.' +
+                                fieldDescriptions(server_fields))
                 .usage('Usage: show servers')
         }, function(argv) {
             maxctrl(argv, function(host) {
@@ -132,7 +477,7 @@ exports.builder = function(yargs) {
             return yargs.epilog('Show detailed information about a service. The `Parameters` ' +
                                 'field contains the currently configured parameters for this ' +
                                 'service. See `help alter service` for more details about altering ' +
-                                'service parameters.')
+                                'service parameters.' + fieldDescriptions(service_fields))
                 .usage('Usage: show service <service>')
         }, function(argv) {
             maxctrl(argv, function(host) {
@@ -140,7 +485,8 @@ exports.builder = function(yargs) {
             })
         })
         .command('services', 'Show all services', function(yargs) {
-            return yargs.epilog('Show detailed information about all services.')
+            return yargs.epilog('Show detailed information about all services.' +
+                                fieldDescriptions(service_fields))
                 .usage('Usage: show services')
         }, function(argv) {
             maxctrl(argv, function(host) {
@@ -151,7 +497,7 @@ exports.builder = function(yargs) {
             return yargs.epilog('Show detailed information about a monitor. The `Parameters` ' +
                                 'field contains the currently configured parameters for this ' +
                                 'monitor. See `help alter monitor` for more details about altering ' +
-                                'monitor parameters.')
+                                'monitor parameters.' + fieldDescriptions(monitor_fields))
                 .usage('Usage: show monitor <monitor>')
         }, function(argv) {
             maxctrl(argv, function(host) {
@@ -159,7 +505,8 @@ exports.builder = function(yargs) {
             })
         })
         .command('monitors', 'Show all monitors', function(yargs) {
-            return yargs.epilog('Show detailed information about all monitors.')
+            return yargs.epilog('Show detailed information about all monitors.' +
+                                fieldDescriptions(monitor_fields))
                 .usage('Usage: show monitors')
         }, function(argv) {
             maxctrl(argv, function(host) {
@@ -173,7 +520,8 @@ exports.builder = function(yargs) {
                                 'ID of a particular session.\n\n' +
                                 'The `Connections` field lists the servers to which ' +
                                 'the session is connected and the `Connection IDs` ' +
-                                'field lists the IDs for those connections.')
+                                'field lists the IDs for those connections.' +
+                                fieldDescriptions(session_fields))
                 .usage('Usage: show session <session>')
                 .group([rDnsOption.shortname], 'Options:')
                 .option(rDnsOption.shortname, rDnsOption.definition)
@@ -188,7 +536,8 @@ exports.builder = function(yargs) {
         })
         .command('sessions', 'Show all sessions', function(yargs) {
             return yargs.epilog('Show detailed information about all sessions. ' +
-                                'See `help show session` for more details.')
+                                'See `help show session` for more details.' +
+                                fieldDescriptions(session_fields))
                 .usage('Usage: show sessions')
                 .group([rDnsOption.shortname], 'Options:')
                 .option(rDnsOption.shortname, rDnsOption.definition)
@@ -202,7 +551,8 @@ exports.builder = function(yargs) {
             })
         })
         .command('filter <filter>', 'Show filter', function(yargs) {
-            return yargs.epilog('The list of services that use this filter is show in the `Services` field.')
+            return yargs.epilog('The list of services that use this filter is show in the `Services` field.' +
+                               fieldDescriptions(filter_fields))
                 .usage('Usage: show filter <filter>')
         }, function(argv) {
             maxctrl(argv, function(host) {
@@ -210,7 +560,8 @@ exports.builder = function(yargs) {
             })
         })
         .command('filters', 'Show all filters', function(yargs) {
-            return yargs.epilog('Show detailed information of all filters.')
+            return yargs.epilog('Show detailed information of all filters.' +
+                                fieldDescriptions(filter_fields))
                 .usage('Usage: show filters')
         }, function(argv) {
             maxctrl(argv, function(host) {
@@ -219,7 +570,8 @@ exports.builder = function(yargs) {
         })
         .command('module <module>', 'Show loaded module', function(yargs) {
             return yargs.epilog('This command shows all available parameters as well as ' +
-                                'detailed version information of a loaded module.')
+                                'detailed version information of a loaded module.' +
+                               fieldDescriptions(module_fields))
                 .usage('Usage: show module <module>')
         }, function(argv) {
             maxctrl(argv, function(host) {
@@ -227,7 +579,8 @@ exports.builder = function(yargs) {
             })
         })
         .command('modules', 'Show all loaded modules', function(yargs) {
-            return yargs.epilog('Displays detailed information about all modules.')
+            return yargs.epilog('Displays detailed information about all modules.' +
+                               fieldDescriptions(module_fields))
                 .usage('Usage: show modules')
         }, function(argv) {
             maxctrl(argv, function(host) {
@@ -236,22 +589,16 @@ exports.builder = function(yargs) {
         })
         .command('maxscale', 'Show MaxScale information', function(yargs) {
             return yargs.epilog('See `help alter maxscale` for more details about altering ' +
-                                'MaxScale parameters.')
+                                'MaxScale parameters.' + fieldDescriptions(show_maxscale_fields))
                 .usage('Usage: show maxscale')
         }, function(argv) {
             maxctrl(argv, function(host) {
-                return getResource(host, 'maxscale', [
-                    {'Version': 'attributes.version'},
-                    {'Commit': 'attributes.commit'},
-                    {'Started At': 'attributes.started_at'},
-                    {'Activated At': 'attributes.activated_at'},
-                    {'Uptime': 'attributes.uptime'},
-                    {'Parameters': 'attributes.parameters'}
-                ])
+                return getResource(host, 'maxscale', show_maxscale_fields)
             })
         })
         .command('thread <thread>', 'Show thread', function(yargs) {
-            return yargs.epilog('Show detailed information about a worker thread.')
+            return yargs.epilog('Show detailed information about a worker thread.' +
+                               fieldDescriptions(thread_fields))
                 .usage('Usage: show thread <thread>')
         }, function(argv) {
             maxctrl(argv, function(host) {
@@ -259,7 +606,8 @@ exports.builder = function(yargs) {
             })
         })
         .command('threads', 'Show all threads', function(yargs) {
-            return yargs.epilog('Show detailed information about all worker threads.')
+            return yargs.epilog('Show detailed information about all worker threads.' +
+                               fieldDescriptions(thread_fields))
                 .usage('Usage: show threads')
         }, function(argv) {
             maxctrl(argv, function(host) {
@@ -268,28 +616,21 @@ exports.builder = function(yargs) {
         })
         .command('logging', 'Show MaxScale logging information', function(yargs) {
             return yargs.epilog('See `help alter logging` for more details about altering ' +
-                                'logging parameters.')
+                                'logging parameters.' + fieldDescriptions(show_logging_fields))
                 .usage('Usage: show logging')
         }, function(argv) {
             maxctrl(argv, function(host) {
-                return getResource(host, 'maxscale/logs', [
-                    {'Current Log File': 'attributes.log_file'},
-                    {'Enabled Log Levels': 'attributes.log_priorities'},
-                    {'Parameters': 'attributes.parameters'}
-                ])
+                return getResource(host, 'maxscale/logs', show_logging_fields)
             })
         })
         .command('commands <module>', 'Show module commands of a module', function(yargs) {
             return yargs.epilog('This command shows the parameters the command expects with ' +
-                                'the parameter descriptions.')
+                                'the parameter descriptions.' + fieldDescriptions(show_commands_fields))
                 .usage('Usage: show commands <module>')
         }, function(argv) {
             maxctrl(argv, function(host) {
-                return getSubCollection(host, 'maxscale/modules/' + argv.module, 'attributes.commands', [
-                    {'Command': 'id'},
-                    {'Parameters': 'attributes.parameters[].type'},
-                    {'Descriptions': 'attributes.parameters[].description'}
-                ])
+                return getSubCollection(host, 'maxscale/modules/' + argv.module, 'attributes.commands',
+                                        show_commands_fields)
             })
         })
         .command('qc_cache', 'Show query classifier cache', function(yargs) {

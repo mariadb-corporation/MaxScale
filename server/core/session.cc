@@ -945,6 +945,9 @@ Session::Session(const SListener& listener)
     {
         m_retain_last_statements = this_unit.retain_last_statements;
     }
+
+    mxb::atomic::add(&service->stats().n_current, 1, mxb::atomic::RELAXED);
+    mxb_assert(service->stats().n_current >= 0);
 }
 
 Session::~Session()
@@ -953,6 +956,7 @@ Session::~Session()
     mxb_assert(!m_down->is_open());
 
     mxb::atomic::add(&service->stats().n_current, -1, mxb::atomic::RELAXED);
+    mxb_assert(service->stats().n_current >= 0);
 
     if (client_dcb)
     {
@@ -1421,7 +1425,6 @@ bool Session::start()
         rval = true;
         m_state = MXS_SESSION::State::STARTED;
         mxb::atomic::add(&service->stats().n_connections, 1, mxb::atomic::RELAXED);
-        mxb::atomic::add(&service->stats().n_current, 1, mxb::atomic::RELAXED);
 
         MXS_INFO("Started %s client session [%" PRIu64 "] for '%s' from %s",
                  service->name(), id(),
@@ -1516,4 +1519,3 @@ void Session::remove_backend_conn(mxs::BackendConnection* conn)
     mxb_assert(iter != m_backends_conns.end());
     m_backends_conns.erase(iter);
 }
-
