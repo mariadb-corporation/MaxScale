@@ -2011,7 +2011,6 @@ int main(int argc, char** argv)
                             auto worker = RoutingWorker::get(RoutingWorker::MAIN);
                             mxb_assert(worker);
 
-                            set_admin_worker(&main_worker);
                             if (main_worker.execute(do_startup, RoutingWorker::EXECUTE_QUEUED))
                             {
                                 // This call will block until MaxScale is shut down.
@@ -2021,9 +2020,6 @@ int main(int argc, char** argv)
                                 // Shutting down started, wait for all routing workers.
                                 RoutingWorker::join_workers();
                                 MXS_NOTICE("All workers have shut down.");
-
-                                // No admin routing worker anymore.
-                                set_admin_worker(nullptr);
 
                                 MonitorManager::destroy_all_monitors();
 

@@ -92,12 +92,5 @@ void maxscale_start_teardown()
 
 bool running_in_admin_thread()
 {
-    auto current_worker = mxb::Worker::get_current();
-    return current_worker == this_unit.admin_worker.load(std::memory_order_acquire);
+    return mxs::MainWorker::is_main_worker();
 }
-
-void set_admin_worker(const mxb::Worker* admin_worker)
-{
-    this_unit.admin_worker.store(admin_worker, std::memory_order_release);
-}
-

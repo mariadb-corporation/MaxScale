@@ -38,5 +38,3 @@ bool maxscale_teardown_in_progress();
 void maxscale_start_teardown();
 
 bool running_in_admin_thread();
-
-void set_admin_worker(const mxb::Worker* admin_worker);
