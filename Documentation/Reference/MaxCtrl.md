@@ -94,11 +94,30 @@ Commands:
 
 List all servers in MaxScale.
 
+
+  Field       | Description
+  -----       | -----------
+  Server      | Server name
+  Address     | Address where the server listens
+  Port        | The port on which the server listens
+  Connections | Current connection count
+  State       | Server state
+  GTID        | Current value of @@gtid_current_pos
+
 ### list services
 
 `Usage: list services`
 
 List all services and the servers they use.
+
+
+  Field             | Description
+  -----             | -----------
+  Service           | Service name
+  Router            | Router used by the service
+  Connections       | Current connection count
+  Total Connections | Total connection count
+  Servers           | Servers that the service uses
 
 ### list listeners
 
@@ -106,11 +125,26 @@ List all services and the servers they use.
 
 List listeners for a service.
 
+
+  Field | Description
+  ----- | -----------
+  Name  | Listener name
+  Port  | The port where the listener listens
+  Host  | The address or socket where the listener listens
+  State | Listener state
+
 ### list monitors
 
 `Usage: list monitors`
 
 List all monitors in MaxScale.
+
+
+  Field   | Description
+  -----   | -----------
+  Monitor | Monitor name
+  State   | Monitor state
+  Servers | The servers that this monitor monitors
 
 ### list sessions
 
@@ -118,11 +152,28 @@ List all monitors in MaxScale.
 
 List all client sessions.
 
+
+  Field     | Description
+  -----     | -----------
+  Id        | Session ID
+  User      | Username
+  Host      | Client host address
+  Connected | Time when the session started
+  Idle      | How long the session has been idle, in seconds
+  Service   | The service where the session connected
+
 ### list filters
 
 `Usage: list filters`
 
 List all filters in MaxScale.
+
+
+  Field   | Description
+  -----   | -----------
+  Filter  | Filter name
+  Service | Services that use the filter
+  Module  | The module that the filter uses
 
 ### list modules
 
@@ -130,11 +181,28 @@ List all filters in MaxScale.
 
 List all currently loaded modules.
 
+
+  Field   | Description
+  -----   | -----------
+  Module  | Module name
+  Type    | Module type
+  Version | Module version
+
 ### list threads
 
 `Usage: list threads`
 
 List all worker threads.
+
+
+  Field       | Description
+  -----       | -----------
+  Id          | Thread ID
+  Current FDs | Current number of managed file descriptors
+  Total FDs   | Total number of managed file descriptors
+  Load (1s)   | Load percentage over the last second
+  Load (1m)   | Load percentage over the last minute
+  Load (1h)   | Load percentage over the last hour
 
 ### list users
 
@@ -143,11 +211,24 @@ List all worker threads.
 List network the users that can be used to connect to the MaxScale REST API as
 well as enabled local accounts.
 
+
+  Field      | Description
+  -----      | -----------
+  Name       | User name
+  Type       | User type
+  Privileges | User privileges
+
 ### list commands
 
 `Usage: list commands`
 
 List all available module commands.
+
+
+  Field    | Description
+  -----    | -----------
+  Module   | Module name
+  Commands | Available commands
 
 ## show
 
@@ -179,9 +260,24 @@ Commands:
 
 `Usage: show server <server>`
 
-Show detailed information about a server. The `Parameters` field contains the
-currently configured parameters for this server. See `help alter server` for
-more details about altering server parameters.
+Show detailed information about a server. The `Parameters` field contains the currently configured parameters for this server. See `help alter server` for more details about altering server parameters.
+
+
+  Field            | Description
+  -----            | -----------
+  Server           | Server name
+  Address          | Address where the server listens
+  Port             | The port on which the server listens
+  State            | Server state
+  Last Event       | The type of the latest event
+  Triggered At     | Time when the latest event was triggered at
+  Services         | Services that use this server
+  Monitors         | Monitors that monitor this server
+  Master ID        | The server ID of the master
+  Node ID          | The node ID of this server
+  Slave Server IDs | List of slave server IDs
+  Statistics       | Server statistics
+  Parameters       | Server parameters
 
 ### show servers
 
@@ -189,13 +285,41 @@ more details about altering server parameters.
 
 Show detailed information about all servers.
 
+
+  Field            | Description
+  -----            | -----------
+  Server           | Server name
+  Address          | Address where the server listens
+  Port             | The port on which the server listens
+  State            | Server state
+  Last Event       | The type of the latest event
+  Triggered At     | Time when the latest event was triggered at
+  Services         | Services that use this server
+  Monitors         | Monitors that monitor this server
+  Master ID        | The server ID of the master
+  Node ID          | The node ID of this server
+  Slave Server IDs | List of slave server IDs
+  Statistics       | Server statistics
+  Parameters       | Server parameters
+
 ### show service
 
 `Usage: show service <service>`
 
-Show detailed information about a service. The `Parameters` field contains the
-currently configured parameters for this service. See `help alter service` for
-more details about altering service parameters.
+Show detailed information about a service. The `Parameters` field contains the currently configured parameters for this service. See `help alter service` for more details about altering service parameters.
+
+
+  Field               | Description
+  -----               | -----------
+  Service             | Service name
+  Router              | Router that the service uses
+  State               | Service state
+  Started At          | When the service was started
+  Current Connections | Current connection count
+  Total Connections   | Total connection count
+  Servers             | Servers that the service uses
+  Parameters          | Service parameter
+  Router Diagnostics  | Diagnostics provided by the router module
 
 ### show services
 
@@ -203,13 +327,33 @@ more details about altering service parameters.
 
 Show detailed information about all services.
 
+
+  Field               | Description
+  -----               | -----------
+  Service             | Service name
+  Router              | Router that the service uses
+  State               | Service state
+  Started At          | When the service was started
+  Current Connections | Current connection count
+  Total Connections   | Total connection count
+  Servers             | Servers that the service uses
+  Parameters          | Service parameter
+  Router Diagnostics  | Diagnostics provided by the router module
+
 ### show monitor
 
 `Usage: show monitor <monitor>`
 
-Show detailed information about a monitor. The `Parameters` field contains the
-currently configured parameters for this monitor. See `help alter monitor` for
-more details about altering monitor parameters.
+Show detailed information about a monitor. The `Parameters` field contains the currently configured parameters for this monitor. See `help alter monitor` for more details about altering monitor parameters.
+
+
+  Field               | Description
+  -----               | -----------
+  Monitor             | Monitor name
+  State               | Monitor state
+  Servers             | The servers that this monitor monitors
+  Parameters          | Monitor parameters
+  Monitor Diagnostics | Diagnostics provided by the monitor module
 
 ### show monitors
 
@@ -217,23 +361,58 @@ more details about altering monitor parameters.
 
 Show detailed information about all monitors.
 
+
+  Field               | Description
+  -----               | -----------
+  Monitor             | Monitor name
+  State               | Monitor state
+  Servers             | The servers that this monitor monitors
+  Parameters          | Monitor parameters
+  Monitor Diagnostics | Diagnostics provided by the monitor module
+
 ### show session
 
 `Usage: show session <session>`
 
-Show detailed information about a single session. The list of sessions can be
-retrieved with the `list sessions` command. The <session> is the session ID of a
-particular session.
+Show detailed information about a single session. The list of sessions can be retrieved with the `list sessions` command. The <session> is the session ID of a particular session.
 
-The `Connections` field lists the servers to which the session is connected and
-the `Connection IDs` field lists the IDs for those connections.
+The `Connections` field lists the servers to which the session is connected and the `Connection IDs` field lists the IDs for those connections.
+
+
+  Field          | Description
+  -----          | -----------
+  Id             | Session ID
+  Service        | The service where the session connected
+  State          | Session state
+  User           | Username
+  Host           | Client host address
+  Connected      | Time when the session started
+  Idle           | How long the session has been idle, in seconds
+  Connections    | Ordered list of backend connections
+  Connection IDs | Thread IDs for the backend connections
+  Queries        | Query history
+  Log            | Per-session log messages
 
 ### show sessions
 
 `Usage: show sessions`
 
-Show detailed information about all sessions. See `help show session` for more
-details.
+Show detailed information about all sessions. See `help show session` for more details.
+
+
+  Field          | Description
+  -----          | -----------
+  Id             | Session ID
+  Service        | The service where the session connected
+  State          | Session state
+  User           | Username
+  Host           | Client host address
+  Connected      | Time when the session started
+  Idle           | How long the session has been idle, in seconds
+  Connections    | Ordered list of backend connections
+  Connection IDs | Thread IDs for the backend connections
+  Queries        | Query history
+  Log            | Per-session log messages
 
 ### show filter
 
@@ -241,18 +420,44 @@ details.
 
 The list of services that use this filter is show in the `Services` field.
 
+
+  Field      | Description
+  -----      | -----------
+  Filter     | Filter name
+  Module     | The module that the filter uses
+  Services   | Services that use the filter
+  Parameters | Filter parameters
+
 ### show filters
 
 `Usage: show filters`
 
 Show detailed information of all filters.
 
+
+  Field      | Description
+  -----      | -----------
+  Filter     | Filter name
+  Module     | The module that the filter uses
+  Services   | Services that use the filter
+  Parameters | Filter parameters
+
 ### show module
 
 `Usage: show module <module>`
 
-This command shows all available parameters as well as detailed version
-information of a loaded module.
+This command shows all available parameters as well as detailed version information of a loaded module.
+
+
+  Field       | Description
+  -----       | -----------
+  Module      | Module name
+  Type        | Module type
+  Version     | Module version
+  Maturity    | Module maturity
+  Description | Short description about the module
+  Parameters  | All the parameters that the module accepts
+  Commands    | Commands that the module provides
 
 ### show modules
 
@@ -260,11 +465,32 @@ information of a loaded module.
 
 Displays detailed information about all modules.
 
+
+  Field       | Description
+  -----       | -----------
+  Module      | Module name
+  Type        | Module type
+  Version     | Module version
+  Maturity    | Module maturity
+  Description | Short description about the module
+  Parameters  | All the parameters that the module accepts
+  Commands    | Commands that the module provides
+
 ### show maxscale
 
 `Usage: show maxscale`
 
 See `help alter maxscale` for more details about altering MaxScale parameters.
+
+
+  Field        | Description
+  -----        | -----------
+  Version      | MaxScale version
+  Commit       | MaxScale commit ID
+  Started At   | Time when MaxScale was started
+  Activated At | Time when MaxScale left passive mode
+  Uptime       | Time MaxScale has been running
+  Parameters   | Global MaxScale parameters
 
 ### show thread
 
@@ -272,11 +498,59 @@ See `help alter maxscale` for more details about altering MaxScale parameters.
 
 Show detailed information about a worker thread.
 
+
+  Field                  | Description
+  -----                  | -----------
+  Id                     | Thread ID
+  Accepts                | Number of TCP accepts done by this thread
+  Reads                  | Number of EPOLLIN events
+  Writes                 | Number of EPOLLOUT events
+  Hangups                | Number of EPOLLHUP and EPOLLRDUP events
+  Errors                 | Number of EPOLLERR events
+  Avg event queue length | Average number of events returned by one epoll_wait call
+  Max event queue length | Maximum number of events returned by one epoll_wait call
+  Max exec time          | The longest time spent processing events returned by a epoll_wait call
+  Max queue time         | The longest time an event had to wait before it was processed
+  Current FDs            | Current number of managed file descriptors
+  Total FDs              | Total number of managed file descriptors
+  Load (1s)              | Load percentage over the last second
+  Load (1m)              | Load percentage over the last minute
+  Load (1h)              | Load percentage over the last hour
+  QC cache size          | Query classifier size
+  QC cache inserts       | Number of times a new query was added into the query classification cache
+  QC cache hits          | How many times a query classification was found in the query classification cache
+  QC cache misses        | How many times a query classification was not found in the query classification cache
+  QC cache evictions     | How many times a query classification result was evicted from the query classification cache
+
 ### show threads
 
 `Usage: show threads`
 
 Show detailed information about all worker threads.
+
+
+  Field                  | Description
+  -----                  | -----------
+  Id                     | Thread ID
+  Accepts                | Number of TCP accepts done by this thread
+  Reads                  | Number of EPOLLIN events
+  Writes                 | Number of EPOLLOUT events
+  Hangups                | Number of EPOLLHUP and EPOLLRDUP events
+  Errors                 | Number of EPOLLERR events
+  Avg event queue length | Average number of events returned by one epoll_wait call
+  Max event queue length | Maximum number of events returned by one epoll_wait call
+  Max exec time          | The longest time spent processing events returned by a epoll_wait call
+  Max queue time         | The longest time an event had to wait before it was processed
+  Current FDs            | Current number of managed file descriptors
+  Total FDs              | Total number of managed file descriptors
+  Load (1s)              | Load percentage over the last second
+  Load (1m)              | Load percentage over the last minute
+  Load (1h)              | Load percentage over the last hour
+  QC cache size          | Query classifier size
+  QC cache inserts       | Number of times a new query was added into the query classification cache
+  QC cache hits          | How many times a query classification was found in the query classification cache
+  QC cache misses        | How many times a query classification was not found in the query classification cache
+  QC cache evictions     | How many times a query classification result was evicted from the query classification cache
 
 ### show logging
 
@@ -284,12 +558,25 @@ Show detailed information about all worker threads.
 
 See `help alter logging` for more details about altering logging parameters.
 
+
+  Field              | Description
+  -----              | -----------
+  Current Log File   | The current log file MaxScale is logging into
+  Enabled Log Levels | List of log levels enabled in MaxScale
+  Parameters         | Logging parameters
+
 ### show commands
 
 `Usage: show commands <module>`
 
-This command shows the parameters the command expects with the parameter
-descriptions.
+This command shows the parameters the command expects with the parameter descriptions.
+
+
+  Field        | Description
+  -----        | -----------
+  Command      | Command name
+  Parameters   | Parameters the command supports
+  Descriptions | Parameter descriptions
 
 ## set
 
