@@ -46,6 +46,7 @@
 #include <maxscale/cn_strings.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/housekeeper.h>
+#include <maxscale/listener.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include <maxscale/router.hh>
 #include <maxscale/routingworker.hh>

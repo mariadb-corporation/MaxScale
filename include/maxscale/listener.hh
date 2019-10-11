@@ -26,9 +26,8 @@
 #include <maxscale/routingworker.hh>
 #include <maxscale/workerlocal.hh>
 
-struct DCB;
-class SERVICE;
-
+class DCB;
+class Service;
 class Listener;
 using SListener = std::shared_ptr<Listener>;
 
@@ -198,7 +197,7 @@ private:
     // Protocol module. Ownership shared with sessions created from this listener.
     std::shared_ptr<mxs::ProtocolModule> m_proto_module;
 
-    SERVICE*             m_service;         /**< The service which used by this listener */
+    Service*             m_service;         /**< The service to which new sessions are sent */
     MXS_CONFIG_PARAMETER m_params;          /**< Configuration parameters */
     mxs::SSLProvider     m_ssl_provider;
     qc_sql_mode_t        m_sql_mode;        /**< Default sql mode for the listener */
@@ -231,7 +230,7 @@ private:
      * @param protocol      The protocol module to use
      * @param ssl           The SSL configuration
      */
-    Listener(SERVICE* service, const std::string& name,
+    Listener(Service* service, const std::string& name,
              const std::string& address, uint16_t port,
              const std::string& protocol,
              std::unique_ptr<mxs::ProtocolModule> proto_instance,

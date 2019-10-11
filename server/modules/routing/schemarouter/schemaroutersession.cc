@@ -16,6 +16,7 @@
 #include "schemarouterinstance.hh"
 
 #include <inttypes.h>
+#include <unordered_set>
 
 #include <maxbase/atomic.hh>
 #include <maxbase/alloc.h>

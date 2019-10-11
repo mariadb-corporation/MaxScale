@@ -25,12 +25,11 @@
 #include <maxscale/config.hh>
 #include <maxscale/protocol.hh>
 #include <maxscale/dcb.hh>
-#include <maxscale/listener.hh>
 #include <maxscale/filter.hh>
 #include <maxscale/server.hh>
 #include <maxscale/target.hh>
 
-struct SERVER;
+class SERVER;
 struct mxs_router;
 struct mxs_router_object;
 struct users;

@@ -36,6 +36,7 @@
 #include <maxscale/routingworker.hh>
 #include <maxscale/protocol/mariadb/rwbackend.hh>
 #include <maxscale/session_stats.hh>
+#include <maxscale/workerlocal.hh>
 
 enum backend_type_t
 {

@@ -22,6 +22,7 @@
 #include <maxscale/authenticator2.hh>
 #include <maxscale/clock.h>
 #include <maxscale/limits.h>
+#include <maxscale/mainworker.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/poll.hh>
@@ -30,6 +31,7 @@
 #include <maxscale/server.hh>
 #include <maxscale/utils.h>
 #include <maxscale/protocol/mariadb/mysql.hh>
+
 // For setting server status through monitor
 #include "../../../core/internal/monitormanager.hh"
 

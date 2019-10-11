@@ -20,7 +20,6 @@
 #include <openssl/sha.h>
 #include <maxbase/jansson.h>
 #include <maxscale/dcb.hh>
-#include <maxscale/listener.hh>
 #include <maxscale/service.hh>
 
 namespace maxscale

@@ -1887,16 +1887,27 @@ void Service::decref()
 
 UserAccountManager* Service::user_account_manager()
 {
-    return m_usermanager.get();
+    return m_usermanager_exists.load(std::memory_order_acquire) ? m_usermanager.get() : nullptr;
 }
 
-void Service::set_user_account_manager(Service::SAccountManager protocol_module)
+void Service::set_user_account_manager(SAccountManager user_manager)
 {
     // Once the object is set, it can not change as this would indicate a change in service
-    // backend protocol.
-    mxb_assert(!m_usermanager);
-    if (!m_usermanager)
+    // backend protocol. The atomic is required to sync the write/read.
+    mxb_assert(!m_usermanager_exists.load(std::memory_order_acquire) && !m_usermanager);
+    m_usermanager = std::move(user_manager);
+    m_usermanager_exists.store(true, std::memory_order_release);
+}
+
+void Service::update_user_accounts()
+{
+    auto manager = user_account_manager();
+    if (manager)
     {
-        m_usermanager = std::move(protocol_module);
+        // TODO: only set credentials when needed, check rate limits etc.
+        auto user = m_config->user;
+        auto pw = m_config->password;
+        manager->set_credentials(user, pw);
+        manager->update_user_accounts();
     }
 }

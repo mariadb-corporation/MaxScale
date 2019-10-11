@@ -105,7 +105,7 @@ private:
 thread_local RateLimit rate_limit;
 }
 
-Listener::Listener(SERVICE* service,
+Listener::Listener(Service* service,
                    const std::string& name,
                    const std::string& address,
                    uint16_t port,
@@ -284,7 +284,7 @@ SListener Listener::create(const std::string& name,
                 else
                 {
                     MXB_ERROR("The protocol of listener '%s' ('%s') differs from the protocol in the target "
-                              "service '%s' ('%s') when both protocols implement partial authentication. "
+                              "service '%s' ('%s') when both protocols implement user account management. "
                               "Cannot create listener.",
                               name.c_str(), protocol_module->name().c_str(),
                               service->name(), service_usermanager->protocol_name().c_str());
@@ -946,8 +946,12 @@ bool Listener::listen()
     // TODO: m_proto_module->load_auth_users(m_service)), return false if there is a
     // TODO: fatal error, and prepopulate the databases of all routing workers if there is not.
 
-    bool rval = false;
 
+    // The user account manager (if any) in the service should update now since this listener may soon
+    // generate sessions.
+    m_service->update_user_accounts();
+
+    bool rval = false;
     if (m_type == Type::UNIQUE_TCP)
     {
         rval = listen_unique();

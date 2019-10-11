@@ -16,6 +16,7 @@
 
 #include <maxscale/cn_strings.hh>
 #include <maxscale/modutil.hh>
+#include <maxscale/routingworker.hh>
 
 namespace
 {

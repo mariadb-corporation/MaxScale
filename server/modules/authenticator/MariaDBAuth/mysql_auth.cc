@@ -21,7 +21,6 @@
 #include <maxscale/paths.h>
 #include <maxscale/secrets.h>
 #include <maxscale/utils.h>
-#include <maxscale/routingworker.hh>
 
 extern "C"
 {

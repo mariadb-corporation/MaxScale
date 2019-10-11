@@ -16,22 +16,18 @@
 
 #include <atomic>
 #include <chrono>
-#include <cstdint>
-#include <future>
 #include <fstream>
 #include <sstream>
 #include <thread>
 #include <tuple>
-#include <unordered_map>
 #include <vector>
 
-#include <mysql.h>
 #include <mariadb_rpl.h>
 #include <errmsg.h>
 
 #include <maxscale/query_classifier.hh>
 #include <maxscale/buffer.hh>
-#include <maxscale/utils.hh>
+#include <maxscale/routingworker.hh>
 
 // Private headers
 #include "sql.hh"

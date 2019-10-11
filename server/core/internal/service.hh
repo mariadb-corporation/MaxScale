@@ -238,11 +238,14 @@ public:
     mxs::UserAccountManager* user_account_manager();
 
     /**
-     * Set service protocol module. Should only be called once.
+     * Set account manager. Must not be called more than once.
      *
-     * @param protocol_module The protocol this service will use
+     * @param user_manager The user account manager this service will use
      */
-    void set_user_account_manager(SAccountManager protocol_module);
+    void set_user_account_manager(SAccountManager user_manager);
+
+    void update_user_accounts();
+
 private:
 
     struct Data
@@ -283,8 +286,9 @@ private:
     // Helper for calculating version values
     std::pair<uint64_t, uint64_t> get_versions(const std::vector<SERVER*>& servers) const;
 
-    // Userdata manager. Ownership shared with listeners. Must be set before accepting clients.
-    SAccountManager m_usermanager;
+    // User account manager. Can only be set once. A guard variable is used to synchronize access.
+    SAccountManager  m_usermanager;
+    std::atomic_bool m_usermanager_exists {false};
 };
 
 // A connection to a service

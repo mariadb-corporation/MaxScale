@@ -17,6 +17,7 @@
 #include <set>
 #include <string>
 
+#include <maxscale/listener.hh>
 #include <maxscale/modutil.hh>
 
 TeeSession::TeeSession(MXS_SESSION* session,
