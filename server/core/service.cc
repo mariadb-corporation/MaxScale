@@ -285,7 +285,7 @@ Service::~Service()
 void Service::destroy(Service* service)
 {
     mxb_assert(service->active());
-    mxb_assert(mxs::RoutingWorker::get_current() == mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN));
+    mxb_assert(mxs::MainWorker::is_main_worker());
 
     char filename[PATH_MAX + 1];
     snprintf(filename, sizeof(filename), "%s/%s.cnf", get_config_persistdir(), service->name());

@@ -186,7 +186,7 @@ void MariaDBBackendConnection::handle_error_response(DCB* plain_dcb, GWBUF* buff
      * This will prevent repeated authentication failures. */
     if (errcode == ER_HOST_IS_BLOCKED)
     {
-        auto main_worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
+        auto main_worker = mxs::MainWorker::get();
         auto server = dcb->server();
         main_worker->execute([server]() {
                                  MonitorManager::set_server_status(server, SERVER_MAINT);
