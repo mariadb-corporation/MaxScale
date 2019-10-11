@@ -296,11 +296,11 @@ public:
     static std::string get_server_monitor(const SERVER* server);
 
     /**
-     * Is the current thread either the main thread or the runtime admin thread?
+     * Is the current thread/worker the main worker?
      *
-     * @return True if running in an admin thread
+     * @return True if it is, false otherwise.
      */
-    static bool is_admin_thread();
+    static bool is_main_worker();
 
     /*
      * Convert a monitor event (enum) to string.

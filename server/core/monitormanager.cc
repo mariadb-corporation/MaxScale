@@ -95,7 +95,7 @@ const char RECONFIG_FAILED[] = "Monitor reconfiguration failed when %s. Check lo
 Monitor* MonitorManager::create_monitor(const string& name, const string& module_name,
                                         MXS_CONFIG_PARAMETER* params)
 {
-    mxb_assert(Monitor::is_admin_thread());
+    mxb_assert(Monitor::is_main_worker());
     Monitor* new_monitor = nullptr;
     const MXS_MODULE* module = get_module(module_name.c_str(), MODULE_MONITOR);
     if (module)
@@ -131,7 +131,7 @@ Monitor* MonitorManager::create_monitor(const string& name, const string& module
 
 void MonitorManager::debug_wait_one_tick()
 {
-    mxb_assert(Monitor::is_admin_thread());
+    mxb_assert(Monitor::is_main_worker());
     using namespace std::chrono;
     std::map<Monitor*, long> ticks;
 
@@ -167,7 +167,7 @@ void MonitorManager::debug_wait_one_tick()
 
 void MonitorManager::destroy_all_monitors()
 {
-    mxb_assert(Monitor::is_admin_thread());
+    mxb_assert(Monitor::is_main_worker());
     auto monitors = this_unit.clear();
     for (auto monitor : monitors)
     {
@@ -178,7 +178,7 @@ void MonitorManager::destroy_all_monitors()
 
 void MonitorManager::start_monitor(Monitor* monitor)
 {
-    mxb_assert(Monitor::is_admin_thread());
+    mxb_assert(Monitor::is_main_worker());
 
     // Only start the monitor if it's stopped.
     if (!monitor->is_running())
@@ -192,7 +192,7 @@ void MonitorManager::start_monitor(Monitor* monitor)
 
 void MonitorManager::populate_services()
 {
-    mxb_assert(Monitor::is_admin_thread());
+    mxb_assert(Monitor::is_main_worker());
     this_unit.foreach_monitor(
         [](Monitor* pMonitor) -> bool {
             pMonitor->populate_services();
@@ -205,7 +205,7 @@ void MonitorManager::populate_services()
  */
 void MonitorManager::start_all_monitors()
 {
-    mxb_assert(Monitor::is_admin_thread());
+    mxb_assert(Monitor::is_main_worker());
     this_unit.foreach_monitor(
         [](Monitor* monitor) {
             MonitorManager::start_monitor(monitor);
@@ -215,7 +215,7 @@ void MonitorManager::start_all_monitors()
 
 void MonitorManager::stop_monitor(Monitor* monitor)
 {
-    mxb_assert(Monitor::is_admin_thread());
+    mxb_assert(Monitor::is_main_worker());
 
     /** Only stop the monitor if it is running */
     if (monitor->is_running())
@@ -226,7 +226,7 @@ void MonitorManager::stop_monitor(Monitor* monitor)
 
 void MonitorManager::deactivate_monitor(Monitor* monitor)
 {
-    mxb_assert(Monitor::is_admin_thread());
+    mxb_assert(Monitor::is_main_worker());
     // This cannot be done with configure(), since other, module-specific config settings may depend on the
     // "servers"-setting of the base monitor.
     monitor->deactivate();
@@ -238,7 +238,7 @@ void MonitorManager::deactivate_monitor(Monitor* monitor)
  */
 void MonitorManager::stop_all_monitors()
 {
-    mxb_assert(Monitor::is_admin_thread());
+    mxb_assert(Monitor::is_main_worker());
     this_unit.foreach_monitor(
         [](Monitor* monitor) {
             MonitorManager::stop_monitor(monitor);
@@ -253,7 +253,7 @@ void MonitorManager::stop_all_monitors()
  */
 void MonitorManager::show_all_monitors(DCB* dcb)
 {
-    mxb_assert(Monitor::is_admin_thread());
+    mxb_assert(Monitor::is_main_worker());
     this_unit.foreach_monitor(
         [dcb](Monitor* monitor) {
             monitor_show(dcb, monitor);
@@ -268,7 +268,7 @@ void MonitorManager::show_all_monitors(DCB* dcb)
  */
 void MonitorManager::monitor_show(DCB* dcb, Monitor* monitor)
 {
-    mxb_assert(Monitor::is_admin_thread());
+    mxb_assert(Monitor::is_main_worker());
     monitor->show(dcb);
 }
 
@@ -279,7 +279,7 @@ void MonitorManager::monitor_show(DCB* dcb, Monitor* monitor)
  */
 void MonitorManager::monitor_list(DCB* dcb)
 {
-    mxb_assert(Monitor::is_admin_thread());
+    mxb_assert(Monitor::is_main_worker());
     dcb_printf(dcb, "---------------------+---------------------\n");
     dcb_printf(dcb, "%-20s | Status\n", "Monitor");
     dcb_printf(dcb, "---------------------+---------------------\n");
@@ -320,7 +320,7 @@ Monitor* MonitorManager::find_monitor(const char* name)
  */
 std::unique_ptr<ResultSet> MonitorManager::monitor_get_list()
 {
-    mxb_assert(Monitor::is_admin_thread());
+    mxb_assert(Monitor::is_main_worker());
     std::unique_ptr<ResultSet> set = ResultSet::create({"Monitor", "Status"});
     this_unit.foreach_monitor(
         [&set](Monitor* ptr) {
@@ -344,7 +344,7 @@ Monitor* MonitorManager::server_is_monitored(const SERVER* server)
 
 bool MonitorManager::create_monitor_config(const Monitor* monitor, const char* filename)
 {
-    mxb_assert(Monitor::is_admin_thread());
+    mxb_assert(Monitor::is_main_worker());
     int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
     if (file == -1)
     {
@@ -374,7 +374,7 @@ bool MonitorManager::create_monitor_config(const Monitor* monitor, const char* f
 
 bool MonitorManager::monitor_serialize(const Monitor* monitor)
 {
-    mxb_assert(Monitor::is_admin_thread());
+    mxb_assert(Monitor::is_main_worker());
     bool rval = false;
     char filename[PATH_MAX];
     snprintf(filename,
@@ -417,7 +417,7 @@ bool MonitorManager::monitor_serialize(const Monitor* monitor)
 
 bool MonitorManager::reconfigure_monitor(mxs::Monitor* monitor, const MXS_CONFIG_PARAMETER& parameters)
 {
-    mxb_assert(Monitor::is_admin_thread());
+    mxb_assert(Monitor::is_main_worker());
     // Backup monitor parameters in case configure fails.
     auto orig = monitor->parameters();
     // Stop/start monitor if it's currently running. If monitor was stopped already, this is likely
@@ -478,7 +478,7 @@ json_t* MonitorManager::monitor_to_json(const Monitor* monitor, const char* host
 
 json_t* MonitorManager::monitored_server_attributes_json(const SERVER* srv)
 {
-    mxb_assert(Monitor::is_admin_thread());
+    mxb_assert(Monitor::is_main_worker());
     Monitor* mon = server_is_monitored(srv);
     if (mon)
     {
@@ -505,7 +505,7 @@ json_t* MonitorManager::monitor_list_to_json(const char* host)
 
 json_t* MonitorManager::monitor_relations_to_server(const SERVER* server, const char* host)
 {
-    mxb_assert(Monitor::is_admin_thread());
+    mxb_assert(Monitor::is_main_worker());
     json_t* rel = nullptr;
 
     string mon_name = Monitor::get_server_monitor(server);
@@ -520,7 +520,7 @@ json_t* MonitorManager::monitor_relations_to_server(const SERVER* server, const 
 
 bool MonitorManager::set_server_status(SERVER* srv, int bit, string* errmsg_out)
 {
-    mxb_assert(Monitor::is_admin_thread());
+    mxb_assert(Monitor::is_main_worker());
     bool written = false;
     Monitor* mon = MonitorManager::server_is_monitored(srv);
     if (mon)
@@ -538,7 +538,7 @@ bool MonitorManager::set_server_status(SERVER* srv, int bit, string* errmsg_out)
 
 bool MonitorManager::clear_server_status(SERVER* srv, int bit, string* errmsg_out)
 {
-    mxb_assert(Monitor::is_admin_thread());
+    mxb_assert(Monitor::is_main_worker());
     bool written = false;
     Monitor* mon = MonitorManager::server_is_monitored(srv);
     if (mon)
@@ -556,7 +556,7 @@ bool MonitorManager::clear_server_status(SERVER* srv, int bit, string* errmsg_ou
 
 bool MonitorManager::add_server_to_monitor(mxs::Monitor* mon, SERVER* server, std::string* error_out)
 {
-    mxb_assert(Monitor::is_admin_thread());
+    mxb_assert(Monitor::is_main_worker());
     bool success = false;
     string server_monitor = Monitor::get_server_monitor(server);
     if (!server_monitor.empty())
@@ -596,7 +596,7 @@ bool MonitorManager::add_server_to_monitor(mxs::Monitor* mon, SERVER* server, st
 
 bool MonitorManager::remove_server_from_monitor(mxs::Monitor* mon, SERVER* server, std::string* error_out)
 {
-    mxb_assert(Monitor::is_admin_thread());
+    mxb_assert(Monitor::is_main_worker());
     bool success = false;
     string server_monitor = Monitor::get_server_monitor(server);
     if (server_monitor != mon->name())

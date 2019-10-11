@@ -89,8 +89,3 @@ void maxscale_start_teardown()
 {
     teardown_in_progress = true;
 }
-
-bool running_in_admin_thread()
-{
-    return mxs::MainWorker::is_main_worker();
-}

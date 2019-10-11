@@ -30,11 +30,16 @@
 #include <vector>
 #include <mutex>
 #include <mysql.h>
+#include <mysqld_error.h>
 
 #include <maxbase/alloc.h>
+#include <maxbase/format.hh>
 #include <maxscale/clock.h>
+#include <maxscale/http.hh>
+#include <maxscale/json_api.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/mariadb.hh>
+#include <maxscale/mainworker.hh>
 #include <maxscale/maxscale.h>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/paths.h>
@@ -42,14 +47,9 @@
 #include <maxscale/routingworker.hh>
 #include <maxscale/secrets.h>
 #include <maxscale/utils.hh>
-#include <maxscale/json_api.hh>
-#include <mysqld_error.h>
-#include <maxbase/format.hh>
-#include <maxscale/http.hh>
 
 #include "internal/config.hh"
 #include "internal/externcmd.hh"
-#include "internal/maxscale.hh"
 #include "internal/monitor.hh"
 #include "internal/modules.hh"
 #include "internal/server.hh"
@@ -107,7 +107,7 @@ public:
      */
     bool claim_server(const string& server, const string& new_owner, string* existing_owner)
     {
-        mxb_assert(Monitor::is_admin_thread());
+        mxb_assert(Monitor::is_main_worker());
         bool claim_success = false;
         auto iter = m_server_owners.find(server);
         if (iter != m_server_owners.end())
@@ -130,7 +130,7 @@ public:
      */
     void release_server(const string& server)
     {
-        mxb_assert(Monitor::is_admin_thread());
+        mxb_assert(Monitor::is_main_worker());
         auto iter = m_server_owners.find(server);
         mxb_assert(iter != m_server_owners.end());
         m_server_owners.erase(iter);
@@ -139,7 +139,7 @@ public:
 
     string claimed_by(const string& server)
     {
-        mxb_assert(Monitor::is_admin_thread());
+        mxb_assert(Monitor::is_main_worker());
         string rval;
         auto iter = m_server_owners.find(server);
         if (iter != m_server_owners.end())
@@ -617,7 +617,7 @@ Monitor::~Monitor()
 bool Monitor::add_server(SERVER* server)
 {
     // This should only be called from the admin thread while the monitor is stopped.
-    mxb_assert(!is_running() && is_admin_thread());
+    mxb_assert(!is_running() && is_main_worker());
     bool success = false;
     string existing_owner;
     if (this_unit.claim_server(server->name(), m_name, &existing_owner))
@@ -651,7 +651,7 @@ void Monitor::server_removed(SERVER* server)
 void Monitor::remove_all_servers()
 {
     // This should only be called from the admin thread while the monitor is stopped.
-    mxb_assert(!is_running() && is_admin_thread());
+    mxb_assert(!is_running() && is_main_worker());
     for (auto mon_server : m_servers)
     {
         mxb_assert(this_unit.claimed_by(mon_server->server->name()) == m_name);
@@ -699,7 +699,7 @@ json_t* Monitor::to_json(const char* host) const
 {
     // This function mostly reads settings-type data, which is only written to by the admin thread,
     // The rest is safe to read without mutexes.
-    mxb_assert(Monitor::is_admin_thread());
+    mxb_assert(Monitor::is_main_worker());
     json_t* rval = json_object();
     json_t* attr = json_object();
     json_t* rel = json_object();
@@ -1282,9 +1282,9 @@ string Monitor::get_server_monitor(const SERVER* server)
     return this_unit.claimed_by(server->name());
 }
 
-bool Monitor::is_admin_thread()
+bool Monitor::is_main_worker()
 {
-    return running_in_admin_thread();
+    return mxs::MainWorker::is_main_worker();
 }
 
 /**
@@ -1918,7 +1918,7 @@ bool MonitorWorker::is_running() const
 void MonitorWorker::do_stop()
 {
     // This should only be called by monitor_stop().
-    mxb_assert(Monitor::is_admin_thread());
+    mxb_assert(Monitor::is_main_worker());
     mxb_assert(is_running());
     mxb_assert(m_thread_running.load() == true);
 
@@ -1940,7 +1940,7 @@ bool MonitorWorker::start()
 {
     // This should only be called by monitor_start(). NULL worker is allowed since the main worker may
     // not exist during program start/stop.
-    mxb_assert(Monitor::is_admin_thread());
+    mxb_assert(Monitor::is_main_worker());
     mxb_assert(!is_running());
     mxb_assert(m_thread_running.load() == false);
 
