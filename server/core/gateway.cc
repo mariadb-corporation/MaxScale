@@ -2008,9 +2008,6 @@ int main(int argc, char** argv)
                                        config_threadcount(),
                                        config_thread_stack_size());
 
-                            auto worker = RoutingWorker::get(RoutingWorker::MAIN);
-                            mxb_assert(worker);
-
                             if (main_worker.execute(do_startup, RoutingWorker::EXECUTE_QUEUED))
                             {
                                 // This call will block until MaxScale is shut down.
