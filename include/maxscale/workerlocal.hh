@@ -31,28 +31,28 @@ void worker_local_delete_data(uint64_t key);
 
 // Data local to a routing worker
 template<class T>
-class rworker_local
+class WorkerLocal
 {
 public:
 
-    rworker_local(const rworker_local&) = delete;
-    rworker_local& operator=(const rworker_local&) = delete;
+    WorkerLocal(const WorkerLocal&) = delete;
+    WorkerLocal& operator=(const WorkerLocal&) = delete;
 
     // Default initialized
-    rworker_local()
+    WorkerLocal()
         : m_handle(IndexedStorage::create_key())
     {
     }
 
     // Forwarding constructor
     template<typename ... Args>
-    rworker_local(Args&& ... args)
+    WorkerLocal(Args&& ... args)
         : m_handle(IndexedStorage::create_key())
         , m_value(std::forward<Args>(args)...)
     {
     }
 
-    ~rworker_local()
+    ~WorkerLocal()
     {
         worker_local_delete_data(m_handle);
     }

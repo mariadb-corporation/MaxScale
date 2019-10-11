@@ -253,11 +253,11 @@ private:
         uint64_t target_capabilities {0};
     };
 
-    mxs::rworker_local<Data>   m_data;
-    RateLimits                 m_rate_limits;   // User reload rate limits
-    mxs::rworker_local<Config> m_config;
-    std::atomic<int64_t>       m_refcount {1};
-    bool                       m_active {true};
+    mxs::WorkerLocal<Data>   m_data;
+    RateLimits               m_rate_limits;   // User reload rate limits
+    mxs::WorkerLocal<Config> m_config;
+    std::atomic<int64_t>     m_refcount {1};
+    bool                     m_active {true};
 
     MXS_CONFIG_PARAMETER m_params;
 

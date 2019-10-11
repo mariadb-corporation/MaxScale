@@ -204,7 +204,7 @@ private:
 
     Type m_type;    /**< The type of the listener */
 
-    mxs::rworker_local<int> m_fd {-1};      /**< File descriptor the listener listens on */
+    mxs::WorkerLocal<int> m_fd {-1};      /**< File descriptor the listener listens on */
 
     /** A shared pointer to the listener itself that is passed as the argument to
      * the protocol's accept function. This allows client connections to live
