@@ -620,7 +620,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
             // When a transaction is started, we initially assume it is read-only.
             m_is_read_only = true;
         }
-        else if (!session_trx_is_active(m_pSession))
+        else if (!m_pSession->is_trx_active())
         {
             if (log_decisions())
             {
@@ -628,7 +628,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
             }
             action = CACHE_USE_AND_POPULATE;
         }
-        else if (session_trx_is_read_only(m_pSession))
+        else if (m_pSession->is_trx_read_only())
         {
             if (config.cache_in_trxs >= CACHE_IN_TRXS_READ_ONLY)
             {

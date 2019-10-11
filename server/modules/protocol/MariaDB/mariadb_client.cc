@@ -986,12 +986,12 @@ char* MariaDBClientConnection::handle_variables(MXS_SESSION* session, GWBUF** re
                 switch (sql_mode_parser.get_sql_mode(value.first, value.second))
                 {
                 case SqlModeParser::ORACLE:
-                    session_set_autocommit(session, false);
+                    session->set_autocommit(false);
                     session->client_protocol_data = QC_SQL_MODE_ORACLE;
                     break;
 
                 case SqlModeParser::DEFAULT:
-                    session_set_autocommit(session, true);
+                    session->set_autocommit(true);
                     session->client_protocol_data = QC_SQL_MODE_DEFAULT;
                     break;
 
@@ -1134,9 +1134,9 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
 {
     mxb_assert(GWBUF_IS_CONTIGUOUS(packetbuf));
 
-    if (session_trx_is_ending(session))
+    if (session->is_trx_ending())
     {
-        session_set_trx_state(session, SESSION_TRX_INACTIVE);
+        session->set_trx_state(SESSION_TRX_INACTIVE);
     }
 
     if (mxs_mysql_get_command(packetbuf) == MXS_COM_QUERY)
@@ -1147,12 +1147,12 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
         {
             if (type & QUERY_TYPE_DISABLE_AUTOCOMMIT)
             {
-                session_set_autocommit(session, false);
-                session_set_trx_state(session, SESSION_TRX_INACTIVE);
+                session->set_autocommit(false);
+                session->set_trx_state(SESSION_TRX_INACTIVE);
             }
             else
             {
-                mxs_session_trx_state_t trx_state;
+                uint32_t trx_state;
                 if (type & QUERY_TYPE_WRITE)
                 {
                     trx_state = SESSION_TRX_READ_WRITE;
@@ -1166,18 +1166,18 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
                     trx_state = SESSION_TRX_ACTIVE;
                 }
 
-                session_set_trx_state(session, trx_state);
+                session->set_trx_state(trx_state);
             }
         }
         else if ((type & QUERY_TYPE_COMMIT) || (type & QUERY_TYPE_ROLLBACK))
         {
-            uint32_t trx_state = session_get_trx_state(session);
+            uint32_t trx_state = session->get_trx_state();
             trx_state |= SESSION_TRX_ENDING_BIT;
-            session_set_trx_state(session, (mxs_session_trx_state_t)trx_state);
+            session->set_trx_state(trx_state);
 
             if (type & QUERY_TYPE_ENABLE_AUTOCOMMIT)
             {
-                session_set_autocommit(session, true);
+                session->set_autocommit(true);
             }
         }
     }
@@ -1673,11 +1673,11 @@ void MariaDBClientConnection::parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* d
         MXS_DEBUG("autocommit:%s", autocommit);
         if (strncasecmp(autocommit, "ON", 2) == 0)
         {
-            session_set_autocommit(ses, true);
+            ses->set_autocommit(true);
         }
         if (strncasecmp(autocommit, "OFF", 3) == 0)
         {
-            session_set_autocommit(ses, false);
+            ses->set_autocommit(false);
         }
     }
     char* trx_state = gwbuf_get_property(data, (char*)"trx_state");
@@ -1687,11 +1687,11 @@ void MariaDBClientConnection::parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* d
 
         if (s == TX_EMPTY)
         {
-            session_set_trx_state(ses, SESSION_TRX_INACTIVE);
+            ses->set_trx_state(SESSION_TRX_INACTIVE);
         }
         else if ((s & TX_EXPLICIT) || (s & TX_IMPLICIT))
         {
-            session_set_trx_state(ses, SESSION_TRX_ACTIVE);
+            ses->set_trx_state(SESSION_TRX_ACTIVE);
         }
     }
     char* trx_characteristics = gwbuf_get_property(data, (char*)"trx_characteristics");
@@ -1699,16 +1699,16 @@ void MariaDBClientConnection::parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* d
     {
         if (strncmp(trx_characteristics, "START TRANSACTION READ ONLY;", 28) == 0)
         {
-            session_set_trx_state(ses, SESSION_TRX_READ_ONLY);
+            ses->set_trx_state(SESSION_TRX_READ_ONLY);
         }
 
         if (strncmp(trx_characteristics, "START TRANSACTION READ WRITE;", 29) == 0)
         {
-            session_set_trx_state(ses, SESSION_TRX_READ_WRITE);
+            ses->set_trx_state(SESSION_TRX_READ_WRITE);
         }
     }
-    MXS_DEBUG("trx state:%s", session_trx_state_to_string(ses->trx_state));
-    MXS_DEBUG("autcommit:%s", session_is_autocommit(ses) ? "ON" : "OFF");
+    MXS_DEBUG("trx state:%s", session_trx_state_to_string((mxs_session_trx_state_t)ses->get_trx_state()));
+    MXS_DEBUG("autcommit:%s", ses->is_autocommit() ? "ON" : "OFF");
 }
 
 /**

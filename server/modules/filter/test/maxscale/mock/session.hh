@@ -47,26 +47,6 @@ public:
 
     Client& client() const;
 
-    bool is_autocommit() const
-    {
-        return session_is_autocommit(this);
-    }
-
-    void set_autocommit(bool autocommit)
-    {
-        session_set_autocommit(this, autocommit);
-    }
-
-    trx_state_t trx_state() const
-    {
-        return session_get_trx_state(this);
-    }
-
-    void set_trx_state(trx_state_t state)
-    {
-        session_set_trx_state(this, state);
-    }
-
     bool route_query(GWBUF* pBuffer)
     {
         return mxs_route_query(this, pBuffer);

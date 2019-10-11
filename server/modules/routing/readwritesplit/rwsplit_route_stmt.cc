@@ -995,23 +995,23 @@ void RWSplitSession::log_master_routing_failure(bool found,
 
 bool RWSplitSession::trx_is_starting() const
 {
-    return session_trx_is_active(m_session)
+    return m_session->is_trx_active()
            && qc_query_is_type(m_qc.current_route_info().type_mask(), QUERY_TYPE_BEGIN_TRX);
 }
 
 bool RWSplitSession::trx_is_read_only() const
 {
-    return session_trx_is_read_only(m_session);
+    return m_session->is_trx_read_only();
 }
 
 bool RWSplitSession::trx_is_open() const
 {
-    return session_trx_is_active(m_session);
+    return m_session->is_trx_active();
 }
 
 bool RWSplitSession::trx_is_ending() const
 {
-    return session_trx_is_ending(m_session);
+    return m_session->is_trx_ending();
 }
 
 bool RWSplitSession::should_replace_master(RWBackend* target)

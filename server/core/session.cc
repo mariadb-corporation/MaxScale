@@ -82,13 +82,12 @@ MXS_SESSION::MXS_SESSION(const SListener& listener)
     , stats{time(0)}
     , service(listener ? listener->service() : nullptr)
     , refcount(1)
-    , trx_state(SESSION_TRX_INACTIVE)
-    , autocommit(listener->sql_mode() == QC_SQL_MODE_ORACLE ? false : true)
     , client_protocol_data(0)
     , qualifies_for_pooling(false)
     , response{}
     , close_reason(SESSION_CLOSE_NONE)
     , load_active(false)
+    , m_autocommit(listener->sql_mode() == QC_SQL_MODE_ORACLE ? false : true)
 {
     mxs_rworker_register_session(this);
 }
@@ -457,20 +456,6 @@ std::unique_ptr<ResultSet> sessionGetList()
     std::unique_ptr<ResultSet> set = ResultSet::create({"Session", "Client", "Service", "State"});
     dcb_foreach(dcb_iter_cb, set.get());
     return set;
-}
-
-mxs_session_trx_state_t session_get_trx_state(const MXS_SESSION* ses)
-{
-    return ses->trx_state;
-}
-
-mxs_session_trx_state_t session_set_trx_state(MXS_SESSION* ses, mxs_session_trx_state_t new_state)
-{
-    mxs_session_trx_state_t prev_state = ses->trx_state;
-
-    ses->trx_state = new_state;
-
-    return prev_state;
 }
 
 const char* session_trx_state_to_string(mxs_session_trx_state_t state)

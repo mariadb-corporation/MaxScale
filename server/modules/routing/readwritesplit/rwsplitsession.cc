@@ -875,7 +875,7 @@ bool RWSplitSession::start_trx_replay()
         }
         else
         {
-            mxb_assert_message(!session_is_autocommit(m_session) || trx_is_ending(),
+            mxb_assert_message(!m_session->is_autocommit() || trx_is_ending(),
                                "Session should have autocommit disabled or transaction just ended if the "
                                "transaction had no statements and no query was interrupted");
         }

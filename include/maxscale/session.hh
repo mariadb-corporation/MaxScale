@@ -214,28 +214,159 @@ public:
 
     const char* client_remote() const;
 
-    virtual mxs::ClientConnection* client_connection() = 0;
+    virtual mxs::ClientConnection*       client_connection() = 0;
     virtual const mxs::ClientConnection* client_connection() const = 0;
-    virtual void set_client_connection(mxs::ClientConnection* client_conn) = 0;
+    virtual void                         set_client_connection(mxs::ClientConnection* client_conn) = 0;
+
+    /**
+     * Get the transaction state of the session.
+     *
+     * Note that this tells only the state of @e explicitly started transactions.
+     * That is, if @e autocommit is OFF, which means that there is always an
+     * active transaction that is ended with an explicit COMMIT or ROLLBACK,
+     * at which point a new transaction is started, this function will still
+     * return SESSION_TRX_INACTIVE, unless a transaction has explicitly been
+     * started with START TRANSACTION.
+     *
+     * Likewise, if @e autocommit is ON, which means that every statement is
+     * executed in a transaction of its own, this will return false, unless a
+     * transaction has explicitly been started with START TRANSACTION.
+     *
+     * @note The return value is valid only if either a router or a filter
+     *       has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
+     *
+     * @return The transaction state.
+     */
+    uint32_t get_trx_state() const
+    {
+        return m_trx_state;
+    }
+
+    /**
+     * Set the transaction state of the session.
+     *
+     * NOTE: Only the protocol object may call this.
+     *
+     * @param new_state The new transaction state.
+     *
+     * @return The previous transaction state.
+     */
+    void set_trx_state(uint32_t new_state)
+    {
+        m_trx_state = new_state;
+    }
+
+    /**
+     * Tells whether an explicit READ ONLY transaction is active.
+     *
+     * @see get_trx_state
+     *
+     * @note The return value is valid only if either a router or a filter
+     *       has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
+     *
+     * @return True if an explicit READ ONLY transaction is active,
+     *         false otherwise.
+     */
+    bool is_trx_read_only() const
+    {
+        return m_trx_state == SESSION_TRX_READ_ONLY || m_trx_state == SESSION_TRX_READ_ONLY_ENDING;
+    }
+
+    /**
+     * Tells whether an explicit READ WRITE transaction is active.
+     *
+     * @see get_trx_state
+     *
+     * @note The return value is valid only if either a router or a filter
+     *       has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
+     *
+     * @return True if an explicit READ WRITE  transaction is active,
+     *         false otherwise.
+     */
+    bool is_trx_read_write() const
+    {
+        return m_trx_state == SESSION_TRX_READ_WRITE || m_trx_state == SESSION_TRX_READ_WRITE_ENDING;
+    }
+
+    /**
+     * Tells whether a transaction is ending.
+     *
+     * @see get_trx_state
+     *
+     * @note The return value is valid only if either a router or a filter
+     *       has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
+     *
+     * @return True if a transaction that was active is ending either via COMMIT or ROLLBACK.
+     */
+    bool is_trx_ending() const
+    {
+        return m_trx_state & SESSION_TRX_ENDING_BIT;
+    }
+
+    /**
+     * Tells whether a transaction is active.
+     *
+     * @see get_trx_state
+     *
+     * @note The return value is valid only if either a router or a filter
+     *       has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
+     *
+     * @return True if a transaction is active, false otherwise.
+     */
+    bool is_trx_active() const
+    {
+        return !is_autocommit() || (m_trx_state & SESSION_TRX_ACTIVE_BIT);
+    }
+
+    /**
+     * Tells whether autocommit is ON or not.
+     *
+     * Note that the returned value effectively only tells the last value
+     * of the statement "set autocommit=...".
+     *
+     * That is, if the statement "set autocommit=1" has been executed, then
+     * even if a transaction has been started, which implicitly will cause
+     * autocommit to be set to 0 for the duration of the transaction, this
+     * function will still return true.
+     *
+     * Note also that by default autocommit is ON.
+     *
+     * @see get_trx_state
+     *
+     * @return True if autocommit has been set ON, false otherwise.
+     */
+    bool is_autocommit() const
+    {
+        return m_autocommit;
+    }
+
+    /**
+     * Sets the autocommit state of the session.
+     *
+     * NOTE: Only the protocol object may call this.
+     *
+     * @param enable True if autocommit is enabled, false otherwise.
+     */
+    void set_autocommit(bool autocommit)
+    {
+        m_autocommit = autocommit;
+    }
 
 protected:
-    State       m_state;                   /**< Current descriptor state */
-    uint64_t    m_id;                      /**< Unique session identifier */
-    std::string m_user;                    /**< The session user. */
+    State       m_state;                    /**< Current descriptor state */
+    uint64_t    m_id;                       /**< Unique session identifier */
+    std::string m_user;                     /**< The session user. */
 
 public:
 
     ClientDCB* client_dcb;  /*< The client connection */
     SListener  listener;    /*< The origin of the connection */
 
-    MXS_SESSION_STATS       stats;                  /*< Session statistics */
-    SERVICE*                service;                /*< The service this session is using */
-    int                     refcount;               /*< Reference count on the session */
-    mxs_session_trx_state_t trx_state;              /*< The current transaction state. */
-    bool                    autocommit;             /*< Whether autocommit is on. */
-    intptr_t                client_protocol_data;   /*< Owned and managed by the client protocol. */
-    bool                    qualifies_for_pooling;  /**< Whether this session qualifies for the connection
-                                                     * pool */
+    MXS_SESSION_STATS stats;                    /*< Session statistics */
+    SERVICE*          service;                  /*< The service this session is using */
+    int               refcount;                 /*< Reference count on the session */
+    intptr_t          client_protocol_data;     /*< Owned and managed by the client protocol. */
+    bool              qualifies_for_pooling;    /*< Whether this session qualifies for the connection pool */
     struct
     {
         mxs::Upstream up;           /*< Upward component to receive buffer. */
@@ -250,6 +381,8 @@ public:
 
 private:
     std::unique_ptr<ProtocolData> m_protocol_data;
+    uint32_t                      m_trx_state {SESSION_TRX_INACTIVE};
+    bool                          m_autocommit; /*< Whether autocommit is on. */
 };
 
 /**
@@ -311,139 +444,6 @@ const char* session_state_to_string(MXS_SESSION::State);
  * @return String representation of the state.
  */
 const char* session_trx_state_to_string(mxs_session_trx_state_t state);
-
-/**
- * Get the transaction state of the session.
- *
- * Note that this tells only the state of @e explicitly started transactions.
- * That is, if @e autocommit is OFF, which means that there is always an
- * active transaction that is ended with an explicit COMMIT or ROLLBACK,
- * at which point a new transaction is started, this function will still
- * return SESSION_TRX_INACTIVE, unless a transaction has explicitly been
- * started with START TRANSACTION.
- *
- * Likewise, if @e autocommit is ON, which means that every statement is
- * executed in a transaction of its own, this will return false, unless a
- * transaction has explicitly been started with START TRANSACTION.
- *
- * @note The return value is valid only if either a router or a filter
- *       has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
- *
- * @param ses The MXS_SESSION object.
- * @return The transaction state.
- */
-mxs_session_trx_state_t session_get_trx_state(const MXS_SESSION* ses);
-
-/**
- * Set the transaction state of the session.
- *
- * NOTE: Only the protocol object may call this.
- *
- * @param ses       The MXS_SESSION object.
- * @param new_state The new transaction state.
- *
- * @return The previous transaction state.
- */
-mxs_session_trx_state_t session_set_trx_state(MXS_SESSION* ses, mxs_session_trx_state_t new_state);
-
-/**
- * Tells whether an explicit READ ONLY transaction is active.
- *
- * @see session_get_trx_state
- *
- * @note The return value is valid only if either a router or a filter
- *       has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
- *
- * @return True if an explicit READ ONLY transaction is active,
- *         false otherwise.
- */
-static inline bool session_trx_is_read_only(const MXS_SESSION* ses)
-{
-    return ses->trx_state == SESSION_TRX_READ_ONLY || ses->trx_state == SESSION_TRX_READ_ONLY_ENDING;
-}
-
-/**
- * Tells whether an explicit READ WRITE transaction is active.
- *
- * @see session_get_trx_state
- *
- * @note The return value is valid only if either a router or a filter
- *       has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
- *
- * @return True if an explicit READ WRITE  transaction is active,
- *         false otherwise.
- */
-static inline bool session_trx_is_read_write(const MXS_SESSION* ses)
-{
-    return ses->trx_state == SESSION_TRX_READ_WRITE || ses->trx_state == SESSION_TRX_READ_WRITE_ENDING;
-}
-
-/**
- * Tells whether a transaction is ending.
- *
- * @see session_get_trx_state
- *
- * @note The return value is valid only if either a router or a filter
- *       has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
- *
- * @return True if a transaction that was active is ending either via COMMIT or ROLLBACK.
- */
-static inline bool session_trx_is_ending(const MXS_SESSION* ses)
-{
-    return ses->trx_state & SESSION_TRX_ENDING_BIT;
-}
-
-/**
- * Tells whether autocommit is ON or not.
- *
- * Note that the returned value effectively only tells the last value
- * of the statement "set autocommit=...".
- *
- * That is, if the statement "set autocommit=1" has been executed, then
- * even if a transaction has been started, which implicitly will cause
- * autocommit to be set to 0 for the duration of the transaction, this
- * function will still return true.
- *
- * Note also that by default autocommit is ON.
- *
- * @see session_get_trx_state
- *
- * @return True if autocommit has been set ON, false otherwise.
- */
-static inline bool session_is_autocommit(const MXS_SESSION* ses)
-{
-    return ses->autocommit;
-}
-
-/**
- * Tells whether a transaction is active.
- *
- * @see session_get_trx_state
- *
- * @note The return value is valid only if either a router or a filter
- *       has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
- *
- * @return True if a transaction is active, false otherwise.
- */
-static inline bool session_trx_is_active(const MXS_SESSION* ses)
-{
-    return !session_is_autocommit(ses) || (ses->trx_state & SESSION_TRX_ACTIVE_BIT);
-}
-
-/**
- * Sets the autocommit state of the session.
- *
- * NOTE: Only the protocol object may call this.
- *
- * @param enable True if autocommit is enabled, false otherwise.
- * @return The previous state.
- */
-static inline bool session_set_autocommit(MXS_SESSION* ses, bool autocommit)
-{
-    bool prev_autocommit = ses->autocommit;
-    ses->autocommit = autocommit;
-    return prev_autocommit;
-}
 
 /**
  * @brief Get a session reference by ID

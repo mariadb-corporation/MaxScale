@@ -527,7 +527,7 @@ void QueryClassifier::process_routing_hints(HINT* pHints, uint32_t* target)
 
 uint32_t QueryClassifier::get_route_target(uint8_t command, uint32_t qtype)
 {
-    bool trx_active = session_trx_is_active(m_pSession);
+    bool trx_active = m_pSession->is_trx_active();
     uint32_t target = TARGET_UNDEFINED;
     bool load_active = (m_load_data_state != LOAD_DATA_INACTIVE);
 
@@ -590,7 +590,7 @@ uint32_t QueryClassifier::get_route_target(uint8_t command, uint32_t qtype)
     {
         target = TARGET_SLAVE;
     }
-    else if (session_trx_is_read_only(m_pSession))
+    else if (m_pSession->is_trx_read_only())
     {
         /* Force TARGET_SLAVE for READ ONLY transaction (active or ending) */
         target = TARGET_SLAVE;
@@ -705,8 +705,8 @@ void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype)
         }
 
         MXS_SESSION* ses = session();
-        const char* autocommit = session_is_autocommit(ses) ? "[enabled]" : "[disabled]";
-        const char* transaction = session_trx_is_active(ses) ? "[open]" : "[not open]";
+        const char* autocommit = ses->is_autocommit() ? "[enabled]" : "[disabled]";
+        const char* transaction = ses->is_trx_active() ? "[open]" : "[not open]";
         uint32_t plen = MYSQL_GET_PACKET_LEN(querybuf);
         const char* querytype = qtypestr == NULL ? "N/A" : qtypestr;
         const char* hint = querybuf->hint == NULL ? "" : ", Hint:";
@@ -1009,8 +1009,7 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
     // TODO: It may be sufficient to simply check whether we are in a read-only
     // TODO: transaction.
     bool in_read_only_trx =
-        (current_target != QueryClassifier::CURRENT_TARGET_UNDEFINED)
-        && session_trx_is_read_only(session());
+        (current_target != QueryClassifier::CURRENT_TARGET_UNDEFINED) && session()->is_trx_read_only();
 
     if (gwbuf_length(pBuffer) > MYSQL_HEADER_LEN)
     {
@@ -1095,14 +1094,12 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
 
         process_routing_hints(pBuffer->hint, &route_target);
 
-        if (session_trx_is_ending(m_pSession)
-            || qc_query_is_type(type_mask, QUERY_TYPE_BEGIN_TRX))
+        if (m_pSession->is_trx_ending() || qc_query_is_type(type_mask, QUERY_TYPE_BEGIN_TRX))
         {
             // Transaction is ending or starting
             m_trx_is_read_only = true;
         }
-        else if (session_trx_is_active(m_pSession)
-                 && !query_type_is_read_only(type_mask))
+        else if (m_pSession->is_trx_active() && !query_type_is_read_only(type_mask))
         {
             // Transaction is no longer read-only
             m_trx_is_read_only = false;
