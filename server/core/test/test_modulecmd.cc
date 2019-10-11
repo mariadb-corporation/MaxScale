@@ -19,10 +19,11 @@
 #include <maxbase/alloc.h>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/dcb.hh>
-#include <maxscale/paths.h>
-#include <maxscale/modulecmd.hh>
-#include <maxscale/session.hh>
 #include <maxscale/json_api.hh>
+#include <maxscale/mainworker.hh>
+#include <maxscale/modulecmd.hh>
+#include <maxscale/paths.h>
+#include <maxscale/session.hh>
 
 #include "../internal/monitormanager.hh"
 
@@ -481,6 +482,9 @@ int main(int argc, char** argv)
 
     mxs_log_init(NULL, NULL, MXS_LOG_TARGET_STDOUT);
     maxbase::init();
+
+    mxb::WatchdogNotifier wn(0);
+    mxs::MainWorker mw(&wn);
 
     rc += test_arguments();
     rc += test_optional_arguments();
