@@ -70,9 +70,9 @@ int maxscale_shutdown()
                 mxs::RoutingWorker::shutdown_all();
             };
 
-        auto& main_worker = mxs::MainWorker::get();
-        main_worker.execute(func, nullptr, mxs::RoutingWorker::EXECUTE_QUEUED);
-        main_worker.shutdown();
+        auto main_worker = mxs::MainWorker::get();
+        main_worker->execute(func, nullptr, mxs::RoutingWorker::EXECUTE_QUEUED);
+        main_worker->shutdown();
     }
 
     return n + 1;

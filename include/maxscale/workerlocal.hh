@@ -152,7 +152,7 @@ private:
 
         if (MainWorker::is_main_worker())
         {
-            storage = &MainWorker::get().storage();
+            storage = &MainWorker::get()->storage();
         }
         else
         {

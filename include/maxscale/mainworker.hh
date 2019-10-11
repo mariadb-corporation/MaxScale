@@ -53,7 +53,7 @@ public:
      *
      * @return The main worker.
      */
-    static MainWorker& get();
+    static MainWorker* get();
 
     void add_task(const std::string& name, TASKFN func, void* pData, int frequency);
     void remove_task(const std::string& name);

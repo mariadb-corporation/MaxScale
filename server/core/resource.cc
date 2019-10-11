@@ -1294,11 +1294,11 @@ static HttpResponse handle_request(const HttpRequest& request)
 
 HttpResponse resource_handle_request(const HttpRequest& request)
 {
-    mxb::WatchedWorker& worker = mxs::MainWorker::get();
+    mxb::WatchedWorker* worker = mxs::MainWorker::get();
 
     HttpResponse response;
-    worker.call([&request, &response, &worker]() {
-                     mxb::WatchdogNotifier::Workaround workaround(&worker);
+    worker->call([&request, &response, &worker]() {
+                     mxb::WatchdogNotifier::Workaround workaround(worker);
                      response = handle_request(request);
                  },
                  mxb::Worker::EXECUTE_AUTO);

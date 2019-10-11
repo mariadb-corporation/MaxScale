@@ -65,11 +65,11 @@ bool MainWorker::created()
 }
 
 // static
-MainWorker& MainWorker::get()
+MainWorker* MainWorker::get()
 {
     mxb_assert(this_unit.pMain);
 
-    return *this_unit.pMain;
+    return this_unit.pMain;
 }
 
 void MainWorker::add_task(const std::string& name, TASKFN func, void* pData, int frequency)
@@ -233,22 +233,22 @@ extern "C"
 
 void hktask_add(const char* zName, TASKFN func, void* pData, int frequency)
 {
-    mxs::MainWorker::get().add_task(zName, func, pData, frequency);
+    mxs::MainWorker::get()->add_task(zName, func, pData, frequency);
 }
 
 void hktask_remove(const char* zName)
 {
-    mxs::MainWorker::get().remove_task(zName);
+    mxs::MainWorker::get()->remove_task(zName);
 }
 
 void hkshow_tasks(DCB* pDcb)
 {
-    mxs::MainWorker::get().show_tasks(pDcb);
+    mxs::MainWorker::get()->show_tasks(pDcb);
 }
 
 json_t* hk_tasks_json(const char* zHost)
 {
-    return mxs::MainWorker::get().tasks_to_json(zHost);
+    return mxs::MainWorker::get()->tasks_to_json(zHost);
 }
 
 int64_t mxs_clock()
