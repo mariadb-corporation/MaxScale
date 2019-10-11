@@ -230,6 +230,17 @@ public:
 class UserAccountManager
 {
 public:
+
+    /**
+     * Start the user account manager. Should be called after creation.
+     */
+    virtual void start() = 0;
+
+    /**
+     * Stop the user account manager. Should be called before destruction.
+     */
+    virtual void stop() = 0;
+
     /**
      * Check if user@host exists and can access the requested database. Does not check password or
      * any other authentication credentials.
@@ -255,6 +266,8 @@ public:
      * @param pw Password, possibly encrypted
      */
     virtual void set_credentials(const std::string& user, const std::string& pw) = 0;
+
+    virtual void set_backends(const std::vector<SERVER*>& backends) = 0;
 
     /**
      * Which protocol this manager can be used with. Currently, it's assumed that the user data managers

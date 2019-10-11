@@ -43,6 +43,7 @@
 
 #include "setparser.hh"
 #include "sqlmodeparser.hh"
+#include "user_data.hh"
 
 namespace
 {
@@ -2069,6 +2070,11 @@ json_t* MySQLProtocolModule::print_auth_users_json()
     return m_auth_module->diagnostics_json();
 }
 
+std::unique_ptr<mxs::UserAccountManager> MySQLProtocolModule::create_user_data_manager()
+{
+    return std::unique_ptr<mxs::UserAccountManager>(new MariaDBUserManager());
+}
+
 MariaDBClientConnection::MariaDBClientConnection(MXS_SESSION* session, mxs::Component* component,
                                                  std::unique_ptr<mxs::ClientAuthenticator> authenticator)
     : m_authenticator(std::move(authenticator))
@@ -2108,7 +2114,7 @@ MySQLProtocolModule::create_backend_protocol(MXS_SESSION* session, SERVER* serve
 
 uint64_t MySQLProtocolModule::capabilities() const
 {
-    return mxs::ProtocolModule::CAP_BACKEND;
+    return mxs::ProtocolModule::CAP_BACKEND | mxs::ProtocolModule::CAP_AUTHDATA;
 }
 
 /**

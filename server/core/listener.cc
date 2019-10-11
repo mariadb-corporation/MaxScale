@@ -947,10 +947,6 @@ bool Listener::listen()
     // TODO: fatal error, and prepopulate the databases of all routing workers if there is not.
 
 
-    // The user account manager (if any) in the service should update now since this listener may soon
-    // generate sessions.
-    m_service->update_user_accounts();
-
     bool rval = false;
     if (m_type == Type::UNIQUE_TCP)
     {

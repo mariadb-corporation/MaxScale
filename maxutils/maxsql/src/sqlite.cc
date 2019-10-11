@@ -69,6 +69,12 @@ bool SQLite::open(const std::string& filename, int flags)
     return success;
 }
 
+bool SQLite::open_inmemory()
+{
+    const int flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE;
+    return open(":memory:", flags);
+}
+
 SQLite::~SQLite()
 {
     sqlite3_close_v2(m_dbhandle);

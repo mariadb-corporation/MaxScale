@@ -273,6 +273,12 @@ Service::~Service()
         router->destroyInstance(router_instance);
     }
 
+    auto manager = user_account_manager();
+    if (manager)
+    {
+        manager->stop();
+    }
+
     if (state != State::FAILED)
     {
         LockGuard guard(this_unit.lock);
@@ -1899,6 +1905,7 @@ void Service::set_user_account_manager(SAccountManager user_manager)
     mxb_assert(!m_usermanager_exists.load(std::memory_order_acquire) && !m_usermanager);
     m_usermanager = std::move(user_manager);
     m_usermanager_exists.store(true, std::memory_order_release);
+    m_usermanager->start();
 }
 
 void Service::update_user_accounts()

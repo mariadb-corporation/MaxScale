@@ -61,6 +61,13 @@ public:
     bool open(const std::string& filename, int flags);
 
     /**
+     * Convenience function for opening a new private in-memory database.
+     *
+     * @return True on success
+     */
+    bool open_inmemory();
+
+    /**
      * Run a simple query which returns no data.
      *
      * @param sql SQL to run

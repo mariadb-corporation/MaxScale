@@ -295,6 +295,8 @@ public:
 
     json_t* print_auth_users_json() override;
 
+    std::unique_ptr<mxs::UserAccountManager> create_user_data_manager() override;
+
 private:
     std::unique_ptr<mxs::AuthenticatorModule> m_auth_module;
 };
