@@ -37,6 +37,7 @@ static constexpr uint32_t SESSION_TRX_INACTIVE = 0;
 static constexpr uint32_t SESSION_TRX_ACTIVE = 1 << 0;      /* 0b0001 */
 static constexpr uint32_t SESSION_TRX_READ_ONLY = 1 << 1;   /* 0b0010 */
 static constexpr uint32_t SESSION_TRX_ENDING = 1 << 2;      /* 0b0100*/
+static constexpr uint32_t SESSION_TRX_STARTING = 1 << 3;    /* 0b1000*/
 
 typedef enum
 {
@@ -284,6 +285,19 @@ public:
     }
 
     /**
+     * Tells whether a transaction is starting.
+     *
+     * @note The return value is valid only if either a router or a filter
+     *       has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
+     *
+     * @return True if a new transaction is currently starting
+     */
+    bool is_trx_starting() const
+    {
+        return m_trx_state & SESSION_TRX_STARTING;
+    }
+
+    /**
      * Tells whether a transaction is active.
      *
      * @see get_trx_state
@@ -295,7 +309,7 @@ public:
      */
     bool is_trx_active() const
     {
-        return !is_autocommit() || (m_trx_state & SESSION_TRX_ACTIVE);
+        return m_trx_state & SESSION_TRX_ACTIVE;
     }
 
     /**

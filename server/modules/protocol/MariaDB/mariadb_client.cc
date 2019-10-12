@@ -1133,10 +1133,32 @@ bool MariaDBClientConnection::reauthenticate_client(MXS_SESSION* session, GWBUF*
 void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf)
 {
     mxb_assert(GWBUF_IS_CONTIGUOUS(packetbuf));
+    mxb_assert((session->get_trx_state() & (SESSION_TRX_STARTING | SESSION_TRX_ENDING))
+               != (SESSION_TRX_STARTING | SESSION_TRX_ENDING));
 
     if (session->is_trx_ending())
     {
-        session->set_trx_state(SESSION_TRX_INACTIVE);
+        if (session->is_autocommit())
+        {
+            // Transaction ended, go into inactive state
+            session->set_trx_state(SESSION_TRX_INACTIVE);
+        }
+        else
+        {
+            // Without autocommit the end of a transaction starts a new one
+            session->set_trx_state(SESSION_TRX_ACTIVE | SESSION_TRX_STARTING);
+        }
+    }
+    else if (session->is_trx_starting())
+    {
+        uint32_t trx_state = session->get_trx_state();
+        trx_state &= ~SESSION_TRX_STARTING;
+        session->set_trx_state(trx_state);
+    }
+    else if (!session->is_autocommit() && session->get_trx_state() == SESSION_TRX_INACTIVE)
+    {
+        // This state is entered when autocommit was disabled
+        session->set_trx_state(SESSION_TRX_ACTIVE | SESSION_TRX_STARTING);
     }
 
     if (mxs_mysql_get_command(packetbuf) == MXS_COM_QUERY)
@@ -1147,12 +1169,13 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
         {
             if (type & QUERY_TYPE_DISABLE_AUTOCOMMIT)
             {
+                // This disables autocommit and the next statement starts a new transaction
                 session->set_autocommit(false);
                 session->set_trx_state(SESSION_TRX_INACTIVE);
             }
             else
             {
-                uint32_t trx_state = SESSION_TRX_ACTIVE;
+                uint32_t trx_state = SESSION_TRX_ACTIVE | SESSION_TRX_STARTING;
 
                 if (type & QUERY_TYPE_READ)
                 {
@@ -1162,7 +1185,7 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
                 session->set_trx_state(trx_state);
             }
         }
-        else if ((type & QUERY_TYPE_COMMIT) || (type & QUERY_TYPE_ROLLBACK))
+        else if (type & (QUERY_TYPE_COMMIT | QUERY_TYPE_ROLLBACK))
         {
             uint32_t trx_state = session->get_trx_state();
             trx_state |= SESSION_TRX_ENDING;
