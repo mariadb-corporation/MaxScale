@@ -38,7 +38,7 @@ bool Session::Endpoint::handleError(mxs::ErrorType type,
 }
 
 Session::Session(Client* pClient, const SListener& listener)
-    : ::Session(listener, nullptr)
+    : ::Session(listener, nullptr, pClient->host())
     , m_client(*pClient)
     , m_client_dcb(this, pClient->host(), pClient)
 {

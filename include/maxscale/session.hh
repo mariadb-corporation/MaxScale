@@ -155,7 +155,6 @@ public:
     {
     };
 
-    MXS_SESSION(const SListener& listener);
     virtual ~MXS_SESSION();
 
     State state() const
@@ -190,10 +189,13 @@ public:
     // Convenience function for client identification
     std::string user_and_host() const
     {
-        return "'" + m_user + "'@'" + client_remote() + "'";
+        return "'" + m_user + "'@'" + m_host + "'";
     }
 
-    const char* client_remote() const;
+    const std::string& client_remote() const
+    {
+        return m_host;
+    }
 
     virtual mxs::ClientConnection*       client_connection() = 0;
     virtual const mxs::ClientConnection* client_connection() const = 0;
@@ -350,6 +352,9 @@ protected:
     State       m_state;                    /**< Current descriptor state */
     uint64_t    m_id;                       /**< Unique session identifier */
     std::string m_user;                     /**< The session user. */
+    std::string m_host;
+
+    MXS_SESSION(const SListener& listener, const std::string& host);
 
 public:
 

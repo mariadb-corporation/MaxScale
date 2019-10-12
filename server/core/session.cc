@@ -74,9 +74,10 @@ struct
 };
 }
 
-MXS_SESSION::MXS_SESSION(const SListener& listener)
+MXS_SESSION::MXS_SESSION(const SListener& listener, const std::string& host)
     : m_state(MXS_SESSION::State::CREATED)
     , m_id(session_get_next_id())
+    , m_host(host)
     , client_dcb(nullptr)
     , listener(listener)
     , stats{time(0)}
@@ -123,16 +124,6 @@ MXS_SESSION::ProtocolData* MXS_SESSION::protocol_data() const
 void MXS_SESSION::set_protocol_data(std::unique_ptr<ProtocolData> new_data)
 {
     m_protocol_data = std::move(new_data);
-}
-
-const char* MXS_SESSION::client_remote() const
-{
-    auto conn = client_connection();
-    if (conn)
-    {
-        return conn->dcb()->remote().c_str();
-    }
-    return nullptr;
 }
 
 bool session_start(MXS_SESSION* ses)
@@ -294,7 +285,7 @@ bool dListSessions_cb(DCB* dcb, void* data)
         dcb_printf(out_dcb,
                    "%-16" PRIu64 " | %-15s | %-14s | %s\n",
                    session->id(),
-                   session->client_remote(),
+                   session->client_remote().c_str(),
                    session->service && session->service->name() ?
                    session->service->name() : "",
                    session_state_to_string(session->state()));
@@ -358,7 +349,7 @@ const char* session_state_to_string(MXS_SESSION::State state)
  */
 const char* session_get_remote(const MXS_SESSION* session)
 {
-    return session ? session->client_remote() : nullptr;
+    return session ? session->client_remote().c_str() : nullptr;
 }
 
 void Session::deliver_response()
@@ -923,8 +914,10 @@ const char* session_get_close_reason(const MXS_SESSION* session)
     }
 }
 
-Session::Session(const SListener& listener, std::shared_ptr<mxs::ProtocolModule> protocol)
-    : MXS_SESSION(listener)
+Session::Session(const SListener& listener,
+                 std::shared_ptr<mxs::ProtocolModule> protocol,
+                 const std::string& host)
+    : MXS_SESSION(listener, host)
     , m_down(static_cast<Service*>(listener->service())->get_connection(this, this))
     , m_protocol(std::move(protocol))
 {

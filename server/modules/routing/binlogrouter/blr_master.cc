@@ -198,7 +198,7 @@ static void blr_start_master(void* data)
     // Load users now so that authentication will work for the fake client
     listener->load_users();
 
-    router->session = new Session(listener, nullptr);
+    router->session = new Session(listener, nullptr, "127.0.0.1");
     mxb_assert(router->session);
 
     // Destroy the listener so it's not visible to the user

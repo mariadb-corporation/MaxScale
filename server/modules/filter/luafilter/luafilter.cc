@@ -364,7 +364,7 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
             /** Call the newSession entry point */
             lua_getglobal(my_session->lua_state, "newSession");
             lua_pushstring(my_session->lua_state, session->user().c_str());
-            lua_pushstring(my_session->lua_state, session->client_remote());
+            lua_pushstring(my_session->lua_state, session->client_remote().c_str());
 
             if (lua_pcall(my_session->lua_state, 2, 0, 0))
             {
@@ -382,7 +382,7 @@ static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
 
         lua_getglobal(my_instance->global_lua_state, "newSession");
         lua_pushstring(my_instance->global_lua_state, session->user().c_str());
-        lua_pushstring(my_instance->global_lua_state, session->client_remote());
+        lua_pushstring(my_instance->global_lua_state, session->client_remote().c_str());
 
         if (lua_pcall(my_instance->global_lua_state, 2, 0, 0))
         {

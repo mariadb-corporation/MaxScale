@@ -1556,7 +1556,7 @@ bool backend_dcb_remove_func(DCB* dcb, void* data)
         BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
         MXS_INFO("High water mark hit for connection to '%s' from %s'@'%s', not reading data until low water "
                  "mark is hit", backend_dcb->server()->name(),
-                 session->user().c_str(), session->client_remote());
+                 session->user().c_str(), session->client_remote().c_str());
 
         backend_dcb->disable_events();
     }

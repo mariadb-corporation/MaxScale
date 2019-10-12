@@ -57,7 +57,7 @@ static void test1()
     auto listener = Listener::create("listener", "mariadbclient", listener_params);
 
     std::shared_ptr<mxs::ProtocolModule> protocol_module(MySQLProtocolModule::create("", ""));
-    auto session = new Session(listener, protocol_module);
+    auto session = new Session(listener, protocol_module, "127.0.0.1");
     int fd = socket(AF_UNIX, SOCK_STREAM, 0);
     mxb_assert(fd >= 0);
 
