@@ -457,31 +457,35 @@ std::unique_ptr<ResultSet> sessionGetList()
     return set;
 }
 
-const char* session_trx_state_to_string(mxs_session_trx_state_t state)
+const char* session_trx_state_to_string(uint32_t state)
 {
-    switch (state)
+    if ((state & SESSION_TRX_ACTIVE) == 0)
     {
-    case SESSION_TRX_INACTIVE:
+        mxb_assert(state == SESSION_TRX_INACTIVE);
         return "SESSION_TRX_INACTIVE";
-
-    case SESSION_TRX_ACTIVE:
-        return "SESSION_TRX_ACTIVE";
-
-    case SESSION_TRX_READ_ONLY:
-        return "SESSION_TRX_READ_ONLY";
-
-    case SESSION_TRX_READ_WRITE:
-        return "SESSION_TRX_READ_WRITE";
-
-    case SESSION_TRX_READ_ONLY_ENDING:
-        return "SESSION_TRX_READ_ONLY_ENDING";
-
-    case SESSION_TRX_READ_WRITE_ENDING:
-        return "SESSION_TRX_READ_WRITE_ENDING";
     }
-
-    MXS_ERROR("Unknown session_trx_state_t value: %d", (int)state);
-    return "UNKNOWN";
+    else if (state & SESSION_TRX_ENDING)
+    {
+        if (state & SESSION_TRX_READ_ONLY)
+        {
+            return "SESSION_TRX_READ_ONLY_ENDING";
+        }
+        else
+        {
+            return "SESSION_TRX_READ_WRITE_ENDING";
+        }
+    }
+    else
+    {
+        if (state & SESSION_TRX_READ_ONLY)
+        {
+            return "SESSION_TRX_READ_ONLY";
+        }
+        else
+        {
+            return "SESSION_TRX_READ_WRITE";
+        }
+    }
 }
 
 static bool ses_find_id(DCB* dcb, void* data)
@@ -1552,4 +1556,3 @@ Session::create_backend_connection(Server* server, BackendDCB::Manager* manager,
     }
     return dcb;
 }
-

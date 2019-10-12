@@ -1152,18 +1152,11 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
             }
             else
             {
-                uint32_t trx_state;
-                if (type & QUERY_TYPE_WRITE)
+                uint32_t trx_state = SESSION_TRX_ACTIVE;
+
+                if (type & QUERY_TYPE_READ)
                 {
-                    trx_state = SESSION_TRX_READ_WRITE;
-                }
-                else if (type & QUERY_TYPE_READ)
-                {
-                    trx_state = SESSION_TRX_READ_ONLY;
-                }
-                else
-                {
-                    trx_state = SESSION_TRX_ACTIVE;
+                    trx_state |= SESSION_TRX_READ_ONLY;
                 }
 
                 session->set_trx_state(trx_state);
@@ -1172,7 +1165,7 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
         else if ((type & QUERY_TYPE_COMMIT) || (type & QUERY_TYPE_ROLLBACK))
         {
             uint32_t trx_state = session->get_trx_state();
-            trx_state |= SESSION_TRX_ENDING_BIT;
+            trx_state |= SESSION_TRX_ENDING;
             session->set_trx_state(trx_state);
 
             if (type & QUERY_TYPE_ENABLE_AUTOCOMMIT)
@@ -1699,15 +1692,15 @@ void MariaDBClientConnection::parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* d
     {
         if (strncmp(trx_characteristics, "START TRANSACTION READ ONLY;", 28) == 0)
         {
-            ses->set_trx_state(SESSION_TRX_READ_ONLY);
+            ses->set_trx_state(SESSION_TRX_ACTIVE | SESSION_TRX_READ_ONLY);
         }
 
         if (strncmp(trx_characteristics, "START TRANSACTION READ WRITE;", 29) == 0)
         {
-            ses->set_trx_state(SESSION_TRX_READ_WRITE);
+            ses->set_trx_state(SESSION_TRX_ACTIVE);
         }
     }
-    MXS_DEBUG("trx state:%s", session_trx_state_to_string((mxs_session_trx_state_t)ses->get_trx_state()));
+    MXS_DEBUG("trx state:%s", session_trx_state_to_string(ses->get_trx_state()));
     MXS_DEBUG("autcommit:%s", ses->is_autocommit() ? "ON" : "OFF");
 }
 

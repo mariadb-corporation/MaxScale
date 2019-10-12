@@ -41,9 +41,9 @@ struct SETTINGS
 // https://github.com/mariadb-corporation/MaxScale/blob/2.2/Documentation/Filters/Cache.md#cache_inside_transactions
 struct TEST_CASE
 {
-    cache_in_trxs_t         cit;        /*< How to cache in transactions. */
-    mxs_session_trx_state_t trx_state;  /*< The transaction state. */
-    bool                    should_use; /*< Whether the cache should be returned from the cache. */
+    cache_in_trxs_t cit;        /*< How to cache in transactions. */
+    uint32_t        trx_state;  /*< The transaction state. */
+    bool            should_use; /*< Whether the cache should be returned from the cache. */
 } TEST_CASES[] =
 {
     {
@@ -58,7 +58,7 @@ struct TEST_CASE
     },
     {
         CACHE_IN_TRXS_NEVER,
-        SESSION_TRX_READ_ONLY,
+        SESSION_TRX_ACTIVE | SESSION_TRX_READ_ONLY,
         false   // should_use
     },
     {
@@ -73,7 +73,7 @@ struct TEST_CASE
     },
     {
         CACHE_IN_TRXS_READ_ONLY,
-        SESSION_TRX_READ_ONLY,
+        SESSION_TRX_ACTIVE | SESSION_TRX_READ_ONLY,
         true    // should_use
     },
     {
@@ -88,7 +88,7 @@ struct TEST_CASE
     },
     {
         CACHE_IN_TRXS_ALL,
-        SESSION_TRX_READ_ONLY,
+        SESSION_TRX_ACTIVE | SESSION_TRX_READ_ONLY,
         true    // should_use
     },
 };
@@ -117,12 +117,6 @@ const char* to_string(cache_in_trxs_t x)
 ostream& operator<<(ostream& out, cache_in_trxs_t x)
 {
     out << to_string(x);
-    return out;
-}
-
-ostream& operator<<(ostream& out, mxs_session_trx_state_t trx_state)
-{
-    out << session_trx_state_to_string(trx_state);
     return out;
 }
 }
@@ -210,7 +204,8 @@ int test(mock::Session& session,
             }
         }
 
-        if ((tc.trx_state != SESSION_TRX_INACTIVE) && (tc.trx_state != SESSION_TRX_READ_ONLY))
+        if (tc.trx_state != SESSION_TRX_INACTIVE
+            && tc.trx_state != (SESSION_TRX_ACTIVE | SESSION_TRX_READ_ONLY))
         {
             // A transaction, but not a read-only one.
 
@@ -422,11 +417,12 @@ int main(int argc, char* argv[])
     if (rv == 0)
     {
         run_unit_test([&]() {
-                set_libdir(MXS_STRDUP(TEST_DIR "/server/modules/filter/cache/storage/storage_inmemory"));
-                preload_module("cache", "server/modules/filter/cache/", MODULE_FILTER);
+                          set_libdir(MXS_STRDUP(TEST_DIR
+                                                "/server/modules/filter/cache/storage/storage_inmemory"));
+                          preload_module("cache", "server/modules/filter/cache/", MODULE_FILTER);
 
-                rv = run();
-            });
+                          rv = run();
+                      });
 
         cout << rv << " failures." << endl;
 

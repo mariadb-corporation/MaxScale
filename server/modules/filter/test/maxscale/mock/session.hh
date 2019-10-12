@@ -34,7 +34,6 @@ class Session : public ::Session
     Session& operator=(Session&);
 
 public:
-    typedef mxs_session_trx_state_t trx_state_t;
 
     /**
      * Constructor

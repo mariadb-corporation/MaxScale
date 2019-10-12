@@ -33,30 +33,10 @@ class SERVER;
 class Listener;
 using SListener = std::shared_ptr<Listener>;
 
-typedef enum
-{
-    SESSION_TRX_INACTIVE_BIT   = 0x01,  /* 0b00001 */
-    SESSION_TRX_ACTIVE_BIT     = 0x02,  /* 0b00010 */
-    SESSION_TRX_READ_ONLY_BIT  = 0x04,  /* 0b00100 */
-    SESSION_TRX_READ_WRITE_BIT = 0x08,  /* 0b01000 */
-    SESSION_TRX_ENDING_BIT     = 0x10,  /* 0b10000*/
-} session_trx_state_bit_t;
-
-typedef enum
-{
-    /*< There is no on-going transaction. */
-    SESSION_TRX_INACTIVE = SESSION_TRX_INACTIVE_BIT,
-    /*< A transaction is active. */
-    SESSION_TRX_ACTIVE = SESSION_TRX_ACTIVE_BIT,
-    /*< An explicit READ ONLY transaction is active. */
-    SESSION_TRX_READ_ONLY = (SESSION_TRX_ACTIVE_BIT | SESSION_TRX_READ_ONLY_BIT),
-    /*< An explicit READ WRITE transaction is active. */
-    SESSION_TRX_READ_WRITE = (SESSION_TRX_ACTIVE_BIT | SESSION_TRX_READ_WRITE_BIT),
-    /*< An explicit READ ONLY transaction is ending. */
-    SESSION_TRX_READ_ONLY_ENDING = (SESSION_TRX_ENDING_BIT | SESSION_TRX_READ_ONLY),
-    /*< An explicit READ WRITE transaction is ending. */
-    SESSION_TRX_READ_WRITE_ENDING = (SESSION_TRX_ENDING_BIT | SESSION_TRX_READ_WRITE),
-} mxs_session_trx_state_t;
+static constexpr uint32_t SESSION_TRX_INACTIVE = 0;
+static constexpr uint32_t SESSION_TRX_ACTIVE = 1 << 0;      /* 0b0001 */
+static constexpr uint32_t SESSION_TRX_READ_ONLY = 1 << 1;   /* 0b0010 */
+static constexpr uint32_t SESSION_TRX_ENDING = 1 << 2;      /* 0b0100*/
 
 typedef enum
 {
@@ -269,7 +249,7 @@ public:
      */
     bool is_trx_read_only() const
     {
-        return m_trx_state == SESSION_TRX_READ_ONLY || m_trx_state == SESSION_TRX_READ_ONLY_ENDING;
+        return m_trx_state & SESSION_TRX_READ_ONLY;
     }
 
     /**
@@ -285,7 +265,7 @@ public:
      */
     bool is_trx_read_write() const
     {
-        return m_trx_state == SESSION_TRX_READ_WRITE || m_trx_state == SESSION_TRX_READ_WRITE_ENDING;
+        return !is_trx_read_only();
     }
 
     /**
@@ -300,7 +280,7 @@ public:
      */
     bool is_trx_ending() const
     {
-        return m_trx_state & SESSION_TRX_ENDING_BIT;
+        return m_trx_state & SESSION_TRX_ENDING;
     }
 
     /**
@@ -315,7 +295,7 @@ public:
      */
     bool is_trx_active() const
     {
-        return !is_autocommit() || (m_trx_state & SESSION_TRX_ACTIVE_BIT);
+        return !is_autocommit() || (m_trx_state & SESSION_TRX_ACTIVE);
     }
 
     /**
@@ -442,7 +422,7 @@ const char* session_state_to_string(MXS_SESSION::State);
  * @param state A transaction state.
  * @return String representation of the state.
  */
-const char* session_trx_state_to_string(mxs_session_trx_state_t state);
+const char* session_trx_state_to_string(uint32_t state);
 
 /**
  * @brief Get a session reference by ID
