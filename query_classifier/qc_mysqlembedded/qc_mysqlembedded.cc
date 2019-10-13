@@ -2010,56 +2010,34 @@ static void parsing_info_set_plain_str(void* ptr, char* str)
     pi->pi_query_plain_str = str;
 }
 
-int32_t qc_mysql_get_database_names(GWBUF* querybuf, char*** databasesp, int* size)
+int32_t qc_mysql_get_database_names(GWBUF* querybuf, std::vector<std::string>* pNames)
 {
-    LEX* lex;
-    TABLE_LIST* tbl;
-    char** databases = NULL, ** tmp = NULL;
-    int currsz = 0, i = 0;
-
-    if (!querybuf)
+    if (!querybuf || !ensure_query_is_parsed(querybuf))
     {
-        goto retblock;
+        return QC_RESULT_OK;
     }
 
-    if (!ensure_query_is_parsed(querybuf))
-    {
-        goto retblock;
-    }
+    LEX* lex = get_lex(querybuf);
 
-    if ((lex = get_lex(querybuf)) == NULL)
+    if (!lex)
     {
-        goto retblock;
+        return QC_RESULT_OK;
     }
 
     if (lex->describe || (is_show_command(lex->sql_command)
                           && !(lex->sql_command == SQLCOM_SHOW_TABLES)
                           && !(lex->sql_command == SQLCOM_SHOW_FIELDS)))
     {
-        goto retblock;
+        return QC_RESULT_OK;
     }
 
     if (lex->sql_command == SQLCOM_CHANGE_DB || lex->sql_command == SQLCOM_SHOW_TABLES)
     {
         SELECT_LEX* select_lex = qcme_get_first_select_lex(lex);
-        if (qcme_string_get(select_lex->db) &&
-            (strcmp(qcme_string_get(select_lex->db), "skygw_virtual") != 0))
+        if (qcme_string_get(select_lex->db)
+            && (strcmp(qcme_string_get(select_lex->db), "skygw_virtual") != 0))
         {
-            if (i >= currsz)
-            {
-                tmp = (char**) realloc(databases,
-                                       sizeof(char*) * (currsz * 2 + 1));
-
-                if (tmp == NULL)
-                {
-                    goto retblock;
-                }
-
-                databases = tmp;
-                currsz = currsz * 2 + 1;
-            }
-
-            databases[i++] = strdup(qcme_string_get(select_lex->db));
+            pNames->push_back(qcme_string_get(select_lex->db));
         }
     }
     else
@@ -2068,7 +2046,7 @@ int32_t qc_mysql_get_database_names(GWBUF* querybuf, char*** databasesp, int* si
 
         while (lex->current_select)
         {
-            tbl = lex->current_select->table_list.first;
+            TABLE_LIST* tbl = lex->current_select->table_list.first;
 
             while (tbl)
             {
@@ -2083,33 +2061,14 @@ int32_t qc_mysql_get_database_names(GWBUF* querybuf, char*** databasesp, int* si
 
                 // The database is sometimes an empty string. So as not to return
                 // an array of empty strings, we need to check for that possibility.
-                if ((strcmp(qcme_string_get(tbl->db), "skygw_virtual") != 0) &&
-                    (*qcme_string_get(tbl->db) != 0))
+                if ((strcmp(qcme_string_get(tbl->db), "skygw_virtual") != 0)
+                    && (*qcme_string_get(tbl->db) != 0))
                 {
-                    if (i >= currsz)
+                    auto str = qcme_string_get(select_lex->db);
+
+                    if (std::find(pNames->begin(), pNames.end(), str) == pNames->end())
                     {
-                        tmp = (char**) realloc(databases,
-                                               sizeof(char*) * (currsz * 2 + 1));
-
-                        if (tmp == NULL)
-                        {
-                            goto retblock;
-                        }
-
-                        databases = tmp;
-                        currsz = currsz * 2 + 1;
-                    }
-
-                    int j = 0;
-
-                    while ((j < i) && (strcmp(qcme_string_get(tbl->db), databases[j]) != 0))
-                    {
-                        ++j;
-                    }
-
-                    if (j == i)     // Not found
-                    {
-                        databases[i++] = strdup(qcme_string_get(tbl->db));
+                        pNames->push_back(str);
                     }
                 }
 
@@ -2119,10 +2078,6 @@ int32_t qc_mysql_get_database_names(GWBUF* querybuf, char*** databasesp, int* si
             lex->current_select = lex->current_select->next_select_in_list();
         }
     }
-
-retblock:
-    *size = i;
-    *databasesp = databases;
 
     return QC_RESULT_OK;
 }

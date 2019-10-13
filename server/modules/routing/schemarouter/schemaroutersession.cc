@@ -1516,10 +1516,9 @@ mxs::Target* SchemaRouterSession::get_query_target(GWBUF* buffer)
         }
     }
 
-    int n_databases = 0;
-    char** databases = qc_get_database_names(buffer, &n_databases);
+    auto databases = qc_get_database_names(buffer);
 
-    if (n_databases > 0)
+    if (!databases.empty())
     {
         // Prefer to select the route target by table. If no tables, route by database.
         if (n_tables)
@@ -1546,10 +1545,9 @@ mxs::Target* SchemaRouterSession::get_query_target(GWBUF* buffer)
         else if (rval == nullptr)
         {
             // Queries which target a database but no tables can have multiple targets. Select first one.
-            for (int i = 0; i < n_databases; i++)
+            for (const auto& a : databases)
             {
-                mxs::Target* target = m_shard.get_location(databases[i]);
-                if (target)
+                if (mxs::Target* target = m_shard.get_location(a))
                 {
                     rval = target;
                     break;
@@ -1559,13 +1557,7 @@ mxs::Target* SchemaRouterSession::get_query_target(GWBUF* buffer)
     }
 
 
-    // Free the databases and tables arrays.
-    for (int i = 0; i < n_databases; i++)
-    {
-        MXS_FREE(databases[i]);
-    }
-    MXS_FREE(databases);
-
+    // Free the tables arrays.
     for (int i = 0; i < n_tables; i++)
     {
         MXS_FREE(tables[i]);

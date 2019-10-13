@@ -24,6 +24,7 @@
 #include <maxscale/log.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/query_classifier.hh>
+#include <maxbase/string.hh>
 #include "../../server/modules/protocol/MariaDB/setsqlmodeparser.hh"
 #include "testreader.hh"
 using std::cerr;
@@ -760,35 +761,24 @@ bool compare_get_database_names(QUERY_CLASSIFIER* pClassifier1,
     bool success = false;
     const char HEADING[] = "qc_get_database_names    : ";
 
-    int n1 = 0;
-    int n2 = 0;
+    std::vector<std::string> rv1;
+    std::vector<std::string> rv2;
+    pClassifier1->qc_get_database_names(pCopy1, &rv1);
+    pClassifier2->qc_get_database_names(pCopy2, &rv2);
 
-    char** rv1;
-    pClassifier1->qc_get_database_names(pCopy1, &rv1, &n1);
-    char** rv2;
-    pClassifier2->qc_get_database_names(pCopy2, &rv2, &n2);
+    stringstream ss(HEADING);
 
-    stringstream ss;
-    ss << HEADING;
-
-    if ((!rv1 && !rv2) || ((n1 == n2) && compare_strings(rv1, rv2, n1)))
+    if (rv1 == rv2)
     {
-        ss << "Ok : ";
-        print_names(ss, rv1, n1);
+        ss << "Ok : " << mxb::join(rv1, ", ");
         success = true;
     }
     else
     {
-        ss << "ERR: ";
-        print_names(ss, rv1, n1);
-        ss << " != ";
-        print_names(ss, rv2, n2);
+        ss << "ERR: " << mxb::join(rv1, ", ") << " != " << mxb::join(rv2, ", ");
     }
 
     report(success, ss.str());
-
-    free_strings(rv1, n1);
-    free_strings(rv2, n2);
 
     return success;
 }

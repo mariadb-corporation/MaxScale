@@ -1204,21 +1204,21 @@ static bool cache_rule_matches_column_regexp(CACHE_RULE* self,
     const char* default_database = NULL;
 
     int n_databases;
-    char** databases = qc_get_database_names((GWBUF*)query, &n_databases);
+    auto databases = qc_get_database_names((GWBUF*)query);
 
-    if (n_databases == 0)
+    if (databases.empty())
     {
         // If no databases have been mentioned, then we can assume that all
         // tables and columns that are not explcitly qualified refer to the
         // default database.
         default_database = default_db;
     }
-    else if ((default_db == NULL) && (n_databases == 1))
+    else if ((default_db == NULL) && (databases.size() == 1))
     {
         // If there is no default database and exactly one database has been
         // explicitly mentioned, then we can assume all tables and columns that
         // are not explicitly qualified refer to that database.
-        default_database = databases[0];
+        default_database = databases[0].c_str();
     }
 
     size_t default_database_len = default_database ? strlen(default_database) : 0;
@@ -1308,15 +1308,6 @@ static bool cache_rule_matches_column_regexp(CACHE_RULE* self,
         MXS_FREE(tables);
     }
 
-    if (databases)
-    {
-        for (i = 0; i < (size_t)n_databases; ++i)
-        {
-            MXS_FREE(databases[i]);
-        }
-        MXS_FREE(databases);
-    }
-
     return matches;
 }
 
@@ -1340,22 +1331,21 @@ static bool cache_rule_matches_column_simple(CACHE_RULE* self, const char* defau
 
     const char* default_database = NULL;
 
-    int n_databases;
-    char** databases = qc_get_database_names((GWBUF*)query, &n_databases);
+    auto databases = qc_get_database_names((GWBUF*)query);
 
-    if (n_databases == 0)
+    if (databases.empty())
     {
         // If no databases have been mentioned, then we can assume that all
         // tables and columns that are not explcitly qualified refer to the
         // default database.
         default_database = default_db;
     }
-    else if ((default_db == NULL) && (n_databases == 1))
+    else if ((default_db == NULL) && (databases.size() == 1))
     {
         // If there is no default database and exactly one database has been
         // explicitly mentioned, then we can assume all tables and columns that
         // are not explicitly qualified refer to that database.
-        default_database = databases[0];
+        default_database = databases[0].c_str();
     }
 
     int n_tables;
@@ -1464,15 +1454,6 @@ static bool cache_rule_matches_column_simple(CACHE_RULE* self, const char* defau
             MXS_FREE(tables[i]);
         }
         MXS_FREE(tables);
-    }
-
-    if (databases)
-    {
-        for (i = 0; i < (size_t)n_databases; ++i)
-        {
-            MXS_FREE(databases[i]);
-        }
-        MXS_FREE(databases);
     }
 
     return matches;

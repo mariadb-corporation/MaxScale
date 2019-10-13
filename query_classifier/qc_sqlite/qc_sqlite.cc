@@ -411,23 +411,13 @@ public:
         return rv;
     }
 
-    bool get_database_names(char*** ppzDatabase_names, int* pnDatabase_names) const
+    bool get_database_names(std::vector<std::string>* pNames) const
     {
         bool rv = false;
 
         if (is_valid())
         {
-            *pnDatabase_names = m_database_names.size();
-
-            if (*pnDatabase_names)
-            {
-                *ppzDatabase_names = copy_string_array(m_database_names);
-            }
-            else
-            {
-                *ppzDatabase_names = NULL;
-            }
-
+            pNames->assign(m_database_names.begin(), m_database_names.end());
             rv = true;
         }
 
@@ -5149,20 +5139,18 @@ static int32_t qc_sqlite_query_has_clause(GWBUF* pStmt, int32_t* pHas_clause)
     return rv;
 }
 
-static int32_t qc_sqlite_get_database_names(GWBUF* pStmt, char*** ppzDatabase_names, int* pnDatabase_names)
+static int32_t qc_sqlite_get_database_names(GWBUF* pStmt, std::vector<std::string>* pNames)
 {
     QC_TRACE();
     int32_t rv = QC_RESULT_ERROR;
     mxb_assert(this_unit.initialized);
     mxb_assert(this_thread.initialized);
 
-    *ppzDatabase_names = NULL;
-    *pnDatabase_names = 0;
     QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, QC_COLLECT_DATABASES);
 
     if (pInfo)
     {
-        if (pInfo->get_database_names(ppzDatabase_names, pnDatabase_names))
+        if (pInfo->get_database_names(pNames))
         {
             rv = QC_RESULT_OK;
         }

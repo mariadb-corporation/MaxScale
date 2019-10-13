@@ -786,16 +786,15 @@ void qc_get_function_info(GWBUF* query, const QC_FUNCTION_INFO** infos, size_t* 
     *n_infos = n;
 }
 
-char** qc_get_database_names(GWBUF* query, int* sizep)
+std::vector<std::string> qc_get_database_names(GWBUF* query)
 {
     QC_TRACE();
     mxb_assert(this_unit.classifier);
 
-    char** names = NULL;
-    *sizep = 0;
+    std::vector<std::string> names;
 
     QCInfoCacheScope scope(query);
-    this_unit.classifier->qc_get_database_names(query, &names, sizep);
+    this_unit.classifier->qc_get_database_names(query, &names);
 
     return names;
 }

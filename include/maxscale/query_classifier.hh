@@ -348,13 +348,11 @@ struct QUERY_CLASSIFIER
      * @param stmt   A COM_QUERY or COM_STMT_PREPARE packet.
      * @param names  On return, the database names, if
      *               @c QC_RESULT_OK is returned.
-     * @param size   On return, the number of names in @names, if
-     *               @c QC_RESULT_OK is returned.
      *
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    int32_t (* qc_get_database_names)(GWBUF* stmt, char*** names, int32_t* size);
+    int32_t (* qc_get_database_names)(GWBUF* stmt, std::vector<std::string>* names);
 
     /**
      * Reports the prepare name.
@@ -737,15 +735,10 @@ char* qc_get_created_table_name(GWBUF* stmt);
  * possible default database is not returned.
  *
  * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
- * @param size  Pointer to integer where the number of databases
- *              is stored.
  *
- * @return Array of strings or NULL if a memory allocation fails.
- *
- * @note The returned array and the strings pointed to @b must be freed
- *       by the caller.
+ * @return Vector of strings
  */
-char** qc_get_database_names(GWBUF* stmt, int* size);
+std::vector<std::string> qc_get_database_names(GWBUF* stmt);
 
 /**
  * Returns the operation of the statement.
