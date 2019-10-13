@@ -109,7 +109,7 @@ public:
     static MariaDBAuthenticatorModule* create(char** options);
     ~MariaDBAuthenticatorModule() override = default;
 
-    std::unique_ptr<mxs::ClientAuthenticator> create_client_authenticator() override;
+    std::unique_ptr<mxs::ClientAuthenticator>  create_client_authenticator() override;
     std::unique_ptr<mxs::BackendAuthenticator> create_backend_authenticator() override;
 
     int         load_users(SERVICE* service) override;
@@ -126,12 +126,13 @@ public:
      */
     sqlite3* get_handle();
 
-    sqlite3** m_handles {nullptr};              /**< SQLite3 database handle */
-    char*     m_cache_dir {nullptr};            /**< Custom cache directory location */
-    bool      m_inject_service_user {true};     /**< Inject the service user into the list of users */
-    bool      m_skip_auth {false};              /**< Authentication will always be successful */
-    bool      m_check_permissions {true};
-    bool      m_lower_case_table_names {false}; /**< Disable database case-sensitivity */
+    mxs::WorkerLocal<sqlite3*> m_handle;    /**< SQLite3 database handle */
+
+    char* m_cache_dir {nullptr};            /**< Custom cache directory location */
+    bool  m_inject_service_user {true};     /**< Inject the service user into the list of users */
+    bool  m_skip_auth {false};              /**< Authentication will always be successful */
+    bool  m_check_permissions {true};
+    bool  m_lower_case_table_names {false};     /**< Disable database case-sensitivity */
 
 private:
     int  get_users(SERVICE* service, bool skip_local, SERVER** srv);
@@ -149,8 +150,8 @@ public:
     bool ssl_capable(DCB* client) override;
     int  authenticate(DCB* client) override;
 
-    int  reauthenticate(DCB* generic_dcb, uint8_t* scramble, size_t scramble_len, const ByteVec& auth_token,
-                        uint8_t* output_token) override;
+    int reauthenticate(DCB* generic_dcb, uint8_t* scramble, size_t scramble_len, const ByteVec& auth_token,
+                       uint8_t* output_token) override;
 
 private:
     /**

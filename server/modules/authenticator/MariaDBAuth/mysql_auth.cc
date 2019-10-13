@@ -42,7 +42,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         MXS_AUTHENTICATOR_VERSION,
         "The MySQL client to MaxScale authenticator implementation",
         "V1.1.0",
-        MXS_NO_MODULE_CAPABILITIES, // Authenticator capabilities are in the instance object
+        MXS_NO_MODULE_CAPABILITIES,     // Authenticator capabilities are in the instance object
         &mxs::AuthenticatorApiGenerator<MariaDBAuthenticatorModule>::s_api,
         NULL,       /* Process init. */
         NULL,       /* Process finish. */
@@ -57,44 +57,47 @@ MXS_MODULE* MXS_CREATE_MODULE()
 }
 }
 
-static bool open_instance_database(const char* path, sqlite3** handle)
+static sqlite3* open_instance_database(const char* path)
 {
+    sqlite3* handle;
+
     // This only opens database in memory if path is exactly ":memory:"
     // To use the URI filename SQLITE_OPEN_URI flag needs to be used.
-    int rc = sqlite3_open_v2(path, handle, db_flags, NULL);
+    int rc = sqlite3_open_v2(path, &handle, db_flags, NULL);
 
     if (rc != SQLITE_OK)
     {
         MXS_ERROR("Failed to open SQLite3 handle: %d", rc);
-        return false;
+        return nullptr;
     }
 
     char* err;
 
-    if (sqlite3_exec(*handle, users_create_sql, NULL, NULL, &err) != SQLITE_OK
-        || sqlite3_exec(*handle, databases_create_sql, NULL, NULL, &err) != SQLITE_OK
-        || sqlite3_exec(*handle, pragma_sql, NULL, NULL, &err) != SQLITE_OK)
+    if (sqlite3_exec(handle, users_create_sql, NULL, NULL, &err) != SQLITE_OK
+        || sqlite3_exec(handle, databases_create_sql, NULL, NULL, &err) != SQLITE_OK
+        || sqlite3_exec(handle, pragma_sql, NULL, NULL, &err) != SQLITE_OK)
     {
         MXS_ERROR("Failed to create database: %s", err);
         sqlite3_free(err);
-        sqlite3_close_v2(*handle);
-        return false;
+        sqlite3_close_v2(handle);
+        return nullptr;
     }
 
-    return true;
+    return handle;
 }
 
 sqlite3* MariaDBAuthenticatorModule::get_handle()
 {
-    int i = mxs_rworker_get_current_id();
-    mxb_assert(i >= 0);
+    sqlite3* handle = *m_handle;
 
-    if (m_handles[i] == NULL)
+    if (!handle)
     {
-        MXB_AT_DEBUG(bool rval = ) open_instance_database(":memory:", &m_handles[i]);
-        mxb_assert(rval);
+        handle = open_instance_database(":memory:");
+        mxb_assert(handle);
+        *m_handle = handle;
     }
-    return m_handles[i];
+
+    return handle;
 }
 
 /**
@@ -106,8 +109,7 @@ sqlite3* MariaDBAuthenticatorModule::get_handle()
 MariaDBAuthenticatorModule* MariaDBAuthenticatorModule::create(char** options)
 {
     auto instance = new(std::nothrow) MariaDBAuthenticatorModule();
-    if (instance
-        && (instance->m_handles = static_cast<sqlite3**>(MXS_CALLOC(config_threadcount(), sizeof(sqlite3*)))))
+    if (instance)
     {
         bool error = false;
         for (int i = 0; options[i]; i++)
@@ -154,7 +156,6 @@ MariaDBAuthenticatorModule* MariaDBAuthenticatorModule::create(char** options)
         if (error)
         {
             MXS_FREE(instance->m_cache_dir);
-            MXS_FREE(instance->m_handles);
             delete instance;
             instance = NULL;
         }
@@ -429,7 +430,7 @@ bool MariaDBClientAuthenticator::set_client_data(MYSQL_session* client_data, DCB
 
     int packet_length_used = 0;
 
-    client_data->auth_token.clear(); // Usually no-op
+    client_data->auth_token.clear();    // Usually no-op
     m_correct_authenticator = false;
 
     if (client_auth_packet_size > MYSQL_AUTH_PACKET_BASE_SIZE)
