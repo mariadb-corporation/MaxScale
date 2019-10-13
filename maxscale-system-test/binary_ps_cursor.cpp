@@ -94,6 +94,7 @@ void test2(TestConnections& test)
                     "Failed to set attributes");
     test.add_result(mysql_stmt_attr_set(stmt1, STMT_ATTR_PREFETCH_ROWS, &rows), "Failed to set attributes");
 
+    sleep(3);
     test.add_result(mysql_stmt_execute(stmt1), "Failed to execute");
     test.add_result(mysql_stmt_bind_result(stmt1, bind1), "Failed to bind result");
 
