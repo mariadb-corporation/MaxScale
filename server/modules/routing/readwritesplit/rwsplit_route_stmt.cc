@@ -202,7 +202,8 @@ bool RWSplitSession::should_try_trx_on_slave(route_target_t route_target) const
            && !m_is_replay_active           // Not replaying a transaction
            && m_otrx_state == OTRX_INACTIVE // Not yet in optimistic mode
            && TARGET_IS_MASTER(route_target)// The target type is master
-           && have_connected_slaves();      // At least one connected slave
+           && have_connected_slaves()       // At least one connected slave
+           && m_qc.is_trx_still_read_only();// The start of the transaction is a read-only statement
 }
 
 bool RWSplitSession::track_optimistic_trx(GWBUF** buffer)
@@ -280,8 +281,8 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
             replace_master(next_master);
         }
 
-        if (m_qc.is_trx_starting() && !trx_is_read_only()   // A normal transaction is starting
-            && should_try_trx_on_slave(route_target))       // Qualifies for speculative routing
+        if (trx_is_starting() && !trx_is_read_only()    // A normal transaction is starting
+            && should_try_trx_on_slave(route_target))   // Qualifies for speculative routing
         {
             // Speculatively start routing the transaction to a slave
             m_otrx_state = OTRX_STARTING;
@@ -995,8 +996,7 @@ void RWSplitSession::log_master_routing_failure(bool found,
 
 bool RWSplitSession::trx_is_starting() const
 {
-    return m_session->is_trx_active()
-           && qc_query_is_type(m_qc.current_route_info().type_mask(), QUERY_TYPE_BEGIN_TRX);
+    return m_session->is_trx_starting();
 }
 
 bool RWSplitSession::trx_is_read_only() const
