@@ -932,23 +932,14 @@ bool Listener::listen_unique()
 
 bool Listener::listen()
 {
+    mxb_assert(mxs::MainWorker::is_main_worker());
+
     mxb::LogScope scope(name());
     m_state = FAILED;
 
-    /** Load the authentication users before before starting the listener */
-    switch (m_proto_module->load_auth_users(m_service))
-    {
-    case MXS_AUTH_LOADUSERS_FATAL:
-        MXS_ERROR("Fatal error when loading users, service is not started.");
-        return false;
-
-    case MXS_AUTH_LOADUSERS_ERROR:
-        MXS_WARNING("Failed to load users, authentication might not work.");
-        break;
-
-    default:
-        break;
-    }
+    // TODO: Here would could load all users (using some functionality equivalent with
+    // TODO: m_proto_module->load_auth_users(m_service)), return false if there is a
+    // TODO: fatal error, and prepopulate the databases of all routing workers if there is not.
 
     bool rval = false;
 

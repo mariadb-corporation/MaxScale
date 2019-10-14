@@ -1946,36 +1946,21 @@ int main(int argc, char** argv)
                 }
             }
 
-            // The actual starting of the serveces must take place in a routing worker.
-            auto worker = RoutingWorker::get(RoutingWorker::MAIN);
-            mxb_assert(worker);
-
-            auto do_launch = [&]() {
-                if (!service_launch_all())
-                {
-                    log_startup_error("Failed to start all MaxScale services.");
-                    rc = MAXSCALE_NOSERVICES;
-                    maxscale_shutdown();
-                }
-                else
-                {
-                    if (this_unit.daemon_mode)
-                    {
-                        // Successful start, notify the parent process that it can exit.
-                        write_child_exit_code(child_pipe, rc);
-                    }
-                }
-            };
-
-            if (worker->execute(do_launch, RoutingWorker::EXECUTE_QUEUED))
+            if (!service_launch_all())
             {
-                MonitorManager::start_all_monitors();
+                log_startup_error("Failed to start all MaxScale services.");
+                rc = MAXSCALE_NOSERVICES;
+                maxscale_shutdown();
             }
             else
             {
-                log_startup_error("Failed to queue launch task.");
-                rc = MAXSCALE_INTERNALERROR;
-                maxscale_shutdown();
+                MonitorManager::start_all_monitors();
+
+                if (this_unit.daemon_mode)
+                {
+                    // Successful start, notify the parent process that it can exit.
+                    write_child_exit_code(child_pipe, rc);
+                }
             }
         };
 
