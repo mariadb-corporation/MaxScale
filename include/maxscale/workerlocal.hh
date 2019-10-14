@@ -81,66 +81,12 @@ public:
         return *get_local_value();
     }
 
-    /**
-     * Assign a value
-     *
-     * Sets the master value and triggers an update on all routing workers.
-     * The value will be updated on all routing worker threads once the
-     * function returns.
-     *
-     * @note: This function must only be called from the MainWorker.
-     *
-     * @param t The new value to assign
-     */
-    void assign(const T& t)
-    {
-        mxb_assert_message(MainWorker::is_main_worker(),
-                           "this method must be called from the main worker thread");
-
-        // Update the value of the master copy
-        std::unique_lock<std::mutex> guard(m_lock);
-        m_value = t;
-        guard.unlock();
-
-        update_local_value();
-
-        // Update the local value of all workers from the master copy
-        mxs::RoutingWorker::execute_concurrently(
-            [this]() {
-                update_local_value();
-            });
-    }
-
-    /**
-     * Get all local values
-     *
-     * @note: This method must only be called from the MainWorker.
-     *
-     * @return A vector containing the individual values for each routing worker
-     */
-    std::vector<T> values() const
-    {
-        mxb_assert_message(MainWorker::is_main_worker(),
-                           "this method must be called from the main worker thread");
-        std::vector<T> rval;
-        std::mutex lock;
-
-        mxs::RoutingWorker::execute_concurrently(
-            [&]() {
-                std::lock_guard<std::mutex> guard(lock);
-                rval.push_back(*get_local_value());
-            });
-
-        return rval;
-    }
-
-private:
+protected:
 
     uint64_t                            m_handle;   // The handle to the worker local data
     typename std::remove_const<T>::type m_value;    // The master value, never used directly
     mutable std::mutex                  m_lock;     // Protects the master value
 
-private:
     /**
      * Get the local value
      *
@@ -177,20 +123,83 @@ private:
         return my_value;
     }
 
-    void update_local_value()
-    {
-        // As get_local_value can cause a lock to be taken, we need the pointer to our value before
-        // we lock the master value for the updating of our value.
-        T* my_value = get_local_value();
-
-        std::lock_guard<std::mutex> guard(m_lock);
-        *my_value = m_value;
-    }
-
     static void destroy_value(void* data)
     {
         delete static_cast<T*>(data);
     }
 };
 
+// Extends WorkerLocal with global read and write methods for updating all stored values.
+template<class T>
+class WorkerGlobal : public WorkerLocal<T>
+{
+public:
+    using WorkerLocal<T>::WorkerLocal;
+    using Base = WorkerLocal<T>;
+
+    /**
+     * Assign a value
+     *
+     * Sets the master value and triggers an update on all routing workers.
+     * The value will be updated on all routing worker threads once the
+     * function returns.
+     *
+     * @note: This function must only be called from the MainWorker.
+     *
+     * @param t The new value to assign
+     */
+    void assign(const T& t)
+    {
+        mxb_assert_message(MainWorker::is_main_worker(),
+                           "this method must be called from the main worker thread");
+
+        // Update the value of the master copy
+        std::unique_lock<std::mutex> guard(Base::m_lock);
+        Base::m_value = t;
+        guard.unlock();
+
+        update_local_value();
+
+        // Update the local value of all workers from the master copy
+        mxs::RoutingWorker::execute_concurrently(
+            [this]() {
+                update_local_value();
+            });
+    }
+
+    /**
+     * Get all local values
+     *
+     * @note: This method must only be called from the MainWorker.
+     *
+     * @return A vector containing the individual values for each routing worker
+     */
+    std::vector<T> values() const
+    {
+        mxb_assert_message(MainWorker::is_main_worker(),
+                           "this method must be called from the main worker thread");
+        std::vector<T> rval;
+        std::mutex lock;
+
+        mxs::RoutingWorker::execute_concurrently(
+            [&]() {
+                std::lock_guard<std::mutex> guard(lock);
+                rval.push_back(*Base::get_local_value());
+            });
+
+        return rval;
+    }
+
+private:
+
+    void update_local_value()
+    {
+        // As get_local_value can cause a lock to be taken, we need the pointer to our value before
+        // we lock the master value for the updating of our value.
+        T* my_value = Base::get_local_value();
+
+        std::lock_guard<std::mutex> guard(Base::m_lock);
+        *my_value = Base::m_value;
+    }
+};
 }

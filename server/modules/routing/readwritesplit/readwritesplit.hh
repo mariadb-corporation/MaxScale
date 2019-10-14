@@ -330,10 +330,10 @@ public:
     bool configure(MXS_CONFIG_PARAMETER* params);
 private:
 
-    SERVICE*                     m_service;   /**< Service where the router belongs*/
-    mxs::WorkerLocal<Config>     m_config;
-    Stats                        m_stats;
-    mxs::WorkerLocal<SrvStatMap> m_server_stats;
+    SERVICE*                      m_service;    /**< Service where the router belongs*/
+    mxs::WorkerGlobal<Config>     m_config;
+    Stats                         m_stats;
+    mxs::WorkerGlobal<SrvStatMap> m_server_stats;
 };
 
 static inline const char* select_criteria_to_str(select_criteria_t type)
