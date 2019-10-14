@@ -1459,37 +1459,6 @@ void DCB::trigger_write_event()
     add_event(EPOLLOUT);
 }
 
-static bool add_fd_to_routing_workers(int fd, uint32_t events, MXB_POLL_DATA* data)
-{
-    bool rv = true;
-    MXB_WORKER* previous_owner = data->owner;
-
-    rv = RoutingWorker::add_shared_fd(fd, events, data);
-
-    if (rv)
-    {
-        // The DCB will appear on the list of the calling thread.
-        RoutingWorker* worker = RoutingWorker::get_current();
-
-        if (!worker)
-        {
-            // TODO: Listeners are created before the workers have been started.
-            // TODO: Hence there will be no current worker. So, we just store them
-            // TODO: in the main worker.
-            worker = RoutingWorker::get(RoutingWorker::MAIN);
-        }
-
-        data->owner = worker;
-    }
-    else
-    {
-        // Restore the situation.
-        data->owner = previous_owner;
-    }
-
-    return rv;
-}
-
 bool DCB::enable_events()
 {
     mxb_assert(m_state == State::CREATED || m_state == State::NOPOLLING);
