@@ -176,8 +176,8 @@ class ResultSetDCB : public ClientDCB
 public:
     ResultSetDCB(MXS_SESSION* session)
         : ClientDCB(DCB::FD_CLOSED, "127.0.0.1", sockaddr_storage {}, DCB::Role::CLIENT, session,
-                    nullptr, nullptr)
-        , m_protocol(this)
+                    nullptr, nullptr),
+        m_protocol(this)
     {
     }
 
@@ -281,6 +281,13 @@ private:
     mutable Protocol  m_protocol;
     std::vector<char> m_response;
 };
+}
+
+bool ResultSetBackend::respond(RouterSession* pSession, const mxs::Reply& reply)
+{
+    mxs::Reply r;
+    r.add_field_count(1);
+    return BufferBackend::respond(pSession, r);
 }
 
 void ResultSetBackend::handle_statement(RouterSession* pSession, GWBUF* pStatement)

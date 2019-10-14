@@ -99,7 +99,7 @@ class BufferBackend : public Backend
 public:
     ~BufferBackend();
 
-    bool respond(RouterSession* pSession, const mxs::Reply& reply);
+    virtual bool respond(RouterSession* pSession, const mxs::Reply& reply);
 
     bool idle(const RouterSession* pSession) const;
 
@@ -159,6 +159,7 @@ public:
         m_created = false;
     }
 
+    bool respond(RouterSession* pSession, const mxs::Reply& reply) final;
     void handle_statement(RouterSession* pSession, GWBUF* pStatement);
 
     int  m_counter;

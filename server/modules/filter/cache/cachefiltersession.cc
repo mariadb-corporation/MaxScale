@@ -257,9 +257,6 @@ CacheFilterSession::~CacheFilterSession()
 CacheFilterSession* CacheFilterSession::Create(Cache* pCache, MXS_SESSION* pSession, SERVICE* pService)
 {
     CacheFilterSession* pCacheFilterSession = NULL;
-
-    mxb_assert(pSession->client_connection());
-
     auto db = static_cast<MYSQL_session*>(pSession->protocol_data())->db;
     char* zDefaultDb = NULL;
 
