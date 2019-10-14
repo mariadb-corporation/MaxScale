@@ -134,18 +134,17 @@ std::unique_ptr<mxs::ClientAuthenticator> PamClientAuthenticator::create(PamAuth
 
     // This handle is only used from one thread, can define no_mutex.
     int db_flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_SHAREDCACHE | SQLITE_OPEN_NOMUTEX;
-    string sqlite_error;
     std::unique_ptr<PamClientAuthenticator> new_auth(new(std::nothrow) PamClientAuthenticator(inst));
     if (new_auth)
     {
-        if (new_auth->m_sqlite.open(inst->m_dbname, db_flags, &sqlite_error))
+        if (new_auth->m_sqlite.open(inst->m_dbname, db_flags))
         {
             new_auth->m_sqlite.set_timeout(1000);
             rval = std::move(new_auth);
         }
         else
         {
-            MXB_ERROR("Could not create PAM authenticator session: %s", sqlite_error.c_str());
+            MXB_ERROR("Could not create PAM authenticator session: %s", new_auth->m_sqlite.error());
         }
     }
     return rval;

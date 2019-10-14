@@ -14,7 +14,7 @@
 #include "pam_auth.hh"
 
 #include <string>
-#include <maxsql/queryresult.hh>
+#include <maxsql/mariadb_connector.hh>
 #include <maxscale/service.hh>
 #include <maxscale/sqlite3.h>
 #include "pam_client_session.hh"

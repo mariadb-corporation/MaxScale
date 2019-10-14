@@ -28,10 +28,11 @@
 #include <errmsg.h>
 #include <mysql.h>
 
+#include <maxbase/alloc.h>
 #include <maxbase/atomic.hh>
 #include <maxbase/format.hh>
 #include <maxsql/mariadb.hh>
-#include <maxbase/alloc.h>
+#include <maxsql/mariadb_connector.hh>
 #include <maxscale/config.hh>
 
 MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, const char* user, const char* passwd)
@@ -266,7 +267,7 @@ std::unique_ptr<mxq::QueryResult> execute_query(MYSQL* conn, const std::string& 
     MYSQL_RES* result = NULL;
     if (mxs_mysql_query(conn, query.c_str()) == 0 && (result = mysql_store_result(conn)) != NULL)
     {
-        rval = std::unique_ptr<QueryResult>(new QueryResult(result));
+        rval = std::unique_ptr<QueryResult>(new mxq::MariaDBQueryResult(result));
     }
     else
     {

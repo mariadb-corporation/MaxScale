@@ -17,12 +17,13 @@
 #include <string>
 #include <vector>
 #include <maxsql/queryresult.hh>
+#include <maxsql/mariadb_connector.hh>
 
 // Test failover/switchover with multiple masters.
 
 using std::string;
 using std::cout;
-using mxq::QueryResult;
+using mxq::MariaDBQueryResult;
 
 void change_master(TestConnections& test ,int slave, int master, const string& conn_name = "",
                    int replication_delay = 0);
@@ -175,9 +176,9 @@ void expect_replicating_from(TestConnections& test, int node, int master)
             auto res = mysql_store_result(conn);
             if (res)
             {
-                QueryResult q_res(res);
-		        auto search_host = test.repl->ip(master);
-		        auto search_port = test.repl->port[master];
+                mxq::MariaDBQueryResult q_res(res);
+                auto search_host = test.repl->ip(master);
+                auto search_port = test.repl->port[master];
                 while (q_res.next_row())
                 {
                     auto host = q_res.get_string("Master_Host");

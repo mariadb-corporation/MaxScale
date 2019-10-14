@@ -16,31 +16,19 @@
 #include <maxsql/ccdefs.hh>
 #include <string>
 #include <unordered_map>
-
-typedef struct st_mysql MYSQL;
-typedef struct st_mysql_res MYSQL_RES;
-typedef char **MYSQL_ROW;
+#include <vector>
 
 namespace maxsql
 {
 
 /**
- * Helper class for simplifying working with resultsets.
+ * Base class for a query result object returned from either a MariaDB-connection or an SQLite-handle.
  */
 class QueryResult
 {
 public:
     QueryResult(const QueryResult&) = delete;
     QueryResult& operator=(const QueryResult&) = delete;
-
-    /**
-     * Construct a new resultset.
-     *
-     * @param resultset The results from mysql_query(). Must not be NULL.
-     */
-    QueryResult(MYSQL_RES* resultset);
-
-    ~QueryResult();
 
     /**
      * Advance to next row. Affects all result returning functions.
@@ -61,14 +49,14 @@ public:
      *
      * @return Column count
      */
-    int64_t get_col_count() const;
+    virtual int64_t get_col_count() const = 0;
 
     /**
      * How many rows does the result set have?
      *
      * @return The number of rows
      */
-    int64_t get_row_count() const;
+    virtual int64_t get_row_count() const = 0;
 
     /**
      * Get a numeric index for a column name. May give wrong results if column names are not unique.
@@ -132,8 +120,9 @@ public:
      */
     std::string error_string() const;
 
+protected:
+    QueryResult(const std::vector<std::string>& col_names);
 private:
-
     class ConversionError
     {
     public:
@@ -170,21 +159,20 @@ private:
         std::string to_string() const;
 
     private:
-        bool m_field_was_null = false;   /**< Was the converted field null? */
+        bool        m_field_was_null = false;   /**< Was the converted field null? */
         std::string m_field_value;              /**< The value in the field if it was not null */
         std::string m_target_type;              /**< The conversion target type */
     };
 
+    virtual const char*              row_elem(int64_t column_ind) const = 0;
+    virtual bool                     advance_row() = 0;
+
     int64_t parse_integer(int64_t column_ind, const std::string& target_type) const;
+    void    set_error(int64_t column_ind, const std::string& target_type) const;
 
-    void set_error(int64_t column_ind, const std::string& target_type) const;
+    int64_t m_current_row_ind = -1;     /**< Index of current row */
 
-    MYSQL_RES* m_resultset = nullptr;   /**< Underlying result set, freed at dtor */
-    MYSQL_ROW m_rowdata = nullptr;     /**< Data for current row */
-    int64_t m_current_row_ind = -1;  /**< Index of current row */
-
-    mutable ConversionError m_error;       /**< Error information */
+    mutable ConversionError                  m_error;       /**< Error information */
     std::unordered_map<std::string, int64_t> m_col_indexes; /**< Map of column name -> index */
 };
-
 }

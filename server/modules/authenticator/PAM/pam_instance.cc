@@ -25,7 +25,7 @@
 #include <maxscale/mysql_utils.hh>
 
 using std::string;
-using mxq::QueryResult;
+using mxq::MariaDBQueryResult;
 
 /**
  * Create an instance.
@@ -55,8 +55,7 @@ PamAuthenticatorModule* PamAuthenticatorModule::create(char** options)
         new(std::nothrow) PamAuthenticatorModule(pam_db_fname));
     if (new_instance)
     {
-        string sqlite_error;
-        if (new_instance->m_sqlite.open(pam_db_fname, db_flags, &sqlite_error))
+        if (new_instance->m_sqlite.open(pam_db_fname, db_flags))
         {
             if (new_instance->prepare_tables())
             {
@@ -65,7 +64,7 @@ PamAuthenticatorModule* PamAuthenticatorModule::create(char** options)
         }
         else
         {
-            MXB_ERROR("Could not create PAM authenticator: %s", sqlite_error.c_str());
+            MXB_ERROR("Could not create PAM authenticator: %s", new_instance->m_sqlite.error());
         }
     }
     return rval;

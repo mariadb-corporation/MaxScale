@@ -51,7 +51,7 @@ public:
      * @param flags Flags given to sqlite3_open_v2
      * @return True on success
      */
-    bool open(const std::string& filename, int flags, std::string* error_out);
+    bool open(const std::string& filename, int flags);
 
     /**
      * Run a simple query which returns no data.
@@ -69,7 +69,7 @@ public:
      * @param cb_data Data pointer given to sqlite3_exec
      * @return True on success
      */
-    template <class T>
+    template<class T>
     bool exec(const std::string& sql, Callback<T> cb, T* cb_data)
     {
         return exec_impl(sql, reinterpret_cast<CallbackVoid>(cb), cb_data);
@@ -93,6 +93,6 @@ private:
     using CallbackVoid = int (*)(void* data, int n_columns, char** rows, char** field_names);
     bool exec_impl(const std::string& sql, CallbackVoid cb, void* cb_data);
 
-    sqlite3* m_dbhandle {nullptr};
+    sqlite3*    m_dbhandle {nullptr};
     std::string m_errormsg;
 };

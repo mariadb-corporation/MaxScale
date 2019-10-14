@@ -14,6 +14,7 @@
 #include <maxsql/mariadb_connector.hh>
 
 #include <mysql.h>
+#include <maxbase/assert.h>
 #include <maxbase/format.hh>
 #include <maxsql/mariadb.hh>
 
@@ -121,7 +122,7 @@ std::unique_ptr<mxq::QueryResult> MariaDB::query(const std::string& query)
             MYSQL_RES* result = mysql_store_result(m_conn);
             if (result)
             {
-                rval = std::unique_ptr<QueryResult>(new QueryResult(result));
+                rval = std::unique_ptr<QueryResult>(new mxq::MariaDBQueryResult(result));
                 clear_errors();
             }
             else
@@ -155,4 +156,50 @@ void MariaDB::set_connection_settings(const MariaDB::ConnectionSettings& sett)
 {
     m_settings = sett;
 }
+
+MariaDBQueryResult::MariaDBQueryResult(MYSQL_RES* resultset)
+    : QueryResult(column_names(resultset))
+    , m_resultset(resultset)
+{
+}
+
+MariaDBQueryResult::~MariaDBQueryResult()
+{
+    mxb_assert(m_resultset);
+    mysql_free_result(m_resultset);
+}
+
+bool MariaDBQueryResult::advance_row()
+{
+    m_rowdata = mysql_fetch_row(m_resultset);
+    return m_rowdata;
+}
+
+int64_t MariaDBQueryResult::get_col_count() const
+{
+    return mysql_num_fields(m_resultset);
+}
+
+int64_t MariaDBQueryResult::get_row_count() const
+{
+    return mysql_num_rows(m_resultset);
+}
+
+const char* MariaDBQueryResult::row_elem(int64_t column_ind) const
+{
+    return m_rowdata[column_ind];
+}
+
+std::vector<std::string> MariaDBQueryResult::column_names(MYSQL_RES* resultset) const
+{
+    std::vector<std::string> rval;
+    auto columns = mysql_num_fields(resultset);
+    MYSQL_FIELD* field_info = mysql_fetch_fields(resultset);
+    for (int64_t column_index = 0; column_index < columns; column_index++)
+    {
+        rval.emplace_back(field_info[column_index].name);
+    }
+    return rval;
+}
+
 }

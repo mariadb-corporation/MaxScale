@@ -21,43 +21,42 @@ using std::string;
 std::unique_ptr<SQLite> SQLite::create(const string& filename, int flags, string* error_out)
 {
     std::unique_ptr<SQLite> new_handle(new SQLite());
-    if (new_handle && new_handle->open(filename, flags, error_out))
+    if (new_handle && new_handle->open(filename, flags))
     {
         return new_handle;
     }
     return nullptr;
 }
 
-bool SQLite::open(const std::string& filename, int flags, std::string* error_out)
+bool SQLite::open(const std::string& filename, int flags)
 {
     const char open_fail[] = "Failed to open SQLite3 handle for file '%s': '%s'";
     const char open_oom[] = "Failed to allocate memory for SQLite3 handle for file '%s'.";
 
-    sqlite3* dbhandle = nullptr;
+    sqlite3_close_v2(m_dbhandle); // Close any existing handle.
+    m_dbhandle = nullptr;
+    m_errormsg.clear();
+
+    sqlite3* new_handle = nullptr;
     const char* zFilename = filename.c_str();
     string error_msg;
     bool success = false;
-    if (sqlite3_open_v2(zFilename, &dbhandle, flags, NULL) == SQLITE_OK)
+    if (sqlite3_open_v2(zFilename, &new_handle, flags, NULL) == SQLITE_OK)
     {
-        sqlite3_close_v2(m_dbhandle); // Close any existing handle.
-        m_dbhandle = dbhandle;
+        m_dbhandle = new_handle;
         success = true;
     }
     // Even if the open failed, the handle may exist and an error message can be read.
-    else if (dbhandle)
+    else if (new_handle)
     {
-        error_msg = mxb::string_printf(open_fail, zFilename, sqlite3_errmsg(dbhandle));
-        sqlite3_close_v2(dbhandle);
+        m_errormsg = mxb::string_printf(open_fail, zFilename, sqlite3_errmsg(new_handle));
+        sqlite3_close_v2(new_handle);
     }
     else
     {
-        error_msg = mxb::string_printf(open_oom, zFilename);
+        m_errormsg = mxb::string_printf(open_oom, zFilename);
     }
 
-    if (!error_msg.empty() && error_out)
-    {
-        *error_out = error_msg;
-    }
     return success;
 }
 

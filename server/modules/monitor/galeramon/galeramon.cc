@@ -30,6 +30,7 @@
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/secrets.h>
 #include <maxsql/mariadb.hh>
+#include <maxsql/mariadb_connector.hh>
 
 #define DONOR_NODE_NAME_MAX_LEN 60
 #define DONOR_LIST_SET_VAR      "SET GLOBAL wsrep_sst_donor = \""
@@ -159,7 +160,7 @@ void get_gtid(MonitorServer* srv, GaleraNode* info)
     {
         if (auto result = mysql_store_result(srv->con))
         {
-            mxq::QueryResult res(result);
+            mxq::MariaDBQueryResult res(result);
 
             if (res.next_row())
             {
@@ -178,7 +179,7 @@ void get_slave_status(MonitorServer* srv, GaleraNode* info)
     {
         if (auto result = mysql_store_result(srv->con))
         {
-            mxq::QueryResult res(result);
+            mxq::MariaDBQueryResult res(result);
 
             if (res.next_row() && res.get_string("Slave_SQL_Running") == "Yes")
             {

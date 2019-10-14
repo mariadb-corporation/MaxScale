@@ -16,6 +16,7 @@
 
 #include <memory>
 #include <string>
+#include <mysql.h>
 #include <maxsql/queryresult.hh>
 
 namespace maxsql
@@ -85,5 +86,53 @@ private:
     unsigned int m_errornum {0};
 
     ConnectionSettings m_settings;
+};
+
+/**
+ * QueryResult implementation for the MariaDB-class.
+ */
+class MariaDBQueryResult : public QueryResult
+{
+public:
+    MariaDBQueryResult(const MariaDBQueryResult&) = delete;
+    MariaDBQueryResult& operator=(const MariaDBQueryResult&) = delete;
+
+    /**
+     * Construct a new resultset.
+     *
+     * @param resultset The results from mysql_query(). Must not be NULL.
+     */
+    MariaDBQueryResult(MYSQL_RES* resultset);
+
+    ~MariaDBQueryResult();
+
+    /**
+     * Advance to next row. Affects all result returning functions.
+     *
+     * @return True if the next row has data, false if the current row was the last one.
+     */
+
+
+    /**
+     * How many columns the result set has.
+     *
+     * @return Column count
+     */
+    int64_t get_col_count() const override;
+
+    /**
+     * How many rows does the result set have?
+     *
+     * @return The number of rows
+     */
+    int64_t get_row_count() const override;
+
+private:
+    const char*              row_elem(int64_t column_ind) const override;
+    bool                     advance_row() override;
+    std::vector<std::string> column_names(MYSQL_RES* results) const;
+
+    MYSQL_RES* m_resultset {nullptr};   /**< Underlying result set, freed at dtor */
+    MYSQL_ROW  m_rowdata {nullptr};     /**< Data for current row */
 };
 }
