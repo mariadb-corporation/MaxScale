@@ -46,13 +46,14 @@
 #include <maxscale/clock.h>
 #include <maxscale/limits.h>
 #include <maxscale/listener.hh>
+#include <maxscale/mainworker.hh>
 #include <maxscale/poll.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol2.hh>
 #include <maxscale/router.hh>
+#include <maxscale/routingworker.hh>
 #include <maxscale/service.hh>
 #include <maxscale/utils.h>
-#include <maxscale/routingworker.hh>
-#include <maxscale/protocol/mariadb/mysql.hh>
 
 #include "internal/modules.hh"
 #include "internal/server.hh"
@@ -2155,7 +2156,7 @@ uint64_t dcb_get_session_id(DCB* dcb)
 
 bool dcb_foreach(bool (* func)(DCB* dcb, void* data), void* data)
 {
-    mxb_assert(RoutingWorker::get_current() == RoutingWorker::get(RoutingWorker::MAIN));
+    mxb_assert(mxs::MainWorker::is_main_worker());
     SerialDcbTask task(func, data);
     RoutingWorker::execute_serially(task);
     return task.more();
