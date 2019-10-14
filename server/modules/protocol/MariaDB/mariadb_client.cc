@@ -350,6 +350,24 @@ void extract_user(char* token, std::string* user)
         user->assign(token);
     }
 }
+
+bool is_use_database(GWBUF* buffer, size_t packet_len)
+{
+    const char USE[] = "USE ";
+    char* ptr = (char*)GWBUF_DATA(buffer) + MYSQL_HEADER_LEN + 1;
+
+    return packet_len > MYSQL_HEADER_LEN + 1 + (sizeof(USE) - 1)
+           && strncasecmp(ptr, USE, sizeof(USE) - 1) == 0;
+}
+
+bool is_kill_query(GWBUF* buffer, size_t packet_len)
+{
+    const char KILL[] = "KILL ";
+    char* ptr = (char*)GWBUF_DATA(buffer) + MYSQL_HEADER_LEN + 1;
+
+    return packet_len > MYSQL_HEADER_LEN + 1 + (sizeof(KILL) - 1)
+           && strncasecmp(ptr, KILL, sizeof(KILL) - 1) == 0;
+}
 }
 
 int MariaDBClientConnection::ssl_authenticate_check_status(DCB* generic_dcb)
@@ -715,7 +733,7 @@ void MariaDBClientConnection::store_client_information(DCB* generic_dcb, GWBUF* 
         {
             if ((int)sizeof(ses->user) > userlen)
             {
-                strcpy(ses->user, username);
+                ses->user = username;
             }
 
             // Include the null terminator in the user length
@@ -733,7 +751,7 @@ void MariaDBClientConnection::store_client_information(DCB* generic_dcb, GWBUF* 
 
                     if (dblen != -1 && (int)sizeof(ses->db) > dblen)
                     {
-                        strcpy(ses->db, (const char*)data + dboffset);
+                        ses->db = (const char*)data + dboffset;
                     }
                 }
             }
@@ -773,7 +791,7 @@ void MariaDBClientConnection::handle_authentication_errors(DCB* generic_dcb, int
 
         fail_str = (char*)MXS_CALLOC(1, message_len + 1);
         MXS_ABORT_IF_NULL(fail_str);
-        snprintf(fail_str, message_len, "Unknown database '%s'", session->db);
+        snprintf(fail_str, message_len, "Unknown database '%s'", session->db.c_str());
 
         modutil_send_mysql_err_packet(dcb, packet_number, 0, 1049, "42000", fail_str);
         break;
@@ -797,10 +815,10 @@ void MariaDBClientConnection::handle_authentication_errors(DCB* generic_dcb, int
     case MXS_AUTH_FAILED:
         MXS_DEBUG("authentication failed. fd %d, state = MYSQL_FAILED_AUTH.", dcb->fd());
         /** Send error 1045 to client */
-        fail_str = create_auth_fail_str(session->user,
+        fail_str = create_auth_fail_str(session->user.c_str(),
                                         dcb->remote().c_str(),
                                         !session->auth_token.empty(),
-                                        session->db,
+                                        session->db.c_str(),
                                         auth_val);
         modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "28000", fail_str);
         break;
@@ -812,10 +830,10 @@ void MariaDBClientConnection::handle_authentication_errors(DCB* generic_dcb, int
     default:
         MXS_DEBUG("authentication failed. fd %d, state unrecognized.", dcb->fd());
         /** Send error 1045 to client */
-        fail_str = create_auth_fail_str(session->user,
+        fail_str = create_auth_fail_str(session->user.c_str(),
                                         dcb->remote().c_str(),
                                         !session->auth_token.empty(),
-                                        session->db,
+                                        session->db.c_str(),
                                         auth_val);
         modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "28000", fail_str);
     }
@@ -1098,8 +1116,8 @@ bool MariaDBClientConnection::reauthenticate_client(MXS_SESSION* session, GWBUF*
 
         // Copy the new username to the session data
         MYSQL_session* data = m_session_data;
-        strcpy(data->user, user.c_str());
-        strcpy(data->db, db.c_str());
+        data->user = user;
+        data->db = db;
 
         std::vector<uint8_t> payload;
         uint64_t payloadlen = gwbuf_length(packetbuf) - MYSQL_HEADER_LEN;
@@ -1442,6 +1460,16 @@ MariaDBClientConnection::handle_query_kill(DCB* dcb, GWBUF* read_buffer, uint32_
     return rval;
 }
 
+void MariaDBClientConnection::handle_use_database(GWBUF* read_buffer)
+{
+    auto databases = qc_get_database_names(read_buffer);
+
+    if (!databases.empty())
+    {
+        m_session_data->db = databases[0];
+    }
+}
+
 /**
  * Some SQL commands/queries need to be detected and handled by the protocol
  * and MaxScale instead of being routed forward as is.
@@ -1493,17 +1521,22 @@ MariaDBClientConnection::process_special_commands(DCB* dcb, GWBUF* read_buffer, 
         mxs_mysql_send_ok(dcb, 1, 0, NULL);
         rval = RES_END;
     }
+    else if (m_command == MXS_COM_INIT_DB)
+    {
+        char* start = (char*)GWBUF_DATA(read_buffer);
+        char* end = start + GWBUF_LENGTH(read_buffer);
+        start += MYSQL_HEADER_LEN + 1;
+        m_session_data->db.assign(start, end);
+    }
     else if (cmd == MXS_COM_QUERY)
     {
-        /* Limits on the length of the queries in which "KILL" is searched for. Reducing
-         * LONGEST_KILL will reduce overhead but also limit the range of accepted queries. */
-        const int SHORTEST_KILL = sizeof("KILL 1") - 1;
-        const int LONGEST_KILL = sizeof("KILL CONNECTION 12345678901234567890 ;");
         auto packet_len = gwbuf_length(read_buffer);
 
-        /* Is length within limits for a kill-type query? */
-        if (packet_len >= (MYSQL_HEADER_LEN + 1 + SHORTEST_KILL)
-            && packet_len <= (MYSQL_HEADER_LEN + 1 + LONGEST_KILL))
+        if (is_use_database(read_buffer, packet_len))
+        {
+            handle_use_database(read_buffer);
+        }
+        else if (is_kill_query(read_buffer, packet_len))
         {
             rval = handle_query_kill(dcb, read_buffer, packet_len);
         }

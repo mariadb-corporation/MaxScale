@@ -433,8 +433,8 @@ static bool validate_user(GSSAPIClientAuthenticator* auth, DCB* dcb, MYSQL_sessi
                           const char* princ)
 {
     mxb_assert(princ);
-    size_t len = sizeof(gssapi_auth_query) + strlen(session->user) * 2
-        + strlen(session->db) * 2 + dcb->remote().length() + strlen(princ) * 2;
+    size_t len = sizeof(gssapi_auth_query) + session->user.length() * 2
+        + session->db.length() * 2 + dcb->remote().length() + strlen(princ) * 2;
     char sql[len + 1];
     bool rval = false;
     char* err;
@@ -449,12 +449,12 @@ static bool validate_user(GSSAPIClientAuthenticator* auth, DCB* dcb, MYSQL_sessi
 
     sprintf(sql,
             gssapi_auth_query,
-            session->user,
+            session->user.c_str(),
             dcb->remote().c_str(),
-            session->db,
-            session->db,
+            session->db.c_str(),
+            session->db.c_str(),
             princ_user,
-            session->user,
+            session->user.c_str(),
             princ);
 
     /**
@@ -515,7 +515,8 @@ int GSSAPIClientAuthenticator::authenticate(DCB* generic_dcb)
         auto ses = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
         char* princ = NULL;
 
-        if (validate_gssapi_token(m_module.principal_name, ses->auth_token.data(), ses->auth_token.size(), &princ)
+        if (validate_gssapi_token(m_module.principal_name, ses->auth_token.data(), ses->auth_token.size(),
+                                  &princ)
             && validate_user(auth, dcb, ses, princ))
         {
             rval = MXS_AUTH_SUCCEEDED;

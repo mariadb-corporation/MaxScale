@@ -369,8 +369,8 @@ int MariaDBClientAuthenticator::validate_mysql_user(DCB* dcb, const MYSQL_sessio
                                                     const mxs::ClientAuthenticator::ByteVec& auth_token,
                                                     uint8_t* phase2_scramble_out)
 {
-    const char* user = session->user;
-    const char* database = session->db;
+    const char* user = session->user.c_str();
+    const char* database = session->db.c_str();
     const char* remote = dcb->remote().c_str();
 
     sqlite3* handle = m_module.get_handle();

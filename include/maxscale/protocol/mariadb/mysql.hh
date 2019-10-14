@@ -447,25 +447,6 @@ void mysql_num_response_packets(GWBUF* buf,
                                 size_t* nbytes);
 
 /**
- * @brief Return current database of the session
- *
- * If no active database is in use, the database is an empty string.
- *
- * @param session Session to inspect
- *
- * @return The current database
- */
-const char* mxs_mysql_get_current_db(MXS_SESSION* session);
-
-/**
- * @brief Set the currently active database for a session
- *
- * @param session Session to modify
- * @param db      The new database
- */
-void mxs_mysql_set_current_db(MXS_SESSION* session, const char* db);
-
-/**
  * @brief Get the command byte
  *
  * @param buffer Buffer containing a complete MySQL packet
@@ -547,7 +528,7 @@ bool mxs_mysql_command_will_respond(uint8_t cmd);
  */
 void mxs_mysql_calculate_hash(const uint8_t* scramble, uint8_t* passwd, uint8_t* output);
 
-int response_length(bool with_ssl, bool ssl_established, const char* user, uint8_t* passwd, char* dbname,
-                    const char* auth_module);
+int response_length(bool with_ssl, bool ssl_established, const char* user, uint8_t* passwd,
+                    const char* dbname, const char* auth_module);
 
 uint8_t* load_hashed_password(const uint8_t* scramble, uint8_t* payload, uint8_t* passwd);

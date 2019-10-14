@@ -19,6 +19,7 @@
 #include <maxscale/modutil.hh>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/query_classifier.hh>
+#include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include "storage.hh"
 
 namespace
@@ -259,15 +260,15 @@ CacheFilterSession* CacheFilterSession::Create(Cache* pCache, MXS_SESSION* pSess
 
     mxb_assert(pSession->client_connection());
 
-    const char* zDb = mxs_mysql_get_current_db(pSession);
+    auto db = static_cast<MYSQL_session*>(pSession->protocol_data())->db;
     char* zDefaultDb = NULL;
 
-    if (zDb[0] != 0)
+    if (!db.empty())
     {
-        zDefaultDb = MXS_STRDUP(zDb);
+        zDefaultDb = MXS_STRDUP(db.c_str());
     }
 
-    if ((zDb[0] == 0) || zDefaultDb)
+    if (db.empty() || zDefaultDb)
     {
         pCacheFilterSession = new(std::nothrow) CacheFilterSession(pSession, pService, pCache, zDefaultDb);
 

@@ -245,11 +245,11 @@ int MariaDBClientAuthenticator::authenticate(DCB* generic_dcb)
     int auth_ret = MXS_AUTH_SSL_COMPLETE;
     auto protocol = static_cast<MariaDBClientConnection*>(dcb->protocol());
     auto client_data = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
-    if (*client_data->user)
+    if (!client_data->user.empty())
     {
         MXS_DEBUG("Receiving connection from '%s' to database '%s'.",
-                  client_data->user,
-                  client_data->db);
+                  client_data->user.c_str(),
+                  client_data->db.c_str());
 
         if (!m_correct_authenticator)
         {
@@ -291,7 +291,7 @@ int MariaDBClientAuthenticator::authenticate(DCB* generic_dcb)
 
             if (auth_ret == MXS_AUTH_FAILED_DB)
             {
-                snprintf(extra, sizeof(extra), "Unknown database: %s", client_data->db);
+                snprintf(extra, sizeof(extra), "Unknown database: %s", client_data->db.c_str());
             }
             else if (auth_ret == MXS_AUTH_FAILED_WRONG_PASSWORD)
             {
@@ -301,7 +301,7 @@ int MariaDBClientAuthenticator::authenticate(DCB* generic_dcb)
             MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE,
                           "%s: login attempt for user '%s'@[%s]:%d, authentication failed. %s",
                           dcb->service()->name(),
-                          client_data->user,
+                          client_data->user.c_str(),
                           dcb->remote().c_str(),
                           static_cast<ClientDCB*>(dcb)->port(),
                           extra);
@@ -513,16 +513,16 @@ bool MariaDBClientAuthenticator::set_client_data(MYSQL_session* client_data, DCB
                                 // logged at once.
                                 MXS_INFO("Client '%s'@[%s] is using an unsupported authenticator "
                                          "plugin '%s'. Trying to switch to '%s'.",
-                                         client_data->user, client_dcb->remote().c_str(), plugin_name,
+                                         client_data->user.c_str(), client_dcb->remote().c_str(), plugin_name,
                                          DEFAULT_MYSQL_AUTH_PLUGIN);
                             }
                         }
                     }
                 }
-                    else
-                    {
-                        m_correct_authenticator = true;
-                    }
+                else
+                {
+                    m_correct_authenticator = true;
+                }
             }
         }
         else
@@ -792,22 +792,22 @@ bool MariaDBBackendSession::extract(DCB* backend, GWBUF* buffer)
 
     switch (state)
     {
-        case State::NEED_OK:
-            if (mxs_mysql_is_ok_packet(buffer))
-            {
-                rval = true;
-                state = State::AUTH_OK;
-            }
-            else
-            {
-                state = State::AUTH_FAILED;
-            }
-            break;
+    case State::NEED_OK:
+        if (mxs_mysql_is_ok_packet(buffer))
+        {
+            rval = true;
+            state = State::AUTH_OK;
+        }
+        else
+        {
+            state = State::AUTH_FAILED;
+        }
+        break;
 
-        default:
-            MXS_ERROR("Unexpected call to MySQLBackendAuth::extract");
-            mxb_assert(false);
-            break;
+    default:
+        MXS_ERROR("Unexpected call to MySQLBackendAuth::extract");
+        mxb_assert(false);
+        break;
     }
 
     return rval;

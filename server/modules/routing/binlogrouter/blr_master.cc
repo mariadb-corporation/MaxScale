@@ -1196,8 +1196,8 @@ static void* CreateMySQLAuthData(const char* username, const char* password, con
         return NULL;
     }
 
-    strcpy(auth_info->user, username);
-    strcpy(auth_info->db, database);
+    auth_info->user = username;
+    auth_info->db = database;
     gw_sha1_str((const uint8_t*)password, strlen(password), auth_info->client_sha1);
 
     return auth_info;

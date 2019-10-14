@@ -1184,8 +1184,8 @@ GWBUF* MariaDBBackendConnection::gw_create_change_user_packet(const MYSQL_sessio
     const char* curr_db = NULL;
     const uint8_t* curr_passwd = NULL;
 
-    const char* db = mses->db;
-    const char* user = m_client_data->user;
+    const char* db = mses->db.c_str();
+    const char* user = m_client_data->user.c_str();
     const uint8_t* pwd = mses->client_sha1;
 
     if (strlen(db) > 0)
@@ -1925,7 +1925,7 @@ GWBUF* MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool s
                                  ssl_established,
                                  username.c_str(),
                                  curr_passwd,
-                                 client->db,
+                                 client->db.c_str(),
                                  auth_plugin_name);
 
     // allocating the GWBUF
@@ -1982,8 +1982,8 @@ GWBUF* MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool s
         // if the db is not NULL append it
         if (client->db[0])
         {
-            memcpy(payload, client->db, strlen(client->db));
-            payload += strlen(client->db);
+            memcpy(payload, client->db.c_str(), client->db.length());
+            payload += client->db.length();
             payload++;
         }
 

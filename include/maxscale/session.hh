@@ -197,6 +197,17 @@ public:
         return m_host;
     }
 
+    // The current active default database (i.e. USE <database>)
+    const std::string& database() const
+    {
+        return m_database;
+    }
+
+    void set_database(const std::string& database)
+    {
+        m_database = database;
+    }
+
     virtual mxs::ClientConnection*       client_connection() = 0;
     virtual const mxs::ClientConnection* client_connection() const = 0;
     virtual void                         set_client_connection(mxs::ClientConnection* client_conn) = 0;
@@ -353,6 +364,7 @@ protected:
     uint64_t    m_id;                       /**< Unique session identifier */
     std::string m_user;                     /**< The session user. */
     std::string m_host;
+    std::string m_database;
 
     MXS_SESSION(const SListener& listener, const std::string& host);
 

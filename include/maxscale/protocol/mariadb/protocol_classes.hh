@@ -58,11 +58,11 @@ public:
     uint32_t client_capabilities() const;
     uint32_t extra_capabilitites() const;
 
-    uint8_t client_sha1[MYSQL_SCRAMBLE_LEN] {0};    /*< SHA1(password) */
-    char    user[MYSQL_USER_MAXLEN + 1] {'\0'};     /*< username       */
-    char    db[MYSQL_DATABASE_MAXLEN + 1] {'\0'};   /*< database       */
-    uint8_t next_sequence {0};                      /*< Next packet sequence */
-    bool    changing_user {false};                  /*< True if a COM_CHANGE_USER is in progress */
+    uint8_t     client_sha1[MYSQL_SCRAMBLE_LEN] {0};/*< SHA1(password) */
+    std::string user;                               /*< username       */
+    std::string db;                                 /*< database       */
+    uint8_t     next_sequence {0};                  /*< Next packet sequence */
+    bool        changing_user {false};              /*< True if a COM_CHANGE_USER is in progress */
 
     ClientInfo client_info;     /**< Client capabilities from handshake response packet */
 
@@ -113,6 +113,7 @@ private:
     bool           handle_change_user(bool* changed_user, GWBUF** packetbuf);
     bool           reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf);
     spec_com_res_t handle_query_kill(DCB* dcb, GWBUF* read_buffer, uint32_t packet_len);
+    void           handle_use_database(GWBUF* read_buffer);
     void           handle_authentication_errors(DCB* dcb, int auth_val, int packet_number);
     int            mysql_send_auth_error(DCB* dcb, int packet_number, const char* mysql_message);
     char*          create_auth_fail_str(const char* username, const char* hostaddr,

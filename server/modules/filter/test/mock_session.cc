@@ -47,7 +47,7 @@ Session::Session(Client* pClient, const SListener& listener)
     m_state = MXS_SESSION::State::CREATED;
     client_dcb = &m_client_dcb;
 
-    strcpy(m_mysql_session.db, "dummy");
+    m_mysql_session.db = "dummy";
 }
 
 Session::~Session()

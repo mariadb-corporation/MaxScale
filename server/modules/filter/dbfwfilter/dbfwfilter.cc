@@ -73,6 +73,7 @@
 #include <maxscale/modulecmd.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
+#include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include <maxscale/pcre2.h>
 #include <maxbase/alloc.h>
 #include <maxscale/utils.h>
@@ -1498,11 +1499,11 @@ fw_actions DbfwSession::get_action() const
 int DbfwSession::send_error()
 {
     mxb_assert(m_session && m_session->client_connection());
-    const char* db = mxs_mysql_get_current_db(m_session);
+    auto db = static_cast<MYSQL_session*>(m_session->protocol_data())->db;
     std::stringstream ss;
     ss << "Access denied for user '" << user() << "'@'" << remote() << "'";
 
-    if (db[0])
+    if (!db.empty())
     {
         ss << " to database '" << db << "'";
     }

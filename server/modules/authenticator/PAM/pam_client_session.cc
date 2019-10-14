@@ -161,7 +161,7 @@ std::unique_ptr<mxs::ClientAuthenticator> PamClientAuthenticator::create(PamAuth
 void PamClientAuthenticator::get_pam_user_services(const DCB* dcb, const MYSQL_session* session,
                                                    StringVector* services_out)
 {
-    const char* user = session->user;
+    const char* user = session->user.c_str();
     const std::string& host = dcb->remote();
     const string db = session->db;
     // First search for a normal matching user.
@@ -273,7 +273,7 @@ int PamClientAuthenticator::authenticate(DCB* generic_dcb)
 
     int rval = MXS_AUTH_SSL_COMPLETE;
     auto ses = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
-    if (*ses->user)
+    if (!ses->user.empty())
     {
         rval = MXS_AUTH_FAILED;
         if (m_state == State::INIT)

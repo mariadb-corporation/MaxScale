@@ -54,33 +54,22 @@ SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session,
     , m_replied_sescmd(0)
     , m_load_target(NULL)
 {
-    char db[MYSQL_DATABASE_MAXLEN + 1] = "";
     m_mysql_session = static_cast<MYSQL_session*>(session->protocol_data());
-    bool using_db = false;
-    const char* current_db = mxs_mysql_get_current_db(session);
+    auto current_db = m_mysql_session->db;
 
     /* To enable connecting directly to a sharded database we first need
      * to disable it for the client DCB's protocol so that we can connect to them */
-    if (m_mysql_session->client_capabilities() & GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB && (*current_db))
+    if (m_mysql_session->client_capabilities() & GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB && !current_db.empty())
     {
         m_mysql_session->client_info.m_client_capabilities &= ~GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB;
-        strcpy(db, current_db);
-        mxs_mysql_set_current_db(session, "");
-        using_db = true;
-        MXS_INFO("Client logging in directly to a database '%s', "
-                 "postponing until databases have been mapped.",
-                 db);
-    }
+        m_mysql_session->db.clear();
 
-    if (using_db)
-    {
-        m_state |= INIT_USE_DB;
-    }
-
-    if (db[0])
-    {
         /* Store the database the client is connecting to */
-        m_connect_db = db;
+        m_connect_db = current_db;
+        m_state |= INIT_USE_DB;
+
+        MXS_INFO("Client logging in directly to a database '%s', "
+                 "postponing until databases have been mapped.", current_db.c_str());
     }
 
     mxb::atomic::add(&m_router->m_stats.sessions, 1);

@@ -241,8 +241,8 @@ int mxs_mysql_send_ok(DCB* dcb, int sequence, uint8_t affected_rows, const char*
  *
  * @return The length of the response packet
  */
-int response_length(bool with_ssl, bool ssl_established, const char* user, uint8_t* passwd, char* dbname,
-                    const char* auth_module)
+int response_length(bool with_ssl, bool ssl_established, const char* user,
+                    uint8_t* passwd, const char* dbname, const char* auth_module)
 {
     long bytes;
 
@@ -403,17 +403,6 @@ bool mxs_mysql_more_results_after_ok(GWBUF* buffer)
     }
 
     return rval;
-}
-
-const char* mxs_mysql_get_current_db(MXS_SESSION* session)
-{
-    return static_cast<MYSQL_session*>(session->protocol_data())->db;
-}
-
-void mxs_mysql_set_current_db(MXS_SESSION* session, const char* db)
-{
-    auto data = static_cast<MYSQL_session*>(session->protocol_data());
-    snprintf(data->db, sizeof(data->db), "%s", db);
 }
 
 bool mxs_mysql_extract_ps_response(GWBUF* buffer, MXS_PS_RESPONSE* out)
