@@ -52,5 +52,5 @@ private:
     bool fetch_anon_proxy_users(SERVER* server, MYSQL* conn);
     void fill_user_arrays(QResult user_res, QResult db_res, QResult roles_mapping_res);
 
-    SQLite m_sqlite;      /**< SQLite3 database handle */
+    mxq::SQLite m_sqlite;      /**< SQLite3 database handle */
 };

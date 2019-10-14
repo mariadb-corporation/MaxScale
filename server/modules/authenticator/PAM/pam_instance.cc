@@ -25,7 +25,8 @@
 #include <maxscale/mysql_utils.hh>
 
 using std::string;
-using mxq::MariaDBQueryResult;
+using mxq::QueryResult;
+using mxq::SQLite;
 
 /**
  * Create an instance.

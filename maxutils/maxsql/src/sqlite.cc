@@ -12,11 +12,20 @@
  */
 
 #include <maxsql/sqlite.hh>
+
 #include <sqlite3.h>
 #include <maxbase/assert.h>
 #include <maxbase/format.hh>
 
 using std::string;
+
+namespace
+{
+const char no_handle[] = "SQLite-handle is not open, cannot perform query.";
+}
+
+namespace maxsql
+{
 
 std::unique_ptr<SQLite> SQLite::create(const string& filename, int flags, string* error_out)
 {
@@ -33,7 +42,7 @@ bool SQLite::open(const std::string& filename, int flags)
     const char open_fail[] = "Failed to open SQLite3 handle for file '%s': '%s'";
     const char open_oom[] = "Failed to allocate memory for SQLite3 handle for file '%s'.";
 
-    sqlite3_close_v2(m_dbhandle); // Close any existing handle.
+    sqlite3_close_v2(m_dbhandle);   // Close any existing handle.
     m_dbhandle = nullptr;
     m_errormsg.clear();
 
@@ -94,4 +103,159 @@ void SQLite::set_timeout(int ms)
 const char* SQLite::error() const
 {
     return m_errormsg.c_str();
+}
+
+SQLiteStmt::SQLiteStmt(sqlite3_stmt* stmt)
+    : m_stmt(stmt)
+{
+}
+
+SQLiteStmt::~SQLiteStmt()
+{
+    sqlite3_finalize(m_stmt);
+}
+
+bool SQLiteStmt::step()
+{
+    int ret = sqlite3_step(m_stmt);
+    m_errornum = ret;
+    return ret == SQLITE_ROW;
+}
+
+bool SQLiteStmt::reset()
+{
+    return sqlite3_reset(m_stmt) == SQLITE_OK && sqlite3_clear_bindings(m_stmt) == SQLITE_OK;
+}
+
+int SQLiteStmt::column_count() const
+{
+    return sqlite3_column_count(m_stmt);
+}
+
+void SQLiteStmt::row_cstr(const unsigned char* output[])
+{
+    int cols = column_count();
+    for (int i = 0; i < cols; i++)
+    {
+        output[i] = sqlite3_column_text(m_stmt, i);
+    }
+}
+
+std::vector<std::string> SQLiteStmt::column_names() const
+{
+    int cols = column_count();
+    std::vector<std::string> rval;
+    rval.reserve(cols);
+    for (int i = 0; i < cols; i++)
+    {
+        rval.emplace_back(sqlite3_column_name(m_stmt, i));
+    }
+    return rval;
+}
+
+std::unique_ptr<mxq::QueryResult> SQLite::query(const std::string& query)
+{
+    using mxq::QueryResult;
+    std::unique_ptr<QueryResult> rval;
+    if (m_dbhandle)
+    {
+        auto stmt = prepare(query);
+        if (stmt)
+        {
+            if (stmt->column_count() > 0)
+            {
+                rval.reset(new(std::nothrow) mxq::SQLiteQueryResult(*stmt));
+            }
+            else
+            {
+                m_errormsg = mxb::string_printf("Query '%s' did not return any data.", query.c_str());
+                m_errornum = USER_ERROR;
+            }
+        }
+    }
+    else
+    {
+        m_errormsg = no_handle;
+        m_errornum = USER_ERROR;
+    }
+
+    return rval;
+}
+
+std::unique_ptr<SQLiteStmt> SQLite::prepare(const std::string& query)
+{
+    std::unique_ptr<SQLiteStmt> rval;
+    sqlite3_stmt* new_stmt = nullptr;
+    const char* tail = nullptr;
+    const char* queryz = query.c_str();
+
+    int ret = sqlite3_prepare_v2(m_dbhandle, queryz, query.length() + 1, &new_stmt, &tail);
+    if (ret == SQLITE_OK)
+    {
+        // Compilation succeeded.
+        if (tail == nullptr)
+        {
+            rval.reset(new(std::nothrow) SQLiteStmt(new_stmt));
+            new_stmt = nullptr;
+        }
+        else
+        {
+            m_errormsg = mxb::string_printf("Query '%s' contained multiple statements. Only singular "
+                                            "statements are supported.", queryz);
+            m_errornum = USER_ERROR;
+            sqlite3_finalize(new_stmt);
+        }
+    }
+    else
+    {
+        m_errormsg = mxb::string_printf("Could not prepare query '%s': %s", queryz, sqlite3_errstr(ret));
+        m_errornum = ret;
+    }
+
+    return rval;
+}
+
+SQLiteQueryResult::SQLiteQueryResult(SQLiteStmt& stmt)
+    : QueryResult(stmt.column_names())
+{
+    m_column_names = stmt.column_names();
+    int cols = stmt.column_count();
+    mxb_assert(m_column_names.size() == (size_t)cols);
+    m_cols = cols;
+
+    while (stmt.step())
+    {
+        m_rows++;
+        const unsigned char* row_elems[cols];
+        stmt.row_cstr(row_elems);
+        for (int i = 0; i < cols; i++)
+        {
+            const char* elem = reinterpret_cast<const char*>(row_elems[i]);
+            m_data_array.emplace_back(elem ? elem : "");
+        }
+    }
+}
+
+bool SQLiteQueryResult::advance_row()
+{
+    m_current_row++;
+    return m_current_row < m_rows;
+}
+
+int64_t SQLiteQueryResult::get_col_count() const
+{
+    return m_cols;
+}
+
+int64_t SQLiteQueryResult::get_row_count() const
+{
+    return m_rows;
+}
+
+const char* SQLiteQueryResult::row_elem(int64_t column_ind) const
+{
+    int64_t coord = m_current_row * m_cols + column_ind;
+    return m_data_array[coord].c_str();
+}
+
 }

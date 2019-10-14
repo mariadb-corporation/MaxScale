@@ -53,7 +53,7 @@ private:
         DONE
     };
 
-    SQLite m_sqlite;   /**< SQLite3 database handle */
+    mxq::SQLite m_sqlite;   /**< SQLite3 database handle */
 
     State    m_state {State::INIT};   /**< Authentication state */
     uint8_t  m_sequence {0};          /**< The next packet seqence number */

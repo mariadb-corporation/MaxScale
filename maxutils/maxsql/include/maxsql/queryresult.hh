@@ -23,6 +23,8 @@ namespace maxsql
 
 /**
  * Base class for a query result object returned from either a MariaDB-connection or an SQLite-handle.
+ * Functions which produce QueryResults should generally return pointers to this class instead of the
+ * derived classes, unless the derived class has specific features.
  */
 class QueryResult
 {
@@ -164,8 +166,20 @@ private:
         std::string m_target_type;              /**< The conversion target type */
     };
 
-    virtual const char*              row_elem(int64_t column_ind) const = 0;
-    virtual bool                     advance_row() = 0;
+    /**
+     * Fetch a column from the current row. Returns const char* for efficiency with C-libraries.
+     *
+     * @param column_ind Column index
+     * @return Data element as string
+     */
+    virtual const char* row_elem(int64_t column_ind) const = 0;
+
+    /**
+     * Advance to next row.
+     *
+     * @return True if the next row is valid, false if this was the last row.
+     */
+    virtual bool advance_row() = 0;
 
     int64_t parse_integer(int64_t column_ind, const std::string& target_type) const;
     void    set_error(int64_t column_ind, const std::string& target_type) const;

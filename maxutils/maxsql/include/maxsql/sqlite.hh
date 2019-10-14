@@ -15,10 +15,15 @@
 #include <maxsql/ccdefs.hh>
 #include <memory>
 #include <string>
+#include <maxsql/queryresult.hh>
 
 struct sqlite3;
+struct sqlite3_stmt;
 
-class SQLite;
+namespace maxsql
+{
+
+class SQLiteStmt;
 
 /**
  * Convenience class for working with SQLite.
@@ -28,9 +33,11 @@ class SQLite
 public:
     SQLite() = default;
     ~SQLite();
-
     SQLite(const SQLite& rhs) = delete;
     SQLite& operator=(const SQLite& rhs) = delete;
+
+    static constexpr unsigned int INTERNAL_ERROR = 1;
+    static constexpr unsigned int USER_ERROR = 2;
 
     template<class T>
     using Callback = int (*)(T* data, int n_columns, char** rows, char** field_names);
@@ -89,10 +96,101 @@ public:
      */
     const char* error() const;
 
+    /**
+     * Run a query which may return data.
+     *
+     * @param query SQL to run
+     * @return Query results on success, null otherwise
+     */
+    std::unique_ptr<mxq::QueryResult> query(const std::string& query);
+
 private:
     using CallbackVoid = int (*)(void* data, int n_columns, char** rows, char** field_names);
     bool exec_impl(const std::string& sql, CallbackVoid cb, void* cb_data);
 
+    std::unique_ptr<SQLiteStmt> prepare(const std::string& query);
+
     sqlite3*    m_dbhandle {nullptr};
     std::string m_errormsg;
+    int         m_errornum {0};
 };
+
+/**
+ * Class which represents an sqlite prepared statement.
+ */
+class SQLiteStmt
+{
+public:
+    SQLiteStmt(sqlite3_stmt* stmt);
+    ~SQLiteStmt();
+
+    /**
+     * Execute/get next result row of the prepared statement.
+     *
+     * @return True, if the new row exists.
+     */
+    bool step();
+
+    int column_count() const;
+
+    /**
+     * Resets the prepared statement. Calling step() runs the query again and may return updated results.
+     *
+     * @return True on success. If false, the statement should be discarded.
+     */
+    bool reset();
+
+    std::vector<std::string> column_names() const;
+
+    /**
+     * Fetch a result row as utf8 string.
+     *
+     * @param output Output array where the results will be written to. The array should be large enough
+     * to fit every column.
+     */
+    void row_cstr(const unsigned char* output[]);
+
+private:
+    sqlite3_stmt* m_stmt {nullptr};
+    int           m_errornum {0};
+};
+
+/**
+ * QueryResult implementation for SQLite.
+ */
+class SQLiteQueryResult : public QueryResult
+{
+public:
+    /**
+     * Construct a new resultset.
+     *
+     * @param resultset The results from mysql_query(). Must not be NULL.
+     */
+    explicit SQLiteQueryResult(SQLiteStmt& stmt);
+
+    /**
+     * How many columns the result set has.
+     *
+     * @return Column count
+     */
+    int64_t get_col_count() const override;
+
+    /**
+     * How many rows does the result set have?
+     *
+     * @return The number of rows
+     */
+    int64_t get_row_count() const override;
+
+private:
+    const char*              row_elem(int64_t column_ind) const override;
+    bool                     advance_row() override;
+
+    std::vector<std::string> m_column_names;    /**< Column names */
+    std::vector<std::string> m_data_array;      /**< A flattened 2D-array with results */
+
+    int m_cols {0};
+    int m_rows {0};
+    int m_current_row {0};
+};
+}
