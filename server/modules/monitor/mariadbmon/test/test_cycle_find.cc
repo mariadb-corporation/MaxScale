@@ -21,6 +21,7 @@
 #include <maxbase/log.hh>
 #include <maxbase/maxbase.hh>
 #include <maxbase/alloc.h>
+#include <maxscale/mainworker.hh>
 #include "../../../../core/internal/server.hh"
 
 using std::string;
@@ -60,14 +61,14 @@ public:
     explicit Test(bool use_hostnames);
     int run_tests();
 private:
-    int             m_current_test = 0;
-    bool            m_use_hostnames = true;
+    int  m_current_test = 0;
+    bool m_use_hostnames = true;
 
     MariaDBMonitor* monitor() const;
-    void init_servers(int count);
-    void clear_servers();
-    void add_replication(EdgeArray edges);
-    int  check_result_cycles(CycleArray expected_cycles);
+    void            init_servers(int count);
+    void            clear_servers();
+    void            add_replication(EdgeArray edges);
+    int             check_result_cycles(CycleArray expected_cycles);
 
     string         create_hostname(int id);
     MariaDBServer* get_server(int id);
@@ -77,6 +78,8 @@ int main()
 {
     maxbase::init();
     maxbase::Log log;
+    mxb::WatchdogNotifier notifier(0);
+    mxs::MainWorker mw(&notifier);
 
     bool use_hostnames = true;
     MariaDBMonitor::Test tester1(use_hostnames);
