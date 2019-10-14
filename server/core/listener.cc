@@ -327,16 +327,19 @@ SListener Listener::create(const std::string& name,
 
 void Listener::close_all_fds()
 {
-    // Shared fds all have the same value. Unique fds each have a unique value. By sorting the values,
-    // removing duplicates and skipping negative values, both cases work and use the same code.
-    auto values = m_fd.values();
-    std::sort(values.begin(), values.end());
-    auto end = std::unique(values.begin(), values.end());
-    auto start = std::upper_bound(values.begin(), end, -1);
-    std::for_each(start, end, close);
-
-    // Make sure we don't accidentally use a closed fd
-    m_fd.assign(-1);
+    if (m_type == Type::UNIQUE_TCP)
+    {
+        mxs::RoutingWorker::execute_concurrently(
+            [this]() {
+                close(*m_local_fd);
+                *m_local_fd = -1;
+            });
+    }
+    else
+    {
+        close(m_shared_fd);
+        m_shared_fd = -1;
+    }
 }
 
 void Listener::destroy(const SListener& listener)
@@ -377,8 +380,9 @@ bool Listener::stop()
         if (m_type == Type::UNIQUE_TCP)
         {
             if (execute_and_check([this]() {
-                                      mxb_assert(*m_fd != -1);
-                                      return mxs::RoutingWorker::get_current()->remove_fd(*m_fd);
+                                      mxb_assert(*m_local_fd != -1);
+                                      auto worker = mxs::RoutingWorker::get_current();
+                                      return worker->remove_fd(*m_local_fd);
                                   }))
             {
                 m_state = STOPPED;
@@ -387,7 +391,7 @@ bool Listener::stop()
         }
         else
         {
-            if (mxs::RoutingWorker::remove_shared_fd(m_fd))
+            if (mxs::RoutingWorker::remove_shared_fd(m_shared_fd))
             {
                 m_state = STOPPED;
                 rval = true;
@@ -408,8 +412,9 @@ bool Listener::start()
         if (m_type == Type::UNIQUE_TCP)
         {
             if (execute_and_check([this]() {
-                                      mxb_assert(*m_fd != -1);
-                                      return mxs::RoutingWorker::get_current()->add_fd(*m_fd, EPOLLIN, this);
+                                      mxb_assert(*m_local_fd != -1);
+                                      auto worker = mxs::RoutingWorker::get_current();
+                                      return worker->add_fd(*m_local_fd, EPOLLIN, this);
                                   }))
             {
                 m_state = STARTED;
@@ -418,7 +423,7 @@ bool Listener::start()
         }
         else
         {
-            if (mxs::RoutingWorker::add_shared_fd(*m_fd, EPOLLIN, this))
+            if (mxs::RoutingWorker::add_shared_fd(m_shared_fd, EPOLLIN, this))
             {
                 m_state = STARTED;
                 rval = true;
@@ -879,7 +884,7 @@ bool Listener::listen_shared()
         if (mxs::RoutingWorker::add_shared_fd(fd, EPOLLIN, this))
         {
             // All workers share the same fd, assign it here
-            m_fd.assign(fd);
+            m_shared_fd = fd;
             rval = true;
             m_state = STARTED;
         }
@@ -907,7 +912,7 @@ bool Listener::listen_unique()
                 if (mxs::RoutingWorker::get_current()->add_fd(fd, EPOLLIN, this))
                 {
                     // Set the worker-local fd to the unique value
-                    *m_fd = fd;
+                    *m_local_fd = fd;
                     rval = true;
                 }
                 else

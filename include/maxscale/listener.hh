@@ -205,7 +205,8 @@ private:
 
     Type m_type;    /**< The type of the listener */
 
-    mxs::WorkerGlobal<int> m_fd {-1};       /**< File descriptor the listener listens on */
+    mxs::WorkerLocal<int> m_local_fd {-1};  /**< File descriptor the listener listens on */
+    int                   m_shared_fd {-1}; /**< File descriptor the listener listens on */
 
     /** A shared pointer to the listener itself that is passed as the argument to
      * the protocol's accept function. This allows client connections to live
@@ -290,7 +291,7 @@ private:
      */
     int fd() const
     {
-        return *m_fd;
+        return m_type == Type::UNIQUE_TCP ? *m_local_fd : m_shared_fd;
     }
 
     // Handler for EPOLL_IN events
