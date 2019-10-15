@@ -34,6 +34,11 @@ enum cache_in_trxs_t
 
 const cache_thread_model_t CACHE_DEFAULT_THREAD_MODEL = CACHE_THREAD_MODEL_ST;
 
+enum cache_invalidate_t
+{
+    CACHE_INVALIDATE_NEVER,
+    CACHE_INVALIDATE_CURRENT,
+};
 
 class CacheConfig : public config::Configuration
 {
@@ -60,6 +65,7 @@ public:
     config::Enum<cache_selects_t>      selects;
     config::Enum<cache_in_trxs_t>      cache_in_trxs;
     config::Bool                       enabled;
+    config::Enum<cache_invalidate_t>   invalidate;
     char*                              zStorage_options {nullptr};  /**< Raw options for storage module. */
     char**                             storage_argv {nullptr};      /**< Cooked options for storage module. */
     int                                storage_argc {0};            /**< Number of cooked options. */
@@ -89,4 +95,5 @@ private:
     static config::ParamEnum<cache_selects_t>      s_selects;
     static config::ParamEnum<cache_in_trxs_t>      s_cache_in_trxs;
     static config::ParamBool                       s_enabled;
+    static config::ParamEnum<cache_invalidate_t>   s_invalidate;
 };

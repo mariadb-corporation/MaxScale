@@ -50,9 +50,6 @@ means that also statements like `SELECT LOCALTIME` are cached. Please check
 
 All of these limitations may be addressed in forthcoming releases.
 
-### Invalidation
-Currently there is **no** cache invalidation, apart from _time-to-live_.
-
 ### Prepared Statements
 Resultsets of prepared statements are **not** cached.
 
@@ -64,6 +61,29 @@ who the caching should apply to, the presence of the cache may provide
 a user with access to data he should not have access to.
 
 Please read the section [Security](#security-1) for more detailed information.
+
+## Invalidation
+
+Since MaxScale 2.5, the cache is capable of invalidating entries in the
+cache when a modification (UPDATE, INSERT or DELETE) that may affect those
+entries is made.
+
+The cache invalidation works on the table-level, that is, a modification
+made to a particular table will cause all cache entries that refer to that
+table to be invalidated, irrespective of whether the modification actually
+has an impact on the cache entries or not. For instance, suppose the result
+of the following SELECT has been cached
+```
+SELECT * FROM t WHERE a=1;
+```
+An insert like
+```
+INSERT INTO t SET a=42;
+```
+will cause the cache entry containing the result of that SELECT to be
+invalidated even if the INSERT actually does not affect it.
+
+Please see [invalidate](#invalidate) for how to enable the invalidation.
 
 ## Configuration
 
@@ -340,6 +360,31 @@ variables using which the behaviour of the cache can be modified
 at runtime. Please see
 [Runtime Configuration](#runtime-configuation)
 for details.
+
+#### `invalidate`
+
+An enumeration option specifying how the cache should invalidate
+cache entries.
+
+    * `never`: No invalidation is performed. This is the default.
+    * `current`: When a modification is made, entries in the cache used by
+      the current session are invalidated. Other sessions that use the same
+      cache will also be affected, but sessions that use another cache will
+      not.
+
+The effect of `current` depends upon the value of `cached_data`. If the value
+is `shared`, that is, all threads share the same cache, then the effect of an
+invalidation is immediately visible to all sessions, as there is just one cache.
+However, if the value is `thread_specific`, then an invalidation will affect only
+the cache that the session happens to be using.
+
+If it is important and _sufficient_ that an application immediately sees a change
+that it itself has caused, then a combination of `invalidate=current`
+and `cached_data=thread_specific` can be used.
+
+If it is important that an application _immediately_ sees all changes, irrespective
+of who has caused them, then a combination of `invalidate=current`
+and `cached_data=shared` _must_ be used.
 
 ### Runtime Configuration
 

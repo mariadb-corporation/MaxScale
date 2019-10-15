@@ -139,6 +139,17 @@ config::ParamEnum<cache_in_trxs_t> CacheConfig::s_cache_in_trxs(
     CACHE_IN_TRXS_ALL
     );
 
+config::ParamEnum<cache_invalidate_t> CacheConfig::s_invalidate(
+    &s_specification,
+    "invalidate",
+    "An enumeration options specifying how the cache should perform cache invalidation.",
+    {
+        {CACHE_INVALIDATE_NEVER, "never"},
+        {CACHE_INVALIDATE_CURRENT, "current"},
+    },
+    CACHE_INVALIDATE_NEVER
+    );
+
 config::ParamBool CacheConfig::s_enabled(
     &s_specification,
     "enabled",
@@ -162,6 +173,7 @@ CacheConfig::CacheConfig(const std::string& name)
     , selects(this, &s_selects)
     , cache_in_trxs(this, &s_cache_in_trxs)
     , enabled(this, &s_enabled)
+    , invalidate(this, &s_invalidate)
 {
 }
 

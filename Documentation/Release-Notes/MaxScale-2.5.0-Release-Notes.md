@@ -23,6 +23,13 @@ The following deprecated parameters have been removed.
 
 ## New Features
 
+### Cache Invalidation
+
+The MaxScale cache is now capable of performing invalidation of cache
+entries. See the
+[documentation](Filters/Cache.md#invalidation)
+for more information.
+
 ## Bug fixes
 
 ## Known Issues and Limitations
