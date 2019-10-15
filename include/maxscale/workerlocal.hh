@@ -135,7 +135,8 @@ class WorkerGlobal : public WorkerLocal<T>
 {
 public:
     using WorkerLocal<T>::WorkerLocal;
-    using Base = WorkerLocal<T>;
+    // CentOS 7 fails to build if an alias is used to access base class methods instead of the this pointer
+    // using Base = WorkerLocal<T>;
 
     /**
      * Assign a value
@@ -154,8 +155,8 @@ public:
                            "this method must be called from the main worker thread");
 
         // Update the value of the master copy
-        std::unique_lock<std::mutex> guard(Base::m_lock);
-        Base::m_value = t;
+        std::unique_lock<std::mutex> guard(this->m_lock);
+        this->m_value = t;
         guard.unlock();
 
         update_local_value();
@@ -184,7 +185,7 @@ public:
         mxs::RoutingWorker::execute_concurrently(
             [&]() {
                 std::lock_guard<std::mutex> guard(lock);
-                rval.push_back(*Base::get_local_value());
+                rval.push_back(*this->get_local_value());
             });
 
         return rval;
@@ -196,10 +197,10 @@ private:
     {
         // As get_local_value can cause a lock to be taken, we need the pointer to our value before
         // we lock the master value for the updating of our value.
-        T* my_value = Base::get_local_value();
+        T* my_value = this->get_local_value();
 
-        std::lock_guard<std::mutex> guard(Base::m_lock);
-        *my_value = Base::m_value;
+        std::lock_guard<std::mutex> guard(this->m_lock);
+        *my_value = this->m_value;
     }
 };
 }
