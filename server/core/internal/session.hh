@@ -144,7 +144,7 @@ public:
      *
      * @param conn The backend connection to link
      */
-    void link_backend_conn(mxs::BackendConnection* conn);
+    void link_backend_connection(mxs::BackendConnection* conn);
 
     /**
      * Unlink a session from a backend connection.

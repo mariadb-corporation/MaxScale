@@ -132,19 +132,25 @@ bool session_start(MXS_SESSION* ses)
     return session->start();
 }
 
-void Session::link_backend_conn(mxs::BackendConnection* conn)
+void Session::link_backend_connection(mxs::BackendConnection* conn)
 {
     auto dcb = conn->dcb();
     mxb_assert(dcb->owner == m_client_conn->dcb()->owner);
     mxb_assert(dcb->role() == DCB::Role::BACKEND);
 
     mxb::atomic::add(&refcount, 1);
+    mxb::atomic::add(&dcb->server()->stats().n_connections, 1, mxb::atomic::RELAXED);
+    MXB_AT_DEBUG(int rc = ) mxb::atomic::add(&dcb->server()->stats().n_current, 1, mxb::atomic::RELAXED);
+    mxb_assert(rc >= 0);
     dcb->reset(this);
     add_backend_conn(conn);
 }
 
 void Session::unlink_backend_connection(mxs::BackendConnection* conn)
 {
+    MXB_AT_DEBUG(int rc = ) mxb::atomic::add(&conn->dcb()->server()->stats().n_current,
+                                             -1, mxb::atomic::RELAXED);
+    mxb_assert(rc > 0);
     remove_backend_conn(conn);
     session_put_ref(this);
 }
@@ -1529,15 +1535,13 @@ Session::create_backend_connection(Server* server, BackendDCB::Manager* manager,
         {
             conn->set_dcb(dcb);
             auto pConn = conn.get();
-            link_backend_conn(pConn);
+            link_backend_connection(pConn);
             dcb->set_connection(std::move(conn));
 
             if (pConn->init_connection() && dcb->enable_events())
             {
                 // The DCB is now connected and added to epoll set. Authentication is done after the EPOLLOUT
                 // event that is triggered once the connection is established.
-                mxb::atomic::add(&server->stats().n_connections, 1, mxb::atomic::RELAXED);
-                mxb::atomic::add(&server->stats().n_current, 1, mxb::atomic::RELAXED);
             }
             else
             {

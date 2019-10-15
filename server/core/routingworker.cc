@@ -61,11 +61,11 @@ struct this_unit
     int             nWorkers;           // How many routing workers there are.
     RoutingWorker** ppWorkers;          // Array of routing worker instances.
     int             next_worker_id;     // Next worker id
-    int  epoll_listener_fd; // Shared epoll descriptor for listening descriptors.
-    int  id_main_worker;    // The id of the worker running in the main thread.
-    int  id_min_worker;     // The smallest routing worker id.
-    int  id_max_worker;     // The largest routing worker id.
-    bool running;           // True if worker threads are running
+    int             epoll_listener_fd;  // Shared epoll descriptor for listening descriptors.
+    int             id_main_worker;     // The id of the worker running in the main thread.
+    int             id_min_worker;      // The smallest routing worker id.
+    int             id_max_worker;      // The largest routing worker id.
+    bool            running;            // True if worker threads are running
 } this_unit =
 {
     false,              // initialized
@@ -592,12 +592,11 @@ BackendDCB* RoutingWorker::get_backend_dcb_from_pool(SERVER* pS,
         // Put back the origininal handler.
         pDcb->set_handler(pDcb->protocol());
         auto ses = static_cast<Session*>(pSession);
-        ses->link_backend_conn(pDcb->protocol());
+        ses->link_backend_connection(pDcb->protocol());
 
         if (pDcb->protocol()->reuse_connection(pDcb, pUpstream))
         {
             mxb::atomic::add(&pServer->pool_stats.n_from_pool, 1, mxb::atomic::RELAXED);
-            mxb::atomic::add(&pServer->stats().n_current, 1, mxb::atomic::RELAXED);
         }
         else
         {
@@ -662,9 +661,6 @@ bool RoutingWorker::can_be_destroyed(BackendDCB* pDcb)
                 auto it = m_dcbs.find(pDcb);
                 mxb_assert(it != m_dcbs.end());
                 m_dcbs.erase(it);
-
-                MXB_AT_DEBUG(int rc =)mxb::atomic::add(&pServer->stats().n_current, -1, mxb::atomic::RELAXED);
-                mxb_assert(rc > 0);
 
                 rv = false;
             }
@@ -1336,7 +1332,6 @@ void maxscale::RoutingWorker::register_epoll_tick_func(std::function<void ()> fu
 {
     m_epoll_tick_funcs.push_back(func);
 }
-
 }
 
 size_t mxs_rworker_broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2)
