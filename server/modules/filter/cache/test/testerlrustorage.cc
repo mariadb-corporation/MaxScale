@@ -70,8 +70,9 @@ int TesterLRUStorage::test_lru(const CacheItems& cache_items, uint64_t size)
         for (size_t i = 0; i < items; ++i)
         {
             const CacheItems::value_type& cache_item = cache_items[i];
+            std::vector<std::string> invalidation_words;
 
-            result = pStorage->put_value(cache_item.first, cache_item.second);
+            result = pStorage->put_value(cache_item.first, invalidation_words, cache_item.second);
 
             if (result == CACHE_RESULT_OK)
             {

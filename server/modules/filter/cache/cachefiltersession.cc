@@ -624,7 +624,8 @@ void CacheFilterSession::store_result()
     {
         m_res = pData;
 
-        cache_result_t result = m_pCache->put_value(m_key, m_res);
+        std::vector<std::string> invalidation_words;
+        cache_result_t result = m_pCache->put_value(m_key, invalidation_words, m_res);
 
         if (!CACHE_RESULT_IS_OK(result))
         {

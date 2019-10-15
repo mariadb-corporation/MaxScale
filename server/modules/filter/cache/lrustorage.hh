@@ -49,12 +49,23 @@ protected:
      * @see Storage::put_value
      */
     cache_result_t do_put_value(const CACHE_KEY& key,
+                                const std::vector<std::string>& invalidation_words,
                                 const GWBUF* pValue);
 
     /**
      * @see Storage::del_value
      */
     cache_result_t do_del_value(const CACHE_KEY& key);
+
+    /**
+     * @see Storage::invalidate
+     */
+    cache_result_t do_invalidate(const std::vector<std::string>& words);
+
+    /**
+     * @see Storage::invalidate_all
+     */
+    cache_result_t do_invalidate_all();
 
     /**
      * @see Storage::get_head

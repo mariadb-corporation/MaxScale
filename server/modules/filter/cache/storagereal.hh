@@ -32,9 +32,14 @@ public:
                              GWBUF** ppValue) const;
 
     cache_result_t put_value(const CACHE_KEY& key,
+                             const std::vector<std::string>& invalidation_words,
                              const GWBUF* pValue);
 
     cache_result_t del_value(const CACHE_KEY& key);
+
+    cache_result_t invalidate(const std::vector<std::string>& words);
+
+    cache_result_t invalidate_all();
 
     cache_result_t get_head(CACHE_KEY* pKey,
                             GWBUF** ppValue) const;

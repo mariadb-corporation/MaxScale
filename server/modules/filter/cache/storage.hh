@@ -80,14 +80,18 @@ public:
     /**
      * Put a value to the cache.
      *
-     * @param key     A key generated with get_key.
-     * @param pValue  Pointer to GWBUF containing the value to be stored.
-     *                Must be one contiguous buffer.
+     * @param key                 A key generated with get_key.
+     * @param invalidation_words  Words that may be used for invalidating the entry.
+     * @param pValue              Pointer to GWBUF containing the value to be stored.
+     *                            Must be one contiguous buffer.
      * @return CACHE_RESULT_OK if item was successfully put,
      *         CACHE_RESULT_OUT_OF_RESOURCES if item could not be put, due to
      *         some resource having become exhausted, or some other error code.
      */
-    virtual cache_result_t put_value(const CACHE_KEY& key, const GWBUF* pValue) = 0;
+    virtual cache_result_t put_value(const CACHE_KEY& key,
+                                     const std::vector<std::string>& invalidation_words,
+
+                                     const GWBUF* pValue) = 0;
 
     /**
      * Delete a value from the cache.
@@ -99,6 +103,22 @@ public:
      *         CACHE_RESULT_OK may be returned also if the entry was not present.
      */
     virtual cache_result_t del_value(const CACHE_KEY& key) = 0;
+
+    /**
+     * Invalidate entries
+     *
+     * @param words  Words that decide what entries are invalidated.
+     *
+     * @return CACHE_RESULT_OK if the invalidation succeeded.
+     */
+    virtual cache_result_t invalidate(const std::vector<std::string>& words) = 0;
+
+    /**
+     * Unconditionally invalidate entries
+     *
+     * @return CACHE_RESULT_OK if the invalidation succeeded.
+     */
+    virtual cache_result_t invalidate_all() = 0;
 
     /**
      * Get the head item from the storage. This is only intended for testing and

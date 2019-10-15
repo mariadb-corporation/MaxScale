@@ -247,6 +247,7 @@ struct CACHE_STORAGE_API
      */
     cache_result_t (* putValue)(CACHE_STORAGE* storage,
                                 const CACHE_KEY* key,
+                                const std::vector<std::string>& invalidation_words,
                                 const GWBUF* value);
 
     /**
@@ -260,6 +261,26 @@ struct CACHE_STORAGE_API
      */
     cache_result_t (* delValue)(CACHE_STORAGE* storage,
                                 const CACHE_KEY* key);
+
+    /**
+     * Invalidate entries
+     *
+     * @param storage  Pointer to a CACHE_STORAGE.
+     * @param words    Words that decide what entries are invalidated.
+     *
+     * @return CACHE_RESULT_OK if the invalidation succeeded.
+     */
+    cache_result_t (* invalidate)(CACHE_STORAGE* storage,
+                                  const std::vector<std::string>& words);
+
+    /**
+     * Unconditionally invalidate all entries
+     *
+     * @param storage  Pointer to a CACHE_STORAGE.
+     *
+     * @return CACHE_RESULT_OK if the invalidation succeeded.
+     */
+    cache_result_t (* invalidate_all)(CACHE_STORAGE* storage);
 
     /**
      * Get the head item from the storage. This is only intended for testing and

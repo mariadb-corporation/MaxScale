@@ -52,11 +52,13 @@ cache_result_t LRUStorageMT::get_value(const CACHE_KEY& key,
     return do_get_value(key, flags, soft_ttl, hard_ttl, ppValue);
 }
 
-cache_result_t LRUStorageMT::put_value(const CACHE_KEY& key, const GWBUF* pValue)
+cache_result_t LRUStorageMT::put_value(const CACHE_KEY& key,
+                                       const std::vector<std::string>& invalidation_words,
+                                       const GWBUF* pValue)
 {
     std::lock_guard<std::mutex> guard(m_lock);
 
-    return do_put_value(key, pValue);
+    return do_put_value(key, invalidation_words, pValue);
 }
 
 cache_result_t LRUStorageMT::del_value(const CACHE_KEY& key)
@@ -64,6 +66,16 @@ cache_result_t LRUStorageMT::del_value(const CACHE_KEY& key)
     std::lock_guard<std::mutex> guard(m_lock);
 
     return do_del_value(key);
+}
+
+cache_result_t LRUStorageMT::invalidate(const std::vector<std::string>& words)
+{
+    return LRUStorage::do_invalidate(words);
+}
+
+cache_result_t LRUStorageMT::invalidate_all()
+{
+    return LRUStorage::do_invalidate_all();
 }
 
 cache_result_t LRUStorageMT::get_head(CACHE_KEY* pKey, GWBUF** ppHead) const

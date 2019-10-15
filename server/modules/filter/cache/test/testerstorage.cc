@@ -76,7 +76,10 @@ int TesterStorage::HitTask::run()
         {
         case STORAGE_PUT:
             {
-                cache_result_t result = m_storage.put_value(cache_item.first, cache_item.second);
+                std::vector<std::string> invalidation_words;
+                cache_result_t result = m_storage.put_value(cache_item.first,
+                                                            invalidation_words,
+                                                            cache_item.second);
                 if (CACHE_RESULT_IS_OK(result))
                 {
                     ++m_puts;
@@ -350,7 +353,8 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
 
         const CacheItems::value_type& cache_item = cache_items[0];
 
-        cache_result_t result = storage.put_value(cache_item.first, cache_item.second);
+        std::vector<std::string> invalidation_words;
+        cache_result_t result = storage.put_value(cache_item.first, invalidation_words, cache_item.second);
 
         if (!CACHE_RESULT_IS_OK(result))
         {

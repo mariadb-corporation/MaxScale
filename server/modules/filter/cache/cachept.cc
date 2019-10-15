@@ -136,14 +136,26 @@ cache_result_t CachePT::get_value(const CACHE_KEY& key,
     return thread_cache().get_value(key, flags, soft_ttl, hard_ttl, ppValue);
 }
 
-cache_result_t CachePT::put_value(const CACHE_KEY& key, const GWBUF* pValue)
+cache_result_t CachePT::put_value(const CACHE_KEY& key,
+                                  const std::vector<std::string>& invalidation_words,
+                                  const GWBUF* pValue)
 {
-    return thread_cache().put_value(key, pValue);
+    return thread_cache().put_value(key, invalidation_words, pValue);
 }
 
 cache_result_t CachePT::del_value(const CACHE_KEY& key)
 {
     return thread_cache().del_value(key);
+}
+
+cache_result_t CachePT::invalidate(const std::vector<std::string>& words)
+{
+    return thread_cache().invalidate(words);
+}
+
+cache_result_t CachePT::invalidate_all()
+{
+    return thread_cache().invalidate_all();
 }
 
 // static

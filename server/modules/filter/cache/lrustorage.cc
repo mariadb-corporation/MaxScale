@@ -81,8 +81,11 @@ cache_result_t LRUStorage::do_get_value(const CACHE_KEY& key,
     return access_value(APPROACH_GET, key, flags, soft_ttl, hard_ttl, ppValue);
 }
 
-cache_result_t LRUStorage::do_put_value(const CACHE_KEY& key, const GWBUF* pvalue)
+cache_result_t LRUStorage::do_put_value(const CACHE_KEY& key,
+                                        const std::vector<std::string>& invalidation_words,
+                                        const GWBUF* pvalue)
 {
+    mxb_assert(invalidation_words.size() == 0);
     cache_result_t result = CACHE_RESULT_ERROR;
 
     size_t value_size = GWBUF_LENGTH(pvalue);
@@ -105,7 +108,7 @@ cache_result_t LRUStorage::do_put_value(const CACHE_KEY& key, const GWBUF* pvalu
     {
         mxb_assert(pNode);
 
-        result = m_pStorage->put_value(key, pvalue);
+        result = m_pStorage->put_value(key, invalidation_words, pvalue);
 
         if (CACHE_RESULT_IS_OK(result))
         {
@@ -162,6 +165,17 @@ cache_result_t LRUStorage::do_del_value(const CACHE_KEY& key)
     }
 
     return result;
+}
+
+cache_result_t LRUStorage::do_invalidate(const std::vector<std::string>& words)
+{
+    return m_pStorage->invalidate(words);
+}
+
+cache_result_t LRUStorage::do_invalidate_all()
+{
+    mxb_assert(!true);
+    return CACHE_RESULT_OK;
 }
 
 cache_result_t LRUStorage::do_get_head(CACHE_KEY* pKey, GWBUF** ppValue) const

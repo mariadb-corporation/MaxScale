@@ -48,14 +48,26 @@ cache_result_t LRUStorageST::get_value(const CACHE_KEY& key,
     return LRUStorage::do_get_value(key, flags, soft_ttl, hard_ttl, ppValue);
 }
 
-cache_result_t LRUStorageST::put_value(const CACHE_KEY& key, const GWBUF* pValue)
+cache_result_t LRUStorageST::put_value(const CACHE_KEY& key,
+                                       const std::vector<std::string>& invalidation_words,
+                                       const GWBUF* pValue)
 {
-    return LRUStorage::do_put_value(key, pValue);
+    return LRUStorage::do_put_value(key, invalidation_words, pValue);
 }
 
 cache_result_t LRUStorageST::del_value(const CACHE_KEY& key)
 {
     return LRUStorage::do_del_value(key);
+}
+
+cache_result_t LRUStorageST::invalidate(const std::vector<std::string>& words)
+{
+    return LRUStorage::do_invalidate(words);
+}
+
+cache_result_t LRUStorageST::invalidate_all()
+{
+    return LRUStorage::do_invalidate_all();
 }
 
 cache_result_t LRUStorageST::get_head(CACHE_KEY* pKey, GWBUF** ppValue) const

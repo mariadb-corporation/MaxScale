@@ -47,14 +47,26 @@ cache_result_t StorageReal::get_value(const CACHE_KEY& key,
     return m_pApi->getValue(m_pStorage, &key, flags, soft_ttl, hard_ttl, ppValue);
 }
 
-cache_result_t StorageReal::put_value(const CACHE_KEY& key, const GWBUF* pValue)
+cache_result_t StorageReal::put_value(const CACHE_KEY& key,
+                                      const std::vector<std::string>& invalidation_words,
+                                      const GWBUF* pValue)
 {
-    return m_pApi->putValue(m_pStorage, &key, pValue);
+    return m_pApi->putValue(m_pStorage, &key, invalidation_words, pValue);
 }
 
 cache_result_t StorageReal::del_value(const CACHE_KEY& key)
 {
     return m_pApi->delValue(m_pStorage, &key);
+}
+
+cache_result_t StorageReal::invalidate(const std::vector<std::string>& words)
+{
+    return m_pApi->invalidate(m_pStorage, words);
+}
+
+cache_result_t StorageReal::invalidate_all()
+{
+    return m_pApi->invalidate_all(m_pStorage);
 }
 
 cache_result_t StorageReal::get_head(CACHE_KEY* pKey, GWBUF** ppHead) const

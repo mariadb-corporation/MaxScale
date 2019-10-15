@@ -48,12 +48,29 @@ cache_result_t InMemoryStorageST::get_value(const CACHE_KEY& key,
     return do_get_value(key, flags, soft_ttl, hard_ttl, ppResult);
 }
 
-cache_result_t InMemoryStorageST::put_value(const CACHE_KEY& key, const GWBUF& value)
+cache_result_t InMemoryStorageST::put_value(const CACHE_KEY& key,
+                                            const std::vector<std::string>& invalidation_words,
+                                            const GWBUF& value)
 {
+    mxb_assert(invalidation_words.empty());
     return do_put_value(key, value);
 }
 
 cache_result_t InMemoryStorageST::del_value(const CACHE_KEY& key)
 {
     return do_del_value(key);
+}
+
+cache_result_t InMemoryStorageST::invalidate(const std::vector<std::string>& words)
+{
+    mxb_assert(!true);
+
+    return CACHE_RESULT_OK;
+}
+
+cache_result_t InMemoryStorageST::invalidate_all()
+{
+    mxb_assert(!true);
+
+    return CACHE_RESULT_OK;
 }

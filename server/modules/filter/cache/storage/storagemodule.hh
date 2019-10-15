@@ -91,6 +91,7 @@ public:
 
     static cache_result_t putValue(CACHE_STORAGE* pCache_storage,
                                    const CACHE_KEY* pKey,
+                                   const std::vector<std::string>& invalidation_words,
                                    const GWBUF* pValue)
     {
         mxb_assert(pCache_storage);
@@ -101,7 +102,7 @@ public:
 
         StorageType* pStorage = reinterpret_cast<StorageType*>(pCache_storage);
 
-        MXS_EXCEPTION_GUARD(result = pStorage->put_value(*pKey, *pValue));
+        MXS_EXCEPTION_GUARD(result = pStorage->put_value(*pKey, invalidation_words, *pValue));
 
         return result;
     }
@@ -116,6 +117,33 @@ public:
         StorageType* pStorage = reinterpret_cast<StorageType*>(pCache_storage);
 
         MXS_EXCEPTION_GUARD(result = pStorage->del_value(*pKey));
+
+        return result;
+    }
+
+    static cache_result_t invalidate(CACHE_STORAGE* pCache_storage,
+                                     const std::vector<std::string>& words)
+    {
+        mxb_assert(pCache_storage);
+
+        cache_result_t result = CACHE_RESULT_ERROR;
+
+        StorageType* pStorage = reinterpret_cast<StorageType*>(pCache_storage);
+
+        MXS_EXCEPTION_GUARD(result = pStorage->invalidate(words));
+
+        return result;
+    }
+
+    static cache_result_t invalidate_all(CACHE_STORAGE* pCache_storage)
+    {
+        mxb_assert(pCache_storage);
+
+        cache_result_t result = CACHE_RESULT_ERROR;
+
+        StorageType* pStorage = reinterpret_cast<StorageType*>(pCache_storage);
+
+        MXS_EXCEPTION_GUARD(result = pStorage->invalidate_all());
 
         return result;
     }
@@ -190,6 +218,8 @@ CACHE_STORAGE_API StorageModule<StorageType>::s_api =
     &StorageModule<StorageType>::getValue,
     &StorageModule<StorageType>::putValue,
     &StorageModule<StorageType>::delValue,
+    &StorageModule<StorageType>::invalidate,
+    &StorageModule<StorageType>::invalidate_all,
     &StorageModule<StorageType>::getHead,
     &StorageModule<StorageType>::getTail,
     &StorageModule<StorageType>::getSize,

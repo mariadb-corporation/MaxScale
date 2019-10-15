@@ -38,8 +38,12 @@ public:
                                      uint32_t soft_ttl,
                                      uint32_t hard_ttl,
                                      GWBUF** ppResult) = 0;
-    virtual cache_result_t put_value(const CACHE_KEY& key, const GWBUF& value) = 0;
+    virtual cache_result_t put_value(const CACHE_KEY& key,
+                                     const std::vector<std::string>& invalidation_words,
+                                     const GWBUF& value) = 0;
     virtual cache_result_t del_value(const CACHE_KEY& key) = 0;
+    virtual cache_result_t invalidate(const std::vector<std::string>& words) = 0;
+    virtual cache_result_t invalidate_all() = 0;
 
     cache_result_t get_head(CACHE_KEY* pKey, GWBUF** ppHead) const;
     cache_result_t get_tail(CACHE_KEY* pKey, GWBUF** ppHead) const;

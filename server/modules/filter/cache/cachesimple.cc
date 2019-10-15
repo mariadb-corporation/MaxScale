@@ -62,14 +62,25 @@ cache_result_t CacheSimple::get_value(const CACHE_KEY& key,
 }
 
 cache_result_t CacheSimple::put_value(const CACHE_KEY& key,
+                                      const std::vector<std::string>& invalidation_words,
                                       const GWBUF* pValue)
 {
-    return m_pStorage->put_value(key, pValue);
+    return m_pStorage->put_value(key, invalidation_words, pValue);
 }
 
 cache_result_t CacheSimple::del_value(const CACHE_KEY& key)
 {
     return m_pStorage->del_value(key);
+}
+
+cache_result_t CacheSimple::invalidate(const std::vector<std::string>& words)
+{
+    return m_pStorage->invalidate(words);
+}
+
+cache_result_t CacheSimple::invalidate_all()
+{
+    return m_pStorage->invalidate_all();
 }
 
 // protected:

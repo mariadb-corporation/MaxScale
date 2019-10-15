@@ -36,8 +36,12 @@ public:
                              uint32_t soft_ttl,
                              uint32_t hard_ttl,
                              GWBUF** ppResult);
-    cache_result_t put_value(const CACHE_KEY& key, const GWBUF& value);
+    cache_result_t put_value(const CACHE_KEY& key,
+                             const std::vector<std::string>& invalidation_words,
+                             const GWBUF& value);
     cache_result_t del_value(const CACHE_KEY& key);
+    cache_result_t invalidate(const std::vector<std::string>& words);
+    cache_result_t invalidate_all();
 
 private:
     InMemoryStorageMT(const std::string& name, const CACHE_STORAGE_CONFIG& config);
