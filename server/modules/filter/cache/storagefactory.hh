@@ -22,10 +22,10 @@ class StorageFactory
 public:
     ~StorageFactory();
 
-    static StorageFactory* Open(const char* zName);
-    static StorageFactory* Open(const std::string& name)
+    static StorageFactory* open(const char* zName);
+    static StorageFactory* open(const std::string& name)
     {
-        return Open(name.c_str());
+        return open(name.c_str());
     }
 
     /**
@@ -66,10 +66,10 @@ public:
      *
      * @return A storage instance or NULL in case of errors.
      */
-    Storage* createStorage(const char* zName,
-                           const CACHE_STORAGE_CONFIG& config,
-                           int argc = 0,
-                           char* argv[] = NULL);
+    Storage* create_storage(const char* zName,
+                            const CACHE_STORAGE_CONFIG& config,
+                            int argc = 0,
+                            char* argv[] = NULL);
 
     /**
      * Create raw storage instance.
@@ -86,10 +86,10 @@ public:
      *
      * @return A storage instance or NULL in case of errors.
      */
-    Storage* createRawStorage(const char* zName,
-                              const CACHE_STORAGE_CONFIG& config,
-                              int argc = 0,
-                              char* argv[] = NULL);
+    Storage* create_raw_storage(const char* zName,
+                                const CACHE_STORAGE_CONFIG& config,
+                                int argc = 0,
+                                char* argv[] = NULL);
 
 private:
     StorageFactory(void* handle, CACHE_STORAGE_API* pApi, uint32_t capabilities);

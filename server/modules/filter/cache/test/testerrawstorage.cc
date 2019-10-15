@@ -41,5 +41,5 @@ int TesterRawStorage::execute(size_t n_threads, size_t n_seconds, const CacheIte
 
 Storage* TesterRawStorage::get_storage(const CACHE_STORAGE_CONFIG& config) const
 {
-    return m_factory.createRawStorage("unspecified", config);
+    return m_factory.create_raw_storage("unspecified", config);
 }

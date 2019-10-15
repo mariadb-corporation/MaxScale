@@ -136,7 +136,7 @@ int main(int argc, char* argv[])
                 libdir = MXS_STRDUP("../storage/storage_inmemory/");
                 set_libdir(libdir);
 
-                pFactory = StorageFactory::Open(zModule);
+                pFactory = StorageFactory::open(zModule);
 
                 if (pFactory)
                 {

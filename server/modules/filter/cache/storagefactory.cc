@@ -125,7 +125,7 @@ StorageFactory::~StorageFactory()
 }
 
 // static
-StorageFactory* StorageFactory::Open(const char* zName)
+StorageFactory* StorageFactory::open(const char* zName)
 {
     StorageFactory* pFactory = 0;
 
@@ -146,10 +146,10 @@ StorageFactory* StorageFactory::Open(const char* zName)
     return pFactory;
 }
 
-Storage* StorageFactory::createStorage(const char* zName,
-                                       const CACHE_STORAGE_CONFIG& config,
-                                       int argc,
-                                       char* argv[])
+Storage* StorageFactory::create_storage(const char* zName,
+                                        const CACHE_STORAGE_CONFIG& config,
+                                        int argc,
+                                        char* argv[])
 {
     mxb_assert(m_handle);
     mxb_assert(m_pApi);
@@ -168,7 +168,7 @@ Storage* StorageFactory::createStorage(const char* zName,
         used_config.max_size = 0;
     }
 
-    Storage* pStorage = createRawStorage(zName, used_config, argc, argv);
+    Storage* pStorage = create_raw_storage(zName, used_config, argc, argv);
 
     if (pStorage)
     {
@@ -206,10 +206,10 @@ Storage* StorageFactory::createStorage(const char* zName,
 }
 
 
-Storage* StorageFactory::createRawStorage(const char* zName,
-                                          const CACHE_STORAGE_CONFIG& config,
-                                          int argc,
-                                          char* argv[])
+Storage* StorageFactory::create_raw_storage(const char* zName,
+                                            const CACHE_STORAGE_CONFIG& config,
+                                            int argc,
+                                            char* argv[])
 {
     mxb_assert(m_handle);
     mxb_assert(m_pApi);

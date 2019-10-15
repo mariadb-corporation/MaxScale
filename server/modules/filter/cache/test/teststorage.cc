@@ -102,7 +102,7 @@ int TestStorage::run(int argc, char** argv)
 
                 set_libdir(MXS_STRDUP_A(libdir));
 
-                StorageFactory* pFactory = StorageFactory::Open(zModule);
+                StorageFactory* pFactory = StorageFactory::open(zModule);
 
                 if (pFactory)
                 {

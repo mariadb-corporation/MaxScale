@@ -47,7 +47,7 @@ int TesterLRUStorage::execute(size_t n_threads, size_t n_seconds, const CacheIte
 
 Storage* TesterLRUStorage::get_storage(const CACHE_STORAGE_CONFIG& config) const
 {
-    return m_factory.createStorage("unspecified", config);
+    return m_factory.create_storage("unspecified", config);
 }
 
 int TesterLRUStorage::test_lru(const CacheItems& cache_items, uint64_t size)

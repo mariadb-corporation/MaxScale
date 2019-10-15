@@ -69,7 +69,7 @@ bool Cache::Create(const CacheConfig& config,
 
     if (rv)
     {
-        pFactory = StorageFactory::Open(config.storage.get());
+        pFactory = StorageFactory::open(config.storage.get());
 
         if (pFactory)
         {

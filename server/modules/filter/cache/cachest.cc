@@ -95,7 +95,7 @@ CacheST* CacheST::Create(const std::string& name,
     int argc = pConfig->storage_argc;
     char** argv = pConfig->storage_argv;
 
-    Storage* pStorage = sFactory->createStorage(name.c_str(), storage_config, argc, argv);
+    Storage* pStorage = sFactory->create_storage(name.c_str(), storage_config, argc, argv);
 
     if (pStorage)
     {
