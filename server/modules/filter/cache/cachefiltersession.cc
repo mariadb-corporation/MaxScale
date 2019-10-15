@@ -144,9 +144,16 @@ bool uses_non_cacheable_variable(GWBUF* pPacket)
 namespace
 {
 
-bool is_select_statement(GWBUF* pStmt)
+enum class StatementType
 {
-    bool is_select = false;
+    SELECT,
+    DUPSERT, // DELETE, UPDATE, INSERT
+    UNKNOWN
+};
+
+StatementType get_statement_type(GWBUF* pStmt)
+{
+    StatementType type = StatementType::UNKNOWN;
 
     char* pSql;
     int len;
@@ -158,26 +165,76 @@ bool is_select_statement(GWBUF* pStmt)
 
     pSql = modutil_MySQL_bypass_whitespace(pSql, len);
 
-    const char SELECT[] = "SELECT";
+    static const char DELETE[] = "DELETE";
+    static const char INSERT[] = "INSERT";
+    static const char SELECT[] = "SELECT";
+    static const char UPDATE[] = "UPDATE";
 
-    const char* pSelect = SELECT;
-    const char* pSelect_end = pSelect + sizeof(SELECT) - 1;
+    const char* pKey = nullptr;
+    const char* pKey_end = nullptr;
 
-    while ((pSql < pSql_end) && (pSelect < pSelect_end) && (toupper(*pSql) == *pSelect))
+    if (pSql_end > pSql)
     {
-        ++pSql;
-        ++pSelect;
-    }
-
-    if (pSelect == pSelect_end)
-    {
-        if ((pSql == pSql_end) || !isalpha(*pSql))
+        switch (*pSql)
         {
-            is_select = true;
+        case 'D':
+        case 'd':
+            type = StatementType::DUPSERT;
+            pKey = DELETE;
+            pKey_end = pKey + sizeof(DELETE) - 1;
+            break;
+
+        case 'I':
+        case 'i':
+            type = StatementType::DUPSERT;
+            pKey = INSERT;
+            pKey_end = pKey + sizeof(INSERT) - 1;
+            break;
+
+        case 'S':
+        case 's':
+            type = StatementType::SELECT;
+            pKey = SELECT;
+            pKey_end = pKey + sizeof(SELECT) - 1;
+            break;
+
+        case 'U':
+        case 'u':
+            type = StatementType::DUPSERT;
+            pKey = UPDATE;
+            pKey_end = pKey + sizeof(UPDATE) - 1;
+            break;
+
+        default:
+            break;
+        }
+
+        if (type != StatementType::UNKNOWN)
+        {
+            ++pKey;
+            ++pSql;
+
+            while ((pSql < pSql_end) && (pKey < pKey_end) && (toupper(*pSql) == *pKey))
+            {
+                ++pSql;
+                ++pKey;
+            }
+
+            if ((pKey == pKey_end) && ((pSql == pSql_end) || !isalpha(*pSql)))
+            {
+                // All is fine; either the statement only contain the keyword (so syntactically
+                // the statement is erroenous) or the keyword was followed by something else
+                // than an alhpanumeric character, e.g. whitespace.
+                ;
+            }
+            else
+            {
+                type = StatementType::UNKNOWN;
+            }
         }
     }
 
-    return is_select;
+    return type;
 }
 }
 
@@ -684,8 +741,9 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
 
         if (action != CACHE_IGNORE)
         {
-            if (is_select_statement(pPacket))
+            switch (get_statement_type(pPacket))
             {
+            case StatementType::SELECT:
                 if (config.selects == CACHE_SELECTS_VERIFY_CACHEABLE)
                 {
                     // Note that the type mask must be obtained a new. A few lines
@@ -713,9 +771,10 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
                         zPrimary_reason = "uses non-cacheable variable";
                     }
                 }
-            }
-            else
-            {
+                break;
+
+            case StatementType::DUPSERT:
+            case StatementType::UNKNOWN:
                 // A bit broad, as e.g. SHOW will cause the read only state to be turned
                 // off. However, during normal use this will always be an UPDATE, INSERT
                 // or DELETE. Note that 'm_is_read_only' only affects transactions that
