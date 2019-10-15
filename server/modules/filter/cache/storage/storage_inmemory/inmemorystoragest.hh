@@ -27,18 +27,18 @@ public:
                                      int argc,
                                      char* argv[]);
 
-    cache_result_t get_info(uint32_t what, json_t** ppInfo) const;
+    cache_result_t get_info(uint32_t what, json_t** ppInfo) const override final;
     cache_result_t get_value(const CACHE_KEY& key,
                              uint32_t flags,
                              uint32_t soft_ttl,
                              uint32_t hard_ttl,
-                             GWBUF** ppResult);
+                             GWBUF** ppResult) override final;
     cache_result_t put_value(const CACHE_KEY& key,
                              const std::vector<std::string>& words,
-                             const GWBUF& pValue);
-    cache_result_t del_value(const CACHE_KEY& key);
-    cache_result_t invalidate(const std::vector<std::string>& words);
-    cache_result_t invalidate_all();
+                             const GWBUF& pValue) override final;
+    cache_result_t del_value(const CACHE_KEY& key) override final;
+    cache_result_t invalidate(const std::vector<std::string>& words) override final;
+    cache_result_t invalidate_all() override final;
 
 private:
     InMemoryStorageST(const std::string& name, const CACHE_STORAGE_CONFIG& config);

@@ -26,11 +26,11 @@ public:
                            SStorageFactory sFactory,
                            const CacheConfig* pConfig);
 
-    json_t* get_info(uint32_t what) const;
+    json_t* get_info(uint32_t what) const override final;
 
-    bool must_refresh(const CACHE_KEY& key, const CacheFilterSession* pSession);
+    bool must_refresh(const CACHE_KEY& key, const CacheFilterSession* pSession) override final;
 
-    void refreshed(const CACHE_KEY& key, const CacheFilterSession* pSession);
+    void refreshed(const CACHE_KEY& key, const CacheFilterSession* pSession) override final;
 
 private:
     CacheST(const std::string& name,

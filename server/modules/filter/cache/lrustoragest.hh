@@ -23,33 +23,33 @@ public:
     static LRUStorageST* create(const CACHE_STORAGE_CONFIG& config, Storage* pstorage);
 
     cache_result_t get_info(uint32_t what,
-                            json_t** ppInfo) const;
+                            json_t** ppInfo) const override final;
 
     cache_result_t get_value(const CACHE_KEY& key,
                              uint32_t flags,
                              uint32_t soft_ttl,
                              uint32_t hard_ttl,
-                             GWBUF** ppValue) const;
+                             GWBUF** ppValue) const override final;
 
     cache_result_t put_value(const CACHE_KEY& key,
                              const std::vector<std::string>& invalidation_words,
-                             const GWBUF* pValue);
+                             const GWBUF* pValue) override final;
 
-    cache_result_t del_value(const CACHE_KEY& key);
+    cache_result_t del_value(const CACHE_KEY& key) override final;
 
-    cache_result_t invalidate(const std::vector<std::string>& invalidation_words);
+    cache_result_t invalidate(const std::vector<std::string>& invalidation_words) override final;
 
-    cache_result_t invalidate_all();
+    cache_result_t invalidate_all() override final;
 
     cache_result_t get_head(CACHE_KEY* pKey,
-                            GWBUF** ppValue) const;
+                            GWBUF** ppValue) const override final;
 
     cache_result_t get_tail(CACHE_KEY* pKey,
-                            GWBUF** ppValue) const;
+                            GWBUF** ppValue) const override final;
 
-    cache_result_t get_size(uint64_t* pSize) const;
+    cache_result_t get_size(uint64_t* pSize) const override final;
 
-    cache_result_t get_items(uint64_t* pItems) const;
+    cache_result_t get_items(uint64_t* pItems) const override final;
 
 private:
     LRUStorageST(const CACHE_STORAGE_CONFIG& config, Storage* pstorage);
