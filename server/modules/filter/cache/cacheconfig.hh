@@ -16,23 +16,23 @@
 #include <maxscale/config2.hh>
 #include "cache_storage_api.hh"
 
-typedef enum cache_selects
+enum cache_selects_t
 {
     CACHE_SELECTS_ASSUME_CACHEABLE,
     CACHE_SELECTS_VERIFY_CACHEABLE,
-} cache_selects_t;
+};
 
 const cache_selects_t CACHE_DEFAULT_SELECTS = CACHE_SELECTS_ASSUME_CACHEABLE;
 
-typedef enum cache_in_trxs
+enum cache_in_trxs_t
 {
     // Do NOT change the order. Code relies upon NEVER < READ_ONLY < ALL.
     CACHE_IN_TRXS_NEVER,
     CACHE_IN_TRXS_READ_ONLY,
     CACHE_IN_TRXS_ALL,
-} cache_in_trxs_t;
+};
 
-const cache_thread_model CACHE_DEFAULT_THREAD_MODEL = CACHE_THREAD_MODEL_ST;
+const cache_thread_model_t CACHE_DEFAULT_THREAD_MODEL = CACHE_THREAD_MODEL_ST;
 
 
 class CacheConfig : public config::Configuration

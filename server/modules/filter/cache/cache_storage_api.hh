@@ -24,7 +24,7 @@
 #include <maxscale/buffer.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 
-typedef enum cache_result_bits
+enum cache_result_bits_t
 {
     CACHE_RESULT_OK               = 0x01,
     CACHE_RESULT_NOT_FOUND        = 0x02,
@@ -33,7 +33,7 @@ typedef enum cache_result_bits
 
     CACHE_RESULT_STALE     = 0x10000,   /*< Possibly combined with OK and NOT_FOUND. */
     CACHE_RESULT_DISCARDED = 0x20000,   /*< Possibly combined with NOT_FOUND. */
-} cache_result_bits_t;
+};
 
 typedef uint32_t cache_result_t;
 
@@ -44,30 +44,30 @@ typedef uint32_t cache_result_t;
 #define CACHE_RESULT_IS_STALE(result)            (result & CACHE_RESULT_STALE)
 #define CACHE_RESULT_IS_DISCARDED(result)        (result & CACHE_RESULT_DISCARDED)
 
-typedef enum cache_flags
+enum cache_flags_t
 {
     CACHE_FLAGS_NONE          = 0x00,
     CACHE_FLAGS_INCLUDE_STALE = 0x01,
-} cache_flags_t;
+};
 
-typedef enum cache_storage_info
+enum cache_storage_info_t
 {
     // TODO: Provide more granularity.
     CACHE_STORAGE_INFO_ALL = 0
-} cache_storage_info_t;
+};
 
-typedef enum cache_thread_model
+enum cache_thread_model_t
 {
     CACHE_THREAD_MODEL_ST,
     CACHE_THREAD_MODEL_MT
-} cache_thread_model_t;
+};
 
 typedef void* CACHE_STORAGE;
 
-typedef struct cache_key
+struct CACHE_KEY
 {
     uint64_t data;
-} CACHE_KEY;
+};
 
 /**
  * Hashes a CACHE_KEY to a size_t
@@ -88,7 +88,7 @@ size_t cache_key_hash(const CACHE_KEY* key);
  */
 bool cache_key_equal_to(const CACHE_KEY* lhs, const CACHE_KEY* rhs);
 
-typedef enum cache_storage_capabilities
+enum cache_storage_capabilities_t
 {
     CACHE_STORAGE_CAP_NONE      = 0x00,
     CACHE_STORAGE_CAP_ST        = 0x01, /*< Storage can optimize for single thread. */
@@ -96,14 +96,14 @@ typedef enum cache_storage_capabilities
     CACHE_STORAGE_CAP_LRU       = 0x04, /*< Storage capable of LRU eviction. */
     CACHE_STORAGE_CAP_MAX_COUNT = 0x08, /*< Storage capable of capping number of entries.*/
     CACHE_STORAGE_CAP_MAX_SIZE  = 0x10, /*< Storage capable of capping size of cache.*/
-} cache_storage_capabilities_t;
+};
 
 static inline bool cache_storage_has_cap(uint32_t capabilities, uint32_t mask)
 {
     return (capabilities & mask) == mask;
 }
 
-typedef struct cache_storage_config_t
+struct CACHE_STORAGE_CONFIG
 {
     /**
      * Specifies whether the storage will be used in a single thread or multi
@@ -142,9 +142,9 @@ typedef struct cache_storage_config_t
      * specify 0, unless CACHE_STORAGE_CAP_MAX_SIZE is returned at initialization.
      */
     uint64_t max_size;
-} CACHE_STORAGE_CONFIG;
+};
 
-typedef struct cache_storage_api
+struct CACHE_STORAGE_API
 {
     /**
      * Called immediately after the storage module has been loaded.
@@ -340,7 +340,7 @@ typedef struct cache_storage_api
      */
     cache_result_t (* getItems)(CACHE_STORAGE* storage,
                                 uint64_t* items);
-} CACHE_STORAGE_API;
+};
 
 #if defined __cplusplus
 const uint32_t CACHE_USE_CONFIG_TTL = static_cast<uint32_t>(-1);

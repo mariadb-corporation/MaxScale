@@ -25,25 +25,25 @@
 
 MXS_BEGIN_DECLS
 
-typedef enum cache_rule_attribute
+enum cache_rule_attribute_t
 {
     CACHE_ATTRIBUTE_COLUMN,
     CACHE_ATTRIBUTE_DATABASE,
     CACHE_ATTRIBUTE_QUERY,
     CACHE_ATTRIBUTE_TABLE,
     CACHE_ATTRIBUTE_USER,
-} cache_rule_attribute_t;
+};
 
-typedef enum cache_rule_op
+enum cache_rule_op_t
 {
     CACHE_OP_EQ,
     CACHE_OP_NEQ,
     CACHE_OP_LIKE,
     CACHE_OP_UNLIKE
-} cache_rule_op_t;
+};
 
 
-typedef struct cache_rule
+struct CACHE_RULE
 {
     cache_rule_attribute_t attribute;   // What attribute is evalued.
     cache_rule_op_t        op;          // What operator is used.
@@ -60,16 +60,16 @@ typedef struct cache_rule
         pcre2_match_data** datas;
     }                  regexp;          // Regexp data, only for CACHE_OP_[LIKE|UNLIKE].
     uint32_t           debug;           // The debug level.
-    struct cache_rule* next;
-} CACHE_RULE;
+    CACHE_RULE*        next;
+};
 
-typedef struct cache_rules
+struct CACHE_RULES
 {
     json_t*     root;           // The JSON root object.
     uint32_t    debug;          // The debug level.
     CACHE_RULE* store_rules;    // The rules for when to store data to the cache.
     CACHE_RULE* use_rules;      // The rules for when to use data from the cache.
-} CACHE_RULES;
+};
 
 /**
  * Returns a string representation of a attribute.
