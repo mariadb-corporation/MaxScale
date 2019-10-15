@@ -20,6 +20,8 @@
 #include <maxscale/cn_strings.hh>
 #include <maxscale/config.hh>
 
+#include "internal/modules.hh"
+
 namespace
 {
 
@@ -33,7 +35,6 @@ thread_local struct ThisThread
 {
     maxscale::MainWorker* pMain;
 } this_thread;
-
 }
 
 namespace maxscale
@@ -173,7 +174,7 @@ int64_t MainWorker::ticks()
     return mxb::atomic::load(&this_unit.clock_ticks, mxb::atomic::RELAXED);
 }
 
-//static
+// static
 bool MainWorker::is_main_worker()
 {
     return this_thread.pMain != nullptr;
@@ -181,11 +182,26 @@ bool MainWorker::is_main_worker()
 
 bool MainWorker::pre_run()
 {
-    return true;
+    bool rval = false;
+
+    if (modules_thread_init() && qc_thread_init(QC_INIT_SELF))
+    {
+        rval = true;
+
+        // Disable the query classification cache, it's a waste of memory on this thread
+        QC_CACHE_PROPERTIES props;
+        qc_get_cache_properties(&props);
+        props.max_size = 0;
+        qc_set_cache_properties(&props);
+    }
+
+    return rval;
 }
 
 void MainWorker::post_run()
 {
+    qc_thread_end(QC_INIT_SELF);
+    modules_thread_finish();
 }
 
 bool MainWorker::call_task(Worker::Call::action_t action, MainWorker::Task* pTask)

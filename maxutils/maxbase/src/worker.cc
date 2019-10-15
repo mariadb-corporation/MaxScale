@@ -71,9 +71,6 @@ typedef struct worker_message
 } WORKER_MESSAGE;
 }
 
-static bool modules_thread_init();
-static void modules_thread_finish();
-
 namespace maxbase
 {
 

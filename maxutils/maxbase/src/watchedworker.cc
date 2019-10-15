@@ -30,5 +30,4 @@ void WatchedWorker::call_epoll_tick()
 
     epoll_tick();
 }
-
 }

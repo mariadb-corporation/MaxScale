@@ -32,7 +32,17 @@
  */
 std::unique_ptr<ResultSet> moduleGetList();
 
-MXS_BEGIN_DECLS
+/**
+ * Calls thread_init on all loaded modules.
+ *
+ * @return True, if all modules were successfully initialized.
+ */
+bool modules_thread_init();
+
+/**
+ * Calls thread_finish on all loaded modules.
+ */
+void modules_thread_finish();
 
 /**
  *@brief Load a module
@@ -155,5 +165,3 @@ json_t* module_list_to_json(const char* host);
  * @return The effective name (may be the same).
  */
 const char* mxs_module_get_effective_name(const char* name);
-
-MXS_END_DECLS
