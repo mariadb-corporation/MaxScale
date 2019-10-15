@@ -476,7 +476,7 @@ void SchemaRouterSession::handle_mapping_reply(SRBackend* bref, GWBUF** pPacket)
 
     if (rc == -1)
     {
-        m_client->dcb()->trigger_hangup_event();
+        m_pSession->terminate();
     }
 }
 
