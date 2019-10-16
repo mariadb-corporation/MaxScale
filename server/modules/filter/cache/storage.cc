@@ -15,10 +15,6 @@
 #include "storage.hh"
 
 
-Storage::Storage()
-{
-}
-
 Storage::~Storage()
 {
 }

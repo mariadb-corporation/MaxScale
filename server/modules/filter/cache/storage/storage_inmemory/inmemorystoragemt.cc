@@ -54,12 +54,12 @@ cache_result_t InMemoryStorageMT::get_value(const CACHE_KEY& key,
 
 cache_result_t InMemoryStorageMT::put_value(const CACHE_KEY& key,
                                             const std::vector<std::string>& invalidation_words,
-                                            const GWBUF& value)
+                                            const GWBUF* pValue)
 {
     mxb_assert(invalidation_words.empty());
     std::lock_guard<std::mutex> guard(m_lock);
 
-    return do_put_value(key, value);
+    return do_put_value(key, pValue);
 }
 
 cache_result_t InMemoryStorageMT::del_value(const CACHE_KEY& key)

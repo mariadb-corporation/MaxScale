@@ -45,7 +45,7 @@ cache_result_t LRUStorageMT::get_value(const CACHE_KEY& key,
                                        uint32_t flags,
                                        uint32_t soft_ttl,
                                        uint32_t hard_ttl,
-                                       GWBUF** ppValue) const
+                                       GWBUF** ppValue)
 {
     std::lock_guard<std::mutex> guard(m_lock);
 
@@ -78,14 +78,14 @@ cache_result_t LRUStorageMT::invalidate_all()
     return LRUStorage::do_invalidate_all();
 }
 
-cache_result_t LRUStorageMT::get_head(CACHE_KEY* pKey, GWBUF** ppHead) const
+cache_result_t LRUStorageMT::get_head(CACHE_KEY* pKey, GWBUF** ppHead)
 {
     std::lock_guard<std::mutex> guard(m_lock);
 
     return LRUStorage::do_get_head(pKey, ppHead);
 }
 
-cache_result_t LRUStorageMT::get_tail(CACHE_KEY* pKey, GWBUF** ppTail) const
+cache_result_t LRUStorageMT::get_tail(CACHE_KEY* pKey, GWBUF** ppTail)
 {
     std::lock_guard<std::mutex> guard(m_lock);
 

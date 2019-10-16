@@ -43,7 +43,7 @@ cache_result_t LRUStorageST::get_value(const CACHE_KEY& key,
                                        uint32_t flags,
                                        uint32_t soft_ttl,
                                        uint32_t hard_ttl,
-                                       GWBUF** ppValue) const
+                                       GWBUF** ppValue)
 {
     return LRUStorage::do_get_value(key, flags, soft_ttl, hard_ttl, ppValue);
 }
@@ -70,12 +70,12 @@ cache_result_t LRUStorageST::invalidate_all()
     return LRUStorage::do_invalidate_all();
 }
 
-cache_result_t LRUStorageST::get_head(CACHE_KEY* pKey, GWBUF** ppValue) const
+cache_result_t LRUStorageST::get_head(CACHE_KEY* pKey, GWBUF** ppValue)
 {
     return LRUStorage::do_get_head(pKey, ppValue);
 }
 
-cache_result_t LRUStorageST::get_tail(CACHE_KEY* pKey, GWBUF** ppValue) const
+cache_result_t LRUStorageST::get_tail(CACHE_KEY* pKey, GWBUF** ppValue)
 {
     return LRUStorage::do_get_tail(pKey, ppValue);
 }

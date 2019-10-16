@@ -19,7 +19,7 @@
 #include <unordered_map>
 #include "../../cache_storage_api.hh"
 
-class InMemoryStorage
+class InMemoryStorage : public Storage
 {
 public:
     virtual ~InMemoryStorage();
@@ -31,24 +31,11 @@ public:
                                             int argc,
                                             char* argv[]);
 
-    void                   get_config(CACHE_STORAGE_CONFIG* pConfig);
-    virtual cache_result_t get_info(uint32_t what, json_t** ppInfo) const = 0;
-    virtual cache_result_t get_value(const CACHE_KEY& key,
-                                     uint32_t flags,
-                                     uint32_t soft_ttl,
-                                     uint32_t hard_ttl,
-                                     GWBUF** ppResult) = 0;
-    virtual cache_result_t put_value(const CACHE_KEY& key,
-                                     const std::vector<std::string>& invalidation_words,
-                                     const GWBUF& value) = 0;
-    virtual cache_result_t del_value(const CACHE_KEY& key) = 0;
-    virtual cache_result_t invalidate(const std::vector<std::string>& words) = 0;
-    virtual cache_result_t invalidate_all() = 0;
-
-    cache_result_t get_head(CACHE_KEY* pKey, GWBUF** ppHead) const;
-    cache_result_t get_tail(CACHE_KEY* pKey, GWBUF** ppHead) const;
-    cache_result_t get_size(uint64_t* pSize) const;
-    cache_result_t get_items(uint64_t* pItems) const;
+    void           get_config(CACHE_STORAGE_CONFIG* pConfig) override final;
+    cache_result_t get_head(CACHE_KEY* pKey, GWBUF** ppHead) override final;
+    cache_result_t get_tail(CACHE_KEY* pKey, GWBUF** ppHead) override final;
+    cache_result_t get_size(uint64_t* pSize) const override final;
+    cache_result_t get_items(uint64_t* pItems) const override final;
 
 protected:
     InMemoryStorage(const std::string& name,
@@ -60,7 +47,7 @@ protected:
                                 uint32_t soft_ttl,
                                 uint32_t hard_ttl,
                                 GWBUF** ppResult);
-    cache_result_t do_put_value(const CACHE_KEY& key, const GWBUF& value);
+    cache_result_t do_put_value(const CACHE_KEY& key, const GWBUF* pValue);
     cache_result_t do_del_value(const CACHE_KEY& key);
 
 private:

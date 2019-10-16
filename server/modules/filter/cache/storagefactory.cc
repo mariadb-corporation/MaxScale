@@ -21,7 +21,6 @@
 #include "cachefilter.hh"
 #include "lrustoragest.hh"
 #include "lrustoragemt.hh"
-#include "storagereal.hh"
 
 
 namespace
@@ -214,14 +213,7 @@ Storage* StorageFactory::create_raw_storage(const char* zName,
     mxb_assert(m_handle);
     mxb_assert(m_pApi);
 
-    Storage* pStorage = 0;
-
-    CACHE_STORAGE* pRawStorage = m_pApi->createInstance(zName, &config, argc, argv);
-
-    if (pRawStorage)
-    {
-        MXS_EXCEPTION_GUARD(pStorage = new StorageReal(m_pApi, pRawStorage));
-    }
+    Storage* pStorage = m_pApi->createInstance(zName, &config, argc, argv);
 
     return pStorage;
 }

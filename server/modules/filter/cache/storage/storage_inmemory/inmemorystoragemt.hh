@@ -38,7 +38,7 @@ public:
                              GWBUF** ppResult) override final;
     cache_result_t put_value(const CACHE_KEY& key,
                              const std::vector<std::string>& invalidation_words,
-                             const GWBUF& value) override final;
+                             const GWBUF* pValue) override final;
     cache_result_t del_value(const CACHE_KEY& key) override final;
     cache_result_t invalidate(const std::vector<std::string>& words) override final;
     cache_result_t invalidate_all() override final;

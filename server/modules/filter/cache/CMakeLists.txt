@@ -15,7 +15,6 @@ if (JANSSON_FOUND)
     rules.cc
     storage.cc
     storagefactory.cc
-    storagereal.cc
     )
   target_link_libraries(cache maxscale-common ${JANSSON_LIBRARIES} mariadbclient)
   set_target_properties(cache PROPERTIES VERSION "1.0.0" LINK_FLAGS -Wl,-z,defs)

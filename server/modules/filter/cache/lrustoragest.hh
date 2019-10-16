@@ -29,7 +29,7 @@ public:
                              uint32_t flags,
                              uint32_t soft_ttl,
                              uint32_t hard_ttl,
-                             GWBUF** ppValue) const override final;
+                             GWBUF** ppValue) override final;
 
     cache_result_t put_value(const CACHE_KEY& key,
                              const std::vector<std::string>& invalidation_words,
@@ -42,10 +42,10 @@ public:
     cache_result_t invalidate_all() override final;
 
     cache_result_t get_head(CACHE_KEY* pKey,
-                            GWBUF** ppValue) const override final;
+                            GWBUF** ppValue) override final;
 
     cache_result_t get_tail(CACHE_KEY* pKey,
-                            GWBUF** ppValue) const override final;
+                            GWBUF** ppValue) override final;
 
     cache_result_t get_size(uint64_t* pSize) const override final;
 

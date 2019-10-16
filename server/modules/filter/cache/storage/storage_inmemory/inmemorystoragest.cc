@@ -50,10 +50,10 @@ cache_result_t InMemoryStorageST::get_value(const CACHE_KEY& key,
 
 cache_result_t InMemoryStorageST::put_value(const CACHE_KEY& key,
                                             const std::vector<std::string>& invalidation_words,
-                                            const GWBUF& value)
+                                            const GWBUF* pValue)
 {
     mxb_assert(invalidation_words.empty());
-    return do_put_value(key, value);
+    return do_put_value(key, pValue);
 }
 
 cache_result_t InMemoryStorageST::del_value(const CACHE_KEY& key)

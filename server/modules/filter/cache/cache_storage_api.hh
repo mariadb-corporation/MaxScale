@@ -144,6 +144,189 @@ struct CACHE_STORAGE_CONFIG
     uint64_t max_size;
 };
 
+const uint32_t CACHE_USE_CONFIG_TTL = static_cast<uint32_t>(-1);
+
+class Storage
+{
+public:
+    Storage(const Storage&) = delete;
+    Storage& operator=(const Storage&) = delete;
+
+    enum what_info_t
+    {
+        INFO_ALL = CACHE_STORAGE_INFO_ALL
+    };
+
+    virtual ~Storage();
+
+    /**
+     * Returns the configuration the storage was created with.
+     *
+     * @param pConfig  Pointer to object that will be updated.
+     */
+    virtual void get_config(CACHE_STORAGE_CONFIG* pConfig) = 0;
+
+    /**
+     * Returns information about the storage.
+     *
+     * @param what  Bitmask of cache_storage_info_t values.
+     * @param info  Upon successful return points to json_t object containing
+     *              information. The caller should call @c json_decref on the
+     *              object when it is no longer needed.
+     *
+     * @return CACHE_RESULT_OK if a json object could be created.
+     */
+    virtual cache_result_t get_info(uint32_t what, json_t** ppInfo) const = 0;
+
+    /**
+     * Get a value from the cache.
+     *
+     * @param key       A key generated with get_key.
+     * @param flags     Mask of cache_flags_t values.
+     * @param soft_ttl  The soft TTL. A value of CACHE_USE_CONFIG_TTL (-1) indicates
+     *                   that the value specfied in the config, used in the creation,
+     *                   should be used.
+     * @param hard_ttl  The hard TTL. A value of CACHE_USE_CONFIG_TTL (-1) indicates
+     *                   that the value specfied in the config, used in the creation,
+     *                   should be used.
+     * @param ppValue   Pointer to variable that after a successful return will
+     *                  point to a GWBUF.
+     *
+     * @return CACHE_RESULT_OK if item was found, CACHE_RESULT_NOT_FOUND if
+     *         item was not found or some other error code. In the OK an NOT_FOUND
+     *         cases, the bit CACHE_RESULT_STALE is set if the item exists but the
+     *         soft TTL has passed. In the NOT_FOUND case, the but CACHE_RESULT_DISCARDED
+     *         if the item existed but the hard TTL had passed.
+     */
+    virtual cache_result_t get_value(const CACHE_KEY& key,
+                                     uint32_t flags,
+                                     uint32_t soft_ttl,
+                                     uint32_t hard_ttl,
+                                     GWBUF** ppValue) = 0;
+
+    cache_result_t get_value(const CACHE_KEY& key,
+                             uint32_t flags,
+                             GWBUF** ppValue)
+    {
+        return get_value(key, flags, CACHE_USE_CONFIG_TTL, CACHE_USE_CONFIG_TTL, ppValue);
+    }
+
+    /**
+     * Put a value to the cache.
+     *
+     * @param key                 A key generated with get_key.
+     * @param invalidation_words  Words that may be used for invalidating the entry.
+     * @param pValue              Pointer to GWBUF containing the value to be stored.
+     *                            Must be one contiguous buffer.
+     * @return CACHE_RESULT_OK if item was successfully put,
+     *         CACHE_RESULT_OUT_OF_RESOURCES if item could not be put, due to
+     *         some resource having become exhausted, or some other error code.
+     */
+    virtual cache_result_t put_value(const CACHE_KEY& key,
+                                     const std::vector<std::string>& invalidation_words,
+                                     const GWBUF* pValue) = 0;
+
+    /**
+     * Delete a value from the cache.
+     *
+     * @param storage    Pointer to a CACHE_STORAGE.
+     * @param key        A key generated with get_key.
+     *
+     * @return CACHE_RESULT_OK if item was successfully deleted.  Note that
+     *         CACHE_RESULT_OK may be returned also if the entry was not present.
+     */
+    virtual cache_result_t del_value(const CACHE_KEY& key) = 0;
+
+    /**
+     * Invalidate entries
+     *
+     * @param words  Words that decide what entries are invalidated.
+     *
+     * @return CACHE_RESULT_OK if the invalidation succeeded.
+     */
+    virtual cache_result_t invalidate(const std::vector<std::string>& words) = 0;
+
+    /**
+     * Unconditionally invalidate entries
+     *
+     * @return CACHE_RESULT_OK if the invalidation succeeded.
+     */
+    virtual cache_result_t invalidate_all() = 0;
+
+    /**
+     * Get the head item from the storage. This is only intended for testing and
+     * debugging purposes and if the storage is being used by different threads
+     * at the same time, the returned result may be incorrect the moment it has
+     * been returned.
+     *
+     * @param key     Pointer to variable that after a successful return will
+     *                contain the key.
+     * @param ppHead  Pointer to variable that after a successful return will
+     *                point to a GWBUF.
+     *
+     * @return CACHE_RESULT_OK if the head item was returned,
+     *         CACHE_RESULT_NOT_FOUND if the cache is empty,
+     *         CACHE_RESULT_OUT_OF_RESOURCES if the storage is incapable of
+     *         returning the head, and
+     *         CACHE_RESULT_ERROR otherwise.
+     */
+    virtual cache_result_t get_head(CACHE_KEY* pKey, GWBUF** ppHead) = 0;
+
+    /**
+     * Get the tail item from the cache. This is only intended for testing and
+     * debugging purposes and if the storage is being used by different threads
+     * at the same time, the returned result may become incorrect the moment it
+     * has been returned.
+     *
+     * @param key     Pointer to variable that after a successful return will
+     *                contain the key.
+     * @param ppTail  Pointer to variable that after a successful return will
+     *                point to a GWBUF.
+     *
+     * @return CACHE_RESULT_OK if the head item was returned,
+     *         CACHE_RESULT_NOT_FOUND if the cache is empty,
+     *         CACHE_RESULT_OUT_OF_RESOURCES if the storage is incapable of
+     *         returning the tail, and
+     *         CACHE_RESULT_ERROR otherwise.
+     */
+    virtual cache_result_t get_tail(CACHE_KEY* pKey, GWBUF** ppTail) = 0;
+
+    /**
+     * Get the current size of the storage. This is only intended for testing and
+     * debugging purposes and if the storage is being used by different threads
+     * at the same time, the returned result may become incorrect the moment it
+     * has been returned.
+     *
+     * @param pSize  Pointer to variable that after a successful return will
+     *               contain the current size of the storage.
+     *
+     * @return CACHE_RESULT_OK if the size was returned,
+     *         CACHE_RESULT_OUT_OF_RESOURCES if the storage
+     *         is incapable of returning the size, and
+     *         CACHE_RESULT_ERROR otherwise.
+     */
+    virtual cache_result_t get_size(uint64_t* pSize) const = 0;
+
+    /**
+     * Get the current number of items in the storage. This is only intended for
+     * testing and debugging purposes and if the storage is being used by different
+     * threads at the same time, the returned result may become incorrect the moment
+     * it has been returned.
+     *
+     * @param pItems  Pointer to variable that after a successful return will
+     *                contain the current number of items in the storage.
+     *
+     * @return CACHE_RESULT_OK if the size was returned,
+     *         CACHE_RESULT_OUT_OF_RESOURCES if the storage
+     *         is incapable of returning the size, and
+     *         CACHE_RESULT_ERROR otherwise.
+     */
+    virtual cache_result_t get_items(uint64_t* pItems) const = 0;
+
+protected:
+    Storage() {}
+};
+
 struct CACHE_STORAGE_API
 {
     /**
@@ -171,207 +354,21 @@ struct CACHE_STORAGE_API
      * @return A new cache instance, or NULL if the instance could not be
      *         created.
      */
-    CACHE_STORAGE* (*createInstance)(const char* name,
-                                     const CACHE_STORAGE_CONFIG* config,
-                                     int argc, char* argv[]);
+    Storage* (*createInstance)(const char* name,
+                               const CACHE_STORAGE_CONFIG* config,
+                               int argc, char* argv[]);
 
     /**
      * Frees an CACHE_STORAGE instance earlier created with createInstance.
      *
      * @param instance The CACHE_STORAGE instance to be freed.
      */
-    void (* freeInstance)(CACHE_STORAGE* instance);
-
-    /**
-     * Returns the configuration the storage was created with.
-     *
-     * @param storage  Pointer to a CACHE_STORAGE
-     * @param config   Pointer to variable that will be updated with the config.
-     */
-    void (* getConfig)(CACHE_STORAGE* storage,
-                       CACHE_STORAGE_CONFIG* config);
-
-    /**
-     * Returns information about the storage.
-     *
-     * @param storage  Pointer to a CACHE_STORAGE.
-     * @param what     Bitmask of cache_storage_info_t values.
-     * @param info     Upon successful return points to json_t object containing
-     *                 information. The caller should call @c json_decref on the
-     *                 object when it is no longer needed.
-     *
-     * @return CACHE_RESULT_OK if a json object could be created.
-     */
-    cache_result_t (* getInfo)(CACHE_STORAGE* storage,
-                               uint32_t what,
-                               json_t** info);
-    /**
-     * Get a value from the cache.
-     *
-     * @param storage    Pointer to a CACHE_STORAGE.
-     * @param key        A key generated with get_key.
-     * @param flags      Mask of cache_flags_t values.
-     * @param soft_ttl   The soft TTL. A value of CACHE_USE_CONFIG_TTL (-1) indicates
-     *                   that the value specfied in the config, used in the creation,
-     *                   should be used.
-     * @param hard_ttl   The hard TTL. A value of CACHE_USE_CONFIG_TTL (-1) indicates
-     *                   that the value specfied in the config, used in the creation,
-     *                   should be used.
-     * @param result     Pointer to variable that after a successful return will
-     *                   point to a GWBUF.
-     *
-     * @return CACHE_RESULT_OK if item was found, CACHE_RESULT_NOT_FOUND if
-     *         item was not found or some other error code. In the OK an NOT_FOUND
-     *         cases, the bit CACHE_RESULT_STALE is set if the item exists but the
-     *         soft TTL has passed. In the NOT_FOUND case, the but CACHE_RESULT_DISCARDED
-     *         if the item existed but the hard TTL had passed.
-     */
-    cache_result_t (* getValue)(CACHE_STORAGE* storage,
-                                const CACHE_KEY* key,
-                                uint32_t flags,
-                                uint32_t soft_ttl,
-                                uint32_t hard_ttl,
-                                GWBUF** result);
-
-    /**
-     * Put a value to the cache.
-     *
-     * @param storage    Pointer to a CACHE_STORAGE.
-     * @param key        A key generated with get_key.
-     * @param value      Pointer to GWBUF containing the value to be stored.
-     *                   Must be one contiguous buffer.
-     *
-     * @return CACHE_RESULT_OK if item was successfully put,
-     *         CACHE_RESULT_OUT_OF_RESOURCES if item could not be put, due to
-     *         some resource having become exhausted, or some other error code.
-     */
-    cache_result_t (* putValue)(CACHE_STORAGE* storage,
-                                const CACHE_KEY* key,
-                                const std::vector<std::string>& invalidation_words,
-                                const GWBUF* value);
-
-    /**
-     * Delete a value from the cache.
-     *
-     * @param storage    Pointer to a CACHE_STORAGE.
-     * @param key        A key generated with get_key.
-     *
-     * @return CACHE_RESULT_OK if item was successfully deleted.  Note that
-     *         CACHE_RESULT_OK may be returned also if the entry was not present.
-     */
-    cache_result_t (* delValue)(CACHE_STORAGE* storage,
-                                const CACHE_KEY* key);
-
-    /**
-     * Invalidate entries
-     *
-     * @param storage  Pointer to a CACHE_STORAGE.
-     * @param words    Words that decide what entries are invalidated.
-     *
-     * @return CACHE_RESULT_OK if the invalidation succeeded.
-     */
-    cache_result_t (* invalidate)(CACHE_STORAGE* storage,
-                                  const std::vector<std::string>& words);
-
-    /**
-     * Unconditionally invalidate all entries
-     *
-     * @param storage  Pointer to a CACHE_STORAGE.
-     *
-     * @return CACHE_RESULT_OK if the invalidation succeeded.
-     */
-    cache_result_t (* invalidate_all)(CACHE_STORAGE* storage);
-
-    /**
-     * Get the head item from the storage. This is only intended for testing and
-     * debugging purposes and if the storage is being used by different threads
-     * at the same time, the returned result may be incorrect the moment it has
-     * been returned.
-     *
-     * @param storage  Pointer to a CACHE_STORAGE.
-     * @param key      Pointer to variable that after a successful return will
-     *                 contain the key.
-     * @param head     Pointer to variable that after a successful return will
-     *                 point to a GWBUF.
-     *
-     * @return CACHE_RESULT_OK if the head item was returned,
-     *         CACHE_RESULT_NOT_FOUND if the cache is empty,
-     *         CACHE_RESULT_OUT_OF_RESOURCES if the storage is incapable of
-     *         returning the head, and
-     *         CACHE_RESULT_ERROR otherwise.
-     */
-    cache_result_t (* getHead)(CACHE_STORAGE* storage,
-                               CACHE_KEY* key,
-                               GWBUF** head);
-
-    /**
-     * Get the tail item from the cache. This is only intended for testing and
-     * debugging purposes and if the storage is being used by different threads
-     * at the same time, the returned result may become incorrect the moment it
-     * has been returned.
-     *
-     * @param storage  Pointer to a CACHE_STORAGE.
-     * @param key      Pointer to variable that after a successful return will
-     *                 contain the key.
-     * @param tail     Pointer to variable that after a successful return will
-     *                 point to a GWBUF.
-     *
-     * @return CACHE_RESULT_OK if the head item was returned,
-     *         CACHE_RESULT_NOT_FOUND if the cache is empty,
-     *         CACHE_RESULT_OUT_OF_RESOURCES if the storage is incapable of
-     *         returning the tail, and
-     *         CACHE_RESULT_ERROR otherwise.
-     */
-    cache_result_t (* getTail)(CACHE_STORAGE* storage,
-                               CACHE_KEY* key,
-                               GWBUF** tail);
-
-    /**
-     * Get the current size of the storage. This is only intended for testing and
-     * debugging purposes and if the storage is being used by different threads
-     * at the same time, the returned result may become incorrect the moment it
-     * has been returned.
-     *
-     * @param storage    Pointer to a CACHE_STORAGE.
-     * @param size       Pointer to variable that after a successful return will
-     *                   contain the current size of the storage.
-     *
-     * @return CACHE_RESULT_OK if the size was returned,
-     *         CACHE_RESULT_OUT_OF_RESOURCES if the storage
-     *         is incapable of returning the size, and
-     *         CACHE_RESULT_ERROR otherwise.
-     */
-    cache_result_t (* getSize)(CACHE_STORAGE* storage,
-                               uint64_t* size);
-
-    /**
-     * Get the current number of items in the storage. This is only intended for
-     * testing and debugging purposes and if the storage is being used by different
-     * threads at the same time, the returned result may become incorrect the moment
-     * it has been returned.
-     *
-     * @param storage    Pointer to a CACHE_STORAGE.
-     * @param items      Pointer to variable that after a successful return will
-     *                   contain the current number of items in the storage.
-     *
-     * @return CACHE_RESULT_OK if the size was returned,
-     *         CACHE_RESULT_OUT_OF_RESOURCES if the storage
-     *         is incapable of returning the size, and
-     *         CACHE_RESULT_ERROR otherwise.
-     */
-    cache_result_t (* getItems)(CACHE_STORAGE* storage,
-                                uint64_t* items);
+    void (* freeInstance)(Storage* instance);
 };
 
-#if defined __cplusplus
-const uint32_t CACHE_USE_CONFIG_TTL = static_cast<uint32_t>(-1);
-#else
-#define CACHE_USE_CONFIG_TTL ((uint32_t)-1)
-#endif
 
 #define CACHE_STORAGE_ENTRY_POINT "CacheGetStorageAPI"
 typedef CACHE_STORAGE_API* (* CacheGetStorageAPIFN)();
-
 
 namespace std
 {

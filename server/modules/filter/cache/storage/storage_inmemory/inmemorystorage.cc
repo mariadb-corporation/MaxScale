@@ -100,12 +100,12 @@ void InMemoryStorage::get_config(CACHE_STORAGE_CONFIG* pConfig)
     *pConfig = m_config;
 }
 
-cache_result_t InMemoryStorage::get_head(CACHE_KEY* pKey, GWBUF** ppHead) const
+cache_result_t InMemoryStorage::get_head(CACHE_KEY* pKey, GWBUF** ppHead)
 {
     return CACHE_RESULT_OUT_OF_RESOURCES;
 }
 
-cache_result_t InMemoryStorage::get_tail(CACHE_KEY* pKey, GWBUF** ppHead) const
+cache_result_t InMemoryStorage::get_tail(CACHE_KEY* pKey, GWBUF** ppHead)
 {
     return CACHE_RESULT_OUT_OF_RESOURCES;
 }
@@ -140,7 +140,7 @@ cache_result_t InMemoryStorage::do_get_value(const CACHE_KEY& key,
 {
     cache_result_t result = CACHE_RESULT_NOT_FOUND;
 
-    Entries::iterator i = m_entries.find(key);
+    Entries::const_iterator i = m_entries.find(key);
 
     if (i != m_entries.end())
     {
@@ -161,7 +161,7 @@ cache_result_t InMemoryStorage::do_get_value(const CACHE_KEY& key,
             soft_ttl = hard_ttl;
         }
 
-        Entry& entry = i->second;
+        const Entry& entry = i->second;
 
         int64_t now = Cache::time_ms();
 
@@ -210,11 +210,11 @@ cache_result_t InMemoryStorage::do_get_value(const CACHE_KEY& key,
     return result;
 }
 
-cache_result_t InMemoryStorage::do_put_value(const CACHE_KEY& key, const GWBUF& value)
+cache_result_t InMemoryStorage::do_put_value(const CACHE_KEY& key, const GWBUF* pValue)
 {
-    mxb_assert(GWBUF_IS_CONTIGUOUS(&value));
+    mxb_assert(GWBUF_IS_CONTIGUOUS(pValue));
 
-    size_t size = GWBUF_LENGTH(&value);
+    size_t size = GWBUF_LENGTH(pValue);
 
     Entries::iterator i = m_entries.find(key);
     Entry* pEntry;
@@ -249,7 +249,7 @@ cache_result_t InMemoryStorage::do_put_value(const CACHE_KEY& key, const GWBUF& 
 
     m_stats.size += size;
 
-    const uint8_t* pData = GWBUF_DATA(&value);
+    const uint8_t* pData = GWBUF_DATA(pValue);
 
     copy(pData, pData + size, pEntry->value.begin());
     pEntry->time = Cache::time_ms();
