@@ -47,7 +47,11 @@ Session::Session(Client* pClient, const SListener& listener)
     m_state = MXS_SESSION::State::CREATED;
     client_dcb = &m_client_dcb;
 
-    m_mysql_session.db = "dummy";
+    std::unique_ptr<MYSQL_session> sMysql_session(new MYSQL_session);
+
+    sMysql_session->db = "dummy";
+
+    set_protocol_data(std::move(sMysql_session));
 }
 
 Session::~Session()

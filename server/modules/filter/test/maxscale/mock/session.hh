@@ -94,7 +94,6 @@ private:
 
     Client&       m_client;
     Dcb           m_client_dcb;
-    MYSQL_session m_mysql_session;
 };
 }
 }
