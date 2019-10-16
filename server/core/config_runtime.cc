@@ -229,6 +229,32 @@ static std::pair<bool, MXS_CONFIG_PARAMETER> load_defaults(const char* name,
     return {rval, params};
 }
 
+std::string get_cycle_name(mxs::Target* item, mxs::Target* target)
+{
+    std::string rval;
+
+    for (auto c : target->get_children())
+    {
+        if (c == item)
+        {
+            rval = item->name();
+        }
+        else
+        {
+            rval = get_cycle_name(item, c);
+        }
+
+        if (!rval.empty())
+        {
+            rval += " <- ";
+            rval += target->name();
+            break;
+        }
+    }
+
+    return rval;
+}
+
 bool runtime_link_target(const std::string& subject, const std::string& target)
 {
     bool rval = false;
@@ -243,16 +269,30 @@ bool runtime_link_target(const std::string& subject, const std::string& target)
         }
         else if (auto tgt = mxs::Target::find(subject))
         {
-            if (!service->has_target(tgt))
+            if (service == tgt)
             {
-                service->add_target(tgt);
-                service->serialize();
-                rval = true;
+                config_runtime_error("Cannot link '%s' to itself", service->name());
             }
-            else
+            else if (service->has_target(tgt))
             {
                 config_runtime_error("Service '%s' already uses target '%s'",
                                      service->name(), subject.c_str());
+            }
+            else
+            {
+                auto cycle = get_cycle_name(service, tgt);
+
+                if (!cycle.empty())
+                {
+                    config_runtime_error("Linking '%s' to '%s' would result in a circular configuration: %s",
+                                         subject.c_str(), service->name(), cycle.c_str());
+                }
+                else
+                {
+                    service->add_target(tgt);
+                    service->serialize();
+                    rval = true;
+                }
             }
         }
         else
