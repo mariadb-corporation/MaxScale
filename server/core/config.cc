@@ -1225,6 +1225,13 @@ Groups<T> get_graph_cycles(Container<T> graph)
                     visit_node(s);
                     n->lowlink = std::min(n->lowlink, s->lowlink);
                 }
+                else if (n == s)
+                {
+                    // This isn't strictly according to the algorithm but this is a convenient spot where we
+                    // can easily spot cycles of size one. Adding an extra group with the two nodes in it
+                    // causes it to be reported correctly.
+                    groups.push_back({n->value, s->value});
+                }
                 else if (s->on_stack)
                 {
                     n->lowlink = std::min(n->lowlink, s->index);
