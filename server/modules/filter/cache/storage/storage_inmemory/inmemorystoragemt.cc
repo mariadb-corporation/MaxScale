@@ -75,11 +75,10 @@ cache_result_t InMemoryStorageMT::invalidate(const std::vector<std::string>& wor
     return do_invalidate(words);
 }
 
-cache_result_t InMemoryStorageMT::invalidate_all()
+cache_result_t InMemoryStorageMT::clear()
 {
-    mxb_assert(!true);
     std::lock_guard<std::mutex> guard(m_lock);
 
-    return CACHE_RESULT_OK;
+    return do_clear();
 }
 

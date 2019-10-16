@@ -42,7 +42,7 @@ public:
 
     cache_result_t invalidate(const std::vector<std::string>& invalidation_words) override final;
 
-    cache_result_t invalidate_all() override final;
+    cache_result_t clear() override final;
 
     cache_result_t get_head(CACHE_KEY* pKey,
                             GWBUF** ppValue) override final;

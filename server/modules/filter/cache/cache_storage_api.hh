@@ -270,11 +270,11 @@ public:
     virtual cache_result_t invalidate(const std::vector<std::string>& words) = 0;
 
     /**
-     * Unconditionally invalidate entries
+     * Clear storage
      *
-     * @return CACHE_RESULT_OK if the invalidation succeeded.
+     * @return CACHE_RESULT_OK is the clearing succeeded.
      */
-    virtual cache_result_t invalidate_all() = 0;
+    virtual cache_result_t clear() = 0;
 
     /**
      * Get the head item from the storage. This is only intended for testing and

@@ -172,7 +172,7 @@ cache_result_t LRUStorage::do_invalidate(const std::vector<std::string>& words)
     return m_pStorage->invalidate(words);
 }
 
-cache_result_t LRUStorage::do_invalidate_all()
+cache_result_t LRUStorage::do_clear()
 {
     mxb_assert(!true);
     return CACHE_RESULT_OK;

@@ -300,6 +300,17 @@ cache_result_t InMemoryStorage::do_invalidate(const std::vector<std::string>& wo
     return CACHE_RESULT_OUT_OF_RESOURCES;
 }
 
+cache_result_t InMemoryStorage::do_clear()
+{
+    m_stats.deletes += m_entries.size();
+    m_stats.size = 0;
+    m_stats.items = 0;
+
+    m_entries.clear();
+
+    return CACHE_RESULT_OK;
+}
+
 static void set_integer(json_t* pObject, const char* zName, size_t value)
 {
     json_t* pValue = json_integer(value);

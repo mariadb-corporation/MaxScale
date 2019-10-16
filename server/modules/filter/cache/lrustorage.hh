@@ -63,9 +63,9 @@ protected:
     cache_result_t do_invalidate(const std::vector<std::string>& words);
 
     /**
-     * @see Storage::invalidate_all
+     * @see Storage::clear
      */
-    cache_result_t do_invalidate_all();
+    cache_result_t do_clear();
 
     /**
      * @see Storage::get_head

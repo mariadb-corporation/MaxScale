@@ -41,7 +41,7 @@ public:
                              const GWBUF* pValue) override final;
     cache_result_t del_value(const CACHE_KEY& key) override final;
     cache_result_t invalidate(const std::vector<std::string>& words) override final;
-    cache_result_t invalidate_all() override final;
+    cache_result_t clear() override final;
 
 private:
     InMemoryStorageMT(const std::string& name, const Config& config);

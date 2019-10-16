@@ -65,9 +65,9 @@ cache_result_t LRUStorageST::invalidate(const std::vector<std::string>& words)
     return LRUStorage::do_invalidate(words);
 }
 
-cache_result_t LRUStorageST::invalidate_all()
+cache_result_t LRUStorageST::clear()
 {
-    return LRUStorage::do_invalidate_all();
+    return LRUStorage::do_clear();
 }
 
 cache_result_t LRUStorageST::get_head(CACHE_KEY* pKey, GWBUF** ppValue)

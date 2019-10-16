@@ -155,9 +155,9 @@ public:
     virtual cache_result_t invalidate(const std::vector<std::string>& words) = 0;
 
     /**
-     * See @Storage::invalidate
+     * See @Storage::clear
      */
-    virtual cache_result_t invalidate_all() = 0;
+    virtual cache_result_t clear() = 0;
 
     /**
      * Returns the monotonic time, expressed in milliseconds, since an

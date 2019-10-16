@@ -53,6 +53,7 @@ protected:
                                 const GWBUF* pValue);
     cache_result_t do_del_value(const CACHE_KEY& key);
     cache_result_t do_invalidate(const std::vector<std::string>& words);
+    cache_result_t do_clear();
 
 private:
     InMemoryStorage(const InMemoryStorage&);

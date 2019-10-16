@@ -70,12 +70,16 @@ cache_result_t LRUStorageMT::del_value(const CACHE_KEY& key)
 
 cache_result_t LRUStorageMT::invalidate(const std::vector<std::string>& words)
 {
+    std::lock_guard<std::mutex> guard(m_lock);
+
     return LRUStorage::do_invalidate(words);
 }
 
-cache_result_t LRUStorageMT::invalidate_all()
+cache_result_t LRUStorageMT::clear()
 {
-    return LRUStorage::do_invalidate_all();
+    std::lock_guard<std::mutex> guard(m_lock);
+
+    return LRUStorage::do_clear();
 }
 
 cache_result_t LRUStorageMT::get_head(CACHE_KEY* pKey, GWBUF** ppHead)

@@ -153,9 +153,9 @@ cache_result_t CachePT::invalidate(const std::vector<std::string>& words)
     return thread_cache().invalidate(words);
 }
 
-cache_result_t CachePT::invalidate_all()
+cache_result_t CachePT::clear()
 {
-    return thread_cache().invalidate_all();
+    return thread_cache().clear();
 }
 
 // static

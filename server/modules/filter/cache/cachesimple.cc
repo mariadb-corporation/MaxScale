@@ -78,9 +78,9 @@ cache_result_t CacheSimple::invalidate(const std::vector<std::string>& words)
     return m_pStorage->invalidate(words);
 }
 
-cache_result_t CacheSimple::invalidate_all()
+cache_result_t CacheSimple::clear()
 {
-    return m_pStorage->invalidate_all();
+    return m_pStorage->clear();
 }
 
 // protected:

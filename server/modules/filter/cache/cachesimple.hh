@@ -38,7 +38,7 @@ public:
 
     cache_result_t invalidate(const std::vector<std::string>& words) override final;
 
-    cache_result_t invalidate_all() override final;
+    cache_result_t clear() override final;
 
 protected:
     CacheSimple(const std::string& name,

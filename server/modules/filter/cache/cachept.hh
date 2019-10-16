@@ -46,7 +46,7 @@ public:
 
     cache_result_t invalidate(const std::vector<std::string>& words);
 
-    cache_result_t invalidate_all();
+    cache_result_t clear();
 
 private:
     typedef std::shared_ptr<Cache> SCache;
