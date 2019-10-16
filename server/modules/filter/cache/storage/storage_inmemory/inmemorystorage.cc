@@ -44,17 +44,24 @@ InMemoryStorage::~InMemoryStorage()
 {
 }
 
-bool InMemoryStorage::Initialize(uint32_t* pCapabilities)
+//static
+bool InMemoryStorage::initialize(uint32_t* pCapabilities)
 {
     *pCapabilities = (CACHE_STORAGE_CAP_ST | CACHE_STORAGE_CAP_MT);
 
     return true;
 }
 
-InMemoryStorage* InMemoryStorage::Create_instance(const char* zName,
-                                                  const CACHE_STORAGE_CONFIG& config,
-                                                  int argc,
-                                                  char* argv[])
+//static
+void InMemoryStorage::finalize()
+{
+}
+
+//static
+InMemoryStorage* InMemoryStorage::create(const char* zName,
+                                         const CACHE_STORAGE_CONFIG& config,
+                                         int argc,
+                                         char* argv[])
 {
     mxb_assert(zName);
 

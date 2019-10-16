@@ -20,6 +20,9 @@ class Storage;
 class StorageFactory
 {
 public:
+    StorageFactory(const StorageFactory&) = delete;
+    StorageFactory& operator=(const StorageFactory&) = delete;
+
     ~StorageFactory();
 
     static StorageFactory* open(const char* zName);
@@ -92,14 +95,11 @@ public:
                                 char* argv[] = NULL);
 
 private:
-    StorageFactory(void* handle, CACHE_STORAGE_API* pApi, uint32_t capabilities);
-
-    StorageFactory(const StorageFactory&);
-    StorageFactory& operator=(const StorageFactory&);
+    StorageFactory(void* handle, StorageModule* pModule, uint32_t capabilities);
 
 private:
-    void*              m_handle;        /*< dl handle of storage. */
-    CACHE_STORAGE_API* m_pApi;          /*< API of storage. */
-    uint32_t           m_storage_caps;  /*< Capabilities of underlying storage. */
-    uint32_t           m_caps;          /*< Capabilities of storages of this factory. */
+    void*          m_handle;        /*< dl handle of storage. */
+    StorageModule* m_pModule;       /*< API of storage. */
+    uint32_t       m_storage_caps;  /*< Capabilities of underlying storage. */
+    uint32_t       m_caps;          /*< Capabilities of storages of this factory. */
 };

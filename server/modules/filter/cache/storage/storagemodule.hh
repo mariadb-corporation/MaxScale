@@ -15,41 +15,27 @@
 #include <maxscale/ccdefs.hh>
 
 template<class StorageType>
-class StorageModule
+class StorageModuleT : public StorageModule
 {
 public:
-    static bool initialize(uint32_t* pCapabilities)
+    bool initialize(uint32_t* pCapabilities) override final
     {
-        return StorageType::Initialize(pCapabilities);
+        return StorageType::initialize(pCapabilities);
     }
 
-    static Storage* createInstance(const char* zName,
-                                   const CACHE_STORAGE_CONFIG* pConfig,
-                                   int argc,
-                                   char* argv[])
+    void finalize() override final
+    {
+        StorageType::finalize();
+    }
+
+    Storage* create_storage(const char* zName,
+                            const CACHE_STORAGE_CONFIG* pConfig,
+                            int argc,
+                            char* argv[]) override final
     {
         mxb_assert(zName);
         mxb_assert(pConfig);
 
-        StorageType* pStorage = NULL;
-
-        MXS_EXCEPTION_GUARD(pStorage = StorageType::Create_instance(zName, *pConfig, argc, argv));
-
-        return pStorage;
+        return StorageType::create(zName, *pConfig, argc, argv);
     }
-
-    static void freeInstance(Storage* pInstance)
-    {
-        MXS_EXCEPTION_GUARD(delete reinterpret_cast<StorageType*>(pInstance));
-    }
-
-    static CACHE_STORAGE_API s_api;
-};
-
-template<class StorageType>
-CACHE_STORAGE_API StorageModule<StorageType>::s_api =
-{
-    &StorageModule<StorageType>::initialize,
-    &StorageModule<StorageType>::createInstance,
-    &StorageModule<StorageType>::freeInstance,
 };

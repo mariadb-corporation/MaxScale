@@ -17,11 +17,18 @@
 #include "../storagemodule.hh"
 #include "inmemorystoragest.hh"
 
+namespace
+{
+
+StorageModuleT<InMemoryStorage> module;
+
+}
+
 extern "C"
 {
 
-CACHE_STORAGE_API* CacheGetStorageAPI()
+StorageModule* CacheGetStorageModule()
 {
-    return &StorageModule<InMemoryStorage>::s_api;
+    return &module;
 }
 }

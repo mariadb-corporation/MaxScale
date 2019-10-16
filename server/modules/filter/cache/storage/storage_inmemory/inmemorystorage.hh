@@ -24,12 +24,13 @@ class InMemoryStorage : public Storage
 public:
     virtual ~InMemoryStorage();
 
-    static bool Initialize(uint32_t* pCapabilities);
+    static bool initialize(uint32_t* pCapabilities);
+    static void finalize();
 
-    static InMemoryStorage* Create_instance(const char* zName,
-                                            const CACHE_STORAGE_CONFIG& config,
-                                            int argc,
-                                            char* argv[]);
+    static InMemoryStorage* create(const char* zName,
+                                   const CACHE_STORAGE_CONFIG& config,
+                                   int argc,
+                                   char* argv[]);
 
     void           get_config(CACHE_STORAGE_CONFIG* pConfig) override final;
     cache_result_t get_head(CACHE_KEY* pKey, GWBUF** ppHead) override final;

@@ -327,8 +327,9 @@ protected:
     Storage() {}
 };
 
-struct CACHE_STORAGE_API
+class StorageModule
 {
+public:
     /**
      * Called immediately after the storage module has been loaded.
      *
@@ -337,7 +338,12 @@ struct CACHE_STORAGE_API
      *
      * @return True if the initialization succeeded, false otherwise.
      */
-    bool (* initialize)(uint32_t* capabilities);
+    virtual bool initialize(uint32_t* capabilities) = 0;
+
+    /**
+     * Called immediately before the storage module will be unloaded.
+     */
+    virtual void finalize() = 0;
 
     /**
      * Creates an instance of cache storage. This function should, if necessary,
@@ -354,21 +360,14 @@ struct CACHE_STORAGE_API
      * @return A new cache instance, or NULL if the instance could not be
      *         created.
      */
-    Storage* (*createInstance)(const char* name,
-                               const CACHE_STORAGE_CONFIG* config,
-                               int argc, char* argv[]);
-
-    /**
-     * Frees an CACHE_STORAGE instance earlier created with createInstance.
-     *
-     * @param instance The CACHE_STORAGE instance to be freed.
-     */
-    void (* freeInstance)(Storage* instance);
+    virtual Storage* create_storage(const char* name,
+                                    const CACHE_STORAGE_CONFIG* config,
+                                    int argc, char* argv[]) = 0;
 };
 
 
-#define CACHE_STORAGE_ENTRY_POINT "CacheGetStorageAPI"
-typedef CACHE_STORAGE_API* (* CacheGetStorageAPIFN)();
+#define CACHE_STORAGE_ENTRY_POINT "CacheGetStorageModule"
+typedef StorageModule* (* CacheGetStorageModuleFN)();
 
 namespace std
 {

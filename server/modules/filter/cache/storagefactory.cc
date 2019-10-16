@@ -26,10 +26,10 @@
 namespace
 {
 
-bool open_cache_storage(const char* zName,
-                        void** pHandle,
-                        CACHE_STORAGE_API** ppApi,
-                        uint32_t* pCapabilities)
+bool open_storage_module(const char* zName,
+                         void** pHandle,
+                         StorageModule** ppModule,
+                         uint32_t* pCapabilities)
 {
     bool rv = false;
 
@@ -44,14 +44,14 @@ bool open_cache_storage(const char* zName,
 
         if (f)
         {
-            CACHE_STORAGE_API* pApi = ((CacheGetStorageAPIFN)f)();
+            StorageModule* pModule = ((CacheGetStorageModuleFN)f)();
 
-            if (pApi)
+            if (pModule)
             {
-                if ((pApi->initialize)(pCapabilities))
+                if (pModule->initialize(pCapabilities))
                 {
                     *pHandle = handle;
-                    *ppApi = pApi;
+                    *ppModule = pModule;
 
                     rv = true;
                 }
@@ -88,9 +88,9 @@ bool open_cache_storage(const char* zName,
 }
 
 
-void close_cache_storage(void* handle, CACHE_STORAGE_API* pApi)
+void close_cache_storage(void* handle, StorageModule* pModule)
 {
-    // TODO: pApi->finalize();
+    pModule->finalize();
 
     if (dlclose(handle) != 0)
     {
@@ -101,15 +101,15 @@ void close_cache_storage(void* handle, CACHE_STORAGE_API* pApi)
 }
 
 StorageFactory::StorageFactory(void* handle,
-                               CACHE_STORAGE_API* pApi,
+                               StorageModule* pModule,
                                uint32_t capabilities)
     : m_handle(handle)
-    , m_pApi(pApi)
+    , m_pModule(pModule)
     , m_storage_caps(capabilities)
     , m_caps(capabilities)
 {
     mxb_assert(handle);
-    mxb_assert(pApi);
+    mxb_assert(pModule);
 
     m_caps |= CACHE_STORAGE_CAP_LRU;
     m_caps |= CACHE_STORAGE_CAP_MAX_COUNT;
@@ -118,27 +118,27 @@ StorageFactory::StorageFactory(void* handle,
 
 StorageFactory::~StorageFactory()
 {
-    close_cache_storage(m_handle, m_pApi);
+    close_cache_storage(m_handle, m_pModule);
     m_handle = 0;
-    m_pApi = 0;
+    m_pModule = 0;
 }
 
 // static
 StorageFactory* StorageFactory::open(const char* zName)
 {
-    StorageFactory* pFactory = 0;
+    StorageFactory* pFactory = nullptr;
 
     void* handle;
-    CACHE_STORAGE_API* pApi;
+    StorageModule* pModule;
     uint32_t capabilities;
 
-    if (open_cache_storage(zName, &handle, &pApi, &capabilities))
+    if (open_storage_module(zName, &handle, &pModule, &capabilities))
     {
-        MXS_EXCEPTION_GUARD(pFactory = new StorageFactory(handle, pApi, capabilities));
+        pFactory = new StorageFactory(handle, pModule, capabilities);
 
         if (!pFactory)
         {
-            close_cache_storage(handle, pApi);
+            close_cache_storage(handle, pModule);
         }
     }
 
@@ -151,7 +151,7 @@ Storage* StorageFactory::create_storage(const char* zName,
                                         char* argv[])
 {
     mxb_assert(m_handle);
-    mxb_assert(m_pApi);
+    mxb_assert(m_pModule);
 
     CacheStorageConfig used_config(config);
 
@@ -211,9 +211,7 @@ Storage* StorageFactory::create_raw_storage(const char* zName,
                                             char* argv[])
 {
     mxb_assert(m_handle);
-    mxb_assert(m_pApi);
+    mxb_assert(m_pModule);
 
-    Storage* pStorage = m_pApi->createInstance(zName, &config, argc, argv);
-
-    return pStorage;
+    return m_pModule->create_storage(zName, &config, argc, argv);
 }
