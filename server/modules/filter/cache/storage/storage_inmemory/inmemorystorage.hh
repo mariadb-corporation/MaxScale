@@ -48,8 +48,11 @@ protected:
                                 uint32_t soft_ttl,
                                 uint32_t hard_ttl,
                                 GWBUF** ppResult);
-    cache_result_t do_put_value(const CACHE_KEY& key, const GWBUF* pValue);
+    cache_result_t do_put_value(const CACHE_KEY& key,
+                                const std::vector<std::string>& invalidation_words,
+                                const GWBUF* pValue);
     cache_result_t do_del_value(const CACHE_KEY& key);
+    cache_result_t do_invalidate(const std::vector<std::string>& words);
 
 private:
     InMemoryStorage(const InMemoryStorage&);

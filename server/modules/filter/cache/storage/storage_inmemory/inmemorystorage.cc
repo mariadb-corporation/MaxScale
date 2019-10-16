@@ -217,9 +217,19 @@ cache_result_t InMemoryStorage::do_get_value(const CACHE_KEY& key,
     return result;
 }
 
-cache_result_t InMemoryStorage::do_put_value(const CACHE_KEY& key, const GWBUF* pValue)
+cache_result_t InMemoryStorage::do_put_value(const CACHE_KEY& key,
+                                             const std::vector<std::string>& invalidation_words,
+                                             const GWBUF* pValue)
 {
     mxb_assert(GWBUF_IS_CONTIGUOUS(pValue));
+
+    if (!invalidation_words.empty())
+    {
+        MXB_ERROR("InMemoryStorage provided with invalidation words, "
+                  "even though it does not support such.");
+        mxb_assert(!true);
+        return CACHE_RESULT_OUT_OF_RESOURCES;
+    }
 
     size_t size = GWBUF_LENGTH(pValue);
 
@@ -281,6 +291,13 @@ cache_result_t InMemoryStorage::do_del_value(const CACHE_KEY& key)
     }
 
     return i != m_entries.end() ? CACHE_RESULT_OK : CACHE_RESULT_NOT_FOUND;
+}
+
+cache_result_t InMemoryStorage::do_invalidate(const std::vector<std::string>& words)
+{
+    MXS_ERROR("InMemoryStorage cannot do invalidation.");
+    mxb_assert(!true);
+    return CACHE_RESULT_OUT_OF_RESOURCES;
 }
 
 static void set_integer(json_t* pObject, const char* zName, size_t value)

@@ -90,12 +90,13 @@ bool cache_key_equal_to(const CACHE_KEY* lhs, const CACHE_KEY* rhs);
 
 enum cache_storage_capabilities_t
 {
-    CACHE_STORAGE_CAP_NONE      = 0x00,
-    CACHE_STORAGE_CAP_ST        = 0x01, /*< Storage can optimize for single thread. */
-    CACHE_STORAGE_CAP_MT        = 0x02, /*< Storage can handle multiple threads. */
-    CACHE_STORAGE_CAP_LRU       = 0x04, /*< Storage capable of LRU eviction. */
-    CACHE_STORAGE_CAP_MAX_COUNT = 0x08, /*< Storage capable of capping number of entries.*/
-    CACHE_STORAGE_CAP_MAX_SIZE  = 0x10, /*< Storage capable of capping size of cache.*/
+    CACHE_STORAGE_CAP_NONE         = 0x00,
+    CACHE_STORAGE_CAP_ST           = 0x01, /*< Storage can optimize for single thread. */
+    CACHE_STORAGE_CAP_MT           = 0x02, /*< Storage can handle multiple threads. */
+    CACHE_STORAGE_CAP_LRU          = 0x04, /*< Storage capable of LRU eviction. */
+    CACHE_STORAGE_CAP_MAX_COUNT    = 0x08, /*< Storage capable of capping number of entries.*/
+    CACHE_STORAGE_CAP_MAX_SIZE     = 0x10, /*< Storage capable of capping size of cache.*/
+    CACHE_STORAGE_CAP_INVALIDATION = 0x20, /*< Storage capable of invalidation.*/
 };
 
 static inline bool cache_storage_has_cap(uint32_t capabilities, uint32_t mask)
