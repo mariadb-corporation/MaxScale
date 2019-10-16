@@ -2064,9 +2064,9 @@ int32_t qc_mysql_get_database_names(GWBUF* querybuf, std::vector<std::string>* p
                 if ((strcmp(qcme_string_get(tbl->db), "skygw_virtual") != 0)
                     && (*qcme_string_get(tbl->db) != 0))
                 {
-                    auto str = qcme_string_get(select_lex->db);
+                    auto str = qcme_string_get(tbl->db);
 
-                    if (std::find(pNames->begin(), pNames.end(), str) == pNames->end())
+                    if (std::find(pNames->begin(), pNames->end(), str) == pNames->end())
                     {
                         pNames->push_back(str);
                     }
