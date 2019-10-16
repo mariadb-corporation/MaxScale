@@ -304,7 +304,7 @@ RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
             }
         }
 
-        if (max_rlag != mxs::RLAG_UNDEFINED)
+        if (max_rlag != mxs::Target::RLAG_UNDEFINED)
         {
             auto state = rlag_ok ? mxs::RLagState::BELOW_LIMIT : mxs::RLagState::ABOVE_LIMIT;
             backend->target()->set_rlag_state(state, max_rlag);

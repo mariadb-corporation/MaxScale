@@ -87,8 +87,8 @@ public:
     PoolStats pool_stats;
     int       persistmax = 0;       /**< Maximum pool size actually achieved since startup */
 
-    int           rlag = mxs::RLAG_UNDEFINED;   /**< Replication Lag for Master/Slave replication */
-    unsigned long node_ts = 0;                  /**< Last timestamp set from M/S monitor module */
+    int           rlag = mxs::Target::RLAG_UNDEFINED;   /**< Replication Lag for Master/Slave replication */
+    unsigned long node_ts = 0;                          /**< Last timestamp set from M/S monitor module */
 
     // Misc fields
     bool master_err_is_logged = false;  /**< If node failed, this indicates whether it is logged. Only
@@ -208,6 +208,10 @@ public:
         return rlag;
     }
 
+    int64_t ping() const override;
+
+    void set_ping(int64_t ping);
+
     uint64_t capabilities() const override
     {
         return 0;
@@ -276,7 +280,8 @@ protected:
     }
 
 private:
-    static const int DEFAULT_CHARSET {0x08};        /**< The latin1 charset */
-    mxs::SSLProvider m_ssl_provider;
-    uint64_t         m_status {0};
+    static const int    DEFAULT_CHARSET {0x08};         /**< The latin1 charset */
+    mxs::SSLProvider    m_ssl_provider;
+    uint64_t            m_status {0};
+    std::atomic_int64_t m_ping {mxs::Target::PING_UNDEFINED};   /**< Server ping measured by monitor, in us */
 };

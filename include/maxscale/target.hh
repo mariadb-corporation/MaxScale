@@ -184,12 +184,12 @@ enum class RLagState
     ABOVE_LIMIT
 };
 
-static constexpr const int RLAG_UNDEFINED = -1;         // Default replication lag value
-
 // A routing target
 class Target
 {
 public:
+    static constexpr const int64_t RLAG_UNDEFINED = -1;         // Default replication lag value
+    static constexpr const int64_t PING_UNDEFINED = -1;         // Default ping value
 
     virtual ~Target() = default;
 
@@ -222,12 +222,19 @@ public:
     virtual int64_t rank() const = 0;
 
     /**
-     * How many seconds behind the master this target is
+     * Returns the number of seconds that this target is behind in replication. If this target is a master or
+     * replication lag is not applicable, returns -1.
      *
-     * @return Returns the lag in seconds that this target is behind. If this target is a master or
-     *         replication lag is not applicable, this function returns 0.
+     * @return Replication lag
      */
     virtual int64_t replication_lag() const = 0;
+
+    /**
+     * Return ping in microseconds, or negative if the value is unknown (e.g. no connection).
+     *
+     * @return Ping in microseconds
+     */
+    virtual int64_t ping() const = 0;
 
     /**
      * Get the routing capabilities required by this target

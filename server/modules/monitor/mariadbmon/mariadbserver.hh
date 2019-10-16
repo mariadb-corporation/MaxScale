@@ -158,7 +158,7 @@ public:
 
     /* Replication lag of the server. Used during calculation so that the actual SERVER struct is
      * only written to once. */
-    int m_replication_lag = mxs::RLAG_UNDEFINED;
+    int m_replication_lag = mxs::Target::RLAG_UNDEFINED;
 
     /* Has anything that could affect replication topology changed this iteration?
      * Causes: server id, slave connections, read-only. */

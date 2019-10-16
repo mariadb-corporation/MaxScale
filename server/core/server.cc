@@ -334,6 +334,16 @@ void SERVER::clear_status(uint64_t bit)
     m_status &= ~bit;
 }
 
+int64_t SERVER::ping() const
+{
+    return m_ping.load(std::memory_order_relaxed);
+}
+
+void SERVER::set_ping(int64_t ping)
+{
+    m_ping.store(ping, std::memory_order_relaxed);
+}
+
 bool Server::set_monitor_user(const string& username)
 {
     bool rval = false;

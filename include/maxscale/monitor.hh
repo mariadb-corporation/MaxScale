@@ -169,7 +169,7 @@ public:
     /**
      * Ping or connect to a database. If connection does not exist or ping fails, a new connection
      * is created. This will always leave a valid database handle in @c *ppCon, allowing the user
-     * to call MySQL C API functions to find out the reason of the failure.
+     * to call MySQL C API functions to find out the reason of the failure. Also measures server ping.
      *
      * @param sett        Connection settings
      * @param pServer     A server

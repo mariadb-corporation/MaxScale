@@ -1216,9 +1216,12 @@ MonitorServer::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& se
     auto pConn = *ppConn;
     if (pConn)
     {
+        mxb::StopWatch timer;
         /** Return if the connection is OK */
         if (mysql_ping(pConn) == 0)
         {
+            long time_us = std::chrono::duration_cast<std::chrono::microseconds>(timer.split()).count();
+            server.set_ping(time_us);
             return ConnectResult::OLDCONN_OK;
         }
         /** Otherwise close the handle. */
@@ -1267,6 +1270,19 @@ MonitorServer::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& se
     }
 
     *ppConn = pConn;
+
+    if (conn_result == ConnectResult::NEWCONN_OK)
+    {
+        // If a new connection was created, measure ping separately.
+        mxb::StopWatch timer;
+        long time_us = mxs::Target::PING_UNDEFINED;
+        if (mysql_ping(pConn) == 0)
+        {
+            time_us = std::chrono::duration_cast<std::chrono::microseconds>(timer.split()).count();
+        }
+        server.set_ping(time_us);
+    }
+
     return conn_result;
 }
 

@@ -1868,19 +1868,34 @@ void Service::add_target(mxs::Target* target)
 
 int64_t Service::replication_lag() const
 {
-    int64_t lag = mxs::RLAG_UNDEFINED;
+    int64_t lag = mxs::Target::RLAG_UNDEFINED;
 
     for (auto a : m_data->targets)
     {
         int64_t l = a->replication_lag();
 
-        if (lag == mxs::RLAG_UNDEFINED || l < lag)
+        if (lag == mxs::Target::RLAG_UNDEFINED || l < lag)
         {
             lag = l;
         }
     }
 
     return lag;
+}
+
+int64_t Service::ping() const
+{
+    auto undef = mxs::Target::PING_UNDEFINED;
+    auto rval = undef;
+    for (auto a : m_data->targets)
+    {
+        auto p = a->ping();
+        if (p != undef && (rval == undef || p < rval))
+        {
+            rval = p;
+        }
+    }
+    return rval;
 }
 
 void Service::incref()

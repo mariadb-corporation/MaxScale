@@ -167,6 +167,7 @@ public:
     }
 
     int64_t replication_lag() const override;
+    int64_t ping() const override;
 
     uint64_t capabilities() const override
     {
