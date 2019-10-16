@@ -379,7 +379,7 @@ void admin_log_error(void* arg, const char* fmt, va_list ap)
     {
         char buf[1024];
         vsnprintf(buf, sizeof(buf), fmt, ap);
-        MXS_ERROR("HTTP daemon error: %s\n", mxb::trimmed_copy(buf).c_str());
+        MXS_ERROR("REST API HTTP daemon error: %s\n", mxb::trimmed_copy(buf).c_str());
     }
 }
 

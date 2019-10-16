@@ -1939,7 +1939,7 @@ int main(int argc, char** argv)
                 }
                 else
                 {
-                    log_startup_error("Failed to initialize admin interface.");
+                    log_startup_error("Failed to initialize REST API.");
                     rc = MAXSCALE_INTERNALERROR;
                     maxscale_shutdown();
                     return;
