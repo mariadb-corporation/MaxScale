@@ -32,7 +32,7 @@ CacheSimple::~CacheSimple()
 }
 
 // static
-bool CacheSimple::Create(const CacheConfig& config,
+bool CacheSimple::create(const CacheConfig& config,
                          std::vector<SCacheRules>* pRules,
                          StorageFactory** ppFactory)
 {
@@ -41,7 +41,7 @@ bool CacheSimple::Create(const CacheConfig& config,
     std::vector<SCacheRules> rules;
     StorageFactory* pFactory = NULL;
 
-    rv = Cache::Create(config, &rules, &pFactory);
+    rv = Cache::create(config, &rules, &pFactory);
 
     if (rv)
     {

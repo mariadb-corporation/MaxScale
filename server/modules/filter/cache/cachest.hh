@@ -20,8 +20,8 @@ class CacheST : public CacheSimple
 public:
     ~CacheST();
 
-    static CacheST* Create(const std::string& name, const CacheConfig* pConfig);
-    static CacheST* Create(const std::string& name,
+    static CacheST* create(const std::string& name, const CacheConfig* pConfig);
+    static CacheST* create(const std::string& name,
                            const std::vector<SCacheRules>& rules,
                            SStorageFactory sFactory,
                            const CacheConfig* pConfig);
@@ -39,7 +39,7 @@ private:
             SStorageFactory sFactory,
             Storage* pStorage);
 
-    static CacheST* Create(const std::string& name,
+    static CacheST* create(const std::string& name,
                            const CacheConfig* pConfig,
                            const std::vector<SCacheRules>& rules,
                            SStorageFactory sFactory);

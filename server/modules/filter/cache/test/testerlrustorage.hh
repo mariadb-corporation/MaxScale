@@ -36,7 +36,7 @@ public:
     /**
      * @see TesterStorage::get_storage
      */
-    Storage* get_storage(const CACHE_STORAGE_CONFIG& config) const;
+    Storage* get_storage(const Storage::Config& config) const;
 
 private:
     int test_lru(const CacheItems& cache_items, uint64_t size);

@@ -32,7 +32,7 @@ CacheMT::~CacheMT()
 {
 }
 
-CacheMT* CacheMT::Create(const std::string& name, const CacheConfig* pConfig)
+CacheMT* CacheMT::create(const std::string& name, const CacheConfig* pConfig)
 {
     mxb_assert(pConfig);
 
@@ -41,11 +41,11 @@ CacheMT* CacheMT::Create(const std::string& name, const CacheConfig* pConfig)
     std::vector<SCacheRules> rules;
     StorageFactory* pFactory = NULL;
 
-    if (CacheSimple::Create(*pConfig, &rules, &pFactory))
+    if (CacheSimple::create(*pConfig, &rules, &pFactory))
     {
         shared_ptr<StorageFactory> sFactory(pFactory);
 
-        pCache = Create(name, pConfig, rules, sFactory);
+        pCache = create(name, pConfig, rules, sFactory);
     }
 
     return pCache;
@@ -73,18 +73,18 @@ void CacheMT::refreshed(const CACHE_KEY& key, const CacheFilterSession* pSession
 }
 
 // static
-CacheMT* CacheMT::Create(const std::string& name,
+CacheMT* CacheMT::create(const std::string& name,
                          const CacheConfig* pConfig,
                          const std::vector<SCacheRules>& rules,
                          SStorageFactory sFactory)
 {
     CacheMT* pCache = NULL;
 
-    CacheStorageConfig storage_config(CACHE_THREAD_MODEL_MT,
-                                      pConfig->hard_ttl.count(),
-                                      pConfig->soft_ttl.count(),
-                                      pConfig->max_count.get(),
-                                      pConfig->max_size.get());
+    Storage::Config storage_config(CACHE_THREAD_MODEL_MT,
+                                   pConfig->hard_ttl.count(),
+                                   pConfig->soft_ttl.count(),
+                                   pConfig->max_count.get(),
+                                   pConfig->max_size.get());
 
     int argc = pConfig->storage_argc;
     char** argv = pConfig->storage_argv;

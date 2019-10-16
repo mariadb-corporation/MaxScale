@@ -47,7 +47,7 @@ protected:
                 SStorageFactory sFactory,
                 Storage* pStorage);
 
-    static bool Create(const CacheConfig& config,
+    static bool create(const CacheConfig& config,
                        std::vector<SCacheRules>* pRules,
                        StorageFactory** ppFactory);
 

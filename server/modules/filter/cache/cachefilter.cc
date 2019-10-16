@@ -169,12 +169,12 @@ CacheFilter* CacheFilter::create(const char* zName, MXS_CONFIG_PARAMETER* ppPara
             {
             case CACHE_THREAD_MODEL_MT:
                 MXS_NOTICE("Creating shared cache.");
-                MXS_EXCEPTION_GUARD(pCache = CacheMT::Create(zName, &pFilter->m_config));
+                MXS_EXCEPTION_GUARD(pCache = CacheMT::create(zName, &pFilter->m_config));
                 break;
 
             case CACHE_THREAD_MODEL_ST:
                 MXS_NOTICE("Creating thread specific cache.");
-                MXS_EXCEPTION_GUARD(pCache = CachePT::Create(zName, &pFilter->m_config));
+                MXS_EXCEPTION_GUARD(pCache = CachePT::create(zName, &pFilter->m_config));
                 break;
 
             default:
@@ -198,7 +198,7 @@ CacheFilter* CacheFilter::create(const char* zName, MXS_CONFIG_PARAMETER* ppPara
 
 CacheFilterSession* CacheFilter::newSession(MXS_SESSION* pSession, SERVICE* pService)
 {
-    return CacheFilterSession::Create(m_sCache.get(), pSession, pService);
+    return CacheFilterSession::create(m_sCache.get(), pSession, pService);
 }
 
 // static

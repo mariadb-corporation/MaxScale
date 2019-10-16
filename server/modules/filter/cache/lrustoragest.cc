@@ -14,7 +14,7 @@
 #define MXS_MODULE_NAME "cache"
 #include "lrustoragest.hh"
 
-LRUStorageST::LRUStorageST(const CACHE_STORAGE_CONFIG& config, Storage* pStorage)
+LRUStorageST::LRUStorageST(const Config& config, Storage* pStorage)
     : LRUStorage(config, pStorage)
 {
     MXS_NOTICE("Created single threaded LRU storage.");
@@ -24,7 +24,7 @@ LRUStorageST::~LRUStorageST()
 {
 }
 
-LRUStorageST* LRUStorageST::create(const CACHE_STORAGE_CONFIG& config, Storage* pStorage)
+LRUStorageST* LRUStorageST::create(const Config& config, Storage* pStorage)
 {
     LRUStorageST* plru_storage = NULL;
 

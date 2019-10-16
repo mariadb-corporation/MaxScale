@@ -26,7 +26,7 @@ int TesterRawStorage::execute(size_t n_threads, size_t n_seconds, const CacheIte
     int rv1 = test_smoke(cache_items);
 
     int rv2 = EXIT_FAILURE;
-    CacheStorageConfig config(CACHE_THREAD_MODEL_MT);
+    Storage::Config config(CACHE_THREAD_MODEL_MT);
 
     Storage* pStorage = get_storage(config);
 
@@ -39,7 +39,7 @@ int TesterRawStorage::execute(size_t n_threads, size_t n_seconds, const CacheIte
     return combine_rvs(rv1, rv2);
 }
 
-Storage* TesterRawStorage::get_storage(const CACHE_STORAGE_CONFIG& config) const
+Storage* TesterRawStorage::get_storage(const Storage::Config& config) const
 {
     return m_factory.create_raw_storage("unspecified", config);
 }

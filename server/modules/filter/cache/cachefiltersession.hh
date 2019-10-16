@@ -51,7 +51,7 @@ public:
      *
      * @return A new instance or NULL if memory allocation fails.
      */
-    static CacheFilterSession* Create(Cache* pCache, MXS_SESSION* pSession, SERVICE* pService);
+    static CacheFilterSession* create(Cache* pCache, MXS_SESSION* pSession, SERVICE* pService);
 
     /**
      * The session has been closed.

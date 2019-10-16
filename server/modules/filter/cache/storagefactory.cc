@@ -146,14 +146,14 @@ StorageFactory* StorageFactory::open(const char* zName)
 }
 
 Storage* StorageFactory::create_storage(const char* zName,
-                                        const CACHE_STORAGE_CONFIG& config,
+                                        const Storage::Config& config,
                                         int argc,
                                         char* argv[])
 {
     mxb_assert(m_handle);
     mxb_assert(m_pModule);
 
-    CacheStorageConfig used_config(config);
+    Storage::Config used_config(config);
 
     uint32_t mask = CACHE_STORAGE_CAP_MAX_COUNT | CACHE_STORAGE_CAP_MAX_SIZE;
 
@@ -206,12 +206,12 @@ Storage* StorageFactory::create_storage(const char* zName,
 
 
 Storage* StorageFactory::create_raw_storage(const char* zName,
-                                            const CACHE_STORAGE_CONFIG& config,
+                                            const Storage::Config& config,
                                             int argc,
                                             char* argv[])
 {
     mxb_assert(m_handle);
     mxb_assert(m_pModule);
 
-    return m_pModule->create_storage(zName, &config, argc, argv);
+    return m_pModule->create_storage(zName, config, argc, argv);
 }

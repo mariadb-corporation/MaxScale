@@ -103,47 +103,6 @@ static inline bool cache_storage_has_cap(uint32_t capabilities, uint32_t mask)
     return (capabilities & mask) == mask;
 }
 
-struct CACHE_STORAGE_CONFIG
-{
-    /**
-     * Specifies whether the storage will be used in a single thread or multi
-     * thread context. In the latter case the storage must perform thread
-     * synchronization as appropriate, in the former  case it need not.
-     */
-    cache_thread_model_t thread_model;
-
-    /**
-     * Hard Time-to-live; number of seconds the value is valid. A value of 0 means
-     * that there is no time-to-live, but that the value is considered fresh
-     * as long as it is available.
-     */
-    uint32_t hard_ttl;
-
-    /**
-     * Soft Time-to-live; number of seconds the value is valid. A value of 0 means
-     * that there is no time-to-live, but that the value is considered fresh
-     * as long as it is available. When the soft TTL has passed, but the hard TTL
-     * has not yet been reached, the stale cached value will be returned, provided
-     * the flag @c CACHE_FLAGS_INCLUDE_STALE is specified when getting the value.
-     */
-    uint32_t soft_ttl;
-
-    /**
-     * The maximum number of items the storage may store, before it should
-     * evict some items. A value of 0 means that there is no limit. The caller
-     * should specify 0, unless CACHE_STORAGE_CAP_MAX_COUNT is returned at
-     * initialization.
-     */
-    uint32_t max_count;
-
-    /**
-     * The maximum size of the storage may may occupy, before it should evict
-     * some items. A value of 0 means that there is no limit. The caller should
-     * specify 0, unless CACHE_STORAGE_CAP_MAX_SIZE is returned at initialization.
-     */
-    uint64_t max_size;
-};
-
 const uint32_t CACHE_USE_CONFIG_TTL = static_cast<uint32_t>(-1);
 
 class Storage
@@ -157,6 +116,69 @@ public:
         INFO_ALL = CACHE_STORAGE_INFO_ALL
     };
 
+    struct Config
+    {
+        Config()
+            : thread_model(CACHE_THREAD_MODEL_MT)
+            , hard_ttl(0)
+            , soft_ttl(0)
+            , max_count(0)
+            , max_size(0)
+        {
+        }
+
+        Config(cache_thread_model_t thread_model,
+               uint32_t hard_ttl = 0,
+               uint32_t soft_ttl = 0,
+               uint32_t max_count = 0,
+               uint64_t max_size = 0)
+            : thread_model(thread_model)
+            , hard_ttl(hard_ttl)
+            , soft_ttl(soft_ttl)
+            , max_count(max_count)
+            , max_size(max_size)
+        {
+        }
+
+        /**
+         * Specifies whether the storage will be used in a single thread or multi
+         * thread context. In the latter case the storage must perform thread
+         * synchronization as appropriate, in the former  case it need not.
+         */
+        cache_thread_model_t thread_model = CACHE_THREAD_MODEL_MT;
+
+        /**
+         * Hard Time-to-live; number of seconds the value is valid. A value of 0 means
+         * that there is no time-to-live, but that the value is considered fresh
+         * as long as it is available.
+         */
+        uint32_t hard_ttl = 0;
+
+        /**
+         * Soft Time-to-live; number of seconds the value is valid. A value of 0 means
+         * that there is no time-to-live, but that the value is considered fresh
+         * as long as it is available. When the soft TTL has passed, but the hard TTL
+         * has not yet been reached, the stale cached value will be returned, provided
+         * the flag @c CACHE_FLAGS_INCLUDE_STALE is specified when getting the value.
+         */
+        uint32_t soft_ttl = 0;
+
+        /**
+         * The maximum number of items the storage may store, before it should
+         * evict some items. A value of 0 means that there is no limit. The caller
+         * should specify 0, unless CACHE_STORAGE_CAP_MAX_COUNT is returned at
+         * initialization.
+         */
+        uint32_t max_count = 0;
+
+        /**
+         * The maximum size of the storage may may occupy, before it should evict
+         * some items. A value of 0 means that there is no limit. The caller should
+         * specify 0, unless CACHE_STORAGE_CAP_MAX_SIZE is returned at initialization.
+         */
+        uint64_t max_size = 0;
+    };
+
     virtual ~Storage();
 
     /**
@@ -164,7 +186,7 @@ public:
      *
      * @param pConfig  Pointer to object that will be updated.
      */
-    virtual void get_config(CACHE_STORAGE_CONFIG* pConfig) = 0;
+    virtual void get_config(Config* pConfig) = 0;
 
     /**
      * Returns information about the storage.
@@ -361,7 +383,7 @@ public:
      *         created.
      */
     virtual Storage* create_storage(const char* name,
-                                    const CACHE_STORAGE_CONFIG* config,
+                                    const Storage::Config& config,
                                     int argc, char* argv[]) = 0;
 };
 
@@ -409,40 +431,5 @@ public:
     CacheKey()
     {
         data = 0;
-    }
-};
-
-class CacheStorageConfig : public CACHE_STORAGE_CONFIG
-{
-public:
-    CacheStorageConfig(cache_thread_model_t thread_model,
-                       uint32_t hard_ttl = 0,
-                       uint32_t soft_ttl = 0,
-                       uint32_t max_count = 0,
-                       uint64_t max_size = 0)
-    {
-        this->thread_model = thread_model;
-        this->hard_ttl = hard_ttl;
-        this->soft_ttl = soft_ttl;
-        this->max_count = max_count;
-        this->max_size = max_size;
-    }
-
-    CacheStorageConfig()
-    {
-        thread_model = CACHE_THREAD_MODEL_MT;
-        hard_ttl = 0;
-        soft_ttl = 0;
-        max_count = 0;
-        max_size = 0;
-    }
-
-    CacheStorageConfig(const CACHE_STORAGE_CONFIG& config)
-    {
-        thread_model = config.thread_model;
-        hard_ttl = config.hard_ttl;
-        soft_ttl = config.soft_ttl;
-        max_count = config.max_count;
-        max_size = config.max_size;
     }
 };

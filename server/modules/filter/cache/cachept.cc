@@ -62,7 +62,7 @@ CachePT::~CachePT()
 }
 
 // static
-CachePT* CachePT::Create(const std::string& name, const CacheConfig* pConfig)
+CachePT* CachePT::create(const std::string& name, const CacheConfig* pConfig)
 {
     mxb_assert(pConfig);
 
@@ -71,11 +71,11 @@ CachePT* CachePT::Create(const std::string& name, const CacheConfig* pConfig)
     std::vector<SCacheRules> rules;
     StorageFactory* pFactory = NULL;
 
-    if (Cache::Create(*pConfig, &rules, &pFactory))
+    if (Cache::create(*pConfig, &rules, &pFactory))
     {
         shared_ptr<StorageFactory> sFactory(pFactory);
 
-        pCache = Create(name, pConfig, rules, sFactory);
+        pCache = create(name, pConfig, rules, sFactory);
     }
 
     return pCache;
@@ -159,7 +159,7 @@ cache_result_t CachePT::invalidate_all()
 }
 
 // static
-CachePT* CachePT::Create(const std::string& name,
+CachePT* CachePT::create(const std::string& name,
                          const CacheConfig* pConfig,
                          const std::vector<SCacheRules>& rules,
                          SStorageFactory sFactory)
@@ -184,7 +184,7 @@ CachePT* CachePT::Create(const std::string& name,
 
             CacheST* pCacheST = 0;
 
-            MXS_EXCEPTION_GUARD(pCacheST = CacheST::Create(namest, rules, sFactory, pConfig));
+            MXS_EXCEPTION_GUARD(pCacheST = CacheST::create(namest, rules, sFactory, pConfig));
 
             if (pCacheST)
             {

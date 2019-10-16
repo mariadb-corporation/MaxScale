@@ -311,7 +311,7 @@ CacheFilterSession::~CacheFilterSession()
 }
 
 // static
-CacheFilterSession* CacheFilterSession::Create(Cache* pCache, MXS_SESSION* pSession, SERVICE* pService)
+CacheFilterSession* CacheFilterSession::create(Cache* pCache, MXS_SESSION* pSession, SERVICE* pService)
 {
     CacheFilterSession* pCacheFilterSession = NULL;
     auto db = static_cast<MYSQL_session*>(pSession->protocol_data())->db;

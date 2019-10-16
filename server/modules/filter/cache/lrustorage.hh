@@ -26,10 +26,10 @@ public:
     /**
      * @see Storage::get_config
      */
-    void get_config(CACHE_STORAGE_CONFIG* pConfig);
+    void get_config(Config* pConfig);
 
 protected:
-    LRUStorage(const CACHE_STORAGE_CONFIG& config, Storage* pStorage);
+    LRUStorage(const Config& config, Storage* pStorage);
 
     /**
      * @see Storage::get_info
@@ -261,7 +261,7 @@ private:
         uint64_t evictions; /*< How many times an item has been evicted from the cache. */
     };
 
-    const CACHE_STORAGE_CONFIG m_config;        /*< The configuration. */
+    const Config               m_config;        /*< The configuration. */
     Storage*                   m_pStorage;      /*< The actual storage. */
     const uint64_t             m_max_count;     /*< The maximum number of items in the LRU list, */
     const uint64_t             m_max_size;      /*< The maximum size of all cached items. */

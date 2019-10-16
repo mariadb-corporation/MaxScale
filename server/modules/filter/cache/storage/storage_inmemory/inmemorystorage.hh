@@ -28,11 +28,11 @@ public:
     static void finalize();
 
     static InMemoryStorage* create(const char* zName,
-                                   const CACHE_STORAGE_CONFIG& config,
+                                   const Config& config,
                                    int argc,
                                    char* argv[]);
 
-    void           get_config(CACHE_STORAGE_CONFIG* pConfig) override final;
+    void           get_config(Config* pConfig) override final;
     cache_result_t get_head(CACHE_KEY* pKey, GWBUF** ppHead) override final;
     cache_result_t get_tail(CACHE_KEY* pKey, GWBUF** ppHead) override final;
     cache_result_t get_size(uint64_t* pSize) const override final;
@@ -40,7 +40,7 @@ public:
 
 protected:
     InMemoryStorage(const std::string& name,
-                    const CACHE_STORAGE_CONFIG& config);
+                    const Config& config);
 
     cache_result_t do_get_info(uint32_t what, json_t** ppInfo) const;
     cache_result_t do_get_value(const CACHE_KEY& key,
@@ -93,8 +93,8 @@ private:
 
     typedef std::unordered_map<CACHE_KEY, Entry> Entries;
 
-    std::string                m_name;
-    const CACHE_STORAGE_CONFIG m_config;
-    Entries                    m_entries;
-    Stats                      m_stats;
+    std::string  m_name;
+    const Config m_config;
+    Entries      m_entries;
+    Stats        m_stats;
 };

@@ -14,7 +14,7 @@
 #define MXS_MODULE_NAME "cache"
 #include "lrustorage.hh"
 
-LRUStorage::LRUStorage(const CACHE_STORAGE_CONFIG& config, Storage* pStorage)
+LRUStorage::LRUStorage(const Config& config, Storage* pStorage)
     : m_config(config)
     , m_pStorage(pStorage)
     , m_max_count(config.max_count != 0 ? config.max_count : UINT64_MAX)
@@ -36,7 +36,7 @@ LRUStorage::~LRUStorage()
     delete m_pStorage;
 }
 
-void LRUStorage::get_config(CACHE_STORAGE_CONFIG* pConfig)
+void LRUStorage::get_config(Config* pConfig)
 {
     *pConfig = m_config;
 }

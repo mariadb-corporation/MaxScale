@@ -23,7 +23,7 @@ public:
     typedef std::auto_ptr<InMemoryStorageST> SInMemoryStorageST;
 
     static SInMemoryStorageST Create(const std::string& name,
-                                     const CACHE_STORAGE_CONFIG& config,
+                                     const Config& config,
                                      int argc,
                                      char* argv[]);
 
@@ -41,7 +41,7 @@ public:
     cache_result_t invalidate_all() override final;
 
 private:
-    InMemoryStorageST(const std::string& name, const CACHE_STORAGE_CONFIG& config);
+    InMemoryStorageST(const std::string& name, const Config& config);
 
 private:
     InMemoryStorageST(const InMemoryStorageST&);

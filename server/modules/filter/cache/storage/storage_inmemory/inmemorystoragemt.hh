@@ -26,7 +26,7 @@ public:
     typedef std::auto_ptr<InMemoryStorageMT> SInMemoryStorageMT;
 
     static SInMemoryStorageMT Create(const std::string& name,
-                                     const CACHE_STORAGE_CONFIG& config,
+                                     const Config& config,
                                      int argc,
                                      char* argv[]);
 
@@ -44,7 +44,7 @@ public:
     cache_result_t invalidate_all() override final;
 
 private:
-    InMemoryStorageMT(const std::string& name, const CACHE_STORAGE_CONFIG& config);
+    InMemoryStorageMT(const std::string& name, const Config& config);
 
 private:
     InMemoryStorageMT(const InMemoryStorageMT&);

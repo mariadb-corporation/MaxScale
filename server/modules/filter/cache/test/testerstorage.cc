@@ -292,7 +292,7 @@ int TesterStorage::test_smoke(const CacheItems& cache_items)
 
 int TesterStorage::test_ttl(const CacheItems& cache_items)
 {
-    CacheStorageConfig config;
+    Storage::Config config;
 
     out() << "ST" << endl;
 
@@ -335,7 +335,7 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
 
     out() << "Testing ttl." << endl;
 
-    CacheStorageConfig config;
+    Storage::Config config;
     storage.get_config(&config);
 
     uint32_t hard_ttl = config.hard_ttl;

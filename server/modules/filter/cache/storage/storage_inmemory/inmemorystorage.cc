@@ -34,7 +34,7 @@ const size_t INMEMORY_KEY_LENGTH = 2 * SHA512_DIGEST_LENGTH;
 #endif
 }
 
-InMemoryStorage::InMemoryStorage(const string& name, const CACHE_STORAGE_CONFIG& config)
+InMemoryStorage::InMemoryStorage(const string& name, const Config& config)
     : m_name(name)
     , m_config(config)
 {
@@ -59,7 +59,7 @@ void InMemoryStorage::finalize()
 
 //static
 InMemoryStorage* InMemoryStorage::create(const char* zName,
-                                         const CACHE_STORAGE_CONFIG& config,
+                                         const Config& config,
                                          int argc,
                                          char* argv[])
 {
@@ -102,7 +102,7 @@ InMemoryStorage* InMemoryStorage::create(const char* zName,
     return sStorage.release();
 }
 
-void InMemoryStorage::get_config(CACHE_STORAGE_CONFIG* pConfig)
+void InMemoryStorage::get_config(Config* pConfig)
 {
     *pConfig = m_config;
 }

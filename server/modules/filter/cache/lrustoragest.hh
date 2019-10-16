@@ -20,7 +20,7 @@ class LRUStorageST : public LRUStorage
 public:
     ~LRUStorageST();
 
-    static LRUStorageST* create(const CACHE_STORAGE_CONFIG& config, Storage* pstorage);
+    static LRUStorageST* create(const Config& config, Storage* pstorage);
 
     cache_result_t get_info(uint32_t what,
                             json_t** ppInfo) const override final;
@@ -52,7 +52,7 @@ public:
     cache_result_t get_items(uint64_t* pItems) const override final;
 
 private:
-    LRUStorageST(const CACHE_STORAGE_CONFIG& config, Storage* pstorage);
+    LRUStorageST(const Config& config, Storage* pstorage);
 
     LRUStorageST(const LRUStorageST&);
     LRUStorageST& operator=(const LRUStorageST&);

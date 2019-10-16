@@ -17,7 +17,7 @@
 using std::auto_ptr;
 
 InMemoryStorageST::InMemoryStorageST(const std::string& name,
-                                     const CACHE_STORAGE_CONFIG& config)
+                                     const Config& config)
     : InMemoryStorage(name, config)
 {
 }
@@ -27,7 +27,7 @@ InMemoryStorageST::~InMemoryStorageST()
 }
 
 auto_ptr<InMemoryStorageST> InMemoryStorageST::Create(const std::string& name,
-                                                      const CACHE_STORAGE_CONFIG& config,
+                                                      const Config& config,
                                                       int argc,
                                                       char* argv[])
 {

@@ -155,7 +155,7 @@ public:
      *
      * @return A storage or NULL in case of error.
      */
-    virtual Storage* get_storage(const CACHE_STORAGE_CONFIG& config) const = 0;
+    virtual Storage* get_storage(const Storage::Config& config) const = 0;
 
     /**
      * Get a random action.

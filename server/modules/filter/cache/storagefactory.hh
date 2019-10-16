@@ -70,7 +70,7 @@ public:
      * @return A storage instance or NULL in case of errors.
      */
     Storage* create_storage(const char* zName,
-                            const CACHE_STORAGE_CONFIG& config,
+                            const Storage::Config& config,
                             int argc = 0,
                             char* argv[] = NULL);
 
@@ -90,7 +90,7 @@ public:
      * @return A storage instance or NULL in case of errors.
      */
     Storage* create_raw_storage(const char* zName,
-                                const CACHE_STORAGE_CONFIG& config,
+                                const Storage::Config& config,
                                 int argc = 0,
                                 char* argv[] = NULL);
 

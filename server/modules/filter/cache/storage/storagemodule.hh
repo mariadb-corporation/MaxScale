@@ -29,13 +29,12 @@ public:
     }
 
     Storage* create_storage(const char* zName,
-                            const CACHE_STORAGE_CONFIG* pConfig,
+                            const Storage::Config& config,
                             int argc,
                             char* argv[]) override final
     {
         mxb_assert(zName);
-        mxb_assert(pConfig);
 
-        return StorageType::create(zName, *pConfig, argc, argv);
+        return StorageType::create(zName, config, argc, argv);
     }
 };
