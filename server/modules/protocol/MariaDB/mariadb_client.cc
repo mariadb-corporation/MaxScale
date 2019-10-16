@@ -1208,6 +1208,8 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
         {
             uint32_t trx_state = session->get_trx_state();
             trx_state |= SESSION_TRX_ENDING;
+            // A commit never starts a new transaction. This would happen with: SET AUTOCOMMIT=0; COMMIT;
+            trx_state &= ~SESSION_TRX_STARTING;
             session->set_trx_state(trx_state);
 
             if (type & QUERY_TYPE_ENABLE_AUTOCOMMIT)

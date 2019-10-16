@@ -35,7 +35,7 @@ int main(int argc, char** argv)
     auto block = [&](int node) {
             return bind([&](int i) {
                             test.repl->block_node(i);
-                            test.maxscales->wait_for_monitor();
+                            test.maxscales->wait_for_monitor(2);
                         },
                         node);
         };
@@ -43,7 +43,7 @@ int main(int argc, char** argv)
     auto unblock = [&](int node) {
             return bind([&](int i) {
                             test.repl->unblock_node(i);
-                            test.maxscales->wait_for_monitor();
+                            test.maxscales->wait_for_monitor(2);
                         },
                         node);
         };
@@ -64,6 +64,12 @@ int main(int argc, char** argv)
             return bind(compare, false, q, res);
         };
 
+    const char* trx_query = "START TRANSACTION";
+
+    auto start_transaction = [&]() {
+                query(true, trx_query);
+        };
+
     conn.connect();
     conn.query("CREATE OR REPLACE TABLE test.t1(id INT)");
     conn.disconnect();
@@ -82,14 +88,14 @@ int main(int argc, char** argv)
         {
             "Minimal transaction works",
             {
-                ok("START TRANSACTION"),
+                start_transaction,
                 ok("COMMIT")
             }
         },
         {
             "Read-only is routed to the slave",
             {
-                ok("START TRANSACTION"),
+                start_transaction,
                 not_equal("SELECT @@server_id", master_id),
                 ok("COMMIT")
             },
@@ -97,7 +103,7 @@ int main(int argc, char** argv)
         {
             "Read-write is routed to the master",
             {
-                ok("START TRANSACTION"),
+                start_transaction,
                 ok("INSERT INTO test.t1 VALUES (1)"),
                 equal("SELECT @@server_id", master_id),
                 ok("COMMIT")
@@ -106,11 +112,11 @@ int main(int argc, char** argv)
         {
             "Read-only after read-write is routed to slave",
             {
-                ok("START TRANSACTION"),
+                start_transaction,
                 ok("INSERT INTO test.t1 VALUES (1)"),
                 equal("SELECT @@server_id", master_id),
                 ok("COMMIT"),
-                ok("START TRANSACTION"),
+                start_transaction,
                 equal("SELECT @@server_id", slave_id),
                 ok("COMMIT")
             }
@@ -118,10 +124,10 @@ int main(int argc, char** argv)
         {
             "Read-write after read-only is routed to master",
             {
-                ok("START TRANSACTION"),
+                start_transaction,
                 equal("SELECT @@server_id", slave_id),
                 ok("COMMIT"),
-                ok("START TRANSACTION"),
+                start_transaction,
                 ok("INSERT INTO test.t1 VALUES (1)"),
                 equal("SELECT @@server_id", master_id),
                 ok("COMMIT")
@@ -130,7 +136,7 @@ int main(int argc, char** argv)
         {
             "Blocking slave moves transaction to the master",
             {
-                ok("START TRANSACTION"),
+                start_transaction,
                 ok("SELECT COUNT(*) FROM test.t1"),
                 block(1),
                 equal("SELECT @@server_id", master_id),
@@ -142,7 +148,7 @@ int main(int argc, char** argv)
             "Blocking master has no effect",
             {
                 block(0),
-                ok("START TRANSACTION"),
+                start_transaction,
                 equal("SELECT @@server_id", slave_id),
                 ok("COMMIT"),
                 unblock(0)
@@ -151,7 +157,7 @@ int main(int argc, char** argv)
         {
             "Blocking master mid-transaction has no effect",
             {
-                ok("START TRANSACTION"),
+                start_transaction,
                 block(0),
                 equal("SELECT @@server_id", slave_id),
                 ok("COMMIT"),
@@ -161,7 +167,7 @@ int main(int argc, char** argv)
         {
             "Blocking master before commit has no effect",
             {
-                ok("START TRANSACTION"),
+                start_transaction,
                 equal("SELECT @@server_id", slave_id),
                 block(0),
                 ok("COMMIT"),
@@ -171,7 +177,7 @@ int main(int argc, char** argv)
         {
             "Conflicting results terminate connection",
             {
-                ok("START TRANSACTION"),
+                start_transaction,
                 equal("SELECT @@server_id", slave_id),
                 err("INSERT INTO test.t1 VALUES (1)"),
                 err("COMMIT")
@@ -181,7 +187,7 @@ int main(int argc, char** argv)
             "Read-write works without slaves",
             {
                 block(1),
-                ok("START TRANSACTION"),
+                start_transaction,
                 ok("INSERT INTO test.t1 VALUES (1)"),
                 ok("COMMIT"),
                 unblock(1)
@@ -191,7 +197,7 @@ int main(int argc, char** argv)
             "Read-only works without slaves",
             {
                 block(1),
-                ok("START TRANSACTION"),
+                start_transaction,
                 equal("SELECT @@server_id", master_id),
                 ok("COMMIT"),
                 unblock(1)
@@ -200,22 +206,28 @@ int main(int argc, char** argv)
     };
 
 
-    for (auto& a : test_cases)
-    {
-        test.tprintf("%s", a.description);
-        conn.connect();
+    auto run_tests = [&](const char* extra) {
+            for (auto& a : test_cases)
+            {
+                test.log_printf("%s%s", a.description, extra);
+                conn.connect();
 
-        // Helps debugging to have a distict query in the log
-        conn.query(string("SELECT '") + a.description + "'");
+                // Helps debugging to have a distict query in the log
+                conn.query(string("SELECT '") + a.description + "'");
 
-        for (auto s : a.steps)
-        {
-            s();
-        }
+                for (auto s : a.steps)
+                {
+                    s();
+                }
 
-        conn.disconnect();
-        test.repl->sync_slaves();
-    }
+                conn.disconnect();
+                test.repl->sync_slaves();
+            }
+        };
+
+    run_tests("");
+    trx_query = "SET AUTOCOMMIT=0";
+    run_tests(" (autocommit=0)");
 
     // Cleanup
     conn.connect();
