@@ -692,16 +692,15 @@ bool qc_is_drop_table_query(GWBUF* query)
     return (is_drop_table != 0) ? true : false;
 }
 
-char** qc_get_table_names(GWBUF* query, int* tblsize, bool fullnames)
+std::vector<std::string> qc_get_table_names(GWBUF* query, bool fullnames)
 {
     QC_TRACE();
     mxb_assert(this_unit.classifier);
 
-    char** names = NULL;
-    *tblsize = 0;
+    std::vector<std::string> names;
 
     QCInfoCacheScope scope(query);
-    this_unit.classifier->qc_get_table_names(query, fullnames, &names, tblsize);
+    this_unit.classifier->qc_get_table_names(query, fullnames, &names);
 
     return names;
 }

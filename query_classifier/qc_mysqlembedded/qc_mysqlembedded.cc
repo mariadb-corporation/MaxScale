@@ -1655,31 +1655,24 @@ static bool is_show_command(int sql_command)
     return rv;
 }
 
-int32_t qc_mysql_get_table_names(GWBUF* querybuf, int32_t fullnames, char*** tablesp, int32_t* tblsize)
+int32_t qc_mysql_get_table_names(GWBUF* querybuf, int32_t fullnames, std::vector<std::string>* tables)
 {
     LEX* lex;
     TABLE_LIST* tbl;
-    int i = 0, currtblsz = 0;
-    char** tables = NULL, ** tmp = NULL;
-
-    if (querybuf == NULL || tblsize == NULL)
-    {
-        goto retblock;
-    }
 
     if (!ensure_query_is_parsed(querybuf))
     {
-        goto retblock;
+        return QC_RESULT_OK;
     }
 
     if ((lex = get_lex(querybuf)) == NULL)
     {
-        goto retblock;
+        return QC_RESULT_OK;
     }
 
     if (lex->describe || (is_show_command(lex->sql_command) && !(lex->sql_command == SQLCOM_SHOW_FIELDS)))
     {
-        goto retblock;
+        return QC_RESULT_OK;
     }
 
     lex->current_select = lex->all_selects_list;
@@ -1690,85 +1683,39 @@ int32_t qc_mysql_get_table_names(GWBUF* querybuf, int32_t fullnames, char*** tab
 
         while (tbl)
         {
-            if (i >= currtblsz)
+            std::string s;
+
+            if (fullnames)
             {
-                tmp = (char**) malloc(sizeof(char*) * (currtblsz * 2 + 1));
-
-                if (tmp)
+                if (qcme_string_get(tbl->db)
+                    && (strcmp(qcme_string_get(tbl->db), "skygw_virtual") != 0)
+                    && (strcmp(qcme_string_get(tbl->table_name), "*") != 0))
                 {
-                    if (currtblsz > 0)
-                    {
-                        for (int x = 0; x < currtblsz; x++)
-                        {
-                            tmp[x] = tables[x];
-                        }
-
-                        free(tables);
-                    }
-
-                    tables = tmp;
-                    currtblsz = currtblsz * 2 + 1;
+                    s = qcme_string_get(tbl->db);
+                    s += ".";
+                    s += qcme_string_get(tbl->table_name);
                 }
             }
 
-            if (tmp != NULL)
+            if (s.empty())
             {
-                char* catnm = NULL;
-
-                if (fullnames)
+                // Sometimes the tablename is "*"; we exclude that.
+                if (strcmp(qcme_string_get(tbl->table_name), "*") != 0)
                 {
-                    if (qcme_string_get(tbl->db)
-                        && (strcmp(qcme_string_get(tbl->db), "skygw_virtual") != 0)
-                        && (strcmp(qcme_string_get(tbl->table_name), "*") != 0))
-                    {
-                        catnm = (char*) calloc(strlen(qcme_string_get(tbl->db))
-                                               + strlen(qcme_string_get(tbl->table_name))
-                                               + 2,
-                                               sizeof(char));
-                        strcpy(catnm, qcme_string_get(tbl->db));
-                        strcat(catnm, ".");
-                        strcat(catnm, qcme_string_get(tbl->table_name));
-                    }
+                    s = qcme_string_get(tbl->table_name);
                 }
-
-                if (!catnm)
-                {
-                    // Sometimes the tablename is "*"; we exclude that.
-                    if (strcmp(qcme_string_get(tbl->table_name), "*") != 0)
-                    {
-                        catnm = strdup(qcme_string_get(tbl->table_name));
-                    }
-                }
-
-                if (catnm)
-                {
-                    int j = 0;
-
-                    while ((j < i) && (strcmp(catnm, tables[j]) != 0))
-                    {
-                        ++j;
-                    }
-
-                    if (j == i)     // Not found
-                    {
-                        tables[i++] = catnm;
-                    }
-                    else
-                    {
-                        free(catnm);
-                    }
-                }
-
-                tbl = tbl->next_local;
             }
+
+            if (std::find(tables->begin(), tables->end(), s) == tables->end())
+            {
+                tables->push_back(s);
+            }
+
+            tbl = tbl->next_local;
         }   /*< while (tbl) */
 
         lex->current_select = lex->current_select->next_select_in_list();
     }   /*< while(lex->current_select) */
-
-retblock:
-    *tblsize = i;
-    *tablesp = tables;
 
     return QC_RESULT_OK;
 }

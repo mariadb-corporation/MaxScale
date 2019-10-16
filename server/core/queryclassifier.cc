@@ -174,37 +174,25 @@ bool foreach_table(QueryClassifier& qc,
                    bool (* func)(QueryClassifier& qc, const std::string&))
 {
     bool rval = true;
-    int n_tables;
-    char** tables = qc_get_table_names(querybuf, &n_tables, true);
 
-    for (int i = 0; i < n_tables; i++)
+    for (const auto& t : qc_get_table_names(querybuf, true))
     {
-        auto db = qc_mysql_get_current_db(pSession);
         std::string table;
 
-        if (strchr(tables[i], '.') == NULL)
+        if (t.find('.') == std::string::npos)
         {
-            table += db;
-            table += ".";
+            table = qc_mysql_get_current_db(pSession) + '.' + t;
         }
-
-        table += tables[i];
+        else
+        {
+            table = t;
+        }
 
         if (!func(qc, table))
         {
             rval = false;
             break;
         }
-    }
-
-    if (tables)
-    {
-        for (int i = 0; i < n_tables; i++)
-        {
-            MXS_FREE(tables[i]);
-        }
-
-        MXS_FREE(tables);
     }
 
     return rval;
@@ -790,37 +778,25 @@ void QueryClassifier::check_create_tmp_table(GWBUF* querybuf, uint32_t type)
     if (qc_query_is_type(type, QUERY_TYPE_CREATE_TMP_TABLE))
     {
         set_have_tmp_tables(true);
-        int size = 0;
-        char** tblname = qc_get_table_names(querybuf, &size, true);
         std::string table;
 
-        for (int i = 0; i < size; i++)
+        for (const auto& t : qc_get_table_names(querybuf, true))
         {
-            if (tblname[i] && *tblname[i])
+            if (strchr(t.c_str(), '.') == NULL)
             {
-                table = tblname[i];
-
-                if (strchr(tblname[i], '.') == NULL)
-                {
-                    auto db = qc_mysql_get_current_db(session());
-                    table = db;
-                    table += ".";
-                    table += tblname[i];
-                }
-                break;
+                table = qc_mysql_get_current_db(session()) + "." + t;
             }
+            else
+            {
+                table = t;
+            }
+            break;
         }
 
         MXS_INFO("Added temporary table %s", table.c_str());
 
         /** Add the table to the set of temporary tables */
         add_tmp_table(table);
-
-        for (int i = 0; i < size; i++)
-        {
-            MXS_FREE(tblname[i]);
-        }
-        MXS_FREE(tblname);
     }
 }
 

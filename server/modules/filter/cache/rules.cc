@@ -86,7 +86,7 @@ static bool cache_rule_attribute_get(struct cache_attribute_mapping* mapping,
 
 static bool cache_rule_op_get(const char* s, cache_rule_op_t* op);
 
-static bool        cache_rule_compare(CACHE_RULE* rule, int thread_id, const char* value);
+static bool        cache_rule_compare(CACHE_RULE* rule, int thread_id, const std::string& value);
 static bool        cache_rule_compare_n(CACHE_RULE* rule, int thread_id, const char* value, size_t length);
 static CACHE_RULE* cache_rule_create_regexp(cache_rule_attribute_t attribute,
                                             cache_rule_op_t op,
@@ -1115,13 +1115,13 @@ static void cache_rule_free(CACHE_RULE* rule)
  *
  * @return True if the value matches, false otherwise.
  */
-static bool cache_rule_compare(CACHE_RULE* self, int thread_id, const char* value)
+static bool cache_rule_compare(CACHE_RULE* self, int thread_id, const std::string& value)
 {
     bool rv;
 
-    if (value)
+    if (!value.empty())
     {
-        rv = cache_rule_compare_n(self, thread_id, value, strlen(value));
+        rv = cache_rule_compare_n(self, thread_id, value.c_str(), value.length());
     }
     else
     {
@@ -1223,16 +1223,15 @@ static bool cache_rule_matches_column_regexp(CACHE_RULE* self,
 
     size_t default_database_len = default_database ? strlen(default_database) : 0;
 
-    int n_tables;
-    char** tables = qc_get_table_names((GWBUF*)query, &n_tables, false);
+    auto tables = qc_get_table_names((GWBUF*)query, false);
 
     const char* default_table = NULL;
 
-    if (n_tables == 1)
+    if (tables.size() == 1)
     {
         // Only if we have exactly one table can we assume anything
         // about a table that has not been mentioned explicitly.
-        default_table = tables[0];
+        default_table = tables[0].c_str();
     }
 
     size_t default_table_len = default_table ? strlen(default_table) : 0;
@@ -1299,15 +1298,6 @@ static bool cache_rule_matches_column_regexp(CACHE_RULE* self,
         ++i;
     }
 
-    if (tables)
-    {
-        for (i = 0; i < (size_t)n_tables; ++i)
-        {
-            MXS_FREE(tables[i]);
-        }
-        MXS_FREE(tables);
-    }
-
     return matches;
 }
 
@@ -1348,16 +1338,15 @@ static bool cache_rule_matches_column_simple(CACHE_RULE* self, const char* defau
         default_database = databases[0].c_str();
     }
 
-    int n_tables;
-    char** tables = qc_get_table_names((GWBUF*)query, &n_tables, false);
+    auto tables = qc_get_table_names((GWBUF*)query, false);
 
     const char* default_table = NULL;
 
-    if (n_tables == 1)
+    if (tables.size() == 1)
     {
         // Only if we have exactly one table can we assume anything
         // about a table that has not been mentioned explicitly.
-        default_table = tables[0];
+        default_table = tables[0].c_str();
     }
 
     const QC_FIELD_INFO* infos;
@@ -1447,15 +1436,6 @@ static bool cache_rule_matches_column_simple(CACHE_RULE* self, const char* defau
         ++i;
     }
 
-    if (tables)
-    {
-        for (i = 0; i < (size_t)n_tables; ++i)
-        {
-            MXS_FREE(tables[i]);
-        }
-        MXS_FREE(tables);
-    }
-
     return matches;
 }
 
@@ -1515,43 +1495,26 @@ static bool cache_rule_matches_database(CACHE_RULE* self,
     mxb_assert(self->attribute == CACHE_ATTRIBUTE_DATABASE);
 
     bool matches = false;
-
     bool fullnames = true;
-    int n;
-    char** names = qc_get_table_names((GWBUF*)query, &n, fullnames);    // TODO: Make qc const-correct.
 
-    if (names)
+    // TODO: Make qc const-correct.
+    for (const auto& name : qc_get_table_names((GWBUF*)query, fullnames))
     {
-        int i = 0;
+        auto pos = name.find('.');
 
-        while (!matches && (i < n))
+        if (pos != std::string::npos)
         {
-            char* name = names[i];
-            char* dot = strchr(name, '.');
-            const char* database = NULL;
-
-            if (dot)
-            {
-                *dot = 0;
-                database = name;
-            }
-            else
-            {
-                database = default_db;
-            }
-
-            matches = cache_rule_compare(self, thread_id, database);
-
-            MXS_FREE(name);
-            ++i;
+            matches = cache_rule_compare(self, thread_id, name.substr(0, pos));
+        }
+        else
+        {
+            matches = cache_rule_compare(self, thread_id, default_db ? default_db : "");
         }
 
-        while (i < n)
+        if (matches)
         {
-            MXS_FREE(names[i++]);
+            break;
         }
-
-        MXS_FREE(names);
     }
 
     return matches;
@@ -1602,44 +1565,30 @@ static bool cache_rule_matches_table_regexp(CACHE_RULE* self,
     mxb_assert((self->op == CACHE_OP_LIKE) || (self->op == CACHE_OP_UNLIKE));
 
     bool matches = false;
+    bool fullnames = true;
 
-    int n;
-    char** names = NULL;
-    bool fullnames;
+    auto names = qc_get_table_names((GWBUF*)query, fullnames);
 
-    fullnames = true;
-    names = qc_get_table_names((GWBUF*)query, &n, fullnames);
-
-    if (names)
+    if (!names.empty())
     {
-        size_t default_db_len = default_db ? strlen(default_db) : 0;
+        std::string db = default_db ? default_db : "";
 
-        int i = 0;
-        while (!matches && (i < n))
+        for (const auto& name : names)
         {
-            char* name = names[i];
-            char* dot = strchr(name, '.');
+            auto pos = name.find('.');
 
-            if (!dot)
+            if (pos == std::string::npos)
             {
                 // Only "tbl"
 
                 if (default_db)
                 {
-                    char buffer[default_db_len + 1 + strlen(name) + 1];
-
-                    strcpy(name, default_db);
-                    strcpy(name + default_db_len, ".");
-                    strcpy(name + default_db_len + 1, name);
-
-                    matches = cache_rule_compare(self, thread_id, name);
+                    matches = cache_rule_compare(self, thread_id, db + '.' + name);
                 }
                 else
                 {
                     matches = cache_rule_compare(self, thread_id, name);
                 }
-
-                MXS_FREE(names[i]);
             }
             else
             {
@@ -1647,16 +1596,11 @@ static bool cache_rule_matches_table_regexp(CACHE_RULE* self,
                 matches = cache_rule_compare(self, thread_id, name);
             }
 
-            ++i;
+            if (matches)
+            {
+                break;
+            }
         }
-
-        if (i < n)
-        {
-            MXS_FREE(names[i]);
-            ++i;
-        }
-
-        MXS_FREE(names);
     }
     else if (self->op == CACHE_OP_UNLIKE)
     {
@@ -1681,75 +1625,49 @@ static bool cache_rule_matches_table_simple(CACHE_RULE* self, const char* defaul
     mxb_assert((self->op == CACHE_OP_EQ) || (self->op == CACHE_OP_NEQ));
 
     bool matches = false;
+    bool fullnames = self->simple.database;
 
-    bool fullnames = false;
-
-    if (self->simple.database)
+    for (const auto& name : qc_get_table_names((GWBUF*)query, fullnames))
     {
-        fullnames = true;
-    }
+        std::string database;
+        std::string table;
 
-    int n;
-    char** names = NULL;
-
-    names = qc_get_table_names((GWBUF*)query, &n, fullnames);
-
-    if (names)
-    {
-        int i = 0;
-        while (!matches && (i < n))
+        if (fullnames)
         {
-            char* name = names[i];
-            const char* database = NULL;
-            const char* table = NULL;
+            auto pos = name.find('.');
 
-            if (fullnames)
+            if (pos != std::string::npos)
             {
-                char* dot = strchr(name, '.');
-
-                if (dot)
-                {
-                    *dot = 0;
-
-                    database = name;
-                    table = dot + 1;
-                }
-                else
-                {
-                    database = default_db;
-                    table = name;
-                }
-
-                if (database)
-                {
-                    matches =
-                        (strcasecmp(self->simple.database, database) == 0)
-                        && (strcasecmp(self->simple.table, table) == 0);
-                }
+                database = name.substr(0, pos);
+                table = name.substr(pos + 1);
             }
             else
             {
+                database = default_db;
                 table = name;
-
-                matches = (strcasecmp(self->simple.table, table) == 0);
             }
 
-            if (self->op == CACHE_OP_NEQ)
+            if (!database.empty())
             {
-                matches = !matches;
+                matches =
+                    (strcasecmp(self->simple.database, database.c_str()) == 0)
+                    && (strcasecmp(self->simple.table, table.c_str()) == 0);
             }
-
-            MXS_FREE(name);
-            ++i;
         }
-
-        if (i < n)
+        else
         {
-            MXS_FREE(names[i]);
-            ++i;
+            matches = (strcasecmp(self->simple.table, name.c_str()) == 0);
         }
 
-        MXS_FREE(names);
+        if (self->op == CACHE_OP_NEQ)
+        {
+            matches = !matches;
+        }
+
+        if (matches)
+        {
+            break;
+        }
     }
 
     return matches;

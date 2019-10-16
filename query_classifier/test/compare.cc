@@ -547,54 +547,6 @@ bool compare_is_drop_table_query(QUERY_CLASSIFIER* pClassifier1,
     return success;
 }
 
-bool compare_strings(const char* const* strings1, const char* const* strings2, int n)
-{
-    for (int i = 0; i < n; ++i)
-    {
-        const char* s1 = strings1[i];
-        const char* s2 = strings2[i];
-
-        if (strcmp(s1, s2) != 0)
-        {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-void free_strings(char** strings, int n)
-{
-    if (strings)
-    {
-        for (int i = 0; i < n; ++i)
-        {
-            free(strings[i]);
-        }
-
-        free(strings);
-    }
-}
-
-void print_names(ostream& out, const char* const* strings, int n)
-{
-    if (strings)
-    {
-        for (int i = 0; i < n; ++i)
-        {
-            out << strings[i];
-            if (i < n - 1)
-            {
-                out << ", ";
-            }
-        }
-    }
-    else
-    {
-        out << "NULL";
-    }
-}
-
 bool compare_get_table_names(QUERY_CLASSIFIER* pClassifier1,
                              GWBUF* pCopy1,
                              QUERY_CLASSIFIER* pClassifier2,
@@ -616,41 +568,31 @@ bool compare_get_table_names(QUERY_CLASSIFIER* pClassifier1,
     int n1 = 0;
     int n2 = 0;
 
-    char** rv1;
-    pClassifier1->qc_get_table_names(pCopy1, full, &rv1, &n1);
-    char** rv2;
-    pClassifier2->qc_get_table_names(pCopy2, full, &rv2, &n2);
+    std::vector<std::string> rv1;
+    pClassifier1->qc_get_table_names(pCopy1, full, &rv1);
+    std::vector<std::string> rv2;
+    pClassifier2->qc_get_table_names(pCopy2, full, &rv2);
 
     // The order need not be the same, so let's compare a set.
-    std::set<string> names1;
-    std::set<string> names2;
-
-    if (rv1)
-    {
-        std::copy(rv1, rv1 + n1, inserter(names1, names1.begin()));
-    }
-
-    if (rv2)
-    {
-        std::copy(rv2, rv2 + n2, inserter(names2, names2.begin()));
-    }
+    std::set<string> names1(rv1.begin(), rv1.end());
+    std::set<string> names2(rv2.begin(), rv2.end());
 
     stringstream ss;
     ss << HEADING;
 
-    if ((!rv1 && !rv2) || (names1 == names2))
+    if (names1 == names2)
     {
         if (n1 == n2)
         {
             ss << "Ok : ";
-            print_names(ss, rv1, n1);
+            ss << mxb::join(rv1, ", ");
         }
         else
         {
             ss << "WRN: ";
-            print_names(ss, rv1, n1);
+            ss << mxb::join(rv1, ", ");
             ss << " != ";
-            print_names(ss, rv2, n2);
+            ss << mxb::join(rv2, ", ");
         }
 
         success = true;
@@ -658,15 +600,12 @@ bool compare_get_table_names(QUERY_CLASSIFIER* pClassifier1,
     else
     {
         ss << "ERR: ";
-        print_names(ss, rv1, n1);
+        ss << mxb::join(rv1, ", ");
         ss << " != ";
-        print_names(ss, rv2, n2);
+        ss << mxb::join(rv2, ", ");
     }
 
     report(success, ss.str());
-
-    free_strings(rv1, n1);
-    free_strings(rv2, n2);
 
     return success;
 }

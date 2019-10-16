@@ -1493,66 +1493,51 @@ bool SchemaRouterSession::handle_statement(GWBUF* querybuf, SRBackend* bref, uin
 
 mxs::Target* SchemaRouterSession::get_query_target(GWBUF* buffer)
 {
-    int n_tables = 0;
-    char** tables = qc_get_table_names(buffer, &n_tables, true);
+    auto tables = qc_get_table_names(buffer, true);
     mxs::Target* rval = NULL;
 
-    for (int i = 0; i < n_tables; i++)
+    for (const auto& t : tables)
     {
-        if (strchr(tables[i], '.') == NULL)
+        if (t.find('.') == std::string::npos)
         {
             rval = m_shard.get_location(m_current_db);
             break;
         }
     }
 
-    auto databases = qc_get_database_names(buffer);
-
-    if (!databases.empty())
+    if (!rval)
     {
-        // Prefer to select the route target by table. If no tables, route by database.
-        if (n_tables)
+        for (const auto& t : tables)
         {
-            for (int i = 0; i < n_tables; i++)
+            if (mxs::Target* target = m_shard.get_location(t))
             {
-                mxs::Target* target = m_shard.get_location(tables[i]);
-                if (target)
+                if (rval && target != rval)
                 {
-                    if (rval && target != rval)
-                    {
-                        MXS_ERROR("Query targets tables on servers '%s' and '%s'. "
-                                  "Cross server queries are not supported.",
-                                  rval->name(), target->name());
-                    }
-                    else if (rval == NULL)
-                    {
-                        rval = target;
-                        MXS_INFO("Query targets table '%s' on server '%s'", tables[i], rval->name());
-                    }
+                    MXS_ERROR("Query targets tables on servers '%s' and '%s'. "
+                              "Cross server queries are not supported.",
+                              rval->name(), target->name());
                 }
-            }
-        }
-        else if (rval == nullptr)
-        {
-            // Queries which target a database but no tables can have multiple targets. Select first one.
-            for (const auto& a : databases)
-            {
-                if (mxs::Target* target = m_shard.get_location(a))
+                else if (!rval)
                 {
                     rval = target;
-                    break;
+                    MXS_INFO("Query targets table '%s' on server '%s'", t.c_str(), rval->name());
                 }
             }
         }
     }
 
-
-    // Free the tables arrays.
-    for (int i = 0; i < n_tables; i++)
+    if (!rval)
     {
-        MXS_FREE(tables[i]);
+        // Queries which target a database but no tables can have multiple targets. Select first one.
+        for (const auto& a : qc_get_database_names(buffer))
+        {
+            if (mxs::Target* target = m_shard.get_location(a))
+            {
+                rval = target;
+                break;
+            }
+        }
     }
-    MXS_FREE(tables);
 
     return rval;
 }
@@ -1569,14 +1554,11 @@ mxs::Target* SchemaRouterSession::get_ps_target(GWBUF* buffer, uint32_t qtype, q
         GWBUF* pStmt = qc_get_preparable_stmt(buffer);
         if (pStmt)
         {
-            int n_tables = 0;
-            char** tables = qc_get_table_names(pStmt, &n_tables, true);
             char* stmt = qc_get_prepare_name(buffer);
 
-            for (int i = 0; i < n_tables; i++)
+            for (const auto& table : qc_get_table_names(pStmt, true))
             {
-                mxs::Target* target = m_shard.get_location(tables[i]);
-                if (target)
+                if (mxs::Target* target = m_shard.get_location(table))
                 {
                     if (rval && target != rval)
                     {
@@ -1589,7 +1571,6 @@ mxs::Target* SchemaRouterSession::get_ps_target(GWBUF* buffer, uint32_t qtype, q
                         rval = target;
                     }
                 }
-                MXS_FREE(tables[i]);
             }
 
             if (rval)
@@ -1597,7 +1578,6 @@ mxs::Target* SchemaRouterSession::get_ps_target(GWBUF* buffer, uint32_t qtype, q
                 MXS_INFO("PREPARING NAMED %s ON SERVER %s", stmt, rval->name());
                 m_shard.add_statement(stmt, rval);
             }
-            MXS_FREE(tables);
             MXS_FREE(stmt);
         }
     }
@@ -1624,17 +1604,12 @@ mxs::Target* SchemaRouterSession::get_ps_target(GWBUF* buffer, uint32_t qtype, q
     }
     else if (qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT))
     {
-        int n_tables = 0;
-        char** tables = qc_get_table_names(buffer, &n_tables, true);
-
-        for (int i = 0; i < n_tables; i++)
+        for (const auto& t : qc_get_table_names(buffer, true))
         {
-            rval = m_shard.get_location(tables[0]);
-            MXS_FREE(tables[i]);
+            rval = m_shard.get_location(t);
         }
-        rval ? MXS_INFO("Prepare statement on server %s", rval->name()) :
-        MXS_INFO("Prepared statement targets no mapped tables");
-        MXS_FREE(tables);
+
+        MXS_INFO("Prepare statement on server %s", rval ? rval->name() : "<no target found>");
     }
     else if (mxs_mysql_is_ps_command(command))
     {

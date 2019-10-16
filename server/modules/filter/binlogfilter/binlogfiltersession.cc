@@ -383,17 +383,14 @@ static bool should_skip_query(const BinlogConfig& config, const std::string& sql
 {
     GWBUF* buf = modutil_create_query(sql.c_str());
     bool rval = false;
-    int n = 0;
+    auto tables = qc_get_table_names(buf, true);
 
     if (qc_get_trx_type_mask(buf) == 0)
     {
         // Not a transaction management related command
-
-        char** names = qc_get_table_names(buf, &n, true);
-
-        for (int i = 0; i < n; i++)
+        for (const auto& t : tables)
         {
-            std::string name = strchr(names[i], '.') ? names[i] : db + "." + names[i];
+            std::string name = t.find('.') != std::string::npos ? t : db + '.' + t;
 
             if (should_skip(config, name))
             {
@@ -401,13 +398,11 @@ static bool should_skip_query(const BinlogConfig& config, const std::string& sql
                 break;
             }
         }
-
-        qc_free_table_names(names, n);
     }
 
     // Also check for the default database in case the query has no tables in it. The dot at the end is
     // required to distinct database names from table names.
-    if (n == 0)
+    if (tables.empty())
     {
         rval = should_skip(config, db + '.');
     }

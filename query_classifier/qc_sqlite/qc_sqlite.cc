@@ -364,32 +364,19 @@ public:
         return rv;
     }
 
-    bool get_table_names(int32_t fullnames, char*** ppzTable_names, int32_t* pnTable_names) const
+    bool get_table_names(int32_t fullnames, std::vector<std::string>* pTables) const
     {
         bool rv = false;
 
         if (is_valid())
         {
-            const vector<char*>* pNames;
-
             if (fullnames)
             {
-                pNames = &m_table_fullnames;
+                pTables->assign(m_table_fullnames.begin(), m_table_fullnames.end());
             }
             else
             {
-                pNames = &m_table_names;
-            }
-
-            *pnTable_names = pNames->size();
-
-            if (*pnTable_names)
-            {
-                *ppzTable_names = copy_string_array(*pNames);
-            }
-            else
-            {
-                *ppzTable_names = NULL;
+                pTables->assign(m_table_names.begin(), m_table_names.end());
             }
 
             rv = true;
@@ -5063,23 +5050,18 @@ static int32_t qc_sqlite_is_drop_table_query(GWBUF* pStmt, int32_t* pIs_drop_tab
     return rv;
 }
 
-static int32_t qc_sqlite_get_table_names(GWBUF* pStmt,
-                                         int32_t fullnames,
-                                         char*** ppzTable_names,
-                                         int32_t* pnTable_names)
+static int32_t qc_sqlite_get_table_names(GWBUF* pStmt, int32_t fullnames, std::vector<std::string>* pTables)
 {
     QC_TRACE();
     int32_t rv = QC_RESULT_ERROR;
     mxb_assert(this_unit.initialized);
     mxb_assert(this_thread.initialized);
 
-    *ppzTable_names = NULL;
-    *pnTable_names = 0;
     QcSqliteInfo* pInfo = QcSqliteInfo::get(pStmt, QC_COLLECT_TABLES);
 
     if (pInfo)
     {
-        if (pInfo->get_table_names(fullnames, ppzTable_names, pnTable_names))
+        if (pInfo->get_table_names(fullnames, pTables))
         {
             rv = QC_RESULT_OK;
         }

@@ -161,23 +161,13 @@ bool extract_insert_target(GWBUF* buffer, std::string* target)
         && qc_get_operation(buffer) == QUERY_OP_INSERT
         && only_implicit_values(buffer))
     {
-        int n_tables = 0;
-        char** tables = qc_get_table_names(buffer, &n_tables, true);
+        auto tables = qc_get_table_names(buffer, true);
 
-        if (n_tables == 1)
+        if (tables.size() == 1)
         {
             /** Only one table in an insert */
             *target = tables[0];
             rval = true;
-        }
-
-        if (tables)
-        {
-            for (int i = 0; i < n_tables; ++i)
-            {
-                MXS_FREE(tables[i]);
-            }
-            MXS_FREE(tables);
         }
     }
 

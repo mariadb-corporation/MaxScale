@@ -310,13 +310,11 @@ struct QUERY_CLASSIFIER
      * @param fullnames  If non-zero, the full (i.e. qualified) names are returned.
      * @param names      On return, the names of the statement, if @c QC_RESULT_OK
      *                   is returned.
-     * @param n_names    On return, how many names were returned, if @c QC_RESULT_OK
-     *                   is returned.
      *
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    int32_t (* qc_get_table_names)(GWBUF* stmt, int32_t full_names, char*** names, int32_t* n_names);
+    int32_t (* qc_get_table_names)(GWBUF* stmt, int32_t full_names, std::vector<std::string>* names);
 
     /**
      * The canonical version of a statement.
@@ -809,7 +807,7 @@ qc_sql_mode_t qc_get_sql_mode();
  * @note The returned array and the strings pointed to @b must be freed
  *       by the caller.
  */
-char** qc_get_table_names(GWBUF* stmt, int* size, bool fullnames);
+std::vector<std::string> qc_get_table_names(GWBUF* stmt, bool fullnames);
 
 /**
  * Free tables returned by qc_get_table_names
