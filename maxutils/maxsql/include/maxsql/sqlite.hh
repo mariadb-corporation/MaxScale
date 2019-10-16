@@ -111,11 +111,17 @@ public:
      */
     std::unique_ptr<mxq::QueryResult> query(const std::string& query);
 
+    /**
+     * Prepare a query.
+     *
+     * @param query Query string
+     * @return The prepared statement object or null on failure
+     */
+    std::unique_ptr<SQLiteStmt> prepare(const std::string& query);
+
 private:
     using CallbackVoid = int (*)(void* data, int n_columns, char** rows, char** field_names);
     bool exec_impl(const std::string& sql, CallbackVoid cb, void* cb_data);
-
-    std::unique_ptr<SQLiteStmt> prepare(const std::string& query);
 
     sqlite3*    m_dbhandle {nullptr};
     std::string m_errormsg;
@@ -138,6 +144,8 @@ public:
      */
     bool step();
 
+    bool step_execute();
+
     int column_count() const;
 
     /**
@@ -146,6 +154,27 @@ public:
      * @return True on success. If false, the statement should be discarded.
      */
     bool reset();
+
+    int bind_parameter_index(const std::string& name);
+
+    /**
+     * Bind a string value to a parameter placeholder.
+     *
+     * @param ind Parameter index. Valid values start from 1.
+     * @param value Parameter value
+     */
+    bool bind_string(int ind, const std::string& value);
+
+    /**
+     * Bind an integer value to a parameter placeholder.
+     *
+     * @param name Parameter name
+     * @param ind Parameter index. Valid values start from 1.
+     * @return
+     */
+    bool bind_int(int ind, int value);
+
+    bool bind_bool(int ind, bool value);
 
     std::vector<std::string> column_names() const;
 
@@ -156,6 +185,13 @@ public:
      * to fit every column.
      */
     void row_cstr(const unsigned char* output[]);
+
+    /**
+     * Get latest error.
+     *
+     * @return Error string
+     */
+    const char* error() const;
 
 private:
     sqlite3_stmt* m_stmt {nullptr};

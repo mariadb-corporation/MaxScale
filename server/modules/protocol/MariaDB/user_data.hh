@@ -29,6 +29,8 @@ class SERVER;
 class MariaDBUserManager : public mxs::UserAccountManager
 {
 public:
+    explicit MariaDBUserManager(const std::string& name);
+
     /**
      * Start the updater thread. Should only be called when the updater is stopped or has just been created.
      */
@@ -53,6 +55,8 @@ private:
     bool load_users();
     bool prepare_internal_db();
     void updater_thread_function();
+    bool write_users(QResult users, bool using_roles);
+    void write_dbs_and_roles(QResult dbs, QResult roles);
 
     // Fields for controlling the updater thread.
     std::thread      m_updater_thread;
@@ -70,13 +74,15 @@ private:
     std::vector<SERVER*> m_backends;
     mxb::Duration        m_update_interval {-1};
 
-    // The main mysql.user-table is stored in sqlite to enable complicated queries */
-    mxq::SQLite m_users;
+    // The main mysql.user-table is stored in sqlite to enable complicated queries. */
+    mxq::SQLite       m_users;
+    const std::string m_users_filename;
 
     // Using normal maps/sets so that entries can be printed in order.
     using StringSet = std::set<std::string>;
     using UserMap = std::map<std::string, StringSet>;
 
-    UserMap m_database_grants;  /**< Maps "user@host" to allowed databases */
-    UserMap m_roles_mapping;    /**< Maps "user@host" to allowed roles */
+    std::mutex m_usermap_lock;      /**< Protects maps from concurrent access */
+    UserMap    m_database_grants;   /**< Maps "user@host" to allowed databases */
+    UserMap    m_roles_mapping;     /**< Maps "user@host" to allowed roles */
 };

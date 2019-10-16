@@ -2067,9 +2067,10 @@ json_t* MySQLProtocolModule::print_auth_users_json()
     return m_auth_module->diagnostics_json();
 }
 
-std::unique_ptr<mxs::UserAccountManager> MySQLProtocolModule::create_user_data_manager()
+std::unique_ptr<mxs::UserAccountManager>
+MySQLProtocolModule::create_user_data_manager(const std::string& service_name)
 {
-    return std::unique_ptr<mxs::UserAccountManager>(new MariaDBUserManager());
+    return std::unique_ptr<mxs::UserAccountManager>(new MariaDBUserManager(service_name));
 }
 
 MariaDBClientConnection::MariaDBClientConnection(MXS_SESSION* session, mxs::Component* component,

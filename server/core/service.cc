@@ -1927,6 +1927,9 @@ void Service::set_user_account_manager(SAccountManager user_manager)
     mxb_assert(!m_usermanager_exists.load(std::memory_order_acquire) && !m_usermanager);
     m_usermanager = std::move(user_manager);
     m_usermanager_exists.store(true, std::memory_order_release);
+    // TODO: update account manager settings whenever the matching service settings are updated
+    m_usermanager->set_credentials(m_config->user, m_config->password);
+    m_usermanager->set_backends(m_data->servers);
     m_usermanager->start();
 }
 

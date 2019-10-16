@@ -267,7 +267,7 @@ SListener Listener::create(const std::string& name,
     std::unique_ptr<mxs::UserAccountManager> new_user_manager;
     if (protocol_module->capabilities() & mxs::ProtocolModule::CAP_AUTHDATA)
     {
-        new_user_manager = protocol_module->create_user_data_manager();
+        new_user_manager = protocol_module->create_user_data_manager(service->name());
         if (new_user_manager)
         {
             auto service_usermanager = service->user_account_manager();

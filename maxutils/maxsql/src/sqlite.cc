@@ -128,9 +128,23 @@ bool SQLiteStmt::step()
     return ret == SQLITE_ROW;
 }
 
+bool SQLiteStmt::step_execute()
+{
+    int ret = sqlite3_step(m_stmt);
+    m_errornum = ret;
+    return ret == SQLITE_DONE;
+}
+
+
 bool SQLiteStmt::reset()
 {
-    return sqlite3_reset(m_stmt) == SQLITE_OK && sqlite3_clear_bindings(m_stmt) == SQLITE_OK;
+    int ret = sqlite3_reset(m_stmt);
+    if (ret == SQLITE_OK)
+    {
+        ret = sqlite3_clear_bindings(m_stmt);
+    }
+    m_errornum = ret;
+    return ret == SQLITE_OK;
 }
 
 int SQLiteStmt::column_count() const
@@ -157,6 +171,52 @@ std::vector<std::string> SQLiteStmt::column_names() const
         rval.emplace_back(sqlite3_column_name(m_stmt, i));
     }
     return rval;
+}
+
+int SQLiteStmt::bind_parameter_index(const std::string& name)
+{
+    // Parameter names must start with ":" or "@". Add ":" if none found.
+    int rval = 0; // Valid indexes start at 1.
+    if (!name.empty())
+    {
+        auto front = name.front();
+        if (front != ':' && front != '@')
+        {
+            string fixedname = ":" + name;
+            rval = sqlite3_bind_parameter_index(m_stmt, fixedname.c_str());
+        }
+        else
+        {
+            rval = sqlite3_bind_parameter_index(m_stmt, name.c_str());
+        }
+    }
+    return rval;
+}
+
+bool SQLiteStmt::bind_string(int ind, const string& value)
+{
+    int ret = sqlite3_bind_text(m_stmt, ind, value.c_str(), value.size(), nullptr);
+    m_errornum = ret;
+    return ret == SQLITE_OK;
+}
+
+bool SQLiteStmt::bind_int(int ind, int value)
+{
+    int ret = sqlite3_bind_int(m_stmt, ind, value);
+    m_errornum = ret;
+    return ret == SQLITE_OK;
+}
+
+bool SQLiteStmt::bind_bool(int ind, bool value)
+{
+    int ret = sqlite3_bind_int(m_stmt, ind, value ? 1 : 0);
+    m_errornum = ret;
+    return ret == SQLITE_OK;
+}
+
+const char* SQLiteStmt::error() const
+{
+    return sqlite3_errstr(m_errornum);
 }
 
 std::unique_ptr<mxq::QueryResult> SQLite::query(const std::string& query)
@@ -199,10 +259,12 @@ std::unique_ptr<SQLiteStmt> SQLite::prepare(const std::string& query)
     if (ret == SQLITE_OK)
     {
         // Compilation succeeded.
-        if (tail == nullptr)
+        if (!*tail)
         {
             rval.reset(new(std::nothrow) SQLiteStmt(new_stmt));
             new_stmt = nullptr;
+            m_errormsg.clear();
+            m_errornum = 0;
         }
         else
         {

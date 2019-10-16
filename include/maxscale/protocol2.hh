@@ -110,7 +110,7 @@ public:
      */
     virtual json_t* print_auth_users_json() = 0;
 
-    virtual std::unique_ptr<UserAccountManager> create_user_data_manager()
+    virtual std::unique_ptr<UserAccountManager> create_user_data_manager(const std::string& service_name)
     {
         return nullptr;
     }
