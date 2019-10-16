@@ -150,7 +150,6 @@ Server* Server::server_alloc(const char* name, const MXS_CONFIG_PARAMETER& param
     server->proxy_protocol = params.get_bool(CN_PROXY_PROTOCOL);
     server->is_active = true;
     server->persistent = persistent;
-    server->assign_status(SERVER_RUNNING);
     server->m_settings.rank = params.get_enum(CN_RANK, rank_values);
     mxb_assert(server->m_settings.rank > 0);
 

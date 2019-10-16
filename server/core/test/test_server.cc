@@ -60,8 +60,8 @@ static int test1()
                        "Should find by unique name.");
     fprintf(stderr, "\t..done\nTesting Status Setting for Server.");
     status = server->status_string();
-    mxb_assert_message(status == "Running", "Status of Server should be Running by default.");
-    server->set_status(SERVER_MASTER);
+    mxb_assert_message(status == "Down", "Status of Server should be Running by default.");
+    server->set_status(SERVER_RUNNING | SERVER_MASTER);
     status = server->status_string();
     mxb_assert_message(status == "Master, Running", "Should find correct status.");
     server->clear_status(SERVER_MASTER);
