@@ -1,7 +1,6 @@
 # RPM specific CPack configuration parameters
 
 set(CPACK_GENERATOR "${CPACK_GENERATOR};RPM")
-set(CPACK_RPM_PACKAGE_RELEASE ${MAXSCALE_BUILD_NUMBER})
 set(CPACK_RPM_PACKAGE_VENDOR "MariaDB Corporation Ab")
 set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "/etc /etc/ld.so.conf.d /etc/init.d /etc/rc.d/init.d /usr/share/man /usr/share/man1")
 set(CPACK_RPM_SPEC_MORE_DEFINE "%define ignore \#")
@@ -9,6 +8,12 @@ set(CPACK_RPM_PACKAGE_NAME "${CPACK_PACKAGE_NAME}")
 set(CPACK_RPM_PACKAGE_FILE_NAME "${CPACK_PACKAGE_FILE_NAME}")
 set(CPACK_RPM_PACKAGE_DESCRIPTION "${CPACK_PACKAGE_DESCRIPTION}")
 set(CPACK_RPM_SPEC_INSTALL_POST "/bin/true")
+
+if(DISTRIB_SUFFIX)
+  set(CPACK_RPM_PACKAGE_RELEASE "${MAXSCALE_BUILD_NUMBER}.${DISTRIB_SUFFIX}")
+else()
+  set(CPACK_RPM_PACKAGE_RELEASE ${MAXSCALE_BUILD_NUMBER})
+endif()
 
 # This prevents the default %post from running which causes binaries to be
 # striped. Without this, MaxCtrl will not work on all systems as the
