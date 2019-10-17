@@ -236,13 +236,9 @@ private:
                                 NodesByKey::iterator* pI,
                                 Node** ppNode);
 
-    class Invalidator
-    {
-    public:
-        virtual ~Invalidator();
-    };
-
+    class Invalidator;
     class NullInvalidator;
+    class LRUInvalidator;
     class FullInvalidator;
     class StorageInvalidator;
 
