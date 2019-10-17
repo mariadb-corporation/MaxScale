@@ -175,4 +175,5 @@ private:
     bool                  m_populate;       /**< Whether the cache should be populated in this session. */
     uint32_t              m_soft_ttl;       /**< The soft TTL used in the session. */
     uint32_t              m_hard_ttl;       /**< The hard TTL used in the session. */
+    GWBUF*                m_pCurrent_stmt;  /**< The current statement, if we are interested in it. */
 };

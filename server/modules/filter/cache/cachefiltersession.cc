@@ -254,6 +254,7 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession,
     , m_populate(pCache->config().enabled)
     , m_soft_ttl(pCache->config().soft_ttl.count())
     , m_hard_ttl(pCache->config().hard_ttl.count())
+    , m_pCurrent_stmt(nullptr)
 {
     m_key.data = 0;
 
@@ -306,6 +307,7 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession,
 
 CacheFilterSession::~CacheFilterSession()
 {
+    gwbuf_free(m_pCurrent_stmt);
     MXS_FREE(m_zUseDb);
     MXS_FREE(m_zDefaultDb);
 }
@@ -405,6 +407,9 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
 
     if (action == ROUTING_CONTINUE)
     {
+        mxb_assert(!m_pCurrent_stmt);
+        m_pCurrent_stmt = gwbuf_clone(pPacket);
+
         rv = m_down.routeQuery(pPacket);
     }
 
@@ -599,6 +604,9 @@ void CacheFilterSession::send_upstream()
     mxb_assert(!m_next_response);
     m_next_response = m_res;
     m_res = NULL;
+
+    gwbuf_free(m_pCurrent_stmt);
+    m_pCurrent_stmt = nullptr;
 }
 
 /**
@@ -611,8 +619,6 @@ void CacheFilterSession::reset_response_state()
 
 /**
  * Store the data.
- *
- * @param csdata Session data
  */
 void CacheFilterSession::store_result()
 {
@@ -624,18 +630,52 @@ void CacheFilterSession::store_result()
     {
         m_res = pData;
 
+        cache_result_t result = CACHE_RESULT_OK;
+
         std::vector<std::string> invalidation_words;
-        cache_result_t result = m_pCache->put_value(m_key, invalidation_words, m_res);
 
-        if (!CACHE_RESULT_IS_OK(result))
+        const CacheConfig& config = m_pCache->config();
+
+        if (config.invalidate != CACHE_INVALIDATE_NEVER)
         {
-            MXS_ERROR("Could not store cache item, deleting it.");
+            mxb_assert(m_pCurrent_stmt);
+            qc_parse_result_t parse_result = qc_parse(m_pCurrent_stmt, QC_COLLECT_TABLES);
 
-            result = m_pCache->del_value(m_key);
-
-            if (!CACHE_RESULT_IS_OK(result) || !CACHE_RESULT_IS_NOT_FOUND(result))
+            if (parse_result == QC_QUERY_PARSED)
             {
-                MXS_ERROR("Could not delete cache item.");
+                invalidation_words = qc_get_table_names(m_res, true);
+
+                for (auto& word : invalidation_words)
+                {
+                    if (word.find('.') == std::string::npos)
+                    {
+                        mxb_assert(m_zDefaultDb);
+                        word = std::string(m_zDefaultDb) + "." + word;
+                    }
+                }
+            }
+            else
+            {
+                MXS_ERROR("The cache should perform invalidation, but the current statement "
+                          "could not be parsed. The result cannot be cached.");
+                result = CACHE_RESULT_ERROR;
+            }
+        }
+
+        if (result == CACHE_RESULT_OK)
+        {
+            result = m_pCache->put_value(m_key, invalidation_words, m_res);
+
+            if (!CACHE_RESULT_IS_OK(result))
+            {
+                MXS_ERROR("Could not store new cache value, deleting old.");
+
+                result = m_pCache->del_value(m_key);
+
+                if (!CACHE_RESULT_IS_OK(result) || !CACHE_RESULT_IS_NOT_FOUND(result))
+                {
+                    MXS_ERROR("Could not delete old cache item.");
+                }
             }
         }
     }
