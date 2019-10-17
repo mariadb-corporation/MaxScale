@@ -112,6 +112,7 @@ Service* Service::create(const char* name, const char* router, MXS_CONFIG_PARAME
     if (service->router_instance == NULL)
     {
         MXS_ERROR("%s: Failed to create router instance. Service not started.", service->name());
+        service->state = State::FAILED;
         delete service;
         return NULL;
     }
@@ -265,20 +266,21 @@ Service::Service(const std::string& name,
 
 Service::~Service()
 {
-    mxb_assert(m_refcount == 0 || maxscale_teardown_in_progress());
-    mxb_assert(!active() || maxscale_teardown_in_progress());
+    mxb_assert((m_refcount == 0 && !active()) || maxscale_teardown_in_progress() || state == State::FAILED);
 
     if (router && router_instance && router->destroyInstance)
     {
         router->destroyInstance(router_instance);
     }
 
-    LockGuard guard(this_unit.lock);
-    auto it = std::remove(this_unit.services.begin(), this_unit.services.end(), this);
-    mxb_assert(it != this_unit.services.end());
-    this_unit.services.erase(it);
-
-    MXS_INFO("Destroying '%s'", name());
+    if (state != State::FAILED)
+    {
+        LockGuard guard(this_unit.lock);
+        auto it = std::remove(this_unit.services.begin(), this_unit.services.end(), this);
+        mxb_assert(it != this_unit.services.end());
+        this_unit.services.erase(it);
+        MXS_INFO("Destroying '%s'", name());
+    }
 }
 
 // static
@@ -1878,7 +1880,7 @@ void Service::decref()
     if (m_refcount.fetch_add(-1, std::memory_order_acq_rel) == 1)
     {
         // Destroy the service in the main routing worker thread
-        mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN)->execute(
+        mxs::MainWorker::get()->execute(
             [this]() {
                 delete this;
             }, mxs::RoutingWorker::EXECUTE_AUTO);
