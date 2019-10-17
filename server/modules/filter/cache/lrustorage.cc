@@ -37,15 +37,30 @@ public:
      *
      * @return The words to provide to the raw storage.
      */
-    virtual const vector<string>& invalidation_words(const vector<string>& words) const = 0;
+    virtual const vector<string>& storage_words(const vector<string>& words) const = 0;
 
     /**
-     * Make note of invalidation words
+     * Return words to be bookkept in the node.
      *
-     * @param invalidation_words  The words that should invalidate @c pNode.
-     * @param pNode               The node.
+     * @param words  Invalidation words provided by the user of the storage.
+     *
+     * @return The words to store in the node.
      */
-    virtual void make_note(const vector<string>& invalidation_words, LRUStorage::Node* pNode) = 0;
+    virtual const vector<string>& node_words(const vector<string>& words) const = 0;
+
+    /**
+     * Add node to bookkeeping.
+     *
+     * @param pNode  The node.
+     */
+    virtual void make_note(LRUStorage::Node* pNode) = 0;
+
+    /**
+     * Remove node from bookkeeping.
+     *
+     * @param pNode  The node.
+     */
+    virtual void remove_note(LRUStorage::Node* pNode) = 0;
 };
 
 
@@ -59,21 +74,32 @@ class LRUStorage::NullInvalidator : public LRUStorage::Invalidator
 public:
     ~NullInvalidator() = default;
 
-    const vector<string>& invalidation_words(const vector<string>&) const override final
+    const vector<string>& storage_words(const vector<string>&) const override final
     {
-        return s_invalidation_words;
+        return s_no_words;
     }
 
-    void make_note(const vector<string>&, LRUStorage::Node*) override final
+    const vector<string>& node_words(const vector<string>&) const override final
     {
+        return s_no_words;
+    }
+
+    void make_note(LRUStorage::Node* pNode) override final
+    {
+        mxb_assert(pNode->invalidation_words().empty());
+    }
+
+    void remove_note(LRUStorage::Node* pNode) override final
+    {
+        mxb_assert(pNode->invalidation_words().empty());
     }
 
 private:
-    static vector<string> s_invalidation_words; // No words
+    static const vector<string> s_no_words;
 };
 
 //static
-vector<string> LRUStorage::NullInvalidator::s_invalidation_words;
+const vector<string> LRUStorage::NullInvalidator::s_no_words;
 
 
 /**
@@ -86,14 +112,12 @@ class LRUStorage::LRUInvalidator : public LRUStorage::Invalidator
 public:
     ~LRUInvalidator() = default;
 
-    void make_note(const vector<string>& invalidation_words, LRUStorage::Node* pNode) override final
+    void make_note(LRUStorage::Node* pNode) override final
     {
-        mxb_assert(!invalidation_words.empty());
-        mxb_assert(m_words_by_node.find(pNode) == m_words_by_node.end());
+        const vector<string>& words = pNode->invalidation_words();
+        mxb_assert(!words.empty());
 
-        m_words_by_node.emplace(pNode, invalidation_words);
-
-        for (auto& word : invalidation_words)
+        for (auto& word : words)
         {
             mxb_assert(!word.empty());
 
@@ -104,13 +128,28 @@ public:
         }
     }
 
+    void remove_note(LRUStorage::Node* pNode) override final
+    {
+        const vector<string>& words = pNode->invalidation_words();
+        mxb_assert(!words.empty());
+
+        for (auto& word : words)
+        {
+            mxb_assert(!word.empty());
+
+            Nodes& nodes = m_nodes_by_word[word];
+            auto it = nodes.find(pNode);
+            mxb_assert(it != nodes.end());
+
+            nodes.erase(it);
+        }
+    }
+
 private:
     using Nodes       = unordered_set<Node*>;
     using NodesByWord = unordered_map<string, Nodes>;
-    using WordsByNode = unordered_map<Node*, vector<string>>;
 
     NodesByWord m_nodes_by_word; // Nodes to be invalidated due to a word.
-    WordsByNode m_words_by_node; // Invalidation words of a particular node.
 };
 
 
@@ -125,17 +164,22 @@ class LRUStorage::FullInvalidator : public LRUStorage::LRUInvalidator
 public:
     ~FullInvalidator() = default;
 
-    const vector<string>& invalidation_words(const vector<string>&) const override final
+    const vector<string>& storage_words(const vector<string>&) const override final
     {
-        return s_invalidation_words;
+        return s_no_words;
+    }
+
+    const vector<string>& node_words(const vector<string>& invalidation_words) const override final
+    {
+        return invalidation_words;
     }
 
 private:
-    static vector<string> s_invalidation_words;
+    static const vector<string> s_no_words;
 };
 
 //static
-vector<string> LRUStorage::FullInvalidator::s_invalidation_words;
+const vector<string> LRUStorage::FullInvalidator::s_no_words;
 
 
 /**
@@ -149,7 +193,12 @@ class LRUStorage::StorageInvalidator : public LRUStorage::LRUInvalidator
 public:
     ~StorageInvalidator() = default;
 
-    const vector<string>& invalidation_words(const vector<string>& invalidation_words) const override final
+    const vector<string>& storage_words(const vector<string>& invalidation_words) const override final
+    {
+        return invalidation_words;
+    }
+
+    const vector<string>& node_words(const vector<string>& invalidation_words) const override final
     {
         return invalidation_words;
     }
@@ -249,7 +298,7 @@ cache_result_t LRUStorage::do_get_value(const CACHE_KEY& key,
 }
 
 cache_result_t LRUStorage::do_put_value(const CACHE_KEY& key,
-                                        const std::vector<std::string>& invalidation_words,
+                                        const vector<string>& invalidation_words,
                                         const GWBUF* pValue)
 {
     mxb_assert(invalidation_words.size() == 0);
@@ -275,9 +324,9 @@ cache_result_t LRUStorage::do_put_value(const CACHE_KEY& key,
     {
         mxb_assert(pNode);
 
-        result = m_pStorage->put_value(key,
-                                       m_sInvalidator->invalidation_words(invalidation_words),
-                                       pValue);
+        const vector<string>& storage_words = m_sInvalidator->storage_words(invalidation_words);
+
+        result = m_pStorage->put_value(key, storage_words, pValue);
 
         if (CACHE_RESULT_IS_OK(result))
         {
@@ -292,12 +341,14 @@ cache_result_t LRUStorage::do_put_value(const CACHE_KEY& key,
                 ++m_stats.items;
             }
 
-            pNode->reset(&i->first, value_size);
+            const vector<string>& node_words = m_sInvalidator->node_words(invalidation_words);
+
+            pNode->reset(&i->first, value_size, node_words);
+            m_sInvalidator->make_note(pNode);
+
             m_stats.size += pNode->size();
 
             move_to_head(pNode);
-
-            m_sInvalidator->make_note(invalidation_words, pNode);
         }
         else if (!existed)
         {
@@ -338,7 +389,7 @@ cache_result_t LRUStorage::do_del_value(const CACHE_KEY& key)
     return result;
 }
 
-cache_result_t LRUStorage::do_invalidate(const std::vector<std::string>& words)
+cache_result_t LRUStorage::do_invalidate(const vector<string>& words)
 {
     return m_pStorage->invalidate(words);
 }
@@ -510,7 +561,7 @@ LRUStorage::Node* LRUStorage::vacate_lru(size_t needed_space)
 
     if (pNode)
     {
-        pNode->reset();
+        pNode->clear();
     }
 
     return pNode;
@@ -525,10 +576,10 @@ bool LRUStorage::free_node_data(Node* pNode)
 {
     bool success = true;
 
-    const CACHE_KEY* pkey = pNode->key();
-    mxb_assert(pkey);
+    const CACHE_KEY* pKey = pNode->key();
+    mxb_assert(pKey);
 
-    NodesByKey::iterator i = m_nodes_by_key.find(*pkey);
+    NodesByKey::iterator i = m_nodes_by_key.find(*pKey);
 
     if (i == m_nodes_by_key.end())
     {
@@ -536,7 +587,7 @@ bool LRUStorage::free_node_data(Node* pNode)
         MXS_ERROR("Item in LRU list was not found in key mapping.");
     }
 
-    cache_result_t result = m_pStorage->del_value(*pkey);
+    cache_result_t result = m_pStorage->del_value(*pKey);
 
     if (CACHE_RESULT_IS_OK(result) || CACHE_RESULT_IS_NOT_FOUND(result))
     {
@@ -557,6 +608,8 @@ bool LRUStorage::free_node_data(Node* pNode)
         m_stats.size -= pNode->size();
         m_stats.items -= 1;
         m_stats.evictions += 1;
+
+        m_sInvalidator->remove_note(pNode);
     }
     else
     {
@@ -659,10 +712,10 @@ cache_result_t LRUStorage::get_existing_node(NodesByKey::iterator& i, const GWBU
     {
         // If the size of the new item is more than what is allowed in total,
         // we must remove the value.
-        const CACHE_KEY* pkey = i->second->key();
-        mxb_assert(pkey);
+        const CACHE_KEY* pKey = i->second->key();
+        mxb_assert(pKey);
 
-        result = do_del_value(*pkey);
+        result = do_del_value(*pKey);
 
         if (!CACHE_RESULT_IS_ERROR(result))
         {

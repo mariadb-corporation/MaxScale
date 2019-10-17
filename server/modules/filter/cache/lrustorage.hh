@@ -135,17 +135,25 @@ private:
         {
             return m_pKey;
         }
+
         size_t size() const
         {
             return m_size;
         }
+
         Node* next() const
         {
             return m_pNext;
         }
+
         Node* prev() const
         {
             return m_pPrev;
+        }
+
+        const std::vector<std::string>& invalidation_words() const
+        {
+            return m_invalidation_words;
         }
 
         /**
@@ -207,17 +215,32 @@ private:
             return pNode;
         }
 
-        void reset(const CACHE_KEY* pkey = NULL, size_t size = 0)
+        void reset(const CACHE_KEY* pKey,
+                   size_t size,
+                   const std::vector<std::string>& invalidation_words)
         {
-            m_pKey = pkey;
+            m_pKey = pKey;
             m_size = size;
+            m_invalidation_words = invalidation_words;
+        }
+
+        void clear()
+        {
+            m_pKey = nullptr;
+            m_size = 0;
+            m_invalidation_words.clear();
         }
 
     private:
-        const CACHE_KEY* m_pKey;    /*< Points at the key stored in nodes_by_key_ below. */
-        size_t           m_size;    /*< The size of the data referred to by m_pKey. */
-        Node*            m_pNext;   /*< The next node in the LRU list. */
-        Node*            m_pPrev;   /*< The previous node in the LRU list. */
+        // TODO: Replace string with char* that points to a shared string.
+        // TODO: No sense in storing the same table name a million times.
+        using Words = std::vector<std::string>;
+
+        const CACHE_KEY* m_pKey;               /*< Points at the key stored in nodes_by_key below. */
+        size_t           m_size;               /*< The size of the data referred to by m_pKey. */
+        Node*            m_pNext;              /*< The next node in the LRU list. */
+        Node*            m_pPrev;              /*< The previous node in the LRU list. */
+        Words            m_invalidation_words; /*< Words that invalidate this node. */
     };
 
     typedef std::unordered_map<CACHE_KEY, Node*> NodesByKey;
