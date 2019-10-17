@@ -61,6 +61,23 @@ public:
      * @param pNode  The node.
      */
     virtual void remove_note(LRUStorage::Node* pNode) = 0;
+
+    /**
+     * Perform invalidation
+     *
+     * @param words  The invalidation words.
+     *
+     * @return True, if invalidation could be performed, false otherwise.
+     */
+    virtual bool invalidate(const vector<string>& words) = 0;
+
+protected:
+    Invalidator(LRUStorage* pOwner)
+        : m_owner(*pOwner)
+    {
+    }
+
+    LRUStorage& m_owner;
 };
 
 
@@ -72,6 +89,11 @@ public:
 class LRUStorage::NullInvalidator : public LRUStorage::Invalidator
 {
 public:
+    NullInvalidator(LRUStorage* pOwner)
+        : Invalidator(pOwner)
+    {
+    }
+
     ~NullInvalidator() = default;
 
     const vector<string>& storage_words(const vector<string>&) const override final
@@ -92,6 +114,12 @@ public:
     void remove_note(LRUStorage::Node* pNode) override final
     {
         mxb_assert(pNode->invalidation_words().empty());
+    }
+
+    bool invalidate(const vector<string>& words) override final
+    {
+        mxb_assert(!true);
+        return true;
     }
 
 private:
@@ -145,6 +173,64 @@ public:
         }
     }
 
+    bool invalidate(const vector<string>& words) override
+    {
+        bool rv = true;
+
+        // A particular node may be invalidated by multiple words.
+        // Hence we need to ensure that we don't attempt to do that
+        // multiple times.
+        unordered_set<Node*> invalidated;
+
+        for (auto& word : words)
+        {
+            auto it = m_nodes_by_word.find(word);
+
+            if (it != m_nodes_by_word.end())
+            {
+                Nodes& nodes = it->second;
+
+                auto it = nodes.begin();
+
+                for (; it != nodes.end(); ++it)
+                {
+                    Node* pNode = *it;
+
+                    if (invalidated.count(pNode) == 0)
+                    {
+                        if (invalidate_node(pNode))
+                        {
+                            invalidated.insert(pNode);
+                            mxb_assert(nodes.count(pNode) == 1);
+                        }
+                        else
+                        {
+                            rv = false;
+                            break;
+                        }
+                    }
+                }
+
+                nodes.erase(nodes.begin(), it);
+            }
+
+            if (!rv)
+            {
+                break;
+            }
+        }
+
+        return rv;
+    }
+
+protected:
+    LRUInvalidator(LRUStorage* pOwner)
+        : Invalidator(pOwner)
+    {
+    }
+
+    virtual bool invalidate_node(Node* pNode) = 0;
+
 private:
     using Nodes       = unordered_set<Node*>;
     using NodesByWord = unordered_map<string, Nodes>;
@@ -162,6 +248,11 @@ private:
 class LRUStorage::FullInvalidator : public LRUStorage::LRUInvalidator
 {
 public:
+    FullInvalidator(LRUStorage* pOwner)
+        : LRUInvalidator(pOwner)
+    {
+    }
+
     ~FullInvalidator() = default;
 
     const vector<string>& storage_words(const vector<string>&) const override final
@@ -172,6 +263,11 @@ public:
     const vector<string>& node_words(const vector<string>& invalidation_words) const override final
     {
         return invalidation_words;
+    }
+
+    bool invalidate_node(Node* pNode) override final
+    {
+        return m_owner.invalidate(pNode, LRUStorage::Context::INVALIDATION);
     }
 
 private:
@@ -191,6 +287,11 @@ const vector<string> LRUStorage::FullInvalidator::s_no_words;
 class LRUStorage::StorageInvalidator : public LRUStorage::LRUInvalidator
 {
 public:
+    StorageInvalidator(LRUStorage* pOwner)
+        : LRUInvalidator(pOwner)
+    {
+    }
+
     ~StorageInvalidator() = default;
 
     const vector<string>& storage_words(const vector<string>& invalidation_words) const override final
@@ -201,6 +302,26 @@ public:
     const vector<string>& node_words(const vector<string>& invalidation_words) const override final
     {
         return invalidation_words;
+    }
+
+    bool invalidate(const vector<string>& words) override
+    {
+        bool rv = LRUInvalidator::invalidate(words);
+
+        if (rv)
+        {
+            if (m_owner.storage()->invalidate(words) != CACHE_RESULT_OK)
+            {
+                rv = false;
+            }
+        }
+
+        return rv;
+    }
+
+    bool invalidate_node(Node* pNode) override final
+    {
+        return m_owner.invalidate(pNode, LRUStorage::Context::LRU_INVALIDATION);
     }
 };
 
@@ -218,7 +339,7 @@ LRUStorage::LRUStorage(const Config& config, Storage* pStorage)
 {
     if (m_config.invalidate == CACHE_INVALIDATE_NEVER)
     {
-        m_sInvalidator = SInvalidator(new NullInvalidator);
+        m_sInvalidator = SInvalidator(new NullInvalidator(this));
     }
     else
     {
@@ -229,26 +350,20 @@ LRUStorage::LRUStorage(const Config& config, Storage* pStorage)
         {
         case CACHE_INVALIDATE_NEVER:
             // We must do all invalidation.
-            m_sInvalidator = SInvalidator(new FullInvalidator);
+            m_sInvalidator = SInvalidator(new FullInvalidator(this));
             break;
 
         case CACHE_INVALIDATE_CURRENT:
             // We can use the storage for performing invalidation in
             // the storage itself.
-            m_sInvalidator = SInvalidator(new StorageInvalidator);
+            m_sInvalidator = SInvalidator(new StorageInvalidator(this));
         }
     }
 }
 
 LRUStorage::~LRUStorage()
 {
-    Node* pnode = m_pHead;
-
-    while (m_pHead)
-    {
-        free_node(m_pHead);     // Adjusts m_pHead
-    }
-
+    do_clear();
     delete m_pStorage;
 }
 
@@ -391,13 +506,34 @@ cache_result_t LRUStorage::do_del_value(const CACHE_KEY& key)
 
 cache_result_t LRUStorage::do_invalidate(const vector<string>& words)
 {
-    return m_pStorage->invalidate(words);
+    cache_result_t rv = CACHE_RESULT_OK;
+
+    if (!m_sInvalidator->invalidate(words))
+    {
+        string s = mxb::join(words, ",");
+
+        MXS_ERROR("Could not invalidate cache entries dependent upon '%s'."
+                  "The entire cache will be cleared.", s.c_str());
+
+        rv = do_clear();
+    }
+
+    return rv;
 }
 
 cache_result_t LRUStorage::do_clear()
 {
-    mxb_assert(!true);
-    return CACHE_RESULT_OK;
+    Node* pnode = m_pHead;
+
+    while (m_pHead)
+    {
+        free_node(m_pHead); // Adjusts m_pHead
+    }
+
+    mxb_assert(!m_pHead);
+    mxb_assert(!m_pTail);
+
+    return m_pStorage->clear();
 }
 
 cache_result_t LRUStorage::do_get_head(CACHE_KEY* pKey, GWBUF** ppValue)
@@ -511,7 +647,7 @@ LRUStorage::Node* LRUStorage::vacate_lru()
 
     Node* pNode = NULL;
 
-    if (free_node_data(m_pTail))
+    if (free_node_data(m_pTail, Context::EVICTION))
     {
         pNode = m_pTail;
 
@@ -539,7 +675,7 @@ LRUStorage::Node* LRUStorage::vacate_lru(size_t needed_space)
     {
         size_t size = m_pTail->size();
 
-        if (free_node_data(m_pTail))
+        if (free_node_data(m_pTail, Context::EVICTION))
         {
             freed_space += size;
 
@@ -570,9 +706,12 @@ LRUStorage::Node* LRUStorage::vacate_lru(size_t needed_space)
 /**
  * Free the data associated with a node.
  *
+ * @param pNode    The node whose data should be freed.
+ * @param context  The context where this is done.
+ *
  * @return True, if the data could be freed, false otherwise.
  */
-bool LRUStorage::free_node_data(Node* pNode)
+bool LRUStorage::free_node_data(Node* pNode, Context context)
 {
     bool success = true;
 
@@ -587,7 +726,12 @@ bool LRUStorage::free_node_data(Node* pNode)
         MXS_ERROR("Item in LRU list was not found in key mapping.");
     }
 
-    cache_result_t result = m_pStorage->del_value(*pKey);
+    cache_result_t result = CACHE_RESULT_OK;
+
+    if (context != Context::LRU_INVALIDATION)
+    {
+        m_pStorage->del_value(*pKey);
+    }
 
     if (CACHE_RESULT_IS_OK(result) || CACHE_RESULT_IS_NOT_FOUND(result))
     {
@@ -607,9 +751,16 @@ bool LRUStorage::free_node_data(Node* pNode)
 
         m_stats.size -= pNode->size();
         m_stats.items -= 1;
-        m_stats.evictions += 1;
 
-        m_sInvalidator->remove_note(pNode);
+        if (context == Context::EVICTION)
+        {
+            m_stats.evictions += 1;
+            m_sInvalidator->remove_note(pNode);
+        }
+        else
+        {
+            m_stats.invalidations += 1;
+        }
     }
     else
     {
@@ -825,6 +976,20 @@ cache_result_t LRUStorage::get_new_node(const CACHE_KEY& key,
     return result;
 }
 
+bool LRUStorage::invalidate(Node* pNode, Context context)
+{
+    mxb_assert(context != Context::EVICTION);
+
+    bool rv = free_node_data(pNode, context);
+
+    if (rv)
+    {
+        free_node(pNode);
+    }
+
+    return rv;
+}
+
 static void set_integer(json_t* pObject, const char* zName, size_t value)
 {
     json_t* pValue = json_integer(value);
@@ -845,4 +1010,5 @@ void LRUStorage::Stats::fill(json_t* pObject) const
     set_integer(pObject, "updates", updates);
     set_integer(pObject, "deletes", deletes);
     set_integer(pObject, "evictions", evictions);
+    set_integer(pObject, "invalidations", invalidations);
 }
