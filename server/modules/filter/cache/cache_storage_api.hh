@@ -62,7 +62,11 @@ enum cache_thread_model_t
     CACHE_THREAD_MODEL_MT
 };
 
-typedef void* CACHE_STORAGE;
+enum cache_invalidate_t
+{
+    CACHE_INVALIDATE_NEVER,
+    CACHE_INVALIDATE_CURRENT,
+};
 
 struct CACHE_KEY
 {
@@ -120,24 +124,26 @@ public:
     struct Config
     {
         Config()
-            : thread_model(CACHE_THREAD_MODEL_MT)
-            , hard_ttl(0)
-            , soft_ttl(0)
-            , max_count(0)
-            , max_size(0)
+        {
+        }
+
+        Config(cache_thread_model_t thread_model)
+            : thread_model(thread_model)
         {
         }
 
         Config(cache_thread_model_t thread_model,
-               uint32_t hard_ttl = 0,
-               uint32_t soft_ttl = 0,
-               uint32_t max_count = 0,
-               uint64_t max_size = 0)
+               uint32_t hard_ttl,
+               uint32_t soft_ttl,
+               uint32_t max_count,
+               uint64_t max_size,
+               cache_invalidate_t invalidate)
             : thread_model(thread_model)
             , hard_ttl(hard_ttl)
             , soft_ttl(soft_ttl)
             , max_count(max_count)
             , max_size(max_size)
+            , invalidate(invalidate)
         {
         }
 
@@ -178,6 +184,13 @@ public:
          * specify 0, unless CACHE_STORAGE_CAP_MAX_SIZE is returned at initialization.
          */
         uint64_t max_size = 0;
+
+        /**
+         * Whether or not the storage should perform invalidation. The caller should
+         * specify CACHE_INVALIDATE_NEVER, unless CACHE_STORAGE_CAP_INVALIDATION is
+         * returned at initialization.
+         */
+        cache_invalidate_t invalidate = CACHE_INVALIDATE_NEVER;
     };
 
     virtual ~Storage();

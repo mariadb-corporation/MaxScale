@@ -153,28 +153,50 @@ Storage* StorageFactory::create_storage(const char* zName,
     mxb_assert(m_handle);
     mxb_assert(m_pModule);
 
-    Storage::Config used_config(config);
+    Storage::Config storage_config(config);
 
     uint32_t mask = CACHE_STORAGE_CAP_MAX_COUNT | CACHE_STORAGE_CAP_MAX_SIZE;
 
     if (!cache_storage_has_cap(m_storage_caps, mask))
     {
-        // Since we will wrap the native storage with a LRUStorage, according
-        // to the used threading model, the storage itself may be single
-        // threaded. No point in locking twice.
-        used_config.thread_model = CACHE_THREAD_MODEL_ST;
-        used_config.max_count = 0;
-        used_config.max_size = 0;
+        // Ok, so the storage implementation does not support eviction, which
+        // means we will have to wrap it. As the wrapper will handle all necessary
+        // locking according to the threading model, the storage itself may be
+        // single threaded. No point in locking twice.
+        storage_config.thread_model = CACHE_THREAD_MODEL_ST;
+        storage_config.max_count = 0;
+        storage_config.max_size = 0;
     }
 
-    Storage* pStorage = create_raw_storage(zName, used_config, argc, argv);
+    if (!cache_storage_has_cap(m_storage_caps, CACHE_STORAGE_CAP_INVALIDATION))
+    {
+        // Ok, so the storage implementation does not support invalidation.
+        // We can't request it.
+        storage_config.invalidate = CACHE_INVALIDATE_NEVER;
+
+        if (config.invalidate != CACHE_INVALIDATE_NEVER)
+        {
+            // But invalidation is needed so we will wrap the raw storage with
+            // a storage that handles both eviction and invalidation. So no need
+            // to request eviction from the raw storage.
+            storage_config.max_count = 0;
+            storage_config.max_size = 0;
+        }
+    }
+
+    Storage* pStorage = create_raw_storage(zName, storage_config, argc, argv);
 
     if (pStorage)
     {
+        if (config.invalidate != CACHE_INVALIDATE_NEVER)
+        {
+            mask |= CACHE_STORAGE_CAP_INVALIDATION;
+        }
+
         if (!cache_storage_has_cap(m_storage_caps, mask))
         {
-            // Ok, so the cache cannot handle eviction. Let's decorate the
-            // real storage with a storage than can.
+            // Ok, so the cache cannot handle eviction (LRU) and/or invalidation.
+            // Let's decorate the raw storage with a storage than can.
 
             LRUStorage* pLruStorage = NULL;
 

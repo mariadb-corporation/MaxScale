@@ -236,6 +236,16 @@ private:
                                 NodesByKey::iterator* pI,
                                 Node** ppNode);
 
+    class Invalidator
+    {
+    public:
+        virtual ~Invalidator();
+    };
+
+    class NullInvalidator;
+    class FullInvalidator;
+    class StorageInvalidator;
+
 private:
     struct Stats
     {
@@ -261,6 +271,8 @@ private:
         uint64_t evictions; /*< How many times an item has been evicted from the cache. */
     };
 
+    using SInvalidator = std::unique_ptr<Invalidator>;
+
     const Config               m_config;        /*< The configuration. */
     Storage*                   m_pStorage;      /*< The actual storage. */
     const uint64_t             m_max_count;     /*< The maximum number of items in the LRU list, */
@@ -269,4 +281,5 @@ private:
     mutable NodesByKey         m_nodes_by_key;  /*< Mapping from cache keys to corresponding Node. */
     mutable Node*              m_pHead;         /*< The node at the LRU list. */
     mutable Node*              m_pTail;         /*< The node at bottom of the LRU list.*/
+    mutable SInvalidator       m_sInvalidator;  /*< The invalidator. */
 };

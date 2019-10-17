@@ -34,12 +34,6 @@ enum cache_in_trxs_t
 
 const cache_thread_model_t CACHE_DEFAULT_THREAD_MODEL = CACHE_THREAD_MODEL_ST;
 
-enum cache_invalidate_t
-{
-    CACHE_INVALIDATE_NEVER,
-    CACHE_INVALIDATE_CURRENT,
-};
-
 class CacheConfig : public config::Configuration
 {
 public:

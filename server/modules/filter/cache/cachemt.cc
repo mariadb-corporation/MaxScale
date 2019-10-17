@@ -84,7 +84,8 @@ CacheMT* CacheMT::create(const std::string& name,
                                    pConfig->hard_ttl.count(),
                                    pConfig->soft_ttl.count(),
                                    pConfig->max_count.get(),
-                                   pConfig->max_size.get());
+                                   pConfig->max_size.get(),
+                                   pConfig->invalidate.get());
 
     int argc = pConfig->storage_argc;
     char** argv = pConfig->storage_argv;

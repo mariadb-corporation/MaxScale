@@ -14,6 +14,48 @@
 #define MXS_MODULE_NAME "cache"
 #include "lrustorage.hh"
 
+/**
+ * @class LRUStorage::NullInvalidator
+ *
+ * An invalidator used when no invalidation need to be performed.
+ */
+class LRUStorage::NullInvalidator : public LRUStorage::Invalidator
+{
+};
+
+
+/**
+ * @class LRUStorage::FullInvalidator
+ *
+ * An invalidator used when invalidation must be performed and the
+ * storage provides no support for invalidation.
+ */
+class LRUStorage::FullInvalidator : public LRUStorage::Invalidator
+{
+};
+
+
+/**
+ * @class LRUStorage::StorageInvalidator
+ *
+ * An invalidator used when invalidation must be performed and the
+ * storage provides support for invalidation.
+ */
+class LRUStorage::StorageInvalidator : public LRUStorage::Invalidator
+{
+};
+
+
+/**
+ * @class LRUStorage::Invalidator
+ */
+LRUStorage::Invalidator::~Invalidator()
+{
+}
+
+/**
+ * @class LRUStorage
+ */
 LRUStorage::LRUStorage(const Config& config, Storage* pStorage)
     : m_config(config)
     , m_pStorage(pStorage)
@@ -22,6 +64,28 @@ LRUStorage::LRUStorage(const Config& config, Storage* pStorage)
     , m_pHead(NULL)
     , m_pTail(NULL)
 {
+    if (m_config.invalidate == CACHE_INVALIDATE_NEVER)
+    {
+        m_sInvalidator = SInvalidator(new NullInvalidator);
+    }
+    else
+    {
+        Storage::Config storage_config;
+        pStorage->get_config(&storage_config);
+
+        switch (storage_config.invalidate)
+        {
+        case CACHE_INVALIDATE_NEVER:
+            // We must do all invalidation.
+            m_sInvalidator = SInvalidator(new FullInvalidator);
+            break;
+
+        case CACHE_INVALIDATE_CURRENT:
+            // We can use the storage for performing invalidation in
+            // the storage itself.
+            m_sInvalidator = SInvalidator(new StorageInvalidator);
+        }
+    }
 }
 
 LRUStorage::~LRUStorage()
