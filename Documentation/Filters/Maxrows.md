@@ -68,7 +68,7 @@ rows or size limit is hit, possible values:
 
 
 ```
-max_resultset_size=empty|error|ok
+max_resultset_return=empty|error|ok
 ```
 The default result type is 'empty'
 
