@@ -183,4 +183,5 @@ private:
     bool                  m_invalidate;     /**< Whether invalidation should be performed. */
     bool                  m_invalidate_now; /**< Should invalidation be done at next response. */
     Tables                m_tables;         /**< Tables selected or modified. */
+    bool                  m_clear_cache;    /**< Whether the entire cache should be cleared. */
 };

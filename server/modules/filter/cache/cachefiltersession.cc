@@ -256,6 +256,7 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession,
     , m_hard_ttl(pCache->config().hard_ttl.count())
     , m_invalidate(pCache->config().invalidate != CACHE_INVALIDATE_NEVER)
     , m_invalidate_now(false)
+    , m_clear_cache(false)
 {
     m_key.data = 0;
 
@@ -436,21 +437,31 @@ int CacheFilterSession::clientReply(GWBUF* pData, const mxs::ReplyRoute& down, c
 
         if (reply.is_complete())
         {
+            // Usually it will be an OK, but we are future proof by accepting result sets as well.
             if (reply.is_ok() || reply.is_resultset())
             {
-                // Usually it will be an OK, but we are future proof by accepting result sets as well.
-                std::vector<std::string> invalidation_words;
-                std::copy(m_tables.begin(), m_tables.end(), std::back_inserter(invalidation_words));
-
-                if (m_pCache->invalidate(invalidation_words) == CACHE_RESULT_OK)
+                if (!m_clear_cache)
                 {
-                    MXS_NOTICE("Cache successfully invalidated.");
+                    std::vector<std::string> invalidation_words;
+                    std::copy(m_tables.begin(), m_tables.end(), std::back_inserter(invalidation_words));
+
+                    if (m_pCache->invalidate(invalidation_words) == CACHE_RESULT_OK)
+                    {
+                        if (log_decisions())
+                        {
+                            MXS_NOTICE("Cache successfully invalidated.");
+                        }
+                    }
+                    else
+                    {
+                        MXS_WARNING("Failed to invalidate individual cache entries, "
+                                    "the cache will now be cleared.");
+                        m_clear_cache = true;
+                    }
                 }
-                else
-                {
-                    MXS_WARNING("Failed to invalidate individual cache entries, "
-                                "the cache will now be cleared.");
 
+                if (m_clear_cache)
+                {
                     if (m_pCache->clear() != CACHE_RESULT_OK)
                     {
                         MXS_ERROR("Could not clear the cache, which is now in "
@@ -463,6 +474,7 @@ int CacheFilterSession::clientReply(GWBUF* pData, const mxs::ReplyRoute& down, c
 
             m_tables.clear();
             m_invalidate_now = false;
+            m_clear_cache = false;
         }
     }
 
@@ -834,10 +846,36 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
                         }
 
                         qc_parse_result_t result = qc_parse(pPacket, QC_COLLECT_TABLES);
-                        mxb_assert(result == QC_QUERY_PARSED);
-                        // TODO: Deal with parsing failure.
 
-                        update_table_names(pPacket);
+                        if (result == QC_QUERY_PARSED)
+                        {
+                            update_table_names(pPacket);
+                        }
+                        else
+                        {
+                            const char* zPrefix = "UPDATE/DELETE/INSERT statement could not be parsed.";
+                            const char* zSuffix = nullptr;
+
+                            if (m_pCache->config().clear_cache_on_parse_errors)
+                            {
+                                zSuffix =
+                                    "The option clear_cache_on_parse_errors is true, "
+                                    "the cache will be cleared.";
+                                m_clear_cache = true;
+                            }
+                            else
+                            {
+                                zSuffix =
+                                    "The option clear_cache_on_parse_errors is false, "
+                                    "no invalidation will take place.";
+                                m_clear_cache = false;
+                            }
+
+                            if (log_decisions())
+                            {
+                                MXS_NOTICE("%s%s", zPrefix, zSuffix);
+                            }
+                        }
                     }
                     /* FALLTHROUGH */
                 case StatementType::UNKNOWN:
