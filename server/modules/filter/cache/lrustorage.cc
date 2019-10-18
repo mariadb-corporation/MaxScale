@@ -143,7 +143,6 @@ public:
     void make_note(LRUStorage::Node* pNode) override final
     {
         const vector<string>& words = pNode->invalidation_words();
-        mxb_assert(!words.empty());
 
         for (auto& word : words)
         {
@@ -159,7 +158,6 @@ public:
     void remove_note(LRUStorage::Node* pNode) override final
     {
         const vector<string>& words = pNode->invalidation_words();
-        mxb_assert(!words.empty());
 
         for (auto& word : words)
         {
@@ -416,7 +414,6 @@ cache_result_t LRUStorage::do_put_value(const CACHE_KEY& key,
                                         const vector<string>& invalidation_words,
                                         const GWBUF* pValue)
 {
-    mxb_assert(invalidation_words.size() == 0);
     cache_result_t result = CACHE_RESULT_ERROR;
 
     size_t value_size = GWBUF_LENGTH(pValue);

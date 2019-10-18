@@ -13,6 +13,7 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
+#include <unordered_set>
 #include <maxscale/buffer.hh>
 #include <maxscale/filter.hh>
 #include "cache.hh"
@@ -162,6 +163,8 @@ private:
     CacheFilterSession(MXS_SESSION* pSession, SERVICE* pService, Cache* pCache, char* zDefaultDb);
 
 private:
+    using Tables = std::unordered_set<std::string>;
+
     cache_session_state_t m_state;          /**< What state is the session in, what data is expected. */
     Cache*                m_pCache;         /**< The cache instance the session is associated with. */
     GWBUF*                m_res;            /**< The response buffer. */
@@ -176,4 +179,7 @@ private:
     uint32_t              m_soft_ttl;       /**< The soft TTL used in the session. */
     uint32_t              m_hard_ttl;       /**< The hard TTL used in the session. */
     GWBUF*                m_pCurrent_stmt;  /**< The current statement, if we are interested in it. */
+    bool                  m_invalidate;     /**< Whether invalidation should be performed. */
+    bool                  m_invalidate_now; /**< Should invalidation be done at next response. */
+    Tables                m_tables;         /**< What tables have been modified in current trx. */
 };

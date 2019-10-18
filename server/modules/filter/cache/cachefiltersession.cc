@@ -255,6 +255,8 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession,
     , m_soft_ttl(pCache->config().soft_ttl.count())
     , m_hard_ttl(pCache->config().hard_ttl.count())
     , m_pCurrent_stmt(nullptr)
+    , m_invalidate(pCache->config().invalidate != CACHE_INVALIDATE_NEVER)
+    , m_invalidate_now(false)
 {
     m_key.data = 0;
 
@@ -429,6 +431,43 @@ int CacheFilterSession::clientReply(GWBUF* pData, const mxs::ReplyRoute& down, c
         else
         {
             m_state = CACHE_IGNORING_RESPONSE;
+        }
+    }
+
+    if (m_invalidate_now)
+    {
+        // The response to either a COMMIT, or to UPDATE/DELETE/INSERT with
+        // autcommit being true.
+
+        if (reply.is_complete())
+        {
+            if (reply.is_ok() || reply.is_resultset())
+            {
+                // Usually it will be an OK, but we are future proof by accepting result sets as well.
+                std::vector<std::string> invalidation_words;
+                std::copy(m_tables.begin(), m_tables.end(), std::back_inserter(invalidation_words));
+
+                if (m_pCache->invalidate(invalidation_words) == CACHE_RESULT_OK)
+                {
+                    MXS_NOTICE("Cache successfully invalidated.");
+                }
+                else
+                {
+                    MXS_WARNING("Failed to invalidate individual cache entries, "
+                                "the cache will now be cleared.");
+
+                    if (m_pCache->clear() != CACHE_RESULT_OK)
+                    {
+                        MXS_ERROR("Could not clear the cache, which is now in "
+                                  "inconsistent state. Caching will now be disabled.");
+                        m_use = false;
+                        m_populate = false;
+                    }
+                }
+            }
+
+            m_tables.clear();
+            m_invalidate_now = false;
         }
     }
 
@@ -634,16 +673,14 @@ void CacheFilterSession::store_result()
 
         std::vector<std::string> invalidation_words;
 
-        const CacheConfig& config = m_pCache->config();
-
-        if (config.invalidate != CACHE_INVALIDATE_NEVER)
+        if (m_invalidate)
         {
             mxb_assert(m_pCurrent_stmt);
             qc_parse_result_t parse_result = qc_parse(m_pCurrent_stmt, QC_COLLECT_TABLES);
 
             if (parse_result == QC_QUERY_PARSED)
             {
-                invalidation_words = qc_get_table_names(m_res, true);
+                invalidation_words = qc_get_table_names(m_pCurrent_stmt, true);
 
                 for (auto& word : invalidation_words)
                 {
@@ -697,6 +734,8 @@ void CacheFilterSession::store_result()
 CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* pPacket)
 {
     cache_action_t action = CACHE_IGNORE;
+
+    m_invalidate_now = false;
 
     if (m_use || m_populate)
     {
@@ -780,50 +819,90 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
             }
         }
 
-        if (action != CACHE_IGNORE)
+        if (m_invalidate || (action != CACHE_IGNORE))
         {
-            switch (get_statement_type(pPacket))
+            if (qc_query_is_type(type_mask, QUERY_TYPE_COMMIT))
             {
-            case StatementType::SELECT:
-                if (config.selects == CACHE_SELECTS_VERIFY_CACHEABLE)
+                m_invalidate_now = true;
+            }
+            else
+            {
+                switch (get_statement_type(pPacket))
                 {
-                    // Note that the type mask must be obtained a new. A few lines
-                    // above we only got the transaction state related type mask.
-                    type_mask = qc_get_type_mask(pPacket);
+                case StatementType::SELECT:
+                    if (config.selects == CACHE_SELECTS_VERIFY_CACHEABLE)
+                    {
+                        // Note that the type mask must be obtained a new. A few lines
+                        // above we only got the transaction state related type mask.
+                        type_mask = qc_get_type_mask(pPacket);
 
-                    if (qc_query_is_type(type_mask, QUERY_TYPE_USERVAR_READ))
-                    {
-                        action = CACHE_IGNORE;
-                        zPrimary_reason = "user variables are read";
+                        if (qc_query_is_type(type_mask, QUERY_TYPE_USERVAR_READ))
+                        {
+                            action = CACHE_IGNORE;
+                            zPrimary_reason = "user variables are read";
+                        }
+                        else if (qc_query_is_type(type_mask, QUERY_TYPE_SYSVAR_READ))
+                        {
+                            action = CACHE_IGNORE;
+                            zPrimary_reason = "system variables are read";
+                        }
+                        else if (uses_non_cacheable_function(pPacket))
+                        {
+                            action = CACHE_IGNORE;
+                            zPrimary_reason = "uses non-cacheable function";
+                        }
+                        else if (uses_non_cacheable_variable(pPacket))
+                        {
+                            action = CACHE_IGNORE;
+                            zPrimary_reason = "uses non-cacheable variable";
+                        }
                     }
-                    else if (qc_query_is_type(type_mask, QUERY_TYPE_SYSVAR_READ))
+                    break;
+
+                case StatementType::DUPSERT:
                     {
-                        action = CACHE_IGNORE;
-                        zPrimary_reason = "system variables are read";
+                        if (!m_pSession->is_trx_active() && m_pSession->is_autocommit())
+                        {
+                            m_invalidate_now = true;
+                        }
+
+                        qc_parse_result_t result = qc_parse(pPacket, QC_COLLECT_TABLES);
+                        mxb_assert(result == QC_QUERY_PARSED);
+                        // TODO: Deal with parsing failure.
+
+                        std::vector<std::string> tables = qc_get_table_names(pPacket, true);
+
+                        for (auto& table : tables)
+                        {
+                            size_t dot = table.find('.');
+                            if (dot == std::string::npos)
+                            {
+                                if (m_zDefaultDb)
+                                {
+                                    table = std::string(m_zDefaultDb) + "." + table;
+                                }
+                                else
+                                {
+                                    // Without a default DB and with a non-qualified table name,
+                                    // the query will fail, so we just ignore the table.
+                                    continue;
+                                }
+                            }
+
+                            m_tables.insert(table);
+                        }
                     }
-                    else if (uses_non_cacheable_function(pPacket))
-                    {
-                        action = CACHE_IGNORE;
-                        zPrimary_reason = "uses non-cacheable function";
-                    }
-                    else if (uses_non_cacheable_variable(pPacket))
-                    {
-                        action = CACHE_IGNORE;
-                        zPrimary_reason = "uses non-cacheable variable";
-                    }
+                    // Flow-through intended.
+                case StatementType::UNKNOWN:
+                    // A bit broad, as e.g. SHOW will cause the read only state to be turned
+                    // off. However, during normal use this will always be an UPDATE, INSERT
+                    // or DELETE. Note that 'm_is_read_only' only affects transactions that
+                    // are not explicitly read-only.
+                    m_is_read_only = false;
+
+                    action = CACHE_IGNORE;
+                    zPrimary_reason = "statement is not SELECT";
                 }
-                break;
-
-            case StatementType::DUPSERT:
-            case StatementType::UNKNOWN:
-                // A bit broad, as e.g. SHOW will cause the read only state to be turned
-                // off. However, during normal use this will always be an UPDATE, INSERT
-                // or DELETE. Note that 'm_is_read_only' only affects transactions that
-                // are not explicitly read-only.
-                m_is_read_only = false;
-
-                action = CACHE_IGNORE;
-                zPrimary_reason = "statement is not SELECT";
             }
         }
 
