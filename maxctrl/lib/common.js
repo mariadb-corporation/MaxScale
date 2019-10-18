@@ -425,8 +425,8 @@ module.exports = function() {
 
     this.fieldDescriptions = function(fields) {
         var t = new Table({chars: {
-            'top' : '', 'top-mid': '', 'top-left': '', 'top-right': '', 'left': ' ', 'right': '',
-            'left-mid': '' , 'mid': '' , 'mid-mid': '', 'right-mid': '' , 'middle': '',
+            'top' : ' ', 'top-mid': '', 'top-left': '', 'top-right': '', 'left': ' ', 'right': '',
+            'left-mid': '' , 'mid': '' , 'mid-mid': '', 'right-mid': '' , 'middle': '|',
             'bottom' : '', 'bottom-mid': '', 'bottom-left': '', 'bottom-right': '',
         }})
 

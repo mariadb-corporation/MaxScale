@@ -448,6 +448,42 @@ const show_commands_fields = [
     }
 ]
 
+const qc_cache_fields = [
+    {
+        name: 'Statement',
+        path: 'id',
+        description: 'The canonical form of the SQL statement'
+    },
+    {
+        name: 'Hits',
+        path: 'attributes.hits',
+        description: 'Number of times cache entry has been used'
+    },
+    {
+        name: 'Type',
+        path: 'attributes.classification.type_mask',
+        description: 'Query type'
+    }
+]
+
+const show_dbusers_fields = [
+    {
+        name: 'Users',
+        path: 'attributes.authenticator_diagnostics[]',
+        description: 'The list of users'
+    },
+    {
+        name: 'Listener',
+        path: 'id',
+        description: 'Listener name'
+    },
+    {
+        name: 'Authenticator',
+        path: 'attributes.parameters.authenticator',
+        description: 'The authenticator used by the listener'
+    }
+]
+
 exports.command = 'show <command>'
 exports.desc = 'Show objects'
 exports.handler = function() {}
@@ -458,6 +494,7 @@ exports.builder = function(yargs) {
                                 'field contains the currently configured parameters for this ' +
                                 'server. See `help alter server` for more details about altering ' +
                                 'server parameters.' + fieldDescriptions(server_fields))
+                .wrap(null)
                 .usage('Usage: show server <server>')
         }, function(argv) {
             maxctrl(argv, function(host) {
@@ -467,6 +504,7 @@ exports.builder = function(yargs) {
         .command('servers', 'Show all servers', function(yargs) {
             return yargs.epilog('Show detailed information about all servers.' +
                                 fieldDescriptions(server_fields))
+                .wrap(null)
                 .usage('Usage: show servers')
         }, function(argv) {
             maxctrl(argv, function(host) {
@@ -478,6 +516,7 @@ exports.builder = function(yargs) {
                                 'field contains the currently configured parameters for this ' +
                                 'service. See `help alter service` for more details about altering ' +
                                 'service parameters.' + fieldDescriptions(service_fields))
+                .wrap(null)
                 .usage('Usage: show service <service>')
         }, function(argv) {
             maxctrl(argv, function(host) {
@@ -487,6 +526,7 @@ exports.builder = function(yargs) {
         .command('services', 'Show all services', function(yargs) {
             return yargs.epilog('Show detailed information about all services.' +
                                 fieldDescriptions(service_fields))
+                .wrap(null)
                 .usage('Usage: show services')
         }, function(argv) {
             maxctrl(argv, function(host) {
@@ -498,6 +538,7 @@ exports.builder = function(yargs) {
                                 'field contains the currently configured parameters for this ' +
                                 'monitor. See `help alter monitor` for more details about altering ' +
                                 'monitor parameters.' + fieldDescriptions(monitor_fields))
+                .wrap(null)
                 .usage('Usage: show monitor <monitor>')
         }, function(argv) {
             maxctrl(argv, function(host) {
@@ -507,6 +548,7 @@ exports.builder = function(yargs) {
         .command('monitors', 'Show all monitors', function(yargs) {
             return yargs.epilog('Show detailed information about all monitors.' +
                                 fieldDescriptions(monitor_fields))
+                .wrap(null)
                 .usage('Usage: show monitors')
         }, function(argv) {
             maxctrl(argv, function(host) {
@@ -522,6 +564,7 @@ exports.builder = function(yargs) {
                                 'the session is connected and the `Connection IDs` ' +
                                 'field lists the IDs for those connections.' +
                                 fieldDescriptions(session_fields))
+                .wrap(null)
                 .usage('Usage: show session <session>')
                 .group([rDnsOption.shortname], 'Options:')
                 .option(rDnsOption.shortname, rDnsOption.definition)
@@ -538,6 +581,7 @@ exports.builder = function(yargs) {
             return yargs.epilog('Show detailed information about all sessions. ' +
                                 'See `help show session` for more details.' +
                                 fieldDescriptions(session_fields))
+                .wrap(null)
                 .usage('Usage: show sessions')
                 .group([rDnsOption.shortname], 'Options:')
                 .option(rDnsOption.shortname, rDnsOption.definition)
@@ -552,7 +596,8 @@ exports.builder = function(yargs) {
         })
         .command('filter <filter>', 'Show filter', function(yargs) {
             return yargs.epilog('The list of services that use this filter is show in the `Services` field.' +
-                               fieldDescriptions(filter_fields))
+                                fieldDescriptions(filter_fields))
+                .wrap(null)
                 .usage('Usage: show filter <filter>')
         }, function(argv) {
             maxctrl(argv, function(host) {
@@ -562,6 +607,7 @@ exports.builder = function(yargs) {
         .command('filters', 'Show all filters', function(yargs) {
             return yargs.epilog('Show detailed information of all filters.' +
                                 fieldDescriptions(filter_fields))
+                .wrap(null)
                 .usage('Usage: show filters')
         }, function(argv) {
             maxctrl(argv, function(host) {
@@ -571,7 +617,8 @@ exports.builder = function(yargs) {
         .command('module <module>', 'Show loaded module', function(yargs) {
             return yargs.epilog('This command shows all available parameters as well as ' +
                                 'detailed version information of a loaded module.' +
-                               fieldDescriptions(module_fields))
+                                fieldDescriptions(module_fields))
+                .wrap(null)
                 .usage('Usage: show module <module>')
         }, function(argv) {
             maxctrl(argv, function(host) {
@@ -580,7 +627,8 @@ exports.builder = function(yargs) {
         })
         .command('modules', 'Show all loaded modules', function(yargs) {
             return yargs.epilog('Displays detailed information about all modules.' +
-                               fieldDescriptions(module_fields))
+                                fieldDescriptions(module_fields))
+                .wrap(null)
                 .usage('Usage: show modules')
         }, function(argv) {
             maxctrl(argv, function(host) {
@@ -590,6 +638,7 @@ exports.builder = function(yargs) {
         .command('maxscale', 'Show MaxScale information', function(yargs) {
             return yargs.epilog('See `help alter maxscale` for more details about altering ' +
                                 'MaxScale parameters.' + fieldDescriptions(show_maxscale_fields))
+                .wrap(null)
                 .usage('Usage: show maxscale')
         }, function(argv) {
             maxctrl(argv, function(host) {
@@ -598,7 +647,8 @@ exports.builder = function(yargs) {
         })
         .command('thread <thread>', 'Show thread', function(yargs) {
             return yargs.epilog('Show detailed information about a worker thread.' +
-                               fieldDescriptions(thread_fields))
+                                fieldDescriptions(thread_fields))
+                .wrap(null)
                 .usage('Usage: show thread <thread>')
         }, function(argv) {
             maxctrl(argv, function(host) {
@@ -607,7 +657,8 @@ exports.builder = function(yargs) {
         })
         .command('threads', 'Show all threads', function(yargs) {
             return yargs.epilog('Show detailed information about all worker threads.' +
-                               fieldDescriptions(thread_fields))
+                                fieldDescriptions(thread_fields))
+                .wrap(null)
                 .usage('Usage: show threads')
         }, function(argv) {
             maxctrl(argv, function(host) {
@@ -617,6 +668,7 @@ exports.builder = function(yargs) {
         .command('logging', 'Show MaxScale logging information', function(yargs) {
             return yargs.epilog('See `help alter logging` for more details about altering ' +
                                 'logging parameters.' + fieldDescriptions(show_logging_fields))
+                .wrap(null)
                 .usage('Usage: show logging')
         }, function(argv) {
             maxctrl(argv, function(host) {
@@ -626,6 +678,7 @@ exports.builder = function(yargs) {
         .command('commands <module>', 'Show module commands of a module', function(yargs) {
             return yargs.epilog('This command shows the parameters the command expects with ' +
                                 'the parameter descriptions.' + fieldDescriptions(show_commands_fields))
+                .wrap(null)
                 .usage('Usage: show commands <module>')
         }, function(argv) {
             maxctrl(argv, function(host) {
@@ -635,29 +688,23 @@ exports.builder = function(yargs) {
         })
         .command('qc_cache', 'Show query classifier cache', function(yargs) {
             return yargs.epilog('Show contents (statement and hits) of query classifier cache.')
+                .wrap(null)
                 .usage('Usage: show qc_cache')
         }, function(argv) {
             maxctrl(argv, function(host) {
-                return getCollection(host, 'maxscale/query_classifier/cache', [
-                    {'Statement': 'id'},
-                    {'Hits': 'attributes.hits'},
-                    {'Type': 'attributes.classification.type_mask' }
-                ])
+                return getCollection(host, 'maxscale/query_classifier/cache', qc_cache_fields)
             })
         })
         .command('dbusers <service>', 'Show database users of the service', function(yargs) {
             return yargs.epilog('Show information about the database users of the service')
+                .wrap(null)
                 .usage('Usage: show dbusers <service>')
         }, function(argv) {
             maxctrl(argv, function(host) {
-                return getSubCollection(host, 'services/' + argv.service, 'attributes.listeners[]', [
-                    {'Users': 'attributes.authenticator_diagnostics[]'},
-                    {'Listener': 'id'},
-                    {'Authenticator': 'attributes.parameters.authenticator'}
-                ])
+                return getSubCollection(host, 'services/' + argv.service, 'attributes.listeners[]', show_dbusers_fields)
             })
         })
-
+        .wrap(null)
         .usage('Usage: show <command>')
         .help()
         .command('*', 'the default command', {}, function(argv) {
