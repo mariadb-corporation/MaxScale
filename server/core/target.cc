@@ -301,6 +301,11 @@ bool Reply::is_resultset() const
     return !m_field_counts.empty();
 }
 
+bool Reply::is_ok() const
+{
+    return m_is_ok && !is_resultset() && !error();
+}
+
 uint64_t Reply::rows_read() const
 {
     return m_row_count;
@@ -361,6 +366,11 @@ void Reply::set_param_count(uint16_t count)
     m_param_count = count;
 }
 
+void Reply::set_is_ok(bool is_ok)
+{
+    m_is_ok = is_ok;
+}
+
 void Reply::clear()
 {
     m_command = 0;
@@ -370,6 +380,7 @@ void Reply::clear()
     m_size = 0;
     m_generated_id = 0;
     m_param_count = 0;
+    m_is_ok = false;
     m_field_counts.clear();
 }
 }

@@ -2268,6 +2268,8 @@ void MariaDBBackendConnection::process_result_start(Iter it, Iter end)
     switch (cmd)
     {
     case MYSQL_REPLY_OK:
+        m_reply.set_is_ok(true);
+
         if (m_reply.command() == MXS_COM_STMT_PREPARE)
         {
             process_ps_response(it, end);

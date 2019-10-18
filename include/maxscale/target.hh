@@ -537,6 +537,15 @@ public:
     bool is_resultset() const;
 
     /**
+     * Does the current reply consist of only OK packets?
+     *
+     * This means that the returned reply has no resultsets or errors in it.
+     *
+     * @return True if the current reply consists of only OK packets
+     */
+    bool is_ok() const;
+
+    /**
      * Number of rows read from the result
      */
     uint64_t rows_read() const;
@@ -579,6 +588,8 @@ public:
 
     void set_param_count(uint16_t id);
 
+    void set_is_ok(bool is_ok);
+
     void clear();
 
     template<typename ... Args>
@@ -595,6 +606,7 @@ private:
     uint64_t              m_size {0};
     uint32_t              m_generated_id {0};
     uint16_t              m_param_count {0};
+    bool                  m_is_ok {false};
     std::vector<uint64_t> m_field_counts;
 };
 }
