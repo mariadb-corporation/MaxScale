@@ -81,9 +81,25 @@ An insert like
 INSERT INTO t SET a=42;
 ```
 will cause the cache entry containing the result of that SELECT to be
-invalidated even if the INSERT actually does not affect it.
+invalidated even if the INSERT actually does not affect it. Please see
+[invalidate](#invalidate) for how to enable the invalidation.
 
-Please see [invalidate](#invalidate) for how to enable the invalidation.
+When invalidation has been enabled MaxScale must be able to completely
+parse a SELECT statement for its results to be stored in the cache. The
+reason is that in order to be able to invalidate cache entries, MaxScale
+must know what tables a SELECT statement depends upon. Consequently, if
+(and only if) invalidation has been enabled and MaxScale fails to parse a
+statement, the result of that particular statement will not be cached.
+
+When invalidation has been enabled, MaxScale will also parse all UPDATE,
+INSERT and DELETE statements, in order to find out what tables are
+modified. If that parsing fails, MaxScale will _by default_ clear the
+entire cache. The reason is that unless MaxScale can completely parse
+the statement it cannot know what tables are modified and hence not what
+cache entries should be invalidated. Consequently, to prevent stale data
+from being returned, the entire cache is cleared. The default behaviour
+can be changed using the configuration parameter
+[clear_cache_on_parse_errors](#clear_cache_on_parse_errors).
 
 ## Configuration
 
@@ -385,6 +401,22 @@ and `cached_data=thread_specific` can be used.
 If it is important that an application _immediately_ sees all changes, irrespective
 of who has caused them, then a combination of `invalidate=current`
 and `cached_data=shared` _must_ be used.
+
+#### `clear_cache_on_parse_errors`
+
+This boolean option specifies how the cache should behave in case of
+parsing errors when invalidation has been enabled.
+
+   * `true`: If the cache fails to parse an UPDATE/INSERT/DELETE
+     statement then all cached data will be cleared.
+   * `false`: A failure to parse an UPDATE/INSERT/DELETE statement
+     is ignored and no invalidation will take place due that statement.
+
+The default value is `true`.
+
+Changing the value to `false` may mean that stale data is returned from
+the cache, if an UPDATE/INSERT/DELETE cannot be parsed and the statement
+affects entries in the cache.
 
 ### Runtime Configuration
 

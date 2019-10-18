@@ -157,6 +157,14 @@ config::ParamBool CacheConfig::s_enabled(
     true
     );
 
+config::ParamBool CacheConfig::s_clear_cache_on_parse_errors(
+    &s_specification,
+    "clear_cache_on_parse_errors",
+    "Specifies whether the cache should be cleared if an UPDATE/INSERT/DELETE statement "
+    "cannot be parsed. This setting has only effect if invalidation has been enabled.",
+    true
+    );
+
 CacheConfig::CacheConfig(const std::string& name)
     : config::Configuration(name, &s_specification)
     , storage(this, &s_storage)
@@ -174,6 +182,7 @@ CacheConfig::CacheConfig(const std::string& name)
     , cache_in_trxs(this, &s_cache_in_trxs)
     , enabled(this, &s_enabled)
     , invalidate(this, &s_invalidate)
+    , clear_cache_on_parse_errors(this, &s_clear_cache_on_parse_errors)
 {
 }
 
