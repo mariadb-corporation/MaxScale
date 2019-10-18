@@ -1213,6 +1213,12 @@ GRANT SELECT ON mysql.* TO 'maxscale'@'maxscalehost';
   `mysql.*` in addition to the normal grants. This is to work around MDEV-13453
   which was fixed in MariaDB 10.2.11.
 
+If you are using MariaDB ColumnStore, the follwing grant is requried.
+
+```
+GRANT ALL ON infinidb_vtable.* TO 'maxscale'@'maxscalehost';
+```
+
 See [MaxScale Troubleshooting](https://mariadb.com/kb/en/mariadb-enterprise/maxscale-troubleshooting/)
 for more information on how to troubleshoot authentication related problems.
 
