@@ -254,7 +254,6 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession,
     , m_populate(pCache->config().enabled)
     , m_soft_ttl(pCache->config().soft_ttl.count())
     , m_hard_ttl(pCache->config().hard_ttl.count())
-    , m_pCurrent_stmt(nullptr)
     , m_invalidate(pCache->config().invalidate != CACHE_INVALIDATE_NEVER)
     , m_invalidate_now(false)
 {
@@ -309,7 +308,6 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession,
 
 CacheFilterSession::~CacheFilterSession()
 {
-    gwbuf_free(m_pCurrent_stmt);
     MXS_FREE(m_zUseDb);
     MXS_FREE(m_zDefaultDb);
 }
@@ -409,9 +407,6 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
 
     if (action == ROUTING_CONTINUE)
     {
-        mxb_assert(!m_pCurrent_stmt);
-        m_pCurrent_stmt = gwbuf_clone(pPacket);
-
         rv = m_down.routeQuery(pPacket);
     }
 
@@ -643,9 +638,6 @@ void CacheFilterSession::send_upstream()
     mxb_assert(!m_next_response);
     m_next_response = m_res;
     m_res = NULL;
-
-    gwbuf_free(m_pCurrent_stmt);
-    m_pCurrent_stmt = nullptr;
 }
 
 /**
@@ -669,50 +661,25 @@ void CacheFilterSession::store_result()
     {
         m_res = pData;
 
-        cache_result_t result = CACHE_RESULT_OK;
-
         std::vector<std::string> invalidation_words;
 
         if (m_invalidate)
         {
-            mxb_assert(m_pCurrent_stmt);
-            qc_parse_result_t parse_result = qc_parse(m_pCurrent_stmt, QC_COLLECT_TABLES);
-
-            if (parse_result == QC_QUERY_PARSED)
-            {
-                invalidation_words = qc_get_table_names(m_pCurrent_stmt, true);
-
-                for (auto& word : invalidation_words)
-                {
-                    if (word.find('.') == std::string::npos)
-                    {
-                        mxb_assert(m_zDefaultDb);
-                        word = std::string(m_zDefaultDb) + "." + word;
-                    }
-                }
-            }
-            else
-            {
-                MXS_ERROR("The cache should perform invalidation, but the current statement "
-                          "could not be parsed. The result cannot be cached.");
-                result = CACHE_RESULT_ERROR;
-            }
+            std::copy(m_tables.begin(), m_tables.end(), std::back_inserter(invalidation_words));
+            m_tables.clear();
         }
 
-        if (result == CACHE_RESULT_OK)
+        cache_result_t result = m_pCache->put_value(m_key, invalidation_words, m_res);
+
+        if (!CACHE_RESULT_IS_OK(result))
         {
-            result = m_pCache->put_value(m_key, invalidation_words, m_res);
+            MXS_ERROR("Could not store new cache value, deleting old.");
 
-            if (!CACHE_RESULT_IS_OK(result))
+            result = m_pCache->del_value(m_key);
+
+            if (!CACHE_RESULT_IS_OK(result) || !CACHE_RESULT_IS_NOT_FOUND(result))
             {
-                MXS_ERROR("Could not store new cache value, deleting old.");
-
-                result = m_pCache->del_value(m_key);
-
-                if (!CACHE_RESULT_IS_OK(result) || !CACHE_RESULT_IS_NOT_FOUND(result))
-                {
-                    MXS_ERROR("Could not delete old cache item.");
-                }
+                MXS_ERROR("Could not delete old cache item.");
             }
         }
     }
@@ -870,27 +837,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
                         mxb_assert(result == QC_QUERY_PARSED);
                         // TODO: Deal with parsing failure.
 
-                        std::vector<std::string> tables = qc_get_table_names(pPacket, true);
-
-                        for (auto& table : tables)
-                        {
-                            size_t dot = table.find('.');
-                            if (dot == std::string::npos)
-                            {
-                                if (m_zDefaultDb)
-                                {
-                                    table = std::string(m_zDefaultDb) + "." + table;
-                                }
-                                else
-                                {
-                                    // Without a default DB and with a non-qualified table name,
-                                    // the query will fail, so we just ignore the table.
-                                    continue;
-                                }
-                            }
-
-                            m_tables.insert(table);
-                        }
+                        update_table_names(pPacket);
                     }
                     // Flow-through intended.
                 case StatementType::UNKNOWN:
@@ -972,6 +919,34 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
     }
 
     return action;
+}
+
+void CacheFilterSession::update_table_names(GWBUF* pPacket)
+{
+    mxb_assert(m_tables.empty());
+
+    const bool fullnames = true;
+    std::vector<std::string> tables = qc_get_table_names(pPacket, fullnames);
+
+    for (auto& table : tables)
+    {
+        size_t dot = table.find('.');
+        if (dot == std::string::npos)
+        {
+            if (m_zDefaultDb)
+            {
+                table = std::string(m_zDefaultDb) + "." + table;
+            }
+            else
+            {
+                // Without a default DB and with a non-qualified table name,
+                // the query will fail, so we just ignore the table.
+                continue;
+            }
+        }
+
+        m_tables.insert(table);
+    }
 }
 
 /**
@@ -1147,6 +1122,24 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(cache_acti
             MXS_NOTICE("Fetching data from server, without storing to the cache.");
         }
         m_state = CACHE_IGNORING_RESPONSE;
+    }
+
+    if (m_invalidate
+        && routing_action == ROUTING_CONTINUE
+        && m_state == CACHE_EXPECTING_RESPONSE)
+    {
+        qc_parse_result_t parse_result = qc_parse(pPacket, QC_COLLECT_TABLES);
+
+        if (parse_result == QC_QUERY_PARSED)
+        {
+            update_table_names(pPacket);
+        }
+        else
+        {
+            MXS_WARNING("Invalidation is enabled but the current statement could not "
+                        "be parsed. Consequently, the result cannot be cached.");
+            m_state = CACHE_IGNORING_RESPONSE;
+        }
     }
 
     return routing_action;
