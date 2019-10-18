@@ -29,8 +29,26 @@ namespace maxscale
  */
 void worker_local_delete_data(uint64_t key);
 
-// Data local to a routing worker
 template<class T>
+struct DefaultConstructor
+{
+    T* operator()(const T& t)
+    {
+        return new T;
+    }
+};
+
+template<class T>
+struct CopyConstructor
+{
+    T* operator()(const T& t)
+    {
+        return new T(t);
+    }
+};
+
+// Data local to a routing worker
+template<class T, class TypeConstructor = CopyConstructor<T>>
 class WorkerLocal
 {
 public:
@@ -113,7 +131,7 @@ protected:
         {
             // First time we get the local value, allocate it from the master value
             std::unique_lock<std::mutex> guard(m_lock);
-            my_value = new T(m_value);
+            my_value = TypeConstructor()(m_value);
             guard.unlock();
 
             storage->set_data(m_handle, my_value, destroy_value);
