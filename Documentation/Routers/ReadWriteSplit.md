@@ -81,6 +81,22 @@ resources but load balancing will almost always give the best single query
 response time and performance. Longer sessions are less affected by a high
 `max_slave_connections` as the relative cost of opening a connection is lower.
 
+### `slave_connections`
+
+This parameter controls how many slave connections each new session starts
+with. The default value is 255 which is the same as the default value of
+`max_slave_connections`.
+
+In contrast to `max_slave_connections`, `slave_connections` serves as a
+soft limit on how many slave connections are created. The number of slave
+connections can exceed `slave_connections` if the load balancing algorithm
+finds an unconnected slave server better than all other slaves.
+
+Setting this parameter to 1 allows faster connection creation and improved
+resource usage due to the smaller amount of initial backend
+connections. It is recommended to use `slave_connections=1` when the
+lifetime of the client connections is short.
+
 ### `max_slave_replication_lag`
 
 **`max_slave_replication_lag`** specifies how many seconds a slave is allowed to

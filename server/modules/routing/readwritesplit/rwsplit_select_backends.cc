@@ -465,7 +465,7 @@ bool RWSplitSession::open_connections()
     }
 
     int n_slaves = get_slave_counts(m_raw_backends, master).second;
-    int max_nslaves = m_router->max_slave_count();
+    int max_nslaves = std::min(m_router->max_slave_count(), m_router->config().slave_connections);
     mxb_assert(n_slaves <= max_nslaves || max_nslaves == 0);
     auto current_rank = get_current_rank();
     PRWBackends candidates;

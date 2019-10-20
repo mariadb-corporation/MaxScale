@@ -154,6 +154,7 @@ struct Config
         , max_slave_replication_lag(params->get_duration<seconds>("max_slave_replication_lag").count())
         , rw_max_slave_conn_percent(0)
         , max_slave_connections(0)
+        , slave_connections(params->get_integer("slave_connections"))
         , causal_reads(params->get_bool("causal_reads"))
         , causal_reads_timeout(std::to_string(params->get_duration<seconds>("causal_reads_timeout").count()))
         , master_reconnection(params->get_bool("master_reconnection"))
@@ -218,6 +219,7 @@ struct Config
     int rw_max_slave_conn_percent;      /**< Maximum percentage of slaves to use for
                                          * each connection*/
     int         max_slave_connections;  /**< Maximum number of slaves for each connection*/
+    int         slave_connections;      /**< Minimum number of slaves for each connection*/
     bool        causal_reads;           /**< Enable causual read */
     std::string causal_reads_timeout;   /**< Timeout, second parameter of function master_wait_gtid */
     bool        master_reconnection;    /**< Allow changes in master server */

@@ -492,6 +492,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             },
             {"max_slave_replication_lag",  MXS_MODULE_PARAM_DURATION,  "0s",   MXS_MODULE_OPT_DURATION_S},
             {"max_slave_connections",      MXS_MODULE_PARAM_STRING,    MAX_SLAVE_COUNT},
+            {"slave_connections",          MXS_MODULE_PARAM_INT,       MAX_SLAVE_COUNT},
             {"retry_failed_reads",         MXS_MODULE_PARAM_BOOL,      "true"},
             {"prune_sescmd_history",       MXS_MODULE_PARAM_BOOL,      "false"},
             {"disable_sescmd_history",     MXS_MODULE_PARAM_BOOL,      "false"},
