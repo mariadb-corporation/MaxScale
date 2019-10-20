@@ -750,7 +750,7 @@ void MariaDBClientConnection::store_client_information(DCB* generic_dcb, GWBUF* 
                 {
                     int dblen = get_zstr_len((const char*)data + dboffset, len - dboffset);
 
-                    if (dblen != -1 && (int)sizeof(ses->db) > dblen)
+                    if (dblen != -1)
                     {
                         ses->db = (const char*)data + dboffset;
                     }
