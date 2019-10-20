@@ -910,7 +910,8 @@ void TestConnections::init_maxscale(int m)
                           true,
                           "cp maxscale.cnf %s;"
                           "iptables -F INPUT;"
-                          "rm -rf %s/*.log /tmp/core* /dev/shm/* /var/lib/maxscale/* /var/lib/maxscale/.secrets;",
+                          "rm -rf %s/*.log /tmp/core* /dev/shm/* /var/lib/maxscale/* /var/lib/maxscale/.secrets;"
+                          "find /var/*/maxscale -name 'maxscale.lock' -delete;",
                           maxscales->maxscale_cnf[m],
                           maxscales->maxscale_log_dir[m]);
     if (maxscale::start)
