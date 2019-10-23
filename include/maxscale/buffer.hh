@@ -417,6 +417,24 @@ void gwbuf_hexdump_pretty(GWBUF* buffer, int log_level = LOG_INFO);
  */
 extern uint8_t* gwbuf_byte_pointer(GWBUF* buffer, size_t offset);
 
+#ifdef SS_DEBUG
+/**
+ * Set the owner of the GWBUF.
+ *
+ * @param int  An integer identifying the owner.
+ */
+inline void gwbuf_set_owner(GWBUF* buf, int owner)
+{
+    buf->owner = owner;
+    buf = buf->next;
+    while (buf)
+    {
+        buf->owner = owner;
+        buf = buf->next;
+    }
+}
+#endif
+
 namespace std
 {
 
