@@ -22,6 +22,7 @@
 #include <netinet/in.h>
 
 #include <maxbase/poll.h>
+#include <maxbase/worker.hh>
 #include <maxscale/authenticator.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/dcbhandler.hh>
@@ -498,6 +499,11 @@ public:
         return m_hanged_up;
     }
 
+    bool is_polling() const
+    {
+        return m_state == State::POLLING;
+    }
+
     /**
      * Will cause an EPOLL[R]HUP event to be delivered when the current
      * event handling finishes, just before the the control returns
@@ -547,6 +553,34 @@ public:
     bool is_fake_event() const
     {
         return m_is_fake_event;
+    }
+
+    /**
+     * Sets the owner of the DCB.
+     *
+     * By default, the owner of a DCB is the routing worker that created it.
+     * With this function, the owner of the DCB can be changed. Note that when
+     * the owner is changed, the DCB must *not* be in a polling state.
+     */
+    void set_owner(mxb::Worker* worker)
+    {
+        mxb_assert(m_state != State::POLLING);
+        this->owner = worker;
+#ifdef SS_DEBUG
+        int wid = worker->id();
+        if (m_writeq)
+        {
+            gwbuf_set_owner(m_writeq, wid);
+        }
+        if (m_readq)
+        {
+            gwbuf_set_owner(m_readq, wid);
+        }
+        if (m_delayq)
+        {
+            gwbuf_set_owner(m_delayq, wid);
+        }
+#endif
     }
 
 protected:
