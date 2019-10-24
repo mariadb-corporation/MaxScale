@@ -182,6 +182,23 @@ public:
      */
     void tick(int64_t idle);
 
+    /**
+     * With this function, a session can be moved from the worker it is
+     * currently handled by, to another.
+     *
+     * @note This function must be called from the worker that currently
+     *       is handling the session.
+     * @note When a session is moved, there must be *no* events still to
+     *       be delivered to any of the dcbs of the session. This is most
+     *       easily handled by performing the move from the epoll_tick()
+     *       function.
+     *
+     * @param worker  The worker the session should be moved to.
+     *
+     * @return True, if the move could be initiated, false otherwise.
+     */
+    bool move_to(mxs::RoutingWorker* worker);
+
 protected:
     std::unique_ptr<mxs::Endpoint> m_down;
 

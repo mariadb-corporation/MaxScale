@@ -1503,3 +1503,87 @@ ListenerSessionData* Session::listener_data()
 {
     return m_listener_data.get();
 }
+
+namespace
+{
+
+bool enable_events(const std::vector<DCB*>& dcbs)
+{
+    bool enabled = true;
+
+    for (DCB* pDcb : dcbs)
+    {
+        if (!pDcb->enable_events())
+        {
+            MXS_ERROR("Could not re-enable epoll events, session will be terminated.");
+            enabled = false;
+            break;
+        }
+    }
+
+    return enabled;
+}
+
+}
+
+bool Session::move_to(RoutingWorker* pTo)
+{
+    mxs::RoutingWorker* pFrom = RoutingWorker::get_current();
+    // TODO: Change to MXS_INFO when everything is ready.
+    MXS_NOTICE("Moving session from %d to %d.", pFrom->id(), pTo->id());
+
+    std::vector<DCB*> to_be_enabled;
+
+    DCB* pDcb = m_client_conn->dcb();
+
+    if (pDcb->is_polling())
+    {
+        pDcb->disable_events();
+        to_be_enabled.push_back(pDcb);
+    }
+
+    for (mxs::BackendConnection* backend_conn : m_backends_conns)
+    {
+        pDcb = backend_conn->dcb();
+        if (pDcb->is_polling())
+        {
+            pDcb->disable_events();
+            to_be_enabled.push_back(pDcb);
+        }
+    }
+
+    pFrom->session_registry().remove(id());
+
+    bool posted = pTo->execute([this, pFrom, pTo, to_be_enabled]() {
+            pTo->session_registry().add(this);
+
+            m_client_conn->dcb()->set_owner(pTo);
+            for (mxs::BackendConnection* pBackend_conn : m_backends_conns)
+            {
+                pBackend_conn->dcb()->set_owner(pTo);
+            }
+
+            if (!enable_events(to_be_enabled))
+            {
+                terminate();
+            }
+
+            MXS_NOTICE("Moved session from %d to %d.", pFrom->id(), pTo->id());
+        }, mxb::Worker::EXECUTE_QUEUED);
+
+    if (!posted)
+    {
+        MXS_ERROR("Could not move session from worker %d to worker %d.",
+                  pFrom->id(), pTo->id());
+
+        pFrom->session_registry().add(this);
+
+        if (!enable_events(to_be_enabled))
+        {
+            MXS_ERROR("Could not re-enable epoll events, session will be terminated.");
+            terminate();
+        }
+    }
+
+    return posted;
+}
