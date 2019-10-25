@@ -418,7 +418,14 @@ bool service_launch_all()
     bool ok = true;
     int num_svc = this_unit.services.size();
 
-    MXS_NOTICE("Starting a total of %d services...", num_svc);
+    if (num_svc > 0)
+    {
+        MXS_NOTICE("Starting a total of %d services...", num_svc);
+    }
+    else
+    {
+        MXS_NOTICE("No services defined in any of the configuration files");
+    }
 
     int curr_svc = 1;
     for (Service* service : this_unit.services)
