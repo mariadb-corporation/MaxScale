@@ -183,6 +183,25 @@ public:
     void tick(int64_t idle);
 
     /**
+     * Sets the load of the session. Should be called whenever there is some
+     * activity on a DCB of a session.
+     *
+     * @param load  The worker load during the last second.
+     */
+    void set_load(int load);
+
+    /**
+     * Returns the average load of the session during the last 30 seconds.
+     *
+     * Note that this is not an absolute value that would tell how much
+     * this session causes load, but gives a rough estimate of how much this
+     * session contributes to the overall load of the worker.
+     *
+     * @return  The load of the session.
+     */
+    int load() const;
+
+    /**
      * With this function, a session can be moved from the worker it is
      * currently handled by, to another.
      *
@@ -203,6 +222,7 @@ protected:
     std::unique_ptr<mxs::Endpoint> m_down;
 
 private:
+    void adjust_load(time_t now) const;
     void add_backend_conn(mxs::BackendConnection* conn);
     void remove_backend_conn(mxs::BackendConnection* conn);
     void parse_and_set_trx_state(const mxs::Reply& reply);
@@ -223,7 +243,7 @@ private:
     FilterList        m_filters;
     SessionVarsByName m_variables;
     QueryInfos        m_last_queries;           /*< The N last queries by the client */
-    int               m_current_query = -1;     /*< The index of the current query */
+    int               m_current_query {-1};     /*< The index of the current query */
     uint32_t          m_retain_last_statements; /*< How many statements be retained */
     Log               m_log;                    /*< Session specific in-memory log */
 
@@ -233,6 +253,12 @@ private:
     // Various listener-specific data the session needs. Ownership shared with the listener that
     // created this session.
     std::shared_ptr<mxs::ListenerSessionData> m_listener_data;
+    std::shared_ptr<mxs::ProtocolModule> m_protocol;
+
+    static const int N_LOAD = 30; // Last 30 seconds.
+
+    mutable std::array<int, N_LOAD> m_load {};
+    time_t                          m_last_load {0};
 };
 
 std::unique_ptr<ResultSet> sessionGetList();

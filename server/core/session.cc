@@ -74,6 +74,9 @@ struct
 };
 }
 
+//static
+const int Session::N_LOAD;
+
 MXS_SESSION::MXS_SESSION(const std::string& host, SERVICE* service)
     : m_state(MXS_SESSION::State::CREATED)
     , m_id(session_get_next_id())
@@ -1502,6 +1505,46 @@ void Session::tick(int64_t idle)
 ListenerSessionData* Session::listener_data()
 {
     return m_listener_data.get();
+}
+
+void Session::adjust_load(time_t now) const
+{
+    int secs = now - m_last_load;
+    if (secs == 0)
+    {
+        // Session is being frequently used, several updates during one second.
+        // The load values need not be adjusted.
+    }
+    else
+    {
+        // There has been secs seconds during which the session has not been used.
+        if (secs < N_LOAD)
+        {
+            // If secs is less than 30, then we need to move the values from the
+            // beginning as many steps to the right.
+            std::copy_backward(m_load.begin(), m_load.end() - secs, m_load.end());
+        }
+
+        // And fill from the beginning with zeros. If secs >= 30, the whole
+        // array will be zeroed.
+        std::fill(m_load.begin(), m_load.begin() + std::min(secs, N_LOAD), 0);
+    }
+}
+
+void Session::set_load(int load)
+{
+    time_t now = time(nullptr);
+    adjust_load(now);
+
+    m_load[0] = load;
+    m_last_load = now;
+}
+
+int Session::load() const
+{
+    adjust_load(time(nullptr));
+
+    return std::accumulate(m_load.begin(), m_load.end(), 0);
 }
 
 namespace
