@@ -1303,6 +1303,9 @@ uint32_t DCB::event_handler(DCB* dcb, uint32_t events)
 
     this_thread.current_dcb = NULL;
 
+    int load = static_cast<mxs::RoutingWorker*>(dcb->owner)->load(mxb::WorkerLoad::ONE_SECOND);
+    static_cast<Session*>(dcb->session())->set_load(load);
+
     return rv;
 }
 
