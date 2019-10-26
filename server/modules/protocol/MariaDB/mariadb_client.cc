@@ -733,10 +733,7 @@ void MariaDBClientConnection::store_client_information(DCB* generic_dcb, GWBUF* 
 
         if (userlen != -1)
         {
-            if ((int)sizeof(ses->user) > userlen)
-            {
-                ses->user = username;
-            }
+            ses->user = username;
 
             // Include the null terminator in the user length
             userlen++;
