@@ -272,7 +272,27 @@ private:
 
     std::string hash(const std::string& password)
     {
-        return mxs::crypt(password, ADMIN_SALT);
+        const int CACHE_MAX_SIZE = 1000;
+        static std::unordered_map<std::string, std::string> hash_cache;
+        auto it = hash_cache.find(password);
+
+        if (it != hash_cache.end())
+        {
+            return it->second;
+        }
+        else
+        {
+            if (hash_cache.size() > CACHE_MAX_SIZE)
+            {
+                auto bucket = rand() % hash_cache.bucket_count();
+                mxb_assert(bucket < hash_cache.bucket_count());
+                hash_cache.erase(hash_cache.cbegin(bucket)->first);
+            }
+
+            auto new_hash = mxs::crypt(password, ADMIN_SALT);
+            hash_cache.insert(std::make_pair(password, new_hash));
+            return new_hash;
+        }
     }
 
     std::string old_hash(const std::string& password)
