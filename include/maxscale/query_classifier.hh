@@ -966,6 +966,13 @@ void qc_get_cache_properties(QC_CACHE_PROPERTIES* properties);
 bool qc_set_cache_properties(const QC_CACHE_PROPERTIES* properties);
 
 /**
+ * Enable or disable the query classifier cache on this thread
+ *
+ * @param enabled If set to true, the cache is enabled. If set to false, the cache id disabled.
+ */
+void qc_use_local_cache(bool enabled);
+
+/**
  * Get cache statistics for the calling thread.
  *
  * @param stats[out]  Cache statistics.

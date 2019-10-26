@@ -187,12 +187,7 @@ bool MainWorker::pre_run()
     if (modules_thread_init() && qc_thread_init(QC_INIT_SELF))
     {
         rval = true;
-
-        // Disable the query classification cache, it's a waste of memory on this thread
-        QC_CACHE_PROPERTIES props;
-        qc_get_cache_properties(&props);
-        props.max_size = 0;
-        qc_set_cache_properties(&props);
+        qc_use_local_cache(false);
     }
 
     return rval;

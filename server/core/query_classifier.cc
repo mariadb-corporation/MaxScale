@@ -99,10 +99,12 @@ static thread_local struct
 {
     QCInfoCache* pInfo_cache;
     uint32_t     options;
+    bool         use_cache;
 } this_thread =
 {
     nullptr,
-    0
+    0,
+    true
 };
 
 
@@ -341,7 +343,7 @@ private:
 
 bool use_cached_result()
 {
-    return this_unit.cache_max_size() != 0;
+    return this_unit.cache_max_size() != 0 && this_thread.use_cache;
 }
 
 bool has_not_been_parsed(GWBUF* pStmt)
@@ -1377,6 +1379,11 @@ bool qc_set_cache_properties(const QC_CACHE_PROPERTIES* properties)
     }
 
     return rv;
+}
+
+void qc_use_local_cache(bool enabled)
+{
+    this_thread.use_cache = enabled;
 }
 
 bool qc_get_cache_stats(QC_CACHE_STATS* pStats)
