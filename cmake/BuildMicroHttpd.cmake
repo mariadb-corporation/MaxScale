@@ -1,4 +1,4 @@
-set(LIBMICROHTTPD_URL "http://ftpmirror.gnu.org/libmicrohttpd/libmicrohttpd-0.9.54.tar.gz"
+set(LIBMICROHTTPD_URL "http://ftpmirror.gnu.org/libmicrohttpd/libmicrohttpd-0.9.67.tar.gz"
   CACHE STRING "GNU libmicrochttpd source code")
 
 ExternalProject_Add(libmicrohttpd
