@@ -10,7 +10,7 @@ fi
 
 T="$(date +%s)"
 
-sudo maxscale -d -U root
+sudo maxscale -d -U maxscale
 if [ $? -ne 0 ] ; then
 	exit 1
 fi
