@@ -205,6 +205,7 @@ public:
     void stash_current_status();
 
     bool status_changed();
+    bool auth_status_changed();
     bool should_print_fail_status();
     void log_connect_error(ConnectResult rval);
 
@@ -266,7 +267,7 @@ public:
     int64_t  node_id = -1;         /**< Node id, server_id for M/S or local_index for Galera */
     int64_t  master_id = -1;       /**< Master server id of this node */
 
-    mxs_monitor_event_t last_event = SERVER_UP_EVENT;   /**< The last event that occurred on this server */
+    mxs_monitor_event_t last_event = SERVER_DOWN_EVENT; /**< The last event that occurred on this server */
     int64_t             triggered_at = 0;               /**< Time when the last event was triggered */
 
     int status_request = NO_CHANGE;     /**< Is admin requesting Maintenance=ON/OFF on the server? */

@@ -1068,6 +1068,15 @@ bool MonitorServer::status_changed()
     return rval;
 }
 
+bool MonitorServer::auth_status_changed()
+{
+    uint64_t old_status = mon_prev_status;
+    uint64_t new_status = server->status();
+
+    return old_status != static_cast<uint64_t>(-1) && old_status != new_status
+           && (old_status & SERVER_AUTH_ERROR) != (new_status & SERVER_AUTH_ERROR);
+}
+
 /**
  * Check if current monitored server has a loggable failure status.
  *
@@ -1413,6 +1422,10 @@ void Monitor::detect_handle_state_changes()
             {
                 launch_command(ptr);
             }
+        }
+        else if (ptr->auth_status_changed())
+        {
+            ptr->log_state_change();
         }
     }
 
