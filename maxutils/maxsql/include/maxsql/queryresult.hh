@@ -32,6 +32,10 @@ public:
     QueryResult(const QueryResult&) = delete;
     QueryResult& operator=(const QueryResult&) = delete;
 
+    virtual ~QueryResult()
+    {
+    }
+
     /**
      * Advance to next row. Affects all result returning functions.
      *
