@@ -149,7 +149,8 @@ public:
      */
     bool has_too_many_connections() const
     {
-        return config().max_connections && stats().n_current >= config().max_connections;
+        auto limit = config().max_connections;
+        return limit && mxb::atomic::load(&stats().n_current, mxb::atomic::RELAXED) > limit;
     }
 
 protected:
