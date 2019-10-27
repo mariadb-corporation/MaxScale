@@ -12,6 +12,7 @@
 #define SERVER2 1
 #define SERVER3 2
 #define SERVER4 3
+#define NOT_MASTER -1
 
 static struct result
 {
@@ -23,50 +24,50 @@ static struct result
     {"select @@server_id;",                                                         SERVER1},
     {"select @@server_id; -- maxscale route to server server3",                     SERVER3},
     {"select @@server_id;",                                                         SERVER1},
-    {"select @@server_id; -- maxscale end",                                         SERVER2},
-    {"select @@server_id; -- maxscale named1 prepare route to master",              SERVER2},
+    {"select @@server_id; -- maxscale end",                                         NOT_MASTER},
+    {"select @@server_id; -- maxscale named1 prepare route to master",              NOT_MASTER},
     {"select @@server_id; -- maxscale named1 begin",                                SERVER1},
     {"select @@server_id;",                                                         SERVER1},
     {"select @@server_id; -- maxscale route to server server3",                     SERVER3},
     {"select @@server_id;",                                                         SERVER1},
-    {"select @@server_id; -- maxscale end",                                         SERVER2},
+    {"select @@server_id; -- maxscale end",                                         NOT_MASTER},
     {"select @@server_id; -- maxscale shorthand1 begin route to server server2",    SERVER2},
     {"select @@server_id;",                                                         SERVER2},
     {"select @@server_id; -- maxscale route to server server3",                     SERVER3},
     {"select @@server_id;",                                                         SERVER2},
-    {"select @@server_id; -- maxscale end",                                         SERVER2},
+    {"select @@server_id; -- maxscale end",                                         NOT_MASTER},
     {"select @@server_id; # maxscale begin route to master",                        SERVER1},
     {"select @@server_id;",                                                         SERVER1},
     {"select @@server_id; # maxscale route to server server3",                      SERVER3},
     {"select @@server_id;",                                                         SERVER1},
     {"select @@server_id; # maxscale end",                                          SERVER2},
-    {"select @@server_id; # maxscale named2 prepare route to master",               SERVER2},
+    {"select @@server_id; # maxscale named2 prepare route to master",               NOT_MASTER},
     {"select @@server_id; # maxscale named2 begin",                                 SERVER1},
     {"select @@server_id;",                                                         SERVER1},
     {"select @@server_id; # maxscale route to server server3",                      SERVER3},
     {"select @@server_id;",                                                         SERVER1},
-    {"select @@server_id; # maxscale end",                                          SERVER2},
+    {"select @@server_id; # maxscale end",                                          NOT_MASTER},
     {"select @@server_id; # maxscale shorthand2 begin route to server server2",     SERVER2},
     {"select @@server_id;",                                                         SERVER2},
     {"select @@server_id; # maxscale route to server server3",                      SERVER3},
     {"select @@server_id;",                                                         SERVER2},
-    {"select @@server_id; # maxscale end",                                          SERVER2},
+    {"select @@server_id; # maxscale end",                                          NOT_MASTER},
     {"select @@server_id/* maxscale begin route to master */;",                     SERVER1},
     {"select @@server_id;",                                                         SERVER1},
     {"select @@server_id/* maxscale route to server server3 */;",                   SERVER3},
     {"select @@server_id;",                                                         SERVER1},
-    {"select @@server_id/* maxscale end */;",                                       SERVER2},
-    {"select @@server_id/* maxscale named3 prepare route to master */;",            SERVER2},
+    {"select @@server_id/* maxscale end */;",                                       NOT_MASTER},
+    {"select @@server_id/* maxscale named3 prepare route to master */;",            NOT_MASTER},
     {"select @@server_id/* maxscale named3 begin */;",                              SERVER1},
     {"select @@server_id;",                                                         SERVER1},
     {"select @@server_id/* maxscale route to server server3 */;",                   SERVER3},
     {"select @@server_id;",                                                         SERVER1},
-    {"select @@server_id/* maxscale end */;",                                       SERVER2},
+    {"select @@server_id/* maxscale end */;",                                       NOT_MASTER},
     {"select @@server_id/* maxscale shorthand3 begin route to server server2 */; ", SERVER2},
     {"select @@server_id;",                                                         SERVER2},
     {"select @@server_id/* maxscale route to server server3 */;",                   SERVER3},
     {"select @@server_id;",                                                         SERVER2},
-    {"select @@server_id/* maxscale end */;",                                       SERVER2},
+    {"select @@server_id/* maxscale end */;",                                       NOT_MASTER},
     {NULL,                                                                          SERVER1}
 };
 
@@ -88,7 +89,12 @@ int main(int argc, char** argv)
     {
         char str[1024];
         find_field(test->maxscales->conn_rwsplit[0], queries[i].query, "@@server_id", str);
-        if (strcmp(server_id[queries[i].reply], str) != 0)
+        if (queries[i].reply == NOT_MASTER)
+        {
+            test->expect(strcmp(server_id[0], str) != 0,
+                         "%s: Query should not go to master.", queries[i].query);
+        }
+        else if (strcmp(server_id[queries[i].reply], str) != 0)
         {
             test->add_result(1,
                              "%s: Expected %s but got %s.\n",
