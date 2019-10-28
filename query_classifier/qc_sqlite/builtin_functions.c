@@ -98,6 +98,7 @@ static const char* BUILTIN_FUNCTIONS[] =
     "unix_timestamp",
     "utc_date",
     "utc_time",
+    "utc_timestamp",
     "week",
     "weekday",
     "weekofyear",

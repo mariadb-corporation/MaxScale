@@ -16,7 +16,10 @@
  */
 #include <maxscale/ccdefs.hh>
 #include <getopt.h>
+#include <sys/types.h>
+#include <pwd.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <maxscale/paths.h>
 #include <maxscale/random.h>
 #include "internal/secrets.hh"
@@ -24,13 +27,9 @@
 #ifdef HAVE_GLIBC
 struct option options[] =
 {
-    {
-        "help",
-        no_argument,
-        NULL,
-        'h'
-    },
-    {NULL, 0, NULL, 0}
+    {"help", no_argument,       NULL, 'h'},
+    {"user", required_argument, NULL, 'u'},
+    {NULL,   0,                 NULL, 0  }
 };
 #endif
 
@@ -45,7 +44,8 @@ void print_usage(const char* executable, const char* directory)
            "Note that re-creating the .secrets file will invalidate all existing\n"
            "passwords used in the configuration file.\n"
            "\n"
-           " -h, --help: Display this help.\n"
+           " -h, --help    Display this help\n"
+           " -u, --user    Sets the owner of the .secrets file (default: maxscale)\n"
            "\n"
            "directory  : The directory where the .secrets file should be created.\n"
            "\n"
@@ -57,7 +57,8 @@ void print_usage(const char* executable, const char* directory)
 
 int main(int argc, char** argv)
 {
-    const char* directory = get_datadir();
+    std::string directory = get_datadir();
+    std::string username = "maxscale";
 
     int c;
 #ifdef HAVE_GLIBC
@@ -69,12 +70,16 @@ int main(int argc, char** argv)
         switch (c)
         {
         case 'h':
-            print_usage(argv[0], directory);
+            print_usage(argv[0], directory.c_str());
             exit(EXIT_SUCCESS);
             break;
 
+        case 'u':
+            username = optarg;
+            break;
+
         default:
-            print_usage(argv[0], directory);
+            print_usage(argv[0], directory.c_str());
             exit(EXIT_FAILURE);
             break;
         }
@@ -84,7 +89,7 @@ int main(int argc, char** argv)
 
     if (optind == argc)
     {
-        fprintf(stderr, "Generating .secrets file in %s.\n", directory);
+        fprintf(stderr, "Generating .secrets file in %s.\n", directory.c_str());
     }
     else
     {
@@ -93,7 +98,25 @@ int main(int argc, char** argv)
 
     mxs_log_init(NULL, NULL, MXS_LOG_TARGET_DEFAULT);
 
-    if (secrets_write_keys(directory) != 0)
+    if (secrets_write_keys(directory.c_str()) == 0)
+    {
+        std::string filename = directory + "/.secrets";
+
+        if (auto user = getpwnam(username.c_str()))
+        {
+            if (chown(filename.c_str(), user->pw_uid, user->pw_gid) == -1)
+            {
+                fprintf(stderr, "Failed to give '%s' ownership of '%s': %d, %s",
+                        username.c_str(), filename.c_str(), errno, strerror(errno));
+            }
+        }
+        else
+        {
+            fprintf(stderr, "Could not find user '%s' when attempting to change ownership of '%s': %d, %s",
+                    username.c_str(), filename.c_str(), errno, strerror(errno));
+        }
+    }
+    else
     {
         fprintf(stderr, "Failed to create the .secrets file.\n");
         rval = EXIT_FAILURE;
