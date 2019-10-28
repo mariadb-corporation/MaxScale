@@ -20,16 +20,54 @@
 #include <set>
 #include <thread>
 #include <maxbase/stopwatch.hh>
-#include <maxsql/sqlite.hh>
 #include <maxsql/queryresult.hh>
 #include <maxscale/protocol2.hh>
 
 class SERVER;
 
+struct UserEntry
+{
+    std::string host_pattern;   /**< Hostname or IP, may have wildcards */
+    std::string plugin;         /**< Auth plugin to use */
+    std::string password;       /**< Auth data used by native auth plugin */
+    std::string auth_string;    /**< Auth data used by other plugins */
+
+    bool ssl {false};           /**< Should the user connect with ssl? */
+    bool global_db_priv {false};/**< Does the user have access to all databases? */
+    bool proxy_grant {false};   /**< Does the user have proxy grants? */
+
+    bool        is_role {false};/**< Is the user a role? */
+    std::string default_role;   /**< Default role if any */
+
+    static bool host_pattern_is_more_specific(const UserEntry& lhs, const UserEntry& rhs);
+};
+
+/**
+ * This class contains data from mysql.user-table. The data is a mapping from username to a list of entries,
+ * where each entry is a hostname pattern with other relevant info.
+ */
+class UserDatabase
+{
+public:
+    void             add_entry(const std::string& username, const UserEntry& entry);
+    void             clear();
+    size_t           size() const;
+    const UserEntry* find_entry(const std::string& username, const std::string& host);
+
+private:
+    using EntryList = std::vector<UserEntry>;
+
+    /**
+     * Map of username -> EntryList. In the list, entries are ordered from most specific hostname pattern to
+     * least specific
+     */
+    std::map<std::string, EntryList> m_contents;
+};
+
 class MariaDBUserManager : public mxs::UserAccountManager
 {
 public:
-    explicit MariaDBUserManager(const std::string& name);
+    explicit MariaDBUserManager(const std::string& service_name);
 
     /**
      * Start the updater thread. Should only be called when the updater is stopped or has just been created.
@@ -53,7 +91,7 @@ private:
     using QResult = std::unique_ptr<mxq::QueryResult>;
 
     bool load_users();
-    bool prepare_internal_db();
+
     void updater_thread_function();
     bool write_users(QResult users, bool using_roles);
     void write_dbs_and_roles(QResult dbs, QResult roles);
@@ -74,15 +112,14 @@ private:
     std::vector<SERVER*> m_backends;
     mxb::Duration        m_update_interval {-1};
 
-    // The main mysql.user-table is stored in sqlite to enable complicated queries. */
-    mxq::SQLite       m_users;
-    const std::string m_users_filename;
+    const std::string m_service_name;   /**< Service using this account data manager. Used for logging. */
 
     // Using normal maps/sets so that entries can be printed in order.
     using StringSet = std::set<std::string>;
-    using UserMap = std::map<std::string, StringSet>;
+    using StringSetMap = std::map<std::string, StringSet>;
 
-    std::mutex m_usermap_lock;      /**< Protects maps from concurrent access */
-    UserMap    m_database_grants;   /**< Maps "user@host" to allowed databases */
-    UserMap    m_roles_mapping;     /**< Maps "user@host" to allowed roles */
+    std::mutex   m_usermap_lock;        /**< Protects maps from concurrent access */
+    UserDatabase m_userdb;              /**< username -> entrylist mapping */
+    StringSetMap m_database_grants;     /**< Maps "user@host" to allowed databases */
+    StringSetMap m_roles_mapping;       /**< Maps "user@host" to allowed roles */
 };
