@@ -17,6 +17,7 @@
 #include <atomic>
 #include <string>
 #include <mutex>
+#include <unordered_map>
 
 #include <maxscale/modinfo.hh>
 #include <maxscale/buffer.hh>
@@ -577,6 +578,15 @@ public:
      */
     uint16_t param_count() const;
 
+    /**
+     * System variable state changes returned by the server
+     *
+     * @param name The variable name
+     *
+     * @return The variable value or an empty string if the variable was not set
+     */
+    std::string get_variable(const std::string& name) const;
+
     //
     // Setters
     //
@@ -597,6 +607,8 @@ public:
 
     void set_is_ok(bool is_ok);
 
+    void set_variable(const std::string& key, const std::string& value);
+
     void clear();
 
     template<typename ... Args>
@@ -615,5 +627,7 @@ private:
     uint16_t              m_param_count {0};
     bool                  m_is_ok {false};
     std::vector<uint64_t> m_field_counts;
+
+    std::unordered_map<std::string, std::string> m_variables;
 };
 }

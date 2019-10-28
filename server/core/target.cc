@@ -331,6 +331,12 @@ uint16_t Reply::param_count() const
     return m_param_count;
 }
 
+std::string Reply::get_variable(const std::string& name) const
+{
+    auto it = m_variables.find(name);
+    return it != m_variables.end() ? it->second : "";
+}
+
 void Reply::set_command(uint8_t command)
 {
     m_command = command;
@@ -371,6 +377,11 @@ void Reply::set_is_ok(bool is_ok)
     m_is_ok = is_ok;
 }
 
+void Reply::set_variable(const std::string& key, const std::string& value)
+{
+    m_variables.insert(std::make_pair(key, value));
+}
+
 void Reply::clear()
 {
     m_command = 0;
@@ -382,5 +393,6 @@ void Reply::clear()
     m_param_count = 0;
     m_is_ok = false;
     m_field_counts.clear();
+    m_variables.clear();
 }
 }
