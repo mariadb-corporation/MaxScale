@@ -41,6 +41,78 @@ static bool get_ip_string_and_port(struct sockaddr_storage* sa,
                                    int iplen,
                                    in_port_t* port_out);
 
+namespace
+{
+using Iter = MariaDBBackendConnection::Iter;
+
+Iter skip_encoded_int(Iter it)
+{
+    switch (*it)
+    {
+    case 0xfc:
+        it.advance(3);
+        break;
+
+    case 0xfd:
+        it.advance(4);
+        break;
+
+    case 0xfe:
+        it.advance(9);
+        break;
+
+    default:
+        ++it;
+        break;
+    }
+
+    return it;
+}
+
+uint64_t get_encoded_int(Iter it)
+{
+    uint64_t len = *it++;
+
+    switch (len)
+    {
+    case 0xfc:
+        len = *it++;
+        len |= ((uint64_t)*it++) << 8;
+        break;
+
+    case 0xfd:
+        len = *it++;
+        len |= ((uint64_t)*it++) << 8;
+        len |= ((uint64_t)*it++) << 16;
+        break;
+
+    case 0xfe:
+        len = *it++;
+        len |= ((uint64_t)*it++) << 8;
+        len |= ((uint64_t)*it++) << 16;
+        len |= ((uint64_t)*it++) << 24;
+        len |= ((uint64_t)*it++) << 32;
+        len |= ((uint64_t)*it++) << 40;
+        len |= ((uint64_t)*it++) << 48;
+        len |= ((uint64_t)*it++) << 56;
+        break;
+
+    default:
+        break;
+    }
+
+    return len;
+}
+
+bool is_last_eof(Iter it)
+{
+    std::advance(it, 3);    // Skip the command byte and warning count
+    uint16_t status = *it++;
+    status |= (*it++) << 8;
+    return (status & SERVER_MORE_RESULTS_EXIST) == 0;
+}
+}
+
 /**
  * Construct a detached backend connection. Session attached separately.
  *
@@ -2178,6 +2250,23 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
     }
 }
 
+void MariaDBBackendConnection::process_ok_packet(Iter it, Iter end)
+{
+    ++it;                       // Skip the command byte
+    it = skip_encoded_int(it);  // Affected rows
+    it = skip_encoded_int(it);  // Last insert ID
+    uint16_t status = *it++;
+    status |= (*it++) << 8;
+
+    if ((status & SERVER_MORE_RESULTS_EXIST) == 0)
+    {
+        // No more results
+        set_reply_state(ReplyState::DONE);
+    }
+
+    it.advance(2);      // Warning count
+}
+
 /**
  * Extract prepared statement response
  *
@@ -2273,10 +2362,9 @@ void MariaDBBackendConnection::process_result_start(Iter it, Iter end)
         {
             process_ps_response(it, end);
         }
-        else if (is_last_ok(it))
+        else
         {
-            // No more results
-            set_reply_state(ReplyState::DONE);
+            process_ok_packet(it, end);
         }
         break;
 

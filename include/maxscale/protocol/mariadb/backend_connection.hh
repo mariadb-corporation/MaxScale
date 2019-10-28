@@ -95,6 +95,7 @@ private:
     void     process_reply_start(Iter it, Iter end);
     void     process_result_start(Iter it, Iter end);
     void     process_ps_response(Iter it, Iter end);
+    void     process_ok_packet(Iter it, Iter end);
     void     update_error(mxs::Buffer::iterator it, mxs::Buffer::iterator end);
     bool     consume_fetched_rows(GWBUF* buffer);
     void     track_query(GWBUF* buffer);
@@ -109,7 +110,7 @@ private:
      */
     void assign_session(MXS_SESSION* session, mxs::Component* upstream);
 
-    mxs_auth_state_t protocol_auth_state {MXS_AUTH_STATE_CONNECTED}; /**< Backend authentication state */
+    mxs_auth_state_t protocol_auth_state {MXS_AUTH_STATE_CONNECTED};    /**< Backend authentication state */
 
     std::unique_ptr<mxs::BackendAuthenticator> m_authenticator;     /**< Backend authentication data */
 
@@ -135,7 +136,3 @@ private:
     GWBUF*          m_stored_query {nullptr};   /*< Temporarily stored queries */
     BackendDCB*     m_dcb {nullptr};            /**< Dcb used by this protocol connection */
 };
-
-bool     is_last_ok(MariaDBBackendConnection::Iter it);
-bool     is_last_eof(MariaDBBackendConnection::Iter it);
-uint64_t get_encoded_int(MariaDBBackendConnection::Iter it);
