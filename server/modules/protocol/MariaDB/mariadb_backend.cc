@@ -45,7 +45,7 @@ namespace
 {
 using Iter = MariaDBBackendConnection::Iter;
 
-Iter skip_encoded_int(Iter it)
+void skip_encoded_int(Iter& it)
 {
     switch (*it)
     {
@@ -65,11 +65,9 @@ Iter skip_encoded_int(Iter it)
         ++it;
         break;
     }
-
-    return it;
 }
 
-uint64_t get_encoded_int(Iter it)
+uint64_t get_encoded_int(Iter& it)
 {
     uint64_t len = *it++;
 
@@ -102,6 +100,20 @@ uint64_t get_encoded_int(Iter it)
     }
 
     return len;
+}
+
+std::string get_encoded_str(Iter& it)
+{
+    uint64_t len = get_encoded_int(it);
+    auto start = it;
+    it.advance(len);
+    return std::string(start, it);
+}
+
+void skip_encoded_str(Iter& it)
+{
+    auto len = get_encoded_int(it);
+    it.advance(len);
 }
 
 bool is_last_eof(Iter it)
@@ -2252,9 +2264,9 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
 
 void MariaDBBackendConnection::process_ok_packet(Iter it, Iter end)
 {
-    ++it;                       // Skip the command byte
-    it = skip_encoded_int(it);  // Affected rows
-    it = skip_encoded_int(it);  // Last insert ID
+    ++it;                   // Skip the command byte
+    skip_encoded_int(it);   // Affected rows
+    skip_encoded_int(it);   // Last insert ID
     uint16_t status = *it++;
     status |= (*it++) << 8;
 
@@ -2264,7 +2276,66 @@ void MariaDBBackendConnection::process_ok_packet(Iter it, Iter end)
         set_reply_state(ReplyState::DONE);
     }
 
-    it.advance(2);      // Warning count
+    if (rcap_type_required(m_session->service->capabilities(), RCAP_TYPE_SESSION_STATE_TRACKING)
+        && (status & SERVER_SESSION_STATE_CHANGED) && m_track_state)
+    {
+        // TODO: Expose the need for session state tracking in a less intrusive way than passing it as a flag
+        // in a GWBUF. It might even be feasible to always process the results but that incurs a cost that we
+        // don't want to always pay.
+
+        mxb_assert(server_capabilities & GW_MYSQL_CAPABILITIES_SESSION_TRACK);
+
+        it.advance(2);          // Skip warning count
+        skip_encoded_str(it);   // Skip human-readable info
+
+        // Skip the total packet length, we don't need it since we know it implicitly via the end iterator
+        MXB_AT_DEBUG(ptrdiff_t total_size = ) get_encoded_int(it);
+        mxb_assert(total_size == std::distance(it, end));
+
+        while (it != end)
+        {
+            uint64_t type = *it++;
+            uint64_t total_size = get_encoded_int(it);
+
+            switch (type)
+            {
+            case SESSION_TRACK_STATE_CHANGE:
+                it.advance(total_size);
+                break;
+
+            case SESSION_TRACK_SCHEMA:
+                skip_encoded_str(it);   // Schema name
+                break;
+
+            case SESSION_TRACK_GTIDS:
+                skip_encoded_int(it);   // Encoding specification
+                m_reply.set_variable(MXS_LAST_GTID, get_encoded_str(it));
+                break;
+
+            case SESSION_TRACK_TRANSACTION_CHARACTERISTICS:
+                m_reply.set_variable("trx_characteristics", get_encoded_str(it));
+                break;
+
+            case SESSION_TRACK_SYSTEM_VARIABLES:
+                {
+                    auto name = get_encoded_str(it);
+                    auto value = get_encoded_str(it);
+                    m_reply.set_variable(name, value);
+                }
+                break;
+
+            case SESSION_TRACK_TRANSACTION_TYPE:
+                m_reply.set_variable("trx_state", get_encoded_str(it));
+                break;
+
+            default:
+                mxb_assert(!true);
+                it.advance(total_size);
+                MXS_WARNING("Received unexpecting session track type: %lu", type);
+                break;
+            }
+        }
+    }
 }
 
 /**
