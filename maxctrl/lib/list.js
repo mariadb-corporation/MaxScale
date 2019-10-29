@@ -348,7 +348,7 @@ exports.builder = function(yargs) {
                 if (argv[this.rDnsOption.shortname]) {
                     resource += '?' + this.rDnsOption.optionOn
                 }
-                return getCollection(host, 'sessions', list_sessions_fields)
+                return getCollection(host, resource, list_sessions_fields)
             })
         })
         .command('filters', 'List filters', function(yargs) {
