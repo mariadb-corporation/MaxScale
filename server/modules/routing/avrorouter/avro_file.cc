@@ -511,7 +511,7 @@ bool read_fde(Avro* router)
  */
 avro_binlog_end_t avro_read_all_events(Avro* router)
 {
-    mxs::WatchdogWorkaround workaround;
+    mxb::WatchdogNotifier::Workaround workaround(mxs::RoutingWorker::get_current());
     mxb_assert(router->binlog_fd != -1);
 
     if (!read_fde(router))
