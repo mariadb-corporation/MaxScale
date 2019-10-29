@@ -1513,9 +1513,12 @@ mxs::Target* SchemaRouterSession::get_query_target(GWBUF* buffer)
             {
                 if (rval && target != rval)
                 {
-                    MXS_ERROR("Query targets tables on servers '%s' and '%s'. "
-                              "Cross server queries are not supported.",
-                              rval->name(), target->name());
+                    if (target != m_config->preferred_server && rval != m_config->preferred_server)
+                    {
+                        MXS_ERROR("Query targets tables on servers '%s' and '%s'. "
+                                  "Cross server queries are not supported.",
+                                  rval->name(), target->name());
+                    }
                 }
                 else if (!rval)
                 {
