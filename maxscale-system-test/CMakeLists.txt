@@ -172,6 +172,7 @@ add_test_executable(bulk_insert.cpp bulk_insert bulk_insert LABELS MySQLProtocol
 
 # Tests for the CCRFilter module
 add_test_executable(ccrfilter.cpp ccrfilter_test ccrfilter LABELS ccrfilter LIGHT REPL_BACKEND)
+add_test_executable(ccrfilter_global.cpp ccrfilter_global_test ccrfilter_global LABELS ccrfilter LIGHT REPL_BACKEND)
 
 # Tries to reconfigure replication setup to use another node as a Master
 add_test_executable(change_master_during_session.cpp change_master_during_session replication LABELS readwritesplit mysqlmon REPL_BACKEND)

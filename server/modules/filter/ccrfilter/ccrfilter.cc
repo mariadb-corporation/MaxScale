@@ -32,6 +32,8 @@ namespace
 
 const char PARAM_MATCH[] = "match";
 const char PARAM_IGNORE[] = "ignore";
+const char PARAM_GLOBAL[] = "global";
+
 const MXS_ENUM_VALUE option_values[] =
 {
     {"ignorecase", PCRE2_CASELESS},
@@ -85,6 +87,12 @@ public:
 
     static CCRFilter* create(const char* name, MXS_CONFIG_PARAMETER* params)
     {
+        if (params->get_integer("count") && params->get_bool(PARAM_GLOBAL))
+        {
+            MXS_ERROR("'count' and 'global' cannot be used at the same time.");
+            return nullptr;
+        }
+
         CCRFilter* new_instance = new(std::nothrow) CCRFilter;
         if (new_instance)
         {
@@ -92,6 +100,7 @@ public:
             new_instance->m_time = params->get_duration<std::chrono::seconds>("time").count();
             new_instance->m_match = params->get_string(PARAM_MATCH);
             new_instance->m_nomatch = params->get_string(PARAM_IGNORE);
+            new_instance->m_global = params->get_bool(PARAM_GLOBAL);
 
             int cflags = params->get_enum("options", option_values);
             bool compile_error = false;
@@ -181,6 +190,9 @@ private:
                          * a data modification operation is done. */
     int m_count = 0;    /* Number of hints to add after each operation that modifies data. */
 
+    bool                m_global;
+    std::atomic<time_t> m_last_modification {0};    /* Time of the last data modifying operation */
+
     LagStats    m_stats;
     pcre2_code* re = nullptr;       /* Compiled regex text of match */
     pcre2_code* nore = nullptr;     /* Compiled regex text of ignore */
@@ -251,6 +263,11 @@ int CCRSession::routeQuery(GWBUF* queue)
                         m_last_modification = now;
                         MXS_INFO("Write operation detected, queries routed to master for %d seconds",
                                  filter->m_time);
+
+                        if (filter->m_global)
+                        {
+                            filter->m_last_modification.store(now, std::memory_order_relaxed);
+                        }
                     }
 
                     filter->m_stats.n_modified++;
@@ -266,7 +283,8 @@ int CCRSession::routeQuery(GWBUF* queue)
         }
         else if (filter->m_time)
         {
-            double dt = difftime(now, m_last_modification);
+            double dt = std::min(difftime(now, m_last_modification),
+                                 difftime(now, filter->m_last_modification.load(std::memory_order_relaxed)));
 
             if (dt < filter->m_time)
             {
@@ -347,8 +365,9 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,
         NULL,
         {
-            {"count",                 MXS_MODULE_PARAM_COUNT,     "0"  },
-            {"time",                  MXS_MODULE_PARAM_DURATION,  "60s"},
+            {"count",                 MXS_MODULE_PARAM_COUNT,     "0"    },
+            {"time",                  MXS_MODULE_PARAM_DURATION,  "60s"  },
+            {PARAM_GLOBAL,            MXS_MODULE_PARAM_BOOL,      "false"},
             {PARAM_MATCH,             MXS_MODULE_PARAM_REGEX},
             {PARAM_IGNORE,            MXS_MODULE_PARAM_REGEX},
             {
