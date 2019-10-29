@@ -29,7 +29,7 @@ static void             gwbuf_free_one(GWBUF* buf);
 static buffer_object_t* gwbuf_remove_buffer_object(GWBUF* buf,
                                                    buffer_object_t* bufobj);
 
-#if defined(SS_DEBUG)
+#if defined (SS_DEBUG)
 inline void invalidate_tail_pointers(GWBUF* head)
 {
     if (head && head->next)
@@ -117,7 +117,6 @@ GWBUF* gwbuf_alloc(unsigned int size)
     rval->next = NULL;
     rval->tail = rval;
     rval->hint = NULL;
-    rval->properties = NULL;
     rval->gwbuf_type = GWBUF_TYPE_UNDEFINED;
     rval->server = NULL;
 
@@ -184,14 +183,6 @@ static void gwbuf_free_one(GWBUF* buf)
         MXS_FREE(buf->sbuf);
     }
 
-    while (buf->properties)
-    {
-        BUF_PROPERTY* prop = buf->properties;
-        buf->properties = prop->next;
-        MXS_FREE(prop->name);
-        MXS_FREE(prop->value);
-        MXS_FREE(prop);
-    }
     /** Release the hint */
     while (buf->hint)
     {
@@ -328,7 +319,6 @@ static GWBUF* gwbuf_clone_portion(GWBUF* buf,
     clonebuf->start = (void*)((char*)buf->start + start_offset);
     clonebuf->end = (void*)((char*)clonebuf->start + length);
     clonebuf->gwbuf_type = buf->gwbuf_type;     /*< clone the type for now */
-    clonebuf->properties = NULL;
     clonebuf->hint = NULL;
     clonebuf->next = NULL;
     clonebuf->tail = clonebuf;
@@ -653,44 +643,6 @@ static buffer_object_t* gwbuf_remove_buffer_object(GWBUF* buf, buffer_object_t* 
     bufobj->bo_donefun_fp(bufobj->bo_data);
     MXS_FREE(bufobj);
     return next;
-}
-
-bool gwbuf_add_property(GWBUF* buf, const char* name, const char* value)
-{
-    validate_buffer(buf);
-
-    char* my_name = MXS_STRDUP(name);
-    char* my_value = MXS_STRDUP(value);
-    BUF_PROPERTY* prop = (BUF_PROPERTY*)MXS_MALLOC(sizeof(BUF_PROPERTY));
-
-    if (!my_name || !my_value || !prop)
-    {
-        MXS_FREE(my_name);
-        MXS_FREE(my_value);
-        MXS_FREE(prop);
-        return false;
-    }
-
-    prop->name = my_name;
-    prop->value = my_value;
-    prop->next = buf->properties;
-    buf->properties = prop;
-
-    return true;
-}
-
-char* gwbuf_get_property(GWBUF* buf, const char* name)
-{
-    validate_buffer(buf);
-
-    BUF_PROPERTY* prop = buf->properties;
-
-    while (prop && strcmp(prop->name, name) != 0)
-    {
-        prop = prop->next;
-    }
-
-    return prop ? prop->value : NULL;
 }
 
 GWBUF* gwbuf_make_contiguous(GWBUF* orig)

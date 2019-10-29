@@ -29,18 +29,6 @@ namespace maxscale
 class Buffer;
 }
 
-/**
- * Buffer properties - used to store properties related to the buffer
- * contents. This may be added at any point during the processing of the
- * data, especially in the protocol stage of the processing.
- */
-struct BUF_PROPERTY
-{
-    char*         name;
-    char*         value;
-    BUF_PROPERTY* next;
-};
-
 enum gwbuf_type_t
 {
     GWBUF_TYPE_UNDEFINED      = 0,
@@ -115,15 +103,14 @@ struct SHARED_BUF
  */
 struct GWBUF
 {
-    GWBUF*        next;         /*< Next buffer in a linked chain of buffers */
-    GWBUF*        tail;         /*< Last buffer in a linked chain of buffers */
-    void*         start;        /*< Start of the valid data */
-    void*         end;          /*< First byte after the valid data */
-    SHARED_BUF*   sbuf;         /*< The shared buffer with the real data */
-    HINT*         hint;         /*< Hint data for this buffer */
-    BUF_PROPERTY* properties;   /*< Buffer properties */
-    SERVER*       server;       /*< The target server where the buffer is executed */
-    uint32_t      gwbuf_type;   /*< buffer's data type information */
+    GWBUF*      next;           /*< Next buffer in a linked chain of buffers */
+    GWBUF*      tail;           /*< Last buffer in a linked chain of buffers */
+    void*       start;          /*< Start of the valid data */
+    void*       end;            /*< First byte after the valid data */
+    SHARED_BUF* sbuf;           /*< The shared buffer with the real data */
+    HINT*       hint;           /*< Hint data for this buffer */
+    SERVER*     server;         /*< The target server where the buffer is executed */
+    uint32_t    gwbuf_type;     /*< buffer's data type information */
 #ifdef SS_DEBUG
     int owner;      /*< Owner of the thread, only for debugging */
 #endif
@@ -165,7 +152,7 @@ inline bool gwbuf_is_contiguous(const GWBUF* b)
 /*< True if all bytes in the buffer have been consumed */
 inline bool gwbuf_link_empty(const GWBUF* b)
 {
-    return ((char*)b->start >= (char*)b->end);
+    return (char*)b->start >= (char*)b->end;
 }
 
 #define GWBUF_EMPTY(b) gwbuf_link_empty(b)
@@ -360,27 +347,6 @@ extern GWBUF* gwbuf_split(GWBUF** buf, size_t length);
  * @param type  Type to be added, mask of @c gwbuf_type_t values.
  */
 extern void gwbuf_set_type(GWBUF* head, uint32_t type);
-
-/**
- * Add a property to a buffer.
- *
- * @param buf    The buffer to add the property to
- * @param name   The property name
- * @param value  The property value
- *
- * @return True on success, false otherwise.
- */
-extern bool gwbuf_add_property(GWBUF* buf, const char* name, const char* value);
-
-/**
- * Return the value of a buffer property
- *
- * @param buf   The buffer itself
- * @param name  The name of the property to return
- *
- * @return The property value or NULL if the property was not found.
- */
-extern char* gwbuf_get_property(GWBUF* buf, const char* name);
 
 /**
  * Convert a chain of GWBUF structures into a single GWBUF structure
