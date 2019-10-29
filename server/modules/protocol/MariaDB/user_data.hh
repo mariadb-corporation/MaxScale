@@ -27,6 +27,7 @@ class SERVER;
 
 struct UserEntry
 {
+    std::string username;       /**< Username */
     std::string host_pattern;   /**< Hostname or IP, may have wildcards */
     std::string plugin;         /**< Auth plugin to use */
     std::string password;       /**< Auth data used by native auth plugin */
@@ -43,25 +44,41 @@ struct UserEntry
 };
 
 /**
- * This class contains data from mysql.user-table. The data is a mapping from username to a list of entries,
- * where each entry is a hostname pattern with other relevant info.
+ * This class contains user data retrieved from the mysql-database.
  */
 class UserDatabase
 {
 public:
+    // Using normal maps/sets so that entries can be printed in order.
+    using StringSet = std::set<std::string>;
+    using StringSetMap = std::map<std::string, StringSet>;
+
     void             add_entry(const std::string& username, const UserEntry& entry);
+    void             set_dbs_and_roles(StringSetMap&& db_grants, StringSetMap&& roles_mapping);
     void             clear();
     size_t           size() const;
+
     const UserEntry* find_entry(const std::string& username, const std::string& host);
+    bool             check_database_access(const UserEntry& entry, const std::string& db) const;
 
 private:
+    bool user_can_access_db(const std::string& user, const std::string& host_pattern,
+                            const std::string& db) const;
+    bool role_can_access_db(const std::string& role, const std::string& db) const;
     using EntryList = std::vector<UserEntry>;
 
     /**
      * Map of username -> EntryList. In the list, entries are ordered from most specific hostname pattern to
-     * least specific
+     * least specific. In effect, contains data from mysql.user-table.
      */
     std::map<std::string, EntryList> m_contents;
+
+    /** Maps "user@host" to allowed databases. Retrieved from mysql.db, mysql.tables_priv and
+     * mysql.columns_priv. */
+    StringSetMap m_database_grants;
+
+    /** Maps "user@host" to allowed roles. Retrieved from mysql.roles_mapping. */
+    StringSetMap m_roles_mapping;
 };
 
 class MariaDBUserManager : public mxs::UserAccountManager
@@ -117,12 +134,6 @@ private:
 
     const std::string m_service_name;   /**< Service using this account data manager. Used for logging. */
 
-    // Using normal maps/sets so that entries can be printed in order.
-    using StringSet = std::set<std::string>;
-    using StringSetMap = std::map<std::string, StringSet>;
-
-    std::mutex   m_usermap_lock;        /**< Protects maps from concurrent access */
-    UserDatabase m_userdb;              /**< username -> entrylist mapping */
-    StringSetMap m_database_grants;     /**< Maps "user@host" to allowed databases */
-    StringSetMap m_roles_mapping;       /**< Maps "user@host" to allowed roles */
+    std::mutex   m_userdb_lock;        /**< Protects UserDatabase from concurrent access */
+    UserDatabase m_userdb;             /**< Contains user account info */
 };

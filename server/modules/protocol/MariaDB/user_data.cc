@@ -294,7 +294,7 @@ bool MariaDBUserManager::write_users(QResult users, bool using_roles)
     bool error = false;
     if (has_required_fields)
     {
-        Guard guard(m_usermap_lock);
+        Guard guard(m_userdb_lock);
 
         // Delete any previous data.
         m_userdb.clear();
@@ -304,6 +304,7 @@ bool MariaDBUserManager::write_users(QResult users, bool using_roles)
             auto username = users->get_string(ind_user);
 
             UserEntry new_entry;
+            new_entry.username = username;
             new_entry.host_pattern = users->get_string(ind_host);
 
             // Treat the user as having global privileges if any of the following global privileges
@@ -339,6 +340,7 @@ void MariaDBUserManager::write_dbs_and_roles(QResult dbs, QResult roles)
 {
     // Because the database grant and roles tables are quite simple and only require lookups, their contents
     // need not be saved in an sqlite database. This simplifies things quite a bit.
+    using StringSetMap = UserDatabase::StringSetMap;
 
     auto map_builder = [](const string& grant_col_name, QResult source) {
             StringSetMap result;
@@ -367,9 +369,8 @@ void MariaDBUserManager::write_dbs_and_roles(QResult dbs, QResult roles)
         new_roles_mapping = map_builder("role", std::move(roles));
     }
 
-    Guard guard(m_usermap_lock);
-    m_database_grants = std::move(new_db_grants);
-    m_roles_mapping = std::move(new_roles_mapping);
+    Guard guard(m_userdb_lock);
+    m_userdb.set_dbs_and_roles(std::move(new_db_grants), std::move(new_roles_mapping));
 }
 
 void UserDatabase::add_entry(const std::string& username, const UserEntry& entry)
@@ -414,6 +415,109 @@ const UserEntry* UserDatabase::find_entry(const std::string& username, const std
 size_t UserDatabase::size() const
 {
     return m_contents.size();
+}
+
+void UserDatabase::set_dbs_and_roles(StringSetMap&& db_grants, StringSetMap&& roles_mapping)
+{
+    m_database_grants = std::move(db_grants);
+    m_roles_mapping = std::move(roles_mapping);
+}
+
+bool UserDatabase::check_database_access(const UserEntry& entry, const std::string& db) const
+{
+    // Accept the user if the entry has a direct global privilege or if the user is not
+    // connecting to a specific database,
+    return entry.global_db_priv || db.empty()
+            // or the user has a privilege to the database, or a table or column in the database,
+           || (user_can_access_db(entry.username, entry.host_pattern, db))
+            // or the user can access db through its default role.
+           || (!entry.default_role.empty() && role_can_access_db(entry.default_role, db));
+}
+
+bool UserDatabase::user_can_access_db(const string& user, const string& host_pattern, const string& db) const
+{
+    string key = user + "@" + host_pattern;
+    auto iter = m_database_grants.find(key);
+    if (iter != m_database_grants.end())
+    {
+        return iter->second.count(db) > 0;
+    }
+    return false;
+}
+
+bool UserDatabase::role_can_access_db(const string& role, const string& db) const
+{
+    auto role_has_global_priv = [this](const string& role) {
+            bool rval = false;
+            auto iter = m_contents.find(role);
+            if (iter != m_contents.end())
+            {
+                auto& entrylist = iter->second;
+                // Because roles have an empty host-pattern, they must be first in the list.
+                if (!entrylist.empty())
+                {
+                    auto& entry = entrylist.front();
+                    if (entry.is_role && entry.global_db_priv)
+                    {
+                        rval = true;
+                    }
+                }
+            }
+            return rval;
+        };
+
+    auto find_linked_roles = [this](const string& role) {
+            std::vector<string> rval;
+            string key = role + "@";
+            auto iter = m_roles_mapping.find(key);
+            if (iter != m_roles_mapping.end())
+            {
+                auto& roles_set = iter->second;
+                for (auto& linked_role : roles_set)
+                {
+                    rval.push_back(linked_role);
+                }
+            }
+            return rval;
+        };
+
+    // Roles are tricky since one role may have access to other roles and so on.
+    StringSet open_set;     // roles which still need to be expanded.
+    StringSet closed_set;   // roles which have been checked already.
+
+    open_set.insert(role);
+    bool privilege_found = false;
+    while (!open_set.empty() && !privilege_found)
+    {
+        string current_role = *open_set.begin();
+        // First, check if role has global privilege.
+
+        if (role_has_global_priv(current_role))
+        {
+            privilege_found = true;
+        }
+        // No global privilege, check db-level privilege.
+        else if (user_can_access_db(current_role, "", db))
+        {
+            privilege_found = true;
+        }
+        else
+        {
+            // The current role does not have access to db. Add linked roles to the open set.
+            auto linked_roles = find_linked_roles(current_role);
+            for (const auto& linked_role : linked_roles)
+            {
+                if (open_set.count(linked_role) == 0 && closed_set.count(linked_role) == 0)
+                {
+                    open_set.insert(linked_role);
+                }
+            }
+        }
+
+        open_set.erase(current_role);
+        closed_set.insert(current_role);
+    }
+    return privilege_found;
 }
 
 bool UserEntry::host_pattern_is_more_specific(const UserEntry& lhs, const UserEntry& rhs)
