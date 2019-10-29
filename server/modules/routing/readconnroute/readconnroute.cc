@@ -712,6 +712,8 @@ static void handleError(MXS_ROUTER* instance,
 {
     mxb_assert(problem_dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
     mxb_assert(problem_dcb->session->state == SESSION_STATE_ROUTER_READY);
+    MXS_INFO("Server '%s' failed", problem_dcb->server->name);
+
     DCB* client_dcb = problem_dcb->session->client_dcb;
     client_dcb->func.write(client_dcb, gwbuf_clone(errbuf));
 
