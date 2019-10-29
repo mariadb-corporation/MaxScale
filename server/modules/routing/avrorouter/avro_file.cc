@@ -36,6 +36,7 @@
 #include <maxscale/maxscale.h>
 #include <maxscale/pcre2.h>
 #include <maxscale/utils.h>
+#include <maxscale/routingworker.hh>
 
 static const char* statefile_section = "avro-conversion";
 
@@ -531,6 +532,7 @@ bool read_fde(Avro* router)
  */
 avro_binlog_end_t avro_read_all_events(Avro* router)
 {
+    mxs::WatchdogWorkaround workaround;
     mxb_assert(router->binlog_fd != -1);
 
     if (!read_fde(router))
