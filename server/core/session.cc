@@ -1471,6 +1471,11 @@ int32_t Session::routeQuery(GWBUF* buffer)
 
 int32_t Session::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
+    if (reply.is_ok() && service->config().session_track_trx_state)
+    {
+        parse_and_set_trx_state(reply);
+    }
+
     return m_client_conn->write(buffer);
 }
 
@@ -1552,4 +1557,43 @@ Session::create_backend_connection(Server* server, BackendDCB::Manager* manager,
         }
     }
     return dcb;
+}
+
+// Use SESSION_TRACK_STATE_CHANGE, SESSION_TRACK_TRANSACTION_TYPE and
+// SESSION_TRACK_TRANSACTION_CHARACTERISTICS to track transaction state.
+void Session::parse_and_set_trx_state(const mxs::Reply& reply)
+{
+    auto autocommit = reply.get_variable("autocommit");
+
+    if (!autocommit.empty())
+    {
+        set_autocommit(strncasecmp(autocommit.c_str(), "ON", 2) == 0);
+    }
+
+    auto trx_state = reply.get_variable("trx_state");
+
+    if (!trx_state.empty())
+    {
+        if (trx_state.find_first_of("TI") == std::string::npos)
+        {
+            set_trx_state(SESSION_TRX_ACTIVE);
+        }
+        else if (trx_state.find_first_of("rRwWsSL") == std::string::npos)
+        {
+            set_trx_state(SESSION_TRX_INACTIVE);
+        }
+    }
+    auto trx_characteristics = reply.get_variable("trx_characteristics");
+
+    if (!trx_characteristics.empty())
+    {
+        if (trx_characteristics == "START TRANSACTION READ ONLY;")
+        {
+            set_trx_state(SESSION_TRX_ACTIVE | SESSION_TRX_READ_ONLY);
+        }
+        else if (trx_characteristics == "START TRANSACTION READ WRITE;")
+        {
+            set_trx_state(SESSION_TRX_ACTIVE);
+        }
+    }
 }

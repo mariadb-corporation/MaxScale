@@ -117,21 +117,6 @@
 class DCB;
 class BackendDCB;
 
-enum mysql_tx_state_t
-{
-    TX_EMPTY         = 0,   ///< "none of the below"
-    TX_EXPLICIT      = 1,   ///< an explicit transaction is active
-    TX_IMPLICIT      = 2,   ///< an implicit transaction is active
-    TX_READ_TRX      = 4,   ///<     transactional reads  were done
-    TX_READ_UNSAFE   = 8,   ///< non-transaction   reads  were done
-    TX_WRITE_TRX     = 16,  ///<     transactional writes were done
-    TX_WRITE_UNSAFE  = 32,  ///< non-transactional writes were done
-    TX_STMT_UNSAFE   = 64,  ///< "unsafe" (non-deterministic like UUID()) stmts
-    TX_RESULT_SET    = 128, ///< result-set was sent
-    TX_WITH_SNAPSHOT = 256, ///< WITH CONSISTENT SNAPSHOT was used
-    TX_LOCKED_TABLES = 512  ///< LOCK TABLES is active
-};
-
 /** Protocol packing macros. */
 #define gw_mysql_set_byte2(__buffer, __int) \
     do { \
@@ -364,8 +349,6 @@ GWBUF* mysql_create_custom_error(int sequence, int affected_rows, uint16_t errnu
 GWBUF* mxs_mysql_create_ok(int sequence, uint8_t affected_rows, const char* message);
 
 void init_response_status(GWBUF* buf, uint8_t cmd, int* npackets, size_t* nbytes);
-
-mysql_tx_state_t parse_trx_state(const char* str);
 
 /** Write an OK packet to a DCB */
 int mxs_mysql_send_ok(DCB* dcb, int sequence, uint8_t affected_rows, const char* message);

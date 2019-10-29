@@ -1701,67 +1701,6 @@ int MariaDBClientConnection::perform_normal_read(DCB* dcb, GWBUF* read_buffer, u
     return rval;
 }
 
-/*
- * Mapping three session tracker's info to mxs_session_trx_state_t
- * SESSION_TRACK_STATE_CHANGE:
- *   Get lasted autocommit value;
- *   https://dev.mysql.com/worklog/task/?id=6885
- * SESSION_TRACK_TRANSACTION_TYPE:
- *   Get transaction boundaries
- *   TX_EMPTY                  => SESSION_TRX_INACTIVE
- *   TX_EXPLICIT | TX_IMPLICIT => SESSION_TRX_ACTIVE
- *   https://dev.mysql.com/worklog/task/?id=6885
- * SESSION_TRACK_TRANSACTION_CHARACTERISTICS
- *   Get trx characteristics such as read only, read write, snapshot ...
- *
- */
-void MariaDBClientConnection::parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data)
-{
-    char* autocommit = gwbuf_get_property(data, (char*)"autocommit");
-
-    if (autocommit)
-    {
-        MXS_DEBUG("autocommit:%s", autocommit);
-        if (strncasecmp(autocommit, "ON", 2) == 0)
-        {
-            ses->set_autocommit(true);
-        }
-        if (strncasecmp(autocommit, "OFF", 3) == 0)
-        {
-            ses->set_autocommit(false);
-        }
-    }
-    char* trx_state = gwbuf_get_property(data, (char*)"trx_state");
-    if (trx_state)
-    {
-        mysql_tx_state_t s = parse_trx_state(trx_state);
-
-        if (s == TX_EMPTY)
-        {
-            ses->set_trx_state(SESSION_TRX_INACTIVE);
-        }
-        else if ((s & TX_EXPLICIT) || (s & TX_IMPLICIT))
-        {
-            ses->set_trx_state(SESSION_TRX_ACTIVE);
-        }
-    }
-    char* trx_characteristics = gwbuf_get_property(data, (char*)"trx_characteristics");
-    if (trx_characteristics)
-    {
-        if (strncmp(trx_characteristics, "START TRANSACTION READ ONLY;", 28) == 0)
-        {
-            ses->set_trx_state(SESSION_TRX_ACTIVE | SESSION_TRX_READ_ONLY);
-        }
-
-        if (strncmp(trx_characteristics, "START TRANSACTION READ WRITE;", 29) == 0)
-        {
-            ses->set_trx_state(SESSION_TRX_ACTIVE);
-        }
-    }
-    MXS_DEBUG("trx state:%s", session_trx_state_to_string(ses->get_trx_state()));
-    MXS_DEBUG("autcommit:%s", ses->is_autocommit() ? "ON" : "OFF");
-}
-
 /**
  * MXS_PROTOCOL_API implementation.
  */
@@ -1891,10 +1830,6 @@ void MariaDBClientConnection::ready_for_reading(DCB* event_dcb)
 
 int32_t MariaDBClientConnection::write(GWBUF* queue)
 {
-    if (GWBUF_IS_REPLY_OK(queue) && m_dcb->service()->config().session_track_trx_state)
-    {
-        parse_and_set_trx_state(m_dcb->session(), queue);
-    }
     return m_dcb->writeq_append(queue);
 }
 

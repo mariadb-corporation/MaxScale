@@ -80,7 +80,6 @@ private:
     int    send_mysql_client_handshake(DCB* dcb);
     char*  handle_variables(MXS_SESSION* session, GWBUF** read_buffer);
     void   track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf);
-    void   parse_and_set_trx_state(MXS_SESSION* ses, GWBUF* data);
     void   mxs_mysql_execute_kill_all_others(MXS_SESSION* issuer, uint64_t target_id,
                                              uint64_t keep_protocol_thread_id, kill_type_t type);
     void mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_type_t type);

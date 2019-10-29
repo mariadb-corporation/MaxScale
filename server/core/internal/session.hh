@@ -178,6 +178,7 @@ protected:
 private:
     void add_backend_conn(mxs::BackendConnection* conn);
     void remove_backend_conn(mxs::BackendConnection* conn);
+    void parse_and_set_trx_state(const mxs::Reply& reply);
 
     // Delivers a provided response to the upstream filter that should receive it
     void deliver_response();
