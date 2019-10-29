@@ -1179,7 +1179,6 @@ Session::~Session()
 
     mxb::atomic::add(&service->stats.n_current, -1, mxb::atomic::RELAXED);
     mxb_assert(service->stats.n_current >= 0);
-<<<<<<< HEAD
 }
 
 void Session::set_client_dcb(DCB* dcb)
@@ -1187,8 +1186,6 @@ void Session::set_client_dcb(DCB* dcb)
     mxb_assert(client_dcb == nullptr);
     mxb_assert(dcb->role == DCB::Role::CLIENT);
     client_dcb = dcb;
-=======
->>>>>>> 2.3
 }
 
 namespace
