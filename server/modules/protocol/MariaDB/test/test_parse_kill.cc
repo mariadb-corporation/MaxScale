@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include <maxscale/protocol/mariadb/protocol_classes.hh>
+#include <maxscale/protocol/mariadb/client_connection.hh>
 
 #include <inttypes.h>
 #include <string>

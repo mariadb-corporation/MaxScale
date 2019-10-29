@@ -21,6 +21,7 @@
 #include <maxscale/paths.h>
 #include <maxscale/secrets.h>
 #include <maxscale/utils.h>
+#include <maxscale/protocol/mariadb/client_connection.hh>
 
 extern "C"
 {

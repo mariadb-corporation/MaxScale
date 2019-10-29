@@ -4,3 +4,6 @@ install_custom_file(mysql.hh ${CMAKE_INSTALL_INCLUDEDIR}/maxscale/protocol/maria
 install_custom_file(rwbackend.hh ${CMAKE_INSTALL_INCLUDEDIR}/maxscale/protocol/mariadb devel)
 install_custom_file(common_constants.hh ${CMAKE_INSTALL_INCLUDEDIR}/maxscale/protocol/mariadb devel)
 install_custom_file(protocol_classes.hh ${CMAKE_INSTALL_INCLUDEDIR}/maxscale/protocol/mariadb devel)
+install_custom_file(client_connection.hh ${CMAKE_INSTALL_INCLUDEDIR}/maxscale/protocol/mariadb devel)
+install_custom_file(backend_connection.hh ${CMAKE_INSTALL_INCLUDEDIR}/maxscale/protocol/mariadb devel)
+

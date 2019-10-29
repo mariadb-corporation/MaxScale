@@ -15,7 +15,7 @@
 #include <maxscale/protocol/mariadb/module_names.hh>
 #define MXS_MODULE_NAME MXS_MARIADB_PROTOCOL_NAME
 
-#include <maxscale/protocol/mariadb/protocol_classes.hh>
+#include <maxscale/protocol/mariadb/client_connection.hh>
 
 #include <inttypes.h>
 #include <limits.h>
@@ -40,6 +40,7 @@
 #include <maxscale/session.hh>
 #include <maxscale/ssl.hh>
 #include <maxscale/utils.h>
+#include <maxscale/protocol/mariadb/backend_connection.hh>
 
 #include "setparser.hh"
 #include "sqlmodeparser.hh"

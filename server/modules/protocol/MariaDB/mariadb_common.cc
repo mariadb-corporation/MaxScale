@@ -32,6 +32,7 @@
 #include <maxscale/routingworker.hh>
 #include <maxscale/service.hh>
 #include <maxscale/target.hh>
+#include <maxscale/protocol/mariadb/backend_connection.hh>
 
 using mxs::ReplyState;
 

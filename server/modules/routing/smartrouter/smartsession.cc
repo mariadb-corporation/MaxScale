@@ -16,7 +16,7 @@
 #include <maxscale/mysql_plus.hh>
 #include <maxscale/modutil.hh>
 #include <maxbase/pretty_print.hh>
-#include <maxscale/protocol/mariadb/protocol_classes.hh>
+#include <maxscale/protocol/mariadb/client_connection.hh>
 
 SmartRouterSession::SmartRouterSession(SmartRouter* pRouter,
                                        MXS_SESSION* pSession,

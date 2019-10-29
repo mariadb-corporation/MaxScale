@@ -11,9 +11,7 @@
  * Public License.
  */
 
-#define MXS_MODULE_NAME "mariadbbackend"
-
-#include <maxscale/protocol/mariadb/protocol_classes.hh>
+#include <maxscale/protocol/mariadb/backend_connection.hh>
 
 #include <mysql.h>
 #include <mysqld_error.h>
@@ -31,6 +29,7 @@
 #include <maxscale/server.hh>
 #include <maxscale/utils.h>
 #include <maxscale/protocol/mariadb/mysql.hh>
+#include <maxscale/protocol/mariadb/client_connection.hh>
 
 // For setting server status through monitor
 #include "../../../core/internal/monitormanager.hh"

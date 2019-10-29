@@ -15,7 +15,7 @@
 #include <maxbase/alloc.h>
 #include <maxscale/buffer.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
-#include <maxscale/protocol/mariadb/protocol_classes.hh>
+#include <maxscale/protocol/mariadb/backend_connection.hh>
 #include <maxscale/authenticator2.hh>
 #include <maxbase/logger.hh>
 
