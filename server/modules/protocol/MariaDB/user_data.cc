@@ -55,8 +55,7 @@ void MariaDBUserManager::start()
 {
     mxb_assert(!m_updater_thread.joinable());
     m_keep_running.store(true, release);
-    m_update_users_requested.store(true, release);      // Update users immediately.
-
+    update_user_accounts();
     m_updater_thread = std::thread([this] {
                                        updater_thread_function();
                                    });
@@ -66,7 +65,7 @@ void MariaDBUserManager::stop()
 {
     mxb_assert(m_updater_thread.joinable());
     m_keep_running.store(false, release);
-    m_update_users_notifier.notify_one();
+    m_notifier.notify_one();
     m_updater_thread.join();
 }
 
@@ -78,10 +77,11 @@ bool MariaDBUserManager::check_user(const std::string& user, const std::string& 
 
 void MariaDBUserManager::update_user_accounts()
 {
-    MutexLock lock(m_update_users_lock);
-    m_update_users_requested.store(true, release);
-    lock.unlock();
-    m_update_users_notifier.notify_one();
+    {
+        Guard guard(m_notifier_lock);
+        m_update_users_requested.store(true, release);
+    }
+    m_notifier.notify_one();
 }
 
 void MariaDBUserManager::set_credentials(const std::string& user, const std::string& pw)
@@ -104,28 +104,80 @@ std::string MariaDBUserManager::protocol_name() const
 
 void MariaDBUserManager::updater_thread_function()
 {
+    using mxb::TimePoint;
+    using mxb::Duration;
+    using mxb::Clock;
+
+    // Minimum wait between update loops. User accounts should not be changing continuously.
+    const std::chrono::seconds default_min_interval(1);
+    // Default value for scheduled updates. Cannot set too far in the future, as the cv wait_until bugs and
+    // doesn't wait.
+    const std::chrono::hours default_max_interval(24);
+
+    // In the beginning, don't update users right away as monitor may not have started yet.
+    TimePoint last_update = Clock::now();
+    int updates = 0;
+
     while (m_keep_running.load(acquire))
     {
-        auto cv_predicate = [this] {
-                return m_update_users_requested.load(acquire) || !m_keep_running.load(acquire);
-            };
+        /**
+         *  The user updating is controlled by several factors:
+         *  1) In the beginning, a hardcoded interval is used to try to repeatedly update users as
+         *  the monitor is performing its first loop.
+         *  2) User refresh requests from the owning service. These can come at any time and rate.
+         *  3) users_refresh_time, the minimum time which should pass between refreshes. This means that
+         *  rapid update requests may be ignored.
+         *  4) users_refresh_interval, the maximum time between refreshes. Users should be refreshed
+         *  automatically if this time elapses.
+         */
 
-        // Wait for something to do. Regular user account updates could be added here.
-        MutexLock lock(m_update_users_lock);
-        if (m_update_interval.secs() > 0)
+        // Calculate the time for the next scheduled update.
+        TimePoint next_scheduled_update = last_update;
+        if (updates == 0)
         {
-            m_update_users_notifier.wait_for(lock, m_update_interval, cv_predicate);
+            // If updating has not succeeded even once yet, keep trying again and again,
+            // with just a minimal wait.
+            next_scheduled_update += default_min_interval;
+        }
+        else if (m_max_refresh_interval > 0)
+        {
+            next_scheduled_update += Duration((double)m_max_refresh_interval);
         }
         else
         {
-            m_update_users_notifier.wait(lock, cv_predicate);
+            next_scheduled_update += default_max_interval;
         }
+
+        // Calculate the earliest allowed time for next update.
+        TimePoint next_possible_update = last_update;
+        if (m_min_refresh_interval > 0 && updates > 0)
+        {
+            next_possible_update += Duration((double)m_min_refresh_interval);
+        }
+        else
+        {
+            next_possible_update += default_min_interval;
+        }
+
+        MutexLock lock(m_notifier_lock);
+        // Wait until "next_possible_update", or until the thread should stop.
+        m_notifier.wait_until(lock, next_possible_update, [this]() {
+            return !m_keep_running.load(acquire);
+        });
+
+        // Wait until "next_scheduled_update", or until update requested or thread stop.
+        m_notifier.wait_until(lock, next_scheduled_update, [this, &updates]() {
+            return !m_keep_running.load(acquire) || m_update_users_requested.load(acquire) || updates == 0;
+        });
         lock.unlock();
 
-        load_users();
+        if (m_keep_running.load(acquire) && load_users())
+        {
+            updates++;
+        }
 
-        // Users updated, can accept new requests. TODO: add rate limits etc.
         m_update_users_requested.store(false, release);
+        last_update = Clock::now();
     }
 }
 

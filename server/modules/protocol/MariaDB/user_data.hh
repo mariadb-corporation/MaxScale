@@ -97,20 +97,23 @@ private:
     void write_dbs_and_roles(QResult dbs, QResult roles);
 
     // Fields for controlling the updater thread.
-    std::thread      m_updater_thread;
-    std::atomic_bool m_keep_running {false};
-
-    // Fields needed for notifying the updater thread.
-    std::condition_variable m_update_users_notifier;
-    std::mutex              m_update_users_lock;
+    std::thread             m_updater_thread;
+    std::atomic_bool        m_keep_running {false};
+    std::condition_variable m_notifier;
+    std::mutex              m_notifier_lock;
     std::atomic_bool        m_update_users_requested {false};
+
+    /**< Minimum time (seconds) between user account updates. Does not affect the first update attempts. */
+    int m_min_refresh_interval {30};
+
+    /**< Maximum time (seconds) between user account updates. If positive, enables automatic updates. */
+    int m_max_refresh_interval {-1};
 
     // Settings and options. Access to most is protected by the mutex.
     std::mutex           m_settings_lock;
     std::string          m_username;
     std::string          m_password;
     std::vector<SERVER*> m_backends;
-    mxb::Duration        m_update_interval {-1};
 
     const std::string m_service_name;   /**< Service using this account data manager. Used for logging. */
 
