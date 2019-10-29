@@ -301,15 +301,17 @@ static bool connection_was_killed(GWBUF* buffer)
     return rval;
 }
 
-GWBUF* RWSplitSession::handle_causal_read_reply(GWBUF* writebuf, RWBackend* backend)
+GWBUF* RWSplitSession::handle_causal_read_reply(GWBUF* writebuf, const mxs::Reply& reply, RWBackend* backend)
 {
     if (m_config.causal_reads)
     {
-        if (GWBUF_IS_REPLY_OK(writebuf) && backend == m_current_master)
+        if (reply.is_ok() && backend == m_current_master)
         {
-            if (char* tmp = gwbuf_get_property(writebuf, MXS_LAST_GTID))
+            auto gtid = reply.get_variable(MXS_LAST_GTID);
+
+            if (!gtid.empty())
             {
-                m_gtid_pos = std::string(tmp);
+                m_gtid_pos = gtid;
             }
         }
 
@@ -652,7 +654,7 @@ void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
 {
     RWBackend* backend = static_cast<RWBackend*>(down.back()->get_userdata());
 
-    if ((writebuf = handle_causal_read_reply(writebuf, backend)) == NULL)
+    if ((writebuf = handle_causal_read_reply(writebuf, reply, backend)) == NULL)
     {
         return;     // Nothing to route, return
     }

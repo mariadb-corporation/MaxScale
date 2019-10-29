@@ -182,7 +182,7 @@ private:
     void send_unknown_ps_error(uint32_t stmt_id);
     void send_readonly_error();
 
-    GWBUF* handle_causal_read_reply(GWBUF* writebuf, mxs::RWBackend* backend);
+    GWBUF* handle_causal_read_reply(GWBUF* writebuf, const mxs::Reply& reply, mxs::RWBackend* backend);
     bool   finish_causal_read();
     GWBUF* add_prefix_wait_gtid(uint64_t version, GWBUF* origin);
     void   correct_packet_sequence(GWBUF* buffer);

@@ -464,10 +464,6 @@ static int test1()
     mxb_assert_message(size == buflen, "Incorrect buffer size");
     mxb_assert_message(0 == GWBUF_EMPTY(buffer), "Buffer should not be empty");
     mxb_assert_message(GWBUF_IS_TYPE_UNDEFINED(buffer), "Buffer type should be undefined");
-    fprintf(stderr, "\t..done\nSet a property for the buffer");
-    gwbuf_add_property(buffer, (char*)"name", (char*)"value");
-    mxb_assert_message(0 == strcmp("value", gwbuf_get_property(buffer, (char*)"name")),
-                       "Should now have correct property");
     strcpy((char*)GWBUF_DATA(buffer), "The quick brown fox jumps over the lazy dog");
     fprintf(stderr, "\t..done\nLoad some data into the buffer");
     mxb_assert_message('q' == GWBUF_DATA_CHAR(buffer, 4), "Fourth character of buffer must be 'q'");
