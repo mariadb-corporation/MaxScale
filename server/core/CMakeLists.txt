@@ -74,6 +74,7 @@ target_link_libraries(maxscale-common
   stdc++
   ${MICROHTTPD_LIBRARIES}
   ${GNUTLS_LIBRARIES}
+  atomic
 )
 
 if(WITH_ASAN AND ASAN_FOUND)
