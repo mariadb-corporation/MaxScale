@@ -1,9 +1,9 @@
 include(ExternalProject)
 
 ExternalProject_Add(maxscale_sqlite
-  SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sqlite-src-3110100
+  SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sqlite-src-3110100.old
   BINARY_DIR ${CMAKE_BINARY_DIR}/sqlite-bld-3110100
-  CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/sqlite-src-3110100/configure --with-pic --enable-maxscale
+  CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/sqlite-src-3110100.old/configure --with-pic --enable-maxscale
   BUILD_COMMAND make sqlite3.c
   INSTALL_COMMAND "")
 
@@ -17,7 +17,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-error=array-bounds")
 add_library(qc_sqlite SHARED qc_sqlite.cc qc_sqlite3.c builtin_functions.c)
 add_dependencies(qc_sqlite maxscale_sqlite)
 # If you feel a need to add something here, check also the handling of 'enable_maxscale'
-# in sqlite-src-3110100/configure.
+# in sqlite-src-3110100.old/configure.
 # In configure we have defined SQLITE_OMIT_VIRTUALTABLE, but it cannot be defined here,
 # although conceptually is should, as one needed static function in case will be missing.
 add_definitions(-DMAXSCALE -DSQLITE_THREADSAFE=0 -DSQLITE_ENABLE_UPDATE_DELETE_LIMIT -DSQLITE_OMIT_ATTACH -DSQLITE_OMIT_REINDEX -DSQLITE_OMIT_AUTOVACUUM -DSQLITE_OMIT_PRAGMA -DSQLITE_DEFAULT_MEMSTATUS=0)
