@@ -58,7 +58,23 @@ class MXS_SESSION;
 namespace maxscale
 {
 
-class AuthenticatorModule;
+class AuthenticatorModuleBase
+{
+public:
+    /**
+     * Get name of supported protocol module.
+     *
+     * @return Supported protocol
+     */
+    virtual std::string supported_protocol() const = 0;
+
+    /**
+     * Get the module name.
+     *
+     * @return Module name
+     */
+    virtual std::string name() const = 0;
+};
 
 /**
  * This struct contains the authenticator entrypoint in a shared library.
@@ -71,7 +87,7 @@ struct AUTHENTICATOR_API
      * @param options Authenticator options
      * @return Authenticator object, or null on error
      */
-    mxs::AuthenticatorModule* (* initialize)(char** options);
+    mxs::AuthenticatorModuleBase* (* initialize)(char** options);
 };
 
 }
@@ -100,6 +116,6 @@ enum mxs_auth_state_t
 
 namespace maxscale
 {
-std::unique_ptr<mxs::AuthenticatorModule> authenticator_init(const char* authenticator, const char* options);
+std::unique_ptr<mxs::AuthenticatorModuleBase> authenticator_init(const char* authenticator, const char* options);
 const char* to_string(mxs_auth_state_t state);
 }

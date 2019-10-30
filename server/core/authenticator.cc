@@ -37,9 +37,9 @@ namespace maxscale
  * @param options Authenticator options
  * @return Authenticator instance or NULL on error
  */
-std::unique_ptr<AuthenticatorModule> authenticator_init(const char* authenticator, const char* options)
+std::unique_ptr<AuthenticatorModuleBase> authenticator_init(const char* authenticator, const char* options)
 {
-    std::unique_ptr<AuthenticatorModule> rval;
+    std::unique_ptr<AuthenticatorModuleBase> rval;
     auto func = (mxs::AUTHENTICATOR_API*)load_module(authenticator, MODULE_AUTHENTICATOR);
 
     // Client authenticator modules must have an init-entrypoint.

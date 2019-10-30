@@ -24,7 +24,7 @@ class BackendAuthenticator;
 /**
  * The base class of all authenticators. Contains the global data for an authenticator module instance.
  */
-class AuthenticatorModule
+class AuthenticatorModule : public AuthenticatorModuleBase
 {
 public:
     AuthenticatorModule(const AuthenticatorModule&) = delete;
@@ -77,20 +77,6 @@ public:
      * @return Capabilities as a bitfield
      */
     virtual uint64_t capabilities() const;
-
-    /**
-     * Get name of supported protocol module.
-     *
-     * @return Supported protocol
-     */
-    virtual std::string supported_protocol() const = 0;
-
-    /**
-     * Get the module name.
-     *
-     * @return Module name
-     */
-    virtual std::string name() const = 0;
 };
 
 /**
@@ -199,9 +185,9 @@ public:
     AuthenticatorApiGenerator(const AuthenticatorApiGenerator&) = delete;
     AuthenticatorApiGenerator& operator=(const AuthenticatorApiGenerator&) = delete;
 
-    static AuthenticatorModule* createInstance(char** options)
+    static AuthenticatorModuleBase* createInstance(char** options)
     {
-        AuthenticatorModule* instance = nullptr;
+        AuthenticatorModuleBase* instance = nullptr;
         MXS_EXCEPTION_GUARD(instance = AuthenticatorImplementation::create(options));
         return instance;
     }

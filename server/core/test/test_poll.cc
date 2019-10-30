@@ -19,15 +19,11 @@
 #undef NDEBUG
 #endif
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <errno.h>
-#include <maxscale/authenticator2.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/service.hh>
-#include <maxscale/protocol/mariadb/mysql.hh>
-#include <maxscale/protocol/mariadb/protocol_classes.hh>
+#include "../../modules/protocol/MariaDB/protocol_module.hh"
 
 #include "test_utils.hh"
 #include "../internal/service.hh"
