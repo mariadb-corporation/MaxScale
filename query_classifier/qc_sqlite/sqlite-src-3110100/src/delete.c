@@ -106,8 +106,13 @@ void sqlite3MaterializeView(
     assert( pFrom->a[0].pOn==0 );
     assert( pFrom->a[0].pUsing==0 );
   }
+#ifdef MAXSCALE
+  pSel = sqlite3SelectNew(pParse, 0, pFrom, pWhere, 0, 0, 0,
+                          SF_IncludeHidden, 0, 0, 0);
+#else
   pSel = sqlite3SelectNew(pParse, 0, pFrom, pWhere, 0, 0, 0, 
                           SF_IncludeHidden, 0, 0);
+#endif
   sqlite3SelectDestInit(&dest, SRT_EphemTab, iCur);
   sqlite3Select(pParse, pSel, &dest);
   sqlite3SelectDelete(db, pSel);
@@ -178,8 +183,13 @@ Expr *sqlite3LimitWhere(
   }
 
   /* generate the SELECT expression tree. */
+#ifdef MAXSCALE
+  pSelect = sqlite3SelectNew(pParse,pEList,pSelectSrc,pWhere,0,0,
+                             pOrderBy,0,pLimit,pOffset,0);
+#else
   pSelect = sqlite3SelectNew(pParse,pEList,pSelectSrc,pWhere,0,0,
                              pOrderBy,0,pLimit,pOffset);
+#endif
   if( pSelect == 0 ) return 0;
 
   /* now generate the new WHERE rowid IN clause for the DELETE/UDPATE */

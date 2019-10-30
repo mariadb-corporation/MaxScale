@@ -60,7 +60,11 @@ static const unsigned char aiClass[] = {
 /*         x0  x1  x2  x3  x4  x5  x6  x7  x8  x9  xa  xb  xc  xd  xe  xf */
 /* 0x */   27, 27, 27, 27, 27, 27, 27, 27, 27,  7,  7, 27,  7,  7, 27, 27,
 /* 1x */   27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27,
+#ifdef MAXSCALE
+/* 2x */    7, 15,  8,  5,  2, 22, 24,  8, 17, 18, 21, 20, 23, 11, 26, 16,
+#else
 /* 2x */    7, 15,  8,  5,  4, 22, 24,  8, 17, 18, 21, 20, 23, 11, 26, 16,
+#endif
 /* 3x */    3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  5, 19, 12, 14, 13,  6,
 /* 4x */    5,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
 /* 5x */    1,  1,  1,  1,  1,  1,  1,  1,  0,  1,  1,  9, 27, 27, 27,  1,
@@ -193,7 +197,12 @@ int sqlite3IsIdChar(u8 c){ return IdChar(c); }
 ** Return the length (in bytes) of the token that begins at z[0]. 
 ** Store the token type in *tokenType before returning.
 */
+#ifdef MAXSCALE
+extern int maxscaleComment();
+int sqlite3GetToken(Parse* pParse, const unsigned char *z, int *tokenType){
+#else
 int sqlite3GetToken(const unsigned char *z, int *tokenType){
+#endif
   int i, c;
   switch( aiClass[*z] ){  /* Switch on the character-class of the first byte
                           ** of the token. See the comment on the CC_ defines
@@ -210,6 +219,9 @@ int sqlite3GetToken(const unsigned char *z, int *tokenType){
     }
     case CC_MINUS: {
       if( z[1]=='-' ){
+#ifdef MAXSCALE
+        maxscaleComment();
+#endif
         for(i=2; (c=z[i])!=0 && c!='\n'; i++){}
         *tokenType = TK_SPACE;   /* IMP: R-22934-25134 */
         return i;
@@ -242,8 +254,39 @@ int sqlite3GetToken(const unsigned char *z, int *tokenType){
         *tokenType = TK_SLASH;
         return 1;
       }
+#ifdef MAXSCALE
+      if ( z[2]=='!' || (z[2]=='M' && z[3]=='!')){
+        int j = (z[2]=='M' ? 4 : 3);
+        // MySQL-specific code
+        for (i=j, c=z[j-1]; (c!='*' || z[i]!='/') && (c=z[i])!=0; i++){}
+        if (c=='*' && z[i]=='/'){
+          if (sqlite3Isdigit(z[j])) {
+            // A version specific executable comment,
+            // e.g. "/*!99999 ..." or "/*M!99999 ..." => never parsed.
+            extern void maxscaleSetStatusCap(int);
+            maxscaleSetStatusCap(2); // QC_QUERY_PARTIALLY_PARSED, see query_classifier.h:qc_parse_result
+            ++i; // Next after the trailing '/'
+          }
+          else {
+            // A non-version specific executable comment,
+            // e.g."/*! select 1 */ or "/*M! select 1 */ => always parsed.
+            char* znc = (char*) z;
+            znc[0]=znc[1]=znc[2]=znc[i-1]=znc[i]=' '; // Remove comment chars, i.e. "/*!" and "*/".
+            if (j==4){
+              znc[3]=0; // It wasn't "/*!" but "/*M!".
+            }
+            for (i=j; sqlite3Isspace(z[i]); ++i){} // Jump over any space.
+          }
+        }
+      } else {
+        for(i=3, c=z[2]; (c!='*' || z[i]!='/') && (c=z[i])!=0; i++){}
+
+        if( c ) i++;
+      }
+#else
       for(i=3, c=z[2]; (c!='*' || z[i]!='/') && (c=z[i])!=0; i++){}
       if( c ) i++;
+#endif
       *tokenType = TK_SPACE;   /* IMP: R-22934-25134 */
       return i;
     }
@@ -257,6 +300,13 @@ int sqlite3GetToken(const unsigned char *z, int *tokenType){
     }
     case CC_LT: {
       if( (c=z[1])=='=' ){
+#ifdef MAXSCALE
+        if ( z[2]=='>' ){
+          // "<=>"
+          *tokenType = TK_EQ;
+          return 3;
+        }
+#endif
         *tokenType = TK_LE;
         return 2;
       }else if( c=='>' ){
@@ -324,9 +374,19 @@ int sqlite3GetToken(const unsigned char *z, int *tokenType){
           }else{
             break;
           }
+#ifdef MAXSCALE
+        }else if (c == '\\' ){
+          if ( z[i+1] ){
+            i++;
+          }
+#endif
         }
       }
+#ifdef MAXSCALE
+      if( c=='\'' || c=='"' ){
+#else
       if( c=='\'' ){
+#endif
         *tokenType = TK_STRING;
         return i+1;
       }else if( c!=0 ){
@@ -345,6 +405,23 @@ int sqlite3GetToken(const unsigned char *z, int *tokenType){
         *tokenType = TK_DOT;
         return 1;
       }
+#ifdef MAXSCALE
+      /* Next char is a digit, we need to sniff further to find out whether it
+      ** is an identifer that starts with a digit.
+      */
+      int j=1;
+      int nondigitChars=0;
+      while ( IdChar(z[j]) ){
+        if ( !sqlite3Isdigit(z[j++]) ){
+          ++nondigitChars;
+        }
+      }
+      if ( nondigitChars ){
+        // At least one char that is not a digit => an id (and not a float) coming.
+        *tokenType = TK_DOT;
+        return 1;
+      }
+#endif
       /* If the next character is a digit, this is a floating point
       ** number that begins with ".".  Fall thru into the next case */
     }
@@ -378,7 +455,11 @@ int sqlite3GetToken(const unsigned char *z, int *tokenType){
       }
 #endif
       while( IdChar(z[i]) ){
+#ifdef MAXSCALE
+        *tokenType = TK_ID;
+#else
         *tokenType = TK_ILLEGAL;
+#endif
         i++;
       }
       return i;
@@ -398,9 +479,30 @@ int sqlite3GetToken(const unsigned char *z, int *tokenType){
       int n = 0;
       testcase( z[0]=='$' );  testcase( z[0]=='@' );
       testcase( z[0]==':' );  testcase( z[0]=='#' );
+#ifdef MAXSCALE
+      if (z[0]=='#') {
+        if (maxscaleComment()) {
+          for(i=1; (c=z[i])!=0 && c!='\n'; i++){}
+          *tokenType = TK_SPACE;
+          return i;
+        }
+      }
+      if (z[0]==':' && z[1]=='=') {
+        *tokenType = TK_EQ;
+        return 2;
+      }
+#endif
       *tokenType = TK_VARIABLE;
       for(i=1; (c=z[i])!=0; i++){
+#ifdef MAXSCALE
+          if ( (i == 1) && (z[0] == '@') && (c == '@') ) {
+          // If the first char is '@' then if the second char is a '@'
+          // it is a system variable (@@xyz).
+          continue;
+        }else if( IdChar(c) ){
+#else
         if( IdChar(c) ){
+#endif
           n++;
 #ifndef SQLITE_OMIT_TCL_VARIABLE
         }else if( c=='(' && n>0 ){
@@ -416,6 +518,20 @@ int sqlite3GetToken(const unsigned char *z, int *tokenType){
         }else if( c==':' && z[i+1]==':' ){
           i++;
 #endif
+#ifdef MAXSCALE
+        }else if ( c=='\'' || c=='"' || c=='`' ){
+          int q=c;
+          ++i;
+          while ( IdChar(z[i]) ) {
+            ++i;
+            ++n;
+          }
+          if ( z[i]==q )
+          {
+            ++i;
+            break;
+          }
+#endif
         }else{
           break;
         }
@@ -424,6 +540,23 @@ int sqlite3GetToken(const unsigned char *z, int *tokenType){
       return i;
     }
     case CC_KYWD: {
+#ifdef MAXSCALE
+      // This is for bit fields, e.g. b'10110111'.
+      if ( z[0]=='b' || z[0]=='B' ) {
+        if ( z[1]=='\'' ){
+          // We return it as an integer. We are not interested in the value
+          *tokenType = TK_INTEGER;
+          for(i=2; (z[i]=='0'||z[i]=='1'); i++){}
+          if ( z[i]!='\'' ){
+            *tokenType = TK_ILLEGAL;
+            while ( z[i] && z[i]!='\'' ){ i++; }
+          }
+          if ( z[i] ) i++;
+          return i;
+        }
+      }
+      /* Not a bit field. It may be a keyword so we flow through */
+#endif
       for(i=1; aiClass[z[i]]<=CC_KYWD; i++){}
       if( IdChar(z[i]) ){
         /* This token started out using characters that can appear in keywords,
@@ -433,7 +566,49 @@ int sqlite3GetToken(const unsigned char *z, int *tokenType){
         break;
       }
       *tokenType = TK_ID;
+#ifdef MAXSCALE
+      i = keywordCode((char*)z, i, tokenType);
+      if (*tokenType != TK_ID)
+      {
+        if (pParse) {
+          if (z != (const unsigned char *)pParse->zTail) {
+            const char *p = (const char*)z - 1;
+            while ((p != pParse->zTail) && sqlite3Isspace(*p)) {
+              --p;
+            }
+
+            if (*p == '.') {
+              /* If the last character before the keyword is '.' then
+              ** we assume this token is the second part of a qualified
+              ** name, e.g. "tbl1.index" in which case we return the
+              ** keyword as an id.
+              */
+              *tokenType = TK_ID;
+            }
+          }
+        }
+
+        if (*tokenType != TK_ID) {
+          extern int maxscaleKeyword(int);
+          extern int maxscaleTranslateKeyword(int);
+
+          *tokenType = maxscaleTranslateKeyword(*tokenType);
+
+          if (*tokenType != TK_ID) {
+            if (maxscaleKeyword(*tokenType) != 0)
+            {
+              /* Consume the entire string. */
+              while ( z[i] ) {
+                ++i;
+              }
+            }
+          }
+        }
+      }
+      return i;
+#else
       return keywordCode((char*)z, i, tokenType);
+#endif
     }
 #ifndef SQLITE_OMIT_BLOB_LITERAL
     case CC_X: {
@@ -450,6 +625,22 @@ int sqlite3GetToken(const unsigned char *z, int *tokenType){
       }
       /* If it is not a BLOB literal, then it must be an ID, since no
       ** SQL keywords start with the letter 'x'.  Fall through */
+    }
+#endif
+#ifdef MAXSCALE
+    // It may be the "XA" keyword.
+    // If the next character is 'a' or 'A', followed by whitespace or a
+    // comment, then we are indeed dealing with the "XA" keyword.
+    if (( z[1]=='a' || z[1]=='A' ) &&
+        (sqlite3Isspace(z[2]) ||                              // Whitespace
+         (z[2]=='/' && z[3]=='*') ||                          // Beginning of /* comment
+         (z[2]=='#') ||                                       // # eol comment
+         (z[2]=='-' && z[3]=='-' && sqlite3Isspace(z[4])))) { // --  eol comment
+      extern int maxscaleKeyword(int);
+
+      *tokenType = TK_XA;
+      maxscaleKeyword(*tokenType);
+      return 2;
     }
 #endif
     case CC_ID: {
@@ -505,7 +696,11 @@ int sqlite3RunParser(Parse *pParse, const char *zSql, char **pzErrMsg){
   while( zSql[i]!=0 ){
     assert( i>=0 );
     pParse->sLastToken.z = &zSql[i];
+#ifdef MAXSCALE
+    pParse->sLastToken.n = sqlite3GetToken(pParse,(unsigned char*)&zSql[i],&tokenType);
+#else
     pParse->sLastToken.n = sqlite3GetToken((unsigned char*)&zSql[i],&tokenType);
+#endif
     i += pParse->sLastToken.n;
     if( i>mxSqlLen ){
       pParse->rc = SQLITE_TOOBIG;

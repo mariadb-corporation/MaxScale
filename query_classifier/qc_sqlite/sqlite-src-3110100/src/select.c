@@ -75,6 +75,9 @@ static void clearSelect(sqlite3 *db, Select *p, int bFree){
     sqlite3ExprDelete(db, p->pLimit);
     sqlite3ExprDelete(db, p->pOffset);
     sqlite3WithDelete(db, p->pWith);
+#ifdef MAXSCALE
+    sqlite3ExprListDelete(db, p->pInto);
+#endif
     if( bFree ) sqlite3DbFree(db, p);
     p = pPrior;
     bFree = 1;
@@ -108,6 +111,10 @@ Select *sqlite3SelectNew(
   u16 selFlags,         /* Flag parameters, such as SF_Distinct */
   Expr *pLimit,         /* LIMIT value.  NULL means not used */
   Expr *pOffset         /* OFFSET value.  NULL means no offset */
+#ifdef MAXSCALE
+  ,
+  ExprList *pInto       /* the INTO clause */
+#endif
 ){
   Select *pNew;
   Select standin;
@@ -118,7 +125,9 @@ Select *sqlite3SelectNew(
     pNew = &standin;
   }
   if( pEList==0 ){
+#ifndef MAXSCALE
     pEList = sqlite3ExprListAppend(pParse, 0, sqlite3Expr(db,TK_ASTERISK,0));
+#endif
   }
   pNew->pEList = pEList;
   pNew->op = TK_SELECT;
@@ -142,6 +151,9 @@ Select *sqlite3SelectNew(
   pNew->pLimit = pLimit;
   pNew->pOffset = pOffset;
   pNew->pWith = 0;
+#ifdef MAXSCALE
+  pNew->pInto = pInto;
+#endif
   assert( pOffset==0 || pLimit!=0 || pParse->nErr>0 || db->mallocFailed!=0 );
   if( db->mallocFailed ) {
     clearSelect(db, pNew, pNew!=&standin);
@@ -247,8 +259,10 @@ int sqlite3JoinType(Parse *pParse, Token *pA, Token *pB, Token *pC){
     jointype = JT_INNER;
   }else if( (jointype & JT_OUTER)!=0 
          && (jointype & (JT_LEFT|JT_RIGHT))!=JT_LEFT ){
+#ifndef MAXSCALE
     sqlite3ErrorMsg(pParse, 
       "RIGHT and FULL OUTER JOINs are not currently supported");
+#endif
     jointype = JT_INNER;
   }
   return jointype;

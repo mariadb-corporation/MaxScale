@@ -2517,6 +2517,9 @@ struct Select {
   Expr *pLimit;          /* LIMIT expression. NULL means not used. */
   Expr *pOffset;         /* OFFSET expression. NULL means not used. */
   With *pWith;           /* WITH clause attached to this select. Or NULL. */
+#ifdef MAXSCALE
+  ExprList* pInto;       /* The INTO clause */
+#endif
 };
 
 /*
@@ -3358,6 +3361,9 @@ Expr *sqlite3ExprFunction(Parse*,ExprList*, Token*);
 void sqlite3ExprAssignVarNumber(Parse*, Expr*);
 void sqlite3ExprDelete(sqlite3*, Expr*);
 ExprList *sqlite3ExprListAppend(Parse*,ExprList*,Expr*);
+#ifdef MAXSCALE
+ExprList *sqlite3ExprListAppendList(Parse*,ExprList*,ExprList*);
+#endif
 void sqlite3ExprListSetSortOrder(ExprList*,int);
 void sqlite3ExprListSetName(Parse*,ExprList*,Token*,int);
 void sqlite3ExprListSetSpan(Parse*,ExprList*,ExprSpan*);
@@ -3445,6 +3451,9 @@ IdList *sqlite3IdListAppend(sqlite3*, IdList*, Token*);
 int sqlite3IdListIndex(IdList*,const char*);
 SrcList *sqlite3SrcListEnlarge(sqlite3*, SrcList*, int, int);
 SrcList *sqlite3SrcListAppend(sqlite3*, SrcList*, Token*, Token*);
+#ifdef MAXSCALE
+SrcList* sqlite3SrcListCat(sqlite3*, SrcList*, SrcList*);
+#endif
 SrcList *sqlite3SrcListAppendFromTerm(Parse*, SrcList*, Token*, Token*,
                                       Token*, Select*, Expr*, IdList*);
 void sqlite3SrcListIndexedBy(Parse *, SrcList *, Token *);
@@ -3459,8 +3468,13 @@ Index *sqlite3CreateIndex(Parse*,Token*,Token*,SrcList*,ExprList*,int,Token*,
                           Expr*, int, int);
 void sqlite3DropIndex(Parse*, SrcList*, int);
 int sqlite3Select(Parse*, Select*, SelectDest*);
+#ifdef MAXSCALE
+Select *sqlite3SelectNew(Parse*,ExprList*,SrcList*,Expr*,ExprList*,
+                         Expr*,ExprList*,u16,Expr*,Expr*,ExprList*);
+#else
 Select *sqlite3SelectNew(Parse*,ExprList*,SrcList*,Expr*,ExprList*,
                          Expr*,ExprList*,u16,Expr*,Expr*);
+#endif
 void sqlite3SelectDelete(sqlite3*, Select*);
 Table *sqlite3SrcListLookup(Parse*, SrcList*);
 int sqlite3IsReadOnly(Parse*, Table*, int);
@@ -3746,7 +3760,11 @@ void sqlite3RootPageMoved(sqlite3*, int, int, int);
 void sqlite3Reindex(Parse*, Token*, Token*);
 void sqlite3AlterFunctions(void);
 void sqlite3AlterRenameTable(Parse*, SrcList*, Token*);
+#ifdef MAXSCALE
+int sqlite3GetToken(Parse*, const unsigned char *, int *);
+#else
 int sqlite3GetToken(const unsigned char *, int *);
+#endif
 void sqlite3NestedParse(Parse*, const char*, ...);
 void sqlite3ExpirePreparedStatements(sqlite3*);
 int sqlite3CodeSubselect(Parse *, Expr *, int, int);
@@ -4071,5 +4089,79 @@ int sqlite3ThreadJoin(SQLiteThread*, void**);
 #if defined(SQLITE_ENABLE_DBSTAT_VTAB) || defined(SQLITE_TEST)
 int sqlite3DbstatRegister(sqlite3*);
 #endif
+
+#ifdef MAXSCALE
+
+typedef enum mxs_drop
+{
+    MXS_DROP_DATABASE,
+    MXS_DROP_FUNCTION,
+    MXS_DROP_SEQUENCE,
+} mxs_drop_t;
+
+typedef enum mxs_set
+{
+    MXS_SET_VARIABLES,
+    MXS_SET_TRANSACTION
+} mxs_set_t;
+
+typedef enum mxs_show
+{
+    MXS_SHOW_COLUMNS,
+    MXS_SHOW_CREATE_SEQUENCE,
+    MXS_SHOW_CREATE_TABLE,
+    MXS_SHOW_CREATE_VIEW,
+    MXS_SHOW_DATABASES,
+    MXS_SHOW_INDEX,
+    MXS_SHOW_INDEXES,
+    MXS_SHOW_KEYS,
+    MXS_SHOW_STATUS,
+    MXS_SHOW_TABLE_STATUS,
+    MXS_SHOW_TABLES,
+    MXS_SHOW_VARIABLES,
+    MXS_SHOW_WARNINGS,
+} mxs_show_t;
+
+enum mxs_show_data
+{
+    MXS_SHOW_COLUMNS_FULL = 1,
+
+    // NOTE: The following are used both in MXS_SHOW_VARIABLES and MXS_SHOW_STATUS
+    MXS_SHOW_VARIABLES_GLOBAL,
+    MXS_SHOW_VARIABLES_SESSION,
+    MXS_SHOW_VARIABLES_UNSPECIFIED,
+    MXS_SHOW_STATUS_MASTER,
+    MXS_SHOW_STATUS_SLAVE,
+    MXS_SHOW_STATUS_ALL_SLAVES,
+};
+
+typedef struct MxsShow
+{
+    mxs_show_t what;
+    u32 data;
+    Token* pName;
+    Token* pDatabase;
+} MxsShow;
+
+typedef enum mxs_alter
+{
+    MXS_ALTER_DISABLE_KEYS,
+    MXS_ALTER_ENABLE_KEYS,
+    MXS_ALTER_RENAME,
+} mxs_alter_t;
+
+typedef enum mxs_lock
+{
+    MXS_LOCK_LOCK,
+    MXS_LOCK_UNLOCK,
+} mxs_lock_t;
+
+typedef enum mxs_handler
+{
+    MXS_HANDLER_OPEN,
+    MXS_HANDLER_CLOSE
+} mxs_handler_t;
+
+#endif /* MAXSCALE */
 
 #endif /* _SQLITEINT_H_ */

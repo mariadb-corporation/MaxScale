@@ -72,7 +72,11 @@ static void renameTableFunc(
       */
       do {
         zCsr += len;
+#ifdef MAXSCALE
+        len = sqlite3GetToken(0, zCsr, &token);
+#else
         len = sqlite3GetToken(zCsr, &token);
+#endif
       } while( token==TK_SPACE );
       assert( len>0 );
     } while( token!=TK_LP && token!=TK_USING );
@@ -118,12 +122,20 @@ static void renameParentFunc(
   UNUSED_PARAMETER(NotUsed);
   if( zInput==0 || zOld==0 ) return;
   for(z=zInput; *z; z=z+n){
+#ifdef MAXSCALE
+      n = sqlite3GetToken(0, z, &token);
+#else
     n = sqlite3GetToken(z, &token);
+#endif
     if( token==TK_REFERENCES ){
       char *zParent;
       do {
         z += n;
+#ifdef MAXSCALE
+        n = sqlite3GetToken(0, z, &token);
+#else
         n = sqlite3GetToken(z, &token);
+#endif
       }while( token==TK_SPACE );
 
       if( token==TK_ILLEGAL ) break;
@@ -196,7 +208,11 @@ static void renameTriggerFunc(
       */
       do {
         zCsr += len;
+#ifdef MAXSCALE
+        len = sqlite3GetToken(0, zCsr, &token);
+#else
         len = sqlite3GetToken(zCsr, &token);
+#endif
       }while( token==TK_SPACE );
       assert( len>0 );
 

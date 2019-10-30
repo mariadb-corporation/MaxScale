@@ -3728,6 +3728,43 @@ SrcList *sqlite3SrcListAppend(
   return pList;
 }
 
+#ifdef MAXSCALE
+/*
+** Catenate the items of one SrcList object to the end of another
+** SrcList object.
+**
+** If either of the provided lists is NULL, then the other list
+** is returned as such. If both are NULL, then NULL is returned.
+** If the operation is performed successfully, then the returned
+** list will contain the items of both lists. In that case, pTail
+** has been deleted.
+**
+** If a memory allocation fails, both lists are unchanged. The
+** db->mallocFailed flag will be set to true.
+*/
+SrcList* sqlite3SrcListCat(sqlite3 *db, SrcList *pHead, SrcList *pTail)
+{
+  SrcList *pNew;
+  if ( pTail==0 ){
+    return pHead;
+  }
+  if ( pHead==0 ){
+    return pTail;
+  }
+  pNew = sqlite3SrcListEnlarge(db, pHead, pTail->nSrc, pHead->nSrc);
+  if (!db->mallocFailed){
+    int i;
+    for(i=0; i<pTail->nSrc; i++){
+      pNew->a[pNew->nSrc - 1 + i] = pTail->a[i];
+      memset(&pTail->a[i], 0, sizeof(pTail->a[0]));
+    }
+    pTail->nSrc = 0;
+    sqlite3SrcListDelete(db, pTail);
+  }
+  return pNew;
+}
+#endif
+
 /*
 ** Assign VdbeCursor index numbers to all tables in a SrcList
 */

@@ -616,6 +616,15 @@ if test "${enable_rtree}" = "yes" ; then
 fi
 
 #########
+# See whether we should enable MaxScale
+AC_ARG_ENABLE(maxscale, AC_HELP_STRING([--enable-maxscale],
+      [Enable MaxScale extensions]),
+      [enable_maxscale=yes],[enable_maxscale=no])
+if test "${enable_maxscale}" = "yes" ; then
+  OPT_FEATURE_FLAGS+=" -DMAXSCALE -DSQLITE_ENABLE_UPDATE_DELETE_LIMIT -DSQLITE_OMIT_ATTACH -DSQLITE_OMIT_REINDEX -DSQLITE_OMIT_AUTOVACUUM -DSQLITE_OMIT_PRAGMA"
+fi
+
+#########
 # attempt to duplicate any OMITS and ENABLES into the $(OPT_FEATURE_FLAGS) parameter
 for option in $CFLAGS $CPPFLAGS
 do

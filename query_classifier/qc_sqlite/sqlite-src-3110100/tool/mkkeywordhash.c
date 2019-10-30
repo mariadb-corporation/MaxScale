@@ -148,97 +148,265 @@ struct Keyword {
 ** These are the keywords
 */
 static Keyword aKeywordTable[] = {
+#ifndef MAXSCALE
   { "ABORT",            "TK_ABORT",        CONFLICT|TRIGGER       },
+#endif
   { "ACTION",           "TK_ACTION",       FKEY                   },
   { "ADD",              "TK_ADD",          ALTER                  },
   { "AFTER",            "TK_AFTER",        TRIGGER                },
+#ifdef MAXSCALE
+  { "AGAINST",          "TK_AGAINST",      ALWAYS                 },
+#endif
   { "ALL",              "TK_ALL",          ALWAYS                 },
   { "ALTER",            "TK_ALTER",        ALTER                  },
+#ifdef MAXSCALE
+  { "ALGORITHM",        "TK_ALGORITHM",    ANALYZE                },
+#endif
   { "ANALYZE",          "TK_ANALYZE",      ANALYZE                },
   { "AND",              "TK_AND",          ALWAYS                 },
   { "AS",               "TK_AS",           ALWAYS                 },
   { "ASC",              "TK_ASC",          ALWAYS                 },
   { "ATTACH",           "TK_ATTACH",       ATTACH                 },
   { "AUTOINCREMENT",    "TK_AUTOINCR",     AUTOINCR               },
+#ifdef MAXSCALE
+  { "AUTO_INCREMENT",   "TK_AUTOINCR",     AUTOINCR               },
+#endif
   { "BEFORE",           "TK_BEFORE",       TRIGGER                },
   { "BEGIN",            "TK_BEGIN",        ALWAYS                 },
   { "BETWEEN",          "TK_BETWEEN",      ALWAYS                 },
+#ifdef MAXSCALE
+  { "BINARY",           "TK_BINARY",       ALWAYS                 },
+#endif
   { "BY",               "TK_BY",           ALWAYS                 },
+#ifdef MAXSCALE
+  { "CALL",             "TK_CALL",         ALWAYS                 },
+#endif
   { "CASCADE",          "TK_CASCADE",      FKEY                   },
   { "CASE",             "TK_CASE",         ALWAYS                 },
   { "CAST",             "TK_CAST",         CAST                   },
+#ifdef MAXSCALE
+  { "CHARACTER",        "TK_CHARACTER",    ALWAYS                 },
+  { "CHARSET",          "TK_CHARSET",      ALWAYS                 },
+#endif
   { "CHECK",            "TK_CHECK",        ALWAYS                 },
+#ifdef MAXSCALE
+  { "CLOSE",            "TK_CLOSE",        ALWAYS                 },
+#endif
   { "COLLATE",          "TK_COLLATE",      ALWAYS                 },
   { "COLUMN",           "TK_COLUMNKW",     ALTER                  },
+#ifdef MAXSCALE
+  { "COLUMNS",          "TK_COLUMNS",      ALWAYS                 },
+  { "COMMENT",          "TK_COMMENT",      ALWAYS                 },
+#endif
   { "COMMIT",           "TK_COMMIT",       ALWAYS                 },
+#ifndef MAXSCALE
   { "CONFLICT",         "TK_CONFLICT",     CONFLICT               },
+#endif
+#ifdef MAXSCALE
+  { "CONNECTION",       "TK_CONNECTION",   ALWAYS                 },
+  { "CONCURRENT",       "TK_CONCURRENT",   ALWAYS                 },
+#endif
   { "CONSTRAINT",       "TK_CONSTRAINT",   ALWAYS                 },
   { "CREATE",           "TK_CREATE",       ALWAYS                 },
   { "CROSS",            "TK_JOIN_KW",      ALWAYS                 },
+#ifdef MAXSCALE
+  { "CURRENT",          "TK_CURRENT",      ALWAYS                 },
+#endif
   { "CURRENT_DATE",     "TK_CTIME_KW",     ALWAYS                 },
   { "CURRENT_TIME",     "TK_CTIME_KW",     ALWAYS                 },
   { "CURRENT_TIMESTAMP","TK_CTIME_KW",     ALWAYS                 },
+#ifdef MAXSCALE
+  { "DATA",             "TK_DATA",         ALWAYS                 },
+  { "DATABASE",         "TK_DATABASE",     ALWAYS                 },
+#else
   { "DATABASE",         "TK_DATABASE",     ATTACH                 },
+#endif
+#ifdef MAXSCALE
+  { "DATABASES",        "TK_DATABASES_KW", ALWAYS                 },
+  { "DEALLOCATE",       "TK_DEALLOCATE",   ALWAYS                 },
+  { "DECLARE",          "TK_DECLARE",      ALWAYS                 },
+#endif
   { "DEFAULT",          "TK_DEFAULT",      ALWAYS                 },
   { "DEFERRED",         "TK_DEFERRED",     ALWAYS                 },
   { "DEFERRABLE",       "TK_DEFERRABLE",   FKEY                   },
+#ifdef MAXSCALE
+  { "DELAYED",          "TK_DELAYED",      ALWAYS                 },
+#endif
   { "DELETE",           "TK_DELETE",       ALWAYS                 },
   { "DESC",             "TK_DESC",         ALWAYS                 },
+#ifdef MAXSCALE
+  { "DESCRIBE",         "TK_EXPLAIN" ,     ALWAYS                 },
+#endif
   { "DETACH",           "TK_DETACH",       ATTACH                 },
   { "DISTINCT",         "TK_DISTINCT",     ALWAYS                 },
+#ifdef MAXSCALE
+  { "DISTINCTROW",      "TK_DISTINCT",     ALWAYS                 },
+  { "DO",               "TK_DO",           ALWAYS                 },
+#endif
   { "DROP",             "TK_DROP",         ALWAYS                 },
+#ifdef MAXSCALE
+  { "DUMPFILE",         "TK_DUMPFILE",     ALWAYS                 },
+#endif
   { "END",              "TK_END",          ALWAYS                 },
   { "EACH",             "TK_EACH",         TRIGGER                },
+#ifdef MAXSCALE
+  { "ENABLE",           "TK_ENABLE",       ALWAYS                 },
+  { "ENGINE",           "TK_ENGINE",       ALWAYS                 },
+  { "ENUM",             "TK_ENUM",         ALWAYS                 },
+#endif
   { "ELSE",             "TK_ELSE",         ALWAYS                 },
   { "ESCAPE",           "TK_ESCAPE",       ALWAYS                 },
   { "EXCEPT",           "TK_EXCEPT",       COMPOUND               },
   { "EXCLUSIVE",        "TK_EXCLUSIVE",    ALWAYS                 },
+#ifdef MAXSCALE
+  { "EXECUTE",          "TK_EXECUTE",      ALWAYS                 },
+  { "EXCLUDE",          "TK_EXCLUDE",      ALWAYS                 },
+  { "EXTENDED",         "TK_EXTENDED",     ALWAYS                 },
+#endif
   { "EXISTS",           "TK_EXISTS",       ALWAYS                 },
   { "EXPLAIN",          "TK_EXPLAIN",      EXPLAIN                },
+#ifndef MAXSCALE
   { "FAIL",             "TK_FAIL",         CONFLICT|TRIGGER       },
+#endif
+#ifdef MAXSCALE
+  { "FIELDS",           "TK_FIELDS",       ALWAYS                 },
+  { "FIRST",            "TK_FIRST",        ALWAYS                 },
+  { "FLUSH",            "TK_FLUSH",        ALWAYS                 },
+  { "FOLLOWING",        "TK_FOLLOWING",    ALWAYS                 },
+#endif
+#ifdef MAXSCALE
+  { "FOR",              "TK_FOR",          ALWAYS                 },
+#else
   { "FOR",              "TK_FOR",          TRIGGER                },
+#endif
+#ifdef MAXSCALE
+  { "FORCE",            "TK_FORCE",        ALWAYS                 },
+#endif
   { "FOREIGN",          "TK_FOREIGN",      FKEY                   },
+#ifdef MAXSCALE
+  { "FORMAT",           "TK_FORMAT",       ALWAYS                 },
+#endif
   { "FROM",             "TK_FROM",         ALWAYS                 },
   { "FULL",             "TK_JOIN_KW",      ALWAYS                 },
+#ifdef MAXSCALE
+  { "FULLTEXT",         "TK_FULLTEXT",     ALWAYS                 },
+  { "FUNCTION",         "TK_FUNCTION_KW",  ALWAYS                 },
+#endif
   { "GLOB",             "TK_LIKE_KW",      ALWAYS                 },
+#ifdef MAXSCALE
+  { "GLOBAL",           "TK_GLOBAL",       ALWAYS                 },
+  { "GRANT",            "TK_GRANT",        ALWAYS                 },
+#endif
   { "GROUP",            "TK_GROUP",        ALWAYS                 },
+#ifdef MAXSCALE
+  { "HANDLER",          "TK_HANDLER",      ALWAYS                 },
+#endif
   { "HAVING",           "TK_HAVING",       ALWAYS                 },
+#ifdef MAXSCALE
+  { "HIGH_PRIORITY",    "TK_HIGH_PRIORITY",ALWAYS                 },
+#endif
   { "IF",               "TK_IF",           ALWAYS                 },
+#ifdef MAXSCALE
+  { "IGNORE",           "TK_IGNORE",       ALWAYS                 },
+#else
   { "IGNORE",           "TK_IGNORE",       CONFLICT|TRIGGER       },
+#endif
   { "IMMEDIATE",        "TK_IMMEDIATE",    ALWAYS                 },
   { "IN",               "TK_IN",           ALWAYS                 },
   { "INDEX",            "TK_INDEX",        ALWAYS                 },
   { "INDEXED",          "TK_INDEXED",      ALWAYS                 },
+#ifdef MAXSCALE
+  { "INDEXES",          "TK_INDEXES",      ALWAYS                 },
+  { "INFILE",           "TK_INFILE",       ALWAYS                 },
+#endif
   { "INITIALLY",        "TK_INITIALLY",    FKEY                   },
   { "INNER",            "TK_JOIN_KW",      ALWAYS                 },
   { "INSERT",           "TK_INSERT",       ALWAYS                 },
   { "INSTEAD",          "TK_INSTEAD",      TRIGGER                },
   { "INTERSECT",        "TK_INTERSECT",    COMPOUND               },
+#ifdef MAXSCALE
+  { "INTERVAL",         "TK_INTERVAL",     ALWAYS                 },
+#endif
   { "INTO",             "TK_INTO",         ALWAYS                 },
   { "IS",               "TK_IS",           ALWAYS                 },
   { "ISNULL",           "TK_ISNULL",       ALWAYS                 },
   { "JOIN",             "TK_JOIN",         ALWAYS                 },
   { "KEY",              "TK_KEY",          ALWAYS                 },
+#ifdef MAXSCALE
+  { "KEYS",             "TK_KEYS",         ALWAYS                 },
+#endif
   { "LEFT",             "TK_JOIN_KW",      ALWAYS                 },
   { "LIKE",             "TK_LIKE_KW",      ALWAYS                 },
   { "LIMIT",            "TK_LIMIT",        ALWAYS                 },
+#ifdef MAXSCALE
+  { "LOAD",             "TK_LOAD",         ALWAYS                 },
+  { "LOCAL",            "TK_LOCAL",        ALWAYS                 },
+  { "LOCK",             "TK_LOCK",         ALWAYS                 },
+  { "LOW_PRIORITY",     "TK_LOW_PRIORITY", ALWAYS                 },
+#endif
   { "MATCH",            "TK_MATCH",        ALWAYS                 },
+#ifdef MAXSCALE
+  { "MASTER",           "TK_MASTER",       ALWAYS                 },
+  { "MERGE",            "TK_MERGE",        ALWAYS                 },
+  { "NAMES",            "TK_NAMES",        ALWAYS                 },
+#endif
   { "NATURAL",          "TK_JOIN_KW",      ALWAYS                 },
+#ifdef MAXSCALE
+  { "NEXT",             "TK_NEXT",         ALWAYS                 },
+#endif
   { "NO",               "TK_NO",           FKEY                   },
   { "NOT",              "TK_NOT",          ALWAYS                 },
   { "NOTNULL",          "TK_NOTNULL",      ALWAYS                 },
+#ifdef MAXSCALE
+  { "NO_WRITE_TO_BINLOG","TK_NO_WRITE_TO_BINLOG",ALWAYS           },
+#endif
   { "NULL",             "TK_NULL",         ALWAYS                 },
   { "OF",               "TK_OF",           ALWAYS                 },
   { "OFFSET",           "TK_OFFSET",       ALWAYS                 },
   { "ON",               "TK_ON",           ALWAYS                 },
+#ifdef MAXSCALE
+  { "OPEN",             "TK_OPEN",         ALWAYS                 },
+#endif
   { "OR",               "TK_OR",           ALWAYS                 },
   { "ORDER",            "TK_ORDER",        ALWAYS                 },
+#ifdef MAXSCALE
+  { "OTHERS",           "TK_OTHERS",       ALWAYS                 },
+#endif
   { "OUTER",            "TK_JOIN_KW",      ALWAYS                 },
+#ifdef MAXSCALE
+  { "OUTFILE",          "TK_OUTFILE",      ALWAYS                 },
+  { "OVER",             "TK_OVER",         ALWAYS                 },
+#endif
+#ifdef MAXSCALE
+  { "PARTITION",        "TK_PARTITION",    ALWAYS                 },
+  { "PARTITIONS",       "TK_PARTITIONS",   ALWAYS                 },
+  { "PASSWORD",         "TK_PASSWORD",     ALWAYS                 },
+  { "PERSISTENT",       "TK_PERSISTENT",   ALWAYS                 },
+#endif
+#ifndef MAXSCALE
   { "PLAN",             "TK_PLAN",         EXPLAIN                },
+#endif
   { "PRAGMA",           "TK_PRAGMA",       PRAGMA                 },
+#ifdef MAXSCALE
+  { "PRECEDING",        "TK_PRECEDING",    ALWAYS                 },
+  { "PREPARE",          "TK_PREPARE",      ALWAYS                 },
+  { "PREVIOUS",         "TK_PREVIOUS",     ALWAYS                 },
+#endif
   { "PRIMARY",          "TK_PRIMARY",      ALWAYS                 },
+#ifdef MAXSCALE
+  { "PROCEDURE",        "TK_FUNCTION_KW",  ALWAYS                 },
+#endif
+#ifndef MAXSCALE
   { "QUERY",            "TK_QUERY",        EXPLAIN                },
+#endif
+#ifdef MAXSCALE
+  { "QUICK",            "TK_QUICK",        ALWAYS                 },
+#endif
   { "RAISE",            "TK_RAISE",        TRIGGER                },
+#ifdef MAXSCALE
+  { "RANGE",            "TK_RANGE",        ALWAYS                 },
+  { "READ",             "TK_READ",         ALWAYS                 },
+#endif
   { "RECURSIVE",        "TK_RECURSIVE",    CTE                    },
   { "REFERENCES",       "TK_REFERENCES",   FKEY                   },
   { "REGEXP",           "TK_LIKE_KW",      ALWAYS                 },
@@ -247,31 +415,99 @@ static Keyword aKeywordTable[] = {
   { "RENAME",           "TK_RENAME",       ALTER                  },
   { "REPLACE",          "TK_REPLACE",      CONFLICT               },
   { "RESTRICT",         "TK_RESTRICT",     FKEY                   },
+#ifdef MAXSCALE
+  { "REVOKE",           "TK_REVOKE",       ALWAYS                 },
+#endif
   { "RIGHT",            "TK_JOIN_KW",      ALWAYS                 },
   { "ROLLBACK",         "TK_ROLLBACK",     ALWAYS                 },
+#ifdef MAXSCALE
+  { "ROLLUP",           "TK_ROLLUP",       ALWAYS                 },
+#endif
   { "ROW",              "TK_ROW",          TRIGGER                },
+#ifdef MAXSCALE
+  { "ROWS",             "TK_ROWS",         ALWAYS                 },
+#endif
   { "SAVEPOINT",        "TK_SAVEPOINT",    ALWAYS                 },
+#ifdef MAXSCALE
+  { "SCHEMAS",          "TK_DATABASES_KW", ALWAYS                 },
+  { "SEQUENCE",         "TK_SEQUENCE",     ALWAYS                 },
+#endif
   { "SELECT",           "TK_SELECT",       ALWAYS                 },
+#ifdef MAXSCALE
+  { "SESSION",          "TK_SESSION",      ALWAYS                 },
+  { "SEPARATOR",        "TK_SEPARATOR",    ALWAYS                 },
+  { "SHOW",             "TK_SHOW",         ALWAYS                 },
+  { "SLAVE",            "TK_SLAVE",        ALWAYS                 },
+  { "SPATIAL",          "TK_SPATIAL",      ALWAYS                 },
+  { "SQL_BIG_RESULT",   "TK_SELECT_OPTIONS_KW", ALWAYS            },
+  { "SQL_BUFFER_RESULT","TK_SELECT_OPTIONS_KW", ALWAYS            },
+  { "SQL_CACHE",        "TK_SELECT_OPTIONS_KW", ALWAYS            },
+  { "SQL_CALC_FOUND_ROWS","TK_SELECT_OPTIONS_KW", ALWAYS          },
+  { "SQL_NO_CACHE",     "TK_SELECT_OPTIONS_KW", ALWAYS            },
+  { "SQL_SMALL_RESULT", "TK_SELECT_OPTIONS_KW", ALWAYS            },
+#endif
   { "SET",              "TK_SET",          ALWAYS                 },
+#ifdef MAXSCALE
+  { "START",            "TK_START",        ALWAYS                 },
+  { "STATEMENT",        "TK_STATEMENT",    ALWAYS                 },
+  { "STATUS",           "TK_STATUS",       ALWAYS                 },
+  { "STRAIGHT_JOIN",    "TK_STRAIGHT_JOIN",ALWAYS                 },
+#endif
   { "TABLE",            "TK_TABLE",        ALWAYS                 },
+#ifdef MAXSCALE
+  { "TABLES",           "TK_TABLES",       ALWAYS                 },
+#endif
   { "TEMP",             "TK_TEMP",         ALWAYS                 },
   { "TEMPORARY",        "TK_TEMP",         ALWAYS                 },
+#ifdef MAXSCALE
+  { "TEMPTABLE",        "TK_TEMPTABLE",    ANALYZE                },
+#endif
   { "THEN",             "TK_THEN",         ALWAYS                 },
+#ifdef MAXSCALE
+  { "TIES",             "TK_TIES",         ANALYZE                },
+#endif
   { "TO",               "TK_TO",           ALWAYS                 },
   { "TRANSACTION",      "TK_TRANSACTION",  ALWAYS                 },
   { "TRIGGER",          "TK_TRIGGER",      TRIGGER                },
+#ifdef MAXSCALE
+  { "TRUNCATE",         "TK_TRUNCATE",     ALWAYS                 },
+  { "UNBOUNDED",        "TK_UNBOUNDED",    ALWAYS                 },
+#endif
   { "UNION",            "TK_UNION",        COMPOUND               },
+  { "UNSIGNED",         "TK_UNSIGNED",     ALWAYS                 },
   { "UNIQUE",           "TK_UNIQUE",       ALWAYS                 },
+#ifdef MAXSCALE
+  { "UNLOCK",           "TK_UNLOCK",       ALWAYS                 },
+#endif
   { "UPDATE",           "TK_UPDATE",       ALWAYS                 },
+  { "USE",              "TK_USE",          ALWAYS                 },
   { "USING",            "TK_USING",        ALWAYS                 },
   { "VACUUM",           "TK_VACUUM",       VACUUM                 },
+#ifdef MAXSCALE
+  { "VALUE",            "TK_VALUE",        ALWAYS                 },
+#endif
   { "VALUES",           "TK_VALUES",       ALWAYS                 },
+#ifdef MAXSCALE
+  { "VARIABLES",        "TK_VARIABLES",    ALWAYS                 },
+#endif
   { "VIEW",             "TK_VIEW",         VIEW                   },
   { "VIRTUAL",          "TK_VIRTUAL",      VTAB                   },
+#ifdef MAXSCALE
+  { "WARNINGS",         "TK_WARNINGS",     ALWAYS                 },
+  { "WINDOW",           "TK_WINDOW",       ALWAYS                 },
+#endif
   { "WITH",             "TK_WITH",         CTE                    },
+#ifndef MAXSCALE
   { "WITHOUT",          "TK_WITHOUT",      ALWAYS                 },
+#endif
   { "WHEN",             "TK_WHEN",         ALWAYS                 },
   { "WHERE",            "TK_WHERE",        ALWAYS                 },
+#ifdef MAXSCALE
+  { "WORK",             "TK_WORK",         ALWAYS                 },
+  { "WRITE",            "TK_WRITE",        ALWAYS                 },
+  { "XA",               "TK_XA",           ALWAYS                 },
+#endif
+  { "ZEROFILL",         "TK_ZEROFILL",     ALWAYS                 },
 };
 
 /* Number of keywords */

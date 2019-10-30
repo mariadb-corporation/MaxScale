@@ -33,7 +33,11 @@ static int findNextHostParameter(const char *zSql, int *pnToken){
 
   *pnToken = 0;
   while( zSql[0] ){
+#ifdef MAXSCALE
+      n = sqlite3GetToken(0, (u8*)zSql, &tokenType);
+#else
     n = sqlite3GetToken((u8*)zSql, &tokenType);
+#endif
     assert( n>0 && tokenType!=TK_ILLEGAL );
     if( tokenType==TK_VARIABLE ){
       *pnToken = n;

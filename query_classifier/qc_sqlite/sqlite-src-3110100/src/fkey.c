@@ -1268,6 +1268,9 @@ static Trigger *fkActionTrigger(
           sqlite3SrcListAppend(db, 0, &tFrom, 0),
           pWhere,
           0, 0, 0, 0, 0, 0
+#ifdef MAXSCALE
+          , 0
+#endif
       );
       pWhere = 0;
     }

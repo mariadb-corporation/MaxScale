@@ -1117,6 +1117,9 @@ Select *sqlite3SelectDup(sqlite3 *db, Select *p, int flags){
   pNew->addrOpenEphm[1] = -1;
   pNew->nSelectRow = p->nSelectRow;
   pNew->pWith = withDup(db, p->pWith);
+#ifdef MAXSCALE
+  pNew->pInto = sqlite3ExprListDup(db, p->pInto, flags);
+#endif
   sqlite3SelectSetName(pNew, p->zSelName);
   return pNew;
 }
@@ -1175,6 +1178,49 @@ no_mem:
   return 0;
 }
 
+#ifdef MAXSCALE
+/*
+** Add an expression list to the end of an expression list. If pList
+** is initially NULL, then create a new expression list.
+**
+** If a memory allocation error occurs, the entire list is freed and
+** NULL is returned.  If non-NULL is returned, then it is guaranteed
+** that the list was successfully appended.
+*/
+ExprList *sqlite3ExprListAppendList(
+  Parse *pParse,          /* Parsing context */
+  ExprList *pList,        /* List to which to append. Might be NULL */
+  ExprList *pAppend       /* List to be appended. Might be NULL */
+){
+  sqlite3 *db = pParse->db;
+  int i;
+  assert( db!=0 );
+  if (!pAppend) {
+    return pList;
+  }
+  if (!pList) {
+    return pAppend;
+  }
+
+  for (i = 0; i < pAppend->nExpr; ++i) {
+    pList = sqlite3ExprListAppend(pParse, pList, pAppend->a[i].pExpr);
+    if (pList) {
+      pAppend->a[i].pExpr = NULL;
+    }
+    else {
+      goto no_mem;
+    }
+  }
+  sqlite3ExprListDelete(db, pAppend);
+  return pList;
+
+no_mem:
+  sqlite3ExprListDelete(db, pList);
+  sqlite3ExprListDelete(db, pAppend);
+  return 0;
+}
+
+#endif
 /*
 ** Set the sort order for the last element on the given ExprList.
 */

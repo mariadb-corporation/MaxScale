@@ -219,6 +219,23 @@ int sqlite3Dequote(char *z){
   }
   for(i=1, j=0;; i++){
     assert( z[i] );
+#ifdef MAXSCALE
+    if ( z[i]==0 ){
+      // TODO: This is needed only because exposed_sqlite3Dequote() is called
+      // TODO: in qc_sqlite.c:update_names(). That call probably is not needed
+      // TODO: and should be removed, in which case this check could also be
+      // TODO: removed.
+      break;
+    }else if ( z[i]=='\\' ){
+      // If we want to dequote properly, a few more characters would have to be
+      // handled explicitly. That would not affect the classification, however,
+      // so we won't do that.
+      if ( z[i+1]==quote || z[i+1]=='\\' ){
+        z[j++] = z[i+1];
+        i++;
+      }
+    } else
+#endif
     if( z[i]==quote ){
       if( z[i+1]==quote ){
         z[j++] = quote;
