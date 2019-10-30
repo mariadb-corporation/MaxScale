@@ -1312,6 +1312,11 @@ static void service_calculate_weights(SERVICE* service)
         /** Calculate total weight */
         for (SERVER_REF* server = service->dbref; server; server = server->next)
         {
+            /* If server_ref is not active, skip calculate weight */
+            if (!SERVER_REF_IS_ACTIVE(server))
+            {
+                continue;
+            }
             string buf = server->server->get_custom_parameter(weightby);
             if (!buf.empty())
             {
@@ -1335,6 +1340,11 @@ static void service_calculate_weights(SERVICE* service)
             /** Calculate the relative weight of the servers */
             for (SERVER_REF* server = service->dbref; server; server = server->next)
             {
+                /* If server_ref is not active, skip calculate weight */
+                if (!SERVER_REF_IS_ACTIVE(server))
+                {
+                    continue;
+                }
                 string buf = server->server->get_custom_parameter(weightby);
                 if (!buf.empty())
                 {
