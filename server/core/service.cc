@@ -166,6 +166,7 @@ void service_add_server(Monitor* pMonitor, SERVER* pServer)
             serviceAddBackend(pService, pServer);
         }
     }
+    service_update_weights();
 }
 
 void service_remove_server(Monitor* pMonitor, SERVER* pServer)
@@ -179,6 +180,7 @@ void service_remove_server(Monitor* pMonitor, SERVER* pServer)
             serviceRemoveBackend(pService, pServer);
         }
     }
+    service_update_weights();
 }
 
 Service::Service(const std::string& name,

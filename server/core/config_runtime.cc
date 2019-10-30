@@ -175,6 +175,7 @@ bool runtime_link_server(Server* server, const char* target)
         {
             if (serviceAddBackend(service, server))
             {
+                service_update_weights();
                 service_serialize(service);
                 rval = true;
             }
@@ -230,6 +231,7 @@ bool runtime_unlink_server(Server* server, const char* target)
             if (!service->uses_cluster())
             {
                 serviceRemoveBackend(service, server);
+                service_update_weights();
                 service_serialize(service);
                 rval = true;
             }
