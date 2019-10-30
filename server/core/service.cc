@@ -1315,7 +1315,7 @@ static void service_calculate_weights(SERVICE* service)
         for (SERVER_REF* server = service->dbref; server; server = server->next)
         {
             /* If server_ref is not active, skip calculate weight */
-            if (!SERVER_REF_IS_ACTIVE(server))
+            if (!server_ref_is_active(server))
             {
                 continue;
             }
@@ -1343,7 +1343,7 @@ static void service_calculate_weights(SERVICE* service)
             for (SERVER_REF* server = service->dbref; server; server = server->next)
             {
                 /* If server_ref is not active, skip calculate weight */
-                if (!SERVER_REF_IS_ACTIVE(server))
+                if (!server_ref_is_active(server))
                 {
                     continue;
                 }
