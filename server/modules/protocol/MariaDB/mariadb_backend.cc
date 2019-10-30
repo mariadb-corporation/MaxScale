@@ -17,7 +17,6 @@
 #include <mysqld_error.h>
 #include <maxbase/alloc.h>
 #include <maxsql/mariadb.hh>
-#include <maxscale/authenticator2.hh>
 #include <maxscale/clock.h>
 #include <maxscale/limits.h>
 #include <maxscale/mainworker.hh>
@@ -28,6 +27,7 @@
 #include <maxscale/router.hh>
 #include <maxscale/server.hh>
 #include <maxscale/utils.h>
+#include <maxscale/protocol/mariadb/authenticator.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/client_connection.hh>
 

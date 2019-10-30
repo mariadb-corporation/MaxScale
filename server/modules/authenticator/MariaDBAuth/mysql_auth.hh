@@ -20,11 +20,11 @@
 #include <stdint.h>
 #include <arpa/inet.h>
 #include <mysql.h>
-#include <maxscale/authenticator2.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/service.hh>
 #include <maxscale/sqlite3.h>
+#include <maxscale/protocol/mariadb/authenticator.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include <maxscale/workerlocal.hh>
 

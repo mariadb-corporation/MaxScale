@@ -14,7 +14,6 @@
 #include "maxscale/mock/backend.hh"
 #include <algorithm>
 #include <vector>
-#include <maxscale/authenticator2.hh>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <iostream>

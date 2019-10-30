@@ -18,7 +18,7 @@
 #include <stddef.h>
 #include <gssapi.h>
 #include <maxscale/sqlite3.h>
-#include <maxscale/authenticator2.hh>
+#include <maxscale/protocol/mariadb/authenticator.hh>
 
 /** Client auth plugin name */
 static const char auth_plugin_name[] = "auth_gssapi_client";

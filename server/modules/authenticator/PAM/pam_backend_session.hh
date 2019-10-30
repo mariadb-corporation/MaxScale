@@ -13,7 +13,7 @@
 #pragma once
 
 #include "pam_auth_common.hh"
-#include <maxscale/authenticator2.hh>
+#include <maxscale/protocol/mariadb/authenticator.hh>
 
 class PamBackendAuthenticator : public mxs::BackendAuthenticator
 {

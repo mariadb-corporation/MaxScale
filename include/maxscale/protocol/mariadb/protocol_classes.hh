@@ -13,10 +13,10 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
-#include <maxscale/authenticator2.hh>
 #include <maxscale/protocol2.hh>
 #include <maxscale/session.hh>
 #include <maxscale/protocol/mariadb/common_constants.hh>
+#include <maxscale/protocol/mariadb/authenticator.hh>
 
 class GWBUF;
 

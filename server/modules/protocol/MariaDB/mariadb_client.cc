@@ -26,12 +26,13 @@
 #include <vector>
 
 #include <maxbase/alloc.h>
-#include <maxscale/authenticator2.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/protocol.hh>
+#include <maxscale/protocol/mariadb/authenticator.hh>
+#include <maxscale/protocol/mariadb/backend_connection.hh>
 #include <maxscale/protocol/mariadb/local_client.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/query_classifier.hh>
@@ -40,7 +41,7 @@
 #include <maxscale/session.hh>
 #include <maxscale/ssl.hh>
 #include <maxscale/utils.h>
-#include <maxscale/protocol/mariadb/backend_connection.hh>
+
 
 #include "setparser.hh"
 #include "sqlmodeparser.hh"

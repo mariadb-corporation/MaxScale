@@ -16,6 +16,7 @@
  */
 
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
+#include <maxscale/protocol/mariadb/authenticator.hh>
 
 #include <set>
 #include <sstream>
@@ -494,4 +495,60 @@ uint32_t MYSQL_session::client_capabilities() const
 uint32_t MYSQL_session::extra_capabilitites() const
 {
     return client_info.m_extra_capabilities;
+}
+
+const char* mxs::to_string(mxs_auth_state_t state)
+{
+    const char* rval = "UNKNOWN AUTH STATE";
+    switch (state)
+    {
+        case MXS_AUTH_STATE_INIT:
+            rval = "MXS_AUTH_STATE_INIT";
+            break;
+
+        case MXS_AUTH_STATE_PENDING_CONNECT:
+            rval = "MXS_AUTH_STATE_PENDING_CONNECT";
+            break;
+
+        case MXS_AUTH_STATE_CONNECTED:
+            rval = "MXS_AUTH_STATE_CONNECTED";
+            break;
+
+        case MXS_AUTH_STATE_MESSAGE_READ:
+            rval = "MXS_AUTH_STATE_MESSAGE_READ";
+            break;
+
+        case MXS_AUTH_STATE_RESPONSE_SENT:
+            rval = "MXS_AUTH_STATE_RESPONSE_SENT";
+            break;
+
+        case MXS_AUTH_STATE_FAILED:
+            rval = "MXS_AUTH_STATE_FAILED";
+            break;
+
+        case MXS_AUTH_STATE_HANDSHAKE_FAILED:
+            rval = "MXS_AUTH_STATE_HANDSHAKE_FAILED";
+            break;
+
+        case MXS_AUTH_STATE_COMPLETE:
+            rval = "MXS_AUTH_STATE_COMPLETE";
+            break;
+
+        default:
+            mxb_assert(!true);
+            break;
+    }
+
+    return rval;
+}
+
+uint64_t mxs::AuthenticatorModule::capabilities() const
+{
+    return 0;
+}
+
+int mxs::ClientAuthenticator::reauthenticate(DCB* client, uint8_t* scramble, size_t scramble_len,
+                                        const ByteVec& auth_token, uint8_t* output)
+{
+    return MXS_AUTH_STATE_FAILED;
 }

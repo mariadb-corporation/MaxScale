@@ -15,7 +15,7 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/protocol2.hh>
-#include <maxscale/authenticator2.hh>
+#include <maxscale/protocol/mariadb/authenticator.hh>
 
 class MySQLProtocolModule : public mxs::ProtocolModule
 {

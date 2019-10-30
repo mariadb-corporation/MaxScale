@@ -15,6 +15,41 @@
 #include <maxscale/authenticator.hh>
 #include <maxscale/dcb.hh>
 
+/** Return values for extract and authenticate entry points */
+#define MXS_AUTH_SUCCEEDED             0/**< Authentication was successful */
+#define MXS_AUTH_FAILED                1/**< Authentication failed */
+#define MXS_AUTH_FAILED_DB             2/**< Authentication failed, database not found */
+#define MXS_AUTH_FAILED_SSL            3/**< SSL authentication failed */
+#define MXS_AUTH_INCOMPLETE            4/**< Authentication is not yet complete */
+#define MXS_AUTH_SSL_INCOMPLETE        5/**< SSL connection is not yet complete */
+#define MXS_AUTH_SSL_COMPLETE          6/**< SSL connection complete or not required */
+#define MXS_AUTH_NO_SESSION            7
+#define MXS_AUTH_BAD_HANDSHAKE         8/**< Malformed client packet */
+#define MXS_AUTH_FAILED_WRONG_PASSWORD 9/**< Client provided wrong password */
+
+/**
+ * Authentication states
+ *
+ * The state usually goes from INIT to CONNECTED and alternates between
+ * MESSAGE_READ and RESPONSE_SENT until ending up in either FAILED or COMPLETE.
+ *
+ * If the server immediately rejects the connection, the state ends up in
+ * HANDSHAKE_FAILED. If the connection creation would block, instead of going to
+ * the CONNECTED state, the connection will be in PENDING_CONNECT state until
+ * the connection can be created.
+ */
+enum mxs_auth_state_t
+{
+    MXS_AUTH_STATE_INIT,            /**< Initial authentication state */
+    MXS_AUTH_STATE_PENDING_CONNECT, /**< Connection creation is underway */
+    MXS_AUTH_STATE_CONNECTED,       /**< Network connection to server created */
+    MXS_AUTH_STATE_MESSAGE_READ,    /**< Read a authentication message from the server */
+    MXS_AUTH_STATE_RESPONSE_SENT,   /**< Responded to the read authentication message */
+    MXS_AUTH_STATE_FAILED,          /**< Authentication failed */
+    MXS_AUTH_STATE_HANDSHAKE_FAILED,/**< Authentication failed immediately */
+    MXS_AUTH_STATE_COMPLETE         /**< Authentication is complete */
+};
+
 namespace maxscale
 {
 
@@ -177,28 +212,6 @@ public:
     virtual int authenticate(DCB* client) = 0;
 };
 
-template<class AuthenticatorImplementation>
-class AuthenticatorApiGenerator
-{
-public:
-    AuthenticatorApiGenerator() = delete;
-    AuthenticatorApiGenerator(const AuthenticatorApiGenerator&) = delete;
-    AuthenticatorApiGenerator& operator=(const AuthenticatorApiGenerator&) = delete;
-
-    static AuthenticatorModuleBase* createInstance(char** options)
-    {
-        AuthenticatorModuleBase* instance = nullptr;
-        MXS_EXCEPTION_GUARD(instance = AuthenticatorImplementation::create(options));
-        return instance;
-    }
-
-    static AUTHENTICATOR_API s_api;
-};
-
-template<class AuthenticatorImplementation>
-AUTHENTICATOR_API AuthenticatorApiGenerator<AuthenticatorImplementation>::s_api =
-{
-    &AuthenticatorApiGenerator<AuthenticatorImplementation>::createInstance
-};
+const char* to_string(mxs_auth_state_t state);
 
 }

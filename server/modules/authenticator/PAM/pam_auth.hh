@@ -19,11 +19,12 @@
 
 #include <maxscale/ccdefs.hh>
 
-#include <maxscale/authenticator2.hh>
+
 #include <string>
 #include <maxbase/alloc.h>
 #include <maxscale/buffer.hh>
 #include <maxscale/dcb.hh>
+#include <maxscale/protocol/mariadb/authenticator.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 
 using std::string;
