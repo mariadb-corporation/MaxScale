@@ -1,4 +1,12 @@
-set(LIBMICROHTTPD_URL "http://ftpmirror.gnu.org/libmicrohttpd/libmicrohttpd-0.9.67.tar.gz"
+if (GNUTLS_VERSION_STRING VERSION_GREATER "3.0.0")
+  set(LIBMICROHTTPD_VERSION "0.9.68")
+else()
+  set(LIBMICROHTTPD_VERSION "0.9.63")
+  message(STATUS "GnuTLS is too old, using older libmicrohttpd")
+endif()
+
+message(STATUS "Using libmicrohttpd version ${LIBMICROHTTPD_VERSION}")
+set(LIBMICROHTTPD_URL "http://ftpmirror.gnu.org/libmicrohttpd/libmicrohttpd-${LIBMICROHTTPD_VERSION}.tar.gz"
   CACHE STRING "GNU libmicrochttpd source code")
 
 ExternalProject_Add(libmicrohttpd
@@ -11,3 +19,5 @@ ExternalProject_Add(libmicrohttpd
 
 include_directories(${CMAKE_BINARY_DIR}/libmicrohttpd/include/)
 set(MICROHTTPD_LIBRARIES ${CMAKE_BINARY_DIR}/libmicrohttpd/lib/libmicrohttpd.a)
+
+mark_as_advanced(LIBMICROHTTPD_VERSION LIBMICROHTTPD_URL MICROHTTPD_LIBRARIES)

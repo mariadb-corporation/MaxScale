@@ -73,8 +73,7 @@ target_link_libraries(maxscale-common
   sqlite3
   stdc++
   ${MICROHTTPD_LIBRARIES}
-  gnutls
-  gcrypt
+  ${GNUTLS_LIBRARIES}
 )
 
 if(WITH_ASAN AND ASAN_FOUND)
