@@ -199,6 +199,91 @@ int sqlite3IsIdChar(u8 c){ return IdChar(c); }
 */
 #ifdef MAXSCALE
 extern int maxscaleComment();
+
+struct mxs_charset_entry
+{
+    const char* name;
+    size_t      len;
+};
+
+// Character set names of MariaDB.
+//
+// NOTE: MUST be kept in alphabetical order.
+const struct mxs_charset_entry mxs_charset_names[] =
+{
+    { "armscii8", 8 },
+    { "ascii",    5 },
+    { "big5",     4 },
+    { "binary",   6 },
+    { "cp1250",   6 },
+    { "cp1251",   6 },
+    { "cp1256",   6 },
+    { "cp1257",   6 },
+    { "cp850",    5 },
+    { "cp852",    5 },
+    { "cp866",    5 },
+    { "cp932",    5 },
+    { "dec8",     4 },
+    { "eucjpms",  7 },
+    { "euckr",    5 },
+    { "gb2312",   6 },
+    { "gbk",      3 },
+    { "geostd8",  7 },
+    { "greek",    5 },
+    { "hebrew",   6 },
+    { "hp8",      3 },
+    { "keybcs2",  7 },
+    { "koi8r",    5 },
+    { "koi8u",    5 },
+    { "latin1",   6 },
+    { "latin2",   6 },
+    { "latin5",   6 },
+    { "latin7",   6 },
+    { "macce",    5 },
+    { "macroman", 8 },
+    { "sjis",     4 },
+    { "swe7",     4 },
+    { "tis620",   6 },
+    { "ucs2",     4 },
+    { "ujis",     4 },
+    { "utf16",    5 },
+    { "utf16le",  7 },
+    { "utf32",    5 },
+    { "utf8",     4 },
+    { "utf8mb4",  7 }
+};
+
+#define N_MXS_CHARSET_NAMES (sizeof(mxs_charset_names)/sizeof(mxs_charset_names[0]))
+
+int mxs_compare_charset_names(const void* l, const void* r)
+{
+    const struct mxs_charset_entry* key = (const struct mxs_charset_entry*)l;
+    const struct mxs_charset_entry* value = (const struct mxs_charset_entry*)r;
+
+    int rv = strncasecmp(key->name, value->name, MIN(key->len, value->len));
+
+    if (key->len != value->len)
+    {
+        if (rv == 0)
+        {
+            rv = key->len < value->len ? -1 : 1;
+        }
+    }
+
+    return rv;
+}
+
+int mxs_is_charset_name(const char* p, size_t n)
+{
+    struct mxs_charset_entry key = { p, n };
+
+    return bsearch(&key,
+                   mxs_charset_names, N_MXS_CHARSET_NAMES, sizeof(mxs_charset_names[0]),
+                   mxs_compare_charset_names) != 0;
+}
+
+
+
 int sqlite3GetToken(Parse* pParse, const unsigned char *z, int *tokenType){
 #else
 int sqlite3GetToken(const unsigned char *z, int *tokenType){
@@ -558,6 +643,22 @@ int sqlite3GetToken(const unsigned char *z, int *tokenType){
       /* Not a bit field. It may be a keyword so we flow through */
 #endif
       for(i=1; aiClass[z[i]]<=CC_KYWD; i++){}
+#ifdef MAXSCALE
+      if ( z[0]== '_' ) {
+        // This can be a case of [_charset_name], so we need to
+        // accept more. We can eat all characters acceptable for
+        // an identifier.
+        while ( IdChar(z[i]) ) { i++; }
+
+        if (mxs_is_charset_name((char*)z + 1, i - 1)) {
+            *tokenType = TK_CHARSET_NAME_KW;
+            return i;
+        } else {
+            // Token type will be TK_ID.
+            break;
+        }
+      }
+#endif
       if( IdChar(z[i]) ){
         /* This token started out using characters that can appear in keywords,
         ** but z[i] is a character not allowed within keywords, so this must

@@ -620,7 +620,7 @@ columnid(A) ::= nm(X). {
   // TODO: BINARY is a reserved word and should not automatically convert into an identifer.
   // TODO: However, if not here then rules such as CAST need to be modified.
   BINARY
-  /*CASCADE*/ CAST CLOSE COLUMNKW COLUMNS COMMENT CONCURRENT /*CONFLICT*/ CONNECTION
+  /*CASCADE*/ CAST CHARSET_NAME_KW CLOSE COLUMNKW COLUMNS COMMENT CONCURRENT /*CONFLICT*/ CONNECTION
   DATA DATABASE DEALLOCATE DEFERRED /*DESC*/ /*DETACH*/ DUMPFILE
   /*EACH*/ END ENGINE ENUM EXCLUSIVE /*EXPLAIN*/ EXTENDED
   FIELDS FIRST FLUSH /*FOR*/ FORMAT
@@ -1907,6 +1907,7 @@ expr(A) ::= nm(X) DOT nm(Y) DOT nm(Z). {
 }
 term(A) ::= INTEGER|FLOAT|BLOB(X).  {spanExpr(&A, pParse, @X, &X);}
 term(A) ::= STRING(X).              {spanExpr(&A, pParse, @X, &X);}
+term(A) ::= CHARSET_NAME_KW(X) STRING(Y). {spanExpr(&A, pParse, @X, &Y);}
 expr(A) ::= VARIABLE(X).     {
   if( X.n>=2 && X.z[0]=='#' && sqlite3Isdigit(X.z[1]) ){
     /* When doing a nested parse, one can include terms in an expression
@@ -1926,7 +1927,7 @@ expr(A) ::= VARIABLE(X).     {
   spanSet(&A, &X, &X);
 }
 %ifdef MAXSCALE
-expr(A) ::= id(X) INTEGER(Y). {
+expr(A) ::= CHARSET_NAME_KW(X) INTEGER(Y). {
   // The sole purpose of this is to interpret something like '_utf8mb4 0xD091D092D093'
   // as a string. It does not matter that any identifier followed by an integer will
   // be interpreted as a string, as invalid usage will be caught by the server.
