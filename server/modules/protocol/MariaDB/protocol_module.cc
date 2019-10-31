@@ -47,8 +47,8 @@ MySQLProtocolModule* MySQLProtocolModule::create(const std::string& auth_name, c
             protocol_module = new(std::nothrow) MySQLProtocolModule();
             if (protocol_module)
             {
-                auto mdb_auth_module = static_cast<mariadb::AuthenticatorModule*>(new_auth_module.release());
-                protocol_module->m_auth_module.reset(mdb_auth_module);
+                protocol_module->m_authenticators.emplace_back(
+                    static_cast<mariadb::AuthenticatorModule*>(new_auth_module.release()));
             }
         }
         else
@@ -71,13 +71,15 @@ std::unique_ptr<mxs::ClientConnection>
 MySQLProtocolModule::create_client_protocol(MXS_SESSION* session, mxs::Component* component)
 {
     std::unique_ptr<mxs::ClientConnection> new_client_proto;
-    auto authenticator = m_auth_module->create_client_authenticator();
-    std::unique_ptr<MXS_SESSION::ProtocolData> session_data(new(std::nothrow) MYSQL_session());
-    if (authenticator && session_data)
+    std::unique_ptr<MYSQL_session> mdb_session(new(std::nothrow) MYSQL_session());
+    if (mdb_session)
     {
-        session->set_protocol_data(std::move(session_data));
+        // The authenticator module used by this session is not known yet. The protocol code will figure
+        // it out once authentication begins.
+        mdb_session->allowed_authenticators = &m_authenticators;
+        session->set_protocol_data(std::move(mdb_session));
         new_client_proto = std::unique_ptr<mxs::ClientConnection>(
-            new(std::nothrow) MariaDBClientConnection(session, component, std::move(authenticator)));
+            new(std::nothrow) MariaDBClientConnection(session, component));
     }
     return new_client_proto;
 }
@@ -101,17 +103,29 @@ std::string MySQLProtocolModule::name() const
 
 int MySQLProtocolModule::load_auth_users(SERVICE* service)
 {
-    return m_auth_module->load_users(service);
+    for (auto& auth : m_authenticators)
+    {
+        int ret = auth->load_users(service);
+        if (ret != MXS_AUTH_LOADUSERS_OK)
+        {
+            return ret;
+        }
+    }
+    return MXS_AUTH_LOADUSERS_OK;
 }
 
 void MySQLProtocolModule::print_auth_users(DCB* output)
 {
-    m_auth_module->diagnostics(output);
+    for (auto& auth : m_authenticators)
+    {
+        auth->diagnostics(output);
+    }
 }
 
 json_t* MySQLProtocolModule::print_auth_users_json()
 {
-    return m_auth_module->diagnostics_json();
+    // TODO: print all to json array or combine elements? In any case this will be removed later on
+    return m_authenticators.front()->diagnostics_json();
 }
 
 std::unique_ptr<mxs::UserAccountManager>
@@ -124,10 +138,12 @@ std::unique_ptr<mxs::BackendConnection>
 MySQLProtocolModule::create_backend_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component)
 {
     // Allocate DCB specific backend-authentication data from the client session.
-    std::unique_ptr<mariadb::BackendAuthenticator> new_backend_auth;
-    if (m_auth_module->capabilities() & mariadb::AuthenticatorModule::CAP_BACKEND_AUTH)
+    mariadb::SBackendAuth new_backend_auth;
+    auto mariases = static_cast<MYSQL_session*>(session->protocol_data());
+    auto auth_module = mariases->m_current_authenticator;
+    if (auth_module->capabilities() & mariadb::AuthenticatorModule::CAP_BACKEND_AUTH)
     {
-        new_backend_auth = m_auth_module->create_backend_authenticator();
+        new_backend_auth = auth_module->create_backend_authenticator();
         if (!new_backend_auth)
         {
             MXS_ERROR("Failed to create backend authenticator session.");
@@ -136,7 +152,7 @@ MySQLProtocolModule::create_backend_protocol(MXS_SESSION* session, SERVER* serve
     else
     {
         MXS_ERROR("Authenticator '%s' does not support backend authentication. "
-                  "Cannot create backend connection.", m_auth_module->name().c_str());
+                  "Cannot create backend connection.", auth_module->name().c_str());
     }
 
     std::unique_ptr<mxs::BackendConnection> rval;

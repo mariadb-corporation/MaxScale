@@ -36,8 +36,7 @@ public:
         RES_END,        // Query handling completed, do not send to filters/router.
     };
 
-    MariaDBClientConnection(MXS_SESSION* session, mxs::Component* component,
-                            mariadb::SClientAuth authenticator);
+    MariaDBClientConnection(MXS_SESSION* session, mxs::Component* component);
 
     void ready_for_reading(DCB* dcb) override;
     void write_ready(DCB* dcb) override;

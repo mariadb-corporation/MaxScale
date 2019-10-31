@@ -121,6 +121,8 @@ public:
     virtual uint64_t capabilities() const;
 };
 
+using SAuthModule = std::unique_ptr<AuthenticatorModule>;
+
 /**
  * The base class of authenticator client sessions. Contains session-specific data for an authenticator.
  */
@@ -134,13 +136,6 @@ public:
 
     ClientAuthenticator() = default;
     virtual ~ClientAuthenticator() = default;
-
-    /**
-     * Get module runtime capabilities.
-     *
-     * @return Capabilities as a bitfield
-     */
-    virtual uint64_t capabilities() const = 0;
 
     /**
      * Extract client from a buffer and place it in a structure shared at the session level.
@@ -186,11 +181,6 @@ public:
     ClientAuthenticatorT(AuthModule* module)
     : m_module(*module)
     {
-    }
-
-    uint64_t capabilities() const override
-    {
-        return m_module.capabilities();
     }
 
 protected:

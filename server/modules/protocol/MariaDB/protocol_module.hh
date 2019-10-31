@@ -44,5 +44,8 @@ public:
     create_user_data_manager(const std::string& service_name) override;
 
 private:
-    std::unique_ptr<mariadb::AuthenticatorModule> m_auth_module;
+    /**
+     * Authenticator modules used by this protocol module. Used from multiple threads, but does not
+     * change once created. */
+    std::vector<mariadb::SAuthModule> m_authenticators;
 };

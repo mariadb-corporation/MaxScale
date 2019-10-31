@@ -875,6 +875,13 @@ int MariaDBClientConnection::perform_authentication(DCB* generic_dcb, GWBUF* rea
     m_session_data->next_sequence = next_sequence;
 
     /**
+     * The correct authenticator should be chosen here (and also in reauthenticate_client()).
+     * Since the authenticators are not yet ready for this, just pick the first one.
+     */
+    m_session_data->m_current_authenticator = m_session_data->allowed_authenticators->front().get();
+    m_authenticator = m_session_data->m_current_authenticator->create_client_authenticator();
+
+    /**
      * The first step in the authentication process is to extract the
      * relevant information from the buffer supplied and place it
      * into a data structure pointed to by the DCB.  The "success"
@@ -884,19 +891,22 @@ int MariaDBClientConnection::perform_authentication(DCB* generic_dcb, GWBUF* rea
      * authenticate function to carry out the user checks.
      */
     int auth_val = MXS_AUTH_FAILED;
-    if (m_authenticator->extract(dcb, read_buffer))
+    if (m_authenticator)
     {
-        auth_val = ssl_authenticate_check_status(dcb);
-
-        if (auth_val == MXS_AUTH_SSL_COMPLETE)
+        if (m_authenticator->extract(dcb, read_buffer))
         {
-            // TLS connection phase complete
-            auth_val = m_authenticator->authenticate(dcb);
+            auth_val = ssl_authenticate_check_status(dcb);
+
+            if (auth_val == MXS_AUTH_SSL_COMPLETE)
+            {
+                // TLS connection phase complete
+                auth_val = m_authenticator->authenticate(dcb);
+            }
         }
-    }
-    else
-    {
-        auth_val = MXS_AUTH_BAD_HANDSHAKE;
+        else
+        {
+            auth_val = MXS_AUTH_BAD_HANDSHAKE;
+        }
     }
 
     auto protocol = this;
@@ -1070,7 +1080,9 @@ char* MariaDBClientConnection::handle_variables(MXS_SESSION* session, GWBUF** re
 bool MariaDBClientConnection::reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf)
 {
     bool rval = false;
-    if (m_authenticator->capabilities() & mariadb::AuthenticatorModule::CAP_REAUTHENTICATE)
+    // Assume for now that reauthentication uses the same plugin, fix later.
+    if (m_session_data->m_current_authenticator->capabilities()
+        & mariadb::AuthenticatorModule::CAP_REAUTHENTICATE)
     {
         std::vector<uint8_t> orig_payload;
         uint32_t orig_len = m_stored_query.length();
@@ -1908,10 +1920,8 @@ int32_t MariaDBClientConnection::connlimit(int limit)
     return mysql_send_standard_error(m_dcb, 0, 1040, "Too many connections");
 }
 
-MariaDBClientConnection::MariaDBClientConnection(MXS_SESSION* session, mxs::Component* component,
-                                                 mariadb::SClientAuth authenticator)
-    : m_authenticator(std::move(authenticator))
-    , m_downstream(component)
+MariaDBClientConnection::MariaDBClientConnection(MXS_SESSION* session, mxs::Component* component)
+    : m_downstream(component)
     , m_session(session)
     , m_session_data(static_cast<MYSQL_session*>(session->protocol_data()))
     , m_version(service_get_version(session->service, SERVICE_VERSION_MIN))
