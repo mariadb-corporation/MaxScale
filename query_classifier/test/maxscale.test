@@ -139,3 +139,8 @@ select soundex(_utf8mb4 0xD091D092D093) as vx, gray_user_tag from user_extends w
 
 # MXS-2713
 SET PASSWORD FOR 'user'@'10.0.0.1'='*C50EB75D7CB4C76B5264218B92BC69E6815B057A';
+
+# MXS-2732
+SELECT * FROM t WHERE f = _latin1'a';
+# This was actually in the bug-report that was made due to a leak.
+CREATE VIEW v1 AS select sql_no_cache T0001.SERVERNAME AS SERVERNAME, T0003.TABNAME AS TABNAME,T0003.LOCAL_NAME AS LOCAL_NAME,T0002.DBINSTANCE AS DBINSTANCE from t2 T0001 join t1 T0002 join t3 T0003 where ((T0002.SERVERGRP = T0001.SERVERGRP) and (T0002.SERVERGRP = T0003.SERVERGRP) and (T0003.MAPSTATE = _latin1'A') and (T0003.ACTSTATE = _latin1' '));
