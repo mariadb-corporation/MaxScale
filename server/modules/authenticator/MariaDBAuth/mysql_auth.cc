@@ -707,9 +707,9 @@ int MariaDBClientAuthenticator::reauthenticate(DCB* generic_dcb, uint8_t* scramb
     return rval;
 }
 
-std::unique_ptr<mxs::BackendAuthenticator> MariaDBAuthenticatorModule::create_backend_authenticator()
+mariadb::SBackendAuth MariaDBAuthenticatorModule::create_backend_authenticator()
 {
-    return std::unique_ptr<mxs::BackendAuthenticator>(new(std::nothrow) MariaDBBackendSession());
+    return mariadb::SBackendAuth(new(std::nothrow) MariaDBBackendSession());
 }
 
 int diag_cb(void* data, int columns, char** row, char** field_names)
@@ -772,9 +772,9 @@ uint64_t MariaDBAuthenticatorModule::capabilities() const
     return CAP_REAUTHENTICATE | CAP_CONC_LOAD_USERS | CAP_BACKEND_AUTH;
 }
 
-std::unique_ptr<mxs::ClientAuthenticator> MariaDBAuthenticatorModule::create_client_authenticator()
+mariadb::SClientAuth MariaDBAuthenticatorModule::create_client_authenticator()
 {
-    return std::unique_ptr<mxs::ClientAuthenticator>(new(std::nothrow) MariaDBClientAuthenticator(this));
+    return mariadb::SClientAuth(new(std::nothrow) MariaDBClientAuthenticator(this));
 }
 
 std::string MariaDBAuthenticatorModule::supported_protocol() const

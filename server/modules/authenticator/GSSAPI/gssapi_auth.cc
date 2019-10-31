@@ -169,7 +169,7 @@ GSSAPIAuthenticatorModule* GSSAPIAuthenticatorModule::create(char** options)
     return instance;
 }
 
-std::unique_ptr<mxs::ClientAuthenticator> GSSAPIAuthenticatorModule::create_client_authenticator()
+mariadb::SClientAuth GSSAPIAuthenticatorModule::create_client_authenticator()
 {
     auto new_ses = new (std::nothrow) GSSAPIClientAuthenticator(this);
     if (new_ses)
@@ -186,7 +186,7 @@ std::unique_ptr<mxs::ClientAuthenticator> GSSAPIAuthenticatorModule::create_clie
         }
     }
 
-    return std::unique_ptr<mxs::ClientAuthenticator>(new_ses);
+    return mariadb::SClientAuth(new_ses);
 }
 
 GSSAPIClientAuthenticator::GSSAPIClientAuthenticator(GSSAPIAuthenticatorModule* module)
@@ -529,9 +529,9 @@ int GSSAPIClientAuthenticator::authenticate(DCB* generic_dcb)
     return rval;
 }
 
-std::unique_ptr<mxs::BackendAuthenticator> GSSAPIAuthenticatorModule::create_backend_authenticator()
+mariadb::SBackendAuth GSSAPIAuthenticatorModule::create_backend_authenticator()
 {
-    return std::unique_ptr<mxs::BackendAuthenticator>(new (std::nothrow) GSSAPIBackendAuthenticator());
+    return mariadb::SBackendAuth(new (std::nothrow) GSSAPIBackendAuthenticator());
 }
 
 /**

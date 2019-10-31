@@ -40,7 +40,10 @@
 namespace maxscale
 {
 
-class AuthenticatorModuleBase
+/**
+ * Base class off all authenticator modules.
+ */
+class AuthenticatorModule
 {
 public:
     /**
@@ -69,7 +72,7 @@ struct AUTHENTICATOR_API
      * @param options Authenticator options
      * @return Authenticator object, or null on error
      */
-    mxs::AuthenticatorModuleBase* (* initialize)(char** options);
+    mxs::AuthenticatorModule* (* initialize)(char** options);
 };
 
 template<class AuthenticatorImplementation>
@@ -80,9 +83,9 @@ public:
     AuthenticatorApiGenerator(const AuthenticatorApiGenerator&) = delete;
     AuthenticatorApiGenerator& operator=(const AuthenticatorApiGenerator&) = delete;
 
-    static AuthenticatorModuleBase* createInstance(char** options)
+    static AuthenticatorModule* createInstance(char** options)
     {
-        AuthenticatorModuleBase* instance = nullptr;
+        AuthenticatorModule* instance = nullptr;
         MXS_EXCEPTION_GUARD(instance = AuthenticatorImplementation::create(options));
         return instance;
     }
@@ -99,6 +102,5 @@ AUTHENTICATOR_API AuthenticatorApiGenerator<AuthenticatorImplementation>::s_api 
 
 namespace maxscale
 {
-std::unique_ptr<mxs::AuthenticatorModuleBase> authenticator_init(const char* authenticator,
-                                                                 const char* options);
+std::unique_ptr<mxs::AuthenticatorModule> authenticator_init(const char* authenticator, const char* options);
 }

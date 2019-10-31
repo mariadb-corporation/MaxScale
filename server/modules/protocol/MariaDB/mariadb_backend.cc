@@ -130,7 +130,7 @@ bool is_last_eof(Iter it)
  *
  * @param authenticator Backend authenticator
  */
-MariaDBBackendConnection::MariaDBBackendConnection(std::unique_ptr<mxs::BackendAuthenticator> authenticator)
+MariaDBBackendConnection::MariaDBBackendConnection(mariadb::SBackendAuth authenticator)
     : m_authenticator(std::move(authenticator))
 {
 }
@@ -150,7 +150,7 @@ MariaDBBackendConnection::MariaDBBackendConnection(std::unique_ptr<mxs::BackendA
 
 std::unique_ptr<MariaDBBackendConnection>
 MariaDBBackendConnection::create(MXS_SESSION* session, mxs::Component* component,
-                                 std::unique_ptr<mxs::BackendAuthenticator> authenticator)
+                                 mariadb::SBackendAuth authenticator)
 {
     std::unique_ptr<MariaDBBackendConnection> backend_conn(
         new(std::nothrow) MariaDBBackendConnection(std::move(authenticator)));
@@ -162,7 +162,7 @@ MariaDBBackendConnection::create(MXS_SESSION* session, mxs::Component* component
 }
 
 std::unique_ptr<MariaDBBackendConnection>
-MariaDBBackendConnection::create_test_protocol(std::unique_ptr<mxs::BackendAuthenticator> authenticator)
+MariaDBBackendConnection::create_test_protocol(mariadb::SBackendAuth authenticator)
 {
     std::unique_ptr<MariaDBBackendConnection> backend_conn(
         new(std::nothrow) MariaDBBackendConnection(std::move(authenticator)));
@@ -195,7 +195,7 @@ bool MariaDBBackendConnection::reuse_connection(BackendDCB* dcb, mxs::Component*
     if (dcb->state() != DCB::State::POLLING || this->protocol_auth_state != MXS_AUTH_STATE_COMPLETE)
     {
         MXS_INFO("DCB and protocol state do not qualify for pooling: %s, %s",
-                 mxs::to_string(dcb->state()), mxs::to_string(this->protocol_auth_state));
+                 mxs::to_string(dcb->state()), mariadb::to_string(this->protocol_auth_state));
     }
     else
     {
@@ -377,7 +377,7 @@ void MariaDBBackendConnection::ready_for_reading(DCB* event_dcb)
               dcb,
               dcb->fd(),
               proto->protocol_auth_state,
-              mxs::to_string(proto->protocol_auth_state));
+              mariadb::to_string(proto->protocol_auth_state));
 
     if (proto->protocol_auth_state == MXS_AUTH_STATE_COMPLETE)
     {
@@ -1044,7 +1044,7 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
             MXS_DEBUG("write to dcb %p fd %d protocol state %s.",
                       dcb,
                       dcb->fd(),
-                      mxs::to_string(backend_protocol->protocol_auth_state));
+                      mariadb::to_string(backend_protocol->protocol_auth_state));
 
             queue = gwbuf_make_contiguous(queue);
             prepare_for_write(dcb, queue);
@@ -1079,7 +1079,7 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
             MXS_DEBUG("delayed write to dcb %p fd %d protocol state %s.",
                       dcb,
                       dcb->fd(),
-                      mxs::to_string(backend_protocol->protocol_auth_state));
+                      mariadb::to_string(backend_protocol->protocol_auth_state));
 
             /** Store data until authentication is complete */
             backend_set_delayqueue(dcb, queue);

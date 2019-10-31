@@ -21,11 +21,10 @@ public:
     using Iter = mxs::Buffer::iterator;
 
     static std::unique_ptr<MariaDBBackendConnection>
-    create(MXS_SESSION* session, mxs::Component* component,
-           std::unique_ptr<mxs::BackendAuthenticator> authenticator);
+    create(MXS_SESSION* session, mxs::Component* component, mariadb::SBackendAuth authenticator);
 
     static std::unique_ptr<MariaDBBackendConnection>
-    create_test_protocol(std::unique_ptr<mxs::BackendAuthenticator> authenticator);
+    create_test_protocol(mariadb::SBackendAuth authenticator);
 
     ~MariaDBBackendConnection() override;
 
@@ -57,7 +56,7 @@ public:
     uint32_t server_capabilities {0};   /**< Server capabilities TODO: private */
 
 private:
-    MariaDBBackendConnection(std::unique_ptr<mxs::BackendAuthenticator> authenticator);
+    MariaDBBackendConnection(mariadb::SBackendAuth authenticator);
 
     int    gw_read_and_write(DCB* dcb);
     int    backend_write_delayqueue(DCB* dcb, GWBUF* buffer);
@@ -112,7 +111,7 @@ private:
 
     mxs_auth_state_t protocol_auth_state {MXS_AUTH_STATE_CONNECTED};    /**< Backend authentication state */
 
-    std::unique_ptr<mxs::BackendAuthenticator> m_authenticator;     /**< Backend authentication data */
+    mariadb::SBackendAuth m_authenticator;     /**< Backend authentication data */
 
     uint64_t    m_thread_id {0};                /**< Backend thread id, received in backend handshake */
     uint8_t     m_scramble[MYSQL_SCRAMBLE_LEN]; /**< Server scramble, received in backend handshake */

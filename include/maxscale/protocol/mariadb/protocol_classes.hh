@@ -56,5 +56,5 @@ public:
     ClientInfo client_info;     /**< Client capabilities from handshake response packet */
 
     // Authentication token storage. Used by different authenticators.
-    mxs::ClientAuthenticator::ByteVec auth_token;
+    mariadb::ClientAuthenticator::ByteVec auth_token;
 };

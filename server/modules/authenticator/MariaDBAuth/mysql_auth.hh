@@ -104,14 +104,14 @@ static int db_flags = SQLITE_OPEN_READWRITE
     | SQLITE_OPEN_CREATE
     | SQLITE_OPEN_NOMUTEX;
 
-class MariaDBAuthenticatorModule : public mxs::AuthenticatorModule
+class MariaDBAuthenticatorModule : public mariadb::AuthenticatorModule
 {
 public:
     static MariaDBAuthenticatorModule* create(char** options);
     ~MariaDBAuthenticatorModule() override = default;
 
-    std::unique_ptr<mxs::ClientAuthenticator>  create_client_authenticator() override;
-    std::unique_ptr<mxs::BackendAuthenticator> create_backend_authenticator() override;
+    mariadb::SClientAuth  create_client_authenticator() override;
+    mariadb::SBackendAuth create_backend_authenticator() override;
 
     int         load_users(SERVICE* service) override;
     void        diagnostics(DCB* output) override;
@@ -141,7 +141,7 @@ private:
     bool add_service_user(SERVICE* service);
 };
 
-class MariaDBClientAuthenticator : public mxs::ClientAuthenticatorT<MariaDBAuthenticatorModule>
+class MariaDBClientAuthenticator : public mariadb::ClientAuthenticatorT<MariaDBAuthenticatorModule>
 {
 public:
     MariaDBClientAuthenticator(MariaDBAuthenticatorModule* module);
@@ -169,7 +169,7 @@ private:
      */
     int validate_mysql_user(DCB* dcb, const MYSQL_session* session,
                             const uint8_t* scramble, size_t scramble_len,
-                            const mxs::ClientAuthenticator::ByteVec& auth_token,
+                            const mariadb::ClientAuthenticator::ByteVec& auth_token,
                             uint8_t* phase2_scramble_out);
     bool check_database(sqlite3* handle, const char* database);
     bool set_client_data(MYSQL_session* client_data, DCB* client_dcb, GWBUF* buffer);
@@ -179,7 +179,7 @@ private:
 };
 
 /** Structure representing the authentication state */
-class MariaDBBackendSession : public mxs::BackendAuthenticator
+class MariaDBBackendSession : public mariadb::BackendAuthenticator
 {
 public:
     ~MariaDBBackendSession() = default;

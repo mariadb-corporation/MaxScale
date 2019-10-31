@@ -260,7 +260,7 @@ static char* get_users_query(const SERVER::Version& version, bool include_root, 
 
 static bool
 check_password(const char* output, const uint8_t* scramble, size_t scramble_len,
-               const mxs::ClientAuthenticator::ByteVec& auth_token, uint8_t* phase2_scramble_out)
+               const mariadb::ClientAuthenticator::ByteVec& auth_token, uint8_t* phase2_scramble_out)
 {
     uint8_t stored_token[SHA_DIGEST_LENGTH] = {};
     size_t stored_token_len = sizeof(stored_token);
@@ -366,7 +366,7 @@ static int auth_cb(void* data, int columns, char** rows, char** row_names)
 
 int MariaDBClientAuthenticator::validate_mysql_user(DCB* dcb, const MYSQL_session* session,
                                                     const uint8_t* scramble, size_t scramble_len,
-                                                    const mxs::ClientAuthenticator::ByteVec& auth_token,
+                                                    const mariadb::ClientAuthenticator::ByteVec& auth_token,
                                                     uint8_t* phase2_scramble_out)
 {
     const char* user = session->user.c_str();

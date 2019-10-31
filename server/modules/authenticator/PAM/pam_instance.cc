@@ -524,14 +524,14 @@ std::string PamAuthenticatorModule::supported_protocol() const
     return MXS_MARIADB_PROTOCOL_NAME;
 }
 
-std::unique_ptr<mxs::ClientAuthenticator> PamAuthenticatorModule::create_client_authenticator()
+mariadb::SClientAuth PamAuthenticatorModule::create_client_authenticator()
 {
     return PamClientAuthenticator::create(this);
 }
 
-std::unique_ptr<mxs::BackendAuthenticator> PamAuthenticatorModule::create_backend_authenticator()
+mariadb::SBackendAuth PamAuthenticatorModule::create_backend_authenticator()
 {
-    return std::unique_ptr<mxs::BackendAuthenticator>(new(std::nothrow) PamBackendAuthenticator());
+    return mariadb::SBackendAuth(new(std::nothrow) PamBackendAuthenticator());
 }
 
 bool PamAuthenticatorModule::fetch_anon_proxy_users(SERVER* server, MYSQL* conn)

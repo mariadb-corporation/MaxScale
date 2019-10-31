@@ -38,14 +38,14 @@ enum gssapi_auth_state
 /** Report GSSAPI errors */
 void report_error(OM_uint32 major, OM_uint32 minor);
 
-class GSSAPIAuthenticatorModule : public mxs::AuthenticatorModule
+class GSSAPIAuthenticatorModule : public mariadb::AuthenticatorModule
 {
 public:
     static GSSAPIAuthenticatorModule* create(char** options);
     ~GSSAPIAuthenticatorModule() override = default;
 
-    std::unique_ptr<mxs::ClientAuthenticator> create_client_authenticator() override;
-    std::unique_ptr<mxs::BackendAuthenticator> create_backend_authenticator() override;
+    mariadb::SClientAuth create_client_authenticator() override;
+    mariadb::SBackendAuth create_backend_authenticator() override;
 
     int         load_users(SERVICE* service) override;
     void        diagnostics(DCB* output) override;
@@ -60,7 +60,7 @@ private:
     sqlite3* handle {nullptr};          /**< SQLite3 database handle */
 };
 
-class GSSAPIClientAuthenticator : public mxs::ClientAuthenticatorT<GSSAPIAuthenticatorModule>
+class GSSAPIClientAuthenticator : public mariadb::ClientAuthenticatorT<GSSAPIAuthenticatorModule>
 {
 public:
     GSSAPIClientAuthenticator(GSSAPIAuthenticatorModule* module);
@@ -80,7 +80,7 @@ private:
     uint8_t*          principal_name {nullptr};     /**< Principal name */
 };
 
-class GSSAPIBackendAuthenticator : public mxs::BackendAuthenticator
+class GSSAPIBackendAuthenticator : public mariadb::BackendAuthenticator
 {
 public:
     ~GSSAPIBackendAuthenticator() override;

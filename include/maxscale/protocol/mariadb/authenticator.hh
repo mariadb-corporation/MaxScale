@@ -13,7 +13,10 @@
 #pragma once
 
 #include <maxscale/authenticator.hh>
-#include <maxscale/dcb.hh>
+
+class DCB;
+class SERVICE;
+class GWBUF;
 
 /** Return values for extract and authenticate entry points */
 #define MXS_AUTH_SUCCEEDED             0/**< Authentication was successful */
@@ -50,16 +53,20 @@ enum mxs_auth_state_t
     MXS_AUTH_STATE_COMPLETE         /**< Authentication is complete */
 };
 
-namespace maxscale
+namespace mariadb
 {
 
 class ClientAuthenticator;
 class BackendAuthenticator;
 
+using SClientAuth = std::unique_ptr<ClientAuthenticator>;
+using SBackendAuth = std::unique_ptr<BackendAuthenticator>;
+
 /**
- * The base class of all authenticators. Contains the global data for an authenticator module instance.
+ * The base class of all authenticators for MariaDB-protocol. Contains the global data for
+ * an authenticator module instance.
  */
-class AuthenticatorModule : public AuthenticatorModuleBase
+class AuthenticatorModule : public mxs::AuthenticatorModule
 {
 public:
     AuthenticatorModule(const AuthenticatorModule&) = delete;
@@ -80,7 +87,7 @@ public:
      *
      * @return Client authenticator
      */
-    virtual std::unique_ptr<ClientAuthenticator> create_client_authenticator() = 0;
+    virtual SClientAuth create_client_authenticator() = 0;
 
     /**
      * Create a new backend authenticator. Should only be implemented by authenticator modules which
@@ -88,7 +95,7 @@ public:
      *
      * @return Backend authenticator
      */
-    virtual std::unique_ptr<BackendAuthenticator> create_backend_authenticator() = 0;
+    virtual SBackendAuth create_backend_authenticator() = 0;
 
     // Load or update authenticator user data
     virtual int load_users(SERVICE* service) = 0;

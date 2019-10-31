@@ -47,8 +47,8 @@ MySQLProtocolModule* MySQLProtocolModule::create(const std::string& auth_name, c
             protocol_module = new(std::nothrow) MySQLProtocolModule();
             if (protocol_module)
             {
-                auto mariadb_auth_module = static_cast<mxs::AuthenticatorModule*>(new_auth_module.release());
-                protocol_module->m_auth_module.reset(mariadb_auth_module);
+                auto mdb_auth_module = static_cast<mariadb::AuthenticatorModule*>(new_auth_module.release());
+                protocol_module->m_auth_module.reset(mdb_auth_module);
             }
         }
         else
@@ -124,8 +124,8 @@ std::unique_ptr<mxs::BackendConnection>
 MySQLProtocolModule::create_backend_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component)
 {
     // Allocate DCB specific backend-authentication data from the client session.
-    std::unique_ptr<mxs::BackendAuthenticator> new_backend_auth;
-    if (m_auth_module->capabilities() & mxs::AuthenticatorModule::CAP_BACKEND_AUTH)
+    std::unique_ptr<mariadb::BackendAuthenticator> new_backend_auth;
+    if (m_auth_module->capabilities() & mariadb::AuthenticatorModule::CAP_BACKEND_AUTH)
     {
         new_backend_auth = m_auth_module->create_backend_authenticator();
         if (!new_backend_auth)

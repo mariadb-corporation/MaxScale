@@ -1070,11 +1070,8 @@ char* MariaDBClientConnection::handle_variables(MXS_SESSION* session, GWBUF** re
 bool MariaDBClientConnection::reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf)
 {
     bool rval = false;
-    auto client_auth = m_authenticator.get();
-    if (client_auth->capabilities() & mxs::AuthenticatorModule::CAP_REAUTHENTICATE)
+    if (m_authenticator->capabilities() & mariadb::AuthenticatorModule::CAP_REAUTHENTICATE)
     {
-        auto proto = this;
-
         std::vector<uint8_t> orig_payload;
         uint32_t orig_len = m_stored_query.length();
         orig_payload.resize(orig_len);
@@ -1125,8 +1122,8 @@ bool MariaDBClientConnection::reauthenticate_client(MXS_SESSION* session, GWBUF*
         payload.resize(payloadlen);
         gwbuf_copy_data(packetbuf, MYSQL_HEADER_LEN, payloadlen, &payload[0]);
 
-        int rc = client_auth->reauthenticate(m_dcb, m_scramble, sizeof(m_scramble),
-                                             payload, data->client_sha1);
+        int rc = m_authenticator->reauthenticate(m_dcb, m_scramble, sizeof(m_scramble),
+                                                 payload, data->client_sha1);
         if (rc == MXS_AUTH_SUCCEEDED)
         {
             // Re-authentication successful, route the original COM_CHANGE_USER
@@ -1912,7 +1909,7 @@ int32_t MariaDBClientConnection::connlimit(int limit)
 }
 
 MariaDBClientConnection::MariaDBClientConnection(MXS_SESSION* session, mxs::Component* component,
-                                                 std::unique_ptr<mxs::ClientAuthenticator> authenticator)
+                                                 mariadb::SClientAuth authenticator)
     : m_authenticator(std::move(authenticator))
     , m_downstream(component)
     , m_session(session)

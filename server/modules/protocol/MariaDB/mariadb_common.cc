@@ -497,7 +497,7 @@ uint32_t MYSQL_session::extra_capabilitites() const
     return client_info.m_extra_capabilities;
 }
 
-const char* mxs::to_string(mxs_auth_state_t state)
+const char* mariadb::to_string(mxs_auth_state_t state)
 {
     const char* rval = "UNKNOWN AUTH STATE";
     switch (state)
@@ -542,13 +542,13 @@ const char* mxs::to_string(mxs_auth_state_t state)
     return rval;
 }
 
-uint64_t mxs::AuthenticatorModule::capabilities() const
+uint64_t mariadb::AuthenticatorModule::capabilities() const
 {
     return 0;
 }
 
-int mxs::ClientAuthenticator::reauthenticate(DCB* client, uint8_t* scramble, size_t scramble_len,
-                                        const ByteVec& auth_token, uint8_t* output)
+int mariadb::ClientAuthenticator::reauthenticate(DCB* client, uint8_t* scramble, size_t scramble_len,
+                                                 const ByteVec& auth_token, uint8_t* output)
 {
     return MXS_AUTH_STATE_FAILED;
 }

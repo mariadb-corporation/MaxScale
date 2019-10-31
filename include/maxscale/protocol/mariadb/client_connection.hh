@@ -37,7 +37,7 @@ public:
     };
 
     MariaDBClientConnection(MXS_SESSION* session, mxs::Component* component,
-                            std::unique_ptr<mxs::ClientAuthenticator> authenticator);
+                            mariadb::SClientAuth authenticator);
 
     void ready_for_reading(DCB* dcb) override;
     void write_ready(DCB* dcb) override;
@@ -87,7 +87,7 @@ private:
     int  ssl_authenticate_check_status(DCB* generic_dcb);
     void track_current_command(GWBUF* buf);
 
-    std::unique_ptr<mxs::ClientAuthenticator> m_authenticator;      /**< Client authentication data */
+    mariadb::SClientAuth m_authenticator;      /**< Client authentication data */
 
     mxs::Component* m_downstream {nullptr}; /**< Downstream component, the session */
     MXS_SESSION*    m_session {nullptr};    /**< Generic session */

@@ -24,11 +24,11 @@
 class PamAuthenticatorModule;
 
 /** Client authenticator PAM-specific session data */
-class PamClientAuthenticator : public mxs::ClientAuthenticatorT<PamAuthenticatorModule>
+class PamClientAuthenticator : public mariadb::ClientAuthenticatorT<PamAuthenticatorModule>
 {
 public:
     using StringVector = std::vector<std::string>;
-    static std::unique_ptr<mxs::ClientAuthenticator> create(PamAuthenticatorModule* instance);
+    static mariadb::SClientAuth create(PamAuthenticatorModule* instance);
 
     int  authenticate(DCB* client) override;
     bool extract(DCB* dcb, GWBUF* read_buffer) override;

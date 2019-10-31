@@ -15,7 +15,7 @@
 #include "pam_auth_common.hh"
 #include <maxscale/protocol/mariadb/authenticator.hh>
 
-class PamBackendAuthenticator : public mxs::BackendAuthenticator
+class PamBackendAuthenticator : public mariadb::BackendAuthenticator
 {
 public:
     PamBackendAuthenticator(const PamBackendAuthenticator& orig) = delete;

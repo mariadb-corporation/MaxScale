@@ -128,9 +128,9 @@ PamClientAuthenticator::PamClientAuthenticator(PamAuthenticatorModule* instance)
 {
 }
 
-std::unique_ptr<mxs::ClientAuthenticator> PamClientAuthenticator::create(PamAuthenticatorModule* inst)
+mariadb::SClientAuth PamClientAuthenticator::create(PamAuthenticatorModule* inst)
 {
-    std::unique_ptr<mxs::ClientAuthenticator> rval;
+    mariadb::SClientAuth rval;
 
     // This handle is only used from one thread, can define no_mutex.
     int db_flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_SHAREDCACHE | SQLITE_OPEN_NOMUTEX;

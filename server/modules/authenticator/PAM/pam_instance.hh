@@ -20,7 +20,7 @@
 #include "pam_client_session.hh"
 
 /** The instance class for the client side PAM authenticator, created in pam_auth_init() */
-class PamAuthenticatorModule : public mxs::AuthenticatorModule
+class PamAuthenticatorModule : public mariadb::AuthenticatorModule
 {
 public:
     PamAuthenticatorModule(const PamAuthenticatorModule& orig) = delete;
@@ -35,8 +35,8 @@ public:
     std::string supported_protocol() const override;
     std::string name() const override;
 
-    std::unique_ptr<mxs::ClientAuthenticator> create_client_authenticator() override;
-    std::unique_ptr<mxs::BackendAuthenticator> create_backend_authenticator() override;
+    mariadb::SClientAuth create_client_authenticator() override;
+    mariadb::SBackendAuth create_backend_authenticator() override;
 
     const std::string m_dbname;     /**< Name of the in-memory database */
 
