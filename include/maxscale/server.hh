@@ -280,8 +280,10 @@ protected:
     }
 
 private:
-    static const int    DEFAULT_CHARSET {0x08};         /**< The latin1 charset */
-    mxs::SSLProvider    m_ssl_provider;
-    uint64_t            m_status {0};
-    std::atomic_int64_t m_ping {mxs::Target::PING_UNDEFINED};   /**< Server ping measured by monitor, in us */
+    static const int DEFAULT_CHARSET {0x08};        /**< The latin1 charset */
+    mxs::SSLProvider m_ssl_provider;
+    uint64_t         m_status {0};
+
+    /** Server ping measured by monitor, in microseconds */
+    std::atomic<int64_t> m_ping {mxs::Target::PING_UNDEFINED};
 };
