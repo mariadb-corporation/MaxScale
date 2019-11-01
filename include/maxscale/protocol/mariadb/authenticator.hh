@@ -19,18 +19,6 @@ class SERVICE;
 class GWBUF;
 class MYSQL_session;
 
-/** Return values for extract and authenticate entry points */
-#define MXS_AUTH_SUCCEEDED             0/**< Authentication was successful */
-#define MXS_AUTH_FAILED                1/**< Authentication failed */
-#define MXS_AUTH_FAILED_DB             2/**< Authentication failed, database not found */
-#define MXS_AUTH_FAILED_SSL            3/**< SSL authentication failed */
-#define MXS_AUTH_INCOMPLETE            4/**< Authentication is not yet complete */
-#define MXS_AUTH_SSL_INCOMPLETE        5/**< SSL connection is not yet complete */
-#define MXS_AUTH_SSL_COMPLETE          6/**< SSL connection complete or not required */
-#define MXS_AUTH_NO_SESSION            7
-#define MXS_AUTH_BAD_HANDSHAKE         8/**< Malformed client packet */
-#define MXS_AUTH_FAILED_WRONG_PASSWORD 9/**< Client provided wrong password */
-
 /**
  * Authentication states
  *
@@ -75,9 +63,9 @@ public:
 
     enum Capabilities
     {
-         CAP_REAUTHENTICATE = (1 << 1),  /**< Does the module support reauthentication? */
-         CAP_BACKEND_AUTH = (1 << 2),    /**< Does the module support backend authentication? */
-         CAP_CONC_LOAD_USERS = (1 << 3)  /**< Does the module support concurrent user loading? */
+        CAP_REAUTHENTICATE  = (1 << 0), /**< Does the module support reauthentication? */
+        CAP_BACKEND_AUTH    = (1 << 1), /**< Does the module support backend authentication? */
+        CAP_CONC_LOAD_USERS = (1 << 2)  /**< Does the module support concurrent user loading? */
     };
 
     AuthenticatorModule() = default;
@@ -129,6 +117,21 @@ class ClientAuthenticator
 public:
     using ByteVec = std::vector<uint8_t>;
 
+    // Return values for authenticate-functions.
+    enum class AuthRes
+    {
+        SUCCESS,        /**< Authentication was successful */
+        FAIL,           /**< Authentication failed */
+        FAIL_DB,        /**< Authentication failed, database not found or no access */
+        FAIL_WRONG_PW,  /**< Client provided wrong password */
+        FAIL_SSL,       /**< SSL authentication failed */
+        INCOMPLETE,     /**< Authentication is not yet complete */
+        INCOMPLETE_SSL, /**< SSL connection is not yet complete */
+        SSL_READY,      /**< SSL connection complete or not required */
+        NO_SESSION,
+        BAD_HANDSHAKE,      /**< Malformed client packet */
+    };
+
     ClientAuthenticator(const ClientAuthenticator&) = delete;
     ClientAuthenticator& operator=(const ClientAuthenticator&) = delete;
 
@@ -145,7 +148,7 @@ public:
     virtual bool extract(GWBUF* buffer, MYSQL_session* session) = 0;
 
     // Carry out the authentication.
-    virtual int authenticate(DCB* client) = 0;
+    virtual AuthRes authenticate(DCB* client) = 0;
 
     /**
      * This entry point was added to avoid calling authenticator functions
@@ -158,12 +161,12 @@ public:
      * @param output Hashed client password used by backend protocols
      * @return 0 on success
      */
-    virtual int reauthenticate(DCB* client, uint8_t* scramble, size_t scramble_len,
-                               const ByteVec& auth_token, uint8_t* output);
+    virtual AuthRes reauthenticate(DCB* client, uint8_t* scramble, size_t scramble_len,
+                                   const ByteVec& auth_token, uint8_t* output);
 };
 
 // Helper template which stores the module reference.
-template <class AuthModule>
+template<class AuthModule>
 class ClientAuthenticatorT : public ClientAuthenticator
 {
 public:
@@ -173,7 +176,7 @@ public:
      * @param module The global module data
      */
     ClientAuthenticatorT(AuthModule* module)
-    : m_module(*module)
+        : m_module(*module)
     {
     }
 
@@ -187,6 +190,14 @@ protected:
 class BackendAuthenticator
 {
 public:
+    // Return values for authenticate-functions.
+    enum class AuthRes
+    {
+        SUCCESS,    /**< Authentication was successful */
+        FAIL,       /**< Authentication failed */
+        INCOMPLETE, /**< Authentication is not yet complete */
+    };
+
     BackendAuthenticator(const BackendAuthenticator&) = delete;
     BackendAuthenticator& operator=(const BackendAuthenticator&) = delete;
 
@@ -200,9 +211,8 @@ public:
     virtual bool ssl_capable(DCB* client) = 0;
 
     // Carry out the authentication.
-    virtual int authenticate(DCB* client) = 0;
+    virtual AuthRes authenticate(DCB* client) = 0;
 };
 
 const char* to_string(mxs_auth_state_t state);
-
 }

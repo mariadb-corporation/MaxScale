@@ -146,11 +146,11 @@ public:
     MariaDBClientAuthenticator(MariaDBAuthenticatorModule* module);
     ~MariaDBClientAuthenticator() override = default;
 
-    bool extract(GWBUF* buffer, MYSQL_session* session) override;
-    int  authenticate(DCB* client) override;
+    bool    extract(GWBUF* buffer, MYSQL_session* session) override;
+    AuthRes authenticate(DCB* client) override;
 
-    int reauthenticate(DCB* generic_dcb, uint8_t* scramble, size_t scramble_len, const ByteVec& auth_token,
-                       uint8_t* output_token) override;
+    AuthRes reauthenticate(DCB* generic_dcb, uint8_t* scramble, size_t scramble_len,
+                           const ByteVec& auth_token, uint8_t* output_token) override;
 
 private:
     /**
@@ -165,10 +165,10 @@ private:
      *
      * @return MXS_AUTH_SUCCEEDED if the user has access to the database
      */
-    int validate_mysql_user(DCB* dcb, const MYSQL_session* session,
-                            const uint8_t* scramble, size_t scramble_len,
-                            const mariadb::ClientAuthenticator::ByteVec& auth_token,
-                            uint8_t* phase2_scramble_out);
+    AuthRes validate_mysql_user(DCB* dcb, const MYSQL_session* session,
+                                const uint8_t* scramble, size_t scramble_len,
+                                const mariadb::ClientAuthenticator::ByteVec& auth_token,
+                                uint8_t* phase2_scramble_out);
     bool check_database(sqlite3* handle, const char* database);
     bool set_client_data(MYSQL_session* client_data, GWBUF* buffer);
 
@@ -182,9 +182,9 @@ class MariaDBBackendSession : public mariadb::BackendAuthenticator
 public:
     ~MariaDBBackendSession() = default;
 
-    bool extract(DCB* backend, GWBUF* buffer) override;
-    bool ssl_capable(DCB* backend) override;
-    int  authenticate(DCB* backend) override;
+    bool    extract(DCB* backend, GWBUF* buffer) override;
+    bool    ssl_capable(DCB* backend) override;
+    AuthRes authenticate(DCB* backend) override;
 
 private:
     /** Authentication states */

@@ -21,6 +21,7 @@
 
 using maxscale::Buffer;
 using std::string;
+using AuthRes = mariadb::ClientAuthenticator::AuthRes;
 
 namespace
 {
@@ -259,16 +260,16 @@ Buffer PamClientAuthenticator::create_auth_change_packet() const
     return buffer;
 }
 
-int PamClientAuthenticator::authenticate(DCB* generic_dcb)
+AuthRes PamClientAuthenticator::authenticate(DCB* generic_dcb)
 {
     mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
 
-    int rval = MXS_AUTH_SSL_COMPLETE;
+    auto rval = AuthRes::SSL_READY;
     auto ses = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
     if (!ses->user.empty())
     {
-        rval = MXS_AUTH_FAILED;
+        rval = AuthRes::FAIL;
         if (m_state == State::INIT)
         {
             /** We need to send the authentication switch packet to change the
@@ -278,7 +279,7 @@ int PamClientAuthenticator::authenticate(DCB* generic_dcb)
             if (authbuf.length() && dcb->protocol_write(authbuf.release()))
             {
                 m_state = State::ASKED_FOR_PW;
-                rval = MXS_AUTH_INCOMPLETE;
+                rval = AuthRes::INCOMPLETE;
             }
         }
         else if (m_state == State::PW_RECEIVED)
@@ -339,7 +340,7 @@ int PamClientAuthenticator::authenticate(DCB* generic_dcb)
             }
             if (authenticated)
             {
-                rval = MXS_AUTH_SUCCEEDED;
+                rval = AuthRes::SUCCESS;
             }
             m_state = State::DONE;
         }

@@ -25,8 +25,6 @@
 #include <maxscale/service.hh>
 #include <maxscale/sqlite3.h>
 
-
-
 /**
  * MySQL queries for retrieving the list of users
  */
@@ -464,12 +462,13 @@ static bool validate_user(GSSAPIClientAuthenticator* auth, DCB* dcb, MYSQL_sessi
  * if authentication was successfully completed or MXS_AUTH_FAILED if authentication
  * has failed.
  */
-int GSSAPIClientAuthenticator::authenticate(DCB* generic_dcb)
+mariadb::ClientAuthenticator::AuthRes GSSAPIClientAuthenticator::authenticate(DCB* generic_dcb)
 {
+    using AuthRes = mariadb::ClientAuthenticator::AuthRes;
     mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
 
-    int rval = MXS_AUTH_FAILED;
+    auto rval = AuthRes::FAIL;
     auto auth = this;
 
     if (state == GSSAPI_AUTH_INIT)
@@ -482,7 +481,7 @@ int GSSAPIClientAuthenticator::authenticate(DCB* generic_dcb)
         if (buffer && dcb->protocol_write(buffer))
         {
             auth->state = GSSAPI_AUTH_DATA_SENT;
-            rval = MXS_AUTH_INCOMPLETE;
+            rval = AuthRes::INCOMPLETE;
         }
     }
     else if (auth->state == GSSAPI_AUTH_DATA_SENT)
@@ -496,7 +495,7 @@ int GSSAPIClientAuthenticator::authenticate(DCB* generic_dcb)
                                   &princ)
             && validate_user(auth, dcb, ses, princ))
         {
-            rval = MXS_AUTH_SUCCEEDED;
+            rval = AuthRes::SUCCESS;
         }
 
         MXS_FREE(princ);

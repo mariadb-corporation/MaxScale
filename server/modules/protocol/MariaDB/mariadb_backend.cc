@@ -297,6 +297,8 @@ void MariaDBBackendConnection::handle_error_response(DCB* plain_dcb, GWBUF* buff
  */
 mxs_auth_state_t MariaDBBackendConnection::handle_server_response(DCB* generic_dcb, GWBUF* buffer)
 {
+    using AuthRes = mariadb::BackendAuthenticator::AuthRes;
+
     auto dcb = static_cast<BackendDCB*>(generic_dcb);
     mxs_auth_state_t rval = protocol_auth_state == MXS_AUTH_STATE_CONNECTED ?
         MXS_AUTH_STATE_HANDSHAKE_FAILED : MXS_AUTH_STATE_FAILED;
@@ -305,12 +307,11 @@ mxs_auth_state_t MariaDBBackendConnection::handle_server_response(DCB* generic_d
     {
         switch (m_authenticator->authenticate(dcb))
         {
-        case MXS_AUTH_INCOMPLETE:
-        case MXS_AUTH_SSL_INCOMPLETE:
+        case AuthRes::INCOMPLETE:
             rval = MXS_AUTH_STATE_RESPONSE_SENT;
             break;
 
-        case MXS_AUTH_SUCCEEDED:
+        case AuthRes::SUCCESS:
             rval = MXS_AUTH_STATE_COMPLETE;
 
         default:

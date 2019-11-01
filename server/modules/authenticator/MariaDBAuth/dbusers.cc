@@ -39,6 +39,11 @@
 #include <maxscale/utils.h>
 #include <maxscale/routingworker.hh>
 
+namespace
+{
+using AuthRes = mariadb::ClientAuthenticator::AuthRes;
+}
+
 /** Don't include the root user */
 #define USERS_QUERY_NO_ROOT " AND user.user NOT IN ('root')"
 
@@ -364,10 +369,12 @@ static int auth_cb(void* data, int columns, char** rows, char** row_names)
     return 0;
 }
 
-int MariaDBClientAuthenticator::validate_mysql_user(DCB* dcb, const MYSQL_session* session,
-                                                    const uint8_t* scramble, size_t scramble_len,
-                                                    const mariadb::ClientAuthenticator::ByteVec& auth_token,
-                                                    uint8_t* phase2_scramble_out)
+AuthRes MariaDBClientAuthenticator::validate_mysql_user(DCB* dcb,
+                                                        const MYSQL_session* session,
+                                                        const uint8_t* scramble,
+                                                        size_t scramble_len,
+                                                        const mariadb::ClientAuthenticator::ByteVec& auth_token,
+                                                        uint8_t* phase2_scramble_out)
 {
     const char* user = session->user.c_str();
     const char* database = session->db.c_str();
@@ -381,7 +388,7 @@ int MariaDBClientAuthenticator::validate_mysql_user(DCB* dcb, const MYSQL_sessio
                           remote, remote,
                           database, database);
     char sql[len + 1];
-    int rval = MXS_AUTH_FAILED;
+    auto rval = AuthRes::FAIL;
     char* err;
 
     if (m_module.m_skip_auth)
@@ -454,11 +461,11 @@ int MariaDBClientAuthenticator::validate_mysql_user(DCB* dcb, const MYSQL_sessio
             /** Password is OK, check that the database exists */
             if (check_database(handle, database))
             {
-                rval = MXS_AUTH_SUCCEEDED;
+                rval = AuthRes::SUCCESS;
             }
             else
             {
-                rval = MXS_AUTH_FAILED_DB;
+                rval = AuthRes::FAIL_DB;
             }
         }
     }

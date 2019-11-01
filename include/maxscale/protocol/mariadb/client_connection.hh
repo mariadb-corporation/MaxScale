@@ -69,10 +69,12 @@ private:
     bool           reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf);
     spec_com_res_t handle_query_kill(DCB* dcb, GWBUF* read_buffer, uint32_t packet_len);
     void           handle_use_database(GWBUF* read_buffer);
-    void           handle_authentication_errors(DCB* dcb, int auth_val, int packet_number);
+    void           handle_authentication_errors(DCB* dcb, mariadb::ClientAuthenticator::AuthRes auth_val,
+                                                int packet_number);
     int            mysql_send_auth_error(DCB* dcb, int packet_number, const char* mysql_message);
     char*          create_auth_fail_str(const char* username, const char* hostaddr,
-                                        bool password, const char* db, int);
+                                        bool password, const char* db,
+                                        mariadb::ClientAuthenticator::AuthRes error);
     int    mysql_send_standard_error(DCB* dcb, int sequence, int errnum, const char* msg);
     GWBUF* mysql_create_standard_error(int sequence, int error_number, const char* msg);
     bool   send_auth_switch_request_packet();
@@ -83,7 +85,7 @@ private:
                                              uint64_t keep_protocol_thread_id, kill_type_t type);
     void mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_type_t type);
     void execute_kill(MXS_SESSION* issuer, std::shared_ptr<KillInfo> info);
-    int  ssl_authenticate_check_status(DCB* generic_dcb);
+    mariadb::ClientAuthenticator::AuthRes ssl_authenticate_check_status(DCB* generic_dcb);
     void track_current_command(GWBUF* buf);
 
     mariadb::SClientAuth m_authenticator;      /**< Client authentication data */

@@ -19,9 +19,6 @@
 #include <maxscale/protocol/mariadb/authenticator.hh>
 
 #include <set>
-#include <sstream>
-#include <map>
-#include <netinet/tcp.h>
 #include <mysql.h>
 #include <maxsql/mariadb.hh>
 #include <maxbase/alloc.h>
@@ -30,7 +27,6 @@
 #include <maxscale/utils.h>
 #include <maxscale/poll.hh>
 #include <maxscale/routing.hh>
-#include <maxscale/routingworker.hh>
 #include <maxscale/service.hh>
 #include <maxscale/target.hh>
 #include <maxscale/protocol/mariadb/backend_connection.hh>
@@ -547,8 +543,9 @@ uint64_t mariadb::AuthenticatorModule::capabilities() const
     return 0;
 }
 
-int mariadb::ClientAuthenticator::reauthenticate(DCB* client, uint8_t* scramble, size_t scramble_len,
-                                                 const ByteVec& auth_token, uint8_t* output)
+mariadb::ClientAuthenticator::AuthRes
+mariadb::ClientAuthenticator::reauthenticate(DCB* client, uint8_t* scramble, size_t scramble_len,
+                                             const ByteVec& auth_token, uint8_t* output)
 {
-    return MXS_AUTH_STATE_FAILED;
+    return AuthRes::FAIL;
 }

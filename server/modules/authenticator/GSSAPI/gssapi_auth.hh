@@ -44,7 +44,7 @@ public:
     static GSSAPIAuthenticatorModule* create(char** options);
     ~GSSAPIAuthenticatorModule() override = default;
 
-    mariadb::SClientAuth create_client_authenticator() override;
+    mariadb::SClientAuth  create_client_authenticator() override;
     mariadb::SBackendAuth create_backend_authenticator() override;
 
     int         load_users(SERVICE* service) override;
@@ -64,8 +64,8 @@ class GSSAPIClientAuthenticator : public mariadb::ClientAuthenticatorT<GSSAPIAut
 public:
     GSSAPIClientAuthenticator(GSSAPIAuthenticatorModule* module);
     ~GSSAPIClientAuthenticator() override;
-    bool extract(GWBUF* buffer, MYSQL_session* session) override;
-    int  authenticate(DCB* client) override;
+    bool    extract(GWBUF* buffer, MYSQL_session* session) override;
+    AuthRes authenticate(DCB* client) override;
 
     sqlite3* handle {nullptr};              /**< SQLite3 database handle */
     uint8_t  sequence {0};                  /**< The next packet seqence number */
@@ -82,9 +82,9 @@ class GSSAPIBackendAuthenticator : public mariadb::BackendAuthenticator
 {
 public:
     ~GSSAPIBackendAuthenticator() override;
-    bool extract(DCB* backend, GWBUF* buffer) override;
-    bool ssl_capable(DCB* backend) override;
-    int  authenticate(DCB* backend) override;
+    bool    extract(DCB* backend, GWBUF* buffer) override;
+    bool    ssl_capable(DCB* backend) override;
+    AuthRes authenticate(DCB* backend) override;
 
 private:
     bool extract_principal_name(DCB* dcb, GWBUF* buffer);

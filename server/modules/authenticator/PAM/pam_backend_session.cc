@@ -300,9 +300,9 @@ bool PamBackendAuthenticator::extract(DCB* dcb, GWBUF* buffer)
     return success;
 }
 
-int PamBackendAuthenticator::authenticate(DCB* dcb)
+mariadb::BackendAuthenticator::AuthRes PamBackendAuthenticator::authenticate(DCB* dcb)
 {
-    int rval = MXS_AUTH_FAILED;
+    auto rval = AuthRes::FAIL;
 
     if (m_state == State::RECEIVED_PROMPT)
     {
@@ -312,7 +312,7 @@ int PamBackendAuthenticator::authenticate(DCB* dcb)
         if (send_client_password(dcb))
         {
             m_state = State::PW_SENT;
-            rval = MXS_AUTH_INCOMPLETE;
+            rval = AuthRes::INCOMPLETE;
         }
         else
         {
@@ -321,7 +321,7 @@ int PamBackendAuthenticator::authenticate(DCB* dcb)
     }
     else if (m_state == State::DONE)
     {
-        rval = MXS_AUTH_SUCCEEDED;
+        rval = AuthRes::SUCCESS;
     }
 
     return rval;

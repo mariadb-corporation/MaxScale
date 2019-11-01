@@ -23,6 +23,8 @@
 #include <maxscale/utils.h>
 #include <maxscale/protocol/mariadb/client_connection.hh>
 
+using AuthRes = mariadb::ClientAuthenticator::AuthRes;
+
 extern "C"
 {
 /**
@@ -238,12 +240,12 @@ MariaDBClientAuthenticator::MariaDBClientAuthenticator(MariaDBAuthenticatorModul
  * @return Authentication status
  * @note Authentication status codes are defined in maxscale/protocol/mysql.h
  */
-int MariaDBClientAuthenticator::authenticate(DCB* generic_dcb)
+AuthRes MariaDBClientAuthenticator::authenticate(DCB* generic_dcb)
 {
     mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
 
-    int auth_ret = MXS_AUTH_SSL_COMPLETE;
+    auto auth_ret = AuthRes::SSL_READY;
     auto protocol = static_cast<MariaDBClientConnection*>(dcb->protocol());
     auto client_data = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
     if (!client_data->user.empty())
@@ -259,11 +261,11 @@ int MariaDBClientAuthenticator::authenticate(DCB* generic_dcb)
             if (dcb->writeq_append(switch_packet))
             {
                 m_auth_switch_sent = true;
-                return MXS_AUTH_INCOMPLETE;
+                return AuthRes::INCOMPLETE;
             }
             else
             {
-                return MXS_AUTH_FAILED;
+                return AuthRes::FAIL;
             }
         }
 
@@ -271,7 +273,7 @@ int MariaDBClientAuthenticator::authenticate(DCB* generic_dcb)
                                        protocol->scramble(), MYSQL_SCRAMBLE_LEN,
                                        client_data->auth_token, client_data->client_sha1);
 
-        if (auth_ret != MXS_AUTH_SUCCEEDED && service_refresh_users(dcb->service()))
+        if (auth_ret != AuthRes::SUCCESS && service_refresh_users(dcb->service()))
         {
             auth_ret = validate_mysql_user(dcb, client_data,
                                            protocol->scramble(), MYSQL_SCRAMBLE_LEN,
@@ -279,9 +281,8 @@ int MariaDBClientAuthenticator::authenticate(DCB* generic_dcb)
         }
 
         /* on successful authentication, set user into dcb field */
-        if (auth_ret == MXS_AUTH_SUCCEEDED)
+        if (auth_ret == AuthRes::SUCCESS)
         {
-            auth_ret = MXS_AUTH_SUCCEEDED;
             dcb->session()->set_user(client_data->user);
             /** Send an OK packet to the client */
         }
@@ -290,11 +291,11 @@ int MariaDBClientAuthenticator::authenticate(DCB* generic_dcb)
             // The default failure is a `User not found` one
             char extra[256] = "User not found.";
 
-            if (auth_ret == MXS_AUTH_FAILED_DB)
+            if (auth_ret == AuthRes::FAIL_DB)
             {
                 snprintf(extra, sizeof(extra), "Unknown database: %s", client_data->db.c_str());
             }
-            else if (auth_ret == MXS_AUTH_FAILED_WRONG_PASSWORD)
+            else if (auth_ret == AuthRes::FAIL_WRONG_PW)
             {
                 strcpy(extra, "Wrong password.");
             }
@@ -656,26 +657,26 @@ int MariaDBAuthenticatorModule::load_users(SERVICE* service)
     return rc;
 }
 
-int MariaDBClientAuthenticator::reauthenticate(DCB* generic_dcb, uint8_t* scramble, size_t scramble_len,
-                                               const ByteVec& auth_token, uint8_t* output_token)
+AuthRes MariaDBClientAuthenticator::reauthenticate(DCB* generic_dcb, uint8_t* scramble, size_t scramble_len,
+                                                   const ByteVec& auth_token, uint8_t* output_token)
 {
     mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
     auto client_data = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
-    int rval = 1;
+    auto rval = AuthRes::FAIL;
 
     uint8_t phase2_scramble[MYSQL_SCRAMBLE_LEN];
-    int rc = validate_mysql_user(dcb, client_data, scramble, scramble_len, auth_token, phase2_scramble);
+    auto rc = validate_mysql_user(dcb, client_data, scramble, scramble_len, auth_token, phase2_scramble);
 
-    if (rc != MXS_AUTH_SUCCEEDED && service_refresh_users(dcb->service()))
+    if (rc != AuthRes::SUCCESS && service_refresh_users(dcb->service()))
     {
         rc = validate_mysql_user(dcb, client_data, scramble, scramble_len, auth_token, phase2_scramble);
     }
 
-    if (rc == MXS_AUTH_SUCCEEDED)
+    if (rc == AuthRes::SUCCESS)
     {
         memcpy(output_token, phase2_scramble, sizeof(phase2_scramble));
-        rval = 0;
+        rval = AuthRes::SUCCESS;
     }
 
     return rval;
@@ -772,13 +773,13 @@ bool MariaDBBackendSession::ssl_capable(DCB* dcb)
     return backend->server()->ssl().context() != nullptr;
 }
 
-int MariaDBBackendSession::authenticate(DCB* backend)
+mariadb::BackendAuthenticator::AuthRes MariaDBBackendSession::authenticate(DCB* backend)
 {
-    int rval = MXS_AUTH_FAILED;
+    auto rval = AuthRes::FAIL;
     if (state == State::AUTH_OK)
     {
         /** Authentication completed successfully */
-        rval = MXS_AUTH_SUCCEEDED;
+        rval = AuthRes::SUCCESS;
     }
     return rval;
 }

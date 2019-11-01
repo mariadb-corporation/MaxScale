@@ -22,9 +22,9 @@ public:
     PamBackendAuthenticator& operator=(const PamBackendAuthenticator&) = delete;
 
     PamBackendAuthenticator();
-    bool extract(DCB* dcb, GWBUF* buffer) override;
-    int  authenticate(DCB* dcb) override;
-    bool ssl_capable(DCB* dcb) override;
+    bool    extract(DCB* dcb, GWBUF* buffer) override;
+    AuthRes authenticate(DCB* dcb) override;
+    bool    ssl_capable(DCB* dcb) override;
 
 private:
     bool send_client_password(DCB* dcb);
@@ -39,8 +39,8 @@ private:
         DONE
     };
 
-    State         m_state {State::INIT}; /**< Authentication state */
-    uint8_t       m_sequence {0};        /**< The next packet sequence number */
-    std::string   m_servername;          /**< Backend name, for logging */
-    std::string   m_clienthost;          /**< Client name & host, for logging */
+    State       m_state {State::INIT};  /**< Authentication state */
+    uint8_t     m_sequence {0};         /**< The next packet sequence number */
+    std::string m_servername;           /**< Backend name, for logging */
+    std::string m_clienthost;           /**< Client name & host, for logging */
 };

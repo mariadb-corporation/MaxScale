@@ -49,6 +49,7 @@
 
 namespace
 {
+using AuthRes = mariadb::ClientAuthenticator::AuthRes;
 
 const char WORD_KILL[] = "KILL";
 
@@ -374,12 +375,12 @@ bool is_kill_query(GWBUF* buffer, size_t packet_len)
 }
 }
 
-int MariaDBClientConnection::ssl_authenticate_check_status(DCB* generic_dcb)
+AuthRes MariaDBClientConnection::ssl_authenticate_check_status(DCB* generic_dcb)
 {
     mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
 
-    int rval = MXS_AUTH_FAILED;
+    AuthRes rval = AuthRes::FAIL;
     /**
      * We record the SSL status before and after ssl authentication. This allows
      * us to detect if the SSL handshake is immediately completed, which means more
@@ -391,20 +392,20 @@ int MariaDBClientConnection::ssl_authenticate_check_status(DCB* generic_dcb)
 
     if (ssl_ret != 0)
     {
-        rval = (ssl_ret == SSL_ERROR_CLIENT_NOT_SSL) ? MXS_AUTH_FAILED_SSL : MXS_AUTH_FAILED;
+        rval = (ssl_ret == SSL_ERROR_CLIENT_NOT_SSL) ? AuthRes::FAIL_SSL : AuthRes::FAIL;
     }
     else if (!health_after)
     {
-        rval = MXS_AUTH_SSL_INCOMPLETE;
+        rval = AuthRes::INCOMPLETE_SSL;
     }
     else if (!health_before && health_after)
     {
-        rval = MXS_AUTH_SSL_INCOMPLETE;
+        rval = AuthRes::INCOMPLETE_SSL;
         dcb->trigger_read_event();
     }
     else if (health_before && health_after)
     {
-        rval = MXS_AUTH_SSL_COMPLETE;
+        rval = AuthRes::SSL_READY;
     }
     return rval;
 }
@@ -766,7 +767,8 @@ void MariaDBClientConnection::store_client_information(DCB* generic_dcb, GWBUF* 
  * @param auth_val The type of authentication failure
  * @note Authentication status codes are defined in maxscale/protocol/mysql.h
  */
-void MariaDBClientConnection::handle_authentication_errors(DCB* generic_dcb, int auth_val, int packet_number)
+void MariaDBClientConnection::handle_authentication_errors(DCB* generic_dcb, AuthRes auth_val,
+                                                           int packet_number)
 {
     mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
@@ -777,14 +779,14 @@ void MariaDBClientConnection::handle_authentication_errors(DCB* generic_dcb, int
 
     switch (auth_val)
     {
-    case MXS_AUTH_NO_SESSION:
+    case AuthRes::NO_SESSION:
         MXS_DEBUG("session creation failed. fd %d, state = MYSQL_AUTH_NO_SESSION.", dcb->fd());
 
         /** Send ERR 1045 to client */
         mysql_send_auth_error(dcb, packet_number, "failed to create new session");
         break;
 
-    case MXS_AUTH_FAILED_DB:
+    case AuthRes::FAIL_DB:
         MXS_DEBUG("database specified was not valid. fd %d, state = MYSQL_FAILED_AUTH_DB.", dcb->fd());
         /** Send error 1049 to client */
         message_len = 25 + MYSQL_DATABASE_MAXLEN;
@@ -796,7 +798,7 @@ void MariaDBClientConnection::handle_authentication_errors(DCB* generic_dcb, int
         modutil_send_mysql_err_packet(dcb, packet_number, 0, 1049, "42000", fail_str);
         break;
 
-    case MXS_AUTH_FAILED_SSL:
+    case AuthRes::FAIL_SSL:
         MXS_DEBUG("client is not SSL capable for SSL listener. fd %d, state = MYSQL_FAILED_AUTH_SSL.",
                   dcb->fd());
 
@@ -804,7 +806,7 @@ void MariaDBClientConnection::handle_authentication_errors(DCB* generic_dcb, int
         mysql_send_auth_error(dcb, packet_number, "Access without SSL denied");
         break;
 
-    case MXS_AUTH_SSL_INCOMPLETE:
+    case AuthRes::INCOMPLETE_SSL:
         MXS_DEBUG("unable to complete SSL authentication. fd %d, state = MYSQL_AUTH_SSL_INCOMPLETE.",
                   dcb->fd());
 
@@ -812,7 +814,7 @@ void MariaDBClientConnection::handle_authentication_errors(DCB* generic_dcb, int
         mysql_send_auth_error(dcb, packet_number, "failed to complete SSL authentication");
         break;
 
-    case MXS_AUTH_FAILED:
+    case AuthRes::FAIL:
         MXS_DEBUG("authentication failed. fd %d, state = MYSQL_FAILED_AUTH.", dcb->fd());
         /** Send error 1045 to client */
         fail_str = create_auth_fail_str(session->user.c_str(),
@@ -823,7 +825,7 @@ void MariaDBClientConnection::handle_authentication_errors(DCB* generic_dcb, int
         modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "28000", fail_str);
         break;
 
-    case MXS_AUTH_BAD_HANDSHAKE:
+    case AuthRes::BAD_HANDSHAKE:
         modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "08S01", "Bad handshake");
         break;
 
@@ -889,14 +891,14 @@ int MariaDBClientConnection::perform_authentication(DCB* generic_dcb, GWBUF* rea
      * data extraction succeeds, then a call is made to the actual
      * authenticate function to carry out the user checks.
      */
-    int auth_val = MXS_AUTH_FAILED;
+    auto auth_val = AuthRes::FAIL;
     if (m_authenticator)
     {
         if (m_authenticator->extract(read_buffer, m_session_data))
         {
             auth_val = ssl_authenticate_check_status(dcb);
 
-            if (auth_val == MXS_AUTH_SSL_COMPLETE)
+            if (auth_val == AuthRes::SSL_READY)
             {
                 // TLS connection phase complete
                 auth_val = m_authenticator->authenticate(dcb);
@@ -904,7 +906,7 @@ int MariaDBClientConnection::perform_authentication(DCB* generic_dcb, GWBUF* rea
         }
         else
         {
-            auth_val = MXS_AUTH_BAD_HANDSHAKE;
+            auth_val = AuthRes::BAD_HANDSHAKE;
         }
     }
 
@@ -918,7 +920,7 @@ int MariaDBClientConnection::perform_authentication(DCB* generic_dcb, GWBUF* rea
      * non-null session) then the whole process has succeeded. In all
      * other cases an error return is made.
      */
-    if (MXS_AUTH_SUCCEEDED == auth_val)
+    if (auth_val == AuthRes::SUCCESS)
     {
         /** User authentication complete, copy the username to the DCB */
         dcb->session()->set_user(m_session_data->user);
@@ -947,7 +949,7 @@ int MariaDBClientConnection::perform_authentication(DCB* generic_dcb, GWBUF* rea
         }
         else
         {
-            auth_val = MXS_AUTH_NO_SESSION;
+            auth_val = AuthRes::NO_SESSION;
         }
     }
     /**
@@ -955,16 +957,15 @@ int MariaDBClientConnection::perform_authentication(DCB* generic_dcb, GWBUF* rea
      * then the protocol state is updated, the client is notified of the failure
      * and the DCB is closed.
      */
-    if (MXS_AUTH_SUCCEEDED != auth_val
-        && MXS_AUTH_INCOMPLETE != auth_val
-        && MXS_AUTH_SSL_INCOMPLETE != auth_val)
+    if (auth_val != AuthRes::SUCCESS && auth_val != AuthRes::INCOMPLETE
+        && auth_val != AuthRes::INCOMPLETE_SSL)
     {
         protocol->protocol_auth_state = MXS_AUTH_STATE_FAILED;
         handle_authentication_errors(dcb, auth_val, next_sequence);
         mxb_assert(dcb->session()->listener);
 
         // MXS_AUTH_NO_SESSION is for failure to start session, not authentication failure
-        if (auth_val != MXS_AUTH_NO_SESSION)
+        if (auth_val != AuthRes::NO_SESSION)
         {
             dcb->session()->listener->mark_auth_as_failed(dcb->remote());
         }
@@ -1133,9 +1134,9 @@ bool MariaDBClientConnection::reauthenticate_client(MXS_SESSION* session, GWBUF*
         payload.resize(payloadlen);
         gwbuf_copy_data(packetbuf, MYSQL_HEADER_LEN, payloadlen, &payload[0]);
 
-        int rc = m_authenticator->reauthenticate(m_dcb, m_scramble, sizeof(m_scramble),
-                                                 payload, data->client_sha1);
-        if (rc == MXS_AUTH_SUCCEEDED)
+        auto rc = m_authenticator->reauthenticate(m_dcb, m_scramble, sizeof(m_scramble),
+                                                  payload, data->client_sha1);
+        if (rc == AuthRes::SUCCESS)
         {
             // Re-authentication successful, route the original COM_CHANGE_USER
             rval = true;
@@ -2026,7 +2027,7 @@ char* MariaDBClientConnection::create_auth_fail_str(const char* username,
                                                     const char* hostaddr,
                                                     bool password,
                                                     const char* db,
-                                                    int errcode)
+                                                    AuthRes errcode)
 {
     char* errstr;
     const char* ferrstr;
@@ -2045,7 +2046,7 @@ char* MariaDBClientConnection::create_auth_fail_str(const char* username,
     {
         ferrstr = "Access denied for user '%s'@'%s' (using password: %s) to database '%s'";
     }
-    else if (errcode == MXS_AUTH_FAILED_SSL)
+    else if (errcode == AuthRes::FAIL_SSL)
     {
         ferrstr = "Access without SSL denied";
     }
@@ -2066,7 +2067,7 @@ char* MariaDBClientConnection::create_auth_fail_str(const char* username,
     {
         sprintf(errstr, ferrstr, username, hostaddr, password ? "YES" : "NO", db);
     }
-    else if (errcode == MXS_AUTH_FAILED_SSL)
+    else if (errcode == AuthRes::FAIL_SSL)
     {
         sprintf(errstr, "%s", ferrstr);
     }

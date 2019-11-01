@@ -177,23 +177,20 @@ bool GSSAPIBackendAuthenticator::ssl_capable(DCB* dcb)
  * @return MXS_AUTH_INCOMPLETE if authentication is ongoing, MXS_AUTH_SUCCEEDED
  * if authentication is complete and MXS_AUTH_FAILED if authentication failed.
  */
-int GSSAPIBackendAuthenticator::authenticate(DCB* dcb)
+mariadb::BackendAuthenticator::AuthRes GSSAPIBackendAuthenticator::authenticate(DCB* dcb)
 {
-    int rval = MXS_AUTH_FAILED;
-    auto auth = this;
-
-    if (auth->state == GSSAPI_AUTH_INIT)
+    auto rval = AuthRes::FAIL;
+    if (state == GSSAPI_AUTH_INIT)
     {
         if (send_new_auth_token(dcb))
         {
-            rval = MXS_AUTH_INCOMPLETE;
-            auth->state = GSSAPI_AUTH_DATA_SENT;
+            rval = AuthRes::INCOMPLETE;
+            state = GSSAPI_AUTH_DATA_SENT;
         }
     }
-    else if (auth->state == GSSAPI_AUTH_OK)
+    else if (state == GSSAPI_AUTH_OK)
     {
-        rval = MXS_AUTH_SUCCEEDED;
+        rval = AuthRes::SUCCESS;
     }
-
     return rval;
 }
