@@ -802,7 +802,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
         {
             if (qc_query_is_type(type_mask, QUERY_TYPE_COMMIT))
             {
-                m_invalidate_now = true;
+                m_invalidate_now = m_invalidate;
             }
             else
             {
@@ -839,6 +839,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
                     break;
 
                 case StatementType::DUPSERT:
+                    if (m_invalidate)
                     {
                         if (!m_pSession->is_trx_active() && m_pSession->is_autocommit())
                         {
