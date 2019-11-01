@@ -147,8 +147,7 @@ public:
     MariaDBClientAuthenticator(MariaDBAuthenticatorModule* module);
     ~MariaDBClientAuthenticator() override = default;
 
-    bool extract(DCB* client, GWBUF* buffer) override;
-    bool ssl_capable(DCB* client) override;
+    bool extract(GWBUF* buffer, MYSQL_session* session) override;
     int  authenticate(DCB* client) override;
 
     int reauthenticate(DCB* generic_dcb, uint8_t* scramble, size_t scramble_len, const ByteVec& auth_token,
@@ -172,7 +171,7 @@ private:
                             const mariadb::ClientAuthenticator::ByteVec& auth_token,
                             uint8_t* phase2_scramble_out);
     bool check_database(sqlite3* handle, const char* database);
-    bool set_client_data(MYSQL_session* client_data, DCB* client_dcb, GWBUF* buffer);
+    bool set_client_data(MYSQL_session* client_data, GWBUF* buffer);
 
     bool m_correct_authenticator {false};   /*< Is session using mysql_native_password? */
     bool m_auth_switch_sent {false};        /*< Expecting a response to AuthSwitchRequest? */

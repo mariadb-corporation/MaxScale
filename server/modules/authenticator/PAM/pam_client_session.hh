@@ -31,9 +31,7 @@ public:
     static mariadb::SClientAuth create(PamAuthenticatorModule* instance);
 
     int  authenticate(DCB* client) override;
-    bool extract(DCB* dcb, GWBUF* read_buffer) override;
-
-    bool ssl_capable(DCB* client) override;
+    bool extract(GWBUF* read_buffer, MYSQL_session* session) override;
 
 private:
     PamClientAuthenticator(PamAuthenticatorModule* instance);

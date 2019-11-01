@@ -323,26 +323,17 @@ int MariaDBClientAuthenticator::authenticate(DCB* generic_dcb)
 }
 
 /**
- * @brief Transfer data from the authentication request to the DCB.
+ * This function examines a buffer containing MySQL authentication data. If the information
+ * in the buffer is invalid, then a failure code is returned. A call to
+ * mysql_auth_set_client_data does the detailed work.
  *
- * The request handler DCB has a field called data that contains protocol
- * specific information. This function examines a buffer containing MySQL
- * authentication data and puts it into a structure that is referred to
- * by the DCB. If the information in the buffer is invalid, then a failure
- * code is returned. A call to mysql_auth_set_client_data does the
- * detailed work.
- *
- * @param dcb Request handler DCB connected to the client
  * @param buffer Pointer to pointer to buffer containing data from client
  * @return True on success, false on error
  */
-bool MariaDBClientAuthenticator::extract(DCB* generic_dcb, GWBUF* buf)
+bool MariaDBClientAuthenticator::extract(GWBUF* buf, MYSQL_session* session)
 {
-    mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
-    auto dcb = static_cast<ClientDCB*>(generic_dcb);
-
     int client_auth_packet_size = gwbuf_length(buf);
-    auto client_data = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
+    auto client_data = session;
 
     /* For clients supporting CLIENT_PROTOCOL_41
      * the Handshake Response Packet is:
@@ -367,7 +358,7 @@ bool MariaDBClientAuthenticator::extract(DCB* generic_dcb, GWBUF* buf)
         || (m_auth_switch_sent
             && (client_auth_packet_size == MYSQL_HEADER_LEN + MYSQL_SCRAMBLE_LEN)))
     {
-        return set_client_data(client_data, dcb, buf);
+        return set_client_data(client_data, buf);
     }
     else
     {
@@ -418,11 +409,10 @@ static bool read_zstr(const uint8_t* client_auth_packet, size_t client_auth_pack
  * return code indicates failure.
  *
  * @param client_data The data structure for the DCB
- * @param client_dcb The client DCB.
  * @param buffer The authentication data.
  * @return True on success, false on error
  */
-bool MariaDBClientAuthenticator::set_client_data(MYSQL_session* client_data, DCB* client_dcb, GWBUF* buffer)
+bool MariaDBClientAuthenticator::set_client_data(MYSQL_session* client_data, GWBUF* buffer)
 {
     int client_auth_packet_size = gwbuf_length(buffer);
     uint8_t client_auth_packet[client_auth_packet_size];
@@ -512,10 +502,10 @@ bool MariaDBClientAuthenticator::set_client_data(MYSQL_session* client_data, DCB
                             {
                                 // The switch attempt is done later but the message is clearest if
                                 // logged at once.
-                                MXS_INFO("Client '%s'@[%s] is using an unsupported authenticator "
+                                MXS_INFO("Client '%s'@'%s' is using an unsupported authenticator "
                                          "plugin '%s'. Trying to switch to '%s'.",
-                                         client_data->user.c_str(), client_dcb->remote().c_str(), plugin_name,
-                                         DEFAULT_MYSQL_AUTH_PLUGIN);
+                                         client_data->user.c_str(), client_data->remote.c_str(),
+                                         plugin_name, DEFAULT_MYSQL_AUTH_PLUGIN);
                             }
                         }
                     }
@@ -544,22 +534,6 @@ bool MariaDBClientAuthenticator::set_client_data(MYSQL_session* client_data, DCB
     }
 
     return true;
-}
-
-/**
- * @brief Determine whether the client is SSL capable
- *
- * The authentication request from the client will indicate whether the client
- * is expecting to make an SSL connection. The information has been extracted
- * in the previous functions.
- *
- * @param dcb Request handler DCB connected to the client
- * @return Boolean indicating whether client is SSL capable
- */
-bool MariaDBClientAuthenticator::ssl_capable(DCB* dcb)
-{
-    auto mariadbses = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
-    return mariadbses->ssl_capable();
 }
 
 /**

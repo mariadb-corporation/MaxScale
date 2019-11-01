@@ -240,24 +240,19 @@ static GWBUF* create_auth_change_packet(GSSAPIAuthenticatorModule* instance, GSS
  * This token will be shared with all the DCBs for this session when the backend
  * GSSAPI authentication is done.
  *
- * @param dcb Client DCB
  * @param buffer Buffer containing the key
  * @return True on success, false if memory allocation failed
  */
-bool GSSAPIClientAuthenticator::store_client_token(DCB* generic_dcb, GWBUF* buffer)
+bool GSSAPIClientAuthenticator::store_client_token(MYSQL_session* session, GWBUF* buffer)
 {
-    mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
-    auto dcb = static_cast<ClientDCB*>(generic_dcb);
-
     bool rval = false;
     uint8_t hdr[MYSQL_HEADER_LEN];
 
     if (gwbuf_copy_data(buffer, 0, MYSQL_HEADER_LEN, hdr) == MYSQL_HEADER_LEN)
     {
         size_t plen = gw_mysql_get_byte3(hdr);
-        auto ses = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
-        ses->auth_token.resize(plen);
-        gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, plen, ses->auth_token.data());
+        session->auth_token.resize(plen);
+        gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, plen, session->auth_token.data());
         rval = true;
     }
 
@@ -266,10 +261,10 @@ bool GSSAPIClientAuthenticator::store_client_token(DCB* generic_dcb, GWBUF* buff
 
 /**
  * @brief Copy username to shared session data
- * @param dcb Client DCB
+ *
  * @param buffer Buffer containing the first authentication response
  */
-void GSSAPIClientAuthenticator::copy_client_information(DCB* dcb, GWBUF* buffer)
+void GSSAPIClientAuthenticator::copy_client_information(GWBUF* buffer)
 {
     gwbuf_copy_data(buffer, MYSQL_SEQ_OFFSET, 1, &sequence);
 }
@@ -277,23 +272,22 @@ void GSSAPIClientAuthenticator::copy_client_information(DCB* dcb, GWBUF* buffer)
 /**
  * @brief Extract data from client response
  *
- * @param dcb Client DCB
  * @param read_buffer Buffer containing the client's response
  * @return True if authentication can continue, false if not
  */
-bool GSSAPIClientAuthenticator::extract(DCB* dcb, GWBUF* read_buffer)
+bool GSSAPIClientAuthenticator::extract(GWBUF* read_buffer, MYSQL_session* session)
 {
     int rval = false;
 
     switch (state)
     {
     case GSSAPI_AUTH_INIT:
-        copy_client_information(dcb, read_buffer);
+        copy_client_information(read_buffer);
         rval = true;
         break;
 
     case GSSAPI_AUTH_DATA_SENT:
-        store_client_token(dcb, read_buffer);
+        store_client_token(session, read_buffer);
         rval = true;
         break;
 
@@ -304,18 +298,6 @@ bool GSSAPIClientAuthenticator::extract(DCB* dcb, GWBUF* read_buffer)
     }
 
     return rval;
-}
-
-/**
- * @brief Is the client SSL capable
- *
- * @param dcb Client DCB
- * @return True if client supports SSL
- */
-bool GSSAPIClientAuthenticator::ssl_capable(DCB* dcb)
-{
-    auto mariadbses = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
-    return mariadbses->ssl_capable();
 }
 
 static gss_name_t server_name = GSS_C_NO_NAME;

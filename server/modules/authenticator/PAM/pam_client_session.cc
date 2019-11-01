@@ -27,25 +27,19 @@ namespace
 /**
  * @brief Read the client's password, store it to MySQL-session
  *
- * @param dcb Client DCB
  * @param buffer Buffer containing the password
- *
  * @return True on success, false if memory allocation failed
  */
-bool store_client_password(DCB* generic_dcb, GWBUF* buffer)
+bool store_client_password(MYSQL_session* session, GWBUF* buffer)
 {
-    mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
-    auto dcb = static_cast<ClientDCB*>(generic_dcb);
-
     bool rval = false;
     uint8_t header[MYSQL_HEADER_LEN];
 
     if (gwbuf_copy_data(buffer, 0, MYSQL_HEADER_LEN, header) == MYSQL_HEADER_LEN)
     {
         size_t plen = gw_mysql_get_byte3(header);
-        auto ses = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
-        ses->auth_token.resize(plen);
-        gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, plen, ses->auth_token.data());
+        session->auth_token.resize(plen);
+        gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, plen, session->auth_token.data());
         rval = true;
     }
     return rval;
@@ -353,7 +347,7 @@ int PamClientAuthenticator::authenticate(DCB* generic_dcb)
     return rval;
 }
 
-bool PamClientAuthenticator::extract(DCB* dcb, GWBUF* buffer)
+bool PamClientAuthenticator::extract(GWBUF* buffer, MYSQL_session* session)
 {
     gwbuf_copy_data(buffer, MYSQL_SEQ_OFFSET, 1, &m_sequence);
     m_sequence++;
@@ -368,7 +362,7 @@ bool PamClientAuthenticator::extract(DCB* dcb, GWBUF* buffer)
 
         case State::ASKED_FOR_PW:
         // Client should have responses with password.
-        if (store_client_password(dcb, buffer))
+        if (store_client_password(session, buffer))
         {
             m_state = State::PW_RECEIVED;
             rval = true;
@@ -381,12 +375,6 @@ bool PamClientAuthenticator::extract(DCB* dcb, GWBUF* buffer)
         break;
     }
     return rval;
-}
-
-bool PamClientAuthenticator::ssl_capable(DCB* client)
-{
-    auto mariadbses = static_cast<MYSQL_session*>(client->session()->protocol_data());
-    return mariadbses->ssl_capable();
 }
 
 bool PamClientAuthenticator::role_can_access_db(const std::string& role, const std::string& target_db)

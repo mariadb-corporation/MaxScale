@@ -65,16 +65,15 @@ class GSSAPIClientAuthenticator : public mariadb::ClientAuthenticatorT<GSSAPIAut
 public:
     GSSAPIClientAuthenticator(GSSAPIAuthenticatorModule* module);
     ~GSSAPIClientAuthenticator() override;
-    bool extract(DCB* client, GWBUF* buffer) override;
-    bool ssl_capable(DCB* client) override;
+    bool extract(GWBUF* buffer, MYSQL_session* session) override;
     int  authenticate(DCB* client) override;
 
     sqlite3* handle {nullptr};              /**< SQLite3 database handle */
     uint8_t  sequence {0};                  /**< The next packet seqence number */
 
 private:
-    void copy_client_information(DCB* dcb, GWBUF* buffer);
-    bool store_client_token(DCB* dcb, GWBUF* buffer);
+    void copy_client_information(GWBUF* buffer);
+    bool store_client_token(MYSQL_session* session, GWBUF* buffer);
 
     gssapi_auth_state state {GSSAPI_AUTH_INIT};     /**< Authentication state*/
     uint8_t*          principal_name {nullptr};     /**< Principal name */

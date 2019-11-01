@@ -77,6 +77,7 @@ MySQLProtocolModule::create_client_protocol(MXS_SESSION* session, mxs::Component
         // The authenticator module used by this session is not known yet. The protocol code will figure
         // it out once authentication begins.
         mdb_session->allowed_authenticators = &m_authenticators;
+        mdb_session->remote = session->client_remote();
         session->set_protocol_data(std::move(mdb_session));
         new_client_proto = std::unique_ptr<mxs::ClientConnection>(
             new(std::nothrow) MariaDBClientConnection(session, component));

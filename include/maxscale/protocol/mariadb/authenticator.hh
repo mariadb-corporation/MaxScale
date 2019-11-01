@@ -17,6 +17,7 @@
 class DCB;
 class SERVICE;
 class GWBUF;
+class MYSQL_session;
 
 /** Return values for extract and authenticate entry points */
 #define MXS_AUTH_SUCCEEDED             0/**< Authentication was successful */
@@ -141,14 +142,10 @@ public:
      * Extract client from a buffer and place it in a structure shared at the session level.
      * Typically, this is called just before the authenticate-entrypoint.
      *
-     * @param client Client dcb
      * @param buffer Packet from client
      * @return True on success
      */
-    virtual bool extract(DCB* client, GWBUF* buffer) = 0;
-
-    // Determine whether the connection can support SSL.
-    virtual bool ssl_capable(DCB* client) = 0;
+    virtual bool extract(GWBUF* buffer, MYSQL_session* session) = 0;
 
     // Carry out the authentication.
     virtual int authenticate(DCB* client) = 0;

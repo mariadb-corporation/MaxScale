@@ -13,7 +13,6 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
-#include <maxscale/protocol2.hh>
 #include <maxscale/session.hh>
 #include <maxscale/protocol/mariadb/common_constants.hh>
 #include <maxscale/protocol/mariadb/authenticator.hh>
@@ -49,6 +48,7 @@ public:
 
     uint8_t     client_sha1[MYSQL_SCRAMBLE_LEN] {0};/*< SHA1(password) */
     std::string user;                               /*< username       */
+    std::string remote;                             /*< client ip      */
     std::string db;                                 /*< database       */
     uint8_t     next_sequence {0};                  /*< Next packet sequence */
     bool        changing_user {false};              /*< True if a COM_CHANGE_USER is in progress */

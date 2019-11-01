@@ -386,7 +386,7 @@ int MariaDBClientConnection::ssl_authenticate_check_status(DCB* generic_dcb)
      * data needs to be read from the socket.
      */
     bool health_before = ssl_is_connection_healthy(dcb);
-    int ssl_ret = ssl_authenticate_client(dcb, m_authenticator->ssl_capable(dcb));
+    int ssl_ret = ssl_authenticate_client(dcb, m_session_data->ssl_capable());
     bool health_after = ssl_is_connection_healthy(dcb);
 
     if (ssl_ret != 0)
@@ -707,7 +707,6 @@ void MariaDBClientConnection::store_client_information(DCB* generic_dcb, GWBUF* 
 
     size_t len = gwbuf_length(buffer);
     uint8_t data[len];
-    auto proto = this;
     MYSQL_session* ses = m_session_data;
 
     gwbuf_copy_data(buffer, 0, len, data);
@@ -893,7 +892,7 @@ int MariaDBClientConnection::perform_authentication(DCB* generic_dcb, GWBUF* rea
     int auth_val = MXS_AUTH_FAILED;
     if (m_authenticator)
     {
-        if (m_authenticator->extract(dcb, read_buffer))
+        if (m_authenticator->extract(read_buffer, m_session_data))
         {
             auth_val = ssl_authenticate_check_status(dcb);
 
