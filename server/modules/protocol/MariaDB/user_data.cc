@@ -348,7 +348,8 @@ const UserEntry* UserDatabase::find_entry(const std::string& username, const std
             // The entry must not be a role (they should have empty hostnames in any case) and the hostname
             // pattern should match the host.
             // TODO: add checking for bitmasks and possibly name lookups (tricky...)
-            if (!entry.is_role && sqlite3_strlike(entry.host_pattern.c_str(), host.c_str(), '\\') == 0)
+            // TODO: sqlite3_strlike(entry.host_pattern.c_str(), host.c_str(), '\\') == 0
+            if (!entry.is_role && entry.host_pattern == host)
             {
                 rval = &entry;
                 break;
