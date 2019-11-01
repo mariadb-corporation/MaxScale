@@ -190,6 +190,10 @@ add_test_executable(mxs2456_trx_replay_cap.cpp mxs2456_trx_replay_cap mxs2456_tr
 # MXS-2512: Enable transaction replay for additional rollback errors.
 add_test_executable(mxs2512_trx_replay_rollback.cpp mxs2512_trx_replay_rollback mxs2512_trx_replay_rollback LABELS readwritesplit REPL_BACKEND)
 
+# MXS-2443: Test causal_reads_mode=global
+# https://jira.mariadb.org/browse/MXS-2443
+add_test_executable(mxs2443_global_causal_reads.cpp mxs2443_global_causal_reads mxs2443_global_causal_reads LABELS readwritesplit REPL_BACKEND)
+
 ############################################
 # END: Tests that require GTID             #
 ############################################
