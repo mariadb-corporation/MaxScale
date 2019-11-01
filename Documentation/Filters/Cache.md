@@ -62,6 +62,12 @@ a user with access to data he should not have access to.
 
 Please read the section [Security](#security-1) for more detailed information.
 
+However, from 2.5 onwards it is possible to configure the cache to cache
+the data of each user separately, which effectively means that there can
+be no unintended sharing. Please see
+[user_data](#user_data)
+for how to change the default behaviour.
+
 ## Invalidation
 
 Since MaxScale 2.5, the cache is capable of invalidating entries in the
@@ -417,6 +423,24 @@ The default value is `true`.
 Changing the value to `false` may mean that stale data is returned from
 the cache, if an UPDATE/INSERT/DELETE cannot be parsed and the statement
 affects entries in the cache.
+
+#### `user_data`
+
+An enumeration option specifying how the cache should cache data for
+different users.
+
+    * `shared`: The data of different users is stored in the same
+      cache. This is the default and may cause that a user can
+      access data he should not have access to.
+    * `unique`: Each user has a unique cache and there can be
+      no unintended sharing.
+
+Note that if `unique` has been specified, then each user will
+conceptually have a cache of his own, which is populated
+independently from each other. That is, if two users make the
+same query, then the data will be fetched twice and also stored
+twice. So, a `unique` cache will in general use more memory and
+cause more traffic to the backend compared to a `shared` cache.
 
 ### Runtime Configuration
 

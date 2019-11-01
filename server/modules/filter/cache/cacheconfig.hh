@@ -32,6 +32,12 @@ enum cache_in_trxs_t
     CACHE_IN_TRXS_ALL,
 };
 
+enum cache_user_data_t
+{
+    CACHE_USER_DATA_SHARED,
+    CACHE_USER_DATA_UNIQUE
+};
+
 const cache_thread_model_t CACHE_DEFAULT_THREAD_MODEL = CACHE_THREAD_MODEL_ST;
 
 class CacheConfig : public config::Configuration
@@ -61,6 +67,7 @@ public:
     config::Bool                       enabled;
     config::Enum<cache_invalidate_t>   invalidate;
     config::Bool                       clear_cache_on_parse_errors;
+    config::Enum<cache_user_data_t>    user_data;
     char*                              zStorage_options {nullptr};  /**< Raw options for storage module. */
     char**                             storage_argv {nullptr};      /**< Cooked options for storage module. */
     int                                storage_argc {0};            /**< Number of cooked options. */
@@ -92,4 +99,5 @@ private:
     static config::ParamBool                       s_enabled;
     static config::ParamEnum<cache_invalidate_t>   s_invalidate;
     static config::ParamBool                       s_clear_cache_on_parse_errors;
+    static config::ParamEnum<cache_user_data_t>    s_user_data;
 };
