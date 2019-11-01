@@ -1149,17 +1149,18 @@ GWBUF* RWSplitSession::add_prefix_wait_gtid(uint64_t version, GWBUF* origin)
         MYSQL_WAIT_GTID_FUNC : MARIADB_WAIT_GTID_FUNC;
 
     const char* gtid_wait_timeout = m_config.causal_reads_timeout.c_str();
-    const char* gtid_position = m_gtid_pos.c_str();
+    std::string gtid_position = m_config.causal_reads_mode == CausalReadsMode::GLOBAL ?
+        m_router->last_gtid() : m_gtid_pos;
 
     /* Create a new buffer to store prefix sql */
-    size_t prefix_len = strlen(gtid_wait_stmt) + strlen(gtid_position)
+    size_t prefix_len = strlen(gtid_wait_stmt) + gtid_position.length()
         + strlen(gtid_wait_timeout) + strlen(wait_func);
 
     // Only do the replacement if it fits into one packet
     if (gwbuf_length(origin) + prefix_len < GW_MYSQL_MAX_PACKET_LEN + MYSQL_HEADER_LEN)
     {
         char prefix_sql[prefix_len];
-        snprintf(prefix_sql, prefix_len, gtid_wait_stmt, wait_func, gtid_position, gtid_wait_timeout);
+        snprintf(prefix_sql, prefix_len, gtid_wait_stmt, wait_func, gtid_position.c_str(), gtid_wait_timeout);
         GWBUF* prefix_buff = modutil_create_query(prefix_sql);
 
         // Copy the original query in case it fails on the slave
@@ -1212,7 +1213,9 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool 
     uint8_t cmd = mxs_mysql_get_command(querybuf);
     GWBUF* send_buf = gwbuf_clone(querybuf);
 
-    if (m_config.causal_reads && cmd == MXS_COM_QUERY && !m_gtid_pos.empty() && target->is_slave())
+    if (m_config.causal_reads && cmd == MXS_COM_QUERY
+        && (!m_gtid_pos.empty() || m_config.causal_reads_mode == CausalReadsMode::GLOBAL)
+        && target->is_slave())
     {
         // Perform the causal read only when the query is routed to a slave
 

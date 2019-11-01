@@ -79,6 +79,12 @@ enum failure_mode
     RW_ERROR_ON_WRITE           /**< Don't close the connection but send an error for writes */
 };
 
+enum class CausalReadsMode : uint64_t
+{
+    LOCAL,
+    GLOBAL,
+};
+
 /**
  * Enum values for router parameters
  */
@@ -104,6 +110,13 @@ static const MXS_ENUM_VALUE master_failure_mode_values[] =
     {"fail_instantly", RW_FAIL_INSTANTLY},
     {"fail_on_write",  RW_FAIL_ON_WRITE },
     {"error_on_write", RW_ERROR_ON_WRITE},
+    {NULL}
+};
+
+static const MXS_ENUM_VALUE causal_reads_mode_values[] =
+{
+    {"local",  (uint64_t)CausalReadsMode::LOCAL },
+    {"global", (uint64_t)CausalReadsMode::GLOBAL},
     {NULL}
 };
 
@@ -157,6 +170,7 @@ struct Config
         , slave_connections(params->get_integer("slave_connections"))
         , causal_reads(params->get_bool("causal_reads"))
         , causal_reads_timeout(std::to_string(params->get_duration<seconds>("causal_reads_timeout").count()))
+        , causal_reads_mode((CausalReadsMode)params->get_enum("causal_reads_mode", causal_reads_mode_values))
         , master_reconnection(params->get_bool("master_reconnection"))
         , delayed_retry(params->get_bool("delayed_retry"))
         , delayed_retry_timeout(params->get_duration<seconds>("delayed_retry_timeout").count())
@@ -213,23 +227,24 @@ struct Config
                                          * the master after a multistatement query. */
     bool strict_sp_calls;               /**< Lock session to master after an SP call */
     bool retry_failed_reads;            /**< Retry failed reads on other servers */
-    int  connection_keepalive;          /**< Send pings to servers that have been idle
-                                         * for too long */
-    int max_slave_replication_lag;      /**< Maximum replication lag */
-    int rw_max_slave_conn_percent;      /**< Maximum percentage of slaves to use for
-                                         * each connection*/
-    int         max_slave_connections;  /**< Maximum number of slaves for each connection*/
-    int         slave_connections;      /**< Minimum number of slaves for each connection*/
-    bool        causal_reads;           /**< Enable causual read */
-    std::string causal_reads_timeout;   /**< Timeout, second parameter of function master_wait_gtid */
-    bool        master_reconnection;    /**< Allow changes in master server */
-    bool        delayed_retry;          /**< Delay routing if no target found */
-    uint64_t    delayed_retry_timeout;  /**< How long to delay until an error is returned */
-    bool        transaction_replay;     /**< Replay failed transactions */
-    size_t      trx_max_size;           /**< Max transaction size for replaying */
-    int64_t     trx_max_attempts;       /**< Maximum number of transaction replay attempts */
-    bool        optimistic_trx;         /**< Enable optimistic transactions */
-    bool        lazy_connect;           /**< Create connections only when needed */
+    int  connection_keepalive;          /**< Send pings to servers that have been idle for too long */
+    int  max_slave_replication_lag;     /**< Maximum replication lag */
+    int  rw_max_slave_conn_percent;     /**< Maximum percentage of slaves to use for each connection*/
+    int  max_slave_connections;         /**< Maximum number of slaves for each connection*/
+    int  slave_connections;             /**< Minimum number of slaves for each connection*/
+
+    bool            causal_reads;           /**< Enable causual read */
+    std::string     causal_reads_timeout;   /**< Timeout, second parameter of function master_wait_gtid */
+    CausalReadsMode causal_reads_mode;
+
+    bool     master_reconnection;       /**< Allow changes in master server */
+    bool     delayed_retry;             /**< Delay routing if no target found */
+    uint64_t delayed_retry_timeout;     /**< How long to delay until an error is returned */
+    bool     transaction_replay;        /**< Replay failed transactions */
+    size_t   trx_max_size;              /**< Max transaction size for replaying */
+    int64_t  trx_max_attempts;          /**< Maximum number of transaction replay attempts */
+    bool     optimistic_trx;            /**< Enable optimistic transactions */
+    bool     lazy_connect;              /**< Create connections only when needed */
 };
 
 /**
@@ -271,6 +286,8 @@ public:
     const Stats&  stats() const;
     SrvStatMap&   local_server_stats();
     SrvStatMap    all_server_stats() const;
+    std::string   last_gtid() const;
+    void          set_last_gtid(const std::string& gtid);
 
     int  max_slave_count() const;
     bool have_enough_servers() const;
@@ -333,10 +350,18 @@ public:
     bool configure(MXS_CONFIG_PARAMETER* params);
 private:
 
+    struct gtid
+    {
+        uint32_t domain;
+        uint32_t server_id;
+        uint64_t sequence;
+    };
+
     SERVICE*                      m_service;    /**< Service where the router belongs*/
     mxs::WorkerGlobal<Config>     m_config;
     Stats                         m_stats;
     mxs::WorkerGlobal<SrvStatMap> m_server_stats;
+    std::atomic<gtid>             m_last_gtid {{0, 0, 0}};
 };
 
 static inline const char* select_criteria_to_str(select_criteria_t type)

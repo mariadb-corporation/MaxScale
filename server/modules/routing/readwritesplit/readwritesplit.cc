@@ -130,6 +130,35 @@ maxscale::SrvStatMap RWSplit::all_server_stats() const
     return stats;
 }
 
+std::string RWSplit::last_gtid() const
+{
+    auto gtid = m_last_gtid.load(std::memory_order_relaxed);
+    return std::to_string(gtid.domain) + '-'
+           + std::to_string(gtid.server_id) + '-'
+           + std::to_string(gtid.sequence);
+}
+
+void RWSplit::set_last_gtid(const std::string& str)
+{
+    static bool warn_malformed_gtid = true;
+    auto tokens = mxb::strtok(str, "-");
+
+    if (tokens.size() == 3)
+    {
+        gtid gtid;
+        gtid.domain = strtol(tokens[0].c_str(), nullptr, 10);
+        gtid.server_id = strtol(tokens[1].c_str(), nullptr, 10);
+        gtid.sequence = strtol(tokens[2].c_str(), nullptr, 10);
+
+        m_last_gtid.store(gtid, std::memory_order_relaxed);
+    }
+    else if (warn_malformed_gtid)
+    {
+        warn_malformed_gtid = false;
+        MXS_WARNING("Malformed GTID received: %s", str.c_str());
+    }
+}
+
 int RWSplit::max_slave_count() const
 {
     int router_nservers = m_service->get_children().size();
@@ -489,6 +518,13 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 "fail_instantly",
                 MXS_MODULE_OPT_NONE,
                 master_failure_mode_values
+            },
+            {
+                "causal_reads_mode",
+                MXS_MODULE_PARAM_ENUM,
+                "local",
+                MXS_MODULE_OPT_NONE,
+                causal_reads_mode_values
             },
             {"max_slave_replication_lag",  MXS_MODULE_PARAM_DURATION,  "0s",   MXS_MODULE_OPT_DURATION_S},
             {"max_slave_connections",      MXS_MODULE_PARAM_STRING,    MAX_SLAVE_COUNT},

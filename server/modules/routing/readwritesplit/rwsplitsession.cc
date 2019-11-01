@@ -311,7 +311,14 @@ GWBUF* RWSplitSession::handle_causal_read_reply(GWBUF* writebuf, const mxs::Repl
 
             if (!gtid.empty())
             {
-                m_gtid_pos = gtid;
+                if (m_config.causal_reads_mode == CausalReadsMode::LOCAL)
+                {
+                    m_gtid_pos = gtid;
+                }
+                else
+                {
+                    m_router->set_last_gtid(gtid);
+                }
             }
         }
 
