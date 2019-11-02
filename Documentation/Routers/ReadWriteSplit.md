@@ -642,6 +642,26 @@ versions a value without a unit may be rejected. Note that since the granularity
 of the timeout is seconds, a timeout specified in milliseconds will be rejected,
 even if the duration is longer than a second.
 
+### `causal_reads_mode`
+
+This parameter controls at which level the causality between reads and writes is
+applied. The parameter was added in MaxScale 2.5.0 and is set to `local` by
+default.
+
+The possible values for this parameter are:
+
+* `local`
+
+  * Writes are locally visible. Writes are guaranteed to be visible only to the
+    connection that does it. Unrelated modifications done by other connections
+    are not visible.
+
+* `global`
+
+  * Writes are globally visible. If one connection writes a value, all
+    connections to the same service will see it. In general this mode is slower
+    than the `local` mode due to the extra synchronization it has to do.
+
 ### `lazy_connect`
 
 Lazy connection creation causes connections to backend servers to be opened only
