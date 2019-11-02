@@ -950,11 +950,15 @@ bool configure_network_socket(int so, int type)
 {
     int one = 1;
 
-    if (type != AF_UNIX && setsockopt(so, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) != 0)
+    if (type != AF_UNIX)
     {
-        MXS_ERROR("Failed to set socket option: %d, %s.", errno, mxs_strerror(errno));
-        mxb_assert(!true);
-        return false;
+        if (setsockopt(so, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) != 0
+            || setsockopt(so, SOL_SOCKET, SO_KEEPALIVE, &one, sizeof(one)) != 0)
+        {
+            MXS_ERROR("Failed to set socket option: %d, %s.", errno, mxs_strerror(errno));
+            mxb_assert(!true);
+            return false;
+        }
     }
 
     return setnonblocking(so) == 0;
