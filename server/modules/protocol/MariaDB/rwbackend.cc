@@ -26,16 +26,9 @@ namespace maxscale
 
 RWBackend::RWBackend(mxs::Endpoint* ref)
     : mxs::Backend(ref)
+    , m_response_stat(target(), 9, std::chrono::milliseconds(250))
     , m_last_write(Clock::now())
 {
-}
-
-RWBackend::~RWBackend()
-{
-    if (m_response_stat.make_valid())
-    {
-        target()->response_time_add(m_response_stat.average().secs(), m_response_stat.num_samples());
-    }
 }
 
 bool RWBackend::execute_session_command()
@@ -142,12 +135,5 @@ void RWBackend::select_ended()
     Backend::select_ended();
 
     m_response_stat.query_ended();
-
-    if (m_response_stat.is_valid()
-        && (m_response_stat.sync_time_reached() || target()->response_time_num_samples() == 0))
-    {
-        target()->response_time_add(m_response_stat.average().secs(), m_response_stat.num_samples());
-        m_response_stat.reset();
-    }
 }
 }

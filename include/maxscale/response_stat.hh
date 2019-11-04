@@ -13,6 +13,7 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
+#include <maxscale/target.hh>
 #include <maxbase/stopwatch.hh>
 #include <maxbase/average.hh>
 
@@ -29,19 +30,19 @@ public:
      * @param num_filter_samples - collect num samples, use median (digital filter)
      * @param sync_duration      - this much time between synchronize to server stats.
      */
-    ResponseStat(int num_filter_samples = 9,
-                 maxbase::Duration sync_duration = std::chrono::milliseconds(250));
+    ResponseStat(Target* target, int num_filter_samples, maxbase::Duration sync_duration);
+    ~ResponseStat();
 
-    void              query_started();
-    void              query_ended();    // ok to call without a query_started
-    bool              make_valid();     // make valid even if there are only filter_samples
-    bool              is_valid() const;
-    long              num_samples() const;
-    maxbase::Duration average() const;
-    bool              sync_time_reached();  // is it time to apply the average to the server?
-    void              reset();
-
+    void query_started();
+    void query_ended();     // ok to call without a query_started()
 private:
+    void sync(bool last_call);
+    bool make_valid();      // make valid even if there are only filter_samples
+    bool is_valid() const;
+    bool sync_time_reached();   // is it time to apply the average to the server?
+    void reset();
+
+    Target*                        m_target;
     const int                      m_num_filter_samples;
     const maxbase::Duration        m_sync_duration;
     long                           m_sample_count;

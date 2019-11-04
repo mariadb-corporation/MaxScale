@@ -16,15 +16,21 @@
 
 namespace maxscale
 {
-ResponseStat::ResponseStat(int num_filter_samples,
+ResponseStat::ResponseStat(Target* target, int num_filter_samples,
                            maxbase::Duration sync_duration)
-    : m_num_filter_samples {num_filter_samples}
+    : m_target(target)
+    , m_num_filter_samples {num_filter_samples}
     , m_sync_duration{sync_duration}
     , m_sample_count{0}
     , m_samples(num_filter_samples)
     , m_last_start{maxbase::TimePoint()}
     , m_next_sync{maxbase::Clock::now() + sync_duration}
 {
+}
+
+ResponseStat::~ResponseStat()
+{
+    sync(true);
 }
 
 
@@ -40,6 +46,7 @@ void ResponseStat::query_ended()
         // m_last_start is defaulted. Ignore, avoids extra logic at call sites.
         return;
     }
+
     m_samples[m_sample_count] = maxbase::Clock::now() - m_last_start;
 
     if (++m_sample_count == m_num_filter_samples)
@@ -50,6 +57,24 @@ void ResponseStat::query_ended()
         m_sample_count = 0;
     }
     m_last_start = maxbase::TimePoint();
+
+    sync(false);
+}
+
+void ResponseStat::sync(bool last_call)
+{
+    if (last_call)
+    {
+        if (make_valid())
+        {
+            m_target->response_time_add(m_average.average(), m_average.num_samples());
+        }
+    }
+    else if (is_valid() && (sync_time_reached() || m_target->response_time_num_samples() == 0))
+    {
+        m_target->response_time_add(m_average.average(), m_average.num_samples());
+        reset();
+    }
 }
 
 bool ResponseStat::make_valid()
@@ -69,16 +94,6 @@ bool ResponseStat::make_valid()
 bool ResponseStat::is_valid() const
 {
     return m_average.num_samples();
-}
-
-long ResponseStat::num_samples() const
-{
-    return m_average.num_samples();
-}
-
-maxbase::Duration ResponseStat::average() const
-{
-    return maxbase::Duration(m_average.average());
 }
 
 bool ResponseStat::sync_time_reached()

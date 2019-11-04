@@ -57,7 +57,7 @@ public:
     static SRWBackends from_endpoints(const Endpoints& endpoints);
 
     RWBackend(mxs::Endpoint* endpoint);
-    virtual ~RWBackend();
+    virtual ~RWBackend() = default;
 
     void     add_ps_handle(uint32_t id, uint32_t handle);
     uint32_t get_ps_handle(uint32_t id) const;
