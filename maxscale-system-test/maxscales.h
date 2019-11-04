@@ -333,7 +333,7 @@ public:
      * @param intervals The number of monitor intervals to wait
      * @param m Number of Maxscale node
      */
-    void wait_for_monitor(int intervals = 1, int m = 0);
+    void wait_for_monitor(int intervals = 2, int m = 0);
 
     /**
      * @brief use_valrind if true Maxscale will be executed under Valgrind
