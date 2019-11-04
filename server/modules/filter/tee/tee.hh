@@ -57,14 +57,14 @@ public:
         return m_service;
     }
 
-    pcre2_code* get_match() const
+    const mxs::Regex& get_match() const
     {
-        return m_match_code;
+        return m_match;
     }
 
-    pcre2_code* get_exclude() const
+    const mxs::Regex& get_exclude() const
     {
-        return m_exclude_code;
+        return m_exclude;
     }
 
     void set_enabled(bool value)
@@ -78,20 +78,13 @@ public:
     }
 
 private:
-    Tee(SERVICE* service,
-        std::string user,
-        std::string remote,
-        pcre2_code* match,
-        std::string match_string,
-        pcre2_code* exclude,
-        std::string exclude_string);
+    Tee(const char* name, MXS_CONFIG_PARAMETER* params);
 
+    std::string m_name;
     SERVICE*    m_service;
-    std::string m_user;         /* The user name to filter on */
-    std::string m_source;       /* The source of the client connection */
-    pcre2_code* m_match_code;   /* Compiled match pattern */
-    pcre2_code* m_exclude_code; /* Compiled exclude pattern*/
-    std::string m_match;        /* Pattern for matching queries */
-    std::string m_exclude;      /* Pattern for excluding queries */
+    std::string m_user;     /* The user name to filter on */
+    std::string m_source;   /* The source of the client connection */
+    mxs::Regex  m_match;    /* Compiled match pattern */
+    mxs::Regex  m_exclude;  /* Compiled exclude pattern*/
     bool        m_enabled;
 };

@@ -20,80 +20,48 @@
 #include <maxscale/listener.hh>
 #include <maxscale/modutil.hh>
 
-TeeSession::TeeSession(MXS_SESSION* session,
-                       SERVICE* service,
-                       LocalClient* client,
-                       pcre2_code* match,
-                       pcre2_match_data* md_match,
-                       pcre2_code* exclude,
-                       pcre2_match_data* md_exclude)
+TeeSession::TeeSession(MXS_SESSION* session, SERVICE* service, LocalClient* client,
+                       const mxs::Regex& match, const mxs::Regex& exclude)
     : mxs::FilterSession(session, service)
     , m_client(client)
     , m_match(match)
-    , m_md_match(md_match)
     , m_exclude(exclude)
-    , m_md_exclude(md_exclude)
+    , m_md_match(m_match ? m_match.create_match_data() : nullptr)
+    , m_md_exclude(m_exclude ? m_exclude.create_match_data() : nullptr)
 {
 }
 
 TeeSession* TeeSession::create(Tee* my_instance, MXS_SESSION* session, SERVICE* service)
 {
-    LocalClient* client = NULL;
-    pcre2_code* match = NULL;
-    pcre2_code* exclude = NULL;
-    pcre2_match_data* md_match = NULL;
-    pcre2_match_data* md_exclude = NULL;
+    TeeSession* rval = nullptr;
 
     if (my_instance->is_enabled()
-        && my_instance->user_matches(session_get_user(session))
-        && my_instance->remote_matches(session_get_remote(session)))
+        && my_instance->user_matches(session->user().c_str())
+        && my_instance->remote_matches(session->client_remote().c_str()))
     {
-        match = my_instance->get_match();
-        exclude = my_instance->get_exclude();
-
-        if ((match && (md_match = pcre2_match_data_create_from_pattern(match, NULL)) == NULL)
-            || (exclude && (md_exclude = pcre2_match_data_create_from_pattern(exclude, NULL)) == NULL))
-        {
-            MXS_OOM();
-            return NULL;
-        }
-
-        client = LocalClient::create(session, my_instance->get_service());
-
-        if (client)
+        if (auto client = LocalClient::create(session, my_instance->get_service()))
         {
             client->connect();
+
+            rval = new TeeSession(session, service, client,
+                                  my_instance->get_match(),
+                                  my_instance->get_exclude());
         }
         else
         {
-            const char* extra = !listener_find_by_service(my_instance->get_service()).empty() ? "" :
-                ": Service has no network listeners";
-            MXS_ERROR("Failed to create local client connection to '%s'%s",
-                      my_instance->get_service()->name(), extra);
-            return NULL;
+            MXS_ERROR("Failed to create local client connection to '%s'",
+                      my_instance->get_service()->name());
         }
     }
 
-    TeeSession* tee = new(std::nothrow) TeeSession(session, service, client,
-                                                   match, md_match, exclude, md_exclude);
-
-    if (!tee)
-    {
-        pcre2_match_data_free(md_match);
-        pcre2_match_data_free(md_exclude);
-
-        if (client)
-        {
-            delete client;
-        }
-    }
-
-    return tee;
+    return rval;
 }
 
 TeeSession::~TeeSession()
 {
     delete m_client;
+    pcre2_match_data_free(m_md_match);
+    pcre2_match_data_free(m_md_exclude);
 }
 
 void TeeSession::close()
@@ -125,31 +93,18 @@ bool TeeSession::query_matches(GWBUF* buffer)
 
     if (m_match || m_exclude)
     {
-        char* sql;
-        int len;
+        std::string sql = mxs::extract_sql(buffer);
 
-        if (modutil_extract_SQL(buffer, &sql, &len))
+        if (!sql.empty())
         {
-            if (m_match && pcre2_match_8(m_match,
-                                         (PCRE2_SPTR)sql,
-                                         len,
-                                         0,
-                                         0,
-                                         m_md_match,
-                                         NULL) < 0)
+            if (m_match && !m_match.match(sql, m_md_match))
             {
-                MXS_INFO("Query does not match the 'match' pattern: %.*s", len, sql);
+                MXS_INFO("Query does not match the 'match' pattern: %s", sql.c_str());
                 rval = false;
             }
-            else if (m_exclude && pcre2_match_8(m_exclude,
-                                                (PCRE2_SPTR)sql,
-                                                len,
-                                                0,
-                                                0,
-                                                m_md_exclude,
-                                                NULL) >= 0)
+            else if (m_exclude && m_exclude.match(sql, m_md_exclude))
             {
-                MXS_INFO("Query matches the 'exclude' pattern: %.*s", len, sql);
+                MXS_INFO("Query matches the 'exclude' pattern: %s", sql.c_str());
                 rval = false;
             }
         }

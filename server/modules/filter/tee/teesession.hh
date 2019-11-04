@@ -16,6 +16,7 @@
 
 #include <maxscale/filter.hh>
 #include <maxscale/protocol/mariadb/local_client.hh>
+#include <maxscale/pcre2.hh>
 
 class Tee;
 
@@ -40,15 +41,13 @@ private:
     TeeSession(MXS_SESSION* session,
                SERVICE* service,
                LocalClient* client,
-               pcre2_code* match,
-               pcre2_match_data* md_match,
-               pcre2_code* exclude,
-               pcre2_match_data* md_exclude);
+               const mxs::Regex& match,
+               const mxs::Regex& exclude);
     bool query_matches(GWBUF* buffer);
 
     LocalClient*      m_client; /**< The client connection to the local service */
-    pcre2_code*       m_match;
+    const mxs::Regex& m_match;
+    const mxs::Regex& m_exclude;
     pcre2_match_data* m_md_match;
-    pcre2_code*       m_exclude;
     pcre2_match_data* m_md_exclude;
 };

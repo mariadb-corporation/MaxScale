@@ -35,20 +35,13 @@ static const MXS_ENUM_VALUE option_values[] =
     {NULL}
 };
 
-Tee::Tee(SERVICE* service,
-         std::string user,
-         std::string remote,
-         pcre2_code* match,
-         std::string match_string,
-         pcre2_code* exclude,
-         std::string exclude_string)
-    : m_service(service)
-    , m_user(user)
-    , m_source(remote)
-    , m_match_code(match)
-    , m_exclude_code(exclude)
-    , m_match(match_string)
-    , m_exclude(exclude_string)
+Tee::Tee(const char* name, MXS_CONFIG_PARAMETER* params)
+    : m_name(name)
+    , m_service(params->get_service("service"))
+    , m_user(params->get_string("user"))
+    , m_source(params->get_string("source"))
+    , m_match(params->get_string("match"), params->get_enum("options", option_values))
+    , m_exclude(params->get_string("exclude"), params->get_enum("options", option_values))
     , m_enabled(true)
 {
 }
@@ -65,26 +58,7 @@ Tee::Tee(SERVICE* service,
  */
 Tee* Tee::create(const char* name, MXS_CONFIG_PARAMETER* params)
 {
-    SERVICE* service = params->get_service("service");
-    uint32_t cflags = params->get_enum("options", option_values);
-    pcre2_code* match = params->get_compiled_regex("match", cflags, NULL).release();
-    pcre2_code* exclude = params->get_compiled_regex("exclude", cflags, NULL).release();
-
-    Tee* my_instance = new(std::nothrow) Tee(service,
-                                             params->get_string("source"),
-                                             params->get_string("user"),
-                                             match,
-                                             params->get_string("match"),
-                                             exclude,
-                                             params->get_string("exclude"));
-
-    if (my_instance == NULL)
-    {
-        pcre2_code_free(match);
-        pcre2_code_free(exclude);
-    }
-
-    return my_instance;
+    return new Tee(name, params);
 }
 
 TeeSession* Tee::newSession(MXS_SESSION* pSession, SERVICE* pService)
@@ -120,17 +94,17 @@ void Tee::diagnostics(DCB* dcb)
                    "\t\tLimit to user			%s\n",
                    m_user.c_str());
     }
-    if (m_match.length())
+    if (m_match)
     {
         dcb_printf(dcb,
                    "\t\tInclude queries that match		%s\n",
-                   m_match.c_str());
+                   m_match.pattern().c_str());
     }
-    if (m_exclude.c_str())
+    if (m_exclude)
     {
         dcb_printf(dcb,
                    "\t\tExclude queries that match		%s\n",
-                   m_exclude.c_str());
+                   m_exclude.pattern().c_str());
     }
     dcb_printf(dcb, "\t\tFilter enabled: %s\n", m_enabled ? "yes" : "no");
 }
@@ -161,14 +135,14 @@ json_t* Tee::diagnostics_json() const
         json_object_set_new(rval, "user", json_string(m_user.c_str()));
     }
 
-    if (m_match.length())
+    if (m_match)
     {
-        json_object_set_new(rval, "match", json_string(m_match.c_str()));
+        json_object_set_new(rval, "match", json_string(m_match.pattern().c_str()));
     }
 
-    if (m_exclude.length())
+    if (m_exclude)
     {
-        json_object_set_new(rval, "exclude", json_string(m_exclude.c_str()));
+        json_object_set_new(rval, "exclude", json_string(m_exclude.pattern().c_str()));
     }
 
     json_object_set_new(rval, "enabled", json_boolean(m_enabled));
