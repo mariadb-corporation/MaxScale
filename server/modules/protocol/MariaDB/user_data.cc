@@ -13,12 +13,12 @@
 
 #include "user_data.hh"
 
-#include <sqlite3.h>
 #include <maxsql/mariadb_connector.hh>
 #include <maxsql/mariadb.hh>
 #include <maxscale/server.hh>
 #include <maxscale/paths.h>
 #include <maxscale/protocol/mariadb/module_names.hh>
+#include "sqlite_strlike.hh"
 
 using std::string;
 using mxq::MariaDB;
@@ -402,7 +402,7 @@ const UserEntry* UserDatabase::find_entry(const std::string& username, const std
             // pattern should match the host.
             // TODO: add checking for bitmasks and possibly name lookups (tricky...)
             // TODO: sqlite3_strlike(entry.host_pattern.c_str(), host.c_str(), '\\') == 0
-            if (!entry.is_role && entry.host_pattern == host)
+            if (!entry.is_role && sql_strlike(entry.host_pattern.c_str(), host.c_str(), '\\') == 0)
             {
                 rval = &entry;
                 break;
