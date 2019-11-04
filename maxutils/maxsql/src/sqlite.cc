@@ -42,7 +42,7 @@ bool SQLite::open(const std::string& filename, int flags)
     const char open_fail[] = "Failed to open SQLite3 handle for file '%s': '%s'";
     const char open_oom[] = "Failed to allocate memory for SQLite3 handle for file '%s'.";
 
-    sqlite3_close_v2(m_dbhandle);   // Close any existing handle.
+    sqlite3_close(m_dbhandle);   // Close any existing handle.
     m_dbhandle = nullptr;
     m_errormsg.clear();
 
@@ -59,7 +59,7 @@ bool SQLite::open(const std::string& filename, int flags)
     else if (new_handle)
     {
         m_errormsg = mxb::string_printf(open_fail, zFilename, sqlite3_errmsg(new_handle));
-        sqlite3_close_v2(new_handle);
+        sqlite3_close(new_handle);
     }
     else
     {
@@ -77,7 +77,7 @@ bool SQLite::open_inmemory()
 
 SQLite::~SQLite()
 {
-    sqlite3_close_v2(m_dbhandle);
+    sqlite3_close(m_dbhandle);
 }
 
 bool SQLite::exec(const std::string& sql)
