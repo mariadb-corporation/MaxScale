@@ -24,10 +24,12 @@
  * @endverbatim
  */
 
-#include <maxscale/pcre2.h>
+#include <maxscale/pcre2.hh>
 #include <maxbase/assert.h>
 #include <maxbase/alloc.h>
 #include <maxscale/log.hh>
+
+#include <utility>
 
 /**
  * Utility wrapper for PCRE2 library function call pcre2_substitute.
@@ -244,4 +246,132 @@ bool mxs_pcre2_check_match_exclude(pcre2_code* re_match,
         }
     }
     return rval;
+}
+
+namespace maxscale
+{
+
+Regex::Regex(const std::string& pattern, int options)
+    : m_pattern(pattern)
+{
+    if (!m_pattern.empty())
+    {
+
+        int err;
+        size_t erroff;
+        mxs_pcre2_result_t rval = MXS_PCRE2_ERROR;
+        m_code = pcre2_compile((PCRE2_SPTR) pattern.c_str(), pattern.length(), options, &err, &erroff, NULL);
+
+        if (!m_code)
+        {
+            PCRE2_UCHAR errorbuf[120];
+            pcre2_get_error_message(err, errorbuf, sizeof(errorbuf));
+            m_error = (const char*)errorbuf;
+        }
+        else if (pcre2_jit_compile(m_code, PCRE2_JIT_COMPLETE) < 0)
+        {
+            MXS_ERROR("PCRE2 JIT compilation of pattern '%s' failed.", pattern.c_str());
+        }
+
+        if (m_code)
+        {
+            m_match_data = pcre2_match_data_create_from_pattern(m_code, nullptr);
+        }
+    }
+}
+
+Regex::Regex(const Regex& rhs)
+    : Regex(rhs.pattern())
+{
+}
+
+Regex& Regex::operator=(const Regex& rhs)
+{
+    Regex tmp(rhs.pattern());
+    std::swap(m_code, tmp.m_code);
+    std::swap(m_match_data, tmp.m_match_data);
+    std::swap(m_pattern, tmp.m_pattern);
+    std::swap(m_error, tmp.m_error);
+    return *this;
+}
+
+Regex::~Regex()
+{
+    pcre2_code_free(m_code);
+    pcre2_match_data_free(m_match_data);
+}
+
+bool Regex::empty() const
+{
+    return m_pattern.empty();
+}
+
+Regex::operator bool() const
+{
+    return !empty() && valid();
+}
+
+bool Regex::valid() const
+{
+    return m_code;
+}
+
+const std::string& Regex::pattern() const
+{
+    return m_pattern;
+}
+
+const std::string& Regex::error() const
+{
+    return m_error;
+}
+
+pcre2_match_data* Regex::create_match_data() const
+{
+    mxb_assert(m_code);
+    return pcre2_match_data_create_from_pattern(m_code, nullptr);
+}
+
+bool Regex::match(const std::string& str, pcre2_match_data* data) const
+{
+    std::unique_lock<std::mutex> guard(m_lock, std::defer_lock);
+
+    if (!data)
+    {
+        guard.lock();
+        data = m_match_data;
+    }
+
+    return pcre2_match(m_code, (PCRE2_SPTR)str.c_str(), str.length(), 0, 0, data, NULL) > 0;
+}
+
+std::string Regex::replace(const std::string& str, const char* replacement, pcre2_match_data* data) const
+{
+    std::unique_lock<std::mutex> guard(m_lock, std::defer_lock);
+
+    if (!data)
+    {
+        guard.lock();
+        data = m_match_data;
+    }
+
+    std::string output;
+    output.resize(str.length());
+    size_t size = output.size();
+    int rc;
+
+    while (pcre2_substitute(
+               m_code, (PCRE2_SPTR) str.c_str(), str.length(),
+               0, PCRE2_SUBSTITUTE_GLOBAL, data, NULL,
+               (PCRE2_SPTR) replacement, PCRE2_ZERO_TERMINATED,
+               (PCRE2_UCHAR*) &output[0], &size) == PCRE2_ERROR_NOMEMORY)
+    {
+        size = output.size() * 2;
+        output.resize(size);
+    }
+
+    output.resize(size);
+
+    return output;
+}
 }
