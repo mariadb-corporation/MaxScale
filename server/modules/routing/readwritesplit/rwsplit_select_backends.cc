@@ -124,62 +124,37 @@ RWBackend* backend_cmp_current_load(PRWBackends& sBackends)
     return best_score(sBackends, server_score);
 }
 
-RWBackend* backend_cmp_response_time(PRWBackends& sBackends)
+/**
+ * @brief Select a server based on current response averages and server load (#of active quearies)
+ *
+ * The algorithm does this:
+ * 1. Read the query time average of the servers into an array,
+ * 2. Calculate the time it would take each server to processes the queued up
+ *    queries plus one. estimate[i] = ave[i] * (n_current_ops + 1)
+ * 3. Pick the server that would finish first if averages remained the same
+ *
+ *  TODO: This change loses the guarantee that all servers get at least some traffic.
+ *
+ * @param sBackends
+ * @return the selected backend.
+ */
+RWBackend* backend_cmp_response_time(PRWBackends& pBackends)
 {
-    const int SZ = sBackends.size();
-    double slot[SZ];
+    const size_t SZ = pBackends.size();
+    double estimated_time[SZ];
 
-    // fill slots with inverses of averages
-    double pre_total {0};
-    for (int i = 0; i < SZ; ++i)
+    // Calculate estimated time to finish current active messages + 1, per server
+    for (size_t i {}; i < SZ; ++i)
     {
-        double ave = sBackends[i]->target()->response_time_average();
-
-        if (ave == 0)
-        {
-            constexpr double very_quick = 1.0 / 10000000;   // arbitrary very short duration (0.1 us)
-            slot[i] = 1 / very_quick;                       // will be used and updated (almost) immediately.
-        }
-        else
-        {
-            slot[i] = 1 / ave;
-        }
-        slot[i] = slot[i] * slot[i] * slot[i];      // favor faster servers even more
-        pre_total += slot[i];
+        estimated_time[i] = pBackends[i]->target()->response_time_average();
+        estimated_time[i] += estimated_time[i] * pBackends[i]->target()->stats().n_current_ops;
     }
 
-    // make the slowest server(s) at least a good fraction of the total to guarantee
-    // some amount of sampling, should the slow server become faster.
-    double total = 0;
-    constexpr int divisor = 197;    // ~0.5%, not exact because SZ>1
-    for (int i = 0; i < SZ; ++i)
-    {
-        slot[i] = std::max(slot[i], pre_total / divisor);
-        total += slot[i];
-    }
+    // Pick the server that would finish first
+    auto it = std::min_element(estimated_time, estimated_time + SZ);
+    size_t index = it - estimated_time;
 
-    // turn slots into a roulette wheel, where sum of slots is 1.0
-    for (int i = 0; i < SZ; ++i)
-    {
-        slot[i] = slot[i] / total;
-    }
-
-    // Find the winner, role the ball:
-    double ball = maxbase::Worker::get_current()->random_engine().zero_to_one_co();
-
-    double slot_walk {0};
-    int winner {0};
-
-    for (; winner < SZ; ++winner)
-    {
-        slot_walk += slot[winner];
-        if (ball < slot_walk)
-        {
-            break;
-        }
-    }
-
-    return sBackends[winner];
+    return pBackends[index];
 }
 
 BackendSelectFunction get_backend_select_function(select_criteria_t sc)
