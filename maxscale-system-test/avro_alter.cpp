@@ -11,7 +11,6 @@ int main(int argc, char* argv[])
 {
     int exit_code;
     TestConnections::skip_maxscale_start(true);
-    TestConnections::check_nodes(false);
     TestConnections test(argc, argv);
     test.set_timeout(600);
     test.maxscales->ssh_node(0, (char*) "rm -rf /var/lib/maxscale/avro", true);
