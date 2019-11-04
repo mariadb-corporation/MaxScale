@@ -34,6 +34,8 @@ public:
     std::string supported_protocol() const override;
     std::string name() const override;
 
+    const std::unordered_set<std::string>& supported_plugins() const override;
+
     mariadb::SClientAuth create_client_authenticator() override;
     mariadb::SBackendAuth create_backend_authenticator() override;
 

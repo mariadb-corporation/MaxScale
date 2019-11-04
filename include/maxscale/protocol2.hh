@@ -235,18 +235,6 @@ public:
     virtual void stop() = 0;
 
     /**
-     * Check if user@host exists and can access the requested database. Does not check password or
-     * any other authentication credentials.
-     *
-     * @param user Client username
-     * @param host Client hostname
-     * @param requested_db Database requested by client. May be empty.
-     * @return True if user account is valid
-     */
-    virtual bool
-    check_user(const std::string& user, const std::string& host, const std::string& requested_db) = 0;
-
-    /**
      * Notify the manager that its data should be updated. The updating may happen
      * in a separate thread.
      */

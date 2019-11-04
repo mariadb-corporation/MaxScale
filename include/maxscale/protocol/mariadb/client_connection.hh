@@ -26,6 +26,8 @@ enum kill_type_t
     KT_HARD       = (1 << 3)
 };
 
+class MariaDBUserManager;
+
 class MariaDBClientConnection : public mxs::ClientConnectionBase
 {
 public:
@@ -95,6 +97,7 @@ private:
     void mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_type_t type);
     void execute_kill(MXS_SESSION* issuer, std::shared_ptr<KillInfo> info);
     void track_current_command(GWBUF* buf);
+    const MariaDBUserManager* user_account_manager();
 
     mariadb::ClientAuthenticator::AuthRes ssl_authenticate_check_status(DCB* generic_dcb);
     static std::string                    to_string(AuthState state);

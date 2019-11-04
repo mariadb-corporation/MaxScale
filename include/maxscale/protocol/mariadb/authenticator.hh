@@ -13,11 +13,13 @@
 #pragma once
 
 #include <maxscale/authenticator.hh>
+#include <unordered_set>
 
 class DCB;
 class SERVICE;
 class GWBUF;
 class MYSQL_session;
+struct UserEntry;
 
 /**
  * Authentication states
@@ -100,6 +102,13 @@ public:
     virtual json_t* diagnostics() = 0;
 
     /**
+     * List the server authentication plugins this authenticator module supports.
+     *
+     * @return Supported authenticator plugins
+     */
+    virtual const std::unordered_set<std::string>& supported_plugins() const = 0;
+
+    /**
      * Get module runtime capabilities. Returns 0 by default.
      *
      * @return Capabilities as a bitfield
@@ -148,7 +157,7 @@ public:
     virtual bool extract(GWBUF* buffer, MYSQL_session* session) = 0;
 
     // Carry out the authentication.
-    virtual AuthRes authenticate(DCB* client) = 0;
+    virtual AuthRes authenticate(DCB* client, const UserEntry* entry) = 0;
 
     /**
      * This entry point was added to avoid calling authenticator functions

@@ -144,6 +144,8 @@ public:
      */
     virtual std::vector<SERVER*> reachable_servers() const = 0;
 
+    virtual const mxs::UserAccountManager* user_account_manager() const = 0;
+
     /**
      * Has a connection limit been reached?
      */

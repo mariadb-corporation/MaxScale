@@ -195,6 +195,8 @@ public:
         return m_data->servers;
     }
 
+    virtual const mxs::UserAccountManager* user_account_manager() const;
+
     /**
      * Check whether a service can be destroyed
      *

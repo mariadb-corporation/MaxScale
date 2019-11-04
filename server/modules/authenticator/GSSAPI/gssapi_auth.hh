@@ -53,6 +53,8 @@ public:
     std::string supported_protocol() const override;
     std::string name() const override;
 
+    const std::unordered_set<std::string>& supported_plugins() const override;
+
     char* principal_name {nullptr};     /**< Service principal name given to the client */
 
 private:
@@ -64,8 +66,9 @@ class GSSAPIClientAuthenticator : public mariadb::ClientAuthenticatorT<GSSAPIAut
 public:
     GSSAPIClientAuthenticator(GSSAPIAuthenticatorModule* module);
     ~GSSAPIClientAuthenticator() override;
+
     bool    extract(GWBUF* buffer, MYSQL_session* session) override;
-    AuthRes authenticate(DCB* client) override;
+    AuthRes authenticate(DCB* client, const UserEntry* entry) override;
 
     sqlite3* handle {nullptr};              /**< SQLite3 database handle */
     uint8_t  sequence {0};                  /**< The next packet seqence number */

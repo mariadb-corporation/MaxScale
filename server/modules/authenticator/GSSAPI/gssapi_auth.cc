@@ -462,7 +462,8 @@ static bool validate_user(GSSAPIClientAuthenticator* auth, DCB* dcb, MYSQL_sessi
  * if authentication was successfully completed or MXS_AUTH_FAILED if authentication
  * has failed.
  */
-mariadb::ClientAuthenticator::AuthRes GSSAPIClientAuthenticator::authenticate(DCB* generic_dcb)
+mariadb::ClientAuthenticator::AuthRes
+GSSAPIClientAuthenticator::authenticate(DCB* generic_dcb, const UserEntry* entry)
 {
     using AuthRes = mariadb::ClientAuthenticator::AuthRes;
     mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
@@ -663,6 +664,12 @@ int GSSAPIAuthenticatorModule::load_users(SERVICE* service)
 std::string GSSAPIAuthenticatorModule::name() const
 {
     return MXS_MODULE_NAME;
+}
+
+const std::unordered_set<std::string>& GSSAPIAuthenticatorModule::supported_plugins() const
+{
+    static const std::unordered_set<std::string> plugins = {"gssapi"};
+    return plugins;
 }
 
 extern "C"

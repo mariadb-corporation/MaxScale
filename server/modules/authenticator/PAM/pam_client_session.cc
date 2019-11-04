@@ -260,7 +260,7 @@ Buffer PamClientAuthenticator::create_auth_change_packet() const
     return buffer;
 }
 
-AuthRes PamClientAuthenticator::authenticate(DCB* generic_dcb)
+AuthRes PamClientAuthenticator::authenticate(DCB* generic_dcb, const UserEntry* entry)
 {
     mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
     auto dcb = static_cast<ClientDCB*>(generic_dcb);

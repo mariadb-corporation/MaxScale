@@ -568,3 +568,9 @@ std::string PamAuthenticatorModule::name() const
 {
     return MXS_MODULE_NAME;
 }
+
+const std::unordered_set<std::string>& PamAuthenticatorModule::supported_plugins() const
+{
+    static const std::unordered_set<std::string> plugins = {"pam"};
+    return plugins;
+}

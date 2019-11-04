@@ -30,8 +30,8 @@ public:
     using StringVector = std::vector<std::string>;
     static mariadb::SClientAuth create(PamAuthenticatorModule* instance);
 
-    AuthRes authenticate(DCB* client) override;
-    bool extract(GWBUF* read_buffer, MYSQL_session* session) override;
+    AuthRes authenticate(DCB* client, const UserEntry* entry) override;
+    bool    extract(GWBUF* read_buffer, MYSQL_session* session) override;
 
 private:
     PamClientAuthenticator(PamAuthenticatorModule* instance);

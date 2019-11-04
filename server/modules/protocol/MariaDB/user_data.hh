@@ -58,7 +58,7 @@ public:
     void   clear();
     size_t size() const;
 
-    const UserEntry* find_entry(const std::string& username, const std::string& host);
+    const UserEntry* find_entry(const std::string& username, const std::string& host) const;
     bool             check_database_access(const UserEntry& entry, const std::string& db) const;
 
 private:
@@ -118,8 +118,17 @@ public:
      */
     void stop() override;
 
-    bool check_user(const std::string& user, const std::string& host,
-                    const std::string& requested_db) override;
+    /**
+     * Check if user@host exists and can access the requested database. Does not check password or
+     * any other authentication credentials.
+     *
+     * @param user Client username
+     * @param host Client hostname
+     * @param requested_db Database requested by client. May be empty.
+     * @return Found user entry.
+     */
+    bool find_user(const std::string& user, const std::string& host, const std::string& requested_db,
+                   UserEntry* entry_out) const;
 
     void        update_user_accounts() override;
     void        set_credentials(const std::string& user, const std::string& pw) override;
@@ -156,6 +165,6 @@ private:
 
     const std::string m_service_name;   /**< Service using this account data manager. Used for logging. */
 
-    std::mutex   m_userdb_lock;         /**< Protects UserDatabase from concurrent access */
-    UserDatabase m_userdb;              /**< Contains user account info */
+    mutable std::mutex m_userdb_lock;           /**< Protects UserDatabase from concurrent access */
+    UserDatabase       m_userdb;                /**< Contains user account info */
 };

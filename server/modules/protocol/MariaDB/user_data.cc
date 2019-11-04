@@ -72,10 +72,45 @@ void MariaDBUserManager::stop()
     m_updater_thread.join();
 }
 
-bool MariaDBUserManager::check_user(const std::string& user, const std::string& host,
-                                    const std::string& requested_db)
+bool MariaDBUserManager::find_user(const std::string& user, const std::string& host,
+                                   const std::string& requested_db, UserEntry* entry_out) const
 {
-    return false;
+    auto userz = user.c_str();
+    auto hostz = host.c_str();
+    UserEntry entry;
+    bool has_sufficient_privs = false;
+    {
+        Guard guard(m_userdb_lock);
+        auto found = m_userdb.find_entry(user, host);
+        if (found)
+        {
+            entry = *found;
+            has_sufficient_privs = m_userdb.check_database_access(*found, requested_db);
+        }
+    }
+
+    if (!entry.host_pattern.empty())
+    {
+        if (has_sufficient_privs)
+        {
+            MXB_INFO("Found matching user '%s'@'%s' for client '%s'@'%s' with sufficient privileges.",
+                     entry.username.c_str(), entry.host_pattern.c_str(), userz, hostz);
+            *entry_out = entry;
+        }
+        else
+        {
+            MXB_INFO("Found matching user '%s'@'%s' for client '%s'@'%s' but user does not have "
+                     "sufficient privileges.",
+                     entry.username.c_str(), entry.host_pattern.c_str(), userz, hostz);
+        }
+    }
+    else
+    {
+        MXB_INFO("Found no matching user for client '%s'@'%s'.", userz, hostz);
+        // TODO: anonymous users need to be handled specially, as not all authenticators support them.
+    }
+
+    return has_sufficient_privs;
 }
 
 void MariaDBUserManager::update_user_accounts()
@@ -392,7 +427,7 @@ void UserDatabase::clear()
     m_contents.clear();
 }
 
-const UserEntry* UserDatabase::find_entry(const std::string& username, const std::string& host)
+const UserEntry* UserDatabase::find_entry(const std::string& username, const std::string& host) const
 {
     const UserEntry* rval = nullptr;
     auto iter = m_contents.find(username);

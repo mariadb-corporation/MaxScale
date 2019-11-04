@@ -882,14 +882,35 @@ int MariaDBClientConnection::perform_authentication(DCB* generic_dcb, GWBUF* rea
     m_session_data->m_current_authenticator = m_session_data->allowed_authenticators->front().get();
     m_authenticator = m_session_data->m_current_authenticator->create_client_authenticator();
 
+    auto users = user_account_manager();
+    UserEntry entry;
+    bool user_found = users->find_user(m_session_data->user, m_session_data->remote, m_session_data->db,
+                                       &entry);
+    // The data in the account manager does not yet quite match with the authenticators themselves,
+    // so it is only additional data for authenticators.
+    bool use_account_data = false;
+    if (user_found)
+    {
+        auto& auth_modules = *(m_session_data->allowed_authenticators);
+        for (const auto & auth_module : auth_modules)
+        {
+            if (auth_module->supported_plugins().count(entry.plugin))
+            {
+                // The following check should be removed once the account manager is fully in use.
+                if (auth_module.get() == m_session_data->m_current_authenticator)
+                {
+                    use_account_data = true;
+                }
+                break;
+            }
+        }
+    }
+
     /**
-     * The first step in the authentication process is to extract the
-     * relevant information from the buffer supplied and place it
-     * into a data structure pointed to by the DCB.  The "success"
-     * result is not final, it implies only that the process is so
-     * far successful, not that authentication has completed.  If the
-     * data extraction succeeds, then a call is made to the actual
-     * authenticate function to carry out the user checks.
+     * The first step in the authentication process is to extract the relevant information from
+     * the buffer supplied. The "success" result is not final, it implies only that the process is so
+     * far successful.  If the data extraction succeeds, then a call is made to the actual authenticate
+     * function to carry out the user checks.
      */
     auto auth_val = AuthRes::FAIL;
     if (m_authenticator)
@@ -897,11 +918,10 @@ int MariaDBClientConnection::perform_authentication(DCB* generic_dcb, GWBUF* rea
         if (m_authenticator->extract(read_buffer, m_session_data))
         {
             auth_val = ssl_authenticate_check_status(dcb);
-
             if (auth_val == AuthRes::SSL_READY)
             {
                 // TLS connection phase complete
-                auth_val = m_authenticator->authenticate(dcb);
+                auth_val = m_authenticator->authenticate(dcb, use_account_data ? &entry : nullptr);
             }
         }
         else
@@ -909,8 +929,6 @@ int MariaDBClientConnection::perform_authentication(DCB* generic_dcb, GWBUF* rea
             auth_val = AuthRes::BAD_HANDSHAKE;
         }
     }
-
-    auto protocol = this;
 
     /**
      * At this point, if the auth_val return code indicates success
@@ -2310,4 +2328,10 @@ std::string MariaDBClientConnection::to_string(AuthState state)
         default:
             return "MySQL (unknown protocol state)";
     }
+}
+
+const MariaDBUserManager* MariaDBClientConnection::user_account_manager()
+{
+    auto users = m_session->service->user_account_manager();
+    return static_cast<const MariaDBUserManager*>(users);
 }

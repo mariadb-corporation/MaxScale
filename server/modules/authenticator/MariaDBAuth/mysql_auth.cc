@@ -240,7 +240,7 @@ MariaDBClientAuthenticator::MariaDBClientAuthenticator(MariaDBAuthenticatorModul
  * @return Authentication status
  * @note Authentication status codes are defined in maxscale/protocol/mysql.h
  */
-AuthRes MariaDBClientAuthenticator::authenticate(DCB* generic_dcb)
+AuthRes MariaDBClientAuthenticator::authenticate(DCB* generic_dcb, const UserEntry* entry)
 {
     mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
@@ -736,6 +736,14 @@ std::string MariaDBAuthenticatorModule::supported_protocol() const
 std::string MariaDBAuthenticatorModule::name() const
 {
     return MXS_MODULE_NAME;
+}
+
+const std::unordered_set<std::string>& MariaDBAuthenticatorModule::supported_plugins() const
+{
+    // Support the empty plugin as well, as that means default.
+    static const std::unordered_set<std::string> plugins = {
+        "mysql_native_password", "caching_sha2_password", ""};
+    return plugins;
 }
 
 bool MariaDBBackendSession::extract(DCB* backend, GWBUF* buffer)

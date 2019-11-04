@@ -1734,6 +1734,11 @@ UserAccountManager* Service::user_account_manager()
     return m_usermanager_exists.load(std::memory_order_acquire) ? m_usermanager.get() : nullptr;
 }
 
+const UserAccountManager* Service::user_account_manager() const
+{
+    return const_cast<Service*>(this)->user_account_manager();
+}
+
 void Service::set_user_account_manager(SAccountManager user_manager)
 {
     // Once the object is set, it can not change as this would indicate a change in service
