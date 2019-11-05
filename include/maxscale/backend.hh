@@ -305,7 +305,7 @@ public:
     }
 
     virtual void select_started();
-    virtual void select_ended();
+    virtual void select_finished();
 
     int64_t                       num_selects() const;
     const maxbase::StopWatch&     session_timer() const;

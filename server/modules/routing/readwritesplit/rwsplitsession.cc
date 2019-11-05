@@ -707,7 +707,7 @@ void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
 
         mxb_assert(m_expected_responses >= 0);
 
-        backend->select_ended();
+        backend->select_finished();
 
         if (!finish_causal_read())
         {

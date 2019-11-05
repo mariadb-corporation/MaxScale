@@ -66,7 +66,7 @@ public:
     bool continue_session_command(GWBUF* buffer);
 
     void select_started() override;
-    void select_ended() override;
+    void select_finished() override;
 
     /**
      * Write a query to the backend
@@ -88,6 +88,8 @@ public:
     {
         return m_last_write;
     }
+
+    void sync_averages();
 
 private:
     BackendHandleMap m_ps_handles;      /**< Internal ID to backend PS handle mapping */

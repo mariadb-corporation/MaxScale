@@ -111,6 +111,11 @@ void RWBackend::close(close_type type)
     mxs::Backend::close(type);
 }
 
+void RWBackend::sync_averages()
+{
+    m_response_stat.sync();
+}
+
 mxs::SRWBackends RWBackend::from_endpoints(const Endpoints& endpoints)
 {
     SRWBackends backends;
@@ -130,10 +135,10 @@ void RWBackend::select_started()
     m_response_stat.query_started();
 }
 
-void RWBackend::select_ended()
+void RWBackend::select_finished()
 {
-    Backend::select_ended();
+    Backend::select_finished();
 
-    m_response_stat.query_ended();
+    m_response_stat.query_finished();
 }
 }

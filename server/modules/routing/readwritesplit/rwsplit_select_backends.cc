@@ -125,15 +125,13 @@ RWBackend* backend_cmp_current_load(PRWBackends& sBackends)
 }
 
 /**
- * @brief Select a server based on current response averages and server load (#of active quearies)
+ * @brief Select a server based on current response averages and server load (#of active queries)
  *
  * The algorithm does this:
  * 1. Read the query time average of the servers into an array,
  * 2. Calculate the time it would take each server to processes the queued up
  *    queries plus one. estimate[i] = ave[i] * (n_current_ops + 1)
  * 3. Pick the server that would finish first if averages remained the same
- *
- *  TODO: This change loses the guarantee that all servers get at least some traffic.
  *
  * @param sBackends
  * @return the selected backend.
@@ -148,6 +146,7 @@ RWBackend* backend_cmp_response_time(PRWBackends& pBackends)
     {
         estimated_time[i] = pBackends[i]->target()->response_time_average();
         estimated_time[i] += estimated_time[i] * pBackends[i]->target()->stats().n_current_ops;
+        pBackends[i]->sync_averages();
     }
 
     // Pick the server that would finish first

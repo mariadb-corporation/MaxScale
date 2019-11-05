@@ -34,10 +34,10 @@ public:
     ~ResponseStat();
 
     void query_started();
-    void query_ended();     // ok to call without a query_started()
+    void query_finished();  // ok to call without a query_started()
+    void sync();            // update server EMA if needed
 private:
     void sync(bool last_call);
-    bool make_valid();      // make valid even if there are only filter_samples
     bool is_valid() const;
     bool sync_time_reached();   // is it time to apply the average to the server?
     void reset();
@@ -50,5 +50,6 @@ private:
     maxbase::CumulativeAverage     m_average;
     maxbase::TimePoint             m_last_start;
     maxbase::TimePoint             m_next_sync;
+    bool                           m_synced {true};
 };
 }

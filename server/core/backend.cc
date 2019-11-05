@@ -256,7 +256,7 @@ void Backend::select_started()
     m_select_timer.start_interval();
 }
 
-void Backend::select_ended()
+void Backend::select_finished()
 {
     m_select_timer.end_interval();
     ++m_num_selects;

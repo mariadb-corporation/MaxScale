@@ -39,7 +39,7 @@ void ResponseStat::query_started()
     m_last_start = maxbase::Clock::now();
 }
 
-void ResponseStat::query_ended()
+void ResponseStat::query_finished()
 {
     if (m_last_start == maxbase::TimePoint())
     {
@@ -56,39 +56,32 @@ void ResponseStat::query_ended()
         m_average.add(std::chrono::duration<double>(new_sample).count());
         m_sample_count = 0;
     }
-    m_last_start = maxbase::TimePoint();
 
+    m_last_start = maxbase::TimePoint();
+}
+
+void ResponseStat::sync()
+{
     sync(false);
 }
 
 void ResponseStat::sync(bool last_call)
 {
-    if (last_call)
+    if (sync_time_reached() || last_call)
     {
-        if (make_valid())
+        if (is_valid())
         {
             m_target->response_time_add(m_average.average(), m_average.num_samples());
+            m_synced = true;
+            reset();
+        }
+        else if (sync_time_reached() || !m_synced)
+        {
+            m_synced = true;
+            m_target->response_time_add(m_target->ping() / 1000000.0, 1);
+            reset();
         }
     }
-    else if (is_valid() && (sync_time_reached() || m_target->response_time_num_samples() == 0))
-    {
-        m_target->response_time_add(m_average.average(), m_average.num_samples());
-        reset();
-    }
-}
-
-bool ResponseStat::make_valid()
-{
-    if (!m_average.num_samples() && m_sample_count)
-    {
-        std::sort(m_samples.begin(), m_samples.begin() + m_sample_count);
-        maxbase::Duration new_sample = m_samples[m_sample_count / 2];
-        m_average.add(std::chrono::duration<double>(new_sample).count());
-        m_sample_count = 0;
-        m_last_start = maxbase::TimePoint();
-    }
-
-    return is_valid();
 }
 
 bool ResponseStat::is_valid() const
