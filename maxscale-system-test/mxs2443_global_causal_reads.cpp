@@ -31,15 +31,15 @@ int main(int argc, char** argv)
                     "INSERT should work: %s", conn.error());
 
         // Existing connections should also see the inserted rows
-        auto second_count = atoi(secondary.field("SELECT COUNT(*) FROM test.t1").c_str());
-        test.expect(second_count == i + 1, "Missing `%d` rows from open connection.", (i + 1) - count);
+        auto count = atoi(secondary.field("SELECT COUNT(*) FROM test.t1").c_str());
+        test.expect(count == i + 1, "Missing `%d` rows from open connection.", (i + 1) - count);
 
         conn.disconnect();
 
         // New connections should see the inserted rows
         conn.connect();
-        auto count = atoi(conn.field("SELECT COUNT(*) FROM test.t1").c_str());
-        test.expect(count == i + 1, "Missing `%d` rows.", (i + 1) - count);
+        auto second_count = atoi(conn.field("SELECT COUNT(*) FROM test.t1").c_str());
+        test.expect(second_count == i + 1, "Missing `%d` rows.", (i + 1) - second_count);
         conn.disconnect();
 
     }
