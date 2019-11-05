@@ -308,6 +308,20 @@ public:
     }
 
     /**
+     * Check if all of the given keys are defined
+     *
+     * @param keys The keys to check
+     *
+     * @return True if all of the keys are defined
+     */
+    bool contains_all(const std::initializer_list<std::string>& keys) const
+    {
+        return std::all_of(keys.begin(), keys.end(), [this](const std::string& a) {
+                               return contains(a);
+                           });
+    }
+
+    /**
      * Set a key-value combination. If the key doesn't exist, it is added. The function is static
      * to handle the special case of params being empty. This is needed until the config management
      * has been properly refactored.

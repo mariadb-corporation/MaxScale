@@ -51,9 +51,9 @@ public:
         return m_source.length() == 0 || strcmp(remote, m_source.c_str()) == 0;
     }
 
-    SERVICE* get_service() const
+    mxs::Target* get_target() const
     {
-        return m_service;
+        return m_target;
     }
 
     const mxs::Regex& get_match() const
@@ -79,11 +79,11 @@ public:
 private:
     Tee(const char* name, MXS_CONFIG_PARAMETER* params);
 
-    std::string m_name;
-    SERVICE*    m_service;
-    std::string m_user;     /* The user name to filter on */
-    std::string m_source;   /* The source of the client connection */
-    mxs::Regex  m_match;    /* Compiled match pattern */
-    mxs::Regex  m_exclude;  /* Compiled exclude pattern*/
-    bool        m_enabled;
+    std::string  m_name;
+    mxs::Target* m_target;
+    std::string  m_user;    /* The user name to filter on */
+    std::string  m_source;  /* The source of the client connection */
+    mxs::Regex   m_match;   /* Compiled match pattern */
+    mxs::Regex   m_exclude; /* Compiled exclude pattern*/
+    bool         m_enabled;
 };

@@ -20,7 +20,7 @@ send the duplicates to must be defined.
 [DataMartFilter]
 type=filter
 module=tee
-service=DataMart
+target=DataMart
 
 [Data-Service]
 type=service
@@ -35,6 +35,17 @@ filters=DataMartFilter
 
 The tee filter requires a mandatory parameter to define the service to replicate
 statements to and accepts a number of optional parameters.
+
+### `target`
+
+The target where the filter will duplicate all queries. The target can be either
+a service or a server.
+
+### `service`
+
+The service where the filter will duplicate all queries. This parameter is
+deprecated in favor of the `target` parameter and will be removed in a future
+release. Both `target` and `service` cannot be defined.
 
 ### `match`, `exclude` and `options`
 
@@ -112,7 +123,7 @@ filters=ReplicateOrders
 [ReplicateOrders]
 type=filter
 module=tee
-service=DataMart
+target=DataMart
 match=insert[ 	]*into[ 	]*orders
 
 [DataMart]
@@ -130,13 +141,13 @@ options=/var/log/DataMart/InsertsLog
 
 [Orders-Listener]
 type=listener
-service=Orders
+target=Orders
 protocol=MariaDBClient
 port=4011
 
 [DataMart-Listener]
 type=listener
-service=DataMart
+target=DataMart
 protocol=MariaDBClient
 port=4012
 ```

@@ -37,7 +37,7 @@ static const MXS_ENUM_VALUE option_values[] =
 
 Tee::Tee(const char* name, MXS_CONFIG_PARAMETER* params)
     : m_name(name)
-    , m_service(params->get_service("service"))
+    , m_target(params->get_target(params->contains("service") ? "service" : "target"))
     , m_user(params->get_string("user"))
     , m_source(params->get_string("source"))
     , m_match(params->get_string("match"), params->get_enum("options", option_values))
@@ -58,7 +58,18 @@ Tee::Tee(const char* name, MXS_CONFIG_PARAMETER* params)
  */
 Tee* Tee::create(const char* name, MXS_CONFIG_PARAMETER* params)
 {
-    return new Tee(name, params);
+    Tee* rv = nullptr;
+
+    if (params->contains_all({"service", "target"}))
+    {
+        MXS_ERROR("Both `service` and `target` cannot be defined at the same time");
+    }
+    else
+    {
+        rv = new Tee(name, params);
+    }
+
+    return rv;
 }
 
 TeeSession* Tee::newSession(MXS_SESSION* pSession, SERVICE* pService)
@@ -85,7 +96,7 @@ json_t* Tee::diagnostics() const
         json_object_set_new(rval, "source", json_string(m_source.c_str()));
     }
 
-    json_object_set_new(rval, "service", json_string(m_service->name()));
+    json_object_set_new(rval, "target", json_string(m_target->name()));
 
     if (m_user.length())
     {
@@ -170,7 +181,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
         NULL,                               /* Thread init. */
         NULL,                               /* Thread finish. */
         {
-            {"service",                      MXS_MODULE_PARAM_SERVICE,NULL, MXS_MODULE_OPT_REQUIRED},
+            {"service",                      MXS_MODULE_PARAM_SERVICE, NULL},
+            {"target",                       MXS_MODULE_PARAM_TARGET,  NULL},
             {"match",                        MXS_MODULE_PARAM_REGEX},
             {"exclude",                      MXS_MODULE_PARAM_REGEX},
             {"source",                       MXS_MODULE_PARAM_STRING},

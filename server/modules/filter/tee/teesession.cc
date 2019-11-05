@@ -39,7 +39,7 @@ TeeSession* TeeSession::create(Tee* my_instance, MXS_SESSION* session, SERVICE* 
         && my_instance->user_matches(session->user().c_str())
         && my_instance->remote_matches(session->client_remote().c_str()))
     {
-        if (auto client = LocalClient::create(session, my_instance->get_service()))
+        if (auto client = LocalClient::create(session, my_instance->get_target()))
         {
             client->connect();
 
@@ -50,7 +50,7 @@ TeeSession* TeeSession::create(Tee* my_instance, MXS_SESSION* session, SERVICE* 
         else
         {
             MXS_ERROR("Failed to create local client connection to '%s'",
-                      my_instance->get_service()->name());
+                      my_instance->get_target()->name());
         }
     }
 
