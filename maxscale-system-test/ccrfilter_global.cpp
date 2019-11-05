@@ -18,7 +18,7 @@ int main(int argc, char* argv[])
     auto secondary = test.maxscales->rwsplit();
     secondary.connect();
 
-    for (int i = 0; i < 50; i++)
+    for (int i = 0; i < 25; i++)
     {
         conn.connect();
         test.expect(conn.query("INSERT INTO test.t1 VALUES ('" + data + "')"),
@@ -34,6 +34,9 @@ int main(int argc, char* argv[])
         // Existing connections should also see the inserted rows
         auto second_count = std::stoi(secondary.field("SELECT COUNT(*) FROM test.t1"));
         test.expect(second_count == i + 1, "Missing `%d` rows from open connection.", (i + 1) - count);
+
+        // Make sure the row is replicated before inserting another one
+        test.repl->sync_slaves();
     }
 
     conn.connect();
