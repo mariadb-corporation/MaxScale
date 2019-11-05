@@ -43,6 +43,20 @@ add_executable(test_cacheoptions
   )
 target_link_libraries(test_cacheoptions maxscale-common mariadbclient)
 
+add_executable(keycheck
+  keycheck.cc
+  ../../../../../query_classifier/test/testreader.cc
+  ../cache.cc
+  ../cache_storage_api.cc
+  ../lrustorage.cc
+  ../lrustoragemt.cc
+  ../lrustoragest.cc
+  ../rules.cc
+  ../storage.cc
+  ../storagefactory.cc
+  )
+target_link_libraries(keycheck maxscale-common)
+
 add_test(test_cache_rules testrules)
 
 add_test(test_cache_inmemory_keygeneration testkeygeneration storage_inmemory ${CMAKE_CURRENT_SOURCE_DIR}/input.test)
