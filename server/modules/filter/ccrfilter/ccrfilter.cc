@@ -130,7 +130,7 @@ public:
         return CCRSession::create(session, service, this);
     }
 
-    json_t* diagnostics_json() const
+    json_t* diagnostics() const
     {
         json_t* rval = json_object();
         json_object_set_new(rval, "count", json_integer(m_count));

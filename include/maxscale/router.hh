@@ -127,7 +127,7 @@ typedef struct mxs_router_object
      *
      * @see jansson.h
      */
-    json_t*  (*diagnostics_json)(const MXS_ROUTER * instance);
+    json_t*  (*diagnostics)(const MXS_ROUTER * instance);
 
     /**
      * @brief Called for each reply packet
@@ -359,7 +359,7 @@ protected:
  * @endcode
  *
  * The concrete router class must implement the methods @c create, @c newSession,
- * @c diagnostics_json and @c getCapabilities, with the prototypes as shown above.
+ * @c diagnostics and @c getCapabilities, with the prototypes as shown above.
  *
  * The plugin function @c GetModuleObject is then implemented as follows:
  *
@@ -437,13 +437,13 @@ public:
         return rv;
     }
 
-    static json_t* diagnostics_json(const MXS_ROUTER* pInstance)
+    static json_t* diagnostics(const MXS_ROUTER* pInstance)
     {
         const RouterType* pRouter = static_cast<const RouterType*>(pInstance);
 
         json_t* rval = NULL;
 
-        MXS_EXCEPTION_GUARD(rval = pRouter->diagnostics_json());
+        MXS_EXCEPTION_GUARD(rval = pRouter->diagnostics());
 
         return rval;
     }
@@ -516,7 +516,7 @@ MXS_ROUTER_OBJECT Router<RouterType, RouterSessionType>::s_object =
     &Router<RouterType, RouterSessionType>::closeSession,
     &Router<RouterType, RouterSessionType>::freeSession,
     &Router<RouterType, RouterSessionType>::routeQuery,
-    &Router<RouterType, RouterSessionType>::diagnostics_json,
+    &Router<RouterType, RouterSessionType>::diagnostics,
     &Router<RouterType, RouterSessionType>::clientReply,
     &Router<RouterType, RouterSessionType>::handleError,
     &Router<RouterType, RouterSessionType>::getCapabilities,

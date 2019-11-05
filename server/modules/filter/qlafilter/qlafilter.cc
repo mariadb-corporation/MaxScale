@@ -296,7 +296,7 @@ bool QlaInstance::read_to_json(int start, int end, json_t** output) const
     return rval;
 }
 
-json_t* QlaInstance::diagnostics_json() const
+json_t* QlaInstance::diagnostics() const
 {
     json_t* rval = json_object();
     if (!m_settings.source.empty())
@@ -835,7 +835,7 @@ int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* queue,
     return my_session->clientReply(queue, down, reply);
 }
 
-json_t* diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession)
+json_t* diagnostics(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession)
 {
     auto my_session = static_cast<const QlaFilterSession*>(fsession);
     if (my_session)
@@ -847,7 +847,7 @@ json_t* diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fs
     else
     {
         auto my_instance = static_cast<const QlaInstance*>(instance);
-        return my_instance->diagnostics_json();
+        return my_instance->diagnostics();
     }
 }
 
@@ -900,7 +900,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         freeSession,
         routeQuery,
         clientReply,
-        diagnostic_json,
+        diagnostics,
         getCapabilities,
         NULL,               // No destroyInstance
     };

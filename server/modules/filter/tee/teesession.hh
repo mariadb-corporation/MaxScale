@@ -34,7 +34,7 @@ public:
 
     void    close();
     int     routeQuery(GWBUF* pPacket);
-    json_t* diagnostics_json() const;
+    json_t* diagnostics() const;
 
 private:
     TeeSession(MXS_SESSION* session,

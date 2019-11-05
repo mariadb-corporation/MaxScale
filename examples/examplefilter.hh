@@ -58,7 +58,7 @@ public:
      *
      * @return Json object
      */
-    json_t* diagnostics_json() const;
+    json_t* diagnostics() const;
 
     /*
      * Get filter capabilities. This is used by protocol code to find out what kind of data the filter

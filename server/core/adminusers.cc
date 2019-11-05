@@ -209,7 +209,7 @@ static json_t* admin_user_json_data(const char* host,
 
 static void user_types_to_json(USERS* users, json_t* arr, const char* host, enum user_type type)
 {
-    json_t* json = users_diagnostic_json(users);
+    json_t* json = users_diagnostics(users);
     size_t index;
     json_t* value;
 

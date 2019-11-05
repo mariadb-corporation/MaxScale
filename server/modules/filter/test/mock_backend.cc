@@ -230,7 +230,7 @@ private:
             return m_owner.write(pBuffer);
         }
 
-        json_t* diagnostics_json() const override
+        json_t* diagnostics() const override
         {
             return nullptr;
         }

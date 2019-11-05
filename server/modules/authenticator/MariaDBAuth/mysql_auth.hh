@@ -114,7 +114,7 @@ public:
     mariadb::SBackendAuth create_backend_authenticator() override;
 
     int         load_users(SERVICE* service) override;
-    json_t*     diagnostics_json() override;
+    json_t*     diagnostics() override;
     uint64_t    capabilities() const override;
     std::string supported_protocol() const override;
     std::string name() const override;

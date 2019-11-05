@@ -1838,7 +1838,7 @@ bool rule_matches(Dbfw* my_instance,
 /**
  * Diagnostics routine
  */
-json_t* Dbfw::diagnostics_json() const
+json_t* Dbfw::diagnostics() const
 {
     return rules_to_json(this_thread->rules(this));
 }

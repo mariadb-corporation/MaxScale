@@ -24,7 +24,7 @@ public:
 
     NullFilterSession* newSession(MXS_SESSION* pSession, SERVICE* pService);
 
-    json_t* diagnostics_json() const;
+    json_t* diagnostics() const;
 
     uint64_t getCapabilities();
 

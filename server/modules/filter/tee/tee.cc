@@ -76,7 +76,7 @@ TeeSession* Tee::newSession(MXS_SESSION* pSession, SERVICE* pService)
  * @param   instance    The filter instance
  * @param   fsession    Filter session, may be NULL
  */
-json_t* Tee::diagnostics_json() const
+json_t* Tee::diagnostics() const
 {
     json_t* rval = json_object();
 

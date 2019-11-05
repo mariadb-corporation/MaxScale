@@ -72,7 +72,7 @@ CommentFilterSession* CommentFilter::newSession(MXS_SESSION* pSession, SERVICE* 
 }
 
 // static
-json_t* CommentFilter::diagnostics_json() const
+json_t* CommentFilter::diagnostics() const
 {
     json_t* rval = json_object();
     json_object_set_new(rval, "Comment", json_string(m_comment.c_str()));

@@ -378,7 +378,7 @@ public:
      * @return A JSON object representing the state of the monitor
      * @see jansson.h
      */
-    virtual json_t* diagnostics_json() const = 0;
+    virtual json_t* diagnostics() const = 0;
 
     /**
      * Set disk space threshold setting.
@@ -651,7 +651,7 @@ public:
      *
      * @return An object, if there is information to return, NULL otherwise.
      */
-    virtual json_t* diagnostics_json() const;
+    virtual json_t* diagnostics() const;
 
     /**
      * Get current time from the monotonic clock.

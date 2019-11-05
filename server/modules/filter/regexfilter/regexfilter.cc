@@ -53,7 +53,7 @@ static int clientReply(MXS_FILTER* instance,
                        GWBUF* reply,
                        const mxs::ReplyRoute& down,
                        const mxs::Reply& r);
-static json_t*  diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession);
+static json_t*  diagnostics(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
 
 static char* regex_replace(const char* sql,
@@ -119,7 +119,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         freeSession,
         routeQuery,
         clientReply,
-        diagnostic_json,
+        diagnostics,
         getCapabilities,
         NULL,
     };
@@ -386,7 +386,7 @@ static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF*
  * @param   instance    The filter instance
  * @param   fsession    Filter session, may be NULL
  */
-static json_t* diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession)
+static json_t* diagnostics(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession)
 {
     RegexInstance* my_instance = (RegexInstance*)instance;
     RegexSession* my_session = (RegexSession*)fsession;

@@ -65,7 +65,7 @@ public:
      *
      * @return Diagnostics messages
      */
-    json_t* diagnostics_json() const;
+    json_t* diagnostics() const;
 
     /**
      * Perform user-activated switchover.

@@ -78,7 +78,7 @@ int TeeSession::routeQuery(GWBUF* queue)
     return mxs::FilterSession::routeQuery(queue);
 }
 
-json_t* TeeSession::diagnostics_json() const
+json_t* TeeSession::diagnostics() const
 {
     return NULL;
 }

@@ -81,7 +81,7 @@ ExampleFilterSession* ExampleFilter::newSession(MXS_SESSION* pSession, SERVICE* 
 }
 
 // static
-json_t* ExampleFilter::diagnostics_json() const
+json_t* ExampleFilter::diagnostics() const
 {
     json_t* rval = json_object();
     int queries = m_total_queries.load(std::memory_order_relaxed);

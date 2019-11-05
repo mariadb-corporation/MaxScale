@@ -55,7 +55,7 @@ public:
 
     ThrottleSession* newSession(MXS_SESSION* mxsSession, SERVICE* service);
 
-    json_t*               diagnostics_json() const;
+    json_t*               diagnostics() const;
     uint64_t              getCapabilities();
     const ThrottleConfig& config() const;
     void                  sessionClose(ThrottleSession* session);

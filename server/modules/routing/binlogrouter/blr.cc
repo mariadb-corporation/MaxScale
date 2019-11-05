@@ -64,7 +64,7 @@ static void freeSession(MXS_ROUTER* instance,
 static int routeQuery(MXS_ROUTER* instance,
                       MXS_ROUTER_SESSION* router_session,
                       GWBUF* queue);
-static json_t* diagnostics_json(const MXS_ROUTER* instance);
+static json_t* diagnostics(const MXS_ROUTER* instance);
 static void    clientReply(MXS_ROUTER* instance,
                            MXS_ROUTER_SESSION* router_session,
                            GWBUF* queue,
@@ -138,7 +138,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         closeSession,
         freeSession,
         routeQuery,
-        diagnostics_json,
+        diagnostics,
         clientReply,
         errorReply,
         getCapabilities,
@@ -1343,7 +1343,7 @@ static const char* event_names_mariadb10[] =
  *
  * @param instance  Instance of the router
  */
-static json_t* diagnostics_json(const MXS_ROUTER* router)
+static json_t* diagnostics(const MXS_ROUTER* router)
 {
     ROUTER_INSTANCE* router_inst = (ROUTER_INSTANCE*)router;
     int minno = 0;
@@ -2624,7 +2624,7 @@ InternalDCB* InternalDCB::create(MXS_SESSION* session, DCB::Manager* manager)
 }
 
 InternalDCB::InternalDCB(MXS_SESSION* session, DCB::Manager* manager)
-    : ClientDCB(FD_CLOSED, "127.0.0.1",sockaddr_storage {}, DCB::Role::INTERNAL, session, nullptr, manager)
+    : ClientDCB(FD_CLOSED, "127.0.0.1", sockaddr_storage {}, DCB::Role::INTERNAL, session, nullptr, manager)
 {
     remove_callbacks();
 }

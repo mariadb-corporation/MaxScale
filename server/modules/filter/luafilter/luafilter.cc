@@ -74,7 +74,7 @@ static int32_t clientReply(MXS_FILTER* instance,
                            const mxs::ReplyRoute& down,
                            const mxs::Reply& reply);
 static void     diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb);
-static json_t*  diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession);
+static json_t*  diagnostics(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
 
 extern "C"
@@ -98,7 +98,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         freeSession,
         routeQuery,
         clientReply,
-        diagnostic_json,
+        diagnostics,
         getCapabilities,
         NULL,       // No destroyInstance
     };
@@ -627,7 +627,7 @@ static int32_t routeQuery(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWB
  * @param instance The filter instance
  * @param fsession Filter session, may be NULL
  */
-static json_t* diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession)
+static json_t* diagnostics(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession)
 {
     LUA_INSTANCE* my_instance = (LUA_INSTANCE*)instance;
     json_t* rval = json_object();

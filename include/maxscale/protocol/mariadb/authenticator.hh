@@ -109,7 +109,7 @@ public:
      *
      * @return JSON representation of the authenticator
      */
-    virtual json_t* diagnostics_json() = 0;
+    virtual json_t* diagnostics() = 0;
 
     /**
      * Get module runtime capabilities. Returns 0 by default.

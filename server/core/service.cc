@@ -1106,9 +1106,9 @@ json_t* service_attributes(const SERVICE* service)
     json_object_set_new(attr, CN_ROUTER, json_string(service->router_name()));
     json_object_set_new(attr, CN_STATE, json_string(service_state_to_string(service->state)));
 
-    if (service->router && service->router_instance && service->router->diagnostics_json)
+    if (service->router && service->router_instance && service->router->diagnostics)
     {
-        json_t* diag = service->router->diagnostics_json(service->router_instance);
+        json_t* diag = service->router->diagnostics(service->router_instance);
 
         if (diag)
         {

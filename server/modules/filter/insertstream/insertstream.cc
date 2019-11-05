@@ -219,7 +219,7 @@ InsertStreamSession* InsertStream::newSession(MXS_SESSION* pSession, SERVICE* pS
     return new InsertStreamSession(pSession, pService, this);
 }
 
-json_t* InsertStream::diagnostics_json() const
+json_t* InsertStream::diagnostics() const
 {
     json_t* rval = json_object();
 

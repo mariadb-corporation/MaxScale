@@ -331,7 +331,7 @@ public:
      *
      * @return The JSON representation of this router instance
      */
-    json_t* diagnostics_json() const;
+    json_t* diagnostics() const;
 
     /**
      * @brief Get router capabilities

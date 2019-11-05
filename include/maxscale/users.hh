@@ -68,7 +68,7 @@ public:
     bool check_permissions(const std::string& user, const std::string& password,
                            user_account_type perm) const;
     bool    set_permissions(const std::string& user, user_account_type perm);
-    json_t* diagnostic_json() const;
+    json_t* diagnostics() const;
     void    diagnostic(DCB* dcb) const;
     bool    empty() const;
     json_t* to_json() const;
@@ -222,7 +222,7 @@ void users_diagnostic(DCB* dcb, USERS* users);
  *
  * @return JSON version of users
  */
-json_t* users_diagnostic_json(USERS* users);
+json_t* users_diagnostics(USERS* users);
 
 /**
  * Convert account_type to a string

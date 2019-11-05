@@ -54,7 +54,7 @@ public:
      *
      * @return JSON representation of the connection
      */
-    virtual json_t* diagnostics_json() const = 0;
+    virtual json_t* diagnostics() const = 0;
 
     virtual void set_dcb(DCB* dcb) = 0;
 };

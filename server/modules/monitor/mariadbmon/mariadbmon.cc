@@ -349,7 +349,7 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
     return settings_ok;
 }
 
-json_t* MariaDBMonitor::diagnostics_json() const
+json_t* MariaDBMonitor::diagnostics() const
 {
     mxb_assert(mxs::MainWorker::is_main_worker());
     return to_json();
@@ -393,7 +393,7 @@ json_t* MariaDBMonitor::to_json(State op)
 
 json_t* MariaDBMonitor::to_json() const
 {
-    json_t* rval = MonitorWorker::diagnostics_json();
+    json_t* rval = MonitorWorker::diagnostics();
 
     // The m_master-pointer can be modified during a tick, but the pointed object cannot be deleted.
     auto master = mxb::atomic::load(&m_master, mxb::atomic::RELAXED);

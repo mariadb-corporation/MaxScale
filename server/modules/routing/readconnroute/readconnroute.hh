@@ -92,7 +92,7 @@ public:
      *
      * @return JSON data representing the router instance
      */
-    json_t* diagnostics_json() const;
+    json_t* diagnostics() const;
 
     /**
      * Get router capability bits

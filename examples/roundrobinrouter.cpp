@@ -136,7 +136,7 @@ public:
     ~RRRouter();
     static RRRouter* create(SERVICE* pService, MXS_CONFIG_PARAMETER* params);
     RRRouterSession* newSession(MXS_SESSION* session, const Endpoints& endpoints);
-    json_t*          diagnostics_json() const;
+    json_t*          diagnostics() const;
 
     uint64_t getCapabilities()
     {
@@ -267,7 +267,7 @@ RRRouter* RRRouter::create(SERVICE* pService, MXS_CONFIG_PARAMETER* params)
  * @param   instance    The router instance
  * @param   dcb         The DCB for diagnostic output
  */
-json_t* RRRouter::diagnostics_json() const
+json_t* RRRouter::diagnostics() const
 {
     json_t* rval = json_object();
 

@@ -156,7 +156,7 @@ bool Users::set_permissions(const std::string& user, user_account_type perm)
     return rval;
 }
 
-json_t* Users::diagnostic_json() const
+json_t* Users::diagnostics() const
 {
     Guard guard(m_lock);
     json_t* rval = json_array();
@@ -242,7 +242,7 @@ void Users::load_json(json_t* json)
         }
         else
         {
-                    MXS_ERROR("Corrupt JSON value in users file: %s", mxs::json_dump(value).c_str());
+            MXS_ERROR("Corrupt JSON value in users file: %s", mxs::json_dump(value).c_str());
         }
     }
 }
@@ -347,10 +347,10 @@ int users_admin_count(USERS* users)
     return u->admin_count();
 }
 
-json_t* users_diagnostic_json(USERS* users)
+json_t* users_diagnostics(USERS* users)
 {
     Users* u = reinterpret_cast<Users*>(users);
-    return u->diagnostic_json();
+    return u->diagnostics();
 }
 
 const char* account_type_to_str(mxs::user_account_type type)

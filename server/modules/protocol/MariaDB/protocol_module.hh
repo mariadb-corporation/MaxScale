@@ -36,7 +36,6 @@ public:
     std::string name() const override;
 
     int  load_auth_users(SERVICE* service) override;
-    void print_auth_users(DCB* output) override;
 
     json_t* print_auth_users_json() override;
 

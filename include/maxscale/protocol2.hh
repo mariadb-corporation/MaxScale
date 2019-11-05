@@ -165,7 +165,7 @@ public:
 class ClientConnectionBase : public ClientConnection
 {
 public:
-    json_t*          diagnostics_json() const override;
+    json_t*          diagnostics() const override;
     void             set_dcb(DCB* dcb) override;
     ClientDCB*       dcb() override;
     const ClientDCB* dcb() const override;

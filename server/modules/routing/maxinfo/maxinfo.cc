@@ -69,7 +69,7 @@ static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance,
 static void     closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session);
 static void     freeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session);
 static int      execute(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session, GWBUF* queue);
-static json_t*  diagnostics_json(const MXS_ROUTER* instance);
+static json_t*  diagnostics(const MXS_ROUTER* instance);
 static uint64_t getCapabilities(MXS_ROUTER* instance);
 static bool     handleError(MXS_ROUTER* instance,
                             MXS_ROUTER_SESSION* router_session,
@@ -102,7 +102,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         closeSession,
         freeSession,
         execute,
-        diagnostics_json,
+        diagnostics,
         NULL,
         handleError,
         getCapabilities,
@@ -341,7 +341,7 @@ static int execute(MXS_ROUTER* rinstance, MXS_ROUTER_SESSION* router_session, GW
  *
  * @param instance  Instance of the router
  */
-static json_t* diagnostics_json(const MXS_ROUTER* instance)
+static json_t* diagnostics(const MXS_ROUTER* instance)
 {
     return NULL;
 }

@@ -152,7 +152,7 @@ typedef struct mxs_filter_object
      *
      * @see jansson.h
      */
-    json_t* (*diagnostics_json)(const MXS_FILTER * instance, const MXS_FILTER_SESSION* fsession);
+    json_t* (*diagnostics)(const MXS_FILTER * instance, const MXS_FILTER_SESSION* fsession);
 
     /**
      * @brief Called to obtain the capabilities of the filter
@@ -361,7 +361,7 @@ public:
     /**
      * Called for obtaining diagnostics about the filter session.
      */
-    json_t* diagnostics_json() const;
+    json_t* diagnostics() const;
 
 protected:
     FilterSession(MXS_SESSION* pSession, SERVICE* service);
@@ -413,7 +413,7 @@ protected:
  *      MyFilterSession* newSession(MXS_SESSION* pSession, SERVICE* pService);
  *
  *      // Diagnostic function that returns a JSON object
- *      json_t* diagnostics_json() const;
+ *      json_t* diagnostics() const;
  *
  *      // Get filter capabilities
  *      uint64_t getCapabilities();
@@ -421,7 +421,7 @@ protected:
  * @endcode
  *
  * The concrete filter class must implement the methods @c create, @c newSession,
- * @c diagnostics_json and @c getCapabilities, with the prototypes as shown above.
+ * @c diagnostics and @c getCapabilities, with the prototypes as shown above.
  *
  * The plugin function @c GetModuleObject is then implemented as follows:
  *
@@ -503,7 +503,7 @@ public:
         return rv;
     }
 
-    static json_t* diagnostics_json(const MXS_FILTER* pInstance, const MXS_FILTER_SESSION* pData)
+    static json_t* diagnostics(const MXS_FILTER* pInstance, const MXS_FILTER_SESSION* pData)
     {
         json_t* rval = NULL;
 
@@ -511,13 +511,13 @@ public:
         {
             const FilterSessionType* pFilterSession = static_cast<const FilterSessionType*>(pData);
 
-            MXS_EXCEPTION_GUARD(rval = pFilterSession->diagnostics_json());
+            MXS_EXCEPTION_GUARD(rval = pFilterSession->diagnostics());
         }
         else
         {
             const FilterType* pFilter = static_cast<const FilterType*>(pInstance);
 
-            MXS_EXCEPTION_GUARD(rval = pFilter->diagnostics_json());
+            MXS_EXCEPTION_GUARD(rval = pFilter->diagnostics());
         }
 
         return rval;
@@ -553,7 +553,7 @@ MXS_FILTER_OBJECT Filter<FilterType, FilterSessionType>::s_object =
     &Filter<FilterType, FilterSessionType>::freeSession,
     &Filter<FilterType, FilterSessionType>::routeQuery,
     &Filter<FilterType, FilterSessionType>::clientReply,
-    &Filter<FilterType, FilterSessionType>::diagnostics_json,
+    &Filter<FilterType, FilterSessionType>::diagnostics,
     &Filter<FilterType, FilterSessionType>::getCapabilities,
     &Filter<FilterType, FilterSessionType>::destroyInstance,
 };

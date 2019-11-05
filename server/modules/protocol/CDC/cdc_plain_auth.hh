@@ -29,9 +29,9 @@ public:
 
     int load_users(SERVICE* service);
 
-    json_t* diagnostics_json()
+    json_t* diagnostics()
     {
-        return m_userdata.diagnostic_json();
+        return m_userdata.diagnostics();
     }
 
     /**

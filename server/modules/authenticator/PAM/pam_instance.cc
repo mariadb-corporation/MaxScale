@@ -475,7 +475,7 @@ static int diag_cb_json(json_t* data, int columns, char** row, char** field_name
     return 0;
 }
 
-json_t* PamAuthenticatorModule::diagnostics_json()
+json_t* PamAuthenticatorModule::diagnostics()
 {
     json_t* rval = json_array();
     string select = "SELECT * FROM " + TABLE_USER + ";";

@@ -47,7 +47,7 @@ public:
 
     ~GaleraMonitor();
     static GaleraMonitor* create(const std::string& name, const std::string& module);
-    json_t*               diagnostics_json() const;
+    json_t*               diagnostics() const;
 
 protected:
     bool configure(const MXS_CONFIG_PARAMETER* param);

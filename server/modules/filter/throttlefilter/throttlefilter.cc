@@ -119,7 +119,7 @@ ThrottleSession* ThrottleFilter::newSession(MXS_SESSION* mxsSession, SERVICE* se
     return new ThrottleSession(mxsSession, service, *this);
 }
 
-json_t* ThrottleFilter::diagnostics_json() const
+json_t* ThrottleFilter::diagnostics() const
 {
     return NULL;
 }

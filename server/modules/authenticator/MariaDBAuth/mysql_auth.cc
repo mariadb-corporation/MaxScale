@@ -697,7 +697,7 @@ int diag_cb_json(void* data, int columns, char** row, char** field_names)
     return 0;
 }
 
-json_t* MariaDBAuthenticatorModule::diagnostics_json()
+json_t* MariaDBAuthenticatorModule::diagnostics()
 {
     json_t* rval = json_array();
 

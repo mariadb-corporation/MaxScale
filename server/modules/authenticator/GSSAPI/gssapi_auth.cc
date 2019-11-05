@@ -86,9 +86,9 @@ static int db_flags = SQLITE_OPEN_READWRITE
     | SQLITE_OPEN_URI
     | SQLITE_OPEN_SHAREDCACHE;
 
-json_t* GSSAPIAuthenticatorModule::diagnostics_json()
+json_t* GSSAPIAuthenticatorModule::diagnostics()
 {
-    return json_array(); // TODO: implement
+    return json_array();    // TODO: implement
 }
 
 uint64_t GSSAPIAuthenticatorModule::capabilities() const
@@ -190,8 +190,8 @@ GSSAPIClientAuthenticator::GSSAPIClientAuthenticator(GSSAPIAuthenticatorModule* 
 
 GSSAPIClientAuthenticator::~GSSAPIClientAuthenticator()
 {
-        sqlite3_close_v2(handle);
-        MXS_FREE(principal_name);
+    sqlite3_close_v2(handle);
+    MXS_FREE(principal_name);
 }
 
 /**

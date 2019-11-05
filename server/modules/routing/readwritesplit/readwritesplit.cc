@@ -275,7 +275,7 @@ RWSplitSession* RWSplit::newSession(MXS_SESSION* session, const Endpoints& endpo
     return rses;
 }
 
-json_t* RWSplit::diagnostics_json() const
+json_t* RWSplit::diagnostics() const
 {
     json_t* rval = json_object();
 

@@ -46,7 +46,7 @@ CatSession* Cat::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
     return connected ? new CatSession(pSession, this, std::move(backends)) : NULL;
 }
 
-json_t* Cat::diagnostics_json() const
+json_t* Cat::diagnostics() const
 {
     return NULL;
 }

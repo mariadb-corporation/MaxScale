@@ -80,7 +80,7 @@ public:
      */
     bool read_to_json(int start, int end, json_t** output) const;
 
-    json_t* diagnostics_json() const;
+    json_t* diagnostics() const;
 
     std::string generate_log_header(uint64_t data_flags) const;
 

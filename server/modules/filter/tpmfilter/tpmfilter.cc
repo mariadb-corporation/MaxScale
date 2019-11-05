@@ -94,7 +94,7 @@ static int  clientReply(MXS_FILTER* instance,
                         GWBUF* queue,
                         const mxs::ReplyRoute& down,
                         const mxs::Reply& reply);
-static json_t*  diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession);
+static json_t*  diagnostics(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
 static void     destroyInstance(MXS_FILTER* instance);
 
@@ -173,7 +173,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         freeSession,
         routeQuery,
         clientReply,
-        diagnostic_json,
+        diagnostics,
         getCapabilities,
         destroyInstance
     };
@@ -618,7 +618,7 @@ static int clientReply(MXS_FILTER* instance,
  * @param   instance    The filter instance
  * @param   fsession    Filter session, may be NULL
  */
-static json_t* diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession)
+static json_t* diagnostics(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession)
 {
     TPM_INSTANCE* my_instance = (TPM_INSTANCE*)instance;
 

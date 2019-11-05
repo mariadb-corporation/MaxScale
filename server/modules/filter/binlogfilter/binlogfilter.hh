@@ -52,7 +52,7 @@ public:
     BinlogFilterSession* newSession(MXS_SESSION* pSession, SERVICE* pService);
 
     // Returns JSON form diagnostic data
-    json_t* diagnostics_json() const;
+    json_t* diagnostics() const;
 
     // Get filter capabilities
     uint64_t getCapabilities();

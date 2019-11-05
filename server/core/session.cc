@@ -467,7 +467,7 @@ json_t* session_json_data(const Session* session, const char* host, bool rdns)
     json_t* connection_arr = json_array();
     for (auto conn : session->backend_connections())
     {
-        json_array_append_new(connection_arr, conn->diagnostics_json());
+        json_array_append_new(connection_arr, conn->diagnostics());
     }
 
     json_object_set_new(attr, "connections", connection_arr);

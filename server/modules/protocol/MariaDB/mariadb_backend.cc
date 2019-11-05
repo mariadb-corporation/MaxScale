@@ -1562,7 +1562,7 @@ bool MariaDBBackendConnection::established()
            && !proto->m_stored_query;
 }
 
-json_t* MariaDBBackendConnection::diagnostics_json() const
+json_t* MariaDBBackendConnection::diagnostics() const
 {
     return json_pack("{siss}", "connection_id", m_thread_id, "server", m_dcb->server()->name());
 }

@@ -2120,9 +2120,8 @@ const ClientDCB* mxs::ClientConnectionBase::dcb() const
     return m_dcb;
 }
 
-json_t* maxscale::ClientConnectionBase::diagnostics_json() const
+json_t* maxscale::ClientConnectionBase::diagnostics() const
 {
-    json_t* rval = json_object(); // This is not currently used.
+    json_t* rval = json_object();   // This is not currently used.
     return rval;
 }
-

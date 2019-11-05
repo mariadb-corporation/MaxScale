@@ -515,7 +515,7 @@ int CacheFilterSession::clientReply(GWBUF* pData, const mxs::ReplyRoute& down, c
     return rv;
 }
 
-json_t* CacheFilterSession::diagnostics_json() const
+json_t* CacheFilterSession::diagnostics() const
 {
     // Not printing anything. Session of the same instance share the same cache, in
     // which case the same information would be printed once per session, or all

@@ -141,7 +141,7 @@ NullFilterSession* NullFilter::newSession(MXS_SESSION* pSession, SERVICE* pServi
 }
 
 // static
-json_t* NullFilter::diagnostics_json() const
+json_t* NullFilter::diagnostics() const
 {
     return NULL;
 }

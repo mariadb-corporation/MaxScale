@@ -148,7 +148,7 @@ static int routeQuery(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session, 
  *
  * @param instance  Instance of the router
  */
-static json_t* diagnostics_json(const MXS_ROUTER* router)
+static json_t* diagnostics(const MXS_ROUTER* router)
 {
     Avro* router_inst = (Avro*)router;
 
@@ -454,7 +454,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         closeSession,
         freeSession,
         routeQuery,
-        diagnostics_json,
+        diagnostics,
         clientReply,
         errorReply,
         getCapabilities,

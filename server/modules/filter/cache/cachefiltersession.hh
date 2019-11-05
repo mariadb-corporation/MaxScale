@@ -76,7 +76,7 @@ public:
     /**
      * Print diagnostics of the session cache.
      */
-    json_t* diagnostics_json() const;
+    json_t* diagnostics() const;
 
 private:
     void handle_expecting_nothing(const mxs::Reply& reply);

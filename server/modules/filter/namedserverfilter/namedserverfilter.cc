@@ -330,9 +330,9 @@ RegexHintFilter* RegexHintFilter::create(const char* name, MXS_CONFIG_PARAMETER*
  *
  * Print diagnostics on the filter instance as a whole + session-specific info.
  */
-json_t* RegexHintFSession::diagnostics_json() const
+json_t* RegexHintFSession::diagnostics() const
 {
-    json_t* rval = m_fil_inst.diagnostics_json();   /* Print overall diagnostics */
+    json_t* rval = m_fil_inst.diagnostics();    /* Print overall diagnostics */
 
     json_object_set_new(rval, "session_queries_diverted", json_integer(m_n_diverted));
     json_object_set_new(rval, "session_queries_undiverted", json_integer(m_n_undiverted));
@@ -347,7 +347,7 @@ json_t* RegexHintFSession::diagnostics_json() const
  *
  * @param   dcb     The DCB for diagnostic output
  */
-json_t* RegexHintFilter::diagnostics_json() const
+json_t* RegexHintFilter::diagnostics() const
 {
     json_t* rval = json_object();
 

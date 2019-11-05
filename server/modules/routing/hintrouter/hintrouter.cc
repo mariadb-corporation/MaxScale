@@ -118,7 +118,7 @@ HintRouterSession* HintRouter::newSession(MXS_SESSION* pSession, const Endpoints
     return rval;
 }
 
-json_t* HintRouter::diagnostics_json() const
+json_t* HintRouter::diagnostics() const
 {
     HR_ENTRY();
 

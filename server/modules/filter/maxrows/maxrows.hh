@@ -100,7 +100,7 @@ public:
     }
 
     // Returns JSON form diagnostic data
-    json_t* diagnostics_json() const
+    json_t* diagnostics() const
     {
         return nullptr;
     }

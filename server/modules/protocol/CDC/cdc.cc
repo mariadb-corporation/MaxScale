@@ -110,7 +110,7 @@ public:
 
     json_t* print_auth_users_json() override
     {
-        return m_auth_module.diagnostics_json();
+        return m_auth_module.diagnostics();
     }
 
 private:
@@ -131,9 +131,9 @@ MXS_MODULE* MXS_CREATE_MODULE()
 {
     static modulecmd_arg_type_t args[] =
     {
-            {MODULECMD_ARG_SERVICE, "Service where the user is added"},
-            {MODULECMD_ARG_STRING,  "User to add"                    },
-            {MODULECMD_ARG_STRING,  "Password of the user"           }
+        {MODULECMD_ARG_SERVICE, "Service where the user is added"},
+        {MODULECMD_ARG_STRING,  "User to add"                    },
+        {MODULECMD_ARG_STRING,  "Password of the user"           }
     };
 
     modulecmd_register_command("cdc", "add_user", MODULECMD_TYPE_ACTIVE, cdc_add_new_user,

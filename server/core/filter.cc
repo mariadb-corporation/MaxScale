@@ -237,9 +237,9 @@ json_t* filter_json_data(const SFilterDef& filter, const char* host)
     json_object_set_new(attr, CN_MODULE, json_string(filter->module.c_str()));
     json_object_set_new(attr, CN_PARAMETERS, filter_parameters_to_json(filter));
 
-    if (filter->obj && filter->filter && filter->obj->diagnostics_json)
+    if (filter->obj && filter->filter && filter->obj->diagnostics)
     {
-        json_t* diag = filter->obj->diagnostics_json(filter->filter, NULL);
+        json_t* diag = filter->obj->diagnostics(filter->filter, NULL);
 
         if (diag)
         {
@@ -326,7 +326,7 @@ int FilterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, cons
     return m_up.clientReply(pPacket, down, reply);
 }
 
-json_t* FilterSession::diagnostics_json() const
+json_t* FilterSession::diagnostics() const
 {
     return NULL;
 }

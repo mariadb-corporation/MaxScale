@@ -684,7 +684,7 @@ json_t* Monitor::to_json(const char* host) const
 
     if (is_running())
     {
-        json_t* diag = diagnostics_json();
+        json_t* diag = diagnostics();
         if (diag)
         {
             json_object_set_new(attr, CN_MONITOR_DIAGNOSTICS, diag);
@@ -1923,7 +1923,7 @@ void MonitorWorker::do_stop()
     m_thread_running.store(false, std::memory_order_release);
 }
 
-json_t* MonitorWorker::diagnostics_json() const
+json_t* MonitorWorker::diagnostics() const
 {
     return json_object();
 }

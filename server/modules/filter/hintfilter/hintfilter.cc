@@ -37,7 +37,7 @@ HintSession* HintInstance::newSession(MXS_SESSION* pSession, SERVICE* pService)
     return new(std::nothrow) HintSession(pSession, pService);
 }
 
-json_t* HintInstance::diagnostics_json() const
+json_t* HintInstance::diagnostics() const
 {
     return nullptr;
 }
