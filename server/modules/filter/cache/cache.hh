@@ -103,27 +103,35 @@ public:
     /**
      * Returns a key for the statement. Takes the current config into account.
      *
+     * @param user         The current user. Empty if a non-user specific cache is used.
+     * @param host         The host of the current user. Empty if a non-user specific cache is used.
      * @param zDefault_db  The default database, can be NULL.
      * @param pQuery       A statement.
      * @param pKey         On output a key.
      *
      * @return CACHE_RESULT_OK if a key could be created.
      */
-    cache_result_t get_key(const char* zDefault_db,
-                           const GWBUF* pQuery,
-                           CACHE_KEY* pKey) const;
+    virtual cache_result_t get_key(const std::string& user,
+                                   const std::string& host,
+                                   const char* zDefault_db,
+                                   const GWBUF* pQuery,
+                                   CACHE_KEY* pKey) const;
 
     /**
      * Returns a key for the statement. Does not take the current config
      * into account.
      *
+     * @param user         The current user. Empty if a non-user specific cache is used.
+     * @param host         The host of the current user. Empty if a non-user specific cache is used.
      * @param zDefault_db  The default database, can be NULL.
      * @param pQuery       A statement.
      * @param pKey         On output a key.
      *
      * @return CACHE_RESULT_OK if a key could be created.
      */
-    static cache_result_t get_default_key(const char* zDefault_db,
+    static cache_result_t get_default_key(const std::string& user,
+                                          const std::string& host,
+                                          const char* zDefault_db,
                                           const GWBUF* pQuery,
                                           CACHE_KEY* pKey);
 

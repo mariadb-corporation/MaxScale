@@ -122,9 +122,13 @@ json_t* CachePT::get_info(uint32_t what) const
     return pInfo;
 }
 
-cache_result_t CachePT::get_key(const char* zDefault_db, const GWBUF* pQuery, CACHE_KEY* pKey) const
+cache_result_t CachePT::get_key(const std::string& user,
+                                const std::string& host,
+                                const char* zDefault_db,
+                                const GWBUF* pQuery,
+                                CACHE_KEY* pKey) const
 {
-    return thread_cache().get_key(zDefault_db, pQuery, pKey);
+    return thread_cache().get_key(user, host, zDefault_db, pQuery, pKey);
 }
 
 cache_result_t CachePT::get_value(const CACHE_KEY& key,

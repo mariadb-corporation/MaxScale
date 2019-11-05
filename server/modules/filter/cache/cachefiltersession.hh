@@ -179,4 +179,5 @@ private:
     bool                  m_invalidate_now; /**< Should invalidation be done at next response. */
     Tables                m_tables;         /**< Tables selected or modified. */
     bool                  m_clear_cache;    /**< Whether the entire cache should be cleared. */
+    bool                  m_user_specific;  /**< Whether a user specific cache should be used. */
 };

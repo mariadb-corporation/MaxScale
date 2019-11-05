@@ -94,16 +94,19 @@ json_t* Cache::show_json() const
     return get_info(INFO_ALL);
 }
 
-cache_result_t Cache::get_key(const char* zDefault_db,
+cache_result_t Cache::get_key(const std::string& user,
+                              const std::string& host,
+                              const char* zDefault_db,
                               const GWBUF* pQuery,
                               CACHE_KEY* pKey) const
 {
-    // TODO: Take config into account.
-    return get_default_key(zDefault_db, pQuery, pKey);
+    return get_default_key(user, host, zDefault_db, pQuery, pKey);
 }
 
 // static
-cache_result_t Cache::get_default_key(const char* zDefault_db,
+cache_result_t Cache::get_default_key(const std::string& user,
+                                      const std::string& host,
+                                      const char* zDefault_db,
                                       const GWBUF* pQuery,
                                       CACHE_KEY* pKey)
 {

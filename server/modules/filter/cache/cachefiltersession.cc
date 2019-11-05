@@ -256,6 +256,7 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession,
     , m_invalidate(pCache->config().invalidate != CACHE_INVALIDATE_NEVER)
     , m_invalidate_now(false)
     , m_clear_cache(false)
+    , m_user_specific(pCache->config().user_data == CACHE_USER_DATA_UNIQUE)
 {
     m_key.data = 0;
 
@@ -1001,7 +1002,12 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_COM_QUERY(GWBUF* 
 
         if (pRules)
         {
-            cache_result_t result = m_pCache->get_key(m_zDefaultDb, pPacket, &m_key);
+            static const std::string empty;
+
+            const std::string& user = m_user_specific ? m_pSession->user() : empty;
+            const std::string& host = m_user_specific ? m_pSession->client_remote() : empty;
+
+            cache_result_t result = m_pCache->get_key(user, host, m_zDefaultDb, pPacket, &m_key);
 
             if (CACHE_RESULT_IS_OK(result))
             {
