@@ -13,10 +13,10 @@
 
 #define MXS_MODULE_NAME "cache"
 #include "cache.hh"
+#include <lzma.h>
 #include <new>
 #include <set>
 #include <string>
-#include <zlib.h>
 #include <maxbase/alloc.h>
 #include <maxscale/buffer.hh>
 #include <maxscale/modutil.hh>
@@ -114,22 +114,21 @@ cache_result_t Cache::get_default_key(const char* zDefault_db,
 
     modutil_extract_SQL(const_cast<GWBUF*>(pQuery), &pSql, &length);
 
-    uint64_t crc1 = crc32(0, Z_NULL, 0);
+    uint64_t crc = 0;
 
     const Bytef* pData;
 
     if (zDefault_db)
     {
-        pData = reinterpret_cast<const Bytef*>(zDefault_db);
-        crc1 = crc32(crc1, pData, strlen(zDefault_db));
+        pData = reinterpret_cast<const uint8_t*>(zDefault_db);
+        crc = lzma_crc64(pData, strlen(zDefault_db), crc);
     }
 
-    pData = reinterpret_cast<const Bytef*>(pSql);
+    pData = reinterpret_cast<const uint8_t*>(pSql);
 
-    crc1 = crc32(crc1, pData, length);
-    uint64_t crc2 = crc32(crc1, pData, length);
+    crc = lzma_crc64(pData, length, crc);
 
-    pKey->data = (crc1 << 32 | crc2);
+    pKey->data = crc;
 
     return CACHE_RESULT_OK;
 }
