@@ -237,19 +237,7 @@ bool service_refresh_users(SERVICE* service);
  * Diagnostics
  */
 
-/**
- * @brief Print service authenticator diagnostics
- *
- * @param dcb     DCB to print to
- * @param service The service to diagnose
- */
-void service_print_users(DCB*, const SERVICE*);
-
-void dprintAllServices(DCB* dcb);
-void dprintService(DCB* dcb, SERVICE* service);
-void dListServices(DCB* dcb);
-void dListListeners(DCB* dcb);
-int  serviceSessionCountAll(void);
+int serviceSessionCountAll(void);
 
 /**
  * Get the capabilities of the servive.

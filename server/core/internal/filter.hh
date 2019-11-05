@@ -87,10 +87,6 @@ void filter_destroy_instances();
  */
 bool filter_serialize(const SFilterDef& filter);
 
-void dprintAllFilters(DCB*);
-void dprintFilter(DCB*, const FilterDef*);
-void dListFilters(DCB*);
-
 /**
  * @brief Convert a filter to JSON
  *

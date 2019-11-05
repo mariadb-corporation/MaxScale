@@ -35,7 +35,6 @@ public:
 
     static InsertStream* create(const char* zName, MXS_CONFIG_PARAMETER* ppParams);
     InsertStreamSession* newSession(MXS_SESSION* pSession, SERVICE* pService);
-    void                 diagnostics(DCB* pDcb) const;
     json_t*              diagnostics_json() const;
     uint64_t             getCapabilities();
 

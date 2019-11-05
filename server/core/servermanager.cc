@@ -104,71 +104,16 @@ Server* ServerManager::find_by_unique_name(const string& name)
 {
     Server* rval = nullptr;
     this_unit.foreach_server(
-            [&rval, name](Server* server) {
-                 if (server->is_active && server->name() == name)
-                 {
-                     rval = server;
-                     return false;
-                 }
-                 return true;
+        [&rval, name](Server* server) {
+            if (server->is_active && server->name() == name)
+            {
+                rval = server;
+                return false;
             }
-    );
+            return true;
+        }
+        );
     return rval;
-}
-
-void ServerManager::printAllServers()
-{
-    this_unit.foreach_server([](Server* server) {
-        if (server->server_is_active())
-        {
-            server->printServer();
-        }
-        return true;
-    });
-}
-
-void ServerManager::dprintAllServers(DCB* dcb)
-{
-    this_unit.foreach_server([dcb](Server* server) {
-        if (server->is_active)
-        {
-            Server::dprintServer(dcb, server);
-        }
-        return true;
-    });
-}
-
-void ServerManager::dListServers(DCB* dcb)
-{
-    const string horizontalLine =
-            "-------------------+-----------------+-------+-------------+--------------------\n";
-    string message;
-    // Estimate the likely size of the string. Should be enough for 5 servers.
-    message.reserve((4 + 5) * horizontalLine.length());
-    message += "Servers.\n" + horizontalLine;
-    message += mxb::string_printf("%-18s | %-15s | Port  | Connections | %-20s\n",
-                                  "Server", "Address", "Status");
-    message += horizontalLine;
-
-    bool have_servers = false;
-    this_unit.foreach_server(
-            [&message, &have_servers](Server* server) {
-                if (server->server_is_active())
-                {
-                    have_servers = true;
-                    string stat = server->status_string();
-                    message += mxb::string_printf("%-18s | %-15s | %5d | %11d | %s\n",
-                                                  server->name(), server->address, server->port,
-                                                  server->stats().n_current, stat.c_str());
-                }
-                return true;
-            });
-
-    if (have_servers)
-    {
-        message += horizontalLine;
-        dcb_printf(dcb, "%s", message.c_str());
-    }
 }
 
 /**
@@ -200,23 +145,14 @@ json_t* ServerManager::server_list_to_json(const char* host)
 {
     json_t* data = json_array();
     this_unit.foreach_server(
-            [data, host](Server* server) {
-                if (server->server_is_active())
-                {
-                    json_array_append_new(data, server_to_json_data_relations(server, host));
-                }
-                return true;
-            });
+        [data, host](Server* server) {
+            if (server->server_is_active())
+            {
+                json_array_append_new(data, server_to_json_data_relations(server, host));
+            }
+            return true;
+        });
     return mxs_json_resource(host, MXS_JSON_API_SERVERS, data);
-}
-
-void ServerManager::dprintAllServersJson(DCB* dcb)
-{
-    json_t* all_servers_json = ServerManager::server_list_to_json("");
-    char* dump = json_dumps(all_servers_json, JSON_INDENT(4));
-    dcb_printf(dcb, "%s", dump);
-    MXS_FREE(dump);
-    json_decref(all_servers_json);
 }
 
 json_t* ServerManager::server_to_json_resource(const Server* server, const char* host)

@@ -830,54 +830,6 @@ void DCB::destroy()
     DCB::free(this);
 }
 
-std::string DCB::diagnostics() const
-{
-    std::stringstream ss;
-
-    ss << "DCB: " << (void*)this << "\n"
-       << "\tDCB state:          " << mxs::to_string(m_state) << "\n";
-
-    if (m_session && m_session->service)
-    {
-        ss << "\tService:            " << m_session->service->name() << "\n";
-    }
-
-    ss << "\tConnected to:       " << m_remote << "\n";
-
-    if (m_session->listener)
-    {
-        ss << "\tProtocol:           " << m_session->listener->protocol() << "\n";
-    }
-    if (m_writeq)
-    {
-        ss << "\tQueued write data:  " << gwbuf_length(m_writeq) << "\n";
-    }
-
-    ss << "\tRole:                     " << mxs::to_string(m_role) << "\n";
-
-    ss << "\tStatistics:\n";
-    ss << "\t\tNo. of Reads:             " << m_stats.n_reads << "\n";
-    ss << "\t\tNo. of Writes:            " << m_stats.n_writes << "\n";
-    ss << "\t\tNo. of Buffered Writes:   " << m_stats.n_buffered << "\n";
-    ss << "\t\tNo. of Accepts:           " << m_stats.n_accepts << "\n";
-    ss << "\t\tNo. of High Water Events: " << m_stats.n_high_water << "\n";
-    ss << "\t\tNo. of Low Water Events:  " << m_stats.n_low_water << "\n";
-
-    /**
-     *  TODO: Introduce something like virtual void DCB::print().
-     *  if (m_persistentstart)
-     *  {
-     *   char buff[20];
-     *   struct tm timeinfo;
-     *   localtime_r(&m_persistentstart, &timeinfo);
-     *   strftime(buff, sizeof(buff), "%b %d %H:%M:%S", &timeinfo);
-     *   dcb_printf(pdcb, "\t\tAdded to persistent pool:       %s\n", buff);
-     *  }
-     */
-
-    return ss.str();
-}
-
 /**
  * Write data to a DCB socket through an SSL structure. The SSL structure is
  * linked from the DCB. All communication is encrypted and done via the SSL
@@ -1853,28 +1805,6 @@ void BackendDCB::reset(MXS_SESSION* session)
     }
 }
 
-std::string BackendDCB::diagnostics() const
-{
-    std::stringstream ss(DCB::diagnostics());
-
-    if (m_server->address)
-    {
-        ss << "\tServer name/IP:     " << m_server->address << "\n";
-    }
-    if (m_server->port)
-    {
-        ss << "\tPort number:        " << m_server->port << "\n";
-    }
-
-    string statusname = m_server->status_string();
-    if (!statusname.empty())
-    {
-        ss << "\tServer status:            " << statusname << "\n";
-    }
-
-    return ss.str();
-}
-
 // static
 void BackendDCB::hangup_cb(MXB_WORKER* worker, const SERVER* server)
 {
@@ -2099,22 +2029,6 @@ const char* to_string(DCB::State state)
         return "DCB::State::UNKNOWN";
     }
 }
-}
-
-bool printAllDCBs_cb(DCB* dcb, void* data)
-{
-    printDCB(dcb);
-    return true;
-}
-
-void printAllDCBs()
-{
-    dcb_foreach(printAllDCBs_cb, NULL);
-}
-
-void printDCB(DCB* dcb)
-{
-    printf("%s", dcb->diagnostics().c_str());
 }
 
 void dcb_printf(DCB* dcb, const char* fmt, ...)

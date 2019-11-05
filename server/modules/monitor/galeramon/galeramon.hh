@@ -47,7 +47,6 @@ public:
 
     ~GaleraMonitor();
     static GaleraMonitor* create(const std::string& name, const std::string& module);
-    void                  diagnostics(DCB* dcb) const;
     json_t*               diagnostics_json() const;
 
 protected:

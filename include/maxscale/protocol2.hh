@@ -97,13 +97,6 @@ public:
     virtual int load_auth_users(SERVICE* service) = 0;
 
     /**
-     * Print a list of authenticator users to DCB.
-     *
-     * @param output Output DCB
-     */
-    virtual void print_auth_users(DCB* output) = 0;
-
-    /**
      * Print a list of authenticator users to json.
      *
      * @return JSON user list

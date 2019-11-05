@@ -81,15 +81,6 @@ ExampleFilterSession* ExampleFilter::newSession(MXS_SESSION* pSession, SERVICE* 
 }
 
 // static
-void ExampleFilter::diagnostics(DCB* pDcb) const
-{
-    int queries = m_total_queries.load(std::memory_order_relaxed);
-    int replies = m_total_replies.load(std::memory_order_relaxed);
-    dcb_printf(pDcb, "\t\tTotal queries            %i\n", queries);
-    dcb_printf(pDcb, "\t\tTotal replies            %i\n", replies);
-}
-
-// static
 json_t* ExampleFilter::diagnostics_json() const
 {
     json_t* rval = json_object();

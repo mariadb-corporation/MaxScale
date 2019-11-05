@@ -56,13 +56,6 @@ void hktask_add(const char* name, TASKFN func, void* data, int frequency);
 void hktask_remove(const char* name);
 
 /**
- * @brief Show the tasks that are scheduled for the house keeper
- *
- * @param pDcb The DCB to send to output
- */
-void hkshow_tasks(DCB* pdcb);
-
-/**
  * @brief Show tasks as JSON resource
  *
  * @param host Hostname of this server

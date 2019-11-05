@@ -27,7 +27,6 @@ public:
     ~Cat();
     static Cat* create(SERVICE* pService, MXS_CONFIG_PARAMETER* params);
     CatSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints);
-    void        diagnostics(DCB* pDcb);
     json_t*     diagnostics_json() const;
     uint64_t    getCapabilities();
 

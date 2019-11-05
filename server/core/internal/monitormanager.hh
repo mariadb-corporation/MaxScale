@@ -98,11 +98,6 @@ public:
      */
     static mxs::Monitor* server_is_monitored(const SERVER* server);
 
-    static void show_all_monitors(DCB* dcb);
-    static void monitor_show(DCB* dcb, mxs::Monitor* monitor);
-
-    static void monitor_list(DCB*);
-
     static std::unique_ptr<ResultSet> monitor_get_list();
 
     /**

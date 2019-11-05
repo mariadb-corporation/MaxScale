@@ -61,13 +61,6 @@ public:
     static MariaDBMonitor* create(const std::string& name, const std::string& module);
 
     /**
-     * Print diagnostics.
-     *
-     * @param dcb DCB to print to
-     */
-    void diagnostics(DCB* dcb) const;
-
-    /**
      * Print diagnostics to json object.
      *
      * @return Diagnostics messages
@@ -312,7 +305,6 @@ private:
     bool require_server_locks() const;
     bool check_lock_status_this_tick();
 
-    std::string    diagnostics_to_string() const;
     json_t*        to_json() const;
     static json_t* to_json(State op);
 

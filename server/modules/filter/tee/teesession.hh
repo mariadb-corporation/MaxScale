@@ -34,7 +34,6 @@ public:
 
     void    close();
     int     routeQuery(GWBUF* pPacket);
-    void    diagnostics(DCB* pDcb);
     json_t* diagnostics_json() const;
 
 private:

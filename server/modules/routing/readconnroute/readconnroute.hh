@@ -88,13 +88,6 @@ public:
     RCRSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints);
 
     /**
-     * Display router diagnostics
-     *
-     * @param dcb       DCB to send diagnostics to
-     */
-    void diagnostics(DCB* pDcb);
-
-    /**
      * Get router diagnostics in JSON
      *
      * @return JSON data representing the router instance

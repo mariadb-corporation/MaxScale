@@ -94,7 +94,6 @@ static int  clientReply(MXS_FILTER* instance,
                         GWBUF* queue,
                         const mxs::ReplyRoute& down,
                         const mxs::Reply& reply);
-static void     diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb);
 static json_t*  diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
 static void     destroyInstance(MXS_FILTER* instance);
@@ -174,7 +173,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
         freeSession,
         routeQuery,
         clientReply,
-        diagnostic,
         diagnostic_json,
         getCapabilities,
         destroyInstance
@@ -608,55 +606,6 @@ static int clientReply(MXS_FILTER* instance,
     return my_session->up->clientReply(my_session->up->instance,
                                        my_session->up->session,
                                        buffer, down, reply);
-}
-
-/**
- * Diagnostics routine
- *
- * If fsession is NULL then print diagnostics on the filter
- * instance as a whole, otherwise print diagnostics for the
- * particular session.
- *
- * @param   instance    The filter instance
- * @param   fsession    Filter session, may be NULL
- * @param   dcb     The DCB for diagnostic output
- */
-static void diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb)
-{
-    TPM_INSTANCE* my_instance = (TPM_INSTANCE*)instance;
-    TPM_SESSION* my_session = (TPM_SESSION*)fsession;
-    int i;
-
-    if (my_instance->source)
-    {
-        dcb_printf(dcb,
-                   "\t\tLimit logging to connections from   %s\n",
-                   my_instance->source);
-    }
-    if (my_instance->user)
-    {
-        dcb_printf(dcb,
-                   "\t\tLimit logging to user		%s\n",
-                   my_instance->user);
-    }
-    if (my_instance->filename)
-    {
-        dcb_printf(dcb,
-                   "\t\tLogging to file %s.\n",
-                   my_instance->filename);
-    }
-    if (my_instance->delimiter)
-    {
-        dcb_printf(dcb,
-                   "\t\tLogging with delimiter %s.\n",
-                   my_instance->delimiter);
-    }
-    if (my_instance->query_delimiter)
-    {
-        dcb_printf(dcb,
-                   "\t\tLogging with query delimiter %s.\n",
-                   my_instance->query_delimiter);
-    }
 }
 
 /**

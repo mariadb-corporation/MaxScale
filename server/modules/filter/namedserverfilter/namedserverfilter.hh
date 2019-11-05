@@ -61,7 +61,6 @@ public:
     ~RegexHintFilter();
     static RegexHintFilter* create(const char* zName, MXS_CONFIG_PARAMETER* ppParams);
     RegexHintFSession*      newSession(MXS_SESSION* session, SERVICE* service);
-    void                    diagnostics(DCB* dcb);
     json_t*                 diagnostics_json() const;
     uint64_t                getCapabilities();
     const RegexToServers*   find_servers(char* sql, int sql_len, pcre2_match_data* mdata);
@@ -101,7 +100,6 @@ public:
                       pcre2_match_data* md);
     ~RegexHintFSession();
 
-    void    diagnostics(DCB* pDcb);
     json_t* diagnostics_json() const;
     int     routeQuery(GWBUF* buffer);
 };

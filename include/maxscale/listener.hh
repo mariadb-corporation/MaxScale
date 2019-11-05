@@ -136,15 +136,6 @@ public:
      */
     int load_users();
 
-    /**
-     * Print the users into a DCB
-     *
-     * Note: not const due to authenticator API
-     *
-     * @param dcb DCB to write into
-     */
-    void print_users(DCB* dcb);
-
     Type type() const
     {
         return m_type;

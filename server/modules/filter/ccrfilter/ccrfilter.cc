@@ -130,26 +130,6 @@ public:
         return CCRSession::create(session, service, this);
     }
 
-    void diagnostics(DCB* dcb) const
-    {
-        dcb_printf(dcb, "Configuration:\n\tCount: %d\n", m_count);
-        dcb_printf(dcb, "\tTime: %d seconds\n", m_time);
-
-        if (!m_match.empty())
-        {
-            dcb_printf(dcb, "\tMatch regex: %s\n", m_match.c_str());
-        }
-        if (!m_nomatch.empty())
-        {
-            dcb_printf(dcb, "\tExclude regex: %s\n", m_nomatch.c_str());
-        }
-
-        dcb_printf(dcb, "\nStatistics:\n");
-        dcb_printf(dcb, "\tNo. of data modifications: %d\n", m_stats.n_modified);
-        dcb_printf(dcb, "\tNo. of hints added based on count: %d\n", m_stats.n_add_count);
-        dcb_printf(dcb, "\tNo. of hints added based on time: %d\n", m_stats.n_add_time);
-    }
-
     json_t* diagnostics_json() const
     {
         json_t* rval = json_object();

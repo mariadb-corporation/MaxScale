@@ -664,13 +664,6 @@ const char* Listener::state() const
     }
 }
 
-void Listener::print_users(DCB* dcb)
-{
-    dcb_printf(dcb, "User names (%s): ", name());
-    m_proto_module->print_auth_users(dcb);
-    dcb_printf(dcb, "\n");
-}
-
 int Listener::load_users()
 {
     mxb::LogScope scope(name());

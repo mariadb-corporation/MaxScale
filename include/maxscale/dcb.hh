@@ -213,8 +213,6 @@ public:
      */
     void clear();
 
-    virtual std::string diagnostics() const;
-
     SERVICE* service() const;
 
     /**
@@ -744,8 +742,7 @@ public:
      * @param server  BackendDCBs connected to this server should be closed.
      */
     static void hangup(const SERVER* server);
-    void shutdown() override;
-    std::string diagnostics() const override;
+    void        shutdown() override;
 
     SERVER* server() const
     {

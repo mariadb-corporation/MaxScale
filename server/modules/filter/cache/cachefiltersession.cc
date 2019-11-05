@@ -225,7 +225,6 @@ StatementType get_statement_type(GWBUF* pStmt)
                 // All is fine; either the statement only contain the keyword (so syntactically
                 // the statement is erroenous) or the keyword was followed by something else
                 // than an alhpanumeric character, e.g. whitespace.
-                ;
             }
             else
             {
@@ -514,15 +513,6 @@ int CacheFilterSession::clientReply(GWBUF* pData, const mxs::ReplyRoute& down, c
     }
 
     return rv;
-}
-
-void CacheFilterSession::diagnostics(DCB* pDcb)
-{
-    // Not printing anything. Session of the same instance share the same cache, in
-    // which case the same information would be printed once per session, or all
-    // threads (but not sessions) share the same cache, in which case the output
-    // would be nonsensical.
-    dcb_printf(pDcb, "\n");
 }
 
 json_t* CacheFilterSession::diagnostics_json() const

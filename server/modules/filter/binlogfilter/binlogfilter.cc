@@ -68,11 +68,6 @@ BinlogFilterSession* BinlogFilter::newSession(MXS_SESSION* pSession, SERVICE* pS
 }
 
 // static
-void BinlogFilter::diagnostics(DCB* pDcb) const
-{
-}
-
-// static
 json_t* BinlogFilter::diagnostics_json() const
 {
     return NULL;

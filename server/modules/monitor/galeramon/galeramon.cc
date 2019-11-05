@@ -69,25 +69,6 @@ GaleraMonitor* GaleraMonitor::create(const std::string& name, const std::string&
     return new GaleraMonitor(name, module);
 }
 
-void GaleraMonitor::diagnostics(DCB* dcb) const
-{
-    dcb_printf(dcb, "Master Failback:\t%s\n", (m_disableMasterFailback == 1) ? "off" : "on");
-    dcb_printf(dcb, "Available when Donor:\t%s\n", (m_availableWhenDonor == 1) ? "on" : "off");
-    dcb_printf(dcb,
-               "Master Role Setting Disabled:\t%s\n",
-               m_disableMasterRoleSetting ? "on" : "off");
-    dcb_printf(dcb, "Set wsrep_sst_donor node list:\t%s\n", (m_set_donor_nodes == 1) ? "on" : "off");
-    if (!m_cluster_uuid.empty())
-    {
-        dcb_printf(dcb, "Galera Cluster UUID:\t%s\n", m_cluster_uuid.c_str());
-        dcb_printf(dcb, "Galera Cluster size:\t%d\n", m_cluster_size);
-    }
-    else
-    {
-        dcb_printf(dcb, "Galera Cluster NOT set:\tno member nodes\n");
-    }
-}
-
 json_t* GaleraMonitor::diagnostics_json() const
 {
     json_t* rval = MonitorWorker::diagnostics_json();

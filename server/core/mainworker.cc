@@ -109,28 +109,6 @@ void MainWorker::remove_task(const std::string& name)
          EXECUTE_AUTO);
 }
 
-void MainWorker::show_tasks(DCB* pDcb) const
-{
-    // TODO: Make call() const.
-    MainWorker* pThis = const_cast<MainWorker*>(this);
-    pThis->call([this, pDcb]() {
-                    dcb_printf(pDcb, "%-25s | Frequency | Next Due\n", "Name");
-                    dcb_printf(pDcb, "--------------------------+-----------+-------------------------\n");
-
-                    for (auto it = m_tasks_by_name.begin(); it != m_tasks_by_name.end(); ++it)
-                    {
-                        const Task& task = it->second;
-
-                        struct tm tm;
-                        char buf[40];
-                        localtime_r(&task.nextdue, &tm);
-                        asctime_r(&tm, buf);
-                        dcb_printf(pDcb, "%-25s | %-9d | %s", task.name.c_str(), task.frequency, buf);
-                    }
-                },
-                EXECUTE_AUTO);
-}
-
 json_t* MainWorker::tasks_to_json(const char* zHost) const
 {
     json_t* pResult = json_array();
@@ -250,11 +228,6 @@ void hktask_add(const char* zName, TASKFN func, void* pData, int frequency)
 void hktask_remove(const char* zName)
 {
     mxs::MainWorker::get()->remove_task(zName);
-}
-
-void hkshow_tasks(DCB* pDcb)
-{
-    mxs::MainWorker::get()->show_tasks(pDcb);
 }
 
 json_t* hk_tasks_json(const char* zHost)

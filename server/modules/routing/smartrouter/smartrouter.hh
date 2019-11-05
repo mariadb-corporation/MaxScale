@@ -70,7 +70,6 @@ public:
 
     SmartRouterSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints);
 
-    void     diagnostics(DCB* pDcb);
     json_t*  diagnostics_json() const;
     uint64_t getCapabilities();
     bool     configure(MXS_CONFIG_PARAMETER* pParams);

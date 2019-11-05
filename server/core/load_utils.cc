@@ -420,54 +420,6 @@ void unload_all_modules()
     }
 }
 
-void printModules()
-{
-    LOADED_MODULE* ptr = registered;
-
-    printf("%-15s | %-11s | Version\n", "Module Name", "Module Type");
-    printf("-----------------------------------------------------\n");
-    while (ptr)
-    {
-        printf("%-15s | %-11s | %s\n", ptr->module, ptr->type, ptr->version);
-        ptr = ptr->next;
-    }
-}
-
-void dprintAllModules(DCB* dcb)
-{
-    LOADED_MODULE* ptr = registered;
-
-    dcb_printf(dcb, "Modules.\n");
-    dcb_printf(dcb, "----------------+-----------------+---------+-------+-------------------------\n");
-    dcb_printf(dcb, "%-15s | %-15s | Version | API   | Status\n", "Module Name", "Module Type");
-    dcb_printf(dcb, "----------------+-----------------+---------+-------+-------------------------\n");
-    while (ptr)
-    {
-        dcb_printf(dcb, "%-15s | %-15s | %-7s ", ptr->module, ptr->type, ptr->version);
-        if (ptr->info)
-        {
-            dcb_printf(dcb,
-                       "| %d.%d.%d | %s",
-                       ptr->info->api_version.major,
-                       ptr->info->api_version.minor,
-                       ptr->info->api_version.patch,
-                       ptr->info->status == MXS_MODULE_IN_DEVELOPMENT ?
-                       "In Development" :
-                       (ptr->info->status == MXS_MODULE_ALPHA_RELEASE ?
-                        "Alpha" :
-                        (ptr->info->status == MXS_MODULE_BETA_RELEASE ?
-                         "Beta" :
-                         (ptr->info->status == MXS_MODULE_GA ?
-                          "GA" :
-                          (ptr->info->status == MXS_MODULE_EXPERIMENTAL ?
-                           "Experimental" : "Unknown")))));
-        }
-        dcb_printf(dcb, "\n");
-        ptr = ptr->next;
-    }
-    dcb_printf(dcb, "----------------+-----------------+---------+-------+-------------------------\n\n");
-}
-
 struct cb_param
 {
     json_t*     commands;

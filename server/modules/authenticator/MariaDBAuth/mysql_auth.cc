@@ -686,30 +686,6 @@ mariadb::SBackendAuth MariaDBAuthenticatorModule::create_backend_authenticator()
     return mariadb::SBackendAuth(new(std::nothrow) MariaDBBackendSession());
 }
 
-int diag_cb(void* data, int columns, char** row, char** field_names)
-{
-    DCB* dcb = (DCB*)data;
-    dcb_printf(dcb, "%s@%s ", row[0], row[1]);
-    return 0;
-}
-
-void MariaDBAuthenticatorModule::diagnostics(DCB* dcb)
-{
-    sqlite3* handle = get_handle();
-    char* err;
-
-    if (sqlite3_exec(handle,
-                     "SELECT user, host FROM " MYSQLAUTH_USERS_TABLE_NAME,
-                     diag_cb,
-                     dcb,
-                     &err) != SQLITE_OK)
-    {
-        dcb_printf(dcb, "Could not access users: %s", err);
-        MXS_ERROR("Could not access users: %s", err);
-        sqlite3_free(err);
-    }
-}
-
 int diag_cb_json(void* data, int columns, char** row, char** field_names)
 {
     json_t* obj = json_object();

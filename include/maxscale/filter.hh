@@ -49,27 +49,9 @@ typedef struct mxs_filter_session
 } MXS_FILTER_SESSION;
 
 /**
- * @verbatim
  * The "module object" structure for a filter module. All entry points
  * marked with `(optional)` are optional entry points which can be set to NULL
  * if no implementation is required.
- *
- * The entry points are:
- *      createInstance   Called by the service to create a new instance of the filter
- *      newSession       Called to create a new user session within the filter
- *      closeSession     Called when a session is closed
- *      freeSession      Called when a session is freed
- *      setDownstream    Sets the downstream component of the filter pipline
- *      setUpstream      Sets the upstream component of the filter pipline
- *      routeQuery       Called on each query that requires routing
- *      clientReply      Called for each reply packet (optional)
- *      diagnostics      Called for diagnostic output
- *      getCapabilities  Called to obtain the capabilities of the filter (optional)
- *      destroyInstance  Called for destroying a filter instance (optional)
- *
- * @endverbatim
- *
- * @see load_module
  */
 typedef struct mxs_filter_object
 {
@@ -159,15 +141,6 @@ typedef struct mxs_filter_object
      */
     int32_t (* clientReply)(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, GWBUF* queue,
                             const mxs::ReplyRoute& down, const mxs::Reply& reply);
-
-    /**
-     * @brief Called for diagnostic output
-     *
-     * @param instance Filter instance
-     * @param fsession Filter session, NULL if general information about the filter is queried
-     * @param dcb      DCB where the diagnostic information should be written
-     */
-    void (* diagnostics)(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb);
 
     /**
      * @brief Called for diagnostic output
@@ -387,13 +360,6 @@ public:
 
     /**
      * Called for obtaining diagnostics about the filter session.
-     *
-     * @param pDcb  The dcb where the diagnostics should be written.
-     */
-    void diagnostics(DCB* pDcb);
-
-    /**
-     * Called for obtaining diagnostics about the filter session.
      */
     json_t* diagnostics_json() const;
 
@@ -446,9 +412,6 @@ protected:
  *      // This creates a new session for a filter instance
  *      MyFilterSession* newSession(MXS_SESSION* pSession, SERVICE* pService);
  *
- *      // Diagnostic function that prints to a DCB
- *      void diagnostics(DCB* pDcb) const;
- *
  *      // Diagnostic function that returns a JSON object
  *      json_t* diagnostics_json() const;
  *
@@ -458,7 +421,7 @@ protected:
  * @endcode
  *
  * The concrete filter class must implement the methods @c create, @c newSession,
- * @c diagnostics and @c getCapabilities, with the prototypes as shown above.
+ * @c diagnostics_json and @c getCapabilities, with the prototypes as shown above.
  *
  * The plugin function @c GetModuleObject is then implemented as follows:
  *
@@ -540,22 +503,6 @@ public:
         return rv;
     }
 
-    static void diagnostics(MXS_FILTER* pInstance, MXS_FILTER_SESSION* pData, DCB* pDcb)
-    {
-        if (pData)
-        {
-            FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
-
-            MXS_EXCEPTION_GUARD(pFilterSession->diagnostics(pDcb));
-        }
-        else
-        {
-            FilterType* pFilter = static_cast<FilterType*>(pInstance);
-
-            MXS_EXCEPTION_GUARD(pFilter->diagnostics(pDcb));
-        }
-    }
-
     static json_t* diagnostics_json(const MXS_FILTER* pInstance, const MXS_FILTER_SESSION* pData)
     {
         json_t* rval = NULL;
@@ -597,7 +544,6 @@ public:
     static MXS_FILTER_OBJECT s_object;
 };
 
-
 template<class FilterType, class FilterSessionType>
 MXS_FILTER_OBJECT Filter<FilterType, FilterSessionType>::s_object =
 {
@@ -607,7 +553,6 @@ MXS_FILTER_OBJECT Filter<FilterType, FilterSessionType>::s_object =
     &Filter<FilterType, FilterSessionType>::freeSession,
     &Filter<FilterType, FilterSessionType>::routeQuery,
     &Filter<FilterType, FilterSessionType>::clientReply,
-    &Filter<FilterType, FilterSessionType>::diagnostics,
     &Filter<FilterType, FilterSessionType>::diagnostics_json,
     &Filter<FilterType, FilterSessionType>::getCapabilities,
     &Filter<FilterType, FilterSessionType>::destroyInstance,

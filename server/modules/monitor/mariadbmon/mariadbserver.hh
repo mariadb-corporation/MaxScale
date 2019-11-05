@@ -182,13 +182,6 @@ public:
      */
     json_t* to_json() const;
 
-    /**
-     * Print server information to a string.
-     *
-     * @return Diagnostics string
-     */
-    std::string diagnostics() const;
-
     void update_server(bool time_to_update_disk_space, bool time_to_update_lock_status);
 
     /**

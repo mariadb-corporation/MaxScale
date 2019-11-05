@@ -71,10 +71,6 @@ public:
         return MXS_AUTH_LOADUSERS_OK;
     }
 
-    void print_auth_users(DCB* output) override
-    {
-    }
-
     json_t* print_auth_users_json() override
     {
         return json_array();

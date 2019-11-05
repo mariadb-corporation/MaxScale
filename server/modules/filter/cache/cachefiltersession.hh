@@ -76,11 +76,6 @@ public:
     /**
      * Print diagnostics of the session cache.
      */
-    void diagnostics(DCB* dcb);
-
-    /**
-     * Print diagnostics of the session cache.
-     */
     json_t* diagnostics_json() const;
 
 private:

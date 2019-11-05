@@ -53,14 +53,6 @@ public:
     ExampleFilterSession* newSession(MXS_SESSION* pSession, SERVICE* pService);
 
     /*
-     * Print diagnostics to a DCB. This is called when the admin tool MaxAdmin asks for the status of this
-     * filter. Run MaxAdmin with "./maxadmin show filters" in the MaxScale binary directory.
-     *
-     * @param pDcb The connection descriptor to print diagnostic to
-     */
-    void diagnostics(DCB* pDcb) const;
-
-    /*
      * Returns JSON form diagnostic data. This is called when the admin tool MaxCtrl asks for the status
      * of this filter. Run MaxCtrl with "./maxctrl show filters" in the MaxScale binary directory.
      *

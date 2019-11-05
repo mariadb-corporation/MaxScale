@@ -47,26 +47,9 @@ typedef struct mxs_router_session
 } MXS_ROUTER_SESSION;
 
 /**
- * @verbatim
  * The "module object" structure for a query router module. All entry points
  * marked with `(optional)` are optional entry points which can be set to NULL
  * if no implementation is required.
- *
- * The entry points are:
- *  createInstance  Called by the service to create a new instance of the query router
- *  newSession      Called to create a new user session within the query router
- *  closeSession    Called when a session is closed
- *  freeSession     Called when a session is freed
- *  routeQuery      Called on each query that requires routing
- *  diagnostics     Called to force the router to print diagnostic output
- *  clientReply     Called to reply to client the data from one or all backends (optional)
- *  handleError     Called when a backend connection fails
- *  getCapabilities Called to obtain the capabilities of the router (optional)
- *  destroyInstance Called for destroying a router instance (optional)
- *
- * @endverbatim
- *
- * @see load_module
  */
 typedef struct mxs_router_object
 {
@@ -134,15 +117,6 @@ typedef struct mxs_router_object
      * and the session should be closed, the function returns 0.
      */
     int32_t (* routeQuery)(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session, GWBUF* queue);
-
-
-    /**
-     * @brief Called for diagnostic output
-     *
-     * @param instance Router instance
-     * @param dcb      DCB where the diagnostic information should be written
-     */
-    void (* diagnostics)(MXS_ROUTER* instance, DCB* dcb);
 
     /**
      * @brief Called for diagnostic output
@@ -380,13 +354,12 @@ protected:
  *
  *      MyRouterSession* newSession(MXS_SESSION* pSession);
  *
- *      void diagnostics(DCB* pDcb);
  *      uint64_t getCapabilities();
  * };
  * @endcode
  *
  * The concrete router class must implement the methods @c create, @c newSession,
- * @c diagnostics and @c getCapabilities, with the prototypes as shown above.
+ * @c diagnostics_json and @c getCapabilities, with the prototypes as shown above.
  *
  * The plugin function @c GetModuleObject is then implemented as follows:
  *
@@ -462,13 +435,6 @@ public:
         MXS_EXCEPTION_GUARD(rv = pRouter_session->routeQuery(pPacket));
 
         return rv;
-    }
-
-    static void diagnostics(MXS_ROUTER* pInstance, DCB* pDcb)
-    {
-        RouterType* pRouter = static_cast<RouterType*>(pInstance);
-
-        MXS_EXCEPTION_GUARD(pRouter->diagnostics(pDcb));
     }
 
     static json_t* diagnostics_json(const MXS_ROUTER* pInstance)
@@ -550,7 +516,6 @@ MXS_ROUTER_OBJECT Router<RouterType, RouterSessionType>::s_object =
     &Router<RouterType, RouterSessionType>::closeSession,
     &Router<RouterType, RouterSessionType>::freeSession,
     &Router<RouterType, RouterSessionType>::routeQuery,
-    &Router<RouterType, RouterSessionType>::diagnostics,
     &Router<RouterType, RouterSessionType>::diagnostics_json,
     &Router<RouterType, RouterSessionType>::clientReply,
     &Router<RouterType, RouterSessionType>::handleError,

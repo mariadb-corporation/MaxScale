@@ -208,80 +208,6 @@ int filter_standard_parameter(const char* name)
     return 0;
 }
 
-/**
- * Print all filters to a DCB
- *
- * Designed to be called within a debugger session in order
- * to display all active filters within MaxScale
- */
-void dprintAllFilters(DCB* dcb)
-{
-    Guard guard(this_unit.lock);
-
-    for (const auto& ptr : this_unit.filters)
-    {
-        dcb_printf(dcb, "FilterDef %p (%s)\n", ptr.get(), ptr->name.c_str());
-        dcb_printf(dcb, "\tModule:      %s\n", ptr->module.c_str());
-        if (ptr->obj && ptr->filter)
-        {
-            ptr->obj->diagnostics(ptr->filter, NULL, dcb);
-        }
-        else
-        {
-            dcb_printf(dcb, "\tModule not loaded.\n");
-        }
-    }
-}
-
-/**
- * Print filter details to a DCB
- *
- * Designed to be called within a debug CLI in order
- * to display all active filters in MaxScale
- */
-void dprintFilter(DCB* dcb, const FilterDef* filter)
-{
-    mxb_assert(filter);
-    dcb_printf(dcb, "FilterDef %p (%s)\n", filter, filter->name.c_str());
-    dcb_printf(dcb, "\tModule:      %s\n", filter->module.c_str());
-    if (filter->obj && filter->filter)
-    {
-        filter->obj->diagnostics(filter->filter, NULL, dcb);
-    }
-}
-
-/**
- * List all filters in a tabular form to a DCB
- *
- */
-void dListFilters(DCB* dcb)
-{
-    Guard guard(this_unit.lock);
-
-    if (!this_unit.filters.empty())
-    {
-        dcb_printf(dcb, "FilterDefs\n");
-        dcb_printf(dcb, "--------------------+-----------------+----------------------------------------\n");
-        dcb_printf(dcb,
-                   "%-19s | %-15s | Options\n",
-                   "FilterDef",
-                   "Module");
-        dcb_printf(dcb, "--------------------+-----------------+----------------------------------------\n");
-
-        for (const auto& ptr : this_unit.filters)
-        {
-            dcb_printf(dcb,
-                       "%-19s | %-15s | ",
-                       ptr->name.c_str(),
-                       ptr->module.c_str());
-            dcb_printf(dcb, "\n");
-        }
-
-        dcb_printf(dcb,
-                   "--------------------+-----------------+----------------------------------------\n\n");
-    }
-}
-
 json_t* filter_parameters_to_json(const SFilterDef& filter)
 {
     mxb_assert(filter);
@@ -398,10 +324,6 @@ int FilterSession::routeQuery(GWBUF* pPacket)
 int FilterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     return m_up.clientReply(pPacket, down, reply);
-}
-
-void FilterSession::diagnostics(DCB* pDcb)
-{
 }
 
 json_t* FilterSession::diagnostics_json() const

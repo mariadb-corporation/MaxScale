@@ -136,7 +136,6 @@ public:
     ~RRRouter();
     static RRRouter* create(SERVICE* pService, MXS_CONFIG_PARAMETER* params);
     RRRouterSession* newSession(MXS_SESSION* session, const Endpoints& endpoints);
-    void             diagnostics(DCB* dcb) const;
     json_t*          diagnostics_json() const;
 
     uint64_t getCapabilities()
@@ -257,22 +256,6 @@ RRRouterSession* RRRouter::newSession(MXS_SESSION* session, const Endpoints& end
 RRRouter* RRRouter::create(SERVICE* pService, MXS_CONFIG_PARAMETER* params)
 {
     return new(std::nothrow) RRRouter(pService);
-}
-
-/**
- * @brief Diagnostics routine (API)
- *
- * Print router statistics to the DCB passed in. This is usually called by the
- * MaxInfo or MaxAdmin modules.
- *
- * @param   instance    The router instance
- * @param   dcb         The DCB for diagnostic output
- */
-void RRRouter::diagnostics(DCB* dcb) const
-{
-    dcb_printf(dcb, "\t\tQueries routed successfully: %lu\n", m_routing_s.load());
-    dcb_printf(dcb, "\t\tFailed routing attempts:     %lu\n", m_routing_f.load());
-    dcb_printf(dcb, "\t\tClient replies routed:       %lu\n", m_routing_c.load());
 }
 
 /**

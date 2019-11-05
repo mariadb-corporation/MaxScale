@@ -457,38 +457,10 @@ void PamAuthenticatorModule::fill_user_arrays(QResult user_res, QResult db_res, 
             auto host = roles_mapping_res->get_string(1);
             auto role = roles_mapping_res->get_string(2);
             m_sqlite.exec(mxb::string_printf(insert_roles_fmt.c_str(),
-                                              username.c_str(), host.c_str(), role.c_str()));
+                                             username.c_str(), host.c_str(), role.c_str()));
         }
     }
     m_sqlite.exec("COMMIT");
-}
-
-void PamAuthenticatorModule::diagnostics(DCB* dcb)
-{
-    json_t* array = diagnostics_json();
-    mxb_assert(json_is_array(array));
-
-    string result, separator;
-    size_t index;
-    json_t* value;
-    json_array_foreach(array, index, value)
-    {
-        // Only print user@host for the non-json version, as this should fit nicely on the console. Add the
-        // other fields if deemed useful.
-        const char* user = json_string_value(json_object_get(value, FIELD_USER.c_str()));
-        const char* host = json_string_value(json_object_get(value, FIELD_HOST.c_str()));
-        if (user && host)
-        {
-            result += separator + user + "@" + host;
-            separator = " ";
-        }
-    }
-
-    if (!result.empty())
-    {
-        dcb_printf(dcb, "%s", result.c_str());
-    }
-    json_decref(array);
 }
 
 static int diag_cb_json(json_t* data, int columns, char** row, char** field_names)

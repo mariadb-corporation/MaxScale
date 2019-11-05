@@ -172,27 +172,6 @@ json_t* Users::diagnostic_json() const
     return rval;
 }
 
-void Users::diagnostic(DCB* dcb) const
-{
-    Guard guard(m_lock);
-    if (!m_data.empty())
-    {
-        const char* sep = "";
-        std::set<std::string> users;
-
-        for (const auto& elem : m_data)
-        {
-            users.insert(elem.first);
-        }
-
-        for (const auto& a : users)
-        {
-            dcb_printf(dcb, "%s%s", sep, a.c_str());
-            sep = ", ";
-        }
-    }
-}
-
 bool Users::empty() const
 {
     Guard guard(m_lock);
@@ -297,7 +276,6 @@ std::string Users::old_hash(const std::string& password)
 {
     return mxs::crypt(password, OLD_ADMIN_SALT);
 }
-
 }
 
 using mxs::Users;
@@ -367,12 +345,6 @@ int users_admin_count(USERS* users)
 {
     Users* u = reinterpret_cast<Users*>(users);
     return u->admin_count();
-}
-
-void users_diagnostic(DCB* dcb, USERS* users)
-{
-    Users* u = reinterpret_cast<Users*>(users);
-    u->diagnostic(dcb);
 }
 
 json_t* users_diagnostic_json(USERS* users)

@@ -72,12 +72,6 @@ CommentFilterSession* CommentFilter::newSession(MXS_SESSION* pSession, SERVICE* 
 }
 
 // static
-void CommentFilter::diagnostics(DCB* pDcb) const
-{
-    dcb_printf(pDcb, "Comment filter with comment: %s", m_comment.c_str());
-}
-
-// static
 json_t* CommentFilter::diagnostics_json() const
 {
     json_t* rval = json_object();

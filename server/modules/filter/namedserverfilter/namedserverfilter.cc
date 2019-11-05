@@ -329,85 +329,15 @@ RegexHintFilter* RegexHintFilter::create(const char* name, MXS_CONFIG_PARAMETER*
  * Diagnostics routine
  *
  * Print diagnostics on the filter instance as a whole + session-specific info.
- *
- * @param   dcb     The DCB for diagnostic output
- */
-void RegexHintFSession::diagnostics(DCB* dcb)
-{
-
-    m_fil_inst.diagnostics(dcb);    /* Print overall diagnostics */
-    dcb_printf(dcb,
-               "\t\tNo. of queries diverted by filter (session): %d\n",
-               m_n_diverted);
-    dcb_printf(dcb,
-               "\t\tNo. of queries not diverted by filter (session):     %d\n",
-               m_n_undiverted);
-}
-
-/**
- * Diagnostics routine
- *
- * Print diagnostics on the filter instance as a whole + session-specific info.
- *
- * @param   dcb     The DCB for diagnostic output
  */
 json_t* RegexHintFSession::diagnostics_json() const
 {
-
     json_t* rval = m_fil_inst.diagnostics_json();   /* Print overall diagnostics */
 
     json_object_set_new(rval, "session_queries_diverted", json_integer(m_n_diverted));
     json_object_set_new(rval, "session_queries_undiverted", json_integer(m_n_undiverted));
 
     return rval;
-}
-
-/**
- * Diagnostics routine
- *
- * Print diagnostics on the filter instance as a whole.
- *
- * @param   dcb     The DCB for diagnostic output
- */
-void RegexHintFilter::diagnostics(DCB* dcb)
-{
-    if (m_mapping.size() > 0)
-    {
-        dcb_printf(dcb, "\t\tMatches and routes:\n");
-    }
-
-    for (const auto& regex_map : m_mapping)
-    {
-        dcb_printf(dcb,
-                   "\t\t\t/%s/ -> ",
-                   regex_map.m_match.c_str());
-
-        for (const auto& target : regex_map.m_targets)
-        {
-            dcb_printf(dcb, ", %s", target.c_str());
-        }
-        dcb_printf(dcb, "\n");
-    }
-    dcb_printf(dcb,
-               "\t\tTotal no. of queries diverted by filter (approx.):     %d\n",
-               m_total_diverted);
-    dcb_printf(dcb,
-               "\t\tTotal no. of queries not diverted by filter (approx.): %d\n",
-               m_total_undiverted);
-
-    for (const auto& source : m_sources)
-    {
-        dcb_printf(dcb,
-                   "\t\tReplacement limited to connections from     %s\n",
-                   source.m_address.c_str());
-    }
-
-    if (m_user.length())
-    {
-        dcb_printf(dcb,
-                   "\t\tReplacement limit to user           %s\n",
-                   m_user.c_str());
-    }
 }
 
 /**

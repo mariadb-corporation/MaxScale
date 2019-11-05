@@ -28,10 +28,9 @@ public:
 
     static PamAuthenticatorModule* create(char** options);
 
-    int load_users(SERVICE* service) override;
-    void diagnostics(DCB* dcb) override;
-    json_t* diagnostics_json() override;
-    uint64_t capabilities() const override;
+    int         load_users(SERVICE* service) override;
+    json_t*     diagnostics_json() override;
+    uint64_t    capabilities() const override;
     std::string supported_protocol() const override;
     std::string name() const override;
 

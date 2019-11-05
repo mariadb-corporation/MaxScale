@@ -29,11 +29,6 @@ public:
 
     int load_users(SERVICE* service);
 
-    void diagnostics(DCB* output)
-    {
-        m_userdata.diagnostic(output);
-    }
-
     json_t* diagnostics_json()
     {
         return m_userdata.diagnostic_json();

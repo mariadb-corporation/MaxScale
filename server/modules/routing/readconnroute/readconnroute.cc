@@ -424,10 +424,6 @@ int RCRSession::routeQuery(GWBUF* queue)
     return m_backend->routeQuery(queue);
 }
 
-void RCR::diagnostics(DCB* dcb)
-{
-}
-
 json_t* RCR::diagnostics_json() const
 {
     json_t* rval = json_object();

@@ -75,49 +75,6 @@ TeeSession* Tee::newSession(MXS_SESSION* pSession, SERVICE* pService)
  *
  * @param   instance    The filter instance
  * @param   fsession    Filter session, may be NULL
- * @param   dcb     The DCB for diagnostic output
- */
-void Tee::diagnostics(DCB* dcb)
-{
-    if (m_source.length())
-    {
-        dcb_printf(dcb,
-                   "\t\tLimit to connections from       %s\n",
-                   m_source.c_str());
-    }
-    dcb_printf(dcb,
-               "\t\tDuplicate statements to service		%s\n",
-               m_service->name());
-    if (m_user.length())
-    {
-        dcb_printf(dcb,
-                   "\t\tLimit to user			%s\n",
-                   m_user.c_str());
-    }
-    if (m_match)
-    {
-        dcb_printf(dcb,
-                   "\t\tInclude queries that match		%s\n",
-                   m_match.pattern().c_str());
-    }
-    if (m_exclude)
-    {
-        dcb_printf(dcb,
-                   "\t\tExclude queries that match		%s\n",
-                   m_exclude.pattern().c_str());
-    }
-    dcb_printf(dcb, "\t\tFilter enabled: %s\n", m_enabled ? "yes" : "no");
-}
-
-/**
- * Diagnostics routine
- *
- * If fsession is NULL then print diagnostics on the filter
- * instance as a whole, otherwise print diagnostics for the
- * particular session.
- *
- * @param   instance    The filter instance
- * @param   fsession    Filter session, may be NULL
  */
 json_t* Tee::diagnostics_json() const
 {

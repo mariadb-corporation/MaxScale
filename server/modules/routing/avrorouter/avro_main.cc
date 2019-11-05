@@ -147,39 +147,6 @@ static int routeQuery(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session, 
  * Display router diagnostics
  *
  * @param instance  Instance of the router
- * @param dcb       DCB to send diagnostics to
- */
-static void diagnostics(MXS_ROUTER* router, DCB* dcb)
-{
-    Avro* router_inst = (Avro*) router;
-    gtid_pos_t gtid = router_inst->handler.get_gtid();
-
-    dcb_printf(dcb,
-               "\tAVRO files directory:                %s\n",
-               router_inst->avrodir.c_str());
-
-    dcb_printf(dcb,
-               "\tBinlog directory:                    %s\n",
-               router_inst->binlogdir.c_str());
-    dcb_printf(dcb,
-               "\tCurrent binlog file:                 %s\n",
-               router_inst->binlog_name.c_str());
-    dcb_printf(dcb,
-               "\tCurrent binlog position:             %lu\n",
-               router_inst->current_pos);
-    dcb_printf(dcb,
-               "\tCurrent GTID value:                  %lu-%lu-%lu\n",
-               gtid.domain,
-               gtid.server_id,
-               gtid.seq);
-    dcb_printf(dcb, "\tCurrent GTID timestamp:              %u\n", gtid.timestamp);
-    dcb_printf(dcb, "\tCurrent GTID #events:                %lu\n", gtid.event_num);
-}
-
-/**
- * Display router diagnostics
- *
- * @param instance  Instance of the router
  */
 static json_t* diagnostics_json(const MXS_ROUTER* router)
 {
@@ -487,7 +454,6 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         closeSession,
         freeSession,
         routeQuery,
-        diagnostics,
         diagnostics_json,
         clientReply,
         errorReply,

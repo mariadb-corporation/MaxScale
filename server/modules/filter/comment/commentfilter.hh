@@ -32,10 +32,6 @@ public:
     // Creates a new session for this filter
     CommentFilterSession* newSession(MXS_SESSION* pSession, SERVICE* pService);
 
-    // Print diagnostics to a DCB
-    void diagnostics(DCB* pDcb) const;
-
-
     // Returns JSON form diagnostic data
     json_t* diagnostics_json() const;
 

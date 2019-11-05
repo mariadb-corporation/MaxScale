@@ -34,7 +34,6 @@ public:
 
     static Tee* create(const char* zName, MXS_CONFIG_PARAMETER* ppParams);
     TeeSession* newSession(MXS_SESSION* session, SERVICE* service);
-    void        diagnostics(DCB* pDcb);
     json_t*     diagnostics_json() const;
 
     uint64_t getCapabilities()

@@ -349,52 +349,6 @@ bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
     return settings_ok;
 }
 
-void MariaDBMonitor::diagnostics(DCB* dcb) const
-{
-    /* The problem with diagnostic printing is that some of the printed elements are array-like and their
-     * length could change during a monitor loop. Such variables are protected by mutexes. Locking is
-     * only required when the monitor thread writes to such a variable and when the admin thread is
-     * reading it. */
-
-    mxb_assert(mxs_rworker_get_current() == mxs_rworker_get(MXS_RWORKER_MAIN));
-    dcb_printf(dcb, "%s", diagnostics_to_string().c_str());
-}
-
-string MariaDBMonitor::diagnostics_to_string() const
-{
-    string rval;
-    rval.reserve(1000);     // Enough for basic output.
-
-    auto bool_to_zstr = [](bool val) -> const char* {
-            return val ? "Enabled" : "Disabled";
-        };
-    rval += string_printf("Automatic failover:      %s\n", bool_to_zstr(m_settings.auto_failover));
-    rval += string_printf("Failcount:               %i\n", m_settings.failcount);
-    rval += string_printf("Failover timeout:        %u\n", m_settings.failover_timeout);
-    rval += string_printf("Switchover timeout:      %u\n", m_settings.switchover_timeout);
-    rval += string_printf("Automatic rejoin:        %s\n", bool_to_zstr(m_settings.auto_rejoin));
-    rval += string_printf("Enforce read-only:       %s\n", bool_to_zstr(m_settings.enforce_read_only_slaves));
-    rval += string_printf("Enforce simple topology: %s\n", bool_to_zstr(m_settings.enforce_simple_topology));
-    rval += string_printf("Detect stale master:     %s\n", bool_to_zstr(m_settings.detect_stale_master));
-    if (!m_settings.excluded_servers.empty())
-    {
-        rval += string_printf("Non-promotable servers (failover): ");
-        rval += string_printf("%s\n", monitored_servers_to_string(m_settings.excluded_servers).c_str());
-    }
-
-    if (require_server_locks())
-    {
-        rval += string_printf("Server lock majority:    %s\n", m_have_lock_majority ? "Yes" : "No");
-    }
-
-    rval += string_printf("\nServer information:\n-------------------\n\n");
-    for (auto srv : servers())
-    {
-        rval += srv->diagnostics() + "\n";
-    }
-    return rval;
-}
-
 json_t* MariaDBMonitor::diagnostics_json() const
 {
     mxb_assert(mxs::MainWorker::is_main_worker());

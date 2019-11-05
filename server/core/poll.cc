@@ -42,18 +42,6 @@ using maxbase::Worker;
 using maxscale::RoutingWorker;
 
 /**
- * Display an entry from the spinlock statistics data
- *
- * @param       dcb     The DCB to print to
- * @param       desc    Description of the statistic
- * @param       value   The statistic value
- */
-static void spin_reporter(void* dcb, char* desc, int value)
-{
-    dcb_printf((DCB*)dcb, "\t%-40s  %d\n", desc, value);
-}
-
-/**
  * Return a poll statistic from the polling subsystem
  *
  * @param what  The required statistic

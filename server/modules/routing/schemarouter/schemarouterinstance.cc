@@ -182,41 +182,6 @@ SchemaRouterSession* SchemaRouter::newSession(MXS_SESSION* pSession, const Endpo
     return rval;
 }
 
-void SchemaRouter::diagnostics(DCB* dcb)
-{
-    double sescmd_pct = m_stats.n_sescmd != 0 ?
-        100.0 * ((double)m_stats.n_sescmd / (double)m_stats.n_queries) :
-        0.0;
-
-    /** Session command statistics */
-    dcb_printf(dcb, "\n\33[1;4mSession Commands\33[0m\n");
-    dcb_printf(dcb,
-               "Total number of queries: %d\n",
-               m_stats.n_queries);
-    dcb_printf(dcb,
-               "Percentage of session commands: %.2f\n",
-               sescmd_pct);
-    dcb_printf(dcb,
-               "Longest chain of stored session commands: %d\n",
-               m_stats.longest_sescmd);
-    dcb_printf(dcb,
-               "Session command history limit exceeded: %d times\n",
-               m_stats.n_hist_exceeded);
-
-    /** Session time statistics */
-
-    if (m_stats.sessions > 0)
-    {
-        dcb_printf(dcb, "\n\33[1;4mSession Time Statistics\33[0m\n");
-        dcb_printf(dcb, "Longest session: %.2lf seconds\n", m_stats.ses_longest);
-        dcb_printf(dcb, "Shortest session: %.2lf seconds\n", m_stats.ses_shortest);
-        dcb_printf(dcb, "Average session length: %.2lf seconds\n", m_stats.ses_average);
-    }
-    dcb_printf(dcb, "Shard map cache hits: %d\n", m_stats.shmap_cache_hit);
-    dcb_printf(dcb, "Shard map cache misses: %d\n", m_stats.shmap_cache_miss);
-    dcb_printf(dcb, "\n");
-}
-
 json_t* SchemaRouter::diagnostics_json() const
 {
     double sescmd_pct = m_stats.n_sescmd != 0 ?

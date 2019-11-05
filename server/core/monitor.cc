@@ -662,39 +662,6 @@ void Monitor::remove_all_servers()
     m_servers.clear();
 }
 
-void Monitor::show(DCB* dcb)
-{
-    dcb_printf(dcb, "Name:                   %s\n", name());
-    dcb_printf(dcb, "State:                  %s\n", state_string());
-    dcb_printf(dcb, "Times monitored:        %li\n", ticks());
-    dcb_printf(dcb, "Sampling interval:      %lu milliseconds\n", m_settings.interval);
-    dcb_printf(dcb, "Connect Timeout:        %i seconds\n", conn_settings().connect_timeout);
-    dcb_printf(dcb, "Read Timeout:           %i seconds\n", conn_settings().read_timeout);
-    dcb_printf(dcb, "Write Timeout:          %i seconds\n", conn_settings().write_timeout);
-    dcb_printf(dcb, "Connect attempts:       %i \n", conn_settings().connect_attempts);
-    dcb_printf(dcb, "Monitored servers:      ");
-
-    const char* sep = "";
-
-    for (const auto& db : m_servers)
-    {
-        dcb_printf(dcb, "%s[%s]:%d", sep, db->server->address, db->server->port);
-        sep = ", ";
-    }
-
-    dcb_printf(dcb, "\n");
-
-    if (is_running())
-    {
-        diagnostics(dcb);
-    }
-    else
-    {
-        dcb_printf(dcb, " (no diagnostics)\n");
-    }
-    dcb_printf(dcb, "\n");
-}
-
 json_t* Monitor::to_json(const char* host) const
 {
     // This function mostly reads settings-type data, which is only written to by the admin thread,
@@ -1954,10 +1921,6 @@ void MonitorWorker::do_stop()
     Worker::shutdown();
     Worker::join();
     m_thread_running.store(false, std::memory_order_release);
-}
-
-void MonitorWorker::diagnostics(DCB* pDcb) const
-{
 }
 
 json_t* MonitorWorker::diagnostics_json() const

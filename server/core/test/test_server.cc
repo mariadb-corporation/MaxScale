@@ -68,9 +68,6 @@ static int test1()
     status = server->status_string();
     mxb_assert_message(status == "Running",
                        "Status of Server should be Running after master status cleared.");
-    fprintf(stderr, "\t..done\nRun Prints for Server and all Servers.");
-    server->printServer();
-    ServerManager::printAllServers();
     fprintf(stderr, "\t..done\nFreeing Server.");
     ServerManager::server_free(server);
     fprintf(stderr, "\t..done\n");

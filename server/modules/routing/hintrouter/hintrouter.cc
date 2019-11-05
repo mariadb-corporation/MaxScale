@@ -118,25 +118,6 @@ HintRouterSession* HintRouter::newSession(MXS_SESSION* pSession, const Endpoints
     return rval;
 }
 
-void HintRouter::diagnostics(DCB* pOut)
-{
-    HR_ENTRY();
-    for (int i = 0; default_action_values[i].name; i++)
-    {
-        if (default_action_values[i].enum_value == (uint64_t)m_default_action)
-        {
-            dcb_printf(pOut, "\tDefault action: route to %s\n", default_action_values[i].name);
-        }
-    }
-    dcb_printf(pOut, "\tDefault server: %s\n", m_default_server.c_str());
-    dcb_printf(pOut, "\tMaximum slave connections/session: %d\n", m_max_slaves);
-    dcb_printf(pOut, "\tTotal cumulative slave connections: %d\n", m_total_slave_conns);
-    dcb_printf(pOut, "\tQueries routed to master: %d\n", m_routed_to_master);
-    dcb_printf(pOut, "\tQueries routed to single slave: %d\n", m_routed_to_slave);
-    dcb_printf(pOut, "\tQueries routed to named server: %d\n", m_routed_to_named);
-    dcb_printf(pOut, "\tQueries routed to all servers: %d\n", m_routed_to_all);
-}
-
 json_t* HintRouter::diagnostics_json() const
 {
     HR_ENTRY();

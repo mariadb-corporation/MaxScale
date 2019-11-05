@@ -64,7 +64,6 @@ static int  clientReply(MXS_FILTER* instance,
                         GWBUF* buffer,
                         const mxs::ReplyRoute& down,
                         const mxs::Reply& reply);
-static void     diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb);
 static json_t*  diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
 
@@ -153,7 +152,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
         freeSession,
         routeQuery,
         clientReply,
-        diagnostic,
         diagnostic_json,
         getCapabilities,
         NULL,       // No destroyInstance
@@ -563,73 +561,6 @@ static int clientReply(MXS_FILTER* instance,
                                        buffer,
                                        down,
                                        reply);
-}
-
-/**
- * Diagnostics routine
- *
- * If fsession is NULL then print diagnostics on the filter
- * instance as a whole, otherwise print diagnostics for the
- * particular session.
- *
- * @param   instance    The filter instance
- * @param   fsession    Filter session, may be NULL
- * @param   dcb     The DCB for diagnostic output
- */
-static void diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb)
-{
-    TOPN_INSTANCE* my_instance = (TOPN_INSTANCE*) instance;
-    TOPN_SESSION* my_session = (TOPN_SESSION*) fsession;
-    int i;
-
-    dcb_printf(dcb,
-               "\t\tReport size            %d\n",
-               my_instance->topN);
-    if (my_instance->source)
-    {
-        dcb_printf(dcb,
-                   "\t\tLimit logging to connections from  %s\n",
-                   my_instance->source);
-    }
-    if (my_instance->user)
-    {
-        dcb_printf(dcb,
-                   "\t\tLimit logging to user      %s\n",
-                   my_instance->user);
-    }
-    if (my_instance->match)
-    {
-        dcb_printf(dcb,
-                   "\t\tInclude queries that match     %s\n",
-                   my_instance->match);
-    }
-    if (my_instance->exclude)
-    {
-        dcb_printf(dcb,
-                   "\t\tExclude queries that match     %s\n",
-                   my_instance->exclude);
-    }
-    if (my_session)
-    {
-        dcb_printf(dcb,
-                   "\t\tLogging to file %s.\n",
-                   my_session->filename);
-        dcb_printf(dcb, "\t\tCurrent Top %d:\n", my_instance->topN);
-        for (i = 0; i < my_instance->topN; i++)
-        {
-            if (my_session->top[i]->sql)
-            {
-                dcb_printf(dcb, "\t\t%d place:\n", i + 1);
-                dcb_printf(dcb,
-                           "\t\t\tExecution time: %.3f seconds\n",
-                           (double) ((my_session->top[i]->duration.tv_sec * 1000)
-                                     + (my_session->top[i]->duration.tv_usec / 1000)) / 1000);
-                dcb_printf(dcb,
-                           "\t\t\tSQL: %s\n",
-                           my_session->top[i]->sql);
-            }
-        }
-    }
 }
 
 /**

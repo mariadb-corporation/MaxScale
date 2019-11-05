@@ -327,15 +327,6 @@ public:
     RWSplitSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints);
 
     /**
-     * @brief Diagnostics routine
-     *
-     * Print query router diagnostics to the DCB passed in
-     *
-     * @param dcb      The DCB for diagnostic output
-     */
-    void diagnostics(DCB* pDcb);
-
-    /**
      * @brief JSON diagnostics routine
      *
      * @return The JSON representation of this router instance

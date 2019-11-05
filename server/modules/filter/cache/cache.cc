@@ -89,34 +89,6 @@ bool Cache::create(const CacheConfig& config,
     return pFactory != NULL;
 }
 
-void Cache::show(DCB* pDcb) const
-{
-    bool showed = false;
-    json_t* pInfo = get_info(INFO_ALL);
-
-    if (pInfo)
-    {
-        size_t flags = JSON_PRESERVE_ORDER;
-        size_t indent = 2;
-        char* z = json_dumps(pInfo, JSON_PRESERVE_ORDER | JSON_INDENT(indent));
-
-        if (z)
-        {
-            dcb_printf(pDcb, "%s\n", z);
-            free(z);
-            showed = true;
-        }
-
-        json_decref(pInfo);
-    }
-
-    if (!showed)
-    {
-        // So as not to upset anyone expecting a JSON object.
-        dcb_printf(pDcb, "{\n}\n");
-    }
-}
-
 json_t* Cache::show_json() const
 {
     return get_info(INFO_ALL);

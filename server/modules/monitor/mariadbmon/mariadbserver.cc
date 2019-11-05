@@ -679,41 +679,6 @@ const char* MariaDBServer::name() const
     return server->name();
 }
 
-string MariaDBServer::diagnostics() const
-{
-    // Format strings.
-    const char fmt_string[] = "%-23s %s\n";
-    const char fmt_int[] = "%-23s %i\n";
-    const char fmt_int64[] = "%-23s %" PRIi64 "\n";
-
-    string rval;
-    rval.reserve(300);      // Enough for most common ouput.
-
-    rval += string_printf(fmt_string, "Server:", name());
-    rval += string_printf(fmt_int64, "Server ID:", m_server_id);
-    rval += string_printf(fmt_string, "Read only:", (m_read_only ? "Yes" : "No"));
-    Guard guard(m_arraylock);
-    if (!m_gtid_current_pos.empty())
-    {
-        rval += string_printf(fmt_string, "Gtid current position:", m_gtid_current_pos.to_string().c_str());
-    }
-    if (!m_gtid_binlog_pos.empty())
-    {
-        rval += string_printf(fmt_string, "Gtid binlog position:", m_gtid_binlog_pos.to_string().c_str());
-    }
-    if (m_node.cycle != NodeData::CYCLE_NONE)
-    {
-        rval += string_printf(fmt_int, "Master group:", m_node.cycle);
-    }
-
-    rval += (m_slave_status.empty() ? "No slave connections\n" : "Slave connections:\n");
-    for (const SlaveStatus& sstatus : m_slave_status)
-    {
-        rval += sstatus.to_string() + "\n";
-    }
-    return rval;
-}
-
 json_t* MariaDBServer::to_json() const
 {
     json_t* result = json_object();

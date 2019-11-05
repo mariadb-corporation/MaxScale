@@ -52,32 +52,6 @@ public:
      */
     static Server* find_by_unique_name(const std::string& name);
 
-    /**
-     * Print all servers
-     *
-     * Designed to be called within a debugger session in order
-     * to display all active servers within the gateway
-     */
-    static void printAllServers();
-
-    /**
-     * Print all servers to a DCB
-     *
-     * Designed to be called within a debugger session in order
-     * to display all active servers within the gateway
-     */
-    static void dprintAllServers(DCB* dcb);
-
-    /**
-     * Print all servers in Json format to a DCB
-     */
-    static void dprintAllServersJson(DCB* dcb);
-
-    /**
-     * List all servers in a tabular form to a DCB
-     *
-     */
-    static void dListServers(DCB* dcb);
     static std::unique_ptr<ResultSet> getList();
 
     /**

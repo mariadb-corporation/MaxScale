@@ -101,9 +101,6 @@ public:
     // Load or update authenticator user data
     virtual int load_users(SERVICE* service) = 0;
 
-    // Print diagnostic output to a DCB.
-    virtual void diagnostics(DCB* output) = 0;
-
     /**
      * @brief Return diagnostic information about the authenticator
      *

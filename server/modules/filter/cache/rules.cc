@@ -337,25 +337,6 @@ void cache_rules_free_array(CACHE_RULES** ppRules, int32_t nRules)
     MXS_FREE(ppRules);
 }
 
-void cache_rules_print(const CACHE_RULES* self, DCB* dcb, size_t indent)
-{
-    if (self->root)
-    {
-        size_t flags = JSON_PRESERVE_ORDER;
-        char* s = json_dumps(self->root, JSON_PRESERVE_ORDER | JSON_INDENT(indent));
-
-        if (s)
-        {
-            dcb_printf(dcb, "%s\n", s);
-            free(s);
-        }
-    }
-    else
-    {
-        dcb_printf(dcb, "{\n}\n");
-    }
-}
-
 bool cache_rules_should_store(CACHE_RULES* self, int thread_id, const char* default_db, const GWBUF* query)
 {
     bool should_store = false;

@@ -373,13 +373,6 @@ public:
     json_t* to_json(const char* host) const;
 
     /**
-     * Write diagnostic information to a DCB.
-     *
-     * @param dcb      The dcb to write to.
-     */
-    virtual void diagnostics(DCB* dcb) const = 0;
-
-    /**
      * Return diagnostic information about the monitor
      *
      * @return A JSON object representing the state of the monitor
@@ -418,8 +411,6 @@ public:
      * @return True, if the bit could be cleared.
      */
     bool clear_server_status(SERVER* srv, int bit, std::string* errmsg_out);
-
-    void show(DCB* dcb);
 
     json_t* monitored_server_json_attributes(const SERVER* srv) const;
 
@@ -649,16 +640,6 @@ public:
      * @return True, if the monitor started, false otherwise.
      */
     bool start() final;
-
-    /**
-     * @brief Write diagnostics
-     *
-     * The implementation should write diagnostic information to the
-     * provided dcb. The default implementation writes nothing.
-     *
-     * @param dcb  The dcb to write to.
-     */
-    virtual void diagnostics(DCB* dcb) const;
 
     /**
      * @brief Obtain diagnostics

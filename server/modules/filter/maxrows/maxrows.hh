@@ -99,11 +99,6 @@ public:
         return MaxRowsSession::create(session, service, this);
     }
 
-    // Print diagnostics to a DCB
-    void diagnostics(DCB* dcb) const
-    {
-    }
-
     // Returns JSON form diagnostic data
     json_t* diagnostics_json() const
     {

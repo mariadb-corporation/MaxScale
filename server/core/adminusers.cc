@@ -639,27 +639,3 @@ bool admin_user_is_pam_account(const std::string& username, const std::string& p
     }
     return false;
 }
-
-/**
- * Print Linux and and inet users
- *
- * @param dcb A DCB to send the output to.
- */
-void dcb_PrintAdminUsers(DCB* dcb)
-{
-    dcb_printf(dcb, "Enabled Linux accounts (secure)    : ");
-
-    if (linux_users)
-    {
-        users_diagnostic(dcb, linux_users);
-    }
-    dcb_printf(dcb, "\n");
-
-    dcb_printf(dcb, "Created network accounts (insecure): ");
-
-    if (inet_users)
-    {
-        users_diagnostic(dcb, inet_users);
-    }
-    dcb_printf(dcb, "\n");
-}

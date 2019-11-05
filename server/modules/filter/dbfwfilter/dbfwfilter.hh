@@ -275,8 +275,7 @@ public:
      */
     bool reload_rules(std::string filename);
 
-    /** Diagnostic routines */
-    void    diagnostics(DCB* dcb) const;
+    /** Diagnostic routine */
     json_t* diagnostics_json() const;
 
     uint64_t getCapabilities() const

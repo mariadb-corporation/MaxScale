@@ -202,12 +202,6 @@ CacheFilterSession* CacheFilter::newSession(MXS_SESSION* pSession, SERVICE* pSer
 }
 
 // static
-void CacheFilter::diagnostics(DCB* pDcb)
-{
-    m_sCache->show(pDcb);
-}
-
-// static
 json_t* CacheFilter::diagnostics_json() const
 {
     return m_sCache->show_json();

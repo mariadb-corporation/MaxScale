@@ -174,10 +174,6 @@ SmartRouter* SmartRouter::create(SERVICE* pService, MXS_CONFIG_PARAMETER* pParam
     return pRouter;
 }
 
-void SmartRouter::diagnostics(DCB* pDcb)
-{
-}
-
 json_t* SmartRouter::diagnostics_json() const
 {
     json_t* pJson = json_object();

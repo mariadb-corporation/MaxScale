@@ -37,7 +37,6 @@ public:
     ~SchemaRouter();
     static SchemaRouter* create(SERVICE* pService, MXS_CONFIG_PARAMETER* params);
     SchemaRouterSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints);
-    void                 diagnostics(DCB* pDcb);
     json_t*              diagnostics_json() const;
     uint64_t             getCapabilities();
     bool                 configure(MXS_CONFIG_PARAMETER* param);

@@ -296,32 +296,6 @@ bool QlaInstance::read_to_json(int start, int end, json_t** output) const
     return rval;
 }
 
-void QlaInstance::diagnostics(DCB* dcb) const
-{
-    using mxb::string_printf;
-    string output;
-    if (!m_settings.source.empty())
-    {
-        output = string_printf("\t\tLimit logging to connections from  %s\n", m_settings.source.c_str());
-    }
-    if (!m_settings.user_name.empty())
-    {
-        output += string_printf("\t\tLimit logging to user      %s\n", m_settings.user_name.c_str());
-    }
-    if (!m_settings.match.empty())
-    {
-        output += string_printf("\t\tInclude queries that match     %s\n", m_settings.match.c_str());
-    }
-    if (!m_settings.exclude.empty())
-    {
-        output += string_printf("\t\tExclude queries that match     %s\n", m_settings.exclude.c_str());
-    }
-
-    output += string_printf("\t\tColumn separator     %s\n", m_settings.separator.c_str());
-    output += string_printf("\t\tNewline replacement     %s\n", m_settings.query_newline.c_str());
-    dcb_printf(dcb, "%s", output.c_str());
-}
-
 json_t* QlaInstance::diagnostics_json() const
 {
     json_t* rval = json_object();
@@ -861,22 +835,6 @@ int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION* session, GWBUF* queue,
     return my_session->clientReply(queue, down, reply);
 }
 
-void diagnostic(MXS_FILTER* instance, MXS_FILTER_SESSION* fsession, DCB* dcb)
-{
-    auto my_session = static_cast<QlaFilterSession*>(fsession);
-    if (my_session)
-    {
-        dcb_printf(dcb,
-                   "\t\tLogging to file            %s.\n",
-                   my_session->m_filename.c_str());
-    }
-    else
-    {
-        auto my_instance = static_cast<QlaInstance*>(instance);
-        my_instance->diagnostics(dcb);
-    }
-}
-
 json_t* diagnostic_json(const MXS_FILTER* instance, const MXS_FILTER_SESSION* fsession)
 {
     auto my_session = static_cast<const QlaFilterSession*>(fsession);
@@ -942,7 +900,6 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         freeSession,
         routeQuery,
         clientReply,
-        diagnostic,
         diagnostic_json,
         getCapabilities,
         NULL,               // No destroyInstance

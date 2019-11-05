@@ -247,53 +247,6 @@ void MonitorManager::stop_all_monitors()
 }
 
 /**
- * Show all monitors
- *
- * @param dcb   DCB for printing output
- */
-void MonitorManager::show_all_monitors(DCB* dcb)
-{
-    mxb_assert(Monitor::is_main_worker());
-    this_unit.foreach_monitor(
-        [dcb](Monitor* monitor) {
-            monitor_show(dcb, monitor);
-            return true;
-        });
-}
-
-/**
- * Show a single monitor
- *
- * @param dcb   DCB for printing output
- */
-void MonitorManager::monitor_show(DCB* dcb, Monitor* monitor)
-{
-    mxb_assert(Monitor::is_main_worker());
-    monitor->show(dcb);
-}
-
-/**
- * List all the monitors
- *
- * @param dcb   DCB for printing output
- */
-void MonitorManager::monitor_list(DCB* dcb)
-{
-    mxb_assert(Monitor::is_main_worker());
-    dcb_printf(dcb, "---------------------+---------------------\n");
-    dcb_printf(dcb, "%-20s | Status\n", "Monitor");
-    dcb_printf(dcb, "---------------------+---------------------\n");
-
-    this_unit.foreach_monitor(
-        [dcb](Monitor* ptr) {
-            dcb_printf(dcb, "%-20s | %s\n", ptr->name(), ptr->state_string());
-            return true;
-        });
-
-    dcb_printf(dcb, "---------------------+---------------------\n");
-}
-
-/**
  * Find a monitor by name
  *
  * @param       name    The name of the monitor

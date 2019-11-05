@@ -1837,39 +1837,6 @@ bool rule_matches(Dbfw* my_instance,
 
 /**
  * Diagnostics routine
- *
- * Prints the connection details and the names of the exchange,
- * queue and the routing key.
- *
- * @param   instance    The filter instance
- * @param   fsession    Filter session, may be NULL
- * @param   dcb     The DCB for diagnostic output
- */
-void Dbfw::diagnostics(DCB* dcb) const
-{
-    dcb_printf(dcb, "Firewall Filter\n");
-    dcb_printf(dcb, "Rule, Type, Times Matched\n");
-
-    RuleList& rules = this_thread->rules(this);
-
-    for (RuleList::const_iterator it = rules.begin(); it != rules.end(); it++)
-    {
-        const SRule& rule = *it;
-        char buf[rule->name().length() + 200];
-        print_rule(rule.get(), buf);
-        dcb_printf(dcb, "%s\n", buf);
-    }
-}
-
-/**
- * Diagnostics routine
- *
- * Prints the connection details and the names of the exchange,
- * queue and the routing key.
- *
- * @param   instance    The filter instance
- * @param   fsession    Filter session, may be NULL
- * @param   dcb     The DCB for diagnostic output
  */
 json_t* Dbfw::diagnostics_json() const
 {
