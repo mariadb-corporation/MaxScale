@@ -10,6 +10,7 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Bug fixes
 
+* [MXS-2734](https://jira.mariadb.org/browse/MXS-2734) Unexpected error message when preferred_server is configured
 * [MXS-2733](https://jira.mariadb.org/browse/MXS-2733) UTC_TIMESTAMP not recognized as a built-in function
 * [MXS-2732](https://jira.mariadb.org/browse/MXS-2732) Memory leak with QC
 * [MXS-2731](https://jira.mariadb.org/browse/MXS-2731) Crash in Avro router.
