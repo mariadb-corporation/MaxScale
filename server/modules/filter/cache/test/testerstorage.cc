@@ -200,7 +200,8 @@ int TesterStorage::run(size_t n_threads,
 
         CacheKey key;
 
-        key.data = i;
+        key.data_hash = i;
+        key.full_hash = i;
 
         vector<uint8_t> value(size, static_cast<uint8_t>(i));
 

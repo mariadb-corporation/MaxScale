@@ -258,7 +258,8 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession,
     , m_clear_cache(false)
     , m_user_specific(pCache->config().user_data == CACHE_USER_DATA_UNIQUE)
 {
-    m_key.data = 0;
+    m_key.data_hash = 0;
+    m_key.full_hash = 0;
 
     reset_response_state();
 

@@ -22,23 +22,26 @@ using std::stringstream;
 std::string cache_key_to_string(const CACHE_KEY& key)
 {
     stringstream ss;
-    ss << key.data;
+    ss << "{ ";
+    ss << "user: " << "\"" << key.user << "\", ";
+    ss << "host: " << "\"" << key.host << "\", ";
+    ss << "data_hash: " << key.data_hash << ",";
+    ss << "full_hash: " << key.full_hash;
+    ss << " }";
 
     return ss.str();
 }
 
-size_t cache_key_hash(const CACHE_KEY* key)
+size_t cache_key_hash(const CACHE_KEY& key)
 {
-    mxb_assert(key);
-    mxb_assert(sizeof(key->data) == sizeof(size_t));
-
-    return key->data;
+    return key.full_hash;
 }
 
-bool cache_key_equal_to(const CACHE_KEY* lhs, const CACHE_KEY* rhs)
+bool cache_key_equal_to(const CACHE_KEY& lhs, const CACHE_KEY& rhs)
 {
-    mxb_assert(lhs);
-    mxb_assert(rhs);
-
-    return lhs->data == rhs->data;
+    return
+        lhs.full_hash == rhs.full_hash
+        && lhs.data_hash == rhs.data_hash
+        && lhs.user == rhs.user
+        && lhs.host == rhs.host;
 }

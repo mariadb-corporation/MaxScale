@@ -246,7 +246,7 @@ bool Tester::get_cache_items(const Statements& statements,
         if (pQuery)
         {
             CACHE_KEY key;
-            cache_result_t result = Cache::get_default_key(string(), string(), NULL, pQuery, &key);
+            cache_result_t result = Cache::get_default_key(NULL, pQuery, &key);
 
             if (result == CACHE_RESULT_OK)
             {

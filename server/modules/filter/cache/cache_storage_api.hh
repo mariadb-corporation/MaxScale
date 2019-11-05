@@ -68,9 +68,18 @@ enum cache_invalidate_t
     CACHE_INVALIDATE_CURRENT,
 };
 
+// This is the structure defining the key of the cache.
+//
+// The user and host are stored explicitly and used when comparing
+// for equality to ensure that it will not be possible for a user to
+// accidentally gain access to another user's data if there happens to
+// be a hash value clash, however unlikely that may be.
 struct CACHE_KEY
 {
-    uint64_t data;
+    std::string user;      // The user of the value; empty if shared.
+    std::string host;      // The host of the user of the value; empty is shared.
+    uint64_t    data_hash; // Hash of the default db and GWBUF given to Cache::get_key().
+    uint64_t    full_hash; // Hash of the entire CACHE_KEY.
 };
 
 /**
@@ -80,7 +89,7 @@ struct CACHE_KEY
  *
  * @return The corresponding hash.
  */
-size_t cache_key_hash(const CACHE_KEY* key);
+size_t cache_key_hash(const CACHE_KEY& key);
 
 /**
  * Are two CACHE_KEYs equal.
@@ -90,7 +99,7 @@ size_t cache_key_hash(const CACHE_KEY* key);
  *
  * @return True, if the keys are equal.
  */
-bool cache_key_equal_to(const CACHE_KEY* lhs, const CACHE_KEY* rhs);
+bool cache_key_equal_to(const CACHE_KEY& lhs, const CACHE_KEY& rhs);
 
 enum cache_storage_capabilities_t
 {
@@ -413,7 +422,7 @@ struct equal_to<CACHE_KEY>
 {
     bool operator()(const CACHE_KEY& lhs, const CACHE_KEY& rhs) const
     {
-        return cache_key_equal_to(&lhs, &rhs);
+        return cache_key_equal_to(lhs, rhs);
     }
 };
 
@@ -422,7 +431,7 @@ struct hash<CACHE_KEY>
 {
     size_t operator()(const CACHE_KEY& key) const
     {
-        return cache_key_hash(&key);
+        return cache_key_hash(key);
     }
 };
 }
@@ -431,7 +440,7 @@ std::string cache_key_to_string(const CACHE_KEY& key);
 
 inline bool operator==(const CACHE_KEY& lhs, const CACHE_KEY& rhs)
 {
-    return lhs.data == rhs.data;
+    return cache_key_equal_to(lhs, rhs);
 }
 
 inline bool operator!=(const CACHE_KEY& lhs, const CACHE_KEY& rhs)
@@ -444,6 +453,7 @@ class CacheKey : public CACHE_KEY
 public:
     CacheKey()
     {
-        data = 0;
+        data_hash = 0;
+        full_hash = 0;
     }
 };

@@ -110,6 +110,7 @@ cache_result_t Cache::get_default_key(const std::string& user,
                                       const GWBUF* pQuery,
                                       CACHE_KEY* pKey)
 {
+    mxb_assert((user.empty() && host.empty()) || (!user.empty() && !host.empty()));
     mxb_assert(GWBUF_IS_CONTIGUOUS(pQuery));
 
     char* pSql;
@@ -131,7 +132,19 @@ cache_result_t Cache::get_default_key(const std::string& user,
 
     crc = lzma_crc64(pData, length, crc);
 
-    pKey->data = crc;
+    pKey->data_hash = crc;
+
+    if (!user.empty())
+    {
+        crc = lzma_crc64(reinterpret_cast<const uint8_t*>(user.data()), user.length(), crc);
+    }
+
+    if (!host.empty())
+    {
+        crc = lzma_crc64(reinterpret_cast<const uint8_t*>(host.data()), host.length(), crc);
+    }
+
+    pKey->full_hash = crc;
 
     return CACHE_RESULT_OK;
 }

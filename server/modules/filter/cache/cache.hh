@@ -135,6 +135,13 @@ public:
                                           const GWBUF* pQuery,
                                           CACHE_KEY* pKey);
 
+    static cache_result_t get_default_key(const char* zDefault_db,
+                                          const GWBUF* pQuery,
+                                          CACHE_KEY* pKey)
+    {
+        return get_default_key(std::string(), std::string(), zDefault_db, pQuery, pKey);
+    }
+
     /**
      * See @Storage::get_value
      */
