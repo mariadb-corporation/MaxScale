@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2023-10-29
+ * Change Date: 2023-11-05
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -950,11 +950,15 @@ bool configure_network_socket(int so, int type)
 {
     int one = 1;
 
-    if (type != AF_UNIX && setsockopt(so, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) != 0)
+    if (type != AF_UNIX)
     {
-        MXS_ERROR("Failed to set socket option: %d, %s.", errno, mxs_strerror(errno));
-        mxb_assert(!true);
-        return false;
+        if (setsockopt(so, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) != 0
+            || setsockopt(so, SOL_SOCKET, SO_KEEPALIVE, &one, sizeof(one)) != 0)
+        {
+            MXS_ERROR("Failed to set socket option: %d, %s.", errno, mxs_strerror(errno));
+            mxb_assert(!true);
+            return false;
+        }
     }
 
     return setnonblocking(so) == 0;

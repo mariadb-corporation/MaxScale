@@ -83,6 +83,16 @@ ignore=.*UPDATE.*
 options=case,extended
 ```
 
+### `global`
+
+`global` is a boolean parameter that when enabled causes writes from one
+connection to propagate to all other connections. This can be used to work
+around cases where one connection writes data and another reads it, expecting
+the write done by the other connection to be visible.
+
+This parameter only works with the `time` parameter. The use of `global` and
+`count` at the same time is not allowed and will be treated as an error.
+
 ## Example Configuration
 
 Here is a minimal filter configuration for the CCRFilter which should solve most
