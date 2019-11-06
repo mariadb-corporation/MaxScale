@@ -311,6 +311,11 @@ uint64_t Reply::rows_read() const
     return m_row_count;
 }
 
+uint16_t Reply::num_warnings() const
+{
+    return m_num_warnings;
+}
+
 uint64_t Reply::size() const
 {
     return m_size;
@@ -382,12 +387,18 @@ void Reply::set_variable(const std::string& key, const std::string& value)
     m_variables.insert(std::make_pair(key, value));
 }
 
+void Reply::set_num_warnings(uint16_t warnings)
+{
+    m_num_warnings = warnings;
+}
+
 void Reply::clear()
 {
     m_command = 0;
     m_reply_state = ReplyState::DONE;
     m_error.clear();
     m_row_count = 0;
+    m_num_warnings = 0;
     m_size = 0;
     m_generated_id = 0;
     m_param_count = 0;

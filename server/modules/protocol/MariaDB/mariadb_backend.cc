@@ -2107,6 +2107,12 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
         if (cmd == MYSQL_REPLY_EOF && len == MYSQL_EOF_PACKET_LEN - MYSQL_HEADER_LEN)
         {
             set_reply_state(is_last_eof(it) ? ReplyState::DONE : ReplyState::START);
+
+            ++it;
+            uint16_t warnings = *it++;
+            warnings |= *it << 8;
+
+            m_reply.set_num_warnings(warnings);
         }
         else if (cmd == MYSQL_REPLY_ERR)
         {
@@ -2143,6 +2149,11 @@ void MariaDBBackendConnection::process_ok_packet(Iter it, Iter end)
         set_reply_state(ReplyState::DONE);
     }
 
+    // Two bytes of warnings
+    uint16_t warnings = *it++;
+    warnings |= (*it++) << 8;
+    m_reply.set_num_warnings(warnings);
+
     if (rcap_type_required(m_session->service->capabilities(), RCAP_TYPE_SESSION_STATE_TRACKING)
         && (status & SERVER_SESSION_STATE_CHANGED) && m_track_state)
     {
@@ -2152,7 +2163,6 @@ void MariaDBBackendConnection::process_ok_packet(Iter it, Iter end)
 
         mxb_assert(server_capabilities & GW_MYSQL_CAPABILITIES_SESSION_TRACK);
 
-        it.advance(2);          // Skip warning count
         skip_encoded_str(it);   // Skip human-readable info
 
         // Skip the total packet length, we don't need it since we know it implicitly via the end iterator

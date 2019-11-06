@@ -559,6 +559,11 @@ public:
     uint64_t rows_read() const;
 
     /**
+     * Number of warnings returned
+     */
+    uint16_t num_warnings() const;
+
+    /**
      * Number of bytes received
      */
     uint64_t size() const;
@@ -609,6 +614,8 @@ public:
 
     void set_variable(const std::string& key, const std::string& value);
 
+    void set_num_warnings(uint16_t warnings);
+
     void clear();
 
     template<typename ... Args>
@@ -625,6 +632,7 @@ private:
     uint64_t              m_size {0};
     uint32_t              m_generated_id {0};
     uint16_t              m_param_count {0};
+    uint16_t              m_num_warnings {0};
     bool                  m_is_ok {false};
     std::vector<uint64_t> m_field_counts;
 
