@@ -32,7 +32,6 @@ using namespace maxscale;
 
 using std::chrono::duration_cast;
 using std::chrono::microseconds;
-using Clock = std::chrono::steady_clock;
 
 /**
  * Check whether it's possible to use this server as a slave
@@ -78,7 +77,7 @@ RWBackend* best_score(PRWBackends& sBackends, std::function<double(mxs::Endpoint
         else if (min == score && best)
         {
             // In the case of a tie, use the least recently used backend
-            auto now = Clock::now();
+            auto now = maxbase::Clock::now();
             auto left = duration_cast<microseconds>(now - best->last_write()).count();
             auto right = duration_cast<microseconds>(now - b->last_write()).count();
 

@@ -12,6 +12,7 @@
  */
 
 #include <maxbase/logger.hh>
+#include <maxbase/stopwatch.hh>
 
 #include <syslog.h>
 #include <fcntl.h>
@@ -55,8 +56,8 @@ int open_fd(const std::string& filename)
 bool should_log_error()
 {
     using std::chrono::seconds;
-    static auto last_write = std::chrono::steady_clock::now() - seconds(61);
-    auto now = std::chrono::steady_clock::now();
+    static auto last_write = maxbase::Clock::now() - seconds(61);
+    auto now = maxbase::Clock::now();
     bool rval = false;
 
     if ((now - last_write).count() >= 60)

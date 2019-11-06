@@ -13,11 +13,11 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/modutil.hh>
+#include <maxbase/stopwatch.hh>
 #include <iostream>
 #include <sstream>
 #include <chrono>
 
-using Clock = std::chrono::steady_clock;
 using std::chrono::duration_cast;
 using std::chrono::milliseconds;
 
@@ -28,14 +28,14 @@ int main(int argc, char* argv[])
     for (std::string line; std::getline(std::cin, line);)
     {
         GWBUF* buf = modutil_create_query(line.c_str());
-        auto start = Clock::now();
+        auto start = maxbase::Clock::now();
 
         for (int i = 0; i < ITERATIONS; i++)
         {
             auto str = mxs::get_canonical(buf);
         }
 
-        auto end = Clock::now();
+        auto end = maxbase::Clock::now();
         gwbuf_free(buf);
 
         std::cout << line << "\n"

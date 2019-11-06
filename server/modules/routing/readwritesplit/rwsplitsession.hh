@@ -363,7 +363,7 @@ private:
     uint64_t         m_sescmd_count;            /**< Number of executed session commands (starts from 1) */
     int              m_expected_responses;      /**< Number of expected responses to the current query */
 
-    std::chrono::steady_clock::time_point m_last_keepalive_check;   /**< When the last ping was done */
+    maxbase::TimePoint m_last_keepalive_check;      /**< When the last ping was done */
 
     std::deque<mxs::Buffer> m_query_queue;      /**< Queued commands waiting to be executed */
     RWSplit*                m_router;           /**< The router instance */

@@ -84,7 +84,7 @@ public:
 
     void close(close_type type = CLOSE_NORMAL);
 
-    std::chrono::steady_clock::time_point last_write() const
+    maxbase::TimePoint last_write() const
     {
         return m_last_write;
     }
@@ -96,6 +96,6 @@ private:
     ResponseStat     m_response_stat;
     bool             m_large_query = false;
 
-    std::chrono::steady_clock::time_point m_last_write;
+    maxbase::TimePoint m_last_write;
 };
 }

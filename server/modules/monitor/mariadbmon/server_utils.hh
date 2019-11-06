@@ -257,7 +257,7 @@ public:
     int seconds_behind_master = mxs::Target::RLAG_UNDEFINED;    /* How much behind the slave is. */
 
     /* Time of the latest gtid event or heartbeat the slave connection has received, timed by the monitor. */
-    maxbase::Clock::time_point last_data_time = maxbase::Clock::now();
+    maxbase::TimePoint last_data_time = maxbase::Clock::now();
 
     std::string to_string() const;
     json_t*     to_json() const;

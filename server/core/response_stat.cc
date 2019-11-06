@@ -13,6 +13,8 @@
 #include <maxscale/response_stat.hh>
 
 #include <algorithm>
+#include <maxbase/worker.hh>
+#include <maxbase/stopwatch.hh>
 
 namespace maxscale
 {
@@ -53,7 +55,7 @@ void ResponseStat::query_finished()
     {
         std::sort(m_samples.begin(), m_samples.end());
         maxbase::Duration new_sample = m_samples[m_num_filter_samples / 2];
-        m_average.add(std::chrono::duration<double>(new_sample).count());
+        m_average.add(new_sample.secs());
         m_sample_count = 0;
     }
 

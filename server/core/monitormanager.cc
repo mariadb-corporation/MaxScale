@@ -147,7 +147,7 @@ void MonitorManager::debug_wait_one_tick()
         [&ticks](Monitor* mon) {
             if (mon->is_running())
             {
-                auto start = steady_clock::now();
+                auto start = maxbase::Clock::now();
                 // A monitor may have been added in between the two foreach-calls (not
                 // if config changes are
                 // serialized). Check if entry exists.
@@ -155,7 +155,7 @@ void MonitorManager::debug_wait_one_tick()
                 {
                     auto tick = ticks[mon];
                     while (mon->ticks() == tick
-                           && (steady_clock::now() - start < seconds(60)))
+                           && (maxbase::Clock::now() - start < seconds(60)))
                     {
                         std::this_thread::sleep_for(milliseconds(100));
                     }

@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include <chrono>
 #include <iostream>
+#include <maxbase/stopwatch.hh>
 #include <maxscale/log.hh>
 #include <maxscale/paths.h>
 #include <maxscale/query_classifier.hh>
@@ -48,15 +49,15 @@ inline GWBUF* create_gwbuf(const char* z)
 
 int run(const char* zStatement, int n)
 {
-    std::chrono::duration<double> diff;
+    maxbase::Duration diff {};
 
     for (int i = 0; i < n; ++i)
     {
         GWBUF* pStatement = create_gwbuf(zStatement);
 
-        auto start = std::chrono::steady_clock::now();
+        maxbase::StopWatch sw;
         int rc = qc_parse(pStatement, QC_COLLECT_ALL);
-        auto end = std::chrono::steady_clock::now();
+        diff += sw.split();
 
         gwbuf_free(pStatement);
 
@@ -64,11 +65,9 @@ int run(const char* zStatement, int n)
         {
             return EXIT_FAILURE;
         }
-
-        diff += (end - start);
     }
 
-    cout << "Time: " << diff.count() << " s" << endl;
+    cout << "Time: " << diff.secs() << " s" << endl;
 
     return EXIT_SUCCESS;
 }

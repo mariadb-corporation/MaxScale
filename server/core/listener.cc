@@ -44,7 +44,6 @@
 #include "internal/session.hh"
 #include "internal/config.hh"
 
-using Clock = std::chrono::steady_clock;
 using std::chrono::seconds;
 
 static std::list<SListener> all_listeners;
@@ -67,7 +66,7 @@ public:
     bool mark_auth_as_failed(const std::string& remote)
     {
         auto& u = m_failures[remote];
-        u.last_failure = Clock::now();
+        u.last_failure = maxbase::Clock::now();
         return ++u.failures == config_get_global_options()->max_auth_errors_until_block;
     }
 
@@ -80,9 +79,9 @@ public:
         {
             auto& u = it->second;
 
-            if (Clock::now() - u.last_failure > seconds(BLOCK_TIME))
+            if (maxbase::Clock::now() - u.last_failure > seconds(BLOCK_TIME))
             {
-                u.last_failure = Clock::now();
+                u.last_failure = maxbase::Clock::now();
                 u.failures = 0;
             }
 
@@ -95,8 +94,8 @@ public:
 private:
     struct Failure
     {
-        Clock::time_point last_failure = Clock::now();
-        int               failures = 0;
+        maxbase::TimePoint last_failure = maxbase::Clock::now();
+        int                failures = 0;
     };
 
     std::unordered_map<std::string, Failure> m_failures;

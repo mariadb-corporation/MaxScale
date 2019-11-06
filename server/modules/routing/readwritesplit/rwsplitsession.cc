@@ -33,7 +33,7 @@ RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session, mxs::SRW
     , m_session(session)
     , m_sescmd_count(1)
     , m_expected_responses(0)
-    , m_last_keepalive_check(steady_clock::now())
+    , m_last_keepalive_check(maxbase::Clock::now())
     , m_router(instance)
     , m_sent_sescmd(0)
     , m_recv_sescmd(0)
@@ -1063,7 +1063,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
         if (!can_continue)
         {
 
-            int idle = duration_cast<seconds>(steady_clock::now() - backend->last_write()).count();
+            int idle = duration_cast<seconds>(maxbase::Clock::now() - backend->last_write()).count();
             MXS_ERROR("Lost connection to the master server, closing session.%s "
                       "Connection has been idle for %d seconds. Error caused by: %s",
                       errmsg.c_str(), idle, mxs::extract_error(errmsgbuf).c_str());

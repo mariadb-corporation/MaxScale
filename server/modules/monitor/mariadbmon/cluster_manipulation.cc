@@ -1567,7 +1567,7 @@ const MariaDBServer* MariaDBMonitor::slave_receiving_events(const MariaDBServer*
 {
     Duration event_timeout(static_cast<double>(m_settings.master_failure_timeout));
     auto current_time = maxbase::Clock::now();
-    maxbase::Clock::time_point recent_event_time = current_time - event_timeout;
+    maxbase::TimePoint recent_event_time = current_time - event_timeout;
 
     const MariaDBServer* connected_slave = NULL;
     for (MariaDBServer* slave : demotion_target->m_node.children)

@@ -26,6 +26,7 @@
 #include <maxbase/atomic.hh>
 #include <maxbase/log.h>
 #include <maxbase/string.hh>
+#include <maxbase/stopwatch.hh>
 
 #define WORKER_ABSENT_ID -1
 
@@ -756,7 +757,7 @@ long time_in_100ms_ticks()
 {
     using TenthSecondDuration = std::chrono::duration<long, std::ratio<1, 10>>;
 
-    auto dur = std::chrono::steady_clock::now().time_since_epoch();
+    auto dur = maxbase::Clock::now().time_since_epoch();
     auto tenth = std::chrono::duration_cast<TenthSecondDuration>(dur);
 
     return tenth.count();
