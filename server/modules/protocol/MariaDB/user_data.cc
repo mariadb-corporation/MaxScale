@@ -13,6 +13,7 @@
 
 #include "user_data.hh"
 
+#include <maxbase/host.hh>
 #include <maxsql/mariadb_connector.hh>
 #include <maxsql/mariadb.hh>
 #include <maxscale/server.hh>
@@ -28,8 +29,10 @@ using Guard = std::lock_guard<std::mutex>;
 namespace
 {
 
-auto acquire = std::memory_order_acquire;
-auto release = std::memory_order_release;
+constexpr auto acquire = std::memory_order_acquire;
+constexpr auto release = std::memory_order_release;
+constexpr auto npos = string::npos;
+constexpr int ipv4min_len = 7;      // 1.1.1.1
 
 namespace backend_queries
 {
@@ -162,13 +165,14 @@ void MariaDBUserManager::updater_thread_function()
         MutexLock lock(m_notifier_lock);
         // Wait until "next_possible_update", or until the thread should stop.
         m_notifier.wait_until(lock, next_possible_update, [this]() {
-            return !m_keep_running.load(acquire);
-        });
+                                  return !m_keep_running.load(acquire);
+                              });
 
         // Wait until "next_scheduled_update", or until update requested or thread stop.
         m_notifier.wait_until(lock, next_scheduled_update, [this, &updates]() {
-            return !m_keep_running.load(acquire) || m_update_users_requested.load(acquire) || updates == 0;
-        });
+                                  return !m_keep_running.load(acquire)
+                                  || m_update_users_requested.load(acquire) || updates == 0;
+                              });
         lock.unlock();
 
         if (m_keep_running.load(acquire) && load_users())
@@ -400,9 +404,7 @@ const UserEntry* UserDatabase::find_entry(const std::string& username, const std
         {
             // The entry must not be a role (they should have empty hostnames in any case) and the hostname
             // pattern should match the host.
-            // TODO: add checking for bitmasks and possibly name lookups (tricky...)
-            // TODO: sqlite3_strlike(entry.host_pattern.c_str(), host.c_str(), '\\') == 0
-            if (!entry.is_role && sql_strlike(entry.host_pattern.c_str(), host.c_str(), '\\') == 0)
+            if (!entry.is_role && address_matches_host_pattern(host, entry.host_pattern))
             {
                 rval = &entry;
                 break;
@@ -518,6 +520,224 @@ bool UserDatabase::role_can_access_db(const string& role, const string& db) cons
         closed_set.insert(current_role);
     }
     return privilege_found;
+}
+
+bool
+UserDatabase::address_matches_host_pattern(const std::string& addr, const std::string& host_pattern) const
+{
+    // First, check the input address type. This affects how the comparison to the host pattern works.
+    auto addrtype = parse_address_type(addr);
+    // If host address form is unexpected, don't bother continuing.
+    if (addrtype == AddrType::UNKNOWN)
+    {
+        MXB_ERROR("Address '%s' is not supported.", addr.c_str());      // TODO: print username as well.
+        return false;
+    }
+
+    auto patterntype = parse_pattern_type(host_pattern);    // TODO: perform this step when loading users
+    if (patterntype == PatternType::UNKNOWN)
+    {
+        MXB_ERROR("Host pattern '%s' is not supported.", addr.c_str());
+        return false;
+    }
+
+    auto like = [](const string& pattern, const string& str) {
+            return sql_strlike(pattern.c_str(), str.c_str(), '\\') == 0;
+        };
+
+    bool matched = false;
+    if (patterntype == PatternType::ADDRESS)
+    {
+        if (like(host_pattern, addr))
+        {
+            matched = true;
+        }
+        else if (addrtype == AddrType::MAPPED)
+        {
+            // Try matching the ipv4-part of the address.
+            auto ipv4_part = addr.find_last_of(':') + 1;
+            if (like(host_pattern, addr.substr(ipv4_part)))
+            {
+                matched = true;
+            }
+        }
+    }
+    else if (patterntype == PatternType::MASK)
+    {
+        // Requires special handling, add later.
+    }
+    else if (patterntype == PatternType::HOSTNAME)
+    {
+        // Need a reverse lookup on the client address. This is slow. TODO: use a separate thread/cache
+        string resolved_addr;
+        if (mxb::reverse_name_lookup(addr, &resolved_addr))
+        {
+            if (like(host_pattern, resolved_addr))
+            {
+                matched = true;
+            }
+        }
+    }
+
+    return matched;
+}
+
+UserDatabase::AddrType UserDatabase::parse_address_type(const std::string& addr) const
+{
+    using mxb::Host;
+
+    auto rval = AddrType::UNKNOWN;
+    if (Host::is_valid_ipv4(addr))
+    {
+        rval = AddrType::IPV4;
+    }
+    else
+    {
+        // The address could be IPv4 mapped to IPv6.
+        const string mapping_prefix = ":ffff:";
+        auto prefix_loc = addr.find(mapping_prefix);
+        if (prefix_loc != npos)
+        {
+            auto ipv4part_loc = prefix_loc + mapping_prefix.length();
+            if (addr.length() >= (ipv4part_loc + ipv4min_len))
+            {
+                // The part after the prefix should be a normal ipv4-address.
+                string ipv4part = addr.substr(ipv4part_loc);
+                if (Host::is_valid_ipv4(ipv4part))
+                {
+                    rval = AddrType::MAPPED;
+                }
+            }
+        }
+
+        // Finally, the address could be ipv6.
+        if (rval == AddrType::UNKNOWN && Host::is_valid_ipv6(addr))
+        {
+            rval = AddrType::IPV6;
+        }
+    }
+    return rval;
+}
+
+UserDatabase::PatternType UserDatabase::parse_pattern_type(const std::string& host_pattern) const
+{
+    using mxb::Host;
+    // The pattern is more tricky, as it may have wildcards. Assume that if the pattern looks like
+    // an address, it is an address and not a hostname. This is not strictly true, but is
+    // a reasonable assumption. This parsing is useful, as if we can be reasonably sure the pattern
+    // is not a hostname, we can skip the expensive reverse name lookup.
+
+    auto is_wc = [](char c) {
+            return c == '%' || c == '_';
+        };
+
+    auto patterntype = PatternType::UNKNOWN;
+    // First, check some common special cases.
+    if (Host::is_valid_ipv4(host_pattern) || Host::is_valid_ipv6(host_pattern))
+    {
+        // No wildcards, just an address.
+        patterntype = PatternType::ADDRESS;
+    }
+    else if (std::all_of(host_pattern.begin(), host_pattern.end(), is_wc))
+    {
+        // Pattern is composed entirely of wildcards.
+        patterntype = PatternType::ADDRESS;
+        // Could be hostname as well, but this would only make a difference with a pattern
+        // like "________" or "__%___" where the resolved hostname is of correct length
+        // while the address is not.
+    }
+    else
+    {
+        auto div_loc = host_pattern.find('/');
+        if (div_loc != npos && (div_loc >= ipv4min_len) && host_pattern.length() > (div_loc + ipv4min_len))
+        {
+            // May be a base_ip/netmask-combination.
+            string base_ip = host_pattern.substr(0, div_loc);
+            string netmask = host_pattern.substr(div_loc + 1);
+            if (Host::is_valid_ipv4(base_ip) && Host::is_valid_ipv4(netmask))
+            {
+                patterntype = PatternType::MASK;
+            }
+        }
+    }
+
+    if (patterntype == PatternType::UNKNOWN)
+    {
+        // Pattern is a hostname, or an address with wildcards. Go through it and take an educated guess.
+        bool maybe_address = true;
+        bool maybe_hostname = true;
+        const char esc = '\\';      // '\' is an escape char to allow e.g. my_host.com to match properly.
+        bool escaped = false;
+
+        auto classify_char = [is_wc, &maybe_address, &maybe_hostname](char c) {
+                auto is_ipchar = [](char c) {
+                        return std::isxdigit(c) || c == ':' || c == '.';
+                    };
+
+                auto is_hostnamechar = [](char c) {
+                        return std::isalnum(c) || c == '_' || c == '.' || c == '-';
+                    };
+
+                if (is_wc(c))
+                {
+                    // Can be address or hostname.
+                }
+                else
+                {
+                    if (!is_ipchar(c))
+                    {
+                        maybe_address = false;
+                    }
+                    if (!is_hostnamechar(c))
+                    {
+                        maybe_hostname = false;
+                    }
+                }
+            };
+
+        for (auto c : host_pattern)
+        {
+            if (escaped)
+            {
+                // % is not a valid escaped character.
+                if (c == '%')
+                {
+                    maybe_address = false;
+                    maybe_hostname = false;
+                }
+                else
+                {
+                    classify_char(c);
+                }
+                escaped = false;
+            }
+            else if (c == esc)
+            {
+                escaped = true;
+            }
+            else
+            {
+                classify_char(c);
+            }
+
+            if (!maybe_address && !maybe_hostname)
+            {
+                // Unrecognized pattern type.
+                break;
+            }
+        }
+
+        if (maybe_address)
+        {
+            // Address takes priority.
+            patterntype = PatternType::ADDRESS;
+        }
+        else if (maybe_hostname)
+        {
+            patterntype = PatternType::HOSTNAME;
+        }
+    }
+    return patterntype;
 }
 
 bool UserEntry::host_pattern_is_more_specific(const UserEntry& lhs, const UserEntry& rhs)

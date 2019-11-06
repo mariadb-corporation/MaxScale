@@ -21,12 +21,11 @@
 #include <maxbase/format.hh>
 #include <maxbase/string.hh>
 
-namespace
-{
+
 // Simple but not exhaustive address validation functions.
 // An ipv4 address "x.x.x.x" cannot be a hostname (where x is a number), but pretty
 // much anything else can. Call is_valid_hostname() last.
-bool is_valid_ipv4(const std::string& ip)
+bool mxb::Host::is_valid_ipv4(const std::string& ip)
 {
     bool ret = ip.find_first_not_of("0123456789.") == std::string::npos
         && (ip.length() <= 15 && ip.length() >= 7)
@@ -35,7 +34,7 @@ bool is_valid_ipv4(const std::string& ip)
     return ret;
 }
 
-bool is_valid_ipv6(const std::string& ip)
+bool mxb::Host::is_valid_ipv6(const std::string& ip)
 {
     auto invalid_char = [](char ch) {
             bool valid = std::isxdigit(ch) || ch == ':' || ch == '.';
@@ -48,6 +47,9 @@ bool is_valid_ipv6(const std::string& ip)
 
     return ret;
 }
+
+namespace
+{
 
 bool is_valid_hostname(const std::string& hn)
 {
@@ -290,7 +292,7 @@ bool reverse_name_lookup(const std::string& ip, std::string* output)
     memset(&socket_address, 0, sizeof(socket_address));
     socklen_t slen = 0;
 
-    if (is_valid_ipv4(ip))
+    if (Host::is_valid_ipv4(ip))
     {
         // Casts between the different sockaddr-types should work.
         int family = AF_INET;
@@ -301,7 +303,7 @@ bool reverse_name_lookup(const std::string& ip, std::string* output)
             slen = sizeof(sockaddr_in);
         }
     }
-    else if (is_valid_ipv6(ip))
+    else if (Host::is_valid_ipv6(ip))
     {
         int family = AF_INET6;
         auto sa_in6 = reinterpret_cast<sockaddr_in6*>(&socket_address);

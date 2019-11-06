@@ -53,10 +53,10 @@ public:
     using StringSet = std::set<std::string>;
     using StringSetMap = std::map<std::string, StringSet>;
 
-    void             add_entry(const std::string& username, const UserEntry& entry);
-    void             set_dbs_and_roles(StringSetMap&& db_grants, StringSetMap&& roles_mapping);
-    void             clear();
-    size_t           size() const;
+    void   add_entry(const std::string& username, const UserEntry& entry);
+    void   set_dbs_and_roles(StringSetMap&& db_grants, StringSetMap&& roles_mapping);
+    void   clear();
+    size_t size() const;
 
     const UserEntry* find_entry(const std::string& username, const std::string& host);
     bool             check_database_access(const UserEntry& entry, const std::string& db) const;
@@ -65,6 +65,28 @@ private:
     bool user_can_access_db(const std::string& user, const std::string& host_pattern,
                             const std::string& db) const;
     bool role_can_access_db(const std::string& role, const std::string& db) const;
+
+    bool address_matches_host_pattern(const std::string& addr, const std::string& host_pattern) const;
+
+    enum class AddrType
+    {
+        UNKNOWN,
+        IPV4,
+        MAPPED,
+        IPV6,
+    };
+
+    enum class PatternType
+    {
+        UNKNOWN,
+        ADDRESS,
+        MASK,
+        HOSTNAME,
+    };
+
+    AddrType    parse_address_type(const std::string& addr) const;
+    PatternType parse_pattern_type(const std::string& host_pattern) const;
+
     using EntryList = std::vector<UserEntry>;
 
     /**
@@ -134,6 +156,6 @@ private:
 
     const std::string m_service_name;   /**< Service using this account data manager. Used for logging. */
 
-    std::mutex   m_userdb_lock;        /**< Protects UserDatabase from concurrent access */
-    UserDatabase m_userdb;             /**< Contains user account info */
+    std::mutex   m_userdb_lock;         /**< Protects UserDatabase from concurrent access */
+    UserDatabase m_userdb;              /**< Contains user account info */
 };

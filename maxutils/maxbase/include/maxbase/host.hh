@@ -60,6 +60,9 @@ public:
     int                port() const;
 
     const std::string& org_input() const;       // for better error messages
+
+    static bool is_valid_ipv4(const std::string& ip);
+    static bool is_valid_ipv6(const std::string& ip);
 private:
     void set_type(bool port_string_specified);      // set m_type based on m_address and m_port
 
