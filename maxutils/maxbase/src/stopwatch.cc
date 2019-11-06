@@ -12,6 +12,7 @@
  */
 
 #include <maxbase/stopwatch.hh>
+#include <maxbase/worker.hh>
 
 #include <iomanip>
 #include <iostream>
@@ -21,6 +22,20 @@
 
 namespace maxbase
 {
+
+TimePoint Clock::now(NowType type) noexcept
+{
+    if (type == NowType::RealTime)
+    {
+        return std::chrono::steady_clock::now();
+    }
+    else
+    {
+        mxb_assert(maxbase::Worker::get_current());
+        mxb_assert(type == NowType::EPollTick);
+        return maxbase::Worker::get_current()->epoll_tick_now();
+    }
+}
 
 StopWatch::StopWatch()
 {

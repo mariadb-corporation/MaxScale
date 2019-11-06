@@ -835,6 +835,7 @@ void Worker::poll_waitevents()
             m_statistics.n_fds[(nfds < STATISTICS::MAXNFDS ? (nfds - 1) : STATISTICS::MAXNFDS - 1)]++;
         }
 
+        m_epoll_tick_now = maxbase::Clock::now();
         uint64_t cycle_start = time_in_100ms_ticks();
 
         for (int i = 0; i < nfds; i++)
@@ -898,7 +899,6 @@ void Worker::poll_waitevents()
             m_statistics.maxexectime = std::max(m_statistics.maxexectime, qtime);
         }
 
-        m_epoll_tick_now = maxbase::Clock::now();
         call_epoll_tick();
     }   /*< while(1) */
 }

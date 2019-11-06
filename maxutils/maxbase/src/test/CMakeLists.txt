@@ -10,7 +10,7 @@
 #add_test(test_mxb_http test_mxb_http)
 
 add_executable(test_mxb_log test_log.cc)
-target_link_libraries(test_mxb_log maxbase rt)
+target_link_libraries(test_mxb_log maxbase pthread rt)
 add_test(test_mxb_log test_mxb_log)
 
 add_executable(test_semaphore test_semaphore.cc)
@@ -18,7 +18,7 @@ target_link_libraries(test_semaphore maxbase pthread rt)
 add_test(test_semaphore test_semaphore)
 
 add_executable(test_mxb_string test_string.cc)
-target_link_libraries(test_mxb_string maxbase)
+target_link_libraries(test_mxb_string maxbase pthread)
 add_test(test_semaphore test_semaphore)
 
 add_executable(test_worker test_worker.cc)

@@ -21,24 +21,24 @@ namespace maxbase
 {
 
 /**
- *   @class Clock
- *
- *   MaxScale "standard" std::chrono clock
+ *  The MaxScale "standard" clock. Do not use this directly,
+ *  use Clock declared further down (specifically, use Clock::now()).
  */
-using Clock = std::chrono::steady_clock;
+using StableClock = std::chrono::steady_clock;
 
 /**
  *  @class Duration
  *
- *  Duration behaves exactly like Clock::duration, but adds ADL and a
- *  conveniece constructor and function secs() for seconds as a double.
+ *  Duration behaves exactly like StableClock::duration, but enables ADL for
+ *  streaming, and adds a conveniece constructor and function secs() for
+ *  seconds as a double.
  */
-struct Duration : public Clock::duration
+struct Duration : public StableClock::duration
 {
-    using Clock::duration::duration;
+    using StableClock::duration::duration;
     Duration() = default;
-    Duration(Clock::duration d)
-        : Clock::duration(d)
+    Duration(StableClock::duration d)
+        : StableClock::duration(d)
     {
     }
 
@@ -58,9 +58,30 @@ struct Duration : public Clock::duration
 /**
  *   @class TimePoint
  *
- *   A std::chrono::time_point to go with Clock and Duration.
+ *   A std::chrono::time_point to go with StableClock and Duration.
  */
-using TimePoint = std::chrono::time_point<Clock, Duration>;
+using TimePoint = std::chrono::time_point<StableClock, Duration>;
+
+/**
+ *  @brief NowType enum
+ *
+ *  EPollTick - Use worker::epoll_tick_now(), no performance penalty.
+ *              The thread must be a worker thread (can relax later).
+ *  RealTime  - Use real-time, but remember this goes to the kernel.
+ *              The thread does not need to be a Worker thread.
+ */
+enum class NowType {EPollTick, RealTime};
+
+/**
+ *   @class Clock
+ *
+ *   MaxScale "standard" clock. It is exactly the same as std::chrono::steady_clock
+ *   except it redefines the static member function now().
+ */
+struct Clock : public StableClock
+{
+    static TimePoint now(NowType type = NowType::RealTime) noexcept;
+};
 
 /**
  *  @class StopWatch
