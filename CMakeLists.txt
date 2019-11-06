@@ -51,6 +51,7 @@ find_package(CURL)
 find_package(PAM)
 find_package(UBSAN)
 find_package(GnuTLS REQUIRED)
+find_package(Libatomic REQUIRED)
 
 # Build PCRE2 so we always know the version
 # Read BuildPCRE2 for details about how to add pcre2 as a dependency to a target
