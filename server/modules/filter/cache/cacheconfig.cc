@@ -165,15 +165,15 @@ config::ParamBool CacheConfig::s_clear_cache_on_parse_errors(
     true
     );
 
-config::ParamEnum<cache_user_data_t> CacheConfig::s_user_data(
+config::ParamEnum<cache_users_t> CacheConfig::s_users(
     &s_specification,
-    "user_data",
-    "Specifies whether cache data is shared between users.",
+    "users",
+    "Specifies whether cached data is shared between users.",
     {
-        {CACHE_USER_DATA_SHARED, "shared"},
-        {CACHE_USER_DATA_UNIQUE, "unique"}
+        {CACHE_USERS_ISOLATED, "isolated"},
+        {CACHE_USERS_MIXED, "mixed"}
     },
-    CACHE_USER_DATA_SHARED
+    CACHE_USERS_MIXED
     );
 
 CacheConfig::CacheConfig(const std::string& name)
@@ -194,7 +194,7 @@ CacheConfig::CacheConfig(const std::string& name)
     , enabled(this, &s_enabled)
     , invalidate(this, &s_invalidate)
     , clear_cache_on_parse_errors(this, &s_clear_cache_on_parse_errors)
-    , user_data(this, &s_user_data)
+    , users(this, &s_users)
 {
 }
 

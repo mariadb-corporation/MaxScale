@@ -256,7 +256,7 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession,
     , m_invalidate(pCache->config().invalidate != CACHE_INVALIDATE_NEVER)
     , m_invalidate_now(false)
     , m_clear_cache(false)
-    , m_user_specific(pCache->config().user_data == CACHE_USER_DATA_UNIQUE)
+    , m_user_specific(pCache->config().users == CACHE_USERS_ISOLATED)
 {
     m_key.data_hash = 0;
     m_key.full_hash = 0;

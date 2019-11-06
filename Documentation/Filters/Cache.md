@@ -424,23 +424,23 @@ Changing the value to `false` may mean that stale data is returned from
 the cache, if an UPDATE/INSERT/DELETE cannot be parsed and the statement
 affects entries in the cache.
 
-#### `user_data`
+#### `users`
 
 An enumeration option specifying how the cache should cache data for
 different users.
 
-    * `shared`: The data of different users is stored in the same
+    * `mixed`: The data of different users is stored in the same
       cache. This is the default and may cause that a user can
       access data he should not have access to.
-    * `unique`: Each user has a unique cache and there can be
+    * `isolated`: Each user has a unique cache and there can be
       no unintended sharing.
 
-Note that if `unique` has been specified, then each user will
+Note that if `isolated` has been specified, then each user will
 conceptually have a cache of his own, which is populated
 independently from each other. That is, if two users make the
 same query, then the data will be fetched twice and also stored
-twice. So, a `unique` cache will in general use more memory and
-cause more traffic to the backend compared to a `shared` cache.
+twice. So, a `isolated` cache will in general use more memory and
+cause more traffic to the backend compared to a `mixed` cache.
 
 ### Runtime Configuration
 
