@@ -30,6 +30,7 @@
 #include <maxbase/worker.h>
 #include <maxbase/workertask.hh>
 #include <maxbase/random.hh>
+#include <maxbase/stopwatch.hh>
 
 namespace maxbase
 {
@@ -257,7 +258,7 @@ public:
     using DisposableTask = WorkerDisposableTask;
     using Load = WorkerLoad;
     using Timer = WorkerTimer;
-    using RandomEngine = maxbase::XorShiftRandom;
+    using RandomEngine = XorShiftRandom;
 
     /**
      * A delegating timer that delegates the timer tick handling
@@ -388,6 +389,16 @@ public:
      * Return the random engine of this worker.
      */
     RandomEngine& random_engine();
+
+    /**
+     * Returns the TimePoint when epoll_tick() was called. Use this in worker threads
+     * instead of maxbase::Clock::now() for timeouts, time tracking etc. where absolute
+     * precisin is not needed (i.e. almost always).
+     */
+    TimePoint epoll_tick_now()
+    {
+        return m_epoll_tick_now;
+    }
 
     /**
      * Add a file descriptor to the epoll instance of the worker.
@@ -994,6 +1005,7 @@ private:
     DelayedCallsByTime m_sorted_calls;          /*< Current delayed calls sorted by time. */
     DelayedCallsById   m_calls;                 /*< Current delayed calls indexed by id. */
     RandomEngine       m_random_engine;         /*< Random engine for this worker (this thread). */
+    TimePoint          m_epoll_tick_now;        /*< TimePoint when epoll_tick() was called */
 
     int32_t m_next_delayed_call_id;     /*< The next delayed call id. */
 };

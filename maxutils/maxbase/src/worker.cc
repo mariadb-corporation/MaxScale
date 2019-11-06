@@ -898,6 +898,7 @@ void Worker::poll_waitevents()
             m_statistics.maxexectime = std::max(m_statistics.maxexectime, qtime);
         }
 
+        m_epoll_tick_now = maxbase::Clock::now();
         call_epoll_tick();
     }   /*< while(1) */
 }
