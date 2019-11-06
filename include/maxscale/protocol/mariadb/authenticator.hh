@@ -214,5 +214,4 @@ public:
     virtual AuthRes authenticate(DCB* client) = 0;
 };
 
-const char* to_string(mxs_auth_state_t state);
 }

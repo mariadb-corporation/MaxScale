@@ -56,6 +56,17 @@ public:
     uint32_t server_capabilities {0};   /**< Server capabilities TODO: private */
 
 private:
+    enum class AuthState
+    {
+        CONNECTED,      /**< Network connection to server created */
+        RESPONSE_SENT,  /**< Responded to the read authentication message */
+        FAIL,           /**< Authentication failed */
+        FAIL_HANDSHAKE, /**< Authentication failed immediately */
+        COMPLETE,       /**< Authentication is complete */
+    };
+
+    static std::string to_string(AuthState auth_state);
+
     MariaDBBackendConnection(mariadb::SBackendAuth authenticator);
 
     int    gw_read_and_write(DCB* dcb);
@@ -85,8 +96,8 @@ private:
     int    gw_decode_mysql_server_handshake(uint8_t* payload);
     GWBUF* gw_generate_auth_response(bool with_ssl, bool ssl_established, uint64_t service_capabilities);
 
-    mxs_auth_state_t handle_server_response(DCB* generic_dcb, GWBUF* buffer);
-    mxs_auth_state_t gw_send_backend_auth(BackendDCB* dcb);
+    AuthState handle_server_response(DCB* generic_dcb, GWBUF* buffer);
+    AuthState gw_send_backend_auth(BackendDCB* dcb);
 
     uint32_t create_capabilities(bool with_ssl, bool db_specified, uint64_t capabilities);
     GWBUF*   process_packets(GWBUF** result);
@@ -109,15 +120,14 @@ private:
      */
     void assign_session(MXS_SESSION* session, mxs::Component* upstream);
 
-    mxs_auth_state_t protocol_auth_state {MXS_AUTH_STATE_CONNECTED};    /**< Backend authentication state */
+    mariadb::SBackendAuth m_authenticator;                      /**< Backend authentication data */
 
-    mariadb::SBackendAuth m_authenticator;     /**< Backend authentication data */
-
-    uint64_t    m_thread_id {0};                /**< Backend thread id, received in backend handshake */
-    uint8_t     m_scramble[MYSQL_SCRAMBLE_LEN]; /**< Server scramble, received in backend handshake */
-    int         m_ignore_replies {0};           /**< How many replies should be discarded */
-    bool        m_collect_result {false};       /**< Collect the next result set as one buffer */
-    bool        m_track_state {false};          /**< Track session state */
+    AuthState   m_auth_state {AuthState::CONNECTED};/**< Backend authentication state */
+    uint64_t    m_thread_id {0};                    /**< Backend thread id, received in backend handshake */
+    uint8_t     m_scramble[MYSQL_SCRAMBLE_LEN];     /**< Server scramble, received in backend handshake */
+    int         m_ignore_replies {0};               /**< How many replies should be discarded */
+    bool        m_collect_result {false};           /**< Collect the next result set as one buffer */
+    bool        m_track_state {false};              /**< Track session state */
     bool        m_skip_next {false};
     uint64_t    m_num_coldefs {0};
     uint32_t    m_num_eof_packets {0};  /**< Encountered eof packet number, used for check packet type */

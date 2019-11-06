@@ -18,7 +18,6 @@
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include <maxscale/protocol/mariadb/authenticator.hh>
 
-#include <set>
 #include <mysql.h>
 #include <maxsql/mariadb.hh>
 #include <maxbase/alloc.h>
@@ -29,41 +28,10 @@
 #include <maxscale/routing.hh>
 #include <maxscale/service.hh>
 #include <maxscale/target.hh>
-#include <maxscale/protocol/mariadb/backend_connection.hh>
 
 using mxs::ReplyState;
 
 uint8_t null_client_sha1[MYSQL_SCRAMBLE_LEN] = "";
-
-const char* gw_mysql_protocol_state2string(int state)
-{
-    switch (state)
-    {
-    case MXS_AUTH_STATE_INIT:
-        return "Authentication initialized";
-
-    case MXS_AUTH_STATE_PENDING_CONNECT:
-        return "Network connection pending";
-
-    case MXS_AUTH_STATE_CONNECTED:
-        return "Network connection created";
-
-    case MXS_AUTH_STATE_MESSAGE_READ:
-        return "Read server handshake";
-
-    case MXS_AUTH_STATE_RESPONSE_SENT:
-        return "Response to handshake sent";
-
-    case MXS_AUTH_STATE_FAILED:
-        return "Authentication failed";
-
-    case MXS_AUTH_STATE_COMPLETE:
-        return "Authentication is complete.";
-
-    default:
-        return "MySQL (unknown protocol state)";
-    }
-}
 
 GWBUF* mysql_create_com_quit(GWBUF* bufparam,
                              int packet_number)
@@ -491,51 +459,6 @@ uint32_t MYSQL_session::client_capabilities() const
 uint32_t MYSQL_session::extra_capabilitites() const
 {
     return client_info.m_extra_capabilities;
-}
-
-const char* mariadb::to_string(mxs_auth_state_t state)
-{
-    const char* rval = "UNKNOWN AUTH STATE";
-    switch (state)
-    {
-        case MXS_AUTH_STATE_INIT:
-            rval = "MXS_AUTH_STATE_INIT";
-            break;
-
-        case MXS_AUTH_STATE_PENDING_CONNECT:
-            rval = "MXS_AUTH_STATE_PENDING_CONNECT";
-            break;
-
-        case MXS_AUTH_STATE_CONNECTED:
-            rval = "MXS_AUTH_STATE_CONNECTED";
-            break;
-
-        case MXS_AUTH_STATE_MESSAGE_READ:
-            rval = "MXS_AUTH_STATE_MESSAGE_READ";
-            break;
-
-        case MXS_AUTH_STATE_RESPONSE_SENT:
-            rval = "MXS_AUTH_STATE_RESPONSE_SENT";
-            break;
-
-        case MXS_AUTH_STATE_FAILED:
-            rval = "MXS_AUTH_STATE_FAILED";
-            break;
-
-        case MXS_AUTH_STATE_HANDSHAKE_FAILED:
-            rval = "MXS_AUTH_STATE_HANDSHAKE_FAILED";
-            break;
-
-        case MXS_AUTH_STATE_COMPLETE:
-            rval = "MXS_AUTH_STATE_COMPLETE";
-            break;
-
-        default:
-            mxb_assert(!true);
-            break;
-    }
-
-    return rval;
 }
 
 uint64_t mariadb::AuthenticatorModule::capabilities() const

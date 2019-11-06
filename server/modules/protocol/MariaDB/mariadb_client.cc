@@ -692,7 +692,7 @@ int MariaDBClientConnection::send_mysql_client_handshake(DCB* dcb)
 
     // writing data in the Client buffer queue
     dcb->protocol_write(buf);
-    protocol->protocol_auth_state = MXS_AUTH_STATE_MESSAGE_READ;
+    m_auth_state = AuthState::MSG_READ;
 
     return sizeof(mysql_packet_header) + mysql_payload_size;
 }
@@ -925,7 +925,7 @@ int MariaDBClientConnection::perform_authentication(DCB* generic_dcb, GWBUF* rea
         /** User authentication complete, copy the username to the DCB */
         dcb->session()->set_user(m_session_data->user);
 
-        protocol->protocol_auth_state = MXS_AUTH_STATE_RESPONSE_SENT;
+        m_auth_state = AuthState::RESPONSE_SENT;
         /**
          * Start session, and a router session for it.
          * If successful, there will be backend connection(s)
@@ -936,9 +936,8 @@ int MariaDBClientConnection::perform_authentication(DCB* generic_dcb, GWBUF* rea
         if (session_start(dcb->session()))
         {
             mxb_assert(dcb->session()->state() != MXS_SESSION::State::CREATED);
-            // For the time being only the sql_mode is stored in MXS_SESSION::client_protocol_data.
             m_sql_mode = m_session->listener->sql_mode();
-            protocol->protocol_auth_state = MXS_AUTH_STATE_COMPLETE;
+            m_auth_state = AuthState::COMPLETE;
             mxs_mysql_send_ok(dcb, next_sequence, 0, NULL);
 
             if (dcb->readq())
@@ -960,7 +959,7 @@ int MariaDBClientConnection::perform_authentication(DCB* generic_dcb, GWBUF* rea
     if (auth_val != AuthRes::SUCCESS && auth_val != AuthRes::INCOMPLETE
         && auth_val != AuthRes::INCOMPLETE_SSL)
     {
-        protocol->protocol_auth_state = MXS_AUTH_STATE_FAILED;
+        m_auth_state = AuthState::FAIL;
         handle_authentication_errors(dcb, auth_val, next_sequence);
         mxb_assert(dcb->session()->listener);
 
@@ -1725,7 +1724,7 @@ void MariaDBClientConnection::ready_for_reading(DCB* event_dcb)
 
     auto dcb = m_dcb;
     auto protocol = this;
-    MXS_DEBUG("Protocol state: %s", gw_mysql_protocol_state2string(protocol->protocol_auth_state));
+    MXS_DEBUG("Protocol state: %s", to_string(protocol->m_auth_state).c_str());
 
     /**
      * The use of max_bytes seems like a hack, but no better option is available
@@ -1777,7 +1776,7 @@ void MariaDBClientConnection::ready_for_reading(DCB* event_dcb)
 
     return_code = 0;
 
-    switch (protocol->protocol_auth_state)
+    switch (protocol->m_auth_state)
     {
     /**
      *
@@ -1791,7 +1790,7 @@ void MariaDBClientConnection::ready_for_reading(DCB* event_dcb)
      * will be changed to MYSQL_IDLE (see below).
      *
      */
-    case MXS_AUTH_STATE_MESSAGE_READ:
+    case AuthState::MSG_READ:
         if (nbytes_read < 3
             || (0 == max_bytes && nbytes_read < MYSQL_GET_PACKET_LEN(read_buffer))
             || (0 != max_bytes && nbytes_read < max_bytes))
@@ -1820,12 +1819,12 @@ void MariaDBClientConnection::ready_for_reading(DCB* event_dcb)
      * result in a call that comes to this section of code.
      *
      */
-    case MXS_AUTH_STATE_COMPLETE:
+    case AuthState::COMPLETE:
         /* After this call read_buffer will point to freed data */
         return_code = perform_normal_read(dcb, read_buffer, nbytes_read);
         break;
 
-    case MXS_AUTH_STATE_FAILED:
+    case AuthState::FAIL:
         gwbuf_free(read_buffer);
         return_code = 1;
         break;
@@ -1847,7 +1846,7 @@ void MariaDBClientConnection::write_ready(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);
     mxb_assert(m_dcb->state() != DCB::State::DISCONNECTED);
-    if ((m_dcb->state() != DCB::State::DISCONNECTED) && (protocol_auth_state == MXS_AUTH_STATE_COMPLETE))
+    if ((m_dcb->state() != DCB::State::DISCONNECTED) && (m_auth_state == AuthState::COMPLETE))
     {
         m_dcb->writeq_drain();
     }
@@ -2287,4 +2286,28 @@ void MariaDBClientConnection::track_current_command(GWBUF* buffer)
 const uint8_t* MariaDBClientConnection::scramble() const
 {
     return m_scramble;
+}
+
+std::string MariaDBClientConnection::to_string(AuthState state)
+{
+    switch (state)
+    {
+        case AuthState::INIT:
+            return "Authentication initialized";
+
+        case AuthState::MSG_READ:
+            return "Read server handshake";
+
+        case AuthState::RESPONSE_SENT:
+            return "Response to handshake sent";
+
+        case AuthState::FAIL:
+            return "Authentication failed";
+
+        case AuthState::COMPLETE:
+            return "Authentication is complete.";
+
+        default:
+            return "MySQL (unknown protocol state)";
+    }
 }
