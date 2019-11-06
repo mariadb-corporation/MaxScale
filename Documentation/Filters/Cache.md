@@ -64,9 +64,8 @@ Please read the section [Security](#security-1) for more detailed information.
 
 However, from 2.5 onwards it is possible to configure the cache to cache
 the data of each user separately, which effectively means that there can
-be no unintended sharing. Please see
-[user_data](#user_data)
-for how to change the default behaviour.
+be no unintended sharing. Please see [users](#users) for how to change
+the default behaviour.
 
 ## Invalidation
 
@@ -106,6 +105,16 @@ cache entries should be invalidated. Consequently, to prevent stale data
 from being returned, the entire cache is cleared. The default behaviour
 can be changed using the configuration parameter
 [clear_cache_on_parse_errors](#clear_cache_on_parse_errors).
+
+Note that what threading approach is used has a big impact on the
+invalidation. Please see
+[Threads, Users and Invalidation](#threads-users-and-invalidation)
+for how the threading approach affects the invalidation.
+
+Note also that since the invalidation may not, depending on how the
+cache has been configured, be visible to all sessions of all users, it
+is still important to configure a reasonable [soft](#soft_ttl) and
+[hard](#hard_ttl) TTL.
 
 ## Configuration
 
@@ -609,6 +618,31 @@ SELECT a, b FROM tbl1;
 SET @maxscale.cache.populate=false;
 ```
 
+## Threads, Users and Invalidation
+
+What caching approach is used and how different users are treated
+has a significant impact on the behaviour of the cache. In the
+following the implication of different combinations is explained.
+
+`cached_data/users`|`mixed`|`isolated`
+-|-------------|----------------------
+`thread_specific`|No thread contention. Data/work duplicated across threads. May cause unintended sharing.|No thread contention. Data/work duplicated across threads _and_ users. No unintended sharing. Requires the most amount of memory.
+`shared`|Thread contention under high load. No duplicated data/work. May cause unintended sharing. Requires the least amount of memory.|Thread contention under high load. Data/work duplicated across users. No unintended sharing.
+
+### Invalidation
+Invalidation takes place only in the current cache, so how _visible_
+the invalidation is, depends upon the configuration value of
+`cached_data`.
+
+#### `cached_data=thread_specific`
+The invalidation is visible only to the sessions that are handled by
+the same worker thread where the invalidation occurred. Sessions of the
+same or other users that are handled by different worker threads will
+not see the new value before the TTL causes the value to be refreshed.
+
+#### `cache_data=shared`
+The invalidation is immediately visible to all sessions of all users.
+
 ## Rules
 
 The caching rules are expressed as a JSON object or as an array of JSON objects.
@@ -904,6 +938,9 @@ regardless of what host the `admin` user comes from.
 As the cache is not aware of grants, unless the cache has been explicitly
 configured who the caching should apply to, the presence of the cache
 may provide a user with access to data he should not have access to.
+Note that the following applies _only_ if `users=mixed` has been configured.
+If `users=isolated` has been configured, then there can never be any
+unintended sharing between users.
 
 Suppose there is a table ``access`` that the user _alice_ has access to,
 but the user _bob_ does not. If _bob_ tries to access the table, he will
