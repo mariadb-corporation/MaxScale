@@ -589,6 +589,9 @@ add_test_executable(cache_runtime_ttl.cpp cache_runtime_ttl cache_runtime_ttl LA
 # Test of Cache filter - invalidate
 add_test_executable(cache_invalidate.cpp cache_invalidate cache_invalidate LABELS cachefilter REPL_BACKEND)
 
+# Test of Cache filter - users
+add_test_executable(cache_users.cpp cache_users cache_users LABELS cachefilter REPL_BACKEND)
+
 # Set utf8mb4 in the backend and restart Maxscale
 add_test_executable(mxs951_utfmb4.cpp mxs951_utfmb4 replication LABELS REPL_BACKEND)
 
