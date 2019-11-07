@@ -24,21 +24,21 @@ namespace maxbase
  *  The MaxScale "standard" clock. Do not use this directly,
  *  use Clock declared further down (specifically, use Clock::now()).
  */
-using StableClock = std::chrono::steady_clock;
+using SteadyClock = std::chrono::steady_clock;
 
 /**
  *  @class Duration
  *
- *  Duration behaves exactly like StableClock::duration, but enables ADL for
+ *  Duration behaves exactly like SteadyClock::duration, but enables ADL for
  *  streaming, and adds a conveniece constructor and function secs() for
  *  seconds as a double.
  */
-struct Duration : public StableClock::duration
+struct Duration : public SteadyClock::duration
 {
-    using StableClock::duration::duration;
+    using SteadyClock::duration::duration;
     Duration() = default;
-    Duration(StableClock::duration d)
-        : StableClock::duration(d)
+    Duration(SteadyClock::duration d)
+        : SteadyClock::duration(d)
     {
     }
 
@@ -58,9 +58,9 @@ struct Duration : public StableClock::duration
 /**
  *   @class TimePoint
  *
- *   A std::chrono::time_point to go with StableClock and Duration.
+ *   A std::chrono::time_point to go with SteadyClock and Duration.
  */
-using TimePoint = std::chrono::time_point<StableClock, Duration>;
+using TimePoint = std::chrono::time_point<SteadyClock, Duration>;
 
 /**
  *  @brief NowType enum
@@ -78,7 +78,7 @@ enum class NowType {EPollTick, RealTime};
  *   MaxScale "standard" clock. It is exactly the same as std::chrono::steady_clock
  *   except it redefines the static member function now().
  */
-struct Clock : public StableClock
+struct Clock : public SteadyClock
 {
     static TimePoint now(NowType type = NowType::RealTime) noexcept;
 };

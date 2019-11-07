@@ -835,7 +835,7 @@ void Worker::poll_waitevents()
             m_statistics.n_fds[(nfds < STATISTICS::MAXNFDS ? (nfds - 1) : STATISTICS::MAXNFDS - 1)]++;
         }
 
-        m_epoll_tick_now = maxbase::Clock::now();
+        m_epoll_tick_now = maxbase::Clock::now(mxb::NowType::RealTime);
         uint64_t cycle_start = time_in_100ms_ticks();
 
         for (int i = 0; i < nfds; i++)

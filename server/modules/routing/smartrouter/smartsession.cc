@@ -109,7 +109,7 @@ int SmartRouterSession::routeQuery(GWBUF* pBuf)
         auto route_info = m_qc.update_route_info(mxs::QueryClassifier::CURRENT_TARGET_UNDEFINED, pBuf);
         std::string canonical = maxscale::get_canonical(pBuf);
 
-        m_measurement = {maxbase::Clock::now(), canonical};
+        m_measurement = {maxbase::Clock::now(maxbase::NowType::EPollTick), canonical};
 
         if (m_qc.target_is_all(route_info.target()))
         {
@@ -203,7 +203,7 @@ void SmartRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down
 
     if (first_response_packet)
     {
-        maxbase::Duration query_dur = maxbase::Clock::now() - m_measurement.start;
+        maxbase::Duration query_dur = maxbase::Clock::now(maxbase::NowType::EPollTick) - m_measurement.start;
         MXS_SDEBUG("Target " << cluster.pBackend->target()->name()
                              << " will be responding to the client."
                              << " First packet received in time " << query_dur);

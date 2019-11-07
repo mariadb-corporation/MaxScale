@@ -393,7 +393,7 @@ public:
     /**
      * Returns the TimePoint when epoll_tick() was called. Use this in worker threads
      * instead of maxbase::Clock::now() for timeouts, time tracking etc. where absolute
-     * precisin is not needed (i.e. almost always).
+     * precision is not needed (i.e. almost always).
      */
     TimePoint epoll_tick_now()
     {

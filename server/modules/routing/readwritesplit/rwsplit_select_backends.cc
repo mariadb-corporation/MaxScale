@@ -77,7 +77,7 @@ RWBackend* best_score(PRWBackends& sBackends, std::function<double(mxs::Endpoint
         else if (min == score && best)
         {
             // In the case of a tie, use the least recently used backend
-            auto now = maxbase::Clock::now();
+            auto now = maxbase::Clock::now(maxbase::NowType::EPollTick);
             auto left = duration_cast<microseconds>(now - best->last_write()).count();
             auto right = duration_cast<microseconds>(now - b->last_write()).count();
 

@@ -66,7 +66,7 @@ public:
     bool mark_auth_as_failed(const std::string& remote)
     {
         auto& u = m_failures[remote];
-        u.last_failure = maxbase::Clock::now();
+        u.last_failure = maxbase::Clock::now(maxbase::NowType::EPollTick);
         return ++u.failures == config_get_global_options()->max_auth_errors_until_block;
     }
 
@@ -81,7 +81,7 @@ public:
 
             if (maxbase::Clock::now() - u.last_failure > seconds(BLOCK_TIME))
             {
-                u.last_failure = maxbase::Clock::now();
+                u.last_failure = maxbase::Clock::now(maxbase::NowType::EPollTick);
                 u.failures = 0;
             }
 
@@ -94,7 +94,7 @@ public:
 private:
     struct Failure
     {
-        maxbase::TimePoint last_failure = maxbase::Clock::now();
+        maxbase::TimePoint last_failure = maxbase::Clock::now(maxbase::NowType::EPollTick);
         int                failures = 0;
     };
 

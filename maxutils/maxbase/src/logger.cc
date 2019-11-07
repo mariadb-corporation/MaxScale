@@ -60,7 +60,7 @@ bool should_log_error()
     auto now = maxbase::Clock::now();
     bool rval = false;
 
-    if ((now - last_write).count() >= 60)
+    if (now - last_write >= seconds(60))
     {
         last_write = now;
         rval = true;

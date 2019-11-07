@@ -55,7 +55,7 @@ private:
     int  m_eviction_schedule = 0;
     bool m_updating = false;
 
-    maxbase::TimePoint m_creation_time = maxbase::Clock::now();
+    maxbase::TimePoint m_creation_time = maxbase::Clock::now(maxbase::NowType::EPollTick);
 };
 
 // Update to the SharedData. Container updates are currently always InsertUpdate.
@@ -101,7 +101,7 @@ inline maxbase::TimePoint PerformanceInfo::creation_time() const
 
 inline maxbase::Duration PerformanceInfo::age() const
 {
-    return maxbase::Clock::now() - m_creation_time;
+    return maxbase::Clock::now(maxbase::NowType::EPollTick) - m_creation_time;
 }
 
 inline void PerformanceInfo::set_eviction_schedule(size_t es)

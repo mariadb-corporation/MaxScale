@@ -43,7 +43,7 @@ void RWSplitSession::handle_connection_keepalive(RWBackend* target)
     mxb_assert(target);
     MXB_AT_DEBUG(size_t nserv = 0);
 
-    auto now = maxbase::Clock::now();
+    auto now = maxbase::Clock::now(maxbase::NowType::EPollTick);
     seconds limit {m_config.connection_keepalive};
 
     if (now - m_last_keepalive_check > limit)
