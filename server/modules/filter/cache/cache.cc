@@ -139,10 +139,14 @@ cache_result_t Cache::get_default_key(const std::string& user,
         crc = lzma_crc64(reinterpret_cast<const uint8_t*>(user.data()), user.length(), crc);
     }
 
+    pKey->user = user;
+
     if (!host.empty())
     {
         crc = lzma_crc64(reinterpret_cast<const uint8_t*>(host.data()), host.length(), crc);
     }
+
+    pKey->host = host;
 
     pKey->full_hash = crc;
 

@@ -427,6 +427,8 @@ int CacheFilterSession::clientReply(GWBUF* pData, const mxs::ReplyRoute& down, c
         }
         else
         {
+            // A failed SELECT
+            m_tables.clear();
             m_state = CACHE_IGNORING_RESPONSE;
         }
     }
