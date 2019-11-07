@@ -214,9 +214,9 @@ bool SQLiteStmt::bind_bool(int ind, bool value)
     return ret == SQLITE_OK;
 }
 
-const char* SQLiteStmt::error() const
+int SQLiteStmt::error() const
 {
-    return sqlite3_errstr(m_errornum);
+    return m_errornum;
 }
 
 std::unique_ptr<mxq::QueryResult> SQLite::query(const std::string& query)
@@ -276,7 +276,8 @@ std::unique_ptr<SQLiteStmt> SQLite::prepare(const std::string& query)
     }
     else
     {
-        m_errormsg = mxb::string_printf("Could not prepare query '%s': %s", queryz, sqlite3_errstr(ret));
+        m_errormsg = mxb::string_printf("Could not prepare query '%s': %s",
+                                        queryz, sqlite3_errmsg(m_dbhandle));
         m_errornum = ret;
     }
 

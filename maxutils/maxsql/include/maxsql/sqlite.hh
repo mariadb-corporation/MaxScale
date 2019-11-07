@@ -187,11 +187,11 @@ public:
     void row_cstr(const unsigned char* output[]);
 
     /**
-     * Get latest error.
+     * Get latest error number.
      *
-     * @return Error string
+     * @return Error number
      */
-    const char* error() const;
+    int error() const;
 
 private:
     sqlite3_stmt* m_stmt {nullptr};
