@@ -6,6 +6,8 @@
 # Build in a temp directory so we don't pollute cwd
 tmpdir=$(mktemp -d)
 
+cpus=$(grep -c processor /proc/cpuinfo)
+
 cd $tmpdir
 
 command -v apt-get
@@ -102,14 +104,6 @@ else
 
         # Enable it by default
         echo "source /opt/rh/devtoolset-7/enable" >> ~/.bashrc
-    else
-        # Installed for REST API and MaxCtrl unit tests
-        sudo yum -y install docker epel-release
-        sudo yum -y install docker-compose
-        sudo groupadd docker
-        sudo usermod -a -G docker `whoami`
-        sudo sed -i 's/--selinux-enabled/--selinux-enabled=false/' /etc/sysconfig/docker
-        sudo systemctl start docker
     fi
   fi
 
@@ -131,7 +125,7 @@ if [ "`echo -e "3.7.1\n$cmake_version"|sort -V|head -n 1`" != "3.7.1" ] ; then
     cd cmake-3.7.1
 
     ./bootstrap
-    gmake
+    make -j $cpus
     sudo make install
     cd ..
 fi
@@ -151,7 +145,7 @@ fi
 cd rabbitmq-c
 git checkout v0.7.1
 cmake .  -DCMAKE_C_FLAGS=-fPIC -DBUILD_SHARED_LIBS=N  -DCMAKE_INSTALL_PREFIX=/usr
-sudo make install
+sudo make install -j $cpus
 cd ../../
 
 # TCL
@@ -180,7 +174,7 @@ then
    tar xzf tcl8.6.5-src.tar.gz
    cd tcl8.6.5/unix
    ./configure
-   sudo make install
+   sudo make install -j $cpus
    cd ../../..
 fi
 
@@ -198,7 +192,7 @@ git checkout v2.9
 mkdir build
 cd build
 cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_C_FLAGS=-fPIC -DJANSSON_INSTALL_LIB_DIR=$install_libdir
-make
+make -j $cpus
 sudo make install
 cd ../../
 
@@ -218,7 +212,7 @@ pushd $avro_dir/build
 # Make sure the library isn't linked against snappy
 sed -i 's/find_package(Snappy)//' ../lang/c/CMakeLists.txt
 cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_C_FLAGS=-fPIC -DCMAKE_CXX_FLAGS=-fPIC
-make
+make -j $cpus
 sudo make install
 popd
 
