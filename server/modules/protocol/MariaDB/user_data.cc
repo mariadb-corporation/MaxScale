@@ -19,6 +19,8 @@
 #include <maxscale/server.hh>
 #include <maxscale/paths.h>
 #include <maxscale/protocol/mariadb/module_names.hh>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #include "sqlite_strlike.hh"
 
 using std::string;
@@ -599,7 +601,38 @@ UserDatabase::address_matches_host_pattern(const std::string& addr, const std::s
     }
     else if (patterntype == PatternType::MASK)
     {
-        // Requires special handling, add later.
+        string effective_addr;
+        if (addrtype == AddrType::IPV4)
+        {
+            effective_addr = addr;
+        }
+        else if (addrtype == AddrType::MAPPED)
+        {
+            effective_addr = addr.substr(addr.find_last_of(':') + 1);
+        }
+
+        if (!effective_addr.empty())
+        {
+            // The pattern is of type "base_ip/mask". The client ip should be accepted if
+            // client_ip & mask == base_ip. To test this, all three parts need to be converted
+            // to numbers.
+            auto ip_to_integer = [](const string& ip) {
+                sockaddr_in sa;
+                inet_pton(AF_INET, ip.c_str(), &(sa.sin_addr));
+                return (uint32_t)sa.sin_addr.s_addr;
+            };
+
+            auto div_loc = host_pattern.find('/');
+            string base_ip_str = host_pattern.substr(0, div_loc);
+            string netmask_str = host_pattern.substr(div_loc + 1);
+            auto address = ip_to_integer(effective_addr);
+            auto base_ip = ip_to_integer(base_ip_str);
+            auto mask = ip_to_integer(netmask_str);
+            if ((address & mask) == base_ip)
+            {
+                matched = true;
+            }
+        }
     }
     else if (patterntype == PatternType::HOSTNAME)
     {
