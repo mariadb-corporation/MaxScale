@@ -278,17 +278,13 @@ static const MXS_ENUM_VALUE ssl_values[] =
 
 static const MXS_ENUM_VALUE ssl_version_values[] =
 {
-    {"MAX",
-     1},
+    {"MAX",    SERVICE_SSL_TLS_MAX},
 #ifndef OPENSSL_1_1
-    {"TLSv10",
-     1},
+    {"TLSv10", SERVICE_TLS10      },
 #endif
 #ifdef OPENSSL_1_0
-    {"TLSv11",
-     1},
-    {"TLSv12",
-     1},
+    {"TLSv11", SERVICE_TLS11      },
+    {"TLSv12", SERVICE_TLS12      },
 #endif
     {NULL}
 };
