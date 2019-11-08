@@ -1,0 +1,186 @@
+/*
+ * Copyright (c) 2016 MariaDB Corporation Ab
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2023-11-05
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
+#include "mirror.hh"
+#include "mirrorsession.hh"
+
+#include <maxscale/protocol/mariadb/mysql.hh>
+#include <maxscale/modutil.hh>
+
+using namespace maxscale;
+
+MirrorSession::MirrorSession(MXS_SESSION* session, Mirror* router, SMyBackends backends)
+    : RouterSession(session)
+    , m_backends(std::move(backends))
+    , m_router(router)
+{
+    for (const auto& a : m_backends)
+    {
+        if (a->target() == m_router->get_main())
+        {
+            m_main = a.get();
+        }
+    }
+}
+
+MirrorSession::~MirrorSession()
+{
+}
+
+void MirrorSession::close()
+{
+    for (auto& a : m_backends)
+    {
+        if (a->in_use())
+        {
+            a->close();
+        }
+    }
+}
+
+int32_t MirrorSession::routeQuery(GWBUF* pPacket)
+{
+    int rc = 0;
+
+    if (m_responses)
+    {
+        m_queue.push_back(pPacket);
+        rc = 1;
+    }
+    else
+    {
+        m_query = mxs::extract_sql(pPacket);
+
+        for (const auto& a : m_backends)
+        {
+            if (a->in_use() && a->write(gwbuf_clone(pPacket)))
+            {
+                if (a.get() == m_main)
+                {
+                    // Routing is successful as long as we can write to the main connection
+                    rc = 1;
+                }
+
+                if (mxs_mysql_command_will_respond(GWBUF_DATA(pPacket)[4]))
+                {
+                    ++m_responses;
+                }
+            }
+        }
+
+        gwbuf_free(pPacket);
+    }
+
+    return rc;
+}
+
+void MirrorSession::route_queued_queries()
+{
+    while (!m_queue.empty() && m_responses == 0)
+    {
+        MXS_INFO(">>> Routing queued queries");
+        auto query = m_queue.front().release();
+        m_queue.pop_front();
+
+        if (!routeQuery(query))
+        {
+            break;
+        }
+
+        MXS_INFO("<<< Queued queries routed");
+
+        // Routing of queued queries should never cause the same query to be put back into the queue. The
+        // check for m_responses should prevent it.
+        mxb_assert(m_queue.empty() || m_queue.back().get() != query);
+    }
+}
+
+void MirrorSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+{
+    auto backend = static_cast<MyBackend*>(down.back()->get_userdata());
+    backend->process_result(pPacket, reply);
+
+    if (reply.is_complete())
+    {
+        backend->ack_write();
+        --m_responses;
+
+        MXS_INFO("Reply from '%s' complete", backend->name());
+
+        if (m_responses == 0)
+        {
+            generate_report();
+            route_queued_queries();
+        }
+    }
+
+    if (backend == m_main)
+    {
+        RouterSession::clientReply(pPacket, down, reply);
+    }
+    else
+    {
+        gwbuf_free(pPacket);
+    }
+}
+
+bool MirrorSession::handleError(mxs::ErrorType type,
+                                GWBUF* pMessage,
+                                mxs::Endpoint* pProblem,
+                                const mxs::Reply& pReply)
+{
+    Backend* backend = static_cast<Backend*>(pProblem->get_userdata());
+
+    if (backend->is_waiting_result())
+    {
+        --m_responses;
+
+        if (m_responses == 0 && backend != m_main)
+        {
+            route_queued_queries();
+        }
+    }
+
+    backend->close();
+
+    // We can continue as long as the main connection isn't dead
+    return backend != m_main;
+}
+
+void MirrorSession::generate_report()
+{
+    json_t* obj = json_object();
+    json_object_set_new(obj, "query", json_string(m_query.c_str()));
+    json_object_set_new(obj, "session", json_integer(m_pSession->id()));
+    json_object_set_new(obj, "query_id", json_integer(++m_num_queries));
+
+    json_t* arr = json_array();
+
+    for (const auto& a : m_backends)
+    {
+        const char* type = a->reply().error() ? "error" : (a->reply().is_resultset() ? "resultset" : "ok");
+
+        json_t* o = json_object();
+        json_object_set_new(o, "target", json_string(a->name()));
+        json_object_set_new(o, "checksum", json_string(a->checksum().hex().c_str()));
+        json_object_set_new(o, "rows", json_integer(a->reply().rows_read()));
+        json_object_set_new(o, "warnings", json_integer(a->reply().num_warnings()));
+        json_object_set_new(o, "duration", json_integer(a->duration()));
+        json_object_set_new(o, "type", json_string(type));
+
+        json_array_append_new(arr, o);
+    }
+
+    json_object_set_new(obj, "results", arr);
+
+    m_router->ship(obj);
+}
