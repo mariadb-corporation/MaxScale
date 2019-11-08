@@ -71,9 +71,9 @@ public:
     AuthState m_auth_state {AuthState::INIT};       /*< Client authentication state */
 
 private:
-    int            perform_authentication(DCB* generic_dcb, GWBUF* read_buffer, int nbytes_read);
-    int            perform_normal_read(DCB* dcb, GWBUF* read_buffer, uint32_t nbytes_read);
-    void           store_client_information(DCB* dcb, GWBUF* buffer);
+    int            perform_authentication(GWBUF* read_buffer, int nbytes_read);
+    int            perform_normal_read(GWBUF* read_buffer, uint32_t nbytes_read);
+    void           store_client_information(GWBUF* buffer);
     int            route_by_statement(uint64_t capabilities, GWBUF** p_readbuf);
     spec_com_res_t process_special_commands(DCB* dcb, GWBUF* read_buffer, uint8_t cmd);
     bool           handle_change_user(bool* changed_user, GWBUF** packetbuf);
@@ -89,16 +89,16 @@ private:
     int    mysql_send_standard_error(DCB* dcb, int sequence, int errnum, const char* msg);
     GWBUF* mysql_create_standard_error(int sequence, int error_number, const char* msg);
     bool   send_auth_switch_request_packet();
-    int    send_mysql_client_handshake(DCB* dcb);
+    int    send_mysql_client_handshake();
     char*  handle_variables(MXS_SESSION* session, GWBUF** read_buffer);
     void   track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf);
     void   mxs_mysql_execute_kill_all_others(MXS_SESSION* issuer, uint64_t target_id,
                                              uint64_t keep_protocol_thread_id, kill_type_t type);
-    void mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_type_t type);
-    void execute_kill(MXS_SESSION* issuer, std::shared_ptr<KillInfo> info);
-    void track_current_command(GWBUF* buf);
-    const MariaDBUserManager* user_account_manager();
+    void  mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_type_t type);
+    void  execute_kill(MXS_SESSION* issuer, std::shared_ptr<KillInfo> info);
+    void  track_current_command(GWBUF* buf);
 
+    const MariaDBUserManager*             user_account_manager();
     mariadb::ClientAuthenticator::AuthRes ssl_authenticate_check_status(DCB* generic_dcb);
     static std::string                    to_string(AuthState state);
 

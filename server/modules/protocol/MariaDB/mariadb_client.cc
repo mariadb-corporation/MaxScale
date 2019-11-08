@@ -516,17 +516,14 @@ static bool kill_user_func(DCB* dcb, void* data)
 }
 
 /**
- * send_mysql_client_handshake
+ * Send the server handshake packet to the client.
  *
- * @param dcb The descriptor control block to use for sending the handshake request
- * @return      The packet length sent
+ * @return The packet length sent
  */
-int MariaDBClientConnection::send_mysql_client_handshake(DCB* dcb)
+int MariaDBClientConnection::send_mysql_client_handshake()
 {
-    auto protocol = this;
+    auto service = m_session->service;
 
-    uint8_t* outbuf = NULL;
-    uint32_t mysql_payload_size = 0;
     uint8_t mysql_packet_header[4];
     uint8_t mysql_packet_id = 0;
     /* uint8_t mysql_filler = GW_MYSQL_HANDSHAKE_FILLER; not needed*/
@@ -537,16 +534,15 @@ int MariaDBClientConnection::send_mysql_client_handshake(DCB* dcb)
     uint8_t mysql_plugin_data[13] = "";
     uint8_t mysql_server_capabilities_one[2];
     uint8_t mysql_server_capabilities_two[2];
-    uint8_t mysql_server_language = get_charset(dcb->service());
+    uint8_t mysql_server_language = get_charset(service);
     uint8_t mysql_server_status[2];
     uint8_t mysql_scramble_len = 21;
     uint8_t mysql_filler_ten[10] = {};
     /* uint8_t mysql_last_byte = 0x00; not needed */
     char server_scramble[GW_MYSQL_SCRAMBLE_SIZE + 1] = "";
-    bool is_maria = supports_extended_caps(dcb->service());
+    bool is_maria = supports_extended_caps(service);
 
-    GWBUF* buf;
-    std::string version = get_version_string(dcb->service());
+    std::string version = get_version_string(service);
 
     gw_generate_random_str(server_scramble, GW_MYSQL_SCRAMBLE_SIZE);
 
@@ -564,7 +560,7 @@ int MariaDBClientConnection::send_mysql_client_handshake(DCB* dcb)
     }
 
     // Send the session id as the server thread id. Only the low 32bits are sent in the handshake.
-    auto thread_id = dcb->session()->id();
+    auto thread_id = m_session->id();
     gw_mysql_set_byte4(mysql_thread_id_num, (uint32_t)(thread_id));
     memcpy(mysql_scramble_buf, server_scramble, 8);
 
@@ -578,7 +574,7 @@ int MariaDBClientConnection::send_mysql_client_handshake(DCB* dcb)
     const char* plugin_name = DEFAULT_MYSQL_AUTH_PLUGIN;
     int plugin_name_len = strlen(plugin_name);
 
-    mysql_payload_size =
+    uint32_t mysql_payload_size =
         sizeof(mysql_protocol_version) + (version.length() + 1) + sizeof(mysql_thread_id_num) + 8
         + sizeof(    /* mysql_filler */ uint8_t) + sizeof(mysql_server_capabilities_one)
         + sizeof(mysql_server_language)
@@ -587,12 +583,13 @@ int MariaDBClientConnection::send_mysql_client_handshake(DCB* dcb)
         + sizeof(    /* mysql_last_byte */ uint8_t);
 
     // allocate memory for packet header + payload
-    if ((buf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size)) == NULL)
+    GWBUF* buf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size);
+    if (!buf)
     {
-        mxb_assert(buf != NULL);
+        mxb_assert(buf);
         return 0;
     }
-    outbuf = GWBUF_DATA(buf);
+    uint8_t* outbuf = GWBUF_DATA(buf);
 
     // write packet header with mysql_payload_size
     gw_mysql_set_byte3(mysql_packet_header, mysql_payload_size);
@@ -637,7 +634,7 @@ int MariaDBClientConnection::send_mysql_client_handshake(DCB* dcb)
         mysql_server_capabilities_one[0] &= ~(uint8_t)GW_MYSQL_CAPABILITIES_CLIENT_MYSQL;
     }
 
-    if (ssl_required_by_dcb(dcb))
+    if (ssl_required_by_dcb(m_dcb))
     {
         mysql_server_capabilities_one[1] |= (int)GW_MYSQL_CAPABILITIES_SSL >> 8;
     }
@@ -691,21 +688,19 @@ int MariaDBClientConnection::send_mysql_client_handshake(DCB* dcb)
     *mysql_handshake_payload = 0x00;
 
     // writing data in the Client buffer queue
-    dcb->protocol_write(buf);
+    m_dcb->protocol_write(buf);
     m_auth_state = AuthState::MSG_READ;
 
     return sizeof(mysql_packet_header) + mysql_payload_size;
 }
 
 /**
- * @brief Store client connection information into the DCB
- * @param dcb Client DCB
+ * @brief Store client connection information into the session
+ *
  * @param buffer Buffer containing the handshake response packet
  */
-void MariaDBClientConnection::store_client_information(DCB* generic_dcb, GWBUF* buffer)
+void MariaDBClientConnection::store_client_information(GWBUF* buffer)
 {
-    mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
-
     size_t len = gwbuf_length(buffer);
     uint8_t data[len];
     MYSQL_session* ses = m_session_data;
@@ -845,21 +840,19 @@ void MariaDBClientConnection::handle_authentication_errors(DCB* generic_dcb, Aut
 /**
  * @brief Client read event, process when client not yet authenticated
  *
- * @param generic_dcb   Descriptor control block
  * @param read_buffer   A buffer containing the data read from client
  * @param nbytes_read   The number of bytes of data read
  * @return 0 if succeed, 1 otherwise
  */
-int MariaDBClientConnection::perform_authentication(DCB* generic_dcb, GWBUF* read_buffer, int nbytes_read)
+int MariaDBClientConnection::perform_authentication(GWBUF* read_buffer, int nbytes_read)
 {
-    auto dcb = static_cast<ClientDCB*>(generic_dcb);
-    MXB_AT_DEBUG(check_packet(dcb, read_buffer, nbytes_read));
+    MXB_AT_DEBUG(check_packet(m_dcb, read_buffer, nbytes_read));
 
     /** Read the client's packet sequence and increment that by one */
     uint8_t next_sequence;
     gwbuf_copy_data(read_buffer, MYSQL_SEQ_OFFSET, 1, &next_sequence);
 
-    if (next_sequence == 1 || (ssl_required_by_dcb(dcb) && next_sequence == 2))
+    if (next_sequence == 1 || (ssl_required_by_dcb(m_dcb) && next_sequence == 2))
     {
         /** This is the first response from the client, read the connection
          * information and store them in the shared structure. For SSL connections,
@@ -869,7 +862,7 @@ int MariaDBClientConnection::perform_authentication(DCB* generic_dcb, GWBUF* rea
          * @see
          * https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::SSLRequest
          */
-        store_client_information(dcb, read_buffer);
+        store_client_information(read_buffer);
     }
 
     next_sequence++;
@@ -917,11 +910,11 @@ int MariaDBClientConnection::perform_authentication(DCB* generic_dcb, GWBUF* rea
     {
         if (m_authenticator->extract(read_buffer, m_session_data))
         {
-            auth_val = ssl_authenticate_check_status(dcb);
+            auth_val = ssl_authenticate_check_status(m_dcb);
             if (auth_val == AuthRes::SSL_READY)
             {
                 // TLS connection phase complete
-                auth_val = m_authenticator->authenticate(dcb, use_account_data ? &entry : nullptr);
+                auth_val = m_authenticator->authenticate(m_dcb, use_account_data ? &entry : nullptr);
             }
         }
         else
@@ -941,7 +934,7 @@ int MariaDBClientConnection::perform_authentication(DCB* generic_dcb, GWBUF* rea
     if (auth_val == AuthRes::SUCCESS)
     {
         /** User authentication complete, copy the username to the DCB */
-        dcb->session()->set_user(m_session_data->user);
+        m_session->set_user(m_session_data->user);
 
         m_auth_state = AuthState::RESPONSE_SENT;
         /**
@@ -951,17 +944,17 @@ int MariaDBClientConnection::perform_authentication(DCB* generic_dcb, GWBUF* rea
          * is changed so that future data will go through the
          * normal data handling function instead of this one.
          */
-        if (session_start(dcb->session()))
+        if (session_start(m_session))
         {
-            mxb_assert(dcb->session()->state() != MXS_SESSION::State::CREATED);
+            mxb_assert(m_session->state() != MXS_SESSION::State::CREATED);
             m_sql_mode = m_session->listener->sql_mode();
             m_auth_state = AuthState::COMPLETE;
-            mxs_mysql_send_ok(dcb, next_sequence, 0, NULL);
+            mxs_mysql_send_ok(m_dcb, next_sequence, 0, NULL);
 
-            if (dcb->readq())
+            if (m_dcb->readq())
             {
                 // The user has already send more data, process it
-                dcb->trigger_read_event();
+                m_dcb->trigger_read_event();
             }
         }
         else
@@ -978,19 +971,19 @@ int MariaDBClientConnection::perform_authentication(DCB* generic_dcb, GWBUF* rea
         && auth_val != AuthRes::INCOMPLETE_SSL)
     {
         m_auth_state = AuthState::FAIL;
-        handle_authentication_errors(dcb, auth_val, next_sequence);
-        mxb_assert(dcb->session()->listener);
+        handle_authentication_errors(m_dcb, auth_val, next_sequence);
+        mxb_assert(m_session->listener);
 
         // MXS_AUTH_NO_SESSION is for failure to start session, not authentication failure
         if (auth_val != AuthRes::NO_SESSION)
         {
-            dcb->session()->listener->mark_auth_as_failed(dcb->remote());
+            m_session->listener->mark_auth_as_failed(m_dcb->remote());
         }
 
         /**
          * Close DCB and which will release MYSQL_session
          */
-        DCB::close(dcb);
+        DCB::close(m_dcb);
     }
     /* One way or another, the buffer is now fully processed */
     gwbuf_free(read_buffer);
@@ -1663,16 +1656,13 @@ int MariaDBClientConnection::route_by_statement(uint64_t capabilities, GWBUF** p
  *
  * Finally, the general client data processing function is called.
  *
- * @param dcb           Descriptor control block
  * @param read_buffer   A buffer containing the data read from client
  * @param nbytes_read   The number of bytes of data read
  * @return 0 if succeed, 1 otherwise
  */
-int MariaDBClientConnection::perform_normal_read(DCB* dcb, GWBUF* read_buffer, uint32_t nbytes_read)
+int MariaDBClientConnection::perform_normal_read(GWBUF* read_buffer, uint32_t nbytes_read)
 {
-    MXS_SESSION* session = dcb->session();
-    auto session_state_value = session->state();
-
+    auto session_state_value = m_session->state();
     if (session_state_value != MXS_SESSION::State::STARTED)
     {
         if (session_state_value != MXS_SESSION::State::STOPPING)
@@ -1681,7 +1671,7 @@ int MariaDBClientConnection::perform_normal_read(DCB* dcb, GWBUF* read_buffer, u
                       session_state_to_string(session_state_value));
         }
         gwbuf_free(read_buffer);
-        DCB::close(dcb);
+        DCB::close(m_dcb);
         return 1;
     }
 
@@ -1689,10 +1679,9 @@ int MariaDBClientConnection::perform_normal_read(DCB* dcb, GWBUF* read_buffer, u
     uint8_t pktlen[MYSQL_HEADER_LEN];
     size_t n_copied = gwbuf_copy_data(read_buffer, 0, MYSQL_HEADER_LEN, pktlen);
 
-    if (n_copied != sizeof(pktlen)
-        || nbytes_read < MYSQL_GET_PAYLOAD_LEN(pktlen) + MYSQL_HEADER_LEN)
+    if (n_copied != sizeof(pktlen) || nbytes_read < MYSQL_GET_PAYLOAD_LEN(pktlen) + MYSQL_HEADER_LEN)
     {
-        dcb->readq_append(read_buffer);
+        m_dcb->readq_append(read_buffer);
         return 0;
     }
 
@@ -1702,27 +1691,27 @@ int MariaDBClientConnection::perform_normal_read(DCB* dcb, GWBUF* read_buffer, u
     /**
      * Feed each statement completely and separately to router.
      */
-    auto capabilities = service_get_capabilities(session->service);
+    auto capabilities = service_get_capabilities(m_session->service);
     int rval = route_by_statement(capabilities, &read_buffer) ? 0 : 1;
 
     if (read_buffer != NULL)
     {
         // Must have been data left over, add incomplete mysql packet to read queue
-        dcb->readq_append(read_buffer);
+        m_dcb->readq_append(read_buffer);
     }
 
     if (rval != 0)
     {
         /** Routing failed, close the client connection */
-        dcb->session()->close_reason = SESSION_CLOSE_ROUTING_FAILED;
-        DCB::close(dcb);
+        m_session->close_reason = SESSION_CLOSE_ROUTING_FAILED;
+        DCB::close(m_dcb);
         MXS_ERROR("Routing the query failed. Session will be closed.");
     }
     else if (m_command == MXS_COM_QUIT)
     {
         /** Close router session which causes closing of backends */
-        mxb_assert_message(session_valid_for_pool(dcb->session()), "Session should qualify for pooling");
-        DCB::close(dcb);
+        mxb_assert_message(session_valid_for_pool(m_session), "Session should qualify for pooling");
+        DCB::close(m_dcb);
     }
 
     return rval;
@@ -1735,14 +1724,7 @@ int MariaDBClientConnection::perform_normal_read(DCB* dcb, GWBUF* read_buffer, u
 void MariaDBClientConnection::ready_for_reading(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);     // The protocol should only handle its own events.
-    GWBUF* read_buffer = NULL;
-    int return_code = 0;
-    uint32_t nbytes_read = 0;
-    uint32_t max_bytes = 0;
-
-    auto dcb = m_dcb;
-    auto protocol = this;
-    MXS_DEBUG("Protocol state: %s", to_string(protocol->m_auth_state).c_str());
+    MXS_DEBUG("Protocol state: %s", to_string(m_auth_state).c_str());
 
     /**
      * The use of max_bytes seems like a hack, but no better option is available
@@ -1762,39 +1744,37 @@ void MariaDBClientConnection::ready_for_reading(DCB* event_dcb)
      *
      * If a neater solution can be found, so much the better.
      */
-    if (ssl_required_but_not_negotiated(dcb))
+    uint32_t max_bytes = 0;
+    if (ssl_required_but_not_negotiated(m_dcb))
     {
         max_bytes = 36;
     }
 
     const uint32_t max_single_read = GW_MYSQL_MAX_PACKET_LEN + MYSQL_HEADER_LEN;
-    return_code = dcb->read(&read_buffer, max_bytes > 0 ? max_bytes : max_single_read);
+    GWBUF* read_buffer = nullptr;
 
+    int return_code = m_dcb->read(&read_buffer, max_bytes > 0 ? max_bytes : max_single_read);
     if (return_code < 0)
     {
-        DCB::close(dcb);
+        DCB::close(m_dcb);
     }
 
-    if (read_buffer)
-    {
-        nbytes_read = gwbuf_length(read_buffer);
-    }
-
+    uint32_t nbytes_read = read_buffer ? gwbuf_length(read_buffer) : 0;
     if (nbytes_read == 0)
     {
         return;
     }
 
-    if (nbytes_read == max_single_read && dcb->socket_bytes_readable() > 0)
+    if (nbytes_read == max_single_read && m_dcb->socket_bytes_readable() > 0)
     {
         // We read a maximally long packet, route it first. This is done in case there's a lot more data
         // waiting and we have to start throttling the reads.
-        dcb->trigger_read_event();
+        m_dcb->trigger_read_event();
     }
 
     return_code = 0;
 
-    switch (protocol->m_auth_state)
+    switch (m_auth_state)
     {
     /**
      *
@@ -1813,20 +1793,20 @@ void MariaDBClientConnection::ready_for_reading(DCB* event_dcb)
             || (0 == max_bytes && nbytes_read < MYSQL_GET_PACKET_LEN(read_buffer))
             || (0 != max_bytes && nbytes_read < max_bytes))
         {
-            dcb->readq_append(read_buffer);
+            m_dcb->readq_append(read_buffer);
         }
         else
         {
             if (nbytes_read > MYSQL_GET_PACKET_LEN(read_buffer))
             {
                 // We read more data than was needed
-                dcb->readq_append(read_buffer);
-                GWBUF* readq = dcb->readq_release();
+                m_dcb->readq_append(read_buffer);
+                GWBUF* readq = m_dcb->readq_release();
                 read_buffer = modutil_get_next_MySQL_packet(&readq);
-                dcb->readq_set(readq);
+                m_dcb->readq_set(readq);
             }
 
-            return_code = perform_authentication(dcb, read_buffer, nbytes_read);
+            return_code = perform_authentication(read_buffer, nbytes_read);
         }
         break;
 
@@ -1839,7 +1819,7 @@ void MariaDBClientConnection::ready_for_reading(DCB* event_dcb)
      */
     case AuthState::COMPLETE:
         /* After this call read_buffer will point to freed data */
-        return_code = perform_normal_read(dcb, read_buffer, nbytes_read);
+        return_code = perform_normal_read(read_buffer, nbytes_read);
         break;
 
     case AuthState::FAIL:
@@ -1873,20 +1853,15 @@ void MariaDBClientConnection::write_ready(DCB* event_dcb)
 void MariaDBClientConnection::error(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);
-    mxb_assert(m_dcb->session()->state() != MXS_SESSION::State::STOPPING);
+    mxb_assert(m_session->state() != MXS_SESSION::State::STOPPING);
     DCB::close(m_dcb);
 }
 
 void MariaDBClientConnection::hangup(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);
-    auto dcb = m_dcb;
 
-    // We simply close the DCB, this will propagate the closure to any
-    // backend descriptors and perform the session cleanup.
-
-    MXS_SESSION* session = dcb->session();
-
+    MXS_SESSION* session = m_session;
     if (session && !session_valid_for_pool(session))
     {
         if (session_get_dump_statements() == SESSION_DUMP_STATEMENTS_ON_ERROR)
@@ -1901,7 +1876,7 @@ void MariaDBClientConnection::hangup(DCB* event_dcb)
 
         // The client did not send a COM_QUIT packet
         std::string errmsg {"Connection killed by MaxScale"};
-        std::string extra {session_get_close_reason(dcb->session())};
+        std::string extra {session_get_close_reason(m_session)};
 
         if (!extra.empty())
         {
@@ -1916,15 +1891,17 @@ void MariaDBClientConnection::hangup(DCB* event_dcb)
             seqno = 3;
         }
 
-        modutil_send_mysql_err_packet(dcb, seqno, 0, 1927, "08S01", errmsg.c_str());
+        modutil_send_mysql_err_packet(m_dcb, seqno, 0, 1927, "08S01", errmsg.c_str());
     }
 
-    DCB::close(dcb);
+    // We simply close the DCB, this will propagate the closure to any
+    // backend descriptors and perform the session cleanup.
+    DCB::close(m_dcb);
 }
 
 bool MariaDBClientConnection::init_connection()
 {
-    send_mysql_client_handshake(m_dcb);
+    send_mysql_client_handshake();
     return true;
 }
 
