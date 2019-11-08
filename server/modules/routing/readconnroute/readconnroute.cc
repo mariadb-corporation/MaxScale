@@ -570,6 +570,8 @@ void RCRSession::handleError(GWBUF* errbuf, DCB* problem_dcb, mxs_error_action_t
 {
     mxb_assert(problem_dcb->role == DCB::Role::BACKEND);
     mxb_assert(problem_dcb->session->state == SESSION_STATE_STARTED);
+    MXS_INFO("Server '%s' failed", problem_dcb->server->name());
+
     DCB* client_dcb = problem_dcb->session->client_dcb;
     client_dcb->func.write(client_dcb, gwbuf_clone(errbuf));
 
