@@ -59,3 +59,11 @@ CLion project files
 .reviewboardrc
 # vscode
 .vscode
+
+# Build directories
+/debug*/
+/release*/
+/package*/
+
+# Emacs
+TAGS
