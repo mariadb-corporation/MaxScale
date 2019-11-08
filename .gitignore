@@ -65,3 +65,11 @@ CLion project files
 *.pro
 *.pro.user
 *.pri
+
+# Build directories
+/debug*/
+/release*/
+/package*/
+
+# Emacs
+TAGS
