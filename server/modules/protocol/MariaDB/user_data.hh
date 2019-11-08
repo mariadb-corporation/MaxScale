@@ -127,8 +127,8 @@ public:
      * @param requested_db Database requested by client. May be empty.
      * @return Found user entry.
      */
-    bool find_user(const std::string& user, const std::string& host, const std::string& requested_db,
-                   UserEntry* entry_out) const;
+    std::unique_ptr<UserEntry>
+    find_user(const std::string& user, const std::string& host, const std::string& requested_db) const;
 
     void        update_user_accounts() override;
     void        set_credentials(const std::string& user, const std::string& pw) override;

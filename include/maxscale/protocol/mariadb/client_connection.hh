@@ -103,6 +103,7 @@ private:
     static std::string                    to_string(AuthState state);
 
     mariadb::SClientAuth m_authenticator;       /**< Client authentication data */
+    std::unique_ptr<UserEntry> m_user_entry;    /**< Client user entry */
 
     mxs::Component* m_downstream {nullptr}; /**< Downstream component, the session */
     MXS_SESSION*    m_session {nullptr};    /**< Generic session */

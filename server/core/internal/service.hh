@@ -247,7 +247,7 @@ public:
      */
     void set_user_account_manager(SAccountManager user_manager);
 
-    void update_user_accounts();
+    void update_user_accounts() override;
 
 private:
 

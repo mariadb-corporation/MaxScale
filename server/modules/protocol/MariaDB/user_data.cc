@@ -27,6 +27,7 @@
 
 using std::string;
 using mxq::MariaDB;
+using SUserEntry = std::unique_ptr<UserEntry>;
 using MutexLock = std::unique_lock<std::mutex>;
 using Guard = std::lock_guard<std::mutex>;
 
@@ -76,8 +77,8 @@ void MariaDBUserManager::stop()
     m_updater_thread.join();
 }
 
-bool MariaDBUserManager::find_user(const std::string& user, const std::string& host,
-                                   const std::string& requested_db, UserEntry* entry_out) const
+SUserEntry
+MariaDBUserManager::find_user(const string& user, const string& host, const string& requested_db) const
 {
     auto userz = user.c_str();
     auto hostz = host.c_str();
@@ -93,13 +94,14 @@ bool MariaDBUserManager::find_user(const std::string& user, const std::string& h
         }
     }
 
+    SUserEntry rval;
     if (!entry.host_pattern.empty())
     {
         if (has_sufficient_privs)
         {
             MXB_INFO("Found matching user '%s'@'%s' for client '%s'@'%s' with sufficient privileges.",
                      entry.username.c_str(), entry.host_pattern.c_str(), userz, hostz);
-            *entry_out = entry;
+            rval.reset(new UserEntry(entry));
         }
         else
         {
@@ -113,8 +115,7 @@ bool MariaDBUserManager::find_user(const std::string& user, const std::string& h
         MXB_INFO("Found no matching user for client '%s'@'%s'.", userz, hostz);
         // TODO: anonymous users need to be handled specially, as not all authenticators support them.
     }
-
-    return has_sufficient_privs;
+    return rval;
 }
 
 void MariaDBUserManager::update_user_accounts()

@@ -146,6 +146,8 @@ public:
 
     virtual const mxs::UserAccountManager* user_account_manager() const = 0;
 
+    virtual void update_user_accounts() = 0;
+
     /**
      * Has a connection limit been reached?
      */

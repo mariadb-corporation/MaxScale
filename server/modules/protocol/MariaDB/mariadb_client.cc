@@ -848,56 +848,73 @@ int MariaDBClientConnection::perform_authentication(GWBUF* read_buffer, int nbyt
 {
     MXB_AT_DEBUG(check_packet(m_dcb, read_buffer, nbytes_read));
 
-    /** Read the client's packet sequence and increment that by one */
-    uint8_t next_sequence;
-    gwbuf_copy_data(read_buffer, MYSQL_SEQ_OFFSET, 1, &next_sequence);
+    /** Read the client's packet sequence. */
+    uint8_t sequence;
+    gwbuf_copy_data(read_buffer, MYSQL_SEQ_OFFSET, 1, &sequence);
 
-    if (next_sequence == 1 || (ssl_required_by_dcb(m_dcb) && next_sequence == 2))
+    /**
+     * Check if this is the first (or second) response from the client. If yes, read connection info
+     * and store it in the session. For SSL connections, both packets 1 & 2 are read. The first SSL
+     * packet is the Protocol::SSLRequest packet.
+     *
+     * @see https://mariadb.com/kb/en/library/connection/#client-handshake-response
+     */
+    bool using_ssl = ssl_required_by_dcb(m_dcb);
+    if (sequence == 1 || (sequence == 2 && using_ssl))
     {
-        /** This is the first response from the client, read the connection
-         * information and store them in the shared structure. For SSL connections,
-         * this will be packet number two since the first packet will be the
-         * Protocol::SSLRequest packet.
-         *
-         * @see
-         * https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::SSLRequest
-         */
         store_client_information(read_buffer);
     }
 
-    next_sequence++;
-    m_session_data->next_sequence = next_sequence;
-
-    /**
-     * The correct authenticator should be chosen here (and also in reauthenticate_client()).
-     * Since the authenticators are not yet ready for this, just pick the first one.
-     */
-    m_session_data->m_current_authenticator = m_session_data->allowed_authenticators->front().get();
-    m_authenticator = m_session_data->m_current_authenticator->create_client_authenticator();
-
-    auto users = user_account_manager();
-    UserEntry entry;
-    bool user_found = users->find_user(m_session_data->user, m_session_data->remote, m_session_data->db,
-                                       &entry);
-    // The data in the account manager does not yet quite match with the authenticators themselves,
-    // so it is only additional data for authenticators.
-    bool use_account_data = false;
-    if (user_found)
+    auto auth_val = AuthRes::INCOMPLETE;
+    bool client_data_ready = (sequence >= 2) || (sequence == 1 && !using_ssl);
+    bool ssl_ready = false;
+    if (using_ssl)
     {
-        auto& auth_modules = *(m_session_data->allowed_authenticators);
-        for (const auto & auth_module : auth_modules)
+        auth_val = ssl_authenticate_check_status(m_dcb);
+        if (auth_val == AuthRes::SSL_READY)
         {
-            if (auth_module->supported_plugins().count(entry.plugin))
-            {
-                // The following check should be removed once the account manager is fully in use.
-                if (auth_module.get() == m_session_data->m_current_authenticator)
-                {
-                    use_account_data = true;
-                }
-                break;
-            }
+            ssl_ready = true;
         }
     }
+    else
+    {
+        ssl_ready = true;
+    }
+
+    // Save next sequence to session. Authenticator may use the value.
+    m_session_data->next_sequence = sequence + 1;
+
+    if (ssl_ready && client_data_ready && !m_authenticator)
+    {
+        // The correct authenticator is chosen here (and also in reauthenticate_client()).
+        auto users = user_account_manager();
+        auto entry = users->find_user(m_session_data->user, m_session_data->remote, m_session_data->db);
+
+        if (entry)
+        {
+            auto& auth_modules = *(m_session_data->allowed_authenticators);
+            for (const auto & auth_module : auth_modules)
+            {
+                if (auth_module->supported_plugins().count(entry->plugin))
+                {
+                    // Found correct authenticator for the user entry. Save related data so that later
+                    // calls do not need to perform the same work.
+                    m_user_entry = std::move(entry);
+                    m_session_data->m_current_authenticator = auth_module.get();
+                    m_authenticator = auth_module->create_client_authenticator();
+                    break;
+                }
+            }
+        }
+        else
+        {
+            // User data may be outdated, send update message through the service. The current session
+            // will fail.
+            m_session->service->update_user_accounts();
+            auth_val = AuthRes::FAIL;
+        }
+    }
+
 
     /**
      * The first step in the authentication process is to extract the relevant information from
@@ -905,16 +922,15 @@ int MariaDBClientConnection::perform_authentication(GWBUF* read_buffer, int nbyt
      * far successful.  If the data extraction succeeds, then a call is made to the actual authenticate
      * function to carry out the user checks.
      */
-    auto auth_val = AuthRes::FAIL;
     if (m_authenticator)
     {
         if (m_authenticator->extract(read_buffer, m_session_data))
         {
-            auth_val = ssl_authenticate_check_status(m_dcb);
-            if (auth_val == AuthRes::SSL_READY)
+            auth_val = m_authenticator->authenticate(m_dcb, m_user_entry.get());
+            if (auth_val == AuthRes::FAIL_WRONG_PW)
             {
-                // TLS connection phase complete
-                auth_val = m_authenticator->authenticate(m_dcb, use_account_data ? &entry : nullptr);
+                // Again, this may be because user data is obsolete.
+                m_session->service->update_user_accounts();
             }
         }
         else
@@ -923,33 +939,23 @@ int MariaDBClientConnection::perform_authentication(GWBUF* read_buffer, int nbyt
         }
     }
 
-    /**
-     * At this point, if the auth_val return code indicates success
-     * the user authentication has been successfully completed.
-     * But in order to have a working connection, a session has to
-     * be created.  Provided that is also successful (indicated by a
-     * non-null session) then the whole process has succeeded. In all
-     * other cases an error return is made.
-     */
     if (auth_val == AuthRes::SUCCESS)
     {
         /** User authentication complete, copy the username to the DCB */
         m_session->set_user(m_session_data->user);
-
         m_auth_state = AuthState::RESPONSE_SENT;
+
         /**
-         * Start session, and a router session for it.
-         * If successful, there will be backend connection(s)
-         * after this point. The protocol authentication state
-         * is changed so that future data will go through the
-         * normal data handling function instead of this one.
+         * Start session, and a router session for it. If successful, there will be backend connection(s)
+         * after this point. The protocol authentication state is changed so that future data will go
+         * through the normal data handling function instead of this one.
          */
         if (session_start(m_session))
         {
             mxb_assert(m_session->state() != MXS_SESSION::State::CREATED);
             m_sql_mode = m_session->listener->sql_mode();
             m_auth_state = AuthState::COMPLETE;
-            mxs_mysql_send_ok(m_dcb, next_sequence, 0, NULL);
+            mxs_mysql_send_ok(m_dcb, m_session_data->next_sequence, 0, NULL);
 
             if (m_dcb->readq())
             {
@@ -962,6 +968,7 @@ int MariaDBClientConnection::perform_authentication(GWBUF* read_buffer, int nbyt
             auth_val = AuthRes::NO_SESSION;
         }
     }
+
     /**
      * If we did not get success throughout or authentication is not yet complete,
      * then the protocol state is updated, the client is notified of the failure
@@ -971,7 +978,7 @@ int MariaDBClientConnection::perform_authentication(GWBUF* read_buffer, int nbyt
         && auth_val != AuthRes::INCOMPLETE_SSL)
     {
         m_auth_state = AuthState::FAIL;
-        handle_authentication_errors(m_dcb, auth_val, next_sequence);
+        handle_authentication_errors(m_dcb, auth_val, m_session_data->next_sequence);
         mxb_assert(m_session->listener);
 
         // MXS_AUTH_NO_SESSION is for failure to start session, not authentication failure
