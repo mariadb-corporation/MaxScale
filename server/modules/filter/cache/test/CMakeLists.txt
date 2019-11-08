@@ -55,7 +55,7 @@ add_executable(keycheck
   ../storage.cc
   ../storagefactory.cc
   )
-target_link_libraries(keycheck maxscale-common)
+target_link_libraries(keycheck maxscale-common lzma)
 
 add_test(test_cache_rules testrules)
 
