@@ -17,6 +17,8 @@
 #include <maxscale/router.hh>
 #include <maxscale/backend.hh>
 
+#include "exporter.hh"
+
 class MirrorSession;
 
 class Mirror : public mxs::Router<Mirror, MirrorSession>
@@ -40,7 +42,8 @@ public:
     }
 
 private:
-    Mirror(SERVICE* pService, MXS_CONFIG_PARAMETER* params);
+    Mirror(SERVICE* pService, MXS_CONFIG_PARAMETER* params, std::unique_ptr<Exporter> exporter);
 
-    mxs::Target* m_main;
+    mxs::Target*              m_main;
+    std::unique_ptr<Exporter> m_exporter;
 };

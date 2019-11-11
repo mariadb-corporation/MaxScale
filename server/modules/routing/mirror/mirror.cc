@@ -14,9 +14,10 @@
 #include "mirror.hh"
 #include "mirrorsession.hh"
 
-Mirror::Mirror(SERVICE* pService, MXS_CONFIG_PARAMETER* params)
+Mirror::Mirror(SERVICE* pService, MXS_CONFIG_PARAMETER* params, std::unique_ptr<Exporter> exporter)
     : Router<Mirror, MirrorSession>(pService)
     , m_main(params->get_target("main"))
+    , m_exporter(std::move(exporter))
 {
 }
 
@@ -27,7 +28,14 @@ Mirror::~Mirror()
 // static
 Mirror* Mirror::create(SERVICE* pService, MXS_CONFIG_PARAMETER* params)
 {
-    return new Mirror(pService, params);
+    Mirror* rval = nullptr;
+
+    if (auto exporter = build_exporter(params))
+    {
+        rval = new Mirror(pService, params, std::move(exporter));
+    }
+
+    return rval;
 }
 
 MirrorSession* Mirror::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
@@ -66,8 +74,7 @@ bool Mirror::configure(MXS_CONFIG_PARAMETER* params)
 
 void Mirror::ship(json_t* obj)
 {
-    // TODO: Actually export it
-    MXS_INFO("%s", mxs::json_dump(obj, JSON_COMPACT).c_str());
+    m_exporter->ship(obj);
     json_decref(obj);
 }
 
@@ -94,6 +101,17 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 MXS_MODULE_PARAM_TARGET,
                 nullptr,
                 MXS_MODULE_OPT_REQUIRED
+            },
+            {
+                CN_EXPORTER,
+                MXS_MODULE_PARAM_ENUM,
+                nullptr,
+                MXS_MODULE_OPT_REQUIRED,
+                exporter_type_values
+            },
+            {
+                CN_FILE,
+                MXS_MODULE_PARAM_STRING
             },
             {MXS_END_MODULE_PARAMS}
         }
