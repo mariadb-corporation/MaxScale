@@ -12,24 +12,17 @@
  */
 #pragma once
 
-/**
- * Common declarations for both PAMAuth and PAMBackendAuth
+/*
+ * Common definitions and includes for PAM authenticator.
  */
+#define MXS_MODULE_NAME "PAMAuth"
+
 #include <maxscale/ccdefs.hh>
 #include <string>
 
 extern const std::string DIALOG;
 extern const std::string PASSWORD;
 extern const int DIALOG_SIZE;
-
-/** PAM authentication states */
-enum pam_auth_state
-{
-    PAM_AUTH_INIT = 0,
-    PAM_AUTH_DATA_SENT,
-    PAM_AUTH_OK,
-    PAM_AUTH_FAILED
-};
 
 /* Magic numbers from server source
  * https://github.com/MariaDB/server/blob/10.2/plugin/auth_pam/auth_pam.c */

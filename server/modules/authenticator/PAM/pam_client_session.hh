@@ -11,30 +11,23 @@
  * Public License.
  */
 #pragma once
-#include "pam_auth.hh"
 
+#include "pam_auth_common.hh"
 #include <cstdint>
 #include <string>
 #include <vector>
-#include "pam_backend_session.hh"
-#include "pam_auth_common.hh"
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 
-class PamAuthenticatorModule;
-
 /** Client authenticator PAM-specific session data */
-class PamClientAuthenticator : public mariadb::ClientAuthenticatorT<PamAuthenticatorModule>
+class PamClientAuthenticator : public mariadb::ClientAuthenticator
 {
 public:
-    using StringVector = std::vector<std::string>;
-    static mariadb::SClientAuth create(PamAuthenticatorModule* instance);
+    PamClientAuthenticator() = default;
 
     AuthRes authenticate(DCB* client, const mariadb::UserEntry* entry) override;
     bool    extract(GWBUF* read_buffer, MYSQL_session* session) override;
 
 private:
-    PamClientAuthenticator(PamAuthenticatorModule* instance);
-
     maxscale::Buffer create_auth_change_packet() const;
 
     enum class State

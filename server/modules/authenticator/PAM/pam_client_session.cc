@@ -18,6 +18,7 @@
 #include <maxscale/event.hh>
 #include "pam_instance.hh"
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 
 using maxscale::Buffer;
 using std::string;
@@ -47,17 +48,6 @@ bool store_client_password(MYSQL_session* session, GWBUF* buffer)
     return rval;
 }
 
-}
-
-PamClientAuthenticator::PamClientAuthenticator(PamAuthenticatorModule* instance)
-    : ClientAuthenticatorT(instance)
-{
-}
-
-mariadb::SClientAuth PamClientAuthenticator::create(PamAuthenticatorModule* inst)
-{
-    mariadb::SClientAuth new_auth(new(std::nothrow) PamClientAuthenticator(inst));
-    return new_auth;
 }
 
 /**

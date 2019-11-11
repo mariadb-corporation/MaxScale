@@ -11,14 +11,12 @@
  * Public License.
  */
 #pragma once
-#include "pam_auth.hh"
 
+#include "pam_auth_common.hh"
 #include <string>
-#include <maxsql/mariadb_connector.hh>
-#include <maxsql/sqlite.hh>
-#include <maxscale/service.hh>
-#include <maxscale/sqlite3.h>
-#include "pam_client_session.hh"
+#include <maxscale/protocol/mariadb/authenticator.hh>
+
+class SERVICE;
 
 /** The instance class for the client side PAM authenticator, created in pam_auth_init() */
 class PamAuthenticatorModule : public mariadb::AuthenticatorModule
@@ -40,19 +38,6 @@ public:
     mariadb::SClientAuth create_client_authenticator() override;
     mariadb::SBackendAuth create_backend_authenticator() override;
 
-    const std::string m_dbname;     /**< Name of the in-memory database */
-
 private:
-    using QResult = std::unique_ptr<mxq::QueryResult>;
-
-    PamAuthenticatorModule(const string& dbname);
-    bool prepare_tables();
-
-    void add_pam_user(const char* user, const char* host, const char* db, bool anydb,
-                      const char* pam_service, bool proxy);
-    void delete_old_users();
-    bool fetch_anon_proxy_users(SERVER* server, MYSQL* conn);
-    void fill_user_arrays(QResult user_res, QResult db_res, QResult roles_mapping_res);
-
-    mxq::SQLite m_sqlite;      /**< SQLite3 database handle */
+    PamAuthenticatorModule() = default;
 };

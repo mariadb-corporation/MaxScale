@@ -20,8 +20,8 @@ class PamBackendAuthenticator : public mariadb::BackendAuthenticator
 public:
     PamBackendAuthenticator(const PamBackendAuthenticator& orig) = delete;
     PamBackendAuthenticator& operator=(const PamBackendAuthenticator&) = delete;
+    PamBackendAuthenticator() = default;
 
-    PamBackendAuthenticator();
     bool    extract(DCB* dcb, GWBUF* buffer) override;
     AuthRes authenticate(DCB* dcb) override;
     bool    ssl_capable(DCB* dcb) override;

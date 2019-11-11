@@ -137,9 +137,6 @@ bool PamBackendAuthenticator::parse_password_prompt(const uint8_t** data, const 
     return success;
 }
 
-PamBackendAuthenticator::PamBackendAuthenticator()
-{}
-
 /**
  * Send password to server
  *
