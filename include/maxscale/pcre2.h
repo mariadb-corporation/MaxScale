@@ -18,16 +18,9 @@
  */
 
 #include <maxscale/cdefs.h>
+#include <maxbase/regex.hh>
 
 MXS_BEGIN_DECLS
-
-#if defined (PCRE2_CODE_UNIT_WIDTH)
-#error PCRE2_CODE_UNIT_WIDTH already defined. Do not define, and include <maxscale/pcre2.h>.
-#else
-#define PCRE2_CODE_UNIT_WIDTH 8
-#endif
-
-#include <pcre2.h>
 
 /**
  * Print an error message explaining an error code.

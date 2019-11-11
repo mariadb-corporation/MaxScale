@@ -56,12 +56,12 @@ public:
         return m_target;
     }
 
-    const mxs::Regex& get_match() const
+    const mxb::Regex& get_match() const
     {
         return m_match;
     }
 
-    const mxs::Regex& get_exclude() const
+    const mxb::Regex& get_exclude() const
     {
         return m_exclude;
     }
@@ -83,7 +83,7 @@ private:
     mxs::Target* m_target;
     std::string  m_user;    /* The user name to filter on */
     std::string  m_source;  /* The source of the client connection */
-    mxs::Regex   m_match;   /* Compiled match pattern */
-    mxs::Regex   m_exclude; /* Compiled exclude pattern*/
+    mxb::Regex   m_match;   /* Compiled match pattern */
+    mxb::Regex   m_exclude; /* Compiled exclude pattern*/
     bool         m_enabled;
 };

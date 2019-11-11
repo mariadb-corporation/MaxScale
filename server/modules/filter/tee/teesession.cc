@@ -21,7 +21,7 @@
 #include <maxscale/modutil.hh>
 
 TeeSession::TeeSession(MXS_SESSION* session, SERVICE* service, LocalClient* client,
-                       const mxs::Regex& match, const mxs::Regex& exclude)
+                       const mxb::Regex& match, const mxb::Regex& exclude)
     : mxs::FilterSession(session, service)
     , m_client(client)
     , m_match(match)

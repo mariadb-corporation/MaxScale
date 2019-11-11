@@ -40,11 +40,11 @@ private:
     TeeSession(MXS_SESSION* session,
                SERVICE* service,
                LocalClient* client,
-               const mxs::Regex& match,
-               const mxs::Regex& exclude);
+               const mxb::Regex& match,
+               const mxb::Regex& exclude);
     bool query_matches(GWBUF* buffer);
 
     LocalClient*      m_client; /**< The client connection to the local service */
-    const mxs::Regex& m_match;
-    const mxs::Regex& m_exclude;
+    const mxb::Regex& m_match;
+    const mxb::Regex& m_exclude;
 };

@@ -24,6 +24,7 @@
 #include <string.h>
 #include <maxbase/alloc.h>
 #include <maxscale/pcre2.hh>
+#include <maxbase/regex.hh>
 
 #define test_assert(a, b) if (!(a)) {fprintf(stderr, b); return 1;}
 
@@ -107,13 +108,13 @@ static int test2()
 
 static int test3()
 {
-    mxs::Regex r1;
+    mxb::Regex r1;
     test_assert(!r1.valid(), "Empty regex is not valid");
     test_assert(r1.empty(), "Empty regex is empty");
     test_assert(!!r1, "Empty regex evaluates to true");
     test_assert(r1.error().empty(), "No errors stored");
 
-    mxs::Regex r2("hello");
+    mxb::Regex r2("hello");
     test_assert(r2.valid(), "Regex is valid");
     test_assert(!r2.empty(), "Regex is not empty");
     test_assert(!!r2, "Regex evaluates to true");
@@ -123,7 +124,7 @@ static int test3()
     test_assert(r2.pattern() == "hello", "Returned pattern is correct");
     test_assert(r2.replace("hello world", "HELLO") == "HELLO world", "Replaces pattern with string");
 
-    mxs::Regex r3("hello", PCRE2_CASELESS);
+    mxb::Regex r3("hello", PCRE2_CASELESS);
     test_assert(r3.error().empty(), "No errors stored");
     test_assert(r3.match("hello world"), "Matches lower case");
     test_assert(r3.match("HELLO WORLD"), "Matches upper case");
@@ -132,19 +133,19 @@ static int test3()
     test_assert(r3.replace("HELLO WORLD", "hi") == "hi WORLD", "Replaces upper case");
     test_assert(r3.replace("HeLlO wOrLd", "hi") == "hi wOrLd", "Replaces mixed case");
 
-    mxs::Regex r4("[");
+    mxb::Regex r4("[");
     test_assert(!r4.valid(), "Invalid regex is detected");
     test_assert(!r4, "Invalid regex evaluates to false");
     test_assert(!r4.error().empty(), "Invalid regex has an error message");
 
-    mxs::Regex r5("hello");
-    mxs::Regex r6;
+    mxb::Regex r5("hello");
+    mxb::Regex r6;
     r6 = r5;
     test_assert(r6, "Assigned regex is valid");
     test_assert(!!r6, "Assigned regex evaluates to true");
     test_assert(r6.match("hello world"), "Assigned regex matches");
 
-    mxs::Regex r7(r5);
+    mxb::Regex r7(r5);
     test_assert(r7, "Copy-constructed regex is valid");
     test_assert(!!r7, "Copy-constructed regex evaluates to true");
     test_assert(r7.match("hello world"), "Copy-constructed regex matches");

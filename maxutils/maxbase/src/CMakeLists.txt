@@ -13,6 +13,7 @@ add_library(maxbase STATIC
   pam_utils.cc
   pretty_print.cc
   random.cc
+  regex.cc
   semaphore.cc
   shareddata.cc
   ssl.cc
