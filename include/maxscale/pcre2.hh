@@ -81,8 +81,11 @@ public:
     Regex(const std::string& pattern = "", int options = 0);
 
     Regex(const Regex& rhs);
-    Regex& operator=(const Regex& rhs);
+    Regex(Regex&& rhs);
     ~Regex();
+
+    Regex& operator=(const Regex& rhs);
+    Regex& operator=(Regex&& rhs);
 
     /**
      * @return True if the pattern is empty i.e. the string `""`
@@ -110,15 +113,6 @@ public:
     const std::string& error() const;
 
     /**
-     * Create match data from pattern.
-     *
-     * The returned value must be freed with `pcre2_match_data_free`.
-     *
-     * @return Match data that can be used with this Regex
-     */
-    pcre2_match_data* create_match_data() const;
-
-    /**
      * Check if `str` matches this pattern
      *
      * @param str  String to match
@@ -126,7 +120,7 @@ public:
      *
      * @return True if the string matches the pattern
      */
-    bool match(const std::string& str, pcre2_match_data* data = nullptr) const;
+    bool match(const std::string& str) const;
 
     /**
      * Replace matches in `str` with given replacement this pattern
@@ -137,15 +131,12 @@ public:
      *
      * @return True if the string matches the pattern
      */
-    std::string replace(const std::string& str, const char* replacement,
-                        pcre2_match_data* data = nullptr) const;
+    std::string replace(const std::string& str, const char* replacement) const;
 
 private:
-    std::string        m_pattern;
-    std::string        m_error;
-    pcre2_code*        m_code = nullptr;
-    pcre2_match_data*  m_match_data = nullptr;
-    mutable std::mutex m_lock;
+    std::string m_pattern;
+    std::string m_error;
+    pcre2_code* m_code = nullptr;
 };
 }
 

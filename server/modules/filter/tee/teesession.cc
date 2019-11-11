@@ -26,8 +26,6 @@ TeeSession::TeeSession(MXS_SESSION* session, SERVICE* service, LocalClient* clie
     , m_client(client)
     , m_match(match)
     , m_exclude(exclude)
-    , m_md_match(m_match ? m_match.create_match_data() : nullptr)
-    , m_md_exclude(m_exclude ? m_exclude.create_match_data() : nullptr)
 {
 }
 
@@ -60,8 +58,6 @@ TeeSession* TeeSession::create(Tee* my_instance, MXS_SESSION* session, SERVICE* 
 TeeSession::~TeeSession()
 {
     delete m_client;
-    pcre2_match_data_free(m_md_match);
-    pcre2_match_data_free(m_md_exclude);
 }
 
 void TeeSession::close()
@@ -93,12 +89,12 @@ bool TeeSession::query_matches(GWBUF* buffer)
 
         if (!sql.empty())
         {
-            if (m_match && !m_match.match(sql, m_md_match))
+            if (m_match && !m_match.match(sql))
             {
                 MXS_INFO("Query does not match the 'match' pattern: %s", sql.c_str());
                 rval = false;
             }
-            else if (m_exclude && m_exclude.match(sql, m_md_exclude))
+            else if (m_exclude && m_exclude.match(sql))
             {
                 MXS_INFO("Query matches the 'exclude' pattern: %s", sql.c_str());
                 rval = false;

@@ -47,6 +47,4 @@ private:
     LocalClient*      m_client; /**< The client connection to the local service */
     const mxs::Regex& m_match;
     const mxs::Regex& m_exclude;
-    pcre2_match_data* m_md_match;
-    pcre2_match_data* m_md_exclude;
 };

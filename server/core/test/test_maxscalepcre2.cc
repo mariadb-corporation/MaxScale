@@ -110,7 +110,7 @@ static int test3()
     mxs::Regex r1;
     test_assert(!r1.valid(), "Empty regex is not valid");
     test_assert(r1.empty(), "Empty regex is empty");
-    test_assert(!r1, "Empty regex evaluates to false");
+    test_assert(!!r1, "Empty regex evaluates to true");
     test_assert(r1.error().empty(), "No errors stored");
 
     mxs::Regex r2("hello");
