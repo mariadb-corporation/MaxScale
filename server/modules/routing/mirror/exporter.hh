@@ -19,6 +19,8 @@
 
 constexpr const char CN_EXPORTER[] = "exporter";
 constexpr const char CN_FILE[] = "file";
+constexpr const char CN_KAFKA_BROKER[] = "kafka_broker";
+constexpr const char CN_KAFKA_TOPIC[] = "kafka_topic";
 
 struct Exporter
 {
@@ -41,8 +43,9 @@ struct Exporter
 
 static const MXS_ENUM_VALUE exporter_type_values[] =
 {
-    {"log",  (uint64_t)Exporter::Type::LOG },
-    {"file", (uint64_t)Exporter::Type::FILE},
+    {"log",   (uint64_t)Exporter::Type::LOG  },
+    {"file",  (uint64_t)Exporter::Type::FILE },
+    {"kafka", (uint64_t)Exporter::Type::KAFKA},
     {NULL}
 };
 

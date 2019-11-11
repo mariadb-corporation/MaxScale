@@ -113,6 +113,14 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 CN_FILE,
                 MXS_MODULE_PARAM_STRING
             },
+            {
+                CN_KAFKA_BROKER,
+                MXS_MODULE_PARAM_STRING
+            },
+            {
+                CN_KAFKA_TOPIC,
+                MXS_MODULE_PARAM_STRING
+            },
             {MXS_END_MODULE_PARAMS}
         }
     };
