@@ -51,6 +51,8 @@ const string db_grants_query =
     // and finally combine with column-level privs as db-level privs
     "(SELECT a.user, a.host, a.db FROM mysql.columns_priv AS a) ) AS c;";
 const string roles_query = "SELECT a.user, a.host, a.role FROM mysql.roles_mapping AS a;";
+const string proxies_query = "SELECT DISTINCT a.user, a.host FROM mysql.proxies_priv AS a "
+                             "WHERE a.proxied_host <> '' AND a.proxied_user <> '';";
 }
 }
 
@@ -114,6 +116,39 @@ MariaDBUserManager::find_user(const string& user, const string& host, const stri
     {
         MXB_INFO("Found no matching user for client '%s'@'%s'.", userz, hostz);
         // TODO: anonymous users need to be handled specially, as not all authenticators support them.
+    }
+    return rval;
+}
+
+SUserEntry MariaDBUserManager::find_anon_proxy_user(const std::string& user, const std::string& host) const
+{
+    auto userz = user.c_str();
+    auto hostz = host.c_str();
+    SUserEntry entry;
+    {
+        Guard guard(m_userdb_lock);
+        auto found = m_userdb.find_entry("", host);
+        if (found)
+        {
+            entry.reset(new (std::nothrow) UserEntry(*found));
+        }
+    }
+
+    SUserEntry rval;
+    if (entry)
+    {
+        if (entry->proxy_grant)
+        {
+            MXB_INFO("Found matching anonymous user ''@'%s' for client '%s'@'%s' with proxy grant.",
+                     entry->host_pattern.c_str(), userz, hostz);
+            rval = std::move(entry);
+        }
+        else
+        {
+            MXB_INFO("Found matching anonymous user ''@'%s' for client '%s'@'%s' but user does not have "
+                     "proxy privileges.",
+                     entry->host_pattern.c_str(), userz, hostz);
+        }
     }
     return rval;
 }
@@ -277,10 +312,11 @@ bool MariaDBUserManager::load_users()
             con.set_connection_settings(sett);
             if (con.open(srv->address, srv->port))
             {
-                QResult users_res, dbs_res, roles_res;
+                QResult users_res, dbs_res, proxies_res, roles_res;
                 // Perform the queries. All must succeed on the same backend.
                 if (((users_res = con.query(backend_queries::users_query)) != nullptr)
-                    && ((dbs_res = con.query(backend_queries::db_grants_query)) != nullptr))
+                    && ((dbs_res = con.query(backend_queries::db_grants_query)) != nullptr)
+                    && ((proxies_res = con.query(backend_queries::proxies_query)) != nullptr))
                 {
                     if (using_roles)
                     {
@@ -298,9 +334,10 @@ bool MariaDBUserManager::load_users()
                 if (got_data)
                 {
                     int rows = users_res->get_row_count();
-                    if (write_users(std::move(users_res), using_roles))
+                    if (read_users(std::move(users_res), using_roles))
                     {
-                        write_dbs_and_roles(std::move(dbs_res), std::move(roles_res));
+                        read_dbs_and_roles(std::move(dbs_res), std::move(roles_res));
+                        read_proxy_grants(std::move(proxies_res));
                         wrote_data = true;
                         // Add anonymous proxy user search.
                         MXB_NOTICE("Read %lu usernames with a total of %i user@host entries from '%s'.",
@@ -323,7 +360,7 @@ bool MariaDBUserManager::load_users()
     return wrote_data;
 }
 
-bool MariaDBUserManager::write_users(QResult users, bool using_roles)
+bool MariaDBUserManager::read_users(QResult users, bool using_roles)
 {
     auto get_bool_enum = [&users](int64_t col_ind) {
             string val = users->get_string(col_ind);
@@ -396,7 +433,7 @@ bool MariaDBUserManager::write_users(QResult users, bool using_roles)
     return !error;
 }
 
-void MariaDBUserManager::write_dbs_and_roles(QResult dbs, QResult roles)
+void MariaDBUserManager::read_dbs_and_roles(QResult dbs, QResult roles)
 {
     // Because the database grant and roles tables are quite simple and only require lookups, their contents
     // need not be saved in an sqlite database. This simplifies things quite a bit.
@@ -431,6 +468,23 @@ void MariaDBUserManager::write_dbs_and_roles(QResult dbs, QResult roles)
 
     Guard guard(m_userdb_lock);
     m_userdb.set_dbs_and_roles(std::move(new_db_grants), std::move(new_roles_mapping));
+}
+
+void MariaDBUserManager::read_proxy_grants(MariaDBUserManager::QResult proxies)
+{
+    if (proxies->get_row_count() > 0)
+    {
+        auto ind_user = proxies->get_col_index("user");
+        auto ind_host = proxies->get_col_index("host");
+        if (ind_user >= 0 && ind_host >= 0)
+        {
+            Guard guard(m_userdb_lock);
+            while (proxies->next_row())
+            {
+                m_userdb.add_proxy_grant(proxies->get_string(ind_user), proxies->get_string(ind_host));
+            }
+        }
+    }
 }
 
 void UserDatabase::add_entry(const std::string& username, const UserEntry& entry)
@@ -825,6 +879,23 @@ UserDatabase::PatternType UserDatabase::parse_pattern_type(const std::string& ho
         }
     }
     return patterntype;
+}
+
+void UserDatabase::add_proxy_grant(const std::string& user, const std::string& host)
+{
+    auto user_iter = m_contents.find(user);
+    if (user_iter != m_contents.end())
+    {
+        EntryList& entries = user_iter->second;
+        UserEntry needle;
+        needle.host_pattern = host;
+        auto entry_iter = std::lower_bound(entries.begin(), entries.end(), needle,
+                                           UserEntry::host_pattern_is_more_specific);
+        if (entry_iter != entries.end() && entry_iter->host_pattern == host)
+        {
+            entry_iter->proxy_grant = true;
+        }
+    }
 }
 
 bool UserEntry::host_pattern_is_more_specific(const UserEntry& lhs, const UserEntry& rhs)

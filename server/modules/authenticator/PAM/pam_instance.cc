@@ -484,7 +484,7 @@ json_t* PamAuthenticatorModule::diagnostics()
 
 uint64_t PamAuthenticatorModule::capabilities() const
 {
-    return AuthenticatorModule::CAP_BACKEND_AUTH;
+    return CAP_BACKEND_AUTH | CAP_ANON_USER;
 }
 
 std::string PamAuthenticatorModule::supported_protocol() const

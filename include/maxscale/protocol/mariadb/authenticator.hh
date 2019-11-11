@@ -61,7 +61,8 @@ public:
     {
         CAP_REAUTHENTICATE  = (1 << 0), /**< Does the module support reauthentication? */
         CAP_BACKEND_AUTH    = (1 << 1), /**< Does the module support backend authentication? */
-        CAP_CONC_LOAD_USERS = (1 << 2)  /**< Does the module support concurrent user loading? */
+        CAP_CONC_LOAD_USERS = (1 << 2), /**< Does the module support concurrent user loading? */
+        CAP_ANON_USER       = (1 << 3), /**< Does the module allow anonymous users? */
     };
 
     AuthenticatorModule() = default;

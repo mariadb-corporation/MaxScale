@@ -886,27 +886,59 @@ int MariaDBClientConnection::perform_authentication(GWBUF* read_buffer, int nbyt
 
     if (ssl_ready && client_data_ready && !m_authenticator)
     {
+        auto& auth_modules = *(m_session_data->allowed_authenticators);
+        // Check if any of the allowed authenticators support anonymous users.
+        bool allow_anon_user = false;
+        for (const auto & auth_module : auth_modules)
+        {
+            if (auth_module->capabilities() & mariadb::AuthenticatorModule::CAP_ANON_USER)
+            {
+                allow_anon_user = true;
+                break;
+            }
+        }
+
         // The correct authenticator is chosen here (and also in reauthenticate_client()).
         auto users = user_account_manager();
         auto entry = users->find_user(m_session_data->user, m_session_data->remote, m_session_data->db);
 
+        if (!entry && allow_anon_user)
+        {
+            // Try find an anonymous user.
+            entry = users->find_anon_proxy_user(m_session_data->user, m_session_data->remote);
+        }
+
+        bool found_good_entry = false;
         if (entry)
         {
-            auto& auth_modules = *(m_session_data->allowed_authenticators);
-            for (const auto & auth_module : auth_modules)
+            mariadb::AuthenticatorModule* selected_module = nullptr;
+            for (const auto& auth_module : auth_modules)
             {
                 if (auth_module->supported_plugins().count(entry->plugin))
                 {
-                    // Found correct authenticator for the user entry. Save related data so that later
-                    // calls do not need to perform the same work.
-                    m_user_entry = std::move(entry);
-                    m_session_data->m_current_authenticator = auth_module.get();
-                    m_authenticator = auth_module->create_client_authenticator();
+                    // Found correct authenticator for the user entry.
+                    selected_module = auth_module.get();
                     break;
                 }
             }
+
+            if (selected_module)
+            {
+                // Save related data so that later calls do not need to perform the same work.
+                m_user_entry = std::move(entry);
+                m_session_data->m_current_authenticator = selected_module;
+                m_authenticator = selected_module->create_client_authenticator();
+                found_good_entry = true;
+            }
+            else
+            {
+                MXB_INFO("User entry '%s@'%s' uses unrecognized authenticator plugin '%s'. "
+                         "Cannot authenticate user.",
+                         entry->username.c_str(), entry->host_pattern.c_str(), entry->plugin.c_str());
+            }
         }
-        else
+
+        if (!found_good_entry)
         {
             // User data may be outdated, send update message through the service. The current session
             // will fail.

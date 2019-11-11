@@ -38,6 +38,7 @@ public:
 
     void   add_entry(const std::string& username, const mariadb::UserEntry& entry);
     void   set_dbs_and_roles(StringSetMap&& db_grants, StringSetMap&& roles_mapping);
+    void   add_proxy_grant(const std::string& user, const std::string& host);
     void   clear();
     size_t size() const;
 
@@ -114,6 +115,9 @@ public:
     std::unique_ptr<mariadb::UserEntry>
     find_user(const std::string& user, const std::string& host, const std::string& requested_db) const;
 
+    std::unique_ptr<mariadb::UserEntry>
+    find_anon_proxy_user(const std::string& user, const std::string& host) const;
+
     void        update_user_accounts() override;
     void        set_credentials(const std::string& user, const std::string& pw) override;
     void        set_backends(const std::vector<SERVER*>& backends) override;
@@ -126,8 +130,9 @@ private:
     bool load_users();
 
     void updater_thread_function();
-    bool write_users(QResult users, bool using_roles);
-    void write_dbs_and_roles(QResult dbs, QResult roles);
+    bool read_users(QResult users, bool using_roles);
+    void read_dbs_and_roles(QResult dbs, QResult roles);
+    void read_proxy_grants(QResult proxies);
 
     // Fields for controlling the updater thread.
     std::thread             m_updater_thread;
