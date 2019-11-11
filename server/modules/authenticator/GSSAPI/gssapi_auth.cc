@@ -463,7 +463,7 @@ static bool validate_user(GSSAPIClientAuthenticator* auth, DCB* dcb, MYSQL_sessi
  * has failed.
  */
 mariadb::ClientAuthenticator::AuthRes
-GSSAPIClientAuthenticator::authenticate(DCB* generic_dcb, const UserEntry* entry)
+GSSAPIClientAuthenticator::authenticate(DCB* generic_dcb, const mariadb::UserEntry* entry)
 {
     using AuthRes = mariadb::ClientAuthenticator::AuthRes;
     mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);

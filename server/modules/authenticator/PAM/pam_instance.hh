@@ -15,6 +15,7 @@
 
 #include <string>
 #include <maxsql/mariadb_connector.hh>
+#include <maxsql/sqlite.hh>
 #include <maxscale/service.hh>
 #include <maxscale/sqlite3.h>
 #include "pam_client_session.hh"

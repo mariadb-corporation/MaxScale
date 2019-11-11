@@ -24,6 +24,7 @@
 #include <maxscale/protocol/mariadb/client_connection.hh>
 
 using AuthRes = mariadb::ClientAuthenticator::AuthRes;
+using mariadb::UserEntry;
 
 extern "C"
 {

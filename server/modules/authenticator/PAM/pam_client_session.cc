@@ -15,13 +15,14 @@
 
 #include <set>
 #include <maxbase/pam_utils.hh>
-#include <maxbase/format.hh>
 #include <maxscale/event.hh>
 #include "pam_instance.hh"
+#include <maxscale/protocol/mariadb/protocol_classes.hh>
 
 using maxscale::Buffer;
 using std::string;
 using AuthRes = mariadb::ClientAuthenticator::AuthRes;
+using mariadb::UserEntry;
 
 namespace
 {
@@ -46,76 +47,6 @@ bool store_client_password(MYSQL_session* session, GWBUF* buffer)
     return rval;
 }
 
-struct UserData
-{
-    string host;
-    string authentication_string;
-    string default_role;
-    bool anydb {false};
-
-    static bool compare(const UserData& lhs, const UserData& rhs)
-    {
-        // Order entries according to https://mariadb.com/kb/en/library/create-user/
-        const string& lhost = lhs.host;
-        const string& rhost = rhs.host;
-        const char wildcards[] = "%_";
-        auto lwc_pos = lhost.find_first_of(wildcards);
-        auto rwc_pos = rhost.find_first_of(wildcards);
-        bool lwc = (lwc_pos != string::npos);
-        bool rwc = (rwc_pos != string::npos);
-
-        // The host without wc:s sorts earlier than the one with them. If both have wc:s, the one with the
-        // later wc wins. If neither have wildcards, use string order. This should be rare.
-        return ((!lwc && rwc) || (lwc && rwc && lwc_pos > rwc_pos) || (!lwc && !rwc && lhost < rhost));
-    }
-
-};
-
-using UserDataArr = std::vector<UserData>;
-
-int user_data_cb(UserDataArr* data, int columns, char** column_vals, char** column_names)
-{
-    mxb_assert(columns == 4);
-    UserData new_row;
-    new_row.host = column_vals[0];
-    new_row.authentication_string = column_vals[1];
-    new_row.default_role = column_vals[2];
-    new_row.anydb = (column_vals[3][0] == '1');
-    data->push_back(new_row);
-    return 0;
-}
-
-int anon_user_data_cb(UserDataArr* data, int columns, char** column_vals, char** column_names)
-{
-    mxb_assert(columns == 2);
-    UserData new_row;
-    new_row.host = column_vals[0];
-    new_row.authentication_string = column_vals[1];
-    data->push_back(new_row);
-    return 0;
-}
-
-int string_cb(PamClientAuthenticator::StringVector* data, int columns, char** column_vals, char** column_names)
-{
-    mxb_assert(columns == 1);
-    if (column_vals[0])
-    {
-        data->push_back(column_vals[0]);
-    }
-    else
-    {
-        // Empty is a valid value.
-        data->push_back("");
-    }
-    return 0;
-}
-
-int row_count_cb(int* data, int columns, char** column_vals, char** column_names)
-{
-    (*data)++;
-    return 0;
-}
-
 }
 
 PamClientAuthenticator::PamClientAuthenticator(PamAuthenticatorModule* instance)
@@ -125,100 +56,8 @@ PamClientAuthenticator::PamClientAuthenticator(PamAuthenticatorModule* instance)
 
 mariadb::SClientAuth PamClientAuthenticator::create(PamAuthenticatorModule* inst)
 {
-    mariadb::SClientAuth rval;
-
-    // This handle is only used from one thread, can define no_mutex.
-    int db_flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_SHAREDCACHE | SQLITE_OPEN_NOMUTEX;
-    std::unique_ptr<PamClientAuthenticator> new_auth(new(std::nothrow) PamClientAuthenticator(inst));
-    if (new_auth)
-    {
-        if (new_auth->m_sqlite.open(inst->m_dbname, db_flags))
-        {
-            new_auth->m_sqlite.set_timeout(1000);
-            rval = std::move(new_auth);
-        }
-        else
-        {
-            MXB_ERROR("Could not create PAM authenticator session: %s", new_auth->m_sqlite.error());
-        }
-    }
-    return rval;
-}
-
-/**
- * Check which PAM services the session user has access to.
- *
- * @param dcb Client DCB
- * @param session MySQL session
- * @param services_out Output for services
- */
-void PamClientAuthenticator::get_pam_user_services(const DCB* dcb, const MYSQL_session* session,
-                                                   StringVector* services_out)
-{
-    const char* user = session->user.c_str();
-    const std::string& host = dcb->remote();
-    const string db = session->db;
-    // First search for a normal matching user.
-    const string columns = FIELD_HOST + ", " + FIELD_AUTHSTR + ", " + FIELD_DEF_ROLE + ", " + FIELD_ANYDB;
-    const string filter = "('%s' LIKE " + FIELD_HOST + ") AND (" + FIELD_IS_ROLE + " = 0)";
-    const string users_filter = "(" + FIELD_USER + " = '%s') AND " + filter;
-    const string users_query_fmt = "SELECT " + columns + " FROM " + TABLE_USER + " WHERE "
-            + users_filter + ";";
-
-    string users_query = mxb::string_printf(users_query_fmt.c_str(), user, host.c_str());
-    UserDataArr matching_users;
-    m_sqlite.exec(users_query, user_data_cb, &matching_users);
-
-    if (!matching_users.empty())
-    {
-        // Only consider the best matching userdata.
-        auto best_entry = *std::min_element(matching_users.begin(), matching_users.end(), UserData::compare);
-
-        // Accept the user if the entry has a direct global privilege or if the user is not
-        // connecting to a specific database.
-        if (best_entry.anydb || db.empty()
-            // Check db-specific access.
-            || (user_can_access_db(user, best_entry.host, db))
-            // Check role-based access.
-            || (!best_entry.default_role.empty() && role_can_access_db(best_entry.default_role, db)))
-        {
-            MXS_INFO("Found matching PAM user '%s'@'%s' for client '%s'@'%s' with sufficient privileges.",
-                     user, best_entry.host.c_str(), user, host.c_str());
-            services_out->push_back(best_entry.authentication_string);
-        }
-        else
-        {
-            MXS_INFO("Found matching PAM user '%s'@'%s' for client '%s'@'%s' but user does not have "
-                     "sufficient privileges.", user, best_entry.host.c_str(), user, host.c_str());
-        }
-    }
-    else
-    {
-        // No normal user entry found for the username.
-        // Check if a matching anonymous user exists. Privileges are not checked for anonymous users since
-        // the authenticator does not know the final mapped user. Roles are also not supported.
-        const string anon_columns = FIELD_HOST + ", " + FIELD_AUTHSTR;
-        const string anon_filter = "(" + FIELD_USER + " = '') AND " + filter + " AND ("
-                                   + FIELD_HAS_PROXY + " = '1')";
-        const string anon_query_fmt = "SELECT " + anon_columns + " FROM " + TABLE_USER
-                                      + " WHERE " + anon_filter + ";";
-        string anon_query = mxb::string_printf(anon_query_fmt.c_str(), host.c_str());
-        MXS_DEBUG("PAM proxy user services search sql: '%s'.", anon_query.c_str());
-
-        UserDataArr anon_entries;
-        m_sqlite.exec(anon_query, anon_user_data_cb, &anon_entries);
-        if (anon_entries.empty())
-        {
-            MXB_INFO("Found no matching PAM user for client '%s'@'%s'.", user, host.c_str());
-        }
-        else
-        {
-            auto best_entry = *std::min_element(anon_entries.begin(), anon_entries.end(), UserData::compare);
-            MXB_INFO("Found matching anonymous PAM user ''@'%s' for client '%s'@'%s'.",
-                     best_entry.host.c_str(), user, host.c_str());
-            services_out->push_back(best_entry.authentication_string);
-        }
-    }
+    mariadb::SClientAuth new_auth(new(std::nothrow) PamClientAuthenticator(inst));
+    return new_auth;
 }
 
 /**
@@ -262,6 +101,7 @@ Buffer PamClientAuthenticator::create_auth_change_packet() const
 
 AuthRes PamClientAuthenticator::authenticate(DCB* generic_dcb, const UserEntry* entry)
 {
+    using mxb::PamResult;
     mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
 
@@ -288,60 +128,25 @@ AuthRes PamClientAuthenticator::authenticate(DCB* generic_dcb, const UserEntry* 
              * responded with the password. Try to continue authentication without more
              * messages to client. */
             string password((char*)ses->auth_token.data(), ses->auth_token.size());
-            /*
-             * Authentication may be attempted twice: first with old user account info and then with
-             * updated info. Updating may fail if it has been attempted too often lately. The second password
-             * check is useless if the user services are same as on the first attempt.
-             */
-            bool authenticated = false;
-            StringVector services_old;
-            for (int loop = 0; loop < 2 && !authenticated; loop++)
-            {
-                if (loop == 0 || service_refresh_users(dcb->service()))
-                {
-                    bool try_validate = true;
-                    StringVector services;
-                    get_pam_user_services(dcb, ses, &services);
-                    if (loop == 0)
-                    {
-                        services_old = services;
-                    }
-                    else if (services == services_old)
-                    {
-                        try_validate = false;
-                    }
-                    if (try_validate)
-                    {
-                        for (auto iter = services.begin(); iter != services.end() && !authenticated; ++iter)
-                        {
-                            string service = *iter;
-                            // The server PAM plugin uses "mysql" as the default service when authenticating
-                            // a user with no service.
-                            if (service.empty())
-                            {
-                                service = "mysql";
-                            }
 
-                            mxb::PamResult res = mxb::pam_authenticate(ses->user, password,
-                                                                       dcb->remote().c_str(),
-                                                                       service, PASSWORD);
-                            if (res.type == mxb::PamResult::Result::SUCCESS)
-                            {
-                                authenticated = true;
-                            }
-                            else
-                            {
-                                MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE, "%s",
-                                              res.error.c_str());
-                            }
-                        }
-                    }
-                }
-            }
-            if (authenticated)
+            // The server PAM plugin uses "mysql" as the default service when authenticating
+            // a user with no service.
+            string pam_service = entry->auth_string.empty() ? "mysql" : entry->auth_string;
+            PamResult res = mxb::pam_authenticate(ses->user, password, dcb->remote(), pam_service, PASSWORD);
+            if (res.type == PamResult::Result::SUCCESS)
             {
                 rval = AuthRes::SUCCESS;
             }
+            else
+            {
+                if (res.type == PamResult::Result::WRONG_USER_PW)
+                {
+                    rval = AuthRes::FAIL_WRONG_PW;
+                }
+                MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE, "%s",
+                              res.error.c_str());
+            }
+
             m_state = State::DONE;
         }
     }
@@ -378,65 +183,3 @@ bool PamClientAuthenticator::extract(GWBUF* buffer, MYSQL_session* session)
     return rval;
 }
 
-bool PamClientAuthenticator::role_can_access_db(const std::string& role, const std::string& target_db)
-{
-    // Roles are tricky since one role may have access to other roles and so on. May need to perform
-    // multiple queries.
-    using StringSet = std::set<string>;
-    StringSet open_set; // roles which still need to be expanded.
-    StringSet closed_set; // roles which have been checked already.
-
-    const string role_anydb_query_fmt = "SELECT 1 FROM " + TABLE_USER + " WHERE ("
-            + FIELD_USER +" = '%s' AND " + FIELD_ANYDB + " = 1 AND " + FIELD_IS_ROLE + " = 1);";
-    const string role_map_query_fmt = "SELECT " + FIELD_ROLE + " FROM " + TABLE_ROLES_MAPPING + " WHERE ("
-            + FIELD_USER +" = '%s' AND " + FIELD_HOST + " = '');";
-
-    open_set.insert(role);
-    bool privilege_found = false;
-    while (!open_set.empty() && !privilege_found)
-    {
-        string current_role = *open_set.begin();
-        // First, check if role has global privilege.
-        int count = 0;
-        string role_anydb_query = mxb::string_printf(role_anydb_query_fmt.c_str(), current_role.c_str());
-        m_sqlite.exec(role_anydb_query.c_str(), row_count_cb, &count);
-        if (count > 0)
-        {
-            privilege_found = true;
-        }
-        // No global privilege, check db-level privilege.
-        else if (user_can_access_db(current_role, "", target_db))
-        {
-            privilege_found = true;
-        }
-        else
-        {
-            // The current role does not have access to db. Add linked roles to the open set.
-            string role_map_query = mxb::string_printf(role_map_query_fmt.c_str(), current_role.c_str());
-            StringVector linked_roles;
-            m_sqlite.exec(role_map_query, string_cb, &linked_roles);
-            for (const auto& linked_role : linked_roles)
-            {
-                if (open_set.count(linked_role) == 0 && closed_set.count(linked_role) == 0)
-                {
-                    open_set.insert(linked_role);
-                }
-            }
-        }
-
-        open_set.erase(current_role);
-        closed_set.insert(current_role);
-    }
-    return privilege_found;
-}
-
-bool PamClientAuthenticator::user_can_access_db(const std::string& user, const std::string& host,
-                                                const std::string& target_db)
-{
-    const string sql_fmt = "SELECT 1 FROM " + TABLE_DB
-            + " WHERE (user = '%s' AND host = '%s' AND db = '%s');";
-    string sql = mxb::string_printf(sql_fmt.c_str(), user.c_str(), host.c_str(), target_db.c_str());
-    int result = 0;
-    m_sqlite.exec(sql, row_count_cb, &result);
-    return result > 0;
-}

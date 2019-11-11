@@ -19,30 +19,6 @@ class DCB;
 class SERVICE;
 class GWBUF;
 class MYSQL_session;
-struct UserEntry;
-
-/**
- * Authentication states
- *
- * The state usually goes from INIT to CONNECTED and alternates between
- * MESSAGE_READ and RESPONSE_SENT until ending up in either FAILED or COMPLETE.
- *
- * If the server immediately rejects the connection, the state ends up in
- * HANDSHAKE_FAILED. If the connection creation would block, instead of going to
- * the CONNECTED state, the connection will be in PENDING_CONNECT state until
- * the connection can be created.
- */
-enum mxs_auth_state_t
-{
-    MXS_AUTH_STATE_INIT,            /**< Initial authentication state */
-    MXS_AUTH_STATE_PENDING_CONNECT, /**< Connection creation is underway */
-    MXS_AUTH_STATE_CONNECTED,       /**< Network connection to server created */
-    MXS_AUTH_STATE_MESSAGE_READ,    /**< Read a authentication message from the server */
-    MXS_AUTH_STATE_RESPONSE_SENT,   /**< Responded to the read authentication message */
-    MXS_AUTH_STATE_FAILED,          /**< Authentication failed */
-    MXS_AUTH_STATE_HANDSHAKE_FAILED,/**< Authentication failed immediately */
-    MXS_AUTH_STATE_COMPLETE         /**< Authentication is complete */
-};
 
 namespace mariadb
 {
@@ -52,6 +28,24 @@ class BackendAuthenticator;
 
 using SClientAuth = std::unique_ptr<ClientAuthenticator>;
 using SBackendAuth = std::unique_ptr<BackendAuthenticator>;
+
+struct UserEntry
+{
+    std::string username;       /**< Username */
+    std::string host_pattern;   /**< Hostname or IP, may have wildcards */
+    std::string plugin;         /**< Auth plugin to use */
+    std::string password;       /**< Auth data used by native auth plugin */
+    std::string auth_string;    /**< Auth data used by other plugins */
+
+    bool ssl {false};           /**< Should the user connect with ssl? */
+    bool global_db_priv {false};/**< Does the user have access to all databases? */
+    bool proxy_grant {false};   /**< Does the user have proxy grants? */
+
+    bool        is_role {false};/**< Is the user a role? */
+    std::string default_role;   /**< Default role if any */
+
+    static bool host_pattern_is_more_specific(const UserEntry& lhs, const UserEntry& rhs);
+};
 
 /**
  * The base class of all authenticators for MariaDB-protocol. Contains the global data for

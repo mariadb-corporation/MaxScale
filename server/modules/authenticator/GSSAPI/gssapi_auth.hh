@@ -68,7 +68,7 @@ public:
     ~GSSAPIClientAuthenticator() override;
 
     bool    extract(GWBUF* buffer, MYSQL_session* session) override;
-    AuthRes authenticate(DCB* client, const UserEntry* entry) override;
+    AuthRes authenticate(DCB* client, const mariadb::UserEntry* entry) override;
 
     sqlite3* handle {nullptr};              /**< SQLite3 database handle */
     uint8_t  sequence {0};                  /**< The next packet seqence number */

@@ -17,7 +17,6 @@
 #include <maxsql/mariadb_connector.hh>
 #include <maxsql/mariadb.hh>
 #include <maxscale/server.hh>
-#include <maxscale/paths.h>
 #include <maxscale/protocol/mariadb/module_names.hh>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -27,6 +26,7 @@
 
 using std::string;
 using mxq::MariaDB;
+using UserEntry = mariadb::UserEntry;
 using SUserEntry = std::unique_ptr<UserEntry>;
 using MutexLock = std::unique_lock<std::mutex>;
 using Guard = std::lock_guard<std::mutex>;

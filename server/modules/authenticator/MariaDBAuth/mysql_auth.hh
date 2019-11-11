@@ -149,7 +149,7 @@ public:
     ~MariaDBClientAuthenticator() override = default;
 
     bool    extract(GWBUF* buffer, MYSQL_session* session) override;
-    AuthRes authenticate(DCB* client, const UserEntry* entry) override;
+    AuthRes authenticate(DCB* client, const mariadb::UserEntry* entry) override;
 
     AuthRes reauthenticate(DCB* generic_dcb, uint8_t* scramble, size_t scramble_len,
                            const ByteVec& auth_token, uint8_t* output_token) override;

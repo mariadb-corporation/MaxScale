@@ -22,26 +22,9 @@
 #include <maxbase/stopwatch.hh>
 #include <maxsql/queryresult.hh>
 #include <maxscale/protocol2.hh>
+#include <maxscale/protocol/mariadb/authenticator.hh>
 
 class SERVER;
-
-struct UserEntry
-{
-    std::string username;       /**< Username */
-    std::string host_pattern;   /**< Hostname or IP, may have wildcards */
-    std::string plugin;         /**< Auth plugin to use */
-    std::string password;       /**< Auth data used by native auth plugin */
-    std::string auth_string;    /**< Auth data used by other plugins */
-
-    bool ssl {false};           /**< Should the user connect with ssl? */
-    bool global_db_priv {false};/**< Does the user have access to all databases? */
-    bool proxy_grant {false};   /**< Does the user have proxy grants? */
-
-    bool        is_role {false};/**< Is the user a role? */
-    std::string default_role;   /**< Default role if any */
-
-    static bool host_pattern_is_more_specific(const UserEntry& lhs, const UserEntry& rhs);
-};
 
 /**
  * This class contains user data retrieved from the mysql-database.
@@ -53,13 +36,14 @@ public:
     using StringSet = std::set<std::string>;
     using StringSetMap = std::map<std::string, StringSet>;
 
-    void   add_entry(const std::string& username, const UserEntry& entry);
+    void   add_entry(const std::string& username, const mariadb::UserEntry& entry);
     void   set_dbs_and_roles(StringSetMap&& db_grants, StringSetMap&& roles_mapping);
     void   clear();
     size_t size() const;
 
-    const UserEntry* find_entry(const std::string& username, const std::string& host) const;
-    bool             check_database_access(const UserEntry& entry, const std::string& db) const;
+    const mariadb::UserEntry*
+    find_entry(const std::string& username, const std::string& host) const;
+    bool             check_database_access(const mariadb::UserEntry& entry, const std::string& db) const;
 
 private:
     bool user_can_access_db(const std::string& user, const std::string& host_pattern,
@@ -87,7 +71,7 @@ private:
     AddrType    parse_address_type(const std::string& addr) const;
     PatternType parse_pattern_type(const std::string& host_pattern) const;
 
-    using EntryList = std::vector<UserEntry>;
+    using EntryList = std::vector<mariadb::UserEntry>;
 
     /**
      * Map of username -> EntryList. In the list, entries are ordered from most specific hostname pattern to
@@ -127,7 +111,7 @@ public:
      * @param requested_db Database requested by client. May be empty.
      * @return Found user entry.
      */
-    std::unique_ptr<UserEntry>
+    std::unique_ptr<mariadb::UserEntry>
     find_user(const std::string& user, const std::string& host, const std::string& requested_db) const;
 
     void        update_user_accounts() override;
