@@ -33,9 +33,9 @@ public:
     char    sysname[SYSNAME_LEN];                       /**< The OS name of the system */
     uint8_t mac_sha1[SHA_DIGEST_LENGTH];                /**< The SHA1 digest of an interface MAC address */
 
-    int          syslog;                                /**< Log to syslog */
-    int          maxlog;                                /**< Log to MaxScale's own logs */
-    time_t       auth_conn_timeout;                     /**< Connection timeout for the user
+    int    syslog;                                      /**< Log to syslog */
+    int    maxlog;                                      /**< Log to MaxScale's own logs */
+    time_t auth_conn_timeout;                           /**< Connection timeout for the user
                                                          * authentication */
     time_t  auth_read_timeout;                          /**< Read timeout for the user authentication */
     time_t  auth_write_timeout;                         /**< Write timeout for the user authentication */

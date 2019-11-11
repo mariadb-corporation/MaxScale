@@ -19,7 +19,7 @@
 #include <string>
 
 #include <maxscale/router.hh>
-#include <maxscale/pcre2.h>
+#include <maxscale/pcre2.hh>
 
 #include "schemaroutersession.hh"
 

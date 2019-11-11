@@ -20,7 +20,7 @@
 #include <string>
 #include <maxscale/buffer.hh>
 #include <maxscale/dcb.hh>
-#include <maxscale/pcre2.h>
+#include <maxscale/pcre2.hh>
 
 #define PTR_IS_RESULTSET(b)    (b[0] == 0x01 && b[1] == 0x0 && b[2] == 0x0 && b[3] == 0x01)
 #define PTR_IS_EOF(b)          (b[0] == 0x05 && b[1] == 0x0 && b[2] == 0x0 && b[4] == 0xfe)

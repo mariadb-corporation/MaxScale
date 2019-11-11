@@ -43,7 +43,7 @@
 #include <maxscale/maxscale.h>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/paths.h>
-#include <maxscale/pcre2.h>
+#include <maxscale/pcre2.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/secrets.hh>
 #include <maxscale/utils.hh>

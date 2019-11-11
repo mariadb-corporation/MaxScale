@@ -22,7 +22,7 @@
 
 #include <maxbase/assert.h>
 #include <maxbase/alloc.h>
-#include <maxscale/pcre2.h>
+#include <maxscale/pcre2.hh>
 
 using std::string;
 
@@ -96,7 +96,7 @@ std::unique_ptr<ExternalCmd> ExternalCmd::create(const string& argstr, int timeo
 {
     bool success = false;
     std::unique_ptr<ExternalCmd> cmd(new ExternalCmd(argstr, timeout));
-    char* argvec[1] {}; // Parse just one argument for testing file existence and permissions.
+    char* argvec[1] {};     // Parse just one argument for testing file existence and permissions.
     if (cmd->tokenize_args(argvec, 1) > 0)
     {
         const char* cmdname = argvec[0];

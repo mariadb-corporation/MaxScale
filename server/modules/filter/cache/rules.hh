@@ -21,7 +21,7 @@
 #include <vector>
 #include <maxscale/buffer.hh>
 #include <maxscale/session.hh>
-#include <maxscale/pcre2.h>
+#include <maxscale/pcre2.hh>
 
 MXS_BEGIN_DECLS
 
@@ -58,9 +58,9 @@ struct CACHE_RULE
     {
         pcre2_code*        code;
         pcre2_match_data** datas;
-    }                  regexp;          // Regexp data, only for CACHE_OP_[LIKE|UNLIKE].
-    uint32_t           debug;           // The debug level.
-    CACHE_RULE*        next;
+    }           regexp;                 // Regexp data, only for CACHE_OP_[LIKE|UNLIKE].
+    uint32_t    debug;                  // The debug level.
+    CACHE_RULE* next;
 };
 
 struct CACHE_RULES

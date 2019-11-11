@@ -31,7 +31,7 @@
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/paths.h>
 #include <maxscale/protocol/mariadb/mysql.hh>
-#include <maxscale/pcre2.h>
+#include <maxscale/pcre2.hh>
 #include <maxscale/router.hh>
 #include <maxscale/secrets.hh>
 #include <maxscale/service.hh>

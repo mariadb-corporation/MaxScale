@@ -19,7 +19,7 @@
 #include <memory>
 #include <unordered_map>
 
-#include <maxscale/pcre2.h>
+#include <maxscale/pcre2.hh>
 #include <maxscale/service.hh>
 #include <binlog_common.hh>
 

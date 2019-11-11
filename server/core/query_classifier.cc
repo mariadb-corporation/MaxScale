@@ -25,7 +25,7 @@
 #include <maxscale/config.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/modutil.hh>
-#include <maxscale/pcre2.h>
+#include <maxscale/pcre2.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/utils.h>
 #include <maxscale/jansson.hh>

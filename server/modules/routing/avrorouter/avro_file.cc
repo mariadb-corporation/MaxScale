@@ -34,7 +34,7 @@
 
 #include <maxbase/alloc.h>
 #include <maxscale/maxscale.h>
-#include <maxscale/pcre2.h>
+#include <maxscale/pcre2.hh>
 #include <maxscale/utils.h>
 #include <maxscale/routingworker.hh>
 

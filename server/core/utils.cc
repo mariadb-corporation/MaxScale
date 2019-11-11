@@ -49,7 +49,7 @@
 #include <maxscale/config.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/limits.h>
-#include <maxscale/pcre2.h>
+#include <maxscale/pcre2.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/random.h>
 #include <maxscale/secrets.hh>

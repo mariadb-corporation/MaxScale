@@ -17,7 +17,7 @@
 
 #include <maxbase/alloc.h>
 #include <maxscale/config.hh>
-#include <maxscale/pcre2.h>
+#include <maxscale/pcre2.hh>
 
 #include "internal/filter.hh"
 #include "internal/modules.hh"
