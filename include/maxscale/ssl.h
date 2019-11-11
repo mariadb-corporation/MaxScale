@@ -34,6 +34,7 @@ typedef enum ssl_method_type
     SERVICE_TLS10,
     SERVICE_TLS11,
     SERVICE_TLS12,
+    SERVICE_TLS13,
     SERVICE_SSL_MAX,
     SERVICE_TLS_MAX,
     SERVICE_SSL_TLS_MAX,

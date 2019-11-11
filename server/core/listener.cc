@@ -200,6 +200,10 @@ int listener_set_ssl_version(SSL_LISTENER* ssl_listener, const char* version)
     {
         ssl_listener->ssl_method_type = SERVICE_TLS12;
     }
+    else if (strcasecmp(version, "TLSV13") == 0)
+    {
+        ssl_listener->ssl_method_type = SERVICE_TLS13;
+    }
     else
     {
         return -1;
@@ -301,6 +305,15 @@ bool SSL_LISTENER_init(SSL_LISTENER* ssl)
 #endif
         break;
 
+    case SERVICE_TLS13:
+#ifdef OPENSSL_1_1
+        ssl->method = (SSL_METHOD*)TLS_method();
+#else
+        MXS_ERROR("TLSv1.3 is not supported on this system.");
+        return false;
+#endif
+        break;
+
     /** Rest of these use the maximum available SSL/TLS methods */
     case SERVICE_SSL_MAX:
         ssl->method = (SSL_METHOD*)SSLv23_method();
@@ -334,6 +347,13 @@ bool SSL_LISTENER_init(SSL_LISTENER* ssl)
 
     /** Disable SSLv3 */
     SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv3);
+
+    if (ssl->ssl_method_type == SERVICE_TLS13)
+    {
+        // There is no TLSv1_3_method function as the TLSv1_X_method functions are deprecated in favor of
+        // disabling them via options.
+        SSL_CTX_set_options(ctx, SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1_2);
+    }
 
     // Disable session cache
     SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_OFF);

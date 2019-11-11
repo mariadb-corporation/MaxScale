@@ -202,13 +202,16 @@ const char* ssl_method_type_to_string(ssl_method_type_t method_type)
     switch (method_type)
     {
     case SERVICE_TLS10:
-        return "TLSV10";
+        return "TLSv10";
 
     case SERVICE_TLS11:
-        return "TLSV11";
+        return "TLSv11";
 
     case SERVICE_TLS12:
-        return "TLSV12";
+        return "TLSv12";
+
+    case SERVICE_TLS13:
+        return "TLSv13";
 
     case SERVICE_SSL_MAX:
     case SERVICE_TLS_MAX:
@@ -237,6 +240,10 @@ ssl_method_type_t string_to_ssl_method_type(const char* str)
     else if (strcasecmp("TLSV12", str) == 0)
     {
         return SERVICE_TLS12;
+    }
+    else if (strcasecmp("TLSV13", str) == 0)
+    {
+        return SERVICE_TLS13;
     }
     return SERVICE_SSL_UNKNOWN;
 }

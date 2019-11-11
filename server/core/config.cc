@@ -282,6 +282,7 @@ static const MXS_ENUM_VALUE ssl_version_values[] =
     {"TLSv10", SERVICE_TLS10      },
     {"TLSv11", SERVICE_TLS11      },
     {"TLSv12", SERVICE_TLS12      },
+    {"TLSv13", SERVICE_TLS13      },
     {NULL}
 };
 
