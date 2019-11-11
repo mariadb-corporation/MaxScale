@@ -20,12 +20,6 @@
 #include <maxscale/sqlite3.h>
 #include <maxscale/protocol/mariadb/authenticator.hh>
 
-/** Client auth plugin name */
-static const char auth_plugin_name[] = "auth_gssapi_client";
-
-/** This is mainly for testing purposes */
-static const char default_princ_name[] = "mariadb/localhost.localdomain";
-
 /** GSSAPI authentication states */
 enum gssapi_auth_state
 {
@@ -56,9 +50,6 @@ public:
     const std::unordered_set<std::string>& supported_plugins() const override;
 
     char* principal_name {nullptr};     /**< Service principal name given to the client */
-
-private:
-    sqlite3* handle {nullptr};          /**< SQLite3 database handle */
 };
 
 class GSSAPIClientAuthenticator : public mariadb::ClientAuthenticatorT<GSSAPIAuthenticatorModule>
@@ -70,12 +61,15 @@ public:
     bool    extract(GWBUF* buffer, MYSQL_session* session) override;
     AuthRes authenticate(DCB* client, const mariadb::UserEntry* entry) override;
 
-    sqlite3* handle {nullptr};              /**< SQLite3 database handle */
-    uint8_t  sequence {0};                  /**< The next packet seqence number */
+    uint8_t  m_sequence {0};                  /**< The next packet sequence number */
 
 private:
     void copy_client_information(GWBUF* buffer);
     bool store_client_token(MYSQL_session* session, GWBUF* buffer);
+    bool validate_gssapi_token(uint8_t* token, size_t len, char** output);
+    bool validate_user(MYSQL_session* session, const char* princ,
+                       const mariadb::UserEntry* entry);
+    GWBUF* create_auth_change_packet();
 
     gssapi_auth_state state {GSSAPI_AUTH_INIT};     /**< Authentication state*/
     uint8_t*          principal_name {nullptr};     /**< Principal name */
@@ -96,5 +90,4 @@ private:
     gssapi_auth_state state {GSSAPI_AUTH_INIT};     /**< Authentication state*/
     uint8_t*          principal_name {nullptr};     /**< Principal name */
     uint8_t           sequence {0};                 /**< The next packet sequence number */
-    sqlite3*          handle {nullptr};             /**< SQLite3 database handle */
 };

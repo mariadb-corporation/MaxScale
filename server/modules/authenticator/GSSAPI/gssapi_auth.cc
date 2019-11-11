@@ -12,77 +12,15 @@
  */
 #include "gssapi_auth.hh"
 
-#include <mysql.h>
 #include <maxbase/alloc.h>
 #include <maxscale/authenticator.hh>
 #include <maxscale/dcb.hh>
-#include <maxscale/mysql_utils.hh>
 #include <maxscale/protocol/mariadb/authenticator.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/module_names.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include <maxscale/secrets.hh>
 #include <maxscale/service.hh>
-#include <maxscale/sqlite3.h>
-
-/**
- * MySQL queries for retrieving the list of users
- */
-
-/** Query that gets all users that authenticate via the gssapi plugin */
-const char* gssapi_users_query =
-    "SELECT u.user, u.host, d.db, u.select_priv, u.authentication_string FROM "
-    "mysql.user AS u LEFT JOIN mysql.db AS d "
-    "ON (u.user = d.user AND u.host = d.host) WHERE u.plugin = 'gssapi' "
-    "UNION "
-    "SELECT u.user, u.host, t.db, u.select_priv, u.authentication_string FROM "
-    "mysql.user AS u LEFT JOIN mysql.tables_priv AS t "
-    "ON (u.user = t.user AND u.host = t.host) WHERE u.plugin = 'gssapi' "
-    "ORDER BY user";
-
-#define GSSAPI_USERS_QUERY_NUM_FIELDS 5
-
-/**
- * SQLite queries for authenticating users
- */
-
-/** Name of the in-memory database */
-#define GSSAPI_DATABASE_NAME "file:gssapi.db?mode=memory&cache=shared"
-
-/** The table name where we store the users */
-#define GSSAPI_TABLE_NAME "gssapi_users"
-
-/** CREATE TABLE statement for the in-memory table */
-const char create_sql[] =
-    "CREATE TABLE IF NOT EXISTS " GSSAPI_TABLE_NAME
-    "(user varchar(255), host varchar(255), db varchar(255), anydb boolean, princ text)";
-
-/** The query that is executed when a user is authenticated */
-static const char gssapi_auth_query[] =
-    "SELECT * FROM " GSSAPI_TABLE_NAME
-    " WHERE user = '%s' AND '%s' LIKE host AND (anydb = '1' OR '%s' IN ('information_schema', '') OR '%s' LIKE db)"
-    " AND ('%s' = '%s' OR princ = '%s') LIMIT 1";
-
-/** Delete query used to clean up the database before loading new users */
-static const char delete_query[] = "DELETE FROM " GSSAPI_TABLE_NAME;
-
-/**
- * The insert query template which adds users to the gssapi_users table.
- *
- * Note that the last two values are strings that can be NULL and thus they have
- * no quoted around them. The quotes for strings are added in add_gssapi_user().
- */
-static const char insert_sql_pattern[] =
-    "INSERT INTO " GSSAPI_TABLE_NAME " VALUES ('%s', '%s', %s, %s, %s)";
-
-/** Used for NULL value creation in the INSERT query */
-static const char null_token[] = "NULL";
-
-/** Flags for sqlite3_open_v2() */
-static int db_flags = SQLITE_OPEN_READWRITE
-    | SQLITE_OPEN_CREATE
-    | SQLITE_OPEN_URI
-    | SQLITE_OPEN_SHAREDCACHE;
 
 json_t* GSSAPIAuthenticatorModule::diagnostics()
 {
@@ -110,27 +48,12 @@ std::string GSSAPIAuthenticatorModule::supported_protocol() const
  */
 GSSAPIAuthenticatorModule* GSSAPIAuthenticatorModule::create(char** options)
 {
+    /** This is mainly for testing purposes */
+    const char default_princ_name[] = "mariadb/localhost.localdomain";
+
     auto instance = new(std::nothrow) GSSAPIAuthenticatorModule();
     if (instance)
     {
-        if (sqlite3_open_v2(GSSAPI_DATABASE_NAME, &instance->handle, db_flags, NULL) != SQLITE_OK)
-        {
-            MXS_ERROR("Failed to open SQLite3 handle.");
-            delete instance;
-            return NULL;
-        }
-
-        char* err;
-
-        if (sqlite3_exec(instance->handle, create_sql, NULL, NULL, &err) != SQLITE_OK)
-        {
-            MXS_ERROR("Failed to create database: %s", err);
-            sqlite3_free(err);
-            sqlite3_close_v2(instance->handle);
-            delete instance;
-            return NULL;
-        }
-
         for (int i = 0; options[i]; i++)
         {
             if (strstr(options[i], "principal_name"))
@@ -164,20 +87,6 @@ GSSAPIAuthenticatorModule* GSSAPIAuthenticatorModule::create(char** options)
 mariadb::SClientAuth GSSAPIAuthenticatorModule::create_client_authenticator()
 {
     auto new_ses = new (std::nothrow) GSSAPIClientAuthenticator(this);
-    if (new_ses)
-    {
-        if (sqlite3_open_v2(GSSAPI_DATABASE_NAME, &new_ses->handle, db_flags, NULL) == SQLITE_OK)
-        {
-            sqlite3_busy_timeout(new_ses->handle, MXS_SQLITE_BUSY_TIMEOUT);
-        }
-        else
-        {
-            MXS_ERROR("Failed to open SQLite3 handle.");
-            delete new_ses;
-            new_ses = NULL;
-        }
-    }
-
     return mariadb::SClientAuth(new_ses);
 }
 
@@ -188,7 +97,6 @@ GSSAPIClientAuthenticator::GSSAPIClientAuthenticator(GSSAPIAuthenticatorModule* 
 
 GSSAPIClientAuthenticator::~GSSAPIClientAuthenticator()
 {
-    sqlite3_close_v2(handle);
     MXS_FREE(principal_name);
 }
 
@@ -205,9 +113,12 @@ GSSAPIClientAuthenticator::~GSSAPIClientAuthenticator()
  * https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::AuthSwitchRequest
  * @see https://web.mit.edu/kerberos/krb5-1.5/krb5-1.5.4/doc/krb5-user/What-is-a-Kerberos-Principal_003f.html
  */
-static GWBUF* create_auth_change_packet(GSSAPIAuthenticatorModule* instance, GSSAPIClientAuthenticator* auth)
+GWBUF* GSSAPIClientAuthenticator::create_auth_change_packet()
 {
-    size_t principal_name_len = strlen(instance->principal_name);
+    /** Client auth plugin name */
+    const char auth_plugin_name[] = "auth_gssapi_client";
+
+    size_t principal_name_len = strlen(m_module.principal_name);
     size_t plen = sizeof(auth_plugin_name) + 1 + principal_name_len;
     GWBUF* buffer = gwbuf_alloc(plen + MYSQL_HEADER_LEN);
 
@@ -216,11 +127,11 @@ static GWBUF* create_auth_change_packet(GSSAPIAuthenticatorModule* instance, GSS
         uint8_t* data = (uint8_t*)GWBUF_DATA(buffer);
         gw_mysql_set_byte3(data, plen);
         data += 3;
-        *data++ = ++auth->sequence;                                 // Second packet
+        *data++ = ++m_sequence;                                 // Second packet
         *data++ = 0xfe;                                             // AuthSwitchRequest command
         memcpy(data, auth_plugin_name, sizeof(auth_plugin_name));   // Plugin name
         data += sizeof(auth_plugin_name);
-        memcpy(data, instance->principal_name, principal_name_len);     // Plugin data
+        memcpy(data, m_module.principal_name, principal_name_len);     // Plugin data
     }
 
     return buffer;
@@ -258,7 +169,7 @@ bool GSSAPIClientAuthenticator::store_client_token(MYSQL_session* session, GWBUF
  */
 void GSSAPIClientAuthenticator::copy_client_information(GWBUF* buffer)
 {
-    gwbuf_copy_data(buffer, MYSQL_SEQ_OFFSET, 1, &sequence);
+    gwbuf_copy_data(buffer, MYSQL_SEQ_OFFSET, 1, &m_sequence);
 }
 
 /**
@@ -302,14 +213,15 @@ static gss_name_t server_name = GSS_C_NO_NAME;
  * @param output Pointer where the client principal name is stored
  * @return True if client token is valid
  */
-static bool validate_gssapi_token(char* principal, uint8_t* token, size_t len, char** output)
+bool GSSAPIClientAuthenticator::validate_gssapi_token(uint8_t* token, size_t len, char** output)
 {
     OM_uint32 major = 0, minor = 0;
     gss_buffer_desc server_buf = {0, 0};
     gss_cred_id_t credentials;
 
-    server_buf.value = (void*)principal;
-    server_buf.length = strlen(principal) + 1;
+    const char* pr = m_module.principal_name;
+    server_buf.value = (void*)pr;
+    server_buf.length = strlen(pr) + 1;
 
     major = gss_import_name(&minor, &server_buf, GSS_C_NT_USER_NAME, &server_name);
 
@@ -387,71 +299,20 @@ static bool validate_gssapi_token(char* principal, uint8_t* token, size_t len, c
     return true;
 }
 
-/** @brief Callback for sqlite3_exec() */
-static int auth_cb(void* data, int columns, char** rows, char** row_names)
-{
-    bool* rv = (bool*)data;
-    *rv = true;
-    return 0;
-}
-
 /**
  * @brief Verify the user has access to the database
  *
- * @param auth Authenticator session
- * @param dcb Client DCB
  * @param session MySQL session
  * @param princ Client principal name
  * @return True if the user has access to the database
  */
-static bool validate_user(GSSAPIClientAuthenticator* auth, DCB* dcb, MYSQL_session* session,
-                          const char* princ)
+bool GSSAPIClientAuthenticator::validate_user(MYSQL_session* session, const char* princ,
+                                              const mariadb::UserEntry* entry)
 {
     mxb_assert(princ);
-    size_t len = sizeof(gssapi_auth_query) + session->user.length() * 2
-        + session->db.length() * 2 + dcb->remote().length() + strlen(princ) * 2;
-    char sql[len + 1];
-    bool rval = false;
-    char* err;
-
-    char princ_user[strlen(princ) + 1];
-    strcpy(princ_user, princ);
-    char* at = strchr(princ_user, '@');
-    if (at)
-    {
-        *at = '\0';
-    }
-
-    sprintf(sql,
-            gssapi_auth_query,
-            session->user.c_str(),
-            dcb->remote().c_str(),
-            session->db.c_str(),
-            session->db.c_str(),
-            princ_user,
-            session->user.c_str(),
-            princ);
-
-    /**
-     * Try authentication twice; first time with the current users, second
-     * time with fresh users
-     */
-    for (int i = 0; i < 2 && !rval; i++)
-    {
-        if (sqlite3_exec(auth->handle, sql, auth_cb, &rval, &err) != SQLITE_OK)
-        {
-            MXS_ERROR("Failed to execute auth query: %s", err);
-            sqlite3_free(err);
-            rval = false;
-        }
-
-        if (!rval)
-        {
-            service_refresh_users(dcb->service());
-        }
-    }
-
-    return rval;
+    std::string princ_user = princ;
+    princ_user.erase(princ_user.find('@'));
+    return (session->user == princ_user || entry->auth_string == princ);
 }
 
 /**
@@ -477,7 +338,7 @@ GSSAPIClientAuthenticator::authenticate(DCB* generic_dcb, const mariadb::UserEnt
         /** We need to send the authentication switch packet to change the
          * authentication to something other than the 'mysql_native_password'
          * method */
-        GWBUF* buffer = create_auth_change_packet(&m_module, auth);
+        GWBUF* buffer = create_auth_change_packet();
 
         if (buffer && dcb->protocol_write(buffer))
         {
@@ -492,9 +353,9 @@ GSSAPIClientAuthenticator::authenticate(DCB* generic_dcb, const mariadb::UserEnt
         auto ses = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
         char* princ = NULL;
 
-        if (validate_gssapi_token(m_module.principal_name, ses->auth_token.data(), ses->auth_token.size(),
+        if (validate_gssapi_token(ses->auth_token.data(), ses->auth_token.size(),
                                   &princ)
-            && validate_user(auth, dcb, ses, princ))
+            && validate_user(ses, princ, entry))
         {
             rval = AuthRes::SUCCESS;
         }
@@ -511,77 +372,6 @@ mariadb::SBackendAuth GSSAPIAuthenticatorModule::create_backend_authenticator()
 }
 
 /**
- * @brief Delete old users from the database
- * @param handle Database handle
- */
-static void delete_old_users(sqlite3* handle)
-{
-    char* err;
-
-    if (sqlite3_exec(handle, delete_query, NULL, NULL, &err) != SQLITE_OK)
-    {
-        MXS_ERROR("Failed to delete old users: %s", err);
-        sqlite3_free(err);
-    }
-}
-
-/**
- * @brief Add new GSSAPI user to the internal user database
- *
- * @param handle Database handle
- * @param user   Username
- * @param host   Host
- * @param db     Database
- * @param anydb  Global access to databases
- */
-static void add_gssapi_user(sqlite3* handle,
-                            const char* user,
-                            const char* host,
-                            const char* db,
-                            bool anydb,
-                            const char* princ)
-{
-    size_t dblen = db ? strlen(db) + 2 : sizeof(null_token);    /** +2 for single quotes */
-    char dbstr[dblen + 1];
-
-    if (db)
-    {
-        sprintf(dbstr, "'%s'", db);
-    }
-    else
-    {
-        strcpy(dbstr, null_token);
-    }
-
-    size_t princlen = princ && *princ ? strlen(princ) + 2 : sizeof(null_token);     /** +2 for single quotes
-                                                                                     * */
-    char princstr[princlen + 1];
-
-    if (princ && *princ)
-    {
-        sprintf(princstr, "'%s'", princ);
-    }
-    else
-    {
-        strcpy(princstr, null_token);
-    }
-
-    size_t len = sizeof(insert_sql_pattern) + strlen(user) + strlen(host) + dblen + princlen + 1;
-
-    char insert_sql[len + 1];
-    sprintf(insert_sql, insert_sql_pattern, user, host, dbstr, anydb ? "1" : "0", princstr);
-
-    char* err;
-    if (sqlite3_exec(handle, insert_sql, NULL, NULL, &err) != SQLITE_OK)
-    {
-        MXS_ERROR("Failed to insert user: %s", err);
-        sqlite3_free(err);
-    }
-
-    MXS_INFO("Added user: %s", insert_sql);
-}
-
-/**
  * @brief Load database users that use GSSAPI authentication
  *
  * Loading the list of database users that use the 'gssapi' plugin allows us to
@@ -592,68 +382,7 @@ static void add_gssapi_user(sqlite3* handle,
  */
 int GSSAPIAuthenticatorModule::load_users(SERVICE* service)
 {
-    const char* user;
-    const char* password;
-    int rval = MXS_AUTH_LOADUSERS_ERROR;
-    auto inst = this;
-    serviceGetUser(service, &user, &password);
-    auto pw = decrypt_password(password);
-
-    bool no_active_servers = true;
-
-    for (SERVER* server : service->reachable_servers())
-    {
-        no_active_servers = false;
-        MYSQL* mysql = mysql_init(NULL);
-
-        if (mxs_mysql_real_connect(mysql, server, user, pw.c_str()))
-        {
-            if (mxs_mysql_query(mysql, gssapi_users_query))
-            {
-                MXS_ERROR("Failed to query server '%s' for GSSAPI users: %s",
-                          server->name(), mysql_error(mysql));
-            }
-            else
-            {
-                MYSQL_RES* res = mysql_store_result(mysql);
-
-                delete_old_users(inst->handle);
-
-                if (res)
-                {
-                    mxb_assert(mysql_num_fields(res) == GSSAPI_USERS_QUERY_NUM_FIELDS);
-                    MYSQL_ROW row;
-
-                    while ((row = mysql_fetch_row(res)))
-                    {
-                        add_gssapi_user(inst->handle,
-                                        row[0],
-                                        row[1],
-                                        row[2],
-                                        row[3] && strcasecmp(row[3], "Y") == 0,
-                                        row[4]);
-                    }
-
-                    rval = MXS_AUTH_LOADUSERS_OK;
-                    mysql_free_result(res);
-                }
-            }
-
-            mysql_close(mysql);
-
-            if (rval == MXS_AUTH_LOADUSERS_OK)
-            {
-                break;
-            }
-        }
-    }
-
-    if (no_active_servers)
-    {
-        rval = MXS_AUTH_LOADUSERS_OK;
-    }
-
-    return rval;
+    return MXS_AUTH_LOADUSERS_OK;
 }
 
 std::string GSSAPIAuthenticatorModule::name() const
