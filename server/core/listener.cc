@@ -188,14 +188,10 @@ int listener_set_ssl_version(SSL_LISTENER* ssl_listener, const char* version)
     {
         ssl_listener->ssl_method_type = SERVICE_SSL_TLS_MAX;
     }
-#ifndef OPENSSL_1_1
     else if (strcasecmp(version, "TLSV10") == 0)
     {
         ssl_listener->ssl_method_type = SERVICE_TLS10;
     }
-#else
-#endif
-#ifdef OPENSSL_1_0
     else if (strcasecmp(version, "TLSV11") == 0)
     {
         ssl_listener->ssl_method_type = SERVICE_TLS11;
@@ -204,7 +200,6 @@ int listener_set_ssl_version(SSL_LISTENER* ssl_listener, const char* version)
     {
         ssl_listener->ssl_method_type = SERVICE_TLS12;
     }
-#endif
     else
     {
         return -1;
@@ -278,22 +273,34 @@ bool SSL_LISTENER_init(SSL_LISTENER* ssl)
 
     switch (ssl->ssl_method_type)
     {
-#ifndef OPENSSL_1_1
     case SERVICE_TLS10:
+#ifndef OPENSSL_1_1
         ssl->method = (SSL_METHOD*)TLSv1_method();
+#else
+        MXS_ERROR("TLSv1.0 is not supported on this system.");
+        return false;
+#endif
         break;
 
-#endif
-#ifdef OPENSSL_1_0
+
     case SERVICE_TLS11:
+#ifdef OPENSSL_1_0
         ssl->method = (SSL_METHOD*)TLSv1_1_method();
+#else
+        MXS_ERROR("TLSv1.1 is not supported on this system.");
+        return false;
+#endif
         break;
 
     case SERVICE_TLS12:
+#ifdef OPENSSL_1_0
         ssl->method = (SSL_METHOD*)TLSv1_2_method();
+#else
+        MXS_ERROR("TLSv1.2 is not supported on this system.");
+        return false;
+#endif
         break;
 
-#endif
     /** Rest of these use the maximum available SSL/TLS methods */
     case SERVICE_SSL_MAX:
         ssl->method = (SSL_METHOD*)SSLv23_method();
