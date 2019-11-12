@@ -1326,6 +1326,12 @@ void Service::update_basic_parameter(const std::string& key, const std::string& 
 {
     m_params.set(key, value);
     m_config.assign(Config(&m_params));
+    // If the parameter affects the user account manager, update its settings.
+    auto manager = user_account_manager();
+    if (manager && (key == CN_USER || key == CN_PASSWORD))
+    {
+        manager->set_credentials(m_config->user, m_config->password);
+    }
 }
 
 const MXS_MODULE_PARAM* common_service_params()
@@ -1665,6 +1671,13 @@ void Service::targets_updated()
     // done on the same thread, there's no possibility of lost updates.
     mxb_assert(mxs::MainWorker::is_main_worker());
     m_data.assign(data);
+
+    // Also update the servers queried by the user account manager.
+    auto manager = user_account_manager();
+    if (manager)
+    {
+        manager->set_backends(data.servers);
+    }
 }
 
 void Service::remove_target(mxs::Target* target)
@@ -1746,7 +1759,6 @@ void Service::set_user_account_manager(SAccountManager user_manager)
     mxb_assert(!m_usermanager_exists.load(std::memory_order_acquire) && !m_usermanager);
     m_usermanager = std::move(user_manager);
     m_usermanager_exists.store(true, std::memory_order_release);
-    // TODO: update account manager settings whenever the matching service settings are updated
     m_usermanager->set_credentials(m_config->user, m_config->password);
     m_usermanager->set_backends(m_data->servers);
     m_usermanager->start();
@@ -1757,10 +1769,6 @@ void Service::update_user_accounts()
     auto manager = user_account_manager();
     if (manager)
     {
-        // TODO: only set credentials when needed, check rate limits etc.
-        auto user = m_config->user;
-        auto pw = m_config->password;
-        manager->set_credentials(user, pw);
         manager->update_user_accounts();
     }
 }

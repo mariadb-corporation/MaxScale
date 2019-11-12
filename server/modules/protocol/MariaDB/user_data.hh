@@ -133,6 +133,7 @@ public:
     void        update_user_accounts() override;
     void        set_credentials(const std::string& user, const std::string& pw) override;
     void        set_backends(const std::vector<SERVER*>& backends) override;
+
     std::string protocol_name() const override;
 
 private:
@@ -151,12 +152,6 @@ private:
     std::mutex              m_notifier_lock;
     std::atomic_bool        m_update_users_requested {false};
 
-    /**< Minimum time (seconds) between user account updates. Does not affect the first update attempts. */
-    int m_min_refresh_interval {30};
-
-    /**< Maximum time (seconds) between user account updates. If positive, enables automatic updates. */
-    int m_max_refresh_interval {-1};
-
     // Settings and options. Access to most is protected by the mutex.
     std::mutex           m_settings_lock;
     std::string          m_username;
@@ -164,6 +159,10 @@ private:
     std::vector<SERVER*> m_backends;
 
     const std::string m_service_name;   /**< Service using this account data manager. Used for logging. */
+
+    /** Warn if no valid servers to query from. Starts false, as in the beginning monitors may not have
+     * ran yet. */
+    bool m_warn_no_servers {false};
 
     mutable std::mutex m_userdb_lock;           /**< Protects UserDatabase from concurrent access */
     UserDatabase       m_userdb;                /**< Contains user account info */

@@ -22,6 +22,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <maxscale/config.hh>
+#include <maxscale/secrets.hh>
 #include "sqlite_strlike.hh"
 
 using std::string;
@@ -171,6 +172,9 @@ void MariaDBUserManager::updater_thread_function()
          *  4) users_refresh_interval, the maximum time between refreshes. Users should be refreshed
          *  automatically if this time elapses.
          */
+        MXS_CONFIG* glob_config = config_get_global_options();
+        auto max_refresh_interval = glob_config->users_refresh_interval;
+        auto min_refresh_interval = glob_config->users_refresh_time;
 
         // Calculate the time for the next scheduled update.
         TimePoint next_scheduled_update = last_update;
@@ -180,9 +184,9 @@ void MariaDBUserManager::updater_thread_function()
             // with just a minimal wait.
             next_scheduled_update += default_min_interval;
         }
-        else if (m_max_refresh_interval > 0)
+        else if (max_refresh_interval > 0)
         {
-            next_scheduled_update += Duration((double)m_max_refresh_interval);
+            next_scheduled_update += Duration((double)max_refresh_interval);
         }
         else
         {
@@ -191,9 +195,9 @@ void MariaDBUserManager::updater_thread_function()
 
         // Calculate the earliest allowed time for next update.
         TimePoint next_possible_update = last_update;
-        if (m_min_refresh_interval > 0 && updates > 0)
+        if (min_refresh_interval > 0 && updates > 0)
         {
-            next_possible_update += Duration((double)m_min_refresh_interval);
+            next_possible_update += Duration((double)min_refresh_interval);
         }
         else
         {
@@ -216,6 +220,7 @@ void MariaDBUserManager::updater_thread_function()
         if (m_keep_running.load(acquire) && load_users())
         {
             updates++;
+            m_warn_no_servers = true;
         }
 
         m_update_users_requested.store(false, release);
@@ -235,6 +240,7 @@ bool MariaDBUserManager::load_users()
     backends = m_backends;
     lock.unlock();
 
+    sett.password = decrypt_password(sett.password);
     mxq::MariaDB con;
 
     MXS_CONFIG* glob_config = config_get_global_options();
@@ -309,7 +315,7 @@ bool MariaDBUserManager::load_users()
         }
     }
 
-    if (!found_valid_server)
+    if (!found_valid_server && m_warn_no_servers)
     {
         MXB_ERROR("No valid servers from which to query MariaDB user accounts found.");
     }
