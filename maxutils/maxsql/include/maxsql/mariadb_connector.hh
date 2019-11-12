@@ -17,6 +17,7 @@
 #include <memory>
 #include <string>
 #include <mysql.h>
+#include <maxbase/ssl.hh>
 #include <maxsql/queryresult.hh>
 
 namespace maxsql
@@ -37,6 +38,11 @@ public:
     {
         std::string user;
         std::string password;
+
+        mxb::SSLConfig ssl;
+
+        std::string local_address;
+        int         timeout {0};
         // TODO: add more
     };
 

@@ -48,10 +48,52 @@ bool MariaDB::open(const std::string& host, unsigned int port, const std::string
     }
 
     bool rval = false;
-    // TODO: add all possible settings like timeouts, ssl etc.
-    if (mysql_real_connect(newconn, host.c_str(),
-                           m_settings.user.c_str(), m_settings.password.c_str(), db.c_str(),
-                           port, nullptr, 0) != nullptr)
+    if (!m_settings.ssl.empty())
+    {
+        // If an option is empty, a null-pointer should be given to mysql_ssl_set.
+        const char* ssl_key = m_settings.ssl.key.empty() ? nullptr : m_settings.ssl.key.c_str();
+        const char* ssl_cert = m_settings.ssl.cert.empty() ? nullptr : m_settings.ssl.cert.c_str();
+        const char* ssl_ca = m_settings.ssl.ca.empty() ? nullptr : m_settings.ssl.ca.c_str();
+        mysql_ssl_set(newconn, ssl_key, ssl_cert, ssl_ca, nullptr, nullptr);
+    }
+
+    if (m_settings.timeout > 0)
+    {
+        // Use the same timeout for all three settings for now.
+        mysql_optionsv(newconn, MYSQL_OPT_CONNECT_TIMEOUT, &m_settings.timeout);
+        mysql_optionsv(newconn, MYSQL_OPT_READ_TIMEOUT, &m_settings.timeout);
+        mysql_optionsv(newconn, MYSQL_OPT_WRITE_TIMEOUT, &m_settings.timeout);
+    }
+
+    if (!m_settings.local_address.empty())
+    {
+        mysql_optionsv(newconn, MYSQL_OPT_BIND, m_settings.local_address.c_str());
+    }
+
+    bool connection_success = false;
+    const char* userz = m_settings.user.c_str();
+    const char* passwdz = m_settings.password.c_str();
+    const char* hostz = host.empty() ? nullptr : host.c_str();
+    const char* dbz = db.c_str();
+
+    if (hostz == nullptr || hostz[0] != '/')
+    {
+        // Assume the host is a normal address. Empty host is treated as "localhost".
+        if (mysql_real_connect(newconn, hostz, userz, passwdz, dbz, port, nullptr, 0) != nullptr)
+        {
+            connection_success = true;
+        }
+    }
+    else
+    {
+        // The host looks like an unix socket.
+        if (mysql_real_connect(newconn, nullptr, userz, passwdz, dbz, 0, hostz, 0) != nullptr)
+        {
+            connection_success = true;
+        }
+    }
+
+    if (connection_success)
     {
         clear_errors();
         m_conn = newconn;
@@ -63,6 +105,7 @@ bool MariaDB::open(const std::string& host, unsigned int port, const std::string
         m_errornum = mysql_errno(newconn);
         mysql_close(newconn);
     }
+
     return rval;
 }
 

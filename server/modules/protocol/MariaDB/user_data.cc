@@ -21,6 +21,7 @@
 #include <maxscale/protocol/mariadb/module_names.hh>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <maxscale/config.hh>
 #include "sqlite_strlike.hh"
 
 using std::string;
@@ -235,7 +236,13 @@ bool MariaDBUserManager::load_users()
     lock.unlock();
 
     mxq::MariaDB con;
-    con.set_connection_settings(sett);
+
+    MXS_CONFIG* glob_config = config_get_global_options();
+    sett.timeout = glob_config->auth_conn_timeout;
+    if (glob_config->local_address)
+    {
+        sett.local_address = glob_config->local_address;
+    }
 
     bool found_valid_server = false;
     bool got_data = false;
@@ -246,6 +253,8 @@ bool MariaDBUserManager::load_users()
         SERVER* srv = backends[i];
         if (srv->is_active && srv->is_usable())
         {
+            found_valid_server = true;
+
             bool using_roles = false;
             auto version = srv->version();
             // Default roles are in server version 10.1.1.
@@ -255,7 +264,10 @@ bool MariaDBUserManager::load_users()
                 using_roles = true;
             }
 
-            found_valid_server = true;
+            const mxb::SSLConfig* srv_ssl_config = srv->ssl().config();
+            sett.ssl = (srv_ssl_config && !srv_ssl_config->empty()) ? *srv_ssl_config : mxb::SSLConfig();
+
+            con.set_connection_settings(sett);
             if (con.open(srv->address, srv->port))
             {
                 QResult users_res, dbs_res, roles_res;
