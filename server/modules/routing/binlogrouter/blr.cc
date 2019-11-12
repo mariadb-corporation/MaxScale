@@ -43,7 +43,7 @@
 #include <maxscale/housekeeper.h>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/router.hh>
-#include <maxscale/secrets.h>
+#include <maxscale/secrets.hh>
 #include <maxscale/server.hh>
 #include <maxscale/service.hh>
 #include <maxscale/users.hh>

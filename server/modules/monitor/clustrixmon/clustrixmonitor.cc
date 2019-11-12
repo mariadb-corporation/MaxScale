@@ -17,7 +17,7 @@
 #include <maxbase/string.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/paths.h>
-#include <maxscale/secrets.h>
+#include <maxscale/secrets.hh>
 #include <maxscale/sqlite3.h>
 #include "../../../core/internal/config_runtime.hh"
 #include "../../../core/internal/service.hh"
@@ -518,7 +518,7 @@ bool ClustrixMonitor::refresh_using_persisted_nodes(std::set<string>& ips_checke
     {
         const std::string& username = conn_settings().username;
         const std::string& password = conn_settings().password;
-        char* zPassword = decrypt_password(password.c_str());
+        const std::string dec_password = decrypt_password(password.c_str());
 
         auto it = nodes.begin();
 
@@ -538,7 +538,7 @@ bool ClustrixMonitor::refresh_using_persisted_nodes(std::set<string>& ips_checke
                 MYSQL* pHub_con = mysql_init(NULL);
 
                 if (mysql_real_connect(pHub_con, host.c_str(),
-                                       username.c_str(), zPassword,
+                                       username.c_str(), dec_password.c_str(),
                                        nullptr,
                                        port, nullptr, 0))
                 {
@@ -565,8 +565,6 @@ bool ClustrixMonitor::refresh_using_persisted_nodes(std::set<string>& ips_checke
 
             ++it;
         }
-
-        MXS_FREE(zPassword);
     }
     else
     {

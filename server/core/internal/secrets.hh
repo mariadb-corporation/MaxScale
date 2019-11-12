@@ -16,9 +16,7 @@
  * @file core/maxscale/secrets.h - MaxScale config file password encryption/decryption
  */
 
-#include <maxscale/secrets.h>
-
-MXS_BEGIN_DECLS
+#include <maxscale/secrets.hh>
 
 #define MAXSCALE_KEYLEN 32
 #define MAXSCALE_IV_LEN 16
@@ -26,13 +24,11 @@ MXS_BEGIN_DECLS
 /**
  * The key structure held in the secrets file
  */
-typedef struct maxkeys
+struct MAXKEYS
 {
     unsigned char enckey[MAXSCALE_KEYLEN];
     unsigned char initvector[MAXSCALE_IV_LEN];
-} MAXKEYS;
+};
 
 int   secrets_write_keys(const char* directory);
 char* encrypt_password(const char*, const char*);
-
-MXS_END_DECLS

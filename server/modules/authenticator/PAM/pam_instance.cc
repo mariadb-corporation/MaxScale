@@ -21,7 +21,7 @@
 #include <maxscale/jansson.hh>
 #include <maxscale/paths.h>
 #include <maxscale/protocol/mariadb/module_names.hh>
-#include <maxscale/secrets.h>
+#include <maxscale/secrets.hh>
 #include <maxscale/mysql_utils.hh>
 
 using std::string;
@@ -314,71 +314,67 @@ int PamAuthenticatorModule::load_users(SERVICE* service)
     serviceGetUser(service, &user, &pw_crypt);
     int rval = MXS_AUTH_LOADUSERS_ERROR;
 
-    char* pw_clear = decrypt_password(pw_crypt);
-    if (pw_clear)
+    string pw_clear = decrypt_password(pw_crypt);
+    bool found_valid_server = false;
+    bool got_data = false;
+    for (auto srv : service->reachable_servers())
     {
-        bool found_valid_server = false;
-        bool got_data = false;
-        for (auto srv : service->reachable_servers())
+        if (srv->is_active && srv->is_usable())
         {
-            if (srv->is_active && srv->is_usable())
+            bool using_roles = false;
+            auto version = srv->version();
+            // Default roles are in server version 10.1.1.
+            if (version.major > 10 || (version.major == 10 && (version.minor > 1
+                                                               || (version.minor == 1
+                                                                   && version.patch == 1))))
             {
-                bool using_roles = false;
-                auto version = srv->version();
-                // Default roles are in server version 10.1.1.
-                if (version.major > 10 || (version.major == 10 && (version.minor > 1
-                                                                   || (version.minor == 1
-                                                                       && version.patch == 1))))
-                {
-                    using_roles = true;
-                }
-                prepare_queries(using_roles);
+                using_roles = true;
+            }
+            prepare_queries(using_roles);
 
-                found_valid_server = true;
-                MYSQL* mysql = mysql_init(NULL);
-                if (mxs_mysql_real_connect(mysql, srv, user, pw_clear))
+            found_valid_server = true;
+            MYSQL* mysql = mysql_init(NULL);
+            if (mxs_mysql_real_connect(mysql, srv, user, pw_clear.c_str()))
+            {
+                string error_msg;
+                QResult users_res, dbs_res, roles_res;
+                // Perform the queries. All must succeed on the same backend.
+                // TODO: Think if it would be faster to do these queries concurrently.
+                if (((users_res = mxs::execute_query(mysql, users_query, &error_msg)) != nullptr)
+                    && ((dbs_res = mxs::execute_query(mysql, db_query, &error_msg)) != nullptr))
                 {
-                    string error_msg;
-                    QResult users_res, dbs_res, roles_res;
-                    // Perform the queries. All must succeed on the same backend.
-                    // TODO: Think if it would be faster to do these queries concurrently.
-                    if (((users_res = mxs::execute_query(mysql, users_query, &error_msg)) != nullptr)
-                        && ((dbs_res = mxs::execute_query(mysql, db_query, &error_msg)) != nullptr))
+                    if (using_roles)
                     {
-                        if (using_roles)
-                        {
-                            if ((roles_res = mxs::execute_query(mysql, role_query, &error_msg)) != nullptr)
-                            {
-                                got_data = true;
-                            }
-                        }
-                        else
+                        if ((roles_res = mxs::execute_query(mysql, role_query, &error_msg)) != nullptr)
                         {
                             got_data = true;
                         }
                     }
-
-                    if (got_data)
-                    {
-                        fill_user_arrays(std::move(users_res), std::move(dbs_res), std::move(roles_res));
-                        fetch_anon_proxy_users(srv, mysql);
-                        rval = MXS_AUTH_LOADUSERS_OK;
-                    }
                     else
                     {
-                        MXB_ERROR("Failed to query server '%s' for PAM users. %s",
-                                  srv->name(), error_msg.c_str());
+                        got_data = true;
                     }
                 }
-                mysql_close(mysql);
-            }
-        }
 
-        if (!found_valid_server)
-        {
-            MXB_ERROR("Service '%s' had no valid servers to query PAM users from.", service->name());
+                if (got_data)
+                {
+                    fill_user_arrays(std::move(users_res), std::move(dbs_res), std::move(roles_res));
+                    fetch_anon_proxy_users(srv, mysql);
+                    rval = MXS_AUTH_LOADUSERS_OK;
+                }
+                else
+                {
+                    MXB_ERROR("Failed to query server '%s' for PAM users. %s",
+                              srv->name(), error_msg.c_str());
+                }
+            }
+            mysql_close(mysql);
         }
-        MXS_FREE(pw_clear);
+    }
+
+    if (!found_valid_server)
+    {
+        MXB_ERROR("Service '%s' had no valid servers to query PAM users from.", service->name());
     }
     return rval;
 }

@@ -28,7 +28,7 @@
 #include <maxscale/dcb.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/mysql_utils.hh>
-#include <maxscale/secrets.h>
+#include <maxscale/secrets.hh>
 #include <maxsql/mariadb.hh>
 #include <maxsql/mariadb_connector.hh>
 

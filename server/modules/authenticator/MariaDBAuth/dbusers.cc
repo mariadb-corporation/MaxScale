@@ -33,7 +33,7 @@
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/pcre2.h>
 #include <maxscale/router.hh>
-#include <maxscale/secrets.h>
+#include <maxscale/secrets.hh>
 #include <maxscale/service.hh>
 #include <maxscale/users.hh>
 #include <maxscale/utils.h>
@@ -960,18 +960,16 @@ bool check_service_permissions(SERVICE* service)
 
     serviceGetUser(service, &user, &password);
 
-    char* dpasswd = decrypt_password(password);
+    auto dpasswd = decrypt_password(password);
     bool rval = false;
 
     for (auto server : servers)
     {
-        if (server->is_mxs_service() || check_server_permissions(service, server, user, dpasswd))
+        if (server->is_mxs_service() || check_server_permissions(service, server, user, dpasswd.c_str()))
         {
             rval = true;
         }
     }
-
-    free(dpasswd);
 
     return rval;
 }
@@ -1262,12 +1260,7 @@ int MariaDBAuthenticatorModule::get_users(SERVICE* service, bool skip_local, SER
 
     serviceGetUser(service, &service_user, &service_passwd);
 
-    char* dpwd = decrypt_password(service_passwd);
-
-    if (dpwd == NULL)
-    {
-        return -1;
-    }
+    auto dpwd = decrypt_password(service_passwd);
 
     /** Delete the old users */
     sqlite3* handle = get_handle();
@@ -1280,7 +1273,7 @@ int MariaDBAuthenticatorModule::get_users(SERVICE* service, bool skip_local, SER
     {
         if (MYSQL* con = gw_mysql_init())
         {
-            if (mxs_mysql_real_connect(con, server, service_user, dpwd) == NULL)
+            if (mxs_mysql_real_connect(con, server, service_user, dpwd.c_str()) == NULL)
             {
                 MXS_ERROR("Failure loading users data from backend [%s:%i] for service [%s]. "
                           "MySQL error %i, %s", server->address, server->port, service->name(),
@@ -1307,8 +1300,6 @@ int MariaDBAuthenticatorModule::get_users(SERVICE* service, bool skip_local, SER
             }
         }
     }
-
-    MXS_FREE(dpwd);
 
     if (candidates.empty())
     {

@@ -45,7 +45,7 @@
 #include <maxscale/paths.h>
 #include <maxscale/pcre2.h>
 #include <maxscale/routingworker.hh>
-#include <maxscale/secrets.h>
+#include <maxscale/secrets.hh>
 #include <maxscale/utils.hh>
 
 #include "internal/config.hh"
@@ -727,7 +727,6 @@ bool Monitor::test_permissions(const string& query)
         return true;
     }
 
-    char* dpasswd = decrypt_password(conn_settings().password.c_str());
     bool rval = false;
 
     for (MonitorServer* mondb : m_servers)
@@ -791,7 +790,6 @@ bool Monitor::test_permissions(const string& query)
         }
     }
 
-    MXS_FREE(dpasswd);
     return rval;
 }
 
@@ -1207,7 +1205,7 @@ MonitorServer::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& se
             uname = server_specific_monuser;
             passwd = srv.monitor_password();
         }
-        char* dpwd = decrypt_password(passwd.c_str());
+        auto dpwd = decrypt_password(passwd);
 
         mysql_optionsv(pConn, MYSQL_OPT_CONNECT_TIMEOUT, &sett.connect_timeout);
         mysql_optionsv(pConn, MYSQL_OPT_READ_TIMEOUT, &sett.read_timeout);
@@ -1219,7 +1217,7 @@ MonitorServer::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& se
         for (int i = 0; i < sett.connect_attempts; i++)
         {
             start = time(NULL);
-            bool result = (mxs_mysql_real_connect(pConn, &server, uname.c_str(), dpwd) != NULL);
+            bool result = (mxs_mysql_real_connect(pConn, &server, uname.c_str(), dpwd.c_str()) != NULL);
             end = time(NULL);
 
             if (result)
@@ -1233,7 +1231,6 @@ MonitorServer::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& se
         {
             conn_result = ConnectResult::TIMEOUT;
         }
-        MXS_FREE(dpwd);
     }
 
     *ppConn = pConn;

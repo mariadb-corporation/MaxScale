@@ -21,7 +21,7 @@
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/module_names.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
-#include <maxscale/secrets.h>
+#include <maxscale/secrets.hh>
 #include <maxscale/service.hh>
 #include <maxscale/sqlite3.h>
 
@@ -597,65 +597,60 @@ int GSSAPIAuthenticatorModule::load_users(SERVICE* service)
     int rval = MXS_AUTH_LOADUSERS_ERROR;
     auto inst = this;
     serviceGetUser(service, &user, &password);
-    char* pw;
+    auto pw = decrypt_password(password);
 
-    if ((pw = decrypt_password(password)))
+    bool no_active_servers = true;
+
+    for (SERVER* server : service->reachable_servers())
     {
-        bool no_active_servers = true;
+        no_active_servers = false;
+        MYSQL* mysql = mysql_init(NULL);
 
-        for (SERVER* server : service->reachable_servers())
+        if (mxs_mysql_real_connect(mysql, server, user, pw.c_str()))
         {
-            no_active_servers = false;
-            MYSQL* mysql = mysql_init(NULL);
-
-            if (mxs_mysql_real_connect(mysql, server, user, pw))
+            if (mxs_mysql_query(mysql, gssapi_users_query))
             {
-                if (mxs_mysql_query(mysql, gssapi_users_query))
-                {
-                    MXS_ERROR("Failed to query server '%s' for GSSAPI users: %s",
-                              server->name(), mysql_error(mysql));
-                }
-                else
-                {
-                    MYSQL_RES* res = mysql_store_result(mysql);
+                MXS_ERROR("Failed to query server '%s' for GSSAPI users: %s",
+                          server->name(), mysql_error(mysql));
+            }
+            else
+            {
+                MYSQL_RES* res = mysql_store_result(mysql);
 
-                    delete_old_users(inst->handle);
+                delete_old_users(inst->handle);
 
-                    if (res)
+                if (res)
+                {
+                    mxb_assert(mysql_num_fields(res) == GSSAPI_USERS_QUERY_NUM_FIELDS);
+                    MYSQL_ROW row;
+
+                    while ((row = mysql_fetch_row(res)))
                     {
-                        mxb_assert(mysql_num_fields(res) == GSSAPI_USERS_QUERY_NUM_FIELDS);
-                        MYSQL_ROW row;
-
-                        while ((row = mysql_fetch_row(res)))
-                        {
-                            add_gssapi_user(inst->handle,
-                                            row[0],
-                                            row[1],
-                                            row[2],
-                                            row[3] && strcasecmp(row[3], "Y") == 0,
-                                            row[4]);
-                        }
-
-                        rval = MXS_AUTH_LOADUSERS_OK;
-                        mysql_free_result(res);
+                        add_gssapi_user(inst->handle,
+                                        row[0],
+                                        row[1],
+                                        row[2],
+                                        row[3] && strcasecmp(row[3], "Y") == 0,
+                                        row[4]);
                     }
-                }
 
-                mysql_close(mysql);
-
-                if (rval == MXS_AUTH_LOADUSERS_OK)
-                {
-                    break;
+                    rval = MXS_AUTH_LOADUSERS_OK;
+                    mysql_free_result(res);
                 }
             }
-        }
 
-        MXS_FREE(pw);
+            mysql_close(mysql);
 
-        if (no_active_servers)
-        {
-            rval = MXS_AUTH_LOADUSERS_OK;
+            if (rval == MXS_AUTH_LOADUSERS_OK)
+            {
+                break;
+            }
         }
+    }
+
+    if (no_active_servers)
+    {
+        rval = MXS_AUTH_LOADUSERS_OK;
     }
 
     return rval;

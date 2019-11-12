@@ -11,12 +11,11 @@
  * Public License.
  */
 
-#include <maxscale/secrets.h>
+#include <maxscale/secrets.hh>
 
-#include <ctype.h>
+#include <cctype>
 #include <openssl/aes.h>
 #include <sys/stat.h>
-#include <time.h>
 
 #include <maxbase/alloc.h>
 #include <maxscale/paths.h>
@@ -332,60 +331,48 @@ int secrets_write_keys(const char* dir)
 }
 
 /**
- * Decrypt a password that is stored inthe MaxScale configuration file.
+ * Decrypt a password that is stored in the MaxScale configuration file.
  * If the password is not encrypted, ie is not a HEX string, then the
  * original is returned, this allows for backward compatibility with
  * unencrypted password.
  *
- * Note the return is always a malloc'd string that the caller must free
- *
  * @param crypt The encrypted password
- * @return  The decrypted password or NULL if allocation failure.
+ * @return The decrypted password
  */
-char* decrypt_password(const char* crypt)
+std::string decrypt_password(const std::string& crypt)
 {
-    MAXKEYS* keys;
-    AES_KEY aeskey;
-    unsigned char* plain;
-    const char* ptr;
-    size_t len = strlen(crypt);
-    unsigned char encrypted[len];
-    int enlen;
-
-    keys = secrets_readKeys(NULL);
-    if (!keys)
+    using std::string;
+    // If the input is not a HEX string, return the input as is. Likely it was not encrypted.
+    for (auto c : crypt)
     {
-        return MXS_STRDUP(crypt);
-    }
-    /*
-    ** If the input is not a HEX string return the input
-    ** it probably was not encrypted
-    */
-    for (ptr = crypt; *ptr; ptr++)
-    {
-        if (!isxdigit(*ptr))
+        if (!isxdigit(c))
         {
-            MXS_FREE(keys);
-            return MXS_STRDUP(crypt);
+            return crypt;
         }
     }
 
-    enlen = len / 2;
-    gw_hex2bin(encrypted, crypt, len);
-
-    if ((plain = (unsigned char*) MXS_MALLOC(enlen + 1)) == NULL)
+    MAXKEYS* keys = secrets_readKeys(NULL);
+    if (!keys)
     {
-        MXS_FREE(keys);
-        return NULL;
+        // Reading failed. This probably means that password encryption is not used, so return original.
+        return crypt;
     }
 
+    size_t len = crypt.length();
+    unsigned char encrypted[len];
+    gw_hex2bin(encrypted, crypt.c_str(), len);
+
+    AES_KEY aeskey;
     AES_set_decrypt_key(keys->enckey, 8 * MAXSCALE_KEYLEN, &aeskey);
+
+    int enlen = len / 2;
+    unsigned char plain[enlen + 1];
 
     AES_cbc_encrypt(encrypted, plain, enlen, &aeskey, keys->initvector, AES_DECRYPT);
     plain[enlen] = '\0';
     MXS_FREE(keys);
 
-    return (char*) plain;
+    return (char*)plain;
 }
 
 /**

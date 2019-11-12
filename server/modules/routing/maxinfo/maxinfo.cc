@@ -45,7 +45,7 @@
 #include <maxscale/resultset.hh>
 #include <maxscale/version.h>
 #include <maxscale/resultset.hh>
-#include <maxscale/secrets.h>
+#include <maxscale/secrets.hh>
 #include <maxscale/users.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 

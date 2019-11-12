@@ -52,7 +52,7 @@
 #include <maxscale/pcre2.h>
 #include <maxscale/poll.hh>
 #include <maxscale/random.h>
-#include <maxscale/secrets.h>
+#include <maxscale/secrets.hh>
 #include <maxscale/session.hh>
 
 #if !defined (PATH_MAX)
@@ -318,7 +318,7 @@ return_eno:
  * @return              The new allocated encrypted password, that the caller must free
  *
  */
-char* create_hex_sha1_sha1_passwd(char* passwd)
+char* create_hex_sha1_sha1_passwd(const char* passwd)
 {
     uint8_t hash1[SHA_DIGEST_LENGTH] = "";
     uint8_t hash2[SHA_DIGEST_LENGTH] = "";

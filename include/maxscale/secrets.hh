@@ -16,12 +16,6 @@
  * @file include/maxscale/secrets.h - MaxScale config file password decryption
  */
 
-#include <maxscale/cdefs.h>
+#include <maxscale/ccdefs.hh>
 
-#include <sys/types.h>
-
-MXS_BEGIN_DECLS
-
-char* decrypt_password(const char*);
-
-MXS_END_DECLS
+std::string decrypt_password(const std::string& crypt);

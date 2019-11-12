@@ -35,7 +35,7 @@
 #include <maxscale/dcb.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/router.hh>
-#include <maxscale/secrets.h>
+#include <maxscale/secrets.hh>
 #include <maxscale/service.hh>
 #include <maxscale/sqlite3.h>
 #include <maxscale/mysql_binlog.h>

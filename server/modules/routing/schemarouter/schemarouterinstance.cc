@@ -27,7 +27,7 @@
 #include <maxscale/poll.hh>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/router.hh>
-#include <maxscale/secrets.h>
+#include <maxscale/secrets.hh>
 
 using std::string;
 

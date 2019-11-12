@@ -22,7 +22,7 @@
 #include <maxscale/event.hh>
 #include <maxscale/modulecmd.hh>
 #include <maxscale/paths.h>
-#include <maxscale/secrets.h>
+#include <maxscale/secrets.hh>
 #include <maxscale/users.hh>
 #include <maxscale/utils.h>
 
@@ -263,19 +263,11 @@ int CDCAuthenticatorModule::set_service_user(SERVICE* service)
     const char* service_passwd = NULL;
     serviceGetUser(service, &service_user, &service_passwd);
 
-    char* dpwd = decrypt_password(service_passwd);
-    if (!dpwd)
-    {
-        MXS_ERROR("decrypt password failed for service user %s, service %s",
-                  service_user, service->name());
-        return 1;
-    }
-
-    char* newpasswd = create_hex_sha1_sha1_passwd(dpwd);
+    auto dpwd = decrypt_password(service_passwd);
+    char* newpasswd = create_hex_sha1_sha1_passwd(dpwd.c_str());
     if (!newpasswd)
     {
         MXS_ERROR("create hex_sha1_sha1_password failed for service user %s", service_user);
-        MXS_FREE(dpwd);
         return 1;
     }
 
@@ -283,7 +275,6 @@ int CDCAuthenticatorModule::set_service_user(SERVICE* service)
     m_userdata.add(service_user, newpasswd, USER_ACCOUNT_ADMIN);
 
     MXS_FREE(newpasswd);
-    MXS_FREE(dpwd);
 
     return 0;
 }

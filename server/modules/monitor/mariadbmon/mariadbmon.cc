@@ -28,7 +28,7 @@
 #include <maxscale/modulecmd.hh>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/routingworker.hh>
-#include <maxscale/secrets.h>
+#include <maxscale/secrets.hh>
 #include <maxscale/utils.hh>
 
 using std::string;
@@ -230,10 +230,7 @@ bool MariaDBMonitor::set_replication_credentials(const MXS_CONFIG_PARAMETER* par
     }
 
     m_settings.shared.replication_user = repl_user;
-    char* decrypted = decrypt_password(repl_pw.c_str());
-    m_settings.shared.replication_password = decrypted;
-    MXS_FREE(decrypted);
-
+    m_settings.shared.replication_password = decrypt_password(repl_pw);
     return true;
 }
 

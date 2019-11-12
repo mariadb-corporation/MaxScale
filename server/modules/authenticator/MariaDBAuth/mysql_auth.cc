@@ -19,7 +19,7 @@
 #include <maxscale/event.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/paths.h>
-#include <maxscale/secrets.h>
+#include <maxscale/secrets.hh>
 #include <maxscale/utils.h>
 #include <maxscale/protocol/mariadb/client_connection.hh>
 
@@ -550,25 +550,15 @@ bool MariaDBAuthenticatorModule::add_service_user(SERVICE* service)
 
     serviceGetUser(service, &user, &password);
 
-    char* pw;
-
-    if ((pw = decrypt_password(password)))
+    std::string pw = decrypt_password(password);
+    char* newpw = create_hex_sha1_sha1_passwd(pw.c_str());
+    if (newpw)
     {
-        char* newpw = create_hex_sha1_sha1_passwd(pw);
-
-        if (newpw)
-        {
-            sqlite3* handle = get_handle();
-            add_mysql_user(handle, user, "%", "", "Y", newpw);
-            add_mysql_user(handle, user, "localhost", "", "Y", newpw);
-            MXS_FREE(newpw);
-            rval = true;
-        }
-        MXS_FREE(pw);
-    }
-    else
-    {
-        MXS_ERROR("[%s] Failed to decrypt service user password.", service->name());
+        sqlite3* handle = get_handle();
+        add_mysql_user(handle, user, "%", "", "Y", newpw);
+        add_mysql_user(handle, user, "localhost", "", "Y", newpw);
+        MXS_FREE(newpw);
+        rval = true;
     }
 
     return rval;
