@@ -479,11 +479,14 @@ cache_result_t LRUStorage::get_existing_node(NodesByKey::iterator& i, const GWBU
 
         result = do_del_value(*pkey);
 
-        if (!CACHE_RESULT_IS_ERROR(result))
+        if (CACHE_RESULT_IS_ERROR(result))
         {
-            // If we failed to remove the value, we do not have enough space.
-            result = CACHE_RESULT_OUT_OF_RESOURCES;
+            // Removal of old value of too big a value to be cached failed, we are hosed.
+            MXS_ERROR("Value is too big to be stored, and removal of old value "
+                      "failed. The cache will return stale data.");
         }
+
+        result = CACHE_RESULT_OUT_OF_RESOURCES;
     }
     else
     {
