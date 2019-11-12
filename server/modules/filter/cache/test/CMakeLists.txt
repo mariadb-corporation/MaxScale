@@ -46,6 +46,11 @@ target_link_libraries(test_cacheoptions maxscale-common)
 add_executable(cache_stress cache_stress.cc)
 target_link_libraries(cache_stress ${MARIADB_CONNECTOR_LIBRARIES} ssl crypt crypto dl pthread)
 
+add_executable(cache_bugs cache_bugs.cc)
+target_link_libraries(cache_bugs cache maxscale-common mysqlcommon)
+
+add_test(test_cache_bugs cache_bugs)
+
 add_test(test_cache_rules testrules)
 
 add_test(test_cache_inmemory_keygeneration testkeygeneration storage_inmemory ${CMAKE_CURRENT_SOURCE_DIR}/input.test)
