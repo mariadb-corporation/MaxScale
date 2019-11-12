@@ -5,19 +5,21 @@
 
 set -x
 
+cpus=$(grep -c processor /proc/cpuinfo)
+
 cd ./MaxScale
 
 mkdir _build
 cd _build
 cmake ..  $cmake_flags
-make || exit 1
+make -j $cpus || exit 1
 
 if [[ "$cmake_flags" =~ "BUILD_TESTS=Y" ]]
 then
     # We don't care about memory leaks in the tests (e.g. servers are never freed)
     export ASAN_OPTIONS=detect_leaks=0
     # All tests must pass otherwise the build is considered a failure
-    ctest --output-on-failure || exit 1
+    ctest --output-on-failure -j 100 || exit 1
 
     # See if docker is installed and run REST API and MaxCtrl tests if it is
     command -v docker
@@ -41,7 +43,7 @@ sudo rm -rf /usr/bin/strip
 sudo touch /usr/bin/strip
 sudo chmod a+x /usr/bin/strip
 
-sudo make package
+sudo make package -j $cpus
 res=$?
 if [ $res != 0 ] ; then
 	echo "Make package failed"
@@ -53,7 +55,7 @@ sudo rm CMakeCache.txt
 
 echo "Building tarball..."
 cmake .. $cmake_flags -DTARBALL=Y
-sudo make package
+sudo make package -j $cpus
 
 cd ..
 cp _build/*.rpm .
@@ -66,7 +68,7 @@ then
         cd _build
         rm CMakeCache.txt
         cmake ..  $cmake_flags -DTARGET_COMPONENT=$component
-        sudo make package
+        sudo make package -j $cpus
         cd ..
         cp _build/*.rpm .
 	    cp _build/*.gz .
@@ -75,7 +77,7 @@ fi
 
 if [ "$BUILD_RABBITMQ" == "yes" ] ; then
   cmake ../rabbitmq_consumer/  $cmake_flags
-  sudo make package
+  sudo make package -j $cpus
   res=$?
   if [ $res != 0 ] ; then
         exit $res
