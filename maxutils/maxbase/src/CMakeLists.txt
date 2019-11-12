@@ -15,6 +15,7 @@ add_library(maxbase STATIC
   random.cc
   semaphore.cc
   shareddata.cc
+  ssl.cc
   stacktrace.cc
   stopwatch.cc
   string.cc

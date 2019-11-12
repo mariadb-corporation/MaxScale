@@ -26,6 +26,7 @@
 #include <openssl/err.h>
 #include <openssl/dh.h>
 
+#include <maxbase/ssl.hh>
 #include <maxscale/modinfo.hh>
 
 class DCB;
@@ -65,23 +66,14 @@ namespace maxscale
 {
 
 // SSL configuration
-struct SSLConfig
+struct SSLConfig : public mxb::SSLConfig
 {
     SSLConfig() = default;
     SSLConfig(const MXS_CONFIG_PARAMETER& params);
 
-    // CA must always be defined for non-empty configurations
-    bool empty() const
-    {
-        return ca.empty();
-    }
-
     // Convert to human readable string representation
     std::string to_string() const;
 
-    std::string       key;                          /**< SSL private key */
-    std::string       cert;                         /**< SSL certificate */
-    std::string       ca;                           /**< SSL CA certificate */
     std::string       crl;                          /** SSL certificate revocation list*/
     ssl_method_type_t version = SERVICE_SSL_TLS_MAX;/**< Which TLS version to use */
     int               verify_depth = 9;             /**< SSL certificate verification depth */
