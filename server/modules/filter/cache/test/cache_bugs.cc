@@ -16,6 +16,7 @@
 #include <string>
 #include <vector>
 #include <maxbase/log.hh>
+#include <maxscale/paths.h>
 #include <maxscale/modinfo.h>
 #include "../cachemt.hh"
 
@@ -56,7 +57,9 @@ int mxs_2727()
     config.thread_model = CACHE_THREAD_MODEL_MT;
     config.enabled = true;
 
+    set_libdir(const_cast<char*>("../storage/storage_inmemory"));
     auto* pCache = CacheMT::Create("MXS-2727", &config);
+    mxb_assert(pCache);
 
     CACHE_KEY key;
     GWBUF* pSelect = create_gwbuf("SELECT * FROM t");
