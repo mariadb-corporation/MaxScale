@@ -151,14 +151,13 @@ public:
     bool    extract(GWBUF* buffer, MYSQL_session* session) override;
     AuthRes authenticate(DCB* client, const mariadb::UserEntry* entry) override;
 
-    AuthRes reauthenticate(DCB* generic_dcb, uint8_t* scramble, size_t scramble_len,
+    AuthRes reauthenticate(const mariadb::UserEntry* entry, DCB* generic_dcb, uint8_t* scramble, size_t scramble_len,
                            const ByteVec& auth_token, uint8_t* output_token) override;
 
 private:
     /**
      * @brief Verify the user has access to the database
      *
-     * @param dcb          Client DCB
      * @param session      Shared MySQL session
      * @param scramble     The scramble sent to the client in the initial handshake
      * @param scramble_len Length of @c scramble
@@ -167,7 +166,7 @@ private:
      *
      * @return MXS_AUTH_SUCCEEDED if the user has access to the database
      */
-    AuthRes validate_mysql_user(DCB* dcb, const MYSQL_session* session,
+    AuthRes validate_mysql_user(const mariadb::UserEntry* entry, const MYSQL_session* session,
                                 const uint8_t* scramble, size_t scramble_len,
                                 const mariadb::ClientAuthenticator::ByteVec& auth_token,
                                 uint8_t* phase2_scramble_out);

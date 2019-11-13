@@ -1178,19 +1178,27 @@ bool MariaDBClientConnection::reauthenticate_client(MXS_SESSION* session, GWBUF*
         data->user = user;
         data->db = db;
 
-        std::vector<uint8_t> payload;
-        uint64_t payloadlen = gwbuf_length(packetbuf) - MYSQL_HEADER_LEN;
-        payload.resize(payloadlen);
-        gwbuf_copy_data(packetbuf, MYSQL_HEADER_LEN, payloadlen, &payload[0]);
+        auto users = user_account_manager();
+        auto user_entry = users->find_user(data->user, data->remote, data->db);
 
-        auto rc = m_authenticator->reauthenticate(m_dcb, m_scramble, sizeof(m_scramble),
-                                                  payload, data->client_sha1);
-        if (rc == AuthRes::SUCCESS)
+        auto rc = AuthRes::FAIL;
+        if (user_entry)
         {
-            // Re-authentication successful, route the original COM_CHANGE_USER
-            rval = true;
+            std::vector<uint8_t> payload;
+            uint64_t payloadlen = gwbuf_length(packetbuf) - MYSQL_HEADER_LEN;
+            payload.resize(payloadlen);
+            gwbuf_copy_data(packetbuf, MYSQL_HEADER_LEN, payloadlen, &payload[0]);
+
+            rc = m_authenticator->reauthenticate(user_entry.get(), m_dcb, m_scramble, sizeof(m_scramble),
+                                                 payload, data->client_sha1);
+            if (rc == AuthRes::SUCCESS)
+            {
+                // Re-authentication successful, route the original COM_CHANGE_USER
+                rval = true;
+            }
         }
-        else
+
+        if (!rval)
         {
             /**
              * Authentication failed. To prevent the COM_CHANGE_USER from reaching

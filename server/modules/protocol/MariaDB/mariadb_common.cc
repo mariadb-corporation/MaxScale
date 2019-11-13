@@ -467,7 +467,7 @@ uint64_t mariadb::AuthenticatorModule::capabilities() const
 }
 
 mariadb::ClientAuthenticator::AuthRes
-mariadb::ClientAuthenticator::reauthenticate(DCB* client, uint8_t* scramble, size_t scramble_len,
+mariadb::ClientAuthenticator::reauthenticate(const UserEntry* entry, DCB* client, uint8_t* scramble, size_t scramble_len,
                                              const ByteVec& auth_token, uint8_t* output)
 {
     return AuthRes::FAIL;

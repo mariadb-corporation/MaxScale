@@ -165,7 +165,7 @@ public:
      * @param output Hashed client password used by backend protocols
      * @return 0 on success
      */
-    virtual AuthRes reauthenticate(DCB* client, uint8_t* scramble, size_t scramble_len,
+    virtual AuthRes reauthenticate(const UserEntry* entry, DCB* client, uint8_t* scramble, size_t scramble_len,
                                    const ByteVec& auth_token, uint8_t* output);
 };
 

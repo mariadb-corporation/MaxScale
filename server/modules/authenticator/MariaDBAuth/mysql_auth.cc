@@ -251,10 +251,6 @@ AuthRes MariaDBClientAuthenticator::authenticate(DCB* generic_dcb, const UserEnt
     auto client_data = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
     if (!client_data->user.empty())
     {
-        MXS_DEBUG("Receiving connection from '%s' to database '%s'.",
-                  client_data->user.c_str(),
-                  client_data->db.c_str());
-
         if (!m_correct_authenticator)
         {
             // Client is attempting to use wrong authenticator, send switch request packet.
@@ -270,16 +266,9 @@ AuthRes MariaDBClientAuthenticator::authenticate(DCB* generic_dcb, const UserEnt
             }
         }
 
-        auth_ret = validate_mysql_user(dcb, client_data,
+        auth_ret = validate_mysql_user(entry, client_data,
                                        protocol->scramble(), MYSQL_SCRAMBLE_LEN,
                                        client_data->auth_token, client_data->client_sha1);
-
-        if (auth_ret != AuthRes::SUCCESS && service_refresh_users(dcb->service()))
-        {
-            auth_ret = validate_mysql_user(dcb, client_data,
-                                           protocol->scramble(), MYSQL_SCRAMBLE_LEN,
-                                           client_data->auth_token, client_data->client_sha1);
-        }
 
         /* on successful authentication, set user into dcb field */
         if (auth_ret == AuthRes::SUCCESS)
@@ -648,7 +637,8 @@ int MariaDBAuthenticatorModule::load_users(SERVICE* service)
     return rc;
 }
 
-AuthRes MariaDBClientAuthenticator::reauthenticate(DCB* generic_dcb, uint8_t* scramble, size_t scramble_len,
+AuthRes MariaDBClientAuthenticator::reauthenticate(const UserEntry* entry, DCB* generic_dcb,
+                                                   uint8_t* scramble, size_t scramble_len,
                                                    const ByteVec& auth_token, uint8_t* output_token)
 {
     mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
@@ -657,12 +647,7 @@ AuthRes MariaDBClientAuthenticator::reauthenticate(DCB* generic_dcb, uint8_t* sc
     auto rval = AuthRes::FAIL;
 
     uint8_t phase2_scramble[MYSQL_SCRAMBLE_LEN];
-    auto rc = validate_mysql_user(dcb, client_data, scramble, scramble_len, auth_token, phase2_scramble);
-
-    if (rc != AuthRes::SUCCESS && service_refresh_users(dcb->service()))
-    {
-        rc = validate_mysql_user(dcb, client_data, scramble, scramble_len, auth_token, phase2_scramble);
-    }
+    auto rc = validate_mysql_user(entry, client_data, scramble, scramble_len, auth_token, phase2_scramble);
 
     if (rc == AuthRes::SUCCESS)
     {

@@ -42,6 +42,7 @@
 namespace
 {
 using AuthRes = mariadb::ClientAuthenticator::AuthRes;
+using mariadb::UserEntry;
 }
 
 /** Don't include the root user */
@@ -353,121 +354,27 @@ static bool no_password_required(const char* result, size_t tok_len)
     return *result == '\0' && tok_len == 0;
 }
 
-/** Used to detect empty result sets */
-struct user_query_result
-{
-    bool ok;
-    char output[SHA_DIGEST_LENGTH * 2 + 1];
-};
-
-/** @brief Callback for sqlite3_exec() */
-static int auth_cb(void* data, int columns, char** rows, char** row_names)
-{
-    struct user_query_result* res = (struct user_query_result*)data;
-    strcpy(res->output, rows[0] ? rows[0] : "");
-    res->ok = true;
-    return 0;
-}
-
-AuthRes MariaDBClientAuthenticator::validate_mysql_user(DCB* dcb,
+AuthRes MariaDBClientAuthenticator::validate_mysql_user(const UserEntry* entry,
                                                         const MYSQL_session* session,
                                                         const uint8_t* scramble,
                                                         size_t scramble_len,
                                                         const mariadb::ClientAuthenticator::ByteVec& auth_token,
                                                         uint8_t* phase2_scramble_out)
 {
-    const char* user = session->user.c_str();
-    const char* database = session->db.c_str();
-    const char* remote = dcb->remote().c_str();
-
-    sqlite3* handle = m_module.get_handle();
-    const char* validate_query = m_module.m_lower_case_table_names ?
-        mysqlauth_validate_user_query_lower : mysqlauth_validate_user_query;
-    size_t len = snprintf(nullptr, 0, validate_query,
-                          user,
-                          remote, remote,
-                          database, database);
-    char sql[len + 1];
-    auto rval = AuthRes::FAIL;
-    char* err;
-
-    if (m_module.m_skip_auth)
+    AuthRes rval = AuthRes::FAIL_WRONG_PW;
+    // TODO: add skip_auth-equivalent support to main user manager
+    auto passwdz = entry->password.c_str();
+    // The * at the start needs to be skipped.
+    if (*passwdz == '*')
     {
-        sprintf(sql, mysqlauth_skip_auth_query, user, database, database);
-    }
-    else
-    {
-        sprintf(sql, validate_query,
-                user,
-                remote, remote,
-                database, database);
+        passwdz++;
     }
 
-    user_query_result res = {};
-
-    if (sqlite3_exec(handle, sql, auth_cb, &res, &err) != SQLITE_OK)
+    if (no_password_required(passwdz, session->auth_token.size())
+        || check_password(passwdz, scramble, scramble_len, auth_token, phase2_scramble_out))
     {
-        MXS_ERROR("Failed to execute auth query: %s", err);
-        sqlite3_free(err);
-    }
-
-    /** Check for IPv6 mapped IPv4 address */
-    if (!res.ok && strchr(remote, ':') && strchr(remote, '.'))
-    {
-        const char* ipv4 = strrchr(remote, ':') + 1;
-        sprintf(sql, validate_query,
-                user,
-                ipv4, ipv4,
-                database, database);
-
-        if (sqlite3_exec(handle, sql, auth_cb, &res, &err) != SQLITE_OK)
-        {
-            MXS_ERROR("Failed to execute auth query: %s", err);
-            sqlite3_free(err);
-        }
-    }
-
-    if (!res.ok)
-    {
-        /**
-         * Try authentication with the hostname instead of the IP. We do this only
-         * as a last resort so we avoid the high cost of the DNS lookup.
-         */
-        char client_hostname[MYSQL_HOST_MAXLEN] = "";
-        get_hostname(dcb, client_hostname, sizeof(client_hostname) - 1);
-
-        sprintf(sql, validate_query,
-                user,
-                client_hostname,
-                client_hostname,
-                database, database);
-
-        if (sqlite3_exec(handle, sql, auth_cb, &res, &err) != SQLITE_OK)
-        {
-            MXS_ERROR("Failed to execute auth query: %s", err);
-            sqlite3_free(err);
-        }
-    }
-
-    if (res.ok)
-    {
-        /** Found a matching row */
-
-        if (no_password_required(res.output, session->auth_token.size())
-            || check_password(res.output,
-                              scramble, scramble_len, auth_token,
-                              phase2_scramble_out))
-        {
-            /** Password is OK, check that the database exists */
-            if (check_database(handle, database))
-            {
-                rval = AuthRes::SUCCESS;
-            }
-            else
-            {
-                rval = AuthRes::FAIL_DB;
-            }
-        }
+        /** Password is OK. TODO: add check that the database exists to main user manager */
+        rval = AuthRes::SUCCESS;
     }
 
     return rval;
