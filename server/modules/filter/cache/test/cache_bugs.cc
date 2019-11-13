@@ -91,7 +91,8 @@ int mxs_2727()
     result = pCache->put_value(key, pValue);
     gwbuf_free(pValue);
 
-    if (!CACHE_RESULT_IS_OK(result))
+    // Expected to fail, as the value does not fit into the cache.
+    if (CACHE_RESULT_IS_OK(result))
     {
         return 1;
     }
