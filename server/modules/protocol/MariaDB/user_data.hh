@@ -42,16 +42,53 @@ public:
     void   clear();
     size_t size() const;
 
+    /**
+     * Find a user entry with matching user & host.
+     *
+     * @param username Client username. This must match exactly with the entry.
+     * @param host Client address. This must match the entry host pattern.
+     * @return The found entry, or null if not found
+     */
     const mariadb::UserEntry*
     find_entry(const std::string& username, const std::string& host) const;
-    bool             check_database_access(const mariadb::UserEntry& entry, const std::string& db) const;
+
+    /**
+      * Find a user entry with matching user. Picks the first entry with a matching username without
+      * considering the client address.
+      *
+      * @param username Client username. This must match exactly with the entry.
+      * @return The found entry, or null if not found
+      */
+    const mariadb::UserEntry*
+    find_entry(const std::string& username) const;
+
+    /**
+     * Check if user entry can access database. The access may be granted with a direct grant or through
+     * the default role.
+     *
+     * @param entry User entry
+     * @param db Target database
+     * @param ignorecase If true, database names are compared case insensitive
+     * @return True if user can access database
+     */
+    bool check_database_access(const mariadb::UserEntry& entry, const std::string& db,
+                               bool ignorecase = false) const;
 
 private:
-    bool user_can_access_db(const std::string& user, const std::string& host_pattern,
-                            const std::string& db) const;
-    bool role_can_access_db(const std::string& role, const std::string& db) const;
+    bool user_can_access_db(const std::string& user, const std::string& host_pattern, const std::string& db,
+                            bool ignorecase) const;
+    bool role_can_access_db(const std::string& role, const std::string& db, bool ignorecase) const;
 
     bool address_matches_host_pattern(const std::string& addr, const std::string& host_pattern) const;
+
+    enum class HostPatternMode
+    {
+        SKIP,
+        MATCH,
+    };
+
+    const mariadb::UserEntry*
+    find_entry(const std::string& username, const std::string& host, HostPatternMode mode) const;
 
     enum class AddrType
     {

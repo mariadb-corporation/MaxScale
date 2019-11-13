@@ -504,6 +504,17 @@ void UserDatabase::clear()
 
 const UserEntry* UserDatabase::find_entry(const std::string& username, const std::string& host) const
 {
+    return find_entry(username, host, HostPatternMode::MATCH);
+}
+
+const mariadb::UserEntry* UserDatabase::find_entry(const std::string& username) const
+{
+    return find_entry(username, "", HostPatternMode::SKIP);
+}
+
+const UserEntry* UserDatabase::find_entry(const std::string& username, const std::string& host,
+                                          HostPatternMode mode) const
+{
     const UserEntry* rval = nullptr;
     auto iter = m_contents.find(username);
     if (iter != m_contents.end())
@@ -514,7 +525,8 @@ const UserEntry* UserDatabase::find_entry(const std::string& username, const std
         {
             // The entry must not be a role (they should have empty hostnames in any case) and the hostname
             // pattern should match the host.
-            if (!entry.is_role && address_matches_host_pattern(host, entry.host_pattern))
+            if (!entry.is_role
+                && (mode == HostPatternMode::SKIP || address_matches_host_pattern(host, entry.host_pattern)))
             {
                 rval = &entry;
                 break;
@@ -535,29 +547,45 @@ void UserDatabase::set_dbs_and_roles(StringSetMap&& db_grants, StringSetMap&& ro
     m_roles_mapping = std::move(roles_mapping);
 }
 
-bool UserDatabase::check_database_access(const UserEntry& entry, const std::string& db) const
+bool UserDatabase::check_database_access(const UserEntry& entry, const std::string& db, bool ignorecase) const
 {
     // Accept the user if the entry has a direct global privilege or if the user is not
     // connecting to a specific database,
     return entry.global_db_priv || db.empty()
             // or the user has a privilege to the database, or a table or column in the database,
-           || (user_can_access_db(entry.username, entry.host_pattern, db))
+           || (user_can_access_db(entry.username, entry.host_pattern, db, ignorecase))
             // or the user can access db through its default role.
-           || (!entry.default_role.empty() && role_can_access_db(entry.default_role, db));
+           || (!entry.default_role.empty() && role_can_access_db(entry.default_role, db, ignorecase));
 }
 
-bool UserDatabase::user_can_access_db(const string& user, const string& host_pattern, const string& db) const
+bool UserDatabase::user_can_access_db(const string& user, const string& host_pattern, const string& db,
+                                      bool ignorecase) const
 {
     string key = user + "@" + host_pattern;
     auto iter = m_database_grants.find(key);
     if (iter != m_database_grants.end())
     {
-        return iter->second.count(db) > 0;
+        // If ignorecase is on, iterate through the set.
+        if (ignorecase)
+        {
+            const StringSet& allowed_dbs = iter->second;
+            for (const auto& allowed_db : allowed_dbs)
+            {
+                if (strcasecmp(allowed_db.c_str(), db.c_str()) == 0)
+                {
+                    return true;
+                }
+            }
+        }
+        else
+        {
+            return iter->second.count(db) > 0;
+        }
     }
     return false;
 }
 
-bool UserDatabase::role_can_access_db(const string& role, const string& db) const
+bool UserDatabase::role_can_access_db(const string& role, const string& db, bool ignorecase) const
 {
     auto role_has_global_priv = [this](const string& role) {
             bool rval = false;
@@ -603,13 +631,12 @@ bool UserDatabase::role_can_access_db(const string& role, const string& db) cons
     {
         string current_role = *open_set.begin();
         // First, check if role has global privilege.
-
         if (role_has_global_priv(current_role))
         {
             privilege_found = true;
         }
         // No global privilege, check db-level privilege.
-        else if (user_can_access_db(current_role, "", db))
+        else if (user_can_access_db(current_role, "", db, ignorecase))
         {
             privilege_found = true;
         }
