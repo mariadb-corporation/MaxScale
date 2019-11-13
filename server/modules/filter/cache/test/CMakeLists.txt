@@ -61,7 +61,7 @@ add_executable(cache_stress cache_stress.cc)
 target_link_libraries(cache_stress ${MARIADB_CONNECTOR_LIBRARIES} ssl crypt crypto dl pthread)
 
 add_executable(cache_bugs cache_bugs.cc)
-target_link_libraries(cache_bugs cache maxscale-common mysqlcommon)
+target_link_libraries(cache_bugs cache maxscale-common)
 
 add_test(test_cache_bugs cache_bugs)
 

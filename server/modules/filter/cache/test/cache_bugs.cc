@@ -16,7 +16,7 @@
 #include <string>
 #include <vector>
 #include <maxbase/log.hh>
-#include <maxscale/modinfo.h>
+#include <maxscale/modinfo.hh>
 #include "../cachemt.hh"
 
 using namespace std;
@@ -56,12 +56,12 @@ int mxs_2727()
     config.thread_model = CACHE_THREAD_MODEL_MT;
     config.enabled = true;
 
-    auto* pCache = CacheMT::Create("MXS-2727", &config);
+    auto* pCache = CacheMT::create("MXS-2727", &config);
 
     CACHE_KEY key;
     GWBUF* pSelect = create_gwbuf("SELECT * FROM t");
 
-    cache_result_t result = pCache->get_key("test", pSelect, &key);
+    cache_result_t result = pCache->get_key(string(), string(), "test", pSelect, &key);
 
     if (!CACHE_RESULT_IS_OK(result))
     {
@@ -73,7 +73,8 @@ int mxs_2727()
 
     GWBUF* pValue = gwbuf_alloc_and_load(value.size(), &value.front());
 
-    result = pCache->put_value(key, pValue);
+    vector<string> invalidation_words;
+    result = pCache->put_value(key, invalidation_words, pValue);
     gwbuf_free(pValue);
 
     if (!CACHE_RESULT_IS_OK(result))
@@ -88,7 +89,7 @@ int mxs_2727()
     pValue = gwbuf_alloc_and_load(value.size(), &value.front());
 
     // This will crash without the MXS-2727 fix.
-    result = pCache->put_value(key, pValue);
+    result = pCache->put_value(key, invalidation_words, pValue);
     gwbuf_free(pValue);
 
     if (!CACHE_RESULT_IS_OK(result))
