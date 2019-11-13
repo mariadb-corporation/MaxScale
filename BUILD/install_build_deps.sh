@@ -6,8 +6,6 @@
 # Build in a temp directory so we don't pollute cwd
 tmpdir=$(mktemp -d)
 
-cpus=$(grep -c processor /proc/cpuinfo)
-
 cd $tmpdir
 
 command -v apt-get
@@ -131,7 +129,7 @@ if [ "`echo -e "3.7.1\n$cmake_version"|sort -V|head -n 1`" != "3.7.1" ] ; then
     cd cmake-3.7.1
 
     ./bootstrap
-    make -j $cpus
+    gmake
     sudo make install
     cd ..
 fi
@@ -162,7 +160,7 @@ then
    tar xzf tcl8.6.5-src.tar.gz
    cd tcl8.6.5/unix
    ./configure
-   sudo make install -j $cpus
+   sudo make install
    cd ../../..
 fi
 
@@ -180,7 +178,7 @@ git checkout v2.9
 mkdir build
 cd build
 cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_C_FLAGS=-fPIC -DJANSSON_INSTALL_LIB_DIR=$install_libdir
-make -j $cpus
+make
 sudo make install
 cd ../../
 
@@ -200,7 +198,7 @@ pushd $avro_dir/build
 # Make sure the library isn't linked against snappy
 sed -i 's/find_package(Snappy)//' ../lang/c/CMakeLists.txt
 cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_C_FLAGS=-fPIC -DCMAKE_CXX_FLAGS=-fPIC
-make -j $cpus
+make
 sudo make install
 popd
 

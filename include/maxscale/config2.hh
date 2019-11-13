@@ -996,6 +996,12 @@ public:
     {
     }
 
+    This& operator=(const value_type& value)
+    {
+        m_value = value;
+        return static_cast<This&>(*this);
+    }
+
     This& operator=(const ConcreteType<This, ParamType>& rhs)
     {
         // Only the value is copied, the parameter and the configuration
@@ -1168,6 +1174,8 @@ inline bool operator>=(const typename ParamType::value_type& lhs,
 class Number : public ConcreteType<Number, ParamNumber>
 {
 protected:
+    using ConcreteType<Number, ParamNumber>::operator =;
+
     Number(Configuration* pConfiguration, const ParamNumber* pParam)
         : ConcreteType(pConfiguration, pParam)
     {
@@ -1180,6 +1188,8 @@ protected:
 class Count : public Number
 {
 public:
+    using Number::operator =;
+
     Count(Configuration* pConfiguration, const ParamCount* pParam)
         : Number(pConfiguration, pParam)
     {
@@ -1192,6 +1202,8 @@ public:
 class Integer : public Number
 {
 public:
+    using Number::operator =;
+
     Integer(Configuration* pConfiguration, const ParamInteger* pParam)
         : Number(pConfiguration, pParam)
     {
@@ -1204,6 +1216,8 @@ public:
 class BitMask : public Count
 {
 public:
+    using Count::operator =;
+
     BitMask(Configuration* pConfiguration, const ParamCount* pParam)
         : Count(pConfiguration, pParam)
     {
@@ -1221,6 +1235,8 @@ public:
 class Bool : public ConcreteType<Bool, ParamBool>
 {
 public:
+    using ConcreteType<Bool, ParamBool>::operator =;
+
     Bool(Configuration* pConfiguration, const ParamBool* pParam)
         : ConcreteType<Bool, ParamBool>(pConfiguration, pParam)
     {
@@ -1239,6 +1255,8 @@ template<class T>
 class Duration : public ConcreteType<Duration<T>, ParamDuration<T>>
 {
 public:
+    using ConcreteType<Duration<T>, ParamDuration<T>>::operator =;
+
     Duration(Configuration* pConfiguration, const ParamDuration<T>* pParam)
         : ConcreteType<Duration<T>, ParamDuration<T>>(pConfiguration, pParam)
     {
@@ -1271,6 +1289,8 @@ template<class T>
 class Enum : public ConcreteType<Enum<T>, ParamEnum<T>>
 {
 public:
+    using ConcreteType<Enum<T>, ParamEnum<T>>::operator =;
+
     Enum(Configuration* pConfiguration, const ParamEnum<T>* pParam)
         : ConcreteType<Enum<T>, ParamEnum<T>>(pConfiguration, pParam)
     {
@@ -1283,6 +1303,8 @@ public:
 class Path : public ConcreteType<Path, ParamPath>
 {
 public:
+    using ConcreteType<Path, ParamPath>::operator =;
+
     Path(Configuration* pConfiguration, const ParamPath* pParam)
         : ConcreteType<Path, ParamPath>(pConfiguration, pParam)
     {
@@ -1305,6 +1327,8 @@ public:
 class Size : public ConcreteType<Size, ParamSize>
 {
 public:
+    using ConcreteType<Size, ParamSize>::operator =;
+
     Size(Configuration* pConfiguration, const ParamSize* pParam)
         : ConcreteType(pConfiguration, pParam)
     {
@@ -1322,6 +1346,8 @@ inline Size::value_type operator/(const Size& lhs, Size::value_type rhs)
 class Server : public ConcreteType<Server, ParamServer>
 {
 public:
+    using ConcreteType<Server, ParamServer>::operator =;
+
     Server(Configuration* pConfiguration, const ParamServer* pParam)
         : ConcreteType<Server, ParamServer>(pConfiguration, pParam)
     {
@@ -1346,6 +1372,8 @@ public:
 class String : public ConcreteType<String, ParamString>
 {
 public:
+    using ConcreteType<String, ParamString>::operator =;
+
     String(Configuration* pConfiguration, const ParamString* pParam)
         : ConcreteType<String, ParamString>(pConfiguration, pParam)
     {
