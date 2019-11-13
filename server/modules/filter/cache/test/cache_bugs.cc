@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2023-01-01
+ * Change Date: 2023-11-12
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -92,7 +92,8 @@ int mxs_2727()
     result = pCache->put_value(key, invalidation_words, pValue);
     gwbuf_free(pValue);
 
-    if (!CACHE_RESULT_IS_OK(result))
+    // Expected to fail, as the value does not fit into the cache.
+    if (CACHE_RESULT_IS_OK(result))
     {
         return 1;
     }
