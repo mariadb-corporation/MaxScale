@@ -13,13 +13,15 @@
 
 #include "user_data.hh"
 
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #include <maxbase/host.hh>
 #include <maxsql/mariadb_connector.hh>
 #include <maxsql/mariadb.hh>
 #include <maxscale/server.hh>
+#include <maxscale/service.hh>
 #include <maxscale/protocol/mariadb/module_names.hh>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+#include <maxscale/routingworker.hh>
 #include <maxscale/config.hh>
 #include <maxscale/secrets.hh>
 #include "sqlite_strlike.hh"
@@ -63,11 +65,6 @@ const string db_grants_query = "SELECT * FROM system.user_acl;";
 }
 }
 
-MariaDBUserManager::MariaDBUserManager(const string& service_name)
-    : m_service_name(service_name)
-{
-}
-
 void MariaDBUserManager::start()
 {
     mxb_assert(!m_updater_thread.joinable());
@@ -84,80 +81,6 @@ void MariaDBUserManager::stop()
     m_keep_running.store(false, release);
     m_notifier.notify_one();
     m_updater_thread.join();
-}
-
-SUserEntry
-MariaDBUserManager::find_user(const string& user, const string& host, const string& requested_db) const
-{
-    auto userz = user.c_str();
-    auto hostz = host.c_str();
-    UserEntry entry;
-    bool has_sufficient_privs = false;
-    {
-        Guard guard(m_userdb_lock);
-        auto found = m_userdb.find_entry(user, host);
-        if (found)
-        {
-            entry = *found;
-            has_sufficient_privs = m_userdb.check_database_access(*found, requested_db);
-        }
-    }
-
-    SUserEntry rval;
-    if (!entry.host_pattern.empty())
-    {
-        if (has_sufficient_privs)
-        {
-            MXB_INFO("Found matching user '%s'@'%s' for client '%s'@'%s' with sufficient privileges.",
-                     entry.username.c_str(), entry.host_pattern.c_str(), userz, hostz);
-            rval.reset(new UserEntry(entry));
-        }
-        else
-        {
-            MXB_INFO("Found matching user '%s'@'%s' for client '%s'@'%s' but user does not have "
-                     "sufficient privileges.",
-                     entry.username.c_str(), entry.host_pattern.c_str(), userz, hostz);
-        }
-    }
-    else
-    {
-        MXB_INFO("Found no matching user for client '%s'@'%s'.", userz, hostz);
-        // TODO: anonymous users need to be handled specially, as not all authenticators support them.
-    }
-    return rval;
-}
-
-SUserEntry MariaDBUserManager::find_anon_proxy_user(const std::string& user, const std::string& host) const
-{
-    auto userz = user.c_str();
-    auto hostz = host.c_str();
-    SUserEntry entry;
-    {
-        Guard guard(m_userdb_lock);
-        auto found = m_userdb.find_entry("", host);
-        if (found)
-        {
-            entry.reset(new(std::nothrow) UserEntry(*found));
-        }
-    }
-
-    SUserEntry rval;
-    if (entry)
-    {
-        if (entry->proxy_grant)
-        {
-            MXB_INFO("Found matching anonymous user ''@'%s' for client '%s'@'%s' with proxy grant.",
-                     entry->host_pattern.c_str(), userz, hostz);
-            rval = std::move(entry);
-        }
-        else
-        {
-            MXB_INFO("Found matching anonymous user ''@'%s' for client '%s'@'%s' but user does not have "
-                     "proxy privileges.",
-                     entry->host_pattern.c_str(), userz, hostz);
-        }
-    }
-    return rval;
 }
 
 void MariaDBUserManager::update_user_accounts()
@@ -264,6 +187,7 @@ void MariaDBUserManager::updater_thread_function()
         {
             updates++;
             m_warn_no_servers = true;
+            m_service->sync_user_account_caches();
         }
 
         m_update_users_requested.store(false, release);
@@ -571,6 +495,28 @@ MariaDBUserManager::LoadResult MariaDBUserManager::read_users_clustrix(QResult u
         rval = LoadResult::SUCCESS;
     }
     return rval;
+}
+
+std::unique_ptr<mxs::UserAccountCache> MariaDBUserManager::create_user_account_cache()
+{
+    auto cache = new(std::nothrow) MariaDBUserCache(*this);
+    return std::unique_ptr<mxs::UserAccountCache>(cache);
+}
+
+UserDatabase MariaDBUserManager::user_database() const
+{
+    UserDatabase rval;
+    {
+        Guard guard(m_userdb_lock);
+        rval = m_userdb;
+    }
+    return rval;
+}
+
+void MariaDBUserManager::set_service(SERVICE* service)
+{
+    mxb_assert(!m_service);
+    m_service = service;
 }
 
 void UserDatabase::add_entry(const std::string& username, const UserEntry& entry)
@@ -1028,4 +974,81 @@ bool UserEntry::host_pattern_is_more_specific(const UserEntry& lhs, const UserEn
            || (lwc && rwc && ((lwc_pos > rwc_pos) || (lwc_pos == rwc_pos && lhost < rhost)))
             // ... and if neither have wildcards, use string order.
            || (!lwc && !rwc && lhost < rhost);
+}
+
+MariaDBUserCache::MariaDBUserCache(const MariaDBUserManager& master)
+    : m_master(master)
+{
+}
+
+SUserEntry
+MariaDBUserCache::find_user(const string& user, const string& host, const string& requested_db) const
+{
+    auto userz = user.c_str();
+    auto hostz = host.c_str();
+    UserEntry entry;
+    bool has_sufficient_privs = false;
+    auto found = m_userdb.find_entry(user, host);
+    if (found)
+    {
+        entry = *found;
+        has_sufficient_privs = m_userdb.check_database_access(*found, requested_db);
+    }
+
+    SUserEntry rval;
+    if (!entry.host_pattern.empty())
+    {
+        if (has_sufficient_privs)
+        {
+            MXB_INFO("Found matching user '%s'@'%s' for client '%s'@'%s' with sufficient privileges.",
+                     entry.username.c_str(), entry.host_pattern.c_str(), userz, hostz);
+            rval.reset(new UserEntry(entry));
+        }
+        else
+        {
+            MXB_INFO("Found matching user '%s'@'%s' for client '%s'@'%s' but user does not have "
+                     "sufficient privileges.",
+                     entry.username.c_str(), entry.host_pattern.c_str(), userz, hostz);
+        }
+    }
+    else
+    {
+        MXB_INFO("Found no matching user for client '%s'@'%s'.", userz, hostz);
+    }
+    return rval;
+}
+
+SUserEntry MariaDBUserCache::find_anon_proxy_user(const std::string& user, const std::string& host) const
+{
+    auto userz = user.c_str();
+    auto hostz = host.c_str();
+    SUserEntry entry;
+    auto found = m_userdb.find_entry("", host);
+    if (found)
+    {
+        entry.reset(new(std::nothrow) UserEntry(*found));
+    }
+
+    SUserEntry rval;
+    if (entry)
+    {
+        if (entry->proxy_grant)
+        {
+            MXB_INFO("Found matching anonymous user ''@'%s' for client '%s'@'%s' with proxy grant.",
+                     entry->host_pattern.c_str(), userz, hostz);
+            rval = std::move(entry);
+        }
+        else
+        {
+            MXB_INFO("Found matching anonymous user ''@'%s' for client '%s'@'%s' but user does not have "
+                     "proxy privileges.",
+                     entry->host_pattern.c_str(), userz, hostz);
+        }
+    }
+    return rval;
+}
+
+void MariaDBUserCache::update_from_master()
+{
+    m_userdb = m_master.user_database();
 }

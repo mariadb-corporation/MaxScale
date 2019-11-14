@@ -1747,9 +1747,10 @@ UserAccountManager* Service::user_account_manager()
     return m_usermanager_exists.load(std::memory_order_acquire) ? m_usermanager.get() : nullptr;
 }
 
-const UserAccountManager* Service::user_account_manager() const
+const mxs::UserAccountCache* Service::user_account_cache() const
 {
-    return const_cast<Service*>(this)->user_account_manager();
+    mxb_assert(mxs::RoutingWorker::get_current());
+    return m_usercache->get();
 }
 
 void Service::set_user_account_manager(SAccountManager user_manager)
@@ -1761,14 +1762,39 @@ void Service::set_user_account_manager(SAccountManager user_manager)
     m_usermanager_exists.store(true, std::memory_order_release);
     m_usermanager->set_credentials(m_config->user, m_config->password);
     m_usermanager->set_backends(m_data->servers);
+    m_usermanager->set_service(this);
+
+    // Message each routingworker to initialize their own user caches.
+    mxb::Semaphore sem;
+    auto init_cache = [this]()
+    {
+        *m_usercache = user_account_manager()->create_user_account_cache();
+    };
+    auto n_threads = mxs::RoutingWorker::broadcast(init_cache, &sem, mxb::Worker::EXECUTE_AUTO);
+    sem.wait_n(n_threads);
+
     m_usermanager->start();
 }
 
-void Service::update_user_accounts()
+void Service::notify_authentication_failed()
 {
     auto manager = user_account_manager();
     if (manager)
     {
         manager->update_user_accounts();
     }
+}
+
+void Service::sync_user_account_caches()
+{
+    // Message each routingworker to update their caches. Do not wait for operation to finish.
+    auto update_cache = [this]()
+    {
+        auto& user_cache = (*m_usercache);
+        if (user_cache)
+        {
+            user_cache->update_from_master();
+        }
+    };
+    mxs::RoutingWorker::broadcast(update_cache, nullptr, mxb::Worker::EXECUTE_AUTO);
 }

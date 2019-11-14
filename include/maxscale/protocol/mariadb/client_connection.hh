@@ -27,6 +27,7 @@ enum kill_type_t
 };
 
 class MariaDBUserManager;
+class MariaDBUserCache;
 
 class MariaDBClientConnection : public mxs::ClientConnectionBase
 {
@@ -98,7 +99,7 @@ private:
     void  execute_kill(MXS_SESSION* issuer, std::shared_ptr<KillInfo> info);
     void  track_current_command(GWBUF* buf);
 
-    const MariaDBUserManager*             user_account_manager();
+    const MariaDBUserCache*               user_account_cache();
     mariadb::ClientAuthenticator::AuthRes ssl_authenticate_check_status(DCB* generic_dcb);
     static std::string                    to_string(AuthState state);
 

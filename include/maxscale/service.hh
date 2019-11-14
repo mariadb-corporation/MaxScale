@@ -144,9 +144,26 @@ public:
      */
     virtual std::vector<SERVER*> reachable_servers() const = 0;
 
-    virtual const mxs::UserAccountManager* user_account_manager() const = 0;
+    /**
+     * Get the user account cache for the current routing worker. Should be only called from a routing
+     * worker.
+     *
+     * @return Thread-specific user account cache
+     */
+    virtual const mxs::UserAccountCache* user_account_cache() const = 0;
 
-    virtual void update_user_accounts() = 0;
+    /**
+     * Notify the service that authentication failed. The service may forward the notification to its user
+     * account manager which then updates its data.
+     */
+    virtual void notify_authentication_failed() = 0;
+
+    /**
+     *  The user account manager should call this function after it has read user data from a backend
+     *  and updated its internal database. Calling this function causes the service to sync all
+     *  thread-specific user data caches with the master data.
+     */
+    virtual void sync_user_account_caches() = 0;
 
     /**
      * Has a connection limit been reached?

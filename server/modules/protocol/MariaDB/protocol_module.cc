@@ -121,10 +121,9 @@ json_t* MySQLProtocolModule::print_auth_users_json()
     return m_authenticators.front()->diagnostics();
 }
 
-std::unique_ptr<mxs::UserAccountManager>
-MySQLProtocolModule::create_user_data_manager(const std::string& service_name)
+std::unique_ptr<mxs::UserAccountManager> MySQLProtocolModule::create_user_data_manager()
 {
-    return std::unique_ptr<mxs::UserAccountManager>(new MariaDBUserManager(service_name));
+    return std::unique_ptr<mxs::UserAccountManager>(new MariaDBUserManager());
 }
 
 std::unique_ptr<mxs::BackendConnection>

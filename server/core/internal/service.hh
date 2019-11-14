@@ -45,6 +45,7 @@ public:
     using FilterList = std::vector<SFilterDef>;
     using RateLimits = std::vector<LastUserLoad>;
     using SAccountManager = std::unique_ptr<mxs::UserAccountManager>;
+    using SAccountCache = std::unique_ptr<mxs::UserAccountCache>;
 
     /**
      * Find a service by name
@@ -195,8 +196,6 @@ public:
         return m_data->servers;
     }
 
-    virtual const mxs::UserAccountManager* user_account_manager() const;
-
     /**
      * Check whether a service can be destroyed
      *
@@ -238,6 +237,11 @@ public:
         return m_active;
     }
 
+    const mxs::UserAccountCache* user_account_cache() const override;
+    void notify_authentication_failed() override;
+
+    void sync_user_account_caches() override;
+
     mxs::UserAccountManager* user_account_manager();
 
     /**
@@ -246,8 +250,6 @@ public:
      * @param user_manager The user account manager this service will use
      */
     void set_user_account_manager(SAccountManager user_manager);
-
-    void update_user_accounts() override;
 
 private:
 
@@ -292,6 +294,10 @@ private:
     // User account manager. Can only be set once. A guard variable is used to synchronize access.
     SAccountManager  m_usermanager;
     std::atomic_bool m_usermanager_exists {false};
+
+    /** User account cache local to each worker. Each worker must initialize their own copy
+     *  and update it when the master data changes. */
+    mxs::WorkerLocal<SAccountCache, mxs::DefaultConstructor<SAccountCache>> m_usercache;
 };
 
 // A connection to a service

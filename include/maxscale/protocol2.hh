@@ -103,7 +103,7 @@ public:
      */
     virtual json_t* print_auth_users_json() = 0;
 
-    virtual std::unique_ptr<UserAccountManager> create_user_data_manager(const std::string& service_name)
+    virtual std::unique_ptr<UserAccountManager> create_user_data_manager()
     {
         return nullptr;
     }
@@ -216,9 +216,10 @@ public:
     virtual BackendDCB*       dcb() = 0;
 };
 
+class UserAccountCache;
+
 /**
- * An interface which a user account manager class must implement. So far, this is just
- * a draft and more features will be added as clarity increases.
+ * An interface which a user account manager must implement. The instance is shared between all threads.
  */
 class UserAccountManager
 {
@@ -256,6 +257,28 @@ public:
      * the same service, only one manager is required.
      */
     virtual std::string protocol_name() const = 0;
+
+    /**
+     * Create a thread-local account cache linked to this account manager.
+     *
+     * @return A new user account cache
+     */
+    virtual std::unique_ptr<UserAccountCache> create_user_account_cache() = 0;
+
+    /**
+     * Set owning service.
+     *
+     * @param service
+     */
+    virtual void set_service(SERVICE* service) = 0;
+};
+
+class UserAccountCache
+{
+public:
+    UserAccountCache() = default;
+    virtual ~UserAccountCache() = default;
+    virtual void update_from_master() = 0;
 };
 
 template<class ProtocolImplementation>

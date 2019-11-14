@@ -50,8 +50,7 @@ public:
      * @param host Client address. This must match the entry host pattern.
      * @return The found entry, or null if not found
      */
-    const mariadb::UserEntry*
-    find_entry(const std::string& username, const std::string& host) const;
+    const mariadb::UserEntry* find_entry(const std::string& username, const std::string& host) const;
 
     /**
      * Find a user entry with matching user. Picks the first entry with a matching username without
@@ -60,8 +59,7 @@ public:
      * @param username Client username. This must match exactly with the entry.
      * @return The found entry, or null if not found
      */
-    const mariadb::UserEntry*
-    find_entry(const std::string& username) const;
+    const mariadb::UserEntry* find_entry(const std::string& username) const;
 
     /**
      * Check if user entry can access database. The access may be granted with a direct grant or through
@@ -129,7 +127,7 @@ private:
 class MariaDBUserManager : public mxs::UserAccountManager
 {
 public:
-    explicit MariaDBUserManager(const std::string& service_name);
+    MariaDBUserManager() = default;
 
     /**
      * Start the updater thread. Should only be called when the updater is stopped or has just been created.
@@ -141,39 +139,27 @@ public:
      */
     void stop() override;
 
-    /**
-     * Check if user@host exists and can access the requested database. Does not check password or
-     * any other authentication credentials.
-     *
-     * @param user Client username
-     * @param host Client hostname
-     * @param requested_db Database requested by client. May be empty.
-     * @return Found user entry.
-     */
-    std::unique_ptr<mariadb::UserEntry>
-    find_user(const std::string& user, const std::string& host, const std::string& requested_db) const;
-
-    std::unique_ptr<mariadb::UserEntry>
-    find_anon_proxy_user(const std::string& user, const std::string& host) const;
-
     void update_user_accounts() override;
     void set_credentials(const std::string& user, const std::string& pw) override;
     void set_backends(const std::vector<SERVER*>& backends) override;
+    void set_service(SERVICE* service) override;
 
-    std::string protocol_name() const override;
+    std::unique_ptr<mxs::UserAccountCache> create_user_account_cache() override;
+
+    std::string  protocol_name() const override;
+    UserDatabase user_database() const;
 
 private:
     using QResult = std::unique_ptr<mxq::QueryResult>;
 
-    bool load_users();
-
     enum class LoadResult
     {
+        SUCCESS,
         QUERY_FAILED,
         INVALID_DATA,
-        SUCCESS,
     };
 
+    bool       load_users();
     LoadResult load_users_mariadb(mxq::MariaDB& conn, SERVER* srv);
     LoadResult load_users_clustrix(mxq::MariaDB& con, SERVER* srv);
 
@@ -198,12 +184,39 @@ private:
     std::string          m_password;
     std::vector<SERVER*> m_backends;
 
-    const std::string m_service_name;   /**< Service using this account data manager. Used for logging. */
+    SERVICE* m_service {nullptr};   /**< Service using this account data manager. */
 
     /** Warn if no valid servers to query from. Starts false, as in the beginning monitors may not have
      * ran yet. */
     bool m_warn_no_servers {false};
 
-    mutable std::mutex m_userdb_lock;           /**< Protects UserDatabase from concurrent access */
-    UserDatabase       m_userdb;                /**< Contains user account info */
+    mutable std::mutex m_userdb_lock;   /**< Protects UserDatabase from concurrent access */
+    UserDatabase       m_userdb;        /**< Contains user account info */
+};
+
+class MariaDBUserCache : public mxs::UserAccountCache
+{
+public:
+    MariaDBUserCache(const MariaDBUserManager& master);
+
+    /**
+     * Check if user@host exists and can access the requested database. Does not check password or
+     * any other authentication credentials.
+     *
+     * @param user Client username
+     * @param host Client hostname
+     * @param requested_db Database requested by client. May be empty.
+     * @return Found user entry.
+     */
+    std::unique_ptr<mariadb::UserEntry>
+    find_user(const std::string& user, const std::string& host, const std::string& requested_db) const;
+
+    std::unique_ptr<mariadb::UserEntry>
+    find_anon_proxy_user(const std::string& user, const std::string& host) const;
+
+    void update_from_master() override;
+
+private:
+    const MariaDBUserManager& m_master;
+    UserDatabase              m_userdb;
 };

@@ -899,7 +899,7 @@ int MariaDBClientConnection::perform_authentication(GWBUF* read_buffer, int nbyt
         }
 
         // The correct authenticator is chosen here (and also in reauthenticate_client()).
-        auto users = user_account_manager();
+        auto users = user_account_cache();
         auto entry = users->find_user(m_session_data->user, m_session_data->remote, m_session_data->db);
 
         if (!entry && allow_anon_user)
@@ -942,7 +942,7 @@ int MariaDBClientConnection::perform_authentication(GWBUF* read_buffer, int nbyt
         {
             // User data may be outdated, send update message through the service. The current session
             // will fail.
-            m_session->service->update_user_accounts();
+            m_session->service->notify_authentication_failed();
             auth_val = AuthRes::FAIL;
         }
     }
@@ -962,7 +962,7 @@ int MariaDBClientConnection::perform_authentication(GWBUF* read_buffer, int nbyt
             if (auth_val == AuthRes::FAIL_WRONG_PW)
             {
                 // Again, this may be because user data is obsolete.
-                m_session->service->update_user_accounts();
+                m_session->service->notify_authentication_failed();
             }
         }
         else
@@ -1178,7 +1178,7 @@ bool MariaDBClientConnection::reauthenticate_client(MXS_SESSION* session, GWBUF*
         data->user = user;
         data->db = db;
 
-        auto users = user_account_manager();
+        auto users = user_account_cache();
         auto user_entry = users->find_user(data->user, data->remote, data->db);
 
         auto rc = AuthRes::FAIL;
@@ -2354,8 +2354,8 @@ std::string MariaDBClientConnection::to_string(AuthState state)
     }
 }
 
-const MariaDBUserManager* MariaDBClientConnection::user_account_manager()
+const MariaDBUserCache* MariaDBClientConnection::user_account_cache()
 {
-    auto users = m_session->service->user_account_manager();
-    return static_cast<const MariaDBUserManager*>(users);
+    auto users = m_session->service->user_account_cache();
+    return static_cast<const MariaDBUserCache*>(users);
 }
