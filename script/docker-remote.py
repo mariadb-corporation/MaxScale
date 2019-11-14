@@ -94,12 +94,12 @@ def completed_process_print(cp):
     if cp.returncode:
         eout = True
         print(cp.host + ':')
-        eprint(cp.returncode, cp.stderr.decode('ascii'))
+        eprint(cp.returncode, cp.stderr.decode('utf-8'))
 
     if not settings.silent and len(cp.stdout):
         if not eout:
             print(cp.host + ':')
-        print(cp.stdout.decode('ascii'))
+        print(cp.stdout.decode('utf-8'))
 
 
 #### function execute_regular_command, any command you would notmally run on command line
