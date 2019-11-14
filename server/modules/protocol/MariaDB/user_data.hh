@@ -23,6 +23,7 @@
 #include <maxsql/queryresult.hh>
 #include <maxscale/protocol2.hh>
 #include <maxscale/protocol/mariadb/authenticator.hh>
+#include <maxsql/mariadb_connector.hh>
 
 class SERVER;
 
@@ -53,12 +54,12 @@ public:
     find_entry(const std::string& username, const std::string& host) const;
 
     /**
-      * Find a user entry with matching user. Picks the first entry with a matching username without
-      * considering the client address.
-      *
-      * @param username Client username. This must match exactly with the entry.
-      * @return The found entry, or null if not found
-      */
+     * Find a user entry with matching user. Picks the first entry with a matching username without
+     * considering the client address.
+     *
+     * @param username Client username. This must match exactly with the entry.
+     * @return The found entry, or null if not found
+     */
     const mariadb::UserEntry*
     find_entry(const std::string& username) const;
 
@@ -155,9 +156,9 @@ public:
     std::unique_ptr<mariadb::UserEntry>
     find_anon_proxy_user(const std::string& user, const std::string& host) const;
 
-    void        update_user_accounts() override;
-    void        set_credentials(const std::string& user, const std::string& pw) override;
-    void        set_backends(const std::vector<SERVER*>& backends) override;
+    void update_user_accounts() override;
+    void set_credentials(const std::string& user, const std::string& pw) override;
+    void set_backends(const std::vector<SERVER*>& backends) override;
 
     std::string protocol_name() const override;
 
@@ -166,10 +167,23 @@ private:
 
     bool load_users();
 
+    enum class LoadResult
+    {
+        QUERY_FAILED,
+        INVALID_DATA,
+        SUCCESS,
+    };
+
+    LoadResult load_users_mariadb(mxq::MariaDB& conn, SERVER* srv);
+    LoadResult load_users_clustrix(mxq::MariaDB& con, SERVER* srv);
+
     void updater_thread_function();
-    bool read_users(QResult users, bool using_roles);
+
+    bool read_users_mariadb(QResult users);
     void read_dbs_and_roles(QResult dbs, QResult roles);
     void read_proxy_grants(QResult proxies);
+
+    LoadResult read_users_clustrix(QResult users, QResult acl);
 
     // Fields for controlling the updater thread.
     std::thread             m_updater_thread;

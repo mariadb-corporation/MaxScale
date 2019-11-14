@@ -39,7 +39,7 @@ constexpr auto release = std::memory_order_release;
 constexpr auto npos = string::npos;
 constexpr int ipv4min_len = 7;      // 1.1.1.1
 
-namespace backend_queries
+namespace mariadb_queries
 {
 const string users_query = "SELECT * FROM mysql.user;";
 const string db_grants_query =
@@ -53,6 +53,13 @@ const string db_grants_query =
 const string roles_query = "SELECT a.user, a.host, a.role FROM mysql.roles_mapping AS a;";
 const string proxies_query = "SELECT DISTINCT a.user, a.host FROM mysql.proxies_priv AS a "
                              "WHERE a.proxied_host <> '' AND a.proxied_user <> '';";
+}
+
+namespace clustrix_queries
+{
+const string users_query = "SELECT *, IF(a.privileges & 1048576, 'Y', 'N') AS global_priv "
+                           "FROM system.users AS u LEFT JOIN system.user_acl AS a ON (u.username = a.role);";
+const string db_grants_query = "SELECT * FROM system.user_acl;";
 }
 }
 
@@ -130,7 +137,7 @@ SUserEntry MariaDBUserManager::find_anon_proxy_user(const std::string& user, con
         auto found = m_userdb.find_entry("", host);
         if (found)
         {
-            entry.reset(new (std::nothrow) UserEntry(*found));
+            entry.reset(new(std::nothrow) UserEntry(*found));
         }
     }
 
@@ -287,68 +294,46 @@ bool MariaDBUserManager::load_users()
     }
 
     bool found_valid_server = false;
-    bool got_data = false;
-    bool wrote_data = false;
 
-    for (size_t i = 0; i < backends.size() && !got_data; i++)
+    auto load_result = LoadResult::QUERY_FAILED;
+    for (size_t i = 0; i < backends.size() && load_result == LoadResult::QUERY_FAILED; i++)
     {
         SERVER* srv = backends[i];
         if (srv->is_active && srv->is_usable())
         {
             found_valid_server = true;
-
-            bool using_roles = false;
-            auto version = srv->version();
-            // Default roles are in server version 10.1.1.
-            if (version.major > 10 || (version.major == 10
-                                       && (version.minor > 1 || (version.minor == 1 && version.patch == 1))))
-            {
-                using_roles = true;
-            }
-
             const mxb::SSLConfig* srv_ssl_config = srv->ssl().config();
             sett.ssl = (srv_ssl_config && !srv_ssl_config->empty()) ? *srv_ssl_config : mxb::SSLConfig();
 
             con.set_connection_settings(sett);
             if (con.open(srv->address, srv->port))
             {
-                QResult users_res, dbs_res, proxies_res, roles_res;
-                // Perform the queries. All must succeed on the same backend.
-                if (((users_res = con.query(backend_queries::users_query)) != nullptr)
-                    && ((dbs_res = con.query(backend_queries::db_grants_query)) != nullptr)
-                    && ((proxies_res = con.query(backend_queries::proxies_query)) != nullptr))
+                auto srv_type = srv->type();
+                switch (srv_type)
                 {
-                    if (using_roles)
-                    {
-                        if ((roles_res = con.query(backend_queries::roles_query)) != nullptr)
-                        {
-                            got_data = true;
-                        }
-                    }
-                    else
-                    {
-                        got_data = true;
-                    }
+                case SERVER::Type::MYSQL:
+                case SERVER::Type::MARIADB:
+                    load_result = load_users_mariadb(con, srv);
+                    break;
+
+                case SERVER::Type::CLUSTRIX:
+                    load_result = load_users_clustrix(con, srv);
+                    break;
                 }
 
-                if (got_data)
-                {
-                    int rows = users_res->get_row_count();
-                    if (read_users(std::move(users_res), using_roles))
-                    {
-                        read_dbs_and_roles(std::move(dbs_res), std::move(roles_res));
-                        read_proxy_grants(std::move(proxies_res));
-                        wrote_data = true;
-                        // Add anonymous proxy user search.
-                        MXB_NOTICE("Read %lu usernames with a total of %i user@host entries from '%s'.",
-                                   m_userdb.size(), rows, srv->name());
-                    }
-                }
-                else
+                if (load_result == LoadResult::QUERY_FAILED)
                 {
                     MXB_ERROR("Failed to query server '%s' for user account info. %s",
                               srv->name(), con.error());
                 }
+                else if (load_result == LoadResult::INVALID_DATA)
+                {
+                    MXB_ERROR("Received invalid data when querying user accounts.");
+                }
+            }
+            else
+            {
+                MXB_ERROR("Could not connect to '%s'. %s", srv->name(), con.error());
             }
         }
     }
@@ -357,10 +342,73 @@ bool MariaDBUserManager::load_users()
     {
         MXB_ERROR("No valid servers from which to query MariaDB user accounts found.");
     }
-    return wrote_data;
+    return load_result == LoadResult::SUCCESS;
 }
 
-bool MariaDBUserManager::read_users(QResult users, bool using_roles)
+MariaDBUserManager::LoadResult MariaDBUserManager::load_users_mariadb(mxq::MariaDB& con, SERVER* srv)
+{
+    auto rval = LoadResult::QUERY_FAILED;
+    bool got_data = false;
+    // Roles were added in server 10.0.5, default roles in server 10.1.1. Strictly speaking, reading the
+    // roles_mapping table for 10.0.5 is not required as they won't be used. Read anyway in case
+    // diagnostics prints it.
+    auto version = srv->version();
+    bool role_support = (version.total >= 100005);
+
+    QResult users_res, dbs_res, proxies_res, roles_res;
+    // Perform the queries. All must succeed on the same backend.
+    if (((users_res = con.query(mariadb_queries::users_query)) != nullptr)
+        && ((dbs_res = con.query(mariadb_queries::db_grants_query)) != nullptr)
+        && ((proxies_res = con.query(mariadb_queries::proxies_query)) != nullptr))
+    {
+        if (role_support)
+        {
+            if ((roles_res = con.query(mariadb_queries::roles_query)) != nullptr)
+            {
+                got_data = true;
+            }
+        }
+        else
+        {
+            got_data = true;
+        }
+    }
+
+    if (got_data)
+    {
+        rval = LoadResult::INVALID_DATA;
+        int rows = users_res->get_row_count();
+        if (read_users_mariadb(std::move(users_res)))
+        {
+            read_dbs_and_roles(std::move(dbs_res), std::move(roles_res));
+            read_proxy_grants(std::move(proxies_res));
+            MXB_NOTICE("Read %lu usernames with a total of %i user@host entries from '%s'.",
+                       m_userdb.size(), rows, srv->name());
+            rval = LoadResult::SUCCESS;
+        }
+    }
+    return rval;
+}
+
+MariaDBUserManager::LoadResult MariaDBUserManager::load_users_clustrix(mxq::MariaDB& con, SERVER* srv)
+{
+    auto rval = LoadResult::QUERY_FAILED;
+    QResult users_res, acl_res;
+    if (((users_res = con.query(clustrix_queries::users_query)) != nullptr)
+        && ((acl_res = con.query(mariadb_queries::db_grants_query)) != nullptr))
+    {
+        int rows = users_res->get_row_count();
+        rval = read_users_clustrix(std::move(users_res), std::move(acl_res));
+        if (rval == LoadResult::SUCCESS)
+        {
+            MXB_NOTICE("Read %lu usernames with a total of %i user@host entries from '%s'.",
+                       m_userdb.size(), rows, srv->name());
+        }
+    }
+    return rval;
+}
+
+bool MariaDBUserManager::read_users_mariadb(QResult users)
 {
     auto get_bool_enum = [&users](int64_t col_ind) {
             string val = users->get_string(col_ind);
@@ -385,8 +433,7 @@ bool MariaDBUserManager::read_users(QResult users, bool using_roles)
 
     bool has_required_fields = (ind_user >= 0) && (ind_host >= 0)
         && (ind_sel_priv >= 0) && (ind_ins_priv >= 0) && (ind_upd_priv >= 0) && (ind_del_priv >= 0)
-        && (ind_ssl >= 0) && (ind_plugin >= 0) && (ind_pw >= 0) && (ind_auth_str >= 0)
-        && (!using_roles || (ind_is_role >= 0 && ind_def_role >= 0));
+        && (ind_ssl >= 0) && (ind_plugin >= 0) && (ind_pw >= 0) && (ind_auth_str >= 0);
 
     bool error = false;
     if (has_required_fields)
@@ -416,9 +463,12 @@ bool MariaDBUserManager::read_users(QResult users, bool using_roles)
             new_entry.password = users->get_string(ind_pw);
             new_entry.auth_string = users->get_string(ind_auth_str);
 
-            if (using_roles)
+            if (ind_is_role >= 0)
             {
                 new_entry.is_role = get_bool_enum(ind_is_role);
+            }
+            if (ind_def_role >= 0)
+            {
                 new_entry.default_role = users->get_string(ind_def_role);
             }
 
@@ -427,7 +477,6 @@ bool MariaDBUserManager::read_users(QResult users, bool using_roles)
     }
     else
     {
-        MXB_ERROR("Received invalid data when querying user accounts.");
         error = true;
     }
     return !error;
@@ -485,6 +534,43 @@ void MariaDBUserManager::read_proxy_grants(MariaDBUserManager::QResult proxies)
             }
         }
     }
+}
+
+MariaDBUserManager::LoadResult MariaDBUserManager::read_users_clustrix(QResult users, QResult acl)
+{
+    auto ind_user = users->get_col_index("username");
+    auto ind_host = users->get_col_index("host");
+    auto ind_pw = users->get_col_index("password");
+    auto ind_plugin = users->get_col_index("plugin");
+    auto ind_priv = acl->get_col_index("global_priv");
+
+    bool has_required_fields = (ind_user >= 0) && (ind_host >= 0) && (ind_pw >= 0) && (ind_plugin >= 0)
+        && (ind_priv >= 0) && (ind_priv >= 0);
+
+    auto rval = LoadResult::INVALID_DATA;
+    if (has_required_fields)
+    {
+        Guard guard(m_userdb_lock);
+
+        // Delete any previous data.
+        m_userdb.clear();
+
+        while (users->next_row())
+        {
+            auto username = users->get_string(ind_user);
+
+            UserEntry new_entry;
+            new_entry.username = username;
+            new_entry.host_pattern = users->get_string(ind_host);
+            new_entry.password = users->get_string(ind_pw);
+            new_entry.plugin = users->get_string(ind_plugin);
+            new_entry.global_db_priv = (users->get_string(ind_priv) == "Y");
+            m_userdb.add_entry(username, new_entry);
+        }
+        // TODO: read database privileges
+        rval = LoadResult::SUCCESS;
+    }
+    return rval;
 }
 
 void UserDatabase::add_entry(const std::string& username, const UserEntry& entry)
@@ -717,10 +803,10 @@ UserDatabase::address_matches_host_pattern(const std::string& addr, const std::s
             // client_ip & mask == base_ip. To test this, all three parts need to be converted
             // to numbers.
             auto ip_to_integer = [](const string& ip) {
-                sockaddr_in sa;
-                inet_pton(AF_INET, ip.c_str(), &(sa.sin_addr));
-                return (uint32_t)sa.sin_addr.s_addr;
-            };
+                    sockaddr_in sa;
+                    inet_pton(AF_INET, ip.c_str(), &(sa.sin_addr));
+                    return (uint32_t)sa.sin_addr.s_addr;
+                };
 
             auto div_loc = host_pattern.find('/');
             string base_ip_str = host_pattern.substr(0, div_loc);
