@@ -53,11 +53,9 @@ type=server
 address=###node_server_IP_3###
 port=###node_server_port_3###
 protocol=MySQLBackend
-extra_port=33066
 
 [server4]
 type=server
 address=###node_server_IP_4###
 port=###node_server_port_4###
 protocol=MySQLBackend
-extra_port=33066
