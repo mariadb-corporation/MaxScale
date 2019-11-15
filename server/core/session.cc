@@ -1507,9 +1507,9 @@ ListenerSessionData* Session::listener_data()
     return m_listener_data.get();
 }
 
-void Session::adjust_load(time_t now) const
+void Session::adjust_io_activity(time_t now) const
 {
-    int secs = now - m_last_load;
+    int secs = now - m_last_io_activity;
     if (secs == 0)
     {
         // Session is being frequently used, several updates during one second.
@@ -1517,34 +1517,37 @@ void Session::adjust_load(time_t now) const
     }
     else
     {
+        // TODO: Change this into two indexes.
+
         // There has been secs seconds during which the session has not been used.
         if (secs < N_LOAD)
         {
             // If secs is less than 30, then we need to move the values from the
             // beginning as many steps to the right.
-            std::copy_backward(m_load.begin(), m_load.end() - secs, m_load.end());
+            std::copy_backward(m_io_activity.begin(), m_io_activity.end() - secs, m_io_activity.end());
         }
 
         // And fill from the beginning with zeros. If secs >= 30, the whole
         // array will be zeroed.
-        std::fill(m_load.begin(), m_load.begin() + std::min(secs, N_LOAD), 0);
+        std::fill(m_io_activity.begin(), m_io_activity.begin() + std::min(secs, N_LOAD), 0);
     }
 }
 
-void Session::set_load(int load)
+void Session::book_io_activity()
 {
     time_t now = time(nullptr);
-    adjust_load(now);
+    adjust_io_activity(now);
 
-    m_load[0] = load;
-    m_last_load = now;
+    ++m_io_activity[0];
+
+    m_last_io_activity = now;
 }
 
-int Session::load() const
+int Session::io_activity() const
 {
-    adjust_load(time(nullptr));
+    adjust_io_activity(time(nullptr));
 
-    return std::accumulate(m_load.begin(), m_load.end(), 0);
+    return std::accumulate(m_io_activity.begin(), m_io_activity.end(), 0);
 }
 
 namespace

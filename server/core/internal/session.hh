@@ -183,23 +183,16 @@ public:
     void tick(int64_t idle);
 
     /**
-     * Sets the load of the session. Should be called whenever there is some
-     * activity on a DCB of a session.
-     *
-     * @param load  The worker load during the last second.
+     * Record that I/O activity was performed for the session.
      */
-    void set_load(int load);
+    void book_io_activity();
 
     /**
-     * Returns the average load of the session during the last 30 seconds.
-     *
-     * Note that this is not an absolute value that would tell how much
-     * this session causes load, but gives a rough estimate of how much this
-     * session contributes to the overall load of the worker.
-     *
-     * @return  The load of the session.
+     * The I/O activity of the session.
+
+     * @return  The number of I/O events handled during the last 30 seconds.
      */
-    int load() const;
+    int io_activity() const;
 
     /**
      * With this function, a session can be moved from the worker it is
@@ -222,7 +215,7 @@ protected:
     std::unique_ptr<mxs::Endpoint> m_down;
 
 private:
-    void adjust_load(time_t now) const;
+    void adjust_io_activity(time_t now) const;
     void add_backend_conn(mxs::BackendConnection* conn);
     void remove_backend_conn(mxs::BackendConnection* conn);
     void parse_and_set_trx_state(const mxs::Reply& reply);
@@ -257,8 +250,8 @@ private:
 
     static const int N_LOAD = 30; // Last 30 seconds.
 
-    mutable std::array<int, N_LOAD> m_load {};
-    time_t                          m_last_load {0};
+    mutable std::array<int, N_LOAD> m_io_activity {};
+    time_t                          m_last_io_activity {0};
 };
 
 std::unique_ptr<ResultSet> sessionGetList();

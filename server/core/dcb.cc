@@ -1277,6 +1277,10 @@ uint32_t DCB::process_events(uint32_t events)
     }
 #endif
 
+    // By design we don't distinguish between real I/O activity and
+    // fake activity. In both cases, the session is busy.
+    static_cast<Session*>(m_session)->book_io_activity();
+
     return rc;
 }
 
@@ -1302,9 +1306,6 @@ uint32_t DCB::event_handler(DCB* dcb, uint32_t events)
     }
 
     this_thread.current_dcb = NULL;
-
-    int load = static_cast<mxs::RoutingWorker*>(dcb->owner)->load(mxb::WorkerLoad::ONE_SECOND);
-    static_cast<Session*>(dcb->session())->set_load(load);
 
     return rv;
 }
