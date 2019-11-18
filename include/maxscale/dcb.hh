@@ -561,13 +561,15 @@ public:
      * By default, the owner of a DCB is the routing worker that created it.
      * With this function, the owner of the DCB can be changed. Note that when
      * the owner is changed, the DCB must *not* be in a polling state.
+     *
+     * @param worker  The new owner of the DCB.
      */
     void set_owner(mxb::Worker* worker)
     {
         mxb_assert(m_state != State::POLLING);
         this->owner = worker;
 #ifdef SS_DEBUG
-        int wid = worker->id();
+        int wid = worker ? worker->id() : -1;
         if (m_writeq)
         {
             gwbuf_set_owner(m_writeq, wid);
@@ -581,6 +583,30 @@ public:
             gwbuf_set_owner(m_delayq, wid);
         }
 #endif
+    }
+
+    /**
+     * Sets the manager of the DCB.
+     *
+     * The manager of a DCB is set when the DCB is created. With this function
+     * it can be changed, which it has to be if the session to which this DCB
+     * belongs is moved from one routing worker to another.
+     *
+     * @param manager  The new manager.
+     */
+    void set_manager(Manager* manager)
+    {
+        if (m_manager)
+        {
+            m_manager->remove(this);
+        }
+
+        m_manager = manager;
+
+        if (m_manager)
+        {
+            m_manager->add(this);
+        }
     }
 
 protected:
