@@ -41,7 +41,8 @@ public:
     void   set_dbs_and_roles(StringSetMap&& db_grants, StringSetMap&& roles_mapping);
     void   add_proxy_grant(const std::string& user, const std::string& host);
     void   clear();
-    size_t size() const;
+    size_t n_usernames() const;
+    size_t n_entries() const;
 
     /**
      * Find a user entry with matching user & host.
@@ -72,6 +73,8 @@ public:
      */
     bool check_database_access(const mariadb::UserEntry& entry, const std::string& db,
                                bool ignorecase = false) const;
+
+    bool equal_contents(const UserDatabase& rhs) const;
 
 private:
     bool user_can_access_db(const std::string& user, const std::string& host_pattern, const std::string& db,
@@ -114,7 +117,7 @@ private:
      * Map of username -> EntryList. In the list, entries are ordered from most specific hostname pattern to
      * least specific. In effect, contains data from mysql.user-table.
      */
-    std::map<std::string, EntryList> m_contents;
+    std::map<std::string, EntryList> m_users;
 
     /** Maps "user@host" to allowed databases. Retrieved from mysql.db, mysql.tables_priv and
      * mysql.columns_priv. */
@@ -160,16 +163,16 @@ private:
     };
 
     bool       load_users();
-    LoadResult load_users_mariadb(mxq::MariaDB& conn, SERVER* srv);
-    LoadResult load_users_clustrix(mxq::MariaDB& con, SERVER* srv);
+    LoadResult load_users_mariadb(mxq::MariaDB& conn, SERVER* srv, UserDatabase* output);
+    LoadResult load_users_clustrix(mxq::MariaDB& con, SERVER* srv, UserDatabase* output);
 
     void updater_thread_function();
 
-    bool read_users_mariadb(QResult users);
-    void read_dbs_and_roles(QResult dbs, QResult roles);
-    void read_proxy_grants(QResult proxies);
+    bool read_users_mariadb(QResult users, UserDatabase* output);
+    void read_dbs_and_roles(QResult dbs, QResult roles, UserDatabase* output);
+    void read_proxy_grants(QResult proxies, UserDatabase* output);
 
-    LoadResult read_users_clustrix(QResult users, QResult acl);
+    LoadResult read_users_clustrix(QResult users, QResult acl, UserDatabase* output);
 
     // Fields for controlling the updater thread.
     std::thread             m_updater_thread;

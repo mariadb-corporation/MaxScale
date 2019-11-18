@@ -44,6 +44,7 @@ struct UserEntry
     bool        is_role {false};/**< Is the user a role? */
     std::string default_role;   /**< Default role if any */
 
+    bool        operator==(const UserEntry& rhs) const;
     static bool host_pattern_is_more_specific(const UserEntry& lhs, const UserEntry& rhs);
 };
 
@@ -165,8 +166,12 @@ public:
      * @param output Hashed client password used by backend protocols
      * @return 0 on success
      */
-    virtual AuthRes reauthenticate(const UserEntry* entry, DCB* client, uint8_t* scramble, size_t scramble_len,
-                                   const ByteVec& auth_token, uint8_t* output);
+    virtual AuthRes reauthenticate(const UserEntry* entry,
+                                   DCB* client,
+                                   uint8_t* scramble,
+                                   size_t scramble_len,
+                                   const ByteVec& auth_token,
+                                   uint8_t* output);
 };
 
 // Helper template which stores the module reference.
@@ -217,5 +222,4 @@ public:
     // Carry out the authentication.
     virtual AuthRes authenticate(DCB* client) = 0;
 };
-
 }

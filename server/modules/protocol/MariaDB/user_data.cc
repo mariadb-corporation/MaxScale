@@ -187,7 +187,6 @@ void MariaDBUserManager::updater_thread_function()
         {
             updates++;
             m_warn_no_servers = true;
-            m_service->sync_user_account_caches();
         }
 
         m_update_users_requested.store(false, release);
@@ -232,27 +231,54 @@ bool MariaDBUserManager::load_users()
             con.set_connection_settings(sett);
             if (con.open(srv->address, srv->port))
             {
+                UserDatabase temp_userdata;
                 auto srv_type = srv->type();
                 switch (srv_type)
                 {
                 case SERVER::Type::MYSQL:
                 case SERVER::Type::MARIADB:
-                    load_result = load_users_mariadb(con, srv);
+                    load_result = load_users_mariadb(con, srv, &temp_userdata);
                     break;
 
                 case SERVER::Type::CLUSTRIX:
-                    load_result = load_users_clustrix(con, srv);
+                    load_result = load_users_clustrix(con, srv, &temp_userdata);
                     break;
                 }
 
-                if (load_result == LoadResult::QUERY_FAILED)
+                switch (load_result)
                 {
+                    case LoadResult::SUCCESS:
+                    // The comparison is not trivially cheap if there are many user entries,
+                    // but it avoids unnecessary user cache updates which would involve copying all
+                    // the data multiple times.
+                    if (temp_userdata.equal_contents(m_userdb))
+                    {
+                        MXB_INFO("Read %lu user@host entries from '%s' for service '%s'. The data was "
+                                 "identical to existing user data.",
+                                 m_userdb.n_entries(), srv->name(), m_service->name());
+                    }
+                    else
+                    {
+                        // Data changed, update caches.
+                        {
+                            Guard guard(m_userdb_lock);
+                            m_userdb = std::move(temp_userdata);
+                        }
+                        m_service->sync_user_account_caches();
+                        MXB_NOTICE("Read %lu user@host entries from '%s' for service '%s'.",
+                                   m_userdb.n_entries(), srv->name(), m_service->name());
+                    }
+                    break;
+
+                    case LoadResult::QUERY_FAILED:
                     MXB_ERROR("Failed to query server '%s' for user account info. %s",
                               srv->name(), con.error());
-                }
-                else if (load_result == LoadResult::INVALID_DATA)
-                {
-                    MXB_ERROR("Received invalid data when querying user accounts.");
+                    break;
+
+                    case LoadResult::INVALID_DATA:
+                    MXB_ERROR("Received invalid data from '%s' when querying user accounts.",
+                              srv->name());
+                    break;
                 }
             }
             else
@@ -269,7 +295,8 @@ bool MariaDBUserManager::load_users()
     return load_result == LoadResult::SUCCESS;
 }
 
-MariaDBUserManager::LoadResult MariaDBUserManager::load_users_mariadb(mxq::MariaDB& con, SERVER* srv)
+MariaDBUserManager::LoadResult
+MariaDBUserManager::load_users_mariadb(mxq::MariaDB& con, SERVER* srv, UserDatabase* output)
 {
     auto rval = LoadResult::QUERY_FAILED;
     bool got_data = false;
@@ -301,38 +328,30 @@ MariaDBUserManager::LoadResult MariaDBUserManager::load_users_mariadb(mxq::Maria
     if (got_data)
     {
         rval = LoadResult::INVALID_DATA;
-        int rows = users_res->get_row_count();
-        if (read_users_mariadb(std::move(users_res)))
+        if (read_users_mariadb(std::move(users_res), output))
         {
-            read_dbs_and_roles(std::move(dbs_res), std::move(roles_res));
-            read_proxy_grants(std::move(proxies_res));
-            MXB_NOTICE("Read %lu usernames with a total of %i user@host entries from '%s'.",
-                       m_userdb.size(), rows, srv->name());
+            read_dbs_and_roles(std::move(dbs_res), std::move(roles_res), output);
+            read_proxy_grants(std::move(proxies_res), output);
             rval = LoadResult::SUCCESS;
         }
     }
     return rval;
 }
 
-MariaDBUserManager::LoadResult MariaDBUserManager::load_users_clustrix(mxq::MariaDB& con, SERVER* srv)
+MariaDBUserManager::LoadResult
+MariaDBUserManager::load_users_clustrix(mxq::MariaDB& con, SERVER* srv, UserDatabase* output)
 {
     auto rval = LoadResult::QUERY_FAILED;
     QResult users_res, acl_res;
     if (((users_res = con.query(clustrix_queries::users_query)) != nullptr)
         && ((acl_res = con.query(mariadb_queries::db_grants_query)) != nullptr))
     {
-        int rows = users_res->get_row_count();
-        rval = read_users_clustrix(std::move(users_res), std::move(acl_res));
-        if (rval == LoadResult::SUCCESS)
-        {
-            MXB_NOTICE("Read %lu usernames with a total of %i user@host entries from '%s'.",
-                       m_userdb.size(), rows, srv->name());
-        }
+        rval = read_users_clustrix(std::move(users_res), std::move(acl_res), output);
     }
     return rval;
 }
 
-bool MariaDBUserManager::read_users_mariadb(QResult users)
+bool MariaDBUserManager::read_users_mariadb(QResult users, UserDatabase* output)
 {
     auto get_bool_enum = [&users](int64_t col_ind) {
             string val = users->get_string(col_ind);
@@ -362,11 +381,6 @@ bool MariaDBUserManager::read_users_mariadb(QResult users)
     bool error = false;
     if (has_required_fields)
     {
-        Guard guard(m_userdb_lock);
-
-        // Delete any previous data.
-        m_userdb.clear();
-
         while (users->next_row())
         {
             auto username = users->get_string(ind_user);
@@ -396,7 +410,7 @@ bool MariaDBUserManager::read_users_mariadb(QResult users)
                 new_entry.default_role = users->get_string(ind_def_role);
             }
 
-            m_userdb.add_entry(username, new_entry);
+            output->add_entry(username, new_entry);
         }
     }
     else
@@ -406,10 +420,8 @@ bool MariaDBUserManager::read_users_mariadb(QResult users)
     return !error;
 }
 
-void MariaDBUserManager::read_dbs_and_roles(QResult dbs, QResult roles)
+void MariaDBUserManager::read_dbs_and_roles(QResult dbs, QResult roles, UserDatabase* output)
 {
-    // Because the database grant and roles tables are quite simple and only require lookups, their contents
-    // need not be saved in an sqlite database. This simplifies things quite a bit.
     using StringSetMap = UserDatabase::StringSetMap;
 
     auto map_builder = [](const string& grant_col_name, QResult source) {
@@ -439,11 +451,10 @@ void MariaDBUserManager::read_dbs_and_roles(QResult dbs, QResult roles)
         new_roles_mapping = map_builder("role", std::move(roles));
     }
 
-    Guard guard(m_userdb_lock);
-    m_userdb.set_dbs_and_roles(std::move(new_db_grants), std::move(new_roles_mapping));
+    output->set_dbs_and_roles(std::move(new_db_grants), std::move(new_roles_mapping));
 }
 
-void MariaDBUserManager::read_proxy_grants(MariaDBUserManager::QResult proxies)
+void MariaDBUserManager::read_proxy_grants(MariaDBUserManager::QResult proxies, UserDatabase* output)
 {
     if (proxies->get_row_count() > 0)
     {
@@ -451,16 +462,16 @@ void MariaDBUserManager::read_proxy_grants(MariaDBUserManager::QResult proxies)
         auto ind_host = proxies->get_col_index("host");
         if (ind_user >= 0 && ind_host >= 0)
         {
-            Guard guard(m_userdb_lock);
             while (proxies->next_row())
             {
-                m_userdb.add_proxy_grant(proxies->get_string(ind_user), proxies->get_string(ind_host));
+                output->add_proxy_grant(proxies->get_string(ind_user), proxies->get_string(ind_host));
             }
         }
     }
 }
 
-MariaDBUserManager::LoadResult MariaDBUserManager::read_users_clustrix(QResult users, QResult acl)
+MariaDBUserManager::LoadResult
+MariaDBUserManager::read_users_clustrix(QResult users, QResult acl, UserDatabase* output)
 {
     auto ind_user = users->get_col_index("username");
     auto ind_host = users->get_col_index("host");
@@ -474,11 +485,6 @@ MariaDBUserManager::LoadResult MariaDBUserManager::read_users_clustrix(QResult u
     auto rval = LoadResult::INVALID_DATA;
     if (has_required_fields)
     {
-        Guard guard(m_userdb_lock);
-
-        // Delete any previous data.
-        m_userdb.clear();
-
         while (users->next_row())
         {
             auto username = users->get_string(ind_user);
@@ -489,7 +495,7 @@ MariaDBUserManager::LoadResult MariaDBUserManager::read_users_clustrix(QResult u
             new_entry.password = users->get_string(ind_pw);
             new_entry.plugin = users->get_string(ind_plugin);
             new_entry.global_db_priv = (users->get_string(ind_priv) == "Y");
-            m_userdb.add_entry(username, new_entry);
+            output->add_entry(username, new_entry);
         }
         // TODO: read database privileges
         rval = LoadResult::SUCCESS;
@@ -521,7 +527,7 @@ void MariaDBUserManager::set_service(SERVICE* service)
 
 void UserDatabase::add_entry(const std::string& username, const UserEntry& entry)
 {
-    auto& entrylist = m_contents[username];
+    auto& entrylist = m_users[username];
     // Find the correct spot to insert. Will insert duplicate hostname patterns, although these should
     // not exist in the source data.
     auto insert_iter = std::upper_bound(entrylist.begin(), entrylist.end(), entry,
@@ -531,7 +537,7 @@ void UserDatabase::add_entry(const std::string& username, const UserEntry& entry
 
 void UserDatabase::clear()
 {
-    m_contents.clear();
+    m_users.clear();
 }
 
 const UserEntry* UserDatabase::find_entry(const std::string& username, const std::string& host) const
@@ -548,8 +554,8 @@ const UserEntry* UserDatabase::find_entry(const std::string& username, const std
                                           HostPatternMode mode) const
 {
     const UserEntry* rval = nullptr;
-    auto iter = m_contents.find(username);
-    if (iter != m_contents.end())
+    auto iter = m_users.find(username);
+    if (iter != m_users.end())
     {
         auto& entrylist = iter->second;
         // List is already ordered, take the first matching entry.
@@ -568,9 +574,19 @@ const UserEntry* UserDatabase::find_entry(const std::string& username, const std
     return rval;
 }
 
-size_t UserDatabase::size() const
+size_t UserDatabase::n_usernames() const
 {
-    return m_contents.size();
+    return m_users.size();
+}
+
+size_t UserDatabase::n_entries() const
+{
+    size_t rval = 0;
+    for (const auto& elem : m_users)
+    {
+        rval += elem.second.size();
+    }
+    return rval;
 }
 
 void UserDatabase::set_dbs_and_roles(StringSetMap&& db_grants, StringSetMap&& roles_mapping)
@@ -621,8 +637,8 @@ bool UserDatabase::role_can_access_db(const string& role, const string& db, bool
 {
     auto role_has_global_priv = [this](const string& role) {
             bool rval = false;
-            auto iter = m_contents.find(role);
-            if (iter != m_contents.end())
+            auto iter = m_users.find(role);
+            if (iter != m_users.end())
             {
                 auto& entrylist = iter->second;
                 // Because roles have an empty host-pattern, they must be first in the list.
@@ -942,8 +958,8 @@ UserDatabase::PatternType UserDatabase::parse_pattern_type(const std::string& ho
 
 void UserDatabase::add_proxy_grant(const std::string& user, const std::string& host)
 {
-    auto user_iter = m_contents.find(user);
-    if (user_iter != m_contents.end())
+    auto user_iter = m_users.find(user);
+    if (user_iter != m_users.end())
     {
         EntryList& entries = user_iter->second;
         UserEntry needle;
@@ -957,23 +973,10 @@ void UserDatabase::add_proxy_grant(const std::string& user, const std::string& h
     }
 }
 
-bool UserEntry::host_pattern_is_more_specific(const UserEntry& lhs, const UserEntry& rhs)
+bool UserDatabase::equal_contents(const UserDatabase& rhs) const
 {
-    // Order entries according to https://mariadb.com/kb/en/library/create-user/
-    const string& lhost = lhs.host_pattern;
-    const string& rhost = rhs.host_pattern;
-    const char wildcards[] = "%_";
-    auto lwc_pos = lhost.find_first_of(wildcards);
-    auto rwc_pos = rhost.find_first_of(wildcards);
-    bool lwc = (lwc_pos != string::npos);
-    bool rwc = (rwc_pos != string::npos);
-
-    // The host without wc:s sorts earlier than the one with them,
-    return (!lwc && rwc)
-            // ... and if both have wc:s, the one with the later wc wins (ties broken by strcmp),
-           || (lwc && rwc && ((lwc_pos > rwc_pos) || (lwc_pos == rwc_pos && lhost < rhost)))
-            // ... and if neither have wildcards, use string order.
-           || (!lwc && !rwc && lhost < rhost);
+    return (m_users == rhs.m_users) && (m_database_grants == rhs.m_database_grants)
+           && (m_roles_mapping == rhs.m_roles_mapping);
 }
 
 MariaDBUserCache::MariaDBUserCache(const MariaDBUserManager& master)

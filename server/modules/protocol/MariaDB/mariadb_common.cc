@@ -29,7 +29,9 @@
 #include <maxscale/service.hh>
 #include <maxscale/target.hh>
 
+using std::string;
 using mxs::ReplyState;
+using UserEntry = mariadb::UserEntry;
 
 uint8_t null_client_sha1[MYSQL_SCRAMBLE_LEN] = "";
 
@@ -471,4 +473,32 @@ mariadb::ClientAuthenticator::reauthenticate(const UserEntry* entry, DCB* client
                                              const ByteVec& auth_token, uint8_t* output)
 {
     return AuthRes::FAIL;
+}
+
+
+bool UserEntry::operator==(const UserEntry& rhs) const
+{
+    return username == rhs.username && host_pattern == rhs.host_pattern && plugin == rhs.plugin
+        && password == rhs.password && auth_string == rhs.auth_string && ssl == rhs.ssl
+        && global_db_priv == rhs.global_db_priv && proxy_grant == rhs.proxy_grant && is_role == rhs.is_role
+        && default_role == rhs.default_role;
+}
+
+bool UserEntry::host_pattern_is_more_specific(const UserEntry& lhs, const UserEntry& rhs)
+{
+    // Order entries according to https://mariadb.com/kb/en/library/create-user/
+    const string& lhost = lhs.host_pattern;
+    const string& rhost = rhs.host_pattern;
+    const char wildcards[] = "%_";
+    auto lwc_pos = lhost.find_first_of(wildcards);
+    auto rwc_pos = rhost.find_first_of(wildcards);
+    bool lwc = (lwc_pos != string::npos);
+    bool rwc = (rwc_pos != string::npos);
+
+    // The host without wc:s sorts earlier than the one with them,
+    return (!lwc && rwc)
+           // ... and if both have wc:s, the one with the later wc wins (ties broken by strcmp),
+           || (lwc && rwc && ((lwc_pos > rwc_pos) || (lwc_pos == rwc_pos && lhost < rhost)))
+           // ... and if neither have wildcards, use string order.
+           || (!lwc && !rwc && lhost < rhost);
 }
