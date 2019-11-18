@@ -1587,6 +1587,8 @@ bool Session::move_to(RoutingWorker* pTo)
         pDcb->disable_events();
         to_be_enabled.push_back(pDcb);
     }
+    pDcb->set_owner(nullptr);
+    pDcb->set_manager(nullptr);
 
     for (mxs::BackendConnection* backend_conn : m_backends_conns)
     {
@@ -1596,6 +1598,8 @@ bool Session::move_to(RoutingWorker* pTo)
             pDcb->disable_events();
             to_be_enabled.push_back(pDcb);
         }
+        pDcb->set_owner(nullptr);
+        pDcb->set_manager(nullptr);
     }
 
     pFrom->session_registry().remove(id());
@@ -1604,9 +1608,12 @@ bool Session::move_to(RoutingWorker* pTo)
             pTo->session_registry().add(this);
 
             m_client_conn->dcb()->set_owner(pTo);
+            m_client_conn->dcb()->set_manager(pTo);
+
             for (mxs::BackendConnection* pBackend_conn : m_backends_conns)
             {
                 pBackend_conn->dcb()->set_owner(pTo);
+                pBackend_conn->dcb()->set_manager(pTo);
             }
 
             if (!enable_events(to_be_enabled))
@@ -1621,6 +1628,15 @@ bool Session::move_to(RoutingWorker* pTo)
     {
         MXS_ERROR("Could not move session from worker %d to worker %d.",
                   pFrom->id(), pTo->id());
+
+        m_client_conn->dcb()->set_owner(pFrom);
+        m_client_conn->dcb()->set_manager(pFrom);
+
+        for (mxs::BackendConnection* pBackend_conn : m_backends_conns)
+        {
+            pBackend_conn->dcb()->set_owner(pFrom);
+            pBackend_conn->dcb()->set_manager(pFrom);
+        }
 
         pFrom->session_registry().add(this);
 
