@@ -75,6 +75,9 @@ public:
     mxb_log_target_t log_target;                        /**< Log type */
     bool             load_persisted_configs;            /**< Load persisted configuration files on startup */
     int              max_auth_errors_until_block;       /**< Host is blocked once this limit is reached */
+    int session_rebalance_threshold;                    /**< If load of particular worker differs more than
+                                                         * this % amount from load-average, rebalancing will be made
+                                                         */
 
 private:
     static config::Specification s_specification;

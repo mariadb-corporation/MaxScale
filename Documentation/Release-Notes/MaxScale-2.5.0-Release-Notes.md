@@ -34,7 +34,16 @@ The following deprecated parameters have been removed.
 
 The MaxScale cache is now capable of performing invalidation of cache
 entries. See the
-[documentation](Filters/Cache.md#invalidation)
+[documentation](../Filters/Cache.md#invalidation)
+for more information.
+
+### Load Rebalancing
+
+If the load of the threads of MaxScale differs by a certain amount,
+MaxScale is now capable of moving sessions from one thread to another
+so that all threads are evenly utilized. Please refer to
+the
+[documentation](../Getting-Started/Configuration-Guide.md#session_rebalance_threshold)
 for more information.
 
 ## Bug fixes

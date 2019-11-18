@@ -116,6 +116,7 @@ constexpr char CN_SERVICE[] = "service";
 constexpr char CN_SESSIONS[] = "sessions";
 constexpr char CN_SESSION_TRACE[] = "session_trace";
 constexpr char CN_SESSION_TRACK_TRX_STATE[] = "session_track_trx_state";
+constexpr char CN_SESSION_REBALANCE_THRESHOLD[] = "session_rebalance_threshold";
 constexpr char CN_SKIP_PERMISSION_CHECKS[] = "skip_permission_checks";
 constexpr char CN_SOCKET[] = "socket";
 constexpr char CN_SQL_MODE[] = "sql_mode";

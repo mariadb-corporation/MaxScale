@@ -2238,6 +2238,13 @@ static int handle_global_item(const char* name, const char* value)
             return 0;
         }
     }
+    else if (strcmp(name, CN_SESSION_REBALANCE_THRESHOLD) == 0)
+    {
+        if (!config_set_session_rebalance_threshold(value))
+        {
+            return 0;
+        }
+    }
     else if ((item = gateway.find_value(name)) != nullptr)
     {
         if (!item->set(value))
@@ -4089,6 +4096,7 @@ static bool create_global_config(const char* filename)
     dprintf(file, "%s=%ld\n", CN_AUTH_WRITE_TIMEOUT, gateway.auth_write_timeout);
     dprintf(file, "%s=%s\n", CN_ADMIN_AUTH, gateway.admin_auth ? "true" : "false");
     dprintf(file, "%s=%u\n", CN_PASSIVE, gateway.passive);
+    dprintf(file, "%s=%d\n", CN_SESSION_REBALANCE_THRESHOLD, gateway.session_rebalance_threshold);
 
     close(file);
 
@@ -4884,4 +4892,23 @@ bool param_is_valid(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* modul
 {
     return config_param_is_valid(basic, key, value, NULL)
            || (module && config_param_is_valid(module, key, value, NULL));
+}
+
+bool config_set_session_rebalance_threshold(const char* value)
+{
+    bool rv = false;
+
+    char* endptr;
+    int intval = strtol(value, &endptr, 0);
+    if (*endptr == '\0' && intval >= 0 && intval <= 100)
+    {
+        gateway.session_rebalance_threshold = intval;
+        rv = true;
+    }
+    else
+    {
+        MXS_ERROR("Invalid value (percentage expected) for '%s': %s", CN_SESSION_REBALANCE_THRESHOLD, value);
+    }
+
+    return rv;
 }

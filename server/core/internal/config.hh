@@ -237,3 +237,12 @@ bool param_is_known(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* modul
 
 bool param_is_valid(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* module,
                     const char* key, const char* value);
+
+/**
+ * Set value for 'session_rebalance_threshold'
+ *
+ * @param value  New value, expected to be 0 <= value <= 100.
+ *
+ * @return True, if the value was valid, false otherwise.
+ */
+bool config_set_session_rebalance_threshold(const char* value);
