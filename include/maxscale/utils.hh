@@ -243,8 +243,10 @@ class Registry
     Registry(const Registry&);
     Registry& operator=(const Registry&);
 public:
-    typedef typename RegistryTraits<EntryType>::id_type    id_type;
-    typedef typename RegistryTraits<EntryType>::entry_type entry_type;
+    typedef typename RegistryTraits<EntryType>::id_type      id_type;
+    typedef typename RegistryTraits<EntryType>::entry_type   entry_type;
+    typedef typename std::unordered_map<id_type, entry_type> ContainerType;
+    typedef typename ContainerType::const_iterator           const_iterator;
 
     Registry()
     {
@@ -295,8 +297,17 @@ public:
         return rval;
     }
 
+    const_iterator begin() const
+    {
+        return m_registry.begin();
+    }
+
+    const_iterator end() const
+    {
+        return m_registry.end();
+    }
+
 private:
-    typedef typename std::unordered_map<id_type, entry_type> ContainerType;
     ContainerType m_registry;
 };
 
