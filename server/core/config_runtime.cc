@@ -766,6 +766,7 @@ bool runtime_alter_maxscale(const char* name, const char* value)
     MXS_CONFIG& cnf = *config_get_global_options();
     std::string key = name;
     bool rval = false;
+    config::Type* item = nullptr;
 
     if (key == CN_AUTH_CONNECT_TIMEOUT)
     {
@@ -1049,6 +1050,15 @@ bool runtime_alter_maxscale(const char* name, const char* value)
         {
             rval = false;
             config_runtime_error("Invalid value for '%s': %s", CN_SESSION_TRACE, value);
+        }
+    }
+    else if ((item = cnf.find_value(name)) != nullptr)
+    {
+        rval = item->set(value);
+
+        if (!rval)
+        {
+            config_runtime_error("Invalid value for '%s': %s", item->parameter().name().c_str(), value);
         }
     }
     else if (config_can_modify_at_runtime(key.c_str()))

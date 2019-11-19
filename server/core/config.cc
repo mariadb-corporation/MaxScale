@@ -74,6 +74,13 @@ using maxscale::Monitor;
 using std::chrono::milliseconds;
 using std::chrono::seconds;
 
+config::Specification MXS_CONFIG::s_specification("maxscale", config::Specification::GLOBAL);
+
+MXS_CONFIG::MXS_CONFIG()
+    : config::Configuration("maxscale", &s_specification)
+{
+}
+
 typedef struct duplicate_context
 {
     std::set<std::string>* sections;
@@ -1823,6 +1830,7 @@ static int handle_global_item(const char* name, const char* value)
 {
     bool processed = true;      // assume 'name' is valid
 
+    config::Type* item = nullptr;
     int i;
     if (strcmp(name, CN_THREADS) == 0)
     {
@@ -2244,6 +2252,14 @@ static int handle_global_item(const char* name, const char* value)
         else
         {
             MXS_ERROR("Invalid value for '%s': %s", CN_MAX_AUTH_ERRORS_UNTIL_BLOCK, value);
+            return 0;
+        }
+    }
+    else if ((item = gateway.find_value(name)) != nullptr)
+    {
+        if (!item->set(value))
+        {
+            MXS_ERROR("Invalid value for '%s': %s", item->parameter().name().c_str(), value);
             return 0;
         }
     }
@@ -4930,12 +4946,4 @@ bool param_is_valid(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* modul
 {
     return config_param_is_valid(basic, key, value, NULL)
            || (module && config_param_is_valid(module, key, value, NULL));
-}
-
-
-config::Specification MXS_CONFIG::s_specification("maxscale", config::Specification::GLOBAL);
-
-MXS_CONFIG::MXS_CONFIG()
-    : config::Configuration("maxscale", &s_specification)
-{
 }
