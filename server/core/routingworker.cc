@@ -771,6 +771,11 @@ void RoutingWorker::epoll_tick()
     {
         func();
     }
+
+    if (m_pTo)
+    {
+        rebalance();
+    }
 }
 
 /**
@@ -1230,10 +1235,127 @@ RoutingWorker* RoutingWorker::pick_worker()
     return get(id);
 }
 
-void maxscale::RoutingWorker::register_epoll_tick_func(std::function<void ()> func)
+void RoutingWorker::register_epoll_tick_func(std::function<void ()> func)
 {
     m_epoll_tick_funcs.push_back(func);
 }
+
+//static
+bool RoutingWorker::balance_workers()
+{
+    bool balancing = false;
+
+    int threshold = config_get_global_options()->session_rebalance_threshold;
+
+    if (threshold == 0)
+    {
+        return balancing;
+    }
+
+    double offset = threshold / 100.0;
+
+    double total_load = 0;
+
+    int min_load = 100;
+    int max_load = 0;
+    RoutingWorker* pTo = nullptr;
+    RoutingWorker* pFrom = nullptr;
+
+    for (int i = 0; i < this_unit.nWorkers; ++i)
+    {
+        RoutingWorker* pWorker = this_unit.ppWorkers[i];
+
+        int load = pWorker->load(Worker::Load::ONE_SECOND);
+
+        if (load < min_load)
+        {
+            min_load = load;
+            pTo = pWorker;
+        }
+
+        if (load > max_load)
+        {
+            max_load = load;
+            pFrom = pWorker;
+        }
+
+        total_load += load;
+    }
+
+    double avg_load = total_load / this_unit.nWorkers;
+
+    if (max_load > avg_load * (1 + offset))
+    {
+        MXS_NOTICE("Worker %d load %d exceeds average load %d by more than %d%%, reducing its workload.",
+                   pFrom->id(), max_load, (int)avg_load, threshold);
+        balancing = true;
+    }
+    else if (min_load < avg_load * (1 - offset))
+    {
+        MXS_NOTICE("Worker %d load %d is below average load %d by more than %d%%, increasing its workload.",
+                   pTo->id(), min_load, (int)avg_load, threshold);
+        balancing = true;
+    }
+    else
+    {
+        MXS_NOTICE("The load of no worker is > 10%% larger than the average, not balancing.");
+        pFrom = nullptr;
+        pTo = nullptr;
+    }
+
+    if (balancing)
+    {
+        mxb_assert(pFrom);
+        mxb_assert(pTo);
+
+        if (!pFrom->execute([pFrom, pTo]() {
+                    pFrom->rebalance(pTo);
+                }, Worker::EXECUTE_QUEUED))
+        {
+            MXS_ERROR("Could not post task to worker, worker load balancing will not take place.");
+        }
+    }
+
+    return balancing;
+}
+
+void RoutingWorker::rebalance(RoutingWorker* pTo)
+{
+    // We can't balance here, because if a single epoll_wait() call returns
+    // both the rebalance-message (sent from balance_workers() above) and
+    // an event for a DCB that we move to another worker, we would crash.
+    // So we only make a note and rebalance in epoll_tick().
+    m_pTo = pTo;
+}
+
+void RoutingWorker::rebalance()
+{
+    mxb_assert(m_pTo);
+
+    int max_io_activity = 0;
+    Session* pMax_session = nullptr;
+
+    for (auto& kv : m_sessions)
+    {
+        Session* pSession = static_cast<Session*>(kv.second);
+
+        int io_activity = pSession->io_activity();
+
+        if (io_activity > max_io_activity)
+        {
+            max_io_activity = io_activity;
+            pMax_session = pSession;
+        }
+    }
+
+    if (pMax_session)
+    {
+        pMax_session->move_to(m_pTo);
+    }
+
+    m_pTo = nullptr;
+}
+
 }
 
 size_t mxs_rworker_broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2)

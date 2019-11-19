@@ -496,6 +496,8 @@ public:
         return m_storage;
     }
 
+    static bool balance_workers();
+
 private:
     // DCB::Manager
     void add(DCB* pDcb) override;
@@ -517,6 +519,7 @@ private:
     Zombies        m_zombies;         /*< DCBs to be deleted. */
     IndexedStorage m_storage;         /*< The storage of this worker. */
     DCBs           m_dcbs;            /*< DCBs managed by this worker. */
+    RoutingWorker* m_pTo { nullptr }; /*< Worker to offload work to. */
 
     RoutingWorker(mxb::WatchdogNotifier* pNotifier);
     virtual ~RoutingWorker();
@@ -529,6 +532,8 @@ private:
 
     void process_timeouts();
     void delete_zombies();
+    void rebalance(RoutingWorker* pTo);
+    void rebalance();
 
     static uint32_t epoll_instance_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
     uint32_t        handle_epoll_events(uint32_t events);

@@ -108,6 +108,8 @@ private:
     bool        call_task(Worker::Call::action_t action, Task* pTask);
     static bool inc_ticks(Worker::Call::action_t action);
 
+    bool balance_workers(Worker::Call::action_t action);
+
     std::map<std::string, Task> m_tasks_by_name;
     IndexedStorage              m_storage;
 };

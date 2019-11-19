@@ -19,6 +19,7 @@
 #endif
 #include <maxscale/cn_strings.hh>
 #include <maxscale/config.hh>
+#include <maxscale/routingworker.hh>
 
 #include "internal/modules.hh"
 
@@ -49,6 +50,8 @@ MainWorker::MainWorker(mxb::WatchdogNotifier* pNotifier)
     this_thread.pMain = this;
 
     delayed_call(100, &MainWorker::inc_ticks);
+    // TODO: Make configurable.
+    delayed_call(3000, &MainWorker::balance_workers, this);
 }
 
 MainWorker::~MainWorker()
@@ -215,6 +218,24 @@ bool MainWorker::inc_ticks(Worker::Call::action_t action)
 
     return true;
 }
+
+bool MainWorker::balance_workers(Worker::Call::action_t action)
+{
+    bool rv = true;
+
+    if (action == Worker::Call::EXECUTE)
+    {
+        if (config_get_global_options()->session_rebalance_threshold != 0)
+        {
+            // TODO: If balancing has taken place, then rebalance
+            // TODO: quickly again.
+            RoutingWorker::balance_workers();
+        }
+    }
+
+    return rv;
+}
+
 }
 
 extern "C"
