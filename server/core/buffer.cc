@@ -17,11 +17,12 @@
 #include <stdlib.h>
 #include <sstream>
 
-#include <maxbase/assert.h>
 #include <maxbase/alloc.h>
+#include <maxbase/assert.h>
+#include <maxscale/config.hh>
 #include <maxscale/hint.h>
-#include <maxscale/utils.h>
 #include <maxscale/routingworker.hh>
+#include <maxscale/utils.h>
 
 using mxs::RoutingWorker;
 
@@ -50,7 +51,16 @@ inline void ensure_at_head(const GWBUF* buf)
 
 inline void ensure_owned(const GWBUF* buf)
 {
-    mxb_assert(buf->owner == RoutingWorker::get_current_id());
+    if (config_get_global_options()->session_rebalance_threshold == 0)
+    {
+        // TODO: If rebalancing occurs, then if a session has been moved while a
+        // TODO: router session has kept a reference to a GWBUF, then buf->owner
+        // TODO: will not be correct and the assertion would fire. Currently there
+        // TODO: is no simple way to track those GWBUFS down in order to change the
+        // TODO: owner. So for the time being we don't check the owner if rebalancing
+        // TODO: is active.
+        mxb_assert(buf->owner == RoutingWorker::get_current_id());
+    }
 }
 
 inline bool validate_buffer(const GWBUF* buf)
