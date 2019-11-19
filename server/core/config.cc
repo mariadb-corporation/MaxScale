@@ -4931,3 +4931,11 @@ bool param_is_valid(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* modul
     return config_param_is_valid(basic, key, value, NULL)
            || (module && config_param_is_valid(module, key, value, NULL));
 }
+
+
+config::Specification MXS_CONFIG::s_specification("maxscale", config::Specification::GLOBAL);
+
+MXS_CONFIG::MXS_CONFIG()
+    : config::Configuration("maxscale", &s_specification)
+{
+}

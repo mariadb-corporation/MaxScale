@@ -45,6 +45,9 @@ bool is_core_param(Specification::Kind kind, const std::string& param)
         pzCore_params = common_service_params();
         break;
 
+    case Specification::GLOBAL:
+        break;
+
     default:
         mxb_assert(!true);
     }

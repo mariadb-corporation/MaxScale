@@ -35,7 +35,7 @@ namespace
 struct CONFIG
 {
     bool stop_at_first_error;
-} config =
+} cfg =
 {
     true,   // stop_at_first_error
 };
@@ -805,7 +805,7 @@ int test(FilterModule::Instance& filter_instance, const FW_TEST& t)
                 ++rv;
             }
 
-            if ((rv != 0) && config.stop_at_first_error)
+            if ((rv != 0) && cfg.stop_at_first_error)
             {
                 break;
             }
@@ -862,7 +862,7 @@ int test(FilterModule& filter_module)
 
         rv += test(filter_module, t);
 
-        if ((rv != 0) && config.stop_at_first_error)
+        if ((rv != 0) && cfg.stop_at_first_error)
         {
             break;
         }
@@ -912,7 +912,7 @@ int test_on_queries(FilterModule& filter_module, fw_action_t action)
 
         rv += test(filter_module, t);
 
-        if ((rv != 0) && config.stop_at_first_error)
+        if ((rv != 0) && cfg.stop_at_first_error)
         {
             break;
         }
@@ -929,7 +929,7 @@ int test_on_queries(FilterModule& filter_module)
 
     rv += test_on_queries(filter_module, FW_ACTION_BLOCK);
 
-    if ((rv == 0) && !config.stop_at_first_error)
+    if ((rv == 0) && !cfg.stop_at_first_error)
     {
         rv += test_on_queries(filter_module, FW_ACTION_ALLOW);
     }
@@ -948,7 +948,7 @@ int run()
         rv = 0;
         rv += test(*sModule.get());
 
-        if ((rv == 0) || !config.stop_at_first_error)
+        if ((rv == 0) || !cfg.stop_at_first_error)
         {
             rv += test_on_queries(*sModule.get());
         }
@@ -981,7 +981,7 @@ int main(int argc, char* argv[])
         switch (c)
         {
         case 'd':
-            config.stop_at_first_error = false;
+            cfg.stop_at_first_error = false;
             break;
 
         default:

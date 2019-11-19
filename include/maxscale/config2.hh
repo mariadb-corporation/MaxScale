@@ -43,7 +43,8 @@ public:
     {
         FILTER,
         MONITOR,
-        ROUTER
+        ROUTER,
+        GLOBAL
     };
 
     using ParamsByName = std::map<std::string, Param*>;

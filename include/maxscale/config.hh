@@ -13,13 +13,19 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
-#include <maxscale/config_common.hh>
+#include <maxscale/config2.hh>
 
 /**
  * The gateway global configuration data
  */
-struct MXS_CONFIG
+class MXS_CONFIG : public config::Configuration
 {
+public:
+    MXS_CONFIG();
+
+    MXS_CONFIG(const MXS_CONFIG&) = delete;
+    MXS_CONFIG& operator=(const MXS_CONFIG&) = delete;
+
     bool    config_check;                               /**< Only check config */
     int     n_threads;                                  /**< Number of polling threads */
     size_t  thread_stack_size;                          /**< The stack size of each worker thread */
@@ -69,6 +75,9 @@ struct MXS_CONFIG
     mxb_log_target_t log_target;                        /**< Log type */
     bool             load_persisted_configs;            /**< Load persisted configuration files on startup */
     int              max_auth_errors_until_block;       /**< Host is blocked once this limit is reached */
+
+private:
+    static config::Specification s_specification;
 };
 
 /**
