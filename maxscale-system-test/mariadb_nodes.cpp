@@ -1321,9 +1321,9 @@ void Mariadb_nodes::reset_server_settings(int node)
     std::string cnf = get_config_name(node);
 
     // Note: This is a CentOS specific path
-    ssh_node(node, "sudo rm -rf /etc/my.cnf.d/*", true);
+    ssh_node(node, "rm -rf /etc/my.cnf.d/*", true);
     copy_to_node(node, (cnfdir + cnf).c_str(), "~/");
-    ssh_node_f(node, false, "sudo mv ~/%s /etc/my.cnf.d/", cnf.c_str());
+    ssh_node_f(node, false, "sudo install -o root -g root -m 0644 ~/%s /etc/my.cnf.d/", cnf.c_str());
 }
 
 void Mariadb_nodes::reset_server_settings()
