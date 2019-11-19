@@ -421,6 +421,7 @@ std::string Nodes::get_nc_item(const char* item_name)
     }
 
     std::string str = network_config.substr(equal + 1, end - equal - 1);
+    str.erase(remove(str.begin(), str.end(), ' '), str.end());
 
     setenv(item_name, str.c_str(), 1);
 
