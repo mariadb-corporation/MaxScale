@@ -24,7 +24,7 @@
 #include <maxbase/alloc.h>
 #include <maxbase/assert.h>
 #include <maxbase/log.hh>
-#include <maxscale/config.hh>
+#include <maxscale/config_common.hh>
 #include <maxscale/modinfo.hh>
 
 namespace config
