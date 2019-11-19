@@ -51,7 +51,7 @@ inline void ensure_at_head(const GWBUF* buf)
 
 inline void ensure_owned(const GWBUF* buf)
 {
-    if (config_get_global_options()->session_rebalance_threshold == 0)
+    if (config_get_global_options()->rebalance_threshold == 0)
     {
         // TODO: If rebalancing occurs, then if a session has been moved while a
         // TODO: router session has kept a reference to a GWBUF, then buf->owner

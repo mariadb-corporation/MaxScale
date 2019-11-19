@@ -368,7 +368,7 @@ Ignored and deprecated in 2.3.
 If you need to explicitly set the stack size, do so using `ulimit -s` before
 starting MaxScale.
 
-### `session_rebalance_threshold`
+### `rebalance_threshold`
 
 This parameter controls at which point MaxScale should start moving load
 from one worker thread to another, if the load of the threads is different.

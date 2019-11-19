@@ -43,7 +43,7 @@ If the load of the threads of MaxScale differs by a certain amount,
 MaxScale is now capable of moving sessions from one thread to another
 so that all threads are evenly utilized. Please refer to
 the
-[documentation](../Getting-Started/Configuration-Guide.md#session_rebalance_threshold)
+[documentation](../Getting-Started/Configuration-Guide.md#rebalance_threshold)
 for more information.
 
 ## Bug fixes

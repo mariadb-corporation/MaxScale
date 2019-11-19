@@ -225,7 +225,7 @@ bool MainWorker::balance_workers(Worker::Call::action_t action)
 
     if (action == Worker::Call::EXECUTE)
     {
-        if (config_get_global_options()->session_rebalance_threshold != 0)
+        if (config_get_global_options()->rebalance_threshold != 0)
         {
             // TODO: If balancing has taken place, then rebalance
             // TODO: quickly again.

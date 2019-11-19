@@ -1054,14 +1054,14 @@ bool runtime_alter_maxscale(const char* name, const char* value)
             config_runtime_error("Invalid value for '%s': %s", CN_SESSION_TRACE, value);
         }
     }
-    else if (key == CN_SESSION_REBALANCE_THRESHOLD)
+    else if (key == CN_REBALANCE_THRESHOLD)
     {
-        rval = config_set_session_rebalance_threshold(value);
+        rval = config_set_rebalance_threshold(value);
 
         if (!rval)
         {
             rval = false;
-            config_runtime_error("Invalid value for '%s': %s", CN_SESSION_REBALANCE_THRESHOLD, value);
+            config_runtime_error("Invalid value for '%s': %s", CN_REBALANCE_THRESHOLD, value);
         }
     }
     else if ((item = cnf.find_value(name)) != nullptr)
@@ -2968,7 +2968,7 @@ bool validate_maxscale_json(json_t* json)
             && runtime_is_bool_or_null(param, CN_ADMIN_AUTH)
             && runtime_is_bool_or_null(param, CN_ADMIN_LOG_AUTH_FAILURES)
             && runtime_is_size_or_null(param, CN_QUERY_CLASSIFIER_CACHE_SIZE)
-            && runtime_is_count_or_null(param, CN_SESSION_REBALANCE_THRESHOLD);
+            && runtime_is_count_or_null(param, CN_REBALANCE_THRESHOLD);
     }
 
     return rval;
