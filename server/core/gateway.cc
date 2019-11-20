@@ -1780,6 +1780,9 @@ int main(int argc, char** argv)
 
     atexit(finish_base_libraries);
 
+    mxb::WatchdogNotifier watchdog_notifier(systemd_interval);
+    MainWorker main_worker(&watchdog_notifier);
+
     if (!config_load_global(cnf_file_path.c_str()))
     {
         rc = MAXSCALE_BADCONFIG;
@@ -1964,8 +1967,6 @@ int main(int argc, char** argv)
             }
         };
 
-    mxb::WatchdogNotifier watchdog_notifier(systemd_interval);
-
     watchdog_notifier.start();
 
     // Initialize the internal query classifier. The actual plugin will be
@@ -1975,8 +1976,6 @@ int main(int argc, char** argv)
         // Before we start the workers we need to check if a shutdown signal has been received
         if (!maxscale_is_shutting_down())
         {
-            MainWorker main_worker(&watchdog_notifier);
-
             if (RoutingWorker::init(&watchdog_notifier))
             {
                 // If a shutdown signal was received while we were initializing the workers,
