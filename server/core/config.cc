@@ -4451,7 +4451,7 @@ bool get_suffixed_duration(const char* zValue,
         return false;
     }
 
-    bool rval = false;
+    bool rval = true;
     char* zEnd;
     uint64_t value = strtoll(zValue, &zEnd, 10);
 
@@ -4491,13 +4491,20 @@ bool get_suffixed_duration(const char* zValue,
         break;
 
     case 0:
-        if (interpretation == mxs::config::INTERPRET_AS_SECONDS)
+        switch (interpretation)
         {
+        case mxs::config::INTERPRET_AS_SECONDS:
             duration = std::chrono::duration_cast<milliseconds>(seconds(value));
-        }
-        else
-        {
+            break;
+
+        case mxs::config::INTERPRET_AS_MILLISECONDS:
             duration = milliseconds(value);
+            break;
+
+        case mxs::config::NO_INTERPRETATION:
+            // A suffix is required.
+            rval = false;
+            break;
         }
         break;
 
@@ -4505,18 +4512,23 @@ bool get_suffixed_duration(const char* zValue,
         break;
     }
 
-    if (*zEnd == 0)
+    if (rval)
     {
-        rval = true;
-
-        if (pDuration)
+        if (*zEnd == 0)
         {
-            *pDuration = duration;
+            if (pDuration)
+            {
+                *pDuration = duration;
+            }
+
+            if (pUnit)
+            {
+                *pUnit = unit;
+            }
         }
-
-        if (pUnit)
+        else
         {
-            *pUnit = unit;
+            rval = false;
         }
     }
 
