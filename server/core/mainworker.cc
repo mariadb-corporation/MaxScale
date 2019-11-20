@@ -50,8 +50,13 @@ MainWorker::MainWorker(mxb::WatchdogNotifier* pNotifier)
     this_thread.pMain = this;
 
     delayed_call(100, &MainWorker::inc_ticks);
-    // TODO: Make configurable.
-    delayed_call(3000, &MainWorker::balance_workers, this);
+
+    const auto& config = *config_get_global_options();
+
+    if (config.rebalance_period != std::chrono::milliseconds(0))
+    {
+        delayed_call(config.rebalance_period.get(), &MainWorker::balance_workers, this);
+    }
 }
 
 MainWorker::~MainWorker()
@@ -221,19 +226,23 @@ bool MainWorker::inc_ticks(Worker::Call::action_t action)
 
 bool MainWorker::balance_workers(Worker::Call::action_t action)
 {
-    bool rv = true;
-
     if (action == Worker::Call::EXECUTE)
     {
+        std::chrono::milliseconds ms { config_get_global_options()->rebalance_period.get() };
+
         if (config_get_global_options()->rebalance_threshold != 0)
         {
-            // TODO: If balancing has taken place, then rebalance
-            // TODO: quickly again.
-            RoutingWorker::balance_workers();
+            if (RoutingWorker::balance_workers())
+            {
+                // Rebalancing has taken place, quickly rebalance again.
+                ms = std::chrono::milliseconds(1000);
+            }
         }
+
+        delayed_call(ms, &MainWorker::balance_workers, this);
     }
 
-    return rv;
+    return false;
 }
 
 }

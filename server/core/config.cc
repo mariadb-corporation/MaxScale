@@ -76,8 +76,25 @@ using std::chrono::seconds;
 
 config::Specification MXS_CONFIG::s_specification("maxscale", config::Specification::GLOBAL);
 
+config::ParamInteger MXS_CONFIG::s_rebalance_threshold(
+    &MXS_CONFIG::s_specification,
+    CN_REBALANCE_THRESHOLD,
+    "When the load of a worker thread is this many percentage points higher/lower "
+    "than the average load, then sessions are moved from/to that worker.",
+    0,
+    0, 100);
+
+config::ParamDuration<std::chrono::milliseconds> MXS_CONFIG::s_rebalance_period(
+    &MXS_CONFIG::s_specification,
+    CN_REBALANCE_PERIOD,
+    "How often should the load of the worker threads be checked and rebalancing be made.",
+    mxs::config::NO_INTERPRETATION,
+    std::chrono::milliseconds(0));
+
 MXS_CONFIG::MXS_CONFIG()
     : config::Configuration("maxscale", &s_specification)
+    , rebalance_threshold(this, &s_rebalance_threshold)
+    , rebalance_period(this, &s_rebalance_period)
 {
 }
 
@@ -2238,10 +2255,11 @@ static int handle_global_item(const char* name, const char* value)
             return 0;
         }
     }
-    else if (strcmp(name, CN_REBALANCE_THRESHOLD) == 0)
+    else if ((item = gateway.find_value(name)) != nullptr)
     {
-        if (!config_set_rebalance_threshold(value))
+        if (!item->set(value))
         {
+            MXS_ERROR("Invalid value for '%s': %s", item->parameter().name().c_str(), value);
             return 0;
         }
     }
@@ -4096,7 +4114,8 @@ static bool create_global_config(const char* filename)
     dprintf(file, "%s=%ld\n", CN_AUTH_WRITE_TIMEOUT, gateway.auth_write_timeout);
     dprintf(file, "%s=%s\n", CN_ADMIN_AUTH, gateway.admin_auth ? "true" : "false");
     dprintf(file, "%s=%u\n", CN_PASSIVE, gateway.passive);
-    dprintf(file, "%s=%d\n", CN_REBALANCE_THRESHOLD, gateway.rebalance_threshold);
+    dprintf(file, "%s=%s\n", CN_REBALANCE_PERIOD, gateway.rebalance_period.to_string().c_str());
+    dprintf(file, "%s=%s\n", CN_REBALANCE_THRESHOLD, gateway.rebalance_threshold.to_string().c_str());
 
     close(file);
 

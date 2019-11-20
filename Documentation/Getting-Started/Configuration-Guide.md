@@ -368,6 +368,17 @@ Ignored and deprecated in 2.3.
 If you need to explicitly set the stack size, do so using `ulimit -s` before
 starting MaxScale.
 
+### `rebalance_period`
+
+This duration parameter controls how often the load of the worker threads
+should be checked. The default value is 0, which means that no checks and
+no rebalancing will be performed.
+```
+rebalance_period=5s
+```
+Note that rebalancing will not be performed unless `rebalance_threshold`
+has also been specified.
+
 ### `rebalance_threshold`
 
 This parameter controls at which point MaxScale should start moving load
@@ -375,15 +386,17 @@ from one worker thread to another, if the load of the threads is different.
 The value should be a percentage, that is, an integer between 0 and 100,
 and it is interpreted as follows.
 
-If the load of a particular thread is larger than the average load by as
+If the load of a particular thread is _larger_ than the average load by as
 many percentage points as specified, then MaxScale will start moving sessions
-from that thread to other threads.
-
-If the load of a particular thread is smaller than the average load by as
-many percentage points as specified, then MaxScale will start moving sessions
+from that thread to other threads. If there is no such thread, then if the
+load of a particular thread is _smaller_ than the average load by as many
+percentage points as specified, then MaxScale will start moving sessions
 from other threads to that thread.
 
 The default value is 0, which means that no rebalancing will occur.
+
+Note that rebalancing will not be performed unless `rebalance_period`
+has also been specified.
 
 ### `auth_connect_timeout`
 

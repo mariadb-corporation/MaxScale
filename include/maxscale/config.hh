@@ -21,6 +21,8 @@
 class MXS_CONFIG : public config::Configuration
 {
 public:
+    using milliseconds = std::chrono::milliseconds;
+
     MXS_CONFIG();
 
     MXS_CONFIG(const MXS_CONFIG&) = delete;
@@ -75,12 +77,17 @@ public:
     mxb_log_target_t log_target;                        /**< Log type */
     bool             load_persisted_configs;            /**< Load persisted configuration files on startup */
     int              max_auth_errors_until_block;       /**< Host is blocked once this limit is reached */
-    int rebalance_threshold;                            /**< If load of particular worker differs more than
-                                                         * this % amount from load-average, rebalancing will be made
+    config::Integer  rebalance_threshold;               /**< If load of particular worker differs more than
+                                                         * this % amount from load-average, rebalancing will
+                                                         * be made.
                                                          */
+    config::Duration<milliseconds> rebalance_period;    /**< How often should rebalancing be made. */
 
 private:
     static config::Specification s_specification;
+
+    static config::ParamInteger                s_rebalance_threshold;
+    static config::ParamDuration<milliseconds> s_rebalance_period;
 };
 
 /**

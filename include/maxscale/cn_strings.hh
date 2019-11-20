@@ -101,6 +101,7 @@ constexpr char CN_QUERY_CLASSIFIER_CACHE_SIZE[] = "query_classifier_cache_size";
 constexpr char CN_QUERY_RETRIES[] = "query_retries";
 constexpr char CN_QUERY_RETRY_TIMEOUT[] = "query_retry_timeout";
 constexpr char CN_RANK[] = "rank";
+constexpr char CN_REBALANCE_PERIOD[] = "rebalance_period";
 constexpr char CN_REBALANCE_THRESHOLD[] = "rebalance_threshold";
 constexpr char CN_RELATIONSHIPS[] = "relationships";
 constexpr char CN_REQUIRED[] = "required";

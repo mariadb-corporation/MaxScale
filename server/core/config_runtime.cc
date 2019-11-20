@@ -1054,14 +1054,13 @@ bool runtime_alter_maxscale(const char* name, const char* value)
             config_runtime_error("Invalid value for '%s': %s", CN_SESSION_TRACE, value);
         }
     }
-    else if (key == CN_REBALANCE_THRESHOLD)
+    else if ((item = cnf.find_value(name)) != nullptr)
     {
-        rval = config_set_rebalance_threshold(value);
+        rval = item->set(value);
 
         if (!rval)
         {
-            rval = false;
-            config_runtime_error("Invalid value for '%s': %s", CN_REBALANCE_THRESHOLD, value);
+            config_runtime_error("Invalid value for '%s': %s", item->parameter().name().c_str(), value);
         }
     }
     else if ((item = cnf.find_value(name)) != nullptr)

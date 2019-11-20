@@ -606,6 +606,13 @@ public:
         return add_delayed_call(new DelayedCallFunctionVoid(delay, next_delayed_call_id(), pFunction));
     }
 
+    uint32_t delayed_call(const std::chrono::milliseconds& delay,
+                          bool (* pFunction)(Worker::Call::action_t action))
+    {
+        int32_t ms = delay.count();
+        return delayed_call(ms, pFunction);
+    }
+
     /**
      * Push a function for delayed execution.
      *
@@ -634,6 +641,15 @@ public:
         return add_delayed_call(new DelayedCallFunction<D>(delay, next_delayed_call_id(), pFunction, data));
     }
 
+    template<class D>
+    uint32_t delayed_call(const std::chrono::milliseconds& delay,
+                          bool (* pFunction)(Worker::Call::action_t action, D data),
+                          D data)
+    {
+        int32_t ms = delay.count();
+        return delayed_call(ms, pFunction, data);
+    }
+
     /**
      * Push a member function for delayed execution.
      *
@@ -659,6 +675,15 @@ public:
                           T* pT)
     {
         return add_delayed_call(new DelayedCallMethodVoid<T>(delay, next_delayed_call_id(), pMethod, pT));
+    }
+
+    template<class T>
+    uint32_t delayed_call(const std::chrono::milliseconds& delay,
+                          bool (T::* pMethod)(Worker::Call::action_t action),
+                          T* pT)
+    {
+        int32_t ms = delay.count();
+        return delayed_call(ms, pMethod, pT);
     }
 
     /**
@@ -692,6 +717,16 @@ public:
                                                             pMethod,
                                                             pT,
                                                             data));
+    }
+
+    template<class T, class D>
+    uint32_t delayed_call(const std::chrono::milliseconds& delay,
+                          bool (T::* pMethod)(Worker::Call::action_t action, D data),
+                          T* pT,
+                          D data)
+    {
+        int32_t ms = delay.count();
+        return delayed_call(ms, pMethod, pT, data);
     }
 
     /**

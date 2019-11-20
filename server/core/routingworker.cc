@@ -1245,7 +1245,7 @@ bool RoutingWorker::balance_workers()
 {
     bool balancing = false;
 
-    int threshold = config_get_global_options()->rebalance_threshold;
+    int threshold = config_get_global_options()->rebalance_threshold.get();
 
     if (threshold == 0)
     {
