@@ -98,6 +98,25 @@ MXS_CONFIG::MXS_CONFIG()
 {
 }
 
+bool MXS_CONFIG::RebalancePeriod::set(const milliseconds& new_value)
+{
+    milliseconds old_value = get();
+
+    bool rv = config::Duration<milliseconds>::set(new_value);
+
+    if (rv)
+    {
+        if (old_value == milliseconds(0))
+        {
+            // So, there was no rebalancing taking place. We need to start it.
+            mxb_assert(mxs::MainWorker::get());
+            mxs::MainWorker::get()->start_rebalancing();
+        }
+    }
+
+    return rv;
+}
+
 typedef struct duplicate_context
 {
     std::set<std::string>* sections;

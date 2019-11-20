@@ -1298,7 +1298,8 @@ bool RoutingWorker::balance_workers()
     }
     else
     {
-        MXS_NOTICE("The load of no worker is > 10%% larger than the average, not balancing.");
+        MXS_NOTICE("The load of no worker is > %d%% higher/lower than the average load %d, not balancing.",
+                   threshold, (int)avg_load);
         pFrom = nullptr;
         pTo = nullptr;
     }

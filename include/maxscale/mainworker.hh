@@ -80,6 +80,13 @@ public:
         return m_storage;
     }
 
+    /**
+     * Starts the rebalancing.
+     *
+     * @note Must *only* be called from the main worker thread.
+     */
+    void start_rebalancing();
+
 private:
     bool pre_run() override;
     void post_run() override;
@@ -109,8 +116,10 @@ private:
     static bool inc_ticks(Worker::Call::action_t action);
 
     bool balance_workers(Worker::Call::action_t action);
+    void order_balancing_cb(const std::chrono::milliseconds& ms);
 
     std::map<std::string, Task> m_tasks_by_name;
     IndexedStorage              m_storage;
+    uint32_t                    m_rebalancing_dc { 0 };
 };
 }

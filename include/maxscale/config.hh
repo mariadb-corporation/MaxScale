@@ -81,7 +81,16 @@ public:
                                                          * this % amount from load-average, rebalancing will
                                                          * be made.
                                                          */
-    config::Duration<milliseconds> rebalance_period;    /**< How often should rebalancing be made. */
+
+    class RebalancePeriod : public config::Duration<milliseconds>
+    {
+    public:
+        using config::Duration<milliseconds>::Duration;
+
+        bool set(const value_type& value) override;
+    };
+
+    RebalancePeriod rebalance_period;    /**< How often should rebalancing be made. */
 
 private:
     static config::Specification s_specification;

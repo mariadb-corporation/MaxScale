@@ -55,7 +55,7 @@ MainWorker::MainWorker(mxb::WatchdogNotifier* pNotifier)
 
     if (config.rebalance_period != std::chrono::milliseconds(0))
     {
-        delayed_call(config.rebalance_period.get(), &MainWorker::balance_workers, this);
+        order_balancing_cb(config.rebalance_period.get());
     }
 }
 
@@ -166,6 +166,31 @@ bool MainWorker::is_main_worker()
     return this_thread.pMain != nullptr;
 }
 
+void MainWorker::start_rebalancing()
+{
+    mxb_assert(is_main_worker());
+
+    if (m_rebalancing_dc == 0)
+    {
+        std::chrono::milliseconds ms { config_get_global_options()->rebalance_period.get() };
+
+        if (ms != std::chrono::milliseconds(0))
+        {
+            MXS_NOTICE("Starting worker thread balancing with a period of %d milliseconds.",
+                       (int)ms.count());
+            order_balancing_cb(ms);
+        }
+        else
+        {
+            MXS_WARNING("Rebalancing period is 0, not starting.");
+        }
+    }
+    else
+    {
+        MXS_WARNING("Thread rebalancing already on-going.");
+    }
+}
+
 bool MainWorker::pre_run()
 {
     bool rval = false;
@@ -226,23 +251,35 @@ bool MainWorker::inc_ticks(Worker::Call::action_t action)
 
 bool MainWorker::balance_workers(Worker::Call::action_t action)
 {
+    m_rebalancing_dc = 0;
+
     if (action == Worker::Call::EXECUTE)
     {
         std::chrono::milliseconds ms { config_get_global_options()->rebalance_period.get() };
 
-        if (config_get_global_options()->rebalance_threshold != 0)
+        if (ms != std::chrono::milliseconds(0))
         {
-            if (RoutingWorker::balance_workers())
+            if (config_get_global_options()->rebalance_threshold != 0)
             {
-                // Rebalancing has taken place, quickly rebalance again.
-                ms = std::chrono::milliseconds(1000);
+                if (RoutingWorker::balance_workers())
+                {
+                    // Rebalancing has taken place, quickly rebalance again.
+                    ms = std::chrono::milliseconds(1000);
+                }
             }
-        }
 
-        delayed_call(ms, &MainWorker::balance_workers, this);
+            order_balancing_cb(ms);
+        }
     }
 
     return false;
+}
+
+void MainWorker::order_balancing_cb(const std::chrono::milliseconds& ms)
+{
+    mxb_assert(m_rebalancing_dc == 0);
+
+    m_rebalancing_dc = delayed_call(ms, &MainWorker::balance_workers, this);
 }
 
 }
