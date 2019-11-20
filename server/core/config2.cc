@@ -924,4 +924,21 @@ std::string ParamString::to_string(value_type value) const
     ss << "\"" << value << "\"";
     return ss.str();
 }
+
+/**
+ * class Number
+ */
+bool Number::set(const value_type& value)
+{
+    bool rv = false;
+    const ParamNumber& p = static_cast<const ParamNumber&>(parameter());
+
+    if (value >= p.min_value() && value <= p.max_value())
+    {
+        rv = ConcreteType<Number, ParamNumber>::set(value);
+    }
+
+    return rv;
+}
+
 }

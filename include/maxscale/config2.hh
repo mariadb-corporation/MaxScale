@@ -328,6 +328,21 @@ public:
                      std::string* pMessage = nullptr) const;
     std::string to_string(value_type value) const;
 
+    value_type default_value() const
+    {
+        return m_default_value;
+    }
+
+    value_type min_value() const
+    {
+        return m_min_value;
+    }
+
+    value_type max_value() const
+    {
+        return m_max_value;
+    }
+
 protected:
     ParamNumber(Specification* pSpecification,
                 const char* zName,
@@ -999,7 +1014,8 @@ public:
 
     This& operator=(const value_type& value)
     {
-        m_value = value;
+        MXB_AT_DEBUG(bool rv =) set(value);
+        mxb_assert(rv);
         return static_cast<This&>(*this);
     }
 
@@ -1007,7 +1023,8 @@ public:
     {
         // Only the value is copied, the parameter and the configuration
         // remains the same.
-        m_value = rhs.m_value;
+        MXB_AT_DEBUG(bool rv =) set(rhs.m_value);
+        mxb_assert(rv);
         return static_cast<This&>(*this);
     }
 
@@ -1016,9 +1033,10 @@ public:
         return m_value;
     }
 
-    void set(const value_type& value)
+    virtual bool set(const value_type& value)
     {
         m_value = value;
+        return true;
     }
 
     std::string to_string() const override
@@ -1181,6 +1199,9 @@ protected:
         : ConcreteType(pConfiguration, pParam)
     {
     }
+
+public:
+    bool set(const value_type& value) override;
 };
 
 /**
