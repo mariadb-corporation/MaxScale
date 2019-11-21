@@ -20,10 +20,12 @@
 #include <set>
 #include <thread>
 #include <maxbase/stopwatch.hh>
+#include <maxsql/mariadb_connector.hh>
 #include <maxsql/queryresult.hh>
 #include <maxscale/protocol2.hh>
 #include <maxscale/protocol/mariadb/authenticator.hh>
-#include <maxsql/mariadb_connector.hh>
+#include <maxscale/protocol/mariadb/protocol_classes.hh>
+
 
 class SERVER;
 
@@ -68,18 +70,20 @@ public:
      *
      * @param entry User entry
      * @param db Target database
-     * @param ignorecase If true, database names are compared case insensitive
+     * @param case_sensitive_db If true, database names are compared case sensitive
      * @return True if user can access database
      */
     bool check_database_access(const mariadb::UserEntry& entry, const std::string& db,
-                               bool ignorecase = false) const;
+                               bool case_sensitive_db = true) const;
 
     bool equal_contents(const UserDatabase& rhs) const;
 
 private:
     bool user_can_access_db(const std::string& user, const std::string& host_pattern, const std::string& db,
-                            bool ignorecase) const;
-    bool role_can_access_db(const std::string& role, const std::string& db, bool ignorecase) const;
+                            bool case_sensitive_db) const;
+    bool user_can_access_role(const std::string& user, const std::string& host_pattern,
+                              const std::string& target_role) const;
+    bool role_can_access_db(const std::string& role, const std::string& db, bool case_sensitive_db) const;
 
     bool address_matches_host_pattern(const std::string& addr, const std::string& host_pattern) const;
 
@@ -212,10 +216,8 @@ public:
      * @return Found user entry.
      */
     std::unique_ptr<mariadb::UserEntry>
-    find_user(const std::string& user, const std::string& host, const std::string& requested_db) const;
-
-    std::unique_ptr<mariadb::UserEntry>
-    find_anon_proxy_user(const std::string& user, const std::string& host) const;
+    find_user(const std::string& user, const std::string& host, const std::string& requested_db,
+              const mariadb::UserSearchSettings& sett) const;
 
     void update_from_master() override;
 

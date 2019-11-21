@@ -50,6 +50,7 @@
 namespace
 {
 using AuthRes = mariadb::ClientAuthenticator::AuthRes;
+using SUserEntry = std::unique_ptr<mariadb::UserEntry>;
 
 const char WORD_KILL[] = "KILL";
 
@@ -886,32 +887,17 @@ int MariaDBClientConnection::perform_authentication(GWBUF* read_buffer, int nbyt
 
     if (ssl_ready && client_data_ready && !m_authenticator)
     {
-        auto& auth_modules = *(m_session_data->allowed_authenticators);
-        // Check if any of the allowed authenticators support anonymous users.
-        bool allow_anon_user = false;
-        for (const auto & auth_module : auth_modules)
-        {
-            if (auth_module->capabilities() & mariadb::AuthenticatorModule::CAP_ANON_USER)
-            {
-                allow_anon_user = true;
-                break;
-            }
-        }
-
+        auto search_settings = user_search_settings();
         // The correct authenticator is chosen here (and also in reauthenticate_client()).
         auto users = user_account_cache();
-        auto entry = users->find_user(m_session_data->user, m_session_data->remote, m_session_data->db);
-
-        if (!entry && allow_anon_user)
-        {
-            // Try find an anonymous user.
-            entry = users->find_anon_proxy_user(m_session_data->user, m_session_data->remote);
-        }
+        auto entry = users->find_user(m_session_data->user, m_session_data->remote, m_session_data->db,
+                                      search_settings);
 
         bool found_good_entry = false;
         if (entry)
         {
             mariadb::AuthenticatorModule* selected_module = nullptr;
+            auto& auth_modules = *(m_session_data->allowed_authenticators);
             for (const auto& auth_module : auth_modules)
             {
                 if (auth_module->supported_plugins().count(entry->plugin))
@@ -1179,7 +1165,8 @@ bool MariaDBClientConnection::reauthenticate_client(MXS_SESSION* session, GWBUF*
         data->db = db;
 
         auto users = user_account_cache();
-        auto user_entry = users->find_user(data->user, data->remote, data->db);
+        auto search_settings = user_search_settings();
+        auto user_entry = users->find_user(data->user, data->remote, data->db, search_settings);
 
         auto rc = AuthRes::FAIL;
         if (user_entry)
@@ -2358,4 +2345,13 @@ const MariaDBUserCache* MariaDBClientConnection::user_account_cache()
 {
     auto users = m_session->service->user_account_cache();
     return static_cast<const MariaDBUserCache*>(users);
+}
+
+mariadb::UserSearchSettings MariaDBClientConnection::user_search_settings() const
+{
+    mariadb::UserSearchSettings rval(*m_session_data->user_search_settings);
+    auto& service_settings = m_session->service->config();
+    rval.allow_root_user = service_settings.enable_root;
+    rval.localhost_match_wildcard_host = service_settings.localhost_match_wildcard_host;
+    return rval;
 }

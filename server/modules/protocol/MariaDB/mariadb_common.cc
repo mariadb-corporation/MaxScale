@@ -502,3 +502,8 @@ bool UserEntry::host_pattern_is_more_specific(const UserEntry& lhs, const UserEn
            // ... and if neither have wildcards, use string order.
            || (!lwc && !rwc && lhost < rhost);
 }
+
+mariadb::UserSearchSettings::UserSearchSettings(const mariadb::UserSearchSettListener& listener_sett)
+    : UserSearchSettListener(listener_sett)
+{
+}

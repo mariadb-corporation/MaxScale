@@ -18,53 +18,64 @@
 #include <maxscale/protocol/mariadb/backend_connection.hh>
 
 #include <maxscale/modutil.hh>
+#include <maxscale/config.hh>
 #include "user_data.hh"
+
+using std::string;
 
 MySQLProtocolModule* MySQLProtocolModule::create(const std::string& auth_name, const std::string& auth_opts)
 {
-    MySQLProtocolModule* protocol_module = nullptr;
-    // TODO: Add support for multiple authenticators.
+    std::unique_ptr<MySQLProtocolModule> protocol_module(new(std::nothrow) MySQLProtocolModule());
+    if (protocol_module)
+    {
+        // TODO: Add support for multiple authenticators.
 
-    const char* auth_namez {nullptr};
-    const char* auth_optsz {nullptr};
-    if (!auth_name.empty())
-    {
-        auth_namez = auth_name.c_str();
-        auth_optsz = auth_opts.c_str();
-    }
-    else
-    {
-        auth_namez = MXS_MARIADBAUTH_AUTHENTICATOR_NAME;
-    }
-
-    auto new_auth_module = mxs::authenticator_init(auth_namez, auth_optsz);
-    if (new_auth_module)
-    {
-        // Check that the authenticator supports the protocol. Use case-insensitive comparison.
-        auto supported_protocol = new_auth_module->supported_protocol();
-        if (strcasecmp(MXS_MODULE_NAME, supported_protocol.c_str()) == 0)
+        const char* auth_namez {nullptr};
+        const char* auth_optsz {nullptr};
+        if (!auth_name.empty())
         {
-            protocol_module = new(std::nothrow) MySQLProtocolModule();
-            if (protocol_module)
+            auth_namez = auth_name.c_str();
+            auth_optsz = auth_opts.c_str();
+        }
+        else
+        {
+            auth_namez = MXS_MARIADBAUTH_AUTHENTICATOR_NAME;
+        }
+
+        auto new_auth_module = mxs::authenticator_init(auth_namez, auth_optsz);
+        if (new_auth_module)
+        {
+            // Check that the authenticator supports the protocol. Use case-insensitive comparison.
+            auto supported_protocol = new_auth_module->supported_protocol();
+            if (strcasecmp(MXS_MODULE_NAME, supported_protocol.c_str()) == 0)
             {
                 protocol_module->m_authenticators.emplace_back(
                     static_cast<mariadb::AuthenticatorModule*>(new_auth_module.release()));
             }
+            else
+            {
+                // When printing protocol name, print the name user gave in configuration file,
+                // not the effective name.
+                MXB_ERROR("Authenticator module '%s' expects to be paired with protocol '%s', "
+                          "not with '%s'.",
+                          auth_namez, supported_protocol.c_str(), MXS_MODULE_NAME);
+            }
         }
         else
         {
-            // When printing protocol name, print the name user gave in configuration file,
-            // not the effective name.
-            MXB_ERROR("Authenticator module '%s' expects to be paired with protocol '%s', "
-                      "not with '%s'.",
-                      auth_namez, supported_protocol.c_str(), MXS_MODULE_NAME);
+            MXB_ERROR("Failed to initialize authenticator module '%s'.", auth_namez);
+            protocol_module.reset();
         }
     }
-    else
+
+    if (protocol_module)
     {
-        MXB_ERROR("Failed to initialize authenticator module '%s'.", auth_namez);
+        if (!protocol_module->parse_authenticator_opts(auth_opts))
+        {
+            protocol_module.reset();
+        }
     }
-    return protocol_module;
+    return protocol_module.release();
 }
 
 std::unique_ptr<mxs::ClientConnection>
@@ -77,8 +88,10 @@ MySQLProtocolModule::create_client_protocol(MXS_SESSION* session, mxs::Component
         // The authenticator module used by this session is not known yet. The protocol code will figure
         // it out once authentication begins.
         mdb_session->allowed_authenticators = &m_authenticators;
+        mdb_session->user_search_settings = &m_user_search_settings;
         mdb_session->remote = session->client_remote();
         session->set_protocol_data(std::move(mdb_session));
+
         new_client_proto = std::unique_ptr<mxs::ClientConnection>(
             new(std::nothrow) MariaDBClientConnection(session, component));
     }
@@ -158,6 +171,62 @@ MySQLProtocolModule::create_backend_protocol(MXS_SESSION* session, SERVER* serve
 uint64_t MySQLProtocolModule::capabilities() const
 {
     return mxs::ProtocolModule::CAP_BACKEND | mxs::ProtocolModule::CAP_AUTHDATA;
+}
+
+bool MySQLProtocolModule::parse_authenticator_opts(const std::string& opts)
+{
+    bool error = false;
+    // Check if any of the authenticators support anonymous users.
+    for (const auto & auth_module : m_authenticators)
+    {
+        if (auth_module->capabilities() & mariadb::AuthenticatorModule::CAP_ANON_USER)
+        {
+            m_user_search_settings.allow_anon_user = true;
+            break;
+        }
+    }
+
+    auto opt_list = mxb::strtok(opts, ",");
+    for (auto opt : opt_list)
+    {
+        auto equals_pos = opt.find('=');
+        if (equals_pos != string::npos && equals_pos > 0 && opt.length() > equals_pos + 1)
+        {
+            string opt_name = opt.substr(0, equals_pos);
+            mxb::trim(opt_name);
+            string opt_value = opt.substr(equals_pos + 1);
+            mxb::trim(opt_value);
+            // TODO: add better parsing, check for invalid values
+            int val = config_truth_value(opt_value.c_str());
+            if (opt_name == "cache_dir")
+            {
+                // ignored
+            }
+            else if (opt_name == "inject_service_user")
+            {
+                m_user_search_settings.allow_service_user = val;
+            }
+            else if (opt_name == "skip_authentication")
+            {
+                m_user_search_settings.match_host_pattern = !val;
+            }
+            else if (opt_name == "lower_case_table_names")
+            {
+                m_user_search_settings.case_sensitive_db = !val;
+            }
+            else
+            {
+                MXB_ERROR("Unknown authenticator option: %s", opt_name.c_str());
+                error = true;
+            }
+        }
+        else
+        {
+            MXB_ERROR("Invalid authenticator option setting: %s", opt.c_str());
+            error = true;
+        }
+    }
+    return !error;
 }
 
 /**

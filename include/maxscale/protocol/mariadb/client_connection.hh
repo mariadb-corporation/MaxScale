@@ -99,6 +99,7 @@ private:
     void  execute_kill(MXS_SESSION* issuer, std::shared_ptr<KillInfo> info);
     void  track_current_command(GWBUF* buf);
 
+    mariadb::UserSearchSettings           user_search_settings() const;
     const MariaDBUserCache*               user_account_cache();
     mariadb::ClientAuthenticator::AuthRes ssl_authenticate_check_status(DCB* generic_dcb);
     static std::string                    to_string(AuthState state);

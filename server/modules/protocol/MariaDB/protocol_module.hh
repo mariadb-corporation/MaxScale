@@ -16,6 +16,7 @@
 #include <maxscale/ccdefs.hh>
 #include <maxscale/protocol2.hh>
 #include <maxscale/protocol/mariadb/authenticator.hh>
+#include <maxscale/protocol/mariadb/protocol_classes.hh>
 
 class MySQLProtocolModule : public mxs::ProtocolModule
 {
@@ -31,19 +32,23 @@ public:
     std::string auth_default() const override;
     GWBUF*      reject(const std::string& host) override;
 
-    uint64_t capabilities() const override;
-
+    uint64_t    capabilities() const override;
     std::string name() const override;
 
-    int  load_auth_users(SERVICE* service) override;
-
+    int     load_auth_users(SERVICE* service) override;
     json_t* print_auth_users_json() override;
 
     std::unique_ptr<mxs::UserAccountManager> create_user_data_manager() override;
 
 private:
+    bool parse_authenticator_opts(const std::string& opts);
+
     /**
      * Authenticator modules used by this protocol module. Used from multiple threads, but does not
      * change once created. */
     std::vector<mariadb::SAuthModule> m_authenticators;
+
+    /** Partial user search settings. These settings originate from the listener and do not
+     * change once set. */
+    mariadb::UserSearchSettListener m_user_search_settings;
 };

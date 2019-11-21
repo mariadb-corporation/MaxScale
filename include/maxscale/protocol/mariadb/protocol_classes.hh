@@ -19,6 +19,18 @@
 
 class GWBUF;
 
+namespace mariadb
+{
+struct UserSearchSettListener
+{
+    // These user search settings are dependant on listener configuration.
+    bool match_host_pattern {true};
+    bool allow_anon_user {false};
+    bool case_sensitive_db {true};
+    bool allow_service_user {true};
+};
+}
+
 /*
  * Data shared with authenticators
  */
@@ -63,4 +75,26 @@ public:
 
     // Authenticator module currently in use by the session. May change on COM_CHANGE_USER.
     mariadb::AuthenticatorModule* m_current_authenticator {nullptr};
+
+    // Partial user search settings for the session. These settings originate from the listener and do not
+    // change once set.
+    const mariadb::UserSearchSettListener* user_search_settings {nullptr};
 };
+
+namespace mariadb
+{
+
+struct UserSearchSettService
+{
+    // These user search settings are dependent on service configuration. As services can be reconfigured
+    // during runtime, the setting values have to be checked when used.
+    bool localhost_match_wildcard_host {true};
+    bool allow_root_user {false};
+};
+
+// The total user search settings structure. Using inheritance to avoid subobjects.
+struct UserSearchSettings : public UserSearchSettListener, UserSearchSettService
+{
+    UserSearchSettings(const UserSearchSettListener& listener_sett);
+};
+}

@@ -23,6 +23,7 @@
 #include <maxscale/protocol/mariadb/module_names.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/config.hh>
+#include <maxscale/cn_strings.hh>
 #include <maxscale/secrets.hh>
 #include "sqlite_strlike.hh"
 
@@ -32,6 +33,7 @@ using UserEntry = mariadb::UserEntry;
 using SUserEntry = std::unique_ptr<UserEntry>;
 using MutexLock = std::unique_lock<std::mutex>;
 using Guard = std::lock_guard<std::mutex>;
+using mariadb::UserSearchSettings;
 
 namespace
 {
@@ -595,26 +597,32 @@ void UserDatabase::set_dbs_and_roles(StringSetMap&& db_grants, StringSetMap&& ro
     m_roles_mapping = std::move(roles_mapping);
 }
 
-bool UserDatabase::check_database_access(const UserEntry& entry, const std::string& db, bool ignorecase) const
+bool UserDatabase::check_database_access(const UserEntry& entry, const std::string& db,
+                                         bool case_sensitive_db) const
 {
     // Accept the user if the entry has a direct global privilege or if the user is not
     // connecting to a specific database,
+    auto& user = entry.username;
+    auto& host = entry.host_pattern;
+    auto& def_role = entry.default_role;
+
     return entry.global_db_priv || db.empty()
             // or the user has a privilege to the database, or a table or column in the database,
-           || (user_can_access_db(entry.username, entry.host_pattern, db, ignorecase))
+           || (user_can_access_db(user, host, db, case_sensitive_db))
             // or the user can access db through its default role.
-           || (!entry.default_role.empty() && role_can_access_db(entry.default_role, db, ignorecase));
+           || (!def_role.empty() && user_can_access_role(user, host, def_role)
+               && role_can_access_db(def_role, db, case_sensitive_db));
 }
 
 bool UserDatabase::user_can_access_db(const string& user, const string& host_pattern, const string& db,
-                                      bool ignorecase) const
+                                      bool case_sensitive_db) const
 {
     string key = user + "@" + host_pattern;
     auto iter = m_database_grants.find(key);
     if (iter != m_database_grants.end())
     {
-        // If ignorecase is on, iterate through the set.
-        if (ignorecase)
+        // If comparing db-names case-insensitively, iterate through the set.
+        if (!case_sensitive_db)
         {
             const StringSet& allowed_dbs = iter->second;
             for (const auto& allowed_db : allowed_dbs)
@@ -633,7 +641,19 @@ bool UserDatabase::user_can_access_db(const string& user, const string& host_pat
     return false;
 }
 
-bool UserDatabase::role_can_access_db(const string& role, const string& db, bool ignorecase) const
+bool UserDatabase::user_can_access_role(const std::string& user, const std::string& host_pattern,
+                                        const std::string& target_role) const
+{
+    string key = user + "@" + host_pattern;
+    auto iter = m_roles_mapping.find(key);
+    if (iter != m_roles_mapping.end())
+    {
+        return iter->second.count(target_role) > 0;
+    }
+    return false;
+}
+
+bool UserDatabase::role_can_access_db(const string& role, const string& db, bool case_sensitive_db) const
 {
     auto role_has_global_priv = [this](const string& role) {
             bool rval = false;
@@ -684,7 +704,7 @@ bool UserDatabase::role_can_access_db(const string& role, const string& db, bool
             privilege_found = true;
         }
         // No global privilege, check db-level privilege.
-        else if (user_can_access_db(current_role, "", db, ignorecase))
+        else if (user_can_access_db(current_role, "", db, case_sensitive_db))
         {
             privilege_found = true;
         }
@@ -985,68 +1005,68 @@ MariaDBUserCache::MariaDBUserCache(const MariaDBUserManager& master)
 }
 
 SUserEntry
-MariaDBUserCache::find_user(const string& user, const string& host, const string& requested_db) const
+MariaDBUserCache::find_user(const string& user, const string& host, const string& requested_db,
+                            const UserSearchSettings& sett) const
 {
     auto userz = user.c_str();
     auto hostz = host.c_str();
-    UserEntry entry;
-    bool has_sufficient_privs = false;
-    auto found = m_userdb.find_entry(user, host);
-    if (found)
+
+    // If "root" user is not allowed, block such user immediately.
+    if (!sett.allow_root_user && user == "root")
     {
-        entry = *found;
-        has_sufficient_privs = m_userdb.check_database_access(*found, requested_db);
+        MXB_INFO("Client '%s'@'%s' blocked because '%s' is false.",
+                 userz, hostz, CN_ENABLE_ROOT_USER);
+        return nullptr;
     }
 
     SUserEntry rval;
-    if (!entry.host_pattern.empty())
+    // TODO: the user may be empty, is it ok to match normally in that case?
+    const UserEntry* found = nullptr;
+    // First try to find a normal user entry. If host pattern matching is disabled, match only username.
+    found = sett.match_host_pattern ? m_userdb.find_entry(user, host) :  m_userdb.find_entry(user);
+    if (found)
     {
-        if (has_sufficient_privs)
+        if (m_userdb.check_database_access(*found, requested_db, sett.case_sensitive_db))
         {
             MXB_INFO("Found matching user '%s'@'%s' for client '%s'@'%s' with sufficient privileges.",
-                     entry.username.c_str(), entry.host_pattern.c_str(), userz, hostz);
-            rval.reset(new UserEntry(entry));
+                     found->username.c_str(), found->host_pattern.c_str(), userz, hostz);
+            rval.reset(new (std::nothrow) UserEntry(*found));
         }
         else
         {
             MXB_INFO("Found matching user '%s'@'%s' for client '%s'@'%s' but user does not have "
                      "sufficient privileges.",
-                     entry.username.c_str(), entry.host_pattern.c_str(), userz, hostz);
+                     found->username.c_str(), found->host_pattern.c_str(), userz, hostz);
         }
     }
-    else
+    else if (sett.allow_anon_user)
+    {
+        // Try find an anonymous entry. Such an entry has empty username and matches any client username.
+        // If host pattern matching is disabled, any user from any host can log in if an anonymous
+        // entry exists.
+        found = sett.match_host_pattern ? m_userdb.find_entry("", host) : m_userdb.find_entry("");
+        if (found)
+        {
+            // For anonymous users, do not check database access as the final effective user is unknown.
+            // Instead, check that the entry has a proxy grant.
+            if (found->proxy_grant)
+            {
+                MXB_INFO("Found matching anonymous user ''@'%s' for client '%s'@'%s' with proxy grant.",
+                         found->host_pattern.c_str(), userz, hostz);
+                rval.reset(new (std::nothrow) UserEntry(*found));
+            }
+            else
+            {
+                MXB_INFO("Found matching anonymous user ''@'%s' for client '%s'@'%s' but user does not have "
+                         "proxy privileges.",
+                         found->host_pattern.c_str(), userz, hostz);
+            }
+        }
+    }
+
+    if (!found)
     {
         MXB_INFO("Found no matching user for client '%s'@'%s'.", userz, hostz);
-    }
-    return rval;
-}
-
-SUserEntry MariaDBUserCache::find_anon_proxy_user(const std::string& user, const std::string& host) const
-{
-    auto userz = user.c_str();
-    auto hostz = host.c_str();
-    SUserEntry entry;
-    auto found = m_userdb.find_entry("", host);
-    if (found)
-    {
-        entry.reset(new(std::nothrow) UserEntry(*found));
-    }
-
-    SUserEntry rval;
-    if (entry)
-    {
-        if (entry->proxy_grant)
-        {
-            MXB_INFO("Found matching anonymous user ''@'%s' for client '%s'@'%s' with proxy grant.",
-                     entry->host_pattern.c_str(), userz, hostz);
-            rval = std::move(entry);
-        }
-        else
-        {
-            MXB_INFO("Found matching anonymous user ''@'%s' for client '%s'@'%s' but user does not have "
-                     "proxy privileges.",
-                     entry->host_pattern.c_str(), userz, hostz);
-        }
     }
     return rval;
 }
