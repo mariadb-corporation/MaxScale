@@ -177,12 +177,12 @@ public:
 
 private:
 
-    uint64_t     m_start_time;      /*< When was the current 1-second period started. */
-    uint64_t     m_wait_start;      /*< The time when the worker entered epoll_wait(). */
-    uint64_t     m_wait_time;       /*< How much time the worker has spent in epoll_wait(). */
-    AverageN<60> m_load_1_hour;     /*< The average load during the last hour. */
-    AverageN<60> m_load_1_minute;   /*< The average load during the last minute. */
-    Average1     m_load_1_second;   /*< The load during the last 1-second period. */
+    uint64_t m_start_time;      /*< When was the current 1-second period started. */
+    uint64_t m_wait_start;      /*< The time when the worker entered epoll_wait(). */
+    uint64_t m_wait_time;       /*< How much time the worker has spent in epoll_wait(). */
+    AverageN m_load_1_hour;     /*< The average load during the last hour. */
+    AverageN m_load_1_minute;   /*< The average load during the last minute. */
+    Average1 m_load_1_second;   /*< The load during the last 1-second period. */
 };
 
 /**

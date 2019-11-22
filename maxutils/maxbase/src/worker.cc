@@ -79,7 +79,8 @@ WorkerLoad::WorkerLoad()
     : m_start_time(0)
     , m_wait_start(0)
     , m_wait_time(0)
-    , m_load_1_minute(&m_load_1_hour)
+    , m_load_1_hour(60) // 60 minutes in an hour
+    , m_load_1_minute(60, &m_load_1_hour) // 60 seconds in a minute
     , m_load_1_second(&m_load_1_minute)
 {
 }

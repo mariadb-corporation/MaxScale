@@ -261,22 +261,26 @@ public:
 /**
  * An Average calculated from N values.
  */
-template<size_t N>
 class AverageN : public Average
 {
 public:
-    AverageN(Average* pDependant = NULL)
+    using Data = std::vector<uint8_t>;
+
+    AverageN(int n, Average* pDependant = NULL)
         : Average(pDependant)
-        , m_end(m_begin + N)
+        , m_buffer(n)
+        , m_begin(m_buffer.begin())
+        , m_end(m_buffer.end())
         , m_i(m_begin)
         , m_sum(0)
         , m_nValues(0)
     {
+        mxb_assert(n > 1);
     }
 
     bool add_value(uint8_t value)
     {
-        if (m_nValues == N)
+        if (m_nValues == m_buffer.size())
         {
             // If as many values that fit has been added, then remove the
             // least recent value from the sum.
@@ -326,7 +330,7 @@ public:
         else
         {
             // Otherwise we update the most recent value.
-            uint8_t* p = prev(m_i);
+            auto p = prev(m_i);
 
             m_sum -= *p;
             *p = value;
@@ -344,7 +348,7 @@ public:
     }
 
 private:
-    uint8_t* prev(uint8_t* p)
+    Data::iterator prev(Data::iterator p)
     {
         mxb_assert(p >= m_begin);
         mxb_assert(p < m_end);
@@ -365,7 +369,7 @@ private:
         return p;
     }
 
-    uint8_t* next(uint8_t* p)
+    Data::iterator next(Data::iterator p)
     {
         mxb_assert(p >= m_begin);
         mxb_assert(p < m_end);
@@ -384,10 +388,11 @@ private:
     }
 
 private:
-    uint8_t  m_begin[N];    /*< Buffer containing values from which the average is calculated. */
-    uint8_t* m_end;         /*< Points to one past the end of the buffer. */
-    uint8_t* m_i;           /*< Current position in the buffer. */
-    uint32_t m_sum;         /*< Sum of all values in the buffer. */
-    uint32_t m_nValues;     /*< How many values the buffer contains. */
+    Data           m_buffer;  /*< Buffer containing values from which the average is calculated. */
+    Data::iterator m_begin;   /*< Points to the beginning of the buffer. */
+    Data::iterator m_end;     /*< Points to one past the end of the buffer. */
+    Data::iterator m_i;       /*< Current position in the buffer. */
+    uint32_t       m_sum;     /*< Sum of all values in the buffer. */
+    uint32_t       m_nValues; /*< How many values the buffer contains. */
 };
 }
