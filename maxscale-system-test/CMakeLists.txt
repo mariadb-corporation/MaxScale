@@ -26,22 +26,13 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_SOURCE_DIR}/connectors/cdc-connector)
 
-# The core library
 include_directories(${CMAKE_BINARY_DIR})
-add_library(testcore SHARED testconnections.cpp nodes.cpp mariadb_nodes.cpp maxscales.cpp
-  mariadb_func.cpp get_com_select_insert.cpp maxadmin_operations.cpp big_transaction.cpp
-  sql_t1.cpp test_binlog_fnc.cpp get_my_ip.cpp big_load.cpp  get_com_select_insert.cpp
-  different_size.cpp fw_copy_rules maxinfo_func.cpp config_operations.cpp rds_vpc.cpp execute_cmd.cpp
-  blob_test.cpp keepalived_func.cpp tcp_connection.cpp base/stopwatch.cpp fw_copy_rules.cpp
-  labels_table.cpp envv.cpp
-  # Include the CDC connector in the core library
-  ${CMAKE_SOURCE_DIR}/connectors/cdc-connector/cdc_connector.cpp)
-target_link_libraries(testcore ${MARIADB_CONNECTOR_LIBRARIES} ${JANSSON_LIBRARIES} z m pthread ssl dl rt crypto crypt maxbase)
-install(TARGETS testcore DESTINATION system-test)
-add_dependencies(testcore connector-c jansson maxbase)
-
 # Include the CDC connector headers
 include_directories(${CMAKE_SOURCE_DIR}/../connectors/cdc-connector/)
+
+# The core testing library
+add_subdirectory(maxtest)
+include_directories(maxtest/include/maxtest)
 
 # Tool used to check backend state
 add_test_executable_notest(check_backend.cpp check_backend check_backend LABELS CONFIG REPL_BACKEND GALERA_BACKEND TWO_MAXSCALES)

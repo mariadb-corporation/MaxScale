@@ -26,7 +26,7 @@ set(TIMEOUT 3600)
 function(add_test_executable source name template)
   add_template(${name} ${template} "${ARGV}")
   add_executable(${name} ${source})
-  target_link_libraries(${name} testcore)
+  target_link_libraries(${name} maxtest)
   add_test(NAME ${name} COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${name} ${name} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
   list(REMOVE_AT ARGV 0 1 2 3)
@@ -42,7 +42,7 @@ endfunction()
 function(add_test_executable_notest source name template)
   add_template(${name} ${template} "${ARGV}")
   add_executable(${name} ${source})
-  target_link_libraries(${name} testcore)
+  target_link_libraries(${name} maxtest)
 endfunction()
 
 # Add a test which uses another test as the executable
