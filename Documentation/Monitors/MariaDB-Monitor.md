@@ -563,11 +563,21 @@ Failover may lose events. If a master goes down before sending new events to at
 least one slave, those events are lost when a new master is chosen. If the old
 master comes back online, the other servers have likely moved on with a
 diverging history and the old master can no longer join the replication cluster.
-To reduce the chance for this happening, use
+
+To reduce the chance of losing data, use
 [semisynchronous replication](https://mariadb.com/kb/en/library/semisynchronous-replication/).
+In semisynchronous mode, the master waits for a slave to receive an event before
+returning an acknowledgement to the client. This does not yet guarantee a clean
+failover. If the master fails after preparing a transaction but before receiving
+slave acknowledgement, it will still commit the prepared transaction as part of
+its crash recovery. Since the slaves may never have seen this transaction, the
+old master has diverged from the slaves. See
+[Configuring the Master Wait Point](https://mariadb.com/kb/en/library/semisynchronous-replication/#configuring-the-master-wait-point)
+for more information.
+
 Even a controlled shutdown of the master may lose events. The server does not by
 default wait for all data to be replicated to the slaves when shutting down and
-instead simply closes all connections. When shutting down the master with the
+instead simply closes all connections. Before shutting down the master with the
 intention of having a slave promoted, run *switchover* first to ensure that all
 data is replicated. For more information on server shutdown, see
 [Binary Log Dump Threads and the Shutdown Process](https://mariadb.com/kb/en/library/replication-threads/#binary-log-dump-threads-and-the-shutdown-process).
