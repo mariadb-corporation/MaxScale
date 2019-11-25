@@ -22,6 +22,7 @@
 #include <sstream>
 
 #include <maxbase/atomic.hh>
+#include <maxbase/average.hh>
 #include <maxbase/semaphore.hh>
 #include <maxbase/alloc.h>
 #include <maxscale/cn_strings.hh>
@@ -41,6 +42,7 @@
 
 #define WORKER_ABSENT_ID -1
 
+using maxbase::AverageN;
 using maxbase::Semaphore;
 using maxbase::Worker;
 using maxbase::WorkerLoad;
@@ -60,6 +62,7 @@ struct this_unit
     bool            initialized;        // Whether the initialization has been performed.
     int             nWorkers;           // How many routing workers there are.
     RoutingWorker** ppWorkers;          // Array of routing worker instances.
+    mxb::AverageN** ppWorker_loads;     // Array of load averages for workers.
     int             next_worker_id;     // Next worker id
     int             epoll_listener_fd;  // Shared epoll descriptor for listening descriptors.
     int             id_main_worker;     // The id of the worker running in the main thread.
@@ -70,7 +73,8 @@ struct this_unit
 {
     false,              // initialized
     0,                  // nWorkers
-    NULL,               // ppWorkers
+    nullptr,            // ppWorkers
+    nullptr,            // ppWorker_loads
     0,                  // next_worker_id
     -1,                 // epoll_listener_fd
     WORKER_ABSENT_ID,   // id_main_worker
@@ -161,8 +165,9 @@ bool RoutingWorker::init(mxb::WatchdogNotifier* pNotifier)
         int nWorkers = config_threadcount();
         RoutingWorker** ppWorkers = new(std::nothrow) RoutingWorker* [MXS_MAX_THREADS]();       // 0-inited
                                                                                                 // array
+        AverageN** ppWorker_loads = new (std::nothrow) AverageN* [MXS_MAX_THREADS];
 
-        if (ppWorkers)
+        if (ppWorkers && ppWorker_loads)
         {
             int id_main_worker = WORKER_ABSENT_ID;
             int id_min_worker = INT_MAX;
@@ -172,8 +177,9 @@ bool RoutingWorker::init(mxb::WatchdogNotifier* pNotifier)
             for (i = 0; i < nWorkers; ++i)
             {
                 RoutingWorker* pWorker = RoutingWorker::create(pNotifier, this_unit.epoll_listener_fd);
+                AverageN* pAverage = new AverageN(10);
 
-                if (pWorker)
+                if (pWorker && pAverage)
                 {
                     int id = pWorker->id();
 
@@ -194,11 +200,13 @@ bool RoutingWorker::init(mxb::WatchdogNotifier* pNotifier)
                     }
 
                     ppWorkers[i] = pWorker;
+                    ppWorker_loads[i] = pAverage;
                 }
                 else
                 {
                     for (int j = i - 1; j >= 0; --j)
                     {
+                        delete ppWorker_loads[j];
                         delete ppWorkers[j];
                     }
 
@@ -208,9 +216,10 @@ bool RoutingWorker::init(mxb::WatchdogNotifier* pNotifier)
                 }
             }
 
-            if (ppWorkers)
+            if (ppWorkers && ppWorker_loads)
             {
                 this_unit.ppWorkers = ppWorkers;
+                this_unit.ppWorker_loads = ppWorker_loads;
                 this_unit.nWorkers = nWorkers;
                 this_unit.id_main_worker = id_main_worker;
                 this_unit.id_min_worker = id_min_worker;
@@ -244,6 +253,9 @@ void RoutingWorker::finish()
 
         delete pWorker;
         this_unit.ppWorkers[i] = NULL;
+
+        mxb::Average* pWorker_load = this_unit.ppWorker_loads[i];
+        delete pWorker_load;
     }
 
     delete[] this_unit.ppWorkers;
@@ -1241,6 +1253,18 @@ void RoutingWorker::register_epoll_tick_func(std::function<void ()> func)
 }
 
 //static
+void RoutingWorker::collect_worker_load()
+{
+    for (int i = 0; i < this_unit.nWorkers; ++i)
+    {
+        auto* pWorker = this_unit.ppWorkers[i];
+        auto* pWorker_load = this_unit.ppWorker_loads[i];
+
+        pWorker_load->add_value(pWorker->load(mxb::WorkerLoad::ONE_SECOND));
+    }
+}
+
+//static
 bool RoutingWorker::balance_workers()
 {
     bool balancing = false;
@@ -1264,8 +1288,9 @@ bool RoutingWorker::balance_workers()
     for (int i = 0; i < this_unit.nWorkers; ++i)
     {
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
+        mxb::Average* pLoad = this_unit.ppWorker_loads[i];
 
-        int load = pWorker->load(Worker::Load::ONE_SECOND);
+        int load = pLoad->value();
 
         if (load < min_load)
         {

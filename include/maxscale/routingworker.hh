@@ -496,6 +496,8 @@ public:
         return m_storage;
     }
 
+    static void collect_worker_load();
+
     static bool balance_workers();
 
 private:

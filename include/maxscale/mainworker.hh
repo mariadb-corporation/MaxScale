@@ -116,10 +116,12 @@ private:
     static bool inc_ticks(Worker::Call::action_t action);
 
     bool balance_workers(Worker::Call::action_t action);
-    void order_balancing_cb(const std::chrono::milliseconds& ms);
+    void order_balancing_cb();
 
     std::map<std::string, Task> m_tasks_by_name;
     IndexedStorage              m_storage;
     uint32_t                    m_rebalancing_dc { 0 };
+    mxb::TimePoint              m_last_rebalancing;
+    bool                        m_force_rebalancing { false };
 };
 }

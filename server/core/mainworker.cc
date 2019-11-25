@@ -55,7 +55,7 @@ MainWorker::MainWorker(mxb::WatchdogNotifier* pNotifier)
 
     if (config.rebalance_period != std::chrono::milliseconds(0))
     {
-        order_balancing_cb(config.rebalance_period.get());
+        order_balancing_cb();
     }
 }
 
@@ -172,18 +172,7 @@ void MainWorker::start_rebalancing()
 
     if (m_rebalancing_dc == 0)
     {
-        std::chrono::milliseconds ms { config_get_global_options()->rebalance_period.get() };
-
-        if (ms != std::chrono::milliseconds(0))
-        {
-            MXS_NOTICE("Starting worker thread balancing with a period of %d milliseconds.",
-                       (int)ms.count());
-            order_balancing_cb(ms);
-        }
-        else
-        {
-            MXS_WARNING("Rebalancing period is 0, not starting.");
-        }
+        order_balancing_cb();
     }
     else
     {
@@ -251,35 +240,47 @@ bool MainWorker::inc_ticks(Worker::Call::action_t action)
 
 bool MainWorker::balance_workers(Worker::Call::action_t action)
 {
-    m_rebalancing_dc = 0;
+    bool rv = true;
 
     if (action == Worker::Call::EXECUTE)
     {
-        std::chrono::milliseconds ms { config_get_global_options()->rebalance_period.get() };
+        RoutingWorker::collect_worker_load();
 
-        if (ms != std::chrono::milliseconds(0))
+        std::chrono::milliseconds period = config_get_global_options()->rebalance_period.get();
+
+        if (period != std::chrono::milliseconds(0))
         {
-            if (config_get_global_options()->rebalance_threshold != 0)
+            mxb::TimePoint now = epoll_tick_now();
+
+            if (m_force_rebalancing || (now - m_last_rebalancing >= period))
             {
+                m_force_rebalancing = false;
+
                 if (RoutingWorker::balance_workers())
                 {
                     // Rebalancing has taken place, quickly rebalance again.
-                    ms = std::chrono::milliseconds(1000);
+                    m_force_rebalancing = true;
                 }
             }
 
-            order_balancing_cb(ms);
+            m_last_rebalancing = now;
+        }
+        else
+        {
+            m_rebalancing_dc = 0;
+            // Turn off delayed call.
+            rv = false;
         }
     }
 
-    return false;
+    return rv;
 }
 
-void MainWorker::order_balancing_cb(const std::chrono::milliseconds& ms)
+void MainWorker::order_balancing_cb()
 {
     mxb_assert(m_rebalancing_dc == 0);
 
-    m_rebalancing_dc = delayed_call(ms, &MainWorker::balance_workers, this);
+    m_rebalancing_dc = delayed_call(1000, &MainWorker::balance_workers, this);
 }
 
 }
