@@ -248,10 +248,23 @@ class AverageN : public Average
 public:
     using Data = std::vector<uint8_t>;
 
-    AverageN(int n, Average* pDependant = nullptr);
+    AverageN(size_t n, Average* pDependant = nullptr);
 
     bool add_value(uint8_t value);
     void update_value(uint8_t value);
+
+    size_t size() const
+    {
+        return m_buffer.size();
+    }
+
+    /**
+     * Resize the array of values. If made smaller than originally was,
+     * the oldest values are discarded.
+     *
+     * @param n The new size.
+     */
+    void resize(size_t n);
 
 private:
     Data::iterator prev(Data::iterator p);
@@ -263,6 +276,6 @@ private:
     Data::iterator m_end;     /*< Points to one past the end of the buffer. */
     Data::iterator m_i;       /*< Current position in the buffer. */
     uint32_t       m_sum;     /*< Sum of all values in the buffer. */
-    uint32_t       m_nValues; /*< How many values the buffer contains. */
+    size_t         m_nValues; /*< How many values the buffer contains. */
 };
 }

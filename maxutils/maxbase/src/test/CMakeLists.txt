@@ -9,6 +9,10 @@
 #)
 #add_test(test_mxb_http test_mxb_http)
 
+add_executable(test_average test_average.cc)
+target_link_libraries(test_average maxbase)
+add_test(test_average test_average)
+
 add_executable(test_mxb_log test_log.cc)
 target_link_libraries(test_mxb_log maxbase pthread rt)
 add_test(test_mxb_log test_mxb_log)

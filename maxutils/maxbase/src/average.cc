@@ -153,7 +153,7 @@ void Average1::update_value(uint8_t value)
     }
 }
 
-AverageN::AverageN(int n, Average* pDependant)
+AverageN::AverageN(size_t n, Average* pDependant)
     : Average(pDependant)
     , m_buffer(n)
     , m_begin(m_buffer.begin())
@@ -162,7 +162,7 @@ AverageN::AverageN(int n, Average* pDependant)
     , m_sum(0)
     , m_nValues(0)
 {
-    mxb_assert(n > 1);
+    mxb_assert(n >= 1);
 }
 
 bool AverageN::add_value(uint8_t value)
@@ -271,6 +271,50 @@ AverageN::Data::iterator AverageN::next(Data::iterator p)
     mxb_assert(p < m_end);
 
     return p;
+}
+
+void AverageN::resize(size_t n)
+{
+    mxb_assert(n > 0);
+
+    uint32_t nValues = std::min(n, m_nValues);
+    Data buffer(nValues);
+
+    if (m_nValues > 0)
+    {
+        int nSkip = m_nValues - n; // We skip the oldest values.
+
+        if (nSkip < 0)
+        {
+            nSkip = 0;
+        }
+
+        int i = ((m_i - m_begin) + nSkip) % m_nValues;
+        auto it = buffer.begin();
+
+        while (nValues)
+        {
+            *it++ = *(m_begin + i);
+            i = (i + 1) % m_nValues;
+            --nValues;
+        }
+    }
+
+    // Now buffer contains the relevant values.
+
+    m_buffer.resize(n);
+    m_begin = m_buffer.begin();
+    m_end = m_buffer.end();
+    m_i = m_begin;
+    m_sum = 0;
+    m_nValues = 0;
+
+    set_value(0);
+
+    for (auto value : buffer)
+    {
+        add_value(value);
+    }
 }
 
 }   // maxbase
