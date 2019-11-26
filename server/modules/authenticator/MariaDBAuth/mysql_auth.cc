@@ -246,285 +246,134 @@ AuthRes MariaDBClientAuthenticator::authenticate(DCB* generic_dcb, const UserEnt
     mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
 
-    auto auth_ret = AuthRes::SSL_READY;
+    auto auth_ret = AuthRes::FAIL;
     auto protocol = static_cast<MariaDBClientConnection*>(dcb->protocol());
     auto client_data = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
-    if (!client_data->user.empty())
+
+    switch (m_state)
     {
-        if (!m_correct_authenticator)
+    case State::SENDING_AUTHSWITCH:
         {
             // Client is attempting to use wrong authenticator, send switch request packet.
             GWBUF* switch_packet = gen_auth_switch_request_packet(client_data, protocol->scramble());
             if (dcb->writeq_append(switch_packet))
             {
-                m_auth_switch_sent = true;
-                return AuthRes::INCOMPLETE;
+                m_state = State::AUTHSWITCH_SENT;
+                auth_ret = AuthRes::INCOMPLETE;
             }
-            else
-            {
-                return AuthRes::FAIL;
-            }
+            break;
         }
 
-        auth_ret = validate_mysql_user(entry, client_data,
-                                       protocol->scramble(), MYSQL_SCRAMBLE_LEN,
-                                       client_data->auth_token, client_data->client_sha1);
-
-        /* on successful authentication, set user into dcb field */
-        if (auth_ret == AuthRes::SUCCESS)
+    case State::CHECK_TOKEN:
         {
-            dcb->session()->set_user(client_data->user);
-            /** Send an OK packet to the client */
+            auth_ret = validate_mysql_user(entry, client_data,
+                                           protocol->scramble(), MYSQL_SCRAMBLE_LEN,
+                                           client_data->auth_token, client_data->client_sha1);
+
+            /* on successful authentication, set user into dcb field */
+            if (auth_ret == AuthRes::SUCCESS)
+            {
+                dcb->session()->set_user(client_data->user);
+            }
+            else if (dcb->service()->config().log_auth_warnings)
+            {
+                // The default failure is a `User not found` one
+                char extra[256] = "User not found.";
+
+                if (auth_ret == AuthRes::FAIL_DB)
+                {
+                    snprintf(extra, sizeof(extra), "Unknown database: %s", client_data->db.c_str());
+                }
+                else if (auth_ret == AuthRes::FAIL_WRONG_PW)
+                {
+                    strcpy(extra, "Wrong password.");
+                }
+
+                MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE,
+                              "%s: login attempt for user '%s'@[%s]:%d, authentication failed. %s",
+                              dcb->service()->name(),
+                              client_data->user.c_str(),
+                              dcb->remote().c_str(),
+                              static_cast<ClientDCB*>(dcb)->port(),
+                              extra);
+
+                if (is_localhost_address(&dcb->ip())
+                    && !dcb->service()->config().localhost_match_wildcard_host)
+                {
+                    MXS_NOTICE("If you have a wildcard grant that covers this address, "
+                               "try adding 'localhost_match_wildcard_host=true' for "
+                               "service '%s'. ",
+                               dcb->service()->name());
+                }
+            }
         }
-        else if (dcb->service()->config().log_auth_warnings)
-        {
-            // The default failure is a `User not found` one
-            char extra[256] = "User not found.";
+        break;
 
-            if (auth_ret == AuthRes::FAIL_DB)
-            {
-                snprintf(extra, sizeof(extra), "Unknown database: %s", client_data->db.c_str());
-            }
-            else if (auth_ret == AuthRes::FAIL_WRONG_PW)
-            {
-                strcpy(extra, "Wrong password.");
-            }
-
-            MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE,
-                          "%s: login attempt for user '%s'@[%s]:%d, authentication failed. %s",
-                          dcb->service()->name(),
-                          client_data->user.c_str(),
-                          dcb->remote().c_str(),
-                          static_cast<ClientDCB*>(dcb)->port(),
-                          extra);
-
-            if (is_localhost_address(&dcb->ip()) && !dcb->service()->config().localhost_match_wildcard_host)
-            {
-                MXS_NOTICE("If you have a wildcard grant that covers this address, "
-                           "try adding 'localhost_match_wildcard_host=true' for "
-                           "service '%s'. ",
-                           dcb->service()->name());
-            }
-        }
-
-        client_data->auth_token.clear();
+    default:
+        mxb_assert(!true);
+        break;
     }
-
     return auth_ret;
 }
 
-/**
- * This function examines a buffer containing MySQL authentication data. If the information
- * in the buffer is invalid, then a failure code is returned. A call to
- * mysql_auth_set_client_data does the detailed work.
- *
- * @param buffer Pointer to pointer to buffer containing data from client
- * @return True on success, false on error
- */
 bool MariaDBClientAuthenticator::extract(GWBUF* buf, MYSQL_session* session)
 {
-    int client_auth_packet_size = gwbuf_length(buf);
+    bool error = false;
     auto client_data = session;
 
-    /* For clients supporting CLIENT_PROTOCOL_41
-     * the Handshake Response Packet is:
-     *
-     * 4            bytes mysql protocol heade
-     * 4            bytes capability flags
-     * 4            max-packet size
-     * 1            byte character set
-     * string[23]   reserved (all [0])
-     * ...
-     * ...
-     * Note that the fixed elements add up to 36
-     */
-
-    /* Check that the packet length is reasonable. The first packet needs to be sufficiently large to
-     * contain required data. If the buffer is unexpectedly large (likely an erroneous or malicious client),
-     * discard the packet as parsing it may cause overflow. The limit is just a guess, but it seems the
-     * packets from most plugins are < 100 bytes. */
-    if ((!m_auth_switch_sent
-         && (client_auth_packet_size >= MYSQL_AUTH_PACKET_BASE_SIZE && client_auth_packet_size < 1028))
-        // If the client is replying to an AuthSwitchRequest, the length is predetermined.
-        || (m_auth_switch_sent
-            && (client_auth_packet_size == MYSQL_HEADER_LEN + MYSQL_SCRAMBLE_LEN)))
+    switch (m_state)
     {
-        return set_client_data(client_data, buf);
-    }
-    else
-    {
-        /* Packet is not big enough */
-        return false;
-    }
-}
-
-/**
- * Helper function for reading a 0-terminated string safely from an array that may not be 0-terminated.
- * The output array should be long enough to contain any string that fits into the packet starting from
- * packet_length_used.
- */
-static bool read_zstr(const uint8_t* client_auth_packet, size_t client_auth_packet_size,
-                      int* packet_length_used, char* output)
-{
-    int null_char_ind = -1;
-    int start_ind = *packet_length_used;
-    for (size_t i = start_ind; i < client_auth_packet_size; i++)
-    {
-        if (client_auth_packet[i] == '\0')
+    case State::INIT:
+        // First, check that session is using correct plugin. The handshake response has already been
+        // parsed in protocol code.
+        if (client_data->plugin == DEFAULT_MYSQL_AUTH_PLUGIN)
         {
-            null_char_ind = i;
-            break;
-        }
-    }
-
-    if (null_char_ind >= 0)
-    {
-        if (output)
-        {
-            memcpy(output, client_auth_packet + start_ind, null_char_ind - start_ind + 1);
-        }
-        *packet_length_used = null_char_ind + 1;
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-}
-
-/**
- * @brief Transfer detailed data from the authentication request to the DCB.
- *
- * The caller has created the data structure pointed to by the DCB, and this
- * function fills in the details. If problems are found with the data, the
- * return code indicates failure.
- *
- * @param client_data The data structure for the DCB
- * @param buffer The authentication data.
- * @return True on success, false on error
- */
-bool MariaDBClientAuthenticator::set_client_data(MYSQL_session* client_data, GWBUF* buffer)
-{
-    int client_auth_packet_size = gwbuf_length(buffer);
-    uint8_t client_auth_packet[client_auth_packet_size];
-    gwbuf_copy_data(buffer, 0, client_auth_packet_size, client_auth_packet);
-
-    int packet_length_used = 0;
-
-    client_data->auth_token.clear();    // Usually no-op
-    m_correct_authenticator = false;
-
-    if (client_auth_packet_size > MYSQL_AUTH_PACKET_BASE_SIZE)
-    {
-        /* Should have a username */
-        uint8_t* name = client_auth_packet + MYSQL_AUTH_PACKET_BASE_SIZE;
-        uint8_t* end = client_auth_packet + sizeof(client_auth_packet);
-        int user_length = 0;
-
-        while (name < end && *name)
-        {
-            name++;
-            user_length++;
-        }
-
-        if (name == end)
-        {
-            // The name is not null terminated
-            return false;
-        }
-
-        if (client_auth_packet_size > (MYSQL_AUTH_PACKET_BASE_SIZE + user_length + 1))
-        {
-            /* Extra 1 is for the terminating null after user name */
-            packet_length_used = MYSQL_AUTH_PACKET_BASE_SIZE + user_length + 1;
-            /*
-             * We should find an authentication token next
-             * One byte of packet is the length of authentication token
-             */
-            int auth_token_len = client_auth_packet[packet_length_used];
-            packet_length_used++;
-
-            if (client_auth_packet_size < (packet_length_used + auth_token_len))
-            {
-                /* Packet was too small to contain authentication token */
-                return false;
-            }
-            else
-            {
-                uint8_t* copy_begin = client_auth_packet + packet_length_used;
-                uint8_t* copy_end = copy_begin + auth_token_len;
-                client_data->auth_token.assign(copy_begin, copy_end);
-                packet_length_used += auth_token_len;
-
-                auto client_capabilities = client_data->client_capabilities();
-                // Database name may be next. It has already been read and is skipped.
-                if (client_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB)
-                {
-                    if (!read_zstr(client_auth_packet, client_auth_packet_size,
-                                   &packet_length_used, NULL))
-                    {
-                        return false;
-                    }
-                }
-
-                // Authentication plugin name.
-                if (client_capabilities & GW_MYSQL_CAPABILITIES_PLUGIN_AUTH)
-                {
-                    int bytes_left = client_auth_packet_size - packet_length_used;
-                    if (bytes_left < 1)
-                    {
-                        return false;
-                    }
-                    else
-                    {
-                        char plugin_name[bytes_left];
-                        if (!read_zstr(client_auth_packet, client_auth_packet_size,
-                                       &packet_length_used, plugin_name))
-                        {
-                            return false;
-                        }
-                        else
-                        {
-                            // Check that the plugin is as expected. If not, make a note so the
-                            // authentication function switches the plugin.
-                            bool correct_auth = strcmp(plugin_name, DEFAULT_MYSQL_AUTH_PLUGIN) == 0;
-                            m_correct_authenticator = correct_auth;
-                            if (!correct_auth)
-                            {
-                                // The switch attempt is done later but the message is clearest if
-                                // logged at once.
-                                MXS_INFO("Client '%s'@'%s' is using an unsupported authenticator "
-                                         "plugin '%s'. Trying to switch to '%s'.",
-                                         client_data->user.c_str(), client_data->remote.c_str(),
-                                         plugin_name, DEFAULT_MYSQL_AUTH_PLUGIN);
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    m_correct_authenticator = true;
-                }
-            }
+            // Correct plugin, token should also have been read by protocol code.
+            m_state = State::CHECK_TOKEN;
         }
         else
         {
-            return false;
+            m_state = State::SENDING_AUTHSWITCH;
+            // The switch attempt is done later but the message is clearest if logged at once.
+            MXS_INFO("Client '%s'@'%s' is using an unsupported authenticator "
+                     "plugin '%s'. Trying to switch to '%s'.",
+                     client_data->user.c_str(), client_data->remote.c_str(),
+                     client_data->plugin.c_str(), DEFAULT_MYSQL_AUTH_PLUGIN);
         }
-    }
-    else if (m_auth_switch_sent)
-    {
-        // Client is replying to an AuthSwitch request. The packet should contain the authentication token.
-        // Length has already been checked.
-        mxb_assert(client_auth_packet_size == MYSQL_HEADER_LEN + MYSQL_SCRAMBLE_LEN);
-        uint8_t* copy_begin = client_auth_packet + MYSQL_HEADER_LEN;
-        uint8_t* copy_end = copy_begin + MYSQL_SCRAMBLE_LEN;
-        client_data->auth_token.assign(copy_begin, copy_end);
-        // Assume that correct authenticator is now used. If this is not the case, authentication fails.
-        m_correct_authenticator = true;
+        break;
+
+    case State::SENDING_AUTHSWITCH:
+        error = true;
+        mxb_assert(!true);
+        break;
+
+    case State::AUTHSWITCH_SENT:
+        {
+            // Client is replying to an AuthSwitch request. The packet should contain
+            // the authentication token.
+            if (gwbuf_length(buf) == MYSQL_HEADER_LEN + MYSQL_SCRAMBLE_LEN)
+            {
+                auto& auth_token = client_data->auth_token;
+                auth_token.clear();
+                auth_token.resize(MYSQL_SCRAMBLE_LEN);
+                gwbuf_copy_data(buf, MYSQL_HEADER_LEN, MYSQL_SCRAMBLE_LEN, auth_token.data());
+                // Assume that correct authenticator is now used. If this is not the case,
+                // authentication will fail.
+                m_state = State::CHECK_TOKEN;
+            }
+            else
+            {
+                error = true;
+            }
+        }
+        break;
+
+    case State::CHECK_TOKEN:
+        // Continue to authenticate().
+        break;
     }
 
-    return true;
+    return !error;
 }
 
 /**

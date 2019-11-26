@@ -155,6 +155,15 @@ public:
                            const ByteVec& auth_token, uint8_t* output_token) override;
 
 private:
+
+    enum class State
+    {
+        INIT,
+        SENDING_AUTHSWITCH,
+        AUTHSWITCH_SENT,
+        CHECK_TOKEN
+    };
+
     /**
      * @brief Verify the user has access to the database
      *
@@ -171,10 +180,10 @@ private:
                                 const mariadb::ClientAuthenticator::ByteVec& auth_token,
                                 uint8_t* phase2_scramble_out);
     bool check_database(sqlite3* handle, const char* database);
-    bool set_client_data(MYSQL_session* client_data, GWBUF* buffer);
+    bool set_client_data(MYSQL_session* client_data);
+    void read_auth_switch_response(MYSQL_session* client_data, GWBUF* buffer);
 
-    bool m_correct_authenticator {false};   /*< Is session using mysql_native_password? */
-    bool m_auth_switch_sent {false};        /*< Expecting a response to AuthSwitchRequest? */
+    State m_state {State::INIT};
 };
 
 /** Structure representing the authentication state */
