@@ -1283,10 +1283,6 @@ bool RoutingWorker::balance_workers()
         return balancing;
     }
 
-    double offset = threshold / 100.0;
-
-    double total_load = 0;
-
     int min_load = 100;
     int max_load = 0;
     RoutingWorker* pTo = nullptr;
@@ -1310,30 +1306,17 @@ bool RoutingWorker::balance_workers()
             max_load = load;
             pFrom = pWorker;
         }
-
-        total_load += load;
     }
 
-    double avg_load = total_load / this_unit.nWorkers;
+    int diff_load = max_load - min_load;
 
-    if (max_load > avg_load * (1 + offset))
+    if (diff_load > threshold)
     {
-        MXS_NOTICE("Worker %d load %d exceeds average load %d by more than %d%%, reducing its workload.",
-                   pFrom->id(), max_load, (int)avg_load, threshold);
+        MXS_NOTICE("Difference in load (%d) between the thread with the maximum load (%d) the thread "
+                   "with the minimum load (%d) exceeds the 'rebalance_threshold' value of %d, "
+                   "moving work from the latter to the former.",
+                   diff_load, max_load, min_load, threshold);
         balancing = true;
-    }
-    else if (min_load < avg_load * (1 - offset))
-    {
-        MXS_NOTICE("Worker %d load %d is below average load %d by more than %d%%, increasing its workload.",
-                   pTo->id(), min_load, (int)avg_load, threshold);
-        balancing = true;
-    }
-    else
-    {
-        MXS_NOTICE("The load of no worker is > %d%% higher/lower than the average load %d, not balancing.",
-                   threshold, (int)avg_load);
-        pFrom = nullptr;
-        pTo = nullptr;
     }
 
     if (balancing)

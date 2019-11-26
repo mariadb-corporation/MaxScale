@@ -387,19 +387,16 @@ moved from one thread to another.
 
 ### `rebalance_threshold`
 
-This parameter controls at which point MaxScale should start moving work
-from one worker thread to another, if the load of the threads is different.
-The value should be a percentage, that is, an integer between 0 and 100,
-and it is interpreted as follows.
+This integer parameter controls at which point MaxScale should start
+moving work from one worker thread to another.
 
-If the load of a particular thread is _larger_ than the average load by as
-many percentage points as specified, then MaxScale will start moving sessions
-from that thread to other threads. If there is no such thread, then if the
-load of a particular thread is _smaller_ than the average load by as many
-percentage points as specified, then MaxScale will start moving sessions
-from other threads to that thread.
+If the difference in load between the thread with the maximum load and
+the thread with the minimum load is larger than the value of this parameter,
+then work will be moved from the former to the latter.
 
-The default value is 0, which means that no rebalancing will occur.
+Since the load of a thread can vary between 0 and 100, the value of this
+parameter must be between 0 and 100. However, a value of 0, which is also
+the default, means that no rebalancing will occur.
 
 Note that rebalancing will not be performed unless `rebalance_period`
 has also been specified.
