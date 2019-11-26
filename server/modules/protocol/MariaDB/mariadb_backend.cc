@@ -486,7 +486,7 @@ bool MariaDBBackendConnection::session_ok_to_route(DCB* dcb)
             auto client_protocol = static_cast<MariaDBClientConnection*>(client_dcb->protocol());
             if (client_protocol)
             {
-                if (client_protocol->m_auth_state == MariaDBClientConnection::AuthState::COMPLETE)
+                if (client_protocol->m_state == MariaDBClientConnection::State::READY)
                 {
                     rval = true;
                 }

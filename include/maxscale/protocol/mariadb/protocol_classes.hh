@@ -62,6 +62,7 @@ public:
     std::string user;                               /*< username       */
     std::string remote;                             /*< client ip      */
     std::string db;                                 /*< database       */
+    std::string plugin;                             /*< authentication plugin requested by client */
     uint8_t     next_sequence {0};                  /*< Next packet sequence */
     bool        changing_user {false};              /*< True if a COM_CHANGE_USER is in progress */
 

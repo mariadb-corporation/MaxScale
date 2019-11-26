@@ -53,6 +53,7 @@ using AuthRes = mariadb::ClientAuthenticator::AuthRes;
 using SUserEntry = std::unique_ptr<mariadb::UserEntry>;
 
 const char WORD_KILL[] = "KILL";
+const int CLIENT_CAPABILITIES_LEN = 32;
 
 std::string get_version_string(SERVICE* service)
 {
@@ -376,37 +377,35 @@ bool is_kill_query(GWBUF* buffer, size_t packet_len)
 }
 }
 
-AuthRes MariaDBClientConnection::ssl_authenticate_check_status(DCB* generic_dcb)
+MariaDBClientConnection::SSLState MariaDBClientConnection::ssl_authenticate_check_status()
 {
-    mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
-    auto dcb = static_cast<ClientDCB*>(generic_dcb);
+    auto rval = SSLState::FAIL;
 
-    AuthRes rval = AuthRes::FAIL;
     /**
      * We record the SSL status before and after ssl authentication. This allows
      * us to detect if the SSL handshake is immediately completed, which means more
      * data needs to be read from the socket.
      */
-    bool health_before = ssl_is_connection_healthy(dcb);
-    int ssl_ret = ssl_authenticate_client(dcb, m_session_data->ssl_capable());
-    bool health_after = ssl_is_connection_healthy(dcb);
+    bool health_before = ssl_is_connection_healthy(m_dcb);
+    int ssl_ret = ssl_authenticate_client(m_dcb, m_session_data->ssl_capable());
+    bool health_after = ssl_is_connection_healthy(m_dcb);
 
     if (ssl_ret != 0)
     {
-        rval = (ssl_ret == SSL_ERROR_CLIENT_NOT_SSL) ? AuthRes::FAIL_SSL : AuthRes::FAIL;
+        rval = (ssl_ret == SSL_ERROR_CLIENT_NOT_SSL) ? SSLState::NOT_CAPABLE : SSLState::FAIL;
     }
     else if (!health_after)
     {
-        rval = AuthRes::INCOMPLETE_SSL;
+        rval = SSLState::INCOMPLETE;
     }
     else if (!health_before && health_after)
     {
-        rval = AuthRes::INCOMPLETE_SSL;
-        dcb->trigger_read_event();
+        rval = SSLState::INCOMPLETE;
+        m_dcb->trigger_read_event();
     }
     else if (health_before && health_after)
     {
-        rval = AuthRes::SSL_READY;
+        rval = SSLState::COMPLETE;
     }
     return rval;
 }
@@ -689,9 +688,9 @@ int MariaDBClientConnection::send_mysql_client_handshake()
     *mysql_handshake_payload = 0x00;
 
     // writing data in the Client buffer queue
-    m_dcb->protocol_write(buf);
-    m_auth_state = AuthState::MSG_READ;
+    write(buf);
 
+    m_state = State::AUTHENTICATING;
     return sizeof(mysql_packet_header) + mysql_payload_size;
 }
 
@@ -841,178 +840,240 @@ void MariaDBClientConnection::handle_authentication_errors(DCB* generic_dcb, Aut
 /**
  * @brief Client read event, process when client not yet authenticated
  *
- * @param read_buffer   A buffer containing the data read from client
- * @param nbytes_read   The number of bytes of data read
+ * @param buffer A buffer containing the data read from client
  * @return 0 if succeed, 1 otherwise
  */
-int MariaDBClientConnection::perform_authentication(GWBUF* read_buffer, int nbytes_read)
+int MariaDBClientConnection::perform_authentication(GWBUF* buffer)
 {
-    MXB_AT_DEBUG(check_packet(m_dcb, read_buffer, nbytes_read));
-
-    /** Read the client's packet sequence. */
-    uint8_t sequence;
-    gwbuf_copy_data(read_buffer, MYSQL_SEQ_OFFSET, 1, &sequence);
-
-    /**
-     * Check if this is the first (or second) response from the client. If yes, read connection info
-     * and store it in the session. For SSL connections, both packets 1 & 2 are read. The first SSL
-     * packet is the Protocol::SSLRequest packet.
-     *
-     * @see https://mariadb.com/kb/en/library/connection/#client-handshake-response
-     */
-    bool using_ssl = ssl_required_by_dcb(m_dcb);
-    if (sequence == 1 || (sequence == 2 && using_ssl))
-    {
-        store_client_information(read_buffer);
-    }
-
-    auto auth_val = AuthRes::INCOMPLETE;
-    bool client_data_ready = (sequence >= 2) || (sequence == 1 && !using_ssl);
-    bool ssl_ready = false;
-    if (using_ssl)
-    {
-        auth_val = ssl_authenticate_check_status(m_dcb);
-        if (auth_val == AuthRes::SSL_READY)
-        {
-            ssl_ready = true;
-        }
-    }
-    else
-    {
-        ssl_ready = true;
-    }
-
     // Save next sequence to session. Authenticator may use the value.
-    m_session_data->next_sequence = sequence + 1;
+    uint8_t sequence = 0;
+    gwbuf_copy_data(buffer, MYSQL_SEQ_OFFSET, 1, &sequence);
+    auto* next_seq = &m_session_data->next_sequence;
+    *next_seq = sequence + 1;
 
-    if (ssl_ready && client_data_ready && !m_authenticator)
+    const char wrong_sequence[] = "Client (%s) sent packet with unexpected sequence number. "
+                                  "Expected %i, got %i.";
+
+    bool error = false;
+    bool state_machine_continue = true;
+    while (state_machine_continue)
     {
-        auto search_settings = user_search_settings();
-        // The correct authenticator is chosen here (and also in reauthenticate_client()).
-        auto users = user_account_cache();
-        auto entry = users->find_user(m_session_data->user, m_session_data->remote, m_session_data->db,
-                                      search_settings);
-
-        bool found_good_entry = false;
-        if (entry)
+        switch (m_auth_state)
         {
-            mariadb::AuthenticatorModule* selected_module = nullptr;
-            auto& auth_modules = *(m_session_data->allowed_authenticators);
-            for (const auto& auth_module : auth_modules)
+        case AuthState::INIT:
+            m_auth_state = ssl_required_by_dcb(m_dcb) ? AuthState::EXPECT_SSL_REQ :
+                AuthState::EXPECT_HS_RESP;
+            break;
+
+        case AuthState::EXPECT_SSL_REQ:
             {
-                if (auth_module->supported_plugins().count(entry->plugin))
+                // Expecting SSLRequest
+                if (sequence == 1)
                 {
-                    // Found correct authenticator for the user entry.
-                    selected_module = auth_module.get();
-                    break;
+                    if (parse_ssl_request_packet(buffer))
+                    {
+                        m_auth_state = AuthState::SSL_NEG;
+                    }
+                    else
+                    {
+                        MXB_ERROR("Client (%s) sent an invalid SSLRequest.", m_session_data->remote.c_str());
+                        m_auth_state = AuthState::FAIL;
+                    }
+                }
+                else
+                {
+                    MXB_ERROR(wrong_sequence, m_session_data->remote.c_str(), 1, sequence);
+                    m_auth_state = AuthState::FAIL;
                 }
             }
+            break;
 
-            if (selected_module)
+        case AuthState::SSL_NEG:
             {
-                // Save related data so that later calls do not need to perform the same work.
-                m_user_entry = std::move(entry);
-                m_session_data->m_current_authenticator = selected_module;
-                m_authenticator = selected_module->create_client_authenticator();
-                found_good_entry = true;
+                // Client should be negotiating ssl.
+                auto ssl_status = ssl_authenticate_check_status();
+                if (ssl_status == SSLState::COMPLETE)
+                {
+                    m_auth_state = AuthState::EXPECT_HS_RESP;
+                }
+                else if (ssl_status == SSLState::INCOMPLETE)
+                {
+                    // SSL negotiation should complete in the background. Execution returns here once
+                    // complete.
+                    state_machine_continue = false;
+                }
+                else
+                {
+                    MXB_ERROR("Client (%s) failed SSL negotiation.", m_session_data->remote.c_str());
+                    m_auth_state = AuthState::FAIL;
+                }
+            }
+            break;
+
+        case AuthState::EXPECT_HS_RESP:
+            {
+                // Expecting normal Handshake response
+                // @see https://mariadb.com/kb/en/library/connection/#client-handshake-response
+                int expected_seq = ssl_required_by_dcb(m_dcb) ? 2 : 1;
+                if (sequence == expected_seq)
+                {
+                    if (parse_handshake_response_packet(buffer))
+                    {
+                        m_auth_state = AuthState::PREPARE_AUTH;
+                    }
+                    else
+                    {
+                        MXB_ERROR("Client (%s) send an invalid HandShakeResponse.",
+                                  m_session_data->remote.c_str());
+                        m_auth_state = AuthState::FAIL;
+                    }
+                }
+                else
+                {
+                    MXB_ERROR(wrong_sequence, m_session_data->remote.c_str(), expected_seq, sequence);
+                    m_auth_state = AuthState::FAIL;
+                }
+            }
+            break;
+
+        case AuthState::PREPARE_AUTH:
+            if (prepare_authentication())
+            {
+                m_auth_state = AuthState::AUTHENTICATING;
             }
             else
             {
-                MXB_INFO("User entry '%s@'%s' uses unrecognized authenticator plugin '%s'. "
-                         "Cannot authenticate user.",
-                         entry->username.c_str(), entry->host_pattern.c_str(), entry->plugin.c_str());
+                m_auth_state = AuthState::FAIL;
             }
-        }
+            break;
 
-        if (!found_good_entry)
-        {
-            // User data may be outdated, send update message through the service. The current session
-            // will fail.
-            m_session->service->notify_authentication_failed();
-            auth_val = AuthRes::FAIL;
-        }
-    }
-
-
-    /**
-     * The first step in the authentication process is to extract the relevant information from
-     * the buffer supplied. The "success" result is not final, it implies only that the process is so
-     * far successful.  If the data extraction succeeds, then a call is made to the actual authenticate
-     * function to carry out the user checks.
-     */
-    if (m_authenticator)
-    {
-        if (m_authenticator->extract(read_buffer, m_session_data))
-        {
-            auth_val = m_authenticator->authenticate(m_dcb, m_user_entry.get());
-            if (auth_val == AuthRes::FAIL_WRONG_PW)
+        case AuthState::AUTHENTICATING:
             {
-                // Again, this may be because user data is obsolete.
-                m_session->service->notify_authentication_failed();
+                auto auth_val = AuthRes::FAIL;
+                if (m_authenticator->extract(buffer, m_session_data))
+                {
+                    auth_val = m_authenticator->authenticate(m_dcb, m_user_entry.get());
+                    if (auth_val == AuthRes::FAIL_WRONG_PW)
+                    {
+                        // Again, this may be because user data is obsolete.
+                        m_session->service->notify_authentication_failed();
+                    }
+                }
+                else
+                {
+                    auth_val = AuthRes::BAD_HANDSHAKE;
+                }
+
+                if (auth_val == AuthRes::SUCCESS)
+                {
+                    m_auth_state = AuthState::START_SESSION;
+                }
+                else if (auth_val == AuthRes::INCOMPLETE || auth_val == AuthRes::INCOMPLETE_SSL)
+                {
+                    // Authentication is expecting another packet from client, so jump out.
+                    state_machine_continue = false;
+                }
+                else
+                {
+                    // Authentication failed.
+                    m_auth_state = AuthState::FAIL;
+                    handle_authentication_errors(m_dcb, auth_val, m_session_data->next_sequence);
+                    mxb_assert(m_session->listener);
+                    m_session->listener->mark_auth_as_failed(m_dcb->remote());
+                }
             }
-        }
-        else
-        {
-            auth_val = AuthRes::BAD_HANDSHAKE;
-        }
-    }
+            break;
 
-    if (auth_val == AuthRes::SUCCESS)
-    {
-        /** User authentication complete, copy the username to the DCB */
-        m_session->set_user(m_session_data->user);
-        m_auth_state = AuthState::RESPONSE_SENT;
+        case AuthState::START_SESSION:
+            // Authentication success, initialize session.
+            m_session->set_user(m_session_data->user);
 
-        /**
-         * Start session, and a router session for it. If successful, there will be backend connection(s)
-         * after this point. The protocol authentication state is changed so that future data will go
-         * through the normal data handling function instead of this one.
-         */
-        if (session_start(m_session))
-        {
-            mxb_assert(m_session->state() != MXS_SESSION::State::CREATED);
-            m_sql_mode = m_session->listener->sql_mode();
-            m_auth_state = AuthState::COMPLETE;
-            mxs_mysql_send_ok(m_dcb, m_session_data->next_sequence, 0, NULL);
-
-            if (m_dcb->readq())
+            if (session_start(m_session))
             {
-                // The user has already send more data, process it
-                m_dcb->trigger_read_event();
+                mxb_assert(m_session->state() != MXS_SESSION::State::CREATED);
+                m_sql_mode = m_session->listener->sql_mode();
+                mxs_mysql_send_ok(m_dcb, m_session_data->next_sequence, 0, NULL);
+                m_auth_state = AuthState::COMPLETE;
+
+                if (m_dcb->readq())
+                {
+                    // The user has already send more data, process it
+                    m_dcb->trigger_read_event();
+                }
             }
-        }
-        else
-        {
-            auth_val = AuthRes::NO_SESSION;
+            else
+            {
+                MXB_ERROR("Failed to create session for '%s'@'%s'.", "a", "b");
+                m_auth_state = AuthState::FAIL;
+            }
+            break;
+
+        case AuthState::COMPLETE:
+            m_state = State::READY;
+            state_machine_continue = false;
+            break;
+
+        case AuthState::FAIL:
+            // Close DCB. Will release session.
+            m_state = State::FAILED;
+            DCB::close(m_dcb);
+            state_machine_continue = false;
+            error = true;
+            break;
         }
     }
 
-    /**
-     * If we did not get success throughout or authentication is not yet complete,
-     * then the protocol state is updated, the client is notified of the failure
-     * and the DCB is closed.
-     */
-    if (auth_val != AuthRes::SUCCESS && auth_val != AuthRes::INCOMPLETE
-        && auth_val != AuthRes::INCOMPLETE_SSL)
-    {
-        m_auth_state = AuthState::FAIL;
-        handle_authentication_errors(m_dcb, auth_val, m_session_data->next_sequence);
-        mxb_assert(m_session->listener);
-
-        // MXS_AUTH_NO_SESSION is for failure to start session, not authentication failure
-        if (auth_val != AuthRes::NO_SESSION)
-        {
-            m_session->listener->mark_auth_as_failed(m_dcb->remote());
-        }
-
-        /**
-         * Close DCB and which will release MYSQL_session
-         */
-        DCB::close(m_dcb);
-    }
     /* One way or another, the buffer is now fully processed */
-    gwbuf_free(read_buffer);
-    return 0;
+    gwbuf_free(buffer);
+    return error ? 1 : 0;
+}
+
+bool MariaDBClientConnection::prepare_authentication()
+{
+    auto search_settings = user_search_settings();
+    // The correct authenticator is chosen here (and also in reauthenticate_client()).
+    auto users = user_account_cache();
+    auto entry = users->find_user(m_session_data->user, m_session_data->remote, m_session_data->db,
+                                  search_settings);
+
+    bool found_good_entry = false;
+    if (entry)
+    {
+        mariadb::AuthenticatorModule* selected_module = nullptr;
+        auto& auth_modules = *(m_session_data->allowed_authenticators);
+        for (const auto& auth_module : auth_modules)
+        {
+            if (auth_module->supported_plugins().count(entry->plugin))
+            {
+                // Found correct authenticator for the user entry.
+                selected_module = auth_module.get();
+                break;
+            }
+        }
+
+        if (selected_module)
+        {
+            // Save related data so that later calls do not need to perform the same work.
+            m_user_entry = std::move(entry);
+            m_session_data->m_current_authenticator = selected_module;
+            m_authenticator = selected_module->create_client_authenticator();
+            found_good_entry = true;
+        }
+        else
+        {
+            MXB_INFO("User entry '%s@'%s' uses unrecognized authenticator plugin '%s'. "
+                     "Cannot authenticate user.",
+                     entry->username.c_str(), entry->host_pattern.c_str(), entry->plugin.c_str());
+        }
+    }
+
+    if (!found_good_entry)
+    {
+        // User data may be outdated, send update message through the service. The current session
+        // will fail.
+        m_session->service->notify_authentication_failed();
+    }
+    return found_good_entry && m_authenticator;
 }
 
 /**
@@ -1758,7 +1819,6 @@ int MariaDBClientConnection::perform_normal_read(GWBUF* read_buffer, uint32_t nb
 void MariaDBClientConnection::ready_for_reading(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);     // The protocol should only handle its own events.
-    MXS_DEBUG("Protocol state: %s", to_string(m_auth_state).c_str());
 
     /**
      * The use of max_bytes seems like a hack, but no better option is available
@@ -1808,7 +1868,7 @@ void MariaDBClientConnection::ready_for_reading(DCB* event_dcb)
 
     return_code = 0;
 
-    switch (m_auth_state)
+    switch (m_state)
     {
     /**
      *
@@ -1822,7 +1882,7 @@ void MariaDBClientConnection::ready_for_reading(DCB* event_dcb)
      * will be changed to MYSQL_IDLE (see below).
      *
      */
-    case AuthState::MSG_READ:
+    case State::AUTHENTICATING:
         if (nbytes_read < 3
             || (0 == max_bytes && nbytes_read < MYSQL_GET_PACKET_LEN(read_buffer))
             || (0 != max_bytes && nbytes_read < max_bytes))
@@ -1840,23 +1900,17 @@ void MariaDBClientConnection::ready_for_reading(DCB* event_dcb)
                 m_dcb->readq_set(readq);
             }
 
-            return_code = perform_authentication(read_buffer, nbytes_read);
+            return_code = perform_authentication(read_buffer);
         }
         break;
 
-    /**
-     *
-     * Once a client connection is authenticated, the protocol authentication
-     * state will be MYSQL_IDLE and so every event of data received will
-     * result in a call that comes to this section of code.
-     *
-     */
-    case AuthState::COMPLETE:
+    // Client connection is authenticated.
+    case State::READY:
         /* After this call read_buffer will point to freed data */
         return_code = perform_normal_read(read_buffer, nbytes_read);
         break;
 
-    case AuthState::FAIL:
+    case State::FAILED:
         gwbuf_free(read_buffer);
         return_code = 1;
         break;
@@ -1865,8 +1919,6 @@ void MariaDBClientConnection::ready_for_reading(DCB* event_dcb)
         MXS_ERROR("In mysql_client.c unexpected protocol authentication state");
         break;
     }
-
-    return;
 }
 
 int32_t MariaDBClientConnection::write(GWBUF* queue)
@@ -1878,7 +1930,7 @@ void MariaDBClientConnection::write_ready(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);
     mxb_assert(m_dcb->state() != DCB::State::DISCONNECTED);
-    if ((m_dcb->state() != DCB::State::DISCONNECTED) && (m_auth_state == AuthState::COMPLETE))
+    if ((m_dcb->state() != DCB::State::DISCONNECTED) && (m_state == State::READY))
     {
         m_dcb->writeq_drain();
     }
@@ -2321,23 +2373,17 @@ std::string MariaDBClientConnection::to_string(AuthState state)
 {
     switch (state)
     {
-        case AuthState::INIT:
-            return "Authentication initialized";
+    case AuthState::INIT:
+        return "Authentication initialized";
 
-        case AuthState::MSG_READ:
-            return "Read server handshake";
+    case AuthState::FAIL:
+        return "Authentication failed";
 
-        case AuthState::RESPONSE_SENT:
-            return "Response to handshake sent";
+    case AuthState::COMPLETE:
+        return "Authentication is complete.";
 
-        case AuthState::FAIL:
-            return "Authentication failed";
-
-        case AuthState::COMPLETE:
-            return "Authentication is complete.";
-
-        default:
-            return "MySQL (unknown protocol state)";
+    default:
+        return "MySQL (unknown protocol state)";
     }
 }
 
@@ -2354,4 +2400,192 @@ mariadb::UserSearchSettings MariaDBClientConnection::user_search_settings() cons
     rval.allow_root_user = service_settings.enable_root;
     rval.localhost_match_wildcard_host = service_settings.localhost_match_wildcard_host;
     return rval;
+}
+
+bool MariaDBClientConnection::parse_ssl_request_packet(GWBUF* buffer)
+{
+    size_t len = gwbuf_length(buffer);
+    // The packet length should be exactly header + 32 = 36 bytes.
+    bool rval = false;
+    if (len == MYSQL_HEADER_LEN + CLIENT_CAPABILITIES_LEN)
+    {
+        uint8_t data[CLIENT_CAPABILITIES_LEN];
+        gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, CLIENT_CAPABILITIES_LEN, data);
+        parse_client_capabilities(data);
+        rval = true;
+    }
+    return rval;
+}
+
+bool MariaDBClientConnection::parse_handshake_response_packet(GWBUF* buffer)
+{
+    size_t buflen = gwbuf_length(buffer);
+    bool rval = false;
+
+    /**
+     * The packet should contain client capabilities at the beginning. Some other fields are also
+     * obligatory, so length should be at least 38 bytes. Likely there is more.
+     *
+     * Use a maximum limit as well to prevent stack overflow with malicious clients. The limit
+     * is just a guess, but it seems the packets from most plugins are < 100 bytes.
+     */
+    size_t min_expected_len = MYSQL_HEADER_LEN + CLIENT_CAPABILITIES_LEN + 2;
+    auto max_expected_len = min_expected_len + MYSQL_USER_MAXLEN + MYSQL_DATABASE_MAXLEN + 1000;
+    if ((buflen >= min_expected_len) && buflen <= max_expected_len)
+    {
+        int datalen = buflen - MYSQL_HEADER_LEN;
+        uint8_t data[datalen + 1];
+        gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, datalen, data);
+        data[datalen] = '\0';   // Simplifies some later parsing.
+        parse_client_capabilities(data);
+        rval = parse_client_response(data + CLIENT_CAPABILITIES_LEN, datalen - CLIENT_CAPABILITIES_LEN);
+    }
+    return rval;
+}
+
+/**
+ * Parse 32 bytes of client capabilities.
+ *
+ * @param data Data array. Should be at least 32 bytes.
+ */
+void MariaDBClientConnection::parse_client_capabilities(const uint8_t* data)
+{
+    MYSQL_session* ses = m_session_data;
+    auto capabilities = ses->client_info.m_client_capabilities;
+    // Can assume that client capabilities are in the first 32 bytes and the buffer is large enough.
+
+    /**
+     * We OR the capability bits in order to retain the starting bits sent
+     * when an SSL connection is opened. Oracle Connector/J 8.0 appears to drop
+     * the SSL capability bit mid-authentication which causes MaxScale to think
+     * that SSL is not used.
+     */
+    capabilities |= gw_mysql_get_byte4(data);
+    data += 4;
+
+    // Next is max packet size, skip it.
+    data += 4;
+
+    ses->client_info.m_charset = *data;
+    data += 1;
+
+    // Next, 19 bytes of reserved filler. Skip.
+    data += 19;
+
+    /**
+     * Next, 4 bytes of extra capabilities. Not always used.
+     * MariaDB 10.2 compatible clients don't set the first bit to signal that
+     * there are extra capabilities stored in the last 4 bytes of the filler.
+     */
+    if ((capabilities & GW_MYSQL_CAPABILITIES_CLIENT_MYSQL) == 0)
+    {
+        ses->client_info.m_extra_capabilities |= gw_mysql_get_byte4(data);
+    }
+
+    ses->client_info.m_client_capabilities = capabilities;
+}
+
+/**
+ * Parse username, database etc from client handshake response. Client capabilities should have
+ * already been parsed.
+ *
+ * @param data Start of data. Buffer should be long enough to contain at least one item.
+ * @param data_len Data length
+ * @return
+ */
+bool MariaDBClientConnection::parse_client_response(const uint8_t* data, int data_len)
+{
+    auto ptr = (const char*)data;
+    auto end = ptr + data_len;
+
+    // A null-terminated username should be first.
+    auto userz = (const char*)data;
+    auto userlen = strlen(userz);   // Cannot overrun since caller added 0 to end of buffer.
+    ptr += userlen + 1;
+
+    bool error = false;
+    auto client_caps = m_session_data->client_info.m_client_capabilities;
+
+    auto read_str = [client_caps, end, &ptr, &error](uint32_t required_capability, const char** output) {
+            if (client_caps & required_capability)
+            {
+                if (ptr < end)
+                {
+                    auto result = ptr;
+                    *output = result;
+                    ptr += strlen(result) + 1;      // Should be null-terminated.
+                }
+                else
+                {
+                    error = true;
+                }
+            }
+        };
+
+
+    if (ptr < end)
+    {
+        // Next is authentication response. The length is encoded in different forms depending on
+        // capabilities.
+        const char* auth_token = nullptr;
+        int auth_token_len = -1;
+        if (client_caps & GW_MYSQL_CAPABILITIES_AUTH_LENENC_DATA)
+        {
+            // Not supported yet. Doesn't seem to be used. TODO: handle
+            MXB_ERROR("Unsupported handshake response.");
+            error = true;
+        }
+        else if (client_caps & GW_MYSQL_CAPABILITIES_SECURE_CONNECTION)
+        {
+            // First token length 1 byte, then token data.
+            auth_token_len = *ptr;
+            ptr += 1;
+            if (auth_token_len >= 0 && end - ptr >= auth_token_len)
+            {
+                auth_token = ptr;
+                ptr += auth_token_len;
+            }
+            else
+            {
+                error = true;
+            }
+        }
+        else
+        {
+            // MariaDB and MySQL documentation differ for this case. Trust MariaDB for now.
+            ptr++;      // 1 byte of filler.
+        }
+
+        // The following fields are optional.
+        const char* db = nullptr;
+        read_str(GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB, &db);
+
+        const char* plugin = nullptr;
+        read_str(GW_MYSQL_CAPABILITIES_PLUGIN_AUTH, &plugin);
+
+        // TODO: read client attributes
+
+        if (!error)
+        {
+            // Success, save data to session.
+            m_session_data->user = userz;
+            if (auth_token)
+            {
+                auto& ses_auth_token = m_session_data->auth_token;
+                ses_auth_token.resize(auth_token_len);
+                ses_auth_token.assign(auth_token, auth_token + auth_token_len);
+            }
+
+            if (db)
+            {
+                m_session_data->db = db;
+            }
+
+            if (plugin)
+            {
+                m_session_data->plugin = plugin;
+            }
+        }
+    }
+    return !error;
 }

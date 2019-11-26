@@ -39,11 +39,25 @@ public:
         RES_END,        // Query handling completed, do not send to filters/router.
     };
 
+    // General connection state
+    enum class State
+    {
+        INIT,
+        AUTHENTICATING,
+        READY,
+        FAILED
+    };
+
+    // Authentication state
     enum class AuthState
     {
         INIT,           /**< Initial authentication state */
-        MSG_READ,       /**< Read an authentication message from the server */
-        RESPONSE_SENT,  /**< Responded to the read authentication message */
+        EXPECT_SSL_REQ, /**< Expecting client to send SSLRequest */
+        SSL_NEG,        /**< Negotiate SSL*/
+        EXPECT_HS_RESP, /**< Expecting client to send standard handshake response */
+        PREPARE_AUTH,
+        AUTHENTICATING,
+        START_SESSION,
         FAIL,           /**< Authentication failed */
         COMPLETE,       /**< Authentication is complete */
     };
@@ -68,13 +82,15 @@ public:
     void           mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t target_id, kill_type_t type);
     const uint8_t* scramble() const;
 
-    // TODO: move to private
-    AuthState m_auth_state {AuthState::INIT};       /*< Client authentication state */
+    State m_state {State::INIT};
 
 private:
-    int            perform_authentication(GWBUF* read_buffer, int nbytes_read);
-    int            perform_normal_read(GWBUF* read_buffer, uint32_t nbytes_read);
-    void           store_client_information(GWBUF* buffer);
+    int  perform_authentication(GWBUF* buffer);
+    int  perform_normal_read(GWBUF* read_buffer, uint32_t nbytes_read);
+    void store_client_information(GWBUF* buffer);
+    bool parse_handshake_response_packet(GWBUF* buffer);
+    bool parse_ssl_request_packet(GWBUF* buffer);
+
     int            route_by_statement(uint64_t capabilities, GWBUF** p_readbuf);
     spec_com_res_t process_special_commands(DCB* dcb, GWBUF* read_buffer, uint8_t cmd);
     bool           handle_change_user(bool* changed_user, GWBUF** packetbuf);
@@ -95,27 +111,40 @@ private:
     void   track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf);
     void   mxs_mysql_execute_kill_all_others(MXS_SESSION* issuer, uint64_t target_id,
                                              uint64_t keep_protocol_thread_id, kill_type_t type);
-    void  mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_type_t type);
-    void  execute_kill(MXS_SESSION* issuer, std::shared_ptr<KillInfo> info);
-    void  track_current_command(GWBUF* buf);
+    void mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_type_t type);
+    void execute_kill(MXS_SESSION* issuer, std::shared_ptr<KillInfo> info);
+    void track_current_command(GWBUF* buf);
 
-    mariadb::UserSearchSettings           user_search_settings() const;
-    const MariaDBUserCache*               user_account_cache();
-    mariadb::ClientAuthenticator::AuthRes ssl_authenticate_check_status(DCB* generic_dcb);
-    static std::string                    to_string(AuthState state);
+    void parse_client_capabilities(const uint8_t* data);
+    bool parse_client_response(const uint8_t* data, int data_len);
+    bool prepare_authentication();
 
-    mariadb::SClientAuth m_authenticator;                /**< Client authentication data */
-    std::unique_ptr<mariadb::UserEntry> m_user_entry;    /**< Client user entry */
+    mariadb::UserSearchSettings user_search_settings() const;
+    const MariaDBUserCache*     user_account_cache();
+    static std::string          to_string(AuthState state);
+
+    enum class SSLState
+    {
+        NOT_CAPABLE,
+        INCOMPLETE,
+        COMPLETE,
+        FAIL
+    };
+
+    MariaDBClientConnection::SSLState ssl_authenticate_check_status();
+
+    mariadb::SClientAuth                m_authenticator;/**< Client authentication data */
+    std::unique_ptr<mariadb::UserEntry> m_user_entry;   /**< Client user entry */
 
     mxs::Component* m_downstream {nullptr}; /**< Downstream component, the session */
     MXS_SESSION*    m_session {nullptr};    /**< Generic session */
     MYSQL_session*  m_session_data {nullptr};
     qc_sql_mode_t   m_sql_mode {QC_SQL_MODE_DEFAULT};   /**< SQL-mode setting */
-
-    uint8_t     m_command {0};
-    bool        m_changing_user {false};
-    bool        m_large_query {false};
-    uint64_t    m_version {0};                  /**< Numeric server version */
-    mxs::Buffer m_stored_query;                 /**< Temporarily stored queries */
-    uint8_t     m_scramble[MYSQL_SCRAMBLE_LEN]; /**< Created server scramble */
+    AuthState       m_auth_state {AuthState::INIT};     /*< Client authentication state */
+    uint8_t         m_command {0};
+    bool            m_changing_user {false};
+    bool            m_large_query {false};
+    uint64_t        m_version {0};                  /**< Numeric server version */
+    mxs::Buffer     m_stored_query;                 /**< Temporarily stored queries */
+    uint8_t         m_scramble[MYSQL_SCRAMBLE_LEN]; /**< Created server scramble */
 };
