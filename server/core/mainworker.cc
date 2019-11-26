@@ -244,26 +244,21 @@ bool MainWorker::balance_workers(Worker::Call::action_t action)
 
     if (action == Worker::Call::EXECUTE)
     {
-        RoutingWorker::collect_worker_load();
+        auto& config = *config_get_global_options();
 
-        std::chrono::milliseconds period = config_get_global_options()->rebalance_period.get();
+        RoutingWorker::collect_worker_load(config.rebalance_window.get());
+
+        std::chrono::milliseconds period = config.rebalance_period.get();
 
         if (period != std::chrono::milliseconds(0))
         {
             mxb::TimePoint now = epoll_tick_now();
 
-            if (m_force_rebalancing || (now - m_last_rebalancing >= period))
+            if (now - m_last_rebalancing >= period)
             {
-                m_force_rebalancing = false;
-
-                if (RoutingWorker::balance_workers())
-                {
-                    // Rebalancing has taken place, quickly rebalance again.
-                    m_force_rebalancing = true;
-                }
+                RoutingWorker::balance_workers();
+                m_last_rebalancing = now;
             }
-
-            m_last_rebalancing = now;
         }
         else
         {

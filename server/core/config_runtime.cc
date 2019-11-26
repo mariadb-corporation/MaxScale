@@ -1058,16 +1058,11 @@ bool runtime_alter_maxscale(const char* name, const char* value)
     {
         rval = item->set(value);
 
-        if (!rval)
+        if (rval)
         {
-            config_runtime_error("Invalid value for '%s': %s", item->parameter().name().c_str(), value);
+            MXS_NOTICE("Value of %s changed to %s", name, value);
         }
-    }
-    else if ((item = cnf.find_value(name)) != nullptr)
-    {
-        rval = item->set(value);
-
-        if (!rval)
+        else
         {
             config_runtime_error("Invalid value for '%s': %s", item->parameter().name().c_str(), value);
         }

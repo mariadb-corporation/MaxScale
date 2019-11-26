@@ -374,14 +374,20 @@ This duration parameter controls how often the load of the worker threads
 should be checked. The default value is 0, which means that no checks and
 no rebalancing will be performed.
 ```
-rebalance_period=5s
+rebalance_period=10s
 ```
 Note that rebalancing will not be performed unless `rebalance_threshold`
-has also been specified.
+also has been specified. Note that the value of `rebalance_period` should
+not be smaller than the value of `rebalance_window` whose default value
+is 10.
+
+If the value of `rebalance_period` is significantly shorter than that
+of `rebalance_window`, it may lead to oscillation where work is constantly
+moved from one thread to another.
 
 ### `rebalance_threshold`
 
-This parameter controls at which point MaxScale should start moving load
+This parameter controls at which point MaxScale should start moving work
 from one worker thread to another, if the load of the threads is different.
 The value should be a percentage, that is, an integer between 0 and 100,
 and it is interpreted as follows.
@@ -397,6 +403,17 @@ The default value is 0, which means that no rebalancing will occur.
 
 Note that rebalancing will not be performed unless `rebalance_period`
 has also been specified.
+
+### `rebalance_window`
+
+This integer parameter controls how many seconds of load should be
+taken into account when deciding whether work should be moved from
+one thread to another.
+
+The default value is 10, which means that the load during the last 10
+seconds is considered when deciding whether work should be moved.
+
+The minimum value is 1 and the maximum 60.
 
 ### `auth_connect_timeout`
 

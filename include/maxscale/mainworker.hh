@@ -122,6 +122,5 @@ private:
     IndexedStorage              m_storage;
     uint32_t                    m_rebalancing_dc { 0 };
     mxb::TimePoint              m_last_rebalancing;
-    bool                        m_force_rebalancing { false };
 };
 }

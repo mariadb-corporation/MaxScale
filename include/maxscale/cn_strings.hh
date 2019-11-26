@@ -103,6 +103,7 @@ constexpr char CN_QUERY_RETRY_TIMEOUT[] = "query_retry_timeout";
 constexpr char CN_RANK[] = "rank";
 constexpr char CN_REBALANCE_PERIOD[] = "rebalance_period";
 constexpr char CN_REBALANCE_THRESHOLD[] = "rebalance_threshold";
+constexpr char CN_REBALANCE_WINDOW[] = "rebalance_window";
 constexpr char CN_RELATIONSHIPS[] = "relationships";
 constexpr char CN_REQUIRED[] = "required";
 constexpr char CN_RETAIN_LAST_STATEMENTS[] = "retain_last_statements";

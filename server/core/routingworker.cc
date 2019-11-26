@@ -173,11 +173,13 @@ bool RoutingWorker::init(mxb::WatchdogNotifier* pNotifier)
             int id_min_worker = INT_MAX;
             int id_max_worker = INT_MIN;
 
+            size_t rebalance_window = config_get_global_options()->rebalance_window.get();
+
             int i;
             for (i = 0; i < nWorkers; ++i)
             {
                 RoutingWorker* pWorker = RoutingWorker::create(pNotifier, this_unit.epoll_listener_fd);
-                AverageN* pAverage = new AverageN(10);
+                AverageN* pAverage = new AverageN(rebalance_window);
 
                 if (pWorker && pAverage)
                 {
@@ -1253,12 +1255,17 @@ void RoutingWorker::register_epoll_tick_func(std::function<void ()> func)
 }
 
 //static
-void RoutingWorker::collect_worker_load()
+void RoutingWorker::collect_worker_load(size_t count)
 {
     for (int i = 0; i < this_unit.nWorkers; ++i)
     {
         auto* pWorker = this_unit.ppWorkers[i];
         auto* pWorker_load = this_unit.ppWorker_loads[i];
+
+        if (pWorker_load->size() != count)
+        {
+            pWorker_load->resize(count);
+        }
 
         pWorker_load->add_value(pWorker->load(mxb::WorkerLoad::ONE_SECOND));
     }

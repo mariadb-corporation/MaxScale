@@ -496,7 +496,7 @@ public:
         return m_storage;
     }
 
-    static void collect_worker_load();
+    static void collect_worker_load(size_t count);
 
     static bool balance_workers();
 

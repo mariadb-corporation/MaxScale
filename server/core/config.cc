@@ -81,8 +81,8 @@ config::ParamInteger MXS_CONFIG::s_rebalance_threshold(
     CN_REBALANCE_THRESHOLD,
     "When the load of a worker thread is this many percentage points higher/lower "
     "than the average load, then sessions are moved from/to that worker.",
-    0,
-    0, 100);
+    0,       // default
+    0, 100); // min, max
 
 config::ParamDuration<std::chrono::milliseconds> MXS_CONFIG::s_rebalance_period(
     &MXS_CONFIG::s_specification,
@@ -91,10 +91,18 @@ config::ParamDuration<std::chrono::milliseconds> MXS_CONFIG::s_rebalance_period(
     mxs::config::NO_INTERPRETATION,
     std::chrono::milliseconds(0));
 
+config::ParamCount MXS_CONFIG::s_rebalance_window(
+    &MXS_CONFIG::s_specification,
+    CN_REBALANCE_WINDOW,
+    "The load of how many seconds should be taken into account when rebalancing.",
+    10,     // default
+    1, 60); // min, max
+
 MXS_CONFIG::MXS_CONFIG()
     : config::Configuration("maxscale", &s_specification)
     , rebalance_threshold(this, &s_rebalance_threshold)
     , rebalance_period(this, &s_rebalance_period)
+    , rebalance_window(this, &s_rebalance_window)
 {
 }
 
