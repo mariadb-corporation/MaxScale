@@ -288,6 +288,11 @@ public:
 
     std::string type() const override;
 
+    value_type default_value() const
+    {
+        return m_default_value;
+    }
+
     std::string default_to_string() const override;
 
     bool validate(const std::string& value_as_string, std::string* pMessage) const override;
@@ -531,6 +536,11 @@ public:
 
     std::string type() const override;
 
+    value_type default_value() const
+    {
+        return m_default_value;
+    }
+
     std::string default_to_string() const override;
 
     bool validate(const std::string& value_as_string, std::string* pMessage) const override;
@@ -586,6 +596,11 @@ public:
     }
 
     std::string type() const override;
+
+    value_type default_value() const
+    {
+        return m_default_value;
+    }
 
     std::string default_to_string() const override;
 
@@ -652,6 +667,11 @@ public:
 
     std::string type() const override;
 
+    value_type default_value() const
+    {
+        return m_default_value;
+    }
+
     std::string default_to_string() const override;
 
     bool validate(const std::string& value_as_string, std::string* pMessage) const override;
@@ -699,6 +719,11 @@ public:
 
     std::string type() const override;
 
+    value_type default_value() const
+    {
+        return nullptr;
+    }
+
     std::string default_to_string() const override;
 
     bool validate(const std::string& value_as_string, std::string* pMessage) const override;
@@ -726,6 +751,11 @@ public:
     }
 
     std::string type() const override;
+
+    value_type default_value() const
+    {
+        return nullptr;
+    }
 
     std::string default_to_string() const override;
 
@@ -762,6 +792,11 @@ public:
     }
 
     std::string type() const override;
+
+    value_type default_value() const
+    {
+        return m_default_value;
+    }
 
     std::string default_to_string() const override;
 
@@ -812,6 +847,11 @@ public:
     }
 
     std::string type() const override;
+
+    value_type default_value() const
+    {
+        return m_default_value;
+    }
 
     std::string default_to_string() const override;
 
@@ -1009,6 +1049,7 @@ public:
 
     ConcreteType(Configuration* pConfiguration, const ParamType* pParam)
         : Type(pConfiguration, pParam)
+        , m_value(pParam->default_value())
     {
     }
 
