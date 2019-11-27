@@ -127,20 +127,19 @@ class ClientAuthenticator
 public:
     using ByteVec = std::vector<uint8_t>;
 
-    // Return values for authenticate-functions.
+    enum class ExchRes
+    {
+        FAIL,         /**< Packet processing failed */
+        INCOMPLETE,   /**< Should be called again after client responds to output */
+        READY         /**< Exchange with client complete, should continue to password check */
+    };
+
+    // Return values for authenticate()-function
     enum class AuthRes
     {
-        SUCCESS,        /**< Authentication was successful */
         FAIL,           /**< Authentication failed */
-        FAIL_DB,        /**< Authentication failed, database not found or no access */
         FAIL_WRONG_PW,  /**< Client provided wrong password */
-        FAIL_SSL,       /**< SSL authentication failed */
-        INCOMPLETE,     /**< Authentication is not yet complete */
-        INCOMPLETE_SSL, /**< SSL connection is not yet complete */
-        SSL_READY,      /**< SSL connection complete or not required */
-        NO_SESSION,
-        BAD_HANDSHAKE,      /**< Malformed client packet */
-        TOKEN_READY
+        SUCCESS,        /**< Authentication was successful */
     };
 
     ClientAuthenticator(const ClientAuthenticator&) = delete;
@@ -150,13 +149,15 @@ public:
     virtual ~ClientAuthenticator() = default;
 
     /**
-     * Extract client data from a buffer and place it in a structure shared at the session level.
-     * Typically, this is called just before the authenticate-entrypoint.
+     * Exchange authentication packets. The module should read the input, optionally write to output,
+     * and return status.
      *
-     * @param buffer Packet from client
-     * @return True on success
+     * @param input Packet from client
+     * @param ses MySQL session
+     * @param output Output for a packet that is sent to the client
+     * @return Authentication status
      */
-    virtual AuthRes extract(GWBUF* buffer, MYSQL_session* session, mxs::Buffer* output_packet) = 0;
+    virtual ExchRes exchange(GWBUF* input, MYSQL_session* ses, mxs::Buffer* output) = 0;
 
     // Carry out the authentication.
     virtual AuthRes authenticate(DCB* client, const UserEntry* entry, MYSQL_session* session) = 0;

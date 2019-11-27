@@ -1026,6 +1026,7 @@ MariaDBUserCache::find_user(const string& user, const string& host, const string
     found = sett.match_host_pattern ? m_userdb.find_entry(user, host) :  m_userdb.find_entry(user);
     if (found)
     {
+        // TODO: when checking db access, also check if database exists.
         if (m_userdb.check_database_access(*found, requested_db, sett.case_sensitive_db))
         {
             MXB_INFO("Found matching user '%s'@'%s' for client '%s'@'%s' with sufficient privileges.",

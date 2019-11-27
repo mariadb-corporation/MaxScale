@@ -180,9 +180,10 @@ void GSSAPIClientAuthenticator::copy_client_information(GWBUF* buffer)
  * @param read_buffer Buffer containing the client's response
  * @return True if authentication can continue, false if not
  */
-AuthRes GSSAPIClientAuthenticator::extract(GWBUF* read_buffer, MYSQL_session* session, mxs::Buffer* output)
+mariadb::ClientAuthenticator::ExchRes
+GSSAPIClientAuthenticator::exchange(GWBUF* read_buffer, MYSQL_session* session, mxs::Buffer* output)
 {
-    auto rval = AuthRes::FAIL;
+    auto rval = ExchRes::FAIL;
 
     switch (state)
     {
@@ -196,7 +197,7 @@ AuthRes GSSAPIClientAuthenticator::extract(GWBUF* read_buffer, MYSQL_session* se
             {
                 output->reset(buffer);
                 state = GSSAPI_AUTH_DATA_SENT;
-                rval = AuthRes::INCOMPLETE;
+                rval = ExchRes::INCOMPLETE;
             }
             break;
         }
@@ -205,7 +206,7 @@ AuthRes GSSAPIClientAuthenticator::extract(GWBUF* read_buffer, MYSQL_session* se
         if (store_client_token(session, read_buffer))
         {
             state = GSSAPI_AUTH_TOKEN_READY;
-            rval = AuthRes::TOKEN_READY;
+            rval = ExchRes::READY;
         }
         break;
 

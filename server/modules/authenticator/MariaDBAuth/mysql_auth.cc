@@ -230,10 +230,11 @@ MariaDBClientAuthenticator::MariaDBClientAuthenticator(MariaDBAuthenticatorModul
 {
 }
 
-AuthRes MariaDBClientAuthenticator::extract(GWBUF* buf, MYSQL_session* session, mxs::Buffer* output_packet)
+mariadb::ClientAuthenticator::ExchRes
+MariaDBClientAuthenticator::exchange(GWBUF* buf, MYSQL_session* session, mxs::Buffer* output_packet)
 {
     auto client_data = session;
-    auto rval = AuthRes::FAIL;
+    auto rval = ExchRes::FAIL;
 
     switch (m_state)
     {
@@ -244,7 +245,7 @@ AuthRes MariaDBClientAuthenticator::extract(GWBUF* buf, MYSQL_session* session, 
         {
             // Correct plugin, token should have been read by protocol code.
             m_state = State::CHECK_TOKEN;
-            rval = AuthRes::TOKEN_READY;
+            rval = ExchRes::READY;
         }
         else
         {
@@ -258,7 +259,7 @@ AuthRes MariaDBClientAuthenticator::extract(GWBUF* buf, MYSQL_session* session, 
             {
                 output_packet->reset(switch_packet);
                 m_state = State::AUTHSWITCH_SENT;
-                rval = AuthRes::INCOMPLETE;
+                rval = ExchRes::INCOMPLETE;
             }
         }
         break;
@@ -276,7 +277,7 @@ AuthRes MariaDBClientAuthenticator::extract(GWBUF* buf, MYSQL_session* session, 
                 // Assume that correct authenticator is now used. If this is not the case,
                 // authentication will fail.
                 m_state = State::CHECK_TOKEN;
-                rval = AuthRes::TOKEN_READY;
+                rval = ExchRes::READY;
             }
         }
         break;
@@ -315,11 +316,7 @@ AuthRes MariaDBClientAuthenticator::authenticate(DCB* generic_dcb, const UserEnt
         // The default failure is a `User not found` one
         char extra[256] = "User not found.";
 
-        if (auth_ret == AuthRes::FAIL_DB)
-        {
-            snprintf(extra, sizeof(extra), "Unknown database: %s", session->db.c_str());
-        }
-        else if (auth_ret == AuthRes::FAIL_WRONG_PW)
+        if (auth_ret == AuthRes::FAIL_WRONG_PW)
         {
             strcpy(extra, "Wrong password.");
         }

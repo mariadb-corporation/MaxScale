@@ -24,7 +24,7 @@ class PamClientAuthenticator : public mariadb::ClientAuthenticator
 public:
     PamClientAuthenticator() = default;
 
-    AuthRes extract(GWBUF* read_buffer, MYSQL_session* session, mxs::Buffer* output_packet) override;
+    ExchRes exchange(GWBUF* read_buffer, MYSQL_session* session, mxs::Buffer* output_packet) override;
     AuthRes authenticate(DCB* client, const mariadb::UserEntry* entry, MYSQL_session* session) override;
 
 private:

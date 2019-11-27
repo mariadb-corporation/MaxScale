@@ -50,6 +50,7 @@
 namespace
 {
 using AuthRes = mariadb::ClientAuthenticator::AuthRes;
+using ExcRes = mariadb::ClientAuthenticator::ExchRes;
 using SUserEntry = std::unique_ptr<mariadb::UserEntry>;
 
 const char WORD_KILL[] = "KILL";
@@ -768,47 +769,11 @@ void MariaDBClientConnection::handle_authentication_errors(DCB* generic_dcb, Aut
     mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
 
-    int message_len;
     char* fail_str = NULL;
     MYSQL_session* session = m_session_data;
 
     switch (auth_val)
     {
-    case AuthRes::NO_SESSION:
-        MXS_DEBUG("session creation failed. fd %d, state = MYSQL_AUTH_NO_SESSION.", dcb->fd());
-
-        /** Send ERR 1045 to client */
-        mysql_send_auth_error(dcb, packet_number, "failed to create new session");
-        break;
-
-    case AuthRes::FAIL_DB:
-        MXS_DEBUG("database specified was not valid. fd %d, state = MYSQL_FAILED_AUTH_DB.", dcb->fd());
-        /** Send error 1049 to client */
-        message_len = 25 + MYSQL_DATABASE_MAXLEN;
-
-        fail_str = (char*)MXS_CALLOC(1, message_len + 1);
-        MXS_ABORT_IF_NULL(fail_str);
-        snprintf(fail_str, message_len, "Unknown database '%s'", session->db.c_str());
-
-        modutil_send_mysql_err_packet(dcb, packet_number, 0, 1049, "42000", fail_str);
-        break;
-
-    case AuthRes::FAIL_SSL:
-        MXS_DEBUG("client is not SSL capable for SSL listener. fd %d, state = MYSQL_FAILED_AUTH_SSL.",
-                  dcb->fd());
-
-        /** Send ERR 1045 to client */
-        mysql_send_auth_error(dcb, packet_number, "Access without SSL denied");
-        break;
-
-    case AuthRes::INCOMPLETE_SSL:
-        MXS_DEBUG("unable to complete SSL authentication. fd %d, state = MYSQL_AUTH_SSL_INCOMPLETE.",
-                  dcb->fd());
-
-        /** Send ERR 1045 to client */
-        mysql_send_auth_error(dcb, packet_number, "failed to complete SSL authentication");
-        break;
-
     case AuthRes::FAIL:
         MXS_DEBUG("authentication failed. fd %d, state = MYSQL_FAILED_AUTH.", dcb->fd());
         /** Send error 1045 to client */
@@ -818,10 +783,6 @@ void MariaDBClientConnection::handle_authentication_errors(DCB* generic_dcb, Aut
                                         session->db.c_str(),
                                         auth_val);
         modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "28000", fail_str);
-        break;
-
-    case AuthRes::BAD_HANDSHAKE:
-        modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "08S01", "Bad handshake");
         break;
 
     default:
@@ -848,12 +809,17 @@ int MariaDBClientConnection::perform_authentication(GWBUF* buffer)
     // Save next sequence to session. Authenticator may use the value.
     uint8_t sequence = 0;
     gwbuf_copy_data(buffer, MYSQL_SEQ_OFFSET, 1, &sequence);
-    auto* next_seq = &m_session_data->next_sequence;
-    *next_seq = sequence + 1;
+    auto next_seq = sequence + 1;
+    m_session_data->next_sequence = next_seq;
 
     const char wrong_sequence[] = "Client (%s) sent packet with unexpected sequence number. "
                                   "Expected %i, got %i.";
+    const char packets_ooo[] = "Got packets out of order";
+    const char sql_errstate[] = "08S01";
+    const int er_bad_handshake = 1043;
+    const int er_out_of_order = 1156;
 
+    auto remote = m_dcb->remote().c_str();
     bool error = false;
     bool state_machine_continue = true;
     while (state_machine_continue)
@@ -876,12 +842,16 @@ int MariaDBClientConnection::perform_authentication(GWBUF* buffer)
                     }
                     else
                     {
-                        MXB_ERROR("Client (%s) sent an invalid SSLRequest.", m_session_data->remote.c_str());
+                        modutil_send_mysql_err_packet(
+                            m_dcb, next_seq, 0, er_bad_handshake, sql_errstate, "Bad SSL handshake");
+                        MXB_ERROR("Client (%s) sent an invalid SSLRequest.", remote);
                         m_auth_state = AuthState::FAIL;
                     }
                 }
                 else
                 {
+                    modutil_send_mysql_err_packet(
+                        m_dcb, next_seq, 0, er_out_of_order, sql_errstate, packets_ooo);
                     MXB_ERROR(wrong_sequence, m_session_data->remote.c_str(), 1, sequence);
                     m_auth_state = AuthState::FAIL;
                 }
@@ -904,6 +874,7 @@ int MariaDBClientConnection::perform_authentication(GWBUF* buffer)
                 }
                 else
                 {
+                    mysql_send_auth_error(m_dcb, next_seq, "Access without SSL denied");
                     MXB_ERROR("Client (%s) failed SSL negotiation.", m_session_data->remote.c_str());
                     m_auth_state = AuthState::FAIL;
                 }
@@ -923,13 +894,17 @@ int MariaDBClientConnection::perform_authentication(GWBUF* buffer)
                     }
                     else
                     {
-                        MXB_ERROR("Client (%s) send an invalid HandShakeResponse.",
+                        modutil_send_mysql_err_packet(
+                            m_dcb, next_seq, 0, er_bad_handshake, sql_errstate, "Bad handshake");
+                        MXB_ERROR("Client (%s) sent an invalid HandShakeResponse.",
                                   m_session_data->remote.c_str());
                         m_auth_state = AuthState::FAIL;
                     }
                 }
                 else
                 {
+                    modutil_send_mysql_err_packet(
+                        m_dcb, next_seq, 0, er_out_of_order, sql_errstate, packets_ooo);
                     MXB_ERROR(wrong_sequence, m_session_data->remote.c_str(), expected_seq, sequence);
                     m_auth_state = AuthState::FAIL;
                 }
@@ -949,28 +924,27 @@ int MariaDBClientConnection::perform_authentication(GWBUF* buffer)
 
         case AuthState::ASK_FOR_TOKEN:
             {
-                mxs::Buffer authenticator_output;
-                auto auth_val = m_authenticator->extract(buffer, m_session_data, &authenticator_output);
-                if (!authenticator_output.empty())
+                mxs::Buffer auth_output;
+                auto auth_val = m_authenticator->exchange(buffer, m_session_data, &auth_output);
+                if (!auth_output.empty())
                 {
-                    write(authenticator_output.release());
+                    write(auth_output.release());
                 }
 
-                if (auth_val == AuthRes::TOKEN_READY)
+                if (auth_val == ExcRes::READY)
                 {
                     // Continue to password check.
                     m_auth_state = AuthState::CHECK_TOKEN;
                 }
-                else if (auth_val == AuthRes::INCOMPLETE || auth_val == AuthRes::INCOMPLETE_SSL)
+                else if (auth_val == ExcRes::INCOMPLETE)
                 {
                     // Authentication is expecting another packet from client, so jump out.
                     state_machine_continue = false;
                 }
                 else
                 {
-                    // Authentication failed.
+                    // Authentication failed. TODO: send an error message here when needed.
                     m_auth_state = AuthState::FAIL;
-                    handle_authentication_errors(m_dcb, auth_val, m_session_data->next_sequence);
                     mxb_assert(m_session->listener);
                     m_session->listener->mark_auth_as_failed(m_dcb->remote());
                 }
@@ -990,8 +964,12 @@ int MariaDBClientConnection::perform_authentication(GWBUF* buffer)
                     {
                         // Again, this may be because user data is obsolete.
                         m_session->service->notify_authentication_failed();
+                        mysql_send_auth_error(m_dcb, next_seq, "Access denied, wrong password");
                     }
-
+                    else
+                    {
+                        mysql_send_auth_error(m_dcb, next_seq, "Access denied");
+                    }
                     m_auth_state = AuthState::FAIL;
                 }
             }
@@ -1001,33 +979,34 @@ int MariaDBClientConnection::perform_authentication(GWBUF* buffer)
             // Authentication success, initialize session.
             m_session->set_user(m_session_data->user);
 
-            if (session_start(m_session))
-            {
-                mxb_assert(m_session->state() != MXS_SESSION::State::CREATED);
-                m_sql_mode = m_session->listener->sql_mode();
-                mxs_mysql_send_ok(m_dcb, m_session_data->next_sequence, 0, NULL);
-                m_auth_state = AuthState::COMPLETE;
-
-                if (m_dcb->readq())
+                if (session_start(m_session))
                 {
-                    // The user has already send more data, process it
-                    m_dcb->trigger_read_event();
+                    mxb_assert(m_session->state() != MXS_SESSION::State::CREATED);
+                    m_auth_state = AuthState::COMPLETE;
                 }
-            }
-            else
-            {
+                else
+                {
+                    mysql_send_auth_error(m_dcb, next_seq,
+                        "Session creation failed, MaxScale may be out of memory");
                 MXB_ERROR("Failed to create session for '%s'@'%s'.", "a", "b");
                 m_auth_state = AuthState::FAIL;
             }
             break;
 
         case AuthState::COMPLETE:
-            m_state = State::READY;
-            state_machine_continue = false;
-            break;
+            m_sql_mode = m_session->listener->sql_mode();
+                mxs_mysql_send_ok(m_dcb, m_session_data->next_sequence, 0, NULL);
+                if (m_dcb->readq())
+                {
+                    // The user has already sent more data, process it
+                    m_dcb->trigger_read_event();
+                }
+                m_state = State::READY;
+                state_machine_continue = false;
+                break;
 
         case AuthState::FAIL:
-            // Close DCB. Will release session.
+            // Close DCB. Will release session. An error message should have already been sent.
             m_state = State::FAILED;
             DCB::close(m_dcb);
             state_machine_continue = false;
@@ -2139,10 +2118,6 @@ char* MariaDBClientConnection::create_auth_fail_str(const char* username,
     {
         ferrstr = "Access denied for user '%s'@'%s' (using password: %s) to database '%s'";
     }
-    else if (errcode == AuthRes::FAIL_SSL)
-    {
-        ferrstr = "Access without SSL denied";
-    }
     else
     {
         ferrstr = "Access denied for user '%s'@'%s' (using password: %s)";
@@ -2159,10 +2134,6 @@ char* MariaDBClientConnection::create_auth_fail_str(const char* username,
     if (db_len > 0)
     {
         sprintf(errstr, ferrstr, username, hostaddr, password ? "YES" : "NO", db);
-    }
-    else if (errcode == AuthRes::FAIL_SSL)
-    {
-        sprintf(errstr, "%s", ferrstr);
     }
     else
     {

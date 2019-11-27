@@ -88,10 +88,11 @@ Buffer PamClientAuthenticator::create_auth_change_packet() const
     return buffer;
 }
 
-AuthRes PamClientAuthenticator::extract(GWBUF* buffer, MYSQL_session* session, mxs::Buffer* output_packet)
+mariadb::ClientAuthenticator::ExchRes
+PamClientAuthenticator::exchange(GWBUF* buffer, MYSQL_session* session, mxs::Buffer* output_packet)
 {
     m_sequence = session->next_sequence;
-    auto rval = AuthRes::FAIL;
+    auto rval = ExchRes::FAIL;
 
     switch (m_state)
     {
@@ -104,7 +105,7 @@ AuthRes PamClientAuthenticator::extract(GWBUF* buffer, MYSQL_session* session, m
             {
                 m_state = State::ASKED_FOR_PW;
                 *output_packet = std::move(authbuf);
-                rval = AuthRes::INCOMPLETE;
+                rval = ExchRes::INCOMPLETE;
             }
         }
         break;
@@ -114,7 +115,7 @@ AuthRes PamClientAuthenticator::extract(GWBUF* buffer, MYSQL_session* session, m
         if (store_client_password(session, buffer))
         {
             m_state = State::PW_RECEIVED;
-            rval = AuthRes::TOKEN_READY;
+            rval = ExchRes::READY;
         }
         break;
 

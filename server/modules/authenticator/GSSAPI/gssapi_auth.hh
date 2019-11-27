@@ -59,7 +59,7 @@ public:
     GSSAPIClientAuthenticator(GSSAPIAuthenticatorModule* module);
     ~GSSAPIClientAuthenticator() override;
 
-    AuthRes extract(GWBUF* buffer, MYSQL_session* session, mxs::Buffer* output) override;
+    ExchRes exchange(GWBUF* buffer, MYSQL_session* session, mxs::Buffer* output) override;
     AuthRes authenticate(DCB* client, const mariadb::UserEntry* entry, MYSQL_session* session) override;
 
     uint8_t  m_sequence {0};                  /**< The next packet sequence number */
