@@ -21,7 +21,6 @@
 #include <maxscale/paths.h>
 #include <maxscale/secrets.hh>
 #include <maxscale/utils.h>
-#include <maxscale/protocol/mariadb/client_connection.hh>
 
 using AuthRes = mariadb::ClientAuthenticator::AuthRes;
 using mariadb::UserEntry;
@@ -197,7 +196,7 @@ static bool is_localhost_address(const struct sockaddr_storage* addr)
 }
 
 // Helper function for generating an AuthSwitchRequest packet.
-static GWBUF* gen_auth_switch_request_packet(MYSQL_session* client_data, const uint8_t* scramble)
+static GWBUF* gen_auth_switch_request_packet(MYSQL_session* client_data)
 {
     /**
      * The AuthSwitchRequest packet:
@@ -210,7 +209,7 @@ static GWBUF* gen_auth_switch_request_packet(MYSQL_session* client_data, const u
 
     /* When sending an AuthSwitchRequest for "mysql_native_password", the scramble data needs an extra
      * byte in the end. */
-    unsigned int payloadlen = 1 + sizeof(plugin) + GW_MYSQL_SCRAMBLE_SIZE + 1;
+    unsigned int payloadlen = 1 + sizeof(plugin) + MYSQL_SCRAMBLE_LEN + 1;
     unsigned int buflen = MYSQL_HEADER_LEN + payloadlen;
     GWBUF* buffer = gwbuf_alloc(buflen);
     uint8_t* bufdata = GWBUF_DATA(buffer);
@@ -220,7 +219,7 @@ static GWBUF* gen_auth_switch_request_packet(MYSQL_session* client_data, const u
     *bufdata++ = MYSQL_REPLY_AUTHSWITCHREQUEST;     // AuthSwitchRequest command
     memcpy(bufdata, plugin, sizeof(plugin));
     bufdata += sizeof(plugin);
-    memcpy(bufdata, scramble, GW_MYSQL_SCRAMBLE_SIZE);
+    memcpy(bufdata, client_data->scramble, MYSQL_SCRAMBLE_LEN);
     bufdata += GW_MYSQL_SCRAMBLE_SIZE;
     *bufdata = '\0';
     return buffer;
@@ -231,95 +230,10 @@ MariaDBClientAuthenticator::MariaDBClientAuthenticator(MariaDBAuthenticatorModul
 {
 }
 
-/**
- * @brief Authenticates a MySQL user who is a client to MaxScale.
- *
- * First call the SSL authentication function. Call other functions to validate
- * the user, reloading the user data if the first attempt fails.
- *
- * @param dcb Request handler DCB connected to the client
- * @return Authentication status
- * @note Authentication status codes are defined in maxscale/protocol/mysql.h
- */
-AuthRes MariaDBClientAuthenticator::authenticate(DCB* generic_dcb, const UserEntry* entry)
+AuthRes MariaDBClientAuthenticator::extract(GWBUF* buf, MYSQL_session* session, mxs::Buffer* output_packet)
 {
-    mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
-    auto dcb = static_cast<ClientDCB*>(generic_dcb);
-
-    auto auth_ret = AuthRes::FAIL;
-    auto protocol = static_cast<MariaDBClientConnection*>(dcb->protocol());
-    auto client_data = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
-
-    switch (m_state)
-    {
-    case State::SENDING_AUTHSWITCH:
-        {
-            // Client is attempting to use wrong authenticator, send switch request packet.
-            GWBUF* switch_packet = gen_auth_switch_request_packet(client_data, protocol->scramble());
-            if (dcb->writeq_append(switch_packet))
-            {
-                m_state = State::AUTHSWITCH_SENT;
-                auth_ret = AuthRes::INCOMPLETE;
-            }
-            break;
-        }
-
-    case State::CHECK_TOKEN:
-        {
-            auth_ret = validate_mysql_user(entry, client_data,
-                                           protocol->scramble(), MYSQL_SCRAMBLE_LEN,
-                                           client_data->auth_token, client_data->client_sha1);
-
-            /* on successful authentication, set user into dcb field */
-            if (auth_ret == AuthRes::SUCCESS)
-            {
-                dcb->session()->set_user(client_data->user);
-            }
-            else if (dcb->service()->config().log_auth_warnings)
-            {
-                // The default failure is a `User not found` one
-                char extra[256] = "User not found.";
-
-                if (auth_ret == AuthRes::FAIL_DB)
-                {
-                    snprintf(extra, sizeof(extra), "Unknown database: %s", client_data->db.c_str());
-                }
-                else if (auth_ret == AuthRes::FAIL_WRONG_PW)
-                {
-                    strcpy(extra, "Wrong password.");
-                }
-
-                MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE,
-                              "%s: login attempt for user '%s'@[%s]:%d, authentication failed. %s",
-                              dcb->service()->name(),
-                              client_data->user.c_str(),
-                              dcb->remote().c_str(),
-                              static_cast<ClientDCB*>(dcb)->port(),
-                              extra);
-
-                if (is_localhost_address(&dcb->ip())
-                    && !dcb->service()->config().localhost_match_wildcard_host)
-                {
-                    MXS_NOTICE("If you have a wildcard grant that covers this address, "
-                               "try adding 'localhost_match_wildcard_host=true' for "
-                               "service '%s'. ",
-                               dcb->service()->name());
-                }
-            }
-        }
-        break;
-
-    default:
-        mxb_assert(!true);
-        break;
-    }
-    return auth_ret;
-}
-
-bool MariaDBClientAuthenticator::extract(GWBUF* buf, MYSQL_session* session)
-{
-    bool error = false;
     auto client_data = session;
+    auto rval = AuthRes::FAIL;
 
     switch (m_state)
     {
@@ -328,23 +242,25 @@ bool MariaDBClientAuthenticator::extract(GWBUF* buf, MYSQL_session* session)
         // parsed in protocol code.
         if (client_data->plugin == DEFAULT_MYSQL_AUTH_PLUGIN)
         {
-            // Correct plugin, token should also have been read by protocol code.
+            // Correct plugin, token should have been read by protocol code.
             m_state = State::CHECK_TOKEN;
+            rval = AuthRes::TOKEN_READY;
         }
         else
         {
-            m_state = State::SENDING_AUTHSWITCH;
-            // The switch attempt is done later but the message is clearest if logged at once.
+            // Client is attempting to use wrong authenticator, send switch request packet.
             MXS_INFO("Client '%s'@'%s' is using an unsupported authenticator "
                      "plugin '%s'. Trying to switch to '%s'.",
                      client_data->user.c_str(), client_data->remote.c_str(),
                      client_data->plugin.c_str(), DEFAULT_MYSQL_AUTH_PLUGIN);
+            GWBUF* switch_packet = gen_auth_switch_request_packet(client_data);
+            if (switch_packet)
+            {
+                output_packet->reset(switch_packet);
+                m_state = State::AUTHSWITCH_SENT;
+                rval = AuthRes::INCOMPLETE;
+            }
         }
-        break;
-
-    case State::SENDING_AUTHSWITCH:
-        error = true;
-        mxb_assert(!true);
         break;
 
     case State::AUTHSWITCH_SENT:
@@ -360,20 +276,72 @@ bool MariaDBClientAuthenticator::extract(GWBUF* buf, MYSQL_session* session)
                 // Assume that correct authenticator is now used. If this is not the case,
                 // authentication will fail.
                 m_state = State::CHECK_TOKEN;
-            }
-            else
-            {
-                error = true;
+                rval = AuthRes::TOKEN_READY;
             }
         }
         break;
 
-    case State::CHECK_TOKEN:
-        // Continue to authenticate().
+    default:
+        mxb_assert(!true);
         break;
     }
 
-    return !error;
+    return rval;
+}
+
+/**
+ * @brief Authenticates a MySQL user who is a client to MaxScale.
+ *
+ * First call the SSL authentication function. Call other functions to validate
+ * the user, reloading the user data if the first attempt fails.
+ *
+ * @param dcb Request handler DCB connected to the client
+ * @return Authentication status
+ * @note Authentication status codes are defined in maxscale/protocol/mysql.h
+ */
+AuthRes MariaDBClientAuthenticator::authenticate(DCB* generic_dcb, const UserEntry* entry,
+                                                 MYSQL_session* session)
+{
+    mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
+    auto dcb = static_cast<ClientDCB*>(generic_dcb);
+
+    mxb_assert(m_state == State::CHECK_TOKEN);
+
+    auto auth_ret = validate_mysql_user(entry, session, session->scramble, MYSQL_SCRAMBLE_LEN,
+                                        session->auth_token, session->client_sha1);
+
+    if (auth_ret != AuthRes::SUCCESS && dcb->service()->config().log_auth_warnings)
+    {
+        // The default failure is a `User not found` one
+        char extra[256] = "User not found.";
+
+        if (auth_ret == AuthRes::FAIL_DB)
+        {
+            snprintf(extra, sizeof(extra), "Unknown database: %s", session->db.c_str());
+        }
+        else if (auth_ret == AuthRes::FAIL_WRONG_PW)
+        {
+            strcpy(extra, "Wrong password.");
+        }
+
+        MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE,
+                      "%s: login attempt for user '%s'@[%s]:%d, authentication failed. %s",
+                      dcb->service()->name(),
+                      session->user.c_str(),
+                      dcb->remote().c_str(),
+                      static_cast<ClientDCB*>(dcb)->port(),
+                      extra);
+
+        if (is_localhost_address(&dcb->ip())
+            && !dcb->service()->config().localhost_match_wildcard_host)
+        {
+            MXS_NOTICE("If you have a wildcard grant that covers this address, "
+                       "try adding 'localhost_match_wildcard_host=true' for "
+                       "service '%s'. ",
+                       dcb->service()->name());
+        }
+    }
+    return auth_ret;
 }
 
 /**

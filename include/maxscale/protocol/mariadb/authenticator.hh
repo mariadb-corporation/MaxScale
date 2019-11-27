@@ -20,6 +20,11 @@ class SERVICE;
 class GWBUF;
 class MYSQL_session;
 
+namespace maxscale
+{
+class Buffer;
+}
+
 namespace mariadb
 {
 
@@ -135,6 +140,7 @@ public:
         SSL_READY,      /**< SSL connection complete or not required */
         NO_SESSION,
         BAD_HANDSHAKE,      /**< Malformed client packet */
+        TOKEN_READY
     };
 
     ClientAuthenticator(const ClientAuthenticator&) = delete;
@@ -144,16 +150,16 @@ public:
     virtual ~ClientAuthenticator() = default;
 
     /**
-     * Extract client from a buffer and place it in a structure shared at the session level.
+     * Extract client data from a buffer and place it in a structure shared at the session level.
      * Typically, this is called just before the authenticate-entrypoint.
      *
      * @param buffer Packet from client
      * @return True on success
      */
-    virtual bool extract(GWBUF* buffer, MYSQL_session* session) = 0;
+    virtual AuthRes extract(GWBUF* buffer, MYSQL_session* session, mxs::Buffer* output_packet) = 0;
 
     // Carry out the authentication.
-    virtual AuthRes authenticate(DCB* client, const UserEntry* entry) = 0;
+    virtual AuthRes authenticate(DCB* client, const UserEntry* entry, MYSQL_session* session) = 0;
 
     /**
      * This entry point was added to avoid calling authenticator functions

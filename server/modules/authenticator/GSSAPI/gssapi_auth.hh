@@ -25,6 +25,7 @@ enum gssapi_auth_state
 {
     GSSAPI_AUTH_INIT = 0,
     GSSAPI_AUTH_DATA_SENT,
+    GSSAPI_AUTH_TOKEN_READY,
     GSSAPI_AUTH_OK,
     GSSAPI_AUTH_FAILED
 };
@@ -58,8 +59,8 @@ public:
     GSSAPIClientAuthenticator(GSSAPIAuthenticatorModule* module);
     ~GSSAPIClientAuthenticator() override;
 
-    bool    extract(GWBUF* buffer, MYSQL_session* session) override;
-    AuthRes authenticate(DCB* client, const mariadb::UserEntry* entry) override;
+    AuthRes extract(GWBUF* buffer, MYSQL_session* session, mxs::Buffer* output) override;
+    AuthRes authenticate(DCB* client, const mariadb::UserEntry* entry, MYSQL_session* session) override;
 
     uint8_t  m_sequence {0};                  /**< The next packet sequence number */
 

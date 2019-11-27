@@ -1091,30 +1091,6 @@ public:
     }
 
     /**
-     * Returns the address of the underlying @ GWBUF. This is intended to only
-     * be used in a context where a function returns a @c GWBUF as an out argument.
-     * For instance:
-     *
-     *    void get_gwbuf(GWBUF** ppBuffer);
-     *    ...
-     *    Buffer buffer;
-     *
-     *    get_gwbuf(&buffer);
-     *
-     * @return  The address of the internal @c GWBUF pointer.
-     *
-     * @attention If the @c Buffer already refers to a @c GWBUF, that underlying
-     *            buffer will first be freed.
-     *
-     * @attention Invalidates all iterators.
-     */
-    GWBUF** operator&()
-    {
-        reset();
-        return &m_pBuffer;
-    }
-
-    /**
      * The total length of the buffer.
      *
      * @return The total length of the buffer.

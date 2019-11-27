@@ -55,9 +55,10 @@ public:
         EXPECT_SSL_REQ, /**< Expecting client to send SSLRequest */
         SSL_NEG,        /**< Negotiate SSL*/
         EXPECT_HS_RESP, /**< Expecting client to send standard handshake response */
-        PREPARE_AUTH,
-        AUTHENTICATING,
-        START_SESSION,
+        PREPARE_AUTH,   /**< Find user account entry */
+        ASK_FOR_TOKEN,  /**< Ask client for token */
+        CHECK_TOKEN,    /**< Check token against user account entry */
+        START_SESSION,  /**< Start routing session */
         FAIL,           /**< Authentication failed */
         COMPLETE,       /**< Authentication is complete */
     };
@@ -80,7 +81,6 @@ public:
     static bool parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* kt_out,
                                  std::string* user_out);
     void           mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t target_id, kill_type_t type);
-    const uint8_t* scramble() const;
 
     State m_state {State::INIT};
 
@@ -146,5 +146,4 @@ private:
     bool            m_large_query {false};
     uint64_t        m_version {0};                  /**< Numeric server version */
     mxs::Buffer     m_stored_query;                 /**< Temporarily stored queries */
-    uint8_t         m_scramble[MYSQL_SCRAMBLE_LEN]; /**< Created server scramble */
 };

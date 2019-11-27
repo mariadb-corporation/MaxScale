@@ -58,7 +58,9 @@ public:
     uint32_t client_capabilities() const;
     uint32_t extra_capabilitites() const;
 
-    uint8_t     client_sha1[MYSQL_SCRAMBLE_LEN] {0};/*< SHA1(password) */
+    uint8_t client_sha1[MYSQL_SCRAMBLE_LEN] {0}; /*< SHA1(password) */
+    uint8_t scramble[MYSQL_SCRAMBLE_LEN] {0};    /*< Created server scramble */
+
     std::string user;                               /*< username       */
     std::string remote;                             /*< client ip      */
     std::string db;                                 /*< database       */

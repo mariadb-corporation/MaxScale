@@ -22,6 +22,8 @@
 #include <maxscale/secrets.hh>
 #include <maxscale/service.hh>
 
+using AuthRes = mariadb::ClientAuthenticator::AuthRes;
+
 json_t* GSSAPIAuthenticatorModule::diagnostics()
 {
     return json_array();    // TODO: implement
@@ -86,7 +88,7 @@ GSSAPIAuthenticatorModule* GSSAPIAuthenticatorModule::create(char** options)
 
 mariadb::SClientAuth GSSAPIAuthenticatorModule::create_client_authenticator()
 {
-    auto new_ses = new (std::nothrow) GSSAPIClientAuthenticator(this);
+    auto new_ses = new(std::nothrow) GSSAPIClientAuthenticator(this);
     return mariadb::SClientAuth(new_ses);
 }
 
@@ -127,11 +129,11 @@ GWBUF* GSSAPIClientAuthenticator::create_auth_change_packet()
         uint8_t* data = (uint8_t*)GWBUF_DATA(buffer);
         gw_mysql_set_byte3(data, plen);
         data += 3;
-        *data++ = ++m_sequence;                                 // Second packet
+        *data++ = ++m_sequence;                                     // Second packet
         *data++ = 0xfe;                                             // AuthSwitchRequest command
         memcpy(data, auth_plugin_name, sizeof(auth_plugin_name));   // Plugin name
         data += sizeof(auth_plugin_name);
-        memcpy(data, m_module.principal_name, principal_name_len);     // Plugin data
+        memcpy(data, m_module.principal_name, principal_name_len);      // Plugin data
     }
 
     return buffer;
@@ -178,20 +180,33 @@ void GSSAPIClientAuthenticator::copy_client_information(GWBUF* buffer)
  * @param read_buffer Buffer containing the client's response
  * @return True if authentication can continue, false if not
  */
-bool GSSAPIClientAuthenticator::extract(GWBUF* read_buffer, MYSQL_session* session)
+AuthRes GSSAPIClientAuthenticator::extract(GWBUF* read_buffer, MYSQL_session* session, mxs::Buffer* output)
 {
-    int rval = false;
+    auto rval = AuthRes::FAIL;
 
     switch (state)
     {
     case GSSAPI_AUTH_INIT:
-        copy_client_information(read_buffer);
-        rval = true;
-        break;
+        {
+            /** We need to send the authentication switch packet to change the
+             * authentication to something other than the 'mysql_native_password'
+             * method */
+            GWBUF* buffer = create_auth_change_packet();
+            if (buffer)
+            {
+                output->reset(buffer);
+                state = GSSAPI_AUTH_DATA_SENT;
+                rval = AuthRes::INCOMPLETE;
+            }
+            break;
+        }
 
     case GSSAPI_AUTH_DATA_SENT:
-        store_client_token(session, read_buffer);
-        rval = true;
+        if (store_client_token(session, read_buffer))
+        {
+            state = GSSAPI_AUTH_TOKEN_READY;
+            rval = AuthRes::TOKEN_READY;
+        }
         break;
 
     default:
@@ -312,7 +327,7 @@ bool GSSAPIClientAuthenticator::validate_user(MYSQL_session* session, const char
     mxb_assert(princ);
     std::string princ_user = princ;
     princ_user.erase(princ_user.find('@'));
-    return (session->user == princ_user || entry->auth_string == princ);
+    return session->user == princ_user || entry->auth_string == princ;
 }
 
 /**
@@ -323,52 +338,31 @@ bool GSSAPIClientAuthenticator::validate_user(MYSQL_session* session, const char
  * if authentication was successfully completed or MXS_AUTH_FAILED if authentication
  * has failed.
  */
-mariadb::ClientAuthenticator::AuthRes
-GSSAPIClientAuthenticator::authenticate(DCB* generic_dcb, const mariadb::UserEntry* entry)
+AuthRes GSSAPIClientAuthenticator::authenticate(DCB* generic_dcb, const mariadb::UserEntry* entry,
+                                                MYSQL_session* session)
 {
-    using AuthRes = mariadb::ClientAuthenticator::AuthRes;
-    mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
-    auto dcb = static_cast<ClientDCB*>(generic_dcb);
-
     auto rval = AuthRes::FAIL;
-    auto auth = this;
 
-    if (state == GSSAPI_AUTH_INIT)
+    mxb_assert(state == GSSAPI_AUTH_TOKEN_READY);
+
+    /** We sent the principal name and the client responded with the GSSAPI
+     * token that we must validate */
+    char* princ = NULL;
+
+    if (validate_gssapi_token(session->auth_token.data(), session->auth_token.size(), &princ)
+        && validate_user(session, princ, entry))
     {
-        /** We need to send the authentication switch packet to change the
-         * authentication to something other than the 'mysql_native_password'
-         * method */
-        GWBUF* buffer = create_auth_change_packet();
-
-        if (buffer && dcb->protocol_write(buffer))
-        {
-            auth->state = GSSAPI_AUTH_DATA_SENT;
-            rval = AuthRes::INCOMPLETE;
-        }
+        rval = AuthRes::SUCCESS;
     }
-    else if (auth->state == GSSAPI_AUTH_DATA_SENT)
-    {
-        /** We sent the principal name and the client responded with the GSSAPI
-         * token that we must validate */
-        auto ses = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
-        char* princ = NULL;
 
-        if (validate_gssapi_token(ses->auth_token.data(), ses->auth_token.size(),
-                                  &princ)
-            && validate_user(ses, princ, entry))
-        {
-            rval = AuthRes::SUCCESS;
-        }
-
-        MXS_FREE(princ);
-    }
+    MXS_FREE(princ);
 
     return rval;
 }
 
 mariadb::SBackendAuth GSSAPIAuthenticatorModule::create_backend_authenticator()
 {
-    return mariadb::SBackendAuth(new (std::nothrow) GSSAPIBackendAuthenticator());
+    return mariadb::SBackendAuth(new(std::nothrow) GSSAPIBackendAuthenticator());
 }
 
 /**

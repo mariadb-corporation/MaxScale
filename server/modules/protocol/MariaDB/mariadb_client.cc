@@ -547,7 +547,7 @@ int MariaDBClientConnection::send_mysql_client_handshake()
     gw_generate_random_str(server_scramble, GW_MYSQL_SCRAMBLE_SIZE);
 
     // copy back to the caller
-    memcpy(m_scramble, server_scramble, GW_MYSQL_SCRAMBLE_SIZE);
+    memcpy(m_session_data->scramble, server_scramble, GW_MYSQL_SCRAMBLE_SIZE);
 
     if (is_maria)
     {
@@ -939,7 +939,7 @@ int MariaDBClientConnection::perform_authentication(GWBUF* buffer)
         case AuthState::PREPARE_AUTH:
             if (prepare_authentication())
             {
-                m_auth_state = AuthState::AUTHENTICATING;
+                m_auth_state = AuthState::ASK_FOR_TOKEN;
             }
             else
             {
@@ -947,26 +947,19 @@ int MariaDBClientConnection::perform_authentication(GWBUF* buffer)
             }
             break;
 
-        case AuthState::AUTHENTICATING:
+        case AuthState::ASK_FOR_TOKEN:
             {
-                auto auth_val = AuthRes::FAIL;
-                if (m_authenticator->extract(buffer, m_session_data))
+                mxs::Buffer authenticator_output;
+                auto auth_val = m_authenticator->extract(buffer, m_session_data, &authenticator_output);
+                if (!authenticator_output.empty())
                 {
-                    auth_val = m_authenticator->authenticate(m_dcb, m_user_entry.get());
-                    if (auth_val == AuthRes::FAIL_WRONG_PW)
-                    {
-                        // Again, this may be because user data is obsolete.
-                        m_session->service->notify_authentication_failed();
-                    }
-                }
-                else
-                {
-                    auth_val = AuthRes::BAD_HANDSHAKE;
+                    write(authenticator_output.release());
                 }
 
-                if (auth_val == AuthRes::SUCCESS)
+                if (auth_val == AuthRes::TOKEN_READY)
                 {
-                    m_auth_state = AuthState::START_SESSION;
+                    // Continue to password check.
+                    m_auth_state = AuthState::CHECK_TOKEN;
                 }
                 else if (auth_val == AuthRes::INCOMPLETE || auth_val == AuthRes::INCOMPLETE_SSL)
                 {
@@ -980,6 +973,26 @@ int MariaDBClientConnection::perform_authentication(GWBUF* buffer)
                     handle_authentication_errors(m_dcb, auth_val, m_session_data->next_sequence);
                     mxb_assert(m_session->listener);
                     m_session->listener->mark_auth_as_failed(m_dcb->remote());
+                }
+            }
+            break;
+
+            case AuthState::CHECK_TOKEN:
+            {
+                auto auth_val = m_authenticator->authenticate(m_dcb, m_user_entry.get(), m_session_data);
+                if (auth_val == AuthRes::SUCCESS)
+                {
+                    m_auth_state = AuthState::START_SESSION;
+                }
+                else
+                {
+                    if (auth_val == AuthRes::FAIL_WRONG_PW)
+                    {
+                        // Again, this may be because user data is obsolete.
+                        m_session->service->notify_authentication_failed();
+                    }
+
+                    m_auth_state = AuthState::FAIL;
                 }
             }
             break;
@@ -1237,8 +1250,8 @@ bool MariaDBClientConnection::reauthenticate_client(MXS_SESSION* session, GWBUF*
             payload.resize(payloadlen);
             gwbuf_copy_data(packetbuf, MYSQL_HEADER_LEN, payloadlen, &payload[0]);
 
-            rc = m_authenticator->reauthenticate(user_entry.get(), m_dcb, m_scramble, sizeof(m_scramble),
-                                                 payload, data->client_sha1);
+            rc = m_authenticator->reauthenticate(
+                user_entry.get(), m_dcb, data->scramble, sizeof(data->scramble), payload, data->client_sha1);
             if (rc == AuthRes::SUCCESS)
             {
                 // Re-authentication successful, route the original COM_CHANGE_USER
@@ -2251,7 +2264,7 @@ bool MariaDBClientConnection::send_auth_switch_request_packet()
     data[3] = 1;    // First response to the COM_CHANGE_USER
     data[MYSQL_HEADER_LEN] = MYSQL_REPLY_AUTHSWITCHREQUEST;
     memcpy(data + MYSQL_HEADER_LEN + 1, plugin, sizeof(plugin));
-    memcpy(data + MYSQL_HEADER_LEN + 1 + sizeof(plugin), m_scramble, GW_MYSQL_SCRAMBLE_SIZE);
+    memcpy(data + MYSQL_HEADER_LEN + 1 + sizeof(plugin), m_session_data->scramble, MYSQL_SCRAMBLE_LEN);
 
     return m_dcb->writeq_append(buffer) != 0;
 }
@@ -2362,11 +2375,6 @@ void MariaDBClientConnection::track_current_command(GWBUF* buffer)
      * contains the latest command executed on this backend.
      */
     m_large_query = MYSQL_GET_PAYLOAD_LEN(data) == MYSQL_PACKET_LENGTH_MAX;
-}
-
-const uint8_t* MariaDBClientConnection::scramble() const
-{
-    return m_scramble;
 }
 
 std::string MariaDBClientConnection::to_string(AuthState state)

@@ -47,7 +47,6 @@ bool store_client_password(MYSQL_session* session, GWBUF* buffer)
     }
     return rval;
 }
-
 }
 
 /**
@@ -80,7 +79,7 @@ Buffer PamClientAuthenticator::create_auth_change_packet() const
     pData += 3;
     *pData++ = m_sequence;
     *pData++ = MYSQL_REPLY_AUTHSWITCHREQUEST;
-    memcpy(pData, DIALOG.c_str(), DIALOG_SIZE); // Plugin name
+    memcpy(pData, DIALOG.c_str(), DIALOG_SIZE);     // Plugin name. TODO: add support for mysql_clear_password
     pData += DIALOG_SIZE;
     *pData++ = DIALOG_ECHO_DISABLED;
     memcpy(pData, PASSWORD.c_str(), PASSWORD.length());     // First message
@@ -89,79 +88,33 @@ Buffer PamClientAuthenticator::create_auth_change_packet() const
     return buffer;
 }
 
-AuthRes PamClientAuthenticator::authenticate(DCB* generic_dcb, const UserEntry* entry)
+AuthRes PamClientAuthenticator::extract(GWBUF* buffer, MYSQL_session* session, mxs::Buffer* output_packet)
 {
-    using mxb::PamResult;
-    mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
-    auto dcb = static_cast<ClientDCB*>(generic_dcb);
-
-    auto rval = AuthRes::SSL_READY;
-    auto ses = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
-    if (!ses->user.empty())
-    {
-        rval = AuthRes::FAIL;
-        if (m_state == State::INIT)
-        {
-            /** We need to send the authentication switch packet to change the
-             * authentication to something other than the 'mysql_native_password'
-             * method */
-            Buffer authbuf = create_auth_change_packet();
-            if (authbuf.length() && dcb->protocol_write(authbuf.release()))
-            {
-                m_state = State::ASKED_FOR_PW;
-                rval = AuthRes::INCOMPLETE;
-            }
-        }
-        else if (m_state == State::PW_RECEIVED)
-        {
-            /** We sent the authentication change packet + plugin name and the client
-             * responded with the password. Try to continue authentication without more
-             * messages to client. */
-            string password((char*)ses->auth_token.data(), ses->auth_token.size());
-
-            // The server PAM plugin uses "mysql" as the default service when authenticating
-            // a user with no service.
-            string pam_service = entry->auth_string.empty() ? "mysql" : entry->auth_string;
-            PamResult res = mxb::pam_authenticate(ses->user, password, dcb->remote(), pam_service, PASSWORD);
-            if (res.type == PamResult::Result::SUCCESS)
-            {
-                rval = AuthRes::SUCCESS;
-            }
-            else
-            {
-                if (res.type == PamResult::Result::WRONG_USER_PW)
-                {
-                    rval = AuthRes::FAIL_WRONG_PW;
-                }
-                MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE, "%s",
-                              res.error.c_str());
-            }
-
-            m_state = State::DONE;
-        }
-    }
-    return rval;
-}
-
-bool PamClientAuthenticator::extract(GWBUF* buffer, MYSQL_session* session)
-{
-    gwbuf_copy_data(buffer, MYSQL_SEQ_OFFSET, 1, &m_sequence);
-    m_sequence++;
-    bool rval = false;
+    m_sequence = session->next_sequence;
+    auto rval = AuthRes::FAIL;
 
     switch (m_state)
     {
-        case State::INIT:
-        // The buffer doesn't have any PAM-specific data yet, as it's the normal HandShakeResponse.
-        rval = true;
+    case State::INIT:
+        {
+            // Change authenticator to "dialog".
+            // TODO: what if authenticator was already correct? Could this part be skipped?
+            Buffer authbuf = create_auth_change_packet();
+            if (authbuf.length())
+            {
+                m_state = State::ASKED_FOR_PW;
+                *output_packet = std::move(authbuf);
+                rval = AuthRes::INCOMPLETE;
+            }
+        }
         break;
 
-        case State::ASKED_FOR_PW:
+    case State::ASKED_FOR_PW:
         // Client should have responses with password.
         if (store_client_password(session, buffer))
         {
             m_state = State::PW_RECEIVED;
-            rval = true;
+            rval = AuthRes::TOKEN_READY;
         }
         break;
 
@@ -173,3 +126,38 @@ bool PamClientAuthenticator::extract(GWBUF* buffer, MYSQL_session* session)
     return rval;
 }
 
+AuthRes PamClientAuthenticator::authenticate(DCB* generic_dcb, const UserEntry* entry, MYSQL_session* session)
+{
+    using mxb::PamResult;
+    auto rval = AuthRes::FAIL;
+    mxb_assert(m_state == State::PW_RECEIVED);
+
+    /** We sent the authentication change packet + plugin name and the client
+     * responded with the password. Try to continue authentication without more
+     * messages to client. */
+
+    // take username from the session object, not the user entry. The entry may be anonymous.
+    string username = session->user;
+    string password((char*)session->auth_token.data(), session->auth_token.size());
+
+    // The server PAM plugin uses "mysql" as the default service when authenticating
+    // a user with no service.
+    string pam_service = entry->auth_string.empty() ? "mysql" : entry->auth_string;
+    PamResult res = mxb::pam_authenticate(username, password, session->remote, pam_service, PASSWORD);
+    if (res.type == PamResult::Result::SUCCESS)
+    {
+        rval = AuthRes::SUCCESS;
+    }
+    else
+    {
+        if (res.type == PamResult::Result::WRONG_USER_PW)
+        {
+            rval = AuthRes::FAIL_WRONG_PW;
+        }
+        MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE, "%s",
+                      res.error.c_str());
+    }
+
+    m_state = State::DONE;
+    return rval;
+}
