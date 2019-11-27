@@ -80,6 +80,7 @@ const int Session::N_LOAD;
 MXS_SESSION::MXS_SESSION(const std::string& host, SERVICE* service)
     : m_state(MXS_SESSION::State::CREATED)
     , m_id(session_get_next_id())
+    , m_worker(mxs::RoutingWorker::get_current())
     , m_host(host)
     , client_dcb(nullptr)
     , stats{time(0)}
@@ -693,19 +694,48 @@ public:
         gwbuf_free(m_buffer);
     }
 
-    void execute()
+    enum Action
     {
+        DISPOSE,
+        RETAIN
+    };
+
+    Action execute()
+    {
+        Action action = DISPOSE;
+
         if (m_session->state() == MXS_SESSION::State::STARTED)
         {
-            GWBUF* buffer = m_buffer;
-            m_buffer = NULL;
-
-            if (m_down.routeQuery(m_down.instance, m_down.session, buffer) == 0)
+            if (mxs::RoutingWorker::get_current() == m_session->worker())
             {
-                // Routing failed, send a hangup to the client.
-                m_session->client_connection()->dcb()->trigger_hangup_event();
+                GWBUF* buffer = m_buffer;
+                m_buffer = NULL;
+
+                if (m_down.routeQuery(m_down.instance, m_down.session, buffer) == 0)
+                {
+                    // Routing failed, send a hangup to the client.
+                    m_session->client_connection()->dcb()->trigger_hangup_event();
+                }
+            }
+            else
+            {
+                // Ok, so the session was moved during the delayed call. We need
+                // to send the task to that worker.
+
+                DelayedRoutingTask* task = this;
+
+                m_session->worker()->execute([task]() {
+                        if (task->execute() == DISPOSE)
+                        {
+                            delete task;
+                        }
+                    }, mxb::Worker::EXECUTE_QUEUED);
+
+                action = RETAIN;
             }
         }
+
+        return action;
     }
 
 private:
@@ -716,12 +746,18 @@ private:
 
 static bool delayed_routing_cb(Worker::Call::action_t action, DelayedRoutingTask* task)
 {
+    DelayedRoutingTask::Action next_step = DelayedRoutingTask::DISPOSE;
+
     if (action == Worker::Call::EXECUTE)
     {
-        task->execute();
+        next_step = task->execute();
     }
 
-    delete task;
+    if (next_step == DelayedRoutingTask::DISPOSE)
+    {
+        delete task;
+    }
+
     return false;
 }
 
@@ -1575,6 +1611,7 @@ bool enable_events(const std::vector<DCB*>& dcbs)
 bool Session::move_to(RoutingWorker* pTo)
 {
     mxs::RoutingWorker* pFrom = RoutingWorker::get_current();
+    mxb_assert(m_worker == pFrom);
     // TODO: Change to MXS_INFO when everything is ready.
     MXS_NOTICE("Moving session from %d to %d.", pFrom->id(), pTo->id());
 
@@ -1604,6 +1641,8 @@ bool Session::move_to(RoutingWorker* pTo)
 
     pFrom->session_registry().remove(id());
 
+    m_worker = pTo; // Set before the move-operation, see DelayedRoutingTask.
+
     bool posted = pTo->execute([this, pFrom, pTo, to_be_enabled]() {
             pTo->session_registry().add(this);
 
@@ -1628,6 +1667,8 @@ bool Session::move_to(RoutingWorker* pTo)
     {
         MXS_ERROR("Could not move session from worker %d to worker %d.",
                   pFrom->id(), pTo->id());
+
+        m_worker = pFrom;
 
         m_client_conn->dcb()->set_owner(pFrom);
         m_client_conn->dcb()->set_manager(pFrom);

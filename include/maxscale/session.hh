@@ -63,6 +63,9 @@ struct mxs_filter_session;
 
 namespace maxscale
 {
+
+class RoutingWorker;
+
 // These are more convenient types
 typedef int32_t (* DOWNSTREAMFUNC)(struct mxs_filter* instance,
                                    struct mxs_filter_session* session,
@@ -156,6 +159,11 @@ public:
     };
 
     virtual ~MXS_SESSION();
+
+    maxscale::RoutingWorker* worker() const
+    {
+        return m_worker;
+    }
 
     State state() const
     {
@@ -361,12 +369,13 @@ public:
     }
 
 protected:
-    State       m_state;                    /**< Current descriptor state */
-    uint64_t    m_id;                       /**< Unique session identifier */
-    std::string m_user;                     /**< The session user. */
-    std::string m_host;
-    std::string m_database;
-    std::string m_pending_database;
+    State                    m_state;    /**< Current descriptor state */
+    uint64_t                 m_id;       /**< Unique session identifier */
+    maxscale::RoutingWorker* m_worker;
+    std::string              m_user;     /**< The session user. */
+    std::string              m_host;
+    std::string              m_database;
+    std::string              m_pending_database;
 
     MXS_SESSION(const std::string& host, SERVICE* service);
 
