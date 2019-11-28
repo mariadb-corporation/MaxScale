@@ -42,13 +42,10 @@ static RSA* rsa_1024 = NULL;
 const MXS_ENUM_VALUE ssl_version_values[] =
 {
     {"MAX",    SERVICE_SSL_TLS_MAX},
-#ifndef OPENSSL_1_1
     {"TLSv10", SERVICE_TLS10      },
-#endif
-#ifdef OPENSSL_1_0
     {"TLSv11", SERVICE_TLS11      },
     {"TLSv12", SERVICE_TLS12      },
-#endif
+    {"TLSv13", SERVICE_TLS13      },
     {NULL}
 };
 
@@ -123,19 +120,18 @@ const char* ssl_method_type_to_string(ssl_method_type_t method_type)
 {
     switch (method_type)
     {
-#ifndef OPENSSL_1_1
     case SERVICE_TLS10:
-        return "TLSV10";
+        return "TLSv10";
 
-#endif
-#ifdef OPENSSL_1_0
     case SERVICE_TLS11:
-        return "TLSV11";
+        return "TLSv11";
 
     case SERVICE_TLS12:
-        return "TLSV12";
+        return "TLSv12";
 
-#endif
+    case SERVICE_TLS13:
+        return "TLSv13";
+
     case SERVICE_SSL_MAX:
     case SERVICE_TLS_MAX:
     case SERVICE_SSL_TLS_MAX:
@@ -152,14 +148,10 @@ ssl_method_type_t string_to_ssl_method_type(const char* str)
     {
         return SERVICE_SSL_TLS_MAX;
     }
-
-#ifndef OPENSSL_1_1
     else if (strcasecmp("TLSV10", str) == 0)
     {
         return SERVICE_TLS10;
     }
-#endif
-#ifdef OPENSSL_1_0
     else if (strcasecmp("TLSV11", str) == 0)
     {
         return SERVICE_TLS11;
@@ -168,8 +160,10 @@ ssl_method_type_t string_to_ssl_method_type(const char* str)
     {
         return SERVICE_TLS12;
     }
-#endif
-
+    else if (strcasecmp("TLSV13", str) == 0)
+    {
+        return SERVICE_TLS13;
+    }
     return SERVICE_SSL_UNKNOWN;
 }
 
@@ -241,22 +235,43 @@ bool SSLContext::init()
 
     switch (m_cfg.version)
     {
-#ifndef OPENSSL_1_1
     case SERVICE_TLS10:
+#ifndef OPENSSL_1_1
         m_method = (SSL_METHOD*)TLSv1_method();
+#else
+        MXS_ERROR("TLSv1.0 is not supported on this system.");
+        return false;
+#endif
         break;
 
-#endif
-#ifdef OPENSSL_1_0
+
     case SERVICE_TLS11:
+#ifdef OPENSSL_1_0
         m_method = (SSL_METHOD*)TLSv1_1_method();
+#else
+        MXS_ERROR("TLSv1.1 is not supported on this system.");
+        return false;
+#endif
         break;
 
     case SERVICE_TLS12:
+#ifdef OPENSSL_1_0
         m_method = (SSL_METHOD*)TLSv1_2_method();
+#else
+        MXS_ERROR("TLSv1.2 is not supported on this system.");
+        return false;
+#endif
         break;
 
+    case SERVICE_TLS13:
+#ifdef OPENSSL_1_1
+        m_method = (SSL_METHOD*)TLS_method();
+#else
+        MXS_ERROR("TLSv1.3 is not supported on this system.");
+        return false;
 #endif
+        break;
+
     /** Rest of these use the maximum available SSL/TLS methods */
     case SERVICE_SSL_MAX:
         m_method = (SSL_METHOD*)SSLv23_method();
@@ -290,6 +305,13 @@ bool SSLContext::init()
 
     /** Disable SSLv3 */
     SSL_CTX_set_options(m_ctx, SSL_OP_NO_SSLv3);
+
+    if (m_cfg.version == SERVICE_TLS13)
+    {
+        // There is no TLSv1_3_method function as the TLSv1_X_method functions are deprecated in favor of
+        // disabling them via options.
+        SSL_CTX_set_options(m_ctx, SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1_2);
+    }
 
     // Disable session cache
     SSL_CTX_set_session_cache_mode(m_ctx, SSL_SESS_CACHE_OFF);

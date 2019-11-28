@@ -34,13 +34,10 @@ class MXS_CONFIG_PARAMETER;
 
 enum ssl_method_type_t
 {
-#ifndef OPENSSL_1_1
     SERVICE_TLS10,
-#endif
-#ifdef OPENSSL_1_0
     SERVICE_TLS11,
     SERVICE_TLS12,
-#endif
+    SERVICE_TLS13,
     SERVICE_SSL_MAX,
     SERVICE_TLS_MAX,
     SERVICE_SSL_TLS_MAX,
