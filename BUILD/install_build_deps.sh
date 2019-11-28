@@ -8,9 +8,56 @@ tmpdir=$(mktemp -d)
 
 cd $tmpdir
 
-command -v apt-get
+distro_id=`cat /etc/*-release | grep "^ID_LIKE=" | sed "s/ID=//"`
 
-if [ $? == 0 ]
+unset packager_type
+
+if [[ ${distro_id} =~ "suse" ]]
+then
+   packager_type="zypper"
+fi
+
+if [[ ${distro_id} =~ "rhel" ]]
+then
+   packager_type="yum"
+fi
+
+if [[ ${distro_id} =~ "debian" ]]
+then
+   packager_type="apt"
+fi
+
+if [[ ${packager_type} == "" ]]
+then
+    command -v apt-get
+
+    if [ $? == 0 ]
+    then
+        packager_type="apt"
+    fi
+
+    command -v yum
+
+    if [ $? == 0 ]
+    then
+        packager_type="yum"
+    fi
+
+    command -v zypper
+
+    if [ $? == 0 ]
+    then
+        packager_type="zypper"
+    fi
+fi
+
+if [[ ${packager_type} == "" ]]
+then
+    echo "Can not determine package manager type, exiting"
+    exit 1
+fi
+
+if [[ ${packager_type} == "apt" ]]
 then
   # DEB-based distro
   install_libdir=/usr/lib
@@ -48,29 +95,11 @@ then
          sudo apt-get install -y --force-yes libgcrypt11-dev
      fi
   fi
-else
-  ## RPM-based distro
-  install_libdir=/usr/lib64
-  command -v yum
+fi
 
-  if [ $? != 0 ]
-  then
-    # We need zypper here
-    sudo zypper -n refresh
-    sudo zypper -n update
-    sudo zypper -n install gcc gcc-c++ ncurses-devel bison glibc-devel libgcc_s1 perl \
-         make libtool libopenssl-devel libaio libaio-devel flex \
-         pcre-devel git wget tcl tcl-devel libuuid-devel \
-         xz-devel sqlite3 sqlite3-devel pkg-config lua lua-devel \
-         gnutls-devel libgcrypt-devel pam-devel systemd-devel
-    sudo zypper -n install rpm-build
-    cat /etc/*-release | grep "SUSE Linux Enterprise Server 11"
-
-    if [ $? != 0 ]
-    then
-      sudo zypper -n install libedit-devel
-    fi
-  else
+if [[ ${packager_type} == "yum" ]]
+then
+    install_libdir=/usr/lib64
     # YUM!
     sudo yum clean all
     sudo yum update -y
@@ -111,8 +140,26 @@ else
         sudo sed -i 's/--selinux-enabled/--selinux-enabled=false/' /etc/sysconfig/docker
         sudo systemctl start docker
     fi
-  fi
+fi
 
+if [[ ${packager_type} == "zypper" ]]
+then
+    install_libdir=/usr/lib64
+    # We need zypper here
+    sudo zypper -n refresh
+    sudo zypper -n update
+    sudo zypper -n install gcc gcc-c++ ncurses-devel bison glibc-devel libgcc_s1 perl \
+         make libtool libopenssl-devel libaio libaio-devel flex \
+         pcre-devel git wget tcl tcl-devel libuuid-devel \
+         xz-devel sqlite3 sqlite3-devel pkg-config lua lua-devel \
+         gnutls-devel libgcrypt-devel pam-devel systemd-devel
+    sudo zypper -n install rpm-build
+    cat /etc/*-release | grep "SUSE Linux Enterprise Server 11"
+
+    if [ $? != 0 ]
+    then
+      sudo zypper -n install libedit-devel
+    fi
 fi
 
 # cmake
