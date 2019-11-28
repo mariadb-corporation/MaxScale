@@ -46,10 +46,12 @@ then
     if [ -d "/lib/systemd/system"  ]
     then
         cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.service /lib/systemd/system
+        mkdir -p /lib/systemd/system/maxscale.service.d
         systemctl daemon-reload
     elif [ -d "/usr/lib/systemd/system"  ]
     then
         cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.service /usr/lib/systemd/system
+        mkdir -p /usr/lib/systemd/system/maxscale.service.d
         systemctl daemon-reload
     fi
 else
