@@ -68,13 +68,26 @@ uint64_t Mirror::getCapabilities()
 
 bool Mirror::configure(MXS_CONFIG_PARAMETER* params)
 {
-    m_main = params->get_target("main");
-    return true;
+    bool rval = false;
+    std::lock_guard<mxb::shared_mutex> guard(m_rw_lock);
+
+    if (auto exporter = build_exporter(params))
+    {
+        m_exporter = std::move(exporter);
+        m_main = params->get_target("main");
+        rval = true;
+    }
+
+    return rval;
 }
 
 void Mirror::ship(json_t* obj)
 {
-    m_exporter->ship(obj);
+    {
+        mxb::shared_lock<mxb::shared_mutex> guard(m_rw_lock);
+        m_exporter->ship(obj);
+    }
+
     json_decref(obj);
 }
 

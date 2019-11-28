@@ -16,6 +16,7 @@
 
 #include <maxscale/router.hh>
 #include <maxscale/backend.hh>
+#include <maxbase/shared_mutex.hh>
 
 #include "exporter.hh"
 
@@ -46,4 +47,5 @@ private:
 
     mxs::Target*              m_main;
     std::unique_ptr<Exporter> m_exporter;
+    mxb::shared_mutex         m_rw_lock;
 };
