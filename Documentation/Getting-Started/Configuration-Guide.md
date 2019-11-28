@@ -1038,7 +1038,8 @@ unexpected outage happens.
 
 The maximum number of authentication failures that are tolerated before a host
 is temporarily blocked. The default value is 10 failures. After a host is
-blocked, connections from it are rejected for 60 seconds.
+blocked, connections from it are rejected for 60 seconds. To disable this
+feature, set the value to 0.
 
 Note that the configured value is not a hard limit. The number of tolerated
 failures is between `max_auth_errors_until_block` and `threads *

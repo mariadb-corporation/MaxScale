@@ -65,27 +65,38 @@ public:
      */
     bool mark_auth_as_failed(const std::string& remote)
     {
-        auto& u = m_failures[remote];
-        u.last_failure = Clock::now();
-        return ++u.failures == config_get_global_options()->max_auth_errors_until_block;
+        bool rval = false;
+
+        if (int limit = config_get_global_options()->max_auth_errors_until_block)
+        {
+            auto& u = m_failures[remote];
+            u.last_failure = Clock::now();
+            rval = ++u.failures == limit;
+        }
+
+        return rval;
     }
 
     bool is_blocked(const std::string& remote)
     {
         bool rval = false;
-        auto it = m_failures.find(remote);
 
-        if (it != m_failures.end())
+        if (int limit = config_get_global_options()->max_auth_errors_until_block)
         {
-            auto& u = it->second;
+            auto it = m_failures.find(remote);
 
-            if (Clock::now() - u.last_failure > seconds(BLOCK_TIME))
+            if (it != m_failures.end())
             {
-                u.last_failure = Clock::now();
-                u.failures = 0;
-            }
+                auto& u = it->second;
 
-            rval = u.failures >= config_get_global_options()->max_auth_errors_until_block;
+                if (Clock::now() - u.last_failure > seconds(BLOCK_TIME))
+                {
+                    u.last_failure = Clock::now();
+                    u.failures = 0;
+                }
+
+                rval = u.failures >= limit;
+            }
         }
 
         return rval;
