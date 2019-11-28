@@ -2922,6 +2922,7 @@ bool config_create_ssl(const char* name,
         if (ok)
         {
             *dest = mxs::SSLContext::create(params);
+            ok = dest->get();
         }
     }
 
