@@ -3715,11 +3715,12 @@ bool config_is_ssl_parameter(const char* key)
     return valid;
 }
 
-static bool config_contains_type(const CONFIG_CONTEXT* ctx, const char* name, const char* type)
+static bool config_contains_type(const CONFIG_CONTEXT* ctx, const char* name,
+                                 std::set<std::string> types)
 {
     while (ctx)
     {
-        if (strcmp(ctx->name(), name) == 0 && type == ctx->m_parameters.get_string(CN_TYPE))
+        if (strcmp(ctx->name(), name) == 0 && types.count(ctx->m_parameters.get_string(CN_TYPE)))
         {
             return true;
         }
@@ -3973,67 +3974,62 @@ bool config_param_is_valid(const MXS_MODULE_PARAM* params,
                 break;
 
             case MXS_MODULE_PARAM_SERVICE:
-                if (context && config_contains_type(context, fixed_value, CN_SERVICE))
+                if ((context && config_contains_type(context, fixed_value, {CN_SERVICE}))
+                    || (!context && service_find(fixed_value)))
                 {
                     valid = true;
                 }
                 break;
 
             case MXS_MODULE_PARAM_SERVER:
-                if (context && config_contains_type(context, fixed_value, CN_SERVER))
+                if ((context && config_contains_type(context, fixed_value, {CN_SERVER}))
+                    || (!context && ServerManager::find_by_unique_name(fixed_value)))
                 {
                     valid = true;
                 }
                 break;
 
             case MXS_MODULE_PARAM_TARGET:
-                if (context && (config_contains_type(context, fixed_value, CN_SERVER)
-                                || config_contains_type(context, fixed_value, CN_SERVICE)))
+                if ((context && config_contains_type(context, fixed_value, {CN_SERVER, CN_SERVICE}))
+                    || (!context && mxs::Target::find(fixed_value)))
                 {
                     valid = true;
                 }
                 break;
 
             case MXS_MODULE_PARAM_SERVERLIST:
-                if (context)
                 {
-                    auto server_names = config_break_list_string(value);
-                    if (!server_names.empty())
+                    auto names = config_break_list_string(value);
+                    valid = !names.empty();
+
+                    for (const auto& elem : names)
                     {
-                        valid = true;
-                        /* Check that every server name in the list is found in the config. */
-                        for (auto elem : server_names)
+                        if ((context && !config_contains_type(context, elem.c_str(), {CN_SERVER}))
+                            || (!context && !ServerManager::find_by_unique_name(elem)))
                         {
-                            if (!config_contains_type(context, elem.c_str(), CN_SERVER))
-                            {
-                                valid = false;
-                                break;
-                            }
+                            valid = false;
+                            break;
                         }
                     }
-                    break;
                 }
+                break;
 
             case MXS_MODULE_PARAM_TARGETLIST:
-                if (context)
                 {
-                    auto server_names = config_break_list_string(value);
-                    if (!server_names.empty())
+                    auto names = config_break_list_string(value);
+                    valid = !names.empty();
+
+                    for (const auto& elem : names)
                     {
-                        valid = true;
-                        /* Check that every server name in the list is found in the config. */
-                        for (auto elem : server_names)
+                        if ((context && !config_contains_type(context, elem.c_str(), {CN_SERVER, CN_SERVICE}))
+                            || (!context && !mxs::Target::find(elem)))
                         {
-                            if (!config_contains_type(context, elem.c_str(), CN_SERVER)
-                                && !config_contains_type(context, elem.c_str(), CN_SERVICE))
-                            {
-                                valid = false;
-                                break;
-                            }
+                            valid = false;
+                            break;
                         }
                     }
-                    break;
                 }
+                break;
 
             case MXS_MODULE_PARAM_PATH:
                 valid = check_path_parameter(&params[i], value);
