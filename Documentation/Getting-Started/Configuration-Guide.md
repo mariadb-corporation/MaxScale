@@ -1034,7 +1034,7 @@ configurations volatile (i.e. they are lost when maxscale is restarted), use
 the current runtime state of MaxScale. This makes problem analysis easier if an
 unexpected outage happens.
 
-#### `max_auth_errors_until_block`
+### `max_auth_errors_until_block`
 
 The maximum number of authentication failures that are tolerated before a host
 is temporarily blocked. The default value is 10 failures. After a host is
