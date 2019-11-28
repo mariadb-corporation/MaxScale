@@ -383,7 +383,7 @@ bool SSL_LISTENER_init(SSL_LISTENER* ssl)
     /* Load the CA certificate into the SSL_CTX structure */
     if (!SSL_CTX_load_verify_locations(ctx, ssl->ssl_ca_cert, NULL))
     {
-        MXS_ERROR("Failed to set Certificate Authority file");
+        MXS_ERROR("Failed to set Certificate Authority file: %s", get_ssl_errors());
         rval = false;
     }
 
