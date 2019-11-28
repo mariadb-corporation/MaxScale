@@ -288,7 +288,7 @@ bool SSL_LISTENER_init(SSL_LISTENER* ssl)
 
 
     case SERVICE_TLS11:
-#ifdef OPENSSL_1_0
+#if defined (OPENSSL_1_0) || defined (OPENSSL_1_1)
         ssl->method = (SSL_METHOD*)TLSv1_1_method();
 #else
         MXS_ERROR("TLSv1.1 is not supported on this system.");
@@ -297,7 +297,7 @@ bool SSL_LISTENER_init(SSL_LISTENER* ssl)
         break;
 
     case SERVICE_TLS12:
-#ifdef OPENSSL_1_0
+#if defined (OPENSSL_1_0) || defined (OPENSSL_1_1)
         ssl->method = (SSL_METHOD*)TLSv1_2_method();
 #else
         MXS_ERROR("TLSv1.2 is not supported on this system.");
