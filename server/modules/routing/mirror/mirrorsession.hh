@@ -49,6 +49,7 @@ private:
     Mirror*                 m_router;
     std::deque<mxs::Buffer> m_queue;
     std::string             m_query;
+    uint8_t                 m_command = 0;
     uint64_t                m_num_queries = 0;
 
     void route_queued_queries();
