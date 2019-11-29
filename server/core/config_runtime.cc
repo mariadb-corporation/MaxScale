@@ -1021,8 +1021,9 @@ bool runtime_alter_maxscale(const char* name, const char* value)
     }
     else if (key == CN_MAX_AUTH_ERRORS_UNTIL_BLOCK)
     {
-        if (int intval = get_positive_int(value))
+        if (is_valid_integer(value))
         {
+            int intval = atoi(value);
             MXS_NOTICE("Updated '%s' from %d to %d",
                        CN_MAX_AUTH_ERRORS_UNTIL_BLOCK,
                        cnf.max_auth_errors_until_block,

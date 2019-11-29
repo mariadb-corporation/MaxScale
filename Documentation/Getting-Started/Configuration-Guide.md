@@ -1037,11 +1037,12 @@ configurations volatile (i.e. they are lost when maxscale is restarted), use
 the current runtime state of MaxScale. This makes problem analysis easier if an
 unexpected outage happens.
 
-#### `max_auth_errors_until_block`
+### `max_auth_errors_until_block`
 
 The maximum number of authentication failures that are tolerated before a host
 is temporarily blocked. The default value is 10 failures. After a host is
-blocked, connections from it are rejected for 60 seconds.
+blocked, connections from it are rejected for 60 seconds. To disable this
+feature, set the value to 0.
 
 Note that the configured value is not a hard limit. The number of tolerated
 failures is between `max_auth_errors_until_block` and `threads *
@@ -1979,10 +1980,14 @@ This parameter controls the level of encryption used. Accepted values are:
  * TLSv10
  * TLSv11
  * TLSv12
+ * TLSv13
  * MAX
 
-The default is to use the highest level of encryption available. For OpenSSL 1.0
-and newer this is TLSv1.2.
+The default is to use the highest level of encryption available that both the
+client and server support. MaxScale supports TLSv1.0, TLSv1.1, TLSv1.2 and
+TLSv1.3 depending on the OpenSSL library version.
+
+The `TLSv13` value was added in MaxScale 2.3.15 ([MXS-2762](https://jira.mariadb.org/browse/MXS-2762)).
 
 ### `ssl_cert_verify_depth`
 

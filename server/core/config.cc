@@ -2245,7 +2245,7 @@ static int handle_global_item(const char* name, const char* value)
     {
         char* endptr;
         int intval = strtol(value, &endptr, 0);
-        if (*endptr == '\0' && intval > 0)
+        if (*endptr == '\0' && intval >= 0)
         {
             gateway.max_auth_errors_until_block = intval;
         }
@@ -2406,6 +2406,7 @@ bool config_create_ssl(const char* name,
         if (ok)
         {
             *dest = mxs::SSLContext::create(params);
+            ok = dest->get();
         }
     }
 
