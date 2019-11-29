@@ -43,7 +43,10 @@ public:
     }
 
 private:
-    Mirror(SERVICE* pService, MXS_CONFIG_PARAMETER* params, std::unique_ptr<Exporter> exporter);
+    Mirror(SERVICE* pService)
+        : Router<Mirror, MirrorSession>(pService)
+    {
+    }
 
     mxs::Target*              m_main;
     std::unique_ptr<Exporter> m_exporter;

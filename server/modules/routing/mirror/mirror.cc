@@ -14,24 +14,17 @@
 #include "mirror.hh"
 #include "mirrorsession.hh"
 
-Mirror::Mirror(SERVICE* pService, MXS_CONFIG_PARAMETER* params, std::unique_ptr<Exporter> exporter)
-    : Router<Mirror, MirrorSession>(pService)
-    , m_main(params->get_target("main"))
-    , m_exporter(std::move(exporter))
-{
-}
-
 // static
 Mirror* Mirror::create(SERVICE* pService, MXS_CONFIG_PARAMETER* params)
 {
-    Mirror* rval = nullptr;
+    std::unique_ptr<Mirror> rval(new Mirror(pService));
 
-    if (auto exporter = build_exporter(params))
+    if (!rval->configure(params))
     {
-        rval = new Mirror(pService, params, std::move(exporter));
+        rval.reset();
     }
 
-    return rval;
+    return rval.release();
 }
 
 MirrorSession* Mirror::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
@@ -65,13 +58,23 @@ uint64_t Mirror::getCapabilities()
 bool Mirror::configure(MXS_CONFIG_PARAMETER* params)
 {
     bool rval = false;
-    std::lock_guard<mxb::shared_mutex> guard(m_rw_lock);
+    auto main_tgt = params->get_target("main");
+    const auto& children = m_pService->get_children();
 
-    if (auto exporter = build_exporter(params))
+    if (std::find(children.begin(), children.end(), main_tgt) != children.end())
     {
-        m_exporter = std::move(exporter);
-        m_main = params->get_target("main");
-        rval = true;
+        std::lock_guard<mxb::shared_mutex> guard(m_rw_lock);
+
+        if (auto exporter = build_exporter(params))
+        {
+            m_exporter = std::move(exporter);
+            m_main = main_tgt;
+            rval = true;
+        }
+    }
+    else
+    {
+        MXS_ERROR("Main target '%s' is not listed in `targets`", params->get_string("main").c_str());
     }
 
     return rval;
