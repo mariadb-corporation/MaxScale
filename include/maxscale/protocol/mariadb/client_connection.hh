@@ -85,9 +85,9 @@ public:
     State m_state {State::INIT};
 
 private:
-    int  perform_authentication(GWBUF* buffer);
-    int  perform_normal_read(GWBUF* read_buffer, uint32_t nbytes_read);
-    void store_client_information(GWBUF* buffer);
+    bool perform_authentication();
+    bool perform_normal_read();
+
     bool parse_handshake_response_packet(GWBUF* buffer);
     bool parse_ssl_request_packet(GWBUF* buffer);
 
@@ -119,9 +119,10 @@ private:
     bool parse_client_response(const uint8_t* data, int data_len);
     bool prepare_authentication();
 
+    bool read_protocol_packet(mxs::Buffer* output, int max_size = -1);
+
     mariadb::UserSearchSettings user_search_settings() const;
     const MariaDBUserCache*     user_account_cache();
-    static std::string          to_string(AuthState state);
 
     enum class SSLState
     {
