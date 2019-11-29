@@ -466,9 +466,9 @@ RoutingWorker* RoutingWorker::get(int worker_id)
         worker_id = this_unit.id_main_worker;
     }
 
-    mxb_assert((worker_id >= this_unit.id_min_worker) && (worker_id <= this_unit.id_max_worker));
+    bool valid = (worker_id >= this_unit.id_min_worker && worker_id <= this_unit.id_max_worker);
 
-    return this_unit.ppWorkers[worker_id];
+    return valid ? this_unit.ppWorkers[worker_id] : nullptr;
 }
 
 RoutingWorker* RoutingWorker::get_current()
