@@ -3042,3 +3042,81 @@ bool runtime_alter_qc_from_json(json_t* json)
 {
     return qc_alter_from_json(json);
 }
+
+bool runtime_thread_rebalance(mxs::RoutingWorker& from,
+                              const std::string& sessions,
+                              const std::string& recipient)
+{
+    bool rv = false;
+
+    long nSessions = std::numeric_limits<long>::max();
+
+    if (sessions.empty() || mxb::get_long(sessions, &nSessions))
+    {
+        long wid_to = -1;
+
+        if (!recipient.empty() && mxb::get_long(recipient, &wid_to))
+        {
+            mxs::RoutingWorker* pTo = mxs::RoutingWorker::get(wid_to);
+
+            if (pTo)
+            {
+                from.rebalance(pTo, nSessions);
+                rv = true;
+            }
+            else
+            {
+                config_runtime_error("The 'recipient' value '%s' does not refer to a worker.",
+                                     recipient.c_str());
+            }
+        }
+        else
+        {
+            config_runtime_error("'recipient' argument not provided, or value is not a valid integer.");
+        }
+    }
+    else
+    {
+        config_runtime_error("'sessions' argument provided, but value '%s' is not a valid integer.",
+                             sessions.c_str());
+    }
+
+    return rv;
+}
+
+bool runtime_threads_rebalance(const std::string& arg_threshold)
+{
+    bool rv = true;
+
+    int64_t threshold = -1;
+
+    const auto& config = *config_get_global_options();
+
+    if (!arg_threshold.empty())
+    {
+        std::string message;
+        if (!config.s_rebalance_threshold.from_string(arg_threshold, &threshold, &message))
+        {
+            config_runtime_error("%s", message.c_str());
+            rv = false;
+        }
+    }
+    else
+    {
+        threshold = config.rebalance_threshold.get();
+
+        if (threshold == 0)
+        {
+            MXS_WARNING("Value of 'rebalance_threshold' is 0, and no explicit 'threshold' "
+                        "value provided, no thread rebalancing will be performed.");
+        }
+    }
+
+    if (threshold)
+    {
+        auto* main_worker = mxs::MainWorker::get();
+        main_worker->balance_workers(mxs::MainWorker::BALANCE_UNCONDITIONALLY, threshold);
+    }
+
+    return rv;
+}

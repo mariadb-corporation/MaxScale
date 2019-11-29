@@ -18,6 +18,7 @@
 
 #include <maxscale/adminusers.hh>
 #include <maxbase/alloc.h>
+#include <maxbase/string.hh>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/housekeeper.h>
 #include <maxscale/http.hh>
@@ -672,6 +673,38 @@ HttpResponse cb_flush(const HttpRequest& request)
     return HttpResponse(code);
 }
 
+HttpResponse cb_thread_rebalance(const HttpRequest& request)
+{
+    string thread = request.uri_part(2);
+    mxb_assert(!thread.empty()); // Should have been checked already.
+
+    long wid;
+    MXB_AT_DEBUG(bool rv=) mxb::get_long(thread, &wid);
+    mxb_assert(rv);
+
+    mxs::RoutingWorker* worker = mxs::RoutingWorker::get(wid);
+    mxb_assert(worker);
+
+    if (runtime_thread_rebalance(*worker,
+                                 request.get_option("sessions"),
+                                 request.get_option("recipient")))
+    {
+        return HttpResponse(MHD_HTTP_NO_CONTENT);
+    }
+
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+}
+
+HttpResponse cb_threads_rebalance(const HttpRequest& request)
+{
+    if (runtime_threads_rebalance(request.get_option("threshold")))
+    {
+        return HttpResponse(MHD_HTTP_NO_CONTENT);
+    }
+
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+}
+
 HttpResponse cb_all_threads(const HttpRequest& request)
 {
     return HttpResponse(MHD_HTTP_OK, mxs_rworker_list_to_json(request.host()));
@@ -1022,6 +1055,8 @@ public:
         /** For all module commands that modify state/data */
         m_post.emplace_back(cb_modulecmd, "maxscale", "modules", ":module", "?");
         m_post.emplace_back(cb_flush, "maxscale", "logs", "flush");
+        m_post.emplace_back(cb_thread_rebalance, "maxscale", "threads", ":thread", "rebalance");
+        m_post.emplace_back(cb_threads_rebalance, "maxscale", "threads", "rebalance");
 
         /** Update resources */
         m_patch.emplace_back(cb_alter_server, "servers", ":server");

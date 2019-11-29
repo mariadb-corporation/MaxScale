@@ -27,6 +27,11 @@
 
 class Server;
 
+namespace maxscale
+{
+class RoutingWorker;
+}
+
 /**
  * @brief Log error to be returned to client
  *
@@ -441,3 +446,25 @@ bool runtime_is_bool_or_null(json_t* json, const char* path);
  * @return True, if the requirement is fulfilled, false otherwise.
  */
 bool runtime_is_count_or_null(json_t* json, const char* path);
+
+/**
+ * Rebalance work of particular thread.
+ *
+ * @param worker      The worker to be rebalanced.
+ * @param sessions    The number of sessions to move.
+ * @param recipient   The thread to move them to.
+ *
+ * @return True, if the rebalancing could be initiated.
+ */
+bool runtime_thread_rebalance(maxscale::RoutingWorker& worker,
+                              const std::string& sessions,
+                              const std::string& recipient);
+
+/**
+ * Rebalance work of threads.
+ *
+ * @param threashold  The rebalancing threshold.
+ *
+ * @return True, if the rebalancing could be initiated.
+ */
+bool runtime_threads_rebalance(const std::string& threshold);

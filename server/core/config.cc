@@ -114,12 +114,8 @@ bool MXS_CONFIG::RebalancePeriod::set(const milliseconds& new_value)
 
     if (rv)
     {
-        if (old_value == milliseconds(0))
-        {
-            // So, there was no rebalancing taking place. We need to start it.
-            mxb_assert(mxs::MainWorker::get());
-            mxs::MainWorker::get()->start_rebalancing();
-        }
+        mxb_assert(mxs::MainWorker::get());
+        mxs::MainWorker::get()->start_rebalancing();
     }
 
     return rv;

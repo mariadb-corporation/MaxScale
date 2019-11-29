@@ -786,7 +786,7 @@ void RoutingWorker::epoll_tick()
         func();
     }
 
-    if (m_pTo)
+    if (m_rebalance.perform)
     {
         rebalance();
     }
@@ -1278,22 +1278,45 @@ bool RoutingWorker::balance_workers()
 
     int threshold = config_get_global_options()->rebalance_threshold.get();
 
-    if (threshold == 0)
+    if (threshold != 0)
     {
-        return balancing;
+        balancing = balance_workers(threshold);
     }
+
+    return balancing;
+}
+
+//static
+bool RoutingWorker::balance_workers(int threshold)
+{
+    bool balancing = false;
 
     int min_load = 100;
     int max_load = 0;
     RoutingWorker* pTo = nullptr;
     RoutingWorker* pFrom = nullptr;
 
+    auto rebalance_period = config_get_global_options()->rebalance_period.get();
+    // If rebalance_period is != 0, then the average load has been updated
+    // and we can use it.
+    bool use_average = rebalance_period != std::chrono::milliseconds(0);
+
     for (int i = 0; i < this_unit.nWorkers; ++i)
     {
         RoutingWorker* pWorker = this_unit.ppWorkers[i];
-        mxb::Average* pLoad = this_unit.ppWorker_loads[i];
 
-        int load = pLoad->value();
+        int load;
+
+        if (use_average)
+        {
+            mxb::Average* pLoad = this_unit.ppWorker_loads[i];
+            load = pLoad->value();
+        }
+        else
+        {
+            // If we can't use the average, we use one second load.
+            load = pWorker->load(mxb::WorkerLoad::ONE_SECOND);
+        }
 
         if (load < min_load)
         {
@@ -1335,41 +1358,68 @@ bool RoutingWorker::balance_workers()
     return balancing;
 }
 
-void RoutingWorker::rebalance(RoutingWorker* pTo)
+void RoutingWorker::rebalance(RoutingWorker* pTo, int nSessions)
 {
     // We can't balance here, because if a single epoll_wait() call returns
     // both the rebalance-message (sent from balance_workers() above) and
     // an event for a DCB that we move to another worker, we would crash.
     // So we only make a note and rebalance in epoll_tick().
-    m_pTo = pTo;
+    m_rebalance.set(pTo, nSessions);
 }
 
 void RoutingWorker::rebalance()
 {
-    mxb_assert(m_pTo);
+    mxb_assert(m_rebalance.pTo);
+    mxb_assert(m_rebalance.perform);
 
-    int max_io_activity = 0;
-    Session* pMax_session = nullptr;
-
-    for (auto& kv : m_sessions)
+    if (m_rebalance.nSessions == 1)
     {
-        Session* pSession = static_cast<Session*>(kv.second);
+        // Just one, move the most active one.
+        int max_io_activity = 0;
+        Session* pMax_session = nullptr;
 
-        int io_activity = pSession->io_activity();
-
-        if (io_activity > max_io_activity)
+        for (auto& kv : m_sessions)
         {
-            max_io_activity = io_activity;
-            pMax_session = pSession;
+            Session* pSession = static_cast<Session*>(kv.second);
+
+            int io_activity = pSession->io_activity();
+
+            if (io_activity > max_io_activity)
+            {
+                max_io_activity = io_activity;
+                pMax_session = pSession;
+            }
+        }
+
+        if (pMax_session)
+        {
+            pMax_session->move_to(m_rebalance.pTo);
+        }
+    }
+    else if (m_rebalance.nSessions > 0)
+    {
+        // TODO: Move all sessions in one message to recipient worker.
+
+        std::vector<Session*> sessions;
+
+        // If more than one, just move enough sessions is arbitrary order.
+        for (auto& kv : m_sessions)
+        {
+            sessions.push_back(static_cast<Session*>(kv.second));
+
+            if (--m_rebalance.nSessions == 0)
+            {
+                break;
+            }
+        }
+
+        for (auto* pSession : sessions)
+        {
+            pSession->move_to(m_rebalance.pTo);
         }
     }
 
-    if (pMax_session)
-    {
-        pMax_session->move_to(m_pTo);
-    }
-
-    m_pTo = nullptr;
+    m_rebalance.reset();
 }
 
 }

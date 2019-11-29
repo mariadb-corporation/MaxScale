@@ -87,6 +87,23 @@ public:
      */
     void start_rebalancing();
 
+    enum BalancingApproach
+    {
+        BALANCE_UNCONDITIONALLY,
+        BALANCE_ACCORDING_TO_PERIOD
+    };
+
+    /**
+     * Balance worker load.
+     *
+     * @param approach   Unconditionally or according to 'rebalance_period'.
+     * @param threshold  The rebalance threshold. If -1, then the value of
+     *                   'rebalance_threshold' will be used.
+     *
+     * @return True, if balancing actually was performed.
+     */
+    bool balance_workers(BalancingApproach approach, int threshold = -1);
+
 private:
     bool pre_run() override;
     void post_run() override;
@@ -115,8 +132,8 @@ private:
     bool        call_task(Worker::Call::action_t action, Task* pTask);
     static bool inc_ticks(Worker::Call::action_t action);
 
-    bool balance_workers(Worker::Call::action_t action);
-    void order_balancing_cb();
+    bool balance_workers_dc(Worker::Call::action_t action);
+    void order_balancing_dc();
 
     std::map<std::string, Task> m_tasks_by_name;
     IndexedStorage              m_storage;

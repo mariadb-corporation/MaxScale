@@ -51,6 +51,9 @@ inline void ensure_at_head(const GWBUF* buf)
 
 inline void ensure_owned(const GWBUF* buf)
 {
+    // TODO: Currently not possible to know whether manually triggered
+    // TODO: rebalance has taken place.
+#ifdef CAN_DETECT_WHETHER_REBALANCE_IN_PROCESS
     if (config_get_global_options()->rebalance_threshold == 0)
     {
         // TODO: If rebalancing occurs, then if a session has been moved while a
@@ -61,6 +64,7 @@ inline void ensure_owned(const GWBUF* buf)
         // TODO: is active.
         mxb_assert(buf->owner == RoutingWorker::get_current_id());
     }
+#endif
 }
 
 inline bool validate_buffer(const GWBUF* buf)

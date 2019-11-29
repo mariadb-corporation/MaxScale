@@ -93,7 +93,7 @@ public:
     RebalancePeriod rebalance_period;    /**< How often should rebalancing be made. */
     config::Count   rebalance_window;    /**< How many seconds should be taken into account. */
 
-private:
+public:
     static config::Specification s_specification;
 
     static config::ParamInteger                s_rebalance_threshold;
