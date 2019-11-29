@@ -72,4 +72,20 @@ char* trim(char* str)
 {
     return ltrim(rtrim(str));
 }
+
+bool get_long(const char* s, int base, long* value)
+{
+    errno = 0;
+    char* end;
+    long l = strtol(s, &end, base);
+
+    bool rv = (*end == 0 && errno == 0);
+
+    if (rv && value)
+    {
+        *value = l;
+    }
+
+    return rv;
+}
 }
