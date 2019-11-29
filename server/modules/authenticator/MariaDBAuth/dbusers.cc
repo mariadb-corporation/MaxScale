@@ -77,7 +77,7 @@ const char* mariadb_102_users_query =
     "), users AS ("
     // Select the root row, the actual user
     "  SELECT t.user, t.host, t.db, t.select_priv, t.password, t.default_role AS role FROM t"
-    "  WHERE t.is_role <> 'Y'"
+    "  WHERE t.is_role = 'N'"
     "  UNION"
     // Recursively select all roles for the users
     "  SELECT u.user, u.host, t.db, t.select_priv, u.password, r.role FROM t"
@@ -85,6 +85,7 @@ const char* mariadb_102_users_query =
     "  ON (t.user = u.role)"
     "  LEFT JOIN mysql.roles_mapping AS r"
     "  ON (t.user = r.user)"
+    "  WHERE t.is_role = 'Y'"
     ")"
     "SELECT DISTINCT t.user, t.host, t.db, t.select_priv, t.password FROM users AS t %s";
 
