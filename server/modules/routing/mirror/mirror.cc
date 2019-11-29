@@ -21,10 +21,6 @@ Mirror::Mirror(SERVICE* pService, MXS_CONFIG_PARAMETER* params, std::unique_ptr<
 {
 }
 
-Mirror::~Mirror()
-{
-}
-
 // static
 Mirror* Mirror::create(SERVICE* pService, MXS_CONFIG_PARAMETER* params)
 {

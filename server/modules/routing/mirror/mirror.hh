@@ -28,7 +28,7 @@ public:
     Mirror(const Mirror&) = delete;
     Mirror& operator=(const Mirror&) = delete;
 
-    ~Mirror();
+    ~Mirror() = default;
     static Mirror* create(SERVICE* pService, MXS_CONFIG_PARAMETER* params);
     MirrorSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints);
     json_t*        diagnostics() const;

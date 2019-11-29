@@ -169,17 +169,21 @@ void MirrorSession::generate_report()
 
     for (const auto& a : m_backends)
     {
-        const char* type = a->reply().error() ? "error" : (a->reply().is_resultset() ? "resultset" : "ok");
+        if (a->in_use())
+        {
+            const char* type = a->reply().error() ?
+                "error" : (a->reply().is_resultset() ? "resultset" : "ok");
 
-        json_t* o = json_object();
-        json_object_set_new(o, "target", json_string(a->name()));
-        json_object_set_new(o, "checksum", json_string(a->checksum().hex().c_str()));
-        json_object_set_new(o, "rows", json_integer(a->reply().rows_read()));
-        json_object_set_new(o, "warnings", json_integer(a->reply().num_warnings()));
-        json_object_set_new(o, "duration", json_integer(a->duration()));
-        json_object_set_new(o, "type", json_string(type));
+            json_t* o = json_object();
+            json_object_set_new(o, "target", json_string(a->name()));
+            json_object_set_new(o, "checksum", json_string(a->checksum().hex().c_str()));
+            json_object_set_new(o, "rows", json_integer(a->reply().rows_read()));
+            json_object_set_new(o, "warnings", json_integer(a->reply().num_warnings()));
+            json_object_set_new(o, "duration", json_integer(a->duration()));
+            json_object_set_new(o, "type", json_string(type));
 
-        json_array_append_new(arr, o);
+            json_array_append_new(arr, o);
+        }
     }
 
     json_object_set_new(obj, "results", arr);
