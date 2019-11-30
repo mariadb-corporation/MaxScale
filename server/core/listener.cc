@@ -288,7 +288,7 @@ bool SSL_LISTENER_init(SSL_LISTENER* ssl)
 
 
     case SERVICE_TLS11:
-#ifdef OPENSSL_1_0
+#if defined (OPENSSL_1_0) || defined (OPENSSL_1_1)
         ssl->method = (SSL_METHOD*)TLSv1_1_method();
 #else
         MXS_ERROR("TLSv1.1 is not supported on this system.");
@@ -297,7 +297,7 @@ bool SSL_LISTENER_init(SSL_LISTENER* ssl)
         break;
 
     case SERVICE_TLS12:
-#ifdef OPENSSL_1_0
+#if defined (OPENSSL_1_0) || defined (OPENSSL_1_1)
         ssl->method = (SSL_METHOD*)TLSv1_2_method();
 #else
         MXS_ERROR("TLSv1.2 is not supported on this system.");
@@ -383,7 +383,7 @@ bool SSL_LISTENER_init(SSL_LISTENER* ssl)
     /* Load the CA certificate into the SSL_CTX structure */
     if (!SSL_CTX_load_verify_locations(ctx, ssl->ssl_ca_cert, NULL))
     {
-        MXS_ERROR("Failed to set Certificate Authority file");
+        MXS_ERROR("Failed to set Certificate Authority file: %s", get_ssl_errors());
         rval = false;
     }
 

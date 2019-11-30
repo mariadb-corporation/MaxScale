@@ -1852,10 +1852,14 @@ This parameter controls the level of encryption used. Accepted values are:
  * TLSv10
  * TLSv11
  * TLSv12
+ * TLSv13
  * MAX
 
-The default is to use the highest level of encryption available. For OpenSSL 1.0
-and newer this is TLSv1.2.
+The default is to use the highest level of encryption available that both the
+client and server support. MaxScale supports TLSv1.0, TLSv1.1, TLSv1.2 and
+TLSv1.3 depending on the OpenSSL library version.
+
+The `TLSv13` value was added in MaxScale 2.3.15 ([MXS-2762](https://jira.mariadb.org/browse/MXS-2762)).
 
 ### `ssl_cert_verify_depth`
 
