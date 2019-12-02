@@ -398,13 +398,13 @@ static bool should_skip_query(const BinlogConfig& config, const std::string& sql
                 break;
             }
         }
-    }
 
-    // Also check for the default database in case the query has no tables in it. The dot at the end is
-    // required to distinct database names from table names.
-    if (tables.empty())
-    {
-        rval = should_skip(config, db + '.');
+        // Also check for the default database in case the query has no tables in it. The dot at the end is
+        // required to distinct database names from table names.
+        if (tables.empty())
+        {
+            rval = should_skip(config, db + '.');
+        }
     }
 
     gwbuf_free(buf);
