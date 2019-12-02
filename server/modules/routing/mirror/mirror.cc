@@ -29,6 +29,14 @@ Mirror* Mirror::create(SERVICE* pService, MXS_CONFIG_PARAMETER* params)
 
 MirrorSession* Mirror::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
 {
+    const auto& children = m_pService->get_children();
+
+    if (std::find(children.begin(), children.end(), m_main) == children.end())
+    {
+        MXS_ERROR("Main target '%s' is not listed in `targets`", m_main->name());
+        return nullptr;
+    }
+
     auto backends = MyBackend::from_endpoints(endpoints);
     bool connected = false;
 
@@ -61,20 +69,13 @@ bool Mirror::configure(MXS_CONFIG_PARAMETER* params)
     auto main_tgt = params->get_target("main");
     const auto& children = m_pService->get_children();
 
-    if (std::find(children.begin(), children.end(), main_tgt) != children.end())
-    {
-        std::lock_guard<mxb::shared_mutex> guard(m_rw_lock);
+    std::lock_guard<mxb::shared_mutex> guard(m_rw_lock);
 
-        if (auto exporter = build_exporter(params))
-        {
-            m_exporter = std::move(exporter);
-            m_main = main_tgt;
-            rval = true;
-        }
-    }
-    else
+    if (auto exporter = build_exporter(params))
     {
-        MXS_ERROR("Main target '%s' is not listed in `targets`", params->get_string("main").c_str());
+        m_exporter = std::move(exporter);
+        m_main = main_tgt;
+        rval = true;
     }
 
     return rval;
