@@ -653,7 +653,7 @@ void TestConnections::add_result(bool result, const char* format, ...)
     }
 }
 
-void TestConnections::expect(bool result, const char* format, ...)
+bool TestConnections::expect(bool result, const char* format, ...)
 {
     if (!result)
     {
@@ -662,6 +662,8 @@ void TestConnections::expect(bool result, const char* format, ...)
         report_result(format, argp);
         va_end(argp);
     }
+
+    return result;
 }
 
 void TestConnections::read_mdbci_info()

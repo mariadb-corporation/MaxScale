@@ -1027,6 +1027,9 @@ add_test_executable(mxs2057_systemd_watchdog.cpp mxs2057_systemd_watchdog mxs205
 # Tries prepared stmt 'SELECT 1,1,1,1...." with different nu,ber of '1'
 add_test_executable(mxs314.cpp mxs314 replication LABELS readwritesplit LIGHT REPL_BACKEND)
 
+# Basic mirror router test
+add_test_executable(test_mirror.cpp test_mirror test_mirror LABELS mirror LIGHT REPL_BACKEND)
+
 ############################################
 # END: Normal tests                        #
 ############################################
