@@ -35,6 +35,11 @@ const server_fields = [
         description: 'Server state'
     },
     {
+        name: 'Version',
+        path: 'attributes.version_string',
+        description: 'Server version'
+    },
+    {
         name: 'Last Event',
         path: 'attributes.last_event',
         description: 'The type of the latest event'
