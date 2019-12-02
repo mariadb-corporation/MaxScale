@@ -51,7 +51,10 @@ private:
     std::string             m_query;
     uint8_t                 m_command = 0;
     uint64_t                m_num_queries = 0;
+    mxs::Buffer             m_last_chunk;
+    mxs::ReplyRoute         m_last_route;
 
     void route_queued_queries();
     void generate_report();
+    void finalize_reply();
 };

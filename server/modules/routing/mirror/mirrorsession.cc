@@ -105,6 +105,18 @@ void MirrorSession::route_queued_queries()
     }
 }
 
+void MirrorSession::finalize_reply()
+{
+    // All replies have now arrived. Return the last chunk of the result to the client
+    // that we've been storing in the session.
+    MXS_INFO("All replies received, routing last chunk to the client.");
+
+    RouterSession::clientReply(m_last_chunk.release(), m_last_route, m_main->reply());
+
+    generate_report();
+    route_queued_queries();
+}
+
 void MirrorSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     auto backend = static_cast<MyBackend*>(down.back()->get_userdata());
@@ -115,22 +127,37 @@ void MirrorSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, con
         backend->ack_write();
         --m_responses;
 
-        MXS_INFO("Reply from '%s' complete", backend->name());
+        MXS_INFO("Reply from '%s' complete%s.", backend->name(), backend == m_main ?
+                 ", delaying routing of last chunk until all replies have been received" : "");
+
+        if (backend == m_main)
+        {
+            m_last_chunk.reset(pPacket);
+            m_last_route = down;
+            pPacket = nullptr;
+        }
 
         if (m_responses == 0)
         {
-            generate_report();
-            route_queued_queries();
+            mxb_assert(!m_last_chunk.empty());
+            mxb_assert(!pPacket || backend != m_main);
+
+            gwbuf_free(pPacket);
+            pPacket = nullptr;
+            finalize_reply();
         }
     }
 
-    if (backend == m_main)
+    if (pPacket)
     {
-        RouterSession::clientReply(pPacket, down, reply);
-    }
-    else
-    {
-        gwbuf_free(pPacket);
+        if (backend == m_main)
+        {
+            RouterSession::clientReply(pPacket, down, reply);
+        }
+        else
+        {
+            gwbuf_free(pPacket);
+        }
     }
 }
 
@@ -147,7 +174,7 @@ bool MirrorSession::handleError(mxs::ErrorType type,
 
         if (m_responses == 0 && backend != m_main)
         {
-            route_queued_queries();
+            finalize_reply();
         }
     }
 
