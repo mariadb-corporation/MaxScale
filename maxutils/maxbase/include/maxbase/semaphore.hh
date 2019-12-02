@@ -94,6 +94,35 @@ public:
     }
 
     /**
+     * @brief Posts the semaphore multiple times.
+     *
+     * Increments the semaphore a specified amount of times. If others threads
+     * were blocked in `wait', as many of them will subsequently return.
+     *
+     * @param nPost  How many times the semaphore should be posted.
+     *
+     * @return How many times the semaphore was posted. If the returned value
+     *         is different from @c nPost it is an indication that the maximum
+     *         count of the semaphore has been reached.
+     */
+    size_t post_n(size_t nPost) const
+    {
+        size_t nPosted = 0;
+
+        while (nPost--)
+        {
+            if (!post())
+            {
+                break;
+            }
+
+            ++nPosted;
+        }
+
+        return nPosted;
+    }
+
+    /**
      * @brief Waits on the semaphore.
      *
      * If the semaphore count is greater than zero, decrements the count and
