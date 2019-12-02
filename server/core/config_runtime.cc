@@ -3104,16 +3104,12 @@ bool runtime_threads_rebalance(const std::string& arg_threshold)
     else
     {
         threshold = config.rebalance_threshold.get();
-
-        if (threshold == 0)
-        {
-            MXS_WARNING("Value of 'rebalance_threshold' is 0, and no explicit 'threshold' "
-                        "value provided, no thread rebalancing will be performed.");
-        }
     }
 
-    if (threshold)
+    if (rv)
     {
+        mxb_assert(threshold > 0);
+
         auto* main_worker = mxs::MainWorker::get();
         main_worker->balance_workers(mxs::MainWorker::BALANCE_UNCONDITIONALLY, threshold);
     }

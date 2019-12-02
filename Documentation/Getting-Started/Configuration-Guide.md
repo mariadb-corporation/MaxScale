@@ -376,10 +376,8 @@ no rebalancing will be performed.
 ```
 rebalance_period=10s
 ```
-Note that rebalancing will not be performed unless `rebalance_threshold`
-also has been specified. Note that the value of `rebalance_period` should
-not be smaller than the value of `rebalance_window` whose default value
-is 10.
+Note that the value of `rebalance_period` should not be smaller than the
+value of `rebalance_window` whose default value is 10.
 
 If the value of `rebalance_period` is significantly shorter than that
 of `rebalance_window`, it may lead to oscillation where work is constantly
@@ -394,12 +392,13 @@ If the difference in load between the thread with the maximum load and
 the thread with the minimum load is larger than the value of this parameter,
 then work will be moved from the former to the latter.
 
-Since the load of a thread can vary between 0 and 100, the value of this
-parameter must be between 0 and 100. However, a value of 0, which is also
-the default, means that no rebalancing will occur.
-
+Although the load of a thread can vary between 0 and 100, the value of this
+parameter must be between 5 and 100. The default value is 20.
+```
+rebalance_threshold=15
+```
 Note that rebalancing will not be performed unless `rebalance_period`
-has also been specified.
+has been specified.
 
 ### `rebalance_window`
 

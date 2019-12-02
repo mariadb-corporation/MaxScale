@@ -79,10 +79,11 @@ config::Specification MXS_CONFIG::s_specification("maxscale", config::Specificat
 config::ParamInteger MXS_CONFIG::s_rebalance_threshold(
     &MXS_CONFIG::s_specification,
     CN_REBALANCE_THRESHOLD,
-    "When the load of a worker thread is this many percentage points higher/lower "
-    "than the average load, then sessions are moved from/to that worker.",
-    0,       // default
-    0, 100); // min, max
+    "If the difference in load between the thread with the maximum load and the thread "
+    "with the minimum load is larger than the value of this parameter, then work will "
+    "be moved from the former to the latter.",
+    20,      // default
+    5, 100); // min, max
 
 config::ParamDuration<std::chrono::milliseconds> MXS_CONFIG::s_rebalance_period(
     &MXS_CONFIG::s_specification,
