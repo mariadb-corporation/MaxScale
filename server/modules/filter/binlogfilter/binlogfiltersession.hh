@@ -100,8 +100,7 @@ private:
     void handleEventData(uint32_t len);
 
     // Check SQL statement in QUERY_EVENT
-    bool checkStatement(const uint8_t* event,
-                        const uint32_t event_size);
+    bool checkStatement(uint8_t* event, const uint32_t event_size);
 
     // Check DB.TABLE in ANNOTATE_ROWS event
     void checkAnnotate(const uint8_t* event,

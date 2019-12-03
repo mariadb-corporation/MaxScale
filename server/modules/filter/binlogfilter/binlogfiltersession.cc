@@ -305,11 +305,9 @@ bool BinlogFilterSession::checkEvent(GWBUF* buffer,
 
         case QUERY_EVENT:
             // Handle the SQL statement: DDL, DML, BEGIN, COMMIT
-            // If statement is COMMIT, then continue with next case.
-            if (checkStatement(body, body_size))
-            {
-                break;
-            }
+            checkStatement(body, body_size);
+            fixEvent(event + MYSQL_HEADER_LEN + 1, hdr.event_size, hdr);
+            break;
 
         case XID_EVENT:
             /** Note: This case is reached when event_type is
@@ -792,7 +790,7 @@ void BinlogFilterSession::handleEventData(uint32_t len)
  * @param event_size    The binlog event size
  * @return              False for COMMIT, true otherwise
  */
-bool BinlogFilterSession::checkStatement(const uint8_t* event, const uint32_t event_size)
+bool BinlogFilterSession::checkStatement(uint8_t* event, const uint32_t event_size)
 {
     int db_name_len = event[4 + 4];
     int var_block_len_offset = 4 + 4 + 1 + 2;
@@ -803,8 +801,28 @@ bool BinlogFilterSession::checkStatement(const uint8_t* event, const uint32_t ev
     std::string db((char*)event + static_size + var_block_len, db_name_len);
     std::string sql((char*)event + static_size + var_block_len + db_name_len + 1, statement_len);
 
-    m_skip = should_skip_query(m_filter.getConfig(), sql, db);
+    const auto& config = m_filter.getConfig();
+    m_skip = should_skip_query(config, sql, db);
     MXS_INFO("[%s] (%s) %s", m_skip ? "SKIP" : "    ", db.c_str(), sql.c_str());
+
+    if (!m_skip && !config.rewrite_src.empty())
+    {
+        if (db == config.rewrite_src)
+        {
+            db = config.rewrite_dest;
+        }
+
+        while (char* p = strstr(&sql[0], config.rewrite_src.c_str()))
+        {
+            memcpy(p, config.rewrite_dest.c_str(), config.rewrite_dest.length());
+        }
+
+        mxb_assert(db.length() == (size_t)db_name_len);
+        mxb_assert(sql.length() == (size_t)statement_len);
+        memcpy(event + static_size + var_block_len, db.c_str(), db_name_len);
+        memcpy(event + static_size + var_block_len + db_name_len + 1, sql.c_str(), statement_len);
+        MXS_INFO("Rename: (%s) %s", db.c_str(), sql.c_str());
+    }
 
     return true;
 }
