@@ -407,7 +407,7 @@ bool SSLContext::init()
     /* Set to require peer (client) certificate verification */
     if (m_cfg.verify_peer)
     {
-        SSL_CTX_set_verify(m_ctx, SSL_VERIFY_PEER, NULL);
+        SSL_CTX_set_verify(m_ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
     }
 
     /* Set the verification depth */
