@@ -590,6 +590,14 @@ modifications done by the client itself.
   addition to this, the `session_track_system_variables` parameter must be set
   to `last_gtid`.
 
+**Note:** This feature does not work with Galera or any other non-standard
+  replication mechanisms. As Galera does not update the `gtid_slave_pos`
+  variable when events are replicated via the Galera library, the
+  [`MASTER_GTID_WAIT`](https://mariadb.com/kb/en/library/master_gtid_wait/)
+  function used by MaxScale to synchronize reads will wait until the
+  timeout. With Galera this is not a serious issue as it, by nature, is a
+  mostly-synchronous replication mechanism.
+
 A practical example can be given by the following set of SQL commands executed
 with `autocommit=1`.
 
