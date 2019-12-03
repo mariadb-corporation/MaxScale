@@ -157,14 +157,32 @@ public:
      * Notify the service that authentication failed. The service may forward the notification to its user
      * account manager which then updates its data.
      */
-    virtual void notify_authentication_failed() = 0;
+    virtual void request_user_account_update() = 0;
 
     /**
      *  The user account manager should call this function after it has read user data from a backend
      *  and updated its internal database. Calling this function causes the service to sync all
      *  thread-specific user data caches with the master data.
+     *
+     *  @param data_changed True if user account data has actually changed. The empty updates are also
+     *  broadcasted as they may be of interest to any sessions waiting for an update.
      */
-    virtual void sync_user_account_caches() = 0;
+    virtual void sync_user_account_caches(bool data_changed) = 0;
+
+    /**
+     * Add a client connection to the list of clients to wakeup on userdata load.
+     *
+     * @param client Client connection to add
+     */
+    virtual void mark_for_wakeup(mxs::ClientConnection* client) = 0;
+
+    /**
+     * Remove a client connection from the wakeup list. Typically only needed when a sleeping connection
+     * is closed.
+     *
+     * @param client Client connection to remove
+     */
+    virtual void unmark_for_wakeup(mxs::ClientConnection* client) = 0;
 
     /**
      * Has a connection limit been reached?

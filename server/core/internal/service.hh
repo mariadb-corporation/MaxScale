@@ -240,9 +240,9 @@ public:
     }
 
     const mxs::UserAccountCache* user_account_cache() const override;
-    void notify_authentication_failed() override;
 
-    void sync_user_account_caches() override;
+    void request_user_account_update() override;
+    void sync_user_account_caches(bool data_changed) override;
 
     mxs::UserAccountManager* user_account_manager();
 
@@ -252,6 +252,9 @@ public:
      * @param user_manager The user account manager this service will use
      */
     void set_user_account_manager(SAccountManager user_manager);
+
+    void mark_for_wakeup(mxs::ClientConnection* session) override;
+    void unmark_for_wakeup(mxs::ClientConnection* session) override;
 
 private:
 
@@ -289,17 +292,20 @@ private:
      * available through this service.
      */
     void targets_updated();
+    void wakeup_sessions_waiting_userdata();
 
     // Helper for calculating version values
     std::pair<uint64_t, uint64_t> get_versions(const std::vector<SERVER*>& servers) const;
 
-    // User account manager. Can only be set once. A guard variable is used to synchronize access.
-    SAccountManager  m_usermanager;
-    std::atomic_bool m_usermanager_exists {false};
+    // User account manager. Can only be set once.
+    SAccountManager m_usermanager;
 
     /** User account cache local to each worker. Each worker must initialize their own copy
      *  and update it when the master data changes. */
     mxs::WorkerLocal<SAccountCache, mxs::DefaultConstructor<SAccountCache>> m_usercache;
+
+    /** Thread-local set of client connections waiting for updated user account data */
+    mxs::WorkerLocal<std::unordered_set<mxs::ClientConnection*>> m_sleeping_clients;
 };
 
 // A connection to a service

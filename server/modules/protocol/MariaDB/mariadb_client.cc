@@ -547,26 +547,55 @@ void MariaDBClientConnection::handle_authentication_errors(DCB* generic_dcb, Aut
  */
 bool MariaDBClientConnection::perform_authentication()
 {
-    // The first response from client requires special handling.
     mxs::Buffer read_buffer;
-    bool read_success = (m_auth_state == AuthState::INIT) ? read_first_client_packet(&read_buffer) :
-        read_protocol_packet(&read_buffer);
-    if (!read_success)
-    {
-        return false;
-    }
-    else if (read_buffer.empty())
-    {
-        // Not enough data was available yet.
-        return true;
-    }
-
-    auto buffer = read_buffer.release();
-    // Save next sequence to session. Authenticator may use the value.
+    GWBUF* buffer = nullptr;
     uint8_t sequence = 0;
-    gwbuf_copy_data(buffer, MYSQL_SEQ_OFFSET, 1, &sequence);
-    auto next_seq = sequence + 1;
-    m_session_data->next_sequence = next_seq;
+    uint8_t next_seq = 0;
+
+    if (m_auth_state == AuthState::TRY_AGAIN)
+    {
+        // Waiting for user account update.
+        if (m_user_update_wakeup)
+        {
+            next_seq = m_session_data->next_sequence;
+            sequence = next_seq - 1;
+        }
+        else
+        {
+            // Should not get client data (or read events) before users have actually been updated.
+            MXB_ERROR("Client %s sent data when waiting for user account update. Closing session.",
+                      m_session->user_and_host().c_str());
+            return false;
+        }
+    }
+    else
+    {
+        bool read_success;
+        if (m_auth_state == AuthState::INIT)
+        {
+            // The first response from client requires special handling.
+            read_success = read_first_client_packet(&read_buffer);
+        }
+        else
+        {
+            read_success = read_protocol_packet(&read_buffer);
+        }
+
+        if (!read_success)
+        {
+            return false;
+        }
+        else if (read_buffer.empty())
+        {
+            // Not enough data was available yet.
+            return true;
+        }
+        buffer = read_buffer.release();
+        // Save next sequence to session. Authenticator may use the value.
+        gwbuf_copy_data(buffer, MYSQL_SEQ_OFFSET, 1, &sequence);
+        next_seq = sequence + 1;
+        m_session_data->next_sequence = next_seq;
+    }
 
     const char wrong_sequence[] = "Client (%s) sent packet with unexpected sequence number. "
                                   "Expected %i, got %i.";
@@ -575,13 +604,12 @@ bool MariaDBClientConnection::perform_authentication()
     const int er_bad_handshake = 1043;
     const int er_out_of_order = 1156;
 
-    auto send_access_denied_error = [this, &next_seq] ()
-    {
-        std::string msg = mxb::string_printf("Access denied for user '%s'@'%s' (using password: %s)",
-            m_session_data->user.c_str(), m_session_data->remote.c_str(),
-            m_session_data->auth_token.empty() ? "NO" : "YES");
-        modutil_send_mysql_err_packet(m_dcb, next_seq, 0, 1045, "2800", msg.c_str());
-    };
+    auto send_access_denied_error = [this, &next_seq]() {
+            std::string msg = mxb::string_printf("Access denied for user '%s'@'%s' (using password: %s)",
+                                                 m_session_data->user.c_str(), m_session_data->remote.c_str(),
+                                                 m_session_data->auth_token.empty() ? "NO" : "YES");
+            modutil_send_mysql_err_packet(m_dcb, next_seq, 0, 1045, "2800", msg.c_str());
+        };
 
     auto remote = m_dcb->remote().c_str();
     bool error = false;
@@ -653,7 +681,7 @@ bool MariaDBClientConnection::perform_authentication()
                 {
                     if (parse_handshake_response_packet(buffer))
                     {
-                        m_auth_state = AuthState::PREPARE_AUTH;
+                        m_auth_state = AuthState::FIND_ENTRY;
                     }
                     else
                     {
@@ -674,15 +702,61 @@ bool MariaDBClientConnection::perform_authentication()
             }
             break;
 
-        case AuthState::PREPARE_AUTH:
-            if (prepare_authentication())
+        case AuthState::FIND_ENTRY:
             {
-                m_auth_state = AuthState::ASK_FOR_TOKEN;
+                auto uares = find_user_account_entry();
+                if (uares == FindUAResult::FOUND)
+                {
+                    m_auth_state = AuthState::ASK_FOR_TOKEN;
+                }
+                else if (uares == FindUAResult::NOT_FOUND)
+                {
+                    if (user_account_cache()->can_update_immediately())
+                    {
+                        // User data may be outdated, send update message through the service.
+                        // The current session will stall until userdata has been updated.
+                        m_session->service->request_user_account_update();
+                        m_session->service->mark_for_wakeup(this);
+                        m_auth_state = AuthState::TRY_AGAIN;
+                        state_machine_continue = false;
+                    }
+                    else
+                    {
+                        MXS_WARNING("User accounts have been recently updated, cannot update again for %s.",
+                            m_session->user_and_host().c_str());
+                        send_access_denied_error();
+                        m_auth_state = AuthState::FAIL;
+                    }
+                }
+                else
+                {
+                    send_access_denied_error();
+                    m_auth_state = AuthState::FAIL;
+                }
             }
-            else
+            break;
+
+        case AuthState::TRY_AGAIN:
             {
-                send_access_denied_error();
-                m_auth_state = AuthState::FAIL;
+                auto uares = FindUAResult::NOT_FOUND;
+                // Only recheck user if the user account data has actually changed since the previous
+                // attempt.
+                if (user_account_cache()->version() > m_previous_userdb_version)
+                {
+                    uares = find_user_account_entry();
+                }
+
+                if (uares == FindUAResult::FOUND)
+                {
+                    MXB_DEBUG("Found user account entry for %s after updating user account data.",
+                        m_session->user_and_host().c_str());
+                    m_auth_state = AuthState::ASK_FOR_TOKEN;
+                }
+                else
+                {
+                    send_access_denied_error();
+                    m_auth_state = AuthState::FAIL;
+                }
             }
             break;
 
@@ -727,7 +801,7 @@ bool MariaDBClientConnection::perform_authentication()
                     if (auth_val == AuthRes::FAIL_WRONG_PW)
                     {
                         // Again, this may be because user data is obsolete.
-                        m_session->service->notify_authentication_failed();
+                        m_session->service->request_user_account_update();
                     }
                     send_access_denied_error();
                     m_auth_state = AuthState::FAIL;
@@ -737,7 +811,6 @@ bool MariaDBClientConnection::perform_authentication()
 
         case AuthState::START_SESSION:
             // Authentication success, initialize session.
-            m_session->set_user(m_session_data->user);
             if (session_start(m_session))
             {
                 mxb_assert(m_session->state() != MXS_SESSION::State::CREATED);
@@ -778,15 +851,15 @@ bool MariaDBClientConnection::perform_authentication()
     return !error;
 }
 
-bool MariaDBClientConnection::prepare_authentication()
+MariaDBClientConnection::FindUAResult MariaDBClientConnection::find_user_account_entry()
 {
     auto search_settings = user_search_settings();
     // The correct authenticator is chosen here (and also in reauthenticate_client()).
     auto users = user_account_cache();
     auto entry = users->find_user(m_session_data->user, m_session_data->remote, m_session_data->db,
                                   search_settings);
-
-    bool found_good_entry = false;
+    m_previous_userdb_version = users->version();   // Can use this to skip user entry check after update.
+    auto rval = FindUAResult::NOT_FOUND;
     if (entry)
     {
         mariadb::AuthenticatorModule* selected_module = nullptr;
@@ -807,7 +880,7 @@ bool MariaDBClientConnection::prepare_authentication()
             m_user_entry = std::move(entry);
             m_session_data->m_current_authenticator = selected_module;
             m_authenticator = selected_module->create_client_authenticator();
-            found_good_entry = true;
+            rval = m_authenticator ? FindUAResult::FOUND : FindUAResult::ERROR;
         }
         else
         {
@@ -816,14 +889,7 @@ bool MariaDBClientConnection::prepare_authentication()
                      entry->username.c_str(), entry->host_pattern.c_str(), entry->plugin.c_str());
         }
     }
-
-    if (!found_good_entry)
-    {
-        // User data may be outdated, send update message through the service. The current session
-        // will fail.
-        m_session->service->notify_authentication_failed();
-    }
-    return found_good_entry && m_authenticator;
+    return rval;
 }
 
 /**
@@ -1705,6 +1771,11 @@ bool MariaDBClientConnection::init_connection()
 
 void MariaDBClientConnection::finish_connection()
 {
+    // If this connection is waiting for userdata, remove the entry.
+    if (m_auth_state == AuthState::TRY_AGAIN)
+    {
+        m_session->service->unmark_for_wakeup(this);
+    }
 }
 
 int32_t MariaDBClientConnection::connlimit(int limit)
@@ -2288,6 +2359,7 @@ bool MariaDBClientConnection::parse_client_response(const uint8_t* data, int dat
         {
             // Success, save data to session.
             m_session_data->user = userz;
+            m_session->set_user(userz);
             if (auth_token)
             {
                 auto& ses_auth_token = m_session_data->auth_token;
@@ -2451,4 +2523,11 @@ bool MariaDBClientConnection::read_first_client_packet(mxs::Buffer* output)
         gwbuf_free(read_buffer);
     }
     return rval;
+}
+
+void MariaDBClientConnection::wakeup()
+{
+    mxb_assert(m_auth_state == AuthState::TRY_AGAIN);
+    m_user_update_wakeup = true;
+    m_dcb->trigger_read_event();
 }

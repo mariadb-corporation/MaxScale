@@ -21,7 +21,6 @@
 #include <maxscale/server.hh>
 #include <maxscale/service.hh>
 #include <maxscale/protocol/mariadb/module_names.hh>
-#include <maxscale/routingworker.hh>
 #include <maxscale/config.hh>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/secrets.hh>
@@ -40,6 +39,7 @@ namespace
 
 constexpr auto acquire = std::memory_order_acquire;
 constexpr auto release = std::memory_order_release;
+constexpr auto relaxed = std::memory_order_relaxed;
 constexpr auto npos = string::npos;
 constexpr int ipv4min_len = 7;      // 1.1.1.1
 
@@ -126,7 +126,15 @@ void MariaDBUserManager::updater_thread_function()
 
     // In the beginning, don't update users right away as monitor may not have started yet.
     TimePoint last_update = Clock::now();
-    int updates = 0;
+
+    auto should_stop_running = [this]() {
+            return !m_keep_running.load(acquire);
+        };
+
+    auto should_stop_waiting = [this]() {
+            return !m_keep_running.load(acquire) || m_update_users_requested.load(acquire)
+                   || m_userdb_version.load(relaxed) == 0;
+        };
 
     while (m_keep_running.load(acquire))
     {
@@ -146,7 +154,7 @@ void MariaDBUserManager::updater_thread_function()
 
         // Calculate the time for the next scheduled update.
         TimePoint next_scheduled_update = last_update;
-        if (updates == 0)
+        if (m_userdb_version.load(relaxed) == 0)
         {
             // If updating has not succeeded even once yet, keep trying again and again,
             // with just a minimal wait.
@@ -163,7 +171,7 @@ void MariaDBUserManager::updater_thread_function()
 
         // Calculate the earliest allowed time for next update.
         TimePoint next_possible_update = last_update;
-        if (min_refresh_interval > 0 && updates > 0)
+        if (min_refresh_interval > 0 && m_userdb_version.load(relaxed) > 0)
         {
             next_possible_update += Duration((double)min_refresh_interval);
         }
@@ -174,29 +182,31 @@ void MariaDBUserManager::updater_thread_function()
 
         MutexLock lock(m_notifier_lock);
         // Wait until "next_possible_update", or until the thread should stop.
-        m_notifier.wait_until(lock, next_possible_update, [this]() {
-                                  return !m_keep_running.load(acquire);
-                              });
+        m_notifier.wait_until(lock, next_possible_update, should_stop_running);
 
+        m_can_update.store(true, release);
         // Wait until "next_scheduled_update", or until update requested or thread stop.
-        m_notifier.wait_until(lock, next_scheduled_update, [this, &updates]() {
-                                  return !m_keep_running.load(acquire)
-                                  || m_update_users_requested.load(acquire) || updates == 0;
-                              });
+        m_notifier.wait_until(lock, next_scheduled_update, should_stop_waiting);
         lock.unlock();
 
-        if (m_keep_running.load(acquire) && load_users())
+        auto update_result = UpdateResult::FAIL;
+        if (m_keep_running.load(acquire))
         {
-            updates++;
-            m_warn_no_servers = true;
+            update_result = update_users();
+            if (update_result != UpdateResult::FAIL)
+            {
+                m_warn_no_servers = true;
+            }
         }
 
+        m_can_update.store(false, release);
+        m_service->sync_user_account_caches(update_result == UpdateResult::SUCCESS_CHANGED);
         m_update_users_requested.store(false, release);
         last_update = Clock::now();
     }
 }
 
-bool MariaDBUserManager::load_users()
+MariaDBUserManager::UpdateResult MariaDBUserManager::update_users()
 {
     MariaDB::ConnectionSettings sett;
     std::vector<SERVER*> backends;
@@ -220,6 +230,7 @@ bool MariaDBUserManager::load_users()
 
     bool found_valid_server = false;
 
+    auto update_result = UpdateResult::FAIL;
     auto load_result = LoadResult::QUERY_FAILED;
     for (size_t i = 0; i < backends.size() && load_result == LoadResult::QUERY_FAILED; i++)
     {
@@ -249,7 +260,7 @@ bool MariaDBUserManager::load_users()
 
                 switch (load_result)
                 {
-                    case LoadResult::SUCCESS:
+                case LoadResult::SUCCESS:
                     // The comparison is not trivially cheap if there are many user entries,
                     // but it avoids unnecessary user cache updates which would involve copying all
                     // the data multiple times.
@@ -258,26 +269,28 @@ bool MariaDBUserManager::load_users()
                         MXB_INFO("Read %lu user@host entries from '%s' for service '%s'. The data was "
                                  "identical to existing user data.",
                                  m_userdb.n_entries(), srv->name(), m_service->name());
+                        update_result = UpdateResult::SUCCESS_NO_CHANGE;
                     }
                     else
                     {
-                        // Data changed, update caches.
+                        // Data changed, update main user db. Cache update message is sent by the caller.
                         {
                             Guard guard(m_userdb_lock);
                             m_userdb = std::move(temp_userdata);
+                            m_userdb_version++;
                         }
-                        m_service->sync_user_account_caches();
                         MXB_NOTICE("Read %lu user@host entries from '%s' for service '%s'.",
                                    m_userdb.n_entries(), srv->name(), m_service->name());
+                        update_result = UpdateResult::SUCCESS_CHANGED;
                     }
                     break;
 
-                    case LoadResult::QUERY_FAILED:
+                case LoadResult::QUERY_FAILED:
                     MXB_ERROR("Failed to query server '%s' for user account info. %s",
                               srv->name(), con.error());
                     break;
 
-                    case LoadResult::INVALID_DATA:
+                case LoadResult::INVALID_DATA:
                     MXB_ERROR("Received invalid data from '%s' when querying user accounts.",
                               srv->name());
                     break;
@@ -294,7 +307,7 @@ bool MariaDBUserManager::load_users()
     {
         MXB_ERROR("No valid servers from which to query MariaDB user accounts found.");
     }
-    return load_result == LoadResult::SUCCESS;
+    return update_result;
 }
 
 MariaDBUserManager::LoadResult
@@ -511,20 +524,36 @@ std::unique_ptr<mxs::UserAccountCache> MariaDBUserManager::create_user_account_c
     return std::unique_ptr<mxs::UserAccountCache>(cache);
 }
 
-UserDatabase MariaDBUserManager::user_database() const
+void MariaDBUserManager::get_user_database(UserDatabase* userdb_out, int* version_out) const
 {
-    UserDatabase rval;
+    UserDatabase db;
+    int version;
     {
+        // A lock is needed to ensure both the db and version number are from the same update.
+        // TODO: think if read-write-lock would be good here, since many threads are likely doing this
+        // at the same time.
         Guard guard(m_userdb_lock);
-        rval = m_userdb;
+        db = m_userdb;
+        version = m_userdb_version.load(relaxed);
     }
-    return rval;
+    *userdb_out = std::move(db);
+    *version_out = version;
 }
 
 void MariaDBUserManager::set_service(SERVICE* service)
 {
     mxb_assert(!m_service);
     m_service = service;
+}
+
+bool MariaDBUserManager::can_update_immediately() const
+{
+    return m_can_update.load(acquire);
+}
+
+int MariaDBUserManager::userdb_version() const
+{
+    return m_userdb_version.load(acquire);
 }
 
 void UserDatabase::add_entry(const std::string& username, const UserEntry& entry)
@@ -1031,7 +1060,7 @@ MariaDBUserCache::find_user(const string& user, const string& host, const string
         {
             MXB_INFO("Found matching user '%s'@'%s' for client '%s'@'%s' with sufficient privileges.",
                      found->username.c_str(), found->host_pattern.c_str(), userz, hostz);
-            rval.reset(new (std::nothrow) UserEntry(*found));
+            rval.reset(new(std::nothrow) UserEntry(*found));
         }
         else
         {
@@ -1054,7 +1083,7 @@ MariaDBUserCache::find_user(const string& user, const string& host, const string
             {
                 MXB_INFO("Found matching anonymous user ''@'%s' for client '%s'@'%s' with proxy grant.",
                          found->host_pattern.c_str(), userz, hostz);
-                rval.reset(new (std::nothrow) UserEntry(*found));
+                rval.reset(new(std::nothrow) UserEntry(*found));
             }
             else
             {
@@ -1074,5 +1103,21 @@ MariaDBUserCache::find_user(const string& user, const string& host, const string
 
 void MariaDBUserCache::update_from_master()
 {
-    m_userdb = m_master.user_database();
+    m_master.get_user_database(&m_userdb, &m_userdb_version);
+}
+
+bool MariaDBUserCache::can_update_immediately() const
+{
+    /**
+     * The usercache can be updated (or is about to be updated) if
+     * 1) The master database is ahead, meaning it's about to send the worker-message, or the message has
+     * already been sent but the current worker hasn't picked it up yet.
+     * 2) Or the minimum time between user updates has passed.
+     */
+    return m_userdb_version < m_master.userdb_version() || m_master.can_update_immediately();
+}
+
+int MariaDBUserCache::version() const
+{
+    return m_userdb_version;
 }

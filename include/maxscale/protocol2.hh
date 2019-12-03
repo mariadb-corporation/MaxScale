@@ -33,8 +33,8 @@ public:
 
     enum Capabilities
     {
-        CAP_AUTHDATA = (1u << 0),        // The protocol implements an authentication data manager
-        CAP_BACKEND = (1u << 1),     // The protocol supports backend communication
+        CAP_AUTHDATA = (1u << 0),   // The protocol implements an authentication data manager
+        CAP_BACKEND  = (1u << 1),   // The protocol supports backend communication
     };
 
     /**
@@ -159,6 +159,12 @@ public:
 
     virtual ClientDCB*       dcb() = 0;
     virtual const ClientDCB* dcb() const = 0;
+
+    virtual void wakeup()
+    {
+        // Should not be called for non-supported protocols.
+        mxb_assert(!true);
+    }
 };
 
 /**

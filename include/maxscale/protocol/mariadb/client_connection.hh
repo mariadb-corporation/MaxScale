@@ -53,6 +53,7 @@ public:
     bool    init_connection() override;
     void    finish_connection() override;
     int32_t connlimit(int limit) override;
+    void    wakeup() override;
 
     std::string current_db() const override;
 
@@ -105,8 +106,15 @@ private:
 
     void parse_client_capabilities(const uint8_t* data);
     bool parse_client_response(const uint8_t* data, int data_len);
-    bool prepare_authentication();
     bool require_ssl() const;
+
+    enum class FindUAResult
+    {
+        FOUND,
+        NOT_FOUND,
+        ERROR,
+    };
+    FindUAResult find_user_account_entry();
 
     mariadb::UserSearchSettings user_search_settings() const;
     const MariaDBUserCache*     user_account_cache();
@@ -118,7 +126,8 @@ private:
         EXPECT_SSL_REQ, /**< Expecting client to send SSLRequest */
         SSL_NEG,        /**< Negotiate SSL*/
         EXPECT_HS_RESP, /**< Expecting client to send standard handshake response */
-        PREPARE_AUTH,   /**< Find user account entry */
+        FIND_ENTRY,     /**< Find user account entry */
+        TRY_AGAIN,      /**< Find user entry again with new data */
         ASK_FOR_TOKEN,  /**< Ask client for token */
         CHECK_TOKEN,    /**< Check token against user account entry */
         START_SESSION,  /**< Start routing session */
@@ -150,4 +159,7 @@ private:
     bool            m_large_query {false};
     uint64_t        m_version {0};                  /**< Numeric server version */
     mxs::Buffer     m_stored_query;                 /**< Temporarily stored queries */
+
+    bool m_user_update_wakeup {false};      /**< Waking up because of user account update? */
+    int  m_previous_userdb_version {0};     /**< Userdb version used for first user account search */
 };

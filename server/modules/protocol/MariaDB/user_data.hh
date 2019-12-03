@@ -150,11 +150,21 @@ public:
     void set_credentials(const std::string& user, const std::string& pw) override;
     void set_backends(const std::vector<SERVER*>& backends) override;
     void set_service(SERVICE* service) override;
+    bool can_update_immediately() const;
 
     std::unique_ptr<mxs::UserAccountCache> create_user_account_cache() override;
 
-    std::string  protocol_name() const override;
-    UserDatabase user_database() const;
+    std::string protocol_name() const override;
+
+    /**
+     * Get both the user database and its version.
+     *
+     * @param userdb_out Output for user database
+     * @param version_out Output for version
+     */
+    void get_user_database(UserDatabase* userdb_out, int* version_out) const;
+
+    int userdb_version() const;
 
 private:
     using QResult = std::unique_ptr<mxq::QueryResult>;
@@ -166,9 +176,16 @@ private:
         INVALID_DATA,
     };
 
-    bool       load_users();
-    LoadResult load_users_mariadb(mxq::MariaDB& conn, SERVER* srv, UserDatabase* output);
-    LoadResult load_users_clustrix(mxq::MariaDB& con, SERVER* srv, UserDatabase* output);
+    enum class UpdateResult
+    {
+        SUCCESS_NO_CHANGE,
+        SUCCESS_CHANGED,
+        FAIL
+    };
+
+    UpdateResult update_users();
+    LoadResult   load_users_mariadb(mxq::MariaDB& conn, SERVER* srv, UserDatabase* output);
+    LoadResult   load_users_clustrix(mxq::MariaDB& con, SERVER* srv, UserDatabase* output);
 
     void updater_thread_function();
 
@@ -177,6 +194,9 @@ private:
     void read_proxy_grants(QResult proxies, UserDatabase* output);
 
     LoadResult read_users_clustrix(QResult users, QResult acl, UserDatabase* output);
+
+    mutable std::mutex m_userdb_lock;   /**< Protects UserDatabase from concurrent access */
+    UserDatabase       m_userdb;        /**< Contains user account info */
 
     // Fields for controlling the updater thread.
     std::thread             m_updater_thread;
@@ -193,12 +213,14 @@ private:
 
     SERVICE* m_service {nullptr};   /**< Service using this account data manager. */
 
+    std::atomic_bool m_can_update {false};      /**< User accounts can or are about to be updated */
+
+    /** How many times the user database has been updated. Only updates with changes count. */
+    std::atomic_int m_userdb_version {0};
+
     /** Warn if no valid servers to query from. Starts false, as in the beginning monitors may not have
      * ran yet. */
     bool m_warn_no_servers {false};
-
-    mutable std::mutex m_userdb_lock;   /**< Protects UserDatabase from concurrent access */
-    UserDatabase       m_userdb;        /**< Contains user account info */
 };
 
 class MariaDBUserCache : public mxs::UserAccountCache
@@ -221,8 +243,12 @@ public:
               const mariadb::UserSearchSettings& sett) const;
 
     void update_from_master() override;
+    bool can_update_immediately() const;
+    int  version() const;
 
 private:
-    const MariaDBUserManager& m_master;
-    UserDatabase              m_userdb;
+    const MariaDBUserManager& m_master;     /**< User database master copy */
+
+    UserDatabase m_userdb;              /**< Local copy of user database */
+    int          m_userdb_version {0};  /**< Version of local copy */
 };

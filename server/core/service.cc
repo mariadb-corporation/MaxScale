@@ -1758,7 +1758,7 @@ void Service::decref()
 
 UserAccountManager* Service::user_account_manager()
 {
-    return m_usermanager_exists.load(std::memory_order_acquire) ? m_usermanager.get() : nullptr;
+    return m_usermanager.get();
 }
 
 const mxs::UserAccountCache* Service::user_account_cache() const
@@ -1770,15 +1770,15 @@ const mxs::UserAccountCache* Service::user_account_cache() const
 void Service::set_user_account_manager(SAccountManager user_manager)
 {
     // Once the object is set, it can not change as this would indicate a change in service
-    // backend protocol. The atomic is required to sync the write/read.
-    mxb_assert(!m_usermanager_exists.load(std::memory_order_acquire) && !m_usermanager);
+    // backend protocol.
+    mxb_assert(!m_usermanager);
     m_usermanager = std::move(user_manager);
-    m_usermanager_exists.store(true, std::memory_order_release);
     m_usermanager->set_credentials(m_config->user, m_config->password);
     m_usermanager->set_backends(m_data->servers);
     m_usermanager->set_service(this);
 
-    // Message each routingworker to initialize their own user caches.
+    // Message each routingworker to initialize their own user caches. Wait for completion so that
+    // the admin thread and workers see the same object.
     mxb::Semaphore sem;
     auto init_cache = [this]()
     {
@@ -1790,25 +1790,22 @@ void Service::set_user_account_manager(SAccountManager user_manager)
     m_usermanager->start();
 }
 
-void Service::notify_authentication_failed()
+void Service::request_user_account_update()
 {
-    auto manager = user_account_manager();
-    if (manager)
-    {
-        manager->update_user_accounts();
-    }
+    user_account_manager()->update_user_accounts();
 }
 
-void Service::sync_user_account_caches()
+void Service::sync_user_account_caches(bool data_changed)
 {
     // Message each routingworker to update their caches. Do not wait for operation to finish.
-    auto update_cache = [this]()
+    auto update_cache = [this, data_changed]()
     {
-        auto& user_cache = (*m_usercache);
-        if (user_cache)
+        auto& user_cache = *m_usercache;
+        if (user_cache && data_changed)
         {
             user_cache->update_from_master();
         }
+        wakeup_sessions_waiting_userdata();
     };
     mxs::RoutingWorker::broadcast(update_cache, nullptr, mxb::Worker::EXECUTE_AUTO);
 }
@@ -1857,4 +1854,27 @@ uint8_t SERVICE::charset() const
         }
     }
     return rval;
+}
+
+void Service::wakeup_sessions_waiting_userdata()
+{
+    auto& sleeping_clients = *m_sleeping_clients;
+    for (auto* sleeper : sleeping_clients)
+    {
+        sleeper->wakeup();
+    }
+    sleeping_clients.clear();
+}
+
+void Service::mark_for_wakeup(mxs::ClientConnection* session)
+{
+    MXB_AT_DEBUG(auto ret = ) m_sleeping_clients->insert(session);
+    mxb_assert(ret.second);
+}
+
+void Service::unmark_for_wakeup(mxs::ClientConnection* session)
+{
+    // Should not assert here, as there may some corner cases where the connection has just been removed
+    // from the set but event was not processed before closing.
+    m_sleeping_clients->erase(session);
 }
