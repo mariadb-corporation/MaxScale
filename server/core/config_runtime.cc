@@ -3049,13 +3049,13 @@ bool runtime_thread_rebalance(mxs::RoutingWorker& from,
 {
     bool rv = false;
 
-    long nSessions = std::numeric_limits<long>::max();
+    int nSessions = std::numeric_limits<int>::max();
 
-    if (sessions.empty() || mxb::get_long(sessions, &nSessions))
+    if (sessions.empty() || mxb::get_int(sessions, &nSessions))
     {
-        long wid_to = -1;
+        int wid_to = -1;
 
-        if (!recipient.empty() && mxb::get_long(recipient, &wid_to))
+        if (!recipient.empty() && mxb::get_int(recipient, &wid_to))
         {
             mxs::RoutingWorker* pTo = mxs::RoutingWorker::get(wid_to);
 
