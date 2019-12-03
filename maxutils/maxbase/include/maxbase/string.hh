@@ -249,4 +249,42 @@ inline bool get_long(const std::string& s, long* value)
     return get_long(s.c_str(), 10, value);
 }
 
+/**
+ * Convert a string to an int.
+ *
+ * @param s      The string to convert.
+ * @param base   The base; must be as specified for strtol.
+ * @param value  On successful return, the corresponding value. Can be nullptr
+ *               in which case the function can be used for merely checking that
+ *               a string can be converted to a long.
+ *
+ * @return True, if the string could be converted.
+ */
+bool get_int(const char* s, int base, int* value);
+
+inline bool get_int(const std::string& s, int base, int* value)
+{
+    return get_int(s.c_str(), base, value);
+}
+
+/**
+ * Convert a string to an int, assuming a base of 10.
+ *
+ * @param s      The string to convert.
+ * @param value  On successful return, the corresponding value. Can be nullptr
+ *               in which case the function can be used for merely checking that
+ *               a string can be converted to a long.
+ *
+ * @return True, if the string could be converted.
+ */
+inline bool get_int(const char* s, int* value)
+{
+    return get_int(s, 10, value);
+}
+
+inline bool get_int(const std::string& s, int* value)
+{
+    return get_int(s.c_str(), 10, value);
+}
+
 }

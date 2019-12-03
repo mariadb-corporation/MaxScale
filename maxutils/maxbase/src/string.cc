@@ -88,4 +88,28 @@ bool get_long(const char* s, int base, long* value)
 
     return rv;
 }
+
+bool get_int(const char* s, int base, int* value)
+{
+    long l;
+    bool rv = get_long(s, base, &l);
+
+    if (rv)
+    {
+        if (l >= std::numeric_limits<int>::min()
+            && l <= std::numeric_limits<int>::max())
+        {
+            if (value)
+            {
+                *value = l;
+            }
+        }
+        else
+        {
+            rv = false;
+        }
+    }
+
+    return rv;
+}
 }
