@@ -27,7 +27,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         MXS_FILTER_VERSION,
         desc,
         "V1.0.0",
-        RCAP_TYPE_NONE,
+        RCAP_TYPE_STMT_OUTPUT,
         &BinlogFilter::s_object,
         NULL,
         NULL,
@@ -81,5 +81,5 @@ json_t* BinlogFilter::diagnostics_json() const
 // static
 uint64_t BinlogFilter::getCapabilities()
 {
-    return RCAP_TYPE_NONE;
+    return RCAP_TYPE_STMT_OUTPUT;
 }
