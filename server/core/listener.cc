@@ -414,7 +414,7 @@ bool SSL_LISTENER_init(SSL_LISTENER* ssl)
     /* Set to require peer (client) certificate verification */
     if (ssl->ssl_verify_peer_certificate)
     {
-        SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
+        SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
     }
 
     /* Set the verification depth */
