@@ -116,7 +116,6 @@ public:
     {
         HANDSHAKE_UNKNOWN,   /*< The DCB has unknown SSL status */
         HANDSHAKE_REQUIRED,  /*< SSL handshake is needed */
-        HANDSHAKE_DONE,      /*< The SSL handshake completed OK */
         ESTABLISHED,         /*< The SSL connection is in use */
         HANDSHAKE_FAILED     /*< The SSL handshake failed */
     };

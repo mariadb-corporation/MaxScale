@@ -271,7 +271,7 @@ int DCB::read(GWBUF** head, int maxbytes)
         m_last_read = mxs_clock();
     }
 
-    if (SSLState::HANDSHAKE_DONE == m_encryption.state || SSLState::ESTABLISHED == m_encryption.state)
+    if (m_encryption.state == SSLState::ESTABLISHED)
     {
         int n = read_SSL(head);
 

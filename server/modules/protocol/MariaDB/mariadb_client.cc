@@ -229,13 +229,8 @@ MariaDBClientConnection::SSLState MariaDBClientConnection::ssl_authenticate_chec
 }
 
 /**
- * @brief Check client's SSL capability and start SSL if appropriate.
- *
- * The protocol should determine whether the client is SSL capable and pass
- * the result as the second parameter. If the listener requires SSL but the
- * client is not SSL capable, an error message is recorded and failure return
- * given. If both sides want SSL, and SSL is not already established, the
- * process is triggered by calling DCB::ssl_handshake.
+ * Start or continue ssl handshake. If the listener requires SSL but the client is not SSL capable,
+ * an error message is recorded and failure return given.
  *
  * @return 0 if ok, >0 if a problem - see return codes defined in ssl.h
  */
@@ -243,28 +238,27 @@ int MariaDBClientConnection::ssl_authenticate_client()
 {
     auto dcb = m_dcb;
 
-    const std::string& user = m_session->user();
-    const std::string& remote = m_dcb->remote();
+    const char* remote = m_dcb->remote().c_str();
     const char* service = m_session->service->name();
 
     /* Now we require an SSL connection */
     if (!m_session_data->ssl_capable())
     {
-        /* Should be SSL, but client is not SSL capable */
-        MXS_INFO("User %s@%s connected to service '%s' without SSL when SSL was required.",
-                 user.c_str(),
-                 remote.c_str(),
-                 service);
+        /* Should be SSL, but client is not SSL capable. Cannot print the username, as client has not
+         * sent that yet. */
+        MXS_INFO("Client from '%s' attempted to connect to service '%s' without SSL when SSL was required.",
+                 remote, service);
         return SSL_ERROR_CLIENT_NOT_SSL;
     }
+
     /* Now we know SSL is required and client is capable */
-    if (dcb->ssl_state() != DCB::SSLState::HANDSHAKE_DONE && dcb->ssl_state() != DCB::SSLState::ESTABLISHED)
+    if (m_dcb->ssl_state() != DCB::SSLState::ESTABLISHED)
     {
         int return_code;
         /** Do the SSL Handshake */
-        if (DCB::SSLState::HANDSHAKE_UNKNOWN == dcb->ssl_state())
+        if (m_dcb->ssl_state() == DCB::SSLState::HANDSHAKE_UNKNOWN)
         {
-            dcb->set_ssl_state(DCB::SSLState::HANDSHAKE_REQUIRED);
+            m_dcb->set_ssl_state(DCB::SSLState::HANDSHAKE_REQUIRED);
         }
         /**
          * Note that this will often fail to achieve its result, because further
@@ -277,27 +271,21 @@ int MariaDBClientConnection::ssl_authenticate_client()
         return_code = dcb->ssl_handshake();
         if (return_code < 0)
         {
-            MXS_INFO("User %s@%s failed to connect to service '%s' with SSL.",
-                     user.c_str(),
-                     remote.c_str(),
-                     service);
+            MXS_INFO("Client from '%s' failed to connect to service '%s' with SSL.",
+                     remote, service);
             return SSL_ERROR_ACCEPT_FAILED;
         }
         else if (mxs_log_is_priority_enabled(LOG_INFO))
         {
-            if (1 == return_code)
+            if (return_code == 1)
             {
-                MXS_INFO("User %s@%s connected to service '%s' with SSL.",
-                         user.c_str(),
-                         remote.c_str(),
-                         service);
+                MXS_INFO("Client from '%s' connected to service '%s' with SSL.",
+                         remote, service);
             }
             else
             {
-                MXS_INFO("User %s@%s connect to service '%s' with SSL in progress.",
-                         user.c_str(),
-                         remote.c_str(),
-                         service);
+                MXS_INFO("Client from '%s' is in progress of connecting to service '%s' with SSL.",
+                         remote, service);
             }
         }
     }
