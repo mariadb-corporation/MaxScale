@@ -70,7 +70,9 @@ private:
         END,        // Query handling completed, do not send to filters/router.
     };
 
-    bool read_protocol_packet(mxs::Buffer* output, int max_size = -1);
+    bool read_first_client_packet(mxs::Buffer* output);
+    bool read_protocol_packet(mxs::Buffer* output);
+
     bool perform_authentication();
     bool perform_normal_read();
     bool parse_handshake_response_packet(GWBUF* buffer);

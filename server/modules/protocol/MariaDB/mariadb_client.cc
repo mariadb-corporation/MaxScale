@@ -54,7 +54,10 @@ using ExcRes = mariadb::ClientAuthenticator::ExchRes;
 using SUserEntry = std::unique_ptr<mariadb::UserEntry>;
 
 const char WORD_KILL[] = "KILL";
-const int CLIENT_CAPABILITIES_LEN = MYSQL_AUTH_PACKET_BASE_SIZE - MYSQL_HEADER_LEN;
+const int CLIENT_CAPABILITIES_LEN = 32;
+const int SSL_REQUEST_PACKET_SIZE = MYSQL_HEADER_LEN + CLIENT_CAPABILITIES_LEN;
+const int NORMAL_HS_RESP_MIN_SIZE = MYSQL_AUTH_PACKET_BASE_SIZE + 2;
+const int MAX_PACKET_SIZE = MYSQL_PACKET_LENGTH_MAX + MYSQL_HEADER_LEN;
 
 std::string get_version_string(SERVICE* service)
 {
@@ -88,6 +91,24 @@ bool supports_extended_caps(SERVICE* service)
     }
 
     return rval;
+}
+
+uint32_t parse_packet_length(GWBUF* buffer)
+{
+    uint32_t prot_packet_len = 0;
+    if (GWBUF_LENGTH(buffer) >= MYSQL_HEADER_LEN)
+    {
+        // Header in first chunk.
+        prot_packet_len = MYSQL_GET_PACKET_LEN(buffer);
+    }
+    else
+    {
+        // The header is split between multiple chunks.
+        uint8_t header[MYSQL_HEADER_LEN];
+        gwbuf_copy_data(buffer, 0, MYSQL_HEADER_LEN, header);
+        prot_packet_len = gw_mysql_get_byte3(header) + MYSQL_HEADER_LEN;
+    }
+    return prot_packet_len;
 }
 }
 
@@ -474,7 +495,6 @@ int MariaDBClientConnection::send_mysql_client_handshake()
     write(buf);
 
     m_state = State::AUTHENTICATING;
-    m_auth_state = require_ssl() ? AuthState::EXPECT_SSL_REQ : AuthState::EXPECT_HS_RESP;
     return sizeof(mysql_packet_header) + mysql_payload_size;
 }
 
@@ -521,25 +541,25 @@ void MariaDBClientConnection::handle_authentication_errors(DCB* generic_dcb, Aut
 }
 
 /**
- * @brief Client read event, process when client not yet authenticated
+ * Start or continue authenticating the client.
  *
- * @param buffer A buffer containing the data read from client
- * @return 0 if succeed, 1 otherwise
+ * @return True if authentication is still ongoing or complete, false if authentication failed and the
+ * connection should be closed.
  */
 bool MariaDBClientConnection::perform_authentication()
 {
+    // The first response from client requires special handling.
     mxs::Buffer read_buffer;
-    int read_limit = (m_auth_state == AuthState::EXPECT_SSL_REQ) ? MYSQL_AUTH_PACKET_BASE_SIZE : 0;
-
-    if (!read_protocol_packet(&read_buffer, read_limit))
+    bool read_success = (m_auth_state == AuthState::INIT) ? read_first_client_packet(&read_buffer) :
+        read_protocol_packet(&read_buffer);
+    if (!read_success)
     {
         return false;
     }
     else if (read_buffer.empty())
     {
-        // An empty read buffer is only allowed during SSL-handling. SSL-functions have already consumed
-        // all the data.
-        return m_auth_state == AuthState::SSL_NEG;
+        // Not enough data was available yet.
+        return true;
     }
 
     auto buffer = read_buffer.release();
@@ -564,8 +584,7 @@ bool MariaDBClientConnection::perform_authentication()
         switch (m_auth_state)
         {
         case AuthState::INIT:
-            mxb_assert(!true);
-            error = true;
+            m_auth_state = require_ssl() ? AuthState::EXPECT_SSL_REQ : AuthState::EXPECT_HS_RESP;
             break;
 
         case AuthState::EXPECT_SSL_REQ:
@@ -744,7 +763,6 @@ bool MariaDBClientConnection::perform_authentication()
         case AuthState::FAIL:
             // Close DCB. Will release session. An error message should have already been sent.
             m_state = State::FAILED;
-            DCB::close(m_dcb);
             state_machine_continue = false;
             error = true;
             break;
@@ -1527,6 +1545,11 @@ bool MariaDBClientConnection::perform_normal_read()
     {
         return false;
     }
+    else if (buffer.empty())
+    {
+        // Didn't get a complete packet, wait for more data.
+        return true;
+    }
 
     // The query classifier classifies according to the service's server that has the smallest version number
     qc_set_server_version(m_version);
@@ -2081,7 +2104,7 @@ bool MariaDBClientConnection::parse_handshake_response_packet(GWBUF* buffer)
      * Use a maximum limit as well to prevent stack overflow with malicious clients. The limit
      * is just a guess, but it seems the packets from most plugins are < 100 bytes.
      */
-    size_t min_expected_len = MYSQL_HEADER_LEN + CLIENT_CAPABILITIES_LEN + 2;
+    size_t min_expected_len = NORMAL_HS_RESP_MIN_SIZE;
     auto max_expected_len = min_expected_len + MYSQL_USER_MAXLEN + MYSQL_DATABASE_MAXLEN + 1000;
     if ((buflen >= min_expected_len) && buflen <= max_expected_len)
     {
@@ -2263,55 +2286,30 @@ bool MariaDBClientConnection::parse_client_response(const uint8_t* data, int dat
 }
 
 /**
- * Read a complete MySQL-protocol packet to output buffer. If maximum size is defined, only reads at max the
- * given number of bytes from dcb. Returns false on read error. Also returns false if the max_size-setting
- * prevents the function from reading a complete packet.
+ * Read a complete MySQL-protocol packet to output buffer. Returns false on read error.
  *
- * @param max_size Maximum size of packet. 0 or negative allows 16MB (max protocol packet size) to be read.
  * @param output Output for read packet. Should be empty before calling.
  * @return True, if reading succeeded. Also returns true if the entire packet was not yet available and
  * the function should be called again later.
  */
-bool MariaDBClientConnection::read_protocol_packet(mxs::Buffer* output, int max_size)
+bool MariaDBClientConnection::read_protocol_packet(mxs::Buffer* output)
 {
-    unsigned int effective_limit = GW_MYSQL_MAX_PACKET_LEN + MYSQL_HEADER_LEN;
-    if (max_size > 0 && (unsigned int)max_size < effective_limit)
-    {
-        effective_limit = max_size;
-    }
-    mxb_assert(effective_limit >= MYSQL_HEADER_LEN);
-
     // TODO: add optimization where the dcb readq is checked first, as it may contain a complete protocol
     // packet.
     GWBUF* read_buffer = nullptr;
-    int ret = m_dcb->read(&read_buffer, effective_limit);
-    if (ret < 0)
+    int buffer_len = m_dcb->read(&read_buffer, MAX_PACKET_SIZE);
+    if (buffer_len < 0)
     {
         return false;
     }
 
-    uint32_t buffer_len = ret;
-    bool rval = false;
-
     if (buffer_len >= MYSQL_HEADER_LEN)
     {
         // Got enough that the entire packet may be available.
-        uint32_t prot_packet_len = 0;
-        if (GWBUF_LENGTH(read_buffer) >= MYSQL_HEADER_LEN)
-        {
-            // Header in first chunk.
-            prot_packet_len = MYSQL_GET_PACKET_LEN(read_buffer);
-        }
-        else
-        {
-            // The header is split between multiple chunks.
-            uint8_t header[MYSQL_HEADER_LEN];
-            gwbuf_copy_data(read_buffer, 0, MYSQL_HEADER_LEN, header);
-            prot_packet_len = gw_mysql_get_byte3(header) + MYSQL_HEADER_LEN;
-        }
+        int prot_packet_len = parse_packet_length(read_buffer);
 
-        // Protocol packet length read. Either received more than the packet, the exact packet or a partial
-        // packet.
+        // Protocol packet length read. Either received more than the packet, the exact packet or
+        // a partial packet.
         if (prot_packet_len < buffer_len)
         {
             // Got more than needed, save extra to DCB and trigger a read.
@@ -2319,55 +2317,113 @@ bool MariaDBClientConnection::read_protocol_packet(mxs::Buffer* output, int max_
             output->reset(first_packet);
             m_dcb->readq_prepend(read_buffer);
             m_dcb->trigger_read_event();
-            rval = true;
         }
         else if (prot_packet_len == buffer_len)
         {
             // Read exact packet. Return it.
             output->reset(read_buffer);
-            if (buffer_len == effective_limit && m_dcb->socket_bytes_readable() > 0)
+            if (buffer_len == MAX_PACKET_SIZE && m_dcb->socket_bytes_readable() > 0)
             {
-                // Read a maximally long packet, route it first. This typically happens when there's a lot
-                // more data waiting and we have to start throttling the reads. May also happen when starting
-                // SSL-handshake.
+                // Read a maximally long packet when socket has even more. Route this packet,
+                // then read again.
                 m_dcb->trigger_read_event();
             }
-            rval = true;
         }
         else
         {
             // Could not read enough, try again later. Save results to dcb.
             m_dcb->readq_prepend(read_buffer);
-
-            if (effective_limit < prot_packet_len)
-            {
-                // Wrong use, limit was too small. Either a programming error or
-                // client is not obeying protocol.
-                MXB_ERROR("Could not read a complete protocol packet of length %i because read limit was %i.",
-                          prot_packet_len, effective_limit);
-            }
-            else
-            {
-                rval = true;
-            }
         }
     }
     else if (buffer_len > 0)
     {
         // Too little data. Save and wait for more.
         m_dcb->readq_prepend(read_buffer);
-        rval = true;
     }
     else
     {
         // No data was read even though event handler was called. This may happen due to manually triggered
         // reads (e.g. during SSL-init).
-        rval = true;
     }
-    return rval;
+    return true;
 }
 
 bool MariaDBClientConnection::require_ssl() const
 {
     return m_session->listener->ssl().context();
+}
+
+bool MariaDBClientConnection::read_first_client_packet(mxs::Buffer* output)
+{
+    /**
+     * Client may send two different kinds of handshakes with different lengths: SSLRequest 36 bytes,
+     * or the normal reply >= 38 bytes. If sending the SSLRequest, the client may have added
+     * SSL-specific data after the protocol packet. This data should not be read out of the socket,
+     * as SSL_accept() will expect to read it.
+     *
+     * To maintain compatibility with both, read in two steps. This adds one extra read during
+     * authentication for non-ssl-connections.
+     */
+    GWBUF* read_buffer = nullptr;
+    int buffer_len = m_dcb->read(&read_buffer, SSL_REQUEST_PACKET_SIZE);
+    if (buffer_len < 0)
+    {
+        return false;
+    }
+
+    int prot_packet_len = 0;
+    if (buffer_len >= MYSQL_HEADER_LEN)
+    {
+        prot_packet_len = parse_packet_length(read_buffer);
+    }
+    else
+    {
+        // Didn't read enough, try again.
+        m_dcb->readq_prepend(read_buffer);
+        return true;
+    }
+
+    // Got the protocol packet length.
+    bool rval = true;
+    if (prot_packet_len == SSL_REQUEST_PACKET_SIZE)
+    {
+        // SSLRequest packet. Most likely the entire packet was already read out. If not, try again later.
+        if (buffer_len < prot_packet_len)
+        {
+            m_dcb->readq_prepend(read_buffer);
+            read_buffer = nullptr;
+        }
+    }
+    else if (prot_packet_len >= NORMAL_HS_RESP_MIN_SIZE)
+    {
+        // Normal response. Need to read again. Likely the entire packet is available at the socket.
+        int ret = m_dcb->read(&read_buffer, prot_packet_len);
+        buffer_len = gwbuf_length(read_buffer);
+        if (ret < 0)
+        {
+            rval = false;
+        }
+        else if (buffer_len < prot_packet_len)
+        {
+            // Still didn't get the full response.
+            m_dcb->readq_prepend(read_buffer);
+            read_buffer = nullptr;
+        }
+    }
+    else
+    {
+        // Unexpected packet size.
+        rval = false;
+    }
+
+    if (rval)
+    {
+        output->reset(read_buffer);
+    }
+    else
+    {
+        // Free any previously read data.
+        gwbuf_free(read_buffer);
+    }
+    return rval;
 }
