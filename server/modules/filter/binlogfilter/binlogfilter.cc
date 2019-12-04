@@ -68,10 +68,6 @@ BinlogFilter* BinlogFilter::create(const char* zName,
     {
         MXS_ERROR("Both '%s' and '%s' must be defined", REWRITE_SRC, REWRITE_DEST);
     }
-    else if (src.length() != dest.length())
-    {
-        MXS_ERROR("Both '%s' and '%s' must have the same length", REWRITE_SRC, REWRITE_DEST);
-    }
     else
     {
         rval = new BinlogFilter(pParams);

@@ -88,7 +88,7 @@ private:
     void fixEvent(uint8_t* data, uint32_t event_size, const REP_HEADER& hdr);
 
     // Whether to skip current event
-    bool checkEvent(GWBUF* data, const REP_HEADER& hdr);
+    bool checkEvent(GWBUF** data, const REP_HEADER& hdr);
 
     // Filter the replication event
     void replaceEvent(GWBUF** data, const REP_HEADER& hdr);
@@ -100,7 +100,7 @@ private:
     void handleEventData(uint32_t len);
 
     // Check SQL statement in QUERY_EVENT
-    bool checkStatement(uint8_t* event, const uint32_t event_size);
+    void checkStatement(GWBUF** buffer, const REP_HEADER& hdr);
 
     // Check DB.TABLE in ANNOTATE_ROWS event
     void checkAnnotate(const uint8_t* event,
