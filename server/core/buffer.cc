@@ -29,7 +29,7 @@ static void             gwbuf_free_one(GWBUF* buf);
 static buffer_object_t* gwbuf_remove_buffer_object(GWBUF* buf,
                                                    buffer_object_t* bufobj);
 
-#if defined(SS_DEBUG)
+#if defined (SS_DEBUG)
 inline void invalidate_tail_pointers(GWBUF* head)
 {
     if (head && head->next)
@@ -845,7 +845,55 @@ void gwbuf_hexdump(GWBUF* buffer, int log_level)
     MXS_LOG_MESSAGE(log_level, "%.*s", n, ss.str().c_str());
 }
 
-void gwbuf_hexdump(const mxs::Buffer& buffer, int log_level)
+void gwbuf_hexdump_pretty(GWBUF* buffer, int log_level)
 {
-    return gwbuf_hexdump(const_cast<mxs::Buffer&>(buffer).get(), log_level);
+    mxs::Buffer buf(buffer);
+    buf.hexdump_pretty(log_level);
+    buf.release();
+}
+
+void mxs::Buffer::hexdump(int log_level) const
+{
+    return gwbuf_hexdump(m_pBuffer, log_level);
+}
+
+void mxs::Buffer::hexdump_pretty(int log_level) const
+{
+    constexpr const char as_hex[] = "0123456789abcdefghijklmnopqrstuvwxyz";
+    std::string result = "\n";
+    std::string hexed;
+    std::string readable;
+    auto it = begin();
+
+    while (it != end())
+    {
+        for (int i = 0; i < 16 && it != end(); i++)
+        {
+            uint8_t c = *it;
+            hexed += as_hex[c >> 4];
+            hexed += as_hex[c & 0x0f];
+            hexed += ' ';
+            readable += isprint(c) && (!isspace(c) || c == ' ') ? (char)c : '.';
+            ++it;
+        }
+
+        if (readable.length() < 16)
+        {
+            hexed.append(48 - hexed.length(), ' ');
+            readable.append(16 - readable.length(), ' ');
+        }
+
+        mxb_assert(hexed.length() == readable.length() * 3);
+        result += hexed.substr(0, 24);
+        result += "  ";
+        result += hexed.substr(24);
+        result += "  ";
+        result += readable;
+        result += '\n';
+
+        hexed.clear();
+        readable.clear();
+    }
+
+    MXS_LOG_MESSAGE(log_level, "%s", result.c_str());
 }
