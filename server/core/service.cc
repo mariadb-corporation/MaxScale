@@ -1798,3 +1798,49 @@ void Service::sync_user_account_caches()
     };
     mxs::RoutingWorker::broadcast(update_cache, nullptr, mxb::Worker::EXECUTE_AUTO);
 }
+
+std::string SERVICE::version_string() const
+{
+    std::string rval;
+    auto& cfg = config();
+    if (!cfg.version_string.empty())
+    {
+        // User-defined version string, use it
+        rval = cfg.version_string;
+    }
+    else
+    {
+        uint64_t smallest_found = UINT64_MAX;
+        for (auto server : reachable_servers())
+        {
+            auto version = server->version();
+            if (version.total > 0 && version.total < smallest_found)
+            {
+                rval = server->version_string();
+                smallest_found = version.total;
+            }
+        }
+    }
+
+    return rval;
+}
+
+uint8_t SERVICE::charset() const
+{
+    uint8_t rval = 0;
+    for (auto s : reachable_servers())
+    {
+        if (s->is_master())
+        {
+            // Master found, stop searching
+            rval = s->charset;
+            break;
+        }
+        else if (s->is_slave() || (s->is_running() && rval == 0))
+        {
+            // Slaves precede Running servers
+            rval = s->charset;
+        }
+    }
+    return rval;
+}

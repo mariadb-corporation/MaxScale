@@ -58,62 +58,19 @@ const int CLIENT_CAPABILITIES_LEN = MYSQL_AUTH_PACKET_BASE_SIZE - MYSQL_HEADER_L
 
 std::string get_version_string(SERVICE* service)
 {
-    std::string rval = DEFAULT_VERSION_STRING;
-
-    if (!service->config().version_string.empty())
+    std::string rval = service->version_string();
+    if (rval.empty())
     {
-        // User-defined version string, use it
-        rval = service->config().version_string;
-    }
-    else
-    {
-        uint64_t smallest_found = UINT64_MAX;
-        for (auto server : service->reachable_servers())
-        {
-            auto version = server->version();
-            if (version.total > 0 && version.total < smallest_found)
-            {
-                rval = server->version_string();
-                smallest_found = version.total;
-            }
-        }
+        rval = DEFAULT_VERSION_STRING;
     }
 
-    // Older applications don't understand versions other than 5 and cause strange problems
+    // Older applications don't understand versions other than 5 and cause strange problems.
+    // TODO: Is this still necessary?
     if (rval[0] != '5')
     {
         const char prefix[] = "5.5.5-";
         rval = prefix + rval;
     }
-
-    return rval;
-}
-
-uint8_t get_charset(SERVICE* service)
-{
-    uint8_t rval = 0;
-
-    for (SERVER* s : service->reachable_servers())
-    {
-        if (s->is_master())
-        {
-            // Master found, stop searching
-            rval = s->charset;
-            break;
-        }
-        else if (s->is_slave() || (s->is_running() && rval == 0))
-        {
-            // Slaves precede Running servers
-            rval = s->charset;
-        }
-    }
-
-    if (rval == 0)
-    {
-        // Charset 8 is latin1, the server default
-        rval = 8;
-    }
-
     return rval;
 }
 
@@ -132,203 +89,6 @@ bool supports_extended_caps(SERVICE* service)
 
     return rval;
 }
-
-/**
- * @brief Check whether a DCB requires SSL.
- *
- * This is a very simple test, but is placed in an SSL function so that
- * the knowledge of the SSL process is removed from the more general
- * handling of a connection in the protocols.
- *
- * @param dcb Request handler DCB connected to the client
- * @return Boolean indicating whether SSL is required.
- */
-bool ssl_required_by_dcb(DCB* dcb)
-{
-    mxb_assert(dcb->session()->listener);
-    return dcb->session()->listener->ssl().context();
-}
-
-/**
- * @brief Check whether a DCB requires SSL, but SSL is not yet negotiated.
- *
- * This is a very simple test, but is placed in an SSL function so that
- * the knowledge of the SSL process is removed from the more general
- * handling of a connection in the protocols.
- *
- * @param dcb Request handler DCB connected to the client
- * @return Boolean indicating whether SSL is required and not negotiated.
- */
-bool ssl_required_but_not_negotiated(DCB* dcb)
-{
-    return ssl_required_by_dcb(dcb) && DCB::SSLState::HANDSHAKE_UNKNOWN == dcb->ssl_state();
-}
-
-/**
- * @brief If an SSL connection is required, check that it has been established.
- *
- * This is called at the end of the authentication of a new connection.
- * If the result is not true, the data packet is abandoned with further
- * data expected from the client.
- *
- * @param dcb Request handler DCB connected to the client
- * @return Boolean to indicate whether connection is healthy
- */
-bool ssl_is_connection_healthy(DCB* dcb)
-{
-    /**
-     * If SSL was never expected, or if the connection has state SSL_ESTABLISHED
-     * then everything is as we wish. Otherwise, either there is a problem or
-     * more to be done.
-     */
-    return !dcb->session()->listener->ssl().context() || dcb->ssl_state() == DCB::SSLState::ESTABLISHED;
-}
-
-/**
- * @brief Check client's SSL capability and start SSL if appropriate.
- *
- * The protocol should determine whether the client is SSL capable and pass
- * the result as the second parameter. If the listener requires SSL but the
- * client is not SSL capable, an error message is recorded and failure return
- * given. If both sides want SSL, and SSL is not already established, the
- * process is triggered by calling DCB::ssl_handshake.
- *
- * @param dcb Request handler DCB connected to the client
- * @param is_capable Indicates if the client can handle SSL
- * @return 0 if ok, >0 if a problem - see return codes defined in ssl.h
- */
-int ssl_authenticate_client(DCB* dcb, bool is_capable)
-{
-    const std::string& user = dcb->session()->user();
-    const std::string& remote = dcb->remote();
-    const char* service = (dcb->service() && dcb->service()->name()) ? dcb->service()->name() : "";
-
-    if (!dcb->session()->listener->ssl().context())
-    {
-        /* Not an SSL connection on account of listener configuration */
-        return SSL_AUTH_CHECKS_OK;
-    }
-    /* Now we require an SSL connection */
-    if (!is_capable)
-    {
-        /* Should be SSL, but client is not SSL capable */
-        MXS_INFO("User %s@%s connected to service '%s' without SSL when SSL was required.",
-                 user.c_str(),
-                 remote.c_str(),
-                 service);
-        return SSL_ERROR_CLIENT_NOT_SSL;
-    }
-    /* Now we know SSL is required and client is capable */
-    if (dcb->ssl_state() != DCB::SSLState::HANDSHAKE_DONE && dcb->ssl_state() != DCB::SSLState::ESTABLISHED)
-    {
-        int return_code;
-        /** Do the SSL Handshake */
-        if (DCB::SSLState::HANDSHAKE_UNKNOWN == dcb->ssl_state())
-        {
-            dcb->set_ssl_state(DCB::SSLState::HANDSHAKE_REQUIRED);
-        }
-        /**
-         * Note that this will often fail to achieve its result, because further
-         * reading (or possibly writing) of SSL related information is needed.
-         * When that happens, there is a call in poll.c so that an EPOLLIN
-         * event that arrives while the SSL state is SSL_HANDSHAKE_REQUIRED
-         * will trigger DCB::ssl_handshake. This situation does not result in a
-         * negative return code - that indicates a real failure.
-         */
-        return_code = dcb->ssl_handshake();
-        if (return_code < 0)
-        {
-            MXS_INFO("User %s@%s failed to connect to service '%s' with SSL.",
-                     user.c_str(),
-                     remote.c_str(),
-                     service);
-            return SSL_ERROR_ACCEPT_FAILED;
-        }
-        else if (mxs_log_is_priority_enabled(LOG_INFO))
-        {
-            if (1 == return_code)
-            {
-                MXS_INFO("User %s@%s connected to service '%s' with SSL.",
-                         user.c_str(),
-                         remote.c_str(),
-                         service);
-            }
-            else
-            {
-                MXS_INFO("User %s@%s connect to service '%s' with SSL in progress.",
-                         user.c_str(),
-                         remote.c_str(),
-                         service);
-            }
-        }
-    }
-    return SSL_AUTH_CHECKS_OK;
-}
-
-void extract_user(char* token, std::string* user)
-{
-    char* end = strchr(token, ';');
-
-    if (end)
-    {
-        user->assign(token, end - token);
-    }
-    else
-    {
-        user->assign(token);
-    }
-}
-
-bool is_use_database(GWBUF* buffer, size_t packet_len)
-{
-    const char USE[] = "USE ";
-    char* ptr = (char*)GWBUF_DATA(buffer) + MYSQL_HEADER_LEN + 1;
-
-    return packet_len > MYSQL_HEADER_LEN + 1 + (sizeof(USE) - 1)
-           && strncasecmp(ptr, USE, sizeof(USE) - 1) == 0;
-}
-
-bool is_kill_query(GWBUF* buffer, size_t packet_len)
-{
-    const char KILL[] = "KILL ";
-    char* ptr = (char*)GWBUF_DATA(buffer) + MYSQL_HEADER_LEN + 1;
-
-    return packet_len > MYSQL_HEADER_LEN + 1 + (sizeof(KILL) - 1)
-           && strncasecmp(ptr, KILL, sizeof(KILL) - 1) == 0;
-}
-}
-
-MariaDBClientConnection::SSLState MariaDBClientConnection::ssl_authenticate_check_status()
-{
-    auto rval = SSLState::FAIL;
-
-    /**
-     * We record the SSL status before and after ssl authentication. This allows
-     * us to detect if the SSL handshake is immediately completed, which means more
-     * data needs to be read from the socket.
-     */
-    bool health_before = ssl_is_connection_healthy(m_dcb);
-    int ssl_ret = ssl_authenticate_client(m_dcb, m_session_data->ssl_capable());
-    bool health_after = ssl_is_connection_healthy(m_dcb);
-
-    if (ssl_ret != 0)
-    {
-        rval = (ssl_ret == SSL_ERROR_CLIENT_NOT_SSL) ? SSLState::NOT_CAPABLE : SSLState::FAIL;
-    }
-    else if (!health_after)
-    {
-        rval = SSLState::INCOMPLETE;
-    }
-    else if (!health_before && health_after)
-    {
-        rval = SSLState::INCOMPLETE;
-        m_dcb->trigger_read_event();
-    }
-    else if (health_before && health_after)
-    {
-        rval = SSLState::COMPLETE;
-    }
-    return rval;
 }
 
 // Servers and queries to execute on them
@@ -436,6 +196,114 @@ static bool kill_user_func(DCB* dcb, void* data)
     return true;
 }
 
+MariaDBClientConnection::SSLState MariaDBClientConnection::ssl_authenticate_check_status()
+{
+    /**
+     * We record the SSL status before and after ssl authentication. This allows
+     * us to detect if the SSL handshake is immediately completed, which means more
+     * data needs to be read from the socket.
+     */
+    bool health_before = (m_dcb->ssl_state() == DCB::SSLState::ESTABLISHED);
+    int ssl_ret = ssl_authenticate_client();
+    bool health_after = (m_dcb->ssl_state() == DCB::SSLState::ESTABLISHED);
+
+    auto rval = SSLState::FAIL;
+    if (ssl_ret != 0)
+    {
+        rval = (ssl_ret == SSL_ERROR_CLIENT_NOT_SSL) ? SSLState::NOT_CAPABLE : SSLState::FAIL;
+    }
+    else if (!health_after)
+    {
+        rval = SSLState::INCOMPLETE;
+    }
+    else if (!health_before && health_after)
+    {
+        rval = SSLState::INCOMPLETE;
+        m_dcb->trigger_read_event();
+    }
+    else if (health_before && health_after)
+    {
+        rval = SSLState::COMPLETE;
+    }
+    return rval;
+}
+
+/**
+ * @brief Check client's SSL capability and start SSL if appropriate.
+ *
+ * The protocol should determine whether the client is SSL capable and pass
+ * the result as the second parameter. If the listener requires SSL but the
+ * client is not SSL capable, an error message is recorded and failure return
+ * given. If both sides want SSL, and SSL is not already established, the
+ * process is triggered by calling DCB::ssl_handshake.
+ *
+ * @return 0 if ok, >0 if a problem - see return codes defined in ssl.h
+ */
+int MariaDBClientConnection::ssl_authenticate_client()
+{
+    auto dcb = m_dcb;
+
+    const std::string& user = m_session->user();
+    const std::string& remote = m_dcb->remote();
+    const char* service = m_session->service->name();
+
+    /* Now we require an SSL connection */
+    if (!m_session_data->ssl_capable())
+    {
+        /* Should be SSL, but client is not SSL capable */
+        MXS_INFO("User %s@%s connected to service '%s' without SSL when SSL was required.",
+                 user.c_str(),
+                 remote.c_str(),
+                 service);
+        return SSL_ERROR_CLIENT_NOT_SSL;
+    }
+    /* Now we know SSL is required and client is capable */
+    if (dcb->ssl_state() != DCB::SSLState::HANDSHAKE_DONE && dcb->ssl_state() != DCB::SSLState::ESTABLISHED)
+    {
+        int return_code;
+        /** Do the SSL Handshake */
+        if (DCB::SSLState::HANDSHAKE_UNKNOWN == dcb->ssl_state())
+        {
+            dcb->set_ssl_state(DCB::SSLState::HANDSHAKE_REQUIRED);
+        }
+        /**
+         * Note that this will often fail to achieve its result, because further
+         * reading (or possibly writing) of SSL related information is needed.
+         * When that happens, there is a call in poll.c so that an EPOLLIN
+         * event that arrives while the SSL state is SSL_HANDSHAKE_REQUIRED
+         * will trigger DCB::ssl_handshake. This situation does not result in a
+         * negative return code - that indicates a real failure.
+         */
+        return_code = dcb->ssl_handshake();
+        if (return_code < 0)
+        {
+            MXS_INFO("User %s@%s failed to connect to service '%s' with SSL.",
+                     user.c_str(),
+                     remote.c_str(),
+                     service);
+            return SSL_ERROR_ACCEPT_FAILED;
+        }
+        else if (mxs_log_is_priority_enabled(LOG_INFO))
+        {
+            if (1 == return_code)
+            {
+                MXS_INFO("User %s@%s connected to service '%s' with SSL.",
+                         user.c_str(),
+                         remote.c_str(),
+                         service);
+            }
+            else
+            {
+                MXS_INFO("User %s@%s connect to service '%s' with SSL in progress.",
+                         user.c_str(),
+                         remote.c_str(),
+                         service);
+            }
+        }
+    }
+    return SSL_AUTH_CHECKS_OK;
+}
+
 /**
  * Send the server handshake packet to the client.
  *
@@ -455,15 +323,19 @@ int MariaDBClientConnection::send_mysql_client_handshake()
     uint8_t mysql_plugin_data[13] = "";
     uint8_t mysql_server_capabilities_one[2];
     uint8_t mysql_server_capabilities_two[2];
-    uint8_t mysql_server_language = get_charset(service);
+    uint8_t mysql_server_language = service->charset();
+    if (mysql_server_language == 0)
+    {
+        // Charset 8 is latin1, the server default.
+        mysql_server_language = 8;
+    }
+
     uint8_t mysql_server_status[2];
     uint8_t mysql_scramble_len = 21;
     uint8_t mysql_filler_ten[10] = {};
     /* uint8_t mysql_last_byte = 0x00; not needed */
     char server_scramble[GW_MYSQL_SCRAMBLE_SIZE + 1] = "";
     bool is_maria = supports_extended_caps(service);
-
-    std::string version = get_version_string(service);
 
     gw_generate_random_str(server_scramble, GW_MYSQL_SCRAMBLE_SIZE);
 
@@ -494,6 +366,8 @@ int MariaDBClientConnection::send_mysql_client_handshake()
      */
     const char* plugin_name = DEFAULT_MYSQL_AUTH_PLUGIN;
     int plugin_name_len = strlen(plugin_name);
+
+    std::string version = get_version_string(service);
 
     uint32_t mysql_payload_size =
         sizeof(mysql_protocol_version) + (version.length() + 1) + sizeof(mysql_thread_id_num) + 8
@@ -555,7 +429,7 @@ int MariaDBClientConnection::send_mysql_client_handshake()
         mysql_server_capabilities_one[0] &= ~(uint8_t)GW_MYSQL_CAPABILITIES_CLIENT_MYSQL;
     }
 
-    if (ssl_required_by_dcb(m_dcb))
+    if (require_ssl())
     {
         mysql_server_capabilities_one[1] |= (int)GW_MYSQL_CAPABILITIES_SSL >> 8;
     }
@@ -612,7 +486,7 @@ int MariaDBClientConnection::send_mysql_client_handshake()
     write(buf);
 
     m_state = State::AUTHENTICATING;
-    m_auth_state = ssl_required_by_dcb(m_dcb) ? AuthState::EXPECT_SSL_REQ : AuthState::EXPECT_HS_RESP;
+    m_auth_state = require_ssl() ? AuthState::EXPECT_SSL_REQ : AuthState::EXPECT_HS_RESP;
     return sizeof(mysql_packet_header) + mysql_payload_size;
 }
 
@@ -760,7 +634,7 @@ bool MariaDBClientConnection::perform_authentication()
             {
                 // Expecting normal Handshake response
                 // @see https://mariadb.com/kb/en/library/connection/#client-handshake-response
-                int expected_seq = ssl_required_by_dcb(m_dcb) ? 2 : 1;
+                int expected_seq = require_ssl() ? 2 : 1;
                 if (sequence == expected_seq)
                 {
                     if (parse_handshake_response_packet(buffer))
@@ -826,7 +700,7 @@ bool MariaDBClientConnection::perform_authentication()
             }
             break;
 
-            case AuthState::CHECK_TOKEN:
+        case AuthState::CHECK_TOKEN:
             {
                 auto auth_val = m_authenticator->authenticate(m_dcb, m_user_entry.get(), m_session_data);
                 if (auth_val == AuthRes::SUCCESS)
@@ -861,7 +735,7 @@ bool MariaDBClientConnection::perform_authentication()
             else
             {
                 mysql_send_auth_error(m_dcb, next_seq,
-                    "Session creation failed, MaxScale may be out of memory");
+                                      "Session creation failed, MaxScale may be out of memory");
                 MXB_ERROR("Failed to create session for '%s'@'%s'.", "a", "b");
                 m_auth_state = AuthState::FAIL;
             }
@@ -869,15 +743,15 @@ bool MariaDBClientConnection::perform_authentication()
 
         case AuthState::COMPLETE:
             m_sql_mode = m_session->listener->sql_mode();
-                mxs_mysql_send_ok(m_dcb, m_session_data->next_sequence, 0, NULL);
-                if (m_dcb->readq())
-                {
-                    // The user has already sent more data, process it
-                    m_dcb->trigger_read_event();
-                }
-                m_state = State::READY;
-                state_machine_continue = false;
-                break;
+            mxs_mysql_send_ok(m_dcb, m_session_data->next_sequence, 0, NULL);
+            if (m_dcb->readq())
+            {
+                // The user has already sent more data, process it
+                m_dcb->trigger_read_event();
+            }
+            m_state = State::READY;
+            state_machine_continue = false;
+            break;
 
         case AuthState::FAIL:
             // Close DCB. Will release session. An error message should have already been sent.
@@ -1251,6 +1125,19 @@ bool MariaDBClientConnection::parse_kill_query(char* query, uint64_t* thread_id_
     unsigned long long int thread_id = 0;
     std::string tmpuser;
 
+    auto extract_user = [](char* token, std::string* user) {
+            char* end = strchr(token, ';');
+
+            if (end)
+            {
+                user->assign(token, end - token);
+            }
+            else
+            {
+                user->assign(token);
+            }
+        };
+
     enum kill_parse_state_t
     {
         KILL,
@@ -1395,10 +1282,10 @@ bool MariaDBClientConnection::parse_kill_query(char* query, uint64_t* thread_id_
  *
  * @return RES_CONTINUE or RES_END
  */
-MariaDBClientConnection::spec_com_res_t
+MariaDBClientConnection::SpecialCmdRes
 MariaDBClientConnection::handle_query_kill(DCB* dcb, GWBUF* read_buffer, uint32_t packet_len)
 {
-    spec_com_res_t rval = RES_CONTINUE;
+    auto rval = SpecialCmdRes::CONTINUE;
     /* First, we need to detect the text "KILL" (ignorecase) in the start
      * of the packet. Copy just enough characters. */
     const size_t KILL_BEGIN_LEN = sizeof(WORD_KILL) - 1;
@@ -1425,7 +1312,7 @@ MariaDBClientConnection::handle_query_kill(DCB* dcb, GWBUF* read_buffer, uint32_
 
         if (parse_kill_query(querybuf, &thread_id, &kt, &user))
         {
-            rval = RES_END;
+            rval = SpecialCmdRes::END;
 
             if (thread_id > 0)
             {
@@ -1463,11 +1350,26 @@ void MariaDBClientConnection::handle_use_database(GWBUF* read_buffer)
  *
  * @return see @c spec_com_res_t
  */
-MariaDBClientConnection::spec_com_res_t
+MariaDBClientConnection::SpecialCmdRes
 MariaDBClientConnection::process_special_commands(DCB* dcb, GWBUF* read_buffer, uint8_t cmd)
 {
-    spec_com_res_t rval = RES_CONTINUE;
+    auto is_use_database = [](GWBUF* buffer, size_t packet_len) -> bool {
+            const char USE[] = "USE ";
+            char* ptr = (char*)GWBUF_DATA(buffer) + MYSQL_HEADER_LEN + 1;
 
+            return packet_len > MYSQL_HEADER_LEN + 1 + (sizeof(USE) - 1)
+                   && strncasecmp(ptr, USE, sizeof(USE) - 1) == 0;
+        };
+
+    auto is_kill_query = [](GWBUF* buffer, size_t packet_len) -> bool {
+            const char KILL[] = "KILL ";
+            char* ptr = (char*)GWBUF_DATA(buffer) + MYSQL_HEADER_LEN + 1;
+
+            return packet_len > MYSQL_HEADER_LEN + 1 + (sizeof(KILL) - 1)
+                   && strncasecmp(ptr, KILL, sizeof(KILL) - 1) == 0;
+        };
+
+    auto rval = SpecialCmdRes::CONTINUE;
     if (cmd == MXS_COM_QUIT)
     {
         /** The client is closing the connection. We know that this will be the
@@ -1502,7 +1404,7 @@ MariaDBClientConnection::process_special_commands(DCB* dcb, GWBUF* read_buffer, 
         uint64_t process_id = gw_mysql_get_byte4(GWBUF_DATA(read_buffer) + MYSQL_HEADER_LEN + 1);
         mxs_mysql_execute_kill(dcb->session(), process_id, KT_CONNECTION);
         mxs_mysql_send_ok(dcb, 1, 0, NULL);
-        rval = RES_END;
+        rval = SpecialCmdRes::END;
     }
     else if (m_command == MXS_COM_INIT_DB)
     {
@@ -1567,7 +1469,7 @@ int MariaDBClientConnection::route_by_statement(uint64_t capabilities, GWBUF** p
         // is thread and not session specific.
         qc_set_sql_mode(m_sql_mode);
 
-        if (process_special_commands(m_dcb, packetbuf, m_command) == RES_END)
+        if (process_special_commands(m_dcb, packetbuf, m_command) == SpecialCmdRes::END)
         {
             gwbuf_free(packetbuf);
             continue;
@@ -1647,7 +1549,7 @@ bool MariaDBClientConnection::perform_normal_read()
     auto read_buffer = buffer.release();
     auto capabilities = service_get_capabilities(m_session->service);
     int ret = route_by_statement(capabilities, &read_buffer) ? 0 : 1;
-    mxb_assert(read_buffer == nullptr); // Router should have consumed the packet.
+    mxb_assert(read_buffer == nullptr);     // Router should have consumed the packet.
 
     bool rval = true;
     if (ret != 0)
@@ -2475,4 +2377,9 @@ bool MariaDBClientConnection::read_protocol_packet(mxs::Buffer* output, int max_
         rval = true;
     }
     return rval;
+}
+
+bool MariaDBClientConnection::require_ssl() const
+{
+    return m_session->listener->ssl().context();
 }

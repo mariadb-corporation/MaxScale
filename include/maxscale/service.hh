@@ -174,6 +174,16 @@ public:
         return limit && mxb::atomic::load(&stats().n_current, mxb::atomic::RELAXED) > limit;
     }
 
+    /**
+     * Get the version string of the service. If a version string is configured, returns that. Otherwise
+     * returns the version string of the server with the smallest version number.
+     *
+     * @return Version string
+     */
+    std::string version_string() const;
+
+    uint8_t charset() const;
+
 protected:
     SERVICE(const std::string& name,
             const std::string& router_name)

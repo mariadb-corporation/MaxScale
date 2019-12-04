@@ -32,13 +32,6 @@ class MariaDBUserCache;
 class MariaDBClientConnection : public mxs::ClientConnectionBase
 {
 public:
-    /** Return type of process_special_commands() */
-    enum spec_com_res_t
-    {
-        RES_CONTINUE,   // No special command detected, proceed as normal.
-        RES_END,        // Query handling completed, do not send to filters/router.
-    };
-
     // General connection state
     enum class State
     {
@@ -46,21 +39,6 @@ public:
         AUTHENTICATING,
         READY,
         FAILED
-    };
-
-    // Authentication state
-    enum class AuthState
-    {
-        INIT,           /**< Initial authentication state */
-        EXPECT_SSL_REQ, /**< Expecting client to send SSLRequest */
-        SSL_NEG,        /**< Negotiate SSL*/
-        EXPECT_HS_RESP, /**< Expecting client to send standard handshake response */
-        PREPARE_AUTH,   /**< Find user account entry */
-        ASK_FOR_TOKEN,  /**< Ask client for token */
-        CHECK_TOKEN,    /**< Check token against user account entry */
-        START_SESSION,  /**< Start routing session */
-        FAIL,           /**< Authentication failed */
-        COMPLETE,       /**< Authentication is complete */
     };
 
     MariaDBClientConnection(MXS_SESSION* session, mxs::Component* component);
@@ -80,25 +58,33 @@ public:
 
     static bool parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* kt_out,
                                  std::string* user_out);
-    void           mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t target_id, kill_type_t type);
+    void mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t target_id, kill_type_t type);
 
     State m_state {State::INIT};
 
 private:
+    /** Return type of process_special_commands() */
+    enum class SpecialCmdRes
+    {
+        CONTINUE,   // No special command detected, proceed as normal.
+        END,        // Query handling completed, do not send to filters/router.
+    };
+
+    bool read_protocol_packet(mxs::Buffer* output, int max_size = -1);
     bool perform_authentication();
     bool perform_normal_read();
-
     bool parse_handshake_response_packet(GWBUF* buffer);
     bool parse_ssl_request_packet(GWBUF* buffer);
+    bool handle_change_user(bool* changed_user, GWBUF** packetbuf);
+    bool reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf);
+    void handle_use_database(GWBUF* read_buffer);
+    void handle_authentication_errors(DCB* dcb, mariadb::ClientAuthenticator::AuthRes auth_val,
+                                      int packet_number);
+    int route_by_statement(uint64_t capabilities, GWBUF** p_readbuf);
 
-    int            route_by_statement(uint64_t capabilities, GWBUF** p_readbuf);
-    spec_com_res_t process_special_commands(DCB* dcb, GWBUF* read_buffer, uint8_t cmd);
-    bool           handle_change_user(bool* changed_user, GWBUF** packetbuf);
-    bool           reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf);
-    spec_com_res_t handle_query_kill(DCB* dcb, GWBUF* read_buffer, uint32_t packet_len);
-    void           handle_use_database(GWBUF* read_buffer);
-    void           handle_authentication_errors(DCB* dcb, mariadb::ClientAuthenticator::AuthRes auth_val,
-                                                int packet_number);
+    SpecialCmdRes process_special_commands(DCB* dcb, GWBUF* read_buffer, uint8_t cmd);
+    SpecialCmdRes handle_query_kill(DCB* dcb, GWBUF* read_buffer, uint32_t packet_len);
+
     int   mysql_send_auth_error(DCB* dcb, int packet_number, const char* mysql_message);
     char* create_auth_fail_str(const char* username, const char* hostaddr,
                                bool password, const char* db,
@@ -118,11 +104,25 @@ private:
     void parse_client_capabilities(const uint8_t* data);
     bool parse_client_response(const uint8_t* data, int data_len);
     bool prepare_authentication();
-
-    bool read_protocol_packet(mxs::Buffer* output, int max_size = -1);
+    bool require_ssl() const;
 
     mariadb::UserSearchSettings user_search_settings() const;
     const MariaDBUserCache*     user_account_cache();
+
+    // Authentication state
+    enum class AuthState
+    {
+        INIT,           /**< Initial authentication state */
+        EXPECT_SSL_REQ, /**< Expecting client to send SSLRequest */
+        SSL_NEG,        /**< Negotiate SSL*/
+        EXPECT_HS_RESP, /**< Expecting client to send standard handshake response */
+        PREPARE_AUTH,   /**< Find user account entry */
+        ASK_FOR_TOKEN,  /**< Ask client for token */
+        CHECK_TOKEN,    /**< Check token against user account entry */
+        START_SESSION,  /**< Start routing session */
+        FAIL,           /**< Authentication failed */
+        COMPLETE,       /**< Authentication is complete */
+    };
 
     enum class SSLState
     {
@@ -132,7 +132,8 @@ private:
         FAIL
     };
 
-    MariaDBClientConnection::SSLState ssl_authenticate_check_status();
+    SSLState ssl_authenticate_check_status();
+    int      ssl_authenticate_client();
 
     mariadb::SClientAuth                m_authenticator;/**< Client authentication data */
     std::unique_ptr<mariadb::UserEntry> m_user_entry;   /**< Client user entry */
