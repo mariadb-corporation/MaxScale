@@ -135,6 +135,7 @@ int BinlogFilterSession::routeQuery(GWBUF* pPacket)
         // Connected client is using SQL mode
         m_state = COMMAND_MODE;
         m_reading_checksum = is_master_binlog_checksum(pPacket);
+        gwbuf_set_type(pPacket, GWBUF_TYPE_COLLECT_RESULT);
         break;
 
     default:
