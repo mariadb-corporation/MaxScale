@@ -294,7 +294,7 @@ public:
     }
 
     /**
-     * Compare for equality.
+     * Compare for equality in a case-sensitive fashion.
      *
      * @param s  The string to compare with.
      *
@@ -306,7 +306,19 @@ public:
     }
 
     /**
-     * Compare for equality.
+     * Compare for equality in case-insensitive fashion.
+     *
+     * @param s  The string to compare with.
+     *
+     * @return True, if the strings are equal.
+     */
+    bool case_eq(const LEncString& s) const
+    {
+        return m_length == s.m_length ? (strncasecmp(m_pString, s.m_pString, m_length) == 0) : false;
+    }
+
+    /**
+     * Compare for equality in a case-sensitive fashion
      *
      * @param s  The string to compare with.
      *
@@ -320,7 +332,21 @@ public:
     }
 
     /**
-     * Compare for equality.
+     * Compare for equality in a case-insensitive fashion.
+     *
+     * @param s  The string to compare with.
+     *
+     * @return True, if the strings are equal.
+     */
+    bool case_eq(const char* zString) const
+    {
+        size_t length = strlen(zString);
+
+        return m_length == length ? (strncasecmp(m_pString, zString, m_length) == 0) : false;
+    }
+
+    /**
+     * Compare for equality in a case-sensitive fashion
      *
      * @param s  The string to compare with.
      *
@@ -329,6 +355,18 @@ public:
     bool eq(const std::string& s) const
     {
         return m_length == s.length() ? (memcmp(m_pString, s.data(), m_length) == 0) : false;
+    }
+
+    /**
+     * Compare for equality in a case-insensitive fashion
+     *
+     * @param s  The string to compare with.
+     *
+     * @return True, if the strings are equal.
+     */
+    bool case_eq(const std::string& s) const
+    {
+        return m_length == s.length() ? (strncasecmp(m_pString, s.data(), m_length) == 0) : false;
     }
 
     /**
