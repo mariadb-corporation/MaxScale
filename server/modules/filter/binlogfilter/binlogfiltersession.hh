@@ -124,4 +124,5 @@ private:
     uint32_t m_large_left = 0;          // Remaining bytes of a large event
     bool     m_is_large = false;        // Large Event indicator
     bool     m_reading_checksum = false;// Whether we are waiting for the binlog checksum response
+    bool     m_is_gtid = false;
 };
