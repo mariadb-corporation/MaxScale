@@ -12,7 +12,7 @@ ExternalProject_Add(librdkafka
   URL ${RDKAFKA_URL}
   SOURCE_DIR ${CMAKE_BINARY_DIR}/librdkafka/
   BINARY_DIR ${CMAKE_BINARY_DIR}/librdkafka/
-  CONFIGURE_COMMAND ${CMAKE_BINARY_DIR}/librdkafka/configure --prefix=${CMAKE_BINARY_DIR}/librdkafka/ --disable-zstd
+  CONFIGURE_COMMAND ${CMAKE_BINARY_DIR}/librdkafka/configure --prefix=${CMAKE_BINARY_DIR}/librdkafka/ --disable-zstd --disable-sasl --disable-lz4-ext
   BUILD_COMMAND make
   INSTALL_COMMAND make install
   UPDATE_COMMAND "")
