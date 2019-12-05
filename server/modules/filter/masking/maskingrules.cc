@@ -430,6 +430,17 @@ bool create_rules_from_root(json_t* pRoot,
 
     return parsed;
 }
+
+inline bool is_same_name(const std::string& s, const char* zS)
+{
+    return strcasecmp(s.c_str(), zS) == 0;
+}
+
+inline bool is_same_name(const std::string& lhs, const LEncString& rhs)
+{
+    return rhs.case_eq(lhs);
+}
+
 }
 
 //
@@ -1063,9 +1074,9 @@ bool MaskingRules::Rule::matches(const ComQueryResponse::ColumnDef& column_def,
     // Otherwise it would be easy to bypass a table/database rule.
 
     bool match =
-        (m_column == column_def.org_name())
-        && (m_table.empty() || table.empty() || (m_table == table))
-        && (m_database.empty() || database.empty() || (m_database == database));
+        is_same_name(m_column, column_def.org_name())
+        && (m_table.empty() || table.empty() || is_same_name(m_table, table))
+        && (m_database.empty() || database.empty() || is_same_name(m_database, database));
 
     if (match)
     {
@@ -1094,9 +1105,9 @@ bool MaskingRules::Rule::matches(const QC_FIELD_INFO& field,
     // Otherwise it would be easy to bypass a table/database rule.
 
     bool match =
-        (m_column == zColumn)
-        && (m_table.empty() || !zTable || (m_table == zTable))
-        && (m_database.empty() || !zDatabase || (m_database == zDatabase));
+        is_same_name(m_column, zColumn)
+        && (m_table.empty() || !zTable || is_same_name(m_table, zTable))
+        && (m_database.empty() || !zDatabase || is_same_name(m_database, zDatabase));
 
     if (match)
     {
