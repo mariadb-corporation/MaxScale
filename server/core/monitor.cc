@@ -266,7 +266,7 @@ void monitor_start(MXS_MONITOR* monitor, const MXS_CONFIG_PARAMETER* params)
         {
             if (journal_is_stale(monitor, monitor->journal_max_age))
             {
-                MXS_WARNING("Removing stale journal file for monitor '%s'.", monitor->name);
+                MXS_NOTICE("Removing stale journal file for monitor '%s'.", monitor->name);
                 remove_server_journal(monitor);
             }
 
@@ -2380,10 +2380,8 @@ static bool journal_is_stale(MXS_MONITOR* monitor, time_t max_age)
 
             if (tdiff >= max_age)
             {
-                MXS_WARNING("Journal file was created %ld seconds ago. Maximum journal "
-                            "age is %ld seconds.",
-                            tdiff,
-                            max_age);
+                MXS_NOTICE("Journal file was created %ld seconds ago. Maximum journal "
+                           "age is %ld seconds.", tdiff, max_age);
             }
             else
             {
