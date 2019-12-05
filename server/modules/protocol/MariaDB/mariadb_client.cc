@@ -26,6 +26,7 @@
 #include <vector>
 
 #include <maxbase/alloc.h>
+#include <maxsql/mariadb.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
@@ -41,7 +42,6 @@
 #include <maxscale/session.hh>
 #include <maxscale/ssl.hh>
 #include <maxscale/utils.h>
-
 
 #include "setparser.hh"
 #include "sqlmodeparser.hh"
@@ -2496,7 +2496,7 @@ void MariaDBClientConnection::parse_client_capabilities(const uint8_t* data)
 bool MariaDBClientConnection::parse_client_response(const uint8_t* data, int data_len)
 {
     auto ptr = (const char*)data;
-    auto end = ptr + data_len;
+    const auto end = ptr + data_len;
 
     // A null-terminated username should be first.
     auto userz = (const char*)data;
@@ -2527,22 +2527,46 @@ bool MariaDBClientConnection::parse_client_response(const uint8_t* data, int dat
     {
         // Next is authentication response. The length is encoded in different forms depending on
         // capabilities.
+        uint64_t len_remaining = end - ptr;
+        uint64_t auth_token_len_bytes = 0;  // In how many bytes the auth token length is encoded in.
+        uint64_t auth_token_len = 0;        // The actual auth token length.
         const char* auth_token = nullptr;
-        int auth_token_len = -1;
+
         if (client_caps & GW_MYSQL_CAPABILITIES_AUTH_LENENC_DATA)
         {
-            // Not supported yet. Doesn't seem to be used. TODO: handle
-            MXB_ERROR("Unsupported handshake response.");
-            error = true;
+            // Token is a length-encoded string. First is a length-encoded integer, then the token data.
+            auth_token_len_bytes = mxq::leint_bytes((const uint8_t*)ptr);
+            if (auth_token_len_bytes <= len_remaining)
+            {
+                auth_token_len = mxq::leint_value((const uint8_t*)ptr);
+            }
+            else
+            {
+                error = true;
+            }
         }
         else if (client_caps & GW_MYSQL_CAPABILITIES_SECURE_CONNECTION)
         {
             // First token length 1 byte, then token data.
+            auth_token_len_bytes = 1;
             auth_token_len = *ptr;
-            ptr += 1;
-            if (auth_token_len >= 0 && end - ptr >= auth_token_len)
+        }
+        else
+        {
+            MXB_ERROR("Client %s@%s attempted to connect with pre-4.1 authentication "
+                      "which is not supported.", userz, m_dcb->remote().c_str());
+            error = true;   // Filler was non-zero, likely due to unsupported client version.
+        }
+
+        if (!error)
+        {
+            if (auth_token_len_bytes + auth_token_len <= len_remaining)
             {
-                auth_token = ptr;
+                ptr += auth_token_len_bytes;
+                if (auth_token_len > 0)
+                {
+                    auth_token = ptr;
+                }
                 ptr += auth_token_len;
             }
             else
@@ -2550,21 +2574,17 @@ bool MariaDBClientConnection::parse_client_response(const uint8_t* data, int dat
                 error = true;
             }
         }
-        else
+
+        const char* db = nullptr;
+        const char* plugin = nullptr;
+        if (!error)
         {
-            // MariaDB and MySQL documentation differ for this case. Trust MariaDB for now.
-            ptr++;      // 1 byte of filler.
+            // The following fields are optional.
+            read_str(GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB, &db);
+            read_str(GW_MYSQL_CAPABILITIES_PLUGIN_AUTH, &plugin);
         }
 
-        // The following fields are optional.
-        const char* db = nullptr;
-        read_str(GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB, &db);
-
-        const char* plugin = nullptr;
-        read_str(GW_MYSQL_CAPABILITIES_PLUGIN_AUTH, &plugin);
-
         // TODO: read client attributes
-
         if (!error)
         {
             // Success, save data to session.

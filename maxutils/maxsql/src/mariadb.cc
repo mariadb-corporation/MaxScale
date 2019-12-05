@@ -108,7 +108,7 @@ bool mysql_get_log_statements()
 size_t leint_bytes(const uint8_t* ptr)
 {
     uint8_t val = *ptr;
-    if (val < 0xfb)
+    if (val <= 0xfb)
     {
         return 1;
     }
@@ -152,7 +152,7 @@ uint64_t leint_value(const uint8_t* c)
     {
         memcpy(&sz, c + 1, 8);
     }
-    else
+    else if (*c != 0xfb) // 0xfb is NULL -> return 0
     {
         mxb_assert(*c == 0xff);
         MXB_ERROR("Unexpected length encoding '%x' encountered when reading length-encoded integer.", *c);
