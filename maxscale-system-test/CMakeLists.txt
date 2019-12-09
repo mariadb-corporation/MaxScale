@@ -1005,6 +1005,7 @@ add_test_executable(mxs2521_double_exec.cpp mxs2521_double_exec mxs2521_double_e
 
 # MXS-2572: Add smartrouter tests.
 add_test_executable(sr_basics.cpp sr_basics sr_basics LABELS REPL_BACKEND)
+add_test_executable(smart_query.cpp smart_query smart_query LABELS REPL_BACKEND)
 
 # MXS-2490: Direct execution doesn't work with MaxScale
 add_test_executable(mxs2490_ps_execute_direct.cpp mxs2490_ps_execute_direct replication LABELS REPL_BACKEND readwritesplit)
