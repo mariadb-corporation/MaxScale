@@ -239,24 +239,24 @@ StatementType get_statement_type(GWBUF* pStmt)
 
 CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession,
                                        SERVICE* pService,
-                                       Cache* pCache,
+                                       std::unique_ptr<SessionCache> sCache,
                                        char* zDefaultDb)
     : maxscale::FilterSession(pSession, pService)
     , m_state(CACHE_EXPECTING_NOTHING)
-    , m_pCache(pCache)
+    , m_sCache(std::move(sCache))
     , m_next_response(nullptr)
     , m_zDefaultDb(zDefaultDb)
     , m_zUseDb(NULL)
     , m_refreshing(false)
     , m_is_read_only(true)
-    , m_use(pCache->config().enabled)
-    , m_populate(pCache->config().enabled)
-    , m_soft_ttl(pCache->config().soft_ttl.count())
-    , m_hard_ttl(pCache->config().hard_ttl.count())
-    , m_invalidate(pCache->config().invalidate != CACHE_INVALIDATE_NEVER)
+    , m_use(m_sCache->config().enabled)
+    , m_populate(m_sCache->config().enabled)
+    , m_soft_ttl(m_sCache->config().soft_ttl.count())
+    , m_hard_ttl(m_sCache->config().hard_ttl.count())
+    , m_invalidate(m_sCache->config().invalidate != CACHE_INVALIDATE_NEVER)
     , m_invalidate_now(false)
     , m_clear_cache(false)
-    , m_user_specific(pCache->config().users == CACHE_USERS_ISOLATED)
+    , m_user_specific(m_sCache->config().users == CACHE_USERS_ISOLATED)
 {
     m_key.data_hash = 0;
     m_key.full_hash = 0;
@@ -315,7 +315,9 @@ CacheFilterSession::~CacheFilterSession()
 }
 
 // static
-CacheFilterSession* CacheFilterSession::create(Cache* pCache, MXS_SESSION* pSession, SERVICE* pService)
+CacheFilterSession* CacheFilterSession::create(std::unique_ptr<SessionCache> sCache,
+                                               MXS_SESSION* pSession,
+                                               SERVICE* pService)
 {
     CacheFilterSession* pCacheFilterSession = NULL;
     auto db = static_cast<MYSQL_session*>(pSession->protocol_data())->db;
@@ -328,7 +330,10 @@ CacheFilterSession* CacheFilterSession::create(Cache* pCache, MXS_SESSION* pSess
 
     if (db.empty() || zDefaultDb)
     {
-        pCacheFilterSession = new(std::nothrow) CacheFilterSession(pSession, pService, pCache, zDefaultDb);
+        pCacheFilterSession = new(std::nothrow) CacheFilterSession(pSession,
+                                                                   pService,
+                                                                   std::move(sCache),
+                                                                   zDefaultDb);
 
         if (!pCacheFilterSession)
         {
@@ -448,7 +453,7 @@ int CacheFilterSession::clientReply(GWBUF* pData, const mxs::ReplyRoute& down, c
                     std::vector<std::string> invalidation_words;
                     std::copy(m_tables.begin(), m_tables.end(), std::back_inserter(invalidation_words));
 
-                    if (m_pCache->invalidate(invalidation_words) == CACHE_RESULT_OK)
+                    if (m_sCache->invalidate(invalidation_words) == CACHE_RESULT_OK)
                     {
                         if (log_decisions())
                         {
@@ -465,7 +470,7 @@ int CacheFilterSession::clientReply(GWBUF* pData, const mxs::ReplyRoute& down, c
 
                 if (m_clear_cache)
                 {
-                    if (m_pCache->clear() != CACHE_RESULT_OK)
+                    if (m_sCache->clear() != CACHE_RESULT_OK)
                     {
                         MXS_ERROR("Could not clear the cache, which is now in "
                                   "inconsistent state. Caching will now be disabled.");
@@ -587,18 +592,18 @@ void CacheFilterSession::handle_storing_response(const mxs::Reply& reply)
     mxb_assert(m_state == CACHE_STORING_RESPONSE);
     mxb_assert(m_res);
 
-    if (cache_max_resultset_size_exceeded(m_pCache->config(), reply.size()))
+    if (cache_max_resultset_size_exceeded(m_sCache->config(), reply.size()))
     {
         if (log_decisions())
         {
             MXS_NOTICE("Current resultset size exceeds maximum allowed size %s. Not caching.",
-                       mxb::pretty_size(m_pCache->config().max_resultset_size.get()).c_str());
+                       mxb::pretty_size(m_sCache->config().max_resultset_size.get()).c_str());
         }
 
         send_upstream();
         m_state = CACHE_IGNORING_RESPONSE;
     }
-    else if (cache_max_resultset_rows_exceeded(m_pCache->config(), reply.rows_read()))
+    else if (cache_max_resultset_rows_exceeded(m_sCache->config(), reply.rows_read()))
     {
         if (log_decisions())
         {
@@ -675,13 +680,13 @@ void CacheFilterSession::store_result()
             m_tables.clear();
         }
 
-        cache_result_t result = m_pCache->put_value(m_key, invalidation_words, m_res);
+        cache_result_t result = m_sCache->put_value(m_key, invalidation_words, m_res);
 
         if (!CACHE_RESULT_IS_OK(result))
         {
             MXS_ERROR("Could not store new cache value, deleting old.");
 
-            result = m_pCache->del_value(m_key);
+            result = m_sCache->del_value(m_key);
 
             if (!CACHE_RESULT_IS_OK(result) || !CACHE_RESULT_IS_NOT_FOUND(result))
             {
@@ -692,7 +697,7 @@ void CacheFilterSession::store_result()
 
     if (m_refreshing)
     {
-        m_pCache->refreshed(m_key, this);
+        m_sCache->refreshed(m_key, this);
         m_refreshing = false;
     }
 }
@@ -716,7 +721,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
 
         const char* zPrimary_reason = NULL;
         const char* zSecondary_reason = "";
-        const CacheConfig& config = m_pCache->config();
+        const CacheConfig& config = m_sCache->config();
 
         if (qc_query_is_type(type_mask, QUERY_TYPE_BEGIN_TRX))
         {
@@ -851,7 +856,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
                             const char* zPrefix = "UPDATE/DELETE/INSERT statement could not be parsed.";
                             const char* zSuffix = nullptr;
 
-                            if (m_pCache->config().clear_cache_on_parse_errors)
+                            if (m_sCache->config().clear_cache_on_parse_errors)
                             {
                                 zSuffix =
                                     "The option clear_cache_on_parse_errors is true, "
@@ -1001,7 +1006,7 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_COM_QUERY(GWBUF* 
 
     if (cache_action != CACHE_IGNORE)
     {
-        const CacheRules* pRules = m_pCache->should_store(m_zDefaultDb, pPacket);
+        const CacheRules* pRules = m_sCache->should_store(m_zDefaultDb, pPacket);
 
         if (pRules)
         {
@@ -1010,7 +1015,7 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_COM_QUERY(GWBUF* 
             const std::string& user = m_user_specific ? m_pSession->user() : empty;
             const std::string& host = m_user_specific ? m_pSession->client_remote() : empty;
 
-            cache_result_t result = m_pCache->get_key(user, host, m_zDefaultDb, pPacket, &m_key);
+            cache_result_t result = m_sCache->get_key(user, host, m_zDefaultDb, pPacket, &m_key);
 
             if (CACHE_RESULT_IS_OK(result))
             {
@@ -1053,7 +1058,7 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(cache_acti
     {
         uint32_t flags = CACHE_FLAGS_INCLUDE_STALE;
         GWBUF* pResponse;
-        cache_result_t result = m_pCache->get_value(m_key, flags, m_soft_ttl, m_hard_ttl, &pResponse);
+        cache_result_t result = m_sCache->get_value(m_key, flags, m_soft_ttl, m_hard_ttl, &pResponse);
 
         if (CACHE_RESULT_IS_OK(result))
         {
@@ -1062,7 +1067,7 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(cache_acti
                 // The value was found, but it was stale. Now we need to
                 // figure out whether somebody else is already fetching it.
 
-                if (m_pCache->must_refresh(m_key, this))
+                if (m_sCache->must_refresh(m_key, this))
                 {
                     // We were the first ones who hit the stale item. It's
                     // our responsibility now to fetch it.

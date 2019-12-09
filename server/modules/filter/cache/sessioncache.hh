@@ -1,0 +1,141 @@
+/*
+ * Copyright (c) 2018 MariaDB Corporation Ab
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2023-11-12
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
+#pragma once
+
+#include <maxscale/ccdefs.hh>
+#include "cache.hh"
+
+class SessionCache
+{
+public:
+    SessionCache(const SessionCache&) = delete;
+    SessionCache& operator=(const SessionCache&) = delete;
+
+    /**
+     * Create session specific cache instance. Note that "session specific" _only_
+     * means that the communication between the session and the cache does not
+     * affect other sessions, not that the cached data would be unique for the
+     * session.
+     *
+     * @return A new instance or nullptr if a cache token cannot be created.
+     */
+    static std::unique_ptr<SessionCache> create(Cache* pCache);
+
+    /**
+     * @see Cache::config
+     */
+    const CacheConfig& config() const
+    {
+        return m_cache.config();
+    }
+
+    /**
+     * @see Cache::should_store
+     */
+    const CacheRules* should_store(const char* zDefaultDb, const GWBUF* pQuery)
+    {
+        return m_cache.should_store(zDefaultDb, pQuery);
+    }
+
+    /**
+     * @see Cache::must_refresh
+     */
+    bool must_refresh(const CACHE_KEY& key, const CacheFilterSession* pSession)
+    {
+        return m_cache.must_refresh(key, pSession);
+    }
+
+    /**
+     * @see Cache::refreshed
+     */
+    void refreshed(const CACHE_KEY& key, const CacheFilterSession* pSession)
+    {
+        return m_cache.refreshed(key, pSession);
+    }
+
+    /**
+     * @see Cache::get_key
+     */
+    cache_result_t get_key(const std::string& user,
+                           const std::string& host,
+                           const char* zDefault_db,
+                           const GWBUF* pQuery,
+                           CACHE_KEY* pKey) const
+    {
+        return m_cache.get_key(user, host, zDefault_db, pQuery, pKey);
+    }
+
+    /**
+     * @See Cache::get_value
+     */
+    cache_result_t get_value(const CACHE_KEY& key,
+                             uint32_t flags,
+                             uint32_t soft_ttl,
+                             uint32_t hard_ttl,
+                             GWBUF** ppValue) const
+    {
+        return m_cache.get_value(key, flags, soft_ttl, hard_ttl, ppValue);
+    }
+
+    /**
+     * @see Cache::put_value
+     */
+    cache_result_t put_value(const CACHE_KEY& key,
+                             const std::vector<std::string>& invalidation_words,
+                             const GWBUF* pValue)
+    {
+        return m_cache.put_value(key, invalidation_words, pValue);
+    }
+
+    /**
+     * @see Cache::del_value
+     */
+    cache_result_t del_value(const CACHE_KEY& key)
+    {
+        return m_cache.del_value(key);
+    }
+
+    /**
+     * @see Cache::invalidate
+     */
+    cache_result_t invalidate(const std::vector<std::string>& words)
+    {
+        return m_cache.invalidate(words);
+    }
+
+    /**
+     * @see Cache::clear
+     */
+    cache_result_t clear()
+    {
+        return m_cache.clear();
+    }
+
+protected:
+    SessionCache(Cache* pCache,
+                 std::unique_ptr<Cache::Token> sToken)
+        : m_cache(*pCache)
+        , m_sToken(std::move(sToken))
+    {
+    }
+
+private:
+    Cache::Token& token()
+    {
+        return *m_sToken.get();
+    }
+
+private:
+    Cache&                        m_cache;
+    std::unique_ptr<Cache::Token> m_sToken;
+};

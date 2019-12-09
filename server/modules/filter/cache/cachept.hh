@@ -24,6 +24,8 @@ public:
 
     static CachePT* create(const std::string& name, const CacheConfig* pConfig);
 
+    std::unique_ptr<Token> create_token() override;
+
     bool must_refresh(const CACHE_KEY& key, const CacheFilterSession* pSession);
 
     void refreshed(const CACHE_KEY& key, const CacheFilterSession* pSession);

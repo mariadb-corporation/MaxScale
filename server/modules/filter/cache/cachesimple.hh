@@ -24,6 +24,8 @@ class CacheSimple : public Cache
 public:
     ~CacheSimple();
 
+    std::unique_ptr<Token> create_token() override;
+
     cache_result_t get_value(const CACHE_KEY& key,
                              uint32_t flags,
                              uint32_t soft_ttl,

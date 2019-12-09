@@ -81,6 +81,11 @@ CachePT* CachePT::create(const std::string& name, const CacheConfig* pConfig)
     return pCache;
 }
 
+std::unique_ptr<Cache::Token> CachePT::create_token()
+{
+    return thread_cache().create_token();
+}
+
 bool CachePT::must_refresh(const CACHE_KEY& key, const CacheFilterSession* pSession)
 {
     return thread_cache().must_refresh(key, pSession);

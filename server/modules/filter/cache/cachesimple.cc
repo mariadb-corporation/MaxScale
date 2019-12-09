@@ -52,6 +52,11 @@ bool CacheSimple::create(const CacheConfig& config,
     return rv;
 }
 
+std::unique_ptr<Cache::Token> CacheSimple::create_token()
+{
+    return std::unique_ptr<Token>(new (std::nothrow) Token);
+}
+
 cache_result_t CacheSimple::get_value(const CACHE_KEY& key,
                                       uint32_t flags,
                                       uint32_t soft_ttl,

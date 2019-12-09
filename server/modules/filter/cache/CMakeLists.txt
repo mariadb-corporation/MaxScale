@@ -13,6 +13,7 @@ if (JANSSON_FOUND)
     lrustoragemt.cc
     lrustoragest.cc
     rules.cc
+    sessioncache.cc
     storage.cc
     storagefactory.cc
     )

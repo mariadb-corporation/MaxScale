@@ -50,6 +50,12 @@ class StorageFactory;
 class Cache
 {
 public:
+    class Token
+    {
+    public:
+        virtual ~Token();
+    };
+
     enum what_info_t
     {
         INFO_RULES   = 0x01,/*< Include information about the rules. */
@@ -69,6 +75,14 @@ public:
     {
         return m_config;
     }
+
+    /**
+     * Create a token to be used for distinguishing between different
+     * cache users within the same thread.
+     *
+     * @return A new token, or NULL if one could not be created.
+     */
+    virtual std::unique_ptr<Token> create_token() = 0;
 
     virtual json_t* get_info(uint32_t what = INFO_ALL) const = 0;
 

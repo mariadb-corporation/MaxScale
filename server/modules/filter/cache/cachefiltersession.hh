@@ -16,9 +16,7 @@
 #include <unordered_set>
 #include <maxscale/buffer.hh>
 #include <maxscale/filter.hh>
-#include "cache.hh"
-#include "cachefilter.hh"
-#include "cache_storage_api.hh"
+#include "sessioncache.hh"
 
 class CacheFilterSession : public maxscale::FilterSession
 {
@@ -52,7 +50,9 @@ public:
      *
      * @return A new instance or NULL if memory allocation fails.
      */
-    static CacheFilterSession* create(Cache* pCache, MXS_SESSION* pSession, SERVICE* pService);
+    static CacheFilterSession* create(std::unique_ptr<SessionCache> sCache,
+                                      MXS_SESSION* pSession,
+                                      SERVICE* pService);
 
     /**
      * The session has been closed.
@@ -90,7 +90,7 @@ private:
 
     bool log_decisions() const
     {
-        return m_pCache->config().debug.is_set(CACHE_DEBUG_DECISIONS);
+        return m_sCache->config().debug.is_set(CACHE_DEBUG_DECISIONS);
     }
 
     void store_result();
@@ -157,13 +157,17 @@ private:
                                     const char* pValue_end);
 
 private:
-    CacheFilterSession(MXS_SESSION* pSession, SERVICE* pService, Cache* pCache, char* zDefaultDb);
+    CacheFilterSession(MXS_SESSION* pSession,
+                       SERVICE* pService,
+                       std::unique_ptr<SessionCache> sCache,
+                       char* zDefaultDb);
 
 private:
     using Tables = std::unordered_set<std::string>;
+    using SSessionCache = std::unique_ptr<SessionCache>;
 
     cache_session_state_t m_state;          /**< What state is the session in, what data is expected. */
-    Cache*                m_pCache;         /**< The cache instance the session is associated with. */
+    SSessionCache         m_sCache;         /**< The cache instance the session is associated with. */
     GWBUF*                m_res;            /**< The response buffer. */
     GWBUF*                m_next_response;  /**< The next response routed to the client. */
     CACHE_KEY             m_key;            /**< Key storage. */

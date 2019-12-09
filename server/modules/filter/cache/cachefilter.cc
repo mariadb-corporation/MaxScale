@@ -198,7 +198,16 @@ CacheFilter* CacheFilter::create(const char* zName, MXS_CONFIG_PARAMETER* ppPara
 
 CacheFilterSession* CacheFilter::newSession(MXS_SESSION* pSession, SERVICE* pService)
 {
-    return CacheFilterSession::create(m_sCache.get(), pSession, pService);
+    CacheFilterSession* pFilter_session = nullptr;
+
+    auto sSession_cache = SessionCache::create(m_sCache.get());
+
+    if (sSession_cache)
+    {
+        pFilter_session = CacheFilterSession::create(std::move(sSession_cache), pSession, pService);
+    }
+
+    return pFilter_session;
 }
 
 // static
