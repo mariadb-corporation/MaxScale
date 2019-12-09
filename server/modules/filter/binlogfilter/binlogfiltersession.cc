@@ -851,10 +851,17 @@ void BinlogFilterSession::checkStatement(GWBUF** buffer, const REP_HEADER& hdr)
 
     if (!m_skip && config.rewrite_src)
     {
-        auto new_db = mxs::pcre2_substitute(config.rewrite_src, db, config.rewrite_dest);
-        auto new_sql = mxs::pcre2_substitute(config.rewrite_src, sql, config.rewrite_dest);
+        std::string err;
+        auto new_db = mxs::pcre2_substitute(config.rewrite_src, db, config.rewrite_dest, &err);
+        auto new_sql = mxs::pcre2_substitute(config.rewrite_src, sql, config.rewrite_dest, &err);
 
-        if (db != new_db || sql != new_sql)
+        if (new_db.empty() || new_sql.empty())
+        {
+            MXS_ERROR("PCRE2 error on pattern '%s' with replacement '%s': %s",
+                      config.rewrite_src_pattern.c_str(),
+                      config.rewrite_dest.c_str(), err.c_str());
+        }
+        else if (db != new_db || sql != new_sql)
         {
             db = new_db;
             sql = new_sql;
