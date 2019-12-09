@@ -24,9 +24,14 @@ public:
     ~LRUStorage();
 
     /**
+     * @see Storage::create_token
+     */
+    std::unique_ptr<Token> create_token() override final;
+
+    /**
      * @see Storage::get_config
      */
-    void get_config(Config* pConfig);
+    void get_config(Config* pConfig) override final;
 
 protected:
     LRUStorage(const Config& config, Storage* pStorage);

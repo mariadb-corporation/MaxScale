@@ -54,7 +54,7 @@ bool CacheSimple::create(const CacheConfig& config,
 
 std::unique_ptr<Cache::Token> CacheSimple::create_token()
 {
-    return std::unique_ptr<Token>(new (std::nothrow) Token);
+    return m_pStorage->create_token();
 }
 
 cache_result_t CacheSimple::get_value(const CACHE_KEY& key,

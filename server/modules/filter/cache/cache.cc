@@ -27,11 +27,6 @@
 
 using namespace std;
 
-Cache::Token::~Token()
-{
-}
-
-
 Cache::Cache(const std::string& name,
              const CacheConfig* pConfig,
              const std::vector<SCacheRules>& rules,

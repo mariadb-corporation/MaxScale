@@ -365,6 +365,11 @@ LRUStorage::~LRUStorage()
     delete m_pStorage;
 }
 
+std::unique_ptr<Storage::Token> LRUStorage::create_token()
+{
+    return m_pStorage->create_token();
+}
+
 void LRUStorage::get_config(Config* pConfig)
 {
     *pConfig = m_config;

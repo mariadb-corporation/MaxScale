@@ -50,11 +50,7 @@ class StorageFactory;
 class Cache
 {
 public:
-    class Token
-    {
-    public:
-        virtual ~Token();
-    };
+    using Token = Storage::Token;
 
     enum what_info_t
     {

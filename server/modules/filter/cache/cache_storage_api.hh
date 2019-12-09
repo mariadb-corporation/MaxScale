@@ -125,6 +125,12 @@ public:
     Storage(const Storage&) = delete;
     Storage& operator=(const Storage&) = delete;
 
+    class Token
+    {
+    public:
+        virtual ~Token();
+    };
+
     enum what_info_t
     {
         INFO_ALL = CACHE_STORAGE_INFO_ALL
@@ -203,6 +209,14 @@ public:
     };
 
     virtual ~Storage();
+
+    /**
+     * Create a token to be used for distinguishing between different
+     * storage users within the same thread.
+     *
+     * @return A new token, or NULL if one could not be created.
+     */
+    virtual std::unique_ptr<Token> create_token() = 0;
 
     /**
      * Returns the configuration the storage was created with.
