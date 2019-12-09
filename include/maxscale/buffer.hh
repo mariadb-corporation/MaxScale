@@ -388,11 +388,22 @@ extern void dprintAllBuffers(void* pdcb);
 /**
  * Debug function for dumping buffer contents to log
  *
+ * @see mxs::Buffer::hexdump
+ *
  * @param buffer    Buffer to dump
  * @param log_level Log priority where the message is written
  */
-void gwbuf_hexdump(GWBUF* buffer, int log_level);
-void gwbuf_hexdump(const mxs::Buffer& buffer, int log_level);
+void gwbuf_hexdump(GWBUF* buffer, int log_level = LOG_INFO);
+
+/**
+ * Debug function for pretty-printing buffer contents to log
+ *
+ * @see mxs::Buffer::hexdump_pretty
+ *
+ * @param buffer    Buffer to dump
+ * @param log_level Log priority where the message is written
+ */
+void gwbuf_hexdump_pretty(GWBUF* buffer, int log_level = LOG_INFO);
 
 /**
  * Return pointer of the byte at offset from start of chained buffer
@@ -1154,6 +1165,24 @@ public:
             throw std::bad_alloc();
         }
     }
+
+    /**
+     * Debug function for dumping buffer contents to log
+     *
+     * Prints contents as hexadecimal. Only the first 1024 bytes are dumped to avoid filling up the log.
+     *
+     * @param log_level Log priority where the message is written
+     */
+    void hexdump(int log_level = LOG_INFO) const;
+
+    /**
+     * Debug function for pretty-printing buffer contents to log
+     *
+     * The output format is similar to `hexdump -C` and provides both hex and human-readable values.
+     *
+     * @param log_level Log priority where the message is written
+     */
+    void hexdump_pretty(int log_level = LOG_INFO) const;
 
 private:
     // To prevent @c Buffer from being created on the heap.

@@ -101,4 +101,18 @@ private:
     std::string m_error;
     pcre2_code* m_code = nullptr;
 };
+
+/**
+ * Replace all occurrences of pattern in string
+ *
+ * @param re      Compiled pattern to use
+ * @param subject Subject string
+ * @param replace Replacement string
+ * @param error   Pointer to std::string where any error messages are stored
+ *
+ * @return The replaced string or the original string if no replacement was made. Returns an empty string when
+ * any PCRE2 error is encountered.
+ */
+std::string pcre2_substitute(pcre2_code* re, const std::string& subject,
+                             const std::string& replace, std::string* error);
 }

@@ -194,6 +194,9 @@ add_test_executable(mxs2512_trx_replay_rollback.cpp mxs2512_trx_replay_rollback 
 # https://jira.mariadb.org/browse/MXS-2443
 add_test_executable(mxs2443_global_causal_reads.cpp mxs2443_global_causal_reads mxs2443_global_causal_reads LABELS readwritesplit REPL_BACKEND)
 
+# MXS-2785: Binlogfilter database rewrite test
+add_test_executable(mxs2785_binlogfilter_rewrite.cpp mxs2785_binlogfilter_rewrite mxs2785_binlogfilter_rewrite LABELS binlogfilter REPL_BACKEND)
+
 ############################################
 # END: Tests that require GTID             #
 ############################################

@@ -37,6 +37,28 @@ in the statements. If any of the tables matches the *match* pattern, the event
 is replicated. If any of the tables matches the *exclude* pattern, the event is
 not replicated.
 
+### `rewrite_src` and `rewrite_dest`
+
+These two parameters control the statement rewriting of the binlogfilter. The
+`rewrite_src` parameter is a PCRE2 regular expression that is matched against
+the default database and the SQL of statement based replication events (query
+events). `rewrite_dest` is the replacement string which supports the normal
+PCRE2 backreferences (e.g the first capture group is `$1`, the second is `$2`,
+etc.).
+
+Both `rewrite_src` and `rewrite_dest` must be defined to enable statement rewriting.
+
+When statement rewriting is enabled
+[GTID-based replication](https://mariadb.com/kb/en/library/gtid/#setting-up-a-new-slave-server-with-global-transaction-id)
+must be used. The filter will disallow replication for all slaves that attempt
+to replicate with traditional file-and-position based replication.
+
+The replacement is done both on the default database as well as the SQL
+statement in the query event. This means that great care must be taken when
+defining the rewriting rules. To prevent accidental modification of the SQL into
+a form that is no longer valid, use database and table names that never occur in
+the inserted data and is never used as a constant value.
+
 ## Example Configuration
 
 With the following configuration, only events belonging to database `customers`

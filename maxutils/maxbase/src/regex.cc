@@ -14,6 +14,7 @@
 
 #include <maxbase/regex.hh>
 #include <maxbase/log.h>
+#include <maxbase/assert.h>
 
 namespace
 {
@@ -185,5 +186,43 @@ std::string Regex::replace(const std::string& str, const char* replacement) cons
     output.resize(size);
 
     return output;
+}
+
+std::string pcre2_substitute(pcre2_code* re,
+                             const std::string& subject,
+                             const std::string& replace,
+                             std::string* error)
+{
+    mxb_assert(re);
+    std::string rval = subject;
+    size_t size_tmp = rval.size();
+    int rc;
+
+    while ((rc = pcre2_substitute(re, (PCRE2_SPTR) subject.c_str(), subject.length(),
+                                  0, PCRE2_SUBSTITUTE_GLOBAL, NULL, NULL,
+                                  (PCRE2_SPTR) replace.c_str(), replace.length(),
+                                  (PCRE2_UCHAR*) &rval[0], &size_tmp)) == PCRE2_ERROR_NOMEMORY)
+    {
+        rval.resize(rval.size() * 2);
+        size_tmp = rval.size();
+    }
+
+    if (rc < 0)
+    {
+        if (error)
+        {
+            char errbuf[1024];
+            pcre2_get_error_message(rc, (PCRE2_UCHAR*)errbuf, sizeof(errbuf));
+            *error = errbuf;
+        }
+
+        rval.clear();
+    }
+    else
+    {
+        rval.resize(size_tmp);
+    }
+
+    return rval;
 }
 }

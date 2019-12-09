@@ -34,8 +34,10 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,
         NULL,
         {
-            {"match",             MXS_MODULE_PARAM_REGEX },
-            {"exclude",           MXS_MODULE_PARAM_REGEX },
+            {"match",             MXS_MODULE_PARAM_REGEX  },
+            {"exclude",           MXS_MODULE_PARAM_REGEX  },
+            {REWRITE_SRC,         MXS_MODULE_PARAM_REGEX  },
+            {REWRITE_DEST,        MXS_MODULE_PARAM_STRING },
             {MXS_END_MODULE_PARAMS}
         }
     };
@@ -58,7 +60,20 @@ BinlogFilter::~BinlogFilter()
 BinlogFilter* BinlogFilter::create(const char* zName,
                                    MXS_CONFIG_PARAMETER* pParams)
 {
-    return new BinlogFilter(pParams);
+    BinlogFilter* rval = nullptr;
+    auto src = pParams->get_string(REWRITE_SRC);
+    auto dest = pParams->get_string(REWRITE_DEST);
+
+    if (src.empty() != dest.empty())
+    {
+        MXS_ERROR("Both '%s' and '%s' must be defined", REWRITE_SRC, REWRITE_DEST);
+    }
+    else
+    {
+        rval = new BinlogFilter(pParams);
+    }
+
+    return rval;
 }
 
 // BinlogFilterSession create routine
