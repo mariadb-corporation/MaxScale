@@ -37,6 +37,33 @@ in the statements. If any of the tables matches the *match* pattern, the event
 is replicated. If any of the tables matches the *exclude* pattern, the event is
 not replicated.
 
+### `rewrite_src`
+
+The old database name to a rewritten statement. When database name rewriting is
+enabled, all occurrences of the old database name (`rewrite_src`) are replaced
+with the new replacement database name (`rewrite_dest`). Both `rewrite_src` and
+`rewrite_dest` must be defined if database rewriting is to be enabled.
+
+The name replacement is done with simple string replacement. This means that the
+database name (`rewrite_src`) **must not** appear as a table name, a field name
+or any other identifier, as a part of a constant value and must not conflict
+with SQL keywords. If the name does appear as a non-database identifier,
+replication will either break or behave in an undefined manner.
+
+We highly recommend using
+[GTID-based replication](https://mariadb.com/kb/en/library/gtid/#setting-up-a-new-slave-server-with-global-transaction-id)
+when using statement rewriting. If `rewrite_dest` is longer than `rewrite_src`,
+the replication must use GTID coordinates. Otherwise, the replication can break
+down when a slave server is disconnected. The filter will disallow replication
+for all slaves that attempt to replicate with traditional file-and-position
+based replication when the new database name is longer than the old name.
+
+### `rewrite_dest`
+
+The new database name of a rewritten statement.  Both `rewrite_src` and
+`rewrite_dest` must be defined if database rewriting is to be enabled. See
+[`rewrite_src`](#rewrite_src) for details on how this feature works.
+
 ## Example Configuration
 
 With the following configuration, only events belonging to database `customers`
