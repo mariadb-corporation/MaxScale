@@ -29,7 +29,7 @@ struct BinlogConfig
         , md_match(match ? pcre2_match_data_create_from_pattern(match, nullptr) : nullptr)
         , exclude(pParams->get_compiled_regex("exclude", 0, nullptr).release())
         , md_exclude(exclude ? pcre2_match_data_create_from_pattern(exclude, nullptr) : nullptr)
-        , rewrite_src(pParams->get_string(REWRITE_SRC))
+        , rewrite_src(pParams->get_compiled_regex(REWRITE_SRC, 0, nullptr).release())
         , rewrite_dest(pParams->get_string(REWRITE_DEST))
     {
     }
@@ -38,7 +38,7 @@ struct BinlogConfig
     pcre2_match_data* md_match;
     pcre2_code*       exclude;
     pcre2_match_data* md_exclude;
-    std::string       rewrite_src;
+    pcre2_code*       rewrite_src;
     std::string       rewrite_dest;
 };
 

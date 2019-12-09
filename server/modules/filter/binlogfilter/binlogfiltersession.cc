@@ -52,6 +52,7 @@
 #include <maxbase/alloc.h>
 #include <maxscale/poll.hh>
 #include <maxscale/modutil.hh>
+#include <maxscale/pcre2.hh>
 
 #include "binlogfilter.hh"
 #include "binlogfiltersession.hh"
@@ -138,13 +139,12 @@ int BinlogFilterSession::routeQuery(GWBUF* pPacket)
         m_state = BINLOG_MODE;
         MXS_INFO("Slave server %u is waiting for binlog events.", m_serverid);
 
-        if (!m_is_gtid
-            && m_filter.getConfig().rewrite_src.length() != m_filter.getConfig().rewrite_dest.length())
+        if (!m_is_gtid)
         {
             gwbuf_free(pPacket);
             std::ostringstream ss;
             ss << "GTID replication is required when '"
-               << REWRITE_SRC << "' and '" << REWRITE_DEST << "' are of different length";
+               << REWRITE_SRC << "' and '" << REWRITE_DEST << "' are used";
             mxs::FilterSession::clientReply(
                 modutil_create_mysql_err_msg(1, 0, ER_MASTER_FATAL_ERROR_READING_BINLOG, "HY000",
                                              ss.str().c_str()));
@@ -849,29 +849,16 @@ void BinlogFilterSession::checkStatement(GWBUF** buffer, const REP_HEADER& hdr)
     m_skip = should_skip_query(config, sql, db);
     MXS_INFO("[%s] (%s) %s", m_skip ? "SKIP" : "    ", db.c_str(), sql.c_str());
 
-    if (!m_skip && !config.rewrite_src.empty())
+    if (!m_skip && config.rewrite_src)
     {
-        bool replace = false;
+        auto new_db = mxs::pcre2_substitute(config.rewrite_src, db, config.rewrite_dest);
+        auto new_sql = mxs::pcre2_substitute(config.rewrite_src, sql, config.rewrite_dest);
 
-        if (db == config.rewrite_src)
+        if (db != new_db || sql != new_sql)
         {
-            replace = true;
-            db = config.rewrite_dest;
-        }
-
-        size_t pos = 0;
-
-        while ((pos = sql.find(config.rewrite_src, pos)) != std::string::npos)
-        {
-            replace = true;
-            sql.replace(pos, config.rewrite_src.length(), config.rewrite_dest);
-            pos += config.rewrite_dest.length();
-        }
-
-        if (replace)
-        {
+            db = new_db;
+            sql = new_sql;
             int len = sql.length() + db.length() - statement_len - db_name_len;
-
 
             if (len > 0)
             {

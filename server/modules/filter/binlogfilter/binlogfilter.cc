@@ -36,7 +36,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         {
             {"match",             MXS_MODULE_PARAM_REGEX  },
             {"exclude",           MXS_MODULE_PARAM_REGEX  },
-            {REWRITE_SRC,         MXS_MODULE_PARAM_STRING },
+            {REWRITE_SRC,         MXS_MODULE_PARAM_REGEX  },
             {REWRITE_DEST,        MXS_MODULE_PARAM_STRING },
             {MXS_END_MODULE_PARAMS}
         }

@@ -16,8 +16,22 @@
 #include <maxscale/pcre2.h>
 #include <maxscale/utils.hh>
 
+#include <string>
+
 namespace maxscale
 {
+
+
+/**
+ * Overload that returns a string
+ *
+ * @param re Compiled pattern to use
+ * @param subject Subject string
+ * @param replace Replacement string
+ *
+ * @return The replaced string or the original string if no replacement was made
+ */
+std::string pcre2_substitute(pcre2_code* re, const std::string& subject, const std::string& replace);
 
 /**
  * @class CloserTraits<pcre2_code*> pcre2.hh <maxscale/pcre2.hh>

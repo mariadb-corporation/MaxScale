@@ -245,3 +245,26 @@ bool mxs_pcre2_check_match_exclude(pcre2_code* re_match,
     }
     return rval;
 }
+
+namespace maxscale
+{
+std::string pcre2_substitute(pcre2_code* re, const std::string& subject, const std::string& replace)
+{
+    std::string rval = subject;
+    size_t size_tmp = rval.size();
+    int rc;
+
+    while ((rc = pcre2_substitute(re, (PCRE2_SPTR) subject.c_str(), subject.length(),
+                                  0, PCRE2_SUBSTITUTE_GLOBAL, NULL, NULL,
+                                  (PCRE2_SPTR) replace.c_str(), replace.length(),
+                                  (PCRE2_UCHAR*) &rval[0], &size_tmp)) == PCRE2_ERROR_NOMEMORY)
+    {
+        rval.resize(rval.size() * 2);
+        size_tmp = rval.size();
+    }
+
+    rval.resize(size_tmp);
+
+    return rval;
+}
+}
