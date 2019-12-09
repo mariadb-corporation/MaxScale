@@ -341,6 +341,9 @@ add_test_executable(mxs2456_trx_replay_cap.cpp mxs2456_trx_replay_cap mxs2456_tr
 # MXS-2512: Enable transaction replay for additional rollback errors.
 add_test_executable(mxs2512_trx_replay_rollback.cpp mxs2512_trx_replay_rollback mxs2512_trx_replay_rollback LABELS readwritesplit REPL_BACKEND)
 
+# MXS-2785: Binlogfilter database rewrite test
+add_test_executable(mxs2785_binlogfilter_rewrite.cpp mxs2785_binlogfilter_rewrite mxs2785_binlogfilter_rewrite LABELS binlogfilter REPL_BACKEND)
+
 ############################################
 # END: Tests that require GTID             #
 ############################################
