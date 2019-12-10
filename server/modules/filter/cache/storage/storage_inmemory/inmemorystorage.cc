@@ -104,7 +104,7 @@ InMemoryStorage* InMemoryStorage::create(const char* zName,
 
 std::unique_ptr<Storage::Token> InMemoryStorage::create_token()
 {
-    return std::unique_ptr<Token>(new (std::nothrow) Token);
+    return nullptr;
 }
 
 void InMemoryStorage::get_config(Config* pConfig)
@@ -144,12 +144,15 @@ cache_result_t InMemoryStorage::do_get_info(uint32_t what, json_t** ppInfo) cons
     return *ppInfo ? CACHE_RESULT_OK : CACHE_RESULT_OUT_OF_RESOURCES;
 }
 
-cache_result_t InMemoryStorage::do_get_value(const CACHE_KEY& key,
+cache_result_t InMemoryStorage::do_get_value(Token* pToken,
+                                             const CACHE_KEY& key,
                                              uint32_t flags,
                                              uint32_t soft_ttl,
                                              uint32_t hard_ttl,
                                              GWBUF** ppResult)
 {
+    mxb_assert(!pToken);
+
     cache_result_t result = CACHE_RESULT_NOT_FOUND;
 
     Entries::const_iterator i = m_entries.find(key);
@@ -222,10 +225,12 @@ cache_result_t InMemoryStorage::do_get_value(const CACHE_KEY& key,
     return result;
 }
 
-cache_result_t InMemoryStorage::do_put_value(const CACHE_KEY& key,
+cache_result_t InMemoryStorage::do_put_value(Token* pToken,
+                                             const CACHE_KEY& key,
                                              const std::vector<std::string>& invalidation_words,
                                              const GWBUF* pValue)
 {
+    mxb_assert(!pToken);
     mxb_assert(GWBUF_IS_CONTIGUOUS(pValue));
 
     if (!invalidation_words.empty())
@@ -279,8 +284,9 @@ cache_result_t InMemoryStorage::do_put_value(const CACHE_KEY& key,
     return CACHE_RESULT_OK;
 }
 
-cache_result_t InMemoryStorage::do_del_value(const CACHE_KEY& key)
+cache_result_t InMemoryStorage::do_del_value(Token* pToken, const CACHE_KEY& key)
 {
+    mxb_assert(!pToken);
     Entries::iterator i = m_entries.find(key);
 
     if (i != m_entries.end())
@@ -298,15 +304,17 @@ cache_result_t InMemoryStorage::do_del_value(const CACHE_KEY& key)
     return i != m_entries.end() ? CACHE_RESULT_OK : CACHE_RESULT_NOT_FOUND;
 }
 
-cache_result_t InMemoryStorage::do_invalidate(const std::vector<std::string>& words)
+cache_result_t InMemoryStorage::do_invalidate(Token* pToken, const std::vector<std::string>& words)
 {
+    mxb_assert(!pToken);
     MXS_ERROR("InMemoryStorage cannot do invalidation.");
     mxb_assert(!true);
     return CACHE_RESULT_OUT_OF_RESOURCES;
 }
 
-cache_result_t InMemoryStorage::do_clear()
+cache_result_t InMemoryStorage::do_clear(Token* pToken)
 {
+    mxb_assert(!pToken);
     m_stats.deletes += m_entries.size();
     m_stats.size = 0;
     m_stats.items = 0;

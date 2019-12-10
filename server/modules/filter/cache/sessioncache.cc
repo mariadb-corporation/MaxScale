@@ -16,14 +16,7 @@
 //static
 std::unique_ptr<SessionCache> SessionCache::create(Cache* pCache)
 {
-    SessionCache* pThis = nullptr;
-
     std::unique_ptr<Cache::Token> sToken = pCache->create_token();
 
-    if (sToken)
-    {
-        pThis = new (std::nothrow) SessionCache(pCache, std::move(sToken));
-    }
-
-    return std::unique_ptr<SessionCache>(pThis);
+    return std::unique_ptr<SessionCache>(new (std::nothrow) SessionCache(pCache, std::move(sToken)));
 }

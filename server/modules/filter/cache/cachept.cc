@@ -136,35 +136,39 @@ cache_result_t CachePT::get_key(const std::string& user,
     return thread_cache().get_key(user, host, zDefault_db, pQuery, pKey);
 }
 
-cache_result_t CachePT::get_value(const CACHE_KEY& key,
+cache_result_t CachePT::get_value(Token* pToken,
+                                  const CACHE_KEY& key,
                                   uint32_t flags,
                                   uint32_t soft_ttl,
                                   uint32_t hard_ttl,
                                   GWBUF** ppValue) const
 {
-    return thread_cache().get_value(key, flags, soft_ttl, hard_ttl, ppValue);
+    return thread_cache().get_value(pToken, key, flags, soft_ttl, hard_ttl, ppValue);
 }
 
-cache_result_t CachePT::put_value(const CACHE_KEY& key,
+cache_result_t CachePT::put_value(Token* pToken,
+                                  const CACHE_KEY& key,
                                   const std::vector<std::string>& invalidation_words,
                                   const GWBUF* pValue)
 {
-    return thread_cache().put_value(key, invalidation_words, pValue);
+    return thread_cache().put_value(pToken, key, invalidation_words, pValue);
 }
 
-cache_result_t CachePT::del_value(const CACHE_KEY& key)
+cache_result_t CachePT::del_value(Token* pToken,
+                                  const CACHE_KEY& key)
 {
-    return thread_cache().del_value(key);
+    return thread_cache().del_value(pToken, key);
 }
 
-cache_result_t CachePT::invalidate(const std::vector<std::string>& words)
+cache_result_t CachePT::invalidate(Token* pToken,
+                                   const std::vector<std::string>& words)
 {
-    return thread_cache().invalidate(words);
+    return thread_cache().invalidate(pToken, words);
 }
 
-cache_result_t CachePT::clear()
+cache_result_t CachePT::clear(Token* pToken)
 {
-    return thread_cache().clear();
+    return thread_cache().clear(pToken);
 }
 
 // static

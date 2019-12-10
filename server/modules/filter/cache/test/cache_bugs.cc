@@ -61,6 +61,8 @@ int mxs_2727()
     auto* pCache = CacheMT::create("MXS-2727", &config);
     mxb_assert(pCache);
 
+    auto sToken = pCache->create_token();
+
     CACHE_KEY key;
     GWBUF* pSelect = create_gwbuf("SELECT * FROM t");
 
@@ -77,7 +79,7 @@ int mxs_2727()
     GWBUF* pValue = gwbuf_alloc_and_load(value.size(), &value.front());
 
     vector<string> invalidation_words;
-    result = pCache->put_value(key, invalidation_words, pValue);
+    result = pCache->put_value(sToken.get(), key, invalidation_words, pValue);
     gwbuf_free(pValue);
 
     if (!CACHE_RESULT_IS_OK(result))
@@ -92,7 +94,7 @@ int mxs_2727()
     pValue = gwbuf_alloc_and_load(value.size(), &value.front());
 
     // This will crash without the MXS-2727 fix.
-    result = pCache->put_value(key, invalidation_words, pValue);
+    result = pCache->put_value(sToken.get(), key, invalidation_words, pValue);
     gwbuf_free(pValue);
 
     // Expected to fail, as the value does not fit into the cache.

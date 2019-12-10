@@ -41,7 +41,8 @@ cache_result_t LRUStorageMT::get_info(uint32_t what,
     return LRUStorage::do_get_info(what, ppInfo);
 }
 
-cache_result_t LRUStorageMT::get_value(const CACHE_KEY& key,
+cache_result_t LRUStorageMT::get_value(Token* pToken,
+                                       const CACHE_KEY& key,
                                        uint32_t flags,
                                        uint32_t soft_ttl,
                                        uint32_t hard_ttl,
@@ -49,37 +50,40 @@ cache_result_t LRUStorageMT::get_value(const CACHE_KEY& key,
 {
     std::lock_guard<std::mutex> guard(m_lock);
 
-    return do_get_value(key, flags, soft_ttl, hard_ttl, ppValue);
+    return do_get_value(pToken, key, flags, soft_ttl, hard_ttl, ppValue);
 }
 
-cache_result_t LRUStorageMT::put_value(const CACHE_KEY& key,
+cache_result_t LRUStorageMT::put_value(Token* pToken,
+                                       const CACHE_KEY& key,
                                        const std::vector<std::string>& invalidation_words,
                                        const GWBUF* pValue)
 {
     std::lock_guard<std::mutex> guard(m_lock);
 
-    return do_put_value(key, invalidation_words, pValue);
+    return do_put_value(pToken, key, invalidation_words, pValue);
 }
 
-cache_result_t LRUStorageMT::del_value(const CACHE_KEY& key)
+cache_result_t LRUStorageMT::del_value(Token* pToken,
+                                       const CACHE_KEY& key)
 {
     std::lock_guard<std::mutex> guard(m_lock);
 
-    return do_del_value(key);
+    return do_del_value(pToken, key);
 }
 
-cache_result_t LRUStorageMT::invalidate(const std::vector<std::string>& words)
+cache_result_t LRUStorageMT::invalidate(Token* pToken,
+                                        const std::vector<std::string>& words)
 {
     std::lock_guard<std::mutex> guard(m_lock);
 
-    return LRUStorage::do_invalidate(words);
+    return LRUStorage::do_invalidate(pToken, words);
 }
 
-cache_result_t LRUStorageMT::clear()
+cache_result_t LRUStorageMT::clear(Token* pToken)
 {
     std::lock_guard<std::mutex> guard(m_lock);
 
-    return LRUStorage::do_clear();
+    return LRUStorage::do_clear(pToken);
 }
 
 cache_result_t LRUStorageMT::get_head(CACHE_KEY* pKey, GWBUF** ppHead)

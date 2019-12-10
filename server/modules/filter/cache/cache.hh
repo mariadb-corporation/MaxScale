@@ -74,9 +74,11 @@ public:
 
     /**
      * Create a token to be used for distinguishing between different
-     * cache users within the same thread.
+     * cache users within the same thread. An implementation that does
+     * not need to differentiate between different users will return
+     * NULL.
      *
-     * @return A new token, or NULL if one could not be created.
+     * @return A new token or NULL.
      */
     virtual std::unique_ptr<Token> create_token() = 0;
 
@@ -155,7 +157,8 @@ public:
     /**
      * See @Storage::get_value
      */
-    virtual cache_result_t get_value(const CACHE_KEY& key,
+    virtual cache_result_t get_value(Token* pToken,
+                                     const CACHE_KEY& key,
                                      uint32_t flags,
                                      uint32_t soft_ttl,
                                      uint32_t hard_ttl,
@@ -164,24 +167,27 @@ public:
     /**
      * See @Storage::put_value
      */
-    virtual cache_result_t put_value(const CACHE_KEY& key,
+    virtual cache_result_t put_value(Token* pToken,
+                                     const CACHE_KEY& key,
                                      const std::vector<std::string>& invalidation_words,
                                      const GWBUF* pValue) = 0;
 
     /**
      * See @Storage::del_value
      */
-    virtual cache_result_t del_value(const CACHE_KEY& key) = 0;
+    virtual cache_result_t del_value(Token* pToken,
+                                     const CACHE_KEY& key) = 0;
 
     /**
      * See @Storage::invalidate
      */
-    virtual cache_result_t invalidate(const std::vector<std::string>& words) = 0;
+    virtual cache_result_t invalidate(Token* pToken,
+                                      const std::vector<std::string>& words) = 0;
 
     /**
      * See @Storage::clear
      */
-    virtual cache_result_t clear() = 0;
+    virtual cache_result_t clear(Token* pToken) = 0;
 
     /**
      * Returns the monotonic time, expressed in milliseconds, since an

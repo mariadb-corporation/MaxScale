@@ -39,35 +39,39 @@ cache_result_t LRUStorageST::get_info(uint32_t what,
     return LRUStorage::do_get_info(what, ppInfo);
 }
 
-cache_result_t LRUStorageST::get_value(const CACHE_KEY& key,
+cache_result_t LRUStorageST::get_value(Token* pToken,
+                                       const CACHE_KEY& key,
                                        uint32_t flags,
                                        uint32_t soft_ttl,
                                        uint32_t hard_ttl,
                                        GWBUF** ppValue)
 {
-    return LRUStorage::do_get_value(key, flags, soft_ttl, hard_ttl, ppValue);
+    return LRUStorage::do_get_value(pToken, key, flags, soft_ttl, hard_ttl, ppValue);
 }
 
-cache_result_t LRUStorageST::put_value(const CACHE_KEY& key,
+cache_result_t LRUStorageST::put_value(Token* pToken,
+                                       const CACHE_KEY& key,
                                        const std::vector<std::string>& invalidation_words,
                                        const GWBUF* pValue)
 {
-    return LRUStorage::do_put_value(key, invalidation_words, pValue);
+    return LRUStorage::do_put_value(pToken, key, invalidation_words, pValue);
 }
 
-cache_result_t LRUStorageST::del_value(const CACHE_KEY& key)
+cache_result_t LRUStorageST::del_value(Token* pToken,
+                                       const CACHE_KEY& key)
 {
-    return LRUStorage::do_del_value(key);
+    return LRUStorage::do_del_value(pToken, key);
 }
 
-cache_result_t LRUStorageST::invalidate(const std::vector<std::string>& words)
+cache_result_t LRUStorageST::invalidate(Token* pToken,
+                                        const std::vector<std::string>& words)
 {
-    return LRUStorage::do_invalidate(words);
+    return LRUStorage::do_invalidate(pToken, words);
 }
 
-cache_result_t LRUStorageST::clear()
+cache_result_t LRUStorageST::clear(Token* pToken)
 {
-    return LRUStorage::do_clear();
+    return LRUStorage::do_clear(pToken);
 }
 
 cache_result_t LRUStorageST::get_head(CACHE_KEY* pKey, GWBUF** ppValue)

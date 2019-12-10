@@ -84,7 +84,7 @@ public:
                              uint32_t hard_ttl,
                              GWBUF** ppValue) const
     {
-        return m_cache.get_value(key, flags, soft_ttl, hard_ttl, ppValue);
+        return m_cache.get_value(token(), key, flags, soft_ttl, hard_ttl, ppValue);
     }
 
     /**
@@ -94,7 +94,7 @@ public:
                              const std::vector<std::string>& invalidation_words,
                              const GWBUF* pValue)
     {
-        return m_cache.put_value(key, invalidation_words, pValue);
+        return m_cache.put_value(token(), key, invalidation_words, pValue);
     }
 
     /**
@@ -102,7 +102,7 @@ public:
      */
     cache_result_t del_value(const CACHE_KEY& key)
     {
-        return m_cache.del_value(key);
+        return m_cache.del_value(token(), key);
     }
 
     /**
@@ -110,7 +110,7 @@ public:
      */
     cache_result_t invalidate(const std::vector<std::string>& words)
     {
-        return m_cache.invalidate(words);
+        return m_cache.invalidate(token(), words);
     }
 
     /**
@@ -118,7 +118,7 @@ public:
      */
     cache_result_t clear()
     {
-        return m_cache.clear();
+        return m_cache.clear(token());
     }
 
 protected:
@@ -130,9 +130,9 @@ protected:
     }
 
 private:
-    Cache::Token& token()
+    Cache::Token* token() const
     {
-        return *m_sToken.get();
+        return m_sToken.get();
     }
 
 private:

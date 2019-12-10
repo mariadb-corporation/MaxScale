@@ -25,6 +25,8 @@ public:
 
     /**
      * @see Storage::create_token
+     *
+     * @return Always NULL.
      */
     std::unique_ptr<Token> create_token() override final;
 
@@ -44,7 +46,8 @@ protected:
     /**
      * @see Storage::get_value
      */
-    cache_result_t do_get_value(const CACHE_KEY& key,
+    cache_result_t do_get_value(Token* pToken,
+                                const CACHE_KEY& key,
                                 uint32_t flags,
                                 uint32_t soft_ttl,
                                 uint32_t hard_ttl,
@@ -53,24 +56,27 @@ protected:
     /**
      * @see Storage::put_value
      */
-    cache_result_t do_put_value(const CACHE_KEY& key,
+    cache_result_t do_put_value(Token* pToken,
+                                const CACHE_KEY& key,
                                 const std::vector<std::string>& invalidation_words,
                                 const GWBUF* pValue);
 
     /**
      * @see Storage::del_value
      */
-    cache_result_t do_del_value(const CACHE_KEY& key);
+    cache_result_t do_del_value(Token* pToken,
+                                const CACHE_KEY& key);
 
     /**
      * @see Storage::invalidate
      */
-    cache_result_t do_invalidate(const std::vector<std::string>& words);
+    cache_result_t do_invalidate(Token* pToken,
+                                 const std::vector<std::string>& words);
 
     /**
      * @see Storage::clear
      */
-    cache_result_t do_clear();
+    cache_result_t do_clear(Token* pToken);
 
     /**
      * @see Storage::get_head

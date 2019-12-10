@@ -57,35 +57,39 @@ std::unique_ptr<Cache::Token> CacheSimple::create_token()
     return m_pStorage->create_token();
 }
 
-cache_result_t CacheSimple::get_value(const CACHE_KEY& key,
+cache_result_t CacheSimple::get_value(Token* pToken,
+                                      const CACHE_KEY& key,
                                       uint32_t flags,
                                       uint32_t soft_ttl,
                                       uint32_t hard_ttl,
                                       GWBUF** ppValue) const
 {
-    return m_pStorage->get_value(key, flags, soft_ttl, hard_ttl, ppValue);
+    return m_pStorage->get_value(pToken, key, flags, soft_ttl, hard_ttl, ppValue);
 }
 
-cache_result_t CacheSimple::put_value(const CACHE_KEY& key,
+cache_result_t CacheSimple::put_value(Token* pToken,
+                                      const CACHE_KEY& key,
                                       const std::vector<std::string>& invalidation_words,
                                       const GWBUF* pValue)
 {
-    return m_pStorage->put_value(key, invalidation_words, pValue);
+    return m_pStorage->put_value(pToken, key, invalidation_words, pValue);
 }
 
-cache_result_t CacheSimple::del_value(const CACHE_KEY& key)
+cache_result_t CacheSimple::del_value(Token* pToken,
+                                      const CACHE_KEY& key)
 {
-    return m_pStorage->del_value(key);
+    return m_pStorage->del_value(pToken, key);
 }
 
-cache_result_t CacheSimple::invalidate(const std::vector<std::string>& words)
+cache_result_t CacheSimple::invalidate(Token* pToken,
+                                       const std::vector<std::string>& words)
 {
-    return m_pStorage->invalidate(words);
+    return m_pStorage->invalidate(pToken, words);
 }
 
-cache_result_t CacheSimple::clear()
+cache_result_t CacheSimple::clear(Token* pToken)
 {
-    return m_pStorage->clear();
+    return m_pStorage->clear(pToken);
 }
 
 // protected:

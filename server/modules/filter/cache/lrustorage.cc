@@ -308,7 +308,7 @@ public:
 
         if (rv)
         {
-            if (m_owner.storage()->invalidate(words) != CACHE_RESULT_OK)
+            if (m_owner.storage()->invalidate(nullptr, words) != CACHE_RESULT_OK)
             {
                 rv = false;
             }
@@ -361,13 +361,19 @@ LRUStorage::LRUStorage(const Config& config, Storage* pStorage)
 
 LRUStorage::~LRUStorage()
 {
-    do_clear();
+    do_clear(nullptr);
     delete m_pStorage;
 }
 
 std::unique_ptr<Storage::Token> LRUStorage::create_token()
 {
-    return m_pStorage->create_token();
+    // The LRUStorage can only be used together with a local storage;
+    // one where the cache-communication is not an issue.
+
+    auto sToken = m_pStorage->create_token();
+    mxb_assert(!sToken);
+
+    return nullptr;
 }
 
 void LRUStorage::get_config(Config* pConfig)
@@ -406,19 +412,24 @@ cache_result_t LRUStorage::do_get_info(uint32_t what,
     return *ppInfo ? CACHE_RESULT_OK : CACHE_RESULT_OUT_OF_RESOURCES;
 }
 
-cache_result_t LRUStorage::do_get_value(const CACHE_KEY& key,
+cache_result_t LRUStorage::do_get_value(Token* pToken,
+                                        const CACHE_KEY& key,
                                         uint32_t flags,
                                         uint32_t soft_ttl,
                                         uint32_t hard_ttl,
                                         GWBUF** ppValue)
 {
+    mxb_assert(!pToken);
     return access_value(APPROACH_GET, key, flags, soft_ttl, hard_ttl, ppValue);
 }
 
-cache_result_t LRUStorage::do_put_value(const CACHE_KEY& key,
+cache_result_t LRUStorage::do_put_value(Token* pToken,
+                                        const CACHE_KEY& key,
                                         const vector<string>& invalidation_words,
                                         const GWBUF* pValue)
 {
+    mxb_assert(!pToken);
+
     cache_result_t result = CACHE_RESULT_ERROR;
 
     size_t value_size = GWBUF_LENGTH(pValue);
@@ -443,7 +454,7 @@ cache_result_t LRUStorage::do_put_value(const CACHE_KEY& key,
 
         const vector<string>& storage_words = m_sInvalidator->storage_words(invalidation_words);
 
-        result = m_pStorage->put_value(key, storage_words, pValue);
+        result = m_pStorage->put_value(pToken, key, storage_words, pValue);
 
         if (CACHE_RESULT_IS_OK(result))
         {
@@ -477,8 +488,10 @@ cache_result_t LRUStorage::do_put_value(const CACHE_KEY& key,
     return result;
 }
 
-cache_result_t LRUStorage::do_del_value(const CACHE_KEY& key)
+cache_result_t LRUStorage::do_del_value(Token* pToken, const CACHE_KEY& key)
 {
+    mxb_assert(!pToken);
+
     cache_result_t result = CACHE_RESULT_NOT_FOUND;
 
     NodesByKey::iterator i = m_nodes_by_key.find(key);
@@ -486,7 +499,7 @@ cache_result_t LRUStorage::do_del_value(const CACHE_KEY& key)
 
     if (existed)
     {
-        result = m_pStorage->del_value(key);
+        result = m_pStorage->del_value(pToken, key);
 
         if (CACHE_RESULT_IS_OK(result) || CACHE_RESULT_IS_NOT_FOUND(result))
         {
@@ -506,8 +519,10 @@ cache_result_t LRUStorage::do_del_value(const CACHE_KEY& key)
     return result;
 }
 
-cache_result_t LRUStorage::do_invalidate(const vector<string>& words)
+cache_result_t LRUStorage::do_invalidate(Token* pToken, const vector<string>& words)
 {
+    mxb_assert(!pToken);
+
     cache_result_t rv = CACHE_RESULT_OK;
 
     if (!m_sInvalidator->invalidate(words))
@@ -517,14 +532,16 @@ cache_result_t LRUStorage::do_invalidate(const vector<string>& words)
         MXS_ERROR("Could not invalidate cache entries dependent upon '%s'."
                   "The entire cache will be cleared.", s.c_str());
 
-        rv = do_clear();
+        rv = do_clear(pToken);
     }
 
     return rv;
 }
 
-cache_result_t LRUStorage::do_clear()
+cache_result_t LRUStorage::do_clear(Token* pToken)
 {
+    mxb_assert(!pToken);
+
     Node* pnode = m_pHead;
 
     while (m_pHead)
@@ -535,7 +552,7 @@ cache_result_t LRUStorage::do_clear()
     mxb_assert(!m_pHead);
     mxb_assert(!m_pTail);
 
-    return m_pStorage->clear();
+    return m_pStorage->clear(pToken);
 }
 
 cache_result_t LRUStorage::do_get_head(CACHE_KEY* pKey, GWBUF** ppValue)
@@ -547,7 +564,8 @@ cache_result_t LRUStorage::do_get_head(CACHE_KEY* pKey, GWBUF** ppValue)
     while (m_pHead && (CACHE_RESULT_IS_NOT_FOUND(result)))
     {
         mxb_assert(m_pHead->key());
-        result = do_get_value(*m_pHead->key(),
+        result = do_get_value(nullptr,
+                              *m_pHead->key(),
                               CACHE_FLAGS_INCLUDE_STALE,
                               CACHE_USE_CONFIG_TTL,
                               CACHE_USE_CONFIG_TTL,
@@ -607,7 +625,7 @@ cache_result_t LRUStorage::access_value(access_approach_t approach,
 
     if (existed)
     {
-        result = m_pStorage->get_value(key, flags, soft_ttl, hard_ttl, ppValue);
+        result = m_pStorage->get_value(nullptr, key, flags, soft_ttl, hard_ttl, ppValue);
 
         if (CACHE_RESULT_IS_OK(result))
         {
@@ -732,7 +750,7 @@ bool LRUStorage::free_node_data(Node* pNode, Context context)
 
     if (context != Context::LRU_INVALIDATION)
     {
-        m_pStorage->del_value(*pKey);
+        m_pStorage->del_value(nullptr, *pKey);
     }
 
     if (CACHE_RESULT_IS_OK(result) || CACHE_RESULT_IS_NOT_FOUND(result))
@@ -868,7 +886,7 @@ cache_result_t LRUStorage::get_existing_node(NodesByKey::iterator& i, const GWBU
         const CACHE_KEY* pKey = i->second->key();
         mxb_assert(pKey);
 
-        result = do_del_value(*pKey);
+        result = do_del_value(nullptr, *pKey);
 
         if (CACHE_RESULT_IS_ERROR(result))
         {

@@ -45,6 +45,7 @@ TesterStorage::HitTask::HitTask(ostream* pOut,
                                 const CacheItems* pCache_items)
     : Tester::Task(pOut)
     , m_storage(*pStorage)
+    , m_sToken(m_storage.create_token())
     , m_cache_items(*pCache_items)
     , m_puts(0)
     , m_gets(0)
@@ -77,7 +78,8 @@ int TesterStorage::HitTask::run()
         case STORAGE_PUT:
             {
                 std::vector<std::string> invalidation_words;
-                cache_result_t result = m_storage.put_value(cache_item.first,
+                cache_result_t result = m_storage.put_value(m_sToken.get(),
+                                                            cache_item.first,
                                                             invalidation_words,
                                                             cache_item.second);
                 if (CACHE_RESULT_IS_OK(result))
@@ -95,7 +97,7 @@ int TesterStorage::HitTask::run()
         case STORAGE_GET:
             {
                 GWBUF* pQuery;
-                cache_result_t result = m_storage.get_value(cache_item.first, 0, &pQuery);
+                cache_result_t result = m_storage.get_value(m_sToken.get(), cache_item.first, 0, &pQuery);
 
                 if (CACHE_RESULT_IS_OK(result))
                 {
@@ -121,7 +123,7 @@ int TesterStorage::HitTask::run()
 
         case STORAGE_DEL:
             {
-                cache_result_t result = m_storage.del_value(cache_item.first);
+                cache_result_t result = m_storage.del_value(m_sToken.get(), cache_item.first);
 
                 if (CACHE_RESULT_IS_OK(result))
                 {
@@ -336,6 +338,8 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
 
     out() << "Testing ttl." << endl;
 
+    auto sToken = storage.create_token();
+
     Storage::Config config;
     storage.get_config(&config);
 
@@ -355,7 +359,10 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
         const CacheItems::value_type& cache_item = cache_items[0];
 
         std::vector<std::string> invalidation_words;
-        cache_result_t result = storage.put_value(cache_item.first, invalidation_words, cache_item.second);
+        cache_result_t result = storage.put_value(sToken.get(),
+                                                  cache_item.first,
+                                                  invalidation_words,
+                                                  cache_item.second);
 
         if (!CACHE_RESULT_IS_OK(result))
         {
@@ -371,7 +378,7 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
             GWBUF* pValue;
 
             pValue = NULL;
-            result = storage.get_value(cache_item.first, 0, &pValue);
+            result = storage.get_value(sToken.get(), cache_item.first, 0, &pValue);
 
             // We should get the item normally as we are below the soft ttl, i.e. no stale bit.
             if (result != CACHE_RESULT_OK)
@@ -386,7 +393,7 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
             slept += 2000;
 
             pValue = NULL;
-            result = storage.get_value(cache_item.first, 0, &pValue);
+            result = storage.get_value(sToken.get(), cache_item.first, 0, &pValue);
 
             // We should not get the item and the stale bit should be on.
             if (!(CACHE_RESULT_IS_NOT_FOUND(result) && CACHE_RESULT_IS_STALE(result)))
@@ -398,7 +405,7 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
             gwbuf_free(pValue);
 
             pValue = NULL;
-            result = storage.get_value(cache_item.first, CACHE_FLAGS_INCLUDE_STALE, &pValue);
+            result = storage.get_value(sToken.get(), cache_item.first, CACHE_FLAGS_INCLUDE_STALE, &pValue);
 
             if (!(CACHE_RESULT_IS_OK(result) && CACHE_RESULT_IS_STALE(result)))
             {
@@ -412,7 +419,7 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
             slept += hard_ttl - slept + 1000;
 
             pValue = NULL;
-            result = storage.get_value(cache_item.first, CACHE_FLAGS_INCLUDE_STALE, &pValue);
+            result = storage.get_value(sToken.get(), cache_item.first, CACHE_FLAGS_INCLUDE_STALE, &pValue);
 
             if (!CACHE_RESULT_IS_NOT_FOUND(result))
             {
@@ -423,14 +430,13 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
             gwbuf_free(pValue);
 
             pValue = NULL;
-            result = storage.get_value(cache_item.first, 0, &pValue);
+            result = storage.get_value(sToken.get(), cache_item.first, 0, &pValue);
 
             if (!CACHE_RESULT_IS_NOT_FOUND(result))
             {
                 out() << "Expected not to be found, and without stale bit." << endl;
                 rv = EXIT_FAILURE;
             }
-
 
             gwbuf_free(pValue);
         }

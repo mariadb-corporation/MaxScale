@@ -39,33 +39,37 @@ cache_result_t InMemoryStorageST::get_info(uint32_t what, json_t** ppInfo) const
     return do_get_info(what, ppInfo);
 }
 
-cache_result_t InMemoryStorageST::get_value(const CACHE_KEY& key,
+cache_result_t InMemoryStorageST::get_value(Token* pToken,
+                                            const CACHE_KEY& key,
                                             uint32_t flags,
                                             uint32_t soft_ttl,
                                             uint32_t hard_ttl,
                                             GWBUF** ppResult)
 {
-    return do_get_value(key, flags, soft_ttl, hard_ttl, ppResult);
+    return do_get_value(pToken, key, flags, soft_ttl, hard_ttl, ppResult);
 }
 
-cache_result_t InMemoryStorageST::put_value(const CACHE_KEY& key,
+cache_result_t InMemoryStorageST::put_value(Token* pToken,
+                                            const CACHE_KEY& key,
                                             const std::vector<std::string>& invalidation_words,
                                             const GWBUF* pValue)
 {
-    return do_put_value(key, invalidation_words, pValue);
+    return do_put_value(pToken, key, invalidation_words, pValue);
 }
 
-cache_result_t InMemoryStorageST::del_value(const CACHE_KEY& key)
+cache_result_t InMemoryStorageST::del_value(Token* pToken,
+                                            const CACHE_KEY& key)
 {
-    return do_del_value(key);
+    return do_del_value(pToken, key);
 }
 
-cache_result_t InMemoryStorageST::invalidate(const std::vector<std::string>& words)
+cache_result_t InMemoryStorageST::invalidate(Token* pToken,
+                                             const std::vector<std::string>& words)
 {
-    return do_invalidate(words);
+    return do_invalidate(pToken, words);
 }
 
-cache_result_t InMemoryStorageST::clear()
+cache_result_t InMemoryStorageST::clear(Token* pToken)
 {
-    return do_clear();
+    return do_clear(pToken);
 }
