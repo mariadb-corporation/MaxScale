@@ -203,9 +203,9 @@ public:
         return m_database;
     }
 
-    void set_database(const std::string& database)
+    void start_database_change(const std::string& database)
     {
-        m_database = database;
+        m_pending_database = database;
     }
 
     virtual mxs::ClientConnection*       client_connection() = 0;
@@ -365,6 +365,7 @@ protected:
     std::string m_user;                     /**< The session user. */
     std::string m_host;
     std::string m_database;
+    std::string m_pending_database;
 
     MXS_SESSION(const SListener& listener, const std::string& host);
 

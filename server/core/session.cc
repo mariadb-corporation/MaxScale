@@ -1327,6 +1327,18 @@ int32_t Session::routeQuery(GWBUF* buffer)
 
 int32_t Session::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
+    if (!m_pending_database.empty())
+    {
+        // Only update the database in case it succeeded. The pending database is cleared regardless of what
+        // was returned to prevent false positives.
+        if (reply.is_ok())
+        {
+            m_database = std::move(m_pending_database);
+        }
+
+        m_pending_database.clear();
+    }
+
     if (reply.is_ok() && service->config().session_track_trx_state)
     {
         parse_and_set_trx_state(reply);

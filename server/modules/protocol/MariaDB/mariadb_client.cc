@@ -1341,6 +1341,7 @@ void MariaDBClientConnection::handle_use_database(GWBUF* read_buffer)
     if (!databases.empty())
     {
         m_session_data->db = databases[0];
+        m_session->start_database_change(m_session_data->db);
     }
 }
 
@@ -1416,6 +1417,7 @@ MariaDBClientConnection::process_special_commands(DCB* dcb, GWBUF* read_buffer, 
         char* end = start + GWBUF_LENGTH(read_buffer);
         start += MYSQL_HEADER_LEN + 1;
         m_session_data->db.assign(start, end);
+        m_session->start_database_change(m_session_data->db);
     }
     else if (cmd == MXS_COM_QUERY)
     {
