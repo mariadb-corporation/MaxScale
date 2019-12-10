@@ -1565,10 +1565,8 @@ bool Monitor::journal_is_stale() const
 
             if (tdiff >= max_age)
             {
-                MXS_WARNING("Journal file was created %ld seconds ago. Maximum journal "
-                            "age is %ld seconds.",
-                            tdiff,
-                            max_age);
+                MXS_NOTICE("Journal file was created %ld seconds ago. Maximum journal "
+                           "age is %ld seconds.", tdiff, max_age);
             }
             else
             {
@@ -1870,7 +1868,7 @@ bool MonitorWorker::start()
 
     if (journal_is_stale())
     {
-        MXS_WARNING("Removing stale journal file for monitor '%s'.", name());
+        MXS_NOTICE("Removing stale journal file for monitor '%s'.", name());
         remove_server_journal();
     }
 
