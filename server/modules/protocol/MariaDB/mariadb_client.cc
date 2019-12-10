@@ -460,8 +460,6 @@ int MariaDBClientConnection::send_mysql_client_handshake()
     mysql_server_capabilities_two[0] = (uint8_t)(GW_MYSQL_CAPABILITIES_SERVER >> 16);
     mysql_server_capabilities_two[1] = (uint8_t)(GW_MYSQL_CAPABILITIES_SERVER >> 24);
 
-    // Check that we match the old values
-    mxb_assert(mysql_server_capabilities_two[0] == 15);
     /** NOTE: pre-2.1 versions sent the fourth byte of the capabilities as
      *  the value 128 even though there's no such capability. */
 
@@ -2257,6 +2255,24 @@ bool MariaDBClientConnection::parse_client_response(const uint8_t* data, int dat
             // The following fields are optional.
             read_str(GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB, &db);
             read_str(GW_MYSQL_CAPABILITIES_PLUGIN_AUTH, &plugin);
+
+            if ((client_caps & GW_MYSQL_CAPABILITIES_CONNECT_ATTRS) && ptr < end)
+            {
+                auto n_bytes = mxq::leint_bytes((const uint8_t*)ptr);
+
+                if (ptr + n_bytes < end)
+                {
+                    n_bytes += mxq::leint_value((const uint8_t*)ptr);
+
+                    if (ptr + n_bytes <= end)
+                    {
+                        // Store the client connection attributes and reuse them for backend connections. The
+                        // data is not processed into key-value pairs as it is not used by MaxScale.
+                        m_session_data->connect_attrs.resize(n_bytes);
+                        memcpy(&m_session_data->connect_attrs[0], ptr, n_bytes);
+                    }
+                }
+            }
         }
 
         // TODO: read client attributes

@@ -1862,6 +1862,11 @@ GWBUF* MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool s
                                  client->db.c_str(),
                                  auth_plugin_name);
 
+    if (capabilities & this->server_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_ATTRS)
+    {
+        bytes += client->connect_attrs.size();
+    }
+
     // allocating the GWBUF
     GWBUF* buffer = gwbuf_alloc(bytes);
     uint8_t* payload = GWBUF_DATA(buffer);
@@ -1922,6 +1927,14 @@ GWBUF* MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool s
         }
 
         memcpy(payload, auth_plugin_name, strlen(auth_plugin_name));
+
+        if ((capabilities & this->server_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_ATTRS)
+            && !client->connect_attrs.empty())
+        {
+            // Copy client attributes as-is. This allows us to pass them along without having to process them.
+            payload += strlen(auth_plugin_name) + 1;
+            memcpy(payload, client->connect_attrs.data(), client->connect_attrs.size());
+        }
     }
 
     return buffer;
