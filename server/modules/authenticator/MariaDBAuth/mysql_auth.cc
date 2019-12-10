@@ -192,6 +192,7 @@ static void* mysql_auth_init(char** options)
         instance->skip_auth = false;
         instance->check_permissions = true;
         instance->lower_case_table_names = false;
+        instance->checksum = 0;
 
         for (int i = 0; options[i]; i++)
         {
@@ -819,12 +820,6 @@ static int mysql_auth_load_users(Listener* port)
         MXS_WARNING("[%s]: failed to load any user information. Authentication"
                     " will probably fail as a result.",
                     service->name());
-    }
-    else if (loaded > 0 && first_load)
-    {
-        mxb_assert(srv);
-        MXS_NOTICE("[%s] Loaded %d MySQL users for listener %s from server %s.",
-                   service->name(), loaded, port->name(), srv->name());
     }
 
     return rc;

@@ -112,6 +112,7 @@ typedef struct mysql_auth
     bool      skip_auth;            /**< Authentication will always be successful */
     bool      check_permissions;
     bool      lower_case_table_names;   /**< Disable database case-sensitivity */
+    uint64_t  checksum;
 } MYSQL_AUTH;
 
 /**
