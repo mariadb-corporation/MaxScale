@@ -69,7 +69,7 @@ ssl=required
 ssl_cert=/###access_homedir###/certs/server-cert.pem
 ssl_key=/###access_homedir###/certs/server-key.pem
 ssl_ca_cert=/###access_homedir###/certs/ca.pem
-ssl_verify_peer_cert=false
+ssl_verify_peer_certificate=false
 
 [Read-Connection-Listener-Slave]
 type=listener
@@ -82,7 +82,7 @@ ssl=required
 ssl_cert=/###access_homedir###/certs/server-cert.pem
 ssl_key=/###access_homedir###/certs/server-key.pem
 ssl_ca_cert=/###access_homedir###/certs/ca.pem
-ssl_verify_peer_cert=false
+ssl_verify_peer_certificate=false
 
 [Read-Connection-Listener-Master]
 type=listener
@@ -95,4 +95,4 @@ ssl=required
 ssl_cert=/###access_homedir###/certs/server-cert.pem
 ssl_key=/###access_homedir###/certs/server-key.pem
 ssl_ca_cert=/###access_homedir###/certs/ca.pem
-ssl_verify_peer_cert=false
+ssl_verify_peer_certificate=false

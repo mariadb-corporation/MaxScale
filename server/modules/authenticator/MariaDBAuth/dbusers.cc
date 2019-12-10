@@ -1040,6 +1040,46 @@ bool query_and_process_users(const char* query, MYSQL* con, SERVICE* service, in
     return rval;
 }
 
+// TODO: Move this to the user account management code
+/*
+ *  void log_loaded_users(MYSQL_AUTH* instance, SERVICE* service, Listener* port, SERVER* srv,
+ *                     const std::vector<User>& userlist, const std::vector<std::string>& dblist)
+ *  {
+ *   uint64_t c = crc32(0, 0, 0);
+ *
+ *   for (const auto& user : userlist)
+ *   {
+ *       c = crc32(c, (uint8_t*)user.user.c_str(), user.user.length());
+ *       c = crc32(c, (uint8_t*)user.host.c_str(), user.host.length());
+ *       c = crc32(c, (uint8_t*)user.db.c_str(), user.db.length());
+ *       uint8_t anydb = user.anydb;
+ *       c = crc32(c, &anydb, sizeof(anydb));
+ *       c = crc32(c, (uint8_t*)user.pw.c_str(), user.pw.length());
+ *   }
+ *
+ *   for (const auto& db : dblist)
+ *   {
+ *       c = crc32(c, (uint8_t*)db.c_str(), db.length());
+ *   }
+ *
+ *   uint64_t old_c = instance->checksum;
+ *
+ *   while (old_c != c)
+ *   {
+ *       if (mxb::atomic::compare_exchange(&instance->checksum, &old_c, c,
+ *                                         mxb::atomic::RELAXED, mxb::atomic::RELAXED))
+ *       {
+ *           MXS_NOTICE("[%s] Loaded %lu MySQL users for listener '%s' "
+ *                      "from server '%s' with checksum 0x%0lx.",
+ *                      service->name(), userlist.size(), port->name(), srv->name(), c);
+ *           break;
+ *       }
+ *
+ *       old_c = instance->checksum;
+ *   }
+ *  }
+ */
+
 int MariaDBAuthenticatorModule::get_users_from_server(MYSQL* con, SERVER* server, SERVICE* service)
 {
     auto server_version = server->version();
