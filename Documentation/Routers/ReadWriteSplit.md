@@ -169,8 +169,9 @@ even if the duration is longer than a second.
 The parameter value is the interval in seconds between each keepalive ping. A
 keepalive ping will be sent to a backend server if the connection is idle and it
 has not been used within `n` seconds where `n` is greater than or equal to the
-value of _connection_keepalive_. The keepalive pings are only sent when the
-client executes a query.
+value of _connection_keepalive_. In MaxScale 2.4 and older versions, the
+keepalive pings were only sent when the client would execute a query. Starting
+with MaxScale 2.5, the keepalive pings are sent regardless of traffic.
 
 This functionality allows the readwritesplit module to keep all backend
 connections alive even if they are not used. This is a common problem if the
