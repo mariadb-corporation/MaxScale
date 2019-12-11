@@ -38,27 +38,6 @@ using std::chrono::seconds;
  * write split router, and not intended to be called from anywhere else.
  */
 
-void RWSplitSession::keep_connections_alive()
-{
-    auto now = maxbase::Clock::now(maxbase::NowType::EPollTick);
-    seconds limit {m_config.connection_keepalive};
-
-    if (now - m_last_keepalive_check > limit / 2)
-    {
-        m_last_keepalive_check = now;
-
-        for (const auto& backend : m_raw_backends)
-        {
-            if (backend->in_use() && !backend->is_waiting_result() && now - backend->last_write() > limit)
-            {
-                MXS_INFO("Pinging %s, idle for over %d seconds", backend->name(),
-                         m_config.connection_keepalive);
-                backend->write(modutil_create_ignorable_ping(), Backend::NO_RESPONSE);
-            }
-        }
-    }
-}
-
 bool RWSplitSession::prepare_connection(RWBackend* target)
 {
     mxb_assert(!target->in_use());
@@ -390,11 +369,6 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
             MXS_ERROR("Could not find valid server for target type %s, closing "
                       "connection.", route_target_to_string(route_target));
         }
-    }
-
-    if (succp && target && m_config.connection_keepalive && !TARGET_IS_ALL(route_target))
-    {
-        keep_connections_alive();
     }
 
     return succp;

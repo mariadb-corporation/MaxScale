@@ -54,12 +54,6 @@ RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session, mxs::SRW
         m_config.max_slave_connections = n_conn;
     }
 
-    if (m_config.connection_keepalive)
-    {
-        m_pSession->add_idle_callback(std::bind(&RWSplitSession::keep_connections_alive, this),
-                                      m_config.connection_keepalive);
-    }
-
     for (auto& b : m_raw_backends)
     {
         m_server_stats[b->target()].start_session();

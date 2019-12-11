@@ -163,7 +163,6 @@ struct Config
         , strict_multi_stmt(params->get_bool("strict_multi_stmt"))
         , strict_sp_calls(params->get_bool("strict_sp_calls"))
         , retry_failed_reads(params->get_bool("retry_failed_reads"))
-        , connection_keepalive(params->get_duration<seconds>("connection_keepalive").count())
         , max_slave_replication_lag(params->get_duration<seconds>("max_slave_replication_lag").count())
         , rw_max_slave_conn_percent(0)
         , max_slave_connections(0)
@@ -227,7 +226,6 @@ struct Config
                                          * the master after a multistatement query. */
     bool strict_sp_calls;               /**< Lock session to master after an SP call */
     bool retry_failed_reads;            /**< Retry failed reads on other servers */
-    int  connection_keepalive;          /**< Send pings to servers that have been idle for too long */
     int  max_slave_replication_lag;     /**< Maximum replication lag */
     int  rw_max_slave_conn_percent;     /**< Maximum percentage of slaves to use for each connection*/
     int  max_slave_connections;         /**< Maximum number of slaves for each connection*/
