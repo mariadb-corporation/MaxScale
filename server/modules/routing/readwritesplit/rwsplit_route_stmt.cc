@@ -38,35 +38,25 @@ using std::chrono::seconds;
  * write split router, and not intended to be called from anywhere else.
  */
 
-void RWSplitSession::handle_connection_keepalive(RWBackend* target)
+void RWSplitSession::keep_connections_alive()
 {
-    mxb_assert(target);
-    MXB_AT_DEBUG(size_t nserv = 0);
-
     auto now = maxbase::Clock::now(maxbase::NowType::EPollTick);
     seconds limit {m_config.connection_keepalive};
 
-    if (now - m_last_keepalive_check > limit)
+    if (now - m_last_keepalive_check > limit / 2)
     {
         m_last_keepalive_check = now;
 
         for (const auto& backend : m_raw_backends)
         {
-            if (backend->in_use() && backend != target && !backend->is_waiting_result())
+            if (backend->in_use() && !backend->is_waiting_result() && now - backend->last_write() > limit)
             {
-                MXB_AT_DEBUG(nserv++);
-
-                if (now - backend->last_write() > limit)
-                {
-                    MXS_INFO("Pinging %s, idle for over %d seconds", backend->name(),
-                             m_config.connection_keepalive);
-                    backend->write(modutil_create_ignorable_ping(), Backend::NO_RESPONSE);
-                }
+                MXS_INFO("Pinging %s, idle for over %d seconds", backend->name(),
+                         m_config.connection_keepalive);
+                backend->write(modutil_create_ignorable_ping(), Backend::NO_RESPONSE);
             }
         }
     }
-
-    mxb_assert(nserv < m_raw_backends.size());
 }
 
 bool RWSplitSession::prepare_connection(RWBackend* target)
@@ -404,7 +394,7 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
 
     if (succp && target && m_config.connection_keepalive && !TARGET_IS_ALL(route_target))
     {
-        handle_connection_keepalive(target);
+        keep_connections_alive();
     }
 
     return succp;

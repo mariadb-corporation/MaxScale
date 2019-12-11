@@ -157,7 +157,7 @@ private:
     mxs::RWBackend* handle_slave_is_target(uint8_t cmd, uint32_t stmt_id);
     bool            handle_master_is_target(mxs::RWBackend** dest);
     bool            handle_got_target(GWBUF* querybuf, mxs::RWBackend* target, bool store);
-    void            handle_connection_keepalive(mxs::RWBackend* target);
+    void            keep_connections_alive();
     bool            prepare_target(mxs::RWBackend* target, route_target_t route_target);
     bool            prepare_connection(mxs::RWBackend* target);
     bool            create_one_connection_for_sescmd();
