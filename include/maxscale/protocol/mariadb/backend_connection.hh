@@ -39,6 +39,7 @@ public:
     void    finish_connection() override;
     bool    reuse_connection(BackendDCB* dcb, mxs::Component* upstream) override;
     bool    established() override;
+    void    ping() override;
     json_t* diagnostics() const override;
 
     /**

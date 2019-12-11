@@ -234,6 +234,12 @@ Service::Service(const std::string& name,
     router = (MXS_ROUTER_OBJECT*)module->module_object;
     m_capabilities = module->module_capabilities;
 
+    if (m_config->connection_keepalive)
+    {
+        // The connection keepalive relies on knowing when a connection is logically idle
+        m_capabilities |= RCAP_TYPE_REQUEST_TRACKING;
+    }
+
     /**
      * At service start last update is set to config->users_refresh_time seconds earlier.
      * This way MaxScale could try reloading users just after startup. But only if user
@@ -1328,6 +1334,12 @@ void Service::update_basic_parameter(const std::string& key, const std::string& 
 {
     m_params.set(key, value);
     m_config.assign(Config(&m_params));
+
+    if (m_config->connection_keepalive)
+    {
+        m_capabilities |= RCAP_TYPE_REQUEST_TRACKING;
+    }
+
     // If the parameter affects the user account manager, update its settings.
     auto manager = user_account_manager();
     if (manager && (key == CN_USER || key == CN_PASSWORD))

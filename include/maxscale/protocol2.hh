@@ -212,6 +212,18 @@ public:
      */
     virtual bool established() = 0;
 
+    /**
+     * Ping a backend connection
+     *
+     * The backend connection should perform an action that keeps the connection alive if it is currently
+     * idle. The idleness of a connection is determined at the protocol level and any actions taken at the
+     * protocol level should not propagate upwards.
+     *
+     * What this means in practice is that if a query is used to ping a backend, the result should be
+     * discarded and the pinging should not interrupt ongoing queries.
+     */
+    virtual void ping() = 0;
+
     virtual const BackendDCB* dcb() const = 0;
     virtual BackendDCB*       dcb() = 0;
 };

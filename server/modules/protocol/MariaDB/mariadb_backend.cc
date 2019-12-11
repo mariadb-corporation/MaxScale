@@ -1561,6 +1561,25 @@ bool MariaDBBackendConnection::established()
     return m_auth_state == AuthState::COMPLETE && (m_ignore_replies == 0) && !m_stored_query;
 }
 
+void MariaDBBackendConnection::ping()
+{
+    if (auto interval = m_session->keepalive_interval())
+    {
+        if (m_reply.state() == ReplyState::DONE)
+        {
+            auto secs = MXS_CLOCK_TO_SEC(mxs_clock() - std::max(m_dcb->last_read(), m_dcb->last_write()));
+
+            if (secs > interval)
+            {
+                MXS_INFO("Pinging '%s', idle for %ld seconds", m_dcb->server()->name(), secs);
+
+                // TODO: Think of a better mechanism for the pings, the ignorable ping mechanism isn't pretty.
+                write(modutil_create_ignorable_ping());
+            }
+        }
+    }
+}
+
 json_t* MariaDBBackendConnection::diagnostics() const
 {
     return json_pack("{siss}", "connection_id", m_thread_id, "server", m_dcb->server()->name());

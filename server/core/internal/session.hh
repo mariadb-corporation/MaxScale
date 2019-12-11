@@ -173,11 +173,13 @@ public:
     void set_client_connection(mxs::ClientConnection* client_conn) override;
 
     /**
-     * Call any pending idle session callbacks
+     * Perform periodic tasks
+     *
+     * This should only be called by a RoutingWorker.
      *
      * @param idle Number of seconds the session has been idle
      */
-    void call_idle_callbacks(int64_t idle);
+    void tick(int64_t idle);
 
 protected:
     std::unique_ptr<mxs::Endpoint> m_down;

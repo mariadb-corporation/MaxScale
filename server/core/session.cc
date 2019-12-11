@@ -88,6 +88,7 @@ MXS_SESSION::MXS_SESSION(const SListener& listener, const std::string& host)
     , close_reason(SESSION_CLOSE_NONE)
     , load_active(false)
     , m_autocommit(listener->sql_mode() == QC_SQL_MODE_ORACLE ? false : true)
+    , m_keepalive_interval(service->config().connection_keepalive)
 {
     mxs_rworker_register_session(this);
 }
@@ -792,29 +793,6 @@ Session::Session(const SListener& listener,
         m_retain_last_statements = this_unit.retain_last_statements;
     }
 
-    if (int timeout = service->config().conn_idle_timeout)
-    {
-        add_idle_callback(
-            [this, timeout]() {
-                MXS_WARNING("Timing out %s, idle for %d seconds", user_and_host().c_str(), timeout);
-                close_reason = SESSION_CLOSE_TIMEOUT;
-                terminate();
-            }, timeout);
-    }
-
-    if (int timeout = service->config().net_write_timeout)
-    {
-        add_idle_callback(
-            [this, timeout]() {
-                if (client_dcb->writeq_len() > 0)
-                {
-                    MXS_WARNING("Network write timed out for %s.", user_and_host().c_str());
-                    close_reason = SESSION_CLOSE_TIMEOUT;
-                    terminate();
-                }
-            }, timeout);
-    }
-
     mxb::atomic::add(&service->stats().n_current, 1, mxb::atomic::RELAXED);
     mxb_assert(service->stats().n_current >= 0);
 }
@@ -1488,18 +1466,39 @@ void Session::parse_and_set_trx_state(const mxs::Reply& reply)
         }
     }
 }
-void MXS_SESSION::add_idle_callback(std::function<void()> cb, int64_t seconds)
-{
-    m_idle_cbs.emplace_back(seconds, cb);
-}
 
-void Session::call_idle_callbacks(int64_t idle)
+void Session::tick(int64_t idle)
 {
-    for (const auto& a : m_idle_cbs)
+    if (auto timeout = service->config().conn_idle_timeout)
     {
-        if (idle > a.first)
+        if (idle > timeout)
         {
-            a.second();
+            MXS_WARNING("Timing out %s, idle for %ld seconds", user_and_host().c_str(), idle);
+            close_reason = SESSION_CLOSE_TIMEOUT;
+            terminate();
+        }
+    }
+
+    if (auto net_timeout = service->config().net_write_timeout)
+    {
+        if (idle > net_timeout && client_dcb->writeq_len() > 0)
+        {
+            MXS_WARNING("Network write timed out for %s.", user_and_host().c_str());
+            close_reason = SESSION_CLOSE_TIMEOUT;
+            terminate();
+        }
+    }
+
+    if (auto interval = keepalive_interval())
+    {
+        if (MXS_CLOCK_TO_SEC(mxs_clock() - m_last_ping) > interval / 2)
+        {
+            m_last_ping = mxs_clock();
+
+            for (const auto& a : backend_connections())
+            {
+                a->ping();
+            }
         }
     }
 }

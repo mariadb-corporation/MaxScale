@@ -418,10 +418,8 @@ void RoutingWorker::process_timeouts()
         {
             if (pDcb->role() == DCB::Role::CLIENT && pDcb->state() == DCB::State::POLLING)
             {
-                if (int64_t idle = (mxs_clock() - pDcb->last_read()) / 10)
-                {
-                    static_cast<Session*>(pDcb->session())->call_idle_callbacks(idle);
-                }
+                auto idle = MXS_CLOCK_TO_SEC(mxs_clock() - pDcb->last_read());
+                static_cast<Session*>(pDcb->session())->tick(idle);
             }
         }
     }
