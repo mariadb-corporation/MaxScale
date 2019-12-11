@@ -92,16 +92,20 @@ public:
      */
     cache_result_t put_value(const CACHE_KEY& key,
                              const std::vector<std::string>& invalidation_words,
-                             const GWBUF* pValue)
+                             const GWBUF* pValue,
+                             std::function<void (cache_result_t)> cb)
     {
+        // TODO: Use cb, i.e. extend Cache API.
         return m_cache.put_value(token(), key, invalidation_words, pValue);
     }
 
     /**
      * @see Cache::del_value
      */
-    cache_result_t del_value(const CACHE_KEY& key)
+    cache_result_t del_value(const CACHE_KEY& key,
+                             std::function<void (cache_result_t)> cb)
     {
+        // TODO: Use cb, i.e. extend Cache API.
         return m_cache.del_value(token(), key);
     }
 

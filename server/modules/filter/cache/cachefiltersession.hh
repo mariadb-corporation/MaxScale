@@ -156,6 +156,11 @@ private:
                                     const char* pValue_begin,
                                     const char* pValue_end);
 
+    using SSessionCache = std::shared_ptr<SessionCache>;
+
+    static void put_value_handler(SSessionCache sCache, const CACHE_KEY& key, cache_result_t result);
+    static void del_value_handler(cache_result_t result);
+
 private:
     CacheFilterSession(MXS_SESSION* pSession,
                        SERVICE* pService,
@@ -164,7 +169,6 @@ private:
 
 private:
     using Tables = std::unordered_set<std::string>;
-    using SSessionCache = std::unique_ptr<SessionCache>;
 
     cache_session_state_t m_state;          /**< What state is the session in, what data is expected. */
     SSessionCache         m_sCache;         /**< The cache instance the session is associated with. */

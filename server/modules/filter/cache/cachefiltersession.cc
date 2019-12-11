@@ -678,19 +678,26 @@ void CacheFilterSession::store_result()
         m_tables.clear();
     }
 
-    cache_result_t result = m_sCache->put_value(m_key, invalidation_words, m_res);
+    // We want local variables to be captured by value. By the time the lambda is called,
+    // this may no longer exist.
+    SSessionCache sCache { m_sCache };
+    CACHE_KEY key { m_key };
 
-    if (!CACHE_RESULT_IS_OK(result))
+    cache_result_t result = m_sCache->put_value(m_key, invalidation_words, m_res,
+                                                [sCache, key](cache_result_t result) {
+                                                    //static
+                                                    put_value_handler(sCache, key, result);
+                                                });
+
+    if (!CACHE_RESULT_IS_PENDING(result))
     {
-        MXS_ERROR("Could not store new cache value, deleting old.");
-
-        result = m_sCache->del_value(m_key);
-
-        if (!CACHE_RESULT_IS_OK(result) || !CACHE_RESULT_IS_NOT_FOUND(result))
-        {
-            MXS_ERROR("Could not delete old cache item.");
-        }
+        //static
+        put_value_handler(m_sCache, m_key, result);
     }
+
+    // Whether or not the result is returned immediately or later, we proceed the
+    // same way. If the putting of the value fails, then there's no harm done as
+    // in that case, we'll hit the server again.
 
     if (m_refreshing)
     {
@@ -1420,4 +1427,32 @@ char* CacheFilterSession::set_cache_hard_ttl(void* pContext,
     CacheFilterSession* pThis = static_cast<CacheFilterSession*>(pContext);
 
     return pThis->set_cache_hard_ttl(zName, pValue_begin, pValue_end);
+}
+
+//static
+void CacheFilterSession::put_value_handler(SSessionCache sCache, const CACHE_KEY& key, cache_result_t result)
+{
+    if (!CACHE_RESULT_IS_OK(result))
+    {
+        MXS_ERROR("Could not store new cache value, deleting old.");
+
+        result = sCache->del_value(key,
+                                   [](cache_result_t result) {
+                                       del_value_handler(result);
+                                   });
+
+        if (!CACHE_RESULT_IS_PENDING(result))
+        {
+            del_value_handler(result);
+        }
+    }
+}
+
+//static
+void CacheFilterSession::del_value_handler(cache_result_t result)
+{
+    if (!CACHE_RESULT_IS_OK(result) || !CACHE_RESULT_IS_NOT_FOUND(result))
+    {
+        MXS_ERROR("Could not delete old cache item.");
+    }
 }
