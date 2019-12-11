@@ -30,11 +30,17 @@ int64_t mxs_clock();
 /**
  * Convert heartbeats to seconds
  */
-#define MXS_CLOCK_TO_SEC(a) ((int64_t)a / 10)
+static inline int64_t MXS_CLOCK_TO_SEC(int64_t a)
+{
+    return a / 10;
+}
 
 /**
  * Convert seconds to heartbeats
  */
-#define MXS_SEC_TO_CLOCK(a) ((int64_t)a * 10)
+static inline int64_t MXS_SEC_TO_CLOCK(int64_t a)
+{
+    return a * 10;
+}
 
 MXS_END_DECLS
