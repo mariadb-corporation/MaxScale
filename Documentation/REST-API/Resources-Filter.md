@@ -115,7 +115,7 @@ The following example defines a request body which creates a new filter.
 
 ```javascript
 {
-    data: {
+    "data": {
         "id": "test-filter", // Name of the filter
         "type": "filters",
         "attributes": {
