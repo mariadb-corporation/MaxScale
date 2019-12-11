@@ -92,6 +92,7 @@ options are enabled.
 | user        | User and hostname of client                      |
 | reply_time  | Response time (ms until first reply from server) |
 | query       | Query                                            |
+| default_db  | The default (current) database                   |
 
 ```
 log_data=date, user, query

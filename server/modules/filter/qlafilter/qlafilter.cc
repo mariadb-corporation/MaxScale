@@ -93,6 +93,7 @@ const MXS_ENUM_VALUE log_data_values[] =
     {"user",       QlaInstance::LOG_DATA_USER      },
     {"query",      QlaInstance::LOG_DATA_QUERY     },
     {"reply_time", QlaInstance::LOG_DATA_REPLY_TIME},
+    {"default_db", QlaInstance::LOG_DATA_DEFAULT_DB},
     {NULL}
 };
 
@@ -139,6 +140,7 @@ QlaInstance::~QlaInstance()
 
 QlaFilterSession::QlaFilterSession(QlaInstance& instance, MXS_SESSION* session)
     : m_instance(instance)
+    , m_pMxs_session(session)
     , m_user(session_get_user(session))
     , m_remote(session_get_remote(session))
     , m_service(session->service->name())
@@ -527,6 +529,7 @@ string QlaInstance::generate_log_header(uint64_t data_flags) const
     const char USERHOST[] = "User@Host";
     const char QUERY[] = "Query";
     const char REPLY_TIME[] = "Reply_time";
+    const char DEFAULT_DB[] = "Default_db";
 
     std::stringstream header;
     string curr_sep;    // Use empty string as the first separator
@@ -560,6 +563,10 @@ string QlaInstance::generate_log_header(uint64_t data_flags) const
     if (data_flags & LOG_DATA_QUERY)
     {
         header << curr_sep << QUERY;
+    }
+    if (data_flags & LOG_DATA_DEFAULT_DB)
+    {
+        header << curr_sep << DEFAULT_DB;
     }
     header << '\n';
     return header.str();
@@ -612,6 +619,14 @@ string QlaFilterSession::generate_log_entry(uint64_t data_flags, const LogEventE
             // The newline replacement is an empty string so print the query as is
             output.write(elems.query, elems.querylen);
         }
+        curr_sep = real_sep;
+    }
+    if (data_flags & QlaInstance::LOG_DATA_DEFAULT_DB)
+    {
+        std::string db = m_pMxs_session->database().empty() ? "(none)" : m_pMxs_session->database();
+
+        output << curr_sep << db;
+        curr_sep = real_sep;
     }
     output << "\n";
     return output.str();

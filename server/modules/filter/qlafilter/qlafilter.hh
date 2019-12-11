@@ -52,6 +52,7 @@ public:
     static const int64_t LOG_DATA_USER = (1 << 3);
     static const int64_t LOG_DATA_QUERY = (1 << 4);
     static const int64_t LOG_DATA_REPLY_TIME = (1 << 5);
+    static const int64_t LOG_DATA_DEFAULT_DB = (1 << 6);
 
     /**
      * Associate a new session with this instance of the filter. Creates a session-specific logfile.
@@ -174,6 +175,7 @@ public:
 
 private:
     QlaInstance& m_instance;
+    MXS_SESSION* m_pMxs_session;        /* The corresponding mxs session */
 
     const std::string m_user;           /* Client username */
     const std::string m_remote;         /* Client address */
