@@ -336,7 +336,11 @@ void MariaDBBackendConnection::prepare_for_write(DCB* dcb, GWBUF* buffer)
 {
     mxb_assert(dcb->session());
 
-    track_query(buffer);
+    if (!GWBUF_IS_IGNORABLE(buffer))
+    {
+        track_query(buffer);
+    }
+
     if (GWBUF_SHOULD_COLLECT_RESULT(buffer))
     {
         m_collect_result = true;
