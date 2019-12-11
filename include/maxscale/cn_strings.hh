@@ -46,6 +46,7 @@ constexpr char CN_CLASSIFICATION[] = "classification";
 constexpr char CN_CLASSIFY[] = "classify";
 constexpr char CN_CLUSTER[] = "cluster";
 constexpr char CN_CONNECTION_TIMEOUT[] = "connection_timeout";
+constexpr char CN_CONNECTION_KEEPALIVE[] = "connection_keepalive";
 constexpr char CN_NET_WRITE_TIMEOUT[] = "net_write_timeout";
 constexpr char CN_DATA[] = "data";
 constexpr char CN_DEFAULT[] = "default";

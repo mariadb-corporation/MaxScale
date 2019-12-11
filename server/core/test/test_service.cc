@@ -52,6 +52,7 @@ static void test1()
     parameters.set(CN_MAX_RETRY_INTERVAL, "10s");
     parameters.set(CN_CONNECTION_TIMEOUT, "10s");
     parameters.set(CN_NET_WRITE_TIMEOUT, "10s");
+    parameters.set(CN_CONNECTION_KEEPALIVE, "100s");
     /* Service tests */
     fprintf(stderr,
             "testservice : creating service called MyService with router nonexistent");

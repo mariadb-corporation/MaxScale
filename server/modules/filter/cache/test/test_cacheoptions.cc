@@ -289,6 +289,7 @@ int test(FilterModule::Instance& filter_instance, const TEST_CASE& tc)
     parameters.set("max_retry_interval", "10s");
     parameters.set("connection_timeout", "10s");
     parameters.set(CN_NET_WRITE_TIMEOUT, "10s");
+    parameters.set(CN_CONNECTION_KEEPALIVE, "100s");
 
     auto service = Service::create("service", "readconnroute", &parameters);
 

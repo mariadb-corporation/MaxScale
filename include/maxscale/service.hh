@@ -101,6 +101,7 @@ public:
         int64_t     net_write_timeout;              /**< Write timeout in seconds */
         int32_t     retain_last_statements;         /**< How many statements to retain per session,
                                                      * -1 if not explicitly specified. */
+        int64_t connection_keepalive;               /**< How often to ping idle sessions */
 
         bool strip_db_esc;      /**< Remove the '\' characters from database names when querying them from
                                  * the server. MySQL Workbench seems to escape at least the underscore
