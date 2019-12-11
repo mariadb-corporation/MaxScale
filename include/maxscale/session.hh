@@ -359,6 +359,17 @@ public:
         m_autocommit = autocommit;
     }
 
+    /**
+     * Add a callback for idle sessions
+     *
+     * When a session has been idle for longer than the given number of seconds, the callback will be called.
+     * The callback will be active for the duration of the session.
+     *
+     * @param cb      Function to call
+     * @param seconds Number of seconds the session must have been idle before the callback is called
+     */
+    void add_idle_callback(std::function<void()> cb, int64_t seconds);
+
 protected:
     State       m_state;                    /**< Current descriptor state */
     uint64_t    m_id;                       /**< Unique session identifier */
@@ -366,6 +377,8 @@ protected:
     std::string m_host;
     std::string m_database;
     std::string m_pending_database;
+
+    std::vector<std::pair<int64_t, std::function<void ()>>> m_idle_cbs;
 
     MXS_SESSION(const SListener& listener, const std::string& host);
 

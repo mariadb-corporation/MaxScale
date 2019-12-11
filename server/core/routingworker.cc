@@ -418,39 +418,9 @@ void RoutingWorker::process_timeouts()
         {
             if (pDcb->role() == DCB::Role::CLIENT && pDcb->state() == DCB::State::POLLING)
             {
-                SERVICE* service = pDcb->session()->service;
-
-                if (service->config().conn_idle_timeout)
+                if (int64_t idle = (mxs_clock() - pDcb->last_read()) / 10)
                 {
-                    int64_t idle = mxs_clock() - pDcb->last_read();
-                    // Multiply by 10 to match conn_idle_timeout resolution
-                    // to the 100 millisecond tics.
-                    int64_t timeout = service->config().conn_idle_timeout * 10;
-
-                    if (idle > timeout)
-                    {
-                        MXS_WARNING("Timing out '%s'@%s, idle for %.1f seconds",
-                                    pDcb->session()->user().c_str(),
-                                    pDcb->remote().c_str(),
-                                    (float)idle / 10.f);
-                        pDcb->session()->close_reason = SESSION_CLOSE_TIMEOUT;
-                        pDcb->trigger_hangup_event();
-                    }
-                }
-
-                if (service->config().net_write_timeout && pDcb->writeq_len() > 0)
-                {
-                    int64_t idle = mxs_clock() - pDcb->last_write();
-                    // Multiply by 10 to match net_write_timeout resolution
-                    // to the 100 millisecond tics.
-                    if (idle > pDcb->service()->config().net_write_timeout * 10)
-                    {
-                        MXS_WARNING("network write timed out for '%s'@%s.",
-                                    pDcb->session()->user().c_str(),
-                                    pDcb->remote().c_str());
-                        pDcb->session()->close_reason = SESSION_CLOSE_TIMEOUT;
-                        pDcb->trigger_hangup_event();
-                    }
+                    static_cast<Session*>(pDcb->session())->call_idle_callbacks(idle);
                 }
             }
         }

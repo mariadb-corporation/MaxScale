@@ -792,6 +792,29 @@ Session::Session(const SListener& listener,
         m_retain_last_statements = this_unit.retain_last_statements;
     }
 
+    if (int timeout = service->config().conn_idle_timeout)
+    {
+        add_idle_callback(
+            [this, timeout]() {
+                MXS_WARNING("Timing out %s, idle for %d seconds", user_and_host().c_str(), timeout);
+                close_reason = SESSION_CLOSE_TIMEOUT;
+                terminate();
+            }, timeout);
+    }
+
+    if (int timeout = service->config().net_write_timeout)
+    {
+        add_idle_callback(
+            [this, timeout]() {
+                if (client_dcb->writeq_len() > 0)
+                {
+                    MXS_WARNING("Network write timed out for %s.", user_and_host().c_str());
+                    close_reason = SESSION_CLOSE_TIMEOUT;
+                    terminate();
+                }
+            }, timeout);
+    }
+
     mxb::atomic::add(&service->stats().n_current, 1, mxb::atomic::RELAXED);
     mxb_assert(service->stats().n_current >= 0);
 }
@@ -1462,6 +1485,21 @@ void Session::parse_and_set_trx_state(const mxs::Reply& reply)
         else if (trx_characteristics == "START TRANSACTION READ WRITE;")
         {
             set_trx_state(SESSION_TRX_ACTIVE);
+        }
+    }
+}
+void MXS_SESSION::add_idle_callback(std::function<void()> cb, int64_t seconds)
+{
+    m_idle_cbs.emplace_back(seconds, cb);
+}
+
+void Session::call_idle_callbacks(int64_t idle)
+{
+    for (const auto& a : m_idle_cbs)
+    {
+        if (idle > a.first)
+        {
+            a.second();
         }
     }
 }
