@@ -82,6 +82,7 @@ const MXS_ENUM_VALUE log_type_values[] =
 {
     {"session", QlaInstance::LOG_FILE_SESSION},
     {"unified", QlaInstance::LOG_FILE_UNIFIED},
+    {"stdout",  QlaInstance::LOG_FILE_STDOUT },
     {NULL}
 };
 
@@ -126,6 +127,7 @@ QlaInstance::Settings::Settings(MXS_CONFIG_PARAMETER* params)
     auto log_file_types = params->get_enum(PARAM_LOG_TYPE, log_type_values);
     write_session_log = (log_file_types & LOG_FILE_SESSION);
     write_unified_log = (log_file_types & LOG_FILE_UNIFIED);
+    write_stdout_log = (log_file_types & LOG_FILE_STDOUT);
 }
 
 QlaInstance::~QlaInstance()
@@ -197,6 +199,12 @@ QlaInstance* QlaInstance::create(const std::string name, MXS_CONFIG_PARAMETER* p
                     delete my_instance;
                     my_instance = NULL;
                 }
+            }
+
+            if (my_instance->m_settings.write_stdout_log)
+            {
+                string entry = my_instance->generate_log_header(my_instance->m_settings.log_file_data_flags);
+                my_instance->write_stdout_log_entry(entry);
             }
         }
     }
@@ -372,10 +380,19 @@ void QlaFilterSession::write_log_entries(const LogEventElems& elems)
         }
     }
 
-    if (m_instance.m_settings.write_unified_log)
+    if (m_instance.m_settings.write_unified_log || m_instance.m_settings.write_stdout_log)
     {
-        string entry = generate_log_entry(m_instance.m_settings.log_file_data_flags, elems);
-        m_instance.write_unified_log_entry(entry);
+        string unified_log_entry = generate_log_entry(m_instance.m_settings.log_file_data_flags, elems);
+
+        if (m_instance.m_settings.write_unified_log)
+        {
+            m_instance.write_unified_log_entry(unified_log_entry);
+        }
+
+        if (m_instance.m_settings.write_stdout_log)
+        {
+            m_instance.write_stdout_log_entry(unified_log_entry);
+        }
     }
 }
 
@@ -693,6 +710,21 @@ void QlaInstance::write_unified_log_entry(const string& entry)
                 m_write_error_logged = true;
             }
         }
+    }
+}
+
+/**
+ * Write an entry to stdout.
+ *
+ * @param entry Log entry contents
+ */
+void QlaInstance::write_stdout_log_entry(const string& entry) const
+{
+    std::cout << entry;
+
+    if (m_settings.flush_writes)
+    {
+        std::cout.flush();
     }
 }
 

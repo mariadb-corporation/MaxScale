@@ -71,12 +71,14 @@ The type of log file to use. The default value is _session_.
 |--------|--------------------------------|
 |session |Write to session-specific files |
 |unified |Use one file for all sessions   |
+|stdout  |Same as unified, but to stdout  |
 
 ```
 log_type=session
 ```
 
-If both logs are required, define `log_type=session,unified`.
+The log types can be combined, e.g. setting `log_type=session,stdout`
+will write both session-specific files, and all sessions to stdout.
 
 ### `log_data`
 

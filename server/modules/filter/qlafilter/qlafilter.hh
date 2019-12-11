@@ -44,6 +44,7 @@ public:
     /* Log file save mode flags. */
     static const int64_t LOG_FILE_SESSION = (1 << 0);   /**< Default value, session specific files */
     static const int64_t LOG_FILE_UNIFIED = (1 << 1);   /**< One file shared by all sessions */
+    static const int64_t LOG_FILE_STDOUT = (1 << 2);    /**< Same as unified, but to stdout */
 
     /* Flags for controlling extra log entry contents */
     static const int64_t LOG_DATA_SERVICE = (1 << 0);
@@ -89,6 +90,7 @@ public:
     void  check_reopen_session_file(const std::string& filename, FILE** ppFile) const;
     void  write_unified_log_entry(const std::string& contents);
     bool  write_to_logfile(FILE* fp, const std::string& contents) const;
+    void  write_stdout_log_entry(const std::string& contents) const;
 
     class Settings
     {
@@ -97,6 +99,7 @@ public:
 
         bool        write_unified_log {false};
         bool        write_session_log {false};
+        bool        write_stdout_log {false};
         uint32_t    log_file_data_flags {0};    /* What data is saved to the files */
         std::string filebase;                   /* The filename base */
         bool        flush_writes {false};       /* Flush log file after every write? */
