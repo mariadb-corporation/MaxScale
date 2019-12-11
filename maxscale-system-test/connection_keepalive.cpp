@@ -1,0 +1,57 @@
+/**
+ * Test for connection_keepalive
+ *
+ * The connection should be kept alive even if the session is idle for longer
+ * than wait_timeout.
+ */
+
+#include "testconnections.h"
+
+int main(int argc, char* argv[])
+{
+    TestConnections test(argc, argv);
+
+    auto conn = test.maxscales->rwsplit();
+    test.expect(conn.connect(), "Connection should work: %s", conn.error());
+
+
+    test.expect(conn.query("CREATE OR REPLACE TABLE test.t1(id INT)"), "CREATE should work: %s",
+                conn.error());
+    test.expect(conn.query("INSERT INTO test.t1 VALUES (1)"), "INSERT should work: %s", conn.error());
+    test.expect(conn.query("SELECT 1"), "SELECT should work: %s", conn.error());
+
+    test.tprintf("Configure the connection to time out if it's inactive for 10 seconds");
+    test.expect(conn.query("SET wait_timeout=10"), "SET should work: %s", conn.error());
+
+    sleep(20);
+
+    test.expect(conn.query("INSERT INTO test.t1 VALUES (1)"), "INSERT should work: %s", conn.error());
+    test.expect(conn.query("SELECT 1"), "SELECT should work: %s", conn.error());
+
+    test.tprintf("Alter the connection_keepalive so that if it takes effect the session would close");
+    test.check_maxctrl("alter service RW-Split-Router connection_keepalive 3000");
+
+    sleep(20);
+
+    test.tprintf("Make sure the connection still uses the old configuration values");
+    test.expect(conn.query("INSERT INTO test.t1 VALUES (1)"), "INSERT should work: %s", conn.error());
+    test.expect(conn.query("SELECT 1"), "SELECT should work: %s", conn.error());
+
+    conn.disconnect();
+    conn.connect();
+
+    test.tprintf(
+        "Set wait_timeout again to the same value. This time the connection should die after 10 seconds.");
+    test.expect(conn.query("SET wait_timeout=10"), "SET should work: %s", conn.error());
+
+    sleep(20);
+
+    test.expect(!conn.query("INSERT INTO test.t1 VALUES (1)"), "INSERT should fail");
+    test.expect(!conn.query("SELECT 1"), "SELECT should fail");
+
+    // Cleanup
+    conn.connect();
+    conn.query("DROP TABLE test.t1");
+
+    return test.global_result;
+}
