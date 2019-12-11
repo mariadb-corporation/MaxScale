@@ -40,7 +40,6 @@ Table of Contents
      * [Failover/switchover fails](#failoverswitchover-fails)
      * [Slave detection shows external masters](#slave-detection-shows-external-masters)
   * [Using the MariaDB Monitor With Binlogrouter](#using-the-mariadb-monitor-with-binlogrouter)
-  * [Example 1 - Monitor script](#example-1---monitor-script)
 
 ## Overview
 
@@ -852,37 +851,3 @@ binlog server to the list of servers only if _master_id_ identity is set.
 For addition information read the
 [Replication Proxy](../Tutorials/Replication-Proxy-Binlog-Router-Tutorial.md)
 tutorial.
-
-## Example 1 - Monitor script
-
-Here is an example shell script which sends an email to an admin@my.org
-when a server goes down.
-
-```
-#!/usr/bin/env bash
-
-#This script assumes that the local mail server is configured properly
-#The second argument is the event type
-event=${$2/.*=/}
-server=${$3/.*=/}
-message="A server has gone down at `date`."
-echo $message|mail -s "The event was $event for server $server." admin@my.org
-
-```
-
-Here is a monitor configuration that only triggers the script when a master
-or a slave server goes down.
-
-```
-[Database-Monitor]
-type=monitor
-module=mariadbmon
-servers=server1,server2
-script=mail_to_admin.sh
-events=master_down,slave_down
-```
-
-When a master or a slave server goes down, the script is executed, a mail is
-sent and the administrator will be immediately notified of any possible
-problems.  This is just a simple example showing what you can do with MaxScale
-and monitor scripts.

@@ -2,6 +2,8 @@
 
 This document lists optional parameters that all current monitors support.
 
+[TOC]
+
 ## Parameters
 
 ### `user`
@@ -177,35 +179,44 @@ disk_space_check_interval=10000
 
 ### `script`
 
-This command will be executed when a server changes its state. The parameter should be an absolute path to a command or the command should be in the executable path. The user which is used to run MaxScale should have execution rights to the file itself and the directory it resides in.
+This command will be executed on a server state change. The parameter should
+be an absolute path to a command or the command should be in the executable
+path. The user running MaxScale should have execution rights to the file itself
+and the directory it resides in. The script may have placeholders which
+MaxScale will substitute with useful information when launching the script.
+
+The placeholders and their substition results are:
+
+* `$INITIATOR` -> IP and port of the server which initiated the event
+* `$EVENT` -> event description, e.g. "server_up"
+* `$LIST` -> list of IPs and ports of all servers
+* `$NODELIST` -> list of IPs and ports of all running servers
+* `$SLAVELIST` -> list of IPs and ports of all slave servers
+* `$MASTERLIST` -> list of IPs and ports of all master servers
+* `$SYNCEDLIST` -> list of IPs and ports of all synced Galera nodes
+* `$PARENT` -> IP and port of the parent of the server which initiated the event.
+For master-slave setups, this will be the master if the initiating server is a
+slave.
+* `$CHILDREN` -> list of IPs and ports of the child nodes of the server who
+initiated the event. For master-slave setups, this will be a list of slave
+servers if the initiating server is a master.
+
+The expanded variable value can be an empty string if no servers match the
+variable's requirements. For example, if no masters are available `$MASTERLIST`
+will expand into an empty string. The list-type substitutions will only contain
+servers monitored by the current monitor.
 
 ```
 script=/home/user/myscript.sh initiator=$INITIATOR event=$EVENT live_nodes=$NODELIST
 ```
 
-The following substitutions will be made to the parameter value:
-
-* `$INITIATOR` will be replaced with the IP and port of the server who initiated the event
-* `$EVENT` will be replaced with the name of the event
-* `$LIST` will be replaced with a list of server IPs and ports
-* `$NODELIST` will be replaced with a list of server IPs and ports that are running
-* `$SLAVELIST` will be replaced with a list of server IPs and ports that are slaves
-* `$MASTERLIST` will be replaced with a list of server IPs and ports that are masters
-* `$SYNCEDLIST` will be replaced with a list of server IPs and ports that are synced Galera nodes
-* `$PARENT` will be replaced with the IP and port of the parent node of the server who initiated
-   the event. For master-slave setups, this will be the master if the initiating server is a slave.
-* `$CHILDREN` will be replaced with the IPs and ports of the child nodes of the server who initiated
-   the event. For master-slave setups, this will be a list of slave servers if the initiating server is a master.
-
-The expanded variable value can be an empty string if no servers match the
-variable's requirements. For example, if no masters are available `$MASTERLIST`
-will expand into an empty string.
-
-For example, the previous example will be executed as:
+The above script could be executed as:
 
 ```
 /home/user/myscript.sh initiator=[192.168.0.10]:3306 event=master_down live_nodes=[192.168.0.201]:3306,[192.168.0.121]:3306
 ```
+
+See section [Script example](#script-example) below for an example script.
 
 Any output by the executed script will be logged into the MaxScale log. Each
 outputted line will be logged as a separate log message.
@@ -215,7 +226,7 @@ messages. If the first word in the output line is one of `alert:`, `error:`,
 `warning:`, `notice:`, `info:` or `debug:`, the message will be logged on the
 corresponding level. If the message is not prefixed with one of the keywords,
 the message will be logged on the notice level. Whitespace before, after or
-inbetween the keyword and the colon is ignored and the matching is
+between the keyword and the colon is ignored and the matching is
 case-insensitive.
 
 ### `script_timeout`
@@ -282,3 +293,81 @@ name of the monitor section in the configuration file. If MaxScale crashes or is
 shut down in an uncontrolled fashion, the journal will be read when MaxScale is
 started. To skip the recovery process, manually delete the journal file before
 starting MaxScale.
+
+## Script example
+
+Below is an example monitor configuration which launches a script with all
+supported substitutions. The example script reads the results and prints it to
+file and sends it as email.
+
+```
+[MyMonitor]
+type=monitor
+module=mariadbmon
+servers=C1N1,C1N2,C1N3
+user=maxscale
+password=password
+monitor_interval=10000
+script=/path/to/maxscale_monitor_alert_script.sh --initiator=$INITIATOR --parent=$PARENT --children=$CHILDREN --event=$EVENT --node_list=$NODELIST --list=$LIST --master_list=$MASTERLIST --slave_list=$SLAVELIST --synced_list=$SYNCEDLIST
+```
+
+File "maxscale_monitor_alert_script.sh":
+```
+#!/usr/bin/env bash
+
+initiator=""
+parent=""
+children=""
+event=""
+node_list=""
+list=""
+master_list=""
+slave_list=""
+synced_list=""
+
+process_arguments()
+{
+   while [ "$1" != "" ]; do
+      if [[ "$1" =~ ^--initiator=.* ]]; then
+         initiator=${1#'--initiator='}
+      elif [[ "$1" =~ ^--parent.* ]]; then
+         parent=${1#'--parent='}
+      elif [[ "$1" =~ ^--children.* ]]; then
+         children=${1#'--children='}
+      elif [[ "$1" =~ ^--event.* ]]; then
+         event=${1#'--event='}
+      elif [[ "$1" =~ ^--node_list.* ]]; then
+         node_list=${1#'--node_list='}
+      elif [[ "$1" =~ ^--list.* ]]; then
+         list=${1#'--list='}
+      elif [[ "$1" =~ ^--master_list.* ]]; then
+         master_list=${1#'--master_list='}
+      elif [[ "$1" =~ ^--slave_list.* ]]; then
+         slave_list=${1#'--slave_list='}
+      elif [[ "$1" =~ ^--synced_list.* ]]; then
+         synced_list=${1#'--synced_list='}
+      fi
+      shift
+   done
+}
+
+process_arguments $@
+read -r -d '' MESSAGE << EOM
+A server has changed state. The following information was provided:
+
+Initiator: $initiator
+Parent: $parent
+Children: $children
+Event: $event
+Node list: $node_list
+List: $list
+Master list: $master_list
+Slave list: $slave_list
+Synced list: $synced_list
+EOM
+
+# print message to file
+echo "$MESSAGE" > /path/to/script_output.txt
+# email the message
+echo "$MESSAGE" | mail -s "MaxScale received $event event for initiator $initiator." mariadb_admin@domain.com
+```
