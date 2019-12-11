@@ -30,6 +30,7 @@ enum cache_result_bits_t
     CACHE_RESULT_NOT_FOUND        = 0x02,
     CACHE_RESULT_ERROR            = 0x03,
     CACHE_RESULT_OUT_OF_RESOURCES = 0x04,
+    CACHE_RESULT_PENDING          = 0x08,
 
     CACHE_RESULT_STALE     = 0x10000,   /*< Possibly combined with OK and NOT_FOUND. */
     CACHE_RESULT_DISCARDED = 0x20000,   /*< Possibly combined with NOT_FOUND. */
@@ -43,6 +44,7 @@ typedef uint32_t cache_result_t;
 #define CACHE_RESULT_IS_OUT_OF_RESOURCES(result) (result & CACHE_RESULT_OUT_OF_RESOURCES)
 #define CACHE_RESULT_IS_STALE(result)            (result & CACHE_RESULT_STALE)
 #define CACHE_RESULT_IS_DISCARDED(result)        (result & CACHE_RESULT_DISCARDED)
+#define CACHE_RESULT_IS_PENDING(result)          (result & CACHE_RESULT_PENDING)
 
 enum cache_flags_t
 {

@@ -508,7 +508,6 @@ int CacheFilterSession::clientReply(GWBUF* pData, const mxs::ReplyRoute& down, c
         MXS_ERROR("Internal cache logic broken, unexpected state: %d", m_state);
         mxb_assert(!true);
         send_upstream();
-        reset_response_state();
         m_state = CACHE_IGNORING_RESPONSE;
     }
 
@@ -667,31 +666,29 @@ void CacheFilterSession::store_result()
     mxb_assert(m_res);
 
     GWBUF* pData = gwbuf_make_contiguous(m_res);
+    MXS_ABORT_IF_NULL(pData);
 
-    if (pData)
+    m_res = pData;
+
+    std::vector<std::string> invalidation_words;
+
+    if (m_invalidate)
     {
-        m_res = pData;
+        std::copy(m_tables.begin(), m_tables.end(), std::back_inserter(invalidation_words));
+        m_tables.clear();
+    }
 
-        std::vector<std::string> invalidation_words;
+    cache_result_t result = m_sCache->put_value(m_key, invalidation_words, m_res);
 
-        if (m_invalidate)
+    if (!CACHE_RESULT_IS_OK(result))
+    {
+        MXS_ERROR("Could not store new cache value, deleting old.");
+
+        result = m_sCache->del_value(m_key);
+
+        if (!CACHE_RESULT_IS_OK(result) || !CACHE_RESULT_IS_NOT_FOUND(result))
         {
-            std::copy(m_tables.begin(), m_tables.end(), std::back_inserter(invalidation_words));
-            m_tables.clear();
-        }
-
-        cache_result_t result = m_sCache->put_value(m_key, invalidation_words, m_res);
-
-        if (!CACHE_RESULT_IS_OK(result))
-        {
-            MXS_ERROR("Could not store new cache value, deleting old.");
-
-            result = m_sCache->del_value(m_key);
-
-            if (!CACHE_RESULT_IS_OK(result) || !CACHE_RESULT_IS_NOT_FOUND(result))
-            {
-                MXS_ERROR("Could not delete old cache item.");
-            }
+            MXS_ERROR("Could not delete old cache item.");
         }
     }
 
