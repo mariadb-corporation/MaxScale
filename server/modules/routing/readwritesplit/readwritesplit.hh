@@ -260,8 +260,8 @@ struct Stats
     uint64_t n_rw_trx = 0;          /**< Read-write transaction count */
 };
 
-using maxscale::ServerStats;
-using maxscale::SrvStatMap;
+using maxscale::SessionStats;
+using maxscale::TargetSessionStats;
 
 class RWSplitSession;
 
@@ -278,14 +278,14 @@ public:
     RWSplit(SERVICE* service, const Config& config);
     ~RWSplit();
 
-    SERVICE*      service() const;
-    const Config& config() const;
-    Stats&        stats();
-    const Stats&  stats() const;
-    SrvStatMap&   local_server_stats();
-    SrvStatMap    all_server_stats() const;
-    std::string   last_gtid() const;
-    void          set_last_gtid(const std::string& gtid);
+    SERVICE*            service() const;
+    const Config&       config() const;
+    Stats&              stats();
+    const Stats&        stats() const;
+    TargetSessionStats& local_server_stats();
+    TargetSessionStats  all_server_stats() const;
+    std::string         last_gtid() const;
+    void                set_last_gtid(const std::string& gtid);
 
     int  max_slave_count() const;
     bool have_enough_servers() const;
@@ -346,11 +346,11 @@ private:
         uint64_t sequence;
     };
 
-    SERVICE*                      m_service;    /**< Service where the router belongs*/
-    mxs::WorkerGlobal<Config>     m_config;
-    Stats                         m_stats;
-    mxs::WorkerGlobal<SrvStatMap> m_server_stats;
-    std::atomic<gtid>             m_last_gtid {{0, 0, 0}};
+    SERVICE*                              m_service;    /**< Service where the router belongs*/
+    mxs::WorkerGlobal<Config>             m_config;
+    Stats                                 m_stats;
+    mxs::WorkerGlobal<TargetSessionStats> m_server_stats;
+    std::atomic<gtid>                     m_last_gtid {{0, 0, 0}};
 };
 
 static inline const char* select_criteria_to_str(select_criteria_t type)

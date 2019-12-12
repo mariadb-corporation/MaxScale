@@ -107,14 +107,14 @@ const Stats& RWSplit::stats() const
     return m_stats;
 }
 
-SrvStatMap& RWSplit::local_server_stats()
+TargetSessionStats& RWSplit::local_server_stats()
 {
     return *m_server_stats;
 }
 
-maxscale::SrvStatMap RWSplit::all_server_stats() const
+maxscale::TargetSessionStats RWSplit::all_server_stats() const
 {
-    SrvStatMap stats;
+    TargetSessionStats stats;
 
     for (const auto& a : m_server_stats.values())
     {
@@ -300,7 +300,7 @@ json_t* RWSplit::diagnostics() const
 
     for (const auto& a : all_server_stats())
     {
-        ServerStats::CurrentStats stats = a.second.current_stats();
+        SessionStats::CurrentStats stats = a.second.current_stats();
 
         json_t* obj = json_object();
         json_object_set_new(obj, "id", json_string(a.first->name()));

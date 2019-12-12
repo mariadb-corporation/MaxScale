@@ -53,11 +53,6 @@ RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session, mxs::SRW
         n_conn = MXS_MAX(floor((double)m_backends.size() * pct), 1);
         m_config.max_slave_connections = n_conn;
     }
-
-    for (auto& b : m_raw_backends)
-    {
-        m_server_stats[b->target()].start_session();
-    }
 }
 
 RWSplitSession* RWSplitSession::create(RWSplit* router, MXS_SESSION* session, const Endpoints& endpoints)
@@ -103,9 +98,9 @@ void RWSplitSession::close()
 
     for (auto& backend : m_raw_backends)
     {
-        m_server_stats[backend->target()].end_session(backend->session_timer().split(),
-                                                      backend->select_timer().total(),
-                                                      backend->num_selects());
+        m_server_stats[backend->target()].update(backend->session_timer().split(),
+                                                 backend->select_timer().total(),
+                                                 backend->num_selects());
     }
 }
 

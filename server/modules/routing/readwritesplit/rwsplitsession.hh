@@ -397,9 +397,9 @@ private:
 
     otrx_state m_otrx_state = OTRX_INACTIVE;    /**< Optimistic trx state*/
 
-    SrvStatMap& m_server_stats;     /**< The server stats local to this thread, cached in the session object.
-                                     * This avoids the lookup involved in getting the worker-local value from
-                                     * the worker's container.*/
+    TargetSessionStats& m_server_stats;     /**< The server stats local to this thread, cached in the
+                                             * session object. This avoids the lookup involved in getting
+                                             * the worker-local value from the worker's container. */
 };
 
 /**

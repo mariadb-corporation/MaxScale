@@ -14,25 +14,20 @@
 #include <maxscale/session_stats.hh>
 #include <iostream>
 
-void maxscale::ServerStats::start_session()
-{
-    // nop for now
-}
-
-void maxscale::ServerStats::end_session(maxbase::Duration sess_duration,
-                                        maxbase::Duration active_duration,
-                                        int64_t num_selects)
+void maxscale::SessionStats::update(maxbase::Duration sess_duration,
+                                    maxbase::Duration active_duration,
+                                    int64_t num_selects)
 {
     m_ave_session_dur.add(sess_duration.secs());
     m_ave_active_dur.add(active_duration.secs());
     m_num_ave_session_selects.add(num_selects);
 }
 
-maxscale::ServerStats& maxscale::ServerStats::operator+=(const maxscale::ServerStats& rhs)
+maxscale::SessionStats& maxscale::SessionStats::operator+=(const maxscale::SessionStats& rhs)
 {
-    total += rhs.total;
-    read += rhs.read;
-    write += rhs.write;
+    m_total += rhs.m_total;
+    m_read += rhs.m_read;
+    m_write += rhs.m_write;
     m_ave_session_dur += rhs.m_ave_session_dur;
     m_ave_active_dur += rhs.m_ave_active_dur;
     m_num_ave_session_selects += rhs.m_num_ave_session_selects;
@@ -40,7 +35,7 @@ maxscale::ServerStats& maxscale::ServerStats::operator+=(const maxscale::ServerS
     return *this;
 }
 
-maxscale::ServerStats::CurrentStats maxscale::ServerStats::current_stats() const
+maxscale::SessionStats::CurrentStats maxscale::SessionStats::current_stats() const
 {
     double sess_secs = m_ave_session_dur.average();
     double active_secs = m_ave_active_dur.average();
@@ -49,7 +44,7 @@ maxscale::ServerStats::CurrentStats maxscale::ServerStats::current_stats() const
     return {maxbase::Duration(sess_secs),
             active,
             static_cast<int64_t>(m_num_ave_session_selects.average()),
-            total,
-            read,
-            write};
+            m_total,
+            m_read,
+            m_write};
 }

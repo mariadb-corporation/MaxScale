@@ -24,8 +24,8 @@
 namespace maxscale
 {
 
-/** ServerStats is a class to hold server statistics associated with a router */
-class ServerStats
+/** SessionStats is a class holding statistics associated with a session */
+class SessionStats
 {
 
 public:
@@ -39,25 +39,53 @@ public:
         int64_t           total_write_queries;
     };
 
-    void start_session();
-    void end_session(maxbase::Duration sess_duration, maxbase::Duration active_duration, int64_t num_selects);
+    void update(maxbase::Duration sess_duration,
+                maxbase::Duration active_duration,
+                int64_t num_selects);
+
+    void inc_total()
+    {
+        ++m_total;
+    }
+
+    void inc_read()
+    {
+        ++m_read;
+    }
+
+    void inc_write()
+    {
+        ++m_write;
+    }
+
+    int64_t total() const
+    {
+        return m_total;
+    }
+
+    int64_t read() const
+    {
+        return m_read;
+    }
+
+    int64_t write() const
+    {
+        return m_write;
+    }
 
     CurrentStats current_stats() const;
 
-    ServerStats& operator+=(const ServerStats& rhs);
-
-    // These are exactly what they were in struct ServerStats, in readwritesplit.hh.
-    // (well, but I changed uint64_t to int64_t).
-    // TODO make these private, and add functions to modify them.
-    int64_t total = 0;
-    int64_t read = 0;
-    int64_t write = 0;
+    SessionStats& operator+=(const SessionStats& rhs);
 
 private:
+    int64_t m_total = 0;
+    int64_t m_read = 0;
+    int64_t m_write = 0;
+
     maxbase::CumulativeAverage m_ave_session_dur;
     maxbase::CumulativeAverage m_ave_active_dur;
     maxbase::CumulativeAverage m_num_ave_session_selects;
 };
 
-using SrvStatMap = std::unordered_map<mxs::Target*, ServerStats>;
+using TargetSessionStats = std::unordered_map<mxs::Target*, SessionStats>;
 }
