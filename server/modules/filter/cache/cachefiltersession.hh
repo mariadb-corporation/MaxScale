@@ -169,6 +169,7 @@ private:
 
     static void put_value_handler(SSessionCache sCache, const CACHE_KEY& key, cache_result_t result);
     static void del_value_handler(cache_result_t result);
+    routing_action_t get_value_handler(GWBUF* pPacket, cache_result_t result, GWBUF* pResponse);
 
     int continue_routing(GWBUF* pPacket);
 

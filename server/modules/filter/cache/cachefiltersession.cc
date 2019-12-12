@@ -1077,90 +1077,7 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(cache_acti
         GWBUF* pResponse;
         cache_result_t result = m_sCache->get_value(m_key, flags, m_soft_ttl, m_hard_ttl, &pResponse);
 
-        if (CACHE_RESULT_IS_OK(result))
-        {
-            if (CACHE_RESULT_IS_STALE(result))
-            {
-                // The value was found, but it was stale. Now we need to
-                // figure out whether somebody else is already fetching it.
-
-                if (m_sCache->must_refresh(m_key, this))
-                {
-                    // We were the first ones who hit the stale item. It's
-                    // our responsibility now to fetch it.
-                    if (log_decisions())
-                    {
-                        MXS_NOTICE("Cache data is stale, fetching fresh from server.");
-                    }
-
-                    // As we don't use the response it must be freed.
-                    gwbuf_free(pResponse);
-
-                    m_refreshing = true;
-                    routing_action = ROUTING_CONTINUE;
-                }
-                else
-                {
-                    // Somebody is already fetching the new value. So, let's
-                    // use the stale value. No point in hitting the server twice.
-                    if (log_decisions())
-                    {
-                        MXS_NOTICE("Cache data is stale but returning it, fresh "
-                                   "data is being fetched already.");
-                    }
-                    routing_action = ROUTING_ABORT;
-                }
-            }
-            else
-            {
-                if (log_decisions())
-                {
-                    MXS_NOTICE("Using fresh data from cache.");
-                }
-                routing_action = ROUTING_ABORT;
-            }
-        }
-        else
-        {
-            if (log_decisions())
-            {
-                MXS_NOTICE("Not found in cache, fetching data from server.");
-            }
-            routing_action = ROUTING_CONTINUE;
-        }
-
-        if (routing_action == ROUTING_CONTINUE)
-        {
-            // If we are populating or refreshing, or the result was discarded
-            // due to hard TTL having kicked in, then we fetch the result *and*
-            // update the cache. That is, as long as there is room in the cache
-            // an entry will stay there.
-            if (m_populate || m_refreshing || CACHE_RESULT_IS_DISCARDED(result))
-            {
-                m_state = CACHE_EXPECTING_RESPONSE;
-            }
-            else
-            {
-                if (log_decisions())
-                {
-                    MXS_NOTICE("Neither populating, nor refreshing, fetching data "
-                               "but not adding to cache.");
-                }
-                m_state = CACHE_IGNORING_RESPONSE;
-            }
-        }
-        else
-        {
-            if (log_decisions())
-            {
-                MXS_NOTICE("Found in cache.");
-            }
-
-            m_state = CACHE_EXPECTING_NOTHING;
-            gwbuf_free(pPacket);
-
-            set_response(pResponse);
-        }
+        routing_action = get_value_handler(pPacket, result, pResponse);
     }
     else if (should_populate(cache_action))
     {
@@ -1450,6 +1367,100 @@ void CacheFilterSession::del_value_handler(cache_result_t result)
     {
         MXS_ERROR("Could not delete old cache item.");
     }
+}
+
+CacheFilterSession::routing_action_t CacheFilterSession::get_value_handler(GWBUF* pPacket,
+                                                                           cache_result_t result,
+                                                                           GWBUF* pResponse)
+{
+    routing_action_t routing_action = ROUTING_CONTINUE;
+
+    if (CACHE_RESULT_IS_OK(result))
+    {
+        if (CACHE_RESULT_IS_STALE(result))
+        {
+            // The value was found, but it was stale. Now we need to
+            // figure out whether somebody else is already fetching it.
+
+            if (m_sCache->must_refresh(m_key, this))
+            {
+                // We were the first ones who hit the stale item. It's
+                // our responsibility now to fetch it.
+                if (log_decisions())
+                {
+                    MXS_NOTICE("Cache data is stale, fetching fresh from server.");
+                }
+
+                // As we don't use the response it must be freed.
+                gwbuf_free(pResponse);
+
+                m_refreshing = true;
+                routing_action = ROUTING_CONTINUE;
+            }
+            else
+            {
+                // Somebody is already fetching the new value. So, let's
+                // use the stale value. No point in hitting the server twice.
+                if (log_decisions())
+                {
+                    MXS_NOTICE("Cache data is stale but returning it, fresh "
+                               "data is being fetched already.");
+                }
+                routing_action = ROUTING_ABORT;
+            }
+        }
+        else
+        {
+            if (log_decisions())
+            {
+                MXS_NOTICE("Using fresh data from cache.");
+            }
+            routing_action = ROUTING_ABORT;
+        }
+    }
+    else
+    {
+        if (log_decisions())
+        {
+            MXS_NOTICE("Not found in cache, fetching data from server.");
+        }
+        routing_action = ROUTING_CONTINUE;
+    }
+
+    if (routing_action == ROUTING_CONTINUE)
+    {
+        // If we are populating or refreshing, or the result was discarded
+        // due to hard TTL having kicked in, then we fetch the result *and*
+        // update the cache. That is, as long as there is room in the cache
+        // an entry will stay there.
+        if (m_populate || m_refreshing || CACHE_RESULT_IS_DISCARDED(result))
+        {
+            m_state = CACHE_EXPECTING_RESPONSE;
+        }
+        else
+        {
+            if (log_decisions())
+            {
+                MXS_NOTICE("Neither populating, nor refreshing, fetching data "
+                           "but not adding to cache.");
+            }
+            m_state = CACHE_IGNORING_RESPONSE;
+        }
+    }
+    else
+    {
+        if (log_decisions())
+        {
+            MXS_NOTICE("Found in cache.");
+        }
+
+        m_state = CACHE_EXPECTING_NOTHING;
+        gwbuf_free(pPacket);
+
+        set_response(pResponse);
+    }
+
+    return routing_action;
 }
 
 int CacheFilterSession::continue_routing(GWBUF* pPacket)
