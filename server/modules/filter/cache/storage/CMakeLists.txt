@@ -1,1 +1,2 @@
 add_subdirectory(storage_inmemory)
+add_subdirectory(storage_memcached)
