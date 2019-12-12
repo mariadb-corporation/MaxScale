@@ -359,13 +359,6 @@ public:
         m_autocommit = autocommit;
     }
 
-
-    // How often keepalive pings should be done, in seconds
-    int64_t keepalive_interval() const
-    {
-        return m_keepalive_interval;
-    }
-
 protected:
     State       m_state;                    /**< Current descriptor state */
     uint64_t    m_id;                       /**< Unique session identifier */
@@ -373,7 +366,7 @@ protected:
     std::string m_host;
     std::string m_database;
     std::string m_pending_database;
-    int64_t     m_last_ping = 0;            /**< The last time all backend connections were pinged */
+    int64_t     m_keepalive_interval = 0;
 
     MXS_SESSION(const SListener& listener, const std::string& host);
 
@@ -402,7 +395,6 @@ private:
     std::unique_ptr<ProtocolData> m_protocol_data;
     uint32_t                      m_trx_state {SESSION_TRX_INACTIVE};
     bool                          m_autocommit; /*< Whether autocommit is on. */
-    int64_t                       m_keepalive_interval = 0;
 };
 
 /**

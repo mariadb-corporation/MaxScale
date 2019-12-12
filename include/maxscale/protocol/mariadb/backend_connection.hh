@@ -40,6 +40,7 @@ public:
     bool    reuse_connection(BackendDCB* dcb, mxs::Component* upstream) override;
     bool    established() override;
     void    ping() override;
+    int64_t seconds_idle() const override;
     json_t* diagnostics() const override;
 
     /**

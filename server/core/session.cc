@@ -78,6 +78,7 @@ MXS_SESSION::MXS_SESSION(const SListener& listener, const std::string& host)
     : m_state(MXS_SESSION::State::CREATED)
     , m_id(session_get_next_id())
     , m_host(host)
+    , m_keepalive_interval(service->config().connection_keepalive)
     , client_dcb(nullptr)
     , listener(listener)
     , stats{time(0)}
@@ -88,7 +89,6 @@ MXS_SESSION::MXS_SESSION(const SListener& listener, const std::string& host)
     , close_reason(SESSION_CLOSE_NONE)
     , load_active(false)
     , m_autocommit(listener->sql_mode() == QC_SQL_MODE_ORACLE ? false : true)
-    , m_keepalive_interval(service->config().connection_keepalive)
 {
     mxs_rworker_register_session(this);
 }
@@ -1489,13 +1489,11 @@ void Session::tick(int64_t idle)
         }
     }
 
-    if (auto interval = keepalive_interval())
+    if (m_keepalive_interval)
     {
-        if (MXS_CLOCK_TO_SEC(mxs_clock() - m_last_ping) > interval / 2)
+        for (const auto& a : backend_connections())
         {
-            m_last_ping = mxs_clock();
-
-            for (const auto& a : backend_connections())
+            if (a->seconds_idle() > m_keepalive_interval)
             {
                 a->ping();
             }

@@ -1563,21 +1563,18 @@ bool MariaDBBackendConnection::established()
 
 void MariaDBBackendConnection::ping()
 {
-    if (auto interval = m_session->keepalive_interval())
+    if (m_reply.state() == ReplyState::DONE)
     {
-        if (m_reply.state() == ReplyState::DONE)
-        {
-            auto secs = MXS_CLOCK_TO_SEC(mxs_clock() - std::max(m_dcb->last_read(), m_dcb->last_write()));
+        MXS_INFO("Pinging '%s', idle for %ld seconds", m_dcb->server()->name(), seconds_idle());
 
-            if (secs > interval)
-            {
-                MXS_INFO("Pinging '%s', idle for %ld seconds", m_dcb->server()->name(), secs);
-
-                // TODO: Think of a better mechanism for the pings, the ignorable ping mechanism isn't pretty.
-                write(modutil_create_ignorable_ping());
-            }
-        }
+        // TODO: Think of a better mechanism for the pings, the ignorable ping mechanism isn't pretty.
+        write(modutil_create_ignorable_ping());
     }
+}
+
+int64_t MariaDBBackendConnection::seconds_idle() const
+{
+    return MXS_CLOCK_TO_SEC(mxs_clock() - std::max(m_dcb->last_read(), m_dcb->last_write()));
 }
 
 json_t* MariaDBBackendConnection::diagnostics() const
