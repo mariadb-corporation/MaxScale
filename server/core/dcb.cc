@@ -204,6 +204,7 @@ DCB* dcb_alloc(dcb_role_t role, SERV_LISTENER* listener)
     newdcb->low_water = config_writeq_low_water();
     newdcb->high_water = config_writeq_high_water();
     newdcb->m_uid = this_unit.uid_generator.fetch_add(1, std::memory_order_relaxed);
+    newdcb->is_fake_event = false;
 
     if (role == DCB_ROLE_SERVICE_LISTENER)
     {
@@ -2062,7 +2063,9 @@ static void dcb_hangup_foreach_worker(MXB_WORKER* worker, struct server* server)
         {
             this_thread.current_dcb = dcb;
             dcb->flags |= DCBF_HUNG;
+            dcb->is_fake_event = true;
             dcb->func.hangup(dcb);
+            dcb->is_fake_event = false;
         }
     }
 
@@ -3249,7 +3252,9 @@ static uint32_t dcb_handler(DCB* dcb, uint32_t events)
         events = dcb->fake_event;
         dcb->fake_event = 0;
 
+        dcb->is_fake_event = true;
         rv |= dcb_process_poll_events(dcb, events);
+        dcb->is_fake_event = false;
     }
 
     this_thread.current_dcb = NULL;
