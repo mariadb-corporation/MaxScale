@@ -559,7 +559,7 @@ protected:
 
     virtual ~DCB();
 
-    bool create_SSL(mxs::SSLContext* ssl);
+    bool create_SSL(const mxs::SSLContext& ssl);
 
     /**
      * Release the instance from the associated session.

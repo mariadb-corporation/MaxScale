@@ -30,7 +30,10 @@ class DCB;
 class Service;
 class Listener;
 using SListener = std::shared_ptr<Listener>;
+namespace maxscale
+{
 class ListenerSessionData;
+}
 
 /**
  * The Listener class is used to link a network port to a service. It defines the name of the
@@ -145,7 +148,7 @@ public:
     // Functions that are temporarily public
     bool create_listener_config(const char* filename);
 
-    std::shared_ptr<ListenerSessionData> shared_data() const
+    std::shared_ptr<mxs::ListenerSessionData> shared_data() const
     {
         return m_shared_data;
     }
@@ -177,7 +180,7 @@ private:
     mxs::WorkerLocal<int> m_local_fd {-1};  /**< File descriptor the listener listens on */
     int                   m_shared_fd {-1}; /**< File descriptor the listener listens on */
 
-    std::shared_ptr<ListenerSessionData> m_shared_data; /**< Data shared with sessions */
+    std::shared_ptr<mxs::ListenerSessionData> m_shared_data;    /**< Data shared with sessions */
 
     /**
      * Creates a new listener that points to a service
@@ -191,9 +194,8 @@ private:
     Listener(Service* service, const std::string& name,
              const std::string& address, uint16_t port,
              const std::string& protocol,
-             std::unique_ptr<mxs::ProtocolModule> proto_instance,
              const MXS_CONFIG_PARAMETER& params,
-             std::unique_ptr<ListenerSessionData> shared_data);
+             std::unique_ptr<mxs::ListenerSessionData> shared_data);
 
     /**
      * Listen on a file descriptor shared between all workers
@@ -252,6 +254,10 @@ private:
 
     // Handler for EPOLL_IN events
     static uint32_t poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
+
+    static std::unique_ptr<mxs::ListenerSessionData>
+    create_shared_data(const MXS_CONFIG_PARAMETER& params, const std::string& listener_name,
+                       std::unique_ptr<mxs::UserAccountManager>* user_manager_out);
 };
 
 /**
@@ -262,6 +268,17 @@ private:
  * @return The listeners that point to the service
  */
 std::vector<SListener> listener_find_by_service(const SERVICE* service);
+
+namespace maxscale
+{
+
+/**
+ * Increment the number of authentication failures from the remote address. If the number
+ * exceeds the configured limit, future attempts to connect from the remote are be rejected.
+ *
+ * @param remote The address where the connection originated
+ */
+void mark_auth_as_failed(const std::string& remote);
 
 /**
  * Listener settings and other data that is shared with all sessions created by the listener.
@@ -275,19 +292,16 @@ std::vector<SListener> listener_find_by_service(const SERVICE* service);
 class ListenerSessionData
 {
 public:
-    ListenerSessionData(qc_sql_mode_t default_sql_mode, SERVICE* service);
+    using SProtocol = std::unique_ptr<mxs::ProtocolModule>;
+
+    ListenerSessionData(SSLContext ssl, qc_sql_mode_t default_sql_mode, SERVICE* service,
+                        SProtocol protocol_module);
     ListenerSessionData(const ListenerSessionData&) = delete;
     ListenerSessionData& operator=(const ListenerSessionData&) = delete;
 
-    /**
-     * Increment the number of authentication failures from the remote address. If the number
-     * exceeds the configured limit, future attempts to connect from the remote are be rejected.
-     *
-     * @param remote The address where the connection originated
-     */
-    void mark_auth_as_failed(const std::string& remote);
-
-    mxs::SSLContext     m_ssl;                      /**< SSL settings */
+    const SSLContext    m_ssl;                      /**< SSL settings */
     const qc_sql_mode_t m_default_sql_mode;         /**< Default sql mode for the listener */
     SERVICE&            m_service;                  /**< The service the listener feeds */
+    const SProtocol     m_proto_module;
 };
+}

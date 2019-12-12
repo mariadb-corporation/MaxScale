@@ -85,6 +85,7 @@ class SSLContext
 {
 public:
     SSLContext() = default;
+    SSLContext(SSLContext&&) noexcept;
     SSLContext& operator=(SSLContext&& rhs) noexcept;
 
     SSLContext& operator=(SSLContext&) = delete;

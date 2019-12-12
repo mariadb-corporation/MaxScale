@@ -1082,10 +1082,9 @@ bool count_by_role_cb(DCB* dcb, void* data)
  * @param       dcb
  * @return      True on success, false on error.
  */
-bool DCB::create_SSL(mxs::SSLContext* ssl)
+bool DCB::create_SSL(const mxs::SSLContext& ssl)
 {
-    m_encryption.handle = ssl->open();
-
+    m_encryption.handle = ssl.open();
     if (!m_encryption.handle)
     {
         MXS_ERROR("Failed to initialize SSL for connection.");
@@ -1689,7 +1688,7 @@ mxs::ClientConnection* ClientDCB::protocol() const
 int ClientDCB::ssl_handshake()
 {
     if (!m_session->listener_data()->m_ssl.valid()
-        || (!m_encryption.handle && !create_SSL(&m_session->listener_data()->m_ssl)))
+        || (!m_encryption.handle && !create_SSL(m_session->listener_data()->m_ssl)))
     {
         return -1;
     }
@@ -1865,7 +1864,7 @@ int BackendDCB::ssl_handshake()
     int ssl_rval;
     int return_code;
 
-    if (!m_server->ssl().context() || (!m_encryption.handle && !create_SSL(m_server->ssl().context())))
+    if (!m_server->ssl().context() || (!m_encryption.handle && !create_SSL(*m_server->ssl().context())))
     {
         mxb_assert(m_server->ssl().context());
         return -1;

@@ -774,12 +774,10 @@ const char* session_get_close_reason(const MXS_SESSION* session)
     }
 }
 
-Session::Session(std::shared_ptr<mxs::ProtocolModule> protocol,
-                 std::shared_ptr<ListenerSessionData> listener_data,
+Session::Session(std::shared_ptr<ListenerSessionData> listener_data,
                  const std::string& host)
     : MXS_SESSION(host, &listener_data->m_service)
     , m_down(static_cast<Service&>(listener_data->m_service).get_connection(this, this))
-    , m_protocol(std::move(protocol))
     , m_listener_data(std::move(listener_data))
 {
     if (service->config().retain_last_statements != -1)         // Explicitly set for the service
@@ -1387,9 +1385,10 @@ BackendDCB*
 Session::create_backend_connection(Server* server, BackendDCB::Manager* manager, mxs::Component* upstream)
 {
     std::unique_ptr<BackendConnection> conn;
-    if (m_protocol->capabilities() & mxs::ProtocolModule::CAP_BACKEND)
+    auto proto_module = m_listener_data->m_proto_module.get();
+    if (proto_module->capabilities() & mxs::ProtocolModule::CAP_BACKEND)
     {
-        conn = m_protocol->create_backend_protocol(this, server, upstream);
+        conn = proto_module->create_backend_protocol(this, server, upstream);
         if (!conn)
         {
             MXS_ERROR("Failed to create protocol session for backend DCB.");
@@ -1397,7 +1396,7 @@ Session::create_backend_connection(Server* server, BackendDCB::Manager* manager,
     }
     else
     {
-        MXB_ERROR("Protocol '%s' does not support backend connections.", m_protocol->name().c_str());
+        MXB_ERROR("Protocol '%s' does not support backend connections.", proto_module->name().c_str());
     }
 
     BackendDCB* dcb = nullptr;

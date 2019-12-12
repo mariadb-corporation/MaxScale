@@ -31,7 +31,10 @@ struct mxs_filter_session;
 struct mxs_router_session;
 class SERVER;
 class Listener;
+namespace maxscale
+{
 class ListenerSessionData;
+}
 using SListener = std::shared_ptr<Listener>;
 
 static constexpr uint32_t SESSION_TRX_INACTIVE = 0;
@@ -212,7 +215,7 @@ public:
     virtual mxs::ClientConnection*       client_connection() = 0;
     virtual const mxs::ClientConnection* client_connection() const = 0;
     virtual void                         set_client_connection(mxs::ClientConnection* client_conn) = 0;
-    virtual ListenerSessionData*         listener_data() = 0;
+    virtual mxs::ListenerSessionData*    listener_data() = 0;
 
     /**
      * Get the transaction state of the session.

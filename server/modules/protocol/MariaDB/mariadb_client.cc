@@ -699,7 +699,7 @@ bool MariaDBClientConnection::perform_authentication()
                 {
                     // Authentication failed. TODO: send an error message here when needed.
                     m_auth_state = AuthState::FAIL;
-                    m_session->listener_data()->mark_auth_as_failed(m_dcb->remote());
+                    mxs::mark_auth_as_failed(m_dcb->remote());
                 }
             }
             break;

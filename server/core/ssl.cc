@@ -411,6 +411,15 @@ SSLContext::~SSLContext()
     SSL_CTX_free(m_ctx);
 }
 
+SSLContext::SSLContext(SSLContext&& rhs) noexcept
+    : m_ctx(rhs.m_ctx)
+    , m_method(rhs.m_method)
+    , m_cfg(std::move(rhs.m_cfg))
+{
+    rhs.m_method = nullptr;
+    rhs.m_ctx = nullptr;
+}
+
 SSLContext& SSLContext::operator=(SSLContext&& rhs) noexcept
 {
     reset();

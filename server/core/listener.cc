@@ -46,6 +46,7 @@
 
 using std::chrono::seconds;
 using std::unique_ptr;
+using ListenerSessionData = mxs::ListenerSessionData;
 
 static std::list<SListener> all_listeners;
 static std::mutex listener_lock;
@@ -121,7 +122,6 @@ Listener::Listener(Service* service,
                    const std::string& address,
                    uint16_t port,
                    const std::string& protocol,
-                   std::unique_ptr<mxs::ProtocolModule> proto_instance,
                    const MXS_CONFIG_PARAMETER& params,
                    unique_ptr<ListenerSessionData> shared_data)
     : MXB_POLL_DATA{Listener::poll_handler}
@@ -130,7 +130,6 @@ Listener::Listener(Service* service,
     , m_protocol(protocol)
     , m_port(port)
     , m_address(address)
-    , m_proto_module(std::move(proto_instance))
     , m_service(service)
     , m_params(params)
     , m_shared_data(std::move(shared_data))
@@ -165,7 +164,6 @@ SListener Listener::create(const std::string& name,
     mxb::LogScope scope(name.c_str());
     bool port_defined = params.contains(CN_PORT);
     bool socket_defined = params.contains(CN_SOCKET);
-    bool sql_mode_defined = params.contains(CN_SQL_MODE);
     Service* service = static_cast<Service*>(params.get_service(CN_SERVICE));
 
     if (port_defined && socket_defined)
@@ -195,35 +193,6 @@ SListener Listener::create(const std::string& name,
         return nullptr;
     }
 
-    qc_sql_mode_t sql_mode;
-
-    if (sql_mode_defined)
-    {
-        std::string sql_mode_str = params.get_string(CN_SQL_MODE);
-
-        if (strcasecmp(sql_mode_str.c_str(), "default") == 0)
-        {
-            sql_mode = QC_SQL_MODE_DEFAULT;
-        }
-        else if (strcasecmp(sql_mode_str.c_str(), "oracle") == 0)
-        {
-            sql_mode = QC_SQL_MODE_ORACLE;
-        }
-        else
-        {
-            MXS_ERROR("'%s' is not a valid value for '%s'. Allowed values are 'DEFAULT' and 'ORACLE'.",
-                      sql_mode_str.c_str(), CN_SQL_MODE);
-            return nullptr;
-        }
-    }
-
-    // If listener doesn't configure sql_mode use the sql mode of query classifier.
-    // This is the global configuration of sql_mode or "default" if it is not configured at all.
-    else
-    {
-        sql_mode = qc_get_sql_mode();
-    }
-
     mxb_assert(!address.empty());
 
     if (socket_defined)
@@ -245,75 +214,15 @@ SListener Listener::create(const std::string& name,
         return nullptr;
     }
 
-    mxs::SSLContext ssl;
-    if (!ssl.read_configuration(name, params, true))
+    SListener listener;
+    unique_ptr<mxs::UserAccountManager> new_user_manager;
+    auto shared_data = create_shared_data(params, name, &new_user_manager);
+    if (shared_data)
     {
-        return nullptr;
+        listener.reset(new(std::nothrow) Listener(service, name, address, port, protocol, params,
+                                                  std::move(shared_data)));
     }
 
-    unique_ptr<ListenerSessionData> shared_data(new ListenerSessionData(sql_mode, service));
-    shared_data->m_ssl = std::move(ssl);
-
-    // These two values being NULL trigger the loading of the default
-    // authenticators that are specific to each protocol module
-    auto authenticator = params.get_string(CN_AUTHENTICATOR);
-    auto authenticator_options = params.get_string(CN_AUTHENTICATOR_OPTIONS);
-
-    // Add protocol and authenticator capabilities from the listener
-    std::unique_ptr<mxs::ProtocolModule> protocol_module;
-    auto protocol_api = (MXS_PROTOCOL_API*)load_module(protocol.c_str(), MODULE_PROTOCOL);
-    if (protocol_api)
-    {
-        protocol_module.reset(protocol_api->create_protocol_module(authenticator, authenticator_options));
-    }
-    if (!protocol_module)
-    {
-        MXS_ERROR("Failed to initialize protocol module '%s' for listener '%s'.",
-                  protocol.c_str(), name.c_str());
-        return nullptr;
-    }
-
-    // If the current protocol implements a user data manager, create one and set to service.
-    // If the service already has one, check that both are meant for the same protocol.
-    std::unique_ptr<mxs::UserAccountManager> new_user_manager;
-    if (protocol_module->capabilities() & mxs::ProtocolModule::CAP_AUTHDATA)
-    {
-        new_user_manager = protocol_module->create_user_data_manager();
-        if (new_user_manager)
-        {
-            auto service_usermanager = service->user_account_manager();
-            if (service_usermanager)
-            {
-                // This name comparison needs to be done by querying the modules themselves since
-                // the actual setting value has aliases.
-                if (service_usermanager->protocol_name() == new_user_manager->protocol_name())
-                {
-                    // Ok, service has only one backend protocol. If ever multiple backend protocols
-                    // need to be supported on the same service, multiple usermanagers are also needed.
-                    new_user_manager = nullptr;     // discard the just generated usermanager
-                }
-                else
-                {
-                    MXB_ERROR("The protocol of listener '%s' ('%s') differs from the protocol in the target "
-                              "service '%s' ('%s') when both protocols implement user account management. "
-                              "Cannot create listener.",
-                              name.c_str(), protocol_module->name().c_str(),
-                              service->name(), service_usermanager->protocol_name().c_str());
-                    return nullptr;
-                }
-            }
-        }
-        else
-        {
-            MXB_ERROR("Failed to create an authentication data manager for protocol '%s'.",
-                      protocol_module->name().c_str());
-            return nullptr;
-        }
-    }
-
-    SListener listener(new(std::nothrow) Listener(service, name, address, port,
-                                                  protocol, std::move(protocol_module),
-                                                  params, std::move(shared_data)));
     if (listener)
     {
         if (new_user_manager)
@@ -603,7 +512,7 @@ json_t* Listener::to_json() const
     json_object_set_new(attr, CN_STATE, json_string(state()));
     json_object_set_new(attr, CN_PARAMETERS, param);
 
-    json_t* diag = m_proto_module->print_auth_users_json();
+    json_t* diag = m_shared_data->m_proto_module->print_auth_users_json();
     if (diag)
     {
         json_object_set_new(attr, CN_AUTHENTICATOR_DIAGNOSTICS, diag);
@@ -670,7 +579,8 @@ const char* Listener::state() const
 int Listener::load_users()
 {
     mxb::LogScope scope(name());
-    return m_proto_module->load_auth_users(m_service);      // TODO: Move this call inside protocol
+    // TODO: Move this call inside protocol
+    return m_shared_data->m_proto_module->load_auth_users(m_service);
 }
 
 
@@ -816,7 +726,7 @@ static ClientConn accept_one_connection(int fd)
 
 ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const char* host)
 {
-    auto* session = new(std::nothrow) Session(m_proto_module, m_shared_data, host);
+    auto* session = new(std::nothrow) Session(m_shared_data, host);
     if (!session)
     {
         MXS_OOM();
@@ -824,7 +734,7 @@ ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const 
         return NULL;
     }
 
-    auto client_protocol = m_proto_module->create_client_protocol(session, session);
+    auto client_protocol = m_shared_data->m_proto_module->create_client_protocol(session, session);
     if (!client_protocol)
     {
         delete session;
@@ -971,7 +881,7 @@ uint32_t Listener::poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_
 
 void Listener::reject_connection(int fd, const char* host)
 {
-    if (GWBUF* buf = m_proto_module->reject(host))
+    if (GWBUF* buf = m_shared_data->m_proto_module->reject(host))
     {
         for (auto b = buf; b; b = b->next)
         {
@@ -1022,7 +932,117 @@ void Listener::accept_connections()
     }
 }
 
-void ListenerSessionData::mark_auth_as_failed(const std::string& remote)
+/**
+ * Listener creation helper function. Creates the shared data object and user account manager.
+ *
+ * @param params Listener config params
+ * @param listener_name Listener name, used for log messages
+ * @param user_manager_out Output for user manager
+ * @return Shared data on success
+ */
+unique_ptr<mxs::ListenerSessionData>
+Listener::create_shared_data(const MXS_CONFIG_PARAMETER& params, const std::string& listener_name,
+                             unique_ptr<mxs::UserAccountManager>* user_manager_out)
+{
+    auto protocol_name = params.get_string(CN_PROTOCOL);
+    auto protocol_namez = protocol_name.c_str();
+    auto listener_namez = listener_name.c_str();
+
+    // If no authenticator is set, the default authenticator will be loaded.
+    auto authenticator = params.get_string(CN_AUTHENTICATOR);
+    auto authenticator_options = params.get_string(CN_AUTHENTICATOR_OPTIONS);
+
+    // Add protocol and authenticator capabilities from the listener
+    std::unique_ptr<mxs::ProtocolModule> protocol_module;
+    auto protocol_api = (MXS_PROTOCOL_API*)load_module(protocol_namez, MODULE_PROTOCOL);
+    if (protocol_api)
+    {
+        protocol_module.reset(protocol_api->create_protocol_module(authenticator, authenticator_options));
+    }
+    if (!protocol_module)
+    {
+        MXS_ERROR("Failed to initialize protocol module '%s' for listener '%s'.",
+                  protocol_namez, listener_namez);
+        return nullptr;
+    }
+
+    // If the service does not yet have a user data manager, create one and set to service.
+    // If one already exists, check that it's for the same protocol the current listener is using.
+    std::unique_ptr<mxs::UserAccountManager> new_user_manager;
+    auto service = static_cast<Service*>(params.get_service(CN_SERVICE));
+    if (protocol_module->capabilities() & mxs::ProtocolModule::CAP_AUTHDATA)
+    {
+        auto old_usermanager = service->user_account_manager();
+        if (old_usermanager)
+        {
+            // This name comparison needs to be done by querying the modules themselves since
+            // the actual setting value has aliases.
+            if (protocol_module->name() != old_usermanager->protocol_name())
+            {
+                // If ever multiple backend protocols need to be supported on the same service,
+                // multiple usermanagers are also needed.
+                MXB_ERROR("The protocol of listener '%s' ('%s') differs from the protocol in the target "
+                          "service '%s' ('%s') when both protocols implement user account management. "
+                          "Cannot create listener.",
+                          listener_namez, protocol_module->name().c_str(),
+                          service->name(), old_usermanager->protocol_name().c_str());
+                return nullptr;
+            }
+        }
+        else
+        {
+            new_user_manager = protocol_module->create_user_data_manager();
+            if (!new_user_manager)
+            {
+                MXB_ERROR("Failed to create an authentication data manager for protocol '%s'.",
+                          protocol_module->name().c_str());
+                return nullptr;
+            }
+        }
+    }
+
+    qc_sql_mode_t sql_mode;
+    if (params.contains(CN_SQL_MODE))
+    {
+        std::string sql_mode_str = params.get_string(CN_SQL_MODE);
+        if (strcasecmp(sql_mode_str.c_str(), "default") == 0)
+        {
+            sql_mode = QC_SQL_MODE_DEFAULT;
+        }
+        else if (strcasecmp(sql_mode_str.c_str(), "oracle") == 0)
+        {
+            sql_mode = QC_SQL_MODE_ORACLE;
+        }
+        else
+        {
+            MXS_ERROR("'%s' is not a valid value for '%s'. Allowed values are 'DEFAULT' and 'ORACLE'.",
+                      sql_mode_str.c_str(), CN_SQL_MODE);
+            return nullptr;
+        }
+    }
+
+    // If listener doesn't configure sql_mode use the sql mode of query classifier.
+    // This is the global configuration of sql_mode or "default" if it is not configured at all.
+    else
+    {
+        sql_mode = qc_get_sql_mode();
+    }
+
+    mxs::SSLContext ssl;
+    if (!ssl.read_configuration(listener_name, params, true))
+    {
+        return nullptr;
+    }
+
+    *user_manager_out = std::move(new_user_manager);
+    unique_ptr<mxs::ListenerSessionData> rval(
+        new(std::nothrow) ListenerSessionData(std::move(ssl), sql_mode, service, std::move(protocol_module)));
+    return rval;
+}
+
+namespace maxscale
+{
+void mark_auth_as_failed(const std::string& remote)
 {
     if (rate_limit.mark_auth_as_failed(remote))
     {
@@ -1031,11 +1051,16 @@ void ListenerSessionData::mark_auth_as_failed(const std::string& remote)
     }
 }
 
-ListenerSessionData::ListenerSessionData(qc_sql_mode_t default_sql_mode, SERVICE* service)
-    : m_default_sql_mode(default_sql_mode)
+ListenerSessionData::ListenerSessionData(SSLContext ssl, qc_sql_mode_t default_sql_mode, SERVICE* service,
+                                         std::unique_ptr<mxs::ProtocolModule> protocol_module)
+    : m_ssl(std::move(ssl))
+    , m_default_sql_mode(default_sql_mode)
     , m_service(*service)
+    , m_proto_module(std::move(protocol_module))
 {
 }
+}
+
 
 const MXS_MODULE_PARAM* common_listener_params()
 {
@@ -1053,7 +1078,7 @@ const MXS_MODULE_PARAM* common_listener_params()
         {CN_ADDRESS,       MXS_MODULE_PARAM_STRING,  "::"},
         {CN_AUTHENTICATOR, MXS_MODULE_PARAM_STRING},
         {
-            CN_SSL,        MXS_MODULE_PARAM_ENUM, "false", MXS_MODULE_OPT_ENUM_UNIQUE, ssl_setting_values()
+            CN_SSL, MXS_MODULE_PARAM_ENUM, "false", MXS_MODULE_OPT_ENUM_UNIQUE, ssl_setting_values()
         },
         {CN_SSL_CERT,      MXS_MODULE_PARAM_PATH,    NULL,        MXS_MODULE_OPT_PATH_R_OK},
         {CN_SSL_KEY,       MXS_MODULE_PARAM_PATH,    NULL,        MXS_MODULE_OPT_PATH_R_OK},
