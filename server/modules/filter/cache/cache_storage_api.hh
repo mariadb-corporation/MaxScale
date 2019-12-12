@@ -255,26 +255,32 @@ public:
      *                  should be used.
      * @param ppValue   Pointer to variable that after a successful return will
      *                  point to a GWBUF.
+     * @param cb        Callback where result is delivered if CACHE_RESULT_PENDING is returned.
      *
-     * @return CACHE_RESULT_OK if item was found, CACHE_RESULT_NOT_FOUND if
-     *         item was not found or some other error code. In the OK an NOT_FOUND
-     *         cases, the bit CACHE_RESULT_STALE is set if the item exists but the
-     *         soft TTL has passed. In the NOT_FOUND case, the but CACHE_RESULT_DISCARDED
-     *         if the item existed but the hard TTL had passed.
+     * @return CACHE_RESULT_OK if item was found,
+     *         CACHE_RESULT_NOT_FOUND if item was not found,
+     *         CACHE_RESULT_PENDING if result delivered to cb,
+     *         or some other error code.
+     *
+     *         In the OK and NOT_FOUND cases, the bit CACHE_RESULT_STALE is set if the item
+     *         exists but the soft TTL has passed. In the NOT_FOUND case, the bit
+     *         CACHE_RESULT_DISCARDED if the item existed but the hard TTL had passed.
      */
     virtual cache_result_t get_value(Token* pToken,
                                      const CACHE_KEY& key,
                                      uint32_t flags,
                                      uint32_t soft_ttl,
                                      uint32_t hard_ttl,
-                                     GWBUF** ppValue) = 0;
+                                     GWBUF** ppValue,
+                                     std::function<void (cache_result_t, GWBUF*)> cb = nullptr) = 0;
 
     cache_result_t get_value(Token* pToken,
                              const CACHE_KEY& key,
                              uint32_t flags,
-                             GWBUF** ppValue)
+                             GWBUF** ppValue,
+                             std::function<void (cache_result_t, GWBUF*)> cb = nullptr)
     {
-        return get_value(pToken, key, flags, CACHE_USE_CONFIG_TTL, CACHE_USE_CONFIG_TTL, ppValue);
+        return get_value(pToken, key, flags, CACHE_USE_CONFIG_TTL, CACHE_USE_CONFIG_TTL, ppValue, cb);
     }
 
     /**
@@ -285,14 +291,18 @@ public:
      * @param invalidation_words  Words that may be used for invalidating the entry.
      * @param pValue              Pointer to GWBUF containing the value to be stored.
      *                            Must be one contiguous buffer.
+     * @param cb                  Callback where result is delivered if CACHE_RESULT_PENDING is returned.
+     *
      * @return CACHE_RESULT_OK if item was successfully put,
+     *         CACHE_RESULT_PENDING if result delivered to cb,
      *         CACHE_RESULT_OUT_OF_RESOURCES if item could not be put, due to
      *         some resource having become exhausted, or some other error code.
      */
     virtual cache_result_t put_value(Token* pToken,
                                      const CACHE_KEY& key,
                                      const std::vector<std::string>& invalidation_words,
-                                     const GWBUF* pValue) = 0;
+                                     const GWBUF* pValue,
+                                     std::function<void (cache_result_t)> cb = nullptr) = 0;
 
     /**
      * Delete a value from the cache.
@@ -300,12 +310,16 @@ public:
      * @param pToken     Token received from @c create_token.
      * @param storage    Pointer to a CACHE_STORAGE.
      * @param key        A key generated with get_key.
+     * @param cb         Callback where result is delivered if CACHE_RESULT_PENDING is returned.
      *
-     * @return CACHE_RESULT_OK if item was successfully deleted.  Note that
-     *         CACHE_RESULT_OK may be returned also if the entry was not present.
+     * @return CACHE_RESULT_OK if item was successfully deleted, or
+     *         CACHE_RESULT_PENDING if result delivered to cb.
+     *
+     *         Note that CACHE_RESULT_OK may be returned also if the entry was not present.
      */
     virtual cache_result_t del_value(Token* pToken,
-                                     const CACHE_KEY& key) = 0;
+                                     const CACHE_KEY& key,
+                                     std::function<void (cache_result_t)> cb = nullptr) = 0;
 
     /**
      * Invalidate entries

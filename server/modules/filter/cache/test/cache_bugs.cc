@@ -58,7 +58,7 @@ int mxs_2727()
     config.enabled = true;
 
     set_libdir(const_cast<char*>("../storage/storage_inmemory"));
-    auto* pCache = CacheMT::create("MXS-2727", &config);
+    Cache* pCache = CacheMT::create("MXS-2727", &config);
     mxb_assert(pCache);
 
     auto sToken = pCache->create_token();

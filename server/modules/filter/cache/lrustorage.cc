@@ -625,7 +625,7 @@ cache_result_t LRUStorage::access_value(access_approach_t approach,
 
     if (existed)
     {
-        result = m_pStorage->get_value(nullptr, key, flags, soft_ttl, hard_ttl, ppValue);
+        result = m_pStorage->get_value(nullptr, key, flags, soft_ttl, hard_ttl, ppValue, nullptr);
 
         if (CACHE_RESULT_IS_OK(result))
         {

@@ -85,8 +85,7 @@ public:
                              GWBUF** ppValue,
                              std::function<void (cache_result_t, GWBUF*)> cb) const
     {
-        // TODO: Use cb, i.e. extend Cache API.
-        return m_cache.get_value(token(), key, flags, soft_ttl, hard_ttl, ppValue);
+        return m_cache.get_value(token(), key, flags, soft_ttl, hard_ttl, ppValue, cb);
     }
 
     /**
@@ -97,8 +96,7 @@ public:
                              const GWBUF* pValue,
                              std::function<void (cache_result_t)> cb)
     {
-        // TODO: Use cb, i.e. extend Cache API.
-        return m_cache.put_value(token(), key, invalidation_words, pValue);
+        return m_cache.put_value(token(), key, invalidation_words, pValue, cb);
     }
 
     /**
@@ -107,8 +105,7 @@ public:
     cache_result_t del_value(const CACHE_KEY& key,
                              std::function<void (cache_result_t)> cb)
     {
-        // TODO: Use cb, i.e. extend Cache API.
-        return m_cache.del_value(token(), key);
+        return m_cache.del_value(token(), key, cb);
     }
 
     /**

@@ -46,7 +46,8 @@ cache_result_t InMemoryStorageMT::get_value(Token* pToken,
                                             uint32_t flags,
                                             uint32_t soft_ttl,
                                             uint32_t hard_ttl,
-                                            GWBUF** ppResult)
+                                            GWBUF** ppResult,
+                                            std::function<void (cache_result_t, GWBUF*)>)
 {
     std::lock_guard<std::mutex> guard(m_lock);
 
@@ -56,7 +57,8 @@ cache_result_t InMemoryStorageMT::get_value(Token* pToken,
 cache_result_t InMemoryStorageMT::put_value(Token* pToken,
                                             const CACHE_KEY& key,
                                             const std::vector<std::string>& invalidation_words,
-                                            const GWBUF* pValue)
+                                            const GWBUF* pValue,
+                                            std::function<void (cache_result_t)>)
 {
     std::lock_guard<std::mutex> guard(m_lock);
 
@@ -64,7 +66,8 @@ cache_result_t InMemoryStorageMT::put_value(Token* pToken,
 }
 
 cache_result_t InMemoryStorageMT::del_value(Token* pToken,
-                                            const CACHE_KEY& key)
+                                            const CACHE_KEY& key,
+                                            std::function<void (cache_result_t)>)
 {
     std::lock_guard<std::mutex> guard(m_lock);
 

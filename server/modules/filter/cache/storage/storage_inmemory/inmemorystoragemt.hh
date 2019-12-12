@@ -36,13 +36,16 @@ public:
                              uint32_t flags,
                              uint32_t soft_ttl,
                              uint32_t hard_ttl,
-                             GWBUF** ppResult) override final;
+                             GWBUF** ppResult,
+                             std::function<void (cache_result_t, GWBUF*)> cb) override final;
     cache_result_t put_value(Token* pToken,
                              const CACHE_KEY& key,
                              const std::vector<std::string>& invalidation_words,
-                             const GWBUF* pValue) override final;
+                             const GWBUF* pValue,
+                             std::function<void (cache_result_t)> cb) override final;
     cache_result_t del_value(Token* pToken,
-                             const CACHE_KEY& key) override final;
+                             const CACHE_KEY& key,
+                             std::function<void (cache_result_t)> cb) override final;
     cache_result_t invalidate(Token* pToken,
                               const std::vector<std::string>& words) override final;
     cache_result_t clear(Token* pToken) override final;

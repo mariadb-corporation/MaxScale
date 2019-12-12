@@ -162,7 +162,8 @@ public:
                                      uint32_t flags,
                                      uint32_t soft_ttl,
                                      uint32_t hard_ttl,
-                                     GWBUF** ppValue) const = 0;
+                                     GWBUF** ppValue,
+                                     std::function<void (cache_result_t, GWBUF*)> cb = nullptr) const = 0;
 
     /**
      * See @Storage::put_value
@@ -170,13 +171,15 @@ public:
     virtual cache_result_t put_value(Token* pToken,
                                      const CACHE_KEY& key,
                                      const std::vector<std::string>& invalidation_words,
-                                     const GWBUF* pValue) = 0;
+                                     const GWBUF* pValue,
+                                     std::function<void (cache_result_t)> cb = nullptr) = 0;
 
     /**
      * See @Storage::del_value
      */
     virtual cache_result_t del_value(Token* pToken,
-                                     const CACHE_KEY& key) = 0;
+                                     const CACHE_KEY& key,
+                                     std::function<void (cache_result_t)> cb = nullptr) = 0;
 
     /**
      * See @Storage::invalidate
