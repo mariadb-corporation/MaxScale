@@ -381,7 +381,7 @@ int32_t InsertStreamSession::clientReply(GWBUF* buffer, const mxs::ReplyRoute& d
 
         mxs::Downstream down;
         down.instance = m_filter;
-        down.routeQuery = InsertStream::routeQuery;
+        down.routeQuery = InsertStream::apiRouteQuery;
         down.session = this;
 
         session_delay_routing(m_pSession, down, queue, 0);

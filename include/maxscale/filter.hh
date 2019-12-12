@@ -436,7 +436,7 @@ template<class FilterType, class FilterSessionType>
 class Filter : public MXS_FILTER
 {
 public:
-    static MXS_FILTER* createInstance(const char* zName, MXS_CONFIG_PARAMETER* ppParams)
+    static MXS_FILTER* apiCreateInstance(const char* zName, MXS_CONFIG_PARAMETER* ppParams)
     {
         FilterType* pFilter = NULL;
 
@@ -445,8 +445,8 @@ public:
         return pFilter;
     }
 
-    static MXS_FILTER_SESSION* newSession(MXS_FILTER* pInstance, MXS_SESSION* pSession, SERVICE* pService,
-                                          mxs::Downstream* pDown, mxs::Upstream* pUp)
+    static MXS_FILTER_SESSION* apiNewSession(MXS_FILTER* pInstance, MXS_SESSION* pSession, SERVICE* pService,
+                                             mxs::Downstream* pDown, mxs::Upstream* pUp)
     {
         FilterType* pFilter = static_cast<FilterType*>(pInstance);
         FilterSessionType* pFilterSession = NULL;
@@ -465,21 +465,21 @@ public:
         return pFilterSession;
     }
 
-    static void closeSession(MXS_FILTER*, MXS_FILTER_SESSION* pData)
+    static void apiCloseSession(MXS_FILTER*, MXS_FILTER_SESSION* pData)
     {
         FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
 
         MXS_EXCEPTION_GUARD(pFilterSession->close());
     }
 
-    static void freeSession(MXS_FILTER*, MXS_FILTER_SESSION* pData)
+    static void apiFreeSession(MXS_FILTER*, MXS_FILTER_SESSION* pData)
     {
         FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
 
         MXS_EXCEPTION_GUARD(delete pFilterSession);
     }
 
-    static int routeQuery(MXS_FILTER* pInstance, MXS_FILTER_SESSION* pData, GWBUF* pPacket)
+    static int apiRouteQuery(MXS_FILTER* pInstance, MXS_FILTER_SESSION* pData, GWBUF* pPacket)
     {
         FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
 
@@ -489,11 +489,11 @@ public:
         return rv;
     }
 
-    static int clientReply(MXS_FILTER* pInstance,
-                           MXS_FILTER_SESSION* pData,
-                           GWBUF* pPacket,
-                           const mxs::ReplyRoute& down,
-                           const mxs::Reply& reply)
+    static int apiClientReply(MXS_FILTER* pInstance,
+                              MXS_FILTER_SESSION* pData,
+                              GWBUF* pPacket,
+                              const mxs::ReplyRoute& down,
+                              const mxs::Reply& reply)
     {
         FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
 
@@ -503,7 +503,7 @@ public:
         return rv;
     }
 
-    static json_t* diagnostics(const MXS_FILTER* pInstance, const MXS_FILTER_SESSION* pData)
+    static json_t* apiDiagnostics(const MXS_FILTER* pInstance, const MXS_FILTER_SESSION* pData)
     {
         json_t* rval = NULL;
 
@@ -523,7 +523,7 @@ public:
         return rval;
     }
 
-    static uint64_t getCapabilities(MXS_FILTER* pInstance)
+    static uint64_t apiGetCapabilities(MXS_FILTER* pInstance)
     {
         uint64_t rv = 0;
 
@@ -534,7 +534,7 @@ public:
         return rv;
     }
 
-    static void destroyInstance(MXS_FILTER* pInstance)
+    static void apiDestroyInstance(MXS_FILTER* pInstance)
     {
         FilterType* pFilter = static_cast<FilterType*>(pInstance);
 
@@ -547,14 +547,14 @@ public:
 template<class FilterType, class FilterSessionType>
 MXS_FILTER_OBJECT Filter<FilterType, FilterSessionType>::s_object =
 {
-    &Filter<FilterType, FilterSessionType>::createInstance,
-    &Filter<FilterType, FilterSessionType>::newSession,
-    &Filter<FilterType, FilterSessionType>::closeSession,
-    &Filter<FilterType, FilterSessionType>::freeSession,
-    &Filter<FilterType, FilterSessionType>::routeQuery,
-    &Filter<FilterType, FilterSessionType>::clientReply,
-    &Filter<FilterType, FilterSessionType>::diagnostics,
-    &Filter<FilterType, FilterSessionType>::getCapabilities,
-    &Filter<FilterType, FilterSessionType>::destroyInstance,
+    &FilterType::apiCreateInstance,
+    &FilterType::apiNewSession,
+    &FilterType::apiCloseSession,
+    &FilterType::apiFreeSession,
+    &FilterType::apiRouteQuery,
+    &FilterType::apiClientReply,
+    &FilterType::apiDiagnostics,
+    &FilterType::apiGetCapabilities,
+    &FilterType::apiDestroyInstance,
 };
 }
