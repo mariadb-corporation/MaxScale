@@ -170,6 +170,8 @@ private:
     static void put_value_handler(SSessionCache sCache, const CACHE_KEY& key, cache_result_t result);
     static void del_value_handler(cache_result_t result);
 
+    int continue_routing(GWBUF* pPacket);
+
 private:
     CacheFilterSession(MXS_SESSION* pSession,
                        SERVICE* pService,

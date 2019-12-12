@@ -427,23 +427,7 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
 
     if (action == ROUTING_CONTINUE)
     {
-        if (m_invalidate && m_state == CACHE_EXPECTING_RESPONSE)
-        {
-            qc_parse_result_t parse_result = qc_parse(pPacket, QC_COLLECT_TABLES);
-
-            if (parse_result == QC_QUERY_PARSED)
-            {
-                update_table_names(pPacket);
-            }
-            else
-            {
-                MXS_WARNING("Invalidation is enabled but the current statement could not "
-                            "be parsed. Consequently, the result cannot be cached.");
-                m_state = CACHE_IGNORING_RESPONSE;
-            }
-        }
-
-        rv = m_down.routeQuery(pPacket);
+        rv = continue_routing(pPacket);
     }
 
     return rv;
@@ -1466,4 +1450,25 @@ void CacheFilterSession::del_value_handler(cache_result_t result)
     {
         MXS_ERROR("Could not delete old cache item.");
     }
+}
+
+int CacheFilterSession::continue_routing(GWBUF* pPacket)
+{
+    if (m_invalidate && m_state == CACHE_EXPECTING_RESPONSE)
+    {
+        qc_parse_result_t parse_result = qc_parse(pPacket, QC_COLLECT_TABLES);
+
+        if (parse_result == QC_QUERY_PARSED)
+        {
+            update_table_names(pPacket);
+        }
+        else
+        {
+            MXS_WARNING("Invalidation is enabled but the current statement could not "
+                        "be parsed. Consequently, the result cannot be cached.");
+            m_state = CACHE_IGNORING_RESPONSE;
+        }
+    }
+
+    return m_down.routeQuery(pPacket);
 }
