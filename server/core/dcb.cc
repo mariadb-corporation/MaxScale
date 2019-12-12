@@ -1694,36 +1694,33 @@ int ClientDCB::ssl_handshake()
         return -1;
     }
 
-    MXB_AT_DEBUG(std::string user = m_session->user());
-
     int ssl_rval = SSL_accept(m_encryption.handle);
 
     switch (SSL_get_error(m_encryption.handle, ssl_rval))
     {
     case SSL_ERROR_NONE:
-        MXS_DEBUG("SSL_accept done for %s@%s", user.c_str(), m_remote.c_str());
+        MXS_DEBUG("SSL_accept done for %s", m_remote.c_str());
         m_encryption.state = SSLState::ESTABLISHED;
         m_encryption.read_want_write = false;
         return 1;
 
     case SSL_ERROR_WANT_READ:
-        MXS_DEBUG("SSL_accept ongoing want read for %s@%s", user.c_str(), m_remote.c_str());
+        MXS_DEBUG("SSL_accept ongoing want read for %s", m_remote.c_str());
         return 0;
 
     case SSL_ERROR_WANT_WRITE:
-        MXS_DEBUG("SSL_accept ongoing want write for %s@%s", user.c_str(), m_remote.c_str());
+        MXS_DEBUG("SSL_accept ongoing want write for %s", m_remote.c_str());
         m_encryption.read_want_write = true;
         return 0;
 
     case SSL_ERROR_ZERO_RETURN:
-        MXS_DEBUG("SSL error, shut down cleanly during SSL accept %s@%s", user.c_str(), m_remote.c_str());
+        MXS_DEBUG("SSL error, shut down cleanly during SSL accept %s", m_remote.c_str());
         log_errors_SSL(0);
         trigger_hangup_event();
         return 0;
 
     case SSL_ERROR_SYSCALL:
-        MXS_DEBUG("SSL connection SSL_ERROR_SYSCALL error during accept %s@%s",
-                  user.c_str(), m_remote.c_str());
+        MXS_DEBUG("SSL connection SSL_ERROR_SYSCALL error during accept %s", m_remote.c_str());
         if (log_errors_SSL(ssl_rval) < 0)
         {
             m_encryption.state = SSLState::HANDSHAKE_FAILED;
@@ -1736,8 +1733,7 @@ int ClientDCB::ssl_handshake()
         }
 
     default:
-        MXS_DEBUG("SSL connection shut down with error during SSL accept %s@%s",
-                  user.c_str(), m_remote.c_str());
+        MXS_DEBUG("SSL connection shut down with error during SSL accept %s", m_remote.c_str());
         if (log_errors_SSL(ssl_rval) < 0)
         {
             m_encryption.state = SSLState::HANDSHAKE_FAILED;
