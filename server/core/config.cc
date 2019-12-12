@@ -144,23 +144,6 @@ const char CN_USERS_REFRESH_TIME[] = "users_refresh_time";
 const char CN_USERS_REFRESH_INTERVAL[] = "users_refresh_interval";
 }
 
-// Values for the `ssl` parameter. These are plain boolean types but for legacy
-// reasons the required and disabled keywords need to be allowed.
-const MXS_ENUM_VALUE ssl_values[] =
-{
-    {"required", 1              },
-    {"true",     1              },
-    {"yes",      1              },
-    {"on",       1              },
-    {"1",        1              },
-    {"disabled", 0              },
-    {"false",    0              },
-    {"no",       0              },
-    {"off",      0              },
-    {"0",        0              },
-    {NULL}
-};
-
 const MXS_MODULE_PARAM config_filter_params[] =
 {
     {
@@ -2357,60 +2340,6 @@ bool config_can_modify_at_runtime(const char* name)
     };
 
     return static_params.count(name);
-}
-
-bool config_create_ssl(const char* name,
-                       const MXS_CONFIG_PARAMETER& params,
-                       bool require_cert,
-                       std::unique_ptr<mxs::SSLContext>* dest)
-{
-    bool ok = true;
-    *dest = nullptr;
-
-    // The enum values convert to bool
-    int value = params.get_enum(CN_SSL, ssl_values);
-    mxb_assert(value != -1);
-
-    if (value)
-    {
-        if (!params.contains(CN_SSL_CA_CERT))
-        {
-            MXS_ERROR("CA Certificate missing for '%s'."
-                      "Please provide the path to the certificate authority "
-                      "certificate by adding the ssl_ca_cert=<path> parameter",
-                      name);
-            ok = false;
-        }
-
-        if (require_cert)
-        {
-            if (!params.contains(CN_SSL_CERT))
-            {
-                MXS_ERROR("Server certificate missing for listener '%s'."
-                          "Please provide the path to the server certificate by adding "
-                          "the ssl_cert=<path> parameter",
-                          name);
-                ok = false;
-            }
-
-            if (!params.contains(CN_SSL_KEY))
-            {
-                MXS_ERROR("Server private key missing for listener '%s'. "
-                          "Please provide the path to the server certificate key by "
-                          "adding the ssl_key=<path> parameter",
-                          name);
-                ok = false;
-            }
-        }
-
-        if (ok)
-        {
-            *dest = mxs::SSLContext::create(params);
-            ok = dest->get();
-        }
-    }
-
-    return ok;
 }
 
 void config_set_global_defaults()

@@ -210,31 +210,19 @@ SSLConfig::SSLConfig(const MXS_CONFIG_PARAMETER& params)
 // static
 std::unique_ptr<SSLContext> SSLContext::create(const MXS_CONFIG_PARAMETER& params)
 {
-    mxb_assert(access(params.get_string(CN_SSL_CA_CERT).c_str(), F_OK) == 0);
-    mxb_assert(params.get_string(CN_SSL_CERT).empty()
-               || access(params.get_string(CN_SSL_CERT).c_str(), F_OK) == 0);
-    mxb_assert(params.get_string(CN_SSL_KEY).empty()
-               || access(params.get_string(CN_SSL_KEY).c_str(), F_OK) == 0);
-
-    std::unique_ptr<SSLContext> ssl(new(std::nothrow) SSLContext(SSLConfig(params)));
-
-    if (ssl && !ssl->init())
+    std::unique_ptr<SSLContext> rval(new(std::nothrow) SSLContext());
+    if (rval)
     {
-        ssl.reset();
+        if (!rval->configure(params))
+        {
+            rval = nullptr;
+        }
     }
-
-    return ssl;
-}
-
-SSLContext::SSLContext(const SSLConfig& cfg)
-    : m_cfg(cfg)
-{
+    return rval;
 }
 
 bool SSLContext::init()
 {
-    bool rval = true;
-
     switch (m_cfg.version)
     {
     case SERVICE_TLS10:
@@ -425,17 +413,15 @@ SSLContext::~SSLContext()
 
 SSLContext& SSLContext::operator=(SSLContext&& rhs) noexcept
 {
-    m_cfg = rhs.m_cfg;
-    m_method = nullptr;
-    SSL_CTX_free(m_ctx);
-    m_ctx = nullptr;
+    reset();
+    m_cfg = std::move(rhs.m_cfg);
     std::swap(m_method, rhs.m_method);
     std::swap(m_ctx, rhs.m_ctx);
     return *this;
 }
 
 SSLProvider::SSLProvider(std::unique_ptr<mxs::SSLContext> context)
-    : m_context {std::move(context)}
+    : m_context{std::move(context)}
 {
 }
 
@@ -470,4 +456,99 @@ std::string SSLConfig::to_string() const
 
     return ss.str();
 }
+
+bool
+SSLContext::read_configuration(const std::string& name, const MXS_CONFIG_PARAMETER& params, bool require_cert)
+{
+    bool ok = true;
+    // The enum values convert to bool
+    int value = params.get_enum(CN_SSL, ssl_setting_values());
+    mxb_assert(value != -1);
+    if (value)
+    {
+        auto namez = name.c_str();
+        if (!params.contains(CN_SSL_CA_CERT))
+        {
+            MXS_ERROR("CA Certificate missing for '%s'."
+                      "Please provide the path to the certificate authority "
+                      "certificate by adding the ssl_ca_cert=<path> parameter",
+                      namez);
+            ok = false;
+        }
+
+        if (require_cert)
+        {
+            if (!params.contains(CN_SSL_CERT))
+            {
+                MXS_ERROR("Server certificate missing for listener '%s'."
+                          "Please provide the path to the server certificate by adding "
+                          "the ssl_cert=<path> parameter",
+                          namez);
+                ok = false;
+            }
+
+            if (!params.contains(CN_SSL_KEY))
+            {
+                MXS_ERROR("Server private key missing for listener '%s'. "
+                          "Please provide the path to the server certificate key by "
+                          "adding the ssl_key=<path> parameter",
+                          namez);
+                ok = false;
+            }
+        }
+
+        if (ok)
+        {
+            ok = configure(params);
+        }
+    }
+    else
+    {
+        // OK, no SSL configured. Reset to empty.
+        reset();
+    }
+    return ok;
+}
+
+void SSLContext::reset()
+{
+    m_cfg = SSLConfig();
+    m_method = nullptr;
+    SSL_CTX_free(m_ctx);
+    m_ctx = nullptr;
+}
+
+bool SSLContext::configure(const MXS_CONFIG_PARAMETER& params)
+{
+    reset();
+    mxb_assert(access(params.get_string(CN_SSL_CA_CERT).c_str(), F_OK) == 0);
+    mxb_assert(params.get_string(CN_SSL_CERT).empty()
+               || access(params.get_string(CN_SSL_CERT).c_str(), F_OK) == 0);
+    mxb_assert(params.get_string(CN_SSL_KEY).empty()
+               || access(params.get_string(CN_SSL_KEY).c_str(), F_OK) == 0);
+
+    m_cfg = SSLConfig(params);
+    return init();
+}
+}
+
+const MXS_ENUM_VALUE* ssl_setting_values()
+{
+    // Values for the `ssl` parameter. These are plain boolean types but for legacy
+    // reasons the required and disabled keywords need to be allowed.
+    static const MXS_ENUM_VALUE ssl_values[] =
+    {
+        {"required", 1},
+        {"true",     1},
+        {"yes",      1},
+        {"on",       1},
+        {"1",        1},
+        {"disabled", 0},
+        {"false",    0},
+        {"no",       0},
+        {"off",      0},
+        {"0",        0},
+        {NULL}
+    };
+    return ssl_values;
 }

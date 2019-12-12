@@ -55,6 +55,7 @@ ssl_method_type_t string_to_ssl_method_type(const char* str);
 #define SSL_ERROR_ACCEPT_FAILED  2
 
 extern const MXS_ENUM_VALUE ssl_version_values[];
+const MXS_ENUM_VALUE* ssl_setting_values();
 
 // The concrete implementation of the SSLProvider class (hides the dependency on routingworker.hh)
 class SSLProviderImp;
@@ -118,14 +119,25 @@ public:
         return m_ctx;
     }
 
+    /**
+     * Configure the SSLContext. Empty configuration is accepted.
+     *
+     * @param name Owning object name. Printed to error messages.
+     * @param params Configuration parameters
+     * @param require_cert Are certificates required
+     * @return True on success
+     */
+    bool read_configuration(const std::string& name, const MXS_CONFIG_PARAMETER& params, bool require_cert);
+
 private:
+    bool configure(const MXS_CONFIG_PARAMETER& params);
+    void reset();
+    bool init();
+
     SSL_CTX*    m_ctx {nullptr};
     SSL_METHOD* m_method {nullptr};         /**<  SSLv3 or TLS1.0/1.1/1.2 methods
                                              * see: https://www.openssl.org/docs/ssl/SSL_CTX_new.html */
     SSLConfig m_cfg;
-
-    SSLContext(const SSLConfig& cfg);
-    bool init();
 };
 
 // A SSL connection provider (incoming or outgoing). Used by servers and listeners.

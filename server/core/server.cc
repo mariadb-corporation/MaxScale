@@ -116,11 +116,17 @@ Server* Server::server_alloc(const char* name, const MXS_CONFIG_PARAMETER& param
         return NULL;
     }
 
-    std::unique_ptr<mxs::SSLContext> ssl;
-    if (!config_create_ssl(name, params, false, &ssl))
+    std::unique_ptr<mxs::SSLContext> ssl(new mxs::SSLContext);
+    if (!ssl || !ssl->read_configuration(name, params, false))
     {
         MXS_ERROR("Unable to initialize SSL for server '%s'", name);
         return NULL;
+    }
+    // An empty ssl config should result in an empty pointer. This can be removed if Server stores SSLContext
+    // as value.
+    if (!ssl->valid())
+    {
+        ssl = nullptr;
     }
 
     Server* server = new(std::nothrow) Server(name, std::move(ssl));
@@ -604,7 +610,9 @@ const MXS_MODULE_PARAM* common_server_params()
         {CN_PERSISTPOOLMAX, MXS_MODULE_PARAM_COUNT,    "0"},
         {CN_PERSISTMAXTIME, MXS_MODULE_PARAM_DURATION, "0",       MXS_MODULE_OPT_DURATION_S},
         {CN_PROXY_PROTOCOL, MXS_MODULE_PARAM_BOOL,     "false"},
-        {CN_SSL,            MXS_MODULE_PARAM_ENUM,     "false",   MXS_MODULE_OPT_ENUM_UNIQUE, ssl_values},
+        {
+            CN_SSL,         MXS_MODULE_PARAM_ENUM, "false", MXS_MODULE_OPT_ENUM_UNIQUE, ssl_setting_values()
+        },
         {CN_SSL_CERT,       MXS_MODULE_PARAM_PATH,     NULL,      MXS_MODULE_OPT_PATH_R_OK },
         {CN_SSL_KEY,        MXS_MODULE_PARAM_PATH,     NULL,      MXS_MODULE_OPT_PATH_R_OK },
         {CN_SSL_CA_CERT,    MXS_MODULE_PARAM_PATH,     NULL,      MXS_MODULE_OPT_PATH_R_OK },

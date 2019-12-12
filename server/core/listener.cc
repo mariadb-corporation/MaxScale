@@ -245,17 +245,14 @@ SListener Listener::create(const std::string& name,
         return nullptr;
     }
 
-    unique_ptr<mxs::SSLContext> ssl_info;
-    if (!config_create_ssl(name.c_str(), params, true, &ssl_info))
+    mxs::SSLContext ssl;
+    if (!ssl.read_configuration(name, params, true))
     {
         return nullptr;
     }
 
     unique_ptr<ListenerSessionData> shared_data(new ListenerSessionData(sql_mode, service));
-    if (ssl_info)
-    {
-        shared_data->m_ssl = std::move(*ssl_info);
-    }
+    shared_data->m_ssl = std::move(ssl);
 
     // These two values being NULL trigger the loading of the default
     // authenticators that are specific to each protocol module
@@ -1055,7 +1052,9 @@ const MXS_MODULE_PARAM* common_listener_params()
         },
         {CN_ADDRESS,       MXS_MODULE_PARAM_STRING,  "::"},
         {CN_AUTHENTICATOR, MXS_MODULE_PARAM_STRING},
-        {CN_SSL,           MXS_MODULE_PARAM_ENUM,    "false",     MXS_MODULE_OPT_ENUM_UNIQUE, ssl_values},
+        {
+            CN_SSL,        MXS_MODULE_PARAM_ENUM, "false", MXS_MODULE_OPT_ENUM_UNIQUE, ssl_setting_values()
+        },
         {CN_SSL_CERT,      MXS_MODULE_PARAM_PATH,    NULL,        MXS_MODULE_OPT_PATH_R_OK},
         {CN_SSL_KEY,       MXS_MODULE_PARAM_PATH,    NULL,        MXS_MODULE_OPT_PATH_R_OK},
         {CN_SSL_CA_CERT,   MXS_MODULE_PARAM_PATH,    NULL,        MXS_MODULE_OPT_PATH_R_OK},

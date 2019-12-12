@@ -44,7 +44,6 @@ enum
 /** Object type specific parameter lists */
 extern const MXS_MODULE_PARAM config_filter_params[];
 extern const char* config_pre_parse_global_params[];
-extern const MXS_ENUM_VALUE ssl_values[];
 
 /**
  * Finalize the configuration subsystem
@@ -123,23 +122,6 @@ bool config_replace_param(CONFIG_CONTEXT* obj, const char* key, const char* valu
  * @param key Name of the parameter to remove
  */
 void config_remove_param(CONFIG_CONTEXT* obj, const char* name);
-
-/**
- * @brief Construct an SSL structure
- *
- * The SSL structure is used by both listeners and servers.
- *
- * @param name         Name of object being created (usually server or listener name)
- * @param params       Parameters to create SSL from
- * @param require_cert Whether certificates are required
- * @param dest         Unique pointer where initialized SSL structure is stored
- *
- * @return True on success, false on error
- */
-bool config_create_ssl(const char* name,
-                       const MXS_CONFIG_PARAMETER& params,
-                       bool require_cert,
-                       std::unique_ptr<mxs::SSLContext>* dest);
 
 /**
  * @brief Check if all SSL parameters are defined
