@@ -82,8 +82,10 @@ public:
                              uint32_t flags,
                              uint32_t soft_ttl,
                              uint32_t hard_ttl,
-                             GWBUF** ppValue) const
+                             GWBUF** ppValue,
+                             std::function<void (cache_result_t, GWBUF*)> cb) const
     {
+        // TODO: Use cb, i.e. extend Cache API.
         return m_cache.get_value(token(), key, flags, soft_ttl, hard_ttl, ppValue);
     }
 

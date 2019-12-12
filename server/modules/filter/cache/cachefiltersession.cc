@@ -1073,11 +1073,59 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(cache_acti
 
     if (should_use(cache_action) && rules.should_use(m_pSession))
     {
+        std::weak_ptr<CacheFilterSession> sWeak { m_sThis };
+
+        auto cb = [sWeak, pPacket](cache_result_t result, GWBUF* pResponse)
+        {
+            std::shared_ptr<CacheFilterSession> sThis = sWeak.lock();
+
+            if (sThis)
+            {
+                auto routing_action = sThis->get_value_handler(pPacket, result, pResponse);
+
+                if (routing_action == ROUTING_CONTINUE)
+                {
+                    sThis->continue_routing(pPacket);
+                }
+                else
+                {
+                    // State is ROUTING_ABORT, which implies that pResponse contains the
+                    // needed response. All we need to do is to send it to the client.
+
+                    mxs::ReplyRoute down;
+                    mxs::Reply reply;
+
+                    sThis->m_up.clientReply(pResponse, down, reply);
+                }
+            }
+            else
+            {
+                // Ok, so the session was terminated before we got a reply.
+                gwbuf_free(pPacket);
+                gwbuf_free(pResponse);
+            }
+        };
+
         uint32_t flags = CACHE_FLAGS_INCLUDE_STALE;
         GWBUF* pResponse;
-        cache_result_t result = m_sCache->get_value(m_key, flags, m_soft_ttl, m_hard_ttl, &pResponse);
 
-        routing_action = get_value_handler(pPacket, result, pResponse);
+        cache_result_t result = m_sCache->get_value(m_key, flags, m_soft_ttl, m_hard_ttl, &pResponse, cb);
+
+        if (!CACHE_RESULT_IS_PENDING(result))
+        {
+            routing_action = get_value_handler(pPacket, result, pResponse);
+
+            if (routing_action == ROUTING_ABORT)
+            {
+                // All set, arrange for the response to be delivered when
+                // we return from the routeQuery() processing.
+                set_response(pResponse);
+            }
+        }
+        else
+        {
+            routing_action = ROUTING_ABORT;
+        }
     }
     else if (should_populate(cache_action))
     {
@@ -1456,8 +1504,6 @@ CacheFilterSession::routing_action_t CacheFilterSession::get_value_handler(GWBUF
 
         m_state = CACHE_EXPECTING_NOTHING;
         gwbuf_free(pPacket);
-
-        set_response(pResponse);
     }
 
     return routing_action;
