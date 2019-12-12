@@ -104,7 +104,7 @@ then
     sudo yum clean all
     sudo yum update -y
     unset enable_power_tools
-    yum repolist all | grep PowerTools 
+    yum repolist all | grep PowerTools
     if [ $? == 0 ]
     then
         enable_power_tools="enablerepo=PowerTools"
