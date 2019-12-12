@@ -699,8 +699,7 @@ bool MariaDBClientConnection::perform_authentication()
                 {
                     // Authentication failed. TODO: send an error message here when needed.
                     m_auth_state = AuthState::FAIL;
-                    mxb_assert(m_session->listener);
-                    m_session->listener->mark_auth_as_failed(m_dcb->remote());
+                    m_session->listener_data()->mark_auth_as_failed(m_dcb->remote());
                 }
             }
             break;
@@ -747,7 +746,7 @@ bool MariaDBClientConnection::perform_authentication()
             break;
 
         case AuthState::COMPLETE:
-            m_sql_mode = m_session->listener->sql_mode();
+            m_sql_mode = m_session->listener_data()->m_default_sql_mode;
             mxs_mysql_send_ok(m_dcb, m_session_data->next_sequence, 0, NULL);
             if (m_dcb->readq())
             {
@@ -2368,7 +2367,7 @@ bool MariaDBClientConnection::read_protocol_packet(mxs::Buffer* output)
 
 bool MariaDBClientConnection::require_ssl() const
 {
-    return m_session->listener->ssl().context();
+    return m_session->listener_data()->m_ssl.valid();
 }
 
 bool MariaDBClientConnection::read_first_client_packet(mxs::Buffer* output)

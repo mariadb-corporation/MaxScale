@@ -31,6 +31,7 @@ struct mxs_filter_session;
 struct mxs_router_session;
 class SERVER;
 class Listener;
+class ListenerSessionData;
 using SListener = std::shared_ptr<Listener>;
 
 static constexpr uint32_t SESSION_TRX_INACTIVE = 0;
@@ -211,6 +212,7 @@ public:
     virtual mxs::ClientConnection*       client_connection() = 0;
     virtual const mxs::ClientConnection* client_connection() const = 0;
     virtual void                         set_client_connection(mxs::ClientConnection* client_conn) = 0;
+    virtual ListenerSessionData*         listener_data() = 0;
 
     /**
      * Get the transaction state of the session.
@@ -367,12 +369,11 @@ protected:
     std::string m_database;
     std::string m_pending_database;
 
-    MXS_SESSION(const SListener& listener, const std::string& host);
+    MXS_SESSION(const std::string& host, SERVICE* service);
 
 public:
 
-    ClientDCB* client_dcb;  /*< The client connection */
-    SListener  listener;    /*< The origin of the connection */
+    ClientDCB* client_dcb;      /*< The client connection */
 
     MXS_SESSION_STATS stats;                    /*< Session statistics */
     SERVICE*          service;                  /*< The service this session is using */
@@ -385,7 +386,9 @@ public:
         SERVICE*      service;      /*< Service where the response originated */
     }               response;       /*< Shortcircuited response */
     session_close_t close_reason;   /*< Reason why the session was closed */
-    bool            load_active;    /*< Data streaming state (for LOAD DATA LOCAL INFILE) */
+
+    bool load_active;           /*< Data streaming state (for LOAD DATA LOCAL INFILE) */
+    bool m_autocommit {false};  /*< Whether autocommit is on. */
 
     ProtocolData* protocol_data() const;
     void          set_protocol_data(std::unique_ptr<ProtocolData> new_data);
@@ -393,7 +396,6 @@ public:
 private:
     std::unique_ptr<ProtocolData> m_protocol_data;
     uint32_t                      m_trx_state {SESSION_TRX_INACTIVE};
-    bool                          m_autocommit; /*< Whether autocommit is on. */
 };
 
 /**

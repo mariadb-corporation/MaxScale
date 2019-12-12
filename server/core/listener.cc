@@ -45,6 +45,7 @@
 #include "internal/config.hh"
 
 using std::chrono::seconds;
+using std::unique_ptr;
 
 static std::list<SListener> all_listeners;
 static std::mutex listener_lock;
@@ -121,9 +122,8 @@ Listener::Listener(Service* service,
                    uint16_t port,
                    const std::string& protocol,
                    std::unique_ptr<mxs::ProtocolModule> proto_instance,
-                   std::unique_ptr<mxs::SSLContext> ssl,
                    const MXS_CONFIG_PARAMETER& params,
-                   qc_sql_mode_t sql_mode)
+                   unique_ptr<ListenerSessionData> shared_data)
     : MXB_POLL_DATA{Listener::poll_handler}
     , m_name(name)
     , m_state(CREATED)
@@ -133,8 +133,7 @@ Listener::Listener(Service* service,
     , m_proto_module(std::move(proto_instance))
     , m_service(service)
     , m_params(params)
-    , m_ssl_provider(std::move(ssl))
-    , m_sql_mode(sql_mode)
+    , m_shared_data(std::move(shared_data))
 {
     if (strcasecmp(service->router_name(), "cli") == 0 || strcasecmp(service->router_name(), "maxinfo") == 0)
     {
@@ -246,11 +245,16 @@ SListener Listener::create(const std::string& name,
         return nullptr;
     }
 
-    std::unique_ptr<mxs::SSLContext> ssl_info;
-
+    unique_ptr<mxs::SSLContext> ssl_info;
     if (!config_create_ssl(name.c_str(), params, true, &ssl_info))
     {
         return nullptr;
+    }
+
+    unique_ptr<ListenerSessionData> shared_data(new ListenerSessionData(sql_mode, service));
+    if (ssl_info)
+    {
+        shared_data->m_ssl = std::move(*ssl_info);
     }
 
     // These two values being NULL trigger the loading of the default
@@ -312,21 +316,13 @@ SListener Listener::create(const std::string& name,
 
     SListener listener(new(std::nothrow) Listener(service, name, address, port,
                                                   protocol, std::move(protocol_module),
-                                                  std::move(ssl_info), params, sql_mode));
+                                                  params, std::move(shared_data)));
     if (listener)
     {
         if (new_user_manager)
         {
             service->set_user_account_manager(std::move(new_user_manager));
         }
-
-        // Storing a self-reference to the listener makes it possible to easily
-        // increment the reference count when new connections are accepted.
-        listener->m_self = listener;
-
-        // Note: This isn't good: we modify the service from a listener and the service itself should do this.
-        // TODO: Currently unused, remove if no longer needed
-        // service->capabilities |= auth_mod->module_capabilities;
 
         std::lock_guard<std::mutex> guard(listener_lock);
         all_listeners.push_back(listener);
@@ -823,7 +819,7 @@ static ClientConn accept_one_connection(int fd)
 
 ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const char* host)
 {
-    auto* session = new(std::nothrow) Session(m_self, m_proto_module, host);
+    auto* session = new(std::nothrow) Session(m_proto_module, m_shared_data, host);
     if (!session)
     {
         MXS_OOM();
@@ -1029,13 +1025,19 @@ void Listener::accept_connections()
     }
 }
 
-void Listener::mark_auth_as_failed(const std::string& remote)
+void ListenerSessionData::mark_auth_as_failed(const std::string& remote)
 {
     if (rate_limit.mark_auth_as_failed(remote))
     {
         MXS_NOTICE("Host '%s' blocked for %d seconds due to too many authentication failures.",
                    remote.c_str(), BLOCK_TIME);
     }
+}
+
+ListenerSessionData::ListenerSessionData(qc_sql_mode_t default_sql_mode, SERVICE* service)
+    : m_default_sql_mode(default_sql_mode)
+    , m_service(*service)
+{
 }
 
 const MXS_MODULE_PARAM* common_listener_params()

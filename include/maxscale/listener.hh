@@ -30,6 +30,7 @@ class DCB;
 class Service;
 class Listener;
 using SListener = std::shared_ptr<Listener>;
+class ListenerSessionData;
 
 /**
  * The Listener class is used to link a network port to a service. It defines the name of the
@@ -141,32 +142,12 @@ public:
         return m_type;
     }
 
-    /**
-     * Mark authentication as failed
-     *
-     * This updates the number of failures that have occurred from this host. If the number of authentications
-     * exceeds a certain value, any attempts to connect from the remote in quesion will be rejected.
-     *
-     * @param remote The address where the connection originated
-     */
-    void mark_auth_as_failed(const std::string& remote);
-
     // Functions that are temporarily public
     bool create_listener_config(const char* filename);
 
-    const mxs::SSLProvider& ssl() const
+    std::shared_ptr<ListenerSessionData> shared_data() const
     {
-        return m_ssl_provider;
-    }
-
-    mxs::SSLProvider& ssl()
-    {
-        return m_ssl_provider;
-    }
-
-    const qc_sql_mode_t sql_mode() const
-    {
-        return m_sql_mode;
+        return m_shared_data;
     }
 
 private:
@@ -190,26 +171,13 @@ private:
 
     Service*             m_service;         /**< The service to which new sessions are sent */
     MXS_CONFIG_PARAMETER m_params;          /**< Configuration parameters */
-    mxs::SSLProvider     m_ssl_provider;
-    qc_sql_mode_t        m_sql_mode;        /**< Default sql mode for the listener */
 
     Type m_type;    /**< The type of the listener */
 
     mxs::WorkerLocal<int> m_local_fd {-1};  /**< File descriptor the listener listens on */
     int                   m_shared_fd {-1}; /**< File descriptor the listener listens on */
 
-    /** A shared pointer to the listener itself that is passed as the argument to
-     * the protocol's accept function. This allows client connections to live
-     * longer than the listener they started on.
-     *
-     * This will eventually be replaced with a shared_ptr of the authenticator instance as that is
-     * what is actually required by the client sessions.
-     *
-     * In practice as a service must outlive all sessions on it, the reference could be owned by the service
-     * instead of each individual client. This would remove the need to increment the listener reference
-     * count every time a client is accepted.
-     */
-    SListener m_self;
+    std::shared_ptr<ListenerSessionData> m_shared_data; /**< Data shared with sessions */
 
     /**
      * Creates a new listener that points to a service
@@ -219,15 +187,13 @@ private:
      * @param address       The address where the listener listens
      * @param port          The port on which the listener listens
      * @param protocol      The protocol module to use
-     * @param ssl           The SSL configuration
      */
     Listener(Service* service, const std::string& name,
              const std::string& address, uint16_t port,
              const std::string& protocol,
              std::unique_ptr<mxs::ProtocolModule> proto_instance,
-             std::unique_ptr<mxs::SSLContext> ssl,
              const MXS_CONFIG_PARAMETER& params,
-             qc_sql_mode_t sql_mode);
+             std::unique_ptr<ListenerSessionData> shared_data);
 
     /**
      * Listen on a file descriptor shared between all workers
@@ -296,3 +262,32 @@ private:
  * @return The listeners that point to the service
  */
 std::vector<SListener> listener_find_by_service(const SERVICE* service);
+
+/**
+ * Listener settings and other data that is shared with all sessions created by the listener.
+ * Should be referred to with shared_ptr.
+ *
+ * The contents should not change once a session with the data has been created, as this could
+ * create concurrency issues. If listener settings are changed, the listener should create a new
+ * shared data object and share that with new sessions. The old sessions will keep using the
+ * previous settings.
+ */
+class ListenerSessionData
+{
+public:
+    ListenerSessionData(qc_sql_mode_t default_sql_mode, SERVICE* service);
+    ListenerSessionData(const ListenerSessionData&) = delete;
+    ListenerSessionData& operator=(const ListenerSessionData&) = delete;
+
+    /**
+     * Increment the number of authentication failures from the remote address. If the number
+     * exceeds the configured limit, future attempts to connect from the remote are be rejected.
+     *
+     * @param remote The address where the connection originated
+     */
+    void mark_auth_as_failed(const std::string& remote);
+
+    mxs::SSLContext     m_ssl;                      /**< SSL settings */
+    const qc_sql_mode_t m_default_sql_mode;         /**< Default sql mode for the listener */
+    SERVICE&            m_service;                  /**< The service the listener feeds */
+};

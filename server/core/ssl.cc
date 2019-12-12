@@ -35,6 +35,8 @@
 #include <maxscale/poll.hh>
 #include <maxscale/service.hh>
 #include <maxscale/routingworker.hh>
+#include <maxscale/ssl.hh>
+
 
 static RSA* rsa_512 = NULL;
 static RSA* rsa_1024 = NULL;
@@ -419,6 +421,17 @@ bool SSLContext::init()
 SSLContext::~SSLContext()
 {
     SSL_CTX_free(m_ctx);
+}
+
+SSLContext& SSLContext::operator=(SSLContext&& rhs) noexcept
+{
+    m_cfg = rhs.m_cfg;
+    m_method = nullptr;
+    SSL_CTX_free(m_ctx);
+    m_ctx = nullptr;
+    std::swap(m_method, rhs.m_method);
+    std::swap(m_ctx, rhs.m_ctx);
+    return *this;
 }
 
 SSLProvider::SSLProvider(std::unique_ptr<mxs::SSLContext> context)

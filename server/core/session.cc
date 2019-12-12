@@ -74,20 +74,18 @@ struct
 };
 }
 
-MXS_SESSION::MXS_SESSION(const SListener& listener, const std::string& host)
+MXS_SESSION::MXS_SESSION(const std::string& host, SERVICE* service)
     : m_state(MXS_SESSION::State::CREATED)
     , m_id(session_get_next_id())
     , m_host(host)
     , client_dcb(nullptr)
-    , listener(listener)
     , stats{time(0)}
-    , service(listener ? listener->service() : nullptr)
+    , service(service)
     , refcount(1)
     , qualifies_for_pooling(false)
     , response{}
     , close_reason(SESSION_CLOSE_NONE)
     , load_active(false)
-    , m_autocommit(listener->sql_mode() == QC_SQL_MODE_ORACLE ? false : true)
 {
     mxs_rworker_register_session(this);
 }
@@ -776,12 +774,13 @@ const char* session_get_close_reason(const MXS_SESSION* session)
     }
 }
 
-Session::Session(const SListener& listener,
-                 std::shared_ptr<mxs::ProtocolModule> protocol,
+Session::Session(std::shared_ptr<mxs::ProtocolModule> protocol,
+                 std::shared_ptr<ListenerSessionData> listener_data,
                  const std::string& host)
-    : MXS_SESSION(listener, host)
-    , m_down(static_cast<Service*>(listener->service())->get_connection(this, this))
+    : MXS_SESSION(host, &listener_data->m_service)
+    , m_down(static_cast<Service&>(listener_data->m_service).get_connection(this, this))
     , m_protocol(std::move(protocol))
+    , m_listener_data(std::move(listener_data))
 {
     if (service->config().retain_last_statements != -1)         // Explicitly set for the service
     {
@@ -792,6 +791,7 @@ Session::Session(const SListener& listener,
         m_retain_last_statements = this_unit.retain_last_statements;
     }
 
+    set_autocommit(!(m_listener_data->m_default_sql_mode == QC_SQL_MODE_ORACLE));
     mxb::atomic::add(&service->stats().n_current, 1, mxb::atomic::RELAXED);
     mxb_assert(service->stats().n_current >= 0);
 }
@@ -1498,4 +1498,9 @@ void Session::tick(int64_t idle)
             }
         }
     }
+}
+
+ListenerSessionData* Session::listener_data()
+{
+    return m_listener_data.get();
 }

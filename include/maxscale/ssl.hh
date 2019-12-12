@@ -83,8 +83,12 @@ struct SSLConfig : public mxb::SSLConfig
 class SSLContext
 {
 public:
+    SSLContext() = default;
+    SSLContext& operator=(SSLContext&& rhs) noexcept;
+
     SSLContext& operator=(SSLContext&) = delete;
     SSLContext(SSLContext&) = delete;
+    ~SSLContext();
 
     /**
      * Create a new SSL configuration
@@ -109,11 +113,14 @@ public:
         return m_cfg;
     }
 
-    ~SSLContext();
+    bool valid() const
+    {
+        return m_ctx;
+    }
 
 private:
-    SSL_CTX*    m_ctx = nullptr;
-    SSL_METHOD* m_method = nullptr;         /**<  SSLv3 or TLS1.0/1.1/1.2 methods
+    SSL_CTX*    m_ctx {nullptr};
+    SSL_METHOD* m_method {nullptr};         /**<  SSLv3 or TLS1.0/1.1/1.2 methods
                                              * see: https://www.openssl.org/docs/ssl/SSL_CTX_new.html */
     SSLConfig m_cfg;
 

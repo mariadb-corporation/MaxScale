@@ -1688,8 +1688,8 @@ mxs::ClientConnection* ClientDCB::protocol() const
  */
 int ClientDCB::ssl_handshake()
 {
-    if (!m_session->listener->ssl().context()
-        || (!m_encryption.handle && !create_SSL(m_session->listener->ssl().context())))
+    if (!m_session->listener_data()->m_ssl.valid()
+        || (!m_encryption.handle && !create_SSL(&m_session->listener_data()->m_ssl)))
     {
         return -1;
     }

@@ -40,6 +40,7 @@ void dListSessions(DCB*);
 
 void printSession(MXS_SESSION*);
 class Server;
+class ListenerSessionData;
 
 // Class that holds the session specific filter data
 class SessionFilter
@@ -107,7 +108,8 @@ public:
     using DCBSet = std::unordered_set<DCB*>;
     using BackendConnectionVector = std::vector<mxs::BackendConnection*>;
 
-    Session(const SListener& listener, std::shared_ptr<mxs::ProtocolModule> protocol,
+    Session(std::shared_ptr<mxs::ProtocolModule> protocol,
+            std::shared_ptr<ListenerSessionData> listener_data,
             const std::string& host);
     ~Session();
 
@@ -169,6 +171,7 @@ public:
 
     mxs::ClientConnection*       client_connection() override;
     const mxs::ClientConnection* client_connection() const override;
+    ListenerSessionData*         listener_data() override;
 
     void set_client_connection(mxs::ClientConnection* client_conn) override;
 
@@ -215,6 +218,10 @@ private:
     // Protocol module, used for creating backend connections. Ownership shared with the listener that
     // created this session.
     std::shared_ptr<mxs::ProtocolModule> m_protocol;
+
+    // Various listener-specific data the session needs. Ownership shared with the listener that
+    // created this session.
+    std::shared_ptr<ListenerSessionData> m_listener_data;
 };
 
 std::unique_ptr<ResultSet> sessionGetList();
