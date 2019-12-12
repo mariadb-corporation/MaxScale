@@ -855,7 +855,7 @@ void BinlogFilterSession::checkStatement(GWBUF** buffer, const REP_HEADER& hdr)
         auto new_db = mxs::pcre2_substitute(config.rewrite_src, db, config.rewrite_dest, &err);
         auto new_sql = mxs::pcre2_substitute(config.rewrite_src, sql, config.rewrite_dest, &err);
 
-        if (new_db.empty() || new_sql.empty())
+        if ((new_db.empty() && !db.empty()) || (new_sql.empty() && !sql.empty()))
         {
             MXS_ERROR("PCRE2 error on pattern '%s' with replacement '%s': %s",
                       config.rewrite_src_pattern.c_str(),

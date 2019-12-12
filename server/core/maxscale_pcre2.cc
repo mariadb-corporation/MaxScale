@@ -263,7 +263,7 @@ std::string pcre2_substitute(pcre2_code* re,
                                   (PCRE2_SPTR) replace.c_str(), replace.length(),
                                   (PCRE2_UCHAR*) &rval[0], &size_tmp)) == PCRE2_ERROR_NOMEMORY)
     {
-        rval.resize(rval.size() * 2);
+        rval.resize(rval.size() * 2 + 1);
         size_tmp = rval.size();
     }
 
