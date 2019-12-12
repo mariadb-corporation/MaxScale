@@ -39,6 +39,15 @@ public:
     ~CacheFilterSession();
 
     /**
+     * Releases the ownership of the CacheFilterSession to the caller.
+     * When the returned shared pointer goes out of scope, the instance
+     * will be deleted.
+     *
+     * @return A shared pointer controlling the life-time of the instance.
+     */
+    std::shared_ptr<CacheFilterSession> release();
+
+    /**
      * Creates a CacheFilterSession instance.
      *
      * @param pCache     Pointer to the cache instance to which this session cache
@@ -169,7 +178,9 @@ private:
 
 private:
     using Tables = std::unordered_set<std::string>;
+    using SCacheFilterSession = std::shared_ptr<CacheFilterSession>;
 
+    SCacheFilterSession   m_sThis;          /**< Shared pointer to this. */
     cache_session_state_t m_state;          /**< What state is the session in, what data is expected. */
     SSessionCache         m_sCache;         /**< The cache instance the session is associated with. */
     GWBUF*                m_res;            /**< The response buffer. */

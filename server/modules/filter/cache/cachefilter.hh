@@ -27,6 +27,8 @@ class CacheFilter : public maxscale::Filter<CacheFilter, CacheFilterSession>
 public:
     ~CacheFilter();
 
+    static void apiFreeSession(MXS_FILTER*, MXS_FILTER_SESSION* pData);
+
     static CacheFilter* create(const char* zName, MXS_CONFIG_PARAMETER* ppParams);
 
     Cache& cache()
@@ -45,7 +47,6 @@ public:
     json_t* diagnostics() const;
 
     uint64_t getCapabilities();
-
 
 private:
     CacheFilter(const std::string& name);
