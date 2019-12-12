@@ -58,7 +58,7 @@ bool Cache::create(const CacheConfig& config,
     }
     else
     {
-        auto_ptr<CacheRules> sRules(CacheRules::create(config.debug.get()));
+        unique_ptr<CacheRules> sRules(CacheRules::create(config.debug.get()));
 
         if (sRules.get())
         {

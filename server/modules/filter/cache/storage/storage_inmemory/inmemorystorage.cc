@@ -20,7 +20,7 @@
 #include "inmemorystoragest.hh"
 #include "inmemorystoragemt.hh"
 
-using std::auto_ptr;
+using std::unique_ptr;
 using std::string;
 
 
@@ -79,7 +79,7 @@ InMemoryStorage* InMemoryStorage::create(const char* zName,
                     (unsigned long)config.max_size);
     }
 
-    auto_ptr<InMemoryStorage> sStorage;
+    unique_ptr<InMemoryStorage> sStorage;
 
     switch (config.thread_model)
     {

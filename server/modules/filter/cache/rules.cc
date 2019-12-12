@@ -408,15 +408,15 @@ CacheRules::~CacheRules()
 }
 
 // static
-std::auto_ptr<CacheRules> CacheRules::create(uint32_t debug)
+std::unique_ptr<CacheRules> CacheRules::create(uint32_t debug)
 {
-    std::auto_ptr<CacheRules> sThis;
+    std::unique_ptr<CacheRules> sThis;
 
     CACHE_RULES* pRules = cache_rules_create(debug);
 
     if (pRules)
     {
-        sThis = std::auto_ptr<CacheRules>(new(std::nothrow) CacheRules(pRules));
+        sThis = std::unique_ptr<CacheRules>(new(std::nothrow) CacheRules(pRules));
     }
 
     return sThis;

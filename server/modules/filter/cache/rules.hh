@@ -203,7 +203,7 @@ public:
      *
      * @return An empty rules object, or NULL in case of error.
      */
-    static std::auto_ptr<CacheRules> create(uint32_t debug);
+    static std::unique_ptr<CacheRules> create(uint32_t debug);
 
     /**
      * Parses the caching rules from a string.

@@ -55,6 +55,6 @@ private:
     CacheFilter& operator=(const CacheFilter&);
 
 private:
-    CacheConfig          m_config;
-    std::auto_ptr<Cache> m_sCache;
+    CacheConfig            m_config;
+    std::unique_ptr<Cache> m_sCache;
 };

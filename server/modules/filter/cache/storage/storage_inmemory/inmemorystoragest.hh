@@ -20,7 +20,7 @@ class InMemoryStorageST : public InMemoryStorage
 public:
     ~InMemoryStorageST();
 
-    typedef std::auto_ptr<InMemoryStorageST> SInMemoryStorageST;
+    typedef std::unique_ptr<InMemoryStorageST> SInMemoryStorageST;
 
     static SInMemoryStorageST Create(const std::string& name,
                                      const Config& config,

@@ -14,7 +14,7 @@
 #define MXS_MODULE_NAME "storage_inmemory"
 #include "inmemorystoragemt.hh"
 
-using std::auto_ptr;
+using std::unique_ptr;
 
 InMemoryStorageMT::InMemoryStorageMT(const std::string& name,
                                      const Config& config)
@@ -26,12 +26,12 @@ InMemoryStorageMT::~InMemoryStorageMT()
 {
 }
 
-auto_ptr<InMemoryStorageMT> InMemoryStorageMT::Create(const std::string& name,
-                                                      const Config& config,
-                                                      int argc,
-                                                      char* argv[])
+unique_ptr<InMemoryStorageMT> InMemoryStorageMT::Create(const std::string& name,
+                                                        const Config& config,
+                                                        int argc,
+                                                        char* argv[])
 {
-    return auto_ptr<InMemoryStorageMT>(new InMemoryStorageMT(name, config));
+    return unique_ptr<InMemoryStorageMT>(new InMemoryStorageMT(name, config));
 }
 
 cache_result_t InMemoryStorageMT::get_info(uint32_t what, json_t** ppInfo) const

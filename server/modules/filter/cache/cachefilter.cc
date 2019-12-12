@@ -24,7 +24,7 @@
 #include "cachemt.hh"
 #include "cachept.hh"
 
-using std::auto_ptr;
+using std::unique_ptr;
 using std::string;
 
 namespace
@@ -184,7 +184,7 @@ CacheFilter* CacheFilter::create(const char* zName, MXS_CONFIG_PARAMETER* ppPara
 
         if (pCache)
         {
-            pFilter->m_sCache = auto_ptr<Cache>(pCache);
+            pFilter->m_sCache = unique_ptr<Cache>(pCache);
         }
         else
         {
