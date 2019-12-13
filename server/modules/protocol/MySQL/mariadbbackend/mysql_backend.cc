@@ -1021,7 +1021,7 @@ static int gw_read_and_write(DCB* dcb)
         {
             stmt = modutil_get_next_MySQL_packet(&read_buffer);
 
-            if (!GWBUF_IS_CONTIGUOUS(stmt))
+            if (stmt && !GWBUF_IS_CONTIGUOUS(stmt))
             {
                 // Make sure the buffer is contiguous
                 stmt = gwbuf_make_contiguous(stmt);
