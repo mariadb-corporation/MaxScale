@@ -13,6 +13,7 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
+#include <libmemcached/memcached.h>
 #include "../../cache_storage_api.hh"
 
 class MemcachedStorage : public Storage
@@ -21,7 +22,7 @@ public:
     MemcachedStorage(const MemcachedStorage&) = delete;
     MemcachedStorage& operator=(const MemcachedStorage&) = delete;
 
-    static bool initialize(uint32_t* pCapabilities);
+    static bool initialize(cache_storage_kind_t* pKind, uint32_t* pCapabilities);
     static void finalize();
 
     ~MemcachedStorage();
@@ -61,8 +62,13 @@ public:
     cache_result_t get_items(uint64_t* pItems) const override final;
 
 private:
-    MemcachedStorage(const std::string& name, const Config& config);
+    MemcachedStorage(const std::string& name,
+                     const Config& config,
+                     const std::string& memcached_config,
+                     memcached_st* pMemc);
 
-    std::string  m_name;
-    const Config m_config;
+    std::string   m_name;
+    const Config  m_config;
+    std::string   m_memcached_config;
+    memcached_st* m_pMemc;
 };
