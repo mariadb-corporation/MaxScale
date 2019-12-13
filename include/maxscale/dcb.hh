@@ -212,6 +212,7 @@ struct DCB : public MXB_POLL_DATA
     }        thread;
     uint32_t n_close = 0;   /** How many times dcb_close has been called. */
     uint64_t m_uid;         /**< Unique identifier for this DCB */
+    bool     is_fake_event = false;
 };
 
 /**

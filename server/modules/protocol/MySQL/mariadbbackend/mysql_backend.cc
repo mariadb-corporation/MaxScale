@@ -27,6 +27,8 @@
 // For setting server status through monitor
 #include "../../../../core/internal/monitormanager.hh"
 
+#include <sstream>
+
 /*
  * MySQL Protocol module for handling the protocol between the gateway
  * and the backend MySQL database.
@@ -348,8 +350,8 @@ static void handle_error_response(DCB* dcb, GWBUF* buffer)
         auto main_worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
         auto target_server = dcb->server;
         main_worker->execute([target_server]() {
-            MonitorManager::set_server_status(target_server, SERVER_MAINT);
-        }, mxb::Worker::EXECUTE_AUTO);
+                                 MonitorManager::set_server_status(target_server, SERVER_MAINT);
+                             }, mxb::Worker::EXECUTE_AUTO);
 
         MXS_ERROR("Server %s has been put into maintenance mode due to the server blocking connections "
                   "from MaxScale. Run 'mysqladmin -h %s -P %d flush-hosts' on this server before taking "
@@ -590,6 +592,23 @@ static int gw_read_backend_event(DCB* dcb)
     return rc;
 }
 
+static std::string get_detailed_error(DCB* dcb)
+{
+    std::ostringstream ss;
+
+    if (int err = gw_getsockerrno(dcb->fd))
+    {
+        ss << " (" << err << ", " << mxs_strerror(err) << ")";
+    }
+    else if (dcb->is_fake_event)
+    {
+        // Fake events should not have TCP socket errors
+        ss << " (Generated event)";
+    }
+
+    return ss.str();
+}
+
 static void do_handle_error(DCB* dcb, mxs_error_action_t action, const char* errmsg)
 {
     bool succp = true;
@@ -597,7 +616,7 @@ static void do_handle_error(DCB* dcb, mxs_error_action_t action, const char* err
 
     mxb_assert(!dcb->dcb_errhandle_called);
 
-    GWBUF* errbuf = mysql_create_custom_error(1, 0, errmsg);
+    GWBUF* errbuf = mysql_create_custom_error(1, 0, (errmsg + get_detailed_error(dcb)).c_str());
     MXS_ROUTER_SESSION* rsession = static_cast<MXS_ROUTER_SESSION*>(session->router_session);
     MXS_ROUTER_OBJECT* router = session->service->router;
     MXS_ROUTER* router_instance = session->service->router_instance;
@@ -1342,7 +1361,7 @@ static int gw_error_backend_event(DCB* dcb)
     }
     else
     {
-        do_handle_error(dcb, ERRACT_NEW_CONNECTION, "Lost connection to backend server.");
+        do_handle_error(dcb, ERRACT_NEW_CONNECTION, "Lost connection to backend server: network error");
     }
 
     return 1;
@@ -1381,7 +1400,8 @@ static int gw_backend_hangup(DCB* dcb)
         }
         else
         {
-            do_handle_error(dcb, ERRACT_NEW_CONNECTION, "Lost connection to backend server.");
+            do_handle_error(dcb, ERRACT_NEW_CONNECTION,
+                            "Lost connection to backend server: connection closed by peer");
         }
     }
 

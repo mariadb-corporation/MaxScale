@@ -103,7 +103,14 @@ then
     # YUM!
     sudo yum clean all
     sudo yum update -y
-    sudo yum install -y --nogpgcheck gcc gcc-c++ ncurses-devel bison glibc-devel \
+    unset enable_power_tools
+    yum repolist all | grep PowerTools
+    if [ $? == 0 ]
+    then
+        enable_power_tools="enablerepo=PowerTools"
+    fi
+    sudo yum install -y --nogpgcheck ${enable_power_tools} \
+         gcc gcc-c++ ncurses-devel bison glibc-devel \
          libgcc perl make libtool openssl-devel libaio libaio-devel libedit-devel \
          libedit-devel systemtap-sdt-devel rpm-sign wget \
          gnupg pcre-devel flex rpmdevtools git wget tcl tcl-devel openssl libuuid-devel xz-devel \
@@ -131,13 +138,9 @@ then
     grep "release 6" /etc/redhat-release
     if [ $? -ne 0 ]
     then
-        # EPEL is installed for REST API and MaxCtrl unit tests (docker-compose etc.) and GCOV report generation (lcov)
-        sudo yum -y install docker epel-release
-        sudo yum -y install docker-compose lcov
-        sudo groupadd docker
-        sudo usermod -a -G docker `whoami`
-        sudo sed -i 's/--selinux-enabled/--selinux-enabled=false/' /etc/sysconfig/docker
-        sudo systemctl start docker
+        # EPEL is installed for GCOV report generation (lcov)
+        sudo yum -y install epel-release
+        sudo yum -y install lcov
     fi
 fi
 
