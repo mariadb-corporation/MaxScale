@@ -48,6 +48,7 @@ typedef std::vector<std::string> StringVector;
 
 using std::tie;
 using maxscale::Monitor;
+using SListener = std::shared_ptr<Listener>;
 
 #define RUNTIME_ERRMSG_BUFSIZE 512
 thread_local std::vector<std::string> runtime_errmsg;

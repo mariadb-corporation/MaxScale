@@ -48,6 +48,8 @@ using std::chrono::seconds;
 using std::unique_ptr;
 using ListenerSessionData = mxs::ListenerSessionData;
 
+using SListener = std::shared_ptr<Listener>;
+
 static std::list<SListener> all_listeners;
 static std::mutex listener_lock;
 
@@ -1040,7 +1042,10 @@ Listener::create_shared_data(const MXS_CONFIG_PARAMETER& params, const std::stri
         return nullptr;
     }
 
-    *user_manager_out = std::move(new_user_manager);
+    if (user_manager_out)
+    {
+        *user_manager_out = std::move(new_user_manager);
+    }
     unique_ptr<mxs::ListenerSessionData> rval(
         new(std::nothrow) ListenerSessionData(std::move(ssl), sql_mode, service, std::move(protocol_module)));
     return rval;
@@ -1064,6 +1069,13 @@ ListenerSessionData::ListenerSessionData(SSLContext ssl, qc_sql_mode_t default_s
     , m_service(*service)
     , m_proto_module(std::move(protocol_module))
 {
+}
+
+std::shared_ptr<mxs::ListenerSessionData>
+ListenerSessionData::create_test_data(const MXS_CONFIG_PARAMETER& params)
+{
+    auto data = Listener::create_shared_data(params, "test_listener", nullptr);
+    return std::shared_ptr<mxs::ListenerSessionData>(std::move(data));
 }
 }
 

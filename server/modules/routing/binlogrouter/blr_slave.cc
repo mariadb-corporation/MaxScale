@@ -51,6 +51,7 @@
 
 using std::string;
 using std::vector;
+class Listener;
 
 /**
  * This struct is used by sqlite3_exec callback routine

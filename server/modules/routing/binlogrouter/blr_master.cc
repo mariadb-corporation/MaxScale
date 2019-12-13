@@ -46,7 +46,6 @@
 #include <maxscale/cn_strings.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/housekeeper.h>
-#include <maxscale/listener.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include <maxscale/router.hh>
 #include <maxscale/routingworker.hh>
@@ -57,6 +56,7 @@
 #include <maxscale/utils.h>
 
 #include "../../../core/internal/session.hh"
+#include "../../../core/internal/listener.hh"
 
 static GWBUF* blr_make_query(DCB* dcb, char* query);
 static GWBUF* blr_make_registration(ROUTER_INSTANCE* router);

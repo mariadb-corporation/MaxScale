@@ -23,7 +23,6 @@
 #include <maxscale/dcb.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/service.hh>
-#include "../../modules/protocol/MariaDB/protocol_module.hh"
 
 #include "test_utils.hh"
 #include "../internal/service.hh"
@@ -51,13 +50,12 @@ static void test1()
     listener_params.set(CN_PROTOCOL, "mariadbclient");
     listener_params.set(CN_SERVICE, service->name());
 
-    auto listener = Listener::create("listener", "mariadbclient", listener_params);
-
-    auto session = new Session(listener->shared_data(), "127.0.0.1");
+    auto listener_data = mxs::ListenerSessionData::create_test_data(listener_params);
+    auto session = new Session(listener_data, "127.0.0.1");
     int fd = socket(AF_UNIX, SOCK_STREAM, 0);
     mxb_assert(fd >= 0);
 
-    auto client_protocol = listener->shared_data()->m_proto_module->create_client_protocol(session, session);
+    auto client_protocol = listener_data->m_proto_module->create_client_protocol(session, session);
     auto pProtocol = client_protocol.get();
     auto dcb = ClientDCB::create(fd, "127.0.0.1", sockaddr_storage {},
                                  session, std::move(client_protocol), nullptr);

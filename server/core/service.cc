@@ -517,13 +517,12 @@ bool service_remove_listener(Service* service, const char* target)
     return rval;
 }
 
-SListener service_find_listener(Service* service,
-                                const std::string& socket,
-                                const std::string& address,
-                                unsigned short port)
+std::shared_ptr<Listener> service_find_listener(Service* service,
+                                                const std::string& socket,
+                                                const std::string& address,
+                                                unsigned short port)
 {
-    SListener rval;
-
+    std::shared_ptr<Listener> rval;
     for (const auto& listener : listener_find_by_service(service))
     {
         if (port == listener->port() && (listener->address() == address || listener->address() == socket))

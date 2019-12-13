@@ -13,8 +13,234 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
-
 #include <maxscale/listener.hh>
+#include <maxscale/workerlocal.hh>
+
+class Service;
+
+/**
+ * The Listener class is used to link a network port to a service. It defines the name of the
+ * protocol module that should be loaded as well as the authenticator that is used.
+ */
+class Listener : public MXB_POLL_DATA
+{
+public:
+    enum class Type
+    {
+        UNIX_SOCKET,    // UNIX domain socket shared between workers
+        SHARED_TCP,     // TCP listening socket shared between workers
+        UNIQUE_TCP,     // Unique TCP listening socket for each worker
+        MAIN_WORKER,    // Listener that always moves the execution to the main worker
+    };
+
+    ~Listener();
+
+    /**
+     * Create a new listener
+     *
+     * @param name     Name of the listener
+     * @param protocol Protocol module to use
+     * @param params   Parameters for the listener
+     *
+     * @return New listener or nullptr on error
+     */
+    static std::shared_ptr<Listener> create(const std::string& name, const std::string& protocol,
+                                            const MXS_CONFIG_PARAMETER& params);
+
+    /**
+     * Destroy a listener
+     *
+     * This removes the listener from the global list of active listeners. Once destroyed, the port used
+     * by a listener is open for immediate reuse.
+     *
+     * @param listener Listener to destroy
+     */
+    static void destroy(const std::shared_ptr<Listener>& listener);
+
+    /**
+     * Start listening on the configured port
+     *
+     * @return True if the listener was able to start listening
+     */
+    bool listen();
+
+    /**
+     * Stop the listener
+     *
+     * @return True if the listener was successfully stopped
+     */
+    bool stop();
+
+    /**
+     * Start a stopped listener
+     *
+     * @return True if the listener was successfully started
+     */
+    bool start();
+
+    /**
+     * Listener name
+     */
+    const char* name() const;
+
+    /**
+     * Network address the listener listens on
+     */
+    const char* address() const;
+
+    /**
+     * Network port the listener listens on
+     */
+    uint16_t port() const;
+
+    /**
+     * Service the listener points to
+     */
+    SERVICE* service() const;
+
+    /**
+     * The protocol module name
+     */
+    const char* protocol() const;
+
+    /**
+     * The state of the listener
+     */
+    const char* state() const;
+
+    /**
+     * Convert to JSON
+     *
+     * @return JSON representation of the object
+     */
+    json_t* to_json() const;
+
+    /**
+     * Load users for a listener
+     *
+     * @return The result from the authenticator module
+     */
+    int load_users();
+
+    Type type() const
+    {
+        return m_type;
+    }
+
+    // Functions that are temporarily public
+    bool create_listener_config(const char* filename);
+
+    std::shared_ptr<mxs::ListenerSessionData> shared_data() const
+    {
+        return m_shared_data;
+    }
+
+    static std::unique_ptr<mxs::ListenerSessionData>
+    create_shared_data(const MXS_CONFIG_PARAMETER& params, const std::string& listener_name,
+                       std::unique_ptr<mxs::UserAccountManager>* user_manager_out);
+
+private:
+    enum State
+    {
+        CREATED,
+        STARTED,
+        STOPPED,
+        FAILED,
+        DESTROYED
+    };
+
+    std::string m_name;             /**< Name of the listener */
+    State       m_state;            /**< Listener state */
+    std::string m_protocol;         /**< Protocol module to load */
+    uint16_t    m_port;             /**< Port to listen on */
+    std::string m_address;          /**< Address to listen with */
+
+    // Protocol module. Ownership shared with sessions created from this listener.
+    std::shared_ptr<mxs::ProtocolModule> m_proto_module;
+
+    Service*             m_service;         /**< The service to which new sessions are sent */
+    MXS_CONFIG_PARAMETER m_params;          /**< Configuration parameters */
+
+    Type m_type;    /**< The type of the listener */
+
+    mxs::WorkerLocal<int> m_local_fd {-1};  /**< File descriptor the listener listens on */
+    int                   m_shared_fd {-1}; /**< File descriptor the listener listens on */
+
+    std::shared_ptr<mxs::ListenerSessionData> m_shared_data;    /**< Data shared with sessions */
+
+    /**
+     * Creates a new listener that points to a service
+     *
+     * @param service       Service where the listener points to
+     * @param name          Name of the listener
+     * @param address       The address where the listener listens
+     * @param port          The port on which the listener listens
+     * @param protocol      The protocol module to use
+     */
+    Listener(Service* service, const std::string& name,
+             const std::string& address, uint16_t port,
+             const std::string& protocol,
+             const MXS_CONFIG_PARAMETER& params,
+             std::unique_ptr<mxs::ListenerSessionData> shared_data);
+
+    /**
+     * Listen on a file descriptor shared between all workers
+     *
+     * @return True if the listening was started successfully
+     */
+    bool listen_shared();
+
+    /**
+     * Listen with a unique file descriptor for each worker
+     *
+     * @return True if the listening was started successfully
+     */
+    bool listen_unique();
+
+    /**
+     * Close all opened file descriptors for this listener
+     */
+    void close_all_fds();
+
+    /**
+     * Accept a single client connection
+     *
+     * @param fd The opened file descriptor to which the client is connected to
+     * @param addr The network information
+     * @param host The host where the client is connecting from
+     *
+     * @return The new DCB or nullptr on error
+     */
+    ClientDCB* accept_one_dcb(int fd, const sockaddr_storage* addr, const char* host);
+
+    /**
+     * Accept all available client connections
+     */
+    void accept_connections();
+
+    /**
+     * Reject a client connection
+     *
+     * Writes an error message to the fd if the protocol supports it and then closes it.
+     *
+     * @param fd   The file descriptor to close
+     * @param host The host where the connection originated from
+     */
+    void reject_connection(int fd, const char* host);
+
+    /**
+     * The file descriptor for accepting new connections
+     *
+     * @return The worker-local file descriptor
+     */
+    int fd() const
+    {
+        return m_type == Type::UNIQUE_TCP ? *m_local_fd : m_shared_fd;
+    }
+
+    // Handler for EPOLL_IN events
+    static uint32_t poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
+};
 
 /**
  * @brief Serialize a listener to a file
@@ -26,7 +252,7 @@
  * @param listener Listener to serialize
  * @return True if the serialization of the listener was successful, false if it fails
  */
-bool listener_serialize(const SListener& listener);
+bool listener_serialize(const std::shared_ptr<Listener>& listener);
 
 /**
  * Find a listener
@@ -35,7 +261,7 @@ bool listener_serialize(const SListener& listener);
  *
  * @return The listener if it exists or an empty SListener if it doesn't
  */
-SListener listener_find(const std::string& name);
+std::shared_ptr<Listener> listener_find(const std::string& name);
 
 /**
  * Find listener by socket
@@ -44,7 +270,7 @@ SListener listener_find(const std::string& name);
  *
  * @return The matching listener if one was found
  */
-SListener listener_find_by_socket(const std::string& socket);
+std::shared_ptr<Listener> listener_find_by_socket(const std::string& socket);
 
 /**
  * Find listener by address and port
@@ -54,7 +280,16 @@ SListener listener_find_by_socket(const std::string& socket);
  *
  * @return The matching listener if one was found
  */
-SListener listener_find_by_address(const std::string& address, unsigned short port);
+std::shared_ptr<Listener> listener_find_by_address(const std::string& address, unsigned short port);
+
+/**
+ * Find all listeners that point to a service
+ *
+ * @param service Service whose listeners are returned
+ *
+ * @return The listeners that point to the service
+ */
+std::vector<std::shared_ptr<Listener>> listener_find_by_service(const SERVICE* service);
 
 /**
  * Get common listener parameter definitions.

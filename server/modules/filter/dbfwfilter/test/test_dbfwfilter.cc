@@ -767,7 +767,6 @@ int test(FilterModule::Instance& filter_instance, const FW_TEST& t)
             const char* zUser = c.zUser ? c.zUser : DEFAULT_USER;
             const char* zHost = c.zHost ? c.zHost : DEFAULT_HOST;
 
-            mock::Client client(zUser, zHost);
             MXS_CONFIG_PARAMETER parameters;
             parameters.set("max_retry_interval", "10s");
             parameters.set("connection_timeout", "10s");
@@ -783,9 +782,9 @@ int test(FilterModule::Instance& filter_instance, const FW_TEST& t)
             listener_params.set(CN_PROTOCOL, "mariadbclient");
             listener_params.set(CN_SERVICE, service->name());
 
-            auto listener = Listener::create("listener", "mariadbclient", listener_params);
-
-            mock::Session session(&client, listener);
+            auto listener_data = mxs::ListenerSessionData::create_test_data(listener_params);
+            mock::Client client(zUser, zHost);
+            mock::Session session(&client, listener_data);
             mock::OkBackend backend;
             mock::RouterSession router_session(&backend, &session);
 

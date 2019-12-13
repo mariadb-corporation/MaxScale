@@ -28,6 +28,8 @@ namespace maxscale
 class Monitor;
 }
 
+class Listener;
+
 /**
  * @file service.h - MaxScale internal service functions
  */
@@ -452,10 +454,9 @@ bool serviceHasBackend(Service* service, SERVER* server);
  *
  * @return True if service has the listener
  */
-SListener service_find_listener(Service* service,
-                                const std::string& socket,
-                                const std::string& address,
-                                unsigned short port);
+std::shared_ptr<Listener>
+service_find_listener(Service* service, const std::string& socket, const std::string& address,
+                      unsigned short port);
 
 /**
  * @brief Check if a MaxScale service listens on a port

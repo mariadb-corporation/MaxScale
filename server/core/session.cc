@@ -34,6 +34,7 @@
 #include <maxscale/dcb.hh>
 #include <maxscale/housekeeper.h>
 #include <maxscale/json_api.hh>
+#include <maxscale/listener.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/router.hh>
@@ -46,7 +47,6 @@
 #include "internal/session.hh"
 #include "internal/server.hh"
 #include "internal/service.hh"
-#include "internal/listener.hh"
 
 using std::string;
 using std::stringstream;

@@ -25,17 +25,13 @@
 
 class DCB;
 class SERVICE;
-struct mxs_filter_def;
 struct mxs_filter;
 struct mxs_filter_session;
-struct mxs_router_session;
 class SERVER;
-class Listener;
 namespace maxscale
 {
 class ListenerSessionData;
 }
-using SListener = std::shared_ptr<Listener>;
 
 static constexpr uint32_t SESSION_TRX_INACTIVE = 0;
 static constexpr uint32_t SESSION_TRX_ACTIVE = 1 << 0;      /* 0b0001 */

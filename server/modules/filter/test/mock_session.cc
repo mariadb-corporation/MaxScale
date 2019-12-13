@@ -37,8 +37,8 @@ bool Session::Endpoint::handleError(mxs::ErrorType type,
     return true;
 }
 
-Session::Session(Client* pClient, const SListener& listener)
-    : ::Session(listener->shared_data(), pClient->host())
+Session::Session(Client* pClient, SListenerData listener_data)
+    : ::Session(std::move(listener_data), pClient->host())
     , m_client(*pClient)
     , m_client_dcb(this, pClient->host(), pClient)
 {
