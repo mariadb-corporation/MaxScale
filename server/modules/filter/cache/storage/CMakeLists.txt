@@ -1,2 +1,4 @@
 add_subdirectory(storage_inmemory)
-add_subdirectory(storage_memcached)
+if (BUILD_STORAGE_MEMCACHED)
+  add_subdirectory(storage_memcached)
+endif()
