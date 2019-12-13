@@ -18,9 +18,9 @@ template<class StorageType>
 class StorageModuleT : public StorageModule
 {
 public:
-    bool initialize(uint32_t* pCapabilities) override final
+    bool initialize(cache_storage_kind_t* pKind, uint32_t* pCapabilities) override final
     {
-        return StorageType::initialize(pCapabilities);
+        return StorageType::initialize(pKind, pCapabilities);
     }
 
     void finalize() override final

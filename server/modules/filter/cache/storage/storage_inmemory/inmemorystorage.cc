@@ -45,8 +45,9 @@ InMemoryStorage::~InMemoryStorage()
 }
 
 //static
-bool InMemoryStorage::initialize(uint32_t* pCapabilities)
+bool InMemoryStorage::initialize(cache_storage_kind_t* pKind, uint32_t* pCapabilities)
 {
+    *pKind = CACHE_STORAGE_PRIVATE;
     *pCapabilities = (CACHE_STORAGE_CAP_ST | CACHE_STORAGE_CAP_MT);
 
     return true;

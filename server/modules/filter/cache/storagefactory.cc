@@ -29,6 +29,7 @@ namespace
 bool open_storage_module(const char* zName,
                          void** pHandle,
                          StorageModule** ppModule,
+                         cache_storage_kind_t* pKind,
                          uint32_t* pCapabilities)
 {
     bool rv = false;
@@ -48,7 +49,7 @@ bool open_storage_module(const char* zName,
 
             if (pModule)
             {
-                if (pModule->initialize(pCapabilities))
+                if (pModule->initialize(pKind, pCapabilities))
                 {
                     *pHandle = handle;
                     *ppModule = pModule;
@@ -130,10 +131,12 @@ StorageFactory* StorageFactory::open(const char* zName)
 
     void* handle;
     StorageModule* pModule;
+    cache_storage_kind_t kind;
     uint32_t capabilities;
 
-    if (open_storage_module(zName, &handle, &pModule, &capabilities))
+    if (open_storage_module(zName, &handle, &pModule, &kind, &capabilities))
     {
+        // TODO: Take 'kind' into account.
         pFactory = new StorageFactory(handle, pModule, capabilities);
 
         if (!pFactory)

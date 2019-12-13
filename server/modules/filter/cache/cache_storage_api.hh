@@ -114,6 +114,12 @@ enum cache_storage_capabilities_t
     CACHE_STORAGE_CAP_INVALIDATION = 0x20, /*< Storage capable of invalidation.*/
 };
 
+enum cache_storage_kind_t
+{
+    CACHE_STORAGE_PRIVATE = 1,  /*< The storage is private to the cache that uses it. */
+    CACHE_STORAGE_SHARED  = 2   /*< The storage is shared with other caches that use it. */
+};
+
 static inline bool cache_storage_has_cap(uint32_t capabilities, uint32_t mask)
 {
     return (capabilities & mask) == mask;
@@ -421,12 +427,13 @@ public:
     /**
      * Called immediately after the storage module has been loaded.
      *
+     * @param kind         On successful return, the kind of the storage.
      * @param capabilities On successful return, contains a bitmask of
      *                     cache_storage_capabilities_t values.
      *
      * @return True if the initialization succeeded, false otherwise.
      */
-    virtual bool initialize(uint32_t* capabilities) = 0;
+    virtual bool initialize(cache_storage_kind_t* kind, uint32_t* capabilities) = 0;
 
     /**
      * Called immediately before the storage module will be unloaded.

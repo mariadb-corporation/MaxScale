@@ -24,7 +24,7 @@ class InMemoryStorage : public Storage
 public:
     virtual ~InMemoryStorage();
 
-    static bool initialize(uint32_t* pCapabilities);
+    static bool initialize(cache_storage_kind_t* pKind, uint32_t* pCapabilities);
     static void finalize();
 
     static InMemoryStorage* create(const char* zName,
