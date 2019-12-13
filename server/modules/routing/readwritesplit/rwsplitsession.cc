@@ -618,7 +618,14 @@ bool RWSplitSession::handle_ignorable_error(RWBackend* backend)
     }
     else
     {
-        mxb_assert(backend->error().is_wsrep_error());
+        static bool warn_unexpected_rollback = true;
+
+        if (!backend->error().is_wsrep_error() && warn_unexpected_rollback)
+        {
+            MXS_WARNING("Expected a WSREP error but got a transaction rollback error: %d, %s",
+                        backend->error().code(), backend->error().message().c_str());
+            warn_unexpected_rollback = false;
+        }
 
         if (backend == m_current_master)
         {
