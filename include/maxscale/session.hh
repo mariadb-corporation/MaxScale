@@ -366,7 +366,6 @@ protected:
     std::string m_host;
     std::string m_database;
     std::string m_pending_database;
-    int64_t     m_keepalive_interval = 0;
 
     MXS_SESSION(const SListener& listener, const std::string& host);
 

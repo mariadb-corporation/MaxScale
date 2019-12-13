@@ -78,7 +78,6 @@ MXS_SESSION::MXS_SESSION(const SListener& listener, const std::string& host)
     : m_state(MXS_SESSION::State::CREATED)
     , m_id(session_get_next_id())
     , m_host(host)
-    , m_keepalive_interval(service->config().connection_keepalive)
     , client_dcb(nullptr)
     , listener(listener)
     , stats{time(0)}
@@ -1489,11 +1488,11 @@ void Session::tick(int64_t idle)
         }
     }
 
-    if (m_keepalive_interval)
+    if (auto interval = service->config().connection_keepalive)
     {
         for (const auto& a : backend_connections())
         {
-            if (a->seconds_idle() > m_keepalive_interval)
+            if (a->seconds_idle() > interval)
             {
                 a->ping();
             }

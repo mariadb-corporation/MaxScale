@@ -27,20 +27,19 @@ int main(int argc, char* argv[])
     test.expect(conn.query("INSERT INTO test.t1 VALUES (1)"), "INSERT should work: %s", conn.error());
     test.expect(conn.query("SELECT 1"), "SELECT should work: %s", conn.error());
 
-    test.tprintf("Alter the connection_keepalive so that if it takes effect the session would close");
+    test.tprintf("Alter the connection_keepalive so that if it takes effect the session will be closed");
     test.check_maxctrl("alter service RW-Split-Router connection_keepalive 3000");
 
     sleep(20);
 
-    test.tprintf("Make sure the connection still uses the old configuration values");
-    test.expect(conn.query("INSERT INTO test.t1 VALUES (1)"), "INSERT should work: %s", conn.error());
-    test.expect(conn.query("SELECT 1"), "SELECT should work: %s", conn.error());
+    test.tprintf("Make sure the connection uses the new configuration values");
+    test.expect(!conn.query("INSERT INTO test.t1 VALUES (1)"), "INSERT should fail");
+    test.expect(!conn.query("SELECT 1"), "SELECT should fail");
 
     conn.disconnect();
     conn.connect();
 
-    test.tprintf("Set wait_timeout again to the same value. "
-                 "This time the connection should die after 10 seconds.");
+    test.tprintf("Set wait_timeout again to the same value. The connection should die after 10 seconds.");
     test.expect(conn.query("SET wait_timeout=10"), "SELECT should work: %s", conn.error());
 
     sleep(20);
