@@ -200,11 +200,8 @@ CacheConfig::CacheConfig(const std::string& name)
 
 CacheConfig::~CacheConfig()
 {
-    for (int i = 0; i < this->storage_argc; ++i)
-    {
-        MXS_FREE(this->storage_argv[i]);
-    }
-
+    // this->storage_argv[i] points into this->zStorage_options, so they must
+    // not explicitly be freed.
     MXS_FREE(this->storage_argv);
     MXS_FREE(this->zStorage_options);
 }
