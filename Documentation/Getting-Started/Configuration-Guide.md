@@ -1555,6 +1555,31 @@ new value will take effect for sessions created thereafter.
 maxctrl alter service MyService retain_last_statements 5
 ```
 
+### `connection_keepalive`
+
+Keep idle connections alive by sending pings to backend servers. This feature
+was introduced in MaxScale 2.5.0 where it was changed from a
+readwritesplit-specific feature to a generic service feature. The default value
+for this parameter is 300 seconds. To disable this feature, set the value to 0.
+
+The keepalive interval is specified as documented [here](#durations). If no
+explicit unit is provided, the value is interpreted as seconds in MaxScale
+2.5. In subsequent versions a value without a unit may be rejected. Note that
+since the granularity of the keepalive is seconds, a keepalive specified in
+milliseconds will be rejected, even if the duration is longer than a second.
+
+The parameter value is the interval in seconds between each keepalive ping. A
+keepalive ping will be sent to a backend server if the connection has been idle
+for longer than the configured keepalive interval.
+
+This parameter only takes effect in top-level services. A top-level service is
+the service where the listener that the client connected to points (i.e. the
+value of `service` in the listener). If a service defines other services in its
+`targets` parameter, the `connection_keepalive` for those is not used.
+
+If the value of `connection_keepalive` is changed at runtime, the change in the
+value takes effect immediately.
+
 ## Server
 
 Server sections are used to define the backend database servers that can be

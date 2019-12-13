@@ -10,6 +10,13 @@ report at [Jira](https://jira.mariadb.org).
 
 ## Changed Features
 
+### `connection_keepalive`
+
+Previously this feature was a readwritesplit feature. In MaxScale 2.5.0 it has
+been converted into a core MaxScale feature and it can be used with all
+routers. In addition to this, the keepalive mechanism now also keeps completely
+idle connections alive (MXS-2505).
+
 ## Dropped Features
 
 ### Configuration parameters
