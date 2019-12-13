@@ -726,13 +726,14 @@ uint32_t QueryClassifier::determine_query_type(GWBUF* querybuf, int command)
 
     switch (command)
     {
-    case MXS_COM_QUIT:          /*< 1 QUIT will close all sessions */
-    case MXS_COM_INIT_DB:       /*< 2 DDL must go to the master */
-    case MXS_COM_REFRESH:       /*< 7 - I guess this is session but not sure */
-    case MXS_COM_DEBUG:         /*< 0d all servers dump debug info to stdout */
-    case MXS_COM_PING:          /*< 0e all servers are pinged */
-    case MXS_COM_CHANGE_USER:   /*< 11 all servers change it accordingly */
-    case MXS_COM_SET_OPTION:    /*< 1b send options to all servers */
+    case MXS_COM_QUIT:              /*< 1 QUIT will close all sessions */
+    case MXS_COM_INIT_DB:           /*< 2 DDL must go to the master */
+    case MXS_COM_REFRESH:           /*< 7 - I guess this is session but not sure */
+    case MXS_COM_DEBUG:             /*< 0d all servers dump debug info to stdout */
+    case MXS_COM_PING:              /*< 0e all servers are pinged */
+    case MXS_COM_CHANGE_USER:       /*< 11 all servers change it accordingly */
+    case MXS_COM_SET_OPTION:        /*< 1b send options to all servers */
+    case MXS_COM_RESET_CONNECTION:  /*< 1f resets the state of all connections */
         type = QUERY_TYPE_SESSION_WRITE;
         break;
 

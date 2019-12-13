@@ -114,10 +114,10 @@ public:
 
     enum class SSLState
     {
-        HANDSHAKE_UNKNOWN,   /*< The DCB has unknown SSL status */
-        HANDSHAKE_REQUIRED,  /*< SSL handshake is needed */
-        ESTABLISHED,         /*< The SSL connection is in use */
-        HANDSHAKE_FAILED     /*< The SSL handshake failed */
+        HANDSHAKE_UNKNOWN,  /*< The DCB has unknown SSL status */
+        HANDSHAKE_REQUIRED, /*< SSL handshake is needed */
+        ESTABLISHED,        /*< The SSL connection is in use */
+        HANDSHAKE_FAILED    /*< The SSL handshake failed */
     };
 
     /**
@@ -286,8 +286,8 @@ public:
      */
     enum class Drain
     {
-        YES, // Drain the writeq.
-        NO   // Do not drain the writeq.
+        YES,    // Drain the writeq.
+        NO      // Do not drain the writeq.
     };
 
     /**
@@ -358,7 +358,7 @@ public:
      *         be returned if the callback could not be added or if the callback
      *         has been added already.
      */
-    bool add_callback(Reason reason, int (*cb)(DCB*, Reason, void*), void* user_data);
+    bool add_callback(Reason reason, int (* cb)(DCB*, Reason, void*), void* user_data);
 
     /**
      * Remove a callback from the DCB.
@@ -370,7 +370,7 @@ public:
      * @return True, if the callback could be removed, false if the callback
      *         was not amongst the added ones.
      */
-    bool remove_callback(Reason reason, int (*cb)(DCB*, Reason, void*), void* user_data);
+    bool remove_callback(Reason reason, int (* cb)(DCB*, Reason, void*), void* user_data);
 
     /**
      * Remove all callbacks
@@ -544,6 +544,11 @@ public:
         dcb->destroy();
     }
 
+    bool is_fake_event() const
+    {
+        return m_is_fake_event;
+    }
+
 protected:
     DCB(int fd,
         const std::string& remote,
@@ -578,8 +583,8 @@ protected:
 
     struct Encryption
     {
-        SSL*     handle = nullptr;                    /**< SSL handle for connection */
-        SSLState state = SSLState::HANDSHAKE_UNKNOWN; /**< Current state of SSL if in use */
+        SSL*     handle = nullptr;                      /**< SSL handle for connection */
+        SSLState state = SSLState::HANDSHAKE_UNKNOWN;   /**< Current state of SSL if in use */
         bool     read_want_read = false;
         bool     read_want_write = false;
         bool     write_want_read = false;
@@ -601,16 +606,16 @@ protected:
     Encryption        m_encryption;                 /**< Encryption state */
     Stats             m_stats;                      /**< DCB related statistics */
     CALLBACK*         m_callbacks = nullptr;        /**< The list of callbacks for the DCB */
-    bool              m_high_water_reached = false; /**< High water mark reached, to determine
-                                                         * whether we need to release throttle */
-    uint64_t          m_writeqlen = 0;              /**< Bytes in writeq */
-    GWBUF*            m_writeq = nullptr;           /**< Write Data Queue */
-    GWBUF*            m_readq = nullptr;            /**< Read queue for incomplete reads */
-    GWBUF*            m_delayq = nullptr;           /**< Delay Backend Write Data Queue */
-    uint32_t          m_triggered_event = 0;        /**< Triggered event to be delivered to handler */
-    uint32_t          m_nClose = 0;                 /**< How many times dcb_close has been called. */
-    bool              m_hanged_up = false;          /**< Has thethis can be called only once */
-
+    bool              m_high_water_reached = false; /**< High water mark reached, to determine whether we need
+                                                     * to release throttle */
+    uint64_t m_writeqlen = 0;                       /**< Bytes in writeq */
+    GWBUF*   m_writeq = nullptr;                    /**< Write Data Queue */
+    GWBUF*   m_readq = nullptr;                     /**< Read queue for incomplete reads */
+    GWBUF*   m_delayq = nullptr;                    /**< Delay Backend Write Data Queue */
+    uint32_t m_triggered_event = 0;                 /**< Triggered event to be delivered to handler */
+    uint32_t m_nClose = 0;                          /**< How many times dcb_close has been called. */
+    bool     m_hanged_up = false;                   /**< Has thethis can be called only once */
+    bool     m_is_fake_event = false;
 private:
     friend class Manager;
 
@@ -627,7 +632,7 @@ private:
 
     static uint32_t poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
     static uint32_t event_handler(DCB* dcb, uint32_t events);
-    uint32_t process_events(uint32_t events);
+    uint32_t        process_events(uint32_t events);
 
     class FakeEventTask;
     friend class FakeEventTask;
@@ -699,8 +704,8 @@ private:
     bool release_from(MXS_SESSION* session) override;
     bool prepare_for_destruction() override;
 
-    sockaddr_storage                          m_ip;             /**< remote IPv4/IPv6 address */
-    std::unique_ptr<mxs::ClientConnection>      m_protocol;       /**< The protocol session */
+    sockaddr_storage                       m_ip;                /**< remote IPv4/IPv6 address */
+    std::unique_ptr<mxs::ClientConnection> m_protocol;          /**< The protocol session */
 };
 
 class Session;
@@ -768,7 +773,7 @@ private:
 
     static void hangup_cb(MXB_WORKER* worker, const SERVER* server);
 
-    SERVER* const                         m_server;   /**< The associated backend server */
+    SERVER* const                           m_server;   /**< The associated backend server */
     std::unique_ptr<mxs::BackendConnection> m_protocol; /**< The protocol session */
 };
 

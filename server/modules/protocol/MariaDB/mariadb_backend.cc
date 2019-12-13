@@ -295,13 +295,14 @@ void MariaDBBackendConnection::handle_error_response(DCB* plain_dcb, GWBUF* buff
  * @param buffer Buffer containing the server's complete handshake
  * @return MXS_AUTH_STATE_HANDSHAKE_FAILED on failure.
  */
-MariaDBBackendConnection::AuthState MariaDBBackendConnection::handle_server_response(DCB* generic_dcb, GWBUF* buffer)
+MariaDBBackendConnection::AuthState MariaDBBackendConnection::handle_server_response(DCB* generic_dcb,
+                                                                                     GWBUF* buffer)
 {
     using AuthRes = mariadb::BackendAuthenticator::AuthRes;
 
     auto dcb = static_cast<BackendDCB*>(generic_dcb);
     AuthState rval = m_auth_state == AuthState::CONNECTED ?
-                     AuthState::FAIL_HANDSHAKE : AuthState::FAIL;
+        AuthState::FAIL_HANDSHAKE : AuthState::FAIL;
 
     if (m_authenticator->extract(dcb, buffer))
     {
@@ -457,8 +458,20 @@ void MariaDBBackendConnection::ready_for_reading(DCB* event_dcb)
 
 void MariaDBBackendConnection::do_handle_error(DCB* dcb, const std::string& errmsg, mxs::ErrorType type)
 {
+    std::ostringstream ss(errmsg);
+
+    if (int err = gw_getsockerrno(dcb->fd()))
+    {
+        ss << " (" << err << ", " << mxs_strerror(err) << ")";
+    }
+    else if (dcb->is_fake_event())
+    {
+        // Fake events should not have TCP socket errors
+        ss << " (Generated event)";
+    }
+
     mxb_assert(!dcb->hanged_up());
-    GWBUF* errbuf = mysql_create_custom_error(1, 0, 2003, errmsg.c_str());
+    GWBUF* errbuf = mysql_create_custom_error(1, 0, 2003, ss.str().c_str());
 
     if (!m_upstream->handleError(type, errbuf, nullptr, m_reply))
     {
@@ -777,7 +790,7 @@ int MariaDBBackendConnection::gw_read_and_write(DCB* dcb)
     if (proto->m_ignore_replies > 0)
     {
         /** The reply to a COM_CHANGE_USER is in packet */
-        GWBUF* query = modutil_get_next_MySQL_packet(&proto->m_stored_query);
+        GWBUF* query = proto->m_stored_query;
         proto->m_stored_query = NULL;
         proto->m_ignore_replies--;
         mxb_assert(proto->m_ignore_replies >= 0);
@@ -1111,7 +1124,7 @@ void MariaDBBackendConnection::error(DCB* event_dcb)
     }
     else
     {
-        do_handle_error(dcb, "Lost connection to backend server.");
+        do_handle_error(dcb, "Lost connection to backend server: network error");
     }
 }
 
@@ -1148,7 +1161,7 @@ void MariaDBBackendConnection::hangup(DCB* event_dcb)
     }
     else
     {
-        do_handle_error(m_dcb, "Lost connection to backend server.");
+        do_handle_error(m_dcb, "Lost connection to backend server: connection closed by peer");
     }
 }
 
@@ -2461,25 +2474,25 @@ std::string MariaDBBackendConnection::to_string(AuthState auth_state)
     std::string rval;
     switch (auth_state)
     {
-        case AuthState::CONNECTED:
-            rval = "CONNECTED";
-            break;
+    case AuthState::CONNECTED:
+        rval = "CONNECTED";
+        break;
 
-        case AuthState::RESPONSE_SENT:
-            rval = "RESPONSE_SENT";
-            break;
+    case AuthState::RESPONSE_SENT:
+        rval = "RESPONSE_SENT";
+        break;
 
-        case AuthState::FAIL:
-            rval = "FAILED";
-            break;
+    case AuthState::FAIL:
+        rval = "FAILED";
+        break;
 
-        case AuthState::FAIL_HANDSHAKE:
-            rval = "HANDSHAKE_FAILED";
-            break;
+    case AuthState::FAIL_HANDSHAKE:
+        rval = "HANDSHAKE_FAILED";
+        break;
 
-        case AuthState::COMPLETE:
-            rval = "COMPLETE";
-            break;
+    case AuthState::COMPLETE:
+        rval = "COMPLETE";
+        break;
     }
     return rval;
 }

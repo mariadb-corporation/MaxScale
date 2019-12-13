@@ -134,8 +134,8 @@ static inline bool dcb_write_parameter_check(DCB* dcb, int fd, GWBUF* queue);
 static int         dcb_read_no_bytes_available(DCB* dcb, int fd, int nreadtotal);
 static int         dcb_set_socket_option(int sockfd, int level, int optname, void* optval, socklen_t optlen);
 
-static int  upstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* userdata);
-static int  downstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* userdata);
+static int upstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* userdata);
+static int downstream_throttle_callback(DCB* dcb, DCB::Reason reason, void* userdata);
 
 static MXB_WORKER* get_dcb_owner()
 {
@@ -1297,7 +1297,9 @@ uint32_t DCB::event_handler(DCB* dcb, uint32_t events)
         events = dcb->m_triggered_event;
         dcb->m_triggered_event = 0;
 
+        dcb->m_is_fake_event = true;
         rv |= dcb->process_events(events);
+        dcb->m_is_fake_event = false;
     }
 
     this_thread.current_dcb = NULL;
@@ -1347,10 +1349,10 @@ public:
 
         RoutingWorker& rworker = static_cast<RoutingWorker&>(worker);
 
-        if (rworker.dcbs().count(m_dcb) != 0  // If the dcb is found in the book-keeping,
-            && !m_dcb->is_closed()            // it has not been closed, and
-            && m_dcb->uid() == m_uid)         // it really is the one (not another one that just
-                                              // happened to get the same address).
+        if (rworker.dcbs().count(m_dcb) != 0    // If the dcb is found in the book-keeping,
+            && !m_dcb->is_closed()              // it has not been closed, and
+            && m_dcb->uid() == m_uid)           // it really is the one (not another one that just
+                                                // happened to get the same address).
         {
             mxb_assert(m_dcb->owner == RoutingWorker::get_current());
             DCB::event_handler(m_dcb, m_ev);
@@ -1583,7 +1585,7 @@ void ClientDCB::shutdown()
 {
     // Close protocol and router session
     if ((m_session->state() == MXS_SESSION::State::STARTED
-        || m_session->state() == MXS_SESSION::State::STOPPING))
+         || m_session->state() == MXS_SESSION::State::STOPPING))
     {
         session_close(m_session);
     }
@@ -1823,7 +1825,9 @@ void BackendDCB::hangup_cb(MXB_WORKER* worker, const SERVER* server)
                 if (!backend_dcb->m_hanged_up)
                 {
                     this_thread.current_dcb = backend_dcb;
+                    backend_dcb->m_is_fake_event = true;
                     backend_dcb->m_protocol->hangup(dcb);
+                    backend_dcb->m_is_fake_event = true;
                     backend_dcb->m_hanged_up = true;
                 }
             }

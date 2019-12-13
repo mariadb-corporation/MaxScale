@@ -1764,6 +1764,15 @@ const char* STRPACKETTYPE(int p)
 
     case MXS_COM_DAEMON:
         return "COM_DAEMON";
+
+    case MXS_COM_RESET_CONNECTION:
+        return "COM_RESET_CONNECTION";
+
+    case MXS_COM_STMT_BULK_EXECUTE:
+        return "COM_STMT_BULK_EXECUTE";
+
+    case MXS_COM_MULTI:
+        return "COM_MULTI";
     }
 
     snprintf(unknow_type, sizeof(unknow_type), format_str, p);
