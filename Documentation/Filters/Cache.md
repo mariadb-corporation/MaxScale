@@ -5,53 +5,7 @@ This filter was introduced in MariaDB MaxScale 2.1.
 Table of Contents
 =================
 
-* [Overview](#overview)
-* [Limitations](#limitations)
-   * [Invalidation](#invalidation)
-   * [Prepared Statements](#prepared-statements)
-   * [Security](#security)
-* [Configuration](#configuration)
-   * [Filter Parameters](#filter-parameters)
-      * [storage](#storage)
-      * [storage_options](#storage_options)
-      * [hard_ttl](#hard_ttl)
-      * [soft_ttl](#soft_ttl)
-      * [max_resultset_rows](#max_resultset_rows)
-      * [max_resultset_size](#max_resultset_size)
-      * [max_count](#max_count)
-      * [max_size](#max_size)
-      * [rules](#rules)
-      * [cached_data](#cached_data)
-      * [selects](#selects)
-      * [cache_inside_transactions](#cache_inside_transactions)
-      * [debug](#debug)
-      * [enabled](#enabled)
-   * [Runtime Configuration](#runtime-configuration)
-      * [@maxscale.cache.populate](#maxscalecachepopulate)
-      * [@maxscale.cache.use](#maxscalecacheuse)
-      * [@maxscale.cache.soft_ttl](#maxscalecachesoft_ttl)
-      * [@maxscale.cache.hard_ttl](#maxscalecachehard_ttl)
-      * [Client Driven Caching](#client-driven-caching)
-* [Rules](#rules-1)
-   * [When to Store](#when-to-store)
-      * [Qualified Names](#qualified-names)
-      * [Implication of the <em>default</em> database](#implication-of-the-default-database)
-      * [Regexp Matching](#regexp-matching)
-      * [Examples](#examples)
-   * [When to Use](#when-to-use)
-      * [Examples](#examples-1)
-* [Security](#security-1)
-* [Storage](#storage-1)
-   * [storage_inmemory](#storage_inmemory)
-   * [storage_rocksdb](#storage_rocksdb)
-   * [Parameters](#parameters)
-      * [cache_directory](#cache_directory)
-      * [collect_statistics](#collect_statistics)
-* [Example](#example)
-   * [Configuration](#configuration-1)
-   * [cache_rules.json](#cache_rulesjson)
-* [Performance](#performance)
-   * [Summary](#summary)
+[TOC]
 
 ## Overview
 
@@ -922,52 +876,6 @@ This simple storage module uses the standard memory allocator for storing
 the cached data.
 ```
 storage=storage_inmemory
-```
-
-### `storage_rocksdb`
-
-This storage module is not built by default and is not included in the
-MariaDB MaxScale packages.
-
-This storage module uses RocksDB database for storing the cached data. The
-directory where the RocksDB database will be created is by default created
-into the _MaxScale cache_ directory, which usually is not on a RAM disk. For
-maximum performance, you may want to explicitly place the RocksDB database
-on a RAM disk.
-```
-storage=storage_rocksdb
-```
-
-### Parameters
-
-#### `cache_directory`
-
-Specifies the directory under which the filter instance specific RocksDB
-databases will be placed. Note that at startup, each RocksDB database will
-be deleted and recreated. That is, cache content will not be retained across
-MaxScale restarts.
-
-```
-storage_options=cache_directory=/mnt/maxscale-cache
-```
-
-With the above setting a directory `/mnt/macscale-cache/storage_rocksdb` will
-created, under which the actual instance specific cache directories are created.
-
-#### `collect_statistics`
-
-Specifies whether RocksDB should collect statistics that later can be queried
-using `maxadmin`. It should be noted, though, that collecting RocksDB statistics
-is not without a cost.
-From the [RocksDB Documentation](https://github.com/facebook/rocksdb/wiki/Statistics)
-
-_The overhead of statistics is usually small but non-negligible. We usually
-observe an overhead of 5%-10%._
-
-The value is a boolean and the default is `false`.
-
-```
-storage_options=collect_statistics=true
 ```
 
 ## Example
