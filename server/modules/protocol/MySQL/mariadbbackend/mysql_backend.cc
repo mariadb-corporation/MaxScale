@@ -839,6 +839,7 @@ static int gw_read_and_write(DCB* dcb)
     MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol;
 
     if (rcap_type_required(capabilities, RCAP_TYPE_PACKET_OUTPUT)
+        || rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT)
         || rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_OUTPUT)
         || proto->collect_result
         || proto->ignore_replies != 0)
@@ -1039,6 +1040,7 @@ static int gw_read_and_write(DCB* dcb)
                  && !rcap_type_required(capabilities, RCAP_TYPE_RESULTSET_OUTPUT))
         {
             stmt = modutil_get_next_MySQL_packet(&read_buffer);
+            mxb_assert_message(stmt, "There should be only complete packets in read_buffer");
 
             if (stmt && !GWBUF_IS_CONTIGUOUS(stmt))
             {
