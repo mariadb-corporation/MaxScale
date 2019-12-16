@@ -56,7 +56,7 @@ int main(int argc, char* argv[])
 
     config.create_server(1);
     config.add_server(1);
-    config.alter_server(1, "address", test->repl->IP[1]);
+    config.alter_server(1, "address", test->repl->IP_private[1]);
     sleep(1);
     test->check_maxscale_alive(0);
     config.alter_server(1, "address", "This-is-not-the-address-you-are-looking-for");

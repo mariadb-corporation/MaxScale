@@ -6,6 +6,16 @@ void copy_rules(TestConnections* Test, const char* rules_name, const char* rules
     std::stringstream src;
     std::stringstream dest;
 
+    Test->maxscales->ssh_node_f(0,
+                                true,
+                                "cd %s;"
+                                "rm -rf rules;"
+                                "mkdir rules;"
+                                "chown %s:%s rules",
+                                Test->maxscales->access_homedir[0],
+                                Test->maxscales->access_user[0],
+                                Test->maxscales->access_user[0]);
+
     src << rules_dir << "/" << rules_name;
     dest << Test->maxscales->access_homedir[0] << "/rules/rules.txt";
 

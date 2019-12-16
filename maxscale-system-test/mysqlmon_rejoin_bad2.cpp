@@ -138,7 +138,7 @@ int main(int argc, char** argv)
                                   "MASTER_USER='repl', MASTER_PASSWORD = 'repl';";
     char cmd[256];
     int ind = master_id_new - 1;
-    snprintf(cmd, sizeof(cmd), CHANGE_CMD_FMT, test.repl->IP[0], test.repl->port[0]);
+    snprintf(cmd, sizeof(cmd), CHANGE_CMD_FMT, test.repl->IP_private[0], test.repl->port[0]);
     MYSQL** nodes = test.repl->nodes;
     mysql_query(nodes[ind], cmd);
     mysql_query(nodes[ind], "START SLAVE;");
