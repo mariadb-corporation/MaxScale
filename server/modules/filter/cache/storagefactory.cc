@@ -103,9 +103,11 @@ void close_cache_storage(void* handle, StorageModule* pModule)
 
 StorageFactory::StorageFactory(void* handle,
                                StorageModule* pModule,
+                               cache_storage_kind_t kind,
                                uint32_t capabilities)
     : m_handle(handle)
     , m_pModule(pModule)
+    , m_kind(kind)
     , m_storage_caps(capabilities)
     , m_caps(capabilities)
 {
@@ -136,8 +138,7 @@ StorageFactory* StorageFactory::open(const char* zName)
 
     if (open_storage_module(zName, &handle, &pModule, &kind, &capabilities))
     {
-        // TODO: Take 'kind' into account.
-        pFactory = new StorageFactory(handle, pModule, capabilities);
+        pFactory = new StorageFactory(handle, pModule, kind, capabilities);
 
         if (!pFactory)
         {
@@ -155,6 +156,39 @@ Storage* StorageFactory::create_storage(const char* zName,
 {
     mxb_assert(m_handle);
     mxb_assert(m_pModule);
+
+    switch (m_kind)
+    {
+    case CACHE_STORAGE_PRIVATE:
+        return create_private_storage(zName, config, argc, argv);
+
+    case CACHE_STORAGE_SHARED:
+        return create_shared_storage(zName, config, argc, argv);
+    }
+
+    mxb_assert(!true);
+    return nullptr;
+}
+
+Storage* StorageFactory::create_raw_storage(const char* zName,
+                                            const Storage::Config& config,
+                                            int argc,
+                                            char* argv[])
+{
+    mxb_assert(m_handle);
+    mxb_assert(m_pModule);
+
+    return m_pModule->create_storage(zName, config, argc, argv);
+}
+
+Storage* StorageFactory::create_private_storage(const char* zName,
+                                                const Storage::Config& config,
+                                                int argc,
+                                                char* argv[])
+{
+    mxb_assert(m_handle);
+    mxb_assert(m_pModule);
+    mxb_assert(m_kind == CACHE_STORAGE_PRIVATE);
 
     Storage::Config storage_config(config);
 
@@ -229,14 +263,43 @@ Storage* StorageFactory::create_storage(const char* zName,
     return pStorage;
 }
 
-
-Storage* StorageFactory::create_raw_storage(const char* zName,
-                                            const Storage::Config& config,
-                                            int argc,
-                                            char* argv[])
+Storage* StorageFactory::create_shared_storage(const char* zName,
+                                               const Storage::Config& config,
+                                               int argc,
+                                               char* argv[])
 {
     mxb_assert(m_handle);
     mxb_assert(m_pModule);
+    mxb_assert(m_kind == CACHE_STORAGE_SHARED);
 
-    return m_pModule->create_storage(zName, config, argc, argv);
+    if (config.invalidate != CACHE_INVALIDATE_NEVER
+        && !cache_storage_has_cap(m_storage_caps, CACHE_STORAGE_CAP_INVALIDATION))
+    {
+        MXS_ERROR("Invalidation is requested, but not natively supported by the "
+                  "storage %s. As the storage is shared the invalidation cannot be "
+                  "provided by the cache filter itself.", zName);
+        return nullptr;
+    }
+
+    Storage::Config storage_config(config);
+
+    if (storage_config.max_count != 0
+        && !cache_storage_has_cap(m_storage_caps, CACHE_STORAGE_CAP_MAX_COUNT))
+    {
+        MXS_WARNING("The storage %s is shared and the maximum number of items cannot "
+                    "be specified locally; the 'max_count' setting is ignored.",
+                    zName);
+        storage_config.max_count = 0;
+    }
+
+    if (storage_config.max_size != 0
+        && !cache_storage_has_cap(m_storage_caps, CACHE_STORAGE_CAP_MAX_SIZE))
+    {
+        MXS_WARNING("The storage %s is shared and the maximum size of the cache "
+                    "cannot be specified locally; the 'max_size' setting is ignored.",
+                    zName);
+        storage_config.max_size = 0;
+    }
+
+    return create_raw_storage(zName, storage_config, argc, argv);
 }

@@ -95,11 +95,25 @@ public:
                                 char* argv[] = NULL);
 
 private:
-    StorageFactory(void* handle, StorageModule* pModule, uint32_t capabilities);
+    StorageFactory(void* handle,
+                   StorageModule* pModule,
+                   cache_storage_kind_t kind,
+                   uint32_t capabilities);
+
+    Storage* create_private_storage(const char* zName,
+                                    const Storage::Config& config,
+                                    int argc,
+                                    char* argv[]);
+
+    Storage* create_shared_storage(const char* zName,
+                                   const Storage::Config& config,
+                                   int argc,
+                                   char* argv[]);
 
 private:
-    void*          m_handle;        /*< dl handle of storage. */
-    StorageModule* m_pModule;       /*< API of storage. */
-    uint32_t       m_storage_caps;  /*< Capabilities of underlying storage. */
-    uint32_t       m_caps;          /*< Capabilities of storages of this factory. */
+    void*                m_handle;        /*< dl handle of storage. */
+    StorageModule*       m_pModule;       /*< API of storage. */
+    cache_storage_kind_t m_kind;          /*< The kind of storage; private or shared. */
+    uint32_t             m_storage_caps;  /*< Capabilities of underlying storage. */
+    uint32_t             m_caps;          /*< Capabilities of storages of this factory. */
 };
