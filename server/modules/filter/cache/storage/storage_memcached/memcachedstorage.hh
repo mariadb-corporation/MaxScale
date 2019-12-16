@@ -13,7 +13,6 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
-#include <libmemcached/memcached.h>
 #include "../../cache_storage_api.hh"
 
 class MemcachedStorage : public Storage
@@ -32,7 +31,7 @@ public:
                                     int argc,
                                     char* argv[]);
 
-    std::unique_ptr<Token> create_token() override final;
+    bool create_token(std::unique_ptr<Token>* psToken) override final;
 
     void get_config(Config* pConfig) override final;
 
@@ -64,11 +63,9 @@ public:
 private:
     MemcachedStorage(const std::string& name,
                      const Config& config,
-                     const std::string& memcached_config,
-                     memcached_st* pMemc);
+                     const std::string& memcached_config);
 
-    std::string   m_name;
-    const Config  m_config;
-    std::string   m_memcached_config;
-    memcached_st* m_pMemc;
+    std::string  m_name;
+    const Config m_config;
+    std::string  m_memcached_config;
 };
