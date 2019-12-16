@@ -67,7 +67,7 @@ RWSplitSession* RWSplitSession::create(RWSplit* router, MXS_SESSION* session, co
         {
             if (rses->open_connections())
             {
-                router->stats().n_sessions += 1;
+                mxb::atomic::add(&router->stats().n_sessions, 1, mxb::atomic::RELAXED);
             }
             else
             {
