@@ -107,7 +107,7 @@ then
     yum repolist all | grep PowerTools
     if [ $? == 0 ]
     then
-        enable_power_tools="enablerepo=PowerTools"
+        enable_power_tools="--enablerepo=PowerTools"
     fi
     sudo yum install -y --nogpgcheck ${enable_power_tools} \
          gcc gcc-c++ ncurses-devel bison glibc-devel \
