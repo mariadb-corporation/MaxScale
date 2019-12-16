@@ -365,15 +365,16 @@ LRUStorage::~LRUStorage()
     delete m_pStorage;
 }
 
-std::unique_ptr<Storage::Token> LRUStorage::create_token()
+bool LRUStorage::create_token(std::unique_ptr<Storage::Token>* psToken)
 {
     // The LRUStorage can only be used together with a local storage;
-    // one where the cache-communication is not an issue.
+    // one where the cache-communication is not an issue, so we expect
+    // the create token to be NULL
 
-    auto sToken = m_pStorage->create_token();
-    mxb_assert(!sToken);
+    bool rv = m_pStorage->create_token(psToken);
+    mxb_assert(!*psToken);
 
-    return nullptr;
+    return rv;
 }
 
 void LRUStorage::get_config(Config* pConfig)

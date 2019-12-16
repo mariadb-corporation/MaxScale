@@ -61,7 +61,9 @@ int mxs_2727()
     Cache* pCache = CacheMT::create("MXS-2727", &config);
     mxb_assert(pCache);
 
-    auto sToken = pCache->create_token();
+    unique_ptr<Cache::Token> sToken;
+    MXB_AT_DEBUG(bool created =) pCache->create_token(&sToken);
+    mxb_assert(created);
 
     CACHE_KEY key;
     GWBUF* pSelect = create_gwbuf("SELECT * FROM t");

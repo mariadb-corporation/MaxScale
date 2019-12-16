@@ -65,7 +65,9 @@ int TesterLRUStorage::test_lru(const CacheItems& cache_items, uint64_t size)
     {
         rv = EXIT_SUCCESS;
 
-        auto sToken = pStorage->create_token();
+        unique_ptr<Storage::Token> sToken;
+        MXB_AT_DEBUG(int created=) pStorage->create_token(&sToken);
+        mxb_assert(created);
 
         cache_result_t result;
 

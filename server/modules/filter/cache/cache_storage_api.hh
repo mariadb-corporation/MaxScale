@@ -224,9 +224,13 @@ public:
      * not need to differentiate between different users will return
      * NULL.
      *
-     * @return A new token or NULL.
+     * @param psToken  On successful return, the new token.
+     *                 NOTE: May be null.
+     *
+     * @return True if a token could be created (or if none had to be),
+     *         false otherwise.
      */
-    virtual std::unique_ptr<Token> create_token() = 0;
+    virtual bool create_token(std::unique_ptr<Token>* psToken) = 0;
 
     /**
      * Returns the configuration the storage was created with.

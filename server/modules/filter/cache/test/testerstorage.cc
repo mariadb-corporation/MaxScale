@@ -45,13 +45,14 @@ TesterStorage::HitTask::HitTask(ostream* pOut,
                                 const CacheItems* pCache_items)
     : Tester::Task(pOut)
     , m_storage(*pStorage)
-    , m_sToken(m_storage.create_token())
     , m_cache_items(*pCache_items)
     , m_puts(0)
     , m_gets(0)
     , m_dels(0)
     , m_misses(0)
 {
+    MXB_AT_DEBUG(bool rv=) m_storage.create_token(&m_sToken);
+    mxb_assert(rv);
     mxb_assert(m_cache_items.size() > 0);
 }
 
@@ -338,7 +339,9 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
 
     out() << "Testing ttl." << endl;
 
-    auto sToken = storage.create_token();
+    unique_ptr<Storage::Token> sToken;
+    MXB_AT_DEBUG(bool created=) storage.create_token(&sToken);
+    mxb_assert(created);
 
     Storage::Config config;
     storage.get_config(&config);

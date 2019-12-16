@@ -103,9 +103,10 @@ InMemoryStorage* InMemoryStorage::create(const char* zName,
     return sStorage.release();
 }
 
-std::unique_ptr<Storage::Token> InMemoryStorage::create_token()
+bool InMemoryStorage::create_token(std::unique_ptr<Storage::Token>* psToken)
 {
-    return nullptr;
+    psToken->reset(nullptr);
+    return true;
 }
 
 void InMemoryStorage::get_config(Config* pConfig)

@@ -32,7 +32,7 @@ public:
                                    int argc,
                                    char* argv[]);
 
-    std::unique_ptr<Token> create_token() override final;
+    bool create_token(std::unique_ptr<Token>* psToken) override final;
     void           get_config(Config* pConfig) override final;
     cache_result_t get_head(CACHE_KEY* pKey, GWBUF** ppHead) override final;
     cache_result_t get_tail(CACHE_KEY* pKey, GWBUF** ppHead) override final;

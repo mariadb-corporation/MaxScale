@@ -16,7 +16,19 @@
 //static
 std::unique_ptr<SessionCache> SessionCache::create(Cache* pCache)
 {
-    std::unique_ptr<Cache::Token> sToken = pCache->create_token();
+    std::unique_ptr<SessionCache> sSession_cache;
 
-    return std::unique_ptr<SessionCache>(new (std::nothrow) SessionCache(pCache, std::move(sToken)));
+    std::unique_ptr<Cache::Token> sToken;
+    bool rv = pCache->create_token(&sToken);
+
+    if (rv)
+    {
+        sSession_cache.reset(new (std::nothrow) SessionCache(pCache, std::move(sToken)));
+    }
+    else
+    {
+        MXS_ERROR("Cache storage token creation failed.");
+    }
+
+    return std::move(sSession_cache);
 }
