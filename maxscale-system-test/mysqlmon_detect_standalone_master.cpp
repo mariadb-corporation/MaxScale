@@ -32,7 +32,7 @@ void check_maxscale(TestConnections& test)
 void replicate_from(TestConnections& test, int server_ind, int target_ind)
 {
     stringstream change_master;
-    change_master << "CHANGE MASTER TO MASTER_HOST = '" << test.repl->IP[target_ind]
+    change_master << "CHANGE MASTER TO MASTER_HOST = '" << test.repl->IP_private[target_ind]
                   << "', MASTER_PORT = " << test.repl->port[target_ind] << ", MASTER_USE_GTID = current_pos, "
                                                              "MASTER_USER='repl', MASTER_PASSWORD='repl';";
     cout << "Server " << server_ind + 1 << " starting to replicate from server " << target_ind + 1 << endl;

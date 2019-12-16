@@ -13,6 +13,8 @@
 
 DEFINE_EXCEPTION(Whoopsy);
 
+#define TIMEOUT 300
+
 // TODO these should be read from maxscale.cnf. Maybe the test-lib should replace
 // any "###ENV_VAR###", with environment variables so that code and conf can share.
 constexpr int max_qps = 500;
@@ -196,26 +198,26 @@ int main(int argc, char* argv[])
         test.maxscales->connect_maxscale(0);
 
         std::cout << "Create table\n";
-        test.set_timeout(120);
+        test.set_timeout(TIMEOUT);
         create_table(test.maxscales->conn_master[0]);
 
         std::cout << "Insert rows\n";
-        test.set_timeout(120);
+        test.set_timeout(TIMEOUT);
         insert_rows(test.maxscales->conn_master[0]);
 
-        test.set_timeout(120);
+        test.set_timeout(TIMEOUT);
         gauge_raw_speed(test);
 
         test.stop_timeout();
         test.repl->sync_slaves();
 
-        test.set_timeout(120);
+        test.set_timeout(TIMEOUT);
         verify_throttling_performace(test);
 
         test.maxscales->close_maxscale_connections(0);
         test.maxscales->connect_maxscale(0);
 
-        test.set_timeout(120);
+        test.set_timeout(TIMEOUT);
         verify_throttling_disconnect(test);
 
         std::cout << "\n\n";

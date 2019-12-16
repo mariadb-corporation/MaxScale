@@ -83,7 +83,7 @@ void Config::create_server(int num)
                                  true,
                                  "maxadmin create server server%d %s %d",
                                  num,
-                                 test_->repl->IP[num],
+                                 test_->repl->IP_private[num],
                                  test_->repl->port[num]);
     created_servers_.insert(num);
     test_->stop_timeout();

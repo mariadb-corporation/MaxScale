@@ -20,7 +20,7 @@ monitor_interval=1000
 [Masking]
 type=filter
 module=masking
-rules=/home/vagrant/masking_auto_firewall.json
+rules=/###access_homedir###/masking_auto_firewall.json
 warn_type_mismatch=always
 large_payload=ignore
 treat_string_arg_as_field=false

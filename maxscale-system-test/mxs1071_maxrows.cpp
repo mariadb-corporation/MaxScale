@@ -207,7 +207,7 @@ int compare_expected(TestConnections* Test, const char* sql, my_ulonglong exp_i,
     my_ulonglong* rows = new my_ulonglong[30];
     my_ulonglong i;
 
-    Test->set_timeout(30);
+    Test->set_timeout(90);
     execute_query_num_of_rows(Test->maxscales->conn_rwsplit[0], sql, rows, &i);
 
     Test->tprintf("Result sets number is %llu\n", i);
@@ -252,7 +252,7 @@ int compare_stmt_expected(TestConnections* Test,
     my_ulonglong* rows = new my_ulonglong[30];
     my_ulonglong i;
 
-    Test->set_timeout(30);
+    Test->set_timeout(90);
     execute_stmt_num_of_rows(stmt, rows, &i);
 
     Test->tprintf("Result sets number is %llu\n", i);

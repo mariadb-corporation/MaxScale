@@ -5,6 +5,7 @@
  */
 
 #include "testconnections.h"
+#include "fw_copy_rules.h"
 
 const char* rules = "rule test1 deny no_where_clause\n"
                     "rule test1 deny columns a b c\n"
@@ -20,11 +21,7 @@ int main(int argc, char** argv)
     TestConnections::skip_maxscale_start(true);
     TestConnections test(argc, argv);
 
-    test.maxscales->ssh_node(0,
-                             "mkdir -p /home/vagrant/rules/; chown -R vagrant:vagrant /home/vagrant/rules/",
-                             true);
-    test.maxscales->copy_to_node_legacy((char*)"rules.txt", (char*)"~/rules/rules.txt", 0);
-    test.maxscales->ssh_node(0, "chmod a+r /home/vagrant/rules/rules.txt;", true);
+    copy_rules(&test, (char*) "rules.txt", (char*) ".");
 
     int rc = 0;
 

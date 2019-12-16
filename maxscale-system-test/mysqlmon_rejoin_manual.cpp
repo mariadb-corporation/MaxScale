@@ -123,8 +123,8 @@ int main(int argc, char** argv)
             test.repl->connect();
             if (find_field(conn, sstatus_query.c_str(), "Master_Host", result) == 0)
             {
-                test.expect(strcmp(result, test.repl->IP[0]) == 0,
-                        "server3 did not rejoin the cluster (%s != %s).", result, test.repl->IP[0]);
+                test.expect(strcmp(result, test.repl->IP_private[0]) == 0,
+                        "server3 did not rejoin the cluster (%s != %s).", result, test.repl->IP_private[0]);
             }
             else
             {

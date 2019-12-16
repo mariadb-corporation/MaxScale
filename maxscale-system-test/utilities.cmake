@@ -11,7 +11,7 @@ function(add_template_manual name template)
 endfunction()
 
 # Default test timeout
-set(TIMEOUT 900)
+set(TIMEOUT 3600)
 
 # This functions adds a source file as an executable, links that file against
 # the common test core and creates a test from it. The first parameter is the

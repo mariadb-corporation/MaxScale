@@ -370,9 +370,9 @@ int Nodes::read_basic_env()
 
             sprintf(env_name, "%s_%03d_hostname", prefix, i);
             hostname[i] = strdup(get_nc_item(env_name).c_str());
-            if (hostname[i] == NULL)
+            if ((hostname[i] == NULL) || (strcmp(hostname[i], "") == 0))
             {
-                hostname[i] = IP[i];
+                hostname[i] = IP_private[i];
             }
             setenv(env_name, hostname[i], 1);
 
@@ -416,6 +416,7 @@ std::string Nodes::get_nc_item(const char* item_name)
     }
 
     std::string str = network_config.substr(equal + 1, end - equal - 1);
+    str.erase(remove(str.begin(), str.end(), ' '), str.end());
 
     setenv(item_name, str.c_str(), 1);
 

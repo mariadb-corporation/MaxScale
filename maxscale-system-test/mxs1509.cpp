@@ -24,7 +24,7 @@ void change_master(TestConnections& test, int slave, int master, const char* nam
                   "CHANGE MASTER %s TO master_host='%s', master_port=3306, master_user='%s', master_password='%s', master_use_gtid=slave_pos;"
                   "START ALL SLAVES",
                   source.c_str(),
-                  test.repl->IP[master],
+                  test.repl->IP_private[master],
                   test.repl->user_name,
                   test.repl->password);
 }

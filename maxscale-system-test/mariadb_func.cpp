@@ -462,7 +462,7 @@ int get_conn_num(MYSQL* conn, std::string ip, std::string hostname, std::string 
                     row = mysql_fetch_row(res);
                     if ((row[2] != NULL ) && (row[3] != NULL))
                     {
-                        if (strstr(row[2], ip.c_str()) && strstr(row[3], db.c_str()))
+                        if ((strcmp(strtok(row[2], ":"), ip.c_str()) == 0) && strstr(row[3], db.c_str()))
                         {
                             conn_num++;
                         }
