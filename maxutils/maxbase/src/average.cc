@@ -27,10 +27,9 @@ void CumulativeAverage::add(double ave, int num_samples)
     }
     else
     {
-        m_ave = (m_ave * (m_num_samples - m_num_last_added)
+        m_ave = (m_ave * (m_num_samples - num_samples)
                  + ave * num_samples) / m_num_samples;
     }
-    m_num_last_added = num_samples;
 }
 
 double CumulativeAverage::average() const
@@ -58,7 +57,6 @@ void CumulativeAverage::reset()
 {
     m_ave = 0;
     m_num_samples = 0;
-    m_num_last_added = 0;
 }
 
 EMAverage::EMAverage(double min_alpha, double max_alpha, int sample_max)
