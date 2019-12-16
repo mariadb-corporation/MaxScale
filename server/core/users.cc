@@ -57,14 +57,15 @@ Users& Users::operator=(const Users& rhs)
 }
 
 Users::Users(Users&& rhs) noexcept
-    : m_data(std::move(rhs.m_data)) // rhs should be a temporary, and no other thread can access it. No lock.
+    : m_data(std::move(rhs.m_data))     // rhs should be a temporary, and no other thread can access it. No
+                                        // lock.
 {
 }
 
 Users& Users::operator=(Users&& rhs) noexcept
 {
     Guard guard(m_lock);
-    m_data = std::move(rhs.m_data); // same as above
+    m_data = std::move(rhs.m_data);     // same as above
     return *this;
 }
 
@@ -201,13 +202,6 @@ json_t* Users::to_json() const
     return arr;
 }
 
-Users* Users::from_json(json_t* json)
-{
-    Users* u = reinterpret_cast<Users*>(users_alloc());
-    u->load_json(json);
-    return u;
-}
-
 bool Users::add_hashed(const std::string& user, const std::string& password, user_account_type perm)
 {
     Guard guard(m_lock);
@@ -280,77 +274,15 @@ std::string Users::old_hash(const std::string& password)
 
 using mxs::Users;
 
-USERS* users_alloc()
+bool users_change_password(Users* users, const char* user, const char* password)
 {
-    Users* rval = new(std::nothrow) mxs::Users();
-    MXS_OOM_IFNULL(rval);
-    return reinterpret_cast<USERS*>(rval);
-}
-
-void users_free(USERS* users)
-{
-    Users* u = reinterpret_cast<Users*>(users);
-    delete u;
-}
-
-bool users_add(USERS* users, const char* user, const char* password, mxs::user_account_type type)
-{
-    Users* u = reinterpret_cast<Users*>(users);
-    return u->add(user, password, type);
-}
-
-bool users_delete(USERS* users, const char* user)
-{
-    Users* u = reinterpret_cast<Users*>(users);
-    return u->remove(user);
-}
-
-json_t* users_to_json(USERS* users)
-{
-    Users* u = reinterpret_cast<Users*>(users);
-    return u->to_json();
-}
-
-USERS* users_from_json(json_t* json)
-{
-    return reinterpret_cast<USERS*>(Users::from_json(json));
-}
-
-bool users_find(USERS* users, const char* user)
-{
-    Users* u = reinterpret_cast<Users*>(users);
-    return u->get(user);
-}
-
-bool users_change_password(USERS* users, const char* user, const char* password)
-{
-    Users* u = reinterpret_cast<Users*>(users);
     mxs::UserInfo info;
-    return u->get(user, &info) && u->remove(user) && u->add(user, password, info.permissions);
+    return users->get(user, &info) && users->remove(user) && users->add(user, password, info.permissions);
 }
 
-bool users_auth(USERS* users, const char* user, const char* password)
+bool users_is_admin(Users* users, const char* user, const char* password)
 {
-    Users* u = reinterpret_cast<Users*>(users);
-    return u->authenticate(user, password);
-}
-
-bool users_is_admin(USERS* users, const char* user, const char* password)
-{
-    Users* u = reinterpret_cast<Users*>(users);
-    return u->check_permissions(user, password ? password : "", mxs::USER_ACCOUNT_ADMIN);
-}
-
-int users_admin_count(USERS* users)
-{
-    Users* u = reinterpret_cast<Users*>(users);
-    return u->admin_count();
-}
-
-json_t* users_diagnostics(USERS* users)
-{
-    Users* u = reinterpret_cast<Users*>(users);
-    return u->diagnostics();
+    return users->check_permissions(user, password ? password : "", mxs::USER_ACCOUNT_ADMIN);
 }
 
 const char* account_type_to_str(mxs::user_account_type type)

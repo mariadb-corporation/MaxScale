@@ -32,44 +32,47 @@
 #include <maxscale/utils.hh>
 #include <maxscale/event.hh>
 
-
 /**
  * @file adminusers.c - Administration user account management
  */
 
-static USERS* load_linux_users();
-static USERS* load_inet_users();
-
-static USERS* linux_users = NULL;
-static USERS* inet_users = NULL;
-
-static const int LINELEN = 80;
-
-static const char LINUX_USERS_FILE_NAME[] = "maxadmin-users";
-static const char INET_USERS_FILE_NAME[] = "passwd";
-
+using mxs::Users;
 using mxs::user_account_type;
 using mxs::USER_ACCOUNT_UNKNOWN;
 using mxs::USER_ACCOUNT_ADMIN;
 using mxs::USER_ACCOUNT_BASIC;
+
+namespace
+{
+Users linux_users;
+Users inet_users;
+
+bool load_users(const char* fname, Users* output);
+
+const char LINUX_USERS_FILE_NAME[] = "maxadmin-users";
+const char INET_USERS_FILE_NAME[] = "passwd";
+const int LINELEN = 80;
+}
 
 /**
  * Admin Users initialisation
  */
 void admin_users_init()
 {
-    if ((linux_users = load_linux_users()) == NULL)
+    if (!load_users(LINUX_USERS_FILE_NAME, &linux_users))
     {
         admin_enable_linux_account(DEFAULT_ADMIN_USER, USER_ACCOUNT_ADMIN);
     }
 
-    if ((inet_users = load_inet_users()) == NULL)
+    if (!load_users(INET_USERS_FILE_NAME, &inet_users))
     {
         admin_add_inet_user(INET_DEFAULT_USERNAME, INET_DEFAULT_PASSWORD, USER_ACCOUNT_ADMIN);
     }
 }
 
-static bool admin_dump_users(USERS* users, const char* fname)
+namespace
+{
+bool admin_dump_users(const Users* users, const char* fname)
 {
     if (access(get_datadir(), F_OK) != 0)
     {
@@ -95,7 +98,7 @@ static bool admin_dump_users(USERS* users, const char* fname)
     }
     else
     {
-        json_t* json = users_to_json(users);
+        json_t* json = users->to_json();
         char* str = json_dumps(json, 0);
         json_decref(json);
 
@@ -121,23 +124,15 @@ static bool admin_dump_users(USERS* users, const char* fname)
     return rval;
 }
 
-static const char* admin_add_user(USERS** pusers,
-                                  const char* fname,
-                                  const char* uname,
-                                  const char* password,
-                                  user_account_type type)
+const char* admin_add_user(Users* pusers, const char* fname, const char* uname, const char* password,
+                           user_account_type type)
 {
-    if (*pusers == NULL)
-    {
-        *pusers = users_alloc();
-    }
-
-    if (!users_add(*pusers, uname, password ? password : "", type))
+    if (!pusers->add(uname, password ? password : "", type))
     {
         return ADMIN_ERR_DUPLICATE;
     }
 
-    if (!admin_dump_users(*pusers, fname))
+    if (!admin_dump_users(pusers, fname))
     {
         return ADMIN_ERR_FILEOPEN;
     }
@@ -145,22 +140,14 @@ static const char* admin_add_user(USERS** pusers,
     return ADMIN_SUCCESS;
 }
 
-static const char* admin_alter_user(USERS** pusers,
-                                    const char* fname,
-                                    const char* uname,
-                                    const char* password)
+const char* admin_alter_user(Users* pusers, const char* fname, const char* uname, const char* password)
 {
-    if (*pusers == NULL)
-    {
-        *pusers = users_alloc();
-    }
-
-    if (!users_change_password(*pusers, uname, password))
+    if (!users_change_password(pusers, uname, password))
     {
         return ADMIN_ERR_USERNOTFOUND;
     }
 
-    if (!admin_dump_users(*pusers, fname))
+    if (!admin_dump_users(pusers, fname))
     {
         return ADMIN_ERR_FILEOPEN;
     }
@@ -168,9 +155,9 @@ static const char* admin_alter_user(USERS** pusers,
     return ADMIN_SUCCESS;
 }
 
-static const char* admin_remove_user(USERS* users, const char* fname, const char* uname)
+const char* admin_remove_user(Users* users, const char* fname, const char* uname)
 {
-    if (!users_delete(users, uname))
+    if (!users->remove(uname))
     {
         MXS_ERROR("Couldn't find user %s. Removing user failed.", uname);
         return ADMIN_ERR_USERNOTFOUND;
@@ -183,7 +170,7 @@ static const char* admin_remove_user(USERS* users, const char* fname, const char
 
     return ADMIN_SUCCESS;
 }
-
+}
 static json_t* admin_user_json_data(const char* host,
                                     const char* user,
                                     enum user_type user_type,
@@ -207,9 +194,11 @@ static json_t* admin_user_json_data(const char* host,
     return entry;
 }
 
-static void user_types_to_json(USERS* users, json_t* arr, const char* host, enum user_type type)
+namespace
 {
-    json_t* json = users_diagnostics(users);
+void user_types_to_json(Users* users, json_t* arr, const char* host, user_type type)
+{
+    json_t* json = users->diagnostics();
     size_t index;
     json_t* value;
 
@@ -221,6 +210,7 @@ static void user_types_to_json(USERS* users, json_t* arr, const char* host, enum
     }
 
     json_decref(json);
+}
 }
 
 static std::string path_from_type(enum user_type type)
@@ -260,46 +250,41 @@ json_t* admin_all_users_to_json(const char* host, enum user_type type)
     json_t* arr = json_array();
     std::string path = path_from_type(type);
 
-    if (inet_users && (type == USER_TYPE_ALL || type == USER_TYPE_INET))
+    if (!inet_users.empty() && (type == USER_TYPE_ALL || type == USER_TYPE_INET))
     {
-        user_types_to_json(inet_users, arr, host, USER_TYPE_INET);
+        user_types_to_json(&inet_users, arr, host, USER_TYPE_INET);
     }
 
-    if (linux_users && (type == USER_TYPE_ALL || type == USER_TYPE_UNIX))
+    if (!linux_users.empty() && (type == USER_TYPE_ALL || type == USER_TYPE_UNIX))
     {
-        user_types_to_json(linux_users, arr, host, USER_TYPE_UNIX);
+        user_types_to_json(&linux_users, arr, host, USER_TYPE_UNIX);
     }
 
     return mxs_json_resource(host, path.c_str(), arr);
 }
 
-USERS* load_legacy_users(FILE* fp)
+namespace
 {
-    USERS* rval;
+
+bool load_legacy_users(FILE* fp, Users* output)
+{
+    Users rval;
     char path[PATH_MAX];
     char uname[80];
-    int added_users = 0;
+    bool error = false;
 
-    if ((rval = users_alloc()) == NULL)
-    {
-        return NULL;
-    }
     while (fgets(uname, sizeof(uname), fp))
     {
         char* nl = strchr(uname, '\n');
-
         if (nl)
         {
             *nl = '\0';
         }
         else if (!feof(fp))
         {
-            MXS_ERROR("Line length exceeds %d characters, possibly corrupted "
-                      "'passwd' file in: %s",
-                      LINELEN,
-                      path);
-            users_free(rval);
-            rval = NULL;
+            MXS_ERROR("Line length exceeds %d characters, possibly corrupted 'passwd' file in: %s",
+                      LINELEN, path);
+            error = true;
             break;
         }
 
@@ -317,52 +302,43 @@ USERS* load_legacy_users(FILE* fp)
             password = "";
         }
 
-        if (users_add(rval, uname, password, USER_ACCOUNT_ADMIN))
-        {
-            added_users++;
-        }
+        rval.add(uname, password, USER_ACCOUNT_ADMIN);
     }
 
-    if (!added_users)
+    if (!error)
     {
-        users_free(rval);
-        rval = NULL;
+        *output = std::move(rval);
     }
-
-    return rval;
+    return !error;
 }
 
 /**
- * Load the admin users
+ * Load the admin users.
  *
  * @param fname Name of the file in the datadir to load
- *
- * @return Table of users
+ * @param output Result output
+ * @return True on success
  */
-static USERS* load_users(const char* fname)
+bool load_users(const char* fname, Users* output)
 {
-    USERS* rval = NULL;
     char path[PATH_MAX];
     snprintf(path, sizeof(path), "%s/%s", get_datadir(), fname);
-    FILE* fp = fopen(path, "r");
 
+    FILE* fp = fopen(path, "r");
     if (fp)
     {
         json_error_t err;
         json_t* json = json_loadf(fp, 0, &err);
-
         if (json)
         {
             /** New format users */
-            rval = users_from_json(json);
+            output->load_json(json);
             json_decref(json);
         }
         else
         {
             /** Old style users file */
-            rval = load_legacy_users(fp);
-
-            if (rval)
+            if (load_legacy_users(fp, output))
             {
                 /** Users loaded successfully, back up the original file and
                  * replace it with the new one */
@@ -376,7 +352,7 @@ static USERS* load_users(const char* fname)
                               errno,
                               mxs_strerror(errno));
                 }
-                else if (!admin_dump_users(rval, fname))
+                else if (!admin_dump_users(output, fname))
                 {
                     MXS_ERROR("Failed to dump new users. Please rename the file "
                               "'%s' manually to '%s' and restart MaxScale to "
@@ -395,20 +371,10 @@ static USERS* load_users(const char* fname)
         }
 
         fclose(fp);
+        return true;
     }
-
-    return rval;
+    return false;
 }
-
-
-static USERS* load_linux_users()
-{
-    return load_users(LINUX_USERS_FILE_NAME);
-}
-
-static USERS* load_inet_users()
-{
-    return load_users(INET_USERS_FILE_NAME);
 }
 
 /**
@@ -432,7 +398,7 @@ const char* admin_enable_linux_account(const char* uname, enum user_account_type
  */
 const char* admin_disable_linux_account(const char* uname)
 {
-    return admin_remove_user(linux_users, LINUX_USERS_FILE_NAME, uname);
+    return admin_remove_user(&linux_users, LINUX_USERS_FILE_NAME, uname);
 }
 
 /**
@@ -444,14 +410,7 @@ const char* admin_disable_linux_account(const char* uname)
  */
 bool admin_linux_account_enabled(const char* uname)
 {
-    bool rv = false;
-
-    if (linux_users)
-    {
-        rv = users_find(linux_users, uname);
-    }
-
-    return rv;
+    return linux_users.get(uname);
 }
 
 /**
@@ -490,7 +449,7 @@ const char* admin_alter_inet_user(const char* uname, const char* password)
  */
 const char* admin_remove_inet_user(const char* uname)
 {
-    return admin_remove_user(inet_users, INET_USERS_FILE_NAME, uname);
+    return admin_remove_user(&inet_users, INET_USERS_FILE_NAME, uname);
 }
 
 /**
@@ -502,14 +461,7 @@ const char* admin_remove_inet_user(const char* uname)
  */
 bool admin_inet_user_exists(const char* uname)
 {
-    bool rv = false;
-
-    if (inet_users)
-    {
-        rv = users_find(inet_users, uname);
-    }
-
-    return rv;
+    return inet_users.get(uname);
 }
 
 /**
@@ -522,11 +474,7 @@ bool admin_inet_user_exists(const char* uname)
  */
 bool admin_verify_inet_user(const char* username, const char* password)
 {
-    bool authenticated = false;
-    if (inet_users)
-    {
-        authenticated = users_auth(inet_users, username, password);
-    }
+    bool authenticated = inet_users.authenticate(username, password);
 
     // If normal authentication didn't work, try PAM.
     // TODO: The reason for 'users_auth' failing is not known here. If the username existed but pw was wrong,
@@ -541,17 +489,12 @@ bool admin_verify_inet_user(const char* username, const char* password)
 
 bool admin_user_is_inet_admin(const char* username, const char* password)
 {
-    bool is_admin = false;
-
     if (!password)
     {
         password = "";
     }
 
-    if (inet_users)
-    {
-        is_admin = users_is_admin(inet_users, username, password);
-    }
+    bool is_admin = users_is_admin(&inet_users, username, password);
     if (!is_admin)
     {
         is_admin = admin_user_is_pam_account(username, password, USER_ACCOUNT_ADMIN);
@@ -561,25 +504,18 @@ bool admin_user_is_inet_admin(const char* username, const char* password)
 
 bool admin_user_is_unix_admin(const char* username)
 {
-    bool rval = false;
-
-    if (linux_users)
-    {
-        rval = users_is_admin(linux_users, username, nullptr);
-    }
-
-    return rval;
+    return users_is_admin(&linux_users, username, nullptr);
 }
 
 bool admin_have_admin()
 {
-    return users_admin_count(inet_users) > 0 || users_admin_count(linux_users) > 0;
+    return inet_users.admin_count() > 0 || linux_users.admin_count() > 0;
 }
 
 bool admin_is_last_admin(const char* user)
 {
     return (admin_user_is_inet_admin(user, nullptr) || admin_user_is_unix_admin(user))
-           && (users_admin_count(inet_users) + users_admin_count(linux_users)) == 1;
+           && ((inet_users.admin_count() + linux_users.admin_count()) == 1);
 }
 
 bool admin_user_is_pam_account(const std::string& username, const std::string& password,

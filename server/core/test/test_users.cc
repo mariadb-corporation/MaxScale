@@ -18,53 +18,43 @@
 #if defined (NDEBUG)
 #undef NDEBUG
 #endif
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
+#include <cstdio>
+#include <cstring>
 #include <maxscale/users.hh>
-
 #include "test_utils.hh"
 
 using mxs::USER_ACCOUNT_ADMIN;
 
 static void test1()
 {
-    USERS* users;
-    bool rv;
+    mxs::Users users;
 
     /* Poll tests */
-    fprintf(stderr,
-            "testusers : Initialise the user table.");
-    users = users_alloc();
-    mxb_assert_message(NULL != users, "Allocating user table should not return NULL.");
-    fprintf(stderr, "\t..done\nAdd a user");
-    rv = users_add(users, "username", "authorisation", USER_ACCOUNT_ADMIN);
+    fprintf(stderr, "Add a user");
+    bool rv = users.add("username", "authorisation", USER_ACCOUNT_ADMIN);
     mxb_assert_message(rv, "Should add one user");
-    rv = users_auth(users, "username", "authorisation");
+    rv = users.authenticate("username", "authorisation");
     mxb_assert_message(rv, "Fetch valid user must not return NULL");
-    rv = users_auth(users, "username", "newauth");
-    mxb_assert_message(rv == 0, "Fetch invalid user must return NULL");
+    rv = users.authenticate("username", "newauth");
+    mxb_assert_message(!rv, "Fetch invalid user must return NULL");
 
     fprintf(stderr, "\t..done\nAdd another user");
-    rv = users_add(users, "username2", "authorisation2", USER_ACCOUNT_ADMIN);
+    rv = users.add("username2", "authorisation2", USER_ACCOUNT_ADMIN);
     mxb_assert_message(rv, "Should add one user");
     fprintf(stderr, "\t..done\nDelete a user.");
-    rv = users_delete(users, "username");
+    rv = users.remove("username");
     mxb_assert_message(rv, "Should delete just one user");
 
     fprintf(stderr, "\t..done\nDump users table.");
-    json_t* dump = users_to_json(users);
+    json_t* dump = users.to_json();
     mxb_assert_message(dump, "Users should be dumped");
-    USERS* loaded_users = users_from_json(dump);
+    mxs::Users loaded_users;
+    loaded_users.load_json(dump);
     mxb_assert_message(dump, "Users should be loaded");
     json_decref(dump);
-    rv = users_auth(loaded_users, "username2", "authorisation2");
-    users_free(loaded_users);
+    rv = loaded_users.authenticate("username2", "authorisation2");
     mxb_assert_message(rv, "Loaded users should contain users");
 
-    fprintf(stderr, "\t..done\nFree user table.");
-    users_free(users);
     fprintf(stderr, "\t..done\n");
 }
 
