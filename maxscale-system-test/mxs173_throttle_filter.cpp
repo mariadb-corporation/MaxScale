@@ -13,7 +13,7 @@
 
 DEFINE_EXCEPTION(Whoopsy);
 
-#define TIMEOUT 300
+constexpr int TIMEOUT = 300;
 
 // TODO these should be read from maxscale.cnf. Maybe the test-lib should replace
 // any "###ENV_VAR###", with environment variables so that code and conf can share.
