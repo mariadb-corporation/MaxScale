@@ -112,7 +112,7 @@ int main(int argc, char** argv)
     const char CHANGE_CMD_FMT[] = "CHANGE MASTER TO MASTER_HOST = '%s', MASTER_PORT = %d, "
                                   "MASTER_USE_GTID = current_pos, MASTER_USER='repl', MASTER_PASSWORD = 'repl';";
     char cmd[256];
-    snprintf(cmd, sizeof(cmd), CHANGE_CMD_FMT, test.repl->IP[3], test.repl->port[3]);
+    snprintf(cmd, sizeof(cmd), CHANGE_CMD_FMT, test.repl->IP_private[3], test.repl->port[3]);
     mysql_query(nodes[0], cmd);
     mysql_query(nodes[0], "START SLAVE;");
     test.maxscales->wait_for_monitor();

@@ -235,7 +235,7 @@ int Mariadb_nodes::find_master()
         i = 0;
         while ((found == 0) && (i < N))
         {
-            if (strcmp(IP[i], master_IP) == 0)
+            if (strcmp(IP_private[i], master_IP) == 0)
             {
                 found = 1;
                 master_node = i;
@@ -273,7 +273,7 @@ void Mariadb_nodes::change_master(int NewMaster, int OldMaster)
         if (i != NewMaster && mysql_ping(nodes[i]) == 0)
         {
             char str[1024];
-            sprintf(str, setup_slave, IP[NewMaster], log_file, log_pos, port[NewMaster]);
+            sprintf(str, setup_slave, IP_private[NewMaster], log_file, log_pos, port[NewMaster]);
             execute_query(nodes[i], "%s", str);
         }
     }
@@ -445,7 +445,7 @@ int Galera_nodes::start_galera()
                    true,
                    "sed -i 's/###NODE-ADDRESS###/%s/' /etc/my.cnf.d/* /etc/mysql/my.cnf.d/*;"
                    "sed -i \"s|###GALERA-LIB-PATH###|$(ls /usr/lib*/galera/*.so)|g\" /etc/my.cnf.d/* /etc/mysql/my.cnf.d/*",
-                   IP[i]);
+                   IP_private[i]);
     }
 
     printf("Starting new Galera cluster\n");
@@ -1493,12 +1493,13 @@ int Mariadb_nodes::prepare_servers()
 
 void Mariadb_nodes::replicate_from(int slave, int master, const char* type)
 {
-    replicate_from(slave, IP[master], port[master], type);
+    replicate_from(slave, IP_private[master], port[master], type);
 }
 
 void Mariadb_nodes::replicate_from(int slave, const std::string& host, uint16_t port, const char* type)
 {
     std::stringstream change_master;
+
     change_master << "CHANGE MASTER TO MASTER_HOST = '" << host
                   << "', MASTER_PORT = " << port << ", MASTER_USE_GTID = "
                   << type << ", MASTER_USER='repl', MASTER_PASSWORD='repl';";
@@ -1535,7 +1536,7 @@ std::string Mariadb_nodes::cnf_servers()
                 cnf_server_name +
                 std::to_string(i + 1) +
                 std::string("]\\ntype=server\\naddress=") +
-                std::string(IP[i]) +
+                std::string(IP_private[i]) +
                 std::string("\\nport=") +
                 std::to_string(port[i]) +
                 std::string("\\nprotocol=MySQLBackend\\n");

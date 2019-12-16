@@ -71,5 +71,6 @@ void stop_keepalived(TestConnections* Test)
     for (int i = 0; i < Test->maxscales->N; i++)
     {
         Test->maxscales->ssh_node(i, "sudo service keepalived stop", true);
+        Test->maxscales->ssh_node(i, "killall -9 keepalived", true);
     }
 }

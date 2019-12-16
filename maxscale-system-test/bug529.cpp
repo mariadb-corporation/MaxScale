@@ -183,10 +183,10 @@ int main(int argc, char* argv[])
         Test->set_timeout(60);
         num_conn =
             get_conn_num(Test->repl->nodes[i],
-                         Test->maxscales->IP[0],
+                         Test->maxscales->IP_private[0],
                          Test->maxscales->hostname[0],
                          (char*) "test");
-        Test->tprintf("Connections to node %d (%s): %d\n", i, Test->repl->IP[i], num_conn);
+        Test->tprintf("Connections to node %d (%s): %d\n", i, Test->repl->IP_private[i], num_conn);
         if ((i == 0) && (num_conn > 2 * conn_N))
         {
             Test->add_result(1, "too many connections to master\n");
@@ -205,10 +205,10 @@ int main(int argc, char* argv[])
         Test->set_timeout(60);
         num_conn =
             get_conn_num(Test->repl->nodes[i],
-                         Test->maxscales->IP[0],
+                         Test->maxscales->IP_private[0],
                          Test->maxscales->hostname[0],
                          (char*) "test");
-        printf("Connections to node %d (%s): %d\n", i, Test->repl->IP[i], num_conn);
+        printf("Connections to node %d (%s): %d\n", i, Test->repl->IP_private[i], num_conn);
         if ((i == 0) && (num_conn > 2 * conn_N))
         {
             Test->add_result(1, "too many connections to master\n");
@@ -223,10 +223,10 @@ int main(int argc, char* argv[])
     {
         num_conn =
             get_conn_num(Test->repl->nodes[i],
-                         Test->maxscales->IP[0],
+                         Test->maxscales->IP_private[0],
                          Test->maxscales->hostname[0],
                          (char*) "test");
-        printf("Connections to node %d (%s): %d\n", i, Test->repl->IP[i], num_conn);
+        printf("Connections to node %d (%s): %d\n", i, Test->repl->IP_private[i], num_conn);
         if ((i == 0) && (num_conn > 2 * conn_N))
         {
             Test->add_result(1, "too many connections to master\n");
@@ -242,10 +242,10 @@ int main(int argc, char* argv[])
         Test->set_timeout(60);
         num_conn =
             get_conn_num(Test->repl->nodes[i],
-                         Test->maxscales->IP[0],
+                         Test->maxscales->IP_private[0],
                          Test->maxscales->hostname[0],
                          (char*) "test");
-        printf("Connections to node %d (%s): %d\n", i, Test->repl->IP[i], num_conn);
+        printf("Connections to node %d (%s): %d\n", i, Test->repl->IP_private[i], num_conn);
         if ((i == 0) && (num_conn != 0))
         {
             Test->add_result(1, "there are still connections to master\n");
@@ -263,10 +263,10 @@ int main(int argc, char* argv[])
         Test->set_timeout(60);
         num_conn =
             get_conn_num(Test->repl->nodes[i],
-                         Test->maxscales->IP[0],
+                         Test->maxscales->IP_private[0],
                          Test->maxscales->hostname[0],
                          (char*) "test");
-        Test->tprintf("Connections to node %d (%s): %d\n", i, Test->repl->IP[i], num_conn);
+        Test->tprintf("Connections to node %d (%s): %d\n", i, Test->repl->IP_private[i], num_conn);
         if ((i == 0) && (num_conn != 0))
         {
             Test->add_result(1, "there are still connections to master\n");
@@ -288,10 +288,10 @@ int main(int argc, char* argv[])
         Test->set_timeout(60);
         num_conn =
             get_conn_num(Test->repl->nodes[i],
-                         Test->maxscales->IP[0],
+                         Test->maxscales->IP_private[0],
                          Test->maxscales->hostname[0],
                          (char*) "test");
-        Test->tprintf("Connections to node %d (%s): %d\n", i, Test->repl->IP[i], num_conn);
+        Test->tprintf("Connections to node %d (%s): %d\n", i, Test->repl->IP_private[i], num_conn);
         if ((i == 0) && (num_conn != 0))
         {
             Test->add_result(1, "there are still connections to master\n");
@@ -311,10 +311,10 @@ int main(int argc, char* argv[])
         Test->set_timeout(60);
         num_conn =
             get_conn_num(Test->repl->nodes[i],
-                         Test->maxscales->IP[0],
+                         Test->maxscales->IP_private[0],
                          Test->maxscales->hostname[0],
                          (char*) "test");
-        Test->tprintf("Connections to node %d (%s): %d\n", i, Test->repl->IP[i], num_conn);
+        Test->tprintf("Connections to node %d (%s): %d\n", i, Test->repl->IP_private[i], num_conn);
         if ((i == 0) && (num_conn != 0))
         {
             Test->add_result(1, "there are still connections to master\n");

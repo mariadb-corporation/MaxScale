@@ -375,9 +375,9 @@ int Nodes::read_basic_env()
 
             sprintf(env_name, "%s_%03d_hostname", prefix, i);
             hostname[i] = strdup(get_nc_item(env_name).c_str());
-            if (hostname[i] == NULL)
+            if ((hostname[i] == NULL) || (strcmp(hostname[i], "") == 0))
             {
-                hostname[i] = IP[i];
+                hostname[i] = IP_private[i];
             }
             setenv(env_name, hostname[i], 1);
 

@@ -35,14 +35,6 @@ int main(int argc, char* argv[])
     char rules_dir[4096];
     FILE* file;
 
-    Test->maxscales->ssh_node_f(0,
-                                true,
-                                "cd %s;"
-                                "rm -rf rules;"
-                                "mkdir rules;"
-                                "chown vagrant:vagrant rules",
-                                Test->maxscales->access_homedir[0]);
-
     sprintf(rules_dir, "%s/fw/", test_dir);
     int N = 19;
     int i;
