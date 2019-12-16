@@ -61,7 +61,6 @@ public:
 private:
     double m_ave = 0;
     long   m_num_samples = 0;
-    long   m_num_last_added = 0;
 };
 
 CumulativeAverage operator+(const CumulativeAverage& rhs, const CumulativeAverage& lhs);
