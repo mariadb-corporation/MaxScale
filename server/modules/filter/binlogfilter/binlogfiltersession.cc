@@ -306,6 +306,7 @@ bool BinlogFilterSession::checkEvent(GWBUF** buffer, const REP_HEADER& hdr)
     }
     else
     {
+        int extra_bytes = 0;
         // Current event size is less than MYSQL_PACKET_LENGTH_MAX
         // or is the beginning of large event.
         switch (hdr.event_type)
@@ -345,9 +346,14 @@ bool BinlogFilterSession::checkEvent(GWBUF** buffer, const REP_HEADER& hdr)
             skipDatabaseTable(body);
             break;
 
+        case EXECUTE_LOAD_QUERY_EVENT:
+            // EXECUTE_LOAD_QUERY_EVENT has an extra 13 bytes of data (file ID, file offset etc.)
+            extra_bytes = 4 + 4 + 4 + 1;
+        /** Fallthrough */
+
         case QUERY_EVENT:
             // Handle the SQL statement: DDL, DML, BEGIN, COMMIT
-            checkStatement(buffer, hdr);
+            checkStatement(buffer, hdr, extra_bytes);
 
             // checkStatement can reallocate the buffer in case the size changes: use fresh pointers
             fixEvent(GWBUF_DATA(*buffer) + MYSQL_HEADER_LEN + 1,
@@ -826,10 +832,11 @@ void BinlogFilterSession::handleEventData(uint32_t len)
  * This function checks whether the statement should be replicated and whether the database/table name should
  * be rewritten. If a rewrite takes place, the buffer can be reallocated.
  *
- * @param bufer Pointer to the buffer containing the event
- * @param hdr   The extracted replication header
+ * @param bufer     Pointer to the buffer containing the event
+ * @param hdr       The extracted replication header
+ * @param extra_len Extra static bytes that this event has (only EXECUTE_LOAD_QUERY_EVENT uses it)
  */
-void BinlogFilterSession::checkStatement(GWBUF** buffer, const REP_HEADER& hdr)
+void BinlogFilterSession::checkStatement(GWBUF** buffer, const REP_HEADER& hdr, int extra_len)
 {
     uint8_t* event = GWBUF_DATA(*buffer) + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN;
     uint32_t event_size = hdr.event_size - BINLOG_EVENT_HDR_LEN;
@@ -837,7 +844,7 @@ void BinlogFilterSession::checkStatement(GWBUF** buffer, const REP_HEADER& hdr)
     int db_name_len = event[4 + 4];
     int var_block_len_offset = 4 + 4 + 1 + 2;
     int var_block_len = gw_mysql_get_byte2(event + var_block_len_offset);
-    int static_size = 4 + 4 + 1 + 2 + 2;
+    int static_size = 4 + 4 + 1 + 2 + 2 + extra_len;
     int statement_len = event_size - static_size - var_block_len - db_name_len - 1 - (m_crc ? 4 : 0);
 
     std::string db((char*)event + static_size + var_block_len, db_name_len);

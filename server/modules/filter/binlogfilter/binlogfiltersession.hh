@@ -22,6 +22,8 @@
 #define RAND_EVENT                   0x000D
 #define TABLE_MAP_EVENT              0x0013
 #define XID_EVENT                    0x0010
+#define BEGIN_LOAD_QUERY_EVENT       0x0011
+#define EXECUTE_LOAD_QUERY_EVENT     0x0012
 #define QUERY_EVENT                  0x0002
 #define MARIADB10_GTID_EVENT         0x00a2
 #define MARIADB_ANNOTATE_ROWS_EVENT  0x00a0
@@ -99,8 +101,8 @@ private:
     // Handle event data
     void handleEventData(uint32_t len);
 
-    // Check SQL statement in QUERY_EVENT
-    void checkStatement(GWBUF** buffer, const REP_HEADER& hdr);
+    // Check SQL statement in QUERY_EVENT or EXECUTE_LOAD_QUERY_EVENT
+    void checkStatement(GWBUF** buffer, const REP_HEADER& hdr, int extra_len = 0);
 
     // Check DB.TABLE in ANNOTATE_ROWS event
     void checkAnnotate(const uint8_t* event,

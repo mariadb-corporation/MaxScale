@@ -327,6 +327,16 @@ public:
      */
     void set_close_reason(const std::string& reason);
 
+    /**
+     * Get latest close reason
+     *
+     * @return A human-readable reason why the connection was closed
+     */
+    const std::string& close_reason() const
+    {
+        return m_close_reason;
+    }
+
 private:
     /**
      * Internal state of the backend

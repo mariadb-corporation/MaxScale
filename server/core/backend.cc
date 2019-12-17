@@ -177,6 +177,7 @@ bool Backend::connect(SessionCommandList* sescmd)
         m_closed_at = 0;
         m_opened_at = time(NULL);
         m_state = IN_USE;
+        m_close_reason.clear();
         rval = true;
         m_history_size = 0;
 

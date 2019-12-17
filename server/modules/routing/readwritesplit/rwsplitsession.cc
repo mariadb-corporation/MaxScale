@@ -570,7 +570,14 @@ bool RWSplitSession::handle_ignorable_error(RWBackend* backend, const mxs::Error
     }
     else
     {
-        mxb_assert(is_wsrep_error(error));
+        static bool warn_unexpected_rollback = true;
+
+        if (!is_wsrep_error(error) && warn_unexpected_rollback)
+        {
+            MXS_WARNING("Expected a WSREP error but got a transaction rollback error: %d, %s",
+                        error.code(), error.message().c_str());
+            warn_unexpected_rollback = false;
+        }
 
         if (backend == m_current_master)
         {
@@ -670,6 +677,18 @@ void RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
 
     if (error.is_unexpected_error())
     {
+        if (error.code() == ER_CONNECTION_KILLED)
+        {
+            // The connection was killed, we can safely ignore it. When the TCP connection is
+            // closed, the router's error handling will sort it out.
+            backend->set_close_reason("Connection was killed");
+        }
+        else
+        {
+            // All other unexpected errors are related to server shutdown.
+            backend->set_close_reason(std::string("Server '") + backend->name() + "' is shutting down");
+        }
+
         // The server sent an error that we didn't expect: treat it as if the connection was closed. The
         // client shouldn't see this error as we can replace the closed connection.
 
@@ -1063,12 +1082,12 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
         if (!can_continue)
         {
 
-            int idle = duration_cast<seconds>(maxbase::Clock::now(
-                                                  maxbase::NowType::EPollTick)
-                                              - backend->last_write()).count();
+            int idle = duration_cast<seconds>(
+                maxbase::Clock::now(maxbase::NowType::EPollTick) - backend->last_write()).count();
             MXS_ERROR("Lost connection to the master server, closing session.%s "
-                      "Connection has been idle for %d seconds. Error caused by: %s",
-                      errmsg.c_str(), idle, mxs::extract_error(errmsgbuf).c_str());
+                      "Connection has been idle for %d seconds. Error caused by: %s"
+                      "Last close reason: %s", errmsg.c_str(), idle, mxs::extract_error(errmsgbuf).c_str(),
+                      backend->close_reason().empty() ? "<none>" : backend->close_reason().c_str());
         }
 
         // Decrement the expected response count only if we know we can continue the sesssion.
