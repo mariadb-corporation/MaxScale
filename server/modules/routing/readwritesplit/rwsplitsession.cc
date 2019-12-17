@@ -119,6 +119,13 @@ void RWSplitSession::close()
 
 int32_t RWSplitSession::routeQuery(GWBUF* querybuf)
 {
+    if (!querybuf)
+    {
+        MXS_ERROR("MXS-2585: Null buffer passed to routeQuery, closing session");
+        mxb_assert(!true);
+        return 0;
+    }
+
     mxb_assert(GWBUF_IS_CONTIGUOUS(querybuf));
     int rval = 0;
 
