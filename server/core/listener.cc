@@ -237,6 +237,12 @@ SListener Listener::create(const std::string& name,
     return listener;
 }
 
+void listener_destroy_instances()
+{
+    std::lock_guard<std::mutex> guard(listener_lock);
+    all_listeners.clear();
+}
+
 void Listener::close_all_fds()
 {
     if (m_type == Type::UNIQUE_TCP)

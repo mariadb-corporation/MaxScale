@@ -62,3 +62,5 @@ SListener listener_find_by_address(const std::string& address, unsigned short po
  * @return Listener parameters
  */
 const MXS_MODULE_PARAM* common_listener_params();
+
+void listener_destroy_instances();
