@@ -42,6 +42,7 @@
 #include <maxscale/session.hh>
 #include <maxscale/ssl.hh>
 #include <maxscale/utils.h>
+#include <maxbase/format.hh>
 
 #include "setparser.hh"
 #include "sqlmodeparser.hh"
@@ -574,6 +575,14 @@ bool MariaDBClientConnection::perform_authentication()
     const int er_bad_handshake = 1043;
     const int er_out_of_order = 1156;
 
+    auto send_access_denied_error = [this, &next_seq] ()
+    {
+        std::string msg = mxb::string_printf("Access denied for user '%s'@'%s' (using password: %s)",
+            m_session_data->user.c_str(), m_session_data->remote.c_str(),
+            m_session_data->auth_token.empty() ? "NO" : "YES");
+        modutil_send_mysql_err_packet(m_dcb, next_seq, 0, 1045, "2800", msg.c_str());
+    };
+
     auto remote = m_dcb->remote().c_str();
     bool error = false;
     bool state_machine_continue = true;
@@ -672,6 +681,7 @@ bool MariaDBClientConnection::perform_authentication()
             }
             else
             {
+                send_access_denied_error();
                 m_auth_state = AuthState::FAIL;
             }
             break;
@@ -697,9 +707,10 @@ bool MariaDBClientConnection::perform_authentication()
                 }
                 else
                 {
-                    // Authentication failed. TODO: send an error message here when needed.
-                    m_auth_state = AuthState::FAIL;
+                    // Authentication failed. TODO: is this the correct error to send?
+                    send_access_denied_error();
                     mxs::mark_auth_as_failed(m_dcb->remote());
+                    m_auth_state = AuthState::FAIL;
                 }
             }
             break;
@@ -717,12 +728,8 @@ bool MariaDBClientConnection::perform_authentication()
                     {
                         // Again, this may be because user data is obsolete.
                         m_session->service->notify_authentication_failed();
-                        mysql_send_auth_error(m_dcb, next_seq, "Access denied, wrong password");
                     }
-                    else
-                    {
-                        mysql_send_auth_error(m_dcb, next_seq, "Access denied");
-                    }
+                    send_access_denied_error();
                     m_auth_state = AuthState::FAIL;
                 }
             }
