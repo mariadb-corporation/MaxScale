@@ -678,6 +678,20 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
 
     if (error.is_unexpected_error())
     {
+        // The connection was killed, we can safely ignore it. When the TCP connection is
+        // closed, the router's error handling will sort it out.
+        if (error.code() == ER_CONNECTION_KILLED)
+        {
+            backend->set_close_reason("Connection was killed");
+        }
+        else
+        {
+            mxb_assert(error.code() == ER_SERVER_SHUTDOWN
+                       || error.code() == ER_NORMAL_SHUTDOWN
+                       || error.code() == ER_SHUTDOWN_COMPLETE);
+            backend->set_close_reason(std::string("Server '") + backend->name() + "' is shutting down");
+        }
+
         // The server sent an error that we didn't expect: treat it as if the connection was closed. The
         // client shouldn't see this error as we can replace the closed connection.
 
@@ -1125,9 +1139,11 @@ void RWSplitSession::handleError(GWBUF* errmsgbuf,
                 {
                     int64_t idle = mxs_clock() - backend->dcb()->last_read;
                     MXS_ERROR("Lost connection to the master server '%s', closing session.%s "
-                              "Connection has been idle for %.1f seconds. Error caused by: %s",
+                              "Connection has been idle for %.1f seconds. Error caused by: %s. "
+                              "Last close reason: %s",
                               backend->name(), errmsg.c_str(), (float)idle / 10.f,
-                              extract_error(errmsgbuf).c_str());
+                              extract_error(errmsgbuf).c_str(),
+                              backend->close_reason().empty() ? "<none>" : backend->close_reason().c_str());
                 }
 
                 // Decrement the expected response count only if we know we can continue the sesssion.

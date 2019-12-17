@@ -36,7 +36,7 @@ Table of Contents
         * [verify_master_failure and master_failure_timeout](#verify_master_failure-and-master_failure_timeout)
         * [servers_no_promotion](#servers_no_promotion)
         * [promotion_sql_file and demotion_sql_file](#promotion_sql_file-and-demotion_sql_file)
-        * [handle_server_events](#handle_server_events)
+        * [handle_events](#handle_events)
   * [Troubleshooting](#troubleshooting)
      * [Failover/switchover fails](#failoverswitchover-fails)
      * [Slave detection shows external masters](#slave-detection-shows-external-masters)
@@ -331,7 +331,7 @@ being demoted or promoted by cluster manipulation commands. See the sections on
 `promotion_sql_file` and `demotion_sql_file` for more information.
 
 The monitor can manipulate scheduled server events when promoting or demoting a
-server. See the section on `handle_server_events` for more information.
+server. See the section on `handle_events` for more information.
 
 All cluster operations can be activated manually through MaxAdmin/MaxCtrl. See
 section [Manual activation](#manual-activation) for more details.
@@ -818,7 +818,7 @@ slave threads are stopped, breaking replication.
 promotion_sql_file=/home/root/scripts/promotion.sql
 demotion_sql_file=/home/root/scripts/demotion.sql
 ```
-#### `handle_server_events`
+#### `handle_events`
 
 This setting is on by default. If enabled, the monitor continuously queries the
 servers for enabled scheduled events and uses this information when performing
