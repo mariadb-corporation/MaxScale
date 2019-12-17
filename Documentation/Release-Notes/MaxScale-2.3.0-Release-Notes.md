@@ -133,7 +133,7 @@ not.
 
 Server events lauched by the event scheduler thread are now handled during
 cluster modification operations. See
-[handle_server_events](../Monitors/MariaDB-Monitor.md#handle_server_events)
+[handle_events](../Monitors/MariaDB-Monitor.md#handle_events)
 for more information.
 
 #### Unused parameters
