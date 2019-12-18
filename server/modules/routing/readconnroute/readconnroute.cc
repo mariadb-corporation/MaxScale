@@ -484,13 +484,15 @@ json_t* RCR::diagnostics() const
 
         total_packets += stats.total_queries;
 
+        double active_pct = std::round(100 * stats.ave_session_active_pct) / 100;
+
         json_t* obj = json_object();
         json_object_set_new(obj, "id", json_string(a.first->name()));
         json_object_set_new(obj, "total", json_integer(stats.total_queries));
         json_object_set_new(obj, "read", json_integer(stats.total_read_queries));
         json_object_set_new(obj, "write", json_integer(stats.total_write_queries));
         json_object_set_new(obj, "avg_sess_duration", json_string(to_string(stats.ave_session_dur).c_str()));
-        json_object_set_new(obj, "avg_sess_active_pct", json_real(stats.ave_session_active_pct));
+        json_object_set_new(obj, "avg_sess_active_pct", json_real(active_pct));
         json_object_set_new(obj, "avg_queries_per_session", json_integer(stats.ave_session_selects));
         json_array_append_new(arr, obj);
     }
