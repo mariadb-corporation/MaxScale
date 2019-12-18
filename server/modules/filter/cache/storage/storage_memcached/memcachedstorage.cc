@@ -13,6 +13,7 @@
 
 #define MXS_MODULE_NAME "storage_memcached"
 #include "memcachedstorage.hh"
+#include <memory>
 #include <libmemcached/memcached.h>
 #include <libmemcached-1.0/strerror.h>
 #include <maxbase/worker.hh>
@@ -45,12 +46,18 @@ vector<char> get_memcached_key(const CACHE_KEY& key)
     return mkey;
 }
 
-class MemcachedToken : public Storage::Token
+class MemcachedToken : public std::enable_shared_from_this<MemcachedToken>,
+                       public Storage::Token
 {
 public:
     ~MemcachedToken()
     {
         memcached_free(m_pMemc);
+    }
+
+    std::shared_ptr<MemcachedToken> get_shared()
+    {
+        return shared_from_this();
     }
 
     static bool create(const string& memcached_config, shared_ptr<Storage::Token>* psToken)
@@ -65,6 +72,7 @@ public:
             if (pToken)
             {
                 psToken->reset(pToken);
+                rv = true;
             }
             else
             {
@@ -89,12 +97,14 @@ public:
     {
         vector<char> mkey = get_memcached_key(key);
 
-        m_thread = std::thread([this, mkey, cb] () {
+        auto sThis = get_shared();
+
+        m_thread = std::thread([sThis, mkey, cb] () {
                 size_t nData;
                 uint32_t flags;
                 memcached_return_t error;
 
-                char* pData = memcached_get(m_pMemc, mkey.data(), mkey.size(), &nData, &flags, &error);
+                char* pData = memcached_get(sThis->m_pMemc, mkey.data(), mkey.size(), &nData, &flags, &error);
 
                 GWBUF* pValue = nullptr;
                 cache_result_t rv;
@@ -120,13 +130,20 @@ public:
                     break;
 
                 default:
-                    MXS_WARNING("memcached_get failed: %s", memcached_last_error_message(m_pMemc));
+                    MXS_WARNING("memcached_get failed: %s", memcached_last_error_message(sThis->m_pMemc));
                     rv = CACHE_RESULT_ERROR;
                 }
 
-                m_pWorker->execute([this, rv, pValue, cb]() {
-                        cb(rv, pValue);
-                        m_thread.join();
+                sThis->m_pWorker->execute([sThis, rv, pValue, cb]() {
+                        if (sThis.use_count() > 1) // The session is still alive
+                        {
+                            cb(rv, pValue);
+                        }
+                        else
+                        {
+                            gwbuf_free(pValue);
+                        }
+                        sThis->m_thread.join();
                     }, mxb::Worker::EXECUTE_QUEUED);
             });
 
@@ -143,8 +160,10 @@ public:
         GWBUF* pClone = gwbuf_clone(const_cast<GWBUF*>(pValue));
         MXS_ABORT_IF_NULL(pClone);
 
-        m_thread = std::thread([this, mkey, pClone, cb]() {
-                memcached_return_t result = memcached_set(m_pMemc, mkey.data(), mkey.size(),
+        auto sThis = get_shared();
+
+        m_thread = std::thread([sThis, mkey, pClone, cb]() {
+                memcached_return_t result = memcached_set(sThis->m_pMemc, mkey.data(), mkey.size(),
                                                           reinterpret_cast<const char*>(GWBUF_DATA(pClone)),
                                                           GWBUF_LENGTH(pClone), 0, 0);
                 cache_result_t rv;
@@ -155,19 +174,22 @@ public:
                 }
                 else
                 {
-                    MXS_WARNING("memcached_set failed: %s", memcached_last_error_message(m_pMemc));
+                    MXS_WARNING("memcached_set failed: %s", memcached_last_error_message(sThis->m_pMemc));
                     rv = CACHE_RESULT_ERROR;
                 }
 
-                m_pWorker->execute([this, pClone, rv, cb]() {
+                sThis->m_pWorker->execute([sThis, pClone, rv, cb]() {
                         // TODO: So as not to trigger an assert in buffer.cc, we need to delete
                         // TODO: the gwbuf in the same worker where it was allocated. This means
                         // TODO: that potentially a very large buffer is kept around for longer
                         // TODO: than necessary. Perhaps time to stop tracking buffer ownership.
                         gwbuf_free(pClone);
 
-                        cb(rv);
-                        m_thread.join();
+                        if (sThis.use_count() > 1) // The session is still alive
+                        {
+                            cb(rv);
+                        }
+                        sThis->m_thread.join();
                     }, mxb::Worker::EXECUTE_QUEUED);
             });
 
@@ -179,8 +201,10 @@ public:
     {
         vector<char> mkey = get_memcached_key(key);
 
-        m_thread = std::thread([this, mkey, cb] () {
-                memcached_return_t result = memcached_delete(m_pMemc, mkey.data(), mkey.size(), 0);
+        auto sThis = get_shared();
+
+        m_thread = std::thread([sThis, mkey, cb] () {
+                memcached_return_t result = memcached_delete(sThis->m_pMemc, mkey.data(), mkey.size(), 0);
 
                 cache_result_t rv;
 
@@ -190,13 +214,16 @@ public:
                 }
                 else
                 {
-                    MXS_WARNING("memcached_delete failed: %s", memcached_last_error_message(m_pMemc));
+                    MXS_WARNING("memcached_delete failed: %s", memcached_last_error_message(sThis->m_pMemc));
                     rv = CACHE_RESULT_ERROR;
                 }
 
-                m_pWorker->execute([this, rv, cb]() {
-                        cb(rv);
-                        m_thread.join();
+                sThis->m_pWorker->execute([sThis, rv, cb]() {
+                        if (sThis.use_count() > 1) // The session is still alive
+                        {
+                            cb(rv);
+                        }
+                        sThis->m_thread.join();
                     }, mxb::Worker::EXECUTE_QUEUED);
             });
 
