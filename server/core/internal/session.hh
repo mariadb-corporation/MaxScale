@@ -189,7 +189,7 @@ public:
 
     /**
      * The I/O activity of the session.
-
+     *
      * @return  The number of I/O events handled during the last 30 seconds.
      */
     int io_activity() const;
@@ -210,6 +210,14 @@ public:
      * @return True, if the move could be initiated, false otherwise.
      */
     bool move_to(mxs::RoutingWorker* worker);
+
+    /**
+     * Set session time-to-live value
+     *
+     * Setting a positive value causes the session to be closed after that many seconds. This is essentially a
+     * delayed fake hangup event.
+     */
+    void set_ttl(int64_t ttl);
 
 protected:
     std::unique_ptr<mxs::Endpoint> m_down;
@@ -239,6 +247,8 @@ private:
     int               m_current_query {-1};     /*< The index of the current query */
     uint32_t          m_retain_last_statements; /*< How many statements be retained */
     Log               m_log;                    /*< Session specific in-memory log */
+    int64_t           m_ttl = 0;                /*< How many seconds the session has until it is killed  */
+    int64_t           m_ttl_start = 0;          /*< The clock tick when TTL was assigned */
 
     BackendConnectionVector m_backends_conns;   /*< Backend connections, in creation order */
     mxs::ClientConnection*  m_client_conn {nullptr};
@@ -246,9 +256,9 @@ private:
     // Various listener-specific data the session needs. Ownership shared with the listener that
     // created this session.
     std::shared_ptr<mxs::ListenerSessionData> m_listener_data;
-    std::shared_ptr<mxs::ProtocolModule> m_protocol;
+    std::shared_ptr<mxs::ProtocolModule>      m_protocol;
 
-    static const int N_LOAD = 30; // Last 30 seconds.
+    static const int N_LOAD = 30;   // Last 30 seconds.
 
     mutable std::array<int, N_LOAD> m_io_activity {};
     time_t                          m_last_io_activity {0};

@@ -1536,6 +1536,18 @@ void Session::tick(int64_t idle)
             }
         }
     }
+
+    if (m_ttl && MXS_CLOCK_TO_SEC(mxs_clock() - m_ttl_start) > m_ttl)
+    {
+        MXS_WARNING("Killing session %lu, session TTL exceeded.", id());
+        terminate();
+    }
+}
+
+void Session::set_ttl(int64_t ttl)
+{
+    m_ttl = ttl;
+    m_ttl_start = mxs_clock();
 }
 
 ListenerSessionData* Session::listener_data()
