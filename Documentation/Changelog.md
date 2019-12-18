@@ -30,6 +30,7 @@
 
 For more details, please refer to:
 
+* [MariaDB MaxScale 2.4.5 Release Notes](Release-Notes/MaxScale-2.4.5-Release-Notes.md)
 * [MariaDB MaxScale 2.4.4 Release Notes](Release-Notes/MaxScale-2.4.4-Release-Notes.md)
 * [MariaDB MaxScale 2.4.3 Release Notes](Release-Notes/MaxScale-2.4.3-Release-Notes.md)
 * [MariaDB MaxScale 2.4.2 Release Notes](Release-Notes/MaxScale-2.4.2-Release-Notes.md)
