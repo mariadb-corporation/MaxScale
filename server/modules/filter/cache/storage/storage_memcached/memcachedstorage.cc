@@ -14,6 +14,8 @@
 #define MXS_MODULE_NAME "storage_memcached"
 #include "memcachedstorage.hh"
 #include <libmemcached/memcached.h>
+#include <libmemcached-1.0/strerror.h>
+#include <maxbase/worker.hh>
 
 using std::string;
 using std::vector;
@@ -86,27 +88,48 @@ public:
     {
         vector<char> mkey = get_memcached_key(key);
 
-        size_t nValue;
-        uint32_t memcached_flags;
-        memcached_return_t result;
-        char* pValue = memcached_get(m_pMemc, mkey.data(), mkey.size(), &nValue, &memcached_flags, &result);
+        m_thread = std::thread([this, mkey, cb] () {
+                size_t nData;
+                uint32_t flags;
+                memcached_return_t error;
 
-        cache_result_t rv;
+                char* pData = memcached_get(m_pMemc, mkey.data(), mkey.size(), &nData, &flags, &error);
 
-        if (pValue)
-        {
-            *ppValue = gwbuf_alloc_and_load(nValue, pValue);
+                GWBUF* pValue = nullptr;
+                cache_result_t rv;
 
-            MXS_FREE(pValue);
-            rv = CACHE_RESULT_OK;
-        }
-        else
-        {
-            MXS_NOTICE("memcached_get failed: %s", memcached_last_error_message(m_pMemc));
-            rv = CACHE_RESULT_NOT_FOUND;
-        }
+                switch (error)
+                {
+                case MEMCACHED_SUCCESS:
+                    if (pData)
+                    {
+                        pValue = gwbuf_alloc_and_load(nData, pData);
+                        MXS_FREE(pData);
+                        rv = CACHE_RESULT_OK;
+                    }
+                    else
+                    {
+                        MXB_NOTICE("NULL pointer returned, but MEMCACHED_SUCCESS.");
+                        rv = CACHE_RESULT_NOT_FOUND;
+                    }
+                    break;
 
-        return rv;
+                case MEMCACHED_NOTFOUND:
+                    rv = CACHE_RESULT_NOT_FOUND;
+                    break;
+
+                default:
+                    MXS_WARNING("memcached_get failed: %s", memcached_last_error_message(m_pMemc));
+                    rv = CACHE_RESULT_ERROR;
+                }
+
+                m_pWorker->execute([this, rv, pValue, cb]() {
+                        cb(rv, pValue);
+                        m_thread.join();
+                    }, mxb::Worker::EXECUTE_QUEUED);
+            });
+
+        return CACHE_RESULT_PENDING;
     }
 
     cache_result_t put_value(const CACHE_KEY& key,
@@ -116,23 +139,38 @@ public:
     {
         vector<char> mkey = get_memcached_key(key);
 
-        memcached_return_t result = memcached_set(m_pMemc, mkey.data(), mkey.size(),
-                                                  reinterpret_cast<const char*>(GWBUF_DATA(pValue)),
-                                                  GWBUF_LENGTH(pValue), 0, 0);
+        GWBUF* pClone = gwbuf_clone(const_cast<GWBUF*>(pValue));
+        MXS_ABORT_IF_NULL(pClone);
 
-        cache_result_t rv;
+        m_thread = std::thread([this, mkey, pClone, cb]() {
+                memcached_return_t result = memcached_set(m_pMemc, mkey.data(), mkey.size(),
+                                                          reinterpret_cast<const char*>(GWBUF_DATA(pClone)),
+                                                          GWBUF_LENGTH(pClone), 0, 0);
+                cache_result_t rv;
 
-        if (result == MEMCACHED_SUCCESS)
-        {
-            rv = CACHE_RESULT_OK;
-        }
-        else
-        {
-            MXS_NOTICE("memcached_get failed: %s", memcached_last_error_message(m_pMemc));
-            rv = CACHE_RESULT_ERROR;
-        }
+                if (result == MEMCACHED_SUCCESS)
+                {
+                    rv = CACHE_RESULT_OK;
+                }
+                else
+                {
+                    MXS_WARNING("memcached_set failed: %s", memcached_last_error_message(m_pMemc));
+                    rv = CACHE_RESULT_ERROR;
+                }
 
-        return rv;
+                m_pWorker->execute([this, pClone, rv, cb]() {
+                        // TODO: So as not to trigger an assert in buffer.cc, we need to delete
+                        // TODO: the gwbuf in the same worker where it was allocated. This means
+                        // TODO: that potentially a very large buffer is kept around for longer
+                        // TODO: than necessary. Perhaps time to stop tracking buffer ownership.
+                        gwbuf_free(pClone);
+
+                        cb(rv);
+                        m_thread.join();
+                    }, mxb::Worker::EXECUTE_QUEUED);
+            });
+
+        return CACHE_RESULT_PENDING;
     }
 
     cache_result_t del_value(const CACHE_KEY& key,
@@ -140,31 +178,41 @@ public:
     {
         vector<char> mkey = get_memcached_key(key);
 
-        memcached_return_t result = memcached_delete(m_pMemc, mkey.data(), mkey.size(), 0);
+        m_thread = std::thread([this, mkey, cb] () {
+                memcached_return_t result = memcached_delete(m_pMemc, mkey.data(), mkey.size(), 0);
 
-        cache_result_t rv;
+                cache_result_t rv;
 
-        if (result == MEMCACHED_SUCCESS)
-        {
-            rv = CACHE_RESULT_OK;
-        }
-        else
-        {
-            MXS_NOTICE("memcached_get failed: %s", memcached_last_error_message(m_pMemc));
-            rv = CACHE_RESULT_ERROR;
-        }
+                if (result == MEMCACHED_SUCCESS)
+                {
+                    rv = CACHE_RESULT_OK;
+                }
+                else
+                {
+                    MXS_WARNING("memcached_delete failed: %s", memcached_last_error_message(m_pMemc));
+                    rv = CACHE_RESULT_ERROR;
+                }
 
-        return rv;
+                m_pWorker->execute([this, rv, cb]() {
+                        cb(rv);
+                        m_thread.join();
+                    }, mxb::Worker::EXECUTE_QUEUED);
+            });
+
+        return CACHE_RESULT_PENDING;
     }
 
 private:
     MemcachedToken(memcached_st* pMemc)
         : m_pMemc(pMemc)
+        , m_pWorker(mxb::Worker::get_current())
     {
     }
 
 private:
     memcached_st* m_pMemc;
+    mxb::Worker*  m_pWorker;
+    std::thread   m_thread;
 };
 
 }
@@ -203,11 +251,7 @@ MemcachedStorage* MemcachedStorage::create(const std::string& name,
 {
     MemcachedStorage* pStorage = nullptr;
 
-    if (config.thread_model != CACHE_THREAD_MODEL_ST)
-    {
-        MXS_ERROR("The storage storage_memcached only supports single-threaded use.");
-    }
-    else if (config.invalidate != CACHE_INVALIDATE_NEVER)
+    if (config.invalidate != CACHE_INVALIDATE_NEVER)
     {
         MXS_ERROR("The storage storage_memcached does not support invalidation.");
     }

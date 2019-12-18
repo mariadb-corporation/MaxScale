@@ -523,7 +523,7 @@ GWBUF* gwbuf_consume(GWBUF* head, unsigned int length)
 
     while (head && length > 0)
     {
-        mxb_assert(head->owner == RoutingWorker::get_current_id());
+        ensure_owned(head);
         unsigned int buflen = GWBUF_LENGTH(head);
 
         GWBUF_CONSUME(head, length);
