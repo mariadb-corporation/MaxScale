@@ -20,6 +20,8 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/router.hh>
+#include <maxscale/session_stats.hh>
+#include <maxscale/workerlocal.hh>
 
 class RCR;
 
@@ -31,7 +33,7 @@ class RCRSession : public mxs::RouterSession
 public:
     RCRSession(RCR* inst, MXS_SESSION* session, mxs::Endpoint* backend,
                const Endpoints& endpoints, uint32_t bitmask, uint32_t bitvalue);
-    ~RCRSession() = default;
+    ~RCRSession();
 
     /**
      * Route data from client to the backend.
@@ -42,10 +44,7 @@ public:
      */
     int routeQuery(GWBUF* queue);
 
-    void clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& pReply)
-    {
-        RouterSession::clientReply(pPacket, down, pReply);
-    }
+    void clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& pReply);
 
     bool handleError(mxs::ErrorType type, GWBUF* pMessage, mxs::Endpoint* pProblem, const mxs::Reply& pReply)
     {
@@ -59,6 +58,11 @@ private:
     uint32_t       m_bitvalue;  /**< Session specific required value of server->status */
     mxs::Endpoint* m_backend;
     Endpoints      m_endpoints;
+
+    maxscale::SessionStats& m_session_stats;
+    maxbase::StopWatch      m_session_timer;
+    maxbase::IntervalTimer  m_query_timer;
+    int64_t                 m_session_queries = 0;
 
     bool connection_is_valid() const;
 };
@@ -111,8 +115,24 @@ public:
      */
     bool configure(MXS_CONFIG_PARAMETER* params);
 
+    /**
+     * @brief session_stats
+     *
+     * @return a reference to the SessionStats of the Target (of the calling thread).
+     */
+    maxscale::SessionStats& session_stats(maxscale::Target* pTarget);
+
+    /**
+     * @brief Combine stats for all servers across all threads
+     *
+     * @return reference to the TargetSessionStats of this thread.
+     */
+    maxscale::TargetSessionStats combined_target_stats() const;
+
 private:
     RCR(SERVICE* service);
 
     uint64_t m_bitmask_and_bitvalue = 0;    /**< Lower 32-bits for bitmask and upper for bitvalue */
+
+    mxs::WorkerGlobal<maxscale::TargetSessionStats> m_target_stats;
 };

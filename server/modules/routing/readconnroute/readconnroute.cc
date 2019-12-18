@@ -145,7 +145,6 @@ bool RCR::configure(MXS_CONFIG_PARAMETER* params)
         }
     }
 
-
     if (bitmask == 0 && bitvalue == 0)
     {
         /** No parameters given, use RUNNING as a valid server */
@@ -190,7 +189,15 @@ RCRSession::RCRSession(RCR* inst, MXS_SESSION* session, mxs::Endpoint* backend,
     , m_bitvalue(bitvalue)
     , m_backend(backend)
     , m_endpoints(endpoints)
+    , m_session_stats(inst->session_stats(backend->target()))
 {
+}
+
+RCRSession::~RCRSession()
+{
+    m_session_stats.update(m_session_timer.split(),
+                           m_query_timer.total(),
+                           m_session_queries);
 }
 
 RCRSession* RCR::newSession(MXS_SESSION* session, const Endpoints& endpoints)
@@ -406,9 +413,6 @@ int RCRSession::routeQuery(GWBUF* queue)
 {
     uint8_t mysql_command = mxs_mysql_get_command(queue);
 
-    // Due to the streaming nature of readconnroute, this is not accurate
-    mxb::atomic::add(&m_backend->target()->stats().packets, 1, mxb::atomic::RELAXED);
-
     if (!connection_is_valid())
     {
         log_closed_session(mysql_command, m_backend->target());
@@ -421,16 +425,82 @@ int RCRSession::routeQuery(GWBUF* queue)
              m_backend->target()->name(),
              mxs::extract_sql(queue).c_str());
 
+    m_query_timer.start_interval();
+
+    m_session_stats.inc_total();
+    if (m_bitvalue & SERVER_MASTER)
+    {
+        // not necessarily a write, but explicitely routed to a master
+        m_session_stats.inc_write();
+    }
+    else
+    {
+        // could be a write, in which case the user has other problems
+        m_session_stats.inc_read();
+    }
+
+    ++m_session_queries;
+
     return m_backend->routeQuery(queue);
+}
+
+void RCRSession::clientReply(GWBUF* pPacket, const maxscale::ReplyRoute& down, const maxscale::Reply& pReply)
+{
+    RouterSession::clientReply(pPacket, down, pReply);
+    m_query_timer.end_interval();
+}
+
+maxscale::SessionStats& RCR::session_stats(maxscale::Target* pTarget)
+{
+    return (*m_target_stats)[pTarget];
+}
+
+maxscale::TargetSessionStats RCR::combined_target_stats() const
+{
+    maxscale::TargetSessionStats stats;
+
+    for (const auto& a : m_target_stats.values())
+    {
+        for (const auto& b : a)
+        {
+            if (b.first->active())
+            {
+                stats[b.first] += b.second;
+            }
+        }
+    }
+
+    return stats;
 }
 
 json_t* RCR::diagnostics() const
 {
+    json_t* arr = json_array();
+    int64_t total_packets = 0;
+
+    for (const auto& a : combined_target_stats())
+    {
+        maxscale::SessionStats::CurrentStats stats = a.second.current_stats();
+
+        total_packets += stats.total_queries;
+
+        json_t* obj = json_object();
+        json_object_set_new(obj, "id", json_string(a.first->name()));
+        json_object_set_new(obj, "total", json_integer(stats.total_queries));
+        json_object_set_new(obj, "read", json_integer(stats.total_read_queries));
+        json_object_set_new(obj, "write", json_integer(stats.total_write_queries));
+        json_object_set_new(obj, "avg_sess_duration", json_string(to_string(stats.ave_session_dur).c_str()));
+        json_object_set_new(obj, "avg_sess_active_pct", json_real(stats.ave_session_active_pct));
+        json_object_set_new(obj, "avg_queries_per_session", json_integer(stats.ave_session_selects));
+        json_array_append_new(arr, obj);
+    }
+
     json_t* rval = json_object();
 
     json_object_set_new(rval, "connections", json_integer(m_pService->stats().n_connections));
     json_object_set_new(rval, "current_connections", json_integer(m_pService->stats().n_current));
-    json_object_set_new(rval, "queries", json_integer(m_pService->stats().packets));
+    json_object_set_new(rval, "queries", json_integer(total_packets));
+    json_object_set_new(rval, "server_query_statistics", arr);
 
     return rval;
 }
