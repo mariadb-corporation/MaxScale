@@ -17,9 +17,9 @@
 #include <libmemcached-1.0/strerror.h>
 #include <maxbase/worker.hh>
 
+using std::shared_ptr;
 using std::string;
 using std::vector;
-using std::unique_ptr;
 
 namespace
 {
@@ -53,21 +53,22 @@ public:
         memcached_free(m_pMemc);
     }
 
-    static bool create(const string& memcached_config, unique_ptr<Storage::Token>* psToken)
+    static bool create(const string& memcached_config, shared_ptr<Storage::Token>* psToken)
     {
         bool rv = false;
         memcached_st* pMemc = memcached(memcached_config.c_str(), memcached_config.size());
 
         if (pMemc)
         {
-            psToken->reset(new (std::nothrow) MemcachedToken(pMemc));
+            MemcachedToken* pToken = new (std::nothrow) MemcachedToken(pMemc);
 
-            if (*psToken)
+            if (pToken)
             {
-                rv = true;
+                psToken->reset(pToken);
             }
             else
             {
+                psToken->reset();
                 memcached_free(pMemc);
             }
         }
@@ -299,7 +300,7 @@ MemcachedStorage* MemcachedStorage::create(const std::string& name,
     return pStorage;
 }
 
-bool MemcachedStorage::create_token(std::unique_ptr<Storage::Token>* psToken)
+bool MemcachedStorage::create_token(std::shared_ptr<Storage::Token>* psToken)
 {
     return MemcachedToken::create(m_memcached_config, psToken);
 }

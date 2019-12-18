@@ -81,7 +81,7 @@ CachePT* CachePT::create(const std::string& name, const CacheConfig* pConfig)
     return pCache;
 }
 
-bool CachePT::create_token(std::unique_ptr<Cache::Token>* psToken)
+bool CachePT::create_token(std::shared_ptr<Cache::Token>* psToken)
 {
     return thread_cache().create_token(psToken);
 }

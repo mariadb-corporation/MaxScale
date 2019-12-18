@@ -28,7 +28,7 @@ public:
      *
      * @return Always NULL.
      */
-    bool create_token(std::unique_ptr<Token>* psToken) override final;
+    bool create_token(std::shared_ptr<Token>* psToken) override final;
 
     /**
      * @see Storage::get_config

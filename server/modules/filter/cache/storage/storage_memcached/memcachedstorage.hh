@@ -31,7 +31,7 @@ public:
                                     int argc,
                                     char* argv[]);
 
-    bool create_token(std::unique_ptr<Token>* psToken) override final;
+    bool create_token(std::shared_ptr<Token>* psToken) override final;
 
     void get_config(Config* pConfig) override final;
 

@@ -339,7 +339,7 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
 
     out() << "Testing ttl." << endl;
 
-    unique_ptr<Storage::Token> sToken;
+    shared_ptr<Storage::Token> sToken;
     MXB_AT_DEBUG(bool created=) storage.create_token(&sToken);
     mxb_assert(created);
 

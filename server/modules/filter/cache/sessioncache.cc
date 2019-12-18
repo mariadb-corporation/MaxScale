@@ -18,7 +18,7 @@ std::unique_ptr<SessionCache> SessionCache::create(Cache* pCache)
 {
     std::unique_ptr<SessionCache> sSession_cache;
 
-    std::unique_ptr<Cache::Token> sToken;
+    std::shared_ptr<Cache::Token> sToken;
     bool rv = pCache->create_token(&sToken);
 
     if (rv)

@@ -365,7 +365,7 @@ LRUStorage::~LRUStorage()
     delete m_pStorage;
 }
 
-bool LRUStorage::create_token(std::unique_ptr<Storage::Token>* psToken)
+bool LRUStorage::create_token(std::shared_ptr<Storage::Token>* psToken)
 {
     // The LRUStorage can only be used together with a local storage;
     // one where the cache-communication is not an issue, so we expect

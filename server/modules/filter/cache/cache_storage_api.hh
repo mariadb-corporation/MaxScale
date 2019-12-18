@@ -230,7 +230,7 @@ public:
      * @return True if a token could be created (or if none had to be),
      *         false otherwise.
      */
-    virtual bool create_token(std::unique_ptr<Token>* psToken) = 0;
+    virtual bool create_token(std::shared_ptr<Token>* psToken) = 0;
 
     /**
      * Returns the configuration the storage was created with.

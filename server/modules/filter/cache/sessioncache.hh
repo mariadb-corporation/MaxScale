@@ -126,7 +126,7 @@ public:
 
 protected:
     SessionCache(Cache* pCache,
-                 std::unique_ptr<Cache::Token> sToken)
+                 std::shared_ptr<Cache::Token> sToken)
         : m_cache(*pCache)
         , m_sToken(std::move(sToken))
     {
@@ -140,5 +140,5 @@ private:
 
 private:
     Cache&                        m_cache;
-    std::unique_ptr<Cache::Token> m_sToken;
+    std::shared_ptr<Cache::Token> m_sToken;
 };

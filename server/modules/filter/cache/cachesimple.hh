@@ -24,7 +24,7 @@ class CacheSimple : public Cache
 public:
     ~CacheSimple();
 
-    bool create_token(std::unique_ptr<Token>* psToken) override;
+    bool create_token(std::shared_ptr<Token>* psToken) override;
 
     cache_result_t get_value(Token* pToken,
                              const CACHE_KEY& key,

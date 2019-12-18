@@ -60,7 +60,7 @@ public:
         HitTask& operator=(const HitTask&);
 
     private:
-        using SToken = std::unique_ptr<Storage::Token>;
+        using SToken = std::shared_ptr<Storage::Token>;
 
         Storage&          m_storage;        /*< The storage that is hit. */
         SToken            m_sToken;         /*< The token. */

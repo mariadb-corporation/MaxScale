@@ -61,7 +61,7 @@ int mxs_2727()
     Cache* pCache = CacheMT::create("MXS-2727", &config);
     mxb_assert(pCache);
 
-    unique_ptr<Cache::Token> sToken;
+    shared_ptr<Cache::Token> sToken;
     MXB_AT_DEBUG(bool created =) pCache->create_token(&sToken);
     mxb_assert(created);
 
