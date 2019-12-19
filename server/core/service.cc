@@ -1359,7 +1359,7 @@ const MXS_MODULE_PARAM* common_service_params()
         // Not mandatory due to RCAP_TYPE_NO_AUTH
         {CN_USER,               MXS_MODULE_PARAM_STRING},
         // Not mandatory due to RCAP_TYPE_NO_AUTH
-        {CN_PASSWORD,           MXS_MODULE_PARAM_STRING},
+        {CN_PASSWORD,           MXS_MODULE_PARAM_PASSWORD},
         {CN_ENABLE_ROOT_USER,   MXS_MODULE_PARAM_BOOL,     "false"},
         {CN_MAX_RETRY_INTERVAL, MXS_MODULE_PARAM_DURATION, "3600s",    MXS_MODULE_OPT_DURATION_S},
         {CN_MAX_CONNECTIONS,    MXS_MODULE_PARAM_COUNT,    "0"},

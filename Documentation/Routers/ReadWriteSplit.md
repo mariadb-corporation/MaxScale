@@ -708,16 +708,6 @@ the session state and the actual data in the database by adding routing hints
 to DDL/DML statements which are then directed to slave servers. Only use routing
 hints when you are sure that they can cause no harm.
 
-## Limitations
-
-For a list of readwritesplit limitations, please read the
-[Limitations](../About/Limitations.md) document.
-
-## Legacy Configuration
-
-In older versions of MaxScale, routers were configured via the _router_options_
-parameter. This functionality was deprecated in 2.2 and was removed in 2.3.
-
 ## Examples
 
 Examples of the readwritesplit router in use can be found in the
@@ -801,6 +791,11 @@ Read queries are routed to the master server in the following situations:
 * if there are multiple statements inside one query e.g.
   `INSERT INTO ... ; SELECT LAST_INSERT_ID();`
 
+### Legacy Configuration
+
+In older versions of MaxScale, routers were configured via the _router_options_
+parameter. This functionality was deprecated in 2.2 and was removed in 2.3.
+
 ### JDBC Batched Statements
 
 Readwritesplit does not support pipelining of JDBC batched statements. This is
@@ -813,6 +808,11 @@ When a multi-statement query is executed through the readwritesplit router, it
 will always be routed to the master. See
 [`strict_multi_stmt`](../Routers/ReadWriteSplit.md#strict_multi_stmt) for more
 details.
+
+If the multi-statement query creates a temporary table, it will not be
+detected and reads to this table can be routed to slave servers. To
+prevent this, always execute the temporary table creation as an individual
+statement.
 
 #### Limitations in client session handling
 

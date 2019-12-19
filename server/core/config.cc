@@ -82,8 +82,8 @@ config::ParamInteger MXS_CONFIG::s_rebalance_threshold(
     "If the difference in load between the thread with the maximum load and the thread "
     "with the minimum load is larger than the value of this parameter, then work will "
     "be moved from the former to the latter.",
-    20,      // default
-    5, 100); // min, max
+    20,     // default
+    5, 100);// min, max
 
 config::ParamDuration<std::chrono::milliseconds> MXS_CONFIG::s_rebalance_period(
     &MXS_CONFIG::s_specification,
@@ -2606,6 +2606,9 @@ const char* param_type_to_str(const MXS_MODULE_PARAM* params, const char* name)
             case MXS_MODULE_PARAM_STRING:
                 return "a string";
 
+            case MXS_MODULE_PARAM_PASSWORD:
+                return "a password string";
+
             case MXS_MODULE_PARAM_QUOTEDSTRING:
                 return "a quoted string";
 
@@ -3232,6 +3235,10 @@ json_t* param_value_to_json(const MXS_MODULE_PARAM* param_info, const string& na
 
     case MXS_MODULE_PARAM_BOOL:
         rval = json_boolean(config_truth_value(value.c_str()));
+        break;
+
+    case MXS_MODULE_PARAM_PASSWORD:
+        rval = json_string("*****");
         break;
 
     default:
@@ -3892,6 +3899,7 @@ bool config_param_is_valid(const MXS_MODULE_PARAM* params,
                 break;
 
             case MXS_MODULE_PARAM_STRING:
+            case MXS_MODULE_PARAM_PASSWORD:
                 if (*value)
                 {
                     valid = true;

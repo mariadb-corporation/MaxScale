@@ -154,7 +154,7 @@ then
          make libtool libopenssl-devel libaio libaio-devel flex \
          pcre-devel git wget tcl tcl-devel libuuid-devel \
          xz-devel sqlite3 sqlite3-devel pkg-config lua lua-devel \
-         gnutls-devel libgcrypt-devel pam-devel systemd-devel libatomic1
+         gnutls-devel libgcrypt-devel pam-devel systemd-devel libcurl-devel libatomic1
     sudo zypper -n install rpm-build
     cat /etc/*-release | grep "SUSE Linux Enterprise Server 11"
 

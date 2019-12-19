@@ -1050,7 +1050,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 CN_REPLICATION_USER,                 MXS_MODULE_PARAM_STRING
             },
             {
-                CN_REPLICATION_PASSWORD,             MXS_MODULE_PARAM_STRING
+                CN_REPLICATION_PASSWORD,             MXS_MODULE_PARAM_PASSWORD
             },
             {
                 CN_REPLICATION_MASTER_SSL,           MXS_MODULE_PARAM_BOOL,                          "false"
