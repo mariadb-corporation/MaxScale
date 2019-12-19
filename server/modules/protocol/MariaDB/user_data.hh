@@ -134,7 +134,7 @@ private:
 class MariaDBUserManager : public mxs::UserAccountManager
 {
 public:
-    MariaDBUserManager() = default;
+    ~MariaDBUserManager() override = default;
 
     /**
      * Start the updater thread. Should only be called when the updater is stopped or has just been created.
@@ -205,6 +205,7 @@ class MariaDBUserCache : public mxs::UserAccountCache
 {
 public:
     MariaDBUserCache(const MariaDBUserManager& master);
+    ~MariaDBUserCache() override = default;
 
     /**
      * Check if user@host exists and can access the requested database. Does not check password or

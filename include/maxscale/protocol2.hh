@@ -29,6 +29,8 @@ class UserAccountManager;
 class ProtocolModule
 {
 public:
+    virtual ~ProtocolModule() = default;
+
     enum Capabilities
     {
         CAP_AUTHDATA = (1u << 0),        // The protocol implements an authentication data manager
@@ -243,6 +245,7 @@ class UserAccountCache;
 class UserAccountManager
 {
 public:
+    virtual ~UserAccountManager() = default;
 
     /**
      * Start the user account manager. Should be called after creation.
@@ -295,7 +298,6 @@ public:
 class UserAccountCache
 {
 public:
-    UserAccountCache() = default;
     virtual ~UserAccountCache() = default;
     virtual void update_from_master() = 0;
 };

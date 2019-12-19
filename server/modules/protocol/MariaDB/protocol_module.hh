@@ -21,6 +21,8 @@
 class MySQLProtocolModule : public mxs::ProtocolModule
 {
 public:
+    ~MySQLProtocolModule() override = default;
+
     static MySQLProtocolModule* create(const std::string& auth_name, const std::string& auth_opts);
 
     std::unique_ptr<mxs::ClientConnection>

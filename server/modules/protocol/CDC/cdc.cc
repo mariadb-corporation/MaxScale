@@ -80,6 +80,8 @@ private:
 class CDCProtocolModule : public mxs::ProtocolModule
 {
 public:
+    ~CDCProtocolModule() override = default;
+
     static CDCProtocolModule* create(const std::string& auth_name, const std::string& auth_opts)
     {
         return new (std::nothrow) CDCProtocolModule();

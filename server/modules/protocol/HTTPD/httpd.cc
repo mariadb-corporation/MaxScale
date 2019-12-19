@@ -43,6 +43,8 @@ static std::string           httpd_default_auth();
 class HTTPDProtocolModule : public mxs::ProtocolModule
 {
 public:
+    ~HTTPDProtocolModule() override = default;
+
     static HTTPDProtocolModule* create(const std::string& auth_name, const std::string& auth_opts)
     {
         return new (std::nothrow) HTTPDProtocolModule();
