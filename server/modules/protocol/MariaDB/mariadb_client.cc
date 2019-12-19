@@ -747,7 +747,7 @@ bool MariaDBClientConnection::perform_authentication()
             {
                 mysql_send_auth_error(m_dcb, next_seq,
                                       "Session creation failed, MaxScale may be out of memory");
-                MXB_ERROR("Failed to create session for '%s'@'%s'.", "a", "b");
+                MXB_ERROR("Failed to create session for %s.", m_session->user_and_host().c_str());
                 m_auth_state = AuthState::FAIL;
             }
             break;
