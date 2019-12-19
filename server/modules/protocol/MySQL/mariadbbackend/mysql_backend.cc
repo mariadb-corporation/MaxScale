@@ -1415,10 +1415,20 @@ static int gw_backend_hangup(DCB* dcb)
 static int gw_backend_close(DCB* dcb)
 {
     mxb_assert(dcb->session);
+    MySQLProtocol* proto = (MySQLProtocol*)dcb->protocol;
+
+    if (proto->protocol_auth_state == MXS_AUTH_STATE_INIT
+        || proto->protocol_auth_state == MXS_AUTH_STATE_PENDING_CONNECT
+        || proto->protocol_auth_state == MXS_AUTH_STATE_CONNECTED)
+    {
+        MYSQL_session client;
+        gw_get_shared_session_auth_info(dcb->session->client_dcb, &client);
+        memset(proto->scramble, 0, sizeof(proto->scramble));
+        dcb_write(dcb, gw_generate_auth_response(&client, proto, false, false, 0));
+    }
 
     /** Send COM_QUIT to the backend being closed */
-    GWBUF* quitbuf = mysql_create_com_quit(NULL, 0);
-    mysql_send_com_quit(dcb, 0, quitbuf);
+    dcb_write(dcb, mysql_create_com_quit(NULL, 0));
 
     /** Free protocol data */
     mysql_protocol_done(dcb);
