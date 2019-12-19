@@ -1629,7 +1629,7 @@ void MariaDBClientConnection::ready_for_reading(DCB* event_dcb)
 
     if (close)
     {
-        DCB::close(m_dcb);
+        m_session->terminate();
     }
 }
 
@@ -1652,7 +1652,7 @@ void MariaDBClientConnection::error(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);
     mxb_assert(m_session->state() != MXS_SESSION::State::STOPPING);
-    DCB::close(m_dcb);
+    m_session->terminate();
 }
 
 void MariaDBClientConnection::hangup(DCB* event_dcb)
@@ -1694,7 +1694,7 @@ void MariaDBClientConnection::hangup(DCB* event_dcb)
 
     // We simply close the DCB, this will propagate the closure to any
     // backend descriptors and perform the session cleanup.
-    DCB::close(m_dcb);
+    m_session->terminate();
 }
 
 bool MariaDBClientConnection::init_connection()
