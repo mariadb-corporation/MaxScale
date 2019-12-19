@@ -1092,7 +1092,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
             int idle = duration_cast<seconds>(
                 maxbase::Clock::now(maxbase::NowType::EPollTick) - backend->last_write()).count();
             MXS_ERROR("Lost connection to the master server, closing session.%s "
-                      "Connection has been idle for %d seconds. Error caused by: %s"
+                      "Connection has been idle for %d seconds. Error caused by: %s. "
                       "Last close reason: %s", errmsg.c_str(), idle, mxs::extract_error(errmsgbuf).c_str(),
                       backend->close_reason().empty() ? "<none>" : backend->close_reason().c_str());
         }
