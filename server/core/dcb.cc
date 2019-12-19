@@ -3327,7 +3327,9 @@ public:
         {
             mxb_assert(m_dcb->poll.owner == RoutingWorker::get_current());
             m_dcb->fakeq = m_buffer;
+            m_dcb->is_fake_event = true;
             dcb_handler(m_dcb, m_ev);
+            m_dcb->is_fake_event = true;
         }
         else
         {
