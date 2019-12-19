@@ -14,6 +14,7 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Bug fixes
 
+* [MXS-2813](https://jira.mariadb.org/browse/MXS-2813) maxctl shows password in clear text
 * [MXS-2809](https://jira.mariadb.org/browse/MXS-2809) 2.4 configuration still contains links to v2.3 documentation
 * [MXS-2803](https://jira.mariadb.org/browse/MXS-2803) Hang with readconnroute and persistent connections
 * [MXS-2802](https://jira.mariadb.org/browse/MXS-2802) COM_RESET_CONNECTION is treated as a write
@@ -22,6 +23,7 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 * [MXS-2782](https://jira.mariadb.org/browse/MXS-2782) Wrong thread id causes MaxScale to crash.
 * [MXS-2776](https://jira.mariadb.org/browse/MXS-2776) Binlog filter skipping commit when writing to ColumnStore
 * [MXS-2775](https://jira.mariadb.org/browse/MXS-2775) Document that a crashed master can break auto_rejoin with semisynchronous replication
+* [MXS-2498](https://jira.mariadb.org/browse/MXS-2498) MaxScale not routing TEMPORARY TABLE reading to MASTER
 
 ## Known Issues and Limitations
 

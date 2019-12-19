@@ -317,7 +317,7 @@ const MXS_MODULE_PARAM config_service_params[] =
     },
     {
         CN_PASSWORD,    // Not mandatory due to RCAP_TYPE_NO_AUTH
-        MXS_MODULE_PARAM_STRING
+        MXS_MODULE_PARAM_PASSWORD
     },
     {
         CN_ENABLE_ROOT_USER,
@@ -515,7 +515,7 @@ const MXS_MODULE_PARAM config_monitor_params[] =
     },
     {
         CN_PASSWORD,
-        MXS_MODULE_PARAM_STRING,
+        MXS_MODULE_PARAM_PASSWORD,
         NULL,
         MXS_MODULE_OPT_REQUIRED
     },
@@ -644,7 +644,7 @@ const MXS_MODULE_PARAM config_server_params[] =
     },
     {
         CN_MONITORPW,
-        MXS_MODULE_PARAM_STRING
+        MXS_MODULE_PARAM_PASSWORD
     },
     {
         CN_PERSISTPOOLMAX,
@@ -3145,6 +3145,9 @@ const char* param_type_to_str(const MXS_MODULE_PARAM* params, const char* name)
             case MXS_MODULE_PARAM_STRING:
                 return "a string";
 
+            case MXS_MODULE_PARAM_PASSWORD:
+                return "a password string";
+
             case MXS_MODULE_PARAM_QUOTEDSTRING:
                 return "a quoted string";
 
@@ -3789,6 +3792,10 @@ json_t* param_value_to_json(const MXS_MODULE_PARAM* param_info, const string& na
 
     case MXS_MODULE_PARAM_BOOL:
         rval = json_boolean(config_truth_value(value.c_str()));
+        break;
+
+    case MXS_MODULE_PARAM_PASSWORD:
+        rval = json_string("*****");
         break;
 
     default:
@@ -4468,6 +4475,7 @@ bool config_param_is_valid(const MXS_MODULE_PARAM* params,
                 break;
 
             case MXS_MODULE_PARAM_STRING:
+            case MXS_MODULE_PARAM_PASSWORD:
                 if (*value)
                 {
                     valid = true;
