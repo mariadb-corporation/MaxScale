@@ -31,5 +31,5 @@ target_link_libraries(maxbase systemd)
 endif()
 
 set_target_properties(maxbase PROPERTIES VERSION "1.0.0" LINK_FLAGS -Wl,-z,defs)
-target_link_libraries(maxbase ${CURL_LIBRARIES} ${PAM_LIBRARIES})
+target_link_libraries(maxbase ${CURL_LIBRARIES} ${PAM_LIBRARIES} pthread)
 add_subdirectory(test)
