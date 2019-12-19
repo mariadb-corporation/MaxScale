@@ -294,9 +294,9 @@ const MXS_MODULE_PARAM config_service_params[] =
      MXS_MODULE_OPT_REQUIRED},
     {CN_ROUTER_OPTIONS,                MXS_MODULE_PARAM_STRING},
     {CN_SERVERS,                       MXS_MODULE_PARAM_STRING},
-    {CN_USER,                          MXS_MODULE_PARAM_STRING},// Not mandatory due to RCAP_TYPE_NO_AUTH
-    {CN_PASSWORD,                      MXS_MODULE_PARAM_STRING},// Not mandatory due to RCAP_TYPE_NO_AUTH
-    {"passwd",                         MXS_MODULE_PARAM_STRING},// Not mandatory due to RCAP_TYPE_NO_AUTH
+    {CN_USER,                          MXS_MODULE_PARAM_STRING},    // Not mandatory due to RCAP_TYPE_NO_AUTH
+    {CN_PASSWORD,                      MXS_MODULE_PARAM_PASSWORD},  // Not mandatory due to RCAP_TYPE_NO_AUTH
+    {"passwd",                         MXS_MODULE_PARAM_PASSWORD},  // Not mandatory due to RCAP_TYPE_NO_AUTH
     {CN_ENABLE_ROOT_USER,              MXS_MODULE_PARAM_BOOL,   "false"},
     {CN_MAX_RETRY_INTERVAL,            MXS_MODULE_PARAM_COUNT,  "3600"},
     {CN_MAX_CONNECTIONS,               MXS_MODULE_PARAM_COUNT,  "0"},
@@ -348,31 +348,31 @@ const MXS_MODULE_PARAM config_listener_params[] =
 
 const MXS_MODULE_PARAM config_monitor_params[] =
 {
-    {CN_TYPE,                      MXS_MODULE_PARAM_STRING, NULL,
+    {CN_TYPE,                      MXS_MODULE_PARAM_STRING,   NULL,
      MXS_MODULE_OPT_REQUIRED},
-    {CN_MODULE,                    MXS_MODULE_PARAM_STRING, NULL,
+    {CN_MODULE,                    MXS_MODULE_PARAM_STRING,   NULL,
      MXS_MODULE_OPT_REQUIRED},
 
-    {CN_USER,                      MXS_MODULE_PARAM_STRING, NULL,
+    {CN_USER,                      MXS_MODULE_PARAM_STRING,   NULL,
      MXS_MODULE_OPT_REQUIRED},
-    {CN_PASSWORD,                  MXS_MODULE_PARAM_STRING, NULL,MXS_MODULE_OPT_REQUIRED },
-    {"passwd",                     MXS_MODULE_PARAM_STRING},
+    {CN_PASSWORD,                  MXS_MODULE_PARAM_PASSWORD, NULL,MXS_MODULE_OPT_REQUIRED },
+    {"passwd",                     MXS_MODULE_PARAM_PASSWORD},
 
     {CN_SERVERS,                   MXS_MODULE_PARAM_STRING},
-    {CN_MONITOR_INTERVAL,          MXS_MODULE_PARAM_COUNT,  "2000"},
-    {CN_BACKEND_CONNECT_TIMEOUT,   MXS_MODULE_PARAM_COUNT,  "3"},
-    {CN_BACKEND_READ_TIMEOUT,      MXS_MODULE_PARAM_COUNT,  "1"},
-    {CN_BACKEND_WRITE_TIMEOUT,     MXS_MODULE_PARAM_COUNT,  "2"},
-    {CN_BACKEND_CONNECT_ATTEMPTS,  MXS_MODULE_PARAM_COUNT,  "1"},
+    {CN_MONITOR_INTERVAL,          MXS_MODULE_PARAM_COUNT,    "2000"},
+    {CN_BACKEND_CONNECT_TIMEOUT,   MXS_MODULE_PARAM_COUNT,    "3"},
+    {CN_BACKEND_READ_TIMEOUT,      MXS_MODULE_PARAM_COUNT,    "1"},
+    {CN_BACKEND_WRITE_TIMEOUT,     MXS_MODULE_PARAM_COUNT,    "2"},
+    {CN_BACKEND_CONNECT_ATTEMPTS,  MXS_MODULE_PARAM_COUNT,    "1"},
 
-    {CN_JOURNAL_MAX_AGE,           MXS_MODULE_PARAM_COUNT,  "28800"},
+    {CN_JOURNAL_MAX_AGE,           MXS_MODULE_PARAM_COUNT,    "28800"},
     {CN_DISK_SPACE_THRESHOLD,      MXS_MODULE_PARAM_STRING},
-    {CN_DISK_SPACE_CHECK_INTERVAL, MXS_MODULE_PARAM_COUNT,  "0"},
+    {CN_DISK_SPACE_CHECK_INTERVAL, MXS_MODULE_PARAM_COUNT,    "0"},
 
-    {CN_SCRIPT,                    MXS_MODULE_PARAM_STRING},// Cannot be a path type as
-                                                            // the script may have
-                                                            // parameters
-    {CN_SCRIPT_TIMEOUT,            MXS_MODULE_PARAM_COUNT,  "90"},
+    {CN_SCRIPT,                    MXS_MODULE_PARAM_STRING},    // Cannot be a path type as
+                                                                // the script may have
+                                                                // parameters
+    {CN_SCRIPT_TIMEOUT,            MXS_MODULE_PARAM_COUNT,    "90"},
     {
         CN_EVENTS,
         MXS_MODULE_PARAM_ENUM,
@@ -404,7 +404,7 @@ const MXS_MODULE_PARAM config_server_params[] =
     {CN_EXTRA_PORT,                  MXS_MODULE_PARAM_COUNT,  "0"},
     {CN_AUTHENTICATOR,               MXS_MODULE_PARAM_STRING},
     {CN_MONITORUSER,                 MXS_MODULE_PARAM_STRING},
-    {CN_MONITORPW,                   MXS_MODULE_PARAM_STRING},
+    {CN_MONITORPW,                   MXS_MODULE_PARAM_PASSWORD},
     {CN_PERSISTPOOLMAX,              MXS_MODULE_PARAM_COUNT,  "0"},
     {CN_PERSISTMAXTIME,              MXS_MODULE_PARAM_COUNT,  "0"},
     {CN_PROXY_PROTOCOL,              MXS_MODULE_PARAM_BOOL,   "false"},
@@ -3036,6 +3036,9 @@ const char* param_type_to_str(const MXS_MODULE_PARAM* params, const char* name)
             case MXS_MODULE_PARAM_STRING:
                 return "a string";
 
+            case MXS_MODULE_PARAM_PASSWORD:
+                return "a password string";
+
             case MXS_MODULE_PARAM_QUOTEDSTRING:
                 return "a quoted string";
 
@@ -3667,6 +3670,10 @@ static json_t* param_value_to_json(const MXS_CONFIG_PARAMETER* param, const MXS_
 
     case MXS_MODULE_PARAM_BOOL:
         rval = json_boolean(config_truth_value(param->value));
+        break;
+
+    case MXS_MODULE_PARAM_PASSWORD:
+        rval = json_string("*****");
         break;
 
     default:
@@ -4341,6 +4348,7 @@ bool config_param_is_valid(const MXS_MODULE_PARAM* params,
                 break;
 
             case MXS_MODULE_PARAM_STRING:
+            case MXS_MODULE_PARAM_PASSWORD:
                 if (*value)
                 {
                     valid = true;

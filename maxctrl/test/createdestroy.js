@@ -63,7 +63,7 @@ describe("Create/Destroy Commands", function() {
                 res.data.relationships.servers.data.length.should.equal(1)
                 res.data.relationships.servers.data[0].id.should.equal("server4")
                 res.data.attributes.parameters.user.should.equal("maxuser")
-                res.data.attributes.parameters.password.should.equal("maxpwd")
+                res.data.attributes.parameters.password.should.equal("*****")
             })
     })
 

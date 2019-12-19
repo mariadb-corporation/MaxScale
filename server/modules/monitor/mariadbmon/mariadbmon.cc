@@ -1048,7 +1048,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 CN_REPLICATION_USER,                 MXS_MODULE_PARAM_STRING
             },
             {
-                CN_REPLICATION_PASSWORD,             MXS_MODULE_PARAM_STRING
+                CN_REPLICATION_PASSWORD,             MXS_MODULE_PARAM_PASSWORD
             },
             {
                 CN_REPLICATION_MASTER_SSL,           MXS_MODULE_PARAM_BOOL,   "false"
@@ -1084,7 +1084,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 CN_HANDLE_EVENTS,                    MXS_MODULE_PARAM_BOOL,   "true"
             },
             {
-                CN_ASSUME_UNIQUE_HOSTNAMES,         MXS_MODULE_PARAM_BOOL,    "true"
+                CN_ASSUME_UNIQUE_HOSTNAMES,          MXS_MODULE_PARAM_BOOL,   "true"
             },
             {MXS_END_MODULE_PARAMS}
         }
