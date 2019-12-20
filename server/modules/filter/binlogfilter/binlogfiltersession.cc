@@ -140,7 +140,7 @@ int BinlogFilterSession::routeQuery(GWBUF* pPacket)
         m_state = BINLOG_MODE;
         MXS_INFO("Slave server %u is waiting for binlog events.", m_serverid);
 
-        if (!m_is_gtid)
+        if (!m_is_gtid && m_filter.getConfig().rewrite_src)
         {
             gwbuf_free(pPacket);
             std::ostringstream ss;

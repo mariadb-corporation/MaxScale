@@ -1358,7 +1358,9 @@ public:
                                                 // happened to get the same address).
         {
             mxb_assert(m_dcb->owner == RoutingWorker::get_current());
+            m_dcb->m_is_fake_event = true;
             DCB::event_handler(m_dcb, m_ev);
+            m_dcb->m_is_fake_event = false;
         }
     }
 

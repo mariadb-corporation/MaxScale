@@ -25,11 +25,7 @@ void query_thread(TestConnections& test, int thread_id)
                                     "Error opening conn to %s:%u, thread num is %d, iteration %ld, error is: %s\n",
                                     host, port, thread_id, i, mysql_error(conn));
 
-                        if (conn && mysql_errno(conn) == 0)
-                        {
-                            test.try_query(conn, "USE test");
-                            mysql_close(conn);
-                        }
+                        mysql_close(conn);
                     };
 
     // Keep running the test until we exhaust all available ports

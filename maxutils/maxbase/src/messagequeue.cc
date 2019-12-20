@@ -133,8 +133,7 @@ MessageQueue* MessageQueue::create(Handler* pHandler)
         if (rv == 0)
         {
             // Succeeded, so apparently it was the missing support for O_DIRECT.
-            MXB_WARNING("Platform does not support O_DIRECT in conjunction with pipes, "
-                        "using without.");
+            MXB_NOTICE("Platform does not support O_DIRECT in conjunction with pipes, using without.");
         }
     }
 

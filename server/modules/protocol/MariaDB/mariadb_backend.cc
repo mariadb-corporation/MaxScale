@@ -182,6 +182,13 @@ bool MariaDBBackendConnection::init_connection()
 void MariaDBBackendConnection::finish_connection()
 {
     mxb_assert(m_dcb->handler());
+
+    if (m_auth_state == AuthState::CONNECTED)
+    {
+        memset(m_scramble, 0, sizeof(m_scramble));
+        m_dcb->writeq_append(gw_generate_auth_response(false, false, 0));
+    }
+
     /** Send COM_QUIT to the backend being closed */
     m_dcb->writeq_append(mysql_create_com_quit(nullptr, 0));
 }
