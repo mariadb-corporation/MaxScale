@@ -21,18 +21,16 @@
 
 #include "internal/maxscale.hh"
 #include "internal/service.hh"
-#include "internal/admin.hh"
-#include "internal/monitormanager.hh"
 
 static time_t started;
 
 namespace
 {
-    struct ThisUnit
-    {
-        std::atomic<const mxb::Worker*> admin_worker {nullptr};
-    };
-    ThisUnit this_unit;
+struct ThisUnit
+{
+    std::atomic<const mxb::Worker*> admin_worker {nullptr};
+};
+ThisUnit this_unit;
 }
 
 void maxscale_reset_starttime(void)
@@ -63,16 +61,7 @@ int maxscale_shutdown()
 
     if (n == 0)
     {
-        auto func = []() {
-                MonitorManager::stop_all_monitors();
-
-                mxs_admin_shutdown();
-                mxs::RoutingWorker::shutdown_all();
-            };
-
-        auto main_worker = mxs::MainWorker::get();
-        main_worker->execute(func, nullptr, mxs::RoutingWorker::EXECUTE_QUEUED);
-        main_worker->shutdown();
+        mxs::MainWorker::start_shutdown();
     }
 
     return n + 1;

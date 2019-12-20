@@ -104,6 +104,11 @@ public:
      */
     bool balance_workers(BalancingApproach approach, int threshold = -1);
 
+    /**
+     * Starts the shutdown process
+     */
+    static void start_shutdown();
+
 private:
     bool pre_run() override;
     void post_run() override;
@@ -137,7 +142,7 @@ private:
 
     std::map<std::string, Task> m_tasks_by_name;
     IndexedStorage              m_storage;
-    uint32_t                    m_rebalancing_dc { 0 };
+    uint32_t                    m_rebalancing_dc {0};
     mxb::TimePoint              m_last_rebalancing;
 };
 }

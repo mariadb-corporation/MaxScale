@@ -22,6 +22,8 @@
 #include <maxscale/routingworker.hh>
 
 #include "internal/modules.hh"
+#include "internal/admin.hh"
+#include "internal/monitormanager.hh"
 
 namespace
 {
@@ -294,6 +296,19 @@ void MainWorker::order_balancing_dc()
     m_rebalancing_dc = delayed_call(1000, &MainWorker::balance_workers_dc, this);
 }
 
+// static
+void MainWorker::start_shutdown()
+{
+    auto func = []() {
+            MonitorManager::stop_all_monitors();
+            mxs_admin_shutdown();
+            mxs::RoutingWorker::shutdown_all();
+        };
+
+    auto main_worker = get();
+    main_worker->execute(func, nullptr, EXECUTE_QUEUED);
+    main_worker->shutdown();
+}
 }
 
 extern "C"
