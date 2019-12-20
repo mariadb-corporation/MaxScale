@@ -68,4 +68,5 @@ private:
     std::string  m_name;
     const Config m_config;
     std::string  m_memcached_config;
+    time_t       m_ttl { 0 };
 };

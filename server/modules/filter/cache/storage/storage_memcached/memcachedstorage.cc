@@ -66,14 +66,14 @@ public:
         return shared_from_this();
     }
 
-    static bool create(const string& memcached_config, shared_ptr<Storage::Token>* psToken)
+    static bool create(const string& memcached_config, time_t ttl, shared_ptr<Storage::Token>* psToken)
     {
         bool rv = false;
         memcached_st* pMemc = memcached(memcached_config.c_str(), memcached_config.size());
 
         if (pMemc)
         {
-            MemcachedToken* pToken = new (std::nothrow) MemcachedToken(pMemc);
+            MemcachedToken* pToken = new (std::nothrow) MemcachedToken(pMemc, ttl);
 
             if (pToken)
             {
@@ -170,7 +170,7 @@ public:
         this_unit.pThread_pool->execute([sThis, mkey, pClone, cb]() {
                 memcached_return_t result = memcached_set(sThis->m_pMemc, mkey.data(), mkey.size(),
                                                           reinterpret_cast<const char*>(GWBUF_DATA(pClone)),
-                                                          GWBUF_LENGTH(pClone), 0, 0);
+                                                          GWBUF_LENGTH(pClone), 0, sThis->m_ttl);
                 cache_result_t rv;
 
                 if (result == MEMCACHED_SUCCESS)
@@ -234,15 +234,17 @@ public:
     }
 
 private:
-    MemcachedToken(memcached_st* pMemc)
+    MemcachedToken(memcached_st* pMemc, time_t ttl)
         : m_pMemc(pMemc)
         , m_pWorker(mxb::Worker::get_current())
+        , m_ttl(ttl)
     {
     }
 
 private:
     memcached_st* m_pMemc;
     mxb::Worker*  m_pWorker;
+    time_t        m_ttl;
 };
 
 }
@@ -254,6 +256,30 @@ MemcachedStorage::MemcachedStorage(const string& name,
     , m_config(config)
     , m_memcached_config(memcached_config)
 {
+    if (config.soft_ttl != config.hard_ttl)
+    {
+        MXS_WARNING("The storage storage_memcached does not distinguish between "
+                    "soft (%u ms) and hard ttl (%u ms). Hard ttl is used.",
+                    config.soft_ttl, config.hard_ttl);
+    }
+
+    auto ms = config.hard_ttl;
+
+    if (ms == 0)
+    {
+        m_ttl = 0;
+    }
+    else
+    {
+        m_ttl = config.hard_ttl / 1000;
+
+        if (m_ttl == 0)
+        {
+            MXS_WARNING("Memcached does not support a ttl (%u ms) less than 1 second. "
+                        "A ttl of 1 second is used.", config.hard_ttl);
+            m_ttl = 1;
+        }
+    }
 }
 
 MemcachedStorage::~MemcachedStorage()
@@ -334,7 +360,7 @@ MemcachedStorage* MemcachedStorage::create(const std::string& name,
 
 bool MemcachedStorage::create_token(std::shared_ptr<Storage::Token>* psToken)
 {
-    return MemcachedToken::create(m_memcached_config, psToken);
+    return MemcachedToken::create(m_memcached_config, m_ttl, psToken);
 }
 
 void MemcachedStorage::get_config(Config* pConfig)
