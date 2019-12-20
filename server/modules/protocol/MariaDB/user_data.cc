@@ -230,76 +230,86 @@ MariaDBUserManager::UpdateResult MariaDBUserManager::update_users()
 
     bool found_valid_server = false;
 
+    // Order and filter the backends, as we would prefer to load users from the master.
+    auto is_unusable = [](const SERVER* srv) {
+            return !srv->is_active || !srv->is_usable();
+        };
+    auto erase_iter = std::remove_if(backends.begin(), backends.end(), is_unusable);
+    backends.erase(erase_iter, backends.end());
+
+    auto compare = [](const SERVER* lhs, const SERVER* rhs) {
+            return (lhs->is_master() && !rhs->is_master())
+                   || (lhs->is_slave() && (!rhs->is_master() && !rhs->is_slave()));
+        };
+    std::sort(backends.begin(), backends.end(), compare);
+
     auto update_result = UpdateResult::FAIL;
     auto load_result = LoadResult::QUERY_FAILED;
     for (size_t i = 0; i < backends.size() && load_result == LoadResult::QUERY_FAILED; i++)
     {
         SERVER* srv = backends[i];
-        if (srv->is_active && srv->is_usable())
+        found_valid_server = true;
+        const mxb::SSLConfig* srv_ssl_config = srv->ssl().config();
+        sett.ssl = (srv_ssl_config && !srv_ssl_config->empty()) ? *srv_ssl_config : mxb::SSLConfig();
+
+        con.set_connection_settings(sett);
+        if (con.open(srv->address, srv->port))
         {
-            found_valid_server = true;
-            const mxb::SSLConfig* srv_ssl_config = srv->ssl().config();
-            sett.ssl = (srv_ssl_config && !srv_ssl_config->empty()) ? *srv_ssl_config : mxb::SSLConfig();
-
-            con.set_connection_settings(sett);
-            if (con.open(srv->address, srv->port))
+            UserDatabase temp_userdata;
+            auto srv_type = srv->type();
+            switch (srv_type)
             {
-                UserDatabase temp_userdata;
-                auto srv_type = srv->type();
-                switch (srv_type)
-                {
-                case SERVER::Type::MYSQL:
-                case SERVER::Type::MARIADB:
-                    load_result = load_users_mariadb(con, srv, &temp_userdata);
-                    break;
+            case SERVER::Type::MYSQL:
+            case SERVER::Type::MARIADB:
+                load_result = load_users_mariadb(con, srv, &temp_userdata);
+                break;
 
-                case SERVER::Type::CLUSTRIX:
-                    load_result = load_users_clustrix(con, srv, &temp_userdata);
-                    break;
-                }
-
-                switch (load_result)
-                {
-                case LoadResult::SUCCESS:
-                    // The comparison is not trivially cheap if there are many user entries,
-                    // but it avoids unnecessary user cache updates which would involve copying all
-                    // the data multiple times.
-                    if (temp_userdata.equal_contents(m_userdb))
-                    {
-                        MXB_INFO("Read %lu user@host entries from '%s' for service '%s'. The data was "
-                                 "identical to existing user data.",
-                                 m_userdb.n_entries(), srv->name(), m_service->name());
-                        update_result = UpdateResult::SUCCESS_NO_CHANGE;
-                    }
-                    else
-                    {
-                        // Data changed, update main user db. Cache update message is sent by the caller.
-                        {
-                            Guard guard(m_userdb_lock);
-                            m_userdb = std::move(temp_userdata);
-                            m_userdb_version++;
-                        }
-                        MXB_NOTICE("Read %lu user@host entries from '%s' for service '%s'.",
-                                   m_userdb.n_entries(), srv->name(), m_service->name());
-                        update_result = UpdateResult::SUCCESS_CHANGED;
-                    }
-                    break;
-
-                case LoadResult::QUERY_FAILED:
-                    MXB_ERROR("Failed to query server '%s' for user account info. %s",
-                              srv->name(), con.error());
-                    break;
-
-                case LoadResult::INVALID_DATA:
-                    MXB_ERROR("Received invalid data from '%s' when querying user accounts.",
-                              srv->name());
-                    break;
-                }
+            case SERVER::Type::CLUSTRIX:
+                load_result = load_users_clustrix(con, srv, &temp_userdata);
+                break;
             }
-            else
+
+            switch (load_result)
             {
-                MXB_ERROR("Could not connect to '%s'. %s", srv->name(), con.error());
+            case LoadResult::SUCCESS:
+                // The comparison is not trivially cheap if there are many user entries,
+                // but it avoids unnecessary user cache updates which would involve copying all
+                // the data multiple times.
+                if (temp_userdata.equal_contents(m_userdb))
+                {
+                    MXB_INFO("Read %lu user@host entries from '%s' for service '%s'. The data was "
+                             "identical to existing user data.",
+                             m_userdb.n_entries(), srv->name(), m_service->name());
+                    update_result = UpdateResult::SUCCESS_NO_CHANGE;
+                }
+                else
+                {
+                    // Data changed, update main user db. Cache update message is sent by the caller.
+                    {
+                        Guard guard(m_userdb_lock);
+                        m_userdb = std::move(temp_userdata);
+                        m_userdb_version++;
+                    }
+                    MXB_NOTICE("Read %lu user@host entries from '%s' for service '%s'.",
+                               m_userdb.n_entries(), srv->name(), m_service->name());
+                    update_result = UpdateResult::SUCCESS_CHANGED;
+                }
+                break;
+
+            case LoadResult::QUERY_FAILED:
+                MXB_ERROR("Failed to query server '%s' for user account info. %s",
+                          srv->name(), con.error());
+                break;
+
+            case LoadResult::INVALID_DATA:
+                MXB_ERROR("Received invalid data from '%s' when querying user accounts.",
+                          srv->name());
+                break;
             }
+        }
+        else
+        {
+            MXB_ERROR("Could not connect to '%s'. %s", srv->name(), con.error());
         }
     }
 
