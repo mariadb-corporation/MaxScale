@@ -76,10 +76,7 @@ public:
         bool                    m_abandon_tasks { false };
     };
 
-    enum
-    {
-        UNLIMITED = std::numeric_limits<int>::max()
-    };
+    static const int UNLIMITED = std::numeric_limits<int>::max();
 
     /**
      * Creates a thread pool with at most the specified number of threads.
@@ -119,7 +116,7 @@ public:
      * - If there are no idle threads and the maximum number of threads has not
      *   been reached, then a new thread is created using which the task is
      *   executed.
-     * - If there are no idel threads and the maximum number of threads has been
+     * - If there are no idle threads and the maximum number of threads has been
      *   reached, then the task is queued for execution and will be executed by
      *   the first thread that becomes idle.
      *
