@@ -27,7 +27,7 @@
 
 #include "../internal/service.hh"
 #include "test_utils.hh"
-#include "../config.cc"
+#include "../internal/listener.hh"
 
 /**
  * test1    Allocate a service and do lots of other things
