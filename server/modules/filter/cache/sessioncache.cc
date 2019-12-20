@@ -13,7 +13,7 @@
 
 #include "sessioncache.hh"
 
-//static
+// static
 std::unique_ptr<SessionCache> SessionCache::create(Cache* pCache)
 {
     std::unique_ptr<SessionCache> sSession_cache;
@@ -23,12 +23,12 @@ std::unique_ptr<SessionCache> SessionCache::create(Cache* pCache)
 
     if (rv)
     {
-        sSession_cache.reset(new (std::nothrow) SessionCache(pCache, std::move(sToken)));
+        sSession_cache.reset(new(std::nothrow) SessionCache(pCache, std::move(sToken)));
     }
     else
     {
         MXS_ERROR("Cache storage token creation failed.");
     }
 
-    return std::move(sSession_cache);
+    return sSession_cache;
 }
