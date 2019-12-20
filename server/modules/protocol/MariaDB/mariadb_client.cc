@@ -2298,6 +2298,7 @@ bool MariaDBClientConnection::parse_client_response(const uint8_t* data, int dat
             if (db)
             {
                 m_session_data->db = db;
+                m_session->set_database(db);
             }
 
             if (plugin)

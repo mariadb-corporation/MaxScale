@@ -451,6 +451,13 @@ json_t* session_json_data(const Session* session, const char* host, bool rdns)
 
     json_object_set_new(attr, "remote", json_string(result_address.c_str()));
 
+    auto db = session->database();
+
+    if (!db.empty())
+    {
+        json_object_set_new(attr, "default_database", json_string(db.c_str()));
+    }
+
     struct tm result;
     char buf[60];
 

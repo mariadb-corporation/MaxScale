@@ -189,6 +189,11 @@ const session_fields = [
         description: 'Client host address'
     },
     {
+        name: 'Database',
+        path: 'attributes.database',
+        description: 'Current default database of the connection'
+    },
+    {
         name: 'Connected',
         path: 'attributes.connected',
         description: 'Time when the session started'

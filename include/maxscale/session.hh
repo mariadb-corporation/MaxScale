@@ -216,6 +216,11 @@ public:
         m_pending_database = database;
     }
 
+    void set_database(const std::string& database)
+    {
+        m_database = database;
+    }
+
     virtual mxs::ClientConnection*       client_connection() = 0;
     virtual const mxs::ClientConnection* client_connection() const = 0;
     virtual void                         set_client_connection(mxs::ClientConnection* client_conn) = 0;
