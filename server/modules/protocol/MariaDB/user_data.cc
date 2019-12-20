@@ -41,7 +41,14 @@ constexpr auto acquire = std::memory_order_acquire;
 constexpr auto release = std::memory_order_release;
 constexpr auto relaxed = std::memory_order_relaxed;
 constexpr auto npos = string::npos;
-constexpr int ipv4min_len = 7;      // 1.1.1.1
+
+const int ipv4min_len = 7;      // 1.1.1.1
+
+/** How many times users can be succesfully loaded before throttling kicks in. */
+const int throttling_start_loads = 5;
+
+/** Max user load attempts when starting. If this limit is exceeded, throttling kicks in. */
+const int user_load_fail_limit = 10;
 
 namespace mariadb_queries
 {
@@ -119,7 +126,8 @@ void MariaDBUserManager::updater_thread_function()
     using mxb::Clock;
 
     // Minimum wait between update loops. User accounts should not be changing continuously.
-    const std::chrono::seconds default_min_interval(1);
+    const std::chrono::milliseconds default_min_interval(500);
+
     // Default value for scheduled updates. Cannot set too far in the future, as the cv wait_until bugs and
     // doesn't wait.
     const std::chrono::hours default_max_interval(24);
@@ -132,8 +140,7 @@ void MariaDBUserManager::updater_thread_function()
         };
 
     auto should_stop_waiting = [this]() {
-            return !m_keep_running.load(acquire) || m_update_users_requested.load(acquire)
-                   || m_userdb_version.load(relaxed) == 0;
+            return !m_keep_running.load(acquire) || m_update_users_requested.load(acquire);
         };
 
     while (m_keep_running.load(acquire))
@@ -152,32 +159,38 @@ void MariaDBUserManager::updater_thread_function()
         auto max_refresh_interval = glob_config->users_refresh_interval;
         auto min_refresh_interval = glob_config->users_refresh_time;
 
-        // Calculate the time for the next scheduled update.
-        TimePoint next_scheduled_update = last_update;
-        if (m_userdb_version.load(relaxed) == 0)
-        {
-            // If updating has not succeeded even once yet, keep trying again and again,
-            // with just a minimal wait.
-            next_scheduled_update += default_min_interval;
-        }
-        else if (max_refresh_interval > 0)
-        {
-            next_scheduled_update += Duration((double)max_refresh_interval);
-        }
-        else
-        {
-            next_scheduled_update += default_max_interval;
-        }
+        /**
+         * Throttling kicks in if users have been loaded a few times, or if loading has failed repeatedly
+         * often enough. This allows a few quick user account updates at the beginning. The quick updates
+         * are useful for test situations, where users are often created just after MaxScale has started.
+         * Also useful for allowing quick updates when monitor hasn't yet refreshed the servers.
+         */
+        bool throttling_on = (m_successful_loads > throttling_start_loads
+                              || m_consecutive_failed_loads > user_load_fail_limit);
 
         // Calculate the earliest allowed time for next update.
         TimePoint next_possible_update = last_update;
-        if (min_refresh_interval > 0 && m_userdb_version.load(relaxed) > 0)
+        if (throttling_on && min_refresh_interval > 0)
         {
             next_possible_update += Duration((double)min_refresh_interval);
         }
         else
         {
             next_possible_update += default_min_interval;
+        }
+
+        // Calculate the time for the next scheduled update.
+        TimePoint next_scheduled_update = last_update;
+        if (!throttling_on && m_successful_loads == 0)
+        {
+            // If updating has not succeeded even once yet, keep trying again and again,
+            // with just a minimal wait.
+            next_scheduled_update += default_min_interval;
+        }
+        else
+        {
+            next_scheduled_update += (max_refresh_interval > 0) ? Duration((double)max_refresh_interval) :
+                default_max_interval;
         }
 
         MutexLock lock(m_notifier_lock);
@@ -193,8 +206,14 @@ void MariaDBUserManager::updater_thread_function()
         if (m_keep_running.load(acquire))
         {
             update_result = update_users();
-            if (update_result != UpdateResult::FAIL)
+            if (update_result == UpdateResult::FAIL)
             {
+                m_consecutive_failed_loads++;
+            }
+            else
+            {
+                m_consecutive_failed_loads = 0;
+                m_successful_loads++;
                 m_warn_no_servers = true;
             }
         }

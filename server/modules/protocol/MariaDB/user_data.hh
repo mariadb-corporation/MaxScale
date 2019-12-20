@@ -210,13 +210,14 @@ private:
     std::string          m_username;
     std::string          m_password;
     std::vector<SERVER*> m_backends;
-
-    SERVICE* m_service {nullptr};   /**< Service using this account data manager. */
+    SERVICE*             m_service {nullptr};   /**< Service using this account data manager */
 
     std::atomic_bool m_can_update {false};      /**< User accounts can or are about to be updated */
+    int              m_successful_loads {0};    /**< Successful refreshes */
+    std::atomic_int  m_userdb_version {0};      /**< How many times the user database has changed */
 
-    /** How many times the user database has been updated. Only updates with changes count. */
-    std::atomic_int m_userdb_version {0};
+    /** How many times user loading has continuously failed. User for suppressing error messages. */
+    int m_consecutive_failed_loads {0};
 
     /** Warn if no valid servers to query from. Starts false, as in the beginning monitors may not have
      * ran yet. */
