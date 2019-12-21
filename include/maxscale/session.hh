@@ -409,6 +409,7 @@ public:
 private:
     std::unique_ptr<ProtocolData> m_protocol_data;
     uint32_t                      m_trx_state {SESSION_TRX_INACTIVE};
+    bool                          m_killed {false};
 };
 
 /**

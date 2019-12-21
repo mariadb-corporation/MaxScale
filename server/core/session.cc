@@ -102,10 +102,10 @@ MXS_SESSION::~MXS_SESSION()
 
 void MXS_SESSION::kill(GWBUF* error)
 {
-    if (m_state == State::STARTED)
+    if (!m_killed && (m_state == State::CREATED || m_state == State::STARTED))
     {
         mxb_assert(!client_connection()->dcb()->is_closed());
-        m_state = State::STOPPING;
+        m_killed = true;
         close_reason = SESSION_CLOSE_HANDLEERROR_FAILED;
 
         if (error)
