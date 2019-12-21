@@ -842,6 +842,11 @@ MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params)
     return QlaInstance::create(name, params);
 }
 
+void destroyInstance(MXS_FILTER* filter)
+{
+    delete static_cast<QlaInstance*>(filter);
+}
+
 MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
                                MXS_SESSION* session,
                                SERVICE* service,
@@ -949,7 +954,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         clientReply,
         diagnostics,
         getCapabilities,
-        NULL,               // No destroyInstance
+        destroyInstance,
     };
 
     static const char description[] = "A simple query logging filter";

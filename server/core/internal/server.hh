@@ -34,6 +34,8 @@ public:
     {
     }
 
+    ~Server();
+
     long persistpoolmax() const
     {
         return m_settings.persistpoolmax;

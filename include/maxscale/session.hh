@@ -156,6 +156,8 @@ public:
      */
     class ProtocolData
     {
+    public:
+        virtual ~ProtocolData() = default;
     };
 
     virtual ~MXS_SESSION();

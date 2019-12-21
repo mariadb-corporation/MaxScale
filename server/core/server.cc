@@ -180,6 +180,11 @@ Server* Server::server_alloc(const char* name, const MXS_CONFIG_PARAMETER& param
     return server;
 }
 
+Server::~Server()
+{
+    MXS_FREE(persistent);
+}
+
 Server* Server::create_test_server()
 {
     static int next_id = 1;
