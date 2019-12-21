@@ -1422,6 +1422,36 @@ void RoutingWorker::rebalance()
     m_rebalance.reset();
 }
 
+// static
+void RoutingWorker::start_shutdown()
+{
+    broadcast([]() {
+                  auto worker = RoutingWorker::get_current();
+                  worker->delayed_call(100, &RoutingWorker::try_shutdown, worker);
+              }, nullptr, EXECUTE_AUTO);
+}
+
+bool RoutingWorker::try_shutdown(Call::action_t action)
+{
+    if (action == Call::EXECUTE)
+    {
+        evict_dcbs(Evict::ALL);
+
+        if (m_sessions.empty())
+        {
+            shutdown();
+        }
+        else
+        {
+            for (const auto& s : m_sessions)
+            {
+                s.second->kill();
+            }
+        }
+    }
+
+    return true;
+}
 }
 
 size_t mxs_rworker_broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2)

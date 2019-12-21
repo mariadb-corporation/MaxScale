@@ -57,6 +57,9 @@ public:
      */
     static void destroy(const std::shared_ptr<Listener>& listener);
 
+    // Stop all listeners
+    static void stop_all();
+
     /**
      * Start listening on the configured port
      *

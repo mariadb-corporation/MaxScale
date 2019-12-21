@@ -275,6 +275,17 @@ void Listener::destroy(const SListener& listener)
     all_listeners.remove(listener);
 }
 
+// static
+void Listener::stop_all()
+{
+    std::lock_guard<std::mutex> guard(listener_lock);
+
+    for (const auto& a : all_listeners)
+    {
+        a->stop();
+    }
+}
+
 // Helper function that executes a function on all workers and checks the result
 static bool execute_and_check(const std::function<bool ()>& func)
 {

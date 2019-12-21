@@ -24,6 +24,7 @@
 #include "internal/modules.hh"
 #include "internal/admin.hh"
 #include "internal/monitormanager.hh"
+#include "internal/listener.hh"
 
 namespace
 {
@@ -300,14 +301,22 @@ void MainWorker::order_balancing_dc()
 void MainWorker::start_shutdown()
 {
     auto func = []() {
+            // Stop all monitors and listeners to prevent any state changes during shutdown and to prevent the
+            // creation of new sessions. Stop the REST API to prevent any conflicting changes from being
+            // executed while we're shutting down.
             MonitorManager::stop_all_monitors();
             mxs_admin_shutdown();
-            mxs::RoutingWorker::shutdown_all();
+            Listener::stop_all();
+
+            // The RoutingWorkers proceed with the shutdown on their own. Once all sessions have closed, they
+            // will exit the event loop.
+            mxs::RoutingWorker::start_shutdown();
+
+            // Stop the MainWorker now that shutdown has been started
+            MainWorker::get()->shutdown();
         };
 
-    auto main_worker = get();
-    main_worker->execute(func, nullptr, EXECUTE_QUEUED);
-    main_worker->shutdown();
+    MainWorker::get()->execute(func, EXECUTE_QUEUED);
 }
 }
 

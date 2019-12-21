@@ -108,6 +108,13 @@ void MXS_SESSION::kill(GWBUF* error)
         m_killed = true;
         close_reason = SESSION_CLOSE_HANDLEERROR_FAILED;
 
+        if (m_state == State::STARTED)
+        {
+            // This signals the rest of the system that the session has started the shutdown procedure.
+            // Currently it mainly affects debug assertions inside the protocol code.
+            m_state = State::STOPPING;
+        }
+
         if (error)
         {
             // Write the error to the client before closing the DCB

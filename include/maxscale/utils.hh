@@ -307,6 +307,11 @@ public:
         return m_registry.end();
     }
 
+    bool empty() const
+    {
+        return m_registry.empty();
+    }
+
 private:
     ContainerType m_registry;
 };

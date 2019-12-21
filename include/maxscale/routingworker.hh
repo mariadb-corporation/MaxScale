@@ -504,6 +504,11 @@ public:
 
     void rebalance(RoutingWorker* pTo, int nSessions = 1);
 
+    /**
+     * Start the routingworker shutdown process
+     */
+    static void start_shutdown();
+
 private:
     // DCB::Manager
     void add(DCB* pDcb) override;
@@ -514,6 +519,8 @@ private:
 
     void evict_dcb(BackendDCB* pDcb);
     void close_pooled_dcb(BackendDCB* pDcb);
+
+    bool try_shutdown(Call::action_t action);
 
 private:
     const int      m_id;              /*< The id of the worker. */
