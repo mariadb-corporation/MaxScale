@@ -477,7 +477,7 @@ void SchemaRouterSession::handle_mapping_reply(SRBackend* bref, GWBUF** pPacket)
 
     if (rc == -1)
     {
-        m_pSession->terminate();
+        m_pSession->kill();
     }
 }
 

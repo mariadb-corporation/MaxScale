@@ -185,7 +185,7 @@ void SmartRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down
             MXS_SERROR("clientReply(): Lost connection to " << cluster.pBackend->target()->name()
                                                             << " Error code=" << err_code
                                                             << ' ' << mxs::extract_error(pPacket));
-            m_pSession->terminate();
+            m_pSession->kill();
             return;
         }
     }
@@ -195,7 +195,7 @@ void SmartRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down
         MXS_SERROR("ProtocolTracker from state " << tracker_state_before
                                                  << " to state " << cluster.tracker.state()
                                                  << ". Disconnect.");
-        m_pSession->terminate();
+        m_pSession->kill();
         return;
     }
 
@@ -386,7 +386,7 @@ bool SmartRouterSession::handleError(mxs::ErrorType type,
                << pProblem->target()->name() << " Error code=" << err_code << " "
                << mxs::extract_error(pPacket));
 
-    m_pSession->terminate(gwbuf_clone(pPacket));
+    m_pSession->kill(gwbuf_clone(pPacket));
     return false;
 }
 

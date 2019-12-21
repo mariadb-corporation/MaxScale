@@ -500,7 +500,7 @@ void MaskingFilterSession::handle_large_payload()
     if (m_filter.config().large_payload() == Config::LARGE_ABORT)
     {
         MXS_WARNING("Payload > 16MB, closing the connection.");
-        m_pSession->terminate();
+        m_pSession->kill();
         m_state = SUPPRESSING_RESPONSE;
     }
     else

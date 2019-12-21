@@ -100,7 +100,7 @@ MXS_SESSION::~MXS_SESSION()
     mxb_assert(removed);
 }
 
-void MXS_SESSION::terminate(GWBUF* error)
+void MXS_SESSION::kill(GWBUF* error)
 {
     if (m_state == State::STARTED)
     {
@@ -1395,7 +1395,7 @@ bool Session::handleError(mxs::ErrorType type, GWBUF* error, Endpoint* down, con
 {
     mxs::ReplyRoute route;
     clientReply(gwbuf_clone(error), route, reply);
-    terminate();
+    kill();
     return false;
 }
 
@@ -1519,7 +1519,7 @@ void Session::tick(int64_t idle)
         {
             MXS_WARNING("Timing out %s, idle for %ld seconds", user_and_host().c_str(), idle);
             close_reason = SESSION_CLOSE_TIMEOUT;
-            terminate();
+            kill();
         }
     }
 
@@ -1529,7 +1529,7 @@ void Session::tick(int64_t idle)
         {
             MXS_WARNING("Network write timed out for %s.", user_and_host().c_str());
             close_reason = SESSION_CLOSE_TIMEOUT;
-            terminate();
+            kill();
         }
     }
 
@@ -1547,7 +1547,7 @@ void Session::tick(int64_t idle)
     if (m_ttl && MXS_CLOCK_TO_SEC(mxs_clock() - m_ttl_start) > m_ttl)
     {
         MXS_WARNING("Killing session %lu, session TTL exceeded.", id());
-        terminate();
+        kill();
     }
 }
 
@@ -1676,7 +1676,7 @@ bool Session::move_to(RoutingWorker* pTo)
 
             if (!enable_events(to_be_enabled))
             {
-                terminate();
+                kill();
             }
 
             MXS_NOTICE("Moved session from %d to %d.", pFrom->id(), pTo->id());
@@ -1703,7 +1703,7 @@ bool Session::move_to(RoutingWorker* pTo)
         if (!enable_events(to_be_enabled))
         {
             MXS_ERROR("Could not re-enable epoll events, session will be terminated.");
-            terminate();
+            kill();
         }
     }
 

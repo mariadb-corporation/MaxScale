@@ -381,7 +381,7 @@ void RWSplitSession::trx_replay_next_stmt()
                                                           "Transaction checksum mismatch encountered "
                                                           "when replaying transaction.");
 
-                m_session->terminate(buf);
+                m_session->kill(buf);
 
                 // Turn the replay flag back on to prevent queries from getting routed before the hangup we
                 // just added is processed. For example, this can happen if the error is sent and the client
@@ -415,7 +415,7 @@ void RWSplitSession::manage_transactions(RWBackend* backend, GWBUF* writebuf, co
 
         if (!mxs_mysql_is_ok_packet(writebuf))
         {
-            m_session->terminate();
+            m_session->kill();
         }
     }
     else if (m_config.transaction_replay && m_can_replay_trx && trx_is_open())
@@ -1021,7 +1021,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, GWBUF* errmsgbuf, mxs::End
 
         // This effectively causes an instant termination of the client connection and prevents any errors
         // from being sent to the client (MXS-2562).
-        m_session->terminate();
+        m_session->kill();
         return false;
     }
 

@@ -192,7 +192,7 @@ public:
      *
      * @param error An optionl error message that is sent to the client before the session is terminated
      */
-    void terminate(GWBUF* error = nullptr);
+    void kill(GWBUF* error = nullptr);
 
     // Convenience function for client identification
     std::string user_and_host() const

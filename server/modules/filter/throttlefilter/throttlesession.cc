@@ -113,7 +113,7 @@ bool ThrottleSession::delayed_routeQuery(maxbase::Worker::Call::action_t action,
     case maxbase::Worker::Call::EXECUTE:
         if (!real_routeQuery(buffer, true))
         {
-            m_pSession->terminate();
+            m_pSession->kill();
         }
         break;
 
