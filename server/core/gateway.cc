@@ -77,6 +77,7 @@
 #include "internal/poll.hh"
 #include "internal/service.hh"
 #include "internal/listener.hh"
+#include "internal/servermanager.hh"
 
 #if !defined (OPENSSL_THREADS)
 #error OpenSSL library does not support multi-threading.
@@ -2010,6 +2011,7 @@ int main(int argc, char** argv)
                                 service_destroy_instances();
                                 filter_destroy_instances();
                                 listener_destroy_instances();
+                                ServerManager::destroy_all();
 
                                 MXS_NOTICE("MaxScale shutdown completed.");
                             }

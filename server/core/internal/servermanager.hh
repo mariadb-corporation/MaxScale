@@ -45,6 +45,11 @@ public:
     static void server_free(Server* server);
 
     /**
+     * Destroys all created servers
+     */
+    static void destroy_all();
+
+    /**
      * Find a server by name.
      *
      * @param name Name of the server

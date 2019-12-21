@@ -65,13 +65,24 @@ public:
         m_all_servers.erase(it);
     }
 
+    void clear()
+    {
+        Guard guard(m_all_servers_lock);
+
+        for (auto s : m_all_servers)
+        {
+            delete s;
+        }
+
+        m_all_servers.clear();
+    }
+
 private:
-    std::mutex m_all_servers_lock;         /**< Protects access to array */
-    std::vector<Server*> m_all_servers;    /**< Global list of servers, in configuration file order */
+    std::mutex           m_all_servers_lock;/**< Protects access to array */
+    std::vector<Server*> m_all_servers;     /**< Global list of servers, in configuration file order */
 };
 
 ThisUnit this_unit;
-
 }
 
 Server* ServerManager::create_server(const char* name, const MXS_CONFIG_PARAMETER& params)
@@ -90,7 +101,8 @@ void ServerManager::server_free(Server* server)
     mxb_assert(server);
     this_unit.erase(server);
 
-    mxs::RoutingWorker::execute_concurrently([server](){
+    mxs::RoutingWorker::execute_concurrently(
+        [server]() {
             mxs::RoutingWorker* worker = mxs::RoutingWorker::get_current();
             mxb_assert(worker);
 
@@ -98,6 +110,11 @@ void ServerManager::server_free(Server* server)
         });
 
     delete server;
+}
+
+void ServerManager::destroy_all()
+{
+    this_unit.clear();
 }
 
 Server* ServerManager::find_by_unique_name(const string& name)
