@@ -204,7 +204,11 @@ void DCB::clear()
 
     remove_callbacks();
 
-    m_session = nullptr;
+    if (m_session)
+    {
+        release_from(m_session);
+        m_session = nullptr;
+    }
 }
 
 /**
@@ -1794,8 +1798,6 @@ BackendDCB* BackendDCB::connect(SERVER* server, MXS_SESSION* session, DCB::Manag
 
 void BackendDCB::reset(MXS_SESSION* session)
 {
-    clear();
-
     m_last_read = mxs_clock();
     m_last_write = mxs_clock();
     m_session = session;
