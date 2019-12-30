@@ -17,7 +17,7 @@
 #include <libmemcached/memcached.h>
 #include <libmemcached-1.0/strerror.h>
 #include <maxbase/worker.hh>
-#include "threadpool.hh"
+#include <maxscale/threadpool.hh>
 
 using std::shared_ptr;
 using std::string;
@@ -25,11 +25,6 @@ using std::vector;
 
 namespace
 {
-
-struct THIS_UNIT
-{
-    ThreadPool* pThread_pool;
-} this_unit;
 
 vector<char> get_memcached_key(const CACHE_KEY& key)
 {
@@ -105,7 +100,7 @@ public:
 
         auto sThis = get_shared();
 
-        this_unit.pThread_pool->execute([sThis, mkey, cb] () {
+        mxs::thread_pool().execute([sThis, mkey, cb] () {
                 size_t nData;
                 uint32_t flags;
                 memcached_return_t error;
@@ -167,7 +162,7 @@ public:
 
         auto sThis = get_shared();
 
-        this_unit.pThread_pool->execute([sThis, mkey, pClone, cb]() {
+        mxs::thread_pool().execute([sThis, mkey, pClone, cb]() {
                 memcached_return_t result = memcached_set(sThis->m_pMemc, mkey.data(), mkey.size(),
                                                           reinterpret_cast<const char*>(GWBUF_DATA(pClone)),
                                                           GWBUF_LENGTH(pClone), 0, sThis->m_ttl);
@@ -207,7 +202,7 @@ public:
 
         auto sThis = get_shared();
 
-        this_unit.pThread_pool->execute([sThis, mkey, cb] () {
+        mxs::thread_pool().execute([sThis, mkey, cb] () {
                 memcached_return_t result = memcached_delete(sThis->m_pMemc, mkey.data(), mkey.size(), 0);
 
                 cache_result_t rv;
@@ -289,8 +284,6 @@ MemcachedStorage::~MemcachedStorage()
 //static
 bool MemcachedStorage::initialize(cache_storage_kind_t* pKind, uint32_t* pCapabilities)
 {
-    this_unit.pThread_pool = new ThreadPool;
-
     *pKind = CACHE_STORAGE_SHARED;
     *pCapabilities = (CACHE_STORAGE_CAP_ST | CACHE_STORAGE_CAP_MT);
     return true;
@@ -299,7 +292,6 @@ bool MemcachedStorage::initialize(cache_storage_kind_t* pKind, uint32_t* pCapabi
 //static
 void MemcachedStorage::finalize()
 {
-    delete this_unit.pThread_pool;
 }
 
 //static
