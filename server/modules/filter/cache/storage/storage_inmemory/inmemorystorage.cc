@@ -61,23 +61,28 @@ void InMemoryStorage::finalize()
 //static
 InMemoryStorage* InMemoryStorage::create(const char* zName,
                                          const Config& config,
-                                         int argc,
-                                         char* argv[])
+                                         const std::string& arguments)
 {
     mxb_assert(zName);
 
     if (config.max_count != 0)
     {
-        MXS_WARNING("A maximum item count of %u specified, although 'storage_inMemory' "
+        MXS_WARNING("A maximum item count of %u specified, although 'storage_inmemory' "
                     "does not enforce such a limit.",
                     (unsigned int)config.max_count);
     }
 
     if (config.max_size != 0)
     {
-        MXS_WARNING("A maximum size of %lu specified, although 'storage_inMemory' "
+        MXS_WARNING("A maximum size of %lu specified, although 'storage_inmemory' "
                     "does not enforce such a limit.",
                     (unsigned long)config.max_size);
+    }
+
+    if (!arguments.empty())
+    {
+        MXS_WARNING("Arguments '%s' provided, although 'storage_inmemory' does not "
+                    "accept any arguments.", arguments.c_str());
     }
 
     unique_ptr<InMemoryStorage> sStorage;
@@ -85,7 +90,7 @@ InMemoryStorage* InMemoryStorage::create(const char* zName,
     switch (config.thread_model)
     {
     case CACHE_THREAD_MODEL_ST:
-        sStorage = InMemoryStorageST::Create(zName, config, argc, argv);
+        sStorage = InMemoryStorageST::create(zName, config);
         break;
 
     default:
@@ -94,7 +99,7 @@ InMemoryStorage* InMemoryStorage::create(const char* zName,
                   (int)config.thread_model);
 
     case CACHE_THREAD_MODEL_MT:
-        sStorage = InMemoryStorageMT::Create(zName, config, argc, argv);
+        sStorage = InMemoryStorageMT::create(zName, config);
         break;
     }
 

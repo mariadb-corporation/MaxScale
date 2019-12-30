@@ -26,10 +26,8 @@ InMemoryStorageST::~InMemoryStorageST()
 {
 }
 
-unique_ptr<InMemoryStorageST> InMemoryStorageST::Create(const std::string& name,
-                                                        const Config& config,
-                                                        int argc,
-                                                        char* argv[])
+unique_ptr<InMemoryStorageST> InMemoryStorageST::create(const std::string& name,
+                                                        const Config& config)
 {
     return unique_ptr<InMemoryStorageST>(new InMemoryStorageST(name, config));
 }

@@ -22,10 +22,8 @@ public:
 
     typedef std::unique_ptr<InMemoryStorageST> SInMemoryStorageST;
 
-    static SInMemoryStorageST Create(const std::string& name,
-                                     const Config& config,
-                                     int argc,
-                                     char* argv[]);
+    static SInMemoryStorageST create(const std::string& name,
+                                     const Config& config);
 
     cache_result_t get_info(uint32_t what, json_t** ppInfo) const override final;
     cache_result_t get_value(Token* pToken,

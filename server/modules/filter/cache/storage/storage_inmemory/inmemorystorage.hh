@@ -29,8 +29,7 @@ public:
 
     static InMemoryStorage* create(const char* zName,
                                    const Config& config,
-                                   int argc,
-                                   char* argv[]);
+                                   const std::string& arguments);
 
     bool create_token(std::shared_ptr<Token>* psToken) override final;
     void           get_config(Config* pConfig) override final;

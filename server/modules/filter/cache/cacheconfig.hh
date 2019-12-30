@@ -68,9 +68,6 @@ public:
     config::Enum<cache_invalidate_t>   invalidate;
     config::Bool                       clear_cache_on_parse_errors;
     config::Enum<cache_users_t>        users;
-    char*                              zStorage_options {nullptr};  /**< Raw options for storage module. */
-    char**                             storage_argv {nullptr};      /**< Cooked options for storage module. */
-    int                                storage_argc {0};            /**< Number of cooked options. */
 
     static const config::Specification& specification()
     {

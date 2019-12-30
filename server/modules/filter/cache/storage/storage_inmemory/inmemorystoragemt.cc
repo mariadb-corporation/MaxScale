@@ -26,10 +26,8 @@ InMemoryStorageMT::~InMemoryStorageMT()
 {
 }
 
-unique_ptr<InMemoryStorageMT> InMemoryStorageMT::Create(const std::string& name,
-                                                        const Config& config,
-                                                        int argc,
-                                                        char* argv[])
+unique_ptr<InMemoryStorageMT> InMemoryStorageMT::create(const std::string& name,
+                                                        const Config& config)
 {
     return unique_ptr<InMemoryStorageMT>(new InMemoryStorageMT(name, config));
 }

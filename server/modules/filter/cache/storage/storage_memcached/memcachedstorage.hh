@@ -28,8 +28,7 @@ public:
 
     static MemcachedStorage* create(const std::string& name,
                                     const Config& config,
-                                    int argc,
-                                    char* argv[]);
+                                    const std::string& arguments);
 
     bool create_token(std::shared_ptr<Token>* psToken) override final;
 

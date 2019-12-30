@@ -87,10 +87,9 @@ CacheMT* CacheMT::create(const std::string& name,
                                    pConfig->max_size.get(),
                                    pConfig->invalidate.get());
 
-    int argc = pConfig->storage_argc;
-    char** argv = pConfig->storage_argv;
+    const auto& storage_arguments = pConfig->storage_options.get();
 
-    Storage* pStorage = sFactory->create_storage(name.c_str(), storage_config, argc, argv);
+    Storage* pStorage = sFactory->create_storage(name.c_str(), storage_config, storage_arguments);
 
     if (pStorage)
     {

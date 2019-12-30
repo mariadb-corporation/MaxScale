@@ -30,11 +30,10 @@ public:
 
     Storage* create_storage(const char* zName,
                             const Storage::Config& config,
-                            int argc,
-                            char* argv[]) override final
+                            const std::string& arguments) override final
     {
         mxb_assert(zName);
 
-        return StorageType::create(zName, config, argc, argv);
+        return StorageType::create(zName, config, arguments);
     }
 };

@@ -64,15 +64,13 @@ public:
      *
      * @param zName      The name of the storage.
      * @param config     The storagfe configuration.
-     * @argc             Number of items in argv.
-     * @argv             Storage specific arguments.
+     * @param arguments  Storage specific arguments.
      *
      * @return A storage instance or NULL in case of errors.
      */
     Storage* create_storage(const char* zName,
                             const Storage::Config& config,
-                            int argc = 0,
-                            char* argv[] = NULL);
+                            const std::string& arguments = std::string());
 
     /**
      * Create raw storage instance.
@@ -84,15 +82,13 @@ public:
      *
      * @param zName      The name of the storage.
      * @param config     The storagfe configuration.
-     * @argc             Number of items in argv.
-     * @argv             Storage specific arguments.
+     * @param arguments  Storage specific arguments.
      *
      * @return A storage instance or NULL in case of errors.
      */
     Storage* create_raw_storage(const char* zName,
                                 const Storage::Config& config,
-                                int argc = 0,
-                                char* argv[] = NULL);
+                                const std::string& arguments = std::string());
 
 private:
     StorageFactory(void* handle,
@@ -102,13 +98,11 @@ private:
 
     Storage* create_private_storage(const char* zName,
                                     const Storage::Config& config,
-                                    int argc,
-                                    char* argv[]);
+                                    const std::string& arguments);
 
     Storage* create_shared_storage(const char* zName,
                                    const Storage::Config& config,
-                                   int argc,
-                                   char* argv[]);
+                                   const std::string& arguments);
 
 private:
     void*                m_handle;        /*< dl handle of storage. */

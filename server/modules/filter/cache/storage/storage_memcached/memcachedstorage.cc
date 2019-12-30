@@ -297,8 +297,7 @@ void MemcachedStorage::finalize()
 //static
 MemcachedStorage* MemcachedStorage::create(const std::string& name,
                                            const Config& config,
-                                           int argc,
-                                           char* argv[])
+                                           const std::string& arguments)
 {
     MemcachedStorage* pStorage = nullptr;
 
@@ -320,24 +319,12 @@ MemcachedStorage* MemcachedStorage::create(const std::string& name,
                         "a maximum number of items in the cache storage.");
         }
 
-        string memcached_config;
-
-        for (int i = 0; i < argc; ++i)
-        {
-            memcached_config += argv[i];
-
-            if (i < argc - 1)
-            {
-                memcached_config += " ";
-            }
-        }
-
         // Only for checking that the configuration is acceptable.
-        memcached_st* pMemc = memcached(memcached_config.c_str(), memcached_config.size());
+        memcached_st* pMemc = memcached(arguments.c_str(), arguments.size());
 
         if (pMemc)
         {
-            pStorage = new (std::nothrow) MemcachedStorage(name, config, memcached_config);
+            pStorage = new (std::nothrow) MemcachedStorage(name, config, arguments);
 
             memcached_free(pMemc);
         }

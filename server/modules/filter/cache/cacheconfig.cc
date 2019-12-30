@@ -200,10 +200,6 @@ CacheConfig::CacheConfig(const std::string& name)
 
 CacheConfig::~CacheConfig()
 {
-    // this->storage_argv[i] points into this->zStorage_options, so they must
-    // not explicitly be freed.
-    MXS_FREE(this->storage_argv);
-    MXS_FREE(this->zStorage_options);
 }
 
 bool CacheConfig::post_configure(const MXS_CONFIG_PARAMETER&)
@@ -217,38 +213,6 @@ bool CacheConfig::post_configure(const MXS_CONFIG_PARAMETER&)
                   CACHE_DEBUG_MIN,
                   CACHE_DEBUG_MAX);
         configured = false;
-    }
-
-    if (!this->storage_options.empty())
-    {
-        this->zStorage_options = MXS_STRDUP_A(this->storage_options.c_str());
-
-        int argc = 1;
-        char* zArg = this->zStorage_options;
-
-        while ((zArg = strchr(zArg, ',')))
-        {
-            zArg = zArg + 1;
-            ++argc;
-        }
-
-        this->storage_argv = (char**) MXS_MALLOC((argc + 1) * sizeof(char*));
-        mxb_assert(this->storage_argv);
-
-        this->storage_argc = argc;
-
-        int i = 0;
-        zArg = this->zStorage_options;
-        this->storage_argv[i++] = zArg;
-
-        while ((zArg = strchr(this->zStorage_options, ',')))
-        {
-            *zArg = 0;
-            ++zArg;
-            this->storage_argv[i++] = zArg;
-        }
-
-        this->storage_argv[i] = NULL;
     }
 
     if (this->soft_ttl > this->hard_ttl)

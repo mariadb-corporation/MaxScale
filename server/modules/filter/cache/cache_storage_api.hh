@@ -449,19 +449,18 @@ public:
      * create the actual storage, initialize it and prepare to put and get
      * cache items.
      *
-     * @param name      The name of the cache instance.
-     * @param config    The storage configuration.
-     * @param argc      The number of elements in the argv array.
-     * @param argv      Array of arguments, as passed in the `storage_options`
-     *                  parameter in the cache section in the MaxScale configuration
-     *                  file.
+     * @param name       The name of the cache instance.
+     * @param config     The storage configuration.
+     * @param arguments  Array of arguments, as passed in the `storage_options`
+     *                   parameter in the cache section in the MaxScale configuration
+     *                   file.
      *
      * @return A new cache instance, or NULL if the instance could not be
      *         created.
      */
     virtual Storage* create_storage(const char* name,
                                     const Storage::Config& config,
-                                    int argc, char* argv[]) = 0;
+                                    const std::string& arguments) = 0;
 };
 
 
