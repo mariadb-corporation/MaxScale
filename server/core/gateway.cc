@@ -65,6 +65,7 @@
 #include <maxscale/server.hh>
 #include <maxscale/session.hh>
 #include <maxscale/sqlite3.h>
+#include <maxscale/threadpool.hh>
 #include <maxscale/utils.h>
 #include <maxscale/version.h>
 
