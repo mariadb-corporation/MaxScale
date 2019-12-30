@@ -31,7 +31,6 @@
 #include <maxscale/jansson.hh>
 #include <maxscale/buffer.hh>
 
-#include "internal/config_runtime.hh"
 #include "internal/modules.hh"
 #include "internal/trxboundaryparser.hh"
 
@@ -1443,9 +1442,12 @@ json_t* get_params(json_t* pJson)
 
     if (pParams && json_is_object(pParams))
     {
-        if (!runtime_is_count_or_null(pParams, CN_CACHE_SIZE))
+        if (auto pSize = mxs_json_pointer(pParams, CN_CACHE_SIZE))
         {
-            pParams = nullptr;
+            if (!json_is_null(pSize) && !json_is_integer(pSize))
+            {
+                pParams = nullptr;
+            }
         }
     }
 
@@ -1471,7 +1473,7 @@ bool qc_alter_from_json(json_t* pJson)
         if ((pValue = mxs_json_pointer(pParams, CN_CACHE_SIZE)))
         {
             cache_properties.max_size = json_integer_value(pValue);
-            // If runtime_is_count_or_null() did its job, then we will not
+            // If get_params() did its job, then we will not
             // get here if the value is negative.
             mxb_assert(cache_properties.max_size >= 0);
         }
