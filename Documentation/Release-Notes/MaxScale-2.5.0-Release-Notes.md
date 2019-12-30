@@ -37,6 +37,11 @@ entries. See the
 [documentation](../Filters/Cache.md#invalidation)
 for more information.
 
+### New Cache Storage Modules
+
+The following storage modules have been added:
+* [storage_memcached](../Filters/Cache.md#storage_memcached)
+
 ### Load Rebalancing
 
 If the load of the threads of MaxScale differs by a certain amount,

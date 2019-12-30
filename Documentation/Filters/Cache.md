@@ -169,12 +169,9 @@ See [Storage](#storage-1) for what storage modules are available.
 
 #### `storage_options`
 
-A comma separated list of arguments to be provided to the storage module,
-specified in `storage`, when it is loaded. Note that the needed arguments
-depend upon the specific module. For instance,
-```
-storage_options=storage_specific_option1=value1,storage_specific_option2=value2
-```
+A string that is provided verbatim to the storage module specified in `storage`,
+when the module is loaded. Note that the needed arguments and their format depend
+upon the specific module.
 
 #### `hard_ttl`
 
@@ -1025,6 +1022,40 @@ the cached data.
 ```
 storage=storage_inmemory
 ```
+This storage module takes no arguments.
+
+### `storage_memcached`
+
+This storage module uses [memcached](https://memcached.org/) for storing the
+cached data.
+
+Multiple MaxScale instances can share the same memcached server and items
+cached by one MaxScale instance will be used by the other. Note that all
+MaxScale instances should have exactly the same configuration, as otherwise
+there can be unintended sharing.
+```
+storage=storage_memcached
+```
+This storage module requires at minimum arguments that specify where
+the memcached server is located.
+```
+storage_options="--SERVER=127.0.0.1"
+```
+The string provided as value for `storage_options` is used verbatim when
+creating the [libmemcached](https://libmemcached.org/libMemcached.html)
+client handle. Please see the
+[description](http://docs.libmemcached.org/libmemcached_configuration.html#description
+for what arguments can be provided.
+
+#### Limitations
+* Invalidation is not supported.
+* There is no distinction between _soft_ and _hard_ ttl, but only hard ttl is used.
+* Configuration values given to `max_size` and `max_count` are ignored.
+
+#### Security
+_Neither_ the data in the memcached server _nor_ the traffic between MaxScale and
+the memcached server is encrypted. Consequently, _anybody_ with access to the
+memcached server or to the network have access to the cached data.
 
 ## Example
 
