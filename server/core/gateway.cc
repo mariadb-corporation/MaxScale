@@ -1299,6 +1299,13 @@ bool set_dirs(const char* basedir)
     return rv;
 }
 
+static mxb::ThreadPool thread_pool;
+
+mxb::ThreadPool& mxs::thread_pool()
+{
+    return ::thread_pool;
+}
+
 /**
  * A RAII class that at construction time takes overship of pipe
  * handle and at destruction time notifies parent if there is
