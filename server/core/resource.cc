@@ -467,7 +467,7 @@ HttpResponse cb_alter_qc(const HttpRequest& request)
 {
     mxb_assert(request.get_json());
 
-    if (runtime_alter_qc_from_json(request.get_json()))
+    if (qc_alter_from_json(request.get_json()))
     {
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }

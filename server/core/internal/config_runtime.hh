@@ -71,111 +71,6 @@ bool runtime_create_server(const char* name, const char* address, const char* po
  */
 bool runtime_destroy_server(Server* server);
 
-
-/**
- * Link a target from an object
- *
- * This function links the target to another object. The target can be either
- * a monitor or a service.
- *
- * @param subject The object to link
- * @param target  The target object to which the subject is linked
- *
- * @return True if the object was found and the subject was linked to it, false
- *         if an error occurred.
- */
-bool runtime_link_target(const std::string& subject, const std::string& target);
-
-/**
- * Unlink a target from an object
- *
- * This function unlinks the target from another object. The target can be either
- * a monitor or a service.
- *
- * @param subject The object to unlink
- * @param target  The target object from which the subject is unlinked
- *
- * @return True if the object was found and the subject was unlinked from it, false
- *         if an error occurred.
- */
-bool runtime_unlink_target(const std::string& subject, const std::string& target);
-
-/**
- * @brief Alter server parameters
- *
- * @param server Server to alter
- * @param key Key to modify
- * @param value New value
- * @return True if @c key was one of the supported parameters
- */
-bool runtime_alter_server(Server* server, const char* key, const char* value);
-
-/**
- * @brief Alter monitor parameters
- *
- * @param monitor Monitor to alter
- * @param key Key to modify
- * @param value New value
- * @return True if @c key was one of the supported parameters
- */
-bool runtime_alter_monitor(mxs::Monitor* monitor, const char* key, const char* value);
-
-/**
- * @brief Alter service parameters
- *
- * @param monitor Service to alter
- * @param key     Key to modify
- * @param value   New value
- *
- * @return True if @c key was one of the supported parameters
- */
-bool runtime_alter_service(Service* service, const char* zKey, const char* zValue);
-
-/**
- * @brief Alter MaxScale parameters
- *
- * @param name  Key to modify
- * @param value New value
- *
- * @return True if @c key was one of the supported parameters
- */
-bool runtime_alter_maxscale(const char* name, const char* value);
-
-/**
- * @brief Create a new listener for a service
- *
- * This function adds a new listener to a service and starts it.
- *
- * @param service     Service where the listener is added
- * @param name        Name of the listener
- * @param addr        Listening address, NULL for default of ::
- * @param port        Listening port, NULL for default of 3306
- * @param proto       Listener protocol, NULL for default of "MySQLClient"
- * @param auth        Listener authenticator, NULL for protocol default authenticator
- * @param auth_opt    Options for the authenticator, NULL for no options
- * @param ssl_key     SSL key, NULL for no key
- * @param ssl_cert    SSL cert, NULL for no cert
- * @param ssl_ca      SSL CA cert, NULL for no CA cert
- * @param ssl_version SSL version, NULL for default of "MAX"
- * @param ssl_depth   SSL cert verification depth, NULL for default
- * @param verify_ssl  SSL peer certificate verification, NULL for default
- *
- * @return True if the listener was successfully created and started
- */
-bool runtime_create_listener(Service* service,
-                             const char* name,
-                             const char* addr,
-                             const char* port,
-                             const char* proto,
-                             const char* auth,
-                             const char* auth_opt,
-                             const char* ssl_key,
-                             const char* ssl_cert,
-                             const char* ssl_ca,
-                             const char* ssl_version,
-                             const char* ssl_depth,
-                             const char* verify_ssl);
-
 /**
  * @brief Destroy a listener
  *
@@ -188,28 +83,6 @@ bool runtime_create_listener(Service* service,
  * @return True if the listener was successfully destroyed
  */
 bool runtime_destroy_listener(Service* service, const char* name);
-
-/**
- * @brief Create a new monitor
- *
- * @param name   Name of the monitor
- * @param module Monitor module
- * @param params Parameters for the monitor
- *
- * @return True if new monitor was created and persisted
- */
-bool runtime_create_monitor(const char* name, const char* module, MXS_CONFIG_PARAMETER* params);
-
-/**
- * @brief Create a new filter
- *
- * @param name   Name of the filter
- * @param module Filter module
- * @param params Filter parameters
- *
- * @return True if a new filter was created and persisted
- */
-bool runtime_create_filter(const char* name, const char* module, MXS_CONFIG_PARAMETER* params);
 
 /**
  * Destroy a filter
@@ -279,16 +152,16 @@ bool runtime_alter_server_relationships_from_json(Server* server, const char* ty
  *
  * @param json JSON defining the monitor
  *
- * @return Created monitor or NULL on error
+ * @return True if the monitor was created, false on error
  */
-mxs::Monitor* runtime_create_monitor_from_json(json_t* json);
+bool runtime_create_monitor_from_json(json_t* json);
 
 /**
  * @brief Create a new filter from JSON
  *
  * @param json JSON defining the filter
  *
- * @return True if filter was created, false on error
+ * @return True if the filter was created, false on error
  */
 bool runtime_create_filter_from_json(json_t* json);
 
@@ -297,9 +170,9 @@ bool runtime_create_filter_from_json(json_t* json);
  *
  * @param json JSON defining the service
  *
- * @return Created service or NULL on error
+ * @return True if the service was created, false on error
  */
-Service* runtime_create_service_from_json(json_t* json);
+bool runtime_create_service_from_json(json_t* json);
 
 /**
  * @brief Alter a monitor using JSON
@@ -406,46 +279,6 @@ bool runtime_alter_user(const std::string& user, const std::string& type, json_t
  * @return True if the core parameters are valid and were successfully applied
  */
 bool runtime_alter_maxscale_from_json(json_t* new_json);
-
-/**
- * @brief Alter core query classifier parameters from JSON.
- *
- * @param new_json  JSON defining the new parameters.
- *
- * @return True if the core parameters are valid and were successfully applied
- */
-bool runtime_alter_qc_from_json(json_t* new_json);
-
-/**
- * Returns whether value at specified path is a string or NULL.
- *
- * @param json  A JSON object.
- * @param path  A path into that object.
- *
- * @return True, if the requirement is fulfilled, false otherwise.
- */
-bool runtime_is_string_or_null(json_t* json, const char* path);
-
-/**
- * Returns whether value at specified path is a boolean or NULL.
- *
- * @param json  A JSON object.
- * @param path  A path into that object.
- *
- * @return True, if the requirement is fulfilled, false otherwise.
- */
-bool runtime_is_bool_or_null(json_t* json, const char* path);
-
-/**
- * Returns whether value at specified path is a positive integer
- * or NULL.
- *
- * @param json  A JSON object.
- * @param path  A path into that object.
- *
- * @return True, if the requirement is fulfilled, false otherwise.
- */
-bool runtime_is_count_or_null(json_t* json, const char* path);
 
 /**
  * Rebalance work of particular thread.
