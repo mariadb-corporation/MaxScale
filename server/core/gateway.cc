@@ -402,11 +402,18 @@ static int signal_set(int sig, void (* handler)(int));
 
 static void sigfatal_handler(int i)
 {
-    // The same signal being handled *now* can occur in another thread (and is often likely).
-    // By setting the default handler here we will always get a core, but not necessarily
-    // the backtrace into the log file. This should be overhauled to proper signal handling
-    // (MXS-599).
-    signal_set(i, SIG_DFL);
+    thread_local std::thread::id current_id;
+    std::thread::id no_id;
+
+    if (current_id != no_id)
+    {
+        // Fatal error when processing a fatal error.
+        // TODO: This should be overhauled to proper signal handling (MXS-599).
+        signal_set(i, SIG_DFL);
+        raise(i);
+    }
+
+    current_id = std::this_thread::get_id();
 
     MXS_CONFIG* cnf = config_get_global_options();
     fprintf(stderr,
@@ -444,6 +451,7 @@ static void sigfatal_handler(int i)
 
     /* re-raise signal to enforce core dump */
     fprintf(stderr, "\n\nWriting core dump\n");
+    signal_set(i, SIG_DFL);
     raise(i);
 }
 
