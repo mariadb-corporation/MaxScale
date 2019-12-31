@@ -1603,6 +1603,21 @@ new value will take effect for sessions created thereafter.
 maxctrl alter service MyService retain_last_statements 5
 ```
 
+### `net_write_timeout`
+
+This parameter controls how long a network write to the client can stay
+buffered. This feature is disabled by default.
+
+When `net_write_timeout` is configured and data is buffered on the client
+network connection, if the time since the last successful network write exceeds
+the configured limit, the client connection will be disconnected.
+
+The value is specified as documented [here](#durations). If no explicit unit
+is provided, the value is interpreted as seconds in MaxScale 2.4. In subsequent
+versions a value without a unit may be rejected. Note that since the granularity
+of the timeout is seconds, a timeout specified in milliseconds will be rejected,
+even if the duration is longer than a second.
+
 ## Server
 
 Server sections are used to define the backend database servers that can be
