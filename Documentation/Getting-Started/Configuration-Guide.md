@@ -1487,6 +1487,11 @@ this might cause conflicts when MariaDB MaxScale tries to authenticate users.
 
 ### `retry_on_failure`
 
+**Note:** This feature is ignored by MaxScale 2.4 and will be removed in future
+  versions. This is due to the fact that a failure to bind to a network
+  interface is a serious error which should always be investigated and is not
+  related to network outages.
+
 The retry_on_failure parameter controls whether MariaDB MaxScale will try to
 restart failed services and accepts a boolean value. This functionality is
 enabled by default to prevent services being permanently disabled if the
@@ -1545,6 +1550,9 @@ max_connections=100
 ```
 
 ### `max_retry_interval`
+
+**Note:** This feature has been removed from MaxScale 2.4. See
+  [`retry_on_failure`](#retry_on_failure) for more details.
 
 Configure the maximum interval between consecutive attempts to bind to an
 interface. The default value for this parameter is 3600 seconds. This
