@@ -114,16 +114,15 @@ public:
         mxs::thread_pool().execute([sThis, mkey, cb] () {
                 size_t nData;
                 uint32_t flags;
-                memcached_return_t error;
+                memcached_return_t mrv;
 
-                char* pData = memcached_get(sThis->m_pMemc, mkey.data(), mkey.size(), &nData, &flags, &error);
+                char* pData = memcached_get(sThis->m_pMemc, mkey.data(), mkey.size(), &nData, &flags, &mrv);
 
                 GWBUF* pValue = nullptr;
                 cache_result_t rv;
 
-                switch (error)
+                if (memcached_success(mrv))
                 {
-                case MEMCACHED_SUCCESS:
                     if (pData)
                     {
                         pValue = gwbuf_alloc_and_load(nData, pData);
@@ -132,18 +131,27 @@ public:
                     }
                     else
                     {
-                        MXB_NOTICE("NULL pointer returned, but MEMCACHED_SUCCESS.");
+                        // TODO: With the textual protocol you could get this; NULL returned but
+                        // TODO: no error reported. Does not seem to be a problem with the binary
+                        // TODO: protocol enabled.
+                        MXS_WARNING("NULL value returned from memcached, but no error reported.");
                         rv = CACHE_RESULT_NOT_FOUND;
                     }
-                    break;
+                }
+                else
+                {
+                    switch (mrv)
+                    {
+                    case MEMCACHED_NOTFOUND:
+                        rv = CACHE_RESULT_NOT_FOUND;
+                        break;
 
-                case MEMCACHED_NOTFOUND:
-                    rv = CACHE_RESULT_NOT_FOUND;
-                    break;
-
-                default:
-                    MXS_WARNING("memcached_get failed: %s", memcached_last_error_message(sThis->m_pMemc));
-                    rv = CACHE_RESULT_ERROR;
+                    default:
+                        MXS_WARNING("Failed when fetching cached value from memcached: %s, %s",
+                                    memcached_strerror(sThis->m_pMemc, mrv),
+                                    memcached_last_error_message(sThis->m_pMemc));
+                        rv = CACHE_RESULT_ERROR;
+                    }
                 }
 
                 sThis->m_pWorker->execute([sThis, rv, pValue, cb]() {
@@ -174,18 +182,20 @@ public:
         auto sThis = get_shared();
 
         mxs::thread_pool().execute([sThis, mkey, pClone, cb]() {
-                memcached_return_t result = memcached_set(sThis->m_pMemc, mkey.data(), mkey.size(),
-                                                          reinterpret_cast<const char*>(GWBUF_DATA(pClone)),
-                                                          GWBUF_LENGTH(pClone), 0, sThis->m_ttl);
+                memcached_return_t mrv = memcached_set(sThis->m_pMemc, mkey.data(), mkey.size(),
+                                                       reinterpret_cast<const char*>(GWBUF_DATA(pClone)),
+                                                       GWBUF_LENGTH(pClone), 0, sThis->m_ttl);
                 cache_result_t rv;
 
-                if (result == MEMCACHED_SUCCESS)
+                if (memcached_success(mrv))
                 {
                     rv = CACHE_RESULT_OK;
                 }
                 else
                 {
-                    MXS_WARNING("memcached_set failed: %s", memcached_last_error_message(sThis->m_pMemc));
+                    MXS_WARNING("Failed when storing cache value to memcached: %s, %s",
+                                memcached_strerror(sThis->m_pMemc, mrv),
+                                memcached_last_error_message(sThis->m_pMemc));
                     rv = CACHE_RESULT_ERROR;
                 }
 
@@ -214,17 +224,19 @@ public:
         auto sThis = get_shared();
 
         mxs::thread_pool().execute([sThis, mkey, cb] () {
-                memcached_return_t result = memcached_delete(sThis->m_pMemc, mkey.data(), mkey.size(), 0);
+                memcached_return_t mrv = memcached_delete(sThis->m_pMemc, mkey.data(), mkey.size(), 0);
 
                 cache_result_t rv;
 
-                if (result == MEMCACHED_SUCCESS)
+                if (memcached_success(mrv))
                 {
                     rv = CACHE_RESULT_OK;
                 }
                 else
                 {
-                    MXS_WARNING("memcached_delete failed: %s", memcached_last_error_message(sThis->m_pMemc));
+                    MXS_WARNING("Failed when deleting cached value from memcached: %s, %s",
+                                memcached_strerror(sThis->m_pMemc, mrv),
+                                memcached_last_error_message(sThis->m_pMemc));
                     rv = CACHE_RESULT_ERROR;
                 }
 
