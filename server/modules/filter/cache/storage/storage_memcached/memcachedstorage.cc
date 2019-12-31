@@ -182,9 +182,10 @@ public:
         auto sThis = get_shared();
 
         mxs::thread_pool().execute([sThis, mkey, pClone, cb]() {
+                const uint32_t flags = 0;
                 memcached_return_t mrv = memcached_set(sThis->m_pMemc, mkey.data(), mkey.size(),
                                                        reinterpret_cast<const char*>(GWBUF_DATA(pClone)),
-                                                       GWBUF_LENGTH(pClone), 0, sThis->m_ttl);
+                                                       GWBUF_LENGTH(pClone), sThis->m_ttl, flags);
                 cache_result_t rv;
 
                 if (memcached_success(mrv))
