@@ -189,6 +189,17 @@ void Target::Stats::add_connection() const
     mxb::atomic::add(&n_connections, 1, mxb::atomic::RELAXED);
     MXB_AT_DEBUG(int rc = ) mxb::atomic::add(&n_current, 1, mxb::atomic::RELAXED);
     mxb_assert(rc >= 0);
+
+    while (true)
+    {
+        int n_max = mxb::atomic::load(&n_max_connections, mxb::atomic::RELAXED);
+        int n_curr = mxb::atomic::load(&n_current, mxb::atomic::RELAXED);
+
+        if (n_curr <= n_max || mxb::atomic::compare_exchange(&n_max_connections, &n_max, n_curr))
+        {
+            break;
+        }
+    }
 }
 
 void Target::Stats::remove_connection() const
