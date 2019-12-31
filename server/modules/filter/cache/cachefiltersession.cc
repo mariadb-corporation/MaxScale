@@ -1089,6 +1089,7 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(cache_acti
                 }
                 else
                 {
+                    mxb_assert(pResponse);
                     // State is ROUTING_ABORT, which implies that pResponse contains the
                     // needed response. All we need to do is to send it to the client.
 
