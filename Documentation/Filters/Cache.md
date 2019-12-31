@@ -1057,6 +1057,34 @@ _Neither_ the data in the memcached server _nor_ the traffic between MaxScale an
 the memcached server is encrypted. Consequently, _anybody_ with access to the
 memcached server or to the network have access to the cached data.
 
+### `storage_redis`
+
+This storage module uses [redis](https://redis.io/) for storing the
+cached data.
+
+Multiple MaxScale instances can share the same redis server and items
+cached by one MaxScale instance will be used by the other. Note that all
+MaxScale instances should have exactly the same configuration, as otherwise
+there can be unintended sharing.
+```
+storage=storage_redis
+```
+This storage module requires arguments that specify where the redis server
+is located.
+```
+storage_options="127.0.0.1:6379"
+```
+
+#### Limitations
+* Invalidation is not supported.
+* There is no distinction between _soft_ and _hard_ ttl, but only hard ttl is used.
+* Configuration values given to `max_size` and `max_count` are ignored.
+
+#### Security
+_Neither_ the data in the redis server _nor_ the traffic between MaxScale and
+the redis server is encrypted. Consequently, _anybody_ with access to the
+redis server or to the network have access to the cached data.
+
 ## Example
 
 In the following we define a cache _MyCache_ that uses the cache storage module
