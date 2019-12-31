@@ -165,7 +165,8 @@ bool mxb_log_get_session_trace();
 static inline bool mxb_log_is_priority_enabled(int priority)
 {
     assert((priority & ~LOG_PRIMASK) == 0);
-    return ((mxb_log_enabled_priorities & (1 << priority)) != 0) || (priority == LOG_ALERT);
+    return ((mxb_log_enabled_priorities & (1 << priority)) != 0) || (priority == LOG_ALERT)
+           || mxb_log_get_session_trace();
 }
 
 /**
