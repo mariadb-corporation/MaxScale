@@ -1519,6 +1519,8 @@ bool ServiceEndpoint::connect()
     // The endpoint is now "connected"
     m_open = true;
 
+    m_service->stats().add_connection();
+
     return true;
 }
 
@@ -1550,6 +1552,8 @@ void ServiceEndpoint::close()
     }
 
     m_open = false;
+
+    m_service->stats().remove_connection();
 }
 
 bool ServiceEndpoint::is_open() const

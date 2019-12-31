@@ -259,10 +259,13 @@ public:
     {
         // NOTE: Currently mutable as various parts of the system modify these when they should only be
         //       modified by the inherited objects.
-        mutable int      n_connections = 0; /**< Number of connections */
-        mutable int      n_current = 0;     /**< Current connections */
-        mutable int      n_current_ops = 0; /**< Current active operations */
-        mutable uint64_t packets = 0;       /**< Number of packets routed to this server */
+        mutable int      n_connections = 0;     /**< Number of connections */
+        mutable int      n_current = 0;         /**< Current connections */
+        mutable int      n_current_ops = 0;     /**< Current active operations */
+        mutable uint64_t packets = 0;           /**< Number of packets routed to this server */
+
+        void add_connection() const;
+        void remove_connection() const;
     };
 
     /**

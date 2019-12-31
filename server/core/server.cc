@@ -665,7 +665,12 @@ bool ServerEndpoint::connect()
 {
     mxb::LogScope scope(m_server->name());
     auto worker = mxs::RoutingWorker::get_current();
-    m_dcb = worker->get_backend_dcb(m_server, m_session, this);
+
+    if ((m_dcb = worker->get_backend_dcb(m_server, m_session, this)))
+    {
+        m_server->stats().add_connection();
+    }
+
     return m_dcb != nullptr;
 }
 
@@ -674,6 +679,8 @@ void ServerEndpoint::close()
     mxb::LogScope scope(m_server->name());
     DCB::close(m_dcb);
     m_dcb = nullptr;
+
+    m_server->stats().remove_connection();
 }
 
 bool ServerEndpoint::is_open() const

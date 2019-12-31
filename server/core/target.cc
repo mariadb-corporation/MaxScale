@@ -184,6 +184,19 @@ void Target::set_rlag_state(RLagState new_state, int max_rlag)
     }
 }
 
+void Target::Stats::add_connection() const
+{
+    mxb::atomic::add(&n_connections, 1, mxb::atomic::RELAXED);
+    MXB_AT_DEBUG(int rc = ) mxb::atomic::add(&n_current, 1, mxb::atomic::RELAXED);
+    mxb_assert(rc >= 0);
+}
+
+void Target::Stats::remove_connection() const
+{
+    MXB_AT_DEBUG(int rc = ) mxb::atomic::add(&n_current, -1, mxb::atomic::RELAXED);
+    mxb_assert(rc > 0);
+}
+
 Error::operator bool() const
 {
     return m_code != 0;

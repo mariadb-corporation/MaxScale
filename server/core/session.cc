@@ -148,18 +148,12 @@ void Session::link_backend_connection(mxs::BackendConnection* conn)
     mxb_assert(dcb->role() == DCB::Role::BACKEND);
 
     mxb::atomic::add(&refcount, 1);
-    mxb::atomic::add(&dcb->server()->stats().n_connections, 1, mxb::atomic::RELAXED);
-    MXB_AT_DEBUG(int rc = ) mxb::atomic::add(&dcb->server()->stats().n_current, 1, mxb::atomic::RELAXED);
-    mxb_assert(rc >= 0);
     dcb->reset(this);
     add_backend_conn(conn);
 }
 
 void Session::unlink_backend_connection(mxs::BackendConnection* conn)
 {
-    MXB_AT_DEBUG(int rc = ) mxb::atomic::add(&conn->dcb()->server()->stats().n_current,
-                                             -1, mxb::atomic::RELAXED);
-    mxb_assert(rc > 0);
     remove_backend_conn(conn);
     session_put_ref(this);
 }
@@ -843,17 +837,12 @@ Session::Session(std::shared_ptr<ListenerSessionData> listener_data,
     }
 
     set_autocommit(!(m_listener_data->m_default_sql_mode == QC_SQL_MODE_ORACLE));
-    mxb::atomic::add(&service->stats().n_current, 1, mxb::atomic::RELAXED);
-    mxb_assert(service->stats().n_current >= 0);
 }
 
 Session::~Session()
 {
     mxb_assert(refcount == 0);
     mxb_assert(!m_down->is_open());
-
-    mxb::atomic::add(&service->stats().n_current, -1, mxb::atomic::RELAXED);
-    mxb_assert(service->stats().n_current >= 0);
 
     if (client_dcb)
     {
@@ -1321,7 +1310,6 @@ bool Session::start()
     {
         rval = true;
         m_state = MXS_SESSION::State::STARTED;
-        mxb::atomic::add(&service->stats().n_connections, 1, mxb::atomic::RELAXED);
 
         MXS_INFO("Started %s client session [%" PRIu64 "] for '%s' from %s",
                  service->name(), id(),
