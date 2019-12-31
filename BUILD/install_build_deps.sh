@@ -72,7 +72,7 @@ then
        build-essential libssl-dev ncurses-dev bison flex \
        perl libtool libpcre3-dev tcl tcl-dev uuid \
        uuid-dev libsqlite3-dev liblzma-dev libpam0g-dev pkg-config \
-       libedit-dev libcurl4-openssl-dev libatomic1
+       libedit-dev libcurl4-openssl-dev libatomic1 libhiredis-dev
 
   # One of these will work, older systems use libsystemd-daemon-dev
   sudo apt-get install -y libsystemd-dev || \
