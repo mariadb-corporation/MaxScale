@@ -68,22 +68,33 @@ public:
 
         if (pMemc)
         {
-            MemcachedToken* pToken = new (std::nothrow) MemcachedToken(pMemc, ttl);
+            memcached_return_t mrv = memcached_behavior_set(pMemc, MEMCACHED_BEHAVIOR_BINARY_PROTOCOL, 1);
 
-            if (pToken)
+            if (memcached_success(mrv))
             {
-                psToken->reset(pToken);
-                rv = true;
+                MemcachedToken* pToken = new (std::nothrow) MemcachedToken(pMemc, ttl);
+
+                if (pToken)
+                {
+                    psToken->reset(pToken);
+                    rv = true;
+                }
+                else
+                {
+                    memcached_free(pMemc);
+                }
             }
             else
             {
-                psToken->reset();
+                MXS_ERROR("Could not turn on memcached binary protocol: %s",
+                          memcached_strerror(pMemc, mrv));
                 memcached_free(pMemc);
             }
         }
         else
         {
-            MXS_ERROR("Could not create memcached handle.");
+            MXS_ERROR("Could not create memcached handle, are the arguments '%s' valid?",
+                      memcached_config.c_str());
         }
 
         return rv;
