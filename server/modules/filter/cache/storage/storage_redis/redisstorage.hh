@@ -61,8 +61,13 @@ public:
 
 private:
     RedisStorage(const std::string& name,
-                 const Config& config);
+                 const Config& config,
+                 const std::string& host,
+                 int port);
 
-    std::string  m_name;
-    const Config m_config;
+    const std::string m_name;
+    const Config      m_config;
+    const std::string m_host;
+    const int         m_port;
+    uint32_t          m_ttl;
 };
