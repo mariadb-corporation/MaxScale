@@ -75,6 +75,21 @@ const server_fields = [
         description: 'List of slave server IDs'
     },
     {
+        name: 'Current Connections',
+        path: 'attributes.statistics.connections',
+        description: 'Current connection count'
+    },
+    {
+        name: 'Total Connections',
+        path: 'attributes.statistics.total_connections',
+        description: 'Total cumulative connection count'
+    },
+    {
+        name: 'Max Connections',
+        path: 'attributes.statistics.max_connections',
+        description: 'Maximum number of concurrent connections ever seen'
+    },
+    {
         name: 'Statistics',
         path: 'attributes.statistics',
         description: 'Server statistics'
@@ -109,13 +124,18 @@ const service_fields = [
     },
     {
         name: 'Current Connections',
-        path: 'attributes.connections',
+        path: 'attributes.statistics.connections',
         description: 'Current connection count'
     },
     {
         name: 'Total Connections',
-        path: 'attributes.total_connections',
+        path: 'attributes.statistics.total_connections',
         description: 'Total connection count'
+    },
+    {
+        name: 'Max Connections',
+        path: 'attributes.statistics.max_connections',
+        description: 'Historical maximum connection count'
     },
     {
         name: 'Servers',

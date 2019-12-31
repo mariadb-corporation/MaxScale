@@ -1132,6 +1132,11 @@ json_t* service_attributes(const SERVICE* service)
     json_object_set_new(attr, "total_connections", json_integer(service->stats().n_connections));
     json_object_set_new(attr, "connections", json_integer(service->stats().n_current));
 
+    // The statistics for servers and services are located in different places in older versions. Newer
+    // versions always have them in the statistics object of the attributes but they are also duplicated in
+    // the service attributes for backwards compatibility.
+    json_object_set_new(attr, "statistics", service->stats().to_json());
+
     /** Add service parameters and listeners */
     json_object_set_new(attr, CN_PARAMETERS, service_parameters_to_json(service));
     json_object_set_new(attr, CN_LISTENERS, service_all_listeners_json_data(service));

@@ -208,6 +208,19 @@ void Target::Stats::remove_connection() const
     mxb_assert(rc > 0);
 }
 
+json_t* Target::Stats::to_json() const
+{
+    json_t* stats = json_object();
+
+    json_object_set_new(stats, "connections", json_integer(n_current));
+    json_object_set_new(stats, "total_connections", json_integer(n_connections));
+    json_object_set_new(stats, "max_connections", json_integer(n_max_connections));
+    json_object_set_new(stats, "active_operations", json_integer(n_current_ops));
+    json_object_set_new(stats, "routed_packets", json_integer(packets));
+
+    return stats;
+}
+
 Error::operator bool() const
 {
     return m_code != 0;

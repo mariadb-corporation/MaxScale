@@ -267,6 +267,8 @@ public:
 
         void add_connection() const;
         void remove_connection() const;
+
+        json_t* to_json() const;
     };
 
     /**

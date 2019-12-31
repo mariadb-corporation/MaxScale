@@ -59,12 +59,12 @@ const list_services_fields = [
     },
     {
         name: 'Connections',
-        path: 'attributes.connections',
+        path: 'attributes.statistics.connections',
         description: 'Current connection count'
     },
     {
         name: 'Total Connections',
-        path: 'attributes.total_connections',
+        path: 'attributes.statistics.total_connections',
         description: 'Total connection count'
     },
     {

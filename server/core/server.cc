@@ -500,14 +500,11 @@ json_t* Server::json_attributes() const
     }
 
     /** Store statistics */
-    json_t* statistics = json_object();
 
     cleanup_persistent_connections(this);
-    json_object_set_new(statistics, "connections", json_integer(stats().n_current));
-    json_object_set_new(statistics, "total_connections", json_integer(stats().n_connections));
+
+    json_t* statistics = stats().to_json();
     json_object_set_new(statistics, "persistent_connections", json_integer(pool_stats.n_persistent));
-    json_object_set_new(statistics, "active_operations", json_integer(stats().n_current_ops));
-    json_object_set_new(statistics, "routed_packets", json_integer(stats().packets));
     maxbase::Duration response_ave(response_time_average());
     json_object_set_new(statistics, "adaptive_avg_select_time", json_string(to_string(response_ave).c_str()));
 

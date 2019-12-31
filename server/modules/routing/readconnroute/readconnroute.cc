@@ -499,8 +499,6 @@ json_t* RCR::diagnostics() const
 
     json_t* rval = json_object();
 
-    json_object_set_new(rval, "connections", json_integer(m_pService->stats().n_connections));
-    json_object_set_new(rval, "current_connections", json_integer(m_pService->stats().n_current));
     json_object_set_new(rval, "queries", json_integer(total_packets));
     json_object_set_new(rval, "server_query_statistics", arr);
 
