@@ -37,6 +37,8 @@
 #include <maxscale/utils.h>
 #include <maxscale/routingworker.h>
 
+#include <sstream>
+
 static void* mysql_auth_init(char** options);
 static bool  mysql_auth_set_protocol_data(DCB* dcb, GWBUF* buf);
 static bool  mysql_auth_is_client_ssl_capable(DCB* dcb);
@@ -301,7 +303,58 @@ static GWBUF* gen_auth_switch_request_packet(MySQLProtocol* proto, MYSQL_session
     bufdata += GW_MYSQL_SCRAMBLE_SIZE;
     *bufdata = '\0';
     return buffer;
-};
+}
+
+static void log_auth_failure(DCB* dcb, int auth_ret)
+{
+    MYSQL_session* client_data = (MYSQL_session*)dcb->data;
+    std::ostringstream extra;
+
+    if (auth_ret == MXS_AUTH_FAILED_DB)
+    {
+        extra << "Unknown database: " << client_data->db;
+    }
+    else if (auth_ret == MXS_AUTH_FAILED_WRONG_PASSWORD)
+    {
+        extra << "Wrong password.";
+    }
+    else
+    {
+        extra << "User not found.";
+    }
+
+
+    std::ostringstream host;
+
+    if (dcb->path)
+    {
+        host << "[" << dcb->remote << "]:" << dcb->path;
+    }
+    else
+    {
+        host << "[" << dcb->remote << "]:" << dcb_get_port(dcb);
+    }
+
+    std::ostringstream db;
+
+    if (*client_data->db)
+    {
+        db << " to database '" << client_data->db << "'";
+    }
+
+    MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE,
+                  "%s: login attempt for user '%s'@%s%s, authentication failed. %s",
+                  dcb->service->name, client_data->user, host.str().c_str(),
+                  db.str().c_str(), extra.str().c_str());
+
+    if (is_localhost_address(&dcb->ip) && !dcb->service->localhost_match_wildcard_host)
+    {
+        MXS_NOTICE("If you have a wildcard grant that covers this address, "
+                   "try adding 'localhost_match_wildcard_host=true' for "
+                   "service '%s'. ", dcb->service->name);
+    }
+}
+
 /**
  * @brief Authenticates a MySQL user who is a client to MaxScale.
  *
@@ -365,47 +418,7 @@ static int mysql_auth_authenticate(DCB* dcb)
         }
         else if (dcb->service->log_auth_warnings)
         {
-            // The default failure is a `User not found` one
-            char extra[256] = "User not found.";
-
-            if (auth_ret == MXS_AUTH_FAILED_DB)
-            {
-                snprintf(extra, sizeof(extra), "Unknown database: %s", client_data->db);
-            }
-            else if (auth_ret == MXS_AUTH_FAILED_WRONG_PASSWORD)
-            {
-                strcpy(extra, "Wrong password.");
-            }
-
-            if (dcb->path)
-            {
-                MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE,
-                              "%s: login attempt for user '%s'@[%s]:%s, authentication failed. %s",
-                              dcb->service->name,
-                              client_data->user,
-                              dcb->remote,
-                              dcb->path,
-                              extra);
-            }
-            else
-            {
-                MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE,
-                              "%s: login attempt for user '%s'@[%s]:%d, authentication failed. %s",
-                              dcb->service->name,
-                              client_data->user,
-                              dcb->remote,
-                              dcb_get_port(dcb),
-                              extra);
-            }
-
-            if (is_localhost_address(&dcb->ip)
-                && !dcb->service->localhost_match_wildcard_host)
-            {
-                MXS_NOTICE("If you have a wildcard grant that covers this address, "
-                           "try adding 'localhost_match_wildcard_host=true' for "
-                           "service '%s'. ",
-                           dcb->service->name);
-            }
+            log_auth_failure(dcb, auth_ret);
         }
 
         /* let's free the auth_token now */
