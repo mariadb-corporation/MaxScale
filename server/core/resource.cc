@@ -1370,11 +1370,14 @@ HttpResponse resource_handle_request(const HttpRequest& request)
     mxs::RoutingWorker* worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
 
     HttpResponse response;
-    worker->call([&request, &response, worker]() {
-                     mxs::WatchdogWorkaround workaround(worker);
-                     response = handle_request(request);
-                 },
-                 mxb::Worker::EXECUTE_AUTO);
+    if (!worker->call([&request, &response, worker]() {
+                          mxs::WatchdogWorkaround workaround(worker);
+                          response = handle_request(request);
+                      },
+                      mxb::Worker::EXECUTE_AUTO))
+    {
+        response = HttpResponse(MHD_HTTP_SERVICE_UNAVAILABLE);
+    }
 
     return response;
 }
