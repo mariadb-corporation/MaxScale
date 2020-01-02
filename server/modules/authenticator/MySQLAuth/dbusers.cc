@@ -415,6 +415,10 @@ int validate_mysql_user(MYSQL_AUTH* instance,
                 rval = MXS_AUTH_FAILED_DB;
             }
         }
+        else
+        {
+            rval = MXS_AUTH_FAILED_WRONG_PASSWORD;
+        }
     }
 
     return rval;
