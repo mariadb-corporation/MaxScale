@@ -44,6 +44,9 @@ Session::Session(Client* pClient)
 
     m_client_dcb.data = &m_mysql_session;
     service = &dummy_service;
+
+    // This prevents the destruction of the dummy service
+    service->active = true;
 }
 
 Session::~Session()

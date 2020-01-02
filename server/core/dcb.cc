@@ -2533,11 +2533,6 @@ DCB* dcb_accept(DCB* dcb)
         }
     }
 
-    if (client_dcb)
-    {
-        mxb::atomic::add(&client_dcb->service->client_count, 1);
-    }
-
     return client_dcb;
 }
 
