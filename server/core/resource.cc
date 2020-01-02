@@ -676,10 +676,10 @@ HttpResponse cb_flush(const HttpRequest& request)
 HttpResponse cb_thread_rebalance(const HttpRequest& request)
 {
     string thread = request.uri_part(2);
-    mxb_assert(!thread.empty()); // Should have been checked already.
+    mxb_assert(!thread.empty());    // Should have been checked already.
 
     long wid;
-    MXB_AT_DEBUG(bool rv=) mxb::get_long(thread, &wid);
+    MXB_AT_DEBUG(bool rv = ) mxb::get_long(thread, &wid);
     mxb_assert(rv);
 
     mxs::RoutingWorker* worker = mxs::RoutingWorker::get(wid);
@@ -1330,13 +1330,15 @@ static HttpResponse handle_request(const HttpRequest& request)
 HttpResponse resource_handle_request(const HttpRequest& request)
 {
     mxb::WatchedWorker* worker = mxs::MainWorker::get();
-
     HttpResponse response;
-    worker->call([&request, &response, &worker]() {
-                     mxb::WatchdogNotifier::Workaround workaround(worker);
-                     response = handle_request(request);
-                 },
-                 mxb::Worker::EXECUTE_AUTO);
+
+    if (!worker->call([&request, &response, worker]() {
+                          mxb::WatchdogNotifier::Workaround workaround(worker);
+                          response = handle_request(request);
+                      }, mxb::Worker::EXECUTE_AUTO))
+    {
+        response = HttpResponse(MHD_HTTP_SERVICE_UNAVAILABLE);
+    }
 
     return response;
 }

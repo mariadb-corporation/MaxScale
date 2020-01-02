@@ -689,7 +689,6 @@ GWBUF* gwbuf_make_contiguous(GWBUF* orig)
 
 size_t gwbuf_copy_data(const GWBUF* buffer, size_t offset, size_t bytes, uint8_t* dest)
 {
-    validate_buffer(buffer);
     uint32_t buflen;
 
     /** Skip unrelated buffers */

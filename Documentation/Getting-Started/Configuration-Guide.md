@@ -1549,6 +1549,9 @@ max_connections=100
 
 ### `max_retry_interval`
 
+**Note:** This feature has been removed from MaxScale 2.4. See
+  [`retry_on_failure`](#retry_on_failure) for more details.
+
 Configure the maximum interval between consecutive attempts to bind to an
 interface. The default value for this parameter is 3600 seconds. This
 parameter was introduced in MaxScale 2.2.0.
@@ -1622,6 +1625,21 @@ value of `service` in the listener). If a service defines other services in its
 
 If the value of `connection_keepalive` is changed at runtime, the change in the
 value takes effect immediately.
+
+### `net_write_timeout`
+
+This parameter controls how long a network write to the client can stay
+buffered. This feature is disabled by default.
+
+When `net_write_timeout` is configured and data is buffered on the client
+network connection, if the time since the last successful network write exceeds
+the configured limit, the client connection will be disconnected.
+
+The value is specified as documented [here](#durations). If no explicit unit
+is provided, the value is interpreted as seconds in MaxScale 2.4. In subsequent
+versions a value without a unit may be rejected. Note that since the granularity
+of the timeout is seconds, a timeout specified in milliseconds will be rejected,
+even if the duration is longer than a second.
 
 ## Server
 

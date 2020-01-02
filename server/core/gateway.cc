@@ -93,17 +93,18 @@ extern char* program_invocation_short_name;
 
 static struct ThisUnit
 {
-    char datadir[PATH_MAX + 1] = "";    /* Data directory created for this gateway instance */
-    bool datadir_defined       = false; /*< If the datadir was already set */
+    char datadir[PATH_MAX + 1] = "";/* Data directory created for this gateway instance */
+    bool datadir_defined = false;   /*< If the datadir was already set */
     char pidfile[PATH_MAX + 1] = "";
-    int pidfd                  = PIDFD_CLOSED;
+    int  pidfd = PIDFD_CLOSED;
+
     std::map<std::string, int> directory_locks;
-    bool daemon_mode           = true;
-    bool syslog_configured     = false;
-    bool maxlog_configured     = false;
-    volatile sig_atomic_t last_signal = 0;
-    bool unload_modules_at_exit = true;
-    std::string redirect_output_to;
+    bool                       daemon_mode = true;
+    bool                       syslog_configured = false;
+    bool                       maxlog_configured = false;
+    volatile sig_atomic_t      last_signal = 0;
+    bool                       unload_modules_at_exit = true;
+    std::string                redirect_output_to;
 #ifndef OPENSSL_1_1
     /** SSL multi-threading functions and structures */
     pthread_mutex_t* ssl_locks = nullptr;
@@ -148,61 +149,61 @@ static struct option long_options[] =
 };
 #endif
 
-static int   cnf_preparser(void* data, const char* section, const char* name, const char* value);
-static int   write_pid_file();  /* write MaxScale pidfile */
-static bool  lock_dir(const std::string& path);
-static bool  lock_directories();
-static void  unlock_directories();
-static void  unlink_pidfile(void);  /* remove pidfile */
-static void  unlock_pidfile();
-static int   ntfw_cb(const char*, const struct stat*, int, struct FTW*);
-static bool  is_file_and_readable(const char* absolute_pathname);
-static bool  path_is_readable(const char* absolute_pathname);
-static bool  path_is_writable(const char* absolute_pathname);
-bool         handle_path_arg(char** dest, const char* path, const char* arg, bool rd, bool wr);
-static bool  handle_debug_args(char* args);
-static void  set_log_augmentation(const char* value);
-static void  usage(void);
+static int    cnf_preparser(void* data, const char* section, const char* name, const char* value);
+static int    write_pid_file(); /* write MaxScale pidfile */
+static bool   lock_dir(const std::string& path);
+static bool   lock_directories();
+static void   unlock_directories();
+static void   unlink_pidfile(void); /* remove pidfile */
+static void   unlock_pidfile();
+static int    ntfw_cb(const char*, const struct stat*, int, struct FTW*);
+static bool   is_file_and_readable(const char* absolute_pathname);
+static bool   path_is_readable(const char* absolute_pathname);
+static bool   path_is_writable(const char* absolute_pathname);
+bool          handle_path_arg(char** dest, const char* path, const char* arg, bool rd, bool wr);
+static bool   handle_debug_args(char* args);
+static void   set_log_augmentation(const char* value);
+static void   usage(void);
 static string get_absolute_fname(const char* relative_path, const char* fname);
-static void print_alert(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
-static void print_alert(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
-static void print_info(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
-static void print_info(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
-static void print_warning(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
-static void print_warning(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
-static void log_startup_error(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
-static void log_startup_error(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
-static bool resolve_maxscale_conf_fname(string* cnf_full_path, const string& cnf_file_arg);
-static char* check_dir_access(char* dirname, bool, bool);
-static int   set_user(const char* user);
-bool         pid_file_exists();
-void         write_child_exit_code(int fd, int code);
-static bool  change_cwd();
-static void  log_exit_status();
-static int   daemonize();
-static bool  sniff_configuration(const char* filepath);
-static bool  modules_process_init();
-static void  modules_process_finish();
-static void  disable_module_unloading(const char* arg);
-static void  enable_module_unloading(const char* arg);
-static void  enable_statement_logging(const char* arg);
-static void  disable_statement_logging(const char* arg);
-static void  redirect_output_to_file(const char* arg);
-static bool  user_is_acceptable(const char* specified_user);
-static bool  init_sqlite3();
-static bool  init_base_libraries();
-static void  finish_base_libraries();
-static bool  redirect_stdout_and_stderr(const std::string& path);
-static bool  is_maxscale_already_running();
+static void   print_alert(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
+static void   print_alert(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
+static void   print_info(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
+static void   print_info(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
+static void   print_warning(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
+static void   print_warning(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
+static void   log_startup_error(int eno, const char* format, ...) mxb_attribute((format(printf, 2, 3)));
+static void   log_startup_error(const char* format, ...) mxb_attribute((format(printf, 1, 2)));
+static bool   resolve_maxscale_conf_fname(string* cnf_full_path, const string& cnf_file_arg);
+static char*  check_dir_access(char* dirname, bool, bool);
+static int    set_user(const char* user);
+bool          pid_file_exists();
+void          write_child_exit_code(int fd, int code);
+static bool   change_cwd();
+static void   log_exit_status();
+static int    daemonize();
+static bool   sniff_configuration(const char* filepath);
+static bool   modules_process_init();
+static void   modules_process_finish();
+static void   disable_module_unloading(const char* arg);
+static void   enable_module_unloading(const char* arg);
+static void   enable_statement_logging(const char* arg);
+static void   disable_statement_logging(const char* arg);
+static void   redirect_output_to_file(const char* arg);
+static bool   user_is_acceptable(const char* specified_user);
+static bool   init_sqlite3();
+static bool   init_base_libraries();
+static void   finish_base_libraries();
+static bool   redirect_stdout_and_stderr(const std::string& path);
+static bool   is_maxscale_already_running();
 
-#define VA_MESSAGE(message, format)\
-    va_list ap ## __LINE__;\
-    va_start(ap ## __LINE__, format);\
-    int len ## __LINE__ = vsnprintf(nullptr, 0, format, ap ## __LINE__);\
-    va_end(ap ## __LINE__);\
-    char message[len ## __LINE__ + 1];\
-    va_start(ap ## __LINE__, format);\
-    vsnprintf(message, sizeof(message), format, ap ## __LINE__);\
+#define VA_MESSAGE(message, format) \
+    va_list ap ## __LINE__; \
+    va_start(ap ## __LINE__, format); \
+    int len ## __LINE__ = vsnprintf(nullptr, 0, format, ap ## __LINE__); \
+    va_end(ap ## __LINE__); \
+    char message[len ## __LINE__ + 1]; \
+    va_start(ap ## __LINE__, format); \
+    vsnprintf(message, sizeof(message), format, ap ## __LINE__); \
     va_end(ap ## __LINE__);
 
 struct DEBUG_ARGUMENT
@@ -406,11 +407,18 @@ static int signal_set(int sig, void (* handler)(int));
 
 static void sigfatal_handler(int i)
 {
-    // The same signal being handled *now* can occur in another thread (and is often likely).
-    // By setting the default handler here we will always get a core, but not necessarily
-    // the backtrace into the log file. This should be overhauled to proper signal handling
-    // (MXS-599).
-    signal_set(i, SIG_DFL);
+    thread_local std::thread::id current_id;
+    std::thread::id no_id;
+
+    if (current_id != no_id)
+    {
+        // Fatal error when processing a fatal error.
+        // TODO: This should be overhauled to proper signal handling (MXS-599).
+        signal_set(i, SIG_DFL);
+        raise(i);
+    }
+
+    current_id = std::this_thread::get_id();
 
     MXS_CONFIG* cnf = config_get_global_options();
 
@@ -438,7 +446,7 @@ static void sigfatal_handler(int i)
             char buf[512];
             snprintf(buf, sizeof(buf), "  %s: %s\n", symbol, cmd);
             strcat(msg, buf);
-    };
+        };
 
     mxb::dump_stacktrace(cb);
 
@@ -446,6 +454,7 @@ static void sigfatal_handler(int i)
 
     /* re-raise signal to enforce core dump */
     print_alert("Writing core dump.");
+    signal_set(i, SIG_DFL);
     raise(i);
 }
 
@@ -1327,7 +1336,7 @@ public:
     {
         if (m_child_pipe != -1 && m_rc != MAXSCALE_SHUTDOWN)
         {
-            write_child_exit_code(m_child_pipe, m_rc);
+            write_child_exit_code(m_child_pipe, m_rc) ;
             ::close(m_child_pipe);
         }
 
@@ -1386,7 +1395,7 @@ int main(int argc, char** argv)
     mxb_assert(cnf);
     const char* specified_user = NULL;
     char export_cnf[PATH_MAX + 1] = "";
-    string cnf_file_arg;  /*< conf filename from cmd-line arg */
+    string cnf_file_arg;    /*< conf filename from cmd-line arg */
     char* tmp_path;
     int opt;
 #ifdef HAVE_GLIBC
@@ -1715,12 +1724,12 @@ int main(int argc, char** argv)
         cnf->log_target = MXB_LOG_TARGET_STDOUT;
     }
 
-    uint64_t systemd_interval = 0; // in microseconds
+    uint64_t systemd_interval = 0;      // in microseconds
 #ifdef HAVE_SYSTEMD
     // Systemd watchdog. Must be called in the initial thread */
     if (sd_watchdog_enabled(false, &systemd_interval) <= 0)
     {
-        systemd_interval = 0; // Disabled
+        systemd_interval = 0;   // Disabled
     }
 #endif
 
@@ -2703,7 +2712,7 @@ static void log_exit_status()
  * background.
  *
  * @return File descriptor the child process should write its exit
-           code to. -1 if the daemonization failed.
+ *          code to. -1 if the daemonization failed.
  */
 static int daemonize(void)
 {
