@@ -19,7 +19,7 @@
 using std::string;
 using std::stringstream;
 
-std::string cache_key_to_string(const CACHE_KEY& key)
+std::string cache_key_to_string(const CacheKey& key)
 {
     stringstream ss;
     ss << "{ ";
@@ -32,12 +32,12 @@ std::string cache_key_to_string(const CACHE_KEY& key)
     return ss.str();
 }
 
-size_t cache_key_hash(const CACHE_KEY& key)
+size_t cache_key_hash(const CacheKey& key)
 {
     return key.full_hash;
 }
 
-bool cache_key_equal_to(const CACHE_KEY& lhs, const CACHE_KEY& rhs)
+bool cache_key_equal_to(const CacheKey& lhs, const CacheKey& rhs)
 {
     return
         lhs.full_hash == rhs.full_hash

@@ -106,7 +106,7 @@ public:
      *
      * @return True, if the session cache should refresh the data.
      */
-    virtual bool must_refresh(const CACHE_KEY& key, const CacheFilterSession* pSession) = 0;
+    virtual bool must_refresh(const CacheKey& key, const CacheFilterSession* pSession) = 0;
 
     /**
      * To inform the cache that a particular item has been updated upon request.
@@ -114,7 +114,7 @@ public:
      * @param key       The hashed key for a query.
      * @param pSession  The session cache informing.
      */
-    virtual void refreshed(const CACHE_KEY& key, const CacheFilterSession* pSession) = 0;
+    virtual void refreshed(const CacheKey& key, const CacheFilterSession* pSession) = 0;
 
     /**
      * Returns a key for the statement. Takes the current config into account.
@@ -131,7 +131,7 @@ public:
                                    const std::string& host,
                                    const char* zDefault_db,
                                    const GWBUF* pQuery,
-                                   CACHE_KEY* pKey) const;
+                                   CacheKey* pKey) const;
 
     /**
      * Returns a key for the statement. Does not take the current config
@@ -149,11 +149,11 @@ public:
                                           const std::string& host,
                                           const char* zDefault_db,
                                           const GWBUF* pQuery,
-                                          CACHE_KEY* pKey);
+                                          CacheKey* pKey);
 
     static cache_result_t get_default_key(const char* zDefault_db,
                                           const GWBUF* pQuery,
-                                          CACHE_KEY* pKey)
+                                          CacheKey* pKey)
     {
         return get_default_key(std::string(), std::string(), zDefault_db, pQuery, pKey);
     }
@@ -162,7 +162,7 @@ public:
      * See @Storage::get_value
      */
     virtual cache_result_t get_value(Token* pToken,
-                                     const CACHE_KEY& key,
+                                     const CacheKey& key,
                                      uint32_t flags,
                                      uint32_t soft_ttl,
                                      uint32_t hard_ttl,
@@ -173,7 +173,7 @@ public:
      * See @Storage::put_value
      */
     virtual cache_result_t put_value(Token* pToken,
-                                     const CACHE_KEY& key,
+                                     const CacheKey& key,
                                      const std::vector<std::string>& invalidation_words,
                                      const GWBUF* pValue,
                                      std::function<void (cache_result_t)> cb = nullptr) = 0;
@@ -182,7 +182,7 @@ public:
      * See @Storage::del_value
      */
     virtual cache_result_t del_value(Token* pToken,
-                                     const CACHE_KEY& key,
+                                     const CacheKey& key,
                                      std::function<void (cache_result_t)> cb = nullptr) = 0;
 
     /**

@@ -29,7 +29,7 @@ namespace
 
 const size_t INMEMORY_KEY_LENGTH = 2 * SHA512_DIGEST_LENGTH;
 
-#if INMEMORY_KEY_LENGTH > CACHE_KEY_MAXLEN
+#if INMEMORY_KEY_LENGTH > CacheKey_MAXLEN
 #error storage_inmemory key is too long.
 #endif
 }
@@ -119,12 +119,12 @@ void InMemoryStorage::get_config(Config* pConfig)
     *pConfig = m_config;
 }
 
-cache_result_t InMemoryStorage::get_head(CACHE_KEY* pKey, GWBUF** ppHead)
+cache_result_t InMemoryStorage::get_head(CacheKey* pKey, GWBUF** ppHead)
 {
     return CACHE_RESULT_OUT_OF_RESOURCES;
 }
 
-cache_result_t InMemoryStorage::get_tail(CACHE_KEY* pKey, GWBUF** ppHead)
+cache_result_t InMemoryStorage::get_tail(CacheKey* pKey, GWBUF** ppHead)
 {
     return CACHE_RESULT_OUT_OF_RESOURCES;
 }
@@ -152,7 +152,7 @@ cache_result_t InMemoryStorage::do_get_info(uint32_t what, json_t** ppInfo) cons
 }
 
 cache_result_t InMemoryStorage::do_get_value(Token* pToken,
-                                             const CACHE_KEY& key,
+                                             const CacheKey& key,
                                              uint32_t flags,
                                              uint32_t soft_ttl,
                                              uint32_t hard_ttl,
@@ -233,7 +233,7 @@ cache_result_t InMemoryStorage::do_get_value(Token* pToken,
 }
 
 cache_result_t InMemoryStorage::do_put_value(Token* pToken,
-                                             const CACHE_KEY& key,
+                                             const CacheKey& key,
                                              const std::vector<std::string>& invalidation_words,
                                              const GWBUF* pValue)
 {
@@ -291,7 +291,7 @@ cache_result_t InMemoryStorage::do_put_value(Token* pToken,
     return CACHE_RESULT_OK;
 }
 
-cache_result_t InMemoryStorage::do_del_value(Token* pToken, const CACHE_KEY& key)
+cache_result_t InMemoryStorage::do_del_value(Token* pToken, const CacheKey& key)
 {
     mxb_assert(!pToken);
     Entries::iterator i = m_entries.find(key);

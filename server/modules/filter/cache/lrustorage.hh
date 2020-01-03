@@ -47,7 +47,7 @@ protected:
      * @see Storage::get_value
      */
     cache_result_t do_get_value(Token* pToken,
-                                const CACHE_KEY& key,
+                                const CacheKey& key,
                                 uint32_t flags,
                                 uint32_t soft_ttl,
                                 uint32_t hard_ttl,
@@ -57,7 +57,7 @@ protected:
      * @see Storage::put_value
      */
     cache_result_t do_put_value(Token* pToken,
-                                const CACHE_KEY& key,
+                                const CacheKey& key,
                                 const std::vector<std::string>& invalidation_words,
                                 const GWBUF* pValue);
 
@@ -65,7 +65,7 @@ protected:
      * @see Storage::del_value
      */
     cache_result_t do_del_value(Token* pToken,
-                                const CACHE_KEY& key);
+                                const CacheKey& key);
 
     /**
      * @see Storage::invalidate
@@ -81,13 +81,13 @@ protected:
     /**
      * @see Storage::get_head
      */
-    cache_result_t do_get_head(CACHE_KEY* pKey,
+    cache_result_t do_get_head(CacheKey* pKey,
                                GWBUF** ppValue);
 
     /**
      * @see Storage::get_tail
      */
-    cache_result_t do_get_tail(CACHE_KEY* pKey,
+    cache_result_t do_get_tail(CacheKey* pKey,
                                GWBUF** ppValue);
 
     /**
@@ -111,13 +111,13 @@ private:
     };
 
     cache_result_t access_value(access_approach_t approach,
-                                const CACHE_KEY& key,
+                                const CacheKey& key,
                                 uint32_t flags,
                                 uint32_t soft_ttl,
                                 uint32_t hard_ttl,
                                 GWBUF** ppValue);
 
-    cache_result_t peek_value(const CACHE_KEY& key,
+    cache_result_t peek_value(const CacheKey& key,
                               uint32_t flags,
                               GWBUF** ppValue)
     {
@@ -142,7 +142,7 @@ private:
             remove();
         }
 
-        const CACHE_KEY* key() const
+        const CacheKey* key() const
         {
             return m_pKey;
         }
@@ -226,7 +226,7 @@ private:
             return pNode;
         }
 
-        void reset(const CACHE_KEY* pKey,
+        void reset(const CacheKey* pKey,
                    size_t size,
                    const std::vector<std::string>& invalidation_words)
         {
@@ -247,14 +247,14 @@ private:
         // TODO: No sense in storing the same table name a million times.
         using Words = std::vector<std::string>;
 
-        const CACHE_KEY* m_pKey;               /*< Points at the key stored in nodes_by_key below. */
+        const CacheKey* m_pKey;               /*< Points at the key stored in nodes_by_key below. */
         size_t           m_size;               /*< The size of the data referred to by m_pKey. */
         Node*            m_pNext;              /*< The next node in the LRU list. */
         Node*            m_pPrev;              /*< The previous node in the LRU list. */
         Words            m_invalidation_words; /*< Words that invalidate this node. */
     };
 
-    typedef std::unordered_map<CACHE_KEY, Node*> NodesByKey;
+    typedef std::unordered_map<CacheKey, Node*> NodesByKey;
 
     enum class Context
     {
@@ -272,7 +272,7 @@ private:
     void  move_to_head(Node* pNode) const;
 
     cache_result_t get_existing_node(NodesByKey::iterator& i, const GWBUF* pvalue, Node** ppNode);
-    cache_result_t get_new_node(const CACHE_KEY& key,
+    cache_result_t get_new_node(const CacheKey& key,
                                 const GWBUF* pValue,
                                 NodesByKey::iterator* pI,
                                 Node** ppNode);

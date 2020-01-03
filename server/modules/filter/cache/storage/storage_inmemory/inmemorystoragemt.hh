@@ -30,19 +30,19 @@ public:
 
     cache_result_t get_info(uint32_t what, json_t** ppInfo) const override final;
     cache_result_t get_value(Token* pToken,
-                             const CACHE_KEY& key,
+                             const CacheKey& key,
                              uint32_t flags,
                              uint32_t soft_ttl,
                              uint32_t hard_ttl,
                              GWBUF** ppResult,
                              std::function<void (cache_result_t, GWBUF*)> cb) override final;
     cache_result_t put_value(Token* pToken,
-                             const CACHE_KEY& key,
+                             const CacheKey& key,
                              const std::vector<std::string>& invalidation_words,
                              const GWBUF* pValue,
                              std::function<void (cache_result_t)> cb) override final;
     cache_result_t del_value(Token* pToken,
-                             const CACHE_KEY& key,
+                             const CacheKey& key,
                              std::function<void (cache_result_t)> cb) override final;
     cache_result_t invalidate(Token* pToken,
                               const std::vector<std::string>& words,

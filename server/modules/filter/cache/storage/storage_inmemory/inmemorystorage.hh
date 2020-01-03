@@ -33,8 +33,8 @@ public:
 
     bool create_token(std::shared_ptr<Token>* psToken) override final;
     void           get_config(Config* pConfig) override final;
-    cache_result_t get_head(CACHE_KEY* pKey, GWBUF** ppHead) override final;
-    cache_result_t get_tail(CACHE_KEY* pKey, GWBUF** ppHead) override final;
+    cache_result_t get_head(CacheKey* pKey, GWBUF** ppHead) override final;
+    cache_result_t get_tail(CacheKey* pKey, GWBUF** ppHead) override final;
     cache_result_t get_size(uint64_t* pSize) const override final;
     cache_result_t get_items(uint64_t* pItems) const override final;
 
@@ -44,17 +44,17 @@ protected:
 
     cache_result_t do_get_info(uint32_t what, json_t** ppInfo) const;
     cache_result_t do_get_value(Token* pToken,
-                                const CACHE_KEY& key,
+                                const CacheKey& key,
                                 uint32_t flags,
                                 uint32_t soft_ttl,
                                 uint32_t hard_ttl,
                                 GWBUF** ppResult);
     cache_result_t do_put_value(Token* pToken,
-                                const CACHE_KEY& key,
+                                const CacheKey& key,
                                 const std::vector<std::string>& invalidation_words,
                                 const GWBUF* pValue);
     cache_result_t do_del_value(Token* pToken,
-                                const CACHE_KEY& key);
+                                const CacheKey& key);
     cache_result_t do_invalidate(Token* pToken,
                                  const std::vector<std::string>& words);
     cache_result_t do_clear(Token* pToken);
@@ -99,7 +99,7 @@ private:
         uint64_t deletes;   /*< How many times an existing key in the cache was deleted. */
     };
 
-    typedef std::unordered_map<CACHE_KEY, Entry> Entries;
+    typedef std::unordered_map<CacheKey, Entry> Entries;
 
     std::string  m_name;
     const Config m_config;

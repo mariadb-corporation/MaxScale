@@ -245,7 +245,7 @@ bool Tester::get_cache_items(const Statements& statements,
         GWBUF* pQuery = gwbuf_from_string(*i);
         if (pQuery)
         {
-            CACHE_KEY key;
+            CacheKey key;
             cache_result_t result = Cache::get_default_key(NULL, pQuery, &key);
 
             if (result == CACHE_RESULT_OK)

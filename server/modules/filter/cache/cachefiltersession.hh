@@ -167,7 +167,7 @@ private:
 
     using SSessionCache = std::shared_ptr<SessionCache>;
 
-    static void put_value_handler(SSessionCache sCache, const CACHE_KEY& key, cache_result_t result);
+    static void put_value_handler(SSessionCache sCache, const CacheKey& key, cache_result_t result);
     static void del_value_handler(cache_result_t result);
     routing_action_t get_value_handler(GWBUF* pPacket, cache_result_t result, GWBUF* pResponse);
     void invalidate_handler(cache_result_t result);
@@ -191,7 +191,7 @@ private:
     SSessionCache         m_sCache;         /**< The cache instance the session is associated with. */
     GWBUF*                m_res;            /**< The response buffer. */
     GWBUF*                m_next_response;  /**< The next response routed to the client. */
-    CACHE_KEY             m_key;            /**< Key storage. */
+    CacheKey              m_key;            /**< Key storage. */
     char*                 m_zDefaultDb;     /**< The default database. */
     char*                 m_zUseDb;         /**< Pending default database. Needs server response. */
     bool                  m_refreshing;     /**< Whether the session is updating a stale cache entry. */

@@ -58,7 +58,7 @@ bool CacheSimple::create_token(std::shared_ptr<Cache::Token>* psToken)
 }
 
 cache_result_t CacheSimple::get_value(Token* pToken,
-                                      const CACHE_KEY& key,
+                                      const CacheKey& key,
                                       uint32_t flags,
                                       uint32_t soft_ttl,
                                       uint32_t hard_ttl,
@@ -69,7 +69,7 @@ cache_result_t CacheSimple::get_value(Token* pToken,
 }
 
 cache_result_t CacheSimple::put_value(Token* pToken,
-                                      const CACHE_KEY& key,
+                                      const CacheKey& key,
                                       const std::vector<std::string>& invalidation_words,
                                       const GWBUF* pValue,
                                       std::function<void (cache_result_t)> cb)
@@ -78,7 +78,7 @@ cache_result_t CacheSimple::put_value(Token* pToken,
 }
 
 cache_result_t CacheSimple::del_value(Token* pToken,
-                                      const CACHE_KEY& key,
+                                      const CacheKey& key,
                                       std::function<void (cache_result_t)> cb)
 {
     return m_pStorage->del_value(pToken, key, cb);
@@ -123,7 +123,7 @@ json_t* CacheSimple::do_get_info(uint32_t what) const
 }
 
 // protected
-bool CacheSimple::do_must_refresh(const CACHE_KEY& key, const CacheFilterSession* pSession)
+bool CacheSimple::do_must_refresh(const CacheKey& key, const CacheFilterSession* pSession)
 {
     bool rv = false;
     Pending::iterator i = m_pending.find(key);
@@ -145,7 +145,7 @@ bool CacheSimple::do_must_refresh(const CACHE_KEY& key, const CacheFilterSession
 }
 
 // protected
-void CacheSimple::do_refreshed(const CACHE_KEY& key, const CacheFilterSession* pSession)
+void CacheSimple::do_refreshed(const CacheKey& key, const CacheFilterSession* pSession)
 {
     Pending::iterator i = m_pending.find(key);
     mxb_assert(i != m_pending.end());

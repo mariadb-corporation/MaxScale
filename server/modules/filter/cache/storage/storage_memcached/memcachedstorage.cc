@@ -26,7 +26,7 @@ using std::vector;
 namespace
 {
 
-vector<char> get_memcached_key(const CACHE_KEY& key)
+vector<char> get_memcached_key(const CacheKey& key)
 {
     vector<char> mkey;
     mkey.reserve(key.user.size() + key.host.size() + sizeof(uint64_t) + sizeof(uint64_t));
@@ -100,7 +100,7 @@ public:
         return rv;
     }
 
-    cache_result_t get_value(const CACHE_KEY& key,
+    cache_result_t get_value(const CacheKey& key,
                              uint32_t flags,
                              uint32_t soft_ttl,
                              uint32_t hard_ttl,
@@ -169,7 +169,7 @@ public:
         return CACHE_RESULT_PENDING;
     }
 
-    cache_result_t put_value(const CACHE_KEY& key,
+    cache_result_t put_value(const CacheKey& key,
                              const std::vector<std::string>& invalidation_words,
                              const GWBUF* pValue,
                              std::function<void (cache_result_t)> cb)
@@ -217,7 +217,7 @@ public:
         return CACHE_RESULT_PENDING;
     }
 
-    cache_result_t del_value(const CACHE_KEY& key,
+    cache_result_t del_value(const CacheKey& key,
                              std::function<void (cache_result_t)> cb)
     {
         vector<char> mkey = get_memcached_key(key);
@@ -377,7 +377,7 @@ cache_result_t MemcachedStorage::get_info(uint32_t what, json_t** ppInfo) const
 }
 
 cache_result_t MemcachedStorage::get_value(Storage::Token* pToken,
-                                           const CACHE_KEY& key,
+                                           const CacheKey& key,
                                            uint32_t flags,
                                            uint32_t soft_ttl,
                                            uint32_t hard_ttl,
@@ -390,7 +390,7 @@ cache_result_t MemcachedStorage::get_value(Storage::Token* pToken,
 }
 
 cache_result_t MemcachedStorage::put_value(Token* pToken,
-                                           const CACHE_KEY& key,
+                                           const CacheKey& key,
                                            const std::vector<std::string>& invalidation_words,
                                            const GWBUF* pValue,
                                            std::function<void (cache_result_t)> cb)
@@ -401,7 +401,7 @@ cache_result_t MemcachedStorage::put_value(Token* pToken,
 }
 
 cache_result_t MemcachedStorage::del_value(Token* pToken,
-                                           const CACHE_KEY& key,
+                                           const CacheKey& key,
                                            std::function<void (cache_result_t)> cb)
 {
     mxb_assert(pToken);
@@ -423,12 +423,12 @@ cache_result_t MemcachedStorage::clear(Token* pToken)
     return CACHE_RESULT_ERROR;
 }
 
-cache_result_t MemcachedStorage::get_head(CACHE_KEY* pKey, GWBUF** ppHead)
+cache_result_t MemcachedStorage::get_head(CacheKey* pKey, GWBUF** ppHead)
 {
     return CACHE_RESULT_ERROR;
 }
 
-cache_result_t MemcachedStorage::get_tail(CACHE_KEY* pKey, GWBUF** ppHead)
+cache_result_t MemcachedStorage::get_tail(CacheKey* pKey, GWBUF** ppHead)
 {
     return CACHE_RESULT_ERROR;
 }

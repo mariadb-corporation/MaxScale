@@ -42,7 +42,7 @@ cache_result_t LRUStorageMT::get_info(uint32_t what,
 }
 
 cache_result_t LRUStorageMT::get_value(Token* pToken,
-                                       const CACHE_KEY& key,
+                                       const CacheKey& key,
                                        uint32_t flags,
                                        uint32_t soft_ttl,
                                        uint32_t hard_ttl,
@@ -55,7 +55,7 @@ cache_result_t LRUStorageMT::get_value(Token* pToken,
 }
 
 cache_result_t LRUStorageMT::put_value(Token* pToken,
-                                       const CACHE_KEY& key,
+                                       const CacheKey& key,
                                        const std::vector<std::string>& invalidation_words,
                                        const GWBUF* pValue,
                                        std::function<void (cache_result_t)>)
@@ -66,7 +66,7 @@ cache_result_t LRUStorageMT::put_value(Token* pToken,
 }
 
 cache_result_t LRUStorageMT::del_value(Token* pToken,
-                                       const CACHE_KEY& key,
+                                       const CacheKey& key,
                                        std::function<void (cache_result_t)>)
 {
     std::lock_guard<std::mutex> guard(m_lock);
@@ -90,14 +90,14 @@ cache_result_t LRUStorageMT::clear(Token* pToken)
     return LRUStorage::do_clear(pToken);
 }
 
-cache_result_t LRUStorageMT::get_head(CACHE_KEY* pKey, GWBUF** ppHead)
+cache_result_t LRUStorageMT::get_head(CacheKey* pKey, GWBUF** ppHead)
 {
     std::lock_guard<std::mutex> guard(m_lock);
 
     return LRUStorage::do_get_head(pKey, ppHead);
 }
 
-cache_result_t LRUStorageMT::get_tail(CACHE_KEY* pKey, GWBUF** ppTail)
+cache_result_t LRUStorageMT::get_tail(CacheKey* pKey, GWBUF** ppTail)
 {
     std::lock_guard<std::mutex> guard(m_lock);
 

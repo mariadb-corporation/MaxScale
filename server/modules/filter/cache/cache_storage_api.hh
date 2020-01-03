@@ -76,32 +76,38 @@ enum cache_invalidate_t
 // for equality to ensure that it will not be possible for a user to
 // accidentally gain access to another user's data if there happens to
 // be a hash value clash, however unlikely that may be.
-struct CACHE_KEY
+class CacheKey
 {
+public:
+    CacheKey()
+        : data_hash(0)
+        , full_hash(0)
+    {}
+
     std::string user;      // The user of the value; empty if shared.
     std::string host;      // The host of the user of the value; empty is shared.
     uint64_t    data_hash; // Hash of the default db and GWBUF given to Cache::get_key().
-    uint64_t    full_hash; // Hash of the entire CACHE_KEY.
+    uint64_t    full_hash; // Hash of the entire CacheKey.
 };
 
 /**
- * Hashes a CACHE_KEY to a size_t
+ * Hashes a CacheKey to a size_t
  *
  * @param key  The key to be hashed.
  *
  * @return The corresponding hash.
  */
-size_t cache_key_hash(const CACHE_KEY& key);
+size_t cache_key_hash(const CacheKey& key);
 
 /**
- * Are two CACHE_KEYs equal.
+ * Are two CacheKeys equal.
  *
  * @param lhs One cache key.
  * @param rhs Another cache key.
  *
  * @return True, if the keys are equal.
  */
-bool cache_key_equal_to(const CACHE_KEY& lhs, const CACHE_KEY& rhs);
+bool cache_key_equal_to(const CacheKey& lhs, const CacheKey& rhs);
 
 enum cache_storage_capabilities_t
 {
@@ -277,7 +283,7 @@ public:
      *         CACHE_RESULT_DISCARDED if the item existed but the hard TTL had passed.
      */
     virtual cache_result_t get_value(Token* pToken,
-                                     const CACHE_KEY& key,
+                                     const CacheKey& key,
                                      uint32_t flags,
                                      uint32_t soft_ttl,
                                      uint32_t hard_ttl,
@@ -285,7 +291,7 @@ public:
                                      std::function<void (cache_result_t, GWBUF*)> cb = nullptr) = 0;
 
     cache_result_t get_value(Token* pToken,
-                             const CACHE_KEY& key,
+                             const CacheKey& key,
                              uint32_t flags,
                              GWBUF** ppValue,
                              std::function<void (cache_result_t, GWBUF*)> cb = nullptr)
@@ -309,7 +315,7 @@ public:
      *         some resource having become exhausted, or some other error code.
      */
     virtual cache_result_t put_value(Token* pToken,
-                                     const CACHE_KEY& key,
+                                     const CacheKey& key,
                                      const std::vector<std::string>& invalidation_words,
                                      const GWBUF* pValue,
                                      std::function<void (cache_result_t)> cb = nullptr) = 0;
@@ -328,7 +334,7 @@ public:
      *         Note that CACHE_RESULT_OK may be returned also if the entry was not present.
      */
     virtual cache_result_t del_value(Token* pToken,
-                                     const CACHE_KEY& key,
+                                     const CacheKey& key,
                                      std::function<void (cache_result_t)> cb = nullptr) = 0;
 
     /**
@@ -370,7 +376,7 @@ public:
      *         returning the head, and
      *         CACHE_RESULT_ERROR otherwise.
      */
-    virtual cache_result_t get_head(CACHE_KEY* pKey, GWBUF** ppHead) = 0;
+    virtual cache_result_t get_head(CacheKey* pKey, GWBUF** ppHead) = 0;
 
     /**
      * Get the tail item from the cache. This is only intended for testing and
@@ -389,7 +395,7 @@ public:
      *         returning the tail, and
      *         CACHE_RESULT_ERROR otherwise.
      */
-    virtual cache_result_t get_tail(CACHE_KEY* pKey, GWBUF** ppTail) = 0;
+    virtual cache_result_t get_tail(CacheKey* pKey, GWBUF** ppTail) = 0;
 
     /**
      * Get the current size of the storage. This is only intended for testing and
@@ -473,42 +479,32 @@ namespace std
 {
 
 template<>
-struct equal_to<CACHE_KEY>
+struct equal_to<CacheKey>
 {
-    bool operator()(const CACHE_KEY& lhs, const CACHE_KEY& rhs) const
+    bool operator()(const CacheKey& lhs, const CacheKey& rhs) const
     {
         return cache_key_equal_to(lhs, rhs);
     }
 };
 
 template<>
-struct hash<CACHE_KEY>
+struct hash<CacheKey>
 {
-    size_t operator()(const CACHE_KEY& key) const
+    size_t operator()(const CacheKey& key) const
     {
         return cache_key_hash(key);
     }
 };
 }
 
-std::string cache_key_to_string(const CACHE_KEY& key);
+std::string cache_key_to_string(const CacheKey& key);
 
-inline bool operator==(const CACHE_KEY& lhs, const CACHE_KEY& rhs)
+inline bool operator==(const CacheKey& lhs, const CacheKey& rhs)
 {
     return cache_key_equal_to(lhs, rhs);
 }
 
-inline bool operator!=(const CACHE_KEY& lhs, const CACHE_KEY& rhs)
+inline bool operator!=(const CacheKey& lhs, const CacheKey& rhs)
 {
     return !(lhs == rhs);
 }
-
-class CacheKey : public CACHE_KEY
-{
-public:
-    CacheKey()
-    {
-        data_hash = 0;
-        full_hash = 0;
-    }
-};

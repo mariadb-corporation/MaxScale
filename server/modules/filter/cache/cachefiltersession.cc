@@ -755,7 +755,7 @@ void CacheFilterSession::store_result()
     // We want local variables to be captured by value. By the time the lambda is called,
     // this may no longer exist.
     SSessionCache sCache { m_sCache };
-    CACHE_KEY key { m_key };
+    CacheKey key { m_key };
 
     cache_result_t result = m_sCache->put_value(m_key, invalidation_words, m_res,
                                                 [sCache, key](cache_result_t result) {
@@ -1452,7 +1452,7 @@ char* CacheFilterSession::set_cache_hard_ttl(void* pContext,
 }
 
 //static
-void CacheFilterSession::put_value_handler(SSessionCache sCache, const CACHE_KEY& key, cache_result_t result)
+void CacheFilterSession::put_value_handler(SSessionCache sCache, const CacheKey& key, cache_result_t result)
 {
     if (!CACHE_RESULT_IS_OK(result))
     {

@@ -46,7 +46,7 @@ int test(StorageFactory& factory, istream& in)
 
     if (Tester::get_statements(in, 0, &statements))
     {
-        typedef unordered_map<CACHE_KEY, string> Keys;
+        typedef unordered_map<CacheKey, string> Keys;
         Keys keys;
 
         size_t n_keys = 0;
@@ -60,7 +60,7 @@ int test(StorageFactory& factory, istream& in)
 
             if (pQuery)
             {
-                CACHE_KEY key;
+                CacheKey key;
                 cache_result_t result = Cache::get_default_key(NULL, pQuery, &key);
 
                 if (result == CACHE_RESULT_OK)

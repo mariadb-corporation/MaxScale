@@ -58,14 +58,14 @@ json_t* CacheMT::get_info(uint32_t flags) const
     return CacheSimple::do_get_info(flags);
 }
 
-bool CacheMT::must_refresh(const CACHE_KEY& key, const CacheFilterSession* pSession)
+bool CacheMT::must_refresh(const CacheKey& key, const CacheFilterSession* pSession)
 {
     std::lock_guard<std::mutex> guard(m_lock_pending);
 
     return do_must_refresh(key, pSession);
 }
 
-void CacheMT::refreshed(const CACHE_KEY& key, const CacheFilterSession* pSession)
+void CacheMT::refreshed(const CacheKey& key, const CacheFilterSession* pSession)
 {
     std::lock_guard<std::mutex> guard(m_lock_pending);
 

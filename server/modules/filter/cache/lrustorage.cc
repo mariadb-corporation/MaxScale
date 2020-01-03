@@ -414,7 +414,7 @@ cache_result_t LRUStorage::do_get_info(uint32_t what,
 }
 
 cache_result_t LRUStorage::do_get_value(Token* pToken,
-                                        const CACHE_KEY& key,
+                                        const CacheKey& key,
                                         uint32_t flags,
                                         uint32_t soft_ttl,
                                         uint32_t hard_ttl,
@@ -425,7 +425,7 @@ cache_result_t LRUStorage::do_get_value(Token* pToken,
 }
 
 cache_result_t LRUStorage::do_put_value(Token* pToken,
-                                        const CACHE_KEY& key,
+                                        const CacheKey& key,
                                         const vector<string>& invalidation_words,
                                         const GWBUF* pValue)
 {
@@ -489,7 +489,7 @@ cache_result_t LRUStorage::do_put_value(Token* pToken,
     return result;
 }
 
-cache_result_t LRUStorage::do_del_value(Token* pToken, const CACHE_KEY& key)
+cache_result_t LRUStorage::do_del_value(Token* pToken, const CacheKey& key)
 {
     mxb_assert(!pToken);
 
@@ -556,7 +556,7 @@ cache_result_t LRUStorage::do_clear(Token* pToken)
     return m_pStorage->clear(pToken);
 }
 
-cache_result_t LRUStorage::do_get_head(CACHE_KEY* pKey, GWBUF** ppValue)
+cache_result_t LRUStorage::do_get_head(CacheKey* pKey, GWBUF** ppValue)
 {
     cache_result_t result = CACHE_RESULT_NOT_FOUND;
 
@@ -581,7 +581,7 @@ cache_result_t LRUStorage::do_get_head(CACHE_KEY* pKey, GWBUF** ppValue)
     return result;
 }
 
-cache_result_t LRUStorage::do_get_tail(CACHE_KEY* pKey, GWBUF** ppValue)
+cache_result_t LRUStorage::do_get_tail(CacheKey* pKey, GWBUF** ppValue)
 {
     cache_result_t result = CACHE_RESULT_NOT_FOUND;
 
@@ -613,7 +613,7 @@ cache_result_t LRUStorage::do_get_items(uint64_t* pItems) const
 }
 
 cache_result_t LRUStorage::access_value(access_approach_t approach,
-                                        const CACHE_KEY& key,
+                                        const CacheKey& key,
                                         uint32_t flags,
                                         uint32_t soft_ttl,
                                         uint32_t hard_ttl,
@@ -736,7 +736,7 @@ bool LRUStorage::free_node_data(Node* pNode, Context context)
 {
     bool success = true;
 
-    const CACHE_KEY* pKey = pNode->key();
+    const CacheKey* pKey = pNode->key();
     mxb_assert(pKey);
 
     NodesByKey::iterator i = m_nodes_by_key.find(*pKey);
@@ -884,7 +884,7 @@ cache_result_t LRUStorage::get_existing_node(NodesByKey::iterator& i, const GWBU
     {
         // If the size of the new item is more than what is allowed in total,
         // we must remove the value.
-        const CACHE_KEY* pKey = i->second->key();
+        const CacheKey* pKey = i->second->key();
         mxb_assert(pKey);
 
         result = do_del_value(nullptr, *pKey);
@@ -940,7 +940,7 @@ cache_result_t LRUStorage::get_existing_node(NodesByKey::iterator& i, const GWBU
     return result;
 }
 
-cache_result_t LRUStorage::get_new_node(const CACHE_KEY& key,
+cache_result_t LRUStorage::get_new_node(const CacheKey& key,
                                         const GWBUF* pValue,
                                         NodesByKey::iterator* pI,
                                         Node** ppNode)

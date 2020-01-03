@@ -50,7 +50,7 @@ public:
     /**
      * @see Cache::must_refresh
      */
-    bool must_refresh(const CACHE_KEY& key, const CacheFilterSession* pSession)
+    bool must_refresh(const CacheKey& key, const CacheFilterSession* pSession)
     {
         return m_cache.must_refresh(key, pSession);
     }
@@ -58,7 +58,7 @@ public:
     /**
      * @see Cache::refreshed
      */
-    void refreshed(const CACHE_KEY& key, const CacheFilterSession* pSession)
+    void refreshed(const CacheKey& key, const CacheFilterSession* pSession)
     {
         return m_cache.refreshed(key, pSession);
     }
@@ -70,7 +70,7 @@ public:
                            const std::string& host,
                            const char* zDefault_db,
                            const GWBUF* pQuery,
-                           CACHE_KEY* pKey) const
+                           CacheKey* pKey) const
     {
         return m_cache.get_key(user, host, zDefault_db, pQuery, pKey);
     }
@@ -78,7 +78,7 @@ public:
     /**
      * @See Cache::get_value
      */
-    cache_result_t get_value(const CACHE_KEY& key,
+    cache_result_t get_value(const CacheKey& key,
                              uint32_t flags,
                              uint32_t soft_ttl,
                              uint32_t hard_ttl,
@@ -91,7 +91,7 @@ public:
     /**
      * @see Cache::put_value
      */
-    cache_result_t put_value(const CACHE_KEY& key,
+    cache_result_t put_value(const CacheKey& key,
                              const std::vector<std::string>& invalidation_words,
                              const GWBUF* pValue,
                              std::function<void (cache_result_t)> cb)
@@ -102,7 +102,7 @@ public:
     /**
      * @see Cache::del_value
      */
-    cache_result_t del_value(const CACHE_KEY& key,
+    cache_result_t del_value(const CacheKey& key,
                              std::function<void (cache_result_t)> cb)
     {
         return m_cache.del_value(token(), key, cb);

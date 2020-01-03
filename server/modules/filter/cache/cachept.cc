@@ -86,12 +86,12 @@ bool CachePT::create_token(std::shared_ptr<Cache::Token>* psToken)
     return thread_cache().create_token(psToken);
 }
 
-bool CachePT::must_refresh(const CACHE_KEY& key, const CacheFilterSession* pSession)
+bool CachePT::must_refresh(const CacheKey& key, const CacheFilterSession* pSession)
 {
     return thread_cache().must_refresh(key, pSession);
 }
 
-void CachePT::refreshed(const CACHE_KEY& key, const CacheFilterSession* pSession)
+void CachePT::refreshed(const CacheKey& key, const CacheFilterSession* pSession)
 {
     thread_cache().refreshed(key, pSession);
 }
@@ -131,13 +131,13 @@ cache_result_t CachePT::get_key(const std::string& user,
                                 const std::string& host,
                                 const char* zDefault_db,
                                 const GWBUF* pQuery,
-                                CACHE_KEY* pKey) const
+                                CacheKey* pKey) const
 {
     return thread_cache().get_key(user, host, zDefault_db, pQuery, pKey);
 }
 
 cache_result_t CachePT::get_value(Token* pToken,
-                                  const CACHE_KEY& key,
+                                  const CacheKey& key,
                                   uint32_t flags,
                                   uint32_t soft_ttl,
                                   uint32_t hard_ttl,
@@ -148,7 +148,7 @@ cache_result_t CachePT::get_value(Token* pToken,
 }
 
 cache_result_t CachePT::put_value(Token* pToken,
-                                  const CACHE_KEY& key,
+                                  const CacheKey& key,
                                   const std::vector<std::string>& invalidation_words,
                                   const GWBUF* pValue,
                                   std::function<void (cache_result_t)> cb)
@@ -157,7 +157,7 @@ cache_result_t CachePT::put_value(Token* pToken,
 }
 
 cache_result_t CachePT::del_value(Token* pToken,
-                                  const CACHE_KEY& key,
+                                  const CacheKey& key,
                                   std::function<void (cache_result_t)> cb)
 {
     return thread_cache().del_value(pToken, key, cb);

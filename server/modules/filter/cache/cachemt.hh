@@ -27,9 +27,9 @@ public:
 
     json_t* get_info(uint32_t what) const override final;
 
-    bool must_refresh(const CACHE_KEY& key, const CacheFilterSession* pSession) override final;
+    bool must_refresh(const CacheKey& key, const CacheFilterSession* pSession) override final;
 
-    void refreshed(const CACHE_KEY& key, const CacheFilterSession* pSession) override final;
+    void refreshed(const CacheKey& key, const CacheFilterSession* pSession) override final;
 
 private:
     CacheMT(const std::string& name,

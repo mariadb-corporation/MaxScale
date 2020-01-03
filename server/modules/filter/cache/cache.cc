@@ -98,7 +98,7 @@ cache_result_t Cache::get_key(const std::string& user,
                               const std::string& host,
                               const char* zDefault_db,
                               const GWBUF* pQuery,
-                              CACHE_KEY* pKey) const
+                              CacheKey* pKey) const
 {
     return get_default_key(user, host, zDefault_db, pQuery, pKey);
 }
@@ -108,7 +108,7 @@ cache_result_t Cache::get_default_key(const std::string& user,
                                       const std::string& host,
                                       const char* zDefault_db,
                                       const GWBUF* pQuery,
-                                      CACHE_KEY* pKey)
+                                      CacheKey* pKey)
 {
     mxb_assert((user.empty() && host.empty()) || (!user.empty() && !host.empty()));
     mxb_assert(GWBUF_IS_CONTIGUOUS(pQuery));

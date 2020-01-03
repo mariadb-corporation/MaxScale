@@ -27,9 +27,9 @@ class Tester
 public:
     class Task;
 
-    typedef std::vector<std::string>                  Statements;
-    typedef std::vector<std::pair<CACHE_KEY, GWBUF*>> CacheItems;
-    typedef std::vector<Task*>                        Tasks;
+    typedef std::vector<std::string>                 Statements;
+    typedef std::vector<std::pair<CacheKey, GWBUF*>> CacheItems;
+    typedef std::vector<Task*>                       Tasks;
 
     class Thread;
     class Task

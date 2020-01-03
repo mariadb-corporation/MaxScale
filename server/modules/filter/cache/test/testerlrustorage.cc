@@ -83,7 +83,7 @@ int TesterLRUStorage::test_lru(const CacheItems& cache_items, uint64_t size)
 
             if (result == CACHE_RESULT_OK)
             {
-                CACHE_KEY key;
+                CacheKey key;
                 GWBUF* pValue;
                 result = pStorage->get_head(&key, &pValue);
 
@@ -132,7 +132,7 @@ int TesterLRUStorage::test_lru(const CacheItems& cache_items, uint64_t size)
             }
         }
 
-        CACHE_KEY key;
+        CacheKey key;
         GWBUF* pValue;
         result = pStorage->get_tail(&key, &pValue);
 

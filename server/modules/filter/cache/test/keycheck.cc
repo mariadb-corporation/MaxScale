@@ -23,7 +23,7 @@ using namespace std;
 namespace
 {
 
-using StatementsByKeys = unordered_multimap<CACHE_KEY, string>;
+using StatementsByKeys = unordered_multimap<CacheKey, string>;
 
 GWBUF* create_gwbuf(const string& s)
 {
@@ -51,7 +51,7 @@ void run(StatementsByKeys& stats, istream& in)
     while (reader.get_statement(stmt) == mxs::TestReader::RESULT_STMT)
     {
         GWBUF* pStmt = create_gwbuf(stmt);
-        CACHE_KEY key;
+        CacheKey key;
 
         Cache::get_default_key(nullptr, pStmt, &key);
         gwbuf_free(pStmt);

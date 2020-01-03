@@ -65,7 +65,7 @@ int mxs_2727()
     MXB_AT_DEBUG(bool created =) pCache->create_token(&sToken);
     mxb_assert(created);
 
-    CACHE_KEY key;
+    CacheKey key;
     GWBUF* pSelect = create_gwbuf("SELECT * FROM t");
 
     cache_result_t result = pCache->get_key(string(), string(), "test", pSelect, &key);
