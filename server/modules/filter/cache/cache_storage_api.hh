@@ -20,6 +20,7 @@
 
 #include <functional>
 #include <string>
+#include <vector>
 
 #include <maxscale/buffer.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
@@ -84,30 +85,38 @@ public:
         , full_hash(0)
     {}
 
+    /**
+     * @param that  A CacheKey to compare equality with.
+     *
+     * @return True, if @c this is equal to @c that.
+     */
+    bool eq(const CacheKey& that) const;
+
+    /**
+     * @return Human readable version of the key.
+     */
+    std::string to_string() const;
+
+    /**
+     * @return Flat version of the key.
+     */
+    std::vector<char> to_vector() const;
+
     std::string user;      // The user of the value; empty if shared.
     std::string host;      // The host of the user of the value; empty is shared.
     uint64_t    data_hash; // Hash of the default db and GWBUF given to Cache::get_key().
     uint64_t    full_hash; // Hash of the entire CacheKey.
 };
 
-/**
- * Hashes a CacheKey to a size_t
- *
- * @param key  The key to be hashed.
- *
- * @return The corresponding hash.
- */
-size_t cache_key_hash(const CacheKey& key);
+inline bool operator == (const CacheKey& lhs, const CacheKey& rhs)
+{
+    return lhs.eq(rhs);
+}
 
-/**
- * Are two CacheKeys equal.
- *
- * @param lhs One cache key.
- * @param rhs Another cache key.
- *
- * @return True, if the keys are equal.
- */
-bool cache_key_equal_to(const CacheKey& lhs, const CacheKey& rhs);
+inline bool operator != (const CacheKey& lhs, const CacheKey& rhs)
+{
+    return !lhs.eq(rhs);
+}
 
 enum cache_storage_capabilities_t
 {
@@ -483,7 +492,7 @@ struct equal_to<CacheKey>
 {
     bool operator()(const CacheKey& lhs, const CacheKey& rhs) const
     {
-        return cache_key_equal_to(lhs, rhs);
+        return lhs == rhs;
     }
 };
 
@@ -492,19 +501,7 @@ struct hash<CacheKey>
 {
     size_t operator()(const CacheKey& key) const
     {
-        return cache_key_hash(key);
+        return key.full_hash;
     }
 };
-}
-
-std::string cache_key_to_string(const CacheKey& key);
-
-inline bool operator==(const CacheKey& lhs, const CacheKey& rhs)
-{
-    return cache_key_equal_to(lhs, rhs);
-}
-
-inline bool operator!=(const CacheKey& lhs, const CacheKey& rhs)
-{
-    return !(lhs == rhs);
 }
