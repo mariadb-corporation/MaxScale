@@ -433,72 +433,10 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
     return rv;
 }
 
-int CacheFilterSession::clientReply(GWBUF* pData, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+int CacheFilterSession::client_reply_post_process(GWBUF* pData,
+                                                  const mxs::ReplyRoute& down,
+                                                  const mxs::Reply& reply)
 {
-    m_res = m_res ? gwbuf_append(m_res, pData) : pData;
-
-    if (m_state == CACHE_EXPECTING_RESPONSE)
-    {
-        if (reply.is_resultset())
-        {
-            m_state = CACHE_STORING_RESPONSE;
-        }
-        else
-        {
-            // A failed SELECT
-            m_tables.clear();
-            m_state = CACHE_IGNORING_RESPONSE;
-        }
-    }
-
-    if (m_invalidate_now)
-    {
-        // The response to either a COMMIT, or to UPDATE/DELETE/INSERT with
-        // autcommit being true.
-
-        if (reply.is_complete())
-        {
-            // Usually it will be an OK, but we are future proof by accepting result sets as well.
-            if (reply.is_ok() || reply.is_resultset())
-            {
-                if (!m_clear_cache)
-                {
-                    std::vector<std::string> invalidation_words;
-                    std::copy(m_tables.begin(), m_tables.end(), std::back_inserter(invalidation_words));
-
-                    if (m_sCache->invalidate(invalidation_words) == CACHE_RESULT_OK)
-                    {
-                        if (log_decisions())
-                        {
-                            MXS_NOTICE("Cache successfully invalidated.");
-                        }
-                    }
-                    else
-                    {
-                        MXS_WARNING("Failed to invalidate individual cache entries, "
-                                    "the cache will now be cleared.");
-                        m_clear_cache = true;
-                    }
-                }
-
-                if (m_clear_cache)
-                {
-                    if (m_sCache->clear() != CACHE_RESULT_OK)
-                    {
-                        MXS_ERROR("Could not clear the cache, which is now in "
-                                  "inconsistent state. Caching will now be disabled.");
-                        m_use = false;
-                        m_populate = false;
-                    }
-                }
-            }
-
-            m_tables.clear();
-            m_invalidate_now = false;
-            m_clear_cache = false;
-        }
-    }
-
     switch (m_state)
     {
     case CACHE_EXPECTING_NOTHING:
@@ -531,6 +469,129 @@ int CacheFilterSession::clientReply(GWBUF* pData, const mxs::ReplyRoute& down, c
     if (next_response)
     {
         rv = FilterSession::clientReply(next_response, down, reply);
+    }
+
+    return rv;
+}
+
+void CacheFilterSession::clear_cache()
+{
+    if (m_sCache->clear() != CACHE_RESULT_OK)
+    {
+        MXS_ERROR("Could not clear the cache, which is now in "
+                  "inconsistent state. Caching will now be disabled.");
+        m_use = false;
+        m_populate = false;
+    }
+}
+
+void CacheFilterSession::invalidate_handler(cache_result_t result)
+{
+    if (CACHE_RESULT_IS_OK(result))
+    {
+        if (log_decisions())
+        {
+            MXS_NOTICE("Cache successfully invalidated.");
+        }
+    }
+    else
+    {
+        MXS_WARNING("Failed to invalidate individual cache entries, "
+                    "the cache will now be cleared.");
+        clear_cache();
+    }
+}
+
+int CacheFilterSession::clientReply(GWBUF* pData, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+{
+    m_res = m_res ? gwbuf_append(m_res, pData) : pData;
+
+    if (m_state == CACHE_EXPECTING_RESPONSE)
+    {
+        if (reply.is_resultset())
+        {
+            m_state = CACHE_STORING_RESPONSE;
+        }
+        else
+        {
+            // A failed SELECT
+            m_tables.clear();
+            m_state = CACHE_IGNORING_RESPONSE;
+        }
+    }
+
+    int rv = 1;
+
+    bool post_process = true;
+
+    if (m_invalidate_now)
+    {
+        // The response to either a COMMIT, or to UPDATE/DELETE/INSERT with
+        // autcommit being true.
+
+        if (reply.is_complete())
+        {
+            // Usually it will be an OK, but we are future proof by accepting result sets as well.
+            if (reply.is_ok() || reply.is_resultset())
+            {
+                if (!m_clear_cache)
+                {
+                    std::vector<std::string> invalidation_words;
+                    std::copy(m_tables.begin(), m_tables.end(), std::back_inserter(invalidation_words));
+
+                    std::weak_ptr<CacheFilterSession> sWeak { m_sThis };
+
+                    cache_result_t result =
+                        m_sCache->invalidate(invalidation_words, [sWeak, pData](cache_result_t result) {
+                                std::shared_ptr<CacheFilterSession> sThis = sWeak.lock();
+
+                                if (sThis)
+                                {
+                                    sThis->invalidate_handler(result);
+
+                                    // TODO: Not quite ok that we loose all information here.
+                                    // TODO: Something like 'mxs::ReplyRoute* pDown = down.clone()'
+                                    // TODO: is needed.
+                                    mxs::ReplyRoute down;
+                                    mxs::Reply reply;
+
+                                    sThis->client_reply_post_process(pData, down, reply);
+                                }
+                                else
+                                {
+                                    // Ok, so the session was terminated before we got a reply.
+                                    gwbuf_free(pData);
+                                }
+                            });
+
+                    if (CACHE_RESULT_IS_PENDING(result))
+                    {
+                        post_process = false;
+                    }
+                    else
+                    {
+                        invalidate_handler(result);
+                    }
+                }
+                else
+                {
+                    clear_cache();
+                }
+            }
+
+            // Irrespective of whether the invalidation is synchronous or asynchronous,
+            // the following state variables can be reset. If synchronous they must be
+            // reset, if asynchronous it does not matter whether they are reset now or
+            // only after the callback is called.
+            m_tables.clear();
+            m_invalidate_now = false;
+            m_clear_cache = false;
+        }
+    }
+
+    if (post_process)
+    {
+        rv = client_reply_post_process(pData, down, reply);
     }
 
     return rv;

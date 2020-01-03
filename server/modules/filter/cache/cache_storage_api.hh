@@ -337,10 +337,12 @@ public:
      * @param pToken  Token received from @c create_token.
      * @param words   Words that decide what entries are invalidated.
      *
-     * @return CACHE_RESULT_OK if the invalidation succeeded.
+     * @return CACHE_RESULT_OK if the invalidation succeeded, or
+     *         CACHE_RESULT_PENDING if result delivered to cb.
      */
     virtual cache_result_t invalidate(Token* pToken,
-                                      const std::vector<std::string>& words) = 0;
+                                      const std::vector<std::string>& words,
+                                      std::function<void (cache_result_t)> cb = nullptr) = 0;
 
     /**
      * Clear storage

@@ -410,13 +410,16 @@ cache_result_t MemcachedStorage::del_value(Token* pToken,
 }
 
 cache_result_t MemcachedStorage::invalidate(Token* pToken,
-                                            const std::vector<std::string>& words)
+                                            const std::vector<std::string>& words,
+                                            std::function<void (cache_result_t)>)
 {
+    mxb_assert(!true);
     return CACHE_RESULT_ERROR;
 }
 
 cache_result_t MemcachedStorage::clear(Token* pToken)
 {
+    mxb_assert(!true);
     return CACHE_RESULT_ERROR;
 }
 

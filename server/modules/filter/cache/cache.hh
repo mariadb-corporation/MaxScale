@@ -189,7 +189,8 @@ public:
      * See @Storage::invalidate
      */
     virtual cache_result_t invalidate(Token* pToken,
-                                      const std::vector<std::string>& words) = 0;
+                                      const std::vector<std::string>& words,
+                                      std::function<void (cache_result_t)> cb = nullptr) = 0;
 
     /**
      * See @Storage::clear

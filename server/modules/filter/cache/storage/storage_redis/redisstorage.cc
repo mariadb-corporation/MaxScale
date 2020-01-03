@@ -272,7 +272,8 @@ public:
                             break;
 
                         default:
-                            MXS_WARNING("Unexpected number of values - %lld - deleted with one key,", pRrv->integer);
+                            MXS_WARNING("Unexpected number of values - %lld - deleted with one key,",
+                                        pRrv->integer);
                             /* FLOWTHROUGH */
                         case 1:
                             rv = CACHE_RESULT_OK;
@@ -465,7 +466,8 @@ cache_result_t RedisStorage::del_value(Token* pToken,
 }
 
 cache_result_t RedisStorage::invalidate(Token* pToken,
-                                        const vector<string>& words)
+                                        const vector<string>& words,
+                                        std::function<void (cache_result_t)> cb)
 {
     return CACHE_RESULT_ERROR;
 }

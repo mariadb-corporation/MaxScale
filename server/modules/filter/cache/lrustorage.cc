@@ -308,7 +308,7 @@ public:
 
         if (rv)
         {
-            if (m_owner.storage()->invalidate(nullptr, words) != CACHE_RESULT_OK)
+            if (m_owner.storage()->invalidate(nullptr, words, nullptr) != CACHE_RESULT_OK)
             {
                 rv = false;
             }

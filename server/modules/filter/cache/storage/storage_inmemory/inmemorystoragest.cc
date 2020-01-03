@@ -65,7 +65,8 @@ cache_result_t InMemoryStorageST::del_value(Token* pToken,
 }
 
 cache_result_t InMemoryStorageST::invalidate(Token* pToken,
-                                             const std::vector<std::string>& words)
+                                             const std::vector<std::string>& words,
+                                             std::function<void (cache_result_t)>)
 {
     return do_invalidate(pToken, words);
 }

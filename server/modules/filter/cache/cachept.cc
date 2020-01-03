@@ -164,9 +164,10 @@ cache_result_t CachePT::del_value(Token* pToken,
 }
 
 cache_result_t CachePT::invalidate(Token* pToken,
-                                   const std::vector<std::string>& words)
+                                   const std::vector<std::string>& words,
+                                   std::function<void (cache_result_t)> cb)
 {
-    return thread_cache().invalidate(pToken, words);
+    return thread_cache().invalidate(pToken, words, cb);
 }
 
 cache_result_t CachePT::clear(Token* pToken)

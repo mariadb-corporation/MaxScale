@@ -57,7 +57,8 @@ public:
                              std::function<void (cache_result_t)> cb) override;
 
     cache_result_t invalidate(Token* pToken,
-                              const std::vector<std::string>& words) override;
+                              const std::vector<std::string>& words,
+                              std::function<void (cache_result_t)> cb) override;
 
     cache_result_t clear(Token* pToken) override;
 

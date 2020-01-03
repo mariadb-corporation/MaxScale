@@ -42,7 +42,8 @@ public:
                              const CACHE_KEY& key,
                              std::function<void (cache_result_t)> cb) override final;
     cache_result_t invalidate(Token* pToken,
-                              const std::vector<std::string>& words) override final;
+                              const std::vector<std::string>& words,
+                              std::function<void (cache_result_t)> cb) override final;
     cache_result_t clear(Token* pToken) override final;
 
 private:

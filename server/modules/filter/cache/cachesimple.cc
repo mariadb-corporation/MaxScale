@@ -85,9 +85,10 @@ cache_result_t CacheSimple::del_value(Token* pToken,
 }
 
 cache_result_t CacheSimple::invalidate(Token* pToken,
-                                       const std::vector<std::string>& words)
+                                       const std::vector<std::string>& words,
+                                       std::function<void (cache_result_t)> cb)
 {
-    return m_pStorage->invalidate(pToken, words);
+    return m_pStorage->invalidate(pToken, words, cb);
 }
 
 cache_result_t CacheSimple::clear(Token* pToken)

@@ -111,9 +111,10 @@ public:
     /**
      * @see Cache::invalidate
      */
-    cache_result_t invalidate(const std::vector<std::string>& words)
+    cache_result_t invalidate(const std::vector<std::string>& words,
+                              std::function<void (cache_result_t)> cb)
     {
-        return m_cache.invalidate(token(), words);
+        return m_cache.invalidate(token(), words, cb);
     }
 
     /**

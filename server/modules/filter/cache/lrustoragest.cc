@@ -67,7 +67,8 @@ cache_result_t LRUStorageST::del_value(Token* pToken,
 }
 
 cache_result_t LRUStorageST::invalidate(Token* pToken,
-                                        const std::vector<std::string>& words)
+                                        const std::vector<std::string>& words,
+                                        std::function<void (cache_result_t)>)
 {
     return LRUStorage::do_invalidate(pToken, words);
 }

@@ -73,7 +73,8 @@ cache_result_t InMemoryStorageMT::del_value(Token* pToken,
 }
 
 cache_result_t InMemoryStorageMT::invalidate(Token* pToken,
-                                             const std::vector<std::string>& words)
+                                             const std::vector<std::string>& words,
+                                             std::function<void (cache_result_t)>)
 {
     std::lock_guard<std::mutex> guard(m_lock);
 
