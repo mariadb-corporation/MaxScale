@@ -26,27 +26,6 @@ using std::vector;
 namespace
 {
 
-vector<char> get_memcached_key(const CacheKey& key)
-{
-    vector<char> mkey;
-    mkey.reserve(key.user.size() + key.host.size() + sizeof(uint64_t) + sizeof(uint64_t));
-
-    auto it = std::back_inserter(mkey);
-
-    const char* p;
-
-    p = key.user.c_str();
-    std::copy(p, p + key.user.size(), it);
-    p = key.host.c_str();
-    std::copy(p, p + key.host.size(), it);
-    p = reinterpret_cast<const char*>(&key.data_hash);
-    std::copy(p, p + sizeof(key.data_hash), it);
-    p = reinterpret_cast<const char*>(&key.full_hash);
-    std::copy(p, p + sizeof(key.full_hash), it);
-
-    return mkey;
-}
-
 class MemcachedToken : public std::enable_shared_from_this<MemcachedToken>,
                        public Storage::Token
 {
@@ -107,7 +86,7 @@ public:
                              GWBUF** ppValue,
                              std::function<void (cache_result_t, GWBUF*)> cb)
     {
-        vector<char> mkey = get_memcached_key(key);
+        vector<char> mkey = key.to_vector();
 
         auto sThis = get_shared();
 
@@ -174,7 +153,7 @@ public:
                              const GWBUF* pValue,
                              std::function<void (cache_result_t)> cb)
     {
-        vector<char> mkey = get_memcached_key(key);
+        vector<char> mkey = key.to_vector();
 
         GWBUF* pClone = gwbuf_clone(const_cast<GWBUF*>(pValue));
         MXS_ABORT_IF_NULL(pClone);
@@ -220,7 +199,7 @@ public:
     cache_result_t del_value(const CacheKey& key,
                              std::function<void (cache_result_t)> cb)
     {
-        vector<char> mkey = get_memcached_key(key);
+        vector<char> mkey = key.to_vector();
 
         auto sThis = get_shared();
 
