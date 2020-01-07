@@ -1508,3 +1508,51 @@ bool Rpl::table_matches(const std::string& ident)
 
     return rval;
 }
+
+tok::Type Rpl::next()
+{
+    return parser.tokens.front().type();
+}
+
+tok::Tokenizer::Token Rpl::chomp()
+{
+    return parser.tokens.chomp();
+}
+
+tok::Tokenizer::Token Rpl::assume(tok::Type t)
+{
+    if (next() != t)
+    {
+        throw ParsingError("Expected " + tok::Tokenizer::Token::to_string(t)
+                           + ", got " + parser.tokens.front().to_string());
+    }
+
+    return chomp();
+}
+
+bool Rpl::expect(const std::vector<tok::Type>& types)
+{
+    bool rval = true;
+    auto it = parser.tokens.begin();
+
+    for (auto t : types)
+    {
+        if (it == parser.tokens.end() || it->type() != t)
+        {
+            rval = false;
+            break;
+        }
+
+        ++it;
+    }
+
+    return rval;
+}
+
+void Rpl::discard(const std::unordered_set<tok::Type>& types)
+{
+    while (types.count(next()))
+    {
+        chomp();
+    }
+}

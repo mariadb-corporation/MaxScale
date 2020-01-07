@@ -18,10 +18,13 @@
 #include <sstream>
 #include <memory>
 #include <unordered_map>
+#include <exception>
 
 #include <maxscale/pcre2.hh>
 #include <maxscale/service.hh>
 #include <binlog_common.hh>
+
+#include "tokenizer.hh"
 
 typedef std::vector<uint8_t> Bytes;
 
@@ -229,6 +232,11 @@ typedef std::auto_ptr<RowEventHandler> SRowEventHandler;
 class Rpl
 {
 public:
+    class ParsingError : public std::runtime_error
+    {
+        using std::runtime_error::runtime_error;
+    };
+
     Rpl(const Rpl&) = delete;
     Rpl& operator=(const Rpl&) = delete;
 
@@ -294,4 +302,17 @@ private:
     bool              table_create_alter(STableCreateEvent create, const char* sql, const char* end);
     void              table_create_rename(const std::string& db, const char* sql, const char* end);
     bool              table_matches(const std::string& ident);
+
+    // SQL parsing related variables and methods
+    struct
+    {
+        tok::Tokenizer::Chain tokens;
+    } parser;
+
+    // Utility functions used by the parser
+    tok::Type             next();
+    tok::Tokenizer::Token chomp();
+    tok::Tokenizer::Token assume(tok::Type t);
+    bool                  expect(const std::vector<tok::Type>&);
+    void                  discard(const std::unordered_set<tok::Type>& types);
 };
