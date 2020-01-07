@@ -74,7 +74,7 @@ struct
 };
 }
 
-//static
+// static
 const int Session::N_LOAD;
 
 MXS_SESSION::MXS_SESSION(const std::string& host, SERVICE* service)
@@ -739,11 +739,11 @@ public:
                 DelayedRoutingTask* task = this;
 
                 m_session->worker()->execute([task]() {
-                        if (task->execute() == DISPOSE)
-                        {
-                            delete task;
-                        }
-                    }, mxb::Worker::EXECUTE_QUEUED);
+                                                 if (task->execute() == DISPOSE)
+                                                 {
+                                                     delete task;
+                                                 }
+                                             }, mxb::Worker::EXECUTE_QUEUED);
 
                 action = RETAIN;
             }
@@ -1631,7 +1631,6 @@ bool enable_events(const std::vector<DCB*>& dcbs)
 
     return enabled;
 }
-
 }
 
 bool Session::move_to(RoutingWorker* pTo)
@@ -1667,27 +1666,27 @@ bool Session::move_to(RoutingWorker* pTo)
 
     pFrom->session_registry().remove(id());
 
-    m_worker = pTo; // Set before the move-operation, see DelayedRoutingTask.
+    m_worker = pTo;     // Set before the move-operation, see DelayedRoutingTask.
 
     bool posted = pTo->execute([this, pFrom, pTo, to_be_enabled]() {
-            pTo->session_registry().add(this);
+                                   pTo->session_registry().add(this);
 
-            m_client_conn->dcb()->set_owner(pTo);
-            m_client_conn->dcb()->set_manager(pTo);
+                                   m_client_conn->dcb()->set_owner(pTo);
+                                   m_client_conn->dcb()->set_manager(pTo);
 
-            for (mxs::BackendConnection* pBackend_conn : m_backends_conns)
-            {
-                pBackend_conn->dcb()->set_owner(pTo);
-                pBackend_conn->dcb()->set_manager(pTo);
-            }
+                                   for (mxs::BackendConnection* pBackend_conn : m_backends_conns)
+                                   {
+                                       pBackend_conn->dcb()->set_owner(pTo);
+                                       pBackend_conn->dcb()->set_manager(pTo);
+                                   }
 
-            if (!enable_events(to_be_enabled))
-            {
-                kill();
-            }
+                                   if (!enable_events(to_be_enabled))
+                                   {
+                                       kill();
+                                   }
 
-            MXS_NOTICE("Moved session from %d to %d.", pFrom->id(), pTo->id());
-        }, mxb::Worker::EXECUTE_QUEUED);
+                                   MXS_NOTICE("Moved session from %d to %d.", pFrom->id(), pTo->id());
+                               }, mxb::Worker::EXECUTE_QUEUED);
 
     if (!posted)
     {

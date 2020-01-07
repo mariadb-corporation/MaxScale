@@ -313,29 +313,22 @@ AuthRes MariaDBClientAuthenticator::authenticate(DCB* generic_dcb, const UserEnt
 
     if (auth_ret != AuthRes::SUCCESS && dcb->service()->config().log_auth_warnings)
     {
-        // The default failure is a `User not found` one
-        char extra[256] = "User not found.";
-
-        if (auth_ret == AuthRes::FAIL_WRONG_PW)
-        {
-            strcpy(extra, "Wrong password.");
-        }
+        std::string extra = auth_ret == AuthRes::FAIL_WRONG_PW ? "Wrong password." : "User not found.";
+        std::string db = !session->db.empty() ? " to database '" + session->db + "'" : "";
 
         MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE,
-                      "%s: login attempt for user '%s'@[%s]:%d, authentication failed. %s",
+                      "%s: login attempt for user '%s'@[%s]:%d%s, authentication failed. %s",
                       dcb->service()->name(),
                       session->user.c_str(),
                       dcb->remote().c_str(),
                       static_cast<ClientDCB*>(dcb)->port(),
-                      extra);
+                      db.c_str(), extra.c_str());
 
-        if (is_localhost_address(&dcb->ip())
-            && !dcb->service()->config().localhost_match_wildcard_host)
+        if (is_localhost_address(&dcb->ip()) && !dcb->service()->config().localhost_match_wildcard_host)
         {
             MXS_NOTICE("If you have a wildcard grant that covers this address, "
                        "try adding 'localhost_match_wildcard_host=true' for "
-                       "service '%s'. ",
-                       dcb->service()->name());
+                       "service '%s'. ", dcb->service()->name());
         }
     }
     return auth_ret;
