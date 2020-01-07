@@ -968,56 +968,7 @@ void Rpl::handle_query_event(REP_HEADER* hdr, uint8_t* ptr)
         }
     }
 
-    char ident[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 2];
-    read_table_identifier(db, sql, sql + len, ident, sizeof(ident));
-
-    if (is_create_table_statement(m_create_table_re, sql, len))
-    {
-        STableCreateEvent created;
-
-        if (is_create_like_statement(sql, len))
-        {
-            created = table_create_copy(sql, len, db);
-        }
-        else if (is_create_as_statement(sql, len))
-        {
-            static bool warn_create_as = true;
-            if (warn_create_as)
-            {
-                MXS_WARNING("`CREATE TABLE AS` is not yet supported, ignoring events to this table: %.*s",
-                            len,
-                            sql);
-                warn_create_as = false;
-            }
-        }
-        else
-        {
-            created = table_create_alloc(ident, sql, len);
-        }
-
-        if (created && !save_and_replace_table_create(created))
-        {
-            MXS_ERROR("Failed to save statement to disk: %.*s", len, sql);
-        }
-    }
-    else if (is_alter_table_statement(m_alter_table_re, sql, len))
-    {
-        auto it = m_created_tables.find(ident);
-
-        if (it != m_created_tables.end())
-        {
-            table_create_alter(it->second, sql, sql + len);
-        }
-        else
-        {
-            MXS_ERROR("Alter statement to table '%s' has no preceding create statement.", ident);
-        }
-    }
-    else if (is_rename_table_statement(sql))
-    {
-        table_create_rename(db, sql, sql + len);
-    }
-
+    parse_sql(sql, db);
     MXS_FREE(tmp);
 }
 
