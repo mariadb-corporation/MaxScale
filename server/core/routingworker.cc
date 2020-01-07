@@ -1372,7 +1372,8 @@ void RoutingWorker::rebalance()
     mxb_assert(m_rebalance.pTo);
     mxb_assert(m_rebalance.perform);
 
-    if (m_rebalance.nSessions == 1)
+    const int n_requested_moves = m_rebalance.nSessions;
+    if (n_requested_moves == 1)
     {
         // Just one, move the most active one.
         int max_io_activity = 0;
@@ -1380,14 +1381,16 @@ void RoutingWorker::rebalance()
 
         for (auto& kv : m_sessions)
         {
-            Session* pSession = static_cast<Session*>(kv.second);
-
-            int io_activity = pSession->io_activity();
-
-            if (io_activity > max_io_activity)
+            auto pSession = static_cast<Session*>(kv.second);
+            if (pSession->is_movable())
             {
-                max_io_activity = io_activity;
-                pMax_session = pSession;
+                int io_activity = pSession->io_activity();
+
+                if (io_activity > max_io_activity)
+                {
+                    max_io_activity = io_activity;
+                    pMax_session = pSession;
+                }
             }
         }
 
@@ -1395,8 +1398,13 @@ void RoutingWorker::rebalance()
         {
             pMax_session->move_to(m_rebalance.pTo);
         }
+        else if (!m_sessions.empty())
+        {
+            MXB_INFO("Could not move any sessions from worker %i because all its sessions are in an "
+                     "unmovable state.", m_id);
+        }
     }
-    else if (m_rebalance.nSessions > 0)
+    else if (n_requested_moves > 1)
     {
         // TODO: Move all sessions in one message to recipient worker.
 
@@ -1405,12 +1413,25 @@ void RoutingWorker::rebalance()
         // If more than one, just move enough sessions is arbitrary order.
         for (auto& kv : m_sessions)
         {
-            sessions.push_back(static_cast<Session*>(kv.second));
-
-            if (--m_rebalance.nSessions == 0)
+            auto pSession = static_cast<Session*>(kv.second);
+            if (pSession->is_movable())
             {
-                break;
+                sessions.push_back(pSession);
+                if (sessions.size() == (size_t)n_requested_moves)
+                {
+                    break;
+                }
             }
+        }
+
+        int n_available_sessions = m_sessions.size();
+        int n_movable_sessions = sessions.size();
+        if (n_movable_sessions < n_requested_moves && n_available_sessions >= n_requested_moves)
+        {
+            // Had enough sessions but some were not movable.
+            int non_movable = n_available_sessions - n_movable_sessions;
+            MXB_INFO("%i session(s) out of %i on worker %i are in an unmovable state.",
+                     non_movable, n_available_sessions, m_id);
         }
 
         for (auto* pSession : sessions)

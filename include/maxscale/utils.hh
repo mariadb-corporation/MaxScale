@@ -312,6 +312,11 @@ public:
         return m_registry.empty();
     }
 
+    auto size() const
+    {
+        return m_registry.size();
+    }
+
 private:
     ContainerType m_registry;
 };

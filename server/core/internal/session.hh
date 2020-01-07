@@ -195,6 +195,15 @@ public:
     int io_activity() const;
 
     /**
+     * Can the session be moved to another thread. The function should be called from the thread
+     * currently running the session to get up-to-date results. Any event processing on
+     * the session may change the movable-status.
+     *
+     * @return True if session can be moved
+     */
+    bool is_movable() const;
+
+    /**
      * With this function, a session can be moved from the worker it is
      * currently handled by, to another.
      *

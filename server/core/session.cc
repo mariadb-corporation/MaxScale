@@ -1703,3 +1703,20 @@ bool Session::move_to(RoutingWorker* pTo)
 
     return posted;
 }
+
+bool Session::is_movable() const
+{
+    if (m_client_conn && !m_client_conn->is_movable())
+    {
+        return false;
+    }
+
+    for (auto backend_conn : m_backends_conns)
+    {
+        if (!backend_conn->is_movable())
+        {
+            return false;
+        }
+    }
+    return true;
+}

@@ -57,6 +57,16 @@ public:
     virtual json_t* diagnostics() const = 0;
 
     virtual void set_dcb(DCB* dcb) = 0;
+
+    /**
+     * Can the connection be moved to another thread.
+     *
+     * @return True if connection can be moved
+     */
+    virtual bool is_movable() const
+    {
+        return true;
+    }
 };
 }
 /**

@@ -54,6 +54,7 @@ public:
     void    finish_connection() override;
     int32_t connlimit(int limit) override;
     void    wakeup() override;
+    bool    is_movable() const override;
 
     std::string current_db() const override;
 
