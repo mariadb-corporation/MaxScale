@@ -25,10 +25,7 @@
 #define UPDATE_EVENT_AFTER 2
 #define DELETE_EVENT       3
 
-static bool warn_decimal = false;       /**< Remove when support for DECIMAL is added */
 static bool warn_bit = false;           /**< Remove when support for BIT is added */
-static bool warn_large_enumset = false; /**< Remove when support for ENUM/SET values
-                                         * larger than 255 is added */
 
 /**
  * @brief Get row event name
@@ -729,86 +726,6 @@ bool Rpl::handle_row_event(REP_HEADER* hdr, uint8_t* ptr)
     }
 
     return rval;
-}
-
-/**
- * @brief Detection of table creation statements
- * @param router Avro router instance
- * @param ptr Pointer to statement
- * @param len Statement length
- * @return True if the statement creates a new table
- */
-bool is_create_table_statement(pcre2_code* create_table_re, char* ptr, size_t len)
-{
-    int rc = 0;
-    pcre2_match_data* mdata = pcre2_match_data_create_from_pattern(create_table_re, NULL);
-
-    if (mdata)
-    {
-        rc = pcre2_match(create_table_re, (PCRE2_SPTR) ptr, len, 0, 0, mdata, NULL);
-        pcre2_match_data_free(mdata);
-    }
-
-    return rc > 0;
-}
-
-bool is_create_like_statement(const char* ptr, size_t len)
-{
-    char sql[len + 1];
-    memcpy(sql, ptr, len);
-    sql[len] = '\0';
-
-    // This is not pretty but it should work
-    return strcasestr(sql, " like ") || strcasestr(sql, "(like ");
-}
-
-bool is_create_as_statement(const char* ptr, size_t len)
-{
-    int err = 0;
-    char sql[len + 1];
-    memcpy(sql, ptr, len);
-    sql[len] = '\0';
-    const char* pattern
-        =   // Case-insensitive mode
-            "(?i)"
-            // Main CREATE TABLE part (the \s is for any whitespace)
-            "create\\stable\\s"
-            // Optional IF NOT EXISTS
-            "(if\\snot\\sexists\\s)?"
-            // The table name with optional database name, both enclosed in optional backticks
-            "(`?\\S+`?.)`?\\S+`?\\s"
-            // And finally the AS keyword
-            "as";
-
-    return mxs_pcre2_simple_match(pattern, sql, 0, &err) == MXS_PCRE2_MATCH;
-}
-
-/**
- * @brief Detection of table alteration statements
- * @param router Avro router instance
- * @param ptr Pointer to statement
- * @param len Statement length
- * @return True if the statement alters a table
- */
-bool is_alter_table_statement(pcre2_code* alter_table_re, char* ptr, size_t len)
-{
-    int rc = 0;
-    pcre2_match_data* mdata = pcre2_match_data_create_from_pattern(alter_table_re, NULL);
-
-    if (mdata)
-    {
-        rc = pcre2_match(alter_table_re, (PCRE2_SPTR) ptr, len, 0, 0, mdata, NULL);
-        pcre2_match_data_free(mdata);
-    }
-
-    return rc > 0;
-}
-
-bool is_rename_table_statement(const char* sql)
-{
-    int err = 0;
-    const char* pattern = "(?i)^\\s*rename\\s*table\\s*";
-    return mxs_pcre2_simple_match(pattern, sql, 0, &err) == MXS_PCRE2_MATCH;
 }
 
 /** Database name offset */

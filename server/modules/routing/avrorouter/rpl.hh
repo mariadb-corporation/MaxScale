@@ -73,9 +73,6 @@ struct Column
     bool        is_unsigned;
     bool        first = false;
     std::string after;
-
-    json_t*       to_json() const;
-    static Column from_json(json_t* json);
 };
 
 struct TableCreateEvent;
@@ -102,22 +99,6 @@ struct TableCreateEvent
     {
         return database + '.' + table;
     }
-
-    /**
-     * Convert to JSON
-     *
-     * @return JSON representation of this object
-     */
-    json_t* to_json() const;
-
-    /**
-     * Convert from JSON
-     *
-     * @param json JSON to convert from
-     *
-     * @return Object representation of JSON if it is valid or empty pointer if invalid.
-     */
-    static STableCreateEvent from_json(json_t* json);
 
     std::vector<Column> columns;
     std::string         table;
@@ -279,8 +260,6 @@ public:
 private:
     SRowEventHandler  m_handler;
     SERVICE*          m_service;
-    pcre2_code*       m_create_table_re;
-    pcre2_code*       m_alter_table_re;
     uint8_t           m_binlog_checksum;
     uint8_t           m_event_types;
     Bytes             m_event_type_hdr_lens;
@@ -295,15 +274,12 @@ private:
 
     std::unordered_map<std::string, int> m_versions;    // Table version numbers per identifier
 
-    void              handle_query_event(REP_HEADER* hdr, uint8_t* ptr);
-    bool              handle_table_map_event(REP_HEADER* hdr, uint8_t* ptr);
-    bool              handle_row_event(REP_HEADER* hdr, uint8_t* ptr);
-    STableCreateEvent table_create_copy(const char* sql, size_t len, const char* db);
-    bool              save_and_replace_table_create(STableCreateEvent created);
-    bool              rename_table_create(STableCreateEvent created, const std::string& old_id);
-    bool              table_create_alter(STableCreateEvent create, const char* sql, const char* end);
-    void              table_create_rename(const std::string& db, const char* sql, const char* end);
-    bool              table_matches(const std::string& ident);
+    void handle_query_event(REP_HEADER* hdr, uint8_t* ptr);
+    bool handle_table_map_event(REP_HEADER* hdr, uint8_t* ptr);
+    bool handle_row_event(REP_HEADER* hdr, uint8_t* ptr);
+    bool save_and_replace_table_create(STableCreateEvent created);
+    bool rename_table_create(STableCreateEvent created, const std::string& old_id);
+    bool table_matches(const std::string& ident);
 
     // SQL parsing related variables and methods
     struct

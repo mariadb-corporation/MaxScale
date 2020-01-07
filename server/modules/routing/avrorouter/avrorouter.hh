@@ -197,18 +197,12 @@ void read_table_info(uint8_t* ptr,
                      char* dest,
                      size_t len);
 TableMapEvent*    table_map_alloc(uint8_t* ptr, uint8_t hdr_len, TableCreateEvent* create);
-STableCreateEvent table_create_alloc(char* ident, const char* sql, int len);
 bool              table_create_save(TableCreateEvent* create, const char* filename);
-bool              table_create_alter(TableCreateEvent* create, const char* sql, const char* end);
 TableCreateEvent* table_create_from_schema(const char* file,
                                            const char* db,
                                            const char* table,
                                            int version);
-void read_table_identifier(const char* db,
-                           const char* sql,
-                           const char* end,
-                           char* dest,
-                           int size);
+
 int               avro_client_handle_request(Avro*, AvroSession*, GWBUF*);
 void              avro_client_rotate(Avro* router, AvroSession* client, uint8_t* ptr);
 bool              avro_open_binlog(const char* binlogdir, const char* file, int* fd);
