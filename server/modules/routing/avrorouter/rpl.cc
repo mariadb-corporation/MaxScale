@@ -1509,6 +1509,61 @@ bool Rpl::table_matches(const std::string& ident)
     return rval;
 }
 
+// Sanitizes the SQL field names for Avro usage
+static std::string avro_sanitizer(const char* s, int l)
+{
+    std::string str(s, l);
+
+    for (auto& a : str)
+    {
+        if (!isalnum(a) && a != '_')
+        {
+            a = '_';
+        }
+    }
+
+    if (is_reserved_word(str.c_str()))
+    {
+        str += '_';
+    }
+
+    return str;
+}
+
+void Rpl::parse_sql(const char* sql, const char* db)
+{
+    MXS_INFO("%s", sql);
+    parser.db = db;
+    parser.tokens = tok::Tokenizer::tokenize(sql, avro_sanitizer);
+
+    try
+    {
+        switch (chomp().type())
+        {
+        case tok::REPLACE:
+        case tok::CREATE:
+            discard({tok::OR, tok::REPLACE});
+            assume(tok::TABLE);
+            discard({tok::IF, tok::NOT, tok::EXISTS});
+            create_table();
+            break;
+
+        case tok::DROP:
+            assume(tok::TABLE);
+            discard({tok::IF, tok::EXISTS});
+            drop_table();
+            break;
+
+        default:
+            break;
+        }
+    }
+    catch (const ParsingError& err)
+    {
+        MXS_INFO("Parsing failed: %s (%s)", err.what(), sql);
+    }
+}
+
 tok::Type Rpl::next()
 {
     return parser.tokens.front().type();
@@ -1554,5 +1609,147 @@ void Rpl::discard(const std::unordered_set<tok::Type>& types)
     while (types.count(next()))
     {
         chomp();
+    }
+}
+
+void Rpl::parentheses()
+{
+    if (next() == tok::LP)
+    {
+        chomp();
+        int depth = 1;
+
+        while (next() != tok::EXHAUSTED && depth > 0)
+        {
+            switch (chomp().type())
+            {
+            case tok::LP:
+                depth++;
+                break;
+
+            case tok::RP:
+                depth--;
+                break;
+
+            default:
+                break;
+            }
+        }
+
+        if (depth > 0)
+        {
+            throw ParsingError("Could not find closing parenthesis");
+        }
+    }
+}
+
+void Rpl::table_identifier()
+{
+    if (expect({tok::ID, tok::DOT, tok::ID}))
+    {
+        parser.db = chomp().value();
+        chomp();
+        parser.table = chomp().value();
+    }
+    else if (expect({tok::ID}))
+    {
+        parser.table = chomp().value();
+    }
+    else
+    {
+        throw ParsingError("Syntax error, have " + parser.tokens.front().to_string()
+                           + " expected identifier");
+    }
+}
+
+Column Rpl::column_def()
+{
+    Column c(assume(tok::ID).value());
+    parentheses();      // Field length, if defined
+    c.is_unsigned = next() == tok::UNSIGNED;
+
+    // Ignore the rest of the field definition, we aren't interested in it
+    while (next() != tok::EXHAUSTED)
+    {
+        parentheses();
+
+        switch (chomp().type())
+        {
+        case tok::COMMA:
+        case tok::AFTER:
+        case tok::FIRST:
+            // Stop consuming tokens in case we hit the end of the field definition
+            return c;
+
+        default:
+            break;
+        }
+    }
+
+    return c;
+}
+
+void Rpl::create_table()
+{
+    table_identifier();
+
+    if (expect({tok::LIKE}) || expect({tok::LP, tok::LIKE}))
+    {
+        // CREATE TABLE ... LIKE ...
+        if (chomp().type() == tok::LP)
+        {
+            chomp();
+        }
+
+        auto new_db = parser.db;
+        auto new_table = parser.table;
+        table_identifier();
+        auto old_db = parser.db;
+        auto old_table = parser.table;
+
+        do_create_table_like(old_db, old_table, new_db, new_table);
+    }
+    else
+    {
+        // CREATE TABLE ...
+        assume(tok::LP);
+        do_create_table();
+    }
+}
+
+void Rpl::drop_table()
+{
+    table_identifier();
+    m_created_tables.erase(parser.db + '.' + parser.table);
+}
+
+void Rpl::do_create_table()
+{
+    std::vector<Column> columns;
+
+    do
+    {
+        columns.push_back(column_def());
+    }
+    while (next() == tok::ID);
+
+    STableCreateEvent tbl(new TableCreateEvent(parser.db, parser.table, 0, std::move(columns)));
+    save_and_replace_table_create(tbl);
+}
+
+void Rpl::do_create_table_like(const std::string& old_db, const std::string& old_table,
+                               const std::string& new_db, const std::string& new_table)
+{
+    auto it = m_created_tables.find(old_db + '.' + old_table);
+
+    if (it != m_created_tables.end())
+    {
+        auto cols = it->second->columns;
+        STableCreateEvent tbl(new TableCreateEvent(new_db, new_table, 1, std::move(cols)));
+        save_and_replace_table_create(tbl);
+    }
+    else
+    {
+        MXS_ERROR("Could not find source table %s.%s", parser.db.c_str(), parser.table.c_str());
     }
 }

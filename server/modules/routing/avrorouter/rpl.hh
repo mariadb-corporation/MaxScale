@@ -306,8 +306,13 @@ private:
     // SQL parsing related variables and methods
     struct
     {
+        std::string           db;
+        std::string           table;
         tok::Tokenizer::Chain tokens;
     } parser;
+
+    // The main parsing function
+    void parse_sql(const char* sql, const char* db);
 
     // Utility functions used by the parser
     tok::Type             next();
@@ -315,4 +320,16 @@ private:
     tok::Tokenizer::Token assume(tok::Type t);
     bool                  expect(const std::vector<tok::Type>&);
     void                  discard(const std::unordered_set<tok::Type>& types);
+
+    // Methods that define the grammar
+    void   table_identifier();
+    void   parentheses();
+    Column column_def();
+    void   create_table();
+    void   drop_table();
+
+    // Non-parsing methods called by the parser
+    void do_create_table();
+    void do_create_table_like(const std::string& old_db, const std::string& old_table,
+                              const std::string& new_db, const std::string& new_table);
 };
