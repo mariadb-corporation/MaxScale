@@ -195,6 +195,10 @@ following fields.
 * `data.attributes.account`
   * Set to `admin` for administrative users and `basic` to read-only users
 
+Only admin accounts can perform POST, PUT, DELETE and PATCH requests. If a basic
+account performs one of the aforementioned request, the REST API will respond
+with a `401 Unauthorized` error.
+
 Here is an example request body defining the network user _my-user_ with the
 password _my-password_ that is allowed to execute only read-only operations.
 
