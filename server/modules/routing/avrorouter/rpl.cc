@@ -1548,10 +1548,21 @@ void Rpl::parse_sql(const char* sql, const char* db)
             create_table();
             break;
 
+        case tok::ALTER:
+            discard({tok::ONLINE, tok::IGNORE});
+            assume(tok::TABLE);
+            alter_table();
+            break;
+
         case tok::DROP:
             assume(tok::TABLE);
             discard({tok::IF, tok::EXISTS});
             drop_table();
+            break;
+
+        case tok::RENAME:
+            assume(tok::TABLE);
+            rename_table();
             break;
 
         default:
@@ -1676,10 +1687,15 @@ Column Rpl::column_def()
         switch (chomp().type())
         {
         case tok::COMMA:
-        case tok::AFTER:
-        case tok::FIRST:
-            // Stop consuming tokens in case we hit the end of the field definition
             return c;
+
+        case tok::AFTER:
+            c.after = assume(tok::ID).value();
+            break;
+
+        case tok::FIRST:
+            c.first = true;
+            break;
 
         default:
             break;
@@ -1723,6 +1739,151 @@ void Rpl::drop_table()
     m_created_tables.erase(parser.db + '.' + parser.table);
 }
 
+void Rpl::alter_table()
+{
+    table_identifier();
+
+    auto it = m_created_tables.find(parser.db + '.' + parser.table);
+
+    if (it == m_created_tables.end())
+    {
+        throw ParsingError("Table not found: " + parser.db + '.' + parser.table);
+    }
+
+    auto create = it->second;
+    bool updated = false;
+
+    while (next() != tok::EXHAUSTED)
+    {
+        switch (chomp().type())
+        {
+        case tok::ADD:
+            discard({tok::COLUMN, tok::IF, tok::NOT, tok::EXISTS});
+
+            if (next() == tok::ID || next() == tok::LP)
+            {
+                alter_table_add_column(create);
+                updated = true;
+            }
+            break;
+
+        case tok::DROP:
+            discard({tok::COLUMN, tok::IF, tok::EXISTS});
+
+            if (next() == tok::ID)
+            {
+                alter_table_drop_column(create);
+                updated = true;
+            }
+            break;
+
+        case tok::MODIFY:
+            discard({tok::COLUMN, tok::IF, tok::EXISTS});
+
+            if (next() == tok::ID)
+            {
+                alter_table_modify_column(create);
+                updated = true;
+            }
+            break;
+
+        case tok::CHANGE:
+            discard({tok::COLUMN, tok::IF, tok::EXISTS});
+
+            if (next() == tok::ID)
+            {
+                alter_table_change_column(create);
+                updated = true;
+            }
+            break;
+
+        case tok::RENAME:
+            {
+                auto old_db = parser.db;
+                auto old_table = parser.table;
+                discard({tok::TO});
+
+                table_identifier();
+                auto new_db = parser.db;
+                auto new_table = parser.table;
+                discard({tok::COMMA});
+
+                do_table_rename(old_db, old_table, old_db, new_table);
+            }
+            break;
+
+        default:
+            break;
+        }
+    }
+
+    if (updated && create->was_used)
+    {
+        // The ALTER statement can modify multiple parts of the table which is why we synchronize the table
+        // only once we've fully processed the statement. In addition to this, the table is only synced if at
+        // least one row event for it has been created.
+        create->version = ++m_versions[create->database + '.' + create->table];
+        create->was_used = false;
+        m_handler->create_table(create);
+    }
+}
+
+void Rpl::alter_table_add_column(const STableCreateEvent& create)
+{
+    if (next() == tok::LP)
+    {
+        // ALTER TABLE ... ADD (column definition, ...)
+        chomp();
+
+        while (next() != tok::EXHAUSTED)
+        {
+            create->columns.push_back(column_def());
+        }
+    }
+    else
+    {
+        // ALTER TABLE ... ADD column definition [FIRST | AFTER ...]
+        do_add_column(create, column_def());
+    }
+}
+
+void Rpl::alter_table_drop_column(const STableCreateEvent& create)
+{
+    do_drop_column(create, chomp().value());
+    discard({tok::RESTRICT, tok::CASCADE});
+}
+
+void Rpl::alter_table_modify_column(const STableCreateEvent& create)
+{
+    do_change_column(create, parser.tokens.front().value());
+}
+
+void Rpl::alter_table_change_column(const STableCreateEvent& create)
+{
+    do_change_column(create, chomp().value());
+}
+
+void Rpl::rename_table()
+{
+    do
+    {
+        table_identifier();
+        auto old_db = parser.db;
+        auto old_table = parser.table;
+
+        assume(tok::TO);
+
+        table_identifier();
+        auto new_db = parser.db;
+        auto new_table = parser.table;
+
+        do_table_rename(old_db, old_table, new_db, new_table);
+
+        discard({tok::COMMA});
+    }
+    while (next() != tok::EXHAUSTED);
+}
+
 void Rpl::do_create_table()
 {
     std::vector<Column> columns;
@@ -1751,5 +1912,93 @@ void Rpl::do_create_table_like(const std::string& old_db, const std::string& old
     else
     {
         MXS_ERROR("Could not find source table %s.%s", parser.db.c_str(), parser.table.c_str());
+    }
+}
+
+void Rpl::do_table_rename(const std::string& old_db, const std::string& old_table,
+                          const std::string& new_db, const std::string& new_table)
+{
+    auto from = old_db + '.' + old_table;
+    auto to = new_db + '.' + new_table;
+    auto it = m_created_tables.find(from);
+
+    if (it != m_created_tables.end())
+    {
+        it->second->database = new_db;
+        it->second->table = new_table;
+        it->second->version = ++m_versions[to];
+        it->second->was_used = false;
+        rename_table_create(it->second, from);
+    }
+}
+
+void Rpl::do_add_column(const STableCreateEvent& create, Column c)
+{
+    auto& cols = create->columns;
+
+    if (c.first)
+    {
+        cols.insert(cols.begin(), c);
+    }
+    else if (!c.after.empty())
+    {
+        auto it = std::find_if(cols.begin(), cols.end(), [&](const auto& a) {
+                                   return a.name == c.after;
+                               });
+
+        if (it == cols.end())
+        {
+            throw ParsingError("Could not find field '" + c.after
+                               + "' for ALTER TABLE ADD COLUMN ... AFTER");
+        }
+
+        cols.insert(++it, c);
+    }
+    else
+    {
+        cols.push_back(c);
+    }
+}
+
+void Rpl::do_drop_column(const STableCreateEvent& create, const std::string& name)
+{
+    auto& cols = create->columns;
+
+    auto it = std::find_if(cols.begin(), cols.end(), [&name](const auto& f) {
+                               return f.name == name;
+                           });
+    if (it == cols.end())
+    {
+        throw ParsingError("Could not find field '" + name
+                           + "' for table " + parser.db + '.' + parser.table);
+    }
+
+    cols.erase(it);
+}
+
+void Rpl::do_change_column(const STableCreateEvent& create, const std::string& old_name)
+{
+    Column c = column_def();
+
+    if (c.first || !c.after.empty())
+    {
+        do_drop_column(create, old_name);
+        do_add_column(create, c);
+    }
+    else
+    {
+        auto& cols = create->columns;
+        auto it = std::find_if(cols.begin(), cols.end(), [&](const auto& a) {
+                                   return a.name == old_name;
+                               });
+
+        if (it != cols.end())
+        {
+            *it = c;
+        }
+        else
+        {
+            throw ParsingError("Could not find column " + old_name);
+        }
     }
 }

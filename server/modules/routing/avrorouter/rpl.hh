@@ -71,6 +71,8 @@ struct Column
     std::string type;
     int         length;
     bool        is_unsigned;
+    bool        first = false;
+    std::string after;
 
     json_t*       to_json() const;
     static Column from_json(json_t* json);
@@ -327,9 +329,20 @@ private:
     Column column_def();
     void   create_table();
     void   drop_table();
+    void   alter_table();
+    void   alter_table_add_column(const STableCreateEvent& create);
+    void   alter_table_drop_column(const STableCreateEvent& create);
+    void   alter_table_modify_column(const STableCreateEvent& create);
+    void   alter_table_change_column(const STableCreateEvent& create);
+    void   rename_table();
 
     // Non-parsing methods called by the parser
     void do_create_table();
     void do_create_table_like(const std::string& old_db, const std::string& old_table,
                               const std::string& new_db, const std::string& new_table);
+    void do_table_rename(const std::string& old_db, const std::string& old_table,
+                         const std::string& new_db, const std::string& new_table);
+    void do_add_column(const STableCreateEvent& create, Column c);
+    void do_drop_column(const STableCreateEvent& create, const std::string& name);
+    void do_change_column(const STableCreateEvent& create, const std::string& old_name);
 };
