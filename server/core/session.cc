@@ -257,18 +257,7 @@ private:
 static void session_free(MXS_SESSION* session)
 {
     MXS_INFO("Stopped %s client session [%" PRIu64 "]", session->service->name(), session->ses_id);
-    Service* service = static_cast<Service*>(session->service);
-
     session_final_free(session);
-    bool should_destroy = !mxb::atomic::load(&service->active);
-
-    if (mxb::atomic::add(&service->client_count, -1) == 1 && should_destroy)
-    {
-        // Destroy the service in the main routing worker thread
-        mxs::RoutingWorker* main_worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
-        main_worker->execute(std::unique_ptr<ServiceDestroyTask>(new ServiceDestroyTask(service)),
-                             Worker::EXECUTE_AUTO);
-    }
 }
 
 static void session_final_free(MXS_SESSION* ses)
@@ -1162,6 +1151,7 @@ Session::Session(const SListener& listener)
 
     mxb::atomic::add(&service->stats.n_current, 1, mxb::atomic::RELAXED);
     mxb_assert(service->stats.n_current >= 0);
+    mxb::atomic::add(&service->client_count, 1, mxb::atomic::RELAXED);
 }
 
 Session::~Session()
@@ -1179,6 +1169,17 @@ Session::~Session()
 
     mxb::atomic::add(&service->stats.n_current, -1, mxb::atomic::RELAXED);
     mxb_assert(service->stats.n_current >= 0);
+
+    bool should_destroy = !mxb::atomic::load(&service->active);
+
+    if (mxb::atomic::add(&service->client_count, -1) == 1 && should_destroy)
+    {
+        // Destroy the service in the main routing worker thread
+        mxs::RoutingWorker* main_worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
+        main_worker->execute(
+            std::unique_ptr<ServiceDestroyTask>(new ServiceDestroyTask(static_cast<Service*>(service))),
+            Worker::EXECUTE_AUTO);
+    }
 }
 
 void Session::set_client_dcb(DCB* dcb)

@@ -872,11 +872,6 @@ DCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const char* 
         }
     }
 
-    if (client_dcb)
-    {
-        mxb::atomic::add(&m_service->client_count, 1);
-    }
-
     return client_dcb;
 }
 
