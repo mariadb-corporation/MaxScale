@@ -181,6 +181,16 @@ void filter_destroy(const SFilterDef& filter)
 {
     mxb_assert(filter);
     mxb_assert(filter_can_be_destroyed(filter));
+
+    char filename[PATH_MAX + 1];
+    snprintf(filename, sizeof(filename), "%s/%s.cnf", get_config_persistdir(), filter->name.c_str());
+
+    if (unlink(filename) == -1 && errno != ENOENT)
+    {
+        MXS_ERROR("Failed to remove persisted filter configuration at '%s': %d, %s",
+                  filename, errno, mxs_strerror(errno));
+    }
+
     filter_free(filter);
 }
 
