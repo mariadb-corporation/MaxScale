@@ -84,7 +84,7 @@ private:
     void handle_use_database(GWBUF* read_buffer);
     void handle_authentication_errors(DCB* dcb, mariadb::ClientAuthenticator::AuthRes auth_val,
                                       int packet_number);
-    int route_by_statement(uint64_t capabilities, GWBUF** p_readbuf);
+    bool route_statement(uint64_t capabilities, mxs::Buffer* buffer);
 
     SpecialCmdRes process_special_commands(DCB* dcb, GWBUF* read_buffer, uint8_t cmd);
     SpecialCmdRes handle_query_kill(DCB* dcb, GWBUF* read_buffer, uint32_t packet_len);

@@ -1509,40 +1509,44 @@ MariaDBClientConnection::process_special_commands(DCB* dcb, GWBUF* read_buffer, 
 }
 
 /**
- * Detect if buffer includes partial mysql packet or multiple packets.
- * Store partial packet to dcb_readqueue. Send complete packets one by one
- * to router.
- *
- * It is assumed readbuf includes at least one complete packet.
- * Return 1 in success. If the last packet is incomplete return success but
- * leave incomplete packet to readbuf.
+ * Route an SQL protocol packet. If the original client packet is less than 16MB, buffer should
+ * contain the complete packet. If the client packet is large (split into multiple protocol packets),
+ * only one protocol packet should be routed at a time.
+ * TODO: what happens with parsing in this case? Likely it fails.
  *
  * @param capabilities  The capabilities of the service.
- * @param p_readbuf     Pointer to the address of GWBUF including the query
+ * @param buffer     Pointer to the address of GWBUF including the query
  *
- * @return 1 if succeed,
+ * @return True on success
  */
-int MariaDBClientConnection::route_by_statement(uint64_t capabilities, GWBUF** p_readbuf)
+bool MariaDBClientConnection::route_statement(uint64_t capabilities, mxs::Buffer* buffer)
 {
-    int rc = 1;
+    bool rval = true;
     auto session = m_session;
 
-    while (GWBUF* packetbuf = modutil_get_next_MySQL_packet(p_readbuf))
+    GWBUF* packetbuf = buffer->release();
+    // TODO: Do this only when RCAP_TYPE_CONTIGUOUS_INPUT is requested
+    packetbuf = gwbuf_make_contiguous(packetbuf);
+    session_retain_statement(session, packetbuf);
+
+    // Track the command being executed
+    track_current_command(packetbuf);
+
+    bool keep_processing = true;
+    // Track MaxScale-specific sql.
+    if (m_command == MXS_COM_QUERY)
     {
-        // TODO: Do this only when RCAP_TYPE_CONTIGUOUS_INPUT is requested
-        packetbuf = gwbuf_make_contiguous(packetbuf);
-        session_retain_statement(session, packetbuf);
-
-        // Track the command being executed
-        track_current_command(packetbuf);
-
-        if (char* message = handle_variables(session, &packetbuf))
+        char* errmsg = handle_variables(m_session, &packetbuf);
+        if (errmsg)
         {
-            rc = write(modutil_create_mysql_err_msg(1, 0, 1193, "HY000", message));
-            MXS_FREE(message);
-            continue;
+            rval = write(modutil_create_mysql_err_msg(1, 0, 1193, "HY000", errmsg)) != 0;
+            MXS_FREE(errmsg);
+            keep_processing = false;
         }
+    }
 
+    if (keep_processing)
+    {
         // Must be done whether or not there were any changes, as the query classifier
         // is thread and not session specific.
         qc_set_sql_mode(m_sql_mode);
@@ -1550,41 +1554,41 @@ int MariaDBClientConnection::route_by_statement(uint64_t capabilities, GWBUF** p
         if (process_special_commands(m_dcb, packetbuf, m_command) == SpecialCmdRes::END)
         {
             gwbuf_free(packetbuf);
-            continue;
+            packetbuf = nullptr;
+            keep_processing = false;
         }
 
-        if (rcap_type_required(capabilities, RCAP_TYPE_TRANSACTION_TRACKING)
-            && !session->service->config().session_track_trx_state
-            && !session_is_load_active(session))
+        if (keep_processing)
         {
-            track_transaction_state(session, packetbuf);
-        }
+            if (rcap_type_required(capabilities, RCAP_TYPE_TRANSACTION_TRACKING)
+                && !session->service->config().session_track_trx_state
+                && !session_is_load_active(session))
+            {
+                track_transaction_state(session, packetbuf);
+            }
 
-        bool changed_user = false;
+            bool changed_user = false;
+            if (!handle_change_user(&changed_user, &packetbuf))
+            {
+                MXS_ERROR("User reauthentication failed for %s", session->user_and_host().c_str());
+                gwbuf_free(packetbuf);
+                packetbuf = nullptr;
+                rval = false;
+                keep_processing = false;
+            }
 
-        if (!handle_change_user(&changed_user, &packetbuf))
-        {
-            MXS_ERROR("User reauthentication failed for %s", session->user_and_host().c_str());
-            gwbuf_free(packetbuf);
-            rc = 0;
-            break;
-        }
+            if (keep_processing)
+            {
+                if (packetbuf)
+                {
+                    rval = m_downstream->routeQuery(packetbuf) != 0;
+                }
 
-        if (packetbuf)
-        {
-            /** Route query */
-            rc = m_downstream->routeQuery(packetbuf);
-        }
-
-        m_changing_user = changed_user;
-
-        if (rc != 1)
-        {
-            break;
+                m_changing_user = changed_user;
+            }
         }
     }
-
-    return rc;
+    return rval;
 }
 
 /**
@@ -1626,16 +1630,13 @@ bool MariaDBClientConnection::perform_normal_read()
     // The query classifier classifies according to the service's server that has the smallest version number
     qc_set_server_version(m_version);
 
-    /**
-     * Feed each statement completely and separately to router.
-     */
-    auto read_buffer = buffer.release();
+    /** Feed each statement completely and separately to router. */
     auto capabilities = service_get_capabilities(m_session->service);
-    int ret = route_by_statement(capabilities, &read_buffer) ? 0 : 1;
-    mxb_assert(read_buffer == nullptr);     // Router should have consumed the packet.
+    bool routed = route_statement(capabilities, &buffer);
+    mxb_assert(buffer.empty());     // Router should have consumed the packet.
 
     bool rval = true;
-    if (ret != 0)
+    if (!routed)
     {
         /** Routing failed, close the client connection */
         m_session->close_reason = SESSION_CLOSE_ROUTING_FAILED;
