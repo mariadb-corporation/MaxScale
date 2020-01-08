@@ -246,3 +246,51 @@ bool param_is_valid(const MXS_MODULE_PARAM* basic, const MXS_MODULE_PARAM* modul
  * @return True, if the value was valid, false otherwise.
  */
 bool config_set_rebalance_threshold(const char* value);
+
+/**
+ * @brief Check if required parameters are missing
+ *
+ * @param name Module name
+ * @param type Module type
+ * @param params List of parameters for the object
+ * @return True if at least one of the required parameters is missing
+ */
+bool missing_required_parameters(const MXS_MODULE_PARAM* mod_params,
+                                 const MXS_CONFIG_PARAMETER& params,
+                                 const char* name);
+
+typedef struct duplicate_context
+{
+    std::set<std::string>* sections;
+    pcre2_code*            re;
+    pcre2_match_data*      mdata;
+} DUPLICATE_CONTEXT;
+
+/**
+ * Initialize the context object used for tracking duplicate sections.
+ *
+ * @param context The context object to be initialized.
+ *
+ * @return True, if the object could be initialized.
+ */
+bool duplicate_context_init(DUPLICATE_CONTEXT* context);
+
+/**
+ * Finalize the context object used for tracking duplicate sections.
+ *
+ * @param context The context object to be initialized.
+ */
+void duplicate_context_finish(DUPLICATE_CONTEXT* context);
+
+/**
+ * Load single configuration file.
+ *
+ * @param file     The file to load.
+ * @param dcontext The context object used when tracking duplicate sections.
+ * @param ccontext The context object used when parsing.
+ *
+ * @return True if the file could be parsed, false otherwise.
+ */
+bool config_load_single_file(const char* file,
+                             DUPLICATE_CONTEXT* dcontext,
+                             CONFIG_CONTEXT* ccontext);

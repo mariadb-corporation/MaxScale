@@ -17,7 +17,7 @@
 #endif
 
 #include <iostream>
-#include "../config.cc"
+#include "../internal/config.hh"
 
 using namespace std;
 

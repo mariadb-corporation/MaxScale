@@ -120,16 +120,6 @@ bool MXS_CONFIG::RebalancePeriod::set(const milliseconds& new_value)
     return rv;
 }
 
-typedef struct duplicate_context
-{
-    std::set<std::string>* sections;
-    pcre2_code*            re;
-    pcre2_match_data*      mdata;
-} DUPLICATE_CONTEXT;
-
-static bool duplicate_context_init(DUPLICATE_CONTEXT* context);
-static void duplicate_context_finish(DUPLICATE_CONTEXT* context);
-
 static bool        process_config_context(CONFIG_CONTEXT*);
 static bool        process_config_update(CONFIG_CONTEXT*);
 static int         handle_global_item(const char*, const char*);
@@ -233,14 +223,7 @@ void config_finish()
     config_context_free(config_context.m_next);
 }
 
-/**
- * Initialize the context object used for tracking duplicate sections.
- *
- * @param context The context object to be initialized.
- *
- * @return True, if the object could be initialized.
- */
-static bool duplicate_context_init(DUPLICATE_CONTEXT* context)
+bool duplicate_context_init(DUPLICATE_CONTEXT* context)
 {
     bool rv = false;
 
@@ -272,12 +255,7 @@ static bool duplicate_context_init(DUPLICATE_CONTEXT* context)
     return rv;
 }
 
-/**
- * Finalize the context object used for tracking duplicate sections.
- *
- * @param context The context object to be initialized.
- */
-static void duplicate_context_finish(DUPLICATE_CONTEXT* context)
+void duplicate_context_finish(DUPLICATE_CONTEXT* context)
 {
     pcre2_match_data_free(context->mdata);
     pcre2_code_free(context->re);
@@ -593,18 +571,9 @@ static void log_config_error(const char* file, int rval)
     MXS_ERROR("%s", errorbuffer);
 }
 
-/**
- * Load single configuration file.
- *
- * @param file     The file to load.
- * @param dcontext The context object used when tracking duplicate sections.
- * @param ccontext The context object used when parsing.
- *
- * @return True if the file could be parsed, false otherwise.
- */
-static bool config_load_single_file(const char* file,
-                                    DUPLICATE_CONTEXT* dcontext,
-                                    CONFIG_CONTEXT* ccontext)
+bool config_load_single_file(const char* file,
+                             DUPLICATE_CONTEXT* dcontext,
+                             CONFIG_CONTEXT* ccontext)
 {
     int rval = -1;
 
@@ -2475,17 +2444,9 @@ void config_set_global_defaults()
     gateway.qc_sql_mode = QC_SQL_MODE_DEFAULT;
 }
 
-/**
- * @brief Check if required parameters are missing
- *
- * @param name Module name
- * @param type Module type
- * @param params List of parameters for the object
- * @return True if at least one of the required parameters is missing
- */
-static bool missing_required_parameters(const MXS_MODULE_PARAM* mod_params,
-                                        const MXS_CONFIG_PARAMETER& params,
-                                        const char* name)
+bool missing_required_parameters(const MXS_MODULE_PARAM* mod_params,
+                                 const MXS_CONFIG_PARAMETER& params,
+                                 const char* name)
 {
     bool rval = false;
 

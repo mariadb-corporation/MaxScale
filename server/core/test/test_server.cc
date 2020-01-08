@@ -28,9 +28,10 @@
 #include <maxscale/config.hh>
 
 // This is pretty ugly but it's required to test internal functions
-#include "../config.cc"
 #include "../server.cc"
+#include "../internal/config.hh"
 #include "../internal/server.hh"
+#include "../internal/servermanager.hh"
 
 static MXS_CONFIG_PARAMETER* params = new MXS_CONFIG_PARAMETER;
 
