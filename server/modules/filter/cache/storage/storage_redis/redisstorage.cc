@@ -35,6 +35,143 @@ namespace
 class Redis
 {
 public:
+    class Reply
+    {
+    public:
+        enum Ownership
+        {
+            OWNED,
+            BORROWED,
+        };
+
+        Reply(const Reply&) = delete;
+        Reply& operator=(const Reply&) = delete;
+
+        Reply()
+            : m_pReply(nullptr)
+            , m_ownership(OWNED)
+        {
+        }
+
+        Reply(redisReply* pReply, Ownership ownership = OWNED)
+            : m_pReply(pReply)
+            , m_ownership(ownership)
+        {
+        }
+
+        Reply(Reply&& other)
+            : m_pReply(other.m_pReply)
+            , m_ownership(other.m_ownership)
+        {
+            other.m_pReply = nullptr;
+            other.m_ownership = OWNED;
+        }
+
+        ~Reply()
+        {
+            reset();
+        }
+
+        explicit operator bool () const
+        {
+            return m_pReply != nullptr;
+        }
+
+        void reset()
+        {
+            reset(nullptr);
+        }
+
+        void reset(redisReply* pReply, Ownership ownership = OWNED)
+        {
+            if (m_pReply && m_ownership == OWNED)
+            {
+                freeReplyObject(m_pReply);
+            }
+
+            m_pReply = pReply;
+            m_ownership = ownership;
+        }
+
+        int type() const
+        {
+            mxb_assert(m_pReply);
+            return m_pReply->type;
+        }
+
+        bool is_array() const
+        {
+            mxb_assert(m_pReply);
+            return m_pReply->type == REDIS_REPLY_ARRAY;
+        }
+
+        bool is_error() const
+        {
+            mxb_assert(m_pReply);
+            return m_pReply->type == REDIS_REPLY_ERROR;
+        }
+
+        bool is_integer() const
+        {
+            mxb_assert(m_pReply);
+            return m_pReply->type == REDIS_REPLY_INTEGER;
+        }
+
+        bool is_nil() const
+        {
+            mxb_assert(m_pReply);
+            return m_pReply->type == REDIS_REPLY_NIL;
+        }
+
+        bool is_status() const
+        {
+            mxb_assert(m_pReply);
+            return m_pReply->type == REDIS_REPLY_STATUS;
+        }
+
+        bool is_string() const
+        {
+            mxb_assert(m_pReply);
+            return m_pReply->type == REDIS_REPLY_STRING;
+        }
+
+        long long integer() const
+        {
+            mxb_assert(is_integer());
+            return m_pReply->integer;
+        }
+
+        const char* str() const
+        {
+            mxb_assert(is_error() || is_status() || is_string());
+            return m_pReply->str;
+        }
+
+        size_t len() const
+        {
+            mxb_assert(is_error() || is_status() || is_string());
+            return m_pReply->len;
+        }
+
+        size_t elements() const
+        {
+            mxb_assert(is_array());
+            return m_pReply->elements;
+        }
+
+        Reply element(size_t i) const
+        {
+            mxb_assert(is_array());
+            mxb_assert(i < m_pReply->elements);
+
+            return Reply(m_pReply->element[i], Reply::BORROWED);
+        }
+
+    private:
+        redisReply* m_pReply;
+        Ownership   m_ownership;
+    };
+
     Redis(const Redis&) = delete;
     Redis& operator=(const Redis&) = delete;
 
@@ -53,14 +190,14 @@ public:
         redisFree(m_pContext);
     }
 
-    redisReply* command(const char* zFormat, ...)
+    Reply command(const char* zFormat, ...)
     {
         va_list ap;
         va_start(ap, zFormat);
         void *reply = redisvCommand(m_pContext, zFormat, ap);
         va_end(ap);
 
-        return static_cast<redisReply*>(reply);
+        return Reply(static_cast<redisReply*>(reply));
     }
 
     int appendCommand(const char* zFormat, ...)
@@ -80,15 +217,15 @@ public:
         return redisAppendCommandArgv(m_pContext, argc, argv, argvlen);
     }
 
-    int getReply(redisReply** ppReply)
+    int getReply(Reply* pReply)
     {
-        void* pReply;
+        void* pV;
 
-        int rv = redisGetReply(m_pContext, &pReply);
+        int rv = redisGetReply(m_pContext, &pV);
 
         if (rv == REDIS_OK)
         {
-            *ppReply = static_cast<redisReply*>(pReply);
+            pReply->reset(static_cast<redisReply*>(pV));
         }
 
         return rv;
@@ -208,17 +345,17 @@ public:
         auto sThis = get_shared();
 
         mxs::thread_pool().execute([sThis, rkey, cb] () {
-                redisReply* pReply = sThis->m_redis.command("GET %b", rkey.data(), rkey.size());
+                Redis::Reply reply = sThis->m_redis.command("GET %b", rkey.data(), rkey.size());
 
                 GWBUF* pValue = nullptr;
                 cache_result_t rv = CACHE_RESULT_ERROR;
 
-                if (pReply)
+                if (reply)
                 {
-                    switch (pReply->type)
+                    switch (reply.type())
                     {
                     case REDIS_REPLY_STRING:
-                        pValue = gwbuf_alloc_and_load(pReply->len, pReply->str);
+                        pValue = gwbuf_alloc_and_load(reply.len(), reply.str());
                         rv = CACHE_RESULT_OK;
                         break;
 
@@ -228,10 +365,8 @@ public:
 
                     default:
                         MXS_WARNING("Unexpected redis redis return type (%s) received.",
-                                    redis_type_to_string(pReply->type));
+                                    redis_type_to_string(reply.type()));
                     }
-
-                    freeReplyObject(pReply);
                 }
                 else
                 {
@@ -305,15 +440,13 @@ public:
                 // First we handle the replies to the "HSET" commands.
                 for (int i = 0; i < n - 1; ++i)
                 {
-                    redisReply* pReply;
-                    int rc = sThis->m_redis.getReply(&pReply);
+                    Redis::Reply reply;
+                    int rc = sThis->m_redis.getReply(&reply);
 
                     if (rc == REDIS_OK)
                     {
-                        mxb_assert(pReply->type == REDIS_REPLY_INTEGER);
-                        mxb_assert(pReply->integer != 1 && pReply->integer != 0); // If 0, the key existed already.
-
-                        freeReplyObject(pReply);
+                        mxb_assert(reply.is_integer());
+                        mxb_assert(reply.integer() == 1 || reply.integer() == 0); // If 0, the key existed already.
                     }
                     else
                     {
@@ -328,25 +461,23 @@ public:
 
                 if (rv == CACHE_RESULT_OK)
                 {
-                    redisReply* pReply;
-                    int rc = sThis->m_redis.getReply(&pReply);
+                    Redis::Reply reply;
+                    int rc = sThis->m_redis.getReply(&reply);
 
                     if (rc == REDIS_OK)
                     {
-                        mxb_assert(pReply->type == REDIS_REPLY_STATUS);
+                        mxb_assert(reply.is_status());
 
-                        if (strncmp(pReply->str, "OK", 2) == 0)
+                        if (strncmp(reply.str(), "OK", 2) == 0)
                         {
                             rv = CACHE_RESULT_OK;
                         }
                         else
                         {
                             MXS_ERROR("Failed when storing cache value to redis, expected 'OK' but "
-                                      "received '%s'.", pReply->str);
+                                      "received '%s'.", reply.str());
                             rv = CACHE_RESULT_ERROR;
                         }
-
-                        freeReplyObject(pReply);
                     }
                     else
                     {
@@ -381,15 +512,15 @@ public:
         auto sThis = get_shared();
 
         mxs::thread_pool().execute([sThis, rkey, cb] () {
-                redisReply* pReply = sThis->m_redis.command("DEL %b", rkey.data(), rkey.size());
+                Redis::Reply reply = sThis->m_redis.command("DEL %b", rkey.data(), rkey.size());
 
                 cache_result_t rv = CACHE_RESULT_ERROR;
 
-                if (pReply)
+                if (reply)
                 {
-                    if (pReply->type == REDIS_REPLY_INTEGER)
+                    if (reply.is_integer())
                     {
-                        switch (pReply->integer)
+                        switch (reply.integer())
                         {
                         case 0:
                             rv = CACHE_RESULT_NOT_FOUND;
@@ -397,7 +528,7 @@ public:
 
                         default:
                             MXS_WARNING("Unexpected number of values - %lld - deleted with one key,",
-                                        pReply->integer);
+                                        reply.integer());
                             /* FLOWTHROUGH */
                         case 1:
                             rv = CACHE_RESULT_OK;
@@ -407,10 +538,8 @@ public:
                     else
                     {
                         MXS_WARNING("Unexpected redis return type (%s) received.",
-                                    redis_type_to_string(pReply->type));
+                                    redis_type_to_string(reply.type()));
                     }
-
-                    freeReplyObject(pReply);
                 }
                 else
                 {
@@ -457,52 +586,52 @@ public:
                 // deleting all values and one HDEL for each invalidation word for
                 // deleting the keys of each word.
 
-                vector<redisReply*> to_free;
+                vector<Redis::Reply> to_free;
 
-                vector<vector<char*>> hdel_argvs;
+                vector<vector<const char*>> hdel_argvs;
                 vector<vector<size_t>> hdel_argvlens;
 
-                vector<char*> del_argv;
+                vector<const char*> del_argv;
                 vector<size_t> del_argvlen;
 
-                del_argv.push_back(const_cast<char*>("DEL"));
+                del_argv.push_back("DEL");
                 del_argvlen.push_back(3);
 
                 for (int i = 0; i < n; ++i)
                 {
-                    redisReply* pReply;
-                    int rc = sThis->m_redis.getReply(&pReply);
+                    Redis::Reply reply;
+                    int rc = sThis->m_redis.getReply(&reply);
 
                     if (rc == REDIS_OK)
                     {
-                        if (pReply->type == REDIS_REPLY_ARRAY)
+                        if (reply.is_array())
                         {
-                            vector<char*> hdel_argv;
+                            vector<const char*> hdel_argv;
                             vector<size_t> hdel_argvlen;
 
-                            hdel_argv.push_back(const_cast<char*>("HDEL"));
+                            hdel_argv.push_back("HDEL");
                             hdel_argvlen.push_back(4);
 
-                            hdel_argv.push_back(const_cast<char*>(words[i].c_str()));
+                            hdel_argv.push_back(words[i].c_str());
                             hdel_argvlen.push_back(words[i].length());
 
                             // 'j = j + 2' since key/value pairs are returned.
-                            for (size_t j = 0; j < pReply->elements; j = j + 2)
+                            for (size_t j = 0; j < reply.elements(); j = j + 2)
                             {
-                                redisReply* pElement = pReply->element[j];
+                                Redis::Reply element = reply.element(j);
 
-                                if (pElement->type == REDIS_REPLY_STRING)
+                                if (element.is_string())
                                 {
-                                    del_argv.push_back(pElement->str);
-                                    del_argvlen.push_back(pElement->len);
+                                    del_argv.push_back(element.str());
+                                    del_argvlen.push_back(element.len());
 
-                                    hdel_argv.push_back(pElement->str);
-                                    hdel_argvlen.push_back(pElement->len);
+                                    hdel_argv.push_back(element.str());
+                                    hdel_argvlen.push_back(element.len());
                                 }
                                 else
                                 {
                                     MXS_ERROR("Unexpected type returned by redis: %s",
-                                              redis_type_to_string(pElement->type));
+                                              redis_type_to_string(element.type()));
                                 }
                             }
 
@@ -510,7 +639,7 @@ public:
                             hdel_argvlens.push_back(std::move(hdel_argvlen));
                         }
 
-                        to_free.push_back(pReply);
+                        to_free.emplace_back(std::move(reply));
                     }
                     else
                     {
@@ -535,7 +664,7 @@ public:
                     for (size_t i = 0; i < hdel_argvs.size(); ++i)
                     {
                         // Delete keys related to a particular table, the HDEL commands.
-                        const vector<char*>& hdel_argv = hdel_argvs[i];
+                        const vector<const char*>& hdel_argv = hdel_argvs[i];
                         const vector<size_t>& hdel_argvlen = hdel_argvlens[i];
 
                         if (hdel_argv.size() > 2)
@@ -565,25 +694,23 @@ public:
                     // into use later.
 
                     // First the reply to the DEL command
-                    redisReply* pReply;
-                    rc = sThis->m_redis.getReply(&pReply);
+                    Redis::Reply reply;
+                    rc = sThis->m_redis.getReply(&reply);
 
                     if (rc == REDIS_OK)
                     {
-                        mxb_assert(pReply->type == REDIS_REPLY_INTEGER);
-
-                        freeReplyObject(pReply);
+                        mxb_assert(reply.is_integer());
+                        reply.reset();
 
                         // Then the replies to the HDEL commands.
                         for (size_t i = 0; i < hdel_argvs.size() && rc == REDIS_OK; ++i)
                         {
-                            redisReply* pReply;
-                            int rc = sThis->m_redis.getReply(&pReply);
+                            int rc = sThis->m_redis.getReply(&reply);
 
                             if (rc == REDIS_OK)
                             {
-                                mxb_assert(pReply->type == REDIS_REPLY_INTEGER);
-                                freeReplyObject(pReply);
+                                mxb_assert(reply.is_integer());
+                                reply.reset();
                             }
                             else
                             {
@@ -605,10 +732,7 @@ public:
                     }
                 }
 
-                for (auto* pReply : to_free)
-                {
-                    freeReplyObject(pReply);
-                }
+                to_free.clear();
 
                 sThis->m_pWorker->execute([sThis, rv, cb]() {
                         if (sThis.use_count() > 1) // The session is still alive
