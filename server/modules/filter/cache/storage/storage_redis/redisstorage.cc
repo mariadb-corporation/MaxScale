@@ -32,6 +32,67 @@ using std::vector;
 namespace
 {
 
+class Redis
+{
+public:
+    Redis(const Redis&) = delete;
+    Redis& operator=(const Redis&) = delete;
+
+    Redis(redisContext* pContext)
+        : m_pContext(pContext)
+    {
+    }
+
+    ~Redis()
+    {
+        redisFree(m_pContext);
+    }
+
+    redisReply* command(const char* zFormat, ...)
+    {
+        va_list ap;
+        va_start(ap, zFormat);
+        void *reply = redisvCommand(m_pContext, zFormat, ap);
+        va_end(ap);
+
+        return static_cast<redisReply*>(reply);
+    }
+
+    int appendCommand(const char* zFormat, ...)
+    {
+        va_list ap;
+        int rv;
+
+        va_start(ap, zFormat);
+        rv = redisvAppendCommand(m_pContext, zFormat,ap);
+        va_end(ap);
+
+        return rv;
+    }
+
+    int appendCommandArgv(int argc, const char **argv, const size_t *argvlen)
+    {
+        return redisAppendCommandArgv(m_pContext, argc, argv, argvlen);
+    }
+
+    int getReply(redisReply** ppReply)
+    {
+        void* pReply;
+
+        int rv = redisGetReply(m_pContext, &pReply);
+
+        if (rv == REDIS_OK)
+        {
+            *ppReply = static_cast<redisReply*>(pReply);
+        }
+
+        return rv;
+    }
+
+private:
+    redisContext* m_pContext;
+};
+
 const char* redis_type_to_string(int type)
 {
     switch (type)
