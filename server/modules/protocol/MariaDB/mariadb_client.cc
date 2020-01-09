@@ -47,6 +47,7 @@
 #include "setparser.hh"
 #include "sqlmodeparser.hh"
 #include "user_data.hh"
+#include "packet_parser.hh"
 
 namespace
 {
@@ -2162,9 +2163,10 @@ bool MariaDBClientConnection::parse_ssl_request_packet(GWBUF* buffer)
     bool rval = false;
     if (len == MYSQL_AUTH_PACKET_BASE_SIZE)
     {
-        uint8_t data[CLIENT_CAPABILITIES_LEN];
-        gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, CLIENT_CAPABILITIES_LEN, data);
-        parse_client_capabilities(data);
+        packet_parser::ByteVec data;
+        data.resize(CLIENT_CAPABILITIES_LEN);
+        gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, CLIENT_CAPABILITIES_LEN, data.data());
+        m_session_data->client_info = packet_parser::parse_client_capabilities(data, nullptr);
         rval = true;
     }
     return rval;
@@ -2187,200 +2189,38 @@ bool MariaDBClientConnection::parse_handshake_response_packet(GWBUF* buffer)
     if ((buflen >= min_expected_len) && buflen <= max_expected_len)
     {
         int datalen = buflen - MYSQL_HEADER_LEN;
-        uint8_t data[datalen + 1];
-        gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, datalen, data);
+        packet_parser::ByteVec data;
+        data.resize(datalen + 1);
+        gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, datalen, data.data());
         data[datalen] = '\0';   // Simplifies some later parsing.
-        parse_client_capabilities(data);
-        rval = parse_client_response(data + CLIENT_CAPABILITIES_LEN, datalen - CLIENT_CAPABILITIES_LEN);
-    }
-    return rval;
-}
 
-/**
- * Parse 32 bytes of client capabilities.
- *
- * @param data Data array. Should be at least 32 bytes.
- */
-void MariaDBClientConnection::parse_client_capabilities(const uint8_t* data)
-{
-    MYSQL_session* ses = m_session_data;
-    auto capabilities = ses->client_info.m_client_capabilities;
-    // Can assume that client capabilities are in the first 32 bytes and the buffer is large enough.
+        auto client_info = packet_parser::parse_client_capabilities(data, &m_session_data->client_info);
+        auto parse_res = packet_parser::parse_client_response(data, client_info.m_client_capabilities);
 
-    /**
-     * We OR the capability bits in order to retain the starting bits sent
-     * when an SSL connection is opened. Oracle Connector/J 8.0 appears to drop
-     * the SSL capability bit mid-authentication which causes MaxScale to think
-     * that SSL is not used.
-     */
-    capabilities |= gw_mysql_get_byte4(data);
-    data += 4;
-
-    // Next is max packet size, skip it.
-    data += 4;
-
-    ses->client_info.m_charset = *data;
-    data += 1;
-
-    // Next, 19 bytes of reserved filler. Skip.
-    data += 19;
-
-    /**
-     * Next, 4 bytes of extra capabilities. Not always used.
-     * MariaDB 10.2 compatible clients don't set the first bit to signal that
-     * there are extra capabilities stored in the last 4 bytes of the filler.
-     */
-    if ((capabilities & GW_MYSQL_CAPABILITIES_CLIENT_MYSQL) == 0)
-    {
-        ses->client_info.m_extra_capabilities |= gw_mysql_get_byte4(data);
-    }
-
-    ses->client_info.m_client_capabilities = capabilities;
-}
-
-/**
- * Parse username, database etc from client handshake response. Client capabilities should have
- * already been parsed.
- *
- * @param data Start of data. Buffer should be long enough to contain at least one item.
- * @param data_len Data length
- * @return
- */
-bool MariaDBClientConnection::parse_client_response(const uint8_t* data, int data_len)
-{
-    auto ptr = (const char*)data;
-    const auto end = ptr + data_len;
-
-    // A null-terminated username should be first.
-    auto userz = (const char*)data;
-    auto userlen = strlen(userz);   // Cannot overrun since caller added 0 to end of buffer.
-    ptr += userlen + 1;
-
-    bool error = false;
-    auto client_caps = m_session_data->client_info.m_client_capabilities;
-
-    auto read_str = [client_caps, end, &ptr, &error](uint32_t required_capability, const char** output) {
-            if (client_caps & required_capability)
-            {
-                if (ptr < end)
-                {
-                    auto result = ptr;
-                    *output = result;
-                    ptr += strlen(result) + 1;      // Should be null-terminated.
-                }
-                else
-                {
-                    error = true;
-                }
-            }
-        };
-
-
-    if (ptr < end)
-    {
-        // Next is authentication response. The length is encoded in different forms depending on
-        // capabilities.
-        uint64_t len_remaining = end - ptr;
-        uint64_t auth_token_len_bytes = 0;  // In how many bytes the auth token length is encoded in.
-        uint64_t auth_token_len = 0;        // The actual auth token length.
-        const char* auth_token = nullptr;
-
-        if (client_caps & GW_MYSQL_CAPABILITIES_AUTH_LENENC_DATA)
+        if (parse_res.success)
         {
-            // Token is a length-encoded string. First is a length-encoded integer, then the token data.
-            auth_token_len_bytes = mxq::leint_bytes((const uint8_t*)ptr);
-            if (auth_token_len_bytes <= len_remaining)
+            // If the buffer is valid, just one 0 should remain.
+            if (data.size() == 1)
             {
-                auth_token_len = mxq::leint_value((const uint8_t*)ptr);
-            }
-            else
-            {
-                error = true;
+                // Success, save data to session.
+                m_session_data->client_info = client_info;
+                m_session_data->user = parse_res.username;
+                m_session->set_user(parse_res.username);
+                m_session_data->auth_token = std::move(parse_res.token_res.auth_token);
+                m_session_data->db = parse_res.db;
+                m_session->set_database(parse_res.db);
+                m_session_data->plugin = std::move(parse_res.plugin);
+                m_session_data->connect_attrs = std::move(parse_res.attr_res.attr_data);
+                rval = true;
             }
         }
-        else if (client_caps & GW_MYSQL_CAPABILITIES_SECURE_CONNECTION)
-        {
-            // First token length 1 byte, then token data.
-            auth_token_len_bytes = 1;
-            auth_token_len = *ptr;
-        }
-        else
+        else if (parse_res.token_res.old_protocol)
         {
             MXB_ERROR("Client %s@%s attempted to connect with pre-4.1 authentication "
-                      "which is not supported.", userz, m_dcb->remote().c_str());
-            error = true;   // Filler was non-zero, likely due to unsupported client version.
-        }
-
-        if (!error)
-        {
-            if (auth_token_len_bytes + auth_token_len <= len_remaining)
-            {
-                ptr += auth_token_len_bytes;
-                if (auth_token_len > 0)
-                {
-                    auth_token = ptr;
-                }
-                ptr += auth_token_len;
-            }
-            else
-            {
-                error = true;
-            }
-        }
-
-        const char* db = nullptr;
-        const char* plugin = nullptr;
-        if (!error)
-        {
-            // The following fields are optional.
-            read_str(GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB, &db);
-            read_str(GW_MYSQL_CAPABILITIES_PLUGIN_AUTH, &plugin);
-
-            if ((client_caps & GW_MYSQL_CAPABILITIES_CONNECT_ATTRS) && ptr < end)
-            {
-                auto n_bytes = mxq::leint_bytes((const uint8_t*)ptr);
-
-                if (ptr + n_bytes < end)
-                {
-                    n_bytes += mxq::leint_value((const uint8_t*)ptr);
-
-                    if (ptr + n_bytes <= end)
-                    {
-                        // Store the client connection attributes and reuse them for backend connections. The
-                        // data is not processed into key-value pairs as it is not used by MaxScale.
-                        m_session_data->connect_attrs.resize(n_bytes);
-                        memcpy(&m_session_data->connect_attrs[0], ptr, n_bytes);
-                    }
-                }
-            }
-        }
-
-        // TODO: read client attributes
-        if (!error)
-        {
-            // Success, save data to session.
-            m_session_data->user = userz;
-            m_session->set_user(userz);
-            if (auth_token)
-            {
-                auto& ses_auth_token = m_session_data->auth_token;
-                ses_auth_token.resize(auth_token_len);
-                ses_auth_token.assign(auth_token, auth_token + auth_token_len);
-            }
-
-            if (db)
-            {
-                m_session_data->db = db;
-                m_session->set_database(db);
-            }
-
-            if (plugin)
-            {
-                m_session_data->plugin = plugin;
-            }
+                      "which is not supported.", parse_res.username.c_str(), m_dcb->remote().c_str());
         }
     }
-    return !error;
+    return rval;
 }
 
 /**

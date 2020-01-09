@@ -105,8 +105,6 @@ private:
     void execute_kill(MXS_SESSION* issuer, std::shared_ptr<KillInfo> info);
     void track_current_command(GWBUF* buf);
 
-    void parse_client_capabilities(const uint8_t* data);
-    bool parse_client_response(const uint8_t* data, int data_len);
     bool require_ssl() const;
 
     enum class FindUAResult
