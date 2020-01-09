@@ -448,7 +448,7 @@ int CacheFilterSession::client_reply_post_process(GWBUF* pData,
         break;
 
     case CACHE_STORING_RESPONSE:
-        handle_storing_response(reply);
+        handle_storing_response(down, reply);
         break;
 
     case CACHE_IGNORING_RESPONSE:
@@ -458,20 +458,11 @@ int CacheFilterSession::client_reply_post_process(GWBUF* pData,
     default:
         MXS_ERROR("Internal cache logic broken, unexpected state: %d", m_state);
         mxb_assert(!true);
-        send_upstream();
+        prepare_response();
         m_state = CACHE_IGNORING_RESPONSE;
     }
 
-    GWBUF* next_response = m_next_response;
-    m_next_response = nullptr;
-    int rv = 1;
-
-    if (next_response)
-    {
-        rv = FilterSession::clientReply(next_response, down, reply);
-    }
-
-    return rv;
+    return flush_response(down, reply);
 }
 
 void CacheFilterSession::clear_cache()
@@ -542,27 +533,23 @@ int CacheFilterSession::clientReply(GWBUF* pData, const mxs::ReplyRoute& down, c
                     std::weak_ptr<CacheFilterSession> sWeak { m_sThis };
 
                     cache_result_t result =
-                        m_sCache->invalidate(invalidation_words, [sWeak, pData](cache_result_t result) {
-                                std::shared_ptr<CacheFilterSession> sThis = sWeak.lock();
+                        m_sCache->invalidate(invalidation_words,
+                                             [sWeak, pData, down, reply](cache_result_t result) {
+                                                 std::shared_ptr<CacheFilterSession> sThis = sWeak.lock();
 
-                                if (sThis)
-                                {
-                                    sThis->invalidate_handler(result);
+                                                 if (sThis)
+                                                 {
+                                                     sThis->invalidate_handler(result);
 
-                                    // TODO: Not quite ok that we loose all information here.
-                                    // TODO: Something like 'mxs::ReplyRoute* pDown = down.clone()'
-                                    // TODO: is needed.
-                                    mxs::ReplyRoute down;
-                                    mxs::Reply reply;
-
-                                    sThis->client_reply_post_process(pData, down, reply);
-                                }
-                                else
-                                {
-                                    // Ok, so the session was terminated before we got a reply.
-                                    gwbuf_free(pData);
-                                }
-                            });
+                                                     sThis->client_reply_post_process(pData, down, reply);
+                                                 }
+                                                 else
+                                                 {
+                                                     // Ok, so the session was terminated before
+                                                     // we got a reply.
+                                                     gwbuf_free(pData);
+                                                 }
+                                             });
 
                     if (CACHE_RESULT_IS_PENDING(result))
                     {
@@ -624,7 +611,7 @@ void CacheFilterSession::handle_expecting_nothing(const mxs::Reply& reply)
         mxb_assert(!true);
     }
 
-    send_upstream();
+    prepare_response();
 }
 
 /**
@@ -653,14 +640,14 @@ void CacheFilterSession::handle_expecting_use_response(const mxs::Reply& reply)
         m_zUseDb = NULL;
     }
 
-    send_upstream();
+    prepare_response();
     m_state = CACHE_IGNORING_RESPONSE;
 }
 
 /**
  * Called when a resultset is being collected.
  */
-void CacheFilterSession::handle_storing_response(const mxs::Reply& reply)
+void CacheFilterSession::handle_storing_response(const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     mxb_assert(m_state == CACHE_STORING_RESPONSE);
     mxb_assert(m_res);
@@ -673,7 +660,7 @@ void CacheFilterSession::handle_storing_response(const mxs::Reply& reply)
                        mxb::pretty_size(m_sCache->config().max_resultset_size.get()).c_str());
         }
 
-        send_upstream();
+        prepare_response();
         m_state = CACHE_IGNORING_RESPONSE;
     }
     else if (cache_max_resultset_rows_exceeded(m_sCache->config(), reply.rows_read()))
@@ -683,7 +670,7 @@ void CacheFilterSession::handle_storing_response(const mxs::Reply& reply)
             MXS_NOTICE("Max rows %lu reached, not caching result.", reply.rows_read());
         }
 
-        send_upstream();
+        prepare_response();
         m_state = CACHE_IGNORING_RESPONSE;
     }
     else if (reply.is_complete())
@@ -694,8 +681,7 @@ void CacheFilterSession::handle_storing_response(const mxs::Reply& reply)
                        mxb::pretty_size(reply.size()).c_str());
         }
 
-        store_result();
-        send_upstream();
+        store_and_prepare_response(down, reply);
         m_state = CACHE_EXPECTING_NOTHING;
     }
 }
@@ -708,7 +694,7 @@ void CacheFilterSession::handle_ignoring_response()
     mxb_assert(m_state == CACHE_IGNORING_RESPONSE);
     mxb_assert(m_res);
 
-    send_upstream();
+    prepare_response();
 }
 
 /**
@@ -716,12 +702,29 @@ void CacheFilterSession::handle_ignoring_response()
  *
  * Queues the current response for forwarding to the upstream component.
  */
-void CacheFilterSession::send_upstream()
+void CacheFilterSession::prepare_response()
 {
     mxb_assert(m_res);
     mxb_assert(!m_next_response);
     m_next_response = m_res;
     m_res = NULL;
+}
+
+/**
+ * Sends data to the client, if there is something to send.
+ */
+int CacheFilterSession::flush_response(const mxs::ReplyRoute& down, const mxs::Reply& reply)
+{
+    GWBUF* next_response = m_next_response;
+    m_next_response = nullptr;
+    int rv = 1;
+
+    if (next_response)
+    {
+        rv = FilterSession::clientReply(next_response, down, reply);
+    }
+
+    return rv;
 }
 
 /**
@@ -735,7 +738,7 @@ void CacheFilterSession::reset_response_state()
 /**
  * Store the data.
  */
-void CacheFilterSession::store_result()
+void CacheFilterSession::store_and_prepare_response(const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     mxb_assert(m_res);
 
@@ -752,26 +755,28 @@ void CacheFilterSession::store_result()
         m_tables.clear();
     }
 
-    // We want local variables to be captured by value. By the time the lambda is called,
-    // this may no longer exist.
-    SSessionCache sCache { m_sCache };
-    CacheKey key { m_key };
+    std::weak_ptr<CacheFilterSession> sWeak { m_sThis };
 
     cache_result_t result = m_sCache->put_value(m_key, invalidation_words, m_res,
-                                                [sCache, key](cache_result_t result) {
-                                                    //static
-                                                    put_value_handler(sCache, key, result);
+                                                [sWeak, down, reply](cache_result_t result) {
+                                                    auto sThis = sWeak.lock();
+
+                                                    // If we do not have an sThis, then the session
+                                                    // has been terminated.
+                                                    if (sThis)
+                                                    {
+                                                        sThis->put_value_handler(result, down, reply);
+                                                        sThis->flush_response(down, reply);
+                                                    }
                                                 });
 
     if (!CACHE_RESULT_IS_PENDING(result))
     {
-        //static
-        put_value_handler(m_sCache, m_key, result);
+        put_value_handler(result, down, reply);
     }
 
     // Whether or not the result is returned immediately or later, we proceed the
-    // same way. If the putting of the value fails, then there's no harm done as
-    // in that case, we'll hit the server again.
+    // same way.
 
     if (m_refreshing)
     {
@@ -1451,17 +1456,32 @@ char* CacheFilterSession::set_cache_hard_ttl(void* pContext,
     return pThis->set_cache_hard_ttl(zName, pValue_begin, pValue_end);
 }
 
-//static
-void CacheFilterSession::put_value_handler(SSessionCache sCache, const CacheKey& key, cache_result_t result)
+void CacheFilterSession::put_value_handler(cache_result_t result,
+                                           const mxs::ReplyRoute& down,
+                                           const mxs::Reply& reply)
 {
-    if (!CACHE_RESULT_IS_OK(result))
+    if (CACHE_RESULT_IS_OK(result))
+    {
+        prepare_response();
+    }
+    else
     {
         MXS_ERROR("Could not store new cache value, deleting old.");
 
-        result = sCache->del_value(key,
-                                   [](cache_result_t result) {
-                                       del_value_handler(result);
-                                   });
+        std::weak_ptr<CacheFilterSession> sWeak { m_sThis };
+
+        result = m_sCache->del_value(m_key,
+                                     [sWeak, down, reply](cache_result_t result) {
+                                         auto sThis = sWeak.lock();
+
+                                         // If we do not have an sThis, then the session
+                                         // has been terminated.
+                                         if (sThis)
+                                         {
+                                             sThis->del_value_handler(result);
+                                             sThis->flush_response(down, reply);
+                                         }
+                                     });
 
         if (!CACHE_RESULT_IS_PENDING(result))
         {
@@ -1470,13 +1490,14 @@ void CacheFilterSession::put_value_handler(SSessionCache sCache, const CacheKey&
     }
 }
 
-//static
 void CacheFilterSession::del_value_handler(cache_result_t result)
 {
     if (!CACHE_RESULT_IS_OK(result) || !CACHE_RESULT_IS_NOT_FOUND(result))
     {
         MXS_ERROR("Could not delete old cache item.");
     }
+
+    prepare_response();
 }
 
 CacheFilterSession::routing_action_t CacheFilterSession::get_value_handler(GWBUF* pPacket,

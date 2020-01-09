@@ -90,10 +90,12 @@ public:
 private:
     void handle_expecting_nothing(const mxs::Reply& reply);
     void handle_expecting_use_response(const mxs::Reply& reply);
-    void handle_storing_response(const mxs::Reply& reply);
+    void handle_storing_response(const mxs::ReplyRoute& down, const mxs::Reply& reply);
     void handle_ignoring_response();
 
-    void send_upstream();
+    void store_and_prepare_response(const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    void prepare_response();
+    int flush_response(const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
     void reset_response_state();
 
@@ -102,7 +104,6 @@ private:
         return m_sCache->config().debug.is_set(CACHE_DEBUG_DECISIONS);
     }
 
-    void store_result();
 
     enum cache_action_t
     {
@@ -167,8 +168,8 @@ private:
 
     using SSessionCache = std::shared_ptr<SessionCache>;
 
-    static void put_value_handler(SSessionCache sCache, const CacheKey& key, cache_result_t result);
-    static void del_value_handler(cache_result_t result);
+    void put_value_handler(cache_result_t result, const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    void del_value_handler(cache_result_t result);
     routing_action_t get_value_handler(GWBUF* pPacket, cache_result_t result, GWBUF* pResponse);
     void invalidate_handler(cache_result_t result);
     int client_reply_post_process(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
