@@ -210,7 +210,7 @@ public:
     virtual void column_null(int i) = 0;
 };
 
-typedef std::auto_ptr<RowEventHandler> SRowEventHandler;
+using SRowEventHandler = std::unique_ptr<RowEventHandler>;
 
 class Rpl
 {

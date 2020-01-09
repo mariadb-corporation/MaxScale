@@ -117,7 +117,7 @@ Avro* Avro::create(SERVICE* service, SRowEventHandler handler)
     }
 
     auto params = service->params();
-    return new(std::nothrow) Avro(service, &params, source_service, handler);
+    return new(std::nothrow) Avro(service, &params, source_service, std::move(handler));
 }
 
 Avro::Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, SERVICE* source, SRowEventHandler handler)
@@ -132,7 +132,7 @@ Avro::Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, SERVICE* source, SRow
     , row_count(0)
     , row_target(params->get_integer("group_rows"))
     , task_handle(0)
-    , handler(service, handler, params->get_compiled_regex("match", 0, NULL).release(),
+    , handler(service, std::move(handler), params->get_compiled_regex("match", 0, NULL).release(),
               params->get_compiled_regex("exclude", 0, NULL).release())
 {
     if (params->contains(CN_SERVERS) || params->contains(CN_CLUSTER))

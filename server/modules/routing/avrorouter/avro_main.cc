@@ -65,9 +65,8 @@ MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params)
     mxs_avro_codec_type codec = static_cast<mxs_avro_codec_type>(
         service->params().get_enum("codec", codec_values));
     std::string avrodir = service->params().get_string("avrodir");
-    SRowEventHandler handler(new AvroConverter(avrodir, block_size, codec));
 
-    Avro* router = Avro::create(service, handler);
+    Avro* router = Avro::create(service, SRowEventHandler(new AvroConverter(avrodir, block_size, codec)));
 
     if (router && !params->contains(CN_SERVERS) && !params->contains(CN_CLUSTER))
     {
