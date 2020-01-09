@@ -168,11 +168,7 @@ std::string Regex::replace(const std::string& str, const char* replacement) cons
             (PCRE2_SPTR) replacement, PCRE2_ZERO_TERMINATED,
             (PCRE2_UCHAR*) &output[0], &size);
 
-        if (rc == 0)
-        {
-            this_thread.md.enlarge();
-        }
-        else if (rc == PCRE2_ERROR_NOMEMORY)
+        if (rc == PCRE2_ERROR_NOMEMORY)
         {
             size = output.size() * 2;
             output.resize(size);
