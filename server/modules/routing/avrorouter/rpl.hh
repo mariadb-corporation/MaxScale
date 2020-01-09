@@ -290,7 +290,7 @@ private:
     } parser;
 
     // The main parsing function
-    void parse_sql(const char* sql, const char* db);
+    void parse_sql(const std::string& sql, const std::string& db);
 
     // Utility functions used by the parser
     tok::Type             next();

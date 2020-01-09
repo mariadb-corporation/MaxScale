@@ -210,11 +210,11 @@ static std::string avro_sanitizer(const char* s, int l)
     return str;
 }
 
-void Rpl::parse_sql(const char* sql, const char* db)
+void Rpl::parse_sql(const std::string& sql, const std::string& db)
 {
-    MXS_INFO("%s", sql);
+    MXS_INFO("%s", sql.c_str());
     parser.db = db;
-    parser.tokens = tok::Tokenizer::tokenize(sql, avro_sanitizer);
+    parser.tokens = tok::Tokenizer::tokenize(sql.c_str(), avro_sanitizer);
 
     try
     {
@@ -251,7 +251,7 @@ void Rpl::parse_sql(const char* sql, const char* db)
     }
     catch (const ParsingError& err)
     {
-        MXS_INFO("Parsing failed: %s (%s)", err.what(), sql);
+        MXS_INFO("Parsing failed: %s (%s)", err.what(), sql.c_str());
     }
 }
 

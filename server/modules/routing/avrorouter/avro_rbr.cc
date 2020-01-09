@@ -16,6 +16,7 @@
 #include <maxscale/mysql_utils.hh>
 #include <jansson.h>
 #include <maxbase/alloc.h>
+#include <maxbase/regex.hh>
 #include <strings.h>
 #include <signal.h>
 #include <maxscale/utils.h>
@@ -787,13 +788,23 @@ bool Rpl::rename_table_create(STableCreateEvent created, const std::string& old_
     return m_handler->create_table(created);
 }
 
-void unify_whitespace(char* sql, int len)
+static void remove_mysql_comments(std::string& str)
 {
-    for (int i = 0; i < len; i++)
+    const char* remove_comments_pattern =
+        "(?:`[^`]*`\\K)|"
+        "(\\/[*](?!(M?!)).*?[*]\\/)|"
+        "((?:#.*|--[[:space:]].*)(\\n|\\r\\n|$))";
+
+    str = mxb::Regex(remove_comments_pattern, PCRE2_SUBSTITUTE_GLOBAL).replace(str, "");
+}
+
+static void unify_whitespace(std::string& str)
+{
+    for (auto& a : str)
     {
-        if (isspace(sql[i]) && sql[i] != ' ')
+        if (isspace(a) && a != ' ')
         {
-            sql[i] = ' ';
+            a = ' ';
         }
     }
 }
@@ -808,27 +819,22 @@ void unify_whitespace(char* sql, int len)
  * @param len Pointer to current length of string, updated to new length if
  *            @c sql is modified
  */
-static void strip_executable_comments(char* sql, int* len)
+static void strip_executable_comments(std::string& str)
 {
-    if (strncmp(sql, "/*!", 3) == 0 || strncmp(sql, "/*M!", 4) == 0)
+    if (strncmp(str.c_str(), "/*!", 3) == 0 || strncmp(str.c_str(), "/*M!", 4) == 0)
     {
-        // Executable comment, remove it
-        char* p = sql + 3;
-        if (*p == '!')
+        str.erase(0, 3);
+
+        if (str.front() == '!')
         {
-            p++;
+            str.erase(0, 1);
         }
 
         // Skip the versioning part
-        while (*p && isdigit(*p))
+        while (!str.empty() && isdigit(str.front()))
         {
-            p++;
+            str.erase(0, 1);
         }
-
-        int n_extra = p - sql;
-        int new_len = *len - n_extra;
-        memmove(sql, sql + n_extra, new_len);
-        *len = new_len;
     }
 }
 
@@ -845,35 +851,21 @@ void Rpl::handle_query_event(REP_HEADER* hdr, uint8_t* ptr)
     int dblen = ptr[DBNM_OFF];
     int vblklen = gw_mysql_get_byte2(ptr + VBLK_OFF);
     int len = hdr->event_size - BINLOG_EVENT_HDR_LEN - (PHDR_OFF + vblklen + 1 + dblen);
-    char* sql = (char*) ptr + PHDR_OFF + vblklen + 1 + dblen;
-    char db[dblen + 1];
-    memcpy(db, (char*) ptr + PHDR_OFF + vblklen, dblen);
-    db[dblen] = 0;
+    std::string sql((char*) ptr + PHDR_OFF + vblklen + 1 + dblen, len);
+    std::string db((char*) ptr + PHDR_OFF + vblklen, dblen);
 
-    size_t sqlsz = len, tmpsz = len;
-    char* tmp = static_cast<char*>(MXS_MALLOC(len + 1));
-    MXS_ABORT_IF_NULL(tmp);
-    remove_mysql_comments((const char**)&sql, &sqlsz, &tmp, &tmpsz);
-    sql = tmp;
-    len = tmpsz;
-    unify_whitespace(sql, len);
-    strip_executable_comments(sql, &len);
-    sql[len] = '\0';
-
-    if (*sql == '\0')
-    {
-        MXS_FREE(tmp);
-        return;
-    }
+    remove_mysql_comments(sql);
+    unify_whitespace(sql);
+    strip_executable_comments(sql);
 
     static bool warn_not_row_format = true;
 
     if (warn_not_row_format)
     {
-        GWBUF* buffer = gwbuf_alloc(len + 5);
-        gw_mysql_set_byte3(GWBUF_DATA(buffer), len + 1);
+        GWBUF* buffer = gwbuf_alloc(sql.length() + 5);
+        gw_mysql_set_byte3(GWBUF_DATA(buffer), sql.length() + 1);
         GWBUF_DATA(buffer)[4] = 0x03;
-        memcpy(GWBUF_DATA(buffer) + 5, sql, len);
+        memcpy(GWBUF_DATA(buffer) + 5, sql.c_str(), sql.length());
         qc_query_op_t op = qc_get_operation(buffer);
         gwbuf_free(buffer);
 
@@ -886,7 +878,6 @@ void Rpl::handle_query_event(REP_HEADER* hdr, uint8_t* ptr)
     }
 
     parse_sql(sql, db);
-    MXS_FREE(tmp);
 }
 
 void Rpl::handle_event(REP_HEADER hdr, uint8_t* ptr)
