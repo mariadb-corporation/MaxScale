@@ -138,20 +138,8 @@ static const char* column_type_to_avro_type(uint8_t type)
  * @param create The TABLE_CREATE for this table
  * @return New schema or NULL if an error occurred
  */
-char* json_new_schema_from_table(const STableMapEvent& map, const STableCreateEvent& create)
+char* json_new_schema_from_table(const STableCreateEvent& create)
 {
-    if (map->version != create->version)
-    {
-        MXS_ERROR("Version mismatch for table %s.%s. Table map version is %d and "
-                  "the table definition version is %d.",
-                  map->database.c_str(),
-                  map->table.c_str(),
-                  map->version,
-                  create->version);
-        mxb_assert(!true);      // Should not happen
-        return NULL;
-    }
-
     json_error_t err;
     memset(&err, 0, sizeof(err));
     json_t* schema = json_object();
@@ -226,7 +214,7 @@ char* json_new_schema_from_table(const STableMapEvent& map, const STableCreateEv
                                        "type",
                                        event_types));
 
-    for (uint64_t i = 0; i < map->columns() && i < create->columns.size(); i++)
+    for (uint64_t i = 0; i < create->columns.size(); i++)
     {
         json_array_append_new(array,
                               json_pack_ex(&err,
@@ -236,7 +224,7 @@ char* json_new_schema_from_table(const STableMapEvent& map, const STableCreateEv
                                            create->columns[i].name.c_str(),
                                            "type",
                                            "null",
-                                           column_type_to_avro_type(map->column_types[i]),
+                                           column_type_to_avro_type(create->column_types[i]),
                                            "real_type",
                                            create->columns[i].type.c_str(),
                                            "length",
@@ -259,28 +247,18 @@ char* json_new_schema_from_table(const STableMapEvent& map, const STableCreateEv
  */
 void save_avro_schema(const char* path,
                       const char* schema,
-                      const STableMapEvent& map,
                       const STableCreateEvent& create)
 {
     char filepath[PATH_MAX];
-    snprintf(filepath,
-             sizeof(filepath),
-             "%s/%s.%s.%06d.avsc",
-             path,
-             map->database.c_str(),
-             map->table.c_str(),
-             map->version);
+    snprintf(filepath, sizeof(filepath), "%s/%s.%s.%06d.avsc", path, create->database.c_str(),
+             create->table.c_str(), create->version);
 
     if (access(filepath, F_OK) != 0)
     {
-        if (!create->was_used)
+        if (FILE* file = fopen(filepath, "wb"))
         {
-            FILE* file = fopen(filepath, "wb");
-            if (file)
-            {
-                fprintf(file, "%s\n", schema);
-                fclose(file);
-            }
+            fprintf(file, "%s\n", schema);
+            fclose(file);
         }
     }
 }
@@ -311,10 +289,10 @@ AvroConverter::AvroConverter(std::string avrodir, uint64_t block_size, mxs_avro_
 {
 }
 
-bool AvroConverter::open_table(const STableMapEvent& map, const STableCreateEvent& create)
+bool AvroConverter::open_table(const STableCreateEvent& create)
 {
     bool rval = false;
-    char* json_schema = json_new_schema_from_table(map, create);
+    char* json_schema = json_new_schema_from_table(create);
 
     if (json_schema)
     {
@@ -323,9 +301,9 @@ bool AvroConverter::open_table(const STableMapEvent& map, const STableCreateEven
                  sizeof(filepath),
                  "%s/%s.%s.%06d.avro",
                  m_avrodir.c_str(),
-                 map->database.c_str(),
-                 map->table.c_str(),
-                 map->version);
+                 create->database.c_str(),
+                 create->table.c_str(),
+                 create->version);
 
         SAvroTable avro_table(avro_table_alloc(filepath,
                                                json_schema,
@@ -334,9 +312,8 @@ bool AvroConverter::open_table(const STableMapEvent& map, const STableCreateEven
 
         if (avro_table)
         {
-            m_open_tables[map->database + "." + map->table] = avro_table;
-            save_avro_schema(m_avrodir.c_str(), json_schema, map, create);
-            m_map = map;
+            m_open_tables[create->id()] = avro_table;
+            save_avro_schema(m_avrodir.c_str(), json_schema, create);
             m_create = create;
             rval = true;
         }
@@ -354,16 +331,15 @@ bool AvroConverter::open_table(const STableMapEvent& map, const STableCreateEven
     return rval;
 }
 
-bool AvroConverter::prepare_table(const STableMapEvent& map, const STableCreateEvent& create)
+bool AvroConverter::prepare_table(const STableCreateEvent& create)
 {
     bool rval = false;
-    auto it = m_open_tables.find(map->database + "." + map->table);
+    auto it = m_open_tables.find(create->id());
 
     if (it != m_open_tables.end())
     {
         m_writer_iface = it->second->avro_writer_iface;
         m_avro_file = &it->second->avro_file;
-        m_map = map;
         m_create = create;
         rval = true;
     }

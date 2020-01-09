@@ -196,7 +196,6 @@ void read_table_info(uint8_t* ptr,
                      uint64_t* table_id,
                      char* dest,
                      size_t len);
-TableMapEvent*    table_map_alloc(uint8_t* ptr, uint8_t hdr_len, TableCreateEvent* create);
 bool              table_create_save(TableCreateEvent* create, const char* filename);
 TableCreateEvent* table_create_from_schema(const char* file,
                                            const char* db,
@@ -208,7 +207,7 @@ void              avro_client_rotate(Avro* router, AvroSession* client, uint8_t*
 bool              avro_open_binlog(const char* binlogdir, const char* file, int* fd);
 void              avro_close_binlog(int fd);
 avro_binlog_end_t avro_read_all_events(Avro* router);
-char*             json_new_schema_from_table(const STableMapEvent& map, const STableCreateEvent& create);
+char*             json_new_schema_from_table(const STableCreateEvent& create);
 bool              handle_row_event(Avro* router, REP_HEADER* hdr, uint8_t* ptr);
 void              handle_one_event(Avro* router, uint8_t* ptr, REP_HEADER& hdr, uint64_t& pos);
 REP_HEADER        construct_header(uint8_t* ptr);

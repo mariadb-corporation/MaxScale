@@ -72,15 +72,14 @@ bool gtid_pos_t::empty() const
 }
 
 /**
- * @brief Extract a table map from a table map event
+ * Extract the field type and metadata information from the table map event
  *
- * This assumes that the complete event minus the replication header is stored
- * at @p ptr
- * @param ptr Pointer to the start of the event payload
- * @param post_header_len Length of the event specific header, 8 or 6 bytes
- * @return New TABLE_MAP or NULL if memory allocation failed
+ * @param ptr     Pointer to the start of the event payload
+ * @param hdr_len Length of the event specific header, 8 or 6 bytes
+ *
+ * @return The ID the table was mapped to
  */
-TableMapEvent* table_map_alloc(uint8_t* ptr, uint8_t hdr_len, TableCreateEvent* create)
+uint64_t TableCreateEvent::map_table(uint8_t* ptr, uint8_t hdr_len)
 {
     uint64_t table_id = 0;
     size_t id_size = hdr_len == 6 ? 4 : 6;
@@ -109,24 +108,17 @@ TableMapEvent* table_map_alloc(uint8_t* ptr, uint8_t hdr_len, TableCreateEvent* 
     ptr += mxq::leint_bytes(ptr);
 
     /** Column types */
-    uint8_t* column_types = ptr;
+    column_types.assign(ptr, ptr + column_count);
     ptr += column_count;
 
     size_t metadata_size = 0;
     uint8_t* metadata = (uint8_t*) mxq::lestr_consume(&ptr, &metadata_size);
-    uint8_t* nullmap = ptr;
-    size_t nullmap_size = (column_count + 7) / 8;
+    column_metadata.assign(metadata, metadata + metadata_size);
 
-    Bytes cols(column_types, column_types + column_count);
-    Bytes nulls(nullmap, nullmap + nullmap_size);
-    Bytes meta(metadata, metadata + metadata_size);
-    return new(std::nothrow) TableMapEvent(schema_name,
-                                           table_name,
-                                           table_id,
-                                           create->version,
-                                           std::move(cols),
-                                           std::move(nulls),
-                                           std::move(meta));
+    size_t nullmap_size = (column_count + 7) / 8;
+    null_bitmap.assign(ptr, ptr + nullmap_size);
+
+    return table_id;
 }
 
 Rpl::Rpl(SERVICE* service,
@@ -497,13 +489,13 @@ void Rpl::alter_table()
         }
     }
 
-    if (updated && create->was_used)
+    if (updated && create->is_open)
     {
         // The ALTER statement can modify multiple parts of the table which is why we synchronize the table
         // only once we've fully processed the statement. In addition to this, the table is only synced if at
         // least one row event for it has been created.
         create->version = ++m_versions[create->database + '.' + create->table];
-        create->was_used = false;
+        create->is_open = false;
         m_handler->create_table(create);
     }
 }
@@ -606,8 +598,6 @@ void Rpl::do_table_rename(const std::string& old_db, const std::string& old_tabl
     {
         it->second->database = new_db;
         it->second->table = new_table;
-        it->second->version = ++m_versions[to];
-        it->second->was_used = false;
         rename_table_create(it->second, from);
     }
 }

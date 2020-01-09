@@ -256,17 +256,15 @@ static bool all_fields_null(uint8_t* null_bitmap, int ncolumns)
  * this row event. Currently this should be a bitfield which has all bits set.
  * @return Pointer to the first byte after the current row event
  */
-uint8_t* process_row_event_data(STableMapEvent map,
-                                STableCreateEvent create,
+uint8_t* process_row_event_data(STableCreateEvent create,
                                 SRowEventHandler& conv,
                                 uint8_t* ptr,
                                 uint8_t* columns_present,
                                 uint8_t* end)
 {
-    mxb_assert(create->database == map->database && create->table == map->table);
     int npresent = 0;
-    long ncolumns = map->columns();
-    uint8_t* metadata = &map->column_metadata[0];
+    long ncolumns = create->columns.size();
+    uint8_t* metadata = &create->column_metadata[0];
     size_t metadata_offset = 0;
 
     /** BIT type values use the extra bits in the row event header */
@@ -292,7 +290,7 @@ uint8_t* process_row_event_data(STableMapEvent map,
                 sprintf(trace[i], "[%ld] NULL", i);
                 conv->column_null(i);
             }
-            else if (column_is_fixed_string(map->column_types[i]))
+            else if (column_is_fixed_string(create->column_types[i]))
             {
                 /** ENUM and SET are stored as STRING types with the type stored
                  * in the metadata. */
@@ -344,7 +342,7 @@ uint8_t* process_row_event_data(STableMapEvent map,
                     check_overflow(ptr <= end);
                 }
             }
-            else if (column_is_bit(map->column_types[i]))
+            else if (column_is_bit(create->column_types[i]))
             {
                 uint8_t len = metadata[metadata_offset + 1];
                 uint8_t bit_len = metadata[metadata_offset] > 0 ? 1 : 0;
@@ -361,7 +359,7 @@ uint8_t* process_row_event_data(STableMapEvent map,
                 ptr += bytes;
                 check_overflow(ptr <= end);
             }
-            else if (column_is_decimal(map->column_types[i]))
+            else if (column_is_decimal(create->column_types[i]))
             {
                 double f_value = 0.0;
                 ptr += unpack_decimal_field(ptr, metadata + metadata_offset, &f_value);
@@ -369,7 +367,7 @@ uint8_t* process_row_event_data(STableMapEvent map,
                 sprintf(trace[i], "[%ld] DECIMAL", i);
                 check_overflow(ptr <= end);
             }
-            else if (column_is_variable_string(map->column_types[i]))
+            else if (column_is_variable_string(create->column_types[i]))
             {
                 size_t sz;
                 int bytes = metadata[metadata_offset] | metadata[metadata_offset + 1] << 8;
@@ -392,7 +390,7 @@ uint8_t* process_row_event_data(STableMapEvent map,
                 conv->column_string(i, buf);
                 check_overflow(ptr <= end);
             }
-            else if (column_is_blob(map->column_types[i]))
+            else if (column_is_blob(create->column_types[i]))
             {
                 uint8_t bytes = metadata[metadata_offset];
                 uint64_t len = 0;
@@ -411,15 +409,15 @@ uint8_t* process_row_event_data(STableMapEvent map,
                 }
                 check_overflow(ptr <= end);
             }
-            else if (column_is_temporal(map->column_types[i]))
+            else if (column_is_temporal(create->column_types[i]))
             {
                 char buf[80];
-                ptr += unpack_temporal_value(map->column_types[i], ptr,
+                ptr += unpack_temporal_value(create->column_types[i], ptr,
                                              &metadata[metadata_offset],
                                              create->columns[i].length,
                                              buf, sizeof(buf));
                 conv->column_string(i, buf);
-                sprintf(trace[i], "[%ld] %s: %s", i, column_type_to_string(map->column_types[i]), buf);
+                sprintf(trace[i], "[%ld] %s: %s", i, column_type_to_string(create->column_types[i]), buf);
                 check_overflow(ptr <= end);
             }
             /** All numeric types (INT, LONG, FLOAT etc.) */
@@ -428,20 +426,20 @@ uint8_t* process_row_event_data(STableMapEvent map,
                 uint8_t lval[16];
                 memset(lval, 0, sizeof(lval));
                 ptr += unpack_numeric_field(ptr,
-                                            map->column_types[i],
+                                            create->column_types[i],
                                             &metadata[metadata_offset],
                                             lval);
-                set_numeric_field_value(conv, i, map->column_types[i], &metadata[metadata_offset], lval,
+                set_numeric_field_value(conv, i, create->column_types[i], &metadata[metadata_offset], lval,
                                         create->columns[i].is_unsigned);
-                sprintf(trace[i], "[%ld] %s", i, column_type_to_string(map->column_types[i]));
+                sprintf(trace[i], "[%ld] %s", i, column_type_to_string(create->column_types[i]));
                 check_overflow(ptr <= end);
             }
-            mxb_assert(metadata_offset <= map->column_metadata.size());
-            metadata_offset += get_metadata_len(map->column_types[i]);
+            mxb_assert(metadata_offset <= create->column_metadata.size());
+            metadata_offset += get_metadata_len(create->column_types[i]);
         }
         else
         {
-            sprintf(trace[i], "[%ld] %s: Not present", i, column_type_to_string(map->column_types[i]));
+            sprintf(trace[i], "[%ld] %s: Not present", i, column_type_to_string(create->column_types[i]));
         }
 
         MXS_INFO("%s", trace[i]);
@@ -514,38 +512,13 @@ bool Rpl::handle_table_map_event(REP_HEADER* hdr, uint8_t* ptr)
     if (create != m_created_tables.end())
     {
         mxb_assert(create->second->columns.size() > 0);
-        auto it = m_table_maps.find(table_ident);
-        STableMapEvent map(table_map_alloc(ptr, ev_len, create->second.get()));
+        auto id = create->second->map_table(ptr, ev_len);
+        m_active_maps[id] = create->second;
+        MXS_DEBUG("Table %s mapped to %lu", create->second->id().c_str(), id);
 
-        if (it != m_table_maps.end())
+        if (!create->second->is_open)
         {
-            auto old = it->second;
-
-            if (old->id == map->id && old->version == map->version
-                && old->table == map->table && old->database == map->database)
-            {
-                // We can reuse the table map object
-                return true;
-            }
-        }
-
-        if (m_handler->open_table(map, create->second))
-        {
-            create->second->was_used = true;
-
-            auto old = m_table_maps.find(table_ident);
-            bool notify = old != m_table_maps.end();
-
-            if (notify)
-            {
-                m_active_maps.erase(old->second->id);
-            }
-
-            m_table_maps[table_ident] = map;
-            m_active_maps[map->id] = map;
-            mxb_assert(m_active_maps[id] == map);
-            MXS_DEBUG("Table %s mapped to %lu", table_ident, map->id);
-            rval = true;
+            create->second->is_open = m_handler->open_table(create->second);
         }
     }
     else
@@ -634,32 +607,28 @@ bool Rpl::handle_row_event(REP_HEADER* hdr, uint8_t* ptr)
 
     if (it != m_active_maps.end())
     {
-        STableMapEvent map = it->second;
-        char table_ident[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 2];
-        snprintf(table_ident, sizeof(table_ident), "%s.%s", map->database.c_str(), map->table.c_str());
+        auto table_ident = it->second->id();
 
         if (!table_matches(table_ident))
         {
             return true;
         }
 
-        auto create = m_created_tables.find(table_ident);
-        bool ok = false;
+        auto create = it->second;
 
-        if (create != m_created_tables.end() && ncolumns == map->columns()
-            && create->second->columns.size() == map->columns()
-            && m_handler->prepare_table(map, create->second))
+        if (ncolumns != create->columns.size())
         {
-            ok = true;
+            MXS_ERROR("Row event and table map event have different column "
+                      "counts for table %s, only full row image is currently "
+                      "supported.", create->id().c_str());
         }
-
-        if (ok)
+        else if (m_handler->prepare_table(create))
         {
             /** Each event has one or more rows in it. The number of rows is not known
              * beforehand so we must continue processing them until we reach the end
              * of the event. */
             int rows = 0;
-            MXS_INFO("Row Event for '%s' at %u", table_ident, hdr->next_pos - hdr->event_size);
+            MXS_INFO("Row Event for '%s' at %u", table_ident.c_str(), hdr->next_pos - hdr->event_size);
 
             while (ptr < end)
             {
@@ -669,7 +638,7 @@ bool Rpl::handle_row_event(REP_HEADER* hdr, uint8_t* ptr)
                 m_gtid.event_num++;
 
                 m_handler->prepare_row(m_gtid, *hdr, event_type);
-                ptr = process_row_event_data(map, create->second, m_handler, ptr, col_present, end);
+                ptr = process_row_event_data(create, m_handler, ptr, col_present, end);
                 m_handler->commit(m_gtid);
 
                 /** Update rows events have the before and after images of the
@@ -679,7 +648,7 @@ bool Rpl::handle_row_event(REP_HEADER* hdr, uint8_t* ptr)
                 {
                     m_gtid.event_num++;
                     m_handler->prepare_row(m_gtid, *hdr, UPDATE_EVENT_AFTER);
-                    ptr = process_row_event_data(map, create->second, m_handler, ptr, col_present, end);
+                    ptr = process_row_event_data(create, m_handler, ptr, col_present, end);
                     m_handler->commit(m_gtid);
                 }
 
@@ -688,42 +657,16 @@ bool Rpl::handle_row_event(REP_HEADER* hdr, uint8_t* ptr)
 
             rval = true;
         }
-        else if (!ok)
-        {
-            MXS_ERROR("Avro file handle was not found for table %s.%s. See earlier"
-                      " errors for more details.",
-                      map->database.c_str(),
-                      map->table.c_str());
-        }
-        else if (create == m_created_tables.end())
-        {
-            MXS_ERROR("Create table statement for %s.%s was not found from the "
-                      "binary logs or the stored schema was not correct.",
-                      map->database.c_str(),
-                      map->table.c_str());
-        }
-        else if (ncolumns == map->columns() && create->second->columns.size() != map->columns())
-        {
-            MXS_ERROR("Table map event has a different column count for table "
-                      "%s.%s than the CREATE TABLE statement. Possible "
-                      "unsupported DDL detected.",
-                      map->database.c_str(),
-                      map->table.c_str());
-        }
         else
         {
-            MXS_ERROR("Row event and table map event have different column "
-                      "counts for table %s.%s, only full row image is currently "
-                      "supported.",
-                      map->database.c_str(),
-                      map->table.c_str());
+            MXS_ERROR("Avro file handle was not found for table %s. See earlier"
+                      " errors for more details.", create->id().c_str());
         }
     }
     else
     {
         MXS_INFO("Row event for unknown table mapped to ID %lu. Data will not "
-                 "be processed.",
-                 table_id);
+                 "be processed.", table_id);
     }
 
     return rval;
@@ -748,20 +691,8 @@ bool Rpl::handle_row_event(REP_HEADER* hdr, uint8_t* ptr)
 bool Rpl::save_and_replace_table_create(STableCreateEvent created)
 {
     std::string table_ident = created->id();
-    auto it = m_created_tables.find(table_ident);
-
-    if (it != m_created_tables.end())
-    {
-        auto tm_it = m_table_maps.find(table_ident);
-
-        if (tm_it != m_table_maps.end())
-        {
-            m_active_maps.erase(tm_it->second->id);
-            m_table_maps.erase(tm_it);
-        }
-    }
-
-    created->version = ++m_versions[created->id()];
+    created->version = ++m_versions[table_ident];
+    created->is_open = false;
     m_created_tables[table_ident] = created;
     mxb_assert(created->columns.size() > 0);
     return m_handler->create_table(created);
@@ -769,23 +700,8 @@ bool Rpl::save_and_replace_table_create(STableCreateEvent created)
 
 bool Rpl::rename_table_create(STableCreateEvent created, const std::string& old_id)
 {
-    auto it = m_created_tables.find(old_id);
-
-    if (it != m_created_tables.end())
-    {
-        auto tm_it = m_table_maps.find(old_id);
-
-        if (tm_it != m_table_maps.end())
-        {
-            m_active_maps.erase(tm_it->second->id);
-            m_table_maps.erase(tm_it);
-        }
-    }
-
     m_created_tables.erase(old_id);
-    m_created_tables[created->id()] = created;
-    mxb_assert(created->columns.size() > 0);
-    return m_handler->create_table(created);
+    return save_and_replace_table_create(created);
 }
 
 static void remove_mysql_comments(std::string& str)

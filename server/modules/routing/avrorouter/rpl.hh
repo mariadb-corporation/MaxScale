@@ -86,7 +86,7 @@ struct TableCreateEvent
         , table(table)
         , database(db)
         , version(version)
-        , was_used(false)
+        , is_open(false)
     {
     }
 
@@ -100,11 +100,17 @@ struct TableCreateEvent
         return database + '.' + table;
     }
 
+    uint64_t map_table(uint8_t* ptr, uint8_t hdr_len);
+
     std::vector<Column> columns;
     std::string         table;
     std::string         database;
-    int                 version;        /**< How many versions of this table have been used */
-    bool                was_used;       /**< Has this schema been persisted to disk */
+    int                 version;    /**< How many versions of this table have been used */
+    bool                is_open;    /**< Has this table been opened by the handler */
+
+    Bytes column_types;
+    Bytes null_bitmap;
+    Bytes column_metadata;
 };
 
 /** A representation of a table map event read from a binary log. A table map
@@ -144,12 +150,9 @@ struct TableMapEvent
     Bytes       column_metadata;
 };
 
-typedef std::shared_ptr<TableMapEvent> STableMapEvent;
-
 // Containers for the replication events
 typedef std::unordered_map<std::string, STableCreateEvent> CreatedTables;
-typedef std::unordered_map<std::string, STableMapEvent>    MappedTables;
-typedef std::unordered_map<uint64_t, STableMapEvent>       ActiveMaps;
+typedef std::unordered_map<uint64_t, STableCreateEvent>    ActiveMaps;
 
 // Handler class for row based replication events
 class RowEventHandler
@@ -166,13 +169,13 @@ public:
     }
 
     // A table was opened
-    virtual bool open_table(const STableMapEvent& map, const STableCreateEvent& create)
+    virtual bool open_table(const STableCreateEvent& create)
     {
         return true;
     }
 
     // Prepare a table for row processing
-    virtual bool prepare_table(const STableMapEvent& map, const STableCreateEvent& create)
+    virtual bool prepare_table(const STableCreateEvent& create)
     {
         return true;
     }
@@ -265,7 +268,6 @@ private:
     Bytes             m_event_type_hdr_lens;
     gtid_pos_t        m_gtid;
     ActiveMaps        m_active_maps;
-    MappedTables      m_table_maps;
     CreatedTables     m_created_tables;
     pcre2_code*       m_match;
     pcre2_code*       m_exclude;
