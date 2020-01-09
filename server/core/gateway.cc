@@ -3194,24 +3194,13 @@ static bool init_base_libraries()
     {
         if (init_sqlite3())
         {
-            if (utils_init())
+            if (maxbase::init())
             {
-                if (maxbase::init())
-                {
-                    initialized = true;
-                }
-                else
-                {
-                    log_startup_error("Failed to initialize MaxScale base library.");
-
-                    utils_end();
-                    // No finalization of sqlite3
-                    finish_ssl();
-                }
+                initialized = true;
             }
             else
             {
-                log_startup_error("Failed to initialize utility library.");
+                log_startup_error("Failed to initialize MaxScale base library.");
 
                 // No finalization of sqlite3
                 finish_ssl();
@@ -3235,7 +3224,6 @@ static bool init_base_libraries()
 static void finish_base_libraries()
 {
     maxbase::finish();
-    utils_end();
     // No finalization of sqlite3
     finish_ssl();
 }

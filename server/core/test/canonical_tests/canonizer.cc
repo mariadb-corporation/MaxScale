@@ -42,12 +42,6 @@ int main(int argc, char** argv)
     mxs_log_init(NULL, NULL, MXS_LOG_TARGET_STDOUT);
     atexit(mxs_log_finish);
 
-    if (!utils_init())
-    {
-        cout << "Utils library init failed." << endl;
-        return rc;
-    }
-
     set_libdir(strdup("../../../../query_classifier/qc_sqlite/"));
     set_datadir(strdup("/tmp"));
     set_langdir(strdup("."));

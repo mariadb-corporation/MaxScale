@@ -43,9 +43,6 @@ enum mxs_socket_type
     MXS_SOCKET_NETWORK,
 };
 
-bool utils_init();      /*< Call this first before using any other function */
-void utils_end();
-
 /**
  * Configure network socket options
  *
@@ -101,7 +98,7 @@ int open_network_socket(enum mxs_socket_type type,
  * @return The opened socket or -1 on failure
  */
 int open_unix_socket(enum mxs_socket_type type,
-                     struct sockaddr_un*  addr,
+                     struct sockaddr_un* addr,
                      const char* path);
 
 int         setnonblocking(int fd);
@@ -121,19 +118,6 @@ char* squeeze_whitespace(char* str);
 bool  strip_escape_chars(char*);
 
 bool is_valid_posix_path(char* path);
-
-char* remove_mysql_comments(const char** src,
-                            const size_t* srcsize,
-                            char** dest,
-                            size_t* destsize);
-char* replace_values(const char** src,
-                     const size_t* srcsize,
-                     char** dest,
-                     size_t* destsize);
-char* replace_literal(char* haystack,
-                      const char* needle,
-                      const char* replacement);
-char* replace_quoted(const char** src, const size_t* srcsize, char** dest, size_t* destsize);
 
 bool clean_up_pathname(char* path);
 

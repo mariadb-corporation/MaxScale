@@ -109,7 +109,6 @@ void init_test_env(char* __attribute((unused))path = nullptr, uint32_t init_type
 
     config_get_global_options()->n_threads = 1;
 
-    utils_init();
     SSL_library_init();
     SSL_load_error_strings();
     OPENSSL_add_all_algorithms_noconf();
