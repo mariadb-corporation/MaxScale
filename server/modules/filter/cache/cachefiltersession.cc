@@ -765,8 +765,10 @@ void CacheFilterSession::store_and_prepare_response(const mxs::ReplyRoute& down,
                                                     // has been terminated.
                                                     if (sThis)
                                                     {
-                                                        sThis->put_value_handler(result, down, reply);
-                                                        sThis->flush_response(down, reply);
+                                                        if (sThis->put_value_handler(result, down, reply))
+                                                        {
+                                                            sThis->flush_response(down, reply);
+                                                        }
                                                     }
                                                 });
 
@@ -1456,10 +1458,12 @@ char* CacheFilterSession::set_cache_hard_ttl(void* pContext,
     return pThis->set_cache_hard_ttl(zName, pValue_begin, pValue_end);
 }
 
-void CacheFilterSession::put_value_handler(cache_result_t result,
+bool CacheFilterSession::put_value_handler(cache_result_t result,
                                            const mxs::ReplyRoute& down,
                                            const mxs::Reply& reply)
 {
+    bool rv = true;
+
     if (CACHE_RESULT_IS_OK(result))
     {
         prepare_response();
@@ -1483,11 +1487,17 @@ void CacheFilterSession::put_value_handler(cache_result_t result,
                                          }
                                      });
 
-        if (!CACHE_RESULT_IS_PENDING(result))
+        if (CACHE_RESULT_IS_PENDING(result))
+        {
+            rv = false;
+        }
+        else
         {
             del_value_handler(result);
         }
     }
+
+    return rv;
 }
 
 void CacheFilterSession::del_value_handler(cache_result_t result)

@@ -168,7 +168,7 @@ private:
 
     using SSessionCache = std::shared_ptr<SessionCache>;
 
-    void put_value_handler(cache_result_t result, const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    bool put_value_handler(cache_result_t result, const mxs::ReplyRoute& down, const mxs::Reply& reply);
     void del_value_handler(cache_result_t result);
     routing_action_t get_value_handler(GWBUF* pPacket, cache_result_t result, GWBUF* pResponse);
     void invalidate_handler(cache_result_t result);
