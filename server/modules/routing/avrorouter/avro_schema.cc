@@ -142,15 +142,15 @@ bool json_extract_field_names(const char* filename, std::vector<Column>& columns
     return rval;
 }
 
-Table* table_create_from_schema(const char* file, const char* db, const char* table, int version)
+STable load_table_from_schema(const char* file, const char* db, const char* table, int version)
 {
-    Table* newtable = NULL;
+    STable rval;
     std::vector<Column> columns;
 
     if (json_extract_field_names(file, columns))
     {
-        newtable = new(std::nothrow) Table(db, table, version, std::move(columns));
+        rval.reset(new Table(db, table, version, std::move(columns)));
     }
 
-    return newtable;
+    return rval;
 }

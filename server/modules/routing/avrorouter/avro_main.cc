@@ -247,7 +247,7 @@ bool converter_func(Worker::Call::action_t action, Avro* router)
             progress = true;
         }
 
-        avro_close_binlog(router->binlog_fd);
+        close(router->binlog_fd);
     }
 
     static int logged = true;

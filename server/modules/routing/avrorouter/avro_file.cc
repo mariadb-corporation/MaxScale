@@ -12,14 +12,7 @@
  */
 
 /**
- * @file avro_file.c - File operations for the Avro router
- *
- * This file contains functions that handle the low level file operations for
- * the Avro router. The handling of Avro data files is done via the Avro C API
- * but the handling of MySQL format binary logs is done manually.
- *
- * Parts of this file have been copied from blr_file.c and modified for other
- * uses.
+ * @file avro_file.c - Legacy file operations for the Avro router
  */
 
 #include "avrorouter.hh"
@@ -77,15 +70,6 @@ bool avro_open_binlog(const char* binlogdir, const char* file, int* dest)
 
     *dest = fd;
     return true;
-}
-
-/**
- * Close a binlog file
- * @param fd Binlog file descriptor
- */
-void avro_close_binlog(int fd)
-{
-    close(fd);
 }
 
 /**
@@ -613,74 +597,4 @@ avro_binlog_end_t avro_read_all_events(Avro* router)
     }
 
     return AVRO_BINLOG_ERROR;
-}
-
-/**
- * Read the field names from the stored Avro schemas
- *
- * @param router Router instance
- */
-void avro_load_metadata_from_schemas(Avro* router)
-{
-    char path[PATH_MAX + 1];
-    snprintf(path, sizeof(path), "%s/*.avsc", router->avrodir.c_str());
-    glob_t files;
-
-    if (glob(path, 0, NULL, &files) != GLOB_NOMATCH)
-    {
-        char db[MYSQL_DATABASE_MAXLEN + 1], table[MYSQL_TABLE_MAXLEN + 1];
-        char table_ident[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 2];
-        int version = 0;
-
-        /** Glob sorts the files in ascending order which means that processing
-         * them in reverse should give us the newest schema first. */
-        for (int i = files.gl_pathc - 1; i > -1; i--)
-        {
-            char* dbstart = strrchr(files.gl_pathv[i], '/');
-
-            if (!dbstart)
-            {
-                continue;
-            }
-
-            dbstart++;
-
-            char* tablestart = strchr(dbstart, '.');
-
-            if (!tablestart)
-            {
-                continue;
-            }
-
-            snprintf(db, sizeof(db), "%.*s", (int)(tablestart - dbstart), dbstart);
-            tablestart++;
-
-            char* versionstart = strchr(tablestart, '.');
-
-            if (!versionstart)
-            {
-                continue;
-            }
-
-            snprintf(table, sizeof(table), "%.*s", (int)(versionstart - tablestart), tablestart);
-            versionstart++;
-
-            char* suffix = strchr(versionstart, '.');
-            char* versionend = NULL;
-            version = strtol(versionstart, &versionend, 10);
-
-            if (versionend == suffix)
-            {
-                snprintf(table_ident, sizeof(table_ident), "%s.%s", db, table);
-                STable created(table_create_from_schema(files.gl_pathv[i], db, table, version));
-                router->handler.add_create(created);
-            }
-            else
-            {
-                MXS_ERROR("Malformed schema file name: %s", files.gl_pathv[i]);
-            }
-        }
-    }
-
-    globfree(&files);
 }

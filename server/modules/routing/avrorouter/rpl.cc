@@ -17,6 +17,8 @@
 #include <sstream>
 #include <algorithm>
 
+#include <glob.h>
+
 #include <maxbase/assert.h>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
@@ -141,17 +143,6 @@ Rpl::Rpl(SERVICE* service,
 void Rpl::flush()
 {
     m_handler->flush_tables();
-}
-
-void Rpl::add_create(STable create)
-{
-    auto it = m_created_tables.find(create->id());
-
-    if (it == m_created_tables.end() || create->version > it->second->version)
-    {
-        m_created_tables[create->id()] = create;
-        m_versions[create->id()] = create->version;
-    }
 }
 
 bool Rpl::table_matches(const std::string& ident)
@@ -671,4 +662,76 @@ void Rpl::do_change_column(const STable& create, const std::string& old_name)
             throw ParsingError("Could not find column " + old_name);
         }
     }
+}
+
+void Rpl::load_metadata(const std::string& datadir)
+{
+    char path[PATH_MAX + 1];
+    snprintf(path, sizeof(path), "%s/*.avsc", datadir.c_str());
+    glob_t files;
+
+    if (glob(path, 0, NULL, &files) != GLOB_NOMATCH)
+    {
+        char db[MYSQL_DATABASE_MAXLEN + 1], table[MYSQL_TABLE_MAXLEN + 1];
+        char table_ident[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 2];
+        int version = 0;
+
+        /** Glob sorts the files in ascending order which means that processing
+         * them in reverse should give us the newest schema first. */
+        for (int i = files.gl_pathc - 1; i > -1; i--)
+        {
+            char* dbstart = strrchr(files.gl_pathv[i], '/');
+
+            if (!dbstart)
+            {
+                continue;
+            }
+
+            dbstart++;
+
+            char* tablestart = strchr(dbstart, '.');
+
+            if (!tablestart)
+            {
+                continue;
+            }
+
+            snprintf(db, sizeof(db), "%.*s", (int)(tablestart - dbstart), dbstart);
+            tablestart++;
+
+            char* versionstart = strchr(tablestart, '.');
+
+            if (!versionstart)
+            {
+                continue;
+            }
+
+            snprintf(table, sizeof(table), "%.*s", (int)(versionstart - tablestart), tablestart);
+            versionstart++;
+
+            char* suffix = strchr(versionstart, '.');
+            char* versionend = NULL;
+            version = strtol(versionstart, &versionend, 10);
+
+            if (versionend == suffix)
+            {
+                snprintf(table_ident, sizeof(table_ident), "%s.%s", db, table);
+
+                if (auto create = load_table_from_schema(files.gl_pathv[i], db, table, version))
+                {
+                    if (m_versions[create->id()] < create->version)
+                    {
+                        m_versions[create->id()] = create->version;
+                        m_created_tables[create->id()] = create;
+                    }
+                }
+            }
+            else
+            {
+                MXS_ERROR("Malformed schema file name: %s", files.gl_pathv[i]);
+            }
+        }
+    }
+
+    globfree(&files);
 }

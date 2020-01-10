@@ -25,7 +25,6 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <time.h>
-#include <glob.h>
 #include <ini.h>
 #include <avro/errors.h>
 #include <maxbase/atomic.h>
@@ -173,5 +172,5 @@ Avro::Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, SERVICE* source, SRow
 
     // TODO: Do these in Avro::create
     avro_load_conversion_state(this);
-    avro_load_metadata_from_schemas(this);
+    this->handler.load_metadata(avrodir);
 }

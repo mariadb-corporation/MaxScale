@@ -232,8 +232,7 @@ public:
         pcre2_code* exclude,
         gtid_pos_t = {});
 
-    // Add a stored Table
-    void add_create(STable create);
+    void load_metadata(const std::string& datadir);
 
     // Handle a replicated binary log event
     void handle_event(REP_HEADER hdr, uint8_t* ptr);
