@@ -672,10 +672,7 @@ void avro_load_metadata_from_schemas(Avro* router)
             if (versionend == suffix)
             {
                 snprintf(table_ident, sizeof(table_ident), "%s.%s", db, table);
-                STableCreateEvent created(table_create_from_schema(files.gl_pathv[i],
-                                                                   db,
-                                                                   table,
-                                                                   version));
+                STable created(table_create_from_schema(files.gl_pathv[i], db, table, version));
                 router->handler.add_create(created);
             }
             else

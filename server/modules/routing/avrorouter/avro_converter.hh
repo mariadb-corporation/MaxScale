@@ -48,8 +48,8 @@ class AvroConverter : public RowEventHandler
 public:
 
     AvroConverter(std::string avrodir, uint64_t block_size, mxs_avro_codec_type codec);
-    bool open_table(const STableCreateEvent& create);
-    bool prepare_table(const STableCreateEvent& create);
+    bool open_table(const STable& create);
+    bool prepare_table(const STable& create);
     void flush_tables();
     void prepare_row(const gtid_pos_t& gtid, const REP_HEADER& hdr, int event_type);
     bool commit(const gtid_pos_t& gtid);
@@ -71,7 +71,7 @@ private:
     AvroTables          m_open_tables;
     uint64_t            m_block_size;
     mxs_avro_codec_type m_codec;
-    STableCreateEvent   m_create;
+    STable              m_create;
 
     void set_active(int i);
 };

@@ -196,18 +196,15 @@ void read_table_info(uint8_t* ptr,
                      uint64_t* table_id,
                      char* dest,
                      size_t len);
-bool              table_create_save(TableCreateEvent* create, const char* filename);
-TableCreateEvent* table_create_from_schema(const char* file,
-                                           const char* db,
-                                           const char* table,
-                                           int version);
+bool   table_create_save(Table* create, const char* filename);
+Table* table_create_from_schema(const char* file, const char* db, const char* table, int version);
 
 int               avro_client_handle_request(Avro*, AvroSession*, GWBUF*);
 void              avro_client_rotate(Avro* router, AvroSession* client, uint8_t* ptr);
 bool              avro_open_binlog(const char* binlogdir, const char* file, int* fd);
 void              avro_close_binlog(int fd);
 avro_binlog_end_t avro_read_all_events(Avro* router);
-char*             json_new_schema_from_table(const STableCreateEvent& create);
+char*             json_new_schema_from_table(const STable& create);
 bool              handle_row_event(Avro* router, REP_HEADER* hdr, uint8_t* ptr);
 void              handle_one_event(Avro* router, uint8_t* ptr, REP_HEADER& hdr, uint64_t& pos);
 REP_HEADER        construct_header(uint8_t* ptr);

@@ -138,7 +138,7 @@ static const char* column_type_to_avro_type(uint8_t type)
  * @param create The TABLE_CREATE for this table
  * @return New schema or NULL if an error occurred
  */
-char* json_new_schema_from_table(const STableCreateEvent& create)
+char* json_new_schema_from_table(const STable& create)
 {
     json_error_t err;
     memset(&err, 0, sizeof(err));
@@ -245,9 +245,7 @@ char* json_new_schema_from_table(const STableCreateEvent& create)
  * @param schema Schema in JSON format
  * @param map Table map that @p schema represents
  */
-void save_avro_schema(const char* path,
-                      const char* schema,
-                      const STableCreateEvent& create)
+void save_avro_schema(const char* path, const char* schema, const STable& create)
 {
     char filepath[PATH_MAX];
     snprintf(filepath, sizeof(filepath), "%s/%s.%s.%06d.avsc", path, create->database.c_str(),
@@ -289,7 +287,7 @@ AvroConverter::AvroConverter(std::string avrodir, uint64_t block_size, mxs_avro_
 {
 }
 
-bool AvroConverter::open_table(const STableCreateEvent& create)
+bool AvroConverter::open_table(const STable& create)
 {
     bool rval = false;
     char* json_schema = json_new_schema_from_table(create);
@@ -331,7 +329,7 @@ bool AvroConverter::open_table(const STableCreateEvent& create)
     return rval;
 }
 
-bool AvroConverter::prepare_table(const STableCreateEvent& create)
+bool AvroConverter::prepare_table(const STable& create)
 {
     bool rval = false;
     auto it = m_open_tables.find(create->id());

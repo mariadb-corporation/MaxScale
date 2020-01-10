@@ -79,7 +79,7 @@ bool gtid_pos_t::empty() const
  *
  * @return The ID the table was mapped to
  */
-uint64_t TableCreateEvent::map_table(uint8_t* ptr, uint8_t hdr_len)
+uint64_t Table::map_table(uint8_t* ptr, uint8_t hdr_len)
 {
     uint64_t table_id = 0;
     size_t id_size = hdr_len == 6 ? 4 : 6;
@@ -143,7 +143,7 @@ void Rpl::flush()
     m_handler->flush_tables();
 }
 
-void Rpl::add_create(STableCreateEvent create)
+void Rpl::add_create(STable create)
 {
     auto it = m_created_tables.find(create->id());
 
@@ -500,7 +500,7 @@ void Rpl::alter_table()
     }
 }
 
-void Rpl::alter_table_add_column(const STableCreateEvent& create)
+void Rpl::alter_table_add_column(const STable& create)
 {
     if (next() == tok::LP)
     {
@@ -519,18 +519,18 @@ void Rpl::alter_table_add_column(const STableCreateEvent& create)
     }
 }
 
-void Rpl::alter_table_drop_column(const STableCreateEvent& create)
+void Rpl::alter_table_drop_column(const STable& create)
 {
     do_drop_column(create, chomp().value());
     discard({tok::RESTRICT, tok::CASCADE});
 }
 
-void Rpl::alter_table_modify_column(const STableCreateEvent& create)
+void Rpl::alter_table_modify_column(const STable& create)
 {
     do_change_column(create, parser.tokens.front().value());
 }
 
-void Rpl::alter_table_change_column(const STableCreateEvent& create)
+void Rpl::alter_table_change_column(const STable& create)
 {
     do_change_column(create, chomp().value());
 }
@@ -566,7 +566,7 @@ void Rpl::do_create_table()
     }
     while (next() == tok::ID);
 
-    STableCreateEvent tbl(new TableCreateEvent(parser.db, parser.table, 0, std::move(columns)));
+    STable tbl(new Table(parser.db, parser.table, 0, std::move(columns)));
     save_and_replace_table_create(tbl);
 }
 
@@ -578,7 +578,7 @@ void Rpl::do_create_table_like(const std::string& old_db, const std::string& old
     if (it != m_created_tables.end())
     {
         auto cols = it->second->columns;
-        STableCreateEvent tbl(new TableCreateEvent(new_db, new_table, 1, std::move(cols)));
+        STable tbl(new Table(new_db, new_table, 1, std::move(cols)));
         save_and_replace_table_create(tbl);
     }
     else
@@ -602,7 +602,7 @@ void Rpl::do_table_rename(const std::string& old_db, const std::string& old_tabl
     }
 }
 
-void Rpl::do_add_column(const STableCreateEvent& create, Column c)
+void Rpl::do_add_column(const STable& create, Column c)
 {
     auto& cols = create->columns;
 
@@ -630,7 +630,7 @@ void Rpl::do_add_column(const STableCreateEvent& create, Column c)
     }
 }
 
-void Rpl::do_drop_column(const STableCreateEvent& create, const std::string& name)
+void Rpl::do_drop_column(const STable& create, const std::string& name)
 {
     auto& cols = create->columns;
 
@@ -646,7 +646,7 @@ void Rpl::do_drop_column(const STableCreateEvent& create, const std::string& nam
     cols.erase(it);
 }
 
-void Rpl::do_change_column(const STableCreateEvent& create, const std::string& old_name)
+void Rpl::do_change_column(const STable& create, const std::string& old_name)
 {
     Column c = column_def();
 

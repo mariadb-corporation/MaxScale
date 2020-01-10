@@ -75,13 +75,10 @@ struct Column
     std::string after;
 };
 
-struct TableCreateEvent;
-typedef std::shared_ptr<TableCreateEvent> STableCreateEvent;
-
 /** A CREATE TABLE abstraction */
-struct TableCreateEvent
+struct Table
 {
-    TableCreateEvent(std::string db, std::string table, int version, std::vector<Column>&& cols)
+    Table(std::string db, std::string table, int version, std::vector<Column>&& cols)
         : columns(cols)
         , table(table)
         , database(db)
@@ -112,6 +109,8 @@ struct TableCreateEvent
     Bytes null_bitmap;
     Bytes column_metadata;
 };
+
+using STable = std::shared_ptr<Table>;
 
 /** A representation of a table map event read from a binary log. A table map
  * maps a table to a unique ID which can be used to match row events to table map
@@ -151,8 +150,8 @@ struct TableMapEvent
 };
 
 // Containers for the replication events
-typedef std::unordered_map<std::string, STableCreateEvent> CreatedTables;
-typedef std::unordered_map<uint64_t, STableCreateEvent>    ActiveMaps;
+typedef std::unordered_map<std::string, STable> CreatedTables;
+typedef std::unordered_map<uint64_t, STable>    ActiveMaps;
 
 // Handler class for row based replication events
 class RowEventHandler
@@ -163,19 +162,19 @@ public:
     }
 
     // A table was created
-    virtual bool create_table(const STableCreateEvent& create)
+    virtual bool create_table(const STable& create)
     {
         return true;
     }
 
     // A table was opened
-    virtual bool open_table(const STableCreateEvent& create)
+    virtual bool open_table(const STable& create)
     {
         return true;
     }
 
     // Prepare a table for row processing
-    virtual bool prepare_table(const STableCreateEvent& create)
+    virtual bool prepare_table(const STable& create)
     {
         return true;
     }
@@ -233,8 +232,8 @@ public:
         pcre2_code* exclude,
         gtid_pos_t = {});
 
-    // Add a stored TableCreateEvent
-    void add_create(STableCreateEvent create);
+    // Add a stored Table
+    void add_create(STable create);
 
     // Handle a replicated binary log event
     void handle_event(REP_HEADER hdr, uint8_t* ptr);
@@ -279,8 +278,8 @@ private:
     void handle_query_event(REP_HEADER* hdr, uint8_t* ptr);
     bool handle_table_map_event(REP_HEADER* hdr, uint8_t* ptr);
     bool handle_row_event(REP_HEADER* hdr, uint8_t* ptr);
-    bool save_and_replace_table_create(STableCreateEvent created);
-    bool rename_table_create(STableCreateEvent created, const std::string& old_id);
+    bool save_and_replace_table_create(STable created);
+    bool rename_table_create(STable created, const std::string& old_id);
     bool table_matches(const std::string& ident);
 
     // SQL parsing related variables and methods
@@ -308,10 +307,10 @@ private:
     void   create_table();
     void   drop_table();
     void   alter_table();
-    void   alter_table_add_column(const STableCreateEvent& create);
-    void   alter_table_drop_column(const STableCreateEvent& create);
-    void   alter_table_modify_column(const STableCreateEvent& create);
-    void   alter_table_change_column(const STableCreateEvent& create);
+    void   alter_table_add_column(const STable& create);
+    void   alter_table_drop_column(const STable& create);
+    void   alter_table_modify_column(const STable& create);
+    void   alter_table_change_column(const STable& create);
     void   rename_table();
 
     // Non-parsing methods called by the parser
@@ -320,7 +319,7 @@ private:
                               const std::string& new_db, const std::string& new_table);
     void do_table_rename(const std::string& old_db, const std::string& old_table,
                          const std::string& new_db, const std::string& new_table);
-    void do_add_column(const STableCreateEvent& create, Column c);
-    void do_drop_column(const STableCreateEvent& create, const std::string& name);
-    void do_change_column(const STableCreateEvent& create, const std::string& old_name);
+    void do_add_column(const STable& create, Column c);
+    void do_drop_column(const STable& create, const std::string& name);
+    void do_change_column(const STable& create, const std::string& old_name);
 };

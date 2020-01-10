@@ -256,7 +256,7 @@ static bool all_fields_null(uint8_t* null_bitmap, int ncolumns)
  * this row event. Currently this should be a bitfield which has all bits set.
  * @return Pointer to the first byte after the current row event
  */
-uint8_t* process_row_event_data(STableCreateEvent create,
+uint8_t* process_row_event_data(STable create,
                                 SRowEventHandler& conv,
                                 uint8_t* ptr,
                                 uint8_t* columns_present,
@@ -688,7 +688,7 @@ bool Rpl::handle_row_event(REP_HEADER* hdr, uint8_t* ptr)
  * @param created Created table
  * @return False if an error occurred and true if successful
  */
-bool Rpl::save_and_replace_table_create(STableCreateEvent created)
+bool Rpl::save_and_replace_table_create(STable created)
 {
     std::string table_ident = created->id();
     created->version = ++m_versions[table_ident];
@@ -698,7 +698,7 @@ bool Rpl::save_and_replace_table_create(STableCreateEvent created)
     return m_handler->create_table(created);
 }
 
-bool Rpl::rename_table_create(STableCreateEvent created, const std::string& old_id)
+bool Rpl::rename_table_create(STable created, const std::string& old_id)
 {
     m_created_tables.erase(old_id);
     return save_and_replace_table_create(created);
