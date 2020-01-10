@@ -53,6 +53,7 @@ static int test1()
 
     SERVICE service;
     service.routerModule = (char*)"required by a check in dcb.cc";
+    dummy.service = &service;
 
     /* Poll tests */
     fprintf(stderr,

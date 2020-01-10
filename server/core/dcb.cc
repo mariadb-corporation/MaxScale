@@ -56,6 +56,7 @@
 
 #include "internal/modules.h"
 #include "internal/session.h"
+#include "internal/service.hh"
 
 using maxscale::RoutingWorker;
 using maxbase::Worker;
@@ -218,6 +219,11 @@ DCB* dcb_alloc(dcb_role_t role, SERV_LISTENER* listener)
         newdcb->poll.owner = RoutingWorker::get_current();
     }
 
+    if (role == DCB_ROLE_CLIENT_HANDLER)
+    {
+        mxb::atomic::add(&listener->service->client_count, 1, mxb::atomic::RELAXED);
+    }
+
     return newdcb;
 }
 
@@ -280,6 +286,21 @@ void dcb_free_all_memory(DCB* dcb)
     if (this_thread.current_dcb == dcb)
     {
         this_thread.current_dcb = NULL;
+    }
+
+    if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
+    {
+        Service* service = static_cast<Service*>(dcb->service);
+        bool should_destroy = !mxb::atomic::load(&service->active);
+
+        if (mxb::atomic::add(&service->client_count, -1) == 1 && should_destroy)
+        {
+            // Destroy the service in the main routing worker thread
+            mxs::RoutingWorker* main_worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
+            main_worker->execute([service]() {
+                                     service_free(service);
+                                 }, Worker::EXECUTE_AUTO);
+        }
     }
 
     DCB_CALLBACK* cb_dcb;
@@ -2518,7 +2539,7 @@ DCB* dcb_accept(DCB* dcb)
             }
 
             if (client_dcb->service->max_connections
-                && client_dcb->service->client_count >= client_dcb->service->max_connections)
+                && client_dcb->service->client_count > client_dcb->service->max_connections)
             {
                 // TODO: If connections can be queued, this is the place to put the
                 // TODO: connection on that queue.
