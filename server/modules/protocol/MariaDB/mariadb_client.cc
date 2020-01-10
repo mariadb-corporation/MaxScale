@@ -54,6 +54,7 @@ namespace
 using AuthRes = mariadb::ClientAuthenticator::AuthRes;
 using ExcRes = mariadb::ClientAuthenticator::ExchRes;
 using SUserEntry = std::unique_ptr<mariadb::UserEntry>;
+using std::move;
 
 const char WORD_KILL[] = "KILL";
 const int CLIENT_CAPABILITIES_LEN = 32;
@@ -724,7 +725,7 @@ bool MariaDBClientConnection::perform_authentication()
                     else
                     {
                         MXS_WARNING("User accounts have been recently updated, cannot update again for %s.",
-                            m_session->user_and_host().c_str());
+                                    m_session->user_and_host().c_str());
                         send_access_denied_error();
                         m_auth_state = AuthState::FAIL;
                     }
@@ -750,7 +751,7 @@ bool MariaDBClientConnection::perform_authentication()
                 if (uares == FindUAResult::FOUND)
                 {
                     MXB_DEBUG("Found user account entry for %s after updating user account data.",
-                        m_session->user_and_host().c_str());
+                              m_session->user_and_host().c_str());
                     m_auth_state = AuthState::ASK_FOR_TOKEN;
                 }
                 else
@@ -878,7 +879,7 @@ MariaDBClientConnection::FindUAResult MariaDBClientConnection::find_user_account
         if (selected_module)
         {
             // Save related data so that later calls do not need to perform the same work.
-            m_user_entry = std::move(entry);
+            m_user_entry = move(entry);
             m_session_data->m_current_authenticator = selected_module;
             m_authenticator = selected_module->create_client_authenticator();
             rval = m_authenticator ? FindUAResult::FOUND : FindUAResult::ERROR;
@@ -1534,9 +1535,9 @@ bool MariaDBClientConnection::route_statement(uint64_t capabilities, mxs::Buffer
     track_current_command(packetbuf);
 
     bool keep_processing = true;
-    // Track MaxScale-specific sql.
     if (m_command == MXS_COM_QUERY)
     {
+        // Track MaxScale-specific sql.
         char* errmsg = handle_variables(m_session, &packetbuf);
         if (errmsg)
         {
@@ -1666,6 +1667,7 @@ void MariaDBClientConnection::ready_for_reading(DCB* event_dcb)
     switch (m_state)
     {
     case State::AUTHENTICATING:
+    case State::CHANGING_USER:
         /**
          * After a listener has accepted a new connection, a standard MySQL handshake is
          * sent to the client. The first time this function is called from the poll loop,
@@ -2206,11 +2208,11 @@ bool MariaDBClientConnection::parse_handshake_response_packet(GWBUF* buffer)
                 m_session_data->client_info = client_info;
                 m_session_data->user = parse_res.username;
                 m_session->set_user(parse_res.username);
-                m_session_data->auth_token = std::move(parse_res.token_res.auth_token);
+                m_session_data->auth_token = move(parse_res.token_res.auth_token);
                 m_session_data->db = parse_res.db;
                 m_session->set_database(parse_res.db);
-                m_session_data->plugin = std::move(parse_res.plugin);
-                m_session_data->connect_attrs = std::move(parse_res.attr_res.attr_data);
+                m_session_data->plugin = move(parse_res.plugin);
+                m_session_data->connect_attrs = move(parse_res.attr_res.attr_data);
                 rval = true;
             }
         }
@@ -2377,4 +2379,43 @@ bool MariaDBClientConnection::is_movable() const
 {
     mxb_assert(mxs::RoutingWorker::get_current() == m_dcb->owner);
     return m_auth_state != AuthState::TRY_AGAIN;
+}
+
+bool MariaDBClientConnection::start_change_user(GWBUF* buffer)
+{
+    // Parse the COM_CHANGE_USER-packet. The packet is somewhat similar to a typical handshake response.
+    size_t buflen = gwbuf_length(buffer);
+    bool rval = false;
+
+    size_t min_expected_len = MYSQL_HEADER_LEN + 5;
+    auto max_expected_len = min_expected_len + MYSQL_USER_MAXLEN + MYSQL_DATABASE_MAXLEN + 1000;
+    if ((buflen >= min_expected_len) && buflen <= max_expected_len)
+    {
+        int datalen = buflen - MYSQL_HEADER_LEN;
+        packet_parser::ByteVec data;
+        data.resize(datalen + 1);
+        gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, datalen, data.data());
+        data[datalen] = '\0';   // Simplifies some later parsing.
+
+        auto parse_res = packet_parser::parse_change_user_packet(data, m_session_data->client_capabilities());
+        if (parse_res.success)
+        {
+            if (data.size() == 1)
+            {
+                m_change_user.username = move(parse_res.username);
+                m_change_user.db = move(parse_res.db);
+                m_change_user.plugin = move(parse_res.plugin);
+                m_change_user.charset = parse_res.charset;
+                m_change_user.auth_token = move(parse_res.token_res.auth_token);
+                m_change_user.conn_attr = move(parse_res.attr_res.attr_data);
+                rval = true;
+            }
+        }
+        else if (parse_res.token_res.old_protocol)
+        {
+            MXB_ERROR("Client %s attempted a COM_CHANGE_USER with pre-4.1 authentication, "
+                      "which is not supported.", m_session->user_and_host().c_str());
+        }
+    }
+    return rval;
 }

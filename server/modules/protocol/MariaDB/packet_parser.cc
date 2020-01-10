@@ -17,13 +17,35 @@
 
 using std::string;
 
-namespace packet_parser
+namespace
 {
-void pop_front(ByteVec& data, int len)
+void pop_front(packet_parser::ByteVec& data, int len)
 {
     auto begin = data.begin();
     data.erase(begin, begin + len);
 }
+
+auto read_stringz_if_cap(packet_parser::ByteVec& data, uint32_t client_caps, uint32_t req_caps)
+{
+    std::pair<bool, string> rval(true, ""); // success & result
+    if ((client_caps & req_caps) == req_caps)
+    {
+        if (!data.empty())
+        {
+            rval.second = (const char*)data.data();
+            pop_front(data, rval.second.size() + 1);    // Should be null-terminated.
+        }
+        else
+        {
+            rval.first = false;
+        }
+    }
+    return rval;
+}
+}
+namespace packet_parser
+{
+
 
 ClientInfo parse_client_capabilities(ByteVec& data, const ClientInfo* old_info)
 {
@@ -70,31 +92,14 @@ ClientResponseResult parse_client_response(ByteVec& data, uint32_t client_caps)
     rval.username = (const char*)data.data();
     pop_front(data, rval.username.size() + 1);
 
-    auto read_stringz_if_cap = [client_caps, &data](uint32_t required_capability) {
-            std::pair<bool, string> rval(true, ""); // success & result
-            if (client_caps & required_capability)
-            {
-                if (!data.empty())
-                {
-                    rval.second = (const char*)data.data();
-                    pop_front(data, rval.second.size() + 1);    // Should be null-terminated.
-                }
-                else
-                {
-                    rval.first = false;
-                }
-            }
-            return rval;
-        };
-
     // Next is authentication response. The length is encoded in different forms depending on
     // capabilities.
-    rval.token_res = parse_auth_token(data, client_caps);
+    rval.token_res = parse_auth_token(data, client_caps, AuthPacketType::HANDSHAKE_RESPONSE);
     if (rval.token_res.success)
     {
         // The following fields are optional.
-        auto db_res = read_stringz_if_cap(GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB);
-        auto plugin_res = read_stringz_if_cap(GW_MYSQL_CAPABILITIES_PLUGIN_AUTH);
+        auto db_res = read_stringz_if_cap(data, client_caps, GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB);
+        auto plugin_res = read_stringz_if_cap(data, client_caps, GW_MYSQL_CAPABILITIES_PLUGIN_AUTH);
         if (db_res.first && plugin_res.first)
         {
             rval.db = std::move(db_res.second);
@@ -110,7 +115,7 @@ ClientResponseResult parse_client_response(ByteVec& data, uint32_t client_caps)
     return rval;
 }
 
-AuthParseResult parse_auth_token(ByteVec& data, uint32_t client_caps)
+AuthParseResult parse_auth_token(ByteVec& data, uint32_t client_caps, AuthPacketType packet_type)
 {
     AuthParseResult rval;
     if (data.empty())
@@ -125,7 +130,9 @@ AuthParseResult parse_auth_token(ByteVec& data, uint32_t client_caps)
     uint64_t auth_token_len_bytes = 0;  // In how many bytes the auth token length is encoded in.
     uint64_t auth_token_len = 0;        // The actual auth token length.
 
-    if (client_caps & GW_MYSQL_CAPABILITIES_AUTH_LENENC_DATA)
+    // com_change_user does not support the length-encoded token.
+    if (packet_type == AuthPacketType::HANDSHAKE_RESPONSE
+        && client_caps & GW_MYSQL_CAPABILITIES_AUTH_LENENC_DATA)
     {
         // Token is a length-encoded string. First is a length-encoded integer, then the token data.
         auth_token_len_bytes = mxq::leint_bytes(ptr);
@@ -204,4 +211,48 @@ AttrParseResult parse_attributes(ByteVec& data, uint32_t client_caps)
     }
     return rval;
 }
+
+ChangeUserParseResult parse_change_user_packet(ByteVec& data, uint32_t client_caps)
+{
+    ChangeUserParseResult rval;
+    const uint8_t* ptr = data.data();
+
+    mxb_assert(*ptr == MXS_COM_CHANGE_USER);
+    ptr++;
+
+    // null-terminated username. Again, cannot overflow.
+    rval.username = (const char*)ptr;
+    ptr += rval.username.length() + 1;
+    pop_front(data, ptr - data.data());
+
+    rval.token_res = parse_auth_token(data, client_caps, AuthPacketType::COM_CHANGE_USER);
+    if (rval.token_res.success)
+    {
+        auto db_res = read_stringz_if_cap(data, client_caps, GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB);
+        if (db_res.first)
+        {
+            rval.db = std::move(db_res.second);
+            // charset, 2 bytes
+            if (data.size() >= 2)
+            {
+                rval.charset = gw_mysql_get_byte2(data.data());
+                pop_front(data, 2);
+                // new auth plugin
+                auto plugin_res = read_stringz_if_cap(data, client_caps, GW_MYSQL_CAPABILITIES_PLUGIN_AUTH);
+                if (plugin_res.first)
+                {
+                    rval.plugin = std::move(plugin_res.second);
+                    // finally, connection attributes
+                    rval.attr_res = parse_attributes(data, client_caps);
+                    if (rval.attr_res.success)
+                    {
+                        rval.success = true;
+                    }
+                }
+            }
+        }
+    }
+    return rval;
+}
+
 }

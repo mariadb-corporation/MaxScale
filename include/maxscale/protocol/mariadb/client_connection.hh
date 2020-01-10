@@ -37,6 +37,7 @@ public:
     {
         INIT,
         AUTHENTICATING,
+        CHANGING_USER,
         READY,
         FAILED
     };
@@ -80,6 +81,7 @@ private:
     bool parse_handshake_response_packet(GWBUF* buffer);
     bool parse_ssl_request_packet(GWBUF* buffer);
     bool handle_change_user(bool* changed_user, GWBUF** packetbuf);
+    bool start_change_user(GWBUF* buffer);
     bool reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf);
     void handle_use_database(GWBUF* read_buffer);
     void handle_authentication_errors(DCB* dcb, mariadb::ClientAuthenticator::AuthRes auth_val,
@@ -142,11 +144,24 @@ private:
         FAIL
     };
 
+    /** Parsed contents of a COM_CHANGE_USER */
+    struct ChangeUserFields
+    {
+        std::string      username;
+        std::string      db;
+        std::string      plugin;
+        uint16_t         charset {0};
+        mariadb::ByteVec auth_token;
+        mariadb::ByteVec conn_attr;
+
+        ChangeUserFields() = default;
+    };
     SSLState ssl_authenticate_check_status();
     int      ssl_authenticate_client();
 
     mariadb::SClientAuth                m_authenticator;/**< Client authentication data */
     std::unique_ptr<mariadb::UserEntry> m_user_entry;   /**< Client user entry */
+    ChangeUserFields                    m_change_user;  /**< User account to change to */
 
     mxs::Component* m_downstream {nullptr}; /**< Downstream component, the session */
     MXS_SESSION*    m_session {nullptr};    /**< Generic session */

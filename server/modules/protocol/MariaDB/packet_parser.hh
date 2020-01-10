@@ -21,6 +21,13 @@ namespace packet_parser
 using ByteVec = std::vector<uint8_t>;
 using ClientInfo = MYSQL_session::ClientInfo;
 
+/** Authentication token parsing depends on packet type. */
+enum class AuthPacketType
+{
+    HANDSHAKE_RESPONSE,
+    COM_CHANGE_USER
+};
+
 struct AuthParseResult
 {
     bool    success {false};        /**< Was parsing successful */
@@ -52,6 +59,21 @@ struct ClientResponseResult
     ClientResponseResult() = default;
 };
 
+struct ChangeUserParseResult
+{
+    bool success {false};
+
+    std::string username;
+    std::string db;
+    std::string plugin;
+    uint16_t charset {0};
+
+    AuthParseResult token_res;
+    AttrParseResult attr_res;
+
+    ChangeUserParseResult() = default;
+};
+
 /**
  * Parse 32 bytes of client capabilities.
  *
@@ -75,9 +97,10 @@ ClientResponseResult parse_client_response(ByteVec& data, uint32_t client_caps);
  *
  * @param data Data array
  * @param client_caps Client capabilities
+ * @param packet_type Packet type
  * @return Result object
  */
-AuthParseResult parse_auth_token(ByteVec& data, uint32_t client_caps);
+AuthParseResult parse_auth_token(ByteVec& data, uint32_t client_caps, AuthPacketType packet_type);
 
 /**
  * Parse connection attributes from array. The data is extracted as is, without breaking it to key-value
@@ -88,4 +111,13 @@ AuthParseResult parse_auth_token(ByteVec& data, uint32_t client_caps);
  * @return Result object
  */
 AttrParseResult parse_attributes(ByteVec& data, uint32_t client_caps);
+
+/**
+ * Parse fields from a COM_CHANGE_USER-packet.
+ *
+ * @param data Data array
+ * @param client_caps Client capabilities
+ * @return Result object
+ */
+ChangeUserParseResult parse_change_user_packet(ByteVec& data, uint32_t client_caps);
 }

@@ -21,6 +21,8 @@ class GWBUF;
 
 namespace mariadb
 {
+using ByteVec = std::vector<uint8_t>;
+
 struct UserSearchSettListener
 {
     // These user search settings are dependant on listener configuration.
@@ -48,10 +50,8 @@ public:
         uint32_t m_client_capabilities {0};     /*< Basic client capabilities */
         uint32_t m_extra_capabilities {0};      /*< MariaDB 10.2 capabilities */
 
-        /**
-         * Connection character set (default latin1 ). Usually just one byte is needed. COM_CHANGE_USER
-         * sends two. */
-        uint16_t m_charset {0x8};
+        /** Connection character set. Usually just one byte is needed. COM_CHANGE_USER sends two. */
+        uint16_t m_charset {0};
     };
 
     bool     ssl_capable() const;
