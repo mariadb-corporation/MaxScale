@@ -32,6 +32,63 @@ using std::vector;
 namespace
 {
 
+const char* redis_type_to_string(int type)
+{
+    switch (type)
+    {
+    case REDIS_REPLY_ARRAY:
+        return "ARRAY";
+
+    case REDIS_REPLY_ERROR:
+        return "ERROR";
+
+    case REDIS_REPLY_INTEGER:
+        return "INTEGER";
+
+    case REDIS_REPLY_NIL:
+        return "NIL";
+
+    case REDIS_REPLY_STATUS:
+        return "STATUS";
+
+    case REDIS_REPLY_STRING:
+        return "STRING";
+    }
+
+    return "UNKNOWN";
+}
+
+string redis_error_to_string(int err)
+{
+    switch (err)
+    {
+    case REDIS_OK:
+        return "no error";
+
+    case REDIS_ERR_IO:
+        {
+            int e = errno;
+            string s("redis I/O error: ");
+            s += mxb_strerror(e);
+        }
+        break;
+
+    case REDIS_ERR_EOF:
+        return "server closed the connection";
+
+    case REDIS_ERR_PROTOCOL:
+        return "error while parsing the protocol";
+
+    case REDIS_ERR_OTHER:
+        return "unspecified error (possibly unresolved hostname)";
+
+    case REDIS_ERR:
+        return "general error";
+    }
+
+    return "unknown error";
+}
+
 class Redis
 {
 public:
@@ -249,66 +306,60 @@ public:
         return rv;
     }
 
+    bool expect_status(const char* zValue, const char* zContext)
+    {
+        if (!zContext)
+        {
+            zContext = "unspecified";
+        }
+
+        Reply reply;
+        int rv = getReply(&reply);
+
+        if (rv == REDIS_OK)
+        {
+            if (reply.is_status())
+            {
+                if (strcmp(reply.str(), zValue) != 0)
+                {
+                    MXS_ERROR("Expected status message '%s' in the context of %s, "
+                              "but received '%s'.", zValue, zContext, reply.str());
+                    rv = REDIS_ERR;
+                }
+            }
+            else
+            {
+                MXS_ERROR("Expected status message in the context of %s, "
+                          "but received a %s.", zContext, redis_type_to_string(reply.type()));
+            }
+        }
+        else
+        {
+            MXS_ERROR("Failed to read reply in the context of %s: %s, %s",
+                      zContext, redis_error_to_string(rv).c_str(), errstr());
+        }
+
+        return rv == REDIS_OK;
+    }
+
+    bool expect_n_status(size_t n, const char* zValue, const char* zContext)
+    {
+        bool rv = true;
+
+        for (size_t i = 0; i < n; ++i)
+        {
+            if (!expect_status(zValue, zContext))
+            {
+                rv = false;
+            }
+        }
+
+        return rv;
+    }
+
 private:
     redisContext* m_pContext;
 };
-
-const char* redis_type_to_string(int type)
-{
-    switch (type)
-    {
-    case REDIS_REPLY_ARRAY:
-        return "ARRAY";
-
-    case REDIS_REPLY_ERROR:
-        return "ERROR";
-
-    case REDIS_REPLY_INTEGER:
-        return "INTEGER";
-
-    case REDIS_REPLY_NIL:
-        return "NIL";
-
-    case REDIS_REPLY_STATUS:
-        return "STATUS";
-
-    case REDIS_REPLY_STRING:
-        return "STRING";
-    }
-
-    return "UNKNOWN";
-}
-
-string redis_error_to_string(int err)
-{
-    switch (err)
-    {
-    case REDIS_OK:
-        return "no error";
-
-    case REDIS_ERR_IO:
-        {
-            int e = errno;
-            string s("redis I/O error: ");
-            s += mxb_strerror(e);
-        }
-        break;
-
-    case REDIS_ERR_EOF:
-        return "server closed the connection";
-
-    case REDIS_ERR_PROTOCOL:
-        return "error while parsing the protocol";
-
-    case REDIS_ERR_OTHER:
-        return "unspecified error (possibly unresolved hostname)";
-
-    case REDIS_ERR:
-        return "general error";
-    }
-
-    return "unknown error";
-}
 
 class RedisToken : public std::enable_shared_from_this<RedisToken>,
                    public Storage::Token
@@ -465,31 +516,14 @@ public:
                 cache_result_t rv = CACHE_RESULT_OK;
 
                 // This will be the response to MULTI above.
-                Redis::Reply reply;
-                rc = redis.getReply(&reply);
 
-                if (rc == REDIS_OK)
+                if (redis.expect_status("OK", "MULTI"))
                 {
-                    mxb_assert(reply.is_status("OK"));
-
                     // All commands before EXEC should only return a status of QUEUED.
-                    for (size_t i = 0; i < n + 1; ++i)
-                    {
-                        rc = redis.getReply(&reply);
-
-                        if (rc == REDIS_OK)
-                        {
-                            mxb_assert(reply.is_status("QUEUED"));
-                        }
-                        else
-                        {
-                            MXS_ERROR("Failed to read response to queued commands: %s, %s",
-                                      redis_error_to_string(rc).c_str(),
-                                      redis.errstr());
-                        }
-                    }
+                    redis.expect_n_status(n + 1, "QUEUED", "queued command");
 
                     // The reply to EXEC
+                    Redis::Reply reply;
                     rc = redis.getReply(&reply);
 
                     if (rc == REDIS_OK)
@@ -501,15 +535,14 @@ public:
 
                         Redis::Reply element;
 
+#ifdef SS_DEBUG
                         // First we handle the replies to the "HSET" commands.
                         for (size_t i = 0; i < n; ++i)
                         {
                             element = reply.element(i);
-
                             mxb_assert(element.is_integer());
-                            // If 0, the key existed already.
-                            mxb_assert(element.integer() == 1 || element.integer() == 0);
                         }
+#endif
 
                         // Then the SET
                         element = reply.element(n);
@@ -740,31 +773,13 @@ public:
                     mxb_assert(rc == REDIS_OK);
 
                     // This will be the response to MULTI above.
-                    Redis::Reply reply;
-                    rc = redis.getReply(&reply);
-
-                    if (rc == REDIS_OK)
+                    if (redis.expect_status("OK", "MULTI"))
                     {
-                        mxb_assert(reply.is_status("OK"));
-
                         // All commands before EXEC should only return a status of QUEUED.
-                        for (size_t i = 0; i < hdel_argvs.size() + 1; ++i)
-                        {
-                            rc = redis.getReply(&reply);
-
-                            if (rc == REDIS_OK)
-                            {
-                                mxb_assert(reply.is_status("QUEUED"));
-                            }
-                            else
-                            {
-                                MXS_ERROR("Failed to read response to queued commands: %s, %s",
-                                          redis_error_to_string(rc).c_str(),
-                                          redis.errstr());
-                            }
-                        }
+                        redis.expect_n_status(hdel_argvs.size() + 1, "QUEUED", "queued command");
 
                         // The reply to EXEC
+                        Redis::Reply reply;
                         rc = redis.getReply(&reply);
 
                         if (rc == REDIS_OK)
@@ -780,10 +795,7 @@ public:
                             for (size_t i = 0; i < hdel_argvs.size(); ++i)
                             {
                                 element = reply.element(i);
-
                                 mxb_assert(element.is_integer());
-                                // If 0, the key existed already.
-                                mxb_assert(element.integer() == 1 || element.integer() == 0);
                             }
 
                             // Then the DEL
