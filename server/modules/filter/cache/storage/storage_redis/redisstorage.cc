@@ -374,14 +374,18 @@ public:
         return shared_from_this();
     }
 
-    static bool create(const string& host, int port, uint32_t ttl, shared_ptr<Storage::Token>* psToken)
+    static bool create(const string& host,
+                       int port,
+                       bool invalidate,
+                       uint32_t ttl,
+                       shared_ptr<Storage::Token>* psToken)
     {
         bool rv = false;
         redisContext* pRedis = redisConnect(host.c_str(), port);
 
         if (pRedis)
         {
-            RedisToken* pToken = new (std::nothrow) RedisToken(pRedis, ttl);
+            RedisToken* pToken = new (std::nothrow) RedisToken(pRedis, invalidate, ttl);
 
             if (pToken)
             {
@@ -463,6 +467,7 @@ public:
                              const GWBUF* pValue,
                              std::function<void (cache_result_t)> cb)
     {
+        mxb_assert(m_invalidate || invalidation_words.empty());
         vector<char> rkey = key.to_vector();
 
         GWBUF* pClone = gwbuf_clone(const_cast<GWBUF*>(pValue));
@@ -471,105 +476,9 @@ public:
         auto sThis = get_shared();
 
         mxs::thread_pool().execute([sThis, rkey, invalidation_words, pClone, cb]() {
-                Redis& redis = sThis->m_redis;
+                RedisAction action = sThis->put_value(rkey, invalidation_words, pClone);
 
-                int rc;
-                // Start a redis transaction.
-                MXB_AT_DEBUG(rc =) redis.appendCommand("MULTI");
-                mxb_assert(rc == REDIS_OK);
-
-                size_t n = invalidation_words.size();
-                if (n != 0)
-                {
-                    // 'rkey' is the key that identifies the value. So, we store it to
-                    // a redis hash that is identified by each invalidation word, aka
-                    // the table name.
-
-                    for (size_t i = 0; i < n; ++i)
-                    {
-                        const char* pHash = invalidation_words[i].c_str();
-                        int hash_len = invalidation_words[i].length();
-                        const char* pField = rkey.data();
-                        int field_len = rkey.size();
-
-                        // redisAppendCommand can only fail if we run out of memory
-                        // or if the format string is broken.
-                        MXB_AT_DEBUG(rc =) redis.appendCommand("HSET %b %b \"1\"",
-                                                               pHash, hash_len,
-                                                               pField, field_len);
-                        mxb_assert(rc == REDIS_OK);
-                    }
-                }
-
-                // Then the actual value is stored.
-                MXB_AT_DEBUG(rc =) redis.appendCommand("SET %b %b PX %u",
-                                                       rkey.data(), rkey.size(),
-                                                       reinterpret_cast<const char*>(GWBUF_DATA(pClone)),
-                                                       GWBUF_LENGTH(pClone),
-                                                       sThis->m_ttl);
-                mxb_assert(rc == REDIS_OK);
-
-                // Commit the transaction, will actually be sent only when we ask for the reply.
-                MXB_AT_DEBUG(rc =) redis.appendCommand("EXEC");
-                mxb_assert(rc == REDIS_OK);
-
-                cache_result_t rv = CACHE_RESULT_OK;
-
-                // This will be the response to MULTI above.
-
-                if (redis.expect_status("OK", "MULTI"))
-                {
-                    // All commands before EXEC should only return a status of QUEUED.
-                    redis.expect_n_status(n + 1, "QUEUED", "queued command");
-
-                    // The reply to EXEC
-                    Redis::Reply reply;
-                    rc = redis.getReply(&reply);
-
-                    if (rc == REDIS_OK)
-                    {
-                        // The reply will now contain the actual responses to the commands
-                        // issued after MULTI.
-                        mxb_assert(reply.is_array());
-                        mxb_assert(reply.elements() == n + 1);
-
-                        Redis::Reply element;
-
-#ifdef SS_DEBUG
-                        // First we handle the replies to the "HSET" commands.
-                        for (size_t i = 0; i < n; ++i)
-                        {
-                            element = reply.element(i);
-                            mxb_assert(element.is_integer());
-                        }
-#endif
-
-                        // Then the SET
-                        element = reply.element(n);
-                        mxb_assert(element.is_status());
-
-                        if (!element.is_status("OK"))
-                        {
-                            MXS_ERROR("Failed when storing cache value to redis, expected 'OK' but "
-                                      "received '%s'.", reply.str());
-                            rv = CACHE_RESULT_ERROR;
-                        }
-                    }
-                    else
-                    {
-                        MXS_WARNING("Failed fatally when reading reply to EXEC: %s, %s",
-                                    redis_error_to_string(rc).c_str(),
-                                    redis.errstr());
-                        rv = CACHE_RESULT_ERROR;
-                    }
-                }
-                else
-                {
-                    MXS_ERROR("Failed when reading response to MULTI: %s, %s",
-                              redis_error_to_string(rc).c_str(),
-                              redis.errstr());
-                    rc = CACHE_RESULT_ERROR;
-                }
+                cache_result_t rv = (action == RedisAction::OK ? CACHE_RESULT_OK : CACHE_RESULT_ERROR);
 
                 sThis->m_pWorker->execute([sThis, pClone, rv, cb]() {
                         // TODO: So as not to trigger an assert in buffer.cc, we need to delete
@@ -645,188 +554,14 @@ public:
     cache_result_t invalidate(const vector<string>& words,
                               std::function<void (cache_result_t)> cb)
     {
+        mxb_assert(m_invalidate);
+
         auto sThis = get_shared();
 
         mxs::thread_pool().execute([sThis, words, cb] () {
-                Redis& redis = sThis->m_redis;
+                RedisAction action = sThis->invalidate(words);
 
-                int rc;
-                int n = words.size();
-                if (n != 0)
-                {
-                    // For each invalidation word (aka table name) we fetch all
-                    // keys.
-                    for (int i = 0; i < n; ++i)
-                    {
-                        const char* pHash = words[i].c_str();
-                        int hash_len = words[i].length();
-
-                        // redisAppendCommand can only fail if we run out of memory
-                        // or if the format string is broken.
-                        MXB_AT_DEBUG(rc =) redis.appendCommand("HGETALL %b",
-                                                               pHash, hash_len);
-                        mxb_assert(rc == REDIS_OK);
-                    }
-                }
-
-                // Then we iterate over the replies and build one DEL command for
-                // deleting all values and one HDEL for each invalidation word for
-                // deleting the keys of each word.
-
-                vector<Redis::Reply> to_free;
-
-                vector<vector<const char*>> hdel_argvs;
-                vector<vector<size_t>> hdel_argvlens;
-
-                vector<const char*> del_argv;
-                vector<size_t> del_argvlen;
-
-                del_argv.push_back("DEL");
-                del_argvlen.push_back(3);
-
-                for (int i = 0; i < n; ++i)
-                {
-                    Redis::Reply reply;
-                    rc = redis.getReply(&reply);
-
-                    if (rc == REDIS_OK)
-                    {
-                        if (reply.is_array())
-                        {
-                            vector<const char*> hdel_argv;
-                            vector<size_t> hdel_argvlen;
-
-                            hdel_argv.push_back("HDEL");
-                            hdel_argvlen.push_back(4);
-
-                            hdel_argv.push_back(words[i].c_str());
-                            hdel_argvlen.push_back(words[i].length());
-
-                            // 'j = j + 2' since key/value pairs are returned.
-                            for (size_t j = 0; j < reply.elements(); j = j + 2)
-                            {
-                                Redis::Reply element = reply.element(j);
-
-                                if (element.is_string())
-                                {
-                                    del_argv.push_back(element.str());
-                                    del_argvlen.push_back(element.len());
-
-                                    hdel_argv.push_back(element.str());
-                                    hdel_argvlen.push_back(element.len());
-                                }
-                                else
-                                {
-                                    MXS_ERROR("Unexpected type returned by redis: %s",
-                                              redis_type_to_string(element.type()));
-                                }
-                            }
-
-                            hdel_argvs.push_back(std::move(hdel_argv));
-                            hdel_argvlens.push_back(std::move(hdel_argvlen));
-                        }
-
-                        to_free.emplace_back(std::move(reply));
-                    }
-                    else
-                    {
-                        MXS_ERROR("Could not read redis reply for hash update for '%s': %s, %s",
-                                  words[i].c_str(),
-                                  redis_error_to_string(rc).c_str(),
-                                  redis.errstr());
-                    }
-                }
-
-                cache_result_t rv = CACHE_RESULT_OK;
-
-                if (del_argv.size() > 1)
-                {
-                    rc = redis.appendCommand("MULTI");
-                    mxb_assert(rc == REDIS_OK);
-
-                    // Delete the relevant keys from the hashes.
-                    for (size_t i = 0; i < hdel_argvs.size(); ++i)
-                    {
-                        // Delete keys related to a particular table, the HDEL commands.
-                        const vector<const char*>& hdel_argv = hdel_argvs[i];
-                        const vector<size_t>& hdel_argvlen = hdel_argvlens[i];
-
-                        if (hdel_argv.size() > 2)
-                        {
-                            const char** ppHdel_argv = const_cast<const char**>(hdel_argv.data());
-                            MXB_AT_DEBUG(rc =) redis.appendCommandArgv(hdel_argv.size(),
-                                                                       ppHdel_argv,
-                                                                       hdel_argvlen.data());
-                            mxb_assert(rc == REDIS_OK);
-                        }
-                    }
-
-                    // Delete all values, the DEL command.
-                    const char** ppDel_argv = const_cast<const char**>(del_argv.data());
-                    rc = redis.appendCommandArgv(del_argv.size(),
-                                                 ppDel_argv,
-                                                 del_argvlen.data());
-                    mxb_assert(rc == REDIS_OK);
-
-                    // This will actually send everything.
-                    rc = redis.appendCommand("EXEC");
-                    mxb_assert(rc == REDIS_OK);
-
-                    // This will be the response to MULTI above.
-                    if (redis.expect_status("OK", "MULTI"))
-                    {
-                        // All commands before EXEC should only return a status of QUEUED.
-                        redis.expect_n_status(hdel_argvs.size() + 1, "QUEUED", "queued command");
-
-                        // The reply to EXEC
-                        Redis::Reply reply;
-                        rc = redis.getReply(&reply);
-
-                        if (rc == REDIS_OK)
-                        {
-                            // The reply will not contain the actual responses to the commands
-                            // issued after MULTI.
-                            mxb_assert(reply.is_array());
-                            mxb_assert(reply.elements() == hdel_argvs.size() + 1);
-
-                            Redis::Reply element;
-
-                            // First we handle the replies to the "HDET" commands.
-                            for (size_t i = 0; i < hdel_argvs.size(); ++i)
-                            {
-                                element = reply.element(i);
-                                mxb_assert(element.is_integer());
-                            }
-
-                            // Then the DEL
-                            element = reply.element(hdel_argvs.size());
-                            mxb_assert(element.is_integer());
-                        }
-                        else
-                        {
-                            MXS_ERROR("Could not read EXEC reply from redis, the cache is now "
-                                      "in an unknown state: %s, %s",
-                                      redis_error_to_string(rc).c_str(),
-                                      redis.errstr());
-                            rv = CACHE_RESULT_ERROR;
-                        }
-                    }
-                    else
-                    {
-                        MXS_ERROR("Could not read MULTI reply from redis, the cache is now "
-                                  "in an unknown state: %s, %s",
-                                  redis_error_to_string(rc).c_str(),
-                                  redis.errstr());
-                        rv = CACHE_RESULT_ERROR;
-                    }
-                }
-
-                to_free.clear();
-
-                // Does this work? Probably not in all cases; it appears that WATCH
-                // needs to be used to prevent problems caused by the fetching of the keys
-                // and the deleteing of the keys (and values) being done in separate
-                // transactions.
+                cache_result_t rv = (action == RedisAction::OK ? CACHE_RESULT_OK : CACHE_RESULT_ERROR);
 
                 sThis->m_pWorker->execute([sThis, rv, cb]() {
                         if (sThis.use_count() > 1) // The session is still alive
@@ -840,9 +575,303 @@ public:
     }
 
 private:
-    RedisToken(redisContext* pRedis, uint32_t ttl)
+    enum class RedisAction
+    {
+        OK,
+        ERROR
+    };
+
+    RedisAction put_value(const vector<char>& rkey,
+                          const vector<std::string>& invalidation_words,
+                          GWBUF* pClone)
+    {
+        RedisAction action = RedisAction::OK;
+
+        int rc;
+        // Start a redis transaction.
+        MXB_AT_DEBUG(rc =) m_redis.appendCommand("MULTI");
+        mxb_assert(rc == REDIS_OK);
+
+        size_t n = invalidation_words.size();
+        if (n != 0)
+        {
+            // 'rkey' is the key that identifies the value. So, we store it to
+            // a redis hash that is identified by each invalidation word, aka
+            // the table name.
+
+            for (size_t i = 0; i < n; ++i)
+            {
+                const char* pHash = invalidation_words[i].c_str();
+                int hash_len = invalidation_words[i].length();
+                const char* pField = rkey.data();
+                int field_len = rkey.size();
+
+                // redisAppendCommand can only fail if we run out of memory
+                // or if the format string is broken.
+                MXB_AT_DEBUG(rc =) m_redis.appendCommand("HSET %b %b \"1\"",
+                                                         pHash, hash_len,
+                                                         pField, field_len);
+                mxb_assert(rc == REDIS_OK);
+            }
+        }
+
+        // Then the actual value is stored.
+        MXB_AT_DEBUG(rc =) m_redis.appendCommand("SET %b %b PX %u",
+                                                 rkey.data(), rkey.size(),
+                                                 reinterpret_cast<const char*>(GWBUF_DATA(pClone)),
+                                                 GWBUF_LENGTH(pClone),
+                                                 m_ttl);
+        mxb_assert(rc == REDIS_OK);
+
+        // Commit the transaction, will actually be sent only when we ask for the reply.
+        MXB_AT_DEBUG(rc =) m_redis.appendCommand("EXEC");
+        mxb_assert(rc == REDIS_OK);
+
+        // This will be the response to MULTI above.
+        if (m_redis.expect_status("OK", "MULTI"))
+        {
+            // All commands before EXEC should only return a status of QUEUED.
+            m_redis.expect_n_status(n + 1, "QUEUED", "queued command");
+
+            // The reply to EXEC
+            Redis::Reply reply;
+            rc = m_redis.getReply(&reply);
+
+            if (rc == REDIS_OK)
+            {
+                // The reply will now contain the actual responses to the commands
+                // issued after MULTI.
+                mxb_assert(reply.is_array());
+                mxb_assert(reply.elements() == n + 1);
+
+                Redis::Reply element;
+
+#ifdef SS_DEBUG
+                // First we handle the replies to the "HSET" commands.
+                for (size_t i = 0; i < n; ++i)
+                {
+                    element = reply.element(i);
+                    mxb_assert(element.is_integer());
+                }
+#endif
+
+                // Then the SET
+                element = reply.element(n);
+                mxb_assert(element.is_status());
+
+                if (!element.is_status("OK"))
+                {
+                    MXS_ERROR("Failed when storing cache value to redis, expected 'OK' but "
+                              "received '%s'.", reply.str());
+                    action = RedisAction::ERROR;
+                }
+            }
+            else
+            {
+                MXS_WARNING("Failed fatally when reading reply to EXEC: %s, %s",
+                            redis_error_to_string(rc).c_str(),
+                            m_redis.errstr());
+                action = RedisAction::ERROR;
+            }
+        }
+        else
+        {
+            MXS_ERROR("Failed when reading response to MULTI: %s, %s",
+                      redis_error_to_string(rc).c_str(),
+                      m_redis.errstr());
+            action = RedisAction::ERROR;
+        }
+
+        return action;
+    }
+
+    RedisAction invalidate(const vector<string>& words)
+    {
+        RedisAction action = RedisAction::OK;
+
+        int rc;
+        int n = words.size();
+        if (n != 0)
+        {
+            // For each invalidation word (aka table name) we fetch all
+            // keys.
+            for (int i = 0; i < n; ++i)
+            {
+                const char* pHash = words[i].c_str();
+                int hash_len = words[i].length();
+
+                // redisAppendCommand can only fail if we run out of memory
+                // or if the format string is broken.
+                MXB_AT_DEBUG(rc =) m_redis.appendCommand("HGETALL %b",
+                                                         pHash, hash_len);
+                mxb_assert(rc == REDIS_OK);
+            }
+        }
+
+        // Then we iterate over the replies and build one DEL command for
+        // deleting all values and one HDEL for each invalidation word for
+        // deleting the keys of each word.
+
+        vector<Redis::Reply> to_free;
+
+        vector<vector<const char*>> hdel_argvs;
+        vector<vector<size_t>> hdel_argvlens;
+
+        vector<const char*> del_argv;
+        vector<size_t> del_argvlen;
+
+        del_argv.push_back("DEL");
+        del_argvlen.push_back(3);
+
+        for (int i = 0; i < n; ++i)
+        {
+            Redis::Reply reply;
+            rc = m_redis.getReply(&reply);
+
+            if (rc == REDIS_OK)
+            {
+                if (reply.is_array())
+                {
+                    vector<const char*> hdel_argv;
+                    vector<size_t> hdel_argvlen;
+
+                    hdel_argv.push_back("HDEL");
+                    hdel_argvlen.push_back(4);
+
+                    hdel_argv.push_back(words[i].c_str());
+                    hdel_argvlen.push_back(words[i].length());
+
+                    // 'j = j + 2' since key/value pairs are returned.
+                    for (size_t j = 0; j < reply.elements(); j = j + 2)
+                    {
+                        Redis::Reply element = reply.element(j);
+
+                        if (element.is_string())
+                        {
+                            del_argv.push_back(element.str());
+                            del_argvlen.push_back(element.len());
+
+                            hdel_argv.push_back(element.str());
+                            hdel_argvlen.push_back(element.len());
+                        }
+                        else
+                        {
+                            MXS_ERROR("Unexpected type returned by redis: %s",
+                                      redis_type_to_string(element.type()));
+                        }
+                    }
+
+                    hdel_argvs.push_back(std::move(hdel_argv));
+                    hdel_argvlens.push_back(std::move(hdel_argvlen));
+                }
+
+                to_free.emplace_back(std::move(reply));
+            }
+            else
+            {
+                MXS_ERROR("Could not read redis reply for hash update for '%s': %s, %s",
+                          words[i].c_str(),
+                          redis_error_to_string(rc).c_str(),
+                          m_redis.errstr());
+            }
+        }
+
+        if (del_argv.size() > 1)
+        {
+            rc = m_redis.appendCommand("MULTI");
+            mxb_assert(rc == REDIS_OK);
+
+            // Delete the relevant keys from the hashes.
+            for (size_t i = 0; i < hdel_argvs.size(); ++i)
+            {
+                // Delete keys related to a particular table, the HDEL commands.
+                const vector<const char*>& hdel_argv = hdel_argvs[i];
+                const vector<size_t>& hdel_argvlen = hdel_argvlens[i];
+
+                if (hdel_argv.size() > 2)
+                {
+                    const char** ppHdel_argv = const_cast<const char**>(hdel_argv.data());
+                    MXB_AT_DEBUG(rc =) m_redis.appendCommandArgv(hdel_argv.size(),
+                                                                 ppHdel_argv,
+                                                                 hdel_argvlen.data());
+                    mxb_assert(rc == REDIS_OK);
+                }
+            }
+
+            // Delete all values, the DEL command.
+            const char** ppDel_argv = const_cast<const char**>(del_argv.data());
+            rc = m_redis.appendCommandArgv(del_argv.size(),
+                                           ppDel_argv,
+                                           del_argvlen.data());
+            mxb_assert(rc == REDIS_OK);
+
+            // This will actually send everything.
+            rc = m_redis.appendCommand("EXEC");
+            mxb_assert(rc == REDIS_OK);
+
+            // This will be the response to MULTI above.
+            if (m_redis.expect_status("OK", "MULTI"))
+            {
+                // All commands before EXEC should only return a status of QUEUED.
+                m_redis.expect_n_status(hdel_argvs.size() + 1, "QUEUED", "queued command");
+
+                // The reply to EXEC
+                Redis::Reply reply;
+                rc = m_redis.getReply(&reply);
+
+                if (rc == REDIS_OK)
+                {
+                    // The reply will not contain the actual responses to the commands
+                    // issued after MULTI.
+                    mxb_assert(reply.is_array());
+                    mxb_assert(reply.elements() == hdel_argvs.size() + 1);
+
+                    Redis::Reply element;
+
+                    // First we handle the replies to the "HDET" commands.
+                    for (size_t i = 0; i < hdel_argvs.size(); ++i)
+                    {
+                        element = reply.element(i);
+                        mxb_assert(element.is_integer());
+                    }
+
+                    // Then the DEL
+                    element = reply.element(hdel_argvs.size());
+                    mxb_assert(element.is_integer());
+                }
+                else
+                {
+                    MXS_ERROR("Could not read EXEC reply from redis, the cache is now "
+                              "in an unknown state: %s, %s",
+                              redis_error_to_string(rc).c_str(),
+                              m_redis.errstr());
+                    action = RedisAction::ERROR;
+                }
+            }
+            else
+            {
+                MXS_ERROR("Could not read MULTI reply from redis, the cache is now "
+                          "in an unknown state: %s, %s",
+                          redis_error_to_string(rc).c_str(),
+                          m_redis.errstr());
+                action = RedisAction::ERROR;
+            }
+        }
+
+        to_free.clear();
+
+        // Does this work? Probably not in all cases; it appears that WATCH
+        // needs to be used to prevent problems caused by the fetching of the keys
+        // and the deleteing of the keys (and values) being done in separate
+        // transactions.
+
+        return action;
+    }
+
+    RedisToken(redisContext* pRedis, bool invalidate, uint32_t ttl)
         : m_redis(pRedis)
         , m_pWorker(mxb::Worker::get_current())
+        , m_invalidate(invalidate)
         , m_ttl(ttl)
     {
     }
@@ -850,6 +879,7 @@ private:
 private:
     Redis        m_redis;
     mxb::Worker* m_pWorker;
+    bool         m_invalidate;
     uint32_t     m_ttl;
 };
 
@@ -864,6 +894,7 @@ RedisStorage::RedisStorage(const string& name,
     , m_config(config)
     , m_host(host)
     , m_port(port)
+    , m_invalidate(config.invalidate != CACHE_INVALIDATE_NEVER)
 {
     if (config.soft_ttl != config.hard_ttl)
     {
@@ -948,7 +979,7 @@ RedisStorage* RedisStorage::create(const string& name,
 
 bool RedisStorage::create_token(shared_ptr<Storage::Token>* psToken)
 {
-    return RedisToken::create(m_host, m_port, m_ttl, psToken);
+    return RedisToken::create(m_host, m_port, m_invalidate, m_ttl, psToken);
 }
 
 void RedisStorage::get_config(Config* pConfig)

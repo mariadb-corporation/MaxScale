@@ -70,5 +70,6 @@ private:
     const Config      m_config;
     const std::string m_host;
     const int         m_port;
+    bool              m_invalidate;
     uint32_t          m_ttl;
 };
