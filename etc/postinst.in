@@ -54,6 +54,8 @@ then
         mkdir -p /usr/lib/systemd/system/maxscale.service.d
         systemctl daemon-reload
     fi
+
+    systemctl enable maxscale.service
 else
     if [ -d "/etc/init/" ] && [ -f "@CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/upstart/maxscale.conf" ]
     then
