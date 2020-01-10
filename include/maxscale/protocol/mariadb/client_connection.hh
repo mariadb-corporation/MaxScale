@@ -35,7 +35,7 @@ public:
     // General connection state
     enum class State
     {
-        INIT,
+        HANDSHAKING,
         AUTHENTICATING,
         CHANGING_USER,
         READY,
@@ -63,7 +63,7 @@ public:
                                  std::string* user_out);
     void mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t target_id, kill_type_t type);
 
-    State m_state {State::INIT};
+    State m_state {State::HANDSHAKING};
 
 private:
     /** Return type of process_special_commands() */
@@ -73,10 +73,20 @@ private:
         END,        // Query handling completed, do not send to filters/router.
     };
 
+    /** Return type of a lower level state machine */
+    enum class StateMachineRes
+    {
+        IN_PROGRESS,// The SM should be called again once more data is available.
+        DONE,       // The SM is complete for now, the protocol may advance to next state
+        ERROR,      // The SM encountered an error. The connection should be closed.
+    };
+
     bool read_first_client_packet(mxs::Buffer* output);
     bool read_protocol_packet(mxs::Buffer* output);
 
-    bool perform_authentication();
+    StateMachineRes process_handshake();
+    StateMachineRes perform_authentication();
+
     bool perform_normal_read();
     bool parse_handshake_response_packet(GWBUF* buffer);
     bool parse_ssl_request_packet(GWBUF* buffer);
@@ -106,6 +116,7 @@ private:
     void mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_type_t type);
     void execute_kill(MXS_SESSION* issuer, std::shared_ptr<KillInfo> info);
     void track_current_command(GWBUF* buf);
+    void update_sequence(GWBUF* buf);
 
     bool require_ssl() const;
 
@@ -120,20 +131,28 @@ private:
     mariadb::UserSearchSettings user_search_settings() const;
     const MariaDBUserCache*     user_account_cache();
 
-    // Authentication state
-    enum class AuthState
+    // Handshake state
+    enum class HSState
     {
-        INIT,           /**< Initial authentication state */
+        INIT,           /**< Initial handshake state */
         EXPECT_SSL_REQ, /**< Expecting client to send SSLRequest */
         SSL_NEG,        /**< Negotiate SSL*/
         EXPECT_HS_RESP, /**< Expecting client to send standard handshake response */
-        FIND_ENTRY,     /**< Find user account entry */
-        TRY_AGAIN,      /**< Find user entry again with new data */
-        ASK_FOR_TOKEN,  /**< Ask client for token */
-        CHECK_TOKEN,    /**< Check token against user account entry */
-        START_SESSION,  /**< Start routing session */
-        FAIL,           /**< Authentication failed */
-        COMPLETE,       /**< Authentication is complete */
+        COMPLETE,       /**< Handshake succeeded */
+        FAIL,           /**< Handshake failed */
+    };
+
+    // Authentication state
+    enum class AuthState
+    {
+        FIND_ENTRY,         /**< Find user account entry */
+        TRY_AGAIN,          /**< Find user entry again with new data */
+        START_EXCHANGE,     /**< Begin authenticator module exchange */
+        CONTINUE_EXCHANGE,  /**< Continue exchange */
+        CHECK_TOKEN,        /**< Check token against user account entry */
+        START_SESSION,      /**< Start routing session */
+        FAIL,               /**< Authentication failed */
+        COMPLETE,           /**< Authentication is complete */
     };
 
     enum class SSLState
@@ -167,7 +186,9 @@ private:
     MXS_SESSION*    m_session {nullptr};    /**< Generic session */
     MYSQL_session*  m_session_data {nullptr};
     qc_sql_mode_t   m_sql_mode {QC_SQL_MODE_DEFAULT};   /**< SQL-mode setting */
-    AuthState       m_auth_state {AuthState::INIT};     /*< Client authentication state */
+    HSState         m_handshake_state {HSState::INIT};
+    AuthState       m_auth_state {AuthState::FIND_ENTRY};   /**< Client authentication state */
+    uint8_t         m_sequence {0};                         /**< Latest sequence number from client */
     uint8_t         m_command {0};
     bool            m_changing_user {false};
     bool            m_large_query {false};

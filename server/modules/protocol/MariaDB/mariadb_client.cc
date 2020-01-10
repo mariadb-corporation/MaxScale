@@ -495,7 +495,6 @@ int MariaDBClientConnection::send_mysql_client_handshake()
     // writing data in the Client buffer queue
     write(buf);
 
-    m_state = State::AUTHENTICATING;
     return sizeof(mysql_packet_header) + mysql_payload_size;
 }
 
@@ -547,169 +546,28 @@ void MariaDBClientConnection::handle_authentication_errors(DCB* generic_dcb, Aut
  * @return True if authentication is still ongoing or complete, false if authentication failed and the
  * connection should be closed.
  */
-bool MariaDBClientConnection::perform_authentication()
+MariaDBClientConnection::StateMachineRes MariaDBClientConnection::perform_authentication()
 {
-    mxs::Buffer read_buffer;
-    GWBUF* buffer = nullptr;
-    uint8_t sequence = 0;
-    uint8_t next_seq = 0;
-
-    if (m_auth_state == AuthState::TRY_AGAIN)
-    {
-        // Waiting for user account update.
-        if (m_user_update_wakeup)
-        {
-            next_seq = m_session_data->next_sequence;
-            sequence = next_seq - 1;
-        }
-        else
-        {
-            // Should not get client data (or read events) before users have actually been updated.
-            MXB_ERROR("Client %s sent data when waiting for user account update. Closing session.",
-                      m_session->user_and_host().c_str());
-            return false;
-        }
-    }
-    else
-    {
-        bool read_success;
-        if (m_auth_state == AuthState::INIT)
-        {
-            // The first response from client requires special handling.
-            read_success = read_first_client_packet(&read_buffer);
-        }
-        else
-        {
-            read_success = read_protocol_packet(&read_buffer);
-        }
-
-        if (!read_success)
-        {
-            return false;
-        }
-        else if (read_buffer.empty())
-        {
-            // Not enough data was available yet.
-            return true;
-        }
-        buffer = read_buffer.release();
-        // Save next sequence to session. Authenticator may use the value.
-        gwbuf_copy_data(buffer, MYSQL_SEQ_OFFSET, 1, &sequence);
-        next_seq = sequence + 1;
-        m_session_data->next_sequence = next_seq;
-    }
-
-    const char wrong_sequence[] = "Client (%s) sent packet with unexpected sequence number. "
-                                  "Expected %i, got %i.";
-    const char packets_ooo[] = "Got packets out of order";
-    const char sql_errstate[] = "08S01";
-    const int er_bad_handshake = 1043;
-    const int er_out_of_order = 1156;
-
-    auto send_access_denied_error = [this, &next_seq]() {
+    auto send_access_denied_error = [this]() {
+            auto ses = m_session_data;
             std::string msg = mxb::string_printf("Access denied for user '%s'@'%s' (using password: %s)",
-                                                 m_session_data->user.c_str(), m_session_data->remote.c_str(),
-                                                 m_session_data->auth_token.empty() ? "NO" : "YES");
-            modutil_send_mysql_err_packet(m_dcb, next_seq, 0, 1045, "2800", msg.c_str());
+                                                 ses->user.c_str(), ses->remote.c_str(),
+                                                 ses->auth_token.empty() ? "NO" : "YES");
+            modutil_send_mysql_err_packet(m_dcb, ses->next_sequence, 0, 1045, "2800", msg.c_str());
         };
 
-    auto remote = m_dcb->remote().c_str();
-    bool error = false;
+    auto rval = StateMachineRes::IN_PROGRESS;
     bool state_machine_continue = true;
     while (state_machine_continue)
     {
         switch (m_auth_state)
         {
-        case AuthState::INIT:
-            m_auth_state = require_ssl() ? AuthState::EXPECT_SSL_REQ : AuthState::EXPECT_HS_RESP;
-            break;
-
-        case AuthState::EXPECT_SSL_REQ:
-            {
-                // Expecting SSLRequest
-                if (sequence == 1)
-                {
-                    if (parse_ssl_request_packet(buffer))
-                    {
-                        m_auth_state = AuthState::SSL_NEG;
-                    }
-                    else
-                    {
-                        modutil_send_mysql_err_packet(
-                            m_dcb, next_seq, 0, er_bad_handshake, sql_errstate, "Bad SSL handshake");
-                        MXB_ERROR("Client (%s) sent an invalid SSLRequest.", remote);
-                        m_auth_state = AuthState::FAIL;
-                    }
-                }
-                else
-                {
-                    modutil_send_mysql_err_packet(
-                        m_dcb, next_seq, 0, er_out_of_order, sql_errstate, packets_ooo);
-                    MXB_ERROR(wrong_sequence, m_session_data->remote.c_str(), 1, sequence);
-                    m_auth_state = AuthState::FAIL;
-                }
-            }
-            break;
-
-        case AuthState::SSL_NEG:
-            {
-                // Client should be negotiating ssl.
-                auto ssl_status = ssl_authenticate_check_status();
-                if (ssl_status == SSLState::COMPLETE)
-                {
-                    m_auth_state = AuthState::EXPECT_HS_RESP;
-                }
-                else if (ssl_status == SSLState::INCOMPLETE)
-                {
-                    // SSL negotiation should complete in the background. Execution returns here once
-                    // complete.
-                    state_machine_continue = false;
-                }
-                else
-                {
-                    mysql_send_auth_error(m_dcb, next_seq, "Access without SSL denied");
-                    MXB_ERROR("Client (%s) failed SSL negotiation.", m_session_data->remote.c_str());
-                    m_auth_state = AuthState::FAIL;
-                }
-            }
-            break;
-
-        case AuthState::EXPECT_HS_RESP:
-            {
-                // Expecting normal Handshake response
-                // @see https://mariadb.com/kb/en/library/connection/#client-handshake-response
-                int expected_seq = require_ssl() ? 2 : 1;
-                if (sequence == expected_seq)
-                {
-                    if (parse_handshake_response_packet(buffer))
-                    {
-                        m_auth_state = AuthState::FIND_ENTRY;
-                    }
-                    else
-                    {
-                        modutil_send_mysql_err_packet(
-                            m_dcb, next_seq, 0, er_bad_handshake, sql_errstate, "Bad handshake");
-                        MXB_ERROR("Client (%s) sent an invalid HandShakeResponse.",
-                                  m_session_data->remote.c_str());
-                        m_auth_state = AuthState::FAIL;
-                    }
-                }
-                else
-                {
-                    modutil_send_mysql_err_packet(
-                        m_dcb, next_seq, 0, er_out_of_order, sql_errstate, packets_ooo);
-                    MXB_ERROR(wrong_sequence, m_session_data->remote.c_str(), expected_seq, sequence);
-                    m_auth_state = AuthState::FAIL;
-                }
-            }
-            break;
-
         case AuthState::FIND_ENTRY:
             {
                 auto uares = find_user_account_entry();
                 if (uares == FindUAResult::FOUND)
                 {
-                    m_auth_state = AuthState::ASK_FOR_TOKEN;
+                    m_auth_state = AuthState::START_EXCHANGE;
                 }
                 else if (uares == FindUAResult::NOT_FOUND)
                 {
@@ -740,32 +598,72 @@ bool MariaDBClientConnection::perform_authentication()
 
         case AuthState::TRY_AGAIN:
             {
-                auto uares = FindUAResult::NOT_FOUND;
-                // Only recheck user if the user account data has actually changed since the previous
-                // attempt.
-                if (user_account_cache()->version() > m_previous_userdb_version)
+                // Waiting for user account update.
+                if (m_user_update_wakeup)
                 {
-                    uares = find_user_account_entry();
-                }
+                    auto uares = FindUAResult::NOT_FOUND;
+                    // Only recheck user if the user account data has actually changed since the previous
+                    // attempt.
+                    if (user_account_cache()->version() > m_previous_userdb_version)
+                    {
+                        uares = find_user_account_entry();
+                    }
 
-                if (uares == FindUAResult::FOUND)
-                {
-                    MXB_DEBUG("Found user account entry for %s after updating user account data.",
-                              m_session->user_and_host().c_str());
-                    m_auth_state = AuthState::ASK_FOR_TOKEN;
+                    if (uares == FindUAResult::FOUND)
+                    {
+                        MXB_DEBUG("Found user account entry for %s after updating user account data.",
+                                  m_session->user_and_host().c_str());
+                        m_auth_state = AuthState::START_EXCHANGE;
+                    }
+                    else
+                    {
+                        send_access_denied_error();
+                        m_auth_state = AuthState::FAIL;
+                    }
                 }
                 else
                 {
-                    send_access_denied_error();
+                    // Should not get client data (or read events) before users have actually been updated.
+                    MXB_ERROR("Client %s sent data when waiting for user account update. Closing session.",
+                              m_session->user_and_host().c_str());
                     m_auth_state = AuthState::FAIL;
                 }
             }
             break;
 
-        case AuthState::ASK_FOR_TOKEN:
+        case AuthState::START_EXCHANGE:
+        case AuthState::CONTINUE_EXCHANGE:
             {
+                mxs::Buffer read_buffer;
+                // Nothing to read on first exchange-call.
+                if (m_auth_state == AuthState::CONTINUE_EXCHANGE)
+                {
+                    if (read_protocol_packet(&read_buffer))
+                    {
+                        if (read_buffer.empty())
+                        {
+                            // Not enough data was available yet.
+                            state_machine_continue = false;
+                            break;
+                        }
+                        else
+                        {
+                            update_sequence(read_buffer.get());
+                            // Save next sequence to session. Authenticator may use the value.
+                            m_session_data->next_sequence = m_sequence + 1;
+                        }
+                    }
+                    else
+                    {
+                        // Connection is likely broken, no need to send error message.
+                        m_auth_state = AuthState::FAIL;
+                        rval = StateMachineRes::ERROR;
+                        break;
+                    }
+                }
+
                 mxs::Buffer auth_output;
-                auto auth_val = m_authenticator->exchange(buffer, m_session_data, &auth_output);
+                auto auth_val = m_authenticator->exchange(read_buffer.get(), m_session_data, &auth_output);
                 if (!auth_output.empty())
                 {
                     write(auth_output.release());
@@ -779,6 +677,10 @@ bool MariaDBClientConnection::perform_authentication()
                 else if (auth_val == ExcRes::INCOMPLETE)
                 {
                     // Authentication is expecting another packet from client, so jump out.
+                    if (m_auth_state == AuthState::START_EXCHANGE)
+                    {
+                        m_auth_state = AuthState::CONTINUE_EXCHANGE;
+                    }
                     state_machine_continue = false;
                 }
                 else
@@ -820,7 +722,7 @@ bool MariaDBClientConnection::perform_authentication()
             }
             else
             {
-                mysql_send_auth_error(m_dcb, next_seq,
+                mysql_send_auth_error(m_dcb, m_session_data->next_sequence,
                                       "Session creation failed, MaxScale may be out of memory");
                 MXB_ERROR("Failed to create session for %s.", m_session->user_and_host().c_str());
                 m_auth_state = AuthState::FAIL;
@@ -835,22 +737,18 @@ bool MariaDBClientConnection::perform_authentication()
                 // The user has already sent more data, process it
                 m_dcb->trigger_read_event();
             }
-            m_state = State::READY;
             state_machine_continue = false;
+            rval = StateMachineRes::DONE;
             break;
 
         case AuthState::FAIL:
             // Close DCB. Will release session. An error message should have already been sent.
-            m_state = State::FAILED;
             state_machine_continue = false;
-            error = true;
+            rval = StateMachineRes::ERROR;
             break;
         }
     }
-
-    /* One way or another, the buffer is now fully processed */
-    gwbuf_free(buffer);
-    return !error;
+    return rval;
 }
 
 MariaDBClientConnection::FindUAResult MariaDBClientConnection::find_user_account_entry()
@@ -1662,42 +1560,73 @@ bool MariaDBClientConnection::perform_normal_read()
 void MariaDBClientConnection::ready_for_reading(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);     // The protocol should only handle its own events.
-    bool close = false;
 
-    switch (m_state)
+    bool state_machine_continue = true;
+    while (state_machine_continue)
     {
-    case State::AUTHENTICATING:
-    case State::CHANGING_USER:
-        /**
-         * After a listener has accepted a new connection, a standard MySQL handshake is
-         * sent to the client. The first time this function is called from the poll loop,
-         * the client reply to the handshake should be available.
-         */
-        if (!perform_authentication())
+        switch (m_state)
         {
-            close = true;
+        case State::HANDSHAKING:
+            /**
+             * After a listener has accepted a new connection, a standard MySQL handshake is
+             * sent to the client. The first time this function is called from the poll loop,
+             * the client reply to the handshake should be available.
+             */
+            {
+                auto ret = process_handshake();
+                switch (ret)
+                {
+                case StateMachineRes::IN_PROGRESS:
+                    state_machine_continue = false;     // need more data
+                    break;
+
+                case StateMachineRes::DONE:
+                    m_state = State::AUTHENTICATING;        // continue directly to next state
+                    break;
+
+                case StateMachineRes::ERROR:
+                    m_state = State::FAILED;
+                    break;
+                }
+            }
+            break;
+
+        case State::AUTHENTICATING:
+        case State::CHANGING_USER:
+            {
+                auto ret = perform_authentication();
+                switch (ret)
+                {
+                case StateMachineRes::IN_PROGRESS:
+                    state_machine_continue = false;     // need more data
+                    break;
+
+                case StateMachineRes::DONE:
+                    m_state = State::READY;
+                    break;
+
+                case StateMachineRes::ERROR:
+                    m_state = State::FAILED;
+                    break;
+                }
+            }
+            break;
+
+        case State::READY:
+            if (!perform_normal_read())
+            {
+                m_state = State::FAILED;
+            }
+            state_machine_continue = false;
+            break;
+
+        case State::FAILED:
+            state_machine_continue = false;
+            break;
         }
-        break;
-
-    case State::READY:
-        // Client connection is authenticated.
-        if (!perform_normal_read())
-        {
-            close = true;
-        }
-        break;
-
-    case State::FAILED:
-        close = true;
-        break;
-
-    default:
-        MXS_ERROR("In mysql_client.c unexpected protocol authentication state");
-        close = true;
-        break;
     }
 
-    if (close)
+    if (m_state == State::FAILED)
     {
         m_session->kill();
     }
@@ -2418,4 +2347,143 @@ bool MariaDBClientConnection::start_change_user(GWBUF* buffer)
         }
     }
     return rval;
+}
+
+MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handshake()
+{
+    mxs::Buffer read_buffer;
+    bool read_success = (m_handshake_state == HSState::INIT) ?
+        // The first response from client requires special handling.
+        read_first_client_packet(&read_buffer) : read_protocol_packet(&read_buffer);
+
+    if (!read_success)
+    {
+        return StateMachineRes::ERROR;
+    }
+    else if (read_buffer.empty())
+    {
+        // Not enough data was available yet.
+        return StateMachineRes::IN_PROGRESS;
+    }
+
+    auto buffer = read_buffer.get();
+    update_sequence(buffer);
+    uint8_t next_seq = m_sequence + 1;
+
+    const char wrong_sequence[] = "Client (%s) sent packet with unexpected sequence number. "
+                                  "Expected %i, got %i.";
+    const char packets_ooo[] = "Got packets out of order";
+    const char sql_errstate[] = "08S01";
+    const int er_bad_handshake = 1043;
+    const int er_out_of_order = 1156;
+
+    auto rval = StateMachineRes::IN_PROGRESS;   // Returned to upper level SM
+    bool state_machine_continue = true;
+    while (state_machine_continue)
+    {
+        switch (m_handshake_state)
+        {
+        case HSState::INIT:
+            m_handshake_state = require_ssl() ? HSState::EXPECT_SSL_REQ : HSState::EXPECT_HS_RESP;
+            break;
+
+        case HSState::EXPECT_SSL_REQ:
+            {
+                // Expecting SSLRequest
+                if (m_sequence == 1)
+                {
+                    if (parse_ssl_request_packet(buffer))
+                    {
+                        m_handshake_state = HSState::SSL_NEG;
+                    }
+                    else
+                    {
+                        modutil_send_mysql_err_packet(
+                            m_dcb, next_seq, 0, er_bad_handshake, sql_errstate, "Bad SSL handshake");
+                        MXB_ERROR("Client (%s) sent an invalid SSLRequest.", m_dcb->remote().c_str());
+                        m_handshake_state = HSState::FAIL;
+                    }
+                }
+                else
+                {
+                    modutil_send_mysql_err_packet(
+                        m_dcb, next_seq, 0, er_out_of_order, sql_errstate, packets_ooo);
+                    MXB_ERROR(wrong_sequence, m_session_data->remote.c_str(), 1, m_sequence);
+                    m_handshake_state = HSState::FAIL;
+                }
+            }
+            break;
+
+        case HSState::SSL_NEG:
+            {
+                // Client should be negotiating ssl.
+                auto ssl_status = ssl_authenticate_check_status();
+                if (ssl_status == SSLState::COMPLETE)
+                {
+                    m_handshake_state = HSState::EXPECT_HS_RESP;
+                }
+                else if (ssl_status == SSLState::INCOMPLETE)
+                {
+                    // SSL negotiation should complete in the background. Execution returns here once
+                    // complete.
+                    state_machine_continue = false;
+                }
+                else
+                {
+                    mysql_send_auth_error(m_dcb, next_seq, "Access without SSL denied");
+                    MXB_ERROR("Client (%s) failed SSL negotiation.", m_session_data->remote.c_str());
+                    m_handshake_state = HSState::FAIL;
+                }
+            }
+            break;
+
+        case HSState::EXPECT_HS_RESP:
+            {
+                // Expecting normal Handshake response
+                // @see https://mariadb.com/kb/en/library/connection/#client-handshake-response
+                int expected_seq = require_ssl() ? 2 : 1;
+                if (m_sequence == expected_seq)
+                {
+                    if (parse_handshake_response_packet(buffer))
+                    {
+                        m_handshake_state = HSState::COMPLETE;
+                    }
+                    else
+                    {
+                        modutil_send_mysql_err_packet(
+                            m_dcb, next_seq, 0, er_bad_handshake, sql_errstate, "Bad handshake");
+                        MXB_ERROR("Client (%s) sent an invalid HandShakeResponse.",
+                                  m_session_data->remote.c_str());
+                        m_handshake_state = HSState::FAIL;
+                    }
+                }
+                else
+                {
+                    modutil_send_mysql_err_packet(
+                        m_dcb, next_seq, 0, er_out_of_order, sql_errstate, packets_ooo);
+                    MXB_ERROR(wrong_sequence, m_session_data->remote.c_str(), expected_seq, m_sequence);
+                    m_handshake_state = HSState::FAIL;
+                }
+            }
+            break;
+
+        case HSState::COMPLETE:
+            state_machine_continue = false;
+            rval = StateMachineRes::DONE;
+            break;
+
+        case HSState::FAIL:
+            // An error message should have already been sent.
+            state_machine_continue = false;
+            rval = StateMachineRes::ERROR;
+            break;
+        }
+    }
+    return rval;
+}
+
+void MariaDBClientConnection::update_sequence(GWBUF* buf)
+{
+    mxb_assert(gwbuf_length(buf) >= MYSQL_HEADER_LEN);
+    gwbuf_copy_data(buf, MYSQL_SEQ_OFFSET, 1, &m_sequence);
 }
