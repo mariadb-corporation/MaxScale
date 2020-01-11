@@ -709,7 +709,8 @@ void RWSplitSession::clientReply(GWBUF* writebuf, DCB* backend_dcb)
         }
     }
 
-    if ((error.is_rollback() || error.is_wsrep_error()) && handle_ignorable_error(backend))
+    if (((m_config.trx_retry_on_deadlock && error.is_rollback()) || error.is_wsrep_error())
+        && handle_ignorable_error(backend))
     {
         // We can ignore this error and treat it as if the connection to the server was broken.
         gwbuf_free(writebuf);

@@ -537,6 +537,19 @@ controls how many server and network failures a single transaction replay
 tolerates. If a transaction is replayed successfully, the counter for failed
 attempts is reset.
 
+### `transaction_replay_retry_on_deadlock`
+
+Enable automatic retrying of transactions that end up in a deadlock. This
+parameter was added in MaxScale 2.4.6 and the feature is disabled by
+default. MaxScale versions from 2.4.0 to 2.4.5 always tried to replay deadlocked
+transactions.
+
+If this feature is enabled and a transaction returns a deadlock error
+(e.g. `SQLSTATE 40001: Deadlock found when trying to get lock; try restarting transaction`),
+the transaction is automatically retried. If the retrying of the transaction
+results in another deadlock error, it is retried until it either succeeds or a
+transaction checksum error is encountered.
+
 ### `optimistic_trx`
 
 Enable optimistic transaction execution. This parameter controls whether normal
