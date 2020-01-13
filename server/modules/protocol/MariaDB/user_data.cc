@@ -862,13 +862,24 @@ UserDatabase::address_matches_host_pattern(const std::string& addr, const std::s
     }
     else if (patterntype == PatternType::HOSTNAME)
     {
-        // Need a reverse lookup on the client address. This is slow. TODO: use a separate thread/cache
-        string resolved_addr;
-        if (mxb::reverse_name_lookup(addr, &resolved_addr))
+        if (addrtype == AddrType::LOCALHOST)
         {
-            if (like(host_pattern, resolved_addr))
+            // A "localhost"-address is matched directly.
+            if (like(host_pattern, addr))
             {
                 matched = true;
+            }
+        }
+        else
+        {
+            // Need a reverse lookup on the client address. This is slow. TODO: use a separate thread/cache
+            string resolved_addr;
+            if (mxb::reverse_name_lookup(addr, &resolved_addr))
+            {
+                if (like(host_pattern, resolved_addr))
+                {
+                    matched = true;
+                }
             }
         }
     }
@@ -884,6 +895,10 @@ UserDatabase::AddrType UserDatabase::parse_address_type(const std::string& addr)
     if (Host::is_valid_ipv4(addr))
     {
         rval = AddrType::IPV4;
+    }
+    else if (strcasecmp(addr.c_str(), "localhost") == 0)
+    {
+        rval = AddrType::LOCALHOST;
     }
     else
     {

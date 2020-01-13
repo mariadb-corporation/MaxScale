@@ -102,6 +102,7 @@ private:
         IPV4,
         MAPPED,
         IPV6,
+        LOCALHOST, /**< If connecting via socket, the remote address is "localhost" */
     };
 
     enum class PatternType
