@@ -21,10 +21,13 @@
 #include <signal.h>
 #include <maxscale/utils.h>
 
-#define WRITE_EVENT        0
-#define UPDATE_EVENT       1
-#define UPDATE_EVENT_AFTER 2
-#define DELETE_EVENT       3
+constexpr int WRITE_EVENT = 0;
+constexpr int UPDATE_EVENT = 1;
+constexpr int UPDATE_EVENT_AFTER = 2;
+constexpr int DELETE_EVENT = 3;
+
+namespace
+{
 
 static bool warn_bit = false;           /**< Remove when support for BIT is added */
 
@@ -33,7 +36,7 @@ static bool warn_bit = false;           /**< Remove when support for BIT is adde
  * @param event Event type
  * @return String representation of the event
  */
-static int get_event_type(uint8_t event)
+int get_event_type(uint8_t event)
 {
     switch (event)
     {
@@ -170,7 +173,7 @@ void set_numeric_field_value(SRowEventHandler& conv,
  * @param current_column Zero indexed column number
  * @return True if the bit is set
  */
-static bool bit_is_set(uint8_t* ptr, int columns, int current_column)
+bool bit_is_set(uint8_t* ptr, int columns, int current_column)
 {
     if (current_column >= 8)
     {
@@ -229,7 +232,7 @@ int get_metadata_len(uint8_t type)
     } while (false)
 
 // Debug function for checking whether a row event consists of only NULL values
-static bool all_fields_null(uint8_t* null_bitmap, int ncolumns)
+bool all_fields_null(uint8_t* null_bitmap, int ncolumns)
 {
     bool rval = true;
 
@@ -484,6 +487,44 @@ void read_table_info(uint8_t* ptr, uint8_t post_header_len, uint64_t* tbl_id, ch
     *tbl_id = table_id;
 }
 
+void normalize_sql_string(std::string& str)
+{
+    // remove mysql comments
+    const char* remove_comments_pattern =
+        "(?:`[^`]*`\\K)|"
+        "(\\/[*](?!(M?!)).*?[*]\\/)|"
+        "((?:#.*|--[[:space:]].*)(\\n|\\r\\n|$))";
+
+    str = mxb::Regex(remove_comments_pattern, PCRE2_SUBSTITUTE_GLOBAL).replace(str, "");
+
+    // unify whitespace
+    for (auto& a : str)
+    {
+        if (isspace(a) && a != ' ')
+        {
+            a = ' ';
+        }
+    }
+
+    // strip executable comments
+    if (strncmp(str.c_str(), "/*!", 3) == 0 || strncmp(str.c_str(), "/*M!", 4) == 0)
+    {
+        str.erase(0, 3);
+
+        if (str.front() == '!')
+        {
+            str.erase(0, 1);
+        }
+
+        // Skip the versioning part
+        while (!str.empty() && isdigit(str.front()))
+        {
+            str.erase(0, 1);
+        }
+    }
+}
+}
+
 /**
  * @brief Handle a table map event
  *
@@ -672,15 +713,6 @@ bool Rpl::handle_row_event(REP_HEADER* hdr, uint8_t* ptr)
     return rval;
 }
 
-/** Database name offset */
-#define DBNM_OFF 8
-
-/** Varblock offset */
-#define VBLK_OFF 4 + 4 + 1 + 2
-
-/** Post-header offset */
-#define PHDR_OFF 4 + 4 + 1 + 2 + 2
-
 /**
  * Save the CREATE TABLE statement to disk and replace older versions of the table
  * in the router's hashtable.
@@ -704,56 +736,6 @@ bool Rpl::rename_table_create(STable created, const std::string& old_id)
     return save_and_replace_table_create(created);
 }
 
-static void remove_mysql_comments(std::string& str)
-{
-    const char* remove_comments_pattern =
-        "(?:`[^`]*`\\K)|"
-        "(\\/[*](?!(M?!)).*?[*]\\/)|"
-        "((?:#.*|--[[:space:]].*)(\\n|\\r\\n|$))";
-
-    str = mxb::Regex(remove_comments_pattern, PCRE2_SUBSTITUTE_GLOBAL).replace(str, "");
-}
-
-static void unify_whitespace(std::string& str)
-{
-    for (auto& a : str)
-    {
-        if (isspace(a) && a != ' ')
-        {
-            a = ' ';
-        }
-    }
-}
-
-/**
- * A very simple function for stripping auto-generated executable comments
- *
- * Note that the string will not strip the trailing part of the comment, making
- * the SQL invalid.
- *
- * @param sql String to modify
- * @param len Pointer to current length of string, updated to new length if
- *            @c sql is modified
- */
-static void strip_executable_comments(std::string& str)
-{
-    if (strncmp(str.c_str(), "/*!", 3) == 0 || strncmp(str.c_str(), "/*M!", 4) == 0)
-    {
-        str.erase(0, 3);
-
-        if (str.front() == '!')
-        {
-            str.erase(0, 1);
-        }
-
-        // Skip the versioning part
-        while (!str.empty() && isdigit(str.front()))
-        {
-            str.erase(0, 1);
-        }
-    }
-}
-
 /**
  * @brief Handling of query events
  *
@@ -764,15 +746,17 @@ static void strip_executable_comments(std::string& str)
  */
 void Rpl::handle_query_event(REP_HEADER* hdr, uint8_t* ptr)
 {
+    constexpr int DBNM_OFF = 8;                 // Database name offset
+    constexpr int VBLK_OFF = 4 + 4 + 1 + 2;     // Varblock offset
+    constexpr int PHDR_OFF = 4 + 4 + 1 + 2 + 2; // Post-header offset
+
     int dblen = ptr[DBNM_OFF];
     int vblklen = gw_mysql_get_byte2(ptr + VBLK_OFF);
     int len = hdr->event_size - BINLOG_EVENT_HDR_LEN - (PHDR_OFF + vblklen + 1 + dblen);
     std::string sql((char*) ptr + PHDR_OFF + vblklen + 1 + dblen, len);
     std::string db((char*) ptr + PHDR_OFF + vblklen, dblen);
 
-    remove_mysql_comments(sql);
-    unify_whitespace(sql);
-    strip_executable_comments(sql);
+    normalize_sql_string(sql);
 
     static bool warn_not_row_format = true;
 

@@ -191,18 +191,9 @@ private:
     void client_callback();
 };
 
-void read_table_info(uint8_t* ptr,
-                     uint8_t post_header_len,
-                     uint64_t* table_id,
-                     char* dest,
-                     size_t len);
 STable load_table_from_schema(const char* file, const char* db, const char* table, int version);
 
 bool              avro_open_binlog(const char* binlogdir, const char* file, int* fd);
 avro_binlog_end_t avro_read_all_events(Avro* router);
-char*             json_new_schema_from_table(const STable& create);
-bool              handle_row_event(Avro* router, REP_HEADER* hdr, uint8_t* ptr);
-void              handle_one_event(Avro* router, uint8_t* ptr, REP_HEADER& hdr, uint64_t& pos);
-REP_HEADER        construct_header(uint8_t* ptr);
 bool              avro_save_conversion_state(Avro* router);
 bool              avro_load_conversion_state(Avro* router);
