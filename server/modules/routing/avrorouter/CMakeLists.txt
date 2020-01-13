@@ -14,6 +14,9 @@ if(AVRO_FOUND AND JANSSON_FOUND)
   target_link_libraries(avrorouter avro-common)
   install_module(avrorouter core)
 
+  include_directories(avro)
+  add_subdirectory(avro)
+
   if (BUILD_TESTS)
     add_subdirectory(test)
   endif()

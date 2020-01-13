@@ -180,11 +180,6 @@ include_directories(${CURL_INCLUDE_DIRS})
 include_directories(maxutils/maxbase/include)
 include_directories(maxutils/maxsql/include)
 
-if (BUILD_CDC)
-  include_directories(avro)
-  add_subdirectory(avro)
-endif()
-
 add_subdirectory(maxutils)
 add_subdirectory(query_classifier)
 add_subdirectory(server)
