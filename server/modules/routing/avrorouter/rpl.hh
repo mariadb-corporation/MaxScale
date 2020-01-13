@@ -112,43 +112,6 @@ struct Table
 
 using STable = std::shared_ptr<Table>;
 
-/** A representation of a table map event read from a binary log. A table map
- * maps a table to a unique ID which can be used to match row events to table map
- * events. The table map event tells us how the table is laid out and gives us
- * some meta information on the columns. */
-struct TableMapEvent
-{
-    TableMapEvent(const std::string& db,
-                  const std::string& table,
-                  uint64_t id,
-                  int version,
-                  Bytes&& cols,
-                  Bytes&& nulls,
-                  Bytes&& metadata)
-        : database(db)
-        , table(table)
-        , id(id)
-        , version(version)
-        , column_types(cols)
-        , null_bitmap(nulls)
-        , column_metadata(metadata)
-    {
-    }
-
-    uint64_t columns() const
-    {
-        return column_types.size();
-    }
-
-    std::string database;
-    std::string table;
-    uint64_t    id;
-    int         version;
-    Bytes       column_types;
-    Bytes       null_bitmap;
-    Bytes       column_metadata;
-};
-
 // Containers for the replication events
 typedef std::unordered_map<std::string, STable> CreatedTables;
 typedef std::unordered_map<uint64_t, STable>    ActiveMaps;
@@ -280,6 +243,8 @@ private:
     bool save_and_replace_table_create(STable created);
     bool rename_table_create(STable created, const std::string& old_id);
     bool table_matches(const std::string& ident);
+
+    uint8_t* process_row_event_data(STable create, uint8_t* ptr, uint8_t* columns_present, uint8_t* end);
 
     // SQL parsing related variables and methods
     struct

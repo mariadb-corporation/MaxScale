@@ -191,8 +191,6 @@ private:
     void client_callback();
 };
 
-STable load_table_from_schema(const char* file, const char* db, const char* table, int version);
-
 bool              avro_open_binlog(const char* binlogdir, const char* file, int* fd);
 avro_binlog_end_t avro_read_all_events(Avro* router);
 bool              avro_save_conversion_state(Avro* router);
