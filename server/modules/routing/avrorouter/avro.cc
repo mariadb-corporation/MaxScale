@@ -42,7 +42,6 @@
 #include <maxscale/utils.hh>
 #include <maxscale/pcre2.hh>
 #include <maxscale/routingworker.hh>
-#include <binlog_common.hh>
 
 #include "avro_converter.hh"
 

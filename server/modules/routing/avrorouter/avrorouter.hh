@@ -28,7 +28,6 @@
 #include <maxscale/router.hh>
 #include <maxscale/protocol/cdc/cdc.hh>
 #include <maxavro.hh>
-#include <binlog_common.hh>
 #include <blr_constants.hh>
 
 #include "rpl.hh"

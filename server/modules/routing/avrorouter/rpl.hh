@@ -22,11 +22,24 @@
 
 #include <maxscale/pcre2.hh>
 #include <maxscale/service.hh>
-#include <binlog_common.hh>
 
 #include "tokenizer.hh"
 
 typedef std::vector<uint8_t> Bytes;
+
+// Packet header for replication messages
+struct REP_HEADER
+{
+    int      payload_len;   /*< Payload length (24 bits) */
+    uint8_t  seqno;         /*< Response sequence number */
+    uint8_t  ok;            /*< OK Byte from packet */
+    uint32_t timestamp;     /*< Timestamp - start of binlog record */
+    uint8_t  event_type;    /*< Binlog event type */
+    uint32_t serverid;      /*< Server id of master */
+    uint32_t event_size;    /*< Size of header, post-header and body */
+    uint32_t next_pos;      /*< Position of next event */
+    uint16_t flags;         /*< Event flags */
+};
 
 // A GTID position
 struct gtid_pos_t

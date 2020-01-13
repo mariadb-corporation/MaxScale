@@ -18,7 +18,6 @@
 #include "avrorouter.hh"
 #include <maxscale/query_classifier.hh>
 
-#include <binlog_common.hh>
 #include <blr_constants.hh>
 #include <glob.h>
 #include <ini.h>
@@ -239,6 +238,72 @@ bool avro_load_conversion_state(Avro* router)
 }
 
 /**
+ * Get the next binlog file name.
+ *
+ * @param router    The router instance
+ * @return 0 on error, >0 as sequence number
+ */
+int get_next_binlog(const char* binlog_name)
+{
+    const char* sptr;
+    int filenum;
+
+    if ((sptr = strrchr(binlog_name, '.')) == NULL)
+    {
+        return 0;
+    }
+    filenum = atoi(sptr + 1);
+    if (filenum)
+    {
+        filenum++;
+    }
+
+    return filenum;
+}
+
+/**
+ * @brief Check if the next binlog file exists and is readable
+ * @param binlogdir Directory where the binlogs are
+ * @param binlog Current binlog name
+ * @return True if next binlog file exists and is readable
+ */
+bool binlog_next_file_exists(const char* binlogdir, const char* binlog)
+{
+    bool rval = false;
+    int filenum = get_next_binlog(binlog);
+
+    if (filenum)
+    {
+        const char* sptr = strrchr(binlog, '.');
+
+        if (sptr)
+        {
+            char buf[BLRM_BINLOG_NAME_STR_LEN + 1];
+            char filename[PATH_MAX + 1];
+            char next_file[BLRM_BINLOG_NAME_STR_LEN + 1 + 20];
+            int offset = sptr - binlog;
+            memcpy(buf, binlog, offset);
+            buf[offset] = '\0';
+            snprintf(next_file, sizeof(next_file), BINLOG_NAMEFMT, buf, filenum);
+            snprintf(filename, PATH_MAX, "%s/%s", binlogdir, next_file);
+            filename[PATH_MAX] = '\0';
+
+            /* Next file in sequence doesn't exist */
+            if (access(filename, R_OK) == -1)
+            {
+                MXS_DEBUG("File '%s' does not yet exist.", filename);
+            }
+            else
+            {
+                rval = true;
+            }
+        }
+    }
+
+    return rval;
+}
+
+/**
  * @brief Rotate to next file if it exists
  *
  * @param router Avro router instance
@@ -258,7 +323,7 @@ static avro_binlog_end_t rotate_to_next_file_if_exists(Avro* router, uint64_t po
                      sizeof(next_binlog),
                      BINLOG_NAMEFMT,
                      router->filestem.c_str(),
-                     blr_file_get_next_binlogname(router->binlog_name.c_str())) >= (int)sizeof(next_binlog))
+                     get_next_binlog(router->binlog_name.c_str())) >= (int)sizeof(next_binlog))
         {
             MXS_ERROR("Next binlog name did not fit into the allocated buffer "
                       "but was truncated, aborting: %s",
@@ -361,6 +426,20 @@ void do_checkpoint(Avro* router)
     avro_save_conversion_state(router);
     AvroSession::notify_all_clients(router->service);
     router->row_count = router->trx_count = 0;
+}
+
+static inline REP_HEADER construct_header(uint8_t* ptr)
+{
+    REP_HEADER hdr;
+
+    hdr.timestamp = gw_mysql_get_byte4(ptr);
+    hdr.event_type = ptr[4];
+    hdr.serverid = gw_mysql_get_byte4(&ptr[5]);
+    hdr.event_size = gw_mysql_get_byte4(&ptr[9]);
+    hdr.next_pos = gw_mysql_get_byte4(&ptr[13]);
+    hdr.flags = gw_mysql_get_byte2(&ptr[17]);
+
+    return hdr;
 }
 
 bool read_header(Avro* router, unsigned long long pos, REP_HEADER* hdr, avro_binlog_end_t* rc)

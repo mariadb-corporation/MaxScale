@@ -453,9 +453,9 @@ STable load_table_from_schema(const char* file, const char* db, const char* tabl
 
 void gtid_pos_t::extract(const REP_HEADER& hdr, uint8_t* ptr)
 {
-    domain = extract_field(ptr + 8, 32);
+    domain = gw_mysql_get_byte4(ptr + 8);
     server_id = hdr.serverid;
-    seq = extract_field(ptr, 64);
+    seq = gw_mysql_get_byte8(ptr);
     event_num = 0;
     timestamp = hdr.timestamp;
 }
