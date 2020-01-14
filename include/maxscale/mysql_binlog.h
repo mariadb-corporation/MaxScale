@@ -13,13 +13,10 @@
 #pragma once
 
 /**
- * @file mysql_binlog.h - Extracting information from binary logs
+ * @file mysql_binlog.h - Binary log constants
  */
 
 #include <maxscale/cdefs.h>
-#include <stdint.h>
-#include <stdbool.h>
-#include <time.h>
 
 MXS_BEGIN_DECLS
 
@@ -68,33 +65,5 @@ MXS_BEGIN_DECLS
 
 /** The table ID used for end of statement row events */
 #define TABLE_DUMMY_ID 0x00ffffff
-
-
-const char* column_type_to_string(uint8_t type);
-
-/** Column type checking functions */
-bool column_is_variable_string(uint8_t type);
-bool column_is_fixed_string(uint8_t type);
-bool column_is_blob(uint8_t type);
-bool column_is_temporal(uint8_t type);
-bool column_is_bit(uint8_t type);
-bool column_is_decimal(uint8_t type);
-
-/** Various types are stored as fixed string types and the real type is stored
- * in the table metadata */
-bool fixed_string_is_enum(uint8_t type);
-
-/** Value unpacking */
-size_t unpack_temporal_value(uint8_t type, uint8_t* ptr, const uint8_t* metadata,
-                             int length, char* buf, size_t buflen);
-size_t unpack_enum(uint8_t* ptr, const uint8_t* metadata, uint8_t* dest);
-size_t unpack_numeric_field(uint8_t* ptr, uint8_t type, const uint8_t* metadata, uint8_t* val);
-size_t unpack_bit(uint8_t* ptr,
-                  uint8_t* null_mask,
-                  uint32_t col_count,
-                  uint32_t curr_col_index,
-                  uint8_t* metadata,
-                  uint64_t* dest);
-size_t unpack_decimal_field(uint8_t* ptr, const uint8_t* metadata, double* val_float);
 
 MXS_END_DECLS
