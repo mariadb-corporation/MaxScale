@@ -280,10 +280,14 @@ static const char* codec_to_string(enum mxs_avro_codec_type type)
     }
 }
 
-AvroConverter::AvroConverter(std::string avrodir, uint64_t block_size, mxs_avro_codec_type codec)
+AvroConverter::AvroConverter(SERVICE* service,
+                             std::string avrodir,
+                             uint64_t block_size,
+                             mxs_avro_codec_type codec)
     : m_avrodir(avrodir)
     , m_block_size(block_size)
     , m_codec(codec)
+    , m_service(service)
 {
 }
 
@@ -349,6 +353,8 @@ void AvroConverter::flush_tables()
     {
         avro_file_writer_flush(it->second->avro_file);
     }
+
+    AvroSession::notify_all_clients(m_service);
 }
 
 void AvroConverter::prepare_row(const Table& create, const gtid_pos_t& gtid,

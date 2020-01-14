@@ -65,7 +65,8 @@ MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params)
         service->params().get_enum("codec", codec_values));
     std::string avrodir = service->params().get_string("avrodir");
 
-    Avro* router = Avro::create(service, SRowEventHandler(new AvroConverter(avrodir, block_size, codec)));
+    Avro* router =
+        Avro::create(service, SRowEventHandler(new AvroConverter(service, avrodir, block_size, codec)));
 
     if (router && !params->contains(CN_SERVERS) && !params->contains(CN_CLUSTER))
     {
@@ -493,17 +494,17 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 | MXS_MODULE_OPT_PATH_X_OK
                 | MXS_MODULE_OPT_PATH_CREAT
             },
-            {"source",                MXS_MODULE_PARAM_SERVICE},
+            {"source",                MXS_MODULE_PARAM_SERVICE                 },
             {"filestem",              MXS_MODULE_PARAM_STRING, BINLOG_NAME_ROOT},
-            {"group_rows",            MXS_MODULE_PARAM_COUNT, "1000"},
-            {"group_trx",             MXS_MODULE_PARAM_COUNT, "1"},
-            {"start_index",           MXS_MODULE_PARAM_COUNT, "1"},
-            {"block_size",            MXS_MODULE_PARAM_SIZE, "0"},
+            {"group_rows",            MXS_MODULE_PARAM_COUNT, "1000"           },
+            {"group_trx",             MXS_MODULE_PARAM_COUNT, "1"              },
+            {"start_index",           MXS_MODULE_PARAM_COUNT, "1"              },
+            {"block_size",            MXS_MODULE_PARAM_SIZE, "0"               },
             {"codec",                 MXS_MODULE_PARAM_ENUM, "null", MXS_MODULE_OPT_ENUM_UNIQUE, codec_values},
-            {"match",                 MXS_MODULE_PARAM_REGEX  },
-            {"exclude",               MXS_MODULE_PARAM_REGEX  },
-            {"server_id",             MXS_MODULE_PARAM_COUNT, "1234"},
-            {"gtid_start_pos",        MXS_MODULE_PARAM_STRING },
+            {"match",                 MXS_MODULE_PARAM_REGEX                   },
+            {"exclude",               MXS_MODULE_PARAM_REGEX                   },
+            {"server_id",             MXS_MODULE_PARAM_COUNT, "1234"           },
+            {"gtid_start_pos",        MXS_MODULE_PARAM_STRING                  },
             {MXS_END_MODULE_PARAMS}
         }
     };

@@ -20,10 +20,38 @@
 #include <unordered_map>
 #include <exception>
 
+#include <blr_constants.hh>
+
 #include <maxscale/pcre2.hh>
 #include <maxscale/service.hh>
 
 #include "tokenizer.hh"
+
+static const char* avro_domain = "domain";
+static const char* avro_server_id = "server_id";
+static const char* avro_sequence = "sequence";
+static const char* avro_event_number = "event_number";
+static const char* avro_event_type = "event_type";
+static const char* avro_timestamp = "timestamp";
+
+
+static inline bool is_reserved_word(const char* word)
+{
+    return strcasecmp(word, avro_domain) == 0
+           || strcasecmp(word, avro_server_id) == 0
+           || strcasecmp(word, avro_sequence) == 0
+           || strcasecmp(word, avro_event_number) == 0
+           || strcasecmp(word, avro_event_type) == 0
+           || strcasecmp(word, avro_timestamp) == 0;
+}
+
+static inline void fix_reserved_word(char* tok)
+{
+    if (is_reserved_word(tok))
+    {
+        strcat(tok, "_");
+    }
+}
 
 typedef std::vector<uint8_t> Bytes;
 

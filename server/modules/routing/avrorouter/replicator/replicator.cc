@@ -11,7 +11,6 @@
  * Public License.
  */
 
-#include "avrorouter.hh"
 #include "replicator.hh"
 
 #include <atomic>
@@ -415,8 +414,6 @@ bool Replicator::Imp::process_one_event(SQL::Event& event)
     if (commit)
     {
         m_rpl->flush();
-        // TODO: Make this a callback of some sorts
-        AvroSession::notify_all_clients(m_cnf.service);
         m_gtid = m_current_gtid;
         save_gtid_state();
     }

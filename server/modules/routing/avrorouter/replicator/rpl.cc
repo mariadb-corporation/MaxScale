@@ -11,7 +11,6 @@
  * Public License.
  */
 
-#include "avrorouter.hh"
 #include "rpl.hh"
 
 #include <sstream>
@@ -20,6 +19,7 @@
 #include <glob.h>
 
 #include <maxbase/assert.h>
+#include <maxscale/mysql_binlog.h>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 

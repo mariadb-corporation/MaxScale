@@ -30,40 +30,14 @@
 #include <maxavro.hh>
 #include <blr_constants.hh>
 
-#include "rpl.hh"
-#include "replicator.hh"
+#include "replicator/replicator.hh"
 
 /** Name of the file where the binlog to Avro conversion progress is stored */
 #define AVRO_PROGRESS_FILE "avro-conversion.ini"
 
 static const char* avro_client_states[] = {"Unregistered", "Registered", "Processing", "Errored"};
 static const char* avro_client_client_mode[] = {"Catch-up", "Busy", "Wait_for_data"};
-
-static const char* avro_domain = "domain";
-static const char* avro_server_id = "server_id";
-static const char* avro_sequence = "sequence";
-static const char* avro_event_number = "event_number";
-static const char* avro_event_type = "event_type";
-static const char* avro_timestamp = "timestamp";
 static const char* avro_client_ouput[] = {"Undefined", "JSON", "Avro"};
-
-static inline bool is_reserved_word(const char* word)
-{
-    return strcasecmp(word, avro_domain) == 0
-           || strcasecmp(word, avro_server_id) == 0
-           || strcasecmp(word, avro_sequence) == 0
-           || strcasecmp(word, avro_event_number) == 0
-           || strcasecmp(word, avro_event_type) == 0
-           || strcasecmp(word, avro_timestamp) == 0;
-}
-
-static inline void fix_reserved_word(char* tok)
-{
-    if (is_reserved_word(tok))
-    {
-        strcat(tok, "_");
-    }
-}
 
 /** How a binlog file is closed */
 typedef enum avro_binlog_end

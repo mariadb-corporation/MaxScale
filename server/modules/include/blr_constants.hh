@@ -19,6 +19,7 @@
 #include <maxscale/ccdefs.hh>
 
 #include <maxscale/protocol/mariadb/mysql.hh>
+#include <mysql.h>
 #include <mariadb_rpl.h>
 
 MXS_BEGIN_DECLS

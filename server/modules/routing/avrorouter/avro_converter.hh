@@ -13,7 +13,6 @@
 #pragma once
 
 #include "avrorouter.hh"
-#include "rpl.hh"
 
 #include <avro.h>
 
@@ -46,7 +45,7 @@ typedef std::unordered_map<std::string, SAvroTable> AvroTables;
 class AvroConverter : public RowEventHandler
 {
 public:
-    AvroConverter(std::string avrodir, uint64_t block_size, mxs_avro_codec_type codec);
+    AvroConverter(SERVICE* service, std::string avrodir, uint64_t block_size, mxs_avro_codec_type codec);
     bool open_table(const Table& create) final;
     bool prepare_table(const Table& create) final;
     void flush_tables() final;
@@ -71,6 +70,7 @@ private:
     AvroTables          m_open_tables;
     uint64_t            m_block_size;
     mxs_avro_codec_type m_codec;
+    SERVICE*            m_service;
 
     void set_active(const Table& create, int i);
 };
