@@ -1425,7 +1425,7 @@ static int gw_backend_close(DCB* dcb)
         || proto->protocol_auth_state == MXS_AUTH_STATE_CONNECTED)
     {
         MYSQL_session client;
-        gw_get_shared_session_auth_info(dcb->session->client_dcb, &client);
+        gw_get_shared_session_auth_info(dcb, &client);
         memset(proto->scramble, 0, sizeof(proto->scramble));
         dcb_write(dcb, gw_generate_auth_response(&client, proto, false, false, 0));
     }
