@@ -76,7 +76,7 @@ public:
     static constexpr int IMPLICIT_COMMIT_FLAG = 0x1;
 
     // Creates a new replication stream and starts it
-    Imp(const Config& cnf, Rpl* rpl);
+    Imp(const Config& cnf, SRowEventHandler handler);
 
     // Check if the replicator is still OK
     bool ok() const;
@@ -102,7 +102,7 @@ private:
     std::string          m_gtid;                    // GTID position to start from
     std::string          m_current_gtid;            // GTID of the transaction being processed
     bool                 m_implicit_commit {false}; // Commit after next query event
-    Rpl*                 m_rpl;                     // Class that handles the replicated events
+    Rpl                  m_rpl;                     // Class that handles the replicated events
 
     // NOTE: must be declared last
     std::thread m_thr;      // Thread that receives the replication events
@@ -112,13 +112,12 @@ const std::string Replicator::Imp::STATEFILE_DIR = "./";
 const std::string Replicator::Imp::STATEFILE_NAME = "current_gtid.txt";
 const std::string Replicator::Imp::STATEFILE_TMP_SUFFIX = ".tmp";
 
-Replicator::Imp::Imp(const Config& cnf, Rpl* rpl)
+Replicator::Imp::Imp(const Config& cnf, SRowEventHandler handler)
     : m_cnf(cnf)
     , m_gtid(cnf.gtid)
-    , m_rpl(rpl)
+    , m_rpl(cnf.service, std::move(handler), cnf.match, cnf.exclude)
     , m_thr(std::thread(&Imp::process_events, this))
 {
-    mxb_assert(m_rpl);
 }
 
 bool Replicator::Imp::ok() const
@@ -212,9 +211,11 @@ void Replicator::Imp::process_events()
 
     qc_thread_init(QC_INIT_BOTH);
 
+    m_rpl.load_metadata(m_cnf.statedir);
+
     if (!m_gtid.empty())
     {
-        m_rpl->set_gtid(gtid_pos_t::from_string(m_gtid));
+        m_rpl.set_gtid(gtid_pos_t::from_string(m_gtid));
     }
 
     while (m_running)
@@ -399,7 +400,7 @@ bool Replicator::Imp::process_one_event(SQL::Event& event)
     uint8_t* ptr = m_sql->event_data() + 20;
 
     MARIADB_RPL_EVENT& ev = *event;
-    hdr.event_size = ev.event_length + (m_rpl->have_checksums() ? 4 : 0);
+    hdr.event_size = ev.event_length + (m_rpl.have_checksums() ? 4 : 0);
     hdr.event_type = ev.event_type;
     hdr.flags = ev.flags;
     hdr.next_pos = ev.next_event_pos;
@@ -409,11 +410,11 @@ bool Replicator::Imp::process_one_event(SQL::Event& event)
     hdr.serverid = ev.server_id;
     hdr.timestamp = ev.timestamp;
 
-    m_rpl->handle_event(hdr, ptr);
+    m_rpl.handle_event(hdr, ptr);
 
     if (commit)
     {
-        m_rpl->flush();
+        m_rpl.flush();
         m_gtid = m_current_gtid;
         save_gtid_state();
     }
@@ -432,9 +433,9 @@ Replicator::Imp::~Imp()
 //
 
 // static
-std::unique_ptr<Replicator> Replicator::start(const Config& cnf, Rpl* rpl)
+std::unique_ptr<Replicator> Replicator::start(const Config& cnf, SRowEventHandler handler)
 {
-    return std::unique_ptr<Replicator>(new Replicator(cnf, rpl));
+    return std::unique_ptr<Replicator>(new Replicator(cnf, std::move(handler)));
 }
 
 bool Replicator::ok() const
@@ -446,8 +447,8 @@ Replicator::~Replicator()
 {
 }
 
-Replicator::Replicator(const Config& cnf, Rpl* rpl)
-    : m_imp(new Imp(cnf, rpl))
+Replicator::Replicator(const Config& cnf, SRowEventHandler handler)
+    : m_imp(new Imp(cnf, std::move(handler)))
 {
 }
 }

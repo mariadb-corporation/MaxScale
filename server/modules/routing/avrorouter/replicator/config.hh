@@ -39,5 +39,7 @@ struct Config
     std::string gtid;               // Starting GTID
     SERVICE*    service;
     std::string statedir = ".";
+    pcre2_code* match = nullptr;
+    pcre2_code* exclude = nullptr;
 };
 }

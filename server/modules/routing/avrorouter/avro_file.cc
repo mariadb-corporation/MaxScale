@@ -98,7 +98,7 @@ bool avro_save_conversion_state(Avro* router)
         return false;
     }
 
-    gtid_pos_t gtid = router->handler.get_gtid();
+    gtid_pos_t gtid = router->handler->get_gtid();
     fprintf(config_file, "[%s]\n", statefile_section);
     fprintf(config_file, "position=%lu\n", router->current_pos);
     fprintf(config_file,
@@ -148,7 +148,7 @@ static int conv_state_handler(void* data, const char* section, const char* key, 
             gtid_pos_t gtid;
             MXB_AT_DEBUG(bool rval = ) gtid.parse(value);
             mxb_assert(rval);
-            router->handler.set_gtid(gtid);
+            router->handler->set_gtid(gtid);
         }
         else if (strcmp(key, "position") == 0)
         {
@@ -206,7 +206,7 @@ bool avro_load_conversion_state(Avro* router)
     case 0:
         {
             rval = true;
-            gtid_pos_t gtid = router->handler.get_gtid();
+            gtid_pos_t gtid = router->handler->get_gtid();
             MXS_NOTICE(
                 "Loaded stored binary log conversion state: File: [%s] Position: [%ld] GTID: [%lu-%lu-%lu:%lu]",
                 router->binlog_name.c_str(),
@@ -422,7 +422,7 @@ static GWBUF* read_event_data(Avro* router, REP_HEADER* hdr, uint64_t pos)
 
 void do_checkpoint(Avro* router)
 {
-    router->handler.flush();
+    router->handler->flush();
     avro_save_conversion_state(router);
     AvroSession::notify_all_clients(router->service);
     router->row_count = router->trx_count = 0;
@@ -548,7 +548,7 @@ bool read_fde(Avro* router)
     {
         if (GWBUF* result = read_event_data(router, &hdr, 4))
         {
-            router->handler.handle_event(hdr, GWBUF_DATA(result));
+            router->handler->handle_event(hdr, GWBUF_DATA(result));
             rval = true;
         }
     }
@@ -626,7 +626,7 @@ avro_binlog_end_t avro_read_all_events(Avro* router)
         // These events are only related to binary log files
         if (hdr.event_type == ROTATE_EVENT)
         {
-            int len = hdr.event_size - BINLOG_EVENT_HDR_LEN - 8 - (router->handler.have_checksums() ? 4 : 0);
+            int len = hdr.event_size - BINLOG_EVENT_HDR_LEN - 8 - (router->handler->have_checksums() ? 4 : 0);
             next_binlog.assign((char*)ptr + 8, len);
             rotate_seen = true;
         }
@@ -634,7 +634,7 @@ avro_binlog_end_t avro_read_all_events(Avro* router)
         {
             // This appears to need special handling
             int annotate_len = hdr.event_size - BINLOG_EVENT_HDR_LEN
-                - (router->handler.have_checksums() ? 4 : 0);
+                - (router->handler->have_checksums() ? 4 : 0);
             MXS_INFO("Annotate_rows_event: %.*s", annotate_len, ptr);
             pos += hdr.event_size;
             router->current_pos = pos;
@@ -653,7 +653,7 @@ avro_binlog_end_t avro_read_all_events(Avro* router)
                 router->trx_count++;
             }
 
-            router->handler.handle_event(hdr, ptr);
+            router->handler->handle_event(hdr, ptr);
         }
 
         gwbuf_free(result);

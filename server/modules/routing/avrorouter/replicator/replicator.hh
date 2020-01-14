@@ -36,7 +36,7 @@ public:
      *
      * @return The new Replicator instance
      */
-    static std::unique_ptr<Replicator> start(const Config& cnf, Rpl* rpl);
+    static std::unique_ptr<Replicator> start(const Config& cnf, SRowEventHandler handler);
 
     /**
      * Check if the replicator is OK
@@ -52,7 +52,7 @@ public:
 
 private:
     class Imp;
-    Replicator(const Config& cnf, Rpl* rpl);
+    Replicator(const Config& cnf, SRowEventHandler handler);
 
     // Pointer to the implementation of the abstract interface
     std::unique_ptr<Replicator::Imp> m_imp;

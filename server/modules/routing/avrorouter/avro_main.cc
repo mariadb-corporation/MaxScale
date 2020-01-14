@@ -60,13 +60,7 @@ static bool conversion_task_ctl(Avro* inst, bool start);
  */
 MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params)
 {
-    uint64_t block_size = service->params().get_size("block_size");
-    mxs_avro_codec_type codec = static_cast<mxs_avro_codec_type>(
-        service->params().get_enum("codec", codec_values));
-    std::string avrodir = service->params().get_string("avrodir");
-
-    Avro* router =
-        Avro::create(service, SRowEventHandler(new AvroConverter(service, avrodir, block_size, codec)));
+    Avro* router = Avro::create(service);
 
     if (router && !params->contains(CN_SERVERS) && !params->contains(CN_CLUSTER))
     {
@@ -162,11 +156,14 @@ static json_t* diagnostics(const MXS_ROUTER* router)
     json_object_set_new(rval, "binlog_name", json_string(router_inst->binlog_name.c_str()));
     json_object_set_new(rval, "binlog_pos", json_integer(router_inst->current_pos));
 
-    gtid_pos_t gtid = router_inst->handler.get_gtid();
-    snprintf(pathbuf, sizeof(pathbuf), "%lu-%lu-%lu", gtid.domain, gtid.server_id, gtid.seq);
-    json_object_set_new(rval, "gtid", json_string(pathbuf));
-    json_object_set_new(rval, "gtid_timestamp", json_integer(gtid.timestamp));
-    json_object_set_new(rval, "gtid_event_number", json_integer(gtid.event_num));
+    if (router_inst->handler)
+    {
+        gtid_pos_t gtid = router_inst->handler->get_gtid();
+        snprintf(pathbuf, sizeof(pathbuf), "%lu-%lu-%lu", gtid.domain, gtid.server_id, gtid.seq);
+        json_object_set_new(rval, "gtid", json_string(pathbuf));
+        json_object_set_new(rval, "gtid_timestamp", json_integer(gtid.timestamp));
+        json_object_set_new(rval, "gtid_event_number", json_integer(gtid.event_num));
+    }
 
     return rval;
 }
@@ -255,7 +252,7 @@ bool converter_func(Worker::Call::action_t action, Avro* router)
     /** We reached end of file, flush unwritten records to disk */
     if (progress)
     {
-        router->handler.flush();
+        router->handler->flush();
         avro_save_conversion_state(router);
         logged = false;
     }
@@ -494,17 +491,17 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 | MXS_MODULE_OPT_PATH_X_OK
                 | MXS_MODULE_OPT_PATH_CREAT
             },
-            {"source",                MXS_MODULE_PARAM_SERVICE                 },
+            {"source",                MXS_MODULE_PARAM_SERVICE},
             {"filestem",              MXS_MODULE_PARAM_STRING, BINLOG_NAME_ROOT},
-            {"group_rows",            MXS_MODULE_PARAM_COUNT, "1000"           },
-            {"group_trx",             MXS_MODULE_PARAM_COUNT, "1"              },
-            {"start_index",           MXS_MODULE_PARAM_COUNT, "1"              },
-            {"block_size",            MXS_MODULE_PARAM_SIZE, "0"               },
+            {"group_rows",            MXS_MODULE_PARAM_COUNT, "1000"},
+            {"group_trx",             MXS_MODULE_PARAM_COUNT, "1"},
+            {"start_index",           MXS_MODULE_PARAM_COUNT, "1"},
+            {"block_size",            MXS_MODULE_PARAM_SIZE, "0"},
             {"codec",                 MXS_MODULE_PARAM_ENUM, "null", MXS_MODULE_OPT_ENUM_UNIQUE, codec_values},
-            {"match",                 MXS_MODULE_PARAM_REGEX                   },
-            {"exclude",               MXS_MODULE_PARAM_REGEX                   },
-            {"server_id",             MXS_MODULE_PARAM_COUNT, "1234"           },
-            {"gtid_start_pos",        MXS_MODULE_PARAM_STRING                  },
+            {"match",                 MXS_MODULE_PARAM_REGEX  },
+            {"exclude",               MXS_MODULE_PARAM_REGEX  },
+            {"server_id",             MXS_MODULE_PARAM_COUNT, "1234"},
+            {"gtid_start_pos",        MXS_MODULE_PARAM_STRING },
             {MXS_END_MODULE_PARAMS}
         }
     };

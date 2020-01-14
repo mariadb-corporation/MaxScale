@@ -81,7 +81,7 @@ void Avro::read_source_service_options(SERVICE* source)
 }
 
 // static
-Avro* Avro::create(SERVICE* service, SRowEventHandler handler)
+Avro* Avro::create(SERVICE* service)
 {
     SERVICE* source_service = NULL;
     std::string source_name = service->params().get_string("source");
@@ -115,10 +115,10 @@ Avro* Avro::create(SERVICE* service, SRowEventHandler handler)
     }
 
     auto params = service->params();
-    return new(std::nothrow) Avro(service, &params, source_service, std::move(handler));
+    return new(std::nothrow) Avro(service, &params, source_service);
 }
 
-Avro::Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, SERVICE* source, SRowEventHandler handler)
+Avro::Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, SERVICE* source)
     : service(service)
     , filestem(params->get_string("filestem"))
     , binlogdir(params->get_string("binlogdir"))
@@ -130,9 +130,11 @@ Avro::Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, SERVICE* source, SRow
     , row_count(0)
     , row_target(params->get_integer("group_rows"))
     , task_handle(0)
-    , handler(service, std::move(handler), params->get_compiled_regex("match", 0, NULL).release(),
-              params->get_compiled_regex("exclude", 0, NULL).release())
 {
+    uint64_t block_size = service->params().get_size("block_size");
+    mxs_avro_codec_type codec = static_cast<mxs_avro_codec_type>(
+        service->params().get_enum("codec", codec_values));
+
     if (params->contains(CN_SERVERS) || params->contains(CN_CLUSTER))
     {
         MXS_NOTICE("Replicating directly from a master server");
@@ -141,15 +143,26 @@ Avro::Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, SERVICE* source, SRow
         cnf.statedir = avrodir;
         cnf.server_id = params->get_integer("server_id");
         cnf.gtid = params->get_string("gtid_start_pos");
+        cnf.match = params->get_compiled_regex("match", 0, NULL).release();
+        cnf.exclude = params->get_compiled_regex("exclude", 0, NULL).release();
 
         auto worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
-        worker->execute([this, cnf]() {
-                            m_replicator = cdc::Replicator::start(cnf, &this->handler);
-                            mxb_assert(m_replicator);
-                        }, mxs::RoutingWorker::EXECUTE_QUEUED);
+        worker->execute(
+            [this, cnf, block_size, codec]() {
+                SRowEventHandler hndl(new AvroConverter(cnf.service, cnf.statedir, block_size, codec));
+                m_replicator = cdc::Replicator::start(cnf, std::move(hndl));
+                mxb_assert(m_replicator);
+            },
+            mxs::RoutingWorker::EXECUTE_QUEUED);
     }
     else
     {
+        handler.reset(
+            new Rpl(service,
+                    SRowEventHandler(new AvroConverter(service, avrodir, block_size, codec)),
+                    params->get_compiled_regex("match", 0, NULL).release(),
+                    params->get_compiled_regex("exclude", 0, NULL).release()));
+
         if (source)
         {
             read_source_service_options(source);
@@ -165,11 +178,11 @@ Avro::Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, SERVICE* source, SRow
 
         MXS_NOTICE("Reading MySQL binlog files from %s", binlogdir.c_str());
         MXS_NOTICE("First binlog is: %s", binlog_name.c_str());
+
+        // TODO: Do these in Avro::create
+        avro_load_conversion_state(this);
+        handler->load_metadata(avrodir);
     }
 
     MXS_NOTICE("Avro files stored at: %s", avrodir.c_str());
-
-    // TODO: Do these in Avro::create
-    avro_load_conversion_state(this);
-    this->handler.load_metadata(avrodir);
 }

@@ -91,7 +91,7 @@ class Avro : public MXS_ROUTER
     Avro& operator=(const Avro&) = delete;
 
 public:
-    static Avro* create(SERVICE* service, SRowEventHandler handler);
+    static Avro* create(SERVICE* service);
 
     SERVICE*    service;    /*< Pointer to the service using this router */
     std::string filestem;   /*< Root of binlog filename */
@@ -105,12 +105,13 @@ public:
     uint64_t    row_count;  /*< Row events processed */
     uint64_t    row_target; /*< Number of row events that trigger a flush */
     uint32_t    task_handle;/**< Delayed task handle */
-    Rpl         handler;
+
+    std::unique_ptr<Rpl> handler;
 
 private:
     std::unique_ptr<cdc::Replicator> m_replicator;
 
-    Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, SERVICE* source, SRowEventHandler handler);
+    Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, SERVICE* source);
     void read_source_service_options(SERVICE* source);
 };
 
