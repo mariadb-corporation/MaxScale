@@ -1086,7 +1086,6 @@ storage_options="server=192.168.1.31:11211, max_value_size=10M"
 ```
 #### Limitations
 * Invalidation is not supported.
-* There is no distinction between _soft_ and _hard_ ttl, but only hard ttl is used.
 * Configuration values given to `max_size` and `max_count` are ignored.
 
 #### Security

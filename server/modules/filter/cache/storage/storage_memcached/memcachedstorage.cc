@@ -19,6 +19,7 @@
 #include <maxbase/worker.hh>
 #include <maxscale/config_common.hh>
 #include <maxscale/threadpool.hh>
+#include "../../cache.hh"
 
 using std::map;
 using std::shared_ptr;
@@ -47,10 +48,14 @@ public:
         return shared_from_this();
     }
 
-    static bool create(const string& memcached_config, time_t ttl, shared_ptr<Storage::Token>* psToken)
+    static bool create(const string& mcd_config,
+                       uint32_t soft_ttl,
+                       uint32_t hard_ttl,
+                       uint32_t mcd_ttl,
+                       shared_ptr<Storage::Token>* psToken)
     {
         bool rv = false;
-        memcached_st* pMemc = memcached(memcached_config.c_str(), memcached_config.size());
+        memcached_st* pMemc = memcached(mcd_config.c_str(), mcd_config.size());
 
         if (pMemc)
         {
@@ -58,7 +63,7 @@ public:
 
             if (memcached_success(mrv))
             {
-                MemcachedToken* pToken = new (std::nothrow) MemcachedToken(pMemc, ttl);
+                MemcachedToken* pToken = new (std::nothrow) MemcachedToken(pMemc, soft_ttl, hard_ttl, mcd_ttl);
 
                 if (pToken)
                 {
@@ -80,7 +85,7 @@ public:
         else
         {
             MXS_ERROR("Could not create memcached handle, are the arguments '%s' valid?",
-                      memcached_config.c_str());
+                      mcd_config.c_str());
         }
 
         return rv;
@@ -93,16 +98,31 @@ public:
                              GWBUF** ppValue,
                              std::function<void (cache_result_t, GWBUF*)> cb)
     {
+        if (soft_ttl == CACHE_USE_CONFIG_TTL)
+        {
+            soft_ttl = m_soft_ttl;
+        }
+
+        if (hard_ttl == CACHE_USE_CONFIG_TTL)
+        {
+            hard_ttl = m_hard_ttl;
+        }
+
+        if (soft_ttl > hard_ttl)
+        {
+            soft_ttl = hard_ttl;
+        }
+
         vector<char> mkey = key.to_vector();
 
         auto sThis = get_shared();
 
-        mxs::thread_pool().execute([sThis, mkey, cb] () {
+        mxs::thread_pool().execute([sThis, flags, soft_ttl, hard_ttl, mkey, cb] () {
                 size_t nData;
-                uint32_t flags;
+                uint32_t stored; // The store-time is stored as flags.
                 memcached_return_t mrv;
 
-                char* pData = memcached_get(sThis->m_pMemc, mkey.data(), mkey.size(), &nData, &flags, &mrv);
+                char* pData = memcached_get(sThis->m_pMemc, mkey.data(), mkey.size(), &nData, &stored, &mrv);
 
                 GWBUF* pValue = nullptr;
                 cache_result_t rv;
@@ -111,9 +131,34 @@ public:
                 {
                     if (pData)
                     {
-                        pValue = gwbuf_alloc_and_load(nData, pData);
+                        uint32_t now = Cache::time_ms();
+
+                        bool is_hard_stale = hard_ttl == 0 ? false : (now - stored > hard_ttl);
+                        bool is_soft_stale = soft_ttl == 0 ? false : (now - stored > soft_ttl);
+                        bool include_stale = ((flags & CACHE_FLAGS_INCLUDE_STALE) != 0);
+
+                        if (is_hard_stale)
+                        {
+                            rv = CACHE_RESULT_NOT_FOUND | CACHE_RESULT_DISCARDED;
+                        }
+                        else if (!is_soft_stale || include_stale)
+                        {
+                            pValue = gwbuf_alloc_and_load(nData, pData);
+
+                            rv = CACHE_RESULT_OK;
+
+                            if (is_soft_stale)
+                            {
+                                rv |= CACHE_RESULT_STALE;
+                            }
+                        }
+                        else
+                        {
+                            mxb_assert(is_soft_stale);
+                            rv = CACHE_RESULT_NOT_FOUND | CACHE_RESULT_STALE;
+                        }
+
                         MXS_FREE(pData);
-                        rv = CACHE_RESULT_OK;
                     }
                     else
                     {
@@ -168,10 +213,10 @@ public:
         auto sThis = get_shared();
 
         mxs::thread_pool().execute([sThis, mkey, pClone, cb]() {
-                const uint32_t flags = 0;
+                const uint32_t flags = Cache::time_ms();
                 memcached_return_t mrv = memcached_set(sThis->m_pMemc, mkey.data(), mkey.size(),
                                                        reinterpret_cast<const char*>(GWBUF_DATA(pClone)),
-                                                       GWBUF_LENGTH(pClone), sThis->m_ttl, flags);
+                                                       GWBUF_LENGTH(pClone), sThis->m_mcd_ttl, flags);
                 cache_result_t rv;
 
                 if (memcached_success(mrv))
@@ -239,17 +284,21 @@ public:
     }
 
 private:
-    MemcachedToken(memcached_st* pMemc, time_t ttl)
+    MemcachedToken(memcached_st* pMemc, uint32_t soft_ttl, uint32_t hard_ttl, uint32_t mcd_ttl)
         : m_pMemc(pMemc)
         , m_pWorker(mxb::Worker::get_current())
-        , m_ttl(ttl)
+        , m_soft_ttl(soft_ttl)
+        , m_hard_ttl(hard_ttl)
+        , m_mcd_ttl(mcd_ttl)
     {
     }
 
 private:
     memcached_st* m_pMemc;
     mxb::Worker*  m_pWorker;
-    time_t        m_ttl;
+    uint32_t      m_soft_ttl; // Soft TTL in milliseconds
+    uint32_t      m_hard_ttl; // Hard TTL in milliseconds
+    uint32_t      m_mcd_ttl;  // Hard TTL in seconds (rounded up if needed)
 };
 
 }
@@ -257,34 +306,22 @@ private:
 MemcachedStorage::MemcachedStorage(const string& name,
                                    const Config& config,
                                    uint32_t max_value_size,
-                                   const string& memcached_config)
+                                   const string& mcd_config)
     : m_name(name)
     , m_config(config)
     , m_limits(max_value_size)
-    , m_memcached_config(memcached_config)
+    , m_mcd_config(mcd_config)
+    , m_mcd_ttl(config.hard_ttl)
 {
-    if (config.soft_ttl != config.hard_ttl)
+    // memcached supports a TTL with a granularity of a second.
+    // A millisecond TTL is honored in get_value.
+    if (m_mcd_ttl != 0)
     {
-        MXS_WARNING("The storage storage_memcached does not distinguish between "
-                    "soft (%u ms) and hard ttl (%u ms). Hard ttl is used.",
-                    config.soft_ttl, config.hard_ttl);
-    }
+        m_mcd_ttl /= 1000;
 
-    auto ms = config.hard_ttl;
-
-    if (ms == 0)
-    {
-        m_ttl = 0;
-    }
-    else
-    {
-        m_ttl = config.hard_ttl / 1000;
-
-        if (m_ttl == 0)
+        if (config.hard_ttl % 1000 != 0)
         {
-            MXS_WARNING("Memcached does not support a ttl (%u ms) less than 1 second. "
-                        "A ttl of 1 second is used.", config.hard_ttl);
-            m_ttl = 1;
+            m_mcd_ttl += 1;
         }
     }
 }
@@ -411,7 +448,11 @@ MemcachedStorage* MemcachedStorage::create(const std::string& name,
 
 bool MemcachedStorage::create_token(std::shared_ptr<Storage::Token>* psToken)
 {
-    return MemcachedToken::create(m_memcached_config, m_ttl, psToken);
+    return MemcachedToken::create(m_mcd_config,
+                                  m_config.soft_ttl,
+                                  m_config.hard_ttl,
+                                  m_mcd_ttl,
+                                  psToken);
 }
 
 void MemcachedStorage::get_config(Config* pConfig)
