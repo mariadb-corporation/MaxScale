@@ -64,7 +64,8 @@ private:
     RedisStorage(const std::string& name,
                  const Config& config,
                  const std::string& host,
-                 int port);
+                 int port,
+                 int retries);
 
     const std::string m_name;
     const Config      m_config;
@@ -72,4 +73,5 @@ private:
     const int         m_port;
     bool              m_invalidate;
     uint32_t          m_ttl;
+    int               m_nRetries;
 };

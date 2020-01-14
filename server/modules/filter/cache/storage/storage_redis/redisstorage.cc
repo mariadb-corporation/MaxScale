@@ -489,6 +489,7 @@ public:
                        int port,
                        bool invalidate,
                        uint32_t ttl,
+                       int nRetries,
                        shared_ptr<Storage::Token>* psToken)
     {
         bool rv = false;
@@ -496,7 +497,7 @@ public:
 
         if (pRedis)
         {
-            RedisToken* pToken = new (std::nothrow) RedisToken(pRedis, invalidate, ttl);
+            RedisToken* pToken = new (std::nothrow) RedisToken(pRedis, invalidate, ttl, nRetries);
 
             if (pToken)
             {
@@ -587,22 +588,24 @@ public:
         auto sThis = get_shared();
 
         mxs::thread_pool().execute([sThis, rkey, invalidation_words, pClone, cb]() {
+                int nRetries = sThis->m_nRetries;
                 RedisAction action;
 
                 do
                 {
                     action = sThis->put_value(rkey, invalidation_words, pClone);
-
-                    if (action == RedisAction::REDO)
-                    {
-                        MXS_WARNING("Failed to store value to redis due to conflict when "
-                                    "book-keeping dependency to %s, retrying.",
-                                    mxb::join(invalidation_words).c_str());
-                    }
                 }
-                while (action == RedisAction::REDO);
+                while (action == RedisAction::RETRY && (nRetries-- > 0));
 
-                cache_result_t rv = (action == RedisAction::ERROR ? CACHE_RESULT_ERROR : CACHE_RESULT_OK);
+                if (action == RedisAction::RETRY)
+                {
+                    MXS_WARNING("After %d attempts, failed to store value to Redis due "
+                                "to conflict when updating dependency to %s.",
+                                sThis->m_nRetries + 1,
+                                mxb::join(invalidation_words).c_str());
+                }
+
+                cache_result_t rv = (action == RedisAction::OK ? CACHE_RESULT_OK : CACHE_RESULT_ERROR);
 
                 sThis->m_pWorker->execute([sThis, pClone, rv, cb]() {
                         // TODO: So as not to trigger an assert in buffer.cc, we need to delete
@@ -683,21 +686,29 @@ public:
         auto sThis = get_shared();
 
         mxs::thread_pool().execute([sThis, words, cb] () {
+                int nRetries = sThis->m_nRetries;
                 RedisAction action;
 
                 do
                 {
                     action = sThis->invalidate(words);
 
-                    if (action == RedisAction::REDO)
+                    if (action == RedisAction::RETRY)
                     {
                         MXS_WARNING("Failed to invalidate values dependent on %s, retrying.",
                                     mxb::join(words).c_str());
                     }
                 }
-                while (action == RedisAction::REDO);
+                while (action == RedisAction::RETRY && (nRetries-- > 0));
 
-                cache_result_t rv = (action == RedisAction::ERROR ? CACHE_RESULT_ERROR : CACHE_RESULT_OK);
+                if (action == RedisAction::RETRY)
+                {
+                    MXS_WARNING("After %d attempts, failed to invalidate values dependent on %s.",
+                                sThis->m_nRetries + 1,
+                                mxb::join(words).c_str());
+                }
+
+                cache_result_t rv = (action == RedisAction::OK ? CACHE_RESULT_OK : CACHE_RESULT_ERROR);
 
                 sThis->m_pWorker->execute([sThis, rv, cb]() {
                         if (sThis.use_count() > 1) // The session is still alive
@@ -714,7 +725,7 @@ private:
     enum class RedisAction
     {
         OK,
-        REDO,
+        RETRY,
         ERROR
     };
 
@@ -835,7 +846,7 @@ private:
             {
                 if (reply.is_nil())
                 {
-                    action = RedisAction::REDO;
+                    action = RedisAction::RETRY;
                 }
                 else
                 {
@@ -1044,7 +1055,7 @@ private:
                 {
                     if (reply.is_nil())
                     {
-                        action = RedisAction::REDO;
+                        action = RedisAction::RETRY;
                     }
                     else
                     {
@@ -1103,11 +1114,14 @@ private:
         return action;
     }
 
-    RedisToken(redisContext* pRedis, bool invalidate, uint32_t ttl)
+    RedisToken(redisContext* pRedis, bool invalidate, uint32_t ttl, int nRetries)
         : m_redis(pRedis)
         , m_pWorker(mxb::Worker::get_current())
         , m_invalidate(invalidate)
+        , m_nRetries(nRetries)
     {
+        mxb_assert(m_nRetries >= 0);
+
         if (ttl != 0)
         {
             m_set_options += " PX "; // The leading space is significant.
@@ -1120,6 +1134,7 @@ private:
     mxb::Worker* m_pWorker;
     bool         m_invalidate;
     std::string  m_set_options;
+    int          m_nRetries;
 };
 
 }
@@ -1128,13 +1143,15 @@ private:
 RedisStorage::RedisStorage(const string& name,
                            const Config& config,
                            const string& host,
-                           int port)
+                           int port,
+                           int nRetries)
     : m_name(name)
     , m_config(config)
     , m_host(host)
     , m_port(port)
     , m_invalidate(config.invalidate != CACHE_INVALIDATE_NEVER)
     , m_ttl(config.hard_ttl)
+    , m_nRetries(nRetries)
 {
     if (config.soft_ttl != config.hard_ttl)
     {
@@ -1164,7 +1181,7 @@ void RedisStorage::finalize()
 //static
 RedisStorage* RedisStorage::create(const string& name,
                                    const Config& config,
-                                   const std::string& arguments)
+                                   const std::string& argument_string)
 {
     RedisStorage* pStorage = nullptr;
 
@@ -1180,27 +1197,66 @@ RedisStorage* RedisStorage::create(const string& name,
                     "a maximum number of items in the cache storage.");
     }
 
-    vector<string> vs = mxb::strtok(arguments, ":");
+    bool error = false;
 
-    if (vs.size() == 2)
+    string host;
+    int port = -1;
+    int nRetries = 2;
+
+    vector<string> arguments = mxb::strtok(argument_string, ",");
+
+    for (const auto& argument : arguments)
     {
-        string host = vs[0];
-        int port;
+        vector<string> kv = mxb::strtok(argument, "=");
 
-        if (mxb::get_int(vs[1], &port) && port > 0)
+        if (kv.size() == 2)
         {
-            pStorage = new (std::nothrow) RedisStorage(name, config, host, port);
+            string key = kv[0];
+            string value = kv[1];
+
+            mxb::trim(key);
+            mxb::trim(value);
+
+            if (key == "server")
+            {
+                vector<string> hp = mxb::strtok(value, ":");
+
+                if (hp.size() == 2)
+                {
+                    host = hp[0];
+
+                    if (!mxb::get_int(hp[1], &port) || port < 0)
+                    {
+                        MXS_ERROR("The provided value '%s' to the argument 'server' does not "
+                                  "translate into a valid host:port combination.", value.c_str());
+                        error = true;
+                    }
+                }
+            }
+            else if (key == "retries_on_conflict")
+            {
+                if (!mxb::get_int(value, &nRetries) || nRetries < 0)
+                {
+                    MXS_ERROR("The provided value '%s' to the argument 'retries_on_conflict' "
+                              "is not 0 or a positive integer.", value.c_str());
+                    error = true;
+                }
+            }
+            else
+            {
+                MXS_ERROR("Unknown argument '%s' provided to storage_redis.", key.c_str());
+                error = true;
+            }
         }
         else
         {
-            MXS_ERROR("The provided arugments '%s' does not translate into a valid "
-                      "host:port combination.", arguments.c_str());
+            MXS_ERROR("The argument '%s' provided to storage_redis is not valid.", argument.c_str());
         }
     }
-    else
+
+    if (!error)
     {
-        MXS_ERROR("storage_redis expects a `storage_options` argument of "
-                  "HOST:PORT format: %s", arguments.c_str());
+        pStorage = new (std::nothrow) RedisStorage(name, config, host, port, nRetries);
     }
 
     return pStorage;
@@ -1208,7 +1264,7 @@ RedisStorage* RedisStorage::create(const string& name,
 
 bool RedisStorage::create_token(shared_ptr<Storage::Token>* psToken)
 {
-    return RedisToken::create(m_host, m_port, m_invalidate, m_ttl, psToken);
+    return RedisToken::create(m_host, m_port, m_invalidate, m_ttl, m_nRetries, psToken);
 }
 
 void RedisStorage::get_config(Config* pConfig)

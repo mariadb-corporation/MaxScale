@@ -1069,14 +1069,42 @@ there can be unintended sharing.
 ```
 storage=storage_redis
 ```
-This storage module requires arguments that specify where the redis server
-is located.
+`storage_redis` has the following mandatory arguments:
+
+* `server` using which the location of the server is specified as `host:port`.
+
+`storage_redis` has the following optional arguments:
+
+* `retries_on_conflict`, which takes an integer argument, specifying the maximum number of times a Redis operation is retried in case of conflicts. The default value is 2. That is, at most 3 attempts.
+
+Example:
 ```
-storage_options="127.0.0.1:6379"
+storage_options="server=127.0.0.1:6379, retries_on_conflict=3"
 ```
+#### Invalidation
+`storage_redis` supports invalidation, but the invalidation does not come
+without a cost.
+
+_Without_ invalidation the storing of a value requires one round-trip to the
+Redis server; _with_ invalidation two round-trips are required. When invalidation
+is enabled and invalidation is performed in conjunction with an INSERT, UPDATE or
+DELETE statement, three round-trips to the Redis server are required.
+
+Note also that when invalidation is enabled, the storing of two independent
+resultsets may conflict and cause Redis operations to be retried. For instance,
+suppose one client executes `SELECT fld1 FROM tbl` and another client executes
+`SELECT fld2 FROM tbl` and both resultsets returned from the server will be
+cached in Redis. As part of that process we need to make a note that if the
+table `tbl` is modified, then those resultsets must be discarded. That may cause
+a conflict that causes the operations to be retried, with additional round-trips
+as the result.
+
+Whether invalidation is feasible or not depends upon many factors; the number of
+unique `SELECT`s, the used time-to-live, the ratio of `SELECT`s and updates, etc.
+Consequently, the caching should be tested with a real workload before it is taken
+into production use.
 
 #### Limitations
-* Invalidation is not supported.
 * There is no distinction between _soft_ and _hard_ ttl, but only hard ttl is used.
 * Configuration values given to `max_size` and `max_count` are ignored.
 
