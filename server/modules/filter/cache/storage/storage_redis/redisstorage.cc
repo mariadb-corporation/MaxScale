@@ -811,11 +811,11 @@ private:
         }
 
         // Then the actual value is stored.
-        MXB_AT_DEBUG(rc =) m_redis.appendCommand("SET %b %b PX %u",
+        MXB_AT_DEBUG(rc =) m_redis.appendCommand("SET %b %b%s",
                                                  rkey.data(), rkey.size(),
                                                  reinterpret_cast<const char*>(GWBUF_DATA(pClone)),
                                                  GWBUF_LENGTH(pClone),
-                                                 m_ttl);
+                                                 m_set_options.c_str());
         mxb_assert(rc == REDIS_OK);
 
         // Commit the transaction, will actually be sent only when we ask for the reply.
@@ -1109,15 +1109,19 @@ private:
         : m_redis(pRedis)
         , m_pWorker(mxb::Worker::get_current())
         , m_invalidate(invalidate)
-        , m_ttl(ttl)
     {
+        if (ttl != 0)
+        {
+            m_set_options += " PX "; // The leading space is significant.
+            m_set_options += std::to_string(ttl);
+        }
     }
 
 private:
     Redis        m_redis;
     mxb::Worker* m_pWorker;
     bool         m_invalidate;
-    uint32_t     m_ttl;
+    std::string  m_set_options;
 };
 
 }
@@ -1132,23 +1136,13 @@ RedisStorage::RedisStorage(const string& name,
     , m_host(host)
     , m_port(port)
     , m_invalidate(config.invalidate != CACHE_INVALIDATE_NEVER)
+    , m_ttl(config.hard_ttl)
 {
     if (config.soft_ttl != config.hard_ttl)
     {
         MXS_WARNING("The storage storage_redis does not distinguish between "
                     "soft (%u ms) and hard ttl (%u ms). Hard ttl is used.",
                     config.soft_ttl, config.hard_ttl);
-    }
-
-    auto ms = config.hard_ttl;
-
-    if (ms == 0)
-    {
-        m_ttl = 0;
-    }
-    else
-    {
-        m_ttl = config.hard_ttl;
     }
 }
 
