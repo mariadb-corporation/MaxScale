@@ -27,7 +27,7 @@
 //
 // With invalidation, things get more complicated as when a table is modified,
 // we need to know which keys should be deleted. Fortunately, Redis has support
-// for hash-tables, using which that can be handled. So, in principle storing a
+// for sets using which that can be handled. So, in principle storing a
 // value to Redis is handled as follows.
 //
 // Assume the following statement: "SELECT * FROM tbl". The key - key1 - is
@@ -36,11 +36,10 @@
 //
 // Storing
 //     SET key1 val1
-//     HSET tbl key1 "1"
+//     SADD tbl key1
 //
 // The SET command simply stores the value val1 at the key key1.
-// The HSET command stores the field key1 with the value "1" to the hash
-// named "tbl".
+// The SADD command adds the member key1 to the set named "tbl".
 //
 // Fetching
 //     GET key1
@@ -48,26 +47,26 @@
 // Deleting
 //     DEL key1
 //
-// Note that we do not modify the hash; deleting will not be performed other
+// Note that we do not modify the set; deleting will not be performed other
 // than in error situations (and at the time of this writing is considered to
 // be removed entirelly) and it does not really matter if an non-existing key
-// is in the hash.
+// is in the set.
 //
 // Invalidating
-//     HGETALL tbl
+//     SMEMBERS tbl
 //     DEL key1 key2 key3 ...
-//     HDEL tbl key1 key2 key3 ...
+//     SREM tbl key1 key2 key3 ...
 //
-// The keys are the ones returned by HGETALL. So, at invalidation time we fetch
+// The keys are the ones returned by SMEMBERS. So, at invalidation time we fetch
 // all keys dependent on the invalidation word (aka table name), then delete
-// the keys themselves and the keys from the hash.
+// the keys themselves and the keys from the set.
 //
-// The problem here is that between HGETALL and (DEL + HDEL) some other session
-// may store a new field to the 'tbl' hash, and a value that should be deleted
+// The problem here is that between SMEMBERS and (DEL + SREM) some other session
+// may store a new field to the 'tbl' set, and a value that should be deleted
 // at this point. Now it won't be deleted until the next time that same
 // invalidation is performed.
 //
-// For correctness, the (SET + HSET) of the storing and the (HGETALL + DEL + HDEL)
+// For correctness, the (SET + SADD) of the storing and the (SMEMBERS + DEL + SREM)
 // of the invalidation must be performed as transactions.
 //
 // Redis does not have a concept of transactions that could be used for this
@@ -79,7 +78,7 @@
 //     MULTI
 //     MSET tbl:lock "1"
 //     SET key1 val1
-//     HSET tbl key1 "1"
+//     SADD tbl key1
 //     EXEC
 //
 // With WATCH (one request-response) we tell Redis that the key tbl:lock (a key
@@ -96,18 +95,18 @@
 //
 // Invalidation
 //     WATCH tbl:lock
-//     HGETALL tbl
+//     SMEMBERS tbl
 //     MULTI
 //     MSET tbl:lock "1"
 //     DEL key1 key2 key3 ...
-//     HDEL tbl key1 key2 key3 ...
+//     SREM tbl key1 key2 key3 ...
 //     EXEC
 //
-// So, first we start watching the variable, then we get all keys of the hash
+// So, first we start watching the variable, then we get all keys of the set
 // and finally within a MULTI block update the watch variable, delete the keys
-// and the keys in the hash.
+// and the keys in the set.
 //
-// The above requires 3 round-trips; one for the WATCH, one for the HGETALL and
+// The above requires 3 round-trips; one for the WATCH, one for the SMEMBERS and
 // one for the MULTI.
 //
 // When something fails due to a conflict, all you need to do is to redo the
@@ -791,20 +790,20 @@ private:
             touch(invalidation_words);
 
             // 'rkey' is the key that identifies the value. So, we store it to
-            // a redis hash that is identified by each invalidation word, aka
+            // a redis set that is identified by each invalidation word, aka
             // the table name.
 
             for (size_t i = 0; i < n; ++i)
             {
-                const char* pHash = invalidation_words[i].c_str();
-                int hash_len = invalidation_words[i].length();
+                const char* pSet = invalidation_words[i].c_str();
+                int set_len = invalidation_words[i].length();
                 const char* pField = rkey.data();
                 int field_len = rkey.size();
 
                 // redisAppendCommand can only fail if we run out of memory
                 // or if the format string is broken.
-                MXB_AT_DEBUG(rc =) m_redis.appendCommand("HSET %b %b \"1\"",
-                                                         pHash, hash_len,
+                MXB_AT_DEBUG(rc =) m_redis.appendCommand("SADD %b %b",
+                                                         pSet, set_len,
                                                          pField, field_len);
                 mxb_assert(rc == REDIS_OK);
             }
@@ -856,7 +855,7 @@ private:
                         mxb_assert(element.is_status("OK"));
                     }
 
-                    // Then we handle the replies to the "HSET" commands.
+                    // Then we handle the replies to the "SADD" commands.
                     for (;i < 2 * n; ++i)
                     {
                         element = reply.element(i);
@@ -916,25 +915,25 @@ private:
             // keys.
             for (size_t i = 0; i < n; ++i)
             {
-                const char* pHash = words[i].c_str();
-                int hash_len = words[i].length();
+                const char* pSet = words[i].c_str();
+                int set_len = words[i].length();
 
                 // redisAppendCommand can only fail if we run out of memory
                 // or if the format string is broken.
-                MXB_AT_DEBUG(rc =) m_redis.appendCommand("HGETALL %b",
-                                                         pHash, hash_len);
+                MXB_AT_DEBUG(rc =) m_redis.appendCommand("SMEMBERS %b",
+                                                         pSet, set_len);
                 mxb_assert(rc == REDIS_OK);
             }
         }
 
         // Then we iterate over the replies and build one DEL command for
-        // deleting all values and one HDEL for each invalidation word for
+        // deleting all values and one SREM for each invalidation word for
         // deleting the keys of each word.
 
         vector<Redis::Reply> to_free;
 
-        vector<vector<const char*>> hdel_argvs;
-        vector<vector<size_t>> hdel_argvlens;
+        vector<vector<const char*>> srem_argvs;
+        vector<vector<size_t>> srem_argvlens;
 
         vector<const char*> del_argv;
         vector<size_t> del_argvlen;
@@ -953,17 +952,16 @@ private:
 
                 if (reply.is_array())
                 {
-                    vector<const char*> hdel_argv;
-                    vector<size_t> hdel_argvlen;
+                    vector<const char*> srem_argv;
+                    vector<size_t> srem_argvlen;
 
-                    hdel_argv.push_back("HDEL");
-                    hdel_argvlen.push_back(4);
+                    srem_argv.push_back("SREM");
+                    srem_argvlen.push_back(4);
 
-                    hdel_argv.push_back(words[i].c_str());
-                    hdel_argvlen.push_back(words[i].length());
+                    srem_argv.push_back(words[i].c_str());
+                    srem_argvlen.push_back(words[i].length());
 
-                    // 'j = j + 2' since key/value pairs are returned.
-                    for (size_t j = 0; j < reply.elements(); j = j + 2)
+                    for (size_t j = 0; j < reply.elements(); ++j)
                     {
                         Redis::Reply element = reply.element(j);
 
@@ -972,8 +970,8 @@ private:
                             del_argv.push_back(element.str());
                             del_argvlen.push_back(element.len());
 
-                            hdel_argv.push_back(element.str());
-                            hdel_argvlen.push_back(element.len());
+                            srem_argv.push_back(element.str());
+                            srem_argvlen.push_back(element.len());
                         }
                         else
                         {
@@ -982,15 +980,15 @@ private:
                         }
                     }
 
-                    hdel_argvs.push_back(std::move(hdel_argv));
-                    hdel_argvlens.push_back(std::move(hdel_argvlen));
+                    srem_argvs.push_back(std::move(srem_argv));
+                    srem_argvlens.push_back(std::move(srem_argvlen));
                 }
 
                 to_free.emplace_back(std::move(reply));
             }
             else
             {
-                MXS_ERROR("Could not read redis reply for hash update for '%s': %s, %s",
+                MXS_ERROR("Could not read redis reply for set update for '%s': %s, %s",
                           words[i].c_str(),
                           redis_error_to_string(rc).c_str(),
                           m_redis.errstr());
@@ -1004,19 +1002,19 @@ private:
 
             touch(words);
 
-            // Delete the relevant keys from the hashes.
-            for (size_t i = 0; i < hdel_argvs.size(); ++i)
+            // Delete the relevant keys from the sets.
+            for (size_t i = 0; i < srem_argvs.size(); ++i)
             {
-                // Delete keys related to a particular table, the HDEL commands.
-                const vector<const char*>& hdel_argv = hdel_argvs[i];
-                const vector<size_t>& hdel_argvlen = hdel_argvlens[i];
+                // Delete keys related to a particular table, the SREM commands.
+                const vector<const char*>& srem_argv = srem_argvs[i];
+                const vector<size_t>& srem_argvlen = srem_argvlens[i];
 
-                if (hdel_argv.size() > 2)
+                if (srem_argv.size() > 2)
                 {
-                    const char** ppHdel_argv = const_cast<const char**>(hdel_argv.data());
-                    MXB_AT_DEBUG(rc =) m_redis.appendCommandArgv(hdel_argv.size(),
-                                                                 ppHdel_argv,
-                                                                 hdel_argvlen.data());
+                    const char** ppSrem_argv = const_cast<const char**>(srem_argv.data());
+                    MXB_AT_DEBUG(rc =) m_redis.appendCommandArgv(srem_argv.size(),
+                                                                 ppSrem_argv,
+                                                                 srem_argvlen.data());
                     mxb_assert(rc == REDIS_OK);
                 }
             }
@@ -1036,7 +1034,7 @@ private:
             if (m_redis.expect_status("OK", "MULTI"))
             {
                 // All commands before EXEC should only return a status of QUEUED.
-                m_redis.expect_n_status(words.size() + hdel_argvs.size() + 1, "QUEUED", "queued command");
+                m_redis.expect_n_status(words.size() + srem_argvs.size() + 1, "QUEUED", "queued command");
 
                 // The reply to EXEC
                 Redis::Reply reply;
@@ -1053,7 +1051,7 @@ private:
                         // The reply will not contain the actual responses to the commands
                         // issued after MULTI.
                         mxb_assert(reply.is_array());
-                        mxb_assert(reply.elements() == words.size() + hdel_argvs.size() + 1);
+                        mxb_assert(reply.elements() == words.size() + srem_argvs.size() + 1);
 
 #ifdef SS_DEBUG
                         Redis::Reply element;
@@ -1065,15 +1063,15 @@ private:
                             mxb_assert(element.is_status("OK"));
                         }
 
-                        // Then we handle the replies to the "HDEL" commands.
-                        for (; i < words.size() + hdel_argvs.size(); ++i)
+                        // Then we handle the replies to the "SREM" commands.
+                        for (; i < words.size() + srem_argvs.size(); ++i)
                         {
                             element = reply.element(i);
                             mxb_assert(element.is_integer());
                         }
 
                         // Finally the DEL itself.
-                        element = reply.element(words.size() + hdel_argvs.size());
+                        element = reply.element(words.size() + srem_argvs.size());
                         mxb_assert(element.is_integer());
 #endif
                     }
