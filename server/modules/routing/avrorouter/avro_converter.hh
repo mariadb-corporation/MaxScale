@@ -46,20 +46,20 @@ typedef std::unordered_map<std::string, SAvroTable> AvroTables;
 class AvroConverter : public RowEventHandler
 {
 public:
-
     AvroConverter(std::string avrodir, uint64_t block_size, mxs_avro_codec_type codec);
-    bool open_table(const STable& create);
-    bool prepare_table(const STable& create);
-    void flush_tables();
-    void prepare_row(const gtid_pos_t& gtid, const REP_HEADER& hdr, int event_type);
-    bool commit(const gtid_pos_t& gtid);
-    void column_int(int i, int32_t value);
-    void column_long(int i, int64_t value);
-    void column_float(int i, float value);
-    void column_double(int i, double value);
-    void column_string(int i, const std::string& value);
-    void column_bytes(int i, uint8_t* value, int len);
-    void column_null(int i);
+    bool open_table(const Table& create) final;
+    bool prepare_table(const Table& create) final;
+    void flush_tables() final;
+    void prepare_row(const Table& create, const gtid_pos_t& gtid,
+                     const REP_HEADER& hdr, int event_type) final;
+    bool commit(const Table& create, const gtid_pos_t& gtid) final;
+    void column_int(const Table& create, int i, int32_t value) final;
+    void column_long(const Table& create, int i, int64_t value) final;
+    void column_float(const Table& create, int i, float value) final;
+    void column_double(const Table& create, int i, double value) final;
+    void column_string(const Table& create, int i, const std::string& value) final;
+    void column_bytes(const Table& create, int i, uint8_t* value, int len) final;
+    void column_null(const Table& create, int i) final;
 
 private:
     avro_value_iface_t* m_writer_iface;
@@ -71,7 +71,6 @@ private:
     AvroTables          m_open_tables;
     uint64_t            m_block_size;
     mxs_avro_codec_type m_codec;
-    STable              m_create;
 
-    void set_active(int i);
+    void set_active(const Table& create, int i);
 };

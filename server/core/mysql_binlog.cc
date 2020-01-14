@@ -525,7 +525,7 @@ static void unpack_date(uint8_t* ptr, struct tm* dest)
  * @param metadata Pointer to field metadata
  * @return Length of the processed field in bytes
  */
-size_t unpack_enum(uint8_t* ptr, uint8_t* metadata, uint8_t* dest)
+size_t unpack_enum(uint8_t* ptr, const uint8_t* metadata, uint8_t* dest)
 {
     memcpy(dest, ptr, metadata[1]);
     return metadata[1];
@@ -568,7 +568,7 @@ size_t unpack_bit(uint8_t* ptr,
  * @param decimals How many decimals the field has
  * @return Number of bytes the temporal value takes
  */
-static size_t temporal_field_size(uint8_t type, uint8_t* decimals, int length)
+static size_t temporal_field_size(uint8_t type, const uint8_t* decimals, int length)
 {
     switch (type)
     {
@@ -617,7 +617,7 @@ static size_t temporal_field_size(uint8_t type, uint8_t* decimals, int length)
  *
  * @return Number of bytes consumed
  */
-size_t unpack_temporal_value(uint8_t type, uint8_t* ptr, uint8_t* metadata,
+size_t unpack_temporal_value(uint8_t type, uint8_t* ptr, const uint8_t* metadata,
                              int length, char* buf, size_t buflen)
 {
     struct tm tm;
@@ -677,7 +677,7 @@ size_t unpack_temporal_value(uint8_t type, uint8_t* ptr, uint8_t* metadata,
  * @return Number of bytes copied
  * @see extract_temporal_value
  */
-size_t unpack_numeric_field(uint8_t* src, uint8_t type, uint8_t* metadata, uint8_t* dest)
+size_t unpack_numeric_field(uint8_t* src, uint8_t type, const uint8_t* metadata, uint8_t* dest)
 {
     size_t size = 0;
     switch (type)
@@ -772,7 +772,7 @@ static uint64_t unpack_bytes(uint8_t* ptr, size_t bytes)
     return val;
 }
 
-size_t unpack_decimal_field(uint8_t* ptr, uint8_t* metadata, double* val_float)
+size_t unpack_decimal_field(uint8_t* ptr, const uint8_t* metadata, double* val_float)
 {
     const int dec_dig = 9;
     int precision = metadata[0];

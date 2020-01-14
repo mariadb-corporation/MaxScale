@@ -138,7 +138,7 @@ static const char* column_type_to_avro_type(uint8_t type)
  * @param create The TABLE_CREATE for this table
  * @return New schema or NULL if an error occurred
  */
-char* json_new_schema_from_table(const STable& create)
+char* json_new_schema_from_table(const Table& create)
 {
     json_error_t err;
     memset(&err, 0, sizeof(err));
@@ -214,23 +214,23 @@ char* json_new_schema_from_table(const STable& create)
                                        "type",
                                        event_types));
 
-    for (uint64_t i = 0; i < create->columns.size(); i++)
+    for (uint64_t i = 0; i < create.columns.size(); i++)
     {
         json_array_append_new(array,
                               json_pack_ex(&err,
                                            0,
                                            "{s:s, s:[s, s], s:s, s:i, s:b}",
                                            "name",
-                                           create->columns[i].name.c_str(),
+                                           create.columns[i].name.c_str(),
                                            "type",
                                            "null",
-                                           column_type_to_avro_type(create->column_types[i]),
+                                           column_type_to_avro_type(create.column_types[i]),
                                            "real_type",
-                                           create->columns[i].type.c_str(),
+                                           create.columns[i].type.c_str(),
                                            "length",
-                                           create->columns[i].length,
+                                           create.columns[i].length,
                                            "unsigned",
-                                           create->columns[i].is_unsigned));
+                                           create.columns[i].is_unsigned));
     }
     json_object_set_new(schema, "fields", array);
     char* rval = json_dumps(schema, JSON_PRESERVE_ORDER);
@@ -245,11 +245,11 @@ char* json_new_schema_from_table(const STable& create)
  * @param schema Schema in JSON format
  * @param map Table map that @p schema represents
  */
-void save_avro_schema(const char* path, const char* schema, const STable& create)
+void save_avro_schema(const char* path, const char* schema, const Table& create)
 {
     char filepath[PATH_MAX];
-    snprintf(filepath, sizeof(filepath), "%s/%s.%s.%06d.avsc", path, create->database.c_str(),
-             create->table.c_str(), create->version);
+    snprintf(filepath, sizeof(filepath), "%s/%s.%s.%06d.avsc", path, create.database.c_str(),
+             create.table.c_str(), create.version);
 
     if (access(filepath, F_OK) != 0)
     {
@@ -287,7 +287,7 @@ AvroConverter::AvroConverter(std::string avrodir, uint64_t block_size, mxs_avro_
 {
 }
 
-bool AvroConverter::open_table(const STable& create)
+bool AvroConverter::open_table(const Table& create)
 {
     bool rval = false;
     char* json_schema = json_new_schema_from_table(create);
@@ -299,9 +299,9 @@ bool AvroConverter::open_table(const STable& create)
                  sizeof(filepath),
                  "%s/%s.%s.%06d.avro",
                  m_avrodir.c_str(),
-                 create->database.c_str(),
-                 create->table.c_str(),
-                 create->version);
+                 create.database.c_str(),
+                 create.table.c_str(),
+                 create.version);
 
         SAvroTable avro_table(avro_table_alloc(filepath,
                                                json_schema,
@@ -310,9 +310,8 @@ bool AvroConverter::open_table(const STable& create)
 
         if (avro_table)
         {
-            m_open_tables[create->id()] = avro_table;
+            m_open_tables[create.id()] = avro_table;
             save_avro_schema(m_avrodir.c_str(), json_schema, create);
-            m_create = create;
             rval = true;
         }
         else
@@ -329,16 +328,15 @@ bool AvroConverter::open_table(const STable& create)
     return rval;
 }
 
-bool AvroConverter::prepare_table(const STable& create)
+bool AvroConverter::prepare_table(const Table& create)
 {
     bool rval = false;
-    auto it = m_open_tables.find(create->id());
+    auto it = m_open_tables.find(create.id());
 
     if (it != m_open_tables.end())
     {
         m_writer_iface = it->second->avro_writer_iface;
         m_avro_file = &it->second->avro_file;
-        m_create = create;
         rval = true;
     }
 
@@ -353,7 +351,8 @@ void AvroConverter::flush_tables()
     }
 }
 
-void AvroConverter::prepare_row(const gtid_pos_t& gtid, const REP_HEADER& hdr, int event_type)
+void AvroConverter::prepare_row(const Table& create, const gtid_pos_t& gtid,
+                                const REP_HEADER& hdr, int event_type)
 {
     avro_generic_value_new(m_writer_iface, &m_record);
     avro_value_get_by_name(&m_record, avro_domain, &m_field, NULL);
@@ -375,7 +374,7 @@ void AvroConverter::prepare_row(const gtid_pos_t& gtid, const REP_HEADER& hdr, i
     avro_value_set_enum(&m_field, event_type);
 }
 
-bool AvroConverter::commit(const gtid_pos_t& gtid)
+bool AvroConverter::commit(const Table& create, const gtid_pos_t& gtid)
 {
     bool rval = true;
 
@@ -388,15 +387,15 @@ bool AvroConverter::commit(const gtid_pos_t& gtid)
     return rval;
 }
 
-void AvroConverter::column_int(int i, int32_t value)
+void AvroConverter::column_int(const Table& create, int i, int32_t value)
 {
-    set_active(i);
+    set_active(create, i);
     avro_value_set_int(&m_field, value);
 }
 
-void AvroConverter::column_long(int i, int64_t value)
+void AvroConverter::column_long(const Table& create, int i, int64_t value)
 {
-    set_active(i);
+    set_active(create, i);
 
     if (avro_value_get_type(&m_field) == AVRO_INT32)
     {
@@ -409,41 +408,41 @@ void AvroConverter::column_long(int i, int64_t value)
     }
 }
 
-void AvroConverter::column_float(int i, float value)
+void AvroConverter::column_float(const Table& create, int i, float value)
 {
-    set_active(i);
+    set_active(create, i);
     avro_value_set_float(&m_field, value);
 }
 
-void AvroConverter::column_double(int i, double value)
+void AvroConverter::column_double(const Table& create, int i, double value)
 {
-    set_active(i);
+    set_active(create, i);
     avro_value_set_double(&m_field, value);
 }
 
-void AvroConverter::column_string(int i, const std::string& value)
+void AvroConverter::column_string(const Table& create, int i, const std::string& value)
 {
-    set_active(i);
+    set_active(create, i);
     avro_value_set_string(&m_field, value.c_str());
 }
 
-void AvroConverter::column_bytes(int i, uint8_t* value, int len)
+void AvroConverter::column_bytes(const Table& create, int i, uint8_t* value, int len)
 {
-    set_active(i);
+    set_active(create, i);
     avro_value_set_bytes(&m_field, value, len);
 }
 
-void AvroConverter::column_null(int i)
+void AvroConverter::column_null(const Table& create, int i)
 {
-    set_active(i);
+    set_active(create, i);
     avro_value_set_branch(&m_union_value, 0, &m_field);
     avro_value_set_null(&m_field);
 }
 
-void AvroConverter::set_active(int i)
+void AvroConverter::set_active(const Table& create, int i)
 {
     MXB_AT_DEBUG(int rc = ) avro_value_get_by_name(&m_record,
-                                                   m_create->columns[i].name.c_str(),
+                                                   create.columns[i].name.c_str(),
                                                    &m_union_value,
                                                    NULL);
     mxb_assert(rc == 0);

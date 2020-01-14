@@ -70,30 +70,30 @@ int get_event_type(uint8_t event)
  * Convert the raw binary data into actual numeric types.
  *
  * @param conv     Event converter to use
+ * @param create   The created table
  * @param idx      Position of this column in the row
- * @param type     Event type
  * @param metadata Field metadata
  * @param value    Pointer to the start of the in-memory representation of the data
  */
-void set_numeric_field_value(SRowEventHandler& conv,
-                             int idx,
-                             uint8_t type,
-                             uint8_t* metadata,
-                             uint8_t* value,
-                             bool is_unsigned)
+void set_numeric_field_value(SRowEventHandler& conv, const Table& create, int idx,
+                             const uint8_t* metadata, uint8_t* value)
 {
+
+    uint8_t type = create.column_types[idx];
+    bool is_unsigned = create.columns[idx].is_unsigned;
+
     switch (type)
     {
     case TABLE_COL_TYPE_TINY:
         if (is_unsigned)
         {
             uint8_t c = *value;
-            conv->column_int(idx, c);
+            conv->column_int(create, idx, c);
         }
         else
         {
             int8_t c = *value;
-            conv->column_int(idx, c);
+            conv->column_int(create, idx, c);
         }
         break;
 
@@ -101,12 +101,12 @@ void set_numeric_field_value(SRowEventHandler& conv,
         if (is_unsigned)
         {
             uint16_t s = gw_mysql_get_byte2(value);
-            conv->column_int(idx, s);
+            conv->column_int(create, idx, s);
         }
         else
         {
             int16_t s = gw_mysql_get_byte2(value);
-            conv->column_int(idx, s);
+            conv->column_int(create, idx, s);
         }
         break;
 
@@ -114,7 +114,7 @@ void set_numeric_field_value(SRowEventHandler& conv,
         if (is_unsigned)
         {
             uint32_t x = gw_mysql_get_byte3(value);
-            conv->column_int(idx, x);
+            conv->column_int(create, idx, x);
         }
         else
         {
@@ -125,7 +125,7 @@ void set_numeric_field_value(SRowEventHandler& conv,
                 x = -((0xffffff & (~x)) + 1);
             }
 
-            conv->column_int(idx, (int64_t)x);
+            conv->column_int(create, idx, (int64_t)x);
         }
         break;
 
@@ -133,24 +133,24 @@ void set_numeric_field_value(SRowEventHandler& conv,
         if (is_unsigned)
         {
             uint32_t x = gw_mysql_get_byte4(value);
-            conv->column_long(idx, x);
+            conv->column_long(create, idx, x);
         }
         else
         {
             int32_t x = gw_mysql_get_byte4(value);
-            conv->column_long(idx, x);
+            conv->column_long(create, idx, x);
         }
         break;
 
     case TABLE_COL_TYPE_LONGLONG:
-        conv->column_long(idx, gw_mysql_get_byte8(value));
+        conv->column_long(create, idx, gw_mysql_get_byte8(value));
         break;
 
     case TABLE_COL_TYPE_FLOAT:
         {
             float f = 0;
             memcpy(&f, value, 4);
-            conv->column_float(idx, f);
+            conv->column_float(create, idx, f);
             break;
         }
 
@@ -158,7 +158,7 @@ void set_numeric_field_value(SRowEventHandler& conv,
         {
             double d = 0;
             memcpy(&d, value, 8);
-            conv->column_double(idx, d);
+            conv->column_double(create, idx, d);
             break;
         }
 
@@ -611,12 +611,15 @@ bool Rpl::table_matches(const std::string& ident)
  * this row event. Currently this should be a bitfield which has all bits set.
  * @return Pointer to the first byte after the current row event
  */
-uint8_t* Rpl::process_row_event_data(STable create, uint8_t* ptr, uint8_t* columns_present, uint8_t* end)
+uint8_t* Rpl::process_row_event_data(const Table& create,
+                                     uint8_t* ptr,
+                                     uint8_t* columns_present,
+                                     uint8_t* end)
 {
     SRowEventHandler& conv = m_handler;
     int npresent = 0;
-    long ncolumns = create->columns.size();
-    uint8_t* metadata = &create->column_metadata[0];
+    long ncolumns = create.columns.size();
+    const uint8_t* metadata = &create.column_metadata[0];
     size_t metadata_offset = 0;
 
     /** BIT type values use the extra bits in the row event header */
@@ -640,9 +643,9 @@ uint8_t* Rpl::process_row_event_data(STable create, uint8_t* ptr, uint8_t* colum
             if (bit_is_set(null_bitmap, ncolumns, i))
             {
                 sprintf(trace[i], "[%ld] NULL", i);
-                conv->column_null(i);
+                conv->column_null(create, i);
             }
-            else if (column_is_fixed_string(create->column_types[i]))
+            else if (column_is_fixed_string(create.column_types[i]))
             {
                 /** ENUM and SET are stored as STRING types with the type stored
                  * in the metadata. */
@@ -652,7 +655,7 @@ uint8_t* Rpl::process_row_event_data(STable create, uint8_t* ptr, uint8_t* colum
                     uint64_t bytes = unpack_enum(ptr, &metadata[metadata_offset], val);
                     char strval[bytes * 2 + 1];
                     gw_bin2hex(strval, val, bytes);
-                    conv->column_string(i, strval);
+                    conv->column_string(create, i, strval);
                     sprintf(trace[i], "[%ld] ENUM: %lu bytes", i, bytes);
                     ptr += bytes;
                     check_overflow(ptr <= end);
@@ -689,12 +692,12 @@ uint8_t* Rpl::process_row_event_data(STable create, uint8_t* ptr, uint8_t* colum
                     char str[bytes + 1];
                     memcpy(str, ptr, bytes);
                     str[bytes] = '\0';
-                    conv->column_string(i, str);
+                    conv->column_string(create, i, str);
                     ptr += bytes;
                     check_overflow(ptr <= end);
                 }
             }
-            else if (column_is_bit(create->column_types[i]))
+            else if (column_is_bit(create.column_types[i]))
             {
                 uint8_t len = metadata[metadata_offset + 1];
                 uint8_t bit_len = metadata[metadata_offset] > 0 ? 1 : 0;
@@ -706,20 +709,20 @@ uint8_t* Rpl::process_row_event_data(STable create, uint8_t* ptr, uint8_t* colum
                     warn_bit = true;
                     MXS_WARNING("BIT is not currently supported, values are stored as 0.");
                 }
-                conv->column_int(i, 0);
+                conv->column_int(create, i, 0);
                 sprintf(trace[i], "[%ld] BIT", i);
                 ptr += bytes;
                 check_overflow(ptr <= end);
             }
-            else if (column_is_decimal(create->column_types[i]))
+            else if (column_is_decimal(create.column_types[i]))
             {
                 double f_value = 0.0;
                 ptr += unpack_decimal_field(ptr, metadata + metadata_offset, &f_value);
-                conv->column_double(i, f_value);
+                conv->column_double(create, i, f_value);
                 sprintf(trace[i], "[%ld] DECIMAL", i);
                 check_overflow(ptr <= end);
             }
-            else if (column_is_variable_string(create->column_types[i]))
+            else if (column_is_variable_string(create.column_types[i]))
             {
                 size_t sz;
                 int bytes = metadata[metadata_offset] | metadata[metadata_offset + 1] << 8;
@@ -739,10 +742,10 @@ uint8_t* Rpl::process_row_event_data(STable create, uint8_t* ptr, uint8_t* colum
                 memcpy(buf, ptr, sz);
                 buf[sz] = '\0';
                 ptr += sz;
-                conv->column_string(i, buf);
+                conv->column_string(create, i, buf);
                 check_overflow(ptr <= end);
             }
-            else if (column_is_blob(create->column_types[i]))
+            else if (column_is_blob(create.column_types[i]))
             {
                 uint8_t bytes = metadata[metadata_offset];
                 uint64_t len = 0;
@@ -751,25 +754,25 @@ uint8_t* Rpl::process_row_event_data(STable create, uint8_t* ptr, uint8_t* colum
                 sprintf(trace[i], "[%ld] BLOB: field: %d bytes, data: %lu bytes", i, bytes, len);
                 if (len)
                 {
-                    conv->column_bytes(i, ptr, len);
+                    conv->column_bytes(create, i, ptr, len);
                     ptr += len;
                 }
                 else
                 {
                     uint8_t nullvalue = 0;
-                    conv->column_bytes(i, &nullvalue, 1);
+                    conv->column_bytes(create, i, &nullvalue, 1);
                 }
                 check_overflow(ptr <= end);
             }
-            else if (column_is_temporal(create->column_types[i]))
+            else if (column_is_temporal(create.column_types[i]))
             {
                 char buf[80];
-                ptr += unpack_temporal_value(create->column_types[i], ptr,
+                ptr += unpack_temporal_value(create.column_types[i], ptr,
                                              &metadata[metadata_offset],
-                                             create->columns[i].length,
+                                             create.columns[i].length,
                                              buf, sizeof(buf));
-                conv->column_string(i, buf);
-                sprintf(trace[i], "[%ld] %s: %s", i, column_type_to_string(create->column_types[i]), buf);
+                conv->column_string(create, i, buf);
+                sprintf(trace[i], "[%ld] %s: %s", i, column_type_to_string(create.column_types[i]), buf);
                 check_overflow(ptr <= end);
             }
             /** All numeric types (INT, LONG, FLOAT etc.) */
@@ -777,21 +780,17 @@ uint8_t* Rpl::process_row_event_data(STable create, uint8_t* ptr, uint8_t* colum
             {
                 uint8_t lval[16];
                 memset(lval, 0, sizeof(lval));
-                ptr += unpack_numeric_field(ptr,
-                                            create->column_types[i],
-                                            &metadata[metadata_offset],
-                                            lval);
-                set_numeric_field_value(conv, i, create->column_types[i], &metadata[metadata_offset], lval,
-                                        create->columns[i].is_unsigned);
-                sprintf(trace[i], "[%ld] %s", i, column_type_to_string(create->column_types[i]));
+                ptr += unpack_numeric_field(ptr, create.column_types[i], &metadata[metadata_offset], lval);
+                set_numeric_field_value(conv, create, i, &metadata[metadata_offset], lval);
+                sprintf(trace[i], "[%ld] %s", i, column_type_to_string(create.column_types[i]));
                 check_overflow(ptr <= end);
             }
-            mxb_assert(metadata_offset <= create->column_metadata.size());
-            metadata_offset += get_metadata_len(create->column_types[i]);
+            mxb_assert(metadata_offset <= create.column_metadata.size());
+            metadata_offset += get_metadata_len(create.column_types[i]);
         }
         else
         {
-            sprintf(trace[i], "[%ld] %s: Not present", i, column_type_to_string(create->column_types[i]));
+            sprintf(trace[i], "[%ld] %s: Not present", i, column_type_to_string(create.column_types[i]));
         }
 
         MXS_INFO("%s", trace[i]);
@@ -834,7 +833,7 @@ bool Rpl::handle_table_map_event(REP_HEADER* hdr, uint8_t* ptr)
 
         if (!create->second->is_open)
         {
-            create->second->is_open = m_handler->open_table(create->second);
+            create->second->is_open = m_handler->open_table(*create->second);
         }
     }
     else
@@ -930,13 +929,13 @@ bool Rpl::handle_row_event(REP_HEADER* hdr, uint8_t* ptr)
             return true;
         }
 
-        auto create = it->second;
+        const auto& create = *it->second;
 
-        if (ncolumns != create->columns.size())
+        if (ncolumns != create.columns.size())
         {
             MXS_ERROR("Row event and table map event have different column "
                       "counts for table %s, only full row image is currently "
-                      "supported.", create->id().c_str());
+                      "supported.", create.id().c_str());
         }
         else if (m_handler->prepare_table(create))
         {
@@ -953,9 +952,9 @@ bool Rpl::handle_row_event(REP_HEADER* hdr, uint8_t* ptr)
                 // Increment the event count for this transaction
                 m_gtid.event_num++;
 
-                m_handler->prepare_row(m_gtid, *hdr, event_type);
+                m_handler->prepare_row(create, m_gtid, *hdr, event_type);
                 ptr = process_row_event_data(create, ptr, col_present, end);
-                m_handler->commit(m_gtid);
+                m_handler->commit(create, m_gtid);
 
                 /** Update rows events have the before and after images of the
                  * affected rows so we'll process them as another record with
@@ -963,9 +962,9 @@ bool Rpl::handle_row_event(REP_HEADER* hdr, uint8_t* ptr)
                 if (event_type == UPDATE_EVENT)
                 {
                     m_gtid.event_num++;
-                    m_handler->prepare_row(m_gtid, *hdr, UPDATE_EVENT_AFTER);
+                    m_handler->prepare_row(create, m_gtid, *hdr, UPDATE_EVENT_AFTER);
                     ptr = process_row_event_data(create, ptr, col_present, end);
-                    m_handler->commit(m_gtid);
+                    m_handler->commit(create, m_gtid);
                 }
 
                 rows++;
@@ -976,7 +975,7 @@ bool Rpl::handle_row_event(REP_HEADER* hdr, uint8_t* ptr)
         else
         {
             MXS_ERROR("Avro file handle was not found for table %s. See earlier"
-                      " errors for more details.", create->id().c_str());
+                      " errors for more details.", create.id().c_str());
         }
     }
     else
@@ -991,24 +990,25 @@ bool Rpl::handle_row_event(REP_HEADER* hdr, uint8_t* ptr)
 /**
  * Save the CREATE TABLE statement to disk and replace older versions of the table
  * in the router's hashtable.
+ *
  * @param router Avro router instance
  * @param created Created table
- * @return False if an error occurred and true if successful
  */
-bool Rpl::save_and_replace_table_create(STable created)
+void Rpl::save_and_replace_table_create(const STable& created)
 {
     std::string table_ident = created->id();
     created->version = ++m_versions[table_ident];
     created->is_open = false;
     m_created_tables[table_ident] = created;
     mxb_assert(created->columns.size() > 0);
-    return m_handler->create_table(created);
 }
 
-bool Rpl::rename_table_create(STable created, const std::string& old_id)
+void Rpl::rename_table_create(const STable& created, const std::string& old_id)
 {
+    save_and_replace_table_create(created);
+    // Remove the old ID only after the new ID is added to the hashtable. This preserves at least one copy of
+    // the table at all times.
     m_created_tables.erase(old_id);
-    return save_and_replace_table_create(created);
 }
 
 /**
@@ -1409,7 +1409,6 @@ void Rpl::alter_table()
         // least one row event for it has been created.
         create->version = ++m_versions[create->database + '.' + create->table];
         create->is_open = false;
-        m_handler->create_table(create);
     }
 }
 

@@ -133,59 +133,44 @@ typedef std::unordered_map<uint64_t, STable>    ActiveMaps;
 class RowEventHandler
 {
 public:
-    virtual ~RowEventHandler()
-    {
-    }
-
-    // A table was created
-    virtual bool create_table(const STable& create)
-    {
-        return true;
-    }
+    virtual ~RowEventHandler() = default;
 
     // A table was opened
-    virtual bool open_table(const STable& create)
-    {
-        return true;
-    }
+    virtual bool open_table(const Table& create) = 0;
 
     // Prepare a table for row processing
-    virtual bool prepare_table(const STable& create)
-    {
-        return true;
-    }
+    virtual bool prepare_table(const Table& create) = 0;
 
     // Flush open tables
-    virtual void flush_tables()
-    {
-    }
+    virtual void flush_tables() = 0;
 
     // Prepare a new row for processing
-    virtual void prepare_row(const gtid_pos_t& gtid, const REP_HEADER& hdr, int event_type) = 0;
+    virtual void prepare_row(const Table& create, const gtid_pos_t& gtid,
+                             const REP_HEADER& hdr, int event_type) = 0;
 
     // Called once all columns are processed
-    virtual bool commit(const gtid_pos_t& gtid) = 0;
+    virtual bool commit(const Table& create, const gtid_pos_t& gtid) = 0;
 
     // Integer handler for short types (less than 32 bits)
-    virtual void column_int(int i, int32_t value) = 0;
+    virtual void column_int(const Table& create, int i, int32_t value) = 0;
 
     // Integer handler for long integer types
-    virtual void column_long(int i, int64_t value) = 0;
+    virtual void column_long(const Table& create, int i, int64_t value) = 0;
 
     // Float handler
-    virtual void column_float(int i, float value) = 0;
+    virtual void column_float(const Table& create, int i, float value) = 0;
 
     // Double handler
-    virtual void column_double(int i, double value) = 0;
+    virtual void column_double(const Table& create, int i, double value) = 0;
 
     // String handler
-    virtual void column_string(int i, const std::string& value) = 0;
+    virtual void column_string(const Table& create, int i, const std::string& value) = 0;
 
     // Bytes handler
-    virtual void column_bytes(int i, uint8_t* value, int len) = 0;
+    virtual void column_bytes(const Table& create, int i, uint8_t* value, int len) = 0;
 
     // Empty (NULL) value type handler
-    virtual void column_null(int i) = 0;
+    virtual void column_null(const Table& create, int i) = 0;
 };
 
 using SRowEventHandler = std::unique_ptr<RowEventHandler>;
@@ -253,11 +238,12 @@ private:
     void handle_query_event(REP_HEADER* hdr, uint8_t* ptr);
     bool handle_table_map_event(REP_HEADER* hdr, uint8_t* ptr);
     bool handle_row_event(REP_HEADER* hdr, uint8_t* ptr);
-    bool save_and_replace_table_create(STable created);
-    bool rename_table_create(STable created, const std::string& old_id);
+    void save_and_replace_table_create(const STable& created);
+    void rename_table_create(const STable& created, const std::string& old_id);
     bool table_matches(const std::string& ident);
 
-    uint8_t* process_row_event_data(STable create, uint8_t* ptr, uint8_t* columns_present, uint8_t* end);
+    uint8_t* process_row_event_data(const Table& create, uint8_t* ptr, uint8_t* columns_present,
+                                    uint8_t* end);
 
     // SQL parsing related variables and methods
     struct

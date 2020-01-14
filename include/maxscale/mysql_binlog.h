@@ -85,16 +85,16 @@ bool column_is_decimal(uint8_t type);
 bool fixed_string_is_enum(uint8_t type);
 
 /** Value unpacking */
-size_t unpack_temporal_value(uint8_t type, uint8_t* ptr, uint8_t* metadata,
+size_t unpack_temporal_value(uint8_t type, uint8_t* ptr, const uint8_t* metadata,
                              int length, char* buf, size_t buflen);
-size_t unpack_enum(uint8_t* ptr, uint8_t* metadata, uint8_t* dest);
-size_t unpack_numeric_field(uint8_t* ptr, uint8_t type, uint8_t* metadata, uint8_t* val);
+size_t unpack_enum(uint8_t* ptr, const uint8_t* metadata, uint8_t* dest);
+size_t unpack_numeric_field(uint8_t* ptr, uint8_t type, const uint8_t* metadata, uint8_t* val);
 size_t unpack_bit(uint8_t* ptr,
                   uint8_t* null_mask,
                   uint32_t col_count,
                   uint32_t curr_col_index,
                   uint8_t* metadata,
                   uint64_t* dest);
-size_t unpack_decimal_field(uint8_t* ptr, uint8_t* metadata, double* val_float);
+size_t unpack_decimal_field(uint8_t* ptr, const uint8_t* metadata, double* val_float);
 
 MXS_END_DECLS
