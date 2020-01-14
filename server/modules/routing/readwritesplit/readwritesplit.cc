@@ -411,6 +411,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             {"transaction_replay",         MXS_MODULE_PARAM_BOOL,      "false"},
             {"transaction_replay_max_size",MXS_MODULE_PARAM_SIZE,      "1Mi"},
             {"transaction_replay_attempts",MXS_MODULE_PARAM_COUNT,     "5"},
+            {"transaction_replay_retry_on_deadlock",MXS_MODULE_PARAM_BOOL,      "false"},
             {"optimistic_trx",             MXS_MODULE_PARAM_BOOL,      "false"},
             {"lazy_connect",               MXS_MODULE_PARAM_BOOL,      "false"},
             {MXS_END_MODULE_PARAMS}

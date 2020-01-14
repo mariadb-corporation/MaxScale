@@ -17,9 +17,11 @@ then
 
     if [ -f /usr/lib/systemd/system/maxscale.service ]
     then
+        systemd stop maxscale.service
         rm /usr/lib/systemd/system/maxscale.service
     elif [ -f /lib/systemd/system/maxscale.service ]
     then
+        systemd stop maxscale.service
         rm /lib/systemd/system/maxscale.service
     fi
 

@@ -176,6 +176,7 @@ struct Config
         , transaction_replay(params->get_bool("transaction_replay"))
         , trx_max_size(params->get_size("transaction_replay_max_size"))
         , trx_max_attempts(params->get_integer("transaction_replay_attempts"))
+        , trx_retry_on_deadlock(params->get_bool("transaction_replay_retry_on_deadlock"))
         , optimistic_trx(params->get_bool("optimistic_trx"))
         , lazy_connect(params->get_bool("lazy_connect"))
     {
@@ -241,6 +242,7 @@ struct Config
     bool     transaction_replay;        /**< Replay failed transactions */
     size_t   trx_max_size;              /**< Max transaction size for replaying */
     int64_t  trx_max_attempts;          /**< Maximum number of transaction replay attempts */
+    bool     trx_retry_on_deadlock;     /**< Replay the transaction if it ends up in a deadlock */
     bool     optimistic_trx;            /**< Enable optimistic transactions */
     bool     lazy_connect;              /**< Create connections only when needed */
 };
