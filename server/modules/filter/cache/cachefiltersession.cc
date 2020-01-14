@@ -1470,7 +1470,7 @@ bool CacheFilterSession::put_value_handler(cache_result_t result,
     }
     else
     {
-        MXS_ERROR("Could not store new cache value, deleting old.");
+        MXS_ERROR("Could not store new cache value, deleting a possibly existing old value.");
 
         std::weak_ptr<CacheFilterSession> sWeak { m_sThis };
 
@@ -1502,9 +1502,9 @@ bool CacheFilterSession::put_value_handler(cache_result_t result,
 
 void CacheFilterSession::del_value_handler(cache_result_t result)
 {
-    if (!CACHE_RESULT_IS_OK(result) || !CACHE_RESULT_IS_NOT_FOUND(result))
+    if (!(CACHE_RESULT_IS_OK(result) || CACHE_RESULT_IS_NOT_FOUND(result)))
     {
-        MXS_ERROR("Could not delete old cache item.");
+        MXS_ERROR("Could not delete cache item, the value may now be stale.");
     }
 
     prepare_response();
