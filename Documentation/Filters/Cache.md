@@ -1015,6 +1015,35 @@ targeting the table `access` will in his case not be served from the cache.
 
 ## Storage
 
+There are two types of storages that can be used; _local_ and _shared_.
+
+The only _local_ storage implementation is `storage_inmemory` that simply
+stores the cache values in memory. The storage is not persistent and is
+destroyed when MaxScale terminates. Since the storage exists in the MaxScale
+process, it is very fast and provides almost always a performance benefit.
+
+Currently there are two _shared_ storages; `storage_memcached` and
+`storage_redis` that are implemented using [memcached](https://memcached.org/)
+and [redis](https://redis.io/) respectively.
+
+The shared storages are accessed across the network and consequently it is
+_not_ self-evident that their use will provide any performance benefit.
+Namely, irrespective of whether he data is fetched from the cache or from
+the server there will be a network hop and often that network hop is, as far
+as the performance goes, what costs the most.
+
+The presence of a shared cache _may_ provide a performance benefit
+* if the network between MaxScale and the storage server (memcached or
+  Redis) is faster than the network between MaxScale and the database
+  server,
+* if the used SELECT statements are heavy to process for the database
+  server, or
+* if the presence of the cache reducues the overall load of an
+  otherwise overloaded database server.
+
+As a general rule a _shared_ storage should not be used without first
+assessing its value using a realistic workload.
+
 ### `storage_inmemory`
 
 This simple storage module uses the standard memory allocator for storing
