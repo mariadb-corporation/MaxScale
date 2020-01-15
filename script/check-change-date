@@ -1,0 +1,54 @@
+#!/bin/bash
+#
+# Copyright (c) 2019 MariaDB Corporation Ab
+#
+#  Use of this software is governed by the Business Source License included
+#  in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+#
+#  Change Date: 2023-12-18
+#
+#  On the date above, in accordance with the Business Source License, use
+#  of this software will be governed by version 2 or later of the General
+#  Public License.
+#
+
+function print_usage_and_exit
+{
+    echo "check-change-date date"
+    echo
+    echo "  date: The expected change date, e.g. 2023-01-01"
+
+    exit 1
+}
+
+function run
+{
+    local date=$1
+
+    local files=`find . -type f`
+
+    for f in $files
+    do
+        fgrep -q "Change Date:" $f 2> /dev/null
+        if [ $? -eq 0 ]
+        then
+            fgrep -q "Change Date: $date" $f 2> /dev/null
+            if [ $? -ne 0 ]
+            then
+                echo "$f lacks expected Change Date."
+            fi
+        fi
+    done
+}
+
+function main
+{
+    if [ $# -ne 1 ]
+    then
+        print_usage_and_exit
+    fi
+
+    run $1
+}
+
+main $*
