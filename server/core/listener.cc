@@ -46,6 +46,8 @@
 
 using std::chrono::seconds;
 using std::unique_ptr;
+using std::move;
+using std::string;
 using ListenerSessionData = mxs::ListenerSessionData;
 
 using SListener = std::shared_ptr<Listener>;
@@ -217,8 +219,7 @@ SListener Listener::create(const std::string& name,
     }
 
     SListener listener;
-    unique_ptr<mxs::UserAccountManager> new_user_manager;
-    auto shared_data = create_shared_data(params, name, &new_user_manager);
+    auto shared_data = create_shared_data(params, name);
     if (shared_data)
     {
         listener.reset(new(std::nothrow) Listener(service, name, address, port, protocol, params,
@@ -227,16 +228,24 @@ SListener Listener::create(const std::string& name,
 
     if (listener)
     {
-        if (new_user_manager)
+        bool user_manager_ok = true;
+        auto proto_module = listener->m_shared_data->m_proto_module.get();
+        if (proto_module->capabilities() & mxs::ProtocolModule::CAP_AUTHDATA)
         {
-            service->set_user_account_manager(std::move(new_user_manager));
+            if (!service->check_update_user_account_manager(proto_module, listener->name()))
+            {
+                user_manager_ok = false;
+            }
         }
 
-        std::lock_guard<std::mutex> guard(listener_lock);
-        all_listeners.push_back(listener);
+        if (user_manager_ok)
+        {
+            std::lock_guard<std::mutex> guard(listener_lock);
+            all_listeners.push_back(listener);
+            return listener;
+        }
     }
-
-    return listener;
+    return nullptr;
 }
 
 void listener_destroy_instances()
@@ -952,16 +961,14 @@ void Listener::accept_connections()
 }
 
 /**
- * Listener creation helper function. Creates the shared data object and user account manager.
+ * Listener creation helper function. Creates the shared data object.
  *
  * @param params Listener config params
  * @param listener_name Listener name, used for log messages
- * @param user_manager_out Output for user manager
  * @return Shared data on success
  */
 unique_ptr<mxs::ListenerSessionData>
-Listener::create_shared_data(const MXS_CONFIG_PARAMETER& params, const std::string& listener_name,
-                             unique_ptr<mxs::UserAccountManager>* user_manager_out)
+Listener::create_shared_data(const MXS_CONFIG_PARAMETER& params, const std::string& listener_name)
 {
     auto protocol_name = params.get_string(CN_PROTOCOL);
     auto protocol_namez = protocol_name.c_str();
@@ -985,41 +992,6 @@ Listener::create_shared_data(const MXS_CONFIG_PARAMETER& params, const std::stri
         return nullptr;
     }
 
-    // If the service does not yet have a user data manager, create one and set to service.
-    // If one already exists, check that it's for the same protocol the current listener is using.
-    std::unique_ptr<mxs::UserAccountManager> new_user_manager;
-    auto service = static_cast<Service*>(params.get_service(CN_SERVICE));
-    if (protocol_module->capabilities() & mxs::ProtocolModule::CAP_AUTHDATA)
-    {
-        auto old_usermanager = service->user_account_manager();
-        if (old_usermanager)
-        {
-            // This name comparison needs to be done by querying the modules themselves since
-            // the actual setting value has aliases.
-            if (protocol_module->name() != old_usermanager->protocol_name())
-            {
-                // If ever multiple backend protocols need to be supported on the same service,
-                // multiple usermanagers are also needed.
-                MXB_ERROR("The protocol of listener '%s' ('%s') differs from the protocol in the target "
-                          "service '%s' ('%s') when both protocols implement user account management. "
-                          "Cannot create listener.",
-                          listener_namez, protocol_module->name().c_str(),
-                          service->name(), old_usermanager->protocol_name().c_str());
-                return nullptr;
-            }
-        }
-        else
-        {
-            new_user_manager = protocol_module->create_user_data_manager();
-            if (!new_user_manager)
-            {
-                MXB_ERROR("Failed to create an authentication data manager for protocol '%s'.",
-                          protocol_module->name().c_str());
-                return nullptr;
-            }
-        }
-    }
-
     qc_sql_mode_t sql_mode;
     if (params.contains(CN_SQL_MODE))
     {
@@ -1039,11 +1011,10 @@ Listener::create_shared_data(const MXS_CONFIG_PARAMETER& params, const std::stri
             return nullptr;
         }
     }
-
-    // If listener doesn't configure sql_mode use the sql mode of query classifier.
-    // This is the global configuration of sql_mode or "default" if it is not configured at all.
     else
     {
+        // If listener doesn't configure sql_mode use the sql mode of query classifier.
+        // This is the global configuration of sql_mode or "default" if it is not configured at all.
         sql_mode = qc_get_sql_mode();
     }
 
@@ -1053,13 +1024,8 @@ Listener::create_shared_data(const MXS_CONFIG_PARAMETER& params, const std::stri
         return nullptr;
     }
 
-    if (user_manager_out)
-    {
-        *user_manager_out = std::move(new_user_manager);
-    }
-    unique_ptr<mxs::ListenerSessionData> rval(
-        new(std::nothrow) ListenerSessionData(std::move(ssl), sql_mode, service, std::move(protocol_module)));
-    return rval;
+    auto service = static_cast<Service*>(params.get_service(CN_SERVICE));
+    return std::make_unique<ListenerSessionData>(move(ssl), sql_mode, service, move(protocol_module));
 }
 
 namespace maxscale
@@ -1075,17 +1041,17 @@ void mark_auth_as_failed(const std::string& remote)
 
 ListenerSessionData::ListenerSessionData(SSLContext ssl, qc_sql_mode_t default_sql_mode, SERVICE* service,
                                          std::unique_ptr<mxs::ProtocolModule> protocol_module)
-    : m_ssl(std::move(ssl))
+    : m_ssl(move(ssl))
     , m_default_sql_mode(default_sql_mode)
     , m_service(*service)
-    , m_proto_module(std::move(protocol_module))
+    , m_proto_module(move(protocol_module))
 {
 }
 
 std::shared_ptr<mxs::ListenerSessionData>
 ListenerSessionData::create_test_data(const MXS_CONFIG_PARAMETER& params)
 {
-    auto data = Listener::create_shared_data(params, "test_listener", nullptr);
+    auto data = Listener::create_shared_data(params, "test_listener");
     return std::shared_ptr<mxs::ListenerSessionData>(std::move(data));
 }
 }

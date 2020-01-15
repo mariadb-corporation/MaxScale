@@ -1776,7 +1776,12 @@ const mxs::UserAccountCache* Service::user_account_cache() const
     return m_usercache->get();
 }
 
-void Service::set_user_account_manager(SAccountManager user_manager)
+/**
+ * Set account manager. Must not be called more than once for the same service.
+ *
+ * @param user_manager The user account manager this service will use
+ */
+void Service::set_start_user_account_manager(SAccountManager user_manager)
 {
     // Once the object is set, it can not change as this would indicate a change in service
     // backend protocol.
@@ -1886,4 +1891,47 @@ void Service::unmark_for_wakeup(mxs::ClientConnection* session)
     // Should not assert here, as there may some corner cases where the connection has just been removed
     // from the set but event was not processed before closing.
     m_sleeping_clients->erase(session);
+}
+
+bool Service::check_update_user_account_manager(mxs::ProtocolModule* protocol_module, const string& listener)
+{
+    // If the service does not yet have a user data manager, create one and set to service.
+    // If one already exists, check that it's for the same protocol the current listener is using.
+    bool rval = false;
+    auto new_proto_name = protocol_module->name();
+    auto listenerz = listener.c_str();
+
+    if (m_usermanager)
+    {
+        // This name comparison needs to be done by querying the modules themselves since
+        // the actual setting value has aliases.
+        if (new_proto_name == m_usermanager->protocol_name())
+        {
+            rval = true;
+        }
+        else
+        {
+            // If ever multiple backend protocols need to be supported on the same service,
+            // multiple usermanagers are also needed.
+            MXB_ERROR("The protocol of listener '%s' ('%s') differs from the protocol in the target "
+                      "service '%s' ('%s') when both protocols implement user account management. ",
+                      listenerz, new_proto_name.c_str(),
+                      name(), m_usermanager->protocol_name().c_str());
+        }
+    }
+    else
+    {
+        auto new_user_manager = protocol_module->create_user_data_manager();
+        if (new_user_manager)
+        {
+            set_start_user_account_manager(move(new_user_manager));
+            rval = true;
+        }
+        else
+        {
+            MXB_ERROR("Failed to create an user account manager for protocol '%s' of listener '%s'.",
+                      new_proto_name.c_str(), listenerz);
+        }
+    }
+    return rval;
 }

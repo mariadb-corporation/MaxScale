@@ -247,11 +247,14 @@ public:
     mxs::UserAccountManager* user_account_manager();
 
     /**
-     * Set account manager. Must not be called more than once.
+     * Set the user account manager for a service to match the given protocol. If the service already
+     * has a compatible account manager, nothing needs to be done.
      *
-     * @param user_manager The user account manager this service will use
+     * @param protocol_module The protocol whose user account manager the service should use
+     * @param listener Name of associated listener. Used for logging.
+     * @return True on success or if existing user manager is already compatible
      */
-    void set_user_account_manager(SAccountManager user_manager);
+    bool check_update_user_account_manager(mxs::ProtocolModule* protocol_module, const std::string& listener);
 
     void mark_for_wakeup(mxs::ClientConnection* session) override;
     void unmark_for_wakeup(mxs::ClientConnection* session) override;
@@ -293,6 +296,7 @@ private:
      */
     void targets_updated();
     void wakeup_sessions_waiting_userdata();
+    void set_start_user_account_manager(SAccountManager user_manager);
 
     // Helper for calculating version values
     std::pair<uint64_t, uint64_t> get_versions(const std::vector<SERVER*>& servers) const;

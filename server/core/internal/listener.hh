@@ -139,8 +139,7 @@ public:
     }
 
     static std::unique_ptr<mxs::ListenerSessionData>
-    create_shared_data(const MXS_CONFIG_PARAMETER& params, const std::string& listener_name,
-                       std::unique_ptr<mxs::UserAccountManager>* user_manager_out);
+    create_shared_data(const MXS_CONFIG_PARAMETER& params, const std::string& listener_name);
 
 private:
     enum State
