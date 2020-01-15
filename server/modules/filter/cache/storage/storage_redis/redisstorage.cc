@@ -721,6 +721,15 @@ public:
         return CACHE_RESULT_PENDING;
     }
 
+    cache_result_t clear()
+    {
+        Redis::Reply reply = m_redis.command("FLUSHALL");
+
+        mxb_assert(reply.is_status("OK"));
+
+        return reply.is_status("OK") ? CACHE_RESULT_OK : CACHE_RESULT_ERROR;
+    }
+
 private:
     enum class RedisAction
     {
@@ -1321,7 +1330,9 @@ cache_result_t RedisStorage::invalidate(Token* pToken,
 
 cache_result_t RedisStorage::clear(Token* pToken)
 {
-    return CACHE_RESULT_ERROR;
+    mxb_assert(pToken);
+
+    return static_cast<RedisToken*>(pToken)->clear();
 }
 
 cache_result_t RedisStorage::get_head(CacheKey* pKey, GWBUF** ppHead)
