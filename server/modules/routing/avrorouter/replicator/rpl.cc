@@ -2062,8 +2062,7 @@ void Rpl::table_identifier()
 Column Rpl::column_def()
 {
     Column c(assume(tok::ID).value());
-    parentheses();      // Field length, if defined
-    c.is_unsigned = next() == tok::UNSIGNED;
+    c.type = chomp().value();
 
     // Ignore the rest of the field definition, we aren't interested in it
     while (next() != tok::EXHAUSTED)
@@ -2072,6 +2071,10 @@ Column Rpl::column_def()
 
         switch (chomp().type())
         {
+        case tok::UNSIGNED:
+            c.is_unsigned = true;
+            break;
+
         case tok::COMMA:
             return c;
 
