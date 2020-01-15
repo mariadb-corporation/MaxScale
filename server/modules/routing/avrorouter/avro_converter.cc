@@ -86,181 +86,6 @@ AvroTable* avro_table_alloc(const char* filepath,
     return table;
 }
 
-/**
- * @brief Convert the MySQL column type to a compatible Avro type
- *
- * Some fields are larger than they need to be but since the Avro integer
- * compression is quite efficient, the real loss in performance is negligible.
- * @param type MySQL column type
- * @return String representation of the Avro type
- */
-static const char* column_type_to_avro_type(uint8_t type)
-{
-    switch (type)
-    {
-    case TABLE_COL_TYPE_TINY:
-    case TABLE_COL_TYPE_SHORT:
-    case TABLE_COL_TYPE_BIT:
-    case TABLE_COL_TYPE_INT24:
-        return "int";
-
-    case TABLE_COL_TYPE_FLOAT:
-        return "float";
-
-    case TABLE_COL_TYPE_DOUBLE:
-    case TABLE_COL_TYPE_NEWDECIMAL:
-        return "double";
-
-    case TABLE_COL_TYPE_NULL:
-        return "null";
-
-    case TABLE_COL_TYPE_LONG:
-    case TABLE_COL_TYPE_LONGLONG:
-        return "long";
-
-    case TABLE_COL_TYPE_TINY_BLOB:
-    case TABLE_COL_TYPE_MEDIUM_BLOB:
-    case TABLE_COL_TYPE_LONG_BLOB:
-    case TABLE_COL_TYPE_BLOB:
-        return "bytes";
-
-    default:
-        return "string";
-    }
-}
-
-/**
- * @brief Create a new JSON Avro schema from the table map and create table abstractions
- *
- * The schema will always have a GTID field and all records contain the current
- * GTID of the transaction.
- * @param map TABLE_MAP for this table
- * @param create The TABLE_CREATE for this table
- * @return New schema or NULL if an error occurred
- */
-char* json_new_schema_from_table(const Table& create)
-{
-    json_error_t err;
-    memset(&err, 0, sizeof(err));
-    json_t* schema = json_object();
-    json_object_set_new(schema, "namespace", json_string("MaxScaleChangeDataSchema.avro"));
-    json_object_set_new(schema, "type", json_string("record"));
-    json_object_set_new(schema, "name", json_string("ChangeRecord"));
-
-    json_t* array = json_array();
-    json_array_append_new(array,
-                          json_pack_ex(&err,
-                                       0,
-                                       "{s:s, s:s}",
-                                       "name",
-                                       avro_domain,
-                                       "type",
-                                       "int"));
-    json_array_append_new(array,
-                          json_pack_ex(&err,
-                                       0,
-                                       "{s:s, s:s}",
-                                       "name",
-                                       avro_server_id,
-                                       "type",
-                                       "int"));
-    json_array_append_new(array,
-                          json_pack_ex(&err,
-                                       0,
-                                       "{s:s, s:s}",
-                                       "name",
-                                       avro_sequence,
-                                       "type",
-                                       "int"));
-    json_array_append_new(array,
-                          json_pack_ex(&err,
-                                       0,
-                                       "{s:s, s:s}",
-                                       "name",
-                                       avro_event_number,
-                                       "type",
-                                       "int"));
-    json_array_append_new(array,
-                          json_pack_ex(&err,
-                                       0,
-                                       "{s:s, s:s}",
-                                       "name",
-                                       avro_timestamp,
-                                       "type",
-                                       "int"));
-
-    /** Enums and other complex types are defined with complete JSON objects
-     * instead of string values */
-    json_t* event_types = json_pack_ex(&err,
-                                       0,
-                                       "{s:s, s:s, s:[s,s,s,s]}",
-                                       "type",
-                                       "enum",
-                                       "name",
-                                       "EVENT_TYPES",
-                                       "symbols",
-                                       "insert",
-                                       "update_before",
-                                       "update_after",
-                                       "delete");
-
-    // Ownership of `event_types` is stolen when using the `o` format
-    json_array_append_new(array,
-                          json_pack_ex(&err,
-                                       0,
-                                       "{s:s, s:o}",
-                                       "name",
-                                       avro_event_type,
-                                       "type",
-                                       event_types));
-
-    for (uint64_t i = 0; i < create.columns.size(); i++)
-    {
-        json_array_append_new(array,
-                              json_pack_ex(&err,
-                                           0,
-                                           "{s:s, s:[s, s], s:s, s:i, s:b}",
-                                           "name",
-                                           create.columns[i].name.c_str(),
-                                           "type",
-                                           "null",
-                                           column_type_to_avro_type(create.column_types[i]),
-                                           "real_type",
-                                           create.columns[i].type.c_str(),
-                                           "length",
-                                           create.columns[i].length,
-                                           "unsigned",
-                                           create.columns[i].is_unsigned));
-    }
-    json_object_set_new(schema, "fields", array);
-    char* rval = json_dumps(schema, JSON_PRESERVE_ORDER);
-    json_decref(schema);
-    return rval;
-}
-
-/**
- * @brief Save the Avro schema of a table to disk
- *
- * @param path Schema directory
- * @param schema Schema in JSON format
- * @param map Table map that @p schema represents
- */
-void save_avro_schema(const char* path, const char* schema, const Table& create)
-{
-    char filepath[PATH_MAX];
-    snprintf(filepath, sizeof(filepath), "%s/%s.%s.%06d.avsc", path, create.database.c_str(),
-             create.table.c_str(), create.version);
-
-    if (access(filepath, F_OK) != 0)
-    {
-        if (FILE* file = fopen(filepath, "wb"))
-        {
-            fprintf(file, "%s\n", schema);
-            fclose(file);
-        }
-    }
-}
-
 static const char* codec_to_string(enum mxs_avro_codec_type type)
 {
     switch (type)
@@ -294,10 +119,12 @@ AvroConverter::AvroConverter(SERVICE* service,
 bool AvroConverter::open_table(const Table& create)
 {
     bool rval = false;
-    char* json_schema = json_new_schema_from_table(create);
 
-    if (json_schema)
+    if (json_t* json = create.to_json())
     {
+        std::string json_schema = mxs::json_dump(json);
+        json_decref(json);
+
         char filepath[PATH_MAX + 1];
         snprintf(filepath,
                  sizeof(filepath),
@@ -308,21 +135,19 @@ bool AvroConverter::open_table(const Table& create)
                  create.version);
 
         SAvroTable avro_table(avro_table_alloc(filepath,
-                                               json_schema,
+                                               json_schema.c_str(),
                                                codec_to_string(m_codec),
                                                m_block_size));
 
         if (avro_table)
         {
             m_open_tables[create.id()] = avro_table;
-            save_avro_schema(m_avrodir.c_str(), json_schema, create);
             rval = true;
         }
         else
         {
             MXS_ERROR("Failed to open new Avro file for writing.");
         }
-        MXS_FREE(json_schema);
     }
     else
     {

@@ -116,6 +116,9 @@ struct Column
     std::string after;
 };
 
+struct Table;
+using STable = std::shared_ptr<Table>;
+
 /** A CREATE TABLE abstraction */
 struct Table
 {
@@ -127,6 +130,15 @@ struct Table
         , is_open(false)
     {
     }
+
+    // Deserialize from JSON file
+    static STable deserialize(const char* filename);
+
+    // Serialize to file as JSON
+    void serialize(const char* filename) const;
+
+    // Serialize to JSON
+    json_t* to_json() const;
 
     /**
      * Get the table identifier i.e. `database.table`
@@ -150,8 +162,6 @@ struct Table
     Bytes null_bitmap;
     Bytes column_metadata;
 };
-
-using STable = std::shared_ptr<Table>;
 
 // Containers for the replication events
 typedef std::unordered_map<std::string, STable> CreatedTables;
@@ -221,6 +231,7 @@ public:
         pcre2_code* exclude,
         gtid_pos_t = {});
 
+    // Sets the data directory and loads metadata from disk
     void load_metadata(const std::string& datadir);
 
     // Handle a replicated binary log event
@@ -260,6 +271,7 @@ private:
     pcre2_code*       m_exclude;
     pcre2_match_data* m_md_match;
     pcre2_match_data* m_md_exclude;
+    std::string       m_datadir;
 
     std::unordered_map<std::string, int> m_versions;    // Table version numbers per identifier
 

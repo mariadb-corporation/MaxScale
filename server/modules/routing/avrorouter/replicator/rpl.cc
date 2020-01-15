@@ -1238,6 +1238,51 @@ bool json_extract_field_names(const char* filename, std::vector<Column>& columns
     return rval;
 }
 
+/**
+ * @brief Convert the MySQL column type to a compatible Avro type
+ *
+ * Some fields are larger than they need to be but since the Avro integer
+ * compression is quite efficient, the real loss in performance is negligible.
+ *
+ * @param type MySQL column type
+ *
+ * @return String representation of the Avro type
+ */
+static const char* column_type_to_avro_type(uint8_t type)
+{
+    switch (type)
+    {
+    case TABLE_COL_TYPE_TINY:
+    case TABLE_COL_TYPE_SHORT:
+    case TABLE_COL_TYPE_BIT:
+    case TABLE_COL_TYPE_INT24:
+        return "int";
+
+    case TABLE_COL_TYPE_FLOAT:
+        return "float";
+
+    case TABLE_COL_TYPE_DOUBLE:
+    case TABLE_COL_TYPE_NEWDECIMAL:
+        return "double";
+
+    case TABLE_COL_TYPE_NULL:
+        return "null";
+
+    case TABLE_COL_TYPE_LONG:
+    case TABLE_COL_TYPE_LONGLONG:
+        return "long";
+
+    case TABLE_COL_TYPE_TINY_BLOB:
+    case TABLE_COL_TYPE_MEDIUM_BLOB:
+    case TABLE_COL_TYPE_LONG_BLOB:
+    case TABLE_COL_TYPE_BLOB:
+        return "bytes";
+
+    default:
+        return "string";
+    }
+}
+
 STable load_table_from_schema(const char* file, const char* db, const char* table, int version)
 {
     STable rval;
@@ -1350,6 +1395,166 @@ uint64_t Table::map_table(uint8_t* ptr, uint8_t hdr_len)
     null_bitmap.assign(ptr, ptr + nullmap_size);
 
     return table_id;
+}
+
+// static
+STable Table::deserialize(const char* path)
+{
+    STable rval;
+    char db[MYSQL_DATABASE_MAXLEN + 1], table[MYSQL_TABLE_MAXLEN + 1];
+    int version = 0;
+
+    if (const char* dbstart = strrchr(path, '/'))
+    {
+        dbstart++;
+
+        if (const char* tablestart = strchr(dbstart, '.'))
+        {
+            snprintf(db, sizeof(db), "%.*s", (int)(tablestart - dbstart), dbstart);
+            tablestart++;
+
+            if (const char* versionstart = strchr(tablestart, '.'))
+            {
+                snprintf(table, sizeof(table), "%.*s", (int)(versionstart - tablestart), tablestart);
+                versionstart++;
+
+                const char* suffix = strchr(versionstart, '.');
+                char* versionend = NULL;
+                version = strtol(versionstart, &versionend, 10);
+
+                if (versionend == suffix)
+                {
+                    rval = load_table_from_schema(path, db, table, version);
+                }
+                else
+                {
+                    MXS_ERROR("Malformed schema file name: %s", path);
+                }
+            }
+        }
+    }
+
+    return rval;
+}
+
+json_t* Table::to_json() const
+{
+    json_error_t err;
+    memset(&err, 0, sizeof(err));
+    json_t* schema = json_object();
+    json_object_set_new(schema, "namespace", json_string("MaxScaleChangeDataSchema.avro"));
+    json_object_set_new(schema, "type", json_string("record"));
+    json_object_set_new(schema, "name", json_string("ChangeRecord"));
+
+    json_t* array = json_array();
+    json_array_append_new(array,
+                          json_pack_ex(&err,
+                                       0,
+                                       "{s:s, s:s}",
+                                       "name",
+                                       avro_domain,
+                                       "type",
+                                       "int"));
+    json_array_append_new(array,
+                          json_pack_ex(&err,
+                                       0,
+                                       "{s:s, s:s}",
+                                       "name",
+                                       avro_server_id,
+                                       "type",
+                                       "int"));
+    json_array_append_new(array,
+                          json_pack_ex(&err,
+                                       0,
+                                       "{s:s, s:s}",
+                                       "name",
+                                       avro_sequence,
+                                       "type",
+                                       "int"));
+    json_array_append_new(array,
+                          json_pack_ex(&err,
+                                       0,
+                                       "{s:s, s:s}",
+                                       "name",
+                                       avro_event_number,
+                                       "type",
+                                       "int"));
+    json_array_append_new(array,
+                          json_pack_ex(&err,
+                                       0,
+                                       "{s:s, s:s}",
+                                       "name",
+                                       avro_timestamp,
+                                       "type",
+                                       "int"));
+
+    /** Enums and other complex types are defined with complete JSON objects
+     * instead of string values */
+    json_t* event_types = json_pack_ex(&err,
+                                       0,
+                                       "{s:s, s:s, s:[s,s,s,s]}",
+                                       "type",
+                                       "enum",
+                                       "name",
+                                       "EVENT_TYPES",
+                                       "symbols",
+                                       "insert",
+                                       "update_before",
+                                       "update_after",
+                                       "delete");
+
+    // Ownership of `event_types` is stolen when using the `o` format
+    json_array_append_new(array,
+                          json_pack_ex(&err,
+                                       0,
+                                       "{s:s, s:o}",
+                                       "name",
+                                       avro_event_type,
+                                       "type",
+                                       event_types));
+
+    for (uint64_t i = 0; i < columns.size(); i++)
+    {
+        json_array_append_new(array,
+                              json_pack_ex(&err,
+                                           0,
+                                           "{s:s, s:[s, s], s:s, s:i, s:b}",
+                                           "name",
+                                           columns[i].name.c_str(),
+                                           "type",
+                                           "null",
+                                           column_type_to_avro_type(column_types[i]),
+                                           "real_type",
+                                           columns[i].type.c_str(),
+                                           "length",
+                                           columns[i].length,
+                                           "unsigned",
+                                           columns[i].is_unsigned));
+    }
+
+    json_object_set_new(schema, "fields", array);
+    return schema;
+}
+
+void Table::serialize(const char* path) const
+{
+    char filepath[PATH_MAX];
+    snprintf(filepath, sizeof(filepath), "%s/%s.%s.%06d.avsc", path, database.c_str(),
+             table.c_str(), version);
+
+    if (access(filepath, F_OK) != 0)
+    {
+        if (FILE* file = fopen(filepath, "wb"))
+        {
+            if (json_t* json = to_json())
+            {
+                fprintf(file, "%s\n", mxs::json_dump(json, JSON_COMPACT).c_str());
+                json_decref(json);
+            }
+
+            fclose(file);
+        }
+    }
 }
 
 Rpl::Rpl(SERVICE* service,
@@ -1634,6 +1839,7 @@ bool Rpl::handle_table_map_event(REP_HEADER* hdr, uint8_t* ptr)
 
         if (!create->second->is_open)
         {
+            create->second->serialize(m_datadir.c_str());
             create->second->is_open = m_handler->open_table(*create->second);
         }
     }
@@ -2391,69 +2597,25 @@ void Rpl::do_change_column(const STable& create, const std::string& old_name)
 
 void Rpl::load_metadata(const std::string& datadir)
 {
+    m_datadir = datadir;
+
     char path[PATH_MAX + 1];
     snprintf(path, sizeof(path), "%s/*.avsc", datadir.c_str());
     glob_t files;
 
     if (glob(path, 0, NULL, &files) != GLOB_NOMATCH)
     {
-        char db[MYSQL_DATABASE_MAXLEN + 1], table[MYSQL_TABLE_MAXLEN + 1];
-        char table_ident[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 2];
-        int version = 0;
-
         /** Glob sorts the files in ascending order which means that processing
          * them in reverse should give us the newest schema first. */
         for (int i = files.gl_pathc - 1; i > -1; i--)
         {
-            char* dbstart = strrchr(files.gl_pathv[i], '/');
-
-            if (!dbstart)
+            if (auto create = Table::deserialize(files.gl_pathv[i]))
             {
-                continue;
-            }
-
-            dbstart++;
-
-            char* tablestart = strchr(dbstart, '.');
-
-            if (!tablestart)
-            {
-                continue;
-            }
-
-            snprintf(db, sizeof(db), "%.*s", (int)(tablestart - dbstart), dbstart);
-            tablestart++;
-
-            char* versionstart = strchr(tablestart, '.');
-
-            if (!versionstart)
-            {
-                continue;
-            }
-
-            snprintf(table, sizeof(table), "%.*s", (int)(versionstart - tablestart), tablestart);
-            versionstart++;
-
-            char* suffix = strchr(versionstart, '.');
-            char* versionend = NULL;
-            version = strtol(versionstart, &versionend, 10);
-
-            if (versionend == suffix)
-            {
-                snprintf(table_ident, sizeof(table_ident), "%s.%s", db, table);
-
-                if (auto create = load_table_from_schema(files.gl_pathv[i], db, table, version))
+                if (m_versions[create->id()] < create->version)
                 {
-                    if (m_versions[create->id()] < create->version)
-                    {
-                        m_versions[create->id()] = create->version;
-                        m_created_tables[create->id()] = create;
-                    }
+                    m_versions[create->id()] = create->version;
+                    m_created_tables[create->id()] = create;
                 }
-            }
-            else
-            {
-                MXS_ERROR("Malformed schema file name: %s", files.gl_pathv[i]);
             }
         }
     }
