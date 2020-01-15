@@ -1075,7 +1075,9 @@ storage=storage_redis
 
 `storage_redis` has the following optional arguments:
 
-* `retries_on_conflict`, which takes an integer argument, specifying the maximum number of times a Redis operation is retried in case of conflicts. The default value is 2. That is, at most 3 attempts.
+* `retries_on_conflict`, which takes an integer argument, specifying the maximum
+  number of times a Redis operation is retried in case of conflicts. The default
+  value is 2. That is, at most 3 attempts.
 
 Example:
 ```
