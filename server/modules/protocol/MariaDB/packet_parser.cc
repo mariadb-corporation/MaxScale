@@ -59,7 +59,7 @@ ClientInfo parse_client_capabilities(ByteVec& data, const ClientInfo* old_info)
      * the SSL capability bit mid-authentication which causes MaxScale to think
      * that SSL is not used.
      */
-    rval.m_client_capabilities |= gw_mysql_get_byte4(ptr);
+    rval.m_client_capabilities |= mariadb::get_byte4(ptr);
     ptr += 4;
 
     // Next is max packet size, skip it.
@@ -78,7 +78,7 @@ ClientInfo parse_client_capabilities(ByteVec& data, const ClientInfo* old_info)
      */
     if ((rval.m_client_capabilities & GW_MYSQL_CAPABILITIES_CLIENT_MYSQL) == 0)
     {
-        rval.m_extra_capabilities |= gw_mysql_get_byte4(ptr);
+        rval.m_extra_capabilities |= mariadb::get_byte4(ptr);
     }
     ptr += 4;
     pop_front(data, ptr - data.data());
@@ -235,7 +235,7 @@ ChangeUserParseResult parse_change_user_packet(ByteVec& data, uint32_t client_ca
             // charset, 2 bytes
             if (data.size() >= 2)
             {
-                rval.charset = gw_mysql_get_byte2(data.data());
+                rval.charset = mariadb::get_byte2(data.data());
                 pop_front(data, 2);
                 // new auth plugin
                 auto plugin_res = read_stringz_if_cap(data, client_caps, GW_MYSQL_CAPABILITIES_PLUGIN_AUTH);

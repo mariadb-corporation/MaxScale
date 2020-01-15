@@ -507,3 +507,53 @@ mariadb::UserSearchSettings::UserSearchSettings(const mariadb::UserSearchSettLis
     : UserSearchSettListener(listener_sett)
 {
 }
+
+namespace mariadb
+{
+void set_byte2(uint8_t* buffer, uint16_t val)
+{
+    buffer[0] = val;
+    buffer[1] = (val >> 8);
+}
+
+void set_byte3(uint8_t* buffer, uint32_t val)
+{
+    set_byte2(buffer, val);
+    buffer[2] = (val >> 16);
+}
+
+void set_byte4(uint8_t* buffer, uint32_t val)
+{
+    set_byte2(buffer, val);
+    set_byte2(buffer + 2, val >> 16);
+}
+
+uint16_t get_byte2(const uint8_t* buffer)
+{
+    uint16_t low = buffer[0];
+    uint16_t high = buffer[1];
+    return low | (high << 8);
+}
+
+uint32_t get_byte3(const uint8_t* buffer)
+{
+    uint32_t low = get_byte2(buffer);
+    uint32_t high = buffer[2];
+    return low | (high << 16);
+}
+
+uint32_t get_byte4(const uint8_t* buffer)
+{
+    uint32_t low = get_byte2(buffer);
+    uint32_t high = get_byte2(buffer + 2);
+    return low | (high << 16);
+}
+
+uint64_t get_byte8(const uint8_t* buffer)
+{
+    uint64_t low = get_byte4(buffer);
+    uint64_t high = get_byte4(buffer + 4);
+    return low | (high << 32);
+}
+}
+

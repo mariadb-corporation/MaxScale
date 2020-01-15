@@ -157,6 +157,22 @@ class BackendDCB;
      | ((uint64_t)(__buffer)[6] << 48)   \
      | ((uint64_t)(__buffer)[7] << 56))
 
+ namespace mariadb
+ {
+/**
+ * Protocol packing and unpacking functions. The functions read or write unsigned integers from/to
+ * MySQL-protocol buffers. MySQL saves integers in lsb-format.
+ */
+
+ void set_byte2(uint8_t* buffer, uint16_t val);
+ void set_byte3(uint8_t* buffer, uint32_t val);
+ void set_byte4(uint8_t* buffer, uint32_t val);
+ uint16_t get_byte2(const uint8_t* buffer);
+ uint32_t get_byte3(const uint8_t* buffer);
+ uint32_t get_byte4(const uint8_t* buffer);
+ uint64_t get_byte8(const uint8_t* buffer);
+ }
+
 /** MySQL protocol constants */
 enum gw_mysql_capabilities_t
 {
