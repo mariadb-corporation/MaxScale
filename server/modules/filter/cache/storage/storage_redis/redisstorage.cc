@@ -548,6 +548,10 @@ public:
                         rv = CACHE_RESULT_NOT_FOUND;
                         break;
 
+                    case REDIS_REPLY_ERROR:
+                        MXS_ERROR("Redis replied with error: %s", sThis->m_redis.errstr());
+                        break;
+
                     default:
                         MXS_WARNING("Unexpected redis redis return type (%s) received.",
                                     redis_type_to_string(reply.type()));
@@ -638,27 +642,35 @@ public:
 
                 if (reply)
                 {
-                    if (reply.is_integer())
+                    switch (reply.type())
                     {
-                        switch (reply.integer())
+                    case REDIS_REPLY_INTEGER:
                         {
-                        case 0:
-                            rv = CACHE_RESULT_NOT_FOUND;
-                            break;
+                            switch (reply.integer())
+                            {
+                            case 0:
+                                rv = CACHE_RESULT_NOT_FOUND;
+                                break;
 
-                        default:
-                            MXS_WARNING("Unexpected number of values - %lld - deleted with one key,",
-                                        reply.integer());
-                            /* FLOWTHROUGH */
-                        case 1:
-                            rv = CACHE_RESULT_OK;
-                            break;
+                            default:
+                                MXS_WARNING("Unexpected number of values - %lld - deleted with one key,",
+                                            reply.integer());
+                                /* FLOWTHROUGH */
+                            case 1:
+                                rv = CACHE_RESULT_OK;
+                                break;
+                            }
                         }
-                    }
-                    else
-                    {
+                        break;
+
+                    case REDIS_REPLY_ERROR:
+                        MXS_ERROR("Redis replied with error: %s", sThis->m_redis.errstr());
+                        break;
+
+                    default:
                         MXS_WARNING("Unexpected redis return type (%s) received.",
                                     redis_type_to_string(reply.type()));
+                        break;
                     }
                 }
                 else
