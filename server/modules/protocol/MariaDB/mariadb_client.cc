@@ -763,13 +763,14 @@ MariaDBClientConnection::FindUAResult MariaDBClientConnection::find_user_account
     if (entry)
     {
         mariadb::AuthenticatorModule* selected_module = nullptr;
-        auto& auth_modules = *(m_session_data->allowed_authenticators);
+        auto& auth_modules = m_session->listener_data()->m_authenticators;
         for (const auto& auth_module : auth_modules)
         {
-            if (auth_module->supported_plugins().count(entry->plugin))
+            auto mariadb_auth = static_cast<mariadb::AuthenticatorModule*>(auth_module.get());
+            if (mariadb_auth->supported_plugins().count(entry->plugin))
             {
                 // Found correct authenticator for the user entry.
-                selected_module = auth_module.get();
+                selected_module = mariadb_auth;
                 break;
             }
         }

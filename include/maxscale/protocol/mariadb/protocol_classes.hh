@@ -76,9 +76,6 @@ public:
     // Authentication token storage. Used by different authenticators.
     mariadb::ClientAuthenticator::ByteVec auth_token;
 
-    // Authenticator modules the session may use. TODO: Change to reference once BLR is cleaned up.
-    const std::vector<mariadb::SAuthModule>* allowed_authenticators {nullptr};
-
     // Authenticator module currently in use by the session. May change on COM_CHANGE_USER.
     mariadb::AuthenticatorModule* m_current_authenticator {nullptr};
 

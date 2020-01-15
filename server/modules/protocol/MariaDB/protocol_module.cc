@@ -17,65 +17,16 @@
 #include <maxscale/protocol/mariadb/client_connection.hh>
 #include <maxscale/protocol/mariadb/backend_connection.hh>
 
-#include <maxscale/modutil.hh>
+#include <maxscale/cn_strings.hh>
 #include <maxscale/config.hh>
+#include <maxscale/modutil.hh>
 #include "user_data.hh"
 
 using std::string;
 
-MySQLProtocolModule* MySQLProtocolModule::create(const std::string& auth_name, const std::string& auth_opts)
+MySQLProtocolModule* MySQLProtocolModule::create()
 {
-    std::unique_ptr<MySQLProtocolModule> protocol_module(new(std::nothrow) MySQLProtocolModule());
-    if (protocol_module)
-    {
-        // TODO: Add support for multiple authenticators.
-
-        const char* auth_namez {nullptr};
-        const char* auth_optsz {nullptr};
-        if (!auth_name.empty())
-        {
-            auth_namez = auth_name.c_str();
-            auth_optsz = auth_opts.c_str();
-        }
-        else
-        {
-            auth_namez = MXS_MARIADBAUTH_AUTHENTICATOR_NAME;
-        }
-
-        auto new_auth_module = mxs::authenticator_init(auth_namez, auth_optsz);
-        if (new_auth_module)
-        {
-            // Check that the authenticator supports the protocol. Use case-insensitive comparison.
-            auto supported_protocol = new_auth_module->supported_protocol();
-            if (strcasecmp(MXS_MODULE_NAME, supported_protocol.c_str()) == 0)
-            {
-                protocol_module->m_authenticators.emplace_back(
-                    static_cast<mariadb::AuthenticatorModule*>(new_auth_module.release()));
-            }
-            else
-            {
-                // When printing protocol name, print the name user gave in configuration file,
-                // not the effective name.
-                MXB_ERROR("Authenticator module '%s' expects to be paired with protocol '%s', "
-                          "not with '%s'.",
-                          auth_namez, supported_protocol.c_str(), MXS_MODULE_NAME);
-            }
-        }
-        else
-        {
-            MXB_ERROR("Failed to initialize authenticator module '%s'.", auth_namez);
-            protocol_module.reset();
-        }
-    }
-
-    if (protocol_module)
-    {
-        if (!protocol_module->parse_authenticator_opts(auth_opts))
-        {
-            protocol_module.reset();
-        }
-    }
-    return protocol_module.release();
+    return new MySQLProtocolModule();
 }
 
 std::unique_ptr<mxs::ClientConnection>
@@ -87,7 +38,6 @@ MySQLProtocolModule::create_client_protocol(MXS_SESSION* session, mxs::Component
     {
         // The authenticator module used by this session is not known yet. The protocol code will figure
         // it out once authentication begins.
-        mdb_session->allowed_authenticators = &m_authenticators;
         mdb_session->user_search_settings = &m_user_search_settings;
         mdb_session->remote = session->client_remote();
         session->set_protocol_data(std::move(mdb_session));
@@ -170,16 +120,19 @@ MySQLProtocolModule::create_backend_protocol(MXS_SESSION* session, SERVER* serve
 
 uint64_t MySQLProtocolModule::capabilities() const
 {
-    return mxs::ProtocolModule::CAP_BACKEND | mxs::ProtocolModule::CAP_AUTHDATA;
+    return mxs::ProtocolModule::CAP_BACKEND | mxs::ProtocolModule::CAP_AUTHDATA
+           | mxs::ProtocolModule::CAP_AUTH_MODULES;
 }
 
-bool MySQLProtocolModule::parse_authenticator_opts(const std::string& opts)
+bool MySQLProtocolModule::parse_authenticator_opts(const std::string& opts,
+                                                   const AuthenticatorList& authenticators)
 {
     bool error = false;
     // Check if any of the authenticators support anonymous users.
-    for (const auto & auth_module : m_authenticators)
+    for (const auto& auth_module : authenticators)
     {
-        if (auth_module->capabilities() & mariadb::AuthenticatorModule::CAP_ANON_USER)
+        auto mariadb_auth = static_cast<mariadb::AuthenticatorModule*>(auth_module.get());
+        if (mariadb_auth->capabilities() & mariadb::AuthenticatorModule::CAP_ANON_USER)
         {
             m_user_search_settings.allow_anon_user = true;
             break;
@@ -227,6 +180,76 @@ bool MySQLProtocolModule::parse_authenticator_opts(const std::string& opts)
         }
     }
     return !error;
+}
+
+mxs::ProtocolModule::AuthenticatorList
+MySQLProtocolModule::create_authenticators(const MXS_CONFIG_PARAMETER& params)
+{
+    // If no authenticator is set, the default authenticator will be loaded.
+    auto auth_names = params.get_string(CN_AUTHENTICATOR);
+    auto auth_opts = params.get_string(CN_AUTHENTICATOR_OPTIONS);
+
+    if (auth_names.empty())
+    {
+        auth_names = MXS_MARIADBAUTH_AUTHENTICATOR_NAME;
+    }
+
+    AuthenticatorList authenticators;
+    auto auth_names_list = mxb::strtok(auth_names, ",");
+    bool error = false;
+
+    for (auto iter = auth_names_list.begin(); iter != auth_names_list.end() && !error; ++iter)
+    {
+        string auth_name = *iter;
+        mxb::trim(auth_name);
+        if (!auth_name.empty())
+        {
+            const char* auth_namez = auth_name.c_str();
+            auto new_auth_module = mxs::authenticator_init(auth_namez, auth_opts.c_str());
+            if (new_auth_module)
+            {
+                // Check that the authenticator supports the protocol. Use case-insensitive comparison.
+                auto supported_protocol = new_auth_module->supported_protocol();
+                if (strcasecmp(MXS_MODULE_NAME, supported_protocol.c_str()) == 0)
+                {
+                    authenticators.push_back(move(new_auth_module));
+                }
+                else
+                {
+                    // When printing protocol name, print the name user gave in configuration file,
+                    // not the effective name.
+                    MXB_ERROR("Authenticator module '%s' expects to be paired with protocol '%s', "
+                              "not with '%s'.",
+                              auth_namez, supported_protocol.c_str(), MXS_MODULE_NAME);
+                    error = true;
+                }
+            }
+            else
+            {
+                MXB_ERROR("Failed to initialize authenticator module '%s'.", auth_namez);
+                error = true;
+            }
+        }
+        else
+        {
+            MXB_ERROR("'%s' has an invalid value '%s'. The value should be a comma-separated "
+                      "list of authenticators, a single authenticator or empty.",
+                      CN_AUTHENTICATOR, auth_names.c_str());
+            error = true;
+        }
+    }
+
+    // Also parse authentication settings which affect the entire listener.
+    if (!error && !parse_authenticator_opts(auth_opts, authenticators))
+    {
+        error = true;
+    }
+
+    if (error)
+    {
+        authenticators.clear();
+    }
+    return authenticators;
 }
 
 /**

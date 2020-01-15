@@ -14,11 +14,13 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/protocol.hh>
+#include <maxscale/authenticator.hh>
 
 class BackendDCB;
 class ClientDCB;
 class DCB;
 class SERVICE;
+class MXS_CONFIG_PARAMETER;
 
 namespace maxscale
 {
@@ -29,12 +31,15 @@ class UserAccountManager;
 class ProtocolModule
 {
 public:
+    using AuthenticatorList = std::vector<mxs::SAuthenticatorModule>;
+
     virtual ~ProtocolModule() = default;
 
     enum Capabilities
     {
-        CAP_AUTHDATA = (1u << 0),   // The protocol implements an authentication data manager
-        CAP_BACKEND  = (1u << 1),   // The protocol supports backend communication
+        CAP_AUTHDATA     = (1u << 0),   // The protocol implements a user account manager
+        CAP_BACKEND      = (1u << 1),   // The protocol supports backend communication
+        CAP_AUTH_MODULES = (1u << 2),   // The protocol uses authenticator modules
     };
 
     /**
@@ -107,12 +112,26 @@ public:
 
     virtual std::unique_ptr<UserAccountManager> create_user_data_manager()
     {
+        mxb_assert(!true);
         return nullptr;
     }
 
     virtual uint64_t capabilities() const
     {
         return 0;
+    }
+
+    /**
+     * The protocol module should read the listener parameters for the list of authenticators and their
+     * options and generate authenticator modules. This is only called if CAP_AUTH_MODULES is enabled.
+     *
+     * @param params Listener and authenticator settings
+     * @return An array of authenticators. Empty on error.
+     */
+    virtual AuthenticatorList create_authenticators(const MXS_CONFIG_PARAMETER& params)
+    {
+        mxb_assert(!true);
+        return {};
     }
 };
 
@@ -316,10 +335,13 @@ public:
     ProtocolApiGenerator(const ProtocolApiGenerator&) = delete;
     ProtocolApiGenerator& operator=(const ProtocolApiGenerator&) = delete;
 
-    static mxs::ProtocolModule* create_protocol_module(const std::string& auth_name,
-                                                       const std::string& auth_opts)
+    static mxs::ProtocolModule* create_protocol_module()
     {
-        return ProtocolImplementation::create(auth_name, auth_opts);
+        // If protocols require non-authentication-related settings, add passing them here.
+        // The unsolved issue is how to separate listener, protocol and authenticator-settings from
+        // each other. Currently this is mostly a non-issue as the only authenticator with a setting
+        // is gssapi.
+        return ProtocolImplementation::create();
     }
 
     static MXS_PROTOCOL_API s_api;

@@ -13,6 +13,7 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
+#include <maxscale/authenticator.hh>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/ssl.hh>
 
@@ -42,6 +43,7 @@ class ListenerSessionData
 {
 public:
     using SProtocol = std::unique_ptr<mxs::ProtocolModule>;
+    using SAuthenticator = std::unique_ptr<mxs::AuthenticatorModule>;
 
     /**
      * Create listener data object for test purposes. The parameters should still be valid listener
@@ -53,7 +55,7 @@ public:
     static std::shared_ptr<mxs::ListenerSessionData> create_test_data(const MXS_CONFIG_PARAMETER& params);
 
     ListenerSessionData(SSLContext ssl, qc_sql_mode_t default_sql_mode, SERVICE* service,
-                        SProtocol protocol_module);
+                        SProtocol protocol_module, std::vector<SAuthenticator>&& authenticators);
     ListenerSessionData(const ListenerSessionData&) = delete;
     ListenerSessionData& operator=(const ListenerSessionData&) = delete;
 
@@ -61,5 +63,7 @@ public:
     const qc_sql_mode_t m_default_sql_mode;         /**< Default sql mode for the listener */
     SERVICE&            m_service;                  /**< The service the listener feeds */
     const SProtocol     m_proto_module;
+
+    const std::vector<SAuthenticator> m_authenticators; /**< Authenticator modules */
 };
 }

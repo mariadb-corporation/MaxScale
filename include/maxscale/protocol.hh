@@ -77,12 +77,9 @@ struct MXS_PROTOCOL_API
     /**
      * Creates a new protocol module instance.
      *
-     * @param auth_name Authenticator module to use. May be ignored by the protocol.
-     * @param auth_opts Authenticator options. May be ignored by the protocol.
      * @return New protocol module instance
      */
-    mxs::ProtocolModule* (* create_protocol_module)(const std::string& auth_name,
-                                                    const std::string& auth_opts);
+    mxs::ProtocolModule* (* create_protocol_module)();
 };
 
 /**

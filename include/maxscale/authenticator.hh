@@ -46,6 +46,8 @@ namespace maxscale
 class AuthenticatorModule
 {
 public:
+    virtual ~AuthenticatorModule() = default;
+
     /**
      * Get name of supported protocol module.
      *
@@ -60,6 +62,8 @@ public:
      */
     virtual std::string name() const = 0;
 };
+
+using SAuthenticatorModule = std::unique_ptr<AuthenticatorModule>;
 
 /**
  * This struct contains the authenticator entrypoint in a shared library.

@@ -82,7 +82,7 @@ class CDCProtocolModule : public mxs::ProtocolModule
 public:
     ~CDCProtocolModule() override = default;
 
-    static CDCProtocolModule* create(const std::string& auth_name, const std::string& auth_opts)
+    static CDCProtocolModule* create()
     {
         return new (std::nothrow) CDCProtocolModule();
     }

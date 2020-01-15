@@ -983,7 +983,7 @@ Listener::create_shared_data(const MXS_CONFIG_PARAMETER& params, const std::stri
     auto protocol_api = (MXS_PROTOCOL_API*)load_module(protocol_namez, MODULE_PROTOCOL);
     if (protocol_api)
     {
-        protocol_module.reset(protocol_api->create_protocol_module(authenticator, authenticator_options));
+        protocol_module.reset(protocol_api->create_protocol_module());
     }
     if (!protocol_module)
     {
@@ -1024,8 +1024,29 @@ Listener::create_shared_data(const MXS_CONFIG_PARAMETER& params, const std::stri
         return nullptr;
     }
 
-    auto service = static_cast<Service*>(params.get_service(CN_SERVICE));
-    return std::make_unique<ListenerSessionData>(move(ssl), sql_mode, service, move(protocol_module));
+    bool auth_ok = true;
+    std::vector<mxs::SAuthenticatorModule> authenticators;
+    if (protocol_module->capabilities() & mxs::ProtocolModule::CAP_AUTH_MODULES)
+    {
+        // If the protocol uses separate authenticator modules, assume that at least one must be created.
+        authenticators = protocol_module->create_authenticators(params);
+        if (authenticators.empty())
+        {
+            auth_ok = false;
+        }
+    }
+
+    if (auth_ok)
+    {
+        auto service = static_cast<Service*>(params.get_service(CN_SERVICE));
+        return std::make_unique<ListenerSessionData>(move(ssl), sql_mode, service, move(protocol_module),
+                                                     move(authenticators));
+    }
+    else
+    {
+        MXB_ERROR("Authenticator creation for listener '%s' failed.", listener_namez);
+        return nullptr;
+    }
 }
 
 namespace maxscale
@@ -1040,11 +1061,13 @@ void mark_auth_as_failed(const std::string& remote)
 }
 
 ListenerSessionData::ListenerSessionData(SSLContext ssl, qc_sql_mode_t default_sql_mode, SERVICE* service,
-                                         std::unique_ptr<mxs::ProtocolModule> protocol_module)
+                                         std::unique_ptr<mxs::ProtocolModule> protocol_module,
+                                         std::vector<SAuthenticator>&& authenticators)
     : m_ssl(move(ssl))
     , m_default_sql_mode(default_sql_mode)
     , m_service(*service)
     , m_proto_module(move(protocol_module))
+    , m_authenticators(move(authenticators))
 {
 }
 
