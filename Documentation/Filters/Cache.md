@@ -1028,7 +1028,7 @@ and [redis](https://redis.io/) respectively.
 
 The shared storages are accessed across the network and consequently it is
 _not_ self-evident that their use will provide any performance benefit.
-Namely, irrespective of whether he data is fetched from the cache or from
+Namely, irrespective of whether the data is fetched from the cache or from
 the server there will be a network hop and often that network hop is, as far
 as the performance goes, what costs the most.
 
@@ -1036,8 +1036,8 @@ The presence of a shared cache _may_ provide a performance benefit
 * if the network between MaxScale and the storage server (memcached or
   Redis) is faster than the network between MaxScale and the database
   server,
-* if the used SELECT statements are heavy to process for the database
-  server, or
+* if the used SELECT statements are heavy (that is, take a significant
+  amount of time) to process for the database server, or
 * if the presence of the cache reducues the overall load of an
   otherwise overloaded database server.
 
@@ -1102,42 +1102,59 @@ storage=storage_redis
 
 * `server` using which the location of the server is specified as `host:port`.
 
-`storage_redis` has the following optional arguments:
-
-* `retries_on_conflict`, which takes an integer argument, specifying the maximum
-  number of times a Redis operation is retried in case of conflicts. The default
-  value is 2. That is, at most 3 attempts.
-
 Example:
 ```
-storage_options="server=127.0.0.1:6379, retries_on_conflict=3"
+storage_options="server=192.168.1.31:6379"
 ```
-#### Invalidation
-`storage_redis` supports invalidation, but the invalidation does not come
-without a cost.
-
-_Without_ invalidation the storing of a value requires one round-trip to the
-Redis server; _with_ invalidation two round-trips are required. When invalidation
-is enabled and invalidation is performed in conjunction with an INSERT, UPDATE or
-DELETE statement, three round-trips to the Redis server are required.
-
-Note also that when invalidation is enabled, the storing of two independent
-resultsets may conflict and cause Redis operations to be retried. For instance,
-suppose one client executes `SELECT fld1 FROM tbl` and another client executes
-`SELECT fld2 FROM tbl` and both resultsets returned from the server will be
-cached in Redis. As part of that process we need to make a note that if the
-table `tbl` is modified, then those resultsets must be discarded. That may cause
-a conflict that causes the operations to be retried, with additional round-trips
-as the result.
-
-Whether invalidation is feasible or not depends upon many factors; the number of
-unique `SELECT`s, the used time-to-live, the ratio of `SELECT`s and updates, etc.
-Consequently, the caching should be tested with a real workload before it is taken
-into production use.
-
 #### Limitations
 * There is no distinction between _soft_ and _hard_ ttl, but only hard ttl is used.
+* Only _best effort_ invalidation is supported, see below.
 * Configuration values given to `max_size` and `max_count` are ignored.
+
+#### Invalidation
+`storage_redis` supports invalidation, but only following a _best efforts_ approach.
+
+To support invalidation fully would require that operations involving the Redis
+server, the MariaDB server and MaxScale are synchronized, which would cause an
+unacceptable overhead.
+
+What _best efforts_ means in this context is best illustrated using an example.
+
+Suppose a client executes the statement `SELECT * FROM tbl` and that the result
+is cached. Next time that or any other client executes the same statement, the
+result is returned from the cache and the MariaDB server will not be accessed
+at all.
+
+If a client now executes the statement `INSERT INTO tbl VALUES (...)`, the
+cached value for the `SELECT` statement above and all other statements that are
+dependent upon `tbl` will be invalidated.
+
+That is, next time someone executes the statement `SELECT * FROM tbl` the
+result will again be fetched from the MariaDB server and stored to the cache.
+
+However, suppose some client executes the statement `SELECT COUNT(*) FROM tbl`
+at the same time someone else executes the `INSERT ...` statement. A possible
+chain of events is as follows:
+```
+                      Timeline 1               Timeline 2
+
+Clients execute       INSERT ...               SELECT COUNT(*) FROM tbl
+MaxScale -> DB                                 SELECT COUNT(*) FROM tbl
+MaxScale -> DB        INSERT ...
+```
+That is, the `SELECT` is performed in the database server _before_ the
+`INSERT`. However, since the timelines are proceeding independently of
+each other, the events may be re-ordered as far as Redis is concerned.
+```
+MaxScale -> Redis     Fetch invalidation keys
+MaxScale -> Redis     Delete values
+MaxScale -> Redis                              Store result and invalidation key
+```
+That is, the cached value for `SELECT COUNT(*) FROM tbl` will reflect the
+situation _before_ the insert and will thus not be correct.
+
+The stale result will be returned until the value has reached its _time-to-live_
+or its invalidation is caused by some update operation.
 
 #### Security
 _Neither_ the data in the redis server _nor_ the traffic between MaxScale and
