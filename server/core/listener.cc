@@ -855,7 +855,7 @@ DCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const char* 
             return NULL;
         }
 
-        if (m_service->max_connections && m_service->client_count >= m_service->max_connections)
+        if (m_service->max_connections && m_service->client_count > m_service->max_connections)
         {
             // TODO: If connections can be queued, this is the place to put the
             // TODO: connection on that queue.
