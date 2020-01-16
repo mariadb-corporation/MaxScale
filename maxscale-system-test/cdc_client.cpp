@@ -20,11 +20,14 @@
 #include "maxinfo_func.h"
 #include "sql_t1.h"
 #include <sys/epoll.h>
+#include <atomic>
+#include <thread>
+#include <chrono>
 
 using namespace std;
 char reg_str[] = "REGISTER UUID=XXX-YYY_YYY, TYPE=JSON";
 char req_str[] = "REQUEST-DATA test.t1";
-int insert_val = 0;
+std::atomic<int> insert_val {0};
 bool exit_flag = false;
 
 void* query_thread(void* ptr);
@@ -225,9 +228,13 @@ void* query_thread(void* ptr)
         if (insert_val != 0)
         {
             char str[256];
-            sprintf(str, "INSERT INTO t1 VALUES (%d, %d)", insert_val, insert_val + 100);
+            sprintf(str, "INSERT INTO t1 VALUES (%d, %d)", insert_val.load(), insert_val.load() + 100);
             insert_val = 0;
             execute_query(Test->repl->nodes[0], "%s", str);
+        }
+        else
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
     }
 
