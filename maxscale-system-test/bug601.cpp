@@ -132,12 +132,17 @@ int main(int argc, char* argv[])
 
 void* parall_traffic(void* ptr)
 {
-    MYSQL* conn;
     while (exit_flag == 0)
     {
-        conn = Test->maxscales->open_rwsplit_connection(0);
-        sleep(1);
+        MYSQL* conn = Test->maxscales->open_rwsplit_connection(0);
+
+        while (exit_flag == 0 && mysql_query(conn, "DO 1") == 0)
+        {
+            sleep(1);
+        }
+
         mysql_close(conn);
     }
+
     return NULL;
 }

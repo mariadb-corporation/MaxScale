@@ -1816,64 +1816,16 @@ int TestConnections::create_connections(int m,
 
 int TestConnections::get_client_ip(int m, char* ip)
 {
-    MYSQL* conn;
-    MYSQL_RES* res;
-    MYSQL_ROW row;
     int ret = 1;
-    unsigned long long int rows;
-    unsigned long long int i;
+    auto c = maxscales->rwsplit(m);
 
-    maxscales->connect_rwsplit(m);
-    if (execute_query(maxscales->conn_rwsplit[m],
-                      "CREATE DATABASE IF NOT EXISTS db_to_check_client_ip") != 0)
+    if (c.connect())
     {
-        return ret;
-    }
-    maxscales->close_rwsplit(m);
-    conn = open_conn_db(maxscales->rwsplit_port[m],
-                        maxscales->IP[m],
-                        (char*) "db_to_check_client_ip",
-                        maxscales->user_name,
-                        maxscales->password,
-                        ssl);
-
-    if (conn != NULL)
-    {
-        if (mysql_query(conn, "show processlist;") != 0)
-        {
-            printf("Error: can't execute SQL-query: show processlist\n");
-            printf("%s\n\n", mysql_error(conn));
-        }
-        else
-        {
-            res = mysql_store_result(conn);
-            if (res == NULL)
-            {
-                printf("Error: can't get the result description\n");
-            }
-            else
-            {
-                mysql_num_fields(res);
-                rows = mysql_num_rows(res);
-                for (i = 0; i < rows; i++)
-                {
-                    row = mysql_fetch_row(res);
-                    if ((row[2] != NULL ) && (row[3] != NULL))
-                    {
-                        if (strstr(row[3], "db_to_check_client_ip") != NULL)
-                        {
-                            ret = 0;
-                            strcpy(ip, row[2]);
-                        }
-                    }
-                }
-            }
-            mysql_free_result(res);
-        }
-        execute_query(maxscales->conn_rwsplit[m], "DROP DATABASE db_to_check_client_ip");
+        std::string host = c.field("SELECT host FROM information_schema.processlist WHERE id = connection_id()");
+        strcpy(ip, host.c_str());
+        ret = 0;
     }
 
-    mysql_close(conn);
     return ret;
 }
 
