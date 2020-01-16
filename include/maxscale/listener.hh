@@ -59,11 +59,15 @@ public:
     ListenerSessionData(const ListenerSessionData&) = delete;
     ListenerSessionData& operator=(const ListenerSessionData&) = delete;
 
-    const SSLContext    m_ssl;                      /**< SSL settings */
-    const qc_sql_mode_t m_default_sql_mode;         /**< Default sql mode for the listener */
-    SERVICE&            m_service;                  /**< The service the listener feeds */
-    const SProtocol     m_proto_module;
+    const SSLContext    m_ssl;                  /**< SSL settings */
+    const qc_sql_mode_t m_default_sql_mode;     /**< Default sql mode for the listener */
+    SERVICE&            m_service;              /**< The service the listener feeds */
+    const SProtocol     m_proto_module;         /**< Protocol module */
 
-    const std::vector<SAuthenticator> m_authenticators; /**< Authenticator modules */
+    /**
+     * Authenticator modules used by the sessions created from the listener. The session will select
+     * an authenticator module during authentication.
+     */
+    const std::vector<SAuthenticator> m_authenticators;
 };
 }

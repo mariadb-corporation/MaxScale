@@ -1085,7 +1085,7 @@ MariaDBUserCache::find_user(const string& user, const string& host, const string
     auto hostz = host.c_str();
 
     // If "root" user is not allowed, block such user immediately.
-    if (!sett.allow_root_user && user == "root")
+    if (!sett.service.allow_root_user && user == "root")
     {
         MXB_INFO("Client '%s'@'%s' blocked because '%s' is false.",
                  userz, hostz, CN_ENABLE_ROOT_USER);
@@ -1096,11 +1096,11 @@ MariaDBUserCache::find_user(const string& user, const string& host, const string
     // TODO: the user may be empty, is it ok to match normally in that case?
     const UserEntry* found = nullptr;
     // First try to find a normal user entry. If host pattern matching is disabled, match only username.
-    found = sett.match_host_pattern ? m_userdb.find_entry(user, host) :  m_userdb.find_entry(user);
+    found = sett.listener.match_host_pattern ? m_userdb.find_entry(user, host) :  m_userdb.find_entry(user);
     if (found)
     {
         // TODO: when checking db access, also check if database exists.
-        if (m_userdb.check_database_access(*found, requested_db, sett.case_sensitive_db))
+        if (m_userdb.check_database_access(*found, requested_db, sett.listener.case_sensitive_db))
         {
             MXB_INFO("Found matching user '%s'@'%s' for client '%s'@'%s' with sufficient privileges.",
                      found->username.c_str(), found->host_pattern.c_str(), userz, hostz);
@@ -1108,17 +1108,18 @@ MariaDBUserCache::find_user(const string& user, const string& host, const string
         }
         else
         {
-            MXB_INFO("Found matching user '%s'@'%s' for client '%s'@'%s' but user does not have "
-                     "sufficient privileges.",
-                     found->username.c_str(), found->host_pattern.c_str(), userz, hostz);
+            MXB_INFO("Found matching user entry '%s'@'%s' for client '%s'@'%s' but user does not have "
+                     "access to database '%s'.",
+                     found->username.c_str(), found->host_pattern.c_str(), userz, hostz,
+                     requested_db.c_str());
         }
     }
-    else if (sett.allow_anon_user)
+    else if (sett.listener.allow_anon_user)
     {
         // Try find an anonymous entry. Such an entry has empty username and matches any client username.
         // If host pattern matching is disabled, any user from any host can log in if an anonymous
         // entry exists.
-        found = sett.match_host_pattern ? m_userdb.find_entry("", host) : m_userdb.find_entry("");
+        found = sett.listener.match_host_pattern ? m_userdb.find_entry("", host) : m_userdb.find_entry("");
         if (found)
         {
             // For anonymous users, do not check database access as the final effective user is unknown.

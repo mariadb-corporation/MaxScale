@@ -54,5 +54,5 @@ private:
 
     /** Partial user search settings. These settings originate from the listener and do not
      * change once set. */
-    mariadb::UserSearchSettListener m_user_search_settings;
+    mariadb::UserSearchSettings::Listener m_user_search_settings;
 };

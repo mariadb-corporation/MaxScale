@@ -503,11 +503,6 @@ bool UserEntry::host_pattern_is_more_specific(const UserEntry& lhs, const UserEn
            || (!lwc && !rwc && lhost < rhost);
 }
 
-mariadb::UserSearchSettings::UserSearchSettings(const mariadb::UserSearchSettListener& listener_sett)
-    : UserSearchSettListener(listener_sett)
-{
-}
-
 namespace mariadb
 {
 void set_byte2(uint8_t* buffer, uint16_t val)

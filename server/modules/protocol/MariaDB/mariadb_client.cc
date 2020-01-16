@@ -753,7 +753,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::perform_authen
 
 MariaDBClientConnection::FindUAResult MariaDBClientConnection::find_user_account_entry()
 {
-    auto search_settings = user_search_settings();
+    const auto& search_settings = m_session_data->user_search_settings;
     // The correct authenticator is chosen here (and also in reauthenticate_client()).
     auto users = user_account_cache();
     auto entry = users->find_user(m_session_data->user, m_session_data->remote, m_session_data->db,
@@ -943,7 +943,7 @@ bool MariaDBClientConnection::reauthenticate_client(MXS_SESSION* session, GWBUF*
         data->db = db;
 
         auto users = user_account_cache();
-        auto search_settings = user_search_settings();
+        const auto& search_settings = m_session_data->user_search_settings;
         auto user_entry = users->find_user(data->user, data->remote, data->db, search_settings);
 
         auto rc = AuthRes::FAIL;
@@ -2077,15 +2077,6 @@ const MariaDBUserCache* MariaDBClientConnection::user_account_cache()
 {
     auto users = m_session->service->user_account_cache();
     return static_cast<const MariaDBUserCache*>(users);
-}
-
-mariadb::UserSearchSettings MariaDBClientConnection::user_search_settings() const
-{
-    mariadb::UserSearchSettings rval(*m_session_data->user_search_settings);
-    auto& service_settings = m_session->service->config();
-    rval.allow_root_user = service_settings.enable_root;
-    rval.localhost_match_wildcard_host = service_settings.localhost_match_wildcard_host;
-    return rval;
 }
 
 bool MariaDBClientConnection::parse_ssl_request_packet(GWBUF* buffer)

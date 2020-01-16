@@ -17,19 +17,32 @@
 #include <maxscale/protocol/mariadb/common_constants.hh>
 #include <maxscale/protocol/mariadb/authenticator.hh>
 
-class GWBUF;
-
 namespace mariadb
 {
 using ByteVec = std::vector<uint8_t>;
 
-struct UserSearchSettListener
+// Total user search settings structure.
+struct UserSearchSettings
 {
-    // These user search settings are dependant on listener configuration.
-    bool match_host_pattern {true};
-    bool allow_anon_user {false};
-    bool case_sensitive_db {true};
-    bool allow_service_user {true};
+    struct Listener
+    {
+        // These user search settings are dependant on listener configuration. Stored in the protocol module.
+        bool match_host_pattern {true};
+        bool allow_anon_user {false};
+        bool case_sensitive_db {true};
+        bool allow_service_user {true};
+    };
+
+    struct Service
+    {
+        // These user search settings are dependent on service configuration. As services can be reconfigured
+        // during runtime, the setting values have to be updated when creating session.
+        bool localhost_match_wildcard_host {true};
+        bool allow_root_user {false};
+    };
+
+    Listener listener;
+    Service  service;
 };
 }
 
@@ -58,8 +71,8 @@ public:
     uint32_t client_capabilities() const;
     uint32_t extra_capabilitites() const;
 
-    uint8_t client_sha1[MYSQL_SCRAMBLE_LEN] {0}; /*< SHA1(password) */
-    uint8_t scramble[MYSQL_SCRAMBLE_LEN] {0};    /*< Created server scramble */
+    uint8_t client_sha1[MYSQL_SCRAMBLE_LEN] {0};/*< SHA1(password) */
+    uint8_t scramble[MYSQL_SCRAMBLE_LEN] {0};   /*< Created server scramble */
 
     std::string user;                               /*< username       */
     std::string remote;                             /*< client ip      */
@@ -79,25 +92,6 @@ public:
     // Authenticator module currently in use by the session. May change on COM_CHANGE_USER.
     mariadb::AuthenticatorModule* m_current_authenticator {nullptr};
 
-    // Partial user search settings for the session. These settings originate from the listener and do not
-    // change once set.
-    const mariadb::UserSearchSettListener* user_search_settings {nullptr};
+    // User search settings for the session. Does not change during session lifetime.
+    mariadb::UserSearchSettings user_search_settings;
 };
-
-namespace mariadb
-{
-
-struct UserSearchSettService
-{
-    // These user search settings are dependent on service configuration. As services can be reconfigured
-    // during runtime, the setting values have to be checked when used.
-    bool localhost_match_wildcard_host {true};
-    bool allow_root_user {false};
-};
-
-// The total user search settings structure. Using inheritance to avoid subobjects.
-struct UserSearchSettings : public UserSearchSettListener, UserSearchSettService
-{
-    UserSearchSettings(const UserSearchSettListener& listener_sett);
-};
-}

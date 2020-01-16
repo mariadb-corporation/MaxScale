@@ -20,6 +20,7 @@
 #include <maxscale/cn_strings.hh>
 #include <maxscale/config.hh>
 #include <maxscale/modutil.hh>
+#include <maxscale/service.hh>
 #include "user_data.hh"
 
 using std::string;
@@ -36,9 +37,12 @@ MySQLProtocolModule::create_client_protocol(MXS_SESSION* session, mxs::Component
     std::unique_ptr<MYSQL_session> mdb_session(new(std::nothrow) MYSQL_session());
     if (mdb_session)
     {
-        // The authenticator module used by this session is not known yet. The protocol code will figure
-        // it out once authentication begins.
-        mdb_session->user_search_settings = &m_user_search_settings;
+        auto& search_sett = mdb_session->user_search_settings;
+        search_sett.listener = m_user_search_settings;
+        auto& service_config = session->service->config();
+        search_sett.service.allow_root_user = service_config.enable_root;
+        search_sett.service.localhost_match_wildcard_host = service_config.localhost_match_wildcard_host;
+
         mdb_session->remote = session->client_remote();
         session->set_protocol_data(std::move(mdb_session));
 

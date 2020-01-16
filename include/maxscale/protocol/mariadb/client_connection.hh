@@ -128,8 +128,7 @@ private:
     };
     FindUAResult find_user_account_entry();
 
-    mariadb::UserSearchSettings user_search_settings() const;
-    const MariaDBUserCache*     user_account_cache();
+    const MariaDBUserCache* user_account_cache();
 
     // Handshake state
     enum class HSState
