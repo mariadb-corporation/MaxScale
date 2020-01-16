@@ -2,6 +2,11 @@
 
 This filter adds routing hints to a service. The filter has no parameters.
 
+## Limitations
+
+The hintfilter does not support routing hints in prepared statements
+([MXS-2838](https://jira.mariadb.org/browse/MXS-2838)).
+
 # Hint Syntax
 
 **Note:** If a query has more than one comment only the first comment is
