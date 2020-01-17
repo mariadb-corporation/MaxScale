@@ -124,19 +124,6 @@ bool config_replace_param(CONFIG_CONTEXT* obj, const char* key, const char* valu
 void config_remove_param(CONFIG_CONTEXT* obj, const char* name);
 
 /**
- * @brief Check if all SSL parameters are defined
- *
- * Helper function to check whether all of the required SSL parameters are defined
- * in the configuration context. The checked parameters are 'ssl', 'ssl_key',
- * 'ssl_cert' and 'ssl_ca_cert'. The 'ssl' parameter must also have a value of
- * 'required'.
- *
- * @param obj Configuration context
- * @return True if all required parameters are present
- */
-bool config_have_required_ssl_params(CONFIG_CONTEXT* obj);
-
-/**
  * @brief Add non-standard configuration parameters to a JSON object
  *
  * @param parameters List of configuration parameter values

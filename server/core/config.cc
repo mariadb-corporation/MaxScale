@@ -3077,68 +3077,6 @@ int maxscale_getline(char** dest, int* size, FILE* file)
     return 1;
 }
 
-/**
- * Validate the SSL parameters for a service
- * @param ssl_cert SSL certificate (private key)
- * @param ssl_ca_cert SSL CA certificate
- * @param ssl_key SSL key (public key)
- * @return 0 if parameters are valid otherwise the number of errors if errors
- * were detected
- */
-static int validate_ssl_parameters(CONFIG_CONTEXT* obj, char* ssl_cert, char* ssl_ca_cert, char* ssl_key)
-{
-    int error_count = 0;
-    if (ssl_cert == NULL)
-    {
-        error_count++;
-        MXS_ERROR("Server certificate missing for listener '%s'."
-                  "Please provide the path to the server certificate by adding "
-                  "the ssl_cert=<path> parameter",
-                  obj->name());
-    }
-    else if (access(ssl_cert, F_OK) != 0)
-    {
-        error_count++;
-        MXS_ERROR("Server certificate file for listener '%s' not found: %s",
-                  obj->name(),
-                  ssl_cert);
-    }
-
-    if (ssl_ca_cert == NULL)
-    {
-        error_count++;
-        MXS_ERROR("CA Certificate missing for listener '%s'."
-                  "Please provide the path to the certificate authority "
-                  "certificate by adding the ssl_ca_cert=<path> parameter",
-                  obj->name());
-    }
-    else if (access(ssl_ca_cert, F_OK) != 0)
-    {
-        error_count++;
-        MXS_ERROR("Certificate authority file for listener '%s' "
-                  "not found: %s",
-                  obj->name(),
-                  ssl_ca_cert);
-    }
-
-    if (ssl_key == NULL)
-    {
-        error_count++;
-        MXS_ERROR("Server private key missing for listener '%s'. "
-                  "Please provide the path to the server certificate key by "
-                  "adding the ssl_key=<path> parameter",
-                  obj->name());
-    }
-    else if (access(ssl_key, F_OK) != 0)
-    {
-        error_count++;
-        MXS_ERROR("Server private key file for listener '%s' not found: %s",
-                  obj->name(),
-                  ssl_key);
-    }
-    return error_count;
-}
-
 void config_add_defaults(MXS_CONFIG_PARAMETER* dest, const MXS_MODULE_PARAM* params)
 {
     if (params)
@@ -3532,16 +3470,6 @@ int create_new_filter(CONFIG_CONTEXT* obj)
     }
 
     return error_count;
-}
-
-bool config_have_required_ssl_params(CONFIG_CONTEXT* obj)
-{
-    MXS_CONFIG_PARAMETER* param = &obj->m_parameters;
-    return param->contains(CN_SSL)
-           && param->contains(CN_SSL_KEY)
-           && param->contains(CN_SSL_CERT)
-           && param->contains(CN_SSL_CA_CERT)
-           && (param->get_string(CN_SSL) == CN_REQUIRED);
 }
 
 bool config_is_ssl_parameter(const char* key)
