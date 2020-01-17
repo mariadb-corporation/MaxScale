@@ -280,9 +280,6 @@ void serviceGetUser(SERVICE* service, const char** user, const char** auth);
 // Used by routers
 const char* serviceGetWeightingParameter(SERVICE* service);
 
-// Reload users
-bool service_refresh_users(SERVICE* service);
-
 /**
  * Diagnostics
  */

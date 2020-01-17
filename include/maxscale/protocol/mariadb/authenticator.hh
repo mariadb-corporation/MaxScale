@@ -89,9 +89,6 @@ public:
      */
     virtual SBackendAuth create_backend_authenticator() = 0;
 
-    // Load or update authenticator user data
-    virtual int load_users(SERVICE* service) = 0;
-
     /**
      * @brief Return diagnostic information about the authenticator
      *

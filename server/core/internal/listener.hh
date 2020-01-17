@@ -118,13 +118,6 @@ public:
      */
     json_t* to_json() const;
 
-    /**
-     * Load users for a listener
-     *
-     * @return The result from the authenticator module
-     */
-    int load_users();
-
     Type type() const
     {
         return m_type;

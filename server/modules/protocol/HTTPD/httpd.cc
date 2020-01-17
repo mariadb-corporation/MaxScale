@@ -67,11 +67,6 @@ public:
     {
         return MXS_MODULE_NAME;
     }
-
-    int load_auth_users(SERVICE* service) override
-    {
-        return MXS_AUTH_LOADUSERS_OK;
-    }
 };
 
 extern "C"

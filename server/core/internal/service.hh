@@ -34,18 +34,11 @@ class Listener;
  * @file service.h - MaxScale internal service functions
  */
 
-struct LastUserLoad
-{
-    time_t last = 0;        // The last time the users were loaded
-    bool   warned = false;  // Has a warning been logged
-};
-
 // The internal service representation
 class Service : public SERVICE
 {
 public:
     using FilterList = std::vector<SFilterDef>;
-    using RateLimits = std::vector<LastUserLoad>;
     using SAccountManager = std::unique_ptr<mxs::UserAccountManager>;
     using SAccountCache = std::unique_ptr<mxs::UserAccountCache>;
 
@@ -125,13 +118,6 @@ public:
     }
 
     uint64_t status() const override;
-
-    /**
-     * Reload users for all listeners
-     *
-     * @return True if loading of users was successful
-     */
-    bool refresh_users();
 
     /**
      * Dump service configuration into a file
@@ -279,7 +265,6 @@ private:
     };
 
     mxs::WorkerGlobal<Data>   m_data;
-    RateLimits                m_rate_limits;    // User reload rate limits
     mxs::WorkerGlobal<Config> m_config;
     std::atomic<int64_t>      m_refcount {1};
     bool                      m_active {true};

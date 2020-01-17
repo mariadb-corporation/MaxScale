@@ -366,20 +366,6 @@ mariadb::SBackendAuth GSSAPIAuthenticatorModule::create_backend_authenticator()
     return mariadb::SBackendAuth(new(std::nothrow) GSSAPIBackendAuthenticator());
 }
 
-/**
- * @brief Load database users that use GSSAPI authentication
- *
- * Loading the list of database users that use the 'gssapi' plugin allows us to
- * give more precise error messages to the clients when authentication fails.
- *
- * @param service Service definition
- * @return MXS_AUTH_LOADUSERS_OK on success, MXS_AUTH_LOADUSERS_ERROR on error
- */
-int GSSAPIAuthenticatorModule::load_users(SERVICE* service)
-{
-    return MXS_AUTH_LOADUSERS_OK;
-}
-
 std::string GSSAPIAuthenticatorModule::name() const
 {
     return MXS_MODULE_NAME;

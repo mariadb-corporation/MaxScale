@@ -37,19 +37,12 @@ public:
     uint64_t    capabilities() const override;
     std::string name() const override;
 
-    int     load_auth_users(SERVICE* service) override;
-
     std::unique_ptr<mxs::UserAccountManager> create_user_data_manager() override;
 
     AuthenticatorList create_authenticators(const MXS_CONFIG_PARAMETER& params) override;
 
 private:
     bool parse_authenticator_opts(const std::string& opts, const AuthenticatorList& authenticators);
-
-    /**
-     * Authenticator modules used by this protocol module. Used from multiple threads, but does not
-     * change once created. TODO: Remove uses of this field */
-    std::vector<mariadb::SAuthModule> m_authenticators;
 
     /** Partial user search settings. These settings originate from the listener and do not
      * change once set. */

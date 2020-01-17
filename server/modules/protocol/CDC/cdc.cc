@@ -105,11 +105,6 @@ public:
         return MXS_MODULE_NAME;
     }
 
-    int load_auth_users(SERVICE* service) override
-    {
-        return m_auth_module.load_users(service);
-    }
-
     json_t* print_auth_users_json() override
     {
         return m_auth_module.diagnostics();

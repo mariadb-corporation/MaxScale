@@ -80,8 +80,6 @@ static struct
     std::vector<Service*> services;
 } this_unit;
 
-static bool service_refresh_users_cb(void* svc);
-
 Service* Service::create(const char* name, const char* router, MXS_CONFIG_PARAMETER* params)
 {
     MXS_ROUTER_OBJECT* router_api = (MXS_ROUTER_OBJECT*)load_module(router, MODULE_ROUTER);
@@ -223,7 +221,6 @@ Service::Service(const std::string& name,
                  const std::string& router_name,
                  MXS_CONFIG_PARAMETER* params)
     : SERVICE(name, router_name)
-    , m_rate_limits(config_threadcount())
     , m_config(params)
     , m_params(*params)
 {
@@ -238,36 +235,6 @@ Service::Service(const std::string& name,
     {
         // The connection keepalive relies on knowing when a connection is logically idle
         m_capabilities |= RCAP_TYPE_REQUEST_TRACKING;
-    }
-
-    /**
-     * At service start last update is set to config->users_refresh_time seconds earlier.
-     * This way MaxScale could try reloading users just after startup. But only if user
-     * refreshing has not been turned off.
-     */
-    MXS_CONFIG* cnf = config_get_global_options();
-
-    // Defaults for disabled reloading of users
-    bool warned = true;
-    bool last = time(NULL);
-
-    if (cnf->users_refresh_time != INT32_MAX)
-    {
-        last -= cnf->users_refresh_time;
-        warned = false;
-    }
-
-    for (auto& a : m_rate_limits)
-    {
-        a.last = last;
-        a.warned = warned;
-    }
-
-    if (cnf->users_refresh_interval > 0)
-    {
-        std::string task_name = name;
-        task_name += " refresh users";
-        hktask_add(task_name.c_str(), service_refresh_users_cb, this, cnf->users_refresh_interval);
     }
 }
 
@@ -647,103 +614,6 @@ Service* service_uses_monitor(mxs::Monitor* monitor)
 SERVICE* service_find(const char* servname)
 {
     return Service::find(servname);
-}
-
-bool Service::refresh_users()
-{
-    mxb::LogScope scope(name());
-    mxb::WatchdogNotifier::Workaround workaround(RoutingWorker::get_current());
-    bool ret = true;
-    int self = mxs_rworker_get_current_id();
-    mxb_assert(self >= 0);
-    time_t now = time(NULL);
-
-    auto listeners = listener_find_by_service(this);
-    bool concurrent_update = false;
-    // All listeners must support concurrent updating for it to be used.
-    // TODO: readd or implement elsewhere
-
-    // Use unique_lock instead of lock_guard to make the locking conditional
-    UniqueLock guard(lock, std::defer_lock);
-    if (!concurrent_update)
-    {
-        // Use only one rate limitation for synchronous authenticators to keep
-        // rate limitations synchronous as well
-        self = 0;
-        guard.lock();
-    }
-
-    MXS_CONFIG* config = config_get_global_options();
-
-    /* Check if refresh rate limit has been exceeded. Also check whether we are in the middle of starting up.
-     * If so, allow repeated reloading of users. */
-    if (now > maxscale_started() + config->users_refresh_time
-        && now < m_rate_limits[self].last + config->users_refresh_time)
-    {
-        if (!m_rate_limits[self].warned)
-        {
-            MXS_WARNING("Refresh rate limit (once every %ld seconds) exceeded for "
-                        "load of users' table.", config->users_refresh_time);
-            m_rate_limits[self].warned = true;
-        }
-    }
-    else
-    {
-        m_rate_limits[self].last = now;
-        m_rate_limits[self].warned = false;
-
-        for (const auto& listener : listeners)
-        {
-            /** Load the authentication users before before starting the listener */
-
-            switch (listener->load_users())
-            {
-            case MXS_AUTH_LOADUSERS_FATAL:
-                MXS_ERROR("Fatal error when loading users for listener '%s',"
-                          " authentication will not work.", listener->name());
-                ret = false;
-                break;
-
-            case MXS_AUTH_LOADUSERS_ERROR:
-                MXS_WARNING("Failed to load users for listener '%s', authentication"
-                            " might not work.", listener->name());
-                ret = false;
-                break;
-
-            default:
-                break;
-            }
-        }
-    }
-
-    return ret;
-}
-
-/**
- * Refresh the database users for the service
- * This function replaces the MySQL users used by the service with the latest
- * version found on the backend servers. There is a limit on how often the users
- * can be reloaded and if this limit is exceeded, the reload will fail.
- * @param service Service to reload
- * @return true on success and false on error
- */
-bool service_refresh_users(SERVICE* svc)
-{
-    Service* service = static_cast<Service*>(svc);
-    mxb_assert(service);
-    return service->refresh_users();
-}
-
-static bool service_refresh_users_cb(void* svc)
-{
-    Service* service = static_cast<Service*>(svc);
-    mxs::RoutingWorker* worker = mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN);
-
-    worker->execute([service]() {
-                        service_refresh_users(service);
-                    }, mxb::Worker::EXECUTE_AUTO);
-
-    return true;
 }
 
 /**

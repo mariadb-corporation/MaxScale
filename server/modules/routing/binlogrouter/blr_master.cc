@@ -197,7 +197,7 @@ static void blr_start_master(void* data)
     mxb_assert(listener);
 
     // Load users now so that authentication will work for the fake client
-    listener->load_users();
+    //listener->load_users();
 
     router->session = new Session(listener->shared_data(), "127.0.0.1");
     mxb_assert(router->session);

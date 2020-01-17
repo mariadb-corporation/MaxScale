@@ -141,8 +141,8 @@ int CDCClientAuthenticator::authenticate(DCB* generic_dcb)
         auth_ret = m_module.cdc_auth_check(m_user, m_auth_data);
 
         /* On failed authentication try to reload users and authenticate again */
-        if (CDC_STATE_AUTH_OK != auth_ret
-            && service_refresh_users(dcb->session()->service) == MXS_AUTH_LOADUSERS_OK)
+        if (auth_ret != CDC_STATE_AUTH_OK
+            && m_module.load_users(dcb->session()->service) == MXS_AUTH_LOADUSERS_OK)
         {
             auth_ret = m_module.cdc_auth_check(m_user, m_auth_data);
         }

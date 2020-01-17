@@ -4101,7 +4101,7 @@ static int blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
                router->binlog_position);
 
     /* Try reloading new users and update cached credentials */
-    service_refresh_users(router->service);
+    //service_refresh_users(router->service);
 
     return blr_slave_send_ok(router, slave);
 }

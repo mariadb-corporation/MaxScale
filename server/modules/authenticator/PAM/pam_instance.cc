@@ -33,18 +33,6 @@ PamAuthenticatorModule* PamAuthenticatorModule::create(char** options)
     return new(std::nothrow) PamAuthenticatorModule();
 }
 
-/**
- * @brief Populates the internal user database by reading from one of the backend servers
- *
- * @param service The service the users should be read from
- *
- * @return MXS_AUTH_LOADUSERS_OK on success, MXS_AUTH_LOADUSERS_ERROR on error
- */
-int PamAuthenticatorModule::load_users(SERVICE* service)
-{
-    return MXS_AUTH_LOADUSERS_OK;
-}
-
 json_t* PamAuthenticatorModule::diagnostics()
 {
     json_t* rval = json_array();

@@ -69,19 +69,6 @@ std::string MySQLProtocolModule::name() const
     return MXS_MODULE_NAME;
 }
 
-int MySQLProtocolModule::load_auth_users(SERVICE* service)
-{
-    for (auto& auth : m_authenticators)
-    {
-        int ret = auth->load_users(service);
-        if (ret != MXS_AUTH_LOADUSERS_OK)
-        {
-            return ret;
-        }
-    }
-    return MXS_AUTH_LOADUSERS_OK;
-}
-
 std::unique_ptr<mxs::UserAccountManager> MySQLProtocolModule::create_user_data_manager()
 {
     return std::unique_ptr<mxs::UserAccountManager>(new MariaDBUserManager());

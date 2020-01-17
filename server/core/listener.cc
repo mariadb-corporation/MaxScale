@@ -604,14 +604,6 @@ const char* Listener::state() const
     }
 }
 
-int Listener::load_users()
-{
-    mxb::LogScope scope(name());
-    // TODO: Move this call inside protocol
-    return m_shared_data->m_proto_module->load_auth_users(m_service);
-}
-
-
 namespace
 {
 

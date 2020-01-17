@@ -37,9 +37,9 @@ public:
 
     enum Capabilities
     {
-        CAP_AUTHDATA     = (1u << 0),   // The protocol implements a user account manager
-        CAP_BACKEND      = (1u << 1),   // The protocol supports backend communication
-        CAP_AUTH_MODULES = (1u << 2),   // The protocol uses authenticator modules
+        CAP_AUTHDATA     = (1u << 0),   // Protocol implements a user account manager
+        CAP_BACKEND      = (1u << 1),   // Protocol supports backend communication
+        CAP_AUTH_MODULES = (1u << 2),   // Protocol uses authenticator modules and does not integrate one
     };
 
     /**
@@ -94,14 +94,6 @@ public:
      * @return Module name
      */
     virtual std::string name() const = 0;
-
-    /**
-     * Load users for all authenticators.
-     *
-     * @param service The service to load from
-     * @return MXS_AUTH_LOADUSERS_OK on success
-     */
-    virtual int load_auth_users(SERVICE* service) = 0;
 
     /**
      * Print a list of authenticator users to json. This should only be implemented by protocols without
