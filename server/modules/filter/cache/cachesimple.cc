@@ -36,6 +36,11 @@ bool CacheSimple::create_token(std::shared_ptr<Cache::Token>* psToken)
     return m_pStorage->create_token(psToken);
 }
 
+void CacheSimple::get_limits(Storage::Limits* pLimits) const
+{
+    m_pStorage->get_limits(pLimits);
+}
+
 cache_result_t CacheSimple::get_value(Token* pToken,
                                       const CacheKey& key,
                                       uint32_t flags,

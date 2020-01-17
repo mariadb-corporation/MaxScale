@@ -26,6 +26,8 @@ public:
 
     bool create_token(std::shared_ptr<Token>* psToken) override;
 
+    void get_limits(Storage::Limits* pLimits) const override final;
+
     cache_result_t get_value(Token* pToken,
                              const CacheKey& key,
                              uint32_t flags,

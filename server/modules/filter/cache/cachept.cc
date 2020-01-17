@@ -96,6 +96,13 @@ void CachePT::refreshed(const CacheKey& key, const CacheFilterSession* pSession)
     thread_cache().refreshed(key, pSession);
 }
 
+void CachePT::get_limits(Storage::Limits* pLimits) const
+{
+    // We return the limits of the first thread Cache. The limits will be the
+    // same for all.
+    m_caches.front()->get_limits(pLimits);
+}
+
 json_t* CachePT::get_info(uint32_t what) const
 {
     json_t* pInfo = Cache::do_get_info(what);

@@ -184,6 +184,25 @@ CacheFilter* CacheFilter::create(const char* zName, MXS_CONFIG_PARAMETER* ppPara
 
         if (pCache)
         {
+            Storage::Limits limits;
+            pCache->get_limits(&limits);
+
+            uint32_t max_resultset_size = pFilter->m_config.max_resultset_size.get();
+
+            if (max_resultset_size == 0)
+            {
+                max_resultset_size = std::numeric_limits<uint32_t>::max();
+            }
+
+            if (max_resultset_size > limits.max_value_size)
+            {
+                MXS_WARNING("The used cache storage limits the maximum size of a value to "
+                            "%u bytes, but either no value has been specified for "
+                            "max_resultset_size or the value is larger. Setting "
+                            "max_resultset_size to the maximum size.", limits.max_value_size);
+                pFilter->m_config.max_resultset_size.set(limits.max_value_size);
+            }
+
             pFilter->m_sCache = unique_ptr<Cache>(pCache);
         }
         else

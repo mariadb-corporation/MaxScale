@@ -86,6 +86,8 @@ public:
      */
     virtual bool create_token(std::shared_ptr<Token>* psToken) = 0;
 
+    virtual void get_limits(Storage::Limits* pLimits) const = 0;
+
     virtual json_t* get_info(uint32_t what = INFO_ALL) const = 0;
 
     /**
