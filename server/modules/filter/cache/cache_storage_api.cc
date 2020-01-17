@@ -16,6 +16,7 @@
 #include <ctype.h>
 #include <sstream>
 
+using std::map;
 using std::string;
 using std::stringstream;
 using std::vector;
@@ -61,4 +62,82 @@ bool CacheKey::eq(const CacheKey& that) const
         && this->data_hash == that.data_hash
         && this->user == that.user
         && this->host == that.host;
+}
+
+bool Storage::split_arguments(const std::string& argument_string,
+                              map<std::string, std::string>* pArguments)
+{
+    bool rv = true;
+
+    vector<string> arguments = mxb::strtok(argument_string, ",");
+    map<string, string> values_by_keys;
+
+    for (const auto& argument : arguments)
+    {
+        vector<string> key_value = mxb::strtok(argument, "=");
+
+        switch (key_value.size())
+        {
+        case 1:
+            values_by_keys[mxb::trimmed_copy(key_value[0])] = "";
+            break;
+
+        case 2:
+            values_by_keys[mxb::trimmed_copy(key_value[0])] = mxb::trimmed_copy(key_value[1]);
+            break;
+
+        default:
+            MXS_ERROR("The provided argument string '%s' is not of the correct format.",
+                      argument_string.c_str());
+            rv = false;
+        }
+    }
+
+    if (rv)
+    {
+        pArguments->swap(values_by_keys);
+    }
+
+    return rv;
+}
+
+bool Storage::get_server_info(const std::string& host_port, std::string* pHost, int* pPort)
+{
+    bool rv = true;
+
+    // We are expecting a "host[:port]" string.
+
+    vector<string> hp = mxb::strtok(host_port, ":");
+
+    switch (hp.size())
+    {
+    case 1:
+        *pHost = mxb::trimmed_copy(hp[0]);
+        break;
+
+    case 2:
+        {
+            *pHost = mxb::trimmed_copy(hp[0]);
+            int port;
+
+            if (mxb::get_int(hp[1], &port) || port < 0)
+            {
+                *pPort = port;
+            }
+            else
+            {
+                MXS_ERROR("The provided value '%s' does not refer to a valid port.",
+                          host_port.c_str());
+                rv = false;
+            }
+        }
+        break;
+
+    default:
+        MXS_ERROR("The provided value '%s' is not of the \"host[:port]\" format.",
+                  host_port.c_str());
+        rv = false;
+    }
+
+    return rv;
 }

@@ -19,6 +19,7 @@
 #include <jansson.h>
 
 #include <functional>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -464,6 +465,30 @@ public:
 
 protected:
     Storage() {}
+
+    /**
+     * Split argument string of the format "key1[:value1](, key2[:value2])"
+     * into the constituent parts.
+     *
+     * @param argument_string  The argument string.
+     * @param pArguments       The argument string split into parts.
+     *
+     * @return True, if the string is of the valid format.
+     */
+    static bool split_arguments(const std::string& argument_string,
+                                std::map<std::string, std::string>* pArguments);
+
+    /**
+     * Converts an argument string "host[:port]" to a host string and port number.
+     *
+     * @param s      The argument string.
+     * @param pHost  Pointer to string that will contain the host.
+     * @param pPost  Pointer to interger that will contain the port, if one was
+     *               provided. Otherwise it is unmodified.
+     *
+     * @return True, if the string was valid, false otherwise.
+     */
+    static bool get_server_info(const std::string& s, std::string* pHost, int* pPort);
 };
 
 class StorageModule
