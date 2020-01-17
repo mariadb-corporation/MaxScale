@@ -1100,7 +1100,8 @@ storage=storage_redis
 ```
 `storage_redis` has the following mandatory arguments:
 
-* `server` using which the location of the server is specified as `host:port`.
+* `server` using which the location of the server is specified as `host[:port]`.
+  If no port is provided, the default Redis port of `6379` is used.
 
 Example:
 ```

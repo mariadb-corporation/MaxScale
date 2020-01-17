@@ -136,12 +136,15 @@
 #include <hiredis/hiredis.h>
 #include <maxscale/threadpool.hh>
 
+using std::map;
 using std::shared_ptr;
 using std::string;
 using std::vector;
 
 namespace
 {
+
+const int DEFAULT_REDIS_PORT = 6379;
 
 struct
 {
@@ -1110,56 +1113,42 @@ RedisStorage* RedisStorage::create(const string& name,
                     "a maximum number of items in the cache storage.");
     }
 
-    bool error = false;
+    map<string, string> arguments;
 
-    string host;
-    int port = -1;
-
-    vector<string> arguments = mxb::strtok(argument_string, ",");
-
-    for (const auto& argument : arguments)
+    if (Storage::split_arguments(argument_string, &arguments))
     {
-        vector<string> kv = mxb::strtok(argument, "=");
+        bool error = false;
 
-        if (kv.size() == 2)
+        string host;
+        int port = DEFAULT_REDIS_PORT;
+
+        auto it = arguments.find("server");
+
+        if (it != arguments.end())
         {
-            string key = kv[0];
-            string value = kv[1];
-
-            mxb::trim(key);
-            mxb::trim(value);
-
-            if (key == "server")
+            if (!Storage::get_server_info(it->second, &host, &port))
             {
-                vector<string> hp = mxb::strtok(value, ":");
-
-                if (hp.size() == 2)
-                {
-                    host = hp[0];
-
-                    if (!mxb::get_int(hp[1], &port) || port < 0)
-                    {
-                        MXS_ERROR("The provided value '%s' to the argument 'server' does not "
-                                  "translate into a valid host:port combination.", value.c_str());
-                        error = true;
-                    }
-                }
-            }
-            else
-            {
-                MXS_ERROR("Unknown argument '%s' provided to storage_redis.", key.c_str());
                 error = true;
             }
+
+            arguments.erase(it);
         }
         else
         {
-            MXS_ERROR("The argument '%s' provided to storage_redis is not valid.", argument.c_str());
+            MXS_ERROR("The mandatory argument 'server' is missing.");
+            error = true;
         }
-    }
 
-    if (!error)
-    {
-        pStorage = new (std::nothrow) RedisStorage(name, config, host, port);
+        for (const auto& kv : arguments)
+        {
+            MXS_WARNING("Unknown `storage_redis` argument: %s=%s",
+                        kv.first.c_str(), kv.second.c_str());
+        }
+
+        if (!error)
+        {
+            pStorage = new (std::nothrow) RedisStorage(name, config, host, port);
+        }
     }
 
     return pStorage;
