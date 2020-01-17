@@ -32,6 +32,15 @@ const size_t INMEMORY_KEY_LENGTH = 2 * SHA512_DIGEST_LENGTH;
 #if INMEMORY_KEY_LENGTH > CacheKey_MAXLEN
 #error storage_inmemory key is too long.
 #endif
+
+struct
+{
+    Storage::Limits default_limits;
+} this_unit =
+{
+    Storage::Limits(std::numeric_limits<uint32_t>::max()) // max_value_size
+};
+
 }
 
 InMemoryStorage::InMemoryStorage(const string& name, const Config& config)
@@ -117,6 +126,11 @@ bool InMemoryStorage::create_token(std::shared_ptr<Storage::Token>* psToken)
 void InMemoryStorage::get_config(Config* pConfig)
 {
     *pConfig = m_config;
+}
+
+void InMemoryStorage::get_limits(Limits* pLimits)
+{
+    *pLimits = this_unit.default_limits;
 }
 
 cache_result_t InMemoryStorage::get_head(CacheKey* pKey, GWBUF** ppHead)

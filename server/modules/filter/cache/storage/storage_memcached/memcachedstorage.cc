@@ -26,6 +26,15 @@ using std::vector;
 namespace
 {
 
+struct
+{
+    Storage::Limits default_limits;
+} this_unit =
+{
+    Storage::Limits(1 * 1024 * 1024) // max_value_size
+};
+
+
 class MemcachedToken : public std::enable_shared_from_this<MemcachedToken>,
                        public Storage::Token
 {
@@ -348,6 +357,11 @@ bool MemcachedStorage::create_token(std::shared_ptr<Storage::Token>* psToken)
 void MemcachedStorage::get_config(Config* pConfig)
 {
     *pConfig = m_config;
+}
+
+void MemcachedStorage::get_limits(Limits* pLimits)
+{
+    *pLimits = this_unit.default_limits;
 }
 
 cache_result_t MemcachedStorage::get_info(uint32_t what, json_t** ppInfo) const

@@ -231,6 +231,23 @@ public:
         cache_invalidate_t invalidate = CACHE_INVALIDATE_NEVER;
     };
 
+    struct Limits
+    {
+        Limits()
+        {
+        }
+
+        Limits(uint32_t max_value_size)
+            : max_value_size(max_value_size)
+        {
+        }
+
+        /**
+         * The maximum size of a single value.
+         */
+        uint32_t max_value_size = std::numeric_limits<uint32_t>::max();
+    };
+
     virtual ~Storage();
 
     /**
@@ -253,6 +270,13 @@ public:
      * @param pConfig  Pointer to object that will be updated.
      */
     virtual void get_config(Config* pConfig) = 0;
+
+    /**
+     * Returns the limits of the storage.
+     *
+     * @param pLimits  Pointer to object that will be updated.
+     */
+    virtual void get_limits(Limits* pLimits) = 0;
 
     /**
      * Returns information about the storage.

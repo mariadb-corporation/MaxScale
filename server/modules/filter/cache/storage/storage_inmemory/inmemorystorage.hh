@@ -32,7 +32,10 @@ public:
                                    const std::string& arguments);
 
     bool create_token(std::shared_ptr<Token>* psToken) override final;
-    void           get_config(Config* pConfig) override final;
+
+    void get_config(Config* pConfig) override final;
+    void get_limits(Limits* pLimits) override final;
+
     cache_result_t get_head(CacheKey* pKey, GWBUF** ppHead) override final;
     cache_result_t get_tail(CacheKey* pKey, GWBUF** ppHead) override final;
     cache_result_t get_size(uint64_t* pSize) const override final;

@@ -33,6 +33,7 @@ public:
     bool create_token(std::shared_ptr<Token>* psToken) override final;
 
     void get_config(Config* pConfig) override final;
+    void get_limits(Limits* pLimits) override final;
 
     cache_result_t get_info(uint32_t what, json_t** ppInfo) const override final;
     cache_result_t get_value(Token* pToken,

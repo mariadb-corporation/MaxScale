@@ -35,6 +35,11 @@ public:
      */
     void get_config(Config* pConfig) override final;
 
+    /**
+     * @see Storage::get_limits
+     */
+    void get_limits(Limits* pLimits) override final;
+
 protected:
     LRUStorage(const Config& config, Storage* pStorage);
 

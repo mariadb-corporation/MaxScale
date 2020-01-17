@@ -143,6 +143,14 @@ using std::vector;
 namespace
 {
 
+struct
+{
+    Storage::Limits default_limits;
+} this_unit =
+{
+    Storage::Limits(std::numeric_limits<uint32_t>::max()) // max_value_size
+};
+
 const char* redis_type_to_string(int type)
 {
     switch (type)
@@ -1165,6 +1173,11 @@ bool RedisStorage::create_token(shared_ptr<Storage::Token>* psToken)
 void RedisStorage::get_config(Config* pConfig)
 {
     *pConfig = m_config;
+}
+
+void RedisStorage::get_limits(Limits* pLimits)
+{
+    *pLimits = this_unit.default_limits;
 }
 
 cache_result_t RedisStorage::get_info(uint32_t what, json_t** ppInfo) const

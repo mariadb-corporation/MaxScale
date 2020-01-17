@@ -382,6 +382,11 @@ void LRUStorage::get_config(Config* pConfig)
     *pConfig = m_config;
 }
 
+void LRUStorage::get_limits(Limits* pLimits)
+{
+    m_pStorage->get_limits(pLimits);
+}
+
 cache_result_t LRUStorage::do_get_info(uint32_t what,
                                        json_t** ppInfo) const
 {
