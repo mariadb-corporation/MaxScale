@@ -57,11 +57,6 @@ protected:
                 SStorageFactory sFactory,
                 Storage* pStorage);
 
-    static bool create(const CacheConfig& config,
-                       std::vector<SCacheRules>* pRules,
-                       StorageFactory** ppFactory);
-
-
     json_t* do_get_info(uint32_t what) const;
 
     bool do_must_refresh(const CacheKey& key, const CacheFilterSession* pSession);

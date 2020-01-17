@@ -43,9 +43,9 @@ Cache::~Cache()
 }
 
 // static
-bool Cache::create(const CacheConfig& config,
-                   std::vector<SCacheRules>* pRules,
-                   StorageFactory** ppFactory)
+bool Cache::get_storage_factory(const CacheConfig& config,
+                                std::vector<SCacheRules>* pRules,
+                                StorageFactory** ppFactory)
 {
     std::vector<SCacheRules> rules;
     StorageFactory* pFactory = NULL;

@@ -211,9 +211,9 @@ protected:
           const std::vector<SCacheRules>& rules,
           SStorageFactory sFactory);
 
-    static bool create(const CacheConfig& config,
-                       std::vector<SCacheRules>* pRules,
-                       StorageFactory** ppFactory);
+    static bool get_storage_factory(const CacheConfig& config,
+                                    std::vector<SCacheRules>* pRules,
+                                    StorageFactory** ppFactory);
 
     json_t* do_get_info(uint32_t what) const;
 

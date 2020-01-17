@@ -31,27 +31,6 @@ CacheSimple::~CacheSimple()
     delete m_pStorage;
 }
 
-// static
-bool CacheSimple::create(const CacheConfig& config,
-                         std::vector<SCacheRules>* pRules,
-                         StorageFactory** ppFactory)
-{
-    int rv = false;
-
-    std::vector<SCacheRules> rules;
-    StorageFactory* pFactory = NULL;
-
-    rv = Cache::create(config, &rules, &pFactory);
-
-    if (rv)
-    {
-        pRules->swap(rules);
-        *ppFactory = pFactory;
-    }
-
-    return rv;
-}
-
 bool CacheSimple::create_token(std::shared_ptr<Cache::Token>* psToken)
 {
     return m_pStorage->create_token(psToken);

@@ -41,7 +41,7 @@ CacheMT* CacheMT::create(const std::string& name, const CacheConfig* pConfig)
     std::vector<SCacheRules> rules;
     StorageFactory* pFactory = NULL;
 
-    if (CacheSimple::create(*pConfig, &rules, &pFactory))
+    if (CacheSimple::get_storage_factory(*pConfig, &rules, &pFactory))
     {
         shared_ptr<StorageFactory> sFactory(pFactory);
 
