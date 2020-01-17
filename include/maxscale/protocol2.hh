@@ -104,12 +104,21 @@ public:
     virtual int load_auth_users(SERVICE* service) = 0;
 
     /**
-     * Print a list of authenticator users to json.
+     * Print a list of authenticator users to json. This should only be implemented by protocols without
+     * CAP_AUTHDATA.
      *
      * @return JSON user list
      */
-    virtual json_t* print_auth_users_json() = 0;
+    virtual json_t* print_auth_users_json()
+    {
+        return nullptr;
+    }
 
+    /**
+     * Create a user account manager. Will be only called for protocols with CAP_AUTHDATA.
+     *
+     * @return New user account manager. Will be shared between all listeners of the service.
+     */
     virtual std::unique_ptr<UserAccountManager> create_user_data_manager()
     {
         mxb_assert(!true);
@@ -318,6 +327,13 @@ public:
      * @param service
      */
     virtual void set_service(SERVICE* service) = 0;
+
+    /**
+     * Print contents to a json array.
+     *
+     * @return Users as json
+     */
+    virtual json_t* users_to_json() const = 0;
 };
 
 class UserAccountCache

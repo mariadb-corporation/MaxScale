@@ -26,7 +26,6 @@
 #include <maxscale/protocol/mariadb/authenticator.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 
-
 class SERVER;
 
 /**
@@ -78,6 +77,14 @@ public:
 
     bool equal_contents(const UserDatabase& rhs) const;
 
+    /**
+     * Print contents to json.
+     *
+     * @service_name Name of owning service
+     * @return user, host, etc as json
+     */
+    json_t* users_to_json() const;
+
 private:
     bool user_can_access_db(const std::string& user, const std::string& host_pattern, const std::string& db,
                             bool case_sensitive_db) const;
@@ -102,7 +109,7 @@ private:
         IPV4,
         MAPPED,
         IPV6,
-        LOCALHOST, /**< If connecting via socket, the remote address is "localhost" */
+        LOCALHOST,      /**< If connecting via socket, the remote address is "localhost" */
     };
 
     enum class PatternType
@@ -156,6 +163,7 @@ public:
     std::unique_ptr<mxs::UserAccountCache> create_user_account_cache() override;
 
     std::string protocol_name() const override;
+    json_t*     users_to_json() const override;
 
     /**
      * Get both the user database and its version.

@@ -38,7 +38,6 @@ public:
     std::string name() const override;
 
     int     load_auth_users(SERVICE* service) override;
-    json_t* print_auth_users_json() override;
 
     std::unique_ptr<mxs::UserAccountManager> create_user_data_manager() override;
 

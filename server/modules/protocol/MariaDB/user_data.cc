@@ -585,6 +585,12 @@ int MariaDBUserManager::userdb_version() const
     return m_userdb_version.load(acquire);
 }
 
+json_t* MariaDBUserManager::users_to_json() const
+{
+    Guard guard(m_userdb_lock);
+    return m_userdb.users_to_json();
+}
+
 void UserDatabase::add_entry(const std::string& username, const UserEntry& entry)
 {
     auto& entrylist = m_users[username];
@@ -1070,6 +1076,24 @@ bool UserDatabase::equal_contents(const UserDatabase& rhs) const
 {
     return (m_users == rhs.m_users) && (m_database_grants == rhs.m_database_grants)
            && (m_roles_mapping == rhs.m_roles_mapping);
+}
+
+json_t* UserDatabase::users_to_json() const
+{
+    auto rval = json_array();
+    for (auto& elem_outer : m_users)
+    {
+        for (auto& elem : elem_outer.second)
+        {
+            auto entry = json_pack("{s:s, s:s, s:s, s:b, s:b, s:b, s:s}",
+                                   "user", elem.username.c_str(), "host", elem.host_pattern.c_str(),
+                                   "plugin", elem.plugin.c_str(), "global priv", elem.global_db_priv,
+                                   "ssl", elem.ssl, "proxy grant", elem.proxy_grant,
+                                   "default_role", elem.default_role.cend());
+            json_array_append_new(rval, entry);
+        }
+    }
+    return rval;
 }
 
 MariaDBUserCache::MariaDBUserCache(const MariaDBUserManager& master)

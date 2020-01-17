@@ -72,11 +72,6 @@ public:
     {
         return MXS_AUTH_LOADUSERS_OK;
     }
-
-    json_t* print_auth_users_json() override
-    {
-        return json_array();
-    }
 };
 
 extern "C"

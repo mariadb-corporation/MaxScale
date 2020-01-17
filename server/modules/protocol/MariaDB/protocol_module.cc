@@ -82,12 +82,6 @@ int MySQLProtocolModule::load_auth_users(SERVICE* service)
     return MXS_AUTH_LOADUSERS_OK;
 }
 
-json_t* MySQLProtocolModule::print_auth_users_json()
-{
-    // TODO: print all to json array or combine elements? In any case this will be removed later on
-    return m_authenticators.front()->diagnostics();
-}
-
 std::unique_ptr<mxs::UserAccountManager> MySQLProtocolModule::create_user_data_manager()
 {
     return std::unique_ptr<mxs::UserAccountManager>(new MariaDBUserManager());
