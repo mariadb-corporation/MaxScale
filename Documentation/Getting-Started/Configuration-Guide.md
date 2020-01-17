@@ -1979,13 +1979,14 @@ This section describes configuration parameters for both servers and listeners
 that control the TLS/SSL encryption method and the various certificate files
 involved in it.
 
-To enable TLS/SSL for a listener, you must set the `ssl` parameter to `true`
-and provide the three files for `ssl_cert`, `ssl_key` and `ssl_ca_cert`.
+To enable TLS/SSL for a listener, you must set the `ssl` parameter to
+`true` and provide at least the `ssl_cert` and `ssl_key` parameters.
 
-To enable TLS/SSL for a server, you must set the `ssl` parameter to `required`
-and provide at least the `ssl_ca_cert` parameter. If the backend database server
-has certificate verification enabled, the `ssl_cert` and `ssl_key` parameters
-must also be defined.
+To enable TLS/SSL for a server, you must set the `ssl` parameter to
+`true`. If the backend database server has certificate verification
+enabled, the `ssl_cert` and `ssl_key` parameters must also be defined.
+
+Custom CA certificates can be defined with the `ssl_ca_cert` parameter.
 
 After this, MaxScale connections between the server and/or the client will be
 encrypted. Note that the database must also be configured to use TLS/SSL

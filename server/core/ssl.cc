@@ -335,12 +335,18 @@ bool SSLContext::init()
         SSL_CTX_set_tmp_rsa_callback(m_ctx, tmp_rsa_callback);
     }
 
-    mxb_assert(!m_cfg.ca.empty());
-
-    /* Load the CA certificate into the SSL_CTX structure */
-    if (!SSL_CTX_load_verify_locations(m_ctx, m_cfg.ca.c_str(), NULL))
+    if (!m_cfg.ca.empty())
     {
-        MXS_ERROR("Failed to set Certificate Authority file: %s", get_ssl_errors());
+        /* Load the CA certificate into the SSL_CTX structure */
+        if (!SSL_CTX_load_verify_locations(m_ctx, m_cfg.ca.c_str(), NULL))
+        {
+            MXS_ERROR("Failed to set Certificate Authority file: %s", get_ssl_errors());
+            return false;
+        }
+    }
+    else if (SSL_CTX_set_default_verify_paths(m_ctx) == 0)
+    {
+        MXS_ERROR("Failed to set default CA verify paths: %s", get_ssl_errors());
         return false;
     }
 

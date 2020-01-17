@@ -2889,15 +2889,6 @@ bool config_create_ssl(const char* name,
 
     if (value)
     {
-        if (!params.contains(CN_SSL_CA_CERT))
-        {
-            MXS_ERROR("CA Certificate missing for '%s'."
-                      "Please provide the path to the certificate authority "
-                      "certificate by adding the ssl_ca_cert=<path> parameter",
-                      name);
-            ok = false;
-        }
-
         if (require_cert)
         {
             if (!params.contains(CN_SSL_CERT))
