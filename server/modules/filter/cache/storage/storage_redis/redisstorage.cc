@@ -148,7 +148,7 @@ struct
     Storage::Limits default_limits;
 } this_unit =
 {
-    Storage::Limits(std::numeric_limits<uint32_t>::max()) // max_value_size
+    Storage::Limits(512 * 1024 * 1024) // max_value_size, https://redis.io/topics/data-types
 };
 
 const char* redis_type_to_string(int type)
