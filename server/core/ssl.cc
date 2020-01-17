@@ -326,12 +326,18 @@ bool SSLContext::init()
         SSL_CTX_set_tmp_rsa_callback(m_ctx, tmp_rsa_callback);
     }
 
-    mxb_assert(!m_cfg.ca.empty());
-
-    /* Load the CA certificate into the SSL_CTX structure */
-    if (!SSL_CTX_load_verify_locations(m_ctx, m_cfg.ca.c_str(), NULL))
+    if (!m_cfg.ca.empty())
     {
-        MXS_ERROR("Failed to set Certificate Authority file: %s", get_ssl_errors());
+        /* Load the CA certificate into the SSL_CTX structure */
+        if (!SSL_CTX_load_verify_locations(m_ctx, m_cfg.ca.c_str(), NULL))
+        {
+            MXS_ERROR("Failed to set Certificate Authority file: %s", get_ssl_errors());
+            return false;
+        }
+    }
+    else if (SSL_CTX_set_default_verify_paths(m_ctx) == 0)
+    {
+        MXS_ERROR("Failed to set default CA verify paths: %s", get_ssl_errors());
         return false;
     }
 
@@ -476,15 +482,6 @@ SSLContext::read_configuration(const std::string& name, const MXS_CONFIG_PARAMET
     if (value)
     {
         auto namez = name.c_str();
-        if (!params.contains(CN_SSL_CA_CERT))
-        {
-            MXS_ERROR("CA Certificate missing for '%s'."
-                      "Please provide the path to the certificate authority "
-                      "certificate by adding the ssl_ca_cert=<path> parameter",
-                      namez);
-            ok = false;
-        }
-
         if (require_cert)
         {
             if (!params.contains(CN_SSL_CERT))
@@ -530,7 +527,8 @@ void SSLContext::reset()
 bool SSLContext::configure(const MXS_CONFIG_PARAMETER& params)
 {
     reset();
-    mxb_assert(access(params.get_string(CN_SSL_CA_CERT).c_str(), F_OK) == 0);
+    mxb_assert(params.get_string(CN_SSL_CA_CERT).empty()
+               || access(params.get_string(CN_SSL_CA_CERT).c_str(), F_OK) == 0);
     mxb_assert(params.get_string(CN_SSL_CERT).empty()
                || access(params.get_string(CN_SSL_CERT).c_str(), F_OK) == 0);
     mxb_assert(params.get_string(CN_SSL_KEY).empty()
