@@ -76,6 +76,7 @@ struct SSLConfig : public mxb::SSLConfig
     ssl_method_type_t version = SERVICE_SSL_TLS_MAX;/**< Which TLS version to use */
     int               verify_depth = 9;             /**< SSL certificate verification depth */
     bool              verify_peer = true;           /**< Enable peer certificate verification */
+    bool              verify_host = true;           /**< Enable peer host verification */
 };
 
 /**

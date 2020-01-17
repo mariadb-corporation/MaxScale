@@ -2863,6 +2863,7 @@ bool runtime_create_listener_from_json(Service* service, json_t* json)
         const char* ssl_verify_peer_certificate = get_string_or_null(json,
                                                                      MXS_JSON_PTR_PARAM_SSL_VERIFY_PEER_CERT);
 
+        // TODO: Create the listener directly from the JSON and pass ssl_verify_peer_host to it.
         rval = runtime_create_listener(service,
                                        id,
                                        address,

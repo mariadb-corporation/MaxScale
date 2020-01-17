@@ -129,6 +129,7 @@ constexpr char CN_SSL_CERT_VERIFY_DEPTH[] = "ssl_cert_verify_depth";
 constexpr char CN_SSL_CRL[] = "ssl_crl";
 constexpr char CN_SSL_KEY[] = "ssl_key";
 constexpr char CN_SSL_VERIFY_PEER_CERTIFICATE[] = "ssl_verify_peer_certificate";
+constexpr char CN_SSL_VERIFY_PEER_HOST[] = "ssl_verify_peer_host";
 constexpr char CN_SSL_VERSION[] = "ssl_version";
 constexpr char CN_STATEMENTS[] = "statements";
 constexpr char CN_STATEMENT[] = "statement";

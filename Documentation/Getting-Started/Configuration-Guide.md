@@ -2091,6 +2091,14 @@ When this feature is enabled, the certificate sent by the peer is verified
 against the configured Certificate Authority. If you are using self-signed
 certificates, set `ssl_verify_peer_certificate=false`.
 
+### `ssl_verify_peer_host`
+
+Peer host verification. This parameter takes a boolean value and is enabled by
+default.
+
+When this feature is enabled, the peer hostname or IP is verified against the
+certificate that is sent by the peer.
+
 ### `ssl_crl`
 
 A string giving a file path that identifies an existing readable file. The file

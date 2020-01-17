@@ -459,9 +459,9 @@ json_t* Server::json_attributes() const
     json_t* params = json_object();
 
     config_add_module_params_json(
-            &m_settings.all_parameters, {CN_TYPE}, common_server_params(),
-            nullptr, // no module-specific parameters
-            params);
+        &m_settings.all_parameters, {CN_TYPE}, common_server_params(),
+        nullptr,    // no module-specific parameters
+        params);
 
     // Add weighting parameters that weren't added by config_add_module_params_json
     {
@@ -613,7 +613,7 @@ const MXS_MODULE_PARAM* common_server_params()
         {CN_PERSISTMAXTIME, MXS_MODULE_PARAM_DURATION, "0",       MXS_MODULE_OPT_DURATION_S},
         {CN_PROXY_PROTOCOL, MXS_MODULE_PARAM_BOOL,     "false"},
         {
-            CN_SSL,         MXS_MODULE_PARAM_ENUM, "false", MXS_MODULE_OPT_ENUM_UNIQUE, ssl_setting_values()
+            CN_SSL, MXS_MODULE_PARAM_ENUM, "false", MXS_MODULE_OPT_ENUM_UNIQUE, ssl_setting_values()
         },
         {CN_SSL_CERT,       MXS_MODULE_PARAM_PATH,     NULL,      MXS_MODULE_OPT_PATH_R_OK },
         {CN_SSL_KEY,        MXS_MODULE_PARAM_PATH,     NULL,      MXS_MODULE_OPT_PATH_R_OK },
@@ -626,6 +626,9 @@ const MXS_MODULE_PARAM* common_server_params()
         },
         {
             CN_SSL_VERIFY_PEER_CERTIFICATE, MXS_MODULE_PARAM_BOOL, "true"
+        },
+        {
+            CN_SSL_VERIFY_PEER_HOST, MXS_MODULE_PARAM_BOOL, "true"
         },
         {
             CN_DISK_SPACE_THRESHOLD, MXS_MODULE_PARAM_STRING

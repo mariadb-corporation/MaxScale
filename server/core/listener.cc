@@ -1089,6 +1089,9 @@ const MXS_MODULE_PARAM* common_listener_params()
             CN_SSL_VERIFY_PEER_CERTIFICATE, MXS_MODULE_PARAM_BOOL, "true"
         },
         {
+            CN_SSL_VERIFY_PEER_HOST, MXS_MODULE_PARAM_BOOL, "true"
+        },
+        {
             CN_SQL_MODE, MXS_MODULE_PARAM_STRING, NULL
         },
         {NULL}

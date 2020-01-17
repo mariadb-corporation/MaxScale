@@ -621,6 +621,8 @@ protected:
 
     bool create_SSL(const mxs::SSLContext& ssl);
 
+    bool verify_peer_host();
+
     /**
      * Release the instance from the associated session.
      *
@@ -649,6 +651,7 @@ protected:
         bool     read_want_write = false;
         bool     write_want_read = false;
         bool     write_want_write = false;
+        bool     verify_host = false;
     };
 
     const uint64_t    m_uid;                        /**< Unique identifier for this DCB */

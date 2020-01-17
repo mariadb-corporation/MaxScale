@@ -204,6 +204,7 @@ SSLConfig::SSLConfig(const MXS_CONFIG_PARAMETER& params)
     , version((ssl_method_type_t)params.get_enum(CN_SSL_VERSION, ssl_version_values))
     , verify_depth(params.get_integer(CN_SSL_CERT_VERIFY_DEPTH))
     , verify_peer(params.get_bool(CN_SSL_VERIFY_PEER_CERTIFICATE))
+    , verify_host(params.get_bool(CN_SSL_VERIFY_PEER_HOST))
 {
 }
 
@@ -465,6 +466,7 @@ std::string SSLConfig::to_string() const
        << "\tSSL method type:                     " << ssl_method_type_to_string(version) << "\n"
        << "\tSSL certificate verification depth:  " << verify_depth << "\n"
        << "\tSSL peer verification :              " << (verify_peer ? "true" : "false") << "\n"
+       << "\tSSL peer host verification :         " << (verify_host ? "true" : "false") << "\n"
        << "\tSSL certificate:                     " << cert << "\n"
        << "\tSSL key:                             " << key << "\n"
        << "\tSSL CA certificate:                  " << ca << "\n";

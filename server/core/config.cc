@@ -3483,6 +3483,7 @@ bool config_is_ssl_parameter(const char* key)
         CN_SSL_VERSION,
         CN_SSL_CERT_VERIFY_DEPTH,
         CN_SSL_VERIFY_PEER_CERTIFICATE,
+        CN_SSL_VERIFY_PEER_HOST,
         NULL
     };
 

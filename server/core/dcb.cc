@@ -37,6 +37,7 @@
 #include <sys/stat.h>
 #include <sys/un.h>
 #include <time.h>
+#include <openssl/x509v3.h>
 
 #include <atomic>
 
@@ -1088,6 +1089,7 @@ bool count_by_role_cb(DCB* dcb, void* data)
  */
 bool DCB::create_SSL(const mxs::SSLContext& ssl)
 {
+    m_encryption.verify_host = ssl.config().verify_host;
     m_encryption.handle = ssl.open();
     if (!m_encryption.handle)
     {
@@ -1102,6 +1104,30 @@ bool DCB::create_SSL(const mxs::SSLContext& ssl)
     }
 
     return true;
+}
+
+bool DCB::verify_peer_host()
+{
+    bool rval = true;
+
+    if (m_encryption.verify_host)
+    {
+        auto r = remote();
+        X509* cert = SSL_get_peer_certificate(m_encryption.handle);
+
+        if (X509_check_ip_asc(cert, r.c_str(), 0) != 1
+            && X509_check_host(cert, r.c_str(), 0, 0, nullptr) != 1)
+        {
+            char buf[1024] = "";
+            X509_NAME_oneline(X509_get_subject_name(cert), buf, sizeof(buf));
+            MXS_ERROR("Peer host '%s' does not match certificate: %s", r.c_str(), buf);
+            rval = false;
+        }
+
+        X509_free(cert);
+    }
+
+    return rval;
 }
 
 /**
@@ -1239,6 +1265,10 @@ uint32_t DCB::process_events(uint32_t events)
         if (1 == return_code)
         {
             m_handler->ready_for_reading(this);
+        }
+        else if (-1 == return_code)
+        {
+            m_handler->error(this);
         }
     }
 
@@ -1711,7 +1741,7 @@ int ClientDCB::ssl_handshake()
         MXS_DEBUG("SSL_accept done for %s", m_remote.c_str());
         m_encryption.state = SSLState::ESTABLISHED;
         m_encryption.read_want_write = false;
-        return 1;
+        return verify_peer_host() ? 1 : -1;
 
     case SSL_ERROR_WANT_READ:
         MXS_DEBUG("SSL_accept ongoing want read for %s", m_remote.c_str());
@@ -1885,7 +1915,7 @@ int BackendDCB::ssl_handshake()
         MXS_DEBUG("SSL_connect done for %s", m_remote.c_str());
         m_encryption.state = SSLState::ESTABLISHED;
         m_encryption.read_want_write = false;
-        return_code = 1;
+        return_code = verify_peer_host() ? 1 : -1;
         break;
 
     case SSL_ERROR_WANT_READ:
