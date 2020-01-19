@@ -30,7 +30,7 @@
 #include <maxavro.hh>
 #include <blr_constants.hh>
 
-#include "replicator/replicator.hh"
+#include "../replicator/replicator.hh"
 
 /** Name of the file where the binlog to Avro conversion progress is stored */
 #define AVRO_PROGRESS_FILE "avro-conversion.ini"

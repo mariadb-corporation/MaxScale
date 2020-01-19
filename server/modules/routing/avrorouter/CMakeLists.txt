@@ -4,7 +4,6 @@ if(AVRO_FOUND AND JANSSON_FOUND)
   include_directories(avro)
 
   add_subdirectory(avro)
-  add_subdirectory(replicator)
 
   add_library(avrorouter SHARED avro_main.cc avro.cc avro_client.cc avro_file.cc avro_converter.cc)
   set_target_properties(avrorouter PROPERTIES VERSION "1.0.0"  LINK_FLAGS -Wl,-z,defs)
