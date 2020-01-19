@@ -50,7 +50,7 @@ public:
     bool prepare_table(const Table& create) final;
     void flush_tables() final;
     void prepare_row(const Table& create, const gtid_pos_t& gtid,
-                     const REP_HEADER& hdr, int event_type) final;
+                     const REP_HEADER& hdr, RowEvent event_type) final;
     bool commit(const Table& create, const gtid_pos_t& gtid) final;
     void column_int(const Table& create, int i, int32_t value) final;
     void column_long(const Table& create, int i, int64_t value) final;

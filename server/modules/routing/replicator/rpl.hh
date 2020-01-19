@@ -167,6 +167,17 @@ struct Table
 typedef std::unordered_map<std::string, STable> CreatedTables;
 typedef std::unordered_map<uint64_t, STable>    ActiveMaps;
 
+// Row event types that map to INSERT, UPDATE and DELETE
+enum class RowEvent
+{
+    WRITE,          // A row was added
+    UPDATE,         // The before image of a row
+    UPDATE_AFTER,   // The after image of a row
+    DELETE,         // The row that was deleted
+
+    UNKNOWN,        // This is never returned
+};
+
 // Handler class for row based replication events
 class RowEventHandler
 {
@@ -184,7 +195,7 @@ public:
 
     // Prepare a new row for processing
     virtual void prepare_row(const Table& create, const gtid_pos_t& gtid,
-                             const REP_HEADER& hdr, int event_type) = 0;
+                             const REP_HEADER& hdr, RowEvent event_type) = 0;
 
     // Called once all columns are processed
     virtual bool commit(const Table& create, const gtid_pos_t& gtid) = 0;

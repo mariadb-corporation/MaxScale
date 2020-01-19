@@ -23,11 +23,6 @@
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 
-constexpr int WRITE_EVENT = 0;
-constexpr int UPDATE_EVENT = 1;
-constexpr int UPDATE_EVENT_AFTER = 2;
-constexpr int DELETE_EVENT = 3;
-
 namespace
 {
 
@@ -839,7 +834,7 @@ size_t unpack_decimal_field(uint8_t* ptr, const uint8_t* metadata, double* val_f
  * @param event Event type
  * @return String representation of the event
  */
-int get_event_type(uint8_t event)
+RowEvent get_event_type(uint8_t event)
 {
     switch (event)
     {
@@ -847,21 +842,21 @@ int get_event_type(uint8_t event)
     case WRITE_ROWS_EVENTv0:
     case WRITE_ROWS_EVENTv1:
     case WRITE_ROWS_EVENTv2:
-        return WRITE_EVENT;
+        return RowEvent::WRITE;
 
     case UPDATE_ROWS_EVENTv0:
     case UPDATE_ROWS_EVENTv1:
     case UPDATE_ROWS_EVENTv2:
-        return UPDATE_EVENT;
+        return RowEvent::UPDATE;
 
     case DELETE_ROWS_EVENTv0:
     case DELETE_ROWS_EVENTv1:
     case DELETE_ROWS_EVENTv2:
-        return DELETE_EVENT;
+        return RowEvent::DELETE;
 
     default:
         MXS_ERROR("Unexpected event type: %d (%0x)", event, event);
-        return -1;
+        return RowEvent::UNKNOWN;
     }
 }
 
@@ -1954,7 +1949,7 @@ bool Rpl::handle_row_event(REP_HEADER* hdr, uint8_t* ptr)
 
             while (ptr < end)
             {
-                int event_type = get_event_type(hdr->event_type);
+                auto event_type = get_event_type(hdr->event_type);
 
                 // Increment the event count for this transaction
                 m_gtid.event_num++;
@@ -1966,10 +1961,10 @@ bool Rpl::handle_row_event(REP_HEADER* hdr, uint8_t* ptr)
                 /** Update rows events have the before and after images of the
                  * affected rows so we'll process them as another record with
                  * a different type */
-                if (event_type == UPDATE_EVENT)
+                if (event_type == RowEvent::UPDATE)
                 {
                     m_gtid.event_num++;
-                    m_handler->prepare_row(create, m_gtid, *hdr, UPDATE_EVENT_AFTER);
+                    m_handler->prepare_row(create, m_gtid, *hdr, RowEvent::UPDATE_AFTER);
                     ptr = process_row_event_data(create, ptr, col_present, end);
                     m_handler->commit(create, m_gtid);
                 }

@@ -18,6 +18,32 @@
 #include <maxbase/assert.h>
 #include <maxbase/alloc.h>
 
+namespace
+{
+
+int rowevent_to_enum_offset(RowEvent event)
+{
+    switch (event)
+    {
+    case RowEvent::WRITE:
+        return 0;
+
+    case RowEvent::UPDATE:
+        return 1;
+
+    case RowEvent::UPDATE_AFTER:
+        return 2;
+
+    case RowEvent::DELETE:
+        return 3;
+
+    default:
+        mxb_assert(!true);
+        return 0;
+    }
+}
+}
+
 /**
  * @brief Allocate an Avro table
  *
@@ -183,7 +209,7 @@ void AvroConverter::flush_tables()
 }
 
 void AvroConverter::prepare_row(const Table& create, const gtid_pos_t& gtid,
-                                const REP_HEADER& hdr, int event_type)
+                                const REP_HEADER& hdr, RowEvent event_type)
 {
     avro_generic_value_new(m_writer_iface, &m_record);
     avro_value_get_by_name(&m_record, avro_domain, &m_field, NULL);
@@ -202,7 +228,7 @@ void AvroConverter::prepare_row(const Table& create, const gtid_pos_t& gtid,
     avro_value_set_int(&m_field, hdr.timestamp);
 
     avro_value_get_by_name(&m_record, avro_event_type, &m_field, NULL);
-    avro_value_set_enum(&m_field, event_type);
+    avro_value_set_enum(&m_field, rowevent_to_enum_offset(event_type));
 }
 
 bool AvroConverter::commit(const Table& create, const gtid_pos_t& gtid)
