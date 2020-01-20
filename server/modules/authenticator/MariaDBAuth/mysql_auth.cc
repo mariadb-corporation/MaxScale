@@ -348,13 +348,12 @@ bool MariaDBAuthenticatorModule::add_service_user(SERVICE* service)
     serviceGetUser(service, &user, &password);
 
     std::string pw = decrypt_password(password);
-    char* newpw = create_hex_sha1_sha1_passwd(pw.c_str());
-    if (newpw)
+    std::string newpw = mxs::create_hex_sha1_sha1_passwd(pw.c_str());
+    if (!newpw.empty())
     {
         sqlite3* handle = get_handle();
-        add_mysql_user(handle, user, "%", "", "Y", newpw);
-        add_mysql_user(handle, user, "localhost", "", "Y", newpw);
-        MXS_FREE(newpw);
+        add_mysql_user(handle, user, "%", "", "Y", newpw.c_str());
+        add_mysql_user(handle, user, "localhost", "", "Y", newpw.c_str());
         rval = true;
     }
 

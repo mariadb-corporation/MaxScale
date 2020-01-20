@@ -115,7 +115,6 @@ void        gw_str_xor(uint8_t* output, const uint8_t* input1, const uint8_t* in
 void        gw_sha1_str(const uint8_t* in, int in_len, uint8_t* out);
 void        gw_sha1_2_str(const uint8_t* in, int in_len, const uint8_t* in2, int in2_len, uint8_t* out);
 int         gw_getsockerrno(int fd);
-char*       create_hex_sha1_sha1_passwd(const char* passwd);
 
 void  replace_whitespace(char* str);
 char* squeeze_whitespace(char* str);

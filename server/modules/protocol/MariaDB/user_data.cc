@@ -202,30 +202,28 @@ void MariaDBUserManager::updater_thread_function()
         m_notifier.wait_until(lock, next_scheduled_update, should_stop_waiting);
         lock.unlock();
 
-        auto update_result = UpdateResult::FAIL;
         if (m_keep_running.load(acquire))
         {
-            update_result = update_users();
-            if (update_result == UpdateResult::FAIL)
-            {
-                m_consecutive_failed_loads++;
-            }
-            else
+            if (update_users())
             {
                 m_consecutive_failed_loads = 0;
                 m_successful_loads++;
                 m_warn_no_servers = true;
             }
+            else
+            {
+                m_consecutive_failed_loads++;
+            }
         }
 
         m_can_update.store(false, release);
-        m_service->sync_user_account_caches(update_result == UpdateResult::SUCCESS_CHANGED);
+        m_service->sync_user_account_caches();
         m_update_users_requested.store(false, release);
         last_update = Clock::now();
     }
 }
 
-MariaDBUserManager::UpdateResult MariaDBUserManager::update_users()
+bool MariaDBUserManager::update_users()
 {
     MariaDB::ConnectionSettings sett;
     std::vector<SERVER*> backends;
@@ -262,7 +260,7 @@ MariaDBUserManager::UpdateResult MariaDBUserManager::update_users()
         };
     std::sort(backends.begin(), backends.end(), compare);
 
-    auto update_result = UpdateResult::FAIL;
+    bool update_result = false;
     auto load_result = LoadResult::QUERY_FAILED;
     for (size_t i = 0; i < backends.size() && load_result == LoadResult::QUERY_FAILED; i++)
     {
@@ -299,7 +297,6 @@ MariaDBUserManager::UpdateResult MariaDBUserManager::update_users()
                     MXB_INFO("Read %lu user@host entries from '%s' for service '%s'. The data was "
                              "identical to existing user data.",
                              m_userdb.n_entries(), srv->name(), m_service->name());
-                    update_result = UpdateResult::SUCCESS_NO_CHANGE;
                 }
                 else
                 {
@@ -311,8 +308,8 @@ MariaDBUserManager::UpdateResult MariaDBUserManager::update_users()
                     }
                     MXB_NOTICE("Read %lu user@host entries from '%s' for service '%s'.",
                                m_userdb.n_entries(), srv->name(), m_service->name());
-                    update_result = UpdateResult::SUCCESS_CHANGED;
                 }
+                update_result = true;
                 break;
 
             case LoadResult::QUERY_FAILED:
@@ -589,6 +586,11 @@ json_t* MariaDBUserManager::users_to_json() const
 {
     Guard guard(m_userdb_lock);
     return m_userdb.users_to_json();
+}
+
+SERVICE* MariaDBUserManager::service() const
+{
+    return m_service;
 }
 
 void UserDatabase::add_entry(const std::string& username, const UserEntry& entry)
@@ -1096,6 +1098,11 @@ json_t* UserDatabase::users_to_json() const
     return rval;
 }
 
+bool UserDatabase::empty() const
+{
+    return m_users.empty();
+}
+
 MariaDBUserCache::MariaDBUserCache(const MariaDBUserManager& master)
     : m_master(master)
 {
@@ -1165,14 +1172,29 @@ MariaDBUserCache::find_user(const string& user, const string& host, const string
 
     if (!found)
     {
-        MXB_INFO("Found no matching user for client '%s'@'%s'.", userz, hostz);
+        // Did not find a matching entry. If service user is allowed, try matching to one.
+        // Username match is enough for this stage. The authenticator will check that the password matches.
+        if (sett.listener.allow_service_user && m_service_entry && (user == m_service_entry->username))
+        {
+            rval = std::make_unique<UserEntry>(*m_service_entry);
+        }
+
+        if (!rval)
+        {
+            MXB_INFO("Found no matching user for client '%s'@'%s'.", userz, hostz);
+        }
     }
     return rval;
 }
 
 void MariaDBUserCache::update_from_master()
 {
-    m_master.get_user_database(&m_userdb, &m_userdb_version);
+    if (m_userdb_version < m_master.userdb_version())
+    {
+        // Master db has updated data, copy it.
+        m_master.get_user_database(&m_userdb, &m_userdb_version);
+    }
+    update_service_user();
 }
 
 bool MariaDBUserCache::can_update_immediately() const
@@ -1189,4 +1211,32 @@ bool MariaDBUserCache::can_update_immediately() const
 int MariaDBUserCache::version() const
 {
     return m_userdb_version;
+}
+
+void MariaDBUserCache::update_service_user()
+{
+    // If the user database is empty, add the service-user. It will only be used with listeners who have
+    // inject_service_user on.
+    SUserEntry result;
+    if (m_userdb.empty())
+    {
+        const char* service_user = nullptr;
+        const char* service_pw = nullptr;
+        serviceGetUser(m_master.service(), &service_user, &service_pw);
+
+        // The equivalent password in the mysql user entry is HEX(SHA1(SHA1(cleartext_pw))).
+        string cleartext_pw = decrypt_password(service_pw);
+        if (!cleartext_pw.empty())
+        {
+            string hexpass = mxs::create_hex_sha1_sha1_passwd(cleartext_pw.c_str());
+            auto entry = std::make_unique<mariadb::UserEntry>();
+            entry->username = service_user;
+            entry->host_pattern = "%";
+            entry->password = hexpass;
+            // The service-user only works with standard authentication.
+            entry->plugin = "mysql_native_password";
+            result = move(entry);
+        }
+    }
+    m_service_entry = move(result);
 }

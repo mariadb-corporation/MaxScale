@@ -164,10 +164,10 @@ public:
      *  and updated its internal database. Calling this function causes the service to sync all
      *  thread-specific user data caches with the master data.
      *
-     *  @param data_changed True if user account data has actually changed. The empty updates are also
-     *  broadcasted as they may be of interest to any sessions waiting for an update.
+     *  Even empty (no changes) and failed updates should be broadcasted as they may be of interest
+     *  to any sessions waiting for user account data.
      */
-    virtual void sync_user_account_caches(bool data_changed) = 0;
+    virtual void sync_user_account_caches() = 0;
 
     /**
      * Add a client connection to the list of clients to wakeup on userdata load.

@@ -228,7 +228,7 @@ public:
     const mxs::UserAccountCache* user_account_cache() const override;
 
     void request_user_account_update() override;
-    void sync_user_account_caches(bool data_changed) override;
+    void sync_user_account_caches() override;
 
     mxs::UserAccountManager* user_account_manager();
 

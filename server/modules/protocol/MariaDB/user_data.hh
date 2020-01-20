@@ -44,6 +44,7 @@ public:
     void   clear();
     size_t n_usernames() const;
     size_t n_entries() const;
+    bool   empty() const;
 
     /**
      * Find a user entry with matching user & host.
@@ -173,7 +174,8 @@ public:
      */
     void get_user_database(UserDatabase* userdb_out, int* version_out) const;
 
-    int userdb_version() const;
+    int      userdb_version() const;
+    SERVICE* service() const;
 
 private:
     using QResult = std::unique_ptr<mxq::QueryResult>;
@@ -185,14 +187,7 @@ private:
         INVALID_DATA,
     };
 
-    enum class UpdateResult
-    {
-        SUCCESS_NO_CHANGE,
-        SUCCESS_CHANGED,
-        FAIL
-    };
-
-    UpdateResult update_users();
+    bool         update_users();
     LoadResult   load_users_mariadb(mxq::MariaDB& conn, SERVER* srv, UserDatabase* output);
     LoadResult   load_users_clustrix(mxq::MariaDB& con, SERVER* srv, UserDatabase* output);
 
@@ -257,8 +252,13 @@ public:
     int  version() const;
 
 private:
+    void update_service_user();
+
     const MariaDBUserManager& m_master;     /**< User database master copy */
 
     UserDatabase m_userdb;              /**< Local copy of user database */
     int          m_userdb_version {0};  /**< Version of local copy */
+
+    /* Service user entry, used with inject_service_user */
+    std::unique_ptr<mariadb::UserEntry> m_service_entry;
 };

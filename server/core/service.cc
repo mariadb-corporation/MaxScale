@@ -1679,13 +1679,13 @@ void Service::request_user_account_update()
     user_account_manager()->update_user_accounts();
 }
 
-void Service::sync_user_account_caches(bool data_changed)
+void Service::sync_user_account_caches()
 {
     // Message each routingworker to update their caches. Do not wait for operation to finish.
-    auto update_cache = [this, data_changed]()
+    auto update_cache = [this]()
     {
         auto& user_cache = *m_usercache;
-        if (user_cache && data_changed)
+        if (user_cache)
         {
             user_cache->update_from_master();
         }

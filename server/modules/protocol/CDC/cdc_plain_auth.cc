@@ -264,8 +264,8 @@ int CDCAuthenticatorModule::set_service_user(SERVICE* service)
     serviceGetUser(service, &service_user, &service_passwd);
 
     auto dpwd = decrypt_password(service_passwd);
-    char* newpasswd = create_hex_sha1_sha1_passwd(dpwd.c_str());
-    if (!newpasswd)
+    std::string newpasswd = mxs::create_hex_sha1_sha1_passwd(dpwd.c_str());
+    if (newpasswd.empty())
     {
         MXS_ERROR("create hex_sha1_sha1_password failed for service user %s", service_user);
         return 1;
@@ -273,9 +273,6 @@ int CDCAuthenticatorModule::set_service_user(SERVICE* service)
 
     /* add service user */
     m_userdata.add(service_user, newpasswd, USER_ACCOUNT_ADMIN);
-
-    MXS_FREE(newpasswd);
-
     return 0;
 }
 

@@ -602,4 +602,12 @@ int get_kernel_version();
  * @return True if the system supports SO_REUSEPORT
  */
 bool have_so_reuseport();
+
+/**
+ * Create a HEX(SHA1(SHA1(password)))
+ *
+ * @param password      Cleartext password
+ * @return              Double-hashed password
+ */
+std::string create_hex_sha1_sha1_passwd(const char* passwd);
 }
