@@ -28,10 +28,6 @@
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include <maxscale/workerlocal.hh>
 
-/** Cache directory and file names */
-static const char DBUSERS_DIR[] = "cache";
-static const char DBUSERS_FILE[] = "dbusers.db";
-
 /** The table name where we store the users */
 #define MYSQLAUTH_USERS_TABLE_NAME "mysqlauth_users"
 
@@ -76,12 +72,6 @@ static const char mysqlauth_validate_database_query[] =
 static const char mysqlauth_validate_database_query_lower[] =
     "SELECT * FROM " MYSQLAUTH_DATABASES_TABLE_NAME " WHERE LOWER(db) = LOWER('%s') LIMIT 1";
 
-/** Delete query used to clean up the database before loading new users */
-static const char delete_users_query[] = "DELETE FROM " MYSQLAUTH_USERS_TABLE_NAME;
-
-/** Delete query used to clean up the database before loading new users */
-static const char delete_databases_query[] = "DELETE FROM " MYSQLAUTH_DATABASES_TABLE_NAME;
-
 /** The insert query template which adds users to the mysqlauth_users table */
 static const char insert_user_query[] =
     "INSERT OR REPLACE INTO " MYSQLAUTH_USERS_TABLE_NAME " VALUES ('%s', '%s', %s, %s, %s)";
@@ -89,12 +79,6 @@ static const char insert_user_query[] =
 /** The insert query template which adds the databases to the table */
 static const char insert_database_query[] =
     "INSERT OR REPLACE INTO " MYSQLAUTH_DATABASES_TABLE_NAME " VALUES ('%s')";
-
-static const char dump_users_query[] =
-    "SELECT user, host, db, anydb, password FROM " MYSQLAUTH_USERS_TABLE_NAME;
-
-static const char dump_databases_query[] =
-    "SELECT db FROM " MYSQLAUTH_DATABASES_TABLE_NAME;
 
 /** Used for NULL value creation in the INSERT query */
 static const char null_token[] = "NULL";
@@ -113,7 +97,6 @@ public:
     mariadb::SClientAuth  create_client_authenticator() override;
     mariadb::SBackendAuth create_backend_authenticator() override;
 
-    int         load_users(SERVICE* service);
     json_t*     diagnostics() override;
     uint64_t    capabilities() const override;
     std::string supported_protocol() const override;
@@ -137,9 +120,7 @@ public:
     bool  m_lower_case_table_names {false};     /**< Disable database case-sensitivity */
 
 private:
-    int  get_users(SERVICE* service, bool skip_local, SERVER** srv);
     int  get_users_from_server(MYSQL* con, SERVER* server, SERVICE* service);
-    bool add_service_user(SERVICE* service);
 };
 
 class MariaDBClientAuthenticator : public mariadb::ClientAuthenticatorT<MariaDBAuthenticatorModule>
@@ -180,8 +161,6 @@ private:
                                 const mariadb::ClientAuthenticator::ByteVec& auth_token,
                                 uint8_t* phase2_scramble_out);
     bool check_database(sqlite3* handle, const char* database);
-    bool set_client_data(MYSQL_session* client_data);
-    void read_auth_switch_response(MYSQL_session* client_data, GWBUF* buffer);
 
     State m_state {State::INIT};
 };

@@ -156,8 +156,6 @@ enum server_category_t
 
 static MYSQL* gw_mysql_init(void);
 static int    gw_mysql_set_timeouts(MYSQL* handle);
-static char*  mysql_format_user_entry(void* data);
-static bool   get_hostname(DCB* dcb, char* client_hostname, size_t size);
 
 static char* get_mariadb_102_users_query(bool include_root)
 {
@@ -376,27 +374,6 @@ AuthRes MariaDBClientAuthenticator::validate_mysql_user(const UserEntry* entry,
     {
         /** Password is OK. TODO: add check that the database exists to main user manager */
         rval = AuthRes::SUCCESS;
-    }
-
-    return rval;
-}
-
-/**
- * @brief Delete all users
- *
- * @param handle SQLite handle
- */
-static bool delete_mysql_users(sqlite3* handle)
-{
-    bool rval = true;
-    char* err;
-
-    if (sqlite3_exec(handle, delete_users_query, NULL, NULL, &err) != SQLITE_OK
-        || sqlite3_exec(handle, delete_databases_query, NULL, NULL, &err) != SQLITE_OK)
-    {
-        MXS_ERROR("Failed to delete old users: %s", err);
-        sqlite3_free(err);
-        rval = false;
     }
 
     return rval;
@@ -882,52 +859,6 @@ bool check_service_permissions(SERVICE* service)
     return rval;
 }
 
-/**
- * @brief Get client hostname
- *
- * Queries the DNS server for the client's hostname.
- *
- * @param ip_address      Client IP address
- * @param client_hostname Output buffer for hostname
- *
- * @return True if the hostname query was successful
- */
-static bool get_hostname(DCB* dcb, char* client_hostname, size_t size)
-{
-    struct addrinfo* ai = NULL, hint = {};
-    hint.ai_flags = AI_ALL;
-    int rc;
-
-    if ((rc = getaddrinfo(dcb->remote().c_str(), NULL, &hint, &ai)) != 0)
-    {
-        MXS_ERROR("Failed to obtain address for host %s, %s",
-                  dcb->remote().c_str(),
-                  gai_strerror(rc));
-        return false;
-    }
-
-    /* Try to lookup the domain name of the given IP-address. This is a slow
-     * i/o-operation, which will stall the entire thread. TODO: cache results
-     * if this feature is used often. */
-    int lookup_result = getnameinfo(ai->ai_addr,
-                                    ai->ai_addrlen,
-                                    client_hostname,
-                                    size,
-                                    NULL,
-                                    0,              // No need for the port
-                                    NI_NAMEREQD);   // Text address only
-    freeaddrinfo(ai);
-
-    if (lookup_result != 0 && lookup_result != EAI_NONAME)
-    {
-        MXS_WARNING("Client hostname lookup failed for '%s', getnameinfo() returned: '%s'.",
-                    dcb->remote().c_str(),
-                    gai_strerror(lookup_result));
-    }
-
-    return lookup_result == 0;
-}
-
 static bool roles_are_available(MYSQL* conn, SERVICE* service, SERVER* server)
 {
     bool rval = false;
@@ -1133,93 +1064,3 @@ int MariaDBAuthenticatorModule::get_users_from_server(MYSQL* con, SERVER* server
     return users;
 }
 
-// Sorts candidates servers so that masters are before slaves which are before only running servers
-static std::vector<SERVER*> get_candidates(SERVICE* service, bool skip_local)
-{
-    std::vector<SERVER*> candidates;
-
-    for (auto server : service->reachable_servers())
-    {
-        if (server->is_running() && (!skip_local || !server->is_mxs_service()))
-        {
-            candidates.push_back(server);
-        }
-    }
-
-    std::sort(candidates.begin(), candidates.end(), [](SERVER* a, SERVER* b) {
-                  return (a->is_master() && !b->is_master())
-                  || (a->is_slave() && !b->is_slave() && !b->is_master());
-              });
-
-    return candidates;
-}
-
-/**
- * Load the user/passwd form mysql.user table into the service users' hashtable
- * environment.
- *
- * @param service   The current service
- * @return          -1 on any error or the number of users inserted
- */
-int MariaDBAuthenticatorModule::get_users(SERVICE* service, bool skip_local, SERVER** srv)
-{
-    const char* service_user = NULL;
-    const char* service_passwd = NULL;
-
-    serviceGetUser(service, &service_user, &service_passwd);
-
-    auto dpwd = decrypt_password(service_passwd);
-
-    /** Delete the old users */
-    sqlite3* handle = get_handle();
-    delete_mysql_users(handle);
-
-    int total_users = -1;
-    auto candidates = get_candidates(service, skip_local);
-
-    for (auto server : candidates)
-    {
-        if (MYSQL* con = gw_mysql_init())
-        {
-            if (mxs_mysql_real_connect(con, server, service_user, dpwd.c_str()) == NULL)
-            {
-                MXS_ERROR("Failure loading users data from backend [%s:%i] for service [%s]. "
-                          "MySQL error %i, %s", server->address, server->port, service->name(),
-                          mysql_errno(con), mysql_error(con));
-                mysql_close(con);
-            }
-            else
-            {
-                /** Successfully connected to a server */
-                int users = get_users_from_server(con, server, service);
-
-                if (users > total_users)
-                {
-                    *srv = server;
-                    total_users = users;
-                }
-
-                mysql_close(con);
-
-                if (!service->config().users_from_all)
-                {
-                    break;
-                }
-            }
-        }
-    }
-
-    if (candidates.empty())
-    {
-        // This service has no servers or all servers are local MaxScale services
-        total_users = 0;
-    }
-    else if (*srv == nullptr && total_users == -1)
-    {
-        MXS_ERROR("Unable to get user data from backend database for service [%s]."
-                  " Failed to connect to any of the backend databases.",
-                  service->name());
-    }
-
-    return total_users;
-}
