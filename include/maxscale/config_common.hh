@@ -601,3 +601,17 @@ inline bool get_suffixed_duration(const char* zValue,
 
     return rv;
 }
+
+/**
+ * Converts a string into the corresponding value, interpreting
+ * IEC or SI prefixes used as suffixes appropriately.
+ *
+ * @param value A numerical string, possibly suffixed by a IEC binary prefix or
+ *              SI prefix.
+ * @param dest  Pointer where the result is stored. If set to NULL, only the
+ *              validity of value is checked.
+ *
+ * @return True on success, false on invalid input in which case contents of
+ *         `dest` are left in an undefined state
+ */
+bool get_suffixed_size(const char* value, uint64_t* dest);
