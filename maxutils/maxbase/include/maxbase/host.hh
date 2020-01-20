@@ -32,25 +32,30 @@ class Host
 {
 public:
     enum class Type {Invalid, UnixDomainSocket, HostName, IPV4, IPV6};      // to_string() provided
-    static constexpr int DefaultPort = 3306;
+    static constexpr int InvalidPort = -1;
 
     Host() = default;   // type() returns Type::Invalid
 
     /**
-     * Constructor
+     * @brief from_string
      * @param str.  A string parsed according to this format (the brackets are real brackets):
-     *              unix_domain_socket | addr | [addr] | [addr]:port
+     *              unix_domain_socket | addr | addr:port | [addr] | [addr]:port
      *              'addr' is a plain ipv4, ipv6, host name or unix domain socket.
      *              An ipv6 address with a port must use the format [ipv6]:port.
-     *              A unix domain socket must start with a forward slash ('/') and must not specify a port.
-     *              The default port is 3306.
+     *              A unix domain socket must start with a forward slash ('/') and must not specify a port
+     *              either in the string or as default_port (-1 will be accepted).
+     *              The default port is InvalidPort.
+     * @return Host. Check with is_valid() that the input string could be parsed, and port is ok.
      */
-    explicit Host(const std::string& input);
+    static Host from_string(const std::string& input, int default_port = InvalidPort);
 
     /**
-     * Constructor
+     * Constructor. Set the address and port. Validation is performed on the combination,
+     *              and the Type is set. The passed in address and port are always set without
+     *              modification, regardless of validation results, and can be read back with
+     *              the address() and port() functions.
      * @param addr. Plain ipv4, ipv6, host name or unix domain socket (no brackets or port specifiers).
-     * @param port. A valid port number. Ignored if 'addr' is a unix domain socket (starts with '/').
+     * @param port. Port number. If 'addr' is a unix domain socket, port must be InvalidPort.
      */
     Host(const std::string& addr, int port);
 
@@ -64,10 +69,10 @@ public:
     static bool is_valid_ipv4(const std::string& ip);
     static bool is_valid_ipv6(const std::string& ip);
 private:
-    void set_type(bool port_string_specified);      // set m_type based on m_address and m_port
+    void set_type();        // set m_type based on m_address and m_port
 
     std::string m_address;
-    int         m_port = DefaultPort;
+    int         m_port;
     Type        m_type = Type::Invalid;
     std::string m_org_input;
 };

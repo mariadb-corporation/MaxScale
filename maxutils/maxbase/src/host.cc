@@ -92,11 +92,11 @@ std::string to_string(Host::Type type)
     return i >= host_type_names.size() ? "UNKNOWN" : host_type_names[i];
 }
 
-void Host::set_type(bool port_string_specified)
+void Host::set_type()
 {
     if (is_valid_socket(m_address))
     {
-        if (!port_string_specified)
+        if (!is_valid_port(m_port))
         {
             m_type = Type::UnixDomainSocket;
         }
@@ -118,17 +118,17 @@ void Host::set_type(bool port_string_specified)
     }
 }
 
-Host::Host(const std::string& in)
+Host Host::from_string(const std::string& in, int default_port)
 {
-    m_org_input = in;
     std::string input = maxbase::trimmed_copy(in);
 
     if (input.empty())
     {
-        return;
+        return Host();
     }
 
     std::string port_part;
+    std::string address_part;
 
     // 'ite' is left pointing into the input if there is an error in parsing. Not exhaustive error checking.
     auto ite = input.begin();
@@ -136,7 +136,7 @@ Host::Host(const std::string& in)
     if (*ite == '[')
     {   // expecting [address]:port, where :port is optional
         auto last = std::find(begin(input), end(input), ']');
-        std::copy(++ite, last, std::back_inserter(m_address));
+        std::copy(++ite, last, std::back_inserter(address_part));
         if (last != end(input))
         {
             if (++last != end(input) && *last == ':' && last + 1 != end(input))
@@ -152,14 +152,14 @@ Host::Host(const std::string& in)
     {
         if (is_valid_ipv6(input))
         {
-            m_address = input;
+            address_part = input;
             ite = end(input);
         }
         else
         {
             // expecting address:port, where :port is optional => (hostnames with colons must use [xxx]:port)
             auto colon = std::find(begin(input), end(input), ':');
-            std::copy(begin(input), colon, std::back_inserter(m_address));
+            std::copy(begin(input), colon, std::back_inserter(address_part));
             ite = colon;
             if (colon != end(input) && ++colon != end(input))
             {
@@ -169,6 +169,7 @@ Host::Host(const std::string& in)
         }
     }
 
+    int port = default_port;
     if (ite == end(input))      // if all input consumed
     {
         if (!port_part.empty())
@@ -177,11 +178,17 @@ Host::Host(const std::string& in)
                                           [](char ch) {
                                               return std::isdigit(ch);
                                           });
-            m_port = all_digits ? std::atoi(port_part.c_str()) : -1;
+            port = all_digits ? std::atoi(port_part.c_str()) : InvalidPort;
         }
-
-        set_type(!port_part.empty());
     }
+
+    Host ret;
+    ret.m_org_input = in;
+    ret.m_address = address_part;
+    ret.m_port = port;
+    ret.set_type();
+
+    return ret;
 }
 
 Host::Host(const std::string& addr, int port)
@@ -192,7 +199,7 @@ Host::Host(const std::string& addr, int port)
 
     if (!m_address.empty() && m_address.front() != '[')
     {
-        set_type(false);
+        set_type();
     }
 }
 
@@ -225,18 +232,20 @@ std::istream& operator>>(std::istream& is, Host& host)
 {
     std::string input;
     is >> input;
-    host = Host(input);
+    host = Host::from_string(input);
     return is;
 }
 
-bool name_lookup(const std::string& host, std::unordered_set<std::string>* addresses_out, std::string* error_out)
+bool name_lookup(const std::string& host,
+                 std::unordered_set<std::string>* addresses_out,
+                 std::string* error_out)
 {
     addrinfo hints;
     memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_UNSPEC;     /* Return any address type */
-    hints.ai_socktype = SOCK_DGRAM;  /* Datagram socket */
-    hints.ai_flags = 0;              /* Mapped IPv4 */
-    hints.ai_protocol = 0;           /* Any protocol */
+    hints.ai_family = AF_UNSPEC;    /* Return any address type */
+    hints.ai_socktype = SOCK_DGRAM; /* Datagram socket */
+    hints.ai_flags = 0;             /* Mapped IPv4 */
+    hints.ai_protocol = 0;          /* Any protocol */
     hints.ai_canonname = nullptr;
     hints.ai_addr = nullptr;
     hints.ai_next = nullptr;
@@ -253,7 +262,7 @@ bool name_lookup(const std::string& host, std::unordered_set<std::string>* addre
         {
             int address_family = iter->ai_family;
             void* addr = nullptr;
-            char buf[INET6_ADDRSTRLEN]; // Enough for both address types
+            char buf[INET6_ADDRSTRLEN];     // Enough for both address types
             if (iter->ai_family == AF_INET)
             {
                 auto sa_in = (sockaddr_in*)(iter->ai_addr);
@@ -269,7 +278,7 @@ bool name_lookup(const std::string& host, std::unordered_set<std::string>* addre
             if (buf[0])
             {
                 addresses_out->insert(buf);
-                success = true; // One successful lookup is enough.
+                success = true;     // One successful lookup is enough.
             }
         }
         freeaddrinfo(results);

@@ -65,7 +65,7 @@ void eval(const maxbase::Host& host, maxbase::Host::Type expected)
 
 void test(const std::string& str, maxbase::Host::Type expected)
 {
-    maxbase::Host host(str);
+    maxbase::Host host {maxbase::Host::from_string(str)};
     eval(host, expected);
 }
 }
@@ -78,13 +78,8 @@ try
     std::cout << "The following should be VALID!!!!!\n";
     test("/tmp/socket", maxbase::Host::Type::UnixDomainSocket);
     test("[/home/socket]", maxbase::Host::Type::UnixDomainSocket);
-    test("0.0.0.0", maxbase::Host::Type::IPV4);
-    test("127.0.0.1", maxbase::Host::Type::IPV4);
-    test("[127.0.0.1]", maxbase::Host::Type::IPV4);
     test("127.0.0.1:4001", maxbase::Host::Type::IPV4);
     test("[127.0.0.1]:4001", maxbase::Host::Type::IPV4);
-    test("fe80::37f8:99a2:558a:9f5d", maxbase::Host::Type::IPV6);
-    test("[fe80::37f8:99a2:558a:9f5d]", maxbase::Host::Type::IPV6);
     test("[fe80::37f8:99a2:558a:9f5d]:4001", maxbase::Host::Type::IPV6);
     test("[::]:4001", maxbase::Host::Type::IPV6);
     test("google.com:80", maxbase::Host::Type::HostName);
@@ -95,17 +90,21 @@ try
     test("[127.0.0.1]:42B", maxbase::Host::Type::Invalid);
     test("[127.0.0.1]:", maxbase::Host::Type::Invalid);
     test("[127.0.0.1:", maxbase::Host::Type::Invalid);
+    test("[127.0.0.1]", maxbase::Host::Type::Invalid);
+    test("127.0.0.1", maxbase::Host::Type::Invalid);
     test("_hello_world.fi:3333", maxbase::Host::Type::Invalid);
 
     std::cout << "\nRegular Constructor!!!!!\n";
 
     std::cout << "The following should be VALID!!!!!\n";
+    eval({"/tmp/socket", maxbase::Host::InvalidPort}, maxbase::Host::Type::UnixDomainSocket);
     eval({"google.com", 80}, maxbase::Host::Type::HostName);
     eval({"123.345.678.901", 4444}, maxbase::Host::Type::IPV4);
     eval({"::", 5555}, maxbase::Host::Type::IPV6);
     eval({"ABCD:ABCD:ABCD:ABCD:ABCD:ABCD:123.123.123.123", 5555}, maxbase::Host::Type::IPV6);
-    eval({"/tmp/socket", -42}, maxbase::Host::Type::UnixDomainSocket);
+
     std::cout << "The following should be INVALID!!!!!\n";
+    eval({"/tmp/socket", 52}, maxbase::Host::Type::Invalid);
     eval({"127.0.0.1", 999999}, maxbase::Host::Type::Invalid);
     eval({"127.0.0.1", -42}, maxbase::Host::Type::Invalid);
     eval({"Hello::World!", 42}, maxbase::Host::Type::Invalid);
