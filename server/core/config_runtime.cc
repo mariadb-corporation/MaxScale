@@ -2391,7 +2391,7 @@ bool object_to_server_relations(const char* target, json_t* old_json, json_t* ne
     }
     else
     {
-        config_runtime_error("Invalid object relations for '%s'", target);
+        config_runtime_error("Could not find all servers that '%s' relates to", target);
     }
 
     return rval;
@@ -2422,7 +2422,7 @@ bool service_to_filter_relations(Service* service, json_t* old_json, json_t* new
     }
     else
     {
-        config_runtime_error("Invalid object relations for '%s'", service->name());
+        config_runtime_error("Could not find all filters that '%s' relates to", service->name());
     }
 
     return rval;
