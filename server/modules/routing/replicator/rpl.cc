@@ -1440,6 +1440,9 @@ json_t* Table::to_json() const
     json_object_set_new(schema, "namespace", json_string("MaxScaleChangeDataSchema.avro"));
     json_object_set_new(schema, "type", json_string("record"));
     json_object_set_new(schema, "name", json_string("ChangeRecord"));
+    json_object_set_new(schema, "table", json_string(table.c_str()));
+    json_object_set_new(schema, "database", json_string(database.c_str()));
+    json_object_set_new(schema, "version", json_integer(version));
 
     json_t* array = json_array();
     json_array_append_new(array,
