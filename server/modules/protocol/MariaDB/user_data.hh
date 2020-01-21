@@ -41,6 +41,7 @@ public:
     void   add_entry(const std::string& username, const mariadb::UserEntry& entry);
     void   set_dbs_and_roles(StringSetMap&& db_grants, StringSetMap&& roles_mapping);
     void   add_proxy_grant(const std::string& user, const std::string& host);
+    void   add_database_name(const std::string& db_name);
     void   clear();
     size_t n_usernames() const;
     size_t n_entries() const;
@@ -63,6 +64,8 @@ public:
      * @return The found entry, or null if not found
      */
     const mariadb::UserEntry* find_entry(const std::string& username) const;
+
+    bool check_database_exists(const std::string& db) const;
 
     /**
      * Check if user entry can access database. The access may be granted with a direct grant or through
@@ -138,6 +141,8 @@ private:
 
     /** Maps "user@host" to allowed roles. Retrieved from mysql.roles_mapping. */
     StringSetMap m_roles_mapping;
+
+    StringSet m_database_names; /**< Set with existing database names */
 };
 
 class MariaDBUserManager : public mxs::UserAccountManager
@@ -194,8 +199,9 @@ private:
     void updater_thread_function();
 
     bool read_users_mariadb(QResult users, UserDatabase* output);
-    void read_dbs_and_roles(QResult dbs, QResult roles, UserDatabase* output);
+    void read_dbs_and_roles(QResult db_grants, QResult roles, UserDatabase* output);
     void read_proxy_grants(QResult proxies, UserDatabase* output);
+    void read_databases(QResult dbs, UserDatabase* output);
 
     LoadResult read_users_clustrix(QResult users, QResult acl, UserDatabase* output);
 

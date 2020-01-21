@@ -64,6 +64,7 @@ const string db_grants_query =
 const string roles_query = "SELECT a.user, a.host, a.role FROM mysql.roles_mapping AS a;";
 const string proxies_query = "SELECT DISTINCT a.user, a.host FROM mysql.proxies_priv AS a "
                              "WHERE a.proxied_host <> '' AND a.proxied_user <> '';";
+const string db_names_query = "SHOW DATABASES;";
 }
 
 namespace clustrix_queries
@@ -347,10 +348,11 @@ MariaDBUserManager::load_users_mariadb(mxq::MariaDB& con, SERVER* srv, UserDatab
     auto version = srv->version();
     bool role_support = (version.total >= 100005);
 
-    QResult users_res, dbs_res, proxies_res, roles_res;
+    QResult users_res, db_grants_res, dbs_res, proxies_res, roles_res;
     // Perform the queries. All must succeed on the same backend.
     if (((users_res = con.query(mariadb_queries::users_query)) != nullptr)
-        && ((dbs_res = con.query(mariadb_queries::db_grants_query)) != nullptr)
+        && ((db_grants_res = con.query(mariadb_queries::db_grants_query)) != nullptr)
+        && ((dbs_res = con.query(mariadb_queries::db_names_query)) != nullptr)
         && ((proxies_res = con.query(mariadb_queries::proxies_query)) != nullptr))
     {
         if (role_support)
@@ -371,7 +373,8 @@ MariaDBUserManager::load_users_mariadb(mxq::MariaDB& con, SERVER* srv, UserDatab
         rval = LoadResult::INVALID_DATA;
         if (read_users_mariadb(std::move(users_res), output))
         {
-            read_dbs_and_roles(std::move(dbs_res), std::move(roles_res), output);
+            read_dbs_and_roles(std::move(db_grants_res), std::move(roles_res), output);
+            read_databases(std::move(dbs_res), output);
             read_proxy_grants(std::move(proxies_res), output);
             rval = LoadResult::SUCCESS;
         }
@@ -383,11 +386,13 @@ MariaDBUserManager::LoadResult
 MariaDBUserManager::load_users_clustrix(mxq::MariaDB& con, SERVER* srv, UserDatabase* output)
 {
     auto rval = LoadResult::QUERY_FAILED;
-    QResult users_res, acl_res;
+    QResult users_res, acl_res, dbs_res;
     if (((users_res = con.query(clustrix_queries::users_query)) != nullptr)
-        && ((acl_res = con.query(mariadb_queries::db_grants_query)) != nullptr))
+        && ((acl_res = con.query(clustrix_queries::db_grants_query)) != nullptr)
+        && ((dbs_res = con.query(mariadb_queries::db_names_query)) != nullptr))
     {
         rval = read_users_clustrix(std::move(users_res), std::move(acl_res), output);
+        read_databases(std::move(dbs_res), output);
     }
     return rval;
 }
@@ -461,7 +466,7 @@ bool MariaDBUserManager::read_users_mariadb(QResult users, UserDatabase* output)
     return !error;
 }
 
-void MariaDBUserManager::read_dbs_and_roles(QResult dbs, QResult roles, UserDatabase* output)
+void MariaDBUserManager::read_dbs_and_roles(QResult db_grants, QResult roles, UserDatabase* output)
 {
     using StringSetMap = UserDatabase::StringSetMap;
 
@@ -483,8 +488,7 @@ void MariaDBUserManager::read_dbs_and_roles(QResult dbs, QResult roles, UserData
             return result;
         };
 
-    // The maps are mutex-protected. Before locking, prepare the result maps entirely.
-    StringSetMap new_db_grants = map_builder("db", std::move(dbs));
+    StringSetMap new_db_grants = map_builder("db", std::move(db_grants));
     StringSetMap new_roles_mapping;
     if (roles)
     {
@@ -511,6 +515,20 @@ void MariaDBUserManager::read_proxy_grants(MariaDBUserManager::QResult proxies, 
     }
 }
 
+void MariaDBUserManager::read_databases(MariaDBUserManager::QResult dbs, UserDatabase* output)
+{
+    // Should just have one column.
+    if (dbs->get_col_count() == 1)
+    {
+        UserDatabase::StringSet db_names;
+        while (dbs->next_row())
+        {
+            output->add_database_name(dbs->get_string(0));
+        }
+    }
+
+}
+
 MariaDBUserManager::LoadResult
 MariaDBUserManager::read_users_clustrix(QResult users, QResult acl, UserDatabase* output)
 {
@@ -535,7 +553,7 @@ MariaDBUserManager::read_users_clustrix(QResult users, QResult acl, UserDatabase
             new_entry.host_pattern = users->get_string(ind_host);
             new_entry.password = users->get_string(ind_pw);
             new_entry.plugin = users->get_string(ind_plugin);
-            new_entry.global_db_priv = (users->get_string(ind_priv) == "Y");
+            new_entry.global_db_priv = (acl->get_string(ind_priv) == "Y");
             output->add_entry(username, new_entry);
         }
         // TODO: read database privileges
@@ -1101,6 +1119,16 @@ json_t* UserDatabase::users_to_json() const
 bool UserDatabase::empty() const
 {
     return m_users.empty();
+}
+
+void UserDatabase::add_database_name(const std::string& db_name)
+{
+    m_database_names.insert(db_name);
+}
+
+bool UserDatabase::check_database_exists(const std::string& db) const
+{
+    return m_database_names.count(db) > 0;
 }
 
 MariaDBUserCache::MariaDBUserCache(const MariaDBUserManager& master)
