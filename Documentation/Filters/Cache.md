@@ -1065,17 +1065,25 @@ there can be unintended sharing.
 ```
 storage=storage_memcached
 ```
-This storage module requires at minimum arguments that specify where
-the memcached server is located.
-```
-storage_options="--SERVER=127.0.0.1"
-```
-The string provided as value for `storage_options` is used verbatim when
-creating the [libmemcached](https://libmemcached.org/libMemcached.html)
-client handle. Please see the
-[description](http://docs.libmemcached.org/libmemcached_configuration.html#description
-for what arguments can be provided.
+`storage_memcache` has the following mandatory arguments:
 
+* `server` using which the location of the server is specified as `host[:port]`.
+  If no port is provided, the default Memcached port of `11211` is used.
+
+`storage_memcached` has the following optional arguments:
+
+* `max_value_size` using which the maximum size of a cached value is specified.
+  By default, the maximum size of a value stored to memcached is 1MB, but that
+  configured to be something else. The value of `max_value_size` will be used
+  for capping `max_resultset_size`, that is, unless memcached is configured to
+  allow larger  values that 1M and `max_value_size` has been set accordingly,
+  only resultsets up to 1MB in size will be cached. The value can be specified
+  as documented [here](../Getting-Started/Configuration-Guide.md/#sizes).
+
+Example:
+```
+storage_options="server=192.168.1.31:11211, max_value_size=10M"
+```
 #### Limitations
 * Invalidation is not supported.
 * There is no distinction between _soft_ and _hard_ ttl, but only hard ttl is used.

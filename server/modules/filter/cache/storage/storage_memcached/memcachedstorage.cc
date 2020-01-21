@@ -17,8 +17,10 @@
 #include <libmemcached/memcached.h>
 #include <libmemcached-1.0/strerror.h>
 #include <maxbase/worker.hh>
+#include <maxscale/config_common.hh>
 #include <maxscale/threadpool.hh>
 
+using std::map;
 using std::shared_ptr;
 using std::string;
 using std::vector;
@@ -26,14 +28,10 @@ using std::vector;
 namespace
 {
 
-struct
-{
-    Storage::Limits default_limits;
-} this_unit =
-{
-    Storage::Limits(1 * 1024 * 1024) // max_value_size
-};
+const char CN_MEMCACHED_MAX_VALUE_SIZE[] = "max_value_size";
 
+const int DEFAULT_MEMCACHED_PORT = 11211;
+const int DEFAULT_MAX_VALUE_SIZE = 1 * 1024 * 1024;
 
 class MemcachedToken : public std::enable_shared_from_this<MemcachedToken>,
                        public Storage::Token
@@ -258,9 +256,11 @@ private:
 
 MemcachedStorage::MemcachedStorage(const string& name,
                                    const Config& config,
+                                   uint32_t max_value_size,
                                    const string& memcached_config)
     : m_name(name)
     , m_config(config)
+    , m_limits(max_value_size)
     , m_memcached_config(memcached_config)
 {
     if (config.soft_ttl != config.hard_ttl)
@@ -309,7 +309,7 @@ void MemcachedStorage::finalize()
 //static
 MemcachedStorage* MemcachedStorage::create(const std::string& name,
                                            const Config& config,
-                                           const std::string& arguments)
+                                           const std::string& argument_string)
 {
     MemcachedStorage* pStorage = nullptr;
 
@@ -331,14 +331,74 @@ MemcachedStorage* MemcachedStorage::create(const std::string& name,
                         "a maximum number of items in the cache storage.");
         }
 
-        // Only for checking that the configuration is acceptable.
-        memcached_st* pMemc = memcached(arguments.c_str(), arguments.size());
+        map<string, string> arguments;
 
-        if (pMemc)
+        if (Storage::split_arguments(argument_string, &arguments))
         {
-            pStorage = new (std::nothrow) MemcachedStorage(name, config, arguments);
+            bool error = false;
 
-            memcached_free(pMemc);
+            mxb::Host host;
+            int max_value_size = DEFAULT_MAX_VALUE_SIZE;
+
+            decltype(arguments)::iterator it;
+
+            it = arguments.find(CN_STORAGE_ARG_SERVER);
+
+            if (it != arguments.end())
+            {
+                if (!Storage::get_host(it->second, DEFAULT_MEMCACHED_PORT, &host))
+                {
+                    error = true;
+                }
+
+                arguments.erase(it);
+            }
+            else
+            {
+                MXS_ERROR("The mandatory argument '%s' is missing.", CN_STORAGE_ARG_SERVER);
+                error = true;
+            }
+
+            it = arguments.find(CN_MEMCACHED_MAX_VALUE_SIZE);
+
+            if (it != arguments.end())
+            {
+                uint64_t size;
+                if (get_suffixed_size(it->second, &size) && (size <= std::numeric_limits<uint32_t>::max()))
+                {
+                    max_value_size = size;
+                }
+                else
+                {
+                    MXS_ERROR("'%s' is not a valid value for '%s'.",
+                              it->second.c_str(), CN_MEMCACHED_MAX_VALUE_SIZE);
+                    error = true;
+                }
+
+                arguments.erase(it);
+            }
+
+            for (const auto& kv : arguments)
+            {
+                MXS_WARNING("Unknown `storage_memcached` argument: %s=%s",
+                            kv.first.c_str(), kv.second.c_str());
+            }
+
+            if (!error)
+            {
+                MXS_NOTICE("Resultsets up to %u bytes in size will be cached by '%s'.",
+                           max_value_size, name.c_str());
+
+                std::string memcached_arguments("--SERVER=");
+                memcached_arguments += host.address();
+                memcached_arguments += ":";
+                memcached_arguments += std::to_string(host.port());
+
+                pStorage = new (std::nothrow) MemcachedStorage(name,
+                                                               config,
+                                                               max_value_size,
+                                                               memcached_arguments);
+            }
         }
         else
         {
@@ -361,7 +421,7 @@ void MemcachedStorage::get_config(Config* pConfig)
 
 void MemcachedStorage::get_limits(Limits* pLimits)
 {
-    *pLimits = this_unit.default_limits;
+    *pLimits = m_limits;
 }
 
 cache_result_t MemcachedStorage::get_info(uint32_t what, json_t** ppInfo) const

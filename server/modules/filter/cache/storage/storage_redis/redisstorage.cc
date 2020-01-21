@@ -1119,14 +1119,13 @@ RedisStorage* RedisStorage::create(const string& name,
     {
         bool error = false;
 
-        string host;
-        int port = DEFAULT_REDIS_PORT;
+        mxb::Host host;
 
-        auto it = arguments.find("server");
+        auto it = arguments.find(CN_STORAGE_ARG_SERVER);
 
         if (it != arguments.end())
         {
-            if (!Storage::get_server_info(it->second, &host, &port))
+            if (!Storage::get_host(it->second, DEFAULT_REDIS_PORT, &host))
             {
                 error = true;
             }
@@ -1135,7 +1134,7 @@ RedisStorage* RedisStorage::create(const string& name,
         }
         else
         {
-            MXS_ERROR("The mandatory argument 'server' is missing.");
+            MXS_ERROR("The mandatory argument '%s' is missing.", CN_STORAGE_ARG_SERVER);
             error = true;
         }
 
@@ -1147,7 +1146,7 @@ RedisStorage* RedisStorage::create(const string& name,
 
         if (!error)
         {
-            pStorage = new (std::nothrow) RedisStorage(name, config, host, port);
+            pStorage = new (std::nothrow) RedisStorage(name, config, host.address(), host.port());
         }
     }
 

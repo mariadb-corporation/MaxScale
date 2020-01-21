@@ -615,3 +615,8 @@ inline bool get_suffixed_duration(const char* zValue,
  *         `dest` are left in an undefined state
  */
 bool get_suffixed_size(const char* value, uint64_t* dest);
+
+inline bool get_suffixed_size(const std::string& value, uint64_t* dest)
+{
+    return get_suffixed_size(value.c_str(), dest);
+}

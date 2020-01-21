@@ -21,6 +21,8 @@ using std::string;
 using std::stringstream;
 using std::vector;
 
+const char CN_STORAGE_ARG_SERVER[] = "server";
+
 std::string CacheKey::to_string() const
 {
     stringstream ss;
@@ -101,43 +103,20 @@ bool Storage::split_arguments(const std::string& argument_string,
     return rv;
 }
 
-bool Storage::get_server_info(const std::string& host_port, std::string* pHost, int* pPort)
+bool Storage::get_host(const std::string& s, int default_port, mxb::Host* pHost)
 {
-    bool rv = true;
+    mxb::Host host = mxb::Host::from_string(s, default_port);
 
-    // We are expecting a "host[:port]" string.
+    bool valid = host.is_valid();
 
-    vector<string> hp = mxb::strtok(host_port, ":");
-
-    switch (hp.size())
+    if (valid)
     {
-    case 1:
-        *pHost = mxb::trimmed_copy(hp[0]);
-        break;
-
-    case 2:
-        {
-            *pHost = mxb::trimmed_copy(hp[0]);
-            int port;
-
-            if (mxb::get_int(hp[1], &port) || port < 0)
-            {
-                *pPort = port;
-            }
-            else
-            {
-                MXS_ERROR("The provided value '%s' does not refer to a valid port.",
-                          host_port.c_str());
-                rv = false;
-            }
-        }
-        break;
-
-    default:
-        MXS_ERROR("The provided value '%s' is not of the \"host[:port]\" format.",
-                  host_port.c_str());
-        rv = false;
+        *pHost = host;
+    }
+    else
+    {
+        MXS_ERROR("The provided value '%s' is not valid.", s.c_str());
     }
 
-    return rv;
+    return valid;
 }

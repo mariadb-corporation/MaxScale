@@ -23,8 +23,11 @@
 #include <string>
 #include <vector>
 
+#include <maxbase/host.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
+
+extern const char CN_STORAGE_ARG_SERVER[];
 
 enum cache_result_bits_t
 {
@@ -481,14 +484,13 @@ protected:
     /**
      * Converts an argument string "host[:port]" to a host string and port number.
      *
-     * @param s      The argument string.
-     * @param pHost  Pointer to string that will contain the host.
-     * @param pPost  Pointer to interger that will contain the port, if one was
-     *               provided. Otherwise it is unmodified.
+     * @param s             The argument string.
+     * @param default_port  The port, if no port is explicitly provided.
+     * @param pHost         Pointer to object that will contain the host.
      *
      * @return True, if the string was valid, false otherwise.
      */
-    static bool get_server_info(const std::string& s, std::string* pHost, int* pPort);
+    static bool get_host(const std::string& s, int default_port, mxb::Host* pHost);
 };
 
 class StorageModule
