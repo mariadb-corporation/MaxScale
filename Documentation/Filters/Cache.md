@@ -116,6 +116,50 @@ cache has been configured, be visible to all sessions of all users, it
 is still important to configure a reasonable [soft](#soft_ttl) and
 [hard](#hard_ttl) TTL.
 
+### Best Efforts
+
+The invalidation offered by the MaxScale cache can be said to be of
+_best efforts_ quality. The reason is that in order to ensure that the
+cache in all circumstances reflects the state in the actual database,
+would require that the operations involving the cache and the MariaDB
+server are synchronized, which would cause an unacceptable overhead.
+
+What _best efforts_ means in this context is best illustrated using an example.
+
+Suppose a client executes the statement `SELECT * FROM tbl` and that the result
+is cached. Next time that or any other client executes the same statement, the
+result is returned from the cache and the MariaDB server will not be accessed
+at all.
+
+If a client now executes the statement `INSERT INTO tbl VALUES (...)`, the
+cached value for the `SELECT` statement above and all other statements that are
+dependent upon `tbl` will be invalidated. That is, the next time someone executes
+the statement `SELECT * FROM tbl` the result will again be fetched from the
+MariaDB server and stored to the cache.
+
+However, suppose some client executes the statement `SELECT COUNT(*) FROM tbl`
+at the same time someone else executes the `INSERT ...` statement. A possible
+chain of events is as follows:
+```
+                      Timeline 1                 Timeline 2
+
+Clients execute       INSERT ...                 SELECT COUNT(*) FROM tbl
+MaxScale -> DB                                   SELECT COUNT(*) FROM tbl
+MaxScale -> DB        INSERT ...
+```
+That is, the `SELECT` is performed in the database server _before_ the
+`INSERT`. However, since the timelines are proceeding independently of
+each other, the events may be re-ordered as far as the cache is concerned.
+```
+MaxScale -> Cache     Delete invalidated values
+MaxScale -> Cache                                Store result and invalidation key
+```
+That is, the cached value for `SELECT COUNT(*) FROM tbl` will reflect the
+situation _before_ the insert and will thus not be correct.
+
+The stale result will be returned until the value has reached its _time-to-live_
+or its invalidation is caused by some update operation.
+
 ## Configuration
 
 The cache is simple to add to any existing service. However, some experimentation
@@ -1116,53 +1160,12 @@ storage_options="server=192.168.1.31:6379"
 ```
 #### Limitations
 * There is no distinction between _soft_ and _hard_ ttl, but only hard ttl is used.
-* Only _best effort_ invalidation is supported, see below.
 * Configuration values given to `max_size` and `max_count` are ignored.
 
 #### Invalidation
-`storage_redis` supports invalidation, but only following a _best efforts_ approach.
-
-To support invalidation fully would require that operations involving the Redis
-server, the MariaDB server and MaxScale are synchronized, which would cause an
-unacceptable overhead.
-
-What _best efforts_ means in this context is best illustrated using an example.
-
-Suppose a client executes the statement `SELECT * FROM tbl` and that the result
-is cached. Next time that or any other client executes the same statement, the
-result is returned from the cache and the MariaDB server will not be accessed
-at all.
-
-If a client now executes the statement `INSERT INTO tbl VALUES (...)`, the
-cached value for the `SELECT` statement above and all other statements that are
-dependent upon `tbl` will be invalidated.
-
-That is, next time someone executes the statement `SELECT * FROM tbl` the
-result will again be fetched from the MariaDB server and stored to the cache.
-
-However, suppose some client executes the statement `SELECT COUNT(*) FROM tbl`
-at the same time someone else executes the `INSERT ...` statement. A possible
-chain of events is as follows:
-```
-                      Timeline 1               Timeline 2
-
-Clients execute       INSERT ...               SELECT COUNT(*) FROM tbl
-MaxScale -> DB                                 SELECT COUNT(*) FROM tbl
-MaxScale -> DB        INSERT ...
-```
-That is, the `SELECT` is performed in the database server _before_ the
-`INSERT`. However, since the timelines are proceeding independently of
-each other, the events may be re-ordered as far as Redis is concerned.
-```
-MaxScale -> Redis     Fetch invalidation keys
-MaxScale -> Redis     Delete values
-MaxScale -> Redis                              Store result and invalidation key
-```
-That is, the cached value for `SELECT COUNT(*) FROM tbl` will reflect the
-situation _before_ the insert and will thus not be correct.
-
-The stale result will be returned until the value has reached its _time-to-live_
-or its invalidation is caused by some update operation.
+`storage_redis` supports invalidation, but the caveats documented [here](#best-efforts)
+are of greater significance since also the communication between the cache and the
+cache storage is asynchronous and takes place over the network.
 
 #### Security
 _Neither_ the data in the redis server _nor_ the traffic between MaxScale and
