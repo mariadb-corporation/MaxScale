@@ -43,6 +43,7 @@ constexpr auto relaxed = std::memory_order_relaxed;
 constexpr auto npos = string::npos;
 
 const int ipv4min_len = 7;      // 1.1.1.1
+const string mysql_default_auth = "mysql_native_password";
 
 /** How many times users can be succesfully loaded before throttling kicks in. */
 const int throttling_start_loads = 5;
@@ -526,7 +527,6 @@ void MariaDBUserManager::read_databases(MariaDBUserManager::QResult dbs, UserDat
             output->add_database_name(dbs->get_string(0));
         }
     }
-
 }
 
 MariaDBUserManager::LoadResult
@@ -684,13 +684,12 @@ void UserDatabase::set_dbs_and_roles(StringSetMap&& db_grants, StringSetMap&& ro
 bool UserDatabase::check_database_access(const UserEntry& entry, const std::string& db,
                                          bool case_sensitive_db) const
 {
-    // Accept the user if the entry has a direct global privilege or if the user is not
-    // connecting to a specific database,
     auto& user = entry.username;
     auto& host = entry.host_pattern;
     auto& def_role = entry.default_role;
 
-    return entry.global_db_priv || db.empty()
+    // Accept the user if the entry has a direct global privilege,
+    return entry.global_db_priv
             // or the user has a privilege to the database, or a table or column in the database,
            || (user_can_access_db(user, host, db, case_sensitive_db))
             // or the user can access db through its default role.
@@ -1136,41 +1135,52 @@ MariaDBUserCache::MariaDBUserCache(const MariaDBUserManager& master)
 {
 }
 
-SUserEntry
+std::unique_ptr<UserEntryResult>
 MariaDBUserCache::find_user(const string& user, const string& host, const string& requested_db,
                             const UserSearchSettings& sett) const
 {
     auto userz = user.c_str();
     auto hostz = host.c_str();
+    auto res = std::make_unique<UserEntryResult>();     // Always return a non-null result.
 
-    // If "root" user is not allowed, block such user immediately.
-    if (!sett.service.allow_root_user && user == "root")
-    {
-        MXB_INFO("Client '%s'@'%s' blocked because '%s' is false.",
-                 userz, hostz, CN_ENABLE_ROOT_USER);
-        return nullptr;
-    }
-
-    SUserEntry rval;
+    const char bad_db_fmt[] = "Found matching user entry '%s'@'%s' for client '%s'@'%s' but user tried to "
+                              "access non-existing database '%s'.";
     // TODO: the user may be empty, is it ok to match normally in that case?
-    const UserEntry* found = nullptr;
+
     // First try to find a normal user entry. If host pattern matching is disabled, match only username.
-    found = sett.listener.match_host_pattern ? m_userdb.find_entry(user, host) :  m_userdb.find_entry(user);
+    const UserEntry* found = sett.listener.match_host_pattern ? m_userdb.find_entry(user, host) :
+        m_userdb.find_entry(user);
     if (found)
     {
-        // TODO: when checking db access, also check if database exists.
-        if (m_userdb.check_database_access(*found, requested_db, sett.listener.case_sensitive_db))
+        res->entry = *found;
+        // If trying to access a specific database, check if allowed.
+        bool db_ok = true;
+        if (!requested_db.empty())
         {
+            if (!m_userdb.check_database_exists(requested_db))
+            {
+                db_ok = false;
+                res->type = UserEntryType::BAD_DB;
+                MXB_INFO(bad_db_fmt,
+                         found->username.c_str(), found->host_pattern.c_str(), userz, hostz,
+                         requested_db.c_str());
+            }
+            else if (!m_userdb.check_database_access(*found, requested_db, sett.listener.case_sensitive_db))
+            {
+                db_ok = false;
+                res->type = UserEntryType::DB_ACCESS_DENIED;
+                MXB_INFO("Found matching user entry '%s'@'%s' for client '%s'@'%s' but user does not have "
+                         "access to database '%s'.",
+                         found->username.c_str(), found->host_pattern.c_str(), userz, hostz,
+                         requested_db.c_str());
+            }
+        }
+
+        if (db_ok)
+        {
+            res->type = UserEntryType::USER_ACCOUNT_OK;
             MXB_INFO("Found matching user '%s'@'%s' for client '%s'@'%s' with sufficient privileges.",
                      found->username.c_str(), found->host_pattern.c_str(), userz, hostz);
-            rval.reset(new(std::nothrow) UserEntry(*found));
-        }
-        else
-        {
-            MXB_INFO("Found matching user entry '%s'@'%s' for client '%s'@'%s' but user does not have "
-                     "access to database '%s'.",
-                     found->username.c_str(), found->host_pattern.c_str(), userz, hostz,
-                     requested_db.c_str());
         }
     }
     else if (sett.listener.allow_anon_user)
@@ -1178,41 +1188,67 @@ MariaDBUserCache::find_user(const string& user, const string& host, const string
         // Try find an anonymous entry. Such an entry has empty username and matches any client username.
         // If host pattern matching is disabled, any user from any host can log in if an anonymous
         // entry exists.
-        found = sett.listener.match_host_pattern ? m_userdb.find_entry("", host) : m_userdb.find_entry("");
-        if (found)
+        auto anon_found = sett.listener.match_host_pattern ? m_userdb.find_entry("", host) :
+            m_userdb.find_entry("");
+        if (anon_found)
         {
+            res->entry = *anon_found;
             // For anonymous users, do not check database access as the final effective user is unknown.
             // Instead, check that the entry has a proxy grant.
-            if (found->proxy_grant)
+            if (!requested_db.empty() && !m_userdb.check_database_exists(requested_db))
             {
-                MXB_INFO("Found matching anonymous user ''@'%s' for client '%s'@'%s' with proxy grant.",
-                         found->host_pattern.c_str(), userz, hostz);
-                rval.reset(new(std::nothrow) UserEntry(*found));
+                res->type = UserEntryType::BAD_DB;
+                MXB_INFO(bad_db_fmt,
+                         anon_found->username.c_str(), anon_found->host_pattern.c_str(), userz, hostz,
+                         requested_db.c_str());
+            }
+            else if (!anon_found->proxy_grant)
+            {
+                res->type = UserEntryType::ANON_PROXY_ACCESS_DENIED;
+                MXB_INFO("Found matching anonymous user ''@'%s' for client '%s'@'%s' but user does not have "
+                         "proxy privileges.",
+                         anon_found->host_pattern.c_str(), userz, hostz);
             }
             else
             {
-                MXB_INFO("Found matching anonymous user ''@'%s' for client '%s'@'%s' but user does not have "
-                         "proxy privileges.",
-                         found->host_pattern.c_str(), userz, hostz);
+                res->type = UserEntryType::USER_ACCOUNT_OK;
+                MXB_INFO("Found matching anonymous user ''@'%s' for client '%s'@'%s' with proxy grant.",
+                         anon_found->host_pattern.c_str(), userz, hostz);
             }
         }
     }
 
-    if (!found)
+    if (res->type == UserEntryType::USER_NOT_FOUND)
     {
         // Did not find a matching entry. If service user is allowed, try matching to one.
         // Username match is enough for this stage. The authenticator will check that the password matches.
+        // The service-user has access to all databases.
         if (sett.listener.allow_service_user && m_service_entry && (user == m_service_entry->username))
         {
-            rval = std::make_unique<UserEntry>(*m_service_entry);
-        }
-
-        if (!rval)
-        {
-            MXB_INFO("Found no matching user for client '%s'@'%s'.", userz, hostz);
+            res->entry = *m_service_entry;
+            res->type = UserEntryType::USER_ACCOUNT_OK;
+            MXB_INFO("Found matching service user '%s@'%%' for client '%s'@'%s'.",
+                     m_service_entry->username.c_str(), userz, hostz);
         }
     }
-    return rval;
+
+    // If "root" user is being accepted when not allowed, block it now.
+    if (res->type == UserEntryType::USER_ACCOUNT_OK && !sett.service.allow_root_user
+        && user == "root")
+    {
+        res->type = UserEntryType::ROOT_ACCESS_DENIED;
+        MXB_INFO("Client '%s'@'%s' blocked because '%s' is false.",
+                 userz, hostz, CN_ENABLE_ROOT_USER);
+        return res;
+    }
+
+    // Finally, if user was not found, generate a dummy entry so that authentication can continue.
+    // It will fail regardless.
+    if (res->type == UserEntryType::USER_NOT_FOUND)
+    {
+        generate_dummy_entry(user, &res->entry);
+    }
+    return res;
 }
 
 void MariaDBUserCache::update_from_master()
@@ -1262,9 +1298,19 @@ void MariaDBUserCache::update_service_user()
             entry->host_pattern = "%";
             entry->password = hexpass;
             // The service-user only works with standard authentication.
-            entry->plugin = "mysql_native_password";
+            entry->plugin = mysql_default_auth;
             result = move(entry);
         }
     }
     m_service_entry = move(result);
+}
+
+void MariaDBUserCache::generate_dummy_entry(const std::string& user, mariadb::UserEntry* output) const
+{
+    // TODO: To match server behavior, this function should look at all the users, and select a plugin
+    // based on the distribution of plugins used. The selection would need to be deterministic.
+    // Worry about this later, the current version is ok in the usual case of mostly mysql_native_password.
+    output->username = user;
+    output->host_pattern = "%";
+    output->plugin = mysql_default_auth;
 }

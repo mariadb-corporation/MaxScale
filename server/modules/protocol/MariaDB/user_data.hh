@@ -52,7 +52,8 @@ public:
      *
      * @param username Client username. This must match exactly with the entry.
      * @param host Client address. This must match the entry host pattern.
-     * @return The found entry, or null if not found
+     * @return The found entry, or null if not found. The pointer should not be saved, as the
+     * contents may go invalid after a refresh.
      */
     const mariadb::UserEntry* find_entry(const std::string& username, const std::string& host) const;
 
@@ -61,7 +62,8 @@ public:
      * considering the client address.
      *
      * @param username Client username. This must match exactly with the entry.
-     * @return The found entry, or null if not found
+     * @return The found entry, or null if not found. The pointer should not be saved, as the
+     * contents may go invalid after a refresh.
      */
     const mariadb::UserEntry* find_entry(const std::string& username) const;
 
@@ -142,7 +144,7 @@ private:
     /** Maps "user@host" to allowed roles. Retrieved from mysql.roles_mapping. */
     StringSetMap m_roles_mapping;
 
-    StringSet m_database_names; /**< Set with existing database names */
+    StringSet m_database_names;     /**< Set with existing database names */
 };
 
 class MariaDBUserManager : public mxs::UserAccountManager
@@ -192,9 +194,9 @@ private:
         INVALID_DATA,
     };
 
-    bool         update_users();
-    LoadResult   load_users_mariadb(mxq::MariaDB& conn, SERVER* srv, UserDatabase* output);
-    LoadResult   load_users_clustrix(mxq::MariaDB& con, SERVER* srv, UserDatabase* output);
+    bool       update_users();
+    LoadResult load_users_mariadb(mxq::MariaDB& conn, SERVER* srv, UserDatabase* output);
+    LoadResult load_users_clustrix(mxq::MariaDB& con, SERVER* srv, UserDatabase* output);
 
     void updater_thread_function();
 
@@ -234,6 +236,24 @@ private:
     bool m_warn_no_servers {false};
 };
 
+// User account search result descriptor
+enum class UserEntryType
+{
+    USER_NOT_FOUND,
+    ROOT_ACCESS_DENIED,
+    ANON_PROXY_ACCESS_DENIED,
+    DB_ACCESS_DENIED,
+    BAD_DB,
+    PLUGIN_IS_NOT_LOADED,
+    USER_ACCOUNT_OK,
+};
+
+struct UserEntryResult
+{
+    mariadb::UserEntry entry;
+    UserEntryType      type {UserEntryType::USER_NOT_FOUND};
+};
+
 class MariaDBUserCache : public mxs::UserAccountCache
 {
 public:
@@ -242,14 +262,20 @@ public:
 
     /**
      * Check if user@host exists and can access the requested database. Does not check password or
-     * any other authentication credentials.
+     * any other authentication credentials. Writes a user entry to the output-parameter.
+     *
+     * To roughly emulate server behavior, an entry is written even if username was not found or
+     * does not have access to database. This is so that a fake authentication exchange can be carried
+     * out. Only if user gives the correct password the real error is returned.
      *
      * @param user Client username
      * @param host Client hostname
      * @param requested_db Database requested by client. May be empty.
-     * @return Found user entry.
+     * @param sett User search settings
+     * @param entry_out The entry will be written here.
+     * @return Result of the search
      */
-    std::unique_ptr<mariadb::UserEntry>
+    std::unique_ptr<UserEntryResult>
     find_user(const std::string& user, const std::string& host, const std::string& requested_db,
               const mariadb::UserSearchSettings& sett) const;
 
@@ -259,6 +285,7 @@ public:
 
 private:
     void update_service_user();
+    void generate_dummy_entry(const std::string& user, mariadb::UserEntry* output) const;
 
     const MariaDBUserManager& m_master;     /**< User database master copy */
 

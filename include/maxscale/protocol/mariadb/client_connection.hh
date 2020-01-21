@@ -28,6 +28,7 @@ enum kill_type_t
 
 class MariaDBUserManager;
 class MariaDBUserCache;
+struct UserEntryResult;
 
 class MariaDBClientConnection : public mxs::ClientConnectionBase
 {
@@ -119,16 +120,18 @@ private:
     void update_sequence(GWBUF* buf);
 
     bool require_ssl() const;
-
-    enum class FindUAResult
-    {
-        FOUND,
-        NOT_FOUND,
-        ERROR,
-    };
-    FindUAResult find_user_account_entry();
+    void update_user_account_entry();
 
     const MariaDBUserCache* user_account_cache();
+
+    enum class AuthErrorType
+    {
+        ACCESS_DENIED,
+        DB_ACCESS_DENIED,
+        BAD_DB,
+        NO_PLUGIN,
+    };
+    void send_authetication_error(AuthErrorType error);
 
     // Handshake state
     enum class HSState
@@ -146,6 +149,7 @@ private:
     {
         FIND_ENTRY,         /**< Find user account entry */
         TRY_AGAIN,          /**< Find user entry again with new data */
+        NO_PLUGIN,          /**< Requested plugin is not loaded */
         START_EXCHANGE,     /**< Begin authenticator module exchange */
         CONTINUE_EXCHANGE,  /**< Continue exchange */
         CHECK_TOKEN,        /**< Check token against user account entry */
@@ -177,9 +181,8 @@ private:
     SSLState ssl_authenticate_check_status();
     int      ssl_authenticate_client();
 
-    mariadb::SClientAuth                m_authenticator;/**< Client authentication data */
-    std::unique_ptr<mariadb::UserEntry> m_user_entry;   /**< Client user entry */
-    ChangeUserFields                    m_change_user;  /**< User account to change to */
+    mariadb::SClientAuth m_authenticator;   /**< Client authentication data */
+    ChangeUserFields     m_change_user;     /**< User account to change to */
 
     mxs::Component* m_downstream {nullptr}; /**< Downstream component, the session */
     MXS_SESSION*    m_session {nullptr};    /**< Generic session */
@@ -193,6 +196,13 @@ private:
     bool            m_large_query {false};
     uint64_t        m_version {0};                  /**< Numeric server version */
     mxs::Buffer     m_stored_query;                 /**< Temporarily stored queries */
+
+    /**
+     * The result from user account search. Even if the result is an authentication failure, a normal
+     * authentication token exchange and check should be carried out to match how the server works.
+     * This way, the client won't know the exact cause of failure without giving the correct password.
+     */
+    std::unique_ptr<UserEntryResult> m_user_entry;
 
     bool m_user_update_wakeup {false};      /**< Waking up because of user account update? */
     int  m_previous_userdb_version {0};     /**< Userdb version used for first user account search */

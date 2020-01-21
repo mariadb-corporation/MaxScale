@@ -55,6 +55,7 @@ using AuthRes = mariadb::ClientAuthenticator::AuthRes;
 using ExcRes = mariadb::ClientAuthenticator::ExchRes;
 using SUserEntry = std::unique_ptr<mariadb::UserEntry>;
 using std::move;
+using std::string;
 
 const char WORD_KILL[] = "KILL";
 const int CLIENT_CAPABILITIES_LEN = 32;
@@ -548,12 +549,9 @@ void MariaDBClientConnection::handle_authentication_errors(DCB* generic_dcb, Aut
  */
 MariaDBClientConnection::StateMachineRes MariaDBClientConnection::perform_authentication()
 {
-    auto send_access_denied_error = [this]() {
-            auto ses = m_session_data;
-            std::string msg = mxb::string_printf("Access denied for user '%s'@'%s' (using password: %s)",
-                                                 ses->user.c_str(), ses->remote.c_str(),
-                                                 ses->auth_token.empty() ? "NO" : "YES");
-            modutil_send_mysql_err_packet(m_dcb, ses->next_sequence, 0, 1045, "2800", msg.c_str());
+    auto send_misc_error = [this](const string& msg) {
+            modutil_send_mysql_err_packet(m_dcb, m_session_data->next_sequence, 0, 1105, "HY000",
+                                          msg.c_str());
         };
 
     auto rval = StateMachineRes::IN_PROGRESS;
@@ -564,13 +562,14 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::perform_authen
         {
         case AuthState::FIND_ENTRY:
             {
-                auto uares = find_user_account_entry();
-                if (uares == FindUAResult::FOUND)
+                update_user_account_entry();
+                if (m_user_entry->type == UserEntryType::USER_ACCOUNT_OK)
                 {
                     m_auth_state = AuthState::START_EXCHANGE;
                 }
-                else if (uares == FindUAResult::NOT_FOUND)
+                else
                 {
+                    // Something is wrong with the entry. Authentication will likely fail.
                     if (user_account_cache()->can_update_immediately())
                     {
                         // User data may be outdated, send update message through the service.
@@ -584,14 +583,10 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::perform_authen
                     {
                         MXS_WARNING("User accounts have been recently updated, cannot update again for %s.",
                                     m_session->user_and_host().c_str());
-                        send_access_denied_error();
-                        m_auth_state = AuthState::FAIL;
+                        // If plugin exists, start exchange. Authentication will surely fail.
+                        m_auth_state = (m_user_entry->type == UserEntryType::PLUGIN_IS_NOT_LOADED) ?
+                            AuthState::NO_PLUGIN : AuthState::START_EXCHANGE;
                     }
-                }
-                else
-                {
-                    send_access_denied_error();
-                    m_auth_state = AuthState::FAIL;
                 }
             }
             break;
@@ -601,34 +596,35 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::perform_authen
                 // Waiting for user account update.
                 if (m_user_update_wakeup)
                 {
-                    auto uares = FindUAResult::NOT_FOUND;
                     // Only recheck user if the user account data has actually changed since the previous
                     // attempt.
                     if (user_account_cache()->version() > m_previous_userdb_version)
                     {
-                        uares = find_user_account_entry();
+                        update_user_account_entry();
                     }
 
-                    if (uares == FindUAResult::FOUND)
+                    if (m_user_entry->type == UserEntryType::USER_ACCOUNT_OK)
                     {
                         MXB_DEBUG("Found user account entry for %s after updating user account data.",
                                   m_session->user_and_host().c_str());
-                        m_auth_state = AuthState::START_EXCHANGE;
                     }
-                    else
-                    {
-                        send_access_denied_error();
-                        m_auth_state = AuthState::FAIL;
-                    }
+                    m_auth_state = (m_user_entry->type == UserEntryType::PLUGIN_IS_NOT_LOADED) ?
+                        AuthState::NO_PLUGIN : AuthState::START_EXCHANGE;
                 }
                 else
                 {
                     // Should not get client data (or read events) before users have actually been updated.
                     MXB_ERROR("Client %s sent data when waiting for user account update. Closing session.",
                               m_session->user_and_host().c_str());
+                    send_misc_error("Unexpected client event");
                     m_auth_state = AuthState::FAIL;
                 }
             }
+            break;
+
+        case AuthState::NO_PLUGIN:
+            send_authetication_error(AuthErrorType::NO_PLUGIN);
+            m_auth_state = AuthState::FAIL;
             break;
 
         case AuthState::START_EXCHANGE:
@@ -657,7 +653,6 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::perform_authen
                     {
                         // Connection is likely broken, no need to send error message.
                         m_auth_state = AuthState::FAIL;
-                        rval = StateMachineRes::ERROR;
                         break;
                     }
                 }
@@ -685,9 +680,10 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::perform_authen
                 }
                 else
                 {
-                    // Authentication failed. TODO: is this the correct error to send?
-                    send_access_denied_error();
-                    mxs::mark_auth_as_failed(m_dcb->remote());
+                    // Exchange failed. Usually a communication or memory error.
+                    auto msg = mxb::string_printf("Authentication plugin '%s' failed",
+                                                  m_session_data->m_current_authenticator->name().c_str());
+                    send_misc_error(msg);
                     m_auth_state = AuthState::FAIL;
                 }
             }
@@ -695,20 +691,62 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::perform_authen
 
         case AuthState::CHECK_TOKEN:
             {
-                auto auth_val = m_authenticator->authenticate(m_dcb, m_user_entry.get(), m_session_data);
-                if (auth_val == AuthRes::SUCCESS)
+                // If the user entry didn't exist in the first place, don't check token and just fail.
+                // TODO: server likely checks some random token to spend time, could add it later.
+                auto entrytype = m_user_entry->type;
+                if (entrytype == UserEntryType::USER_NOT_FOUND)
                 {
-                    m_auth_state = AuthState::START_SESSION;
+                    send_authetication_error(AuthErrorType::ACCESS_DENIED);
+                    m_auth_state = AuthState::FAIL;
                 }
                 else
                 {
-                    if (auth_val == AuthRes::FAIL_WRONG_PW)
+                    auto auth_val = m_authenticator->authenticate(m_dcb, &m_user_entry->entry,
+                                                                  m_session_data);
+                    if (auth_val == AuthRes::SUCCESS)
                     {
-                        // Again, this may be because user data is obsolete.
-                        m_session->service->request_user_account_update();
+                        if (entrytype == UserEntryType::USER_ACCOUNT_OK)
+                        {
+                            m_auth_state = AuthState::START_SESSION;
+                        }
+                        else
+                        {
+                            // Translate the original user account search error type to an error message type.
+                            auto error = AuthErrorType::ACCESS_DENIED;
+                            switch (entrytype)
+                            {
+                            case UserEntryType::DB_ACCESS_DENIED:
+                                error = AuthErrorType::DB_ACCESS_DENIED;
+                                break;
+
+                            case UserEntryType::ROOT_ACCESS_DENIED:
+                            case UserEntryType::ANON_PROXY_ACCESS_DENIED:
+                                error = AuthErrorType::ACCESS_DENIED;
+                                break;
+
+                            case UserEntryType::BAD_DB:
+                                error = AuthErrorType::BAD_DB;
+                                break;
+
+                            default:
+                                mxb_assert(!true);
+                            }
+                            send_authetication_error(error);
+                            m_auth_state = AuthState::FAIL;
+                        }
                     }
-                    send_access_denied_error();
-                    m_auth_state = AuthState::FAIL;
+                    else
+                    {
+                        if (auth_val == AuthRes::FAIL_WRONG_PW)
+                        {
+                            // Again, this may be because user data is obsolete. Update userdata, but fail
+                            // session anyway since I/O with client cannot be redone.
+                            m_session->service->request_user_account_update();
+                        }
+                        // This is also sent if the auth module fails.
+                        send_authetication_error(AuthErrorType::ACCESS_DENIED);
+                        m_auth_state = AuthState::FAIL;
+                    }
                 }
             }
             break;
@@ -722,8 +760,9 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::perform_authen
             }
             else
             {
-                mysql_send_auth_error(m_dcb, m_session_data->next_sequence,
-                                      "Session creation failed, MaxScale may be out of memory");
+                // Send internal error, as in this case the client has done nothing wrong.
+                modutil_send_mysql_err_packet(m_dcb, m_session_data->next_sequence, 0, 1815, "HY000",
+                                              "Internal error: Session creation failed");
                 MXB_ERROR("Failed to create session for %s.", m_session->user_and_host().c_str());
                 m_auth_state = AuthState::FAIL;
             }
@@ -742,8 +781,9 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::perform_authen
             break;
 
         case AuthState::FAIL:
-            // Close DCB. Will release session. An error message should have already been sent.
+            // An error message should have already been sent.
             state_machine_continue = false;
+            mxs::mark_auth_as_failed(m_dcb->remote());
             rval = StateMachineRes::ERROR;
             break;
         }
@@ -751,46 +791,44 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::perform_authen
     return rval;
 }
 
-MariaDBClientConnection::FindUAResult MariaDBClientConnection::find_user_account_entry()
+void MariaDBClientConnection::update_user_account_entry()
 {
     const auto& search_settings = m_session_data->user_search_settings;
     // The correct authenticator is chosen here (and also in reauthenticate_client()).
     auto users = user_account_cache();
-    auto entry = users->find_user(m_session_data->user, m_session_data->remote, m_session_data->db,
-                                  search_settings);
+    auto search_res = users->find_user(m_session_data->user, m_session_data->remote, m_session_data->db,
+                                       search_settings);
     m_previous_userdb_version = users->version();   // Can use this to skip user entry check after update.
-    auto rval = FindUAResult::NOT_FOUND;
-    if (entry)
-    {
-        mariadb::AuthenticatorModule* selected_module = nullptr;
-        auto& auth_modules = m_session->listener_data()->m_authenticators;
-        for (const auto& auth_module : auth_modules)
-        {
-            auto mariadb_auth = static_cast<mariadb::AuthenticatorModule*>(auth_module.get());
-            if (mariadb_auth->supported_plugins().count(entry->plugin))
-            {
-                // Found correct authenticator for the user entry.
-                selected_module = mariadb_auth;
-                break;
-            }
-        }
 
-        if (selected_module)
+    mariadb::AuthenticatorModule* selected_module = nullptr;
+    auto& auth_modules = m_session->listener_data()->m_authenticators;
+    for (const auto& auth_module : auth_modules)
+    {
+        auto protocol_auth = static_cast<mariadb::AuthenticatorModule*>(auth_module.get());
+        if (protocol_auth->supported_plugins().count(search_res->entry.plugin))
         {
-            // Save related data so that later calls do not need to perform the same work.
-            m_user_entry = move(entry);
-            m_session_data->m_current_authenticator = selected_module;
-            m_authenticator = selected_module->create_client_authenticator();
-            rval = m_authenticator ? FindUAResult::FOUND : FindUAResult::ERROR;
-        }
-        else
-        {
-            MXB_INFO("User entry '%s@'%s' uses unrecognized authenticator plugin '%s'. "
-                     "Cannot authenticate user.",
-                     entry->username.c_str(), entry->host_pattern.c_str(), entry->plugin.c_str());
+            // Found correct authenticator for the user entry.
+            selected_module = protocol_auth;
+            break;
         }
     }
-    return rval;
+
+    if (selected_module)
+    {
+        // Correct plugin is loaded, generate session-specific data.
+        m_session_data->m_current_authenticator = selected_module;
+        m_authenticator = selected_module->create_client_authenticator();
+    }
+    else
+    {
+        // Authentication cannot continue in this case. Should be rare, though.
+        search_res->type = UserEntryType::PLUGIN_IS_NOT_LOADED;
+        MXB_INFO("User entry '%s@'%s' uses unrecognized authenticator plugin '%s'. "
+                 "Cannot authenticate user.",
+                 search_res->entry.username.c_str(), search_res->entry.host_pattern.c_str(),
+                 search_res->entry.plugin.c_str());
+    }
+    m_user_entry = move(search_res);
 }
 
 /**
@@ -955,7 +993,8 @@ bool MariaDBClientConnection::reauthenticate_client(MXS_SESSION* session, GWBUF*
             gwbuf_copy_data(packetbuf, MYSQL_HEADER_LEN, payloadlen, &payload[0]);
 
             rc = m_authenticator->reauthenticate(
-                user_entry.get(), m_dcb, data->scramble, sizeof(data->scramble), payload, data->client_sha1);
+                &user_entry->entry, m_dcb, data->scramble, sizeof(data->scramble), payload,
+                data->client_sha1);
             if (rc == AuthRes::SUCCESS)
             {
                 // Re-authentication successful, route the original COM_CHANGE_USER
@@ -2478,4 +2517,43 @@ void MariaDBClientConnection::update_sequence(GWBUF* buf)
 {
     mxb_assert(gwbuf_length(buf) >= MYSQL_HEADER_LEN);
     gwbuf_copy_data(buf, MYSQL_SEQ_OFFSET, 1, &m_sequence);
+}
+
+void MariaDBClientConnection::send_authetication_error(AuthErrorType error)
+{
+    auto ses = m_session_data;
+    switch (error)
+    {
+
+    case AuthErrorType::ACCESS_DENIED:
+        {
+            string msg = mxb::string_printf("Access denied for user '%s'@'%s' (using password: %s)",
+                                            ses->user.c_str(), ses->remote.c_str(),
+                                            ses->auth_token.empty() ? "NO" : "YES");
+            modutil_send_mysql_err_packet(m_dcb, ses->next_sequence, 0, 1045, "28000", msg.c_str());
+        }
+        break;
+
+    case AuthErrorType::DB_ACCESS_DENIED:
+        {
+            string msg = mxb::string_printf("Access denied for user '%s'@'%s' to database '%s'",
+                                            ses->user.c_str(), ses->remote.c_str(), ses->db.c_str());
+            modutil_send_mysql_err_packet(m_dcb, ses->next_sequence, 0, 1044, "42000", msg.c_str());
+        }
+        break;
+
+    case AuthErrorType::BAD_DB:
+        {
+            string msg = mxb::string_printf("Unknown database '%s'", ses->db.c_str());
+            modutil_send_mysql_err_packet(m_dcb, ses->next_sequence, 0, 1049, "42000", msg.c_str());
+        }
+        break;
+
+    case AuthErrorType::NO_PLUGIN:
+        {
+            string msg = mxb::string_printf("Plugin '%s' is not loaded", m_user_entry->entry.plugin.c_str());
+            modutil_send_mysql_err_packet(m_dcb, ses->next_sequence, 0, 1524, "HY000", msg.c_str());
+        }
+        break;
+    }
 }
