@@ -65,7 +65,7 @@ static void discard_if_response_differs(SRWBackend backend,
                                         uint8_t slave_response,
                                         SSessionCommand sescmd)
 {
-    if (master_response != slave_response)
+    if (master_response != slave_response && backend->in_use())
     {
         uint8_t cmd = sescmd->get_command();
         std::string query = sescmd->to_string();
