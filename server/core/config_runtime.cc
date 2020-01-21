@@ -1938,22 +1938,32 @@ bool update_object_relations(const std::string& target,
             rval = true;
         }
     }
-    else
-    {
-        config_runtime_error("Invalid object relations for '%s'", target.c_str());
-    }
 
     return rval;
 }
 
 bool object_to_server_relations(const std::string& target, json_t* old_json, json_t* new_json)
 {
-    return update_object_relations(target, object_to_server, old_json, new_json);
+    bool rval = update_object_relations(target, object_to_server, old_json, new_json);
+
+    if (!rval)
+    {
+        config_runtime_error("Could not find all servers that '%s' relates to", target.c_str());
+    }
+
+    return rval;
 }
 
 bool service_to_service_relations(const std::string& target, json_t* old_json, json_t* new_json)
 {
-    return update_object_relations(target, service_to_service, old_json, new_json);
+    bool rval = update_object_relations(target, service_to_service, old_json, new_json);
+
+    if (!rval)
+    {
+        config_runtime_error("Could not find all services that '%s' relates to", target.c_str());
+    }
+
+    return rval;
 }
 
 bool service_to_filter_relations(Service* service, json_t* old_json, json_t* new_json)
@@ -1981,7 +1991,8 @@ bool service_to_filter_relations(Service* service, json_t* old_json, json_t* new
     }
     else
     {
-        config_runtime_error("Invalid object relations for '%s'", service->name());
+
+        config_runtime_error("Could not find all filters that '%s' relates to", service->name());
     }
 
     return rval;

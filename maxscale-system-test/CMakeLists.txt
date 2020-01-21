@@ -55,7 +55,7 @@ add_template_manual(mxs710_bad_socket mxs711_two_ports)
 add_template_manual(mxs720_line_with_no_equal mxs720_line_with_no_equal)
 add_template_manual(mxs720_wierd_line mxs720_wierd_line)
 add_template_manual(mxs710_bad_socket mxs799)
-add_test_executable(config_test.cpp config_test replication LABELS CONFIG)
+add_test_executable(config_test.cpp config_test replication LABELS LIGHT CONFIG)
 
 add_subdirectory(cdc_datatypes)
 
@@ -185,7 +185,7 @@ add_test_executable(mxs1961_standalone_rejoin.cpp mxs1961_standalone_rejoin mxs1
 add_test_executable(verify_master_failure.cpp verify_master_failure verify_master_failure LABELS mysqlmon REPL_BACKEND)
 
 # MXS-2456: Cap transaction replay attempts
-add_test_executable(mxs2456_trx_replay_cap.cpp mxs2456_trx_replay_cap mxs2456_trx_replay_cap LABELS REPL_BACKEND)
+add_test_executable(mxs2456_trx_replay_cap.cpp mxs2456_trx_replay_cap mxs2456_trx_replay_cap LABELS readwritesplit REPL_BACKEND)
 
 # MXS-2512: Enable transaction replay for additional rollback errors.
 add_test_executable(mxs2512_trx_replay_rollback.cpp mxs2512_trx_replay_rollback mxs2512_trx_replay_rollback LABELS readwritesplit REPL_BACKEND)
@@ -258,7 +258,7 @@ add_test_executable(csmon_test.cpp csmon_test csmon_test LABELS csmon CS_BACKEND
 # MXS-682
 # MXS-957
 # MXS-1786
-add_test_executable(sanity_check.cpp sanity_check replication LABELS LIGHT REPL_BACKEND)
+add_test_executable(sanity_check.cpp sanity_check replication LABELS readwritesplit LIGHT REPL_BACKEND)
 
 # Repeatedly connect to maxscale while the backends reject all connections, expect no crash
 add_test_executable(backend_auth_fail.cpp backend_auth_fail replication LABELS readconnroute REPL_BACKEND)
@@ -935,7 +935,7 @@ add_test_executable(mxs2037_namedserver_wildcards.cpp mxs2037_namedserver_wildca
 # MXS-2043: Error "The MariaDB server is running with the --read-only option"
 #           for "select for update"
 # https://jira.mariadb.org/browse/MXS-2043
-add_test_executable(mxs2043_select_for_update.cpp mxs2043_select_for_update replication LABELS REPL_BACKEND)
+add_test_executable(mxs2043_select_for_update.cpp mxs2043_select_for_update replication LABELS REPL_BACKEND readwritesplit)
 
 # MXS-2054: Hybrid clusters
 add_test_executable(mxs2054_hybrid_cluster.cpp mxs2054_hybrid_cluster mxs2054_hybrid_cluster LABELS REPL_BACKEND)
@@ -950,7 +950,7 @@ add_test_executable(mxs2115_version_string.cpp mxs2115_version_string replicatio
 add_test_executable(mxs2273_being_drained.cpp mxs2273_being_drained mxs2273_being_drained LABELS REPL_BACKEND)
 
 # MXS-2295: COM_CHANGE_USER does not clear out session command history
-add_test_executable(mxs2295_change_user_loop.cpp mxs2295_change_user_loop mxs2295_change_user_loop LABELS REPL_BACKEND)
+add_test_executable(mxs2295_change_user_loop.cpp mxs2295_change_user_loop mxs2295_change_user_loop LABELS REPL_BACKEND readwritesplit)
 
 # MXS-2300: Prune session command history
 add_test_executable(mxs2300_history_pruning.cpp mxs2300_history_pruning mxs2300_history_pruning LABELS readwritesplit REPL_BACKEND)
@@ -965,7 +965,7 @@ add_test_executable(mxs2313_rank.cpp mxs2313_rank mxs2313_rank LABELS readwrites
 add_test_executable(mxs2417_ignore_persisted_cnf.cpp mxs2417_ignore_persisted_cnf mxs2417_ignore_persisted_cnf LABELS REPL_BACKEND)
 
 # MXS-2450: Crash on COM_CHANGE_USER with disable_sescmd_history=true
-add_test_executable(mxs2450_change_user_crash.cpp mxs2450_change_user_crash mxs2450_change_user_crash LABELS REPL_BACKEND)
+add_test_executable(mxs2450_change_user_crash.cpp mxs2450_change_user_crash mxs2450_change_user_crash LABELS REPL_BACKEND readwritesplit)
 
 # MXS-1662: PAM admin authentication
 add_test_executable(mxs1662_pam_admin.cpp mxs1662_pam_admin mxs1662_pam_admin LABELS REPL_BACKEND)
@@ -980,7 +980,7 @@ add_test_executable(mxs2414_host_blocking.cpp mxs2414_host_blocking replication 
 add_test_executable(pam_authentication.cpp pam_authentication pam_authentication LABELS REPL_BACKEND)
 
 # MXS-2350: On-demand connection creation
-add_test_executable(mxs2350_lazy_connect.cpp mxs2350_lazy_connect mxs2350_lazy_connect LABELS REPL_BACKEND)
+add_test_executable(mxs2350_lazy_connect.cpp mxs2350_lazy_connect mxs2350_lazy_connect LABELS REPL_BACKEND readwritesplit)
 
 # MXS-2520: Allow master reconnection on reads
 add_test_executable(mxs2520_master_read_reconnect.cpp mxs2520_master_read_reconnect mxs2520_master_read_reconnect LABELS REPL_BACKEND readwritesplit)
