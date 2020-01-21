@@ -568,7 +568,7 @@ void add_mysql_user(sqlite3* handle,
         sqlite3_free(err);
     }
 
-    MXS_INFO("Added user: %s", insert_sql);
+    MXS_INFO("Added user: %s@%s db: %s global: %s", user, host, dbstr, anydb ? "yes" : "no");
 }
 
 static void add_database(sqlite3* handle, const char* db)
