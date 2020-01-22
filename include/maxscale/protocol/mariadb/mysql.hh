@@ -161,7 +161,8 @@ class BackendDCB;
  {
 /**
  * Protocol packing and unpacking functions. The functions read or write unsigned integers from/to
- * MySQL-protocol buffers. MySQL saves integers in lsb-format.
+ * MySQL-protocol buffers. MySQL saves integers in lsb-first format, so a conversion to host format
+ * may be required.
  */
 
  void set_byte2(uint8_t* buffer, uint16_t val);

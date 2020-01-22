@@ -507,8 +507,9 @@ namespace mariadb
 {
 void set_byte2(uint8_t* buffer, uint16_t val)
 {
-    buffer[0] = val;
-    buffer[1] = (val >> 8);
+    uint16_t le16 = htole16(val);
+    auto ple16 = reinterpret_cast<uint16_t*>(buffer);
+    *ple16 = le16;
 }
 
 void set_byte3(uint8_t* buffer, uint32_t val)
@@ -519,15 +520,16 @@ void set_byte3(uint8_t* buffer, uint32_t val)
 
 void set_byte4(uint8_t* buffer, uint32_t val)
 {
-    set_byte2(buffer, val);
-    set_byte2(buffer + 2, val >> 16);
+    uint32_t le32 = htole32(val);
+    auto ple32 = reinterpret_cast<uint32_t*>(buffer);
+    *ple32 = le32;
 }
 
 uint16_t get_byte2(const uint8_t* buffer)
 {
-    uint16_t low = buffer[0];
-    uint16_t high = buffer[1];
-    return low | (high << 8);
+    uint16_t le16 = *(reinterpret_cast<const uint16_t*>(buffer));
+    auto host16 = le16toh(le16);
+    return host16;
 }
 
 uint32_t get_byte3(const uint8_t* buffer)
@@ -539,16 +541,16 @@ uint32_t get_byte3(const uint8_t* buffer)
 
 uint32_t get_byte4(const uint8_t* buffer)
 {
-    uint32_t low = get_byte2(buffer);
-    uint32_t high = get_byte2(buffer + 2);
-    return low | (high << 16);
+    uint32_t le32 = *(reinterpret_cast<const uint32_t*>(buffer));
+    auto host32 = le32toh(le32);
+    return host32;
 }
 
 uint64_t get_byte8(const uint8_t* buffer)
 {
-    uint64_t low = get_byte4(buffer);
-    uint64_t high = get_byte4(buffer + 4);
-    return low | (high << 32);
+    uint64_t le64 = *(reinterpret_cast<const uint64_t*>(buffer));
+    auto host64 = le64toh(le64);
+    return host64;
 }
 }
 
