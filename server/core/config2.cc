@@ -381,6 +381,16 @@ ostream& Configuration::persist(ostream& out) const
     return out;
 }
 
+void Configuration::fill(json_t* pJson) const
+{
+    for (const auto& kv : m_values)
+    {
+        const Type* pType = kv.second;
+
+        json_object_set_new(pJson, kv.first.c_str(), pType->to_json());
+    }
+}
+
 void Configuration::insert(Type* pValue)
 {
     mxb_assert(m_values.find(pValue->parameter().name()) == m_values.end());
@@ -550,6 +560,11 @@ ParamBool::value_type ParamBool::get(const mxs::ConfigParameters& params) const
     return rv;
 }
 
+json_t* ParamBool::to_json(value_type value) const
+{
+    return json_boolean(value);
+}
+
 /**
  * ParamNumber
  */
@@ -639,6 +654,11 @@ ParamNumber::value_type ParamNumber::get(const mxs::ConfigParameters& params) co
     return rv;
 }
 
+json_t* ParamNumber::to_json(value_type value) const
+{
+    return json_integer(value);
+}
+
 /**
  * ParamCount
  */
@@ -717,6 +737,11 @@ bool ParamPath::from_string(const std::string& value_as_string,
 std::string ParamPath::to_string(const value_type& value) const
 {
     return value;
+}
+
+json_t* ParamPath::to_json(const value_type& value) const
+{
+    return json_string(value.c_str());
 }
 
 void ParamPath::populate(MXS_MODULE_PARAM& param) const
@@ -814,6 +839,11 @@ ParamServer::value_type ParamServer::get(const mxs::ConfigParameters& params) co
     return rv;
 }
 
+json_t* ParamServer::to_json(value_type value) const
+{
+    return json_string(value->name());
+}
+
 /**
  * ParamTarget
  */
@@ -891,6 +921,11 @@ ParamTarget::value_type ParamTarget::get(const mxs::ConfigParameters& params) co
     return rv;
 }
 
+json_t* ParamTarget::to_json(value_type value) const
+{
+    return json_string(value->name());
+}
+
 /**
  * ParamSize
  */
@@ -962,6 +997,11 @@ ParamSize::value_type ParamSize::get(const mxs::ConfigParameters& params) const
     }
 
     return rv;
+}
+
+json_t* ParamSize::to_json(value_type value) const
+{
+    return json_integer(value);
 }
 
 /**
@@ -1064,6 +1104,11 @@ ParamString::value_type ParamString::get(const mxs::ConfigParameters& params) co
     }
 
     return rv;
+}
+
+json_t* ParamString::to_json(value_type value) const
+{
+    return json_string(value.c_str());
 }
 
 /**

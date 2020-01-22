@@ -302,6 +302,7 @@ public:
     bool from_string(const std::string& value, value_type* pValue,
                      std::string* pMessage = nullptr) const;
     std::string to_string(value_type value) const;
+    json_t* to_json(value_type value) const;
 
     /**
      * Returns the value of this parameter as specified in the provided
@@ -345,6 +346,7 @@ public:
     bool from_string(const std::string& value, value_type* pValue,
                      std::string* pMessage = nullptr) const;
     std::string to_string(value_type value) const;
+    json_t* to_json(value_type value) const;
 
     value_type default_value() const
     {
@@ -576,6 +578,7 @@ public:
     bool from_string(const std::string& value, value_type* pValue,
                      std::string* pMessage = nullptr) const;
     std::string to_string(const value_type& value) const;
+    json_t* to_json(const value_type& value) const;
 
     /**
      * Returns the value of this parameter as specified in the provided
@@ -650,6 +653,7 @@ public:
     bool from_string(const std::string& value, value_type* pValue,
                      std::string* pMessage = nullptr) const;
     std::string to_string(value_type value) const;
+    json_t* to_json(value_type value) const;
 
     void populate(MXS_MODULE_PARAM& param) const;
 
@@ -733,6 +737,7 @@ public:
     bool from_string(const std::string& value, value_type* pValue,
                      std::string* pMessage = nullptr) const;
     std::string to_string(const value_type& value) const;
+    json_t* to_json(const value_type& value) const;
 
     void populate(MXS_MODULE_PARAM& param) const;
 
@@ -799,6 +804,8 @@ public:
                      std::string* pMessage = nullptr) const;
     std::string to_string(value_type value) const;
 
+    json_t* to_json(value_type value) const;
+
     /**
      * Returns the value of this parameter as specified in the provided
      * collection of parameters, or default value if none specified.
@@ -844,6 +851,7 @@ public:
     bool from_string(const std::string& value, value_type* pValue,
                      std::string* pMessage = nullptr) const;
     std::string to_string(value_type value) const;
+    json_t* to_json(value_type value) const;
 
     /**
      * Returns the value of this parameter as specified in the provided
@@ -898,6 +906,7 @@ public:
     bool from_string(const std::string& value, value_type* pValue,
                      std::string* pMessage = nullptr) const;
     std::string to_string(value_type value) const;
+    json_t* to_json(value_type value) const;
 
     /**
      * Returns the value of this parameter as specified in the provided
@@ -966,6 +975,7 @@ public:
     bool from_string(const std::string& value, value_type* pValue,
                      std::string* pMessage = nullptr) const;
     std::string to_string(value_type value) const;
+    json_t* to_json(value_type value) const;
 
     /**
      * Returns the value of this parameter as specified in the provided
@@ -1048,6 +1058,13 @@ public:
      * @param out  The stream to persist to.
      */
     std::ostream& persist(std::ostream& out) const;
+
+    /**
+     * Fill the object with the param-name/param-value pairs of the configuration.
+     *
+     * @param pJson  The json object to be filled.
+     */
+    void fill(json_t* pJson) const;
 
     /**
      * Called when configuration has initially been configured, to allow a
@@ -1142,6 +1159,13 @@ public:
     virtual std::string to_string() const = 0;
 
     /**
+     * Convert this value to a json object.
+     *
+     * @return The value as a json object.
+     */
+    virtual json_t* to_json() const = 0;
+
+    /**
      * Set value.
      *
      * @param value_as_string  The new value expressed as a string.
@@ -1213,6 +1237,11 @@ public:
     std::string to_string() const override
     {
         return static_cast<const ParamType&>(parameter()).to_string(m_value);
+    }
+
+    json_t* to_json() const override
+    {
+        return static_cast<const ParamType&>(parameter()).to_json(m_value);
     }
 
 protected:
@@ -1679,6 +1708,13 @@ std::string ParamDuration<T>::to_string(const value_type& value) const
 }
 
 template<class T>
+json_t* ParamDuration<T>::to_json(const value_type& value) const
+{
+    // TODO: We loose information here, as the suffix is not included.
+    return json_integer(value.count());
+}
+
+template<class T>
 typename ParamDuration<T>::value_type ParamDuration<T>::get(const mxs::ConfigParameters& params) const
 {
     value_type rv { m_default_value };
@@ -1829,6 +1865,18 @@ std::string ParamEnum<T>::to_string(value_type value) const
                            });
 
     return it != m_enumeration.end() ? it->second : "unknown";
+}
+
+template<class T>
+json_t* ParamEnum<T>::to_json(value_type value) const
+{
+    auto it = std::find_if(m_enumeration.begin(), m_enumeration.end(),
+                           [value](const std::pair<T, const char*>& entry) {
+                               return entry.first == value;
+                           });
+
+    // TODO: Information is lost, as the enumeration is expressed as a string.
+    return json_string(it != m_enumeration.end() ? it->second : "unknown");
 }
 
 template<class T>

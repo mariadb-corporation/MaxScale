@@ -2252,14 +2252,6 @@ static int handle_global_item(const char* name, const char* value)
             return 0;
         }
     }
-    else if ((item = gateway.find_value(name)) != nullptr)
-    {
-        if (!item->set(value))
-        {
-            MXS_ERROR("Invalid value for '%s': %s", item->parameter().name().c_str(), value);
-            return 0;
-        }
-    }
     else
     {
         bool found = false;
