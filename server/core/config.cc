@@ -3981,6 +3981,9 @@ json_t* config_maxscale_to_json(const char* host)
     json_object_set_new(param, CN_MAX_AUTH_ERRORS_UNTIL_BLOCK,
                         json_integer(cnf->max_auth_errors_until_block));
 
+    // This will dump all parameters defined using the new configuration mechanism.
+    cnf->fill(param);
+
     json_t* attr = json_object();
     time_t started = maxscale_started();
     time_t activated = started + MXS_CLOCK_TO_SEC(cnf->promoted_at);
