@@ -88,8 +88,6 @@ int main(int argc, char** argv)
         cout << "Test preparations failed.\n";
     }
 
-
-
     auto expect_server_status = [&test](const string& server_name, const string& status) {
             auto set_to_string = [](const StringSet& str_set) -> string {
                 string rval;
@@ -127,7 +125,7 @@ int main(int argc, char** argv)
     // Helper function for checking PAM-login. If db is empty, log to null database.
     auto try_log_in = [&test](const string& user, const string& pass, const string& database) {
         const char* host = test.maxscales->IP[0];
-        int port = test.maxscales->ports[0][0];
+        int port = test.maxscales->rwsplit_port[0];
         const char* db = nullptr;
         if (!database.empty())
         {
@@ -283,6 +281,16 @@ int main(int argc, char** argv)
         test.try_query(conn, drop_role_fmt, r1);
         test.try_query(conn, drop_role_fmt, r2);
         test.try_query(conn, drop_role_fmt, r3);
+    }
+
+    if (test.ok())
+    {
+        // Finally, test that normal authentication on the same port works. This tests MXS-2497.
+        auto maxconn = test.maxscales->open_rwsplit_connection();
+        int port = test.maxscales->rwsplit_port[0];
+        test.try_query(maxconn, "SELECT rand();");
+        cout << "Normal mariadb-authentication on port " << port << (test.ok() ? " works.\n" : " failed.\n");
+        mysql_close(maxconn);
     }
 
     // Cleanup: remove the linux users on the backends and MaxScale node, unload pam plugin.

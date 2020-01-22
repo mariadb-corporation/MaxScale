@@ -4,7 +4,7 @@ log_info=1
 
 [MySQL-Monitor]
 type=monitor
-module=mysqlmon
+module=mariadbmon
 servers= server1, server2, server3, server4
 user=maxskysql
 password= skysql
@@ -28,33 +28,24 @@ type=listener
 service=RWSplit-Router
 protocol=MySQLClient
 port=4006
-authenticator=PAMAuth
+authenticator=PAMAuth, mysqlauth
 
 [server1]
 type=server
 address=###node_server_IP_1###
 port=###node_server_port_1###
-protocol=MySQLBackend
-authenticator=PAMBackendAuth
 
 [server2]
 type=server
 address=###node_server_IP_2###
 port=###node_server_port_2###
-protocol=MySQLBackend
-authenticator=PAMBackendAuth
 
 [server3]
 type=server
 address=###node_server_IP_3###
 port=###node_server_port_3###
-protocol=MySQLBackend
-authenticator=PAMBackendAuth
 
 [server4]
 type=server
 address=###node_server_IP_4###
 port=###node_server_port_4###
-protocol=MySQLBackend
-authenticator=PAMBackendAuth
-

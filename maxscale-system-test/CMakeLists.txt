@@ -979,7 +979,7 @@ add_test_executable(mxs2441_galera_slaves.cpp mxs2441_galera_slaves mxs2441_gale
 # MXS-2414: Block host after repeated authentication failures
 add_test_executable(mxs2414_host_blocking.cpp mxs2414_host_blocking replication LABELS REPL_BACKEND)
 
-# PAM authentication
+# PAM authentication, also tests multiple authenticators on the same listener (MXS-2497)
 add_test_executable(pam_authentication.cpp pam_authentication pam_authentication LABELS REPL_BACKEND)
 
 # MXS-2350: On-demand connection creation
