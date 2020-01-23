@@ -214,7 +214,7 @@ void insert(TestConnections& test, MYSQL* pMaster)
 
 void select(TestConnections& test, MYSQL* pSlave)
 {
-    int attempts = 5;
+    int attempts = 15;
 
     my_ulonglong nRows = 0;
     unsigned long long nResult_sets;

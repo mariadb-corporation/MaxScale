@@ -27,6 +27,8 @@ int main(int argc, char* argv[])
 
     Test->maxscales->copy_to_node_legacy(cache_rules.c_str(), "~/", 0);
 
+    Test->maxscales->ssh_node(0, "chmod a+rw *.json", true);
+
     copy_rules(Test, "rules2", fw_rules.c_str());
 
     Test->maxscales->start_maxscale(0);

@@ -81,6 +81,7 @@ int main(int argc, char* argv[])
     std::string to = std::string(test.maxscales->access_homedir[0]) + lua_file;
 
     test.maxscales->copy_to_node(0, from.c_str(), to.c_str());
+    test.maxscales->ssh_node(0, (std::string("chmod a+r ") + to).c_str(), true);
     test.maxscales->start();
     sleep(2);
     test.maxscales->wait_for_monitor();

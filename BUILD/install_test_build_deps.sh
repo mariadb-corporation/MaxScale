@@ -23,6 +23,7 @@ then
                  coreutils libjansson-dev zlib1g-dev \
                  mariadb-test python python-pip cmake libpam0g-dev
   sudo apt-get install -y --force-yes openjdk-8-jdk
+  sudo apt-get install -y --force-yes php-mysql
   if [ $? != 0 ]
   then
     sudo apt-get install -y --force-yes openjdk-7-jdk
@@ -52,6 +53,7 @@ EOL
                  php perl coreutils libjansson-devel python python-pip \
                  cmake pam-devel openssl-devel python-devel libjansson-devel
     sudo zypper -n install java-1_8_0-openjdk
+    sudo zypper -n install php-mysql
   else
   # YUM!
     cat >mariadb.repo <<'EOL'
@@ -72,6 +74,7 @@ EOL
     sudo yum install -y --nogpgcheck java-1.8.0-openjdk
     sudo yum install -y --nogpgcheck centos-release-scl
     sudo yum install -y --nogpgcheck devtoolset-7-gcc*
+    sudo yum install -y --nogpgcheck php-mysql
     echo "please run 'scl enable devtoolset-7 bash' to enable new gcc!!"
   fi
   sudo pip install --upgrade pip
