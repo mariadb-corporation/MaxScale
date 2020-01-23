@@ -113,10 +113,10 @@ int32_t RWSplitSession::routeQuery(GWBUF* querybuf)
         return 0;
     }
 
-    mxb_assert(GWBUF_IS_CONTIGUOUS(querybuf));
+    mxb_assert(gwbuf_is_contiguous(querybuf));
     int rval = 0;
 
-    if (m_is_replay_active && !GWBUF_IS_REPLAYED(querybuf))
+    if (m_is_replay_active && !gwbuf_is_replayed(querybuf))
     {
         MXS_INFO("New %s received while transaction replay is active: %s",
                  STRPACKETTYPE(GWBUF_DATA(querybuf)[4]),
@@ -125,7 +125,7 @@ int32_t RWSplitSession::routeQuery(GWBUF* querybuf)
         return 1;
     }
 
-    if ((m_query_queue.empty() || GWBUF_IS_REPLAYED(querybuf)) && can_route_queries())
+    if ((m_query_queue.empty() || gwbuf_is_replayed(querybuf)) && can_route_queries())
     {
         /** Gather the information required to make routing decisions */
         if (!m_qc.large_query())
@@ -861,7 +861,7 @@ bool RWSplitSession::start_trx_replay()
 
             // Erase all replayed queries from the query queue to prevent checksum mismatches
             m_query_queue.erase(std::remove_if(m_query_queue.begin(), m_query_queue.end(), [](mxs::Buffer b) {
-                                                   return GWBUF_IS_REPLAYED(b.get());
+                                                   return gwbuf_is_replayed(b.get());
                                                }), m_query_queue.end());
         }
 

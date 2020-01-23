@@ -1802,7 +1802,7 @@ bool rule_matches(Dbfw* my_instance,
                   SRule rule,
                   char* query)
 {
-    mxb_assert(GWBUF_IS_CONTIGUOUS(queue));
+    mxb_assert(gwbuf_is_contiguous(queue));
     char* msg = NULL;
     bool matches = false;
     bool is_sql = modutil_is_SQL(queue) || modutil_is_SQL_prepare(queue);

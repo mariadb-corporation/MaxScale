@@ -252,7 +252,7 @@ cache_result_t InMemoryStorage::do_put_value(Token* pToken,
                                              const GWBUF* pValue)
 {
     mxb_assert(!pToken);
-    mxb_assert(GWBUF_IS_CONTIGUOUS(pValue));
+    mxb_assert(gwbuf_is_contiguous(pValue));
 
     if (!invalidation_words.empty())
     {

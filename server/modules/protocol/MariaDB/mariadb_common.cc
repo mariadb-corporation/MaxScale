@@ -418,7 +418,7 @@ bool mxs_mysql_command_will_respond(uint8_t cmd)
 
 static inline bool complete_ps_response(GWBUF* buffer)
 {
-    mxb_assert(GWBUF_IS_CONTIGUOUS(buffer));
+    mxb_assert(gwbuf_is_contiguous(buffer));
     MXS_PS_RESPONSE resp;
     bool rval = false;
 

@@ -248,7 +248,7 @@ private:
 
     result_t initialize(GWBUF* pBuffer)
     {
-        mxb_assert(GWBUF_IS_CONTIGUOUS(pBuffer));
+        mxb_assert(gwbuf_is_contiguous(pBuffer));
 
         result_t rv = ERROR;
 

@@ -111,7 +111,7 @@ cache_result_t Cache::get_default_key(const std::string& user,
                                       CacheKey* pKey)
 {
     mxb_assert((user.empty() && host.empty()) || (!user.empty() && !host.empty()));
-    mxb_assert(GWBUF_IS_CONTIGUOUS(pQuery));
+    mxb_assert(gwbuf_is_contiguous(pQuery));
 
     char* pSql;
     int length;

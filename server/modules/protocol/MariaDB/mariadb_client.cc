@@ -982,7 +982,7 @@ bool MariaDBClientConnection::reauthenticate_client(MXS_SESSION* session, GWBUF*
 
 void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf)
 {
-    mxb_assert(GWBUF_IS_CONTIGUOUS(packetbuf));
+    mxb_assert(gwbuf_is_contiguous(packetbuf));
     mxb_assert((session->get_trx_state() & (SESSION_TRX_STARTING | SESSION_TRX_ENDING))
                != (SESSION_TRX_STARTING | SESSION_TRX_ENDING));
 

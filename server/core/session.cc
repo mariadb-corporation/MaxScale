@@ -897,7 +897,7 @@ bool get_cmd_and_stmt(GWBUF* pBuffer, const char** ppCmd, char** ppStmt, int* pL
 
         if (cmd == MXS_COM_QUERY)
         {
-            if (GWBUF_IS_CONTIGUOUS(pBuffer))
+            if (gwbuf_is_contiguous(pBuffer))
             {
                 modutil_extract_SQL(pBuffer, ppStmt, pLen);
             }

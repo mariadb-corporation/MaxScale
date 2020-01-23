@@ -257,7 +257,7 @@ int32_t InsertStreamSession::routeQuery(GWBUF* queue)
     bool send_ok = false;
     bool send_error = false;
     int rc = 0;
-    mxb_assert(GWBUF_IS_CONTIGUOUS(queue));
+    mxb_assert(gwbuf_is_contiguous(queue));
 
     if (m_pSession->is_trx_active() && extract_insert_target(queue, &target))
     {

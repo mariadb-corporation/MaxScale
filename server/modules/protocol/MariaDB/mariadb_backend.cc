@@ -343,16 +343,16 @@ void MariaDBBackendConnection::prepare_for_write(DCB* dcb, GWBUF* buffer)
 {
     mxb_assert(dcb->session());
 
-    if (!GWBUF_IS_IGNORABLE(buffer))
+    if (!gwbuf_is_ignorable(buffer))
     {
         track_query(buffer);
     }
 
-    if (GWBUF_SHOULD_COLLECT_RESULT(buffer))
+    if (gwbuf_should_collect_result(buffer))
     {
         m_collect_result = true;
     }
-    m_track_state = GWBUF_SHOULD_TRACK_STATE(buffer);
+    m_track_state = gwbuf_should_track_state(buffer);
 }
 
 /*******************************************************************************
@@ -907,7 +907,7 @@ int MariaDBBackendConnection::gw_read_and_write(DCB* dcb)
             stmt = modutil_get_next_MySQL_packet(&read_buffer);
             mxb_assert_message(stmt, "There should be only complete packets in read_buffer");
 
-            if (!GWBUF_IS_CONTIGUOUS(stmt))
+            if (!gwbuf_is_contiguous(stmt))
             {
                 // Make sure the buffer is contiguous
                 stmt = gwbuf_make_contiguous(stmt);
@@ -1074,7 +1074,7 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
             }
             else
             {
-                if (GWBUF_IS_IGNORABLE(queue))
+                if (gwbuf_is_ignorable(queue))
                 {
                     /** The response to this command should be ignored */
                     backend_protocol->m_ignore_replies++;

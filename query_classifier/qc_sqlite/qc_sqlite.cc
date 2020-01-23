@@ -3716,7 +3716,7 @@ static bool parse_query(GWBUF* query, uint32_t collect)
     bool parsed = false;
     mxb_assert(!query_is_parsed(query, collect));
 
-    if (GWBUF_IS_CONTIGUOUS(query))
+    if (gwbuf_is_contiguous(query))
     {
         uint8_t* data = (uint8_t*) GWBUF_DATA(query);
 
@@ -3816,7 +3816,7 @@ static bool parse_query(GWBUF* query, uint32_t collect)
 
 static bool query_is_parsed(GWBUF* query, uint32_t collect)
 {
-    bool rc = query && GWBUF_IS_PARSED(query);
+    bool rc = query && gwbuf_is_parsed(query);
 
     if (rc)
     {

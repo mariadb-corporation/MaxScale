@@ -67,7 +67,7 @@ std::string SessionCommand::to_string()
     /** TODO: Create C++ versions of modutil functions  */
     GWBUF* buf = m_buffer.release();
 
-    if (!GWBUF_IS_CONTIGUOUS(buf))
+    if (!gwbuf_is_contiguous(buf))
     {
         buf = gwbuf_make_contiguous(buf);
     }

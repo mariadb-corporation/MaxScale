@@ -41,25 +41,11 @@ enum gwbuf_type_t
     GWBUF_TYPE_TRACK_STATE    = (1 << 6),
 };
 
-#define GWBUF_IS_TYPE_UNDEFINED(b)     ((b)->gwbuf_type == 0)
-#define GWBUF_IS_IGNORABLE(b)          ((b)->gwbuf_type & GWBUF_TYPE_IGNORABLE)
-#define GWBUF_IS_COLLECTED_RESULT(b)   ((b)->gwbuf_type & GWBUF_TYPE_RESULT)
-#define GWBUF_SHOULD_COLLECT_RESULT(b) ((b)->gwbuf_type & GWBUF_TYPE_COLLECT_RESULT)
-#define GWBUF_IS_REPLY_OK(b)           ((b)->gwbuf_type & GWBUF_TYPE_REPLY_OK)
-
-// True if the query is not initiated by the client but an internal replaying mechanism
-#define GWBUF_IS_REPLAYED(b) ((b)->gwbuf_type & GWBUF_TYPE_REPLAYED)
-
-// Track session state change response
-#define GWBUF_SHOULD_TRACK_STATE(b) ((b)->gwbuf_type & GWBUF_TYPE_TRACK_STATE)
-
 enum  gwbuf_info_t
 {
     GWBUF_INFO_NONE   = 0x0,
     GWBUF_INFO_PARSED = 0x1
 };
-
-#define GWBUF_IS_PARSED(b) (b->sbuf->info & GWBUF_INFO_PARSED)
 
 /**
  * A structure for cleaning up memory allocations of structures which are
@@ -72,13 +58,7 @@ enum bufobj_id_t
     GWBUF_PARSING_INFO
 };
 
-struct buffer_object_t
-{
-    bufobj_id_t      bo_id;
-    void*            bo_data;
-    void             (* bo_donefun_fp)(void*);
-    buffer_object_t* bo_next;
-};
+struct buffer_object_t;
 
 /**
  * A structure to encapsulate the data in a form that the data itself can be
@@ -116,6 +96,48 @@ struct GWBUF
 #endif
 };
 
+inline bool gwbuf_is_type_undefined(GWBUF* b)
+{
+    return b->gwbuf_type == 0;
+}
+
+inline bool gwbuf_is_ignorable(GWBUF* b)
+{
+    return b->gwbuf_type & GWBUF_TYPE_IGNORABLE;
+}
+
+inline bool gwbuf_is_collected_result(GWBUF* b)
+{
+    return b->gwbuf_type & GWBUF_TYPE_RESULT;
+}
+
+inline bool gwbuf_should_collect_result(GWBUF* b)
+{
+    return b->gwbuf_type & GWBUF_TYPE_COLLECT_RESULT;
+}
+
+inline bool gwbuf_is_reply_ok(GWBUF* b)
+{
+    return b->gwbuf_type & GWBUF_TYPE_REPLY_OK;
+}
+
+// True if the query is not initiated by the client but an internal replaying mechanism
+inline bool gwbuf_is_replayed(GWBUF* b)
+{
+    return b->gwbuf_type & GWBUF_TYPE_REPLAYED;
+}
+
+// Track session state change response
+inline bool gwbuf_should_track_state(GWBUF* b)
+{
+    return b->gwbuf_type & GWBUF_TYPE_TRACK_STATE;
+}
+
+inline bool gwbuf_is_parsed(GWBUF* b)
+{
+    return b->sbuf->info & GWBUF_INFO_PARSED;
+}
+
 /*<
  * Macros to access the data in the buffers
  */
@@ -130,7 +152,15 @@ inline const uint8_t* gwbuf_link_data(const GWBUF* b)
     return static_cast<uint8_t*>(b->start);
 }
 
-#define GWBUF_DATA(b) gwbuf_link_data(b)
+inline uint8_t* GWBUF_DATA(GWBUF* b)
+{
+    return gwbuf_link_data(b);
+}
+
+inline const uint8_t* GWBUF_DATA(const GWBUF* b)
+{
+    return gwbuf_link_data(b);
+}
 
 /*< Number of bytes in the individual buffer */
 inline size_t gwbuf_link_length(const GWBUF* b)
@@ -138,7 +168,10 @@ inline size_t gwbuf_link_length(const GWBUF* b)
     return (size_t)((char*)b->end - (char*)b->start);
 }
 
-#define GWBUF_LENGTH(b) gwbuf_link_length(b)
+inline size_t GWBUF_LENGTH(const GWBUF* b)
+{
+    return gwbuf_link_length(b);
+}
 
 /*< Check whether the buffer is contiguous*/
 inline bool gwbuf_is_contiguous(const GWBUF* b)
@@ -147,15 +180,16 @@ inline bool gwbuf_is_contiguous(const GWBUF* b)
     return b->next == nullptr;
 }
 
-#define GWBUF_IS_CONTIGUOUS(b) gwbuf_is_contiguous(b)
-
 /*< True if all bytes in the buffer have been consumed */
 inline bool gwbuf_link_empty(const GWBUF* b)
 {
     return (char*)b->start >= (char*)b->end;
 }
 
-#define GWBUF_EMPTY(b) gwbuf_link_empty(b)
+inline bool GWBUF_EMPTY(const GWBUF* b)
+{
+    return gwbuf_link_empty(b);
+}
 
 /*< Consume a number of bytes in the buffer */
 inline void gwbuf_link_consume(GWBUF* b, unsigned int bytes)
@@ -163,20 +197,25 @@ inline void gwbuf_link_consume(GWBUF* b, unsigned int bytes)
     b->start = bytes > ((char*)b->end - (char*)b->start) ? b->end : (void*)((char*)b->start + bytes);
 }
 
-#define GWBUF_CONSUME(b, bytes) gwbuf_link_consume(b, bytes)
+inline void GWBUF_CONSUME(GWBUF* b, unsigned int bytes)
+{
+    gwbuf_link_consume(b, bytes);
+}
 
 inline void gwbuf_link_rtrim(GWBUF* b, unsigned int bytes)
 {
     b->end = bytes > ((char*)b->end - (char*)b->start) ? b->start : (void*)((char*)b->end - bytes);
 }
 
-#define GWBUF_RTRIM(b, bytes) gwbuf_link_rtrim(b, bytes)
+inline void GWBUF_RTRIM(GWBUF* b, unsigned int bytes)
+{
+    gwbuf_link_rtrim(b, bytes);
+}
 
 inline uint32_t gwbuf_type(const GWBUF* b)
 {
     return b->gwbuf_type;
 }
-#define GWBUF_TYPE(b) gwbuf_type(b)
 
 /*<
  * Function prototypes for the API to maniplate the buffers
@@ -1146,7 +1185,7 @@ public:
      */
     bool is_contiguous() const
     {
-        return GWBUF_IS_CONTIGUOUS(m_pBuffer);
+        return gwbuf_is_contiguous(m_pBuffer);
     }
 
     /**

@@ -26,9 +26,16 @@
 
 using mxs::RoutingWorker;
 
+struct buffer_object_t
+{
+    bufobj_id_t      bo_id;
+    void*            bo_data;
+    void             (* bo_donefun_fp)(void*);
+    buffer_object_t* bo_next;
+};
+
 static void             gwbuf_free_one(GWBUF* buf);
-static buffer_object_t* gwbuf_remove_buffer_object(GWBUF* buf,
-                                                   buffer_object_t* bufobj);
+static buffer_object_t* gwbuf_remove_buffer_object(GWBUF* buf, buffer_object_t* bufobj);
 
 #if defined (SS_DEBUG)
 inline void invalidate_tail_pointers(GWBUF* head)

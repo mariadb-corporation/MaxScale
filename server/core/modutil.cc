@@ -1388,7 +1388,7 @@ namespace maxscale
 
 std::string get_canonical(GWBUF* querybuf)
 {
-    mxb_assert(GWBUF_IS_CONTIGUOUS(querybuf));
+    mxb_assert(gwbuf_is_contiguous(querybuf));
     uint8_t* it = GWBUF_DATA(querybuf) + MYSQL_HEADER_LEN + 1;
     uint8_t* end = GWBUF_DATA(querybuf) + gwbuf_length(querybuf);
     std::string rval(end - it, 0);

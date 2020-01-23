@@ -295,7 +295,7 @@ int MaskingFilterSession::routeQuery(GWBUF* pPacket)
 
 int MaskingFilterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    mxb_assert(GWBUF_IS_CONTIGUOUS(pPacket));
+    mxb_assert(gwbuf_is_contiguous(pPacket));
 
     ComResponse response(pPacket);
 

@@ -463,7 +463,7 @@ static int test1()
     fprintf(stderr, "\nBuffer length is now %lu", buflen);
     mxb_assert_message(size == buflen, "Incorrect buffer size");
     mxb_assert_message(0 == GWBUF_EMPTY(buffer), "Buffer should not be empty");
-    mxb_assert_message(GWBUF_IS_TYPE_UNDEFINED(buffer), "Buffer type should be undefined");
+    mxb_assert_message(gwbuf_is_type_undefined(buffer), "Buffer type should be undefined");
     strcpy((char*)GWBUF_DATA(buffer), "The quick brown fox jumps over the lazy dog");
     fprintf(stderr, "\t..done\nLoad some data into the buffer");
     mxb_assert_message('q' == GWBUF_DATA_CHAR(buffer, 4), "Fourth character of buffer must be 'q'");
@@ -509,7 +509,7 @@ static int test1()
     fprintf(stderr, "\nBuffer length is now %lu", buflen);
     mxb_assert_message(size == buflen, "Incorrect buffer size");
     mxb_assert_message(0 == GWBUF_EMPTY(buffer), "Buffer should not be empty");
-    mxb_assert_message(GWBUF_IS_TYPE_UNDEFINED(buffer), "Buffer type should be undefined");
+    mxb_assert_message(gwbuf_is_type_undefined(buffer), "Buffer type should be undefined");
     extra = gwbuf_alloc(size);
     buflen = GWBUF_LENGTH(buffer);
     fprintf(stderr, "\t..done\nAllocated extra buffer of size %lu.", size);

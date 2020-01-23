@@ -366,7 +366,7 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
     uint8_t* pData = static_cast<uint8_t*>(GWBUF_DATA(pPacket));
 
     // All of these should be guaranteed by RCAP_TYPE_TRANSACTION_TRACKING
-    mxb_assert(GWBUF_IS_CONTIGUOUS(pPacket));
+    mxb_assert(gwbuf_is_contiguous(pPacket));
     mxb_assert(GWBUF_LENGTH(pPacket) >= MYSQL_HEADER_LEN + 1);
     mxb_assert(MYSQL_GET_PAYLOAD_LEN(pData) + MYSQL_HEADER_LEN == GWBUF_LENGTH(pPacket));
 
