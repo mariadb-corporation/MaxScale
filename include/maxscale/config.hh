@@ -70,10 +70,6 @@ public:
     time_t   users_refresh_interval;                    /**< How often the users will be refreshed */
     uint64_t writeq_high_water;                         /**< High water mark of dcb write queue */
     uint64_t writeq_low_water;                          /**< Low water mark of dcb write queue */
-    char     peer_hosts[MAX_ADMIN_HOST_LEN];            /**< The protocol, address and port for peers
-                                                         * (currently only one) */
-    char             peer_user[MAX_ADMIN_HOST_LEN];     /**< Username for maxscale-to-maxscale traffic */
-    char             peer_password[MAX_ADMIN_HOST_LEN]; /**< Password for maxscale-to-maxscale traffic */
     mxb_log_target_t log_target;                        /**< Log type */
     config::Bool     load_persisted_configs;            /**< Load persisted configuration files on startup */
     config::Integer  max_auth_errors_until_block;       /**< Host is blocked once this limit is reached */

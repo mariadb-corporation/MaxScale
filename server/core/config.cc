@@ -2363,9 +2363,6 @@ void config_set_global_defaults()
     gateway.users_refresh_time = USERS_REFRESH_TIME_DEFAULT;
     gateway.users_refresh_interval = 0;
 
-    gateway.peer_hosts[0] = '\0';
-    gateway.peer_user[0] = '\0';
-    gateway.peer_password[0] = '\0';
     gateway.log_target = MXB_LOG_TARGET_DEFAULT;
 
     gateway.qc_cache_properties.max_size = get_total_memory() * 0.15;
