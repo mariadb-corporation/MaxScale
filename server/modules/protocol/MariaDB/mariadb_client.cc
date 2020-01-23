@@ -544,18 +544,13 @@ void MariaDBClientConnection::handle_authentication_errors(DCB* generic_dcb, Aut
 /**
  * Start or continue authenticating the client.
  *
- * @return True if authentication is still ongoing or complete, false if authentication failed and the
- * connection should be closed.
+ * @return Instruction for upper level state machine
  */
-MariaDBClientConnection::StateMachineRes MariaDBClientConnection::perform_authentication()
+MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_authentication()
 {
-    auto send_misc_error = [this](const string& msg) {
-            modutil_send_mysql_err_packet(m_dcb, m_session_data->next_sequence, 0, 1105, "HY000",
-                                          msg.c_str());
-        };
-
     auto rval = StateMachineRes::IN_PROGRESS;
     bool state_machine_continue = true;
+
     while (state_machine_continue)
     {
         switch (m_auth_state)
@@ -629,126 +624,11 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::perform_authen
 
         case AuthState::START_EXCHANGE:
         case AuthState::CONTINUE_EXCHANGE:
-            {
-                mxs::Buffer read_buffer;
-                // Nothing to read on first exchange-call.
-                if (m_auth_state == AuthState::CONTINUE_EXCHANGE)
-                {
-                    if (read_protocol_packet(&read_buffer))
-                    {
-                        if (read_buffer.empty())
-                        {
-                            // Not enough data was available yet.
-                            state_machine_continue = false;
-                            break;
-                        }
-                        else
-                        {
-                            update_sequence(read_buffer.get());
-                            // Save next sequence to session. Authenticator may use the value.
-                            m_session_data->next_sequence = m_sequence + 1;
-                        }
-                    }
-                    else
-                    {
-                        // Connection is likely broken, no need to send error message.
-                        m_auth_state = AuthState::FAIL;
-                        break;
-                    }
-                }
-
-                mxs::Buffer auth_output;
-                auto auth_val = m_authenticator->exchange(read_buffer.get(), m_session_data, &auth_output);
-                if (!auth_output.empty())
-                {
-                    write(auth_output.release());
-                }
-
-                if (auth_val == ExcRes::READY)
-                {
-                    // Continue to password check.
-                    m_auth_state = AuthState::CHECK_TOKEN;
-                }
-                else if (auth_val == ExcRes::INCOMPLETE)
-                {
-                    // Authentication is expecting another packet from client, so jump out.
-                    if (m_auth_state == AuthState::START_EXCHANGE)
-                    {
-                        m_auth_state = AuthState::CONTINUE_EXCHANGE;
-                    }
-                    state_machine_continue = false;
-                }
-                else
-                {
-                    // Exchange failed. Usually a communication or memory error.
-                    auto msg = mxb::string_printf("Authentication plugin '%s' failed",
-                                                  m_session_data->m_current_authenticator->name().c_str());
-                    send_misc_error(msg);
-                    m_auth_state = AuthState::FAIL;
-                }
-            }
+            state_machine_continue = perform_auth_exchange();
             break;
 
         case AuthState::CHECK_TOKEN:
-            {
-                // If the user entry didn't exist in the first place, don't check token and just fail.
-                // TODO: server likely checks some random token to spend time, could add it later.
-                auto entrytype = m_user_entry->type;
-                if (entrytype == UserEntryType::USER_NOT_FOUND)
-                {
-                    send_authetication_error(AuthErrorType::ACCESS_DENIED);
-                    m_auth_state = AuthState::FAIL;
-                }
-                else
-                {
-                    auto auth_val = m_authenticator->authenticate(m_dcb, &m_user_entry->entry,
-                                                                  m_session_data);
-                    if (auth_val == AuthRes::SUCCESS)
-                    {
-                        if (entrytype == UserEntryType::USER_ACCOUNT_OK)
-                        {
-                            m_auth_state = AuthState::START_SESSION;
-                        }
-                        else
-                        {
-                            // Translate the original user account search error type to an error message type.
-                            auto error = AuthErrorType::ACCESS_DENIED;
-                            switch (entrytype)
-                            {
-                            case UserEntryType::DB_ACCESS_DENIED:
-                                error = AuthErrorType::DB_ACCESS_DENIED;
-                                break;
-
-                            case UserEntryType::ROOT_ACCESS_DENIED:
-                            case UserEntryType::ANON_PROXY_ACCESS_DENIED:
-                                error = AuthErrorType::ACCESS_DENIED;
-                                break;
-
-                            case UserEntryType::BAD_DB:
-                                error = AuthErrorType::BAD_DB;
-                                break;
-
-                            default:
-                                mxb_assert(!true);
-                            }
-                            send_authetication_error(error);
-                            m_auth_state = AuthState::FAIL;
-                        }
-                    }
-                    else
-                    {
-                        if (auth_val == AuthRes::FAIL_WRONG_PW)
-                        {
-                            // Again, this may be because user data is obsolete. Update userdata, but fail
-                            // session anyway since I/O with client cannot be redone.
-                            m_session->service->request_user_account_update();
-                        }
-                        // This is also sent if the auth module fails.
-                        send_authetication_error(AuthErrorType::ACCESS_DENIED);
-                        m_auth_state = AuthState::FAIL;
-                    }
-                }
-            }
+            perform_check_token();
             break;
 
         case AuthState::START_SESSION:
@@ -1454,12 +1334,10 @@ MariaDBClientConnection::process_special_commands(DCB* dcb, GWBUF* read_buffer, 
  * only one protocol packet should be routed at a time.
  * TODO: what happens with parsing in this case? Likely it fails.
  *
- * @param capabilities  The capabilities of the service.
  * @param buffer     Pointer to the address of GWBUF including the query
- *
  * @return True on success
  */
-bool MariaDBClientConnection::route_statement(uint64_t capabilities, mxs::Buffer* buffer)
+bool MariaDBClientConnection::route_statement(mxs::Buffer* buffer)
 {
     bool rval = true;
     auto session = m_session;
@@ -1500,6 +1378,7 @@ bool MariaDBClientConnection::route_statement(uint64_t capabilities, mxs::Buffer
 
         if (keep_processing)
         {
+            auto capabilities = service_get_capabilities(m_session->service);
             if (rcap_type_required(capabilities, RCAP_TYPE_TRANSACTION_TRACKING)
                 && !session->service->config().session_track_trx_state
                 && !session_is_load_active(session))
@@ -1543,7 +1422,7 @@ bool MariaDBClientConnection::route_statement(uint64_t capabilities, mxs::Buffer
  *
  * @return True if session should continue, false if client connection should be closed
  */
-bool MariaDBClientConnection::perform_normal_read()
+MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal_read()
 {
     auto session_state_value = m_session->state();
     if (session_state_value != MXS_SESSION::State::STARTED)
@@ -1553,41 +1432,40 @@ bool MariaDBClientConnection::perform_normal_read()
             MXS_ERROR("Session received a query in incorrect state: %s",
                       session_state_to_string(session_state_value));
         }
-        return false;
+        return StateMachineRes::ERROR;
     }
 
     mxs::Buffer buffer;
     if (!read_protocol_packet(&buffer))
     {
-        return false;
+        return StateMachineRes::ERROR;
     }
     else if (buffer.empty())
     {
         // Didn't get a complete packet, wait for more data.
-        return true;
+        return StateMachineRes::IN_PROGRESS;
     }
 
     // The query classifier classifies according to the service's server that has the smallest version number
     qc_set_server_version(m_version);
 
-    /** Feed each statement completely and separately to router. */
-    auto capabilities = service_get_capabilities(m_session->service);
-    bool routed = route_statement(capabilities, &buffer);
+    bool routed = route_statement(&buffer);
     mxb_assert(buffer.empty());     // Router should have consumed the packet.
 
-    bool rval = true;
+    auto rval = StateMachineRes::IN_PROGRESS;
     if (!routed)
     {
         /** Routing failed, close the client connection */
         m_session->close_reason = SESSION_CLOSE_ROUTING_FAILED;
-        rval = false;
+        rval = StateMachineRes::ERROR;
         MXS_ERROR("Routing the query failed. Session will be closed.");
     }
     else if (m_command == MXS_COM_QUIT)
     {
         /** Close router session which causes closing of backends */
         mxb_assert_message(session_valid_for_pool(m_session), "Session should qualify for pooling");
-        rval = false;
+        m_state = State::QUIT;
+        rval = StateMachineRes::DONE;
     }
 
     return rval;
@@ -1634,7 +1512,7 @@ void MariaDBClientConnection::ready_for_reading(DCB* event_dcb)
         case State::AUTHENTICATING:
         case State::CHANGING_USER:
             {
-                auto ret = perform_authentication();
+                auto ret = process_authentication();
                 switch (ret)
                 {
                 case StateMachineRes::IN_PROGRESS:
@@ -1653,20 +1531,33 @@ void MariaDBClientConnection::ready_for_reading(DCB* event_dcb)
             break;
 
         case State::READY:
-            if (!perform_normal_read())
             {
-                m_state = State::FAILED;
+                auto ret = process_normal_read();
+                switch (ret)
+                {
+                case StateMachineRes::IN_PROGRESS:
+                    state_machine_continue = false;
+                    break;
+
+                case StateMachineRes::DONE:
+                    // In this case, next m_state was written by 'process_normal_read'.
+                    break;
+
+                case StateMachineRes::ERROR:
+                    m_state = State::FAILED;
+                    break;
+                }
             }
-            state_machine_continue = false;
             break;
 
+        case State::QUIT:
         case State::FAILED:
             state_machine_continue = false;
             break;
         }
     }
 
-    if (m_state == State::FAILED)
+    if (m_state == State::FAILED || m_state == State::QUIT)
     {
         m_session->kill();
     }
@@ -2555,5 +2446,138 @@ void MariaDBClientConnection::send_authetication_error(AuthErrorType error)
             modutil_send_mysql_err_packet(m_dcb, ses->next_sequence, 0, 1524, "HY000", msg.c_str());
         }
         break;
+    }
+}
+
+void MariaDBClientConnection::send_misc_error(const std::string& msg)
+{
+    modutil_send_mysql_err_packet(m_dcb, m_session_data->next_sequence, 0, 1105, "HY000", msg.c_str());
+}
+
+/**
+ * Authentication exchange state for authenticator state machine.
+ *
+ * @return True, if the calling state machine should continue. False, if it should wait for more client data.
+ */
+bool MariaDBClientConnection::perform_auth_exchange()
+{
+    mxb_assert(m_auth_state == AuthState::START_EXCHANGE || m_auth_state == AuthState::CONTINUE_EXCHANGE);
+
+    mxs::Buffer read_buffer;
+    // Nothing to read on first exchange-call.
+    if (m_auth_state == AuthState::CONTINUE_EXCHANGE)
+    {
+        if (read_protocol_packet(&read_buffer))
+        {
+            if (read_buffer.empty())
+            {
+                // Not enough data was available yet.
+                return false;
+            }
+            else
+            {
+                update_sequence(read_buffer.get());
+                // Save next sequence to session. Authenticator may use the value.
+                m_session_data->next_sequence = m_sequence + 1;
+            }
+        }
+        else
+        {
+            // Connection is likely broken, no need to send error message.
+            m_auth_state = AuthState::FAIL;
+            return true;
+        }
+    }
+
+    mxs::Buffer auth_output;
+    auto auth_val = m_authenticator->exchange(read_buffer.get(), m_session_data, &auth_output);
+    if (!auth_output.empty())
+    {
+        write(auth_output.release());
+    }
+
+    bool state_machine_continue = true;
+    if (auth_val == ExcRes::READY)
+    {
+        // Continue to password check.
+        m_auth_state = AuthState::CHECK_TOKEN;
+    }
+    else if (auth_val == ExcRes::INCOMPLETE)
+    {
+        // Authentication is expecting another packet from client, so jump out.
+        if (m_auth_state == AuthState::START_EXCHANGE)
+        {
+            m_auth_state = AuthState::CONTINUE_EXCHANGE;
+        }
+        state_machine_continue = false;
+    }
+    else
+    {
+        // Exchange failed. Usually a communication or memory error.
+        auto msg = mxb::string_printf("Authentication plugin '%s' failed",
+                                      m_session_data->m_current_authenticator->name().c_str());
+        send_misc_error(msg);
+        m_auth_state = AuthState::FAIL;
+    }
+    return state_machine_continue;
+}
+
+void MariaDBClientConnection::perform_check_token()
+{
+    // If the user entry didn't exist in the first place, don't check token and just fail.
+    // TODO: server likely checks some random token to spend time, could add it later.
+    auto entrytype = m_user_entry->type;
+    if (entrytype == UserEntryType::USER_NOT_FOUND)
+    {
+        send_authetication_error(AuthErrorType::ACCESS_DENIED);
+        m_auth_state = AuthState::FAIL;
+    }
+    else
+    {
+        auto auth_val = m_authenticator->authenticate(m_dcb, &m_user_entry->entry, m_session_data);
+        if (auth_val == AuthRes::SUCCESS)
+        {
+            if (entrytype == UserEntryType::USER_ACCOUNT_OK)
+            {
+                m_auth_state = AuthState::START_SESSION;
+            }
+            else
+            {
+                // Translate the original user account search error type to an error message type.
+                auto error = AuthErrorType::ACCESS_DENIED;
+                switch (entrytype)
+                {
+                case UserEntryType::DB_ACCESS_DENIED:
+                    error = AuthErrorType::DB_ACCESS_DENIED;
+                    break;
+
+                case UserEntryType::ROOT_ACCESS_DENIED:
+                case UserEntryType::ANON_PROXY_ACCESS_DENIED:
+                    error = AuthErrorType::ACCESS_DENIED;
+                    break;
+
+                case UserEntryType::BAD_DB:
+                    error = AuthErrorType::BAD_DB;
+                    break;
+
+                default:
+                    mxb_assert(!true);
+                }
+                send_authetication_error(error);
+                m_auth_state = AuthState::FAIL;
+            }
+        }
+        else
+        {
+            if (auth_val == AuthRes::FAIL_WRONG_PW)
+            {
+                // Again, this may be because user data is obsolete. Update userdata, but fail
+                // session anyway since I/O with client cannot be redone.
+                m_session->service->request_user_account_update();
+            }
+            // This is also sent if the auth module fails.
+            send_authetication_error(AuthErrorType::ACCESS_DENIED);
+            m_auth_state = AuthState::FAIL;
+        }
     }
 }

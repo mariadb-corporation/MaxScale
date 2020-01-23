@@ -40,7 +40,8 @@ public:
         AUTHENTICATING,
         CHANGING_USER,
         READY,
-        FAILED
+        FAILED,
+        QUIT,
     };
 
     MariaDBClientConnection(MXS_SESSION* session, mxs::Component* component);
@@ -86,9 +87,12 @@ private:
     bool read_protocol_packet(mxs::Buffer* output);
 
     StateMachineRes process_handshake();
-    StateMachineRes perform_authentication();
+    StateMachineRes process_authentication();
+    bool            perform_auth_exchange();
+    void            perform_check_token();
 
-    bool perform_normal_read();
+    StateMachineRes process_normal_read();
+
     bool parse_handshake_response_packet(GWBUF* buffer);
     bool parse_ssl_request_packet(GWBUF* buffer);
     bool handle_change_user(bool* changed_user, GWBUF** packetbuf);
@@ -97,7 +101,7 @@ private:
     void handle_use_database(GWBUF* read_buffer);
     void handle_authentication_errors(DCB* dcb, mariadb::ClientAuthenticator::AuthRes auth_val,
                                       int packet_number);
-    bool route_statement(uint64_t capabilities, mxs::Buffer* buffer);
+    bool route_statement(mxs::Buffer* buffer);
 
     SpecialCmdRes process_special_commands(DCB* dcb, GWBUF* read_buffer, uint8_t cmd);
     SpecialCmdRes handle_query_kill(DCB* dcb, GWBUF* read_buffer, uint32_t packet_len);
@@ -131,7 +135,9 @@ private:
         BAD_DB,
         NO_PLUGIN,
     };
+
     void send_authetication_error(AuthErrorType error);
+    void send_misc_error(const std::string& msg);
 
     // Handshake state
     enum class HSState
