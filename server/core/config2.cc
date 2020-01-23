@@ -249,11 +249,13 @@ void Specification::remove(Param* pParam)
 Param::Param(Specification* pSpecification,
              const char* zName,
              const char* zDescription,
+             Modifiable modifiable,
              Kind kind,
              mxs_module_param_type legacy_type)
     : m_specification(*pSpecification)
     , m_name(zName)
     , m_description(zDescription)
+    , m_modifiable(modifiable)
     , m_kind(kind)
     , m_legacy_type(legacy_type)
 {
@@ -313,6 +315,11 @@ bool Param::is_optional() const
 bool Param::has_default_value() const
 {
     return is_optional();
+}
+
+Param::Modifiable Param::modifiable() const
+{
+    return m_modifiable;
 }
 
 void Param::populate(MXS_MODULE_PARAM& param) const

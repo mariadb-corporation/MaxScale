@@ -164,6 +164,12 @@ public:
         OPTIONAL
     };
 
+    enum Modifiable
+    {
+        AT_STARTUP, // The parameter can be modified only at startup.
+        AT_RUNTIME  // The parameter can be modified also at runtime.
+    };
+
     ~Param();
 
     /**
@@ -215,6 +221,19 @@ public:
     bool has_default_value() const;
 
     /**
+     * @return Modifiable::AT_RUNTIME or Modifiable::AT_STARTUP.
+     */
+    Modifiable modifiable() const;
+
+    /**
+     * @return True, if the parameter can be modified at runtime.
+     */
+    bool is_modifiable_at_runtime() const
+    {
+        return m_modifiable == Modifiable::AT_RUNTIME;
+    }
+
+    /**
      * @return Default value as string.
      *
      * @note Meaningful only if @c has_default_value returns true.
@@ -252,6 +271,7 @@ protected:
     Param(Specification* pSpecification,
           const char* zName,
           const char* zDescription,
+          Modifiable modifiable,
           Kind kind,
           mxs_module_param_type legacy_type);
 
@@ -259,6 +279,7 @@ private:
     Specification&        m_specification;
     std::string           m_name;
     std::string           m_description;
+    Modifiable            m_modifiable;
     Kind                  m_kind;
     mxs_module_param_type m_legacy_type;
 };
@@ -273,16 +294,18 @@ public:
 
     ParamBool(Specification* pSpecification,
               const char* zName,
-              const char* zDescription)
-        : ParamBool(pSpecification, zName, zDescription, Param::MANDATORY, value_type())
+              const char* zDescription,
+              Modifiable modifiable = Modifiable::AT_STARTUP)
+        : ParamBool(pSpecification, zName, zDescription, modifiable, Param::MANDATORY, value_type())
     {
     }
 
     ParamBool(Specification* pSpecification,
               const char* zName,
               const char* zDescription,
-              value_type default_value)
-        : ParamBool(pSpecification, zName, zDescription, Param::OPTIONAL, default_value)
+              value_type default_value,
+              Modifiable modifiable = Modifiable::AT_STARTUP)
+        : ParamBool(pSpecification, zName, zDescription, modifiable, Param::OPTIONAL, default_value)
     {
     }
 
@@ -321,9 +344,10 @@ private:
     ParamBool(Specification* pSpecification,
               const char* zName,
               const char* zDescription,
+              Modifiable modifiable,
               Kind kind,
               value_type default_value)
-        : Param(pSpecification, zName, zDescription, kind, MXS_MODULE_PARAM_BOOL)
+        : Param(pSpecification, zName, zDescription, modifiable, kind, MXS_MODULE_PARAM_BOOL)
         , m_default_value(default_value)
     {
     }
@@ -380,12 +404,13 @@ protected:
     ParamNumber(Specification* pSpecification,
                 const char* zName,
                 const char* zDescription,
+                Modifiable modifiable,
                 Kind kind,
                 mxs_module_param_type legacy_type,
                 value_type default_value,
                 value_type min_value,
                 value_type max_value)
-        : Param(pSpecification, zName, zDescription, kind, legacy_type)
+        : Param(pSpecification, zName, zDescription, modifiable, kind, legacy_type)
         , m_default_value(default_value)
         , m_min_value(min_value <= max_value ? min_value : max_value)
         , m_max_value(max_value)
@@ -407,8 +432,9 @@ class ParamCount : public ParamNumber
 public:
     ParamCount(Specification* pSpecification,
                const char* zName,
-               const char* zDescription)
-        : ParamCount(pSpecification, zName, zDescription, Param::MANDATORY,
+               const char* zDescription,
+               Modifiable modifiable = Modifiable::AT_STARTUP)
+        : ParamCount(pSpecification, zName, zDescription, modifiable, Param::MANDATORY,
                      value_type(), 0, std::numeric_limits<uint32_t>::max())
     {
     }
@@ -417,8 +443,9 @@ public:
                const char* zName,
                const char* zDescription,
                value_type min_value,
-               value_type max_value)
-        : ParamCount(pSpecification, zName, zDescription, Param::MANDATORY,
+               value_type max_value,
+               Modifiable modifiable = Modifiable::AT_STARTUP)
+        : ParamCount(pSpecification, zName, zDescription, modifiable, Param::MANDATORY,
                      value_type(), min_value, max_value)
     {
     }
@@ -426,8 +453,9 @@ public:
     ParamCount(Specification* pSpecification,
                const char* zName,
                const char* zDescription,
-               value_type default_value)
-        : ParamCount(pSpecification, zName, zDescription, Param::OPTIONAL,
+               value_type default_value,
+               Modifiable modifiable = Modifiable::AT_STARTUP)
+        : ParamCount(pSpecification, zName, zDescription, modifiable, Param::OPTIONAL,
                      default_value, 0, std::numeric_limits<uint32_t>::max())
     {
     }
@@ -437,8 +465,9 @@ public:
                const char* zDescription,
                value_type default_value,
                value_type min_value,
-               value_type max_value)
-        : ParamCount(pSpecification, zName, zDescription, Param::OPTIONAL,
+               value_type max_value,
+               Modifiable modifiable = Modifiable::AT_STARTUP)
+        : ParamCount(pSpecification, zName, zDescription, modifiable, Param::OPTIONAL,
                      default_value, min_value, max_value)
     {
     }
@@ -449,11 +478,12 @@ private:
     ParamCount(Specification* pSpecification,
                const char* zName,
                const char* zDescription,
+               Modifiable modifiable,
                Kind kind,
                value_type default_value,
                value_type min_value,
                value_type max_value)
-        : ParamNumber(pSpecification, zName, zDescription, kind, MXS_MODULE_PARAM_COUNT,
+        : ParamNumber(pSpecification, zName, zDescription, modifiable, kind, MXS_MODULE_PARAM_COUNT,
                       default_value,
                       min_value >= 0 ? min_value : 0,
                       max_value <= std::numeric_limits<uint32_t>::max() ?
@@ -474,8 +504,9 @@ class ParamInteger : public ParamNumber
 public:
     ParamInteger(Specification* pSpecification,
                  const char* zName,
-                 const char* zDescription)
-        : ParamInteger(pSpecification, zName, zDescription, Param::MANDATORY,
+                 const char* zDescription,
+                 Modifiable modifiable = Modifiable::AT_STARTUP)
+        : ParamInteger(pSpecification, zName, zDescription, modifiable, Param::MANDATORY,
                        value_type(),
                        std::numeric_limits<int32_t>::min(),
                        std::numeric_limits<int32_t>::max())
@@ -486,8 +517,9 @@ public:
                  const char* zName,
                  const char* zDescription,
                  value_type min_value,
-                 value_type max_value)
-        : ParamInteger(pSpecification, zName, zDescription, Param::MANDATORY,
+                 value_type max_value,
+                 Modifiable modifiable = Modifiable::AT_STARTUP)
+        : ParamInteger(pSpecification, zName, zDescription, modifiable, Param::MANDATORY,
                        value_type(), min_value, max_value)
     {
     }
@@ -495,8 +527,9 @@ public:
     ParamInteger(Specification* pSpecification,
                  const char* zName,
                  const char* zDescription,
-                 value_type default_value)
-        : ParamInteger(pSpecification, zName, zDescription, Param::OPTIONAL,
+                 value_type default_value,
+                 Modifiable modifiable = Modifiable::AT_STARTUP)
+        : ParamInteger(pSpecification, zName, zDescription, modifiable, Param::OPTIONAL,
                        default_value,
                        std::numeric_limits<int32_t>::min(),
                        std::numeric_limits<int32_t>::max())
@@ -508,8 +541,9 @@ public:
                  const char* zDescription,
                  value_type default_value,
                  value_type min_value,
-                 value_type max_value)
-        : ParamInteger(pSpecification, zName, zDescription, Param::OPTIONAL,
+                 value_type max_value,
+                 Modifiable modifiable = Modifiable::AT_STARTUP)
+        : ParamInteger(pSpecification, zName, zDescription, modifiable, Param::OPTIONAL,
                        default_value, min_value, max_value)
     {
     }
@@ -520,11 +554,12 @@ private:
     ParamInteger(Specification* pSpecification,
                  const char* zName,
                  const char* zDescription,
+                 Modifiable modifiable,
                  Kind kind,
                  value_type default_value,
                  value_type min_value,
                  value_type max_value)
-        : ParamNumber(pSpecification, zName, zDescription, kind, MXS_MODULE_PARAM_INT,
+        : ParamNumber(pSpecification, zName, zDescription, modifiable, kind, MXS_MODULE_PARAM_INT,
                       default_value,
                       min_value >= std::numeric_limits<int32_t>::min() ?
                       min_value : std::numeric_limits<int32_t>::min(),
@@ -548,8 +583,10 @@ public:
     ParamDuration(Specification* pSpecification,
                   const char* zName,
                   const char* zDescription,
-                  mxs::config::DurationInterpretation interpretation)
-        : ParamDuration(pSpecification, zName, zDescription, Param::MANDATORY, interpretation, value_type())
+                  mxs::config::DurationInterpretation interpretation,
+                  Modifiable modifiable = Modifiable::AT_STARTUP)
+        : ParamDuration(pSpecification, zName, zDescription, modifiable, Param::MANDATORY,
+                        interpretation, value_type())
     {
     }
 
@@ -557,8 +594,10 @@ public:
                   const char* zName,
                   const char* zDescription,
                   mxs::config::DurationInterpretation interpretation,
-                  value_type default_value)
-        : ParamDuration(pSpecification, zName, zDescription, Param::OPTIONAL, interpretation, default_value)
+                  value_type default_value,
+                  Modifiable modifiable = Modifiable::AT_STARTUP)
+        : ParamDuration(pSpecification, zName, zDescription, modifiable, Param::OPTIONAL,
+                        interpretation, default_value)
     {
     }
 
@@ -597,10 +636,11 @@ private:
     ParamDuration(Specification* pSpecification,
                   const char* zName,
                   const char* zDescription,
+                  Modifiable modifiable,
                   Kind kind,
                   mxs::config::DurationInterpretation interpretation,
                   value_type default_value)
-        : Param(pSpecification, zName, zDescription, kind, MXS_MODULE_PARAM_DURATION)
+        : Param(pSpecification, zName, zDescription, modifiable, kind, MXS_MODULE_PARAM_DURATION)
         , m_interpretation(interpretation)
         , m_default_value(default_value)
     {
@@ -623,8 +663,10 @@ public:
     ParamEnum(Specification* pSpecification,
               const char* zName,
               const char* zDescription,
-              const std::vector<std::pair<T, const char*>>& enumeration)
-        : ParamEnum(pSpecification, zName, zDescription, Param::MANDATORY, enumeration, value_type())
+              const std::vector<std::pair<T, const char*>>& enumeration,
+              Modifiable modifiable = Modifiable::AT_STARTUP)
+        : ParamEnum(pSpecification, zName, zDescription, modifiable, Param::MANDATORY,
+                    enumeration, value_type())
     {
     }
 
@@ -632,8 +674,10 @@ public:
               const char* zName,
               const char* zDescription,
               const std::vector<std::pair<T, const char*>>& enumeration,
-              value_type default_value)
-        : ParamEnum(pSpecification, zName, zDescription, Param::OPTIONAL, enumeration, default_value)
+              value_type default_value,
+              Modifiable modifiable = Modifiable::AT_STARTUP)
+        : ParamEnum(pSpecification, zName, zDescription, modifiable, Param::OPTIONAL,
+                    enumeration, default_value)
     {
     }
 
@@ -674,6 +718,7 @@ private:
     ParamEnum(Specification* pSpecification,
               const char* zName,
               const char* zDescription,
+              Modifiable modifiable,
               Kind kind,
               const std::vector<std::pair<T, const char*>>& enumeration,
               value_type default_value);
@@ -707,8 +752,9 @@ public:
     ParamPath(Specification* pSpecification,
               const char* zName,
               const char* zDescription,
-              uint32_t options)
-        : ParamPath(pSpecification, zName, zDescription, Param::MANDATORY, options, value_type())
+              uint32_t options,
+              Modifiable modifiable = Modifiable::AT_STARTUP)
+        : ParamPath(pSpecification, zName, zDescription, modifiable, Param::MANDATORY, options, value_type())
     {
     }
 
@@ -716,8 +762,9 @@ public:
               const char* zName,
               const char* zDescription,
               uint32_t options,
-              value_type default_value)
-        : ParamPath(pSpecification, zName, zDescription, Param::OPTIONAL, options, default_value)
+              value_type default_value,
+              Modifiable modifiable = Modifiable::AT_STARTUP)
+        : ParamPath(pSpecification, zName, zDescription, modifiable, Param::OPTIONAL, options, default_value)
     {
     }
 
@@ -758,10 +805,11 @@ private:
     ParamPath(Specification* pSpecification,
               const char* zName,
               const char* zDescription,
+              Modifiable modifiable,
               Kind kind,
               uint32_t options,
               value_type default_value)
-        : Param(pSpecification, zName, zDescription, kind, MXS_MODULE_PARAM_PATH)
+        : Param(pSpecification, zName, zDescription, modifiable, kind, MXS_MODULE_PARAM_PATH)
         , m_options(options)
         , m_default_value(default_value)
     {
@@ -782,8 +830,9 @@ public:
 
     ParamServer(Specification* pSpecification,
                 const char* zName,
-                const char* zDescription)
-        : Param(pSpecification, zName, zDescription, Param::MANDATORY, MXS_MODULE_PARAM_SERVER)
+                const char* zDescription,
+                Modifiable modifiable = Modifiable::AT_STARTUP)
+        : Param(pSpecification, zName, zDescription, modifiable, Param::MANDATORY, MXS_MODULE_PARAM_SERVER)
     {
     }
 
@@ -830,8 +879,9 @@ public:
 
     ParamTarget(Specification* pSpecification,
                 const char* zName,
-                const char* zDescription)
-        : Param(pSpecification, zName, zDescription, Param::MANDATORY, MXS_MODULE_PARAM_TARGET)
+                const char* zDescription,
+                Modifiable modifiable = Modifiable::AT_STARTUP)
+        : Param(pSpecification, zName, zDescription, modifiable, Param::MANDATORY, MXS_MODULE_PARAM_TARGET)
     {
     }
 
@@ -877,16 +927,18 @@ public:
 
     ParamSize(Specification* pSpecification,
               const char* zName,
-              const char* zDescription)
-        : ParamSize(pSpecification, zName, zDescription, Param::MANDATORY, value_type())
+              const char* zDescription,
+              Modifiable modifiable = Modifiable::AT_STARTUP)
+        : ParamSize(pSpecification, zName, zDescription, modifiable, Param::MANDATORY, value_type())
     {
     }
 
     ParamSize(Specification* pSpecification,
               const char* zName,
               const char* zDescription,
-              value_type default_value)
-        : ParamSize(pSpecification, zName, zDescription, Param::OPTIONAL, default_value)
+              value_type default_value,
+              Modifiable modifiable = Modifiable::AT_STARTUP)
+        : ParamSize(pSpecification, zName, zDescription, modifiable, Param::OPTIONAL, default_value)
     {
     }
 
@@ -925,9 +977,10 @@ private:
     ParamSize(Specification* pSpecification,
               const char* zName,
               const char* zDescription,
+              Modifiable modifiable,
               Kind kind,
               value_type default_value)
-        : Param(pSpecification, zName, zDescription, kind, MXS_MODULE_PARAM_SIZE)
+        : Param(pSpecification, zName, zDescription, modifiable, kind, MXS_MODULE_PARAM_SIZE)
         , m_default_value(default_value)
     {
     }
@@ -946,16 +999,18 @@ public:
 
     ParamString(Specification* pSpecification,
                 const char* zName,
-                const char* zDescription)
-        : ParamString(pSpecification, zName, zDescription, Param::MANDATORY, value_type())
+                const char* zDescription,
+                Modifiable modifiable = Modifiable::AT_STARTUP)
+        : ParamString(pSpecification, zName, zDescription, modifiable, Param::MANDATORY, value_type())
     {
     }
 
     ParamString(Specification* pSpecification,
                 const char* zName,
                 const char* zDescription,
-                value_type default_value)
-        : ParamString(pSpecification, zName, zDescription, Param::OPTIONAL, default_value)
+                value_type default_value,
+                Modifiable modifiable = Modifiable::AT_STARTUP)
+        : ParamString(pSpecification, zName, zDescription, modifiable, Param::OPTIONAL, default_value)
     {
     }
 
@@ -994,9 +1049,10 @@ private:
     ParamString(Specification* pSpecification,
                 const char* zName,
                 const char* zDescription,
+                Modifiable modifiable,
                 Kind kind,
                 value_type default_value)
-        : Param(pSpecification, zName, zDescription, kind, MXS_MODULE_PARAM_STRING)
+        : Param(pSpecification, zName, zDescription, modifiable, kind, MXS_MODULE_PARAM_STRING)
         , m_default_value(default_value)
     {
     }
@@ -1735,10 +1791,11 @@ template<class T>
 ParamEnum<T>::ParamEnum(Specification* pSpecification,
                         const char* zName,
                         const char* zDescription,
+                        Modifiable modifiable,
                         Kind kind,
                         const std::vector<std::pair<T, const char*>>& enumeration,
                         value_type default_value)
-    : Param(pSpecification, zName, zDescription, kind, MXS_MODULE_PARAM_ENUM)
+    : Param(pSpecification, zName, zDescription, modifiable, kind, MXS_MODULE_PARAM_ENUM)
     , m_enumeration(enumeration)
     , m_default_value(default_value)
 {
