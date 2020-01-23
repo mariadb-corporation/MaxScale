@@ -76,6 +76,12 @@ using std::chrono::seconds;
 
 config::Specification MXS_CONFIG::s_specification("maxscale", config::Specification::GLOBAL);
 
+config::ParamBool MXS_CONFIG::s_load_persisted_configs(
+    &MXS_CONFIG::s_specification,
+    CN_LOAD_PERSISTED_CONFIGS,
+    "Specifies whether persisted configuration files should be loaded on startup.",
+    true);
+
 config::ParamInteger MXS_CONFIG::s_max_auth_errors_until_block(
     &MXS_CONFIG::s_specification,
     CN_MAX_AUTH_ERRORS_UNTIL_BLOCK,
@@ -109,6 +115,7 @@ config::ParamCount MXS_CONFIG::s_rebalance_window(
 
 MXS_CONFIG::MXS_CONFIG()
     : config::Configuration("maxscale", &s_specification)
+    , load_persisted_configs(this, &s_load_persisted_configs)
     , max_auth_errors_until_block(this, &s_max_auth_errors_until_block)
     , rebalance_threshold(this, &s_rebalance_threshold)
     , rebalance_period(this, &s_rebalance_period)
@@ -2225,20 +2232,6 @@ static int handle_global_item(const char* name, const char* value)
             return 0;
         }
     }
-    else if (strcmp(name, CN_LOAD_PERSISTED_CONFIGS) == 0)
-    {
-        int b = config_truth_value(value);
-
-        if (b != -1)
-        {
-            gateway.load_persisted_configs = b;
-        }
-        else
-        {
-            MXS_ERROR("Invalid value for '%s': %s", CN_LOAD_PERSISTED_CONFIGS, value);
-            return 0;
-        }
-    }
     else if ((item = gateway.find_value(name)) != nullptr)
     {
         if (!item->set(value))
@@ -2367,7 +2360,6 @@ void config_set_global_defaults()
     gateway.query_retry_timeout = DEFAULT_QUERY_RETRY_TIMEOUT;
     gateway.passive = false;
     gateway.promoted_at = 0;
-    gateway.load_persisted_configs = true;
     gateway.users_refresh_time = USERS_REFRESH_TIME_DEFAULT;
     gateway.users_refresh_interval = 0;
 
@@ -3971,7 +3963,6 @@ json_t* config_maxscale_to_json(const char* host)
     json_object_set_new(param, CN_RETAIN_LAST_STATEMENTS, json_integer(session_get_retain_last_statements()));
     json_object_set_new(param, CN_DUMP_LAST_STATEMENTS, json_string(session_get_dump_statements_str()));
     json_object_set_new(param, CN_SESSION_TRACE, json_integer(session_get_session_trace()));
-    json_object_set_new(param, CN_LOAD_PERSISTED_CONFIGS, json_boolean(cnf->load_persisted_configs));
 
     // This will dump all parameters defined using the new configuration mechanism.
     cnf->fill(param);
