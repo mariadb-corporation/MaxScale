@@ -76,6 +76,14 @@ using std::chrono::seconds;
 
 config::Specification MXS_CONFIG::s_specification("maxscale", config::Specification::GLOBAL);
 
+config::ParamInteger MXS_CONFIG::s_max_auth_errors_until_block(
+    &MXS_CONFIG::s_specification,
+    CN_MAX_AUTH_ERRORS_UNTIL_BLOCK,
+    "The maximum number of authentication failures that are tolerated "
+    "before a host is temporarily blocked.",
+    DEFAULT_MAX_AUTH_ERRORS_UNTIL_BLOCK,
+    0, std::numeric_limits<config::ParamInteger::value_type>::max()); // min, max
+
 config::ParamInteger MXS_CONFIG::s_rebalance_threshold(
     &MXS_CONFIG::s_specification,
     CN_REBALANCE_THRESHOLD,
@@ -101,6 +109,7 @@ config::ParamCount MXS_CONFIG::s_rebalance_window(
 
 MXS_CONFIG::MXS_CONFIG()
     : config::Configuration("maxscale", &s_specification)
+    , max_auth_errors_until_block(this, &s_max_auth_errors_until_block)
     , rebalance_threshold(this, &s_rebalance_threshold)
     , rebalance_period(this, &s_rebalance_period)
     , rebalance_window(this, &s_rebalance_window)
@@ -2230,20 +2239,6 @@ static int handle_global_item(const char* name, const char* value)
             return 0;
         }
     }
-    else if (strcmp(name, CN_MAX_AUTH_ERRORS_UNTIL_BLOCK) == 0)
-    {
-        char* endptr;
-        int intval = strtol(value, &endptr, 0);
-        if (*endptr == '\0' && intval >= 0)
-        {
-            gateway.max_auth_errors_until_block = intval;
-        }
-        else
-        {
-            MXS_ERROR("Invalid value for '%s': %s", CN_MAX_AUTH_ERRORS_UNTIL_BLOCK, value);
-            return 0;
-        }
-    }
     else if ((item = gateway.find_value(name)) != nullptr)
     {
         if (!item->set(value))
@@ -2373,7 +2368,6 @@ void config_set_global_defaults()
     gateway.passive = false;
     gateway.promoted_at = 0;
     gateway.load_persisted_configs = true;
-    gateway.max_auth_errors_until_block = DEFAULT_MAX_AUTH_ERRORS_UNTIL_BLOCK;
     gateway.users_refresh_time = USERS_REFRESH_TIME_DEFAULT;
     gateway.users_refresh_interval = 0;
 
@@ -3978,8 +3972,6 @@ json_t* config_maxscale_to_json(const char* host)
     json_object_set_new(param, CN_DUMP_LAST_STATEMENTS, json_string(session_get_dump_statements_str()));
     json_object_set_new(param, CN_SESSION_TRACE, json_integer(session_get_session_trace()));
     json_object_set_new(param, CN_LOAD_PERSISTED_CONFIGS, json_boolean(cnf->load_persisted_configs));
-    json_object_set_new(param, CN_MAX_AUTH_ERRORS_UNTIL_BLOCK,
-                        json_integer(cnf->max_auth_errors_until_block));
 
     // This will dump all parameters defined using the new configuration mechanism.
     cnf->fill(param);

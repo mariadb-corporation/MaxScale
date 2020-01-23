@@ -73,7 +73,7 @@ public:
     {
         bool rval = false;
 
-        if (int limit = config_get_global_options()->max_auth_errors_until_block)
+        if (int limit = config_get_global_options()->max_auth_errors_until_block.get())
         {
             auto& u = m_failures[remote];
             u.last_failure = maxbase::Clock::now(maxbase::NowType::EPollTick);
@@ -87,7 +87,7 @@ public:
     {
         bool rval = false;
 
-        if (int limit = config_get_global_options()->max_auth_errors_until_block)
+        if (int limit = config_get_global_options()->max_auth_errors_until_block.get())
         {
             auto it = m_failures.find(remote);
 

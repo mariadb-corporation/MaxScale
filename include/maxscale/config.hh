@@ -76,7 +76,7 @@ public:
     char             peer_password[MAX_ADMIN_HOST_LEN]; /**< Password for maxscale-to-maxscale traffic */
     mxb_log_target_t log_target;                        /**< Log type */
     bool             load_persisted_configs;            /**< Load persisted configuration files on startup */
-    int              max_auth_errors_until_block;       /**< Host is blocked once this limit is reached */
+    config::Integer  max_auth_errors_until_block;       /**< Host is blocked once this limit is reached */
     config::Integer  rebalance_threshold;               /**< If load of particular worker differs more than
                                                          * this % amount from load-average, rebalancing will
                                                          * be made.
@@ -96,6 +96,7 @@ public:
 public:
     static config::Specification s_specification;
 
+    static config::ParamInteger                s_max_auth_errors_until_block;
     static config::ParamInteger                s_rebalance_threshold;
     static config::ParamDuration<milliseconds> s_rebalance_period;
     static config::ParamCount                  s_rebalance_window;

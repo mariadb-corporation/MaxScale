@@ -880,23 +880,6 @@ bool runtime_alter_maxscale(const char* name, const char* value)
                                  CN_DUMP_LAST_STATEMENTS);
         }
     }
-    else if (key == CN_MAX_AUTH_ERRORS_UNTIL_BLOCK)
-    {
-        if (is_valid_integer(value))
-        {
-            int intval = atoi(value);
-            MXS_NOTICE("Updated '%s' from %d to %d",
-                       CN_MAX_AUTH_ERRORS_UNTIL_BLOCK,
-                       cnf.max_auth_errors_until_block,
-                       intval);
-            cnf.max_auth_errors_until_block = intval;
-            rval = true;
-        }
-        else
-        {
-            config_runtime_error("Invalid value for '%s': %s", CN_MAX_AUTH_ERRORS_UNTIL_BLOCK, value);
-        }
-    }
     else if (key == CN_SESSION_TRACE)
     {
         char* endptr;
