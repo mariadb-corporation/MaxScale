@@ -35,7 +35,7 @@ using namespace maxscale;
 static void discard_if_response_differs(RWBackend* backend, bool master_ok, bool slave_ok,
                                         SSessionCommand sescmd)
 {
-    if (master_ok != slave_ok)
+    if (master_ok != slave_ok && backend->in_use())
     {
         uint8_t cmd = sescmd->get_command();
         std::string query = sescmd->to_string();
