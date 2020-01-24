@@ -67,7 +67,7 @@ static void discard_if_response_differs(RWBackend* backend,
                                         uint8_t slave_response,
                                         SSessionCommand sescmd)
 {
-    if (master_response != slave_response)
+    if (master_response != slave_response && backend->in_use())
     {
         uint8_t cmd = sescmd->get_command();
         std::string query = sescmd->to_string();
@@ -88,7 +88,6 @@ void RWSplitSession::process_sescmd_response(RWBackend* backend, GWBUF** ppPacke
 {
     if (backend->has_session_commands())
     {
-        mxb_assert(GWBUF_IS_COLLECTED_RESULT(*ppPacket));
         uint8_t cmd;
         gwbuf_copy_data(*ppPacket, MYSQL_HEADER_LEN, 1, &cmd);
         uint8_t command = backend->next_session_command()->get_command();
@@ -96,6 +95,8 @@ void RWSplitSession::process_sescmd_response(RWBackend* backend, GWBUF** ppPacke
         uint64_t id = backend->complete_session_command();
         MXS_PS_RESPONSE resp = {};
         bool discard = true;
+
+        mxb_assert(GWBUF_IS_COLLECTED_RESULT(*ppPacket) || command == MXS_COM_CHANGE_USER);
 
         if (command == MXS_COM_STMT_PREPARE && cmd != MYSQL_REPLY_ERR)
         {
