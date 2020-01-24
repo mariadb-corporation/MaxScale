@@ -312,7 +312,7 @@ private:
     tok::Tokenizer::Token chomp();
     tok::Tokenizer::Token assume(tok::Type t);
     bool                  expect(const std::vector<tok::Type>&);
-    void                  discard(const std::unordered_set<tok::Type>& types);
+    void                  discard(const std::unordered_set<int>& types);
 
     // Methods that define the grammar
     void   table_identifier();

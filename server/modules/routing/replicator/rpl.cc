@@ -2202,7 +2202,7 @@ bool Rpl::expect(const std::vector<tok::Type>& types)
     return rval;
 }
 
-void Rpl::discard(const std::unordered_set<tok::Type>& types)
+void Rpl::discard(const std::unordered_set<int>& types)
 {
     while (types.count(next()))
     {
