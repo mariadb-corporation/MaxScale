@@ -701,9 +701,7 @@ static bool check_server_permissions(SERVICE* service,
     }
 
     /** Copy the server charset */
-    MY_CHARSET_INFO cs_info;
-    mysql_get_character_set_info(mysql, &cs_info);
-    server->charset = cs_info.number;
+    server->charset = mxs_mysql_get_character_set(mysql);
 
     if (server->version_string[0] == 0)
     {
