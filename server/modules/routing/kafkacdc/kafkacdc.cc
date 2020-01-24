@@ -20,9 +20,10 @@
 namespace
 {
 
-constexpr const char CN_BROKER[] = "broker";
+constexpr const char CN_BOOTSTRAP_SERVERS[] = "bootstrap_servers";
 constexpr const char CN_TOPIC[] = "topic";
 constexpr const char CN_DATADIR[] = "datadir";
+constexpr const char CN_ENABLE_IDEMPOTENCE[] = "enable_idempotence";
 
 const char* roweventtype_to_string(RowEvent type)
 {
@@ -81,31 +82,73 @@ public:
 
     static SRowEventHandler create(mxs::ConfigParameters* params)
     {
-        SRowEventHandler rval;
-        auto cnf = RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL);
-        auto broker = params->get_string(CN_BROKER);
         std::string err;
+        SRowEventHandler rval;
+        auto broker = params->get_string(CN_BOOTSTRAP_SERVERS);
+        auto enable_idempotence = params->get_bool(CN_ENABLE_IDEMPOTENCE);
 
-        if (cnf->set("bootstrap.servers", broker, err) == RdKafka::Conf::ConfResult::CONF_OK
-            && cnf->set("enable.idempotence", "true", err) == RdKafka::Conf::ConfResult::CONF_OK
-            && cnf->set("message.send.max.retries", "10000000", err) == RdKafka::Conf::ConfResult::CONF_OK
-            && cnf->set("event_cb", new KafkaLogger, err) == RdKafka::Conf::ConfResult::CONF_OK)
+        if (auto cnf = create_config(broker, enable_idempotence))
         {
-            if (auto producer = RdKafka::Producer::create(cnf, err))
+            if (auto producer = RdKafka::Producer::create(cnf.get(), err))
             {
-                rval.reset(new KafkaEventHandler(SProducer(producer), params->get_string(CN_TOPIC)));
+                rval.reset(new KafkaEventHandler(SProducer(producer), broker, params->get_string(CN_TOPIC)));
             }
             else
             {
                 MXS_ERROR("Failed to create Kafka producer: %s", err.c_str());
             }
         }
-        else
+
+        return rval;
+    }
+
+    gtid_pos_t load_latest_gtid()
+    {
+        gtid_pos_t rval;
+
+        if (auto cnf = create_config(m_broker, false))
         {
-            MXS_ERROR("Failed to set Kafka parameters: %s", err.c_str());
+            std::string err;
+
+            if (auto consumer = RdKafka::KafkaConsumer::create(cnf.get(), err))
+            {
+                int64_t high = RdKafka::Topic::OFFSET_INVALID;
+                int64_t low = RdKafka::Topic::OFFSET_INVALID;
+                auto rc = consumer->query_watermark_offsets(m_topic, 0, &low, &high, 10000);
+
+                if (high != RdKafka::Topic::OFFSET_INVALID && high > 0)
+                {
+                    std::vector<RdKafka::TopicPartition*> partitions;
+                    partitions.push_back(RdKafka::TopicPartition::create(m_topic, 0, high - 1));
+                    consumer->assign(partitions);
+                    auto msg = consumer->consume(60000);
+
+                    if (msg->err() == RdKafka::ERR_NO_ERROR)
+                    {
+                        json_error_t err;
+                        json_t* json = json_loadb((const char*)msg->payload(), msg->len(), 0, &err);
+
+                        if (json)
+                        {
+                            if (auto gtid = json_object_get(json, "gtid"))
+                            {
+                                rval = gtid_pos_t::from_string(json_string_value(gtid));
+                            }
+
+                            json_decref(json);
+                        }
+                    }
+                }
+
+                consumer->close();
+                delete consumer;
+            }
+            else
+            {
+                MXS_ERROR("%s", err.c_str());
+            }
         }
 
-        delete cnf;
         return rval;
     }
 
@@ -190,12 +233,14 @@ public:
 
 private:
     std::string m_key;
+    std::string m_broker;
     std::string m_topic;
     SProducer   m_producer;
     json_t*     m_obj;
 
-    KafkaEventHandler(SProducer producer, const std::string& topic)
-        : m_topic(topic)
+    KafkaEventHandler(SProducer producer, const std::string& broker, const std::string& topic)
+        : m_broker(broker)
+        , m_topic(topic)
         , m_producer(std::move(producer))
     {
     }
@@ -235,6 +280,41 @@ private:
         while (err == RdKafka::ERR__QUEUE_FULL);
 
         return err != RdKafka::ERR_NO_ERROR;
+    }
+
+    static std::unique_ptr<RdKafka::Conf> create_config(const std::string& broker, bool enable_idempotence)
+    {
+        constexpr const auto OK = RdKafka::Conf::ConfResult::CONF_OK;
+        std::string err;
+        std::unique_ptr<RdKafka::Conf> cnf(RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL));
+
+        if (cnf)
+        {
+            if (cnf->set("event_cb", new KafkaLogger, err) != OK)
+            {
+                MXS_ERROR("Failed to set Kafka event logger: %s", err.c_str());
+                cnf.reset();
+            }
+            else if (cnf->set("bootstrap.servers", broker, err) != OK)
+            {
+                MXS_ERROR("Failed to set `bootstrap.servers`: %s", err.c_str());
+                cnf.reset();
+            }
+            else if (cnf->set("group.id", "maxscale-kafkacdc", err) != OK)
+            {
+                MXS_ERROR("Failed to set `group.id`: %s", err.c_str());
+                cnf.reset();
+            }
+            else if (enable_idempotence
+                     && (cnf->set("enable.idempotence", "true", err) != OK
+                         || cnf->set("message.send.max.retries", "10000000", err) != OK))
+            {
+                MXS_ERROR("Failed to enable idempotent producer: %s", err.c_str());
+                cnf.reset();
+            }
+        }
+
+        return cnf;
     }
 };
 }
@@ -288,12 +368,16 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         nullptr,
         {
             {
-                CN_BROKER,
-                MXS_MODULE_PARAM_STRING
+                CN_BOOTSTRAP_SERVERS,
+                MXS_MODULE_PARAM_STRING,
+                nullptr,
+                MXS_MODULE_OPT_REQUIRED
             },
             {
                 CN_TOPIC,
-                MXS_MODULE_PARAM_STRING
+                MXS_MODULE_PARAM_STRING,
+                nullptr,
+                MXS_MODULE_OPT_REQUIRED
             },
             {
                 CN_DATADIR,
@@ -303,6 +387,11 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 | MXS_MODULE_OPT_PATH_W_OK
                 | MXS_MODULE_OPT_PATH_X_OK
                 | MXS_MODULE_OPT_PATH_CREAT
+            },
+            {
+                CN_ENABLE_IDEMPOTENCE,
+                MXS_MODULE_PARAM_BOOL,
+                "true"
             },
             {MXS_END_MODULE_PARAMS}
         }

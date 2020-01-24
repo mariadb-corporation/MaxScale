@@ -184,6 +184,12 @@ class RowEventHandler
 public:
     virtual ~RowEventHandler() = default;
 
+    // Optional method for loading the GTID position from a custom storage
+    virtual gtid_pos_t load_latest_gtid()
+    {
+        return gtid_pos_t();
+    }
+
     // A table was opened
     virtual bool open_table(const Table& create) = 0;
 
@@ -267,6 +273,12 @@ public:
     const gtid_pos_t& get_gtid() const
     {
         return m_gtid;
+    }
+
+    // Load GTID from the handler
+    gtid_pos_t load_gtid()
+    {
+        return m_handler->load_latest_gtid();
     }
 
 private:

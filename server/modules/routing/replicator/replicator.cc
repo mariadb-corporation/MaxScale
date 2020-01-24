@@ -213,7 +213,14 @@ void Replicator::Imp::process_events()
 
     m_rpl.load_metadata(m_cnf.statedir);
 
-    if (!m_gtid.empty())
+    auto gtid = m_rpl.load_gtid();
+
+    if (!gtid.empty())
+    {
+        m_rpl.set_gtid(gtid);
+        m_gtid = gtid.to_string();
+    }
+    else if (!m_gtid.empty())
     {
         m_rpl.set_gtid(gtid_pos_t::from_string(m_gtid));
     }
