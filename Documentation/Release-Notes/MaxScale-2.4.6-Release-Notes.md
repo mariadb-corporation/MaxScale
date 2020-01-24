@@ -1,4 +1,4 @@
-# MariaDB MaxScale 2.4.6 Release Notes
+# MariaDB MaxScale 2.4.6 Release Notes -- 2020-01-24
 
 Release 2.4.6 is a GA release.
 
