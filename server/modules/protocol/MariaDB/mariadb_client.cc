@@ -1343,10 +1343,11 @@ bool MariaDBClientConnection::route_statement(mxs::Buffer* buffer)
     GWBUF* packetbuf = buffer->release();
     // TODO: Do this only when RCAP_TYPE_CONTIGUOUS_INPUT is requested
     packetbuf = gwbuf_make_contiguous(packetbuf);
-    session_retain_statement(session, packetbuf);
 
-    // Track the command being executed
-    track_current_command(packetbuf);
+    if (m_routing_state == RoutingState::PACKET_START && mxs_mysql_command_will_respond(m_command))
+    {
+        session_retain_statement(m_session, packetbuf);
+    }
 
     bool keep_processing = true;
     if (m_command == MXS_COM_QUERY)
@@ -1366,6 +1367,9 @@ bool MariaDBClientConnection::route_statement(mxs::Buffer* buffer)
         // Must be done whether or not there were any changes, as the query classifier
         // is thread and not session specific.
         qc_set_sql_mode(m_sql_mode);
+        // The query classifier classifies according to the service's server that has
+        // the smallest version number.
+        qc_set_server_version(m_version);
 
         if (process_special_commands(m_dcb, packetbuf, m_command) == SpecialCmdRes::END)
         {
@@ -1444,11 +1448,63 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
         return StateMachineRes::IN_PROGRESS;
     }
 
-    // The query classifier classifies according to the service's server that has the smallest version number
-    qc_set_server_version(m_version);
+    bool routed = false;
 
-    bool routed = route_statement(&buffer);
-    mxb_assert(buffer.empty());     // Router should have consumed the packet.
+    // Backend-protocol tracks LOAD_DATA-state by looking at replies.
+    // TODO: add client-side tracking for proper error detection.
+    if (session_is_load_active(m_session))
+    {
+        m_routing_state = RoutingState::LOAD_DATA;
+    }
+
+    switch (m_routing_state)
+    {
+    case RoutingState::PACKET_START:
+        if (buffer.length() > MYSQL_HEADER_LEN)
+        {
+            track_current_command(&buffer);
+            bool is_large = large_query_continues(buffer);
+            routed = route_statement(&buffer);
+            if (routed && is_large)
+            {
+                m_routing_state = RoutingState::LARGE_PACKET;
+            }
+        }
+        else
+        {
+            // Unexpected, client should not be sending empty (header-only) packets in this case.
+            MXS_ERROR("Client %s sent empty packet when a normal packet was expected.",
+                      m_session->user_and_host().c_str());
+        }
+        break;
+
+    case RoutingState::LARGE_PACKET:
+        {
+            // No command bytes, just continue routing large packet.
+            bool is_large = large_query_continues(buffer);
+            routed = route_statement(&buffer);
+            if (!is_large)
+            {
+                // Large packet routing completed.
+                m_routing_state = RoutingState::PACKET_START;
+            }
+        }
+        break;
+
+    case RoutingState::LOAD_DATA:
+        {
+            // Local-infile routing continues until client sends an empty packet. Again, tracked by backend
+            // but this time on the downstream side.
+            routed = route_statement(&buffer);
+            if (!session_is_load_active(m_session))
+            {
+                m_routing_state = RoutingState::PACKET_START;
+            }
+        }
+        break;
+    }
+
+    mxb_assert(!routed || buffer.empty());      // Router should have consumed the packet.
 
     auto rval = StateMachineRes::IN_PROGRESS;
     if (!routed)
@@ -1972,33 +2028,13 @@ std::string MariaDBClientConnection::current_db() const
     return m_session_data->db;
 }
 
-void MariaDBClientConnection::track_current_command(GWBUF* buffer)
+void MariaDBClientConnection::track_current_command(mxs::Buffer* buffer)
 {
-    mxb_assert(gwbuf_is_contiguous(buffer));
-    uint8_t* data = GWBUF_DATA(buffer);
+    mxb_assert(m_routing_state == RoutingState::PACKET_START);
+    auto buf = buffer->get();
 
-    if (m_changing_user)
-    {
-        // User reauthentication in progress, ignore the contents.
-        return;
-    }
-
-    if (!m_large_query)
-    {
-        m_command = MYSQL_GET_COMMAND(data);
-
-        if (mxs_mysql_command_will_respond(m_command))
-        {
-            session_retain_statement(m_session, buffer);
-        }
-    }
-
-    /**
-     * If the buffer contains a large query, we have to skip the command
-     * byte extraction for the next packet. This way current_command always
-     * contains the latest command executed on this backend.
-     */
-    m_large_query = MYSQL_GET_PAYLOAD_LEN(data) == MYSQL_PACKET_LENGTH_MAX;
+    uint8_t* data = GWBUF_DATA(buf);
+    m_command = MYSQL_GET_COMMAND(data);
 }
 
 const MariaDBUserCache* MariaDBClientConnection::user_account_cache()
@@ -2095,7 +2131,17 @@ bool MariaDBClientConnection::read_protocol_packet(mxs::Buffer* output)
     if (buffer_len >= MYSQL_HEADER_LEN)
     {
         // Got enough that the entire packet may be available.
-        int prot_packet_len = parse_packet_length(read_buffer);
+
+        // Ensure that the HEADER + command byte is contiguous. This simplifies further parsing.
+        // In the vast majority of cases the start of the buffer is already contiguous.
+        auto link_len = gwbuf_link_length(read_buffer);
+        if ((buffer_len == MYSQL_HEADER_LEN && link_len < MYSQL_HEADER_LEN)
+            || (buffer_len > MYSQL_HEADER_LEN && link_len <= MYSQL_HEADER_LEN))
+        {
+            read_buffer = gwbuf_make_contiguous(read_buffer);
+        }
+
+        int prot_packet_len = MYSQL_GET_PACKET_LEN(read_buffer);
 
         // Protocol packet length read. Either received more than the packet, the exact packet or
         // a partial packet.
@@ -2587,4 +2633,14 @@ void MariaDBClientConnection::perform_check_token()
             m_auth_state = AuthState::FAIL;
         }
     }
+}
+
+bool MariaDBClientConnection::in_routing_state() const
+{
+    return m_state == State::READY;
+}
+
+bool MariaDBClientConnection::large_query_continues(const mxs::Buffer& buffer) const
+{
+    return MYSQL_GET_PACKET_LEN(buffer.get()) == MAX_PACKET_SIZE;
 }

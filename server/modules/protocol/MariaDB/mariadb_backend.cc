@@ -510,7 +510,7 @@ bool MariaDBBackendConnection::session_ok_to_route(DCB* dcb)
             auto client_protocol = static_cast<MariaDBClientConnection*>(client_dcb->protocol());
             if (client_protocol)
             {
-                if (client_protocol->m_state == MariaDBClientConnection::State::READY)
+                if (client_protocol->in_routing_state())
                 {
                     rval = true;
                 }
@@ -1756,7 +1756,7 @@ bool MariaDBBackendConnection::gw_read_backend_handshake(DCB* dcb, GWBUF* buffer
 int MariaDBBackendConnection::send_mysql_native_password_response(DCB* dcb)
 {
     uint8_t* curr_passwd = m_client_data->auth_token_phase2.empty() ? null_client_sha1 :
-                           m_client_data->auth_token_phase2.data();
+        m_client_data->auth_token_phase2.data();
 
     GWBUF* buffer = gwbuf_alloc(MYSQL_HEADER_LEN + GW_MYSQL_SCRAMBLE_SIZE);
     uint8_t* data = GWBUF_DATA(buffer);

@@ -33,17 +33,6 @@ struct UserEntryResult;
 class MariaDBClientConnection : public mxs::ClientConnectionBase
 {
 public:
-    // General connection state
-    enum class State
-    {
-        HANDSHAKING,
-        AUTHENTICATING,
-        CHANGING_USER,
-        READY,
-        FAILED,
-        QUIT,
-    };
-
     MariaDBClientConnection(MXS_SESSION* session, mxs::Component* component);
 
     void ready_for_reading(DCB* dcb) override;
@@ -64,8 +53,7 @@ public:
     static bool parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* kt_out,
                                  std::string* user_out);
     void mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t target_id, kill_type_t type);
-
-    State m_state {State::HANDSHAKING};
+    bool in_routing_state() const;
 
 private:
     /** Return type of process_special_commands() */
@@ -120,8 +108,9 @@ private:
                                              uint64_t keep_protocol_thread_id, kill_type_t type);
     void mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_type_t type);
     void execute_kill(MXS_SESSION* issuer, std::shared_ptr<KillInfo> info);
-    void track_current_command(GWBUF* buf);
+    void track_current_command(mxs::Buffer* buf);
     void update_sequence(GWBUF* buf);
+    bool large_query_continues(const mxs::Buffer& buffer) const;
 
     bool require_ssl() const;
     void update_user_account_entry();
@@ -138,6 +127,17 @@ private:
 
     void send_authetication_error(AuthErrorType error, const std::string& auth_mod_msg = "");
     void send_misc_error(const std::string& msg);
+
+    // General connection state
+    enum class State
+    {
+        HANDSHAKING,
+        AUTHENTICATING,
+        CHANGING_USER,
+        READY,
+        FAILED,
+        QUIT,
+    };
 
     // Handshake state
     enum class HSState
@@ -172,6 +172,13 @@ private:
         FAIL
     };
 
+    enum class RoutingState
+    {
+        PACKET_START,   /**< Expecting the client to send a normal packet */
+        LARGE_PACKET,   /**< Expecting the client to continue streaming a large packet */
+        LOAD_DATA,      /**< Expecting the client to continue streaming CSV-data */
+    };
+
     /** Parsed contents of a COM_CHANGE_USER */
     struct ChangeUserFields
     {
@@ -187,6 +194,11 @@ private:
     SSLState ssl_authenticate_check_status();
     int      ssl_authenticate_client();
 
+    State        m_state {State::HANDSHAKING};                  /**< Overall state */
+    HSState      m_handshake_state {HSState::INIT};             /**< Handshake state */
+    AuthState    m_auth_state {AuthState::FIND_ENTRY};          /**< Authentication state */
+    RoutingState m_routing_state {RoutingState::PACKET_START};  /**< Routing state */
+
     mariadb::SClientAuth m_authenticator;   /**< Client authentication data */
     ChangeUserFields     m_change_user;     /**< User account to change to */
 
@@ -194,9 +206,7 @@ private:
     MXS_SESSION*    m_session {nullptr};    /**< Generic session */
     MYSQL_session*  m_session_data {nullptr};
     qc_sql_mode_t   m_sql_mode {QC_SQL_MODE_DEFAULT};   /**< SQL-mode setting */
-    HSState         m_handshake_state {HSState::INIT};
-    AuthState       m_auth_state {AuthState::FIND_ENTRY};   /**< Client authentication state */
-    uint8_t         m_sequence {0};                         /**< Latest sequence number from client */
+    uint8_t         m_sequence {0};                     /**< Latest sequence number from client */
     uint8_t         m_command {0};
     bool            m_changing_user {false};
     bool            m_large_query {false};

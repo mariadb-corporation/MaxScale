@@ -1126,6 +1126,11 @@ public:
         return m_pBuffer;
     }
 
+    const GWBUF* get() const
+    {
+        return m_pBuffer;
+    }
+
     /**
      * Resets the underlying GWBUF.
      *
