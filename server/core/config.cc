@@ -88,7 +88,8 @@ config::ParamInteger MXS_CONFIG::s_max_auth_errors_until_block(
     "The maximum number of authentication failures that are tolerated "
     "before a host is temporarily blocked.",
     DEFAULT_MAX_AUTH_ERRORS_UNTIL_BLOCK,
-    0, std::numeric_limits<config::ParamInteger::value_type>::max()); // min, max
+    0, std::numeric_limits<config::ParamInteger::value_type>::max(), // min, max
+    config::Param::Modifiable::AT_RUNTIME);
 
 config::ParamInteger MXS_CONFIG::s_rebalance_threshold(
     &MXS_CONFIG::s_specification,
@@ -97,21 +98,24 @@ config::ParamInteger MXS_CONFIG::s_rebalance_threshold(
     "with the minimum load is larger than the value of this parameter, then work will "
     "be moved from the former to the latter.",
     20,     // default
-    5, 100);// min, max
+    5, 100, // min, max
+    config::Param::Modifiable::AT_RUNTIME);
 
 config::ParamDuration<std::chrono::milliseconds> MXS_CONFIG::s_rebalance_period(
     &MXS_CONFIG::s_specification,
     CN_REBALANCE_PERIOD,
     "How often should the load of the worker threads be checked and rebalancing be made.",
     mxs::config::NO_INTERPRETATION,
-    std::chrono::milliseconds(0));
+    std::chrono::milliseconds(0),
+    config::Param::Modifiable::AT_RUNTIME);
 
 config::ParamCount MXS_CONFIG::s_rebalance_window(
     &MXS_CONFIG::s_specification,
     CN_REBALANCE_WINDOW,
     "The load of how many seconds should be taken into account when rebalancing.",
     10,     // default
-    1, 60); // min, max
+    1, 60,  // min, max
+    config::Param::Modifiable::AT_RUNTIME);
 
 MXS_CONFIG::MXS_CONFIG()
     : config::Configuration("maxscale", &s_specification)
