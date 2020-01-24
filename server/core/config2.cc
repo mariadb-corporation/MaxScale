@@ -1121,16 +1121,20 @@ json_t* ParamString::to_json(value_type value) const
 /**
  * class Number
  */
-bool Number::set(const value_type& value)
+bool Number::is_valid(const value_type& value) const
 {
-    bool rv = false;
     const ParamNumber& p = static_cast<const ParamNumber&>(parameter());
 
-    if (value >= p.min_value() && value <= p.max_value())
-    {
-        rv = ConcreteType<Number, ParamNumber>::set(value);
-    }
+    return value >= p.min_value() && value <= p.max_value();
+}
 
-    return rv;
+Number::value_type Number::atomic_get() const
+{
+    return mxb::atomic::load(&m_value, mxb::atomic::RELAXED);
+}
+
+void Number::atomic_set(const value_type& value)
+{
+    mxb::atomic::store(&m_value, value, mxb::atomic::RELAXED);
 }
 }

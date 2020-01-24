@@ -1281,13 +1281,23 @@ public:
 
     value_type get() const
     {
-        return m_value;
+        return parameter().is_modifiable_at_runtime() ? atomic_get() : m_value;
     }
 
-    virtual bool set(const value_type& value)
+    bool set(const value_type& value)
     {
-        m_value = value;
-        return true;
+        bool rv = is_valid(value);
+
+        if (rv)
+        {
+            atomic_set(value);
+        }
+        else
+        {
+            do_set(value);
+        }
+
+        return rv;
     }
 
     std::string to_string() const override
@@ -1301,7 +1311,31 @@ public:
     }
 
 protected:
-    value_type m_value;
+    virtual bool is_valid(const value_type&) const
+    {
+        return true;
+    }
+
+    virtual void do_set(const value_type& value)
+    {
+        m_value = value;
+    }
+
+    virtual value_type atomic_get() const
+    {
+        std::lock_guard<std::mutex> guard(m_mutex);
+        return m_value;
+    }
+
+    virtual void atomic_set(const value_type& value)
+    {
+        std::lock_guard<std::mutex> guard(m_mutex);
+        do_set(value);
+    }
+
+protected:
+    value_type         m_value;
+    mutable std::mutex m_mutex;
 };
 
 /**
@@ -1456,8 +1490,11 @@ protected:
     {
     }
 
-public:
-    bool set(const value_type& value) override;
+protected:
+    bool is_valid(const value_type& value) const override final;
+
+    value_type atomic_get() const override final;
+    void atomic_set(const value_type& value) override final;
 };
 
 /**

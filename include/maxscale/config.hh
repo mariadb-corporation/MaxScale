@@ -83,7 +83,8 @@ public:
     public:
         using config::Duration<milliseconds>::Duration;
 
-        bool set(const value_type& value) override;
+    protected:
+        void do_set(const value_type& value) override final;
     };
 
     RebalancePeriod rebalance_period;    /**< How often should rebalancing be made. */

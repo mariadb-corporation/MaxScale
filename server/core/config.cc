@@ -123,17 +123,12 @@ MXS_CONFIG::MXS_CONFIG()
 {
 }
 
-bool MXS_CONFIG::RebalancePeriod::set(const milliseconds& new_value)
+void MXS_CONFIG::RebalancePeriod::do_set(const milliseconds& new_value)
 {
-    bool rv = config::Duration<milliseconds>::set(new_value);
+    config::Duration<milliseconds>::do_set(new_value);
 
-    if (rv)
-    {
-        mxb_assert(mxs::MainWorker::get());
-        mxs::MainWorker::get()->start_rebalancing();
-    }
-
-    return rv;
+    mxb_assert(mxs::MainWorker::get());
+    mxs::MainWorker::get()->start_rebalancing();
 }
 
 static bool        process_config_context(CONFIG_CONTEXT*);
