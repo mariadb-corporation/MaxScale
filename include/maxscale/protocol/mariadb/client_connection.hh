@@ -71,20 +71,29 @@ private:
         ERROR,      // The SM encountered an error. The connection should be closed.
     };
 
+    enum class AuthType
+    {
+        NORMAL_AUTH,
+        CHANGE_USER,
+    };
+
     bool read_first_client_packet(mxs::Buffer* output);
     bool read_protocol_packet(mxs::Buffer* output);
 
     StateMachineRes process_handshake();
-    StateMachineRes process_authentication();
+    StateMachineRes process_authentication(AuthType auth_type);
     bool            perform_auth_exchange();
-    void            perform_check_token();
+    void            perform_check_token(AuthType auth_type);
 
     StateMachineRes process_normal_read();
+    bool            process_normal_packet(mxs::Buffer* buffer);
 
     bool parse_handshake_response_packet(GWBUF* buffer);
     bool parse_ssl_request_packet(GWBUF* buffer);
     bool handle_change_user(bool* changed_user, GWBUF** packetbuf);
-    bool start_change_user(GWBUF* buffer);
+    bool start_change_user(mxs::Buffer* buffer);
+    bool complete_change_user();
+    void cancel_change_user();
     bool reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf);
     void handle_use_database(GWBUF* read_buffer);
     void handle_authentication_errors(DCB* dcb, mariadb::ClientAuthenticator::AuthRes auth_val,
@@ -160,6 +169,7 @@ private:
         CONTINUE_EXCHANGE,  /**< Continue exchange */
         CHECK_TOKEN,        /**< Check token against user account entry */
         START_SESSION,      /**< Start routing session */
+        CHANGE_USER_OK,     /**< User-change processed */
         FAIL,               /**< Authentication failed */
         COMPLETE,           /**< Authentication is complete */
     };
@@ -182,15 +192,11 @@ private:
     /** Parsed contents of a COM_CHANGE_USER */
     struct ChangeUserFields
     {
-        std::string      username;
-        std::string      db;
-        std::string      plugin;
-        uint16_t         charset {0};
-        mariadb::ByteVec auth_token;
-        mariadb::ByteVec conn_attr;
-
-        ChangeUserFields() = default;
+        mxs::Buffer                      client_query;  /**< The original change-user-query from client. */
+        std::unique_ptr<MYSQL_session>   session;       /**< Temporary session-data */
+        std::unique_ptr<UserEntryResult> user_entry_bu; /**< Old user entry information */
     };
+
     SSLState ssl_authenticate_check_status();
     int      ssl_authenticate_client();
 
@@ -209,7 +215,6 @@ private:
     uint8_t         m_sequence {0};                     /**< Latest sequence number from client */
     uint8_t         m_command {0};
     bool            m_changing_user {false};
-    bool            m_large_query {false};
     uint64_t        m_version {0};                  /**< Numeric server version */
     mxs::Buffer     m_stored_query;                 /**< Temporarily stored queries */
 

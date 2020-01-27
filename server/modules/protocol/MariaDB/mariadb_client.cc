@@ -547,7 +547,8 @@ void MariaDBClientConnection::handle_authentication_errors(DCB* generic_dcb, Aut
  *
  * @return Instruction for upper level state machine
  */
-MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_authentication()
+MariaDBClientConnection::StateMachineRes
+MariaDBClientConnection::process_authentication(AuthType auth_type)
 {
     auto rval = StateMachineRes::IN_PROGRESS;
     bool state_machine_continue = true;
@@ -629,7 +630,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_authen
             break;
 
         case AuthState::CHECK_TOKEN:
-            perform_check_token();
+            perform_check_token(auth_type);
             break;
 
         case AuthState::START_SESSION:
@@ -649,6 +650,15 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_authen
             }
             break;
 
+        case AuthState::CHANGE_USER_OK:
+            {
+                // Reauthentication to MaxScale succeeded, but the query still needs to be successfully
+                // routed.
+                rval = complete_change_user() ? StateMachineRes::DONE : StateMachineRes::ERROR;
+                state_machine_continue = false;
+                break;
+            }
+
         case AuthState::COMPLETE:
             m_sql_mode = m_session->listener_data()->m_default_sql_mode;
             mxs_mysql_send_ok(m_dcb, m_session_data->next_sequence, 0, NULL);
@@ -664,8 +674,18 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_authen
         case AuthState::FAIL:
             // An error message should have already been sent.
             state_machine_continue = false;
-            mxs::mark_auth_as_failed(m_dcb->remote());
-            rval = StateMachineRes::ERROR;
+            if (auth_type == AuthType::NORMAL_AUTH)
+            {
+                mxs::mark_auth_as_failed(m_dcb->remote());
+                rval = StateMachineRes::ERROR;
+            }
+            else
+            {
+                // com_change_user failed, but the session may yet continue.
+                cancel_change_user();
+                rval = StateMachineRes::DONE;
+            }
+
             break;
         }
     }
@@ -674,11 +694,9 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_authen
 
 void MariaDBClientConnection::update_user_account_entry()
 {
-    const auto& search_settings = m_session_data->user_search_settings;
-    // The correct authenticator is chosen here (and also in reauthenticate_client()).
     auto users = user_account_cache();
     auto search_res = users->find_user(m_session_data->user, m_session_data->remote, m_session_data->db,
-                                       search_settings);
+                                       m_session_data->user_search_settings);
     m_previous_userdb_version = users->version();   // Can use this to skip user entry check after update.
 
     mariadb::AuthenticatorModule* selected_module = nullptr;
@@ -698,6 +716,7 @@ void MariaDBClientConnection::update_user_account_entry()
     {
         // Correct plugin is loaded, generate session-specific data.
         m_session_data->m_current_authenticator = selected_module;
+        // If changing user, this overrides the old client authenticator.
         m_authenticator = selected_module->create_client_authenticator();
     }
     else
@@ -1388,24 +1407,9 @@ bool MariaDBClientConnection::route_statement(mxs::Buffer* buffer)
                 track_transaction_state(session, packetbuf);
             }
 
-            bool changed_user = false;
-            if (!handle_change_user(&changed_user, &packetbuf))
+            if (packetbuf)
             {
-                MXS_ERROR("User reauthentication failed for %s", session->user_and_host().c_str());
-                gwbuf_free(packetbuf);
-                packetbuf = nullptr;
-                rval = false;
-                keep_processing = false;
-            }
-
-            if (keep_processing)
-            {
-                if (packetbuf)
-                {
-                    rval = m_downstream->routeQuery(packetbuf) != 0;
-                }
-
-                m_changing_user = changed_user;
+                rval = m_downstream->routeQuery(packetbuf) != 0;
             }
         }
     }
@@ -1462,13 +1466,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
     case RoutingState::PACKET_START:
         if (buffer.length() > MYSQL_HEADER_LEN)
         {
-            track_current_command(&buffer);
-            bool is_large = large_query_continues(buffer);
-            routed = route_statement(&buffer);
-            if (routed && is_large)
-            {
-                m_routing_state = RoutingState::LARGE_PACKET;
-            }
+            routed = process_normal_packet(&buffer);
         }
         else
         {
@@ -1566,7 +1564,9 @@ void MariaDBClientConnection::ready_for_reading(DCB* event_dcb)
         case State::AUTHENTICATING:
         case State::CHANGING_USER:
             {
-                auto ret = process_authentication();
+                auto auth_type = (m_state == State::CHANGING_USER) ? AuthType::CHANGE_USER :
+                    AuthType::NORMAL_AUTH;
+                auto ret = process_authentication(auth_type);
                 switch (ret)
                 {
                 case StateMachineRes::IN_PROGRESS:
@@ -2276,10 +2276,10 @@ bool MariaDBClientConnection::is_movable() const
     return m_auth_state != AuthState::TRY_AGAIN;
 }
 
-bool MariaDBClientConnection::start_change_user(GWBUF* buffer)
+bool MariaDBClientConnection::start_change_user(mxs::Buffer* buffer)
 {
     // Parse the COM_CHANGE_USER-packet. The packet is somewhat similar to a typical handshake response.
-    size_t buflen = gwbuf_length(buffer);
+    size_t buflen = buffer->length();
     bool rval = false;
 
     size_t min_expected_len = MYSQL_HEADER_LEN + 5;
@@ -2289,21 +2289,37 @@ bool MariaDBClientConnection::start_change_user(GWBUF* buffer)
         int datalen = buflen - MYSQL_HEADER_LEN;
         packet_parser::ByteVec data;
         data.resize(datalen + 1);
-        gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, datalen, data.data());
+        gwbuf_copy_data(buffer->get(), MYSQL_HEADER_LEN, datalen, data.data());
         data[datalen] = '\0';   // Simplifies some later parsing.
 
         auto parse_res = packet_parser::parse_change_user_packet(data, m_session_data->client_capabilities());
         if (parse_res.success)
         {
+            // Only the last byte should be left.
             if (data.size() == 1)
             {
-                m_change_user.username = move(parse_res.username);
-                m_change_user.db = move(parse_res.db);
-                m_change_user.plugin = move(parse_res.plugin);
-                m_change_user.charset = parse_res.charset;
-                m_change_user.auth_token = move(parse_res.token_res.auth_token);
-                m_change_user.conn_attr = move(parse_res.attr_res.attr_data);
+                m_change_user.client_query = move(*buffer);
+
+                // Make a temporary session for the change user. Some of the fields persist for the new
+                // user, some need to be overwritten.
+                m_change_user.session = std::make_unique<MYSQL_session>(*m_session_data);
+                m_change_user.session->user = parse_res.username;
+                m_change_user.session->db = parse_res.db;
+                m_change_user.session->plugin = parse_res.plugin;
+                m_change_user.session->client_info.m_charset = parse_res.charset;
+                m_change_user.session->auth_token = parse_res.token_res.auth_token;
+                m_change_user.session->connect_attrs = parse_res.attr_res.attr_data;
+
+                // Backup the old user account entry in case user change fails. The client authenticator
+                // does not need to be preserved.
+                m_change_user.user_entry_bu = move(m_user_entry);
+
+                // Point the session used by the connection to the temporary session so other authentication-
+                // related functions access it. Backend connections will still see the old session data.
+                m_session_data = m_change_user.session.get();
                 rval = true;
+                MXB_INFO("Client %s is attempting a COM_CHANGE_USER to '%s'.",
+                         m_session->user_and_host().c_str(), m_change_user.session->user.c_str());
             }
         }
         else if (parse_res.token_res.old_protocol)
@@ -2315,6 +2331,30 @@ bool MariaDBClientConnection::start_change_user(GWBUF* buffer)
     return rval;
 }
 
+bool MariaDBClientConnection::complete_change_user()
+{
+    // Finalize results by writing session-level objects and routing the original change-user packet.
+    MXB_INFO("COM_CHANGE_USER from %s to '%s' succeeded.",
+             m_session->user_and_host().c_str(), m_change_user.session->user.c_str());
+    m_change_user.user_entry_bu = nullptr;
+    m_session_data = static_cast<MYSQL_session*>(m_session->protocol_data());
+    *m_session_data = *m_change_user.session;
+    m_change_user.session.reset();
+    bool rval = route_statement(&m_change_user.client_query);
+    m_change_user.client_query.release();
+    return rval;
+}
+
+void MariaDBClientConnection::cancel_change_user()
+{
+    MXB_INFO("COM_CHANGE_USER from %s to '%s' failed.",
+             m_session->user_and_host().c_str(), m_change_user.session->user.c_str());
+    // Cancel by restoring old values. An error message should have been sent to the client.
+    m_user_entry = move(m_change_user.user_entry_bu);
+    m_session_data = static_cast<MYSQL_session*>(m_session->protocol_data());
+    m_change_user.client_query.reset();
+    m_change_user.session = nullptr;
+}
 MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handshake()
 {
     mxs::Buffer read_buffer;
@@ -2575,7 +2615,7 @@ bool MariaDBClientConnection::perform_auth_exchange()
     return state_machine_continue;
 }
 
-void MariaDBClientConnection::perform_check_token()
+void MariaDBClientConnection::perform_check_token(AuthType auth_type)
 {
     // If the user entry didn't exist in the first place, don't check token and just fail.
     // TODO: server likely checks some random token to spend time, could add it later.
@@ -2592,7 +2632,8 @@ void MariaDBClientConnection::perform_check_token()
         {
             if (entrytype == UserEntryType::USER_ACCOUNT_OK)
             {
-                m_auth_state = AuthState::START_SESSION;
+                m_auth_state = (auth_type == AuthType::NORMAL_AUTH) ? AuthState::START_SESSION :
+                    AuthState::CHANGE_USER_OK;
             }
             else
             {
@@ -2643,4 +2684,32 @@ bool MariaDBClientConnection::in_routing_state() const
 bool MariaDBClientConnection::large_query_continues(const mxs::Buffer& buffer) const
 {
     return MYSQL_GET_PACKET_LEN(buffer.get()) == MAX_PACKET_SIZE;
+}
+
+bool MariaDBClientConnection::process_normal_packet(mxs::Buffer* buffer)
+{
+    bool success = false;
+    track_current_command(buffer);
+    bool is_large = large_query_continues(*buffer);
+    if (m_command == MXS_COM_CHANGE_USER)
+    {
+        // Client sent a change-user-packet. Parse it but only route it once change-user completes.
+        if (start_change_user(buffer))
+        {
+            m_state = State::CHANGING_USER;
+            m_auth_state = AuthState::FIND_ENTRY;
+            m_dcb->trigger_read_event();
+            success = true;
+        }
+    }
+    else
+    {
+        bool routed = route_statement(buffer);
+        if (routed && is_large)
+        {
+            m_routing_state = RoutingState::LARGE_PACKET;
+        }
+        success = routed;
+    }
+    return success;
 }

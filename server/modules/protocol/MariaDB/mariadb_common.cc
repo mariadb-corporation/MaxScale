@@ -463,6 +463,23 @@ uint32_t MYSQL_session::extra_capabilitites() const
     return client_info.m_extra_capabilities;
 }
 
+MYSQL_session::MYSQL_session(const MYSQL_session& rhs)
+    : user(rhs.user)
+    , remote(rhs.remote)
+    , db(rhs.db)
+    , plugin(rhs.plugin)
+    , next_sequence(rhs.next_sequence)
+    , changing_user(rhs.changing_user)
+    , connect_attrs(rhs.connect_attrs)
+    , client_info(rhs.client_info)
+    , auth_token(rhs.auth_token)
+    , auth_token_phase2(rhs.auth_token_phase2)
+    , m_current_authenticator(rhs.m_current_authenticator)
+    , user_search_settings(rhs.user_search_settings)
+{
+    memcpy(scramble, rhs.scramble, MYSQL_SCRAMBLE_LEN);
+}
+
 uint64_t mariadb::AuthenticatorModule::capabilities() const
 {
     return 0;

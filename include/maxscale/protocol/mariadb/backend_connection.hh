@@ -78,7 +78,7 @@ private:
     int    gw_send_change_user_to_backend(DCB* backend);
     void   gw_send_proxy_protocol_header(BackendDCB* backend_dcb);
     int    handle_persistent_connection(BackendDCB* dcb, GWBUF* queue);
-    GWBUF* gw_create_change_user_packet(const MYSQL_session* mses);
+    GWBUF* gw_create_change_user_packet();
     void   do_handle_error(DCB* dcb, const std::string& errmsg,
                            mxs::ErrorType type = mxs::ErrorType::TRANSIENT);
     void   prepare_for_write(DCB* dcb, GWBUF* buffer);

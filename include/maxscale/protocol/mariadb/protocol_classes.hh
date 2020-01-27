@@ -52,6 +52,8 @@ struct UserSearchSettings
 class MYSQL_session : public MXS_SESSION::ProtocolData
 {
 public:
+    MYSQL_session() = default;
+    MYSQL_session(const MYSQL_session& rhs);
 
     /**
      * Contains client capabilities. The client sends this data in the handshake response-packet, and the

@@ -226,7 +226,7 @@ bool MariaDBBackendConnection::reuse_connection(BackendDCB* dcb, mxs::Component*
             m_stored_query = nullptr;
         }
 
-        GWBUF* buf = gw_create_change_user_packet(m_client_data);
+        GWBUF* buf = gw_create_change_user_packet();
         if (dcb->writeq_append(buf))
         {
             MXS_INFO("Sent COM_CHANGE_USER");
@@ -1212,7 +1212,7 @@ int MariaDBBackendConnection::backend_write_delayqueue(DCB* plain_dcb, GWBUF* bu
     {
         /** Recreate the COM_CHANGE_USER packet with the scramble the backend sent to us */
         gwbuf_free(buffer);
-        buffer = gw_create_change_user_packet(m_client_data);
+        buffer = gw_create_change_user_packet();
     }
 
     int rc = 1;
@@ -1255,27 +1255,21 @@ int MariaDBBackendConnection::gw_change_user(DCB* backend, MXS_SESSION* in_sessi
 /**
  * Create COM_CHANGE_USER packet and store it to GWBUF.
  *
- * @param mses          MySQL session
  * @return GWBUF buffer consisting of COM_CHANGE_USER packet
  * @note the function doesn't fail
  */
-GWBUF* MariaDBBackendConnection::gw_create_change_user_packet(const MYSQL_session* mses)
+GWBUF* MariaDBBackendConnection::gw_create_change_user_packet()
 {
-    GWBUF* buffer;
-    uint8_t* payload = NULL;
-    uint8_t* payload_start = NULL;
-    long bytes;
-    char dbpass[MYSQL_USER_MAXLEN + 1] = "";
+    auto mses = m_client_data;
     const char* curr_db = NULL;
-    const uint8_t* curr_passwd = NULL;
-
     const char* db = mses->db.c_str();
     if (strlen(db) > 0)
     {
         curr_db = db;
     }
 
-    if (!mses->auth_token_phase2.empty())
+    const uint8_t* curr_passwd = NULL;
+    if (mses->auth_token_phase2.size() == GW_MYSQL_SCRAMBLE_SIZE)
     {
         curr_passwd = mses->auth_token_phase2.data();
     }
@@ -1284,12 +1278,12 @@ GWBUF* MariaDBBackendConnection::gw_create_change_user_packet(const MYSQL_sessio
      * Protocol MySQL COM_CHANGE_USER for CLIENT_PROTOCOL_41
      * 1 byte COMMAND
      */
-    bytes = 1;
+    long bytes = 1;
 
     /** add the user and a terminating char */
     const char* user = m_client_data->user.c_str();
-    bytes += strlen(user);
-    bytes++;
+    bytes += strlen(user) + 1;
+
     /**
      * next will be + 1 (scramble_len) + 20 (fixed_scramble) +
      * (db + NULL term) + 2 bytes charset
@@ -1307,22 +1301,24 @@ GWBUF* MariaDBBackendConnection::gw_create_change_user_packet(const MYSQL_sessio
     }
     bytes++;
 
+    auto plugin_strlen = strlen(DEFAULT_MYSQL_AUTH_PLUGIN);
+
     /** the charset */
     bytes += 2;
-    bytes += strlen("mysql_native_password");
-    bytes++;
+    bytes += plugin_strlen + 1;
+    bytes += mses->connect_attrs.size();
 
     /** the packet header */
     bytes += 4;
 
-    buffer = gwbuf_alloc(bytes);
+    GWBUF* buffer = gwbuf_alloc(bytes);
 
     // The COM_CHANGE_USER is a session command so the result must be collected
     gwbuf_set_type(buffer, GWBUF_TYPE_COLLECT_RESULT);
 
-    payload = GWBUF_DATA(buffer);
+    uint8_t* payload = GWBUF_DATA(buffer);
     memset(payload, '\0', bytes);
-    payload_start = payload;
+    uint8_t* payload_start = payload;
 
     /** set packet number to 0 */
     payload[3] = 0x00;
@@ -1352,6 +1348,7 @@ GWBUF* MariaDBBackendConnection::gw_create_change_user_packet(const MYSQL_sessio
         gw_sha1_str(hash1, GW_MYSQL_SCRAMBLE_SIZE, hash2);
 
         /** dbpass is the HEX form of SHA1(SHA1(real_password)) */
+        char dbpass[MYSQL_USER_MAXLEN + 1] = "";
         gw_bin2hex(dbpass, hash2, GW_MYSQL_SCRAMBLE_SIZE);
 
         /** new_sha is the SHA1(CONCAT(scramble, hash2) */
@@ -1390,14 +1387,15 @@ GWBUF* MariaDBBackendConnection::gw_create_change_user_packet(const MYSQL_sessio
     payload++;
     *payload = '\x00';      // Discards second byte from client?
     payload++;
-    memcpy(payload, "mysql_native_password", strlen("mysql_native_password"));
-    /*
-     * Following needed if more to be added
-     * payload += strlen("mysql_native_password");
-     ** put here the paylod size: bytes to write - 4 bytes packet header
-     */
-    gw_mysql_set_byte3(payload_start, (bytes - 4));
+    memcpy(payload, DEFAULT_MYSQL_AUTH_PLUGIN, plugin_strlen);
+    payload += plugin_strlen + 1;
 
+    if (!mses->connect_attrs.empty())
+    {
+        memcpy(payload, mses->connect_attrs.data(), mses->connect_attrs.size());
+    }
+
+    mariadb::set_byte3(payload_start, (bytes - MYSQL_HEADER_LEN));
     return buffer;
 }
 
@@ -1409,7 +1407,7 @@ GWBUF* MariaDBBackendConnection::gw_create_change_user_packet(const MYSQL_sessio
 int
 MariaDBBackendConnection::gw_send_change_user_to_backend(DCB* backend)
 {
-    GWBUF* buffer = gw_create_change_user_packet(m_client_data);
+    GWBUF* buffer = gw_create_change_user_packet();
     int rc = 0;
     if (backend->writeq_append(buffer))
     {
@@ -2366,8 +2364,8 @@ void MariaDBBackendConnection::process_result_start(Iter it, Iter end)
         break;
 
     case MYSQL_REPLY_EOF:
-        // EOF packets are never expected as the first response
-        mxb_assert(!true);
+        // EOF packets are never expected as the first response unless changing user.
+        mxb_assert(m_changing_user);
         break;
 
     default:
