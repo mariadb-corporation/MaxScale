@@ -367,10 +367,10 @@ public:
 
     bool set(Type& value, const std::string& value_as_string) const override;
 
-    bool from_string(const std::string& value, value_type* pValue,
-                     std::string* pMessage = nullptr) const;
-    std::string to_string(value_type value) const;
-    json_t* to_json(value_type value) const;
+    virtual bool from_string(const std::string& value, value_type* pValue,
+                             std::string* pMessage = nullptr) const;
+    virtual std::string to_string(value_type value) const;
+    virtual json_t* to_json(value_type value) const;
 
     value_type default_value() const
     {
@@ -418,7 +418,11 @@ protected:
         mxb_assert(min_value <= max_value);
     }
 
-private:
+    bool from_value(const std::string& value_as_string,
+                    value_type value,
+                    value_type* pValue,
+                    std::string* pMessage) const;
+
     value_type m_default_value;
     value_type m_min_value;
     value_type m_max_value;
@@ -920,16 +924,29 @@ public:
 /**
  * ParamSize
  */
-class ParamSize : public Param
+class ParamSize : public ParamNumber
 {
 public:
-    using value_type = uint64_t;
-
     ParamSize(Specification* pSpecification,
               const char* zName,
               const char* zDescription,
               Modifiable modifiable = Modifiable::AT_STARTUP)
-        : ParamSize(pSpecification, zName, zDescription, modifiable, Param::MANDATORY, value_type())
+        : ParamSize(pSpecification, zName, zDescription, modifiable, Param::MANDATORY,
+                    value_type(),
+                    0,
+                    std::numeric_limits<int32_t>::max())
+    {
+    }
+
+    ParamSize(Specification* pSpecification,
+              const char* zName,
+              const char* zDescription,
+              value_type min_value,
+              value_type max_value,
+              Modifiable modifiable = Modifiable::AT_STARTUP)
+        : ParamSize(pSpecification, zName, zDescription, modifiable, Param::MANDATORY,
+                    value_type(),
+                    min_value, max_value)
     {
     }
 
@@ -938,25 +955,29 @@ public:
               const char* zDescription,
               value_type default_value,
               Modifiable modifiable = Modifiable::AT_STARTUP)
-        : ParamSize(pSpecification, zName, zDescription, modifiable, Param::OPTIONAL, default_value)
+        : ParamSize(pSpecification, zName, zDescription, modifiable, Param::OPTIONAL,
+                    default_value,
+                    0,
+                    std::numeric_limits<int32_t>::max())
+    {
+    }
+
+    ParamSize(Specification* pSpecification,
+              const char* zName,
+              const char* zDescription,
+              value_type default_value,
+              value_type min_value,
+              value_type max_value,
+              Modifiable modifiable = Modifiable::AT_STARTUP)
+        : ParamSize(pSpecification, zName, zDescription, modifiable, Param::OPTIONAL, default_value,
+                    min_value, max_value)
     {
     }
 
     std::string type() const override;
 
-    value_type default_value() const
-    {
-        return m_default_value;
-    }
-
-    std::string default_to_string() const override;
-
-    bool validate(const std::string& value_as_string, std::string* pMessage) const override;
-
-    bool set(Type& value, const std::string& value_as_string) const override;
-
     bool from_string(const std::string& value, value_type* pValue,
-                     std::string* pMessage = nullptr) const;
+                     std::string* pMessage = nullptr) const override;
     std::string to_string(value_type value) const;
     json_t* to_json(value_type value) const;
 
@@ -979,14 +1000,13 @@ private:
               const char* zDescription,
               Modifiable modifiable,
               Kind kind,
-              value_type default_value)
-        : Param(pSpecification, zName, zDescription, modifiable, kind, MXS_MODULE_PARAM_SIZE)
-        , m_default_value(default_value)
+              value_type default_value,
+              value_type min_value,
+              value_type max_value)
+        : ParamNumber(pSpecification, zName, zDescription, modifiable, kind, MXS_MODULE_PARAM_SIZE,
+                      default_value, min_value, max_value)
     {
     }
-
-private:
-    value_type m_default_value;
 };
 
 /**

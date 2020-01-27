@@ -610,34 +610,22 @@ bool ParamNumber::from_string(const std::string& value_as_string,
     const char* zValue = value_as_string.c_str();
     char* zEnd;
     long l = strtol(zValue, &zEnd, 10);
-    bool valid = (l >= m_min_value && l <= m_max_value && zEnd != zValue && *zEnd == 0);
 
-    if (valid)
+    bool rv = zEnd != zValue && *zEnd == 0;
+
+    if (rv)
     {
-        *pValue = l;
+        rv = from_value(value_as_string, l, pValue, pMessage);
     }
     else if (pMessage)
     {
-        if (!(zEnd != zValue && *zEnd == 0))
-        {
-            *pMessage = "Invalid ";
-        }
-        else if (!(l >= m_min_value))
-        {
-            *pMessage = "Too small a ";
-        }
-        else
-        {
-            mxb_assert(!(l <= m_max_value));
-            *pMessage = "Too large a ";
-        }
-
+        *pMessage = "Invalid ";
         *pMessage += type();
         *pMessage += ": ";
         *pMessage += value_as_string;
     }
 
-    return valid;
+    return rv;
 }
 
 std::string ParamNumber::to_string(value_type value) const
@@ -664,6 +652,37 @@ ParamNumber::value_type ParamNumber::get(const mxs::ConfigParameters& params) co
 json_t* ParamNumber::to_json(value_type value) const
 {
     return json_integer(value);
+}
+
+bool ParamNumber::from_value(const string& value_as_string,
+                             value_type value,
+                             value_type* pValue,
+                             std::string* pMessage) const
+{
+    bool rv = value >= m_min_value && value <= m_max_value;
+
+    if (rv)
+    {
+        *pValue = value;
+    }
+    else if (pMessage)
+    {
+        if (value < m_min_value)
+        {
+            *pMessage = "Too small a ";
+        }
+        else
+        {
+            mxb_assert(value >= m_max_value);
+            *pMessage = "Too large a ";
+        }
+
+        *pMessage += type();
+        *pMessage += ": ";
+        *pMessage += value_as_string;
+    }
+
+    return rv;
 }
 
 /**
@@ -941,44 +960,21 @@ std::string ParamSize::type() const
     return "size";
 }
 
-std::string ParamSize::default_to_string() const
-{
-    return to_string(m_default_value);
-}
-
-bool ParamSize::validate(const std::string& value_as_string, std::string* pMessage) const
-{
-    value_type value;
-    return from_string(value_as_string, &value, pMessage);
-}
-
-bool ParamSize::set(Type& value, const std::string& value_as_string) const
-{
-    mxb_assert(&value.parameter() == this);
-
-    Size& size_value = static_cast<Size&>(value);
-
-    value_type x;
-    bool valid = from_string(value_as_string, &x);
-
-    if (valid)
-    {
-        size_value.set(x);
-    }
-
-    return valid;
-}
-
 bool ParamSize::from_string(const std::string& value_as_string,
                             value_type* pValue,
                             std::string* pMessage) const
 {
-    bool valid = get_suffixed_size(value_as_string.c_str(), pValue);
+    uint64_t value;
+    bool valid = get_suffixed_size(value_as_string.c_str(), &value);
 
     if (!valid && pMessage)
     {
         *pMessage = "Invalid size: ";
         *pMessage += value_as_string;
+    }
+    else
+    {
+        valid = from_value(value_as_string, value, pValue, pMessage);
     }
 
     return valid;
