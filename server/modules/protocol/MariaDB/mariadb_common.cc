@@ -472,7 +472,7 @@ mariadb::ClientAuthenticator::AuthRes
 mariadb::ClientAuthenticator::reauthenticate(const UserEntry* entry, DCB* client, uint8_t* scramble, size_t scramble_len,
                                              const ByteVec& auth_token, uint8_t* output)
 {
-    return AuthRes::FAIL;
+    return AuthRes();
 }
 
 

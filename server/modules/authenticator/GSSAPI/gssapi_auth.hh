@@ -59,9 +59,9 @@ public:
     ~GSSAPIClientAuthenticator() override;
 
     ExchRes exchange(GWBUF* buffer, MYSQL_session* session, mxs::Buffer* output) override;
-    AuthRes authenticate(DCB* client, const mariadb::UserEntry* entry, MYSQL_session* session) override;
+    AuthRes authenticate(const mariadb::UserEntry* entry, MYSQL_session* session) override;
 
-    uint8_t  m_sequence {0};                  /**< The next packet sequence number */
+    uint8_t m_sequence {0};                 /**< The next packet sequence number */
 
 private:
     void copy_client_information(GWBUF* buffer);

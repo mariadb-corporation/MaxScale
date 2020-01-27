@@ -55,7 +55,9 @@ public:
     static std::shared_ptr<mxs::ListenerSessionData> create_test_data(const MXS_CONFIG_PARAMETER& params);
 
     ListenerSessionData(SSLContext ssl, qc_sql_mode_t default_sql_mode, SERVICE* service,
-                        SProtocol protocol_module, std::vector<SAuthenticator>&& authenticators);
+                        SProtocol protocol_module, const std::string& listener_name,
+                        std::vector<SAuthenticator>&& authenticators);
+
     ListenerSessionData(const ListenerSessionData&) = delete;
     ListenerSessionData& operator=(const ListenerSessionData&) = delete;
 
@@ -63,6 +65,7 @@ public:
     const qc_sql_mode_t m_default_sql_mode;     /**< Default sql mode for the listener */
     SERVICE&            m_service;              /**< The service the listener feeds */
     const SProtocol     m_proto_module;         /**< Protocol module */
+    const std::string   m_listener_name;        /**< Name of the owning listener */
 
     /**
      * Authenticator modules used by the sessions created from the listener. The session will select

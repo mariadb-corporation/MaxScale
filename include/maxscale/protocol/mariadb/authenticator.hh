@@ -126,17 +126,23 @@ public:
 
     enum class ExchRes
     {
-        FAIL,         /**< Packet processing failed */
-        INCOMPLETE,   /**< Should be called again after client responds to output */
-        READY         /**< Exchange with client complete, should continue to password check */
+        FAIL,           /**< Packet processing failed */
+        INCOMPLETE,     /**< Should be called again after client responds to output */
+        READY           /**< Exchange with client complete, should continue to password check */
     };
 
     // Return values for authenticate()-function
-    enum class AuthRes
+    struct AuthRes
     {
-        FAIL,           /**< Authentication failed */
-        FAIL_WRONG_PW,  /**< Client provided wrong password */
-        SUCCESS,        /**< Authentication was successful */
+        enum class Status
+        {
+            FAIL,           /**< Authentication failed */
+            FAIL_WRONG_PW,  /**< Client provided wrong password */
+            SUCCESS,        /**< Authentication was successful */
+        };
+
+        Status      status {Status::FAIL};
+        std::string msg;
     };
 
     ClientAuthenticator(const ClientAuthenticator&) = delete;
@@ -156,8 +162,13 @@ public:
      */
     virtual ExchRes exchange(GWBUF* input, MYSQL_session* ses, mxs::Buffer* output) = 0;
 
-    // Carry out the authentication.
-    virtual AuthRes authenticate(DCB* client, const UserEntry* entry, MYSQL_session* session) = 0;
+    /**
+     * Check client token against the password.
+     *
+     * @param entry User account entry
+     * @param session Protocol session data
+     */
+    virtual AuthRes authenticate(const UserEntry* entry, MYSQL_session* session) = 0;
 
     /**
      * This entry point was added to avoid calling authenticator functions

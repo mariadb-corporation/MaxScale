@@ -127,10 +127,10 @@ PamClientAuthenticator::exchange(GWBUF* buffer, MYSQL_session* session, mxs::Buf
     return rval;
 }
 
-AuthRes PamClientAuthenticator::authenticate(DCB* generic_dcb, const UserEntry* entry, MYSQL_session* session)
+AuthRes PamClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_session* session)
 {
     using mxb::PamResult;
-    auto rval = AuthRes::FAIL;
+    AuthRes rval;
     mxb_assert(m_state == State::PW_RECEIVED);
 
     /** We sent the authentication change packet + plugin name and the client
@@ -147,16 +147,15 @@ AuthRes PamClientAuthenticator::authenticate(DCB* generic_dcb, const UserEntry* 
     PamResult res = mxb::pam_authenticate(username, password, session->remote, pam_service, PASSWORD);
     if (res.type == PamResult::Result::SUCCESS)
     {
-        rval = AuthRes::SUCCESS;
+        rval.status = AuthRes::Status::SUCCESS;
     }
     else
     {
         if (res.type == PamResult::Result::WRONG_USER_PW)
         {
-            rval = AuthRes::FAIL_WRONG_PW;
+            rval.status = AuthRes::Status::FAIL_WRONG_PW;
         }
-        MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE, "%s",
-                      res.error.c_str());
+        rval.msg = res.error;
     }
 
     m_state = State::DONE;

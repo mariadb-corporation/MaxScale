@@ -1032,7 +1032,7 @@ Listener::create_shared_data(const MXS_CONFIG_PARAMETER& params, const std::stri
     {
         auto service = static_cast<Service*>(params.get_service(CN_SERVICE));
         return std::make_unique<ListenerSessionData>(move(ssl), sql_mode, service, move(protocol_module),
-                                                     move(authenticators));
+                                                     listener_name, move(authenticators));
     }
     else
     {
@@ -1054,11 +1054,13 @@ void mark_auth_as_failed(const std::string& remote)
 
 ListenerSessionData::ListenerSessionData(SSLContext ssl, qc_sql_mode_t default_sql_mode, SERVICE* service,
                                          std::unique_ptr<mxs::ProtocolModule> protocol_module,
+                                         const std::string& listener_name,
                                          std::vector<SAuthenticator>&& authenticators)
     : m_ssl(move(ssl))
     , m_default_sql_mode(default_sql_mode)
     , m_service(*service)
     , m_proto_module(move(protocol_module))
+    , m_listener_name(listener_name)
     , m_authenticators(move(authenticators))
 {
 }

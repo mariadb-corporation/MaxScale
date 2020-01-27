@@ -136,7 +136,7 @@ private:
         NO_PLUGIN,
     };
 
-    void send_authetication_error(AuthErrorType error);
+    void send_authetication_error(AuthErrorType error, const std::string& auth_mod_msg = "");
     void send_misc_error(const std::string& msg);
 
     // Handshake state

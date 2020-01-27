@@ -339,10 +339,9 @@ bool GSSAPIClientAuthenticator::validate_user(MYSQL_session* session, const char
  * if authentication was successfully completed or MXS_AUTH_FAILED if authentication
  * has failed.
  */
-AuthRes GSSAPIClientAuthenticator::authenticate(DCB* generic_dcb, const mariadb::UserEntry* entry,
-                                                MYSQL_session* session)
+AuthRes GSSAPIClientAuthenticator::authenticate(const mariadb::UserEntry* entry, MYSQL_session* session)
 {
-    auto rval = AuthRes::FAIL;
+    AuthRes rval;
 
     mxb_assert(state == GSSAPI_AUTH_TOKEN_READY);
 
@@ -353,7 +352,7 @@ AuthRes GSSAPIClientAuthenticator::authenticate(DCB* generic_dcb, const mariadb:
     if (validate_gssapi_token(session->auth_token.data(), session->auth_token.size(), &princ)
         && validate_user(session, princ, entry))
     {
-        rval = AuthRes::SUCCESS;
+        rval.status = AuthRes::Status::SUCCESS;
     }
 
     MXS_FREE(princ);

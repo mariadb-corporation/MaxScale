@@ -25,7 +25,7 @@ public:
     PamClientAuthenticator() = default;
 
     ExchRes exchange(GWBUF* read_buffer, MYSQL_session* session, mxs::Buffer* output_packet) override;
-    AuthRes authenticate(DCB* client, const mariadb::UserEntry* entry, MYSQL_session* session) override;
+    AuthRes authenticate(const mariadb::UserEntry* entry, MYSQL_session* session) override;
 
 private:
     maxscale::Buffer create_auth_change_packet() const;

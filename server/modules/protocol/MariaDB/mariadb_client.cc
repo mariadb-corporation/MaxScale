@@ -43,6 +43,7 @@
 #include <maxscale/ssl.hh>
 #include <maxscale/utils.h>
 #include <maxbase/format.hh>
+#include <maxscale/event.hh>
 
 #include "setparser.hh"
 #include "sqlmodeparser.hh"
@@ -515,9 +516,9 @@ void MariaDBClientConnection::handle_authentication_errors(DCB* generic_dcb, Aut
     char* fail_str = NULL;
     MYSQL_session* session = m_session_data;
 
-    switch (auth_val)
+    switch (auth_val.status)
     {
-    case AuthRes::FAIL:
+    case AuthRes::Status::FAIL:
         MXS_DEBUG("authentication failed. fd %d, state = MYSQL_FAILED_AUTH.", dcb->fd());
         /** Send error 1045 to client */
         fail_str = create_auth_fail_str(session->user.c_str(),
@@ -864,7 +865,7 @@ bool MariaDBClientConnection::reauthenticate_client(MXS_SESSION* session, GWBUF*
         const auto& search_settings = m_session_data->user_search_settings;
         auto user_entry = users->find_user(data->user, data->remote, data->db, search_settings);
 
-        auto rc = AuthRes::FAIL;
+        AuthRes rc;
         if (user_entry)
         {
             std::vector<uint8_t> payload;
@@ -875,7 +876,7 @@ bool MariaDBClientConnection::reauthenticate_client(MXS_SESSION* session, GWBUF*
             rc = m_authenticator->reauthenticate(
                 &user_entry->entry, m_dcb, data->scramble, sizeof(data->scramble), payload,
                 data->client_sha1);
-            if (rc == AuthRes::SUCCESS)
+            if (rc.status == AuthRes::Status::SUCCESS)
             {
                 // Re-authentication successful, route the original COM_CHANGE_USER
                 rval = true;
@@ -2410,42 +2411,51 @@ void MariaDBClientConnection::update_sequence(GWBUF* buf)
     gwbuf_copy_data(buf, MYSQL_SEQ_OFFSET, 1, &m_sequence);
 }
 
-void MariaDBClientConnection::send_authetication_error(AuthErrorType error)
+void MariaDBClientConnection::send_authetication_error(AuthErrorType error, const std::string& auth_mod_msg)
 {
     auto ses = m_session_data;
+    string mariadb_msg;
+
     switch (error)
     {
-
     case AuthErrorType::ACCESS_DENIED:
-        {
-            string msg = mxb::string_printf("Access denied for user '%s'@'%s' (using password: %s)",
-                                            ses->user.c_str(), ses->remote.c_str(),
-                                            ses->auth_token.empty() ? "NO" : "YES");
-            modutil_send_mysql_err_packet(m_dcb, ses->next_sequence, 0, 1045, "28000", msg.c_str());
-        }
+        mariadb_msg = mxb::string_printf("Access denied for user '%s'@'%s' (using password: %s)",
+                                         ses->user.c_str(), ses->remote.c_str(),
+                                         ses->auth_token.empty() ? "NO" : "YES");
+        modutil_send_mysql_err_packet(m_dcb, ses->next_sequence, 0, 1045, "28000", mariadb_msg.c_str());
         break;
 
     case AuthErrorType::DB_ACCESS_DENIED:
-        {
-            string msg = mxb::string_printf("Access denied for user '%s'@'%s' to database '%s'",
-                                            ses->user.c_str(), ses->remote.c_str(), ses->db.c_str());
-            modutil_send_mysql_err_packet(m_dcb, ses->next_sequence, 0, 1044, "42000", msg.c_str());
-        }
+        mariadb_msg = mxb::string_printf("Access denied for user '%s'@'%s' to database '%s'",
+                                         ses->user.c_str(), ses->remote.c_str(), ses->db.c_str());
+        modutil_send_mysql_err_packet(m_dcb, ses->next_sequence, 0, 1044, "42000", mariadb_msg.c_str());
         break;
 
     case AuthErrorType::BAD_DB:
-        {
-            string msg = mxb::string_printf("Unknown database '%s'", ses->db.c_str());
-            modutil_send_mysql_err_packet(m_dcb, ses->next_sequence, 0, 1049, "42000", msg.c_str());
-        }
+        mariadb_msg = mxb::string_printf("Unknown database '%s'", ses->db.c_str());
+        modutil_send_mysql_err_packet(m_dcb, ses->next_sequence, 0, 1049, "42000", mariadb_msg.c_str());
         break;
 
     case AuthErrorType::NO_PLUGIN:
-        {
-            string msg = mxb::string_printf("Plugin '%s' is not loaded", m_user_entry->entry.plugin.c_str());
-            modutil_send_mysql_err_packet(m_dcb, ses->next_sequence, 0, 1524, "HY000", msg.c_str());
-        }
+        mariadb_msg = mxb::string_printf("Plugin '%s' is not loaded", m_user_entry->entry.plugin.c_str());
+        modutil_send_mysql_err_packet(m_dcb, ses->next_sequence, 0, 1524, "HY000", mariadb_msg.c_str());
         break;
+    }
+
+    // Also log an authentication failure event.
+    if (m_session->service->config().log_auth_warnings)
+    {
+        string total_msg = mxb::string_printf("Authentication failed for user '%s'@[%s] to service '%s'. "
+                                              "Originating listener: '%s'. MariaDB error: '%s'.",
+                                              ses->user.c_str(), ses->remote.c_str(),
+                                              m_session->service->name(),
+                                              m_session->listener_data()->m_listener_name.c_str(),
+                                              mariadb_msg.c_str());
+        if (!auth_mod_msg.empty())
+        {
+            total_msg += mxb::string_printf(" Authenticator error: '%s'.", auth_mod_msg.c_str());
+        }
+        MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE, "%s", total_msg.c_str());
     }
 }
 
@@ -2534,8 +2544,8 @@ void MariaDBClientConnection::perform_check_token()
     }
     else
     {
-        auto auth_val = m_authenticator->authenticate(m_dcb, &m_user_entry->entry, m_session_data);
-        if (auth_val == AuthRes::SUCCESS)
+        auto auth_val = m_authenticator->authenticate(&m_user_entry->entry, m_session_data);
+        if (auth_val.status == AuthRes::Status::SUCCESS)
         {
             if (entrytype == UserEntryType::USER_ACCOUNT_OK)
             {
@@ -2563,20 +2573,20 @@ void MariaDBClientConnection::perform_check_token()
                 default:
                     mxb_assert(!true);
                 }
-                send_authetication_error(error);
+                send_authetication_error(error, auth_val.msg);
                 m_auth_state = AuthState::FAIL;
             }
         }
         else
         {
-            if (auth_val == AuthRes::FAIL_WRONG_PW)
+            if (auth_val.status == AuthRes::Status::FAIL_WRONG_PW)
             {
                 // Again, this may be because user data is obsolete. Update userdata, but fail
                 // session anyway since I/O with client cannot be redone.
                 m_session->service->request_user_account_update();
             }
             // This is also sent if the auth module fails.
-            send_authetication_error(AuthErrorType::ACCESS_DENIED);
+            send_authetication_error(AuthErrorType::ACCESS_DENIED, auth_val.msg);
             m_auth_state = AuthState::FAIL;
         }
     }

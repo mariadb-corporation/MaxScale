@@ -360,7 +360,8 @@ AuthRes MariaDBClientAuthenticator::validate_mysql_user(const UserEntry* entry,
                                                         const mariadb::ClientAuthenticator::ByteVec& auth_token,
                                                         uint8_t* phase2_scramble_out)
 {
-    AuthRes rval = AuthRes::FAIL_WRONG_PW;
+    AuthRes rval;
+    rval.status = AuthRes::Status::FAIL_WRONG_PW;
     // TODO: add skip_auth-equivalent support to main user manager
     auto passwdz = entry->password.c_str();
     // The * at the start needs to be skipped.
@@ -372,8 +373,7 @@ AuthRes MariaDBClientAuthenticator::validate_mysql_user(const UserEntry* entry,
     if (no_password_required(passwdz, session->auth_token.size())
         || check_password(passwdz, scramble, scramble_len, auth_token, phase2_scramble_out))
     {
-        /** Password is OK. TODO: add check that the database exists to main user manager */
-        rval = AuthRes::SUCCESS;
+        rval.status = AuthRes::Status::SUCCESS;     /** Password is OK. */
     }
 
     return rval;
@@ -1061,4 +1061,3 @@ int MariaDBAuthenticatorModule::get_users_from_server(MYSQL* con, SERVER* server
 
     return users;
 }
-

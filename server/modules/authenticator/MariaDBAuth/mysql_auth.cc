@@ -290,47 +290,12 @@ MariaDBClientAuthenticator::exchange(GWBUF* buf, MYSQL_session* session, mxs::Bu
     return rval;
 }
 
-/**
- * @brief Authenticates a MySQL user who is a client to MaxScale.
- *
- * First call the SSL authentication function. Call other functions to validate
- * the user, reloading the user data if the first attempt fails.
- *
- * @param dcb Request handler DCB connected to the client
- * @return Authentication status
- * @note Authentication status codes are defined in maxscale/protocol/mysql.h
- */
-AuthRes MariaDBClientAuthenticator::authenticate(DCB* generic_dcb, const UserEntry* entry,
-                                                 MYSQL_session* session)
+AuthRes MariaDBClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_session* session)
 {
-    mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
-    auto dcb = static_cast<ClientDCB*>(generic_dcb);
-
     mxb_assert(m_state == State::CHECK_TOKEN);
 
     auto auth_ret = validate_mysql_user(entry, session, session->scramble, MYSQL_SCRAMBLE_LEN,
                                         session->auth_token, session->client_sha1);
-
-    if (auth_ret != AuthRes::SUCCESS && dcb->service()->config().log_auth_warnings)
-    {
-        std::string extra = auth_ret == AuthRes::FAIL_WRONG_PW ? "Wrong password." : "User not found.";
-        std::string db = !session->db.empty() ? " to database '" + session->db + "'" : "";
-
-        MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE,
-                      "%s: login attempt for user '%s'@[%s]:%d%s, authentication failed. %s",
-                      dcb->service()->name(),
-                      session->user.c_str(),
-                      dcb->remote().c_str(),
-                      static_cast<ClientDCB*>(dcb)->port(),
-                      db.c_str(), extra.c_str());
-
-        if (is_localhost_address(&dcb->ip()) && !dcb->service()->config().localhost_match_wildcard_host)
-        {
-            MXS_NOTICE("If you have a wildcard grant that covers this address, "
-                       "try adding 'localhost_match_wildcard_host=true' for "
-                       "service '%s'. ", dcb->service()->name());
-        }
-    }
     return auth_ret;
 }
 
@@ -341,15 +306,15 @@ AuthRes MariaDBClientAuthenticator::reauthenticate(const UserEntry* entry, DCB* 
     mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
     auto dcb = static_cast<ClientDCB*>(generic_dcb);
     auto client_data = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
-    auto rval = AuthRes::FAIL;
+    AuthRes rval;
 
     uint8_t phase2_scramble[MYSQL_SCRAMBLE_LEN];
     auto rc = validate_mysql_user(entry, client_data, scramble, scramble_len, auth_token, phase2_scramble);
 
-    if (rc == AuthRes::SUCCESS)
+    if (rc.status == AuthRes::Status::SUCCESS)
     {
         memcpy(output_token, phase2_scramble, sizeof(phase2_scramble));
-        rval = AuthRes::SUCCESS;
+        rval.status = AuthRes::Status::SUCCESS;
     }
 
     return rval;
