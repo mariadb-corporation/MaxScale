@@ -23,6 +23,7 @@ int main(int argc, char* argv[])
 
     /** Copy original config so we can easily reset the testing environment */
     test->maxscales->ssh_node_f(0, true, "cp /etc/maxscale.cnf /tmp/maxscale.cnf");
+    test->maxscales->ssh_node_f(0, true, "chmod a+rw /tmp/maxscale.cnf");
 
     /** Get a baseline result with a good configuration */
     int baseline = test->maxscales->ssh_node_f(0, true, "maxscale -c --user=maxscale -f /tmp/maxscale.cnf");
