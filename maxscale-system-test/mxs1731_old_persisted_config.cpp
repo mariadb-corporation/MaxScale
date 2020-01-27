@@ -30,6 +30,9 @@ int main(int argc, char** argv)
                                "chown maxscale:maxscale /var/lib/maxscale/maxscale.cnf.d/;"
                                "cp %s /var/lib/maxscale/maxscale.cnf.d/RW-Split-Router.cnf",
                                filename);
+    test.maxscales->ssh_node_f(0,
+                               true,
+                               "chmod a+r /var/lib/maxscale/maxscale.cnf.d/RW-Split-Router.cnf");
 
     test.maxscales->restart();
     test.check_maxscale_alive();

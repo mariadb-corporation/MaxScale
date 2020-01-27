@@ -41,9 +41,9 @@ void test_script_monitor(TestConnections* Test, Mariadb_nodes* nodes, char* expe
     Test->set_timeout(200);
     Test->maxscales->ssh_node_f(0,
                                 true,
-                                "cd %s;"
-                                "truncate -s 0 script_output;"
-                                "chown maxscale:maxscale script_output",
+                                "cd %s; truncate -s 0 script_output; \
+                                chown maxscale:maxscale script_output; \
+                                chmod a+rw script_output",
                                 Test->maxscales->access_homedir[0]);
     sleep(10);
 

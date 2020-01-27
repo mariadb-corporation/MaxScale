@@ -177,6 +177,7 @@ int main(int argc, char* argv[])
 
     if (test.maxscales->copy_to_node(0, from.c_str(), to.c_str()) == 0)
     {
+        test.maxscales->ssh_node(0, (std::string("chmod a+r ") + to).c_str(), true);
         if (test.maxscales->start() == 0)
         {
             sleep(2);

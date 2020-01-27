@@ -21,5 +21,9 @@ void copy_rules(TestConnections* Test, const char* rules_name, const char* rules
 
     Test->set_timeout(30);
     Test->maxscales->copy_to_node_legacy(src.str().c_str(), dest.str().c_str(), 0);
+    Test->maxscales->ssh_node_f(0,
+                                true,
+                                "chmod a+r %s",
+                                dest.str().c_str());
     Test->stop_timeout();
 }
