@@ -68,12 +68,11 @@ public:
     char*    local_address;                             /**< Local address to use when connecting */
     time_t   users_refresh_time;                        /**< How often the users can be refreshed */
     time_t   users_refresh_interval;                    /**< How often the users will be refreshed */
-    uint64_t writeq_high_water;                         /**< High water mark of dcb write queue */
-    uint64_t writeq_low_water;                          /**< Low water mark of dcb write queue */
-    mxb_log_target_t log_target;                        /**< Log type */
-    config::Bool     load_persisted_configs;            /**< Load persisted configuration files on startup */
-    config::Integer  max_auth_errors_until_block;       /**< Host is blocked once this limit is reached */
-    config::Integer  rebalance_threshold;               /**< If load of particular worker differs more than
+    config::Size    writeq_high_water;                  /**< High water mark of dcb write queue */
+    config::Size    writeq_low_water;                   /**< Low water mark of dcb write queue */
+    config::Bool    load_persisted_configs;             /**< Load persisted configuration files on startup */
+    config::Integer max_auth_errors_until_block;        /**< Host is blocked once this limit is reached */
+    config::Integer rebalance_threshold;                /**< If load of particular worker differs more than
                                                          * this % amount from load-average, rebalancing will
                                                          * be made.
                                                          */
@@ -90,9 +89,16 @@ public:
     RebalancePeriod rebalance_period;    /**< How often should rebalancing be made. */
     config::Count   rebalance_window;    /**< How many seconds should be taken into account. */
 
+    // The following will not be configured via the configuration mechanism.
+    mxb_log_target_t log_target;                        /**< Log type */
+
+    bool post_configure(const mxs::ConfigParameters& params) override;
+
 public:
     static config::Specification s_specification;
 
+    static config::ParamSize                   s_writeq_high_water;
+    static config::ParamSize                   s_writeq_low_water;
     static config::ParamBool                   s_load_persisted_configs;
     static config::ParamInteger                s_max_auth_errors_until_block;
     static config::ParamInteger                s_rebalance_threshold;

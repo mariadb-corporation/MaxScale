@@ -76,6 +76,22 @@ using std::chrono::seconds;
 
 config::Specification MXS_CONFIG::s_specification("maxscale", config::Specification::GLOBAL);
 
+config::ParamSize MXS_CONFIG::s_writeq_high_water(
+    &MXS_CONFIG::s_specification,
+    CN_WRITEQ_HIGH_WATER,
+    "High water mark of dcb write queue.",
+    0,
+    MIN_WRITEQ_HIGH_WATER, std::numeric_limits<config::ParamInteger::value_type>::max(),
+    config::Param::Modifiable::AT_RUNTIME);
+
+config::ParamSize MXS_CONFIG::s_writeq_low_water(
+    &MXS_CONFIG::s_specification,
+    CN_WRITEQ_LOW_WATER,
+    "Low water mark of dcb write queue.",
+    0,
+    MIN_WRITEQ_LOW_WATER, std::numeric_limits<config::ParamInteger::value_type>::max(),
+    config::Param::Modifiable::AT_RUNTIME);
+
 config::ParamBool MXS_CONFIG::s_load_persisted_configs(
     &MXS_CONFIG::s_specification,
     CN_LOAD_PERSISTED_CONFIGS,
@@ -119,6 +135,8 @@ config::ParamCount MXS_CONFIG::s_rebalance_window(
 
 MXS_CONFIG::MXS_CONFIG()
     : config::Configuration("maxscale", &s_specification)
+    , writeq_high_water(this, &s_writeq_high_water)
+    , writeq_low_water(this, &s_writeq_low_water)
     , load_persisted_configs(this, &s_load_persisted_configs)
     , max_auth_errors_until_block(this, &s_max_auth_errors_until_block)
     , rebalance_threshold(this, &s_rebalance_threshold)
@@ -605,11 +623,11 @@ bool config_load_single_file(const char* file,
     }
 
     /* Check this after reading config is finished */
-    if ((gateway.writeq_high_water || gateway.writeq_low_water)
-        && gateway.writeq_high_water <= gateway.writeq_low_water)
+    mxs::ConfigParameters params; // We don't have this for the main configuration.
+    if (!gateway.post_configure(params))
     {
         rval = -1;
-        MXS_ERROR("Invaild configuration, writeq_high_water should be greater than writeq_low_water");
+        MXS_ERROR("Invalid configuration.");
     }
 
     return rval == 0;
@@ -1765,38 +1783,22 @@ size_t config_thread_stack_size()
 
 uint32_t config_writeq_high_water()
 {
-    return mxb::atomic::load(&gateway.writeq_high_water, mxb::atomic::RELAXED);
+    return gateway.writeq_high_water.get();
 }
 
 bool config_set_writeq_high_water(uint32_t size)
 {
-    bool rval = false;
-
-    if (size >= MIN_WRITEQ_HIGH_WATER)
-    {
-        mxb::atomic::store(&gateway.writeq_high_water, size, mxb::atomic::RELAXED);
-        rval = true;
-    }
-
-    return rval;
+    return gateway.writeq_high_water.set(size);
 }
 
 uint32_t config_writeq_low_water()
 {
-    return mxb::atomic::load(&gateway.writeq_low_water, mxb::atomic::RELAXED);
+    return gateway.writeq_low_water.get();
 }
 
 bool config_set_writeq_low_water(uint32_t size)
 {
-    bool rval = false;
-
-    if (size >= MIN_WRITEQ_LOW_WATER)
-    {
-        mxb::atomic::store(&gateway.writeq_low_water, size, mxb::atomic::RELAXED);
-        rval = true;
-    }
-
-    return rval;
+    return gateway.writeq_low_water.set(size);
 }
 
 static struct
@@ -2145,42 +2147,6 @@ static int handle_global_item(const char* name, const char* value)
             return 0;
         }
     }
-    else if (strcmp(name, CN_WRITEQ_HIGH_WATER) == 0)
-    {
-        if (!get_suffixed_size(value, &gateway.writeq_high_water))
-        {
-            MXS_ERROR("Invalid value for %s: %s", CN_WRITEQ_HIGH_WATER, value);
-            return 0;
-        }
-
-        if (gateway.writeq_high_water < MIN_WRITEQ_HIGH_WATER)
-        {
-            MXS_WARNING("The specified writeq high water mark %lu, is smaller "
-                        "than the minimum allowed size %lu. Changing to minimum.",
-                        gateway.writeq_high_water,
-                        MIN_WRITEQ_HIGH_WATER);
-            gateway.writeq_high_water = MIN_WRITEQ_HIGH_WATER;
-        }
-        MXS_NOTICE("Writeq high water mark set to: %lu", gateway.writeq_high_water);
-    }
-    else if (strcmp(name, CN_WRITEQ_LOW_WATER) == 0)
-    {
-        if (!get_suffixed_size(value, &gateway.writeq_low_water))
-        {
-            MXS_ERROR("Invalid value for %s: %s", CN_WRITEQ_LOW_WATER, value);
-            return 0;
-        }
-
-        if (gateway.writeq_low_water < MIN_WRITEQ_LOW_WATER)
-        {
-            MXS_WARNING("The specified writeq low water mark %lu, is smaller "
-                        "than the minimum allowed size %lu. Changing to minimum.",
-                        gateway.writeq_low_water,
-                        MIN_WRITEQ_LOW_WATER);
-            gateway.writeq_low_water = MIN_WRITEQ_LOW_WATER;
-        }
-        MXS_NOTICE("Writeq low water mark set to: %lu", gateway.writeq_low_water);
-    }
     else if (strcmp(name, CN_RETAIN_LAST_STATEMENTS) == 0)
     {
         char* endptr;
@@ -2373,8 +2339,6 @@ void config_set_global_defaults()
     }
 
     gateway.thread_stack_size = 0;
-    gateway.writeq_high_water = 0;
-    gateway.writeq_low_water = 0;
     pthread_attr_t attr;
     if (pthread_attr_init(&attr) == 0)
     {
@@ -4819,6 +4783,22 @@ bool config_set_rebalance_threshold(const char* value)
     else
     {
         MXS_ERROR("Invalid value (percentage expected) for '%s': %s", CN_REBALANCE_THRESHOLD, value);
+    }
+
+    return rv;
+}
+
+bool MXS_CONFIG::post_configure(const mxs::ConfigParameters& params)
+{
+    bool rv = true;
+
+    if (this->writeq_high_water != 0 || this->writeq_low_water != 0)
+    {
+        if (this->writeq_high_water <= this->writeq_low_water)
+        {
+            MXS_ERROR("Invalid configuration, writeq_high_water should be greater than writeq_low_water.");
+            rv = false;
+        }
     }
 
     return rv;
