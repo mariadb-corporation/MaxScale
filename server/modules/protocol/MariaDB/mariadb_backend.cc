@@ -1270,17 +1270,14 @@ GWBUF* MariaDBBackendConnection::gw_create_change_user_packet(const MYSQL_sessio
     const uint8_t* curr_passwd = NULL;
 
     const char* db = mses->db.c_str();
-    const char* user = m_client_data->user.c_str();
-    const uint8_t* pwd = mses->client_sha1;
-
     if (strlen(db) > 0)
     {
         curr_db = db;
     }
 
-    if (memcmp(pwd, null_client_sha1, MYSQL_SCRAMBLE_LEN))
+    if (!mses->auth_token_phase2.empty())
     {
-        curr_passwd = pwd;
+        curr_passwd = mses->auth_token_phase2.data();
     }
 
     /**
@@ -1290,6 +1287,7 @@ GWBUF* MariaDBBackendConnection::gw_create_change_user_packet(const MYSQL_sessio
     bytes = 1;
 
     /** add the user and a terminating char */
+    const char* user = m_client_data->user.c_str();
     bytes += strlen(user);
     bytes++;
     /**
@@ -1345,7 +1343,7 @@ GWBUF* MariaDBBackendConnection::gw_create_change_user_packet(const MYSQL_sessio
         uint8_t client_scramble[GW_MYSQL_SCRAMBLE_SIZE];
 
         /** hash1 is the function input, SHA1(real_password) */
-        memcpy(hash1, pwd, GW_MYSQL_SCRAMBLE_SIZE);
+        memcpy(hash1, mses->auth_token_phase2.data(), GW_MYSQL_SCRAMBLE_SIZE);
 
         /**
          * hash2 is the SHA1(input data), where
@@ -1757,8 +1755,8 @@ bool MariaDBBackendConnection::gw_read_backend_handshake(DCB* dcb, GWBUF* buffer
  */
 int MariaDBBackendConnection::send_mysql_native_password_response(DCB* dcb)
 {
-    uint8_t* curr_passwd = memcmp(m_client_data->client_sha1, null_client_sha1, MYSQL_SCRAMBLE_LEN) ?
-        m_client_data->client_sha1 : null_client_sha1;
+    uint8_t* curr_passwd = m_client_data->auth_token_phase2.empty() ? null_client_sha1 :
+                           m_client_data->auth_token_phase2.data();
 
     GWBUF* buffer = gwbuf_alloc(MYSQL_HEADER_LEN + GW_MYSQL_SCRAMBLE_SIZE);
     uint8_t* data = GWBUF_DATA(buffer);
@@ -1881,9 +1879,9 @@ GWBUF* MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool s
     uint8_t client_capabilities[4] = {0, 0, 0, 0};
     uint8_t* curr_passwd = NULL;
 
-    if (memcmp(client->client_sha1, null_client_sha1, MYSQL_SCRAMBLE_LEN) != 0)
+    if (!client->auth_token_phase2.empty())
     {
-        curr_passwd = client->client_sha1;
+        curr_passwd = client->auth_token_phase2.data();
     }
 
     uint32_t capabilities = create_capabilities(with_ssl, client->db[0], service_capabilities);

@@ -293,31 +293,10 @@ MariaDBClientAuthenticator::exchange(GWBUF* buf, MYSQL_session* session, mxs::Bu
 AuthRes MariaDBClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_session* session)
 {
     mxb_assert(m_state == State::CHECK_TOKEN);
-
-    auto auth_ret = validate_mysql_user(entry, session, session->scramble, MYSQL_SCRAMBLE_LEN,
-                                        session->auth_token, session->client_sha1);
+    AuthRes auth_ret;
+    auth_ret.status = validate_mysql_user(entry, session) ? AuthRes::Status::SUCCESS :
+        AuthRes::Status::FAIL_WRONG_PW;
     return auth_ret;
-}
-
-AuthRes MariaDBClientAuthenticator::reauthenticate(const UserEntry* entry, DCB* generic_dcb,
-                                                   uint8_t* scramble, size_t scramble_len,
-                                                   const ByteVec& auth_token, uint8_t* output_token)
-{
-    mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
-    auto dcb = static_cast<ClientDCB*>(generic_dcb);
-    auto client_data = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
-    AuthRes rval;
-
-    uint8_t phase2_scramble[MYSQL_SCRAMBLE_LEN];
-    auto rc = validate_mysql_user(entry, client_data, scramble, scramble_len, auth_token, phase2_scramble);
-
-    if (rc.status == AuthRes::Status::SUCCESS)
-    {
-        memcpy(output_token, phase2_scramble, sizeof(phase2_scramble));
-        rval.status = AuthRes::Status::SUCCESS;
-    }
-
-    return rval;
 }
 
 mariadb::SBackendAuth MariaDBAuthenticatorModule::create_backend_authenticator()

@@ -71,7 +71,6 @@ public:
     uint32_t client_capabilities() const;
     uint32_t extra_capabilitites() const;
 
-    uint8_t client_sha1[MYSQL_SCRAMBLE_LEN] {0};/*< SHA1(password) */
     uint8_t scramble[MYSQL_SCRAMBLE_LEN] {0};   /*< Created server scramble */
 
     std::string user;                               /*< username       */
@@ -86,8 +85,12 @@ public:
 
     ClientInfo client_info;     /**< Client capabilities from handshake response packet */
 
-    // Authentication token storage. Used by different authenticators.
+    /**
+     * Authentication token storage. Used by different authenticators in different ways. So far, only
+     * MariaDBAuth uses both tokens, as it needs storage for an intermediary result.
+     */
     mariadb::ClientAuthenticator::ByteVec auth_token;
+    mariadb::ClientAuthenticator::ByteVec auth_token_phase2;
 
     // Authenticator module currently in use by the session. May change on COM_CHANGE_USER.
     mariadb::AuthenticatorModule* m_current_authenticator {nullptr};

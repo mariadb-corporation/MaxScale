@@ -169,24 +169,6 @@ public:
      * @param session Protocol session data
      */
     virtual AuthRes authenticate(const UserEntry* entry, MYSQL_session* session) = 0;
-
-    /**
-     * This entry point was added to avoid calling authenticator functions
-     * directly when a COM_CHANGE_USER command is executed. Not implemented by most authenticators.
-     *
-     * @param dcb The connection
-     * @param scramble Scramble sent by MaxScale to client
-     * @param scramble_len Scramble length
-     * @param auth_token Authentication token sent by client
-     * @param output Hashed client password used by backend protocols
-     * @return 0 on success
-     */
-    virtual AuthRes reauthenticate(const UserEntry* entry,
-                                   DCB* client,
-                                   uint8_t* scramble,
-                                   size_t scramble_len,
-                                   const ByteVec& auth_token,
-                                   uint8_t* output);
 };
 
 // Helper template which stores the module reference.

@@ -132,9 +132,6 @@ public:
     ExchRes exchange(GWBUF* buffer, MYSQL_session* session, mxs::Buffer* output_packet) override;
     AuthRes authenticate(const mariadb::UserEntry* entry, MYSQL_session* session) override;
 
-    AuthRes reauthenticate(const mariadb::UserEntry* entry, DCB* generic_dcb, uint8_t* scramble,
-                           size_t scramble_len, const ByteVec& auth_token, uint8_t* output_token) override;
-
 private:
 
     enum class State
@@ -145,21 +142,7 @@ private:
         CHECK_TOKEN
     };
 
-    /**
-     * @brief Verify the user has access to the database
-     *
-     * @param session      Shared MySQL session
-     * @param scramble     The scramble sent to the client in the initial handshake
-     * @param scramble_len Length of @c scramble
-     * @param auth_token   Authentication token from client
-     * @param phase2_scramble_out Output for backend token
-     *
-     * @return MXS_AUTH_SUCCEEDED if the user has access to the database
-     */
-    AuthRes validate_mysql_user(const mariadb::UserEntry* entry, const MYSQL_session* session,
-                                const uint8_t* scramble, size_t scramble_len,
-                                const mariadb::ClientAuthenticator::ByteVec& auth_token,
-                                uint8_t* phase2_scramble_out);
+    bool validate_mysql_user(const mariadb::UserEntry* entry, MYSQL_session* session);
     bool check_database(sqlite3* handle, const char* database);
 
     State m_state {State::INIT};

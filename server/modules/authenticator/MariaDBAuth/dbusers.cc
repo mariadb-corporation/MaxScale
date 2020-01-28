@@ -264,16 +264,15 @@ static char* get_users_query(const SERVER::Version& version, bool include_root, 
 }
 
 static bool
-check_password(const char* output, const uint8_t* scramble, size_t scramble_len,
-               const mariadb::ClientAuthenticator::ByteVec& auth_token, uint8_t* phase2_scramble_out)
+check_password(const char* password_entry, MYSQL_session* session)
 {
     uint8_t stored_token[SHA_DIGEST_LENGTH] = {};
     size_t stored_token_len = sizeof(stored_token);
 
-    if (*output)
+    if (*password_entry)
     {
         /** Convert the hexadecimal string to binary */
-        gw_hex2bin(stored_token, output, strlen(output));
+        gw_hex2bin(stored_token, password_entry, strlen(password_entry));
     }
 
     /**
@@ -293,16 +292,16 @@ check_password(const char* output, const uint8_t* scramble, size_t scramble_len,
 
     /** First, calculate the SHA1 of the scramble and the hash stored in the database */
     uint8_t step1[SHA_DIGEST_LENGTH];
-    gw_sha1_2_str(scramble, scramble_len, stored_token, stored_token_len, step1);
+    gw_sha1_2_str(session->scramble, sizeof(session->scramble), stored_token, stored_token_len, step1);
 
     /** Next, extract the SHA1 of the real password by XOR'ing it with
      * the output of the previous calculation */
     uint8_t step2[SHA_DIGEST_LENGTH] = {};
-    gw_str_xor(step2, auth_token.data(), step1, auth_token.size());
+    gw_str_xor(step2, session->auth_token.data(), step1, session->auth_token.size());
 
     /** The phase 2 scramble needs to be copied to the shared data structure as it
      * is required when the backend authentication is done. */
-    memcpy(phase2_scramble_out, step2, SHA_DIGEST_LENGTH);
+    session->auth_token_phase2.assign(step2, step2 + SHA_DIGEST_LENGTH);
 
     /** Finally, calculate the SHA1 of the hashed real password */
     uint8_t final_step[SHA_DIGEST_LENGTH];
@@ -353,16 +352,21 @@ static bool no_password_required(const char* result, size_t tok_len)
     return *result == '\0' && tok_len == 0;
 }
 
-AuthRes MariaDBClientAuthenticator::validate_mysql_user(const UserEntry* entry,
-                                                        const MYSQL_session* session,
-                                                        const uint8_t* scramble,
-                                                        size_t scramble_len,
-                                                        const mariadb::ClientAuthenticator::ByteVec& auth_token,
-                                                        uint8_t* phase2_scramble_out)
+/**
+ * @brief Verify the user password
+ *
+ * @param entry        User account entry
+ * @param session      Shared MySQL session
+ * @return True if password was correct
+ */
+bool MariaDBClientAuthenticator::validate_mysql_user(const UserEntry* entry, MYSQL_session* session)
 {
-    AuthRes rval;
-    rval.status = AuthRes::Status::FAIL_WRONG_PW;
-    // TODO: add skip_auth-equivalent support to main user manager
+    // If the user entry has empty password and the client gave no password, accept.
+    if (entry->password.empty() && session->auth_token.empty())
+    {
+        return true;
+    }
+
     auto passwdz = entry->password.c_str();
     // The * at the start needs to be skipped.
     if (*passwdz == '*')
@@ -370,13 +374,7 @@ AuthRes MariaDBClientAuthenticator::validate_mysql_user(const UserEntry* entry,
         passwdz++;
     }
 
-    if (no_password_required(passwdz, session->auth_token.size())
-        || check_password(passwdz, scramble, scramble_len, auth_token, phase2_scramble_out))
-    {
-        rval.status = AuthRes::Status::SUCCESS;     /** Password is OK. */
-    }
-
-    return rval;
+    return check_password(passwdz, session);
 }
 
 /**

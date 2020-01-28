@@ -873,9 +873,6 @@ bool MariaDBClientConnection::reauthenticate_client(MXS_SESSION* session, GWBUF*
             payload.resize(payloadlen);
             gwbuf_copy_data(packetbuf, MYSQL_HEADER_LEN, payloadlen, &payload[0]);
 
-            rc = m_authenticator->reauthenticate(
-                &user_entry->entry, m_dcb, data->scramble, sizeof(data->scramble), payload,
-                data->client_sha1);
             if (rc.status == AuthRes::Status::SUCCESS)
             {
                 // Re-authentication successful, route the original COM_CHANGE_USER
