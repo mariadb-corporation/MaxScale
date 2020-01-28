@@ -87,6 +87,9 @@ void run(TestConnections& test)
     // This should NOT go through as a function is used with a masked column (that happens to be uppercase).
     test_one(test, "SELECT LENGTH(A), b FROM masking_auto_firewall", Expect::FAILURE);
 
+    // This should NOT go through as a function is used with a masked column.
+    test_one(test, "SELECT CAST(A as CHAR), b FROM masking_auto_firewall", Expect::FAILURE);
+
     // This SHOULD go through as a function is NOT used with a masked column
     // in a prepared statement.
     test_one(test, "PREPARE ps1 FROM 'SELECT a, LENGTH(b) FROM masking_auto_firewall'", Expect::SUCCESS);
