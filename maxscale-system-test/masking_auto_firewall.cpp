@@ -118,6 +118,9 @@ void run(TestConnections& test)
     // This should NOT succeed as a masked column is used in the statment.
     test_one(test, "select 1 UNION select a FROM masking_auto_firewall", Expect::FAILURE);
 
+    // This should NOT succeed as a masked column is used in the statment.
+    test_one(test, "select 1 UNION ALL select a FROM masking_auto_firewall", Expect::FAILURE);
+
     // This should NOT succeed as '*' is used in the statment.
     test_one(test, "select 1 UNION select * FROM masking_auto_firewall", Expect::FAILURE);
 
