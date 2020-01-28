@@ -20,6 +20,7 @@
 #include <vector>
 
 #include <maxbase/stopwatch.hh>
+#include <maxbase/threadpool.hh>
 #include <maxscale/monitor.hh>
 #include "mariadbserver.hh"
 
@@ -205,6 +206,8 @@ private:
 
     /* The current state of a cluster modifying operation */
     std::atomic<State> m_state {State::IDLE};
+
+    mxb::ThreadPool m_threadpool;   /* Threads used in concurrent operations */
 
     // Topology related fields
     MariaDBServer* m_master = NULL;         /* The most "master-like" server in the cluster. Is the only

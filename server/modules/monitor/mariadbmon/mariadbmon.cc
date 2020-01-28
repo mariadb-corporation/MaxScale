@@ -18,7 +18,6 @@
 
 #include <future>
 #include <inttypes.h>
-#include <sstream>
 #include <mysql.h>
 #include <maxbase/assert.h>
 #include <maxbase/format.hh>
@@ -26,7 +25,6 @@
 #include <maxscale/dcb.hh>
 #include <maxscale/mainworker.hh>
 #include <maxscale/modulecmd.hh>
-#include <maxscale/mysql_utils.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/secrets.hh>
 #include <maxscale/utils.hh>
@@ -458,22 +456,19 @@ void MariaDBMonitor::tick()
     // Query all servers for their status.
     bool should_update_disk_space = check_disk_space_this_tick();
     bool should_update_lock_status = check_lock_status_this_tick();
-    auto update_task = [should_update_disk_space, should_update_lock_status](MariaDBServer* server) {
-            server->update_server(should_update_disk_space, should_update_lock_status);
-        };
 
-    // Asynchronously query all servers for their status.
-    std::vector<std::future<void>> futures;
-    futures.reserve(servers().size());
-    for (auto server : servers())
+    // Concurrently query all servers for their status.
+    mxb::Semaphore update_complete;
+    auto serverlist = servers();
+    for (auto server : serverlist)
     {
-        futures.emplace_back(std::async(std::launch::async, update_task, server));
+        auto update_task = [should_update_disk_space, should_update_lock_status, &update_complete, server]() {
+                server->update_server(should_update_disk_space, should_update_lock_status);
+                update_complete.post();
+            };
+        m_threadpool.execute(update_task);
     }
-    // Wait for all updates to complete.
-    for (auto& f : futures)
-    {
-        f.get();
-    }
+    update_complete.wait_n(serverlist.size());
 
     for (MariaDBServer* server : servers())
     {
