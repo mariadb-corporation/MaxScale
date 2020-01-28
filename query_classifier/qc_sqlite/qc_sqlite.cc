@@ -917,6 +917,7 @@ public:
             case TK_BITAND:
             case TK_BITOR:
             case TK_CASE:
+            case TK_CAST:
             case TK_IN:
             case TK_ISNULL:
             case TK_MINUS:
@@ -3975,6 +3976,9 @@ static const char* get_token_symbol(int token)
 
     case TK_CASE:
         return "case";
+
+    case TK_CAST:
+        return "cast";
 
     case TK_IN:
         return "in";
