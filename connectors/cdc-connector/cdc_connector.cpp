@@ -170,7 +170,7 @@ void Closer<int>::close(int fd)
 namespace CDC
 {
 
-const char* const TIMEOUT  = "Request timed out";
+const char* const TIMEOUT = "Request timed out";
 
 /**
  * Public functions
@@ -449,21 +449,36 @@ SRow Connection::read()
     SRow rval;
     std::string row;
 
-    if (read_row(row))
+    while (true)
     {
-        json_error_t err;
-        json_t* js = json_loads(row.c_str(), JSON_ALLOW_NUL, &err);
+        if (read_row(row))
+        {
+            json_error_t err;
+            json_t* js = json_loads(row.c_str(), JSON_ALLOW_NUL, &err);
 
-        if (js)
-        {
-            rval = process_row(js);
-            json_decref(js);
+            if (js)
+            {
+                if (is_schema(js))
+                {
+                    m_schema = row;
+                    process_schema(js);
+                    json_decref(js);
+                    continue;
+                }
+                else
+                {
+                    rval = process_row(js);
+                    json_decref(js);
+                }
+            }
+            else
+            {
+                m_error = "Failed to parse JSON: ";
+                m_error += err.text;
+            }
         }
-        else
-        {
-            m_error = "Failed to parse JSON: ";
-            m_error += err.text;
-        }
+
+        break;
     }
 
     return rval;
