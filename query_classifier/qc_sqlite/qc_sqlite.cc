@@ -928,6 +928,7 @@ public:
             case TK_BITAND:
             case TK_BITOR:
             case TK_CASE:
+            case TK_CAST:
             case TK_IN:
             case TK_ISNULL:
             case TK_MINUS:
@@ -1258,6 +1259,11 @@ public:
         IGNORE_COMPOUND_SELECTS
     };
 
+    bool is_significant_union(const Select* pSelect)
+    {
+        return ((pSelect->op == TK_UNION) || (pSelect->op == TK_ALL)) && pSelect->pPrior;
+    }
+
     void update_field_infos_from_select(QcAliases& aliases,
                                         uint32_t context,
                                         const Select* pSelect,
@@ -1357,7 +1363,7 @@ public:
 
         if (compound_approach == ANALYZE_COMPOUND_SELECTS)
         {
-            if (((pSelect->op == TK_UNION) || (pSelect->op == TK_ALL)) && pSelect->pPrior)
+            if (is_significant_union(pSelect))
             {
                 const Select* pPrior = pSelect->pPrior;
 
@@ -2139,7 +2145,7 @@ public:
         }
 
         QcAliases aliases;
-        uint32_t context = (pSelect->op == TK_UNION && pSelect->pPrior) ? QC_FIELD_UNION : 0;
+        uint32_t context = is_significant_union(pSelect) ? QC_FIELD_UNION : 0;
         update_field_infos_from_select(aliases, context, pSelect, NULL);
     }
 
@@ -4001,6 +4007,9 @@ static const char* get_token_symbol(int token)
 
     case TK_CASE:
         return "case";
+
+    case TK_CAST:
+        return "cast";
 
     case TK_IN:
         return "in";
