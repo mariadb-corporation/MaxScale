@@ -575,7 +575,7 @@ retblock:
  */
 static bool query_is_parsed(GWBUF* buf)
 {
-    return buf != NULL && GWBUF_IS_PARSED(buf);
+    return buf != NULL && gwbuf_is_parsed(buf);
 }
 
 /**
@@ -1552,7 +1552,7 @@ parsing_info_t* get_pinfo(GWBUF* querybuf)
 {
     parsing_info_t* pi = NULL;
 
-    if ((querybuf != NULL) && GWBUF_IS_PARSED(querybuf))
+    if ((querybuf != NULL) && gwbuf_is_parsed(querybuf))
     {
         pi = (parsing_info_t*) gwbuf_get_buffer_object_data(querybuf, GWBUF_PARSING_INFO);
     }
