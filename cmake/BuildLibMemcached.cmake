@@ -18,8 +18,9 @@ set(LIBMEMCACHED_URL "https://launchpad.net/libmemcached/1.0/${LIBMEMCACHED_VERS
 
 ExternalProject_Add(libmemcached
   URL ${LIBMEMCACHED_URL}
-    SOURCE_DIR ${CMAKE_BINARY_DIR}/libmemcached/
+  SOURCE_DIR ${CMAKE_BINARY_DIR}/libmemcached/
   CONFIGURE_COMMAND ${CMAKE_BINARY_DIR}/libmemcached//configure --prefix=${CMAKE_BINARY_DIR}/libmemcached/ --enable-shared --with-pic --libdir=${CMAKE_BINARY_DIR}/libmemcached/lib/
+  PATCH_COMMAND sed -i "s/opt_servers == false/opt_servers == 0/" ${CMAKE_BINARY_DIR}/libmemcached/clients/memflush.cc
   BINARY_DIR ${CMAKE_BINARY_DIR}/libmemcached/
   BUILD_COMMAND make
   INSTALL_COMMAND make install)
