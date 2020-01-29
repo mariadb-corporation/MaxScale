@@ -439,7 +439,7 @@ public:
                const char* zDescription,
                Modifiable modifiable = Modifiable::AT_STARTUP)
         : ParamCount(pSpecification, zName, zDescription, modifiable, Param::MANDATORY,
-                     value_type(), 0, std::numeric_limits<uint32_t>::max())
+                     value_type(), 0, std::numeric_limits<value_type>::max())
     {
     }
 
@@ -460,7 +460,7 @@ public:
                value_type default_value,
                Modifiable modifiable = Modifiable::AT_STARTUP)
         : ParamCount(pSpecification, zName, zDescription, modifiable, Param::OPTIONAL,
-                     default_value, 0, std::numeric_limits<uint32_t>::max())
+                     default_value, 0, std::numeric_limits<value_type>::max())
     {
     }
 
@@ -490,11 +490,11 @@ private:
         : ParamNumber(pSpecification, zName, zDescription, modifiable, kind, MXS_MODULE_PARAM_COUNT,
                       default_value,
                       min_value >= 0 ? min_value : 0,
-                      max_value <= std::numeric_limits<uint32_t>::max() ?
-                      max_value : std::numeric_limits<uint32_t>::max())
+                      max_value <= std::numeric_limits<value_type>::max() ?
+                      max_value : std::numeric_limits<value_type>::max())
     {
         mxb_assert(min_value >= 0);
-        mxb_assert(max_value <= std::numeric_limits<uint32_t>::max());
+        mxb_assert(max_value <= std::numeric_limits<value_type>::max());
     }
 };
 
@@ -512,8 +512,8 @@ public:
                  Modifiable modifiable = Modifiable::AT_STARTUP)
         : ParamInteger(pSpecification, zName, zDescription, modifiable, Param::MANDATORY,
                        value_type(),
-                       std::numeric_limits<int32_t>::min(),
-                       std::numeric_limits<int32_t>::max())
+                       std::numeric_limits<value_type>::min(),
+                       std::numeric_limits<value_type>::max())
     {
     }
 
@@ -535,8 +535,8 @@ public:
                  Modifiable modifiable = Modifiable::AT_STARTUP)
         : ParamInteger(pSpecification, zName, zDescription, modifiable, Param::OPTIONAL,
                        default_value,
-                       std::numeric_limits<int32_t>::min(),
-                       std::numeric_limits<int32_t>::max())
+                       std::numeric_limits<value_type>::min(),
+                       std::numeric_limits<value_type>::max())
     {
     }
 
@@ -565,13 +565,13 @@ private:
                  value_type max_value)
         : ParamNumber(pSpecification, zName, zDescription, modifiable, kind, MXS_MODULE_PARAM_INT,
                       default_value,
-                      min_value >= std::numeric_limits<int32_t>::min() ?
-                      min_value : std::numeric_limits<int32_t>::min(),
-                      max_value <= std::numeric_limits<int32_t>::max() ?
-                      max_value : std::numeric_limits<int32_t>::max())
+                      min_value >= std::numeric_limits<value_type>::min() ?
+                      min_value : std::numeric_limits<value_type>::min(),
+                      max_value <= std::numeric_limits<value_type>::max() ?
+                      max_value : std::numeric_limits<value_type>::max())
     {
-        mxb_assert(min_value >= std::numeric_limits<int32_t>::min());
-        mxb_assert(max_value <= std::numeric_limits<int32_t>::max());
+        mxb_assert(min_value >= std::numeric_limits<value_type>::min());
+        mxb_assert(max_value <= std::numeric_limits<value_type>::max());
     }
 };
 
@@ -934,7 +934,7 @@ public:
         : ParamSize(pSpecification, zName, zDescription, modifiable, Param::MANDATORY,
                     value_type(),
                     0,
-                    std::numeric_limits<int32_t>::max())
+                    std::numeric_limits<value_type>::max())
     {
     }
 
@@ -958,7 +958,7 @@ public:
         : ParamSize(pSpecification, zName, zDescription, modifiable, Param::OPTIONAL,
                     default_value,
                     0,
-                    std::numeric_limits<int32_t>::max())
+                    std::numeric_limits<value_type>::max())
     {
     }
 
