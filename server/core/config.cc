@@ -74,7 +74,24 @@ using maxscale::Monitor;
 using std::chrono::milliseconds;
 using std::chrono::seconds;
 
+namespace
+{
+
+const char CN_ADMIN_PAM_READWRITE_SERVICE[] = "admin_pam_readwrite_service";
+const char CN_ADMIN_PAM_READONLY_SERVICE[] = "admin_pam_readonly_service";
+const char CN_LOCAL_ADDRESS[] = "local_address";
+const char CN_USERS_REFRESH_TIME[] = "users_refresh_time";
+const char CN_USERS_REFRESH_INTERVAL[] = "users_refresh_interval";
+}
+
+
 config::Specification MXS_CONFIG::s_specification("maxscale", config::Specification::GLOBAL);
+
+config::ParamDuration<std::chrono::seconds> MXS_CONFIG::s_users_refresh_interval(
+    &MXS_CONFIG::s_specification,
+    CN_USERS_REFRESH_INTERVAL,
+    "How often the users will be refreshed.",
+    mxs::config::INTERPRET_AS_SECONDS);
 
 config::ParamSize MXS_CONFIG::s_writeq_high_water(
     &MXS_CONFIG::s_specification,
@@ -135,6 +152,7 @@ config::ParamCount MXS_CONFIG::s_rebalance_window(
 
 MXS_CONFIG::MXS_CONFIG()
     : config::Configuration("maxscale", &s_specification)
+    , users_refresh_interval(this, &s_users_refresh_interval)
     , writeq_high_water(this, &s_writeq_high_water)
     , writeq_low_water(this, &s_writeq_low_water)
     , load_persisted_configs(this, &s_load_persisted_configs)
@@ -195,16 +213,6 @@ static const char* config_file = NULL;
 static MXS_CONFIG gateway;
 static bool is_persisted_config = false;    /**< True if a persisted configuration file is being parsed */
 static CONFIG_CONTEXT config_context;
-
-namespace
-{
-
-const char CN_ADMIN_PAM_READWRITE_SERVICE[] = "admin_pam_readwrite_service";
-const char CN_ADMIN_PAM_READONLY_SERVICE[] = "admin_pam_readonly_service";
-const char CN_LOCAL_ADDRESS[] = "local_address";
-const char CN_USERS_REFRESH_TIME[] = "users_refresh_time";
-const char CN_USERS_REFRESH_INTERVAL[] = "users_refresh_interval";
-}
 
 const MXS_MODULE_PARAM config_filter_params[] =
 {
@@ -2140,13 +2148,6 @@ static int handle_global_item(const char* name, const char* value)
 
         gateway.users_refresh_time = users_refresh_time;
     }
-    else if (strcmp(name, CN_USERS_REFRESH_INTERVAL) == 0)
-    {
-        if (!get_seconds(name, value, &gateway.users_refresh_interval))
-        {
-            return 0;
-        }
-    }
     else if (strcmp(name, CN_RETAIN_LAST_STATEMENTS) == 0)
     {
         char* endptr;
@@ -2326,7 +2327,6 @@ void config_set_global_defaults()
     gateway.passive = false;
     gateway.promoted_at = 0;
     gateway.users_refresh_time = USERS_REFRESH_TIME_DEFAULT;
-    gateway.users_refresh_interval = 0;
 
     gateway.log_target = MXB_LOG_TARGET_DEFAULT;
 

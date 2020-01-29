@@ -22,6 +22,7 @@ class MXS_CONFIG : public config::Configuration
 {
 public:
     using milliseconds = std::chrono::milliseconds;
+    using seconds = std::chrono::seconds;
 
     MXS_CONFIG();
 
@@ -67,7 +68,7 @@ public:
                                                          * */
     char*    local_address;                             /**< Local address to use when connecting */
     time_t   users_refresh_time;                        /**< How often the users can be refreshed */
-    time_t   users_refresh_interval;                    /**< How often the users will be refreshed */
+    config::Duration<seconds> users_refresh_interval;   /**< How often the users will be refreshed */
     config::Size    writeq_high_water;                  /**< High water mark of dcb write queue */
     config::Size    writeq_low_water;                   /**< Low water mark of dcb write queue */
     config::Bool    load_persisted_configs;             /**< Load persisted configuration files on startup */
@@ -97,6 +98,7 @@ public:
 public:
     static config::Specification s_specification;
 
+    static config::ParamDuration<seconds>      s_users_refresh_interval;
     static config::ParamSize                   s_writeq_high_water;
     static config::ParamSize                   s_writeq_low_water;
     static config::ParamBool                   s_load_persisted_configs;

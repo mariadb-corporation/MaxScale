@@ -160,7 +160,7 @@ void MariaDBUserManager::updater_thread_function()
          *  automatically if this time elapses.
          */
         MXS_CONFIG* glob_config = config_get_global_options();
-        auto max_refresh_interval = glob_config->users_refresh_interval;
+        auto max_refresh_interval = glob_config->users_refresh_interval.get().count();
         auto min_refresh_interval = glob_config->users_refresh_time;
 
         /**
