@@ -342,7 +342,7 @@ const MXS_MODULE_PARAM config_listener_params[] =
      MXS_MODULE_OPT_ENUM_UNIQUE,
      ssl_version_values},
     {CN_SSL_CERT_VERIFY_DEPTH,       MXS_MODULE_PARAM_COUNT,   "9"},
-    {CN_SSL_VERIFY_PEER_CERTIFICATE, MXS_MODULE_PARAM_BOOL,    "true"},
+    {CN_SSL_VERIFY_PEER_CERTIFICATE, MXS_MODULE_PARAM_BOOL,    "false"},
     {NULL}
 };
 
@@ -421,7 +421,7 @@ const MXS_MODULE_PARAM config_server_params[] =
      MXS_MODULE_OPT_ENUM_UNIQUE,
      ssl_version_values},
     {CN_SSL_CERT_VERIFY_DEPTH,       MXS_MODULE_PARAM_COUNT,  "9"},
-    {CN_SSL_VERIFY_PEER_CERTIFICATE, MXS_MODULE_PARAM_BOOL,   "true"},
+    {CN_SSL_VERIFY_PEER_CERTIFICATE, MXS_MODULE_PARAM_BOOL,   "false"},
     {CN_DISK_SPACE_THRESHOLD,        MXS_MODULE_PARAM_STRING},
     {NULL}
 };
