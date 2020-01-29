@@ -48,6 +48,7 @@ constexpr char CN_CLUSTER[] = "cluster";
 constexpr char CN_CONFIGURATION[] = "configuration";
 constexpr char CN_CONNECTION_KEEPALIVE[] = "connection_keepalive";
 constexpr char CN_CONNECTION_TIMEOUT[] = "connection_timeout";
+constexpr char CN_CORE[] = "core";
 constexpr char CN_DATA[] = "data";
 constexpr char CN_DEFAULT[] = "default";
 constexpr char CN_DESCRIPTION[] = "description";

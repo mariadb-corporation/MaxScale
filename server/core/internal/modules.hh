@@ -165,3 +165,12 @@ json_t* module_list_to_json(const char* host);
  * @return The effective name (may be the same).
  */
 const char* mxs_module_get_effective_name(const char* name);
+
+/**
+ * @brief Convert "virtual" core module to JSON
+ *
+ * @param host   Hostname of this server
+ *
+ * @return The core module in JSON format
+ */
+json_t* core_module_to_json(const char* host);

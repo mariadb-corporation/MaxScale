@@ -363,6 +363,7 @@ json_t* Param::to_json() const
     json_t* pJson = json_object();
 
     json_object_set_new(pJson, CN_NAME, json_string(m_name.c_str()));
+    json_object_set_new(pJson, CN_DESCRIPTION, json_string(m_description.c_str()));
     json_object_set_new(pJson, CN_TYPE, json_string(type().c_str()));
     json_object_set_new(pJson, CN_MANDATORY, json_boolean(is_mandatory()));
     json_object_set_new(pJson, CN_MODIFIABLE, json_boolean(is_modifiable_at_runtime()));

@@ -28,6 +28,7 @@
 #include <maxscale/modulecmd.hh>
 #include <maxscale/routingworker.hh>
 
+#include "internal/config.hh"
 #include "internal/config_runtime.hh"
 #include "internal/filter.hh"
 #include "internal/httprequest.hh"
@@ -105,7 +106,7 @@ bool Resource::matching_variable_path(const string& path, const string& target) 
             || (path == ":server" && ServerManager::find_by_unique_name(target))
             || (path == ":filter" && filter_find(target.c_str()))
             || (path == ":monitor" && MonitorManager::find_monitor(target.c_str()))
-            || (path == ":module" && get_module(target.c_str(), NULL))
+            || (path == ":module" && (get_module(target.c_str(), NULL) || target == CN_CORE))
             || (path == ":inetuser" && admin_inet_user_exists(target.c_str()))
             || (path == ":unixuser" && admin_linux_account_enabled(target.c_str())))
         {
@@ -746,8 +747,19 @@ HttpResponse cb_all_modules(const HttpRequest& request)
 
 HttpResponse cb_module(const HttpRequest& request)
 {
-    const MXS_MODULE* module = get_module(request.last_uri_part().c_str(), NULL);
-    return HttpResponse(MHD_HTTP_OK, module_to_json(module, request.host()));
+    json_t* json;
+
+    if (request.last_uri_part() == CN_CORE)
+    {
+        json = core_module_to_json(request.host());
+    }
+    else
+    {
+        const MXS_MODULE* module = get_module(request.last_uri_part().c_str(), NULL);
+        json = module_to_json(module, request.host());
+    }
+
+    return HttpResponse(MHD_HTTP_OK, json);
 }
 
 HttpResponse cb_all_users(const HttpRequest& request)
@@ -874,6 +886,8 @@ HttpResponse cb_clear_server(const HttpRequest& request)
 HttpResponse cb_modulecmd(const HttpRequest& request)
 {
     std::string module = request.uri_part(2);
+
+    // TODO: If the core ever has module commands, they need to be handled here.
     std::string identifier = request.uri_segment(3, request.uri_part_count());
     std::string verb = request.get_verb();
 

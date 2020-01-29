@@ -267,3 +267,10 @@ void duplicate_context_finish(DUPLICATE_CONTEXT* context);
 bool config_load_single_file(const char* file,
                              DUPLICATE_CONTEXT* dcontext,
                              CONFIG_CONTEXT* ccontext);
+
+/**
+ * Turn parameters into json.
+ *
+ * @return Parameters as json.
+ */
+json_t* config_core_params_to_json(const char* host);

@@ -544,9 +544,43 @@ json_t* module_to_json(const MXS_MODULE* module, const char* host)
     return mxs_json_resource(host, MXS_JSON_API_MODULES, data);
 }
 
+json_t* core_module_json_data(const char* host)
+{
+    json_t* commands = json_array();
+    // TODO: The following data will now be somewhat different compared to
+    // TODO: what the modules that do not use the new configuration mechanism
+    // TODO: return.
+    json_t* params = config_get_global_options()->specification().to_json();
+
+    json_t* attr = json_object();
+    json_object_set_new(attr, "module_type", json_string(CN_CORE));
+    json_object_set_new(attr, "version", json_string(MAXSCALE_VERSION));
+    json_object_set_new(attr, CN_DESCRIPTION, json_string(CN_CORE));
+    json_object_set_new(attr, "maturity", json_string("GA"));
+    json_object_set_new(attr, "commands", commands);
+    json_object_set_new(attr, CN_PARAMETERS, params);
+
+    json_t* obj = json_object();
+    json_object_set_new(obj, CN_ID, json_string(CN_CORE));
+    json_object_set_new(obj, CN_TYPE, json_string(CN_MODULE));
+    json_object_set_new(obj, CN_ATTRIBUTES, attr);
+    json_object_set_new(obj, CN_LINKS, mxs_json_self_link(host, CN_MODULES, CN_CORE));
+
+    return obj;
+}
+
+json_t* core_module_to_json(const char* host)
+{
+    json_t* data = core_module_json_data(host);
+
+    return mxs_json_resource(host, MXS_JSON_API_MODULES, data);
+}
+
 json_t* module_list_to_json(const char* host)
 {
     json_t* arr = json_array();
+
+    json_array_append_new(arr, core_module_json_data(host));
 
     for (LOADED_MODULE* ptr = registered; ptr; ptr = ptr->next)
     {
