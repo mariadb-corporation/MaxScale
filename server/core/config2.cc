@@ -242,6 +242,19 @@ void Specification::remove(Param* pParam)
     m_params.erase(it);
 }
 
+json_t* Specification::to_json() const
+{
+    json_t* pSpecification = json_array();
+
+    for (const auto& kv : m_params)
+    {
+        const Param* pParam = kv.second;
+
+        json_array_append_new(pSpecification, pParam->to_json());
+    }
+
+    return pSpecification;
+}
 
 /**
  * class Param
@@ -345,6 +358,17 @@ void Param::populate(MXS_MODULE_PARAM& param) const
     }
 }
 
+json_t* Param::to_json() const
+{
+    json_t* pJson = json_object();
+
+    json_object_set_new(pJson, CN_NAME, json_string(m_name.c_str()));
+    json_object_set_new(pJson, CN_TYPE, json_string(type().c_str()));
+    json_object_set_new(pJson, CN_MANDATORY, json_boolean(is_mandatory()));
+    json_object_set_new(pJson, CN_MODIFIABLE, json_boolean(is_modifiable_at_runtime()));
+
+    return pJson;
+}
 
 /**
  * class Configuration
@@ -422,6 +446,20 @@ bool Configuration::post_configure(const mxs::ConfigParameters& params)
 size_t Configuration::size() const
 {
     return m_values.size();
+}
+
+json_t* Configuration::to_json() const
+{
+    json_t* pConfiguration = json_array();
+
+    for (const auto& kv : m_values)
+    {
+        const Type* pValue = kv.second;
+
+        json_array_append_new(pConfiguration, pValue->to_json());
+    }
+
+    return pConfiguration;
 }
 
 /**

@@ -47,7 +47,7 @@ public:
         GLOBAL
     };
 
-    using ParamsByName = std::map<std::string, Param*>;
+    using ParamsByName = std::map<std::string, Param*>; // We want to have them ordered by name.
     using const_iterator = ParamsByName::const_iterator;
     using value_type = ParamsByName::value_type;
 
@@ -137,6 +137,11 @@ public:
     {
         return m_params.cend();
     }
+
+    /**
+     * @return Specification as a json array.
+     */
+    json_t* to_json() const;
 
 private:
     friend Param;
@@ -266,6 +271,11 @@ public:
      * @param param  The legacy parameter specification to be populated.
      */
     virtual void populate(MXS_MODULE_PARAM& param) const;
+
+    /**
+     * @return Parameter as json object.
+     */
+    virtual json_t* to_json() const;
 
 protected:
     Param(Specification* pSpecification,
@@ -1095,7 +1105,7 @@ using ParamBitMask = ParamCount;
 class Configuration
 {
 public:
-    using ValuesByName = std::map<std::string, Type*>;
+    using ValuesByName = std::map<std::string, Type*>; // We want to have them ordered by name.
     using const_iterator = ValuesByName::const_iterator;
     using value_type = ValuesByName::value_type;
 
@@ -1175,6 +1185,11 @@ public:
     {
         return m_values.cend();
     }
+
+    /**
+     * @return Return the configuration as a json array.
+     */
+    json_t* to_json() const;
 
 private:
     friend Type;
