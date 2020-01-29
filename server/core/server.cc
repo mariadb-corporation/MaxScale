@@ -625,7 +625,7 @@ const MXS_MODULE_PARAM* common_server_params()
             CN_SSL_CERT_VERIFY_DEPTH, MXS_MODULE_PARAM_COUNT, "9"
         },
         {
-            CN_SSL_VERIFY_PEER_CERTIFICATE, MXS_MODULE_PARAM_BOOL, "true"
+            CN_SSL_VERIFY_PEER_CERTIFICATE, MXS_MODULE_PARAM_BOOL, "false"
         },
         {
             CN_SSL_VERIFY_PEER_HOST, MXS_MODULE_PARAM_BOOL, "true"

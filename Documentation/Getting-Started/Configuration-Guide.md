@@ -2085,11 +2085,14 @@ larger than 0.
 
 ### `ssl_verify_peer_certificate`
 
-Peer certificate verification. This functionality is enabled by default.
+Peer certificate verification. This functionality is disabled by default. In
+versions prior to 2.3.17 the feature was enabled by default.
 
-When this feature is enabled, the certificate sent by the peer is verified
-against the configured Certificate Authority. If you are using self-signed
-certificates, set `ssl_verify_peer_certificate=false`.
+When this feature is enabled, the peer must send a certificate. The certificate
+sent by the peer is verified against the configured Certificate Authority to
+make sure the peer is who they claim to be. For listeners, this behaves as if
+`REQUIRE X509` was defined for all users. For servers, this behaves like the
+`--ssl-verify-server-cert` command line option for the `mysql` client.
 
 ### `ssl_verify_peer_host`
 
