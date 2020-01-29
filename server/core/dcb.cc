@@ -174,7 +174,7 @@ DCB::DCB(Role role, MXS_SESSION* session)
         authfunc = session->listener->auth_func();
     }
 
-    if (high_water && low_water)
+    if (high_water && low_water && role == Role::CLIENT)
     {
         dcb_add_callback(this, DCB_REASON_HIGH_WATER, downstream_throttle_callback, NULL);
         dcb_add_callback(this, DCB_REASON_LOW_WATER, downstream_throttle_callback, NULL);
