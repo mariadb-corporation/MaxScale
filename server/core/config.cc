@@ -488,7 +488,7 @@ const MXS_MODULE_PARAM config_listener_params[] =
     {
         CN_SSL_VERIFY_PEER_CERTIFICATE,
         MXS_MODULE_PARAM_BOOL,
-        "true"
+        "false"
     },
     {NULL}
 };
@@ -702,7 +702,7 @@ const MXS_MODULE_PARAM config_server_params[] =
     {
         CN_SSL_VERIFY_PEER_CERTIFICATE,
         MXS_MODULE_PARAM_BOOL,
-        "true"
+        "false"
     },
     {
         CN_DISK_SPACE_THRESHOLD,
