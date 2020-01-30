@@ -71,9 +71,8 @@ public:
     bool                admin_auth;                     /**< Admin interface authentication */
     bool                admin_enabled;                  /**< Admin interface is enabled */
     bool                admin_log_auth_failures;        /**< Log admin interface authentication failures */
-    std::string         admin_pam_rw_service;           /**< PAM service for read-write users */
-    std::string         admin_pam_ro_service;           /**< PAM service for read-only users */
-
+    config::String  admin_pam_rw_service;               /**< PAM service for read-write users */
+    config::String  admin_pam_ro_service;               /**< PAM service for read-only users */
     config::String  admin_ssl_key;                      /**< Admin SSL key */
     config::String  admin_ssl_cert;                     /**< Admin SSL cert */
     config::String  admin_ssl_ca_cert;                  /**< Admin SSL CA cert */
@@ -103,6 +102,8 @@ public:
 public:
     static config::Specification s_specification;
 
+    static config::ParamString       s_admin_pam_rw_service;
+    static config::ParamString       s_admin_pam_ro_service;
     static config::ParamString       s_admin_ssl_key;
     static config::ParamString       s_admin_ssl_cert;
     static config::ParamString       s_admin_ssl_ca_cert;

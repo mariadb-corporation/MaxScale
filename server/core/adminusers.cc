@@ -522,8 +522,8 @@ bool admin_user_is_pam_account(const std::string& username, const std::string& p
                                user_account_type min_acc_type)
 {
     mxb_assert(min_acc_type == USER_ACCOUNT_BASIC || min_acc_type == USER_ACCOUNT_ADMIN);
-    auto pam_ro_srv = config_get_global_options()->admin_pam_ro_service;
-    auto pam_rw_srv = config_get_global_options()->admin_pam_rw_service;
+    auto pam_ro_srv = config_get_global_options()->admin_pam_ro_service.get();
+    auto pam_rw_srv = config_get_global_options()->admin_pam_rw_service.get();
     bool have_ro_srv = !pam_ro_srv.empty();
     bool have_rw_srv = !pam_rw_srv.empty();
 

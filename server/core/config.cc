@@ -87,6 +87,16 @@ const char CN_USERS_REFRESH_INTERVAL[] = "users_refresh_interval";
 
 config::Specification MXS_CONFIG::s_specification("maxscale", config::Specification::GLOBAL);
 
+config::ParamString MXS_CONFIG::s_admin_pam_rw_service(
+    &MXS_CONFIG::s_specification,
+    CN_ADMIN_PAM_READWRITE_SERVICE,
+    "PAM service for read-write users.");
+
+config::ParamString MXS_CONFIG::s_admin_pam_ro_service(
+    &MXS_CONFIG::s_specification,
+    CN_ADMIN_PAM_READONLY_SERVICE,
+    "PAM service for read-only users.");
+
 config::ParamString MXS_CONFIG::s_admin_ssl_key(
     &MXS_CONFIG::s_specification,
     CN_ADMIN_SSL_KEY,
@@ -195,6 +205,8 @@ config::ParamCount MXS_CONFIG::s_rebalance_window(
 
 MXS_CONFIG::MXS_CONFIG()
     : config::Configuration("maxscale", &s_specification)
+    , admin_pam_rw_service(this, &s_admin_pam_rw_service)
+    , admin_pam_ro_service(this, &s_admin_pam_ro_service)
     , admin_ssl_key(this, &s_admin_ssl_key)
     , admin_ssl_cert(this, &s_admin_ssl_cert)
     , admin_ssl_ca_cert(this, &s_admin_ssl_ca_cert)
@@ -2143,14 +2155,6 @@ static int handle_global_item(const char* name, const char* value)
     {
         gateway.admin_log_auth_failures = config_truth_value(value);
     }
-    else if (strcmp(name, CN_ADMIN_PAM_READWRITE_SERVICE) == 0)
-    {
-        gateway.admin_pam_rw_service = value;
-    }
-    else if (strcmp(name, CN_ADMIN_PAM_READONLY_SERVICE) == 0)
-    {
-        gateway.admin_pam_ro_service = value;
-    }
     else if (strcmp(name, CN_PASSIVE) == 0)
     {
         gateway.passive = config_truth_value((char*)value);
@@ -3898,10 +3902,6 @@ json_t* config_maxscale_to_json(const char* host)
     json_object_set_new(param, CN_ADMIN_LOG_AUTH_FAILURES, json_boolean(cnf->admin_log_auth_failures));
     json_object_set_new(param, CN_ADMIN_HOST, json_string(cnf->admin_host));
     json_object_set_new(param, CN_ADMIN_PORT, json_integer(cnf->admin_port));
-    json_object_set_new(param, CN_ADMIN_PAM_READWRITE_SERVICE,
-                        json_string(cnf->admin_pam_rw_service.c_str()));
-    json_object_set_new(param, CN_ADMIN_PAM_READONLY_SERVICE,
-                        json_string(cnf->admin_pam_ro_service.c_str()));
 
     json_object_set_new(param, CN_PASSIVE, json_boolean(cnf->passive));
 
