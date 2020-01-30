@@ -74,9 +74,9 @@ public:
     std::string         admin_pam_rw_service;           /**< PAM service for read-write users */
     std::string         admin_pam_ro_service;           /**< PAM service for read-only users */
 
-    char admin_ssl_key[PATH_MAX];                       /**< Admin SSL key */
-    char admin_ssl_cert[PATH_MAX];                      /**< Admin SSL cert */
-    char admin_ssl_ca_cert[PATH_MAX];                   /**< Admin SSL CA cert */
+    config::String  admin_ssl_key;                      /**< Admin SSL key */
+    config::String  admin_ssl_cert;                     /**< Admin SSL cert */
+    config::String  admin_ssl_ca_cert;                  /**< Admin SSL CA cert */
     config::Integer query_retries;                      /**< Number of times a interrupted query is
                                                          * retried */
     config::Seconds query_retry_timeout;                /**< Timeout for query retries */
@@ -103,6 +103,9 @@ public:
 public:
     static config::Specification s_specification;
 
+    static config::ParamString       s_admin_ssl_key;
+    static config::ParamString       s_admin_ssl_cert;
+    static config::ParamString       s_admin_ssl_ca_cert;
     static config::ParamInteger      s_query_retries;
     static config::ParamSeconds      s_query_retry_timeout;
     static config::ParamString       s_local_address;

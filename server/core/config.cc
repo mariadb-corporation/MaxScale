@@ -87,6 +87,21 @@ const char CN_USERS_REFRESH_INTERVAL[] = "users_refresh_interval";
 
 config::Specification MXS_CONFIG::s_specification("maxscale", config::Specification::GLOBAL);
 
+config::ParamString MXS_CONFIG::s_admin_ssl_key(
+    &MXS_CONFIG::s_specification,
+    CN_ADMIN_SSL_KEY,
+    "Admin SSL key");
+
+config::ParamString MXS_CONFIG::s_admin_ssl_cert(
+    &MXS_CONFIG::s_specification,
+    CN_ADMIN_SSL_CERT,
+    "Admin SSL cert");
+
+config::ParamString MXS_CONFIG::s_admin_ssl_ca_cert(
+    &MXS_CONFIG::s_specification,
+    CN_ADMIN_SSL_CA_CERT,
+    "Admin SSL CA cert");
+
 config::ParamInteger MXS_CONFIG::s_query_retries(
     &MXS_CONFIG::s_specification,
     CN_QUERY_RETRIES,
@@ -180,6 +195,9 @@ config::ParamCount MXS_CONFIG::s_rebalance_window(
 
 MXS_CONFIG::MXS_CONFIG()
     : config::Configuration("maxscale", &s_specification)
+    , admin_ssl_key(this, &s_admin_ssl_key)
+    , admin_ssl_cert(this, &s_admin_ssl_cert)
+    , admin_ssl_ca_cert(this, &s_admin_ssl_ca_cert)
     , query_retries(this, &s_query_retries)
     , query_retry_timeout(this, &s_query_retry_timeout)
     , local_address(this, &s_local_address)
@@ -2113,18 +2131,6 @@ static int handle_global_item(const char* name, const char* value)
     {
         strcpy(gateway.admin_host, value);
     }
-    else if (strcmp(name, CN_ADMIN_SSL_KEY) == 0)
-    {
-        strcpy(gateway.admin_ssl_key, value);
-    }
-    else if (strcmp(name, CN_ADMIN_SSL_CERT) == 0)
-    {
-        strcpy(gateway.admin_ssl_cert, value);
-    }
-    else if (strcmp(name, CN_ADMIN_SSL_CA_CERT) == 0)
-    {
-        strcpy(gateway.admin_ssl_ca_cert, value);
-    }
     else if (strcmp(name, CN_ADMIN_AUTH) == 0)
     {
         gateway.admin_auth = config_truth_value(value);
@@ -2320,9 +2326,6 @@ void config_set_global_defaults()
     gateway.admin_log_auth_failures = true;
     gateway.admin_enabled = true;
     strcpy(gateway.admin_host, DEFAULT_ADMIN_HOST);
-    gateway.admin_ssl_key[0] = '\0';
-    gateway.admin_ssl_cert[0] = '\0';
-    gateway.admin_ssl_ca_cert[0] = '\0';
     gateway.passive = false;
     gateway.promoted_at = 0;
 
@@ -3883,8 +3886,6 @@ json_t* config_maxscale_to_json(const char* host)
     json_object_set_new(param, "connector_plugindir", json_string(get_connector_plugindir()));
     json_object_set_new(param, CN_THREADS, json_integer(config_threadcount()));
     json_object_set_new(param, CN_THREAD_STACK_SIZE, json_integer(config_thread_stack_size()));
-    json_object_set_new(param, CN_WRITEQ_HIGH_WATER, json_integer(config_writeq_high_water()));
-    json_object_set_new(param, CN_WRITEQ_LOW_WATER, json_integer(config_writeq_low_water()));
 
     MXS_CONFIG* cnf = config_get_global_options();
 
@@ -3897,9 +3898,6 @@ json_t* config_maxscale_to_json(const char* host)
     json_object_set_new(param, CN_ADMIN_LOG_AUTH_FAILURES, json_boolean(cnf->admin_log_auth_failures));
     json_object_set_new(param, CN_ADMIN_HOST, json_string(cnf->admin_host));
     json_object_set_new(param, CN_ADMIN_PORT, json_integer(cnf->admin_port));
-    json_object_set_new(param, CN_ADMIN_SSL_KEY, json_string(cnf->admin_ssl_key));
-    json_object_set_new(param, CN_ADMIN_SSL_CERT, json_string(cnf->admin_ssl_cert));
-    json_object_set_new(param, CN_ADMIN_SSL_CA_CERT, json_string(cnf->admin_ssl_ca_cert));
     json_object_set_new(param, CN_ADMIN_PAM_READWRITE_SERVICE,
                         json_string(cnf->admin_pam_rw_service.c_str()));
     json_object_set_new(param, CN_ADMIN_PAM_READONLY_SERVICE,

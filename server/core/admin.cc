@@ -345,15 +345,15 @@ static char* load_cert(const char* file)
 static bool load_ssl_certificates()
 {
     bool rval = false;
-    const char* key = config_get_global_options()->admin_ssl_key;
-    const char* cert = config_get_global_options()->admin_ssl_cert;
-    const char* ca = config_get_global_options()->admin_ssl_ca_cert;
+    const auto& key = config_get_global_options()->admin_ssl_key.get();
+    const auto& cert = config_get_global_options()->admin_ssl_cert.get();
+    const auto& ca = config_get_global_options()->admin_ssl_ca_cert.get();
 
-    if (*key && *cert && *ca)
+    if (!key.empty() && !cert.empty() && !ca.empty())
     {
-        if ((admin_ssl_key = load_cert(key))
-            && (admin_ssl_cert = load_cert(cert))
-            && (admin_ssl_ca_cert = load_cert(ca)))
+        if ((admin_ssl_key = load_cert(key.c_str()))
+            && (admin_ssl_cert = load_cert(cert.c_str()))
+            && (admin_ssl_ca_cert = load_cert(ca.c_str())))
         {
             rval = true;
         }
