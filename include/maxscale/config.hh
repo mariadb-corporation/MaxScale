@@ -21,13 +21,29 @@
 class MXS_CONFIG : public config::Configuration
 {
 public:
-    using milliseconds = std::chrono::milliseconds;
-    using seconds = std::chrono::seconds;
-
-    MXS_CONFIG();
-
     MXS_CONFIG(const MXS_CONFIG&) = delete;
     MXS_CONFIG& operator=(const MXS_CONFIG&) = delete;
+
+    class RebalancePeriod : public config::Milliseconds
+    {
+    public:
+        using config::Milliseconds::Milliseconds;
+
+    protected:
+        void do_set(const value_type& value) override final;
+    };
+
+    class ParamUsersRefreshTime : public config::ParamSeconds
+    {
+    public:
+        using config::ParamSeconds::ParamSeconds;
+
+        bool from_string(const std::string& value_as_string,
+                         value_type* pValue,
+                         std::string* pMessage) const;
+    };
+
+    MXS_CONFIG();
 
     bool    config_check;                               /**< Only check config */
     int     n_threads;                                  /**< Number of polling threads */
@@ -67,8 +83,8 @@ public:
     bool   substitute_variables;                        /**< Should environment variables be substituted
                                                          * */
     char*    local_address;                             /**< Local address to use when connecting */
-    time_t   users_refresh_time;                        /**< How often the users can be refreshed */
-    config::Duration<seconds> users_refresh_interval;   /**< How often the users will be refreshed */
+    config::Seconds users_refresh_time;                 /**< How often the users can be refreshed */
+    config::Seconds users_refresh_interval;             /**< How often the users will be refreshed */
     config::Size    writeq_high_water;                  /**< High water mark of dcb write queue */
     config::Size    writeq_low_water;                   /**< Low water mark of dcb write queue */
     config::Bool    load_persisted_configs;             /**< Load persisted configuration files on startup */
@@ -77,18 +93,8 @@ public:
                                                          * this % amount from load-average, rebalancing will
                                                          * be made.
                                                          */
-
-    class RebalancePeriod : public config::Duration<milliseconds>
-    {
-    public:
-        using config::Duration<milliseconds>::Duration;
-
-    protected:
-        void do_set(const value_type& value) override final;
-    };
-
-    RebalancePeriod rebalance_period;    /**< How often should rebalancing be made. */
-    config::Count   rebalance_window;    /**< How many seconds should be taken into account. */
+    RebalancePeriod rebalance_period;                   /**< How often should rebalancing be made. */
+    config::Count   rebalance_window;                   /**< How many seconds should be taken into account. */
 
     // The following will not be configured via the configuration mechanism.
     mxb_log_target_t log_target;                        /**< Log type */
@@ -98,14 +104,15 @@ public:
 public:
     static config::Specification s_specification;
 
-    static config::ParamDuration<seconds>      s_users_refresh_interval;
-    static config::ParamSize                   s_writeq_high_water;
-    static config::ParamSize                   s_writeq_low_water;
-    static config::ParamBool                   s_load_persisted_configs;
-    static config::ParamInteger                s_max_auth_errors_until_block;
-    static config::ParamInteger                s_rebalance_threshold;
-    static config::ParamDuration<milliseconds> s_rebalance_period;
-    static config::ParamCount                  s_rebalance_window;
+    static ParamUsersRefreshTime     s_users_refresh_time;
+    static config::ParamSeconds      s_users_refresh_interval;
+    static config::ParamSize         s_writeq_high_water;
+    static config::ParamSize         s_writeq_low_water;
+    static config::ParamBool         s_load_persisted_configs;
+    static config::ParamInteger      s_max_auth_errors_until_block;
+    static config::ParamInteger      s_rebalance_threshold;
+    static config::ParamMilliseconds s_rebalance_period;
+    static config::ParamCount        s_rebalance_window;
 };
 
 /**

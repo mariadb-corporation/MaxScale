@@ -665,6 +665,9 @@ private:
     value_type                          m_default_value;
 };
 
+using ParamMilliseconds = ParamDuration<std::chrono::milliseconds>;
+using ParamSeconds = ParamDuration<std::chrono::seconds>;
+
 /**
  * ParamEnum
  */
@@ -1617,6 +1620,9 @@ public:
         return ConcreteType<Duration<T>, ParamDuration<T>>::m_value.count();
     }
 };
+
+using Milliseconds = Duration<std::chrono::milliseconds>;
+using Seconds = Duration<std::chrono::seconds>;
 
 /*
  *  template<class T>

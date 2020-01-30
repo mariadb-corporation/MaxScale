@@ -87,7 +87,14 @@ const char CN_USERS_REFRESH_INTERVAL[] = "users_refresh_interval";
 
 config::Specification MXS_CONFIG::s_specification("maxscale", config::Specification::GLOBAL);
 
-config::ParamDuration<std::chrono::seconds> MXS_CONFIG::s_users_refresh_interval(
+MXS_CONFIG::ParamUsersRefreshTime MXS_CONFIG::s_users_refresh_time(
+    &MXS_CONFIG::s_specification,
+    CN_USERS_REFRESH_TIME,
+    "How often the users can be refreshed.",
+    mxs::config::INTERPRET_AS_SECONDS,
+    std::chrono::seconds(USERS_REFRESH_TIME_DEFAULT));
+
+config::ParamSeconds MXS_CONFIG::s_users_refresh_interval(
     &MXS_CONFIG::s_specification,
     CN_USERS_REFRESH_INTERVAL,
     "How often the users will be refreshed.",
@@ -152,6 +159,7 @@ config::ParamCount MXS_CONFIG::s_rebalance_window(
 
 MXS_CONFIG::MXS_CONFIG()
     : config::Configuration("maxscale", &s_specification)
+    , users_refresh_time(this, &s_users_refresh_time)
     , users_refresh_interval(this, &s_users_refresh_interval)
     , writeq_high_water(this, &s_writeq_high_water)
     , writeq_low_water(this, &s_writeq_low_water)
@@ -169,6 +177,32 @@ void MXS_CONFIG::RebalancePeriod::do_set(const milliseconds& new_value)
 
     mxb_assert(mxs::MainWorker::get());
     mxs::MainWorker::get()->start_rebalancing();
+}
+
+bool MXS_CONFIG::ParamUsersRefreshTime::from_string(const std::string& value_as_string,
+                                                    value_type* pValue,
+                                                    std::string* pMessage) const
+{
+    bool rv = true;
+
+    char* endptr;
+    long value = strtol(value_as_string.c_str(), &endptr, 0);
+
+    if (*endptr == '\0' && value < 0)
+    {
+        MXS_NOTICE("The value of '%s' is less than 0, users will be updated "
+                   "as fast as the user account manager can.",
+                   CN_USERS_REFRESH_TIME);
+        // Strictly speaking they will be refreshed once every 68 years,
+        // but I just don't beleave the uptime will be that long.
+        *pValue = value_type(INT32_MAX);
+    }
+    else
+    {
+        rv = config::ParamSeconds::from_string(value_as_string, pValue, pMessage);
+    }
+
+    return rv;
 }
 
 static bool        process_config_context(CONFIG_CONTEXT*);
@@ -2116,38 +2150,6 @@ static int handle_global_item(const char* name, const char* value)
     {
         gateway.local_address = MXS_STRDUP_A(value);
     }
-    else if (strcmp(name, CN_USERS_REFRESH_TIME) == 0)
-    {
-        char* endptr;
-        time_t users_refresh_time = strtol(value, &endptr, 0);
-
-        if (*endptr == '\0' && users_refresh_time < 0)
-        {
-            MXS_NOTICE("Value of '%s' is less than 0, users will "
-                       "not be automatically refreshed.",
-                       CN_USERS_REFRESH_TIME);
-            // Strictly speaking they will be refreshed once every 68 years,
-            // but I just don't beleave the uptime will be that long.
-            users_refresh_time = INT32_MAX;
-        }
-        else
-        {
-            // Have to "parse" the value anew in case a suffix has been used.
-            if (!get_seconds(name, value, &users_refresh_time))
-            {
-                return 0;
-            }
-
-            if (users_refresh_time > INT32_MAX)
-            {
-                // To ensure that there will be no overflows when
-                // we later do arithmetic.
-                users_refresh_time = INT32_MAX;
-            }
-        }
-
-        gateway.users_refresh_time = users_refresh_time;
-    }
     else if (strcmp(name, CN_RETAIN_LAST_STATEMENTS) == 0)
     {
         char* endptr;
@@ -2326,7 +2328,6 @@ void config_set_global_defaults()
     gateway.query_retry_timeout = DEFAULT_QUERY_RETRY_TIMEOUT;
     gateway.passive = false;
     gateway.promoted_at = 0;
-    gateway.users_refresh_time = USERS_REFRESH_TIME_DEFAULT;
 
     gateway.log_target = MXB_LOG_TARGET_DEFAULT;
 
