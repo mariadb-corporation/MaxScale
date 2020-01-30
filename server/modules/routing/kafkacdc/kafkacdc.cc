@@ -20,11 +20,6 @@
 namespace
 {
 
-constexpr const char CN_BOOTSTRAP_SERVERS[] = "bootstrap_servers";
-constexpr const char CN_TOPIC[] = "topic";
-constexpr const char CN_DATADIR[] = "datadir";
-constexpr const char CN_ENABLE_IDEMPOTENCE[] = "enable_idempotence";
-
 const char* roweventtype_to_string(RowEvent type)
 {
     switch (type)
@@ -80,18 +75,18 @@ public:
         m_producer->flush(60000);
     }
 
-    static SRowEventHandler create(mxs::ConfigParameters* params)
+    static SRowEventHandler create(const std::string& broker,
+                                   const std::string& topic,
+                                   bool enable_idempotence)
     {
         std::string err;
         SRowEventHandler rval;
-        auto broker = params->get_string(CN_BOOTSTRAP_SERVERS);
-        auto enable_idempotence = params->get_bool(CN_ENABLE_IDEMPOTENCE);
 
         if (auto cnf = create_config(broker, enable_idempotence))
         {
             if (auto producer = RdKafka::Producer::create(cnf.get(), err))
             {
-                rval.reset(new KafkaEventHandler(SProducer(producer), broker, params->get_string(CN_TOPIC)));
+                rval.reset(new KafkaEventHandler(SProducer(producer), broker, topic));
             }
             else
             {
@@ -324,10 +319,49 @@ private:
 };
 }
 
-KafkaCDC::KafkaCDC(SERVICE* pService, mxs::ConfigParameters* params)
-    : Router<KafkaCDC, KafkaCDCSession>(pService)
+// static
+KafkaCDC* KafkaCDC::create(SERVICE* pService, mxs::ConfigParameters* params)
 {
-    configure(params);
+    KafkaCDC* rval = nullptr;
+
+    if (s_spec.validate(*params))
+    {
+        Config config(*params);
+
+        if (auto rpl = create_replicator(config, pService))
+        {
+            rval = new KafkaCDC(pService, std::move(config), std::move(rpl));
+        }
+    }
+
+    return rval;
+}
+
+// static
+std::unique_ptr<cdc::Replicator> KafkaCDC::create_replicator(const Config& config, SERVICE* service)
+{
+    std::unique_ptr<cdc::Replicator> rval;
+    if (auto handler = KafkaEventHandler::create(config.bootstrap_servers,
+                                                 config.topic,
+                                                 config.enable_idempotence))
+    {
+        cdc::Config cnf;
+        cnf.service = service;
+        cnf.statedir = config.datadir;
+
+        // Resetting m_replicator before assigning the new values makes sure the old one stops
+        // before the new one starts.
+        rval = cdc::Replicator::start(cnf, std::move(handler));
+    }
+
+    return rval;
+}
+
+KafkaCDC::KafkaCDC(SERVICE* pService, Config&& config, std::unique_ptr<cdc::Replicator>&& rpl)
+    : Router<KafkaCDC, KafkaCDCSession>(pService)
+    , m_config(std::move(config))
+    , m_replicator(std::move(rpl))
+{
 }
 
 json_t* KafkaCDC::diagnostics() const
@@ -340,16 +374,13 @@ bool KafkaCDC::configure(mxs::ConfigParameters* params)
 {
     bool rval = false;
 
-    if (auto handler = KafkaEventHandler::create(params))
+    if (s_spec.validate(*params))
     {
-        cdc::Config cnf;
-        cnf.service = m_pService;
-        cnf.statedir = params->get_string(CN_DATADIR);
-
         // Resetting m_replicator before assigning the new values makes sure the old one stops
         // before the new one starts.
         m_replicator.reset();
-        m_replicator = cdc::Replicator::start(cnf, std::move(handler));
+        m_config = Config(*params);
+        m_replicator = create_replicator(m_config, m_pService);
         rval = true;
     }
 
@@ -371,36 +402,9 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         nullptr,
         nullptr,
         nullptr,
-        {
-            {
-                CN_BOOTSTRAP_SERVERS,
-                MXS_MODULE_PARAM_STRING,
-                nullptr,
-                MXS_MODULE_OPT_REQUIRED
-            },
-            {
-                CN_TOPIC,
-                MXS_MODULE_PARAM_STRING,
-                nullptr,
-                MXS_MODULE_OPT_REQUIRED
-            },
-            {
-                CN_DATADIR,
-                MXS_MODULE_PARAM_PATH,
-                MXS_DEFAULT_DATADIR,
-                MXS_MODULE_OPT_PATH_R_OK
-                | MXS_MODULE_OPT_PATH_W_OK
-                | MXS_MODULE_OPT_PATH_X_OK
-                | MXS_MODULE_OPT_PATH_CREAT
-            },
-            {
-                CN_ENABLE_IDEMPOTENCE,
-                MXS_MODULE_PARAM_BOOL,
-                "true"
-            },
-            {MXS_END_MODULE_PARAMS}
-        }
     };
+
+    s_spec.populate(info);
 
     return &info;
 }
