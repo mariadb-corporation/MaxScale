@@ -1617,7 +1617,7 @@ public:
 
     typename T::rep count() const
     {
-        return ConcreteType<Duration<T>, ParamDuration<T>>::m_value.count();
+        return ConcreteType<Duration<T>, ParamDuration<T>>::get().count();
     }
 };
 
@@ -1666,14 +1666,9 @@ public:
     {
     }
 
-    const char* c_str() const
-    {
-        return m_value.c_str();
-    }
-
     bool empty() const
     {
-        return m_value.empty();
+        return ConcreteType<Path, ParamPath>::get().empty();
     }
 };
 

@@ -54,9 +54,11 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, const char* user, cons
 
     MXS_CONFIG* config = config_get_global_options();
 
-    if (config->local_address)
+    auto local_address = config->local_address.get();
+
+    if (!local_address.empty())
     {
-        if (mysql_optionsv(con, MYSQL_OPT_BIND, config->local_address) != 0)
+        if (mysql_optionsv(con, MYSQL_OPT_BIND, local_address.c_str()) != 0)
         {
             MXS_ERROR("'local_address' specified in configuration file, but could not "
                       "configure MYSQL handle. MaxScale will try to connect using default "
@@ -108,7 +110,7 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, const char* user, cons
 int mxs_mysql_query(MYSQL* conn, const char* query)
 {
     MXS_CONFIG* cnf = config_get_global_options();
-    return maxsql::mysql_query_ex(conn, query, cnf->query_retries, cnf->query_retry_timeout);
+    return maxsql::mysql_query_ex(conn, query, cnf->query_retries.get(), cnf->query_retry_timeout.count());
 }
 
 const char* mxs_mysql_get_value(MYSQL_RES* result, MYSQL_ROW row, const char* key)

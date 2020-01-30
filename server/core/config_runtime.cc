@@ -820,32 +820,6 @@ bool runtime_alter_maxscale(const char* name, const char* value)
         cnf.skip_permission_checks = config_truth_value(value);
         rval = true;
     }
-    else if (key == CN_QUERY_RETRIES)
-    {
-        int intval = get_positive_int(value);
-        if (intval)
-        {
-            cnf.query_retries = intval;
-            rval = true;
-        }
-        else
-        {
-            config_runtime_error("Invalid timeout value for '%s': %s", CN_QUERY_RETRIES, value);
-        }
-    }
-    else if (key == CN_QUERY_RETRY_TIMEOUT)
-    {
-        int intval = get_positive_int(value);
-        if (intval)
-        {
-            cnf.query_retry_timeout = intval;
-            rval = true;
-        }
-        else
-        {
-            config_runtime_error("Invalid timeout value for '%s': %s", CN_QUERY_RETRY_TIMEOUT, value);
-        }
-    }
     else if (key == CN_RETAIN_LAST_STATEMENTS)
     {
         if (is_valid_integer(value))

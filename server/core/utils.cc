@@ -657,12 +657,14 @@ int open_network_socket(enum mxs_socket_type type,
             {
                 MXS_CONFIG* config = config_get_global_options();
 
-                if (config->local_address)
+                auto la = config->local_address.get();
+
+                if (!la.empty())
                 {
                     freeaddrinfo(ai);
                     ai = NULL;
 
-                    if ((rc = getaddrinfo(config->local_address, NULL, &hint, &ai)) == 0)
+                    if ((rc = getaddrinfo(la.c_str(), NULL, &hint, &ai)) == 0)
                     {
                         struct sockaddr_storage local_address = {};
 
@@ -671,13 +673,13 @@ int open_network_socket(enum mxs_socket_type type,
 
                         if (bind(so, (struct sockaddr*)&local_address, sizeof(local_address)) == 0)
                         {
-                            MXS_INFO("Bound connecting socket to \"%s\".", config->local_address);
+                            MXS_INFO("Bound connecting socket to \"%s\".", la.c_str());
                         }
                         else
                         {
                             MXS_ERROR("Could not bind connecting socket to local address \"%s\", "
                                       "connecting to server using default local address: %s",
-                                      config->local_address,
+                                      la.c_str(),
                                       mxs_strerror(errno));
                         }
                     }
@@ -685,7 +687,7 @@ int open_network_socket(enum mxs_socket_type type,
                     {
                         MXS_ERROR("Could not get address information for local address \"%s\", "
                                   "connecting to server using default local address: %s",
-                                  config->local_address,
+                                  la.c_str(),
                                   mxs_strerror(errno));
                     }
                 }

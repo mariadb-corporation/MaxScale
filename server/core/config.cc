@@ -87,6 +87,27 @@ const char CN_USERS_REFRESH_INTERVAL[] = "users_refresh_interval";
 
 config::Specification MXS_CONFIG::s_specification("maxscale", config::Specification::GLOBAL);
 
+config::ParamInteger MXS_CONFIG::s_query_retries(
+    &MXS_CONFIG::s_specification,
+    CN_QUERY_RETRIES,
+    "Number of times an interrupted query is retried.",
+    DEFAULT_QUERY_RETRIES,
+    0,
+    std::numeric_limits<config::ParamInteger::value_type>::max());
+
+config::ParamSeconds MXS_CONFIG::s_query_retry_timeout(
+    &MXS_CONFIG::s_specification,
+    CN_QUERY_RETRY_TIMEOUT,
+    "The total timeout in seconds for any retried queries.",
+    mxs::config::INTERPRET_AS_SECONDS,
+    std::chrono::seconds(DEFAULT_QUERY_RETRY_TIMEOUT),
+    config::Param::Modifiable::AT_RUNTIME);
+
+config::ParamString MXS_CONFIG::s_local_address(
+    &MXS_CONFIG::s_specification,
+    CN_LOCAL_ADDRESS,
+    "Local address to use when connecting.");
+
 MXS_CONFIG::ParamUsersRefreshTime MXS_CONFIG::s_users_refresh_time(
     &MXS_CONFIG::s_specification,
     CN_USERS_REFRESH_TIME,
@@ -159,6 +180,9 @@ config::ParamCount MXS_CONFIG::s_rebalance_window(
 
 MXS_CONFIG::MXS_CONFIG()
     : config::Configuration("maxscale", &s_specification)
+    , query_retries(this, &s_query_retries)
+    , query_retry_timeout(this, &s_query_retry_timeout)
+    , local_address(this, &s_local_address)
     , users_refresh_time(this, &s_users_refresh_time)
     , users_refresh_interval(this, &s_users_refresh_interval)
     , writeq_high_water(this, &s_writeq_high_water)
@@ -2013,27 +2037,6 @@ static int handle_global_item(const char* name, const char* value)
             return 0;
         }
     }
-    else if (strcmp(name, CN_QUERY_RETRIES) == 0)
-    {
-        char* endptr;
-        int intval = strtol(value, &endptr, 0);
-        if (*endptr == '\0' && intval >= 0)
-        {
-            gateway.query_retries = intval;
-        }
-        else
-        {
-            MXS_ERROR("Invalid timeout value for '%s': %s", CN_QUERY_RETRIES, value);
-            return 0;
-        }
-    }
-    else if (strcmp(name, CN_QUERY_RETRY_TIMEOUT) == 0)
-    {
-        if (!get_seconds(name, value, &gateway.query_retry_timeout))
-        {
-            return 0;
-        }
-    }
     else if (strcmp(name, CN_LOG_THROTTLING) == 0)
     {
         if (*value == 0)
@@ -2145,10 +2148,6 @@ static int handle_global_item(const char* name, const char* value)
     else if (strcmp(name, CN_PASSIVE) == 0)
     {
         gateway.passive = config_truth_value((char*)value);
-    }
-    else if (strcmp(name, CN_LOCAL_ADDRESS) == 0)
-    {
-        gateway.local_address = MXS_STRDUP_A(value);
     }
     else if (strcmp(name, CN_RETAIN_LAST_STATEMENTS) == 0)
     {
@@ -2324,8 +2323,6 @@ void config_set_global_defaults()
     gateway.admin_ssl_key[0] = '\0';
     gateway.admin_ssl_cert[0] = '\0';
     gateway.admin_ssl_ca_cert[0] = '\0';
-    gateway.query_retries = DEFAULT_QUERY_RETRIES;
-    gateway.query_retry_timeout = DEFAULT_QUERY_RETRY_TIMEOUT;
     gateway.passive = false;
     gateway.promoted_at = 0;
 

@@ -77,12 +77,10 @@ public:
     char admin_ssl_key[PATH_MAX];                       /**< Admin SSL key */
     char admin_ssl_cert[PATH_MAX];                      /**< Admin SSL cert */
     char admin_ssl_ca_cert[PATH_MAX];                   /**< Admin SSL CA cert */
-    int  query_retries;                                 /**< Number of times a interrupted query is
+    config::Integer query_retries;                      /**< Number of times a interrupted query is
                                                          * retried */
-    time_t query_retry_timeout;                         /**< Timeout for query retries */
-    bool   substitute_variables;                        /**< Should environment variables be substituted
-                                                         * */
-    char*    local_address;                             /**< Local address to use when connecting */
+    config::Seconds query_retry_timeout;                /**< Timeout for query retries */
+    config::String  local_address;                      /**< Local address to use when connecting */
     config::Seconds users_refresh_time;                 /**< How often the users can be refreshed */
     config::Seconds users_refresh_interval;             /**< How often the users will be refreshed */
     config::Size    writeq_high_water;                  /**< High water mark of dcb write queue */
@@ -98,12 +96,16 @@ public:
 
     // The following will not be configured via the configuration mechanism.
     mxb_log_target_t log_target;                        /**< Log type */
+    bool             substitute_variables;              /**< Should environment variables be substituted */
 
     bool post_configure(const mxs::ConfigParameters& params) override;
 
 public:
     static config::Specification s_specification;
 
+    static config::ParamInteger      s_query_retries;
+    static config::ParamSeconds      s_query_retry_timeout;
+    static config::ParamString       s_local_address;
     static ParamUsersRefreshTime     s_users_refresh_time;
     static config::ParamSeconds      s_users_refresh_interval;
     static config::ParamSize         s_writeq_high_water;
