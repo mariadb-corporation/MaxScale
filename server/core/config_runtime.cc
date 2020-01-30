@@ -680,42 +680,6 @@ bool runtime_alter_maxscale(const char* name, const char* value)
             config_runtime_error("Invalid timeout value for '%s': %s", CN_AUTH_WRITE_TIMEOUT, value);
         }
     }
-    else if (key == CN_ADMIN_AUTH)
-    {
-        int boolval = config_truth_value(value);
-
-        if (boolval != -1)
-        {
-            MXS_NOTICE("Updated '%s' from '%s' to '%s'",
-                       CN_ADMIN_AUTH,
-                       cnf.admin_auth ? "true" : "false",
-                       boolval ? "true" : "false");
-            cnf.admin_auth = boolval;
-            rval = true;
-        }
-        else
-        {
-            config_runtime_error("Invalid boolean value for '%s': %s", CN_ADMIN_AUTH, value);
-        }
-    }
-    else if (key == CN_ADMIN_LOG_AUTH_FAILURES)
-    {
-        int boolval = config_truth_value(value);
-
-        if (boolval != -1)
-        {
-            MXS_NOTICE("Updated '%s' from '%s' to '%s'",
-                       CN_ADMIN_LOG_AUTH_FAILURES,
-                       cnf.admin_log_auth_failures ? "true" : "false",
-                       boolval ? "true" : "false");
-            cnf.admin_log_auth_failures = boolval;
-            rval = true;
-        }
-        else
-        {
-            config_runtime_error("Invalid boolean value for '%s': %s", CN_ADMIN_LOG_AUTH_FAILURES, value);
-        }
-    }
     else if (key == CN_PASSIVE)
     {
         int boolval = config_truth_value(value);

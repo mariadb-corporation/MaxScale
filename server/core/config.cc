@@ -87,6 +87,37 @@ const char CN_USERS_REFRESH_INTERVAL[] = "users_refresh_interval";
 
 config::Specification MXS_CONFIG::s_specification("maxscale", config::Specification::GLOBAL);
 
+config::ParamString MXS_CONFIG::s_admin_host(
+    &MXS_CONFIG::s_specification,
+    CN_ADMIN_HOST,
+    "Admin interface host.",
+    DEFAULT_ADMIN_HOST);
+
+config::ParamInteger MXS_CONFIG::s_admin_port(
+    &MXS_CONFIG::s_specification,
+    CN_ADMIN_PORT,
+    "Admin interface port.",
+    DEFAULT_ADMIN_HTTP_PORT);
+
+config::ParamBool MXS_CONFIG::s_admin_auth(
+    &MXS_CONFIG::s_specification,
+    CN_ADMIN_AUTH,
+    "Admin interface authentication.",
+    true);
+
+config::ParamBool MXS_CONFIG::s_admin_enabled(
+    &MXS_CONFIG::s_specification,
+    CN_ADMIN_ENABLED,
+    "Admin interface is enabled.",
+    true);
+
+config::ParamBool MXS_CONFIG::s_admin_log_auth_failures(
+    &MXS_CONFIG::s_specification,
+    CN_ADMIN_LOG_AUTH_FAILURES,
+    "Log admin interface authentication failures.",
+    true,
+    config::Param::Modifiable::AT_RUNTIME);
+
 config::ParamString MXS_CONFIG::s_admin_pam_rw_service(
     &MXS_CONFIG::s_specification,
     CN_ADMIN_PAM_READWRITE_SERVICE,
@@ -205,6 +236,11 @@ config::ParamCount MXS_CONFIG::s_rebalance_window(
 
 MXS_CONFIG::MXS_CONFIG()
     : config::Configuration("maxscale", &s_specification)
+    , admin_host(this, &s_admin_host)
+    , admin_port(this, &s_admin_port)
+    , admin_auth(this, &s_admin_auth)
+    , admin_enabled(this, &s_admin_enabled)
+    , admin_log_auth_failures(this, &s_admin_log_auth_failures)
     , admin_pam_rw_service(this, &s_admin_pam_rw_service)
     , admin_pam_ro_service(this, &s_admin_pam_ro_service)
     , admin_ssl_key(this, &s_admin_ssl_key)
@@ -2135,26 +2171,6 @@ static int handle_global_item(const char* name, const char* value)
             MXS_FREE(v);
         }
     }
-    else if (strcmp(name, CN_ADMIN_PORT) == 0)
-    {
-        gateway.admin_port = atoi(value);
-    }
-    else if (strcmp(name, CN_ADMIN_HOST) == 0)
-    {
-        strcpy(gateway.admin_host, value);
-    }
-    else if (strcmp(name, CN_ADMIN_AUTH) == 0)
-    {
-        gateway.admin_auth = config_truth_value(value);
-    }
-    else if (strcmp(name, CN_ADMIN_ENABLED) == 0)
-    {
-        gateway.admin_enabled = config_truth_value(value);
-    }
-    else if (strcmp(name, CN_ADMIN_LOG_AUTH_FAILURES) == 0)
-    {
-        gateway.admin_log_auth_failures = config_truth_value(value);
-    }
     else if (strcmp(name, CN_PASSIVE) == 0)
     {
         gateway.passive = config_truth_value((char*)value);
@@ -2291,17 +2307,6 @@ bool config_can_modify_at_runtime(const char* name)
     }
     std::unordered_set<std::string> static_params
     {
-        CN_USERS_REFRESH_INTERVAL,
-        CN_USERS_REFRESH_TIME,
-        CN_LOCAL_ADDRESS,
-        CN_ADMIN_ENABLED,
-        CN_ADMIN_SSL_CA_CERT,
-        CN_ADMIN_SSL_CERT,
-        CN_ADMIN_SSL_KEY,
-        CN_ADMIN_HOST,
-        CN_ADMIN_PORT,
-        CN_ADMIN_PAM_READWRITE_SERVICE,
-        CN_ADMIN_PAM_READONLY_SERVICE,
         CN_LOG_THROTTLING,
         "sql_mode",
         CN_QUERY_CLASSIFIER_ARGS,
@@ -2325,11 +2330,6 @@ void config_set_global_defaults()
     gateway.skip_permission_checks = false;
     gateway.syslog = 1;
     gateway.maxlog = 1;
-    gateway.admin_port = DEFAULT_ADMIN_HTTP_PORT;
-    gateway.admin_auth = true;
-    gateway.admin_log_auth_failures = true;
-    gateway.admin_enabled = true;
-    strcpy(gateway.admin_host, DEFAULT_ADMIN_HOST);
     gateway.passive = false;
     gateway.promoted_at = 0;
 
@@ -3897,11 +3897,6 @@ json_t* config_maxscale_to_json(const char* host)
     json_object_set_new(param, CN_AUTH_READ_TIMEOUT, json_integer(cnf->auth_read_timeout));
     json_object_set_new(param, CN_AUTH_WRITE_TIMEOUT, json_integer(cnf->auth_write_timeout));
     json_object_set_new(param, CN_SKIP_PERMISSION_CHECKS, json_boolean(cnf->skip_permission_checks));
-    json_object_set_new(param, CN_ADMIN_AUTH, json_boolean(cnf->admin_auth));
-    json_object_set_new(param, CN_ADMIN_ENABLED, json_boolean(cnf->admin_enabled));
-    json_object_set_new(param, CN_ADMIN_LOG_AUTH_FAILURES, json_boolean(cnf->admin_log_auth_failures));
-    json_object_set_new(param, CN_ADMIN_HOST, json_string(cnf->admin_host));
-    json_object_set_new(param, CN_ADMIN_PORT, json_integer(cnf->admin_port));
 
     json_object_set_new(param, CN_PASSIVE, json_boolean(cnf->passive));
 

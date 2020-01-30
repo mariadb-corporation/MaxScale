@@ -66,11 +66,11 @@ public:
     char*               qc_args;                        /**< Arguments for the query classifier */
     QC_CACHE_PROPERTIES qc_cache_properties;            /**< The query classifier cache properties. */
     qc_sql_mode_t       qc_sql_mode;                    /**< The query classifier sql mode */
-    char                admin_host[MAX_ADMIN_HOST_LEN]; /**< Admin interface host */
-    uint16_t            admin_port;                     /**< Admin interface port */
-    bool                admin_auth;                     /**< Admin interface authentication */
-    bool                admin_enabled;                  /**< Admin interface is enabled */
-    bool                admin_log_auth_failures;        /**< Log admin interface authentication failures */
+    config::String  admin_host;                         /**< Admin interface host */
+    config::Integer admin_port;                         /**< Admin interface port */
+    config::Bool    admin_auth;                         /**< Admin interface authentication */
+    config::Bool    admin_enabled;                      /**< Admin interface is enabled */
+    config::Bool    admin_log_auth_failures;            /**< Log admin interface authentication failures */
     config::String  admin_pam_rw_service;               /**< PAM service for read-write users */
     config::String  admin_pam_ro_service;               /**< PAM service for read-only users */
     config::String  admin_ssl_key;                      /**< Admin SSL key */
@@ -102,6 +102,11 @@ public:
 public:
     static config::Specification s_specification;
 
+    static config::ParamString       s_admin_host;
+    static config::ParamInteger      s_admin_port;
+    static config::ParamBool         s_admin_auth;
+    static config::ParamBool         s_admin_enabled;
+    static config::ParamBool         s_admin_log_auth_failures;
     static config::ParamString       s_admin_pam_rw_service;
     static config::ParamString       s_admin_pam_ro_service;
     static config::ParamString       s_admin_ssl_key;

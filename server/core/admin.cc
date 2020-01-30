@@ -387,8 +387,8 @@ bool mxs_admin_init()
 {
     struct sockaddr_storage addr;
 
-    if (host_to_sockaddr(config_get_global_options()->admin_host,
-                         config_get_global_options()->admin_port,
+    if (host_to_sockaddr(config_get_global_options()->admin_host.get().c_str(),
+                         config_get_global_options()->admin_port.get(),
                          &addr))
     {
         int options = MHD_USE_EPOLL_INTERNALLY_LINUX_ONLY | MHD_USE_DEBUG;
