@@ -52,6 +52,14 @@ public:
         void do_set(const value_type& value) override final;
     };
 
+    class Passive : public config::Bool
+    {
+    public:
+        using config::Bool::Bool;
+
+        void do_set(const value_type& value) override final;
+    };
+
     MXS_CONFIG();
 
     bool    config_check;                               /**< Only check config */
@@ -68,9 +76,7 @@ public:
     time_t  auth_read_timeout;                          /**< Read timeout for the user authentication */
     time_t  auth_write_timeout;                         /**< Write timeout for the user authentication */
     bool    skip_permission_checks;                     /**< Skip service and monitor permission checks */
-    int32_t passive;                                    /**< True if MaxScale is in passive mode */
-    int64_t promoted_at;                                /**< Time when this Maxscale instance was
-                                                         * promoted from a passive to an active */
+    Passive         passive;                            /**< True if MaxScale is in passive mode */
     config::String  qc_name;                            /**< The name of the query classifier to load */
     config::String  qc_args;                            /**< Arguments for the query classifieer */
     QcCacheMaxSize  qc_cache_max_size;                  /**< Maximum amount of memory used by qc */
@@ -106,12 +112,15 @@ public:
     mxb_log_target_t    log_target;                     /**< Log type */
     bool                substitute_variables;           /**< Should environment variables be substituted */
     QC_CACHE_PROPERTIES qc_cache_properties;            /**< The query classifier cache properties. */
+    int64_t             promoted_at;                    /**< Time when this Maxscale instance was
+                                                         * promoted from a passive to an active */
 
     bool post_configure(const mxs::ConfigParameters& params) override;
 
 public:
     static config::Specification s_specification;
 
+    static config::ParamBool                s_passive;
     static config::ParamString              s_qc_name;
     static config::ParamString              s_qc_args;
     static config::ParamSize                s_qc_cache_max_size;

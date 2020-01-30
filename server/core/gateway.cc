@@ -1690,7 +1690,7 @@ int main(int argc, char** argv)
             break;
 
         case 'p':
-            cnf->passive = true;
+            cnf->passive.set(true);
             break;
 
         case 'g':

@@ -91,6 +91,13 @@ static CONFIG_CONTEXT config_context;
 
 config::Specification MXS_CONFIG::s_specification("maxscale", config::Specification::GLOBAL);
 
+config::ParamBool MXS_CONFIG::s_passive(
+    &MXS_CONFIG::s_specification,
+    CN_PASSIVE,
+    "True if MaxScale is in passive mode.",
+    false,
+    config::Param::Modifiable::AT_RUNTIME);
+
 config::ParamString MXS_CONFIG::s_qc_name(
     &MXS_CONFIG::s_specification,
     CN_QUERY_CLASSIFIER,
@@ -267,6 +274,7 @@ config::ParamCount MXS_CONFIG::s_rebalance_window(
 
 MXS_CONFIG::MXS_CONFIG()
     : config::Configuration("maxscale", &s_specification)
+    , passive(this, &s_passive)
     , qc_name(this, &s_qc_name)
     , qc_args(this, &s_qc_args)
     , qc_cache_max_size(this, &s_qc_cache_max_size)
@@ -335,6 +343,15 @@ void MXS_CONFIG::QcCacheMaxSize::do_set(const value_type& value)
     config::Size::do_set(value);
     gateway.qc_cache_properties.max_size = value;
     qc_set_cache_properties(&gateway.qc_cache_properties);
+}
+
+void MXS_CONFIG::Passive::do_set(const value_type& value)
+{
+    config::Bool::do_set(value);
+    if (get() && !value)
+    {
+        gateway.promoted_at = mxs_clock();
+    }
 }
 
 static bool        process_config_context(CONFIG_CONTEXT*);
@@ -2150,10 +2167,6 @@ static int handle_global_item(const char* name, const char* value)
             MXS_FREE(v);
         }
     }
-    else if (strcmp(name, CN_PASSIVE) == 0)
-    {
-        gateway.passive = config_truth_value((char*)value);
-    }
     else if (strcmp(name, CN_RETAIN_LAST_STATEMENTS) == 0)
     {
         char* endptr;
@@ -2309,7 +2322,6 @@ void config_set_global_defaults()
     gateway.skip_permission_checks = false;
     gateway.syslog = 1;
     gateway.maxlog = 1;
-    gateway.passive = false;
     gateway.promoted_at = 0;
 
     gateway.log_target = MXB_LOG_TARGET_DEFAULT;
@@ -3872,8 +3884,6 @@ json_t* config_maxscale_to_json(const char* host)
     json_object_set_new(param, CN_AUTH_WRITE_TIMEOUT, json_integer(cnf->auth_write_timeout));
     json_object_set_new(param, CN_SKIP_PERMISSION_CHECKS, json_boolean(cnf->skip_permission_checks));
 
-    json_object_set_new(param, CN_PASSIVE, json_boolean(cnf->passive));
-
     json_object_set_new(param,
                         CN_QUERY_CLASSIFIER_CACHE_SIZE,
                         json_integer(cnf->qc_cache_properties.max_size));
@@ -3927,7 +3937,7 @@ static bool create_global_config(const char* filename)
     dprintf(file, "%s=%ld\n", CN_AUTH_READ_TIMEOUT, gateway.auth_read_timeout);
     dprintf(file, "%s=%ld\n", CN_AUTH_WRITE_TIMEOUT, gateway.auth_write_timeout);
     dprintf(file, "%s=%s\n", CN_ADMIN_AUTH, gateway.admin_auth ? "true" : "false");
-    dprintf(file, "%s=%u\n", CN_PASSIVE, gateway.passive);
+    dprintf(file, "%s=%s\n", CN_PASSIVE, gateway.passive ? "true" : "false");
     dprintf(file, "%s=%s\n", CN_REBALANCE_PERIOD, gateway.rebalance_period.to_string().c_str());
     dprintf(file, "%s=%s\n", CN_REBALANCE_THRESHOLD, gateway.rebalance_threshold.to_string().c_str());
 

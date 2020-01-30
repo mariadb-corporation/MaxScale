@@ -680,31 +680,6 @@ bool runtime_alter_maxscale(const char* name, const char* value)
             config_runtime_error("Invalid timeout value for '%s': %s", CN_AUTH_WRITE_TIMEOUT, value);
         }
     }
-    else if (key == CN_PASSIVE)
-    {
-        int boolval = config_truth_value(value);
-
-        if (boolval != -1)
-        {
-            MXS_NOTICE("Updated '%s' from '%s' to '%s'",
-                       CN_PASSIVE,
-                       cnf.passive ? "true" : "false",
-                       boolval ? "true" : "false");
-
-            if (cnf.passive && !boolval)
-            {
-                // This MaxScale is being promoted to the active instance
-                cnf.promoted_at = mxs_clock();
-            }
-
-            cnf.passive = boolval;
-            rval = true;
-        }
-        else
-        {
-            config_runtime_error("Invalid boolean value for '%s': %s", CN_PASSIVE, value);
-        }
-    }
     else if (key == CN_WRITEQ_HIGH_WATER)
     {
         uint64_t size = 0;
