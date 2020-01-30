@@ -819,7 +819,7 @@ public:
 class ParamTarget : public Param
 {
 public:
-    using value_type = mxs::Target *;
+    using value_type = mxs::Target*;
 
     ParamTarget(Specification* pSpecification,
                 const char* zName,
@@ -1013,6 +1013,9 @@ public:
     using const_iterator = ValuesByName::const_iterator;
     using value_type = ValuesByName::value_type;
 
+    Configuration(Configuration&& rhs) = default;
+    Configuration& operator=(Configuration&& rhs) = default;
+
     /**
      * Constructor
      *
@@ -1088,7 +1091,7 @@ private:
 
 private:
     std::string          m_name;
-    const Specification& m_specification;
+    const Specification* m_pSpecification;
     ValuesByName         m_values;
 };
 
@@ -1104,6 +1107,10 @@ class Type
 public:
     Type(const Type& rhs) = delete;
     Type& operator=(const Type&) = delete;
+
+    // Type is move-only
+    Type(Type&& rhs);
+    Type& operator=(Type&&);
 
     ~Type();
 
@@ -1147,9 +1154,9 @@ protected:
     Type(Configuration* pConfiguration, const Param* pParam);
 
 private:
-    Configuration&    m_configuration;
-    const Param&      m_param;
-    const std::string m_name;
+    Configuration* m_pConfiguration;
+    const Param*   m_pParam;
+    std::string    m_name;
 };
 
 /**
@@ -1164,6 +1171,12 @@ public:
 
     ConcreteType(const ConcreteType&) = delete;
 
+    ConcreteType(ConcreteType&& rhs)
+        : Type(std::forward<ConcreteType &&>(rhs))
+        , m_value(std::move(rhs.m_value))
+    {
+    }
+
     ConcreteType(Configuration* pConfiguration, const ParamType* pParam)
         : Type(pConfiguration, pParam)
         , m_value(pParam->default_value())
@@ -1172,7 +1185,7 @@ public:
 
     This& operator=(const value_type& value)
     {
-        MXB_AT_DEBUG(bool rv =) set(value);
+        MXB_AT_DEBUG(bool rv = ) set(value);
         mxb_assert(rv);
         return static_cast<This&>(*this);
     }
@@ -1181,7 +1194,7 @@ public:
     {
         // Only the value is copied, the parameter and the configuration
         // remains the same.
-        MXB_AT_DEBUG(bool rv =) set(rhs.m_value);
+        MXB_AT_DEBUG(bool rv = ) set(rhs.m_value);
         mxb_assert(rv);
         return static_cast<This&>(*this);
     }
@@ -1351,7 +1364,7 @@ inline bool operator>=(const typename ParamType::value_type& lhs,
 class Number : public ConcreteType<Number, ParamNumber>
 {
 protected:
-    using ConcreteType<Number, ParamNumber>::operator =;
+    using ConcreteType<Number, ParamNumber>::operator=;
 
     Number(Configuration* pConfiguration, const ParamNumber* pParam)
         : ConcreteType(pConfiguration, pParam)
@@ -1368,7 +1381,7 @@ public:
 class Count : public Number
 {
 public:
-    using Number::operator =;
+    using Number::operator=;
 
     Count(Configuration* pConfiguration, const ParamCount* pParam)
         : Number(pConfiguration, pParam)
@@ -1382,7 +1395,7 @@ public:
 class Integer : public Number
 {
 public:
-    using Number::operator =;
+    using Number::operator=;
 
     Integer(Configuration* pConfiguration, const ParamInteger* pParam)
         : Number(pConfiguration, pParam)
@@ -1396,7 +1409,7 @@ public:
 class BitMask : public Count
 {
 public:
-    using Count::operator =;
+    using Count::operator=;
 
     BitMask(Configuration* pConfiguration, const ParamCount* pParam)
         : Count(pConfiguration, pParam)
@@ -1415,7 +1428,7 @@ public:
 class Bool : public ConcreteType<Bool, ParamBool>
 {
 public:
-    using ConcreteType<Bool, ParamBool>::operator =;
+    using ConcreteType<Bool, ParamBool>::operator=;
 
     Bool(Configuration* pConfiguration, const ParamBool* pParam)
         : ConcreteType<Bool, ParamBool>(pConfiguration, pParam)
@@ -1435,7 +1448,7 @@ template<class T>
 class Duration : public ConcreteType<Duration<T>, ParamDuration<T>>
 {
 public:
-    using ConcreteType<Duration<T>, ParamDuration<T>>::operator =;
+    using ConcreteType<Duration<T>, ParamDuration<T>>::operator=;
 
     Duration(Configuration* pConfiguration, const ParamDuration<T>* pParam)
         : ConcreteType<Duration<T>, ParamDuration<T>>(pConfiguration, pParam)
@@ -1469,7 +1482,7 @@ template<class T>
 class Enum : public ConcreteType<Enum<T>, ParamEnum<T>>
 {
 public:
-    using ConcreteType<Enum<T>, ParamEnum<T>>::operator =;
+    using ConcreteType<Enum<T>, ParamEnum<T>>::operator=;
 
     Enum(Configuration* pConfiguration, const ParamEnum<T>* pParam)
         : ConcreteType<Enum<T>, ParamEnum<T>>(pConfiguration, pParam)
@@ -1483,7 +1496,7 @@ public:
 class Path : public ConcreteType<Path, ParamPath>
 {
 public:
-    using ConcreteType<Path, ParamPath>::operator =;
+    using ConcreteType<Path, ParamPath>::operator=;
 
     Path(Configuration* pConfiguration, const ParamPath* pParam)
         : ConcreteType<Path, ParamPath>(pConfiguration, pParam)
@@ -1507,7 +1520,7 @@ public:
 class Size : public ConcreteType<Size, ParamSize>
 {
 public:
-    using ConcreteType<Size, ParamSize>::operator =;
+    using ConcreteType<Size, ParamSize>::operator=;
 
     Size(Configuration* pConfiguration, const ParamSize* pParam)
         : ConcreteType(pConfiguration, pParam)
@@ -1526,7 +1539,7 @@ inline Size::value_type operator/(const Size& lhs, Size::value_type rhs)
 class Server : public ConcreteType<Server, ParamServer>
 {
 public:
-    using ConcreteType<Server, ParamServer>::operator =;
+    using ConcreteType<Server, ParamServer>::operator=;
 
     Server(Configuration* pConfiguration, const ParamServer* pParam)
         : ConcreteType<Server, ParamServer>(pConfiguration, pParam)
@@ -1552,7 +1565,7 @@ public:
 class String : public ConcreteType<String, ParamString>
 {
 public:
-    using ConcreteType<String, ParamString>::operator =;
+    using ConcreteType<String, ParamString>::operator=;
 
     String(Configuration* pConfiguration, const ParamString* pParam)
         : ConcreteType<String, ParamString>(pConfiguration, pParam)

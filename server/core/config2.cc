@@ -344,7 +344,7 @@ void Param::populate(MXS_MODULE_PARAM& param) const
  */
 Configuration::Configuration(const std::string& name, const config::Specification* pSpecification)
     : m_name(name)
-    , m_specification(*pSpecification)
+    , m_pSpecification(pSpecification)
 {
 }
 
@@ -355,7 +355,7 @@ const std::string& Configuration::name() const
 
 const config::Specification& Configuration::specification() const
 {
-    return m_specification;
+    return *m_pSpecification;
 }
 
 Type* Configuration::find_value(const string& name)
@@ -411,34 +411,63 @@ size_t Configuration::size() const
  * class Type
  */
 Type::Type(Configuration* pConfiguration, const config::Param* pParam)
-    : m_configuration(*pConfiguration)
-    , m_param(*pParam)
+    : m_pConfiguration(pConfiguration)
+    , m_pParam(pParam)
     , m_name(pParam->name())
 {
     // The name is copied, so that we have access to it in the destructor
     // also in the case that Param happens to be destructed first.
-    m_configuration.insert(this);
+    m_pConfiguration->insert(this);
+}
+
+Type::Type(Type&& rhs)
+    : m_pConfiguration(rhs.m_pConfiguration)
+    , m_pParam(rhs.m_pParam)
+    , m_name(std::move(rhs.m_name))
+{
+    m_pConfiguration->remove(&rhs, m_name);
+    m_pConfiguration->insert(this);
+    rhs.m_pConfiguration = nullptr;
+}
+
+Type& Type::operator=(Type&& rhs)
+{
+    if (this != &rhs)
+    {
+        m_pConfiguration = rhs.m_pConfiguration;
+        m_pParam = rhs.m_pParam;
+        m_name = std::move(rhs.m_name);
+        rhs.m_pConfiguration = nullptr;
+
+        m_pConfiguration->remove(&rhs, m_name);
+        m_pConfiguration->insert(this);
+    }
+
+    return *this;
 }
 
 Type::~Type()
 {
-    m_configuration.remove(this, m_name);
+    if (m_pConfiguration)
+    {
+        m_pConfiguration->remove(this, m_name);
+    }
 }
 
 const config::Param& Type::parameter() const
 {
-    return m_param;
+    return *m_pParam;
 }
 
 ostream& Type::persist(ostream& out) const
 {
-    out << m_param.name() << "=" << to_string();
+    out << m_pParam->name() << "=" << to_string();
     return out;
 }
 
 bool Type::set(const string& value_as_string)
 {
-    return m_param.set(*this, value_as_string);
+    return m_pParam->set(*this, value_as_string);
 }
 
 /**
@@ -1052,5 +1081,4 @@ bool Number::set(const value_type& value)
 
     return rv;
 }
-
 }
