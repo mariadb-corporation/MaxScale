@@ -1895,7 +1895,10 @@ int main(int argc, char** argv)
         }
     }
 
-    if (!qc_setup(&cnf->qc_cache_properties, cnf->qc_sql_mode, cnf->qc_name, cnf->qc_args))
+    if (!qc_setup(&cnf->qc_cache_properties,
+                  cnf->qc_sql_mode.get(),
+                  cnf->qc_name.get().c_str(),
+                  cnf->qc_args.get().c_str()))
     {
         log_startup_error("Failed to initialise query classifier library.");
         rc = MAXSCALE_INTERNALERROR;

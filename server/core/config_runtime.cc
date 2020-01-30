@@ -705,35 +705,6 @@ bool runtime_alter_maxscale(const char* name, const char* value)
             config_runtime_error("Invalid boolean value for '%s': %s", CN_PASSIVE, value);
         }
     }
-    else if (key == CN_QUERY_CLASSIFIER_CACHE_SIZE)
-    {
-        uint64_t max_size;
-
-        if (get_suffixed_size(value, &max_size))
-        {
-            decltype(QC_CACHE_PROPERTIES::max_size) new_size = max_size;
-
-            if (new_size >= 0)
-            {
-                MXS_NOTICE("Updated '%s' from %" PRIi64 " to %lu",
-                           CN_QUERY_CLASSIFIER_CACHE_SIZE,
-                           cnf.qc_cache_properties.max_size,
-                           max_size);
-
-                cnf.qc_cache_properties.max_size = new_size;
-                qc_set_cache_properties(&cnf.qc_cache_properties);
-                rval = true;
-            }
-            else
-            {
-                config_runtime_error("Value too large for '%s': %s", CN_QUERY_CLASSIFIER_CACHE_SIZE, value);
-            }
-        }
-        else
-        {
-            config_runtime_error("Invalid size value for '%s': %s", CN_QUERY_CLASSIFIER_CACHE_SIZE, value);
-        }
-    }
     else if (key == CN_WRITEQ_HIGH_WATER)
     {
         uint64_t size = 0;

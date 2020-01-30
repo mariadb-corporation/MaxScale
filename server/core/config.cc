@@ -84,8 +84,39 @@ const char CN_USERS_REFRESH_TIME[] = "users_refresh_time";
 const char CN_USERS_REFRESH_INTERVAL[] = "users_refresh_interval";
 }
 
+static const char* config_file = NULL;
+static MXS_CONFIG gateway;
+static bool is_persisted_config = false;    /**< True if a persisted configuration file is being parsed */
+static CONFIG_CONTEXT config_context;
 
 config::Specification MXS_CONFIG::s_specification("maxscale", config::Specification::GLOBAL);
+
+config::ParamString MXS_CONFIG::s_qc_name(
+    &MXS_CONFIG::s_specification,
+    CN_QUERY_CLASSIFIER,
+    "The name of the query classifier to load.",
+    "qc_sqlite");
+
+config::ParamString MXS_CONFIG::s_qc_args(
+    &MXS_CONFIG::s_specification,
+    CN_QUERY_CLASSIFIER_ARGS,
+    "Arguments for the query classifier.");
+
+config::ParamSize MXS_CONFIG::s_qc_cache_max_size(
+    &MXS_CONFIG::s_specification,
+    CN_QUERY_CLASSIFIER_CACHE_SIZE,
+    "Maximum amount of memory used by query classifier cache.",
+    config::Param::Modifiable::AT_RUNTIME);
+
+config::ParamEnum<qc_sql_mode_t> MXS_CONFIG::s_qc_sql_mode(
+    &MXS_CONFIG::s_specification,
+    CN_SQL_MODE,
+    "The query classifier sql mode.",
+    {
+        { QC_SQL_MODE_DEFAULT, "default" },
+        { QC_SQL_MODE_ORACLE, "oracle" }
+    },
+    QC_SQL_MODE_DEFAULT);
 
 config::ParamString MXS_CONFIG::s_admin_host(
     &MXS_CONFIG::s_specification,
@@ -236,6 +267,10 @@ config::ParamCount MXS_CONFIG::s_rebalance_window(
 
 MXS_CONFIG::MXS_CONFIG()
     : config::Configuration("maxscale", &s_specification)
+    , qc_name(this, &s_qc_name)
+    , qc_args(this, &s_qc_args)
+    , qc_cache_max_size(this, &s_qc_cache_max_size)
+    , qc_sql_mode(this, &s_qc_sql_mode)
     , admin_host(this, &s_admin_host)
     , admin_port(this, &s_admin_port)
     , admin_auth(this, &s_admin_auth)
@@ -295,6 +330,13 @@ bool MXS_CONFIG::ParamUsersRefreshTime::from_string(const std::string& value_as_
     return rv;
 }
 
+void MXS_CONFIG::QcCacheMaxSize::do_set(const value_type& value)
+{
+    config::Size::do_set(value);
+    gateway.qc_cache_properties.max_size = value;
+    qc_set_cache_properties(&gateway.qc_cache_properties);
+}
+
 static bool        process_config_context(CONFIG_CONTEXT*);
 static bool        process_config_update(CONFIG_CONTEXT*);
 static int         handle_global_item(const char*, const char*);
@@ -332,11 +374,6 @@ void        config_fix_param(const MXS_MODULE_PARAM* params, const string& name,
 std::string closest_matching_parameter(const std::string& str,
                                        const MXS_MODULE_PARAM* base,
                                        const MXS_MODULE_PARAM* mod);
-
-static const char* config_file = NULL;
-static MXS_CONFIG gateway;
-static bool is_persisted_config = false;    /**< True if a persisted configuration file is being parsed */
-static CONFIG_CONTEXT config_context;
 
 const MXS_MODULE_PARAM config_filter_params[] =
 {
@@ -2045,64 +2082,6 @@ static int handle_global_item(const char* name, const char* value)
             return 0;
         }
     }
-    else if (strcmp(name, CN_QUERY_CLASSIFIER) == 0)
-    {
-        int len = strlen(value);
-        int max_len = sizeof(gateway.qc_name) - 1;
-
-        if (len <= max_len)
-        {
-            strcpy(gateway.qc_name, value);
-        }
-        else
-        {
-            MXS_ERROR("The length of '%s' is %d, while the maximum length is %d.", value, len, max_len);
-            return 0;
-        }
-    }
-    else if (strcmp(name, CN_QUERY_CLASSIFIER_ARGS) == 0)
-    {
-        gateway.qc_args = MXS_STRDUP_A(value);
-    }
-    else if (strcmp(name, CN_QUERY_CLASSIFIER_CACHE_SIZE) == 0)
-    {
-        uint64_t int_value;
-
-        if (!get_suffixed_size(value, &int_value))
-        {
-            MXS_ERROR("Invalid value for %s: %s", CN_QUERY_CLASSIFIER_CACHE_SIZE, value);
-            return 0;
-        }
-
-        decltype(gateway.qc_cache_properties.max_size) max_size = int_value;
-
-        if (max_size >= 0)
-        {
-            gateway.qc_cache_properties.max_size = max_size;
-        }
-        else
-        {
-            MXS_ERROR("Value too large for %s: %s", CN_QUERY_CLASSIFIER_CACHE_SIZE, value);
-            return 0;
-        }
-    }
-    else if (strcmp(name, "sql_mode") == 0)
-    {
-        if (strcasecmp(value, "default") == 0)
-        {
-            gateway.qc_sql_mode = QC_SQL_MODE_DEFAULT;
-        }
-        else if (strcasecmp(value, "oracle") == 0)
-        {
-            gateway.qc_sql_mode = QC_SQL_MODE_ORACLE;
-        }
-        else
-        {
-            MXS_ERROR("'%s' is not a valid value for '%s'. Allowed values are 'DEFAULT' and 'ORACLE'.",
-                      value, name);
-            return 0;
-        }
-    }
     else if (strcmp(name, CN_LOG_THROTTLING) == 0)
     {
         if (*value == 0)
@@ -2380,11 +2359,6 @@ void config_set_global_defaults()
     {
         strcpy(gateway.sysname, uname_data.sysname);
     }
-
-    /* query_classifier */
-    memset(gateway.qc_name, 0, sizeof(gateway.qc_name));
-    gateway.qc_args = NULL;
-    gateway.qc_sql_mode = QC_SQL_MODE_DEFAULT;
 }
 
 bool missing_required_parameters(const MXS_MODULE_PARAM* mod_params,
@@ -3899,13 +3873,6 @@ json_t* config_maxscale_to_json(const char* host)
     json_object_set_new(param, CN_SKIP_PERMISSION_CHECKS, json_boolean(cnf->skip_permission_checks));
 
     json_object_set_new(param, CN_PASSIVE, json_boolean(cnf->passive));
-
-    json_object_set_new(param, CN_QUERY_CLASSIFIER, json_string(cnf->qc_name));
-
-    if (cnf->qc_args)
-    {
-        json_object_set_new(param, CN_QUERY_CLASSIFIER_ARGS, json_string(cnf->qc_args));
-    }
 
     json_object_set_new(param,
                         CN_QUERY_CLASSIFIER_CACHE_SIZE,
