@@ -46,6 +46,7 @@ class AvroConverter : public RowEventHandler
 {
 public:
     AvroConverter(SERVICE* service, std::string avrodir, uint64_t block_size, mxs_avro_codec_type codec);
+    bool create_table(const Table& create) final;
     bool open_table(const Table& create) final;
     bool prepare_table(const Table& create) final;
     void flush_tables() final;

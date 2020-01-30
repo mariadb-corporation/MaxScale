@@ -152,12 +152,17 @@ public:
         return rval;
     }
 
-    bool open_table(const Table& table)
+    bool create_table(const Table& table)
     {
         json_t* js = table.to_json();
         bool rval = produce(js, nullptr, 0);
         json_decref(js);
         return rval;
+    }
+
+    bool open_table(const Table& table)
+    {
+        return true;
     }
 
     bool prepare_table(const Table& table)

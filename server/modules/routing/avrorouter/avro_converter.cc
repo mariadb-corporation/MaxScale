@@ -142,6 +142,11 @@ AvroConverter::AvroConverter(SERVICE* service,
 {
 }
 
+bool AvroConverter::create_table(const Table& create)
+{
+    return true;
+}
+
 bool AvroConverter::open_table(const Table& create)
 {
     bool rval = false;

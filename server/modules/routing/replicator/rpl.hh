@@ -122,12 +122,13 @@ using STable = std::shared_ptr<Table>;
 /** A CREATE TABLE abstraction */
 struct Table
 {
-    Table(std::string db, std::string table, int version, std::vector<Column>&& cols)
+    Table(std::string db, std::string table, int version, std::vector<Column>&& cols, const gtid_pos_t& g)
         : columns(cols)
         , table(table)
         , database(db)
         , version(version)
         , is_open(false)
+        , gtid(g)
     {
     }
 
@@ -157,6 +158,7 @@ struct Table
     std::string         database;
     int                 version;    /**< How many versions of this table have been used */
     bool                is_open;    /**< Has this table been opened by the handler */
+    gtid_pos_t          gtid;
 
     Bytes column_types;
     Bytes null_bitmap;
@@ -190,7 +192,10 @@ public:
         return gtid_pos_t();
     }
 
-    // A table was opened
+    // A table was created or altered
+    virtual bool create_table(const Table& create) = 0;
+
+    // A table was used for the first time
     virtual bool open_table(const Table& create) = 0;
 
     // Prepare a table for row processing

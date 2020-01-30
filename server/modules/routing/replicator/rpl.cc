@@ -1143,7 +1143,7 @@ bool not_generated_field(const char* name)
  * @param table The TABLE_CREATE object to populate
  * @return True on success successfully, false on error
  */
-bool json_extract_field_names(const char* filename, std::vector<Column>& columns)
+bool json_extract_field_names(const char* filename, std::vector<Column>& columns, gtid_pos_t& gtid)
 {
     bool rval = false;
     json_error_t err;
@@ -1153,6 +1153,15 @@ bool json_extract_field_names(const char* filename, std::vector<Column>& columns
 
     if ((obj = json_load_file(filename, 0, &err)) && (arr = json_object_get(obj, "fields")))
     {
+
+        if (auto g = json_object_get(obj, "gtid"))
+        {
+            if (json_is_string(g))
+            {
+                gtid = gtid_pos_t::from_string(json_string_value(g));
+            }
+        }
+
         if (json_is_array(arr))
         {
             int array_size = json_array_size(arr);
@@ -1282,10 +1291,11 @@ STable load_table_from_schema(const char* file, const char* db, const char* tabl
 {
     STable rval;
     std::vector<Column> columns;
+    gtid_pos_t gtid;
 
-    if (json_extract_field_names(file, columns))
+    if (json_extract_field_names(file, columns, gtid))
     {
-        rval.reset(new Table(db, table, version, std::move(columns)));
+        rval.reset(new Table(db, table, version, std::move(columns), gtid));
     }
 
     return rval;
@@ -1443,6 +1453,7 @@ json_t* Table::to_json() const
     json_object_set_new(schema, "table", json_string(table.c_str()));
     json_object_set_new(schema, "database", json_string(database.c_str()));
     json_object_set_new(schema, "version", json_integer(version));
+    json_object_set_new(schema, "gtid", json_string(gtid.to_string().c_str()));
 
     json_t* array = json_array();
     json_array_append_new(array,
@@ -2410,6 +2421,10 @@ void Rpl::alter_table()
         }
     }
 
+    // Update the GTID of the table. This allows us to safely continue replication from the latest DDL
+    // statement without having to worry about the schemas being out of sync.
+    create->gtid = m_gtid;
+
     if (updated && create->is_open)
     {
         // The ALTER statement can modify multiple parts of the table which is why we synchronize the table
@@ -2486,7 +2501,7 @@ void Rpl::do_create_table()
     }
     while (next() == tok::ID);
 
-    STable tbl(new Table(parser.db, parser.table, 0, std::move(columns)));
+    STable tbl(new Table(parser.db, parser.table, 0, std::move(columns), m_gtid));
     save_and_replace_table_create(tbl);
 }
 
@@ -2498,7 +2513,7 @@ void Rpl::do_create_table_like(const std::string& old_db, const std::string& old
     if (it != m_created_tables.end())
     {
         auto cols = it->second->columns;
-        STable tbl(new Table(new_db, new_table, 1, std::move(cols)));
+        STable tbl(new Table(new_db, new_table, 1, std::move(cols), m_gtid));
         save_and_replace_table_create(tbl);
     }
     else
