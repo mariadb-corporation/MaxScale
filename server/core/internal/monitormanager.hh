@@ -189,5 +189,5 @@ public:
     /**
      * Waits until all running monitors have advanced one tick.
      */
-    static void debug_wait_one_tick();
+    static void wait_one_tick();
 };

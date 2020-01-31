@@ -129,7 +129,7 @@ Monitor* MonitorManager::create_monitor(const string& name, const string& module
     return new_monitor;
 }
 
-void MonitorManager::debug_wait_one_tick()
+void MonitorManager::wait_one_tick()
 {
     mxb_assert(Monitor::is_main_worker());
     using namespace std::chrono;

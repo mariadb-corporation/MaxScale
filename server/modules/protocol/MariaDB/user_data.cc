@@ -134,8 +134,8 @@ void MariaDBUserManager::updater_thread_function()
     // doesn't wait.
     const std::chrono::hours default_max_interval(24);
 
-    // In the beginning, don't update users right away as monitor may not have started yet.
-    TimePoint last_update = Clock::now();
+    // Do the first update immediately.
+    TimePoint last_update = Clock::now() - default_min_interval;
 
     auto should_stop_running = [this]() {
             return !m_keep_running.load(acquire);

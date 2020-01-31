@@ -779,7 +779,7 @@ HttpResponse cb_unix_user(const HttpRequest& request)
 
 HttpResponse cb_monitor_wait(const HttpRequest& request)
 {
-    MonitorManager::debug_wait_one_tick();
+    MonitorManager::wait_one_tick();
     return HttpResponse(MHD_HTTP_OK);
 }
 

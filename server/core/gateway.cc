@@ -1968,21 +1968,19 @@ int main(int argc, char** argv)
                 }
             }
 
+            MonitorManager::start_all_monitors();
+            MonitorManager::wait_one_tick();
+
             if (!service_launch_all())
             {
                 log_startup_error("Failed to start all MaxScale services.");
                 rc = MAXSCALE_NOSERVICES;
                 maxscale_shutdown();
             }
-            else
+            else if (this_unit.daemon_mode)
             {
-                MonitorManager::start_all_monitors();
-
-                if (this_unit.daemon_mode)
-                {
-                    // Successful start, notify the parent process that it can exit.
-                    write_child_exit_code(child_pipe, rc);
-                }
+                // Successful start, notify the parent process that it can exit.
+                write_child_exit_code(child_pipe, rc);
             }
         };
 

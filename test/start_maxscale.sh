@@ -9,6 +9,8 @@ maxscaledir=$MAXSCALE_DIR
 
 test -z "$MAXSCALE_DIR" && exit 1
 
+test -f $maxscaledir/run/maxscale/maxscale.pid && kill -9 $(cat $maxscaledir/run/maxscale/maxscale.pid)
+
 rm -r $maxscaledir/lib/maxscale
 rm -r $maxscaledir/cache/maxscale
 rm -r $maxscaledir/run/maxscale
