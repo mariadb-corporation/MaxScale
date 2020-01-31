@@ -303,6 +303,19 @@ public:
                      std::string* pMessage = nullptr) const;
     std::string to_string(value_type value) const;
 
+    /**
+     * Returns the value of this parameter as specified in the provided
+     * collection of parameters, or default value if none specified.
+     *
+     * @note Before calling this member function @params should have been
+     *       validated by calling @c Specification::validate(params).
+     *
+     * @params The provided configuration params.
+     *
+     * @return The value of this parameter.
+     */
+    value_type get(const MXS_CONFIG_PARAMETER& params) const;
+
 private:
     ParamBool(Specification* pSpecification,
               const char* zName,
@@ -347,6 +360,19 @@ public:
     {
         return m_max_value;
     }
+
+    /**
+     * Returns the value of this parameter as specified in the provided
+     * collection of parameters, or default value if none specified.
+     *
+     * @note Before calling this member function @params should have been
+     *       validated by calling @c Specification::validate(params).
+     *
+     * @params The provided configuration params.
+     *
+     * @return The value of this parameter.
+     */
+    value_type get(const MXS_CONFIG_PARAMETER& params) const;
 
 protected:
     ParamNumber(Specification* pSpecification,
@@ -551,6 +577,19 @@ public:
                      std::string* pMessage = nullptr) const;
     std::string to_string(const value_type& value) const;
 
+    /**
+     * Returns the value of this parameter as specified in the provided
+     * collection of parameters, or default value if none specified.
+     *
+     * @note Before calling this member function @params should have been
+     *       validated by calling @c Specification::validate(params).
+     *
+     * @params The provided configuration params.
+     *
+     * @return The value of this parameter.
+     */
+    value_type get(const MXS_CONFIG_PARAMETER& params) const;
+
 private:
     ParamDuration(Specification* pSpecification,
                   const char* zName,
@@ -613,6 +652,19 @@ public:
     std::string to_string(value_type value) const;
 
     void populate(MXS_MODULE_PARAM& param) const;
+
+    /**
+     * Returns the value of this parameter as specified in the provided
+     * collection of parameters, or default value if none specified.
+     *
+     * @note Before calling this member function @params should have been
+     *       validated by calling @c Specification::validate(params).
+     *
+     * @params The provided configuration params.
+     *
+     * @return The value of this parameter.
+     */
+    value_type get(const MXS_CONFIG_PARAMETER& params) const;
 
 private:
     ParamEnum(Specification* pSpecification,
@@ -684,6 +736,19 @@ public:
 
     void populate(MXS_MODULE_PARAM& param) const;
 
+    /**
+     * Returns the value of this parameter as specified in the provided
+     * collection of parameters, or default value if none specified.
+     *
+     * @note Before calling this member function @params should have been
+     *       validated by calling @c Specification::validate(params).
+     *
+     * @params The provided configuration params.
+     *
+     * @return The value of this parameter.
+     */
+    value_type get(const MXS_CONFIG_PARAMETER& params) const;
+
 private:
     ParamPath(Specification* pSpecification,
               const char* zName,
@@ -733,6 +798,19 @@ public:
     bool from_string(const std::string& value, value_type* pValue,
                      std::string* pMessage = nullptr) const;
     std::string to_string(value_type value) const;
+
+    /**
+     * Returns the value of this parameter as specified in the provided
+     * collection of parameters, or default value if none specified.
+     *
+     * @note Before calling this member function @params should have been
+     *       validated by calling @c Specification::validate(params).
+     *
+     * @params The provided configuration params.
+     *
+     * @return The value of this parameter.
+     */
+    value_type get(const MXS_CONFIG_PARAMETER& params) const;
 };
 
 /**
@@ -766,6 +844,19 @@ public:
     bool from_string(const std::string& value, value_type* pValue,
                      std::string* pMessage = nullptr) const;
     std::string to_string(value_type value) const;
+
+    /**
+     * Returns the value of this parameter as specified in the provided
+     * collection of parameters, or default value if none specified.
+     *
+     * @note Before calling this member function @params should have been
+     *       validated by calling @c Specification::validate(params).
+     *
+     * @params The provided configuration params.
+     *
+     * @return The value of this parameter.
+     */
+    value_type get(const MXS_CONFIG_PARAMETER& params) const;
 };
 
 /**
@@ -807,6 +898,19 @@ public:
     bool from_string(const std::string& value, value_type* pValue,
                      std::string* pMessage = nullptr) const;
     std::string to_string(value_type value) const;
+
+    /**
+     * Returns the value of this parameter as specified in the provided
+     * collection of parameters, or default value if none specified.
+     *
+     * @note Before calling this member function @params should have been
+     *       validated by calling @c Specification::validate(params).
+     *
+     * @params The provided configuration params.
+     *
+     * @return The value of this parameter.
+     */
+    value_type get(const MXS_CONFIG_PARAMETER& params) const;
 
 private:
     ParamSize(Specification* pSpecification,
@@ -862,6 +966,19 @@ public:
     bool from_string(const std::string& value, value_type* pValue,
                      std::string* pMessage = nullptr) const;
     std::string to_string(value_type value) const;
+
+    /**
+     * Returns the value of this parameter as specified in the provided
+     * collection of parameters, or default value if none specified.
+     *
+     * @note Before calling this member function @params should have been
+     *       validated by calling @c Specification::validate(params).
+     *
+     * @params The provided configuration params.
+     *
+     * @return The value of this parameter.
+     */
+    value_type get(const MXS_CONFIG_PARAMETER& params) const;
 
 private:
     ParamString(Specification* pSpecification,
@@ -1549,6 +1666,23 @@ std::string ParamDuration<T>::to_string(const value_type& value) const
 }
 
 template<class T>
+typename ParamDuration<T>::value_type ParamDuration<T>::get(const MXS_CONFIG_PARAMETER& params) const
+{
+    value_type rv { m_default_value };
+
+    bool contains = params.contains(name());
+    mxb_assert(!is_mandatory() || contains);
+
+    if (contains)
+    {
+        MXB_AT_DEBUG(bool valid=) from_string(params.get_string(name()), &rv);
+        mxb_assert(valid);
+    }
+
+    return rv;
+}
+
+template<class T>
 ParamEnum<T>::ParamEnum(Specification* pSpecification,
                         const char* zName,
                         const char* zDescription,
@@ -1691,4 +1825,22 @@ void ParamEnum<T>::populate(MXS_MODULE_PARAM& param) const
 
     param.accepted_values = &m_enum_values[0];
 }
+
+template<class T>
+typename ParamEnum<T>::value_type ParamEnum<T>::get(const MXS_CONFIG_PARAMETER& params) const
+{
+    value_type rv { m_default_value };
+
+    bool contains = params.contains(name());
+    mxb_assert(!is_mandatory() || contains);
+
+    if (contains)
+    {
+        MXB_AT_DEBUG(bool valid=) from_string(params.get_string(name()), &rv);
+        mxb_assert(valid);
+    }
+
+    return rv;
+}
+
 }

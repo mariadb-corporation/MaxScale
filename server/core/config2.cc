@@ -505,6 +505,22 @@ string ParamBool::to_string(value_type value) const
     return value ? "true" : "false";
 }
 
+ParamBool::value_type ParamBool::get(const MXS_CONFIG_PARAMETER& params) const
+{
+    value_type rv { m_default_value };
+
+    bool contains = params.contains(name());
+    mxb_assert(!is_mandatory() || contains);
+
+    if (contains)
+    {
+        MXB_AT_DEBUG(bool valid=) from_string(params.get_string(name()), &rv);
+        mxb_assert(valid);
+    }
+
+    return rv;
+}
+
 /**
  * ParamNumber
  */
@@ -576,6 +592,22 @@ bool ParamNumber::from_string(const std::string& value_as_string,
 std::string ParamNumber::to_string(value_type value) const
 {
     return std::to_string(value);
+}
+
+ParamNumber::value_type ParamNumber::get(const MXS_CONFIG_PARAMETER& params) const
+{
+    value_type rv { m_default_value };
+
+    bool contains = params.contains(name());
+    mxb_assert(!is_mandatory() || contains);
+
+    if (contains)
+    {
+        MXB_AT_DEBUG(bool valid=) from_string(params.get_string(name()), &rv);
+        mxb_assert(valid);
+    }
+
+    return rv;
 }
 
 /**
@@ -665,6 +697,22 @@ void ParamPath::populate(MXS_MODULE_PARAM& param) const
     param.options |= m_options;
 }
 
+ParamPath::value_type ParamPath::get(const MXS_CONFIG_PARAMETER& params) const
+{
+    value_type rv { m_default_value };
+
+    bool contains = params.contains(name());
+    mxb_assert(!is_mandatory() || contains);
+
+    if (contains)
+    {
+        MXB_AT_DEBUG(bool valid=) from_string(params.get_string(name()), &rv);
+        mxb_assert(valid);
+    }
+
+    return rv;
+}
+
 /**
  * ParamServer
  */
@@ -719,6 +767,22 @@ bool ParamServer::from_string(const std::string& value_as_string,
 std::string ParamServer::to_string(value_type value) const
 {
     return value->name();
+}
+
+ParamServer::value_type ParamServer::get(const MXS_CONFIG_PARAMETER& params) const
+{
+    value_type rv { nullptr };
+
+    bool contains = params.contains(name());
+    mxb_assert(!is_mandatory() || contains);
+
+    if (contains)
+    {
+        MXB_AT_DEBUG(bool valid=) from_string(params.get_string(name()), &rv);
+        mxb_assert(valid);
+    }
+
+    return rv;
 }
 
 /**
@@ -782,6 +846,22 @@ std::string ParamTarget::to_string(value_type value) const
     return value->name();
 }
 
+ParamTarget::value_type ParamTarget::get(const MXS_CONFIG_PARAMETER& params) const
+{
+    value_type rv { nullptr };
+
+    bool contains = params.contains(name());
+    mxb_assert(!is_mandatory() || contains);
+
+    if (contains)
+    {
+        MXB_AT_DEBUG(bool valid=) from_string(params.get_string(name()), &rv);
+        mxb_assert(valid);
+    }
+
+    return rv;
+}
+
 /**
  * ParamSize
  */
@@ -837,6 +917,22 @@ std::string ParamSize::to_string(value_type value) const
 {
     // TODO: Use largest possible unit.
     return std::to_string(value);
+}
+
+ParamSize::value_type ParamSize::get(const MXS_CONFIG_PARAMETER& params) const
+{
+    value_type rv { m_default_value };
+
+    bool contains = params.contains(name());
+    mxb_assert(!is_mandatory() || contains);
+
+    if (contains)
+    {
+        MXB_AT_DEBUG(bool valid=) from_string(params.get_string(name()), &rv);
+        mxb_assert(valid);
+    }
+
+    return rv;
 }
 
 /**
@@ -923,6 +1019,22 @@ std::string ParamString::to_string(value_type value) const
     stringstream ss;
     ss << "\"" << value << "\"";
     return ss.str();
+}
+
+ParamString::value_type ParamString::get(const MXS_CONFIG_PARAMETER& params) const
+{
+    value_type rv { m_default_value };
+
+    bool contains = params.contains(name());
+    mxb_assert(!is_mandatory() || contains);
+
+    if (contains)
+    {
+        MXB_AT_DEBUG(bool valid=) from_string(params.get_string(name()), &rv);
+        mxb_assert(valid);
+    }
+
+    return rv;
 }
 
 /**
