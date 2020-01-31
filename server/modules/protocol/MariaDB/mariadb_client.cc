@@ -501,48 +501,6 @@ int MariaDBClientConnection::send_mysql_client_handshake()
 }
 
 /**
- * @brief Analyse authentication errors and write appropriate log messages
- *
- * @param dcb Request handler DCB connected to the client
- * @param auth_val The type of authentication failure
- * @note Authentication status codes are defined in maxscale/protocol/mysql.h
- */
-void MariaDBClientConnection::handle_authentication_errors(DCB* generic_dcb, AuthRes auth_val,
-                                                           int packet_number)
-{
-    mxb_assert(generic_dcb->role() == DCB::Role::CLIENT);
-    auto dcb = static_cast<ClientDCB*>(generic_dcb);
-
-    char* fail_str = NULL;
-    MYSQL_session* session = m_session_data;
-
-    switch (auth_val.status)
-    {
-    case AuthRes::Status::FAIL:
-        MXS_DEBUG("authentication failed. fd %d, state = MYSQL_FAILED_AUTH.", dcb->fd());
-        /** Send error 1045 to client */
-        fail_str = create_auth_fail_str(session->user.c_str(),
-                                        dcb->remote().c_str(),
-                                        !session->auth_token.empty(),
-                                        session->db.c_str(),
-                                        auth_val);
-        modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "28000", fail_str);
-        break;
-
-    default:
-        MXS_DEBUG("authentication failed. fd %d, state unrecognized.", dcb->fd());
-        /** Send error 1045 to client */
-        fail_str = create_auth_fail_str(session->user.c_str(),
-                                        dcb->remote().c_str(),
-                                        !session->auth_token.empty(),
-                                        session->db.c_str(),
-                                        auth_val);
-        modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "28000", fail_str);
-    }
-    MXS_FREE(fail_str);
-}
-
-/**
  * Start or continue authenticating the client.
  *
  * @return Instruction for upper level state machine
@@ -820,102 +778,6 @@ char* MariaDBClientConnection::handle_variables(MXS_SESSION* session, GWBUF** re
     return message;
 }
 
-/**
- * Perform re-authentication of the client
- *
- * @param session   Client session
- * @param packetbuf Client's response to the AuthSwitchRequest
- *
- * @return True if the user is allowed access
- */
-bool MariaDBClientConnection::reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf)
-{
-    bool rval = false;
-    // Assume for now that reauthentication uses the same plugin, fix later.
-    if (m_session_data->m_current_authenticator->capabilities()
-        & mariadb::AuthenticatorModule::CAP_REAUTHENTICATE)
-    {
-        std::vector<uint8_t> orig_payload;
-        uint32_t orig_len = m_stored_query.length();
-        orig_payload.resize(orig_len);
-        gwbuf_copy_data(m_stored_query.get(), 0, orig_len, orig_payload.data());
-
-        auto it = orig_payload.begin();
-        it += MYSQL_HEADER_LEN + 1;     // Skip header and command byte
-        auto user_end = std::find(it, orig_payload.end(), '\0');
-
-        if (user_end == orig_payload.end())
-        {
-            mysql_send_auth_error(m_dcb, 3, "Malformed AuthSwitchRequest packet");
-            return false;
-        }
-
-        std::string user(it, user_end);
-        it = user_end;
-        ++it;
-
-        // Skip the auth token
-        auto token_len = *it++;
-        it += token_len;
-
-        auto db_end = std::find(it, orig_payload.end(), '\0');
-
-        if (db_end == orig_payload.end())
-        {
-            mysql_send_auth_error(m_dcb, 3, "Malformed AuthSwitchRequest packet");
-            return false;
-        }
-
-        std::string db(it, db_end);
-
-        it = db_end;
-        ++it;
-
-        unsigned int client_charset = *it++;
-        client_charset |= ((unsigned int)(*it++) << 8u);
-        m_session_data->client_info.m_charset = client_charset;
-
-        // Copy the new username to the session data
-        MYSQL_session* data = m_session_data;
-        data->user = user;
-        data->db = db;
-
-        auto users = user_account_cache();
-        const auto& search_settings = m_session_data->user_search_settings;
-        auto user_entry = users->find_user(data->user, data->remote, data->db, search_settings);
-
-        AuthRes rc;
-        if (user_entry)
-        {
-            std::vector<uint8_t> payload;
-            uint64_t payloadlen = gwbuf_length(packetbuf) - MYSQL_HEADER_LEN;
-            payload.resize(payloadlen);
-            gwbuf_copy_data(packetbuf, MYSQL_HEADER_LEN, payloadlen, &payload[0]);
-
-            if (rc.status == AuthRes::Status::SUCCESS)
-            {
-                // Re-authentication successful, route the original COM_CHANGE_USER
-                rval = true;
-            }
-        }
-
-        if (!rval)
-        {
-            /**
-             * Authentication failed. To prevent the COM_CHANGE_USER from reaching
-             * the backend servers (and possibly causing problems) the client
-             * connection will be closed.
-             *
-             * First packet is COM_CHANGE_USER, the second is AuthSwitchRequest,
-             * third is the response and the fourth is the following error.
-             */
-            handle_authentication_errors(m_dcb, rc, 3);
-        }
-    }
-
-    return rval;
-}
-
 void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf)
 {
     mxb_assert(gwbuf_is_contiguous(packetbuf));
@@ -985,33 +847,6 @@ void MariaDBClientConnection::track_transaction_state(MXS_SESSION* session, GWBU
             }
         }
     }
-}
-
-bool MariaDBClientConnection::handle_change_user(bool* changed_user, GWBUF** packetbuf)
-{
-    bool ok = true;
-    if (!m_changing_user && m_command == MXS_COM_CHANGE_USER)
-    {
-        // Track the COM_CHANGE_USER progress at the session level
-        m_session_data->changing_user = true;
-
-        *changed_user = true;
-        send_auth_switch_request_packet();
-
-        // Store the original COM_CHANGE_USER for later
-        m_stored_query = mxs::Buffer(*packetbuf);
-        *packetbuf = NULL;
-    }
-    else if (m_changing_user)
-    {
-        mxb_assert(m_command == MXS_COM_CHANGE_USER);
-        m_changing_user = false;
-        bool ok = reauthenticate_client(m_session, *packetbuf);
-        gwbuf_free(*packetbuf);
-        *packetbuf = m_stored_query.release();
-    }
-
-    return ok;
 }
 
 /**
@@ -1794,66 +1629,6 @@ int MariaDBClientConnection::mysql_send_auth_error(DCB* dcb, int packet_number, 
 }
 
 /**
- * Create a message error string to send via MySQL ERR packet.
- *
- * @param       username        The MySQL user
- * @param       hostaddr        The client IP
- * @param       password        If client provided a password
- * @param       db              The default database the client requested
- * @param       errcode         Authentication error code
- *
- * @return      Pointer to the allocated string or NULL on failure
- */
-char* MariaDBClientConnection::create_auth_fail_str(const char* username,
-                                                    const char* hostaddr,
-                                                    bool password,
-                                                    const char* db,
-                                                    AuthRes errcode)
-{
-    char* errstr;
-    const char* ferrstr;
-    int db_len;
-
-    if (db != NULL)
-    {
-        db_len = strlen(db);
-    }
-    else
-    {
-        db_len = 0;
-    }
-
-    if (db_len > 0)
-    {
-        ferrstr = "Access denied for user '%s'@'%s' (using password: %s) to database '%s'";
-    }
-    else
-    {
-        ferrstr = "Access denied for user '%s'@'%s' (using password: %s)";
-    }
-    errstr = (char*)MXS_MALLOC(strlen(username) + strlen(ferrstr)
-                               + strlen(hostaddr) + strlen("YES") - 6
-                               + db_len + ((db_len > 0) ? (strlen(" to database ") + 2) : 0) + 1);
-
-    if (errstr == NULL)
-    {
-        goto retblock;
-    }
-
-    if (db_len > 0)
-    {
-        sprintf(errstr, ferrstr, username, hostaddr, password ? "YES" : "NO", db);
-    }
-    else
-    {
-        sprintf(errstr, ferrstr, username, hostaddr, password ? "YES" : "NO");
-    }
-
-retblock:
-    return errstr;
-}
-
-/**
  * @brief Send a standard MariaDB error message, emulating real server
  *
  * Supports the sending to a client of a standard database error, for
@@ -1928,25 +1703,6 @@ GWBUF* MariaDBClientConnection::mysql_create_standard_error(int packet_number, i
     memcpy(mysql_handshake_payload, error_message, strlen(error_message));
 
     return buf;
-}
-
-/**
- * Sends an AuthSwitchRequest packet with the default auth plugin to the client.
- */
-bool MariaDBClientConnection::send_auth_switch_request_packet()
-{
-    const char plugin[] = DEFAULT_MYSQL_AUTH_PLUGIN;
-    uint32_t len = 1 + sizeof(plugin) + GW_MYSQL_SCRAMBLE_SIZE;
-    GWBUF* buffer = gwbuf_alloc(MYSQL_HEADER_LEN + len);
-
-    uint8_t* data = GWBUF_DATA(buffer);
-    gw_mysql_set_byte3(data, len);
-    data[3] = 1;    // First response to the COM_CHANGE_USER
-    data[MYSQL_HEADER_LEN] = MYSQL_REPLY_AUTHSWITCHREQUEST;
-    memcpy(data + MYSQL_HEADER_LEN + 1, plugin, sizeof(plugin));
-    memcpy(data + MYSQL_HEADER_LEN + 1 + sizeof(plugin), m_session_data->scramble, MYSQL_SCRAMBLE_LEN);
-
-    return m_dcb->writeq_append(buffer) != 0;
 }
 
 void MariaDBClientConnection::execute_kill(MXS_SESSION* issuer, std::shared_ptr<KillInfo> info)

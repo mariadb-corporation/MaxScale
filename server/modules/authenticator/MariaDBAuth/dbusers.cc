@@ -311,47 +311,6 @@ check_password(const char* password_entry, MYSQL_session* session)
     return memcmp(final_step, stored_token, stored_token_len) == 0;
 }
 
-/** Callback for check_database() */
-static int database_cb(void* data, int columns, char** rows, char** row_names)
-{
-    bool* rval = (bool*)data;
-    *rval = true;
-    return 0;
-}
-
-bool MariaDBClientAuthenticator::check_database(sqlite3* handle, const char* database)
-{
-    bool rval = true;
-
-    if (*database)
-    {
-        rval = false;
-        const char* query = m_module.m_lower_case_table_names ?
-            mysqlauth_validate_database_query_lower :
-            mysqlauth_validate_database_query;
-        size_t len = strlen(query) + strlen(database) + 1;
-        char sql[len];
-
-        sprintf(sql, query, database);
-
-        char* err;
-
-        if (sqlite3_exec(handle, sql, database_cb, &rval, &err) != SQLITE_OK)
-        {
-            MXS_ERROR("Failed to execute auth query: %s", err);
-            sqlite3_free(err);
-            rval = false;
-        }
-    }
-
-    return rval;
-}
-
-static bool no_password_required(const char* result, size_t tok_len)
-{
-    return *result == '\0' && tok_len == 0;
-}
-
 /**
  * @brief Verify the user password
  *

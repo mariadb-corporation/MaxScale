@@ -90,26 +90,23 @@ private:
 
     bool parse_handshake_response_packet(GWBUF* buffer);
     bool parse_ssl_request_packet(GWBUF* buffer);
-    bool handle_change_user(bool* changed_user, GWBUF** packetbuf);
+
     bool start_change_user(mxs::Buffer* buffer);
     bool complete_change_user();
     void cancel_change_user();
-    bool reauthenticate_client(MXS_SESSION* session, GWBUF* packetbuf);
+
     void handle_use_database(GWBUF* read_buffer);
-    void handle_authentication_errors(DCB* dcb, mariadb::ClientAuthenticator::AuthRes auth_val,
-                                      int packet_number);
+
     bool route_statement(mxs::Buffer* buffer);
 
     SpecialCmdRes process_special_commands(DCB* dcb, GWBUF* read_buffer, uint8_t cmd);
     SpecialCmdRes handle_query_kill(DCB* dcb, GWBUF* read_buffer, uint32_t packet_len);
 
     int   mysql_send_auth_error(DCB* dcb, int packet_number, const char* mysql_message);
-    char* create_auth_fail_str(const char* username, const char* hostaddr,
-                               bool password, const char* db,
-                               mariadb::ClientAuthenticator::AuthRes error);
+
     int    mysql_send_standard_error(DCB* dcb, int sequence, int errnum, const char* msg);
     GWBUF* mysql_create_standard_error(int sequence, int error_number, const char* msg);
-    bool   send_auth_switch_request_packet();
+
     int    send_mysql_client_handshake();
     char*  handle_variables(MXS_SESSION* session, GWBUF** read_buffer);
     void   track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf);
@@ -214,9 +211,7 @@ private:
     qc_sql_mode_t   m_sql_mode {QC_SQL_MODE_DEFAULT};   /**< SQL-mode setting */
     uint8_t         m_sequence {0};                     /**< Latest sequence number from client */
     uint8_t         m_command {0};
-    bool            m_changing_user {false};
     uint64_t        m_version {0};                  /**< Numeric server version */
-    mxs::Buffer     m_stored_query;                 /**< Temporarily stored queries */
 
     /**
      * The result from user account search. Even if the result is an authentication failure, a normal

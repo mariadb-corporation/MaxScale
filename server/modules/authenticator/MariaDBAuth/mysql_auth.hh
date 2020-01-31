@@ -143,7 +143,6 @@ private:
     };
 
     bool validate_mysql_user(const mariadb::UserEntry* entry, MYSQL_session* session);
-    bool check_database(sqlite3* handle, const char* database);
 
     State m_state {State::INIT};
 };
