@@ -1767,6 +1767,21 @@ bool validate_object_json(json_t* json,
 
     if (is_valid_resource_body(json))
     {
+        if (json_t* parameters = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS))
+        {
+            const char* key;
+            json_t* value;
+
+            json_object_foreach(parameters, key, value)
+            {
+                if (json_is_string(value) && strchr(json_string_value(value), '\n'))
+                {
+                    config_runtime_error("Parameter '%s' contains unescaped newlines", key);
+                    return false;
+                }
+            }
+        }
+
         if (!(value = mxs_json_pointer(json, MXS_JSON_PTR_ID)))
         {
             config_runtime_error("Value not found: '%s'", MXS_JSON_PTR_ID);
