@@ -236,24 +236,6 @@ private:
     bool m_warn_no_servers {false};
 };
 
-// User account search result descriptor
-enum class UserEntryType
-{
-    USER_NOT_FOUND,
-    ROOT_ACCESS_DENIED,
-    ANON_PROXY_ACCESS_DENIED,
-    DB_ACCESS_DENIED,
-    BAD_DB,
-    PLUGIN_IS_NOT_LOADED,
-    USER_ACCOUNT_OK,
-};
-
-struct UserEntryResult
-{
-    mariadb::UserEntry entry;
-    UserEntryType      type {UserEntryType::USER_NOT_FOUND};
-};
-
 class MariaDBUserCache : public mxs::UserAccountCache
 {
 public:
@@ -262,9 +244,9 @@ public:
 
     /**
      * Check if user@host exists and can access the requested database. Does not check password or
-     * any other authentication credentials. Writes a user entry to the output-parameter.
+     * any other authentication credentials.
      *
-     * To roughly emulate server behavior, an entry is written even if username was not found or
+     * To roughly emulate server behavior, an entry is returned even if username was not found or
      * does not have access to database. This is so that a fake authentication exchange can be carried
      * out. Only if user gives the correct password the real error is returned.
      *
@@ -272,10 +254,9 @@ public:
      * @param host Client hostname
      * @param requested_db Database requested by client. May be empty.
      * @param sett User search settings
-     * @param entry_out The entry will be written here.
      * @return Result of the search
      */
-    std::unique_ptr<UserEntryResult>
+    mariadb::UserEntryResult
     find_user(const std::string& user, const std::string& host, const std::string& requested_db,
               const mariadb::UserSearchSettings& sett) const;
 

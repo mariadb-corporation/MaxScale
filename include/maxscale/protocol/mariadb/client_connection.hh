@@ -186,12 +186,11 @@ private:
         LOAD_DATA,      /**< Expecting the client to continue streaming CSV-data */
     };
 
-    /** Parsed contents of a COM_CHANGE_USER */
+    /** Temporary data required during COM_CHANGE_USER. */
     struct ChangeUserFields
     {
         mxs::Buffer                      client_query;  /**< The original change-user-query from client. */
         std::unique_ptr<MYSQL_session>   session;       /**< Temporary session-data */
-        std::unique_ptr<UserEntryResult> user_entry_bu; /**< Old user entry information */
     };
 
     SSLState ssl_authenticate_check_status();
@@ -212,13 +211,6 @@ private:
     uint8_t         m_sequence {0};                     /**< Latest sequence number from client */
     uint8_t         m_command {0};
     uint64_t        m_version {0};                  /**< Numeric server version */
-
-    /**
-     * The result from user account search. Even if the result is an authentication failure, a normal
-     * authentication token exchange and check should be carried out to match how the server works.
-     * This way, the client won't know the exact cause of failure without giving the correct password.
-     */
-    std::unique_ptr<UserEntryResult> m_user_entry;
 
     bool m_user_update_wakeup {false};      /**< Waking up because of user account update? */
     int  m_previous_userdb_version {0};     /**< Userdb version used for first user account search */

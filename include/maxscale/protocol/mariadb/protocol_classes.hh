@@ -99,4 +99,7 @@ public:
 
     // User search settings for the session. Does not change during session lifetime.
     mariadb::UserSearchSettings user_search_settings;
+
+    // User entry used by the session.
+    mariadb::UserEntryResult user_entry;
 };

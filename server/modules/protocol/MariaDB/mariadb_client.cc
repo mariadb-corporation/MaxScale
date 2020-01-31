@@ -55,6 +55,7 @@ namespace
 using AuthRes = mariadb::ClientAuthenticator::AuthRes;
 using ExcRes = mariadb::ClientAuthenticator::ExchRes;
 using SUserEntry = std::unique_ptr<mariadb::UserEntry>;
+using UserEntryType = mariadb::UserEntryType;
 using std::move;
 using std::string;
 
@@ -510,6 +511,8 @@ MariaDBClientConnection::process_authentication(AuthType auth_type)
 {
     auto rval = StateMachineRes::IN_PROGRESS;
     bool state_machine_continue = true;
+    // The referenced object may be updated during this function.
+    const auto& user_entry = m_session_data->user_entry;
 
     while (state_machine_continue)
     {
@@ -518,7 +521,7 @@ MariaDBClientConnection::process_authentication(AuthType auth_type)
         case AuthState::FIND_ENTRY:
             {
                 update_user_account_entry();
-                if (m_user_entry->type == UserEntryType::USER_ACCOUNT_OK)
+                if (user_entry.type == UserEntryType::USER_ACCOUNT_OK)
                 {
                     m_auth_state = AuthState::START_EXCHANGE;
                 }
@@ -539,7 +542,7 @@ MariaDBClientConnection::process_authentication(AuthType auth_type)
                         MXS_WARNING("User accounts have been recently updated, cannot update again for %s.",
                                     m_session->user_and_host().c_str());
                         // If plugin exists, start exchange. Authentication will surely fail.
-                        m_auth_state = (m_user_entry->type == UserEntryType::PLUGIN_IS_NOT_LOADED) ?
+                        m_auth_state = (user_entry.type == UserEntryType::PLUGIN_IS_NOT_LOADED) ?
                             AuthState::NO_PLUGIN : AuthState::START_EXCHANGE;
                     }
                 }
@@ -558,12 +561,12 @@ MariaDBClientConnection::process_authentication(AuthType auth_type)
                         update_user_account_entry();
                     }
 
-                    if (m_user_entry->type == UserEntryType::USER_ACCOUNT_OK)
+                    if (user_entry.type == UserEntryType::USER_ACCOUNT_OK)
                     {
                         MXB_DEBUG("Found user account entry for %s after updating user account data.",
                                   m_session->user_and_host().c_str());
                     }
-                    m_auth_state = (m_user_entry->type == UserEntryType::PLUGIN_IS_NOT_LOADED) ?
+                    m_auth_state = (user_entry.type == UserEntryType::PLUGIN_IS_NOT_LOADED) ?
                         AuthState::NO_PLUGIN : AuthState::START_EXCHANGE;
                 }
                 else
@@ -652,9 +655,9 @@ MariaDBClientConnection::process_authentication(AuthType auth_type)
 
 void MariaDBClientConnection::update_user_account_entry()
 {
+    const auto mses = m_session_data;
     auto users = user_account_cache();
-    auto search_res = users->find_user(m_session_data->user, m_session_data->remote, m_session_data->db,
-                                       m_session_data->user_search_settings);
+    auto search_res = users->find_user(mses->user, mses->remote, mses->db, mses->user_search_settings);
     m_previous_userdb_version = users->version();   // Can use this to skip user entry check after update.
 
     mariadb::AuthenticatorModule* selected_module = nullptr;
@@ -662,7 +665,7 @@ void MariaDBClientConnection::update_user_account_entry()
     for (const auto& auth_module : auth_modules)
     {
         auto protocol_auth = static_cast<mariadb::AuthenticatorModule*>(auth_module.get());
-        if (protocol_auth->supported_plugins().count(search_res->entry.plugin))
+        if (protocol_auth->supported_plugins().count(search_res.entry.plugin))
         {
             // Found correct authenticator for the user entry.
             selected_module = protocol_auth;
@@ -673,20 +676,20 @@ void MariaDBClientConnection::update_user_account_entry()
     if (selected_module)
     {
         // Correct plugin is loaded, generate session-specific data.
-        m_session_data->m_current_authenticator = selected_module;
+        mses->m_current_authenticator = selected_module;
         // If changing user, this overrides the old client authenticator.
         m_authenticator = selected_module->create_client_authenticator();
     }
     else
     {
         // Authentication cannot continue in this case. Should be rare, though.
-        search_res->type = UserEntryType::PLUGIN_IS_NOT_LOADED;
+        search_res.type = UserEntryType::PLUGIN_IS_NOT_LOADED;
         MXB_INFO("User entry '%s@'%s' uses unrecognized authenticator plugin '%s'. "
                  "Cannot authenticate user.",
-                 search_res->entry.username.c_str(), search_res->entry.host_pattern.c_str(),
-                 search_res->entry.plugin.c_str());
+                 search_res.entry.username.c_str(), search_res.entry.host_pattern.c_str(),
+                 search_res.entry.plugin.c_str());
     }
-    m_user_entry = move(search_res);
+    mses->user_entry = move(search_res);
 }
 
 /**
@@ -2057,7 +2060,7 @@ bool MariaDBClientConnection::start_change_user(mxs::Buffer* buffer)
                 m_change_user.client_query = move(*buffer);
 
                 // Make a temporary session for the change user. Some of the fields persist for the new
-                // user, some need to be overwritten.
+                // user, some need to be overwritten. The client authenticator does not need to be preserved.
                 m_change_user.session = std::make_unique<MYSQL_session>(*m_session_data);
                 m_change_user.session->user = parse_res.username;
                 m_change_user.session->db = parse_res.db;
@@ -2065,10 +2068,6 @@ bool MariaDBClientConnection::start_change_user(mxs::Buffer* buffer)
                 m_change_user.session->client_info.m_charset = parse_res.charset;
                 m_change_user.session->auth_token = parse_res.token_res.auth_token;
                 m_change_user.session->connect_attrs = parse_res.attr_res.attr_data;
-
-                // Backup the old user account entry in case user change fails. The client authenticator
-                // does not need to be preserved.
-                m_change_user.user_entry_bu = move(m_user_entry);
 
                 // Point the session used by the connection to the temporary session so other authentication-
                 // related functions access it. Backend connections will still see the old session data.
@@ -2092,8 +2091,9 @@ bool MariaDBClientConnection::complete_change_user()
     // Finalize results by writing session-level objects and routing the original change-user packet.
     MXB_INFO("COM_CHANGE_USER from %s to '%s' succeeded.",
              m_session->user_and_host().c_str(), m_change_user.session->user.c_str());
-    m_change_user.user_entry_bu = nullptr;
     m_session_data = static_cast<MYSQL_session*>(m_session->protocol_data());
+    // The old session data must be overwritten in-place, as other connections etc may have
+    // saved pointers to it.
     *m_session_data = *m_change_user.session;
     m_change_user.session.reset();
     bool rval = route_statement(&m_change_user.client_query);
@@ -2106,7 +2106,6 @@ void MariaDBClientConnection::cancel_change_user()
     MXB_INFO("COM_CHANGE_USER from %s to '%s' failed.",
              m_session->user_and_host().c_str(), m_change_user.session->user.c_str());
     // Cancel by restoring old values. An error message should have been sent to the client.
-    m_user_entry = move(m_change_user.user_entry_bu);
     m_session_data = static_cast<MYSQL_session*>(m_session->protocol_data());
     m_change_user.client_query.reset();
     m_change_user.session = nullptr;
@@ -2276,7 +2275,7 @@ void MariaDBClientConnection::send_authetication_error(AuthErrorType error, cons
         break;
 
     case AuthErrorType::NO_PLUGIN:
-        mariadb_msg = mxb::string_printf("Plugin '%s' is not loaded", m_user_entry->entry.plugin.c_str());
+        mariadb_msg = mxb::string_printf("Plugin '%s' is not loaded", ses->user_entry.entry.plugin.c_str());
         modutil_send_mysql_err_packet(m_dcb, ses->next_sequence, 0, 1524, "HY000", mariadb_msg.c_str());
         break;
     }
@@ -2375,7 +2374,7 @@ void MariaDBClientConnection::perform_check_token(AuthType auth_type)
 {
     // If the user entry didn't exist in the first place, don't check token and just fail.
     // TODO: server likely checks some random token to spend time, could add it later.
-    auto entrytype = m_user_entry->type;
+    const auto entrytype = m_session_data->user_entry.type;
     if (entrytype == UserEntryType::USER_NOT_FOUND)
     {
         send_authetication_error(AuthErrorType::ACCESS_DENIED);
@@ -2383,7 +2382,7 @@ void MariaDBClientConnection::perform_check_token(AuthType auth_type)
     }
     else
     {
-        auto auth_val = m_authenticator->authenticate(&m_user_entry->entry, m_session_data);
+        auto auth_val = m_authenticator->authenticate(&m_session_data->user_entry.entry, m_session_data);
         if (auth_val.status == AuthRes::Status::SUCCESS)
         {
             if (entrytype == UserEntryType::USER_ACCOUNT_OK)

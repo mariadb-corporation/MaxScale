@@ -476,6 +476,7 @@ MYSQL_session::MYSQL_session(const MYSQL_session& rhs)
     , auth_token_phase2(rhs.auth_token_phase2)
     , m_current_authenticator(rhs.m_current_authenticator)
     , user_search_settings(rhs.user_search_settings)
+    , user_entry(rhs.user_entry)
 {
     memcpy(scramble, rhs.scramble, MYSQL_SCRAMBLE_LEN);
 }

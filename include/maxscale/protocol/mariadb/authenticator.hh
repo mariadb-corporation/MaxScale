@@ -53,6 +53,24 @@ struct UserEntry
     static bool host_pattern_is_more_specific(const UserEntry& lhs, const UserEntry& rhs);
 };
 
+// User account search result descriptor
+enum class UserEntryType
+{
+    USER_NOT_FOUND,
+    ROOT_ACCESS_DENIED,
+    ANON_PROXY_ACCESS_DENIED,
+    DB_ACCESS_DENIED,
+    BAD_DB,
+    PLUGIN_IS_NOT_LOADED,
+    USER_ACCOUNT_OK,
+};
+
+struct UserEntryResult
+{
+    mariadb::UserEntry entry;
+    UserEntryType      type {UserEntryType::USER_NOT_FOUND};
+};
+
 /**
  * The base class of all authenticators for MariaDB-protocol. Contains the global data for
  * an authenticator module instance.
