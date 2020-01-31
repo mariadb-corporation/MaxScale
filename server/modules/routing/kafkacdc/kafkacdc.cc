@@ -133,6 +133,8 @@ public:
                             json_decref(json);
                         }
                     }
+
+                    delete msg;
                 }
 
                 consumer->close();
@@ -181,10 +183,12 @@ public:
         m_key = gtid.to_string() + ':' + std::to_string(gtid.event_num);
 
         m_obj = json_object();
-        json_object_set_new(m_obj, "gtid", json_string(gtid.to_string().c_str()));
+        json_object_set_new(m_obj, "domain", json_integer(gtid.domain));
+        json_object_set_new(m_obj, "server_id", json_integer(gtid.server_id));
+        json_object_set_new(m_obj, "sequence", json_integer(gtid.seq));
         json_object_set_new(m_obj, "event_number", json_integer(gtid.event_num));
-        json_object_set_new(m_obj, "event_type", json_string(type));
         json_object_set_new(m_obj, "timestamp", json_integer(hdr.timestamp));
+        json_object_set_new(m_obj, "event_type", json_string(type));
     }
 
     bool commit(const Table& create, const gtid_pos_t& gtid)

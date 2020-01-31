@@ -1256,39 +1256,51 @@ bool json_extract_field_names(const char* filename, std::vector<Column>& columns
  *
  * @return String representation of the Avro type
  */
-static const char* column_type_to_avro_type(uint8_t type)
+static const char* column_type_to_avro_type(const std::string& type)
 {
-    switch (type)
+    std::string str;
+    std::transform(type.begin(), type.end(), std::back_inserter(str), [](auto ch) {
+                       return tolower(ch);
+                   });
+
+    const std::unordered_set<std::string> int_types = {
+        "tinyint", "boolean", "smallint", "mediumint", "int", "integer",
+    };
+
+    const std::unordered_set<std::string> long_types = {
+        "bigint", "serial"
+    };
+
+    const std::unordered_set<std::string> double_types = {
+        "double", "decimal", "numeric", "fixed", "dec", "real"
+    };
+
+    const std::unordered_set<std::string> bytes_types = {
+        "tinyblob", "blob", "mediumblob", "longblob"
+    };
+
+    if (int_types.count(str))
     {
-    case TABLE_COL_TYPE_TINY:
-    case TABLE_COL_TYPE_SHORT:
-    case TABLE_COL_TYPE_BIT:
-    case TABLE_COL_TYPE_INT24:
         return "int";
-
-    case TABLE_COL_TYPE_FLOAT:
-        return "float";
-
-    case TABLE_COL_TYPE_DOUBLE:
-    case TABLE_COL_TYPE_NEWDECIMAL:
-        return "double";
-
-    case TABLE_COL_TYPE_NULL:
-        return "null";
-
-    case TABLE_COL_TYPE_LONG:
-    case TABLE_COL_TYPE_LONGLONG:
-        return "long";
-
-    case TABLE_COL_TYPE_TINY_BLOB:
-    case TABLE_COL_TYPE_MEDIUM_BLOB:
-    case TABLE_COL_TYPE_LONG_BLOB:
-    case TABLE_COL_TYPE_BLOB:
-        return "bytes";
-
-    default:
-        return "string";
     }
+    else if (long_types.count(str))
+    {
+        return "long";
+    }
+    else if (double_types.count(str))
+    {
+        return "double";
+    }
+    else if (bytes_types.count(str))
+    {
+        return "bytes";
+    }
+    else if (str == "float")
+    {
+        return "float";
+    }
+
+    return "string";
 }
 
 STable load_table_from_schema(const char* file, const char* db, const char* table, int version)
@@ -1536,7 +1548,7 @@ json_t* Table::to_json() const
                                            columns[i].name.c_str(),
                                            "type",
                                            "null",
-                                           column_type_to_avro_type(column_types[i]),
+                                           column_type_to_avro_type(columns[i].type),
                                            "real_type",
                                            columns[i].type.c_str(),
                                            "length",
@@ -2039,6 +2051,7 @@ void Rpl::save_and_replace_table_create(const STable& created)
     created->version = ++m_versions[table_ident];
     created->is_open = false;
     m_created_tables[table_ident] = created;
+    m_handler->create_table(*created);
     mxb_assert(created->columns.size() > 0);
 }
 
@@ -2455,6 +2468,7 @@ void Rpl::alter_table()
         // least one row event for it has been created.
         create->version = ++m_versions[create->database + '.' + create->table];
         create->is_open = false;
+        m_handler->create_table(*create);
     }
 }
 
