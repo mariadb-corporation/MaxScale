@@ -21,7 +21,6 @@ SQL::SQL(MYSQL* mysql, const cdc::Server& server)
 
 SQL::~SQL()
 {
-    mysql_free_result(m_res);
     mariadb_rpl_close(m_rpl);
     mysql_close(m_mysql);
 }
@@ -70,12 +69,6 @@ std::pair<std::string, std::unique_ptr<SQL>> SQL::connect(const std::vector<cdc:
 
 bool SQL::query(const std::string& sql)
 {
-    if (m_res)
-    {
-        mysql_free_result(m_res);
-        m_res = nullptr;
-    }
-
     return mysql_query(m_mysql, sql.c_str()) == 0;
 }
 
@@ -107,4 +100,28 @@ bool SQL::replicate(int server_id)
     }
 
     return true;
+}
+
+SQL::Result SQL::result()
+{
+    SQL::Result rval;
+
+    if (auto res = mysql_use_result(m_mysql))
+    {
+        int n_rows = mysql_num_fields(res);
+
+        while (auto row = mysql_fetch_row(res))
+        {
+            Row r;
+
+            for (int i = 0; i < n_rows; i++)
+            {
+                r.push_back(row[i] ? row[i] : "");
+            }
+
+            rval.push_back(r);
+        }
+    }
+
+    return rval;
 }

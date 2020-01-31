@@ -23,6 +23,10 @@
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 
+#include "sql.hh"
+
+using namespace std::literals::string_literals;
+
 namespace
 {
 
@@ -1838,6 +1842,25 @@ bool Rpl::handle_table_map_event(REP_HEADER* hdr, uint8_t* ptr)
     }
 
     auto create = m_created_tables.find(table_ident);
+
+    if (create == m_created_tables.end())
+    {
+        auto res = SQL::connect({m_server}, 60, 60);
+
+        if (res.first.empty() && res.second->query("SHOW CREATE TABLE "s + table_ident))
+        {
+            // Returns one row with the CREATE in the second field
+            auto sql = res.second->result()[0][1];
+            normalize_sql_string(sql);
+            parse_sql(sql, std::string(table_ident, strchr(table_ident, '.')));
+            create = m_created_tables.find(table_ident);
+        }
+        else
+        {
+            MXS_ERROR("Failed to fetch CREATE for '%s': %s", table_ident,
+                      res.first.empty() ? res.second->error().c_str() : res.first.c_str());
+        }
+    }
 
     if (create != m_created_tables.end())
     {

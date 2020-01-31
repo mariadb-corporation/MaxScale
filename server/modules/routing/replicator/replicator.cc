@@ -189,6 +189,8 @@ bool Replicator::Imp::connect()
                            m_sql->server().port, m_gtid.c_str());
             }
             rval = true;
+
+            m_rpl.set_server(m_sql->server());
         }
     }
 

@@ -13,14 +13,10 @@
 
 #pragma once
 
-#include <chrono>
 #include <string>
-#include <unordered_set>
-#include <vector>
 
 #include <maxscale/service.hh>
-
-#include "rpl.hh"
+#include <maxbase/regex.hh>
 
 namespace cdc
 {

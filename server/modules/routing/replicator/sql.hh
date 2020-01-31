@@ -16,6 +16,7 @@
 #include <mariadb_rpl.h>
 
 #include <memory>
+#include <vector>
 
 #include "config.hh"
 
@@ -26,6 +27,8 @@ public:
     SQL(const SQL&) = delete;
     SQL& operator=(const SQL&) = delete;
 
+    using Row = std::vector<std::string>;
+    using Result = std::vector<Row>;
     using Event = std::unique_ptr<MARIADB_RPL_EVENT, std::function<decltype(mariadb_free_rpl_event)>>;
 
     /**
@@ -113,11 +116,13 @@ public:
         return m_rpl->buffer;
     }
 
+
+    Result result();
+
 private:
     SQL(MYSQL* mysql, const cdc::Server& server);
 
     MYSQL*       m_mysql {nullptr};     // Database handle
-    MYSQL_RES*   m_res {nullptr};       // Open result set
     MARIADB_RPL* m_rpl {nullptr};       // Replication handle
     cdc::Server  m_server;              // The server where the connection was made
 };

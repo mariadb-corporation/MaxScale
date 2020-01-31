@@ -26,6 +26,7 @@
 #include <maxscale/service.hh>
 
 #include "tokenizer.hh"
+#include "config.hh"
 
 static const char* avro_domain = "domain";
 static const char* avro_server_id = "server_id";
@@ -268,6 +269,13 @@ public:
         return m_binlog_checksum;
     }
 
+    // Sets the current server where events are being replicated from. Used to fetch CREATE TABLE statements
+    // if TABLE_MAP events are read before the DDL is processed.
+    void set_server(const cdc::Server& server)
+    {
+        m_server = server;
+    }
+
     // Set current GTID
     void set_gtid(gtid_pos_t gtid)
     {
@@ -300,6 +308,7 @@ private:
     pcre2_match_data* m_md_match;
     pcre2_match_data* m_md_exclude;
     std::string       m_datadir;
+    cdc::Server       m_server;
 
     std::unordered_map<std::string, int> m_versions;    // Table version numbers per identifier
 
