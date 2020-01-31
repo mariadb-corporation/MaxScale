@@ -725,11 +725,6 @@ bool runtime_alter_maxscale(const char* name, const char* value)
         mxs_log_set_highprecision_enabled(config_truth_value(value));
         rval = true;
     }
-    else if (key == CN_SKIP_PERMISSION_CHECKS)
-    {
-        cnf.skip_permission_checks = config_truth_value(value);
-        rval = true;
-    }
     else if (key == CN_RETAIN_LAST_STATEMENTS)
     {
         if (is_valid_integer(value))

@@ -91,6 +91,13 @@ static CONFIG_CONTEXT config_context;
 
 config::Specification MXS_CONFIG::s_specification("maxscale", config::Specification::GLOBAL);
 
+config::ParamBool MXS_CONFIG::s_skip_permission_checks(
+    &MXS_CONFIG::s_specification,
+    CN_SKIP_PERMISSION_CHECKS,
+    "Skip service and monitor permission checks.",
+    false,
+    config::Param::Modifiable::AT_RUNTIME);
+
 config::ParamBool MXS_CONFIG::s_passive(
     &MXS_CONFIG::s_specification,
     CN_PASSIVE,
@@ -274,6 +281,7 @@ config::ParamCount MXS_CONFIG::s_rebalance_window(
 
 MXS_CONFIG::MXS_CONFIG()
     : config::Configuration("maxscale", &s_specification)
+    , skip_permission_checks(this, &s_passive)
     , passive(this, &s_passive)
     , qc_name(this, &s_qc_name)
     , qc_args(this, &s_qc_args)
@@ -2074,10 +2082,6 @@ static int handle_global_item(const char* name, const char* value)
     {
         mxs_log_set_highprecision_enabled(config_truth_value((char*)value));
     }
-    else if (strcmp(name, CN_SKIP_PERMISSION_CHECKS) == 0)
-    {
-        gateway.skip_permission_checks = config_truth_value((char*)value);
-    }
     else if (strcmp(name, CN_AUTH_CONNECT_TIMEOUT) == 0)
     {
         if (!get_seconds(name, value, &gateway.auth_conn_timeout))
@@ -2319,7 +2323,6 @@ void config_set_global_defaults()
     gateway.auth_conn_timeout = DEFAULT_AUTH_CONNECT_TIMEOUT;
     gateway.auth_read_timeout = DEFAULT_AUTH_READ_TIMEOUT;
     gateway.auth_write_timeout = DEFAULT_AUTH_WRITE_TIMEOUT;
-    gateway.skip_permission_checks = false;
     gateway.syslog = 1;
     gateway.maxlog = 1;
     gateway.promoted_at = 0;
@@ -3882,7 +3885,6 @@ json_t* config_maxscale_to_json(const char* host)
     json_object_set_new(param, CN_AUTH_CONNECT_TIMEOUT, json_integer(cnf->auth_conn_timeout));
     json_object_set_new(param, CN_AUTH_READ_TIMEOUT, json_integer(cnf->auth_read_timeout));
     json_object_set_new(param, CN_AUTH_WRITE_TIMEOUT, json_integer(cnf->auth_write_timeout));
-    json_object_set_new(param, CN_SKIP_PERMISSION_CHECKS, json_boolean(cnf->skip_permission_checks));
 
     json_object_set_new(param,
                         CN_QUERY_CLASSIFIER_CACHE_SIZE,

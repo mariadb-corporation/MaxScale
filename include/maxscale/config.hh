@@ -75,7 +75,7 @@ public:
                                                          * authentication */
     time_t  auth_read_timeout;                          /**< Read timeout for the user authentication */
     time_t  auth_write_timeout;                         /**< Write timeout for the user authentication */
-    bool    skip_permission_checks;                     /**< Skip service and monitor permission checks */
+    config::Bool    skip_permission_checks;             /**< Skip service and monitor permission checks */
     Passive         passive;                            /**< True if MaxScale is in passive mode */
     config::String  qc_name;                            /**< The name of the query classifier to load */
     config::String  qc_args;                            /**< Arguments for the query classifieer */
@@ -120,6 +120,7 @@ public:
 public:
     static config::Specification s_specification;
 
+    static config::ParamBool                s_skip_permission_checks;
     static config::ParamBool                s_passive;
     static config::ParamString              s_qc_name;
     static config::ParamString              s_qc_args;
