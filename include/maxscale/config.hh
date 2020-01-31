@@ -71,10 +71,9 @@ public:
 
     int    syslog;                                      /**< Log to syslog */
     int    maxlog;                                      /**< Log to MaxScale's own logs */
-    time_t auth_conn_timeout;                           /**< Connection timeout for the user
-                                                         * authentication */
-    time_t  auth_read_timeout;                          /**< Read timeout for the user authentication */
-    time_t  auth_write_timeout;                         /**< Write timeout for the user authentication */
+    config::Seconds auth_conn_timeout;                  /**< Connection timeout for the user authentication */
+    config::Seconds auth_read_timeout;                  /**< Read timeout for the user authentication */
+    config::Seconds auth_write_timeout;                 /**< Write timeout for the user authentication */
     config::Bool    skip_permission_checks;             /**< Skip service and monitor permission checks */
     Passive         passive;                            /**< True if MaxScale is in passive mode */
     config::String  qc_name;                            /**< The name of the query classifier to load */
@@ -120,6 +119,9 @@ public:
 public:
     static config::Specification s_specification;
 
+    static config::ParamSeconds             s_auth_conn_timeout;
+    static config::ParamSeconds             s_auth_read_timeout;
+    static config::ParamSeconds             s_auth_write_timeout;
     static config::ParamBool                s_skip_permission_checks;
     static config::ParamBool                s_passive;
     static config::ParamString              s_qc_name;

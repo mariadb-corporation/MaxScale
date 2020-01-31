@@ -243,7 +243,7 @@ bool MariaDBUserManager::update_users()
     mxq::MariaDB con;
 
     MXS_CONFIG* glob_config = config_get_global_options();
-    sett.timeout = glob_config->auth_conn_timeout;
+    sett.timeout = glob_config->auth_conn_timeout.count();
     auto local_address = glob_config->local_address.get();
     if (!local_address.empty())
     {

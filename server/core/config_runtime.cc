@@ -629,58 +629,7 @@ bool runtime_alter_maxscale(const char* name, const char* value)
     bool rval = false;
     config::Type* item = nullptr;
 
-    if (key == CN_AUTH_CONNECT_TIMEOUT)
-    {
-        time_t timeout = get_positive_int(value);
-        if (timeout)
-        {
-            MXS_NOTICE("Updated '%s' from %ld to %ld",
-                       CN_AUTH_CONNECT_TIMEOUT,
-                       cnf.auth_conn_timeout,
-                       timeout);
-            cnf.auth_conn_timeout = timeout;
-            rval = true;
-        }
-        else
-        {
-            config_runtime_error("Invalid timeout value for '%s': %s", CN_AUTH_CONNECT_TIMEOUT, value);
-        }
-    }
-    else if (key == CN_AUTH_READ_TIMEOUT)
-    {
-        time_t timeout = get_positive_int(value);
-        if (timeout)
-        {
-            MXS_NOTICE("Updated '%s' from %ld to %ld",
-                       CN_AUTH_READ_TIMEOUT,
-                       cnf.auth_read_timeout,
-                       timeout);
-            cnf.auth_read_timeout = timeout;
-            rval = true;
-        }
-        else
-        {
-            config_runtime_error("Invalid timeout value for '%s': %s", CN_AUTH_READ_TIMEOUT, value);
-        }
-    }
-    else if (key == CN_AUTH_WRITE_TIMEOUT)
-    {
-        time_t timeout = get_positive_int(value);
-        if (timeout)
-        {
-            MXS_NOTICE("Updated '%s' from %ld to %ld",
-                       CN_AUTH_WRITE_TIMEOUT,
-                       cnf.auth_write_timeout,
-                       timeout);
-            cnf.auth_write_timeout = timeout;
-            rval = true;
-        }
-        else
-        {
-            config_runtime_error("Invalid timeout value for '%s': %s", CN_AUTH_WRITE_TIMEOUT, value);
-        }
-    }
-    else if (key == CN_WRITEQ_HIGH_WATER)
+    if (key == CN_WRITEQ_HIGH_WATER)
     {
         uint64_t size = 0;
 

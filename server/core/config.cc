@@ -91,6 +91,30 @@ static CONFIG_CONTEXT config_context;
 
 config::Specification MXS_CONFIG::s_specification("maxscale", config::Specification::GLOBAL);
 
+config::ParamSeconds MXS_CONFIG::s_auth_conn_timeout(
+    &MXS_CONFIG::s_specification,
+    CN_AUTH_CONNECT_TIMEOUT,
+    "Connection timeout for the user authentication.",
+    mxs::config::INTERPRET_AS_SECONDS,
+    std::chrono::seconds(DEFAULT_AUTH_CONNECT_TIMEOUT),
+    config::Param::Modifiable::AT_RUNTIME);
+
+config::ParamSeconds MXS_CONFIG::s_auth_read_timeout(
+    &MXS_CONFIG::s_specification,
+    CN_AUTH_READ_TIMEOUT,
+    "Read timeout for the user authentication.",
+    mxs::config::INTERPRET_AS_SECONDS,
+    std::chrono::seconds(DEFAULT_AUTH_READ_TIMEOUT),
+    config::Param::Modifiable::AT_RUNTIME);
+
+config::ParamSeconds MXS_CONFIG::s_auth_write_timeout(
+    &MXS_CONFIG::s_specification,
+    CN_AUTH_WRITE_TIMEOUT,
+    "Write timeout for the user authentication.",
+    mxs::config::INTERPRET_AS_SECONDS,
+    std::chrono::seconds(DEFAULT_AUTH_WRITE_TIMEOUT),
+    config::Param::Modifiable::AT_RUNTIME);
+
 config::ParamBool MXS_CONFIG::s_skip_permission_checks(
     &MXS_CONFIG::s_specification,
     CN_SKIP_PERMISSION_CHECKS,
@@ -281,6 +305,9 @@ config::ParamCount MXS_CONFIG::s_rebalance_window(
 
 MXS_CONFIG::MXS_CONFIG()
     : config::Configuration("maxscale", &s_specification)
+    , auth_conn_timeout(this, &s_auth_conn_timeout)
+    , auth_read_timeout(this, &s_auth_read_timeout)
+    , auth_write_timeout(this, &s_auth_write_timeout)
     , skip_permission_checks(this, &s_passive)
     , passive(this, &s_passive)
     , qc_name(this, &s_qc_name)
@@ -2082,27 +2109,6 @@ static int handle_global_item(const char* name, const char* value)
     {
         mxs_log_set_highprecision_enabled(config_truth_value((char*)value));
     }
-    else if (strcmp(name, CN_AUTH_CONNECT_TIMEOUT) == 0)
-    {
-        if (!get_seconds(name, value, &gateway.auth_conn_timeout))
-        {
-            return 0;
-        }
-    }
-    else if (strcmp(name, CN_AUTH_READ_TIMEOUT) == 0)
-    {
-        if (!get_seconds(name, value, &gateway.auth_read_timeout))
-        {
-            return 0;
-        }
-    }
-    else if (strcmp(name, CN_AUTH_WRITE_TIMEOUT) == 0)
-    {
-        if (!get_seconds(name, value, &gateway.auth_write_timeout))
-        {
-            return 0;
-        }
-    }
     else if (strcmp(name, CN_LOG_THROTTLING) == 0)
     {
         if (*value == 0)
@@ -2320,9 +2326,6 @@ void config_set_global_defaults()
     struct utsname uname_data;
     gateway.config_check = false;
     gateway.n_threads = DEFAULT_NTHREADS;
-    gateway.auth_conn_timeout = DEFAULT_AUTH_CONNECT_TIMEOUT;
-    gateway.auth_read_timeout = DEFAULT_AUTH_READ_TIMEOUT;
-    gateway.auth_write_timeout = DEFAULT_AUTH_WRITE_TIMEOUT;
     gateway.syslog = 1;
     gateway.maxlog = 1;
     gateway.promoted_at = 0;
@@ -3882,10 +3885,6 @@ json_t* config_maxscale_to_json(const char* host)
 
     MXS_CONFIG* cnf = config_get_global_options();
 
-    json_object_set_new(param, CN_AUTH_CONNECT_TIMEOUT, json_integer(cnf->auth_conn_timeout));
-    json_object_set_new(param, CN_AUTH_READ_TIMEOUT, json_integer(cnf->auth_read_timeout));
-    json_object_set_new(param, CN_AUTH_WRITE_TIMEOUT, json_integer(cnf->auth_write_timeout));
-
     json_object_set_new(param,
                         CN_QUERY_CLASSIFIER_CACHE_SIZE,
                         json_integer(cnf->qc_cache_properties.max_size));
@@ -3935,9 +3934,9 @@ static bool create_global_config(const char* filename)
     }
 
     dprintf(file, "[maxscale]\n");
-    dprintf(file, "%s=%ld\n", CN_AUTH_CONNECT_TIMEOUT, gateway.auth_conn_timeout);
-    dprintf(file, "%s=%ld\n", CN_AUTH_READ_TIMEOUT, gateway.auth_read_timeout);
-    dprintf(file, "%s=%ld\n", CN_AUTH_WRITE_TIMEOUT, gateway.auth_write_timeout);
+    dprintf(file, "%s=%ld\n", CN_AUTH_CONNECT_TIMEOUT, gateway.auth_conn_timeout.count());
+    dprintf(file, "%s=%ld\n", CN_AUTH_READ_TIMEOUT, gateway.auth_read_timeout.count());
+    dprintf(file, "%s=%ld\n", CN_AUTH_WRITE_TIMEOUT, gateway.auth_write_timeout.count());
     dprintf(file, "%s=%s\n", CN_ADMIN_AUTH, gateway.admin_auth ? "true" : "false");
     dprintf(file, "%s=%s\n", CN_PASSIVE, gateway.passive ? "true" : "false");
     dprintf(file, "%s=%s\n", CN_REBALANCE_PERIOD, gateway.rebalance_period.to_string().c_str());

@@ -433,6 +433,7 @@ protected:
                     value_type* pValue,
                     std::string* pMessage) const;
 
+protected:
     value_type m_default_value;
     value_type m_min_value;
     value_type m_max_value;
