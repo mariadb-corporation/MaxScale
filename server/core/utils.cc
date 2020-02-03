@@ -33,7 +33,6 @@
 
 #include <fcntl.h>
 #include <netdb.h>
-#include <regex.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -48,9 +47,6 @@
 #include <maxbase/alloc.h>
 #include <maxscale/config.hh>
 #include <maxscale/dcb.hh>
-#include <maxscale/limits.h>
-#include <maxscale/pcre2.hh>
-#include <maxscale/poll.hh>
 #include <maxscale/random.h>
 #include <maxscale/secrets.hh>
 #include <maxscale/session.hh>
@@ -65,17 +61,47 @@
 
 #define MAX_ERROR_MSG PATH_MAX
 
-/* used in the hex2bin function */
-#define char_val(X) \
-    (X >= '0' && X <= '9' ? X - '0'       \
-                          : X >= 'A' && X <= 'Z' ? X - 'A' + 10    \
-                                                 : X >= 'a' && X <= 'z' ? X - 'a' + 10    \
-                                                                        : '\177')
+namespace
+{
+using HexLookupTable = std::array<uint8_t, 256>;
+HexLookupTable init_hex_lookup_table() noexcept;
+
+// Hex char -> byte val lookup table.
+const HexLookupTable hex_lookup_table = init_hex_lookup_table();
 
 /* used in the bin2hex function */
-char hex_upper[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-char hex_lower[] = "0123456789abcdefghijklmnopqrstuvwxyz";
+const char hex_upper[] = "0123456789ABCDEF";
+const char hex_lower[] = "0123456789abcdef";
 
+HexLookupTable init_hex_lookup_table() noexcept
+{
+    auto char_val = [](char c) -> uint8_t {
+            if (c >= '0' && c <= '9')
+            {
+                return c - '0';
+            }
+            else if (c >= 'A' && c <= 'F')
+            {
+                return c - 'A' + 10;
+            }
+            else if (c >= 'a' && c <= 'f')
+            {
+                return c - 'a' + 10;
+            }
+            else
+            {
+                return '\177';
+            }
+        };
+
+    HexLookupTable rval;
+    for (size_t i = 0; i < rval.size(); i++)
+    {
+        rval[i] = char_val(i);
+    }
+    return rval;
+}
+}
 /**
  * Check if the provided pathname is POSIX-compliant. The valid characters
  * are [a-z A-Z 0-9._-].
@@ -151,7 +177,7 @@ int setblocking(int fd)
     return 0;
 }
 
-char* gw_strend(register const char* s)
+char* gw_strend(const char* s)
 {
     while (*s++)
     {
@@ -183,72 +209,6 @@ int gw_generate_random_str(char* output, int len)
     output[len] = '\0';
 
     return 0;
-}
-
-/*****************************************
-* hex string to binary data
-* output must be pre allocated
-*****************************************/
-int gw_hex2bin(uint8_t* out, const char* in, unsigned int len)
-{
-    const char* in_end = in + len;
-
-    if (len == 0 || in == NULL)
-    {
-        return 1;
-    }
-
-    while (in < in_end)
-    {
-        register unsigned char b1 = char_val(*in);
-        uint8_t b2 = 0;
-        in++;
-        b2 = (b1 << 4) | char_val(*in);
-        *out++ = b2;
-
-        in++;
-    }
-
-    return 0;
-}
-
-/*****************************************
-* binary data to hex string
-* output must be pre allocated
-*****************************************/
-char* gw_bin2hex(char* out, const uint8_t* in, unsigned int len)
-{
-    const uint8_t* in_end = in + len;
-    if (len == 0 || in == NULL)
-    {
-        return NULL;
-    }
-
-    for (; in != in_end; ++in)
-    {
-        *out++ = hex_upper[((uint8_t) * in) >> 4];
-        *out++ = hex_upper[((uint8_t) * in) & 0x0F];
-    }
-    *out = '\0';
-
-    return out;
-}
-
-/****************************************************
- * fill a preallocated buffer with XOR(str1, str2)
- * XOR between 2 equal len strings
- * note that XOR(str1, XOR(str1 CONCAT str2)) == str2
- * and that  XOR(str1, str2) == XOR(str2, str1)
- *****************************************************/
-void gw_str_xor(uint8_t* output, const uint8_t* input1, const uint8_t* input2, unsigned int len)
-{
-    const uint8_t* input1_end = NULL;
-    input1_end = input1 + len;
-
-    while (input1 < input1_end)
-    {
-        *output++ = *input1++ ^ *input2++;
-    }
 }
 
 /**********************************************************
@@ -326,9 +286,56 @@ std::string create_hex_sha1_sha1_passwd(const char* passwd)
     /* hash2 is the SHA1(input data), where input_data = SHA1(real_password) */
     gw_sha1_str(hash1, SHA_DIGEST_LENGTH, hash2);
     /* dbpass is the HEX form of SHA1(SHA1(real_password)) */
-    gw_bin2hex(hexpasswd, hash2, SHA_DIGEST_LENGTH);
+    mxs::bin2hex(hash2, SHA_DIGEST_LENGTH, hexpasswd);
 
     return hexpasswd;
+}
+
+bool hex2bin(const char* in, unsigned int in_len, uint8_t* out)
+{
+    // Input length must be multiple of two.
+    if (!in || in_len == 0 || in_len % 2 != 0)
+    {
+        return false;
+    }
+
+    const char* in_end = in + in_len;
+    while (in < in_end)
+    {
+        // One byte is formed from two hex chars, with the first char forming the high bits.
+        uint8_t high_half = hex_lookup_table[*in++];
+        uint8_t low_half = hex_lookup_table[*in++];
+        uint8_t total = (high_half << 4) | low_half;
+        *out++ = total;
+    }
+    return true;
+}
+
+char* bin2hex(const uint8_t* in, unsigned int len, char* out)
+{
+    const uint8_t* in_end = in + len;
+    if (len == 0 || in == NULL)
+    {
+        return NULL;
+    }
+
+    for (; in != in_end; ++in)
+    {
+        *out++ = hex_upper[((uint8_t) * in) >> 4];
+        *out++ = hex_upper[((uint8_t) * in) & 0x0F];
+    }
+    *out = '\0';
+
+    return out;
+}
+
+void bin_bin_xor(const uint8_t* input1, const uint8_t* input2, unsigned int input_len, uint8_t* output)
+{
+    const uint8_t* input1_end = input1 + input_len;
+    while (input1 < input1_end)
+    {
+        *output++ = *input1++ ^ *input2++;
+    }
 }
 }
 

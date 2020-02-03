@@ -272,7 +272,7 @@ check_password(const char* password_entry, MYSQL_session* session)
     if (*password_entry)
     {
         /** Convert the hexadecimal string to binary */
-        gw_hex2bin(stored_token, password_entry, strlen(password_entry));
+        mxs::hex2bin(password_entry, strlen(password_entry), stored_token);
     }
 
     /**
@@ -297,7 +297,7 @@ check_password(const char* password_entry, MYSQL_session* session)
     /** Next, extract the SHA1 of the real password by XOR'ing it with
      * the output of the previous calculation */
     uint8_t step2[SHA_DIGEST_LENGTH] = {};
-    gw_str_xor(step2, session->auth_token.data(), step1, session->auth_token.size());
+    mxs::bin_bin_xor(session->auth_token.data(), step1, session->auth_token.size(), step2);
 
     /** The phase 2 scramble needs to be copied to the shared data structure as it
      * is required when the backend authentication is done. */

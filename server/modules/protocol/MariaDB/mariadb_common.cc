@@ -270,7 +270,7 @@ void mxs_mysql_calculate_hash(const uint8_t* scramble, uint8_t* passwd, uint8_t*
     gw_sha1_2_str(scramble, GW_MYSQL_SCRAMBLE_SIZE, hash2, GW_MYSQL_SCRAMBLE_SIZE, new_sha);
 
     // compute the xor in client_scramble
-    gw_str_xor(output, new_sha, hash1, GW_MYSQL_SCRAMBLE_SIZE);
+    mxs::bin_bin_xor(new_sha, hash1, GW_MYSQL_SCRAMBLE_SIZE, output);
 }
 
 /**

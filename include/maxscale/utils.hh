@@ -181,11 +181,6 @@ private:
 private:
     T m_resource;
 };
-}
-
-
-namespace maxscale
-{
 
 /**
  * @class CloserTraits<FILE*> utils.hh <maxscale/utils.hh>
@@ -610,4 +605,34 @@ bool have_so_reuseport();
  * @return              Double-hashed password
  */
 std::string create_hex_sha1_sha1_passwd(const char* passwd);
+
+/**
+ * Converts a HEX string to binary data, combining two hex chars to one byte.
+ *
+ * @param out Preallocated output buffer
+ * @param in Input string
+ * @param in_len Input string length
+ * @return True on success
+ */
+bool hex2bin(const char* in, unsigned int in_len, uint8_t* out);
+
+/**
+ * Convert binary data to hex string. Doubles the size.
+ *
+ * @param in Input buffer
+ * @param len Input buffer length
+ * @param out Preallocated output buffer
+ * @return Output or null on error
+ */
+char* bin2hex(const uint8_t* in, unsigned int len, char* out);
+
+/**
+ * Fill a preallocated buffer with XOR(in1, in2). Byte arrays should be equal length.
+ *
+ * @param input1 First input
+ * @param input2 Second input
+ * @param input_len Input length
+ * @param output Output buffer
+ */
+void bin_bin_xor(const uint8_t* input1, const uint8_t* input2, unsigned int input_len, uint8_t* output);
 }

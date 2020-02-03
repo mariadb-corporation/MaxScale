@@ -1349,16 +1349,13 @@ GWBUF* MariaDBBackendConnection::gw_create_change_user_packet()
 
         /** dbpass is the HEX form of SHA1(SHA1(real_password)) */
         char dbpass[MYSQL_USER_MAXLEN + 1] = "";
-        gw_bin2hex(dbpass, hash2, GW_MYSQL_SCRAMBLE_SIZE);
+        mxs::bin2hex(hash2, GW_MYSQL_SCRAMBLE_SIZE, dbpass);
 
         /** new_sha is the SHA1(CONCAT(scramble, hash2) */
         gw_sha1_2_str(m_scramble, MYSQL_SCRAMBLE_LEN, hash2, MYSQL_SCRAMBLE_LEN, new_sha);
 
         /** compute the xor in client_scramble */
-        gw_str_xor(client_scramble,
-                   new_sha,
-                   hash1,
-                   GW_MYSQL_SCRAMBLE_SIZE);
+        mxs::bin_bin_xor(new_sha, hash1, GW_MYSQL_SCRAMBLE_SIZE, client_scramble);
 
         /** set the auth-length */
         *payload = GW_MYSQL_SCRAMBLE_SIZE;

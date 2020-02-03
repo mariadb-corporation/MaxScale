@@ -21,7 +21,7 @@
 #include <maxscale/paths.h>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/random.h>
-#include <maxscale/utils.h>
+#include <maxscale/utils.hh>
 
 #include "internal/secrets.hh"
 
@@ -360,7 +360,7 @@ std::string decrypt_password(const std::string& crypt)
 
     size_t len = crypt.length();
     unsigned char encrypted[len];
-    gw_hex2bin(encrypted, crypt.c_str(), len);
+    mxs::hex2bin(crypt.c_str(), len, encrypted);
 
     AES_KEY aeskey;
     AES_set_decrypt_key(keys->enckey, 8 * MAXSCALE_KEYLEN, &aeskey);
@@ -405,7 +405,7 @@ char* encrypt_password(const char* path, const char* password)
     hex_output = (char*) MXS_MALLOC(padded_len * 2 + 1);
     if (hex_output)
     {
-        gw_bin2hex(hex_output, encrypted, padded_len);
+        mxs::bin2hex(encrypted, padded_len, hex_output);
     }
     MXS_FREE(keys);
 

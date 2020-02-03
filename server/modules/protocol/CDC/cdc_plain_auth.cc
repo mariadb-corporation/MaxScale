@@ -58,7 +58,7 @@ bool cdc_add_new_user(const MODULECMD_ARG* args, json_t** output)
     char final_data[data_size];
     strcpy(final_data, user);
     strcat(final_data, ":");
-    gw_bin2hex(final_data + userlen + 1, phase2, sizeof(phase2));
+    mxs::bin2hex(phase2, sizeof(phase2), final_data + userlen + 1);
     final_data[data_size - 1] = '\n';
 
     SERVICE* service = args->argv[0].value.service;
@@ -111,7 +111,7 @@ int CDCAuthenticatorModule::cdc_auth_check(char* username, uint8_t* auth_data)
     char hex_step1[2 * SHA_DIGEST_LENGTH + 1] = "";
 
     gw_sha1_str(auth_data, SHA_DIGEST_LENGTH, sha1_step1);
-    gw_bin2hex(hex_step1, sha1_step1, SHA_DIGEST_LENGTH);
+    mxs::bin2hex(sha1_step1, SHA_DIGEST_LENGTH, hex_step1);
 
     return m_userdata.authenticate(username, hex_step1) ? CDC_STATE_AUTH_OK : CDC_STATE_AUTH_FAILED;
 }
@@ -206,7 +206,7 @@ bool CDCClientAuthenticator::set_client_data(uint8_t* client_auth_packet, int cl
 {
     if (client_auth_packet_size % 2 != 0)
     {
-        /** gw_hex2bin expects an even number of bytes */
+        /** hex2bin expects an even number of bytes */
         client_auth_packet_size--;
     }
 
@@ -217,7 +217,7 @@ bool CDCClientAuthenticator::set_client_data(uint8_t* client_auth_packet, int cl
     /* decode input data */
     if (client_auth_packet_size <= CDC_USER_MAXLEN)
     {
-        gw_hex2bin((uint8_t*)decoded_buffer, (const char*)client_auth_packet, client_auth_packet_size);
+        mxs::hex2bin((const char*)client_auth_packet, client_auth_packet_size, (uint8_t*)decoded_buffer);
         decoded_buffer[decoded_size] = '\0';
         char* tmp_ptr = strchr(decoded_buffer, ':');
 

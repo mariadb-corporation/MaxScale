@@ -103,12 +103,9 @@ int open_unix_socket(enum mxs_socket_type type,
 
 int         setnonblocking(int fd);
 int         setblocking(int fd);
-char*       gw_strend(register const char* s);
+char*       gw_strend(const char* s);
 static char gw_randomchar();
 int         gw_generate_random_str(char* output, int len);
-int         gw_hex2bin(uint8_t* out, const char* in, unsigned int len);
-char*       gw_bin2hex(char* out, const uint8_t* in, unsigned int len);
-void        gw_str_xor(uint8_t* output, const uint8_t* input1, const uint8_t* input2, unsigned int len);
 void        gw_sha1_str(const uint8_t* in, int in_len, uint8_t* out);
 void        gw_sha1_2_str(const uint8_t* in, int in_len, const uint8_t* in2, int in2_len, uint8_t* out);
 int         gw_getsockerrno(int fd);

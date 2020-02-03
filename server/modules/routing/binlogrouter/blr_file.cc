@@ -2021,7 +2021,7 @@ int blr_read_events_all_events(ROUTER_INSTANCE* router,
                 gw_mysql_set_byte4(iv + BLRM_NONCE_LENGTH, (unsigned long)pos);
 
                 /* Human readable version */
-                gw_bin2hex(iv_hex, iv, BLRM_IV_LENGTH);
+                mxs::bin2hex(iv, BLRM_IV_LENGTH, iv_hex);
 
                 MXS_DEBUG("** Encrypted Event @ %lu: the IV is %s, size is %lu, next pos is %lu\n",
                           (unsigned long)pos,
@@ -2441,7 +2441,7 @@ int blr_read_events_all_events(ROUTER_INSTANCE* router,
             if (!(debug & BLR_CHECK_ONLY))
             {
                 /* Hex representation of nonce */
-                gw_bin2hex(nonce_hex, ste_event.nonce, BLRM_NONCE_LENGTH);
+                mxs::bin2hex(ste_event.nonce, BLRM_NONCE_LENGTH, nonce_hex);
 
                 MXS_DEBUG("- START_ENCRYPTION event @ %llu, size %lu, next pos is @ %lu, flags %u",
                           pos,
@@ -4024,8 +4024,8 @@ static GWBUF* blr_prepare_encrypted_event(ROUTER_INSTANCE* router,
     char nonce_hex[BLRM_NONCE_LENGTH * 2 + 1] = "";
 
     /* Human readable debug */
-    gw_bin2hex(iv_hex, iv, BLRM_IV_LENGTH);
-    gw_bin2hex(nonce_hex, nonce_ptr, BLRM_NONCE_LENGTH);
+    mxs::bin2hex(iv, BLRM_IV_LENGTH, iv_hex);
+    mxs::bin2hex(nonce_ptr, BLRM_NONCE_LENGTH, nonce_hex);
 
     MXS_DEBUG("** Encryption/Decryption of Event @ %lu: the IV is %s, "
               "size is %lu, next pos is %lu",
@@ -4279,7 +4279,7 @@ static void blr_report_checksum(REP_HEADER hdr,
     cksum_data[1] = *(buffer + hdr.event_size - 2 - BINLOG_EVENT_HDR_LEN);
     cksum_data[0] = *(buffer + hdr.event_size - 1 - BINLOG_EVENT_HDR_LEN);
 
-    gw_bin2hex(ptr, cksum_data, BINLOG_EVENT_CRC_SIZE);
+    mxs::bin2hex(cksum_data, BINLOG_EVENT_CRC_SIZE, ptr);
     for (char* p = ptr; *p; ++p)
     {
         *p = tolower(*p);

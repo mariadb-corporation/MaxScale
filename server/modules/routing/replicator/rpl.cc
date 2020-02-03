@@ -1685,7 +1685,7 @@ uint8_t* Rpl::process_row_event_data(const Table& create,
                     uint8_t val[metadata[metadata_offset + 1]];
                     uint64_t bytes = unpack_enum(ptr, &metadata[metadata_offset], val);
                     char strval[bytes * 2 + 1];
-                    gw_bin2hex(strval, val, bytes);
+                    mxs::bin2hex(val, bytes, strval);
                     conv->column_string(create, i, strval);
                     sprintf(trace[i], "[%ld] ENUM: %lu bytes", i, bytes);
                     ptr += bytes;
