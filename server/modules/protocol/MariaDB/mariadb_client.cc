@@ -1192,12 +1192,12 @@ MariaDBClientConnection::process_special_commands(DCB* dcb, GWBUF* read_buffer, 
  * @param buffer     Pointer to the address of GWBUF including the query
  * @return True on success
  */
-bool MariaDBClientConnection::route_statement(mxs::Buffer* buffer)
+bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
 {
     bool rval = true;
     auto session = m_session;
 
-    GWBUF* packetbuf = buffer->release();
+    GWBUF* packetbuf = buffer.release();
     // TODO: Do this only when RCAP_TYPE_CONTIGUOUS_INPUT is requested
     packetbuf = gwbuf_make_contiguous(packetbuf);
 
@@ -1304,13 +1304,14 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
     case RoutingState::PACKET_START:
         if (buffer.length() > MYSQL_HEADER_LEN)
         {
-            routed = process_normal_packet(&buffer);
+            routed = process_normal_packet(move(buffer));
         }
         else
         {
             // Unexpected, client should not be sending empty (header-only) packets in this case.
             MXS_ERROR("Client %s sent empty packet when a normal packet was expected.",
                       m_session->user_and_host().c_str());
+            buffer.reset();
         }
         break;
 
@@ -1318,7 +1319,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
         {
             // No command bytes, just continue routing large packet.
             bool is_large = large_query_continues(buffer);
-            routed = route_statement(&buffer);
+            routed = route_statement(move(buffer));
             if (!is_large)
             {
                 // Large packet routing completed.
@@ -1331,7 +1332,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
         {
             // Local-infile routing continues until client sends an empty packet. Again, tracked by backend
             // but this time on the downstream side.
-            routed = route_statement(&buffer);
+            routed = route_statement(move(buffer));
             if (!session_is_load_active(m_session))
             {
                 m_routing_state = RoutingState::PACKET_START;
@@ -1339,8 +1340,6 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
         }
         break;
     }
-
-    mxb_assert(!routed || buffer.empty());      // Router should have consumed the packet.
 
     auto rval = StateMachineRes::IN_PROGRESS;
     if (!routed)
@@ -1787,12 +1786,10 @@ std::string MariaDBClientConnection::current_db() const
     return m_session_data->db;
 }
 
-void MariaDBClientConnection::track_current_command(mxs::Buffer* buffer)
+void MariaDBClientConnection::track_current_command(const mxs::Buffer& buffer)
 {
     mxb_assert(m_routing_state == RoutingState::PACKET_START);
-    auto buf = buffer->get();
-
-    uint8_t* data = GWBUF_DATA(buf);
+    const uint8_t* data = GWBUF_DATA(buffer.get());
     m_command = MYSQL_GET_COMMAND(data);
 }
 
@@ -2035,10 +2032,10 @@ bool MariaDBClientConnection::is_movable() const
     return m_auth_state != AuthState::TRY_AGAIN;
 }
 
-bool MariaDBClientConnection::start_change_user(mxs::Buffer* buffer)
+bool MariaDBClientConnection::start_change_user(mxs::Buffer&& buffer)
 {
     // Parse the COM_CHANGE_USER-packet. The packet is somewhat similar to a typical handshake response.
-    size_t buflen = buffer->length();
+    size_t buflen = buffer.length();
     bool rval = false;
 
     size_t min_expected_len = MYSQL_HEADER_LEN + 5;
@@ -2048,7 +2045,7 @@ bool MariaDBClientConnection::start_change_user(mxs::Buffer* buffer)
         int datalen = buflen - MYSQL_HEADER_LEN;
         packet_parser::ByteVec data;
         data.resize(datalen + 1);
-        gwbuf_copy_data(buffer->get(), MYSQL_HEADER_LEN, datalen, data.data());
+        gwbuf_copy_data(buffer.get(), MYSQL_HEADER_LEN, datalen, data.data());
         data[datalen] = '\0';   // Simplifies some later parsing.
 
         auto parse_res = packet_parser::parse_change_user_packet(data, m_session_data->client_capabilities());
@@ -2057,7 +2054,7 @@ bool MariaDBClientConnection::start_change_user(mxs::Buffer* buffer)
             // Only the last byte should be left.
             if (data.size() == 1)
             {
-                m_change_user.client_query = move(*buffer);
+                m_change_user.client_query = move(buffer);
 
                 // Make a temporary session for the change user. Some of the fields persist for the new
                 // user, some need to be overwritten. The client authenticator does not need to be preserved.
@@ -2096,8 +2093,7 @@ bool MariaDBClientConnection::complete_change_user()
     // saved pointers to it.
     *m_session_data = *m_change_user.session;
     m_change_user.session.reset();
-    bool rval = route_statement(&m_change_user.client_query);
-    m_change_user.client_query.release();
+    bool rval = route_statement(move(m_change_user.client_query));
     return rval;
 }
 
@@ -2441,15 +2437,15 @@ bool MariaDBClientConnection::large_query_continues(const mxs::Buffer& buffer) c
     return MYSQL_GET_PACKET_LEN(buffer.get()) == MAX_PACKET_SIZE;
 }
 
-bool MariaDBClientConnection::process_normal_packet(mxs::Buffer* buffer)
+bool MariaDBClientConnection::process_normal_packet(mxs::Buffer&& buffer)
 {
     bool success = false;
     track_current_command(buffer);
-    bool is_large = large_query_continues(*buffer);
+    bool is_large = large_query_continues(buffer);
     if (m_command == MXS_COM_CHANGE_USER)
     {
         // Client sent a change-user-packet. Parse it but only route it once change-user completes.
-        if (start_change_user(buffer))
+        if (start_change_user(move(buffer)))
         {
             m_state = State::CHANGING_USER;
             m_auth_state = AuthState::FIND_ENTRY;
@@ -2459,7 +2455,7 @@ bool MariaDBClientConnection::process_normal_packet(mxs::Buffer* buffer)
     }
     else
     {
-        bool routed = route_statement(buffer);
+        bool routed = route_statement(move(buffer));
         if (routed && is_large)
         {
             m_routing_state = RoutingState::LARGE_PACKET;

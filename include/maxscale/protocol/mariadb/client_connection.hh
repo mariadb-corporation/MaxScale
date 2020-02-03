@@ -86,18 +86,18 @@ private:
     void            perform_check_token(AuthType auth_type);
 
     StateMachineRes process_normal_read();
-    bool            process_normal_packet(mxs::Buffer* buffer);
+    bool            process_normal_packet(mxs::Buffer&& buffer);
 
     bool parse_handshake_response_packet(GWBUF* buffer);
     bool parse_ssl_request_packet(GWBUF* buffer);
 
-    bool start_change_user(mxs::Buffer* buffer);
+    bool start_change_user(mxs::Buffer&& buffer);
     bool complete_change_user();
     void cancel_change_user();
 
     void handle_use_database(GWBUF* read_buffer);
 
-    bool route_statement(mxs::Buffer* buffer);
+    bool route_statement(mxs::Buffer&& buffer);
 
     SpecialCmdRes process_special_commands(DCB* dcb, GWBUF* read_buffer, uint8_t cmd);
     SpecialCmdRes handle_query_kill(DCB* dcb, GWBUF* read_buffer, uint32_t packet_len);
@@ -114,7 +114,7 @@ private:
                                              uint64_t keep_protocol_thread_id, kill_type_t type);
     void mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_type_t type);
     void execute_kill(MXS_SESSION* issuer, std::shared_ptr<KillInfo> info);
-    void track_current_command(mxs::Buffer* buf);
+    void track_current_command(const mxs::Buffer& buf);
     void update_sequence(GWBUF* buf);
     bool large_query_continues(const mxs::Buffer& buffer) const;
 
