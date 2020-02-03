@@ -629,12 +629,7 @@ bool runtime_alter_maxscale(const char* name, const char* value)
     bool rval = false;
     config::Type* item = nullptr;
 
-    if (key == CN_MS_TIMESTAMP)
-    {
-        mxs_log_set_highprecision_enabled(config_truth_value(value));
-        rval = true;
-    }
-    else if (key == CN_DUMP_LAST_STATEMENTS)
+    if (key == CN_DUMP_LAST_STATEMENTS)
     {
         rval = true;
         if (strcmp(value, "on_close") == 0)

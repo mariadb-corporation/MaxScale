@@ -86,6 +86,13 @@ const char CN_USERS_REFRESH_INTERVAL[] = "users_refresh_interval";
 
 config::Specification MXS_CONFIG::s_specification("maxscale", config::Specification::GLOBAL);
 
+config::ParamBool MXS_CONFIG::s_ms_timestamp(
+    &MXS_CONFIG::s_specification,
+    CN_MS_TIMESTAMP,
+    "Enable or disable high precision timestamps.",
+    false,
+    config::Param::Modifiable::AT_RUNTIME);
+
 config::ParamInteger MXS_CONFIG::s_retain_last_statements(
     &MXS_CONFIG::s_specification,
     CN_RETAIN_LAST_STATEMENTS,
@@ -337,6 +344,9 @@ struct ThisUnit
 
 MXS_CONFIG::MXS_CONFIG()
     : config::Configuration("maxscale", &s_specification)
+    , ms_timestamp(this, &s_ms_timestamp, [](bool enable) {
+            mxs_log_set_highprecision_enabled(enable);
+        })
     , retain_last_statements(this, &s_retain_last_statements, [](config::ParamInteger::value_type intval) {
             session_set_retain_last_statements(intval);
         })
@@ -2140,10 +2150,6 @@ static int handle_global_item(const char* name, const char* value)
         MXS_WARNING("%s is ignored and has been deprecated. If you need to explicitly "
                     "set the stack size, do so with 'ulimit -s' before starting MaxScale.",
                     CN_THREAD_STACK_SIZE);
-    }
-    else if (strcmp(name, CN_MS_TIMESTAMP) == 0)
-    {
-        mxs_log_set_highprecision_enabled(config_truth_value((char*)value));
     }
     else if (strcmp(name, CN_LOG_THROTTLING) == 0)
     {

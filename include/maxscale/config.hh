@@ -69,6 +69,7 @@ public:
     char    sysname[SYSNAME_LEN];                       /**< The OS name of the system */
     uint8_t mac_sha1[SHA_DIGEST_LENGTH];                /**< The SHA1 digest of an interface MAC address */
 
+    config::Bool    ms_timestamp;                       /**< Enable or disable high precision timestamps */
     config::Integer retain_last_statements;             /**< How many statements should be retained. */
     config::Bool    syslog;                             /**< Log to syslog */
     config::Bool    maxlog;                             /**< Log to MaxScale's own logs */
@@ -120,6 +121,7 @@ public:
 public:
     static config::Specification s_specification;
 
+    static config::ParamBool                s_ms_timestamp;
     static config::ParamInteger             s_retain_last_statements;
     static config::ParamBool                s_syslog;
     static config::ParamBool                s_maxlog;
