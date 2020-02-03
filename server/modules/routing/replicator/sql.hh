@@ -117,7 +117,7 @@ public:
     }
 
 
-    Result result();
+    Result result(const std::string& sql);
 
 private:
     SQL(MYSQL* mysql, const cdc::Server& server);

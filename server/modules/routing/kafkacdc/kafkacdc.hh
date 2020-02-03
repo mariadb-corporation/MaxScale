@@ -36,17 +36,6 @@ static cfg::ParamString s_topic(
 static cfg::ParamBool s_enable_idempotence(
     &s_spec, "enable_idempotence", "Enables idempotent Kafka producer", false);
 
-static class ParamDatadirPath : public cfg::ParamPath
-{
-    using cfg::ParamPath::ParamPath;
-
-    value_type default_value() const override
-    {
-        return get_datadir();
-    }
-} s_datadir(
-    &s_spec, "datadir", "Directory where internal data files are stored", PATH_FLAGS, "");
-
 // Never used
 class KafkaCDCSession : public mxs::RouterSession
 {
@@ -63,14 +52,12 @@ public:
         Config(const mxs::ConfigParameters& params)
             : bootstrap_servers(s_bootstrap_servers.get(params))
             , topic(s_topic.get(params))
-            , datadir(s_datadir.get(params))
             , enable_idempotence(s_enable_idempotence.get(params))
         {
         }
 
         std::string bootstrap_servers;
         std::string topic;
-        std::string datadir;
         bool        enable_idempotence;
     };
 

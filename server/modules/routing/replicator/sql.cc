@@ -70,7 +70,7 @@ std::pair<std::string, std::unique_ptr<SQL>> SQL::connect(const std::vector<cdc:
 bool SQL::query(const std::string& sql)
 {
     bool rval = mysql_query(m_mysql, sql.c_str()) == 0;
-    mysql_free_result(mysql_user_result(m_mysql));
+    mysql_free_result(mysql_use_result(m_mysql));
     return rval;
 }
 

@@ -1866,7 +1866,7 @@ bool Rpl::handle_table_map_event(REP_HEADER* hdr, uint8_t* ptr)
             if (!rset.empty() && rset.front().size() == 2)
             {
                 // Returns one row with the CREATE in the second field
-                auto sql = res.second->result()[0][1];
+                auto sql = rset[0][1];
                 normalize_sql_string(sql);
                 parse_sql(sql, std::string(table_ident, strchr(table_ident, '.')));
                 create = m_created_tables.find(table_ident);

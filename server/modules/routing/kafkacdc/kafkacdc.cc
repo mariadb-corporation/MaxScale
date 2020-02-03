@@ -351,7 +351,7 @@ std::unique_ptr<cdc::Replicator> KafkaCDC::create_replicator(const Config& confi
     {
         cdc::Config cnf;
         cnf.service = service;
-        cnf.statedir = config.datadir;
+        cnf.statedir = std::string(get_datadir()) + "/" + service->name();
 
         // Resetting m_replicator before assigning the new values makes sure the old one stops
         // before the new one starts.
