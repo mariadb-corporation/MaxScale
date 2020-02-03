@@ -298,12 +298,19 @@ config::ParamCount MXS_CONFIG::s_rebalance_window(
     1, 60,  // min, max
     config::Param::Modifiable::AT_RUNTIME);
 
+namespace
+{
 
-static const char* config_file = NULL;
-static MXS_CONFIG gateway;
-static bool is_persisted_config = false;    /**< True if a persisted configuration file is being parsed */
-static CONFIG_CONTEXT config_context;
+struct ThisUnit
+{
+    const char*    config_file = nullptr;
+    MXS_CONFIG     gateway;
+    bool           is_persisted_config = false; /**< True if a persisted configuration file is being parsed */
+    CONFIG_CONTEXT config_context;
+    bool           is_root_config_file = true;  /**< The first one will be. */
+} this_unit;
 
+}
 
 MXS_CONFIG::MXS_CONFIG()
     : config::Configuration("maxscale", &s_specification)
@@ -378,8 +385,8 @@ bool MXS_CONFIG::ParamUsersRefreshTime::from_string(const std::string& value_as_
 void MXS_CONFIG::QcCacheMaxSize::do_set(const value_type& value)
 {
     config::Size::do_set(value);
-    gateway.qc_cache_properties.max_size = value;
-    qc_set_cache_properties(&gateway.qc_cache_properties);
+    this_unit.gateway.qc_cache_properties.max_size = value;
+    qc_set_cache_properties(&this_unit.gateway.qc_cache_properties);
 }
 
 void MXS_CONFIG::Passive::do_set(const value_type& value)
@@ -387,7 +394,7 @@ void MXS_CONFIG::Passive::do_set(const value_type& value)
     config::Bool::do_set(value);
     if (get() && !value)
     {
-        gateway.promoted_at = mxs_clock();
+        this_unit.gateway.promoted_at = mxs_clock();
     }
 }
 
@@ -476,7 +483,7 @@ const char* deprecated_server_params[] =
 
 void config_finish()
 {
-    config_context_free(config_context.m_next);
+    config_context_free(this_unit.config_context.m_next);
 }
 
 bool duplicate_context_init(DUPLICATE_CONTEXT* context)
@@ -602,7 +609,7 @@ char* config_clean_string_list(const char* str)
 
 CONFIG_CONTEXT::CONFIG_CONTEXT(const string& section)
     : m_name(section)
-    , m_was_persisted(is_persisted_config)
+    , m_was_persisted(this_unit.is_persisted_config)
     , m_next(nullptr)
 {
 }
@@ -643,8 +650,6 @@ static bool is_maxscale_section(const char* section)
     return strcasecmp(section, CN_GATEWAY) == 0 || strcasecmp(section, CN_MAXSCALE) == 0;
 }
 
-static bool is_root_config_file = true;
-
 static int ini_global_handler(void* userdata, const char* section, const char* name, const char* value)
 {
     return is_maxscale_section(section) ? handle_global_item(name, value) : 1;
@@ -666,7 +671,7 @@ static int ini_handler(void* userdata, const char* section, const char* name, co
 
     const std::set<std::string> legacy_parameters {"passwd"};
 
-    if (is_persisted_config && legacy_parameters.count(name))
+    if (this_unit.is_persisted_config && legacy_parameters.count(name))
     {
         /**
          * Ignore legacy parameters in persisted configurations. Needs to be
@@ -677,7 +682,7 @@ static int ini_handler(void* userdata, const char* section, const char* name, co
 
     if (is_empty_string(value))
     {
-        if (is_persisted_config)
+        if (this_unit.is_persisted_config)
         {
             /**
              * Found old-style persisted configuration. These will be automatically
@@ -756,7 +761,7 @@ static int ini_handler(void* userdata, const char* section, const char* name, co
         cntxt->m_next = ptr;
     }
 
-    if (ptr && !ptr->m_was_persisted && is_persisted_config)
+    if (ptr && !ptr->m_was_persisted && this_unit.is_persisted_config)
     {
         MXS_NOTICE("Found persisted configuration for '%s'.", ptr->name());
         ptr->m_was_persisted = true;
@@ -767,7 +772,7 @@ static int ini_handler(void* userdata, const char* section, const char* name, co
     {
         /** The values in the persisted configurations are updated versions of
          * the ones in the main configuration file.  */
-        if (is_persisted_config)
+        if (this_unit.is_persisted_config)
         {
             if (!config_replace_param(ptr, name, value))
             {
@@ -787,7 +792,7 @@ static int ini_handler(void* userdata, const char* section, const char* name, co
 
     if (is_maxscale_section(section))
     {
-        if (!is_root_config_file && !is_persisted_config)
+        if (!this_unit.is_root_config_file && !this_unit.is_persisted_config)
         {
             MXS_ERROR("The [maxscale] section must only be defined in the root configuration file.");
             return 0;
@@ -847,7 +852,7 @@ bool config_load_single_file(const char* file,
 
     /* Check this after reading config is finished */
     mxs::ConfigParameters params; // We don't have this for the main configuration.
-    if (!gateway.post_configure(params))
+    if (!this_unit.gateway.post_configure(params))
     {
         rval = -1;
         MXS_ERROR("Invalid configuration.");
@@ -1051,7 +1056,7 @@ bool export_config_file(const char* filename)
 
     // The config objects are stored in reverse order so first convert it back
     // to the correct order
-    for (CONFIG_CONTEXT* ctx = config_context.m_next; ctx; ctx = ctx->m_next)
+    for (CONFIG_CONTEXT* ctx = this_unit.config_context.m_next; ctx; ctx = ctx->m_next)
     {
         contexts.push_back(ctx);
     }
@@ -1107,9 +1112,9 @@ static bool config_load_and_process(const char* filename, bool (* process_config
 
     if (duplicate_context_init(&dcontext))
     {
-        if (config_load_single_file(filename, &dcontext, &config_context))
+        if (config_load_single_file(filename, &dcontext, &this_unit.config_context))
         {
-            is_root_config_file = false;
+            this_unit.is_root_config_file = false;
             const char DIR_SUFFIX[] = ".d";
 
             char dir[strlen(filename) + sizeof(DIR_SUFFIX)];
@@ -1120,7 +1125,7 @@ static bool config_load_and_process(const char* filename, bool (* process_config
 
             if (is_directory(dir))
             {
-                rval = config_load_dir(dir, &dcontext, &config_context);
+                rval = config_load_dir(dir, &dcontext, &this_unit.config_context);
             }
 
             /** Create the persisted configuration directory if it doesn't exist */
@@ -1137,7 +1142,7 @@ static bool config_load_and_process(const char* filename, bool (* process_config
                  *
                  * TODO: Figure out a cleaner way to do this
                  */
-                is_persisted_config = true;
+                this_unit.is_persisted_config = true;
                 have_persisted_configs = true;
 
                 MXS_NOTICE("Runtime configuration changes have been done to MaxScale. Loading persisted "
@@ -1154,19 +1159,20 @@ static bool config_load_and_process(const char* filename, bool (* process_config
                  */
                 if (duplicate_context_init(&p_dcontext))
                 {
-                    rval = config_load_dir(persist_cnf, &p_dcontext, &config_context);
+                    rval = config_load_dir(persist_cnf, &p_dcontext, &this_unit.config_context);
                     duplicate_context_finish(&p_dcontext);
                 }
                 else
                 {
                     rval = false;
                 }
-                is_persisted_config = false;
+                this_unit.is_persisted_config = false;
             }
 
             if (rval)
             {
-                if (!check_config_objects(config_context.m_next) || !process_config(config_context.m_next))
+                if (!check_config_objects(this_unit.config_context.m_next)
+                    || !process_config(this_unit.config_context.m_next))
                 {
                     rval = false;
                     if (have_persisted_configs)
@@ -1193,21 +1199,21 @@ bool config_load_global(const char* filename)
     {
         log_config_error(filename, rval);
     }
-    else if (gateway.qc_cache_properties.max_size == -1)
+    else if (this_unit.gateway.qc_cache_properties.max_size == -1)
     {
-        gateway.qc_cache_properties.max_size = 0;
+        this_unit.gateway.qc_cache_properties.max_size = 0;
         MXS_WARNING("Failed to automatically detect available system memory: disabling the query classifier "
                     "cache. To enable it, add '%s' to the configuration file.",
                     CN_QUERY_CLASSIFIER_CACHE_SIZE);
     }
-    else if (gateway.qc_cache_properties.max_size == 0)
+    else if (this_unit.gateway.qc_cache_properties.max_size == 0)
     {
         MXS_NOTICE("Query classifier cache is disabled");
     }
     else
     {
         MXS_NOTICE("Using up to %s of memory for query classifier cache",
-                   mxb::pretty_size(gateway.qc_cache_properties.max_size).c_str());
+                   mxb::pretty_size(this_unit.gateway.qc_cache_properties.max_size).c_str());
     }
 
     return rval == 0;
@@ -1221,9 +1227,9 @@ bool config_load_global(const char* filename)
  */
 bool config_load(const char* filename)
 {
-    mxb_assert(!config_file);
+    mxb_assert(!this_unit.config_file);
 
-    config_file = filename;
+    this_unit.config_file = filename;
     bool rval = config_load_and_process(filename, process_config_context);
 
     return rval;
@@ -1676,7 +1682,7 @@ static bool process_config_context(CONFIG_CONTEXT* context)
         MXS_ERROR("%d errors were encountered while processing the configuration "
                   "file '%s'.",
                   error_count,
-                  config_file);
+                  this_unit.config_file);
     }
 
     return error_count == 0;
@@ -1996,32 +2002,32 @@ void config_remove_param(CONFIG_CONTEXT* obj, const char* name)
  */
 int config_threadcount()
 {
-    return gateway.n_threads;
+    return this_unit.gateway.n_threads;
 }
 
 size_t config_thread_stack_size()
 {
-    return gateway.thread_stack_size;
+    return this_unit.gateway.thread_stack_size;
 }
 
 uint32_t config_writeq_high_water()
 {
-    return gateway.writeq_high_water.get();
+    return this_unit.gateway.writeq_high_water.get();
 }
 
 bool config_set_writeq_high_water(uint32_t size)
 {
-    return gateway.writeq_high_water.set(size);
+    return this_unit.gateway.writeq_high_water.set(size);
 }
 
 uint32_t config_writeq_low_water()
 {
-    return gateway.writeq_low_water.get();
+    return this_unit.gateway.writeq_low_water.get();
 }
 
 bool config_set_writeq_low_water(uint32_t size)
 {
-    return gateway.writeq_low_water.set(size);
+    return this_unit.gateway.writeq_low_water.set(size);
 }
 
 static struct
@@ -2065,14 +2071,14 @@ static int handle_global_item(const char* name, const char* value)
     {
         if (strcmp(value, CN_AUTO) == 0)
         {
-            gateway.n_threads = get_processor_count();
+            this_unit.gateway.n_threads = get_processor_count();
         }
         else
         {
             int thrcount = atoi(value);
             if (thrcount > 0)
             {
-                gateway.n_threads = thrcount;
+                this_unit.gateway.n_threads = thrcount;
 
                 int processor_count = get_processor_count();
                 if (thrcount > processor_count)
@@ -2090,14 +2096,14 @@ static int handle_global_item(const char* name, const char* value)
             }
         }
 
-        if (gateway.n_threads > MXS_MAX_ROUTING_THREADS)
+        if (this_unit.gateway.n_threads > MXS_MAX_ROUTING_THREADS)
         {
             MXS_WARNING("Number of threads set to %d, which is greater than the "
                         "hard maximum of %d. Number of threads adjusted down "
                         "accordingly.",
-                        gateway.n_threads,
+                        this_unit.gateway.n_threads,
                         MXS_MAX_ROUTING_THREADS);
-            gateway.n_threads = MXS_MAX_ROUTING_THREADS;
+            this_unit.gateway.n_threads = MXS_MAX_ROUTING_THREADS;
         }
     }
     else if (strcmp(name, CN_THREAD_STACK_SIZE) == 0)
@@ -2229,7 +2235,7 @@ static int handle_global_item(const char* name, const char* value)
             return 0;
         }
     }
-    else if ((item = gateway.find_value(name)) != nullptr)
+    else if ((item = this_unit.gateway.find_value(name)) != nullptr)
     {
         if (!item->set(value))
         {
@@ -2326,58 +2332,58 @@ void config_set_global_defaults()
 {
     uint8_t mac_addr[6] = "";
     struct utsname uname_data;
-    gateway.config_check = false;
-    gateway.n_threads = DEFAULT_NTHREADS;
-    gateway.syslog = 1;
-    gateway.maxlog = 1;
-    gateway.promoted_at = 0;
+    this_unit.gateway.config_check = false;
+    this_unit.gateway.n_threads = DEFAULT_NTHREADS;
+    this_unit.gateway.syslog = 1;
+    this_unit.gateway.maxlog = 1;
+    this_unit.gateway.promoted_at = 0;
 
-    gateway.log_target = MXB_LOG_TARGET_DEFAULT;
+    this_unit.gateway.log_target = MXB_LOG_TARGET_DEFAULT;
 
-    gateway.qc_cache_properties.max_size = get_total_memory() * 0.15;
+    this_unit.gateway.qc_cache_properties.max_size = get_total_memory() * 0.15;
 
-    if (gateway.qc_cache_properties.max_size == 0)
+    if (this_unit.gateway.qc_cache_properties.max_size == 0)
     {
         // Set to -1 so that we know the auto-sizing failed.
-        gateway.qc_cache_properties.max_size = -1;
+        this_unit.gateway.qc_cache_properties.max_size = -1;
     }
 
-    gateway.thread_stack_size = 0;
+    this_unit.gateway.thread_stack_size = 0;
     pthread_attr_t attr;
     if (pthread_attr_init(&attr) == 0)
     {
         size_t thread_stack_size;
         if (pthread_attr_getstacksize(&attr, &thread_stack_size) == 0)
         {
-            gateway.thread_stack_size = thread_stack_size;
+            this_unit.gateway.thread_stack_size = thread_stack_size;
         }
     }
 
     /* get release string */
-    if (!config_get_release_string(gateway.release_string))
+    if (!config_get_release_string(this_unit.gateway.release_string))
     {
-        sprintf(gateway.release_string, "undefined");
+        sprintf(this_unit.gateway.release_string, "undefined");
     }
 
     /* get first mac_address in SHA1 */
     if (config_get_ifaddr(mac_addr))
     {
-        gw_sha1_str(mac_addr, 6, gateway.mac_sha1);
+        gw_sha1_str(mac_addr, 6, this_unit.gateway.mac_sha1);
     }
     else
     {
-        memset(gateway.mac_sha1, '\0', sizeof(gateway.mac_sha1));
-        memcpy(gateway.mac_sha1, "MAC-undef", 9);
+        memset(this_unit.gateway.mac_sha1, '\0', sizeof(this_unit.gateway.mac_sha1));
+        memcpy(this_unit.gateway.mac_sha1, "MAC-undef", 9);
     }
 
     /* get uname info */
     if (uname(&uname_data))
     {
-        strcpy(gateway.sysname, "undefined");
+        strcpy(this_unit.gateway.sysname, "undefined");
     }
     else
     {
-        strcpy(gateway.sysname, uname_data.sysname);
+        strcpy(this_unit.gateway.sysname, uname_data.sysname);
     }
 }
 
@@ -2879,7 +2885,7 @@ static int config_get_release_string(char* release)
 
 MXS_CONFIG* config_get_global_options()
 {
-    return &gateway;
+    return &this_unit.gateway;
 }
 
 /**
@@ -3936,13 +3942,13 @@ static bool create_global_config(const char* filename)
     }
 
     dprintf(file, "[maxscale]\n");
-    dprintf(file, "%s=%ld\n", CN_AUTH_CONNECT_TIMEOUT, gateway.auth_conn_timeout.count());
-    dprintf(file, "%s=%ld\n", CN_AUTH_READ_TIMEOUT, gateway.auth_read_timeout.count());
-    dprintf(file, "%s=%ld\n", CN_AUTH_WRITE_TIMEOUT, gateway.auth_write_timeout.count());
-    dprintf(file, "%s=%s\n", CN_ADMIN_AUTH, gateway.admin_auth ? "true" : "false");
-    dprintf(file, "%s=%s\n", CN_PASSIVE, gateway.passive ? "true" : "false");
-    dprintf(file, "%s=%s\n", CN_REBALANCE_PERIOD, gateway.rebalance_period.to_string().c_str());
-    dprintf(file, "%s=%s\n", CN_REBALANCE_THRESHOLD, gateway.rebalance_threshold.to_string().c_str());
+    dprintf(file, "%s=%ld\n", CN_AUTH_CONNECT_TIMEOUT, this_unit.gateway.auth_conn_timeout.count());
+    dprintf(file, "%s=%ld\n", CN_AUTH_READ_TIMEOUT, this_unit.gateway.auth_read_timeout.count());
+    dprintf(file, "%s=%ld\n", CN_AUTH_WRITE_TIMEOUT, this_unit.gateway.auth_write_timeout.count());
+    dprintf(file, "%s=%s\n", CN_ADMIN_AUTH, this_unit.gateway.admin_auth ? "true" : "false");
+    dprintf(file, "%s=%s\n", CN_PASSIVE, this_unit.gateway.passive ? "true" : "false");
+    dprintf(file, "%s=%s\n", CN_REBALANCE_PERIOD, this_unit.gateway.rebalance_period.to_string().c_str());
+    dprintf(file, "%s=%s\n", CN_REBALANCE_THRESHOLD, this_unit.gateway.rebalance_threshold.to_string().c_str());
 
     close(file);
 
@@ -4748,7 +4754,7 @@ bool config_set_rebalance_threshold(const char* value)
     int intval = strtol(value, &endptr, 0);
     if (*endptr == '\0' && intval >= 0 && intval <= 100)
     {
-        gateway.rebalance_threshold = intval;
+        this_unit.gateway.rebalance_threshold = intval;
         rv = true;
     }
     else
