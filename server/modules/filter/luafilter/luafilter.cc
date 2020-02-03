@@ -59,7 +59,7 @@ extern "C"
 /*
  * The filter entry points
  */
-static MXS_FILTER*         createInstance(const char* name, MXS_CONFIG_PARAMETER*);
+static MXS_FILTER*         createInstance(const char* name, mxs::ConfigParameters*);
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
                                       MXS_SESSION* session,
                                       SERVICE* service,
@@ -252,7 +252,7 @@ void expose_functions(lua_State* state, GWBUF** active_buffer)
  * @param params  Filter parameters
  * @return The instance data for this new instance
  */
-static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params)
+static MXS_FILTER* createInstance(const char* name, mxs::ConfigParameters* params)
 {
     LUA_INSTANCE* my_instance = new(std::nothrow) LUA_INSTANCE;
 
