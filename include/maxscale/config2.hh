@@ -1293,12 +1293,16 @@ public:
     ConcreteType(ConcreteType&& rhs)
         : Type(std::forward<ConcreteType &&>(rhs))
         , m_value(std::move(rhs.m_value))
+        , m_on_set(std::move(rhs.m_on_set))
     {
     }
 
-    ConcreteType(Configuration* pConfiguration, const ParamType* pParam)
+    ConcreteType(Configuration* pConfiguration,
+                 const ParamType* pParam,
+                 std::function<void (value_type)> on_set)
         : Type(pConfiguration, pParam)
         , m_value(pParam->default_value())
+        , m_on_set(on_set)
     {
     }
 
@@ -1329,11 +1333,19 @@ public:
 
         if (rv)
         {
-            atomic_set(value);
-        }
-        else
-        {
-            do_set(value);
+            if (parameter().is_modifiable_at_runtime())
+            {
+                atomic_set(value);
+            }
+            else
+            {
+                do_set(value);
+            }
+
+            if (m_on_set)
+            {
+                m_on_set(value);
+            }
         }
 
         return rv;
@@ -1373,8 +1385,9 @@ protected:
     }
 
 protected:
-    value_type         m_value;
-    mutable std::mutex m_mutex;
+    value_type                       m_value;
+    mutable std::mutex               m_mutex;
+    std::function<void (value_type)> m_on_set;
 };
 
 /**
@@ -1524,8 +1537,10 @@ class Number : public ConcreteType<Number, ParamNumber>
 protected:
     using ConcreteType<Number, ParamNumber>::operator=;
 
-    Number(Configuration* pConfiguration, const ParamNumber* pParam)
-        : ConcreteType(pConfiguration, pParam)
+    Number(Configuration* pConfiguration,
+           const ParamNumber* pParam,
+           std::function<void (value_type)> on_set)
+        : ConcreteType(pConfiguration, pParam, on_set)
     {
     }
 
@@ -1544,8 +1559,10 @@ class Count : public Number
 public:
     using Number::operator=;
 
-    Count(Configuration* pConfiguration, const ParamCount* pParam)
-        : Number(pConfiguration, pParam)
+    Count(Configuration* pConfiguration,
+          const ParamCount* pParam,
+          std::function<void (value_type)> on_set = nullptr)
+        : Number(pConfiguration, pParam, on_set)
     {
     }
 };
@@ -1558,8 +1575,10 @@ class Integer : public Number
 public:
     using Number::operator=;
 
-    Integer(Configuration* pConfiguration, const ParamInteger* pParam)
-        : Number(pConfiguration, pParam)
+    Integer(Configuration* pConfiguration,
+            const ParamInteger* pParam,
+            std::function<void (value_type)> on_set = nullptr)
+        : Number(pConfiguration, pParam, on_set)
     {
     }
 };
@@ -1572,8 +1591,10 @@ class BitMask : public Count
 public:
     using Count::operator=;
 
-    BitMask(Configuration* pConfiguration, const ParamCount* pParam)
-        : Count(pConfiguration, pParam)
+    BitMask(Configuration* pConfiguration,
+            const ParamCount* pParam,
+            std::function<void (value_type)> on_set = nullptr)
+        : Count(pConfiguration, pParam, on_set)
     {
     }
 
@@ -1591,8 +1612,10 @@ class Bool : public ConcreteType<Bool, ParamBool>
 public:
     using ConcreteType<Bool, ParamBool>::operator=;
 
-    Bool(Configuration* pConfiguration, const ParamBool* pParam)
-        : ConcreteType<Bool, ParamBool>(pConfiguration, pParam)
+    Bool(Configuration* pConfiguration,
+         const ParamBool* pParam,
+         std::function<void (value_type)> on_set = nullptr)
+        : ConcreteType<Bool, ParamBool>(pConfiguration, pParam, on_set)
     {
     }
 
@@ -1610,9 +1633,12 @@ class Duration : public ConcreteType<Duration<T>, ParamDuration<T>>
 {
 public:
     using ConcreteType<Duration<T>, ParamDuration<T>>::operator=;
+    using value_type = typename ParamDuration<T>::value_type;
 
-    Duration(Configuration* pConfiguration, const ParamDuration<T>* pParam)
-        : ConcreteType<Duration<T>, ParamDuration<T>>(pConfiguration, pParam)
+    Duration(Configuration* pConfiguration,
+             const ParamDuration<T>* pParam,
+             std::function<void (value_type)> on_set = nullptr)
+        : ConcreteType<Duration<T>, ParamDuration<T>>(pConfiguration, pParam, on_set)
     {
     }
 
@@ -1647,9 +1673,12 @@ class Enum : public ConcreteType<Enum<T>, ParamEnum<T>>
 {
 public:
     using ConcreteType<Enum<T>, ParamEnum<T>>::operator=;
+    using value_type = typename ParamEnum<T>::value_type;
 
-    Enum(Configuration* pConfiguration, const ParamEnum<T>* pParam)
-        : ConcreteType<Enum<T>, ParamEnum<T>>(pConfiguration, pParam)
+    Enum(Configuration* pConfiguration,
+         const ParamEnum<T>* pParam,
+         std::function<void (value_type)> on_set = nullptr)
+        : ConcreteType<Enum<T>, ParamEnum<T>>(pConfiguration, pParam, on_set)
     {
     }
 };
@@ -1662,8 +1691,10 @@ class Path : public ConcreteType<Path, ParamPath>
 public:
     using ConcreteType<Path, ParamPath>::operator=;
 
-    Path(Configuration* pConfiguration, const ParamPath* pParam)
-        : ConcreteType<Path, ParamPath>(pConfiguration, pParam)
+    Path(Configuration* pConfiguration,
+         const ParamPath* pParam,
+         std::function<void (value_type)> on_set = nullptr)
+        : ConcreteType<Path, ParamPath>(pConfiguration, pParam, on_set)
     {
     }
 
@@ -1681,8 +1712,10 @@ class Size : public ConcreteType<Size, ParamSize>
 public:
     using ConcreteType<Size, ParamSize>::operator=;
 
-    Size(Configuration* pConfiguration, const ParamSize* pParam)
-        : ConcreteType(pConfiguration, pParam)
+    Size(Configuration* pConfiguration,
+         const ParamSize* pParam,
+         std::function<void (value_type)> on_set = nullptr)
+        : ConcreteType(pConfiguration, pParam, on_set)
     {
     }
 };
@@ -1700,8 +1733,10 @@ class Server : public ConcreteType<Server, ParamServer>
 public:
     using ConcreteType<Server, ParamServer>::operator=;
 
-    Server(Configuration* pConfiguration, const ParamServer* pParam)
-        : ConcreteType<Server, ParamServer>(pConfiguration, pParam)
+    Server(Configuration* pConfiguration,
+           const ParamServer* pParam,
+           std::function<void (value_type)> on_set = nullptr)
+        : ConcreteType<Server, ParamServer>(pConfiguration, pParam, on_set)
     {
     }
 };
@@ -1712,8 +1747,10 @@ public:
 class Target : public ConcreteType<Target, ParamTarget>
 {
 public:
-    Target(Configuration* pConfiguration, const ParamTarget* pParam)
-        : ConcreteType<Target, ParamTarget>(pConfiguration, pParam)
+    Target(Configuration* pConfiguration,
+           const ParamTarget* pParam,
+           std::function<void (value_type)> on_set = nullptr)
+        : ConcreteType<Target, ParamTarget>(pConfiguration, pParam, on_set)
     {
     }
 };
@@ -1726,8 +1763,10 @@ class String : public ConcreteType<String, ParamString>
 public:
     using ConcreteType<String, ParamString>::operator=;
 
-    String(Configuration* pConfiguration, const ParamString* pParam)
-        : ConcreteType<String, ParamString>(pConfiguration, pParam)
+    String(Configuration* pConfiguration,
+           const ParamString* pParam,
+           std::function<void (value_type)> on_set = nullptr)
+        : ConcreteType<String, ParamString>(pConfiguration, pParam, on_set)
     {
     }
 
