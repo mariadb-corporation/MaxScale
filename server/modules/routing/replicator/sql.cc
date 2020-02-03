@@ -69,7 +69,9 @@ std::pair<std::string, std::unique_ptr<SQL>> SQL::connect(const std::vector<cdc:
 
 bool SQL::query(const std::string& sql)
 {
-    return mysql_query(m_mysql, sql.c_str()) == 0;
+    bool rval = mysql_query(m_mysql, sql.c_str()) == 0;
+    mysql_free_result(mysql_user_result(m_mysql));
+    return rval;
 }
 
 bool SQL::query(const std::vector<std::string>& sql)
@@ -102,24 +104,27 @@ bool SQL::replicate(int server_id)
     return true;
 }
 
-SQL::Result SQL::result()
+SQL::Result SQL::result(const std::string& sql)
 {
     SQL::Result rval;
 
-    if (auto res = mysql_use_result(m_mysql))
+    if (mysql_query(m_mysql, sql.c_str()) == 0)
     {
-        int n_rows = mysql_num_fields(res);
-
-        while (auto row = mysql_fetch_row(res))
+        if (auto res = mysql_use_result(m_mysql))
         {
-            Row r;
+            int n_rows = mysql_num_fields(res);
 
-            for (int i = 0; i < n_rows; i++)
+            while (auto row = mysql_fetch_row(res))
             {
-                r.push_back(row[i] ? row[i] : "");
-            }
+                Row r;
 
-            rval.push_back(r);
+                for (int i = 0; i < n_rows; i++)
+                {
+                    r.push_back(row[i] ? row[i] : "");
+                }
+
+                rval.push_back(r);
+            }
         }
     }
 

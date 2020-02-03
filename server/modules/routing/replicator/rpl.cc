@@ -1859,13 +1859,18 @@ bool Rpl::handle_table_map_event(REP_HEADER* hdr, uint8_t* ptr)
     {
         auto res = SQL::connect({m_server}, 60, 60);
 
-        if (res.first.empty() && res.second->query("SHOW CREATE TABLE "s + table_ident))
+        if (res.first.empty())
         {
-            // Returns one row with the CREATE in the second field
-            auto sql = res.second->result()[0][1];
-            normalize_sql_string(sql);
-            parse_sql(sql, std::string(table_ident, strchr(table_ident, '.')));
-            create = m_created_tables.find(table_ident);
+            auto rset = res.second->result("SHOW CREATE TABLE "s + table_ident);
+
+            if (!rset.empty() && rset.front().size() == 2)
+            {
+                // Returns one row with the CREATE in the second field
+                auto sql = res.second->result()[0][1];
+                normalize_sql_string(sql);
+                parse_sql(sql, std::string(table_ident, strchr(table_ident, '.')));
+                create = m_created_tables.find(table_ident);
+            }
         }
         else
         {
