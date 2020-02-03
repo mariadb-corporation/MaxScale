@@ -69,8 +69,8 @@ public:
     char    sysname[SYSNAME_LEN];                       /**< The OS name of the system */
     uint8_t mac_sha1[SHA_DIGEST_LENGTH];                /**< The SHA1 digest of an interface MAC address */
 
-    int    syslog;                                      /**< Log to syslog */
-    int    maxlog;                                      /**< Log to MaxScale's own logs */
+    config::Bool    syslog;                             /**< Log to syslog */
+    config::Bool    maxlog;                             /**< Log to MaxScale's own logs */
     config::Seconds auth_conn_timeout;                  /**< Connection timeout for the user authentication */
     config::Seconds auth_read_timeout;                  /**< Read timeout for the user authentication */
     config::Seconds auth_write_timeout;                 /**< Write timeout for the user authentication */
@@ -119,6 +119,8 @@ public:
 public:
     static config::Specification s_specification;
 
+    static config::ParamBool                s_syslog;
+    static config::ParamBool                s_maxlog;
     static config::ParamSeconds             s_auth_conn_timeout;
     static config::ParamSeconds             s_auth_read_timeout;
     static config::ParamSeconds             s_auth_write_timeout;

@@ -86,6 +86,20 @@ const char CN_USERS_REFRESH_INTERVAL[] = "users_refresh_interval";
 
 config::Specification MXS_CONFIG::s_specification("maxscale", config::Specification::GLOBAL);
 
+config::ParamBool MXS_CONFIG::s_syslog(
+    &MXS_CONFIG::s_specification,
+    CN_SYSLOG,
+    "Log to syslog.",
+    true,
+    config::Param::Modifiable::AT_RUNTIME);
+
+config::ParamBool MXS_CONFIG::s_maxlog(
+    &MXS_CONFIG::s_specification,
+    CN_MAXLOG,
+    "Log to MaxScale's own log.",
+    true,
+    config::Param::Modifiable::AT_RUNTIME);
+
 config::ParamSeconds MXS_CONFIG::s_auth_conn_timeout(
     &MXS_CONFIG::s_specification,
     CN_AUTH_CONNECT_TIMEOUT,
@@ -314,6 +328,8 @@ struct ThisUnit
 
 MXS_CONFIG::MXS_CONFIG()
     : config::Configuration("maxscale", &s_specification)
+    , syslog(this, &s_syslog)
+    , maxlog(this, &s_maxlog)
     , auth_conn_timeout(this, &s_auth_conn_timeout)
     , auth_read_timeout(this, &s_auth_read_timeout)
     , auth_write_timeout(this, &s_auth_write_timeout)
@@ -2334,8 +2350,6 @@ void config_set_global_defaults()
     struct utsname uname_data;
     this_unit.gateway.config_check = false;
     this_unit.gateway.n_threads = DEFAULT_NTHREADS;
-    this_unit.gateway.syslog = 1;
-    this_unit.gateway.maxlog = 1;
     this_unit.gateway.promoted_at = 0;
 
     this_unit.gateway.log_target = MXB_LOG_TARGET_DEFAULT;

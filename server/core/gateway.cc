@@ -700,8 +700,8 @@ static bool init_log()
     }
     else if (mxs_log_init(NULL, get_logdir(), cnf->log_target))
     {
-        mxs_log_set_syslog_enabled(cnf->syslog);
-        mxs_log_set_maxlog_enabled(cnf->maxlog);
+        mxs_log_set_syslog_enabled(cnf->syslog.get());
+        mxs_log_set_maxlog_enabled(cnf->maxlog.get());
 
         // Since init_log() may be called more than once, we need to ensure
         // that the cleanup-function is not registered more than once.
