@@ -209,7 +209,7 @@ void ClustrixMonitor::Config::populate(MXS_MODULE& module)
     clustrixmon::specification.populate(module);
 }
 
-bool ClustrixMonitor::Config::configure(const MXS_CONFIG_PARAMETER& params)
+bool ClustrixMonitor::Config::configure(const mxs::ConfigParameters& params)
 {
     return clustrixmon::specification.configure(m_configuration, params);
 }
@@ -269,7 +269,7 @@ ClustrixMonitor* ClustrixMonitor::create(const string& name, const string& modul
 
 using std::chrono::milliseconds;
 
-bool ClustrixMonitor::configure(const MXS_CONFIG_PARAMETER* pParams)
+bool ClustrixMonitor::configure(const mxs::ConfigParameters* pParams)
 {
     if (!clustrixmon::specification.validate(*pParams))
     {

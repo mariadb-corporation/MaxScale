@@ -245,7 +245,7 @@ uint64_t RegexHintFilter::getCapabilities()
  *
  * @return The new instance or null on error
  */
-RegexHintFilter* RegexHintFilter::create(const char* name, MXS_CONFIG_PARAMETER* params)
+RegexHintFilter* RegexHintFilter::create(const char* name, mxs::ConfigParameters* params)
 {
     bool error = false;
     SourceHostVector source_addresses;
@@ -547,7 +547,7 @@ bool RegexHintFilter::regex_compile_and_add(int pcre_ops,
  * @param mapping An array of regex->serverlist mappings for filling in. Is cleared on error.
  * @param max_capcount_out The maximum detected pcre2 capture count is written here.
  */
-void RegexHintFilter::form_regex_server_mapping(MXS_CONFIG_PARAMETER* params,
+void RegexHintFilter::form_regex_server_mapping(mxs::ConfigParameters* params,
                                                 int pcre_ops,
                                                 MappingVector* mapping,
                                                 uint32_t* max_capcount_out)

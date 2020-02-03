@@ -101,13 +101,12 @@ enum DurationUnit
     DURATION_IN_DEFAULT
 };
 }
-}
 
 /**
  * Config parameter container. Typically includes all parameters of a single configuration file section
  * such as a server or filter.
  */
-class MXS_CONFIG_PARAMETER
+class ConfigParameters
 {
 public:
     using ContainerType = std::map<std::string, std::string>;
@@ -338,7 +337,7 @@ public:
      *
      * @param source Parameters to copy
      */
-    void set_multiple(const MXS_CONFIG_PARAMETER& source);
+    void set_multiple(const mxs::ConfigParameters& source);
 
     void set_from_list(std::vector<std::pair<std::string, std::string>> list,
                        const MXS_MODULE_PARAM* module_params = NULL);
@@ -362,17 +361,19 @@ private:
 
 template<>
 inline std::chrono::milliseconds
-MXS_CONFIG_PARAMETER::get_duration<std::chrono::milliseconds>(const std::string& key) const
+mxs::ConfigParameters::get_duration<std::chrono::milliseconds>(const std::string& key) const
 {
     return get_duration_in_ms(key, mxs::config::INTERPRET_AS_MILLISECONDS);
 }
 
 template<>
 inline std::chrono::seconds
-MXS_CONFIG_PARAMETER::get_duration<std::chrono::seconds>(const std::string& key) const
+mxs::ConfigParameters::get_duration<std::chrono::seconds>(const std::string& key) const
 {
     std::chrono::milliseconds ms = get_duration_in_ms(key, mxs::config::INTERPRET_AS_SECONDS);
     return std::chrono::duration_cast<std::chrono::seconds>(ms);
+}
+
 }
 
 
@@ -385,10 +386,10 @@ class CONFIG_CONTEXT
 public:
     CONFIG_CONTEXT(const std::string& section = "");
 
-    std::string          m_name;            /**< The name of the object being configured */
-    MXS_CONFIG_PARAMETER m_parameters;      /**< The list of parameter values */
-    bool                 m_was_persisted;   /**< True if this object was persisted */
-    CONFIG_CONTEXT*      m_next;            /**< Next pointer in the linked list */
+    std::string           m_name;            /**< The name of the object being configured */
+    mxs::ConfigParameters m_parameters;      /**< The list of parameter values */
+    bool                  m_was_persisted;   /**< True if this object was persisted */
+    CONFIG_CONTEXT*       m_next;            /**< Next pointer in the linked list */
 
     const char* name() const
     {

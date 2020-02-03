@@ -206,7 +206,7 @@ public:
      *
      * @return New instance or NULL on error
      */
-    static Dbfw* create(const char* zName, MXS_CONFIG_PARAMETER* ppParams);
+    static Dbfw* create(const char* zName, mxs::ConfigParameters* ppParams);
 
     /**
      * Create a new filter session
@@ -292,7 +292,7 @@ private:
     std::string        m_filename;  /*< Path to the rule file */
     int                m_version;   /*< Latest rule file version, incremented on reload */
 
-    Dbfw(MXS_CONFIG_PARAMETER* param);
+    Dbfw(mxs::ConfigParameters* param);
     bool do_reload_rules(std::string filename);
 };
 

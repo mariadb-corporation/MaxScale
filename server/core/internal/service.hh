@@ -60,7 +60,7 @@ public:
      *
      * @return The newly created service or NULL if an error occurred
      */
-    static Service* create(const char* name, const char* router, MXS_CONFIG_PARAMETER* params);
+    static Service* create(const char* name, const char* router, mxs::ConfigParameters* params);
 
     /**
      * Destroy a service
@@ -191,7 +191,7 @@ public:
      */
     bool can_be_destroyed() const;
 
-    const MXS_CONFIG_PARAMETER& params() const override
+    const mxs::ConfigParameters& params() const override
     {
         return m_params;
     }
@@ -269,9 +269,9 @@ private:
     std::atomic<int64_t>      m_refcount {1};
     bool                      m_active {true};
 
-    MXS_CONFIG_PARAMETER m_params;
+    mxs::ConfigParameters m_params;
 
-    Service(const std::string& name, const std::string& router, MXS_CONFIG_PARAMETER* params);
+    Service(const std::string& name, const std::string& router, mxs::ConfigParameters* params);
 
     /**
      * Recalculate internal data

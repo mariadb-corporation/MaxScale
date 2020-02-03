@@ -85,7 +85,7 @@ private:
 ThisUnit this_unit;
 }
 
-Server* ServerManager::create_server(const char* name, const MXS_CONFIG_PARAMETER& params)
+Server* ServerManager::create_server(const char* name, const mxs::ConfigParameters& params)
 {
     Server* server = Server::server_alloc(name, params);
     if (server)

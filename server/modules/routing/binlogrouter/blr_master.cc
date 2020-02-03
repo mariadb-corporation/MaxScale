@@ -187,7 +187,7 @@ static void blr_start_master(void* data)
     pthread_mutex_unlock(&router->lock);
 
     // Create a temporary listener so we can create a session originating from it
-    MXS_CONFIG_PARAMETER listener_params;
+    mxs::ConfigParameters listener_params;
     listener_params.set(CN_ADDRESS, "127.0.0.1");
     listener_params.set(CN_PORT, "9999");
     listener_params.set(CN_PROTOCOL, "mariadbclient");

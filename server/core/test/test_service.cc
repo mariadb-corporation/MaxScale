@@ -48,7 +48,7 @@ static void test1()
     set_libdir(MXS_STRDUP_A("../../modules/routing/readconnroute/"));
     load_module("readconnroute", MODULE_ROUTER);
 
-    MXS_CONFIG_PARAMETER parameters;
+    mxs::ConfigParameters parameters;
     parameters.set(CN_MAX_RETRY_INTERVAL, "10s");
     parameters.set(CN_CONNECTION_TIMEOUT, "10s");
     parameters.set(CN_NET_WRITE_TIMEOUT, "10s");
@@ -67,7 +67,7 @@ static void test1()
     mxb_assert_message(0 == strcmp("MyService", service->name()), "Service must have given name");
     fprintf(stderr, "\t..done\nAdding protocol testprotocol.");
 
-    MXS_CONFIG_PARAMETER listener_params;
+    mxs::ConfigParameters listener_params;
     listener_params.set(CN_ADDRESS, "localhost");
     listener_params.set(CN_PORT, "9876");
     listener_params.set(CN_PROTOCOL, "mariadbclient");

@@ -279,7 +279,7 @@ int test_path(config::Path& value)
 
 int test_server(config::Server& value)
 {
-    MXS_CONFIG_PARAMETER params1;
+    mxs::ConfigParameters params1;
     params1.set(CN_PERSISTMAXTIME, "0");
     params1.set(CN_RANK, "primary");
 

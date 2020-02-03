@@ -71,7 +71,7 @@ public:
 
     struct Config
     {
-        Config(const MXS_CONFIG_PARAMETER* params)
+        Config(const mxs::ConfigParameters* params)
             : max_rows(params->get_integer("max_resultset_rows"))
             , max_size(params->get_size("max_resultset_size"))
             , debug(params->get_integer("debug"))
@@ -88,7 +88,7 @@ public:
     static constexpr uint64_t CAPABILITIES = RCAP_TYPE_REQUEST_TRACKING;
 
     // Creates a new filter instance
-    static MaxRows* create(const char* name, MXS_CONFIG_PARAMETER* params)
+    static MaxRows* create(const char* name, mxs::ConfigParameters* params)
     {
         return new(std::nothrow) MaxRows(name, params);
     }
@@ -118,7 +118,7 @@ public:
     }
 
 private:
-    MaxRows(const char* name, const MXS_CONFIG_PARAMETER* params)
+    MaxRows(const char* name, const mxs::ConfigParameters* params)
         : m_name(name)
         , m_config(params)
     {

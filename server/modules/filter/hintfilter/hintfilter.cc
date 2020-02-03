@@ -27,7 +27,7 @@
  */
 
 // static
-HintInstance* HintInstance::create(const char* zName, MXS_CONFIG_PARAMETER* ppParams)
+HintInstance* HintInstance::create(const char* zName, mxs::ConfigParameters* ppParams)
 {
     return new(std::nothrow) HintInstance;
 }

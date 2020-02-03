@@ -80,7 +80,7 @@ private:
     std::string                        m_topic;
 };
 
-std::unique_ptr<Exporter> build_exporter(MXS_CONFIG_PARAMETER* params)
+std::unique_ptr<Exporter> build_exporter(mxs::ConfigParameters* params)
 {
     std::unique_ptr<Exporter> rval;
     Exporter::Type type = (Exporter::Type)params->get_enum(CN_EXPORTER, exporter_type_values);

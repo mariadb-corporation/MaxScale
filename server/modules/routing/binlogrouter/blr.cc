@@ -53,7 +53,7 @@
 #include "../../../core/internal/servermanager.hh"
 
 /* The router entry points */
-static MXS_ROUTER*         createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params);
+static MXS_ROUTER*         createInstance(SERVICE* service, mxs::ConfigParameters* params);
 static void                free_instance(ROUTER_INSTANCE* instance);
 static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session,
                                       mxs::Upstream* up, const Endpoints& endpoints);
@@ -252,7 +252,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
  *
  * @return The instance data for this new instance
  */
-static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params)
+static MXS_ROUTER* createInstance(SERVICE* service, mxs::ConfigParameters* params)
 {
     ROUTER_INSTANCE* inst;
     uuid_t defuuid;

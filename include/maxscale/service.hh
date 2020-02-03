@@ -84,7 +84,7 @@ public:
 
     struct Config
     {
-        Config(MXS_CONFIG_PARAMETER* params);
+        Config(mxs::ConfigParameters* params);
 
         std::string user;                           /**< Username */
         std::string password;                       /**< Password */
@@ -120,7 +120,7 @@ public:
         return m_name.c_str();
     }
 
-    virtual const MXS_CONFIG_PARAMETER& params() const = 0;
+    virtual const mxs::ConfigParameters& params() const = 0;
 
     const char* router_name() const
     {

@@ -35,11 +35,11 @@ class SchemaRouter : public mxs::Router<SchemaRouter, SchemaRouterSession>
 {
 public:
     ~SchemaRouter();
-    static SchemaRouter* create(SERVICE* pService, MXS_CONFIG_PARAMETER* params);
+    static SchemaRouter* create(SERVICE* pService, mxs::ConfigParameters* params);
     SchemaRouterSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints);
     json_t*              diagnostics() const;
     uint64_t             getCapabilities();
-    bool                 configure(MXS_CONFIG_PARAMETER* param);
+    bool                 configure(mxs::ConfigParameters* param);
 
 private:
     friend class SchemaRouterSession;

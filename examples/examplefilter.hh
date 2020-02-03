@@ -42,7 +42,7 @@ public:
      * @return The object on success, NULL on failure. Failure is typically caused by an invalid
      * configuration parameter.
      */
-    static ExampleFilter* create(const char* zName, MXS_CONFIG_PARAMETER* ppParams);
+    static ExampleFilter* create(const char* zName, mxs::ConfigParameters* ppParams);
 
     /*
      * Creates a new session for this filter. This is called when a new client connects.
@@ -76,7 +76,7 @@ public:
 
 private:
     // Used by the create function
-    ExampleFilter(const MXS_CONFIG_PARAMETER* pParams);
+    ExampleFilter(const mxs::ConfigParameters* pParams);
 
     // The fields are specific to ExampleFilter.
     std::atomic<int> m_total_queries {0};   /**< How many queries has this filter seen */

@@ -68,7 +68,7 @@ typedef struct mxs_filter_object
      *
      * @return New filter instance on NULL on error
      */
-    MXS_FILTER*(*createInstance)(const char* name, MXS_CONFIG_PARAMETER* params);
+    MXS_FILTER*(*createInstance)(const char* name, mxs::ConfigParameters* params);
 
     /**
      * Called to create a new user session within the filter
@@ -407,7 +407,7 @@ protected:
  * {
  * public:
  *      // This creates a new filter instance
- *      static MyFilter* create(const char* zName, MXS_CONFIG_PARAMETER* ppParams);
+ *      static MyFilter* create(const char* zName, mxs::ConfigParameters* ppParams);
  *
  *      // This creates a new session for a filter instance
  *      MyFilterSession* newSession(MXS_SESSION* pSession, SERVICE* pService);
@@ -436,7 +436,7 @@ template<class FilterType, class FilterSessionType>
 class Filter : public MXS_FILTER
 {
 public:
-    static MXS_FILTER* apiCreateInstance(const char* zName, MXS_CONFIG_PARAMETER* ppParams)
+    static MXS_FILTER* apiCreateInstance(const char* zName, mxs::ConfigParameters* ppParams)
     {
         FilterType* pFilter = NULL;
 

@@ -93,7 +93,7 @@ const char RECONFIG_FAILED[] = "Monitor reconfiguration failed when %s. Check lo
 }
 
 Monitor* MonitorManager::create_monitor(const string& name, const string& module_name,
-                                        MXS_CONFIG_PARAMETER* params)
+                                        mxs::ConfigParameters* params)
 {
     mxb_assert(Monitor::is_main_worker());
     Monitor* new_monitor = nullptr;
@@ -368,7 +368,7 @@ bool MonitorManager::monitor_serialize(const Monitor* monitor)
     return rval;
 }
 
-bool MonitorManager::reconfigure_monitor(mxs::Monitor* monitor, const MXS_CONFIG_PARAMETER& parameters)
+bool MonitorManager::reconfigure_monitor(mxs::Monitor* monitor, const mxs::ConfigParameters& parameters)
 {
     mxb_assert(Monitor::is_main_worker());
     // Backup monitor parameters in case configure fails.
@@ -411,7 +411,7 @@ bool MonitorManager::alter_monitor(mxs::Monitor* monitor, const std::string& key
         return false;
     }
 
-    MXS_CONFIG_PARAMETER modified = monitor->parameters();
+    mxs::ConfigParameters modified = monitor->parameters();
     modified.set(key, value);
 
     bool success = MonitorManager::reconfigure_monitor(monitor, modified);
@@ -526,7 +526,7 @@ bool MonitorManager::add_server_to_monitor(mxs::Monitor* mon, SERVER* server, st
         // To keep monitor modifications straightforward, all changes should go through the same
         // reconfigure-function. As the function accepts key-value combinations (so that they are easily
         // serialized), construct the value here.
-        MXS_CONFIG_PARAMETER modified_params = mon->parameters();
+        mxs::ConfigParameters modified_params = mon->parameters();
         string serverlist = modified_params.get_string(CN_SERVERS);
         if (serverlist.empty())
         {

@@ -33,7 +33,7 @@ class HintSession;
 class HintInstance : public mxs::Filter<HintInstance, HintSession>
 {
 public:
-    static HintInstance* create(const char* zName, MXS_CONFIG_PARAMETER* ppParams);
+    static HintInstance* create(const char* zName, mxs::ConfigParameters* ppParams);
     HintSession*         newSession(MXS_SESSION* pSession, SERVICE* pService);
     json_t*              diagnostics() const;
     uint64_t             getCapabilities();

@@ -21,9 +21,9 @@ using std::auto_ptr;
 namespace maxscale
 {
 
-MXS_CONFIG_PARAMETER* Module::create_default_parameters() const
+mxs::ConfigParameters* Module::create_default_parameters() const
 {
-    MXS_CONFIG_PARAMETER* rval = new MXS_CONFIG_PARAMETER;
+    mxs::ConfigParameters* rval = new mxs::ConfigParameters;
     const MXS_MODULE_PARAM* param_definition = m_module.parameters;
     while (param_definition->name)
     {

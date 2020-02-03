@@ -35,7 +35,7 @@ static const MXS_ENUM_VALUE option_values[] =
     {NULL}
 };
 
-Tee::Tee(const char* name, MXS_CONFIG_PARAMETER* params)
+Tee::Tee(const char* name, mxs::ConfigParameters* params)
     : m_name(name)
     , m_target(params->get_target(params->contains("service") ? "service" : "target"))
     , m_user(params->get_string("user"))
@@ -56,7 +56,7 @@ Tee::Tee(const char* name, MXS_CONFIG_PARAMETER* params)
  *
  * @return The instance data for this new instance
  */
-Tee* Tee::create(const char* name, MXS_CONFIG_PARAMETER* params)
+Tee* Tee::create(const char* name, mxs::ConfigParameters* params)
 {
     Tee* rv = nullptr;
 

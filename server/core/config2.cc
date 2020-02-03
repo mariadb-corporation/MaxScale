@@ -105,7 +105,7 @@ ostream& Specification::document(ostream& out) const
     return out;
 }
 
-bool Specification::validate(const MXS_CONFIG_PARAMETER& params) const
+bool Specification::validate(const mxs::ConfigParameters& params) const
 {
     bool valid = true;
 
@@ -164,7 +164,7 @@ bool Specification::validate(const MXS_CONFIG_PARAMETER& params) const
     return valid;
 }
 
-bool Specification::configure(Configuration& configuration, const MXS_CONFIG_PARAMETER& params) const
+bool Specification::configure(Configuration& configuration, const mxs::ConfigParameters& params) const
 {
     mxb_assert(validate(params));
     mxb_assert(size() == configuration.size());
@@ -397,7 +397,7 @@ void Configuration::remove(Type* pValue, const std::string& name)
     m_values.erase(it);
 }
 
-bool Configuration::post_configure(const MXS_CONFIG_PARAMETER& params)
+bool Configuration::post_configure(const mxs::ConfigParameters& params)
 {
     return true;
 }
@@ -505,7 +505,7 @@ string ParamBool::to_string(value_type value) const
     return value ? "true" : "false";
 }
 
-ParamBool::value_type ParamBool::get(const MXS_CONFIG_PARAMETER& params) const
+ParamBool::value_type ParamBool::get(const mxs::ConfigParameters& params) const
 {
     value_type rv { m_default_value };
 
@@ -594,7 +594,7 @@ std::string ParamNumber::to_string(value_type value) const
     return std::to_string(value);
 }
 
-ParamNumber::value_type ParamNumber::get(const MXS_CONFIG_PARAMETER& params) const
+ParamNumber::value_type ParamNumber::get(const mxs::ConfigParameters& params) const
 {
     value_type rv { m_default_value };
 
@@ -697,7 +697,7 @@ void ParamPath::populate(MXS_MODULE_PARAM& param) const
     param.options |= m_options;
 }
 
-ParamPath::value_type ParamPath::get(const MXS_CONFIG_PARAMETER& params) const
+ParamPath::value_type ParamPath::get(const mxs::ConfigParameters& params) const
 {
     value_type rv { m_default_value };
 
@@ -769,7 +769,7 @@ std::string ParamServer::to_string(value_type value) const
     return value->name();
 }
 
-ParamServer::value_type ParamServer::get(const MXS_CONFIG_PARAMETER& params) const
+ParamServer::value_type ParamServer::get(const mxs::ConfigParameters& params) const
 {
     value_type rv { nullptr };
 
@@ -846,7 +846,7 @@ std::string ParamTarget::to_string(value_type value) const
     return value->name();
 }
 
-ParamTarget::value_type ParamTarget::get(const MXS_CONFIG_PARAMETER& params) const
+ParamTarget::value_type ParamTarget::get(const mxs::ConfigParameters& params) const
 {
     value_type rv { nullptr };
 
@@ -919,7 +919,7 @@ std::string ParamSize::to_string(value_type value) const
     return std::to_string(value);
 }
 
-ParamSize::value_type ParamSize::get(const MXS_CONFIG_PARAMETER& params) const
+ParamSize::value_type ParamSize::get(const mxs::ConfigParameters& params) const
 {
     value_type rv { m_default_value };
 
@@ -1021,7 +1021,7 @@ std::string ParamString::to_string(value_type value) const
     return ss.str();
 }
 
-ParamString::value_type ParamString::get(const MXS_CONFIG_PARAMETER& params) const
+ParamString::value_type ParamString::get(const mxs::ConfigParameters& params) const
 {
     value_type rv { m_default_value };
 

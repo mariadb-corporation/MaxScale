@@ -137,7 +137,7 @@ int main(int argc, char** argv)
     // Declared in config.cc and needs to be removed if/when blr is refactored
     extern const MXS_MODULE_PARAM config_server_params[];
 
-    MXS_CONFIG_PARAMETER params;
+    mxs::ConfigParameters params;
     params.set_from_list({
         {"address", "_none_"},
         {"port", "3306"},

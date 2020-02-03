@@ -117,7 +117,7 @@ public:
      *
      * @return A new instance or NULL if creation failed.
      */
-    std::auto_ptr<Instance> createInstance(const char* zName, MXS_CONFIG_PARAMETER* pParameters);
+    std::auto_ptr<Instance> createInstance(const char* zName, mxs::ConfigParameters* pParameters);
 
 private:
     friend class Instance;

@@ -336,14 +336,14 @@ public:
      *
      * @return True, if the monitor could be started, false otherwise.
      */
-    virtual bool configure(const MXS_CONFIG_PARAMETER* params);
+    virtual bool configure(const mxs::ConfigParameters* params);
 
     /**
      * Get text-form settings.
      *
      * @return Monitor configuration parameters
      */
-    const MXS_CONFIG_PARAMETER& parameters() const;
+    const mxs::ConfigParameters& parameters() const;
 
     long ticks() const;
 
@@ -600,7 +600,7 @@ private:
     std::unique_ptr<ExternalCmd> m_scriptcmd;   /**< External command representing the monitor script */
 
     ServerVector         m_servers;      /**< Monitored servers */
-    MXS_CONFIG_PARAMETER m_parameters;   /**< Configuration parameters in text form */
+    mxs::ConfigParameters m_parameters;   /**< Configuration parameters in text form */
     Settings             m_settings;     /**< Base class settings */
 };
 
@@ -686,7 +686,7 @@ protected:
      *
      * @note If false is returned, then the monitor will not be started.
      */
-    bool configure(const MXS_CONFIG_PARAMETER* pParams) override;
+    bool configure(const mxs::ConfigParameters* pParams) override;
 
     /**
      * @brief Check whether the monitor has sufficient rights

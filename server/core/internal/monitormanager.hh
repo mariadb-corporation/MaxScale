@@ -33,7 +33,7 @@ public:
      * @return              The newly created monitor, or NULL on error
      */
     static mxs::Monitor* create_monitor(const std::string& name, const std::string& module_name,
-                                        MXS_CONFIG_PARAMETER* params);
+                                        mxs::ConfigParameters* params);
 
     /**
      * Mark monitor as deactivated. A deactivated monitor appears not to exist, as if it had been
@@ -118,7 +118,7 @@ public:
      * @param parameters New parameters to apply
      * @return True if reconfiguration was successful
      */
-    static bool reconfigure_monitor(mxs::Monitor* monitor, const MXS_CONFIG_PARAMETER& parameters);
+    static bool reconfigure_monitor(mxs::Monitor* monitor, const mxs::ConfigParameters& parameters);
 
     /**
      * Change one parameter in the monitor during runtime. Should only be called from the admin thread.

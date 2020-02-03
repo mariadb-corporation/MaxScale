@@ -184,12 +184,12 @@ std::string get_module_param_name(const std::string& type)
  *
  * @return Whether loading succeeded and the list of default parameters
  */
-std::pair<bool, MXS_CONFIG_PARAMETER> load_defaults(const char* name,
+std::pair<bool, mxs::ConfigParameters> load_defaults(const char* name,
                                                     const char* module_type,
                                                     const char* object_type)
 {
     bool rval;
-    MXS_CONFIG_PARAMETER params;
+    mxs::ConfigParameters params;
     CONFIG_CONTEXT ctx = {(char*)""};
 
     if (const MXS_MODULE* mod = get_module(name, module_type))
@@ -508,7 +508,7 @@ bool runtime_alter_server(Server* server, const char* key, const char* value)
 }
 
 bool undefined_mandatory_parameter(const MXS_MODULE_PARAM* mod_params,
-                                   const MXS_CONFIG_PARAMETER* params)
+                                   const mxs::ConfigParameters* params)
 {
     bool rval = false;
     mxb_assert(mod_params);
@@ -541,7 +541,7 @@ bool validate_param(const MXS_MODULE_PARAM* basic,
 
 bool validate_param(const MXS_MODULE_PARAM* basic,
                     const MXS_MODULE_PARAM* module,
-                    MXS_CONFIG_PARAMETER* params)
+                    mxs::ConfigParameters* params)
 {
     bool rval = std::all_of(params->begin(), params->end(),
                             [basic, module](const std::pair<std::string, std::string>& p) {
@@ -945,7 +945,7 @@ bool runtime_alter_maxscale(const char* name, const char* value)
 }
 
 // Helper for runtime_create_listener
-void set_if_not_null(MXS_CONFIG_PARAMETER& params, const char* name,
+void set_if_not_null(mxs::ConfigParameters& params, const char* name,
                      const char* value, const char* dflt = nullptr)
 {
     if ((!value || strcasecmp(value, CN_DEFAULT) == 0) && dflt)
@@ -987,7 +987,7 @@ bool runtime_create_listener(Service* service,
         auth_opt = nullptr;
     }
 
-    MXS_CONFIG_PARAMETER params;
+    mxs::ConfigParameters params;
     bool ok;
     tie(ok, params) = load_defaults(proto, MODULE_PROTOCOL, CN_LISTENER);
     params.set(CN_SERVICE, service->name());
@@ -1072,7 +1072,7 @@ bool runtime_create_listener(Service* service,
     return rval;
 }
 
-bool runtime_create_monitor(const char* name, const char* module, MXS_CONFIG_PARAMETER* params)
+bool runtime_create_monitor(const char* name, const char* module, mxs::ConfigParameters* params)
 {
     bool rval = false;
 
@@ -1082,7 +1082,7 @@ bool runtime_create_monitor(const char* name, const char* module, MXS_CONFIG_PAR
 
         if (config_is_valid_name(name, &reason))
         {
-            MXS_CONFIG_PARAMETER final_params;
+            mxs::ConfigParameters final_params;
             bool ok;
             tie(ok, final_params) = load_defaults(module, MODULE_MONITOR, CN_MONITOR);
 
@@ -1123,14 +1123,14 @@ bool runtime_create_monitor(const char* name, const char* module, MXS_CONFIG_PAR
     return rval;
 }
 
-bool runtime_create_filter(const char* name, const char* module, MXS_CONFIG_PARAMETER* params)
+bool runtime_create_filter(const char* name, const char* module, mxs::ConfigParameters* params)
 {
     bool rval = false;
 
     if (!filter_find(name))
     {
         SFilterDef filter;
-        MXS_CONFIG_PARAMETER parameters;
+        mxs::ConfigParameters parameters;
         bool ok;
         tie(ok, parameters) = load_defaults(module, MODULE_FILTER, CN_FILTER);
 
@@ -1177,14 +1177,14 @@ bool runtime_create_filter(const char* name, const char* module, MXS_CONFIG_PARA
     return rval;
 }
 
-bool runtime_create_service(const char* name, const char* router, MXS_CONFIG_PARAMETER* params)
+bool runtime_create_service(const char* name, const char* router, mxs::ConfigParameters* params)
 {
     bool rval = false;
 
     if (Service::find(name) == NULL)
     {
         Service* service = NULL;
-        MXS_CONFIG_PARAMETER parameters;
+        mxs::ConfigParameters parameters;
         bool ok;
         tie(ok, parameters) = load_defaults(router, MODULE_ROUTER, CN_SERVICE);
 
@@ -1226,9 +1226,9 @@ bool runtime_create_service(const char* name, const char* router, MXS_CONFIG_PAR
     return rval;
 }
 
-MXS_CONFIG_PARAMETER extract_parameters_from_json(json_t* json)
+mxs::ConfigParameters extract_parameters_from_json(json_t* json)
 {
-    MXS_CONFIG_PARAMETER rval;
+    mxs::ConfigParameters rval;
     if (json_t* parameters = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS))
     {
         const char* key;
@@ -1818,7 +1818,7 @@ bool validate_object_json(json_t* json,
     return rval;
 }
 
-bool server_relationship_to_parameter(json_t* json, MXS_CONFIG_PARAMETER* params)
+bool server_relationship_to_parameter(json_t* json, mxs::ConfigParameters* params)
 {
     StringSet relations;
     bool rval = false;
@@ -1900,9 +1900,9 @@ bool validate_monitor_json(json_t* json)
     return rval;
 }
 
-MXS_CONFIG_PARAMETER extract_parameters(json_t* json)
+mxs::ConfigParameters extract_parameters(json_t* json)
 {
-    MXS_CONFIG_PARAMETER params;
+    mxs::ConfigParameters params;
     json_t* parameters = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
 
     if (parameters && json_is_object(parameters))
@@ -2218,7 +2218,7 @@ bool runtime_create_server(const char* name, const char* address, const char* po
         std::string reason;
         if (!external || config_is_valid_name(name, &reason))
         {
-            MXS_CONFIG_PARAMETER parameters;
+            mxs::ConfigParameters parameters;
             config_add_defaults(&parameters, common_server_params());
             if (address)
             {
@@ -2450,7 +2450,7 @@ bool runtime_create_server_from_json(json_t* json)
         }
         else
         {
-            MXS_CONFIG_PARAMETER params;
+            mxs::ConfigParameters params;
             config_add_defaults(&params, common_server_params());
             params.set_multiple(extract_parameters_from_json(json));
 
@@ -2558,7 +2558,7 @@ bool runtime_create_monitor_from_json(json_t* json)
 
         if (const MXS_MODULE* mod = get_module(module, MODULE_MONITOR))
         {
-            MXS_CONFIG_PARAMETER params;
+            mxs::ConfigParameters params;
             bool ok;
             tie(ok, params) = load_defaults(module, MODULE_MONITOR, CN_MONITOR);
             mxb_assert(ok);

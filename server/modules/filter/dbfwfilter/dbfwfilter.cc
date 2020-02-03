@@ -1248,7 +1248,7 @@ namespace
 int global_version = 1;
 }
 
-Dbfw::Dbfw(MXS_CONFIG_PARAMETER* params)
+Dbfw::Dbfw(mxs::ConfigParameters* params)
     : m_action((enum fw_actions)params->get_enum("action", action_values))
     , m_log_match(0)
     , m_treat_string_as_field(params->get_bool("treat_string_as_field"))
@@ -1271,7 +1271,7 @@ Dbfw::~Dbfw()
 {
 }
 
-Dbfw* Dbfw::create(const char* zName, MXS_CONFIG_PARAMETER* pParams)
+Dbfw* Dbfw::create(const char* zName, mxs::ConfigParameters* pParams)
 {
     Dbfw* rval = NULL;
     RuleList rules;

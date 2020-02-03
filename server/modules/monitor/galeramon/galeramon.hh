@@ -50,7 +50,7 @@ public:
     json_t*               diagnostics() const;
 
 protected:
-    bool configure(const MXS_CONFIG_PARAMETER* param);
+    bool configure(const mxs::ConfigParameters* param);
     bool has_sufficient_permissions();
     void update_server_status(mxs::MonitorServer* monitored_server);
     void pre_tick();

@@ -45,7 +45,7 @@ public:
      * @return New listener or nullptr on error
      */
     static std::shared_ptr<Listener> create(const std::string& name, const std::string& protocol,
-                                            const MXS_CONFIG_PARAMETER& params);
+                                            const mxs::ConfigParameters& params);
 
     /**
      * Destroy a listener
@@ -132,7 +132,7 @@ public:
     }
 
     static std::unique_ptr<mxs::ListenerSessionData>
-    create_shared_data(const MXS_CONFIG_PARAMETER& params, const std::string& listener_name);
+    create_shared_data(const mxs::ConfigParameters& params, const std::string& listener_name);
 
 private:
     enum State
@@ -154,7 +154,7 @@ private:
     std::shared_ptr<mxs::ProtocolModule> m_proto_module;
 
     Service*             m_service;         /**< The service to which new sessions are sent */
-    MXS_CONFIG_PARAMETER m_params;          /**< Configuration parameters */
+    mxs::ConfigParameters m_params;          /**< Configuration parameters */
 
     Type m_type;    /**< The type of the listener */
 
@@ -175,7 +175,7 @@ private:
     Listener(Service* service, const std::string& name,
              const std::string& address, uint16_t port,
              const std::string& protocol,
-             const MXS_CONFIG_PARAMETER& params,
+             const mxs::ConfigParameters& params,
              std::unique_ptr<mxs::ListenerSessionData> shared_data);
 
     /**

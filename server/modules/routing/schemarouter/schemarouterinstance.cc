@@ -51,7 +51,7 @@ SchemaRouter::~SchemaRouter()
 {
 }
 
-SchemaRouter* SchemaRouter::create(SERVICE* pService, MXS_CONFIG_PARAMETER* params)
+SchemaRouter* SchemaRouter::create(SERVICE* pService, mxs::ConfigParameters* params)
 {
     // TODO: This is wrong: a router shouldn't modify core parameters. This should be expressed in some other
     // form that the service would know to behave differently if a router requires authentication from all
@@ -68,7 +68,7 @@ SchemaRouter* SchemaRouter::create(SERVICE* pService, MXS_CONFIG_PARAMETER* para
     return new SchemaRouter(pService, config);
 }
 
-bool SchemaRouter::configure(MXS_CONFIG_PARAMETER* params)
+bool SchemaRouter::configure(mxs::ConfigParameters* params)
 {
     SConfig config(new Config(params));
     m_config = config;

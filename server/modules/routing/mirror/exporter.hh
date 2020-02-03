@@ -49,4 +49,4 @@ static const MXS_ENUM_VALUE exporter_type_values[] =
     {NULL}
 };
 
-std::unique_ptr<Exporter> build_exporter(MXS_CONFIG_PARAMETER* params);
+std::unique_ptr<Exporter> build_exporter(mxs::ConfigParameters* params);

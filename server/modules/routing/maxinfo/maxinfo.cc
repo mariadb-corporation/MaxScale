@@ -61,7 +61,7 @@ static int maxinfo_execute_query(INFO_INSTANCE*, INFO_SESSION*, char*);
 static int maxinfo_send_ok(DCB* dcb);
 
 /* The router entry points */
-static MXS_ROUTER*         createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params);
+static MXS_ROUTER*         createInstance(SERVICE* service, mxs::ConfigParameters* params);
 static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance,
                                       MXS_SESSION* session,
                                       mxs::Upstream* up,
@@ -139,7 +139,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
  *
  * @return The instance data for this new instance
  */
-static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params)
+static MXS_ROUTER* createInstance(SERVICE* service, mxs::ConfigParameters* params)
 {
     INFO_INSTANCE* inst;
     int i;

@@ -30,7 +30,10 @@
 #include <maxscale/modinfo.hh>
 
 class DCB;
-class MXS_CONFIG_PARAMETER;
+namespace maxscale
+{
+class ConfigParameters;
+}
 
 enum ssl_method_type_t
 {
@@ -67,7 +70,7 @@ namespace maxscale
 struct SSLConfig : public mxb::SSLConfig
 {
     SSLConfig() = default;
-    SSLConfig(const MXS_CONFIG_PARAMETER& params);
+    SSLConfig(const mxs::ConfigParameters& params);
 
     // Convert to human readable string representation
     std::string to_string() const;
@@ -100,7 +103,7 @@ public:
      *
      * @return A new SSL configuration or nullptr on error
      */
-    static std::unique_ptr<SSLContext> create(const MXS_CONFIG_PARAMETER& params);
+    static std::unique_ptr<SSLContext> create(const mxs::ConfigParameters& params);
 
     /**
      * Opens a new OpenSSL session for this configuration context
@@ -129,10 +132,10 @@ public:
      * @param require_cert Are certificates required
      * @return True on success
      */
-    bool read_configuration(const std::string& name, const MXS_CONFIG_PARAMETER& params, bool require_cert);
+    bool read_configuration(const std::string& name, const mxs::ConfigParameters& params, bool require_cert);
 
 private:
-    bool configure(const MXS_CONFIG_PARAMETER& params);
+    bool configure(const mxs::ConfigParameters& params);
     void reset();
     bool init();
 

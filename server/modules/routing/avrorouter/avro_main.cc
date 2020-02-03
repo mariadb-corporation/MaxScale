@@ -58,7 +58,7 @@ static bool conversion_task_ctl(Avro* inst, bool start);
  *
  * @return The instance data for this new instance
  */
-MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params)
+MXS_ROUTER* createInstance(SERVICE* service, mxs::ConfigParameters* params)
 {
     Avro* router = Avro::create(service);
 

@@ -187,7 +187,7 @@ MariaDBServer* MariaDBMonitor::get_server(SERVER* server)
     return NULL;
 }
 
-bool MariaDBMonitor::set_replication_credentials(const MXS_CONFIG_PARAMETER* params)
+bool MariaDBMonitor::set_replication_credentials(const mxs::ConfigParameters* params)
 {
     bool repl_user_exists = params->contains(CN_REPLICATION_USER);
     bool repl_pw_exists = params->contains(CN_REPLICATION_PASSWORD);
@@ -243,7 +243,7 @@ MariaDBMonitor* MariaDBMonitor::create(const string& name, const string& module)
  * @param params Config parameters
  * @return True if settings are ok
  */
-bool MariaDBMonitor::configure(const MXS_CONFIG_PARAMETER* params)
+bool MariaDBMonitor::configure(const mxs::ConfigParameters* params)
 {
     if (!MonitorWorker::configure(params))
     {

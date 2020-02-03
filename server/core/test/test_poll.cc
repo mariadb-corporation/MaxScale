@@ -37,14 +37,14 @@ static void test1()
 {
     /* Poll tests */
     fprintf(stderr, "Add a DCB");
-    MXS_CONFIG_PARAMETER parameters;
+    mxs::ConfigParameters parameters;
     parameters.set(CN_MAX_RETRY_INTERVAL, "10s");
     parameters.set(CN_CONNECTION_TIMEOUT, "10s");
     parameters.set(CN_NET_WRITE_TIMEOUT, "10s");
     parameters.set(CN_CONNECTION_KEEPALIVE, "100s");
     auto service = Service::create("service", "readconnroute", &parameters);
 
-    MXS_CONFIG_PARAMETER listener_params;
+    mxs::ConfigParameters listener_params;
     listener_params.set(CN_ADDRESS, "0.0.0.0");
     listener_params.set(CN_PORT, "3306");
     listener_params.set(CN_PROTOCOL, "mariadbclient");

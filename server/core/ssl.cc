@@ -197,7 +197,7 @@ static const char* get_ssl_errors()
 namespace maxscale
 {
 
-SSLConfig::SSLConfig(const MXS_CONFIG_PARAMETER& params)
+SSLConfig::SSLConfig(const mxs::ConfigParameters& params)
     : mxb::SSLConfig(params.get_string(CN_SSL_KEY), params.get_string(CN_SSL_CERT),
                      params.get_string(CN_SSL_CA_CERT))
     , crl(params.get_string(CN_SSL_CRL))
@@ -209,7 +209,7 @@ SSLConfig::SSLConfig(const MXS_CONFIG_PARAMETER& params)
 }
 
 // static
-std::unique_ptr<SSLContext> SSLContext::create(const MXS_CONFIG_PARAMETER& params)
+std::unique_ptr<SSLContext> SSLContext::create(const mxs::ConfigParameters& params)
 {
     std::unique_ptr<SSLContext> rval(new(std::nothrow) SSLContext());
     if (rval)
@@ -474,8 +474,8 @@ std::string SSLConfig::to_string() const
     return ss.str();
 }
 
-bool
-SSLContext::read_configuration(const std::string& name, const MXS_CONFIG_PARAMETER& params, bool require_cert)
+bool SSLContext::read_configuration(const std::string& name, const mxs::ConfigParameters& params,
+                                    bool require_cert)
 {
     bool ok = true;
     // The enum values convert to bool
@@ -526,7 +526,7 @@ void SSLContext::reset()
     m_ctx = nullptr;
 }
 
-bool SSLContext::configure(const MXS_CONFIG_PARAMETER& params)
+bool SSLContext::configure(const mxs::ConfigParameters& params)
 {
     reset();
     mxb_assert(params.get_string(CN_SSL_CA_CERT).empty()

@@ -85,7 +85,7 @@ class CCRFilter : public mxs::Filter<CCRFilter, CCRSession>
 public:
     friend class CCRSession;    // Session needs to access & modify data in filter object
 
-    static CCRFilter* create(const char* name, MXS_CONFIG_PARAMETER* params)
+    static CCRFilter* create(const char* name, mxs::ConfigParameters* params)
     {
         if (params->get_integer("count") && params->get_bool(PARAM_GLOBAL))
         {

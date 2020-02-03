@@ -35,7 +35,7 @@ public:
 
         static void populate(MXS_MODULE& module);
 
-        bool configure(const MXS_CONFIG_PARAMETER& params);
+        bool configure(const mxs::ConfigParameters& params);
 
         long cluster_monitor_interval() const
         {
@@ -69,7 +69,7 @@ public:
 
     static ClustrixMonitor* create(const std::string& name, const std::string& module);
 
-    bool configure(const MXS_CONFIG_PARAMETER* pParams) override;
+    bool configure(const mxs::ConfigParameters* pParams) override;
 
     bool softfail(SERVER* pServer, json_t** ppError);
     bool unsoftfail(SERVER* pServer, json_t** ppError);

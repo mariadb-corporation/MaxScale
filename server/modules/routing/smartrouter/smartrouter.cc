@@ -84,12 +84,12 @@ void SmartRouter::Config::populate(MXS_MODULE& module)
     smartrouter::specification.populate(module);
 }
 
-bool SmartRouter::Config::configure(const MXS_CONFIG_PARAMETER& params)
+bool SmartRouter::Config::configure(const mxs::ConfigParameters& params)
 {
     return smartrouter::specification.configure(*this, params);
 }
 
-bool SmartRouter::Config::post_configure(const MXS_CONFIG_PARAMETER& params)
+bool SmartRouter::Config::post_configure(const mxs::ConfigParameters& params)
 {
     bool rv = true;
     auto servers = params.get_server_list(CN_SERVERS);
@@ -109,7 +109,7 @@ bool SmartRouter::Config::post_configure(const MXS_CONFIG_PARAMETER& params)
     return rv;
 }
 
-bool SmartRouter::configure(MXS_CONFIG_PARAMETER* pParams)
+bool SmartRouter::configure(mxs::ConfigParameters* pParams)
 {
     if (!smartrouter::specification.validate(*pParams))
     {
@@ -161,7 +161,7 @@ SmartRouterSession* SmartRouter::newSession(MXS_SESSION* pSession, const Endpoin
 }
 
 // static
-SmartRouter* SmartRouter::create(SERVICE* pService, MXS_CONFIG_PARAMETER* pParams)
+SmartRouter* SmartRouter::create(SERVICE* pService, mxs::ConfigParameters* pParams)
 {
     SmartRouter* pRouter = new(std::nothrow) SmartRouter(pService);
 

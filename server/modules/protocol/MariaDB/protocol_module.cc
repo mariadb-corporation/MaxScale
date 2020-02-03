@@ -168,7 +168,7 @@ bool MySQLProtocolModule::parse_authenticator_opts(const std::string& opts,
 }
 
 mxs::ProtocolModule::AuthenticatorList
-MySQLProtocolModule::create_authenticators(const MXS_CONFIG_PARAMETER& params)
+MySQLProtocolModule::create_authenticators(const mxs::ConfigParameters& params)
 {
     // If no authenticator is set, the default authenticator will be loaded.
     auto auth_names = params.get_string(CN_AUTHENTICATOR);

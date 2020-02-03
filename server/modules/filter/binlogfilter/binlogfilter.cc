@@ -46,7 +46,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 }
 
 // BinlogFilter constructor
-BinlogFilter::BinlogFilter(const MXS_CONFIG_PARAMETER* pParams)
+BinlogFilter::BinlogFilter(const mxs::ConfigParameters* pParams)
     : m_config(pParams)
 {
 }
@@ -58,7 +58,7 @@ BinlogFilter::~BinlogFilter()
 
 // static: filter create routine
 BinlogFilter* BinlogFilter::create(const char* zName,
-                                   MXS_CONFIG_PARAMETER* pParams)
+                                   mxs::ConfigParameters* pParams)
 {
     BinlogFilter* rval = nullptr;
     auto src = pParams->get_string(REWRITE_SRC);

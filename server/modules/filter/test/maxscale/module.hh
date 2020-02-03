@@ -35,7 +35,7 @@ public:
      *
      * @return A ConfigParameters object.
      */
-    MXS_CONFIG_PARAMETER* create_default_parameters() const;
+    mxs::ConfigParameters* create_default_parameters() const;
 
     /**
      * Load a module with a specific name, assumed to be of a specific type.

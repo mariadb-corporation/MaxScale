@@ -64,7 +64,7 @@ void config_set_global_defaults();
  * @param dest Container where the default parameters are added
  * @param params Module parameter definitions
  */
-void config_add_defaults(MXS_CONFIG_PARAMETER* dest, const MXS_MODULE_PARAM* params);
+void config_add_defaults(mxs::ConfigParameters* dest, const MXS_MODULE_PARAM* params);
 
 char* config_clean_string_list(const char* str);
 bool  config_load(const char*);
@@ -131,7 +131,7 @@ void config_remove_param(CONFIG_CONTEXT* obj, const char* name);
  * @param ignored_params Set of parameters which should not be added to the output
  * @param output Output JSON object where the parameters are added
  */
-void config_add_module_params_json(const MXS_CONFIG_PARAMETER* parameters,
+void config_add_module_params_json(const mxs::ConfigParameters* parameters,
                                    const std::unordered_set<std::string>& ignored_params,
                                    const MXS_MODULE_PARAM* basic_params,
                                    const MXS_MODULE_PARAM* module_params,
@@ -177,7 +177,7 @@ bool is_normal_server_parameter(const char* param);
  * @param common_param_defs Common module parameter definitions. These are printed first.
  * @param module_param_defs Module-specific parameter definitions.
  */
-std::string generate_config_string(const std::string& instance_name, const MXS_CONFIG_PARAMETER& parameters,
+std::string generate_config_string(const std::string& instance_name, const mxs::ConfigParameters& parameters,
                                    const MXS_MODULE_PARAM* common_param_defs,
                                    const MXS_MODULE_PARAM* module_param_defs);
 
@@ -229,7 +229,7 @@ bool config_set_rebalance_threshold(const char* value);
  * @return True if at least one of the required parameters is missing
  */
 bool missing_required_parameters(const MXS_MODULE_PARAM* mod_params,
-                                 const MXS_CONFIG_PARAMETER& params,
+                                 const mxs::ConfigParameters& params,
                                  const char* name);
 
 typedef struct duplicate_context

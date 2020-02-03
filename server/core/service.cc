@@ -80,7 +80,7 @@ static struct
     std::vector<Service*> services;
 } this_unit;
 
-Service* Service::create(const char* name, const char* router, MXS_CONFIG_PARAMETER* params)
+Service* Service::create(const char* name, const char* router, mxs::ConfigParameters* params)
 {
     MXS_ROUTER_OBJECT* router_api = (MXS_ROUTER_OBJECT*)load_module(router, MODULE_ROUTER);
 
@@ -91,7 +91,7 @@ Service* Service::create(const char* name, const char* router, MXS_CONFIG_PARAME
     }
 
     // TODO: Think of a cleaner way to do this, e.g. reference.
-    MXS_CONFIG_PARAMETER empty;
+    mxs::ConfigParameters empty;
     if (!params)
     {
         params = &empty;
@@ -126,7 +126,7 @@ Service* Service::create(const char* name, const char* router, MXS_CONFIG_PARAME
     return service;
 }
 
-static std::string get_version_string(MXS_CONFIG_PARAMETER* params)
+static std::string get_version_string(mxs::ConfigParameters* params)
 {
     std::string version_string = params->get_string(CN_VERSION_STRING);
 
@@ -196,7 +196,7 @@ uint64_t Service::status() const
     return status;
 }
 
-Service::Config::Config(MXS_CONFIG_PARAMETER* params)
+Service::Config::Config(mxs::ConfigParameters* params)
     : user(params->get_string(CN_USER))
     , password(params->get_string(CN_PASSWORD))
     , weightby(params->get_string(CN_WEIGHTBY))
@@ -219,7 +219,7 @@ Service::Config::Config(MXS_CONFIG_PARAMETER* params)
 
 Service::Service(const std::string& name,
                  const std::string& router_name,
-                 MXS_CONFIG_PARAMETER* params)
+                 mxs::ConfigParameters* params)
     : SERVICE(name, router_name)
     , m_config(params)
     , m_params(*params)
@@ -781,7 +781,7 @@ bool Service::dump_config(const char* filename) const
     const MXS_MODULE* mod = get_module(router_name(), NULL);
     mxb_assert(mod);
 
-    MXS_CONFIG_PARAMETER params_to_print = m_params;
+    mxs::ConfigParameters params_to_print = m_params;
     // The next text-mode parameter may not be up-to-date, print them manually. TODO: Fix
     params_to_print.remove(CN_FILTERS);
     params_to_print.remove(CN_SERVERS);

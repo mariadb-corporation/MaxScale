@@ -108,7 +108,7 @@ static mxs::Endpoint* get_root_master(const Endpoints& endpoints)
     return master_host;
 }
 
-bool RCR::configure(MXS_CONFIG_PARAMETER* params)
+bool RCR::configure(mxs::ConfigParameters* params)
 {
     uint64_t bitmask = 0;
     uint64_t bitvalue = 0;
@@ -168,7 +168,7 @@ RCR::RCR(SERVICE* service)
 }
 
 // static
-RCR* RCR::create(SERVICE* service, MXS_CONFIG_PARAMETER* params)
+RCR* RCR::create(SERVICE* service, mxs::ConfigParameters* params)
 {
     RCR* inst = new(std::nothrow) RCR(service);
 

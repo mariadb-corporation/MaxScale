@@ -60,7 +60,7 @@ public:
     static const char* treat_string_arg_as_field_name;
     static const char* treat_string_arg_as_field_default;
 
-    MaskingFilterConfig(const char* zName, const MXS_CONFIG_PARAMETER* pParams)
+    MaskingFilterConfig(const char* zName, const mxs::ConfigParameters* pParams)
         : m_name(zName)
         , m_large_payload(get_large_payload(pParams))
         , m_rules(get_rules(pParams))
@@ -177,15 +177,15 @@ public:
         return prevent_function_usage() || check_user_variables() || check_unions() || check_subqueries();
     }
 
-    static large_payload_t      get_large_payload(const MXS_CONFIG_PARAMETER* pParams);
-    static std::string          get_rules(const MXS_CONFIG_PARAMETER* pParams);
-    static warn_type_mismatch_t get_warn_type_mismatch(const MXS_CONFIG_PARAMETER* pParams);
-    static bool                 get_prevent_function_usage(const MXS_CONFIG_PARAMETER* pParams);
-    static bool                 get_check_user_variables(const MXS_CONFIG_PARAMETER* pParams);
-    static bool                 get_check_unions(const MXS_CONFIG_PARAMETER* pParams);
-    static bool                 get_check_subqueries(const MXS_CONFIG_PARAMETER* pParams);
-    static bool                 get_require_fully_parsed(const MXS_CONFIG_PARAMETER* pParams);
-    static bool                 get_treat_string_arg_as_field(const MXS_CONFIG_PARAMETER* pParams);
+    static large_payload_t      get_large_payload(const mxs::ConfigParameters* pParams);
+    static std::string          get_rules(const mxs::ConfigParameters* pParams);
+    static warn_type_mismatch_t get_warn_type_mismatch(const mxs::ConfigParameters* pParams);
+    static bool                 get_prevent_function_usage(const mxs::ConfigParameters* pParams);
+    static bool                 get_check_user_variables(const mxs::ConfigParameters* pParams);
+    static bool                 get_check_unions(const mxs::ConfigParameters* pParams);
+    static bool                 get_check_subqueries(const mxs::ConfigParameters* pParams);
+    static bool                 get_require_fully_parsed(const mxs::ConfigParameters* pParams);
+    static bool                 get_treat_string_arg_as_field(const mxs::ConfigParameters* pParams);
 
 private:
     std::string          m_name;

@@ -54,7 +54,7 @@ struct Config
     std::set<std::string> ignored_tables;   /**< Set of ignored tables */
     SERVER*               preferred_server; /**< Server to prefer in conflict situations */
 
-    Config(MXS_CONFIG_PARAMETER* conf);
+    Config(mxs::ConfigParameters* conf);
 
     ~Config()
     {

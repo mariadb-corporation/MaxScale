@@ -62,7 +62,7 @@ ThrottleFilter::ThrottleFilter(const ThrottleConfig& config)
 {
 }
 
-ThrottleFilter* ThrottleFilter::create(const char* zName, MXS_CONFIG_PARAMETER* pParams)
+ThrottleFilter* ThrottleFilter::create(const char* zName, mxs::ConfigParameters* pParams)
 {
     int max_qps = pParams->get_integer(MAX_QPS_CFG);
     int sample_msecs =

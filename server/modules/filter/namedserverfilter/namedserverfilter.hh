@@ -59,13 +59,13 @@ public:
                     const MappingVector& map,
                     int ovector_size);
     ~RegexHintFilter();
-    static RegexHintFilter* create(const char* zName, MXS_CONFIG_PARAMETER* ppParams);
+    static RegexHintFilter* create(const char* zName, mxs::ConfigParameters* ppParams);
     RegexHintFSession*      newSession(MXS_SESSION* session, SERVICE* service);
     json_t*                 diagnostics() const;
     uint64_t                getCapabilities();
     const RegexToServers*   find_servers(char* sql, int sql_len, pcre2_match_data* mdata);
 
-    static void form_regex_server_mapping(MXS_CONFIG_PARAMETER* params,
+    static void form_regex_server_mapping(mxs::ConfigParameters* params,
                                           int pcre_ops,
                                           MappingVector* mapping,
                                           uint32_t* max_capcount_out);

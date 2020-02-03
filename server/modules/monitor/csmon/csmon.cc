@@ -129,7 +129,7 @@ void CsMonitor::update_server_status(MonitorServer* srv)
     srv->set_pending_status(status);
 }
 
-bool CsMonitor::configure(const MXS_CONFIG_PARAMETER* pParams)
+bool CsMonitor::configure(const mxs::ConfigParameters* pParams)
 {
     if (!MonitorWorkerSimple::configure(pParams))
     {

@@ -134,7 +134,7 @@ public:
     static constexpr const uint64_t CAPABILITIES {RCAP_TYPE_CONTIGUOUS_INPUT | RCAP_TYPE_RESULTSET_OUTPUT};
 
     ~RRRouter();
-    static RRRouter* create(SERVICE* pService, MXS_CONFIG_PARAMETER* params);
+    static RRRouter* create(SERVICE* pService, mxs::ConfigParameters* params);
     RRRouterSession* newSession(MXS_SESSION* session, const Endpoints& endpoints);
     json_t*          diagnostics() const;
 
@@ -174,7 +174,7 @@ RRRouter::RRRouter(SERVICE* service)
 {
     RR_DEBUG("Creating instance.");
     /* Read options specific to round robin router. */
-    const MXS_CONFIG_PARAMETER& params = service->params();
+    const mxs::ConfigParameters& params = service->params();
     m_max_backends = params.get_integer(MAX_BACKENDS);
     m_write_server = params.get_server(WRITE_BACKEND);
     m_print_on_routing = params.get_bool(PRINT_ON_ROUTING);
@@ -253,7 +253,7 @@ RRRouterSession* RRRouter::newSession(MXS_SESSION* session, const Endpoints& end
  * @param options   The options for this query router
  * @return          NULL in failure, pointer to router in success.
  */
-RRRouter* RRRouter::create(SERVICE* pService, MXS_CONFIG_PARAMETER* params)
+RRRouter* RRRouter::create(SERVICE* pService, mxs::ConfigParameters* params)
 {
     return new(std::nothrow) RRRouter(pService);
 }

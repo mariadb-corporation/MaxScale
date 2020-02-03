@@ -155,7 +155,7 @@ CacheFilter::~CacheFilter()
 }
 
 // static
-CacheFilter* CacheFilter::create(const char* zName, MXS_CONFIG_PARAMETER* ppParams)
+CacheFilter* CacheFilter::create(const char* zName, mxs::ConfigParameters* ppParams)
 {
     CacheFilter* pFilter = new CacheFilter(zName);
 

@@ -492,7 +492,7 @@ const char* Monitor::name() const
 using std::chrono::milliseconds;
 using std::chrono::seconds;
 
-bool Monitor::configure(const MXS_CONFIG_PARAMETER* params)
+bool Monitor::configure(const mxs::ConfigParameters* params)
 {
     m_settings.interval = params->get_duration<milliseconds>(CN_MONITOR_INTERVAL).count();
     m_settings.journal_max_age = params->get_duration<seconds>(CN_JOURNAL_MAX_AGE).count();
@@ -573,7 +573,7 @@ bool Monitor::configure(const MXS_CONFIG_PARAMETER* params)
     return !error;
 }
 
-const MXS_CONFIG_PARAMETER& Monitor::parameters() const
+const mxs::ConfigParameters& Monitor::parameters() const
 {
     return m_parameters;
 }
@@ -2093,7 +2093,7 @@ void MonitorServer::update_disk_space_status()
     }
 }
 
-bool MonitorWorker::configure(const MXS_CONFIG_PARAMETER* pParams)
+bool MonitorWorker::configure(const mxs::ConfigParameters* pParams)
 {
     return Monitor::configure(pParams);
 }

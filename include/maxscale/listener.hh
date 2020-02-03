@@ -52,7 +52,7 @@ public:
      * @param params Associated listener settings
      * @return New listener data object for test sessions
      */
-    static std::shared_ptr<mxs::ListenerSessionData> create_test_data(const MXS_CONFIG_PARAMETER& params);
+    static std::shared_ptr<mxs::ListenerSessionData> create_test_data(const mxs::ConfigParameters& params);
 
     ListenerSessionData(SSLContext ssl, qc_sql_mode_t default_sql_mode, SERVICE* service,
                         SProtocol protocol_module, const std::string& listener_name,

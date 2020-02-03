@@ -99,7 +99,7 @@ void careful_strcpy(char* dest, size_t max_len, const std::string& source)
 }
 }
 
-Server* Server::server_alloc(const char* name, const MXS_CONFIG_PARAMETER& params)
+Server* Server::server_alloc(const char* name, const mxs::ConfigParameters& params)
 {
     auto monuser = params.get_string(CN_MONITORUSER);
     auto monpw = params.get_string(CN_MONITORPW);

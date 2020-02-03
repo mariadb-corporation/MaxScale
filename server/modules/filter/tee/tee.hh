@@ -32,7 +32,7 @@ class Tee : public mxs::Filter<Tee, TeeSession>
     const Tee& operator=(const Tee&);
 public:
 
-    static Tee* create(const char* zName, MXS_CONFIG_PARAMETER* ppParams);
+    static Tee* create(const char* zName, mxs::ConfigParameters* ppParams);
     TeeSession* newSession(MXS_SESSION* session, SERVICE* service);
     json_t*     diagnostics() const;
 
@@ -77,7 +77,7 @@ public:
     }
 
 private:
-    Tee(const char* name, MXS_CONFIG_PARAMETER* params);
+    Tee(const char* name, mxs::ConfigParameters* params);
 
     std::string  m_name;
     mxs::Target* m_target;

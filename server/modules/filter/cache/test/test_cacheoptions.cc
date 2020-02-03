@@ -284,7 +284,7 @@ int test(FilterModule::Instance& filter_instance, const TEST_CASE& tc)
 
     static int port = 3306;
 
-    MXS_CONFIG_PARAMETER parameters;
+    mxs::ConfigParameters parameters;
     parameters.set("max_retry_interval", "10s");
     parameters.set("connection_timeout", "10s");
     parameters.set(CN_NET_WRITE_TIMEOUT, "10s");
@@ -292,7 +292,7 @@ int test(FilterModule::Instance& filter_instance, const TEST_CASE& tc)
 
     auto service = Service::create("service", "readconnroute", &parameters);
 
-    MXS_CONFIG_PARAMETER listener_params;
+    mxs::ConfigParameters listener_params;
     listener_params.set(CN_ADDRESS, "0.0.0.0");
     listener_params.set(CN_PORT, std::to_string(port++).c_str());
     listener_params.set(CN_PROTOCOL, "mariadbclient");

@@ -38,7 +38,7 @@ public:
     QlaInstance(const QlaInstance&) = delete;
     QlaInstance& operator=(const QlaInstance&) = delete;
 
-    QlaInstance(const std::string& name, MXS_CONFIG_PARAMETER* params);
+    QlaInstance(const std::string& name, mxs::ConfigParameters* params);
     ~QlaInstance();
 
     /* Log file save mode flags. */
@@ -70,7 +70,7 @@ public:
      * @param params    The array of name/value pair parameters for the filter
      * @return          The new filter instance, or NULL on error
      */
-    static QlaInstance* create(const std::string name, MXS_CONFIG_PARAMETER* params);
+    static QlaInstance* create(const std::string name, mxs::ConfigParameters* params);
 
     /**
      * Read contents of unified log file and save to json object.
@@ -95,7 +95,7 @@ public:
     class Settings
     {
     public:
-        Settings(MXS_CONFIG_PARAMETER* params);
+        Settings(mxs::ConfigParameters* params);
 
         bool        write_unified_log {false};
         bool        write_session_log {false};

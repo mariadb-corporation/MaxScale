@@ -24,7 +24,7 @@ static constexpr const char REWRITE_DEST[] = "rewrite_dest";
 // Binlog Filter configuration
 struct BinlogConfig
 {
-    BinlogConfig(const MXS_CONFIG_PARAMETER* pParams)
+    BinlogConfig(const mxs::ConfigParameters* pParams)
         : match(pParams->get_compiled_regex("match", 0, nullptr).release())
         , md_match(match ? pcre2_match_data_create_from_pattern(match, nullptr) : nullptr)
         , exclude(pParams->get_compiled_regex("exclude", 0, nullptr).release())
@@ -55,7 +55,7 @@ public:
 
     // Creates a new filter instance
     static BinlogFilter* create(const char* zName,
-                                MXS_CONFIG_PARAMETER* ppParams);
+                                mxs::ConfigParameters* ppParams);
 
     // Creates a new session for this filter
     BinlogFilterSession* newSession(MXS_SESSION* pSession, SERVICE* pService);
@@ -74,7 +74,7 @@ public:
 
 private:
     // Constructor: used in the create function
-    BinlogFilter(const MXS_CONFIG_PARAMETER* pParams);
+    BinlogFilter(const mxs::ConfigParameters* pParams);
 
 private:
     BinlogConfig m_config;

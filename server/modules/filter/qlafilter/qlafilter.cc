@@ -104,7 +104,7 @@ void print_string_replace_newlines(const char* sql_string, size_t sql_str_len,
 bool check_replace_file(const string& filename, FILE** ppFile);
 }
 
-QlaInstance::QlaInstance(const string& name, MXS_CONFIG_PARAMETER* params)
+QlaInstance::QlaInstance(const string& name, mxs::ConfigParameters* params)
     : m_settings(params)
     , m_name(name)
     , m_session_data_flags(m_settings.log_file_data_flags & ~LOG_DATA_SESSION)
@@ -112,7 +112,7 @@ QlaInstance::QlaInstance(const string& name, MXS_CONFIG_PARAMETER* params)
 {
 }
 
-QlaInstance::Settings::Settings(MXS_CONFIG_PARAMETER* params)
+QlaInstance::Settings::Settings(mxs::ConfigParameters* params)
     : log_file_data_flags(params->get_enum(PARAM_LOG_DATA, log_data_values))
     , filebase(params->get_string(PARAM_FILEBASE))
     , flush_writes(params->get_bool(PARAM_FLUSH))
@@ -168,7 +168,7 @@ void QlaFilterSession::close()
     m_event_data.clear();
 }
 
-QlaInstance* QlaInstance::create(const std::string name, MXS_CONFIG_PARAMETER* params)
+QlaInstance* QlaInstance::create(const std::string name, mxs::ConfigParameters* params)
 {
     QlaInstance* my_instance = NULL;
 
@@ -837,7 +837,7 @@ bool check_replace_file(const string& filename, FILE** ppFile)
     return newfile;
 }
 
-MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params)
+MXS_FILTER* createInstance(const char* name, mxs::ConfigParameters* params)
 {
     return QlaInstance::create(name, params);
 }

@@ -174,7 +174,7 @@ MaskingFilter::~MaskingFilter()
 }
 
 // static
-MaskingFilter* MaskingFilter::create(const char* zName, MXS_CONFIG_PARAMETER* pParams)
+MaskingFilter* MaskingFilter::create(const char* zName, mxs::ConfigParameters* pParams)
 {
     MaskingFilter* pFilter = NULL;
 

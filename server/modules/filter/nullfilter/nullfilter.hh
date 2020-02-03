@@ -20,7 +20,7 @@ class NullFilter : public maxscale::Filter<NullFilter, NullFilterSession>
 {
 public:
     ~NullFilter();
-    static NullFilter* create(const char* zName, MXS_CONFIG_PARAMETER* pParams);
+    static NullFilter* create(const char* zName, mxs::ConfigParameters* pParams);
 
     NullFilterSession* newSession(MXS_SESSION* pSession, SERVICE* pService);
 

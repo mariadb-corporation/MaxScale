@@ -36,7 +36,7 @@
  *      user=<username to limit filter>
  */
 
-static MXS_FILTER*         createInstance(const char* name, MXS_CONFIG_PARAMETER* params);
+static MXS_FILTER*         createInstance(const char* name, mxs::ConfigParameters* params);
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
                                       MXS_SESSION* session,
                                       SERVICE* service,
@@ -206,7 +206,7 @@ void free_instance(RegexInstance* instance)
  *
  * @return The instance data for this new instance
  */
-static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params)
+static MXS_FILTER* createInstance(const char* name, mxs::ConfigParameters* params)
 {
     RegexInstance* my_instance = static_cast<RegexInstance*>(MXS_CALLOC(1, sizeof(RegexInstance)));
 

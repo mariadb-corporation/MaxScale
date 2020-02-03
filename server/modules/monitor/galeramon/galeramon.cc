@@ -108,7 +108,7 @@ json_t* GaleraMonitor::diagnostics() const
     return rval;
 }
 
-bool GaleraMonitor::configure(const MXS_CONFIG_PARAMETER* params)
+bool GaleraMonitor::configure(const mxs::ConfigParameters* params)
 {
     if (!MonitorWorkerSimple::configure(params))
     {

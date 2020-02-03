@@ -25,7 +25,7 @@ Cat::~Cat()
 {
 }
 
-Cat* Cat::create(SERVICE* pService, MXS_CONFIG_PARAMETER* params)
+Cat* Cat::create(SERVICE* pService, mxs::ConfigParameters* params)
 {
     return new Cat(pService);
 }

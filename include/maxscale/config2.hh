@@ -77,7 +77,7 @@ public:
      * @return True, if they represent valid parameters - all mandatory are present,
      *         all present ones are of corrent type - for this configuration.
      */
-    bool validate(const MXS_CONFIG_PARAMETER& params) const;
+    bool validate(const mxs::ConfigParameters& params) const;
 
     /**
      * Configure configuration
@@ -87,7 +87,7 @@ public:
      *
      * @return True if could be configured.
      */
-    bool configure(Configuration& configuration, const MXS_CONFIG_PARAMETER& params) const;
+    bool configure(Configuration& configuration, const mxs::ConfigParameters& params) const;
 
     /**
      * Find given parameter of the specification.
@@ -314,7 +314,7 @@ public:
      *
      * @return The value of this parameter.
      */
-    value_type get(const MXS_CONFIG_PARAMETER& params) const;
+    value_type get(const mxs::ConfigParameters& params) const;
 
 private:
     ParamBool(Specification* pSpecification,
@@ -372,7 +372,7 @@ public:
      *
      * @return The value of this parameter.
      */
-    value_type get(const MXS_CONFIG_PARAMETER& params) const;
+    value_type get(const mxs::ConfigParameters& params) const;
 
 protected:
     ParamNumber(Specification* pSpecification,
@@ -588,7 +588,7 @@ public:
      *
      * @return The value of this parameter.
      */
-    value_type get(const MXS_CONFIG_PARAMETER& params) const;
+    value_type get(const mxs::ConfigParameters& params) const;
 
 private:
     ParamDuration(Specification* pSpecification,
@@ -664,7 +664,7 @@ public:
      *
      * @return The value of this parameter.
      */
-    value_type get(const MXS_CONFIG_PARAMETER& params) const;
+    value_type get(const mxs::ConfigParameters& params) const;
 
 private:
     ParamEnum(Specification* pSpecification,
@@ -747,7 +747,7 @@ public:
      *
      * @return The value of this parameter.
      */
-    value_type get(const MXS_CONFIG_PARAMETER& params) const;
+    value_type get(const mxs::ConfigParameters& params) const;
 
 private:
     ParamPath(Specification* pSpecification,
@@ -810,7 +810,7 @@ public:
      *
      * @return The value of this parameter.
      */
-    value_type get(const MXS_CONFIG_PARAMETER& params) const;
+    value_type get(const mxs::ConfigParameters& params) const;
 };
 
 /**
@@ -856,7 +856,7 @@ public:
      *
      * @return The value of this parameter.
      */
-    value_type get(const MXS_CONFIG_PARAMETER& params) const;
+    value_type get(const mxs::ConfigParameters& params) const;
 };
 
 /**
@@ -910,7 +910,7 @@ public:
      *
      * @return The value of this parameter.
      */
-    value_type get(const MXS_CONFIG_PARAMETER& params) const;
+    value_type get(const mxs::ConfigParameters& params) const;
 
 private:
     ParamSize(Specification* pSpecification,
@@ -978,7 +978,7 @@ public:
      *
      * @return The value of this parameter.
      */
-    value_type get(const MXS_CONFIG_PARAMETER& params) const;
+    value_type get(const mxs::ConfigParameters& params) const;
 
 private:
     ParamString(Specification* pSpecification,
@@ -1057,7 +1057,7 @@ public:
      *
      * @note The default implementation returns true.
      */
-    virtual bool post_configure(const MXS_CONFIG_PARAMETER& params);
+    virtual bool post_configure(const mxs::ConfigParameters& params);
 
     /**
      * @return The number of values in the configuration.
@@ -1666,7 +1666,7 @@ std::string ParamDuration<T>::to_string(const value_type& value) const
 }
 
 template<class T>
-typename ParamDuration<T>::value_type ParamDuration<T>::get(const MXS_CONFIG_PARAMETER& params) const
+typename ParamDuration<T>::value_type ParamDuration<T>::get(const mxs::ConfigParameters& params) const
 {
     value_type rv { m_default_value };
 
@@ -1827,7 +1827,7 @@ void ParamEnum<T>::populate(MXS_MODULE_PARAM& param) const
 }
 
 template<class T>
-typename ParamEnum<T>::value_type ParamEnum<T>::get(const MXS_CONFIG_PARAMETER& params) const
+typename ParamEnum<T>::value_type ParamEnum<T>::get(const mxs::ConfigParameters& params) const
 {
     value_type rv { m_default_value };
 

@@ -29,7 +29,7 @@ public:
 
     static void apiFreeSession(MXS_FILTER*, MXS_FILTER_SESSION* pData);
 
-    static CacheFilter* create(const char* zName, MXS_CONFIG_PARAMETER* ppParams);
+    static CacheFilter* create(const char* zName, mxs::ConfigParameters* ppParams);
 
     Cache& cache()
     {

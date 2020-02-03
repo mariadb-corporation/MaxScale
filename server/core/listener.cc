@@ -126,7 +126,7 @@ Listener::Listener(Service* service,
                    const std::string& address,
                    uint16_t port,
                    const std::string& protocol,
-                   const MXS_CONFIG_PARAMETER& params,
+                   const mxs::ConfigParameters& params,
                    unique_ptr<ListenerSessionData> shared_data)
     : MXB_POLL_DATA{Listener::poll_handler}
     , m_name(name)
@@ -163,7 +163,7 @@ Listener::~Listener()
 
 SListener Listener::create(const std::string& name,
                            const std::string& protocol,
-                           const MXS_CONFIG_PARAMETER& params)
+                           const mxs::ConfigParameters& params)
 {
     mxb::LogScope scope(name.c_str());
     bool port_defined = params.contains(CN_PORT);
@@ -960,7 +960,7 @@ void Listener::accept_connections()
  * @return Shared data on success
  */
 unique_ptr<mxs::ListenerSessionData>
-Listener::create_shared_data(const MXS_CONFIG_PARAMETER& params, const std::string& listener_name)
+Listener::create_shared_data(const mxs::ConfigParameters& params, const std::string& listener_name)
 {
     auto protocol_name = params.get_string(CN_PROTOCOL);
     auto protocol_namez = protocol_name.c_str();
@@ -1066,7 +1066,7 @@ ListenerSessionData::ListenerSessionData(SSLContext ssl, qc_sql_mode_t default_s
 }
 
 std::shared_ptr<mxs::ListenerSessionData>
-ListenerSessionData::create_test_data(const MXS_CONFIG_PARAMETER& params)
+ListenerSessionData::create_test_data(const mxs::ConfigParameters& params)
 {
     auto data = Listener::create_shared_data(params, "test_listener");
     return std::shared_ptr<mxs::ListenerSessionData>(std::move(data));

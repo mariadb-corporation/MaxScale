@@ -30,7 +30,7 @@ protected:
 
 private:
     CsMonitor(const std::string& name, const std::string& module);
-    bool configure(const MXS_CONFIG_PARAMETER* pParams) override;
+    bool configure(const mxs::ConfigParameters* pParams) override;
 
     SERVER* m_primary;
 };

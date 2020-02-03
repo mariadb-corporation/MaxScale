@@ -46,7 +46,7 @@ public:
 
         static void populate(MXS_MODULE& module);
 
-        bool configure(const MXS_CONFIG_PARAMETER& params);
+        bool configure(const mxs::ConfigParameters& params);
 
         mxs::Target* master() const
         {
@@ -59,20 +59,20 @@ public:
         }
 
     private:
-        bool post_configure(const MXS_CONFIG_PARAMETER& params) override;
+        bool post_configure(const mxs::ConfigParameters& params) override;
 
     private:
         config::Target m_master;
         config::Bool   m_persist_performance_data;
     };
 
-    static SmartRouter* create(SERVICE* pService, MXS_CONFIG_PARAMETER* pParams);
+    static SmartRouter* create(SERVICE* pService, mxs::ConfigParameters* pParams);
 
     SmartRouterSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints);
 
     json_t*  diagnostics() const;
     uint64_t getCapabilities();
-    bool     configure(MXS_CONFIG_PARAMETER* pParams);
+    bool     configure(mxs::ConfigParameters* pParams);
 
     SERVICE* service() const;
 

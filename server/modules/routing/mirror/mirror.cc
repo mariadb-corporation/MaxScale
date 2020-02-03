@@ -15,7 +15,7 @@
 #include "mirrorsession.hh"
 
 // static
-Mirror* Mirror::create(SERVICE* pService, MXS_CONFIG_PARAMETER* params)
+Mirror* Mirror::create(SERVICE* pService, mxs::ConfigParameters* params)
 {
     std::unique_ptr<Mirror> rval(new Mirror(pService));
 
@@ -63,7 +63,7 @@ uint64_t Mirror::getCapabilities()
     return caps;
 }
 
-bool Mirror::configure(MXS_CONFIG_PARAMETER* params)
+bool Mirror::configure(mxs::ConfigParameters* params)
 {
     bool rval = false;
     auto main_tgt = params->get_target("main");

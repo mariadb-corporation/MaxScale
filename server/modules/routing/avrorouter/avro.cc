@@ -118,7 +118,7 @@ Avro* Avro::create(SERVICE* service)
     return new(std::nothrow) Avro(service, &params, source_service);
 }
 
-Avro::Avro(SERVICE* service, MXS_CONFIG_PARAMETER* params, SERVICE* source)
+Avro::Avro(SERVICE* service, mxs::ConfigParameters* params, SERVICE* source)
     : service(service)
     , filestem(params->get_string("filestem"))
     , binlogdir(params->get_string("binlogdir"))

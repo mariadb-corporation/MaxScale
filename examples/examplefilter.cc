@@ -60,7 +60,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     return &info;
 }
 
-ExampleFilter::ExampleFilter(const MXS_CONFIG_PARAMETER* pParams)
+ExampleFilter::ExampleFilter(const mxs::ConfigParameters* pParams)
 {
     m_collect_global_counts = pParams->get_bool(CN_COUNT_GLOBALS);
 }
@@ -70,7 +70,7 @@ ExampleFilter::~ExampleFilter()
 }
 
 // static
-ExampleFilter* ExampleFilter::create(const char* zName, MXS_CONFIG_PARAMETER* pParams)
+ExampleFilter* ExampleFilter::create(const char* zName, mxs::ConfigParameters* pParams)
 {
     return new ExampleFilter(pParams);
 }

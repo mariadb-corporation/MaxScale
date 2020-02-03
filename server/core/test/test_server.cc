@@ -33,7 +33,7 @@
 #include "../internal/server.hh"
 #include "../internal/servermanager.hh"
 
-static MXS_CONFIG_PARAMETER* params = new MXS_CONFIG_PARAMETER;
+static mxs::ConfigParameters* params = new mxs::ConfigParameters;
 
 /**
  * test1    Allocate a server and do lots of other things
@@ -88,7 +88,7 @@ bool test_load_config(const char* input, Server* server)
         if (config_load_single_file(input, &dcontext, &ccontext))
         {
             CONFIG_CONTEXT* obj = ccontext.m_next;
-            MXS_CONFIG_PARAMETER* param = &obj->m_parameters;
+            mxs::ConfigParameters* param = &obj->m_parameters;
             config_add_defaults(&obj->m_parameters, common_server_params());
 
             TEST(strcmp(obj->name(), server->name()) == 0, "Server names differ");

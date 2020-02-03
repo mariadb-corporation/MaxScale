@@ -242,7 +242,7 @@ static void log_router_options_not_supported(SERVICE* service, std::string route
  */
 
 
-RWSplit* RWSplit::create(SERVICE* service, MXS_CONFIG_PARAMETER* params)
+RWSplit* RWSplit::create(SERVICE* service, mxs::ConfigParameters* params)
 {
 
     if (params->contains(CN_ROUTER_OPTIONS))
@@ -328,7 +328,7 @@ uint64_t RWSplit::getCapabilities()
     return CAPABILITIES;
 }
 
-bool RWSplit::configure(MXS_CONFIG_PARAMETER* params)
+bool RWSplit::configure(mxs::ConfigParameters* params)
 {
     bool rval = false;
     Config cnf(params);

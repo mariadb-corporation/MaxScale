@@ -39,7 +39,7 @@ public:
 
     std::unique_ptr<mxs::UserAccountManager> create_user_data_manager() override;
 
-    AuthenticatorList create_authenticators(const MXS_CONFIG_PARAMETER& params) override;
+    AuthenticatorList create_authenticators(const mxs::ConfigParameters& params) override;
 
 private:
     bool parse_authenticator_opts(const std::string& opts, const AuthenticatorList& authenticators);

@@ -62,7 +62,7 @@ static struct
  *
  * @return The newly created filter or NULL if an error occurred
  */
-SFilterDef filter_alloc(const char* name, const char* module, MXS_CONFIG_PARAMETER* params)
+SFilterDef filter_alloc(const char* name, const char* module, mxs::ConfigParameters* params)
 {
     MXS_FILTER_OBJECT* object = (MXS_FILTER_OBJECT*)load_module(module, MODULE_FILTER);
 
@@ -105,7 +105,7 @@ FilterDef::FilterDef(std::string name,
                      std::string module,
                      MXS_FILTER_OBJECT* object,
                      MXS_FILTER* instance,
-                     MXS_CONFIG_PARAMETER* params)
+                     mxs::ConfigParameters* params)
     : name(name)
     , module(module)
     , parameters(*params)

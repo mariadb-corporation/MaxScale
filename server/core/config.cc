@@ -1426,13 +1426,13 @@ static bool process_config_context(CONFIG_CONTEXT* context)
     return error_count == 0;
 }
 
-bool MXS_CONFIG_PARAMETER::get_bool(const std::string& key) const
+bool mxs::ConfigParameters::get_bool(const std::string& key) const
 {
     string param_value = get_string(key);
     return param_value.empty() ? false : config_truth_value(param_value.c_str());
 }
 
-uint64_t MXS_CONFIG_PARAMETER::get_size(const std::string& key) const
+uint64_t mxs::ConfigParameters::get_size(const std::string& key) const
 {
     string param_value = get_string(key);
     uint64_t intval = 0;
@@ -1441,7 +1441,7 @@ uint64_t MXS_CONFIG_PARAMETER::get_size(const std::string& key) const
     return intval;
 }
 
-milliseconds MXS_CONFIG_PARAMETER::get_duration_in_ms(const std::string& key,
+milliseconds mxs::ConfigParameters::get_duration_in_ms(const std::string& key,
                                                       mxs::config::DurationInterpretation interpretation)
 const
 {
@@ -1453,7 +1453,7 @@ const
     return duration;
 }
 
-int64_t MXS_CONFIG_PARAMETER::get_enum(const std::string& key, const MXS_ENUM_VALUE* enum_mapping) const
+int64_t mxs::ConfigParameters::get_enum(const std::string& key, const MXS_ENUM_VALUE* enum_mapping) const
 {
     int64_t rv = 0;
 
@@ -1473,19 +1473,19 @@ int64_t MXS_CONFIG_PARAMETER::get_enum(const std::string& key, const MXS_ENUM_VA
     return rv;
 }
 
-SERVICE* MXS_CONFIG_PARAMETER::get_service(const std::string& key) const
+SERVICE* mxs::ConfigParameters::get_service(const std::string& key) const
 {
     string param_value = get_string(key);
     return service_find(param_value.c_str());
 }
 
-SERVER* MXS_CONFIG_PARAMETER::get_server(const std::string& key) const
+SERVER* mxs::ConfigParameters::get_server(const std::string& key) const
 {
     string param_value = get_string(key);
     return ServerManager::find_by_unique_name(param_value.c_str());
 }
 
-bool MXS_CONFIG_PARAMETER::contains(const string& key) const
+bool mxs::ConfigParameters::contains(const string& key) const
 {
     // Because of how the parameters are used, this method can be called through a null pointer.
     // Handle this here for now. TODO: Refactor away.
@@ -1493,7 +1493,7 @@ bool MXS_CONFIG_PARAMETER::contains(const string& key) const
     return can_be_null ? m_contents.count(key) > 0 : false;
 }
 
-std::vector<SERVER*> MXS_CONFIG_PARAMETER::get_server_list(const string& key, string* name_error_out) const
+std::vector<SERVER*> mxs::ConfigParameters::get_server_list(const string& key, string* name_error_out) const
 {
     auto names_list = get_string(key);
     auto server_names = config_break_list_string(names_list);
@@ -1514,12 +1514,12 @@ std::vector<SERVER*> MXS_CONFIG_PARAMETER::get_server_list(const string& key, st
     return server_arr;
 }
 
-mxs::Target* MXS_CONFIG_PARAMETER::get_target(const string& key) const
+mxs::Target* mxs::ConfigParameters::get_target(const string& key) const
 {
     return mxs::Target::find(get_string(key));
 }
 
-std::vector<mxs::Target*> MXS_CONFIG_PARAMETER::get_target_list(const string& key) const
+std::vector<mxs::Target*> mxs::ConfigParameters::get_target_list(const string& key) const
 {
     std::vector<mxs::Target*> targets;
 
@@ -1532,7 +1532,7 @@ std::vector<mxs::Target*> MXS_CONFIG_PARAMETER::get_target_list(const string& ke
     return targets;
 }
 
-char* MXS_CONFIG_PARAMETER::get_c_str_copy(const string& key) const
+char* mxs::ConfigParameters::get_c_str_copy(const string& key) const
 {
     string value = get_string(key);
     char* rval = NULL;
@@ -1543,7 +1543,7 @@ char* MXS_CONFIG_PARAMETER::get_c_str_copy(const string& key) const
     return rval;
 }
 
-std::unique_ptr<pcre2_code> MXS_CONFIG_PARAMETER::get_compiled_regex(const string& key, uint32_t options,
+std::unique_ptr<pcre2_code> mxs::ConfigParameters::get_compiled_regex(const string& key, uint32_t options,
                                                                      uint32_t* output_ovec_size) const
 {
     auto regex_string = get_string(key);
@@ -1559,7 +1559,7 @@ std::unique_ptr<pcre2_code> MXS_CONFIG_PARAMETER::get_compiled_regex(const strin
     return code;
 }
 
-std::vector<std::unique_ptr<pcre2_code>> MXS_CONFIG_PARAMETER::get_compiled_regexes(
+std::vector<std::unique_ptr<pcre2_code>> mxs::ConfigParameters::get_compiled_regexes(
     const std::vector<string>& keys,
     uint32_t options,
     uint32_t* ovec_size_out,
@@ -1602,7 +1602,7 @@ std::vector<std::unique_ptr<pcre2_code>> MXS_CONFIG_PARAMETER::get_compiled_rege
     return rval;
 }
 
-string MXS_CONFIG_PARAMETER::get_string(const std::string& key) const
+string mxs::ConfigParameters::get_string(const std::string& key) const
 {
     string rval;
     auto iter = m_contents.find(key);
@@ -1613,13 +1613,13 @@ string MXS_CONFIG_PARAMETER::get_string(const std::string& key) const
     return rval;
 }
 
-int64_t MXS_CONFIG_PARAMETER::get_integer(const std::string& key) const
+int64_t mxs::ConfigParameters::get_integer(const std::string& key) const
 {
     string value = get_string(key);
     return value.empty() ? 0 : strtoll(value.c_str(), NULL, 10);
 }
 
-void config_free_one_param(MXS_CONFIG_PARAMETER* p1)
+void config_free_one_param(mxs::ConfigParameters* p1)
 {
     if (p1)
     {
@@ -1662,12 +1662,12 @@ bool config_append_param(CONFIG_CONTEXT* obj, const char* key, const char* value
     return rval;
 }
 
-void MXS_CONFIG_PARAMETER::set(const std::string& key, const std::string& value)
+void mxs::ConfigParameters::set(const std::string& key, const std::string& value)
 {
     m_contents[key] = value;
 }
 
-void MXS_CONFIG_PARAMETER::set_multiple(const MXS_CONFIG_PARAMETER& source)
+void mxs::ConfigParameters::set_multiple(const mxs::ConfigParameters& source)
 {
     for (const auto& elem : source)
     {
@@ -1675,7 +1675,7 @@ void MXS_CONFIG_PARAMETER::set_multiple(const MXS_CONFIG_PARAMETER& source)
     }
 }
 
-void MXS_CONFIG_PARAMETER::set_from_list(std::vector<std::pair<std::string, std::string>> list,
+void mxs::ConfigParameters::set_from_list(std::vector<std::pair<std::string, std::string>> list,
                                          const MXS_MODULE_PARAM* module_params)
 {
     // Add custom values.
@@ -1697,27 +1697,27 @@ void MXS_CONFIG_PARAMETER::set_from_list(std::vector<std::pair<std::string, std:
     }
 }
 
-void MXS_CONFIG_PARAMETER::remove(const string& key)
+void mxs::ConfigParameters::remove(const string& key)
 {
     m_contents.erase(key);
 }
 
-void MXS_CONFIG_PARAMETER::clear()
+void mxs::ConfigParameters::clear()
 {
     m_contents.clear();
 }
 
-bool MXS_CONFIG_PARAMETER::empty() const
+bool mxs::ConfigParameters::empty() const
 {
     return m_contents.empty();
 }
 
-MXS_CONFIG_PARAMETER::ContainerType::const_iterator MXS_CONFIG_PARAMETER::begin() const
+mxs::ConfigParameters::ContainerType::const_iterator mxs::ConfigParameters::begin() const
 {
     return m_contents.begin();
 }
 
-MXS_CONFIG_PARAMETER::ContainerType::const_iterator MXS_CONFIG_PARAMETER::end() const
+mxs::ConfigParameters::ContainerType::const_iterator mxs::ConfigParameters::end() const
 {
     return m_contents.end();
 }
@@ -2445,7 +2445,7 @@ void config_set_global_defaults()
 }
 
 bool missing_required_parameters(const MXS_MODULE_PARAM* mod_params,
-                                 const MXS_CONFIG_PARAMETER& params,
+                                 const mxs::ConfigParameters& params,
                                  const char* name)
 {
     bool rval = false;
@@ -3077,7 +3077,7 @@ int maxscale_getline(char** dest, int* size, FILE* file)
     return 1;
 }
 
-void config_add_defaults(MXS_CONFIG_PARAMETER* dest, const MXS_MODULE_PARAM* params)
+void config_add_defaults(mxs::ConfigParameters* dest, const MXS_MODULE_PARAM* params)
 {
     if (params)
     {
@@ -3144,7 +3144,7 @@ json_t* param_value_to_json(const MXS_MODULE_PARAM* param_info, const string& na
     return rval;
 }
 
-void config_add_module_params_json(const MXS_CONFIG_PARAMETER* parameters,
+void config_add_module_params_json(const mxs::ConfigParameters* parameters,
                                    const std::unordered_set<std::string>& ignored_params,
                                    const MXS_MODULE_PARAM* basic_params,
                                    const MXS_MODULE_PARAM* module_params,
@@ -4613,7 +4613,7 @@ bool config_parse_disk_space_threshold(SERVER::DiskSpaceLimits* pDisk_space_thre
     return success;
 }
 
-std::string generate_config_string(const std::string& instance_name, const MXS_CONFIG_PARAMETER& parameters,
+std::string generate_config_string(const std::string& instance_name, const mxs::ConfigParameters& parameters,
                                    const MXS_MODULE_PARAM* common_param_defs,
                                    const MXS_MODULE_PARAM* module_param_defs)
 {

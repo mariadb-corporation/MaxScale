@@ -148,7 +148,7 @@ using std::chrono::seconds;
 
 struct Config
 {
-    Config(MXS_CONFIG_PARAMETER* params)
+    Config(mxs::ConfigParameters* params)
         : slave_selection_criteria(
             (select_criteria_t)params->get_enum("slave_selection_criteria", slave_selection_criteria_values))
         , backend_select_fct(get_backend_select_function(slave_selection_criteria))
@@ -305,7 +305,7 @@ public:
      *
      * @return New router instance or NULL on error
      */
-    static RWSplit* create(SERVICE* pService, MXS_CONFIG_PARAMETER* params);
+    static RWSplit* create(SERVICE* pService, mxs::ConfigParameters* params);
 
     /**
      * @brief Create a new session for this router instance
@@ -338,7 +338,7 @@ public:
      */
     uint64_t getCapabilities();
 
-    bool configure(MXS_CONFIG_PARAMETER* params);
+    bool configure(mxs::ConfigParameters* params);
 private:
 
     struct gtid

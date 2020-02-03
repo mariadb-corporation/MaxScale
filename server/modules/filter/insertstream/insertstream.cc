@@ -203,13 +203,13 @@ GWBUF* create_load_data_command(const char* target)
 }
 }
 
-InsertStream::InsertStream(MXS_CONFIG_PARAMETER* params)
+InsertStream::InsertStream(mxs::ConfigParameters* params)
     : m_source(params->get_string("source"))
     , m_user(params->get_string("user"))
 {
 }
 
-InsertStream* InsertStream::create(const char* name, MXS_CONFIG_PARAMETER* params)
+InsertStream* InsertStream::create(const char* name, mxs::ConfigParameters* params)
 {
     return new InsertStream(params);
 }

@@ -65,7 +65,7 @@ typedef struct mxs_router_object
      *
      * @return New router instance on NULL on error
      */
-    MXS_ROUTER*(*createInstance)(SERVICE * service, MXS_CONFIG_PARAMETER* params);
+    MXS_ROUTER*(*createInstance)(SERVICE * service, mxs::ConfigParameters* params);
 
     /**
      * Called to create a new user session within the router
@@ -203,7 +203,7 @@ typedef struct mxs_router_object
      *         failed. If reconfiguration failed, the state of the router
      *         instance should not be modified.
      */
-    bool (* configureInstance)(MXS_ROUTER* instance, MXS_CONFIG_PARAMETER* params);
+    bool (* configureInstance)(MXS_ROUTER* instance, mxs::ConfigParameters* params);
 } MXS_ROUTER_OBJECT;
 
 /**
@@ -350,7 +350,7 @@ protected:
  * class MyRouter : public maxscale::Router<MyRouter, MyRouterSession>
  * {
  * public:
- *      static MyRouter* create(SERVICE* pService, MXS_CONFIG_PARAMETER* params);
+ *      static MyRouter* create(SERVICE* pService, mxs::ConfigParameters* params);
  *
  *      MyRouterSession* newSession(MXS_SESSION* pSession);
  *
@@ -383,12 +383,12 @@ class Router : public MXS_ROUTER
 public:
 
     // The default configure entry point, does nothing and always fails
-    bool configure(MXS_CONFIG_PARAMETER* param)
+    bool configure(mxs::ConfigParameters* param)
     {
         return false;
     }
 
-    static MXS_ROUTER* createInstance(SERVICE* pService, MXS_CONFIG_PARAMETER* params)
+    static MXS_ROUTER* createInstance(SERVICE* pService, mxs::ConfigParameters* params)
     {
         RouterType* pRouter = NULL;
 
@@ -488,7 +488,7 @@ public:
         MXS_EXCEPTION_GUARD(delete pRouter);
     }
 
-    static bool configure(MXS_ROUTER* pInstance, MXS_CONFIG_PARAMETER* param)
+    static bool configure(MXS_ROUTER* pInstance, mxs::ConfigParameters* param)
     {
         RouterType* pRouter = static_cast<RouterType*>(pInstance);
         bool rval = false;

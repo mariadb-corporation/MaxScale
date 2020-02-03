@@ -80,7 +80,7 @@ static const int default_sql_size = 4 * 1024;
  */
 struct TPM_INSTANCE;
 
-static MXS_FILTER*         createInstance(const char* name, MXS_CONFIG_PARAMETER*);
+static MXS_FILTER*         createInstance(const char* name, mxs::ConfigParameters*);
 static MXS_FILTER_SESSION* newSession(MXS_FILTER* instance,
                                       MXS_SESSION* session,
                                       SERVICE* service,
@@ -215,7 +215,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
  *
  * @return The instance data for this new instance
  */
-static MXS_FILTER* createInstance(const char* name, MXS_CONFIG_PARAMETER* params)
+static MXS_FILTER* createInstance(const char* name, mxs::ConfigParameters* params)
 {
     TPM_INSTANCE* my_instance = static_cast<TPM_INSTANCE*>(MXS_CALLOC(1, sizeof(TPM_INSTANCE)));
 

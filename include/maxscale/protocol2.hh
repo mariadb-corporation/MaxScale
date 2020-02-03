@@ -20,12 +20,12 @@ class BackendDCB;
 class ClientDCB;
 class DCB;
 class SERVICE;
-class MXS_CONFIG_PARAMETER;
 
 namespace maxscale
 {
-class ClientConnection;
 class BackendConnection;
+class ClientConnection;
+class ConfigParameters;
 class UserAccountManager;
 
 class ProtocolModule
@@ -129,7 +129,7 @@ public:
      * @param params Listener and authenticator settings
      * @return An array of authenticators. Empty on error.
      */
-    virtual AuthenticatorList create_authenticators(const MXS_CONFIG_PARAMETER& params)
+    virtual AuthenticatorList create_authenticators(const ConfigParameters& params)
     {
         mxb_assert(!true);
         return {};

@@ -125,7 +125,7 @@ public:
      * @param params Configuration
      * @return The new server or NULL on error
      */
-    static Server* server_alloc(const char* name, const MXS_CONFIG_PARAMETER& params);
+    static Server* server_alloc(const char* name, const mxs::ConfigParameters& params);
 
     /**
      * Creates a server without any configuration. This should be used in unit tests in place of
@@ -248,7 +248,7 @@ private:
 
         /** All config settings in text form. This is only read and written from the admin thread
          *  so no need for locking. */
-        MXS_CONFIG_PARAMETER all_parameters;
+        mxs::ConfigParameters all_parameters;
 
         std::string protocol;       /**< Backend protocol module name. Does not change so needs no locking. */
 
@@ -266,7 +266,7 @@ private:
 
         /** Additional custom parameters which may affect routing decisions or a monitor.
          *  Can be queried from modules at any time so access must be protected by mutex. */
-        MXS_CONFIG_PARAMETER custom_parameters;
+        mxs::ConfigParameters custom_parameters;
     };
 
     /**

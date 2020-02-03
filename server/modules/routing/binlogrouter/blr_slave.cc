@@ -6285,7 +6285,7 @@ static int blr_set_master_ssl(ROUTER_INSTANCE* router,
 
     if (router->ssl_enabled && !config.ssl_ca.empty() && !config.ssl_key.empty() && !config.ssl_cert.empty())
     {
-        MXS_CONFIG_PARAMETER params;
+        mxs::ConfigParameters params;
         params.set_from_list({
             {CN_SSL, CN_REQUIRED},
             {CN_SSL_KEY, config.ssl_key},
