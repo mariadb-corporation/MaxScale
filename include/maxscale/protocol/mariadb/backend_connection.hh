@@ -72,10 +72,10 @@ private:
     MariaDBBackendConnection(mariadb::SBackendAuth authenticator);
 
     int    gw_read_and_write(DCB* dcb);
-    int    backend_write_delayqueue(DCB* dcb, GWBUF* buffer);
+    bool   backend_write_delayqueue(DCB* dcb, GWBUF* buffer);
     void   backend_set_delayqueue(DCB* dcb, GWBUF* queue);
-    int    gw_change_user(DCB* dcb, MXS_SESSION* session, GWBUF* queue);
-    int    gw_send_change_user_to_backend(DCB* backend);
+    bool   change_user(DCB* backend, GWBUF* queue);
+    bool   send_change_user_to_backend(DCB* backend);
     void   gw_send_proxy_protocol_header(BackendDCB* backend_dcb);
     int    handle_persistent_connection(BackendDCB* dcb, GWBUF* queue);
     GWBUF* gw_create_change_user_packet();

@@ -1064,7 +1064,7 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
 
             if (m_reply.command() == MXS_COM_CHANGE_USER)
             {
-                return gw_change_user(dcb, dcb->session(), queue);
+                return change_user(dcb, queue);
             }
             else if (cmd == MXS_COM_QUIT && dcb->server()->persistent_conns_enabled())
             {
@@ -1194,62 +1194,56 @@ void MariaDBBackendConnection::backend_set_delayqueue(DCB* dcb, GWBUF* queue)
 }
 
 /**
- * This routine writes the delayq via dcb_write
- * The dcb->m_delayq contains data received from the client before
- * mysql backend authentication succeded
+ * This routine writes the delayq via dcb_write. The dcb->m_delayq contains data received
+ * from the client before mysql backend authentication succeded
  *
  * @param dcb The current backend DCB
  * @return The dcb_write status
  */
-int MariaDBBackendConnection::backend_write_delayqueue(DCB* plain_dcb, GWBUF* buffer)
+bool MariaDBBackendConnection::backend_write_delayqueue(DCB* plain_dcb, GWBUF* buffer)
 {
     mxb_assert(plain_dcb->role() == DCB::Role::BACKEND);
     BackendDCB* dcb = static_cast<BackendDCB*>(plain_dcb);
     mxb_assert(dcb->session());
     mxb_assert(buffer);
 
-    if (MYSQL_IS_CHANGE_USER(((uint8_t*)GWBUF_DATA(buffer))))
+    bool rval = false;
+    const uint8_t* data = GWBUF_DATA(buffer);
+    if (MYSQL_IS_CHANGE_USER(data))
     {
         /** Recreate the COM_CHANGE_USER packet with the scramble the backend sent to us */
-        gwbuf_free(buffer);
-        buffer = gw_create_change_user_packet();
+        rval = change_user(dcb, buffer);
     }
-
-    int rc = 1;
-
-    if (MYSQL_IS_COM_QUIT(((uint8_t*)GWBUF_DATA(buffer))) && dcb->server()->persistent_conns_enabled())
+    else if (MYSQL_IS_COM_QUIT(data) && dcb->server()->persistent_conns_enabled())
     {
         /** We need to keep the pooled connections alive so we just ignore the COM_QUIT packet */
         gwbuf_free(buffer);
-        rc = 1;
+        rval = true;
     }
     else
     {
-        rc = dcb->writeq_append(buffer);
+        rval = dcb->writeq_append(buffer);
     }
 
-    if (rc == 0)
+    if (!rval)
     {
         do_handle_error(dcb, "Lost connection to backend server while writing delay queue.");
     }
 
-    return rc;
+    return rval;
 }
 
 /**
- * This routine handles the COM_CHANGE_USER command
- *
- * TODO: Move this into the authenticators
+ * This routine handles the COM_CHANGE_USER command.
  *
  * @param dcb           The current backend DCB
- * @param in_session    The current session data (MYSQL_session)
  * @param queue         The GWBUF containing the COM_CHANGE_USER receveid
- * @return 1 on success and 0 on failure
+ * @return True on success
  */
-int MariaDBBackendConnection::gw_change_user(DCB* backend, MXS_SESSION* in_session, GWBUF* queue)
+bool MariaDBBackendConnection::change_user(DCB* backend, GWBUF* queue)
 {
     gwbuf_free(queue);
-    return gw_send_change_user_to_backend(backend);
+    return send_change_user_to_backend(backend);
 }
 
 /**
@@ -1397,21 +1391,20 @@ GWBUF* MariaDBBackendConnection::gw_create_change_user_packet()
 }
 
 /**
- * Write a MySQL CHANGE_USER packet to backend server
+ * Write a MySQL CHANGE_USER packet to backend server.
  *
- * @return 1 on success, 0 on failure
+ * @return True on success
  */
-int
-MariaDBBackendConnection::gw_send_change_user_to_backend(DCB* backend)
+bool MariaDBBackendConnection::send_change_user_to_backend(DCB* backend)
 {
     GWBUF* buffer = gw_create_change_user_packet();
-    int rc = 0;
+    bool rval = false;
     if (backend->writeq_append(buffer))
     {
         m_changing_user = true;
-        rc = 1;
+        rval = true;
     }
-    return rc;
+    return rval;
 }
 
 /* Send proxy protocol header. See
