@@ -629,29 +629,7 @@ bool runtime_alter_maxscale(const char* name, const char* value)
     bool rval = false;
     config::Type* item = nullptr;
 
-    if (key == CN_DUMP_LAST_STATEMENTS)
-    {
-        rval = true;
-        if (strcmp(value, "on_close") == 0)
-        {
-            session_set_dump_statements(SESSION_DUMP_STATEMENTS_ON_CLOSE);
-        }
-        else if (strcmp(value, "on_error") == 0)
-        {
-            session_set_dump_statements(SESSION_DUMP_STATEMENTS_ON_ERROR);
-        }
-        else if (strcmp(value, "never") == 0)
-        {
-            session_set_dump_statements(SESSION_DUMP_STATEMENTS_NEVER);
-        }
-        else
-        {
-            rval = false;
-            config_runtime_error("%s can have the values 'never', 'on_close' or 'on_error'.",
-                                 CN_DUMP_LAST_STATEMENTS);
-        }
-    }
-    else if ((item = cnf.find_value(name)) != nullptr)
+    if ((item = cnf.find_value(name)) != nullptr)
     {
         if (item->parameter().is_modifiable_at_runtime())
         {

@@ -86,13 +86,26 @@ const char CN_USERS_REFRESH_INTERVAL[] = "users_refresh_interval";
 
 config::Specification MXS_CONFIG::s_specification("maxscale", config::Specification::GLOBAL);
 
+config::ParamEnum<session_dump_statements_t> MXS_CONFIG::s_dump_statements(
+    &MXS_CONFIG::s_specification,
+    CN_DUMP_LAST_STATEMENTS,
+    "In what circumstances should the last statements that a client sent be dumped.",
+    {
+        { SESSION_DUMP_STATEMENTS_ON_CLOSE, "on_close" },
+        { SESSION_DUMP_STATEMENTS_ON_ERROR, "on_error" },
+        { SESSION_DUMP_STATEMENTS_NEVER, "never" }
+    },
+    SESSION_DUMP_STATEMENTS_NEVER,
+    config::Param::Modifiable::AT_RUNTIME);
+
 config::ParamCount MXS_CONFIG::s_session_trace(
     &MXS_CONFIG::s_specification,
     CN_SESSION_TRACE,
     "How many log entries are stored in the session specific trace log.",
     0, // default
     0, // min
-    std::numeric_limits<config::ParamCount::value_type>::max()); // max
+    std::numeric_limits<config::ParamCount::value_type>::max(), // max
+    config::Param::Modifiable::AT_RUNTIME);
 
 config::ParamBool MXS_CONFIG::s_ms_timestamp(
     &MXS_CONFIG::s_specification,
@@ -352,6 +365,9 @@ struct ThisUnit
 
 MXS_CONFIG::MXS_CONFIG()
     : config::Configuration("maxscale", &s_specification)
+    , dump_statements(this, &s_dump_statements, [](session_dump_statements_t when) {
+            session_set_dump_statements(when);
+        })
     , session_trace(this, &s_session_trace, [](int32_t count) {
             session_set_session_trace(count);
             mxb_log_set_session_trace(true);
@@ -2229,27 +2245,6 @@ static int handle_global_item(const char* name, const char* value)
             }
 
             MXS_FREE(v);
-        }
-    }
-    else if (strcmp(name, CN_DUMP_LAST_STATEMENTS) == 0)
-    {
-        if (strcmp(value, "on_close") == 0)
-        {
-            session_set_dump_statements(SESSION_DUMP_STATEMENTS_ON_CLOSE);
-        }
-        else if (strcmp(value, "on_error") == 0)
-        {
-            session_set_dump_statements(SESSION_DUMP_STATEMENTS_ON_ERROR);
-        }
-        else if (strcmp(value, "never") == 0)
-        {
-            session_set_dump_statements(SESSION_DUMP_STATEMENTS_NEVER);
-        }
-        else
-        {
-            MXS_ERROR("%s can have the values 'never', 'on_close' or 'on_error'.",
-                      CN_DUMP_LAST_STATEMENTS);
-            return 0;
         }
     }
     else if ((item = this_unit.gateway.find_value(name)) != nullptr)

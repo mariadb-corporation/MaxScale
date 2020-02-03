@@ -14,6 +14,7 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/config2.hh>
+#include <maxscale/session.hh>
 
 /**
  * The gateway global configuration data
@@ -60,6 +61,8 @@ public:
         void do_set(const value_type& value) override final;
     };
 
+    using SessionDumpStatements = config::Enum<session_dump_statements_t>;
+
     MXS_CONFIG();
 
     bool    config_check;                               /**< Only check config */
@@ -69,6 +72,7 @@ public:
     char    sysname[SYSNAME_LEN];                       /**< The OS name of the system */
     uint8_t mac_sha1[SHA_DIGEST_LENGTH];                /**< The SHA1 digest of an interface MAC address */
 
+    SessionDumpStatements dump_statements;              /**< Whether to dump last statements. */
     config::Count   session_trace;                      /**< How entries stored to session trace log.*/
     config::Bool    ms_timestamp;                       /**< Enable or disable high precision timestamps */
     config::Count   retain_last_statements;             /**< How many statements should be retained. */
@@ -122,42 +126,43 @@ public:
 public:
     static config::Specification s_specification;
 
-    static config::ParamCount               s_session_trace;
-    static config::ParamBool                s_ms_timestamp;
-    static config::ParamCount               s_retain_last_statements;
-    static config::ParamBool                s_syslog;
-    static config::ParamBool                s_maxlog;
-    static config::ParamSeconds             s_auth_conn_timeout;
-    static config::ParamSeconds             s_auth_read_timeout;
-    static config::ParamSeconds             s_auth_write_timeout;
-    static config::ParamBool                s_skip_permission_checks;
-    static config::ParamBool                s_passive;
-    static config::ParamString              s_qc_name;
-    static config::ParamString              s_qc_args;
-    static config::ParamSize                s_qc_cache_max_size;
-    static config::ParamEnum<qc_sql_mode_t> s_qc_sql_mode;
-    static config::ParamString              s_admin_host;
-    static config::ParamInteger             s_admin_port;
-    static config::ParamBool                s_admin_auth;
-    static config::ParamBool                s_admin_enabled;
-    static config::ParamBool                s_admin_log_auth_failures;
-    static config::ParamString              s_admin_pam_rw_service;
-    static config::ParamString              s_admin_pam_ro_service;
-    static config::ParamString              s_admin_ssl_key;
-    static config::ParamString              s_admin_ssl_cert;
-    static config::ParamString              s_admin_ssl_ca_cert;
-    static config::ParamInteger             s_query_retries;
-    static config::ParamSeconds             s_query_retry_timeout;
-    static config::ParamString              s_local_address;
-    static ParamUsersRefreshTime            s_users_refresh_time;
-    static config::ParamSeconds             s_users_refresh_interval;
-    static config::ParamSize                s_writeq_high_water;
-    static config::ParamSize                s_writeq_low_water;
-    static config::ParamBool                s_load_persisted_configs;
-    static config::ParamInteger             s_max_auth_errors_until_block;
-    static config::ParamInteger             s_rebalance_threshold;
-    static config::ParamMilliseconds        s_rebalance_period;
-    static config::ParamCount               s_rebalance_window;
+    static config::ParamEnum<session_dump_statements_t> s_dump_statements;
+    static config::ParamCount                           s_session_trace;
+    static config::ParamBool                            s_ms_timestamp;
+    static config::ParamCount                           s_retain_last_statements;
+    static config::ParamBool                            s_syslog;
+    static config::ParamBool                            s_maxlog;
+    static config::ParamSeconds                         s_auth_conn_timeout;
+    static config::ParamSeconds                         s_auth_read_timeout;
+    static config::ParamSeconds                         s_auth_write_timeout;
+    static config::ParamBool                            s_skip_permission_checks;
+    static config::ParamBool                            s_passive;
+    static config::ParamString                          s_qc_name;
+    static config::ParamString                          s_qc_args;
+    static config::ParamSize                            s_qc_cache_max_size;
+    static config::ParamEnum<qc_sql_mode_t>             s_qc_sql_mode;
+    static config::ParamString                          s_admin_host;
+    static config::ParamInteger                         s_admin_port;
+    static config::ParamBool                            s_admin_auth;
+    static config::ParamBool                            s_admin_enabled;
+    static config::ParamBool                            s_admin_log_auth_failures;
+    static config::ParamString                          s_admin_pam_rw_service;
+    static config::ParamString                          s_admin_pam_ro_service;
+    static config::ParamString                          s_admin_ssl_key;
+    static config::ParamString                          s_admin_ssl_cert;
+    static config::ParamString                          s_admin_ssl_ca_cert;
+    static config::ParamInteger                         s_query_retries;
+    static config::ParamSeconds                         s_query_retry_timeout;
+    static config::ParamString                          s_local_address;
+    static ParamUsersRefreshTime                        s_users_refresh_time;
+    static config::ParamSeconds                         s_users_refresh_interval;
+    static config::ParamSize                            s_writeq_high_water;
+    static config::ParamSize                            s_writeq_low_water;
+    static config::ParamBool                            s_load_persisted_configs;
+    static config::ParamInteger                         s_max_auth_errors_until_block;
+    static config::ParamInteger                         s_rebalance_threshold;
+    static config::ParamMilliseconds                    s_rebalance_period;
+    static config::ParamCount                           s_rebalance_window;
 };
 
 /**
