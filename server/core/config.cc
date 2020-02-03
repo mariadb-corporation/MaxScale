@@ -86,6 +86,15 @@ const char CN_USERS_REFRESH_INTERVAL[] = "users_refresh_interval";
 
 config::Specification MXS_CONFIG::s_specification("maxscale", config::Specification::GLOBAL);
 
+config::ParamInteger MXS_CONFIG::s_retain_last_statements(
+    &MXS_CONFIG::s_specification,
+    CN_RETAIN_LAST_STATEMENTS,
+    "How many statements should be retained for each session for debugging purposes.",
+    0, // default
+    0, // min
+    std::numeric_limits<config::ParamInteger::value_type>::max(), // max
+    config::Param::Modifiable::AT_RUNTIME);
+
 config::ParamBool MXS_CONFIG::s_syslog(
     &MXS_CONFIG::s_specification,
     CN_SYSLOG,
@@ -328,6 +337,9 @@ struct ThisUnit
 
 MXS_CONFIG::MXS_CONFIG()
     : config::Configuration("maxscale", &s_specification)
+    , retain_last_statements(this, &s_retain_last_statements, [](config::ParamInteger::value_type intval) {
+            session_set_retain_last_statements(intval);
+        })
     , syslog(this, &s_syslog)
     , maxlog(this, &s_maxlog)
     , auth_conn_timeout(this, &s_auth_conn_timeout)
@@ -2201,20 +2213,6 @@ static int handle_global_item(const char* name, const char* value)
             MXS_FREE(v);
         }
     }
-    else if (strcmp(name, CN_RETAIN_LAST_STATEMENTS) == 0)
-    {
-        char* endptr;
-        int intval = strtol(value, &endptr, 0);
-        if (*endptr == '\0' && intval >= 0)
-        {
-            session_set_retain_last_statements(intval);
-        }
-        else
-        {
-            MXS_ERROR("Invalid value for '%s': %s", CN_RETAIN_LAST_STATEMENTS, value);
-            return 0;
-        }
-    }
     else if (strcmp(name, CN_DUMP_LAST_STATEMENTS) == 0)
     {
         if (strcmp(value, "on_close") == 0)
@@ -3911,7 +3909,6 @@ json_t* config_maxscale_to_json(const char* host)
                         CN_QUERY_CLASSIFIER_CACHE_SIZE,
                         json_integer(cnf->qc_cache_properties.max_size));
 
-    json_object_set_new(param, CN_RETAIN_LAST_STATEMENTS, json_integer(session_get_retain_last_statements()));
     json_object_set_new(param, CN_DUMP_LAST_STATEMENTS, json_string(session_get_dump_statements_str()));
     json_object_set_new(param, CN_SESSION_TRACE, json_integer(session_get_session_trace()));
 

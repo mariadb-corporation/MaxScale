@@ -634,18 +634,6 @@ bool runtime_alter_maxscale(const char* name, const char* value)
         mxs_log_set_highprecision_enabled(config_truth_value(value));
         rval = true;
     }
-    else if (key == CN_RETAIN_LAST_STATEMENTS)
-    {
-        if (is_valid_integer(value))
-        {
-            session_set_retain_last_statements(atoi(value));
-            rval = true;
-        }
-        else
-        {
-            config_runtime_error("Invalid value for '%s': %s", CN_RETAIN_LAST_STATEMENTS, value);
-        }
-    }
     else if (key == CN_DUMP_LAST_STATEMENTS)
     {
         rval = true;
