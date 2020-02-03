@@ -86,6 +86,14 @@ const char CN_USERS_REFRESH_INTERVAL[] = "users_refresh_interval";
 
 config::Specification MXS_CONFIG::s_specification("maxscale", config::Specification::GLOBAL);
 
+config::ParamCount MXS_CONFIG::s_session_trace(
+    &MXS_CONFIG::s_specification,
+    CN_SESSION_TRACE,
+    "How many log entries are stored in the session specific trace log.",
+    0, // default
+    0, // min
+    std::numeric_limits<config::ParamCount::value_type>::max()); // max
+
 config::ParamBool MXS_CONFIG::s_ms_timestamp(
     &MXS_CONFIG::s_specification,
     CN_MS_TIMESTAMP,
@@ -93,7 +101,7 @@ config::ParamBool MXS_CONFIG::s_ms_timestamp(
     false,
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamInteger MXS_CONFIG::s_retain_last_statements(
+config::ParamCount MXS_CONFIG::s_retain_last_statements(
     &MXS_CONFIG::s_specification,
     CN_RETAIN_LAST_STATEMENTS,
     "How many statements should be retained for each session for debugging purposes.",
@@ -344,11 +352,15 @@ struct ThisUnit
 
 MXS_CONFIG::MXS_CONFIG()
     : config::Configuration("maxscale", &s_specification)
+    , session_trace(this, &s_session_trace, [](int32_t count) {
+            session_set_session_trace(count);
+            mxb_log_set_session_trace(true);
+        })
     , ms_timestamp(this, &s_ms_timestamp, [](bool enable) {
             mxs_log_set_highprecision_enabled(enable);
         })
-    , retain_last_statements(this, &s_retain_last_statements, [](config::ParamInteger::value_type intval) {
-            session_set_retain_last_statements(intval);
+    , retain_last_statements(this, &s_retain_last_statements, [](int32_t count) {
+            session_set_retain_last_statements(count);
         })
     , syslog(this, &s_syslog)
     , maxlog(this, &s_maxlog)
@@ -2237,21 +2249,6 @@ static int handle_global_item(const char* name, const char* value)
         {
             MXS_ERROR("%s can have the values 'never', 'on_close' or 'on_error'.",
                       CN_DUMP_LAST_STATEMENTS);
-            return 0;
-        }
-    }
-    else if (strcmp(name, CN_SESSION_TRACE) == 0)
-    {
-        char* endptr;
-        int intval = strtol(value, &endptr, 0);
-        if (*endptr == '\0' && intval >= 0)
-        {
-            session_set_session_trace(intval);
-            mxb_log_set_session_trace(true);
-        }
-        else
-        {
-            MXS_ERROR("Invalid value for '%s': %s", CN_SESSION_TRACE, value);
             return 0;
         }
     }
