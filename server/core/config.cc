@@ -84,11 +84,6 @@ const char CN_USERS_REFRESH_TIME[] = "users_refresh_time";
 const char CN_USERS_REFRESH_INTERVAL[] = "users_refresh_interval";
 }
 
-static const char* config_file = NULL;
-static MXS_CONFIG gateway;
-static bool is_persisted_config = false;    /**< True if a persisted configuration file is being parsed */
-static CONFIG_CONTEXT config_context;
-
 config::Specification MXS_CONFIG::s_specification("maxscale", config::Specification::GLOBAL);
 
 config::ParamSeconds MXS_CONFIG::s_auth_conn_timeout(
@@ -303,12 +298,19 @@ config::ParamCount MXS_CONFIG::s_rebalance_window(
     1, 60,  // min, max
     config::Param::Modifiable::AT_RUNTIME);
 
+
+static const char* config_file = NULL;
+static MXS_CONFIG gateway;
+static bool is_persisted_config = false;    /**< True if a persisted configuration file is being parsed */
+static CONFIG_CONTEXT config_context;
+
+
 MXS_CONFIG::MXS_CONFIG()
     : config::Configuration("maxscale", &s_specification)
     , auth_conn_timeout(this, &s_auth_conn_timeout)
     , auth_read_timeout(this, &s_auth_read_timeout)
     , auth_write_timeout(this, &s_auth_write_timeout)
-    , skip_permission_checks(this, &s_passive)
+    , skip_permission_checks(this, &s_skip_permission_checks)
     , passive(this, &s_passive)
     , qc_name(this, &s_qc_name)
     , qc_args(this, &s_qc_args)
