@@ -932,6 +932,11 @@ QueryClassifier::current_target_t QueryClassifier::handle_multi_temp_and_load(
     return rv;
 }
 
+uint16_t QueryClassifier::get_param_count(uint32_t id)
+{
+    return m_sPs_manager->param_count(id);
+}
+
 bool QueryClassifier::query_continues_ps(uint8_t cmd, uint32_t stmt_id, GWBUF* buffer)
 {
     bool rval = false;

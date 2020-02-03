@@ -860,17 +860,19 @@ RWBackend* RWSplitSession::handle_slave_is_target(uint8_t cmd, uint32_t stmt_id)
     {
         ExecMap::iterator it = m_exec_map.find(stmt_id);
 
-        if (it != m_exec_map.end())
+        if (it != m_exec_map.end() && it->second.target)
         {
-            if (it->second->in_use())
+            auto prev_target = it->second.target;
+
+            if (prev_target->in_use())
             {
-                target = it->second;
+                target = prev_target;
                 MXS_INFO("%s on %s", STRPACKETTYPE(cmd), target->name());
             }
             else
             {
                 MXS_ERROR("Old COM_STMT_EXECUTE target %s not in use, cannot "
-                          "proceed with %s", it->second->name(), STRPACKETTYPE(cmd));
+                          "proceed with %s", prev_target->name(), STRPACKETTYPE(cmd));
             }
         }
         else
@@ -1147,6 +1149,41 @@ GWBUF* RWSplitSession::add_prefix_wait_gtid(uint64_t version, GWBUF* origin)
     return rval;
 }
 
+void RWSplitSession::process_stmt_execute(GWBUF** buf, uint32_t id, RWBackend* target)
+{
+    GWBUF* buffer = *buf;
+    mxb_assert(gwbuf_is_contiguous(buffer));
+    mxb_assert(mxs_mysql_get_command(buffer) == MXS_COM_STMT_EXECUTE);
+
+    auto params = m_qc.get_param_count(id);
+    size_t types_offset = MYSQL_HEADER_LEN + 1 + 4 + 1 + 4 + ((params + 7) / 8);
+    uint8_t* ptr = GWBUF_DATA(buffer) + types_offset;
+    auto& info = m_exec_map[id];
+
+    if (*ptr)
+    {
+        ++ptr;
+        // Store the metadata, two bytes per parameter, for later use
+        info.metadata.assign(ptr, ptr + (params * 2));
+    }
+    else if (info.metadata_sent.count(target) == 0)
+    {
+        uint64_t newlen = gwbuf_length(buffer) + info.metadata.size() - MYSQL_HEADER_LEN;
+
+        // Set to 1, we are sending the types
+        mxb_assert(*ptr == 0);
+        *ptr = 1;
+
+        // Splice the metadata into COM_STMT_EXECUTE
+        GWBUF* tmp = gwbuf_split(&buffer, types_offset + 1);
+        GWBUF* param_types = gwbuf_alloc_and_load(info.metadata.size(), info.metadata.data());
+        tmp = gwbuf_append(tmp, param_types);
+        buffer = buffer ? gwbuf_append(tmp, buffer) : tmp;
+        gw_mysql_set_byte3(GWBUF_DATA(buffer), gwbuf_length(buffer) - MYSQL_HEADER_LEN);
+        *buf = buffer;
+    }
+}
+
 /**
  * @brief Handle writing to a target server
  *
@@ -1196,15 +1233,23 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool 
         response = mxs::Backend::EXPECT_RESPONSE;
     }
 
-    bool large_query = is_large_query(querybuf);
+    bool large_query = is_large_query(send_buf);
     uint32_t orig_id = 0;
 
     if (!is_locked_to_master() && mxs_mysql_is_ps_command(cmd) && !m_qc.large_query())
     {
         // Store the original ID in case routing fails
-        orig_id = extract_binary_ps_id(querybuf);
+        orig_id = extract_binary_ps_id(send_buf);
         // Replace the ID with our internal one, the backends will replace it with their own ID
-        replace_binary_ps_id(querybuf, m_qc.current_route_info().stmt_id());
+        auto new_id = m_qc.current_route_info().stmt_id();
+        replace_binary_ps_id(send_buf, new_id);
+
+        if (cmd == MXS_COM_STMT_EXECUTE)
+        {
+            // The metadata in COM_STMT_EXECUTE is optional. If the statement contains the metadata, store it
+            // for later use. If it doesn't, add it if the current target has never gotten it.
+            process_stmt_execute(&send_buf, new_id, target);
+        }
     }
 
     /**
@@ -1269,7 +1314,9 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool 
         /** Track the targets of the COM_STMT_EXECUTE statements. This
          * information is used to route all COM_STMT_FETCH commands
          * to the same server where the COM_STMT_EXECUTE was done. */
-        m_exec_map[m_qc.current_route_info().stmt_id()] = target;
+        auto& info = m_exec_map[m_qc.current_route_info().stmt_id()];
+        info.target = target;
+        info.metadata_sent.insert(target);
         MXS_INFO("%s on %s", STRPACKETTYPE(cmd), target->name());
     }
 

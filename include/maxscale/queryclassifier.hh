@@ -246,6 +246,15 @@ public:
     }
 
     /**
+     * Get number of parameters for a prepared statement
+     *
+     * @param id The statement ID
+     *
+     * @return Number of parameters
+     */
+    uint16_t get_param_count(uint32_t id);
+
+    /**
      * @brief Store and process a prepared statement
      *
      * @param buffer Buffer containing either a text or a binary protocol

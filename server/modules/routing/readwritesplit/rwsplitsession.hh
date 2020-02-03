@@ -40,8 +40,18 @@ typedef std::map<uint64_t, std::pair<mxs::RWBackend*, bool>> ResponseMap;
 /** List of slave responses that arrived before the master and whether they succeeded */
 typedef std::list<std::pair<mxs::RWBackend*, bool>> SlaveResponseList;
 
+struct ExecInfo
+{
+    // The latest server this was executed on, used to figure out where COM_STMT_FETCH needs to be sent.
+    mxs::RWBackend* target = nullptr;
+    // Parameter type metadata
+    std::vector<uint8_t> metadata;
+    // The set of servers to which the metadata has been sent
+    std::unordered_set<mxs::RWBackend*> metadata_sent;
+};
+
 /** Map of COM_STMT_EXECUTE targets by internal ID */
-typedef std::unordered_map<uint32_t, mxs::RWBackend*> ExecMap;
+typedef std::unordered_map<uint32_t, ExecInfo> ExecMap;
 
 /**
  * The client session of a RWSplit instance
@@ -161,6 +171,7 @@ private:
     bool            prepare_connection(mxs::RWBackend* target);
     bool            create_one_connection_for_sescmd();
     void            retry_query(GWBUF* querybuf, int delay = 1);
+    void            process_stmt_execute(GWBUF** buffer, uint32_t id, mxs::RWBackend* target);
 
     // Transaction state helpers
     bool trx_is_starting() const;
@@ -375,7 +386,7 @@ private:
                                                  * command */
     uint64_t m_sescmd_prune_pos {0};
 
-    ExecMap m_exec_map;     /**< Map of COM_STMT_EXECUTE statement IDs to Backends */
+    ExecMap m_exec_map;     // Information map of COM_STMT_EXECUTE execution
 
     std::string          m_gtid_pos;            /**< Gtid position for causal read */
     wait_gtid_state      m_wait_gtid;           /**< State of MASTER_GTID_WAIT reply */
