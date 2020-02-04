@@ -94,6 +94,12 @@ MXS_CONFIG::ParamThreadsCount MXS_CONFIG::s_n_threads(
     1,
     std::numeric_limits<MXS_CONFIG::ParamThreadsCount::value_type>::max());
 
+MXS_CONFIG::ParamLogThrottling MXS_CONFIG::s_log_throttling(
+    &MXS_CONFIG::s_specification,
+    CN_LOG_THROTTLING,
+    "Limit the amount of identical log messages than can be logged during a certain time period."
+    );
+
 config::ParamEnum<session_dump_statements_t> MXS_CONFIG::s_dump_statements(
     &MXS_CONFIG::s_specification,
     CN_DUMP_LAST_STATEMENTS,
@@ -373,6 +379,9 @@ struct ThisUnit
 
 MXS_CONFIG::MXS_CONFIG()
     : config::Configuration("maxscale", &s_specification)
+    , log_throttling(this, &s_log_throttling, [](MXS_LOG_THROTTLING throttling) {
+            mxs_log_set_throttling(&throttling);
+        })
     , n_threads(this, &s_n_threads)
     , dump_statements(this, &s_dump_statements, [](session_dump_statements_t when) {
             session_set_dump_statements(when);
@@ -461,6 +470,132 @@ bool MXS_CONFIG::ParamUsersRefreshTime::from_string(const std::string& value_as_
     return rv;
 }
 
+std::string MXS_CONFIG::ParamLogThrottling::type() const
+{
+    return "throttling";
+}
+
+std::string MXS_CONFIG::ParamLogThrottling::default_to_string() const
+{
+    return to_string(m_default_value);
+}
+
+bool MXS_CONFIG::ParamLogThrottling::validate(const std::string& value_as_string, std::string* pMessage) const
+{
+    value_type value;
+    return from_string(value_as_string, &value, pMessage);
+}
+
+bool MXS_CONFIG::ParamLogThrottling::set(config::Type& value, const std::string& value_as_string) const
+{
+    mxb_assert(&value.parameter() == this);
+
+    MXS_CONFIG::LogThrottling& throttling_value = static_cast<MXS_CONFIG::LogThrottling&>(value);
+
+    value_type x;
+    bool valid = from_string(value_as_string, &x);
+
+    if (valid)
+    {
+        throttling_value.set(x);
+    }
+
+    return valid;
+}
+
+static bool get_milliseconds(const char* zName,
+                             const char* zValue,
+                             const char* zDisplay_value,
+                             time_t* pMilliseconds);
+
+bool MXS_CONFIG::ParamLogThrottling::from_string(const std::string& value_as_string,
+                                                 value_type* pValue,
+                                                 std::string* pMessage) const
+{
+    bool rv = false;
+
+    if (value_as_string.empty())
+    {
+        *pValue = MXS_LOG_THROTTLING { 0, 0, 0 };
+        rv = true;
+    }
+    else
+    {
+        char v[value_as_string.size() + 1];
+        strcpy(v, value_as_string.c_str());
+
+        char* count = v;
+        char* window_ms = NULL;
+        char* suppress_ms = NULL;
+
+        window_ms = strchr(count, ',');
+        if (window_ms)
+        {
+            *window_ms = 0;
+            ++window_ms;
+
+            suppress_ms = strchr(window_ms, ',');
+            if (suppress_ms)
+            {
+                *suppress_ms = 0;
+                ++suppress_ms;
+            }
+        }
+
+        if (!count || !window_ms || !suppress_ms)
+        {
+            MXS_ERROR("Invalid value for the `log_throttling` configuration entry: '%s'. "
+                      "The format of the value for `log_throttling` is 'X, Y, Z', where "
+                      "X is the maximum number of times a particular error can be logged "
+                      "in the time window of Y milliseconds, before the logging is suppressed "
+                      "for Z milliseconds.", value_as_string.c_str());
+        }
+        else
+        {
+            int c = atoi(count);
+            time_t w;
+            time_t s;
+
+            if (c >= 0
+                && get_milliseconds(name().c_str(), window_ms, value_as_string.c_str(), &w)
+                && get_milliseconds(name().c_str(), suppress_ms, value_as_string.c_str(), &s))
+            {
+                MXS_LOG_THROTTLING throttling;
+                throttling.count = c;
+                throttling.window_ms = w;
+                throttling.suppress_ms = s;
+
+                *pValue = throttling;
+                rv = true;
+            }
+            else
+            {
+                MXS_ERROR("Invalid value for the `log_throttling` configuration entry: '%s'. "
+                          "The configuration entry `log_throttling` requires as value one zero or "
+                          "positive integer and two durations.", value_as_string.c_str());
+            }
+        }
+    }
+
+    return rv;
+}
+
+std::string MXS_CONFIG::ParamLogThrottling::to_string(const value_type& value) const
+{
+    std::stringstream ss;
+    ss << value.count << "," << value.window_ms << "ms" << value.suppress_ms << "ms";
+    return ss.str();
+}
+
+json_t* MXS_CONFIG::ParamLogThrottling::to_json(const value_type& value) const
+{
+    json_t* pJson = json_object();
+    json_object_set_new(pJson, "count", json_integer(value.count));
+    json_object_set_new(pJson, "window", json_integer(value.window_ms));
+    json_object_set_new(pJson, "suppress", json_integer(value.suppress_ms));
+    return pJson;
+}
+
 bool MXS_CONFIG::ParamThreadsCount::from_string(const std::string& value_as_string,
                                                 value_type* pValue,
                                                 std::string* pMessage) const
@@ -504,7 +639,6 @@ bool MXS_CONFIG::ParamThreadsCount::from_string(const std::string& value_as_stri
     return rv;
 }
 
-
 static bool        process_config_context(CONFIG_CONTEXT*);
 static bool        process_config_update(CONFIG_CONTEXT*);
 static int         handle_global_item(const char*, const char*);
@@ -524,10 +658,6 @@ static bool get_milliseconds(const char* zName,
                              const char* zValue,
                              const char* zDisplay_value,
                              std::chrono::milliseconds* pMilliseconds);
-static bool get_milliseconds(const char* zName,
-                             const char* zValue,
-                             const char* zDisplay_value,
-                             time_t* pMilliseconds);
 static void log_duration_suffix_warning(const char* zName, const char* zValue);
 
 int         config_get_ifaddr(unsigned char* output);
@@ -2184,75 +2314,7 @@ static int handle_global_item(const char* name, const char* value)
 
     config::Type* item = nullptr;
     int i;
-    if (strcmp(name, CN_LOG_THROTTLING) == 0)
-    {
-        if (*value == 0)
-        {
-            MXS_LOG_THROTTLING throttling = {0, 0, 0};
-
-            mxs_log_set_throttling(&throttling);
-        }
-        else
-        {
-            char* v = MXS_STRDUP_A(value);
-
-            char* count = v;
-            char* window_ms = NULL;
-            char* suppress_ms = NULL;
-
-            window_ms = strchr(count, ',');
-            if (window_ms)
-            {
-                *window_ms = 0;
-                ++window_ms;
-
-                suppress_ms = strchr(window_ms, ',');
-                if (suppress_ms)
-                {
-                    *suppress_ms = 0;
-                    ++suppress_ms;
-                }
-            }
-
-            if (!count || !window_ms || !suppress_ms)
-            {
-                MXS_ERROR("Invalid value for the `log_throttling` configuration entry: '%s'. "
-                          "The format of the value for `log_throttling` is 'X, Y, Z', where "
-                          "X is the maximum number of times a particular error can be logged "
-                          "in the time window of Y milliseconds, before the logging is suppressed "
-                          "for Z milliseconds.", value);
-                return 0;
-            }
-            else
-            {
-                int c = atoi(count);
-                time_t w;
-                time_t s;
-
-                if (c >= 0
-                    && get_milliseconds(name, window_ms, value, &w)
-                    && get_milliseconds(name, suppress_ms, value, &s))
-                {
-                    MXS_LOG_THROTTLING throttling;
-                    throttling.count = c;
-                    throttling.window_ms = w;
-                    throttling.suppress_ms = s;
-
-                    mxs_log_set_throttling(&throttling);
-                }
-                else
-                {
-                    MXS_ERROR("Invalid value for the `log_throttling` configuration entry: '%s'. "
-                              "The configuration entry `log_throttling` requires as value one zero or "
-                              "positive integer and two durations.", value);
-                    return 0;
-                }
-            }
-
-            MXS_FREE(v);
-        }
-    }
-    else if ((item = this_unit.gateway.find_value(name)) != nullptr)
+    if ((item = this_unit.gateway.find_value(name)) != nullptr)
     {
         if (!item->set(value))
         {

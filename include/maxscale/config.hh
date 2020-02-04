@@ -35,6 +35,49 @@ public:
                          std::string* pMessage) const;
     };
 
+    class ParamLogThrottling : public config::Param
+    {
+    public:
+        using value_type = MXS_LOG_THROTTLING;
+
+        ParamLogThrottling(config::Specification* pSpecification,
+                           const char* zName,
+                           const char* zDescription)
+            : Param(pSpecification, zName, zDescription,
+                    Modifiable::AT_RUNTIME,
+                    Param::OPTIONAL,
+                    MXS_MODULE_PARAM_STRING)
+        {
+        }
+
+        std::string type() const override final;
+        value_type default_value() const
+        {
+            return m_default_value;
+        }
+        std::string default_to_string() const override final;
+        bool validate(const std::string& value_as_string, std::string* pMessage) const override final;
+        bool set(config::Type& value, const std::string& value_as_string) const override final;
+        bool from_string(const std::string& value, value_type* pValue, std::string* pMessage = nullptr) const;
+
+        std::string to_string(const value_type& value) const;
+        json_t* to_json(const value_type& value) const;
+
+    private:
+        const value_type m_default_value = { 0, 0, 0 };
+    };
+
+    class LogThrottling : public config::ConcreteType<LogThrottling, ParamLogThrottling>
+    {
+    public:
+        LogThrottling(Configuration* pConfiguration,
+                      const ParamLogThrottling* pParam,
+                      std::function<void (value_type)> on_set = nullptr)
+            : config::ConcreteType<LogThrottling, ParamLogThrottling>(pConfiguration, pParam, on_set)
+        {
+        }
+    };
+
     class ParamThreadsCount : public config::ParamCount
     {
     public:
@@ -54,6 +97,7 @@ public:
     char    sysname[SYSNAME_LEN];                       /**< The OS name of the system */
     uint8_t mac_sha1[SHA_DIGEST_LENGTH];                /**< The SHA1 digest of an interface MAC address */
 
+    LogThrottling   log_throttling;                     /**< When and how to throttle logged messaged. */
     config::Count   n_threads;                          /**< Number of polling threads */
     SessionDumpStatements dump_statements;              /**< Whether to dump last statements. */
     config::Count   session_trace;                      /**< How entries stored to session trace log.*/
@@ -109,6 +153,7 @@ public:
 public:
     static config::Specification s_specification;
 
+    static ParamLogThrottling                           s_log_throttling;
     static ParamThreadsCount                            s_n_threads;
     static config::ParamEnum<session_dump_statements_t> s_dump_statements;
     static config::ParamCount                           s_session_trace;
