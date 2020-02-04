@@ -25,15 +25,6 @@ public:
     MXS_CONFIG(const MXS_CONFIG&) = delete;
     MXS_CONFIG& operator=(const MXS_CONFIG&) = delete;
 
-    class RebalancePeriod : public config::Milliseconds
-    {
-    public:
-        using config::Milliseconds::Milliseconds;
-
-    protected:
-        void do_set(const value_type& value) override final;
-    };
-
     class ParamUsersRefreshTime : public config::ParamSeconds
     {
     public:
@@ -42,23 +33,6 @@ public:
         bool from_string(const std::string& value_as_string,
                          value_type* pValue,
                          std::string* pMessage) const;
-    };
-
-    class QcCacheMaxSize : public config::Size
-    {
-    public:
-        using config::Size::Size;
-
-    protected:
-        void do_set(const value_type& value) override final;
-    };
-
-    class Passive : public config::Bool
-    {
-    public:
-        using config::Bool::Bool;
-
-        void do_set(const value_type& value) override final;
     };
 
     using SessionDumpStatements = config::Enum<session_dump_statements_t>;
@@ -82,10 +56,10 @@ public:
     config::Seconds auth_read_timeout;                  /**< Read timeout for the user authentication */
     config::Seconds auth_write_timeout;                 /**< Write timeout for the user authentication */
     config::Bool    skip_permission_checks;             /**< Skip service and monitor permission checks */
-    Passive         passive;                            /**< True if MaxScale is in passive mode */
+    config::Bool    passive;                            /**< True if MaxScale is in passive mode */
     config::String  qc_name;                            /**< The name of the query classifier to load */
     config::String  qc_args;                            /**< Arguments for the query classifieer */
-    QcCacheMaxSize  qc_cache_max_size;                  /**< Maximum amount of memory used by qc */
+    config::Size    qc_cache_max_size;                  /**< Maximum amount of memory used by qc */
     config::Enum<qc_sql_mode_t> qc_sql_mode;            /**< The query classifier sql mode */
     config::String  admin_host;                         /**< Admin interface host */
     config::Integer admin_port;                         /**< Admin interface port */
@@ -111,7 +85,7 @@ public:
                                                          * this % amount from load-average, rebalancing will
                                                          * be made.
                                                          */
-    RebalancePeriod rebalance_period;                   /**< How often should rebalancing be made. */
+    config::Milliseconds rebalance_period;              /**< How often should rebalancing be made. */
     config::Count   rebalance_window;                   /**< How many seconds should be taken into account. */
 
     // The following will not be configured via the configuration mechanism.

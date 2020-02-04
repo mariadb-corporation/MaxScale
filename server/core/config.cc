@@ -384,10 +384,19 @@ MXS_CONFIG::MXS_CONFIG()
     , auth_read_timeout(this, &s_auth_read_timeout)
     , auth_write_timeout(this, &s_auth_write_timeout)
     , skip_permission_checks(this, &s_skip_permission_checks)
-    , passive(this, &s_passive)
+    , passive(this, &s_passive, [](bool value) {
+            if (this_unit.gateway.passive.get() && !value)
+            {
+                // If we were passive, but no longer are, we register the time.
+                this_unit.gateway.promoted_at = mxs_clock();
+            }
+        })
     , qc_name(this, &s_qc_name)
     , qc_args(this, &s_qc_args)
-    , qc_cache_max_size(this, &s_qc_cache_max_size)
+    , qc_cache_max_size(this, &s_qc_cache_max_size, [](int64_t size) {
+            this_unit.gateway.qc_cache_properties.max_size = size;
+            qc_set_cache_properties(&this_unit.gateway.qc_cache_properties);
+        })
     , qc_sql_mode(this, &s_qc_sql_mode)
     , admin_host(this, &s_admin_host)
     , admin_port(this, &s_admin_port)
@@ -409,17 +418,12 @@ MXS_CONFIG::MXS_CONFIG()
     , load_persisted_configs(this, &s_load_persisted_configs)
     , max_auth_errors_until_block(this, &s_max_auth_errors_until_block)
     , rebalance_threshold(this, &s_rebalance_threshold)
-    , rebalance_period(this, &s_rebalance_period)
+    , rebalance_period(this, &s_rebalance_period, [](const std::chrono::milliseconds&) {
+            mxb_assert(mxs::MainWorker::get());
+            mxs::MainWorker::get()->start_rebalancing();
+        })
     , rebalance_window(this, &s_rebalance_window)
 {
-}
-
-void MXS_CONFIG::RebalancePeriod::do_set(const milliseconds& new_value)
-{
-    config::Duration<milliseconds>::do_set(new_value);
-
-    mxb_assert(mxs::MainWorker::get());
-    mxs::MainWorker::get()->start_rebalancing();
 }
 
 bool MXS_CONFIG::ParamUsersRefreshTime::from_string(const std::string& value_as_string,
@@ -446,22 +450,6 @@ bool MXS_CONFIG::ParamUsersRefreshTime::from_string(const std::string& value_as_
     }
 
     return rv;
-}
-
-void MXS_CONFIG::QcCacheMaxSize::do_set(const value_type& value)
-{
-    config::Size::do_set(value);
-    this_unit.gateway.qc_cache_properties.max_size = value;
-    qc_set_cache_properties(&this_unit.gateway.qc_cache_properties);
-}
-
-void MXS_CONFIG::Passive::do_set(const value_type& value)
-{
-    config::Bool::do_set(value);
-    if (get() && !value)
-    {
-        this_unit.gateway.promoted_at = mxs_clock();
-    }
 }
 
 static bool        process_config_context(CONFIG_CONTEXT*);
