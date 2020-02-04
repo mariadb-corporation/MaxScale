@@ -2126,6 +2126,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handsh
     auto buffer = read_buffer.get();
     update_sequence(buffer);
     uint8_t next_seq = m_sequence + 1;
+    m_session_data->next_sequence = next_seq;
 
     const char wrong_sequence[] = "Client (%s) sent packet with unexpected sequence number. "
                                   "Expected %i, got %i.";
