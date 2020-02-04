@@ -157,22 +157,22 @@ class BackendDCB;
      | ((uint64_t)(__buffer)[6] << 48)   \
      | ((uint64_t)(__buffer)[7] << 56))
 
- namespace mariadb
- {
+namespace mariadb
+{
 /**
  * Protocol packing and unpacking functions. The functions read or write unsigned integers from/to
  * MySQL-protocol buffers. MySQL saves integers in lsb-first format, so a conversion to host format
  * may be required.
  */
 
- void set_byte2(uint8_t* buffer, uint16_t val);
- void set_byte3(uint8_t* buffer, uint32_t val);
- void set_byte4(uint8_t* buffer, uint32_t val);
- uint16_t get_byte2(const uint8_t* buffer);
- uint32_t get_byte3(const uint8_t* buffer);
- uint32_t get_byte4(const uint8_t* buffer);
- uint64_t get_byte8(const uint8_t* buffer);
- }
+void     set_byte2(uint8_t* buffer, uint16_t val);
+void     set_byte3(uint8_t* buffer, uint32_t val);
+void     set_byte4(uint8_t* buffer, uint32_t val);
+uint16_t get_byte2(const uint8_t* buffer);
+uint32_t get_byte3(const uint8_t* buffer);
+uint32_t get_byte4(const uint8_t* buffer);
+uint64_t get_byte8(const uint8_t* buffer);
+}
 
 /** MySQL protocol constants */
 enum gw_mysql_capabilities_t
@@ -254,6 +254,9 @@ enum gw_mysql_capabilities_t
 #define MXS_MARIA_CAP_PROGRESS             (1 << 0)
 #define MXS_MARIA_CAP_COM_MULTI            (1 << 1)
 #define MXS_MARIA_CAP_STMT_BULK_OPERATIONS (1 << 2)
+
+// Default extended flags that MaxScale supports
+constexpr const uint32_t MXS_EXTRA_CAPABILITIES_SERVER = MXS_MARIA_CAP_STMT_BULK_OPERATIONS;
 
 enum mxs_mysql_cmd_t
 {

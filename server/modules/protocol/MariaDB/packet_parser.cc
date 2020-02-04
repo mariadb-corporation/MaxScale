@@ -27,7 +27,7 @@ void pop_front(packet_parser::ByteVec& data, int len)
 
 auto read_stringz_if_cap(packet_parser::ByteVec& data, uint32_t client_caps, uint32_t req_caps)
 {
-    std::pair<bool, string> rval(true, ""); // success & result
+    std::pair<bool, string> rval(true, "");     // success & result
     if ((client_caps & req_caps) == req_caps)
     {
         if (!data.empty())
@@ -78,7 +78,9 @@ ClientInfo parse_client_capabilities(ByteVec& data, const ClientInfo* old_info)
      */
     if ((rval.m_client_capabilities & GW_MYSQL_CAPABILITIES_CLIENT_MYSQL) == 0)
     {
-        rval.m_extra_capabilities |= mariadb::get_byte4(ptr);
+        // We don't support COM_MULTI or progress reporting. The former is not used and the latter requires
+        // some extra work to implement correctly.
+        rval.m_extra_capabilities |= (mariadb::get_byte4(ptr) & MXS_EXTRA_CAPABILITIES_SERVER);
     }
     ptr += 4;
     pop_front(data, ptr - data.data());
@@ -254,5 +256,4 @@ ChangeUserParseResult parse_change_user_packet(ByteVec& data, uint32_t client_ca
     }
     return rval;
 }
-
 }

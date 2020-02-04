@@ -363,7 +363,7 @@ int MariaDBClientConnection::send_mysql_client_handshake()
          * The new 10.2 capability flags are stored in the last 4 bytes of the
          * 10 byte filler block.
          */
-        uint32_t new_flags = MXS_MARIA_CAP_STMT_BULK_OPERATIONS;
+        uint32_t new_flags = MXS_EXTRA_CAPABILITIES_SERVER;
         memcpy(mysql_filler_ten + 6, &new_flags, sizeof(new_flags));
     }
 
