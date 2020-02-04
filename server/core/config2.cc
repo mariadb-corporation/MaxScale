@@ -164,7 +164,9 @@ bool Specification::validate(const mxs::ConfigParameters& params) const
     return valid;
 }
 
-bool Specification::configure(Configuration& configuration, const mxs::ConfigParameters& params) const
+bool Specification::configure(Configuration& configuration,
+                              const mxs::ConfigParameters& params,
+                              mxs::ConfigParameters* pUnrecognized) const
 {
     mxb_assert(validate(params));
     mxb_assert(size() == configuration.size());
@@ -192,6 +194,10 @@ bool Specification::configure(Configuration& configuration, const mxs::ConfigPar
                     mxb_assert(!true);
                     configured = false;
                 }
+            }
+            else if (pUnrecognized)
+            {
+                pUnrecognized->set(name, value);
             }
             else
             {

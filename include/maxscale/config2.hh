@@ -84,10 +84,16 @@ public:
      *
      * @param configuration  The configuration that should be configured.
      * @param params         The parameters that should be used, will be validated.
+     * @param pUnrecognized  If non-null:
+     *                       - Will contain on return parameters that were not used.
+     *                       - An unrecognized parameter will not cause the configuring
+     *                         to fail.
      *
      * @return True if could be configured.
      */
-    bool configure(Configuration& configuration, const mxs::ConfigParameters& params) const;
+    bool configure(Configuration& configuration,
+                   const mxs::ConfigParameters& params,
+                   mxs::ConfigParameters* pUnrecognized = nullptr) const;
 
     /**
      * Find given parameter of the specification.
