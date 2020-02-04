@@ -35,17 +35,26 @@ public:
                          std::string* pMessage) const;
     };
 
+    class ParamThreadsCount : public config::ParamCount
+    {
+    public:
+        using config::ParamCount::ParamCount;
+
+        bool from_string(const std::string& value_as_string,
+                         value_type* pValue,
+                         std::string* pMessage) const;
+    };
+
     using SessionDumpStatements = config::Enum<session_dump_statements_t>;
 
     MXS_CONFIG();
 
     bool    config_check;                               /**< Only check config */
-    int     n_threads;                                  /**< Number of polling threads */
-    size_t  thread_stack_size;                          /**< The stack size of each worker thread */
     char    release_string[RELEASE_STR_LENGTH];         /**< The release name string of the system */
     char    sysname[SYSNAME_LEN];                       /**< The OS name of the system */
     uint8_t mac_sha1[SHA_DIGEST_LENGTH];                /**< The SHA1 digest of an interface MAC address */
 
+    config::Count   n_threads;                          /**< Number of polling threads */
     SessionDumpStatements dump_statements;              /**< Whether to dump last statements. */
     config::Count   session_trace;                      /**< How entries stored to session trace log.*/
     config::Bool    ms_timestamp;                       /**< Enable or disable high precision timestamps */
@@ -100,6 +109,7 @@ public:
 public:
     static config::Specification s_specification;
 
+    static ParamThreadsCount                            s_n_threads;
     static config::ParamEnum<session_dump_statements_t> s_dump_statements;
     static config::ParamCount                           s_session_trace;
     static config::ParamBool                            s_ms_timestamp;

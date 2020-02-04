@@ -86,6 +86,14 @@ const char CN_USERS_REFRESH_INTERVAL[] = "users_refresh_interval";
 
 config::Specification MXS_CONFIG::s_specification("maxscale", config::Specification::GLOBAL);
 
+MXS_CONFIG::ParamThreadsCount MXS_CONFIG::s_n_threads(
+    &MXS_CONFIG::s_specification,
+    CN_THREADS,
+    "This parameter specifies how many threads will be used for handling the routing.",
+    DEFAULT_NTHREADS, // TODO: Why not get_processor_count()?
+    1,
+    std::numeric_limits<MXS_CONFIG::ParamThreadsCount::value_type>::max());
+
 config::ParamEnum<session_dump_statements_t> MXS_CONFIG::s_dump_statements(
     &MXS_CONFIG::s_specification,
     CN_DUMP_LAST_STATEMENTS,
@@ -365,6 +373,7 @@ struct ThisUnit
 
 MXS_CONFIG::MXS_CONFIG()
     : config::Configuration("maxscale", &s_specification)
+    , n_threads(this, &s_n_threads)
     , dump_statements(this, &s_dump_statements, [](session_dump_statements_t when) {
             session_set_dump_statements(when);
         })
@@ -451,6 +460,50 @@ bool MXS_CONFIG::ParamUsersRefreshTime::from_string(const std::string& value_as_
 
     return rv;
 }
+
+bool MXS_CONFIG::ParamThreadsCount::from_string(const std::string& value_as_string,
+                                                value_type* pValue,
+                                                std::string* pMessage) const
+{
+    bool rv = true;
+
+    if (value_as_string == CN_AUTO)
+    {
+        *pValue = get_processor_count();
+    }
+    else
+    {
+        value_type value;
+        rv = ParamCount::from_string(value_as_string, &value, pMessage);
+
+        if (rv)
+        {
+            int processor_count = get_processor_count();
+            if (value > processor_count)
+            {
+                MXS_WARNING("Number of threads set to %d, which is greater than "
+                            "the number of processors available: %d",
+                            (int)value,
+                            processor_count);
+            }
+
+            if (value > MXS_MAX_ROUTING_THREADS)
+            {
+                MXS_WARNING("Number of threads set to %d, which is greater than the "
+                            "hard maximum of %d. Number of threads adjusted down "
+                            "accordingly.",
+                            (int)value,
+                            MXS_MAX_ROUTING_THREADS);
+                value = MXS_MAX_ROUTING_THREADS;
+            }
+
+            *pValue = value;
+        }
+    }
+
+    return rv;
+}
+
 
 static bool        process_config_context(CONFIG_CONTEXT*);
 static bool        process_config_update(CONFIG_CONTEXT*);
@@ -2056,12 +2109,22 @@ void config_remove_param(CONFIG_CONTEXT* obj, const char* name)
  */
 int config_threadcount()
 {
-    return this_unit.gateway.n_threads;
+    return this_unit.gateway.n_threads.get();
 }
 
 size_t config_thread_stack_size()
 {
-    return this_unit.gateway.thread_stack_size;
+    size_t thread_stack_size = 0;
+    pthread_attr_t attr;
+    if (pthread_attr_init(&attr) == 0)
+    {
+        if (pthread_attr_getstacksize(&attr, &thread_stack_size) != 0)
+        {
+            MXS_WARNING("Could not get thread stack size.");
+        }
+    }
+
+    return thread_stack_size;
 }
 
 uint32_t config_writeq_high_water()
@@ -2121,53 +2184,7 @@ static int handle_global_item(const char* name, const char* value)
 
     config::Type* item = nullptr;
     int i;
-    if (strcmp(name, CN_THREADS) == 0)
-    {
-        if (strcmp(value, CN_AUTO) == 0)
-        {
-            this_unit.gateway.n_threads = get_processor_count();
-        }
-        else
-        {
-            int thrcount = atoi(value);
-            if (thrcount > 0)
-            {
-                this_unit.gateway.n_threads = thrcount;
-
-                int processor_count = get_processor_count();
-                if (thrcount > processor_count)
-                {
-                    MXS_WARNING("Number of threads set to %d, which is greater than "
-                                "the number of processors available: %d",
-                                thrcount,
-                                processor_count);
-                }
-            }
-            else
-            {
-                MXS_ERROR("Invalid value for 'threads': %s.", value);
-                return 0;
-            }
-        }
-
-        if (this_unit.gateway.n_threads > MXS_MAX_ROUTING_THREADS)
-        {
-            MXS_WARNING("Number of threads set to %d, which is greater than the "
-                        "hard maximum of %d. Number of threads adjusted down "
-                        "accordingly.",
-                        this_unit.gateway.n_threads,
-                        MXS_MAX_ROUTING_THREADS);
-            this_unit.gateway.n_threads = MXS_MAX_ROUTING_THREADS;
-        }
-    }
-    else if (strcmp(name, CN_THREAD_STACK_SIZE) == 0)
-    {
-        // DEPRECATED in 2.3, remove in 2.4
-        MXS_WARNING("%s is ignored and has been deprecated. If you need to explicitly "
-                    "set the stack size, do so with 'ulimit -s' before starting MaxScale.",
-                    CN_THREAD_STACK_SIZE);
-    }
-    else if (strcmp(name, CN_LOG_THROTTLING) == 0)
+    if (strcmp(name, CN_LOG_THROTTLING) == 0)
     {
         if (*value == 0)
         {
@@ -2321,7 +2338,6 @@ bool config_can_modify_at_runtime(const char* name)
         "sql_mode",
         CN_QUERY_CLASSIFIER_ARGS,
         CN_QUERY_CLASSIFIER,
-        CN_THREAD_STACK_SIZE,
         CN_THREADS
     };
 
@@ -2333,7 +2349,6 @@ void config_set_global_defaults()
     uint8_t mac_addr[6] = "";
     struct utsname uname_data;
     this_unit.gateway.config_check = false;
-    this_unit.gateway.n_threads = DEFAULT_NTHREADS;
     this_unit.gateway.promoted_at = 0;
 
     this_unit.gateway.log_target = MXB_LOG_TARGET_DEFAULT;
@@ -2344,17 +2359,6 @@ void config_set_global_defaults()
     {
         // Set to -1 so that we know the auto-sizing failed.
         this_unit.gateway.qc_cache_properties.max_size = -1;
-    }
-
-    this_unit.gateway.thread_stack_size = 0;
-    pthread_attr_t attr;
-    if (pthread_attr_init(&attr) == 0)
-    {
-        size_t thread_stack_size;
-        if (pthread_attr_getstacksize(&attr, &thread_stack_size) == 0)
-        {
-            this_unit.gateway.thread_stack_size = thread_stack_size;
-        }
     }
 
     /* get release string */
