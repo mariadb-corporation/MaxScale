@@ -430,7 +430,7 @@ const char ERR_CANNOT_MODIFY[] =
     "The server is monitored, so only the maintenance status can be "
     "set/cleared manually. Status was not modified.";
 const char WRN_REQUEST_OVERWRITTEN[] =
-    "Previous maintenance request was not yet read by the monitor and was overwritten.";
+    "Previous maintenance/draining request was not yet read by the monitor and was overwritten.";
 
 /* Is not really an event as the other values, but is a valid config setting and also the default.
  * Bitmask value matches all events. */
@@ -1323,10 +1323,6 @@ void MonitorServer::mon_report_query_error()
               mysql_error(con));
 }
 
-/**
- * Check if admin is requesting setting or clearing maintenance status on the server and act accordingly.
- * Should be called at the beginning of a monitor loop.
- */
 void Monitor::check_maintenance_requests()
 {
     /* In theory, the admin may be modifying the server maintenance status during this function. The overall
@@ -1334,35 +1330,9 @@ void Monitor::check_maintenance_requests()
     bool was_pending = m_status_change_pending.exchange(false, std::memory_order_acq_rel);
     if (was_pending)
     {
-        for (auto ptr : m_servers)
+        for (auto server : m_servers)
         {
-            // The admin can only modify the [Maintenance] and [Drain] bits.
-            int admin_msg = atomic_exchange_int(&ptr->status_request, MonitorServer::NO_CHANGE);
-
-            switch (admin_msg)
-            {
-            case MonitorServer::MAINT_ON:
-                ptr->server->set_status(SERVER_MAINT);
-                break;
-
-            case MonitorServer::MAINT_OFF:
-                ptr->server->clear_status(SERVER_MAINT);
-                break;
-
-            case MonitorServer::BEING_DRAINED_ON:
-                ptr->server->set_status(SERVER_DRAINING);
-                break;
-
-            case MonitorServer::BEING_DRAINED_OFF:
-                ptr->server->clear_status(SERVER_DRAINING);
-                break;
-
-            case MonitorServer::NO_CHANGE:
-                break;
-
-            default:
-                mxb_assert(!true);
-            }
+            server->apply_status_requests();
         }
     }
 }
@@ -1749,7 +1719,7 @@ bool Monitor::set_server_status(SERVER* srv, int bit, string* errmsg_out)
             /* Maintenance and being-drained are set/cleared using a special variable which the
              * monitor reads when starting the next update cycle. */
 
-            int request;
+            MonitorServer::StatusRequest request;
             if (bit & SERVER_MAINT)
             {
                 request = MonitorServer::MAINT_ON;
@@ -1757,16 +1727,11 @@ bool Monitor::set_server_status(SERVER* srv, int bit, string* errmsg_out)
             else
             {
                 mxb_assert(bit & SERVER_DRAINING);
-                request = MonitorServer::BEING_DRAINED_ON;
+                request = MonitorServer::DRAINING_ON;
             }
 
-            int previous_request = atomic_exchange_int(&msrv->status_request, request);
+            msrv->add_status_request(request);
             written = true;
-            // Warn if the previous request hasn't been read.
-            if (previous_request != MonitorServer::NO_CHANGE)
-            {
-                MXS_WARNING(WRN_REQUEST_OVERWRITTEN);
-            }
             // Also set a flag so the next loop happens sooner.
             m_status_change_pending.store(true, std::memory_order_release);
         }
@@ -1807,7 +1772,7 @@ bool Monitor::clear_server_status(SERVER* srv, int bit, string* errmsg_out)
         }
         else
         {
-            int request;
+            MonitorServer::StatusRequest request;
             if (bit & SERVER_MAINT)
             {
                 request = MonitorServer::MAINT_OFF;
@@ -1815,16 +1780,11 @@ bool Monitor::clear_server_status(SERVER* srv, int bit, string* errmsg_out)
             else
             {
                 mxb_assert(bit & SERVER_DRAINING);
-                request = MonitorServer::BEING_DRAINED_OFF;
+                request = MonitorServer::DRAINING_OFF;
             }
 
-            int previous_request = atomic_exchange_int(&msrv->status_request, request);
+            msrv->add_status_request(request);
             written = true;
-            // Warn if the previous request hasn't been read.
-            if (previous_request != MonitorServer::NO_CHANGE)
-            {
-                MXS_WARNING(WRN_REQUEST_OVERWRITTEN);
-            }
             // Also set a flag so the next loop happens sooner.
             m_status_change_pending.store(true, std::memory_order_release);
         }
@@ -1894,10 +1854,6 @@ MonitorWorker::MonitorWorker(const string& name, const string& module)
     , m_shutdown(0)
     , m_checked(false)
     , m_loop_called(get_time_ms())
-{
-}
-
-MonitorWorker::~MonitorWorker()
 {
 }
 
@@ -1988,7 +1944,8 @@ int64_t MonitorWorker::get_time_ms()
 
 bool MonitorServer::can_update_disk_space_status() const
 {
-    return ok_to_check_disk_space && (!m_shared.monitor_disk_limits.empty() || server->have_disk_space_limits());
+    return m_ok_to_check_disk_space
+        && (!m_shared.monitor_disk_limits.empty() || server->have_disk_space_limits());
 }
 
 void MonitorServer::update_disk_space_status()
@@ -2073,7 +2030,7 @@ void MonitorServer::update_disk_space_status()
         if (mysql_errno(pMs->con) == ER_UNKNOWN_TABLE)
         {
             // Disable disk space checking for this server.
-            pMs->ok_to_check_disk_space = false;
+            m_ok_to_check_disk_space = false;
 
             MXS_ERROR("Disk space cannot be checked for %s at %s, because either the "
                       "version (%s) is too old, or the DISKS information schema plugin "
@@ -2296,6 +2253,47 @@ MonitorServer::~MonitorServer()
     if (con)
     {
         mysql_close(con);
+    }
+}
+
+void MonitorServer::apply_status_requests()
+{
+    // The admin can only modify the [Maintenance] and [Drain] bits.
+    int admin_msg = m_status_request.exchange(NO_CHANGE, std::memory_order_acq_rel);
+
+    switch (admin_msg)
+    {
+        case MonitorServer::MAINT_ON:
+            server->set_status(SERVER_MAINT);
+            break;
+
+        case MonitorServer::MAINT_OFF:
+            server->clear_status(SERVER_MAINT);
+            break;
+
+        case MonitorServer::DRAINING_ON:
+            server->set_status(SERVER_DRAINING);
+            break;
+
+        case MonitorServer::DRAINING_OFF:
+            server->clear_status(SERVER_DRAINING);
+            break;
+
+        case MonitorServer::NO_CHANGE:
+            break;
+
+        default:
+            mxb_assert(!true);
+    }
+}
+
+void MonitorServer::add_status_request(StatusRequest request)
+{
+    int previous_request = m_status_request.exchange(request, std::memory_order_acq_rel);
+    // Warn if the previous request hasn't been read.
+    if (previous_request != NO_CHANGE)
+    {
+        MXS_WARNING(WRN_REQUEST_OVERWRITTEN);
     }
 }
 }

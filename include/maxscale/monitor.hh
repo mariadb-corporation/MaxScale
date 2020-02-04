@@ -153,14 +153,15 @@ public:
         TIMEOUT        /* No existing connection or no ping reply. Timeout on new connection. */
     };
 
-    /**
-     * Maintenance mode request constants.
-     */
-    static const int NO_CHANGE = 0;
-    static const int MAINT_OFF = 1;
-    static const int MAINT_ON = 2;
-    static const int BEING_DRAINED_OFF = 3;
-    static const int BEING_DRAINED_ON = 4;
+    /** Status change requests */
+    enum StatusRequest
+    {
+        NO_CHANGE,
+        MAINT_OFF,
+        MAINT_ON,
+        DRAINING_OFF,
+        DRAINING_ON,
+    };
 
     // When a monitor detects that a server is down, these bits should be cleared.
     static constexpr uint64_t SERVER_DOWN_CLEAR_BITS {SERVER_RUNNING | SERVER_AUTH_ERROR | SERVER_MASTER
@@ -256,9 +257,11 @@ public:
      */
     void update_disk_space_status();
 
+    void add_status_request(StatusRequest request);
+    void apply_status_requests();
+
     SERVER* server = nullptr;       /**< The server being monitored */
     MYSQL*  con = nullptr;          /**< The MySQL connection */
-    bool    log_version_err = true;
     int     mon_err_count = 0;
 
     uint64_t mon_prev_status = -1;      /**< Status before starting the current monitor loop */
@@ -270,12 +273,11 @@ public:
     mxs_monitor_event_t last_event = SERVER_DOWN_EVENT; /**< The last event that occurred on this server */
     int64_t             triggered_at = 0;               /**< Time when the last event was triggered */
 
-    int status_request = NO_CHANGE;     /**< Is admin requesting Maintenance=ON/OFF on the server? */
-
 private:
     const SharedSettings& m_shared;     /**< Settings shared between all servers of the monitor */
 
-    bool ok_to_check_disk_space {true};     /**< Set to false if check fails */
+    std::atomic_int m_status_request {NO_CHANGE};     /**< Status change request from admin */
+    bool            m_ok_to_check_disk_space {true};  /**< Set to false if check fails */
 };
 
 /**
@@ -498,6 +500,10 @@ protected:
      */
     void store_server_journal(MonitorServer* master);
 
+    /**
+     * Check if admin is requesting setting or clearing maintenance status on the server and act accordingly.
+     * Should be called at the beginning of a monitor loop.
+     */
     void check_maintenance_requests();
 
     /**
@@ -614,7 +620,7 @@ public:
     MonitorWorker(const MonitorWorker&) = delete;
     MonitorWorker& operator=(const MonitorWorker&) = delete;
 
-    virtual ~MonitorWorker();
+    ~MonitorWorker() override = default;
 
     bool is_running() const final;
 
@@ -651,7 +657,7 @@ public:
      *
      * @return An object, if there is information to return, NULL otherwise.
      */
-    virtual json_t* diagnostics() const;
+    json_t* diagnostics() const override;
 
     /**
      * Get current time from the monotonic clock.
@@ -664,16 +670,6 @@ protected:
     MonitorWorker(const std::string& name, const std::string& module);
 
     void do_stop() final;
-
-    /**
-     * @brief Should the monitor shut down?
-     *
-     * @return True, if the monitor should shut down, false otherwise.
-     */
-    bool should_shutdown() const
-    {
-        return atomic_load_int32(&m_shutdown) != 0;
-    }
 
     /**
      * @brief Configure the monitor.
