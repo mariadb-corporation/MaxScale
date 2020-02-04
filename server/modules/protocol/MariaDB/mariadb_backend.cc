@@ -35,6 +35,7 @@
 #include "../../../core/internal/monitormanager.hh"
 
 using mxs::ReplyState;
+using std::string;
 
 static bool get_ip_string_and_port(struct sockaddr_storage* sa,
                                    char* ip,
@@ -226,7 +227,7 @@ bool MariaDBBackendConnection::reuse_connection(BackendDCB* dcb, mxs::Component*
             m_stored_query = nullptr;
         }
 
-        GWBUF* buf = gw_create_change_user_packet();
+        GWBUF* buf = create_change_user_packet();
         if (dcb->writeq_append(buf))
         {
             MXS_INFO("Sent COM_CHANGE_USER");
@@ -1252,141 +1253,81 @@ bool MariaDBBackendConnection::change_user(DCB* backend, GWBUF* queue)
  * @return GWBUF buffer consisting of COM_CHANGE_USER packet
  * @note the function doesn't fail
  */
-GWBUF* MariaDBBackendConnection::gw_create_change_user_packet()
+GWBUF* MariaDBBackendConnection::create_change_user_packet()
 {
+    auto make_auth_token = [this] {
+            std::vector<uint8_t> rval;
+            const string& hex_hash2 = m_client_data->user_entry.entry.password;
+            if (hex_hash2.empty())
+            {
+                return rval;// Empty password -> empty token
+            }
+
+            // Need to compute the value of:
+            // SHA1(scramble || SHA1(SHA1(password))) ⊕ SHA1(password)
+
+            // SHA1(SHA1(password)) is in the user entry and needs to be converted to binary form.
+            if (hex_hash2.length() == 2 * SHA_DIGEST_LENGTH)
+            {
+                uint8_t hash2[SHA_DIGEST_LENGTH];
+                mxs::hex2bin(hex_hash2.c_str(), hex_hash2.length(), hash2);
+
+                // Calculate SHA1(CONCAT(scramble, hash2) */
+                uint8_t concat_hash[SHA_DIGEST_LENGTH];
+                gw_sha1_2_str(m_scramble, MYSQL_SCRAMBLE_LEN, hash2, SHA_DIGEST_LENGTH, concat_hash);
+
+                // SHA1(password) was sent by client and is in binary form.
+                auto& hash1 = m_client_data->auth_token_phase2;
+                if (hash1.size() == SHA_DIGEST_LENGTH)
+                {
+                    // Compute the XOR */
+                    uint8_t new_token[SHA_DIGEST_LENGTH];
+                    mxs::bin_bin_xor(concat_hash, hash1.data(), SHA_DIGEST_LENGTH, new_token);
+                    rval.assign(new_token, new_token + SHA_DIGEST_LENGTH);
+                }
+            }
+            return rval;
+        };
+
     auto mses = m_client_data;
-    const char* curr_db = NULL;
-    const char* db = mses->db.c_str();
-    if (strlen(db) > 0)
-    {
-        curr_db = db;
-    }
+    std::vector<uint8_t> payload;
+    payload.reserve(200);   // Enough for most cases.
 
-    const uint8_t* curr_passwd = NULL;
-    if (mses->auth_token_phase2.size() == GW_MYSQL_SCRAMBLE_SIZE)
-    {
-        curr_passwd = mses->auth_token_phase2.data();
-    }
+    auto insert_stringz = [&payload](const std::string& str) {
+            auto n = str.length() + 1;
+            auto zstr = str.c_str();
+            payload.insert(payload.end(), zstr, zstr + n);
+        };
 
-    /**
-     * Protocol MySQL COM_CHANGE_USER for CLIENT_PROTOCOL_41
-     * 1 byte COMMAND
-     */
-    long bytes = 1;
+    // Command byte COM_CHANGE_USER 0x11 */
+    payload.push_back(MXS_COM_CHANGE_USER);
 
-    /** add the user and a terminating char */
-    const char* user = m_client_data->user.c_str();
-    bytes += strlen(user) + 1;
+    insert_stringz(mses->user);
 
-    /**
-     * next will be + 1 (scramble_len) + 20 (fixed_scramble) +
-     * (db + NULL term) + 2 bytes charset
-     */
-    if (curr_passwd != NULL)
-    {
-        bytes += GW_MYSQL_SCRAMBLE_SIZE;
-    }
-    /** 1 byte for scramble_len */
-    bytes++;
-    /** db name and terminating char */
-    if (curr_db != NULL)
-    {
-        bytes += strlen(curr_db);
-    }
-    bytes++;
+    // Calculate the authentication token.
+    auto token = make_auth_token();
+    payload.push_back(token.size());
+    payload.insert(payload.end(), token.begin(), token.end());
 
-    auto plugin_strlen = strlen(DEFAULT_MYSQL_AUTH_PLUGIN);
+    insert_stringz(mses->db);
 
-    /** the charset */
-    bytes += 2;
-    bytes += plugin_strlen + 1;
-    bytes += mses->connect_attrs.size();
+    uint8_t charset[2];
+    mariadb::set_byte2(charset, mses->client_info.m_charset);
+    payload.insert(payload.end(), charset, charset + sizeof(charset));
 
-    /** the packet header */
-    bytes += 4;
+    insert_stringz(mses->plugin);
+    auto& attr = mses->connect_attrs;
+    payload.insert(payload.end(), attr.begin(), attr.end());
 
-    GWBUF* buffer = gwbuf_alloc(bytes);
-
-    // The COM_CHANGE_USER is a session command so the result must be collected
+    GWBUF* buffer = gwbuf_alloc(payload.size() + MYSQL_HEADER_LEN);
+    auto data = GWBUF_DATA(buffer);
+    mariadb::set_byte3(data, payload.size());
+    data += 3;
+    *data++ = 0;    // Sequence.
+    memcpy(data, payload.data(), payload.size());
+    // COM_CHANGE_USER is a session command so the result must be collected.
     gwbuf_set_type(buffer, GWBUF_TYPE_COLLECT_RESULT);
 
-    uint8_t* payload = GWBUF_DATA(buffer);
-    memset(payload, '\0', bytes);
-    uint8_t* payload_start = payload;
-
-    /** set packet number to 0 */
-    payload[3] = 0x00;
-    payload += 4;
-
-    /** set the command COM_CHANGE_USER 0x11 */
-    payload[0] = 0x11;
-    payload++;
-    memcpy(payload, user, strlen(user));
-    payload += strlen(user);
-    payload++;
-
-    if (curr_passwd != NULL)
-    {
-        uint8_t hash1[GW_MYSQL_SCRAMBLE_SIZE] = "";
-        uint8_t hash2[GW_MYSQL_SCRAMBLE_SIZE] = "";
-        uint8_t new_sha[GW_MYSQL_SCRAMBLE_SIZE] = "";
-        uint8_t client_scramble[GW_MYSQL_SCRAMBLE_SIZE];
-
-        /** hash1 is the function input, SHA1(real_password) */
-        memcpy(hash1, mses->auth_token_phase2.data(), GW_MYSQL_SCRAMBLE_SIZE);
-
-        /**
-         * hash2 is the SHA1(input data), where
-         * input_data = SHA1(real_password)
-         */
-        gw_sha1_str(hash1, GW_MYSQL_SCRAMBLE_SIZE, hash2);
-
-        /** dbpass is the HEX form of SHA1(SHA1(real_password)) */
-        char dbpass[MYSQL_USER_MAXLEN + 1] = "";
-        mxs::bin2hex(hash2, GW_MYSQL_SCRAMBLE_SIZE, dbpass);
-
-        /** new_sha is the SHA1(CONCAT(scramble, hash2) */
-        gw_sha1_2_str(m_scramble, MYSQL_SCRAMBLE_LEN, hash2, MYSQL_SCRAMBLE_LEN, new_sha);
-
-        /** compute the xor in client_scramble */
-        mxs::bin_bin_xor(new_sha, hash1, GW_MYSQL_SCRAMBLE_SIZE, client_scramble);
-
-        /** set the auth-length */
-        *payload = GW_MYSQL_SCRAMBLE_SIZE;
-        payload++;
-        /**
-         * copy the 20 bytes scramble data after
-         * packet_buffer + 36 + user + NULL + 1 (byte of auth-length)
-         */
-        memcpy(payload, client_scramble, GW_MYSQL_SCRAMBLE_SIZE);
-        payload += GW_MYSQL_SCRAMBLE_SIZE;
-    }
-    else
-    {
-        /** skip the auth-length and leave the byte as NULL */
-        payload++;
-    }
-    /** if the db is not NULL append it */
-    if (curr_db != NULL)
-    {
-        memcpy(payload, curr_db, strlen(curr_db));
-        payload += strlen(curr_db);
-    }
-    payload++;
-    /** Set the charset, 2 bytes. Use the value sent by client. */
-    *payload = mses->client_info.m_charset;
-    payload++;
-    *payload = '\x00';      // Discards second byte from client?
-    payload++;
-    memcpy(payload, DEFAULT_MYSQL_AUTH_PLUGIN, plugin_strlen);
-    payload += plugin_strlen + 1;
-
-    if (!mses->connect_attrs.empty())
-    {
-        memcpy(payload, mses->connect_attrs.data(), mses->connect_attrs.size());
-    }
-
-    mariadb::set_byte3(payload_start, (bytes - MYSQL_HEADER_LEN));
     return buffer;
 }
 
@@ -1397,7 +1338,7 @@ GWBUF* MariaDBBackendConnection::gw_create_change_user_packet()
  */
 bool MariaDBBackendConnection::send_change_user_to_backend(DCB* backend)
 {
-    GWBUF* buffer = gw_create_change_user_packet();
+    GWBUF* buffer = create_change_user_packet();
     bool rval = false;
     if (backend->writeq_append(buffer))
     {

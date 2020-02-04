@@ -325,15 +325,7 @@ bool MariaDBClientAuthenticator::validate_mysql_user(const UserEntry* entry, MYS
     {
         return true;
     }
-
-    auto passwdz = entry->password.c_str();
-    // The * at the start needs to be skipped.
-    if (*passwdz == '*')
-    {
-        passwdz++;
-    }
-
-    return check_password(passwdz, session);
+    return check_password(entry->password.c_str(), session);
 }
 
 /**

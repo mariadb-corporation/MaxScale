@@ -449,6 +449,14 @@ bool MariaDBUserManager::read_users_mariadb(QResult users, UserDatabase* output)
 
             new_entry.plugin = users->get_string(ind_plugin);
             new_entry.password = users->get_string(ind_pw);
+
+            // Hex-form passwords have a '*' at the beginning, remove it.
+            auto& pwd = new_entry.password;
+            if (!pwd.empty() && pwd[0] == '*')
+            {
+                pwd.erase(0, 1);
+            }
+
             new_entry.auth_string = users->get_string(ind_auth_str);
 
             if (ind_is_role >= 0)
