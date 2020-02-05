@@ -2096,11 +2096,14 @@ make sure the peer is who they claim to be. For listeners, this behaves as if
 
 ### `ssl_verify_peer_host`
 
-Peer host verification. This parameter takes a boolean value and is enabled by
+Peer host verification. This parameter takes a boolean value and is disabled by
 default.
 
 When this feature is enabled, the peer hostname or IP is verified against the
-certificate that is sent by the peer.
+certificate that is sent by the peer. If the IP address or the hostname does not
+match the one in the certificate returned by the peer, the connection will be
+closed. If the peer does not provide a certificate, the host verification is not
+done. To require peer certificates, use `ssl_verify_peer_certificate`.
 
 ### `ssl_crl`
 

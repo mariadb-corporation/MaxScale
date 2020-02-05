@@ -628,7 +628,7 @@ const MXS_MODULE_PARAM* common_server_params()
             CN_SSL_VERIFY_PEER_CERTIFICATE, MXS_MODULE_PARAM_BOOL, "false"
         },
         {
-            CN_SSL_VERIFY_PEER_HOST, MXS_MODULE_PARAM_BOOL, "true"
+            CN_SSL_VERIFY_PEER_HOST, MXS_MODULE_PARAM_BOOL, "false"
         },
         {
             CN_DISK_SPACE_THRESHOLD, MXS_MODULE_PARAM_STRING

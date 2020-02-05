@@ -1115,16 +1115,19 @@ bool DCB::verify_peer_host()
         auto r = remote();
         X509* cert = SSL_get_peer_certificate(m_encryption.handle);
 
-        if (X509_check_ip_asc(cert, r.c_str(), 0) != 1
-            && X509_check_host(cert, r.c_str(), 0, 0, nullptr) != 1)
+        if (cert)
         {
-            char buf[1024] = "";
-            X509_NAME_oneline(X509_get_subject_name(cert), buf, sizeof(buf));
-            MXS_ERROR("Peer host '%s' does not match certificate: %s", r.c_str(), buf);
-            rval = false;
-        }
+            if (X509_check_ip_asc(cert, r.c_str(), 0) != 1
+                && X509_check_host(cert, r.c_str(), 0, 0, nullptr) != 1)
+            {
+                char buf[1024] = "";
+                X509_NAME_oneline(X509_get_subject_name(cert), buf, sizeof(buf));
+                MXS_ERROR("Peer host '%s' does not match certificate: %s", r.c_str(), buf);
+                rval = false;
+            }
 
-        X509_free(cert);
+            X509_free(cert);
+        }
     }
 
     return rval;
