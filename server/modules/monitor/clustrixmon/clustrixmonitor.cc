@@ -195,11 +195,11 @@ sqlite3* open_or_create_db(const std::string& path)
 }
 
 ClustrixMonitor::Config::Config(const std::string& name)
-    : m_configuration(name, &clustrixmon::specification)
-    , m_cluster_monitor_interval(&m_configuration, &clustrixmon::cluster_monitor_interval)
-    , m_health_check_threshold(&m_configuration, &clustrixmon::health_check_threshold)
-    , m_dynamic_node_detection(&m_configuration, &clustrixmon::dynamic_node_detection)
-    , m_health_check_port(&m_configuration, &clustrixmon::health_check_port)
+    : config::Configuration(name, &clustrixmon::specification)
+    , m_cluster_monitor_interval(this, &clustrixmon::cluster_monitor_interval)
+    , m_health_check_threshold(this, &clustrixmon::health_check_threshold)
+    , m_dynamic_node_detection(this, &clustrixmon::dynamic_node_detection)
+    , m_health_check_port(this, &clustrixmon::health_check_port)
 {
 }
 
@@ -207,11 +207,6 @@ ClustrixMonitor::Config::Config(const std::string& name)
 void ClustrixMonitor::Config::populate(MXS_MODULE& module)
 {
     clustrixmon::specification.populate(module);
-}
-
-bool ClustrixMonitor::Config::configure(const mxs::ConfigParameters& params)
-{
-    return clustrixmon::specification.configure(m_configuration, params);
 }
 
 ClustrixMonitor::ClustrixMonitor(const string& name, const string& module, sqlite3* pDb)

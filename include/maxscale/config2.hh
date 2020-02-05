@@ -62,7 +62,10 @@ public:
     /**
      * @return What kind of specification.
      */
-    Kind kind() const;
+    Kind kind() const
+    {
+        return m_kind;
+    }
 
     /**
      * @return The module name of this specification.
@@ -81,24 +84,8 @@ public:
      * @return True, if the @params represent valid parameters - all mandatory are
      *         present, all present ones are of corrent type - for this specification.
      */
-    bool validate(const mxs::ConfigParameters& params,
-                  mxs::ConfigParameters* pUnrecognized = nullptr) const;
-
-    /**
-     * Configure configuration
-     *
-     * @param configuration  The configuration that should be configured.
-     * @param params         The parameters that should be used, will be validated.
-     * @param pUnrecognized  If non-null:
-     *                       - Will contain on return parameters that were not used.
-     *                       - An unrecognized parameter will not cause the configuring
-     *                         to fail.
-     *
-     * @return True if could be configured.
-     */
-    bool configure(Configuration& configuration,
-                   const mxs::ConfigParameters& params,
-                   mxs::ConfigParameters* pUnrecognized = nullptr) const;
+    virtual bool validate(const mxs::ConfigParameters& params,
+                          mxs::ConfigParameters* pUnrecognized = nullptr) const;
 
     /**
      * Find given parameter of the specification.
@@ -1120,8 +1107,6 @@ using ParamBitMask = ParamCount;
 class Configuration
 {
 public:
-    friend class Specification;
-
     using ValuesByName = std::map<std::string, Type*>; // We want to have them ordered by name.
     using const_iterator = ValuesByName::const_iterator;
     using value_type = ValuesByName::value_type;
@@ -1146,21 +1131,6 @@ public:
      * @return The specification of this configuration.
      */
     const Specification& specification() const;
-
-    /**
-     *  Validate parameters
-     *
-     * @param params         Parameters as found in the configuration file.
-     * @param pUnrecognized  If non-null:
-     *                       - Will contain on return parameters that were not used.
-     *                       - An unrecognized parameter will not cause the configuring
-     *                         to fail.
-     *
-     * @return True, if the @params represent valid parameters - all mandatory are
-     *         present, all present ones are of corrent type - for this specification.
-     */
-    virtual bool validate(const mxs::ConfigParameters& params,
-                          mxs::ConfigParameters* pUnrecognized = nullptr) const;
 
     /**
      * Configure this configuration

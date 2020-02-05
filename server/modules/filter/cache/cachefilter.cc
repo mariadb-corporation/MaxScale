@@ -163,7 +163,7 @@ CacheFilter* CacheFilter::create(const char* zName, mxs::ConfigParameters* ppPar
     {
         Cache* pCache = NULL;
 
-        if (CacheConfig::specification().configure(pFilter->m_config, *ppParams))
+        if (pFilter->m_config.configure(*ppParams))
         {
             switch (pFilter->m_config.thread_model.get())
             {

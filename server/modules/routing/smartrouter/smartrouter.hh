@@ -46,8 +46,6 @@ public:
 
         static void populate(MXS_MODULE& module);
 
-        bool configure(const mxs::ConfigParameters& params);
-
         mxs::Target* master() const
         {
             return m_master.get();

@@ -84,11 +84,6 @@ void SmartRouter::Config::populate(MXS_MODULE& module)
     smartrouter::specification.populate(module);
 }
 
-bool SmartRouter::Config::configure(const mxs::ConfigParameters& params)
-{
-    return smartrouter::specification.configure(*this, params);
-}
-
 bool SmartRouter::Config::post_configure(const mxs::ConfigParameters& params)
 {
     bool rv = true;

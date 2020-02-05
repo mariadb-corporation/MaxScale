@@ -172,57 +172,6 @@ bool Specification::validate(const mxs::ConfigParameters& params,
     return valid;
 }
 
-bool Specification::configure(Configuration& configuration,
-                              const mxs::ConfigParameters& params,
-                              mxs::ConfigParameters* pUnrecognized) const
-{
-    mxb_assert(validate(params));
-    mxb_assert(size() == configuration.size());
-
-    bool configured = true;
-
-    for (const auto& param : params)
-    {
-        const auto& name = param.first;
-
-        if (!is_core_param(m_kind, name))
-        {
-            const auto& value = param.second;
-
-            const Param* pParam = find_param(name.c_str());
-            config::Type* pValue = configuration.find_value(name.c_str());
-
-            mxb_assert(pValue && pParam);   // Should have been validated.
-            mxb_assert(&pValue->parameter() == pParam);
-
-            if (pParam && pValue)
-            {
-                if (!pParam->set(*pValue, value.c_str()))
-                {
-                    mxb_assert(!true);
-                    configured = false;
-                }
-            }
-            else if (pUnrecognized)
-            {
-                pUnrecognized->set(name, value);
-            }
-            else
-            {
-                MXS_ERROR("%s: The parameter '%s' is unrecognized.", m_module.c_str(), name.c_str());
-                configured = false;
-            }
-        }
-    }
-
-    if (configured)
-    {
-        configured = configuration.post_configure(params);
-    }
-
-    return configured;
-}
-
 void Specification::populate(MXS_MODULE& module) const
 {
     MXS_MODULE_PARAM* pModule_param = &module.parameters[0];
@@ -404,16 +353,55 @@ const config::Specification& Configuration::specification() const
     return *m_pSpecification;
 }
 
-bool Configuration::validate(const mxs::ConfigParameters& params,
-                             mxs::ConfigParameters* pUnrecognized) const
-{
-    return specification().validate(params, pUnrecognized);
-}
-
 bool Configuration::configure(const mxs::ConfigParameters& params,
                               mxs::ConfigParameters* pUnrecognized)
 {
-    return specification().configure(*this, params, pUnrecognized);
+    mxb_assert(m_pSpecification->validate(params));
+    mxb_assert(m_pSpecification->size() == size());
+
+    bool configured = true;
+
+    for (const auto& param : params)
+    {
+        const auto& name = param.first;
+
+        if (!is_core_param(m_pSpecification->kind(), name))
+        {
+            const auto& value = param.second;
+
+            const Param* pParam = m_pSpecification->find_param(name.c_str());
+            config::Type* pValue = find_value(name.c_str());
+
+            mxb_assert(pValue && pParam);   // Should have been validated.
+            mxb_assert(&pValue->parameter() == pParam);
+
+            if (pParam && pValue)
+            {
+                if (!pParam->set(*pValue, value.c_str()))
+                {
+                    mxb_assert(!true);
+                    configured = false;
+                }
+            }
+            else if (pUnrecognized)
+            {
+                pUnrecognized->set(name, value);
+            }
+            else
+            {
+                MXS_ERROR("%s: The parameter '%s' is unrecognized.",
+                          m_pSpecification->module().c_str(), name.c_str());
+                configured = false;
+            }
+        }
+    }
+
+    if (configured)
+    {
+        configured = post_configure(params);
+    }
+
+    return configured;
 }
 
 Type* Configuration::find_value(const string& name)

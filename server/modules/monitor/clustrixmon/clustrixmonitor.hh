@@ -28,14 +28,12 @@ class ClustrixMonitor : public maxscale::MonitorWorker
     ClustrixMonitor(const ClustrixMonitor&) = delete;
     ClustrixMonitor& operator=(const ClustrixMonitor&) = delete;
 public:
-    class Config
+    class Config : public config::Configuration
     {
     public:
         Config(const std::string& name);
 
         static void populate(MXS_MODULE& module);
-
-        bool configure(const mxs::ConfigParameters& params);
 
         long cluster_monitor_interval() const
         {
@@ -58,7 +56,6 @@ public:
         }
 
     private:
-        config::Configuration                       m_configuration;
         config::Duration<std::chrono::milliseconds> m_cluster_monitor_interval;
         config::Count                               m_health_check_threshold;
         config::Bool                                m_dynamic_node_detection;
