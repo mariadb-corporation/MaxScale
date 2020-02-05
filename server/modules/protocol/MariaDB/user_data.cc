@@ -47,7 +47,7 @@ constexpr auto npos = string::npos;
 const int ipv4min_len = 7;      // 1.1.1.1
 const string mysql_default_auth = "mysql_native_password";
 
-/** How many times users can be succesfully loaded before throttling kicks in. */
+/** How many times users can be successfully loaded before throttling kicks in. */
 const int throttling_start_loads = 5;
 
 /** Max user load attempts when starting. If this limit is exceeded, throttling kicks in. */
@@ -86,6 +86,7 @@ void MariaDBUserManager::start()
     m_updater_thread = std::thread([this] {
                                        updater_thread_function();
                                    });
+    m_thread_started.wait();
 }
 
 void MariaDBUserManager::stop()
@@ -130,14 +131,15 @@ void MariaDBUserManager::updater_thread_function()
     using mxb::Clock;
 
     // Minimum wait between update loops. User accounts should not be changing continuously.
-    const std::chrono::milliseconds default_min_interval(500);
+    const std::chrono::seconds default_min_interval(1);
 
     // Default value for scheduled updates. Cannot set too far in the future, as the cv wait_until bugs and
     // doesn't wait.
     const std::chrono::hours default_max_interval(24);
 
-    // Do the first update immediately.
-    TimePoint last_update = Clock::now() - default_min_interval;
+    bool first_iteration = true;
+    bool throttling = false;
+    TimePoint last_update = Clock::now();
 
     auto should_stop_running = [this]() {
             return !m_keep_running.load(acquire);
@@ -163,29 +165,22 @@ void MariaDBUserManager::updater_thread_function()
         auto max_refresh_interval = glob_config->users_refresh_interval.count();
         auto min_refresh_interval = glob_config->users_refresh_time.count();
 
-        /**
-         * Throttling kicks in if users have been loaded a few times, or if loading has failed repeatedly
-         * often enough. This allows a few quick user account updates at the beginning. The quick updates
-         * are useful for test situations, where users are often created just after MaxScale has started.
-         * Also useful for allowing quick updates when monitor hasn't yet refreshed the servers.
-         */
-        bool throttling_on = (m_successful_loads > throttling_start_loads
-                              || m_consecutive_failed_loads > user_load_fail_limit);
-
-        // Calculate the earliest allowed time for next update.
+        // Calculate the earliest allowed time for next update. If throttling is not on, next update can
+        // happen immediately.
         TimePoint next_possible_update = last_update;
-        if (throttling_on && min_refresh_interval > 0)
+        if (throttling)
         {
-            next_possible_update += Duration((double)min_refresh_interval);
-        }
-        else
-        {
-            next_possible_update += default_min_interval;
+            next_possible_update += (min_refresh_interval > 0) ? Duration((double)min_refresh_interval) :
+                default_min_interval;
         }
 
         // Calculate the time for the next scheduled update.
         TimePoint next_scheduled_update = last_update;
-        if (!throttling_on && m_successful_loads == 0)
+        if (first_iteration)
+        {
+            // Try to update immediately.
+        }
+        else if (!throttling && m_successful_loads == 0)
         {
             // If updating has not succeeded even once yet, keep trying again and again,
             // with just a minimal wait.
@@ -202,6 +197,13 @@ void MariaDBUserManager::updater_thread_function()
         m_notifier.wait_until(lock, next_possible_update, should_stop_running);
 
         m_can_update.store(true, release);
+        if (first_iteration)
+        {
+            // Thread has properly started and the "can_update"-state is visible to other threads.
+            m_thread_started.post();
+            first_iteration = false;
+        }
+
         // Wait until "next_scheduled_update", or until update requested or thread stop.
         m_notifier.wait_until(lock, next_scheduled_update, should_stop_waiting);
         lock.unlock();
@@ -220,11 +222,28 @@ void MariaDBUserManager::updater_thread_function()
             }
         }
 
-        m_can_update.store(false, release);
+        /**
+         * Throttling kicks in if users have been loaded a few times, or if loading has failed repeatedly
+         * often enough. This allows a few quick user account updates at the beginning. The quick updates
+         * are useful for test situations, where users are often created just after MaxScale has started. */
+        throttling = (m_successful_loads > throttling_start_loads
+                      || m_consecutive_failed_loads > user_load_fail_limit);
+
+        if (throttling)
+        {
+            m_can_update.store(false, release);
+        }
+
         m_service->sync_user_account_caches();
         m_update_users_requested.store(false, release);
         last_update = Clock::now();
     }
+
+    // Possible race here: If throttling=false and m_keep_running=false, m_can_update may be momentarily
+    // "true" even when thread is exiting the loop. If a client is logging at that exact moment, the session
+    // may be put on standby without ever waking up. This is not an issue if the thread stops only when
+    // MaxScale is shutting down.
+    m_can_update.store(false, release);
 }
 
 bool MariaDBUserManager::update_users()

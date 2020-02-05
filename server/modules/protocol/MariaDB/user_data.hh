@@ -217,6 +217,8 @@ private:
     std::mutex              m_notifier_lock;
     std::atomic_bool        m_update_users_requested {false};
 
+    mxb::Semaphore m_thread_started;    /* Communicates that the updater thread has properly started. */
+
     // Settings and options. Access to most is protected by the mutex.
     std::mutex           m_settings_lock;
     std::string          m_username;
@@ -232,7 +234,7 @@ private:
     int m_consecutive_failed_loads {0};
 
     /** Warn if no valid servers to query from. Starts false, as in the beginning monitors may not have
-     * ran yet. */
+     *  ran yet. */
     bool m_warn_no_servers {false};
 };
 
