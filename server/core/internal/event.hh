@@ -40,5 +40,28 @@ enum result_t
  *         ACCEPTED, if @c zName and @c zValue are valid.
  */
 result_t configure(const char* zName, const char* zValue);
+
+inline result_t configure(const std::string& name, const std::string& value)
+{
+    return configure(name.c_str(), value.c_str());
+}
+
+/**
+ * @brief Validate an event
+ *
+ * @param zName    A MaxScale event configuration item name,
+ *                 such as "event.authentication_failure.facility"
+ * @param zValue   The value it should be set to, e.g. "LOG_ERROR".
+ *
+ * @return IGNORED, if @c zName does not start with "event.",
+ *         INVALID, if @c zName or @c zValue is invalid, and
+ *         ACCEPTED, if @c zName and @c zValue are valid.
+ */
+result_t validate(const char* zName, const char* zValue);
+
+inline result_t validate(const std::string& name, const std::string& value)
+{
+    return validate(name.c_str(), value.c_str());
+}
 }
 }

@@ -219,6 +219,23 @@ struct
     facilities
 };
 
+event::result_t validate_facility(event::id_t id, const char* zValue)
+{
+    event::result_t rv = event::INVALID;
+
+    int32_t facility;
+    if (log_facility_from_string(&facility, zValue))
+    {
+        rv = event::ACCEPTED;
+    }
+    else
+    {
+        MXS_ERROR("%s is not a valid facility.", zValue);
+    }
+
+    return rv;
+}
+
 event::result_t configure_facility(event::id_t id, const char* zValue)
 {
     event::result_t rv = event::INVALID;
@@ -232,6 +249,23 @@ event::result_t configure_facility(event::id_t id, const char* zValue)
     else
     {
         MXS_ERROR("%s is not a valid facility.", zValue);
+    }
+
+    return rv;
+}
+
+event::result_t validate_level(event::id_t id, const char* zValue)
+{
+    event::result_t rv = event::INVALID;
+
+    int32_t level;
+    if (log_level_from_string(&level, zValue))
+    {
+        rv = event::ACCEPTED;
+    }
+    else
+    {
+        MXS_ERROR("%s is not a valid level.", zValue);
     }
 
     return rv;
@@ -254,6 +288,59 @@ event::result_t configure_level(event::id_t id, const char* zValue)
 
     return rv;
 }
+
+event::result_t action(const char* zName,
+                       const char* zValue,
+                       event::result_t (*facility_action)(event::id_t id, const char* zValue),
+                       event::result_t (*level_action)(event::id_t id, const char* zValue))
+{
+    event::result_t rv = event::IGNORED;
+
+    if (strncmp(zName, EVENT_PREFIX, sizeof(EVENT_PREFIX) - 1) == 0)
+    {
+        rv = event::INVALID;
+
+        string name(zName + sizeof(EVENT_PREFIX) - 1);      // Character following '.'
+
+        auto i = name.find_first_of('.');
+
+        if (i != string::npos)
+        {
+            string event = name.substr(0, i);
+            string property = name.substr(i + 1);
+
+            event::id_t id;
+            if (event::from_string(&id, event.c_str()))
+            {
+                mxb_assert((id >= 0) && (id < N_EVENTS));
+
+                if (property == CN_FACILITY)
+                {
+                    rv = facility_action(id, zValue);
+                }
+                else if (property == CN_LEVEL)
+                {
+                    rv = level_action(id, zValue);
+                }
+                else
+                {
+                    MXS_ERROR("%s is neither %s nor %s.", property.c_str(), CN_FACILITY, CN_LEVEL);
+                }
+            }
+            else
+            {
+                MXS_ERROR("%s does not refer to a known event.", zValue);
+            }
+        }
+        else
+        {
+            MXS_ERROR("%s is not a valid event configuration.", zName);
+        }
+    }
+
+    return rv;
+}
+
 }
 
 namespace maxscale
@@ -405,53 +492,14 @@ int32_t get_log_level(id_t id)
     return atomic_load_int32(&event.level);
 }
 
+result_t validate(const char* zName, const char* zValue)
+{
+    return action(zName, zValue, validate_facility, validate_level);
+}
+
 result_t configure(const char* zName, const char* zValue)
 {
-    result_t rv = IGNORED;
-
-    if (strncmp(zName, EVENT_PREFIX, sizeof(EVENT_PREFIX) - 1) == 0)
-    {
-        rv = INVALID;
-
-        string name(zName + sizeof(EVENT_PREFIX) - 1);      // Character following '.'
-
-        auto i = name.find_first_of('.');
-
-        if (i != string::npos)
-        {
-            string event = name.substr(0, i);
-            string property = name.substr(i + 1);
-
-            id_t id;
-            if (from_string(&id, event.c_str()))
-            {
-                mxb_assert((id >= 0) && (id < N_EVENTS));
-
-                if (property == CN_FACILITY)
-                {
-                    rv = configure_facility(id, zValue);
-                }
-                else if (property == CN_LEVEL)
-                {
-                    rv = configure_level(id, zValue);
-                }
-                else
-                {
-                    MXS_ERROR("%s is neither %s nor %s.", property.c_str(), CN_FACILITY, CN_LEVEL);
-                }
-            }
-            else
-            {
-                MXS_ERROR("%s does not refer to a known event.", zValue);
-            }
-        }
-        else
-        {
-            MXS_ERROR("%s is not a valid event configuration.", zName);
-        }
-    }
-
-    return rv;
+    return action(zName, zValue, configure_facility, configure_level);
 }
 
 void log(id_t event_id,
