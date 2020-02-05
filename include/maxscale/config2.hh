@@ -72,12 +72,17 @@ public:
     /**
      *  Validate parameters
      *
-     * @param params  Parameters as found in the configuration file.
+     * @param params         Parameters as found in the configuration file.
+     * @param pUnrecognized  If non-null:
+     *                       - Will contain on return parameters that were not used.
+     *                       - An unrecognized parameter will not cause the configuring
+     *                         to fail.
      *
-     * @return True, if they represent valid parameters - all mandatory are present,
-     *         all present ones are of corrent type - for this configuration.
+     * @return True, if the @params represent valid parameters - all mandatory are
+     *         present, all present ones are of corrent type - for this specification.
      */
-    bool validate(const mxs::ConfigParameters& params) const;
+    bool validate(const mxs::ConfigParameters& params,
+                  mxs::ConfigParameters* pUnrecognized = nullptr) const;
 
     /**
      * Configure configuration
@@ -1115,6 +1120,8 @@ using ParamBitMask = ParamCount;
 class Configuration
 {
 public:
+    friend class Specification;
+
     using ValuesByName = std::map<std::string, Type*>; // We want to have them ordered by name.
     using const_iterator = ValuesByName::const_iterator;
     using value_type = ValuesByName::value_type;
@@ -1141,6 +1148,35 @@ public:
     const Specification& specification() const;
 
     /**
+     *  Validate parameters
+     *
+     * @param params         Parameters as found in the configuration file.
+     * @param pUnrecognized  If non-null:
+     *                       - Will contain on return parameters that were not used.
+     *                       - An unrecognized parameter will not cause the configuring
+     *                         to fail.
+     *
+     * @return True, if the @params represent valid parameters - all mandatory are
+     *         present, all present ones are of corrent type - for this specification.
+     */
+    virtual bool validate(const mxs::ConfigParameters& params,
+                          mxs::ConfigParameters* pUnrecognized = nullptr) const;
+
+    /**
+     * Configure this configuration
+     *
+     * @param params         The parameters that should be used, will be validated.
+     * @param pUnrecognized  If non-null:
+     *                       - Will contain on return parameters that were not used.
+     *                       - An unrecognized parameter will not cause the configuring
+     *                         to fail.
+     *
+     * @return True if could be configured.
+     */
+    virtual bool configure(const mxs::ConfigParameters& params,
+                           mxs::ConfigParameters* pUnrecognized = nullptr);
+
+    /**
      * @param name  The name of the parameter to look up.
      *
      * @return The corresponding @c Value or NULL if @c name is unknown.
@@ -1161,19 +1197,6 @@ public:
      * @param pJson  The json object to be filled.
      */
     void fill(json_t* pJson) const;
-
-    /**
-     * Called when configuration has initially been configured, to allow a
-     * Configuration to check any interdependencies between values or to calculate
-     * derived ones.
-     *
-     * @param params  The parameters the configuration was configured with.
-     *
-     * @return True, if everything is ok.
-     *
-     * @note The default implementation returns true.
-     */
-    virtual bool post_configure(const mxs::ConfigParameters& params);
 
     /**
      * @return The number of values in the configuration.
@@ -1200,6 +1223,20 @@ public:
      * @return Return the configuration as a json array.
      */
     json_t* to_json() const;
+
+protected:
+    /**
+     * Called when configuration has initially been configured, to allow a
+     * Configuration to check any interdependencies between values or to calculate
+     * derived ones.
+     *
+     * @param params  The parameters the configuration was configured with.
+     *
+     * @return True, if everything is ok.
+     *
+     * @note The default implementation returns true.
+     */
+    virtual bool post_configure(const mxs::ConfigParameters& params);
 
 private:
     friend Type;

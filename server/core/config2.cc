@@ -105,7 +105,8 @@ ostream& Specification::document(ostream& out) const
     return out;
 }
 
-bool Specification::validate(const mxs::ConfigParameters& params) const
+bool Specification::validate(const mxs::ConfigParameters& params,
+                             mxs::ConfigParameters* pUnrecognized) const
 {
     bool valid = true;
 
@@ -144,8 +145,15 @@ bool Specification::validate(const mxs::ConfigParameters& params) const
         }
         else if (!is_core_param(m_kind, name))
         {
-            MXS_WARNING("%s: The parameter '%s' is unrecognized.", m_module.c_str(), name.c_str());
-            valid = false;
+            if (pUnrecognized)
+            {
+                pUnrecognized->set(name, value);
+            }
+            else
+            {
+                MXS_WARNING("%s: The parameter '%s' is unrecognized.", m_module.c_str(), name.c_str());
+                valid = false;
+            }
         }
     }
 
@@ -394,6 +402,18 @@ const std::string& Configuration::name() const
 const config::Specification& Configuration::specification() const
 {
     return *m_pSpecification;
+}
+
+bool Configuration::validate(const mxs::ConfigParameters& params,
+                             mxs::ConfigParameters* pUnrecognized) const
+{
+    return specification().validate(params, pUnrecognized);
+}
+
+bool Configuration::configure(const mxs::ConfigParameters& params,
+                              mxs::ConfigParameters* pUnrecognized)
+{
+    return specification().configure(*this, params, pUnrecognized);
 }
 
 Type* Configuration::find_value(const string& name)
