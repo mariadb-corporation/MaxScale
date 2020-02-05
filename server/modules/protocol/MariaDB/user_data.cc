@@ -1123,8 +1123,10 @@ void UserDatabase::add_proxy_grant(const std::string& user, const std::string& h
 
 bool UserDatabase::equal_contents(const UserDatabase& rhs) const
 {
-    return (m_users == rhs.m_users) && (m_database_grants == rhs.m_database_grants)
-           && (m_roles_mapping == rhs.m_roles_mapping);
+    return m_users == rhs.m_users
+           && m_database_grants == rhs.m_database_grants
+           && m_roles_mapping == rhs.m_roles_mapping
+           && m_database_names == rhs.m_database_names;
 }
 
 json_t* UserDatabase::users_to_json() const
