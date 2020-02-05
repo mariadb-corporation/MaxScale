@@ -198,12 +198,14 @@ config::ParamString MXS_CONFIG::s_qc_name(
 config::ParamString MXS_CONFIG::s_qc_args(
     &MXS_CONFIG::s_specification,
     CN_QUERY_CLASSIFIER_ARGS,
-    "Arguments for the query classifier.");
+    "Arguments for the query classifier.",
+    "");
 
 config::ParamSize MXS_CONFIG::s_qc_cache_max_size(
     &MXS_CONFIG::s_specification,
     CN_QUERY_CLASSIFIER_CACHE_SIZE,
     "Maximum amount of memory used by query classifier cache.",
+    0,
     config::Param::Modifiable::AT_RUNTIME);
 
 config::ParamEnum<qc_sql_mode_t> MXS_CONFIG::s_qc_sql_mode(
@@ -250,27 +252,32 @@ config::ParamBool MXS_CONFIG::s_admin_log_auth_failures(
 config::ParamString MXS_CONFIG::s_admin_pam_rw_service(
     &MXS_CONFIG::s_specification,
     CN_ADMIN_PAM_READWRITE_SERVICE,
-    "PAM service for read-write users.");
+    "PAM service for read-write users.",
+    "");
 
 config::ParamString MXS_CONFIG::s_admin_pam_ro_service(
     &MXS_CONFIG::s_specification,
     CN_ADMIN_PAM_READONLY_SERVICE,
-    "PAM service for read-only users.");
+    "PAM service for read-only users.",
+    "");
 
 config::ParamString MXS_CONFIG::s_admin_ssl_key(
     &MXS_CONFIG::s_specification,
     CN_ADMIN_SSL_KEY,
-    "Admin SSL key");
+    "Admin SSL key",
+    "");
 
 config::ParamString MXS_CONFIG::s_admin_ssl_cert(
     &MXS_CONFIG::s_specification,
     CN_ADMIN_SSL_CERT,
-    "Admin SSL cert");
+    "Admin SSL cert",
+    "");
 
 config::ParamString MXS_CONFIG::s_admin_ssl_ca_cert(
     &MXS_CONFIG::s_specification,
     CN_ADMIN_SSL_CA_CERT,
-    "Admin SSL CA cert");
+    "Admin SSL CA cert",
+    "");
 
 config::ParamInteger MXS_CONFIG::s_query_retries(
     &MXS_CONFIG::s_specification,
@@ -291,7 +298,8 @@ config::ParamSeconds MXS_CONFIG::s_query_retry_timeout(
 config::ParamString MXS_CONFIG::s_local_address(
     &MXS_CONFIG::s_specification,
     CN_LOCAL_ADDRESS,
-    "Local address to use when connecting.");
+    "Local address to use when connecting.",
+    "");
 
 MXS_CONFIG::ParamUsersRefreshTime MXS_CONFIG::s_users_refresh_time(
     &MXS_CONFIG::s_specification,
@@ -304,7 +312,8 @@ config::ParamSeconds MXS_CONFIG::s_users_refresh_interval(
     &MXS_CONFIG::s_specification,
     CN_USERS_REFRESH_INTERVAL,
     "How often the users will be refreshed.",
-    mxs::config::INTERPRET_AS_SECONDS);
+    mxs::config::INTERPRET_AS_SECONDS,
+    std::chrono::seconds(0));
 
 config::ParamSize MXS_CONFIG::s_writeq_high_water(
     &MXS_CONFIG::s_specification,
