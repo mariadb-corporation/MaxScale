@@ -39,16 +39,17 @@
 #include <vector>
 #include <unordered_set>
 
+#include <maxbase/alloc.h>
 #include <maxbase/atomic.hh>
 #include <maxbase/format.hh>
 #include <maxbase/pretty_print.hh>
 #include <maxscale/adminusers.hh>
-#include <maxbase/alloc.h>
 #include <maxscale/clock.h>
 #include <maxscale/housekeeper.h>
 #include <maxscale/http.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/limits.h>
+#include <maxscale/log.hh>
 #include <maxscale/maxscale.h>
 #include <maxscale/paths.h>
 #include <maxscale/pcre2.hh>
@@ -74,41 +75,6 @@ using maxscale::Monitor;
 using std::chrono::milliseconds;
 using std::chrono::seconds;
 
-namespace
-{
-
-const char CN_ADMIN_PAM_READWRITE_SERVICE[] = "admin_pam_readwrite_service";
-const char CN_ADMIN_PAM_READONLY_SERVICE[] = "admin_pam_readonly_service";
-const char CN_LOCAL_ADDRESS[] = "local_address";
-const char CN_USERS_REFRESH_TIME[] = "users_refresh_time";
-const char CN_USERS_REFRESH_INTERVAL[] = "users_refresh_interval";
-
-struct
-{
-    const char* name;
-    int         priority;
-    const char* replacement;
-} lognames[] =
-{
-    {"log_messages", LOG_NOTICE,
-     "log_notice"},     //
-    // Deprecated
-    {"log_trace",    LOG_INFO,
-     "log_info"},   //
-    // Deprecated
-    {"log_debug",    LOG_DEBUG,
-     NULL},
-    {"log_warning",  LOG_WARNING,
-     NULL},
-    {"log_notice",   LOG_NOTICE,
-     NULL},
-    {"log_info",     LOG_INFO,
-     NULL},
-    {NULL,           0}
-};
-
-}
-
 bool MXS_CONFIG::Specification::validate(const mxs::ConfigParameters& params,
                                          mxs::ConfigParameters* pUnrecognized) const
 {
@@ -124,45 +90,10 @@ bool MXS_CONFIG::Specification::validate(const mxs::ConfigParameters& params,
 
             const auto& name = kv.first;
             const auto& value = kv.second;
-#ifndef SS_DEBUG
-            if (name == "log_debug")
+
+            if (maxscale::event::validate(name, value) == maxscale::event::ACCEPTED)
             {
-                MXS_WARNING("The 'log_debug' option has no effect in release mode.");
                 found = true;
-            }
-            else
-#endif
-            {
-                maxscale::event::result_t result = maxscale::event::validate(name, value);
-
-                switch (result)
-                {
-                case maxscale::event::ACCEPTED:
-                    found = true;
-                    break;
-
-                case maxscale::event::IGNORED:
-                    for (int i = 0; lognames[i].name; i++)
-                    {
-                        if (strcasecmp(name.c_str(), lognames[i].name) == 0)
-                        {
-                            found = true;
-                            if (lognames[i].replacement)
-                            {
-                                MXS_WARNING("In the configuration file the use of '%s' is deprecated, "
-                                            "use '%s' instead.",
-                                            lognames[i].name,
-                                            lognames[i].replacement);
-                            }
-                        }
-                    }
-                    break;
-
-                case maxscale::event::INVALID:
-                    found = true;
-                    validated = false;
-                    break;
-                }
             }
 
             if (!found)
@@ -192,6 +123,34 @@ bool MXS_CONFIG::Specification::validate(const mxs::ConfigParameters& params,
 }
 
 MXS_CONFIG::Specification MXS_CONFIG::s_specification("maxscale", config::Specification::GLOBAL);
+
+config::ParamBool MXS_CONFIG::s_log_debug(
+    &MXS_CONFIG::s_specification,
+    CN_LOG_DEBUG,
+    "Specifies whether debug messages should be logged (meaningful only with debug builds).",
+    false,
+    config::Param::Modifiable::AT_RUNTIME);
+
+config::ParamBool MXS_CONFIG::s_log_info(
+    &MXS_CONFIG::s_specification,
+    CN_LOG_INFO,
+    "Specifies whether info messages should be logged.",
+    false,
+    config::Param::Modifiable::AT_RUNTIME);
+
+config::ParamBool MXS_CONFIG::s_log_notice(
+    &MXS_CONFIG::s_specification,
+    CN_LOG_NOTICE,
+    "Specifies whether notice messages should be logged.",
+    false,
+    config::Param::Modifiable::AT_RUNTIME);
+
+config::ParamBool MXS_CONFIG::s_log_warning(
+    &MXS_CONFIG::s_specification,
+    CN_LOG_WARNING,
+    "Specifies whether warning messages should be logged.",
+    false,
+    config::Param::Modifiable::AT_RUNTIME);
 
 MXS_CONFIG::ParamThreadsCount MXS_CONFIG::s_n_threads(
     &MXS_CONFIG::s_specification,
@@ -495,6 +454,21 @@ struct ThisUnit
 
 MXS_CONFIG::MXS_CONFIG()
     : config::Configuration("maxscale", &s_specification)
+    , log_debug(this, &s_log_debug, [](bool enable) {
+#ifndef SS_DEBUG
+            MXS_WARNING("The 'log_debug' option has no effect in release mode.");
+#endif
+            mxs_log_set_priority_enabled(LOG_DEBUG, enable);
+        })
+    , log_info(this, &s_log_info, [](bool enable) {
+            mxs_log_set_priority_enabled(LOG_INFO, enable);
+        })
+    , log_notice(this, &s_log_notice, [](bool enable) {
+            mxs_log_set_priority_enabled(LOG_NOTICE, enable);
+        })
+    , log_warning(this, &s_log_warning, [](bool enable) {
+            mxs_log_set_priority_enabled(LOG_WARNING, enable);
+        })
     , log_throttling(this, &s_log_throttling, [](MXS_LOG_THROTTLING throttling) {
             mxs_log_set_throttling(&throttling);
         })
@@ -4840,47 +4814,10 @@ bool MXS_CONFIG::configure(const mxs::ConfigParameters& params, mxs::ConfigParam
 
             const auto& name = kv.first;
             const auto& value = kv.second;
-#ifndef SS_DEBUG
-            if (name == "log_debug")
+
+            if (maxscale::event::validate(name, value) == maxscale::event::ACCEPTED)
             {
-                MXS_WARNING("The 'log_debug' option has no effect in release mode.");
                 found = true;
-            }
-            else
-#endif
-            {
-                maxscale::event::result_t result = maxscale::event::validate(name, value);
-
-                switch (result)
-                {
-                case maxscale::event::ACCEPTED:
-                    found = true;
-                    break;
-
-                case maxscale::event::IGNORED:
-                    for (int i = 0; lognames[i].name; i++)
-                    {
-                        if (strcasecmp(name.c_str(), lognames[i].name) == 0)
-                        {
-                            found = true;
-                            if (lognames[i].replacement)
-                            {
-                                MXS_WARNING("In the configuration file the use of '%s' is deprecated, "
-                                            "use '%s' instead.",
-                                            lognames[i].name,
-                                            lognames[i].replacement);
-                            }
-
-                            mxs_log_set_priority_enabled(lognames[i].priority, config_truth_value(value));
-                        }
-                    }
-                    break;
-
-                case maxscale::event::INVALID:
-                    found = true;
-                    configured = false;
-                    break;
-                }
             }
 
             if (!found)

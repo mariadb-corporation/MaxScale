@@ -25,6 +25,8 @@ The following deprecated parameters have been removed.
 
 * `non_blocking_polls`
 * `poll_sleep`
+* `log_trace` and `log_messages` that were synonyms for `log_info` and
+  `log_notice` respectively.
 
 ## Deprecated Features
 

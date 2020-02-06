@@ -97,6 +97,10 @@ public:
     char    sysname[SYSNAME_LEN];                       /**< The OS name of the system */
     uint8_t mac_sha1[SHA_DIGEST_LENGTH];                /**< The SHA1 digest of an interface MAC address */
 
+    config::Bool    log_debug;                          /**< Whether debug messages are logged. */
+    config::Bool    log_info;                           /**< Whether info messages are logged. */
+    config::Bool    log_notice;                         /**< Whether notice messages are logged. */
+    config::Bool    log_warning;                        /**< Whether warning messages are logged. */
     LogThrottling   log_throttling;                     /**< When and how to throttle logged messaged. */
     config::Count   n_threads;                          /**< Number of polling threads */
     SessionDumpStatements dump_statements;              /**< Whether to dump last statements. */
@@ -166,6 +170,10 @@ public:
 
     static Specification                                s_specification;
 
+    static config::ParamBool                            s_log_debug;
+    static config::ParamBool                            s_log_info;
+    static config::ParamBool                            s_log_notice;
+    static config::ParamBool                            s_log_warning;
     static ParamLogThrottling                           s_log_throttling;
     static ParamThreadsCount                            s_n_threads;
     static config::ParamEnum<session_dump_statements_t> s_dump_statements;
