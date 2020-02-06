@@ -1148,10 +1148,11 @@ void RWSplitSession::handleError(GWBUF* errmsgbuf,
                     int64_t idle = mxs_clock() - backend->dcb()->last_read;
                     MXS_ERROR("Lost connection to the master server '%s', closing session.%s "
                               "Connection has been idle for %.1f seconds. Error caused by: %s. "
-                              "Last close reason: %s",
+                              "Last close reason: %s. Last error: %s",
                               backend->name(), errmsg.c_str(), (float)idle / 10.f,
                               extract_error(errmsgbuf).c_str(),
-                              backend->close_reason().empty() ? "<none>" : backend->close_reason().c_str());
+                              backend->close_reason().empty() ? "<none>" : backend->close_reason().c_str(),
+                              backend->error().message().c_str());
                 }
 
                 // Decrement the expected response count only if we know we can continue the sesssion.
