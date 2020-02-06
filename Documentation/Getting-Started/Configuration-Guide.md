@@ -42,16 +42,6 @@ Auth Error    | The monitor cannot login and query the server due to insufficien
 Maintenance   | The server is under maintenance. Typically this status bit is turned on manually using _maxctrl_, but it will also be turned on for a server that for some reason is blocking connections from MaxScale. When a server is in maintenace mode, no connections will be created to it and existing connections will be closed.
 Slave of External Master | The server is a slave of a master that is not being monitored.
 
-### Protocol
-
-A protocol module is responsible for the low-level communication between
-MaxScale and either clients of MaxScale or servers exposed by MaxScale.
-The most commonly used protocol modules are `mariadbclient` and
-`mariadbbackend`.
-
-Protocol modules do not have sections of their own in the MaxScale
-configuration file, but are referred to from _servers_ and _listeners_.
-
 ### Monitor
 
 A monitor module is capable of monitoring the state of a particular kind
@@ -1644,72 +1634,55 @@ even if the duration is longer than a second.
 
 ## Server
 
-Server sections are used to define the backend database servers that can be
-formed into a service. A server may be a member of one or more services within
-MariaDB MaxScale. Servers are identified by a server name which is the section
-name in the configuration file. Servers have a type parameter of server, plus
-address port and protocol parameters.
+Server sections define the backend database servers MaxScale uses. A server is
+identified by its section name in the configuration file. The only mandatory
+parameter of a server is *type*, but *address* and *port* are also usually
+defined. A server may be a member of one or more services. A server may only be
+monitored by at most one monitor.
 
 ```
-[server1]
+[MyMariaDBServer1]
 type=server
 address=127.0.0.1
 port=3000
-protocol=MariaDBBackend
 ```
 
 ### `address`
 
-The IP address or hostname of the machine running the database server that is
-being defined. MariaDB MaxScale will use this address to connect to the backend
-database server.
+The IP-address or hostname of the machine running the database server. MaxScale
+uses this address to connect to the server. This parameter is mandatory unless
+*socket* is defined.
 
 ### `port`
 
-The port on which the database listens for incoming connections. MariaDB
-MaxScale will use this port to connect to the database server. The default value
-is 3306.
+The port the backend server listens on for incoming connections. MaxScale uses
+this port to connect to the server. The default value is 3306.
 
 ### `socket`
 
 The absolute path to a UNIX domain socket the MariaDB server is listening
-on. Either `address` or `socket` must be defined and defining them both is an
+on. Either *address* or *socket* must be defined and defining them both is an
 error.
 
-### `protocol`
+### `monitoruser` and `monitorpw`
 
-The name for the protocol module to use to connect MariaDB MaxScale to the
-database. Currently only one backend protocol is supported, the MariaDBBackend
-module.
-
-### `monitoruser`
-
-The monitor has a username and password that is used to connect to all servers
-for monitoring purposes, this may be overridden by supplying a monitoruser
-statement for each individual server.
+These settings define a server-specific username and password for monitoring the
+server. Monitors typically use the credentials in their own configuration
+sections to connect to all servers. If server-specific settings are given, the
+monitor uses those instead.
 
 ```
 monitoruser=mymonitoruser
-```
-
-### `monitorpw`
-
-The monitor has a username and password that is used to connect to all servers
-for monitoring purposes, this may be overridden by supplying a `monitorpw`
-for the individual servers.
-
-```
 monitorpw=mymonitorpasswd
 ```
 
-The `monitorpw` parameter may be either a plain text password or it may be an
-encrypted password.  See the section on encrypting passwords for use in the
-maxscale.cnf file.
+`monitorpw` may be either a plain text password or an encrypted password.  See
+the section [encrypting passwords](#encrypting-passwords) for more information.
 
 ### `extra_port`
 
 An alternative port used to monitor the server. This allows MaxScale to connect
-even when `max_connections` has been reached on the backend server. If this
+even when *max_connections* on the backend server has been reached. If this
 parameter is defined and a connection to the normal port fails, the alternative
 port is used.
 
@@ -1772,17 +1745,6 @@ configured to disregard authentication errors (`skip_authentication=true`).
 Server states also need to be set manually in MaxCtrl. These steps are *not*
 required for MariaDB 10.3, since its implementation is more flexible and allows
 both PROXY-headered and headerless connections from a proxy-enabled IP.
-
-### `authenticator`
-
-The authenticator module to use. Each protocol module defines a default
-authentication module which is used if no `authenticator` parameter is found
-from the configuration.
-
-### `authenticator_options`
-
-Removed feature. Only client authenticator modules have options, in the listener
-definition. Server authenticator options in the config file are ignored.
 
 ### `disk_space_threshold`
 
@@ -1860,25 +1822,21 @@ to exclude `DR-site` servers from routing.
 [main-site-master]
 type=server
 address=192.168.0.11
-protocol=MariaDBBackend
 rank=primary
 
 [main-site-slave]
 type=server
 address=192.168.0.12
-protocol=MariaDBBackend
 rank=primary
 
 [DR-site-master]
 type=server
 address=192.168.0.21
-protocol=MariaDBBackend
 rank=secondary
 
 [DR-site-slave]
 type=server
 address=192.168.0.22
-protocol=MariaDBBackend
 rank=secondary
 ```
 
@@ -1888,30 +1846,26 @@ they are available. When they are no longer available, the `DR-site-master` and
 
 ## Listener
 
-The listener defines a port and protocol pair that is used to listen for
-connections to a service. A service may have multiple listeners associated with
-it, either to support multiple protocols or multiple ports. As with other
-elements of the configuration the section name is the listener name and it can
-be selected freely. A type parameter is used to identify the section as a
-listener definition. Address is optional and it allows the user to limit
-connections to certain interface only. Socket is also optional and used for Unix
-socket connections.
+A listener defines a port MaxScale listens on for incoming connections. Accepted
+connections are linked with a MaxScale service. Multiple listeners can feed the
+same service. Mandatory parameters are *type*, *service* and *protocol*.
+*address* is optional, it limits connections to a certain network interface
+only. *socket* is also optional and is used for Unix socket connections.
 
-The network socket where the listener listens will have a backlog of
+The network socket where the listener listens may have a backlog of
 connections. The size of this backlog is controlled by the
-net.ipv4.tcp_max_syn_backlog and net.core.somaxconn kernel parameters.
+*net.ipv4.tcp_max_syn_backlog* and *net.core.somaxconn* kernel parameters.
 
 Increasing the size of the backlog by modifying the kernel parameters helps with
 sudden connection spikes and rejected connections. For more information see
 [listen(2)](http://man7.org/linux/man-pages/man2/listen.2.html).
 
 ```
-[<Listener name>]
+[MyListener1]
 type=listener
-service=<Service name>]
-protocol=[MariaDBClient|HTTPD]
-address=[IP|hostname]
-port=<Listen port number>
+service=MyService1
+protocol=MariaDBClient
+port=3006
 ```
 
 ### `service`
@@ -1921,43 +1875,43 @@ that is defined elsewhere in the configuration file.
 
 ### `protocol`
 
-The name of the protocol module that is used for the communication between the
-client and MariaDB MaxScale itself.
+The name of the protocol module used for communication between the client and
+MaxScale. Usually this is set to `MariaDBClient` for MariaDB-connections. Other
+recognized values are `HTTPD` and `CDC`.
 
 ### `address`
 
-The address option sets the address that will be used to bind the listening
-socket. The address may be specified as an IP address in 'dot notation' or as a
-hostname. If the address option is not included in the listener definition the
-listener will bind to all network interfaces.
+This sets the address the listening socket is bound to. The address may be
+specified as an IP address in 'dot notation' or as a hostname. If left undefined
+the listener will bind to all network interfaces.
 
 ### `port`
 
-The port to use to listen for incoming connections to MariaDB MaxScale from the
-clients. If the port is omitted from the configuration a default port for the
-protocol will be used.
+The port the listener listens on. If left undefined a default port for the
+protocol is used.
 
 ### `socket`
 
-The `socket` option may be included in a listener definition, this configures
-the listener to use Unix domain sockets to listen for incoming connections. The
-parameter value given is the name of the socket to use.
+If defined, the listener uses Unix domain sockets to listen for incoming
+connections. The parameter value is the name of the socket to use.
 
-**Note:** If you want to use both network ports and UNIX domain sockets
-  with a service, define two separate listeners that connect to the same
-  service.
+If you want to use both network ports and UNIX domain sockets with a service,
+define two separate listeners that connect to the same service.
 
 ### `authenticator`
 
 The authenticator module to use. Each protocol module defines a default
-authentication module which is used if no `authenticator` parameter is found
-from the configuration.
+authentication module, which is used if the setting is left undefined.
+*MariaDBClient*-protocol supports multiple authenticators and they can be used
+simultaneously by giving a comma-separated list e.g.
+`authenticator=PAMAuth,mysqlauth,gssapiauth`
 
 ### `authenticator_options`
 
-Option string given to the authenticator module. The value of this parameter
-should be a comma-separated list of key-value pairs. See authenticator specific
-documentation for more details.
+This defines additional options for authentication. As of MaxScale 2.5.0, only
+*MariaDBClient* and its authenticators support additional options. The value of
+this parameter should be a comma-separated list of key-value pairs. See
+authenticator specific documentation for more details.
 
 ### `sql_mode`
 
@@ -1975,16 +1929,10 @@ and backend protocols are for MariaDB MaxScale-database communication.
 
 ## `MariaDBClient`
 
-This is the implementation of the MySQL protocol that is used by clients of
-MariaDB MaxScale to connect to MariaDB MaxScale.
-
-## `MariaDBBackend`
-
-The MariaDBBackend protocol module is the implementation of the protocol that
-MariaDB MaxScale uses to connect to the backend MariaDB, MySQL and Percona
-Server databases. This implementation is tailored for the MariaDB MaxScale to
-MySQL Database traffic and is not a general purpose implementation of the MySQL
-protocol.
+This is the implementation of the MySQL-protocol. When defined for a listener,
+the listener will accept MySQL-connections from clients, assign them to a
+MaxScale service and route the queries from the client to backend servers. Any
+backends used by the service should be MariaDB/MySQL-servers or compatible.
 
 ## `HTTPD`
 
@@ -1993,6 +1941,10 @@ protocol.
 This protocol module is currently still under development, it provides a means
 to create HTTP connections to MariaDB MaxScale for use by web browsers or
 RESTful API clients.
+
+## `CDC`
+
+See [Change Data Capture Protocol](../Protocols/CDC.md) for more information.
 
 # TLS/SSL encryption
 
@@ -2118,7 +2070,6 @@ certificates. This parameter is only accepted by services.
 type=server
 address=10.131.24.62
 port=3306
-protocol=MariaDBBackend
 ssl=required
 ssl_cert=/usr/local/mariadb/maxscale/ssl/crt.max-client.pem
 ssl_key=/usr/local/mariadb/maxscale/ssl/key.max-client.pem
