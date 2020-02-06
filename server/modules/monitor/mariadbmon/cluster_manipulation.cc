@@ -980,7 +980,7 @@ void MariaDBMonitor::wait_cluster_stabilization(GeneralOpData& op, const ServerA
                 {
                     // IO error on slave
                     MXS_WARNING("%s cannot start replication because of IO thread error: '%s'.",
-                                slave_conn->settings.to_string().c_str(), slave_conn->last_error.c_str());
+                                slave_conn->settings.to_string().c_str(), slave_conn->last_io_error.c_str());
                     repl_fails.push_back(*iter);
                     iter = unconfirmed.erase(iter);
                 }
@@ -988,7 +988,7 @@ void MariaDBMonitor::wait_cluster_stabilization(GeneralOpData& op, const ServerA
                 {
                     // SQL error on slave
                     MXS_WARNING("%s cannot start replication because of SQL thread error: '%s'.",
-                                slave_conn->settings.to_string().c_str(), slave_conn->last_error.c_str());
+                                slave_conn->settings.to_string().c_str(), slave_conn->last_sql_error.c_str());
                     repl_fails.push_back(*iter);
                     iter = unconfirmed.erase(iter);
                 }
@@ -1053,10 +1053,10 @@ void MariaDBMonitor::wait_cluster_stabilization(GeneralOpData& op, const ServerA
         for (auto failed_slave : unconfirmed)
         {
             auto slave_conn = failed_slave->slave_connection_status_host_port(new_master);
-            if (slave_conn && !slave_conn->last_error.empty())
+            if (slave_conn && !slave_conn->last_io_error.empty())
             {
                 MXB_WARNING("%s did not connect because of error: '%s'",
-                            slave_conn->settings.to_string().c_str(), slave_conn->last_error.c_str());
+                            slave_conn->settings.to_string().c_str(), slave_conn->last_io_error.c_str());
             }
         }
     }

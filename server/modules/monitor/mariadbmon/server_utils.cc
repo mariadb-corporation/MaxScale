@@ -82,7 +82,8 @@ json_t* SlaveStatus::to_json() const
                         seconds_behind_master == mxs::Target::RLAG_UNDEFINED ? json_null() :
                         json_integer(seconds_behind_master));
     json_object_set_new(result, "master_server_id", json_integer(master_server_id));
-    json_object_set_new(result, "last_io_or_sql_error", json_string(last_error.c_str()));
+    json_object_set_new(result, "last_io_error", json_string(last_io_error.c_str()));
+    json_object_set_new(result, "last_sql_error", json_string(last_sql_error.c_str()));
     json_object_set_new(result, "gtid_io_pos", json_string(gtid_io_pos.to_string().c_str()));
     return result;
 }
