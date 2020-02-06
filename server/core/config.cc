@@ -82,9 +82,116 @@ const char CN_ADMIN_PAM_READONLY_SERVICE[] = "admin_pam_readonly_service";
 const char CN_LOCAL_ADDRESS[] = "local_address";
 const char CN_USERS_REFRESH_TIME[] = "users_refresh_time";
 const char CN_USERS_REFRESH_INTERVAL[] = "users_refresh_interval";
+
+struct
+{
+    const char* name;
+    int         priority;
+    const char* replacement;
+} lognames[] =
+{
+    {"log_messages", LOG_NOTICE,
+     "log_notice"},     //
+    // Deprecated
+    {"log_trace",    LOG_INFO,
+     "log_info"},   //
+    // Deprecated
+    {"log_debug",    LOG_DEBUG,
+     NULL},
+    {"log_warning",  LOG_WARNING,
+     NULL},
+    {"log_notice",   LOG_NOTICE,
+     NULL},
+    {"log_info",     LOG_INFO,
+     NULL},
+    {NULL,           0}
+};
+
 }
 
-config::Specification MXS_CONFIG::s_specification("maxscale", config::Specification::GLOBAL);
+bool MXS_CONFIG::Specification::validate(const mxs::ConfigParameters& params,
+                                         mxs::ConfigParameters* pUnrecognized) const
+{
+    mxs::ConfigParameters unrecognized;
+
+    bool validated = config::Specification::validate(params, &unrecognized);
+
+    if (validated)
+    {
+        for (const auto& kv : unrecognized)
+        {
+            bool found = false;
+
+            const auto& name = kv.first;
+            const auto& value = kv.second;
+#ifndef SS_DEBUG
+            if (name == "log_debug")
+            {
+                MXS_WARNING("The 'log_debug' option has no effect in release mode.");
+                found = true;
+            }
+            else
+#endif
+            {
+                maxscale::event::result_t result = maxscale::event::validate(name, value);
+
+                switch (result)
+                {
+                case maxscale::event::ACCEPTED:
+                    found = true;
+                    break;
+
+                case maxscale::event::IGNORED:
+                    for (int i = 0; lognames[i].name; i++)
+                    {
+                        if (strcasecmp(name.c_str(), lognames[i].name) == 0)
+                        {
+                            found = true;
+                            if (lognames[i].replacement)
+                            {
+                                MXS_WARNING("In the configuration file the use of '%s' is deprecated, "
+                                            "use '%s' instead.",
+                                            lognames[i].name,
+                                            lognames[i].replacement);
+                            }
+                        }
+                    }
+                    break;
+
+                case maxscale::event::INVALID:
+                    found = true;
+                    validated = false;
+                    break;
+                }
+            }
+
+            if (!found)
+            {
+                for (int i = 0; !found && config_pre_parse_global_params[i]; ++i)
+                {
+                    found = (name == config_pre_parse_global_params[i]);
+                }
+            }
+
+            if (!found)
+            {
+                if (pUnrecognized)
+                {
+                    pUnrecognized->set(name, value);
+                }
+                else
+                {
+                    MXS_ERROR("Unknown global parameter '%s'.", name.c_str());
+                    validated = false;
+                }
+            }
+        }
+    }
+
+    return validated;
+}
+
+MXS_CONFIG::Specification MXS_CONFIG::s_specification("maxscale", config::Specification::GLOBAL);
 
 MXS_CONFIG::ParamThreadsCount MXS_CONFIG::s_n_threads(
     &MXS_CONFIG::s_specification,
@@ -650,7 +757,6 @@ bool MXS_CONFIG::ParamThreadsCount::from_string(const std::string& value_as_stri
 
 static bool        process_config_context(CONFIG_CONTEXT*);
 static bool        process_config_update(CONFIG_CONTEXT*);
-static int         handle_global_item(const char*, const char*);
 static bool        check_config_objects(CONFIG_CONTEXT* context);
 static int         maxscale_getline(char** dest, int* size, FILE* file);
 static bool        check_first_last_char(const char* string, char expected);
@@ -699,7 +805,7 @@ const MXS_MODULE_PARAM config_filter_params[] =
 };
 
 /*
- * This is currently only used in handle_global_item() to verify that
+ * This is currently only used in config_load_global() to verify that
  * all global configuration item names are valid.
  */
 const char* config_pre_parse_global_params[] =
@@ -898,7 +1004,14 @@ static bool is_maxscale_section(const char* section)
 
 static int ini_global_handler(void* userdata, const char* section, const char* name, const char* value)
 {
-    return is_maxscale_section(section) ? handle_global_item(name, value) : 1;
+    mxs::ConfigParameters* params = static_cast<mxs::ConfigParameters*>(userdata);
+
+    if (is_maxscale_section(section))
+    {
+        params->set(name, value);
+    }
+
+    return 1;
 }
 
 /**
@@ -1094,14 +1207,6 @@ bool config_load_single_file(const char* file,
         {
             log_config_error(file, rval);
         }
-    }
-
-    /* Check this after reading config is finished */
-    mxs::ConfigParameters params; // We don't have this for the main configuration.
-    if (!this_unit.gateway.post_configure(params))
-    {
-        rval = -1;
-        MXS_ERROR("Invalid configuration.");
     }
 
     return rval == 0;
@@ -1439,30 +1544,23 @@ static bool config_load_and_process(const char* filename, bool (* process_config
 
 bool config_load_global(const char* filename)
 {
-    int rval;
+    mxs::ConfigParameters params;
+    bool rval = (ini_parse(filename, ini_global_handler, &params) == 0);
 
-    if ((rval = ini_parse(filename, ini_global_handler, NULL)) != 0)
+    if (!rval)
     {
         log_config_error(filename, rval);
     }
-    else if (this_unit.gateway.qc_cache_properties.max_size == -1)
+    else if (!MXS_CONFIG::s_specification.validate(params))
     {
-        this_unit.gateway.qc_cache_properties.max_size = 0;
-        MXS_WARNING("Failed to automatically detect available system memory: disabling the query classifier "
-                    "cache. To enable it, add '%s' to the configuration file.",
-                    CN_QUERY_CLASSIFIER_CACHE_SIZE);
-    }
-    else if (this_unit.gateway.qc_cache_properties.max_size == 0)
-    {
-        MXS_NOTICE("Query classifier cache is disabled");
+        rval = false;
     }
     else
     {
-        MXS_NOTICE("Using up to %s of memory for query classifier cache",
-                   mxb::pretty_size(this_unit.gateway.qc_cache_properties.max_size).c_str());
+        rval = this_unit.gateway.configure(params);
     }
 
-    return rval == 0;
+    return rval;
 }
 
 /**
@@ -2284,114 +2382,6 @@ uint32_t config_writeq_low_water()
 bool config_set_writeq_low_water(uint32_t size)
 {
     return this_unit.gateway.writeq_low_water.set(size);
-}
-
-static struct
-{
-    const char* name;
-    int         priority;
-    const char* replacement;
-} lognames[] =
-{
-    {"log_messages", LOG_NOTICE,
-     "log_notice"},     //
-    // Deprecated
-    {"log_trace",    LOG_INFO,
-     "log_info"},   //
-    // Deprecated
-    {"log_debug",    LOG_DEBUG,
-     NULL},
-    {"log_warning",  LOG_WARNING,
-     NULL},
-    {"log_notice",   LOG_NOTICE,
-     NULL},
-    {"log_info",     LOG_INFO,
-     NULL},
-    {NULL,           0}
-};
-
-/**
- * Configuration handler for items in the global [MaxScale] section
- *
- * @param name  The item name
- * @param value The item value
- * @return 0 on error
- */
-static int handle_global_item(const char* name, const char* value)
-{
-    bool processed = true;      // assume 'name' is valid
-
-    config::Type* item = nullptr;
-    int i;
-    if ((item = this_unit.gateway.find_value(name)) != nullptr)
-    {
-        if (!item->set(value))
-        {
-            MXS_ERROR("Invalid value for '%s': %s", item->parameter().name().c_str(), value);
-            return 0;
-        }
-    }
-    else
-    {
-        bool found = false;
-#ifndef SS_DEBUG
-        if (strcmp(name, "log_debug") == 0)
-        {
-            MXS_WARNING("The 'log_debug' option has no effect in release mode.");
-            found = true;
-        }
-        else
-#endif
-        {
-            maxscale::event::result_t result = maxscale::event::configure(name, value);
-
-            switch (result)
-            {
-            case maxscale::event::ACCEPTED:
-                found = true;
-                break;
-
-            case maxscale::event::IGNORED:
-                for (i = 0; lognames[i].name; i++)
-                {
-                    if (strcasecmp(name, lognames[i].name) == 0)
-                    {
-                        found = true;
-                        if (lognames[i].replacement)
-                        {
-                            MXS_WARNING("In the configuration file the use of '%s' is deprecated, "
-                                        "use '%s' instead.",
-                                        lognames[i].name,
-                                        lognames[i].replacement);
-                        }
-
-                        mxs_log_set_priority_enabled(lognames[i].priority, config_truth_value(value));
-                    }
-                }
-                break;
-
-            case maxscale::event::INVALID:
-                return 0;
-            }
-        }
-
-
-        if (!found)
-        {
-            for (int i = 0; !found && config_pre_parse_global_params[i]; ++i)
-            {
-                found = strcmp(name, config_pre_parse_global_params[i]) == 0;
-            }
-        }
-        processed = found;
-    }
-
-    if (!processed)
-    {
-        MXS_ERROR("Unknown global parameter '%s'.", name);
-    }
-
-    return processed ? 1 : 0;
 }
 
 bool config_can_modify_at_runtime(const char* name)
@@ -4835,6 +4825,108 @@ bool config_set_rebalance_threshold(const char* value)
     }
 
     return rv;
+}
+
+bool MXS_CONFIG::configure(const mxs::ConfigParameters& params, mxs::ConfigParameters* pUnrecognized)
+{
+    mxs::ConfigParameters unrecognized;
+    bool configured = config::Configuration::configure(params, &unrecognized);
+
+    if (configured)
+    {
+        for (const auto& kv : unrecognized)
+        {
+            bool found = false;
+
+            const auto& name = kv.first;
+            const auto& value = kv.second;
+#ifndef SS_DEBUG
+            if (name == "log_debug")
+            {
+                MXS_WARNING("The 'log_debug' option has no effect in release mode.");
+                found = true;
+            }
+            else
+#endif
+            {
+                maxscale::event::result_t result = maxscale::event::validate(name, value);
+
+                switch (result)
+                {
+                case maxscale::event::ACCEPTED:
+                    found = true;
+                    break;
+
+                case maxscale::event::IGNORED:
+                    for (int i = 0; lognames[i].name; i++)
+                    {
+                        if (strcasecmp(name.c_str(), lognames[i].name) == 0)
+                        {
+                            found = true;
+                            if (lognames[i].replacement)
+                            {
+                                MXS_WARNING("In the configuration file the use of '%s' is deprecated, "
+                                            "use '%s' instead.",
+                                            lognames[i].name,
+                                            lognames[i].replacement);
+                            }
+
+                            mxs_log_set_priority_enabled(lognames[i].priority, config_truth_value(value));
+                        }
+                    }
+                    break;
+
+                case maxscale::event::INVALID:
+                    found = true;
+                    configured = false;
+                    break;
+                }
+            }
+
+            if (!found)
+            {
+                for (int i = 0; !found && config_pre_parse_global_params[i]; ++i)
+                {
+                    found = (name == config_pre_parse_global_params[i]);
+                }
+            }
+
+            if (!found)
+            {
+                if (pUnrecognized)
+                {
+                    pUnrecognized->set(name, value);
+                }
+                else
+                {
+                    MXS_ERROR("Unknown global parameter '%s'.", name.c_str());
+                    configured = false;
+                }
+            }
+        }
+
+        if (configured)
+        {
+            if (this->qc_cache_properties.max_size == -1)
+            {
+                this->qc_cache_properties.max_size = 0;
+                MXS_WARNING("Failed to automatically detect available system memory: disabling the query "
+                            "classifier cache. To enable it, add '%s' to the configuration file.",
+                            CN_QUERY_CLASSIFIER_CACHE_SIZE);
+            }
+            else if (this->qc_cache_properties.max_size == 0)
+            {
+                MXS_NOTICE("Query classifier cache is disabled");
+            }
+            else
+            {
+                MXS_NOTICE("Using up to %s of memory for query classifier cache",
+                           mxb::pretty_size(this->qc_cache_properties.max_size).c_str());
+            }
+        }
+    }
+
+    return configured;
 }
 
 bool MXS_CONFIG::post_configure(const mxs::ConfigParameters& params)

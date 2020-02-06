@@ -444,6 +444,10 @@ std::vector<std::string> config_break_list_string(const std::string& list_string
  * a valid truth value
  */
 int config_truth_value(const char* value);
+inline int config_truth_value(const std::string& value)
+{
+    return config_truth_value(value.c_str());
+}
 
 /**
  * @brief Get worker thread count

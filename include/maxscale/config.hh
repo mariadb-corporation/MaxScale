@@ -148,10 +148,23 @@ public:
     int64_t             promoted_at;                    /**< Time when this Maxscale instance was
                                                          * promoted from a passive to an active */
 
+    bool configure(const mxs::ConfigParameters& params,
+                   mxs::ConfigParameters* pUnrecognized = nullptr) override;
+
+private:
     bool post_configure(const mxs::ConfigParameters& params) override;
 
 public:
-    static config::Specification s_specification;
+    class Specification : public config::Specification
+    {
+    public:
+        using config::Specification::Specification;
+
+        bool validate(const mxs::ConfigParameters& params,
+                      mxs::ConfigParameters* pUnrecognized = nullptr) const override final;
+    };
+
+    static Specification                                s_specification;
 
     static ParamLogThrottling                           s_log_throttling;
     static ParamThreadsCount                            s_n_threads;

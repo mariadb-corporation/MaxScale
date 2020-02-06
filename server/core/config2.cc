@@ -372,8 +372,7 @@ bool Configuration::configure(const mxs::ConfigParameters& params,
             const Param* pParam = m_pSpecification->find_param(name.c_str());
             config::Type* pValue = find_value(name.c_str());
 
-            mxb_assert(pValue && pParam);   // Should have been validated.
-            mxb_assert(&pValue->parameter() == pParam);
+            mxb_assert(!pValue || (&pValue->parameter() == pParam));
 
             if (pParam && pValue)
             {
