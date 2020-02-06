@@ -53,27 +53,26 @@ static struct ThisUnit
 
 } this_unit;
 
-int kv_iter(void* cls,
-            enum MHD_ValueKind kind,
-            const char* key,
-            const char* value)
+int header_cb(void* cls,
+              enum MHD_ValueKind kind,
+              const char* key,
+              const char* value)
 {
-    size_t* rval = (size_t*)cls;
-
-    if (strcasecmp(key, "Content-Length") == 0)
-    {
-        *rval = atoi(value);
-        return MHD_NO;
-    }
-
+    Headers* res = (Headers*)cls;
+    res->emplace(key, value);
     return MHD_YES;
+}
+
+static inline Headers get_headers(MHD_Connection* connection)
+{
+    Headers rval;
+    MHD_get_connection_values(connection, MHD_HEADER_KIND, header_cb, &rval);
+    return rval;
 }
 
 static inline size_t request_data_length(MHD_Connection* connection)
 {
-    size_t rval = 0;
-    MHD_get_connection_values(connection, MHD_HEADER_KIND, kv_iter, &rval);
-    return rval;
+    return atoi(get_headers(connection)["Content-Length"].c_str());
 }
 
 static bool modifies_data(const string& method)
@@ -94,6 +93,44 @@ static void send_auth_error(MHD_Connection* connection)
     MHD_destroy_response(resp);
 }
 
+static bool send_cors_preflight_request(MHD_Connection* connection, const std::string& verb)
+{
+    bool rval = false;
+
+    if (verb == MHD_HTTP_METHOD_OPTIONS)
+    {
+        auto headers = get_headers(connection);
+
+        if (headers.count("Origin"))
+        {
+            MHD_Response* response =
+                MHD_create_response_from_buffer(0, (void*)"", MHD_RESPMEM_PERSISTENT);
+
+            MHD_add_response_header(response, "Access-Control-Allow-Origin", headers["Origin"].c_str());
+            MHD_add_response_header(response, "Vary", "Origin");
+
+            if (headers.count("Access-Control-Request-Headers"))
+            {
+                MHD_add_response_header(response, "Access-Control-Allow-Headers",
+                                        headers["Access-Control-Request-Headers"].c_str());
+            }
+
+            if (headers.count("Access-Control-Request-Method"))
+            {
+                MHD_add_response_header(response, "Access-Control-Allow-Methods",
+                                        headers["Access-Control-Request-Method"].c_str());
+            }
+
+            MHD_queue_response(connection, MHD_HTTP_OK, response);
+            MHD_destroy_response(response);
+
+            rval = true;
+        }
+    }
+
+    return rval;
+}
+
 int handle_client(void* cls,
                   MHD_Connection* connection,
                   const char* url,
@@ -104,6 +141,11 @@ int handle_client(void* cls,
                   void** con_cls)
 
 {
+    if (send_cors_preflight_request(connection, method))
+    {
+        return MHD_YES;
+    }
+
     if (*con_cls == NULL)
     {
         if ((*con_cls = new(std::nothrow) Client(connection)) == NULL)
@@ -314,11 +356,29 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
                                         (void*)data.c_str(),
                                         MHD_RESPMEM_MUST_COPY);
 
-    const Headers& headers = reply.get_headers();
+    auto headers = reply.get_headers();
 
     for (Headers::const_iterator it = headers.begin(); it != headers.end(); it++)
     {
         MHD_add_response_header(response, it->first.c_str(), it->second.c_str());
+    }
+
+    if (headers.count("Origin"))
+    {
+        MHD_add_response_header(response, "Access-Control-Allow-Origin", headers["Origin"].c_str());
+        MHD_add_response_header(response, "Vary", "Origin");
+
+        if (headers.count("Access-Control-Request-Headers"))
+        {
+            MHD_add_response_header(response, "Access-Control-Allow-Headers",
+                                    headers["Access-Control-Request-Headers"].c_str());
+        }
+
+        if (headers.count("Access-Control-Request-Method"))
+        {
+            MHD_add_response_header(response, "Access-Control-Allow-Methods",
+                                    headers["Access-Control-Request-Method"].c_str());
+        }
     }
 
     int rval = MHD_queue_response(m_connection, reply.get_code(), response);
