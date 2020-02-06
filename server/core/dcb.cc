@@ -635,11 +635,11 @@ int dcb_read(DCB* dcb,
         else
         {
             GWBUF* buffer;
-            dcb->last_read = mxs_clock();
 
             buffer = dcb_basic_read(dcb, bytes_available, maxbytes, nreadtotal, &nsingleread);
             if (buffer)
             {
+                dcb->last_read = mxs_clock();
                 nreadtotal += nsingleread;
                 MXS_DEBUG("Read %d bytes from dcb %p in state %s fd %d.",
                           nsingleread,
@@ -789,19 +789,19 @@ static int dcb_read_SSL(DCB* dcb, GWBUF** head)
         dcb_drain_writeq(dcb);
     }
 
-    dcb->last_read = mxs_clock();
     buffer = dcb_basic_read_SSL(dcb, &nsingleread);
     if (buffer)
     {
+        dcb->last_read = mxs_clock();
         nreadtotal += nsingleread;
         *head = gwbuf_append(*head, buffer);
 
         while (buffer)
         {
-            dcb->last_read = mxs_clock();
             buffer = dcb_basic_read_SSL(dcb, &nsingleread);
             if (buffer)
             {
+                dcb->last_read = mxs_clock();
                 nreadtotal += nsingleread;
                 /*< Append read data to the gwbuf */
                 *head = gwbuf_append(*head, buffer);
