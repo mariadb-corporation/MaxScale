@@ -12,60 +12,26 @@
  */
 
 #include <maxscale/authenticator.hh>
-
-#include <maxscale/modutil.hh>
-#include <maxbase/alloc.h>
-
 #include "internal/modules.hh"
 
 namespace maxscale
 {
 
 /**
- * @brief Initialize an authenticator module
- *
- * Process the options into an array and pass them to the authenticator
- * initialization function
+ * Initialize an authenticator module
  *
  * @param authenticator Authenticator name
  * @param options Authenticator options
  * @return Authenticator instance or NULL on error
  */
-std::unique_ptr<AuthenticatorModule> authenticator_init(const char* authenticator, const char* options)
+std::unique_ptr<AuthenticatorModule>
+authenticator_init(const std::string& authenticator, mxs::ConfigParameters* options)
 {
     std::unique_ptr<AuthenticatorModule> rval;
-    auto func = (mxs::AUTHENTICATOR_API*)load_module(authenticator, MODULE_AUTHENTICATOR);
-
-    // Client authenticator modules must have an init-entrypoint.
-    if (func && func->initialize)
+    auto func = (mxs::AUTHENTICATOR_API*)load_module(authenticator.c_str(), MODULE_AUTHENTICATOR);
+    if (func)
     {
-        char* optarray[AUTHENTICATOR_MAX_OPTIONS + 1];
-        size_t optlen = options && *options ? strlen(options) : 0;
-        char optcopy[optlen + 1];
-        int optcount = 0;
-
-        if (options && *options)
-        {
-            strcpy(optcopy, options);
-            char* opt = optcopy;
-
-            while (opt && optcount < AUTHENTICATOR_MAX_OPTIONS)
-            {
-                char* end = strnchr_esc(opt, ',', sizeof(optcopy) - (opt - optcopy));
-
-                if (end)
-                {
-                    *end++ = '\0';
-                }
-
-                optarray[optcount++] = opt;
-                opt = end;
-            }
-        }
-
-        optarray[optcount] = NULL;
-
-        rval.reset(func->initialize(optarray));
+        rval.reset(func->create(options));
     }
     return rval;
 }

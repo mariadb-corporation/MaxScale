@@ -44,11 +44,10 @@ std::string GSSAPIAuthenticatorModule::supported_protocol() const
  *
  * This function processes the service principal name that is given to the client.
  *
- * @param listener Listener port
  * @param options Listener options
  * @return Authenticator instance
  */
-GSSAPIAuthenticatorModule* GSSAPIAuthenticatorModule::create(char** options)
+GSSAPIAuthenticatorModule* GSSAPIAuthenticatorModule::create(mxs::ConfigParameters* options)
 {
     /** This is mainly for testing purposes */
     const char default_princ_name[] = "mariadb/localhost.localdomain";
@@ -56,33 +55,18 @@ GSSAPIAuthenticatorModule* GSSAPIAuthenticatorModule::create(char** options)
     auto instance = new(std::nothrow) GSSAPIAuthenticatorModule();
     if (instance)
     {
-        for (int i = 0; options[i]; i++)
+        const std::string princ_option = "principal_name";
+        if (options->contains(princ_option))
         {
-            if (strstr(options[i], "principal_name"))
-            {
-                char* ptr = strchr(options[i], '=');
-                if (ptr)
-                {
-                    ptr++;
-                    instance->principal_name = MXS_STRDUP_A(ptr);
-                }
-            }
-            else
-            {
-                MXS_ERROR("Unknown option: %s", options[i]);
-                MXS_FREE(instance->principal_name);
-                delete instance;
-                return NULL;
-            }
+            instance->principal_name = options->get_string(princ_option);
+            options->remove(princ_option);
         }
-
-        if (instance->principal_name == NULL)
+        else
         {
-            instance->principal_name = MXS_STRDUP_A(default_princ_name);
-            MXS_NOTICE("Using default principal name: %s", instance->principal_name);
+            instance->principal_name = default_princ_name;
+            MXS_NOTICE("Using default principal name: %s", instance->principal_name.c_str());
         }
     }
-
     return instance;
 }
 
@@ -120,7 +104,7 @@ GWBUF* GSSAPIClientAuthenticator::create_auth_change_packet()
     /** Client auth plugin name */
     const char auth_plugin_name[] = "auth_gssapi_client";
 
-    size_t principal_name_len = strlen(m_module.principal_name);
+    size_t principal_name_len = m_module.principal_name.length();
     size_t plen = sizeof(auth_plugin_name) + 1 + principal_name_len;
     GWBUF* buffer = gwbuf_alloc(plen + MYSQL_HEADER_LEN);
 
@@ -133,7 +117,7 @@ GWBUF* GSSAPIClientAuthenticator::create_auth_change_packet()
         *data++ = 0xfe;                                             // AuthSwitchRequest command
         memcpy(data, auth_plugin_name, sizeof(auth_plugin_name));   // Plugin name
         data += sizeof(auth_plugin_name);
-        memcpy(data, m_module.principal_name, principal_name_len);      // Plugin data
+        memcpy(data, m_module.principal_name.c_str(), principal_name_len);      // Plugin data
     }
 
     return buffer;
@@ -235,7 +219,7 @@ bool GSSAPIClientAuthenticator::validate_gssapi_token(uint8_t* token, size_t len
     gss_buffer_desc server_buf = {0, 0};
     gss_cred_id_t credentials;
 
-    const char* pr = m_module.principal_name;
+    const char* pr = m_module.principal_name.c_str();
     server_buf.value = (void*)pr;
     server_buf.length = strlen(pr) + 1;
 

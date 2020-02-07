@@ -25,7 +25,7 @@ public:
     PamAuthenticatorModule(const PamAuthenticatorModule& orig) = delete;
     PamAuthenticatorModule& operator=(const PamAuthenticatorModule&) = delete;
 
-    static PamAuthenticatorModule* create(char** options);
+    static PamAuthenticatorModule* create(mxs::ConfigParameters* options);
 
     json_t*     diagnostics() override;
     uint64_t    capabilities() const override;

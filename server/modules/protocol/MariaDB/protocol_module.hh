@@ -42,7 +42,8 @@ public:
     AuthenticatorList create_authenticators(const mxs::ConfigParameters& params) override;
 
 private:
-    bool parse_authenticator_opts(const std::string& opts, const AuthenticatorList& authenticators);
+    bool parse_auth_options(const std::string& opts, mxs::ConfigParameters* params_out);
+    void read_authentication_options(mxs::ConfigParameters* params);
 
     /** Partial user search settings. These settings originate from the listener and do not
      * change once set. */

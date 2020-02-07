@@ -109,62 +109,34 @@ uint64_t MySQLProtocolModule::capabilities() const
            | mxs::ProtocolModule::CAP_AUTH_MODULES;
 }
 
-bool MySQLProtocolModule::parse_authenticator_opts(const std::string& opts,
-                                                   const AuthenticatorList& authenticators)
+void MySQLProtocolModule::read_authentication_options(mxs::ConfigParameters* params)
 {
-    bool error = false;
-    // Check if any of the authenticators support anonymous users.
-    for (const auto& auth_module : authenticators)
+    if (!params->empty())
     {
-        auto mariadb_auth = static_cast<mariadb::AuthenticatorModule*>(auth_module.get());
-        if (mariadb_auth->capabilities() & mariadb::AuthenticatorModule::CAP_ANON_USER)
-        {
-            m_user_search_settings.allow_anon_user = true;
-            break;
-        }
-    }
+        // Read any values recognized by the protocol itself and remove them. The leftovers are given to
+        // authenticators.
 
-    auto opt_list = mxb::strtok(opts, ",");
-    for (auto opt : opt_list)
-    {
-        auto equals_pos = opt.find('=');
-        if (equals_pos != string::npos && equals_pos > 0 && opt.length() > equals_pos + 1)
+        const string inject = "inject_service_user";
+        const string skip_auth = "skip_authentication";
+        const string lower_case = "lower_case_table_names";
+
+        params->remove("cache_dir"); // ignored
+        if (params->contains(inject))
         {
-            string opt_name = opt.substr(0, equals_pos);
-            mxb::trim(opt_name);
-            string opt_value = opt.substr(equals_pos + 1);
-            mxb::trim(opt_value);
-            // TODO: add better parsing, check for invalid values
-            int val = config_truth_value(opt_value.c_str());
-            if (opt_name == "cache_dir")
-            {
-                // ignored
-            }
-            else if (opt_name == "inject_service_user")
-            {
-                m_user_search_settings.allow_service_user = val;
-            }
-            else if (opt_name == "skip_authentication")
-            {
-                m_user_search_settings.match_host_pattern = !val;
-            }
-            else if (opt_name == "lower_case_table_names")
-            {
-                m_user_search_settings.case_sensitive_db = !val;
-            }
-            else
-            {
-                MXB_ERROR("Unknown authenticator option: %s", opt_name.c_str());
-                error = true;
-            }
+            m_user_search_settings.allow_service_user = params->get_bool(inject);
+            params->remove(inject);
         }
-        else
+        if (params->contains(skip_auth))
         {
-            MXB_ERROR("Invalid authenticator option setting: %s", opt.c_str());
-            error = true;
+            m_user_search_settings.match_host_pattern = !params->get_bool(skip_auth);
+            params->remove(skip_auth);
+        }
+        if (params->contains(lower_case))
+        {
+            m_user_search_settings.case_sensitive_db = !params->get_bool(lower_case);
+            params->remove(lower_case);
         }
     }
-    return !error;
 }
 
 mxs::ProtocolModule::AuthenticatorList
@@ -179,6 +151,17 @@ MySQLProtocolModule::create_authenticators(const mxs::ConfigParameters& params)
         auth_names = MXS_MARIADBAUTH_AUTHENTICATOR_NAME;
     }
 
+    mxs::ConfigParameters auth_config;
+    if (parse_auth_options(auth_opts, &auth_config))
+    {
+        // Read authentication settings which affect the entire listener.
+        read_authentication_options(&auth_config);
+    }
+    else
+    {
+        return {}; // error
+    }
+
     AuthenticatorList authenticators;
     auto auth_names_list = mxb::strtok(auth_names, ",");
     bool error = false;
@@ -190,7 +173,7 @@ MySQLProtocolModule::create_authenticators(const mxs::ConfigParameters& params)
         if (!auth_name.empty())
         {
             const char* auth_namez = auth_name.c_str();
-            auto new_auth_module = mxs::authenticator_init(auth_namez, auth_opts.c_str());
+            auto new_auth_module = mxs::authenticator_init(auth_name, &auth_config);
             if (new_auth_module)
             {
                 // Check that the authenticator supports the protocol. Use case-insensitive comparison.
@@ -217,17 +200,35 @@ MySQLProtocolModule::create_authenticators(const mxs::ConfigParameters& params)
         }
         else
         {
-            MXB_ERROR("'%s' has an invalid value '%s'. The value should be a comma-separated "
-                      "list of authenticators, a single authenticator or empty.",
-                      CN_AUTHENTICATOR, auth_names.c_str());
+            MXB_ERROR("'%s' is an invalid value for '%s'. The value should be a comma-separated "
+                      "list of authenticators or a single authenticator.",
+                      auth_names.c_str(), CN_AUTHENTICATOR);
             error = true;
         }
     }
 
-    // Also parse authentication settings which affect the entire listener.
-    if (!error && !parse_authenticator_opts(auth_opts, authenticators))
+    // All authenticators have been created. Any remaining settings in the config object are unrecognized.
+    if (!error && !auth_config.empty())
     {
         error = true;
+        for (const auto& elem : auth_config)
+        {
+            MXB_ERROR("Unrecognized authenticator option: '%s'", elem.first.c_str());
+        }
+    }
+
+    if (!error)
+    {
+        // Check if any of the authenticators support anonymous users.
+        for (const auto& auth_module : authenticators)
+        {
+            auto mariadb_auth = static_cast<mariadb::AuthenticatorModule*>(auth_module.get());
+            if (mariadb_auth->capabilities() & mariadb::AuthenticatorModule::CAP_ANON_USER)
+            {
+                m_user_search_settings.allow_anon_user = true;
+                break;
+            }
+        }
     }
 
     if (error)
@@ -235,6 +236,39 @@ MySQLProtocolModule::create_authenticators(const mxs::ConfigParameters& params)
         authenticators.clear();
     }
     return authenticators;
+}
+
+/**
+ * Parse the authenticator options string to config parameters object.
+ *
+ * @param opts Options string
+ * @param params_out Config object to write to
+ * @return True on success
+ */
+bool MySQLProtocolModule::parse_auth_options(const std::string& opts, mxs::ConfigParameters* params_out)
+{
+    bool error = false;
+    auto opt_list = mxb::strtok(opts, ",");
+
+    for (const auto& opt : opt_list)
+    {
+        auto equals_pos = opt.find('=');
+        if (equals_pos != string::npos && equals_pos > 0 && opt.length() > equals_pos + 1)
+        {
+            string opt_name = opt.substr(0, equals_pos);
+            mxb::trim(opt_name);
+            string opt_value = opt.substr(equals_pos + 1);
+            mxb::trim(opt_value);
+            params_out->set(opt_name, opt_value);
+        }
+        else
+        {
+            MXB_ERROR("Invalid authenticator option setting: %s", opt.c_str());
+            error = true;
+            break;
+        }
+    }
+    return !error;
 }
 
 /**

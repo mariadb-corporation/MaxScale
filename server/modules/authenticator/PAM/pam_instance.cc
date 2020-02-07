@@ -28,7 +28,7 @@ using std::string;
  * @param options Listener options
  * @return New client authenticator instance or NULL on error
  */
-PamAuthenticatorModule* PamAuthenticatorModule::create(char** options)
+PamAuthenticatorModule* PamAuthenticatorModule::create(mxs::ConfigParameters* options)
 {
     return new(std::nothrow) PamAuthenticatorModule();
 }

@@ -108,67 +108,9 @@ sqlite3* MariaDBAuthenticatorModule::get_handle()
  * @param options Authenticator options
  * @return New MYSQL_AUTH instance or NULL on error
  */
-MariaDBAuthenticatorModule* MariaDBAuthenticatorModule::create(char** options)
+MariaDBAuthenticatorModule* MariaDBAuthenticatorModule::create(mxs::ConfigParameters* options)
 {
-    auto instance = new(std::nothrow) MariaDBAuthenticatorModule();
-    if (instance)
-    {
-        bool error = false;
-        for (int i = 0; options[i]; i++)
-        {
-            char* value = strchr(options[i], '=');
-
-            if (value)
-            {
-                *value++ = '\0';
-
-                if (strcmp(options[i], "cache_dir") == 0)
-                {
-                    if ((instance->m_cache_dir = MXS_STRDUP(value)) == NULL
-                        || !clean_up_pathname(instance->m_cache_dir))
-                    {
-                        error = true;
-                    }
-                }
-                else if (strcmp(options[i], "inject_service_user") == 0)
-                {
-                    instance->m_inject_service_user = config_truth_value(value);
-                }
-                else if (strcmp(options[i], "skip_authentication") == 0)
-                {
-                    instance->m_skip_auth = config_truth_value(value);
-                }
-                else if (strcmp(options[i], "lower_case_table_names") == 0)
-                {
-                    instance->m_lower_case_table_names = config_truth_value(value);
-                }
-                else
-                {
-                    MXS_ERROR("Unknown authenticator option: %s", options[i]);
-                    error = true;
-                }
-            }
-            else
-            {
-                MXS_ERROR("Unknown authenticator option: %s", options[i]);
-                error = true;
-            }
-        }
-
-        if (error)
-        {
-            MXS_FREE(instance->m_cache_dir);
-            delete instance;
-            instance = NULL;
-        }
-    }
-    else if (instance)
-    {
-        delete instance;
-        instance = NULL;
-    }
-
-    return instance;
+    return new(std::nothrow) MariaDBAuthenticatorModule();
 }
 
 static bool is_localhost_address(const struct sockaddr_storage* addr)

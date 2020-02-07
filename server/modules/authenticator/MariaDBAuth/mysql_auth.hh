@@ -91,7 +91,7 @@ static int db_flags = SQLITE_OPEN_READWRITE
 class MariaDBAuthenticatorModule : public mariadb::AuthenticatorModule
 {
 public:
-    static MariaDBAuthenticatorModule* create(char** options);
+    static MariaDBAuthenticatorModule* create(mxs::ConfigParameters* options);
     ~MariaDBAuthenticatorModule() override = default;
 
     mariadb::SClientAuth  create_client_authenticator() override;

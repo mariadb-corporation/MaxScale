@@ -36,7 +36,7 @@ void report_error(OM_uint32 major, OM_uint32 minor);
 class GSSAPIAuthenticatorModule : public mariadb::AuthenticatorModule
 {
 public:
-    static GSSAPIAuthenticatorModule* create(char** options);
+    static GSSAPIAuthenticatorModule* create(mxs::ConfigParameters* options);
     ~GSSAPIAuthenticatorModule() override = default;
 
     mariadb::SClientAuth  create_client_authenticator() override;
@@ -49,7 +49,7 @@ public:
 
     const std::unordered_set<std::string>& supported_plugins() const override;
 
-    char* principal_name {nullptr};     /**< Service principal name given to the client */
+    std::string principal_name;     /**< Service principal name given to the client */
 };
 
 class GSSAPIClientAuthenticator : public mariadb::ClientAuthenticatorT<GSSAPIAuthenticatorModule>
