@@ -369,15 +369,14 @@ bool Configuration::configure(const mxs::ConfigParameters& params,
         {
             const auto& value = param.second;
 
-            const Param* pParam = m_pSpecification->find_param(name.c_str());
             config::Type* pValue = find_value(name.c_str());
 
-            mxb_assert(!pValue || (&pValue->parameter() == pParam));
-
-            if (pParam && pValue)
+            if (pValue)
             {
-                if (!pParam->set(*pValue, value.c_str()))
+                string message;
+                if (!pValue->set_from_string(value, &message))
                 {
+                    MXS_ERROR("%s: %s.", m_pSpecification->module().c_str(), message.c_str());
                     mxb_assert(!true);
                     configured = false;
                 }
@@ -534,11 +533,6 @@ ostream& Type::persist(ostream& out) const
     return out;
 }
 
-bool Type::set(const string& value_as_string)
-{
-    return m_pParam->set(*this, value_as_string);
-}
-
 /**
  * ParamBool
  */
@@ -556,23 +550,6 @@ bool ParamBool::validate(const std::string& value_as_string, std::string* pMessa
 {
     value_type value;
     return from_string(value_as_string, &value, pMessage);
-}
-
-bool ParamBool::set(Type& value, const std::string& value_as_string) const
-{
-    mxb_assert(&value.parameter() == this);
-
-    Bool& bool_value = static_cast<Bool&>(value);
-
-    value_type x;
-    bool valid = from_string(value_as_string, &x);
-
-    if (valid)
-    {
-        bool_value.set(x);
-    }
-
-    return valid;
 }
 
 bool ParamBool::from_string(const string& value_as_string, value_type* pValue, string* pMessage) const
@@ -636,23 +613,6 @@ bool ParamNumber::validate(const std::string& value_as_string, std::string* pMes
 {
     value_type value;
     return from_string(value_as_string, &value, pMessage);
-}
-
-bool ParamNumber::set(Type& value, const std::string& value_as_string) const
-{
-    mxb_assert(&value.parameter() == this);
-
-    Number& number_value = static_cast<Number&>(value);
-
-    value_type x;
-    bool valid = from_string(value_as_string, &x);
-
-    if (valid)
-    {
-        number_value.set(x);
-    }
-
-    return valid;
 }
 
 bool ParamNumber::from_string(const std::string& value_as_string,
@@ -772,23 +732,6 @@ bool ParamPath::validate(const std::string& value_as_string, std::string* pMessa
     return from_string(value_as_string, &value, pMessage);
 }
 
-bool ParamPath::set(Type& value, const std::string& value_as_string) const
-{
-    mxb_assert(&value.parameter() == this);
-
-    Path& path_value = static_cast<Path&>(value);
-
-    value_type x;
-    bool valid = from_string(value_as_string, &x);
-
-    if (valid)
-    {
-        path_value.set(x);
-    }
-
-    return valid;
-}
-
 bool ParamPath::from_string(const std::string& value_as_string,
                             value_type* pValue,
                             std::string* pMessage) const
@@ -820,6 +763,13 @@ std::string ParamPath::to_string(const value_type& value) const
 json_t* ParamPath::to_json(const value_type& value) const
 {
     return json_string(value.c_str());
+}
+
+bool ParamPath::is_valid(const value_type& value) const
+{
+    // TODO: Check that provided path is compatible with option flags.
+    mxb_assert(!true);
+    return true;
 }
 
 void ParamPath::populate(MXS_MODULE_PARAM& param) const
@@ -862,23 +812,6 @@ bool ParamServer::validate(const std::string& value_as_string, std::string* pMes
 {
     value_type value;
     return from_string(value_as_string, &value, pMessage);
-}
-
-bool ParamServer::set(Type& value, const std::string& value_as_string) const
-{
-    mxb_assert(&value.parameter() == this);
-
-    Server& server_value = static_cast<Server&>(value);
-
-    value_type x;
-    bool valid = from_string(value_as_string, &x);
-
-    if (valid)
-    {
-        server_value.set(x);
-    }
-
-    return valid;
 }
 
 bool ParamServer::from_string(const std::string& value_as_string,
@@ -939,23 +872,6 @@ bool ParamTarget::validate(const std::string& value_as_string, std::string* pMes
 {
     value_type value;
     return from_string(value_as_string, &value, pMessage);
-}
-
-bool ParamTarget::set(Type& value, const std::string& value_as_string) const
-{
-    mxb_assert(&value.parameter() == this);
-
-    Target& target_value = static_cast<Target&>(value);
-
-    value_type x;
-    bool valid = from_string(value_as_string, &x);
-
-    if (valid)
-    {
-        target_value.set(x);
-    }
-
-    return valid;
 }
 
 bool ParamTarget::from_string(const std::string& value_as_string,
@@ -1078,23 +994,6 @@ bool ParamString::validate(const std::string& value_as_string, std::string* pMes
     return from_string(value_as_string, &value, pMessage);
 }
 
-bool ParamString::set(Type& value, const std::string& value_as_string) const
-{
-    mxb_assert(&value.parameter() == this);
-
-    String& string_value = static_cast<String&>(value);
-
-    value_type x;
-    bool valid = from_string(value_as_string, &x);
-
-    if (valid)
-    {
-        string_value.set(x);
-    }
-
-    return valid;
-}
-
 bool ParamString::from_string(const std::string& value_as_string,
                               value_type* pValue,
                               std::string* pMessage) const
@@ -1169,13 +1068,6 @@ json_t* ParamString::to_json(value_type value) const
 /**
  * class Number
  */
-bool Number::is_valid(const value_type& value) const
-{
-    const ParamNumber& p = static_cast<const ParamNumber&>(parameter());
-
-    return value >= p.min_value() && value <= p.max_value();
-}
-
 Number::value_type Number::atomic_get() const
 {
     return mxb::atomic::load(&m_value, mxb::atomic::RELAXED);

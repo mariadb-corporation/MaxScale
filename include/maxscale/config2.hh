@@ -253,17 +253,6 @@ public:
     virtual bool validate(const std::string& value_as_string, std::string* pMessage) const = 0;
 
     /**
-     * Set setting value with value from configuration file.
-     *
-     * @param value            The @c Type to configure.
-     * @param value_as_string  The string value to configure it with.
-     *
-     * @return True, if it could be configured, false otherwise. The
-     *         function will fail only if @c value_as_string is invalid.
-     */
-    virtual bool set(Type& value, const std::string& value_as_string) const = 0;
-
-    /**
      * Populate a legacy parameter specification with data.
      *
      * @param param  The legacy parameter specification to be populated.
@@ -328,12 +317,15 @@ public:
 
     bool validate(const std::string& value_as_string, std::string* pMessage) const override;
 
-    bool set(Type& value, const std::string& value_as_string) const override;
-
     bool from_string(const std::string& value, value_type* pValue,
                      std::string* pMessage = nullptr) const;
     std::string to_string(value_type value) const;
     json_t* to_json(value_type value) const;
+
+    bool is_valid(value_type) const
+    {
+        return true;
+    }
 
     /**
      * Returns the value of this parameter as specified in the provided
@@ -373,12 +365,15 @@ public:
 
     bool validate(const std::string& value_as_string, std::string* pMessage) const override;
 
-    bool set(Type& value, const std::string& value_as_string) const override;
-
     virtual bool from_string(const std::string& value, value_type* pValue,
                              std::string* pMessage = nullptr) const;
     virtual std::string to_string(value_type value) const;
     virtual json_t* to_json(value_type value) const;
+
+    bool is_valid(value_type value) const
+    {
+        return value >= m_min_value && value <= m_max_value;
+    }
 
     value_type default_value() const
     {
@@ -625,12 +620,15 @@ public:
 
     bool validate(const std::string& value_as_string, std::string* pMessage) const override;
 
-    bool set(Type& value, const std::string& value_as_string) const override;
-
     bool from_string(const std::string& value, value_type* pValue,
                      std::string* pMessage = nullptr) const;
     std::string to_string(const value_type& value) const;
     json_t* to_json(const value_type& value) const;
+
+    bool is_valid(const value_type& value) const
+    {
+        return true;
+    }
 
     /**
      * Returns the value of this parameter as specified in the provided
@@ -708,12 +706,15 @@ public:
 
     bool validate(const std::string& value_as_string, std::string* pMessage) const override;
 
-    bool set(Type& value, const std::string& value_as_string) const override;
-
     bool from_string(const std::string& value, value_type* pValue,
                      std::string* pMessage = nullptr) const;
     std::string to_string(value_type value) const;
     json_t* to_json(value_type value) const;
+
+    bool is_valid(value_type value) const
+    {
+        return true;
+    }
 
     void populate(MXS_MODULE_PARAM& param) const;
 
@@ -795,12 +796,12 @@ public:
 
     bool validate(const std::string& value_as_string, std::string* pMessage) const override;
 
-    bool set(Type& value, const std::string& value_as_string) const override;
-
     bool from_string(const std::string& value, value_type* pValue,
                      std::string* pMessage = nullptr) const;
     std::string to_string(const value_type& value) const;
     json_t* to_json(const value_type& value) const;
+
+    bool is_valid(const value_type& value) const;
 
     void populate(MXS_MODULE_PARAM& param) const;
 
@@ -863,13 +864,15 @@ public:
 
     bool validate(const std::string& value_as_string, std::string* pMessage) const override;
 
-    bool set(Type& value, const std::string& value_as_string) const override;
-
     bool from_string(const std::string& value, value_type* pValue,
                      std::string* pMessage = nullptr) const;
     std::string to_string(value_type value) const;
-
     json_t* to_json(value_type value) const;
+
+    bool is_valid(value_type value) const
+    {
+        return true;
+    }
 
     /**
      * Returns the value of this parameter as specified in the provided
@@ -912,12 +915,15 @@ public:
 
     bool validate(const std::string& value_as_string, std::string* pMessage) const override;
 
-    bool set(Type& value, const std::string& value_as_string) const override;
-
     bool from_string(const std::string& value, value_type* pValue,
                      std::string* pMessage = nullptr) const;
     std::string to_string(value_type value) const;
     json_t* to_json(value_type value) const;
+
+    bool is_valid(value_type value) const
+    {
+        return true;
+    }
 
     /**
      * Returns the value of this parameter as specified in the provided
@@ -1057,12 +1063,15 @@ public:
 
     bool validate(const std::string& value_as_string, std::string* pMessage) const override;
 
-    bool set(Type& value, const std::string& value_as_string) const override;
-
     bool from_string(const std::string& value, value_type* pValue,
                      std::string* pMessage = nullptr) const;
     std::string to_string(value_type value) const;
     json_t* to_json(value_type value) const;
+
+    bool is_valid(const value_type& value) const
+    {
+        return true;
+    }
 
     /**
      * Returns the value of this parameter as specified in the provided
@@ -1277,10 +1286,13 @@ public:
      * Set value.
      *
      * @param value_as_string  The new value expressed as a string.
+     * @param pMessage         If non-null, on failure will contain
+     *                         reason why.
      *
      * @return True, if the value could be set, false otherwise.
      */
-    bool set(const std::string& value_as_string);
+    virtual bool set_from_string(const std::string& value_as_string,
+                                 std::string* pMessage = nullptr) = 0;
 
 protected:
     Type(Configuration* pConfiguration, const Param* pParam);
@@ -1339,14 +1351,28 @@ public:
         return static_cast<const ParamType&>(*m_pParam);
     }
 
+    bool set_from_string(const std::string& value_as_string,
+                         std::string* pMessage = nullptr) override
+    {
+        value_type value;
+        bool rv = parameter().from_string(value_as_string, &value, pMessage);
+
+        if (rv)
+        {
+            rv = set(value);
+        }
+
+        return rv;
+    }
+
     value_type get() const
     {
-        return parameter().is_modifiable_at_runtime() ? atomic_get() : m_value;
+        return parameter().is_modifiable_at_runtime() ? atomic_get() : non_atomic_get();
     }
 
     bool set(const value_type& value)
     {
-        bool rv = is_valid(value);
+        bool rv = parameter().is_valid(value);
 
         if (rv)
         {
@@ -1356,7 +1382,7 @@ public:
             }
             else
             {
-                do_set(value);
+                non_atomic_set(value);
             }
 
             if (m_on_set)
@@ -1379,26 +1405,26 @@ public:
     }
 
 protected:
-    virtual bool is_valid(const value_type&) const
-    {
-        return true;
-    }
-
-    virtual void do_set(const value_type& value)
+    void non_atomic_set(const value_type& value)
     {
         m_value = value;
+    }
+
+    value_type non_atomic_get() const
+    {
+        return m_value;
     }
 
     virtual value_type atomic_get() const
     {
         std::lock_guard<std::mutex> guard(m_mutex);
-        return m_value;
+        return non_atomic_get();
     }
 
     virtual void atomic_set(const value_type& value)
     {
         std::lock_guard<std::mutex> guard(m_mutex);
-        do_set(value);
+        non_atomic_set(value);
     }
 
 protected:
@@ -1562,8 +1588,6 @@ protected:
     }
 
 protected:
-    bool is_valid(const value_type& value) const override final;
-
     value_type atomic_get() const override final;
     void atomic_set(const value_type& value) override final;
 };
@@ -1844,24 +1868,6 @@ bool ParamDuration<T>::validate(const std::string& value_as_string, std::string*
 }
 
 template<class T>
-bool ParamDuration<T>::set(Type& value, const std::string& value_as_string) const
-{
-    mxb_assert(&value.parameter() == this);
-
-    Duration<T>& duration_value = static_cast<Duration<T>&>(value);
-
-    value_type x;
-    bool valid = from_string(value_as_string, &x);
-
-    if (valid)
-    {
-        duration_value.set(x);
-    }
-
-    return valid;
-}
-
-template<class T>
 bool ParamDuration<T>::from_string(const std::string& value_as_string,
                                    value_type* pValue,
                                    std::string* pMessage) const
@@ -1990,24 +1996,6 @@ bool ParamEnum<T>::validate(const std::string& value_as_string, std::string* pMe
 {
     value_type value;
     return from_string(value_as_string, &value, pMessage);
-}
-
-template<class T>
-bool ParamEnum<T>::set(Type& value, const std::string& value_as_string) const
-{
-    mxb_assert(&value.parameter() == this);
-
-    Enum<T>& enum_value = static_cast<Enum<T>&>(value);
-
-    value_type x;
-    bool valid = from_string(value_as_string, &x);
-
-    if (valid)
-    {
-        enum_value.set(x);
-    }
-
-    return valid;
 }
 
 template<class T>

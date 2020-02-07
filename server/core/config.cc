@@ -576,23 +576,6 @@ bool MXS_CONFIG::ParamLogThrottling::validate(const std::string& value_as_string
     return from_string(value_as_string, &value, pMessage);
 }
 
-bool MXS_CONFIG::ParamLogThrottling::set(config::Type& value, const std::string& value_as_string) const
-{
-    mxb_assert(&value.parameter() == this);
-
-    MXS_CONFIG::LogThrottling& throttling_value = static_cast<MXS_CONFIG::LogThrottling&>(value);
-
-    value_type x;
-    bool valid = from_string(value_as_string, &x);
-
-    if (valid)
-    {
-        throttling_value.set(x);
-    }
-
-    return valid;
-}
-
 static bool get_milliseconds(const char* zName,
                              const char* zValue,
                              const char* zDisplay_value,

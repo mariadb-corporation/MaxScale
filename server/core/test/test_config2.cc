@@ -129,7 +129,7 @@ int test(T& value, const TestEntry<typename T::value_type>* pEntries, int nEntri
 
         if (entry.valid && validated)
         {
-            param.set(value, entry.zText);
+            value.set_from_string(entry.zText);
 
             if (value != entry.value)
             {

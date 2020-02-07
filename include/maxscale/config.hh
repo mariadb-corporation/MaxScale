@@ -57,11 +57,15 @@ public:
         }
         std::string default_to_string() const override final;
         bool validate(const std::string& value_as_string, std::string* pMessage) const override final;
-        bool set(config::Type& value, const std::string& value_as_string) const override final;
         bool from_string(const std::string& value, value_type* pValue, std::string* pMessage = nullptr) const;
 
         std::string to_string(const value_type& value) const;
         json_t* to_json(const value_type& value) const;
+
+        bool is_valid(const value_type&) const
+        {
+            return true;
+        }
 
     private:
         const value_type m_default_value = { 0, 0, 0 };

@@ -633,7 +633,8 @@ bool runtime_alter_maxscale(const char* name, const char* value)
     {
         if (item->parameter().is_modifiable_at_runtime())
         {
-            rval = item->set(value);
+            std::string message;
+            rval = item->set_from_string(value, &message);
 
             if (rval)
             {
@@ -641,7 +642,8 @@ bool runtime_alter_maxscale(const char* name, const char* value)
             }
             else
             {
-                config_runtime_error("Invalid value for '%s': %s", item->parameter().name().c_str(), value);
+                config_runtime_error("Invalid value for '%s': %s, %s",
+                                     item->parameter().name().c_str(), value, message.c_str());
             }
         }
         else
