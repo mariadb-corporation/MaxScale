@@ -1244,7 +1244,7 @@ public:
      *
      * @return Param of the value.
      */
-    const Param& parameter() const;
+    virtual const Param& parameter() const;
 
     /**
      * Persist this value to a stream. It will be written as
@@ -1285,7 +1285,6 @@ public:
 protected:
     Type(Configuration* pConfiguration, const Param* pParam);
 
-private:
     Configuration* m_pConfiguration;
     const Param*   m_pParam;
     std::string    m_name;
@@ -1333,6 +1332,11 @@ public:
         MXB_AT_DEBUG(bool rv = ) set(rhs.m_value);
         mxb_assert(rv);
         return static_cast<This&>(*this);
+    }
+
+    const ParamType& parameter() const override
+    {
+        return static_cast<const ParamType&>(*m_pParam);
     }
 
     value_type get() const
@@ -1578,6 +1582,11 @@ public:
         : Number(pConfiguration, pParam, on_set)
     {
     }
+
+    const ParamCount& parameter() const override
+    {
+        return static_cast<const ParamCount&>(*m_pParam);
+    }
 };
 
 /**
@@ -1593,6 +1602,11 @@ public:
             std::function<void (value_type)> on_set = nullptr)
         : Number(pConfiguration, pParam, on_set)
     {
+    }
+
+    const ParamInteger& parameter() const override
+    {
+        return static_cast<const ParamInteger&>(*m_pParam);
     }
 };
 
