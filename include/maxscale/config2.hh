@@ -282,6 +282,82 @@ private:
 };
 
 /**
+ * Concrete Param, helper class to be derived from with the actual
+ * concrete parameter class.
+ */
+template<class ParamType, class NativeType>
+class ConcreteParam : public Param
+{
+public:
+    using value_type = NativeType;
+
+    value_type default_value() const
+    {
+        return m_default_value;
+    }
+
+    std::string default_to_string() const override
+    {
+        return static_cast<const ParamType*>(this)->to_string(m_default_value);
+    }
+
+    bool validate(const std::string& value_as_string, std::string* pMessage) const override
+    {
+        value_type value;
+        return static_cast<const ParamType*>(this)->from_string(value_as_string, &value, pMessage);
+    }
+
+    bool is_valid(const value_type&) const
+    {
+        return true;
+    }
+
+    /**
+     * Returns the value of this parameter as specified in the provided
+     * collection of parameters, or default value if none specified.
+     *
+     * @note Before calling this member function @params should have been
+     *       validated by calling @c Specification::validate(params).
+     *
+     * @params The provided configuration params.
+     *
+     * @return The value of this parameter.
+     */
+    value_type get(const mxs::ConfigParameters& params) const
+    {
+        value_type rv { m_default_value };
+
+        bool contains = params.contains(name());
+        mxb_assert(!is_mandatory() || contains);
+
+        if (contains)
+        {
+            const ParamType* pThis = static_cast<const ParamType*>(this);
+
+            MXB_AT_DEBUG(bool valid=) pThis->from_string(params.get_string(name()), &rv);
+            mxb_assert(valid);
+        }
+
+        return rv;
+    }
+
+protected:
+    ConcreteParam(Specification* pSpecification,
+                  const char* zName,
+                  const char* zDescription,
+                  Modifiable modifiable,
+                  Kind kind,
+                  mxs_module_param_type legacy_type,
+                  value_type default_value)
+        : Param(pSpecification, zName, zDescription, modifiable, kind, legacy_type)
+        , m_default_value(default_value)
+    {
+    }
+
+    value_type m_default_value;
+};
+
+/**
  * ParamBool
  */
 class ParamBool : public Param
