@@ -12,7 +12,7 @@
  */
 #pragma once
 
-#include <maxscale/ccdefs.hh>
+#include <maxbase/ccdefs.hh>
 #include <maxbase/assert.h>
 #include <maxbase/stopwatch.hh>
 
