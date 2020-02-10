@@ -1217,6 +1217,9 @@ protected:
      */
     virtual bool post_configure(const mxs::ConfigParameters& params);
 
+    template<class ParamType>
+    void add_native(typename ParamType::value_type* pValue, ParamType* pParam);
+
 private:
     friend Type;
 
@@ -1224,9 +1227,12 @@ private:
     void remove(Type* pValue, const std::string& name);
 
 private:
+    using Natives = std::vector<std::unique_ptr<Type>>;
+
     std::string          m_name;
     const Specification* m_pSpecification;
     ValuesByName         m_values;
+    Natives              m_natives;
 };
 
 
@@ -1300,6 +1306,95 @@ protected:
     Configuration* m_pConfiguration;
     const Param*   m_pParam;
     std::string    m_name;
+};
+
+/**
+ * Wrapper for native configuration value, not to be instantiated explicitly.
+ */
+template<class ParamType>
+class Native : public Type
+{
+public:
+    using value_type = typename ParamType::value_type;
+
+    Native(const Type& rhs) = delete;
+    Native& operator=(const Native&) = delete;
+
+    Native(Configuration* pConfiguration, ParamType* pParam, value_type* pValue)
+        : Type(pConfiguration, pParam)
+        , m_pValue(pValue)
+    {
+    }
+
+    // Native is move-only
+    Native(Native&& rhs)
+        : m_pValue(rhs.m_pValue)
+    {
+        rhs.m_pValue = nullptr;
+    }
+
+    Native& operator=(Native&& rhs)
+    {
+        if (this != &rhs)
+        {
+            Type::operator=(rhs);
+            m_pValue = rhs.m_pValue;
+            rhs.m_pValue = nullptr;
+        }
+
+        return *this;
+    }
+
+    ~Native();
+
+    const ParamType& parameter() const override final
+    {
+        return static_cast<const ParamType&>(*m_pParam);
+    }
+
+    std::string to_string() const override
+    {
+        return parameter().to_string(*m_pValue);
+    }
+
+    json_t* to_json() const override final
+    {
+        return parameter().to_json(*m_pValue);
+    }
+
+    bool set_from_string(const std::string& value_as_string,
+                         std::string* pMessage = nullptr) override final
+    {
+        value_type value;
+        bool rv = parameter().from_string(value_as_string, &value, pMessage);
+
+        if (rv)
+        {
+            rv = set(value);
+        }
+
+        return rv;
+    }
+
+    value_type get() const
+    {
+        return *m_pValue;
+    }
+
+    bool set(const value_type& value)
+    {
+        bool rv = parameter().is_valid(value);
+
+        if (rv)
+        {
+            *m_pValue = value;
+        }
+
+        return rv;
+    }
+
+protected:
+    value_type* m_pValue;
 };
 
 /**
@@ -2087,6 +2182,12 @@ typename ParamEnum<T>::value_type ParamEnum<T>::get(const mxs::ConfigParameters&
     }
 
     return rv;
+}
+
+template<class ParamType>
+void Configuration::add_native(typename ParamType::value_type* pValue, ParamType* pParam)
+{
+    m_natives.push_back(std::unique_ptr<Type>(new Native<ParamType>(this, pParam, pValue)));
 }
 
 }
