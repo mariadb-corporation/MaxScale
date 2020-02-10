@@ -39,6 +39,9 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, const char* user, cons
     bool have_ssl = ssl && !ssl->empty();
     if (have_ssl)
     {
+        char enforce_tls = 1;
+        mysql_optionsv(con, MYSQL_OPT_SSL_ENFORCE, (void*)&enforce_tls);
+
         // If an option is empty, a null-pointer should be given to mysql_ssl_set.
         const char* ssl_key = ssl->key.empty() ? nullptr : ssl->key.c_str();
         const char* ssl_cert = ssl->cert.empty() ? nullptr : ssl->cert.c_str();
