@@ -510,7 +510,7 @@ bool gw_read_backend_handshake(DCB* dcb, GWBUF* buffer);
 mxs_auth_state_t gw_send_backend_auth(DCB* dcb);
 
 /** Sends a response for an AuthSwitchRequest to the default auth plugin */
-int send_mysql_native_password_response(DCB* dcb);
+int send_mysql_native_password_response(DCB* dcb, GWBUF* buffer);
 
 /** Sends an AuthSwitchRequest packet with the default auth plugin to the DCB */
 bool send_auth_switch_request_packet(DCB* dcb);

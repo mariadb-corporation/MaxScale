@@ -1009,11 +1009,22 @@ mxs_auth_state_t gw_send_backend_auth(DCB* dcb)
     return rval;
 }
 
-int send_mysql_native_password_response(DCB* dcb)
+int send_mysql_native_password_response(DCB* dcb, GWBUF* reply)
 {
     MySQLProtocol* proto = (MySQLProtocol*) dcb->protocol;
     MYSQL_session local_session;
     gw_get_shared_session_auth_info(dcb, &local_session);
+
+    const char default_plugin_name[] = DEFAULT_MYSQL_AUTH_PLUGIN;
+
+    // Calculate the next sequence number
+    uint8_t seqno = 0;
+    gwbuf_copy_data(reply, 3, 1, &seqno);
+    ++seqno;
+
+    // Copy the new scramble. Skip packet header, command byte and null-terminated plugin name.
+    gwbuf_copy_data(reply, MYSQL_HEADER_LEN + 1 + sizeof(default_plugin_name),
+                    sizeof(proto->scramble), proto->scramble);
 
     uint8_t* curr_passwd = memcmp(local_session.client_sha1, null_client_sha1, MYSQL_SCRAMBLE_LEN) ?
         local_session.client_sha1 : null_client_sha1;
@@ -1021,7 +1032,7 @@ int send_mysql_native_password_response(DCB* dcb)
     GWBUF* buffer = gwbuf_alloc(MYSQL_HEADER_LEN + GW_MYSQL_SCRAMBLE_SIZE);
     uint8_t* data = GWBUF_DATA(buffer);
     gw_mysql_set_byte3(data, GW_MYSQL_SCRAMBLE_SIZE);
-    data[3] = 2;    // This is the third packet after the COM_CHANGE_USER
+    data[3] = seqno;
     calculate_hash(proto->scramble, curr_passwd, data + MYSQL_HEADER_LEN);
 
     return dcb_write(dcb, buffer);
@@ -1060,7 +1071,7 @@ int gw_decode_mysql_server_handshake(MySQLProtocol* conn, uint8_t* payload)
     uint8_t scramble_data_1[GW_SCRAMBLE_LENGTH_323] = "";
     uint8_t scramble_data_2[GW_MYSQL_SCRAMBLE_SIZE - GW_SCRAMBLE_LENGTH_323] = "";
     uint8_t capab_ptr[4] = "";
-    int scramble_len = 0;
+    uint8_t scramble_len = 0;
     uint8_t mxs_scramble[GW_MYSQL_SCRAMBLE_SIZE] = "";
     int protocol_version = 0;
 
@@ -1116,21 +1127,15 @@ int gw_decode_mysql_server_handshake(MySQLProtocol* conn, uint8_t* payload)
     // get scramble len
     if (payload[0] > 0)
     {
-        scramble_len = payload[0] - 1;
-        mxb_assert(scramble_len > GW_SCRAMBLE_LENGTH_323);
-        mxb_assert(scramble_len <= GW_MYSQL_SCRAMBLE_SIZE);
-
-        if ((scramble_len < GW_SCRAMBLE_LENGTH_323)
-            || scramble_len > GW_MYSQL_SCRAMBLE_SIZE)
-        {
-            /* log this */
-            return -2;
-        }
+        scramble_len = std::min(payload[0] - 1, GW_MYSQL_SCRAMBLE_SIZE);
     }
     else
     {
         scramble_len = GW_MYSQL_SCRAMBLE_SIZE;
     }
+
+    mxb_assert(scramble_len > GW_SCRAMBLE_LENGTH_323);
+
     // skip 10 zero bytes
     payload += 11;
 
