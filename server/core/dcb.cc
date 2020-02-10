@@ -307,7 +307,6 @@ int DCB::read(GWBUF** head, int maxbytes)
         else
         {
             GWBUF* buffer;
-            m_last_read = mxs_clock();
 
             buffer = basic_read(bytes_available, maxbytes, nreadtotal, &nsingleread);
             if (buffer)
@@ -457,7 +456,6 @@ int DCB::read_SSL(GWBUF** head)
 
         while (buffer)
         {
-            m_last_read = mxs_clock();
             buffer = basic_read_SSL(&nsingleread);
             if (buffer)
             {
@@ -487,6 +485,11 @@ GWBUF* DCB::basic_read_SSL(int* nsingleread)
     GWBUF* buffer = NULL;
 
     *nsingleread = SSL_read(m_encryption.handle, temp_buffer, MXS_SO_RCVBUF_SIZE);
+
+    if (*nsingleread)
+    {
+        m_last_read = mxs_clock();
+    }
 
     m_stats.n_reads++;
 

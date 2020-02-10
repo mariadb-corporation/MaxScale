@@ -1797,7 +1797,7 @@ uint8_t* Rpl::process_row_event_data(const Table& create,
             }
             else if (column_is_temporal(create.column_types[i]))
             {
-                char buf[80];
+                char buf[120];
                 ptr += unpack_temporal_value(create.column_types[i], ptr,
                                              &metadata[metadata_offset],
                                              create.columns[i].length,

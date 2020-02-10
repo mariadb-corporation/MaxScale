@@ -23,7 +23,7 @@ option(WITH_TCMALLOC "Use tcmalloc as the memory allocator" OFF)
 option(WITH_JEMALLOC "Use jemalloc as the memory allocator" OFF)
 option(INSTALL_EXPERIMENTAL "Install experimental modules" OK)
 option(WITH_ASAN "Enable AddressSanitizer" OFF)
-option(WITH_ASAN "Enable ThreadSanitizer" OFF)
+option(WITH_TSAN "Enable ThreadSanitizer" OFF)
 
 # Default package name
 set(PACKAGE_NAME "maxscale" CACHE STRING "Name of the generated package")
