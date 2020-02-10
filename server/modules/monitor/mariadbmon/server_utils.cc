@@ -78,7 +78,7 @@ json_t* SlaveStatus::to_json() const
                         "slave_io_running",
                         json_string(slave_io_to_string(slave_io_running).c_str()));
     json_object_set_new(result, "slave_sql_running", json_string(slave_sql_running ? "Yes" : "No"));
-    json_object_set_new(result, "seconds_behing_master",
+    json_object_set_new(result, "seconds_behind_master",
                         seconds_behind_master == SERVER::RLAG_UNDEFINED ? json_null() :
                         json_integer(seconds_behind_master));
     json_object_set_new(result, "master_server_id", json_integer(master_server_id));
