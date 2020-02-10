@@ -541,17 +541,6 @@ std::string ParamBool::type() const
     return "boolean";
 }
 
-std::string ParamBool::default_to_string() const
-{
-    return to_string(m_default_value);
-}
-
-bool ParamBool::validate(const std::string& value_as_string, std::string* pMessage) const
-{
-    value_type value;
-    return from_string(value_as_string, &value, pMessage);
-}
-
 bool ParamBool::from_string(const string& value_as_string, value_type* pValue, string* pMessage) const
 {
     int rv = config_truth_value(value_as_string.c_str());
@@ -580,22 +569,6 @@ string ParamBool::to_string(value_type value) const
     return value ? "true" : "false";
 }
 
-ParamBool::value_type ParamBool::get(const mxs::ConfigParameters& params) const
-{
-    value_type rv { m_default_value };
-
-    bool contains = params.contains(name());
-    mxb_assert(!is_mandatory() || contains);
-
-    if (contains)
-    {
-        MXB_AT_DEBUG(bool valid=) from_string(params.get_string(name()), &rv);
-        mxb_assert(valid);
-    }
-
-    return rv;
-}
-
 json_t* ParamBool::to_json(value_type value) const
 {
     return json_boolean(value);
@@ -604,17 +577,6 @@ json_t* ParamBool::to_json(value_type value) const
 /**
  * ParamNumber
  */
-std::string ParamNumber::default_to_string() const
-{
-    return to_string(m_default_value);
-}
-
-bool ParamNumber::validate(const std::string& value_as_string, std::string* pMessage) const
-{
-    value_type value;
-    return from_string(value_as_string, &value, pMessage);
-}
-
 bool ParamNumber::from_string(const std::string& value_as_string,
                               value_type* pValue,
                               std::string* pMessage) const
@@ -643,22 +605,6 @@ bool ParamNumber::from_string(const std::string& value_as_string,
 std::string ParamNumber::to_string(value_type value) const
 {
     return std::to_string(value);
-}
-
-ParamNumber::value_type ParamNumber::get(const mxs::ConfigParameters& params) const
-{
-    value_type rv { m_default_value };
-
-    bool contains = params.contains(name());
-    mxb_assert(!is_mandatory() || contains);
-
-    if (contains)
-    {
-        MXB_AT_DEBUG(bool valid=) from_string(params.get_string(name()), &rv);
-        mxb_assert(valid);
-    }
-
-    return rv;
 }
 
 json_t* ParamNumber::to_json(value_type value) const
@@ -721,17 +667,6 @@ std::string ParamPath::type() const
     return "path";
 }
 
-std::string ParamPath::default_to_string() const
-{
-    return to_string(m_default_value);
-}
-
-bool ParamPath::validate(const std::string& value_as_string, std::string* pMessage) const
-{
-    value_type value;
-    return from_string(value_as_string, &value, pMessage);
-}
-
 bool ParamPath::from_string(const std::string& value_as_string,
                             value_type* pValue,
                             std::string* pMessage) const
@@ -779,39 +714,12 @@ void ParamPath::populate(MXS_MODULE_PARAM& param) const
     param.options |= m_options;
 }
 
-ParamPath::value_type ParamPath::get(const mxs::ConfigParameters& params) const
-{
-    value_type rv { m_default_value };
-
-    bool contains = params.contains(name());
-    mxb_assert(!is_mandatory() || contains);
-
-    if (contains)
-    {
-        MXB_AT_DEBUG(bool valid=) from_string(params.get_string(name()), &rv);
-        mxb_assert(valid);
-    }
-
-    return rv;
-}
-
 /**
  * ParamServer
  */
 std::string ParamServer::type() const
 {
     return "server";
-}
-
-std::string ParamServer::default_to_string() const
-{
-    return "";
-}
-
-bool ParamServer::validate(const std::string& value_as_string, std::string* pMessage) const
-{
-    value_type value;
-    return from_string(value_as_string, &value, pMessage);
 }
 
 bool ParamServer::from_string(const std::string& value_as_string,
@@ -831,28 +739,12 @@ bool ParamServer::from_string(const std::string& value_as_string,
 
 std::string ParamServer::to_string(value_type value) const
 {
-    return value->name();
-}
-
-ParamServer::value_type ParamServer::get(const mxs::ConfigParameters& params) const
-{
-    value_type rv { nullptr };
-
-    bool contains = params.contains(name());
-    mxb_assert(!is_mandatory() || contains);
-
-    if (contains)
-    {
-        MXB_AT_DEBUG(bool valid=) from_string(params.get_string(name()), &rv);
-        mxb_assert(valid);
-    }
-
-    return rv;
+    return value ? value->name() : "";
 }
 
 json_t* ParamServer::to_json(value_type value) const
 {
-    return json_string(value->name());
+    return value ? json_string(value->name()) : nullptr;
 }
 
 /**
@@ -861,17 +753,6 @@ json_t* ParamServer::to_json(value_type value) const
 std::string ParamTarget::type() const
 {
     return "target";
-}
-
-std::string ParamTarget::default_to_string() const
-{
-    return "";
-}
-
-bool ParamTarget::validate(const std::string& value_as_string, std::string* pMessage) const
-{
-    value_type value;
-    return from_string(value_as_string, &value, pMessage);
 }
 
 bool ParamTarget::from_string(const std::string& value_as_string,
@@ -896,28 +777,12 @@ bool ParamTarget::from_string(const std::string& value_as_string,
 
 std::string ParamTarget::to_string(value_type value) const
 {
-    return value->name();
-}
-
-ParamTarget::value_type ParamTarget::get(const mxs::ConfigParameters& params) const
-{
-    value_type rv { nullptr };
-
-    bool contains = params.contains(name());
-    mxb_assert(!is_mandatory() || contains);
-
-    if (contains)
-    {
-        MXB_AT_DEBUG(bool valid=) from_string(params.get_string(name()), &rv);
-        mxb_assert(valid);
-    }
-
-    return rv;
+    return value ? value->name() : "";
 }
 
 json_t* ParamTarget::to_json(value_type value) const
 {
-    return json_string(value->name());
+    return value ? json_string(value->name()) : nullptr;
 }
 
 /**
@@ -954,22 +819,6 @@ std::string ParamSize::to_string(value_type value) const
     return std::to_string(value);
 }
 
-ParamSize::value_type ParamSize::get(const mxs::ConfigParameters& params) const
-{
-    value_type rv { m_default_value };
-
-    bool contains = params.contains(name());
-    mxb_assert(!is_mandatory() || contains);
-
-    if (contains)
-    {
-        MXB_AT_DEBUG(bool valid=) from_string(params.get_string(name()), &rv);
-        mxb_assert(valid);
-    }
-
-    return rv;
-}
-
 json_t* ParamSize::to_json(value_type value) const
 {
     return json_integer(value);
@@ -981,17 +830,6 @@ json_t* ParamSize::to_json(value_type value) const
 std::string ParamString::type() const
 {
     return "string";
-}
-
-std::string ParamString::default_to_string() const
-{
-    return to_string(m_default_value);
-}
-
-bool ParamString::validate(const std::string& value_as_string, std::string* pMessage) const
-{
-    value_type value;
-    return from_string(value_as_string, &value, pMessage);
 }
 
 bool ParamString::from_string(const std::string& value_as_string,
@@ -1042,22 +880,6 @@ std::string ParamString::to_string(value_type value) const
     stringstream ss;
     ss << "\"" << value << "\"";
     return ss.str();
-}
-
-ParamString::value_type ParamString::get(const mxs::ConfigParameters& params) const
-{
-    value_type rv { m_default_value };
-
-    bool contains = params.contains(name());
-    mxb_assert(!is_mandatory() || contains);
-
-    if (contains)
-    {
-        MXB_AT_DEBUG(bool valid=) from_string(params.get_string(name()), &rv);
-        mxb_assert(valid);
-    }
-
-    return rv;
 }
 
 json_t* ParamString::to_json(value_type value) const

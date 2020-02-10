@@ -360,11 +360,9 @@ protected:
 /**
  * ParamBool
  */
-class ParamBool : public Param
+class ParamBool : public ConcreteParam<ParamBool, bool>
 {
 public:
-    using value_type = bool;
-
     ParamBool(Specification* pSpecification,
               const char* zName,
               const char* zDescription,
@@ -384,37 +382,10 @@ public:
 
     std::string type() const override;
 
-    value_type default_value() const
-    {
-        return m_default_value;
-    }
-
-    std::string default_to_string() const override;
-
-    bool validate(const std::string& value_as_string, std::string* pMessage) const override;
-
     bool from_string(const std::string& value, value_type* pValue,
                      std::string* pMessage = nullptr) const;
     std::string to_string(value_type value) const;
     json_t* to_json(value_type value) const;
-
-    bool is_valid(value_type) const
-    {
-        return true;
-    }
-
-    /**
-     * Returns the value of this parameter as specified in the provided
-     * collection of parameters, or default value if none specified.
-     *
-     * @note Before calling this member function @params should have been
-     *       validated by calling @c Specification::validate(params).
-     *
-     * @params The provided configuration params.
-     *
-     * @return The value of this parameter.
-     */
-    value_type get(const mxs::ConfigParameters& params) const;
 
 private:
     ParamBool(Specification* pSpecification,
@@ -423,24 +394,15 @@ private:
               Modifiable modifiable,
               Kind kind,
               value_type default_value)
-        : Param(pSpecification, zName, zDescription, modifiable, kind, MXS_MODULE_PARAM_BOOL)
-        , m_default_value(default_value)
+        : ConcreteParam<ParamBool, bool>(pSpecification, zName, zDescription,
+                                         modifiable, kind, MXS_MODULE_PARAM_BOOL, default_value)
     {
     }
-
-private:
-    value_type m_default_value;
 };
 
-class ParamNumber : public Param
+class ParamNumber : public ConcreteParam<ParamNumber, int64_t>
 {
 public:
-    using value_type = int64_t;
-
-    std::string default_to_string() const override;
-
-    bool validate(const std::string& value_as_string, std::string* pMessage) const override;
-
     virtual bool from_string(const std::string& value, value_type* pValue,
                              std::string* pMessage = nullptr) const;
     virtual std::string to_string(value_type value) const;
@@ -449,11 +411,6 @@ public:
     bool is_valid(value_type value) const
     {
         return value >= m_min_value && value <= m_max_value;
-    }
-
-    value_type default_value() const
-    {
-        return m_default_value;
     }
 
     value_type min_value() const
@@ -466,19 +423,6 @@ public:
         return m_max_value;
     }
 
-    /**
-     * Returns the value of this parameter as specified in the provided
-     * collection of parameters, or default value if none specified.
-     *
-     * @note Before calling this member function @params should have been
-     *       validated by calling @c Specification::validate(params).
-     *
-     * @params The provided configuration params.
-     *
-     * @return The value of this parameter.
-     */
-    value_type get(const mxs::ConfigParameters& params) const;
-
 protected:
     ParamNumber(Specification* pSpecification,
                 const char* zName,
@@ -489,8 +433,8 @@ protected:
                 value_type default_value,
                 value_type min_value,
                 value_type max_value)
-        : Param(pSpecification, zName, zDescription, modifiable, kind, legacy_type)
-        , m_default_value(default_value)
+        : ConcreteParam<ParamNumber, int64_t>(pSpecification, zName, zDescription,
+                                              modifiable, kind, legacy_type, default_value)
         , m_min_value(min_value <= max_value ? min_value : max_value)
         , m_max_value(max_value)
     {
@@ -503,7 +447,6 @@ protected:
                     std::string* pMessage) const;
 
 protected:
-    value_type m_default_value;
     value_type m_min_value;
     value_type m_max_value;
 };
@@ -659,7 +602,7 @@ private:
  * ParamDuration
  */
 template<class T>
-class ParamDuration : public Param
+class ParamDuration : public ConcreteParam<ParamDuration<T>, T>
 {
 public:
     using value_type = T;
@@ -668,7 +611,7 @@ public:
                   const char* zName,
                   const char* zDescription,
                   mxs::config::DurationInterpretation interpretation,
-                  Modifiable modifiable = Modifiable::AT_STARTUP)
+                  Param::Modifiable modifiable = Param::Modifiable::AT_STARTUP)
         : ParamDuration(pSpecification, zName, zDescription, modifiable, Param::MANDATORY,
                         interpretation, value_type())
     {
@@ -678,8 +621,8 @@ public:
                   const char* zName,
                   const char* zDescription,
                   mxs::config::DurationInterpretation interpretation,
-                  value_type default_value,
-                  Modifiable modifiable = Modifiable::AT_STARTUP)
+                  value_type  default_value,
+                  Param::Modifiable modifiable = Param::Modifiable::AT_STARTUP)
         : ParamDuration(pSpecification, zName, zDescription, modifiable, Param::OPTIONAL,
                         interpretation, default_value)
     {
@@ -687,55 +630,27 @@ public:
 
     std::string type() const override;
 
-    value_type default_value() const
-    {
-        return m_default_value;
-    }
-
-    std::string default_to_string() const override;
-
-    bool validate(const std::string& value_as_string, std::string* pMessage) const override;
-
     bool from_string(const std::string& value, value_type* pValue,
                      std::string* pMessage = nullptr) const;
     std::string to_string(const value_type& value) const;
     json_t* to_json(const value_type& value) const;
 
-    bool is_valid(const value_type& value) const
-    {
-        return true;
-    }
-
-    /**
-     * Returns the value of this parameter as specified in the provided
-     * collection of parameters, or default value if none specified.
-     *
-     * @note Before calling this member function @params should have been
-     *       validated by calling @c Specification::validate(params).
-     *
-     * @params The provided configuration params.
-     *
-     * @return The value of this parameter.
-     */
-    value_type get(const mxs::ConfigParameters& params) const;
-
 private:
     ParamDuration(Specification* pSpecification,
                   const char* zName,
                   const char* zDescription,
-                  Modifiable modifiable,
-                  Kind kind,
+                  Param::Modifiable modifiable,
+                  Param::Kind kind,
                   mxs::config::DurationInterpretation interpretation,
                   value_type default_value)
-        : Param(pSpecification, zName, zDescription, modifiable, kind, MXS_MODULE_PARAM_DURATION)
+        : ConcreteParam<ParamDuration<T>, T>(pSpecification, zName, zDescription,
+                                             modifiable, kind, MXS_MODULE_PARAM_DURATION, default_value)
         , m_interpretation(interpretation)
-        , m_default_value(default_value)
     {
     }
 
 private:
     mxs::config::DurationInterpretation m_interpretation;
-    value_type                          m_default_value;
 };
 
 using ParamMilliseconds = ParamDuration<std::chrono::milliseconds>;
@@ -745,7 +660,7 @@ using ParamSeconds = ParamDuration<std::chrono::seconds>;
  * ParamEnum
  */
 template<class T>
-class ParamEnum : public Param
+class ParamEnum : public ConcreteParam<ParamEnum<T>, T>
 {
 public:
     using value_type = T;
@@ -754,7 +669,7 @@ public:
               const char* zName,
               const char* zDescription,
               const std::vector<std::pair<T, const char*>>& enumeration,
-              Modifiable modifiable = Modifiable::AT_STARTUP)
+              Param::Modifiable modifiable = Param::Modifiable::AT_STARTUP)
         : ParamEnum(pSpecification, zName, zDescription, modifiable, Param::MANDATORY,
                     enumeration, value_type())
     {
@@ -765,7 +680,7 @@ public:
               const char* zDescription,
               const std::vector<std::pair<T, const char*>>& enumeration,
               value_type default_value,
-              Modifiable modifiable = Modifiable::AT_STARTUP)
+              Param::Modifiable modifiable = Param::Modifiable::AT_STARTUP)
         : ParamEnum(pSpecification, zName, zDescription, modifiable, Param::OPTIONAL,
                     enumeration, default_value)
     {
@@ -773,63 +688,33 @@ public:
 
     std::string type() const override;
 
-    value_type default_value() const
-    {
-        return m_default_value;
-    }
-
-    std::string default_to_string() const override;
-
-    bool validate(const std::string& value_as_string, std::string* pMessage) const override;
-
     bool from_string(const std::string& value, value_type* pValue,
                      std::string* pMessage = nullptr) const;
     std::string to_string(value_type value) const;
     json_t* to_json(value_type value) const;
 
-    bool is_valid(value_type value) const
-    {
-        return true;
-    }
-
     void populate(MXS_MODULE_PARAM& param) const;
-
-    /**
-     * Returns the value of this parameter as specified in the provided
-     * collection of parameters, or default value if none specified.
-     *
-     * @note Before calling this member function @params should have been
-     *       validated by calling @c Specification::validate(params).
-     *
-     * @params The provided configuration params.
-     *
-     * @return The value of this parameter.
-     */
-    value_type get(const mxs::ConfigParameters& params) const;
 
 private:
     ParamEnum(Specification* pSpecification,
               const char* zName,
               const char* zDescription,
-              Modifiable modifiable,
-              Kind kind,
+              Param::Modifiable modifiable,
+              Param::Kind kind,
               const std::vector<std::pair<T, const char*>>& enumeration,
               value_type default_value);
 
 private:
     std::vector<std::pair<T, const char*>> m_enumeration;
-    value_type                             m_default_value;
     std::vector<MXS_ENUM_VALUE>            m_enum_values;
 };
 
 /**
  * ParamPath
  */
-class ParamPath : public Param
+class ParamPath : public ConcreteParam<ParamPath, std::string>
 {
 public:
-    using value_type = std::string;
-
     enum Options
     {
         X = MXS_MODULE_OPT_PATH_X_OK,   // Execute permission required.
@@ -863,15 +748,6 @@ public:
 
     std::string type() const override;
 
-    value_type default_value() const
-    {
-        return m_default_value;
-    }
-
-    std::string default_to_string() const override;
-
-    bool validate(const std::string& value_as_string, std::string* pMessage) const override;
-
     bool from_string(const std::string& value, value_type* pValue,
                      std::string* pMessage = nullptr) const;
     std::string to_string(const value_type& value) const;
@@ -881,19 +757,6 @@ public:
 
     void populate(MXS_MODULE_PARAM& param) const;
 
-    /**
-     * Returns the value of this parameter as specified in the provided
-     * collection of parameters, or default value if none specified.
-     *
-     * @note Before calling this member function @params should have been
-     *       validated by calling @c Specification::validate(params).
-     *
-     * @params The provided configuration params.
-     *
-     * @return The value of this parameter.
-     */
-    value_type get(const mxs::ConfigParameters& params) const;
-
 private:
     ParamPath(Specification* pSpecification,
               const char* zName,
@@ -902,117 +765,62 @@ private:
               Kind kind,
               uint32_t options,
               value_type default_value)
-        : Param(pSpecification, zName, zDescription, modifiable, kind, MXS_MODULE_PARAM_PATH)
+        : ConcreteParam<ParamPath, std::string>(pSpecification, zName, zDescription,
+                                                modifiable, kind, MXS_MODULE_PARAM_PATH, default_value)
         , m_options(options)
-        , m_default_value(default_value)
     {
     }
 
 private:
     uint32_t   m_options;
-    value_type m_default_value;
 };
 
 /**
  * ParamServer
  */
-class ParamServer : public Param
+class ParamServer : public ConcreteParam<ParamServer, SERVER*>
 {
 public:
-    using value_type = SERVER*;
-
     ParamServer(Specification* pSpecification,
                 const char* zName,
                 const char* zDescription,
                 Modifiable modifiable = Modifiable::AT_STARTUP)
-        : Param(pSpecification, zName, zDescription, modifiable, Param::MANDATORY, MXS_MODULE_PARAM_SERVER)
+        : ConcreteParam<ParamServer, SERVER*>(pSpecification, zName, zDescription,
+                                              modifiable, Param::MANDATORY, MXS_MODULE_PARAM_SERVER,
+                                              nullptr)
     {
     }
 
     std::string type() const override;
 
-    value_type default_value() const
-    {
-        return nullptr;
-    }
-
-    std::string default_to_string() const override;
-
-    bool validate(const std::string& value_as_string, std::string* pMessage) const override;
-
     bool from_string(const std::string& value, value_type* pValue,
                      std::string* pMessage = nullptr) const;
     std::string to_string(value_type value) const;
     json_t* to_json(value_type value) const;
-
-    bool is_valid(value_type value) const
-    {
-        return true;
-    }
-
-    /**
-     * Returns the value of this parameter as specified in the provided
-     * collection of parameters, or default value if none specified.
-     *
-     * @note Before calling this member function @params should have been
-     *       validated by calling @c Specification::validate(params).
-     *
-     * @params The provided configuration params.
-     *
-     * @return The value of this parameter.
-     */
-    value_type get(const mxs::ConfigParameters& params) const;
 };
 
 /**
  * ParamTarget
  */
-class ParamTarget : public Param
+class ParamTarget : public ConcreteParam<ParamTarget, mxs::Target*>
 {
 public:
-    using value_type = mxs::Target*;
-
     ParamTarget(Specification* pSpecification,
                 const char* zName,
                 const char* zDescription,
                 Modifiable modifiable = Modifiable::AT_STARTUP)
-        : Param(pSpecification, zName, zDescription, modifiable, Param::MANDATORY, MXS_MODULE_PARAM_TARGET)
+        : ConcreteParam<ParamTarget, mxs::Target*>(pSpecification, zName, zDescription,
+                                                   modifiable, Param::MANDATORY, MXS_MODULE_PARAM_TARGET,
+                                                   nullptr)
     {
     }
 
     std::string type() const override;
 
-    value_type default_value() const
-    {
-        return nullptr;
-    }
-
-    std::string default_to_string() const override;
-
-    bool validate(const std::string& value_as_string, std::string* pMessage) const override;
-
     bool from_string(const std::string& value, value_type* pValue,
                      std::string* pMessage = nullptr) const;
     std::string to_string(value_type value) const;
     json_t* to_json(value_type value) const;
-
-    bool is_valid(value_type value) const
-    {
-        return true;
-    }
-
-    /**
-     * Returns the value of this parameter as specified in the provided
-     * collection of parameters, or default value if none specified.
-     *
-     * @note Before calling this member function @params should have been
-     *       validated by calling @c Specification::validate(params).
-     *
-     * @params The provided configuration params.
-     *
-     * @return The value of this parameter.
-     */
-    value_type get(const mxs::ConfigParameters& params) const;
 };
 
 /**
@@ -1075,19 +883,6 @@ public:
     std::string to_string(value_type value) const;
     json_t* to_json(value_type value) const;
 
-    /**
-     * Returns the value of this parameter as specified in the provided
-     * collection of parameters, or default value if none specified.
-     *
-     * @note Before calling this member function @params should have been
-     *       validated by calling @c Specification::validate(params).
-     *
-     * @params The provided configuration params.
-     *
-     * @return The value of this parameter.
-     */
-    value_type get(const mxs::ConfigParameters& params) const;
-
 private:
     ParamSize(Specification* pSpecification,
               const char* zName,
@@ -1106,11 +901,9 @@ private:
 /**
  * ParamString
  */
-class ParamString : public Param
+class ParamString : public ConcreteParam<ParamString, std::string>
 {
 public:
-    using value_type = std::string;
-
     ParamString(Specification* pSpecification,
                 const char* zName,
                 const char* zDescription,
@@ -1130,37 +923,10 @@ public:
 
     std::string type() const override;
 
-    value_type default_value() const
-    {
-        return m_default_value;
-    }
-
-    std::string default_to_string() const override;
-
-    bool validate(const std::string& value_as_string, std::string* pMessage) const override;
-
     bool from_string(const std::string& value, value_type* pValue,
                      std::string* pMessage = nullptr) const;
     std::string to_string(value_type value) const;
     json_t* to_json(value_type value) const;
-
-    bool is_valid(const value_type& value) const
-    {
-        return true;
-    }
-
-    /**
-     * Returns the value of this parameter as specified in the provided
-     * collection of parameters, or default value if none specified.
-     *
-     * @note Before calling this member function @params should have been
-     *       validated by calling @c Specification::validate(params).
-     *
-     * @params The provided configuration params.
-     *
-     * @return The value of this parameter.
-     */
-    value_type get(const mxs::ConfigParameters& params) const;
 
 private:
     ParamString(Specification* pSpecification,
@@ -1169,13 +935,10 @@ private:
                 Modifiable modifiable,
                 Kind kind,
                 value_type default_value)
-        : Param(pSpecification, zName, zDescription, modifiable, kind, MXS_MODULE_PARAM_STRING)
-        , m_default_value(default_value)
+        : ConcreteParam<ParamString, std::string>(pSpecification, zName, zDescription,
+                                                  modifiable, kind, MXS_MODULE_PARAM_STRING, default_value)
     {
     }
-
-private:
-    value_type m_default_value;
 };
 
 /**
@@ -2026,19 +1789,6 @@ std::string ParamDuration<T>::type() const
 }
 
 template<class T>
-std::string ParamDuration<T>::default_to_string() const
-{
-    return to_string(m_default_value);
-}
-
-template<class T>
-bool ParamDuration<T>::validate(const std::string& value_as_string, std::string* pMessage) const
-{
-    value_type value;
-    return from_string(value_as_string, &value, pMessage);
-}
-
-template<class T>
 bool ParamDuration<T>::from_string(const std::string& value_as_string,
                                    value_type* pValue,
                                    std::string* pMessage) const
@@ -2088,33 +1838,16 @@ json_t* ParamDuration<T>::to_json(const value_type& value) const
 }
 
 template<class T>
-typename ParamDuration<T>::value_type ParamDuration<T>::get(const mxs::ConfigParameters& params) const
-{
-    value_type rv { m_default_value };
-
-    bool contains = params.contains(name());
-    mxb_assert(!is_mandatory() || contains);
-
-    if (contains)
-    {
-        MXB_AT_DEBUG(bool valid=) from_string(params.get_string(name()), &rv);
-        mxb_assert(valid);
-    }
-
-    return rv;
-}
-
-template<class T>
 ParamEnum<T>::ParamEnum(Specification* pSpecification,
                         const char* zName,
                         const char* zDescription,
-                        Modifiable modifiable,
-                        Kind kind,
+                        Param::Modifiable modifiable,
+                        Param::Kind kind,
                         const std::vector<std::pair<T, const char*>>& enumeration,
                         value_type default_value)
-    : Param(pSpecification, zName, zDescription, modifiable, kind, MXS_MODULE_PARAM_ENUM)
+    : ConcreteParam<ParamEnum<T>, T>(pSpecification, zName, zDescription,
+                                     modifiable, kind, MXS_MODULE_PARAM_ENUM, default_value)
     , m_enumeration(enumeration)
-    , m_default_value(default_value)
 {
     m_enum_values.reserve(m_enumeration.size() + 1);
 
@@ -2154,19 +1887,6 @@ std::string ParamEnum<T>::type() const
     s += "]";
 
     return s;
-}
-
-template<class T>
-std::string ParamEnum<T>::default_to_string() const
-{
-    return to_string(m_default_value);
-}
-
-template<class T>
-bool ParamEnum<T>::validate(const std::string& value_as_string, std::string* pMessage) const
-{
-    value_type value;
-    return from_string(value_as_string, &value, pMessage);
 }
 
 template<class T>
@@ -2241,23 +1961,6 @@ void ParamEnum<T>::populate(MXS_MODULE_PARAM& param) const
     Param::populate(param);
 
     param.accepted_values = &m_enum_values[0];
-}
-
-template<class T>
-typename ParamEnum<T>::value_type ParamEnum<T>::get(const mxs::ConfigParameters& params) const
-{
-    value_type rv { m_default_value };
-
-    bool contains = params.contains(name());
-    mxb_assert(!is_mandatory() || contains);
-
-    if (contains)
-    {
-        MXB_AT_DEBUG(bool valid=) from_string(params.get_string(name()), &rv);
-        mxb_assert(valid);
-    }
-
-    return rv;
 }
 
 template<class ParamType>
