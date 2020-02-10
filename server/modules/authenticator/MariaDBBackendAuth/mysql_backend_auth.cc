@@ -92,6 +92,11 @@ static bool auth_backend_extract(DCB* dcb, GWBUF* buf)
             rval = true;
             mba->state = MBA_AUTH_OK;
         }
+        else if (mxs_mysql_get_command(buf) == MYSQL_REPLY_AUTHSWITCHREQUEST
+                 && send_mysql_native_password_response(dcb, buf))
+        {
+            rval = true;
+        }
         else
         {
             mba->state = MBA_AUTH_FAILED;
@@ -123,6 +128,11 @@ static int auth_backend_authenticate(DCB* dcb)
     {
         /** Authentication completed successfully */
         rval = MXS_AUTH_SUCCEEDED;
+    }
+    else if (mba->state == MBA_NEED_OK)
+    {
+        /** Sent AuthSwitchRequest response */
+        rval = MXS_AUTH_INCOMPLETE;
     }
 
     return rval;

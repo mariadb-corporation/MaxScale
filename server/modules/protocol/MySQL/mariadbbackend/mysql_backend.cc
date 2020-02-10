@@ -782,14 +782,7 @@ static bool handle_auth_change_response(GWBUF* reply, MySQLProtocol* proto, DCB*
          * a new scramble for the re-authentication process.
          */
 
-        // Load the new scramble into the protocol...
-        gwbuf_copy_data(reply,
-                        5 + strlen(DEFAULT_MYSQL_AUTH_PLUGIN) + 1,
-                        GW_MYSQL_SCRAMBLE_SIZE,
-                        proto->scramble);
-
-        /// ... and use it to send the encrypted password to the server
-        rval = send_mysql_native_password_response(dcb);
+        rval = send_mysql_native_password_response(dcb, reply);
     }
 
     return rval;
