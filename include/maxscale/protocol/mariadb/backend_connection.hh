@@ -91,7 +91,7 @@ private:
     bool   session_ok_to_route(DCB* dcb);
     bool   complete_ps_response(GWBUF* buffer);
     bool   handle_auth_change_response(GWBUF* reply, DCB* dcb);
-    int    send_mysql_native_password_response(DCB* dcb);
+    int    send_mysql_native_password_response(DCB* dcb, GWBUF* reply);
     bool   expecting_text_result();
     bool   expecting_ps_response();
     void   mxs_mysql_parse_ok_packet(GWBUF* buff, size_t packet_offset, size_t packet_len);

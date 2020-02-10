@@ -406,5 +406,6 @@ mariadb::BackendAuthenticator::AuthRes MariaDBBackendSession::authenticate(DCB* 
         /** Authentication completed successfully */
         rval = AuthRes::SUCCESS;
     }
+
     return rval;
 }
