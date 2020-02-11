@@ -30,7 +30,12 @@ The following deprecated parameters have been removed.
 
 ## Deprecated Features
 
+* Server parameters `protocol` and `authenticator` have been deprecated. Any
+  definitions are ignored.
+
 ## New Features
+
+* Listeners support multiple authenticators.
 
 ### Cache Invalidation
 

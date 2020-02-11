@@ -2,10 +2,13 @@
 
 ## MariaDB MaxScale 2.5
 
-* MaxAdmin has been removed
-* Server weights have been removed
+* MaxAdmin has been removed.
+* Server weights have been removed.
 * Services can now directly route to other services with the help of the
   [`target`](Getting-Started/Configuration-Guide.md#target) parameter.
+* Server parameters *protocol* and *authenticator* have been deprecated. Any
+  definitions are ignored.
+* Listeners support multiple authenticators.
 
 ## MariaDB MaxScale 2.4
 
