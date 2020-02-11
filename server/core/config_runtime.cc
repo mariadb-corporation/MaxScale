@@ -185,8 +185,8 @@ std::string get_module_param_name(const std::string& type)
  * @return Whether loading succeeded and the list of default parameters
  */
 std::pair<bool, mxs::ConfigParameters> load_defaults(const char* name,
-                                                    const char* module_type,
-                                                    const char* object_type)
+                                                     const char* module_type,
+                                                     const char* object_type)
 {
     bool rval;
     mxs::ConfigParameters params;
@@ -2745,7 +2745,12 @@ bool runtime_alter_maxscale_from_json(json_t* new_json)
             json_t* new_val = json_object_get(new_param, key);
             json_t* old_val = json_object_get(old_param, key);
 
-            if (old_val && new_val && mxs::json_to_string(new_val) == mxs::json_to_string(old_val))
+            if (json_is_object(new_val))
+            {
+                // TODO: Remove this workaround for log_throttling causing a debug assert in
+                // mxs::json_to_string due to the parameter value being an object.
+            }
+            else if (old_val && new_val && mxs::json_to_string(new_val) == mxs::json_to_string(old_val))
             {
                 /** No change in values */
             }

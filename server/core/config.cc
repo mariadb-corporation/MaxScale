@@ -300,7 +300,8 @@ config::ParamBool MXS_CONFIG::s_admin_auth(
     &MXS_CONFIG::s_specification,
     CN_ADMIN_AUTH,
     "Admin interface authentication.",
-    true);
+    true,
+    config::Param::Modifiable::AT_RUNTIME);
 
 config::ParamBool MXS_CONFIG::s_admin_enabled(
     &MXS_CONFIG::s_specification,
