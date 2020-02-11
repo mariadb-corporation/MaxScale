@@ -57,10 +57,12 @@ public:
         }
         std::string default_to_string() const override final;
         bool validate(const std::string& value_as_string, std::string* pMessage) const override final;
-        bool from_string(const std::string& value, value_type* pValue, std::string* pMessage = nullptr) const;
 
         std::string to_string(const value_type& value) const;
+        bool from_string(const std::string& value, value_type* pValue, std::string* pMessage = nullptr) const;
+
         json_t* to_json(const value_type& value) const;
+        bool from_json(const json_t* pJson, value_type* pValue, std::string* pMessage = nullptr) const;
 
         bool is_valid(const value_type&) const
         {

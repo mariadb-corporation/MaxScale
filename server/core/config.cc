@@ -581,6 +581,13 @@ static bool get_milliseconds(const char* zName,
                              const char* zDisplay_value,
                              time_t* pMilliseconds);
 
+std::string MXS_CONFIG::ParamLogThrottling::to_string(const value_type& value) const
+{
+    std::stringstream ss;
+    ss << value.count << "," << value.window_ms << "ms" << value.suppress_ms << "ms";
+    return ss.str();
+}
+
 bool MXS_CONFIG::ParamLogThrottling::from_string(const std::string& value_as_string,
                                                  value_type* pValue,
                                                  std::string* pMessage) const
@@ -653,13 +660,6 @@ bool MXS_CONFIG::ParamLogThrottling::from_string(const std::string& value_as_str
     return rv;
 }
 
-std::string MXS_CONFIG::ParamLogThrottling::to_string(const value_type& value) const
-{
-    std::stringstream ss;
-    ss << value.count << "," << value.window_ms << "ms" << value.suppress_ms << "ms";
-    return ss.str();
-}
-
 json_t* MXS_CONFIG::ParamLogThrottling::to_json(const value_type& value) const
 {
     json_t* pJson = json_object();
@@ -667,6 +667,45 @@ json_t* MXS_CONFIG::ParamLogThrottling::to_json(const value_type& value) const
     json_object_set_new(pJson, "window", json_integer(value.window_ms));
     json_object_set_new(pJson, "suppress", json_integer(value.suppress_ms));
     return pJson;
+}
+
+bool MXS_CONFIG::ParamLogThrottling::from_json(const json_t* pJson,
+                                               value_type* pValue,
+                                               std::string* pMessage) const
+{
+    bool rv = false;
+
+    if (json_is_object(pJson))
+    {
+        json_t* pCount = json_object_get(pJson, "count");
+        json_t* pWindow = json_object_get(pJson, "window");
+        json_t* pSuppress = json_object_get(pJson, "suppress");
+
+        if (pCount && json_is_integer(pCount)
+            && pWindow && json_is_integer(pWindow)
+            && pSuppress && json_is_integer(pSuppress))
+        {
+            pValue->count = json_integer_value(pCount);
+            pValue->window_ms = json_integer_value(pWindow);
+            pValue->suppress_ms = json_integer_value(pSuppress);
+            rv = true;
+        }
+        else if (pMessage)
+        {
+            *pMessage =
+                "Expected an object like '{ count = <integer>, window = <integer>, "
+                "suppress = <integer> }' but one or more of the keys were missing and/or "
+                "one or more of the values were not an integer.";
+        }
+    }
+    else
+    {
+        *pMessage = "Expected a json object, but got a json ";
+        *pMessage += mxs::json_type_to_string(pJson);
+        *pMessage += ".";
+    }
+
+    return rv;
 }
 
 bool MXS_CONFIG::ParamThreadsCount::from_string(const std::string& value_as_string,

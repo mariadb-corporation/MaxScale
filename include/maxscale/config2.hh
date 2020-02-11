@@ -382,10 +382,13 @@ public:
 
     std::string type() const override;
 
+    std::string to_string(value_type value) const;
     bool from_string(const std::string& value, value_type* pValue,
                      std::string* pMessage = nullptr) const;
-    std::string to_string(value_type value) const;
+
     json_t* to_json(value_type value) const;
+    bool from_json(const json_t* pJson, value_type* pValue,
+                   std::string* pMessage = nullptr) const;
 
 private:
     ParamBool(Specification* pSpecification,
@@ -403,10 +406,13 @@ private:
 class ParamNumber : public ConcreteParam<ParamNumber, int64_t>
 {
 public:
+    virtual std::string to_string(value_type value) const;
     virtual bool from_string(const std::string& value, value_type* pValue,
                              std::string* pMessage = nullptr) const;
-    virtual std::string to_string(value_type value) const;
+
     virtual json_t* to_json(value_type value) const;
+    virtual bool from_json(const json_t* pJson, value_type* pValue,
+                           std::string* pMessage = nullptr) const;
 
     bool is_valid(value_type value) const
     {
@@ -441,8 +447,7 @@ protected:
         mxb_assert(min_value <= max_value);
     }
 
-    bool from_value(const std::string& value_as_string,
-                    value_type value,
+    bool from_value(value_type value,
                     value_type* pValue,
                     std::string* pMessage) const;
 
@@ -630,10 +635,13 @@ public:
 
     std::string type() const override;
 
+    std::string to_string(const value_type& value) const;
     bool from_string(const std::string& value, value_type* pValue,
                      std::string* pMessage = nullptr) const;
-    std::string to_string(const value_type& value) const;
+
     json_t* to_json(const value_type& value) const;
+    bool from_json(const json_t* pJson, value_type* pValue,
+                   std::string* pMessage = nullptr) const;
 
 private:
     ParamDuration(Specification* pSpecification,
@@ -688,10 +696,13 @@ public:
 
     std::string type() const override;
 
+    std::string to_string(value_type value) const;
     bool from_string(const std::string& value, value_type* pValue,
                      std::string* pMessage = nullptr) const;
-    std::string to_string(value_type value) const;
+
     json_t* to_json(value_type value) const;
+    bool from_json(const json_t* pJson, value_type* pValue,
+                   std::string* pMessage = nullptr) const;
 
     void populate(MXS_MODULE_PARAM& param) const;
 
@@ -748,10 +759,13 @@ public:
 
     std::string type() const override;
 
+    std::string to_string(const value_type& value) const;
     bool from_string(const std::string& value, value_type* pValue,
                      std::string* pMessage = nullptr) const;
-    std::string to_string(const value_type& value) const;
+
     json_t* to_json(const value_type& value) const;
+    bool from_json(const json_t* pJson, value_type* pValue,
+                   std::string* pMessage = nullptr) const;
 
     bool is_valid(const value_type& value) const;
 
@@ -793,10 +807,13 @@ public:
 
     std::string type() const override;
 
+    std::string to_string(value_type value) const;
     bool from_string(const std::string& value, value_type* pValue,
                      std::string* pMessage = nullptr) const;
-    std::string to_string(value_type value) const;
+
     json_t* to_json(value_type value) const;
+    bool from_json(const json_t* pJson, value_type* pValue,
+                   std::string* pMessage = nullptr) const;
 };
 
 /**
@@ -817,10 +834,13 @@ public:
 
     std::string type() const override;
 
+    std::string to_string(value_type value) const;
     bool from_string(const std::string& value, value_type* pValue,
                      std::string* pMessage = nullptr) const;
-    std::string to_string(value_type value) const;
+
     json_t* to_json(value_type value) const;
+    bool from_json(const json_t* pJson, value_type* pValue,
+                   std::string* pMessage = nullptr) const;
 };
 
 /**
@@ -878,10 +898,13 @@ public:
 
     std::string type() const override;
 
+    std::string to_string(value_type value) const;
     bool from_string(const std::string& value, value_type* pValue,
                      std::string* pMessage = nullptr) const override;
-    std::string to_string(value_type value) const;
+
     json_t* to_json(value_type value) const;
+    bool from_json(const json_t* pJson, value_type* pValue,
+                   std::string* pMessage = nullptr) const;
 
 private:
     ParamSize(Specification* pSpecification,
@@ -923,10 +946,13 @@ public:
 
     std::string type() const override;
 
+    std::string to_string(value_type value) const;
     bool from_string(const std::string& value, value_type* pValue,
                      std::string* pMessage = nullptr) const;
-    std::string to_string(value_type value) const;
+
     json_t* to_json(value_type value) const;
+    bool from_json(const json_t* pJson, value_type* pValue,
+                   std::string* pMessage = nullptr) const;
 
 private:
     ParamString(Specification* pSpecification,
@@ -1139,6 +1165,17 @@ public:
     virtual bool set_from_string(const std::string& value_as_string,
                                  std::string* pMessage = nullptr) = 0;
 
+    /**
+     * Set value.
+     *
+     * @param json      The new value expressed as a json object.
+     * @param pMessage  If non-null, on failure will contain reason why.
+     *
+     * @return True, if the value could be set, false otherwise.
+     */
+    virtual bool set_from_json(const json_t* pJson,
+                               std::string* pMessage = nullptr) = 0;
+
 protected:
     Type(Configuration* pConfiguration, const Param* pParam);
 
@@ -1206,6 +1243,20 @@ public:
     {
         value_type value;
         bool rv = parameter().from_string(value_as_string, &value, pMessage);
+
+        if (rv)
+        {
+            rv = set(value);
+        }
+
+        return rv;
+    }
+
+    bool set_from_json(const json_t* pJson,
+                       std::string* pMessage = nullptr) override final
+    {
+        value_type value;
+        bool rv = parameter().from_json(pJson, &value, pMessage);
 
         if (rv)
         {
@@ -1299,6 +1350,20 @@ public:
         return rv;
     }
 
+    bool set_from_json(const json_t* pJson,
+                       std::string* pMessage = nullptr) override
+    {
+        value_type value;
+        bool rv = parameter().from_json(pJson, &value, pMessage);
+
+        if (rv)
+        {
+            rv = set(value);
+        }
+
+        return rv;
+    }
+
     value_type get() const
     {
         return parameter().is_modifiable_at_runtime() ? atomic_get() : non_atomic_get();
@@ -1330,12 +1395,12 @@ public:
 
     std::string to_string() const override
     {
-        return static_cast<const ParamType&>(parameter()).to_string(m_value);
+        return parameter().to_string(m_value);
     }
 
     json_t* to_json() const override
     {
-        return static_cast<const ParamType&>(parameter()).to_json(m_value);
+        return parameter().to_json(m_value);
     }
 
 protected:
@@ -1789,6 +1854,14 @@ std::string ParamDuration<T>::type() const
 }
 
 template<class T>
+std::string ParamDuration<T>::to_string(const value_type& value) const
+{
+    std::stringstream ss;
+    ss << value.count() << DurationSuffix::of(value);
+    return ss.str();
+}
+
+template<class T>
 bool ParamDuration<T>::from_string(const std::string& value_as_string,
                                    value_type* pValue,
                                    std::string* pMessage) const
@@ -1823,18 +1896,33 @@ bool ParamDuration<T>::from_string(const std::string& value_as_string,
 }
 
 template<class T>
-std::string ParamDuration<T>::to_string(const value_type& value) const
+json_t* ParamDuration<T>::to_json(const value_type& value) const
 {
-    std::stringstream ss;
-    ss << value.count() << DurationSuffix::of(value);
-    return ss.str();
+    return json_integer(std::chrono::duration_cast<std::chrono::milliseconds>(value).count());
 }
 
 template<class T>
-json_t* ParamDuration<T>::to_json(const value_type& value) const
+bool ParamDuration<T>::from_json(const json_t* pJson,
+                                 value_type* pValue,
+                                 std::string* pMessage) const
 {
-    // TODO: We loose information here, as the suffix is not included.
-    return json_integer(value.count());
+    bool rv = false;
+
+    if (json_is_integer(pJson))
+    {
+        std::chrono::milliseconds ms(json_integer_value(pJson));
+
+        *pValue = std::chrono::duration_cast<value_type>(ms);
+        rv = true;
+    }
+    else
+    {
+        *pMessage = "Expected a json integer, but got a json ";
+        *pMessage += mxs::json_type_to_string(pJson);
+        *pMessage += ".";
+    }
+
+    return rv;
 }
 
 template<class T>
@@ -1890,6 +1978,17 @@ std::string ParamEnum<T>::type() const
 }
 
 template<class T>
+std::string ParamEnum<T>::to_string(value_type value) const
+{
+    auto it = std::find_if(m_enumeration.begin(), m_enumeration.end(),
+                           [value](const std::pair<T, const char*>& entry) {
+                               return entry.first == value;
+                           });
+
+    return it != m_enumeration.end() ? it->second : "unknown";
+}
+
+template<class T>
 bool ParamEnum<T>::from_string(const std::string& value_as_string,
                                value_type* pValue,
                                std::string* pMessage) const
@@ -1933,17 +2032,6 @@ bool ParamEnum<T>::from_string(const std::string& value_as_string,
 }
 
 template<class T>
-std::string ParamEnum<T>::to_string(value_type value) const
-{
-    auto it = std::find_if(m_enumeration.begin(), m_enumeration.end(),
-                           [value](const std::pair<T, const char*>& entry) {
-                               return entry.first == value;
-                           });
-
-    return it != m_enumeration.end() ? it->second : "unknown";
-}
-
-template<class T>
 json_t* ParamEnum<T>::to_json(value_type value) const
 {
     auto it = std::find_if(m_enumeration.begin(), m_enumeration.end(),
@@ -1951,8 +2039,29 @@ json_t* ParamEnum<T>::to_json(value_type value) const
                                return entry.first == value;
                            });
 
-    // TODO: Information is lost, as the enumeration is expressed as a string.
-    return json_string(it != m_enumeration.end() ? it->second : "unknown");
+    return it != m_enumeration.end() ? json_string(it->second) : nullptr;
+}
+
+template<class T>
+bool ParamEnum<T>::from_json(const json_t* pJson, value_type* pValue,
+                             std::string* pMessage) const
+{
+    bool rv = false;
+
+    if (json_is_string(pJson))
+    {
+        const char* z = json_string_value(pJson);
+
+        rv = from_string(z, pValue, pMessage);
+    }
+    else
+    {
+        *pMessage = "Expected a json string, but got a json ";
+        *pMessage += mxs::json_type_to_string(pJson);
+        *pMessage += ".";
+    }
+
+    return rv;
 }
 
 template<class T>

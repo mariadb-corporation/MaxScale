@@ -65,6 +65,7 @@ bool is_core_param(Specification::Kind kind, const std::string& param)
 
     return rv;
 }
+
 }
 
 namespace config
@@ -541,6 +542,11 @@ std::string ParamBool::type() const
     return "boolean";
 }
 
+string ParamBool::to_string(value_type value) const
+{
+    return value ? "true" : "false";
+}
+
 bool ParamBool::from_string(const string& value_as_string, value_type* pValue, string* pMessage) const
 {
     int rv = config_truth_value(value_as_string.c_str());
@@ -564,19 +570,38 @@ bool ParamBool::from_string(const string& value_as_string, value_type* pValue, s
     return rv != -1;
 }
 
-string ParamBool::to_string(value_type value) const
-{
-    return value ? "true" : "false";
-}
-
 json_t* ParamBool::to_json(value_type value) const
 {
     return json_boolean(value);
 }
 
+bool ParamBool::from_json(const json_t* pJson,  value_type* pValue, string* pMessage) const
+{
+    bool rv = false;
+
+    if (json_is_boolean(pJson))
+    {
+        *pValue = json_boolean_value(pJson) ? true : false;
+        rv = true;
+    }
+    else if (pMessage)
+    {
+        *pMessage = "Expected a json boolean, but got a json ";
+        *pMessage += mxs::json_type_to_string(pJson);
+        *pMessage += ".";
+    }
+
+    return rv;
+}
+
 /**
  * ParamNumber
  */
+std::string ParamNumber::to_string(value_type value) const
+{
+    return std::to_string(value);
+}
+
 bool ParamNumber::from_string(const std::string& value_as_string,
                               value_type* pValue,
                               std::string* pMessage) const
@@ -589,7 +614,7 @@ bool ParamNumber::from_string(const std::string& value_as_string,
 
     if (rv)
     {
-        rv = from_value(value_as_string, l, pValue, pMessage);
+        rv = from_value(l, pValue, pMessage);
     }
     else if (pMessage)
     {
@@ -602,18 +627,33 @@ bool ParamNumber::from_string(const std::string& value_as_string,
     return rv;
 }
 
-std::string ParamNumber::to_string(value_type value) const
-{
-    return std::to_string(value);
-}
-
 json_t* ParamNumber::to_json(value_type value) const
 {
     return json_integer(value);
 }
 
-bool ParamNumber::from_value(const string& value_as_string,
-                             value_type value,
+bool ParamNumber::from_json(const json_t* pJson, value_type* pValue,
+                            std::string* pMessage) const
+{
+    bool rv = false;
+
+    if (json_is_integer(pJson))
+    {
+        value_type value = json_integer_value(pJson);
+
+        rv = from_value(value, pValue, pMessage);
+    }
+    else if (pMessage)
+    {
+        *pMessage = "Expected a json integer, but got a json ";
+        *pMessage += mxs::json_type_to_string(pJson);
+        *pMessage += ".";
+    }
+
+    return rv;
+}
+
+bool ParamNumber::from_value(value_type value,
                              value_type* pValue,
                              std::string* pMessage) const
 {
@@ -637,7 +677,7 @@ bool ParamNumber::from_value(const string& value_as_string,
 
         *pMessage += type();
         *pMessage += ": ";
-        *pMessage += value_as_string;
+        *pMessage += std::to_string(value);
     }
 
     return rv;
@@ -667,14 +707,16 @@ std::string ParamPath::type() const
     return "path";
 }
 
+std::string ParamPath::to_string(const value_type& value) const
+{
+    return value;
+}
+
 bool ParamPath::from_string(const std::string& value_as_string,
                             value_type* pValue,
                             std::string* pMessage) const
 {
-    MXS_MODULE_PARAM param {};
-    param.options = m_options;
-
-    bool valid = check_path_parameter(&param, value_as_string.c_str());
+    bool valid = is_valid(value_as_string.c_str());
 
     if (valid)
     {
@@ -690,21 +732,38 @@ bool ParamPath::from_string(const std::string& value_as_string,
     return valid;
 }
 
-std::string ParamPath::to_string(const value_type& value) const
-{
-    return value;
-}
-
 json_t* ParamPath::to_json(const value_type& value) const
 {
     return json_string(value.c_str());
 }
 
+bool ParamPath::from_json(const json_t* pJson, value_type* pValue,
+                          std::string* pMessage) const
+{
+    bool rv = false;
+
+    if (json_is_string(pJson))
+    {
+        const char* z = json_string_value(pJson);
+
+        rv = from_string(z, pValue, pMessage);
+    }
+    else
+    {
+        *pMessage = "Expected a json string, but got a json ";
+        *pMessage += mxs::json_type_to_string(pJson);
+        *pMessage += ".";
+    }
+
+    return rv;
+}
+
 bool ParamPath::is_valid(const value_type& value) const
 {
-    // TODO: Check that provided path is compatible with option flags.
-    mxb_assert(!true);
-    return true;
+    MXS_MODULE_PARAM param {};
+    param.options = m_options;
+
+    return check_path_parameter(&param, value.c_str());
 }
 
 void ParamPath::populate(MXS_MODULE_PARAM& param) const
@@ -722,6 +781,11 @@ std::string ParamServer::type() const
     return "server";
 }
 
+std::string ParamServer::to_string(value_type value) const
+{
+    return value ? value->name() : "";
+}
+
 bool ParamServer::from_string(const std::string& value_as_string,
                               value_type* pValue,
                               std::string* pMessage) const
@@ -737,14 +801,30 @@ bool ParamServer::from_string(const std::string& value_as_string,
     return *pValue;
 }
 
-std::string ParamServer::to_string(value_type value) const
-{
-    return value ? value->name() : "";
-}
-
 json_t* ParamServer::to_json(value_type value) const
 {
     return value ? json_string(value->name()) : nullptr;
+}
+
+bool ParamServer::from_json(const json_t* pJson, value_type* pValue,
+                            std::string* pMessage) const
+{
+    bool rv = false;
+
+    if (json_is_string(pJson))
+    {
+        const char* z = json_string_value(pJson);
+
+        rv = from_string(z, pValue, pMessage);
+    }
+    else
+    {
+        *pMessage = "Expected a json string, but got a json ";
+        *pMessage += mxs::json_type_to_string(pJson);
+        *pMessage += ".";
+    }
+
+    return rv;
 }
 
 /**
@@ -753,6 +833,11 @@ json_t* ParamServer::to_json(value_type value) const
 std::string ParamTarget::type() const
 {
     return "target";
+}
+
+std::string ParamTarget::to_string(value_type value) const
+{
+    return value ? value->name() : "";
 }
 
 bool ParamTarget::from_string(const std::string& value_as_string,
@@ -775,14 +860,30 @@ bool ParamTarget::from_string(const std::string& value_as_string,
     return *pValue;
 }
 
-std::string ParamTarget::to_string(value_type value) const
-{
-    return value ? value->name() : "";
-}
-
 json_t* ParamTarget::to_json(value_type value) const
 {
     return value ? json_string(value->name()) : nullptr;
+}
+
+bool ParamTarget::from_json(const json_t* pJson, value_type* pValue,
+                            std::string* pMessage) const
+{
+    bool rv = false;
+
+    if (json_is_string(pJson))
+    {
+        const char* z = json_string_value(pJson);
+
+        rv = from_string(z, pValue, pMessage);
+    }
+    else
+    {
+        *pMessage = "Expected a json string, but got a json ";
+        *pMessage += mxs::json_type_to_string(pJson);
+        *pMessage += ".";
+    }
+
+    return rv;
 }
 
 /**
@@ -791,6 +892,12 @@ json_t* ParamTarget::to_json(value_type value) const
 std::string ParamSize::type() const
 {
     return "size";
+}
+
+std::string ParamSize::to_string(value_type value) const
+{
+    // TODO: Use largest possible unit.
+    return std::to_string(value);
 }
 
 bool ParamSize::from_string(const std::string& value_as_string,
@@ -807,21 +914,37 @@ bool ParamSize::from_string(const std::string& value_as_string,
     }
     else
     {
-        valid = from_value(value_as_string, value, pValue, pMessage);
+        valid = from_value(value, pValue, pMessage);
     }
 
     return valid;
 }
 
-std::string ParamSize::to_string(value_type value) const
-{
-    // TODO: Use largest possible unit.
-    return std::to_string(value);
-}
-
 json_t* ParamSize::to_json(value_type value) const
 {
     return json_integer(value);
+}
+
+bool ParamSize::from_json(const json_t* pJson,
+                          value_type* pValue,
+                          std::string* pMessage) const
+{
+    bool rv = false;
+
+    if (json_is_string(pJson))
+    {
+        const char* z = json_string_value(pJson);
+
+        rv = from_string(z, pValue, pMessage);
+    }
+    else
+    {
+        *pMessage = "Expected a json string, but got a json ";
+        *pMessage += mxs::json_type_to_string(pJson);
+        *pMessage += ".";
+    }
+
+    return rv;
 }
 
 /**
@@ -830,6 +953,13 @@ json_t* ParamSize::to_json(value_type value) const
 std::string ParamString::type() const
 {
     return "string";
+}
+
+std::string ParamString::to_string(value_type value) const
+{
+    stringstream ss;
+    ss << "\"" << value << "\"";
+    return ss.str();
 }
 
 bool ParamString::from_string(const std::string& value_as_string,
@@ -875,16 +1005,30 @@ bool ParamString::from_string(const std::string& value_as_string,
     return valid;
 }
 
-std::string ParamString::to_string(value_type value) const
-{
-    stringstream ss;
-    ss << "\"" << value << "\"";
-    return ss.str();
-}
-
 json_t* ParamString::to_json(value_type value) const
 {
     return json_string(value.c_str());
+}
+
+bool ParamString::from_json(const json_t* pJson,
+                            value_type* pValue,
+                            std::string* pMessage) const
+{
+    bool rv = false;
+
+    if (json_is_string(pJson))
+    {
+        *pValue = json_string_value(pJson);
+        rv = true;
+    }
+    else
+    {
+        *pMessage = "Expected a json string, but got a json ";
+        *pMessage += mxs::json_type_to_string(pJson);
+        *pMessage += ".";
+    }
+
+    return rv;
 }
 
 /**

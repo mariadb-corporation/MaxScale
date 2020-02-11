@@ -103,4 +103,44 @@ static inline std::string json_to_string(json_t* json)
     return ss.str();
 }
 
+/**
+ * @brief Convert type of JSON object to string
+ *
+ * @param json  Object whose type should be returned.
+ *
+ * @return The type of the object expressed as a string.
+ */
+static inline const char* json_type_to_string(const json_t* json)
+{
+    switch (json_typeof(json))
+    {
+    case JSON_OBJECT:
+        return "object";
+
+    case JSON_ARRAY:
+        return "array";
+
+    case JSON_STRING:
+        return "string";
+
+    case JSON_INTEGER:
+        return "integer";
+
+    case JSON_REAL:
+        return "real";
+
+    case JSON_TRUE:
+    case JSON_FALSE:
+        return "boolean";
+
+    case JSON_NULL:
+        return "null";
+
+    default:
+        mxb_assert(!true);
+    }
+
+    return "unknown";
+}
+
 }
