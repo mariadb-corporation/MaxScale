@@ -1046,6 +1046,9 @@ add_test_executable(mxs2729_rebalance.cc mxs2729_rebalance replication LABELS RE
 # MXS-2750: Test COM_STMT_EXECUTE metadata addition
 add_test_executable(mxs2750_com_stmt_exec.cc mxs2750_com_stmt_exec replication LABELS readwritesplit REPL_BACKEND)
 
+# MXS-2793: Schemarouter multi-table joins
+add_test_executable(mxs2793_multi_table.cpp mxs2793_multi_table mxs2793_multi_table LABELS schemarouter REPL_BACKEND)
+
 ############################################
 # END: Normal tests                        #
 ############################################
