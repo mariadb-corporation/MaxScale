@@ -165,7 +165,7 @@ CacheFilter* CacheFilter::create(const char* zName, mxs::ConfigParameters* ppPar
 
         if (pFilter->m_config.configure(*ppParams))
         {
-            switch (pFilter->m_config.thread_model.get())
+            switch (pFilter->m_config.thread_model)
             {
             case CACHE_THREAD_MODEL_MT:
                 MXS_NOTICE("Creating shared cache.");
@@ -187,7 +187,7 @@ CacheFilter* CacheFilter::create(const char* zName, mxs::ConfigParameters* ppPar
             Storage::Limits limits;
             pCache->get_limits(&limits);
 
-            uint32_t max_resultset_size = pFilter->m_config.max_resultset_size.get();
+            uint32_t max_resultset_size = pFilter->m_config.max_resultset_size;
 
             if (max_resultset_size == 0)
             {
@@ -200,7 +200,7 @@ CacheFilter* CacheFilter::create(const char* zName, mxs::ConfigParameters* ppPar
                             "%u bytes, but either no value has been specified for "
                             "max_resultset_size or the value is larger. Setting "
                             "max_resultset_size to the maximum size.", limits.max_value_size);
-                pFilter->m_config.max_resultset_size.set(limits.max_value_size);
+                pFilter->m_config.max_resultset_size = limits.max_value_size;
             }
 
             pFilter->m_sCache = unique_ptr<Cache>(pCache);

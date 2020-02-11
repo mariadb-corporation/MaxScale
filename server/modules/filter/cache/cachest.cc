@@ -89,11 +89,11 @@ CacheST* CacheST::create(const std::string& name,
     Storage::Config storage_config(CACHE_THREAD_MODEL_ST,
                                    pConfig->hard_ttl.count(),
                                    pConfig->soft_ttl.count(),
-                                   pConfig->max_count.get(),
-                                   pConfig->max_size.get(),
-                                   pConfig->invalidate.get());
+                                   pConfig->max_count,
+                                   pConfig->max_size,
+                                   pConfig->invalidate);
 
-    const auto& storage_arguments = pConfig->storage_options.get();
+    const auto& storage_arguments = pConfig->storage_options;
 
     Storage* pStorage = sFactory->create_storage(name.c_str(), storage_config, storage_arguments);
 

@@ -54,11 +54,11 @@ bool Cache::get_storage_factory(const CacheConfig& config,
 
     if (!config.rules.empty())
     {
-        rv = CacheRules::load(config.rules.get(), config.debug.get(), &rules);
+        rv = CacheRules::load(config.rules, config.debug, &rules);
     }
     else
     {
-        unique_ptr<CacheRules> sRules(CacheRules::create(config.debug.get()));
+        unique_ptr<CacheRules> sRules(CacheRules::create(config.debug));
 
         if (sRules.get())
         {
@@ -69,7 +69,7 @@ bool Cache::get_storage_factory(const CacheConfig& config,
 
     if (rv)
     {
-        pFactory = StorageFactory::open(config.storage.get());
+        pFactory = StorageFactory::open(config.storage);
 
         if (pFactory)
         {

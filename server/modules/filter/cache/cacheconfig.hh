@@ -51,23 +51,23 @@ public:
 
     using milliseconds = std::chrono::milliseconds;
 
-    config::String                     storage;
-    config::String                     storage_options;
-    config::Duration<milliseconds>     hard_ttl;
-    config::Duration<milliseconds>     soft_ttl;
-    config::Count                      max_resultset_rows;
-    config::Size                       max_resultset_size;
-    config::Count                      max_count;
-    config::Size                       max_size;
-    config::Path                       rules;
-    config::BitMask                    debug;
-    config::Enum<cache_thread_model_t> thread_model;
-    config::Enum<cache_selects_t>      selects;
-    config::Enum<cache_in_trxs_t>      cache_in_trxs;
-    config::Bool                       enabled;
-    config::Enum<cache_invalidate_t>   invalidate;
-    config::Bool                       clear_cache_on_parse_errors;
-    config::Enum<cache_users_t>        users;
+    std::string          storage;
+    std::string          storage_options;
+    milliseconds         hard_ttl;
+    milliseconds         soft_ttl;
+    int64_t              max_resultset_rows;
+    int64_t              max_resultset_size;
+    int64_t              max_count;
+    int64_t              max_size;
+    std::string          rules;
+    int64_t              debug; // bitmask
+    cache_thread_model_t thread_model;
+    cache_selects_t      selects;
+    cache_in_trxs_t      cache_in_trxs;
+    bool                 enabled;
+    cache_invalidate_t   invalidate;
+    bool                 clear_cache_on_parse_errors;
+    cache_users_t        users;
 
     static const config::Specification& specification()
     {

@@ -101,7 +101,7 @@ private:
 
     bool log_decisions() const
     {
-        return m_sCache->config().debug.is_set(CACHE_DEBUG_DECISIONS);
+        return m_sCache->config().debug & CACHE_DEBUG_DECISIONS ? true : false;
     }
 
 

@@ -25,12 +25,12 @@
 namespace
 {
 
-inline bool cache_max_resultset_rows_exceeded(const CacheConfig& config, uint64_t rows)
+inline bool cache_max_resultset_rows_exceeded(const CacheConfig& config, int64_t rows)
 {
     return config.max_resultset_rows == 0 ? false : rows > config.max_resultset_rows;
 }
 
-inline bool cache_max_resultset_size_exceeded(const CacheConfig& config, uint64_t size)
+inline bool cache_max_resultset_size_exceeded(const CacheConfig& config, int64_t size)
 {
     return config.max_resultset_size == 0 ? false : size > config.max_resultset_size;
 }
@@ -657,7 +657,7 @@ void CacheFilterSession::handle_storing_response(const mxs::ReplyRoute& down, co
         if (log_decisions())
         {
             MXS_NOTICE("Current resultset size exceeds maximum allowed size %s. Not caching.",
-                       mxb::pretty_size(m_sCache->config().max_resultset_size.get()).c_str());
+                       mxb::pretty_size(m_sCache->config().max_resultset_size).c_str());
         }
 
         prepare_response();

@@ -178,24 +178,24 @@ config::ParamEnum<cache_users_t> CacheConfig::s_users(
 
 CacheConfig::CacheConfig(const std::string& name)
     : config::Configuration(name, &s_specification)
-    , storage(this, &s_storage)
-    , storage_options(this, &s_storage_options)
-    , hard_ttl(this, &s_hard_ttl)
-    , soft_ttl(this, &s_soft_ttl)
-    , max_resultset_rows(this, &s_max_resultset_rows)
-    , max_resultset_size(this, &s_max_resultset_size)
-    , max_count(this, &s_max_count)
-    , max_size(this, &s_max_size)
-    , rules(this, &s_rules)
-    , debug(this, &s_debug)
-    , thread_model(this, &s_thread_model)
-    , selects(this, &s_selects)
-    , cache_in_trxs(this, &s_cache_in_trxs)
-    , enabled(this, &s_enabled)
-    , invalidate(this, &s_invalidate)
-    , clear_cache_on_parse_errors(this, &s_clear_cache_on_parse_errors)
-    , users(this, &s_users)
 {
+    add_native(&storage, &s_storage);
+    add_native(&storage_options, &s_storage_options);
+    add_native(&hard_ttl, &s_hard_ttl);
+    add_native(&soft_ttl, &s_soft_ttl);
+    add_native(&max_resultset_rows, &s_max_resultset_rows);
+    add_native(&max_resultset_size, &s_max_resultset_size);
+    add_native(&max_count, &s_max_count);
+    add_native(&max_size, &s_max_size);
+    add_native(&rules, &s_rules);
+    add_native(&debug, &s_debug);
+    add_native(&thread_model, &s_thread_model);
+    add_native(&selects, &s_selects);
+    add_native(&cache_in_trxs, &s_cache_in_trxs);
+    add_native(&enabled, &s_enabled);
+    add_native(&invalidate, &s_invalidate);
+    add_native(&clear_cache_on_parse_errors, &s_clear_cache_on_parse_errors);
+    add_native(&users, &s_users);
 }
 
 CacheConfig::~CacheConfig()
@@ -238,9 +238,9 @@ bool CacheConfig::post_configure(const mxs::ConfigParameters&)
             MXS_WARNING("The value of 'max_resultset_size' %ld should not be larger than "
                         "the value of 'max_size' %ld. Adjusting the value of 'max_resultset_size' "
                         "down to %ld.",
-                        this->max_resultset_size.get(),
-                        this->max_size.get(),
-                        this->max_size.get());
+                        this->max_resultset_size,
+                        this->max_size,
+                        this->max_size);
             this->max_resultset_size = this->max_size;
         }
     }
