@@ -1029,64 +1029,35 @@ bool change_current_db(std::string& dest, Shard& shard, GWBUF* buf)
 }
 
 /**
- * Convert a length encoded string into a C string.
+ * Convert a length encoded string into a string.
+ *
  * @param data Pointer to the first byte of the string
- * @return Pointer to the newly allocated string or NULL if the value is NULL or an error occurred
+ *
+ * @return String value
  */
-char* get_lenenc_str(void* data)
+std::string get_lenenc_str(uint8_t* ptr)
 {
-    unsigned char* ptr = (unsigned char*)data;
-    char* rval;
-    uintptr_t size;
-    long offset;
-
-    if (data == NULL)
-    {
-        return NULL;
-    }
-
     if (*ptr < 251)
     {
-        size = (uintptr_t) * ptr;
-        offset = 1;
+        return std::string((char*)ptr + 1, *ptr);
     }
     else
     {
         switch (*(ptr))
         {
-        case 0xfb:
-            return NULL;
-
         case 0xfc:
-            size = *(ptr + 1) + (*(ptr + 2) << 8);
-            offset = 2;
-            break;
+            return std::string((char*)ptr + 2, mariadb::get_byte2(ptr));
 
         case 0xfd:
-            size = *ptr + (*(ptr + 2) << 8) + (*(ptr + 3) << 16);
-            offset = 3;
-            break;
+            return std::string((char*)ptr + 3, mariadb::get_byte3(ptr));
 
         case 0xfe:
-            size = *ptr + ((*(ptr + 2) << 8)) + (*(ptr + 3) << 16)
-                + (*(ptr + 4) << 24) + ((uintptr_t) * (ptr + 5) << 32)
-                + ((uintptr_t) * (ptr + 6) << 40)
-                + ((uintptr_t) * (ptr + 7) << 48) + ((uintptr_t) * (ptr + 8) << 56);
-            offset = 8;
-            break;
+            return std::string((char*)ptr + 8, mariadb::get_byte8(ptr));
 
         default:
-            return NULL;
+            return "";
         }
     }
-
-    rval = (char*)MXS_MALLOC(sizeof(char) * (size + 1));
-    if (rval)
-    {
-        memcpy(rval, ptr + offset, size);
-        memset(rval + size, 0, 1);
-    }
-    return rval;
 }
 
 static const std::set<std::string> always_ignore = {"mysql", "information_schema", "performance_schema"};
@@ -1191,15 +1162,28 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SRBackend* bref
     {
         int payloadlen = gw_mysql_get_byte3(ptr);
         int packetlen = payloadlen + 4;
-        char* data = get_lenenc_str(ptr + 4);
+        auto data = get_lenenc_str(ptr + 4);
         mxs::Target* target = bref->target();
 
-        if (data)
+        if (!data.empty())
         {
-            m_shard.add_location(data, target);
-            MXS_INFO("<%s, %s>", target->name(), data);
-            MXS_FREE(data);
+            mxs::Target* duplicate = m_shard.get_location(data);
+
+            if (duplicate && data.find('.') != std::string::npos && !ignore_duplicate_table(data))
+            {
+                duplicate_found = true;
+                MXS_ERROR("'%s' found on servers '%s' and '%s' for user %s.",
+                          data.c_str(), target->name(), duplicate->name(),
+                          m_pSession->user_and_host().c_str());
+            }
+            else
+            {
+                m_shard.add_location(data, target);
+            }
+
+            MXS_INFO("<%s, %s>", target->name(), data.c_str());
         }
+
         ptr += packetlen;
     }
 
