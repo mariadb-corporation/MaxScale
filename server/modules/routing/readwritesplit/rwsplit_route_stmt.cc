@@ -934,7 +934,6 @@ SRWBackend RWSplitSession::handle_slave_is_target(uint8_t cmd, uint32_t stmt_id)
     {
         mxb::atomic::add(&m_router->stats().n_slave, 1, mxb::atomic::RELAXED);
         m_server_stats[target->server()].read++;
-        mxb_assert(target->in_use() || target->can_connect());
     }
     else
     {
