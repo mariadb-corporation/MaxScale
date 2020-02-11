@@ -45,12 +45,14 @@ public:
     class Test;
     friend class Test;
 
-    enum class RequireLocks
+    // Weakly-typed enum since cast to integer.
+    enum RequireLocks
     {
-        NONE,
-        MAJORITY_RUNNING,
-        MAJORITY_ALL
+        LOCKS_NONE = 0,
+        LOCKS_MAJORITY_RUNNING,
+        LOCKS_MAJORITY_ALL
     };
+
 
     /**
      * Create the monitor instance and return the instance data.
@@ -66,7 +68,7 @@ public:
      *
      * @return Diagnostics messages
      */
-    json_t* diagnostics() const;
+    json_t* diagnostics() const override;
 
     /**
      * Perform user-activated switchover.
@@ -242,7 +244,6 @@ private:
                                                  * gtid:s? */
 
     mxb::StopWatch m_last_lock_update;          /* Time since last lock status update */
-    bool           m_have_lock_majority {false};/* Does the monitor have lock majority? */
 
     // MariaDB-Monitor specific settings. These are only written to when configuring the monitor.
     class Settings
@@ -280,7 +281,7 @@ private:
 
         /* Should all cluster modification commands require a majority of server locks?
          * Used in multi-Maxscale situations. */
-        RequireLocks require_server_locks {RequireLocks::NONE};
+        RequireLocks require_server_locks {LOCKS_NONE};
 
         // Cluster operations additional settings
         int  failover_timeout {10};             /* Time limit in seconds for failover */
@@ -294,7 +295,8 @@ private:
         MariaDBServer::SharedSettings shared;   /* Settings required by MariaDBServer objects */
     };
 
-    Settings m_settings;
+    Settings                   m_settings;
+    MariaDBServer::SharedState m_shared_state; /* State data shared with servers */
 
     // Base methods
     MariaDBMonitor(const std::string& name, const std::string& module);
@@ -304,7 +306,7 @@ private:
 
     void reset_node_index_info();
     bool execute_manual_command(std::function<void ()> command, json_t** error_out);
-    bool immediate_tick_required() const;
+    bool immediate_tick_required() const override;
     bool require_server_locks() const;
     bool check_lock_status_this_tick();
 

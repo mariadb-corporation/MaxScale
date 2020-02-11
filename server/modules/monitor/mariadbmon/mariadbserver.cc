@@ -35,10 +35,12 @@ using ConnectResult = maxscale::MonitorServer::ConnectResult;
 
 MariaDBServer::MariaDBServer(SERVER* server, int config_index,
                              const MonitorServer::SharedSettings& base_settings,
-                             const MariaDBServer::SharedSettings& settings)
+                             const MariaDBServer::SharedSettings& settings,
+                             const MariaDBServer::SharedState&    shared_state)
     : MonitorServer(server, base_settings)
     , m_config_index(config_index)
     , m_settings(settings)
+    , m_shared_state(shared_state)
 {
 }
 
@@ -699,6 +701,8 @@ json_t* MariaDBServer::to_json() const
     json_object_set_new(result,
                         "master_group",
                         (m_node.cycle == NodeData::CYCLE_NONE) ? json_null() : json_integer(m_node.cycle));
+
+    json_object_set_new(result, "server_lock", json_boolean(m_has_lock));
 
     json_t* slave_connections = json_array();
     for (const auto& sstatus : m_slave_status)
@@ -2160,24 +2164,24 @@ void MariaDBServer::update_server(bool time_to_update_disk_space, bool time_to_u
     auto server = this;
     MonitorServer* mon_srv = server;
     ConnectResult conn_status = mon_srv->ping_or_connect();
-    MYSQL* conn = mon_srv->con;     // mon_ping_or_connect_to_db() may have reallocated the MYSQL struct.
 
     if (mxs::Monitor::connection_is_ok(conn_status))
     {
-        server->set_status(SERVER_RUNNING);
-        if (conn_status == ConnectResult::NEWCONN_OK)
+        set_status(SERVER_RUNNING);
+        const bool new_connection = (conn_status == ConnectResult::NEWCONN_OK);
+        if (new_connection)
         {
             // Is a new connection or a reconnection. Check server version.
-            server->update_server_version();
+            update_server_version();
+            m_has_lock = false; // Lock expired due to lost connection.
         }
 
-        if (server->m_capabilities.basic_support
-            || server->m_srv_type == MariaDBServer::server_type::BINLOG_ROUTER)
+        if (m_capabilities.basic_support || m_srv_type == MariaDBServer::server_type::BINLOG_ROUTER)
         {
             // Check permissions if permissions failed last time or if this is a new connection.
-            if (server->had_status(SERVER_AUTH_ERROR) || conn_status == ConnectResult::NEWCONN_OK)
+            if (had_status(SERVER_AUTH_ERROR) || new_connection)
             {
-                server->check_permissions();
+                check_permissions();
             }
 
             // If permissions are ok, continue.
@@ -2186,6 +2190,18 @@ void MariaDBServer::update_server(bool time_to_update_disk_space, bool time_to_u
                 if (time_to_update_disk_space && mon_srv->can_update_disk_space_status())
                 {
                     mon_srv->update_disk_space_status();
+                }
+
+                /**
+                 * Lock status needs to be updated if
+                 * 1) Requested by monitor (regular update)
+                 * 2) This is the master MaxScale, yet does not have a lock on the server.
+                 * A secondary MaxScale should not try to aggressively acquire the lock so that it's easy
+                 * for the master.
+                 */
+                if (time_to_update_lock_status || (m_shared_state.have_lock_majority && !m_has_lock))
+                {
+                    update_lock_status();
                 }
 
                 // Query MariaDBServer specific data
@@ -2198,7 +2214,9 @@ void MariaDBServer::update_server(bool time_to_update_disk_space, bool time_to_u
         /* The current server is not running. Clear some of the bits. User-set bits and some long-term bits
          * can stay. */
         server->clear_status(MonitorServer::SERVER_DOWN_CLEAR_BITS);
-        auto conn_errno = mysql_errno(conn);
+        m_has_lock = false;
+
+        auto conn_errno = mysql_errno(mon_srv->con);
         if (conn_errno == ER_ACCESS_DENIED_ERROR || conn_errno == ER_ACCESS_DENIED_NO_PASSWORD_ERROR)
         {
             server->set_status(SERVER_AUTH_ERROR);
@@ -2210,11 +2228,6 @@ void MariaDBServer::update_server(bool time_to_update_disk_space, bool time_to_u
         {
             mon_srv->log_connect_error(conn_status);
         }
-    }
-
-    if (time_to_update_lock_status)
-    {
-        update_lock_status();
     }
 
     /** Increase or reset the error count of the server. */
@@ -2293,11 +2306,11 @@ void MariaDBServer::update_lock_status()
     // MaxScale has it. If any error occurs, assume no lock.
     if (!is_running() || has_status(SERVER_AUTH_ERROR))
     {
-        m_have_lock = false;
+        m_has_lock = false;
         return;
     }
 
-    // First, check who currectly has the lock.
+    // First, check who currently has the lock.
     string cmd = string_printf("SELECT IS_USED_LOCK('%s')", LOCK_NAME);
     string err_msg;
     auto res_is_used = execute_query(cmd, &err_msg);
@@ -2313,11 +2326,11 @@ void MariaDBServer::update_lock_status()
                 if (res_get_lock->get_string(0).empty())
                 {
                     // This means an error occurred. This MaxScale does not have the lock.
-                    m_have_lock = false;
+                    m_has_lock = false;
                 }
                 else if (res_get_lock->get_int(0) == 1)
                 {
-                    m_have_lock = true;
+                    m_has_lock = true;
                 }
             }
         }
@@ -2327,23 +2340,23 @@ void MariaDBServer::update_lock_status()
             if (lock_owner_id >= 0 && (size_t)lock_owner_id == con->thread_id)
             {
                 // This MaxScale has the lock. Print warning if it got the lock without knowing it.
-                if (!m_have_lock)
+                if (!m_has_lock)
                 {
                     MXS_WARNING("Acquired the lock '%s' on server '%s' without locking it.",
                                 LOCK_NAME, name());
-                    m_have_lock = true;
+                    m_has_lock = true;
                 }
             }
             else
             {
                 // Another MaxScale has the lock. Print a warning if lock was lost without releasing it.
                 // This may happen if connection broke and was recreated.
-                if (m_have_lock)
+                if (m_has_lock)
                 {
                     MXS_WARNING("Lost the lock '%s' on server '%s' without releasing it. "
                                 "The lock is now owned by connection '%li'.",
                                 LOCK_NAME, name(), lock_owner_id);
-                    m_have_lock = false;
+                    m_has_lock = false;
                 }
             }
         }
@@ -2352,7 +2365,7 @@ void MariaDBServer::update_lock_status()
     {
         // If the query failed, assume that this MaxScale does not have the lock. This is correct if
         // connection failed.
-        m_have_lock = false;
+        m_has_lock = false;
     }
 
     if (!err_msg.empty())
@@ -2372,7 +2385,7 @@ void MariaDBServer::release_lock()
         if (res_release_lock->get_int(0) == 1)
         {
             // Expected.
-            m_have_lock = false;
+            m_has_lock = false;
         }
         else
         {
@@ -2384,4 +2397,9 @@ void MariaDBServer::release_lock()
     {
         MXS_ERROR("Failed to release lock on server '%s'. %s", name(), err_msg.c_str());
     }
+}
+
+bool MariaDBServer::has_lock() const
+{
+    return m_has_lock;
 }

@@ -1838,7 +1838,7 @@ bool MariaDBMonitor::check_gtid_replication(Log log_mode, const MariaDBServer* d
 
 bool MariaDBMonitor::lock_status_is_ok(json_t** error_out) const
 {
-    if (require_server_locks() && !m_have_lock_majority)
+    if (require_server_locks() && !m_shared_state.have_lock_majority)
     {
         const char locks_taken[] =
             "Cannot perform cluster operation because this MaxScale does not have exclusive locks "
@@ -1891,7 +1891,7 @@ void MariaDBMonitor::delay_auto_cluster_ops()
 bool MariaDBMonitor::can_perform_cluster_ops()
 {
     return !mxs::Config::get().passive.get() && cluster_operation_disable_timer <= 0
-           && !m_cluster_modified && (!require_server_locks() || m_have_lock_majority);
+           && !m_cluster_modified && (!require_server_locks() || m_shared_state.have_lock_majority);
 }
 
 /**

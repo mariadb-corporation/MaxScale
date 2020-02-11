@@ -74,9 +74,12 @@ class MariaDBServer : public mxs::MonitorServer
 {
 public:
     class SharedSettings;
+    struct SharedState;
 
-    MariaDBServer(SERVER* server, int config_index, const MonitorServer::SharedSettings& base_settings,
-                  const MariaDBServer::SharedSettings& settings);
+    MariaDBServer(SERVER* server, int config_index,
+                  const MonitorServer::SharedSettings& base_settings,
+                  const MariaDBServer::SharedSettings& settings,
+                  const MariaDBServer::SharedState&    shared_state);
 
     class EventInfo
     {
@@ -138,6 +141,15 @@ public:
         bool handle_event_scheduler {true};
     };
 
+    struct SharedState
+    {
+        /**
+         * Indicates if this is the primary MaxScale for the monitored servers. The state is shared with
+         * servers. When true, servers will attempt to quickly re-acquire the lock after losing it.
+         */
+        bool have_lock_majority {false};
+    };
+
     /* What position this server has in the monitor config? Used for tiebreaking between servers. */
     int m_config_index = 0;
 
@@ -154,7 +166,6 @@ public:
     GtidList         m_gtid_binlog_pos;     /* Gtid of latest event written to binlog. */
     SlaveStatusArray m_slave_status;        /* Data returned from SHOW (ALL) SLAVE(S) STATUS */
     NodeData         m_node;                /* Replication topology data */
-    bool             m_have_lock = false;   /* Does this MaxScale have a lock on the server? */
 
     /* Replication lag of the server. Used during calculation so that the actual SERVER struct is
      * only written to once. */
@@ -169,11 +180,6 @@ public:
     ReplicationSettings m_rpl_settings;
 
     EventNameSet m_enabled_events;              /* Enabled scheduled events */
-    bool         m_print_update_errormsg {true};/* Should an update error be printed? */
-
-    const SharedSettings& m_settings;   /* Settings required for various operations */
-
-
 
     /**
      * Print server information to a json object.
@@ -560,6 +566,7 @@ public:
 
     void update_lock_status();
     void release_lock();
+    bool has_lock() const;
 
 private:
     using EventManipulator = std::function<void (const EventInfo& event, json_t** error_out)>;
@@ -587,6 +594,12 @@ private:
      * diagnostics-methods. Reading inside monitor thread does not need to be mutexed, as outside threads
      * only read the values. */
     mutable std::mutex m_arraylock;
+
+    const SharedSettings& m_settings;       /* Settings required for various operations */
+    const SharedState&    m_shared_state;   /* State shared with monitor */
+
+    bool  m_has_lock {false};               /* Does this monitor have a lock on the server? */
+    bool  m_print_update_errormsg {true};   /* Should an update error be printed? */
 
     bool               update_slave_status(std::string* errmsg_out = NULL);
     bool               sstatus_array_topology_equal(const SlaveStatusArray& new_slave_status);

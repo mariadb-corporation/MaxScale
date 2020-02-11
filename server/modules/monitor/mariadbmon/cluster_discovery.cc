@@ -1006,6 +1006,10 @@ bool MariaDBMonitor::is_candidate_valid(MariaDBServer* cand, RequireRunning req_
     return is_valid;
 }
 
+/**
+ * Updates the cluster level lock status. Does not attempt to acquire locks, as that is performed during
+ * normal server update.
+ */
 void MariaDBMonitor::update_cluster_lock_status()
 {
     if (require_server_locks())
@@ -1014,34 +1018,24 @@ void MariaDBMonitor::update_cluster_lock_status()
         int running_servers = 0;
         for (MariaDBServer* server : servers())
         {
-            locks_held += server->m_have_lock;
+            locks_held += server->has_lock();
             running_servers += server->is_running();
         }
 
-        // Check if the monitor has a majority of locks.
-        bool had_lock_majority = m_have_lock_majority;
-        bool have_lock_majority = false;
-        if (m_settings.require_server_locks == RequireLocks::MAJORITY_RUNNING)
+        // Check if the monitor has a majority of locks. Either require majority of running servers or
+        // majority of all.
+        int required_for_majority = -1;
+        if (m_settings.require_server_locks == LOCKS_MAJORITY_RUNNING)
         {
-            have_lock_majority = (locks_held >= (running_servers / 2 + 1));
+            required_for_majority = (running_servers / 2 + 1);
         }
-        else if (m_settings.require_server_locks == RequireLocks::MAJORITY_ALL)
+        else
         {
-            have_lock_majority = (locks_held >= ((int)servers().size() / 2 + 1));
+            required_for_majority = ((int)servers().size() / 2 + 1);
         }
 
-        // Release locks if no majority. This gives another MaxScale the chance to get them.
-        // TODO: multithread
-        if (locks_held > 0 && !have_lock_majority)
-        {
-            for (MariaDBServer* server : servers())
-            {
-                if (server->m_have_lock)
-                {
-                    server->release_lock();
-                }
-            }
-        }
+        bool had_lock_majority = m_shared_state.have_lock_majority;
+        bool have_lock_majority = (locks_held >= required_for_majority);
 
         // If situation changed, log it.
         if (have_lock_majority != had_lock_majority)
@@ -1057,7 +1051,23 @@ void MariaDBMonitor::update_cluster_lock_status()
                             "Cluster manipulation operations such as failover are disabled.", name());
             }
         }
-        m_have_lock_majority = have_lock_majority;
+
+        // Release locks if no majority. This gives another MaxScale the chance to get them.
+        // TODO: multithread
+        if (locks_held > 0 && !have_lock_majority)
+        {
+            MXB_WARNING("'%s' acquired %i lock(s) without acquiring lock majority, and will release them. "
+                        "The monitor of the primary MaxScale must have failed to acquire all server locks.",
+                        name(), locks_held);
+            for (MariaDBServer* server : servers())
+            {
+                if (server->has_lock())
+                {
+                    server->release_lock();
+                }
+            }
+        }
+        m_shared_state.have_lock_majority = have_lock_majority;
     }
 }
 

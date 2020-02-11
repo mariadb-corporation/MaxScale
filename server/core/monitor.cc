@@ -2173,6 +2173,7 @@ void MonitorWorker::process_state_changes()
 bool MonitorWorker::pre_run()
 {
     bool rv = false;
+    m_ticks.store(0, std::memory_order_release);
 
     if (mysql_thread_init() == 0)
     {
@@ -2234,7 +2235,7 @@ bool MonitorWorker::call_run_one_tick(Worker::Call::action_t action)
 void MonitorWorker::run_one_tick()
 {
     tick();
-    m_ticks.fetch_add(1, std::memory_order_acq_rel);
+    m_ticks.store(ticks() + 1, std::memory_order_release);
 }
 
 bool MonitorWorker::immediate_tick_required() const

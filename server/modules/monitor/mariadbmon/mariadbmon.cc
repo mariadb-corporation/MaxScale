@@ -65,23 +65,17 @@ namespace
 {
 
 const char CLUSTER_OP_REQUIRE_LOCKS[] = "cluster_manipulation_require_locks";
-const MXS_ENUM_VALUE lock_none = {"none", static_cast<int>(MariaDBMonitor::RequireLocks::NONE)};
-const MXS_ENUM_VALUE lock_majority_running =
-{
-    "majority_of_running", static_cast<int>(MariaDBMonitor::RequireLocks::MAJORITY_RUNNING)
-};
-const MXS_ENUM_VALUE lock_majority_all =
-{
-    "majority_of_all", static_cast<int>(MariaDBMonitor::RequireLocks::MAJORITY_ALL)
-};
+const MXS_ENUM_VALUE lock_none = {"none", MariaDBMonitor::LOCKS_NONE};
 
 const MXS_ENUM_VALUE require_lock_values[] =
 {
     lock_none,
-    lock_majority_running,
-    lock_majority_all,
+    {"majority_of_running", MariaDBMonitor::LOCKS_MAJORITY_RUNNING},
+    {"majority_of_all", MariaDBMonitor::LOCKS_MAJORITY_ALL},
     {nullptr}
 };
+
+auto lock_check_interval = mxb::Duration((double)60);    // Re-check once per minute.
 }
 
 MariaDBMonitor::MariaDBMonitor(const string& name, const string& module)
@@ -92,7 +86,7 @@ MariaDBMonitor::MariaDBMonitor(const string& name, const string& module)
 mxs::MonitorServer*
 MariaDBMonitor::create_server(SERVER* server, const mxs::MonitorServer::SharedSettings& shared)
 {
-    return new MariaDBServer(server, servers().size(), shared, m_settings.shared);
+    return new MariaDBServer(server, servers().size(), shared, m_settings.shared, m_shared_state);
 }
 
 const ServerArray& MariaDBMonitor::servers() const
@@ -399,6 +393,7 @@ json_t* MariaDBMonitor::to_json() const
                         json_integer(m_master_gtid_domain));
     json_object_set_new(rval, "state", to_json(m_state));
 
+    json_object_set_new(rval, "lock_majority", json_boolean(m_shared_state.have_lock_majority));
     json_t* server_info = json_array();
     for (MariaDBServer* server : servers())
     {
@@ -432,6 +427,8 @@ void MariaDBMonitor::pre_loop()
             server->con = NULL;
         }
     }
+
+    m_shared_state.have_lock_majority = false;
 }
 
 void MariaDBMonitor::tick()
@@ -750,15 +747,15 @@ bool MariaDBMonitor::immediate_tick_required() const
 
 bool MariaDBMonitor::require_server_locks() const
 {
-    return (m_settings.require_server_locks == RequireLocks::MAJORITY_ALL)
-           || (m_settings.require_server_locks == RequireLocks::MAJORITY_RUNNING);
+    return (m_settings.require_server_locks == LOCKS_MAJORITY_ALL)
+           || (m_settings.require_server_locks == LOCKS_MAJORITY_RUNNING);
 }
 
 bool MariaDBMonitor::check_lock_status_this_tick()
 {
     bool should_update_lock_status = false;
-    auto check_interval = mxb::Duration((double)60);    // Re-check once per minute.
-    if (require_server_locks() && m_last_lock_update.split() > check_interval)
+    // Attempt to get locks when starting.
+    if (require_server_locks() && (ticks() == 0 || m_last_lock_update.split() > lock_check_interval))
     {
         should_update_lock_status = true;
         m_last_lock_update.restart();
