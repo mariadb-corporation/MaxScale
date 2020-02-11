@@ -18,15 +18,18 @@
 #include <mutex>
 #include <string>
 #include <unordered_map>
+#include <set>
+#include <vector>
 
 #include <maxscale/service.hh>
 
 using namespace maxscale;
 
 /** This contains the database to server mapping */
-typedef std::unordered_map<std::string, mxs::Target*> ServerMap;
-typedef std::unordered_map<uint64_t, mxs::Target*>    BinaryPSMap;
-typedef std::unordered_map<uint32_t, uint32_t>        PSHandleMap;
+typedef std::unordered_multimap<std::string, mxs::Target*> ServerMap;
+typedef std::unordered_map<std::string, mxs::Target*>      StmtMap;
+typedef std::unordered_map<uint64_t, mxs::Target*>         BinaryPSMap;
+typedef std::unordered_map<uint32_t, uint32_t>             PSHandleMap;
 
 class Shard
 {
@@ -39,10 +42,8 @@ public:
      *
      * @param db     Database to add
      * @param target Target where database is located
-     *
-     * @return True if location was added
      */
-    bool add_location(std::string db, mxs::Target* target);
+    void add_location(std::string db, mxs::Target* target);
 
     /**
      * @brief Retrieve the location of a database
@@ -52,6 +53,7 @@ public:
      * @return The database or NULL if no server contains the database
      */
     mxs::Target* get_location(std::string db);
+    mxs::Target* get_location(const std::vector<std::string>& db);
 
     void         add_statement(std::string stmt, mxs::Target* target);
     void         add_statement(uint32_t id, mxs::Target* target);
@@ -62,14 +64,6 @@ public:
     mxs::Target* get_statement(uint32_t id);
     bool         remove_statement(std::string stmt);
     bool         remove_statement(uint32_t id);
-
-    /**
-     * @brief Change the location of a database
-     *
-     * @param db     Database to relocate
-     * @param target Target where database is relocated to
-     */
-    void replace_location(std::string db, mxs::Target* target);
 
     /**
      * @brief Check if shard contains stale information
@@ -105,10 +99,13 @@ public:
 
 private:
     ServerMap   m_map;
-    ServerMap   stmt_map;
+    StmtMap     stmt_map;
     BinaryPSMap m_binary_map;
     PSHandleMap m_ps_handles;
     time_t      m_last_updated;
+
+    std::set<mxs::Target*> get_all_locations(std::string db);
+    std::set<mxs::Target*> get_all_locations(const std::vector<std::string>& db);
 };
 
 typedef std::unordered_map<std::string, Shard> ShardMap;

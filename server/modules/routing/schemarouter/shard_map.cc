@@ -26,9 +26,9 @@ Shard::~Shard()
 {
 }
 
-bool Shard::add_location(std::string db, mxs::Target* target)
+void Shard::add_location(std::string db, mxs::Target* target)
 {
-    return m_map.insert(std::make_pair(db, target)).second;
+    m_map.emplace(db, target);
 }
 
 void Shard::add_statement(std::string stmt, mxs::Target* target)
@@ -63,54 +63,57 @@ uint32_t Shard::get_ps_handle(uint32_t id)
     return 0;
 }
 
-void Shard::replace_location(std::string db, mxs::Target* target)
+std::set<mxs::Target*> Shard::get_all_locations(const std::vector<std::string>& tables)
 {
-    m_map[db] = target;
+    if (tables.empty())
+    {
+        return {};
+    }
+
+    auto it = tables.begin();
+    std::set<mxs::Target*> targets = get_all_locations(*it++);
+
+    for (; it != tables.end(); ++it)
+    {
+        std::set<mxs::Target*> right = get_all_locations(*it);
+        std::set<mxs::Target*> left;
+        left.swap(targets);
+        std::set_intersection(right.begin(), right.end(), left.begin(), left.end(),
+                              std::inserter(targets, targets.end()));
+    }
+
+    return targets;
+}
+
+std::set<mxs::Target*> Shard::get_all_locations(std::string table)
+{
+    std::set<mxs::Target*> rval;
+    std::transform(table.begin(), table.end(), table.begin(), ::tolower);
+    bool db_only = table.find(".") == std::string::npos;
+
+    for (const auto& a : m_map)
+    {
+        std::string db = db_only ? a.first.substr(0, a.first.find(".")) : a.first;
+
+        if (db == table)
+        {
+            rval.insert(a.second);
+        }
+    }
+
+    return rval;
+}
+
+mxs::Target* Shard::get_location(const std::vector<std::string>& tables)
+{
+    auto targets = get_all_locations(tables);
+    return targets.empty() ? nullptr : *targets.begin();
 }
 
 mxs::Target* Shard::get_location(std::string table)
 {
-    mxs::Target* rval = NULL;
-    if (table.find(".") == std::string::npos)
-    {
-        for (ServerMap::iterator it = m_map.begin(); it != m_map.end(); it++)
-        {
-            std::transform(table.begin(), table.end(), table.begin(), ::tolower);
-            std::string db = it->first.substr(0, it->first.find("."));
-            std::transform(db.begin(), db.end(), db.begin(), ::tolower);
-            if (db.compare(table) == 0)
-            {
-                if ((rval && rval != it->second))
-                {
-                    MXS_DEBUG("There are 2 databases with same name on a different servers: '%s' and '%s'. "
-                              "Connecting to '%s'",
-                              rval->name(),
-                              it->second->name(),
-                              rval->name());
-                    break;
-                }
-                else
-                {
-                    rval = it->second;
-                }
-            }
-        }
-    }
-    else
-    {
-        for (ServerMap::iterator it = m_map.begin(); it != m_map.end(); it++)
-        {
-            std::transform(table.begin(), table.end(), table.begin(), ::tolower);
-            std::string db = it->first;
-            std::transform(db.begin(), db.end(), db.begin(), ::tolower);
-            if (db.compare(table) == 0)
-            {
-                rval = it->second;
-                break;
-            }
-        }
-    }
-    return rval;
+    auto targets = get_all_locations(table);
+    return targets.empty() ? nullptr : *targets.begin();
 }
 
 mxs::Target* Shard::get_statement(std::string stmt)

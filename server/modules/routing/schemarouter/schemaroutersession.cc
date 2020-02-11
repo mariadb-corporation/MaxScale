@@ -1196,34 +1196,8 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SRBackend* bref
 
         if (data)
         {
-            if (m_shard.add_location(data, target))
-            {
-                MXS_INFO("<%s, %s>", target->name(), data);
-            }
-            else
-            {
-                if (strchr(data, '.') != NULL && !ignore_duplicate_table(std::string(data)))
-                {
-                    duplicate_found = true;
-                    mxs::Target* duplicate = m_shard.get_location(data);
-
-                    MXS_ERROR("Table '%s' found on servers '%s' and '%s' for user %s@%s.",
-                              data,
-                              target->name(),
-                              duplicate->name(),
-                              m_pSession->user().c_str(),
-                              m_pSession->client_remote().c_str());
-                }
-                else if (m_config->preferred_server == target)
-                {
-                    /** In conflict situations, use the preferred server */
-                    MXS_INFO("Forcing location of '%s' from '%s' to '%s'",
-                             data,
-                             m_shard.get_location(data)->name(),
-                             target->name());
-                    m_shard.replace_location(data, target);
-                }
-            }
+            m_shard.add_location(data, target);
+            MXS_INFO("<%s, %s>", target->name(), data);
             MXS_FREE(data);
         }
         ptr += packetlen;
@@ -1496,50 +1470,21 @@ mxs::Target* SchemaRouterSession::get_query_target(GWBUF* buffer)
     auto tables = qc_get_table_names(buffer, true);
     mxs::Target* rval = NULL;
 
-    for (const auto& t : tables)
+    for (auto& t : tables)
     {
         if (t.find('.') == std::string::npos)
         {
-            rval = m_shard.get_location(m_current_db);
-            break;
+            t = m_current_db + '.' + t;
         }
     }
 
-    if (!rval)
+    if ((rval = m_shard.get_location(tables)))
     {
-        for (const auto& t : tables)
-        {
-            if (mxs::Target* target = m_shard.get_location(t))
-            {
-                if (rval && target != rval)
-                {
-                    if (target != m_config->preferred_server && rval != m_config->preferred_server)
-                    {
-                        MXS_ERROR("Query targets tables on servers '%s' and '%s'. "
-                                  "Cross server queries are not supported.",
-                                  rval->name(), target->name());
-                    }
-                }
-                else if (!rval)
-                {
-                    rval = target;
-                    MXS_INFO("Query targets table '%s' on server '%s'", t.c_str(), rval->name());
-                }
-            }
-        }
+        MXS_INFO("Query targets table on server '%s'", rval->name());
     }
-
-    if (!rval)
+    else if ((rval = m_shard.get_location(qc_get_database_names(buffer))))
     {
-        // Queries which target a database but no tables can have multiple targets. Select first one.
-        for (const auto& a : qc_get_database_names(buffer))
-        {
-            if (mxs::Target* target = m_shard.get_location(a))
-            {
-                rval = target;
-                break;
-            }
-        }
+        MXS_INFO("Query targets database on server '%s'", rval->name());
     }
 
     return rval;
@@ -1559,24 +1504,7 @@ mxs::Target* SchemaRouterSession::get_ps_target(GWBUF* buffer, uint32_t qtype, q
         {
             char* stmt = qc_get_prepare_name(buffer);
 
-            for (const auto& table : qc_get_table_names(pStmt, true))
-            {
-                if (mxs::Target* target = m_shard.get_location(table))
-                {
-                    if (rval && target != rval)
-                    {
-                        MXS_ERROR("Statement targets tables on servers '%s' and '%s'. "
-                                  "Cross server queries are not supported.",
-                                  rval->name(), target->name());
-                    }
-                    else if (rval == NULL)
-                    {
-                        rval = target;
-                    }
-                }
-            }
-
-            if (rval)
+            if ((rval = m_shard.get_location(qc_get_table_names(pStmt, true))))
             {
                 MXS_INFO("PREPARING NAMED %s ON SERVER %s", stmt, rval->name());
                 m_shard.add_statement(stmt, rval);
@@ -1607,11 +1535,7 @@ mxs::Target* SchemaRouterSession::get_ps_target(GWBUF* buffer, uint32_t qtype, q
     }
     else if (qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT))
     {
-        for (const auto& t : qc_get_table_names(buffer, true))
-        {
-            rval = m_shard.get_location(t);
-        }
-
+        rval = m_shard.get_location(qc_get_table_names(buffer, true));
         MXS_INFO("Prepare statement on server %s", rval ? rval->name() : "<no target found>");
     }
     else if (mxs_mysql_is_ps_command(command))
