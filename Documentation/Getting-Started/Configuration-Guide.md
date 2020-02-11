@@ -173,7 +173,6 @@ runtime and can only be defined in a configuration file:
 * `local_address`
 * `users_refresh_time`
 * `load_persisted_configs`
-* `admin_auth`
 * `admin_ssl_key`
 * `admin_ssl_cert`
 * `admin_ssl_ca_cert`
