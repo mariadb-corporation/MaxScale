@@ -24,7 +24,6 @@ Config::Config(mxs::ConfigParameters* conf)
     , debug(conf->get_bool("debug"))
     , ignore_regex(NULL)
     , ignore_match_data(NULL)
-    , preferred_server(conf->get_server("preferred_server"))
 {
     // TODO: Don't process this in the router
     if (conf->contains(CN_IGNORE_TABLES_REGEX))

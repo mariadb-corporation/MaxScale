@@ -247,10 +247,10 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,
         NULL,
         {
-            {CN_IGNORE_TABLES,                MXS_MODULE_PARAM_STRING },
-            {CN_IGNORE_TABLES_REGEX,          MXS_MODULE_PARAM_STRING },
-            {CN_IGNORE_DATABASES,             MXS_MODULE_PARAM_STRING },
-            {CN_IGNORE_DATABASES_REGEX,       MXS_MODULE_PARAM_STRING },
+            {CN_IGNORE_TABLES,                MXS_MODULE_PARAM_STRING   },
+            {CN_IGNORE_TABLES_REGEX,          MXS_MODULE_PARAM_STRING   },
+            {CN_IGNORE_DATABASES,             MXS_MODULE_PARAM_STRING   },
+            {CN_IGNORE_DATABASES_REGEX,       MXS_MODULE_PARAM_STRING   },
             {"max_sescmd_history",            MXS_MODULE_PARAM_COUNT, "0"},
             {"disable_sescmd_history",        MXS_MODULE_PARAM_BOOL, "false"},
             {"refresh_databases",             MXS_MODULE_PARAM_BOOL, "true"},
@@ -261,7 +261,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 MXS_MODULE_OPT_DURATION_S
             },
             {"debug",                         MXS_MODULE_PARAM_BOOL, "false"},
-            {"preferred_server",              MXS_MODULE_PARAM_SERVER },
+            {"preferred_server",              MXS_MODULE_PARAM_SERVER, nullptr, MXS_MODULE_OPT_DEPRECATED},
             {MXS_END_MODULE_PARAMS}
         }
     };

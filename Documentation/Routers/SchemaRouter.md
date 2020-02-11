@@ -119,7 +119,6 @@ MaxScale's hostname.
 
 ## Router Parameters
 
-
 ### `ignore_tables`
 
 List of full table names (e.g. db1.t1) to ignore when checking for duplicate tables.
@@ -145,6 +144,10 @@ ignore_tables_regex=^db1|^db2|^db3\.t
 
 ### `preferred_server`
 
+This parameter has been deprecated in MaxScale 2.5.0. It is no longer needed
+after the fix to MXS-2793 made it possible to correctly store the database
+location information.
+
 The name of a server in MaxScale which will be used as the preferred server
 when a database is found on more than one server. If a database exists on
 two servers, of which neither is the server referred by this parameter, the
@@ -154,20 +157,6 @@ This parameter allows deterministic conflict resolution when a sharded cluster
 has a central database server and one or more sharded databases spread across
 multiple servers which replicate from the central database server.
 
-**Note:** As of version 2.1 of MaxScale, all of the router options can also be
-defined as parameters. The values defined in _router_options_ will have priority
-over the parameters.
-
-```
-[Shard-Router]
-type=service
-router=schemarouter
-servers=server1,server2
-user=myuser
-password=mypwd
-refresh_databases=true
-refresh_interval=60
-```
 ### `ignore_databases`
 
 This parameter has been deprecated, use [ignore_tables](#ignore_tables) instead.

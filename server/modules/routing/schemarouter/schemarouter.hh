@@ -52,7 +52,6 @@ struct Config
     pcre2_code*           ignore_regex;     /**< Regular expression used to ignore tables */
     pcre2_match_data*     ignore_match_data;/**< Match data for @c ignore_regex */
     std::set<std::string> ignored_tables;   /**< Set of ignored tables */
-    SERVER*               preferred_server; /**< Server to prefer in conflict situations */
 
     Config(mxs::ConfigParameters* conf);
 
