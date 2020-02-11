@@ -178,6 +178,11 @@ SchemaRouterSession* SchemaRouter::newSession(MXS_SESSION* pSession, const Endpo
     {
         rval = new SchemaRouterSession(pSession, this, std::move(backends));
     }
+    else
+    {
+        MXS_ERROR("Failed to connect to any of the backend servers");
+    }
+
 
     return rval;
 }
