@@ -49,12 +49,12 @@ public:
     uint64_t getCapabilities();
 
 private:
-    CacheFilter(const std::string& name);
+    CacheFilter(std::unique_ptr<CacheConfig> sConfig, std::unique_ptr<Cache> sCache);
 
     CacheFilter(const CacheFilter&);
     CacheFilter& operator=(const CacheFilter&);
 
 private:
-    CacheConfig            m_config;
-    std::unique_ptr<Cache> m_sCache;
+    std::unique_ptr<CacheConfig> m_sConfig;
+    std::unique_ptr<Cache>       m_sCache;
 };

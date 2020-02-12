@@ -145,8 +145,9 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 // CacheFilter
 //
 
-CacheFilter::CacheFilter(const std::string& name)
-    : m_config(name)
+CacheFilter::CacheFilter(std::unique_ptr<CacheConfig> sConfig, std::unique_ptr<Cache> sCache)
+    : m_sConfig(std::move(sConfig))
+    , m_sCache(std::move(sCache))
 {
 }
 
@@ -155,31 +156,30 @@ CacheFilter::~CacheFilter()
 }
 
 // static
-CacheFilter* CacheFilter::create(const char* zName, mxs::ConfigParameters* ppParams)
+CacheFilter* CacheFilter::create(const char* zName, mxs::ConfigParameters* pParams)
 {
-    CacheFilter* pFilter = new CacheFilter(zName);
+    CacheFilter* pFilter = nullptr;
 
-    if (pFilter)
+    std::unique_ptr<CacheConfig> sConfig(new (std::nothrow) CacheConfig(zName));
+
+    if (sConfig && sConfig->configure(*pParams))
     {
-        Cache* pCache = NULL;
+        Cache* pCache = nullptr;
 
-        if (pFilter->m_config.configure(*ppParams))
+        switch (sConfig->thread_model)
         {
-            switch (pFilter->m_config.thread_model)
-            {
-            case CACHE_THREAD_MODEL_MT:
-                MXS_NOTICE("Creating shared cache.");
-                MXS_EXCEPTION_GUARD(pCache = CacheMT::create(zName, &pFilter->m_config));
-                break;
+        case CACHE_THREAD_MODEL_MT:
+            MXS_NOTICE("Creating shared cache.");
+            MXS_EXCEPTION_GUARD(pCache = CacheMT::create(zName, sConfig.get()));
+            break;
 
-            case CACHE_THREAD_MODEL_ST:
-                MXS_NOTICE("Creating thread specific cache.");
-                MXS_EXCEPTION_GUARD(pCache = CachePT::create(zName, &pFilter->m_config));
-                break;
+        case CACHE_THREAD_MODEL_ST:
+            MXS_NOTICE("Creating thread specific cache.");
+            MXS_EXCEPTION_GUARD(pCache = CachePT::create(zName, sConfig.get()));
+            break;
 
-            default:
-                mxb_assert(!true);
-            }
+        default:
+            mxb_assert(!true);
         }
 
         if (pCache)
@@ -187,7 +187,7 @@ CacheFilter* CacheFilter::create(const char* zName, mxs::ConfigParameters* ppPar
             Storage::Limits limits;
             pCache->get_limits(&limits);
 
-            uint32_t max_resultset_size = pFilter->m_config.max_resultset_size;
+            uint32_t max_resultset_size = sConfig->max_resultset_size;
 
             if (max_resultset_size == 0)
             {
@@ -200,15 +200,10 @@ CacheFilter* CacheFilter::create(const char* zName, mxs::ConfigParameters* ppPar
                             "%u bytes, but either no value has been specified for "
                             "max_resultset_size or the value is larger. Setting "
                             "max_resultset_size to the maximum size.", limits.max_value_size);
-                pFilter->m_config.max_resultset_size = limits.max_value_size;
+                sConfig->max_resultset_size = limits.max_value_size;
             }
 
-            pFilter->m_sCache = unique_ptr<Cache>(pCache);
-        }
-        else
-        {
-            delete pFilter;
-            pFilter = NULL;
+            pFilter = new (std::nothrow) CacheFilter(std::move(sConfig), unique_ptr<Cache>(pCache));
         }
     }
 
