@@ -102,6 +102,9 @@ default value is `/var/lib/maxscale/<service name>`. If data for a table
 is replicated before a DDL event for it is replicated, the CREATE TABLE
 will be queried from the master server.
 
+During shutdown, the Kafka event queue is flushed. This can take up to 60
+seconds if the network is slow or there are network problems.
+
 ## Configuration
 
 The `servers` parameter defines the set of servers where the data is replicated
@@ -145,6 +148,15 @@ describes the parameter as follows:
 > user) when idempotence is enabled: max.in.flight.requests.per.connection=5 (must
 > be less than or equal to 5), retries=INT32_MAX (must be greater than 0),
 > acks=all, queuing.strategy=fifo.
+
+### `timeout`
+
+The connection and read timeout for the replication stream. The default
+value is 10 seconds.
+
+When a `kafkacdc` service is being destryed and no events are replicated,
+the replication thread waits for a read to time out before exiting. This
+can cause slow shutdowns when `timeout` is configured to a large value.
 
 ## Example Configuration
 

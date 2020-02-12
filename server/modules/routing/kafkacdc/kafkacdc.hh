@@ -36,6 +36,9 @@ static cfg::ParamString s_topic(
 static cfg::ParamBool s_enable_idempotence(
     &s_spec, "enable_idempotence", "Enables idempotent Kafka producer", false);
 
+static cfg::ParamCount s_timeout(
+    &s_spec, "timeout", "Connection and read timeout for replication", 10);
+
 // Never used
 class KafkaCDCSession : public mxs::RouterSession
 {
@@ -53,12 +56,14 @@ public:
             : bootstrap_servers(s_bootstrap_servers.get(params))
             , topic(s_topic.get(params))
             , enable_idempotence(s_enable_idempotence.get(params))
+            , timeout(s_timeout.get(params))
         {
         }
 
         std::string bootstrap_servers;
         std::string topic;
         bool        enable_idempotence;
+        int         timeout;
     };
 
     ~KafkaCDC() = default;

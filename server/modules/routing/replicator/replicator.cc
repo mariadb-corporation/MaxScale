@@ -147,7 +147,7 @@ bool Replicator::Imp::connect()
     std::string err;
 
     auto servers = service_to_servers(m_cnf.service);
-    std::tie(err, m_sql) = SQL::connect(servers);
+    std::tie(err, m_sql) = SQL::connect(servers, m_cnf.timeout, m_cnf.timeout);
 
     if (!err.empty())
     {
