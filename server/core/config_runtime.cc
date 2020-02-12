@@ -622,28 +622,30 @@ bool runtime_alter_service(Service* service, const char* zKey, const char* zValu
     return rval;
 }
 
-bool runtime_alter_maxscale(const char* name, const char* value)
+bool runtime_alter_maxscale(const char* name, json_t* value)
 {
     MXS_CONFIG& cnf = *config_get_global_options();
     std::string key = name;
     bool rval = false;
     config::Type* item = nullptr;
+    auto valstr = mxs::json_dump(value);
 
     if ((item = cnf.find_value(name)) != nullptr)
     {
         if (item->parameter().is_modifiable_at_runtime())
         {
             std::string message;
-            rval = item->set_from_string(value, &message);
+            rval = item->set_from_json(value, &message);
 
             if (rval)
             {
-                MXS_NOTICE("Value of %s changed to %s", name, value);
+                MXS_NOTICE("Value of %s changed to %s", name, valstr.c_str());
             }
             else
             {
                 config_runtime_error("Invalid value for '%s': %s, %s",
-                                     item->parameter().name().c_str(), value, message.c_str());
+                                     item->parameter().name().c_str(),
+                                     valstr.c_str(), message.c_str());
             }
         }
         else
@@ -657,7 +659,7 @@ bool runtime_alter_maxscale(const char* name, const char* value)
     }
     else
     {
-        config_runtime_error("Unknown global parameter: %s=%s", name, value);
+        config_runtime_error("Unknown global parameter: %s=%s", name, valstr.c_str());
     }
 
     if (rval)
@@ -2759,7 +2761,7 @@ bool runtime_alter_maxscale_from_json(json_t* new_json)
                 /** We can't change these at runtime */
                 MXS_INFO("Ignoring runtime change to '%s': Cannot be altered at runtime", key);
             }
-            else if (!runtime_alter_maxscale(key, mxs::json_to_string(value).c_str()))
+            else if (!runtime_alter_maxscale(key, value))
             {
                 rval = false;
             }

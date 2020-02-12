@@ -21,17 +21,17 @@ describe("Core Parameters", function() {
     before(startMaxScale)
 
     it("auth_connect_timeout", function() {
-        return set_value("auth_connect_timeout", 10)
+        return set_value("auth_connect_timeout", 10000)
         .should.be.fulfilled
     })
 
     it("auth_read_timeout", function() {
-        return set_value("auth_read_timeout", 10)
+        return set_value("auth_read_timeout", 10000)
         .should.be.fulfilled
     })
 
     it("auth_write_timeout", function() {
-        return set_value("auth_write_timeout", 10)
+        return set_value("auth_write_timeout", 10000)
         .should.be.fulfilled
     })
 
