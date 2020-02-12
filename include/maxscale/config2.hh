@@ -1082,8 +1082,19 @@ protected:
      */
     virtual bool post_configure(const mxs::ConfigParameters& params);
 
+    /**
+     * Add a native parameter value:
+     * - will be configured at startup
+     * - assumed not to be modified at runtime via admin interface
+     *
+     * @param pValue  Pointer to the parameter value.
+     * @param pParam  Pointer to paramter describing value.
+     * @param onSet   Optional functor to be called when value is set (at startup).
+     */
     template<class ParamType>
-    void add_native(typename ParamType::value_type* pValue, ParamType* pParam);
+    void add_native(typename ParamType::value_type* pValue,
+                    ParamType* pParam,
+                    std::function<void (typename ParamType::value_type)> on_set = nullptr);
 
 private:
     friend Type;
@@ -1196,9 +1207,13 @@ public:
     Native(const Type& rhs) = delete;
     Native& operator=(const Native&) = delete;
 
-    Native(Configuration* pConfiguration, ParamType* pParam, value_type* pValue)
+    Native(Configuration* pConfiguration,
+           ParamType* pParam,
+           value_type* pValue,
+           std::function<void (value_type)> on_set = nullptr)
         : Type(pConfiguration, pParam)
         , m_pValue(pValue)
+        , m_on_set(on_set)
     {
     }
 
@@ -1278,13 +1293,19 @@ public:
         if (rv)
         {
             *m_pValue = value;
+
+            if (m_on_set)
+            {
+                m_on_set(value);
+            }
         }
 
         return rv;
     }
 
 protected:
-    value_type* m_pValue;
+    value_type*                      m_pValue;
+    std::function<void (value_type)> m_on_set;
 };
 
 /**
@@ -2073,9 +2094,11 @@ void ParamEnum<T>::populate(MXS_MODULE_PARAM& param) const
 }
 
 template<class ParamType>
-void Configuration::add_native(typename ParamType::value_type* pValue, ParamType* pParam)
+void Configuration::add_native(typename ParamType::value_type* pValue,
+                               ParamType* pParam,
+                               std::function<void (typename ParamType::value_type)> on_set)
 {
-    m_natives.push_back(std::unique_ptr<Type>(new Native<ParamType>(this, pParam, pValue)));
+    m_natives.push_back(std::unique_ptr<Type>(new Native<ParamType>(this, pParam, pValue, on_set)));
 }
 
 }
