@@ -394,7 +394,7 @@ MariaDBServer* MariaDBMonitor::find_topology_master_server(RequireRunning req_ru
                             is_candidate_valid(elem, req_running, &server_msg);
                             cycle_invalid_msg.cat(server_msg);
                         }
-                        cycle_invalid_msg.cat("");  // Adds a linebreak
+                        cycle_invalid_msg.cat("");      // Adds a linebreak
                         topo_messages.cat(cycle_invalid_msg.message());
                     }
                 }

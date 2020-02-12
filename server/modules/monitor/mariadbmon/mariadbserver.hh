@@ -79,7 +79,7 @@ public:
     MariaDBServer(SERVER* server, int config_index,
                   const MonitorServer::SharedSettings& base_settings,
                   const MariaDBServer::SharedSettings& settings,
-                  const MariaDBServer::SharedState&    shared_state);
+                  const MariaDBServer::SharedState& shared_state);
 
     class EventInfo
     {
@@ -598,8 +598,8 @@ private:
     const SharedSettings& m_settings;       /* Settings required for various operations */
     const SharedState&    m_shared_state;   /* State shared with monitor */
 
-    bool  m_has_lock {false};               /* Does this monitor have a lock on the server? */
-    bool  m_print_update_errormsg {true};   /* Should an update error be printed? */
+    bool m_has_lock {false};                /* Does this monitor have a lock on the server? */
+    bool m_print_update_errormsg {true};    /* Should an update error be printed? */
 
     bool               update_slave_status(std::string* errmsg_out = NULL);
     bool               sstatus_array_topology_equal(const SlaveStatusArray& new_slave_status);

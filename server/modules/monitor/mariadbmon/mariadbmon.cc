@@ -70,12 +70,12 @@ const MXS_ENUM_VALUE lock_none = {"none", MariaDBMonitor::LOCKS_NONE};
 const MXS_ENUM_VALUE require_lock_values[] =
 {
     lock_none,
-    {"majority_of_running", MariaDBMonitor::LOCKS_MAJORITY_RUNNING},
-    {"majority_of_all", MariaDBMonitor::LOCKS_MAJORITY_ALL},
+    {"majority_of_running",MariaDBMonitor::LOCKS_MAJORITY_RUNNING              },
+    {"majority_of_all",MariaDBMonitor::LOCKS_MAJORITY_ALL                  },
     {nullptr}
 };
 
-auto lock_check_interval = mxb::Duration((double)60);    // Re-check once per minute.
+auto lock_check_interval = mxb::Duration((double)60);   // Re-check once per minute.
 }
 
 MariaDBMonitor::MariaDBMonitor(const string& name, const string& module)
@@ -1009,33 +1009,33 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,                                       /* Thread finish. */
         {
             {
-                "detect_replication_lag",            MXS_MODULE_PARAM_BOOL,                          "false",
+                "detect_replication_lag",            MXS_MODULE_PARAM_BOOL,      "false",
                 MXS_MODULE_OPT_DEPRECATED
             },
             {
-                "detect_stale_master",               MXS_MODULE_PARAM_BOOL,                          "true"
+                "detect_stale_master",               MXS_MODULE_PARAM_BOOL,      "true"
             },
             {
-                "detect_stale_slave",                MXS_MODULE_PARAM_BOOL,                          "true"
+                "detect_stale_slave",                MXS_MODULE_PARAM_BOOL,      "true"
             },
             {
-                CN_DETECT_STANDALONE_MASTER,         MXS_MODULE_PARAM_BOOL,                          "true"
+                CN_DETECT_STANDALONE_MASTER,         MXS_MODULE_PARAM_BOOL,      "true"
             },
             {
-                CN_FAILCOUNT,                        MXS_MODULE_PARAM_COUNT,                         "5"
+                CN_FAILCOUNT,                        MXS_MODULE_PARAM_COUNT,     "5"
             },
             {
-                "ignore_external_masters",           MXS_MODULE_PARAM_BOOL,                          "false"
+                "ignore_external_masters",           MXS_MODULE_PARAM_BOOL,      "false"
             },
             {
-                CN_AUTO_FAILOVER,                    MXS_MODULE_PARAM_BOOL,                          "false"
+                CN_AUTO_FAILOVER,                    MXS_MODULE_PARAM_BOOL,      "false"
             },
             {
-                CN_FAILOVER_TIMEOUT,                 MXS_MODULE_PARAM_DURATION,                      "90s",
+                CN_FAILOVER_TIMEOUT,                 MXS_MODULE_PARAM_DURATION,  "90s",
                 MXS_MODULE_OPT_DURATION_S
             },
             {
-                CN_SWITCHOVER_TIMEOUT,               MXS_MODULE_PARAM_DURATION,                      "90s",
+                CN_SWITCHOVER_TIMEOUT,               MXS_MODULE_PARAM_DURATION,  "90s",
                 MXS_MODULE_OPT_DURATION_S
             },
             {
@@ -1045,20 +1045,20 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 CN_REPLICATION_PASSWORD,             MXS_MODULE_PARAM_PASSWORD
             },
             {
-                CN_REPLICATION_MASTER_SSL,           MXS_MODULE_PARAM_BOOL,                          "false"
+                CN_REPLICATION_MASTER_SSL,           MXS_MODULE_PARAM_BOOL,      "false"
             },
             {
-                CN_VERIFY_MASTER_FAILURE,            MXS_MODULE_PARAM_BOOL,                          "true"
+                CN_VERIFY_MASTER_FAILURE,            MXS_MODULE_PARAM_BOOL,      "true"
             },
             {
-                CN_MASTER_FAILURE_TIMEOUT,           MXS_MODULE_PARAM_DURATION,                      "10s",
+                CN_MASTER_FAILURE_TIMEOUT,           MXS_MODULE_PARAM_DURATION,  "10s",
                 MXS_MODULE_OPT_DURATION_S
             },
             {
-                CN_AUTO_REJOIN,                      MXS_MODULE_PARAM_BOOL,                          "false"
+                CN_AUTO_REJOIN,                      MXS_MODULE_PARAM_BOOL,      "false"
             },
             {
-                CN_ENFORCE_READONLY,                 MXS_MODULE_PARAM_BOOL,                          "false"
+                CN_ENFORCE_READONLY,                 MXS_MODULE_PARAM_BOOL,      "false"
             },
             {
                 CN_NO_PROMOTE_SERVERS,               MXS_MODULE_PARAM_SERVERLIST
@@ -1070,19 +1070,19 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 CN_DEMOTION_SQL_FILE,                MXS_MODULE_PARAM_PATH
             },
             {
-                CN_SWITCHOVER_ON_LOW_DISK_SPACE,     MXS_MODULE_PARAM_BOOL,                          "false"
+                CN_SWITCHOVER_ON_LOW_DISK_SPACE,     MXS_MODULE_PARAM_BOOL,      "false"
             },
             {
-                CN_MAINTENANCE_ON_LOW_DISK_SPACE,    MXS_MODULE_PARAM_BOOL,                          "true"
+                CN_MAINTENANCE_ON_LOW_DISK_SPACE,    MXS_MODULE_PARAM_BOOL,      "true"
             },
             {
-                CN_HANDLE_EVENTS,                    MXS_MODULE_PARAM_BOOL,                          "true"
+                CN_HANDLE_EVENTS,                    MXS_MODULE_PARAM_BOOL,      "true"
             },
             {
-                CN_ASSUME_UNIQUE_HOSTNAMES,          MXS_MODULE_PARAM_BOOL,                          "true"
+                CN_ASSUME_UNIQUE_HOSTNAMES,          MXS_MODULE_PARAM_BOOL,      "true"
             },
             {
-                CN_ENFORCE_SIMPLE_TOPOLOGY,          MXS_MODULE_PARAM_BOOL,                          "false"
+                CN_ENFORCE_SIMPLE_TOPOLOGY,          MXS_MODULE_PARAM_BOOL,      "false"
             },
             {
                 CLUSTER_OP_REQUIRE_LOCKS,            MXS_MODULE_PARAM_ENUM,

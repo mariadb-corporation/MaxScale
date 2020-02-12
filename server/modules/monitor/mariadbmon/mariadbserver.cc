@@ -36,7 +36,7 @@ using ConnectResult = maxscale::MonitorServer::ConnectResult;
 MariaDBServer::MariaDBServer(SERVER* server, int config_index,
                              const MonitorServer::SharedSettings& base_settings,
                              const MariaDBServer::SharedSettings& settings,
-                             const MariaDBServer::SharedState&    shared_state)
+                             const MariaDBServer::SharedState& shared_state)
     : MonitorServer(server, base_settings)
     , m_config_index(config_index)
     , m_settings(settings)
@@ -2173,7 +2173,7 @@ void MariaDBServer::update_server(bool time_to_update_disk_space, bool time_to_u
         {
             // Is a new connection or a reconnection. Check server version.
             update_server_version();
-            m_has_lock = false; // Lock expired due to lost connection.
+            m_has_lock = false;     // Lock expired due to lost connection.
         }
 
         if (m_capabilities.basic_support || m_srv_type == MariaDBServer::server_type::BINLOG_ROUTER)

@@ -796,8 +796,8 @@ bool Monitor::test_permissions(const string& query)
 json_t* Monitor::monitored_server_json_attributes(const SERVER* srv) const
 {
     auto comp = [srv](MonitorServer* ms) {
-        return ms->server == srv;
-    };
+            return ms->server == srv;
+        };
 
     auto iter = std::find_if(m_servers.begin(), m_servers.end(), comp);
     if (iter != m_servers.end())
@@ -811,7 +811,7 @@ json_t* Monitor::monitored_server_json_attributes(const SERVER* srv) const
         time_t t = maxscale_started() + MXS_CLOCK_TO_SEC(mon_srv->triggered_at);
         json_object_set_new(rval, "last_event", json_string(event_name));
         json_object_set_new(rval, "triggered_at", json_string(http_to_date(t).c_str()));
-        return rval; // TODO: Add derived class calling here for monitor-specific data
+        return rval;    // TODO: Add derived class calling here for monitor-specific data
     }
     return nullptr;
 }
@@ -1945,7 +1945,7 @@ int64_t MonitorWorker::get_time_ms()
 bool MonitorServer::can_update_disk_space_status() const
 {
     return m_ok_to_check_disk_space
-        && (!m_shared.monitor_disk_limits.empty() || server->have_disk_space_limits());
+           && (!m_shared.monitor_disk_limits.empty() || server->have_disk_space_limits());
 }
 
 void MonitorServer::update_disk_space_status()
@@ -2264,27 +2264,27 @@ void MonitorServer::apply_status_requests()
 
     switch (admin_msg)
     {
-        case MonitorServer::MAINT_ON:
-            server->set_status(SERVER_MAINT);
-            break;
+    case MonitorServer::MAINT_ON:
+        server->set_status(SERVER_MAINT);
+        break;
 
-        case MonitorServer::MAINT_OFF:
-            server->clear_status(SERVER_MAINT);
-            break;
+    case MonitorServer::MAINT_OFF:
+        server->clear_status(SERVER_MAINT);
+        break;
 
-        case MonitorServer::DRAINING_ON:
-            server->set_status(SERVER_DRAINING);
-            break;
+    case MonitorServer::DRAINING_ON:
+        server->set_status(SERVER_DRAINING);
+        break;
 
-        case MonitorServer::DRAINING_OFF:
-            server->clear_status(SERVER_DRAINING);
-            break;
+    case MonitorServer::DRAINING_OFF:
+        server->clear_status(SERVER_DRAINING);
+        break;
 
-        case MonitorServer::NO_CHANGE:
-            break;
+    case MonitorServer::NO_CHANGE:
+        break;
 
-        default:
-            mxb_assert(!true);
+    default:
+        mxb_assert(!true);
     }
 }
 
@@ -2349,9 +2349,9 @@ void mxs::Monitor::Test::remove_servers()
     m_monitor->remove_all_servers();
     for (auto srv : copy)
     {
-        delete srv; // MonitorServer dtor doesn't delete the base server.
+        delete srv;     // MonitorServer dtor doesn't delete the base server.
     }
-};
+}
 
 void mxs::Monitor::Test::add_server(SERVER* new_server)
 {

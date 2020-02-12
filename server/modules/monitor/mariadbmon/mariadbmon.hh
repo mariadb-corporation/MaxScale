@@ -296,7 +296,7 @@ private:
     };
 
     Settings                   m_settings;
-    MariaDBServer::SharedState m_shared_state; /* State data shared with servers */
+    MariaDBServer::SharedState m_shared_state;      /* State data shared with servers */
 
     // Base methods
     MariaDBMonitor(const std::string& name, const std::string& module);
