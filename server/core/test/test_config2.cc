@@ -131,7 +131,7 @@ int test(T& value, const TestEntry<typename T::value_type>* pEntries, int nEntri
         {
             value.set_from_string(entry.zText);
 
-            if (value != entry.value)
+            if (value.get() != entry.value)
             {
                 cout << value.to_string() << " != " << entry.value << endl;
                 ++nErrors;

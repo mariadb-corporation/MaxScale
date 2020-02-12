@@ -206,7 +206,7 @@ bool CacheConfig::post_configure(const mxs::ConfigParameters&)
 {
     bool configured = true;
 
-    if ((this->debug < CACHE_DEBUG_MIN) || (this->debug > CACHE_DEBUG_MAX))
+    if ((this->debug.get() < CACHE_DEBUG_MIN) || (this->debug.get() > CACHE_DEBUG_MAX))
     {
         MXS_ERROR("The value of the configuration entry 'debug' must "
                   "be between %d and %d, inclusive.",
@@ -215,16 +215,16 @@ bool CacheConfig::post_configure(const mxs::ConfigParameters&)
         configured = false;
     }
 
-    if (this->soft_ttl > this->hard_ttl)
+    if (this->soft_ttl.get() > this->hard_ttl.get())
     {
         MXS_WARNING("The value of 'soft_ttl' must be less than or equal to that of 'hard_ttl'. "
                     "Setting 'soft_ttl' to the same value as 'hard_ttl'.");
         this->soft_ttl = this->hard_ttl;
     }
 
-    if (this->max_resultset_size == 0)
+    if (this->max_resultset_size.get() == 0)
     {
-        if (this->max_size != 0)
+        if (this->max_size.get() != 0)
         {
             // If a specific size has been configured for 'max_size' but 'max_resultset_size'
             // has not been specifically set, then we silently set it to the same as 'max_size'.
@@ -233,7 +233,7 @@ bool CacheConfig::post_configure(const mxs::ConfigParameters&)
     }
     else
     {
-        if ((this->max_size != 0) && (this->max_resultset_size > this->max_size))
+        if ((this->max_size.get() != 0) && (this->max_resultset_size.get() > this->max_size.get()))
         {
             MXS_WARNING("The value of 'max_resultset_size' %ld should not be larger than "
                         "the value of 'max_size' %ld. Adjusting the value of 'max_resultset_size' "

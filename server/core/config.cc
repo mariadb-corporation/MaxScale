@@ -4894,9 +4894,12 @@ bool MXS_CONFIG::post_configure(const mxs::ConfigParameters& params)
 {
     bool rv = true;
 
-    if (this->writeq_high_water != 0 || this->writeq_low_water != 0)
+    auto whw = this->writeq_high_water.get();
+    auto wlw = this->writeq_low_water.get();
+
+    if (whw != 0 || wlw != 0)
     {
-        if (this->writeq_high_water <= this->writeq_low_water)
+        if (whw <= wlw)
         {
             MXS_ERROR("Invalid configuration, writeq_high_water should be greater than writeq_low_water.");
             rv = false;

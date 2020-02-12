@@ -56,7 +56,7 @@ MainWorker::MainWorker(mxb::WatchdogNotifier* pNotifier)
 
     const auto& config = *config_get_global_options();
 
-    if (config.rebalance_period != std::chrono::milliseconds(0))
+    if (config.rebalance_period.get() != std::chrono::milliseconds(0))
     {
         order_balancing_dc();
     }
