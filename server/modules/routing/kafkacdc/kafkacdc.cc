@@ -120,21 +120,28 @@ public:
 
                     if (msg->err() == RdKafka::ERR_NO_ERROR)
                     {
-                        json_error_t err;
-                        json_t* json = json_loadb((const char*)msg->payload(), msg->len(), 0, &err);
-
-                        if (json)
+                        if (msg->key())
                         {
-                            if (auto gtid = json_object_get(json, "gtid"))
-                            {
-                                rval = gtid_pos_t::from_string(json_string_value(gtid));
-                            }
-
-                            json_decref(json);
+                            rval = gtid_pos_t::from_string(*msg->key());
+                            MXS_INFO("Continuing replication from latest stored GTID in Kafka: %s",
+                                     rval.to_string().c_str());
                         }
+                        else
+                        {
+                            MXS_WARNING("Stored Kafka message does not contain a key, "
+                                        "cannot restore position.");
+                        }
+                    }
+                    else if (msg->err() != RdKafka::ERR_REQUEST_TIMED_OUT)
+                    {
+                        MXS_ERROR("Couldn't read GTID from Kafka: %s", msg->errstr().c_str());
                     }
 
                     delete msg;
+                }
+                else
+                {
+                    MXS_INFO("Kafka watermarks: High: %ld Low: %ld", high, low);
                 }
 
                 consumer->close();
