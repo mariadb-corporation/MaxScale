@@ -1632,13 +1632,13 @@ int main(int argc, char** argv)
                     tok++;
                     if (tok)
                     {
-                        cnf->maxlog = config_truth_value(tok);
+                        cnf->maxlog.set(config_truth_value(tok));
                         this_unit.maxlog_configured = true;
                     }
                 }
                 else
                 {
-                    cnf->maxlog = config_truth_value(optarg);
+                    cnf->maxlog.set(config_truth_value(optarg));
                     this_unit.maxlog_configured = true;
                 }
             }
@@ -1652,13 +1652,13 @@ int main(int argc, char** argv)
                     tok++;
                     if (tok)
                     {
-                        cnf->syslog = config_truth_value(tok);
+                        cnf->syslog.set(config_truth_value(tok));
                         this_unit.syslog_configured = true;
                     }
                 }
                 else
                 {
-                    cnf->syslog = config_truth_value(optarg);
+                    cnf->syslog.set(config_truth_value(optarg));
                     this_unit.syslog_configured = true;
                 }
             }
@@ -2554,14 +2554,14 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         {
             if (!this_unit.syslog_configured)
             {
-                cnf->syslog = config_truth_value((char*)value);
+                cnf->syslog.set(config_truth_value((char*)value));
             }
         }
         else if (strcmp(name, CN_MAXLOG) == 0)
         {
             if (!this_unit.maxlog_configured)
             {
-                cnf->maxlog = config_truth_value((char*)value);
+                cnf->maxlog.set(config_truth_value((char*)value));
             }
         }
         else if (strcmp(name, CN_LOG_AUGMENTATION) == 0)

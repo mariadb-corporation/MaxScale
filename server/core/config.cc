@@ -4814,7 +4814,7 @@ bool config_set_rebalance_threshold(const char* value)
     int intval = strtol(value, &endptr, 0);
     if (*endptr == '\0' && intval >= 0 && intval <= 100)
     {
-        this_unit.gateway.rebalance_threshold = intval;
+        this_unit.gateway.rebalance_threshold.set(intval);
         rv = true;
     }
     else
