@@ -428,7 +428,8 @@ void MariaDBMonitor::pre_loop()
         }
     }
 
-    m_shared_state.have_lock_majority = false;
+    m_shared_state = MariaDBServer::SharedState();
+    m_locks_info = ClusterLocksInfo();
 }
 
 void MariaDBMonitor::tick()
@@ -443,11 +444,6 @@ void MariaDBMonitor::tick()
         auto status = srv->server->status();
         srv->pending_status = status;
         srv->mon_prev_status = status;
-    }
-
-    if (cluster_operation_disable_timer > 0)
-    {
-        cluster_operation_disable_timer--;
     }
 
     // Query all servers for their status.
@@ -532,6 +528,11 @@ void MariaDBMonitor::process_state_changes()
     MonitorWorker::process_state_changes();
 
     m_cluster_modified = false;
+    if (cluster_operation_disable_timer > 0)
+    {
+        cluster_operation_disable_timer--;
+    }
+
     // Check for manual commands
     if (m_manual_cmd.command_waiting_exec)
     {
@@ -557,34 +558,31 @@ void MariaDBMonitor::process_state_changes()
         }
     }
 
-    if (can_perform_cluster_ops())
+    if (m_settings.auto_failover)
     {
-        if (m_settings.auto_failover)
-        {
-            handle_auto_failover();
-        }
+        handle_auto_failover();
+    }
 
-        // Do not auto-join servers on this monitor loop if a failover (or any other cluster modification)
-        // has been performed, as server states have not been updated yet. It will happen next iteration.
-        if (m_settings.auto_rejoin && cluster_can_be_joined() && can_perform_cluster_ops())
-        {
-            // Check if any servers should be autojoined to the cluster and try to join them.
-            handle_auto_rejoin();
-        }
+    // Do not auto-join servers on this monitor loop if a failover (or any other cluster modification)
+    // has been performed, as server states have not been updated yet. It will happen next iteration.
+    if (m_settings.auto_rejoin && cluster_can_be_joined() && can_perform_cluster_ops())
+    {
+        // Check if any servers should be autojoined to the cluster and try to join them.
+        handle_auto_rejoin();
+    }
 
-        /* Check if any slave servers have read-only off and turn it on if user so wishes. Again, do not
-         * perform this if cluster has been modified this loop since it may not be clear which server
-         * should be a slave. */
-        if (m_settings.enforce_read_only_slaves && can_perform_cluster_ops())
-        {
-            enforce_read_only_on_slaves();
-        }
+    /* Check if any slave servers have read-only off and turn it on if user so wishes. Again, do not
+     * perform this if cluster has been modified this loop since it may not be clear which server
+     * should be a slave. */
+    if (m_settings.enforce_read_only_slaves && can_perform_cluster_ops())
+    {
+        enforce_read_only_on_slaves();
+    }
 
-        /* Check if the master server is on low disk space and act on it. */
-        if (m_settings.switchover_on_low_disk_space && can_perform_cluster_ops())
-        {
-            handle_low_disk_space_master();
-        }
+    /* Check if the master server is on low disk space and act on it. */
+    if (m_settings.switchover_on_low_disk_space && can_perform_cluster_ops())
+    {
+        handle_low_disk_space_master();
     }
 
     m_state = State::MONITOR;
@@ -745,7 +743,7 @@ bool MariaDBMonitor::immediate_tick_required() const
     return m_manual_cmd.command_waiting_exec;
 }
 
-bool MariaDBMonitor::require_server_locks() const
+bool MariaDBMonitor::server_locks_in_use() const
 {
     return (m_settings.require_server_locks == LOCKS_MAJORITY_ALL)
            || (m_settings.require_server_locks == LOCKS_MAJORITY_RUNNING);
@@ -753,12 +751,13 @@ bool MariaDBMonitor::require_server_locks() const
 
 bool MariaDBMonitor::check_lock_status_this_tick()
 {
+    mxb_assert(!(m_locks_info.locks_needed() && !server_locks_in_use()));
     bool should_update_lock_status = false;
     // Attempt to get locks when starting.
-    if (require_server_locks() && (ticks() == 0 || m_last_lock_update.split() > lock_check_interval))
+    if (server_locks_in_use() && (ticks() == 0 || m_locks_info.locks_needed()))
     {
         should_update_lock_status = true;
-        m_last_lock_update.restart();
+        m_locks_info.last_lock_update.restart();
     }
     return should_update_lock_status;
 }
@@ -804,6 +803,17 @@ bool MariaDBMonitor::run_manual_reset_replication(SERVER* master_server, json_t*
                                               rval = manual_reset_replication(master_server, error_out);
                                           }, error_out);
     return send_ok && rval;
+}
+
+bool MariaDBMonitor::cluster_operations_disabled_short() const
+{
+    return cluster_operation_disable_timer > 0 || m_cluster_modified;
+}
+
+bool MariaDBMonitor::ClusterLocksInfo::locks_needed() const
+{
+    return failover_needs_locks || switchover_needs_locks || rejoin_needs_locks
+           || last_lock_update.split() > lock_check_interval;
 }
 
 /**

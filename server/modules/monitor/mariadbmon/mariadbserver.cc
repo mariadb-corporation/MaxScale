@@ -2314,14 +2314,14 @@ void MariaDBServer::update_lock_status()
     string cmd = string_printf("SELECT IS_USED_LOCK('%s')", LOCK_NAME);
     string err_msg;
     auto res_is_used = execute_query(cmd, &err_msg);
-    if (res_is_used && res_is_used->next_row())
+    if (res_is_used && res_is_used->get_col_count() == 1 && res_is_used->next_row())
     {
         if (res_is_used->get_string(0).empty())
         {
             // Lock is free, try to get it.
             cmd = string_printf("SELECT GET_LOCK('%s', 0)", LOCK_NAME);
             auto res_get_lock = execute_query(cmd, &err_msg);
-            if (res_get_lock && res_get_lock->next_row())
+            if (res_get_lock && res_get_lock->get_col_count() == 1 && res_get_lock->next_row())
             {
                 if (res_get_lock->get_string(0).empty())
                 {
@@ -2377,10 +2377,10 @@ void MariaDBServer::update_lock_status()
 void MariaDBServer::release_lock()
 {
     // Try to release the lock.
-    string cmd = string_printf("SELECT FREE_LOCK('%s')", LOCK_NAME);
+    string cmd = string_printf("SELECT RELEASE_LOCK('%s')", LOCK_NAME);
     string err_msg;
     auto res_release_lock = execute_query(cmd, &err_msg);
-    if (res_release_lock)
+    if (res_release_lock && res_release_lock->get_col_count() == 1 && res_release_lock->next_row())
     {
         if (res_release_lock->get_int(0) == 1)
         {

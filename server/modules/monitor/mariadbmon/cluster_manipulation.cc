@@ -28,6 +28,18 @@ using maxbase::string_printf;
 using maxbase::StopWatch;
 using maxbase::Duration;
 
+namespace
+{
+void print_no_locks_error(json_t** error_out)
+{
+    const char locks_taken[] =
+        "Cannot perform cluster operation because this MaxScale does not have exclusive locks "
+        "on a majority of servers. Run \"SELECT IS_USED_LOCK('%s');\" on the servers to find out "
+        "which connection has the locks.";
+    auto err_msg = string_printf(locks_taken, LOCK_NAME);
+    PRINT_MXS_JSON_ERROR(error_out, "%s", err_msg.c_str());
+}
+}
 const char NO_SERVER[] = "Server '%s' is not monitored by '%s'.";
 const char FAILOVER_OK[] = "Failover '%s' -> '%s' performed.";
 const char FAILOVER_FAIL[] = "Failover '%s' -> '%s' failed.";
@@ -51,8 +63,9 @@ bool MariaDBMonitor::manual_switchover(SERVER* promotion_server, SERVER* demotio
      * so server states can be assumed to be up-to-date.
      */
 
-    if (!lock_status_is_ok(error_out))
+    if (!lock_status_is_ok())
     {
+        print_no_locks_error(error_out);
         return false;
     }
 
@@ -82,8 +95,9 @@ bool MariaDBMonitor::manual_switchover(SERVER* promotion_server, SERVER* demotio
 
 bool MariaDBMonitor::manual_failover(json_t** output)
 {
-    if (!lock_status_is_ok(output))
+    if (!lock_status_is_ok())
     {
+        print_no_locks_error(output);
         return false;
     }
 
@@ -111,8 +125,9 @@ bool MariaDBMonitor::manual_failover(json_t** output)
 
 bool MariaDBMonitor::manual_rejoin(SERVER* rejoin_cand_srv, json_t** output)
 {
-    if (!lock_status_is_ok(output))
+    if (!lock_status_is_ok())
     {
+        print_no_locks_error(output);
         return false;
     }
 
@@ -1438,65 +1453,112 @@ unique_ptr<MariaDBMonitor::FailoverParams> MariaDBMonitor::failover_prepare(Log 
  */
 void MariaDBMonitor::handle_auto_failover()
 {
-    if (m_master == NULL || m_master->is_running())
+    m_locks_info.failover_needs_locks = false;
+    if (!m_master || m_master->is_running())
     {
         // No need for failover. This also applies if master is in maintenance, because that is a user
         // problem.
         m_warn_master_down = true;
         m_warn_failover_precond = true;
+        m_warn_failover_needs_locks = true;
         return;
     }
 
-    int master_down_count = m_master->mon_err_count;
-    const MariaDBServer* connected_slave = NULL;
-    Duration event_age;
-    Duration delay_time;
-
-    const auto failcount = m_settings.failcount;
-    if (failcount > 1 && m_warn_master_down)
+    if (cluster_operations_disabled_short())
     {
-        int monitor_passes = failcount - master_down_count;
-        MXS_WARNING("Master has failed. If master status does not change in %d monitor passes, failover "
-                    "begins.",
-                    (monitor_passes > 1) ? monitor_passes : 1);
+        // If cluster operations are temporarily disabled, try again next tick.
+        return;
+    }
+
+    const int failcount = m_settings.failcount;
+    const int master_down_count = m_master->mon_err_count;
+    const bool active = !mxs::Config::get().passive.get();
+    const bool locks_ok = lock_status_is_ok();
+
+    if (m_warn_master_down)
+    {
+        // Warn that master is down. If failover is not possible due to a likely persisting reason,
+        // explain it.
+        if (!active || !locks_ok)
+        {
+            string reason = !active ? "MaxScale is in passive mode." :
+                "monitor does not have exclusive locks on a majority of servers.";
+            MXB_WARNING("Master has failed, but failover is disabled because %s", reason.c_str());
+        }
+        else if (failcount > 1 && master_down_count < failcount)
+        {
+            // Failover is not happening yet but likely soon will.
+            int ticks_until = failcount - master_down_count;
+            MXB_WARNING("Master has failed. If master does not return in %i monitor tick(s), failover "
+                        "begins.", ticks_until);
+        }
         m_warn_master_down = false;
     }
-    // If master seems to be down, check if slaves are receiving events.
-    else if (m_settings.verify_master_failure
-             && (connected_slave = slave_receiving_events(m_master, &event_age, &delay_time)) != NULL)
+
+    if (active && master_down_count >= failcount)
     {
-        MXS_NOTICE("Slave '%s' is still connected to '%s' and received a new gtid or heartbeat event %.1f "
-                   "seconds ago. Delaying failover for at least %.1f seconds.",
-                   connected_slave->name(), m_master->name(), event_age.secs(), delay_time.secs());
-    }
-    else if (master_down_count >= failcount)
-    {
-        // Failover is required, but first we should check if preconditions are met.
-        Log log_mode = m_warn_failover_precond ? Log::ON : Log::OFF;
-        auto op = failover_prepare(log_mode, NULL);
-        if (op)
+        // Master has been down long enough.
+        if (locks_ok)
         {
-            m_warn_failover_precond = true;
-            MXS_NOTICE("Performing automatic failover to replace failed master '%s'.", m_master->name());
-            if (failover_perform(*op))
+            bool slave_verify_ok = true;
+            if (m_settings.verify_master_failure)
             {
-                MXS_NOTICE(FAILOVER_OK, op->demotion_target->name(), op->promotion.target->name());
+                Duration event_age;
+                Duration delay_time;
+                auto connected_slave = slave_receiving_events(m_master, &event_age, &delay_time);
+                if (connected_slave)
+                {
+                    slave_verify_ok = false;
+                    MXB_NOTICE("Slave '%s' is still connected to '%s' and received a new gtid or heartbeat "
+                               "event %.1f seconds ago. Delaying failover for at least %.1f seconds.",
+                               connected_slave->name(), m_master->name(),
+                               event_age.secs(), delay_time.secs());
+                }
             }
-            else
+
+            if (slave_verify_ok)
             {
-                MXS_ERROR(FAILOVER_FAIL, op->demotion_target->name(), op->promotion.target->name());
-                delay_auto_cluster_ops();
+                // Failover is required, but first we should check if preconditions are met.
+                Log log_mode = m_warn_failover_precond ? Log::ON : Log::OFF;
+                auto op = failover_prepare(log_mode, NULL);
+                if (op)
+                {
+                    m_warn_failover_precond = true;
+                    MXS_NOTICE("Performing automatic failover to replace failed master '%s'.",
+                               m_master->name());
+                    if (failover_perform(*op))
+                    {
+                        MXS_NOTICE(FAILOVER_OK, op->demotion_target->name(), op->promotion.target->name());
+                    }
+                    else
+                    {
+                        MXS_ERROR(FAILOVER_FAIL, op->demotion_target->name(), op->promotion.target->name());
+                        delay_auto_cluster_ops();
+                    }
+                }
+                else
+                {
+                    // Failover was not attempted because of errors, however these errors are not permanent.
+                    // Servers were not modified, so it's ok to try this again.
+                    if (m_warn_failover_precond)
+                    {
+                        MXS_WARNING("Not performing automatic failover. Will keep retrying with most "
+                                    "error messages suppressed.");
+                        m_warn_failover_precond = false;
+                    }
+                }
             }
         }
-        else
+        else if (master_down_count > 2 * failcount)
         {
-            // Failover was not attempted because of errors, however these errors are not permanent.
-            // Servers were not modified, so it's ok to try this again.
-            if (m_warn_failover_precond)
+            // No locks and no-one seems to be doing failover. Try to regain locks and try again.
+            m_locks_info.failover_needs_locks = true;
+            if (m_warn_failover_needs_locks)
             {
-                MXS_WARNING("Not performing automatic failover. Will keep retrying with most error messages "
-                            "suppressed.");
-                m_warn_failover_precond = false;
+                MXB_WARNING("Master server '%s' has been down for %i (> 2 x failcount) monitor ticks, "
+                            "attempting to regain lock majority.",
+                            m_master->name(), master_down_count);
+                m_warn_failover_needs_locks = false;
             }
         }
     }
@@ -1836,19 +1898,9 @@ bool MariaDBMonitor::check_gtid_replication(Log log_mode, const MariaDBServer* d
     return gtid_domain_ok && gtid_ok;
 }
 
-bool MariaDBMonitor::lock_status_is_ok(json_t** error_out) const
+bool MariaDBMonitor::lock_status_is_ok() const
 {
-    if (require_server_locks() && !m_shared_state.have_lock_majority)
-    {
-        const char locks_taken[] =
-            "Cannot perform cluster operation because this MaxScale does not have exclusive locks "
-            "on a majority of servers. Run \"SELECT IS_USED_LOCK('%s');\" on the servers to find out "
-            "which connection has the locks.";
-        auto err_msg = string_printf(locks_taken, LOCK_NAME);
-        PRINT_MXS_JSON_ERROR(error_out, "%s", err_msg.c_str());
-        return false;
-    }
-    return true;
+    return !(server_locks_in_use() && !m_shared_state.have_lock_majority);
 }
 
 /**
@@ -1891,7 +1943,7 @@ void MariaDBMonitor::delay_auto_cluster_ops()
 bool MariaDBMonitor::can_perform_cluster_ops()
 {
     return !mxs::Config::get().passive.get() && cluster_operation_disable_timer <= 0
-           && !m_cluster_modified && (!require_server_locks() || m_shared_state.have_lock_majority);
+           && !m_cluster_modified && (!server_locks_in_use() || m_shared_state.have_lock_majority);
 }
 
 /**

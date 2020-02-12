@@ -1012,7 +1012,7 @@ bool MariaDBMonitor::is_candidate_valid(MariaDBServer* cand, RequireRunning req_
  */
 void MariaDBMonitor::update_cluster_lock_status()
 {
-    if (require_server_locks())
+    if (server_locks_in_use())
     {
         int locks_held = 0;
         int running_servers = 0;
@@ -1066,6 +1066,13 @@ void MariaDBMonitor::update_cluster_lock_status()
                     server->release_lock();
                 }
             }
+        }
+
+        if (have_lock_majority)
+        {
+            m_locks_info.failover_needs_locks = false;
+            m_locks_info.switchover_needs_locks = false;
+            m_locks_info.rejoin_needs_locks = false;
         }
         m_shared_state.have_lock_majority = have_lock_majority;
     }

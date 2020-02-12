@@ -251,8 +251,10 @@ replicate from. In most cases this should be left on.
 ### `failcount`
 
 Number of consecutive monitor passes a master server must be down before it is
-considered failed. At this point, automatic failover is performed if enabled
-(`auto_failover=true`). If automatic failover is not on, the monitor will try to
+considered failed. If automatic failover is enabled (`auto_failover=true`), it
+may be performed at this time. A value of 0 or 1 enables immediate failover.
+
+If automatic failover is not possible, the monitor will try to
 search for another server to fultill the master role. See section
 [Master selection](#master-selection)
 for more details. Changing the master may break replication as queries could be

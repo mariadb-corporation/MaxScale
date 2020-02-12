@@ -242,8 +242,19 @@ private:
     bool m_warn_switchover_precond {true};      /* Print switchover preconditions error message? */
     bool m_warn_cannot_rejoin {true};           /* Print warning if auto_rejoin fails because of invalid
                                                  * gtid:s? */
+    bool m_warn_failover_needs_locks {true};    /* Warn that failover requires server locks */
 
-    mxb::StopWatch m_last_lock_update;          /* Time since last lock status update */
+    struct ClusterLocksInfo
+    {
+        bool locks_needed() const;
+
+        mxb::StopWatch last_lock_update;            /* Time since last lock status update */
+
+        bool failover_needs_locks {false};
+        bool switchover_needs_locks {false};
+        bool rejoin_needs_locks {false};
+    };
+    ClusterLocksInfo m_locks_info;
 
     // MariaDB-Monitor specific settings. These are only written to when configuring the monitor.
     class Settings
@@ -307,7 +318,7 @@ private:
     void reset_node_index_info();
     bool execute_manual_command(std::function<void ()> command, json_t** error_out);
     bool immediate_tick_required() const override;
-    bool require_server_locks() const;
+    bool server_locks_in_use() const;
     bool check_lock_status_this_tick();
 
     json_t*        to_json() const;
@@ -350,7 +361,7 @@ private:
     void handle_low_disk_space_master();
     void handle_auto_failover();
     void handle_auto_rejoin();
-    bool lock_status_is_ok(json_t** error_out = nullptr) const;
+    bool lock_status_is_ok() const;
 
     const MariaDBServer* slave_receiving_events(const MariaDBServer* demotion_target,
                                                 maxbase::Duration* event_age_out,
@@ -364,6 +375,7 @@ private:
 
     void delay_auto_cluster_ops();
     bool can_perform_cluster_ops();
+    bool cluster_operations_disabled_short() const;
 
     // Methods used by failover/switchover/rejoin
     MariaDBServer* select_promotion_target(MariaDBServer* demotion_target, OperationType op, Log log_mode,
