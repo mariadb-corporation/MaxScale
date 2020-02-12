@@ -188,7 +188,7 @@ public:
         // should not be exposed to the core.
         constexpr int64_t max_entry_size = 0xffffff - 5;
 
-        int64_t cache_max_size = this_unit.cache_max_size() / config_get_global_options()->n_threads.get();
+        int64_t cache_max_size = this_unit.cache_max_size() / config_get_global_options()->n_threads;
         int64_t size = canonical_stmt.size();
 
         if (size < max_entry_size && size <= cache_max_size)
@@ -449,7 +449,7 @@ bool qc_setup(const QC_CACHE_PROPERTIES* cache_properties,
 
             if (cache_max_size)
             {
-                int64_t size_per_thr = cache_max_size / config_get_global_options()->n_threads.get();
+                int64_t size_per_thr = cache_max_size / config_get_global_options()->n_threads;
                 MXS_NOTICE("Query classification results are cached and reused. "
                            "Memory used per thread: %s", mxb::pretty_size(size_per_thr).c_str());
             }

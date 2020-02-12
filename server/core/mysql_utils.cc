@@ -57,7 +57,7 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, const char* user, cons
 
     MXS_CONFIG* config = config_get_global_options();
 
-    auto local_address = config->local_address.get();
+    auto local_address = config->local_address;
 
     if (!local_address.empty())
     {

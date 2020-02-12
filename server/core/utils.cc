@@ -664,7 +664,7 @@ int open_network_socket(enum mxs_socket_type type,
             {
                 MXS_CONFIG* config = config_get_global_options();
 
-                auto la = config->local_address.get();
+                auto la = config->local_address;
 
                 if (!la.empty())
                 {

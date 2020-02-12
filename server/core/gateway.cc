@@ -1896,9 +1896,9 @@ int main(int argc, char** argv)
     }
 
     if (!qc_setup(&cnf->qc_cache_properties,
-                  cnf->qc_sql_mode.get(),
-                  cnf->qc_name.get().c_str(),
-                  cnf->qc_args.get().c_str()))
+                  cnf->qc_sql_mode,
+                  cnf->qc_name.c_str(),
+                  cnf->qc_args.c_str()))
     {
         log_startup_error("Failed to initialise query classifier library.");
         rc = MAXSCALE_INTERNALERROR;
@@ -1954,14 +1954,14 @@ int main(int argc, char** argv)
                 {
                     MXS_WARNING("Failed to bind on address '::', attempting to "
                                 "bind on IPv4 address '0.0.0.0'.");
-                    cnf->admin_host.set("0.0.0.0");
+                    cnf->admin_host = "0.0.0.0";
                     success = mxs_admin_init();
                 }
 
                 if (success)
                 {
                     MXS_NOTICE("Started REST API on [%s]:%d",
-                               cnf->admin_host.get().c_str(), (int)cnf->admin_port.get());
+                               cnf->admin_host.c_str(), (int)cnf->admin_port);
                 }
                 else
                 {

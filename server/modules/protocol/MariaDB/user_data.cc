@@ -263,7 +263,7 @@ bool MariaDBUserManager::update_users()
 
     MXS_CONFIG* glob_config = config_get_global_options();
     sett.timeout = glob_config->auth_conn_timeout.count();
-    auto local_address = glob_config->local_address.get();
+    auto local_address = glob_config->local_address;
     if (!local_address.empty())
     {
         sett.local_address = local_address;

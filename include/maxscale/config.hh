@@ -108,7 +108,7 @@ public:
     config::Bool    log_notice;                         /**< Whether notice messages are logged. */
     config::Bool    log_warning;                        /**< Whether warning messages are logged. */
     LogThrottling   log_throttling;                     /**< When and how to throttle logged messaged. */
-    config::Count   n_threads;                          /**< Number of polling threads */
+    int64_t         n_threads;                          /**< Number of polling threads */
     SessionDumpStatements dump_statements;              /**< Whether to dump last statements. */
     config::Count   session_trace;                      /**< How entries stored to session trace log.*/
     config::Bool    ms_timestamp;                       /**< Enable or disable high precision timestamps */
@@ -120,29 +120,29 @@ public:
     config::Seconds auth_write_timeout;                 /**< Write timeout for the user authentication */
     config::Bool    skip_permission_checks;             /**< Skip service and monitor permission checks */
     config::Bool    passive;                            /**< True if MaxScale is in passive mode */
-    config::String  qc_name;                            /**< The name of the query classifier to load */
-    config::String  qc_args;                            /**< Arguments for the query classifieer */
+    std::string     qc_name;                            /**< The name of the query classifier to load */
+    std::string     qc_args;                            /**< Arguments for the query classifieer */
     config::Size    qc_cache_max_size;                  /**< Maximum amount of memory used by qc */
-    config::Enum<qc_sql_mode_t> qc_sql_mode;            /**< The query classifier sql mode */
-    config::String  admin_host;                         /**< Admin interface host */
-    config::Integer admin_port;                         /**< Admin interface port */
-    config::Bool    admin_auth;                         /**< Admin interface authentication */
-    config::Bool    admin_enabled;                      /**< Admin interface is enabled */
+    qc_sql_mode_t   qc_sql_mode;                        /**< The query classifier sql mode */
+    std::string     admin_host;                         /**< Admin interface host */
+    int64_t         admin_port;                         /**< Admin interface port */
+    bool            admin_auth;                         /**< Admin interface authentication */
+    bool            admin_enabled;                      /**< Admin interface is enabled */
     config::Bool    admin_log_auth_failures;            /**< Log admin interface authentication failures */
-    config::String  admin_pam_rw_service;               /**< PAM service for read-write users */
-    config::String  admin_pam_ro_service;               /**< PAM service for read-only users */
-    config::String  admin_ssl_key;                      /**< Admin SSL key */
-    config::String  admin_ssl_cert;                     /**< Admin SSL cert */
-    config::String  admin_ssl_ca_cert;                  /**< Admin SSL CA cert */
+    std::string     admin_pam_rw_service;               /**< PAM service for read-write users */
+    std::string     admin_pam_ro_service;               /**< PAM service for read-only users */
+    std::string     admin_ssl_key;                      /**< Admin SSL key */
+    std::string     admin_ssl_cert;                     /**< Admin SSL cert */
+    std::string     admin_ssl_ca_cert;                  /**< Admin SSL CA cert */
     config::Integer query_retries;                      /**< Number of times a interrupted query is
                                                          * retried */
     config::Seconds query_retry_timeout;                /**< Timeout for query retries */
-    config::String  local_address;                      /**< Local address to use when connecting */
+    std::string     local_address;                      /**< Local address to use when connecting */
     config::Seconds users_refresh_time;                 /**< How often the users can be refreshed */
     config::Seconds users_refresh_interval;             /**< How often the users will be refreshed */
     config::Size    writeq_high_water;                  /**< High water mark of dcb write queue */
     config::Size    writeq_low_water;                   /**< Low water mark of dcb write queue */
-    config::Bool    load_persisted_configs;             /**< Load persisted configuration files on startup */
+    bool            load_persisted_configs;             /**< Load persisted configuration files on startup */
     config::Integer max_auth_errors_until_block;        /**< Host is blocked once this limit is reached */
     config::Integer rebalance_threshold;                /**< If load of particular worker differs more than
                                                          * this % amount from load-average, rebalancing will

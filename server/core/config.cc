@@ -300,8 +300,7 @@ config::ParamBool MXS_CONFIG::s_admin_auth(
     &MXS_CONFIG::s_specification,
     CN_ADMIN_AUTH,
     "Admin interface authentication.",
-    true,
-    config::Param::Modifiable::AT_RUNTIME);
+    true);
 
 config::ParamBool MXS_CONFIG::s_admin_enabled(
     &MXS_CONFIG::s_specification,
@@ -373,14 +372,16 @@ MXS_CONFIG::ParamUsersRefreshTime MXS_CONFIG::s_users_refresh_time(
     CN_USERS_REFRESH_TIME,
     "How often the users can be refreshed.",
     mxs::config::INTERPRET_AS_SECONDS,
-    std::chrono::seconds(USERS_REFRESH_TIME_DEFAULT));
+    std::chrono::seconds(USERS_REFRESH_TIME_DEFAULT),
+    config::Param::Modifiable::AT_RUNTIME);
 
 config::ParamSeconds MXS_CONFIG::s_users_refresh_interval(
     &MXS_CONFIG::s_specification,
     CN_USERS_REFRESH_INTERVAL,
     "How often the users will be refreshed.",
     mxs::config::INTERPRET_AS_SECONDS,
-    std::chrono::seconds(0));
+    std::chrono::seconds(0),
+    config::Param::Modifiable::AT_RUNTIME);
 
 config::ParamSize MXS_CONFIG::s_writeq_high_water(
     &MXS_CONFIG::s_specification,
@@ -473,7 +474,6 @@ MXS_CONFIG::MXS_CONFIG()
     , log_throttling(this, &s_log_throttling, [](MXS_LOG_THROTTLING throttling) {
             mxs_log_set_throttling(&throttling);
         })
-    , n_threads(this, &s_n_threads)
     , dump_statements(this, &s_dump_statements, [](session_dump_statements_t when) {
             session_set_dump_statements(when);
         })
@@ -500,31 +500,17 @@ MXS_CONFIG::MXS_CONFIG()
                 this_unit.gateway.promoted_at = mxs_clock();
             }
         })
-    , qc_name(this, &s_qc_name)
-    , qc_args(this, &s_qc_args)
     , qc_cache_max_size(this, &s_qc_cache_max_size, [](int64_t size) {
             this_unit.gateway.qc_cache_properties.max_size = size;
             qc_set_cache_properties(&this_unit.gateway.qc_cache_properties);
         })
-    , qc_sql_mode(this, &s_qc_sql_mode)
-    , admin_host(this, &s_admin_host)
-    , admin_port(this, &s_admin_port)
-    , admin_auth(this, &s_admin_auth)
-    , admin_enabled(this, &s_admin_enabled)
     , admin_log_auth_failures(this, &s_admin_log_auth_failures)
-    , admin_pam_rw_service(this, &s_admin_pam_rw_service)
-    , admin_pam_ro_service(this, &s_admin_pam_ro_service)
-    , admin_ssl_key(this, &s_admin_ssl_key)
-    , admin_ssl_cert(this, &s_admin_ssl_cert)
-    , admin_ssl_ca_cert(this, &s_admin_ssl_ca_cert)
     , query_retries(this, &s_query_retries)
     , query_retry_timeout(this, &s_query_retry_timeout)
-    , local_address(this, &s_local_address)
     , users_refresh_time(this, &s_users_refresh_time)
     , users_refresh_interval(this, &s_users_refresh_interval)
     , writeq_high_water(this, &s_writeq_high_water)
     , writeq_low_water(this, &s_writeq_low_water)
-    , load_persisted_configs(this, &s_load_persisted_configs)
     , max_auth_errors_until_block(this, &s_max_auth_errors_until_block)
     , rebalance_threshold(this, &s_rebalance_threshold)
     , rebalance_period(this, &s_rebalance_period, [](const std::chrono::milliseconds&) {
@@ -533,6 +519,21 @@ MXS_CONFIG::MXS_CONFIG()
         })
     , rebalance_window(this, &s_rebalance_window)
 {
+    add_native(&n_threads, &s_n_threads);
+    add_native(&qc_name, &s_qc_name);
+    add_native(&qc_args, &s_qc_args);
+    add_native(&qc_sql_mode, &s_qc_sql_mode);
+    add_native(&admin_host, &s_admin_host);
+    add_native(&admin_port, &s_admin_port);
+    add_native(&admin_auth, &s_admin_auth);
+    add_native(&admin_enabled, &s_admin_enabled);
+    add_native(&admin_pam_rw_service, &s_admin_pam_rw_service);
+    add_native(&admin_pam_ro_service, &s_admin_pam_ro_service);
+    add_native(&admin_ssl_key, &s_admin_ssl_key);
+    add_native(&admin_ssl_cert, &s_admin_ssl_cert);
+    add_native(&admin_ssl_ca_cert, &s_admin_ssl_ca_cert);
+    add_native(&local_address, &s_local_address);
+    add_native(&load_persisted_configs, &s_load_persisted_configs);
 }
 
 bool MXS_CONFIG::ParamUsersRefreshTime::from_string(const std::string& value_as_string,
@@ -2343,7 +2344,7 @@ void config_remove_param(CONFIG_CONTEXT* obj, const char* name)
  */
 int config_threadcount()
 {
-    return this_unit.gateway.n_threads.get();
+    return this_unit.gateway.n_threads;
 }
 
 size_t config_thread_stack_size()
