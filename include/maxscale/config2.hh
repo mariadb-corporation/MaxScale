@@ -1215,6 +1215,8 @@ public:
         , m_pValue(pValue)
         , m_on_set(on_set)
     {
+        // Native values are not modifiable at runtime.
+        mxb_assert(!pParam->is_modifiable_at_runtime());
     }
 
     // Native is move-only
@@ -1668,11 +1670,6 @@ public:
         : Count(pConfiguration, pParam, on_set)
     {
     }
-
-    bool is_set(value_type bit) const
-    {
-        return (m_value & bit) == bit;
-    }
 };
 
 /**
@@ -1688,11 +1685,6 @@ public:
          std::function<void (value_type)> on_set = nullptr)
         : ConcreteType<Bool, ParamBool>(pConfiguration, pParam, on_set)
     {
-    }
-
-    explicit operator bool() const
-    {
-        return m_value;
     }
 };
 
@@ -1711,11 +1703,6 @@ public:
              std::function<void (value_type)> on_set = nullptr)
         : ConcreteType<Duration<T>, ParamDuration<T>>(pConfiguration, pParam, on_set)
     {
-    }
-
-    typename T::rep count() const
-    {
-        return ConcreteType<Duration<T>, ParamDuration<T>>::get().count();
     }
 };
 
@@ -1767,11 +1754,6 @@ public:
          std::function<void (value_type)> on_set = nullptr)
         : ConcreteType<Path, ParamPath>(pConfiguration, pParam, on_set)
     {
-    }
-
-    bool empty() const
-    {
-        return ConcreteType<Path, ParamPath>::get().empty();
     }
 };
 
@@ -1839,16 +1821,6 @@ public:
            std::function<void (value_type)> on_set = nullptr)
         : ConcreteType<String, ParamString>(pConfiguration, pParam, on_set)
     {
-    }
-
-    const char* c_str() const
-    {
-        return m_value.c_str();
-    }
-
-    bool empty() const
-    {
-        return m_value.empty();
     }
 };
 

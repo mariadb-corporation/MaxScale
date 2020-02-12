@@ -53,7 +53,7 @@ public:
 
         bool persist_performance_data() const
         {
-            return static_cast<bool>(m_persist_performance_data);
+            return m_persist_performance_data.get();
         }
 
     private:

@@ -1890,7 +1890,7 @@ void MariaDBMonitor::delay_auto_cluster_ops()
 
 bool MariaDBMonitor::can_perform_cluster_ops()
 {
-    return !config_get_global_options()->passive && cluster_operation_disable_timer <= 0
+    return !config_get_global_options()->passive.get() && cluster_operation_disable_timer <= 0
            && !m_cluster_modified && (!require_server_locks() || m_have_lock_majority);
 }
 

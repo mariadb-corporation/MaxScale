@@ -4002,11 +4002,11 @@ static bool create_global_config(const char* filename)
     }
 
     dprintf(file, "[maxscale]\n");
-    dprintf(file, "%s=%ld\n", CN_AUTH_CONNECT_TIMEOUT, this_unit.gateway.auth_conn_timeout.count());
-    dprintf(file, "%s=%ld\n", CN_AUTH_READ_TIMEOUT, this_unit.gateway.auth_read_timeout.count());
-    dprintf(file, "%s=%ld\n", CN_AUTH_WRITE_TIMEOUT, this_unit.gateway.auth_write_timeout.count());
+    dprintf(file, "%s=%ld\n", CN_AUTH_CONNECT_TIMEOUT, this_unit.gateway.auth_conn_timeout.get().count());
+    dprintf(file, "%s=%ld\n", CN_AUTH_READ_TIMEOUT, this_unit.gateway.auth_read_timeout.get().count());
+    dprintf(file, "%s=%ld\n", CN_AUTH_WRITE_TIMEOUT, this_unit.gateway.auth_write_timeout.get().count());
     dprintf(file, "%s=%s\n", CN_ADMIN_AUTH, this_unit.gateway.admin_auth ? "true" : "false");
-    dprintf(file, "%s=%s\n", CN_PASSIVE, this_unit.gateway.passive ? "true" : "false");
+    dprintf(file, "%s=%s\n", CN_PASSIVE, this_unit.gateway.passive.get() ? "true" : "false");
     dprintf(file, "%s=%s\n", CN_REBALANCE_PERIOD, this_unit.gateway.rebalance_period.to_string().c_str());
     dprintf(file, "%s=%s\n", CN_REBALANCE_THRESHOLD, this_unit.gateway.rebalance_threshold.to_string().c_str());
 

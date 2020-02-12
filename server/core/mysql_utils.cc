@@ -113,7 +113,8 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, const char* user, cons
 int mxs_mysql_query(MYSQL* conn, const char* query)
 {
     MXS_CONFIG* cnf = config_get_global_options();
-    return maxsql::mysql_query_ex(conn, query, cnf->query_retries.get(), cnf->query_retry_timeout.count());
+    return maxsql::mysql_query_ex(conn, query,
+                                  cnf->query_retries.get(), cnf->query_retry_timeout.get().count());
 }
 
 const char* mxs_mysql_get_value(MYSQL_RES* result, MYSQL_ROW row, const char* key)

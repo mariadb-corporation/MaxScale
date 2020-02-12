@@ -37,7 +37,7 @@ public:
 
         long cluster_monitor_interval() const
         {
-            return m_cluster_monitor_interval.count();
+            return m_cluster_monitor_interval.get().count();
         }
 
         long health_check_threshold() const
@@ -47,7 +47,7 @@ public:
 
         bool dynamic_node_detection() const
         {
-            return static_cast<bool>(m_dynamic_node_detection);
+            return m_dynamic_node_detection.get();
         }
 
         int health_check_port() const

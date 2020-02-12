@@ -1826,7 +1826,7 @@ int main(int argc, char** argv)
         }
     }
 
-    if (!cnf->syslog && !cnf->maxlog)
+    if (!cnf->syslog.get() && !cnf->maxlog.get())
     {
         print_warning("Both MaxScale and Syslog logging disabled.");
     }

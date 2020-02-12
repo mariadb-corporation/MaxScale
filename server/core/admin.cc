@@ -175,9 +175,11 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
         char* pw = NULL;
         char* user = MHD_basic_auth_get_username_password(connection, &pw);
 
+        auto admin_log_auth_failures = config_get_global_options()->admin_log_auth_failures.get();
+
         if (!user || !pw || !admin_verify_inet_user(user, pw))
         {
-            if (config_get_global_options()->admin_log_auth_failures)
+            if (admin_log_auth_failures)
             {
                 MXS_WARNING("Authentication failed for '%s', %s. Request: %s %s",
                             user ? user : "",
@@ -190,7 +192,7 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
         }
         else if (modifies_data(method) && !admin_user_is_inet_admin(user, pw))
         {
-            if (config_get_global_options()->admin_log_auth_failures)
+            if (admin_log_auth_failures)
             {
                 MXS_WARNING("Authorization failed for '%s', request requires "
                             "administrative privileges. Request: %s %s",

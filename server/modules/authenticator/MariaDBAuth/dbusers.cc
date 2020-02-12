@@ -781,7 +781,7 @@ bool check_service_permissions(SERVICE* service)
     auto servers = service->reachable_servers();
 
     if (rcap_type_required(service_get_capabilities(service), RCAP_TYPE_NO_AUTH)
-        || config_get_global_options()->skip_permission_checks
+        || config_get_global_options()->skip_permission_checks.get()
         || servers.empty())     // No servers to check
     {
         return true;
