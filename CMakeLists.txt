@@ -68,6 +68,12 @@ include(cmake/BuildMicroHttpd.cmake)
 
 include_directories(${JANSSON_INCLUDE_DIR})
 
+# Both of these modules require librdkafka
+if (BUILD_KAFKACDC OR BUILD_MIRROR OR BUILD_SYSTEM_TESTS)
+  include(${CMAKE_SOURCE_DIR}/cmake/BuildRdkafka.cmake)
+  include_directories(${RDKAFKA_INCLUDE_DIR})
+endif()
+
 if(NOT OPENSSL_FOUND AND NOT BUILD_SYSTEM_TESTS)
   message(FATAL_ERROR "Failed to locate dependency: OpenSSL")
 else()

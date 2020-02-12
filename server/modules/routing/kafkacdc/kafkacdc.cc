@@ -152,7 +152,8 @@ public:
     bool create_table(const Table& table)
     {
         json_t* js = table.to_json();
-        bool rval = produce(js, nullptr, 0);
+        auto gtid = table.gtid.to_string();
+        bool rval = produce(js, gtid.c_str(), gtid.length());
         json_decref(js);
         return rval;
     }

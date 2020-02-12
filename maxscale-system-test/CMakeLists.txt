@@ -32,9 +32,10 @@ add_library(testcore SHARED testconnections.cpp nodes.cpp mariadb_nodes.cpp maxs
   # Include the CDC connector in the core library
   ${CMAKE_SOURCE_DIR}/connectors/cdc-connector/cdc_connector.cpp)
 target_link_libraries(testcore
-        ${MARIADB_CONNECTOR_LIBRARIES} ${JANSSON_LIBRARIES} maxbase maxsql z m pthread ssl dl rt crypto crypt)
+        ${MARIADB_CONNECTOR_LIBRARIES} ${JANSSON_LIBRARIES} maxbase maxsql z m pthread ssl dl rt crypto crypt
+        ${RDKAFKA_LIBRARIES})
 install(TARGETS testcore DESTINATION system-test)
-add_dependencies(testcore connector-c jansson maxbase)
+add_dependencies(testcore connector-c jansson maxbase librdkafka)
 
 # Include the CDC connector headers
 include_directories(${CMAKE_SOURCE_DIR}/../connectors/cdc-connector/)
@@ -196,6 +197,9 @@ add_test_executable(mxs2443_global_causal_reads.cpp mxs2443_global_causal_reads 
 
 # MXS-2785: Binlogfilter database rewrite test
 add_test_executable(mxs2785_binlogfilter_rewrite.cpp mxs2785_binlogfilter_rewrite mxs2785_binlogfilter_rewrite LABELS binlogfilter REPL_BACKEND)
+
+# KafkaCDC test case
+add_test_executable(test_kafkacdc.cpp test_kafkacdc test_kafkacdc LABELS kafkacdc REPL_BACKEND)
 
 ############################################
 # END: Tests that require GTID             #

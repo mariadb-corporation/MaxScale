@@ -1,9 +1,3 @@
-# Both of these modules require librdkafka
-if (BUILD_KAFKACDC OR BUILD_MIRROR)
-  include(${CMAKE_SOURCE_DIR}/cmake/BuildRdkafka.cmake)
-  include_directories(${RDKAFKA_INCLUDE_DIR})
-endif()
-
 # Avrorouter and kafkacdc use the replicator library
 if(BUILD_CDC OR BUILD_KAFKACDC)
   add_subdirectory(replicator)
