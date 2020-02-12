@@ -1314,7 +1314,7 @@ protected:
  * A concrete Value. Instantiated with a derived class and the
  * corresponding param type.
  */
-template<class This, class ParamType>
+template<class ParamType>
 class ConcreteType : public Type
 {
 public:
@@ -1332,7 +1332,7 @@ public:
 
     ConcreteType(Configuration* pConfiguration,
                  const ParamType* pParam,
-                 std::function<void (value_type)> on_set)
+                 std::function<void (value_type)> on_set = nullptr)
         : Type(pConfiguration, pParam)
         , m_value(pParam->default_value())
         , m_on_set(on_set)
@@ -1441,103 +1441,57 @@ protected:
 };
 
 
-class Number : public ConcreteType<Number, ParamNumber>
+template<class ParamType>
+class Number : public ConcreteType<ParamType>
 {
-protected:
+public:
+    using value_type = typename ParamType::value_type;
+
     Number(Configuration* pConfiguration,
-           const ParamNumber* pParam,
-           std::function<void (value_type)> on_set)
-        : ConcreteType(pConfiguration, pParam, on_set)
+           const ParamType* pParam,
+           std::function<void (value_type)> on_set = nullptr)
+        : ConcreteType<ParamType>(pConfiguration, pParam, on_set)
     {
     }
 
 protected:
-    value_type atomic_get() const override final;
-    void atomic_set(const value_type& value) override final;
+    value_type atomic_get() const override final
+    {
+        // this-> as otherwise m_value is not visible.
+        return mxb::atomic::load(&this->m_value, mxb::atomic::RELAXED);
+    }
+
+    void atomic_set(const value_type& value) override final
+    {
+        mxb::atomic::store(&this->m_value, value, mxb::atomic::RELAXED);
+    }
 };
 
 /**
  * Count
  */
-class Count : public Number
-{
-public:
-    Count(Configuration* pConfiguration,
-          const ParamCount* pParam,
-          std::function<void (value_type)> on_set = nullptr)
-        : Number(pConfiguration, pParam, on_set)
-    {
-    }
-
-    const ParamCount& parameter() const override
-    {
-        return static_cast<const ParamCount&>(*m_pParam);
-    }
-};
+using Count = Number<ParamCount>;
 
 /**
  * Integer
  */
-class Integer : public Number
-{
-public:
-    Integer(Configuration* pConfiguration,
-            const ParamInteger* pParam,
-            std::function<void (value_type)> on_set = nullptr)
-        : Number(pConfiguration, pParam, on_set)
-    {
-    }
-
-    const ParamInteger& parameter() const override
-    {
-        return static_cast<const ParamInteger&>(*m_pParam);
-    }
-};
+using Integer = Number<ParamInteger>;
 
 /**
  * BitMask
  */
-class BitMask : public Count
-{
-public:
-    BitMask(Configuration* pConfiguration,
-            const ParamCount* pParam,
-            std::function<void (value_type)> on_set = nullptr)
-        : Count(pConfiguration, pParam, on_set)
-    {
-    }
-};
+using BitMask = Count;
 
 /**
  * Bool
  */
-class Bool : public ConcreteType<Bool, ParamBool>
-{
-public:
-    Bool(Configuration* pConfiguration,
-         const ParamBool* pParam,
-         std::function<void (value_type)> on_set = nullptr)
-        : ConcreteType<Bool, ParamBool>(pConfiguration, pParam, on_set)
-    {
-    }
-};
+using Bool = ConcreteType<ParamBool>;
 
 /**
  * Duration
  */
 template<class T>
-class Duration : public ConcreteType<Duration<T>, ParamDuration<T>>
-{
-public:
-    using value_type = typename ParamDuration<T>::value_type;
-
-    Duration(Configuration* pConfiguration,
-             const ParamDuration<T>* pParam,
-             std::function<void (value_type)> on_set = nullptr)
-        : ConcreteType<Duration<T>, ParamDuration<T>>(pConfiguration, pParam, on_set)
-    {
-    }
-};
+using Duration = ConcreteType<ParamDuration<T>>;
 
 using Milliseconds = Duration<std::chrono::milliseconds>;
 using Seconds = Duration<std::chrono::seconds>;
@@ -1546,93 +1500,32 @@ using Seconds = Duration<std::chrono::seconds>;
  * Enum
  */
 template<class T>
-class Enum : public ConcreteType<Enum<T>, ParamEnum<T>>
-{
-public:
-    using value_type = typename ParamEnum<T>::value_type;
-
-    Enum(Configuration* pConfiguration,
-         const ParamEnum<T>* pParam,
-         std::function<void (value_type)> on_set = nullptr)
-        : ConcreteType<Enum<T>, ParamEnum<T>>(pConfiguration, pParam, on_set)
-    {
-    }
-};
+using Enum = ConcreteType<ParamEnum<T>>;
 
 /**
  * Path
  */
-class Path : public ConcreteType<Path, ParamPath>
-{
-public:
-    Path(Configuration* pConfiguration,
-         const ParamPath* pParam,
-         std::function<void (value_type)> on_set = nullptr)
-        : ConcreteType<Path, ParamPath>(pConfiguration, pParam, on_set)
-    {
-    }
-};
+using Path = ConcreteType<ParamPath>;
 
 /**
  * Size
  */
-class Size : public ConcreteType<Size, ParamSize>
-{
-public:
-    Size(Configuration* pConfiguration,
-         const ParamSize* pParam,
-         std::function<void (value_type)> on_set = nullptr)
-        : ConcreteType(pConfiguration, pParam, on_set)
-    {
-    }
-};
-
-inline Size::value_type operator/(const Size& lhs, Size::value_type rhs)
-{
-    return lhs.get() / rhs;
-}
+using Size = ConcreteType<ParamSize>;
 
 /**
  * Server
  */
-class Server : public ConcreteType<Server, ParamServer>
-{
-public:
-    Server(Configuration* pConfiguration,
-           const ParamServer* pParam,
-           std::function<void (value_type)> on_set = nullptr)
-        : ConcreteType<Server, ParamServer>(pConfiguration, pParam, on_set)
-    {
-    }
-};
+using Server = ConcreteType<ParamServer>;
 
 /**
  * Target
  */
-class Target : public ConcreteType<Target, ParamTarget>
-{
-public:
-    Target(Configuration* pConfiguration,
-           const ParamTarget* pParam,
-           std::function<void (value_type)> on_set = nullptr)
-        : ConcreteType<Target, ParamTarget>(pConfiguration, pParam, on_set)
-    {
-    }
-};
+using Target = ConcreteType<ParamTarget>;
 
 /**
  * String
  */
-class String : public ConcreteType<String, ParamString>
-{
-public:
-    String(Configuration* pConfiguration,
-           const ParamString* pParam,
-           std::function<void (value_type)> on_set = nullptr)
-        : ConcreteType<String, ParamString>(pConfiguration, pParam, on_set)
-    {
-    }
-};
+using String = ConcreteType<ParamString>;
 
 /**
  * IMPLEMENTATION DETAILS
@@ -1882,5 +1775,4 @@ void Configuration::add_native(typename ParamType::value_type* pValue,
 {
     m_natives.push_back(std::unique_ptr<Type>(new Native<ParamType>(this, pParam, pValue, on_set)));
 }
-
 }

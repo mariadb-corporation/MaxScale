@@ -1030,17 +1030,4 @@ bool ParamString::from_json(const json_t* pJson,
 
     return rv;
 }
-
-/**
- * class Number
- */
-Number::value_type Number::atomic_get() const
-{
-    return mxb::atomic::load(&m_value, mxb::atomic::RELAXED);
-}
-
-void Number::atomic_set(const value_type& value)
-{
-    mxb::atomic::store(&m_value, value, mxb::atomic::RELAXED);
-}
 }

@@ -73,13 +73,13 @@ public:
         const value_type m_default_value = { 0, 0, 0 };
     };
 
-    class LogThrottling : public config::ConcreteType<LogThrottling, ParamLogThrottling>
+    class LogThrottling : public config::ConcreteType<ParamLogThrottling>
     {
     public:
         LogThrottling(Configuration* pConfiguration,
                       const ParamLogThrottling* pParam,
                       std::function<void (value_type)> on_set = nullptr)
-            : config::ConcreteType<LogThrottling, ParamLogThrottling>(pConfiguration, pParam, on_set)
+            : config::ConcreteType<ParamLogThrottling>(pConfiguration, pParam, on_set)
         {
         }
     };

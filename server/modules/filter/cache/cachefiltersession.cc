@@ -27,12 +27,12 @@ namespace
 
 inline bool cache_max_resultset_rows_exceeded(const CacheConfig& config, int64_t rows)
 {
-    return config.max_resultset_rows.get() == 0 ? false : rows > config.max_resultset_rows.get();
+    return config.max_resultset_rows == 0 ? false : rows > config.max_resultset_rows;
 }
 
 inline bool cache_max_resultset_size_exceeded(const CacheConfig& config, int64_t size)
 {
-    return config.max_resultset_size.get() == 0 ? false : size > config.max_resultset_size.get();
+    return config.max_resultset_size == 0 ? false : size > config.max_resultset_size;
 }
 }
 
@@ -828,7 +828,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
         }
         else if (m_pSession->is_trx_read_only())
         {
-            if (config.cache_in_trxs.get() >= CACHE_IN_TRXS_READ_ONLY)
+            if (config.cache_in_trxs >= CACHE_IN_TRXS_READ_ONLY)
             {
                 if (log_decisions())
                 {
@@ -838,7 +838,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
             }
             else
             {
-                mxb_assert(config.cache_in_trxs.get() == CACHE_IN_TRXS_NEVER);
+                mxb_assert(config.cache_in_trxs == CACHE_IN_TRXS_NEVER);
 
                 if (log_decisions())
                 {
@@ -852,7 +852,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
             // There is a transaction and it is *not* explicitly read-only,
             // although so far there has only been SELECTs.
 
-            if (config.cache_in_trxs.get() >= CACHE_IN_TRXS_ALL)
+            if (config.cache_in_trxs >= CACHE_IN_TRXS_ALL)
             {
                 if (log_decisions())
                 {
@@ -862,8 +862,8 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
             }
             else
             {
-                mxb_assert((config.cache_in_trxs.get() == CACHE_IN_TRXS_NEVER)
-                           || (config.cache_in_trxs.get() == CACHE_IN_TRXS_READ_ONLY));
+                mxb_assert((config.cache_in_trxs == CACHE_IN_TRXS_NEVER)
+                           || (config.cache_in_trxs == CACHE_IN_TRXS_READ_ONLY));
 
                 if (log_decisions())
                 {
@@ -893,7 +893,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
                 switch (get_statement_type(pPacket))
                 {
                 case StatementType::SELECT:
-                    if (config.selects.get() == CACHE_SELECTS_VERIFY_CACHEABLE)
+                    if (config.selects == CACHE_SELECTS_VERIFY_CACHEABLE)
                     {
                         // Note that the type mask must be obtained a new. A few lines
                         // above we only got the transaction state related type mask.
