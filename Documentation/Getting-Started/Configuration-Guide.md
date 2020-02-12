@@ -151,7 +151,6 @@ runtime and can only be defined in a configuration file:
 * `users_refresh_time`
 * `users_refresh_interval`
 * `load_persisted_configs`
-* `admin_auth`
 * `admin_ssl_key`
 * `admin_ssl_cert`
 * `admin_ssl_ca_cert`
