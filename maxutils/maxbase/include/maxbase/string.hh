@@ -33,7 +33,7 @@ const char* mxb_strerror(int error);
  * function std::ostream& operator<<(std::ostream&, const T&) declared.
  */
 template<class T,
-         typename std::remove_reference<decltype(operator<<(*(std::ostream*)(0), *(T*)(0)))>::type* =
+         typename std::remove_reference<decltype(operator<<(*(std::ostream*)nullptr, *(T*)(0)))>::type* =
              nullptr>
 std::string to_string(const T& t)
 {
@@ -41,6 +41,17 @@ std::string to_string(const T& t)
     os << t;
     return os.str();
 }
+
+/**
+ * macro MAKE_STR - Make a string out of streaming operations:
+ *                  db.query(MAKE_STR("SELECT col FROM table WHERE id = " << id));
+ */
+#define MAKE_STR(sstr) \
+    [&]() { \
+        std::ostringstream os; \
+        os << sstr; \
+        return os.str(); \
+    } ()
 
 namespace maxbase
 {
