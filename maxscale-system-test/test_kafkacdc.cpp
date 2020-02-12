@@ -5,15 +5,22 @@
 
 using namespace std::literals::string_literals;
 
-int consume_messages(TestConnections& test)
+std::unique_ptr<RdKafka::KafkaConsumer> consumer;
+
+void prepare_consumer(TestConnections& test)
 {
     std::string err;
     auto cnf = RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL);
     cnf->set("bootstrap.servers", test.maxscales->IP[0] + ":9092"s, err);
     cnf->set("group.id", "kafkacdc", err);
 
-    auto consumer = RdKafka::KafkaConsumer::create(cnf, err);
+    consumer.reset(RdKafka::KafkaConsumer::create(cnf, err));
     consumer->subscribe({"kafkacdc"});
+    delete cnf;
+}
+
+int consume_messages(TestConnections& test)
+{
     int i = 0;
     bool ok = true;
 
@@ -35,10 +42,13 @@ int consume_messages(TestConnections& test)
         delete msg;
     }
 
-    delete consumer;
-    delete cnf;
-
     return i;
+}
+
+void read_messages(TestConnections& test, int n_expected)
+{
+    int i = consume_messages(test);
+    test.expect(i == n_expected, "Expected %d messages, got %d", n_expected, i);
 }
 
 int main(int argc, char** argv)
@@ -64,9 +74,25 @@ int main(int argc, char** argv)
     test.tprintf("Give MaxScale some time to process the events");
     sleep(5);
 
-    int i = consume_messages(test);
-    const int n_expected = 7;
-    test.expect(i == n_expected, "Expected %d messages, got %d", n_expected, i);
+    // Connect to Kafka
+    prepare_consumer(test);
+
+    read_messages(test, 7);
+
+    conn.query("INSERT INTO t1 VALUES (4), (5), (6)");
+    sleep(5);
+
+    read_messages(test, 3);
+
+    test.tprintf("Restarting MaxScale and inserting data");
+    test.maxscales->stop();
+    test.maxscales->ssh_output("rm /var/lib/maxscale/Kafka-CDC/current_gtid.txt");
+    test.maxscales->start();
+
+    conn.query("INSERT INTO t1 VALUES (7), (8), (9)");
+    sleep(5);
+
+    read_messages(test, 3);
 
     test.tprintf("Stopping Kafka container");
     test.maxscales->ssh_output("sudo docker ps -aq|xargs sudo docker rm -vf");
