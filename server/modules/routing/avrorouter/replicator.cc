@@ -221,6 +221,11 @@ void Replicator::Imp::process_events()
     {
         if (!connect())
         {
+            if (m_should_stop)
+            {
+                break;
+            }
+
             // We failed to connect to any of the servers, try again in a few seconds
             std::this_thread::sleep_for(milliseconds(5000));
             continue;
