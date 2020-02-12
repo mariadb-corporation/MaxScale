@@ -74,8 +74,6 @@ const MXS_ENUM_VALUE require_lock_values[] =
     {"majority_of_all",MariaDBMonitor::LOCKS_MAJORITY_ALL                  },
     {nullptr}
 };
-
-auto lock_check_interval = mxb::Duration((double)60);   // Re-check once per minute.
 }
 
 MariaDBMonitor::MariaDBMonitor(const string& name, const string& module)
@@ -751,12 +749,41 @@ bool MariaDBMonitor::server_locks_in_use() const
 
 bool MariaDBMonitor::check_lock_status_this_tick()
 {
+    auto calc_interval = [this](int base_intervals, int deviation_max_intervals) {
+            // Scale the interval calculation by the monitor interval.
+            int mon_interval_ms = settings().interval;
+            int deviation = m_random_gen.b_to_e_co(0, deviation_max_intervals);
+            return (base_intervals + deviation) * mon_interval_ms;
+        };
+
     mxb_assert(!(m_locks_info.locks_needed() && !server_locks_in_use()));
     bool should_update_lock_status = false;
     // Attempt to get locks when starting.
-    if (server_locks_in_use() && (ticks() == 0 || m_locks_info.locks_needed()))
+    if (server_locks_in_use())
     {
-        should_update_lock_status = true;
+        if (m_locks_info.time_to_update())
+        {
+            should_update_lock_status = true;
+            // Calculate time until next update check. Randomize a bit to reduce possibility that multiple
+            // monitors would attempt to get locks simultaneously.
+            // The randomization parameters are not used configurable, but the correct values are not
+            // obvious.
+            int next_check_interval = calc_interval(10, 6);
+            m_locks_info.lock_check_interval = std::chrono::milliseconds(next_check_interval);
+        }
+        else if (m_locks_info.locks_needed())
+        {
+            // A cluster operation depends on acquiring locks, and enough time has passed.
+            should_update_lock_status = true;
+            // Calculate time until next "need" check. Again, randomize a bit. Use smaller values than with
+            // the normal checks, as the frequency is higher and the other MaxScale is likely down.
+            int next_check_interval = calc_interval(2, 3);
+            m_locks_info.lock_need_interval = std::chrono::milliseconds(next_check_interval);
+        }
+    }
+
+    if (should_update_lock_status)
+    {
         m_locks_info.last_lock_update.restart();
     }
     return should_update_lock_status;
@@ -812,8 +839,13 @@ bool MariaDBMonitor::cluster_operations_disabled_short() const
 
 bool MariaDBMonitor::ClusterLocksInfo::locks_needed() const
 {
-    return failover_needs_locks || switchover_needs_locks || rejoin_needs_locks
-           || last_lock_update.split() > lock_check_interval;
+    return (failover_needs_locks || switchover_needs_locks || rejoin_needs_locks)
+           && last_lock_update.split() > lock_need_interval;
+}
+
+bool MariaDBMonitor::ClusterLocksInfo::time_to_update() const
+{
+    return last_lock_update.split() > lock_check_interval;
 }
 
 /**

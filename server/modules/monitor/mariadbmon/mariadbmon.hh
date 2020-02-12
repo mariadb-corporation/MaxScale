@@ -247,14 +247,19 @@ private:
     struct ClusterLocksInfo
     {
         bool locks_needed() const;
+        bool time_to_update() const;
 
-        mxb::StopWatch last_lock_update;            /* Time since last lock status update */
+        mxb::StopWatch last_lock_update;        /* Time since last lock status update */
+        mxb::Duration  lock_check_interval {0}; /* General lock check interval */
+        mxb::Duration  lock_need_interval {0};  /* If a cluster op requires locks, use a smaller interval */
 
         bool failover_needs_locks {false};
         bool switchover_needs_locks {false};
         bool rejoin_needs_locks {false};
     };
     ClusterLocksInfo m_locks_info;
+
+    mxb::XorShiftRandom m_random_gen;
 
     // MariaDB-Monitor specific settings. These are only written to when configuring the monitor.
     class Settings
