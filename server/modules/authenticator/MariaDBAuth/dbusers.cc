@@ -510,26 +510,24 @@ static int gw_mysql_set_timeouts(MYSQL* handle)
     int rc;
 
     mxs::Config* cnf = config_get_global_options();
+    unsigned int timeout;
 
-    if ((rc = mysql_optionsv(handle,
-                             MYSQL_OPT_READ_TIMEOUT,
-                             (void*) &cnf->auth_read_timeout)))
+    timeout = cnf->auth_read_timeout.get().count();
+    if ((rc = mysql_optionsv(handle, MYSQL_OPT_READ_TIMEOUT, (void*) &timeout)))
     {
         MXS_ERROR("Failed to set read timeout for backend connection.");
         goto retblock;
     }
 
-    if ((rc = mysql_optionsv(handle,
-                             MYSQL_OPT_CONNECT_TIMEOUT,
-                             (void*) &cnf->auth_conn_timeout)))
+    timeout = cnf->auth_conn_timeout.get().count();
+    if ((rc = mysql_optionsv(handle, MYSQL_OPT_CONNECT_TIMEOUT, (void*) &timeout)))
     {
         MXS_ERROR("Failed to set connect timeout for backend connection.");
         goto retblock;
     }
 
-    if ((rc = mysql_optionsv(handle,
-                             MYSQL_OPT_WRITE_TIMEOUT,
-                             (void*) &cnf->auth_write_timeout)))
+    timeout = cnf->auth_write_timeout.get().count();
+    if ((rc = mysql_optionsv(handle, MYSQL_OPT_WRITE_TIMEOUT, (void*) &timeout)))
     {
         MXS_ERROR("Failed to set write timeout for backend connection.");
         goto retblock;
@@ -731,9 +729,14 @@ static bool check_server_permissions(SERVICE* service,
     }
 
     mxs::Config* cnf = config_get_global_options();
-    mysql_optionsv(mysql, MYSQL_OPT_READ_TIMEOUT, &cnf->auth_read_timeout);
-    mysql_optionsv(mysql, MYSQL_OPT_CONNECT_TIMEOUT, &cnf->auth_conn_timeout);
-    mysql_optionsv(mysql, MYSQL_OPT_WRITE_TIMEOUT, &cnf->auth_write_timeout);
+    unsigned int timeout;
+
+    timeout = cnf->auth_read_timeout.get().count();
+    mysql_optionsv(mysql, MYSQL_OPT_READ_TIMEOUT, &timeout);
+    timeout = cnf->auth_conn_timeout.get().count();
+    mysql_optionsv(mysql, MYSQL_OPT_CONNECT_TIMEOUT, &timeout);
+    timeout = cnf->auth_write_timeout.get().count();
+    mysql_optionsv(mysql, MYSQL_OPT_WRITE_TIMEOUT, &timeout);
     mysql_optionsv(mysql, MYSQL_PLUGIN_DIR, get_connector_plugindir());
 
     if (mxs_mysql_real_connect(mysql, server, user, password) == NULL)
