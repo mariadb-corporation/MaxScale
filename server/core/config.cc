@@ -509,15 +509,15 @@ Config::Config()
     , auth_write_timeout(this, &s_auth_write_timeout)
     , skip_permission_checks(this, &s_skip_permission_checks)
     , passive(this, &s_passive, [](bool value) {
-            if (this_unit.gateway.passive.get() && !value)
+            if (Config::get().passive.get() && !value)
             {
                 // If we were passive, but no longer are, we register the time.
-                this_unit.gateway.promoted_at = mxs_clock();
+                Config::get().promoted_at = mxs_clock();
             }
         })
     , qc_cache_max_size(this, &s_qc_cache_max_size, [](int64_t size) {
-            this_unit.gateway.qc_cache_properties.max_size = size;
-            qc_set_cache_properties(&this_unit.gateway.qc_cache_properties);
+            Config::get().qc_cache_properties.max_size = size;
+            qc_set_cache_properties(&Config::get().qc_cache_properties);
         })
     , admin_log_auth_failures(this, &s_admin_log_auth_failures)
     , query_retries(this, &s_query_retries)
@@ -529,8 +529,8 @@ Config::Config()
     , max_auth_errors_until_block(this, &s_max_auth_errors_until_block)
     , rebalance_threshold(this, &s_rebalance_threshold)
     , rebalance_period(this, &s_rebalance_period, [](const std::chrono::milliseconds&) {
-            mxb_assert(mxs::MainWorker::get());
-            mxs::MainWorker::get()->start_rebalancing();
+            mxb_assert(MainWorker::get());
+            MainWorker::get()->start_rebalancing();
         })
     , rebalance_window(this, &s_rebalance_window)
 
@@ -1696,7 +1696,7 @@ bool config_load_global(const char* filename)
     }
     else
     {
-        rval = this_unit.gateway.configure(params);
+        rval = mxs::Config::get().configure(params);
     }
 
     return rval;
@@ -2485,7 +2485,7 @@ void config_remove_param(CONFIG_CONTEXT* obj, const char* name)
  */
 int config_threadcount()
 {
-    return this_unit.gateway.n_threads;
+    return mxs::Config::get().n_threads;
 }
 
 size_t config_thread_stack_size()
@@ -2505,22 +2505,22 @@ size_t config_thread_stack_size()
 
 uint32_t config_writeq_high_water()
 {
-    return this_unit.gateway.writeq_high_water.get();
+    return mxs::Config::get().writeq_high_water.get();
 }
 
 bool config_set_writeq_high_water(uint32_t size)
 {
-    return this_unit.gateway.writeq_high_water.set(size);
+    return mxs::Config::get().writeq_high_water.set(size);
 }
 
 uint32_t config_writeq_low_water()
 {
-    return this_unit.gateway.writeq_low_water.get();
+    return mxs::Config::get().writeq_low_water.get();
 }
 
 bool config_set_writeq_low_water(uint32_t size)
 {
-    return this_unit.gateway.writeq_low_water.set(size);
+    return mxs::Config::get().writeq_low_water.set(size);
 }
 
 bool config_can_modify_at_runtime(const char* name)
@@ -4092,14 +4092,16 @@ static bool create_global_config(const char* filename)
         return false;
     }
 
+    const auto& config = mxs::Config::get();
+
     dprintf(file, "[maxscale]\n");
-    dprintf(file, "%s=%ld\n", CN_AUTH_CONNECT_TIMEOUT, this_unit.gateway.auth_conn_timeout.get().count());
-    dprintf(file, "%s=%ld\n", CN_AUTH_READ_TIMEOUT, this_unit.gateway.auth_read_timeout.get().count());
-    dprintf(file, "%s=%ld\n", CN_AUTH_WRITE_TIMEOUT, this_unit.gateway.auth_write_timeout.get().count());
-    dprintf(file, "%s=%s\n", CN_ADMIN_AUTH, this_unit.gateway.admin_auth ? "true" : "false");
-    dprintf(file, "%s=%s\n", CN_PASSIVE, this_unit.gateway.passive.get() ? "true" : "false");
-    dprintf(file, "%s=%s\n", CN_REBALANCE_PERIOD, this_unit.gateway.rebalance_period.to_string().c_str());
-    dprintf(file, "%s=%s\n", CN_REBALANCE_THRESHOLD, this_unit.gateway.rebalance_threshold.to_string().c_str());
+    dprintf(file, "%s=%ld\n", CN_AUTH_CONNECT_TIMEOUT, config.auth_conn_timeout.get().count());
+    dprintf(file, "%s=%ld\n", CN_AUTH_READ_TIMEOUT, config.auth_read_timeout.get().count());
+    dprintf(file, "%s=%ld\n", CN_AUTH_WRITE_TIMEOUT, config.auth_write_timeout.get().count());
+    dprintf(file, "%s=%s\n", CN_ADMIN_AUTH, config.admin_auth ? "true" : "false");
+    dprintf(file, "%s=%s\n", CN_PASSIVE, config.passive.get() ? "true" : "false");
+    dprintf(file, "%s=%s\n", CN_REBALANCE_PERIOD, config.rebalance_period.to_string().c_str());
+    dprintf(file, "%s=%s\n", CN_REBALANCE_THRESHOLD, config.rebalance_threshold.to_string().c_str());
 
     close(file);
 
@@ -4905,7 +4907,7 @@ bool config_set_rebalance_threshold(const char* value)
     int intval = strtol(value, &endptr, 0);
     if (*endptr == '\0' && intval >= 0 && intval <= 100)
     {
-        this_unit.gateway.rebalance_threshold.set(intval);
+        mxs::Config::get().rebalance_threshold.set(intval);
         rv = true;
     }
     else
