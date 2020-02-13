@@ -105,17 +105,11 @@ public:
 
     Config();
 
-    bool    config_check;                               /**< Only check config */
-    char    release_string[RELEASE_STR_LENGTH];         /**< The release name string of the system */
-    char    sysname[SYSNAME_LEN];                       /**< The OS name of the system */
-    uint8_t mac_sha1[SHA_DIGEST_LENGTH];                /**< The SHA1 digest of an interface MAC address */
-
     config::Bool          log_debug;                   /**< Whether debug messages are logged. */
     config::Bool          log_info;                    /**< Whether info messages are logged. */
     config::Bool          log_notice;                  /**< Whether notice messages are logged. */
     config::Bool          log_warning;                 /**< Whether warning messages are logged. */
     LogThrottling         log_throttling;              /**< When and how to throttle logged messaged. */
-    int64_t               n_threads;                   /**< Number of polling threads */
     SessionDumpStatements dump_statements;             /**< Whether to dump last statements. */
     config::Count         session_trace;               /**< How entries stored to session trace log.*/
     config::Bool          ms_timestamp;                /**< Enable or disable high precision timestamps */
@@ -127,29 +121,15 @@ public:
     config::Seconds       auth_write_timeout;          /**< Write timeout for the user authentication */
     config::Bool          skip_permission_checks;      /**< Skip service and monitor permission checks */
     config::Bool          passive;                     /**< True if MaxScale is in passive mode */
-    std::string           qc_name;                     /**< The name of the query classifier to load */
-    std::string           qc_args;                     /**< Arguments for the query classifieer */
     config::Size          qc_cache_max_size;           /**< Maximum amount of memory used by qc */
-    qc_sql_mode_t         qc_sql_mode;                 /**< The query classifier sql mode */
-    std::string           admin_host;                  /**< Admin interface host */
-    int64_t               admin_port;                  /**< Admin interface port */
-    bool                  admin_auth;                  /**< Admin interface authentication */
-    bool                  admin_enabled;               /**< Admin interface is enabled */
     config::Bool          admin_log_auth_failures;     /**< Log admin interface authentication failures */
-    std::string           admin_pam_rw_service;        /**< PAM service for read-write users */
-    std::string           admin_pam_ro_service;        /**< PAM service for read-only users */
-    std::string           admin_ssl_key;               /**< Admin SSL key */
-    std::string           admin_ssl_cert;              /**< Admin SSL cert */
-    std::string           admin_ssl_ca_cert;           /**< Admin SSL CA cert */
     config::Integer       query_retries;               /**< Number of times a interrupted query is
                                                          * retried */
     config::Seconds       query_retry_timeout;         /**< Timeout for query retries */
-    std::string           local_address;               /**< Local address to use when connecting */
     config::Seconds       users_refresh_time;          /**< How often the users can be refreshed */
     config::Seconds       users_refresh_interval;      /**< How often the users will be refreshed */
     config::Size          writeq_high_water;           /**< High water mark of dcb write queue */
     config::Size          writeq_low_water;            /**< Low water mark of dcb write queue */
-    bool                  load_persisted_configs;      /**< Load persisted configuration files on startup */
     config::Integer       max_auth_errors_until_block; /**< Host is blocked once this limit is reached */
     config::Integer       rebalance_threshold;         /**< If load of particular worker differs more than
                                                         * this % amount from load-average, rebalancing will
@@ -158,7 +138,29 @@ public:
     config::Milliseconds  rebalance_period;            /**< How often should rebalancing be made. */
     config::Count         rebalance_window;            /**< How many seconds should be taken into account. */
 
+    // NON-modifiable automatically configured parameters.
+    int64_t               n_threads;                   /**< Number of polling threads */
+    std::string           qc_name;                     /**< The name of the query classifier to load */
+    std::string           qc_args;                     /**< Arguments for the query classifieer */
+    qc_sql_mode_t         qc_sql_mode;                 /**< The query classifier sql mode */
+    std::string           admin_host;                  /**< Admin interface host */
+    int64_t               admin_port;                  /**< Admin interface port */
+    bool                  admin_auth;                  /**< Admin interface authentication */
+    bool                  admin_enabled;               /**< Admin interface is enabled */
+    std::string           admin_pam_rw_service;        /**< PAM service for read-write users */
+    std::string           admin_pam_ro_service;        /**< PAM service for read-only users */
+    std::string           admin_ssl_key;               /**< Admin SSL key */
+    std::string           admin_ssl_cert;              /**< Admin SSL cert */
+    std::string           admin_ssl_ca_cert;           /**< Admin SSL CA cert */
+    std::string           local_address;               /**< Local address to use when connecting */
+    bool                  load_persisted_configs;      /**< Load persisted configuration files on startup */
+
     // The following will not be configured via the configuration mechanism.
+    bool    config_check;                               /**< Only check config */
+    char    release_string[RELEASE_STR_LENGTH];         /**< The release name string of the system */
+    char    sysname[SYSNAME_LEN];                       /**< The OS name of the system */
+    uint8_t mac_sha1[SHA_DIGEST_LENGTH];                /**< The SHA1 digest of an interface MAC address */
+
     mxb_log_target_t      log_target;                  /**< Log type */
     bool                  substitute_variables;        /**< Should environment variables be substituted */
     QC_CACHE_PROPERTIES   qc_cache_properties;         /**< The query classifier cache properties. */
@@ -188,7 +190,6 @@ public:
     static config::ParamBool                            s_log_notice;
     static config::ParamBool                            s_log_warning;
     static ParamLogThrottling                           s_log_throttling;
-    static ParamThreadsCount                            s_n_threads;
     static config::ParamEnum<session_dump_statements_t> s_dump_statements;
     static config::ParamCount                           s_session_trace;
     static config::ParamBool                            s_ms_timestamp;
@@ -200,31 +201,33 @@ public:
     static config::ParamSeconds                         s_auth_write_timeout;
     static config::ParamBool                            s_skip_permission_checks;
     static config::ParamBool                            s_passive;
+    static config::ParamSize                            s_qc_cache_max_size;
+    static config::ParamBool                            s_admin_log_auth_failures;
+    static config::ParamInteger                         s_query_retries;
+    static config::ParamSeconds                         s_query_retry_timeout;
+    static ParamUsersRefreshTime                        s_users_refresh_time;
+    static config::ParamSeconds                         s_users_refresh_interval;
+    static config::ParamSize                            s_writeq_high_water;
+    static config::ParamSize                            s_writeq_low_water;
+    static config::ParamInteger                         s_max_auth_errors_until_block;
+    static config::ParamInteger                         s_rebalance_threshold;
+    static config::ParamMilliseconds                    s_rebalance_period;
+    static config::ParamCount                           s_rebalance_window;
+
+    static ParamThreadsCount                            s_n_threads;
     static config::ParamString                          s_qc_name;
     static config::ParamString                          s_qc_args;
-    static config::ParamSize                            s_qc_cache_max_size;
     static config::ParamEnum<qc_sql_mode_t>             s_qc_sql_mode;
     static config::ParamString                          s_admin_host;
     static config::ParamInteger                         s_admin_port;
     static config::ParamBool                            s_admin_auth;
     static config::ParamBool                            s_admin_enabled;
-    static config::ParamBool                            s_admin_log_auth_failures;
     static config::ParamString                          s_admin_pam_rw_service;
     static config::ParamString                          s_admin_pam_ro_service;
     static config::ParamString                          s_admin_ssl_key;
     static config::ParamString                          s_admin_ssl_cert;
     static config::ParamString                          s_admin_ssl_ca_cert;
-    static config::ParamInteger                         s_query_retries;
-    static config::ParamSeconds                         s_query_retry_timeout;
     static config::ParamString                          s_local_address;
-    static ParamUsersRefreshTime                        s_users_refresh_time;
-    static config::ParamSeconds                         s_users_refresh_interval;
-    static config::ParamSize                            s_writeq_high_water;
-    static config::ParamSize                            s_writeq_low_water;
     static config::ParamBool                            s_load_persisted_configs;
-    static config::ParamInteger                         s_max_auth_errors_until_block;
-    static config::ParamInteger                         s_rebalance_threshold;
-    static config::ParamMilliseconds                    s_rebalance_period;
-    static config::ParamCount                           s_rebalance_window;
 };
 }

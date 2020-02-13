@@ -155,14 +155,6 @@ config::ParamBool Config::s_log_warning(
     false,
     config::Param::Modifiable::AT_RUNTIME);
 
-Config::ParamThreadsCount Config::s_n_threads(
-    &Config::s_specification,
-    CN_THREADS,
-    "This parameter specifies how many threads will be used for handling the routing.",
-    DEFAULT_NTHREADS, // TODO: Why not get_processor_count()?
-    1,
-    std::numeric_limits<Config::ParamThreadsCount::value_type>::max());
-
 Config::ParamLogThrottling Config::s_log_throttling(
     &Config::s_specification,
     CN_LOG_THROTTLING,
@@ -258,18 +250,6 @@ config::ParamBool Config::s_passive(
     false,
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamString Config::s_qc_name(
-    &Config::s_specification,
-    CN_QUERY_CLASSIFIER,
-    "The name of the query classifier to load.",
-    "qc_sqlite");
-
-config::ParamString Config::s_qc_args(
-    &Config::s_specification,
-    CN_QUERY_CLASSIFIER_ARGS,
-    "Arguments for the query classifier.",
-    "");
-
 config::ParamSize Config::s_qc_cache_max_size(
     &Config::s_specification,
     CN_QUERY_CLASSIFIER_CACHE_SIZE,
@@ -277,76 +257,12 @@ config::ParamSize Config::s_qc_cache_max_size(
     0,
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamEnum<qc_sql_mode_t> Config::s_qc_sql_mode(
-    &Config::s_specification,
-    CN_SQL_MODE,
-    "The query classifier sql mode.",
-    {
-        { QC_SQL_MODE_DEFAULT, "default" },
-        { QC_SQL_MODE_ORACLE, "oracle" }
-    },
-    QC_SQL_MODE_DEFAULT);
-
-config::ParamString Config::s_admin_host(
-    &Config::s_specification,
-    CN_ADMIN_HOST,
-    "Admin interface host.",
-    DEFAULT_ADMIN_HOST);
-
-config::ParamInteger Config::s_admin_port(
-    &Config::s_specification,
-    CN_ADMIN_PORT,
-    "Admin interface port.",
-    DEFAULT_ADMIN_HTTP_PORT);
-
-config::ParamBool Config::s_admin_auth(
-    &Config::s_specification,
-    CN_ADMIN_AUTH,
-    "Admin interface authentication.",
-    true);
-
-config::ParamBool Config::s_admin_enabled(
-    &Config::s_specification,
-    CN_ADMIN_ENABLED,
-    "Admin interface is enabled.",
-    true);
-
 config::ParamBool Config::s_admin_log_auth_failures(
     &Config::s_specification,
     CN_ADMIN_LOG_AUTH_FAILURES,
     "Log admin interface authentication failures.",
     true,
     config::Param::Modifiable::AT_RUNTIME);
-
-config::ParamString Config::s_admin_pam_rw_service(
-    &Config::s_specification,
-    CN_ADMIN_PAM_READWRITE_SERVICE,
-    "PAM service for read-write users.",
-    "");
-
-config::ParamString Config::s_admin_pam_ro_service(
-    &Config::s_specification,
-    CN_ADMIN_PAM_READONLY_SERVICE,
-    "PAM service for read-only users.",
-    "");
-
-config::ParamString Config::s_admin_ssl_key(
-    &Config::s_specification,
-    CN_ADMIN_SSL_KEY,
-    "Admin SSL key",
-    "");
-
-config::ParamString Config::s_admin_ssl_cert(
-    &Config::s_specification,
-    CN_ADMIN_SSL_CERT,
-    "Admin SSL cert",
-    "");
-
-config::ParamString Config::s_admin_ssl_ca_cert(
-    &Config::s_specification,
-    CN_ADMIN_SSL_CA_CERT,
-    "Admin SSL CA cert",
-    "");
 
 config::ParamInteger Config::s_query_retries(
     &Config::s_specification,
@@ -363,12 +279,6 @@ config::ParamSeconds Config::s_query_retry_timeout(
     mxs::config::INTERPRET_AS_SECONDS,
     std::chrono::seconds(DEFAULT_QUERY_RETRY_TIMEOUT),
     config::Param::Modifiable::AT_RUNTIME);
-
-config::ParamString Config::s_local_address(
-    &Config::s_specification,
-    CN_LOCAL_ADDRESS,
-    "Local address to use when connecting.",
-    "");
 
 Config::ParamUsersRefreshTime Config::s_users_refresh_time(
     &Config::s_specification,
@@ -401,12 +311,6 @@ config::ParamSize Config::s_writeq_low_water(
     0,
     MIN_WRITEQ_LOW_WATER, std::numeric_limits<config::ParamInteger::value_type>::max(),
     config::Param::Modifiable::AT_RUNTIME);
-
-config::ParamBool Config::s_load_persisted_configs(
-    &Config::s_specification,
-    CN_LOAD_PERSISTED_CONFIGS,
-    "Specifies whether persisted configuration files should be loaded on startup.",
-    true);
 
 config::ParamInteger Config::s_max_auth_errors_until_block(
     &Config::s_specification,
@@ -442,6 +346,102 @@ config::ParamCount Config::s_rebalance_window(
     10,     // default
     1, 60,  // min, max
     config::Param::Modifiable::AT_RUNTIME);
+
+Config::ParamThreadsCount Config::s_n_threads(
+    &Config::s_specification,
+    CN_THREADS,
+    "This parameter specifies how many threads will be used for handling the routing.",
+    DEFAULT_NTHREADS, // TODO: Why not get_processor_count()?
+    1,
+    std::numeric_limits<Config::ParamThreadsCount::value_type>::max());
+
+config::ParamString Config::s_qc_name(
+    &Config::s_specification,
+    CN_QUERY_CLASSIFIER,
+    "The name of the query classifier to load.",
+    "qc_sqlite");
+
+config::ParamString Config::s_qc_args(
+    &Config::s_specification,
+    CN_QUERY_CLASSIFIER_ARGS,
+    "Arguments for the query classifier.",
+    "");
+
+config::ParamEnum<qc_sql_mode_t> Config::s_qc_sql_mode(
+    &Config::s_specification,
+    CN_SQL_MODE,
+    "The query classifier sql mode.",
+    {
+        { QC_SQL_MODE_DEFAULT, "default" },
+        { QC_SQL_MODE_ORACLE, "oracle" }
+    },
+    QC_SQL_MODE_DEFAULT);
+
+config::ParamString Config::s_admin_host(
+    &Config::s_specification,
+    CN_ADMIN_HOST,
+    "Admin interface host.",
+    DEFAULT_ADMIN_HOST);
+
+config::ParamInteger Config::s_admin_port(
+    &Config::s_specification,
+    CN_ADMIN_PORT,
+    "Admin interface port.",
+    DEFAULT_ADMIN_HTTP_PORT);
+
+config::ParamBool Config::s_admin_auth(
+    &Config::s_specification,
+    CN_ADMIN_AUTH,
+    "Admin interface authentication.",
+    true);
+
+config::ParamBool Config::s_admin_enabled(
+    &Config::s_specification,
+    CN_ADMIN_ENABLED,
+    "Admin interface is enabled.",
+    true);
+
+config::ParamString Config::s_admin_pam_rw_service(
+    &Config::s_specification,
+    CN_ADMIN_PAM_READWRITE_SERVICE,
+    "PAM service for read-write users.",
+    "");
+
+config::ParamString Config::s_admin_pam_ro_service(
+    &Config::s_specification,
+    CN_ADMIN_PAM_READONLY_SERVICE,
+    "PAM service for read-only users.",
+    "");
+
+config::ParamString Config::s_admin_ssl_key(
+    &Config::s_specification,
+    CN_ADMIN_SSL_KEY,
+    "Admin SSL key",
+    "");
+
+config::ParamString Config::s_admin_ssl_cert(
+    &Config::s_specification,
+    CN_ADMIN_SSL_CERT,
+    "Admin SSL cert",
+    "");
+
+config::ParamString Config::s_admin_ssl_ca_cert(
+    &Config::s_specification,
+    CN_ADMIN_SSL_CA_CERT,
+    "Admin SSL CA cert",
+    "");
+
+config::ParamString Config::s_local_address(
+    &Config::s_specification,
+    CN_LOCAL_ADDRESS,
+    "Local address to use when connecting.",
+    "");
+
+config::ParamBool Config::s_load_persisted_configs(
+    &Config::s_specification,
+    CN_LOAD_PERSISTED_CONFIGS,
+    "Specifies whether persisted configuration files should be loaded on startup.",
+    true);
 }
 
 namespace
