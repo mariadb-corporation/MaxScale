@@ -130,4 +130,31 @@ public:
 private:
     static thread_local Func s_redirect;
 };
+
+#define MXB_STREAM_LOG_HELPER(CMXBLOGLEVEL__, mxb_msg_str__) \
+    do { \
+        if (!mxb_log_is_priority_enabled(CMXBLOGLEVEL__)) \
+        { \
+            break; \
+        } \
+        thread_local std::ostringstream os; \
+        os.str(std::string()); \
+        os << mxb_msg_str__; \
+        mxb_log_message(CMXBLOGLEVEL__, MXB_MODULE_NAME, __FILE__, __LINE__, \
+                        __func__, "%s", os.str().c_str()); \
+    } while (false)
+
+#define MXS_SALERT(mxb_msg_str__)   MXS_STREAM_LOG_HELPER(LOG_ALERT, mxb_msg_str__)
+#define MXS_SERROR(mxb_msg_str__)   MXS_STREAM_LOG_HELPER(LOG_ERR, mxb_msg_str__)
+#define MXS_SWARNING(mxb_msg_str__) MXS_STREAM_LOG_HELPER(LOG_WARNING, mxb_msg_str__)
+#define MXS_SNOTICE(mxb_msg_str__)  MXS_STREAM_LOG_HELPER(LOG_NOTICE, mxb_msg_str__)
+#define MXS_SINFO(mxb_msg_str__)    MXS_STREAM_LOG_HELPER(LOG_INFO, mxb_msg_str__)
+#define MXS_SDEBUG(mxb_msg_str__)   MXS_STREAM_LOG_HELPER(LOG_DEBUG, mxb_msg_str__)
+
+#define MXS_SALERT   MXB_SALERT
+#define MXS_SERROR   MXB_SERROR
+#define MXS_SWARNING MXB_SWARNING
+#define MXS_SNOTICE  MXB_SNOTICE
+#define MXS_SINFO    MXB_SINFO
+#define MXS_SDEBUG   MXB_SDEBUG
 }
