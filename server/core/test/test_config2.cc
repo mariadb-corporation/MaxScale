@@ -248,15 +248,17 @@ int test_integer(config::Integer& value)
 {
     static const TestEntry<config::Integer::value_type> entries[] =
     {
-        {"0",           true, 0          },
-        {"-1",          true, -1         },
-        {"1",           true, 1          },
-        {"-2147483648", true, -2147483648},
-        {"2147483647",  true, 2147483647 },
+        {"0",                    true, 0},
+        {"-1",                   true, -1},
+        {"1",                    true, 1},
+        {"-2147483648",          true, -2147483648},
+        {"2147483647",           true, 2147483647},
+        {"-9223372036854775807", true, -9223372036854775807}, // Should be ...8, but compiler whines.
+        {"9223372036854775807",  true, 9223372036854775807},
 
-        {"-2147483649", false},
-        {"2147483648",  false},
-        {"0x10",        false},
+        {"-9223372036854775809", false},
+        {"9223372036854775808",  false},
+        {"0x10",                 false},
     };
 
     return test(value, entries, elements_in_array(entries));

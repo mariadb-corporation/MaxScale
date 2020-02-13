@@ -611,9 +611,10 @@ bool ParamNumber::from_string(const std::string& value_as_string,
 {
     const char* zValue = value_as_string.c_str();
     char* zEnd;
+    errno = 0;
     long l = strtol(zValue, &zEnd, 10);
 
-    bool rv = zEnd != zValue && *zEnd == 0;
+    bool rv = errno == 0 && zEnd != zValue && *zEnd == 0;
 
     if (rv)
     {
