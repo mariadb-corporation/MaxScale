@@ -173,7 +173,7 @@ bool RoutingWorker::init(mxb::WatchdogNotifier* pNotifier)
             int id_min_worker = INT_MAX;
             int id_max_worker = INT_MIN;
 
-            size_t rebalance_window = config_get_global_options()->rebalance_window.get();
+            size_t rebalance_window = mxs::Config::get().rebalance_window.get();
 
             int i;
             for (i = 0; i < nWorkers; ++i)
@@ -1276,7 +1276,7 @@ bool RoutingWorker::balance_workers()
 {
     bool balancing = false;
 
-    int threshold = config_get_global_options()->rebalance_threshold.get();
+    int threshold = mxs::Config::get().rebalance_threshold.get();
 
     if (threshold != 0)
     {
@@ -1296,7 +1296,7 @@ bool RoutingWorker::balance_workers(int threshold)
     RoutingWorker* pTo = nullptr;
     RoutingWorker* pFrom = nullptr;
 
-    auto rebalance_period = config_get_global_options()->rebalance_period.get();
+    auto rebalance_period = mxs::Config::get().rebalance_period.get();
     // If rebalance_period is != 0, then the average load has been updated
     // and we can use it.
     bool use_average = rebalance_period != std::chrono::milliseconds(0);

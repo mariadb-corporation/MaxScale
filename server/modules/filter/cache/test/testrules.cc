@@ -568,8 +568,8 @@ int main()
 
     if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
     {
-        mxs::Config* pConfig = config_get_global_options();
-        pConfig->n_threads = 1;
+        mxs::Config& config = mxs::Config::get();
+        config.n_threads = 1;
 
         set_libdir(MXS_STRDUP_A("../../../../../query_classifier/qc_sqlite/"));
         if (qc_init(NULL, QC_SQL_MODE_DEFAULT, "qc_sqlite", ""))

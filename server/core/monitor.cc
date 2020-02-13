@@ -722,7 +722,7 @@ json_t* Monitor::parameters_to_json() const
 
 bool Monitor::test_permissions(const string& query)
 {
-    if (m_servers.empty() || config_get_global_options()->skip_permission_checks.get())
+    if (m_servers.empty() || mxs::Config::get().skip_permission_checks.get())
     {
         return true;
     }

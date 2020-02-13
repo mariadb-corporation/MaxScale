@@ -107,7 +107,7 @@ void init_test_env(char* __attribute((unused))path = nullptr, uint32_t init_type
     set_signal(SIGBUS, sigfatal_handler);
 #endif
 
-    config_get_global_options()->n_threads = 1;
+    mxs::Config::get().n_threads = 1;
 
     SSL_library_init();
     SSL_load_error_strings();

@@ -420,15 +420,15 @@ static void sigfatal_handler(int i)
 
     current_id = std::this_thread::get_id();
 
-    mxs::Config* cnf = config_get_global_options();
+    const mxs::Config& cnf = mxs::Config::get();
 
     print_alert("MaxScale %s received fatal signal %d. "
                 "Commit ID: %s System name: %s Release string: %s\n\n",
-                MAXSCALE_VERSION, i, maxscale_commit, cnf->sysname, cnf->release_string);
+                MAXSCALE_VERSION, i, maxscale_commit, cnf.sysname, cnf.release_string);
 
     MXS_ALERT("MaxScale %s received fatal signal %d. "
               "Commit ID: %s System name: %s Release string: %s",
-              MAXSCALE_VERSION, i, maxscale_commit, cnf->sysname, cnf->release_string);
+              MAXSCALE_VERSION, i, maxscale_commit, cnf.sysname, cnf.release_string);
 
     if (DCB* dcb = dcb_get_current())
     {
@@ -692,16 +692,16 @@ retblock:
 static bool init_log()
 {
     bool rval = false;
-    mxs::Config* cnf = config_get_global_options();
+    const mxs::Config& cnf = mxs::Config::get();
 
-    if (!cnf->config_check && mkdir(get_logdir(), 0777) != 0 && errno != EEXIST)
+    if (!cnf.config_check && mkdir(get_logdir(), 0777) != 0 && errno != EEXIST)
     {
         print_alert(errno, "Cannot create log directory '%s'", default_logdir);
     }
-    else if (mxs_log_init(NULL, get_logdir(), cnf->log_target))
+    else if (mxs_log_init(NULL, get_logdir(), cnf.log_target))
     {
-        mxs_log_set_syslog_enabled(cnf->syslog.get());
-        mxs_log_set_maxlog_enabled(cnf->maxlog.get());
+        mxs_log_set_syslog_enabled(cnf.syslog.get());
+        mxs_log_set_maxlog_enabled(cnf.maxlog.get());
 
         // Since init_log() may be called more than once, we need to ensure
         // that the cleanup-function is not registered more than once.
@@ -1391,8 +1391,7 @@ int main(int argc, char** argv)
     // Option string for getopt
     const char accepted_opts[] = "dnce:f:g:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:H:p";
 
-    mxs::Config* cnf = config_get_global_options();
-    mxb_assert(cnf);
+    mxs::Config& cnf = mxs::Config::get();
     const char* specified_user = NULL;
     char export_cnf[PATH_MAX + 1] = "";
     string cnf_file_arg;    /*< conf filename from cmd-line arg */
@@ -1467,11 +1466,11 @@ int main(int argc, char** argv)
         case 'l':
             if (strncasecmp(optarg, "file", PATH_MAX) == 0)
             {
-                cnf->log_target = MXB_LOG_TARGET_FS;
+                cnf.log_target = MXB_LOG_TARGET_FS;
             }
             else if (strncasecmp(optarg, "stdout", PATH_MAX) == 0)
             {
-                cnf->log_target = MXB_LOG_TARGET_STDOUT;
+                cnf.log_target = MXB_LOG_TARGET_STDOUT;
             }
             else
             {
@@ -1632,13 +1631,13 @@ int main(int argc, char** argv)
                     tok++;
                     if (tok)
                     {
-                        cnf->maxlog.set(config_truth_value(tok));
+                        cnf.maxlog.set(config_truth_value(tok));
                         this_unit.maxlog_configured = true;
                     }
                 }
                 else
                 {
-                    cnf->maxlog.set(config_truth_value(optarg));
+                    cnf.maxlog.set(config_truth_value(optarg));
                     this_unit.maxlog_configured = true;
                 }
             }
@@ -1652,13 +1651,13 @@ int main(int argc, char** argv)
                     tok++;
                     if (tok)
                     {
-                        cnf->syslog.set(config_truth_value(tok));
+                        cnf.syslog.set(config_truth_value(tok));
                         this_unit.syslog_configured = true;
                     }
                 }
                 else
                 {
-                    cnf->syslog.set(config_truth_value(optarg));
+                    cnf.syslog.set(config_truth_value(optarg));
                     this_unit.syslog_configured = true;
                 }
             }
@@ -1681,16 +1680,16 @@ int main(int argc, char** argv)
             return EXIT_SUCCESS;
 
         case 'c':
-            cnf->config_check = true;
+            cnf.config_check = true;
             break;
 
         case 'e':
-            cnf->config_check = true;
+            cnf.config_check = true;
             strcpy(export_cnf, optarg);
             break;
 
         case 'p':
-            cnf->passive.set(true);
+            cnf.passive.set(true);
             break;
 
         case 'g':
@@ -1718,10 +1717,10 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    if (cnf->config_check)
+    if (cnf.config_check)
     {
         this_unit.daemon_mode = false;
-        cnf->log_target = MXB_LOG_TARGET_STDOUT;
+        cnf.log_target = MXB_LOG_TARGET_STDOUT;
     }
 
     uint64_t systemd_interval = 0;      // in microseconds
@@ -1780,7 +1779,7 @@ int main(int argc, char** argv)
         mxs_log_finish();
     }
 
-    if (cnf->log_target != MXB_LOG_TARGET_STDOUT && this_unit.daemon_mode)
+    if (cnf.log_target != MXB_LOG_TARGET_STDOUT && this_unit.daemon_mode)
     {
         mxs_log_redirect_stdout(true);
     }
@@ -1817,7 +1816,7 @@ int main(int argc, char** argv)
         }
     }
 
-    if (!cnf->config_check)
+    if (!cnf.config_check)
     {
         if (is_maxscale_already_running())
         {
@@ -1826,7 +1825,7 @@ int main(int argc, char** argv)
         }
     }
 
-    if (!cnf->syslog.get() && !cnf->maxlog.get())
+    if (!cnf.syslog.get() && !cnf.maxlog.get())
     {
         print_warning("Both MaxScale and Syslog logging disabled.");
     }
@@ -1876,7 +1875,7 @@ int main(int argc, char** argv)
     }
 
     cleanup_old_process_datadirs();
-    if (!cnf->config_check)
+    if (!cnf.config_check)
     {
         /*
          * Set the data directory. We use a unique directory name to avoid conflicts
@@ -1895,10 +1894,10 @@ int main(int argc, char** argv)
         }
     }
 
-    if (!qc_setup(&cnf->qc_cache_properties,
-                  cnf->qc_sql_mode,
-                  cnf->qc_name.c_str(),
-                  cnf->qc_args.c_str()))
+    if (!qc_setup(&cnf.qc_cache_properties,
+                  cnf.qc_sql_mode,
+                  cnf.qc_name.c_str(),
+                  cnf.qc_args.c_str()))
     {
         log_startup_error("Failed to initialise query classifier library.");
         rc = MAXSCALE_INTERNALERROR;
@@ -1932,7 +1931,7 @@ int main(int argc, char** argv)
                 return;
             }
 
-            if (cnf->config_check)
+            if (cnf.config_check)
             {
                 MXS_NOTICE("Configuration was successfully verified.");
 
@@ -1946,22 +1945,22 @@ int main(int argc, char** argv)
                 return;
             }
 
-            if (cnf->admin_enabled)
+            if (cnf.admin_enabled)
             {
                 bool success = mxs_admin_init();
 
-                if (!success && (cnf->admin_host == "::"))
+                if (!success && (cnf.admin_host == "::"))
                 {
                     MXS_WARNING("Failed to bind on address '::', attempting to "
                                 "bind on IPv4 address '0.0.0.0'.");
-                    cnf->admin_host = "0.0.0.0";
+                    cnf.admin_host = "0.0.0.0";
                     success = mxs_admin_init();
                 }
 
                 if (success)
                 {
                     MXS_NOTICE("Started REST API on [%s]:%d",
-                               cnf->admin_host.c_str(), (int)cnf->admin_port);
+                               cnf.admin_host.c_str(), (int)cnf.admin_port);
                 }
                 else
                 {
@@ -2375,14 +2374,14 @@ void set_log_augmentation(const char* value)
  */
 static int cnf_preparser(void* data, const char* section, const char* name, const char* value)
 {
-    mxs::Config* cnf = config_get_global_options();
+    mxs::Config& cnf = mxs::Config::get();
 
     char* tmp;
     /** These are read from the configuration file. These will not override
      * command line parameters but will override default values. */
     if (strcasecmp(section, "maxscale") == 0)
     {
-        if (cnf->substitute_variables)
+        if (cnf.substitute_variables)
         {
             if (*value == '$')
             {
@@ -2554,14 +2553,14 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         {
             if (!this_unit.syslog_configured)
             {
-                cnf->syslog.set(config_truth_value((char*)value));
+                cnf.syslog.set(config_truth_value((char*)value));
             }
         }
         else if (strcmp(name, CN_MAXLOG) == 0)
         {
             if (!this_unit.maxlog_configured)
             {
-                cnf->maxlog.set(config_truth_value((char*)value));
+                cnf.maxlog.set(config_truth_value((char*)value));
             }
         }
         else if (strcmp(name, CN_LOG_AUGMENTATION) == 0)
@@ -2570,7 +2569,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         }
         else if (strcmp(name, CN_SUBSTITUTE_VARIABLES) == 0)
         {
-            cnf->substitute_variables = config_truth_value(value);
+            cnf.substitute_variables = config_truth_value(value);
         }
     }
 

@@ -509,24 +509,24 @@ static int gw_mysql_set_timeouts(MYSQL* handle)
 {
     int rc;
 
-    mxs::Config* cnf = config_get_global_options();
+    const auto& cnf = mxs::Config::get();
     unsigned int timeout;
 
-    timeout = cnf->auth_read_timeout.get().count();
+    timeout = cnf.auth_read_timeout.get().count();
     if ((rc = mysql_optionsv(handle, MYSQL_OPT_READ_TIMEOUT, (void*) &timeout)))
     {
         MXS_ERROR("Failed to set read timeout for backend connection.");
         goto retblock;
     }
 
-    timeout = cnf->auth_conn_timeout.get().count();
+    timeout = cnf.auth_conn_timeout.get().count();
     if ((rc = mysql_optionsv(handle, MYSQL_OPT_CONNECT_TIMEOUT, (void*) &timeout)))
     {
         MXS_ERROR("Failed to set connect timeout for backend connection.");
         goto retblock;
     }
 
-    timeout = cnf->auth_write_timeout.get().count();
+    timeout = cnf.auth_write_timeout.get().count();
     if ((rc = mysql_optionsv(handle, MYSQL_OPT_WRITE_TIMEOUT, (void*) &timeout)))
     {
         MXS_ERROR("Failed to set write timeout for backend connection.");
@@ -728,14 +728,14 @@ static bool check_server_permissions(SERVICE* service,
         return false;
     }
 
-    mxs::Config* cnf = config_get_global_options();
+    const mxs::Config& cnf = mxs::Config::get();
     unsigned int timeout;
 
-    timeout = cnf->auth_read_timeout.get().count();
+    timeout = cnf.auth_read_timeout.get().count();
     mysql_optionsv(mysql, MYSQL_OPT_READ_TIMEOUT, &timeout);
-    timeout = cnf->auth_conn_timeout.get().count();
+    timeout = cnf.auth_conn_timeout.get().count();
     mysql_optionsv(mysql, MYSQL_OPT_CONNECT_TIMEOUT, &timeout);
-    timeout = cnf->auth_write_timeout.get().count();
+    timeout = cnf.auth_write_timeout.get().count();
     mysql_optionsv(mysql, MYSQL_OPT_WRITE_TIMEOUT, &timeout);
     mysql_optionsv(mysql, MYSQL_PLUGIN_DIR, get_connector_plugindir());
 
@@ -784,7 +784,7 @@ bool check_service_permissions(SERVICE* service)
     auto servers = service->reachable_servers();
 
     if (rcap_type_required(service_get_capabilities(service), RCAP_TYPE_NO_AUTH)
-        || config_get_global_options()->skip_permission_checks.get()
+        || mxs::Config::get().skip_permission_checks.get()
         || servers.empty())     // No servers to check
     {
         return true;

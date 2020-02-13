@@ -77,8 +77,8 @@ int test(bool success, const char* zHost, const char* zUser, const char* zPasswo
 {
     int rv = EXIT_FAILURE;
 
-    mxs::Config* config = config_get_global_options();
-    config->local_address = const_cast<char*>(zAddress);
+    mxs::Config& config = mxs::Config::get();
+    config.local_address = const_cast<char*>(zAddress);
 
     Server* pServer = Server::create_test_server();
     Server& server = *pServer;

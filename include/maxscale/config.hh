@@ -27,6 +27,11 @@ public:
     Config(const Config&) = delete;
     Config& operator=(const Config&) = delete;
 
+    /**
+     * @return The MaxScale global configuration.
+     */
+    static Config& get();
+
     class ParamUsersRefreshTime : public config::ParamSeconds
     {
     public:
@@ -223,10 +228,3 @@ public:
     static config::ParamCount                           s_rebalance_window;
 };
 }
-
-/**
- * @brief Get global MaxScale configuration
- *
- * @return The global configuration
- */
-mxs::Config* config_get_global_options();

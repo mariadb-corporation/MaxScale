@@ -361,7 +361,7 @@ int serviceInitialize(Service* service)
 {
     int listeners = 0;
 
-    if (!config_get_global_options()->config_check)
+    if (!mxs::Config::get().config_check)
     {
         listeners = serviceStartAllPorts(service);
     }

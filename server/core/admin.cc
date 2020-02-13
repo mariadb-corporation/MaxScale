@@ -170,12 +170,12 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
 {
     bool rval = true;
 
-    if (config_get_global_options()->admin_auth)
+    if (mxs::Config::get().admin_auth)
     {
         char* pw = NULL;
         char* user = MHD_basic_auth_get_username_password(connection, &pw);
 
-        auto admin_log_auth_failures = config_get_global_options()->admin_log_auth_failures.get();
+        auto admin_log_auth_failures = mxs::Config::get().admin_log_auth_failures.get();
 
         if (!user || !pw || !admin_verify_inet_user(user, pw))
         {
@@ -347,9 +347,10 @@ static char* load_cert(const char* file)
 static bool load_ssl_certificates()
 {
     bool rval = false;
-    const auto& key = config_get_global_options()->admin_ssl_key;
-    const auto& cert = config_get_global_options()->admin_ssl_cert;
-    const auto& ca = config_get_global_options()->admin_ssl_ca_cert;
+    const auto& config = mxs::Config::get();
+    const auto& key = config.admin_ssl_key;
+    const auto& cert = config.admin_ssl_cert;
+    const auto& ca = config.admin_ssl_ca_cert;
 
     if (!key.empty() && !cert.empty() && !ca.empty())
     {
@@ -389,9 +390,8 @@ bool mxs_admin_init()
 {
     struct sockaddr_storage addr;
 
-    if (host_to_sockaddr(config_get_global_options()->admin_host.c_str(),
-                         config_get_global_options()->admin_port,
-                         &addr))
+    const auto& config = mxs::Config::get();
+    if (host_to_sockaddr(config.admin_host.c_str(), config.admin_port, &addr))
     {
         int options = MHD_USE_EPOLL_INTERNALLY_LINUX_ONLY | MHD_USE_DEBUG;
 

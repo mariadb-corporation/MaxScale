@@ -825,7 +825,7 @@ bool handle_manual_switchover(const MODULECMD_ARG* args, json_t** error_out)
     mxb_assert((args->argc < 3) || (MODULECMD_GET_TYPE(&args->argv[2].type) == MODULECMD_ARG_SERVER));
 
     bool rval = false;
-    if (config_get_global_options()->passive.get())
+    if (mxs::Config::get().passive.get())
     {
         const char* const MSG = "Switchover requested but not performed, as MaxScale is in passive mode.";
         PRINT_MXS_JSON_ERROR(error_out, MSG);
@@ -854,7 +854,7 @@ bool handle_manual_failover(const MODULECMD_ARG* args, json_t** output)
     mxb_assert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
     bool rv = false;
 
-    if (config_get_global_options()->passive.get())
+    if (mxs::Config::get().passive.get())
     {
         PRINT_MXS_JSON_ERROR(output, "Failover requested but not performed, as MaxScale is in passive mode.");
     }
@@ -881,7 +881,7 @@ bool handle_manual_rejoin(const MODULECMD_ARG* args, json_t** output)
     mxb_assert(MODULECMD_GET_TYPE(&args->argv[1].type) == MODULECMD_ARG_SERVER);
 
     bool rv = false;
-    if (config_get_global_options()->passive.get())
+    if (mxs::Config::get().passive.get())
     {
         PRINT_MXS_JSON_ERROR(output, "Rejoin requested but not performed, as MaxScale is in passive mode.");
     }
@@ -902,7 +902,7 @@ bool handle_manual_reset_replication(const MODULECMD_ARG* args, json_t** output)
     mxb_assert(args->argc == 1 || MODULECMD_GET_TYPE(&args->argv[1].type) == MODULECMD_ARG_SERVER);
 
     bool rv = false;
-    if (config_get_global_options()->passive.get())
+    if (mxs::Config::get().passive.get())
     {
         PRINT_MXS_JSON_ERROR(output, "Replication reset requested but not performed, as MaxScale is in "
                                      "passive mode.");

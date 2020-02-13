@@ -662,9 +662,9 @@ int open_network_socket(enum mxs_socket_type type,
             }
             else if (type == MXS_SOCKET_NETWORK)
             {
-                mxs::Config* config = config_get_global_options();
+                const auto& config = mxs::Config::get();
 
-                auto la = config->local_address;
+                auto la = config.local_address;
 
                 if (!la.empty())
                 {

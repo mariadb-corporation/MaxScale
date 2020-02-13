@@ -550,7 +550,7 @@ json_t* core_module_json_data(const char* host)
     // TODO: The following data will now be somewhat different compared to
     // TODO: what the modules that do not use the new configuration mechanism
     // TODO: return.
-    json_t* params = config_get_global_options()->specification().to_json();
+    json_t* params = mxs::Config::get().specification().to_json();
 
     json_t* attr = json_object();
     json_object_set_new(attr, "module_type", json_string(CN_CORE));

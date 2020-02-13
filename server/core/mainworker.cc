@@ -54,7 +54,7 @@ MainWorker::MainWorker(mxb::WatchdogNotifier* pNotifier)
 
     delayed_call(100, &MainWorker::inc_ticks);
 
-    const auto& config = *config_get_global_options();
+    const auto& config = mxs::Config::get();
 
     if (config.rebalance_period.get() != std::chrono::milliseconds(0))
     {
@@ -173,7 +173,7 @@ void MainWorker::start_rebalancing()
 {
     mxb_assert(is_main_worker());
 
-    auto& config = *config_get_global_options();
+    const auto& config = mxs::Config::get();
 
     std::chrono::milliseconds period = config.rebalance_period.get();
 
@@ -255,7 +255,7 @@ bool MainWorker::balance_workers(BalancingApproach approach, int threshold)
 {
     bool rebalanced = false;
 
-    auto& config = *config_get_global_options();
+    const auto& config = mxs::Config::get();
 
     if (threshold == -1)
     {

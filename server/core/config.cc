@@ -548,6 +548,12 @@ Config::Config()
     add_native(&load_persisted_configs, &s_load_persisted_configs);
 }
 
+//static
+Config& Config::get()
+{
+    return this_unit.gateway;
+}
+
 bool Config::configure(const mxs::ConfigParameters& params, mxs::ConfigParameters* pUnrecognized)
 {
     mxs::ConfigParameters unrecognized;
@@ -1146,7 +1152,7 @@ static int ini_handler(void* userdata, const char* section, const char* name, co
         }
     }
 
-    if (config_get_global_options()->substitute_variables)
+    if (mxs::Config::get().substitute_variables)
     {
         if (*value == '$')
         {
@@ -1573,7 +1579,7 @@ static bool config_load_and_process(const char* filename, bool (* process_config
             const char* persist_cnf = get_config_persistdir();
             mxs_mkdir_all(persist_cnf, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
-            if (config_get_global_options()->load_persisted_configs
+            if (mxs::Config::get().load_persisted_configs
                 && is_directory(persist_cnf) && contains_cnf_files(persist_cnf))
             {
                 /**
@@ -3036,11 +3042,6 @@ static int config_get_release_string(char* release)
     }
 }
 
-mxs::Config* config_get_global_options()
-{
-    return &this_unit.gateway;
-}
-
 /**
  * Check if sections are defined multiple times in the configuration file.
  *
@@ -4044,21 +4045,21 @@ json_t* config_maxscale_to_json(const char* host)
     json_object_set_new(param, CN_THREADS, json_integer(config_threadcount()));
     json_object_set_new(param, CN_THREAD_STACK_SIZE, json_integer(config_thread_stack_size()));
 
-    mxs::Config* cnf = config_get_global_options();
+    const mxs::Config& cnf = mxs::Config::get();
 
     json_object_set_new(param,
                         CN_QUERY_CLASSIFIER_CACHE_SIZE,
-                        json_integer(cnf->qc_cache_properties.max_size));
+                        json_integer(cnf.qc_cache_properties.max_size));
 
     json_object_set_new(param, CN_DUMP_LAST_STATEMENTS, json_string(session_get_dump_statements_str()));
     json_object_set_new(param, CN_SESSION_TRACE, json_integer(session_get_session_trace()));
 
     // This will dump all parameters defined using the new configuration mechanism.
-    cnf->fill(param);
+    cnf.fill(param);
 
     json_t* attr = json_object();
     time_t started = maxscale_started();
-    time_t activated = started + MXS_CLOCK_TO_SEC(cnf->promoted_at);
+    time_t activated = started + MXS_CLOCK_TO_SEC(cnf.promoted_at);
     json_object_set_new(attr, CN_PARAMETERS, param);
     json_object_set_new(attr, "version", json_string(MAXSCALE_VERSION));
     json_object_set_new(attr, "commit", json_string(MAXSCALE_COMMIT));
