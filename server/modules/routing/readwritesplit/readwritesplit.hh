@@ -146,9 +146,9 @@ BackendSelectFunction get_backend_select_function(select_criteria_t);
 
 using std::chrono::seconds;
 
-struct Config
+struct RWSConfig
 {
-    Config(mxs::ConfigParameters* params)
+    RWSConfig(mxs::ConfigParameters* params)
         : slave_selection_criteria(
             (select_criteria_t)params->get_enum("slave_selection_criteria", slave_selection_criteria_values))
         , backend_select_fct(get_backend_select_function(slave_selection_criteria))
@@ -277,11 +277,11 @@ class RWSplit : public mxs::Router<RWSplit, RWSplitSession>
 
 public:
 
-    RWSplit(SERVICE* service, const Config& config);
+    RWSplit(SERVICE* service, const RWSConfig& config);
     ~RWSplit();
 
     SERVICE*            service() const;
-    const Config&       config() const;
+    const RWSConfig&    config() const;
     Stats&              stats();
     const Stats&        stats() const;
     TargetSessionStats& local_server_stats();
@@ -349,7 +349,7 @@ private:
     };
 
     SERVICE*                              m_service;    /**< Service where the router belongs*/
-    mxs::WorkerGlobal<Config>             m_config;
+    mxs::WorkerGlobal<RWSConfig>          m_config;
     Stats                                 m_stats;
     mxs::WorkerGlobal<TargetSessionStats> m_server_stats;
     std::atomic<gtid>                     m_last_gtid {{0, 0, 0}};

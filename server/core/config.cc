@@ -75,12 +75,13 @@ using maxscale::Monitor;
 using std::chrono::milliseconds;
 using std::chrono::seconds;
 
-namespace config = maxscale::config;
-
-bool MXS_CONFIG::Specification::validate(const mxs::ConfigParameters& params,
-                                         mxs::ConfigParameters* pUnrecognized) const
+namespace maxscale
 {
-    mxs::ConfigParameters unrecognized;
+
+bool Config::Specification::validate(const ConfigParameters& params,
+                                     ConfigParameters* pUnrecognized) const
+{
+    ConfigParameters unrecognized;
 
     bool validated = config::Specification::validate(params, &unrecognized);
 
@@ -124,52 +125,52 @@ bool MXS_CONFIG::Specification::validate(const mxs::ConfigParameters& params,
     return validated;
 }
 
-MXS_CONFIG::Specification MXS_CONFIG::s_specification("maxscale", config::Specification::GLOBAL);
+Config::Specification Config::s_specification("maxscale", config::Specification::GLOBAL);
 
-config::ParamBool MXS_CONFIG::s_log_debug(
-    &MXS_CONFIG::s_specification,
+config::ParamBool Config::s_log_debug(
+    &Config::s_specification,
     CN_LOG_DEBUG,
     "Specifies whether debug messages should be logged (meaningful only with debug builds).",
     false,
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamBool MXS_CONFIG::s_log_info(
-    &MXS_CONFIG::s_specification,
+config::ParamBool Config::s_log_info(
+    &Config::s_specification,
     CN_LOG_INFO,
     "Specifies whether info messages should be logged.",
     false,
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamBool MXS_CONFIG::s_log_notice(
-    &MXS_CONFIG::s_specification,
+config::ParamBool Config::s_log_notice(
+    &Config::s_specification,
     CN_LOG_NOTICE,
     "Specifies whether notice messages should be logged.",
     false,
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamBool MXS_CONFIG::s_log_warning(
-    &MXS_CONFIG::s_specification,
+config::ParamBool Config::s_log_warning(
+    &Config::s_specification,
     CN_LOG_WARNING,
     "Specifies whether warning messages should be logged.",
     false,
     config::Param::Modifiable::AT_RUNTIME);
 
-MXS_CONFIG::ParamThreadsCount MXS_CONFIG::s_n_threads(
-    &MXS_CONFIG::s_specification,
+Config::ParamThreadsCount Config::s_n_threads(
+    &Config::s_specification,
     CN_THREADS,
     "This parameter specifies how many threads will be used for handling the routing.",
     DEFAULT_NTHREADS, // TODO: Why not get_processor_count()?
     1,
-    std::numeric_limits<MXS_CONFIG::ParamThreadsCount::value_type>::max());
+    std::numeric_limits<Config::ParamThreadsCount::value_type>::max());
 
-MXS_CONFIG::ParamLogThrottling MXS_CONFIG::s_log_throttling(
-    &MXS_CONFIG::s_specification,
+Config::ParamLogThrottling Config::s_log_throttling(
+    &Config::s_specification,
     CN_LOG_THROTTLING,
     "Limit the amount of identical log messages than can be logged during a certain time period."
     );
 
-config::ParamEnum<session_dump_statements_t> MXS_CONFIG::s_dump_statements(
-    &MXS_CONFIG::s_specification,
+config::ParamEnum<session_dump_statements_t> Config::s_dump_statements(
+    &Config::s_specification,
     CN_DUMP_LAST_STATEMENTS,
     "In what circumstances should the last statements that a client sent be dumped.",
     {
@@ -180,8 +181,8 @@ config::ParamEnum<session_dump_statements_t> MXS_CONFIG::s_dump_statements(
     SESSION_DUMP_STATEMENTS_NEVER,
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamCount MXS_CONFIG::s_session_trace(
-    &MXS_CONFIG::s_specification,
+config::ParamCount Config::s_session_trace(
+    &Config::s_specification,
     CN_SESSION_TRACE,
     "How many log entries are stored in the session specific trace log.",
     0, // default
@@ -189,15 +190,15 @@ config::ParamCount MXS_CONFIG::s_session_trace(
     std::numeric_limits<config::ParamCount::value_type>::max(), // max
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamBool MXS_CONFIG::s_ms_timestamp(
-    &MXS_CONFIG::s_specification,
+config::ParamBool Config::s_ms_timestamp(
+    &Config::s_specification,
     CN_MS_TIMESTAMP,
     "Enable or disable high precision timestamps.",
     false,
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamCount MXS_CONFIG::s_retain_last_statements(
-    &MXS_CONFIG::s_specification,
+config::ParamCount Config::s_retain_last_statements(
+    &Config::s_specification,
     CN_RETAIN_LAST_STATEMENTS,
     "How many statements should be retained for each session for debugging purposes.",
     0, // default
@@ -205,79 +206,79 @@ config::ParamCount MXS_CONFIG::s_retain_last_statements(
     std::numeric_limits<config::ParamInteger::value_type>::max(), // max
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamBool MXS_CONFIG::s_syslog(
-    &MXS_CONFIG::s_specification,
+config::ParamBool Config::s_syslog(
+    &Config::s_specification,
     CN_SYSLOG,
     "Log to syslog.",
     true,
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamBool MXS_CONFIG::s_maxlog(
-    &MXS_CONFIG::s_specification,
+config::ParamBool Config::s_maxlog(
+    &Config::s_specification,
     CN_MAXLOG,
     "Log to MaxScale's own log.",
     true,
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamSeconds MXS_CONFIG::s_auth_conn_timeout(
-    &MXS_CONFIG::s_specification,
+config::ParamSeconds Config::s_auth_conn_timeout(
+    &Config::s_specification,
     CN_AUTH_CONNECT_TIMEOUT,
     "Connection timeout for the user authentication.",
     mxs::config::INTERPRET_AS_SECONDS,
     std::chrono::seconds(DEFAULT_AUTH_CONNECT_TIMEOUT),
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamSeconds MXS_CONFIG::s_auth_read_timeout(
-    &MXS_CONFIG::s_specification,
+config::ParamSeconds Config::s_auth_read_timeout(
+    &Config::s_specification,
     CN_AUTH_READ_TIMEOUT,
     "Read timeout for the user authentication.",
     mxs::config::INTERPRET_AS_SECONDS,
     std::chrono::seconds(DEFAULT_AUTH_READ_TIMEOUT),
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamSeconds MXS_CONFIG::s_auth_write_timeout(
-    &MXS_CONFIG::s_specification,
+config::ParamSeconds Config::s_auth_write_timeout(
+    &Config::s_specification,
     CN_AUTH_WRITE_TIMEOUT,
     "Write timeout for the user authentication.",
     mxs::config::INTERPRET_AS_SECONDS,
     std::chrono::seconds(DEFAULT_AUTH_WRITE_TIMEOUT),
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamBool MXS_CONFIG::s_skip_permission_checks(
-    &MXS_CONFIG::s_specification,
+config::ParamBool Config::s_skip_permission_checks(
+    &Config::s_specification,
     CN_SKIP_PERMISSION_CHECKS,
     "Skip service and monitor permission checks.",
     false,
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamBool MXS_CONFIG::s_passive(
-    &MXS_CONFIG::s_specification,
+config::ParamBool Config::s_passive(
+    &Config::s_specification,
     CN_PASSIVE,
     "True if MaxScale is in passive mode.",
     false,
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamString MXS_CONFIG::s_qc_name(
-    &MXS_CONFIG::s_specification,
+config::ParamString Config::s_qc_name(
+    &Config::s_specification,
     CN_QUERY_CLASSIFIER,
     "The name of the query classifier to load.",
     "qc_sqlite");
 
-config::ParamString MXS_CONFIG::s_qc_args(
-    &MXS_CONFIG::s_specification,
+config::ParamString Config::s_qc_args(
+    &Config::s_specification,
     CN_QUERY_CLASSIFIER_ARGS,
     "Arguments for the query classifier.",
     "");
 
-config::ParamSize MXS_CONFIG::s_qc_cache_max_size(
-    &MXS_CONFIG::s_specification,
+config::ParamSize Config::s_qc_cache_max_size(
+    &Config::s_specification,
     CN_QUERY_CLASSIFIER_CACHE_SIZE,
     "Maximum amount of memory used by query classifier cache.",
     0,
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamEnum<qc_sql_mode_t> MXS_CONFIG::s_qc_sql_mode(
-    &MXS_CONFIG::s_specification,
+config::ParamEnum<qc_sql_mode_t> Config::s_qc_sql_mode(
+    &Config::s_specification,
     CN_SQL_MODE,
     "The query classifier sql mode.",
     {
@@ -286,129 +287,129 @@ config::ParamEnum<qc_sql_mode_t> MXS_CONFIG::s_qc_sql_mode(
     },
     QC_SQL_MODE_DEFAULT);
 
-config::ParamString MXS_CONFIG::s_admin_host(
-    &MXS_CONFIG::s_specification,
+config::ParamString Config::s_admin_host(
+    &Config::s_specification,
     CN_ADMIN_HOST,
     "Admin interface host.",
     DEFAULT_ADMIN_HOST);
 
-config::ParamInteger MXS_CONFIG::s_admin_port(
-    &MXS_CONFIG::s_specification,
+config::ParamInteger Config::s_admin_port(
+    &Config::s_specification,
     CN_ADMIN_PORT,
     "Admin interface port.",
     DEFAULT_ADMIN_HTTP_PORT);
 
-config::ParamBool MXS_CONFIG::s_admin_auth(
-    &MXS_CONFIG::s_specification,
+config::ParamBool Config::s_admin_auth(
+    &Config::s_specification,
     CN_ADMIN_AUTH,
     "Admin interface authentication.",
     true);
 
-config::ParamBool MXS_CONFIG::s_admin_enabled(
-    &MXS_CONFIG::s_specification,
+config::ParamBool Config::s_admin_enabled(
+    &Config::s_specification,
     CN_ADMIN_ENABLED,
     "Admin interface is enabled.",
     true);
 
-config::ParamBool MXS_CONFIG::s_admin_log_auth_failures(
-    &MXS_CONFIG::s_specification,
+config::ParamBool Config::s_admin_log_auth_failures(
+    &Config::s_specification,
     CN_ADMIN_LOG_AUTH_FAILURES,
     "Log admin interface authentication failures.",
     true,
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamString MXS_CONFIG::s_admin_pam_rw_service(
-    &MXS_CONFIG::s_specification,
+config::ParamString Config::s_admin_pam_rw_service(
+    &Config::s_specification,
     CN_ADMIN_PAM_READWRITE_SERVICE,
     "PAM service for read-write users.",
     "");
 
-config::ParamString MXS_CONFIG::s_admin_pam_ro_service(
-    &MXS_CONFIG::s_specification,
+config::ParamString Config::s_admin_pam_ro_service(
+    &Config::s_specification,
     CN_ADMIN_PAM_READONLY_SERVICE,
     "PAM service for read-only users.",
     "");
 
-config::ParamString MXS_CONFIG::s_admin_ssl_key(
-    &MXS_CONFIG::s_specification,
+config::ParamString Config::s_admin_ssl_key(
+    &Config::s_specification,
     CN_ADMIN_SSL_KEY,
     "Admin SSL key",
     "");
 
-config::ParamString MXS_CONFIG::s_admin_ssl_cert(
-    &MXS_CONFIG::s_specification,
+config::ParamString Config::s_admin_ssl_cert(
+    &Config::s_specification,
     CN_ADMIN_SSL_CERT,
     "Admin SSL cert",
     "");
 
-config::ParamString MXS_CONFIG::s_admin_ssl_ca_cert(
-    &MXS_CONFIG::s_specification,
+config::ParamString Config::s_admin_ssl_ca_cert(
+    &Config::s_specification,
     CN_ADMIN_SSL_CA_CERT,
     "Admin SSL CA cert",
     "");
 
-config::ParamInteger MXS_CONFIG::s_query_retries(
-    &MXS_CONFIG::s_specification,
+config::ParamInteger Config::s_query_retries(
+    &Config::s_specification,
     CN_QUERY_RETRIES,
     "Number of times an interrupted query is retried.",
     DEFAULT_QUERY_RETRIES,
     0,
     std::numeric_limits<config::ParamInteger::value_type>::max());
 
-config::ParamSeconds MXS_CONFIG::s_query_retry_timeout(
-    &MXS_CONFIG::s_specification,
+config::ParamSeconds Config::s_query_retry_timeout(
+    &Config::s_specification,
     CN_QUERY_RETRY_TIMEOUT,
     "The total timeout in seconds for any retried queries.",
     mxs::config::INTERPRET_AS_SECONDS,
     std::chrono::seconds(DEFAULT_QUERY_RETRY_TIMEOUT),
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamString MXS_CONFIG::s_local_address(
-    &MXS_CONFIG::s_specification,
+config::ParamString Config::s_local_address(
+    &Config::s_specification,
     CN_LOCAL_ADDRESS,
     "Local address to use when connecting.",
     "");
 
-MXS_CONFIG::ParamUsersRefreshTime MXS_CONFIG::s_users_refresh_time(
-    &MXS_CONFIG::s_specification,
+Config::ParamUsersRefreshTime Config::s_users_refresh_time(
+    &Config::s_specification,
     CN_USERS_REFRESH_TIME,
     "How often the users can be refreshed.",
     mxs::config::INTERPRET_AS_SECONDS,
     std::chrono::seconds(USERS_REFRESH_TIME_DEFAULT),
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamSeconds MXS_CONFIG::s_users_refresh_interval(
-    &MXS_CONFIG::s_specification,
+config::ParamSeconds Config::s_users_refresh_interval(
+    &Config::s_specification,
     CN_USERS_REFRESH_INTERVAL,
     "How often the users will be refreshed.",
     mxs::config::INTERPRET_AS_SECONDS,
     std::chrono::seconds(0),
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamSize MXS_CONFIG::s_writeq_high_water(
-    &MXS_CONFIG::s_specification,
+config::ParamSize Config::s_writeq_high_water(
+    &Config::s_specification,
     CN_WRITEQ_HIGH_WATER,
     "High water mark of dcb write queue.",
     0,
     MIN_WRITEQ_HIGH_WATER, std::numeric_limits<config::ParamInteger::value_type>::max(),
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamSize MXS_CONFIG::s_writeq_low_water(
-    &MXS_CONFIG::s_specification,
+config::ParamSize Config::s_writeq_low_water(
+    &Config::s_specification,
     CN_WRITEQ_LOW_WATER,
     "Low water mark of dcb write queue.",
     0,
     MIN_WRITEQ_LOW_WATER, std::numeric_limits<config::ParamInteger::value_type>::max(),
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamBool MXS_CONFIG::s_load_persisted_configs(
-    &MXS_CONFIG::s_specification,
+config::ParamBool Config::s_load_persisted_configs(
+    &Config::s_specification,
     CN_LOAD_PERSISTED_CONFIGS,
     "Specifies whether persisted configuration files should be loaded on startup.",
     true);
 
-config::ParamInteger MXS_CONFIG::s_max_auth_errors_until_block(
-    &MXS_CONFIG::s_specification,
+config::ParamInteger Config::s_max_auth_errors_until_block(
+    &Config::s_specification,
     CN_MAX_AUTH_ERRORS_UNTIL_BLOCK,
     "The maximum number of authentication failures that are tolerated "
     "before a host is temporarily blocked.",
@@ -416,8 +417,8 @@ config::ParamInteger MXS_CONFIG::s_max_auth_errors_until_block(
     0, std::numeric_limits<config::ParamInteger::value_type>::max(), // min, max
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamInteger MXS_CONFIG::s_rebalance_threshold(
-    &MXS_CONFIG::s_specification,
+config::ParamInteger Config::s_rebalance_threshold(
+    &Config::s_specification,
     CN_REBALANCE_THRESHOLD,
     "If the difference in load between the thread with the maximum load and the thread "
     "with the minimum load is larger than the value of this parameter, then work will "
@@ -426,21 +427,22 @@ config::ParamInteger MXS_CONFIG::s_rebalance_threshold(
     5, 100, // min, max
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamDuration<std::chrono::milliseconds> MXS_CONFIG::s_rebalance_period(
-    &MXS_CONFIG::s_specification,
+config::ParamDuration<std::chrono::milliseconds> Config::s_rebalance_period(
+    &Config::s_specification,
     CN_REBALANCE_PERIOD,
     "How often should the load of the worker threads be checked and rebalancing be made.",
     mxs::config::NO_INTERPRETATION,
     std::chrono::milliseconds(0),
     config::Param::Modifiable::AT_RUNTIME);
 
-config::ParamCount MXS_CONFIG::s_rebalance_window(
-    &MXS_CONFIG::s_specification,
+config::ParamCount Config::s_rebalance_window(
+    &Config::s_specification,
     CN_REBALANCE_WINDOW,
     "The load of how many seconds should be taken into account when rebalancing.",
     10,     // default
     1, 60,  // min, max
     config::Param::Modifiable::AT_RUNTIME);
+}
 
 namespace
 {
@@ -448,7 +450,7 @@ namespace
 struct ThisUnit
 {
     const char*    config_file = nullptr;
-    MXS_CONFIG     gateway;
+    mxs::Config    gateway;
     bool           is_persisted_config = false; /**< True if a persisted configuration file is being parsed */
     CONFIG_CONTEXT config_context;
     bool           is_root_config_file = true;  /**< The first one will be. */
@@ -456,7 +458,15 @@ struct ThisUnit
 
 }
 
-MXS_CONFIG::MXS_CONFIG()
+static bool get_milliseconds(const char* zName,
+                             const char* zValue,
+                             const char* zDisplay_value,
+                             time_t* pMilliseconds);
+
+namespace maxscale
+{
+
+Config::Config()
     : config::Configuration("maxscale", &s_specification)
     , log_debug(this, &s_log_debug, [](bool enable) {
 #ifndef SS_DEBUG
@@ -538,9 +548,93 @@ MXS_CONFIG::MXS_CONFIG()
     add_native(&load_persisted_configs, &s_load_persisted_configs);
 }
 
-bool MXS_CONFIG::ParamUsersRefreshTime::from_string(const std::string& value_as_string,
-                                                    value_type* pValue,
-                                                    std::string* pMessage) const
+bool Config::configure(const mxs::ConfigParameters& params, mxs::ConfigParameters* pUnrecognized)
+{
+    mxs::ConfigParameters unrecognized;
+    bool configured = config::Configuration::configure(params, &unrecognized);
+
+    if (configured)
+    {
+        for (const auto& kv : unrecognized)
+        {
+            bool found = false;
+
+            const auto& name = kv.first;
+            const auto& value = kv.second;
+
+            if (maxscale::event::validate(name, value) == maxscale::event::ACCEPTED)
+            {
+                found = true;
+            }
+
+            if (!found)
+            {
+                for (int i = 0; !found && config_pre_parse_global_params[i]; ++i)
+                {
+                    found = (name == config_pre_parse_global_params[i]);
+                }
+            }
+
+            if (!found)
+            {
+                if (pUnrecognized)
+                {
+                    pUnrecognized->set(name, value);
+                }
+                else
+                {
+                    MXS_ERROR("Unknown global parameter '%s'.", name.c_str());
+                    configured = false;
+                }
+            }
+        }
+
+        if (configured)
+        {
+            if (this->qc_cache_properties.max_size == -1)
+            {
+                this->qc_cache_properties.max_size = 0;
+                MXS_WARNING("Failed to automatically detect available system memory: disabling the query "
+                            "classifier cache. To enable it, add '%s' to the configuration file.",
+                            CN_QUERY_CLASSIFIER_CACHE_SIZE);
+            }
+            else if (this->qc_cache_properties.max_size == 0)
+            {
+                MXS_NOTICE("Query classifier cache is disabled");
+            }
+            else
+            {
+                MXS_NOTICE("Using up to %s of memory for query classifier cache",
+                           mxb::pretty_size(this->qc_cache_properties.max_size).c_str());
+            }
+        }
+    }
+
+    return configured;
+}
+
+bool Config::post_configure(const mxs::ConfigParameters& params)
+{
+    bool rv = true;
+
+    auto whw = this->writeq_high_water.get();
+    auto wlw = this->writeq_low_water.get();
+
+    if (whw != 0 || wlw != 0)
+    {
+        if (whw <= wlw)
+        {
+            MXS_ERROR("Invalid configuration, writeq_high_water should be greater than writeq_low_water.");
+            rv = false;
+        }
+    }
+
+    return rv;
+}
+
+bool Config::ParamUsersRefreshTime::from_string(const std::string& value_as_string,
+                                                value_type* pValue,
+                                                std::string* pMessage) const
 {
     bool rv = true;
 
@@ -564,37 +658,32 @@ bool MXS_CONFIG::ParamUsersRefreshTime::from_string(const std::string& value_as_
     return rv;
 }
 
-std::string MXS_CONFIG::ParamLogThrottling::type() const
+std::string Config::ParamLogThrottling::type() const
 {
     return "throttling";
 }
 
-std::string MXS_CONFIG::ParamLogThrottling::default_to_string() const
+std::string Config::ParamLogThrottling::default_to_string() const
 {
     return to_string(m_default_value);
 }
 
-bool MXS_CONFIG::ParamLogThrottling::validate(const std::string& value_as_string, std::string* pMessage) const
+bool Config::ParamLogThrottling::validate(const std::string& value_as_string, std::string* pMessage) const
 {
     value_type value;
     return from_string(value_as_string, &value, pMessage);
 }
 
-static bool get_milliseconds(const char* zName,
-                             const char* zValue,
-                             const char* zDisplay_value,
-                             time_t* pMilliseconds);
-
-std::string MXS_CONFIG::ParamLogThrottling::to_string(const value_type& value) const
+std::string Config::ParamLogThrottling::to_string(const value_type& value) const
 {
     std::stringstream ss;
     ss << value.count << "," << value.window_ms << "ms" << value.suppress_ms << "ms";
     return ss.str();
 }
 
-bool MXS_CONFIG::ParamLogThrottling::from_string(const std::string& value_as_string,
-                                                 value_type* pValue,
-                                                 std::string* pMessage) const
+bool Config::ParamLogThrottling::from_string(const std::string& value_as_string,
+                                             value_type* pValue,
+                                             std::string* pMessage) const
 {
     bool rv = false;
 
@@ -664,7 +753,7 @@ bool MXS_CONFIG::ParamLogThrottling::from_string(const std::string& value_as_str
     return rv;
 }
 
-json_t* MXS_CONFIG::ParamLogThrottling::to_json(const value_type& value) const
+json_t* Config::ParamLogThrottling::to_json(const value_type& value) const
 {
     json_t* pJson = json_object();
     json_object_set_new(pJson, "count", json_integer(value.count));
@@ -673,9 +762,9 @@ json_t* MXS_CONFIG::ParamLogThrottling::to_json(const value_type& value) const
     return pJson;
 }
 
-bool MXS_CONFIG::ParamLogThrottling::from_json(const json_t* pJson,
-                                               value_type* pValue,
-                                               std::string* pMessage) const
+bool Config::ParamLogThrottling::from_json(const json_t* pJson,
+                                           value_type* pValue,
+                                           std::string* pMessage) const
 {
     bool rv = false;
 
@@ -712,9 +801,9 @@ bool MXS_CONFIG::ParamLogThrottling::from_json(const json_t* pJson,
     return rv;
 }
 
-bool MXS_CONFIG::ParamThreadsCount::from_string(const std::string& value_as_string,
-                                                value_type* pValue,
-                                                std::string* pMessage) const
+bool Config::ParamThreadsCount::from_string(const std::string& value_as_string,
+                                            value_type* pValue,
+                                            std::string* pMessage) const
 {
     bool rv = true;
 
@@ -753,6 +842,7 @@ bool MXS_CONFIG::ParamThreadsCount::from_string(const std::string& value_as_stri
     }
 
     return rv;
+}
 }
 
 static bool        process_config_context(CONFIG_CONTEXT*);
@@ -1551,7 +1641,7 @@ bool config_load_global(const char* filename)
     {
         log_config_error(filename, rval);
     }
-    else if (!MXS_CONFIG::s_specification.validate(params))
+    else if (!mxs::Config::s_specification.validate(params))
     {
         rval = false;
     }
@@ -2946,7 +3036,7 @@ static int config_get_release_string(char* release)
     }
 }
 
-MXS_CONFIG* config_get_global_options()
+mxs::Config* config_get_global_options()
 {
     return &this_unit.gateway;
 }
@@ -3954,7 +4044,7 @@ json_t* config_maxscale_to_json(const char* host)
     json_object_set_new(param, CN_THREADS, json_integer(config_threadcount()));
     json_object_set_new(param, CN_THREAD_STACK_SIZE, json_integer(config_thread_stack_size()));
 
-    MXS_CONFIG* cnf = config_get_global_options();
+    mxs::Config* cnf = config_get_global_options();
 
     json_object_set_new(param,
                         CN_QUERY_CLASSIFIER_CACHE_SIZE,
@@ -4822,90 +4912,6 @@ bool config_set_rebalance_threshold(const char* value)
     else
     {
         MXS_ERROR("Invalid value (percentage expected) for '%s': %s", CN_REBALANCE_THRESHOLD, value);
-    }
-
-    return rv;
-}
-
-bool MXS_CONFIG::configure(const mxs::ConfigParameters& params, mxs::ConfigParameters* pUnrecognized)
-{
-    mxs::ConfigParameters unrecognized;
-    bool configured = config::Configuration::configure(params, &unrecognized);
-
-    if (configured)
-    {
-        for (const auto& kv : unrecognized)
-        {
-            bool found = false;
-
-            const auto& name = kv.first;
-            const auto& value = kv.second;
-
-            if (maxscale::event::validate(name, value) == maxscale::event::ACCEPTED)
-            {
-                found = true;
-            }
-
-            if (!found)
-            {
-                for (int i = 0; !found && config_pre_parse_global_params[i]; ++i)
-                {
-                    found = (name == config_pre_parse_global_params[i]);
-                }
-            }
-
-            if (!found)
-            {
-                if (pUnrecognized)
-                {
-                    pUnrecognized->set(name, value);
-                }
-                else
-                {
-                    MXS_ERROR("Unknown global parameter '%s'.", name.c_str());
-                    configured = false;
-                }
-            }
-        }
-
-        if (configured)
-        {
-            if (this->qc_cache_properties.max_size == -1)
-            {
-                this->qc_cache_properties.max_size = 0;
-                MXS_WARNING("Failed to automatically detect available system memory: disabling the query "
-                            "classifier cache. To enable it, add '%s' to the configuration file.",
-                            CN_QUERY_CLASSIFIER_CACHE_SIZE);
-            }
-            else if (this->qc_cache_properties.max_size == 0)
-            {
-                MXS_NOTICE("Query classifier cache is disabled");
-            }
-            else
-            {
-                MXS_NOTICE("Using up to %s of memory for query classifier cache",
-                           mxb::pretty_size(this->qc_cache_properties.max_size).c_str());
-            }
-        }
-    }
-
-    return configured;
-}
-
-bool MXS_CONFIG::post_configure(const mxs::ConfigParameters& params)
-{
-    bool rv = true;
-
-    auto whw = this->writeq_high_water.get();
-    auto wlw = this->writeq_low_water.get();
-
-    if (whw != 0 || wlw != 0)
-    {
-        if (whw <= wlw)
-        {
-            MXS_ERROR("Invalid configuration, writeq_high_water should be greater than writeq_low_water.");
-            rv = false;
-        }
     }
 
     return rv;

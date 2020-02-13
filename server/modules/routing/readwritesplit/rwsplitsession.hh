@@ -368,7 +368,7 @@ private:
     mxs::RWBackend*  m_current_master;          /**< Current master server */
     mxs::RWBackend*  m_target_node;             /**< The currently locked target node */
     mxs::RWBackend*  m_prev_target;             /**< The previous target where a query was sent */
-    Config           m_config;                  /**< Configuration for this session */
+    RWSConfig        m_config;                  /**< Configuration for this session */
     MXS_SESSION*     m_session;                 /**< The client session */
     uint64_t         m_sescmd_count;            /**< Number of executed session commands (starts from 1) */
     int              m_expected_responses;      /**< Number of expected responses to the current query */

@@ -51,7 +51,7 @@ using namespace maxscale;
 #define MAX_SLAVE_COUNT "255"
 
 // TODO: Don't process parameters in readwritesplit
-static bool handle_max_slaves(Config& config, const char* str)
+static bool handle_max_slaves(RWSConfig& config, const char* str)
 {
     bool rval = true;
     char* endptr;
@@ -76,7 +76,7 @@ static bool handle_max_slaves(Config& config, const char* str)
     return rval;
 }
 
-RWSplit::RWSplit(SERVICE* service, const Config& config)
+RWSplit::RWSplit(SERVICE* service, const RWSConfig& config)
     : mxs::Router<RWSplit, RWSplitSession>(service)
     , m_service(service)
     , m_config(config)
@@ -92,7 +92,7 @@ SERVICE* RWSplit::service() const
     return m_service;
 }
 
-const Config& RWSplit::config() const
+const RWSConfig& RWSplit::config() const
 {
     return m_config;
 }
@@ -251,7 +251,7 @@ RWSplit* RWSplit::create(SERVICE* service, mxs::ConfigParameters* params)
         return NULL;
     }
 
-    Config config(params);
+    RWSConfig config(params);
 
     if (!handle_max_slaves(config, params->get_string("max_slave_connections").c_str()))
     {
@@ -331,7 +331,7 @@ uint64_t RWSplit::getCapabilities()
 bool RWSplit::configure(mxs::ConfigParameters* params)
 {
     bool rval = false;
-    Config cnf(params);
+    RWSConfig cnf(params);
 
     if (handle_max_slaves(cnf, params->get_string("max_slave_connections").c_str()))
     {
