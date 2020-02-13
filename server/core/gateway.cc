@@ -1382,7 +1382,8 @@ int main(int argc, char** argv)
 {
     int rc = MAXSCALE_SHUTDOWN;
 
-    config_set_global_defaults();
+    mxs::Config& cnf = mxs::Config::get();
+
     maxscale_reset_starttime();
 
     snprintf(this_unit.datadir, PATH_MAX, "%s", default_datadir);
@@ -1390,8 +1391,6 @@ int main(int argc, char** argv)
 
     // Option string for getopt
     const char accepted_opts[] = "dnce:f:g:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:H:p";
-
-    mxs::Config& cnf = mxs::Config::get();
     const char* specified_user = NULL;
     char export_cnf[PATH_MAX + 1] = "";
     string cnf_file_arg;    /*< conf filename from cmd-line arg */

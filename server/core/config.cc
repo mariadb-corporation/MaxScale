@@ -463,6 +463,9 @@ static bool get_milliseconds(const char* zName,
                              const char* zDisplay_value,
                              time_t* pMilliseconds);
 
+static int get_ifaddr(unsigned char* output);
+static int get_release_string(char* release);
+
 namespace maxscale
 {
 
@@ -530,6 +533,11 @@ Config::Config()
             mxs::MainWorker::get()->start_rebalancing();
         })
     , rebalance_window(this, &s_rebalance_window)
+
+    , config_check(false)
+    , log_target(MXB_LOG_TARGET_DEFAULT)
+    , substitute_variables(false)
+    , promoted_at(0)
 {
     add_native(&n_threads, &s_n_threads);
     add_native(&qc_name, &s_qc_name);
@@ -546,6 +554,43 @@ Config::Config()
     add_native(&admin_ssl_ca_cert, &s_admin_ssl_ca_cert);
     add_native(&local_address, &s_local_address);
     add_native(&load_persisted_configs, &s_load_persisted_configs);
+
+    this->qc_cache_properties.max_size = get_total_memory() * 0.15;
+
+    if (this->qc_cache_properties.max_size == 0)
+    {
+        // Set to -1 so that we know the auto-sizing failed.
+        this->qc_cache_properties.max_size = -1;
+    }
+
+    /* get release string */
+    if (!get_release_string(this->release_string))
+    {
+        sprintf(this->release_string, "undefined");
+    }
+
+    /* get first mac_address in SHA1 */
+    uint8_t mac_addr[6] = "";
+    if (get_ifaddr(mac_addr))
+    {
+        gw_sha1_str(mac_addr, 6, this->mac_sha1);
+    }
+    else
+    {
+        memset(this->mac_sha1, '\0', sizeof(this->mac_sha1));
+        memcpy(this->mac_sha1, "MAC-undef", 9);
+    }
+
+    /* get uname info */
+    struct utsname uname_data;
+    if (uname(&uname_data))
+    {
+        strcpy(this->sysname, "undefined");
+    }
+    else
+    {
+        strcpy(this->sysname, uname_data.sysname);
+    }
 }
 
 //static
@@ -871,8 +916,6 @@ static bool get_milliseconds(const char* zName,
                              std::chrono::milliseconds* pMilliseconds);
 static void log_duration_suffix_warning(const char* zName, const char* zValue);
 
-int         config_get_ifaddr(unsigned char* output);
-static int  config_get_release_string(char* release);
 bool        config_has_duplicate_sections(const char* config, DUPLICATE_CONTEXT* context);
 int         create_new_service(CONFIG_CONTEXT* obj);
 int         create_new_server(CONFIG_CONTEXT* obj);
@@ -2501,51 +2544,6 @@ bool config_can_modify_at_runtime(const char* name)
     return static_params.count(name);
 }
 
-void config_set_global_defaults()
-{
-    uint8_t mac_addr[6] = "";
-    struct utsname uname_data;
-    this_unit.gateway.config_check = false;
-    this_unit.gateway.promoted_at = 0;
-
-    this_unit.gateway.log_target = MXB_LOG_TARGET_DEFAULT;
-
-    this_unit.gateway.qc_cache_properties.max_size = get_total_memory() * 0.15;
-
-    if (this_unit.gateway.qc_cache_properties.max_size == 0)
-    {
-        // Set to -1 so that we know the auto-sizing failed.
-        this_unit.gateway.qc_cache_properties.max_size = -1;
-    }
-
-    /* get release string */
-    if (!config_get_release_string(this_unit.gateway.release_string))
-    {
-        sprintf(this_unit.gateway.release_string, "undefined");
-    }
-
-    /* get first mac_address in SHA1 */
-    if (config_get_ifaddr(mac_addr))
-    {
-        gw_sha1_str(mac_addr, 6, this_unit.gateway.mac_sha1);
-    }
-    else
-    {
-        memset(this_unit.gateway.mac_sha1, '\0', sizeof(this_unit.gateway.mac_sha1));
-        memcpy(this_unit.gateway.mac_sha1, "MAC-undef", 9);
-    }
-
-    /* get uname info */
-    if (uname(&uname_data))
-    {
-        strcpy(this_unit.gateway.sysname, "undefined");
-    }
-    else
-    {
-        strcpy(this_unit.gateway.sysname, uname_data.sysname);
-    }
-}
-
 bool missing_required_parameters(const MXS_MODULE_PARAM* mod_params,
                                  const mxs::ConfigParameters& params,
                                  const char* name)
@@ -2852,7 +2850,7 @@ int config_truth_value(const char* str)
  * @return 1 on success, 0 on failure
  *
  */
-int config_get_ifaddr(unsigned char* output)
+static int get_ifaddr(unsigned char* output)
 {
     struct ifreq ifr;
     struct ifconf ifc;
@@ -2918,7 +2916,7 @@ int config_get_ifaddr(unsigned char* output)
  *
  * @return 1 on success, 0 on failure
  */
-static int config_get_release_string(char* release)
+static int get_release_string(char* release)
 {
     const char* masks[] =
     {

@@ -51,11 +51,6 @@ extern const char* config_pre_parse_global_params[];
 void config_finish();
 
 /**
- * Set the defaults for the global configuration options
- */
-void config_set_global_defaults();
-
-/**
  * @brief Add default parameters for a module to the configuration context
  *
  * Only parameters that aren't yet in the destination container are added.
