@@ -1776,6 +1776,7 @@ void Configuration::add_native(typename ParamType::value_type* pValue,
                                ParamType* pParam,
                                std::function<void (typename ParamType::value_type)> on_set)
 {
+    *pValue = pParam->default_value();
     m_natives.push_back(std::unique_ptr<Type>(new Native<ParamType>(this, pParam, pValue, on_set)));
 }
 }
