@@ -2823,7 +2823,7 @@ bool runtime_threads_rebalance(const std::string& arg_threshold)
     if (!arg_threshold.empty())
     {
         std::string message;
-        if (!config.s_rebalance_threshold.from_string(arg_threshold, &threshold, &message))
+        if (!config.rebalance_threshold.parameter().from_string(arg_threshold, &threshold, &message))
         {
             config_runtime_error("%s", message.c_str());
             rv = false;

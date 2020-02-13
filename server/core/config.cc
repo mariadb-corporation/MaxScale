@@ -450,7 +450,6 @@ namespace
 struct ThisUnit
 {
     const char*    config_file = nullptr;
-    mxs::Config    gateway;
     bool           is_persisted_config = false; /**< True if a persisted configuration file is being parsed */
     CONFIG_CONTEXT config_context;
     bool           is_root_config_file = true;  /**< The first one will be. */
@@ -596,7 +595,9 @@ Config::Config()
 //static
 Config& Config::get()
 {
-    return this_unit.gateway;
+    static Config config;
+
+    return config;
 }
 
 bool Config::configure(const mxs::ConfigParameters& params, mxs::ConfigParameters* pUnrecognized)
@@ -1690,13 +1691,18 @@ bool config_load_global(const char* filename)
     {
         log_config_error(filename, rval);
     }
-    else if (!mxs::Config::s_specification.validate(params))
-    {
-        rval = false;
-    }
     else
     {
-        rval = mxs::Config::get().configure(params);
+        mxs::Config& config = mxs::Config::get();
+
+        if (!config.specification().validate(params))
+        {
+            rval = false;
+        }
+        else
+        {
+            rval = config.configure(params);
+        }
     }
 
     return rval;

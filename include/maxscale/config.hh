@@ -103,8 +103,7 @@ public:
 
     using SessionDumpStatements = config::Enum<session_dump_statements_t>;
 
-    Config();
-
+    // RUNTIME-modifiable automatically configured parameters.
     config::Bool          log_debug;                   /**< Whether debug messages are logged. */
     config::Bool          log_info;                    /**< Whether info messages are logged. */
     config::Bool          log_notice;                  /**< Whether notice messages are logged. */
@@ -171,9 +170,11 @@ public:
                    mxs::ConfigParameters* pUnrecognized = nullptr) override;
 
 private:
+    Config();
+
     bool post_configure(const mxs::ConfigParameters& params) override;
 
-public:
+private:
     class Specification : public config::Specification
     {
     public:
