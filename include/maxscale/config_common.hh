@@ -100,7 +100,10 @@ enum DurationUnit
     DURATION_IN_MILLISECONDS,
     DURATION_IN_DEFAULT
 };
+
 }
+
+namespace cfg = config;
 
 /**
  * Config parameter container. Typically includes all parameters of a single configuration file section

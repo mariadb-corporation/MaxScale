@@ -21,7 +21,7 @@
 
 #include "../replicator/replicator.hh"
 
-namespace cfg = config;
+namespace cfg = maxscale::config;
 
 constexpr const uint32_t PATH_FLAGS = cfg::ParamPath::C | cfg::ParamPath::W;
 

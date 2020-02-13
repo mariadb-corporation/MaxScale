@@ -22,6 +22,8 @@
 #include "clustrixmembership.hh"
 #include "clustrixnode.hh"
 
+namespace config = maxscale::config;
+
 class ClustrixMonitor : public maxscale::MonitorWorker
                       , private ClustrixNode::Persister
 {

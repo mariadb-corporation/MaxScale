@@ -27,6 +27,8 @@
 
 #include <future>
 
+namespace config = maxscale::config;
+
 class SmartRouterSession;
 
 /** class Smartrouter. Manages the performance info reads and updates.

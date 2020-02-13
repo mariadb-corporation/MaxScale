@@ -23,7 +23,7 @@ using namespace std;
 namespace
 {
 
-using namespace config;
+using namespace maxscale::config;
 
 bool is_core_param(Specification::Kind kind, const std::string& param)
 {
@@ -67,6 +67,9 @@ bool is_core_param(Specification::Kind kind, const std::string& param)
 }
 
 }
+
+namespace maxscale
+{
 
 namespace config
 {
@@ -1029,5 +1032,6 @@ bool ParamString::from_json(const json_t* pJson,
     }
 
     return rv;
+}
 }
 }

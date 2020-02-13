@@ -23,6 +23,7 @@
 #include "test_utils.hh"
 
 using namespace std;
+namespace config = maxscale::config;
 
 inline ostream& operator<<(ostream& out, const std::chrono::seconds& x)
 {

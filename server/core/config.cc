@@ -75,6 +75,8 @@ using maxscale::Monitor;
 using std::chrono::milliseconds;
 using std::chrono::seconds;
 
+namespace config = maxscale::config;
+
 bool MXS_CONFIG::Specification::validate(const mxs::ConfigParameters& params,
                                          mxs::ConfigParameters* pUnrecognized) const
 {

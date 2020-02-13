@@ -27,6 +27,9 @@
 #include <maxscale/config_common.hh>
 #include <maxscale/modinfo.hh>
 
+namespace maxscale
+{
+
 namespace config
 {
 
@@ -1774,5 +1777,6 @@ void Configuration::add_native(typename ParamType::value_type* pValue,
                                std::function<void (typename ParamType::value_type)> on_set)
 {
     m_natives.push_back(std::unique_ptr<Type>(new Native<ParamType>(this, pParam, pValue, on_set)));
+}
 }
 }

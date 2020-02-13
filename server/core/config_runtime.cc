@@ -627,7 +627,7 @@ bool runtime_alter_maxscale(const char* name, json_t* value)
     MXS_CONFIG& cnf = *config_get_global_options();
     std::string key = name;
     bool rval = false;
-    config::Type* item = nullptr;
+    mxs::cfg::Type* item = nullptr;
     auto valstr = mxs::json_dump(value);
 
     if ((item = cnf.find_value(name)) != nullptr)

@@ -16,6 +16,8 @@
 #include <maxscale/config2.hh>
 #include "cache_storage_api.hh"
 
+namespace config = maxscale::config;
+
 enum cache_selects_t
 {
     CACHE_SELECTS_ASSUME_CACHEABLE,
