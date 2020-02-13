@@ -812,9 +812,12 @@ static MXS_ROUTER* createInstance(SERVICE* service, MXS_CONFIG_PARAMETER* params
             {"authenticator", "MySQLBackendAuth"}
         }, config_server_params);
 
-        Server* server = Server::server_alloc("binlog_router_master_host", params);
+        std::string my_name = "binlog_router_master_host_";
+        my_name += service->name();
 
-        if (server == NULL)
+        Server* server = Server::server_alloc(my_name.c_str(), params);
+
+        if (!server && !(server = Server::find_by_unique_name(my_name)))
         {
             MXS_ERROR("%s: Error for server_alloc in createInstance",
                       inst->service->name());
@@ -2868,6 +2871,9 @@ const char* blr_get_event_description(ROUTER_INSTANCE* router, uint8_t event)
 static void destroyInstance(MXS_ROUTER* instance)
 {
     ROUTER_INSTANCE* inst = (ROUTER_INSTANCE*) instance;
+
+    std::string task_name = inst->service->name() + std::string(" stats");
+    hktask_remove(task_name.c_str());
 
     MXS_DEBUG("Destroying instance of router %s for service %s",
               inst->service->router_name(),

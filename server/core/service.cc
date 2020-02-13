@@ -559,7 +559,7 @@ bool service_can_be_destroyed(Service* service)
 {
     bool rval = listener_find_by_service(service).empty();
 
-    if (rval)
+    if (rval && strcmp(service->router_name(), "binlogrouter") != 0)
     {
         for (auto s = service->dbref; s; s = s->next)
         {
