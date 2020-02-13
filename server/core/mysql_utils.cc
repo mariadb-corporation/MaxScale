@@ -55,7 +55,7 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, const char* user, cons
     mysql_optionsv(con, MYSQL_OPT_RECONNECT, &yes);
     mysql_optionsv(con, MYSQL_INIT_COMMAND, "SET SQL_MODE=''");
 
-    MXS_CONFIG* config = config_get_global_options();
+    mxs::Config* config = config_get_global_options();
 
     auto local_address = config->local_address;
 
@@ -112,7 +112,7 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, const char* user, cons
 
 int mxs_mysql_query(MYSQL* conn, const char* query)
 {
-    MXS_CONFIG* cnf = config_get_global_options();
+    mxs::Config* cnf = config_get_global_options();
     return maxsql::mysql_query_ex(conn, query,
                                   cnf->query_retries.get(), cnf->query_retry_timeout.get().count());
 }

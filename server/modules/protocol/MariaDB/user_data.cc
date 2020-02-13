@@ -161,7 +161,7 @@ void MariaDBUserManager::updater_thread_function()
          *  4) users_refresh_interval, the maximum time between refreshes. Users should be refreshed
          *  automatically if this time elapses.
          */
-        MXS_CONFIG* glob_config = config_get_global_options();
+        mxs::Config* glob_config = config_get_global_options();
         auto max_refresh_interval = glob_config->users_refresh_interval.get().count();
         auto min_refresh_interval = glob_config->users_refresh_time.get().count();
 
@@ -261,7 +261,7 @@ bool MariaDBUserManager::update_users()
     sett.password = decrypt_password(sett.password);
     mxq::MariaDB con;
 
-    MXS_CONFIG* glob_config = config_get_global_options();
+    mxs::Config* glob_config = config_get_global_options();
     sett.timeout = glob_config->auth_conn_timeout.get().count();
     auto local_address = glob_config->local_address;
     if (!local_address.empty())

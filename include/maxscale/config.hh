@@ -230,5 +230,3 @@ public:
  * @return The global configuration
  */
 mxs::Config* config_get_global_options();
-
-using MXS_CONFIG = mxs::Config;

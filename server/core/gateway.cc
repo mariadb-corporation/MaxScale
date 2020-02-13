@@ -420,7 +420,7 @@ static void sigfatal_handler(int i)
 
     current_id = std::this_thread::get_id();
 
-    MXS_CONFIG* cnf = config_get_global_options();
+    mxs::Config* cnf = config_get_global_options();
 
     print_alert("MaxScale %s received fatal signal %d. "
                 "Commit ID: %s System name: %s Release string: %s\n\n",
@@ -692,7 +692,7 @@ retblock:
 static bool init_log()
 {
     bool rval = false;
-    MXS_CONFIG* cnf = config_get_global_options();
+    mxs::Config* cnf = config_get_global_options();
 
     if (!cnf->config_check && mkdir(get_logdir(), 0777) != 0 && errno != EEXIST)
     {
@@ -1391,7 +1391,7 @@ int main(int argc, char** argv)
     // Option string for getopt
     const char accepted_opts[] = "dnce:f:g:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:H:p";
 
-    MXS_CONFIG* cnf = config_get_global_options();
+    mxs::Config* cnf = config_get_global_options();
     mxb_assert(cnf);
     const char* specified_user = NULL;
     char export_cnf[PATH_MAX + 1] = "";
@@ -2375,7 +2375,7 @@ void set_log_augmentation(const char* value)
  */
 static int cnf_preparser(void* data, const char* section, const char* name, const char* value)
 {
-    MXS_CONFIG* cnf = config_get_global_options();
+    mxs::Config* cnf = config_get_global_options();
 
     char* tmp;
     /** These are read from the configuration file. These will not override

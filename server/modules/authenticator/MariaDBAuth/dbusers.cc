@@ -509,7 +509,7 @@ static int gw_mysql_set_timeouts(MYSQL* handle)
 {
     int rc;
 
-    MXS_CONFIG* cnf = config_get_global_options();
+    mxs::Config* cnf = config_get_global_options();
 
     if ((rc = mysql_optionsv(handle,
                              MYSQL_OPT_READ_TIMEOUT,
@@ -730,7 +730,7 @@ static bool check_server_permissions(SERVICE* service,
         return false;
     }
 
-    MXS_CONFIG* cnf = config_get_global_options();
+    mxs::Config* cnf = config_get_global_options();
     mysql_optionsv(mysql, MYSQL_OPT_READ_TIMEOUT, &cnf->auth_read_timeout);
     mysql_optionsv(mysql, MYSQL_OPT_CONNECT_TIMEOUT, &cnf->auth_conn_timeout);
     mysql_optionsv(mysql, MYSQL_OPT_WRITE_TIMEOUT, &cnf->auth_write_timeout);

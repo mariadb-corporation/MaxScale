@@ -624,7 +624,7 @@ bool runtime_alter_service(Service* service, const char* zKey, const char* zValu
 
 bool runtime_alter_maxscale(const char* name, json_t* value)
 {
-    MXS_CONFIG& cnf = *config_get_global_options();
+    mxs::Config& cnf = *config_get_global_options();
     std::string key = name;
     bool rval = false;
     mxs::cfg::Type* item = nullptr;
