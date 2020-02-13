@@ -103,6 +103,15 @@ public:
         BINLOG_OFF
     };
 
+    /* Server lock status descriptor */
+    enum class LockStatus
+    {
+        UNKNOWN,        /* Unknown/error */
+        FREE,           /* Lock is unclaimed */
+        OWNED_SELF,     /* Lock is claimed by current monitor */
+        OWNED_OTHER,    /* Lock is claimed by other monitor/MaxScale */
+    };
+
     // Class which encapsulates server capabilities depending on its version.
     class Capabilities
     {
@@ -564,9 +573,17 @@ public:
      */
     void set_status(uint64_t bits);
 
-    void update_lock_status();
-    void release_lock();
-    bool has_lock() const;
+    void update_locks_status();
+
+    enum class LockType
+    {
+        SERVER,
+        MASTER,
+    };
+    void release_lock(LockType lock_type);
+    void release_all_locks();
+    void get_lock(LockType lock_type);
+    bool lock_owned(LockType lock_type);
 
 private:
     using EventManipulator = std::function<void (const EventInfo& event, json_t** error_out)>;
@@ -598,7 +615,9 @@ private:
     const SharedSettings& m_settings;       /* Settings required for various operations */
     const SharedState&    m_shared_state;   /* State shared with monitor */
 
-    bool m_has_lock {false};                /* Does this monitor have a lock on the server? */
+    LockStatus m_serverlock {LockStatus::UNKNOWN};      /* Server lock status */
+    LockStatus m_masterlock {LockStatus::UNKNOWN};      /* Master lock status */
+
     bool m_print_update_errormsg {true};    /* Should an update error be printed? */
 
     bool               update_slave_status(std::string* errmsg_out = NULL);

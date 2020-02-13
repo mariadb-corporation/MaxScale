@@ -15,8 +15,6 @@
 
 #include <fstream>
 #include <inttypes.h>
-#include <iomanip>
-#include <thread>
 #include <set>
 #include <mysql.h>
 #include <mysqld_error.h>
@@ -702,7 +700,8 @@ json_t* MariaDBServer::to_json() const
                         "master_group",
                         (m_node.cycle == NodeData::CYCLE_NONE) ? json_null() : json_integer(m_node.cycle));
 
-    json_object_set_new(result, "server_lock", json_boolean(m_has_lock));
+    bool have_lock = m_serverlock == LockStatus::OWNED_SELF;
+    json_object_set_new(result, "server_lock", json_boolean(have_lock));
 
     json_t* slave_connections = json_array();
     for (const auto& sstatus : m_slave_status)
@@ -2173,7 +2172,7 @@ void MariaDBServer::update_server(bool time_to_update_disk_space, bool time_to_u
         {
             // Is a new connection or a reconnection. Check server version.
             update_server_version();
-            m_has_lock = false;     // Lock expired due to lost connection.
+            m_serverlock = LockStatus::UNKNOWN;     // Lock expired due to lost connection.
         }
 
         if (m_capabilities.basic_support || m_srv_type == MariaDBServer::server_type::BINLOG_ROUTER)
@@ -2199,9 +2198,10 @@ void MariaDBServer::update_server(bool time_to_update_disk_space, bool time_to_u
                  * A secondary MaxScale should not try to aggressively acquire the lock so that it's easy
                  * for the master.
                  */
-                if (time_to_update_lock_status || (m_shared_state.have_lock_majority && !m_has_lock))
+                if (time_to_update_lock_status
+                    || (m_shared_state.have_lock_majority && !lock_owned(LockType::SERVER)))
                 {
-                    update_lock_status();
+                    update_locks_status();
                 }
 
                 // Query MariaDBServer specific data
@@ -2214,7 +2214,7 @@ void MariaDBServer::update_server(bool time_to_update_disk_space, bool time_to_u
         /* The current server is not running. Clear some of the bits. User-set bits and some long-term bits
          * can stay. */
         server->clear_status(MonitorServer::SERVER_DOWN_CLEAR_BITS);
-        m_has_lock = false;
+        m_serverlock = LockStatus::UNKNOWN;
 
         auto conn_errno = mysql_errno(mon_srv->con);
         if (conn_errno == ER_ACCESS_DENIED_ERROR || conn_errno == ER_ACCESS_DENIED_NO_PASSWORD_ERROR)
@@ -2300,106 +2300,197 @@ bool MariaDBServer::kick_out_super_users(GeneralOpData& op)
     return !error;
 }
 
-void MariaDBServer::update_lock_status()
+void MariaDBServer::update_locks_status()
 {
-    // Try to get a MariaDBMonitor specific lock on the server. It's possible the locking fails if another
-    // MaxScale has it. If any error occurs, assume no lock.
-    if (!is_running() || has_status(SERVER_AUTH_ERROR))
-    {
-        m_has_lock = false;
-        return;
-    }
-
-    // First, check who currently has the lock.
-    string cmd = string_printf("SELECT IS_USED_LOCK('%s')", LOCK_NAME);
-    string err_msg;
-    auto res_is_used = execute_query(cmd, &err_msg);
-    if (res_is_used && res_is_used->get_col_count() == 1 && res_is_used->next_row())
-    {
-        if (res_is_used->get_string(0).empty())
-        {
-            // Lock is free, try to get it.
-            cmd = string_printf("SELECT GET_LOCK('%s', 0)", LOCK_NAME);
-            auto res_get_lock = execute_query(cmd, &err_msg);
-            if (res_get_lock && res_get_lock->get_col_count() == 1 && res_get_lock->next_row())
+    /**
+     * Read a lock status from a result row.
+     */
+    auto read_lock_status = [this](const QueryResult& is_used_row, int ind, int64_t* owner_id_out) {
+            LockStatus rval;
+            if (is_used_row.field_is_null(ind))
             {
-                if (res_get_lock->get_string(0).empty())
-                {
-                    // This means an error occurred. This MaxScale does not have the lock.
-                    m_has_lock = false;
-                }
-                else if (res_get_lock->get_int(0) == 1)
-                {
-                    m_has_lock = true;
-                }
+                // null means the lock is free.
+                rval = LockStatus::FREE;
             }
-        }
-        else
-        {
-            auto lock_owner_id = res_is_used->get_int(0);
-            if (lock_owner_id >= 0 && (size_t)lock_owner_id == con->thread_id)
+            else
+            {
+                auto lock_owner_id = is_used_row.get_int(ind);
+                if (lock_owner_id >= 0 && (size_t)lock_owner_id == con->thread_id)
+                {
+                    // This MaxScale has the lock.
+                    rval = LockStatus::OWNED_SELF;
+                }
+                else
+                {
+                    // Another MaxScale has the lock.
+                    rval = LockStatus::OWNED_OTHER;
+                }
+                *owner_id_out = lock_owner_id;
+            }
+            return rval;
+        };
+
+    auto report_unexpected_lock = [this](LockStatus old_status, LockStatus new_status, int64_t owner_id,
+                                         const string& lock_name) {
+            bool owned_lock = (old_status == LockStatus::OWNED_SELF);
+            if (new_status == LockStatus::OWNED_SELF)
             {
                 // This MaxScale has the lock. Print warning if it got the lock without knowing it.
-                if (!m_has_lock)
+                if (!owned_lock)
                 {
-                    MXS_WARNING("Acquired the lock '%s' on server '%s' without locking it.",
-                                LOCK_NAME, name());
-                    m_has_lock = true;
+                    MXB_WARNING("Acquired the lock '%s' on server '%s' without locking it.",
+                                lock_name.c_str(), name());
                 }
             }
             else
             {
-                // Another MaxScale has the lock. Print a warning if lock was lost without releasing it.
+                // Don't have the lock. Print a warning if lock was lost without releasing it.
                 // This may happen if connection broke and was recreated.
-                if (m_has_lock)
+                if (owned_lock)
                 {
-                    MXS_WARNING("Lost the lock '%s' on server '%s' without releasing it. "
-                                "The lock is now owned by connection '%li'.",
-                                LOCK_NAME, name(), lock_owner_id);
-                    m_has_lock = false;
+                    string msg = string_printf("Lost the lock '%s' on server '%s' without releasing it.",
+                                               lock_name.c_str(), name());
+                    if (new_status == LockStatus::OWNED_OTHER)
+                    {
+                        msg += string_printf(" The lock is now owned by connection %li.", owner_id);
+                    }
+                    MXB_WARNING("%s", msg.c_str());
                 }
             }
-        }
-    }
-    else
+        };
+
+    // First, check who currently has the locks. If the query fails, assume that this MaxScale does not
+    // have the locks. This is correct if connection failed.
+    string cmd = string_printf("SELECT IS_USED_LOCK('%s'), IS_USED_LOCK('%s');",
+                               SERVER_LOCK_NAME, MASTER_LOCK_NAME);
+    string err_msg;
+    auto serverlock_status_new = LockStatus::UNKNOWN;
+    auto masterlock_status_new = LockStatus::UNKNOWN;
+    auto res_is_used = execute_query(cmd, &err_msg);
+
+    if (res_is_used && res_is_used->get_col_count() == 2 && res_is_used->next_row())
     {
-        // If the query failed, assume that this MaxScale does not have the lock. This is correct if
-        // connection failed.
-        m_has_lock = false;
+        int64_t serverlock_owner_id = 0;
+        serverlock_status_new = read_lock_status(*res_is_used, 0, &serverlock_owner_id);
+        report_unexpected_lock(m_serverlock, serverlock_status_new, serverlock_owner_id, SERVER_LOCK_NAME);
+
+        int64_t masterlock_owner_id = 0;
+        masterlock_status_new = read_lock_status(*res_is_used, 1, &masterlock_owner_id);
+        report_unexpected_lock(m_masterlock, masterlock_status_new, masterlock_owner_id, MASTER_LOCK_NAME);
+        // Masterlock is not acquired here, only status is updated.
+    }
+
+    m_serverlock = serverlock_status_new;
+    m_masterlock = masterlock_status_new;
+
+    if (m_serverlock == LockStatus::FREE)
+    {
+        // Lock is free, try to get it. 'get_lock' updates lock status.
+        get_lock(LockType::SERVER);
     }
 
     if (!err_msg.empty())
     {
-        MXS_ERROR("Failed to update lock status of server '%s'. %s", name(), err_msg.c_str());
+        MXB_ERROR("Failed to update lock status of server '%s'. %s", name(), err_msg.c_str());
     }
 }
 
-void MariaDBServer::release_lock()
+void MariaDBServer::release_lock(LockType lock_type)
 {
+    bool normal_lock = (lock_type == LockType::SERVER);
+    LockStatus* output = normal_lock ? &m_serverlock : &m_masterlock;
+    const char* lockname = normal_lock ? SERVER_LOCK_NAME : MASTER_LOCK_NAME;
+
     // Try to release the lock.
-    string cmd = string_printf("SELECT RELEASE_LOCK('%s')", LOCK_NAME);
+    string cmd = string_printf("SELECT RELEASE_LOCK('%s')", lockname);
     string err_msg;
+    auto lock_result = LockStatus::UNKNOWN;
     auto res_release_lock = execute_query(cmd, &err_msg);
     if (res_release_lock && res_release_lock->get_col_count() == 1 && res_release_lock->next_row())
     {
-        if (res_release_lock->get_int(0) == 1)
+        if (res_release_lock->field_is_null(0))
         {
-            // Expected.
-            m_has_lock = false;
+            // Lock did not exist and can be considered free.
+            lock_result = LockStatus::FREE;
         }
         else
         {
-            // Lock did not exist or was not owned by this connection. Error will be detected by
-            // 'update_lock_status'.
+            auto res_num = res_release_lock->get_int(0);
+            if (res_num == 1)
+            {
+                // Expected. Lock was owned by this connection and is released.
+                lock_result = LockStatus::FREE;
+            }
+            else
+            {
+                // Lock was owned by another connection and was not freed.
+                lock_result = LockStatus::OWNED_OTHER;
+            }
         }
     }
     else
     {
         MXS_ERROR("Failed to release lock on server '%s'. %s", name(), err_msg.c_str());
     }
+
+    *output = lock_result;
 }
 
-bool MariaDBServer::has_lock() const
+void MariaDBServer::get_lock(LockType lock_type)
 {
-    return m_has_lock;
+    bool normal_lock = (lock_type == LockType::SERVER);
+    LockStatus* output = normal_lock ? &m_serverlock : &m_masterlock;
+    const char* lockname = normal_lock ? SERVER_LOCK_NAME : MASTER_LOCK_NAME;
+
+    string cmd = string_printf("SELECT GET_LOCK('%s', 0)", lockname);
+    string err_msg;
+    auto lock_result = LockStatus::UNKNOWN;
+    auto res_get_lock = execute_query(cmd, &err_msg);
+    const int column = 0;
+    if (res_get_lock && res_get_lock->get_col_count() == 1 && res_get_lock->next_row())
+    {
+        // If the result is NULL, an error occurred.
+        if (!res_get_lock->field_is_null(column))
+        {
+            auto lock_res = res_get_lock->get_int(column);
+            if (lock_res == 1)
+            {
+                lock_result = LockStatus::OWNED_SELF;
+            }
+            else
+            {
+                // Someone else got to it first
+                lock_result = LockStatus::OWNED_OTHER;
+            }
+        }
+    }
+    else
+    {
+        MXB_ERROR("Failed to acquire lock on server '%s'. %s", name(), err_msg.c_str());
+    }
+
+    *output = lock_result;
+}
+
+bool MariaDBServer::lock_owned(LockType lock_type)
+{
+    if (lock_type == LockType::SERVER)
+    {
+        return m_serverlock == LockStatus::OWNED_SELF;
+    }
+    else
+    {
+        return m_masterlock == LockStatus::OWNED_SELF;
+    }
+}
+
+void MariaDBServer::release_all_locks()
+{
+    for (auto lock_type : {MariaDBServer::LockType::SERVER, MariaDBServer::LockType::MASTER})
+    {
+        if (lock_owned(lock_type))
+        {
+            release_lock(lock_type);
+        }
+    }
 }

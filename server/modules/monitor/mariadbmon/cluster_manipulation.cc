@@ -35,8 +35,8 @@ void print_no_locks_error(json_t** error_out)
     const char locks_taken[] =
         "Cannot perform cluster operation because this MaxScale does not have exclusive locks "
         "on a majority of servers. Run \"SELECT IS_USED_LOCK('%s');\" on the servers to find out "
-        "which connection has the locks.";
-    auto err_msg = string_printf(locks_taken, LOCK_NAME);
+        "which connection id has a lock.";
+    auto err_msg = string_printf(locks_taken, SERVER_LOCK_NAME);
     PRINT_MXS_JSON_ERROR(error_out, "%s", err_msg.c_str());
 }
 }

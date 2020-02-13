@@ -511,6 +511,10 @@ void MariaDBMonitor::tick()
         srv->assign_status(server->pending_status);
     }
 
+    if (server_locks_in_use() && m_shared_state.have_lock_majority)
+    {
+        check_acquire_masterlock();
+    }
     log_master_changes();
 
     flush_server_status();
@@ -835,6 +839,32 @@ bool MariaDBMonitor::run_manual_reset_replication(SERVER* master_server, json_t*
 bool MariaDBMonitor::cluster_operations_disabled_short() const
 {
     return cluster_operation_disable_timer > 0 || m_cluster_modified;
+}
+
+void MariaDBMonitor::check_acquire_masterlock()
+{
+    // Check that the correct server has the masterlock. If not, release and reacquire.
+    // The lock status has already been fetched by the server update code.
+    const MariaDBServer* masterlock_target = nullptr;
+    if (m_master && m_master->is_master())
+    {
+        masterlock_target = m_master;
+    }
+
+    const auto masterlock = MariaDBServer::LockType::MASTER;
+    for (auto server : servers())
+    {
+        if (server->lock_owned(masterlock) && server != masterlock_target)
+        {
+            // Should not have the lock, release.
+            server->release_lock(masterlock);
+        }
+        else if (!server->lock_owned(masterlock) && server == masterlock_target)
+        {
+            // Don't have the lock when should.
+            server->get_lock(masterlock);
+        }
+    }
 }
 
 bool MariaDBMonitor::ClusterLocksInfo::locks_needed() const

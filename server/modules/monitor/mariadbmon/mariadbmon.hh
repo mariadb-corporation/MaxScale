@@ -324,7 +324,6 @@ private:
     bool execute_manual_command(std::function<void ()> command, json_t** error_out);
     bool immediate_tick_required() const override;
     bool server_locks_in_use() const;
-    bool check_lock_status_this_tick();
 
     json_t*        to_json() const;
     static json_t* to_json(State op);
@@ -344,7 +343,9 @@ private:
     void assign_server_roles();
     void assign_slave_and_relay_master(MariaDBServer* start_node);
     void check_cluster_operations_support();
+    bool check_lock_status_this_tick();
     void update_cluster_lock_status();
+    void check_acquire_masterlock();
 
     MariaDBServer* find_topology_master_server(RequireRunning req_running, std::string* msg_out = nullptr);
     MariaDBServer* find_best_reach_server(const ServerArray& candidates);

@@ -1014,11 +1014,13 @@ void MariaDBMonitor::update_cluster_lock_status()
 {
     if (server_locks_in_use())
     {
-        int locks_held = 0;
+        int server_locks_held = 0;
+        int master_locks_held = 0;
         int running_servers = 0;
         for (MariaDBServer* server : servers())
         {
-            locks_held += server->has_lock();
+            server_locks_held += server->lock_owned(MariaDBServer::LockType::SERVER);
+            master_locks_held += server->lock_owned(MariaDBServer::LockType::MASTER);
             running_servers += server->is_running();
         }
 
@@ -1035,7 +1037,7 @@ void MariaDBMonitor::update_cluster_lock_status()
         }
 
         bool had_lock_majority = m_shared_state.have_lock_majority;
-        bool have_lock_majority = (locks_held >= required_for_majority);
+        bool have_lock_majority = (server_locks_held >= required_for_majority);
 
         // If situation changed, log it.
         if (have_lock_majority != had_lock_majority)
@@ -1053,18 +1055,15 @@ void MariaDBMonitor::update_cluster_lock_status()
         }
 
         // Release locks if no majority. This gives another MaxScale the chance to get them.
-        // TODO: multithread
-        if (locks_held > 0 && !have_lock_majority)
+        int total_locks = server_locks_held + master_locks_held;
+        if (!have_lock_majority && total_locks > 0)
         {
-            MXB_WARNING("'%s' acquired %i lock(s) without acquiring lock majority, and will release them. "
+            MXB_WARNING("'%s' holds %i lock(s) without lock majority, and will release them. "
                         "The monitor of the primary MaxScale must have failed to acquire all server locks.",
-                        name(), locks_held);
+                        name(), total_locks);
             for (MariaDBServer* server : servers())
             {
-                if (server->has_lock())
-                {
-                    server->release_lock();
-                }
+                server->release_all_locks();
             }
         }
 
