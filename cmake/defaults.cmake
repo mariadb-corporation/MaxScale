@@ -6,7 +6,7 @@
 option(WITH_MAXSCALE_CNF "Install the template maxscale.cnf file" ON)
 option(STATIC_EMBEDDED "Use static version of libmysqld" ON)
 option(BUILD_RABBITMQ "Build RabbitMQ components" ON)
-option(BUILD_BINLOG "Build binlog router" ON)
+option(BUILD_BINLOG "Build binlog router" OFF)
 option(BUILD_CDC "Build Avro router" ON)
 option(BUILD_KAFKACDC "Build MariaDB-to-Kafka CDC module" ON)
 option(BUILD_MAXCTRL "Build MaxCtrl" ON)
