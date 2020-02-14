@@ -117,7 +117,8 @@ describe("Resource Self Links", function() {
             return request.get(base_url + endpoint)
                 .then(function(resp) {
                     obj = JSON.parse(resp)
-                    return request.get(obj.links.self)
+                    return request.get(obj.links.self,
+                                       {auth: {user: 'admin', password: 'mariadb'}})
                 })
                 .then(function(resp) {
                     var obj_self = JSON.parse(resp)

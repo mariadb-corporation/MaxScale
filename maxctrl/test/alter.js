@@ -156,17 +156,17 @@ describe("Alter Commands", function() {
     })
 
     it('alters maxscale', function() {
-        return verifyCommand('alter maxscale auth_connect_timeout 5', 'maxscale')
+        return verifyCommand('alter maxscale auth_connect_timeout 5000', 'maxscale')
             .then(function(res) {
-                res.data.attributes.parameters.auth_connect_timeout.should.equal(5)
+                res.data.attributes.parameters.auth_connect_timeout.should.equal(5000)
             })
     })
 
     it('alters maxscale with multiple parameters', function() {
-        return verifyCommand('alter maxscale auth_connect_timeout 123 auth_read_timeout 123', 'maxscale')
+        return verifyCommand('alter maxscale auth_connect_timeout 12000 auth_read_timeout 12000', 'maxscale')
             .then(function(res) {
-                res.data.attributes.parameters.auth_connect_timeout.should.equal(123)
-                res.data.attributes.parameters.auth_read_timeout.should.equal(123)
+                res.data.attributes.parameters.auth_connect_timeout.should.equal(12000)
+                res.data.attributes.parameters.auth_read_timeout.should.equal(12000)
             })
     })
 

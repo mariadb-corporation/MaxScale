@@ -57,16 +57,6 @@ describe("Authentication", function() {
     var auth2 = "http://" + user2.data.id + ":" + user2.data.attributes.password + "@"
     var auth3 = "http://" + user3.data.id + ":" + user3.data.attributes.password + "@"
 
-    it("unauthorized request without authentication", function() {
-        return request.get(base_url + "/maxscale")
-            .should.be.fulfilled
-    })
-
-    it("authorized request without authentication", function() {
-        return request.get(auth1 + host + "/maxscale")
-            .should.be.fulfilled
-    })
-
     it("add user", function() {
         return request.post(base_url + "/users/inet", { json: user1 })
             .should.be.fulfilled
@@ -75,10 +65,6 @@ describe("Authentication", function() {
     it("request created user", function() {
         return request.get(base_url + "/users/inet/" + user1.data.id)
             .should.be.fulfilled
-    })
-
-    it("enable authentication", function() {
-        return set_auth(auth1, true).should.be.fulfilled
     })
 
     it("unauthorized request with authentication", function() {
@@ -127,20 +113,6 @@ describe("Authentication", function() {
     })
 
     it("request with correct user", function() {
-        return request.get(auth2 + host + "/maxscale")
-            .should.be.fulfilled
-    })
-
-    it("disable authentication", function() {
-        return set_auth(auth2, false).should.be.fulfilled
-    })
-
-    it("unauthorized request without authentication ", function() {
-        return request.get(base_url + "/maxscale/logs")
-            .should.be.fulfilled
-    })
-
-    it("authorized request without authentication", function() {
         return request.get(auth2 + host + "/maxscale")
             .should.be.fulfilled
     })

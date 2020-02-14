@@ -85,7 +85,7 @@ module.exports = function() {
     this.verifyCommand = function(command, resource) {
         return doCommand(command)
             .then(function() {
-                return request.get(host + resource, {json: true})
+                return request.get(host + resource, {json: true, auth: {user: 'admin', password: 'mariadb'}})
             })
     };
 
