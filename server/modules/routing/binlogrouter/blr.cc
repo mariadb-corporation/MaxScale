@@ -2243,6 +2243,9 @@ static void destroyInstance(MXS_ROUTER* instance)
 {
     ROUTER_INSTANCE* inst = (ROUTER_INSTANCE*) instance;
 
+    std::string task_name = inst->service->name() + std::string(" stats");
+    hktask_remove(task_name.c_str());
+
     MXS_DEBUG("Destroying instance of router %s for service %s",
               inst->service->router_name(),
               inst->service->name());
