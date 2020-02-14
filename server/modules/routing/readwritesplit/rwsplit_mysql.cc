@@ -92,6 +92,7 @@ bool RWSplitSession::handle_target_is_all(route_target_t route_target,
     {
         result = true;
         mxb::atomic::add(&m_router->stats().n_all, 1, mxb::atomic::RELAXED);
+        mxb::atomic::add(&m_router->stats().n_queries, 1, mxb::atomic::RELAXED);
     }
 
     m_qc.set_large_query(is_large);
