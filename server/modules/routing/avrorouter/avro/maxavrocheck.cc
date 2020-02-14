@@ -128,12 +128,23 @@ static struct option long_options[] = {
     {0,         0,           0, 0  }
 };
 
+static const char* USAGE =
+    R"EOF(
+Usage: maxavrocheck [OPTIONS] FILE
+
+  -v Verbose output
+  -d Dump file contents as JSON
+  -f Number of rows to skip
+  -c Number of rows to dump
+  -h Print this help output
+)EOF";
+
 int main(int argc, char** argv)
 {
 
     if (argc < 2)
     {
-        printf("Usage: %s FILE\n", argv[0]);
+        printf("%s\n", USAGE);
         return 1;
     }
 
@@ -146,7 +157,7 @@ int main(int argc, char** argv)
     char c;
     int option_index;
 
-    while ((c = getopt_long(argc, argv, "vdf:c:", long_options, &option_index)) >= 0)
+    while ((c = getopt_long(argc, argv, "hvdf:c:", long_options, &option_index)) >= 0)
     {
         switch (c)
         {
@@ -165,6 +176,10 @@ int main(int argc, char** argv)
         case 'c':
             num_rows = strtol(optarg, NULL, 10);
             break;
+
+        case 'h':
+            printf("%s\n", USAGE);
+            return 1;
         }
     }
 
