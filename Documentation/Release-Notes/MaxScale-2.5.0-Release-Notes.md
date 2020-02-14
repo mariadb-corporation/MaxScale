@@ -28,6 +28,10 @@ The following deprecated parameters have been removed.
 * `log_trace` and `log_messages` that were synonyms for `log_info` and
   `log_notice` respectively.
 
+### Removed modules
+
+* The **maxinfo**-router and the **httpd**-protocol have been removed.
+
 ## Deprecated Features
 
 * Server parameters `protocol` and `authenticator` have been deprecated. Any

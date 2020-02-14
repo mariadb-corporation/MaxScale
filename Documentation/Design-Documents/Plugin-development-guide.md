@@ -59,8 +59,7 @@ MaxScale and backend servers. Protocol modules read and write to socket
 descriptors using raw I/O functions provided by the MPI, and implement
 protocol-specific I/O functions to be used through a common interface. The
 Protocol module API is defined in `protocol.h`. Currently, the only implemented
-database protocol is *MySQL*. Other protocols currently in use include *HTTPD*
-and *maxscaled*, which are used by the MaxInfo and MaxAdmin modules.
+database protocol is *MySQL*.
 
 **Authenticator** modules retrieve user account information from the backend
 databases, store it and use it to authenticate connecting clients. MariaDB
@@ -220,8 +219,7 @@ A diagnostics printing routine is present in nearly all module types, although
 with varying signatures. This entrypoint should print various statistics and
 status information about the module instance `instance` in string form. The
 target of the printing is the given DCB, and printing should be implemented by
-calling `dcb_printf`. The diagnostics function is used by the *MaxInfo* and
-*MaxAdmin* features.
+calling `dcb_printf`.
 
 ### Protocol
 

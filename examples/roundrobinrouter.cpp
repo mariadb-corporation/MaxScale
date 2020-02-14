@@ -261,8 +261,7 @@ RRRouter* RRRouter::create(SERVICE* pService, mxs::ConfigParameters* params)
 /**
  * @brief Diagnostics routine (API)
  *
- * Print router statistics to the DCB passed in. This is usually called by the
- * MaxInfo or MaxAdmin modules.
+ * Print router statistics to JSON. This is called by the REST-api.
  *
  * @param   instance    The router instance
  * @param   dcb         The DCB for diagnostic output
