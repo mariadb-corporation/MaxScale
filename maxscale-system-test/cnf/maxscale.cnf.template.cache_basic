@@ -22,7 +22,7 @@ user=maxskysql
 password= skysql
 monitor_interval=1000
 
-[Cache]
+[Cache-Local]
 type=filter
 module=cache
 storage=storage_inmemory
@@ -32,20 +32,75 @@ cached_data=shared
 # NOTE: on the TTL are ajusted as well.
 hard_ttl=10
 soft_ttl=5
-max_size=10M
 rules=/###access_homedir###/cache_rules.json
 
-[RCR]
+[RCR-Local]
 type=service
 router=readconnroute
 router_options=master
 servers=server1,server2
 user=maxskysql
 password=skysql
-filters=Cache
+filters=Cache-Local
 
-[RCR-Listener]
+[RCR-Local-Listener]
 type=listener
-service=RCR
+service=RCR-Local
 protocol=MySQLClient
 port=4008
+
+[Cache-Memcached]
+type=filter
+module=cache
+storage=storage_memcached
+storage_options="server=###node_server_IP_1###:###node_server_port_1###"
+selects=verify_cacheable
+cached_data=shared
+# NOTE: If you adjust the TTL values, ensure that test programs dependent
+# NOTE: on the TTL are ajusted as well.
+hard_ttl=10
+soft_ttl=5
+rules=/###access_homedir###/cache_rules.json
+
+[RCR-Memcached]
+type=service
+router=readconnroute
+router_options=master
+servers=server1,server2
+user=maxskysql
+password=skysql
+filters=Cache-Memcached
+
+[RCR-Memcached-Listener]
+type=listener
+service=RCR-Memcached
+protocol=MySQLClient
+port=4009
+
+[Cache-Redis]
+type=filter
+module=cache
+storage=storage_redis
+storage_options="server=###node_server_IP_1###:###node_server_port_1###"
+selects=verify_cacheable
+cached_data=shared
+# NOTE: If you adjust the TTL values, ensure that test programs dependent
+# NOTE: on the TTL are ajusted as well.
+hard_ttl=10
+soft_ttl=5
+rules=/###access_homedir###/cache_rules.json
+
+[RCR-Redis]
+type=service
+router=readconnroute
+router_options=master
+servers=server1,server2
+user=maxskysql
+password=skysql
+filters=Cache-Redis
+
+[RCR-Redis-Listener]
+type=listener
+service=RCR-Redis
+protocol=MySQLClient
+port=4010
