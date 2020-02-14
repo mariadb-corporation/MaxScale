@@ -481,7 +481,7 @@ ServerLock::Status ServerLock::status() const
     return m_status;
 }
 
-bool ServerLock::operator==(const ServerLock& rhs)
+bool ServerLock::operator==(const ServerLock& rhs) const
 {
     return m_status == rhs.m_status && m_owner_id == rhs.m_owner_id && m_owner_id != CONN_ID_UNKNOWN;
 }

@@ -321,7 +321,7 @@ public:
     int64_t owner() const;
     Status  status() const;
 
-    bool operator==(const ServerLock& rhs);
+    bool operator==(const ServerLock& rhs) const;
 private:
     int64_t m_owner_id {CONN_ID_UNKNOWN};
     Status  m_status {Status::UNKNOWN};

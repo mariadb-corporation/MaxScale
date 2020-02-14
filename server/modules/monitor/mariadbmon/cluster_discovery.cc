@@ -530,6 +530,12 @@ void MariaDBMonitor::assign_server_roles()
                 // In this case, label the master as a slave and proceed normally.
                 m_master->set_status(SERVER_SLAVE);
             }
+            else if (is_slave_maxscale() && !m_master->marked_as_master())
+            {
+                // Another special case: masterlock is not correctly set but topology analysis didn't find
+                // a better master server. Set as slave to prevent writes.
+                m_master->set_status(SERVER_SLAVE);
+            }
             else
             {
                 // Master is running and writable.
@@ -698,81 +704,88 @@ void MariaDBMonitor::assign_slave_and_relay_master(MariaDBServer* start_node)
  */
 bool MariaDBMonitor::master_is_valid(std::string* reason_out)
 {
-    bool rval = true;
+    bool is_valid = true;
     string reason;
     // The master server of the cluster needs to be re-calculated in the following cases:
 
     // 1) There is no master. This typically only applies when MaxScale is first ran.
-    if (m_master == NULL)
+    if (!m_master)
     {
-        rval = false;
+        is_valid = false;
     }
     // 2) read_only has been activated on the master.
-    else if (m_master->is_read_only())
+    else if (m_master->is_running() && m_master->is_read_only())
     {
-        rval = false;
+        is_valid = false;
         reason = "it is in read-only mode";
     }
-    // 3) The master has been down for more than failcount iterations and there is no hope of any kind of
+    // 3) Master lock status is not properly set.
+    else if (is_slave_maxscale() && m_master->is_running() && !m_master->marked_as_master(&reason))
+    {
+        is_valid = false;
+    }
+    // 4) The master has been down for more than failcount iterations and there is no hope of any kind of
     //    failover fixing the situation. The master is a hopeless one if it has been down for a while and
     //    has no running slaves, not even behind relays.
     //
     //    This condition should account for the situation when a dba or another MaxScale performs a failover
     //    and moves all the running slaves under another master. If even one running slave remains, the switch
     //    will not happen.
-    else if (m_master->is_down())
+    else if (m_master->is_down() && m_master->mon_err_count > m_settings.failcount
+             && running_slaves(m_master) == 0)
     {
-        // These two conditionals are separate since cases 4&5 should not apply if master is down.
-        if (m_master->mon_err_count > m_settings.failcount && running_slaves(m_master) == 0)
-        {
-            rval = false;
-            reason = string_printf("it has been down over %d (failcount) monitor updates and "
-                                   "it does not have any running slaves",
-                                   m_settings.failcount);
-        }
+        is_valid = false;
+        reason = string_printf("it has been down over %d (failcount) monitor updates and "
+                               "it does not have any running slaves",
+                               m_settings.failcount);
     }
-    // 4) The master was a non-replicating master (not in a cycle) but now has a slave connection.
-    else if (m_master_cycle_status.cycle_id == NodeData::CYCLE_NONE)
-    {
-        // The master should not have a master of its own.
-        if (!m_master->m_node.parents.empty())
-        {
-            rval = false;
-            reason = "it has started replicating from another server in the cluster";
-        }
-    }
-    // 5) The master was part of a cycle but is no longer, or one of the servers in the cycle is
-    //    replicating from a server outside the cycle.
-    else
-    {
-        /* The master was previously in a cycle. Compare the current cycle to the previous data and see
-         * if the cycle is still the best multimaster group. */
-        int current_cycle_id = m_master->m_node.cycle;
 
-        // 5a) The master is no longer in a cycle.
-        if (current_cycle_id == NodeData::CYCLE_NONE)
+    // Next, test topology changes which may lead to a master change. Only valid when master is running.
+    if (is_valid && m_master->is_running())
+    {
+        // 5) The master was a non-replicating master (not in a cycle) but now has a slave connection.
+        if (m_master_cycle_status.cycle_id == NodeData::CYCLE_NONE)
         {
-            rval = false;
-            ServerArray& old_members = m_master_cycle_status.cycle_members;
-            string server_names_old = monitored_servers_to_string(old_members);
-            reason = "it is no longer in the multimaster group (" + server_names_old + ")";
+            // The master should not have a master of its own.
+            if (!m_master->m_node.parents.empty())
+            {
+                is_valid = false;
+                reason = "it has started replicating from another server in the cluster";
+            }
         }
-        // 5b) The master is still in a cycle but the cycle has gained a master outside of the cycle.
+        // 6) The master was part of a cycle but is no longer, or one of the servers in the cycle is
+        //    replicating from a server outside the cycle.
         else
         {
-            ServerArray& current_members = m_cycles[current_cycle_id];
-            if (cycle_has_master_server(current_members))
+            /* The master was previously in a cycle. Compare the current cycle to the previous data and see
+             * if the cycle is still the best multimaster group. */
+            int current_cycle_id = m_master->m_node.cycle;
+
+            // 6a) The master is no longer in a cycle.
+            if (current_cycle_id == NodeData::CYCLE_NONE)
             {
-                rval = false;
-                string server_names_current = monitored_servers_to_string(current_members);
-                reason = "a server in the master's multimaster group (" + server_names_current
-                    + ") is replicating from a server not in the group";
+                is_valid = false;
+                ServerArray& old_members = m_master_cycle_status.cycle_members;
+                string server_names_old = monitored_servers_to_string(old_members);
+                reason = "it is no longer in the multimaster group (" + server_names_old + ")";
+            }
+            // 6b) The master is still in a cycle but the cycle has gained a master outside of the cycle.
+            else
+            {
+                ServerArray& current_members = m_cycles[current_cycle_id];
+                if (cycle_has_master_server(current_members))
+                {
+                    is_valid = false;
+                    string server_names_current = monitored_servers_to_string(current_members);
+                    reason = "a server in the master's multimaster group (" + server_names_current
+                        + ") is replicating from a server not in the group";
+                }
             }
         }
     }
 
     *reason_out = reason;
-    return rval;
+    return is_valid;
 }
 
 /**
@@ -831,7 +844,8 @@ void MariaDBMonitor::update_topology()
         m_next_master = NULL;
     }
 
-    if (m_cluster_topology_changed || !m_master || !m_master->is_usable())
+    if (m_cluster_topology_changed || !m_master || !m_master->is_usable()
+        || (is_slave_maxscale() && !m_master->marked_as_master()))
     {
         update_master();
     }
@@ -1004,17 +1018,11 @@ bool MariaDBMonitor::is_candidate_valid(MariaDBServer* cand, RequireRunning req_
         // Locks are in use and this is a slave MaxScale. In this case, only a candidate clearly marked as
         // master by the primary MaxScale is a valid candidate. Both locks must be owned by the primary
         // MaxScale and by the same connection.
-        auto pri_serverlock = cand->serverlock(MariaDBServer::LockType::SERVER);
-        auto pri_masterlock = cand->serverlock(MariaDBServer::LockType::MASTER);
-        if (pri_masterlock.status() != ServerLock::Status::OWNED_OTHER)
+        string reason;
+        if (!cand->marked_as_master(&reason))
         {
             is_valid = false;
-            reasons.cat("it's not marked as master by the primary MaxScale");
-        }
-        else if (!(pri_masterlock == pri_serverlock))
-        {
-            is_valid = false;
-            reasons.cat("the normal lock and master lock are claimed by different connection id:s");
+            reasons.cat(reason);
         }
     }
 

@@ -2302,9 +2302,7 @@ bool MariaDBServer::kick_out_super_users(GeneralOpData& op)
 
 void MariaDBServer::update_locks_status()
 {
-    /**
-     * Read a lock status from a result row.
-     */
+    /* Read a lock status from a result row. */
     auto read_lock_status = [this](const QueryResult& is_used_row, int ind) {
             ServerLock rval;
             if (is_used_row.field_is_null(ind))
@@ -2493,7 +2491,24 @@ int64_t MariaDBServer::conn_id() const
     return con ? con->thread_id : -1;
 }
 
-ServerLock MariaDBServer::serverlock(MariaDBServer::LockType lock_type)
+bool MariaDBServer::marked_as_master(string* why_not) const
 {
-    return lock_type == (LockType::MASTER) ? m_masterlock : m_serverlock;
+    bool rval = true;
+    if (m_masterlock.status() != ServerLock::Status::OWNED_OTHER)
+    {
+        rval = false;
+        if (why_not)
+        {
+            *why_not = "it's not marked as master by the primary MaxScale";
+        }
+    }
+    else if (!(m_masterlock == m_serverlock))
+    {
+        rval = false;
+        if (why_not)
+        {
+            *why_not = "the normal lock and master lock are claimed by different connection id:s";
+        }
+    }
+    return rval;
 }

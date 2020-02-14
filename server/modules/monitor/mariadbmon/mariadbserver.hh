@@ -575,8 +575,7 @@ public:
     void release_all_locks();
     void get_lock(LockType lock_type);
     bool lock_owned(LockType lock_type);
-
-    ServerLock serverlock(LockType lock_type);
+    bool marked_as_master(std::string* why_not = nullptr) const;
 
 private:
     using EventManipulator = std::function<void (const EventInfo& event, json_t** error_out)>;
