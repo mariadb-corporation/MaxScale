@@ -464,3 +464,24 @@ std::string EndPoint::to_string() const
 {
     return "[" + m_host.address() + "]:" + std::to_string(m_host.port());
 }
+
+void ServerLock::set_status(Status new_status, int64_t owner_id)
+{
+    m_owner_id = (new_status == Status::UNKNOWN || new_status == Status::FREE) ? CONN_ID_UNKNOWN : owner_id;
+    m_status = new_status;
+}
+
+int64_t ServerLock::owner() const
+{
+    return m_owner_id;
+}
+
+ServerLock::Status ServerLock::status() const
+{
+    return m_status;
+}
+
+bool ServerLock::operator==(const ServerLock& rhs)
+{
+    return m_status == rhs.m_status && m_owner_id == rhs.m_owner_id && m_owner_id != CONN_ID_UNKNOWN;
+}

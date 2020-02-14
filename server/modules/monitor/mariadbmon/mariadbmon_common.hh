@@ -41,6 +41,7 @@
 
 extern const int64_t SERVER_ID_UNKNOWN;
 extern const int64_t GTID_DOMAIN_UNKNOWN;
+constexpr int64_t CONN_ID_UNKNOWN = -1;     /** Default connection id */
 extern const int PORT_UNKNOWN;
 extern const char* const CN_HANDLE_EVENTS;
 extern const char* SERVER_LOCK_NAME;

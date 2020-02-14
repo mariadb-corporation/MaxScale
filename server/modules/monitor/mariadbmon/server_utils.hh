@@ -304,3 +304,25 @@ public:
 
     ServerOperation(MariaDBServer* target, bool was_is_master);
 };
+
+/* Server lock status descriptor */
+class ServerLock
+{
+public:
+    enum class Status
+    {
+        UNKNOWN,        /* Unknown/error */
+        FREE,           /* Lock is unclaimed */
+        OWNED_SELF,     /* Lock is claimed by current monitor */
+        OWNED_OTHER,    /* Lock is claimed by other monitor/MaxScale */
+    };
+
+    void    set_status(Status new_status, int64_t owner_id = CONN_ID_UNKNOWN);
+    int64_t owner() const;
+    Status  status() const;
+
+    bool operator==(const ServerLock& rhs);
+private:
+    int64_t m_owner_id {CONN_ID_UNKNOWN};
+    Status  m_status {Status::UNKNOWN};
+};

@@ -461,6 +461,8 @@ void MariaDBMonitor::tick()
     }
     update_complete.wait_n(serverlist.size());
 
+    update_cluster_lock_status();
+
     for (MariaDBServer* server : servers())
     {
         if (server->m_topology_changed)
@@ -469,8 +471,6 @@ void MariaDBMonitor::tick()
             server->m_topology_changed = false;
         }
     }
-
-    update_cluster_lock_status();
     update_topology();
 
     if (m_cluster_topology_changed)
@@ -515,8 +515,8 @@ void MariaDBMonitor::tick()
     {
         check_acquire_masterlock();
     }
-    log_master_changes();
 
+    log_master_changes();
     flush_server_status();
     process_state_changes();
     hangup_failed_servers();
@@ -865,6 +865,11 @@ void MariaDBMonitor::check_acquire_masterlock()
             server->get_lock(masterlock);
         }
     }
+}
+
+bool MariaDBMonitor::is_slave_maxscale() const
+{
+    return server_locks_in_use() && !m_shared_state.have_lock_majority;
 }
 
 bool MariaDBMonitor::ClusterLocksInfo::locks_needed() const

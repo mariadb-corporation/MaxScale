@@ -103,15 +103,6 @@ public:
         BINLOG_OFF
     };
 
-    /* Server lock status descriptor */
-    enum class LockStatus
-    {
-        UNKNOWN,        /* Unknown/error */
-        FREE,           /* Lock is unclaimed */
-        OWNED_SELF,     /* Lock is claimed by current monitor */
-        OWNED_OTHER,    /* Lock is claimed by other monitor/MaxScale */
-    };
-
     // Class which encapsulates server capabilities depending on its version.
     class Capabilities
     {
@@ -585,6 +576,8 @@ public:
     void get_lock(LockType lock_type);
     bool lock_owned(LockType lock_type);
 
+    ServerLock serverlock(LockType lock_type);
+
 private:
     using EventManipulator = std::function<void (const EventInfo& event, json_t** error_out)>;
     using EventStatusMapper = std::function<std::string (const EventInfo& event)>;
@@ -615,8 +608,8 @@ private:
     const SharedSettings& m_settings;       /* Settings required for various operations */
     const SharedState&    m_shared_state;   /* State shared with monitor */
 
-    LockStatus m_serverlock {LockStatus::UNKNOWN};      /* Server lock status */
-    LockStatus m_masterlock {LockStatus::UNKNOWN};      /* Master lock status */
+    ServerLock m_serverlock;        /* Server lock status */
+    ServerLock m_masterlock;        /* Master lock status */
 
     bool m_print_update_errormsg {true};    /* Should an update error be printed? */
 
@@ -644,4 +637,6 @@ private:
     void warn_event_scheduler();
     bool events_foreach(EventManipulator& func, json_t** error_out);
     bool alter_event(const EventInfo& event, const std::string& target_status, json_t** error_out);
+
+    int64_t conn_id() const;
 };

@@ -345,7 +345,7 @@ private:
     void check_cluster_operations_support();
     bool check_lock_status_this_tick();
     void update_cluster_lock_status();
-    void check_acquire_masterlock();
+    bool is_slave_maxscale() const;
 
     MariaDBServer* find_topology_master_server(RequireRunning req_running, std::string* msg_out = nullptr);
     MariaDBServer* find_best_reach_server(const ServerArray& candidates);
@@ -356,7 +356,7 @@ private:
     int  running_slaves(MariaDBServer* search_root);
     bool cycle_has_master_server(ServerArray& cycle_servers);
     void update_gtid_domain();
-
+    void check_acquire_masterlock();
     void update_master_cycle_info();
     bool is_candidate_valid(MariaDBServer* cand, RequireRunning req_running, std::string* why_not = nullptr);
 

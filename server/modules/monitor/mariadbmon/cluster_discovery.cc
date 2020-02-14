@@ -359,8 +359,7 @@ MariaDBServer* MariaDBMonitor::find_topology_master_server(RequireRunning req_ru
             {
                 ServerArray& cycle_members = iter.second;
                 // Check that no server in the cycle is replicating from outside the cycle. This requirement
-                // is
-                // analogous with the same requirement for non-cycle servers.
+                // is analogous with the same requirement for non-cycle servers.
                 if (!cycle_has_master_server(cycle_members))
                 {
                     // Find a valid candidate from the cycle.
@@ -383,9 +382,10 @@ MariaDBServer* MariaDBMonitor::find_topology_master_server(RequireRunning req_ru
                         // No single server in the cycle was viable. Go through the cycle again and construct
                         // a message explaining why.
                         string server_names = monitored_servers_to_string(cycle_members);
-                        string msg_start = string_printf("No valid master server could be found in the cycle with "
-                                                         "servers %s:",
-                                                         server_names.c_str());
+                        string msg_start = string_printf(
+                            "No valid master server could be found in the cycle with servers %s:",
+                            server_names.c_str());
+
                         DelimitedPrinter cycle_invalid_msg("\n");
                         cycle_invalid_msg.cat(msg_start);
                         for (MariaDBServer* elem : cycle_members)
@@ -983,24 +983,44 @@ bool MariaDBMonitor::is_candidate_valid(MariaDBServer* cand, RequireRunning req_
     if (cand->is_in_maintenance())
     {
         is_valid = false;
-        reasons.cat("in maintenance");
+        reasons.cat("it's in maintenance");
     }
 
     if (cand->is_read_only())
     {
         is_valid = false;
-        reasons.cat("in read_only mode");
+        reasons.cat("it's read_only");
     }
 
     if (req_running == RequireRunning::REQUIRED && cand->is_down())
     {
         is_valid = false;
-        reasons.cat("down");
+        reasons.cat("it's down");
+    }
+
+    // Check the following only if the other requirements are fulfilled.
+    if (is_valid && is_slave_maxscale())
+    {
+        // Locks are in use and this is a slave MaxScale. In this case, only a candidate clearly marked as
+        // master by the primary MaxScale is a valid candidate. Both locks must be owned by the primary
+        // MaxScale and by the same connection.
+        auto pri_serverlock = cand->serverlock(MariaDBServer::LockType::SERVER);
+        auto pri_masterlock = cand->serverlock(MariaDBServer::LockType::MASTER);
+        if (pri_masterlock.status() != ServerLock::Status::OWNED_OTHER)
+        {
+            is_valid = false;
+            reasons.cat("it's not marked as master by the primary MaxScale");
+        }
+        else if (!(pri_masterlock == pri_serverlock))
+        {
+            is_valid = false;
+            reasons.cat("the normal lock and master lock are claimed by different connection id:s");
+        }
     }
 
     if (!is_valid && why_not)
     {
-        *why_not = string_printf("'%s' is not a valid master candidate because it is %s.",
+        *why_not = string_printf("'%s' is not a valid master candidate because %s.",
                                  cand->name(), reasons.message().c_str());
     }
     return is_valid;
