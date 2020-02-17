@@ -216,7 +216,7 @@ std::string load_file(const std::string& file)
 
 static bool load_ssl_certificates()
 {
-    bool rval = false;
+    bool rval = true;
     const auto& config = mxs::Config::get();
     const auto& key = config.admin_ssl_key;
     const auto& cert = config.admin_ssl_cert;
@@ -229,6 +229,11 @@ static bool load_ssl_certificates()
         this_unit.ssl_ca = load_file(ca.c_str());
 
         rval = !this_unit.ssl_key.empty() && !this_unit.ssl_cert.empty() && !this_unit.ssl_ca.empty();
+
+        if (rval)
+        {
+            this_unit.using_ssl = true;
+        }
     }
 
     return rval;
@@ -379,7 +384,12 @@ bool mxs_admin_init()
     struct sockaddr_storage addr;
 
     const auto& config = mxs::Config::get();
-    if (host_to_sockaddr(config.admin_host.c_str(), config.admin_port, &addr))
+
+    if (!load_ssl_certificates())
+    {
+        MXS_ERROR("Failed to load REST API TLS certificates.");
+    }
+    else if (host_to_sockaddr(config.admin_host.c_str(), config.admin_port, &addr))
     {
         int options = MHD_USE_EPOLL_INTERNALLY_LINUX_ONLY | MHD_USE_DEBUG;
 
@@ -388,9 +398,8 @@ bool mxs_admin_init()
             options |= MHD_USE_DUAL_STACK;
         }
 
-        if (load_ssl_certificates())
+        if (this_unit.using_ssl)
         {
-            this_unit.using_ssl = true;
             options |= MHD_USE_SSL;
         }
 
