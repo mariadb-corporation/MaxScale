@@ -39,6 +39,8 @@
 using std::string;
 using std::ifstream;
 
+namespace
+{
 static struct MHD_Daemon* http_daemon = NULL;
 
 /** In-memory certificates in PEM format */
@@ -87,135 +89,6 @@ static void send_auth_error(MHD_Connection* connection)
 
     MHD_queue_basic_auth_fail_response(connection, "maxscale", resp);
     MHD_destroy_response(resp);
-}
-
-int Client::process(string url, string method, const char* upload_data, size_t* upload_size)
-{
-    json_t* json = NULL;
-
-    if (*upload_size)
-    {
-        m_data.append(upload_data, *upload_size);
-        *upload_size = 0;
-        return MHD_YES;
-    }
-
-    json_error_t err = {};
-
-    if (m_data.length()
-        && (json = json_loadb(m_data.c_str(), m_data.size(), 0, &err)) == NULL)
-    {
-        string msg = string("{\"errors\": [ { \"detail\": \"Invalid JSON in request: ")
-            + err.text + "\" } ] }";
-        MHD_Response* response = MHD_create_response_from_buffer(msg.size(),
-                                                                 &msg[0],
-                                                                 MHD_RESPMEM_MUST_COPY);
-        MHD_queue_response(m_connection, MHD_HTTP_BAD_REQUEST, response);
-        MHD_destroy_response(response);
-        return MHD_YES;
-    }
-
-    HttpRequest request(m_connection, url, method, json);
-    HttpResponse reply(MHD_HTTP_NOT_FOUND);
-
-    MXS_DEBUG("Request:\n%s", request.to_string().c_str());
-    request.fix_api_version();
-    reply = resource_handle_request(request);
-
-    string data;
-
-    json_t* js = reply.get_response();
-
-    if (js)
-    {
-        int flags = 0;
-        string pretty = request.get_option("pretty");
-
-        if (pretty == "true" || pretty.length() == 0)
-        {
-            flags |= JSON_INDENT(4);
-        }
-
-        data = mxs::json_dump(js, flags);
-    }
-
-    MHD_Response* response =
-        MHD_create_response_from_buffer(data.size(),
-                                        (void*)data.c_str(),
-                                        MHD_RESPMEM_MUST_COPY);
-
-    const Headers& headers = reply.get_headers();
-
-    for (Headers::const_iterator it = headers.begin(); it != headers.end(); it++)
-    {
-        MHD_add_response_header(response, it->first.c_str(), it->second.c_str());
-    }
-
-    int rval = MHD_queue_response(m_connection, reply.get_code(), response);
-    MHD_destroy_response(response);
-
-    return rval;
-}
-
-void close_client(void* cls,
-                  MHD_Connection* connection,
-                  void** con_cls,
-                  enum MHD_RequestTerminationCode toe)
-{
-    Client* client = static_cast<Client*>(*con_cls);
-    delete client;
-}
-
-bool Client::auth(MHD_Connection* connection, const char* url, const char* method)
-{
-    bool rval = true;
-
-    if (mxs::Config::get().admin_auth)
-    {
-        char* pw = NULL;
-        char* user = MHD_basic_auth_get_username_password(connection, &pw);
-
-        auto admin_log_auth_failures = mxs::Config::get().admin_log_auth_failures.get();
-
-        if (!user || !pw || !admin_verify_inet_user(user, pw))
-        {
-            if (admin_log_auth_failures)
-            {
-                MXS_WARNING("Authentication failed for '%s', %s. Request: %s %s",
-                            user ? user : "",
-                            pw ? "using password" : "no password",
-                            method,
-                            url);
-            }
-
-            rval = false;
-        }
-        else if (modifies_data(method) && !admin_user_is_inet_admin(user, pw))
-        {
-            if (admin_log_auth_failures)
-            {
-                MXS_WARNING("Authorization failed for '%s', request requires "
-                            "administrative privileges. Request: %s %s",
-                            user,
-                            method,
-                            url);
-            }
-            rval = false;
-        }
-        else
-        {
-            MXS_INFO("Accept authentication from '%s', %s. Request: %s",
-                     user ? user : "",
-                     pw ? "using password" : "no password",
-                     url);
-        }
-        MXS_FREE(user);
-        MXS_FREE(pw);
-    }
-
-    m_state = rval ? Client::OK : Client::FAILED;
-
-    return rval;
 }
 
 int handle_client(void* cls,
@@ -384,6 +257,136 @@ void admin_log_error(void* arg, const char* fmt, va_list ap)
         vsnprintf(buf, sizeof(buf), fmt, ap);
         MXS_ERROR("REST API HTTP daemon error: %s\n", mxb::trimmed_copy(buf).c_str());
     }
+}
+
+void close_client(void* cls,
+                  MHD_Connection* connection,
+                  void** con_cls,
+                  enum MHD_RequestTerminationCode toe)
+{
+    Client* client = static_cast<Client*>(*con_cls);
+    delete client;
+}
+}
+
+int Client::process(string url, string method, const char* upload_data, size_t* upload_size)
+{
+    json_t* json = NULL;
+
+    if (*upload_size)
+    {
+        m_data.append(upload_data, *upload_size);
+        *upload_size = 0;
+        return MHD_YES;
+    }
+
+    json_error_t err = {};
+
+    if (m_data.length()
+        && (json = json_loadb(m_data.c_str(), m_data.size(), 0, &err)) == NULL)
+    {
+        string msg = string("{\"errors\": [ { \"detail\": \"Invalid JSON in request: ")
+            + err.text + "\" } ] }";
+        MHD_Response* response = MHD_create_response_from_buffer(msg.size(),
+                                                                 &msg[0],
+                                                                 MHD_RESPMEM_MUST_COPY);
+        MHD_queue_response(m_connection, MHD_HTTP_BAD_REQUEST, response);
+        MHD_destroy_response(response);
+        return MHD_YES;
+    }
+
+    HttpRequest request(m_connection, url, method, json);
+    HttpResponse reply(MHD_HTTP_NOT_FOUND);
+
+    MXS_DEBUG("Request:\n%s", request.to_string().c_str());
+    request.fix_api_version();
+    reply = resource_handle_request(request);
+
+    string data;
+
+    json_t* js = reply.get_response();
+
+    if (js)
+    {
+        int flags = 0;
+        string pretty = request.get_option("pretty");
+
+        if (pretty == "true" || pretty.length() == 0)
+        {
+            flags |= JSON_INDENT(4);
+        }
+
+        data = mxs::json_dump(js, flags);
+    }
+
+    MHD_Response* response =
+        MHD_create_response_from_buffer(data.size(),
+                                        (void*)data.c_str(),
+                                        MHD_RESPMEM_MUST_COPY);
+
+    const Headers& headers = reply.get_headers();
+
+    for (Headers::const_iterator it = headers.begin(); it != headers.end(); it++)
+    {
+        MHD_add_response_header(response, it->first.c_str(), it->second.c_str());
+    }
+
+    int rval = MHD_queue_response(m_connection, reply.get_code(), response);
+    MHD_destroy_response(response);
+
+    return rval;
+}
+
+bool Client::auth(MHD_Connection* connection, const char* url, const char* method)
+{
+    bool rval = true;
+
+    if (mxs::Config::get().admin_auth)
+    {
+        char* pw = NULL;
+        char* user = MHD_basic_auth_get_username_password(connection, &pw);
+
+        auto admin_log_auth_failures = mxs::Config::get().admin_log_auth_failures.get();
+
+        if (!user || !pw || !admin_verify_inet_user(user, pw))
+        {
+            if (admin_log_auth_failures)
+            {
+                MXS_WARNING("Authentication failed for '%s', %s. Request: %s %s",
+                            user ? user : "",
+                            pw ? "using password" : "no password",
+                            method,
+                            url);
+            }
+
+            rval = false;
+        }
+        else if (modifies_data(method) && !admin_user_is_inet_admin(user, pw))
+        {
+            if (admin_log_auth_failures)
+            {
+                MXS_WARNING("Authorization failed for '%s', request requires "
+                            "administrative privileges. Request: %s %s",
+                            user,
+                            method,
+                            url);
+            }
+            rval = false;
+        }
+        else
+        {
+            MXS_INFO("Accept authentication from '%s', %s. Request: %s",
+                     user ? user : "",
+                     pw ? "using password" : "no password",
+                     url);
+        }
+        MXS_FREE(user);
+        MXS_FREE(pw);
+    }
+
+    m_state = rval ? Client::OK : Client::FAILED;
+
+    return rval;
 }
 
 bool mxs_admin_init()
