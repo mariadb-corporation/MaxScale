@@ -1131,7 +1131,7 @@ public:
     Type(Type&& rhs);
     Type& operator=(Type&&);
 
-    ~Type();
+    virtual ~Type();
 
     /**
      * Get parameter describing this value.
@@ -1241,7 +1241,7 @@ public:
         return *this;
     }
 
-    ~Native();
+    ~Native() = default;
 
     const ParamType& parameter() const override final
     {
