@@ -41,14 +41,17 @@ using std::ifstream;
 
 namespace
 {
-static struct MHD_Daemon* http_daemon = NULL;
 
-/** In-memory certificates in PEM format */
-static char* admin_ssl_key = NULL;
-static char* admin_ssl_cert = NULL;
-static char* admin_ssl_ca_cert = NULL;
+static struct ThisUnit
+{
+    struct MHD_Daemon* daemon = nullptr;
+    std::string        ssl_key;
+    std::string        ssl_cert;
+    std::string        ssl_ca;
+    bool               using_ssl = false;
+    bool               log_daemon_errors = true;
 
-static bool using_ssl = false;
+} this_unit;
 
 int kv_iter(void* cls,
             enum MHD_ValueKind kind,
@@ -194,27 +197,21 @@ static bool host_to_sockaddr(const char* host, uint16_t port, struct sockaddr_st
     return true;
 }
 
-static char* load_cert(const char* file)
+std::string load_file(const std::string& file)
 {
-    char* rval = NULL;
-    ifstream infile(file);
-    struct stat st;
+    std::ostringstream ss;
+    std::ifstream infile(file);
 
-    if (stat(file, &st) == 0
-        && (rval = new(std::nothrow) char[st.st_size + 1]))
+    if (infile)
     {
-        infile.read(rval, st.st_size);
-        rval[st.st_size] = '\0';
-
-        if (!infile.good())
-        {
-            MXS_ERROR("Failed to load certificate file: %s", file);
-            delete rval;
-            rval = NULL;
-        }
+        ss << infile.rdbuf();
+    }
+    else
+    {
+        MXS_ERROR("Failed to load file '%s': %d, %s", file.c_str(), errno, mxs_strerror(errno));
     }
 
-    return rval;
+    return ss.str();
 }
 
 static bool load_ssl_certificates()
@@ -227,31 +224,19 @@ static bool load_ssl_certificates()
 
     if (!key.empty() && !cert.empty() && !ca.empty())
     {
-        if ((admin_ssl_key = load_cert(key.c_str()))
-            && (admin_ssl_cert = load_cert(cert.c_str()))
-            && (admin_ssl_ca_cert = load_cert(ca.c_str())))
-        {
-            rval = true;
-        }
-        else
-        {
-            delete admin_ssl_key;
-            delete admin_ssl_cert;
-            delete admin_ssl_ca_cert;
-            admin_ssl_key = NULL;
-            admin_ssl_cert = NULL;
-            admin_ssl_ca_cert = NULL;
-        }
+        this_unit.ssl_key = load_file(key.c_str());
+        this_unit.ssl_cert = load_file(cert.c_str());
+        this_unit.ssl_ca = load_file(ca.c_str());
+
+        rval = !this_unit.ssl_key.empty() && !this_unit.ssl_cert.empty() && !this_unit.ssl_ca.empty();
     }
 
     return rval;
 }
 
-static bool log_daemon_errors = true;
-
 void admin_log_error(void* arg, const char* fmt, va_list ap)
 {
-    if (log_daemon_errors)
+    if (this_unit.log_daemon_errors)
     {
         char buf[1024];
         vsnprintf(buf, sizeof(buf), fmt, ap);
@@ -405,35 +390,35 @@ bool mxs_admin_init()
 
         if (load_ssl_certificates())
         {
-            using_ssl = true;
+            this_unit.using_ssl = true;
             options |= MHD_USE_SSL;
         }
 
         // The port argument is ignored and the port in the struct sockaddr is used instead
-        http_daemon = MHD_start_daemon(options, 0, NULL, NULL, handle_client, NULL,
-                                       MHD_OPTION_EXTERNAL_LOGGER, admin_log_error, NULL,
-                                       MHD_OPTION_NOTIFY_COMPLETED, close_client, NULL,
-                                       MHD_OPTION_SOCK_ADDR, &addr,
-                                       !using_ssl ? MHD_OPTION_END :
-                                       MHD_OPTION_HTTPS_MEM_KEY, admin_ssl_key,
-                                       MHD_OPTION_HTTPS_MEM_CERT, admin_ssl_cert,
-                                       MHD_OPTION_HTTPS_MEM_TRUST, admin_ssl_cert,
-                                       MHD_OPTION_END);
+        this_unit.daemon = MHD_start_daemon(options, 0, NULL, NULL, handle_client, NULL,
+                                            MHD_OPTION_EXTERNAL_LOGGER, admin_log_error, NULL,
+                                            MHD_OPTION_NOTIFY_COMPLETED, close_client, NULL,
+                                            MHD_OPTION_SOCK_ADDR, &addr,
+                                            !this_unit.using_ssl ? MHD_OPTION_END :
+                                            MHD_OPTION_HTTPS_MEM_KEY, this_unit.ssl_key.c_str(),
+                                            MHD_OPTION_HTTPS_MEM_CERT, this_unit.ssl_cert.c_str(),
+                                            MHD_OPTION_HTTPS_MEM_TRUST, this_unit.ssl_cert.c_str(),
+                                            MHD_OPTION_END);
     }
 
     // Silence all other errors to prevent malformed requests from flooding the log
-    log_daemon_errors = false;
+    this_unit.log_daemon_errors = false;
 
-    return http_daemon != NULL;
+    return this_unit.daemon != NULL;
 }
 
 void mxs_admin_shutdown()
 {
-    MHD_stop_daemon(http_daemon);
+    MHD_stop_daemon(this_unit.daemon);
     MXS_NOTICE("Stopped MaxScale REST API");
 }
 
 bool mxs_admin_https_enabled()
 {
-    return using_ssl;
+    return this_unit.using_ssl;
 }
