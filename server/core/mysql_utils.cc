@@ -36,8 +36,8 @@
 MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, const char* user, const char* passwd)
 {
     auto ssl = server->ssl().config();
-    bool have_ssl = ssl && !ssl->empty();
-    if (have_ssl)
+
+    if (ssl)
     {
         char enforce_tls = 1;
         mysql_optionsv(con, MYSQL_OPT_SSL_ENFORCE, (void*)&enforce_tls);
@@ -89,7 +89,7 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, const char* user, cons
         /** Copy the server charset */
         server->charset = mxs_mysql_get_character_set(mysql);
 
-        if (have_ssl && mysql_get_ssl_cipher(con) == NULL)
+        if (ssl && mysql_get_ssl_cipher(con) == NULL)
         {
             if (server->warn_ssl_not_enabled)
             {
