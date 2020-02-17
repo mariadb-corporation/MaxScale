@@ -336,6 +336,11 @@ int serviceStartAllPorts(Service* service)
         {
             service->state = SERVICE::State::STARTED;
             service->started = time(0);
+
+            if (service->get_children().empty())
+            {
+                MXS_WARNING("Service '%s' has a listener but no servers", service->name());
+            }
         }
     }
     else
