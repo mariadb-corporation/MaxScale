@@ -34,7 +34,8 @@ public:
     Client(MHD_Connection* connection);
 
     // Handle HTTP request
-    int handle(const char* url, const char* method, const char* upload_data, size_t* upload_data_size);
+    int handle(const std::string& url, const std::string& method,
+               const char* upload_data, size_t* upload_data_size);
 
 private:
     enum state
@@ -90,6 +91,15 @@ private:
     {
         m_state = CLOSED;
     }
+
+    /**
+     * Serve a file that the client is requesting
+     *
+     * @param url   The URL the client is requesting
+     *
+     * @return True if a file was served and the processing should stop
+     */
+    bool serve_file(const std::string& url) const;
 
     MHD_Connection* m_connection;   /**< Connection handle */
     std::string     m_data;         /**< Uploaded data */

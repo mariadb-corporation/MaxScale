@@ -19,6 +19,8 @@
 #include <climits>
 #include <new>
 #include <fstream>
+#include <unordered_map>
+
 #include <microhttpd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -34,6 +36,7 @@
 #include <maxscale/clock.h>
 #include <maxscale/http.hh>
 #include <maxscale/adminusers.hh>
+#include <maxscale/paths.h>
 
 #include "internal/resource.hh"
 
@@ -55,6 +58,8 @@ static struct ThisUnit
     bool               log_daemon_errors = true;
     bool               cors = false;
     std::string        sign_key;
+
+    std::unordered_map<std::string, std::string> files;
 } this_unit;
 
 int header_cb(void* cls,
@@ -154,6 +159,47 @@ std::string load_file(const std::string& file)
     }
 
     return ss.str();
+}
+
+std::string get_file(const std::string& file)
+{
+    if (this_unit.files.find(file) == this_unit.files.end())
+    {
+        this_unit.files[file] = load_file(file);
+    }
+
+    return this_unit.files[file];
+}
+
+std::string get_filename(const HttpRequest& request)
+{
+    std::string sharedir = get_sharedir();
+    sharedir += "/gui/";
+    std::string path = sharedir;
+
+    if (request.uri_part_count() == 0)
+    {
+        path += "index.html";
+    }
+    else
+    {
+        path += request.uri_segment(0, request.uri_part_count());
+    }
+
+    char pathbuf[PATH_MAX + 1] = "";
+
+    if (realpath(path.c_str(), pathbuf) && access(pathbuf, R_OK) == 0
+        && strncmp(pathbuf, sharedir.c_str(), sharedir.length()) == 0)
+    {
+        // A valid file that's stored in the GUI directory
+        path.assign(pathbuf);
+    }
+    else
+    {
+        path.clear();
+    }
+
+    return path;
 }
 
 static bool load_ssl_certificates()
@@ -314,9 +360,58 @@ bool Client::send_cors_preflight_request(const std::string& verb)
     return rval;
 }
 
-int Client::handle(const char* url, const char* method, const char* upload_data, size_t* upload_data_size)
+bool Client::serve_file(const std::string& url) const
+{
+    bool rval = false;
+    HttpRequest request(m_connection, url, MHD_HTTP_METHOD_GET, nullptr);
+    request.fix_api_version();
+
+    std::string path = get_filename(request);
+
+    if (!path.empty())
+    {
+        MXS_DEBUG("Client requested file: %s", path.c_str());
+        MXS_DEBUG("Request:\n%s", request.to_string().c_str());
+        std::string data = get_file(path);
+
+        if (!data.empty())
+        {
+            rval = true;
+
+            MHD_Response* response =
+                MHD_create_response_from_buffer(data.size(),
+                                                (void*)data.c_str(),
+                                                MHD_RESPMEM_MUST_COPY);
+
+            if (this_unit.cors && !get_header("Origin").empty())
+            {
+                add_cors_headers(response);
+            }
+
+            if (MHD_queue_response(m_connection, MHD_HTTP_OK, response) == MHD_YES)
+            {
+                rval = true;
+            }
+
+            MHD_destroy_response(response);
+        }
+        else
+        {
+            MXS_DEBUG("File not found: %s", path.c_str());
+        }
+    }
+
+    return rval;
+}
+
+int Client::handle(const std::string& url, const std::string& method,
+                   const char* upload_data, size_t* upload_data_size)
 {
     if (this_unit.cors && send_cors_preflight_request(method))
+    {
+        return MHD_YES;
+    }
+    else if (method == MHD_HTTP_METHOD_GET && serve_file(url))
     {
         return MHD_YES;
     }
@@ -329,7 +424,7 @@ int Client::handle(const char* url, const char* method, const char* upload_data,
         if (state == Client::INIT)
         {
             // First request, do authentication
-            if (!auth(m_connection, url, method))
+            if (!auth(m_connection, url.c_str(), method.c_str()))
             {
                 rval = MHD_YES;
             }
@@ -450,6 +545,8 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
 
     int rval = MHD_queue_response(m_connection, reply.get_code(), response);
     MHD_destroy_response(response);
+
+    MXS_DEBUG("Response: HTTP %d", reply.get_code());
 
     return rval;
 }
