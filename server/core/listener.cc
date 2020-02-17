@@ -138,11 +138,7 @@ Listener::Listener(Service* service,
     , m_params(params)
     , m_shared_data(std::move(shared_data))
 {
-    if (strcasecmp(service->router_name(), "cli") == 0 || strcasecmp(service->router_name(), "maxinfo") == 0)
-    {
-        m_type = Type::MAIN_WORKER;
-    }
-    else if (m_address[0] == '/')
+    if (m_address[0] == '/')
     {
         m_type = Type::UNIX_SOCKET;
     }
@@ -935,10 +931,7 @@ void Listener::accept_connections()
         }
         else
         {
-            auto worker = type() == Type::MAIN_WORKER ?
-                mxs::RoutingWorker::get(mxs::RoutingWorker::MAIN) :
-                mxs::RoutingWorker::pick_worker();
-
+            auto worker = mxs::RoutingWorker::pick_worker();
             worker->execute([this, conn]() {
                                 if (ClientDCB* dcb = accept_one_dcb(conn.fd, &conn.addr, conn.host))
                                 {

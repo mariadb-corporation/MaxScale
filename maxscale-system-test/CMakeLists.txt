@@ -449,12 +449,6 @@ add_test_script(mariadb_tests_hartmut_galera.sh mariadb_tests_hartmut.sh galera_
 # Creates a number of connections > max_connections setting
 add_test_executable(max_connections.cpp max_connections replication LABELS MySQLAuth MySQLProtocol UNSTABLE HEAVY REPL_BACKEND)
 
-# Test of Maxinfo SQL interface
-add_test_executable(maxinfo_sql.cpp maxinfo_sql maxinfo_sql LABELS maxinfo REPL_BACKEND)
-
-# Test of Maxinfo interface (http), python impelemntation
-add_test_script(maxinfo.py maxinfo.py maxinfo LABELS maxinfo LIGHT REPL_BACKEND)
-
 # Checks tha Maxscale processis running as 'maxscale' user
 add_test_executable(maxscale_process_user.cpp maxscale_process_user replication LABELS maxscale LIGHT REPL_BACKEND)
 
@@ -880,9 +874,6 @@ add_test_executable(local_address.cpp local_address local_address LABELS REPL_BA
 # MXS-1628: Security scanner says MaxScale is vulnerable to ancient MySQL vulnerability
 # https://jira.mariadb.org/browse/MXS-1628
 add_test_executable(mxs1628_bad_handshake.cpp mxs1628_bad_handshake replication LABELS REPL_BACKEND)
-
-# MXS-1836: MaxInfo "show eventTimes" returns garbage.
-add_test_executable(mxs1836_show_eventTimes.cpp mxs1836_show_eventTimes mxs1836_show_eventTimes LABELS REPL_BACKEND)
 
 # MXS-173 throttling filter
 add_test_executable(mxs173_throttle_filter.cpp mxs173_throttle_filter mxs173_throttle_filter LABELS REPL_BACKEND)

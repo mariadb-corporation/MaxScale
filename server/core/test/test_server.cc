@@ -148,16 +148,10 @@ int main(int argc, char** argv)
      * loaded in one core function call.
      */
     mxs_log_init(NULL, NULL, MXS_LOG_TARGET_STDOUT);
-    set_libdir(MXS_STRDUP_A("../../modules/authenticator/MariaDBAuth/"));
-    load_module("mariadbauth", MODULE_AUTHENTICATOR);
-    set_libdir(MXS_STRDUP_A("../../modules/protocol/HTTPD/"));
-    load_module("HTTPD", MODULE_PROTOCOL);
 
     params->set_from_list({
         {"address", "127.0.0.1"},
         {"port", "9876"},
-        {"protocol", "HTTPD"},
-        {"authenticator", "mariadbauth"}
     }, common_server_params());
     int result = 0;
 

@@ -1875,8 +1875,8 @@ that is defined elsewhere in the configuration file.
 ### `protocol`
 
 The name of the protocol module used for communication between the client and
-MaxScale. Usually this is set to `MariaDBClient` for MariaDB-connections. Other
-recognized values are `HTTPD` and `CDC`.
+MaxScale. The same protocol is also used for backend communication. Usually this
+is set to `MariaDBClient`.
 
 ### `address`
 
@@ -1932,14 +1932,6 @@ This is the implementation of the MySQL-protocol. When defined for a listener,
 the listener will accept MySQL-connections from clients, assign them to a
 MaxScale service and route the queries from the client to backend servers. Any
 backends used by the service should be MariaDB/MySQL-servers or compatible.
-
-## `HTTPD`
-
-*Note:* This module is deprecated: use the REST API instead.
-
-This protocol module is currently still under development, it provides a means
-to create HTTP connections to MariaDB MaxScale for use by web browsers or
-RESTful API clients.
 
 ## `CDC`
 
