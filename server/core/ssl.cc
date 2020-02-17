@@ -207,7 +207,8 @@ SSLConfig::SSLConfig(const MXS_CONFIG_PARAMETER& params)
 // static
 std::unique_ptr<SSLContext> SSLContext::create(const MXS_CONFIG_PARAMETER& params)
 {
-    mxb_assert(access(params.get_string(CN_SSL_CA_CERT).c_str(), F_OK) == 0);
+    mxb_assert(params.get_string(CN_SSL_CA_CERT).empty()
+               || access(params.get_string(CN_SSL_CA_CERT).c_str(), F_OK) == 0);
     mxb_assert(params.get_string(CN_SSL_CERT).empty()
                || access(params.get_string(CN_SSL_CERT).c_str(), F_OK) == 0);
     mxb_assert(params.get_string(CN_SSL_KEY).empty()
