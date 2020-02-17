@@ -6,6 +6,7 @@ add_library(storage_memcached SHARED
   storage_memcached.cc
   )
 
+add_dependencies(storage_memcached libmemcached)
 target_link_libraries(storage_memcached cache maxscale-common ${LIBMEMCACHED_LIBRARIES} sasl2)
 set_target_properties(storage_memcached PROPERTIES VERSION "1.0.0")
 set_target_properties(storage_memcached PROPERTIES LINK_FLAGS -Wl,-z,defs)
