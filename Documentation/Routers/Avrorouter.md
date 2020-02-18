@@ -453,6 +453,20 @@ For more details about building MaxScale from source, please refer to the
 [Building MaxScale from Source Code](../Getting-Started/Building-MaxScale-from-Source-Code.md)
 document.
 
+## Router Diagnostics
+
+The `router_diagnostics` output for an avrorouter service contains the following
+fields.
+
+* `infofile`: File where the avrorouter stores the conversion process state.
+* `avrodir`: Directory where avro files are stored
+* `binlogdir`: Directory where binlog files are read from
+* `binlog_name`: Current binlog name
+* `binlog_pos`: Current binlog position
+* `gtid`: Current GTID
+* `gtid_timestamp`: Current GTID timestamp
+* `gtid_event_number`: Current GTID event number
+
 ## Limitations
 
 The avrorouter does not support the following data types, conversions or SQL statements:
