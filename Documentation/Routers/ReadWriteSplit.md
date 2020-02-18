@@ -663,8 +663,8 @@ only the master connection is used.
 
 ## Router Diagnostics
 
-The `router_diagnostics` field of the MaxCtrl `show service` and the service
-REST API output for a readwritesplit service contains the following fields.
+The `router_diagnostics` output for a readwritesplit service contains the
+following fields.
 
 * `queries`: Number of queries executed through this service.
 * `route_master`: Number of writes routed to master.

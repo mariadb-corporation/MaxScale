@@ -15,25 +15,7 @@ See [Limitations](#limitations) for more information.
 
 From 2.3.0 onwards, SchemaRouter is capable of limited table family sharding.
 
-Table of Contents
-=================
-
-* [Routing Logic](#routing-logic)
-* [Configuration](#configuration)
-* [Router Parameters](#router-parameters)
-   * [ignore_tables](#ignore_tables)
-   * [ignore_tables_regex](#ignore_tables_regex)
-   * [preferred_server](#preferred_server)
-   * [ignore_databases](#ignore_databases)
-   * [ignore_databases_regex](#ignore_databases_regex)
-* [Table Family Sharding](#table-family-sharding)
-* [Router Options](#router-options)
-   * [max_sescmd_history](#max_sescmd_history)
-   * [disable_sescmd_history](#disable_sescmd_history)
-   * [refresh_databases](#refresh_databases)
-   * [refresh_interval](#refresh_interval)
-* [Limitations](#limitations)
-* [Examples](#examples)
+[TOC]
 
 ## Routing Logic
 
@@ -231,6 +213,21 @@ is provided, the value is interpreted as seconds in MaxScale 2.4. In subsequent
 versions a value without a unit may be rejected. Note that since the granularity
 of the intervaltimeout is seconds, a timeout specified in milliseconds will be rejected,
 even if the duration is longer than a second.
+
+## Router Diagnostics
+
+The `router_diagnostics` output for a schemarouter service contains the
+following fields.
+
+* `queries`: Number of queries executed through this service.
+* `sescmd_percentage`: The percentage of queries that were session commands.
+* `longest_sescmd_chain`: The largest amount of session commands executed by one client session.
+* `times_sescmd_limit_exceeded`: Number of times the session command history limit was exceeded.
+* `longest_session`: The longest client session in seconds.
+* `shortest_session`: The shortest client session in seconds.
+* `average_session`: The average client session duration in seconds.
+* `shard_map_hits`: Cache hits for the shard map cache.
+* `shard_map_misses`: Cache misses for the shard map cache.
 
 ## Limitations
 
