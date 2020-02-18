@@ -37,6 +37,12 @@
 #include <maxscale/protocol/mariadb/rwbackend.hh>
 #include <maxscale/session_stats.hh>
 #include <maxscale/workerlocal.hh>
+#include <maxscale/config2.hh>
+
+namespace cfg = maxscale::config;
+using namespace std::literals::chrono_literals;
+
+constexpr int SLAVE_MAX = 255;
 
 enum backend_type_t
 {
@@ -79,7 +85,7 @@ enum failure_mode
     RW_ERROR_ON_WRITE           /**< Don't close the connection but send an error for writes */
 };
 
-enum class CausalReadsMode : uint64_t
+enum CausalReadsMode
 {
     LOCAL,
     GLOBAL,
@@ -119,6 +125,125 @@ static const MXS_ENUM_VALUE causal_reads_mode_values[] =
     {"global", (uint64_t)CausalReadsMode::GLOBAL},
     {NULL}
 };
+
+static cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::ROUTER);
+
+static cfg::ParamEnum<mxs_target_t> s_use_sql_variables_in(
+    &s_spec, "use_sql_variables_in",
+    "Whether to route SQL variable modifications to all servers or only to the master",
+{
+    {TYPE_ALL, "all"},
+    {TYPE_MASTER, "master"},
+}, TYPE_ALL, cfg::Param::AT_RUNTIME);
+
+static cfg::ParamEnum<select_criteria_t> s_slave_selection_criteria(
+    &s_spec, "slave_selection_criteria", "Slave selection criteria",
+{
+    {LEAST_GLOBAL_CONNECTIONS, "LEAST_GLOBAL_CONNECTIONS"},
+    {LEAST_ROUTER_CONNECTIONS, "LEAST_ROUTER_CONNECTIONS"},
+    {LEAST_BEHIND_MASTER, "LEAST_BEHIND_MASTER"},
+    {LEAST_CURRENT_OPERATIONS, "LEAST_CURRENT_OPERATIONS"},
+    {ADAPTIVE_ROUTING, "ADAPTIVE_ROUTING"}
+}, LEAST_CURRENT_OPERATIONS, cfg::Param::AT_RUNTIME);
+
+static cfg::ParamEnum<failure_mode> s_master_failure_mode(
+    &s_spec, "master_failure_mode", "Master failure mode behavior",
+{
+    {RW_FAIL_INSTANTLY, "fail_instantly"},
+    {RW_FAIL_ON_WRITE, "fail_on_write"},
+    {RW_ERROR_ON_WRITE, "error_on_write"}
+}, RW_FAIL_INSTANTLY, cfg::Param::AT_RUNTIME);
+
+static cfg::ParamEnum<CausalReadsMode> s_causal_reads_mode(
+    &s_spec, "causal_reads_mode", "Causal reads mode",
+{
+    {CausalReadsMode::LOCAL, "local"},
+    {CausalReadsMode::GLOBAL, "global"},
+}, CausalReadsMode::GLOBAL, cfg::Param::AT_RUNTIME);
+
+static cfg::ParamSeconds s_max_slave_replication_lag(
+    &s_spec, "max_slave_replication_lag", "Maximum allowed slave replication lag",
+    cfg::INTERPRET_AS_SECONDS, 0s, cfg::Param::AT_RUNTIME);
+
+static cfg::ParamString s_max_slave_connections(
+    &s_spec, "max_slave_connections", "Maximum number of slave connections",
+    std::to_string(SLAVE_MAX), cfg::Param::AT_RUNTIME);
+
+static cfg::ParamCount s_slave_connections(
+    &s_spec, "slave_connections", "Starting number of slave connections",
+    SLAVE_MAX, cfg::Param::AT_RUNTIME);
+
+static cfg::ParamBool s_retry_failed_reads(
+    &s_spec, "retry_failed_reads", "Automatically retry failed reads outside of transactions",
+    true, cfg::Param::AT_RUNTIME);
+
+static cfg::ParamBool s_prune_sescmd_history(
+    &s_spec, "prune_sescmd_history", "Prune old session command history if the limit is exceeded",
+    false, cfg::Param::AT_RUNTIME);
+
+static cfg::ParamBool s_disable_sescmd_history(
+    &s_spec, "disable_sescmd_history", "Disable session command history",
+    false, cfg::Param::AT_RUNTIME);
+
+static cfg::ParamCount s_max_sescmd_history(
+    &s_spec, "max_sescmd_history", "Session command history size",
+    50, cfg::Param::AT_RUNTIME);
+
+static cfg::ParamBool s_strict_multi_stmt(
+    &s_spec, "strict_multi_stmt", "Lock connection to master after multi-statement query",
+    false, cfg::Param::AT_RUNTIME);
+
+static cfg::ParamBool s_strict_sp_calls(
+    &s_spec, "strict_sp_calls", "Lock connection to master after a stored procedure is executed",
+    false, cfg::Param::AT_RUNTIME);
+
+static cfg::ParamBool s_master_accept_reads(
+    &s_spec, "master_accept_reads", "Use master for reads",
+    false, cfg::Param::AT_RUNTIME);
+
+static cfg::ParamBool s_causal_reads(
+    &s_spec, "causal_reads", "Synchronize reads on slaves with the master",
+    false, cfg::Param::AT_RUNTIME);
+
+static cfg::ParamSeconds s_causal_reads_timeout(
+    &s_spec, "causal_reads_timeout", "Timeout for the slave synchronization",
+    cfg::INTERPRET_AS_SECONDS, 10s, cfg::Param::AT_RUNTIME);
+
+static cfg::ParamBool s_master_reconnection(
+    &s_spec, "master_reconnection", "Reconnect to master",
+    false, cfg::Param::AT_RUNTIME);
+
+static cfg::ParamBool s_delayed_retry(
+    &s_spec, "delayed_retry", "Retry failed writes outside of transactions",
+    false, cfg::Param::AT_RUNTIME);
+
+static cfg::ParamSeconds s_delayed_retry_timeout(
+    &s_spec, "delayed_retry_timeout", "Timeout for delayed_retry",
+    cfg::INTERPRET_AS_SECONDS, 10s, cfg::Param::AT_RUNTIME);
+
+static cfg::ParamBool s_transaction_replay(
+    &s_spec, "transaction_replay", "Retry failed transactions",
+    false, cfg::Param::AT_RUNTIME);
+
+static cfg::ParamSize s_transaction_replay_max_size(
+    &s_spec, "transaction_replay_max_size", "Maximum size of transaction to retry",
+    1024 * 1024 * 1024, cfg::Param::AT_RUNTIME);
+
+static cfg::ParamCount s_transaction_replay_attempts(
+    &s_spec, "transaction_replay_attempts", "Maximum number of times to retry a transaction",
+    5, cfg::Param::AT_RUNTIME);
+
+static cfg::ParamBool s_transaction_replay_retry_on_deadlock(
+    &s_spec, "transaction_replay_retry_on_deadlock", "Retry transaction on deadlock",
+    false, cfg::Param::AT_RUNTIME);
+
+static cfg::ParamBool s_optimistic_trx(
+    &s_spec, "optimistic_trx", "Optimistically offload transactions to slaves",
+    false, cfg::Param::AT_RUNTIME);
+
+static cfg::ParamBool s_lazy_connect(
+    &s_spec, "lazy_connect", "Create connections only when needed",
+    false, cfg::Param::AT_RUNTIME);
 
 #define BREF_IS_NOT_USED(s)       ((s)->bref_state & ~BREF_IN_USE)
 #define BREF_IS_IN_USE(s)         ((s)->bref_state & BREF_IN_USE)
