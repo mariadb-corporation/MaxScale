@@ -37,6 +37,10 @@ The following deprecated parameters have been removed.
 * Server parameters `protocol` and `authenticator` have been deprecated. Any
   definitions are ignored.
 
+### Readwritesplit
+
+* The use of percentage values in `max_slave_connections` has been deprecated.
+
 ## New Features
 
 * Listeners support multiple authenticators.

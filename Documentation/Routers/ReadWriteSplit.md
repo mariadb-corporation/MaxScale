@@ -57,14 +57,14 @@ taken into use by new sessions.
 
 ### `max_slave_connections`
 
-**`max_slave_connections`** sets the maximum number of slaves a router session
-uses at any moment. The default is to use at most 255 slave connections per
-client connection. In older versions the default was to use all available slaves
-with no limit.
+`max_slave_connections` sets the maximum number of slaves a router session uses
+at any moment. The default is to use at most 255 slave connections per client
+connection. In older versions the default was to use all available slaves with
+no limit.
 
-```
-max_slave_connections=<max. number, or % of available slaves>
-```
+Starting with MaxScale 2.5.0, the use of percentage values in
+`max_slave_connections` is deprecated. The support for percentages will be
+removed in a future release.
 
 For example, if you have configured MaxScale with one master and three slaves
 and set `max_slave_connections=2`, for each client connection a connection to
