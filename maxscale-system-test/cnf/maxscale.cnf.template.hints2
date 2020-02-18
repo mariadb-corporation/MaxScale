@@ -19,7 +19,6 @@ router= readwritesplit
 servers=server1,server2,server3,server4
 user=maxskysql
 password=skysql
-max_slave_connections=100%
 use_sql_variables_in=all
 slave_selection_criteria=LEAST_BEHIND_MASTER
 filters=hints

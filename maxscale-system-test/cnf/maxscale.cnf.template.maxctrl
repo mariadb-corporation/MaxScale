@@ -18,7 +18,6 @@ router=readwritesplit
 servers=server1,server2,server3,server4
 user=maxskysql
 password=skysql
-max_slave_connections=100%
 
 [SchemaRouter-Router]
 type=service
@@ -34,7 +33,6 @@ router=readwritesplit
 servers=server1,server2,server3,server4
 user=maxskysql
 password=skysql
-max_slave_connections=100%
 filters=Hint
 
 [Read-Connection-Router]

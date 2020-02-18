@@ -40,7 +40,6 @@ type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
 
-max_slave_connections=100%
 use_sql_variables_in=all
 
 user=skysql
@@ -52,7 +51,6 @@ enable_root_user=1
 type=service
 router=readwritesplit
 servers=server1,server2
-max_slave_connections=100%
 use_sql_variables_in=all
 user=skysql
 password=skysql
