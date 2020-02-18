@@ -489,9 +489,9 @@ uint64_t mariadb::AuthenticatorModule::capabilities() const
 bool UserEntry::operator==(const UserEntry& rhs) const
 {
     return username == rhs.username && host_pattern == rhs.host_pattern && plugin == rhs.plugin
-        && password == rhs.password && auth_string == rhs.auth_string && ssl == rhs.ssl
-        && global_db_priv == rhs.global_db_priv && proxy_grant == rhs.proxy_grant && is_role == rhs.is_role
-        && default_role == rhs.default_role;
+           && password == rhs.password && auth_string == rhs.auth_string && ssl == rhs.ssl
+           && global_db_priv == rhs.global_db_priv && proxy_grant == rhs.proxy_grant && is_role == rhs.is_role
+           && default_role == rhs.default_role;
 }
 
 bool UserEntry::host_pattern_is_more_specific(const UserEntry& lhs, const UserEntry& rhs)
@@ -507,10 +507,85 @@ bool UserEntry::host_pattern_is_more_specific(const UserEntry& lhs, const UserEn
 
     // The host without wc:s sorts earlier than the one with them,
     return (!lwc && rwc)
-           // ... and if both have wc:s, the one with the later wc wins (ties broken by strcmp),
+            // ... and if both have wc:s, the one with the later wc wins (ties broken by strcmp),
            || (lwc && rwc && ((lwc_pos > rwc_pos) || (lwc_pos == rwc_pos && lhost < rhost)))
-           // ... and if neither have wildcards, use string order.
+            // ... and if neither have wildcards, use string order.
            || (!lwc && !rwc && lhost < rhost);
+}
+
+/**
+ * Read a complete MySQL-protocol packet to output buffer. Returns false on read error.
+ *
+ * @param dcb Dcb to read from
+ * @param output Output for read packet. Should be empty before calling.
+ * @return True, if reading succeeded. Also returns true if the entire packet was not yet available and
+ * the function should be called again later.
+ */
+bool read_protocol_packet(DCB* dcb, mxs::Buffer* output)
+{
+    // TODO: add optimization where the dcb readq is checked first, as it may contain a complete protocol
+    // packet.
+    const int MAX_PACKET_SIZE = MYSQL_PACKET_LENGTH_MAX + MYSQL_HEADER_LEN;
+    GWBUF* read_buffer = nullptr;
+    int buffer_len = dcb->read(&read_buffer, MAX_PACKET_SIZE);
+    if (buffer_len < 0)
+    {
+        return false;
+    }
+
+    if (buffer_len >= MYSQL_HEADER_LEN)
+    {
+        // Got enough that the entire packet may be available.
+
+        // Ensure that the HEADER + command byte is contiguous. This simplifies further parsing.
+        // In the vast majority of cases the start of the buffer is already contiguous.
+        auto link_len = gwbuf_link_length(read_buffer);
+        if ((buffer_len == MYSQL_HEADER_LEN && link_len < MYSQL_HEADER_LEN)
+            || (buffer_len > MYSQL_HEADER_LEN && link_len <= MYSQL_HEADER_LEN))
+        {
+            read_buffer = gwbuf_make_contiguous(read_buffer);
+        }
+
+        int prot_packet_len = MYSQL_GET_PACKET_LEN(read_buffer);
+
+        // Protocol packet length read. Either received more than the packet, the exact packet or
+        // a partial packet.
+        if (prot_packet_len < buffer_len)
+        {
+            // Got more than needed, save extra to DCB and trigger a read.
+            auto first_packet = gwbuf_split(&read_buffer, prot_packet_len);
+            output->reset(first_packet);
+            dcb->readq_prepend(read_buffer);
+            dcb->trigger_read_event();
+        }
+        else if (prot_packet_len == buffer_len)
+        {
+            // Read exact packet. Return it.
+            output->reset(read_buffer);
+            if (buffer_len == MAX_PACKET_SIZE && dcb->socket_bytes_readable() > 0)
+            {
+                // Read a maximally long packet when socket has even more. Route this packet,
+                // then read again.
+                dcb->trigger_read_event();
+            }
+        }
+        else
+        {
+            // Could not read enough, try again later. Save results to dcb.
+            dcb->readq_prepend(read_buffer);
+        }
+    }
+    else if (buffer_len > 0)
+    {
+        // Too little data. Save and wait for more.
+        dcb->readq_prepend(read_buffer);
+    }
+    else
+    {
+        // No data was read even though event handler was called. This may happen due to manually triggered
+        // reads (e.g. during SSL-init).
+    }
+    return true;
 }
 
 namespace mariadb
@@ -563,4 +638,3 @@ uint64_t get_byte8(const uint8_t* buffer)
     return host64;
 }
 }
-

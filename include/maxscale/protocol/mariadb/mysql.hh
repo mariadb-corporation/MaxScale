@@ -528,3 +528,5 @@ int response_length(bool with_ssl, bool ssl_established, const char* user, uint8
                     const char* dbname, const char* auth_module);
 
 uint8_t* load_hashed_password(const uint8_t* scramble, uint8_t* payload, uint8_t* passwd);
+
+bool read_protocol_packet(DCB* dcb, mxs::Buffer* output);

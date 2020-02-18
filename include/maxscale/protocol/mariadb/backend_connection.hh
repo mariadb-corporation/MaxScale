@@ -71,7 +71,7 @@ private:
 
     MariaDBBackendConnection(mariadb::SBackendAuth authenticator);
 
-    int    gw_read_and_write(DCB* dcb);
+    int    normal_read();
     bool   backend_write_delayqueue(DCB* dcb, GWBUF* buffer);
     void   backend_set_delayqueue(DCB* dcb, GWBUF* queue);
     bool   change_user(DCB* backend, GWBUF* queue);

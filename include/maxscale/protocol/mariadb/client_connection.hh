@@ -78,7 +78,6 @@ private:
     };
 
     bool read_first_client_packet(mxs::Buffer* output);
-    bool read_protocol_packet(mxs::Buffer* output);
 
     StateMachineRes process_handshake();
     StateMachineRes process_authentication(AuthType auth_type);
@@ -102,16 +101,16 @@ private:
     SpecialCmdRes process_special_commands(DCB* dcb, GWBUF* read_buffer, uint8_t cmd);
     SpecialCmdRes handle_query_kill(DCB* dcb, GWBUF* read_buffer, uint32_t packet_len);
 
-    int   mysql_send_auth_error(DCB* dcb, int packet_number, const char* mysql_message);
+    int mysql_send_auth_error(DCB* dcb, int packet_number, const char* mysql_message);
 
     int    mysql_send_standard_error(DCB* dcb, int sequence, int errnum, const char* msg);
     GWBUF* mysql_create_standard_error(int sequence, int error_number, const char* msg);
 
-    int    send_mysql_client_handshake();
-    char*  handle_variables(MXS_SESSION* session, GWBUF** read_buffer);
-    void   track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf);
-    void   mxs_mysql_execute_kill_all_others(MXS_SESSION* issuer, uint64_t target_id,
-                                             uint64_t keep_protocol_thread_id, kill_type_t type);
+    int   send_mysql_client_handshake();
+    char* handle_variables(MXS_SESSION* session, GWBUF** read_buffer);
+    void  track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf);
+    void  mxs_mysql_execute_kill_all_others(MXS_SESSION* issuer, uint64_t target_id,
+                                            uint64_t keep_protocol_thread_id, kill_type_t type);
     void mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_type_t type);
     void execute_kill(MXS_SESSION* issuer, std::shared_ptr<KillInfo> info);
     void track_current_command(const mxs::Buffer& buf);
@@ -189,8 +188,8 @@ private:
     /** Temporary data required during COM_CHANGE_USER. */
     struct ChangeUserFields
     {
-        mxs::Buffer                      client_query;  /**< The original change-user-query from client. */
-        std::unique_ptr<MYSQL_session>   session;       /**< Temporary session-data */
+        mxs::Buffer                    client_query;    /**< The original change-user-query from client. */
+        std::unique_ptr<MYSQL_session> session;         /**< Temporary session-data */
     };
 
     SSLState ssl_authenticate_check_status();

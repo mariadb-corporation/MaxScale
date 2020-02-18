@@ -1280,7 +1280,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_normal
     }
 
     mxs::Buffer buffer;
-    if (!read_protocol_packet(&buffer))
+    if (!read_protocol_packet(m_dcb, &buffer))
     {
         return StateMachineRes::ERROR;
     }
@@ -1866,79 +1866,6 @@ bool MariaDBClientConnection::parse_handshake_response_packet(GWBUF* buffer)
     return rval;
 }
 
-/**
- * Read a complete MySQL-protocol packet to output buffer. Returns false on read error.
- *
- * @param output Output for read packet. Should be empty before calling.
- * @return True, if reading succeeded. Also returns true if the entire packet was not yet available and
- * the function should be called again later.
- */
-bool MariaDBClientConnection::read_protocol_packet(mxs::Buffer* output)
-{
-    // TODO: add optimization where the dcb readq is checked first, as it may contain a complete protocol
-    // packet.
-    GWBUF* read_buffer = nullptr;
-    int buffer_len = m_dcb->read(&read_buffer, MAX_PACKET_SIZE);
-    if (buffer_len < 0)
-    {
-        return false;
-    }
-
-    if (buffer_len >= MYSQL_HEADER_LEN)
-    {
-        // Got enough that the entire packet may be available.
-
-        // Ensure that the HEADER + command byte is contiguous. This simplifies further parsing.
-        // In the vast majority of cases the start of the buffer is already contiguous.
-        auto link_len = gwbuf_link_length(read_buffer);
-        if ((buffer_len == MYSQL_HEADER_LEN && link_len < MYSQL_HEADER_LEN)
-            || (buffer_len > MYSQL_HEADER_LEN && link_len <= MYSQL_HEADER_LEN))
-        {
-            read_buffer = gwbuf_make_contiguous(read_buffer);
-        }
-
-        int prot_packet_len = MYSQL_GET_PACKET_LEN(read_buffer);
-
-        // Protocol packet length read. Either received more than the packet, the exact packet or
-        // a partial packet.
-        if (prot_packet_len < buffer_len)
-        {
-            // Got more than needed, save extra to DCB and trigger a read.
-            auto first_packet = gwbuf_split(&read_buffer, prot_packet_len);
-            output->reset(first_packet);
-            m_dcb->readq_prepend(read_buffer);
-            m_dcb->trigger_read_event();
-        }
-        else if (prot_packet_len == buffer_len)
-        {
-            // Read exact packet. Return it.
-            output->reset(read_buffer);
-            if (buffer_len == MAX_PACKET_SIZE && m_dcb->socket_bytes_readable() > 0)
-            {
-                // Read a maximally long packet when socket has even more. Route this packet,
-                // then read again.
-                m_dcb->trigger_read_event();
-            }
-        }
-        else
-        {
-            // Could not read enough, try again later. Save results to dcb.
-            m_dcb->readq_prepend(read_buffer);
-        }
-    }
-    else if (buffer_len > 0)
-    {
-        // Too little data. Save and wait for more.
-        m_dcb->readq_prepend(read_buffer);
-    }
-    else
-    {
-        // No data was read even though event handler was called. This may happen due to manually triggered
-        // reads (e.g. during SSL-init).
-    }
-    return true;
-}
-
 bool MariaDBClientConnection::require_ssl() const
 {
     return m_session->listener_data()->m_ssl.valid();
@@ -2111,7 +2038,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handsh
     mxs::Buffer read_buffer;
     bool read_success = (m_handshake_state == HSState::INIT) ?
         // The first response from client requires special handling.
-        read_first_client_packet(&read_buffer) : read_protocol_packet(&read_buffer);
+        read_first_client_packet(&read_buffer) : read_protocol_packet(m_dcb, &read_buffer);
 
     if (!read_success)
     {
@@ -2312,7 +2239,7 @@ bool MariaDBClientConnection::perform_auth_exchange()
     // Nothing to read on first exchange-call.
     if (m_auth_state == AuthState::CONTINUE_EXCHANGE)
     {
-        if (read_protocol_packet(&read_buffer))
+        if (read_protocol_packet(m_dcb, &read_buffer))
         {
             if (read_buffer.empty())
             {

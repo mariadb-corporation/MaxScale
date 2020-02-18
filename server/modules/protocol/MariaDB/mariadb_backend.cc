@@ -363,53 +363,27 @@ void MariaDBBackendConnection::prepare_for_write(DCB* dcb, GWBUF* buffer)
     m_track_state = gwbuf_should_track_state(buffer);
 }
 
-/*******************************************************************************
- *******************************************************************************
- *
- * API Entry Point - Read
- *
- * When the polling mechanism finds that new incoming data is available for
- * a backend connection, it will call this entry point, passing the relevant
- * DCB.
- *
- * The first time through, it is expected that protocol_auth_state will be
- * MYSQL_CONNECTED and an attempt will be made to send authentication data
- * to the backend server. The state may progress to MYSQL_AUTH_REC although
- * for an SSL connection this will not happen straight away, and the state
- * will remain MYSQL_CONNECTED.
- *
- * When the connection is fully established, it is expected that the state
- * will be MYSQL_IDLE and the information read from the backend will be
- * transferred to the client (front end).
- *
- *******************************************************************************
- ******************************************************************************/
-
 void MariaDBBackendConnection::ready_for_reading(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);     // The protocol should only handle its own events.
-    auto dcb = m_dcb;
-
-    mxb_assert(dcb->session());
-
-    MXS_DEBUG("Read dcb %p fd %d protocol state %s.", dcb, dcb->fd(), to_string(m_auth_state).c_str());
 
     if (m_auth_state == AuthState::COMPLETE)
     {
-        gw_read_and_write(dcb);
+        normal_read();
     }
     else
     {
-        GWBUF* readbuf = NULL;
+        mxs::Buffer buffer;
         std::ostringstream errmsg("Authentication with backend failed.");
 
-        if (!read_complete_packet(dcb, &readbuf))
+        if (!read_protocol_packet(m_dcb, &buffer))
         {
             m_auth_state = AuthState::FAIL;
-            do_handle_error(dcb, errmsg.str(), mxs::ErrorType::PERMANENT);
+            do_handle_error(m_dcb, errmsg.str(), mxs::ErrorType::PERMANENT);
         }
-        else if (readbuf)
+        else if (!buffer.empty())
         {
+            GWBUF* readbuf = buffer.release();
             /*
             ** We have a complete response from the server
             ** TODO: add support for non-contiguous responses
@@ -423,15 +397,15 @@ void MariaDBBackendConnection::ready_for_reading(DCB* event_dcb)
                 errmsg << "Invalid authentication message from backend '" << m_dcb->server()->name() << "': "
                        << mxs_mysql_get_mysql_errno(readbuf) << ", " << mxs::extract_error(readbuf);
                 m_auth_state = AuthState::FAIL;
-                handle_error_response(dcb, readbuf);
+                handle_error_response(m_dcb, readbuf);
             }
 
             if (m_auth_state == AuthState::CONNECTED)
             {
                 /** Read the server handshake and send the standard response */
-                if (gw_read_backend_handshake(dcb, readbuf))
+                if (gw_read_backend_handshake(m_dcb, readbuf))
                 {
-                    m_auth_state = gw_send_backend_auth(dcb);
+                    m_auth_state = gw_send_backend_auth(m_dcb);
                 }
                 else
                 {
@@ -444,33 +418,33 @@ void MariaDBBackendConnection::ready_for_reading(DCB* event_dcb)
                  * packet that can contain authenticator specific data from the
                  * backend server. For 'mysql_native_password' it'll be an OK
                  * packet */
-                m_auth_state = handle_server_response(dcb, readbuf);
+                m_auth_state = handle_server_response(m_dcb, readbuf);
             }
 
             if (m_auth_state == AuthState::COMPLETE)
             {
                 /** Authentication completed successfully */
-                GWBUF* localq = dcb->delayq_release();
+                GWBUF* localq = m_dcb->delayq_release();
 
                 if (localq)
                 {
                     localq = gwbuf_make_contiguous(localq);
                     /** Send the queued commands to the backend */
-                    prepare_for_write(dcb, localq);
-                    backend_write_delayqueue(dcb, localq);
+                    prepare_for_write(m_dcb, localq);
+                    backend_write_delayqueue(m_dcb, localq);
                 }
             }
             else if (m_auth_state == AuthState::FAIL || m_auth_state == AuthState::FAIL_HANDSHAKE)
             {
                 /** Authentication failed */
-                do_handle_error(dcb, errmsg.str(), mxs::ErrorType::PERMANENT);
+                do_handle_error(m_dcb, errmsg.str(), mxs::ErrorType::PERMANENT);
             }
 
             gwbuf_free(readbuf);
         }
-        else if (m_auth_state == AuthState::CONNECTED && dcb->ssl_state() == DCB::SSLState::ESTABLISHED)
+        else if (m_auth_state == AuthState::CONNECTED && m_dcb->ssl_state() == DCB::SSLState::ESTABLISHED)
         {
-            m_auth_state = gw_send_backend_auth(dcb);
+            m_auth_state = gw_send_backend_auth(m_dcb);
         }
     }
 }
@@ -634,11 +608,11 @@ bool MariaDBBackendConnection::handle_auth_change_response(GWBUF* reply, DCB* dc
 /**
  * With authentication completed, read new data and write to backend
  *
- * @param dcb           Descriptor control block for backend server
  * @return 0 is fail, 1 is success
  */
-int MariaDBBackendConnection::gw_read_and_write(DCB* dcb)
+int MariaDBBackendConnection::normal_read()
 {
+    auto dcb = m_dcb;
     GWBUF* read_buffer = NULL;
     MXS_SESSION* session = dcb->session();
     int nbytes_read = 0;
