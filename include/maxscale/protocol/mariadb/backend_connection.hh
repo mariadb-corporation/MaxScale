@@ -112,7 +112,8 @@ private:
     bool     consume_fetched_rows(GWBUF* buffer);
     void     track_query(GWBUF* buffer);
     void     set_reply_state(mxs::ReplyState state);
-
+    void     handshake();
+    void     authenticate();
     /**
      * Set associated client protocol session and upstream. Should be called after creation or when swapping
      * sessions.
