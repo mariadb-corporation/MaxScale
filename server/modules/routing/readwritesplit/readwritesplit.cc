@@ -61,6 +61,7 @@ static bool handle_max_slaves(RWSConfig& config, const char* str)
     {
         config.rw_max_slave_conn_percent = val;
         config.max_slave_connections = 0;
+        MXS_WARNING("Use of percentages in 'max_slave_connections' is deprecated");
     }
     else if (*endptr == '\0')
     {
@@ -251,7 +252,12 @@ RWSplit* RWSplit::create(SERVICE* service, mxs::ConfigParameters* params)
         return NULL;
     }
 
-    RWSConfig config(params);
+    if (!s_spec.validate(*params))
+    {
+        return nullptr;
+    }
+
+    RWSConfig config(*params);
 
     if (!handle_max_slaves(config, params->get_string("max_slave_connections").c_str()))
     {
@@ -331,12 +337,16 @@ uint64_t RWSplit::getCapabilities()
 bool RWSplit::configure(mxs::ConfigParameters* params)
 {
     bool rval = false;
-    RWSConfig cnf(params);
 
-    if (handle_max_slaves(cnf, params->get_string("max_slave_connections").c_str()))
+    if (s_spec.validate(*params))
     {
-        m_config.assign(cnf);
-        rval = true;
+        RWSConfig cnf(*params);
+
+        if (handle_max_slaves(cnf, params->get_string("max_slave_connections").c_str()))
+        {
+            m_config.assign(cnf);
+            rval = true;
+        }
     }
 
     return rval;
@@ -363,60 +373,10 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,
         NULL,
         NULL,
-        NULL,
-        {
-            {
-                "use_sql_variables_in",
-                MXS_MODULE_PARAM_ENUM,
-                "all",
-                MXS_MODULE_OPT_NONE,
-                use_sql_variables_in_values
-            },
-            {
-                "slave_selection_criteria",
-                MXS_MODULE_PARAM_ENUM,
-                "LEAST_CURRENT_OPERATIONS",
-                MXS_MODULE_OPT_NONE,
-                slave_selection_criteria_values
-            },
-            {
-                "master_failure_mode",
-                MXS_MODULE_PARAM_ENUM,
-                "fail_instantly",
-                MXS_MODULE_OPT_NONE,
-                master_failure_mode_values
-            },
-            {
-                "causal_reads_mode",
-                MXS_MODULE_PARAM_ENUM,
-                "local",
-                MXS_MODULE_OPT_NONE,
-                causal_reads_mode_values
-            },
-            {"max_slave_replication_lag",  MXS_MODULE_PARAM_DURATION,  "0s",  MXS_MODULE_OPT_DURATION_S},
-            {"max_slave_connections",      MXS_MODULE_PARAM_STRING,    MAX_SLAVE_COUNT},
-            {"slave_connections",          MXS_MODULE_PARAM_INT,       MAX_SLAVE_COUNT},
-            {"retry_failed_reads",         MXS_MODULE_PARAM_BOOL,      "true"},
-            {"prune_sescmd_history",       MXS_MODULE_PARAM_BOOL,      "false"},
-            {"disable_sescmd_history",     MXS_MODULE_PARAM_BOOL,      "false"},
-            {"max_sescmd_history",         MXS_MODULE_PARAM_COUNT,     "50"},
-            {"strict_multi_stmt",          MXS_MODULE_PARAM_BOOL,      "false"},
-            {"strict_sp_calls",            MXS_MODULE_PARAM_BOOL,      "false"},
-            {"master_accept_reads",        MXS_MODULE_PARAM_BOOL,      "false"},
-            {"causal_reads",               MXS_MODULE_PARAM_BOOL,      "false"},
-            {"causal_reads_timeout",       MXS_MODULE_PARAM_DURATION,  "10s", MXS_MODULE_OPT_DURATION_S},
-            {"master_reconnection",        MXS_MODULE_PARAM_BOOL,      "false"},
-            {"delayed_retry",              MXS_MODULE_PARAM_BOOL,      "false"},
-            {"delayed_retry_timeout",      MXS_MODULE_PARAM_DURATION,  "10s", MXS_MODULE_OPT_DURATION_S},
-            {"transaction_replay",         MXS_MODULE_PARAM_BOOL,      "false"},
-            {"transaction_replay_max_size",MXS_MODULE_PARAM_SIZE,      "1Mi"},
-            {"transaction_replay_attempts",MXS_MODULE_PARAM_COUNT,     "5"},
-            {"transaction_replay_retry_on_deadlock",MXS_MODULE_PARAM_BOOL,      "false"},
-            {"optimistic_trx",             MXS_MODULE_PARAM_BOOL,      "false"},
-            {"lazy_connect",               MXS_MODULE_PARAM_BOOL,      "false"},
-            {MXS_END_MODULE_PARAMS}
-        }
+        NULL
     };
+
+    s_spec.populate(info);
 
     MXS_NOTICE("Initializing statement-based read/write split router module.");
     return &info;
