@@ -50,7 +50,7 @@ using namespace maxscale;
 /** Maximum number of slaves */
 #define MAX_SLAVE_COUNT "255"
 
-// TODO: Don't process parameters in readwritesplit
+// TODO: Remove support for percentage values in 2.6
 static bool handle_max_slaves(RWSConfig& config, const char* str)
 {
     bool rval = true;
@@ -222,63 +222,38 @@ bool RWSplit::have_enough_servers() const
     return succp;
 }
 
-static void log_router_options_not_supported(SERVICE* service, std::string router_opts)
-{
-    std::stringstream ss;
-
-    for (const auto& a : mxs::strtok(router_opts, ", \t"))
-    {
-        ss << a << "\n";
-    }
-
-    MXS_ERROR("`router_options` is no longer supported in readwritesplit. "
-              "To define the router options as parameters, add the following "
-              "lines to service '%s':\n\n%s\n",
-              service->name(),
-              ss.str().c_str());
-}
-
 /**
  * API function definitions
  */
 
-
 RWSplit* RWSplit::create(SERVICE* service, mxs::ConfigParameters* params)
 {
+    RWSplit* rval = nullptr;
 
-    if (params->contains(CN_ROUTER_OPTIONS))
+    if (s_spec.validate(*params))
     {
-        log_router_options_not_supported(service, params->get_string(CN_ROUTER_OPTIONS));
-        return NULL;
+        RWSConfig config(*params);
+
+        if (handle_max_slaves(config, params->get_string("max_slave_connections").c_str()))
+        {
+            if (config.master_reconnection && config.disable_sescmd_history)
+            {
+                MXS_ERROR("Both 'master_reconnection' and 'disable_sescmd_history' are enabled: "
+                          "Master reconnection cannot be done without session command history.");
+            }
+            else
+            {
+                rval = new RWSplit(service, config);
+            }
+        }
     }
 
-    if (!s_spec.validate(*params))
-    {
-        return nullptr;
-    }
-
-    RWSConfig config(*params);
-
-    if (!handle_max_slaves(config, params->get_string("max_slave_connections").c_str()))
-    {
-        return NULL;
-    }
-
-    if (config.master_reconnection && config.disable_sescmd_history)
-    {
-        MXS_ERROR("Both 'master_reconnection' and 'disable_sescmd_history' are enabled: "
-                  "Master reconnection cannot be done without session command history.");
-        return NULL;
-    }
-
-    return new(std::nothrow) RWSplit(service, config);
+    return rval;
 }
 
 RWSplitSession* RWSplit::newSession(MXS_SESSION* session, const Endpoints& endpoints)
 {
-    RWSplitSession* rses = NULL;
-    MXS_EXCEPTION_GUARD(rses = RWSplitSession::create(this, session, endpoints));
-    return rses;
+    return RWSplitSession::create(this, session, endpoints);
 }
 
 json_t* RWSplit::diagnostics() const
@@ -359,14 +334,12 @@ bool RWSplit::configure(mxs::ConfigParameters* params)
  */
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static const char description[] = "A Read/Write splitting router for enhancement read scalability";
-
     static MXS_MODULE info =
     {
         MXS_MODULE_API_ROUTER,
         MXS_MODULE_GA,
         MXS_ROUTER_VERSION,
-        description,
+        "A Read/Write splitting router for enhancement read scalability",
         "V1.1.0",
         CAPABILITIES,
         &RWSplit::s_object,
@@ -377,7 +350,5 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     };
 
     s_spec.populate(info);
-
-    MXS_NOTICE("Initializing statement-based read/write split router module.");
     return &info;
 }
