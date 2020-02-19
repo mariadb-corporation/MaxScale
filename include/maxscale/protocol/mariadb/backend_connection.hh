@@ -58,16 +58,13 @@ public:
     uint32_t server_capabilities {0};   /**< Server capabilities TODO: private */
 
 private:
-    enum class AuthState
+    enum class State
     {
-        CONNECTED,      /**< Network connection to server created */
-        RESPONSE_SENT,  /**< Responded to the read authentication message */
-        FAIL,           /**< Authentication failed */
-        FAIL_HANDSHAKE, /**< Authentication failed immediately */
-        COMPLETE,       /**< Authentication is complete */
+        HANDSHAKING,    /**< Handshaking with backend */
+        AUTHENTICATING, /**< Authenticating with backend */
+        ROUTING,        /**< Ready to route queries */
+        FAILED,         /**< Handshake/authentication failed */
     };
-
-    static std::string to_string(AuthState auth_state);
 
     enum class HandShakeState
     {
@@ -78,7 +75,6 @@ private:
         COMPLETE,       /**< Handshake complete */
         FAIL,           /**< Handshake failed */
     };
-    HandShakeState m_hs_state {HandShakeState::EXPECT_HS};
 
     enum class HandShakeRes
     {
@@ -86,13 +82,25 @@ private:
         DONE,
         ERROR,
     };
-    HandShakeRes handshake();
 
-    void authenticate();
+    enum class AuthenticateRes
+    {
+        IN_PROGRESS,
+        DONE,
+        ERROR,
+    };
+
+    State          m_state {State::HANDSHAKING};            /**< Connection state */
+    HandShakeState m_hs_state {HandShakeState::EXPECT_HS};  /**< Handshake state */
+
+    mariadb::SBackendAuth m_authenticator; /**< Authentication plugin data */
 
     MariaDBBackendConnection(mariadb::SBackendAuth authenticator);
 
-    int    normal_read();
+    HandShakeRes    handshake();
+    AuthenticateRes authenticate();
+    int             normal_read();
+
     bool   backend_write_delayqueue(DCB* dcb, GWBUF* buffer);
     void   backend_set_delayqueue(DCB* dcb, GWBUF* queue);
     bool   change_user(DCB* backend, GWBUF* queue);
@@ -119,8 +127,6 @@ private:
     int    gw_decode_mysql_server_handshake(uint8_t* payload);
     GWBUF* gw_generate_auth_response(bool with_ssl, bool ssl_established, uint64_t service_capabilities);
 
-    AuthState handle_server_response(DCB* generic_dcb, GWBUF* buffer);
-
     uint32_t create_capabilities(bool with_ssl, bool db_specified, uint64_t capabilities);
     GWBUF*   process_packets(GWBUF** result);
     void     process_one_packet(Iter it, Iter end, uint32_t len);
@@ -142,9 +148,8 @@ private:
      */
     void assign_session(MXS_SESSION* session, mxs::Component* upstream);
 
-    mariadb::SBackendAuth m_authenticator;                      /**< Backend authentication data */
+    static std::string to_string(State auth_state);
 
-    AuthState   m_auth_state {AuthState::CONNECTED};/**< Backend authentication state */
     uint64_t    m_thread_id {0};                    /**< Backend thread id, received in backend handshake */
     uint8_t     m_scramble[MYSQL_SCRAMBLE_LEN];     /**< Server scramble, received in backend handshake */
     int         m_ignore_replies {0};               /**< How many replies should be discarded */

@@ -16,14 +16,13 @@
 #include <mysql.h>
 #include <mysqld_error.h>
 #include <maxbase/alloc.h>
+#include <maxbase/format.hh>
 #include <maxsql/mariadb.hh>
 #include <maxscale/clock.h>
-#include <maxscale/limits.h>
 #include <maxscale/mainworker.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/poll.hh>
-#include <maxscale/protocol.hh>
 #include <maxscale/router.hh>
 #include <maxscale/server.hh>
 #include <maxscale/utils.h>
@@ -184,7 +183,7 @@ void MariaDBBackendConnection::finish_connection()
 {
     mxb_assert(m_dcb->handler());
 
-    if (m_auth_state == AuthState::CONNECTED)
+    if (m_state == State::HANDSHAKING)
     {
         memset(m_scramble, 0, sizeof(m_scramble));
         m_dcb->writeq_append(gw_generate_auth_response(false, false, 0));
@@ -200,10 +199,10 @@ bool MariaDBBackendConnection::reuse_connection(BackendDCB* dcb, mxs::Component*
     mxb_assert(dcb->session() && !dcb->readq() && !dcb->delayq() && !dcb->writeq());
     mxb_assert(m_ignore_replies >= 0);
 
-    if (dcb->state() != DCB::State::POLLING || m_auth_state != AuthState::COMPLETE)
+    if (dcb->state() != DCB::State::POLLING || m_state != State::ROUTING)
     {
         MXS_INFO("DCB and protocol state do not qualify for pooling: %s, %s",
-                 mxs::to_string(dcb->state()), to_string(m_auth_state).c_str());
+                 mxs::to_string(dcb->state()), to_string(m_state).c_str());
     }
     else
     {
@@ -294,51 +293,6 @@ void MariaDBBackendConnection::handle_error_response(DCB* plain_dcb, GWBUF* buff
 }
 
 /**
- * @brief Handle the server's response packet
- *
- * This function reads the server's response packet and does the final step of
- * the authentication.
- *
- * @param generic_dcb Backend DCB
- * @param buffer Buffer containing the server's complete handshake
- * @return MXS_AUTH_STATE_HANDSHAKE_FAILED on failure.
- */
-MariaDBBackendConnection::AuthState MariaDBBackendConnection::handle_server_response(DCB* generic_dcb,
-                                                                                     GWBUF* buffer)
-{
-    using AuthRes = mariadb::BackendAuthenticator::AuthRes;
-
-    auto dcb = static_cast<BackendDCB*>(generic_dcb);
-    AuthState rval = m_auth_state == AuthState::CONNECTED ?
-        AuthState::FAIL_HANDSHAKE : AuthState::FAIL;
-
-    if (mxs_mysql_get_command(buffer) == MYSQL_REPLY_AUTHSWITCHREQUEST
-        && m_client_data->plugin == DEFAULT_MYSQL_AUTH_PLUGIN)
-    {
-        return send_mysql_native_password_response(dcb, buffer) ?
-               AuthState::RESPONSE_SENT : AuthState::FAIL;
-    }
-
-    if (m_authenticator->extract(dcb, buffer))
-    {
-        switch (m_authenticator->authenticate(dcb))
-        {
-        case AuthRes::INCOMPLETE:
-            rval = AuthState::RESPONSE_SENT;
-            break;
-
-        case AuthRes::SUCCESS:
-            rval = AuthState::COMPLETE;
-
-        default:
-            break;
-        }
-    }
-
-    return rval;
-}
-
-/**
  * @brief Prepare protocol for a write
  *
  * This prepares both the buffer and the protocol itself for writing a query
@@ -367,25 +321,33 @@ void MariaDBBackendConnection::ready_for_reading(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);     // The protocol should only handle its own events.
 
-    if (m_auth_state == AuthState::CONNECTED)
+    if (m_state == State::HANDSHAKING)
     {
         auto hs_res = handshake();
         if (hs_res == HandShakeRes::DONE)
         {
-            m_auth_state = AuthState::RESPONSE_SENT;
+            m_state = State::AUTHENTICATING;
         }
         else if (hs_res == HandShakeRes::ERROR)
         {
-            m_auth_state = AuthState::FAIL_HANDSHAKE;
+            m_state = State::FAILED;
         }
     }
-    else if (m_auth_state == AuthState::COMPLETE)
+    else if (m_state == State::ROUTING)
     {
         normal_read();
     }
     else
     {
-        authenticate();
+        auto auth_res = authenticate();
+        if (auth_res == AuthenticateRes::DONE)
+        {
+            m_state = State::ROUTING;
+        }
+        else if (auth_res == AuthenticateRes::ERROR)
+        {
+            m_state = State::FAILED;
+        }
     }
 }
 
@@ -953,15 +915,13 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
 
     int rc = 0;
 
-    switch (m_auth_state)
+    switch (m_state)
     {
-    case AuthState::FAIL_HANDSHAKE:
-    case AuthState::FAIL:
+    case State::FAILED:
         if (dcb->session()->state() != MXS_SESSION::State::STOPPING)
         {
-            MXS_ERROR("Unable to write to backend '%s' due to %s failure. Server in state %s.",
+            MXS_ERROR("Unable to write to backend '%s' because connection has failed. Server in state %s.",
                       dcb->server()->name(),
-                      m_auth_state == AuthState::FAIL_HANDSHAKE ? "handshake" : "authentication",
                       dcb->server()->status_string().c_str());
         }
 
@@ -969,12 +929,12 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
         rc = 0;
         break;
 
-    case AuthState::COMPLETE:
+    case State::ROUTING:
         {
             auto cmd = static_cast<mxs_mysql_cmd_t>(mxs_mysql_get_command(queue));
 
             MXS_DEBUG("write to dcb %p fd %d protocol state %s.",
-                      dcb, dcb->fd(), to_string(m_auth_state).c_str());
+                      dcb, dcb->fd(), to_string(m_state).c_str());
 
             queue = gwbuf_make_contiguous(queue);
             prepare_for_write(dcb, queue);
@@ -1007,7 +967,7 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
     default:
         {
             MXS_DEBUG("delayed write to dcb %p fd %d protocol state %s.",
-                      dcb, dcb->fd(), to_string(m_auth_state).c_str());
+                      dcb, dcb->fd(), to_string(m_state).c_str());
 
             /** Store data until authentication is complete */
             backend_set_delayqueue(dcb, queue);
@@ -1410,7 +1370,7 @@ static bool get_ip_string_and_port(struct sockaddr_storage* sa,
 
 bool MariaDBBackendConnection::established()
 {
-    return m_auth_state == AuthState::COMPLETE && (m_ignore_replies == 0) && !m_stored_query;
+    return m_state == State::ROUTING && (m_ignore_replies == 0) && !m_stored_query;
 }
 
 void MariaDBBackendConnection::ping()
@@ -2305,29 +2265,25 @@ void MariaDBBackendConnection::set_reply_state(mxs::ReplyState state)
     m_reply.set_reply_state(state);
 }
 
-std::string MariaDBBackendConnection::to_string(AuthState auth_state)
+std::string MariaDBBackendConnection::to_string(State auth_state)
 {
     std::string rval;
     switch (auth_state)
     {
-    case AuthState::CONNECTED:
-        rval = "CONNECTED";
+    case State::HANDSHAKING:
+        rval = "Handshaking";
         break;
 
-    case AuthState::RESPONSE_SENT:
-        rval = "RESPONSE_SENT";
+    case State::AUTHENTICATING:
+        rval = "Authenticating";
         break;
 
-    case AuthState::FAIL:
-        rval = "FAILED";
+    case State::FAILED:
+        rval = "Failed";
         break;
 
-    case AuthState::FAIL_HANDSHAKE:
-        rval = "HANDSHAKE_FAILED";
-        break;
-
-    case AuthState::COMPLETE:
-        rval = "COMPLETE";
+    case State::ROUTING:
+        rval = "Routing";
         break;
     }
     return rval;
@@ -2445,56 +2401,81 @@ MariaDBBackendConnection::HandShakeRes MariaDBBackendConnection::handshake()
     return rval;
 }
 
-void MariaDBBackendConnection::authenticate()
+MariaDBBackendConnection::AuthenticateRes MariaDBBackendConnection::authenticate()
 {
     mxs::Buffer buffer;
-    string errmsg = (string)"Authentication with '" + m_dcb->server()->name() + "' failed.";
-
     if (!read_protocol_packet(m_dcb, &buffer))
     {
-        m_auth_state = AuthState::FAIL;
-        do_handle_error(m_dcb, errmsg, mxs::ErrorType::PERMANENT);
+        do_handle_error(m_dcb, "Socket error", mxs::ErrorType::PERMANENT);
+        return AuthenticateRes::ERROR;
     }
-    else if (!buffer.empty())
+    else if (buffer.empty())
     {
-        // Have a complete response from the server.
-        buffer.make_contiguous();
+        // Didn't get enough data, read again later.
+        return AuthenticateRes::IN_PROGRESS;
+    }
+    else if (buffer.length() == MYSQL_HEADER_LEN)
+    {
+        // Effectively empty buffer. Should not happen during authentication. Error.
+        do_handle_error(m_dcb, "Invalid packet", mxs::ErrorType::PERMANENT);
+        return AuthenticateRes::ERROR;
+    }
 
-        if (is_error_response(buffer.get()))
+    // Have a complete response from the server.
+    buffer.make_contiguous();
+    uint8_t cmd = MYSQL_GET_COMMAND(GWBUF_DATA(buffer.get()));
+
+    // Three options: OK, ERROR or AuthSwitch/other.
+    auto rval = AuthenticateRes::ERROR;
+    if (cmd == MYSQL_REPLY_OK)
+    {
+        MXB_INFO("Authentication to '%s' succeeded.", m_dcb->server()->name());
+        rval = AuthenticateRes::DONE;
+    }
+    else if (cmd == MYSQL_REPLY_ERR)
+    {
+        // Server responded with an error, authentication failed.
+        handle_error_response(m_dcb, buffer.get());
+        rval = AuthenticateRes::ERROR;
+    }
+    else
+    {
+        // Something else, likely AuthSwitch or a message to the authentication plugin.
+        using AuthRes = mariadb::BackendAuthenticator::AuthRes;
+        if (cmd == MYSQL_REPLY_AUTHSWITCHREQUEST && m_client_data->plugin == DEFAULT_MYSQL_AUTH_PLUGIN)
         {
-            /** The server responded with an error */
-            errmsg += "Message from backend: " + std::to_string(mxs_mysql_get_mysql_errno(buffer.get()))
-                + ", " + mxs::extract_error(buffer.get());
-            m_auth_state = AuthState::FAIL;
-            handle_error_response(m_dcb, buffer.get());
+            send_mysql_native_password_response(m_dcb, buffer.get());
+            rval = AuthenticateRes::IN_PROGRESS;
         }
-
-        if (m_auth_state == AuthState::RESPONSE_SENT)
+        else if (m_authenticator->extract(m_dcb, buffer.get()))
         {
-            /** Read the message from the server. This will be the first
-             * packet that can contain authenticator specific data from the
-             * backend server. For 'mysql_native_password' it'll be an OK
-             * packet */
-            m_auth_state = handle_server_response(m_dcb, buffer.get());
-        }
-
-        if (m_auth_state == AuthState::COMPLETE)
-        {
-            /** Authentication completed successfully */
-            GWBUF* localq = m_dcb->delayq_release();
-
-            if (localq)
+            switch (m_authenticator->authenticate(m_dcb))
             {
-                localq = gwbuf_make_contiguous(localq);
-                /** Send the queued commands to the backend */
-                prepare_for_write(m_dcb, localq);
-                backend_write_delayqueue(m_dcb, localq);
+            case AuthRes::INCOMPLETE:
+                rval = AuthenticateRes::IN_PROGRESS;
+                break;
+
+            case AuthRes::SUCCESS:
+                rval = AuthenticateRes::DONE;
+
+            case AuthRes::FAIL:
+                rval = AuthenticateRes::ERROR;
+                break;
             }
         }
-        else if (m_auth_state == AuthState::FAIL || m_auth_state == AuthState::FAIL_HANDSHAKE)
+    }
+
+    if (rval == AuthenticateRes::DONE)
+    {
+        /** Authentication completed successfully */
+        GWBUF* localq = m_dcb->delayq_release();
+        if (localq)
         {
-            /** Authentication failed */
-            do_handle_error(m_dcb, errmsg, mxs::ErrorType::PERMANENT);
+            localq = gwbuf_make_contiguous(localq);
+            /** Send the queued commands to the backend */
+            prepare_for_write(m_dcb, localq);
+            backend_write_delayqueue(m_dcb, localq);
         }
     }
+    return rval;
 }
