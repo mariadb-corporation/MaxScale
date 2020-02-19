@@ -72,6 +72,12 @@ slave servers.
 For more complex examples of the readconnroute router, take a look at the
 examples in the [Tutorials](../Tutorials) folder.
 
+## Router Diagnostics
+
+The `router_diagnostics` output for readconnroute has the following fields.
+
+* `queries`: Number of queries executed through this service.
+
 ## Limitations
 
 * Sending of binary data with `LOAD DATA LOCAL INFILE` is not supported.

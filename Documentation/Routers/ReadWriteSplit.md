@@ -684,6 +684,28 @@ initial connection creation is skipped. If the client executes only read
 queries, no connection to the master is made. If only write queries are made,
 only the master connection is used.
 
+## Router Diagnostics
+
+The `router_diagnostics` output for a readwritesplit service contains the
+following fields.
+
+* `queries`: Number of queries executed through this service.
+* `route_master`: Number of writes routed to master.
+* `route_slave`: Number of reads routed to slaves.
+* `route_all`: Number of session commands routed to all servers.
+* `rw_transactions`: Number of explicit read-write transactions.
+* `ro_transactions`: Number of explicit read-only transactions.
+* `replayed_transactions`: Number of replayed transactions.
+
+* `server_query_statistics`: Statistics for each configured and used server consisting of the following fields.
+  * `id`: Name of the server
+  * `total`: Total number of queries.
+  * `read`: Total number of reads.
+  * `write`: Total number of writes.
+  * `avg_sess_duration`: Average duration of a client session to this server.
+  * `avg_sess_active_pct`: Average percentage of time client sessions were active. 0% means connections were opened but never used.
+  * `avg_selects_per_session`: Average number of selects per session.
+
 ## Server Ranks
 
 The general rule with server ranks is that primary servers will be used before
