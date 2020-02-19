@@ -69,6 +69,27 @@ private:
 
     static std::string to_string(AuthState auth_state);
 
+    enum class HandShakeState
+    {
+        EXPECT_HS,      /**< Expecting initial server handshake */
+        START_SSL,      /**< Send SSLRequest and start SSL */
+        SSL_NEG,        /**< Negotiating SSL */
+        SEND_HS_RESP,   /**< Send handshake response */
+        COMPLETE,       /**< Handshake complete */
+        FAIL,           /**< Handshake failed */
+    };
+    HandShakeState m_hs_state {HandShakeState::EXPECT_HS};
+
+    enum class HandShakeRes
+    {
+        IN_PROGRESS,
+        DONE,
+        ERROR,
+    };
+    HandShakeRes handshake();
+
+    void authenticate();
+
     MariaDBBackendConnection(mariadb::SBackendAuth authenticator);
 
     int    normal_read();
@@ -86,7 +107,7 @@ private:
     bool   read_complete_packet(DCB* dcb, GWBUF** readbuf);
     GWBUF* track_response(GWBUF** buffer);
     bool   mxs_mysql_is_result_set(GWBUF* buffer);
-    bool   gw_read_backend_handshake(DCB* dcb, GWBUF* buffer);
+    bool   read_backend_handshake(mxs::Buffer&& buffer);
     void   handle_error_response(DCB* plain_dcb, GWBUF* buffer);
     bool   session_ok_to_route(DCB* dcb);
     bool   complete_ps_response(GWBUF* buffer);
@@ -99,7 +120,6 @@ private:
     GWBUF* gw_generate_auth_response(bool with_ssl, bool ssl_established, uint64_t service_capabilities);
 
     AuthState handle_server_response(DCB* generic_dcb, GWBUF* buffer);
-    AuthState gw_send_backend_auth(BackendDCB* dcb);
 
     uint32_t create_capabilities(bool with_ssl, bool db_specified, uint64_t capabilities);
     GWBUF*   process_packets(GWBUF** result);
@@ -112,8 +132,7 @@ private:
     bool     consume_fetched_rows(GWBUF* buffer);
     void     track_query(GWBUF* buffer);
     void     set_reply_state(mxs::ReplyState state);
-    void     handshake();
-    void     authenticate();
+
     /**
      * Set associated client protocol session and upstream. Should be called after creation or when swapping
      * sessions.

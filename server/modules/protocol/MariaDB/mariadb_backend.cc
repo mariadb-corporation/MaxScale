@@ -367,13 +367,21 @@ void MariaDBBackendConnection::ready_for_reading(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);     // The protocol should only handle its own events.
 
-    if (m_auth_state == AuthState::COMPLETE)
+    if (m_auth_state == AuthState::CONNECTED)
+    {
+        auto hs_res = handshake();
+        if (hs_res == HandShakeRes::DONE)
+        {
+            m_auth_state = AuthState::RESPONSE_SENT;
+        }
+        else if (hs_res == HandShakeRes::ERROR)
+        {
+            m_auth_state = AuthState::FAIL_HANDSHAKE;
+        }
+    }
+    else if (m_auth_state == AuthState::COMPLETE)
     {
         normal_read();
-    }
-    else if (m_auth_state == AuthState::CONNECTED)
-    {
-        handshake();
     }
     else
     {
@@ -1530,54 +1538,14 @@ GWBUF* MariaDBBackendConnection::track_response(GWBUF** buffer)
 }
 
 /**
- * Write MySQL authentication packet to backend server.
- *
- * @param dcb  Backend DCB
- * @return Authentication state after sending handshake response
- */
-MariaDBBackendConnection::AuthState MariaDBBackendConnection::gw_send_backend_auth(BackendDCB* dcb)
-{
-    auto rval = AuthState::FAIL;
-
-    if (dcb->session() == NULL
-        || (dcb->session()->state() != MXS_SESSION::State::CREATED
-            && dcb->session()->state() != MXS_SESSION::State::STARTED)
-        || (dcb->server()->ssl().context() && dcb->ssl_state() == DCB::SSLState::HANDSHAKE_FAILED))
-    {
-        return rval;
-    }
-
-    bool with_ssl = dcb->server()->ssl().context();
-    bool ssl_established = dcb->ssl_state() == DCB::SSLState::ESTABLISHED;
-
-    GWBUF* buffer = gw_generate_auth_response(with_ssl, ssl_established, dcb->service()->capabilities());
-    mxb_assert(buffer);
-
-    if (with_ssl && !ssl_established)
-    {
-        if (dcb->writeq_append(buffer) && dcb->ssl_handshake() >= 0)
-        {
-            rval = AuthState::CONNECTED;
-        }
-    }
-    else if (dcb->writeq_append(buffer))
-    {
-        rval = AuthState::RESPONSE_SENT;
-    }
-
-    return rval;
-}
-
-/**
  * Read the backend server MySQL handshake
  *
- * @param dcb  Backend DCB
  * @return true on success, false on failure
  */
-bool MariaDBBackendConnection::gw_read_backend_handshake(DCB* dcb, GWBUF* buffer)
+bool MariaDBBackendConnection::read_backend_handshake(mxs::Buffer&& buffer)
 {
     bool rval = false;
-    uint8_t* payload = GWBUF_DATA(buffer) + 4;
+    uint8_t* payload = GWBUF_DATA(buffer.get()) + 4;
 
     if (gw_decode_mysql_server_handshake(payload) >= 0)
     {
@@ -2365,40 +2333,116 @@ std::string MariaDBBackendConnection::to_string(AuthState auth_state)
     return rval;
 }
 
-void MariaDBBackendConnection::handshake()
+MariaDBBackendConnection::HandShakeRes MariaDBBackendConnection::handshake()
 {
-    string errmsg = (string)"Handshake with '" + m_dcb->server()->name() + "' failed.";
-    mxs::Buffer buffer;
-    if (!read_protocol_packet(m_dcb, &buffer))
-    {
-        // Socket error.
-        m_auth_state = AuthState::FAIL;
-        do_handle_error(m_dcb, errmsg, mxs::ErrorType::PERMANENT);
-    }
-    else if (!buffer.empty())
-    {
-        // Have a complete response from the server.
-        buffer.make_contiguous();
+    auto rval = HandShakeRes::ERROR;
+    bool state_machine_continue = true;
 
-        /** Read the server handshake and send the standard response */
-        if (gw_read_backend_handshake(m_dcb, buffer.get()))
-        {
-            m_auth_state = gw_send_backend_auth(m_dcb);
-        }
-        else
-        {
-            m_auth_state = AuthState::FAIL;
-        }
-    }
-    else if (m_auth_state == AuthState::CONNECTED && m_dcb->ssl_state() == DCB::SSLState::ESTABLISHED)
+    while (state_machine_continue)
     {
-        m_auth_state = gw_send_backend_auth(m_dcb);
+        switch (m_hs_state)
+        {
+        case HandShakeState::EXPECT_HS:
+            {
+                // Read the server handshake.
+                mxs::Buffer buffer;
+                if (!read_protocol_packet(m_dcb, &buffer))
+                {
+                    // Socket error.
+                    string errmsg = (string)"Handshake with '" + m_dcb->server()->name() + "' failed.";
+                    do_handle_error(m_dcb, errmsg, mxs::ErrorType::PERMANENT);
+                    m_hs_state = HandShakeState::FAIL;
+                }
+                else if (buffer.empty())
+                {
+                    // Only got a partial packet, wait for more.
+                    state_machine_continue = false;
+                    rval = HandShakeRes::IN_PROGRESS;
+                }
+                else
+                {
+                    // Have a complete response from the server.
+                    buffer.make_contiguous();
+                    if (read_backend_handshake(std::move(buffer)))
+                    {
+                        m_hs_state = m_dcb->server()->ssl().context() ? HandShakeState::START_SSL :
+                            HandShakeState::SEND_HS_RESP;
+                    }
+                    else
+                    {
+                        do_handle_error(m_dcb, "Bad handshake", mxs::ErrorType::PERMANENT);
+                        m_hs_state = HandShakeState::FAIL;
+                    }
+                }
+            }
+            break;
+
+        case HandShakeState::START_SSL:
+            {
+                // SSL-connection starts by sending a cleartext SSLRequest-packet,
+                // then initiating SSL-negotiation.
+                GWBUF* ssl_req = gw_generate_auth_response(true, false, m_dcb->service()->capabilities());
+                if (ssl_req && m_dcb->writeq_append(ssl_req) && m_dcb->ssl_handshake() >= 0)
+                {
+                    m_hs_state = HandShakeState::SSL_NEG;
+                }
+                else
+                {
+                    do_handle_error(m_dcb, "SSL failed", mxs::ErrorType::PERMANENT);
+                    m_hs_state = HandShakeState::FAIL;
+                }
+            }
+            break;
+
+        case HandShakeState::SSL_NEG:
+            {
+                // Check SSL-state.
+                auto ssl_state = m_dcb->ssl_state();
+                if (ssl_state == DCB::SSLState::ESTABLISHED)
+                {
+                    m_hs_state = HandShakeState::SEND_HS_RESP;      // SSL ready
+                }
+                else if (ssl_state == DCB::SSLState::HANDSHAKE_REQUIRED)
+                {
+                    state_machine_continue = false;     // in progress, wait for more data
+                    rval = HandShakeRes::IN_PROGRESS;
+                }
+                else
+                {
+                    do_handle_error(m_dcb, "SSL failed", mxs::ErrorType::PERMANENT);
+                    m_hs_state = HandShakeState::FAIL;
+                }
+            }
+            break;
+
+        case HandShakeState::SEND_HS_RESP:
+            {
+                bool with_ssl = m_dcb->server()->ssl().context();
+                GWBUF* hs_resp = gw_generate_auth_response(with_ssl, with_ssl,
+                                                           m_dcb->service()->capabilities());
+                if (m_dcb->writeq_append(hs_resp))
+                {
+                    m_hs_state = HandShakeState::COMPLETE;
+                }
+                else
+                {
+                    m_hs_state = HandShakeState::FAIL;
+                }
+            }
+            break;
+
+        case HandShakeState::COMPLETE:
+            state_machine_continue = false;
+            rval = HandShakeRes::DONE;
+            break;
+
+        case HandShakeState::FAIL:
+            state_machine_continue = false;
+            rval = HandShakeRes::ERROR;
+            break;
+        }
     }
-    else if (m_auth_state == AuthState::FAIL_HANDSHAKE)
-    {
-        /** The server responded with an error */
-        do_handle_error(m_dcb, errmsg, mxs::ErrorType::PERMANENT);
-    }
+    return rval;
 }
 
 void MariaDBBackendConnection::authenticate()
