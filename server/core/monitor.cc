@@ -1462,48 +1462,53 @@ mxs_connect_result_t mon_ping_or_connect_to_db(MXS_MONITOR* mon, MXS_MONITORED_S
         }
         /** Otherwise close the handle. */
         mysql_close(database->con);
+        database->con = nullptr;
     }
 
-    mxs_connect_result_t conn_result = MONITOR_CONN_REFUSED;
-    if ((database->con = mysql_init(NULL)))
+    char* uname = mon->user;
+    char* passwd = mon->password;
+
+    if (database->server->monuser[0] && database->server->monpw[0])
     {
-        char* uname = mon->user;
-        char* passwd = mon->password;
+        uname = database->server->monuser;
+        passwd = database->server->monpw;
+    }
 
-        if (database->server->monuser[0] && database->server->monpw[0])
+    char* dpwd = decrypt_password(passwd);
+
+    mxs_connect_result_t conn_result = MONITOR_CONN_REFUSED;
+
+    for (int i = 0; i < mon->connect_attempts; i++)
+    {
+        MYSQL* mysql = mysql_init(nullptr);
+
+        mysql_optionsv(mysql, MYSQL_OPT_CONNECT_TIMEOUT, (void*) &mon->connect_timeout);
+        mysql_optionsv(mysql, MYSQL_OPT_READ_TIMEOUT, (void*) &mon->read_timeout);
+        mysql_optionsv(mysql, MYSQL_OPT_WRITE_TIMEOUT, (void*) &mon->write_timeout);
+        mysql_optionsv(mysql, MYSQL_PLUGIN_DIR, get_connector_plugindir());
+
+        time_t start = time(nullptr);
+        bool result = (mxs_mysql_real_connect(mysql, database->server, uname, dpwd) != nullptr);
+        time_t end = time(nullptr);
+
+        if (result)
         {
-            uname = database->server->monuser;
-            passwd = database->server->monpw;
+            database->con = mysql;
+            conn_result = MONITOR_CONN_NEWCONN_OK;
+            break;
         }
-
-        char* dpwd = decrypt_password(passwd);
-
-        mysql_optionsv(database->con, MYSQL_OPT_CONNECT_TIMEOUT, (void*) &mon->connect_timeout);
-        mysql_optionsv(database->con, MYSQL_OPT_READ_TIMEOUT, (void*) &mon->read_timeout);
-        mysql_optionsv(database->con, MYSQL_OPT_WRITE_TIMEOUT, (void*) &mon->write_timeout);
-        mysql_optionsv(database->con, MYSQL_PLUGIN_DIR, get_connector_plugindir());
-
-        time_t start = 0;
-        time_t end = 0;
-        for (int i = 0; i < mon->connect_attempts; i++)
+        else
         {
-            start = time(NULL);
-            bool result = (mxs_mysql_real_connect(database->con, database->server, uname, dpwd) != NULL);
-            end = time(NULL);
-
-            if (result)
-            {
-                conn_result = MONITOR_CONN_NEWCONN_OK;
-                break;
-            }
+            mysql_close(mysql);
         }
 
         if (conn_result == MONITOR_CONN_REFUSED && (int)difftime(end, start) >= mon->connect_timeout)
         {
             conn_result = MONITOR_CONN_TIMEOUT;
         }
-        MXS_FREE(dpwd);
     }
+
+    MXS_FREE(dpwd);
 
     return conn_result;
 }
