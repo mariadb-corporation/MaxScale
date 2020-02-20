@@ -24,7 +24,7 @@ public:
 
     bool    extract(DCB* dcb, GWBUF* buffer) override;
     AuthRes authenticate(DCB* dcb) override;
-    bool    ssl_capable(DCB* dcb) override;
+    AuthRes exchange(const mxs::Buffer& input, mxs::Buffer* output) override;
 
 private:
     bool send_client_password(DCB* dcb);

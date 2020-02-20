@@ -156,18 +156,6 @@ bool GSSAPIBackendAuthenticator::extract(DCB* dcb, GWBUF* buffer)
 }
 
 /**
- * @brief Check whether the DCB supports SSL
- * @param dcb Backend DCB
- * @return True if DCB supports SSL
- */
-bool GSSAPIBackendAuthenticator::ssl_capable(DCB* dcb)
-{
-    mxb_assert(dcb->role() == DCB::Role::BACKEND);
-    BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
-    return backend_dcb->server()->ssl().context() != NULL;
-}
-
-/**
  * @brief Authenticate the backend connection
  * @param dcb Backend DCB
  * @return MXS_AUTH_INCOMPLETE if authentication is ongoing, MXS_AUTH_SUCCEEDED
@@ -194,4 +182,10 @@ mariadb::BackendAuthenticator::AuthRes GSSAPIBackendAuthenticator::authenticate(
 GSSAPIBackendAuthenticator::GSSAPIBackendAuthenticator(const mariadb::BackendAuthData& shared_data)
     : m_shared_data(shared_data)
 {
+}
+
+mariadb::BackendAuthenticator::AuthRes
+GSSAPIBackendAuthenticator::exchange(const mxs::Buffer& input, mxs::Buffer* output)
+{
+    return AuthRes::FAIL;
 }

@@ -243,10 +243,17 @@ public:
     // Extract backend data from a buffer. Typically, this is called just before the authenticate-entrypoint.
     virtual bool extract(DCB* client, GWBUF* buffer) = 0;
 
-    // Determine whether the connection can support SSL.
-    virtual bool ssl_capable(DCB* client) = 0;
-
     // Carry out the authentication.
     virtual AuthRes authenticate(DCB* client) = 0;
+
+    /**
+     * Exchange authentication packets. The plugin should read the input, optionally write to output,
+     * and return status.
+     *
+     * @param input Packet from backend
+     * @param output Output for a packet that will be sent to backend
+     * @return Authentication status
+     */
+    virtual AuthRes exchange(const mxs::Buffer& input, mxs::Buffer* output) = 0;
 };
 }

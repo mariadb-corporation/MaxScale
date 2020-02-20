@@ -333,14 +333,6 @@ bool MariaDBBackendSession::extract(DCB* backend, GWBUF* buffer)
     return rval;
 }
 
-bool MariaDBBackendSession::ssl_capable(DCB* dcb)
-{
-    // TODO: The argument should be a BackendDCB.
-    mxb_assert(dcb->role() == DCB::Role::BACKEND);
-    BackendDCB* backend = static_cast<BackendDCB*>(dcb);
-    return backend->server()->ssl().context() != nullptr;
-}
-
 mariadb::BackendAuthenticator::AuthRes MariaDBBackendSession::authenticate(DCB* backend)
 {
     auto rval = AuthRes::FAIL;
@@ -350,5 +342,12 @@ mariadb::BackendAuthenticator::AuthRes MariaDBBackendSession::authenticate(DCB* 
         rval = AuthRes::SUCCESS;
     }
 
+    return rval;
+}
+
+mariadb::BackendAuthenticator::AuthRes
+MariaDBBackendSession::exchange(const mxs::Buffer& input, mxs::Buffer* output)
+{
+    auto rval = AuthRes::FAIL;
     return rval;
 }

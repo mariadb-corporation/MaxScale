@@ -2409,9 +2409,16 @@ MariaDBBackendConnection::AuthenticateRes MariaDBBackendConnection::authenticate
             send_mysql_native_password_response(m_dcb, buffer.get());
             rval = AuthenticateRes::IN_PROGRESS;
         }
-        else if (m_authenticator->extract(m_dcb, buffer.get()))
+        else
         {
-            switch (m_authenticator->authenticate(m_dcb))
+            mxs::Buffer output;
+            auto res = m_authenticator->exchange(buffer, &output);
+            if (!output.empty())
+            {
+                m_dcb->writeq_append(output.release());
+            }
+
+            switch (res)
             {
             case AuthRes::INCOMPLETE:
                 rval = AuthenticateRes::IN_PROGRESS;

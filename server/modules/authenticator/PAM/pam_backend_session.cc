@@ -314,11 +314,10 @@ mariadb::BackendAuthenticator::AuthRes PamBackendAuthenticator::authenticate(DCB
     return rval;
 }
 
-bool PamBackendAuthenticator::ssl_capable(DCB* dcb)
+mariadb::BackendAuthenticator::AuthRes
+PamBackendAuthenticator::exchange(const mxs::Buffer& input, mxs::Buffer* output)
 {
-    mxb_assert(dcb->role() == DCB::Role::BACKEND);
-    BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
-    return backend_dcb->server()->ssl().context();
+    return AuthRes::FAIL;
 }
 
 PamBackendAuthenticator::PamBackendAuthenticator(mariadb::BackendAuthData& shared_data)

@@ -154,8 +154,8 @@ public:
     ~MariaDBBackendSession() = default;
 
     bool    extract(DCB* backend, GWBUF* buffer) override;
-    bool    ssl_capable(DCB* backend) override;
     AuthRes authenticate(DCB* backend) override;
+    AuthRes exchange(const mxs::Buffer& input, mxs::Buffer* output) override;
 
 private:
     /** Authentication states */
