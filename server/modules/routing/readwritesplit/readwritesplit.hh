@@ -461,7 +461,10 @@ public:
     uint64_t getCapabilities();
 
     bool configure(mxs::ConfigParameters* params);
+
 private:
+    bool check_causal_reads(SERVER* server) const;
+    void set_warnings(json_t* json) const;
 
     struct gtid
     {
