@@ -31,7 +31,7 @@ json_t* GSSAPIAuthenticatorModule::diagnostics()
 
 uint64_t GSSAPIAuthenticatorModule::capabilities() const
 {
-    return CAP_BACKEND_AUTH;
+    return 0;
 }
 
 std::string GSSAPIAuthenticatorModule::supported_protocol() const

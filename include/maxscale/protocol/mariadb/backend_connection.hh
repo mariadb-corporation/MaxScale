@@ -21,10 +21,7 @@ public:
     using Iter = mxs::Buffer::iterator;
 
     static std::unique_ptr<MariaDBBackendConnection>
-    create(MXS_SESSION* session, mxs::Component* component, mariadb::SBackendAuth authenticator);
-
-    static std::unique_ptr<MariaDBBackendConnection>
-    create_test_protocol(mariadb::SBackendAuth authenticator);
+    create(MXS_SESSION* session, mxs::Component* component, SERVER& server);
 
     ~MariaDBBackendConnection() override;
 
@@ -93,9 +90,10 @@ private:
     State          m_state {State::HANDSHAKING};            /**< Connection state */
     HandShakeState m_hs_state {HandShakeState::EXPECT_HS};  /**< Handshake state */
 
-    mariadb::SBackendAuth m_authenticator; /**< Authentication plugin data */
+    SERVER&               m_server;             /**< Connected backend server */
+    mariadb::SBackendAuth m_authenticator;      /**< Authentication plugin data */
 
-    MariaDBBackendConnection(mariadb::SBackendAuth authenticator);
+    MariaDBBackendConnection(SERVER& server, mariadb::SBackendAuth authenticator);
 
     HandShakeRes    handshake();
     AuthenticateRes authenticate();

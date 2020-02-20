@@ -279,7 +279,7 @@ json_t* MariaDBAuthenticatorModule::diagnostics()
 
 uint64_t MariaDBAuthenticatorModule::capabilities() const
 {
-    return CAP_REAUTHENTICATE | CAP_CONC_LOAD_USERS | CAP_BACKEND_AUTH;
+    return 0;
 }
 
 mariadb::SClientAuth MariaDBAuthenticatorModule::create_client_authenticator()

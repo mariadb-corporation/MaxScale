@@ -130,8 +130,9 @@ bool is_last_eof(Iter it)
  *
  * @param authenticator Backend authenticator
  */
-MariaDBBackendConnection::MariaDBBackendConnection(mariadb::SBackendAuth authenticator)
-    : m_authenticator(std::move(authenticator))
+MariaDBBackendConnection::MariaDBBackendConnection(SERVER& server, mariadb::SBackendAuth authenticator)
+    : m_server(server)
+    , m_authenticator(std::move(authenticator))
 {
 }
 
@@ -149,23 +150,26 @@ MariaDBBackendConnection::MariaDBBackendConnection(mariadb::SBackendAuth authent
  ******************************************************************************/
 
 std::unique_ptr<MariaDBBackendConnection>
-MariaDBBackendConnection::create(MXS_SESSION* session, mxs::Component* component,
-                                 mariadb::SBackendAuth authenticator)
+MariaDBBackendConnection::create(MXS_SESSION* session, mxs::Component* component, SERVER& server)
 {
-    std::unique_ptr<MariaDBBackendConnection> backend_conn(
-        new(std::nothrow) MariaDBBackendConnection(std::move(authenticator)));
+    std::unique_ptr<MariaDBBackendConnection> backend_conn;
+
+    auto mariases = static_cast<MYSQL_session*>(session->protocol_data());
+    auto auth_module = mariases->m_current_authenticator;
+    auto new_backend_auth = auth_module->create_backend_authenticator();
+    if (new_backend_auth)
+    {
+        backend_conn.reset(new(std::nothrow) MariaDBBackendConnection(server, std::move(new_backend_auth)));
+    }
+    else
+    {
+        MXB_ERROR("Failed to create backend authenticator session for '%s'.", server.name());
+    }
+
     if (backend_conn)
     {
         backend_conn->assign_session(session, component);
     }
-    return backend_conn;
-}
-
-std::unique_ptr<MariaDBBackendConnection>
-MariaDBBackendConnection::create_test_protocol(mariadb::SBackendAuth authenticator)
-{
-    std::unique_ptr<MariaDBBackendConnection> backend_conn(
-        new(std::nothrow) MariaDBBackendConnection(std::move(authenticator)));
     return backend_conn;
 }
 
