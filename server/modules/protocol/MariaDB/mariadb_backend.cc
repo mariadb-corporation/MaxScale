@@ -175,10 +175,10 @@ MariaDBBackendConnection::create(MXS_SESSION* session, mxs::Component* component
 
 bool MariaDBBackendConnection::init_connection()
 {
-    if (m_dcb->server()->proxy_protocol)
+    if (m_server.proxy_protocol)
     {
         // TODO: The following function needs a return value.
-        gw_send_proxy_protocol_header(m_dcb);
+        send_proxy_protocol_header();
     }
     return true;
 }
@@ -302,13 +302,10 @@ void MariaDBBackendConnection::handle_error_response(DCB* plain_dcb, GWBUF* buff
  * This prepares both the buffer and the protocol itself for writing a query
  * to the backend.
  *
- * @param dcb    The backend DCB to write to
  * @param buffer Buffer that will be written
  */
-void MariaDBBackendConnection::prepare_for_write(DCB* dcb, GWBUF* buffer)
+void MariaDBBackendConnection::prepare_for_write(GWBUF* buffer)
 {
-    mxb_assert(dcb->session());
-
     if (!gwbuf_is_ignorable(buffer))
     {
         track_query(buffer);
@@ -870,12 +867,10 @@ void MariaDBBackendConnection::write_ready(DCB* event_dcb)
     return;
 }
 
-int MariaDBBackendConnection::handle_persistent_connection(BackendDCB* dcb, GWBUF* queue)
+int MariaDBBackendConnection::handle_persistent_connection(GWBUF* queue)
 {
-    auto protocol = this;
     int rc = 0;
-
-    mxb_assert(protocol->m_ignore_replies > 0);
+    mxb_assert(m_ignore_replies > 0);
 
     if (MYSQL_IS_COM_QUIT((uint8_t*)GWBUF_DATA(queue)))
     {
@@ -883,7 +878,7 @@ int MariaDBBackendConnection::handle_persistent_connection(BackendDCB* dcb, GWBU
          * closing. */
         MXS_INFO("COM_QUIT received while COM_CHANGE_USER is in progress, closing pooled connection");
         gwbuf_free(queue);
-        dcb->trigger_hangup_event();
+        m_dcb->trigger_hangup_event();
     }
     else
     {
@@ -894,7 +889,7 @@ int MariaDBBackendConnection::handle_persistent_connection(BackendDCB* dcb, GWBU
          * packets at one time.
          */
         MXS_INFO("COM_CHANGE_USER in progress, appending query to queue");
-        protocol->m_stored_query = gwbuf_append(protocol->m_stored_query, queue);
+        m_stored_query = gwbuf_append(m_stored_query, queue);
         rc = 1;
     }
 
@@ -909,24 +904,19 @@ int MariaDBBackendConnection::handle_persistent_connection(BackendDCB* dcb, GWBU
  */
 int32_t MariaDBBackendConnection::write(GWBUF* queue)
 {
-    BackendDCB* dcb = m_dcb;
-    auto backend_protocol = this;
-
-    if (backend_protocol->m_ignore_replies > 0)
+    if (m_ignore_replies > 0)
     {
-        return handle_persistent_connection(dcb, queue);
+        return handle_persistent_connection(queue);
     }
 
     int rc = 0;
-
     switch (m_state)
     {
     case State::FAILED:
-        if (dcb->session()->state() != MXS_SESSION::State::STOPPING)
+        if (m_session->state() != MXS_SESSION::State::STOPPING)
         {
             MXS_ERROR("Unable to write to backend '%s' because connection has failed. Server in state %s.",
-                      dcb->server()->name(),
-                      dcb->server()->status_string().c_str());
+                      m_server.name(), m_server.status_string().c_str());
         }
 
         gwbuf_free(queue);
@@ -938,16 +928,16 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
             auto cmd = static_cast<mxs_mysql_cmd_t>(mxs_mysql_get_command(queue));
 
             MXS_DEBUG("write to dcb %p fd %d protocol state %s.",
-                      dcb, dcb->fd(), to_string(m_state).c_str());
+                      m_dcb, m_dcb->fd(), to_string(m_state).c_str());
 
             queue = gwbuf_make_contiguous(queue);
-            prepare_for_write(dcb, queue);
+            prepare_for_write(queue);
 
             if (m_reply.command() == MXS_COM_CHANGE_USER)
             {
-                return change_user(dcb, queue);
+                return change_user(queue);
             }
-            else if (cmd == MXS_COM_QUIT && dcb->server()->persistent_conns_enabled())
+            else if (cmd == MXS_COM_QUIT && m_server.persistent_conns_enabled())
             {
                 /** We need to keep the pooled connections alive so we just ignore the COM_QUIT packet */
                 gwbuf_free(queue);
@@ -958,12 +948,12 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
                 if (gwbuf_is_ignorable(queue))
                 {
                     /** The response to this command should be ignored */
-                    backend_protocol->m_ignore_replies++;
-                    mxb_assert(backend_protocol->m_ignore_replies > 0);
+                    m_ignore_replies++;
+                    mxb_assert(m_ignore_replies > 0);
                 }
 
                 /** Write to backend */
-                rc = dcb->writeq_append(queue);
+                rc = m_dcb->writeq_append(queue);
             }
         }
         break;
@@ -971,10 +961,10 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
     default:
         {
             MXS_DEBUG("delayed write to dcb %p fd %d protocol state %s.",
-                      dcb, dcb->fd(), to_string(m_state).c_str());
+                      m_dcb, m_dcb->fd(), to_string(m_state).c_str());
 
             /** Store data until authentication is complete */
-            backend_set_delayqueue(dcb, queue);
+            backend_set_delayqueue(m_dcb, queue);
             rc = 1;
         }
         break;
@@ -992,33 +982,29 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
 void MariaDBBackendConnection::error(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);
-    auto dcb = m_dcb;
-    MXS_SESSION* session = dcb->session();
-    mxb_assert(session);
 
-    if (dcb->state() != DCB::State::POLLING || session->state() != MXS_SESSION::State::STARTED)
+    const auto dcb_state = m_dcb->state();
+    if (dcb_state != DCB::State::POLLING || m_session->state() != MXS_SESSION::State::STARTED)
     {
-        int error;
+        int error = 0;
         int len = sizeof(error);
 
-        if (getsockopt(dcb->fd(), SOL_SOCKET, SO_ERROR, &error, (socklen_t*) &len) == 0 && error != 0)
+        if (getsockopt(m_dcb->fd(), SOL_SOCKET, SO_ERROR, &error, (socklen_t*) &len) == 0 && error != 0)
         {
-            if (dcb->state() != DCB::State::POLLING)
+            const char* error_strz = mxs_strerror(errno);
+            if (dcb_state != DCB::State::POLLING)
             {
-                MXS_ERROR("DCB in state %s got error '%s'.",
-                          mxs::to_string(dcb->state()),
-                          mxs_strerror(errno));
+                MXS_ERROR("DCB in state %s got error '%s'.", mxs::to_string(dcb_state), error_strz);
             }
             else
             {
-                MXS_ERROR("Error '%s' in session that is not ready for routing.",
-                          mxs_strerror(errno));
+                MXS_ERROR("Error '%s' in session that is not ready for routing.", error_strz);
             }
         }
     }
     else
     {
-        do_handle_error(dcb, "Lost connection to backend server: network error");
+        do_handle_error(m_dcb, "Lost connection to backend server: network error");
     }
 }
 
@@ -1078,24 +1064,18 @@ void MariaDBBackendConnection::backend_set_delayqueue(DCB* dcb, GWBUF* queue)
  * This routine writes the delayq via dcb_write. The dcb->m_delayq contains data received
  * from the client before mysql backend authentication succeded
  *
- * @param dcb The current backend DCB
  * @return The dcb_write status
  */
-bool MariaDBBackendConnection::backend_write_delayqueue(DCB* plain_dcb, GWBUF* buffer)
+bool MariaDBBackendConnection::backend_write_delayqueue(GWBUF* buffer)
 {
-    mxb_assert(plain_dcb->role() == DCB::Role::BACKEND);
-    BackendDCB* dcb = static_cast<BackendDCB*>(plain_dcb);
-    mxb_assert(dcb->session());
-    mxb_assert(buffer);
-
     bool rval = false;
     const uint8_t* data = GWBUF_DATA(buffer);
     if (MYSQL_IS_CHANGE_USER(data))
     {
         /** Recreate the COM_CHANGE_USER packet with the scramble the backend sent to us */
-        rval = change_user(dcb, buffer);
+        rval = change_user(buffer);
     }
-    else if (MYSQL_IS_COM_QUIT(data) && dcb->server()->persistent_conns_enabled())
+    else if (MYSQL_IS_COM_QUIT(data) && m_server.persistent_conns_enabled())
     {
         /** We need to keep the pooled connections alive so we just ignore the COM_QUIT packet */
         gwbuf_free(buffer);
@@ -1103,12 +1083,12 @@ bool MariaDBBackendConnection::backend_write_delayqueue(DCB* plain_dcb, GWBUF* b
     }
     else
     {
-        rval = dcb->writeq_append(buffer);
+        rval = m_dcb->writeq_append(buffer);
     }
 
     if (!rval)
     {
-        do_handle_error(dcb, "Lost connection to backend server while writing delay queue.");
+        do_handle_error(m_dcb, "Lost connection to backend server while writing delay queue.");
     }
 
     return rval;
@@ -1117,14 +1097,13 @@ bool MariaDBBackendConnection::backend_write_delayqueue(DCB* plain_dcb, GWBUF* b
 /**
  * This routine handles the COM_CHANGE_USER command.
  *
- * @param dcb           The current backend DCB
  * @param queue         The GWBUF containing the COM_CHANGE_USER receveid
  * @return True on success
  */
-bool MariaDBBackendConnection::change_user(DCB* backend, GWBUF* queue)
+bool MariaDBBackendConnection::change_user(GWBUF* queue)
 {
     gwbuf_free(queue);
-    return send_change_user_to_backend(backend);
+    return send_change_user_to_backend();
 }
 
 /**
@@ -1216,11 +1195,11 @@ GWBUF* MariaDBBackendConnection::create_change_user_packet()
  *
  * @return True on success
  */
-bool MariaDBBackendConnection::send_change_user_to_backend(DCB* backend)
+bool MariaDBBackendConnection::send_change_user_to_backend()
 {
     GWBUF* buffer = create_change_user_packet();
     bool rval = false;
-    if (backend->writeq_append(buffer))
+    if (m_dcb->writeq_append(buffer))
     {
         m_changing_user = true;
         rval = true;
@@ -1233,14 +1212,12 @@ bool MariaDBBackendConnection::send_change_user_to_backend(DCB* backend)
  * for more information. Currently only supports the text version (v1) of
  * the protocol. Binary version may be added when the feature has been confirmed
  * to work.
- *
- * @param backend_dcb The target dcb.
  */
-void MariaDBBackendConnection::gw_send_proxy_protocol_header(BackendDCB* backend_dcb)
+void MariaDBBackendConnection::send_proxy_protocol_header()
 {
     // TODO: Add support for chained proxies. Requires reading the client header.
 
-    const ClientDCB* client_dcb = backend_dcb->session()->client_connection()->dcb();
+    const ClientDCB* client_dcb = m_session->client_connection()->dcb();
     const int client_fd = client_dcb->fd();
     const sa_family_t family = client_dcb->ip().ss_family;
     const char* family_str = nullptr;
@@ -1318,10 +1295,8 @@ void MariaDBBackendConnection::gw_send_proxy_protocol_header(BackendDCB* backend
     GWBUF* headerbuf = gwbuf_alloc_and_load(strlen(proxy_header), proxy_header);
     if (headerbuf)
     {
-        MXS_INFO("Sending proxy-protocol header '%s' to backend %s.",
-                 proxy_header,
-                 backend_dcb->server()->name());
-        if (!backend_dcb->writeq_append(headerbuf))
+        MXS_INFO("Sending proxy-protocol header '%s' to backend %s.", proxy_header, m_server.name());
+        if (!m_dcb->writeq_append(headerbuf))
         {
             gwbuf_free(headerbuf);
         }
@@ -1381,7 +1356,7 @@ void MariaDBBackendConnection::ping()
 {
     if (m_reply.state() == ReplyState::DONE)
     {
-        MXS_INFO("Pinging '%s', idle for %ld seconds", m_dcb->server()->name(), seconds_idle());
+        MXS_INFO("Pinging '%s', idle for %ld seconds", m_server.name(), seconds_idle());
 
         // TODO: Think of a better mechanism for the pings, the ignorable ping mechanism isn't pretty.
         write(modutil_create_ignorable_ping());
@@ -1395,7 +1370,7 @@ int64_t MariaDBBackendConnection::seconds_idle() const
 
 json_t* MariaDBBackendConnection::diagnostics() const
 {
-    return json_pack("{siss}", "connection_id", m_thread_id, "server", m_dcb->server()->name());
+    return json_pack("{siss}", "connection_id", m_thread_id, "server", m_server.name());
 }
 
 int MariaDBBackendConnection::mysql_send_com_quit(DCB* dcb, int packet_number, GWBUF* bufparam)
@@ -1583,7 +1558,7 @@ int MariaDBBackendConnection::gw_decode_mysql_server_handshake(uint8_t* payload)
     // get ThreadID: 4 bytes
     uint32_t tid = gw_mysql_get_byte4(payload);
 
-    MXS_INFO("Connected to '%s' with thread id %u", m_dcb->server()->name(), tid);
+    MXS_INFO("Connected to '%s' with thread id %u", m_server.name(), tid);
 
     /* TODO: Correct value of thread id could be queried later from backend if
      * there is any worry it might be larger than 32bit allows. */
@@ -1881,7 +1856,7 @@ void MariaDBBackendConnection::process_one_packet(Iter it, Iter end, uint32_t le
         {
             // This should never happen
             MXS_ERROR("Unexpected result state. cmd: 0x%02hhx, len: %u server: %s",
-                      cmd, len, m_dcb->server()->name());
+                      cmd, len, m_server.name());
             session_dump_statements(m_session);
             session_dump_log(m_session);
             mxb_assert(!true);
@@ -2309,7 +2284,7 @@ MariaDBBackendConnection::HandShakeRes MariaDBBackendConnection::handshake()
                 if (!read_protocol_packet(m_dcb, &buffer))
                 {
                     // Socket error.
-                    string errmsg = (string)"Handshake with '" + m_dcb->server()->name() + "' failed.";
+                    string errmsg = (string)"Handshake with '" + m_server.name() + "' failed.";
                     do_handle_error(m_dcb, errmsg, mxs::ErrorType::TRANSIENT);
                     m_hs_state = HandShakeState::FAIL;
                 }
@@ -2325,7 +2300,7 @@ MariaDBBackendConnection::HandShakeRes MariaDBBackendConnection::handshake()
                     buffer.make_contiguous();
                     if (read_backend_handshake(std::move(buffer)))
                     {
-                        m_hs_state = m_dcb->server()->ssl().context() ? HandShakeState::START_SSL :
+                        m_hs_state = m_server.ssl().context() ? HandShakeState::START_SSL :
                             HandShakeState::SEND_HS_RESP;
                     }
                     else
@@ -2377,7 +2352,7 @@ MariaDBBackendConnection::HandShakeRes MariaDBBackendConnection::handshake()
 
         case HandShakeState::SEND_HS_RESP:
             {
-                bool with_ssl = m_dcb->server()->ssl().context();
+                bool with_ssl = m_server.ssl().context();
                 GWBUF* hs_resp = gw_generate_auth_response(with_ssl, with_ssl,
                                                            m_dcb->service()->capabilities());
                 if (m_dcb->writeq_append(hs_resp))
@@ -2433,7 +2408,7 @@ MariaDBBackendConnection::AuthenticateRes MariaDBBackendConnection::authenticate
     auto rval = AuthenticateRes::ERROR;
     if (cmd == MYSQL_REPLY_OK)
     {
-        MXB_INFO("Authentication to '%s' succeeded.", m_dcb->server()->name());
+        MXB_INFO("Authentication to '%s' succeeded.", m_server.name());
         rval = AuthenticateRes::DONE;
     }
     else if (cmd == MYSQL_REPLY_ERR)
@@ -2477,8 +2452,8 @@ MariaDBBackendConnection::AuthenticateRes MariaDBBackendConnection::authenticate
         {
             localq = gwbuf_make_contiguous(localq);
             /** Send the queued commands to the backend */
-            prepare_for_write(m_dcb, localq);
-            backend_write_delayqueue(m_dcb, localq);
+            prepare_for_write(localq);
+            backend_write_delayqueue(localq);
         }
     }
     return rval;

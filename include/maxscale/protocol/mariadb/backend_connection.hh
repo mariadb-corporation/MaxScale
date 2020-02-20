@@ -99,16 +99,16 @@ private:
     AuthenticateRes authenticate();
     int             normal_read();
 
-    bool   backend_write_delayqueue(DCB* dcb, GWBUF* buffer);
+    bool   backend_write_delayqueue(GWBUF* buffer);
     void   backend_set_delayqueue(DCB* dcb, GWBUF* queue);
-    bool   change_user(DCB* backend, GWBUF* queue);
-    bool   send_change_user_to_backend(DCB* backend);
-    void   gw_send_proxy_protocol_header(BackendDCB* backend_dcb);
-    int    handle_persistent_connection(BackendDCB* dcb, GWBUF* queue);
+    bool   change_user(GWBUF* queue);
+    bool   send_change_user_to_backend();
+    void   send_proxy_protocol_header();
+    int    handle_persistent_connection(GWBUF* queue);
     GWBUF* create_change_user_packet();
     void   do_handle_error(DCB* dcb, const std::string& errmsg,
                            mxs::ErrorType type = mxs::ErrorType::TRANSIENT);
-    void   prepare_for_write(DCB* dcb, GWBUF* buffer);
+    void   prepare_for_write(GWBUF* buffer);
     int    mysql_send_com_quit(DCB* dcb, int sequence, GWBUF* buf);
     bool   read_complete_packet(DCB* dcb, GWBUF** readbuf);
     GWBUF* track_response(GWBUF** buffer);
