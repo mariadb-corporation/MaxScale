@@ -2306,7 +2306,7 @@ MariaDBBackendConnection::HandShakeRes MariaDBBackendConnection::handshake()
                 {
                     // Socket error.
                     string errmsg = (string)"Handshake with '" + m_dcb->server()->name() + "' failed.";
-                    do_handle_error(m_dcb, errmsg, mxs::ErrorType::PERMANENT);
+                    do_handle_error(m_dcb, errmsg, mxs::ErrorType::TRANSIENT);
                     m_hs_state = HandShakeState::FAIL;
                 }
                 else if (buffer.empty())
@@ -2326,7 +2326,7 @@ MariaDBBackendConnection::HandShakeRes MariaDBBackendConnection::handshake()
                     }
                     else
                     {
-                        do_handle_error(m_dcb, "Bad handshake", mxs::ErrorType::PERMANENT);
+                        do_handle_error(m_dcb, "Bad handshake", mxs::ErrorType::TRANSIENT);
                         m_hs_state = HandShakeState::FAIL;
                     }
                 }
@@ -2344,7 +2344,7 @@ MariaDBBackendConnection::HandShakeRes MariaDBBackendConnection::handshake()
                 }
                 else
                 {
-                    do_handle_error(m_dcb, "SSL failed", mxs::ErrorType::PERMANENT);
+                    do_handle_error(m_dcb, "SSL failed", mxs::ErrorType::TRANSIENT);
                     m_hs_state = HandShakeState::FAIL;
                 }
             }
@@ -2365,7 +2365,7 @@ MariaDBBackendConnection::HandShakeRes MariaDBBackendConnection::handshake()
                 }
                 else
                 {
-                    do_handle_error(m_dcb, "SSL failed", mxs::ErrorType::PERMANENT);
+                    do_handle_error(m_dcb, "SSL failed", mxs::ErrorType::TRANSIENT);
                     m_hs_state = HandShakeState::FAIL;
                 }
             }
@@ -2406,7 +2406,7 @@ MariaDBBackendConnection::AuthenticateRes MariaDBBackendConnection::authenticate
     mxs::Buffer buffer;
     if (!read_protocol_packet(m_dcb, &buffer))
     {
-        do_handle_error(m_dcb, "Socket error", mxs::ErrorType::PERMANENT);
+        do_handle_error(m_dcb, "Socket error", mxs::ErrorType::TRANSIENT);
         return AuthenticateRes::ERROR;
     }
     else if (buffer.empty())
@@ -2417,7 +2417,7 @@ MariaDBBackendConnection::AuthenticateRes MariaDBBackendConnection::authenticate
     else if (buffer.length() == MYSQL_HEADER_LEN)
     {
         // Effectively empty buffer. Should not happen during authentication. Error.
-        do_handle_error(m_dcb, "Invalid packet", mxs::ErrorType::PERMANENT);
+        do_handle_error(m_dcb, "Invalid packet", mxs::ErrorType::TRANSIENT);
         return AuthenticateRes::ERROR;
     }
 
