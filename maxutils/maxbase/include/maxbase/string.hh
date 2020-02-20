@@ -318,4 +318,47 @@ std::string create_list_string(const std::vector<std::string>& elements,
  * @param str String to convert
  */
 std::string tolower(const std::string& str);
+
+template<typename T>
+struct StringToTHelper
+{
+    static T convert(const std::string& str)
+    {
+        if (str.empty())
+        {
+            return T();
+        }
+
+        T ret;
+        std::istringstream os {str};
+        os >> ret;
+
+        return ret;
+    }
+};
+
+template<>
+struct StringToTHelper<std::string>
+{
+    static std::string convert(const std::string& str)
+    {
+        return str;
+    }
+};
+
+template<>
+struct StringToTHelper<char>
+{
+    static char convert(const std::string& str)
+    {
+        if (str.empty())
+        {
+            return ' ';
+        }
+        else
+        {
+            return str[0];
+        }
+    }
+};
 }
