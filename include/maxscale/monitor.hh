@@ -224,6 +224,22 @@ public:
      */
     ConnectResult ping_or_connect();
 
+    /**
+     * Fetch global variables from the server and store them in the SERVER object.
+     */
+    void fetch_server_variables();
+
+    /**
+     * Fetch global variables from the server if they haven't been fetched recently.
+     */
+    void maybe_fetch_server_variables()
+    {
+        if (should_fetch_server_variables())
+        {
+            fetch_server_variables();
+        }
+    }
+
     const char* get_event_name();
 
     /*
@@ -276,8 +292,12 @@ public:
 private:
     const SharedSettings& m_shared;     /**< Settings shared between all servers of the monitor */
 
-    std::atomic_int m_status_request {NO_CHANGE};     /**< Status change request from admin */
-    bool            m_ok_to_check_disk_space {true};  /**< Set to false if check fails */
+    std::atomic_int m_status_request{NO_CHANGE};        /**< Status change request from admin */
+    bool            m_ok_to_check_disk_space{true};     /**< Set to false if check fails */
+
+    std::chrono::steady_clock::time_point m_last_variable_update;
+
+    bool should_fetch_server_variables();
 };
 
 /**

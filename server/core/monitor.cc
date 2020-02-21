@@ -78,6 +78,11 @@ using Guard = std::lock_guard<std::mutex>;
 using maxscale::Monitor;
 using maxscale::MonitorServer;
 using ConnectResult = maxscale::MonitorServer::ConnectResult;
+using namespace std::literals::chrono_literals;
+using std::chrono::steady_clock;
+using std::chrono::duration_cast;
+using std::chrono::seconds;
+using std::chrono::milliseconds;
 
 const char CN_BACKEND_CONNECT_ATTEMPTS[] = "backend_connect_attempts";
 const char CN_BACKEND_CONNECT_TIMEOUT[] = "backend_connect_timeout";
@@ -489,9 +494,6 @@ const char* Monitor::name() const
     return m_name.c_str();
 }
 
-using std::chrono::milliseconds;
-using std::chrono::seconds;
-
 bool Monitor::configure(const mxs::ConfigParameters* params)
 {
     m_settings.interval = params->get_duration<milliseconds>(CN_MONITOR_INTERVAL).count();
@@ -787,6 +789,8 @@ bool Monitor::test_permissions(const string& query)
             {
                 mysql_free_result(res);
             }
+
+            mondb->maybe_fetch_server_variables();
         }
     }
 
@@ -1253,6 +1257,31 @@ MonitorServer::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& se
 ConnectResult MonitorServer::ping_or_connect()
 {
     return ping_or_connect_to_db(m_shared.conn_settings, *server, &con);
+}
+
+static constexpr seconds variable_update_interval = 10min;
+
+bool MonitorServer::should_fetch_server_variables()
+{
+    return steady_clock::now() - m_last_variable_update > variable_update_interval;
+}
+
+void MonitorServer::fetch_server_variables()
+{
+    if (auto r = mxs::execute_query(con, "SHOW GLOBAL VARIABLES"))
+    {
+        MXS_INFO("Server variables loaded from '%s', next update in %ld seconds.",
+                 server->name(), variable_update_interval.count());
+        m_last_variable_update = steady_clock::now();
+        std::unordered_map<std::string, std::string> variables;
+
+        while (r->next_row())
+        {
+            variables.emplace(r->get_string(0), r->get_string(1));
+        }
+
+        server->set_variables(std::move(variables));
+    }
 }
 
 /**
@@ -2108,6 +2137,7 @@ void MonitorWorkerSimple::tick()
 
             if (connection_is_ok(rval))
             {
+                pMs->maybe_fetch_server_variables();
                 pMs->clear_pending_status(SERVER_AUTH_ERROR);
                 pMs->set_pending_status(SERVER_RUNNING);
 

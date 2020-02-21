@@ -273,6 +273,19 @@ public:
         return m_ssl_provider;
     }
 
+    void set_variables(std::unordered_map<std::string, std::string>&& variables)
+    {
+        std::lock_guard<std::mutex> guard(m_var_lock);
+        m_variables = variables;
+    }
+
+    std::string get_variable(const std::string& key) const
+    {
+        std::lock_guard<std::mutex> guard(m_var_lock);
+        auto it = m_variables.find(key);
+        return it == m_variables.end() ? "" : it->second;
+    }
+
 protected:
     SERVER(std::unique_ptr<mxs::SSLContext> ssl_context)
         : m_ssl_provider{std::move(ssl_context)}
@@ -286,4 +299,9 @@ private:
 
     /** Server ping measured by monitor, in microseconds */
     std::atomic<int64_t> m_ping {mxs::Target::PING_UNDEFINED};
+
+    // Server side global variables
+    std::unordered_map<std::string, std::string> m_variables;
+    // Lock that protects m_variables
+    mutable std::mutex m_var_lock;
 };
