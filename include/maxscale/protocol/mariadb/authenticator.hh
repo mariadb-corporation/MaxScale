@@ -13,6 +13,7 @@
 #pragma once
 
 #include <maxscale/authenticator.hh>
+#include <maxscale/protocol/mariadb/common_constants.hh>
 #include <unordered_set>
 
 class DCB;
@@ -30,6 +31,7 @@ namespace mariadb
 
 class ClientAuthenticator;
 class BackendAuthenticator;
+struct BackendAuthData;
 
 using SClientAuth = std::unique_ptr<ClientAuthenticator>;
 using SBackendAuth = std::unique_ptr<BackendAuthenticator>;
@@ -97,12 +99,12 @@ public:
     virtual SClientAuth create_client_authenticator() = 0;
 
     /**
-     * Create a new backend authenticator. Should only be implemented by authenticator modules which
-     * also support backend authentication.
+     * Create a new backend authenticator.
      *
+     * @param auth_data Data shared with backend connection
      * @return Backend authenticator
      */
-    virtual SBackendAuth create_backend_authenticator() = 0;
+    virtual SBackendAuth create_backend_authenticator(BackendAuthData& auth_data) = 0;
 
     /**
      * @brief Return diagnostic information about the authenticator
@@ -206,7 +208,20 @@ protected:
 };
 
 /**
- * The base class for all authenticator backend sessions. Created by the client session.
+ * Data shared between the backend connection and its authenticator module.
+ */
+struct BackendAuthData
+{
+    BackendAuthData(const char* srv_name);
+
+    const char* const    servername;    /**< Server name, used for logging */
+    const MYSQL_session* client_data;   /**< Protocol-session data */
+
+    uint8_t scramble[MYSQL_SCRAMBLE_LEN] {0};   /**< Server scramble, received from backend */
+};
+
+/**
+ * The base class for all backend authenticator modules for MariaDB-protocol.
  */
 class BackendAuthenticator
 {

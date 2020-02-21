@@ -40,7 +40,7 @@ public:
     ~GSSAPIAuthenticatorModule() override = default;
 
     mariadb::SClientAuth  create_client_authenticator() override;
-    mariadb::SBackendAuth create_backend_authenticator() override;
+    mariadb::SBackendAuth create_backend_authenticator(mariadb::BackendAuthData& auth_data) override;
 
     json_t*     diagnostics() override;
     uint64_t    capabilities() const override;
@@ -78,14 +78,17 @@ private:
 class GSSAPIBackendAuthenticator : public mariadb::BackendAuthenticator
 {
 public:
+    GSSAPIBackendAuthenticator(const mariadb::BackendAuthData& shared_data);
     ~GSSAPIBackendAuthenticator() override;
     bool    extract(DCB* backend, GWBUF* buffer) override;
     bool    ssl_capable(DCB* backend) override;
     AuthRes authenticate(DCB* backend) override;
 
 private:
-    bool extract_principal_name(DCB* dcb, GWBUF* buffer);
+    bool extract_principal_name(GWBUF* buffer);
     bool send_new_auth_token(DCB* dcb);
+
+    const mariadb::BackendAuthData& m_shared_data; /**< Data shared with backend connection */
 
     gssapi_auth_state state {GSSAPI_AUTH_INIT};     /**< Authentication state*/
     uint8_t*          principal_name {nullptr};     /**< Principal name */

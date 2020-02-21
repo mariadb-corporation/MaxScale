@@ -126,13 +126,11 @@ bool is_last_eof(Iter it)
 }
 
 /**
- * Construct a detached backend connection. Session attached separately.
- *
- * @param authenticator Backend authenticator
+ * Construct a detached backend connection. Session and authenticator attached separately.
  */
-MariaDBBackendConnection::MariaDBBackendConnection(SERVER& server, mariadb::SBackendAuth authenticator)
+MariaDBBackendConnection::MariaDBBackendConnection(SERVER& server)
     : m_server(server)
-    , m_authenticator(std::move(authenticator))
+    , m_auth_data(server.name())
 {
 }
 
@@ -152,24 +150,8 @@ MariaDBBackendConnection::MariaDBBackendConnection(SERVER& server, mariadb::SBac
 std::unique_ptr<MariaDBBackendConnection>
 MariaDBBackendConnection::create(MXS_SESSION* session, mxs::Component* component, SERVER& server)
 {
-    std::unique_ptr<MariaDBBackendConnection> backend_conn;
-
-    auto mariases = static_cast<MYSQL_session*>(session->protocol_data());
-    auto auth_module = mariases->m_current_authenticator;
-    auto new_backend_auth = auth_module->create_backend_authenticator();
-    if (new_backend_auth)
-    {
-        backend_conn.reset(new(std::nothrow) MariaDBBackendConnection(server, std::move(new_backend_auth)));
-    }
-    else
-    {
-        MXB_ERROR("Failed to create backend authenticator session for '%s'.", server.name());
-    }
-
-    if (backend_conn)
-    {
-        backend_conn->assign_session(session, component);
-    }
+    std::unique_ptr<MariaDBBackendConnection> backend_conn(new MariaDBBackendConnection(server));
+    backend_conn->assign_session(session, component);
     return backend_conn;
 }
 
@@ -2156,9 +2138,10 @@ uint64_t MariaDBBackendConnection::thread_id() const
 void MariaDBBackendConnection::assign_session(MXS_SESSION* session, mxs::Component* upstream)
 {
     m_session = session;
-    m_client_data = static_cast<MYSQL_session*>(m_session->protocol_data());
+    m_client_data = static_cast<MYSQL_session*>(session->protocol_data());
+    m_auth_data.client_data = m_client_data;
+    m_authenticator = m_client_data->m_current_authenticator->create_backend_authenticator(m_auth_data);
     m_upstream = upstream;
-    // TODO: authenticators may also need data swapping
 }
 
 /**

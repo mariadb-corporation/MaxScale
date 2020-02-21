@@ -89,11 +89,12 @@ private:
 
     State          m_state {State::HANDSHAKING};            /**< Connection state */
     HandShakeState m_hs_state {HandShakeState::EXPECT_HS};  /**< Handshake state */
+    SERVER&        m_server;                                /**< Connected backend server */
 
-    SERVER&               m_server;             /**< Connected backend server */
-    mariadb::SBackendAuth m_authenticator;      /**< Authentication plugin data */
+    mariadb::SBackendAuth    m_authenticator;   /**< Authentication plugin */
+    mariadb::BackendAuthData m_auth_data;       /**< Data shared with auth plugin */
 
-    MariaDBBackendConnection(SERVER& server, mariadb::SBackendAuth authenticator);
+    MariaDBBackendConnection(SERVER& server);
 
     HandShakeRes    handshake();
     AuthenticateRes authenticate();
@@ -139,7 +140,7 @@ private:
 
     /**
      * Set associated client protocol session and upstream. Should be called after creation or when swapping
-     * sessions.
+     * sessions. Also initializes authenticator plugin.
      *
      * @param session The new session to read client data from
      * @param upstream The new upstream to send server replies to

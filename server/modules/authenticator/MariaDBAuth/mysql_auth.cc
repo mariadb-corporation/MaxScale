@@ -241,7 +241,8 @@ AuthRes MariaDBClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_s
     return auth_ret;
 }
 
-mariadb::SBackendAuth MariaDBAuthenticatorModule::create_backend_authenticator()
+mariadb::SBackendAuth
+MariaDBAuthenticatorModule::create_backend_authenticator(mariadb::BackendAuthData& auth_data)
 {
     return mariadb::SBackendAuth(new(std::nothrow) MariaDBBackendSession());
 }

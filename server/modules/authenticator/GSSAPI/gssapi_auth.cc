@@ -344,9 +344,10 @@ AuthRes GSSAPIClientAuthenticator::authenticate(const mariadb::UserEntry* entry,
     return rval;
 }
 
-mariadb::SBackendAuth GSSAPIAuthenticatorModule::create_backend_authenticator()
+mariadb::SBackendAuth
+GSSAPIAuthenticatorModule::create_backend_authenticator(mariadb::BackendAuthData& auth_data)
 {
-    return mariadb::SBackendAuth(new(std::nothrow) GSSAPIBackendAuthenticator());
+    return mariadb::SBackendAuth(new(std::nothrow) GSSAPIBackendAuthenticator(auth_data));
 }
 
 std::string GSSAPIAuthenticatorModule::name() const

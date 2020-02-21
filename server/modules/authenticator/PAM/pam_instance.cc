@@ -54,9 +54,10 @@ mariadb::SClientAuth PamAuthenticatorModule::create_client_authenticator()
     return mariadb::SClientAuth(new(std::nothrow) PamClientAuthenticator());
 }
 
-mariadb::SBackendAuth PamAuthenticatorModule::create_backend_authenticator()
+mariadb::SBackendAuth
+PamAuthenticatorModule::create_backend_authenticator(mariadb::BackendAuthData& auth_data)
 {
-    return mariadb::SBackendAuth(new(std::nothrow) PamBackendAuthenticator());
+    return mariadb::SBackendAuth(new(std::nothrow) PamBackendAuthenticator(auth_data));
 }
 
 std::string PamAuthenticatorModule::name() const

@@ -20,7 +20,7 @@ class PamBackendAuthenticator : public mariadb::BackendAuthenticator
 public:
     PamBackendAuthenticator(const PamBackendAuthenticator& orig) = delete;
     PamBackendAuthenticator& operator=(const PamBackendAuthenticator&) = delete;
-    PamBackendAuthenticator() = default;
+    PamBackendAuthenticator(mariadb::BackendAuthData& shared_data);
 
     bool    extract(DCB* dcb, GWBUF* buffer) override;
     AuthRes authenticate(DCB* dcb) override;
@@ -39,8 +39,10 @@ private:
         DONE
     };
 
+    const mariadb::BackendAuthData& m_shared_data; /**< Data shared with backend connection */
+    const std::string               m_clienthost;  /**< Client 'name'@'host', for logging. */
+
     State       m_state {State::INIT};  /**< Authentication state */
     uint8_t     m_sequence {0};         /**< The next packet sequence number */
-    std::string m_servername;           /**< Backend name, for logging */
-    std::string m_clienthost;           /**< Client name & host, for logging */
+
 };

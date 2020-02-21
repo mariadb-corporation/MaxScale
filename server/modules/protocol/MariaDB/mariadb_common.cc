@@ -481,6 +481,11 @@ MYSQL_session::MYSQL_session(const MYSQL_session& rhs)
     memcpy(scramble, rhs.scramble, MYSQL_SCRAMBLE_LEN);
 }
 
+std::string MYSQL_session::user_and_host() const
+{
+    return "'" + user + "'@'" + remote + "'";
+}
+
 uint64_t mariadb::AuthenticatorModule::capabilities() const
 {
     return 0;
@@ -636,5 +641,10 @@ uint64_t get_byte8(const uint8_t* buffer)
     uint64_t le64 = *(reinterpret_cast<const uint64_t*>(buffer));
     auto host64 = le64toh(le64);
     return host64;
+}
+
+BackendAuthData::BackendAuthData(const char* srv_name)
+    : servername(srv_name)
+{
 }
 }

@@ -58,11 +58,10 @@ bool GSSAPIBackendAuthenticator::send_new_auth_token(DCB* dcb)
 /**
  * @brief Extract the principal name from the AuthSwitchRequest packet
  *
- * @param dcb Backend DCB
  * @param buffer Buffer containing an AuthSwitchRequest packet
  * @return True on success, false on error
  */
-bool GSSAPIBackendAuthenticator::extract_principal_name(DCB* dcb, GWBUF* buffer)
+bool GSSAPIBackendAuthenticator::extract_principal_name(GWBUF* buffer)
 {
     bool rval = false;
     size_t buflen = gwbuf_length(buffer) - MYSQL_HEADER_LEN;
@@ -76,14 +75,11 @@ bool GSSAPIBackendAuthenticator::extract_principal_name(DCB* dcb, GWBUF* buffer)
 
     if (databuf[0] != MYSQL_REPLY_AUTHSWITCHREQUEST)
     {
-        mxb_assert(dcb->role() == DCB::Role::BACKEND);
-        BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
-
         /** Server responded with something we did not expect. If it's an OK packet,
          * it's possible that the server authenticated us as the anonymous user. This
          * means that the server is not secure. */
         MXS_ERROR("Server '%s' returned an unexpected authentication response.%s",
-                  backend_dcb->server()->name(),
+                  m_shared_data.servername,
                   databuf[0] == MYSQL_REPLY_OK ?
                   " Authentication was complete before it even started, "
                   "anonymous users might not be disabled." : "");
@@ -142,7 +138,7 @@ bool GSSAPIBackendAuthenticator::extract(DCB* dcb, GWBUF* buffer)
     bool rval = false;
     auto auth = this;
 
-    if (auth->state == GSSAPI_AUTH_INIT && extract_principal_name(dcb, buffer))
+    if (auth->state == GSSAPI_AUTH_INIT && extract_principal_name(buffer))
     {
         rval = true;
     }
@@ -193,4 +189,9 @@ mariadb::BackendAuthenticator::AuthRes GSSAPIBackendAuthenticator::authenticate(
         rval = AuthRes::SUCCESS;
     }
     return rval;
+}
+
+GSSAPIBackendAuthenticator::GSSAPIBackendAuthenticator(const mariadb::BackendAuthData& shared_data)
+    : m_shared_data(shared_data)
+{
 }

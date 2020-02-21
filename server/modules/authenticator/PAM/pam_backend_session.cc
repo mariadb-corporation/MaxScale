@@ -31,7 +31,7 @@ bool PamBackendAuthenticator::parse_authswitchreq(const uint8_t** data, const ui
         return false;
     }
 
-    const char* server_name = m_servername.c_str();
+    const char* server_name = m_shared_data.servername;
     bool success = false;
     uint8_t cmdbyte = *ptr++;
     if (cmdbyte == MYSQL_REPLY_AUTHSWITCHREQUEST)
@@ -92,7 +92,7 @@ bool PamBackendAuthenticator::parse_password_prompt(const uint8_t** data, const 
         return false;
     }
 
-    const char* server_name = m_servername.c_str();
+    const char* server_name = m_shared_data.servername;
     bool success = false;
     int msg_type = *ptr++;
     if (msg_type == DIALOG_ECHO_ENABLED || msg_type == DIALOG_ECHO_DISABLED)
@@ -120,13 +120,13 @@ bool PamBackendAuthenticator::parse_password_prompt(const uint8_t** data, const 
         }
         else
         {
-            MXB_ERROR("'%s' asked for '%s' when authenticating '%s'. '%s' was expected.",
+            MXB_ERROR("'%s' asked for '%s' when authenticating %s. '%s' was expected.",
                       server_name, prompt, m_clienthost.c_str(), PASSWORD.c_str());
         }
     }
     else
     {
-        MXB_ERROR("'%s' sent an unknown message type %i when authenticating '%s'.",
+        MXB_ERROR("'%s' sent an unknown message type %i when authenticating %s.",
                   server_name, msg_type, m_clienthost.c_str());
     }
 
@@ -179,16 +179,7 @@ bool PamBackendAuthenticator::extract(DCB* dcb, GWBUF* buffer)
      * Authenticators receive complete packets from protocol.
      */
 
-    mxb_assert(dcb->role() == DCB::Role::BACKEND);
-    BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
-
-    const char* srv_name = backend_dcb->server()->name();
-    if (m_servername.empty())
-    {
-        m_servername = srv_name;
-        auto client_dcb = dcb->session()->client_dcb;
-        m_clienthost = client_dcb->session()->user() + std::string("@") + client_dcb->remote();
-    }
+    const char* srv_name = m_shared_data.servername;
 
     // Smallest buffer that is parsed, header + (cmd-byte/msg-type + message).
     const int min_readable_buflen = MYSQL_HEADER_LEN + 1 + 1;
@@ -291,8 +282,8 @@ bool PamBackendAuthenticator::extract(DCB* dcb, GWBUF* buffer)
 
     if (unexpected_data)
     {
-        MXS_ERROR("Failed to read data from '%s' when authenticating user '%s'.",
-                  srv_name, dcb->session()->user().c_str());
+        MXS_ERROR("Failed to read data from '%s' when authenticating %s.",
+                  srv_name, m_clienthost.c_str());
     }
     return success;
 }
@@ -303,9 +294,8 @@ mariadb::BackendAuthenticator::AuthRes PamBackendAuthenticator::authenticate(DCB
 
     if (m_state == State::RECEIVED_PROMPT)
     {
-        mxb_assert(dcb->role() == DCB::Role::BACKEND);
-        BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
-        MXS_DEBUG("pam_backend_auth_authenticate sending password to '%s'.", backend_dcb->server()->name());
+        MXS_DEBUG("pam_backend_auth_authenticate sending password to '%s'.",
+                  m_shared_data.servername);
         if (send_client_password(dcb))
         {
             m_state = State::PW_SENT;
@@ -329,4 +319,10 @@ bool PamBackendAuthenticator::ssl_capable(DCB* dcb)
     mxb_assert(dcb->role() == DCB::Role::BACKEND);
     BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
     return backend_dcb->server()->ssl().context();
+}
+
+PamBackendAuthenticator::PamBackendAuthenticator(mariadb::BackendAuthData& shared_data)
+    : m_shared_data(shared_data)
+    , m_clienthost(shared_data.client_data->user_and_host())
+{
 }

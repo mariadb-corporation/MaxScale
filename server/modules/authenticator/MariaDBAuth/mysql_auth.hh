@@ -95,7 +95,7 @@ public:
     ~MariaDBAuthenticatorModule() override = default;
 
     mariadb::SClientAuth  create_client_authenticator() override;
-    mariadb::SBackendAuth create_backend_authenticator() override;
+    mariadb::SBackendAuth create_backend_authenticator(mariadb::BackendAuthData& auth_data) override;
 
     json_t*     diagnostics() override;
     uint64_t    capabilities() const override;

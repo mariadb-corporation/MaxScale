@@ -56,6 +56,13 @@ public:
     MYSQL_session(const MYSQL_session& rhs);
 
     /**
+     * Convenience method to print user and host.
+     *
+     * @return 'user'@'host'
+     */
+    std::string user_and_host() const;
+
+    /**
      * Contains client capabilities. The client sends this data in the handshake response-packet, and the
      * same data is sent to backends. Usually only the client protocol should write to these.
      */
