@@ -1229,6 +1229,16 @@ public:
     }
 
     /**
+     * Get pointer to internal data. The data can only be assumed contiguous if 'make_contiguous' has been
+     * called.
+     *
+     * @return Pointer to internal data.
+     */
+    uint8_t* data();
+
+    const uint8_t* data() const;
+
+    /**
      * Debug function for dumping buffer contents to log
      *
      * Prints contents as hexadecimal. Only the first 1024 bytes are dumped to avoid filling up the log.

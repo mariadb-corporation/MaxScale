@@ -256,4 +256,38 @@ ChangeUserParseResult parse_change_user_packet(ByteVec& data, uint32_t client_ca
     }
     return rval;
 }
+
+mariadb::AuthSwitchReqContents parse_auth_switch_request(ByteVec& data)
+{
+    mariadb::AuthSwitchReqContents rval;
+    // The data should have at least a cmd-byte, plugin name and plugin data.
+    const int minlen = 3;
+    if (data.size() >= minlen)
+    {
+        const uint8_t* ptr = data.data();
+        const uint8_t* end = ptr + data.size();
+
+        if (*ptr == MYSQL_REPLY_AUTHSWITCHREQUEST)
+        {
+            ptr++;
+            // Next, null-terminated plugin name. Check for invalid string.
+            size_t len_remaining = end - ptr;
+            size_t plugin_name_len = strnlen((const char*)ptr, len_remaining);
+            // The length should be smaller than total length.
+            if (plugin_name_len > 0 && plugin_name_len < len_remaining)
+            {
+                rval.plugin_name = (const char*)ptr;
+                ptr += rval.plugin_name.length() + 1;
+
+                // Next plugin data until the end.
+                if (ptr < end)
+                {
+                    rval.plugin_data.assign(ptr, end);
+                    rval.success = true;
+                }
+            }
+        }
+    }
+    return rval;
+}
 }

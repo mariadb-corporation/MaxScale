@@ -120,4 +120,13 @@ AttrParseResult parse_attributes(ByteVec& data, uint32_t client_caps);
  * @return Result object
  */
 ChangeUserParseResult parse_change_user_packet(ByteVec& data, uint32_t client_caps);
+
+/**
+ * Parse fields from an authentication switch request-packet. Is somewhat different from the other parsing
+ * functions in that wrong packet type is detected and null-termination is not assumed.
+ *
+ * @param data Packet data without the header.
+ * @return Result object
+ */
+mariadb::AuthSwitchReqContents parse_auth_switch_request(ByteVec& data);
 }

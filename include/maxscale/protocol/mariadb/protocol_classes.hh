@@ -44,6 +44,18 @@ struct UserSearchSettings
     Listener listener;
     Service  service;
 };
+
+/**
+ * Contents of an Authentication Switch Request-packet. Defined here for authenticator plugins.
+ */
+struct AuthSwitchReqContents
+{
+    bool        success {false}; /**< Was parsing successful */
+    std::string plugin_name;     /**< Plugin name */
+    ByteVec     plugin_data;     /**< Data for plugin */
+};
+
+AuthSwitchReqContents parse_auth_switch_request(const mxs::Buffer& input);
 }
 
 /*

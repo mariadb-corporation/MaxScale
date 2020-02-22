@@ -120,7 +120,7 @@ public:
     bool  m_lower_case_table_names {false};     /**< Disable database case-sensitivity */
 
 private:
-    int  get_users_from_server(MYSQL* con, SERVER* server, SERVICE* service);
+    int get_users_from_server(MYSQL* con, SERVER* server, SERVICE* service);
 };
 
 class MariaDBClientAuthenticator : public mariadb::ClientAuthenticatorT<MariaDBAuthenticatorModule>
@@ -151,22 +151,25 @@ private:
 class MariaDBBackendSession : public mariadb::BackendAuthenticator
 {
 public:
+    MariaDBBackendSession(mariadb::BackendAuthData& shared_data);
     ~MariaDBBackendSession() = default;
 
-    bool    extract(DCB* backend, GWBUF* buffer) override;
-    AuthRes authenticate(DCB* backend) override;
     AuthRes exchange(const mxs::Buffer& input, mxs::Buffer* output) override;
 
 private:
+    mxs::Buffer generate_auth_response(int seqno);
+
     /** Authentication states */
     enum class State
     {
-        NEED_OK,                /**< Waiting for server's OK packet */
-        AUTH_OK,                /**< Authentication completed successfully */
-        AUTH_FAILED             /**< Authentication failed */
+        EXPECT_AUTHSWITCH,      /**< Waiting for authentication switch packet */
+        PW_SENT,                /**< Hashed password has been sent to backend */
+        ERROR                   /**< Authentication failed */
     };
 
-    State state {State::NEED_OK};   /**< Authentication state */
+    mariadb::BackendAuthData& m_shared_data;
+
+    State m_state {State::EXPECT_AUTHSWITCH};   /**< Authentication state */
 };
 
 /**

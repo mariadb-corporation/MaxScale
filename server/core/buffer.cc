@@ -869,3 +869,13 @@ void mxs::Buffer::hexdump_pretty(int log_level) const
 
     MXS_LOG_MESSAGE(log_level, "%s", result.c_str());
 }
+
+uint8_t* maxscale::Buffer::data()
+{
+    return GWBUF_DATA(m_pBuffer);
+}
+
+const uint8_t* maxscale::Buffer::data() const
+{
+    return GWBUF_DATA(m_pBuffer);
+}

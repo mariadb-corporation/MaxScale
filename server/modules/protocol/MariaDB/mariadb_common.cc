@@ -28,6 +28,7 @@
 #include <maxscale/routing.hh>
 #include <maxscale/service.hh>
 #include <maxscale/target.hh>
+#include "packet_parser.hh"
 
 using std::string;
 using mxs::ReplyState;
@@ -254,7 +255,7 @@ int response_length(bool with_ssl, bool ssl_established, const char* user,
     return bytes;
 }
 
-void mxs_mysql_calculate_hash(const uint8_t* scramble, uint8_t* passwd, uint8_t* output)
+void mxs_mysql_calculate_hash(const uint8_t* scramble, const uint8_t* passwd, uint8_t* output)
 {
     uint8_t hash1[GW_MYSQL_SCRAMBLE_SIZE] = "";
     uint8_t hash2[GW_MYSQL_SCRAMBLE_SIZE] = "";
@@ -646,5 +647,15 @@ uint64_t get_byte8(const uint8_t* buffer)
 BackendAuthData::BackendAuthData(const char* srv_name)
     : servername(srv_name)
 {
+}
+
+AuthSwitchReqContents parse_auth_switch_request(const mxs::Buffer& input)
+{
+    int datalen = input.length() - MYSQL_HEADER_LEN;
+    mxb_assert(datalen >= 0);
+    packet_parser::ByteVec data;
+    data.resize(datalen);
+    gwbuf_copy_data(input.get(), MYSQL_HEADER_LEN, datalen, data.data());
+    return packet_parser::parse_auth_switch_request(data);
 }
 }

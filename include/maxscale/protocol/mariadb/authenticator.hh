@@ -240,12 +240,6 @@ public:
     BackendAuthenticator() = default;
     virtual ~BackendAuthenticator() = default;
 
-    // Extract backend data from a buffer. Typically, this is called just before the authenticate-entrypoint.
-    virtual bool extract(DCB* client, GWBUF* buffer) = 0;
-
-    // Carry out the authentication.
-    virtual AuthRes authenticate(DCB* client) = 0;
-
     /**
      * Exchange authentication packets. The plugin should read the input, optionally write to output,
      * and return status.
@@ -255,5 +249,12 @@ public:
      * @return Authentication status
      */
     virtual AuthRes exchange(const mxs::Buffer& input, mxs::Buffer* output) = 0;
+
+protected:
+    // Common error message formats, used in several authenticators.
+    static constexpr const char* WRONG_PLUGIN_REQ =
+        "'%s' asked for authentication plugin '%s' when authenticating '%s'. Only '%s' is supported.";
+    static constexpr const char* MALFORMED_AUTH_SWITCH =
+        "Received malformed AuthSwitchRequest-packet from '%s'.";
 };
 }

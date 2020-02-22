@@ -80,8 +80,8 @@ class GSSAPIBackendAuthenticator : public mariadb::BackendAuthenticator
 public:
     GSSAPIBackendAuthenticator(const mariadb::BackendAuthData& shared_data);
     ~GSSAPIBackendAuthenticator() override;
-    bool    extract(DCB* backend, GWBUF* buffer) override;
-    AuthRes authenticate(DCB* backend) override;
+    bool    extract(DCB* backend, GWBUF* buffer);
+    AuthRes authenticate(DCB* backend);
     AuthRes exchange(const mxs::Buffer& input, mxs::Buffer* output) override;
 private:
     bool extract_principal_name(GWBUF* buffer);

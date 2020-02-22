@@ -22,8 +22,8 @@ public:
     PamBackendAuthenticator& operator=(const PamBackendAuthenticator&) = delete;
     PamBackendAuthenticator(mariadb::BackendAuthData& shared_data);
 
-    bool    extract(DCB* dcb, GWBUF* buffer) override;
-    AuthRes authenticate(DCB* dcb) override;
+    bool    extract(DCB* dcb, GWBUF* buffer);
+    AuthRes authenticate(DCB* dcb);
     AuthRes exchange(const mxs::Buffer& input, mxs::Buffer* output) override;
 
 private:
