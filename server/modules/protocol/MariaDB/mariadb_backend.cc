@@ -2411,33 +2411,23 @@ MariaDBBackendConnection::AuthenticateRes MariaDBBackendConnection::authenticate
     {
         // Something else, likely AuthSwitch or a message to the authentication plugin.
         using AuthRes = mariadb::BackendAuthenticator::AuthRes;
-        if (cmd == MYSQL_REPLY_AUTHSWITCHREQUEST && m_client_data->plugin == DEFAULT_MYSQL_AUTH_PLUGIN)
+        mxs::Buffer output;
+        auto res = m_authenticator->exchange(buffer, &output);
+        if (!output.empty())
         {
-            send_mysql_native_password_response(m_dcb, buffer.get());
-            rval = AuthenticateRes::IN_PROGRESS;
+            m_dcb->writeq_append(output.release());
         }
-        else
+
+        switch (res)
         {
-            mxs::Buffer output;
-            auto res = m_authenticator->exchange(buffer, &output);
-            if (!output.empty())
-            {
-                m_dcb->writeq_append(output.release());
-            }
+        case AuthRes::INCOMPLETE:
+        case AuthRes::SUCCESS:
+            rval = AuthenticateRes::IN_PROGRESS;
+            break;
 
-            switch (res)
-            {
-            case AuthRes::INCOMPLETE:
-                rval = AuthenticateRes::IN_PROGRESS;
-                break;
-
-            case AuthRes::SUCCESS:
-                rval = AuthenticateRes::DONE;
-
-            case AuthRes::FAIL:
-                rval = AuthenticateRes::ERROR;
-                break;
-            }
+        case AuthRes::FAIL:
+            rval = AuthenticateRes::ERROR;
+            break;
         }
     }
 

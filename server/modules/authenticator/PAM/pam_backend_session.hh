@@ -13,7 +13,7 @@
 #pragma once
 
 #include "pam_auth_common.hh"
-#include <maxscale/protocol/mariadb/authenticator.hh>
+#include <maxscale/protocol/mariadb/protocol_classes.hh>
 
 class PamBackendAuthenticator : public mariadb::BackendAuthenticator
 {
@@ -22,27 +22,23 @@ public:
     PamBackendAuthenticator& operator=(const PamBackendAuthenticator&) = delete;
     PamBackendAuthenticator(mariadb::BackendAuthData& shared_data);
 
-    bool    extract(DCB* dcb, GWBUF* buffer);
-    AuthRes authenticate(DCB* dcb);
     AuthRes exchange(const mxs::Buffer& input, mxs::Buffer* output) override;
 
 private:
-    bool send_client_password(DCB* dcb);
-    bool parse_authswitchreq(const uint8_t** data, const uint8_t* end);
-    bool parse_password_prompt(const uint8_t** data, const uint8_t* end);
+    mxs::Buffer generate_pw_packet() const;
+
+    bool parse_password_prompt(mariadb::ByteVec& data);
 
     enum class State
     {
-        INIT,
-        RECEIVED_PROMPT,
-        PW_SENT,
-        DONE
+        EXPECT_AUTHSWITCH,
+        EXCHANGING,
+        ERROR,
     };
 
-    const mariadb::BackendAuthData& m_shared_data; /**< Data shared with backend connection */
-    const std::string               m_clienthost;  /**< Client 'name'@'host', for logging. */
+    const mariadb::BackendAuthData& m_shared_data;  /**< Data shared with backend connection */
+    const std::string               m_clienthost;   /**< Client 'name'@'host', for logging. */
 
-    State       m_state {State::INIT};  /**< Authentication state */
-    uint8_t     m_sequence {0};         /**< The next packet sequence number */
-
+    State   m_state {State::EXPECT_AUTHSWITCH}; /**< Authentication state */
+    uint8_t m_sequence {0};                     /**< The next packet sequence number */
 };

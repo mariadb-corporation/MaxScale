@@ -260,7 +260,8 @@ ChangeUserParseResult parse_change_user_packet(ByteVec& data, uint32_t client_ca
 mariadb::AuthSwitchReqContents parse_auth_switch_request(ByteVec& data)
 {
     mariadb::AuthSwitchReqContents rval;
-    // The data should have at least a cmd-byte, plugin name and plugin data.
+    // The data should have at least a cmd-byte and non-empty plugin name. Some plugins may not add
+    // plugin data.
     const int minlen = 3;
     if (data.size() >= minlen)
     {
@@ -279,12 +280,16 @@ mariadb::AuthSwitchReqContents parse_auth_switch_request(ByteVec& data)
                 rval.plugin_name = (const char*)ptr;
                 ptr += rval.plugin_name.length() + 1;
 
-                // Next plugin data until the end.
+                // Next, plugin data until the end.
                 if (ptr < end)
                 {
+                    // Plugins may modify the plugin data vector when processing it, e.g. adding a byte to
+                    // the end. Reserving some extra space here avoids reallocations during the processing.
+                    rval.plugin_data.reserve(end - ptr + MYSQL_HEADER_LEN);
                     rval.plugin_data.assign(ptr, end);
-                    rval.success = true;
+
                 }
+                rval.success = true;
             }
         }
     }

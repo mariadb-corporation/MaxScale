@@ -14,84 +14,22 @@
 #include "pam_backend_session.hh"
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
-#include <maxscale/server.hh>
-
-/**
- * Parse packet type and plugin name from packet data. Advances pointer.
- *
- * @param data Data from server. The pointer is advanced.
- * @param end Pointer to after the end of data
- * @return True if all expected fields were parsed
- */
-bool PamBackendAuthenticator::parse_authswitchreq(const uint8_t** data, const uint8_t* end)
-{
-    const uint8_t* ptr = *data;
-    if (ptr >= end)
-    {
-        return false;
-    }
-
-    const char* server_name = m_shared_data.servername;
-    bool success = false;
-    uint8_t cmdbyte = *ptr++;
-    if (cmdbyte == MYSQL_REPLY_AUTHSWITCHREQUEST)
-    {
-        // Correct packet type.
-        if (ptr < end)
-        {
-            const char* plugin_name = reinterpret_cast<const char*>(ptr);
-            if (strcmp(plugin_name, DIALOG.c_str()) == 0)
-            {
-                // Correct plugin.
-                ptr += DIALOG_SIZE;
-                success = true;
-            }
-            else
-            {
-                MXB_ERROR("'%s' asked for authentication plugin '%s' when authenticating '%s'. "
-                          "Only '%s' is supported.",
-                          server_name, plugin_name, m_clienthost.c_str(), DIALOG.c_str());
-            }
-        }
-        else
-        {
-            MXB_ERROR("Received malformed AuthSwitchRequest-packet from '%s'.", server_name);
-        }
-    }
-    else if (cmdbyte == MYSQL_REPLY_OK)
-    {
-        // Authentication is already done? Maybe the server authenticated us as the anonymous user. This
-        // is quite insecure. */
-        MXB_ERROR("Authentication of '%s' to '%s' was complete before it even started, anonymous users may "
-                  "be enabled.", m_clienthost.c_str(), server_name);
-    }
-    else
-    {
-        MXB_ERROR("Expected AuthSwitchRequest-packet from '%s' but received %#x.", server_name, cmdbyte);
-    }
-
-    if (success)
-    {
-        *data = ptr;
-    }
-    return success;
-}
 
 /**
  * Parse prompt type and message text from packet data. Advances pointer.
  *
  * @param data Data from server. The pointer is advanced.
- * @param end Pointer to after the end of data
  * @return True if all expected fields were parsed
  */
-bool PamBackendAuthenticator::parse_password_prompt(const uint8_t** data, const uint8_t* end)
+bool PamBackendAuthenticator::parse_password_prompt(mariadb::ByteVec& data)
 {
-    const uint8_t* ptr = *data;
-    if (end - ptr < 2) // Need at least message type + message
+    if (data.size() < 2)    // Need at least message type + message
     {
         return false;
     }
 
+    data.push_back('\0');   // Simplifies parsing by ensuring 0-termination.
+    const uint8_t* ptr = data.data();
     const char* server_name = m_shared_data.servername;
     bool success = false;
     int msg_type = *ptr++;
@@ -105,13 +43,13 @@ bool PamBackendAuthenticator::parse_password_prompt(const uint8_t** data, const 
         if (linebrk_pos)
         {
             int msg_len = linebrk_pos - messages;
-            MXS_INFO("'%s' sent message when authenticating '%s': '%.*s'",
+            MXS_INFO("'%s' sent message when authenticating %s: %.*s",
                      server_name, m_clienthost.c_str(), msg_len, messages);
             prompt = linebrk_pos + 1;
         }
         else
         {
-            prompt = messages; // No additional messages.
+            prompt = messages;      // No additional messages.
         }
 
         if (prompt == PASSWORD)
@@ -129,33 +67,33 @@ bool PamBackendAuthenticator::parse_password_prompt(const uint8_t** data, const 
         MXB_ERROR("'%s' sent an unknown message type %i when authenticating %s.",
                   server_name, msg_type, m_clienthost.c_str());
     }
-
-    if (success)
-    {
-        *data = ptr;
-    }
     return success;
 }
 
 /**
- * Send password to server
+ * Generate packet with client password in cleartext.
  *
- * @param dcb Backend DCB
- * @return True on success, false on error
+ * @return Packet with password
  */
-bool PamBackendAuthenticator::send_client_password(DCB* dcb)
+mxs::Buffer PamBackendAuthenticator::generate_pw_packet() const
 {
-    auto ses = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
-    auto auth_token_len = ses->auth_token.size();
+    const auto& auth_token = m_shared_data.client_data->auth_token;     // Contains the pw from client.
+    auto auth_token_len = auth_token.size();
     size_t buflen = MYSQL_HEADER_LEN + auth_token_len;
-    uint8_t bufferdata[buflen];
-    gw_mysql_set_byte3(bufferdata, auth_token_len);
-    bufferdata[MYSQL_SEQ_OFFSET] = m_sequence;
-    memcpy(bufferdata + MYSQL_HEADER_LEN, ses->auth_token.data(), auth_token_len);
-    return dcb->writeq_append(gwbuf_alloc_and_load(buflen, bufferdata));
+    mxs::Buffer rval(buflen);
+    auto* ptr = rval.data();
+    mariadb::set_byte3(ptr, auth_token_len);
+    ptr += 3;
+    *ptr++ = m_sequence;
+    if (auth_token_len > 0)
+    {
+        memcpy(ptr, auth_token.data(), auth_token_len);
+    }
+    return rval;
 }
 
-bool PamBackendAuthenticator::extract(DCB* dcb, GWBUF* buffer)
+mariadb::BackendAuthenticator::AuthRes
+PamBackendAuthenticator::exchange(const mxs::Buffer& input, mxs::Buffer* output)
 {
     /**
      * The server PAM plugin sends data usually once, at the moment it gets a prompt-type message
@@ -180,144 +118,88 @@ bool PamBackendAuthenticator::extract(DCB* dcb, GWBUF* buffer)
      */
 
     const char* srv_name = m_shared_data.servername;
-
     // Smallest buffer that is parsed, header + (cmd-byte/msg-type + message).
     const int min_readable_buflen = MYSQL_HEADER_LEN + 1 + 1;
-    // The buffer should be reasonable size. Large buffers likely mean that the auth scheme is complicated.
+    // The buffer should be of reasonable size. Large buffers likely mean that the auth scheme is complicated.
     const int MAX_BUFLEN = 2000;
-    const int buflen = gwbuf_length(buffer);
+    const int buflen = input.length();
     if (buflen <= min_readable_buflen || buflen > MAX_BUFLEN)
     {
         MXB_ERROR("Received packet of size %i from '%s' during authentication. Expected packet size is "
                   "between %i and %i.", buflen, srv_name, min_readable_buflen, MAX_BUFLEN);
-        return false;
+        return AuthRes::FAIL;
     }
 
-    uint8_t data[buflen + 1]; // + 1 to ensure that the end has a zero.
-    data[buflen] = 0;
-    gwbuf_copy_data(buffer, 0, buflen, data);
-    m_sequence = data[MYSQL_SEQ_OFFSET] + 1;
-    const uint8_t* data_ptr = data + MYSQL_COM_OFFSET;
-    const uint8_t* end_ptr = data + buflen;
-    bool success = false;
-    bool unexpected_data = false;
+    m_sequence = MYSQL_GET_PACKET_NO(GWBUF_DATA(input.get())) + 1;
+    auto rval = AuthRes::FAIL;
 
     switch (m_state)
     {
-        case State::INIT:
-        // Server should have sent the AuthSwitchRequest. If server version is 10.4, the server may not
-        // send a prompt. Older versions add the first prompt to the same packet.
-        if (parse_authswitchreq(&data_ptr, end_ptr))
+    case State::EXPECT_AUTHSWITCH:
         {
-            if (end_ptr > data_ptr)
+            // Server should have sent the AuthSwitchRequest. If server version is 10.4, the server may not
+            // send a prompt. Older versions add the first prompt to the same packet.
+            auto parse_res = mariadb::parse_auth_switch_request(input);
+            if (parse_res.success)
             {
-                if (parse_password_prompt(&data_ptr, end_ptr))
+                if (parse_res.plugin_name != DIALOG)
                 {
-                    m_state = State::RECEIVED_PROMPT;
-                    success = true;
+                    MXB_ERROR(WRONG_PLUGIN_REQ, m_shared_data.servername, parse_res.plugin_name.c_str(),
+                              m_shared_data.client_data->user_and_host().c_str(), DIALOG.c_str());
                 }
-                else
+                else if (parse_res.plugin_data.empty())
                 {
-                    // Password prompt should have been there, but was not.
-                    unexpected_data = true;
+                    // Just the AuthSwitchRequest, this is ok. The server now expects a password.
+                    *output = generate_pw_packet();
+                    m_state = State::EXCHANGING;
+                    rval = AuthRes::SUCCESS;
+                }
+                else if (parse_password_prompt(parse_res.plugin_data))
+                {
+                    // Got a password prompt, send answer.
+                    *output = generate_pw_packet();
+                    m_state = State::EXCHANGING;
+                    rval = AuthRes::SUCCESS;
                 }
             }
             else
             {
-                // Just the AuthSwitchRequest, this is ok. The server now expects a password so set state
-                // accordingly.
-                m_state = State::RECEIVED_PROMPT;
-                success = true;
+                // No AuthSwitchRequest, error.
+                MXB_ERROR(MALFORMED_AUTH_SWITCH, m_shared_data.servername);
             }
-        }
-        else
-        {
-            // No AuthSwitchRequest, error.
-            unexpected_data = true;
         }
         break;
 
-        case State::PW_SENT:
+    case State::EXCHANGING:
         {
-            /** Read authentication response. This is typically either OK packet or ERROR, but can be another
-             *  prompt. */
-            uint8_t cmdbyte = data[MYSQL_COM_OFFSET];
-            if (cmdbyte == MYSQL_REPLY_OK)
+            // The packet may contain another prompt, try parse it. Currently, it's expected to be
+            // another "Password: ". In the future other setups may be supported.
+            mariadb::ByteVec data;
+            data.reserve(input.length());   // reserve some extra to ensure no further allocations needed.
+            int datalen = input.length() - MYSQL_HEADER_LEN;
+            data.resize(datalen);
+            gwbuf_copy_data(input.get(), MYSQL_HEADER_LEN, datalen, data.data());
+
+            if (parse_password_prompt(data))
             {
-                MXS_DEBUG("pam_backend_auth_extract received ok packet from '%s'.", srv_name);
-                m_state = State::DONE;
-                success = true;
-            }
-            else if (cmdbyte == MYSQL_REPLY_ERR)
-            {
-                MXS_DEBUG("pam_backend_auth_extract received error packet from '%s'.", srv_name);
-                m_state = State::DONE;
-            }
-            else
-            {
-                // The packet may contain another prompt, try parse it. Currently, it's expected to be
-                // another "Password: ", in the future other setups may be supported.
-                if (parse_password_prompt(&data_ptr, end_ptr))
-                {
-                    m_state = State::RECEIVED_PROMPT;
-                    success = true;
-                }
-                else
-                {
-                    MXS_ERROR("Expected OK, ERR or PAM prompt from '%s' but received something else. ",
-                              srv_name);
-                    unexpected_data = true;
-                }
+                *output = generate_pw_packet();
+                rval = AuthRes::SUCCESS;
             }
         }
         break;
 
 
-        default:
-            // This implicates an error in either PAM authenticator or backend protocol.
-            mxb_assert(!true);
-            unexpected_data = true;
-            break;
+    case State::ERROR:
+        // Should not get here.
+        mxb_assert(!true);
+        break;
     }
 
-    if (unexpected_data)
+    if (rval != AuthRes::SUCCESS)
     {
-        MXS_ERROR("Failed to read data from '%s' when authenticating %s.",
-                  srv_name, m_clienthost.c_str());
+        m_state = State::ERROR;
     }
-    return success;
-}
-
-mariadb::BackendAuthenticator::AuthRes PamBackendAuthenticator::authenticate(DCB* dcb)
-{
-    auto rval = AuthRes::FAIL;
-
-    if (m_state == State::RECEIVED_PROMPT)
-    {
-        MXS_DEBUG("pam_backend_auth_authenticate sending password to '%s'.",
-                  m_shared_data.servername);
-        if (send_client_password(dcb))
-        {
-            m_state = State::PW_SENT;
-            rval = AuthRes::INCOMPLETE;
-        }
-        else
-        {
-            m_state = State::DONE;
-        }
-    }
-    else if (m_state == State::DONE)
-    {
-        rval = AuthRes::SUCCESS;
-    }
-
     return rval;
-}
-
-mariadb::BackendAuthenticator::AuthRes
-PamBackendAuthenticator::exchange(const mxs::Buffer& input, mxs::Buffer* output)
-{
-    return AuthRes::FAIL;
 }
 
 PamBackendAuthenticator::PamBackendAuthenticator(mariadb::BackendAuthData& shared_data)
