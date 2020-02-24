@@ -286,6 +286,10 @@ public:
         return it == m_variables.end() ? "" : it->second;
     }
 
+    void set_gtid_pos(uint32_t domain, uint64_t sequence);
+
+    uint64_t get_gtid_pos(uint32_t domain) const;
+
 protected:
     SERVER(std::unique_ptr<mxs::SSLContext> ssl_context)
         : m_ssl_provider{std::move(ssl_context)}
@@ -304,4 +308,12 @@ private:
     std::unordered_map<std::string, std::string> m_variables;
     // Lock that protects m_variables
     mutable std::mutex m_var_lock;
+
+    struct GTID
+    {
+        std::atomic<int64_t>  domain{-1};
+        std::atomic<uint64_t> sequence{0};
+    };
+
+    std::array<GTID, 32> m_gtids;
 };

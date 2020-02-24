@@ -374,6 +374,60 @@ uint64_t SERVER::status_from_string(const char* str)
     return 0;
 }
 
+void SERVER::set_gtid_pos(uint32_t domain, uint64_t sequence)
+{
+    // Try to find the existing slot or reserve a free one for this domain
+    for (auto& a : m_gtids)
+    {
+        auto d = a.domain.load(std::memory_order_relaxed);
+        int64_t empty = -1;
+
+        // Use this slot if it's already assigned for this domain. If it's not assigned, try to reserve it.
+        // Since all threads iterate the list in the same order, we're guaranteed to only reserve one slot per
+        // domain.
+        if (d == domain || a.domain.compare_exchange_strong(empty, domain, std::memory_order_relaxed))
+        {
+            uint64_t current;
+            do
+            {
+                current = a.sequence.load(std::memory_order_relaxed);
+
+                if (sequence <= current)
+                {
+                    // Someone else stored a newer GTID position
+                    break;
+                }
+            }
+            while (!a.sequence.compare_exchange_weak(current, sequence,
+                                                     std::memory_order_release,
+                                                     std::memory_order_relaxed));
+
+            return;
+        }
+    }
+}
+
+uint64_t SERVER::get_gtid_pos(uint32_t domain) const
+{
+    for (const auto& a : m_gtids)
+    {
+        auto seq = a.sequence.load(std::memory_order_acquire);
+        auto dom = a.domain.load(std::memory_order_relaxed);
+
+        if (dom == domain)
+        {
+            return seq;
+        }
+        else if (dom == -1)
+        {
+            // Found an empty slot. This means that no GTIDs have been stored for this domain.
+            break;
+        }
+    }
+
+    return 0;
+}
+
 void Server::set_version(uint64_t version_num, const std::string& version_str)
 {
     if (version_str != version_string())
