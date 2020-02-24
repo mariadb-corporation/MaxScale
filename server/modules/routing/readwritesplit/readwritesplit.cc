@@ -180,12 +180,27 @@ void RWSplit::set_last_gtid(const std::string& str)
 
     if (tokens.size() == 3)
     {
-        gtid gtid;
-        gtid.domain = strtol(tokens[0].c_str(), nullptr, 10);
-        gtid.server_id = strtol(tokens[1].c_str(), nullptr, 10);
-        gtid.sequence = strtol(tokens[2].c_str(), nullptr, 10);
+        gtid generated_gtid;
+        generated_gtid.domain = strtol(tokens[0].c_str(), nullptr, 10);
+        generated_gtid.server_id = strtol(tokens[1].c_str(), nullptr, 10);
+        generated_gtid.sequence = strtol(tokens[2].c_str(), nullptr, 10);
 
-        m_last_gtid.store(gtid, std::memory_order_relaxed);
+        gtid current_gtid;
+        gtid next_gtid;
+
+        do
+        {
+            current_gtid = m_last_gtid.load(std::memory_order_relaxed);
+            auto next_gtid = generated_gtid;
+
+            if (current_gtid.domain == next_gtid.domain && current_gtid.sequence >= next_gtid.sequence)
+            {
+                break;
+            }
+        }
+        while (!m_last_gtid.compare_exchange_weak(current_gtid, next_gtid,
+                                                  std::memory_order_relaxed,
+                                                  std::memory_order_relaxed));
     }
     else if (warn_malformed_gtid)
     {

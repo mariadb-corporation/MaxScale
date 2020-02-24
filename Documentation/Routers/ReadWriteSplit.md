@@ -668,7 +668,11 @@ The possible values for this parameter are:
 
   * Writes are globally visible. If one connection writes a value, all
     connections to the same service will see it. In general this mode is slower
-    than the `local` mode due to the extra synchronization it has to do.
+    than the `local` mode due to the extra synchronization it has to do. This
+    guarantees global happens-before ordering of reads when all transactions are
+    inside a single GTID domain. Multi-domain use of causal_reads can cause
+    non-causal reads to occur which is why it is highly recommended to avoid
+    this when the global causal reads mode is used.
 
 ### `lazy_connect`
 
