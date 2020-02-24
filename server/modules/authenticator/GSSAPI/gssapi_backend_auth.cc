@@ -14,167 +14,27 @@
 #include "gssapi_auth.hh"
 
 #include <maxbase/alloc.h>
-#include <maxscale/dcb.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
-#include <maxscale/server.hh>
-
-GSSAPIBackendAuthenticator::~GSSAPIBackendAuthenticator()
-{
-    MXS_FREE(principal_name);
-}
 
 /**
- * @brief Create a new GSSAPI token
- * @param dcb Backend DCB
- * @return True on success, false on error
- */
-bool GSSAPIBackendAuthenticator::send_new_auth_token(DCB* dcb)
-{
-    bool rval = false;
-    auto auth = this;
-    auto ses = static_cast<MYSQL_session*>(dcb->session()->protocol_data());
-    auto auth_token_len = ses->auth_token.size();
-    GWBUF* buffer = gwbuf_alloc(MYSQL_HEADER_LEN + auth_token_len);
-
-    // This function actually just forwards the client's token to the backend server
-    if (buffer)
-    {
-        uint8_t* data = (uint8_t*)GWBUF_DATA(buffer);
-        gw_mysql_set_byte3(data, auth_token_len);
-        data += 3;
-        *data++ = ++auth->sequence;
-        memcpy(data, ses->auth_token.data(), auth_token_len);
-
-        if (dcb->writeq_append(buffer))
-        {
-            rval = true;
-        }
-    }
-
-    return rval;
-}
-
-/**
- * @brief Extract the principal name from the AuthSwitchRequest packet
+ * Generate packet with client password in cleartext.
  *
- * @param buffer Buffer containing an AuthSwitchRequest packet
- * @return True on success, false on error
+ * @return Packet with password
  */
-bool GSSAPIBackendAuthenticator::extract_principal_name(GWBUF* buffer)
+mxs::Buffer GSSAPIBackendAuthenticator::generate_auth_token_packet() const
 {
-    bool rval = false;
-    size_t buflen = gwbuf_length(buffer) - MYSQL_HEADER_LEN;
-    uint8_t databuf[buflen];
-    uint8_t* data = databuf;
-    auto auth = this;
-
-    /** Copy the payload and the current packet sequence number */
-    gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, buflen, databuf);
-    gwbuf_copy_data(buffer, MYSQL_SEQ_OFFSET, 1, &auth->sequence);
-
-    if (databuf[0] != MYSQL_REPLY_AUTHSWITCHREQUEST)
+    const auto& auth_token = m_shared_data.client_data->auth_token;     // Should contain the client token.
+    auto auth_token_len = auth_token.size();
+    size_t buflen = MYSQL_HEADER_LEN + auth_token_len;
+    mxs::Buffer rval(buflen);
+    auto* ptr = rval.data();
+    mariadb::set_byte3(ptr, auth_token_len);
+    ptr += 3;
+    *ptr++ = m_sequence;
+    if (auth_token_len > 0)
     {
-        /** Server responded with something we did not expect. If it's an OK packet,
-         * it's possible that the server authenticated us as the anonymous user. This
-         * means that the server is not secure. */
-        MXS_ERROR("Server '%s' returned an unexpected authentication response.%s",
-                  m_shared_data.servername,
-                  databuf[0] == MYSQL_REPLY_OK ?
-                  " Authentication was complete before it even started, "
-                  "anonymous users might not be disabled." : "");
-        return false;
-    }
-
-    /**
-     * The AuthSwitchRequest packet
-     *
-     * 0xfe        - Command byte
-     * string[NUL] - Auth plugin name
-     * string[EOF] - Auth plugin data
-     *
-     * Skip over the auth plugin name and copy the service principal name stored
-     * in the auth plugin data section.
-     */
-    while (*data && data < databuf + buflen)
-    {
-        data++;
-    }
-
-    data++;
-    buflen -= data - databuf;
-
-    if (buflen > 0)
-    {
-        uint8_t* principal = static_cast<uint8_t*>(MXS_MALLOC(buflen + 1));
-
-        if (principal)
-        {
-            /** Store the principal name for later when we request the token
-             * from the GSSAPI server */
-            memcpy(principal, data, buflen);
-            principal[buflen] = '\0';
-            auth->principal_name = principal;
-            rval = true;
-        }
-    }
-    else
-    {
-        MXS_ERROR("Backend server did not send any auth plugin data.");
-    }
-
-    return rval;
-}
-
-/**
- * @brief Extract data from a MySQL packet
- * @param dcb Backend DCB
- * @param buffer Buffer containing a complete packet
- * @return True if authentication is ongoing or complete,
- * false if authentication failed.
- */
-bool GSSAPIBackendAuthenticator::extract(DCB* dcb, GWBUF* buffer)
-{
-    bool rval = false;
-    auto auth = this;
-
-    if (auth->state == GSSAPI_AUTH_INIT && extract_principal_name(buffer))
-    {
-        rval = true;
-    }
-    else if (auth->state == GSSAPI_AUTH_DATA_SENT)
-    {
-        /** Read authentication response */
-        if (mxs_mysql_is_ok_packet(buffer))
-        {
-            auth->state = GSSAPI_AUTH_OK;
-            rval = true;
-        }
-    }
-
-    return rval;
-}
-
-/**
- * @brief Authenticate the backend connection
- * @param dcb Backend DCB
- * @return MXS_AUTH_INCOMPLETE if authentication is ongoing, MXS_AUTH_SUCCEEDED
- * if authentication is complete and MXS_AUTH_FAILED if authentication failed.
- */
-mariadb::BackendAuthenticator::AuthRes GSSAPIBackendAuthenticator::authenticate(DCB* dcb)
-{
-    auto rval = AuthRes::FAIL;
-    if (state == GSSAPI_AUTH_INIT)
-    {
-        if (send_new_auth_token(dcb))
-        {
-            rval = AuthRes::INCOMPLETE;
-            state = GSSAPI_AUTH_DATA_SENT;
-        }
-    }
-    else if (state == GSSAPI_AUTH_OK)
-    {
-        rval = AuthRes::SUCCESS;
+        memcpy(ptr, auth_token.data(), auth_token_len);
     }
     return rval;
 }
@@ -187,5 +47,69 @@ GSSAPIBackendAuthenticator::GSSAPIBackendAuthenticator(const mariadb::BackendAut
 mariadb::BackendAuthenticator::AuthRes
 GSSAPIBackendAuthenticator::exchange(const mxs::Buffer& input, mxs::Buffer* output)
 {
-    return AuthRes::FAIL;
+    const char plugin_name[] = "auth_gssapi_client";
+    const char* srv_name = m_shared_data.servername;
+    // Smallest buffer that is parsed, header + principal name (0-term).
+    const int min_readable_buflen = MYSQL_HEADER_LEN + 2;
+    const int buflen = input.length();
+    if (buflen <= min_readable_buflen)
+    {
+        MXB_ERROR("Received packet of size %i from '%s' during authentication. Expected packet size is "
+                  "at least %i.", buflen, srv_name, min_readable_buflen);
+        return AuthRes::FAIL;
+    }
+
+    m_sequence = MYSQL_GET_PACKET_NO(GWBUF_DATA(input.get())) + 1;
+    auto rval = AuthRes::FAIL;
+
+    switch (m_state)
+    {
+    case State::EXPECT_AUTHSWITCH:
+        {
+            // Server should have sent the AuthSwitchRequest.
+            auto parse_res = mariadb::parse_auth_switch_request(input);
+            if (parse_res.success)
+            {
+                if (parse_res.plugin_name != plugin_name)
+                {
+                    MXB_ERROR(WRONG_PLUGIN_REQ, m_shared_data.servername, parse_res.plugin_name.c_str(),
+                              m_shared_data.client_data->user_and_host().c_str(), plugin_name);
+                }
+                else if (!parse_res.plugin_data.empty())
+                {
+                    // Principal name sent by server is in parse result, but it's not required.
+                    *output = generate_auth_token_packet();
+                    m_state = State::TOKEN_SENT;
+                    rval = AuthRes::SUCCESS;
+                }
+                else
+                {
+                    MXB_ERROR("Backend server did not send any auth plugin data.");
+                }
+            }
+            else
+            {
+                // No AuthSwitchRequest, error.
+                MXB_ERROR(MALFORMED_AUTH_SWITCH, m_shared_data.servername);
+            }
+        }
+        break;
+
+    case State::TOKEN_SENT:
+        // Server is sending more packets than expected. Error.
+        MXB_ERROR("Server '%s' sent more packets than expected.", m_shared_data.servername);
+        break;
+
+
+    case State::ERROR:
+        // Should not get here.
+        mxb_assert(!true);
+        break;
+    }
+
+    if (rval != AuthRes::SUCCESS)
+    {
+        m_state = State::ERROR;
+    }
+    return rval;
 }

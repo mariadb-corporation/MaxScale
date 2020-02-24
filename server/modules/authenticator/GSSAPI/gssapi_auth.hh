@@ -14,11 +14,9 @@
 #define MXS_MODULE_NAME "GSSAPIAuth"
 
 #include <maxscale/ccdefs.hh>
-#include <stdint.h>
-#include <stddef.h>
 #include <gssapi.h>
-#include <maxscale/sqlite3.h>
 #include <maxscale/protocol/mariadb/authenticator.hh>
+#include <maxscale/protocol/mariadb/protocol_classes.hh>
 
 /** GSSAPI authentication states */
 enum gssapi_auth_state
@@ -79,17 +77,20 @@ class GSSAPIBackendAuthenticator : public mariadb::BackendAuthenticator
 {
 public:
     GSSAPIBackendAuthenticator(const mariadb::BackendAuthData& shared_data);
-    ~GSSAPIBackendAuthenticator() override;
-    bool    extract(DCB* backend, GWBUF* buffer);
-    AuthRes authenticate(DCB* backend);
     AuthRes exchange(const mxs::Buffer& input, mxs::Buffer* output) override;
+
 private:
-    bool extract_principal_name(GWBUF* buffer);
-    bool send_new_auth_token(DCB* dcb);
+    mxs::Buffer generate_auth_token_packet() const;
 
-    const mariadb::BackendAuthData& m_shared_data; /**< Data shared with backend connection */
+    enum class State
+    {
+        EXPECT_AUTHSWITCH,
+        TOKEN_SENT,
+        ERROR
+    };
 
-    gssapi_auth_state state {GSSAPI_AUTH_INIT};     /**< Authentication state*/
-    uint8_t*          principal_name {nullptr};     /**< Principal name */
-    uint8_t           sequence {0};                 /**< The next packet sequence number */
+    State   m_state {State::EXPECT_AUTHSWITCH};     /**< Authentication state*/
+    uint8_t m_sequence {0};                         /**< The next packet sequence number */
+
+    const mariadb::BackendAuthData& m_shared_data;      /**< Data shared with backend connection */
 };
