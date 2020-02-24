@@ -402,9 +402,23 @@ public:
     /**
      * Update the checksum calculation
      *
+     * @param ptr Pointer to data
+     * @param len Length of the data
+     */
+    virtual void update(uint8_t* ptr, size_t len) = 0;
+
+    /**
+     * Update the checksum calculation
+     *
      * @param buffer Buffer to add to the calculation
      */
-    virtual void update(GWBUF* buffer) = 0;
+    void update(GWBUF* buffer)
+    {
+        for (GWBUF* b = buffer; b; b = b->next)
+        {
+            update(GWBUF_DATA(b), GWBUF_LENGTH(b));
+        }
+    }
 
     /**
      * Finalize the calculation
@@ -415,10 +429,15 @@ public:
      * made.
      *
      * Calling finalize will overwrite the currently stored calculation.
-     *
-     * @param buffer Optional buffer to process before finalizing
      */
-    virtual void finalize(GWBUF* buffer = NULL) = 0;
+    virtual void finalize() = 0;
+
+    // Overload with an update before finalize
+    void finalize(GWBUF* buffer)
+    {
+        update(buffer);
+        finalize();
+    }
 
     /**
      * Reset the checksum to a zero state
@@ -439,8 +458,9 @@ public:
 class SHA1Checksum : public Checksum
 {
 public:
-
-    typedef std::array<uint8_t, SHA_DIGEST_LENGTH> Sum;
+    using Checksum::update;
+    using Checksum::finalize;
+    using Sum = std::array<uint8_t, SHA_DIGEST_LENGTH>;
 
     SHA1Checksum()
     {
@@ -448,17 +468,13 @@ public:
         m_sum.fill(0);      // CentOS 6 doesn't like aggregate initialization...
     }
 
-    void update(GWBUF* buffer)
+    void update(uint8_t* ptr, size_t len)
     {
-        for (GWBUF* b = buffer; b; b = b->next)
-        {
-            SHA1_Update(&m_ctx, GWBUF_DATA(b), GWBUF_LENGTH(b));
-        }
+        SHA1_Update(&m_ctx, ptr, len);
     }
 
-    void finalize(GWBUF* buffer = NULL)
+    void finalize()
     {
-        update(buffer);
         SHA1_Final(&m_sum.front(), &m_ctx);
     }
 
@@ -499,23 +515,21 @@ static inline bool operator!=(const SHA1Checksum& lhs, const SHA1Checksum& rhs)
 class CRC32Checksum : public Checksum
 {
 public:
+    using Checksum::update;
+    using Checksum::finalize;
 
     CRC32Checksum()
     {
         m_ctx = crc32(0L, NULL, 0);
     }
 
-    void update(GWBUF* buffer)
+    void update(uint8_t* ptr, size_t len)
     {
-        for (GWBUF* b = buffer; b; b = b->next)
-        {
-            m_ctx = crc32(m_ctx, GWBUF_DATA(b), GWBUF_LENGTH(b));
-        }
+        m_ctx = crc32(m_ctx, ptr, len);
     }
 
-    void finalize(GWBUF* buffer = NULL)
+    void finalize()
     {
-        update(buffer);
         m_sum = m_ctx;
         reset();
     }
@@ -551,6 +565,16 @@ static inline bool operator==(const CRC32Checksum& lhs, const CRC32Checksum& rhs
 static inline bool operator!=(const CRC32Checksum& lhs, const CRC32Checksum& rhs)
 {
     return !(lhs == rhs);
+}
+
+// Convenience function for calculating a hex checksum
+template<class T>
+std::string checksum(uint8_t* ptr, size_t len)
+{
+    T cksum;
+    cksum.update(ptr, len);
+    cksum.finalize();
+    return cksum.hex();
 }
 
 /**
