@@ -1143,49 +1143,48 @@ Monitor::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& sett, SE
         }
         /** Otherwise close the handle. */
         mysql_close(pConn);
+        pConn = nullptr;
     }
 
     ConnectResult conn_result = ConnectResult::REFUSED;
-    if ((pConn = mysql_init(NULL)) != nullptr)
-    {
-        string uname = sett.username;
-        string passwd = sett.password;
-        const Server& srv = static_cast<const Server&>(server);     // Clean this up later.
-        string server_specific_monuser = srv.monitor_user();
-        if (!server_specific_monuser.empty())
-        {
-            uname = server_specific_monuser;
-            passwd = srv.monitor_password();
-        }
-        char* dpwd = decrypt_password(passwd.c_str());
+    string uname = sett.username;
+    string passwd = sett.password;
+    const Server& srv = static_cast<const Server&>(server);         // Clean this up later.
+    string server_specific_monuser = srv.monitor_user();
 
+    if (!server_specific_monuser.empty())
+    {
+        uname = server_specific_monuser;
+        passwd = srv.monitor_password();
+    }
+
+    char* dpwd = decrypt_password(passwd.c_str());
+
+    for (int i = 0; i < sett.connect_attempts; i++)
+    {
+        pConn = mysql_init(NULL);
         mysql_optionsv(pConn, MYSQL_OPT_CONNECT_TIMEOUT, &sett.connect_timeout);
         mysql_optionsv(pConn, MYSQL_OPT_READ_TIMEOUT, &sett.read_timeout);
         mysql_optionsv(pConn, MYSQL_OPT_WRITE_TIMEOUT, &sett.write_timeout);
         mysql_optionsv(pConn, MYSQL_PLUGIN_DIR, get_connector_plugindir());
+        time_t start = time(NULL);
 
-        time_t start = 0;
-        time_t end = 0;
-        for (int i = 0; i < sett.connect_attempts; i++)
+        if (mxs_mysql_real_connect(pConn, &server, uname.c_str(), dpwd))
         {
-            start = time(NULL);
-            bool result = (mxs_mysql_real_connect(pConn, &server, uname.c_str(), dpwd) != NULL);
-            end = time(NULL);
-
-            if (result)
-            {
-                conn_result = ConnectResult::NEWCONN_OK;
-                break;
-            }
+            conn_result = ConnectResult::NEWCONN_OK;
+            break;
         }
-
-        if (conn_result == ConnectResult::REFUSED && difftime(end, start) >= sett.connect_timeout)
+        else if (conn_result == ConnectResult::REFUSED
+                 && difftime(time(NULL), start) >= sett.connect_timeout)
         {
             conn_result = ConnectResult::TIMEOUT;
         }
-        MXS_FREE(dpwd);
+
+        mysql_close(pConn);
+        pConn = nullptr;
     }
 
+    MXS_FREE(dpwd);
     *ppConn = pConn;
     return conn_result;
 }
