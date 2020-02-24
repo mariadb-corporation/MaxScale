@@ -1044,6 +1044,9 @@ add_test_executable(mxs2750_com_stmt_exec.cc mxs2750_com_stmt_exec replication L
 # MXS-2793: Schemarouter multi-table joins
 add_test_executable(mxs2793_multi_table.cpp mxs2793_multi_table mxs2793_multi_table LABELS schemarouter REPL_BACKEND)
 
+# MXS-2878: Verify that TLS is required
+add_test_executable(mxs2878_monitor_ssl.cpp mxs2878_monitor_ssl mxs2878_monitor_ssl LABELS REPL_BACKEND)
+
 ############################################
 # END: Normal tests                        #
 ############################################
