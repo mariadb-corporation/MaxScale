@@ -59,6 +59,7 @@ private:
     {
         HANDSHAKING,    /**< Handshaking with backend */
         AUTHENTICATING, /**< Authenticating with backend */
+        SEND_DELAYQ,    /**< Sending contents of delay queue */
         ROUTING,        /**< Ready to route queries */
         FAILED,         /**< Handshake/authentication failed */
     };
@@ -94,14 +95,20 @@ private:
     mariadb::SBackendAuth    m_authenticator;   /**< Authentication plugin */
     mariadb::BackendAuthData m_auth_data;       /**< Data shared with auth plugin */
 
+    /**
+     * Packets received from router while the connection was busy handshaking/authenticating.
+     * Sent to server once connection is ready. */
+    mxs::Buffer m_delayed_packets;
+
     MariaDBBackendConnection(SERVER& server);
 
     HandShakeRes    handshake();
     AuthenticateRes authenticate();
+    bool            send_delayed_packets();
     int             normal_read();
 
-    bool   backend_write_delayqueue(GWBUF* buffer);
-    void   backend_set_delayqueue(DCB* dcb, GWBUF* queue);
+    bool backend_write_delayqueue(GWBUF* buffer);
+
     bool   change_user(GWBUF* queue);
     bool   send_change_user_to_backend();
     void   send_proxy_protocol_header();

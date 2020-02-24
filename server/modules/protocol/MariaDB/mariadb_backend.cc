@@ -182,7 +182,7 @@ void MariaDBBackendConnection::finish_connection()
 bool MariaDBBackendConnection::reuse_connection(BackendDCB* dcb, mxs::Component* upstream)
 {
     bool rv = false;
-    mxb_assert(dcb->session() && !dcb->readq() && !dcb->delayq() && !dcb->writeq());
+    mxb_assert(dcb->session() && !dcb->readq() && !m_delayed_packets.empty() && !dcb->writeq());
     mxb_assert(m_ignore_replies >= 0);
 
     if (dcb->state() != DCB::State::POLLING || m_state != State::ROUTING)
@@ -304,32 +304,65 @@ void MariaDBBackendConnection::ready_for_reading(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);     // The protocol should only handle its own events.
 
-    if (m_state == State::HANDSHAKING)
+    bool state_machine_continue = true;
+    while (state_machine_continue)
     {
-        auto hs_res = handshake();
-        if (hs_res == HandShakeRes::DONE)
+        switch (m_state)
         {
-            m_state = State::AUTHENTICATING;
-        }
-        else if (hs_res == HandShakeRes::ERROR)
-        {
-            m_state = State::FAILED;
-        }
-    }
-    else if (m_state == State::ROUTING)
-    {
-        normal_read();
-    }
-    else
-    {
-        auto auth_res = authenticate();
-        if (auth_res == AuthenticateRes::DONE)
-        {
+        case State::HANDSHAKING:
+            {
+                auto hs_res = handshake();
+                switch (hs_res)
+                {
+                case HandShakeRes::IN_PROGRESS:
+                    state_machine_continue = false;
+                    break;
+
+                case HandShakeRes::DONE:
+                    m_state = State::AUTHENTICATING;
+                    break;
+
+                case HandShakeRes::ERROR:
+                    m_state = State::FAILED;
+                    break;
+                }
+            }
+            break;
+
+        case State::AUTHENTICATING:
+            {
+                auto auth_res = authenticate();
+                switch (auth_res)
+                {
+                case AuthenticateRes::IN_PROGRESS:
+                    state_machine_continue = false;
+                    break;
+
+                case AuthenticateRes::DONE:
+                    m_state = State::SEND_DELAYQ;
+                    break;
+
+                case AuthenticateRes::ERROR:
+                    m_state = State::FAILED;
+                    break;
+                }
+            }
+            break;
+
+        case State::SEND_DELAYQ:
+            send_delayed_packets();
             m_state = State::ROUTING;
-        }
-        else if (auth_res == AuthenticateRes::ERROR)
-        {
-            m_state = State::FAILED;
+            break;
+
+        case State::ROUTING:
+            normal_read();
+            // Normal read always consumes all data.
+            state_machine_continue = false;
+            break;
+
+        case State::FAILED:
+            state_machine_continue = false;
+            break;
         }
     }
 }
@@ -946,7 +979,7 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
                       m_dcb, m_dcb->fd(), to_string(m_state).c_str());
 
             /** Store data until authentication is complete */
-            backend_set_delayqueue(m_dcb, queue);
+            m_delayed_packets.append(queue);
             rc = 1;
         }
         break;
@@ -1025,21 +1058,6 @@ void MariaDBBackendConnection::hangup(DCB* event_dcb)
     {
         do_handle_error(m_dcb, "Lost connection to backend server: connection closed by peer");
     }
-}
-
-/**
- * This routine put into the delay queue the input queue
- * The input is what backend DCB is receiving
- * The routine is called from func.write() when mysql backend connection
- * is not yet complete buu there are inout data from client
- *
- * @param dcb   The current backend DCB
- * @param queue Input data in the GWBUF struct
- */
-void MariaDBBackendConnection::backend_set_delayqueue(DCB* dcb, GWBUF* queue)
-{
-    /* Append data */
-    dcb->delayq_append(queue);
 }
 
 /**
@@ -2240,6 +2258,10 @@ std::string MariaDBBackendConnection::to_string(State auth_state)
         rval = "Authenticating";
         break;
 
+    case State::SEND_DELAYQ:
+        rval = "Sending delayed queries";
+        break;
+
     case State::FAILED:
         rval = "Failed";
         break;
@@ -2418,30 +2440,21 @@ MariaDBBackendConnection::AuthenticateRes MariaDBBackendConnection::authenticate
             m_dcb->writeq_append(output.release());
         }
 
-        switch (res)
-        {
-        case AuthRes::INCOMPLETE:
-        case AuthRes::SUCCESS:
-            rval = AuthenticateRes::IN_PROGRESS;
-            break;
-
-        case AuthRes::FAIL:
-            rval = AuthenticateRes::ERROR;
-            break;
-        }
+        rval = (res == AuthRes::SUCCESS) ? AuthenticateRes::IN_PROGRESS : AuthenticateRes::ERROR;
     }
 
-    if (rval == AuthenticateRes::DONE)
-    {
-        /** Authentication completed successfully */
-        GWBUF* localq = m_dcb->delayq_release();
-        if (localq)
-        {
-            localq = gwbuf_make_contiguous(localq);
-            /** Send the queued commands to the backend */
-            prepare_for_write(localq);
-            backend_write_delayqueue(localq);
-        }
-    }
     return rval;
+}
+
+bool MariaDBBackendConnection::send_delayed_packets()
+{
+    if (!m_delayed_packets.empty())
+    {
+        m_delayed_packets.make_contiguous();
+        /** Send the queued commands to the backend */
+        GWBUF* buffer = m_delayed_packets.release();
+        prepare_for_write(buffer);
+        backend_write_delayqueue(buffer);
+    }
+    return false;
 }

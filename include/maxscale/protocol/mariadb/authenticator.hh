@@ -226,12 +226,11 @@ struct BackendAuthData
 class BackendAuthenticator
 {
 public:
-    // Return values for authenticate-functions.
+    // Return values for authenticate-functions. TODO: change to bool if no more values needed
     enum class AuthRes
     {
         SUCCESS,    /**< Authentication was successful */
         FAIL,       /**< Authentication failed */
-        INCOMPLETE, /**< Authentication is not yet complete */
     };
 
     BackendAuthenticator(const BackendAuthenticator&) = delete;

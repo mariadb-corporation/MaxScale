@@ -455,30 +455,6 @@ public:
         m_readq = buffer;
     }
 
-    GWBUF* delayq()
-    {
-        return m_delayq;
-    }
-
-    void delayq_append(GWBUF* buffer)
-    {
-        m_delayq = gwbuf_append(m_delayq, buffer);
-    }
-
-    /**
-     * @brief Returns the read queue of the DCB and sets the read queue to NULL.
-     *
-     * @note The read queue becomes the property of the caller.
-     *
-     * @return A buffer of NULL if there is no read queue.
-     */
-    GWBUF* delayq_release()
-    {
-        GWBUF* delayq = m_delayq;
-        m_delayq = NULL;
-        return delayq;
-    }
-
     int64_t last_read() const
     {
         return m_last_read;
@@ -578,10 +554,6 @@ public:
         {
             gwbuf_set_owner(m_readq, wid);
         }
-        if (m_delayq)
-        {
-            gwbuf_set_owner(m_delayq, wid);
-        }
 #endif
     }
 
@@ -674,7 +646,6 @@ protected:
     uint64_t m_writeqlen = 0;                       /**< Bytes in writeq */
     GWBUF*   m_writeq = nullptr;                    /**< Write Data Queue */
     GWBUF*   m_readq = nullptr;                     /**< Read queue for incomplete reads */
-    GWBUF*   m_delayq = nullptr;                    /**< Delay Backend Write Data Queue */
     uint32_t m_triggered_event = 0;                 /**< Triggered event to be delivered to handler */
     uint32_t m_nClose = 0;                          /**< How many times dcb_close has been called. */
     bool     m_hanged_up = false;                   /**< Has thethis can be called only once */

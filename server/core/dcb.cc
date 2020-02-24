@@ -187,7 +187,6 @@ DCB::~DCB()
         SSL_free(m_encryption.handle);
     }
 
-    gwbuf_free(m_delayq);
     gwbuf_free(m_writeq);
     gwbuf_free(m_readq);
 
@@ -197,10 +196,8 @@ DCB::~DCB()
 void DCB::clear()
 {
     gwbuf_free(m_readq);
-    gwbuf_free(m_delayq);
     gwbuf_free(m_writeq);
     m_readq = NULL;
-    m_delayq = NULL;
     m_writeq = NULL;
 
     remove_callbacks();
