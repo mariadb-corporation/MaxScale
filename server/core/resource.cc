@@ -194,18 +194,6 @@ public:
 
         do
         {
-            map<std::string, uint64_t>::iterator it = m_etag.find(path);
-
-            if (it != m_etag.end())
-            {
-                it->second++;
-            }
-            else
-            {
-                // First modification
-                m_etag[path] = 1;
-            }
-
             m_last_modified[path] = time(NULL);
         }
         while (drop_path_part(path));
@@ -224,23 +212,9 @@ public:
         return m_init;
     }
 
-    uint64_t etag(const string& path) const
-    {
-        map<string, uint64_t>::const_iterator it = m_etag.find(path);
-
-        if (it != m_etag.end())
-        {
-            return it->second;
-        }
-
-        // Resource has not yet been updated
-        return 0;
-    }
-
 private:
-    time_t                m_init;
-    map<string, time_t>   m_last_modified;
-    map<string, uint64_t> m_etag;
+    time_t              m_init;
+    map<string, time_t> m_last_modified;
 };
 
 HttpResponse cb_stop_monitor(const HttpRequest& request)
@@ -1251,7 +1225,8 @@ static bool request_reads_data(const string& verb)
            || verb == MHD_HTTP_METHOD_HEAD;
 }
 
-static bool request_precondition_met(const HttpRequest& request, HttpResponse& response)
+static bool request_precondition_met(const HttpRequest& request, HttpResponse& response,
+                                     const std::string& cksum)
 {
     bool rval = true;
     string str;
@@ -1275,9 +1250,7 @@ static bool request_precondition_met(const HttpRequest& request, HttpResponse& r
     }
     else if ((str = request.get_header(MHD_HTTP_HEADER_IF_MATCH)).length())
     {
-        str = str.substr(1, str.length() - 2);
-
-        if (watcher.etag(uri) != strtoul(str.c_str(), NULL, 10))
+        if (cksum != str)
         {
             rval = false;
             response = HttpResponse(MHD_HTTP_PRECONDITION_FAILED);
@@ -1285,9 +1258,7 @@ static bool request_precondition_met(const HttpRequest& request, HttpResponse& r
     }
     else if ((str = request.get_header(MHD_HTTP_HEADER_IF_NONE_MATCH)).length())
     {
-        str = str.substr(1, str.length() - 2);
-
-        if (watcher.etag(uri) == strtoul(str.c_str(), NULL, 10))
+        if (cksum == str)
         {
             rval = false;
             response = HttpResponse(MHD_HTTP_NOT_MODIFIED);
@@ -1304,12 +1275,14 @@ static HttpResponse handle_request(const HttpRequest& request)
               request.get_uri().c_str(),
               request.get_json_str().c_str());
 
-    HttpResponse rval;
+    HttpResponse rval = resources.process_request(request);
 
-    if (request_precondition_met(request, rval))
+    // Calculate the checksum from the generated JSON
+    auto str = mxs::json_dump(rval.get_response());
+    auto cksum = '"' + mxs::checksum<mxs::SHA1Checksum>((uint8_t*)str.c_str(), str.size()) + '"';
+
+    if (request_precondition_met(request, rval, cksum))
     {
-        rval = resources.process_request(request);
-
         if (request_modifies_data(request.get_verb()))
         {
             switch (rval.get_code())
@@ -1326,14 +1299,9 @@ static HttpResponse handle_request(const HttpRequest& request)
         }
         else if (request_reads_data(request.get_verb()))
         {
-            const string& uri = request.get_uri();
-
-            rval.add_header(HTTP_RESPONSE_HEADER_LAST_MODIFIED,
-                            http_to_date(watcher.last_modified(uri)));
-
-            stringstream ss;
-            ss << "\"" << watcher.etag(uri) << "\"";
-            rval.add_header(HTTP_RESPONSE_HEADER_ETAG, ss.str());
+            const auto& uri = request.get_uri();
+            rval.add_header(HTTP_RESPONSE_HEADER_LAST_MODIFIED, http_to_date(watcher.last_modified(uri)));
+            rval.add_header(HTTP_RESPONSE_HEADER_ETAG, cksum.c_str());
         }
     }
 

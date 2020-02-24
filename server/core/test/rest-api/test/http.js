@@ -5,25 +5,24 @@ describe("HTTP Headers", function() {
     before(startMaxScale)
 
     it("ETag changes after modification", function() {
-        return request.get(base_url + "/servers/server1", {resolveWithFullResponse: true})
+        var etag_one
+        var etag_all
+        return request.get(base_url + "/servers", {resolveWithFullResponse: true})
             .then(function(resp) {
-                resp.headers.etag.should.be.equal("\"0\"")
+                etag_all = resp.headers.etag
+            })
+            .then(() => request.get(base_url + "/servers/server1", {resolveWithFullResponse: true}))
+            .then(function(resp) {
+                etag_one = resp.headers.etag
                 var srv = JSON.parse(resp.body)
                 delete srv.data.relationships
+                srv.data.attributes.parameters.port = 1234
                 return request.patch(base_url + "/servers/server1", {json: srv})
             })
-            .then(function() {
-                return request.get(base_url + "/servers/server1", {resolveWithFullResponse: true})
-            })
-            .then(function(resp) {
-                resp.headers.etag.should.be.equal("\"1\"")
-            })
-            .then(function() {
-                return request.get(base_url + "/servers", {resolveWithFullResponse: true})
-            })
-            .then(function(resp) {
-                resp.headers.etag.should.be.equal("\"1\"")
-            })
+            .then(() => request.get(base_url + "/servers/server1", {resolveWithFullResponse: true}))
+            .then((resp) => resp.headers.etag.should.not.be.equal(etag_one))
+            .then(() => request.get(base_url + "/servers", {resolveWithFullResponse: true}))
+            .then((resp) => resp.headers.etag.should.not.be.equal(etag_all))
     });
 
     it("Last-Modified changes after modification", function(done) {
