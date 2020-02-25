@@ -149,9 +149,15 @@ public:
             mxb_assert(!word.empty());
 
             Nodes& nodes = m_nodes_by_word[word];
-            mxb_assert(nodes.find(pNode) == nodes.end());
 
-            nodes.emplace(pNode);
+            // If a value is put multiple times in a row, then we will
+            // have made a note for it already, meaning that it already
+            // will be in 'nodes'. This *will* happen when a value whose
+            // soft (but not hard) TTL has passed is returned as in that
+            // case the caller will fetch and store the value a new.
+            // However 'nodes' being a set the following "duplicate" insert
+            // will be harmless.
+            nodes.insert(pNode);
         }
     }
 
