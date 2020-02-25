@@ -407,7 +407,7 @@ void SERVER::set_gtid_pos(uint32_t domain, uint64_t sequence)
     }
 }
 
-uint64_t SERVER::get_gtid_pos(uint32_t domain) const
+uint64_t SERVER::gtid_pos(uint32_t domain) const
 {
     for (const auto& a : m_gtids)
     {

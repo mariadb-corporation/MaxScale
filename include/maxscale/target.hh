@@ -231,6 +231,15 @@ public:
     virtual int64_t replication_lag() const = 0;
 
     /**
+     * Returns the latest replicated position that this target has reached.
+     *
+     * @param domain The replication domain to use
+     *
+     * @return The position the target is at or 0 if no events have been replicated from this domain
+     */
+    virtual uint64_t gtid_pos(uint32_t domain) const = 0;
+
+    /**
      * Return ping in microseconds, or negative if the value is unknown (e.g. no connection).
      *
      * @return Ping in microseconds

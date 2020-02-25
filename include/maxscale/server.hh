@@ -288,7 +288,7 @@ public:
 
     void set_gtid_pos(uint32_t domain, uint64_t sequence);
 
-    uint64_t get_gtid_pos(uint32_t domain) const;
+    uint64_t gtid_pos(uint32_t domain) const override;
 
 protected:
     SERVER(std::unique_ptr<mxs::SSLContext> ssl_context)

@@ -1608,6 +1608,23 @@ int64_t Service::replication_lag() const
     return lag;
 }
 
+uint64_t Service::gtid_pos(uint32_t domain) const
+{
+    uint64_t max_pos = 0;
+
+    for (auto t : m_data->targets)
+    {
+        auto pos = t->gtid_pos(domain);
+
+        if (pos > max_pos)
+        {
+            pos = max_pos;
+        }
+    }
+
+    return max_pos;
+}
+
 int64_t Service::ping() const
 {
     auto undef = mxs::Target::PING_UNDEFINED;
