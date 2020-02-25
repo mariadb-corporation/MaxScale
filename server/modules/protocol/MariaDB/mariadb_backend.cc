@@ -123,6 +123,13 @@ bool is_last_eof(Iter it)
     status |= (*it++) << 8;
     return (status & SERVER_MORE_RESULTS_EXIST) == 0;
 }
+
+void set_gtid_pos(SERVER& server, const std::string& gtid)
+{
+    uint32_t domain = strtoul(gtid.c_str(), nullptr, 10);
+    uint64_t sequence = strtoul(strrchr(gtid.c_str(), '-') + 1, nullptr, 10);
+    server.set_gtid_pos(domain, sequence);
+}
 }
 
 /**
@@ -1952,6 +1959,7 @@ void MariaDBBackendConnection::process_ok_packet(Iter it, Iter end)
             case SESSION_TRACK_GTIDS:
                 skip_encoded_int(it);   // Encoding specification
                 m_reply.set_variable(MXS_LAST_GTID, get_encoded_str(it));
+                set_gtid_pos(m_server, m_reply.get_variable(MXS_LAST_GTID));
                 break;
 
             case SESSION_TRACK_TRANSACTION_CHARACTERISTICS:
@@ -1963,6 +1971,11 @@ void MariaDBBackendConnection::process_ok_packet(Iter it, Iter end)
                     auto name = get_encoded_str(it);
                     auto value = get_encoded_str(it);
                     m_reply.set_variable(name, value);
+
+                    if (name == MXS_LAST_GTID)
+                    {
+                        set_gtid_pos(m_server, value);
+                    }
                 }
                 break;
 
