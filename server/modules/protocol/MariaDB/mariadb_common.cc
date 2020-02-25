@@ -211,7 +211,7 @@ int mxs_mysql_send_ok(DCB* dcb, int sequence, uint8_t affected_rows, const char*
  * @return The length of the response packet
  */
 int response_length(bool with_ssl, bool ssl_established, const char* user,
-                    uint8_t* passwd, const char* dbname, const char* auth_module)
+                    const uint8_t* passwd, const char* dbname, const char* auth_module)
 {
     long bytes;
 
@@ -282,7 +282,7 @@ void mxs_mysql_calculate_hash(const uint8_t* scramble, const uint8_t* passwd, ui
  *
  * @return Address of the next byte after the end of the stored password
  */
-uint8_t* load_hashed_password(const uint8_t* scramble, uint8_t* payload, uint8_t* passwd)
+uint8_t* load_hashed_password(const uint8_t* scramble, uint8_t* payload, const uint8_t* passwd)
 {
     *payload++ = GW_MYSQL_SCRAMBLE_SIZE;
     mxs_mysql_calculate_hash(scramble, passwd, payload);
@@ -470,7 +470,6 @@ MYSQL_session::MYSQL_session(const MYSQL_session& rhs)
     , db(rhs.db)
     , plugin(rhs.plugin)
     , next_sequence(rhs.next_sequence)
-    , changing_user(rhs.changing_user)
     , connect_attrs(rhs.connect_attrs)
     , client_info(rhs.client_info)
     , auth_token(rhs.auth_token)

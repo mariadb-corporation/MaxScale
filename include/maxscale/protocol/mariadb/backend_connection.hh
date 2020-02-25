@@ -157,7 +157,6 @@ private:
     static std::string to_string(State auth_state);
 
     uint64_t    m_thread_id {0};                    /**< Backend thread id, received in backend handshake */
-    uint8_t     m_scramble[MYSQL_SCRAMBLE_LEN];     /**< Server scramble, received in backend handshake */
     int         m_ignore_replies {0};               /**< How many replies should be discarded */
     bool        m_collect_result {false};           /**< Collect the next result set as one buffer */
     bool        m_track_state {false};              /**< Track session state */
@@ -174,7 +173,6 @@ private:
 
     mxs::Component* m_upstream {nullptr};       /**< Upstream component, typically a router */
     MXS_SESSION*    m_session {nullptr};        /**< Generic session */
-    MYSQL_session*  m_client_data {nullptr};    /**< Client-session shared data */
     GWBUF*          m_stored_query {nullptr};   /*< Temporarily stored queries */
     BackendDCB*     m_dcb {nullptr};            /**< Dcb used by this protocol connection */
 };

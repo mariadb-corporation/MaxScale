@@ -171,7 +171,7 @@ void MariaDBBackendConnection::finish_connection()
 
     if (m_state == State::HANDSHAKING)
     {
-        memset(m_scramble, 0, sizeof(m_scramble));
+        memset(m_auth_data.scramble, 0, sizeof(m_auth_data.scramble));
         m_dcb->writeq_append(gw_generate_auth_response(false, false, 0));
     }
 
@@ -690,7 +690,6 @@ int MariaDBBackendConnection::normal_read()
              */
             GWBUF_DATA(read_buffer)[3] = 0x3;
             m_changing_user = false;
-            m_client_data->changing_user = false;
         }
     }
 
@@ -1116,7 +1115,7 @@ GWBUF* MariaDBBackendConnection::create_change_user_packet()
 {
     auto make_auth_token = [this] {
             std::vector<uint8_t> rval;
-            const string& hex_hash2 = m_client_data->user_entry.entry.password;
+            const string& hex_hash2 = m_auth_data.client_data->user_entry.entry.password;
             if (hex_hash2.empty())
             {
                 return rval;    // Empty password -> empty token
@@ -1133,10 +1132,10 @@ GWBUF* MariaDBBackendConnection::create_change_user_packet()
 
                 // Calculate SHA1(CONCAT(scramble, hash2) */
                 uint8_t concat_hash[SHA_DIGEST_LENGTH];
-                gw_sha1_2_str(m_scramble, MYSQL_SCRAMBLE_LEN, hash2, SHA_DIGEST_LENGTH, concat_hash);
+                gw_sha1_2_str(m_auth_data.scramble, MYSQL_SCRAMBLE_LEN, hash2, SHA_DIGEST_LENGTH, concat_hash);
 
                 // SHA1(password) was sent by client and is in binary form.
-                auto& hash1 = m_client_data->auth_token_phase2;
+                auto& hash1 = m_auth_data.client_data->auth_token_phase2;
                 if (hash1.size() == SHA_DIGEST_LENGTH)
                 {
                     // Compute the XOR */
@@ -1148,7 +1147,7 @@ GWBUF* MariaDBBackendConnection::create_change_user_packet()
             return rval;
         };
 
-    auto mses = m_client_data;
+    auto mses = m_auth_data.client_data;
     std::vector<uint8_t> payload;
     payload.reserve(200);   // Enough for most cases.
 
@@ -1507,16 +1506,16 @@ int MariaDBBackendConnection::send_mysql_native_password_response(DCB* dcb, GWBU
     // Copy the new scramble. Skip packet header, command byte and null-terminated plugin name.
     const char default_plugin_name[] = DEFAULT_MYSQL_AUTH_PLUGIN;
     gwbuf_copy_data(reply, MYSQL_HEADER_LEN + 1 + sizeof(default_plugin_name),
-                    sizeof(m_scramble), m_scramble);
+                    sizeof(m_auth_data.scramble), m_auth_data.scramble);
 
-    uint8_t* curr_passwd = m_client_data->auth_token_phase2.empty() ? null_client_sha1 :
-        m_client_data->auth_token_phase2.data();
+    const auto& sha1_pw = m_auth_data.client_data->auth_token_phase2;
+    const uint8_t* curr_passwd = sha1_pw.empty() ? null_client_sha1 : sha1_pw.data();
 
     GWBUF* buffer = gwbuf_alloc(MYSQL_HEADER_LEN + GW_MYSQL_SCRAMBLE_SIZE);
     uint8_t* data = GWBUF_DATA(buffer);
     gw_mysql_set_byte3(data, GW_MYSQL_SCRAMBLE_SIZE);
     data[3] = seqno;    // This is the third packet after the COM_CHANGE_USER
-    mxs_mysql_calculate_hash(m_scramble, curr_passwd, data + MYSQL_HEADER_LEN);
+    mxs_mysql_calculate_hash(m_auth_data.scramble, curr_passwd, data + MYSQL_HEADER_LEN);
 
     return dcb->writeq_append(buffer);
 }
@@ -1607,7 +1606,7 @@ int MariaDBBackendConnection::gw_decode_mysql_server_handshake(uint8_t* payload)
     memcpy(mxs_scramble + GW_SCRAMBLE_LENGTH_323, scramble_data_2, scramble_len - GW_SCRAMBLE_LENGTH_323);
 
     // full 20 bytes scramble is ready
-    memcpy(m_scramble, mxs_scramble, GW_MYSQL_SCRAMBLE_SIZE);
+    memcpy(m_auth_data.scramble, mxs_scramble, GW_MYSQL_SCRAMBLE_SIZE);
     return 0;
 }
 
@@ -1623,16 +1622,16 @@ int MariaDBBackendConnection::gw_decode_mysql_server_handshake(uint8_t* payload)
 GWBUF* MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool ssl_established,
                                                            uint64_t service_capabilities)
 {
-    auto client = m_client_data;
+    auto client_data = m_auth_data.client_data;
     uint8_t client_capabilities[4] = {0, 0, 0, 0};
-    uint8_t* curr_passwd = NULL;
+    const uint8_t* curr_passwd = NULL;
 
-    if (!client->auth_token_phase2.empty())
+    if (!client_data->auth_token_phase2.empty())
     {
-        curr_passwd = client->auth_token_phase2.data();
+        curr_passwd = client_data->auth_token_phase2.data();
     }
 
-    uint32_t capabilities = create_capabilities(with_ssl, client->db[0], service_capabilities);
+    uint32_t capabilities = create_capabilities(with_ssl, client_data->db[0], service_capabilities);
     gw_mysql_set_byte4(client_capabilities, capabilities);
 
     /**
@@ -1642,17 +1641,17 @@ GWBUF* MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool s
      */
     const char* auth_plugin_name = DEFAULT_MYSQL_AUTH_PLUGIN;
 
-    const std::string& username = m_client_data->user;
+    const std::string& username = client_data->user;
     long bytes = response_length(with_ssl,
                                  ssl_established,
                                  username.c_str(),
                                  curr_passwd,
-                                 client->db.c_str(),
+                                 client_data->db.c_str(),
                                  auth_plugin_name);
 
     if (capabilities & this->server_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_ATTRS)
     {
-        bytes += client->connect_attrs.size();
+        bytes += client_data->connect_attrs.size();
     }
 
     // allocating the GWBUF
@@ -1678,7 +1677,7 @@ GWBUF* MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool s
 
     // set the charset
     payload += 4;
-    *payload = m_client_data->client_info.m_charset;
+    *payload = client_data->client_info.m_charset;
 
     payload++;
 
@@ -1686,7 +1685,7 @@ GWBUF* MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool s
     payload += 19;
 
     // Either MariaDB 10.2 extra capabilities or 4 bytes filler
-    uint32_t extra_capabilities = m_client_data->extra_capabilitites();
+    uint32_t extra_capabilities = client_data->extra_capabilitites();
     memcpy(payload, &extra_capabilities, sizeof(extra_capabilities));
     payload += 4;
 
@@ -1699,7 +1698,7 @@ GWBUF* MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool s
 
         if (curr_passwd)
         {
-            payload = load_hashed_password(m_scramble, payload, curr_passwd);
+            payload = load_hashed_password(m_auth_data.scramble, payload, curr_passwd);
         }
         else
         {
@@ -1707,21 +1706,21 @@ GWBUF* MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool s
         }
 
         // if the db is not NULL append it
-        if (client->db[0])
+        if (client_data->db[0])
         {
-            memcpy(payload, client->db.c_str(), client->db.length());
-            payload += client->db.length();
+            memcpy(payload, client_data->db.c_str(), client_data->db.length());
+            payload += client_data->db.length();
             payload++;
         }
 
         memcpy(payload, auth_plugin_name, strlen(auth_plugin_name));
 
         if ((capabilities & this->server_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_ATTRS)
-            && !client->connect_attrs.empty())
+            && !client_data->connect_attrs.empty())
         {
             // Copy client attributes as-is. This allows us to pass them along without having to process them.
             payload += strlen(auth_plugin_name) + 1;
-            memcpy(payload, client->connect_attrs.data(), client->connect_attrs.size());
+            memcpy(payload, client_data->connect_attrs.data(), client_data->connect_attrs.size());
         }
     }
 
@@ -1749,7 +1748,7 @@ uint32_t MariaDBBackendConnection::create_capabilities(bool with_ssl, bool db_sp
     uint32_t final_capabilities;
 
     /** Copy client's flags to backend but with the known capabilities mask */
-    final_capabilities = (m_client_data->client_capabilities() & (uint32_t)GW_MYSQL_CAPABILITIES_CLIENT);
+    final_capabilities = (m_auth_data.client_data->client_capabilities() & (uint32_t)GW_MYSQL_CAPABILITIES_CLIENT);
 
     if (with_ssl)
     {
@@ -2156,10 +2155,10 @@ uint64_t MariaDBBackendConnection::thread_id() const
 void MariaDBBackendConnection::assign_session(MXS_SESSION* session, mxs::Component* upstream)
 {
     m_session = session;
-    m_client_data = static_cast<MYSQL_session*>(session->protocol_data());
-    m_auth_data.client_data = m_client_data;
-    m_authenticator = m_client_data->m_current_authenticator->create_backend_authenticator(m_auth_data);
     m_upstream = upstream;
+    MYSQL_session* client_data = static_cast<MYSQL_session*>(session->protocol_data());
+    m_auth_data.client_data = client_data;
+    m_authenticator = client_data->m_current_authenticator->create_backend_authenticator(m_auth_data);
 }
 
 /**

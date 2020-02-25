@@ -1503,7 +1503,7 @@ void MariaDBClientConnection::hangup(DCB* event_dcb)
 
         int seqno = 1;
 
-        if (m_session_data->changing_user)
+        if (m_state == State::CHANGING_USER)
         {
             // In case a COM_CHANGE_USER is in progress, we need to send the error with the seqno 3
             seqno = 3;
