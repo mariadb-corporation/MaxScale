@@ -159,7 +159,7 @@ static cfg::ParamEnum<CausalReadsMode> s_causal_reads_mode(
 {
     {CausalReadsMode::LOCAL, "local"},
     {CausalReadsMode::GLOBAL, "global"},
-}, CausalReadsMode::GLOBAL, cfg::Param::AT_RUNTIME);
+}, CausalReadsMode::LOCAL, cfg::Param::AT_RUNTIME);
 
 static cfg::ParamSeconds s_max_slave_replication_lag(
     &s_spec, "max_slave_replication_lag", "Maximum allowed slave replication lag",
