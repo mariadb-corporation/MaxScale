@@ -674,6 +674,15 @@ The possible values for this parameter are:
     non-causal reads to occur which is why it is highly recommended to avoid
     this when the global causal reads mode is used.
 
+* `fast`
+
+  * This mode is similar to the `local` mode where it will only affect the
+    connection that does the write but where the `local` mode waits for a slave
+    server to catch up, the `fast` mode will only use servers that are known to
+    have replicated the write. This means that if no slave has replicated the
+    write, the master where the write was done will be used. The value of
+    `causal_reads_timeout` is ignored in this mode.
+
 ### `lazy_connect`
 
 Lazy connection creation causes connections to backend servers to be opened only

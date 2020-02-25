@@ -87,8 +87,9 @@ enum failure_mode
 
 enum CausalReadsMode
 {
-    LOCAL,
-    GLOBAL,
+    LOCAL,  // Causal reads are done on a session level with MASTER_GTID_WAIT
+    GLOBAL, // Causal reads are done globally with MASTER_GTID_WAIT
+    FAST    // Causal reads use GTID position to pick an up-to-date server
 };
 
 /**
@@ -159,6 +160,7 @@ static cfg::ParamEnum<CausalReadsMode> s_causal_reads_mode(
 {
     {CausalReadsMode::LOCAL, "local"},
     {CausalReadsMode::GLOBAL, "global"},
+    {CausalReadsMode::FAST, "fast"},
 }, CausalReadsMode::LOCAL, cfg::Param::AT_RUNTIME);
 
 static cfg::ParamSeconds s_max_slave_replication_lag(

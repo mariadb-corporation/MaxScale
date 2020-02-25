@@ -57,6 +57,11 @@ bool rpl_lag_is_ok(mxs::RWBackend* backend, int max_rlag)
     return max_rlag == mxs::Target::RLAG_UNDEFINED || backend->target()->replication_lag() <= max_rlag;
 }
 
+bool gtid_pos_is_ok(mxs::RWBackend* backend, RWSplit::gtid gtid_pos)
+{
+    return gtid_pos.sequence == 0 || backend->target()->gtid_pos(gtid_pos.domain) >= gtid_pos.sequence;
+}
+
 RWBackend* best_score(PRWBackends& sBackends, std::function<double(mxs::Endpoint*)> server_score)
 {
     const double max_score = std::nexttoward(std::numeric_limits<double>::max(), 0.0);
@@ -274,8 +279,10 @@ RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
         bool rlag_ok = rpl_lag_is_ok(backend, max_rlag);
         int priority = get_backend_priority(backend, m_config.master_accept_reads);
         auto rank = backend->target()->rank();
+        bool gtid_is_ok = m_config.causal_reads_mode != CausalReadsMode::FAST
+            || gtid_pos_is_ok(backend, m_gtid_pos);
 
-        if (master_or_slave && is_usable && rlag_ok && rank == current_rank)
+        if (master_or_slave && is_usable && rlag_ok && rank == current_rank && gtid_is_ok)
         {
             if (priority < best_priority)
             {

@@ -1215,6 +1215,7 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool 
     GWBUF* send_buf = gwbuf_clone(querybuf);
 
     if (m_config.causal_reads && cmd == MXS_COM_QUERY
+        && m_config.causal_reads_mode != CausalReadsMode::FAST
         && (!m_gtid_pos.empty() || m_config.causal_reads_mode == CausalReadsMode::GLOBAL)
         && target->is_slave())
     {
