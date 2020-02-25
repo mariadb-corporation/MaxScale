@@ -1116,7 +1116,7 @@ GWBUF* RWSplitSession::add_prefix_wait_gtid(uint64_t version, GWBUF* origin)
 
     const char* gtid_wait_timeout = m_config.causal_reads_timeout.c_str();
     std::string gtid_position = m_config.causal_reads_mode == CausalReadsMode::GLOBAL ?
-        m_router->last_gtid() : m_gtid_pos;
+        m_router->last_gtid() : m_gtid_pos.to_string();
 
     /* Create a new buffer to store prefix sql */
     size_t prefix_len = strlen(gtid_wait_stmt) + gtid_position.length()

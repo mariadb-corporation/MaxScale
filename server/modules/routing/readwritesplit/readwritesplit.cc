@@ -167,46 +167,28 @@ maxscale::TargetSessionStats RWSplit::all_server_stats() const
 
 std::string RWSplit::last_gtid() const
 {
-    auto gtid = m_last_gtid.load(std::memory_order_relaxed);
-    return std::to_string(gtid.domain) + '-'
-           + std::to_string(gtid.server_id) + '-'
-           + std::to_string(gtid.sequence);
+    return m_last_gtid.load(std::memory_order_relaxed).to_string();
 }
 
 void RWSplit::set_last_gtid(const std::string& str)
 {
-    static bool warn_malformed_gtid = true;
-    auto tokens = mxb::strtok(str, "-");
+    gtid current_gtid;
+    gtid next_gtid;
+    gtid generated_gtid = gtid::from_string(str);
 
-    if (tokens.size() == 3)
+    do
     {
-        gtid generated_gtid;
-        generated_gtid.domain = strtol(tokens[0].c_str(), nullptr, 10);
-        generated_gtid.server_id = strtol(tokens[1].c_str(), nullptr, 10);
-        generated_gtid.sequence = strtol(tokens[2].c_str(), nullptr, 10);
+        current_gtid = m_last_gtid.load(std::memory_order_relaxed);
+        auto next_gtid = generated_gtid;
 
-        gtid current_gtid;
-        gtid next_gtid;
-
-        do
+        if (current_gtid.domain == next_gtid.domain && current_gtid.sequence >= next_gtid.sequence)
         {
-            current_gtid = m_last_gtid.load(std::memory_order_relaxed);
-            auto next_gtid = generated_gtid;
-
-            if (current_gtid.domain == next_gtid.domain && current_gtid.sequence >= next_gtid.sequence)
-            {
-                break;
-            }
+            break;
         }
-        while (!m_last_gtid.compare_exchange_weak(current_gtid, next_gtid,
-                                                  std::memory_order_relaxed,
-                                                  std::memory_order_relaxed));
     }
-    else if (warn_malformed_gtid)
-    {
-        warn_malformed_gtid = false;
-        MXS_WARNING("Malformed GTID received: %s", str.c_str());
-    }
+    while (!m_last_gtid.compare_exchange_weak(current_gtid, next_gtid,
+                                              std::memory_order_relaxed,
+                                              std::memory_order_relaxed));
 }
 
 int RWSplit::max_slave_count() const
@@ -269,6 +251,33 @@ bool RWSplit::have_enough_servers() const
     }
 
     return succp;
+}
+
+// static
+RWSplit::gtid RWSplit::gtid::from_string(const std::string& str)
+{
+    gtid g;
+    const char* ptr = str.c_str();
+    char* end;
+    g.domain = strtoul(ptr, &end, 10);
+    mxb_assert(*end == '-');
+    ptr = end + 1;
+    g.server_id = strtoul(ptr, &end, 10);
+    mxb_assert(*end == '-');
+    ptr = end + 1;
+    g.sequence = strtoul(ptr, &end, 10);
+    mxb_assert(*end == '\0');
+    return g;
+}
+
+std::string RWSplit::gtid::to_string() const
+{
+    return std::to_string(domain) + '-' + std::to_string(server_id) + '-' + std::to_string(sequence);
+}
+
+bool RWSplit::gtid::empty() const
+{
+    return domain == 0 && server_id == 0 && sequence == 0;
 }
 
 /**

@@ -388,7 +388,7 @@ private:
 
     ExecMap m_exec_map;     // Information map of COM_STMT_EXECUTE execution
 
-    std::string          m_gtid_pos;            /**< Gtid position for causal read */
+    RWSplit::gtid        m_gtid_pos{0, 0, 0};   /**< Gtid position for causal read */
     wait_gtid_state      m_wait_gtid;           /**< State of MASTER_GTID_WAIT reply */
     uint32_t             m_next_seq;            /**< Next packet's sequence number */
     mxs::QueryClassifier m_qc;                  /**< The query classifier. */

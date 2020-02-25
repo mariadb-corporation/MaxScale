@@ -398,6 +398,16 @@ class RWSplit : public mxs::Router<RWSplit, RWSplitSession>
     RWSplit& operator=(const RWSplit&);
 
 public:
+    struct gtid
+    {
+        uint32_t domain;
+        uint32_t server_id;
+        uint64_t sequence;
+
+        static gtid from_string(const std::string& str);
+        std::string to_string() const;
+        bool        empty() const;
+    };
 
     RWSplit(SERVICE* service, const RWSConfig& config);
     ~RWSplit();
@@ -465,13 +475,6 @@ public:
 private:
     bool check_causal_reads(SERVER* server) const;
     void set_warnings(json_t* json) const;
-
-    struct gtid
-    {
-        uint32_t domain;
-        uint32_t server_id;
-        uint64_t sequence;
-    };
 
     SERVICE*                              m_service;    /**< Service where the router belongs*/
     mxs::WorkerGlobal<RWSConfig>          m_config;

@@ -37,7 +37,6 @@ RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session, mxs::SRW
     , m_router(instance)
     , m_sent_sescmd(0)
     , m_recv_sescmd(0)
-    , m_gtid_pos("")
     , m_wait_gtid(NONE)
     , m_next_seq(0)
     , m_qc(this, session, m_config.use_sql_variables_in)
@@ -313,13 +312,13 @@ GWBUF* RWSplitSession::handle_causal_read_reply(GWBUF* writebuf, const mxs::Repl
 
             if (!gtid.empty())
             {
-                if (m_config.causal_reads_mode == CausalReadsMode::LOCAL)
+                if (m_config.causal_reads_mode == CausalReadsMode::GLOBAL)
                 {
-                    m_gtid_pos = gtid;
+                    m_router->set_last_gtid(gtid);
                 }
                 else
                 {
-                    m_router->set_last_gtid(gtid);
+                    m_gtid_pos = RWSplit::gtid::from_string(gtid);
                 }
             }
         }
