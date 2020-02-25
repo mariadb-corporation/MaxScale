@@ -543,11 +543,3 @@ std::pair<int, int> get_slave_counts(mxs::PRWBackends& backends, mxs::RWBackend*
  * The following are implemented in rwsplit_tmp_table_multi.c
  */
 void close_all_connections(mxs::PRWBackends& backends);
-
-/**
- * Check if replication lag is below acceptable levels
- */
-static inline bool rpl_lag_is_ok(mxs::RWBackend* backend, int max_rlag)
-{
-    return max_rlag == mxs::Target::RLAG_UNDEFINED || backend->target()->replication_lag() <= max_rlag;
-}

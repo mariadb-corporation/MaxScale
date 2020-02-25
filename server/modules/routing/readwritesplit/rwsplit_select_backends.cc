@@ -33,6 +33,9 @@ using namespace maxscale;
 using std::chrono::duration_cast;
 using std::chrono::microseconds;
 
+namespace
+{
+
 /**
  * Check whether it's possible to use this server as a slave
  *
@@ -41,9 +44,17 @@ using std::chrono::microseconds;
  *
  * @return True if this server is a valid slave candidate
  */
-static bool valid_for_slave(const RWBackend* backend, const RWBackend* master)
+bool valid_for_slave(const RWBackend* backend, const RWBackend* master)
 {
     return (backend->is_slave() || backend->is_relay()) && (!master || backend != master);
+}
+
+/**
+ * Check if replication lag is below acceptable levels
+ */
+bool rpl_lag_is_ok(mxs::RWBackend* backend, int max_rlag)
+{
+    return max_rlag == mxs::Target::RLAG_UNDEFINED || backend->target()->replication_lag() <= max_rlag;
 }
 
 RWBackend* best_score(PRWBackends& sBackends, std::function<double(mxs::Endpoint*)> server_score)
@@ -155,28 +166,6 @@ RWBackend* backend_cmp_response_time(PRWBackends& pBackends)
     return pBackends[index];
 }
 
-BackendSelectFunction get_backend_select_function(select_criteria_t sc)
-{
-    switch (sc)
-    {
-    case LEAST_GLOBAL_CONNECTIONS:
-    case LEAST_ROUTER_CONNECTIONS:
-        return backend_cmp_global_conn;
-
-    case LEAST_BEHIND_MASTER:
-        return backend_cmp_behind_master;
-
-    case LEAST_CURRENT_OPERATIONS:
-        return backend_cmp_current_load;
-
-    case ADAPTIVE_ROUTING:
-        return backend_cmp_response_time;
-    }
-
-    assert(false && "incorrect use of select_criteria_t");
-    return backend_cmp_current_load;
-}
-
 // Calculates server priority
 int get_backend_priority(RWBackend* backend, bool masters_accepts_reads)
 {
@@ -201,6 +190,29 @@ int get_backend_priority(RWBackend* backend, bool masters_accepts_reads)
     }
 
     return priority;
+}
+}
+
+BackendSelectFunction get_backend_select_function(select_criteria_t sc)
+{
+    switch (sc)
+    {
+    case LEAST_GLOBAL_CONNECTIONS:
+    case LEAST_ROUTER_CONNECTIONS:
+        return backend_cmp_global_conn;
+
+    case LEAST_BEHIND_MASTER:
+        return backend_cmp_behind_master;
+
+    case LEAST_CURRENT_OPERATIONS:
+        return backend_cmp_current_load;
+
+    case ADAPTIVE_ROUTING:
+        return backend_cmp_response_time;
+    }
+
+    mxb_assert_message(false, "incorrect use of select_criteria_t");
+    return backend_cmp_current_load;
 }
 
 int64_t RWSplitSession::get_current_rank()
