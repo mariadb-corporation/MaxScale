@@ -177,6 +177,14 @@ add_test_executable(mxs2187_multi_replay.cpp mxs2187_multi_replay mxs2187_multi_
 # https://jira.mariadb.org/browse/MXS-1776
 add_test_executable(mxs1778_causal_reads.cpp mxs1778_causal_reads mxs1778_causal_reads LABELS readwritesplit REPL_BACKEND)
 
+# MXS-2443: Test causal_reads_mode=global
+# https://jira.mariadb.org/browse/MXS-2443
+add_test_executable(mxs2443_global_causal_reads.cpp mxs2443_global_causal_reads mxs2443_global_causal_reads LABELS readwritesplit REPL_BACKEND)
+
+# MXS-1720: Test causal_reads_mode=fast
+# https://jira.mariadb.org/browse/MXS-1720
+add_test_executable(mxs1720_fast_causal_reads.cpp mxs1720_fast_causal_reads mxs1720_fast_causal_reads LABELS readwritesplit REPL_BACKEND)
+
 # MXS-1961: Standalone master loses master status
 # https://jira.mariadb.org/browse/MXS-1961
 add_test_executable(mxs1961_standalone_rejoin.cpp mxs1961_standalone_rejoin mxs1961_standalone_rejoin LABELS REPL_BACKEND)
@@ -190,10 +198,6 @@ add_test_executable(mxs2456_trx_replay_cap.cpp mxs2456_trx_replay_cap mxs2456_tr
 
 # MXS-2512: Enable transaction replay for additional rollback errors.
 add_test_executable(mxs2512_trx_replay_rollback.cpp mxs2512_trx_replay_rollback mxs2512_trx_replay_rollback LABELS readwritesplit REPL_BACKEND)
-
-# MXS-2443: Test causal_reads_mode=global
-# https://jira.mariadb.org/browse/MXS-2443
-add_test_executable(mxs2443_global_causal_reads.cpp mxs2443_global_causal_reads mxs2443_global_causal_reads LABELS readwritesplit REPL_BACKEND)
 
 # MXS-2785: Binlogfilter database rewrite test
 add_test_executable(mxs2785_binlogfilter_rewrite.cpp mxs2785_binlogfilter_rewrite mxs2785_binlogfilter_rewrite LABELS binlogfilter REPL_BACKEND)
