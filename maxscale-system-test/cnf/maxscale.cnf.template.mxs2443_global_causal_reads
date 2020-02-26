@@ -16,8 +16,7 @@ router=readwritesplit
 servers=server1,server2,server3,server4
 user=maxskysql
 password=skysql
-causal_reads=true
-causal_reads_mode=global
+causal_reads=global
 
 [RW-Split-Listener]
 type=listener

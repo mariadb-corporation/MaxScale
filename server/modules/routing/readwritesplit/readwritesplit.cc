@@ -356,7 +356,7 @@ json_t* RWSplit::diagnostics() const
 
     json_object_set_new(rval, "server_query_statistics", arr);
 
-    if (m_config->causal_reads)
+    if (m_config->causal_reads != CausalReads::NONE)
     {
         set_warnings(rval);
     }

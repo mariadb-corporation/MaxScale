@@ -85,46 +85,12 @@ enum failure_mode
     RW_ERROR_ON_WRITE           /**< Don't close the connection but send an error for writes */
 };
 
-enum CausalReadsMode
+enum CausalReads
 {
+    NONE,   // No causal reads, default
     LOCAL,  // Causal reads are done on a session level with MASTER_GTID_WAIT
     GLOBAL, // Causal reads are done globally with MASTER_GTID_WAIT
     FAST    // Causal reads use GTID position to pick an up-to-date server
-};
-
-/**
- * Enum values for router parameters
- */
-static const MXS_ENUM_VALUE use_sql_variables_in_values[] =
-{
-    {"all",    TYPE_ALL   },
-    {"master", TYPE_MASTER},
-    {NULL}
-};
-
-static const MXS_ENUM_VALUE slave_selection_criteria_values[] =
-{
-    {"LEAST_GLOBAL_CONNECTIONS", LEAST_GLOBAL_CONNECTIONS},
-    {"LEAST_ROUTER_CONNECTIONS", LEAST_ROUTER_CONNECTIONS},
-    {"LEAST_BEHIND_MASTER",      LEAST_BEHIND_MASTER     },
-    {"LEAST_CURRENT_OPERATIONS", LEAST_CURRENT_OPERATIONS},
-    {"ADAPTIVE_ROUTING",         ADAPTIVE_ROUTING        },
-    {NULL}
-};
-
-static const MXS_ENUM_VALUE master_failure_mode_values[] =
-{
-    {"fail_instantly", RW_FAIL_INSTANTLY},
-    {"fail_on_write",  RW_FAIL_ON_WRITE },
-    {"error_on_write", RW_ERROR_ON_WRITE},
-    {NULL}
-};
-
-static const MXS_ENUM_VALUE causal_reads_mode_values[] =
-{
-    {"local",  (uint64_t)CausalReadsMode::LOCAL },
-    {"global", (uint64_t)CausalReadsMode::GLOBAL},
-    {NULL}
 };
 
 static cfg::Specification s_spec(MXS_MODULE_NAME, cfg::Specification::ROUTER);
@@ -155,13 +121,22 @@ static cfg::ParamEnum<failure_mode> s_master_failure_mode(
     {RW_ERROR_ON_WRITE, "error_on_write"}
 }, RW_FAIL_INSTANTLY, cfg::Param::AT_RUNTIME);
 
-static cfg::ParamEnum<CausalReadsMode> s_causal_reads_mode(
-    &s_spec, "causal_reads_mode", "Causal reads mode",
+static cfg::ParamEnum<CausalReads> s_causal_reads(
+    &s_spec, "causal_reads", "Causal reads mode",
 {
-    {CausalReadsMode::LOCAL, "local"},
-    {CausalReadsMode::GLOBAL, "global"},
-    {CausalReadsMode::FAST, "fast"},
-}, CausalReadsMode::LOCAL, cfg::Param::AT_RUNTIME);
+    // Legacy values for causal_reads
+    {CausalReads::NONE, "false"},
+    {CausalReads::NONE, "off"},
+    {CausalReads::NONE, "0"},
+    {CausalReads::LOCAL, "true"},
+    {CausalReads::LOCAL, "on"},
+    {CausalReads::LOCAL, "1"},
+
+    {CausalReads::NONE, "none"},
+    {CausalReads::LOCAL, "local"},
+    {CausalReads::GLOBAL, "global"},
+    {CausalReads::FAST, "fast"},
+}, CausalReads::NONE, cfg::Param::AT_RUNTIME);
 
 static cfg::ParamSeconds s_max_slave_replication_lag(
     &s_spec, "max_slave_replication_lag", "Maximum allowed slave replication lag",
@@ -201,10 +176,6 @@ static cfg::ParamBool s_strict_sp_calls(
 
 static cfg::ParamBool s_master_accept_reads(
     &s_spec, "master_accept_reads", "Use master for reads",
-    false, cfg::Param::AT_RUNTIME);
-
-static cfg::ParamBool s_causal_reads(
-    &s_spec, "causal_reads", "Synchronize reads on slaves with the master",
     false, cfg::Param::AT_RUNTIME);
 
 static cfg::ParamSeconds s_causal_reads_timeout(
@@ -293,7 +264,6 @@ struct RWSConfig
         , slave_connections(s_slave_connections.get(params))
         , causal_reads(s_causal_reads.get(params))
         , causal_reads_timeout(std::to_string(s_causal_reads_timeout.get(params).count()))
-        , causal_reads_mode(s_causal_reads_mode.get(params))
         , master_reconnection(s_master_reconnection.get(params))
         , delayed_retry(s_delayed_retry.get(params))
         , delayed_retry_timeout(s_delayed_retry_timeout.get(params).count())
@@ -304,7 +274,7 @@ struct RWSConfig
         , optimistic_trx(s_optimistic_trx.get(params))
         , lazy_connect(s_lazy_connect.get(params))
     {
-        if (causal_reads)
+        if (causal_reads != CausalReads::NONE)
         {
             retry_failed_reads = true;
         }
@@ -356,9 +326,8 @@ struct RWSConfig
     int  max_slave_connections;         /**< Maximum number of slaves for each connection*/
     int  slave_connections;             /**< Minimum number of slaves for each connection*/
 
-    bool            causal_reads;           /**< Enable causual read */
-    std::string     causal_reads_timeout;   /**< Timeout, second parameter of function master_wait_gtid */
-    CausalReadsMode causal_reads_mode;
+    CausalReads causal_reads;
+    std::string causal_reads_timeout;   /**< Timeout, second parameter of function master_wait_gtid */
 
     bool     master_reconnection;       /**< Allow changes in master server */
     bool     delayed_retry;             /**< Delay routing if no target found */

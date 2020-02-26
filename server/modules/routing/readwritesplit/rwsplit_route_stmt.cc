@@ -323,7 +323,7 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
         }
         else if (TARGET_IS_MASTER(route_target))
         {
-            if (m_config.causal_reads)
+            if (m_config.causal_reads != CausalReads::NONE)
             {
                 gwbuf_set_type(querybuf, GWBUF_TYPE_TRACK_STATE);
             }
@@ -1115,7 +1115,7 @@ GWBUF* RWSplitSession::add_prefix_wait_gtid(uint64_t version, GWBUF* origin)
         MYSQL_WAIT_GTID_FUNC : MARIADB_WAIT_GTID_FUNC;
 
     const char* gtid_wait_timeout = m_config.causal_reads_timeout.c_str();
-    std::string gtid_position = m_config.causal_reads_mode == CausalReadsMode::GLOBAL ?
+    std::string gtid_position = m_config.causal_reads == CausalReads::GLOBAL ?
         m_router->last_gtid() : m_gtid_pos.to_string();
 
     /* Create a new buffer to store prefix sql */
@@ -1214,10 +1214,9 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool 
     uint8_t cmd = mxs_mysql_get_command(querybuf);
     GWBUF* send_buf = gwbuf_clone(querybuf);
 
-    if (m_config.causal_reads && cmd == MXS_COM_QUERY
-        && m_config.causal_reads_mode != CausalReadsMode::FAST
-        && (!m_gtid_pos.empty() || m_config.causal_reads_mode == CausalReadsMode::GLOBAL)
-        && target->is_slave())
+    if (cmd == MXS_COM_QUERY && target->is_slave()
+        && ((m_config.causal_reads == CausalReads::LOCAL && !m_gtid_pos.empty())
+            || m_config.causal_reads == CausalReads::GLOBAL))
     {
         // Perform the causal read only when the query is routed to a slave
 

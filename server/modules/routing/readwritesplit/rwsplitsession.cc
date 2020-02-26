@@ -304,7 +304,7 @@ static bool connection_was_killed(GWBUF* buffer)
 
 GWBUF* RWSplitSession::handle_causal_read_reply(GWBUF* writebuf, const mxs::Reply& reply, RWBackend* backend)
 {
-    if (m_config.causal_reads)
+    if (m_config.causal_reads != CausalReads::NONE)
     {
         if (reply.is_ok() && backend == m_current_master)
         {
@@ -312,7 +312,7 @@ GWBUF* RWSplitSession::handle_causal_read_reply(GWBUF* writebuf, const mxs::Repl
 
             if (!gtid.empty())
             {
-                if (m_config.causal_reads_mode == CausalReadsMode::GLOBAL)
+                if (m_config.causal_reads == CausalReads::GLOBAL)
                 {
                     m_router->set_last_gtid(gtid);
                 }
@@ -608,7 +608,7 @@ bool RWSplitSession::finish_causal_read()
 {
     bool rval = true;
 
-    if (m_config.causal_reads)
+    if (m_config.causal_reads != CausalReads::NONE)
     {
         if (m_wait_gtid == RETRYING_ON_MASTER)
         {

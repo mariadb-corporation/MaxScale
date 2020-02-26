@@ -17,8 +17,7 @@ router=readwritesplit
 servers=###server_line###
 user=maxskysql
 password=skysql
-causal_reads=true
-causal_reads_mode=fast
+causal_reads=fast
 
 [RW-Split-Listener]
 type=listener

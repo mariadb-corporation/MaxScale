@@ -177,11 +177,11 @@ add_test_executable(mxs2187_multi_replay.cpp mxs2187_multi_replay mxs2187_multi_
 # https://jira.mariadb.org/browse/MXS-1776
 add_test_executable(mxs1778_causal_reads.cpp mxs1778_causal_reads mxs1778_causal_reads LABELS readwritesplit REPL_BACKEND)
 
-# MXS-2443: Test causal_reads_mode=global
+# MXS-2443: Test causal_reads=global
 # https://jira.mariadb.org/browse/MXS-2443
 add_test_executable(mxs2443_global_causal_reads.cpp mxs2443_global_causal_reads mxs2443_global_causal_reads LABELS readwritesplit REPL_BACKEND)
 
-# MXS-1720: Test causal_reads_mode=fast
+# MXS-1720: Test causal_reads=fast
 # https://jira.mariadb.org/browse/MXS-1720
 add_test_executable(mxs1720_fast_causal_reads.cpp mxs1720_fast_causal_reads mxs1720_fast_causal_reads LABELS readwritesplit REPL_BACKEND)
 
