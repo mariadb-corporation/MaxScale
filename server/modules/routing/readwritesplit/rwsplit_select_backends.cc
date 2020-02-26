@@ -280,7 +280,7 @@ RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
         int priority = get_backend_priority(backend, m_config.master_accept_reads);
         auto rank = backend->target()->rank();
         bool gtid_is_ok = m_config.causal_reads_mode != CausalReadsMode::FAST
-            || gtid_pos_is_ok(backend, m_gtid_pos);
+            || my_master || gtid_pos_is_ok(backend, m_gtid_pos);
 
         if (master_or_slave && is_usable && rlag_ok && rank == current_rank && gtid_is_ok)
         {

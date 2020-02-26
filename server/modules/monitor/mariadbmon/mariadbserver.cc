@@ -439,11 +439,14 @@ bool MariaDBServer::update_gtids(string* errmsg_out)
             {
                 m_gtid_current_pos = GtidList::from_string(current_str);
 
+                std::vector<std::pair<uint32_t, uint64_t>> positions;
+
                 for (auto d : m_gtid_current_pos.domains())
                 {
-                    auto gtid = m_gtid_current_pos.get_gtid(d);
-                    server->set_gtid_pos(gtid.m_domain, gtid.m_sequence);
+                    positions.push_back({d, m_gtid_current_pos.get_gtid(d).m_sequence});
                 }
+
+                server->set_gtid_list(positions);
             }
 
             if (binlog_str.empty())

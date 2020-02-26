@@ -21,6 +21,7 @@
 #include <maxscale/ssl.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/target.hh>
+#include <maxscale/workerlocal.hh>
 
 /**
  * Server configuration parameters names
@@ -286,7 +287,17 @@ public:
         return it == m_variables.end() ? "" : it->second;
     }
 
-    void set_gtid_pos(uint32_t domain, uint64_t sequence);
+    /**
+     * Set GTID positions
+     *
+     * @param positions List of pairs for the domain and the GTID position for it
+     */
+    void set_gtid_list(const std::vector<std::pair<uint32_t, uint64_t>>& positions);
+
+    /**
+     * Remove all stored GTID positions
+     */
+    void clear_gtid_list();
 
     uint64_t gtid_pos(uint32_t domain) const override;
 
@@ -315,5 +326,5 @@ private:
         std::atomic<uint64_t> sequence{0};
     };
 
-    std::array<GTID, 32> m_gtids;
+    mxs::WorkerGlobal<std::unordered_map<uint32_t, uint64_t>> m_gtids;
 };
