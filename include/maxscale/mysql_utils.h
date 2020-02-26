@@ -158,10 +158,11 @@ void mxs_mysql_set_log_statements(bool enable);
 bool mxs_mysql_get_log_statements();
 
 /**
- * Get default server character set
+ * Update default server character set from @@global.character_set_server
  *
- * @return The numeric identifier of `@@global.character_set_server`
+ * @param mysql  The connection handle
+ * @param server The server to modify
  */
-uint8_t mxs_mysql_get_character_set(MYSQL* mysql);
+void mxs_update_server_charset(MYSQL* mysql, SERVER* server);
 
 MXS_END_DECLS
