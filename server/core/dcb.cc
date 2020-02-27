@@ -1317,9 +1317,12 @@ uint32_t DCB::process_events(uint32_t events)
     }
 #endif
 
-    // By design we don't distinguish between real I/O activity and
-    // fake activity. In both cases, the session is busy.
-    static_cast<Session*>(m_session)->book_io_activity();
+    if (m_session)
+    {
+        // By design we don't distinguish between real I/O activity and
+        // fake activity. In both cases, the session is busy.
+        static_cast<Session*>(m_session)->book_io_activity();
+    }
 
     return rc;
 }
