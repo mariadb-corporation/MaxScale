@@ -35,8 +35,8 @@ void run_test(TestConnections& test, MYSQL* conn)
     test.expect(strstr(mysql_error(conn), "Access denied for user"),
                 "Wrong error message returned on failed authentication");
 
-    test.expect(execute_query_silent(conn, "INSERT INTO t1 VALUES (77, 11);") != 0,
-                "Query should fail, MaxScale should disconnect on auth failure");
+    test.expect(execute_query_silent(conn, "INSERT INTO t1 VALUES (77, 11);") == 0,
+                "MaxScale should not disconnect on COM_CHANGE_USER failure");
 }
 
 int main(int argc, char *argv[])
