@@ -35,10 +35,10 @@
 typedef std::map<uint32_t, uint32_t> ClientHandleMap;
 
 // Records of the backend who responded to the session commands and whether it succeeded
-typedef std::map<uint64_t, std::pair<mxs::RWBackend*, bool>> ResponseMap;
+typedef std::map<uint64_t, std::pair<mxs::RWBackend*, mxs::Error>> ResponseMap;
 
 /** List of slave responses that arrived before the master and whether they succeeded */
-typedef std::list<std::pair<mxs::RWBackend*, bool>> SlaveResponseList;
+typedef std::unordered_map<mxs::RWBackend*, mxs::Error> SlaveResponseList;
 
 struct ExecInfo
 {

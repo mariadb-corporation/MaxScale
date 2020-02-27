@@ -32,17 +32,23 @@ using namespace maxscale;
  * @param slave_ok   Slave's reply was OK
  * @param sescmd     The executed session command
  */
-static void discard_if_response_differs(RWBackend* backend, bool master_ok, bool slave_ok,
+static void discard_if_response_differs(RWBackend* backend, RWBackend* master,
+                                        const mxs::Error& master_err,
+                                        const mxs::Error& slave_err,
                                         SSessionCommand sescmd)
 {
-    if (master_ok != slave_ok && backend->in_use())
+    if (!master_err != !slave_err && backend->in_use())
     {
         uint8_t cmd = sescmd->get_command();
-        std::string query = sescmd->to_string();
+        auto sql = sescmd->to_string();
+        std::string query = sql.empty() ? "<no query>" : sql;
+
         MXS_WARNING("Slave server '%s': response (%s) differs from master's response (%s) to %s: `%s`. "
                     "Closing slave connection due to inconsistent session state.",
-                    backend->name(), slave_ok ? "OK" : "ERROR", master_ok ? "OK" : "ERROR",
-                    STRPACKETTYPE(cmd), query.empty() ? "<no query>" : query.c_str());
+                    backend->name(),
+                    slave_err ? slave_err.message().c_str() : "OK",
+                    master_err ? master_err.message().c_str() : "OK",
+                    STRPACKETTYPE(cmd), query.c_str());
         backend->close(mxs::Backend::CLOSE_FATAL);
         backend->set_close_reason("Invalid response to: " + query);
     }
@@ -77,7 +83,7 @@ void RWSplitSession::process_sescmd_response(RWBackend* backend, GWBUF** ppPacke
                 mxb_assert(m_expected_responses == 0);
 
                 /** Store the master's response so that the slave responses can be compared to it */
-                m_sescmd_responses[id] = std::make_pair(backend, !reply.error());
+                m_sescmd_responses[id] = std::make_pair(backend, reply.error());
 
                 if (reply.error())
                 {
@@ -94,7 +100,8 @@ void RWSplitSession::process_sescmd_response(RWBackend* backend, GWBUF** ppPacke
                 // Discard any slave connections that did not return the same result
                 for (auto& a : m_slave_responses)
                 {
-                    discard_if_response_differs(a.first, m_sescmd_responses[id].second, a.second, sescmd);
+                    const auto& replier = m_sescmd_responses[id];
+                    discard_if_response_differs(a.first, replier.first, replier.second, a.second, sescmd);
                 }
 
                 m_slave_responses.clear();
@@ -116,18 +123,13 @@ void RWSplitSession::process_sescmd_response(RWBackend* backend, GWBUF** ppPacke
         {
             /** Record slave command so that the response can be validated
              * against the master's response when it arrives. */
-            m_slave_responses.push_back(std::make_pair(backend, !reply.error()));
+            m_slave_responses[backend] = reply.error();
         }
     }
     else
     {
-        if (reply.error() && m_sescmd_responses[id].second)
-        {
-            MXS_WARNING("Session command returned an error on slave '%s': %s",
-                        backend->name(), reply.error().message().c_str());
-        }
-
-        discard_if_response_differs(backend, m_sescmd_responses[id].second, !reply.error(), sescmd);
+        const auto& replier = m_sescmd_responses[id];
+        discard_if_response_differs(backend, replier.first, replier.second, reply.error(), sescmd);
     }
 
     if (discard)
