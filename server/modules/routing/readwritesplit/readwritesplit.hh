@@ -246,66 +246,9 @@ using std::chrono::seconds;
 
 struct RWSConfig
 {
-    RWSConfig(const mxs::ConfigParameters& params)
-        : slave_selection_criteria(s_slave_selection_criteria.get(params))
-        , backend_select_fct(get_backend_select_function(s_slave_selection_criteria.get(params)))
-        , use_sql_variables_in(s_use_sql_variables_in.get(params))
-        , master_failure_mode(s_master_failure_mode.get(params))
-        , max_sescmd_history(s_max_sescmd_history.get(params))
-        , prune_sescmd_history(s_prune_sescmd_history.get(params))
-        , disable_sescmd_history(s_disable_sescmd_history.get(params))
-        , master_accept_reads(s_master_accept_reads.get(params))
-        , strict_multi_stmt(s_strict_multi_stmt.get(params))
-        , strict_sp_calls(s_strict_sp_calls.get(params))
-        , retry_failed_reads(s_retry_failed_reads.get(params))
-        , max_slave_replication_lag(s_max_slave_replication_lag.get(params).count())
-        , rw_max_slave_conn_percent(0)
-        , max_slave_connections(0)
-        , slave_connections(s_slave_connections.get(params))
-        , causal_reads(s_causal_reads.get(params))
-        , causal_reads_timeout(std::to_string(s_causal_reads_timeout.get(params).count()))
-        , master_reconnection(s_master_reconnection.get(params))
-        , delayed_retry(s_delayed_retry.get(params))
-        , delayed_retry_timeout(s_delayed_retry_timeout.get(params).count())
-        , transaction_replay(s_transaction_replay.get(params))
-        , trx_max_size(s_transaction_replay_max_size.get(params))
-        , trx_max_attempts(s_transaction_replay_attempts.get(params))
-        , trx_retry_on_deadlock(s_transaction_replay_retry_on_deadlock.get(params))
-        , optimistic_trx(s_optimistic_trx.get(params))
-        , lazy_connect(s_lazy_connect.get(params))
-    {
-        if (causal_reads != CausalReads::NONE)
-        {
-            retry_failed_reads = true;
-        }
+    RWSConfig() = default;
 
-        /** These options cancel each other out */
-        if (disable_sescmd_history && max_sescmd_history > 0)
-        {
-            max_sescmd_history = 0;
-        }
-
-        if (optimistic_trx)
-        {
-            // Optimistic transaction routing requires transaction replay
-            transaction_replay = true;
-        }
-
-        if (transaction_replay || lazy_connect)
-        {
-            /**
-             * Replaying transactions requires that we are able to do delayed query
-             * retries. Both transaction replay and lazy connection creation require
-             * fail-on-write failure mode and reconnections to masters.
-             */
-            if (transaction_replay)
-            {
-                delayed_retry = true;
-            }
-            master_reconnection = true;
-            master_failure_mode = RW_FAIL_ON_WRITE;
-        }
-    }
+    static std::pair<bool, RWSConfig> create(const mxs::ConfigParameters& params);
 
     select_criteria_t     slave_selection_criteria;     /**< The slave selection criteria */
     BackendSelectFunction backend_select_fct;
@@ -338,6 +281,9 @@ struct RWSConfig
     bool     trx_retry_on_deadlock;     /**< Replay the transaction if it ends up in a deadlock */
     bool     optimistic_trx;            /**< Enable optimistic transactions */
     bool     lazy_connect;              /**< Create connections only when needed */
+
+private:
+    RWSConfig(const mxs::ConfigParameters& params);
 };
 
 /**
