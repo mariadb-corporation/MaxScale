@@ -33,7 +33,7 @@ void do_test(Test pre, Test post)
 {
     TestConnections& test = *global_test;
     int rc;
-    test.maxscales->connect();
+    test.maxscales->connect_rwsplit();
 
     if (pre.query)
     {
@@ -67,7 +67,7 @@ int main(int argc, char** argv)
     global_test = &test;
 
     // Prepare a table for testing
-    test.maxscales->connect();
+    test.maxscales->connect_rwsplit();
     test.try_query(test.maxscales->conn_rwsplit[0], "CREATE OR REPLACE TABLE test.t1(id INT)");
     test.repl->sync_slaves();
     test.maxscales->disconnect();
@@ -81,10 +81,10 @@ int main(int argc, char** argv)
     test.tprintf("Check that read with open read-only transaction works");
     do_test({"START TRANSACTION READ ONLY"}, {"SELECT 1"});
 
-    test.tprintf("Check that write with autocommit=0 fails");
-    do_test({"SET autocommit=0"}, {"INSERT INTO test.t1 VALUES (1)", false});
+    test.tprintf("Check that write right after autocommit=0 works");
+    do_test({"SET autocommit=0"}, {"INSERT INTO test.t1 VALUES (1)"});
 
-    test.maxscales->connect();
+    test.maxscales->connect_rwsplit();
     test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE test.t1");
     test.repl->fix_replication();
     test.maxscales->disconnect();
