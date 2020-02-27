@@ -637,7 +637,6 @@ MariaDBClientConnection::process_authentication(AuthType auth_type)
             state_machine_continue = false;
             if (auth_type == AuthType::NORMAL_AUTH)
             {
-                mxs::mark_auth_as_failed(m_dcb->remote());
                 rval = StateMachineRes::ERROR;
             }
             else
@@ -2352,6 +2351,13 @@ void MariaDBClientConnection::perform_check_token(AuthType auth_type)
             send_authetication_error(AuthErrorType::ACCESS_DENIED, auth_val.msg);
             m_auth_state = AuthState::FAIL;
         }
+    }
+
+    if (m_auth_state == AuthState::FAIL)
+    {
+        // Add only the true authentication failures into listener's host blocking counters. This way internal
+        // reasons (e.g. no valid master found) don't trigger blocking of hosts.
+        mxs::mark_auth_as_failed(m_dcb->remote());
     }
 }
 
