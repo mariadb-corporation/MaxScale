@@ -52,9 +52,9 @@ struct users;
 #define USERS_REFRESH_TIME_DEFAULT 30   /* Allowed time interval (in seconds) after last update*/
 
 /** Default timeout values used by the connections which fetch user authentication data */
-#define DEFAULT_AUTH_CONNECT_TIMEOUT 3
-#define DEFAULT_AUTH_READ_TIMEOUT    1
-#define DEFAULT_AUTH_WRITE_TIMEOUT   2
+#define DEFAULT_AUTH_CONNECT_TIMEOUT 10
+#define DEFAULT_AUTH_READ_TIMEOUT    10
+#define DEFAULT_AUTH_WRITE_TIMEOUT   10
 
 enum service_version_which_t
 {

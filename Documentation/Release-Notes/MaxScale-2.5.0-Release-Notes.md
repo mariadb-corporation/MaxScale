@@ -17,6 +17,14 @@ been converted into a core MaxScale feature and it can be used with all
 routers. In addition to this, the keepalive mechanism now also keeps completely
 idle connections alive (MXS-2505).
 
+### User loading timeouts
+
+The default timeout values for user loading have been changed.
+
+* `auth_connect_timeout` changed from 3 to 10 second
+* `auth_read_timeout` changed from 1 to 10 seconds
+* `auth_write_timeout` changed from 2 to 10 seconds
+
 ## Dropped Features
 
 ### Configuration parameters

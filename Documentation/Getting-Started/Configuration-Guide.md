@@ -406,8 +406,8 @@ The minimum value is 1 and the maximum 60.
 The connection timeout in seconds for the MySQL connections to the backend
 server when user authentication data is fetched. Increasing the value of this
 parameter will cause MariaDB MaxScale to wait longer for a response from the
-backend server before aborting the authentication process. The default is 3
-seconds.
+backend server before aborting the authentication process. The default is 10
+seconds since MaxScale 2.5.0. Older versions used a default of 3 seconds. 
 
 ```
 auth_connect_timeout=10s
@@ -421,13 +421,15 @@ even if the duration is longer than a second.
 
 ### `auth_read_timeout`
 
-The read timeout in seconds for the MySQL connection to the backend database
-when user authentication data is fetched. Increasing the value of this parameter
-will cause MariaDB MaxScale to wait longer for a response from the backend
-server when user data is being actively fetched. If the authentication is
-failing and you either have a large number of database users and grants or the
-connection to the backend servers is slow, it is a good idea to increase this
-value. The default is 1 second.
+The network read timeout in seconds for the MySQL connection to the backend
+database when user authentication data is fetched. The default is 10 seconds
+since MaxScale 2.5.0. Older versions used a default of 1 second.
+
+Increasing the value of this parameter will cause MariaDB MaxScale to wait
+longer for a response from the backend server when user data is being actively
+fetched. If the authentication is failing and you either have a large number of
+database users and grants or the connection to the backend servers is slow, it
+is a good idea to increase this value.
 
 ```
 auth_read_timeout=10s
@@ -441,9 +443,9 @@ even if the duration is longer than a second.
 
 ### `auth_write_timeout`
 
-The write timeout in seconds for the MySQL connection to the backend database
-when user authentication data is fetched. Currently MariaDB MaxScale does not
-write or modify the data in the backend server. The default is 2 seconds.
+The network write timeout in seconds for the MySQL connection to the backend
+database when user authentication data is fetched. The default is 10 seconds
+since MaxScale 2.5.0. Older versions used a default of 2 seconds.
 
 ```
 auth_write_timeout=10s
