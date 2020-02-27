@@ -154,9 +154,6 @@ enum server_category_t
     SERVER_CLUSTRIX
 };
 
-static MYSQL* gw_mysql_init(void);
-static int    gw_mysql_set_timeouts(MYSQL* handle);
-
 static char* get_mariadb_102_users_query(bool include_root)
 {
     const char* with_root = include_root ? "" : " WHERE t.user <> 'root'";
@@ -470,74 +467,6 @@ static void add_database(sqlite3* handle, const char* db)
 }
 
 /**
- * Returns a MYSQL object suitably configured.
- *
- * @return An object or NULL if something fails.
- */
-MYSQL* gw_mysql_init()
-{
-    MYSQL* con = mysql_init(NULL);
-
-    if (con)
-    {
-        if (gw_mysql_set_timeouts(con) != 0)
-        {
-            MXS_ERROR("Failed to set timeout values for backend connection.");
-            mysql_close(con);
-            con = NULL;
-        }
-    }
-    else
-    {
-        MXS_ERROR("mysql_init: %s", mysql_error(NULL));
-    }
-
-    return con;
-}
-
-/**
- * Set read, write and connect timeout values for MySQL database connection.
- *
- * @param handle            MySQL handle
- * @param read_timeout      Read timeout value in seconds
- * @param write_timeout     Write timeout value in seconds
- * @param connect_timeout   Connect timeout value in seconds
- *
- * @return 0 if succeed, 1 if failed
- */
-static int gw_mysql_set_timeouts(MYSQL* handle)
-{
-    int rc;
-
-    const auto& cnf = mxs::Config::get();
-    unsigned int timeout;
-
-    timeout = cnf.auth_read_timeout.get().count();
-    if ((rc = mysql_optionsv(handle, MYSQL_OPT_READ_TIMEOUT, (void*) &timeout)))
-    {
-        MXS_ERROR("Failed to set read timeout for backend connection.");
-        goto retblock;
-    }
-
-    timeout = cnf.auth_conn_timeout.get().count();
-    if ((rc = mysql_optionsv(handle, MYSQL_OPT_CONNECT_TIMEOUT, (void*) &timeout)))
-    {
-        MXS_ERROR("Failed to set connect timeout for backend connection.");
-        goto retblock;
-    }
-
-    timeout = cnf.auth_write_timeout.get().count();
-    if ((rc = mysql_optionsv(handle, MYSQL_OPT_WRITE_TIMEOUT, (void*) &timeout)))
-    {
-        MXS_ERROR("Failed to set write timeout for backend connection.");
-        goto retblock;
-    }
-
-retblock:
-    return rc;
-}
-
-/**
  * @brief Check permissions for a particular table.
  *
  * @param mysql         A valid MySQL connection.
@@ -721,13 +650,7 @@ static bool check_server_permissions(SERVICE* service,
                                      const char* user,
                                      const char* password)
 {
-    MYSQL* mysql = gw_mysql_init();
-
-    if (mysql == NULL)
-    {
-        return false;
-    }
-
+    MYSQL* mysql = mysql_init(nullptr);
     const mxs::Config& cnf = mxs::Config::get();
     unsigned int timeout;
 
