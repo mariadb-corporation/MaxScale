@@ -2277,6 +2277,13 @@ MariaDBBackendConnection::HandShakeRes MariaDBBackendConnection::handshake()
                     state_machine_continue = false;
                     rval = HandShakeRes::IN_PROGRESS;
                 }
+                else if (mxs_mysql_get_command(buffer.get()) == MYSQL_REPLY_ERR)
+                {
+                    // Server responded with an error instead of a handshake, probably too many connections.
+                    do_handle_error(m_dcb, "Connection rejected: " + mxs::extract_error(buffer.get()),
+                                    mxs::ErrorType::TRANSIENT);
+                    m_hs_state = HandShakeState::FAIL;
+                }
                 else
                 {
                     // Have a complete response from the server.
