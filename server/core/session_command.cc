@@ -60,26 +60,7 @@ bool SessionCommand::eq(const SessionCommand& rhs) const
 
 std::string SessionCommand::to_string()
 {
-    std::string str;
-    char* sql;
-    int sql_len;
-
-    /** TODO: Create C++ versions of modutil functions  */
-    GWBUF* buf = m_buffer.release();
-
-    if (!gwbuf_is_contiguous(buf))
-    {
-        buf = gwbuf_make_contiguous(buf);
-    }
-
-    if (modutil_extract_SQL(buf, &sql, &sql_len))
-    {
-        str.append(sql, sql_len);
-    }
-
-    m_buffer.reset(buf);
-
-    return str;
+    return mxs::extract_sql(m_buffer.get());
 }
 
 void SessionCommand::mark_as_duplicate(const SessionCommand& rhs)
