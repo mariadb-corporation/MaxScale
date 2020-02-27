@@ -50,7 +50,7 @@ public:
         GLOBAL
     };
 
-    using ParamsByName = std::map<std::string, Param*>; // We want to have them ordered by name.
+    using ParamsByName = std::map<std::string, Param*>;     // We want to have them ordered by name.
     using const_iterator = ParamsByName::const_iterator;
     using value_type = ParamsByName::value_type;
 
@@ -172,8 +172,8 @@ public:
 
     enum Modifiable
     {
-        AT_STARTUP, // The parameter can be modified only at startup.
-        AT_RUNTIME  // The parameter can be modified also at runtime.
+        AT_STARTUP,     // The parameter can be modified only at startup.
+        AT_RUNTIME      // The parameter can be modified also at runtime.
     };
 
     ~Param();
@@ -328,7 +328,7 @@ public:
      */
     value_type get(const mxs::ConfigParameters& params) const
     {
-        value_type rv { m_default_value };
+        value_type rv {m_default_value};
 
         bool contains = params.contains(name());
         mxb_assert(!is_mandatory() || contains);
@@ -337,7 +337,7 @@ public:
         {
             const ParamType* pThis = static_cast<const ParamType*>(this);
 
-            MXB_AT_DEBUG(bool valid=) pThis->from_string(params.get_string(name()), &rv);
+            MXB_AT_DEBUG(bool valid = ) pThis->from_string(params.get_string(name()), &rv);
             mxb_assert(valid);
         }
 
@@ -386,12 +386,12 @@ public:
     std::string type() const override;
 
     std::string to_string(value_type value) const;
-    bool from_string(const std::string& value, value_type* pValue,
-                     std::string* pMessage = nullptr) const;
+    bool        from_string(const std::string& value, value_type* pValue,
+                            std::string* pMessage = nullptr) const;
 
     json_t* to_json(value_type value) const;
-    bool from_json(const json_t* pJson, value_type* pValue,
-                   std::string* pMessage = nullptr) const;
+    bool    from_json(const json_t* pJson, value_type* pValue,
+                      std::string* pMessage = nullptr) const;
 
 private:
     ParamBool(Specification* pSpecification,
@@ -410,12 +410,12 @@ class ParamNumber : public ConcreteParam<ParamNumber, int64_t>
 {
 public:
     virtual std::string to_string(value_type value) const;
-    virtual bool from_string(const std::string& value, value_type* pValue,
-                             std::string* pMessage = nullptr) const;
+    virtual bool        from_string(const std::string& value, value_type* pValue,
+                                    std::string* pMessage = nullptr) const;
 
     virtual json_t* to_json(value_type value) const;
-    virtual bool from_json(const json_t* pJson, value_type* pValue,
-                           std::string* pMessage = nullptr) const;
+    virtual bool    from_json(const json_t* pJson, value_type* pValue,
+                              std::string* pMessage = nullptr) const;
 
     bool is_valid(value_type value) const
     {
@@ -629,7 +629,7 @@ public:
                   const char* zName,
                   const char* zDescription,
                   mxs::config::DurationInterpretation interpretation,
-                  value_type  default_value,
+                  value_type default_value,
                   Param::Modifiable modifiable = Param::Modifiable::AT_STARTUP)
         : ParamDuration(pSpecification, zName, zDescription, modifiable, Param::OPTIONAL,
                         interpretation, default_value)
@@ -639,12 +639,12 @@ public:
     std::string type() const override;
 
     std::string to_string(const value_type& value) const;
-    bool from_string(const std::string& value, value_type* pValue,
-                     std::string* pMessage = nullptr) const;
+    bool        from_string(const std::string& value, value_type* pValue,
+                            std::string* pMessage = nullptr) const;
 
     json_t* to_json(const value_type& value) const;
-    bool from_json(const json_t* pJson, value_type* pValue,
-                   std::string* pMessage = nullptr) const;
+    bool    from_json(const json_t* pJson, value_type* pValue,
+                      std::string* pMessage = nullptr) const;
 
 private:
     ParamDuration(Specification* pSpecification,
@@ -700,12 +700,12 @@ public:
     std::string type() const override;
 
     std::string to_string(value_type value) const;
-    bool from_string(const std::string& value, value_type* pValue,
-                     std::string* pMessage = nullptr) const;
+    bool        from_string(const std::string& value, value_type* pValue,
+                            std::string* pMessage = nullptr) const;
 
     json_t* to_json(value_type value) const;
-    bool from_json(const json_t* pJson, value_type* pValue,
-                   std::string* pMessage = nullptr) const;
+    bool    from_json(const json_t* pJson, value_type* pValue,
+                      std::string* pMessage = nullptr) const;
 
     void populate(MXS_MODULE_PARAM& param) const;
 
@@ -763,12 +763,12 @@ public:
     std::string type() const override;
 
     std::string to_string(const value_type& value) const;
-    bool from_string(const std::string& value, value_type* pValue,
-                     std::string* pMessage = nullptr) const;
+    bool        from_string(const std::string& value, value_type* pValue,
+                            std::string* pMessage = nullptr) const;
 
     json_t* to_json(const value_type& value) const;
-    bool from_json(const json_t* pJson, value_type* pValue,
-                   std::string* pMessage = nullptr) const;
+    bool    from_json(const json_t* pJson, value_type* pValue,
+                      std::string* pMessage = nullptr) const;
 
     bool is_valid(const value_type& value) const;
 
@@ -789,7 +789,7 @@ private:
     }
 
 private:
-    uint32_t   m_options;
+    uint32_t m_options;
 };
 
 /**
@@ -811,12 +811,12 @@ public:
     std::string type() const override;
 
     std::string to_string(value_type value) const;
-    bool from_string(const std::string& value, value_type* pValue,
-                     std::string* pMessage = nullptr) const;
+    bool        from_string(const std::string& value, value_type* pValue,
+                            std::string* pMessage = nullptr) const;
 
     json_t* to_json(value_type value) const;
-    bool from_json(const json_t* pJson, value_type* pValue,
-                   std::string* pMessage = nullptr) const;
+    bool    from_json(const json_t* pJson, value_type* pValue,
+                      std::string* pMessage = nullptr) const;
 };
 
 /**
@@ -838,12 +838,12 @@ public:
     std::string type() const override;
 
     std::string to_string(value_type value) const;
-    bool from_string(const std::string& value, value_type* pValue,
-                     std::string* pMessage = nullptr) const;
+    bool        from_string(const std::string& value, value_type* pValue,
+                            std::string* pMessage = nullptr) const;
 
     json_t* to_json(value_type value) const;
-    bool from_json(const json_t* pJson, value_type* pValue,
-                   std::string* pMessage = nullptr) const;
+    bool    from_json(const json_t* pJson, value_type* pValue,
+                      std::string* pMessage = nullptr) const;
 };
 
 /**
@@ -902,12 +902,12 @@ public:
     std::string type() const override;
 
     std::string to_string(value_type value) const;
-    bool from_string(const std::string& value, value_type* pValue,
-                     std::string* pMessage = nullptr) const override;
+    bool        from_string(const std::string& value, value_type* pValue,
+                            std::string* pMessage = nullptr) const override;
 
     json_t* to_json(value_type value) const;
-    bool from_json(const json_t* pJson, value_type* pValue,
-                   std::string* pMessage = nullptr) const;
+    bool    from_json(const json_t* pJson, value_type* pValue,
+                      std::string* pMessage = nullptr) const;
 
 private:
     ParamSize(Specification* pSpecification,
@@ -950,12 +950,12 @@ public:
     std::string type() const override;
 
     std::string to_string(value_type value) const;
-    bool from_string(const std::string& value, value_type* pValue,
-                     std::string* pMessage = nullptr) const;
+    bool        from_string(const std::string& value, value_type* pValue,
+                            std::string* pMessage = nullptr) const;
 
     json_t* to_json(value_type value) const;
-    bool from_json(const json_t* pJson, value_type* pValue,
-                   std::string* pMessage = nullptr) const;
+    bool    from_json(const json_t* pJson, value_type* pValue,
+                      std::string* pMessage = nullptr) const;
 
 private:
     ParamString(Specification* pSpecification,
@@ -984,7 +984,7 @@ using ParamBitMask = ParamCount;
 class Configuration
 {
 public:
-    using ValuesByName = std::map<std::string, Type*>; // We want to have them ordered by name.
+    using ValuesByName = std::map<std::string, Type*>;      // We want to have them ordered by name.
     using const_iterator = ValuesByName::const_iterator;
     using value_type = ValuesByName::value_type;
 
@@ -1097,7 +1097,7 @@ protected:
     template<class ParamType>
     void add_native(typename ParamType::value_type* pValue,
                     ParamType* pParam,
-                    std::function<void (typename ParamType::value_type)> on_set = nullptr);
+                    std::function<void(typename ParamType::value_type)> on_set = nullptr);
 
 private:
     friend Type;
@@ -1213,7 +1213,7 @@ public:
     Native(Configuration* pConfiguration,
            ParamType* pParam,
            value_type* pValue,
-           std::function<void (value_type)> on_set = nullptr)
+           std::function<void(value_type)> on_set = nullptr)
         : Type(pConfiguration, pParam)
         , m_pValue(pValue)
         , m_on_set(on_set)
@@ -1309,8 +1309,8 @@ public:
     }
 
 protected:
-    value_type*                      m_pValue;
-    std::function<void (value_type)> m_on_set;
+    value_type*                     m_pValue;
+    std::function<void(value_type)> m_on_set;
 };
 
 /**
@@ -1335,7 +1335,7 @@ public:
 
     ConcreteType(Configuration* pConfiguration,
                  const ParamType* pParam,
-                 std::function<void (value_type)> on_set = nullptr)
+                 std::function<void(value_type)> on_set = nullptr)
         : Type(pConfiguration, pParam)
         , m_value(pParam->default_value())
         , m_on_set(on_set)
@@ -1438,9 +1438,9 @@ protected:
     }
 
 protected:
-    value_type                       m_value;
-    mutable std::mutex               m_mutex;
-    std::function<void (value_type)> m_on_set;
+    value_type                      m_value;
+    mutable std::mutex              m_mutex;
+    std::function<void(value_type)> m_on_set;
 };
 
 
@@ -1452,7 +1452,7 @@ public:
 
     Number(Configuration* pConfiguration,
            const ParamType* pParam,
-           std::function<void (value_type)> on_set = nullptr)
+           std::function<void(value_type)> on_set = nullptr)
         : ConcreteType<ParamType>(pConfiguration, pParam, on_set)
     {
     }
@@ -1774,7 +1774,7 @@ void ParamEnum<T>::populate(MXS_MODULE_PARAM& param) const
 template<class ParamType>
 void Configuration::add_native(typename ParamType::value_type* pValue,
                                ParamType* pParam,
-                               std::function<void (typename ParamType::value_type)> on_set)
+                               std::function<void(typename ParamType::value_type)> on_set)
 {
     *pValue = pParam->default_value();
     m_natives.push_back(std::unique_ptr<Type>(new Native<ParamType>(this, pParam, pValue, on_set)));

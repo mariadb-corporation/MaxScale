@@ -63,13 +63,14 @@ public:
             return m_default_value;
         }
         std::string default_to_string() const override final;
-        bool validate(const std::string& value_as_string, std::string* pMessage) const override final;
+        bool        validate(const std::string& value_as_string, std::string* pMessage) const override final;
 
         std::string to_string(const value_type& value) const;
-        bool from_string(const std::string& value, value_type* pValue, std::string* pMessage = nullptr) const;
+        bool        from_string(const std::string& value, value_type* pValue,
+                                std::string* pMessage = nullptr) const;
 
         json_t* to_json(const value_type& value) const;
-        bool from_json(const json_t* pJson, value_type* pValue, std::string* pMessage = nullptr) const;
+        bool    from_json(const json_t* pJson, value_type* pValue, std::string* pMessage = nullptr) const;
 
         bool is_valid(const value_type&) const
         {
@@ -77,7 +78,7 @@ public:
         }
 
     private:
-        const value_type m_default_value = { 0, 0, 0 };
+        const value_type m_default_value = {0, 0, 0};
     };
 
     class LogThrottling : public config::ConcreteType<ParamLogThrottling>
@@ -85,7 +86,7 @@ public:
     public:
         LogThrottling(Configuration* pConfiguration,
                       const ParamLogThrottling* pParam,
-                      std::function<void (value_type)> on_set = nullptr)
+                      std::function<void(value_type)> on_set = nullptr)
             : config::ConcreteType<ParamLogThrottling>(pConfiguration, pParam, on_set)
         {
         }
@@ -104,55 +105,55 @@ public:
     using SessionDumpStatements = config::Enum<session_dump_statements_t>;
 
     // RUNTIME-modifiable automatically configured parameters.
-    config::Bool          log_debug;                   /**< Whether debug messages are logged. */
-    config::Bool          log_info;                    /**< Whether info messages are logged. */
-    config::Bool          log_notice;                  /**< Whether notice messages are logged. */
-    config::Bool          log_warning;                 /**< Whether warning messages are logged. */
-    LogThrottling         log_throttling;              /**< When and how to throttle logged messaged. */
-    SessionDumpStatements dump_statements;             /**< Whether to dump last statements. */
-    config::Count         session_trace;               /**< How entries stored to session trace log.*/
-    config::Bool          ms_timestamp;                /**< Enable or disable high precision timestamps */
-    config::Count         retain_last_statements;      /**< How many statements should be retained. */
-    config::Bool          syslog;                      /**< Log to syslog */
-    config::Bool          maxlog;                      /**< Log to MaxScale's own logs */
-    config::Seconds       auth_conn_timeout;           /**< Connection timeout for the user authentication */
-    config::Seconds       auth_read_timeout;           /**< Read timeout for the user authentication */
-    config::Seconds       auth_write_timeout;          /**< Write timeout for the user authentication */
-    config::Bool          skip_permission_checks;      /**< Skip service and monitor permission checks */
-    config::Bool          passive;                     /**< True if MaxScale is in passive mode */
-    config::Size          qc_cache_max_size;           /**< Maximum amount of memory used by qc */
-    config::Bool          admin_log_auth_failures;     /**< Log admin interface authentication failures */
-    config::Integer       query_retries;               /**< Number of times a interrupted query is
-                                                         * retried */
-    config::Seconds       query_retry_timeout;         /**< Timeout for query retries */
-    config::Seconds       users_refresh_time;          /**< How often the users can be refreshed */
-    config::Seconds       users_refresh_interval;      /**< How often the users will be refreshed */
-    config::Size          writeq_high_water;           /**< High water mark of dcb write queue */
-    config::Size          writeq_low_water;            /**< Low water mark of dcb write queue */
-    config::Integer       max_auth_errors_until_block; /**< Host is blocked once this limit is reached */
-    config::Integer       rebalance_threshold;         /**< If load of particular worker differs more than
-                                                        * this % amount from load-average, rebalancing will
-                                                        * be made.
-                                                        */
-    config::Milliseconds  rebalance_period;            /**< How often should rebalancing be made. */
-    config::Count         rebalance_window;            /**< How many seconds should be taken into account. */
+    config::Bool          log_debug;                /**< Whether debug messages are logged. */
+    config::Bool          log_info;                 /**< Whether info messages are logged. */
+    config::Bool          log_notice;               /**< Whether notice messages are logged. */
+    config::Bool          log_warning;              /**< Whether warning messages are logged. */
+    LogThrottling         log_throttling;           /**< When and how to throttle logged messaged. */
+    SessionDumpStatements dump_statements;          /**< Whether to dump last statements. */
+    config::Count         session_trace;            /**< How entries stored to session trace log.*/
+    config::Bool          ms_timestamp;             /**< Enable or disable high precision timestamps */
+    config::Count         retain_last_statements;   /**< How many statements should be retained. */
+    config::Bool          syslog;                   /**< Log to syslog */
+    config::Bool          maxlog;                   /**< Log to MaxScale's own logs */
+    config::Seconds       auth_conn_timeout;        /**< Connection timeout for the user authentication */
+    config::Seconds       auth_read_timeout;        /**< Read timeout for the user authentication */
+    config::Seconds       auth_write_timeout;       /**< Write timeout for the user authentication */
+    config::Bool          skip_permission_checks;   /**< Skip service and monitor permission checks */
+    config::Bool          passive;                  /**< True if MaxScale is in passive mode */
+    config::Size          qc_cache_max_size;        /**< Maximum amount of memory used by qc */
+    config::Bool          admin_log_auth_failures;  /**< Log admin interface authentication failures */
+    config::Integer       query_retries;            /**< Number of times a interrupted query is
+                                                     * retried */
+    config::Seconds query_retry_timeout;            /**< Timeout for query retries */
+    config::Seconds users_refresh_time;             /**< How often the users can be refreshed */
+    config::Seconds users_refresh_interval;         /**< How often the users will be refreshed */
+    config::Size    writeq_high_water;              /**< High water mark of dcb write queue */
+    config::Size    writeq_low_water;               /**< Low water mark of dcb write queue */
+    config::Integer max_auth_errors_until_block;    /**< Host is blocked once this limit is reached */
+    config::Integer rebalance_threshold;            /**< If load of particular worker differs more than
+                                                     * this % amount from load-average, rebalancing will
+                                                     * be made.
+                                                     */
+    config::Milliseconds rebalance_period;          /**< How often should rebalancing be made. */
+    config::Count        rebalance_window;          /**< How many seconds should be taken into account. */
 
     // NON-modifiable automatically configured parameters.
-    int64_t               n_threads;                   /**< Number of polling threads */
-    std::string           qc_name;                     /**< The name of the query classifier to load */
-    std::string           qc_args;                     /**< Arguments for the query classifieer */
-    qc_sql_mode_t         qc_sql_mode;                 /**< The query classifier sql mode */
-    std::string           admin_host;                  /**< Admin interface host */
-    int64_t               admin_port;                  /**< Admin interface port */
-    bool                  admin_auth;                  /**< Admin interface authentication */
-    bool                  admin_enabled;               /**< Admin interface is enabled */
-    std::string           admin_pam_rw_service;        /**< PAM service for read-write users */
-    std::string           admin_pam_ro_service;        /**< PAM service for read-only users */
-    std::string           admin_ssl_key;               /**< Admin SSL key */
-    std::string           admin_ssl_cert;              /**< Admin SSL cert */
-    std::string           admin_ssl_ca_cert;           /**< Admin SSL CA cert */
-    std::string           local_address;               /**< Local address to use when connecting */
-    bool                  load_persisted_configs;      /**< Load persisted configuration files on startup */
+    int64_t       n_threads;                    /**< Number of polling threads */
+    std::string   qc_name;                      /**< The name of the query classifier to load */
+    std::string   qc_args;                      /**< Arguments for the query classifieer */
+    qc_sql_mode_t qc_sql_mode;                  /**< The query classifier sql mode */
+    std::string   admin_host;                   /**< Admin interface host */
+    int64_t       admin_port;                   /**< Admin interface port */
+    bool          admin_auth;                   /**< Admin interface authentication */
+    bool          admin_enabled;                /**< Admin interface is enabled */
+    std::string   admin_pam_rw_service;         /**< PAM service for read-write users */
+    std::string   admin_pam_ro_service;         /**< PAM service for read-only users */
+    std::string   admin_ssl_key;                /**< Admin SSL key */
+    std::string   admin_ssl_cert;               /**< Admin SSL cert */
+    std::string   admin_ssl_ca_cert;            /**< Admin SSL CA cert */
+    std::string   local_address;                /**< Local address to use when connecting */
+    bool          load_persisted_configs;       /**< Load persisted configuration files on startup */
 
     // The following will not be configured via the configuration mechanism.
     bool    config_check;                               /**< Only check config */
@@ -160,11 +161,11 @@ public:
     char    sysname[SYSNAME_LEN];                       /**< The OS name of the system */
     uint8_t mac_sha1[SHA_DIGEST_LENGTH];                /**< The SHA1 digest of an interface MAC address */
 
-    mxb_log_target_t      log_target;                  /**< Log type */
-    bool                  substitute_variables;        /**< Should environment variables be substituted */
-    QC_CACHE_PROPERTIES   qc_cache_properties;         /**< The query classifier cache properties. */
-    int64_t               promoted_at;                 /**< Time when this Maxscale instance was
-                                                        * promoted from a passive to an active */
+    mxb_log_target_t    log_target;                 /**< Log type */
+    bool                substitute_variables;       /**< Should environment variables be substituted */
+    QC_CACHE_PROPERTIES qc_cache_properties;        /**< The query classifier cache properties. */
+    int64_t             promoted_at;                /**< Time when this Maxscale instance was
+                                                    * promoted from a passive to an active */
 
     bool configure(const mxs::ConfigParameters& params,
                    mxs::ConfigParameters* pUnrecognized = nullptr) override;
@@ -184,7 +185,7 @@ private:
                       mxs::ConfigParameters* pUnrecognized = nullptr) const override final;
     };
 
-    static Specification                                s_specification;
+    static Specification s_specification;
 
     static config::ParamBool                            s_log_debug;
     static config::ParamBool                            s_log_info;
@@ -215,20 +216,20 @@ private:
     static config::ParamMilliseconds                    s_rebalance_period;
     static config::ParamCount                           s_rebalance_window;
 
-    static ParamThreadsCount                            s_n_threads;
-    static config::ParamString                          s_qc_name;
-    static config::ParamString                          s_qc_args;
-    static config::ParamEnum<qc_sql_mode_t>             s_qc_sql_mode;
-    static config::ParamString                          s_admin_host;
-    static config::ParamInteger                         s_admin_port;
-    static config::ParamBool                            s_admin_auth;
-    static config::ParamBool                            s_admin_enabled;
-    static config::ParamString                          s_admin_pam_rw_service;
-    static config::ParamString                          s_admin_pam_ro_service;
-    static config::ParamString                          s_admin_ssl_key;
-    static config::ParamString                          s_admin_ssl_cert;
-    static config::ParamString                          s_admin_ssl_ca_cert;
-    static config::ParamString                          s_local_address;
-    static config::ParamBool                            s_load_persisted_configs;
+    static ParamThreadsCount                s_n_threads;
+    static config::ParamString              s_qc_name;
+    static config::ParamString              s_qc_args;
+    static config::ParamEnum<qc_sql_mode_t> s_qc_sql_mode;
+    static config::ParamString              s_admin_host;
+    static config::ParamInteger             s_admin_port;
+    static config::ParamBool                s_admin_auth;
+    static config::ParamBool                s_admin_enabled;
+    static config::ParamString              s_admin_pam_rw_service;
+    static config::ParamString              s_admin_pam_ro_service;
+    static config::ParamString              s_admin_ssl_key;
+    static config::ParamString              s_admin_ssl_cert;
+    static config::ParamString              s_admin_ssl_ca_cert;
+    static config::ParamString              s_local_address;
+    static config::ParamBool                s_load_persisted_configs;
 };
 }

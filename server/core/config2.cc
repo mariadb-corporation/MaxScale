@@ -65,7 +65,6 @@ bool is_core_param(Specification::Kind kind, const std::string& param)
 
     return rv;
 }
-
 }
 
 namespace maxscale
@@ -578,7 +577,7 @@ json_t* ParamBool::to_json(value_type value) const
     return json_boolean(value);
 }
 
-bool ParamBool::from_json(const json_t* pJson,  value_type* pValue, string* pMessage) const
+bool ParamBool::from_json(const json_t* pJson, value_type* pValue, string* pMessage) const
 {
     bool rv = false;
 

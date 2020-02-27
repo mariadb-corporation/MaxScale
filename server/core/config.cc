@@ -166,9 +166,9 @@ config::ParamEnum<session_dump_statements_t> Config::s_dump_statements(
     CN_DUMP_LAST_STATEMENTS,
     "In what circumstances should the last statements that a client sent be dumped.",
     {
-        { SESSION_DUMP_STATEMENTS_ON_CLOSE, "on_close" },
-        { SESSION_DUMP_STATEMENTS_ON_ERROR, "on_error" },
-        { SESSION_DUMP_STATEMENTS_NEVER, "never" }
+        {SESSION_DUMP_STATEMENTS_ON_CLOSE, "on_close"},
+        {SESSION_DUMP_STATEMENTS_ON_ERROR, "on_error"},
+        {SESSION_DUMP_STATEMENTS_NEVER, "never"}
     },
     SESSION_DUMP_STATEMENTS_NEVER,
     config::Param::Modifiable::AT_RUNTIME);
@@ -177,8 +177,8 @@ config::ParamCount Config::s_session_trace(
     &Config::s_specification,
     CN_SESSION_TRACE,
     "How many log entries are stored in the session specific trace log.",
-    0, // default
-    0, // min
+    0,                                                          // default
+    0,                                                          // min
     std::numeric_limits<config::ParamCount::value_type>::max(), // max
     config::Param::Modifiable::AT_RUNTIME);
 
@@ -193,9 +193,9 @@ config::ParamCount Config::s_retain_last_statements(
     &Config::s_specification,
     CN_RETAIN_LAST_STATEMENTS,
     "How many statements should be retained for each session for debugging purposes.",
-    0, // default
-    0, // min
-    std::numeric_limits<config::ParamInteger::value_type>::max(), // max
+    0,                                                              // default
+    0,                                                              // min
+    std::numeric_limits<config::ParamInteger::value_type>::max(),   // max
     config::Param::Modifiable::AT_RUNTIME);
 
 config::ParamBool Config::s_syslog(
@@ -318,7 +318,7 @@ config::ParamInteger Config::s_max_auth_errors_until_block(
     "The maximum number of authentication failures that are tolerated "
     "before a host is temporarily blocked.",
     DEFAULT_MAX_AUTH_ERRORS_UNTIL_BLOCK,
-    0, std::numeric_limits<config::ParamInteger::value_type>::max(), // min, max
+    0, std::numeric_limits<config::ParamInteger::value_type>::max(),    // min, max
     config::Param::Modifiable::AT_RUNTIME);
 
 config::ParamInteger Config::s_rebalance_threshold(
@@ -351,7 +351,7 @@ Config::ParamThreadsCount Config::s_n_threads(
     &Config::s_specification,
     CN_THREADS,
     "This parameter specifies how many threads will be used for handling the routing.",
-    DEFAULT_NTHREADS, // TODO: Why not get_processor_count()?
+    DEFAULT_NTHREADS,   // TODO: Why not get_processor_count()?
     1,
     std::numeric_limits<Config::ParamThreadsCount::value_type>::max());
 
@@ -372,8 +372,8 @@ config::ParamEnum<qc_sql_mode_t> Config::s_qc_sql_mode(
     CN_SQL_MODE,
     "The query classifier sql mode.",
     {
-        { QC_SQL_MODE_DEFAULT, "default" },
-        { QC_SQL_MODE_ORACLE, "oracle" }
+        {QC_SQL_MODE_DEFAULT, "default"},
+        {QC_SQL_MODE_ORACLE, "oracle"}
     },
     QC_SQL_MODE_DEFAULT);
 
@@ -454,7 +454,6 @@ struct ThisUnit
     CONFIG_CONTEXT config_context;
     bool           is_root_config_file = true;  /**< The first one will be. */
 } this_unit;
-
 }
 
 static bool get_milliseconds(const char* zName,
@@ -472,71 +471,71 @@ Config::Config()
     : config::Configuration("maxscale", &s_specification)
     , log_debug(this, &s_log_debug, [](bool enable) {
 #ifndef SS_DEBUG
-            MXS_WARNING("The 'log_debug' option has no effect in release mode.");
+                    MXS_WARNING("The 'log_debug' option has no effect in release mode.");
 #endif
-            mxs_log_set_priority_enabled(LOG_DEBUG, enable);
-        })
-    , log_info(this, &s_log_info, [](bool enable) {
-            mxs_log_set_priority_enabled(LOG_INFO, enable);
-        })
-    , log_notice(this, &s_log_notice, [](bool enable) {
-            mxs_log_set_priority_enabled(LOG_NOTICE, enable);
-        })
-    , log_warning(this, &s_log_warning, [](bool enable) {
-            mxs_log_set_priority_enabled(LOG_WARNING, enable);
-        })
-    , log_throttling(this, &s_log_throttling, [](MXS_LOG_THROTTLING throttling) {
-            mxs_log_set_throttling(&throttling);
-        })
-    , dump_statements(this, &s_dump_statements, [](session_dump_statements_t when) {
-            session_set_dump_statements(when);
-        })
-    , session_trace(this, &s_session_trace, [](int32_t count) {
-            session_set_session_trace(count);
-            mxb_log_set_session_trace(true);
-        })
-    , ms_timestamp(this, &s_ms_timestamp, [](bool enable) {
-            mxs_log_set_highprecision_enabled(enable);
-        })
-    , retain_last_statements(this, &s_retain_last_statements, [](int32_t count) {
-            session_set_retain_last_statements(count);
-        })
-    , syslog(this, &s_syslog)
-    , maxlog(this, &s_maxlog)
-    , auth_conn_timeout(this, &s_auth_conn_timeout)
-    , auth_read_timeout(this, &s_auth_read_timeout)
-    , auth_write_timeout(this, &s_auth_write_timeout)
-    , skip_permission_checks(this, &s_skip_permission_checks)
-    , passive(this, &s_passive, [](bool value) {
-            if (Config::get().passive.get() && !value)
-            {
-                // If we were passive, but no longer are, we register the time.
-                Config::get().promoted_at = mxs_clock();
-            }
-        })
-    , qc_cache_max_size(this, &s_qc_cache_max_size, [](int64_t size) {
-            Config::get().qc_cache_properties.max_size = size;
-            qc_set_cache_properties(&Config::get().qc_cache_properties);
-        })
-    , admin_log_auth_failures(this, &s_admin_log_auth_failures)
-    , query_retries(this, &s_query_retries)
-    , query_retry_timeout(this, &s_query_retry_timeout)
-    , users_refresh_time(this, &s_users_refresh_time)
-    , users_refresh_interval(this, &s_users_refresh_interval)
-    , writeq_high_water(this, &s_writeq_high_water)
-    , writeq_low_water(this, &s_writeq_low_water)
-    , max_auth_errors_until_block(this, &s_max_auth_errors_until_block)
-    , rebalance_threshold(this, &s_rebalance_threshold)
-    , rebalance_period(this, &s_rebalance_period, [](const std::chrono::milliseconds&) {
-            mxb_assert(MainWorker::get());
-            MainWorker::get()->start_rebalancing();
-        })
-    , rebalance_window(this, &s_rebalance_window)
+                    mxs_log_set_priority_enabled(LOG_DEBUG, enable);
+                }),
+    log_info(this, &s_log_info, [](bool enable) {
+                 mxs_log_set_priority_enabled(LOG_INFO, enable);
+             }),
+    log_notice(this, &s_log_notice, [](bool enable) {
+                   mxs_log_set_priority_enabled(LOG_NOTICE, enable);
+               }),
+    log_warning(this, &s_log_warning, [](bool enable) {
+                    mxs_log_set_priority_enabled(LOG_WARNING, enable);
+                }),
+    log_throttling(this, &s_log_throttling, [](MXS_LOG_THROTTLING throttling) {
+                       mxs_log_set_throttling(&throttling);
+                   }),
+    dump_statements(this, &s_dump_statements, [](session_dump_statements_t when) {
+                        session_set_dump_statements(when);
+                    }),
+    session_trace(this, &s_session_trace, [](int32_t count) {
+                      session_set_session_trace(count);
+                      mxb_log_set_session_trace(true);
+                  }),
+    ms_timestamp(this, &s_ms_timestamp, [](bool enable) {
+                     mxs_log_set_highprecision_enabled(enable);
+                 }),
+    retain_last_statements(this, &s_retain_last_statements, [](int32_t count) {
+                               session_set_retain_last_statements(count);
+                           }),
+    syslog(this, &s_syslog),
+    maxlog(this, &s_maxlog),
+    auth_conn_timeout(this, &s_auth_conn_timeout),
+    auth_read_timeout(this, &s_auth_read_timeout),
+    auth_write_timeout(this, &s_auth_write_timeout),
+    skip_permission_checks(this, &s_skip_permission_checks),
+    passive(this, &s_passive, [](bool value) {
+                if (Config::get().passive.get() && !value)
+                {
+                    // If we were passive, but no longer are, we register the time.
+                    Config::get().promoted_at = mxs_clock();
+                }
+            }),
+    qc_cache_max_size(this, &s_qc_cache_max_size, [](int64_t size) {
+                          Config::get().qc_cache_properties.max_size = size;
+                          qc_set_cache_properties(&Config::get().qc_cache_properties);
+                      }),
+    admin_log_auth_failures(this, &s_admin_log_auth_failures),
+    query_retries(this, &s_query_retries),
+    query_retry_timeout(this, &s_query_retry_timeout),
+    users_refresh_time(this, &s_users_refresh_time),
+    users_refresh_interval(this, &s_users_refresh_interval),
+    writeq_high_water(this, &s_writeq_high_water),
+    writeq_low_water(this, &s_writeq_low_water),
+    max_auth_errors_until_block(this, &s_max_auth_errors_until_block),
+    rebalance_threshold(this, &s_rebalance_threshold),
+    rebalance_period(this, &s_rebalance_period, [](const std::chrono::milliseconds&) {
+                         mxb_assert(MainWorker::get());
+                         MainWorker::get()->start_rebalancing();
+                     }),
+    rebalance_window(this, &s_rebalance_window)
 
-    , config_check(false)
-    , log_target(MXB_LOG_TARGET_DEFAULT)
-    , substitute_variables(false)
-    , promoted_at(0)
+    , config_check(false),
+    log_target(MXB_LOG_TARGET_DEFAULT),
+    substitute_variables(false),
+    promoted_at(0)
 {
     add_native(&n_threads, &s_n_threads);
     add_native(&qc_name, &s_qc_name);
@@ -592,7 +591,7 @@ Config::Config()
     }
 }
 
-//static
+// static
 Config& Config::get()
 {
     static Config config;
@@ -741,7 +740,7 @@ bool Config::ParamLogThrottling::from_string(const std::string& value_as_string,
 
     if (value_as_string.empty())
     {
-        *pValue = MXS_LOG_THROTTLING { 0, 0, 0 };
+        *pValue = MXS_LOG_THROTTLING {0, 0, 0};
         rv = true;
     }
     else
@@ -2193,7 +2192,7 @@ uint64_t mxs::ConfigParameters::get_size(const std::string& key) const
 }
 
 milliseconds mxs::ConfigParameters::get_duration_in_ms(const std::string& key,
-                                                      mxs::config::DurationInterpretation interpretation)
+                                                       mxs::config::DurationInterpretation interpretation)
 const
 {
     string value = get_string(key);
@@ -2295,7 +2294,7 @@ char* mxs::ConfigParameters::get_c_str_copy(const string& key) const
 }
 
 std::unique_ptr<pcre2_code> mxs::ConfigParameters::get_compiled_regex(const string& key, uint32_t options,
-                                                                     uint32_t* output_ovec_size) const
+                                                                      uint32_t* output_ovec_size) const
 {
     auto regex_string = get_string(key);
     std::unique_ptr<pcre2_code> code;
@@ -2427,7 +2426,7 @@ void mxs::ConfigParameters::set_multiple(const mxs::ConfigParameters& source)
 }
 
 void mxs::ConfigParameters::set_from_list(std::vector<std::pair<std::string, std::string>> list,
-                                         const MXS_MODULE_PARAM* module_params)
+                                          const MXS_MODULE_PARAM* module_params)
 {
     // Add custom values.
     for (const auto& a : list)
