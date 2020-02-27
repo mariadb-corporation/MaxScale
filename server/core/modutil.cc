@@ -1816,7 +1816,8 @@ static inline void extract_error_state(uint8_t* pBuffer, uint8_t** ppState, uint
     // followed by a 1 byte sql state marker and 5 bytes of sql state. In this context
     // the marker and the state itself are combined.
     *ppState = pBuffer + MYSQL_HEADER_LEN + 1 + 2;
-    *pnState = 6;
+    // The SQLSTATE is optional and, if present, starts with the hash sign
+    *pnState = **ppState == '#' ? 6 : 0;
 }
 
 /**
@@ -1835,8 +1836,14 @@ static inline void extract_error_message(uint8_t* pBuffer, uint8_t** ppMessage, 
     // The payload starts with a one byte command followed by a two byte error code,
     // followed by a 1 byte sql state marker and 5 bytes of sql state, followed by
     // a message until the end of the packet.
-    *ppMessage = pBuffer + MYSQL_HEADER_LEN + 1 + 2 + 1 + 5;
-    *pnMessage = packet_len - MYSQL_HEADER_LEN - 1 - 2 - 1 - 5;
+    *ppMessage = pBuffer + MYSQL_HEADER_LEN + 1 + 2;
+    *pnMessage = packet_len - MYSQL_HEADER_LEN - 1 - 2;
+
+    if (**ppMessage == '#')     // The SQLSTATE is optional
+    {
+        (*ppMessage) += 6;
+        (*pnMessage) -= 6;
+    }
 }
 
 std::string extract_error(GWBUF* buffer)
@@ -1860,7 +1867,7 @@ std::string extract_error(GWBUF* buffer)
         std::string err(reinterpret_cast<const char*>(pState), nState);
         std::string msg(reinterpret_cast<const char*>(pMessage), nMessage);
 
-        rval = err + ": " + msg;
+        rval = err.empty() ? msg : err + ": " + msg;
     }
 
     return rval;
