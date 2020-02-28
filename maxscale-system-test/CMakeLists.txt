@@ -54,7 +54,7 @@ add_subdirectory(cdc_datatypes)
 ############################################
 
 # Configures 'keepalived' on two Maxscale machines and tried failover
-#add_test_executable(keepalived_masterdown.cpp keepalived_masterdown keepalived_masterdown LABELS REPL_BACKEND TWO_MAXSCALES)
+add_test_executable(cooperative_monitoring.cpp cooperative_monitoring cooperative_monitoring LABELS REPL_BACKEND TWO_MAXSCALES)
 
 # MySQL Monitor with Multi-master configurations
 add_test_executable(mysqlmon_multimaster.cpp mysqlmon_multimaster mysqlmon_multimaster LABELS mysqlmon REPL_BACKEND BREAKS_REPL)

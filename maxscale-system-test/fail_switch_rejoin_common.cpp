@@ -72,12 +72,13 @@ void check(TestConnections& test)
 /**
  * Get master server id (master decided by MaxScale)
  *
+ * @param maxscale_ind Which MaxScale to query
  * @param test Tester object
  * @return Master server id
  */
-int get_master_server_id(TestConnections& test)
+int get_master_server_id(TestConnections& test, int maxscale_ind = 0)
 {
-    MYSQL* conn = test.maxscales->open_rwsplit_connection(0);
+    MYSQL* conn = test.maxscales->open_rwsplit_connection(maxscale_ind);
     int id = -1;
     char str[1024];
 
