@@ -204,6 +204,7 @@ add_test_executable(mxs2785_binlogfilter_rewrite.cpp mxs2785_binlogfilter_rewrit
 
 # KafkaCDC test case
 add_test_executable(test_kafkacdc.cpp test_kafkacdc test_kafkacdc LABELS kafkacdc REPL_BACKEND)
+target_link_libraries(test_kafkacdc ${RDKAFKA_LIBRARIES})
 
 ############################################
 # END: Tests that require GTID             #
