@@ -1167,6 +1167,13 @@ storage_options="server=192.168.1.31:6379"
 are of greater significance since also the communication between the cache and the
 cache storage is asynchronous and takes place over the network.
 
+*NOTE* If invalidation is turned on after caching has been used (in non-invalidation
+mode), redis must be flushed as otherwise there will be entries in the cache that
+will not be affected by the invalidation.
+```
+$ redis-cli flushall
+```
+
 #### Security
 _Neither_ the data in the redis server _nor_ the traffic between MaxScale and
 the redis server is encrypted. Consequently, _anybody_ with access to the
