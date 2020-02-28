@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
 
     // Payload length and sequence number
     uint8_t bufsize = wbuf.size();
-    wbuf.insert(wbuf.begin(), {(uint8_t)(bufsize), (uint8_t)(bufsize >> 8), (uint8_t)(bufsize >> 16), 2});
+    wbuf.insert(wbuf.begin(), {(uint8_t)(bufsize), (uint8_t)(bufsize >> 8), (uint8_t)(bufsize >> 16), 1});
 
 
     tcp::Connection conn;
