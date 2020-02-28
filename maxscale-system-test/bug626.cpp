@@ -27,7 +27,6 @@ int main(int argc, char* argv[])
     mysql_close(conn);
 
     execute_query(test.repl->nodes[0], "DROP USER 'old'@'%%'");
-    test.log_includes(0, "MaxScale does not support these old passwords");
 
     return test.global_result;
 }
