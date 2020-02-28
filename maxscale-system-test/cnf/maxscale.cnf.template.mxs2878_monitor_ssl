@@ -35,13 +35,3 @@ module=mysqlmon
 servers=server1,server2,server3,server4
 user=maxskysql
 password=skysql
-
-[CLI]
-type=service
-router=cli
-
-[CLI-Listener]
-type=listener
-service=CLI
-protocol=maxscaled
-socket=default
