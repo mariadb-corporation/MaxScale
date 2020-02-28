@@ -8,8 +8,10 @@ int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
 
-    test.maxscales->ssh_node_f(0, true, "maxctrl set server server3 slave");
-    test.maxscales->ssh_node_f(0, true, "maxctrl set server server4 slave");
+    test.maxctrl("set server server3 running");
+    test.maxctrl("set server server3 slave");
+    test.maxctrl("set server server4 running");
+    test.maxctrl("set server server4 slave");
 
     test.repl->connect();
     execute_query(test.repl->nodes[0], "CREATE OR REPLACE TABLE test.t1 AS SELECT 1 AS id");
@@ -19,7 +21,7 @@ int main(int argc, char** argv)
     test.repl->sync_slaves();
     test.repl->disconnect();
 
-    test.maxscales->connect();
+    test.maxscales->connect_rwsplit();
 
     Row server1 = get_row(test.maxscales->conn_rwsplit[0],
                           "SELECT @@server_id, @@last_insert_id, id FROM test.t1");
