@@ -97,6 +97,9 @@ private:
     MHD_Connection* m_connection;   /**< Connection handle */
     std::string     m_data;         /**< Uploaded data */
     state           m_state;        /**< Client state */
+    std::string     m_user;         /**< The user account */
+
+    bool auth_with_token(const std::string& token);
 };
 
 /**

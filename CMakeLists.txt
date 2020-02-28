@@ -65,6 +65,7 @@ include_directories(BEFORE ${MARIADB_CONNECTOR_INCLUDE_DIR})
 
 include(cmake/BuildJansson.cmake)
 include(cmake/BuildMicroHttpd.cmake)
+include(cmake/BuildJwtCpp.cmake)
 
 include_directories(${JANSSON_INCLUDE_DIR})
 

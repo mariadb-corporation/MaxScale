@@ -25,6 +25,7 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <sys/stat.h>
+#include <jwt-cpp/jwt.h>
 
 #include <maxbase/atomic.h>
 #include <maxbase/assert.h>
@@ -50,7 +51,7 @@ static struct ThisUnit
     std::string        ssl_ca;
     bool               using_ssl = false;
     bool               log_daemon_errors = true;
-
+    std::string        sign_key;
 } this_unit;
 
 int header_cb(void* cls,
@@ -299,6 +300,24 @@ void close_client(void* cls,
     Client* client = static_cast<Client*>(*con_cls);
     delete client;
 }
+
+bool authorize_user(const char* method, const char* user, const char* url)
+{
+    bool rval = true;
+
+    if (modifies_data(method) && !admin_user_is_inet_admin(user, nullptr))
+    {
+        if (mxs::Config::get().admin_log_auth_failures.get())
+        {
+            MXS_WARNING("Authorization failed for '%s', request requires "
+                        "administrative privileges. Request: %s %s",
+                        user, method, url);
+        }
+        rval = false;
+    }
+
+    return rval;
+}
 }
 
 int Client::process(string url, string method, const char* upload_data, size_t* upload_size)
@@ -329,16 +348,30 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
 
     HttpRequest request(m_connection, url, method, json);
     HttpResponse reply(MHD_HTTP_NOT_FOUND);
-
     MXS_DEBUG("Request:\n%s", request.to_string().c_str());
     request.fix_api_version();
-    reply = resource_handle_request(request);
+
+
+    if (request.uri_part_count() == 1 && request.uri_segment(0, 1) == "auth")
+    {
+        auto now = std::chrono::system_clock::now();
+        auto token = jwt::create()
+            .set_issuer("maxscale")
+            .set_audience(m_user)
+            .set_issued_at(now)
+            .set_expires_at(now + std::chrono::seconds {28800})
+            .sign(jwt::algorithm::hs256 {this_unit.sign_key});
+
+        reply = HttpResponse(MHD_HTTP_OK, json_pack("{s: s}", "token", token.c_str()));
+    }
+    else
+    {
+        reply = resource_handle_request(request);
+    }
 
     string data;
 
-    json_t* js = reply.get_response();
-
-    if (js)
+    if (json_t* js = reply.get_response())
     {
         int flags = 0;
         string pretty = request.get_option("pretty");
@@ -387,51 +420,71 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
     return rval;
 }
 
+bool Client::auth_with_token(const std::string& token)
+{
+    bool rval = false;
+
+    try
+    {
+        auto d = jwt::decode(token.substr(7));
+        jwt::verify()
+        .allow_algorithm(jwt::algorithm::hs256 {this_unit.sign_key})
+        .with_issuer("maxscale")
+        .verify(d);
+
+        m_user = *d.get_audience().begin();
+        rval = true;
+    }
+    catch (const std::exception& e)
+    {
+        MXS_ERROR("Failed to validate token: %s", e.what());
+    }
+
+    return rval;
+}
+
 bool Client::auth(MHD_Connection* connection, const char* url, const char* method)
 {
     bool rval = true;
 
     if (mxs::Config::get().admin_auth)
     {
-        char* pw = NULL;
-        char* user = MHD_basic_auth_get_username_password(connection, &pw);
+        auto token = get_headers(connection)[MHD_HTTP_HEADER_AUTHORIZATION];
 
-        auto admin_log_auth_failures = mxs::Config::get().admin_log_auth_failures.get();
-
-        if (!user || !pw || !admin_verify_inet_user(user, pw))
+        if (token.substr(0, 7) == "Bearer ")
         {
-            if (admin_log_auth_failures)
-            {
-                MXS_WARNING("Authentication failed for '%s', %s. Request: %s %s",
-                            user ? user : "",
-                            pw ? "using password" : "no password",
-                            method,
-                            url);
-            }
-
-            rval = false;
-        }
-        else if (modifies_data(method) && !admin_user_is_inet_admin(user, pw))
-        {
-            if (admin_log_auth_failures)
-            {
-                MXS_WARNING("Authorization failed for '%s', request requires "
-                            "administrative privileges. Request: %s %s",
-                            user,
-                            method,
-                            url);
-            }
-            rval = false;
+            rval = auth_with_token(token);
         }
         else
         {
-            MXS_INFO("Accept authentication from '%s', %s. Request: %s",
-                     user ? user : "",
-                     pw ? "using password" : "no password",
-                     url);
+            rval = false;
+            char* pw = NULL;
+            char* user = MHD_basic_auth_get_username_password(connection, &pw);
+
+            if (!user || !pw || !admin_verify_inet_user(user, pw))
+            {
+                if (mxs::Config::get().admin_log_auth_failures.get())
+                {
+                    MXS_WARNING("Authentication failed for '%s', %s. Request: %s %s",
+                                user ? user : "",
+                                pw ? "using password" : "no password",
+                                method, url);
+                }
+            }
+            else if (authorize_user(user, method, url))
+            {
+                MXS_INFO("Accept authentication from '%s', %s. Request: %s",
+                         user ? user : "",
+                         pw ? "using password" : "no password",
+                         url);
+
+                // Store the username for later in case we are generating a token
+                m_user = user ? user : "";
+                rval = true;
+            }
+            MXS_FREE(user);
+            MXS_FREE(pw);
         }
-        MXS_FREE(user);
-        MXS_FREE(pw);
     }
 
     m_state = rval ? Client::OK : Client::FAILED;
@@ -442,6 +495,18 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
 bool mxs_admin_init()
 {
     struct sockaddr_storage addr;
+
+    // Initialize JWT signing key
+    std::random_device r;
+    std::mt19937_64 gen(r());
+    std::ostringstream ss;
+
+    for (int i = 0; i < 2048; i++)
+    {
+        ss << std::hex << gen();
+    }
+
+    this_unit.sign_key = ss.str();
 
     const auto& config = mxs::Config::get();
 
