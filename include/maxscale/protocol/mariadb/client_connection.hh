@@ -52,7 +52,7 @@ public:
 
     static bool parse_kill_query(char* query, uint64_t* thread_id_out, kill_type_t* kt_out,
                                  std::string* user_out);
-    void mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t target_id, kill_type_t type);
+    void mxs_mysql_execute_kill(uint64_t target_id, kill_type_t type);
     bool in_routing_state() const;
 
 private:
@@ -81,38 +81,31 @@ private:
 
     StateMachineRes process_handshake();
     StateMachineRes process_authentication(AuthType auth_type);
-    bool            perform_auth_exchange();
-    void            perform_check_token(AuthType auth_type);
-
     StateMachineRes process_normal_read();
-    bool            process_normal_packet(mxs::Buffer&& buffer);
 
-    bool parse_handshake_response_packet(GWBUF* buffer);
+    int  send_mysql_client_handshake();
     bool parse_ssl_request_packet(GWBUF* buffer);
+    bool parse_handshake_response_packet(GWBUF* buffer);
+
+    bool perform_auth_exchange();
+    void perform_check_token(AuthType auth_type);
+    bool process_normal_packet(mxs::Buffer&& buffer);
+    bool route_statement(mxs::Buffer&& buffer);
 
     bool start_change_user(mxs::Buffer&& buffer);
     bool complete_change_user();
     void cancel_change_user();
 
-    void handle_use_database(GWBUF* read_buffer);
+    void  handle_use_database(GWBUF* read_buffer);
+    char* handle_variables(GWBUF** read_buffer);
 
-    bool route_statement(mxs::Buffer&& buffer);
+    SpecialCmdRes process_special_commands(GWBUF* read_buffer, uint8_t cmd);
+    SpecialCmdRes handle_query_kill(GWBUF* read_buffer, uint32_t packet_len);
 
-    SpecialCmdRes process_special_commands(DCB* dcb, GWBUF* read_buffer, uint8_t cmd);
-    SpecialCmdRes handle_query_kill(DCB* dcb, GWBUF* read_buffer, uint32_t packet_len);
-
-    int mysql_send_auth_error(DCB* dcb, int packet_number, const char* mysql_message);
-
-    int    mysql_send_standard_error(DCB* dcb, int sequence, int errnum, const char* msg);
-    GWBUF* mysql_create_standard_error(int sequence, int error_number, const char* msg);
-
-    int   send_mysql_client_handshake();
-    char* handle_variables(MXS_SESSION* session, GWBUF** read_buffer);
-    void  track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf);
-    void  mxs_mysql_execute_kill_all_others(MXS_SESSION* issuer, uint64_t target_id,
-                                            uint64_t keep_protocol_thread_id, kill_type_t type);
-    void mxs_mysql_execute_kill_user(MXS_SESSION* issuer, const char* user, kill_type_t type);
-    void execute_kill(MXS_SESSION* issuer, std::shared_ptr<KillInfo> info);
+    void track_transaction_state(MXS_SESSION* session, GWBUF* packetbuf);
+    void execute_kill_all_others(uint64_t target_id, uint64_t keep_protocol_thread_id, kill_type_t type);
+    void execute_kill_user(const char* user, kill_type_t type);
+    void execute_kill(std::shared_ptr<KillInfo> info);
     void track_current_command(const mxs::Buffer& buf);
     void update_sequence(GWBUF* buf);
     bool large_query_continues(const mxs::Buffer& buffer) const;
@@ -130,8 +123,12 @@ private:
         NO_PLUGIN,
     };
 
-    void send_authetication_error(AuthErrorType error, const std::string& auth_mod_msg = "");
-    void send_misc_error(const std::string& msg);
+    void   send_authetication_error(AuthErrorType error, const std::string& auth_mod_msg = "");
+    void   send_misc_error(const std::string& msg);
+    int    send_auth_error(int packet_number, const char* mysql_message);
+    int    send_standard_error(int packet_number, int error_number, const char* error_message);
+    GWBUF* create_standard_error(int sequence, int error_number, const char* msg);
+    void   write_ok_packet(int sequence, uint8_t affected_rows = 0, const char* message = nullptr);
 
     // General connection state
     enum class State

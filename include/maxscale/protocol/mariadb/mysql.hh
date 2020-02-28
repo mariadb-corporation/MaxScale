@@ -363,9 +363,6 @@ GWBUF* mxs_mysql_create_ok(int sequence, uint8_t affected_rows, const char* mess
 
 void init_response_status(GWBUF* buf, uint8_t cmd, int* npackets, size_t* nbytes);
 
-/** Write an OK packet to a DCB */
-int mxs_mysql_send_ok(DCB* dcb, int sequence, uint8_t affected_rows, const char* message);
-
 /**
  * @brief Check if the buffer contains an OK packet
  *

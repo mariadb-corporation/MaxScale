@@ -188,10 +188,6 @@ GWBUF* mxs_mysql_create_ok(int sequence, uint8_t affected_rows, const char* mess
     return buf;
 }
 
-int mxs_mysql_send_ok(DCB* dcb, int sequence, uint8_t affected_rows, const char* message)
-{
-    return dcb->protocol_write(mxs_mysql_create_ok(sequence, affected_rows, message));
-}
 /**
  * @brief Computes the size of the response to the DB initial handshake
  *

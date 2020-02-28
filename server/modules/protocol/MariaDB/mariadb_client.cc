@@ -622,7 +622,7 @@ MariaDBClientConnection::process_authentication(AuthType auth_type)
 
         case AuthState::COMPLETE:
             m_sql_mode = m_session->listener_data()->m_default_sql_mode;
-            mxs_mysql_send_ok(m_dcb, m_session_data->next_sequence, 0, NULL);
+            write_ok_packet(m_session_data->next_sequence);
             if (m_dcb->readq())
             {
                 // The user has already sent more data, process it
@@ -694,13 +694,12 @@ void MariaDBClientConnection::update_user_account_entry()
 /**
  * Handle relevant variables
  *
- * @param session      The session for which the query classifier mode is adjusted.
  * @param read_buffer  Pointer to a buffer, assumed to contain a statement.
  *                     May be reallocated if not contiguous.
  *
  * @return NULL if successful, otherwise dynamically allocated error message.
  */
-char* MariaDBClientConnection::handle_variables(MXS_SESSION* session, GWBUF** read_buffer)
+char* MariaDBClientConnection::handle_variables(GWBUF** read_buffer)
 {
     char* message = NULL;
 
@@ -726,12 +725,12 @@ char* MariaDBClientConnection::handle_variables(MXS_SESSION* session, GWBUF** re
                 switch (sql_mode_parser.get_sql_mode(value.first, value.second))
                 {
                 case SqlModeParser::ORACLE:
-                    session->set_autocommit(false);
+                    m_session->set_autocommit(false);
                     m_sql_mode = QC_SQL_MODE_ORACLE;
                     break;
 
                 case SqlModeParser::DEFAULT:
-                    session->set_autocommit(true);
+                    m_session->set_autocommit(true);
                     m_sql_mode = QC_SQL_MODE_DEFAULT;
                     break;
 
@@ -758,7 +757,7 @@ char* MariaDBClientConnection::handle_variables(MXS_SESSION* session, GWBUF** re
                 const SetParser::Result::Item& variable = *i;
                 const SetParser::Result::Item& value = *j;
 
-                message = session_set_variable_value(session,
+                message = session_set_variable_value(m_session,
                                                      variable.first,
                                                      variable.second,
                                                      value.first,
@@ -1026,14 +1025,13 @@ bool MariaDBClientConnection::parse_kill_query(char* query, uint64_t* thread_id_
  * commands in the beginning of the packet and with no comments.
  * Increased parsing would slow down the handling of every single query.
  *
- * @param dcb         Client dcb
  * @param read_buffer Input buffer
  * @param packet_len  Length of the protocol packet
  *
  * @return RES_CONTINUE or RES_END
  */
 MariaDBClientConnection::SpecialCmdRes
-MariaDBClientConnection::handle_query_kill(DCB* dcb, GWBUF* read_buffer, uint32_t packet_len)
+MariaDBClientConnection::handle_query_kill(GWBUF* read_buffer, uint32_t packet_len)
 {
     auto rval = SpecialCmdRes::CONTINUE;
     /* First, we need to detect the text "KILL" (ignorecase) in the start
@@ -1066,14 +1064,14 @@ MariaDBClientConnection::handle_query_kill(DCB* dcb, GWBUF* read_buffer, uint32_
 
             if (thread_id > 0)
             {
-                mxs_mysql_execute_kill(dcb->session(), thread_id, kt);
+                mxs_mysql_execute_kill(thread_id, kt);
             }
             else if (!user.empty())
             {
-                mxs_mysql_execute_kill_user(dcb->session(), user.c_str(), kt);
+                execute_kill_user(user.c_str(), kt);
             }
 
-            mxs_mysql_send_ok(dcb, 1, 0, NULL);
+            write_ok_packet(1);
         }
     }
 
@@ -1095,14 +1093,13 @@ void MariaDBClientConnection::handle_use_database(GWBUF* read_buffer)
  * Some SQL commands/queries need to be detected and handled by the protocol
  * and MaxScale instead of being routed forward as is.
  *
- * @param dcb         Client dcb
  * @param read_buffer The current read buffer
  * @param cmd         Current command being executed
  *
  * @return see @c spec_com_res_t
  */
 MariaDBClientConnection::SpecialCmdRes
-MariaDBClientConnection::process_special_commands(DCB* dcb, GWBUF* read_buffer, uint8_t cmd)
+MariaDBClientConnection::process_special_commands(GWBUF* read_buffer, uint8_t cmd)
 {
     auto is_use_database = [](GWBUF* buffer, size_t packet_len) -> bool {
             const char USE[] = "USE ";
@@ -1131,7 +1128,7 @@ MariaDBClientConnection::process_special_commands(DCB* dcb, GWBUF* read_buffer, 
          * a batch and then expecting N responses) then it is possible that
          * the backend connections are not idle when the COM_QUIT is received.
          * In most cases we can assume that the connections are idle. */
-        session_qualify_for_pool(dcb->session());
+        session_qualify_for_pool(m_session);
     }
     else if (cmd == MXS_COM_SET_OPTION)
     {
@@ -1153,8 +1150,8 @@ MariaDBClientConnection::process_special_commands(DCB* dcb, GWBUF* read_buffer, 
     else if (cmd == MXS_COM_PROCESS_KILL)
     {
         uint64_t process_id = gw_mysql_get_byte4(GWBUF_DATA(read_buffer) + MYSQL_HEADER_LEN + 1);
-        mxs_mysql_execute_kill(dcb->session(), process_id, KT_CONNECTION);
-        mxs_mysql_send_ok(dcb, 1, 0, NULL);
+        mxs_mysql_execute_kill(process_id, KT_CONNECTION);
+        write_ok_packet(1);
         rval = SpecialCmdRes::END;
     }
     else if (m_command == MXS_COM_INIT_DB)
@@ -1175,7 +1172,7 @@ MariaDBClientConnection::process_special_commands(DCB* dcb, GWBUF* read_buffer, 
         }
         else if (is_kill_query(read_buffer, packet_len))
         {
-            rval = handle_query_kill(dcb, read_buffer, packet_len);
+            rval = handle_query_kill(read_buffer, packet_len);
         }
     }
 
@@ -1209,7 +1206,7 @@ bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
     if (m_command == MXS_COM_QUERY)
     {
         // Track MaxScale-specific sql.
-        char* errmsg = handle_variables(m_session, &packetbuf);
+        char* errmsg = handle_variables(&packetbuf);
         if (errmsg)
         {
             rval = write(modutil_create_mysql_err_msg(1, 0, 1193, "HY000", errmsg)) != 0;
@@ -1227,7 +1224,7 @@ bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
         // the smallest version number.
         qc_set_server_version(m_version);
 
-        if (process_special_commands(m_dcb, packetbuf, m_command) == SpecialCmdRes::END)
+        if (process_special_commands(packetbuf, m_command) == SpecialCmdRes::END)
         {
             gwbuf_free(packetbuf);
             packetbuf = nullptr;
@@ -1534,7 +1531,7 @@ void MariaDBClientConnection::finish_connection()
 
 int32_t MariaDBClientConnection::connlimit(int limit)
 {
-    return mysql_send_standard_error(m_dcb, 0, 1040, "Too many connections");
+    return send_standard_error(0, 1040, "Too many connections");
 }
 
 MariaDBClientConnection::MariaDBClientConnection(MXS_SESSION* session, mxs::Component* component)
@@ -1550,13 +1547,12 @@ MariaDBClientConnection::MariaDBClientConnection(MXS_SESSION* session, mxs::Comp
  *
  * Send a MySQL protocol ERR message, for gateway authentication error to the dcb
  *
- * @param dcb descriptor Control Block for the connection to which the OK is sent
  * @param packet_number
  * @param mysql_message
  * @return packet length
  *
  */
-int MariaDBClientConnection::mysql_send_auth_error(DCB* dcb, int packet_number, const char* mysql_message)
+int MariaDBClientConnection::send_auth_error(int packet_number, const char* mysql_message)
 {
     uint8_t* outbuf = NULL;
     uint32_t mysql_payload_size = 0;
@@ -1568,14 +1564,7 @@ int MariaDBClientConnection::mysql_send_auth_error(DCB* dcb, int packet_number, 
     const char* mysql_error_msg = NULL;
     const char* mysql_state = NULL;
 
-    GWBUF* buf;
-
-    if (dcb->state() != DCB::State::POLLING)
-    {
-        MXS_DEBUG("dcb %p is in a state %s, and it is not in epoll set anymore. Skip error sending.",
-                  dcb, mxs::to_string(dcb->state()));
-        return 0;
-    }
+    mxb_assert(m_dcb->state() == DCB::State::POLLING);
     mysql_error_msg = "Access denied!";
     mysql_state = "28000";
 
@@ -1593,7 +1582,8 @@ int MariaDBClientConnection::mysql_send_auth_error(DCB* dcb, int packet_number, 
         sizeof(field_count) + sizeof(mysql_err) + sizeof(mysql_statemsg) + strlen(mysql_error_msg);
 
     // allocate memory for packet header + payload
-    if ((buf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size)) == NULL)
+    GWBUF* buf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size);
+    if (!buf)
     {
         return 0;
     }
@@ -1624,7 +1614,7 @@ int MariaDBClientConnection::mysql_send_auth_error(DCB* dcb, int packet_number, 
     memcpy(mysql_payload, mysql_error_msg, strlen(mysql_error_msg));
 
     // writing data in the Client buffer queue
-    dcb->protocol_write(buf);
+    write(buf);
 
     return sizeof(mysql_packet_header) + mysql_payload_size;
 }
@@ -1637,17 +1627,16 @@ int MariaDBClientConnection::mysql_send_auth_error(DCB* dcb, int packet_number, 
  * appear like a backend server error. First introduced to support connection
  * throttling, to send "Too many connections" error.
  *
- * @param dcb           The client DCB to which error is to be sent
  * @param packet_number Packet number for header
  * @param error_number  Standard error number as for MariaDB
  * @param error_message Text message to be included
  * @return 0 on failure, 1 on success
  */
-int MariaDBClientConnection::mysql_send_standard_error(DCB* dcb, int packet_number, int error_number,
-                                                       const char* error_message)
+int MariaDBClientConnection::send_standard_error(int packet_number, int error_number,
+                                                 const char* error_message)
 {
-    GWBUF* buf = mysql_create_standard_error(packet_number, error_number, error_message);
-    return buf ? dcb->protocol_write(buf) : 0;
+    GWBUF* buf = create_standard_error(packet_number, error_number, error_message);
+    return buf ? write(buf) : 0;
 }
 
 /**
@@ -1658,13 +1647,13 @@ int MariaDBClientConnection::mysql_send_standard_error(DCB* dcb, int packet_numb
  * appear like a backend server error. First introduced to support connection
  * throttling, to send "Too many connections" error.
  *
- * @param packet_number Packet number for header
+ * @param sequence Packet number for header
  * @param error_number  Standard error number as for MariaDB
- * @param error_message Text message to be included
+ * @param msg Text message to be included
  * @return GWBUF        A buffer containing the error message, ready to send
  */
-GWBUF* MariaDBClientConnection::mysql_create_standard_error(int packet_number, int error_number,
-                                                            const char* error_message)
+GWBUF* MariaDBClientConnection::create_standard_error(int packet_number, int error_number,
+                                                      const char* error_message)
 {
     uint8_t* outbuf = NULL;
     uint32_t mysql_payload_size = 0;
@@ -1706,9 +1695,9 @@ GWBUF* MariaDBClientConnection::mysql_create_standard_error(int packet_number, i
     return buf;
 }
 
-void MariaDBClientConnection::execute_kill(MXS_SESSION* issuer, std::shared_ptr<KillInfo> info)
+void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info)
 {
-    MXS_SESSION* ref = session_get_ref(issuer);
+    MXS_SESSION* ref = session_get_ref(m_session);
     auto origin = mxs::RoutingWorker::get_current();
 
     auto func = [info, ref, origin]() {
@@ -1741,10 +1730,9 @@ void MariaDBClientConnection::execute_kill(MXS_SESSION* issuer, std::shared_ptr<
     std::thread(func).detach();
 }
 
-void MariaDBClientConnection::mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64_t target_id,
-                                                     kill_type_t type)
+void MariaDBClientConnection::mxs_mysql_execute_kill(uint64_t target_id, kill_type_t type)
 {
-    mxs_mysql_execute_kill_all_others(issuer, target_id, 0, type);
+    execute_kill_all_others(target_id, 0, type);
 }
 
 /**
@@ -1753,31 +1741,28 @@ void MariaDBClientConnection::mxs_mysql_execute_kill(MXS_SESSION* issuer, uint64
  *       and really goes to the heart of explaining what the session_id/thread_id means in terms
  *       of a service/server pipeline and the recursiveness of this call.
  */
-void MariaDBClientConnection::mxs_mysql_execute_kill_all_others(MXS_SESSION* issuer,
-                                                                uint64_t target_id,
-                                                                uint64_t keep_protocol_thread_id,
-                                                                kill_type_t type)
+void MariaDBClientConnection::execute_kill_all_others(uint64_t target_id,
+                                                      uint64_t keep_protocol_thread_id,
+                                                      kill_type_t type)
 {
     const char* hard = (type & KT_HARD) ? "HARD " : (type & KT_SOFT) ? "SOFT " : "";
     const char* query = (type & KT_QUERY) ? "QUERY " : "";
     std::stringstream ss;
     ss << "KILL " << hard << query;
 
-    auto info = std::make_shared<ConnKillInfo>(target_id, ss.str(), issuer, keep_protocol_thread_id);
-    execute_kill(issuer, info);
+    auto info = std::make_shared<ConnKillInfo>(target_id, ss.str(), m_session, keep_protocol_thread_id);
+    execute_kill(info);
 }
 
-void MariaDBClientConnection::mxs_mysql_execute_kill_user(MXS_SESSION* issuer,
-                                                          const char* user,
-                                                          kill_type_t type)
+void MariaDBClientConnection::execute_kill_user(const char* user, kill_type_t type)
 {
     const char* hard = (type & KT_HARD) ? "HARD " : (type & KT_SOFT) ? "SOFT " : "";
     const char* query = (type & KT_QUERY) ? "QUERY " : "";
     std::stringstream ss;
     ss << "KILL " << hard << query << "USER " << user;
 
-    auto info = std::make_shared<UserKillInfo>(user, ss.str(), issuer);
-    execute_kill(issuer, info);
+    auto info = std::make_shared<UserKillInfo>(user, ss.str(), m_session);
+    execute_kill(info);
 }
 
 std::string MariaDBClientConnection::current_db() const
@@ -2040,6 +2025,7 @@ void MariaDBClientConnection::cancel_change_user()
     m_change_user.client_query.reset();
     m_change_user.session = nullptr;
 }
+
 MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handshake()
 {
     mxs::Buffer read_buffer;
@@ -2122,7 +2108,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handsh
                 }
                 else
                 {
-                    mysql_send_auth_error(m_dcb, next_seq, "Access without SSL denied");
+                    send_auth_error(next_seq, "Access without SSL denied");
                     MXB_ERROR("Client (%s) failed SSL negotiation.", m_session_data->remote.c_str());
                     m_handshake_state = HSState::FAIL;
                 }
@@ -2419,4 +2405,9 @@ bool MariaDBClientConnection::process_normal_packet(mxs::Buffer&& buffer)
         success = routed;
     }
     return success;
+}
+
+void MariaDBClientConnection::write_ok_packet(int sequence, uint8_t affected_rows, const char* message)
+{
+    write(mxs_mysql_create_ok(sequence, affected_rows, message));
 }
