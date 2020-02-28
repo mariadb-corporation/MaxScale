@@ -772,25 +772,20 @@ bool check_monitor_permissions(MXS_MONITOR* monitor, const char* query)
 
     for (MXS_MONITORED_SERVER* mondb = monitor->monitored_servers; mondb; mondb = mondb->next)
     {
-        if (!mon_connection_is_ok(mon_ping_or_connect_to_db(monitor, mondb)))
+        auto result = mon_ping_or_connect_to_db(monitor, mondb);
+
+        if (!mon_connection_is_ok(result))
         {
             MXS_ERROR("[%s] Failed to connect to server '%s' ([%s]:%d) when"
-                      " checking monitor user credentials and permissions: %s",
+                      " checking monitor user credentials and permissions.",
                       monitor->name,
                       mondb->server->name,
                       mondb->server->address,
-                      mondb->server->port,
-                      mysql_error(mondb->con));
-            switch (mysql_errno(mondb->con))
-            {
-            case ER_ACCESS_DENIED_ERROR:
-            case ER_DBACCESS_DENIED_ERROR:
-            case ER_ACCESS_DENIED_NO_PASSWORD_ERROR:
-                break;
+                      mondb->server->port);
 
-            default:
+            if (result != MONITOR_CONN_ACCESS_DENIED)
+            {
                 rval = true;
-                break;
             }
         }
         else if (mxs_mysql_query(mondb->con, query) != 0)
@@ -1499,7 +1494,13 @@ mxs_connect_result_t mon_ping_or_connect_to_db(MXS_MONITOR* mon, MXS_MONITORED_S
         }
         else
         {
+            auto err = mysql_errno(mysql);
             mysql_close(mysql);
+
+            if (err == ER_ACCESS_DENIED_ERROR || err == ER_ACCESS_DENIED_NO_PASSWORD_ERROR)
+            {
+                conn_result = MONITOR_CONN_ACCESS_DENIED;
+            }
         }
 
         if (conn_result == MONITOR_CONN_REFUSED && (int)difftime(end, start) >= mon->connect_timeout)
@@ -2844,7 +2845,7 @@ void MonitorInstanceSimple::tick()
                  */
                 monitor_clear_pending_status(pMs, SERVER_DOWN_CLEAR_BITS);
 
-                if (mysql_errno(pMs->con) == ER_ACCESS_DENIED_ERROR)
+                if (rval == MONITOR_CONN_ACCESS_DENIED)
                 {
                     monitor_set_pending_status(pMs, SERVER_AUTH_ERROR);
                 }

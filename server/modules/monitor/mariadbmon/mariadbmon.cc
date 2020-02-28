@@ -382,8 +382,8 @@ void MariaDBMonitor::update_server(MariaDBServer* server)
         // The server is not running. Clear some of the bits. User-set bits and some long-term bits
         // can stay.
         server->clear_status(SERVER_DOWN_CLEAR_BITS);
-        auto conn_errno = mysql_errno(conn);
-        if (conn_errno == ER_ACCESS_DENIED_ERROR || conn_errno == ER_ACCESS_DENIED_NO_PASSWORD_ERROR)
+
+        if (conn_status == MONITOR_CONN_ACCESS_DENIED)
         {
             server->set_status(SERVER_AUTH_ERROR);
         }

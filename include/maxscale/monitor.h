@@ -179,7 +179,8 @@ typedef enum
     MONITOR_CONN_NEWCONN_OK,    /* No existing connection or no ping reply. New connection created
                                  * successfully. */
     MONITOR_CONN_REFUSED,       /* No existing connection or no ping reply. Server refused new connection. */
-    MONITOR_CONN_TIMEOUT        /* No existing connection or no ping reply. Timeout on new connection. */
+    MONITOR_CONN_TIMEOUT,       /* No existing connection or no ping reply. Timeout on new connection. */
+    MONITOR_CONN_ACCESS_DENIED  /* Server refused new connection due to authentication failure */
 } mxs_connect_result_t;
 
 /** Monitor events */
