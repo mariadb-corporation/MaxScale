@@ -334,7 +334,6 @@ mxs::Users CDCAuthenticatorModule::read_users(char* usersfile)
  */
 int CDCAuthenticatorModule::load_users(SERVICE* service)
 {
-    int rc = MXS_AUTH_LOADUSERS_ERROR;
     char path[PATH_MAX + 1];
     snprintf(path, PATH_MAX, "%s/%s/%s",
              get_datadir(), service->name(), CDC_USERS_FILENAME);
@@ -345,9 +344,8 @@ int CDCAuthenticatorModule::load_users(SERVICE* service)
         /** Successfully loaded at least one user */
         // TODO: separate failed user load and no user data cases.
         m_userdata = std::move(new_users);
-        rc = MXS_AUTH_LOADUSERS_OK;
     }
 
     set_service_user(service);
-    return rc;
+    return MXS_AUTH_LOADUSERS_OK;
 }
