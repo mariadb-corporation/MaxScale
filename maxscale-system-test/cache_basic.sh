@@ -27,14 +27,42 @@ function install_package
     fi
 }
 
-function install_redis_on_node_000
+function start_service
 {
-    install_package ${node_000_keyfile} ${node_000_whoami} ${node_000_network} redis
+    local keyfile=$1
+    local user=$2
+    local host=$3
+    local service=$4
+
+    echo "Starting $package on $host."
+
+    ssh -i ${keyfile} -o StrictHostKeyChecking=no ${user}@${host} sudo systemctl start ${service}
+
+    if [ $? -ne 0 ]
+    then
+        echo "error: Could not start $service on $host."
+        exit 1
+    fi
 }
 
-function install_memcached_on_node_000
+function install_redis_on_maxscale_000
 {
-    install_package ${node_000_keyfile} ${node_000_whoami} ${node_000_network} memcached
+    install_package ${maxscale_000_keyfile} ${maxscale_000_whoami} ${maxscale_000_network} redis
+}
+
+function start_redis_on_maxscale_000
+{
+    start_service ${maxscale_000_keyfile} ${maxscale_000_whoami} ${maxscale_000_network} redis
+}
+
+function install_memcached_on_maxscale_000
+{
+    install_package ${maxscale_000_keyfile} ${maxscale_000_whoami} ${maxscale_000_network} memcached
+}
+
+function start_memcached_on_maxscale_000
+{
+    start_service ${maxscale_000_keyfile} ${maxscale_000_whoami} ${maxscale_000_network} memcached
 }
 
 function run_test
@@ -93,6 +121,7 @@ let seconds=$soft_ttl+2
 function run_tests
 {
     local port=$1
+    local seconds=$2
 
     run_test $port create || exit 1
     run_test $port insert1 || exit 1
@@ -130,14 +159,21 @@ function run_tests
     run_test $port drop || exit 1
 }
 
-# See cnf/maxscale.cnf.template.cache_basic for the port
+# See cnf/maxscale.cnf.template.cache_basic for the ports
+
 echo Testing with local storage
-run_tests 4008
+let seconds=$soft_ttl+2
+run_tests 4008 $seconds
 
 echo Testing with memcached storage
-install_memcached_on_node_000
-run_tests 4009
+install_memcached_on_maxscale_000
+start_memcached_on_maxscale_000
+let seconds=$soft_ttl+2
+run_tests 4009 $seconds
 
 echo Testing with redis storage
-install_redis_on_node_000
-run_tests 4010
+install_redis_on_maxscale_000
+start_redis_on_maxscale_000
+# Redis does not distinguish between soft/hard TTL
+let seconds=$hard_ttl+2
+run_tests 4010 $seconds
