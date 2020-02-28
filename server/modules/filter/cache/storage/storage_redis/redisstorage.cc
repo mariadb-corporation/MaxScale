@@ -767,11 +767,10 @@ private:
         }
 
         // Then the actual value is stored.
-        MXB_AT_DEBUG(rc =) m_redis.appendCommand("SET %b %b%s",
+        MXB_AT_DEBUG(rc =) m_redis.appendCommand(m_set_format.c_str(),
                                                  rkey.data(), rkey.size(),
                                                  reinterpret_cast<const char*>(GWBUF_DATA(pClone)),
-                                                 GWBUF_LENGTH(pClone),
-                                                 m_set_options.c_str());
+                                                 GWBUF_LENGTH(pClone));
         mxb_assert(rc == REDIS_OK);
 
         // Commit the transaction, will actually be sent only when we ask for the reply.
@@ -1040,11 +1039,12 @@ private:
         : m_redis(pRedis)
         , m_pWorker(mxb::Worker::get_current())
         , m_invalidate(invalidate)
+        , m_set_format("SET %b %b")
     {
         if (ttl != 0)
         {
-            m_set_options += " PX "; // The leading space is significant.
-            m_set_options += std::to_string(ttl);
+            m_set_format += " PX ";
+            m_set_format += std::to_string(ttl);
         }
     }
 
@@ -1052,7 +1052,7 @@ private:
     Redis        m_redis;
     mxb::Worker* m_pWorker;
     bool         m_invalidate;
-    std::string  m_set_options;
+    std::string  m_set_format;
 };
 
 }
