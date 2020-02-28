@@ -93,7 +93,7 @@ bool MariaDB::open(const std::string& host, unsigned int port, const std::string
         }
     }
 
-    if (connection_success)
+    if (connection_success && mysql_query(newconn, "SET SQL_MODE=''") == 0)
     {
         clear_errors();
         m_conn = newconn;
