@@ -70,11 +70,11 @@ Result check(TestConnections& test, Connection& c, const string& stmt, Expect ex
     return rows;
 }
 
-void run(TestConnections& test, Expect expect)
+void run(TestConnections& test, int port, Expect expect)
 {
     create(test);
 
-    Connection c = test.maxscales->rwsplit();
+    Connection c = test.maxscales->get_connection(port);
     c.connect();
     c.query("INSERT INTO cache_invalidate values (1)");
 
@@ -88,6 +88,9 @@ void run(TestConnections& test, Expect expect)
 }
 }
 
+const int PORT_LOCAL_CACHE = 4006;
+const int PORT_REDIS_CACHE = 4007;
+
 int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
@@ -98,11 +101,18 @@ int main(int argc, char* argv[])
     {
         // Non-invalidated cache
         test.tprintf("Testing non-invalidated cache.");
-        run(test, Expect::SAME);
+        test.tprintf("Local storage.");
+        run(test, PORT_LOCAL_CACHE, Expect::SAME);
+        test.tprintf("Redis storage.");
+        run(test, PORT_REDIS_CACHE, Expect::SAME);
 
         // Invalidated cache
+
+        // When the 'invalidate' flag is turned on, we also need to flush redis.
+        // Otherwise there will be entries that are not subject to invalidation.
         maxscales->ssh_node(0,
-                            "sed -i \"s/invalidate=never/invalidate=current/\" /etc/maxscale.cnf",
+                            "sed -i \"s/invalidate=never/invalidate=current/\" /etc/maxscale.cnf; "
+                            "redis-cli flushall",
                             true);
         maxscales->restart_maxscale();
 
@@ -112,9 +122,10 @@ int main(int argc, char* argv[])
         if (maxscales->connect_rwsplit(0) == 0)
         {
             test.tprintf("Testing invalidated cache.");
-            run(test, Expect::DIFFERENT);
-
-            drop(test);
+            test.tprintf("Local storage.");
+            run(test, PORT_LOCAL_CACHE, Expect::DIFFERENT);
+            test.tprintf("Redis storage.");
+            run(test, PORT_REDIS_CACHE, Expect::DIFFERENT);
         }
         else
         {
