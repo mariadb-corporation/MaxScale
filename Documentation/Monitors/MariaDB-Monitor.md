@@ -1,46 +1,6 @@
 # MariaDB Monitor
 
-Table of Contents
-=================
-
-  * [Overview](#overview)
-  * [Master selection](#master-selection)
-  * [Configuration](#configuration)
-  * [Common Monitor Parameters](#common-monitor-parameters)
-  * [MariaDB Monitor optional parameters](#mariadb-monitor-optional-parameters)
-     * [assume_unique_hostnames](#assume_unique_hostnames)
-     * [detect_replication_lag](#detect_replication_lag)
-     * [detect_stale_master](#detect_stale_master)
-     * [detect_stale_slave](#detect_stale_slave)
-     * [mysql51_replication](#mysql51_replication)
-     * [multimaster](#multimaster)
-     * [ignore_external_masters](#ignore_external_masters)
-     * [detect_standalone_master](#detect_standalone_master)
-     * [failcount](#failcount)
-     * [allow_cluster_recovery](#allow_cluster_recovery)
-     * [enforce_read_only_slaves](#enforce_read_only_slaves)
-     * [maintenance_on_low_disk_space](#maintenance_on_low_disk_space)
-  * [Cluster manipulation operations](#cluster-manipulation-operations)
-     * [Operation details](#operation-details)
-     * [Manual activation](#manual-activation)
-     * [Automatic activation](#automatic-activation)
-     * [Limitations and requirements](#limitations-and-requirements)
-     * [External master support](#external-master-support)
-     * [Configuration parameters](#configuration-parameters)
-        * [auto_failover](#auto_failover)
-        * [auto_rejoin](#auto_rejoin)
-        * [switchover_on_low_disk_space](#switchover_on_low_disk_space)
-        * [enforce_simple_topology](#enforce_simple_topology)
-        * [replication_user and replication_password](#replication_user-and-replication_password)
-        * [failover_timeout and switchover_timeout](#failover_timeout-and-switchover_timeout)
-        * [verify_master_failure and master_failure_timeout](#verify_master_failure-and-master_failure_timeout)
-        * [servers_no_promotion](#servers_no_promotion)
-        * [promotion_sql_file and demotion_sql_file](#promotion_sql_file-and-demotion_sql_file)
-        * [handle_events](#handle_events)
-  * [Troubleshooting](#troubleshooting)
-     * [Failover/switchover fails](#failoverswitchover-fails)
-     * [Slave detection shows external masters](#slave-detection-shows-external-masters)
-  * [Using the MariaDB Monitor With Binlogrouter](#using-the-mariadb-monitor-with-binlogrouter)
+[TOC]
 
 ## Overview
 
@@ -260,6 +220,14 @@ routed to a server without previous events. To prevent this, avoid having
 multiple valid master servers in the cluster.
 
 The default value is 5 failures.
+
+The worst-case delay between the master failure and the start of the failover
+can be calculated by summing up the timeout values and `monitor_interval` and
+multiplying that by `failcount`:
+
+```
+(monitor_interval + backend_connect_timeout) * failcount
+```
 
 ### `allow_cluster_recovery`
 
