@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "testconnections.h"
+#include "mariadb_nodes.h"
 #include "failover_common.cpp"
 
 int main(int argc, char** argv)
