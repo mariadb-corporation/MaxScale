@@ -4,24 +4,7 @@
 
 # The Maxscale Administrative & Monitoring Client Application
 
- - [Overview](#overview)
- - [Configuring MariaDB MaxScale for MaxAdmin](#configuring-mariadb-maxscale-for-maxadmin)
- - [Running MaxAdmin](#running-maxadmin)
- - [Working With Administration Interface Users](#working-with-administration-interface-users)
- - [Getting Help](#getting-help)
- - [Working with Services](#working-with-services)
- - [Working with Servers](#working-with-servers)
- - [Working with Sessions](#working-with-sessions)
- - [Descriptor Control Blocks](#descriptor-control-blocks)
- - [Working with Filters](#working-with-filters)
- - [Working with Monitors](#working-with-monitors)
- - [MariaDB MaxScale Status Commands](#maxscale-status-commands)
- - [Administration Commands](#administration-commands)
- - [Runtime Configuration Changes](#runtime-configuration-changes)
-   - [Servers](#servers)
-   - [Listeners](#listeners)
-   - [Monitors](#monitors)
- - [Tuning MariaDB MaxScale](#tuning-mariadb-maxscale)
+[TOC]
 
 # Overview
 
