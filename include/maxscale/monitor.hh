@@ -576,8 +576,20 @@ protected:
     /**< Number of monitor ticks ran. Derived classes should increment this whenever completing a tick. */
     std::atomic_long m_ticks {0};
 
-private:
+protected:
+    /**
+     * Can a server be disabled, that is, set to maintenance or draining mode.
+     *
+     * @param server      A server being monitored by this monitor.
+     * @param errmsg_out  If cannot be, on return explanation why.
+     *
+     * @return True, if the server can be disabled, false otherwise.
+     *
+     * @note The default implementation return true.
+     */
+    virtual bool can_be_disabled(const MonitorServer& server, std::string* errmsg_out) const;
 
+private:
     /**
      * Creates a new monitored server object. Called by monitor configuration code. If a monitor wants to
      * implements its own server-class, it must override this function.

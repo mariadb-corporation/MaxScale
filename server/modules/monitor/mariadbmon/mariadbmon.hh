@@ -107,6 +107,8 @@ public:
     bool run_manual_reset_replication(SERVER* master_server, json_t** error_out);
 
 protected:
+    bool can_be_disabled(const mxs::MonitorServer& server, std::string* errmsg_out) const;
+
     void pre_loop() override;
     void tick() override;
     void process_state_changes() override;

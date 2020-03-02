@@ -25,6 +25,12 @@ The default timeout values for user loading have been changed.
 * `auth_read_timeout` changed from 1 to 10 seconds
 * `auth_write_timeout` changed from 2 to 10 seconds
 
+### Setting a server to maintenance or draining mode
+
+In the case of a regular MariaDB cluster (monitored by the MariaDB monitor),
+it is no longer possible to set the the master server to maintenance or
+draining mode, but a switchover must be performed first.
+
 ## Dropped Features
 
 ### Configuration parameters

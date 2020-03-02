@@ -1715,6 +1715,11 @@ bool Monitor::set_disk_space_threshold(const string& dst_setting)
     return rv;
 }
 
+bool Monitor::can_be_disabled(const MonitorServer& server, std::string* errmsg_out) const
+{
+    return true;
+}
+
 bool Monitor::set_server_status(SERVER* srv, int bit, string* errmsg_out)
 {
     MonitorServer* msrv = get_monitored_server(srv);
@@ -1741,7 +1746,7 @@ bool Monitor::set_server_status(SERVER* srv, int bit, string* errmsg_out)
                 *errmsg_out = ERR_CANNOT_MODIFY;
             }
         }
-        else
+        else if (can_be_disabled(*msrv, errmsg_out))
         {
             /* Maintenance and being-drained are set/cleared using a special variable which the
              * monitor reads when starting the next update cycle. */

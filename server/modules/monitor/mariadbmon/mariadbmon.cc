@@ -401,6 +401,21 @@ json_t* MariaDBMonitor::to_json() const
     return rval;
 }
 
+bool MariaDBMonitor::can_be_disabled(const mxs::MonitorServer& mserver, std::string* errmsg_out) const
+{
+    // If the server is the master, it cannot be disabled.
+    bool can_be = !status_is_master(mserver.server->status());
+
+    if (!can_be)
+    {
+        *errmsg_out =
+            "The server is master, so it cannot be set in maintenance or draining mode. "
+            "First perform a switchover and then retry the operation.";
+    }
+
+    return can_be;
+}
+
 void MariaDBMonitor::pre_loop()
 {
     // Read the journal and the last known master.
