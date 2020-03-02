@@ -1716,9 +1716,12 @@ int32_t qc_mysql_get_table_names(GWBUF* querybuf, int32_t fullnames, std::vector
                 }
             }
 
-            if (std::find(tables->begin(), tables->end(), s) == tables->end())
+            if (!s.empty())
             {
-                tables->push_back(s);
+                if (std::find(tables->begin(), tables->end(), s) == tables->end())
+                {
+                    tables->push_back(s);
+                }
             }
 
             tbl = tbl->next_local;
