@@ -150,7 +150,8 @@ public:
         NEWCONN_OK,    /* No existing connection or no ping reply. New connection created
                         * successfully. */
         REFUSED,       /* No existing connection or no ping reply. Server refused new connection. */
-        TIMEOUT        /* No existing connection or no ping reply. Timeout on new connection. */
+        TIMEOUT,       /* No existing connection or no ping reply. Timeout on new connection. */
+        ACCESS_DENIED  /* Server refused new connection due to authentication failure */
     };
 
     /** Status change requests */

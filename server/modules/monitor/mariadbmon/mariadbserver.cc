@@ -2226,8 +2226,7 @@ void MariaDBServer::update_server(bool time_to_update_disk_space, bool time_to_u
         server->clear_status(MonitorServer::SERVER_DOWN_CLEAR_BITS);
         m_serverlock.set_status(ServerLock::Status::UNKNOWN);
 
-        auto conn_errno = mysql_errno(mon_srv->con);
-        if (conn_errno == ER_ACCESS_DENIED_ERROR || conn_errno == ER_ACCESS_DENIED_NO_PASSWORD_ERROR)
+        if (conn_status == ConnectResult::ACCESS_DENIED)
         {
             server->set_status(SERVER_AUTH_ERROR);
         }
