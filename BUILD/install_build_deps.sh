@@ -72,7 +72,8 @@ then
        build-essential libssl-dev ncurses-dev bison flex \
        perl libtool libpcre3-dev tcl tcl-dev uuid \
        uuid-dev libsqlite3-dev liblzma-dev libpam0g-dev pkg-config \
-       libedit-dev libcurl4-openssl-dev libatomic1
+       libedit-dev libcurl4-openssl-dev libatomic1 \
+       libsasl2-dev
 
   # One of these will work, older systems use libsystemd-daemon-dev
   sudo apt-get install -y libsystemd-dev || \
@@ -115,7 +116,8 @@ then
          libedit-devel systemtap-sdt-devel rpm-sign wget \
          gnupg pcre-devel flex rpmdevtools git wget tcl tcl-devel openssl libuuid-devel xz-devel \
          sqlite sqlite-devel pkgconfig lua lua-devel rpm-build createrepo yum-utils \
-         gnutls-devel libgcrypt-devel pam-devel libcurl-devel libatomic
+         gnutls-devel libgcrypt-devel pam-devel libcurl-devel libatomic \
+         cyrus-sasl-devel
 
     # Attempt to install libasan, it'll only work on CentOS 7
     sudo yum install -y --nogpgcheck libasan
