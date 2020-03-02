@@ -705,7 +705,8 @@ bool compare_get_database_names(QUERY_CLASSIFIER* pClassifier1,
     pClassifier1->qc_get_database_names(pCopy1, &rv1);
     pClassifier2->qc_get_database_names(pCopy2, &rv2);
 
-    stringstream ss(HEADING);
+    stringstream ss;
+    ss << HEADING;
 
     if (rv1 == rv2)
     {
