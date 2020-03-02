@@ -87,7 +87,7 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, const char* user, cons
     if (mysql)
     {
         /** Copy the server charset */
-        server->charset = mxs_mysql_get_character_set(mysql);
+        mxs_update_server_charset(mysql, server);
 
         if (ssl && mysql_get_ssl_cipher(con) == NULL)
         {
@@ -385,16 +385,15 @@ const char* dbg_decode_response(GWBUF* pPacket)
 }
 #endif
 
-uint8_t mxs_mysql_get_character_set(MYSQL* mysql)
+void mxs_update_server_charset(MYSQL* mysql, SERVER* server)
 {
-    uint8_t charset = 8; // Default is latin1 with the ID 8
     const char* CHARSET_QUERY =
         "SELECT co.id FROM information_schema.collations AS co "
         "JOIN information_schema.character_sets AS cs "
         "ON (co.collation_name = cs.default_collate_name) "
         "WHERE cs.character_set_name=@@global.character_set_server;";
 
-    if (mysql_query(mysql, CHARSET_QUERY) == 0)
+    if (mxs_mysql_query(mysql, CHARSET_QUERY) == 0)
     {
         if (auto res = mysql_use_result(mysql))
         {
@@ -402,13 +401,11 @@ uint8_t mxs_mysql_get_character_set(MYSQL* mysql)
             {
                 if (row[0])
                 {
-                    charset = atoi(row[0]);
+                    server->charset = atoi(row[0]);
                 }
             }
 
             mysql_free_result(res);
         }
     }
-
-    return charset;
 }

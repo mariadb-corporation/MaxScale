@@ -115,11 +115,12 @@ mxs_mysql_name_kind_t mxs_mysql_name_to_pcre(char* pcre,
 void mxs_mysql_update_server_version(SERVER* dest, MYSQL* source);
 
 /**
- * Get default server character set
+ * Update default server character set from @@global.character_set_server
  *
- * @return The numeric identifier of `@@global.character_set_server`
+ * @param mysql  The connection handle
+ * @param server The server to modify
  */
-uint8_t mxs_mysql_get_character_set(MYSQL* mysql);
+void mxs_update_server_charset(MYSQL* mysql, SERVER* server);
 
 namespace maxscale
 {

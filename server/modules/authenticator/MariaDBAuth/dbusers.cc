@@ -934,7 +934,7 @@ static bool check_server_permissions(SERVICE* service,
     }
 
     /** Copy the server charset */
-    server->charset = mxs_mysql_get_character_set(mysql);
+    mxs_update_server_charset(mysql, server);
 
     if (server->version().total == 0)
     {
