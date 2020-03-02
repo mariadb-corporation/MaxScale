@@ -315,15 +315,15 @@ void MariaDBBackendConnection::ready_for_reading(DCB* event_dcb)
                 auto hs_res = handshake();
                 switch (hs_res)
                 {
-                case HandShakeRes::IN_PROGRESS:
+                case StateMachineRes::IN_PROGRESS:
                     state_machine_continue = false;
                     break;
 
-                case HandShakeRes::DONE:
+                case StateMachineRes::DONE:
                     m_state = State::AUTHENTICATING;
                     break;
 
-                case HandShakeRes::ERROR:
+                case StateMachineRes::ERROR:
                     m_state = State::FAILED;
                     break;
                 }
@@ -335,15 +335,35 @@ void MariaDBBackendConnection::ready_for_reading(DCB* event_dcb)
                 auto auth_res = authenticate();
                 switch (auth_res)
                 {
-                case AuthenticateRes::IN_PROGRESS:
+                case StateMachineRes::IN_PROGRESS:
                     state_machine_continue = false;
                     break;
 
-                case AuthenticateRes::DONE:
+                case StateMachineRes::DONE:
+                    m_state = State::CONNECTION_INIT;
+                    break;
+
+                case StateMachineRes::ERROR:
+                    m_state = State::FAILED;
+                    break;
+                }
+            }
+            break;
+
+        case State::CONNECTION_INIT:
+            {
+                auto init_res = send_connection_init_queries();
+                switch (init_res)
+                {
+                case StateMachineRes::IN_PROGRESS:
+                    state_machine_continue = false;
+                    break;
+
+                case StateMachineRes::DONE:
                     m_state = State::SEND_DELAYQ;
                     break;
 
-                case AuthenticateRes::ERROR:
+                case StateMachineRes::ERROR:
                     m_state = State::FAILED;
                     break;
                 }
@@ -2256,6 +2276,10 @@ std::string MariaDBBackendConnection::to_string(State auth_state)
         rval = "Authenticating";
         break;
 
+    case State::CONNECTION_INIT:
+        rval = "Sending connection initialization queries";
+        break;
+
     case State::SEND_DELAYQ:
         rval = "Sending delayed queries";
         break;
@@ -2271,9 +2295,9 @@ std::string MariaDBBackendConnection::to_string(State auth_state)
     return rval;
 }
 
-MariaDBBackendConnection::HandShakeRes MariaDBBackendConnection::handshake()
+MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::handshake()
 {
-    auto rval = HandShakeRes::ERROR;
+    auto rval = StateMachineRes::ERROR;
     bool state_machine_continue = true;
 
     while (state_machine_continue)
@@ -2295,7 +2319,7 @@ MariaDBBackendConnection::HandShakeRes MariaDBBackendConnection::handshake()
                 {
                     // Only got a partial packet, wait for more.
                     state_machine_continue = false;
-                    rval = HandShakeRes::IN_PROGRESS;
+                    rval = StateMachineRes::IN_PROGRESS;
                 }
                 else if (mxs_mysql_get_command(buffer.get()) == MYSQL_REPLY_ERR)
                 {
@@ -2350,7 +2374,7 @@ MariaDBBackendConnection::HandShakeRes MariaDBBackendConnection::handshake()
                 else if (ssl_state == DCB::SSLState::HANDSHAKE_REQUIRED)
                 {
                     state_machine_continue = false;     // in progress, wait for more data
-                    rval = HandShakeRes::IN_PROGRESS;
+                    rval = StateMachineRes::IN_PROGRESS;
                 }
                 else
                 {
@@ -2378,36 +2402,36 @@ MariaDBBackendConnection::HandShakeRes MariaDBBackendConnection::handshake()
 
         case HandShakeState::COMPLETE:
             state_machine_continue = false;
-            rval = HandShakeRes::DONE;
+            rval = StateMachineRes::DONE;
             break;
 
         case HandShakeState::FAIL:
             state_machine_continue = false;
-            rval = HandShakeRes::ERROR;
+            rval = StateMachineRes::ERROR;
             break;
         }
     }
     return rval;
 }
 
-MariaDBBackendConnection::AuthenticateRes MariaDBBackendConnection::authenticate()
+MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::authenticate()
 {
     mxs::Buffer buffer;
     if (!read_protocol_packet(m_dcb, &buffer))
     {
         do_handle_error(m_dcb, "Socket error", mxs::ErrorType::TRANSIENT);
-        return AuthenticateRes::ERROR;
+        return StateMachineRes::ERROR;
     }
     else if (buffer.empty())
     {
         // Didn't get enough data, read again later.
-        return AuthenticateRes::IN_PROGRESS;
+        return StateMachineRes::IN_PROGRESS;
     }
     else if (buffer.length() == MYSQL_HEADER_LEN)
     {
         // Effectively empty buffer. Should not happen during authentication. Error.
         do_handle_error(m_dcb, "Invalid packet", mxs::ErrorType::TRANSIENT);
-        return AuthenticateRes::ERROR;
+        return StateMachineRes::ERROR;
     }
 
     // Have a complete response from the server.
@@ -2415,17 +2439,17 @@ MariaDBBackendConnection::AuthenticateRes MariaDBBackendConnection::authenticate
     uint8_t cmd = MYSQL_GET_COMMAND(GWBUF_DATA(buffer.get()));
 
     // Three options: OK, ERROR or AuthSwitch/other.
-    auto rval = AuthenticateRes::ERROR;
+    auto rval = StateMachineRes::ERROR;
     if (cmd == MYSQL_REPLY_OK)
     {
         MXB_INFO("Authentication to '%s' succeeded.", m_server.name());
-        rval = AuthenticateRes::DONE;
+        rval = StateMachineRes::DONE;
     }
     else if (cmd == MYSQL_REPLY_ERR)
     {
         // Server responded with an error, authentication failed.
         handle_error_response(m_dcb, buffer.get());
-        rval = AuthenticateRes::ERROR;
+        rval = StateMachineRes::ERROR;
     }
     else
     {
@@ -2438,7 +2462,7 @@ MariaDBBackendConnection::AuthenticateRes MariaDBBackendConnection::authenticate
             m_dcb->writeq_append(output.release());
         }
 
-        rval = (res == AuthRes::SUCCESS) ? AuthenticateRes::IN_PROGRESS : AuthenticateRes::ERROR;
+        rval = (res == AuthRes::SUCCESS) ? StateMachineRes::IN_PROGRESS : StateMachineRes::ERROR;
     }
 
     return rval;
@@ -2455,4 +2479,93 @@ bool MariaDBBackendConnection::send_delayed_packets()
         backend_write_delayqueue(buffer);
     }
     return false;
+}
+
+MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::send_connection_init_queries()
+{
+    // Send init-queries one-by-one to backend. All must succeed.
+    if (m_init_queries.queries == nullptr)
+    {
+        // First time in this function.
+        auto& queries = m_session->service->connection_init_sql();
+        if (queries.empty())
+        {
+            return StateMachineRes::DONE;   // no init queries configured, continue normally
+        }
+        else
+        {
+            // Got connection init queries.
+            m_init_queries.queries = &queries;
+            m_init_queries.queries_ind = 0;
+        }
+    }
+
+    // If expecting a result, check it first.
+    if (m_init_queries.expecting_result)
+    {
+        mxs::Buffer buffer;
+        if (!read_protocol_packet(m_dcb, &buffer))
+        {
+            do_handle_error(m_dcb, "Socket error", mxs::ErrorType::TRANSIENT);
+            return StateMachineRes::ERROR;
+        }
+        else if (buffer.empty())
+        {
+            // Didn't get enough data, read again later.
+            return StateMachineRes::IN_PROGRESS;
+        }
+        else
+        {
+            string wrong_packet_type;
+            // If server returned anything else than ok, it's an error.
+            if (buffer.length() == MYSQL_HEADER_LEN)
+            {
+                wrong_packet_type = "an empty packet";
+            }
+            else
+            {
+                uint8_t cmd = MYSQL_GET_COMMAND(buffer.data());
+                if (cmd == MYSQL_REPLY_ERR)
+                {
+                    wrong_packet_type = "an error packet";
+                }
+                else if (cmd != MYSQL_REPLY_OK)
+                {
+                    wrong_packet_type = "a resultset packet";
+                }
+            }
+
+            if (wrong_packet_type.empty())
+            {
+                m_init_queries.expecting_result = false;
+            }
+            else
+            {
+                const string& previous_query = (*m_init_queries.queries)[m_init_queries.queries_ind - 1];
+                // Query failed or gave weird results.
+                string errmsg = mxb::string_printf("Connection initialization query '%s' returned %s.",
+                                                   previous_query.c_str(), wrong_packet_type.c_str());
+                do_handle_error(m_dcb, errmsg, mxs::ErrorType::TRANSIENT);
+                return StateMachineRes::ERROR;
+            }
+        }
+    }
+
+    auto rval = StateMachineRes::ERROR;
+    // If have more queries, send the next one.
+    if ((size_t)m_init_queries.queries_ind < m_init_queries.queries->size())
+    {
+        const string& next_query = (*m_init_queries.queries)[m_init_queries.queries_ind];
+        GWBUF* buffer = modutil_create_query(next_query.c_str());
+        m_dcb->writeq_append(buffer);
+        m_init_queries.queries_ind++;
+        m_init_queries.expecting_result = true;
+        rval = StateMachineRes::IN_PROGRESS;
+    }
+    else
+    {
+        // All done.
+        rval = StateMachineRes::DONE;
+    }
+    return rval;
 }

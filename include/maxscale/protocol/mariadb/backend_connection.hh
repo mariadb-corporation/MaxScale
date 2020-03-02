@@ -59,6 +59,7 @@ private:
     {
         HANDSHAKING,    /**< Handshaking with backend */
         AUTHENTICATING, /**< Authenticating with backend */
+        CONNECTION_INIT,/**< Sending connection init file contents */
         SEND_DELAYQ,    /**< Sending contents of delay queue */
         ROUTING,        /**< Ready to route queries */
         FAILED,         /**< Handshake/authentication failed */
@@ -74,18 +75,11 @@ private:
         FAIL,           /**< Handshake failed */
     };
 
-    enum class HandShakeRes
+    enum class StateMachineRes
     {
-        IN_PROGRESS,
-        DONE,
-        ERROR,
-    };
-
-    enum class AuthenticateRes
-    {
-        IN_PROGRESS,
-        DONE,
-        ERROR,
+        IN_PROGRESS,// The SM should be called again once more data is available.
+        DONE,       // The SM is complete for now, the protocol may advance to next state.
+        ERROR,      // The SM encountered an error. The connection should be closed.
     };
 
     State          m_state {State::HANDSHAKING};            /**< Connection state */
@@ -100,10 +94,23 @@ private:
      * Sent to server once connection is ready. */
     mxs::Buffer m_delayed_packets;
 
+    /**
+     * Contains information about custom connection initialization queries.
+     */
+    struct InitQueriesStatus
+    {
+        const std::vector<std::string>* queries {nullptr};      /**< Query container */
+
+        int  queries_ind {-1};          /**< Current query index */
+        bool expecting_result {false};  /**< Expecting a result from backend? */
+    };
+    InitQueriesStatus m_init_queries;
+
     MariaDBBackendConnection(SERVER& server);
 
-    HandShakeRes    handshake();
-    AuthenticateRes authenticate();
+    StateMachineRes handshake();
+    StateMachineRes authenticate();
+    StateMachineRes send_connection_init_queries();
     bool            send_delayed_packets();
     int             normal_read();
 

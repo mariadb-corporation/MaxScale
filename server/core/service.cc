@@ -54,6 +54,7 @@
 #include <maxscale/json_api.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/housekeeper.h>
+#include <fstream>
 
 #include "internal/config.hh"
 #include "internal/filter.hh"
@@ -74,11 +75,16 @@ using namespace maxscale;
 using LockGuard = std::lock_guard<std::mutex>;
 using UniqueLock = std::unique_lock<std::mutex>;
 
+namespace
+{
 static struct
 {
     std::mutex            lock;
     std::vector<Service*> services;
 } this_unit;
+
+const char CN_CONNECTION_INIT_SQL_FILE[] = "connection_init_sql_file";
+}
 
 Service* Service::create(const char* name, const char* router, mxs::ConfigParameters* params)
 {
@@ -118,6 +124,11 @@ Service* Service::create(const char* name, const char* router, mxs::ConfigParame
     if (router_api->getCapabilities)
     {
         service->m_capabilities |= router_api->getCapabilities(service->router_instance);
+    }
+    if (!service->read_connection_init_sql())
+    {
+        delete service;
+        return nullptr;
     }
 
     LockGuard guard(this_unit.lock);
@@ -214,6 +225,7 @@ Service::Config::Config(mxs::ConfigParameters* params)
     , connection_keepalive(params->get_duration<std::chrono::seconds>(CN_CONNECTION_KEEPALIVE).count())
     , strip_db_esc(params->get_bool(CN_STRIP_DB_ESC))
     , rank(params->get_enum(CN_RANK, rank_values))
+    , connection_init_sql_file(params->get_string(CN_CONNECTION_INIT_SQL_FILE))
 {
 }
 
@@ -1267,6 +1279,9 @@ const MXS_MODULE_PARAM* common_service_params()
             CN_RANK, MXS_MODULE_PARAM_ENUM, DEFAULT_RANK, MXS_MODULE_OPT_ENUM_UNIQUE, rank_values
         },
         {CN_CONNECTION_KEEPALIVE, MXS_MODULE_PARAM_DURATION, "300s",     MXS_MODULE_OPT_DURATION_S},
+        {
+            CN_CONNECTION_INIT_SQL_FILE, MXS_MODULE_PARAM_PATH,     nullptr,    MXS_MODULE_OPT_PATH_R_OK
+        },
         {NULL}
     };
     return config_service_params;
@@ -1827,6 +1842,46 @@ bool Service::check_update_user_account_manager(mxs::ProtocolModule* protocol_mo
         {
             MXB_ERROR("Failed to create an user account manager for protocol '%s' of listener '%s'.",
                       new_proto_name.c_str(), listenerz);
+        }
+    }
+    return rval;
+}
+
+const std::vector<string>& Service::connection_init_sql() const
+{
+    return m_connection_init_sql;
+}
+
+/**
+ * Read in connection init sql file. Should only be called during service creation.
+ *
+ * @return True on success, or if setting was not set.
+ */
+bool Service::read_connection_init_sql()
+{
+    m_connection_init_sql.clear();
+    string filename = m_config->connection_init_sql_file;
+    bool rval = true;
+    if (!filename.empty())
+    {
+        std::ifstream inputfile(filename);
+        if (inputfile.is_open())
+        {
+            string line;
+            while (std::getline(inputfile, line))
+            {
+                if (!line.empty())
+                {
+                    m_connection_init_sql.push_back(line);
+                }
+            }
+            MXB_NOTICE("Read %lu queries from connection init file '%s' to '%s'.",
+                       m_connection_init_sql.size(), filename.c_str(), name());
+        }
+        else
+        {
+            MXB_ERROR("Could not open connection init file '%s'.", filename.c_str());
+            rval = false;
         }
     }
     return rval;

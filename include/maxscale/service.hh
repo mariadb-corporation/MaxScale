@@ -108,6 +108,9 @@ public:
                                  * character. */
 
         int64_t rank;   /*< The ranking of this service */
+
+        /** File with queries to send to backend. Only supported by mariadb-protocol module. */
+        std::string connection_init_sql_file;
     };
 
     State              state {State::ALLOC};        /**< The service state */
@@ -190,6 +193,8 @@ public:
      * @param client Client connection to remove
      */
     virtual void unmark_for_wakeup(mxs::ClientConnection* client) = 0;
+
+    virtual const std::vector<std::string>& connection_init_sql() const = 0;
 
     /**
      * Has a connection limit been reached?

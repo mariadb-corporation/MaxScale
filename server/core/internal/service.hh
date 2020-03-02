@@ -246,6 +246,8 @@ public:
     void mark_for_wakeup(mxs::ClientConnection* session) override;
     void unmark_for_wakeup(mxs::ClientConnection* session) override;
 
+    const std::vector<std::string>& connection_init_sql() const override;
+
 private:
 
     struct Data
@@ -287,6 +289,8 @@ private:
     // Helper for calculating version values
     std::pair<uint64_t, uint64_t> get_versions(const std::vector<SERVER*>& servers) const;
 
+    bool read_connection_init_sql();
+
     // User account manager. Can only be set once.
     SAccountManager m_usermanager;
 
@@ -296,6 +300,9 @@ private:
 
     /** Thread-local set of client connections waiting for updated user account data */
     mxs::WorkerLocal<std::unordered_set<mxs::ClientConnection*>> m_sleeping_clients;
+
+    /** Connection init sql queries. Only written to during service creation. */
+    std::vector<std::string> m_connection_init_sql;
 };
 
 // A connection to a service
