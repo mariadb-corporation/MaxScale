@@ -14,7 +14,7 @@
 
 #include <maxscale/ccdefs.hh>
 
-#include <map>
+#include <unordered_map>
 #include <string>
 #include <memory>
 #include <microhttpd.h>
@@ -31,11 +31,11 @@
 #define HTTP_RESPONSE_HEADER_ACCEPT        "Accept"
 #define HTTP_RESPONSE_HEADER_CONTENT_TYPE  "Content-Type"
 
-typedef std::map<std::string, std::string> Headers;
-
 class HttpResponse
 {
 public:
+    using Headers = std::unordered_map<std::string, std::string>;
+
     /**
      * @brief Create new HTTP response
      *

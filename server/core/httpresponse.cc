@@ -83,7 +83,7 @@ void HttpResponse::add_header(const string& key, const string& value)
     m_headers[key] = value;
 }
 
-const Headers& HttpResponse::get_headers() const
+const HttpResponse::Headers& HttpResponse::get_headers() const
 {
     return m_headers;
 }

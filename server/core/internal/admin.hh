@@ -15,15 +15,28 @@
 #include <maxscale/ccdefs.hh>
 
 #include <string>
+#include <unordered_map>
 #include <microhttpd.h>
 
 class Client
 {
-    Client(const Client&);
-    Client& operator=(const Client&);
-
 public:
+    Client(const Client&) = delete;
+    Client& operator=(const Client&) = delete;
 
+    using Headers = std::unordered_map<std::string, std::string>;
+
+    /**
+     * @brief Create a new client
+     *
+     * @param connection The connection handle for this client
+     */
+    Client(MHD_Connection* connection);
+
+    // Handle HTTP request
+    int handle(const char* url, const char* method, const char* upload_data, size_t* upload_data_size);
+
+private:
     enum state
     {
         OK,
@@ -31,21 +44,6 @@ public:
         INIT,
         CLOSED
     };
-
-    /**
-     * @brief Create a new client
-     *
-     * @param connection The connection handle for this client
-     */
-    Client(MHD_Connection* connection)
-        : m_connection(connection)
-        , m_state(INIT)
-    {
-    }
-
-    ~Client()
-    {
-    }
 
     /**
      * @brief Process a client request
@@ -93,13 +91,18 @@ public:
         m_state = CLOSED;
     }
 
-private:
     MHD_Connection* m_connection;   /**< Connection handle */
     std::string     m_data;         /**< Uploaded data */
     state           m_state;        /**< Client state */
     std::string     m_user;         /**< The user account */
+    Headers         m_headers;
 
-    bool auth_with_token(const std::string& token);
+    bool        auth_with_token(const std::string& token);
+    bool        send_cors_preflight_request(const std::string& verb);
+    std::string get_header(const std::string& key) const;
+    size_t      request_data_length() const;
+    void        send_auth_error() const;
+    void        add_cors_headers(MHD_Response*) const;
 };
 
 /**

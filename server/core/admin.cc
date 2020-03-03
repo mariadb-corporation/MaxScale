@@ -59,77 +59,24 @@ int header_cb(void* cls,
               const char* key,
               const char* value)
 {
-    Headers* res = (Headers*)cls;
-    res->emplace(key, value);
+    Client::Headers* res = (Client::Headers*)cls;
+    std::string k = key;
+    std::transform(k.begin(), k.end(), k.begin(), ::tolower);
+    res->emplace(k, value);
     return MHD_YES;
 }
 
-static inline Headers get_headers(MHD_Connection* connection)
+Client::Headers get_headers(MHD_Connection* connection)
 {
-    Headers rval;
+    Client::Headers rval;
     MHD_get_connection_values(connection, MHD_HEADER_KIND, header_cb, &rval);
     return rval;
-}
-
-static inline size_t request_data_length(MHD_Connection* connection)
-{
-    return atoi(get_headers(connection)["Content-Length"].c_str());
 }
 
 static bool modifies_data(const string& method)
 {
     return method == MHD_HTTP_METHOD_POST || method == MHD_HTTP_METHOD_PUT
            || method == MHD_HTTP_METHOD_DELETE || method == MHD_HTTP_METHOD_PATCH;
-}
-
-static void send_auth_error(MHD_Connection* connection)
-{
-    static char error_resp[] = "{\"errors\": [ { \"detail\": \"Access denied\" } ] }";
-    MHD_Response* resp =
-        MHD_create_response_from_buffer(sizeof(error_resp) - 1,
-                                        error_resp,
-                                        MHD_RESPMEM_PERSISTENT);
-
-    MHD_queue_basic_auth_fail_response(connection, "maxscale", resp);
-    MHD_destroy_response(resp);
-}
-
-static bool send_cors_preflight_request(MHD_Connection* connection, const std::string& verb)
-{
-    bool rval = false;
-
-    if (verb == MHD_HTTP_METHOD_OPTIONS)
-    {
-        auto headers = get_headers(connection);
-
-        if (headers.count("Origin"))
-        {
-            MHD_Response* response =
-                MHD_create_response_from_buffer(0, (void*)"", MHD_RESPMEM_PERSISTENT);
-
-            MHD_add_response_header(response, "Access-Control-Allow-Origin", headers["Origin"].c_str());
-            MHD_add_response_header(response, "Vary", "Origin");
-
-            if (headers.count("Access-Control-Request-Headers"))
-            {
-                MHD_add_response_header(response, "Access-Control-Allow-Headers",
-                                        headers["Access-Control-Request-Headers"].c_str());
-            }
-
-            if (headers.count("Access-Control-Request-Method"))
-            {
-                MHD_add_response_header(response, "Access-Control-Allow-Methods",
-                                        headers["Access-Control-Request-Method"].c_str());
-            }
-
-            MHD_queue_response(connection, MHD_HTTP_OK, response);
-            MHD_destroy_response(response);
-
-            rval = true;
-        }
-    }
-
-    return rval;
 }
 
 int handle_client(void* cls,
@@ -142,11 +89,6 @@ int handle_client(void* cls,
                   void** con_cls)
 
 {
-    if (send_cors_preflight_request(connection, method))
-    {
-        return MHD_YES;
-    }
-
     if (*con_cls == NULL)
     {
         if ((*con_cls = new(std::nothrow) Client(connection)) == NULL)
@@ -156,53 +98,7 @@ int handle_client(void* cls,
     }
 
     Client* client = static_cast<Client*>(*con_cls);
-    Client::state state = client->get_state();
-    int rval = MHD_NO;
-
-    if (state != Client::CLOSED)
-    {
-        if (state == Client::INIT)
-        {
-            // First request, do authentication
-            if (!client->auth(connection, url, method))
-            {
-                rval = MHD_YES;
-            }
-        }
-
-        if (client->get_state() == Client::OK)
-        {
-            // Authentication was successful, start processing the request
-            if (state == Client::INIT && request_data_length(connection))
-            {
-                // The first call doesn't have any data
-                rval = MHD_YES;
-            }
-            else
-            {
-                rval = client->process(url, method, upload_data, upload_data_size);
-            }
-        }
-        else if (client->get_state() == Client::FAILED)
-        {
-            // Authentication has failed, an error will be sent to the client
-            rval = MHD_YES;
-
-            if (*upload_data_size || (state == Client::INIT && request_data_length(connection)))
-            {
-                // The client is uploading data, discard it so we can send the error
-                *upload_data_size = 0;
-            }
-            else if (state != Client::INIT)
-            {
-                // The client has finished uploading data, send an error and close the connection
-                send_auth_error(connection);
-                client->close();
-            }
-        }
-    }
-
-    return rval;
+    return client->handle(url, method, upload_data, upload_data_size);
 }
 
 static bool host_to_sockaddr(const char* host, uint16_t port, struct sockaddr_storage* addr)
@@ -334,6 +230,133 @@ void init_jwt_sign_key()
 }
 }
 
+Client::Client(MHD_Connection* connection)
+    : m_connection(connection)
+    , m_state(INIT)
+    , m_headers(get_headers(connection))
+{
+}
+
+std::string Client::get_header(const std::string& key) const
+{
+    auto k = key;
+    std::transform(k.begin(), k.end(), k.begin(), ::tolower);
+    auto it = m_headers.find(k);
+    return it != m_headers.end() ? it->second : "";
+}
+
+size_t Client::request_data_length() const
+{
+    return atoi(get_header("Content-Length").c_str());
+}
+
+void Client::send_auth_error() const
+{
+    static char error_resp[] = "{\"errors\": [ { \"detail\": \"Access denied\" } ] }";
+    MHD_Response* resp =
+        MHD_create_response_from_buffer(sizeof(error_resp) - 1,
+                                        error_resp,
+                                        MHD_RESPMEM_PERSISTENT);
+
+    MHD_queue_basic_auth_fail_response(m_connection, "maxscale", resp);
+    MHD_destroy_response(resp);
+}
+
+void Client::add_cors_headers(MHD_Response* response) const
+{
+    MHD_add_response_header(response, "Access-Control-Allow-Origin", get_header("Origin").c_str());
+    MHD_add_response_header(response, "Vary", "Origin");
+
+    auto request_headers = get_header("Access-Control-Request-Headers");
+    auto request_method = get_header("Access-Control-Request-Method");
+
+    if (!request_headers.empty())
+    {
+        MHD_add_response_header(response, "Access-Control-Allow-Headers", request_headers.c_str());
+    }
+
+    if (!request_method.empty())
+    {
+        MHD_add_response_header(response, "Access-Control-Allow-Methods", request_headers.c_str());
+    }
+}
+
+bool Client::send_cors_preflight_request(const std::string& verb)
+{
+    bool rval = false;
+
+    if (verb == MHD_HTTP_METHOD_OPTIONS && !get_header("Origin").empty())
+    {
+        MHD_Response* response =
+            MHD_create_response_from_buffer(0, (void*)"", MHD_RESPMEM_PERSISTENT);
+
+        add_cors_headers(response);
+
+        MHD_queue_response(m_connection, MHD_HTTP_OK, response);
+        MHD_destroy_response(response);
+
+        rval = true;
+    }
+
+    return rval;
+}
+
+int Client::handle(const char* url, const char* method, const char* upload_data, size_t* upload_data_size)
+{
+    if (send_cors_preflight_request(method))
+    {
+        return MHD_YES;
+    }
+
+    Client::state state = get_state();
+    int rval = MHD_NO;
+
+    if (state != Client::CLOSED)
+    {
+        if (state == Client::INIT)
+        {
+            // First request, do authentication
+            if (!auth(m_connection, url, method))
+            {
+                rval = MHD_YES;
+            }
+        }
+
+        if (get_state() == Client::OK)
+        {
+            // Authentication was successful, start processing the request
+            if (state == Client::INIT && request_data_length())
+            {
+                // The first call doesn't have any data
+                rval = MHD_YES;
+            }
+            else
+            {
+                rval = process(url, method, upload_data, upload_data_size);
+            }
+        }
+        else if (get_state() == Client::FAILED)
+        {
+            // Authentication has failed, an error will be sent to the client
+            rval = MHD_YES;
+
+            if (*upload_data_size || (state == Client::INIT && request_data_length()))
+            {
+                // The client is uploading data, discard it so we can send the error
+                *upload_data_size = 0;
+            }
+            else if (state != Client::INIT)
+            {
+                // The client has finished uploading data, send an error and close the connection
+                send_auth_error();
+                close();
+            }
+        }
+    }
+
+    return rval;
+}
+
 int Client::process(string url, string method, const char* upload_data, size_t* upload_size)
 {
     json_t* json = NULL;
@@ -403,29 +426,14 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
                                         (void*)data.c_str(),
                                         MHD_RESPMEM_MUST_COPY);
 
-    auto headers = reply.get_headers();
-
-    for (Headers::const_iterator it = headers.begin(); it != headers.end(); it++)
+    for (const auto& a : reply.get_headers())
     {
-        MHD_add_response_header(response, it->first.c_str(), it->second.c_str());
+        MHD_add_response_header(response, a.first.c_str(), a.second.c_str());
     }
 
-    if (headers.count("Origin"))
+    if (!get_header("Origin").empty())
     {
-        MHD_add_response_header(response, "Access-Control-Allow-Origin", headers["Origin"].c_str());
-        MHD_add_response_header(response, "Vary", "Origin");
-
-        if (headers.count("Access-Control-Request-Headers"))
-        {
-            MHD_add_response_header(response, "Access-Control-Allow-Headers",
-                                    headers["Access-Control-Request-Headers"].c_str());
-        }
-
-        if (headers.count("Access-Control-Request-Method"))
-        {
-            MHD_add_response_header(response, "Access-Control-Allow-Methods",
-                                    headers["Access-Control-Request-Method"].c_str());
-        }
+        add_cors_headers(response);
     }
 
     int rval = MHD_queue_response(m_connection, reply.get_code(), response);
@@ -440,7 +448,7 @@ bool Client::auth_with_token(const std::string& token)
 
     try
     {
-        auto d = jwt::decode(token.substr(7));
+        auto d = jwt::decode(token);
         jwt::verify()
         .allow_algorithm(jwt::algorithm::hs256 {this_unit.sign_key})
         .with_issuer("maxscale")
@@ -463,11 +471,11 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
 
     if (mxs::Config::get().admin_auth)
     {
-        auto token = get_headers(connection)[MHD_HTTP_HEADER_AUTHORIZATION];
+        auto token = get_header(MHD_HTTP_HEADER_AUTHORIZATION);
 
         if (token.substr(0, 7) == "Bearer ")
         {
-            rval = auth_with_token(token);
+            rval = auth_with_token(token.substr(7));
         }
         else
         {
