@@ -119,3 +119,32 @@ describe("Authentication", function() {
 
     after(stopMaxScale)
 });
+
+describe("JSON Web Tokens", function() {
+    before(startMaxScale)
+
+    it("generates valid token", function() {
+        var token = ''
+        return request.get(base_url + "/auth", {json: true})
+            .then((res) => {
+                token = res.token
+            })
+            .then(() => request.get("http://" + host + "/servers", {headers: {'Authorization': 'Bearer ' + token}}))
+            .should.be.fulfilled
+    })
+
+    it("rejects invalid token with correct credentials", function() {
+        var token = 'thisisnotavalidjsonwebtoken'
+        return request.get(base_url + "/servers", {headers: {'Authorization': 'Bearer ' + token}})
+            .should.be.rejected
+    })
+
+
+    it("rejects invalid token with incorrect credentials", function() {
+        var token = 'thisisnotavalidjsonwebtoken'
+        return request.get("http://" + host + "/servers", {headers: {'Authorization': 'Bearer ' + token}})
+            .should.be.rejected
+    })
+
+    after(stopMaxScale)
+});
