@@ -361,6 +361,7 @@ static Keyword aKeywordTable[] = {
   { "NOT",              "TK_NOT",          ALWAYS                 },
   { "NOTNULL",          "TK_NOTNULL",      ALWAYS                 },
 #ifdef MAXSCALE
+  { "NOWAIT",           "TK_NOWAIT",       ALWAYS                 },
   { "NO_WRITE_TO_BINLOG","TK_NO_WRITE_TO_BINLOG",ALWAYS           },
 #endif
   { "NULL",             "TK_NULL",         ALWAYS                 },
@@ -400,6 +401,7 @@ static Keyword aKeywordTable[] = {
   { "PROCEDURE",        "TK_FUNCTION_KW",  ALWAYS                 },
 #endif
 #ifdef MAXSCALE
+  { "OPTIMIZE",         "TK_OPTIMIZE",     ALWAYS                 },
   { "QUERY",            "TK_QUERY",        ALWAYS                 },
 #else
   { "QUERY",            "TK_QUERY",        EXPLAIN                },
@@ -501,6 +503,7 @@ static Keyword aKeywordTable[] = {
   { "VIEW",             "TK_VIEW",         VIEW                   },
   { "VIRTUAL",          "TK_VIRTUAL",      VTAB                   },
 #ifdef MAXSCALE
+  { "WAIT",             "TK_WAIT",         ALWAYS                 },
   { "WARNINGS",         "TK_WARNINGS",     ALWAYS                 },
   { "WINDOW",           "TK_WINDOW",       ALWAYS                 },
 #endif
