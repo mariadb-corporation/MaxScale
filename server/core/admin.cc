@@ -318,6 +318,20 @@ bool authorize_user(const char* method, const char* user, const char* url)
 
     return rval;
 }
+
+void init_jwt_sign_key()
+{
+    // Initialize JWT signing key
+    std::random_device gen;
+    constexpr auto KEY_BITS = 512;
+    constexpr auto VALUE_SIZE = sizeof(decltype(gen()));
+    constexpr auto NUM_VALUES = KEY_BITS / VALUE_SIZE;
+    std::vector<decltype(gen())> key;
+    key.reserve(NUM_VALUES);
+    std::generate_n(std::back_inserter(key), NUM_VALUES, std::ref(gen));
+    this_unit.sign_key.assign((const char*)key.data(), key.size() * VALUE_SIZE);
+    mxb_assert(this_unit.sign_key.size() == KEY_BITS);
+}
 }
 
 int Client::process(string url, string method, const char* upload_data, size_t* upload_size)
@@ -495,20 +509,9 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
 bool mxs_admin_init()
 {
     struct sockaddr_storage addr;
-
-    // Initialize JWT signing key
-    std::random_device r;
-    std::mt19937_64 gen(r());
-    std::ostringstream ss;
-
-    for (int i = 0; i < 2048; i++)
-    {
-        ss << std::hex << gen();
-    }
-
-    this_unit.sign_key = ss.str();
-
     const auto& config = mxs::Config::get();
+
+    init_jwt_sign_key();
 
     if (!load_ssl_certificates())
     {
