@@ -906,9 +906,11 @@ public:
             case TK_BITOR:
             case TK_CASE:
             case TK_CAST:
+            case TK_DIV:
             case TK_IN:
             case TK_ISNULL:
             case TK_MINUS:
+            case TK_MOD:
             case TK_NOTNULL:
             case TK_PLUS:
             case TK_SLASH:
@@ -3988,6 +3990,9 @@ static const char* get_token_symbol(int token)
     case TK_CAST:
         return "cast";
 
+    case TK_DIV:
+        return "div";
+
     case TK_IN:
         return "in";
 
@@ -3996,6 +4001,9 @@ static const char* get_token_symbol(int token)
 
     case TK_MINUS:
         return "-";
+
+    case TK_MOD:
+        return "mod";
 
     case TK_NOTNULL:
         return "isnotnull";

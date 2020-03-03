@@ -242,6 +242,7 @@ static Keyword aKeywordTable[] = {
   { "DISTINCT",         "TK_DISTINCT",     ALWAYS                 },
 #ifdef MAXSCALE
   { "DISTINCTROW",      "TK_DISTINCT",     ALWAYS                 },
+  { "DIV",              "TK_DIV",          ALWAYS                 },
   { "DO",               "TK_DO",           ALWAYS                 },
 #endif
   { "DROP",             "TK_DROP",         ALWAYS                 },
@@ -349,6 +350,7 @@ static Keyword aKeywordTable[] = {
 #ifdef MAXSCALE
   { "MASTER",           "TK_MASTER",       ALWAYS                 },
   { "MERGE",            "TK_MERGE",        ALWAYS                 },
+  { "MOD",              "TK_MOD",          ALWAYS                 },
   { "NAMES",            "TK_NAMES",        ALWAYS                 },
 #endif
   { "NATURAL",          "TK_JOIN_KW",      ALWAYS                 },

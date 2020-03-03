@@ -77,6 +77,16 @@
 #define WF_SUPPORTED
 #endif
 
+extern "C"
+{
+
+my_bool _db_my_assert(const char *file, int line, const char *msg)
+{
+    return true;
+}
+
+}
+
 #if defined (CTE_SUPPORTED)
 // We need to be able to access private data of With_element that has no
 // public access methods. So, we use this very questionable method of
