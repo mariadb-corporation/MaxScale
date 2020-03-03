@@ -42,6 +42,30 @@ For more details on how administrative interface users are created and managed,
 refer to the [MaxCtrl](../Reference/MaxCtrl.md) documentation as well as the
 documentation of the [users](Resources-User.md) resource.
 
+### JSON Web Tokens
+
+MaxScale supports authentication via
+[JSON Web Tokens](https://tools.ietf.org/html/rfc7519).
+The `/v1/auth` endpoint can be used to generate new tokens which are returned in
+the following form.
+
+```javascript
+{
+    "token": "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhZG1pbiIsImV4cCI6MTU4MzI1NDE1MSwiaWF0IjoxNTgzMjI1MzUxLCJpc3MiOiJtYXhzY2FsZSJ9.B1BqhjjKaCWKe3gVXLszpOPfeu8cLiwSb4CMIJAoyqw"
+}
+```
+
+The generated tokens are valid for 8 hours. If MaxScale is restarted, all
+generated tokens are invalidated.
+
+To use the token for authentication, the generated token must be presented in
+the Authorization header with the Bearer authentication scheme. For example, the
+token above would be used in the following manner:
+
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhZG1pbiIsImV4cCI6MTU4MzI1NDE1MSwiaWF0IjoxNTgzMjI1MzUxLCJpc3MiOiJtYXhzY2FsZSJ9.B1BqhjjKaCWKe3gVXLszpOPfeu8cLiwSb4CMIJAoyqw
+```
+
 ## Resources
 
 The MaxScale REST API provides the following resources. All resources conform to
