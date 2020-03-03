@@ -631,6 +631,10 @@ columnid(A) ::= nm(X). {
   /*KEY*/
   /*LIKE_KW*/
   MASTER /*MATCH*/ MERGE
+  // TODO: MOD is a keyword that should not decay into an id. However, now that is does,
+  // TODO: also "mod(a, 2)" kind of usage will be accepted. Incorrect use will anyway be
+  // TODO: rejected by the server.
+  MOD
   NAMES NEXT
   NO
   OF OFFSET OPEN
@@ -670,7 +674,7 @@ columnid(A) ::= nm(X). {
 %right ESCAPE.
 %left BITAND BITOR LSHIFT RSHIFT.
 %left PLUS MINUS.
-%left STAR SLASH REM.
+%left DIV MOD STAR SLASH REM.
 %left CONCAT.
 %left COLLATE.
 %right BITNOT.
@@ -2165,7 +2169,7 @@ expr(A) ::= INTERVAL expr(X) id. {
   A=X; // We simply ignore 'INTERVAL'
 }
 %endif
-expr(A) ::= expr(X) STAR|SLASH|REM(OP) expr(Y).
+expr(A) ::= expr(X) DIV|MOD|STAR|SLASH|REM(OP) expr(Y).
                                         {spanBinaryExpr(&A,pParse,@OP,&X,&Y);}
 expr(A) ::= expr(X) CONCAT(OP) expr(Y). {spanBinaryExpr(&A,pParse,@OP,&X,&Y);}
 %type likeop {struct LikeOp}
