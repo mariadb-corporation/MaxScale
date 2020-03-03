@@ -1016,7 +1016,7 @@ public:
                 {
                     if (strcasecmp(zToken, "last_insert_id") == 0)
                     {
-                        m_type_mask |= (QUERY_TYPE_READ | QUERY_TYPE_MASTER_READ);
+                        m_type_mask |= QUERY_TYPE_MASTER_READ;
                     }
                     else if (is_sequence_related_function(zToken))
                     {
