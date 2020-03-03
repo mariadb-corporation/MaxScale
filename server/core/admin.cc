@@ -301,7 +301,7 @@ void close_client(void* cls,
     delete client;
 }
 
-bool authorize_user(const char* method, const char* user, const char* url)
+bool authorize_user(const char* user, const char* method, const char* url)
 {
     bool rval = true;
 
