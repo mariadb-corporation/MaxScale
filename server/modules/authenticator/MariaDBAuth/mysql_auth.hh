@@ -112,6 +112,7 @@ typedef struct mysql_auth
     bool      skip_auth;            /**< Authentication will always be successful */
     bool      check_permissions;
     bool      lower_case_table_names;   /**< Disable database case-sensitivity */
+    bool      log_password_mismatch;    /**< Log password mismatches*/
     uint64_t  checksum;
 } MYSQL_AUTH;
 
@@ -211,5 +212,8 @@ int validate_mysql_user(MYSQL_AUTH* instance,
                         MYSQL_session* session,
                         uint8_t* scramble,
                         size_t scramble_len);
+
+std::pair<bool, std::string> get_password(MYSQL_AUTH* instance, DCB* dcb, MYSQL_session* session,
+                                          uint8_t* scramble, size_t scramble_len);
 
 MXS_END_DECLS

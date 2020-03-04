@@ -195,6 +195,7 @@ static void* mysql_auth_init(char** options)
         instance->check_permissions = true;
         instance->lower_case_table_names = false;
         instance->checksum = 0;
+        instance->log_password_mismatch = false;
 
         for (int i = 0; options[i]; i++)
         {
@@ -223,6 +224,10 @@ static void* mysql_auth_init(char** options)
                 else if (strcmp(options[i], "lower_case_table_names") == 0)
                 {
                     instance->lower_case_table_names = config_truth_value(value);
+                }
+                else if (strcmp(options[i], "log_password_mismatch") == 0)
+                {
+                    instance->log_password_mismatch = config_truth_value(value);
                 }
                 else
                 {
@@ -308,8 +313,9 @@ static GWBUF* gen_auth_switch_request_packet(MySQLProtocol* proto, MYSQL_session
     return buffer;
 }
 
-static void log_auth_failure(DCB* dcb, int auth_ret)
+static void log_auth_failure(MYSQL_AUTH* instance, DCB* dcb, int auth_ret)
 {
+    MySQLProtocol* protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
     MYSQL_session* client_data = (MYSQL_session*)dcb->data;
     std::ostringstream extra;
 
@@ -320,6 +326,18 @@ static void log_auth_failure(DCB* dcb, int auth_ret)
     else if (auth_ret == MXS_AUTH_FAILED_WRONG_PASSWORD)
     {
         extra << "Wrong password.";
+
+        if (instance->log_password_mismatch)
+        {
+            uint8_t double_sha1[sizeof(client_data->client_sha1)];
+            gw_sha1_str(client_data->client_sha1, sizeof(client_data->client_sha1), double_sha1);
+            char buf[sizeof(double_sha1) * 2 + 1];
+            gw_bin2hex(buf, double_sha1, sizeof(double_sha1));
+            extra << " Received '" << buf << "', expected '"
+                  << get_password(instance, dcb, client_data, protocol->scramble,
+                            sizeof(protocol->scramble)).second
+                  << "'.";
+        }
     }
     else
     {
@@ -410,9 +428,10 @@ static int mysql_auth_authenticate(DCB* dcb)
             dcb->user = MXS_STRDUP_A(client_data->user);
             /** Send an OK packet to the client */
         }
-        else if (dcb->service->log_auth_warnings)
+        else if (dcb->service->log_auth_warnings
+                 || (instance->log_password_mismatch && auth_ret == MXS_AUTH_FAILED_WRONG_PASSWORD))
         {
-            log_auth_failure(dcb, auth_ret);
+            log_auth_failure(instance, dcb, auth_ret);
         }
 
         /* let's free the auth_token now */

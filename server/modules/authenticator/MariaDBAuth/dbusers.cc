@@ -374,11 +374,8 @@ static int auth_cb(void* data, int columns, char** rows, char** row_names)
     return 0;
 }
 
-int validate_mysql_user(MYSQL_AUTH* instance,
-                        DCB* dcb,
-                        MYSQL_session* session,
-                        uint8_t* scramble,
-                        size_t scramble_len)
+std::pair<bool, std::string> get_password(MYSQL_AUTH* instance, DCB* dcb, MYSQL_session* session,
+                                          uint8_t* scramble, size_t scramble_len)
 {
     sqlite3* handle = get_handle(instance);
     const char* validate_query = instance->lower_case_table_names ?
@@ -387,7 +384,6 @@ int validate_mysql_user(MYSQL_AUTH* instance,
     size_t len = strlen(validate_query) + 1 + strlen(session->user) * 2
         + strlen(session->db) * 2 + MYSQL_HOST_MAXLEN + session->auth_token_len * 4 + 1;
     char sql[len + 1];
-    int rval = MXS_AUTH_FAILED;
     char* err;
 
     if (instance->skip_auth)
@@ -456,12 +452,25 @@ int validate_mysql_user(MYSQL_AUTH* instance,
         }
     }
 
-    if (res.ok)
+    return {res.ok, res.output};
+}
+
+int validate_mysql_user(MYSQL_AUTH* instance,
+                        DCB* dcb,
+                        MYSQL_session* session,
+                        uint8_t* scramble,
+                        size_t scramble_len)
+{
+    int rval = MXS_AUTH_FAILED;
+    sqlite3* handle = get_handle(instance);
+    auto res = get_password(instance, dcb, session, scramble, scramble_len);
+
+    if (res.first)
     {
         /** Found a matching row */
 
-        if (no_password_required(res.output, session->auth_token_len)
-            || check_password(res.output,
+        if (no_password_required(res.second.c_str(), session->auth_token_len)
+            || check_password(res.second.c_str(),
                               session->auth_token,
                               session->auth_token_len,
                               scramble,
