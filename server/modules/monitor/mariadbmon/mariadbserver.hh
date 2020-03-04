@@ -139,6 +139,9 @@ public:
         /* Should failover/switchover enable/disable any scheduled events on the servers during
          * promotion/demotion? */
         bool handle_event_scheduler {true};
+
+        /** Should the server regularly update locks status. True if either lock mode is on. */
+        bool server_locks_enabled {true};
     };
 
     struct SharedState
@@ -188,7 +191,7 @@ public:
      */
     json_t* to_json() const;
 
-    void update_server(bool time_to_update_disk_space, bool time_to_update_lock_status);
+    void update_server(bool time_to_update_disk_space);
 
     /**
      * Query this server.
@@ -571,10 +574,15 @@ public:
         SERVER,
         MASTER,
     };
-    void release_lock(LockType lock_type);
-    void release_all_locks();
-    void get_lock(LockType lock_type);
+    bool release_lock(LockType lock_type);
+    int  release_all_locks();
+    bool get_lock(LockType lock_type);
     bool lock_owned(LockType lock_type);
+
+    ServerLock masterlock_status() const;
+    ServerLock serverlock_status() const;
+    ServerLock lock_status(LockType lock_type) const;
+
     bool marked_as_master(std::string* why_not = nullptr) const;
 
 private:
@@ -638,4 +646,5 @@ private:
     bool alter_event(const EventInfo& event, const std::string& target_status, json_t** error_out);
 
     int64_t conn_id() const;
+    void    clear_locks_info();
 };

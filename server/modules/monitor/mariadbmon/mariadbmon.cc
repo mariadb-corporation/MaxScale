@@ -261,10 +261,11 @@ bool MariaDBMonitor::configure(const mxs::ConfigParameters* params)
     m_settings.shared.demotion_sql_file = params->get_string(CN_DEMOTION_SQL_FILE);
     m_settings.switchover_on_low_disk_space = params->get_bool(CN_SWITCHOVER_ON_LOW_DISK_SPACE);
     m_settings.maintenance_on_low_disk_space = params->get_bool(CN_MAINTENANCE_ON_LOW_DISK_SPACE);
-    m_settings.require_server_locks =
-        static_cast<RequireLocks>(params->get_enum(CLUSTER_OP_REQUIRE_LOCKS, require_lock_values));
     m_settings.shared.handle_event_scheduler = params->get_bool(CN_HANDLE_EVENTS);
     m_settings.shared.replication_ssl = params->get_bool(CN_REPLICATION_MASTER_SSL);
+    m_settings.require_server_locks =
+        static_cast<RequireLocks>(params->get_enum(CLUSTER_OP_REQUIRE_LOCKS, require_lock_values));
+    m_settings.shared.server_locks_enabled = (m_settings.require_server_locks != RequireLocks::LOCKS_NONE);
 
     m_settings.excluded_servers.clear();
 
@@ -461,20 +462,12 @@ void MariaDBMonitor::tick()
 
     // Query all servers for their status.
     bool should_update_disk_space = check_disk_space_this_tick();
-    bool should_update_lock_status = check_lock_status_this_tick();
 
     // Concurrently query all servers for their status.
-    mxb::Semaphore update_complete;
-    auto serverlist = servers();
-    for (auto server : serverlist)
-    {
-        auto update_task = [should_update_disk_space, should_update_lock_status, &update_complete, server]() {
-                server->update_server(should_update_disk_space, should_update_lock_status);
-                update_complete.post();
-            };
-        m_threadpool.execute(update_task);
-    }
-    update_complete.wait_n(serverlist.size());
+    auto update_task = [should_update_disk_space](MariaDBServer* server) {
+            server->update_server(should_update_disk_space);
+        };
+    execute_task_all_servers(update_task);
 
     update_cluster_lock_status();
 
@@ -777,7 +770,7 @@ bool MariaDBMonitor::check_lock_status_this_tick()
 
     mxb_assert(!(m_locks_info.locks_needed() && !server_locks_in_use()));
     bool should_update_lock_status = false;
-    // Attempt to get locks when starting.
+
     if (server_locks_in_use())
     {
         if (m_locks_info.time_to_update())
@@ -785,7 +778,7 @@ bool MariaDBMonitor::check_lock_status_this_tick()
             should_update_lock_status = true;
             // Calculate time until next update check. Randomize a bit to reduce possibility that multiple
             // monitors would attempt to get locks simultaneously.
-            // The randomization parameters are not used configurable, but the correct values are not
+            // The randomization parameters are not user configurable, but the correct values are not
             // obvious.
             int next_check_interval = calc_interval(10, 6);
             m_locks_info.lock_check_interval = std::chrono::milliseconds(next_check_interval);
@@ -795,7 +788,7 @@ bool MariaDBMonitor::check_lock_status_this_tick()
             // A cluster operation depends on acquiring locks, and enough time has passed.
             should_update_lock_status = true;
             // Calculate time until next "need" check. Again, randomize a bit. Use smaller values than with
-            // the normal checks, as the frequency is higher and the other MaxScale is likely down.
+            // the normal checks, as the locks are urgently required and the other MaxScale is likely down.
             int next_check_interval = calc_interval(2, 3);
             m_locks_info.lock_need_interval = std::chrono::milliseconds(next_check_interval);
         }
@@ -866,18 +859,33 @@ void MariaDBMonitor::check_acquire_masterlock()
         masterlock_target = m_master;
     }
 
-    const auto masterlock = MariaDBServer::LockType::MASTER;
+    const auto ml = MariaDBServer::LockType::MASTER;
     for (auto server : servers())
     {
-        if (server->lock_owned(masterlock) && server != masterlock_target)
+        if (server != masterlock_target)
         {
-            // Should not have the lock, release.
-            server->release_lock(masterlock);
+            if (server->lock_owned(ml))
+            {
+                // Should not have the lock, release.
+                server->release_lock(ml);
+            }
         }
-        else if (!server->lock_owned(masterlock) && server == masterlock_target)
+        else if (server == masterlock_target)
         {
-            // Don't have the lock when should.
-            server->get_lock(masterlock);
+            auto masterlock = server->masterlock_status();
+            if (masterlock.is_free())
+            {
+                // Don't have the lock when should.
+                server->get_lock(ml);
+            }
+            else if (masterlock.status() == ServerLock::Status::OWNED_OTHER)
+            {
+                // Someone else is holding the masterlock, even when this monitor has lock majority.
+                // Not a problem for this monitor, but secondary MaxScales may select a wrong master.
+                MXB_ERROR("Cannot acquire lock '%s' on '%s' as it's claimed by another connection (id %li). "
+                          "Secondary MaxScales may select the wrong master.",
+                          MASTER_LOCK_NAME, name(), masterlock.owner());
+            }
         }
     }
 }
@@ -885,6 +893,25 @@ void MariaDBMonitor::check_acquire_masterlock()
 bool MariaDBMonitor::is_slave_maxscale() const
 {
     return server_locks_in_use() && !m_shared_state.have_lock_majority;
+}
+
+void MariaDBMonitor::execute_task_all_servers(const ServerFunction& task)
+{
+    execute_task_on_servers(task, servers());
+}
+
+void MariaDBMonitor::execute_task_on_servers(const ServerFunction& task, const ServerArray& servers)
+{
+    mxb::Semaphore task_complete;
+    for (auto server : servers)
+    {
+        auto server_task = [&task, &task_complete, server]() {
+                task(server);
+                task_complete.post();
+            };
+        m_threadpool.execute(server_task);
+    }
+    task_complete.wait_n(servers.size());
 }
 
 bool MariaDBMonitor::ClusterLocksInfo::locks_needed() const

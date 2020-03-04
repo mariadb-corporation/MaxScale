@@ -485,3 +485,8 @@ bool ServerLock::operator==(const ServerLock& rhs) const
 {
     return m_status == rhs.m_status && m_owner_id == rhs.m_owner_id && m_owner_id != CONN_ID_UNKNOWN;
 }
+
+bool ServerLock::is_free() const
+{
+    return m_status == Status::FREE;
+}

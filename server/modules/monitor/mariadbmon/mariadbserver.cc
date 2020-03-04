@@ -2167,7 +2167,7 @@ bool MariaDBServer::update_enabled_events()
  *
  * @param server The server to update
  */
-void MariaDBServer::update_server(bool time_to_update_disk_space, bool time_to_update_lock_status)
+void MariaDBServer::update_server(bool time_to_update_disk_space)
 {
     auto server = this;
     MonitorServer* mon_srv = server;
@@ -2182,7 +2182,7 @@ void MariaDBServer::update_server(bool time_to_update_disk_space, bool time_to_u
         {
             // Is a new connection or a reconnection. Check server version.
             update_server_version();
-            m_serverlock.set_status(ServerLock::Status::UNKNOWN);   // Lock expired due to lost connection.
+            clear_locks_info();     // Lock expired due to lost connection.
         }
 
         if (m_capabilities.basic_support || m_srv_type == MariaDBServer::server_type::BINLOG_ROUTER)
@@ -2201,16 +2201,10 @@ void MariaDBServer::update_server(bool time_to_update_disk_space, bool time_to_u
                     mon_srv->update_disk_space_status();
                 }
 
-                /**
-                 * Lock status needs to be updated if
-                 * 1) Requested by monitor (regular update)
-                 * 2) This is the master MaxScale, yet does not have a lock on the server.
-                 * A secondary MaxScale should not try to aggressively acquire the lock so that it's easy
-                 * for the master.
-                 */
-                if (time_to_update_lock_status
-                    || (m_shared_state.have_lock_majority && !lock_owned(LockType::SERVER)))
+                if (m_settings.server_locks_enabled)
                 {
+                    // Update lock status every tick. This is especially required for the secondary MaxScale,
+                    // as it needs to quickly react if the primary dies.
                     update_locks_status();
                 }
 
@@ -2224,7 +2218,7 @@ void MariaDBServer::update_server(bool time_to_update_disk_space, bool time_to_u
         /* The current server is not running. Clear some of the bits. User-set bits and some long-term bits
          * can stay. */
         server->clear_status(MonitorServer::SERVER_DOWN_CLEAR_BITS);
-        m_serverlock.set_status(ServerLock::Status::UNKNOWN);
+        clear_locks_info();
 
         if (conn_status == ConnectResult::ACCESS_DENIED)
         {
@@ -2384,15 +2378,16 @@ void MariaDBServer::update_locks_status()
     {
         MXB_ERROR("Failed to update lock status of server '%s'. %s", name(), err_msg.c_str());
     }
-
-    if (m_serverlock.status() == ServerLock::Status::FREE)
-    {
-        // Lock is free, try to get it. 'get_lock' updates lock status.
-        get_lock(LockType::SERVER);
-    }
 }
 
-void MariaDBServer::release_lock(LockType lock_type)
+/**
+ * Release a server lock.
+ *
+ * @param lock_type Which lock to release
+ * @return True if lock was released normally. False does not mean lock is held, as it may not have been
+ * held to begin with.
+ */
+bool MariaDBServer::release_lock(LockType lock_type)
 {
     bool normal_lock = (lock_type == LockType::SERVER);
     ServerLock* output = normal_lock ? &m_serverlock : &m_masterlock;
@@ -2402,8 +2397,9 @@ void MariaDBServer::release_lock(LockType lock_type)
     string cmd = string_printf("SELECT RELEASE_LOCK('%s')", lockname);
     string err_msg;
     ServerLock lock_result;
-    auto res_release_lock = execute_query(cmd, &err_msg);
+    bool rval = false;
 
+    auto res_release_lock = execute_query(cmd, &err_msg);
     if (res_release_lock && res_release_lock->get_col_count() == 1 && res_release_lock->next_row())
     {
         if (res_release_lock->field_is_null(0))
@@ -2418,6 +2414,7 @@ void MariaDBServer::release_lock(LockType lock_type)
             {
                 // Expected. Lock was owned by this connection and is released.
                 lock_result.set_status(ServerLock::Status::FREE);
+                rval = true;
             }
             else
             {
@@ -2432,14 +2429,16 @@ void MariaDBServer::release_lock(LockType lock_type)
     }
 
     *output = lock_result;
+    return rval;
 }
 
-void MariaDBServer::get_lock(LockType lock_type)
+bool MariaDBServer::get_lock(LockType lock_type)
 {
     bool normal_lock = (lock_type == LockType::SERVER);
     ServerLock* output = normal_lock ? &m_serverlock : &m_masterlock;
     const char* lockname = normal_lock ? SERVER_LOCK_NAME : MASTER_LOCK_NAME;
 
+    bool rval = false;
     string cmd = string_printf("SELECT GET_LOCK('%s', 0)", lockname);
     string err_msg;
     ServerLock lock_result;
@@ -2456,6 +2455,7 @@ void MariaDBServer::get_lock(LockType lock_type)
             {
                 // Got the lock.
                 lock_result.set_status(ServerLock::Status::OWNED_SELF, con->thread_id);
+                rval = true;
             }
             else
             {
@@ -2470,6 +2470,7 @@ void MariaDBServer::get_lock(LockType lock_type)
     }
 
     *output = lock_result;
+    return rval;
 }
 
 bool MariaDBServer::lock_owned(LockType lock_type)
@@ -2484,15 +2485,22 @@ bool MariaDBServer::lock_owned(LockType lock_type)
     }
 }
 
-void MariaDBServer::release_all_locks()
+/**
+ * Release both types of locks held on the server.
+ *
+ * @return How many locks were held and then released
+ */
+int MariaDBServer::release_all_locks()
 {
+    int normal_releases = 0;
     for (auto lock_type : {MariaDBServer::LockType::SERVER, MariaDBServer::LockType::MASTER})
     {
         if (lock_owned(lock_type))
         {
-            release_lock(lock_type);
+            normal_releases += release_lock(lock_type);
         }
     }
+    return normal_releases;
 }
 
 int64_t MariaDBServer::conn_id() const
@@ -2520,4 +2528,25 @@ bool MariaDBServer::marked_as_master(string* why_not) const
         }
     }
     return rval;
+}
+
+void MariaDBServer::clear_locks_info()
+{
+    m_serverlock.set_status(ServerLock::Status::UNKNOWN);
+    m_masterlock.set_status(ServerLock::Status::UNKNOWN);
+}
+
+ServerLock MariaDBServer::masterlock_status() const
+{
+    return m_masterlock;
+}
+
+ServerLock MariaDBServer::serverlock_status() const
+{
+    return m_serverlock;
+}
+
+ServerLock MariaDBServer::lock_status(LockType locktype) const
+{
+    return (locktype == LockType::SERVER) ? m_serverlock : m_masterlock;
 }

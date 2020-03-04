@@ -24,6 +24,7 @@
 
 using std::string;
 using maxbase::string_printf;
+using LockType = MariaDBServer::LockType;
 
 namespace
 {
@@ -1035,19 +1036,24 @@ bool MariaDBMonitor::is_candidate_valid(MariaDBServer* cand, RequireRunning req_
 }
 
 /**
- * Updates the cluster level lock status. Does not attempt to acquire locks, as that is performed during
- * normal server update.
+ * Updates the cluster level lock status. If server locks are free, try to acquire.
  */
 void MariaDBMonitor::update_cluster_lock_status()
 {
     if (server_locks_in_use())
     {
+        const bool had_lock_majority = m_shared_state.have_lock_majority;
+
+        int server_locks_free = 0;
         int server_locks_held = 0;
         int master_locks_held = 0;
         int running_servers = 0;
+
         for (MariaDBServer* server : servers())
         {
-            server_locks_held += server->lock_owned(MariaDBServer::LockType::SERVER);
+            auto lockstatus = server->lock_status(MariaDBServer::LockType::SERVER);
+            server_locks_held += lockstatus.status() == ServerLock::Status::OWNED_SELF;
+            server_locks_free += lockstatus.status() == ServerLock::Status::FREE;
             master_locks_held += server->lock_owned(MariaDBServer::LockType::MASTER);
             running_servers += server->is_running();
         }
@@ -1064,8 +1070,24 @@ void MariaDBMonitor::update_cluster_lock_status()
             required_for_majority = ((int)servers().size() / 2 + 1);
         }
 
-        bool had_lock_majority = m_shared_state.have_lock_majority;
-        bool have_lock_majority = (server_locks_held >= required_for_majority);
+        // Check if this monitor can obtain lock majority.
+        if (server_locks_free > 0 && (server_locks_held + server_locks_free >= required_for_majority))
+        {
+            /**
+             *  This MaxScale can obtain or already has lock majority. Try to acquire free locks if
+             *  1) Some time has passed since last locking attempt.
+             *  2) This is the master MaxScale, yet does not have a lock on the server.
+             *  A secondary MaxScale should not try to aggressively acquire the lock so that it's easy
+             *  for the master.
+             */
+            bool time_to_get_locks = check_lock_status_this_tick();
+            if (had_lock_majority || time_to_get_locks)
+            {
+                // Get as many locks as possible.
+                server_locks_held += get_free_locks();
+            }
+        }
+        const bool have_lock_majority = (server_locks_held >= required_for_majority);
 
         // If situation changed, log it.
         if (have_lock_majority != had_lock_majority)
@@ -1082,7 +1104,8 @@ void MariaDBMonitor::update_cluster_lock_status()
             }
         }
 
-        // Release locks if no majority. This gives another MaxScale the chance to get them.
+        // Release locks if no majority. This gives another MaxScale the chance to get them. Should be a
+        // rare occurrence.
         int total_locks = server_locks_held + master_locks_held;
         if (!have_lock_majority && total_locks > 0)
         {
@@ -1103,6 +1126,25 @@ void MariaDBMonitor::update_cluster_lock_status()
         }
         m_shared_state.have_lock_majority = have_lock_majority;
     }
+}
+
+int MariaDBMonitor::get_free_locks()
+{
+    ServerArray targets;
+    for (auto server : servers())
+    {
+        if (server->serverlock_status().is_free())
+        {
+            targets.push_back(server);
+        }
+    }
+
+    std::atomic_int locks_acquired {0};
+    auto get_lock_task = [&locks_acquired](MariaDBServer* server) {
+            locks_acquired += server->get_lock(LockType::SERVER);
+        };
+    execute_task_on_servers(get_lock_task, targets);
+    return locks_acquired;
 }
 
 MariaDBMonitor::DNSResolver::StringSet MariaDBMonitor::DNSResolver::resolve_server(const string& host)

@@ -320,6 +320,7 @@ public:
     void    set_status(Status new_status, int64_t owner_id = CONN_ID_UNKNOWN);
     int64_t owner() const;
     Status  status() const;
+    bool    is_free() const;
 
     bool operator==(const ServerLock& rhs) const;
 private:

@@ -107,13 +107,15 @@ public:
     bool run_manual_reset_replication(SERVER* master_server, json_t** error_out);
 
 protected:
-    bool can_be_disabled(const mxs::MonitorServer& server, std::string* errmsg_out) const;
+    bool can_be_disabled(const mxs::MonitorServer& server, std::string* errmsg_out) const override;
 
     void pre_loop() override;
     void tick() override;
     void process_state_changes() override;
 
 private:
+    using ServerFunction = std::function<void (MariaDBServer*)>;
+
     // Some methods need a log on/off setting.
     enum class Log
     {
@@ -252,8 +254,11 @@ private:
         bool time_to_update() const;
 
         mxb::StopWatch last_lock_update;        /* Time since last lock status update */
-        mxb::Duration  lock_check_interval {0}; /* General lock check interval */
-        mxb::Duration  lock_need_interval {0};  /* If a cluster op requires locks, use a smaller interval */
+
+        /* General lock check interval. Initialized to zero to allow a check during first loop. */
+        mxb::Duration lock_check_interval {0};
+        /* A smaller interval used when a cluster operation depends on acquiring the locks. */
+        mxb::Duration lock_need_interval {0};
 
         bool failover_needs_locks {false};
         bool switchover_needs_locks {false};
@@ -326,6 +331,8 @@ private:
     bool execute_manual_command(std::function<void ()> command, json_t** error_out);
     bool immediate_tick_required() const override;
     bool server_locks_in_use() const;
+    void execute_task_all_servers(const ServerFunction& task);
+    void execute_task_on_servers(const ServerFunction& task, const ServerArray& servers);
 
     json_t*        to_json() const;
     static json_t* to_json(State op);
@@ -347,6 +354,7 @@ private:
     void check_cluster_operations_support();
     bool check_lock_status_this_tick();
     void update_cluster_lock_status();
+    int  get_free_locks();
     bool is_slave_maxscale() const;
 
     MariaDBServer* find_topology_master_server(RequireRunning req_running, std::string* msg_out = nullptr);
