@@ -123,6 +123,7 @@ extern void maxscaleFlush(Parse*, Token* pWhat);
 extern void maxscaleHandler(Parse*, mxs_handler_t, SrcList* pFullName, Token* pName);
 extern void maxscaleLoadData(Parse*, SrcList* pFullName, int local);
 extern void maxscaleLock(Parse*, mxs_lock_t, SrcList*);
+extern void maxscaleOptimize(Parse*, SrcList*);
 extern void maxscalePrepare(Parse*, Token* pName, Expr* pStmt);
 extern void maxscalePrivileges(Parse*, int kind);
 extern void maxscaleRenameTable(Parse*, SrcList* pTables);
@@ -630,6 +631,7 @@ columnid(A) ::= nm(X). {
   IF IMMEDIATE INITIALLY INSTEAD
   /*KEY*/
   /*LIKE_KW*/
+  LOCAL
   MASTER /*MATCH*/ MERGE
   // TODO: MOD is a keyword that should not decay into an id. However, now that is does,
   // TODO: also "mod(a, 2)" kind of usage will be accepted. Incorrect use will anyway be
@@ -637,6 +639,7 @@ columnid(A) ::= nm(X). {
   MOD
   NAMES NEXT
   NO
+  NOWAIT
   OF OFFSET OPEN
   PARTITIONS PASSWORD PREVIOUS
   QUERY QUICK
@@ -648,6 +651,7 @@ columnid(A) ::= nm(X). {
   // TODO: However, if not here then rules such as CAST need to be modified.
   UNSIGNED
   VALUE VIEW /*VIRTUAL*/
+  WAIT
   /*WITH*/
   WORK
   XA
@@ -3495,6 +3499,26 @@ cmd ::= TRUNCATE table_opt nm(X) dbnm(Y). {
   }
 
   maxscaleTruncate(pParse, pDatabase, pName);
+}
+
+//////////////////////// OPTIMIZE statement ////////////////////////////////////
+//
+cmd ::= optimize(X). {
+    maxscaleOptimize(pParse, X);
+}
+
+%type optimize {SrcList*}
+
+optimize_arg1_opt ::= .
+optimize_arg1_opt ::= LOCAL.
+optimize_arg1_opt ::= NO_WRITE_TO_BINLOG.
+
+optimize_arg2_opt ::= .
+optimize_arg2_opt ::= NOWAIT.
+optimize_arg2_opt ::= WAIT INTEGER.
+
+optimize(A) ::= OPTIMIZE optimize_arg1_opt TABLE fullnames(X) optimize_arg2_opt. {
+    A = X;
 }
 
 //////////////////////// ORACLE Assignment ////////////////////////////////////
