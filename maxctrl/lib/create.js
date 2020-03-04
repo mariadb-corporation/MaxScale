@@ -22,8 +22,12 @@ function to_obj(obj, value) {
 function validateParams(argv, params) {
     var rval = null;
     params.forEach((value) => {
-        var kv = value.split('=')
-        if (!kv || kv.length != 2) {
+        try {
+            var kv = value.split('=')
+            if (!kv || kv.length != 2) {
+                rval = 'Not a key-value parameter: ' + value
+            }
+        } catch (err) {
             rval = 'Not a key-value parameter: ' + value
         }
     })
