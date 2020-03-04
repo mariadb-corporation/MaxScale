@@ -224,7 +224,7 @@ multiple valid master servers in the cluster.
 The default value is 5 failures.
 
 The worst-case delay between the master failure and the start of the failover
-can be calculated by summing up the timeout values and `monitor_interval` and
+can be estimated by summing up the timeout values and `monitor_interval` and
 multiplying that by `failcount`:
 
 ```
