@@ -188,6 +188,7 @@ static void   disable_module_unloading(const char* arg);
 static void   enable_module_unloading(const char* arg);
 static void   enable_statement_logging(const char* arg);
 static void   disable_statement_logging(const char* arg);
+static void   enable_cors(const char* arg);
 static void   redirect_output_to_file(const char* arg);
 static bool   user_is_acceptable(const char* specified_user);
 static bool   init_sqlite3();
@@ -238,6 +239,10 @@ const DEBUG_ARGUMENT debug_arguments[] =
     {
         "disable-statement-logging", disable_statement_logging,
         "disable the logging of monitor and authenticator SQL statements sent by MaxScale to the servers"
+    },
+    {
+        "enable-cors", enable_cors,
+        "enable CORS support in the REST API"
     },
     {NULL, NULL, NULL}
 };
@@ -2910,6 +2915,11 @@ static void enable_statement_logging(const char* arg)
 static void disable_statement_logging(const char* arg)
 {
     maxsql::mysql_set_log_statements(false);
+}
+
+static void enable_cors(const char* arg)
+{
+    mxs_admin_enable_cors();
 }
 
 static void redirect_output_to_file(const char* arg)

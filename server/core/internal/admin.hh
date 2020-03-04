@@ -123,3 +123,11 @@ void mxs_admin_shutdown();
  * @return True if HTTPS is enabled
  */
 bool mxs_admin_https_enabled();
+
+/**
+ * @brief Enable CORS support
+ *
+ * CORS support allows browsers to access the REST API without MaxScale being the origin. There is no
+ * validation of the headers which means this is meant only for testing purposes.
+ */
+bool mxs_admin_enable_cors();

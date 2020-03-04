@@ -51,6 +51,7 @@ static struct ThisUnit
     std::string        ssl_ca;
     bool               using_ssl = false;
     bool               log_daemon_errors = true;
+    bool               cors = false;
     std::string        sign_key;
 } this_unit;
 
@@ -303,7 +304,7 @@ bool Client::send_cors_preflight_request(const std::string& verb)
 
 int Client::handle(const char* url, const char* method, const char* upload_data, size_t* upload_data_size)
 {
-    if (send_cors_preflight_request(method))
+    if (this_unit.cors && send_cors_preflight_request(method))
     {
         return MHD_YES;
     }
@@ -431,7 +432,7 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
         MHD_add_response_header(response, a.first.c_str(), a.second.c_str());
     }
 
-    if (!get_header("Origin").empty())
+    if (this_unit.cors && !get_header("Origin").empty())
     {
         add_cors_headers(response);
     }
@@ -566,4 +567,9 @@ void mxs_admin_shutdown()
 bool mxs_admin_https_enabled()
 {
     return this_unit.using_ssl;
+}
+
+bool mxs_admin_enable_cors()
+{
+    return this_unit.cors = true;
 }
