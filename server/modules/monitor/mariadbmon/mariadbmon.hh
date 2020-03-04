@@ -106,6 +106,14 @@ public:
      */
     bool run_manual_reset_replication(SERVER* master_server, json_t** error_out);
 
+    /**
+     * Perform user-activated lock release
+     *
+     * @param error_out Error output
+     * @return True if locks are in use, even if none were released
+     */
+    bool run_release_locks(json_t** error_out);
+
 protected:
     bool can_be_disabled(const mxs::MonitorServer& server, std::string* errmsg_out) const override;
 
@@ -366,10 +374,11 @@ private:
     bool manual_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out);
     bool manual_failover(json_t** output);
     bool manual_rejoin(SERVER* rejoin_cand_srv, json_t** output);
+    bool manual_reset_replication(SERVER* master_server, json_t** error_out);
+    bool manual_release_locks(json_t** error_out);
     void handle_low_disk_space_master();
     void handle_auto_failover();
     void handle_auto_rejoin();
-    bool lock_status_is_ok() const;
 
     const MariaDBServer* slave_receiving_events(const MariaDBServer* demotion_target,
                                                 maxbase::Duration* event_age_out,
@@ -384,6 +393,7 @@ private:
     void delay_auto_cluster_ops(Log log = Log::ON);
     bool can_perform_cluster_ops();
     bool cluster_operations_disabled_short() const;
+    bool lock_status_is_ok() const;
 
     // Methods used by failover/switchover/rejoin
     MariaDBServer* select_promotion_target(MariaDBServer* demotion_target, OperationType op, Log log_mode,
@@ -419,7 +429,6 @@ private:
     void enforce_read_only_on_slaves();
     void log_master_changes();
     void set_low_disk_slaves_maintenance();
-    bool manual_reset_replication(SERVER* master_server, json_t** error_out);
 };
 
 /**

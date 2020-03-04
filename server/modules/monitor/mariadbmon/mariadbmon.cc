@@ -826,6 +826,16 @@ bool MariaDBMonitor::run_manual_reset_replication(SERVER* master_server, json_t*
     return send_ok && rval;
 }
 
+bool MariaDBMonitor::run_release_locks(json_t** error_out)
+{
+    bool rval = false;
+    auto func = [this, &rval, error_out]() {
+            rval = manual_release_locks(error_out);
+        };
+    bool send_ok = execute_manual_command(func, error_out);
+    return send_ok && rval;
+}
+
 bool MariaDBMonitor::cluster_operations_disabled_short() const
 {
     return cluster_operation_disable_timer > 0 || m_cluster_modified;
@@ -894,6 +904,41 @@ void MariaDBMonitor::execute_task_on_servers(const ServerFunction& task, const S
         m_threadpool.execute(server_task);
     }
     task_complete.wait_n(servers.size());
+}
+
+bool MariaDBMonitor::manual_release_locks(json_t** error_out)
+{
+    bool rval = false;
+    if (server_locks_in_use())
+    {
+        std::atomic_int released_locks {0};
+        auto release_lock_task = [&released_locks](MariaDBServer* server) {
+                released_locks += server->release_all_locks();
+            };
+        execute_task_all_servers(release_lock_task);
+        m_locks_info.have_lock_majority = false;
+
+        // Set next locking attempt 1 minute to the future.
+        m_locks_info.next_lock_attempt_delay = std::chrono::minutes(1);
+        m_locks_info.last_locking_attempt.restart();
+
+        int released = released_locks.load(std::memory_order_relaxed);
+        const char LOCK_DELAY_MSG[] = "Will not attempt to reacquire locks for 1 minute.";
+        if (released > 0)
+        {
+            MXS_NOTICE("Released %i lock(s). %s", released, LOCK_DELAY_MSG);
+            rval = true;
+        }
+        else
+        {
+            PRINT_MXS_JSON_ERROR(error_out, "Did not release any locks. %s", LOCK_DELAY_MSG);
+        }
+    }
+    else
+    {
+        PRINT_MXS_JSON_ERROR(error_out, "Server locks are not in use, cannot release them.");
+    }
+    return rval;
 }
 
 bool MariaDBMonitor::ClusterLocksInfo::time_to_update() const
@@ -1009,6 +1054,15 @@ bool handle_manual_reset_replication(const MODULECMD_ARG* args, json_t** output)
     return rv;
 }
 
+bool handle_release_locks(const MODULECMD_ARG* args, json_t** output)
+{
+    mxb_assert(args->argc == 1);
+    mxb_assert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
+    Monitor* mon = args->argv[0].value.monitor;
+    auto mariamon = static_cast<MariaDBMonitor*>(mon);
+    return mariamon->run_release_locks(output);
+}
+
 string monitored_servers_to_string(const ServerArray& servers)
 {
     string rval;
@@ -1033,14 +1087,10 @@ string monitored_servers_to_string(const ServerArray& servers)
  */
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    MXS_NOTICE("Initialise the MariaDB Monitor module.");
-    static const char ARG_MONITOR_DESC[] = "Monitor name (from configuration file)";
+    static const char ARG_MONITOR_DESC[] = "Monitor name";
     static modulecmd_arg_type_t switchover_argv[] =
     {
-        {
-            MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
-            ARG_MONITOR_DESC
-        },
+        {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC},
         {MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "New master (optional)"    },
         {MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Current master (optional)"}
     };
@@ -1051,10 +1101,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 
     static modulecmd_arg_type_t failover_argv[] =
     {
-        {
-            MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
-            ARG_MONITOR_DESC
-        },
+        {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC},
     };
 
     modulecmd_register_command(MXS_MODULE_NAME, "failover", MODULECMD_TYPE_ACTIVE,
@@ -1063,10 +1110,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 
     static modulecmd_arg_type_t rejoin_argv[] =
     {
-        {
-            MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
-            ARG_MONITOR_DESC
-        },
+        {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC},
         {MODULECMD_ARG_SERVER, "Joining server"}
     };
 
@@ -1076,10 +1120,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 
     static modulecmd_arg_type_t reset_gtid_argv[] =
     {
-        {
-            MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
-            ARG_MONITOR_DESC
-        },
+        {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC},
         {MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Master server (optional)"}
     };
 
@@ -1088,6 +1129,16 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                                MXS_ARRAY_NELEMS(reset_gtid_argv), reset_gtid_argv,
                                "Delete slave connections, delete binary logs and "
                                "set up replication (dangerous)");
+
+    static modulecmd_arg_type_t release_locks_argv[] =
+    {
+        {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC},
+    };
+
+    modulecmd_register_command(MXS_MODULE_NAME, "release-locks", MODULECMD_TYPE_ACTIVE,
+                               handle_release_locks,
+                               MXS_ARRAY_NELEMS(release_locks_argv), release_locks_argv,
+                               "Release any held server locks for 1 minute.");
 
     static MXS_MODULE info =
     {
