@@ -194,7 +194,12 @@ public:
      */
     virtual void unmark_for_wakeup(mxs::ClientConnection* client) = 0;
 
-    virtual const std::vector<std::string>& connection_init_sql() const = 0;
+    struct ConnectionInitSql
+    {
+        std::vector<std::string> queries;
+        std::vector<uint8_t>     buffer_contents;
+    };
+    virtual const ConnectionInitSql& connection_init_sql() const = 0;
 
     /**
      * Has a connection limit been reached?

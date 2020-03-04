@@ -260,7 +260,7 @@ public:
     void mark_for_wakeup(mxs::ClientConnection* session) override;
     void unmark_for_wakeup(mxs::ClientConnection* session) override;
 
-    const std::vector<std::string>& connection_init_sql() const override;
+    const ConnectionInitSql& connection_init_sql() const override;
 
 private:
 
@@ -317,7 +317,7 @@ private:
     mxs::WorkerLocal<std::unordered_set<mxs::ClientConnection*>> m_sleeping_clients;
 
     /** Connection init sql queries. Only written to during service creation. */
-    std::vector<std::string> m_connection_init_sql;
+    ConnectionInitSql m_conn_init_sql_data;
 };
 
 // A connection to a service

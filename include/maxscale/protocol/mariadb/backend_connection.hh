@@ -97,14 +97,19 @@ private:
     /**
      * Contains information about custom connection initialization queries.
      */
-    struct InitQueriesStatus
+    struct InitQueryStatus
     {
-        const std::vector<std::string>* queries {nullptr};      /**< Query container */
+        enum class State
+        {
+            SENDING,
+            RECEIVING,
+        };
+        State state {State::SENDING};
 
-        int  queries_ind {-1};          /**< Current query index */
-        bool expecting_result {false};  /**< Expecting a result from backend? */
+        int ok_packets_expected {0};    /**< OK packets expected in total */
+        int ok_packets_received {0};    /**< OK packets received so far */
     };
-    InitQueriesStatus m_init_queries;
+    InitQueryStatus m_init_query_status;
 
     MariaDBBackendConnection(SERVER& server);
 

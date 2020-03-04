@@ -55,6 +55,7 @@
 #include <maxscale/routingworker.hh>
 #include <maxscale/housekeeper.h>
 #include <fstream>
+#include <maxscale/modutil.hh>
 
 #include "internal/config.hh"
 #include "internal/filter.hh"
@@ -1886,9 +1887,9 @@ bool Service::check_update_user_account_manager(mxs::ProtocolModule* protocol_mo
     return rval;
 }
 
-const std::vector<string>& Service::connection_init_sql() const
+const SERVICE::ConnectionInitSql& Service::connection_init_sql() const
 {
-    return m_connection_init_sql;
+    return m_conn_init_sql_data;
 }
 
 /**
@@ -1898,11 +1899,14 @@ const std::vector<string>& Service::connection_init_sql() const
  */
 bool Service::read_connection_init_sql()
 {
-    m_connection_init_sql.clear();
+    mxb_assert(m_conn_init_sql_data.queries.empty() && m_conn_init_sql_data.buffer_contents.empty());
+
     string filename = m_config->connection_init_sql_file;
-    bool rval = true;
+    bool file_ok = true;
     if (!filename.empty())
     {
+        auto& queries = m_conn_init_sql_data.queries;
+
         std::ifstream inputfile(filename);
         if (inputfile.is_open())
         {
@@ -1911,19 +1915,33 @@ bool Service::read_connection_init_sql()
             {
                 if (!line.empty())
                 {
-                    m_connection_init_sql.push_back(line);
+                    queries.push_back(line);
                 }
             }
             MXB_NOTICE("Read %lu queries from connection init file '%s' to '%s'.",
-                       m_connection_init_sql.size(), filename.c_str(), name());
+                       queries.size(), filename.c_str(), name());
         }
         else
         {
             MXB_ERROR("Could not open connection init file '%s'.", filename.c_str());
-            rval = false;
+            file_ok = false;
+        }
+
+        if (file_ok)
+        {
+            // Construct a buffer with all the queries. The protocol can send the entire buffer as is.
+            mxs::Buffer total_buf;
+            for (const auto& query : queries)
+            {
+                auto querybuf = modutil_create_query(query.c_str());
+                total_buf.append(querybuf);
+            }
+            auto total_len = total_buf.length();
+            m_conn_init_sql_data.buffer_contents.resize(total_len);
+            gwbuf_copy_data(total_buf.get(), 0, total_len, m_conn_init_sql_data.buffer_contents.data());
         }
     }
-    return rval;
+    return file_ok;
 }
 
 void Service::set_cluster(mxs::Monitor* monitor)

@@ -2483,89 +2483,89 @@ bool MariaDBBackendConnection::send_delayed_packets()
 
 MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::send_connection_init_queries()
 {
-    // Send init-queries one-by-one to backend. All must succeed.
-    if (m_init_queries.queries == nullptr)
-    {
-        // First time in this function.
-        auto& queries = m_session->service->connection_init_sql();
-        if (queries.empty())
-        {
-            return StateMachineRes::DONE;   // no init queries configured, continue normally
-        }
-        else
-        {
-            // Got connection init queries.
-            m_init_queries.queries = &queries;
-            m_init_queries.queries_ind = 0;
-        }
-    }
-
-    // If expecting a result, check it first.
-    if (m_init_queries.expecting_result)
-    {
-        mxs::Buffer buffer;
-        if (!read_protocol_packet(m_dcb, &buffer))
-        {
-            do_handle_error(m_dcb, "Socket error", mxs::ErrorType::TRANSIENT);
-            return StateMachineRes::ERROR;
-        }
-        else if (buffer.empty())
-        {
-            // Didn't get enough data, read again later.
-            return StateMachineRes::IN_PROGRESS;
-        }
-        else
-        {
-            string wrong_packet_type;
-            // If server returned anything else than ok, it's an error.
-            if (buffer.length() == MYSQL_HEADER_LEN)
-            {
-                wrong_packet_type = "an empty packet";
-            }
-            else
-            {
-                uint8_t cmd = MYSQL_GET_COMMAND(buffer.data());
-                if (cmd == MYSQL_REPLY_ERR)
-                {
-                    wrong_packet_type = "an error packet";
-                }
-                else if (cmd != MYSQL_REPLY_OK)
-                {
-                    wrong_packet_type = "a resultset packet";
-                }
-            }
-
-            if (wrong_packet_type.empty())
-            {
-                m_init_queries.expecting_result = false;
-            }
-            else
-            {
-                const string& previous_query = (*m_init_queries.queries)[m_init_queries.queries_ind - 1];
-                // Query failed or gave weird results.
-                string errmsg = mxb::string_printf("Connection initialization query '%s' returned %s.",
-                                                   previous_query.c_str(), wrong_packet_type.c_str());
-                do_handle_error(m_dcb, errmsg, mxs::ErrorType::TRANSIENT);
-                return StateMachineRes::ERROR;
-            }
-        }
-    }
-
     auto rval = StateMachineRes::ERROR;
-    // If have more queries, send the next one.
-    if ((size_t)m_init_queries.queries_ind < m_init_queries.queries->size())
+    switch (m_init_query_status.state)
     {
-        const string& next_query = (*m_init_queries.queries)[m_init_queries.queries_ind];
-        GWBUF* buffer = modutil_create_query(next_query.c_str());
-        m_dcb->writeq_append(buffer);
-        m_init_queries.queries_ind++;
-        m_init_queries.expecting_result = true;
-        rval = StateMachineRes::IN_PROGRESS;
-    }
-    else
-    {
-        // All done.
-        rval = StateMachineRes::DONE;
+    case InitQueryStatus::State::SENDING:
+        {
+            // First time in this function.
+            const auto& init_query_data = m_session->service->connection_init_sql();
+            const auto& query_contents = init_query_data.buffer_contents;
+            if (query_contents.empty())
+            {
+                rval = StateMachineRes::DONE;   // no init queries configured, continue normally
+            }
+            else
+            {
+                // Send all the initialization queries in one packet. The server should respond with one
+                // OK-packet per query.
+                GWBUF* buffer = gwbuf_alloc_and_load(query_contents.size(), query_contents.data());
+                m_dcb->writeq_append(buffer);
+                m_init_query_status.ok_packets_expected = init_query_data.queries.size();
+                m_init_query_status.ok_packets_received = 0;
+                m_init_query_status.state = InitQueryStatus::State::RECEIVING;
+                rval = StateMachineRes::IN_PROGRESS;
+            }
+        }
+        break;
+
+    case InitQueryStatus::State::RECEIVING:
+        while (m_init_query_status.ok_packets_received < m_init_query_status.ok_packets_expected)
+        {
+            // Check result. If server returned anything else than OK, it's an error.
+            mxs::Buffer buffer;
+            if (!read_protocol_packet(m_dcb, &buffer))
+            {
+                do_handle_error(m_dcb, "Socket error", mxs::ErrorType::TRANSIENT);
+            }
+            else if (buffer.empty())
+            {
+                // Didn't get enough data, read again later.
+                rval = StateMachineRes::IN_PROGRESS;
+            }
+            else
+            {
+                string wrong_packet_type;
+                if (buffer.length() == MYSQL_HEADER_LEN)
+                {
+                    wrong_packet_type = "an empty packet";
+                }
+                else
+                {
+                    uint8_t cmd = MYSQL_GET_COMMAND(buffer.data());
+                    if (cmd == MYSQL_REPLY_ERR)
+                    {
+                        wrong_packet_type = "an error packet";
+                    }
+                    else if (cmd != MYSQL_REPLY_OK)
+                    {
+                        wrong_packet_type = "a resultset packet";
+                    }
+                }
+
+                if (wrong_packet_type.empty())
+                {
+                    // Got an ok packet.
+                    m_init_query_status.ok_packets_received++;
+                }
+                else
+                {
+                    // Query failed or gave weird results.
+                    const auto& init_queries = m_session->service->connection_init_sql().queries;
+                    const string& errored_query = init_queries[m_init_query_status.ok_packets_received];
+                    string errmsg = mxb::string_printf("Connection initialization query '%s' returned %s.",
+                                                       errored_query.c_str(), wrong_packet_type.c_str());
+                    do_handle_error(m_dcb, errmsg, mxs::ErrorType::PERMANENT);
+                    break;
+                }
+            }
+        }
+
+        if (m_init_query_status.ok_packets_received == m_init_query_status.ok_packets_expected)
+        {
+            rval = StateMachineRes::DONE;
+        }
+        break;
     }
     return rval;
 }
