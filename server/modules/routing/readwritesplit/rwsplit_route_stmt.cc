@@ -310,11 +310,9 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
         route_target = TARGET_LAST_USED;
     }
 
-    RWBackend* target;
-    bool ok;
-    std::tie(ok, target) = get_target(querybuf, route_target);
+    bool ok = true;
 
-    if (ok && target)
+    if (auto target = get_target(querybuf, route_target))
     {
         // We have a valid target, reset retry duration
         m_retry_duration = 0;
@@ -336,66 +334,60 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
             ok = handle_got_target(querybuf, target, store_stmt);
         }
     }
-    else if (!ok && TARGET_IS_MASTER(route_target) && should_migrate_trx(target))
+    else
     {
-        ok = start_trx_migration(target, querybuf);
-    }
-    else if (can_retry_query() || can_continue_trx_replay())
-    {
-        retry_query(gwbuf_clone(querybuf));
-        ok = true;
-        MXS_INFO("Delaying routing: %s", extract_sql(querybuf).c_str());
-    }
-    else if (m_config.master_failure_mode != RW_ERROR_ON_WRITE)
-    {
-        MXS_ERROR("Could not find valid server for target type %s, closing "
-                  "connection.", route_target_to_string(route_target));
+        auto next_master = get_master_backend();
+
+        if (should_migrate_trx(next_master))
+        {
+            ok = start_trx_migration(next_master, querybuf);
+        }
+        else if (can_retry_query() || can_continue_trx_replay())
+        {
+            retry_query(gwbuf_clone(querybuf));
+            MXS_INFO("Delaying routing: %s", extract_sql(querybuf).c_str());
+        }
+        else if (m_config.master_failure_mode != RW_ERROR_ON_WRITE)
+        {
+            MXS_ERROR("Could not find valid server for target type %s, closing "
+                      "connection.", route_target_to_string(route_target));
+            ok = false;
+        }
     }
 
     return ok;
 }
 
-std::pair<bool, RWBackend*> RWSplitSession::get_target(GWBUF* querybuf, route_target_t route_target)
+RWBackend* RWSplitSession::get_target(GWBUF* querybuf, route_target_t route_target)
 {
+    RWBackend* rval = nullptr;
     const QueryClassifier::RouteInfo& info = m_qc.current_route_info();
-    RWBackend* target = nullptr;
-    bool ok = false;
 
-    switch (route_target)
+    // We can't use a switch here as the route_target is a bitfield where multiple values are set at one time.
+    // Mostly this happens when the type is TARGET_NAMED_SERVER and TARGET_SLAVE due to a routing hint.
+    if (TARGET_IS_NAMED_SERVER(route_target) || TARGET_IS_RLAG_MAX(route_target))
     {
-    case TARGET_NAMED_SERVER:
-    case TARGET_RLAG_MAX:
-        if ((target = handle_hinted_target(querybuf, route_target)))
-        {
-            ok = true;
-        }
-        break;
-
-    case TARGET_LAST_USED:
-        if ((target = get_last_used_backend()))
-        {
-            ok = true;
-        }
-        break;
-
-    case TARGET_SLAVE:
-        if ((target = handle_slave_is_target(info.command(), info.stmt_id())))
-        {
-            ok = true;
-        }
-        break;
-
-    case TARGET_MASTER:
-        ok = handle_master_is_target(&target);
-        break;
-
-    default:
-        mxb_assert(!true);
+        rval = handle_hinted_target(querybuf, route_target);
+    }
+    else if (TARGET_IS_LAST_USED(route_target))
+    {
+        rval = get_last_used_backend();
+    }
+    else if (TARGET_IS_SLAVE(route_target))
+    {
+        rval = handle_slave_is_target(info.command(), info.stmt_id());
+    }
+    else if (TARGET_IS_MASTER(route_target))
+    {
+        rval = handle_master_is_target();
+    }
+    else
+    {
         MXS_ERROR("Unexpected target type: %s", route_target_to_string(route_target));
-        break;
+        mxb_assert(!true);
     }
 
-    return {ok, target};
+    return rval;
 }
 
 /**
@@ -936,21 +928,21 @@ bool RWSplitSession::start_trx_migration(RWBackend* target, GWBUF* querybuf)
  *
  *  @return bool - true if succeeded, false otherwise
  */
-bool RWSplitSession::handle_master_is_target(RWBackend** dest)
+RWBackend* RWSplitSession::handle_master_is_target()
 {
     RWBackend* target = get_target_backend(BE_MASTER, NULL, mxs::Target::RLAG_UNDEFINED);
-    bool succp = false;
+    RWBackend* rval = nullptr;
 
     if (target && target == m_current_master)
     {
         mxb::atomic::add(&m_router->stats().n_master, 1, mxb::atomic::RELAXED);
         m_server_stats[target->target()].inc_write();
-        succp = true;
+        rval = target;
     }
     else if (!m_config.delayed_retry || m_retry_duration >= m_config.delayed_retry_timeout)
     {
         // Cannot retry the query, log a message that routing has failed
-        log_master_routing_failure(succp, m_current_master, target);
+        log_master_routing_failure(target, m_current_master, target);
     }
 
     if (!m_locked_to_master && m_target_node == m_current_master)
@@ -959,8 +951,7 @@ bool RWSplitSession::handle_master_is_target(RWBackend** dest)
         m_target_node = nullptr;
     }
 
-    *dest = target;
-    return succp;
+    return rval;
 }
 
 void RWSplitSession::process_stmt_execute(GWBUF** buf, uint32_t id, RWBackend* target)
