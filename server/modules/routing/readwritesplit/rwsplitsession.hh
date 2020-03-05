@@ -180,6 +180,7 @@ private:
     bool trx_is_ending() const;
 
     bool can_continue_using_master(const mxs::RWBackend* master);
+    bool is_valid_for_master(const mxs::RWBackend* master);
     bool should_replace_master(mxs::RWBackend* target);
     void replace_master(mxs::RWBackend* target);
     bool should_migrate_trx(mxs::RWBackend* target);
@@ -188,9 +189,8 @@ private:
                                     mxs::RWBackend* old_master,
                                     mxs::RWBackend* curr_master);
 
-    // Send unknown prepared statement ID error to client
-    void send_unknown_ps_error(uint32_t stmt_id);
     void send_readonly_error();
+    bool query_not_supported(GWBUF* querybuf);
 
     GWBUF* handle_causal_read_reply(GWBUF* writebuf, const mxs::Reply& reply, mxs::RWBackend* backend);
     bool   finish_causal_read();

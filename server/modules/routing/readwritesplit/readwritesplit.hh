@@ -443,9 +443,6 @@ static inline const char* failure_mode_to_str(enum failure_mode type)
     }
 }
 
-void closed_session_reply(GWBUF* querybuf);
-bool send_readonly_error(DCB* dcb);
-
 /**
  * Get total slave count and connected slave count
  *

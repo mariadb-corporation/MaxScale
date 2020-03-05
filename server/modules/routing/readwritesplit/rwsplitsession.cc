@@ -1268,15 +1268,6 @@ bool RWSplitSession::supports_hint(HINT_TYPE hint_type) const
     return rv;
 }
 
-void RWSplitSession::send_unknown_ps_error(uint32_t stmt_id)
-{
-    std::stringstream ss;
-    ss << "Unknown prepared statement handler (" << stmt_id << ") given to MaxScale";
-    GWBUF* err = modutil_create_mysql_err_msg(1, 0, ER_UNKNOWN_STMT_HANDLER, "HY000", ss.str().c_str());
-    mxs::ReplyRoute route;
-    RouterSession::clientReply(err, route, mxs::Reply());
-}
-
 /**
  * See if the current master is still a valid TARGET_MASTER candidate
  *
@@ -1290,4 +1281,18 @@ bool RWSplitSession::can_continue_using_master(const mxs::RWBackend* master)
 {
     auto tgt = master->target();
     return tgt->is_master() || (master->in_use() && tgt->is_in_maint() && trx_is_open());
+}
+
+bool RWSplitSession::is_valid_for_master(const mxs::RWBackend* master)
+{
+    bool rval = false;
+
+    if (master->in_use()
+        || (m_config.master_reconnection && master->can_connect() && can_recover_servers()))
+    {
+        rval = master->target()->is_master()
+            || (master->in_use() && master->target()->is_in_maint() && trx_is_open());
+    }
+
+    return rval;
 }

@@ -34,6 +34,16 @@ using namespace maxscale;
 
 using std::chrono::seconds;
 
+namespace
+{
+GWBUF* create_readonly_error()
+{
+    return modutil_create_mysql_err_msg(1, 0, ER_OPTION_PREVENTS_STATEMENT, "HY000",
+                                        "The MariaDB server is running with the --read-only"
+                                        " option so it cannot execute this statement");
+}
+}
+
 /**
  * The functions that support the routing of queries to back end
  * servers. All the functions in this module are internal to the read
@@ -48,13 +58,10 @@ bool RWSplitSession::prepare_connection(RWBackend* target)
     if (rval)
     {
         MXS_INFO("Connected to '%s'", target->name());
-
-        if (target->is_waiting_result())
-        {
-            mxb_assert_message(!m_sescmd_list.empty() && target->has_session_commands(),
-                               "Session command list must not be empty and target "
-                               "should have unfinished session commands.");
-        }
+        mxb_assert_message(!target->is_waiting_result()
+                           || (!m_sescmd_list.empty() && target->has_session_commands()),
+                           "Session command list must not be empty and target "
+                           "should have unfinished session commands.");
     }
 
     return rval;
@@ -62,17 +69,8 @@ bool RWSplitSession::prepare_connection(RWBackend* target)
 
 bool RWSplitSession::prepare_target(RWBackend* target, route_target_t route_target)
 {
-    bool rval = true;
-
-    // Check if we need to connect to the server in order to use it
-    if (!target->in_use())
-    {
-        mxb_assert(target->can_connect() && can_recover_servers());
-        mxb_assert(!TARGET_IS_MASTER(route_target) || m_config.master_reconnection);
-        rval = prepare_connection(target);
-    }
-
-    return rval;
+    mxb_assert(target->in_use() || (target->can_connect() && can_recover_servers()));
+    return target->in_use() || prepare_connection(target);
 }
 
 void RWSplitSession::retry_query(GWBUF* querybuf, int delay)
@@ -104,15 +102,9 @@ void RWSplitSession::retry_query(GWBUF* querybuf, int delay)
 
 bool RWSplitSession::have_connected_slaves() const
 {
-    for (const auto& b : m_raw_backends)
-    {
-        if (b->is_slave() && b->in_use())
-        {
-            return true;
-        }
-    }
-
-    return false;
+    return std::any_of(m_raw_backends.begin(), m_raw_backends.end(), [](auto b) {
+                           return b->is_slave() && b->in_use();
+                       });
 }
 
 bool RWSplitSession::should_try_trx_on_slave(route_target_t route_target) const
@@ -180,34 +172,7 @@ bool RWSplitSession::handle_target_is_all(route_target_t route_target,
     bool result = false;
     bool is_large = is_large_query(querybuf);
 
-    if (TARGET_IS_MASTER(route_target) || TARGET_IS_SLAVE(route_target))
-    {
-        /**
-         * Conflicting routing targets. Return an error to the client.
-         */
-
-        char* query_str = modutil_get_query(querybuf);
-        char* qtype_str = qc_typemask_to_string(qtype);
-
-        MXS_ERROR("Can't route %s:%s:\"%s\". SELECT with session data "
-                  "modification is not supported if configuration parameter "
-                  "use_sql_variables_in=all .",
-                  STRPACKETTYPE(packet_type),
-                  qtype_str,
-                  (query_str == NULL ? "(empty)" : query_str));
-
-        auto err = modutil_create_mysql_err_msg(1, 0, 1064, "42000",
-                                                "Routing query to backend failed. "
-                                                "See the error log for further details.");
-
-        mxs::ReplyRoute route;
-        RouterSession::clientReply(err, route, mxs::Reply());
-
-        result = true;
-        MXS_FREE(query_str);
-        MXS_FREE(qtype_str);
-    }
-    else if (m_qc.large_query())
+    if (m_qc.large_query())
     {
         // TODO: Append to the already stored session command instead of disabling history
         MXS_INFO("Large session write, have to disable session command history");
@@ -228,20 +193,57 @@ bool RWSplitSession::handle_target_is_all(route_target_t route_target,
     return result;
 }
 
-/**
- * @brief Send an error message to the client telling that the server is in read only mode
- *
- * @param dcb Client DCB
- *
- * @return True if sending the message was successful, false if an error occurred
- */
 void RWSplitSession::send_readonly_error()
 {
-    const char* errmsg = "The MariaDB server is running with the --read-only"
-                         " option so it cannot execute this statement";
-    GWBUF* err = modutil_create_mysql_err_msg(1, 0, ER_OPTION_PREVENTS_STATEMENT, "HY000", errmsg);
     mxs::ReplyRoute route;
-    RouterSession::clientReply(err, route, mxs::Reply());
+    RouterSession::clientReply(create_readonly_error(), route, mxs::Reply());
+}
+
+bool RWSplitSession::query_not_supported(GWBUF* querybuf)
+{
+    const QueryClassifier::RouteInfo& info = m_qc.current_route_info();
+    route_target_t route_target = info.target();
+    GWBUF* err = nullptr;
+
+    if (mxs_mysql_is_ps_command(info.command()) && info.stmt_id() == 0)
+    {
+        // Unknown PS ID, can't route this query
+        std::stringstream ss;
+        ss << "Unknown prepared statement handler (" << extract_binary_ps_id(querybuf)
+           << ") given to MaxScale";
+        err = modutil_create_mysql_err_msg(1, 0, ER_UNKNOWN_STMT_HANDLER, "HY000", ss.str().c_str());
+    }
+    else if (TARGET_IS_ALL(route_target) && (TARGET_IS_MASTER(route_target) || TARGET_IS_SLAVE(route_target)))
+    {
+        // Conflicting routing targets. Return an error to the client.
+        MXS_ERROR("Can't route %s '%s'. SELECT with session data modification is not "
+                  "supported with `use_sql_variables_in=all`.",
+                  STRPACKETTYPE(info.command()), mxs::extract_sql(querybuf).c_str());
+
+        err = modutil_create_mysql_err_msg(1, 0, 1064, "42000",
+                                           "Routing query to backend failed. "
+                                           "See the error log for further details.");
+    }
+    else if (m_config.master_failure_mode == RW_ERROR_ON_WRITE && TARGET_IS_MASTER(route_target)
+             && (!m_current_master || !is_valid_for_master(m_current_master)))
+    {
+        // We are in read-only mode as the master is no longer available or is not valid
+        err = create_readonly_error();
+
+        if (m_current_master && m_current_master->in_use())
+        {
+            m_current_master->close();
+            m_current_master->set_close_reason("The original master is not available");
+        }
+    }
+
+    if (err)
+    {
+        mxs::ReplyRoute route;
+        RouterSession::clientReply(err, route, mxs::Reply());
+    }
+
+    return err != nullptr;
 }
 
 /**
@@ -271,6 +273,20 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
         route_target = TARGET_MASTER;
     }
 
+    auto next_master = get_target_backend(BE_MASTER, NULL, mxs::Target::RLAG_UNDEFINED);
+
+    if (should_replace_master(next_master))
+    {
+        MXS_INFO("Replacing old master '%s' with new master '%s'",
+                 m_current_master ? m_current_master->name() : "<no previous master>", next_master->name());
+        replace_master(next_master);
+    }
+
+    if (query_not_supported(querybuf))
+    {
+        return true;
+    }
+
     if (TARGET_IS_ALL(route_target))
     {
         succp = handle_target_is_all(route_target, querybuf, command, qtype);
@@ -278,17 +294,6 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
     else
     {
         update_trx_statistics();
-
-        auto next_master = get_target_backend(BE_MASTER, NULL, mxs::Target::RLAG_UNDEFINED);
-
-        if (should_replace_master(next_master))
-        {
-            MXS_INFO("Replacing old master '%s' with new master '%s'",
-                     m_current_master ?
-                     m_current_master->name() : "<no previous master>",
-                     next_master->name());
-            replace_master(next_master);
-        }
 
         if (trx_is_starting() && !trx_is_read_only()    // A normal transaction is starting
             && should_try_trx_on_slave(route_target))   // Qualifies for speculative routing
@@ -322,12 +327,6 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
             store_stmt = track_optimistic_trx(&querybuf);
             target = m_prev_target;
             succp = true;
-        }
-        else if (mxs_mysql_is_ps_command(command) && stmt_id == 0)
-        {
-            // Unknown prepared statement ID
-            succp = true;
-            send_unknown_ps_error(extract_binary_ps_id(querybuf));
         }
         else if (TARGET_IS_NAMED_SERVER(route_target) || TARGET_IS_RLAG_MAX(route_target))
         {
@@ -591,24 +590,12 @@ RWBackend* RWSplitSession::get_hinted_backend(const char* name)
 RWBackend* RWSplitSession::get_master_backend()
 {
     RWBackend* rval = nullptr;
-    /** get root master from available servers */
-    RWBackend* master = get_root_master();
 
-    if (master)
+    if (RWBackend* master = get_root_master())
     {
-        if (master->in_use()
-            || (m_config.master_reconnection && master->can_connect() && can_recover_servers()))
+        if (is_valid_for_master(master))
         {
-            if (can_continue_using_master(master))
-            {
-                rval = master;
-            }
-            else
-            {
-                MXS_ERROR("Server '%s' does not have the master state and "
-                          "can't be chosen as the master.",
-                          master->name());
-            }
+            rval = master;
         }
         else
         {
@@ -967,34 +954,18 @@ bool RWSplitSession::start_trx_migration(RWBackend* target, GWBUF* querybuf)
 bool RWSplitSession::handle_master_is_target(RWBackend** dest)
 {
     RWBackend* target = get_target_backend(BE_MASTER, NULL, mxs::Target::RLAG_UNDEFINED);
-    bool succp = true;
+    bool succp = false;
 
     if (target && target == m_current_master)
     {
         mxb::atomic::add(&m_router->stats().n_master, 1, mxb::atomic::RELAXED);
         m_server_stats[target->target()].inc_write();
+        succp = true;
     }
-    else
+    else if (!m_config.delayed_retry || m_retry_duration >= m_config.delayed_retry_timeout)
     {
-        succp = false;
-        /** The original master is not available, we can't route the write */
-        if (m_config.master_failure_mode == RW_ERROR_ON_WRITE)
-        {
-            succp = true;
-            send_readonly_error();
-
-            if (m_current_master && m_current_master->in_use())
-            {
-                m_current_master->close();
-                m_current_master->set_close_reason("The original master is not available");
-            }
-        }
-        else if (!m_config.delayed_retry
-                 || m_retry_duration >= m_config.delayed_retry_timeout)
-        {
-            // Cannot retry the query, log a message that routing has failed
-            log_master_routing_failure(succp, m_current_master, target);
-        }
+        // Cannot retry the query, log a message that routing has failed
+        log_master_routing_failure(succp, m_current_master, target);
     }
 
     if (!m_config.strict_multi_stmt && !m_config.strict_sp_calls
