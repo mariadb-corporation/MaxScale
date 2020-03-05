@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <maxbase/alloc.h>
+#include <maxscale/config2.hh>
 #include <maxscale/filter.hh>
 #include <maxscale/hint.h>
 #include <maxscale/modinfo.hh>
@@ -41,7 +42,120 @@ const MXS_ENUM_VALUE option_values[] =
     {"extended",   PCRE2_EXTENDED},
     {NULL}
 };
+
+namespace ccr
+{
+
+namespace config = mxs::config;
+
+enum regex_options
+{
+    CCR_REGEX_CASE_INSENSITIVE = PCRE2_CASELESS,
+    CCR_REGEX_CASE_SENSITIVE   = 0,
+    CCR_REGEX_EXTENDED         = PCRE2_EXTENDED
+};
+
+config::Specification specification(MXS_MODULE_NAME, config::Specification::FILTER);
+
+config::ParamCount count(
+    &specification,
+    "count",
+    "The number of SQL statements to route to master after detecting a data modifying SQL statement.",
+    0);
+
+config::ParamSeconds time(
+    &specification,
+    "time",
+    "The time window during which queries are routed to the master.",
+    mxs::config::INTERPRET_AS_SECONDS,
+    std::chrono::seconds { 60 });
+
+config::ParamBool global(
+    &specification,
+    "global",
+    "Specifies whether a write on one connection should have an impact on reads "
+    "made on another connections. Note that 'global' and 'count' are mutually "
+    "exclusive.",
+    false);
+
+config::ParamRegex match(
+    &specification,
+    "match",
+    "Regular expression used for matching statements.");
+
+config::ParamRegex ignore(
+    &specification,
+    "ignore",
+    "Regular expression used for excluding statements.");
+
+config::ParamEnumMask<regex_options> options(
+    &specification,
+    "options",
+    "Specificies addition options for the regular expressions; 'ignorecase' makes the "
+    "matching case insensitive (on by default), 'case' makes the matching case sensitive "
+    "and 'extended' causes whitespace to be ignored. The have been deprecated and you "
+    "should instead use pattern settings in the regular expressions themselves.",
+    {
+        { CCR_REGEX_CASE_INSENSITIVE, "ignorecase" },
+        { CCR_REGEX_CASE_SENSITIVE,   "case" },
+        { CCR_REGEX_EXTENDED,         "extended" }
+    },
+    CCR_REGEX_CASE_INSENSITIVE);
+
 }
+}
+
+class CCRConfig : public mxs::config::Configuration
+{
+public:
+    CCRConfig(const CCRConfig&) = delete;
+    CCRConfig& operator=(const CCRConfig&) = delete;
+
+    CCRConfig(const std::string& name)
+        : mxs::config::Configuration(name, &ccr::specification)
+    {
+        add_native(&match, &ccr::match);
+        add_native(&ignore, &ccr::ignore);
+        add_native(&time, &ccr::time);
+        add_native(&count, &ccr::count);
+        add_native(&global, &ccr::global);
+        add_native(&options, &ccr::options);
+    }
+
+    CCRConfig(CCRConfig&& rhs) = default;
+
+    bool post_configure(const mxs::ConfigParameters&)
+    {
+        bool rv = true;
+
+        if (this->global && (this->count != 0))
+        {
+            MXS_ERROR("'count' and 'global' cannot be used at the same time.");
+            rv = false;
+        }
+
+        if (rv)
+        {
+            this->ovector_size = std::max(this->match.ovec_size, this->ignore.ovec_size);
+
+            if (this->options != 0)
+            {
+                this->match.set_options(options);
+                this->ignore.set_options(options);
+            }
+        }
+
+        return rv;
+    }
+
+    mxs::config::RegexValue match;
+    mxs::config::RegexValue ignore;
+    std::chrono::seconds    time;
+    int64_t                 count;
+    bool                    global;
+    uint32_t                options;
+    uint32_t                ovector_size { 0 };
+};
 
 class CCRFilter;
 
