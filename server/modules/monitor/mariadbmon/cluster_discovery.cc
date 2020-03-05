@@ -1042,7 +1042,7 @@ void MariaDBMonitor::update_cluster_lock_status()
 {
     if (server_locks_in_use())
     {
-        const bool had_lock_majority = m_shared_state.have_lock_majority;
+        const bool had_lock_majority = m_locks_info.have_lock_majority;
 
         int server_locks_free = 0;
         int server_locks_held = 0;
@@ -1075,13 +1075,11 @@ void MariaDBMonitor::update_cluster_lock_status()
         {
             /**
              *  This MaxScale can obtain or already has lock majority. Try to acquire free locks if
-             *  1) Some time has passed since last locking attempt.
-             *  2) This is the master MaxScale, yet does not have a lock on the server.
-             *  A secondary MaxScale should not try to aggressively acquire the lock so that it's easy
-             *  for the master.
+             *  1) some time has passed since last locking attempt
+             *  2) or this is the master MaxScale, yet lacks some locks. A secondary MaxScale should not
+             *  try to repeatedly acquire locks as this could prevent the primary from getting majority.
              */
-            bool time_to_get_locks = check_lock_status_this_tick();
-            if (had_lock_majority || time_to_get_locks)
+            if (had_lock_majority || try_acquire_locks_this_tick())
             {
                 // Get as many locks as possible.
                 server_locks_held += get_free_locks();
@@ -1089,13 +1087,16 @@ void MariaDBMonitor::update_cluster_lock_status()
         }
         const bool have_lock_majority = (server_locks_held >= required_for_majority);
 
-        // If situation changed, log it.
+        // If situation changed, log it. Also, if monitor gained lock majority, delay automatic cluster
+        // operations for a while so that the other monitor(s) have time to detect the new situation.
         if (have_lock_majority != had_lock_majority)
         {
             if (have_lock_majority)
             {
-                MXS_NOTICE("'%s' acquired the exclusive lock on the majority of its servers. "
-                           "Cluster manipulation operations such as failover can be executed.", name());
+                MXS_NOTICE("'%s' acquired the exclusive lock on a majority of its servers. "
+                           "Automatic cluster manipulation operations such as failover will be enabled "
+                           "in %i monitor ticks.", name(), m_settings.failcount);
+                delay_auto_cluster_ops(Log::OFF);
             }
             else
             {
@@ -1117,14 +1118,7 @@ void MariaDBMonitor::update_cluster_lock_status()
                 server->release_all_locks();
             }
         }
-
-        if (have_lock_majority)
-        {
-            m_locks_info.failover_needs_locks = false;
-            m_locks_info.switchover_needs_locks = false;
-            m_locks_info.rejoin_needs_locks = false;
-        }
-        m_shared_state.have_lock_majority = have_lock_majority;
+        m_locks_info.have_lock_majority = have_lock_majority;
     }
 }
 

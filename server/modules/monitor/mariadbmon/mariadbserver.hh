@@ -74,12 +74,10 @@ class MariaDBServer : public mxs::MonitorServer
 {
 public:
     class SharedSettings;
-    struct SharedState;
 
     MariaDBServer(SERVER* server, int config_index,
                   const MonitorServer::SharedSettings& base_settings,
-                  const MariaDBServer::SharedSettings& settings,
-                  const MariaDBServer::SharedState& shared_state);
+                  const MariaDBServer::SharedSettings& settings);
 
     class EventInfo
     {
@@ -142,15 +140,6 @@ public:
 
         /** Should the server regularly update locks status. True if either lock mode is on. */
         bool server_locks_enabled {true};
-    };
-
-    struct SharedState
-    {
-        /**
-         * Indicates if this is the primary MaxScale for the monitored servers. The state is shared with
-         * servers. When true, servers will attempt to quickly re-acquire the lock after losing it.
-         */
-        bool have_lock_majority {false};
     };
 
     /* What position this server has in the monitor config? Used for tiebreaking between servers. */
@@ -613,7 +602,6 @@ private:
     mutable std::mutex m_arraylock;
 
     const SharedSettings& m_settings;       /* Settings required for various operations */
-    const SharedState&    m_shared_state;   /* State shared with monitor */
 
     ServerLock m_serverlock;        /* Server lock status */
     ServerLock m_masterlock;        /* Master lock status */

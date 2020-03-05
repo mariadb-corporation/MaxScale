@@ -1453,14 +1453,12 @@ unique_ptr<MariaDBMonitor::FailoverParams> MariaDBMonitor::failover_prepare(Log 
  */
 void MariaDBMonitor::handle_auto_failover()
 {
-    m_locks_info.failover_needs_locks = false;
     if (!m_master || m_master->is_running())
     {
         // No need for failover. This also applies if master is in maintenance, because that is a user
         // problem.
         m_warn_master_down = true;
         m_warn_failover_precond = true;
-        m_warn_failover_needs_locks = true;
         return;
     }
 
@@ -1547,18 +1545,6 @@ void MariaDBMonitor::handle_auto_failover()
                         m_warn_failover_precond = false;
                     }
                 }
-            }
-        }
-        else if (master_down_count > 2 * failcount)
-        {
-            // No locks and no-one seems to be doing failover. Try to regain locks and try again.
-            m_locks_info.failover_needs_locks = true;
-            if (m_warn_failover_needs_locks)
-            {
-                MXB_WARNING("Master server '%s' has been down for %i (> 2 x failcount) monitor ticks, "
-                            "attempting to regain lock majority.",
-                            m_master->name(), master_down_count);
-                m_warn_failover_needs_locks = false;
             }
         }
     }
@@ -1900,7 +1886,7 @@ bool MariaDBMonitor::check_gtid_replication(Log log_mode, const MariaDBServer* d
 
 bool MariaDBMonitor::lock_status_is_ok() const
 {
-    return !(server_locks_in_use() && !m_shared_state.have_lock_majority);
+    return !(server_locks_in_use() && !m_locks_info.have_lock_majority);
 }
 
 /**
@@ -1928,10 +1914,10 @@ ServerArray MariaDBMonitor::get_redirectables(const MariaDBServer* old_master,
     return redirectable_slaves;
 }
 
-void MariaDBMonitor::delay_auto_cluster_ops()
+void MariaDBMonitor::delay_auto_cluster_ops(Log log)
 {
-    if (m_settings.auto_failover || m_settings.auto_rejoin || m_settings.enforce_read_only_slaves
-        || m_settings.switchover_on_low_disk_space)
+    if (log == Log::ON && (m_settings.auto_failover || m_settings.auto_rejoin
+                           || m_settings.enforce_read_only_slaves || m_settings.switchover_on_low_disk_space))
     {
         const char DISABLING_AUTO_OPS[] = "Disabling automatic cluster operations for %i monitor ticks.";
         MXS_NOTICE(DISABLING_AUTO_OPS, m_settings.failcount);
@@ -1943,7 +1929,7 @@ void MariaDBMonitor::delay_auto_cluster_ops()
 bool MariaDBMonitor::can_perform_cluster_ops()
 {
     return !mxs::Config::get().passive.get() && cluster_operation_disable_timer <= 0
-           && !m_cluster_modified && (!server_locks_in_use() || m_shared_state.have_lock_majority);
+           && !m_cluster_modified && lock_status_is_ok();
 }
 
 /**

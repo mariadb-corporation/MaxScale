@@ -33,12 +33,10 @@ using ConnectResult = maxscale::MonitorServer::ConnectResult;
 
 MariaDBServer::MariaDBServer(SERVER* server, int config_index,
                              const MonitorServer::SharedSettings& base_settings,
-                             const MariaDBServer::SharedSettings& settings,
-                             const MariaDBServer::SharedState& shared_state)
+                             const MariaDBServer::SharedSettings& settings)
     : MonitorServer(server, base_settings)
     , m_config_index(config_index)
     , m_settings(settings)
-    , m_shared_state(shared_state)
 {
 }
 

@@ -84,7 +84,7 @@ MariaDBMonitor::MariaDBMonitor(const string& name, const string& module)
 mxs::MonitorServer*
 MariaDBMonitor::create_server(SERVER* server, const mxs::MonitorServer::SharedSettings& shared)
 {
-    return new MariaDBServer(server, servers().size(), shared, m_settings.shared, m_shared_state);
+    return new MariaDBServer(server, servers().size(), shared, m_settings.shared);
 }
 
 const ServerArray& MariaDBMonitor::servers() const
@@ -392,7 +392,7 @@ json_t* MariaDBMonitor::to_json() const
                         json_integer(m_master_gtid_domain));
     json_object_set_new(rval, "state", to_json(m_state));
 
-    json_object_set_new(rval, "lock_majority", json_boolean(m_shared_state.have_lock_majority));
+    json_object_set_new(rval, "lock_majority", json_boolean(m_locks_info.have_lock_majority));
     json_t* server_info = json_array();
     for (MariaDBServer* server : servers())
     {
@@ -442,7 +442,6 @@ void MariaDBMonitor::pre_loop()
         }
     }
 
-    m_shared_state = MariaDBServer::SharedState();
     m_locks_info = ClusterLocksInfo();
 }
 
@@ -519,7 +518,7 @@ void MariaDBMonitor::tick()
         srv->assign_status(server->pending_status);
     }
 
-    if (server_locks_in_use() && m_shared_state.have_lock_majority)
+    if (server_locks_in_use() && m_locks_info.have_lock_majority)
     {
         check_acquire_masterlock();
     }
@@ -759,8 +758,10 @@ bool MariaDBMonitor::server_locks_in_use() const
            || (m_settings.require_server_locks == LOCKS_MAJORITY_RUNNING);
 }
 
-bool MariaDBMonitor::check_lock_status_this_tick()
+bool MariaDBMonitor::try_acquire_locks_this_tick()
 {
+    mxb_assert(server_locks_in_use());
+
     auto calc_interval = [this](int base_intervals, int deviation_max_intervals) {
             // Scale the interval calculation by the monitor interval.
             int mon_interval_ms = settings().interval;
@@ -768,37 +769,18 @@ bool MariaDBMonitor::check_lock_status_this_tick()
             return (base_intervals + deviation) * mon_interval_ms;
         };
 
-    mxb_assert(!(m_locks_info.locks_needed() && !server_locks_in_use()));
-    bool should_update_lock_status = false;
-
-    if (server_locks_in_use())
+    bool try_acquire_locks = false;
+    if (m_locks_info.time_to_update())
     {
-        if (m_locks_info.time_to_update())
-        {
-            should_update_lock_status = true;
-            // Calculate time until next update check. Randomize a bit to reduce possibility that multiple
-            // monitors would attempt to get locks simultaneously.
-            // The randomization parameters are not user configurable, but the correct values are not
-            // obvious.
-            int next_check_interval = calc_interval(10, 6);
-            m_locks_info.lock_check_interval = std::chrono::milliseconds(next_check_interval);
-        }
-        else if (m_locks_info.locks_needed())
-        {
-            // A cluster operation depends on acquiring locks, and enough time has passed.
-            should_update_lock_status = true;
-            // Calculate time until next "need" check. Again, randomize a bit. Use smaller values than with
-            // the normal checks, as the locks are urgently required and the other MaxScale is likely down.
-            int next_check_interval = calc_interval(2, 3);
-            m_locks_info.lock_need_interval = std::chrono::milliseconds(next_check_interval);
-        }
+        try_acquire_locks = true;
+        // Calculate time until next update check. Randomize a bit to reduce possibility that multiple
+        // monitors would attempt to get locks simultaneously. The randomization parameters are not user
+        // configurable, but the correct values are not obvious.
+        int next_check_interval = calc_interval(5, 3);
+        m_locks_info.next_lock_attempt_delay = std::chrono::milliseconds(next_check_interval);
+        m_locks_info.last_locking_attempt.restart();
     }
-
-    if (should_update_lock_status)
-    {
-        m_locks_info.last_lock_update.restart();
-    }
-    return should_update_lock_status;
+    return try_acquire_locks;
 }
 
 bool MariaDBMonitor::run_manual_switchover(SERVER* promotion_server, SERVER* demotion_server,
@@ -892,7 +874,7 @@ void MariaDBMonitor::check_acquire_masterlock()
 
 bool MariaDBMonitor::is_slave_maxscale() const
 {
-    return server_locks_in_use() && !m_shared_state.have_lock_majority;
+    return server_locks_in_use() && !m_locks_info.have_lock_majority;
 }
 
 void MariaDBMonitor::execute_task_all_servers(const ServerFunction& task)
@@ -914,15 +896,9 @@ void MariaDBMonitor::execute_task_on_servers(const ServerFunction& task, const S
     task_complete.wait_n(servers.size());
 }
 
-bool MariaDBMonitor::ClusterLocksInfo::locks_needed() const
-{
-    return (failover_needs_locks || switchover_needs_locks || rejoin_needs_locks)
-           && last_lock_update.split() > lock_need_interval;
-}
-
 bool MariaDBMonitor::ClusterLocksInfo::time_to_update() const
 {
-    return last_lock_update.split() > lock_check_interval;
+    return last_locking_attempt.split() > next_lock_attempt_delay;
 }
 
 /**

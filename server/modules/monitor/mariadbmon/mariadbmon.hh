@@ -246,23 +246,16 @@ private:
     bool m_warn_switchover_precond {true};      /* Print switchover preconditions error message? */
     bool m_warn_cannot_rejoin {true};           /* Print warning if auto_rejoin fails because of invalid
                                                  * gtid:s? */
-    bool m_warn_failover_needs_locks {true};    /* Warn that failover requires server locks */
 
     struct ClusterLocksInfo
     {
-        bool locks_needed() const;
         bool time_to_update() const;
 
-        mxb::StopWatch last_lock_update;        /* Time since last lock status update */
+        bool           have_lock_majority {false};  /* Is this the primary monitor for the cluster? */
+        mxb::StopWatch last_locking_attempt;        /* Time since last server lock attempt */
 
-        /* General lock check interval. Initialized to zero to allow a check during first loop. */
-        mxb::Duration lock_check_interval {0};
-        /* A smaller interval used when a cluster operation depends on acquiring the locks. */
-        mxb::Duration lock_need_interval {0};
-
-        bool failover_needs_locks {false};
-        bool switchover_needs_locks {false};
-        bool rejoin_needs_locks {false};
+        /* Time until next locking attempt. Initialized to zero to allow an attempt during first loop. */
+        mxb::Duration next_lock_attempt_delay {0};
     };
     ClusterLocksInfo m_locks_info;
 
@@ -318,8 +311,7 @@ private:
         MariaDBServer::SharedSettings shared;   /* Settings required by MariaDBServer objects */
     };
 
-    Settings                   m_settings;
-    MariaDBServer::SharedState m_shared_state;      /* State data shared with servers */
+    Settings m_settings;
 
     // Base methods
     MariaDBMonitor(const std::string& name, const std::string& module);
@@ -352,7 +344,7 @@ private:
     void assign_server_roles();
     void assign_slave_and_relay_master(MariaDBServer* start_node);
     void check_cluster_operations_support();
-    bool check_lock_status_this_tick();
+    bool try_acquire_locks_this_tick();
     void update_cluster_lock_status();
     int  get_free_locks();
     bool is_slave_maxscale() const;
@@ -389,7 +381,7 @@ private:
     bool switchover_perform(SwitchoverParams& operation);
     bool failover_perform(FailoverParams& op);
 
-    void delay_auto_cluster_ops();
+    void delay_auto_cluster_ops(Log log = Log::ON);
     bool can_perform_cluster_ops();
     bool cluster_operations_disabled_short() const;
 
