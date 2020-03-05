@@ -19,7 +19,7 @@ describe("Create/Destroy Commands", function() {
     })
 
     it('monitor without parameters fails due to missing user parameter', function() {
-        return verifyCommand('create monitor my-monitor mysqlmon', 'monitors/my-monitor')
+        return doCommand('create monitor my-monitor mysqlmon')
             .should.be.rejected
     })
 
@@ -271,6 +271,11 @@ describe("Create/Destroy Commands", function() {
     it('destroy filter with no parameters', function() {
         return doCommand('destroy filter test-filter')
             .should.be.fulfilled
+    })
+
+    it('create filter with bad parameters', function() {
+        return doCommand('create filter test-filter qlafilter count 10')
+            .should.be.rejected
     })
 
     after(stopMaxScale)
