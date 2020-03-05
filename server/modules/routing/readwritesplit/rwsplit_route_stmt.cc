@@ -148,27 +148,15 @@ bool RWSplitSession::track_optimistic_trx(GWBUF** buffer)
 }
 
 /**
- * @brief Operations to be carried out if request is for all backend servers
+ * Route query to all backends
  *
- * If the choice of sending to all backends is in conflict with other bit
- * settings in route_target, then error messages are written to the log.
+ * @param querybuf Query to route
  *
- * Otherwise, the function route_session_write is called to carry out the
- * actual routing.
- *
- * @param route_target  Bit map indicating where packet should be routed
- * @param inst          Router instance
- * @param rses          Router session
- * @param querybuf      Query buffer containing packet
- * @param packet_type   Integer (enum) indicating type of packet
- * @param qtype         Query type
- * @return bool indicating whether the session can continue
+ * @return True if routing was successful
  */
-bool RWSplitSession::handle_target_is_all(route_target_t route_target,
-                                          GWBUF* querybuf,
-                                          int packet_type,
-                                          uint32_t qtype)
+bool RWSplitSession::handle_target_is_all(GWBUF* querybuf)
 {
+    const QueryClassifier::RouteInfo& info = m_qc.current_route_info();
     bool result = false;
     bool is_large = is_large_query(querybuf);
 
@@ -178,10 +166,10 @@ bool RWSplitSession::handle_target_is_all(route_target_t route_target,
         MXS_INFO("Large session write, have to disable session command history");
         m_config.disable_sescmd_history = true;
 
-        continue_large_session_write(querybuf, qtype);
+        continue_large_session_write(querybuf, info.type_mask());
         result = true;
     }
-    else if (route_session_write(gwbuf_clone(querybuf), packet_type, qtype))
+    else if (route_session_write(gwbuf_clone(querybuf), info.command(), info.type_mask()))
     {
         result = true;
         mxb::atomic::add(&m_router->stats().n_all, 1, mxb::atomic::RELAXED);
@@ -254,24 +242,12 @@ bool RWSplitSession::query_not_supported(GWBUF* querybuf)
  * @return true if routing succeed or if it failed due to unsupported query.
  * false if backend failure was encountered.
  */
-bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
+bool RWSplitSession::route_stmt(GWBUF* querybuf)
 {
+    const QueryClassifier::RouteInfo& info = m_qc.current_route_info();
+    route_target_t route_target = info.target();
     mxb_assert_message(m_otrx_state != OTRX_ROLLBACK,
                        "OTRX_ROLLBACK should never happen when routing queries");
-    bool succp = false;
-    const QueryClassifier::RouteInfo& info = m_qc.current_route_info();
-    uint32_t stmt_id = info.stmt_id();
-    uint8_t command = info.command();
-    uint32_t qtype = info.type_mask();
-    route_target_t route_target = info.target();
-    RWBackend* target = nullptr;
-
-    if (trx_is_open() && m_config.transaction_replay && TARGET_IS_ALL(route_target))
-    {
-        // Route session commands inside transactions to the master. These will be recorded alongside the
-        // transaction and will be applied on the slaves once the transaction is over.
-        route_target = TARGET_MASTER;
-    }
 
     auto next_master = get_target_backend(BE_MASTER, NULL, mxs::Target::RLAG_UNDEFINED);
 
@@ -286,128 +262,136 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
     {
         return true;
     }
-
-    if (TARGET_IS_ALL(route_target))
+    else if (TARGET_IS_ALL(route_target) && !should_route_sescmd_to_master())
     {
-        succp = handle_target_is_all(route_target, querybuf, command, qtype);
+        return handle_target_is_all(querybuf);
     }
     else
     {
-        update_trx_statistics();
+        return route_single_stmt(querybuf);
+    }
+}
 
-        if (trx_is_starting() && !trx_is_read_only()    // A normal transaction is starting
-            && should_try_trx_on_slave(route_target))   // Qualifies for speculative routing
-        {
-            // Speculatively start routing the transaction to a slave
-            m_otrx_state = OTRX_STARTING;
-            route_target = TARGET_SLAVE;
-        }
-        else if (m_otrx_state == OTRX_STARTING)
-        {
-            // Transaction was started, begin active tracking of its progress
-            m_otrx_state = OTRX_ACTIVE;
-        }
+bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
+{
+    RWBackend* target = nullptr;
+    bool succp = false;
+    const QueryClassifier::RouteInfo& info = m_qc.current_route_info();
+    uint8_t command = info.command();
+    route_target_t route_target = should_route_sescmd_to_master() ? TARGET_MASTER : info.target();
 
-        // If delayed query retry is enabled, we need to store the current statement
-        bool store_stmt = m_config.delayed_retry;
+    update_trx_statistics();
 
-        if (m_qc.large_query())
+    if (trx_is_starting() && !trx_is_read_only() && should_try_trx_on_slave(route_target))
+    {
+        // A normal transaction is starting and it qualifies for speculative routing
+        m_otrx_state = OTRX_STARTING;
+        route_target = TARGET_SLAVE;
+    }
+    else if (m_otrx_state == OTRX_STARTING)
+    {
+        // Transaction was started, begin active tracking of its progress
+        m_otrx_state = OTRX_ACTIVE;
+    }
+
+    // If delayed query retry is enabled, we need to store the current statement
+    bool store_stmt = m_config.delayed_retry;
+
+    if (m_qc.large_query())
+    {
+        /** We're processing a large query that's split across multiple packets.
+         * Route it to the same backend where we routed the previous packet. */
+        mxb_assert(m_prev_target);
+        target = m_prev_target;
+        succp = true;
+    }
+    else if (m_otrx_state == OTRX_ACTIVE)
+    {
+        /** We are speculatively executing a transaction to the slave, keep
+         * routing queries to the same server. If the query modifies data,
+         * a rollback is initiated on the slave server. */
+        store_stmt = track_optimistic_trx(&querybuf);
+        target = m_prev_target;
+        succp = true;
+    }
+    else if (TARGET_IS_NAMED_SERVER(route_target) || TARGET_IS_RLAG_MAX(route_target))
+    {
+        if ((target = handle_hinted_target(querybuf, route_target)))
         {
-            /** We're processing a large query that's split across multiple packets.
-             * Route it to the same backend where we routed the previous packet. */
-            mxb_assert(m_prev_target);
-            target = m_prev_target;
             succp = true;
         }
-        else if (m_otrx_state == OTRX_ACTIVE)
+    }
+    else if (TARGET_IS_LAST_USED(route_target))
+    {
+        if ((target = get_last_used_backend()))
         {
-            /** We are speculatively executing a transaction to the slave, keep
-             * routing queries to the same server. If the query modifies data,
-             * a rollback is initiated on the slave server. */
-            store_stmt = track_optimistic_trx(&querybuf);
-            target = m_prev_target;
             succp = true;
         }
-        else if (TARGET_IS_NAMED_SERVER(route_target) || TARGET_IS_RLAG_MAX(route_target))
+    }
+    else if (TARGET_IS_SLAVE(route_target))
+    {
+        if ((target = handle_slave_is_target(command, info.stmt_id())))
         {
-            if ((target = handle_hinted_target(querybuf, route_target)))
-            {
-                succp = true;
-            }
-        }
-        else if (TARGET_IS_LAST_USED(route_target))
-        {
-            if ((target = get_last_used_backend()))
-            {
-                succp = true;
-            }
-        }
-        else if (TARGET_IS_SLAVE(route_target))
-        {
-            if ((target = handle_slave_is_target(command, stmt_id)))
-            {
-                succp = true;
+            succp = true;
 
-                bool is_sql = command == MXS_COM_QUERY || command == MXS_COM_STMT_EXECUTE;
-                if (is_sql)
+            if (command == MXS_COM_QUERY || command == MXS_COM_STMT_EXECUTE)
+            {
+                target->select_started();
+
+                if (m_config.retry_failed_reads)
                 {
-                    target->select_started();
-
-                    if (m_config.retry_failed_reads)
-                    {
-                        store_stmt = true;
-                    }
+                    store_stmt = true;
                 }
             }
         }
-        else if (TARGET_IS_MASTER(route_target))
+    }
+    else if (TARGET_IS_MASTER(route_target))
+    {
+        if (m_config.causal_reads != CausalReads::NONE)
         {
-            if (m_config.causal_reads != CausalReads::NONE)
-            {
-                gwbuf_set_type(querybuf, GWBUF_TYPE_TRACK_STATE);
-            }
-
-            succp = handle_master_is_target(&target);
-
-            if (!succp && should_migrate_trx(target))
-            {
-                return start_trx_migration(target, querybuf);
-            }
+            gwbuf_set_type(querybuf, GWBUF_TYPE_TRACK_STATE);
         }
 
-        if (succp && target)
-        {
-            // We have a valid target, reset retry duration
-            m_retry_duration = 0;
+        succp = handle_master_is_target(&target);
 
-            if (!prepare_target(target, route_target))
-            {
-                // The connection to target was down and we failed to reconnect
-                succp = false;
-            }
-            else if (target->has_session_commands())
-            {
-                // We need to wait until the session commands are executed
-                m_query_queue.emplace_front(gwbuf_clone(querybuf));
-                MXS_INFO("Queuing query until '%s' completes session command", target->name());
-            }
-            else
-            {
-                // Target server was found and is in the correct state
-                succp = handle_got_target(querybuf, target, store_stmt);
-            }
-        }
-        else if (can_retry_query() || can_continue_trx_replay())
+        if (!succp && should_migrate_trx(target))
         {
-            retry_query(gwbuf_clone(querybuf));
-            succp = true;
-            MXS_INFO("Delaying routing: %s", extract_sql(querybuf).c_str());
+            return start_trx_migration(target, querybuf);
         }
-        else if (m_config.master_failure_mode != RW_ERROR_ON_WRITE)
+    }
+
+    if (succp && target)
+    {
+        // We have a valid target, reset retry duration
+        m_retry_duration = 0;
+
+        if (!prepare_target(target, route_target))
         {
-            MXS_ERROR("Could not find valid server for target type %s, closing "
-                      "connection.", route_target_to_string(route_target));
+            // The connection to target was down and we failed to reconnect
+            succp = false;
         }
+        else if (target->has_session_commands())
+        {
+            // We need to wait until the session commands are executed
+            m_query_queue.emplace_front(gwbuf_clone(querybuf));
+            MXS_INFO("Queuing query until '%s' completes session command", target->name());
+        }
+        else
+        {
+            // Target server was found and is in the correct state
+            succp = handle_got_target(querybuf, target, store_stmt);
+        }
+    }
+    else if (can_retry_query() || can_continue_trx_replay())
+    {
+        retry_query(gwbuf_clone(querybuf));
+        succp = true;
+        MXS_INFO("Delaying routing: %s", extract_sql(querybuf).c_str());
+    }
+    else if (m_config.master_failure_mode != RW_ERROR_ON_WRITE)
+    {
+        MXS_ERROR("Could not find valid server for target type %s, closing "
+                  "connection.", route_target_to_string(route_target));
     }
 
     return succp;

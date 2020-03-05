@@ -132,7 +132,7 @@ int32_t RWSplitSession::routeQuery(GWBUF* querybuf)
         }
 
         /** No active or pending queries */
-        if (route_single_stmt(querybuf))
+        if (route_stmt(querybuf))
         {
             rval = 1;
         }

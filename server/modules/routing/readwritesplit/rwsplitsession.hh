@@ -147,6 +147,7 @@ private:
 
     bool route_session_write(GWBUF* querybuf, uint8_t command, uint32_t type);
     void continue_large_session_write(GWBUF* querybuf, uint32_t type);
+    bool route_stmt(GWBUF* querybuf);
     bool route_single_stmt(GWBUF* querybuf);
     bool route_stored_query();
     void close_stale_connections();
@@ -159,10 +160,7 @@ private:
     mxs::RWBackend* get_target_backend(backend_type_t btype, const char* name, int max_rlag);
     mxs::RWBackend* get_root_master();
 
-    bool handle_target_is_all(route_target_t route_target,
-                              GWBUF* querybuf,
-                              int packet_type,
-                              uint32_t qtype);
+    bool            handle_target_is_all(GWBUF* querybuf);
     mxs::RWBackend* handle_hinted_target(GWBUF* querybuf, route_target_t route_target);
     mxs::RWBackend* handle_slave_is_target(uint8_t cmd, uint32_t stmt_id);
     bool            handle_master_is_target(mxs::RWBackend** dest);
@@ -297,6 +295,12 @@ private:
         return std::none_of(m_raw_backends.begin(), m_raw_backends.end(), [&](mxs::RWBackend* b) {
                                 return b->in_use() && b != backend;
                             });
+    }
+
+    inline bool should_route_sescmd_to_master() const
+    {
+        return trx_is_open() && m_config.transaction_replay
+               && TARGET_IS_ALL(m_qc.current_route_info().target());
     }
 
     std::string get_verbose_status()
