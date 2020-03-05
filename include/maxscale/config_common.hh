@@ -628,3 +628,19 @@ inline bool get_suffixed_size(const std::string& value, uint64_t* dest)
 {
     return get_suffixed_size(value.c_str(), dest);
 }
+
+/**
+ * Compile a regex string using PCRE2 using the settings provided.
+ *
+ * @param regex_string The string to compile
+ * @param jit_enabled Enable JIT compilation. If true but JIT is not available,
+ * a warning is printed.
+ * @param options PCRE2 compilation options
+ * @param output_ovector_size Output for the match data ovector size. On error,
+ * nothing is written. If NULL, the parameter is ignored.
+ * @return Compiled regex code on success, NULL otherwise
+ */
+pcre2_code* compile_regex_string(const char* regex_string,
+                                 bool jit_enabled,
+                                 uint32_t options,
+                                 uint32_t* output_ovector_size);

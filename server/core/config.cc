@@ -903,10 +903,6 @@ static int         maxscale_getline(char** dest, int* size, FILE* file);
 static bool        check_first_last_char(const char* string, char expected);
 static void        remove_first_last_char(char* value);
 static bool        test_regex_string_validity(const char* regex_string, const char* key);
-static pcre2_code* compile_regex_string(const char* regex_string,
-                                        bool jit_enabled,
-                                        uint32_t options,
-                                        uint32_t* output_ovector_size);
 static bool duration_is_valid(const char* zValue, mxs::config::DurationUnit* pUnit);
 static bool get_seconds(const char* zName, const char* zValue, seconds* pSeconds);
 static bool get_seconds(const char* zName, const char* zValue, time_t* pSeconds);
@@ -4195,21 +4191,10 @@ static void remove_first_last_char(char* value)
     memmove(value, value + 1, len - 1);
 }
 
-/**
- * Compile a regex string using PCRE2 using the settings provided.
- *
- * @param regex_string The string to compile
- * @param jit_enabled Enable JIT compilation. If true but JIT is not available,
- * a warning is printed.
- * @param options PCRE2 compilation options
- * @param output_ovector_size Output for the match data ovector size. On error,
- * nothing is written. If NULL, the parameter is ignored.
- * @return Compiled regex code on success, NULL otherwise
- */
-static pcre2_code* compile_regex_string(const char* regex_string,
-                                        bool jit_enabled,
-                                        uint32_t options,
-                                        uint32_t* output_ovector_size)
+pcre2_code* compile_regex_string(const char* regex_string,
+                                 bool jit_enabled,
+                                 uint32_t options,
+                                 uint32_t* output_ovector_size)
 {
     bool success = true;
     int errorcode = -1;

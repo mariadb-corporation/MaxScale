@@ -793,6 +793,90 @@ private:
 };
 
 /**
+ * ParamRegex
+ */
+
+class RegexValue
+{
+public:
+    RegexValue() = default;
+    RegexValue(const RegexValue&) = default;
+    RegexValue& operator = (const RegexValue&) = default;
+
+    RegexValue(const std::string&          text,
+               std::unique_ptr<pcre2_code> sCode,
+               uint32_t                    ovec_size,
+               uint32_t                    options)
+        : text(text)
+        , sCode(std::move(sCode)) // Gets default_delete<pcre2_code> from the unique_ptr.
+        , ovec_size(ovec_size)
+        , options(options)
+    {
+    }
+
+    bool operator == (const RegexValue& rhs) const
+    {
+        return
+            this->text == rhs.text
+            && this->ovec_size == rhs.ovec_size
+            && this->options == rhs.options
+            && (!this->sCode == !rhs.sCode); // Both NULL, or both valid.
+    }
+
+    bool operator != (const RegexValue& rhs) const
+    {
+        return !(*this == rhs);
+    }
+
+    void set_options(uint32_t options)
+    {
+        this->options = options;
+    }
+
+    std::string                 text;
+    std::shared_ptr<pcre2_code> sCode;
+    uint32_t                    ovec_size { 0 };
+    uint32_t                    options { 0 };
+};
+
+class ParamRegex : public ConcreteParam<ParamRegex, RegexValue>
+{
+public:
+    ParamRegex(Specification* pSpecification,
+               const char* zName,
+               const char* zDescription,
+               Modifiable modifiable = Modifiable::AT_STARTUP)
+        : ConcreteParam<ParamRegex, RegexValue>(pSpecification, zName, zDescription,
+                                                modifiable, Param::MANDATORY, MXS_MODULE_PARAM_REGEX,
+                                                value_type())
+    {
+    }
+
+    uint32_t options() const
+    {
+        return m_options;
+    }
+
+    void set_options(uint32_t options)
+    {
+        m_options = options;
+    }
+
+    std::string type() const override;
+
+    std::string to_string(const value_type& value) const;
+    bool        from_string(const std::string& value, value_type* pValue,
+                            std::string* pMessage = nullptr) const;
+
+    json_t* to_json(const value_type& value) const;
+    bool    from_json(const json_t* pJson, value_type* pValue,
+                      std::string* pMessage = nullptr) const;
+
+private:
+    uint32_t m_options = 0;
+};
+
+/**
  * ParamServer
  */
 class ParamServer : public ConcreteParam<ParamServer, SERVER*>
@@ -1511,6 +1595,11 @@ using Enum = ConcreteType<ParamEnum<T>>;
 using Path = ConcreteType<ParamPath>;
 
 /**
+ * Regex
+ */
+using Regex = ConcreteType<ParamRegex>;
+
+/**
  * Size
  */
 using Size = ConcreteType<ParamSize>;
@@ -1780,4 +1869,10 @@ void Configuration::add_native(typename ParamType::value_type* pValue,
     m_natives.push_back(std::unique_ptr<Type>(new Native<ParamType>(this, pParam, pValue, on_set)));
 }
 }
+}
+
+inline std::ostream& operator << (std::ostream& out, const mxs::config::RegexValue& value)
+{
+    out << value.text;
+    return out;
 }

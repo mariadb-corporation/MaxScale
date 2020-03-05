@@ -777,6 +777,96 @@ void ParamPath::populate(MXS_MODULE_PARAM& param) const
 }
 
 /**
+ * ParamRegex
+ */
+std::string ParamRegex::type() const
+{
+    return "regex";
+}
+
+std::string ParamRegex::to_string(const value_type& type) const
+{
+    return type.text;
+}
+
+bool ParamRegex::from_string(const std::string& value_as_string,
+                             value_type* pValue,
+                             std::string* pMessage) const
+{
+    bool rv = false;
+
+    if (value_as_string.empty())
+    {
+        if (pMessage)
+        {
+            *pMessage = "An empty string is not a valid regular expression.";
+        }
+    }
+    else
+    {
+        bool slashes = false;
+
+        if (value_as_string.length() >= 2)
+        {
+            slashes = value_as_string.front() == '/' && value_as_string.back() == '/';
+        }
+
+        if (!slashes)
+        {
+            if (pMessage)
+            {
+                *pMessage = "Missing slashes (/) around a regular expression is deprecated.";
+            }
+        }
+
+        string text = value_as_string.substr(slashes ? 1 : 0, value_as_string.length() - (slashes ? 2 : 0));
+
+        uint32_t jit_available = 0;
+        pcre2_config(PCRE2_CONFIG_JIT, &jit_available);
+
+        uint32_t ovec_size;
+        std::unique_ptr<pcre2_code> sCode(compile_regex_string(text.c_str(), jit_available, m_options, &ovec_size));
+
+        if (sCode)
+        {
+            RegexValue value(value_as_string, std::move(sCode), m_options, ovec_size);
+
+            *pValue = std::move(value);
+            rv = true;
+        }
+    }
+
+    return rv;
+}
+
+json_t* ParamRegex::to_json(const value_type& value) const
+{
+    return json_string(value.text.c_str());
+}
+
+bool ParamRegex::from_json(const json_t* pJson,
+                           value_type* pValue,
+                           std::string* pMessage) const
+{
+    bool rv = false;
+
+    if (json_is_string(pJson))
+    {
+        const char* z = json_string_value(pJson);
+
+        rv = from_string(z, pValue, pMessage);
+    }
+    else
+    {
+        *pMessage = "Expected a json string, but got a json ";
+        *pMessage += mxs::json_type_to_string(pJson);
+        *pMessage += ".";
+    }
+
+    return rv;
+}
+
+/**
  * ParamServer
  */
 std::string ParamServer::type() const

@@ -87,6 +87,11 @@ config::ParamPath
                "Specifies the path of something.",
                config::ParamPath::F);
 
+config::ParamRegex
+param_regex(&specification,
+            "regex_parameter",
+            "Specifies a regular expression.");
+
 config::ParamServer
 param_server(&specification,
              "server_parameter",
@@ -280,6 +285,29 @@ int test_path(config::Path& value)
     return test(value, entries, elements_in_array(entries));
 }
 
+int test_regex(config::Regex& value)
+{
+    static TestEntry<config::Regex::value_type> entries[] =
+    {
+        { "^hello$",   true },
+        { "/^hello$/", true },
+        { "",          false },
+    };
+
+    config::RegexValue* pValue;
+    bool rv;
+
+    pValue = const_cast<config::RegexValue*>(&entries[0].value);
+    rv = param_regex.from_string(entries[0].zText, pValue);
+    mxb_assert(rv);
+
+    pValue = const_cast<config::RegexValue*>(&entries[1].value);
+    rv = param_regex.from_string(entries[1].zText, pValue);
+    mxb_assert(rv);
+
+    return test(value, entries, elements_in_array(entries));
+}
+
 int test_server(config::Server& value)
 {
     mxs::ConfigParameters params1;
@@ -364,6 +392,9 @@ int main()
 
     config::Path value_path(&configuration, &param_path);
     nErrors += test_path(value_path);
+
+    config::Regex value_regex(&configuration, &param_regex);
+    nErrors += test_regex(value_regex);
 
     config::Server value_server(&configuration, &param_server);
     nErrors += test_server(value_server);
