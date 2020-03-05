@@ -1196,8 +1196,7 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool 
 
     /**
      * TODO: This effectively disables pipelining of queries, very bad for batch insert performance. Replace
-     *       with proper, per server tracking of which responses need to be sent to the client. This would
-     *       also solve MXS-2009 by speeding up session commands.
+     *       with proper, per server tracking of which responses need to be sent to the client.
      */
     mxb_assert_message(!target->is_waiting_result() || m_qc.large_query(),
                        "Node must be idle when routing queries to it");
