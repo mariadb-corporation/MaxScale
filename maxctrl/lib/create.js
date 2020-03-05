@@ -22,8 +22,12 @@ function to_obj(obj, value) {
 function validateParams(argv, params) {
     var rval = null;
     params.forEach((value) => {
-        var kv = value.split('=')
-        if (!kv || kv.length != 2) {
+        try {
+            var kv = value.split('=')
+            if (!kv || kv.length != 2) {
+                rval = 'Not a key-value parameter: ' + value
+            }
+        } catch (err) {
             rval = 'Not a key-value parameter: ' + value
         }
     })
@@ -167,10 +171,8 @@ exports.builder = function(yargs) {
 
             var err = false;
 
-            if (argv.params) {
-                err = validateParams(argv, argv.params)
-                monitor.data.attributes.parameters = argv.params.reduce(to_obj, {})
-            }
+            err = validateParams(argv, argv.params)
+            monitor.data.attributes.parameters = argv.params.reduce(to_obj, {})
 
             if (argv.servers) {
                 for (i = 0; i < argv.servers.length; i++) {
@@ -261,14 +263,12 @@ exports.builder = function(yargs) {
                     }
                 }
 
-                if (argv.params) {
-                    var err = validateParams(argv, argv.params)
-                    if (err) {
-                        return Promise.reject(err)
-                    }
-
-                    filter.data.attributes.parameters = argv.params.reduce(to_obj, {})
+                var err = validateParams(argv, argv.params)
+                if (err) {
+                    return Promise.reject(err)
                 }
+                filter.data.attributes.parameters = argv.params.reduce(to_obj, {})
+
 
                 return doRequest(host, 'filters', null, {method: 'POST', body: filter})
             })

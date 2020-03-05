@@ -17,7 +17,7 @@ describe("Library invocation", function() {
     })
 
     it('multiple hosts', function() {
-        var opts = { extra_args: [ '--quiet', '--hosts', '127.0.0.1:8989', 'localhost:8989'] }
+        var opts = { extra_args: [ '--quiet', '--hosts', '127.0.0.1:8989,localhost:8989'] }
         return ctrl.execute('list servers'.split(' '), opts)
             .should.be.fulfilled
     })

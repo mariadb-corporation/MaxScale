@@ -292,7 +292,7 @@ whitespace in the pattern. `case` turns on case-sensitive matching. These settin
 also be defined in the pattern itself, so they can be used even in modules without
 pattern compilation settings. The pattern settings are `(?i)` for `ignorecase` and `(?x)`
 for `extended`. See the
-[PCRE2 api documentation](https://www.pcre.org/current/doc/html/pcre2api.html#SEC20)
+[PCRE2 syntax documentation](https://www.pcre.org/current/doc/html/pcre2syntax.html#SEC16)
 for more information.
 
 #### Standard regular expression settings for filters

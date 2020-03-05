@@ -1,4 +1,18 @@
 require('../test_utils.js')()
+const mariadb = require('mariadb');
+var conn
+
+function createConnection() {
+    return mariadb.createConnection({host: '127.0.0.1', port: 4006, user: 'maxuser', password: 'maxpwd'})
+        .then(c => {
+            conn = c
+        })
+}
+
+function closeConnection() {
+    conn.end()
+    conn = null
+}
 
 var tests = [
     'list servers',
@@ -15,6 +29,7 @@ var tests = [
     'show services',
     'show monitors',
     'show sessions',
+    'show session 1',
     'show filters',
     'show modules',
     'show maxscale',
@@ -30,10 +45,19 @@ var tests = [
     'show maxscale',
     'show logging',
     'show commands readwritesplit',
+    'show qc_cache',
+    'show dbusers RW-Split-Router',
+]
+
+var rdns_tests = [
+    'list sessions',
+    'show sessions',
+    'show session 1',
 ]
 
 describe("Diagnostic Commands", function() {
     before(startMaxScale)
+    before(createConnection)
 
     tests.forEach(function(i) {
         it(i, function() {
@@ -42,6 +66,14 @@ describe("Diagnostic Commands", function() {
         });
     })
 
+    rdns_tests.forEach(function(i) {
+        it(i + ' with reverse DNS lookups', function() {
+            return doCommand(i + ' --rdns')
+                .should.be.fulfilled
+        });
+    })
+
+    after(closeConnection)
     after(stopMaxScale)
 });
 

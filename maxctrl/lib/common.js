@@ -303,14 +303,6 @@ module.exports = function() {
     // Perform a PATCH on a resource
     this.updateValue = function(host, resource, key, value) {
         var body = {}
-
-        // Convert string booleans into JSON booleans
-        if (value == "true") {
-            value = true
-        } else if (value == "false") {
-            value = false
-        }
-
         _.set(body, key, value)
         return doRequest(host, resource, null, { method: 'PATCH', body: body })
     }
