@@ -240,8 +240,6 @@ static const char gtid_wait_stmt[] =
  *  Smaller numbers are better.
  */
 using BackendSelectFunction = mxs::RWBackend * (*)(mxs::PRWBackends& sBackends);
-BackendSelectFunction get_backend_select_function(select_criteria_t);
-
 using std::chrono::seconds;
 
 struct RWSConfig
@@ -284,6 +282,7 @@ struct RWSConfig
 
 private:
     RWSConfig(const mxs::ConfigParameters& params);
+    static BackendSelectFunction get_backend_select_function(select_criteria_t sc);
 };
 
 /**
@@ -399,56 +398,3 @@ private:
     mxs::WorkerGlobal<TargetSessionStats> m_server_stats;
     std::atomic<gtid>                     m_last_gtid {{0, 0, 0}};
 };
-
-static inline const char* select_criteria_to_str(select_criteria_t type)
-{
-    switch (type)
-    {
-    case LEAST_GLOBAL_CONNECTIONS:
-        return "LEAST_GLOBAL_CONNECTIONS";
-
-    case LEAST_ROUTER_CONNECTIONS:
-        return "LEAST_ROUTER_CONNECTIONS";
-
-    case LEAST_BEHIND_MASTER:
-        return "LEAST_BEHIND_MASTER";
-
-    case LEAST_CURRENT_OPERATIONS:
-        return "LEAST_CURRENT_OPERATIONS";
-
-    case ADAPTIVE_ROUTING:
-        return "ADAPTIVE_ROUTING";
-
-    default:
-        return "UNDEFINED_CRITERIA";
-    }
-}
-
-static inline const char* failure_mode_to_str(enum failure_mode type)
-{
-    switch (type)
-    {
-    case RW_FAIL_INSTANTLY:
-        return "fail_instantly";
-
-    case RW_FAIL_ON_WRITE:
-        return "fail_on_write";
-
-    case RW_ERROR_ON_WRITE:
-        return "error_on_write";
-
-    default:
-        mxb_assert(false);
-        return "UNDEFINED_MODE";
-    }
-}
-
-/**
- * Get total slave count and connected slave count
- *
- * @param backends List of backend servers
- * @param master   Current master
- *
- * @return Total number of slaves and number of slaves we are connected to
- */
-std::pair<int, int> get_slave_counts(mxs::PRWBackends& backends, mxs::RWBackend* master);

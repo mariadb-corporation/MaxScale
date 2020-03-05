@@ -198,7 +198,8 @@ int get_backend_priority(RWBackend* backend, bool masters_accepts_reads)
 }
 }
 
-BackendSelectFunction get_backend_select_function(select_criteria_t sc)
+// static
+BackendSelectFunction RWSConfig::get_backend_select_function(select_criteria_t sc)
 {
     switch (sc)
     {
@@ -218,6 +219,30 @@ BackendSelectFunction get_backend_select_function(select_criteria_t sc)
 
     mxb_assert_message(false, "incorrect use of select_criteria_t");
     return backend_cmp_current_load;
+}
+
+std::pair<int, int> get_slave_counts(PRWBackends& backends, RWBackend* master)
+{
+    int slaves_found = 0;
+    int slaves_connected = 0;
+
+    /** Calculate how many connections we already have */
+    for (PRWBackends::const_iterator it = backends.begin(); it != backends.end(); it++)
+    {
+        const RWBackend* backend = *it;
+
+        if (backend->can_connect() && valid_for_slave(backend, master))
+        {
+            slaves_found += 1;
+
+            if (backend->in_use())
+            {
+                slaves_connected += 1;
+            }
+        }
+    }
+
+    return std::make_pair(slaves_found, slaves_connected);
 }
 
 int64_t RWSplitSession::get_current_rank()
@@ -388,30 +413,6 @@ RWBackend* RWSplitSession::get_root_master()
     }
 
     return backend_cmp_global_conn(candidates);
-}
-
-std::pair<int, int> get_slave_counts(PRWBackends& backends, RWBackend* master)
-{
-    int slaves_found = 0;
-    int slaves_connected = 0;
-
-    /** Calculate how many connections we already have */
-    for (PRWBackends::const_iterator it = backends.begin(); it != backends.end(); it++)
-    {
-        const RWBackend* backend = *it;
-
-        if (backend->can_connect() && valid_for_slave(backend, master))
-        {
-            slaves_found += 1;
-
-            if (backend->in_use())
-            {
-                slaves_connected += 1;
-            }
-        }
-    }
-
-    return std::make_pair(slaves_found, slaves_connected);
 }
 
 /**
