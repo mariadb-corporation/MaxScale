@@ -79,24 +79,17 @@ RWSplitSession* RWSplitSession::create(RWSplit* router, MXS_SESSION* session, co
     return rses;
 }
 
-void close_all_connections(PRWBackends& backends)
+void RWSplitSession::close()
 {
-    for (auto& backend : backends)
+    m_current_query.reset();
+
+    for (auto& backend : m_raw_backends)
     {
         if (backend->in_use())
         {
             backend->close();
         }
-    }
-}
 
-void RWSplitSession::close()
-{
-    close_all_connections(m_raw_backends);
-    m_current_query.reset();
-
-    for (auto& backend : m_raw_backends)
-    {
         m_server_stats[backend->target()].update(backend->session_timer().split(),
                                                  backend->select_timer().total(),
                                                  backend->num_selects());

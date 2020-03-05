@@ -455,8 +455,3 @@ bool send_readonly_error(DCB* dcb);
  * @return Total number of slaves and number of slaves we are connected to
  */
 std::pair<int, int> get_slave_counts(mxs::PRWBackends& backends, mxs::RWBackend* master);
-
-/*
- * The following are implemented in rwsplit_tmp_table_multi.c
- */
-void close_all_connections(mxs::PRWBackends& backends);

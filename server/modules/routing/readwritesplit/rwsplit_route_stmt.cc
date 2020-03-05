@@ -19,6 +19,8 @@
 #include <string.h>
 #include <strings.h>
 
+#include <mysqld_error.h>
+
 #include <maxbase/alloc.h>
 #include <maxscale/clock.h>
 #include <maxscale/modutil.hh>
@@ -202,6 +204,95 @@ bool RWSplitSession::track_optimistic_trx(GWBUF** buffer)
     }
 
     return store_stmt;
+}
+
+/**
+ * @brief Operations to be carried out if request is for all backend servers
+ *
+ * If the choice of sending to all backends is in conflict with other bit
+ * settings in route_target, then error messages are written to the log.
+ *
+ * Otherwise, the function route_session_write is called to carry out the
+ * actual routing.
+ *
+ * @param route_target  Bit map indicating where packet should be routed
+ * @param inst          Router instance
+ * @param rses          Router session
+ * @param querybuf      Query buffer containing packet
+ * @param packet_type   Integer (enum) indicating type of packet
+ * @param qtype         Query type
+ * @return bool indicating whether the session can continue
+ */
+bool RWSplitSession::handle_target_is_all(route_target_t route_target,
+                                          GWBUF* querybuf,
+                                          int packet_type,
+                                          uint32_t qtype)
+{
+    bool result = false;
+    bool is_large = is_large_query(querybuf);
+
+    if (TARGET_IS_MASTER(route_target) || TARGET_IS_SLAVE(route_target))
+    {
+        /**
+         * Conflicting routing targets. Return an error to the client.
+         */
+
+        char* query_str = modutil_get_query(querybuf);
+        char* qtype_str = qc_typemask_to_string(qtype);
+
+        MXS_ERROR("Can't route %s:%s:\"%s\". SELECT with session data "
+                  "modification is not supported if configuration parameter "
+                  "use_sql_variables_in=all .",
+                  STRPACKETTYPE(packet_type),
+                  qtype_str,
+                  (query_str == NULL ? "(empty)" : query_str));
+
+        auto err = modutil_create_mysql_err_msg(1, 0, 1064, "42000",
+                                                "Routing query to backend failed. "
+                                                "See the error log for further details.");
+
+        mxs::ReplyRoute route;
+        RouterSession::clientReply(err, route, mxs::Reply());
+
+        result = true;
+        MXS_FREE(query_str);
+        MXS_FREE(qtype_str);
+    }
+    else if (m_qc.large_query())
+    {
+        // TODO: Append to the already stored session command instead of disabling history
+        MXS_INFO("Large session write, have to disable session command history");
+        m_config.disable_sescmd_history = true;
+
+        continue_large_session_write(querybuf, qtype);
+        result = true;
+    }
+    else if (route_session_write(gwbuf_clone(querybuf), packet_type, qtype))
+    {
+        result = true;
+        mxb::atomic::add(&m_router->stats().n_all, 1, mxb::atomic::RELAXED);
+        mxb::atomic::add(&m_router->stats().n_queries, 1, mxb::atomic::RELAXED);
+    }
+
+    m_qc.set_large_query(is_large);
+
+    return result;
+}
+
+/**
+ * @brief Send an error message to the client telling that the server is in read only mode
+ *
+ * @param dcb Client DCB
+ *
+ * @return True if sending the message was successful, false if an error occurred
+ */
+void RWSplitSession::send_readonly_error()
+{
+    const char* errmsg = "The MariaDB server is running with the --read-only"
+                         " option so it cannot execute this statement";
+    GWBUF* err = modutil_create_mysql_err_msg(1, 0, ER_OPTION_PREVENTS_STATEMENT, "HY000", errmsg);
+    mxs::ReplyRoute route;
+    RouterSession::clientReply(err, route, mxs::Reply());
 }
 
 /**
