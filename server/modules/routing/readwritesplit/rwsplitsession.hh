@@ -363,6 +363,18 @@ private:
         }
     }
 
+    void replace_binary_ps_id(GWBUF* buffer, uint32_t id)
+    {
+        uint8_t* ptr = GWBUF_DATA(buffer) + MYSQL_PS_ID_OFFSET;
+        gw_mysql_set_byte4(ptr, id);
+    }
+
+    uint32_t extract_binary_ps_id(GWBUF* buffer)
+    {
+        uint8_t* ptr = GWBUF_DATA(buffer) + MYSQL_PS_ID_OFFSET;
+        return gw_mysql_get_byte4(ptr);
+    }
+
     mxs::SRWBackends m_backends;                /**< Mem. management, not for use outside RWSplitSession */
     mxs::PRWBackends m_raw_backends;            /**< Backend pointers for use in interfaces . */
     mxs::RWBackend*  m_current_master;          /**< Current master server */
@@ -388,7 +400,7 @@ private:
 
     ExecMap m_exec_map;     // Information map of COM_STMT_EXECUTE execution
 
-    RWSplit::gtid        m_gtid_pos{0, 0, 0};   /**< Gtid position for causal read */
+    RWSplit::gtid        m_gtid_pos {0, 0, 0};  /**< Gtid position for causal read */
     wait_gtid_state      m_wait_gtid;           /**< State of MASTER_GTID_WAIT reply */
     uint32_t             m_next_seq;            /**< Next packet's sequence number */
     mxs::QueryClassifier m_qc;                  /**< The query classifier. */

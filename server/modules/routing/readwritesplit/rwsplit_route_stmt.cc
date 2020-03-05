@@ -75,41 +75,6 @@ bool RWSplitSession::prepare_target(RWBackend* target, route_target_t route_targ
     return rval;
 }
 
-bool RWSplitSession::create_one_connection_for_sescmd()
-{
-    mxb_assert(m_config.lazy_connect);
-
-    // Try to first find a master
-    for (auto backend : m_raw_backends)
-    {
-        if (backend->can_connect() && backend->is_master())
-        {
-            if (prepare_target(backend, TARGET_MASTER))
-            {
-                if (!m_current_master)
-                {
-                    MXS_INFO("Chose '%s' as master due to session write", backend->name());
-                    m_current_master = backend;
-                }
-
-                return true;
-            }
-        }
-    }
-
-    // If no master was found, find a slave
-    for (auto backend : m_raw_backends)
-    {
-        if (backend->can_connect() && backend->is_slave() && prepare_target(backend, TARGET_SLAVE))
-        {
-            return true;
-        }
-    }
-
-    // No servers are available
-    return false;
-}
-
 void RWSplitSession::retry_query(GWBUF* querybuf, int delay)
 {
     mxb_assert(querybuf);
@@ -135,22 +100,6 @@ void RWSplitSession::retry_query(GWBUF* querybuf, int delay)
 
     session_delay_routing(session, down, querybuf, delay);
     ++m_retry_duration;
-}
-
-namespace
-{
-
-void replace_binary_ps_id(GWBUF* buffer, uint32_t id)
-{
-    uint8_t* ptr = GWBUF_DATA(buffer) + MYSQL_PS_ID_OFFSET;
-    gw_mysql_set_byte4(ptr, id);
-}
-
-uint32_t extract_binary_ps_id(GWBUF* buffer)
-{
-    uint8_t* ptr = GWBUF_DATA(buffer) + MYSQL_PS_ID_OFFSET;
-    return gw_mysql_get_byte4(ptr);
-}
 }
 
 bool RWSplitSession::have_connected_slaves() const
@@ -463,123 +412,6 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
     }
 
     return succp;
-}
-
-/**
- * Compress session command history
- *
- * This function removes data duplication by sharing buffers between session
- * commands that have identical data. Only one copy of the actual data is stored
- * for each unique session command.
- *
- * @param sescmd Executed session command
- */
-void RWSplitSession::compress_history(mxs::SSessionCommand& sescmd)
-{
-    auto eq = [&](mxs::SSessionCommand& scmd) {
-            return scmd->eq(*sescmd);
-        };
-
-    auto first = std::find_if(m_sescmd_list.begin(), m_sescmd_list.end(), eq);
-
-    if (first != m_sescmd_list.end())
-    {
-        // Duplicate command, use a reference of the old command instead of duplicating it
-        sescmd->mark_as_duplicate(**first);
-    }
-}
-
-void RWSplitSession::continue_large_session_write(GWBUF* querybuf, uint32_t type)
-{
-    for (auto it = m_raw_backends.begin(); it != m_raw_backends.end(); it++)
-    {
-        RWBackend* backend = *it;
-
-        if (backend->in_use())
-        {
-            backend->continue_session_command(gwbuf_clone(querybuf));
-        }
-    }
-}
-
-void RWSplitSession::discard_responses(uint64_t pos)
-{
-    /** Prune all completed responses before a certain position */
-    ResponseMap::iterator it = m_sescmd_responses.lower_bound(pos);
-
-    if (it != m_sescmd_responses.end())
-    {
-        // Found newer responses that were returned after this position
-        m_sescmd_responses.erase(m_sescmd_responses.begin(), it);
-    }
-    else
-    {
-        // All responses are older than the requested position
-        m_sescmd_responses.clear();
-    }
-}
-
-void RWSplitSession::discard_old_history(uint64_t lowest_pos)
-{
-    if (m_sescmd_prune_pos)
-    {
-        if (m_sescmd_prune_pos < lowest_pos)
-        {
-            discard_responses(m_sescmd_prune_pos);
-        }
-
-        auto it = std::find_if(m_sescmd_list.begin(), m_sescmd_list.end(),
-                               [this](const SSessionCommand& s) {
-                                   return s->get_position() > m_sescmd_prune_pos;
-                               });
-
-        if (it != m_sescmd_list.begin() && it != m_sescmd_list.end())
-        {
-            MXS_INFO("Pruning from %lu to %lu", m_sescmd_prune_pos, it->get()->get_position());
-            m_sescmd_list.erase(m_sescmd_list.begin(), it);
-            m_sescmd_prune_pos = 0;
-        }
-    }
-}
-
-mxs::SSessionCommand RWSplitSession::create_sescmd(GWBUF* buffer)
-{
-    uint8_t cmd = m_qc.current_route_info().command();
-
-    if (mxs_mysql_is_ps_command(cmd))
-    {
-        if (cmd == MXS_COM_STMT_CLOSE)
-        {
-            // Remove the command from the PS mapping
-            m_qc.ps_erase(buffer);
-            m_exec_map.erase(m_qc.current_route_info().stmt_id());
-        }
-
-        /**
-         * Replace the ID with our internal one, the backends will replace it with their own ID
-         * when the packet is being written. We use the internal ID when we store the command
-         * to remove the need for extra conversions from external to internal form when the command
-         * is being replayed on a server.
-         */
-        replace_binary_ps_id(buffer, m_qc.current_route_info().stmt_id());
-    }
-
-    /** The SessionCommand takes ownership of the buffer */
-    mxs::SSessionCommand sescmd(new mxs::SessionCommand(buffer, m_sescmd_count++));
-    auto type = m_qc.current_route_info().type_mask();
-
-    if (qc_query_is_type(type, QUERY_TYPE_PREPARE_NAMED_STMT)
-        || qc_query_is_type(type, QUERY_TYPE_PREPARE_STMT))
-    {
-        m_qc.ps_store(buffer, sescmd->get_position());
-    }
-    else if (qc_query_is_type(type, QUERY_TYPE_DEALLOC_PREPARE))
-    {
-        mxb_assert(!mxs_mysql_is_ps_command(m_qc.current_route_info().command()));
-        m_qc.ps_erase(buffer);
-    }
-
-    return sescmd;
 }
 
 /**
