@@ -274,10 +274,7 @@ bool RWSplitSession::route_stmt(GWBUF* querybuf)
 
 bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
 {
-    RWBackend* target = nullptr;
-    bool succp = false;
     const QueryClassifier::RouteInfo& info = m_qc.current_route_info();
-    uint8_t command = info.command();
     route_target_t route_target = should_route_sescmd_to_master() ? TARGET_MASTER : info.target();
 
     update_trx_statistics();
@@ -295,15 +292,14 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
     }
 
     // If delayed query retry is enabled, we need to store the current statement
-    bool store_stmt = m_config.delayed_retry;
+    bool store_stmt = m_config.delayed_retry
+        || (TARGET_IS_SLAVE(route_target) && m_config.retry_failed_reads);
 
     if (m_qc.large_query())
     {
         /** We're processing a large query that's split across multiple packets.
          * Route it to the same backend where we routed the previous packet. */
-        mxb_assert(m_prev_target);
-        target = m_prev_target;
-        succp = true;
+        route_target = TARGET_LAST_USED;
     }
     else if (m_otrx_state == OTRX_ACTIVE)
     {
@@ -311,56 +307,14 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
          * routing queries to the same server. If the query modifies data,
          * a rollback is initiated on the slave server. */
         store_stmt = track_optimistic_trx(&querybuf);
-        target = m_prev_target;
-        succp = true;
-    }
-    else if (TARGET_IS_NAMED_SERVER(route_target) || TARGET_IS_RLAG_MAX(route_target))
-    {
-        if ((target = handle_hinted_target(querybuf, route_target)))
-        {
-            succp = true;
-        }
-    }
-    else if (TARGET_IS_LAST_USED(route_target))
-    {
-        if ((target = get_last_used_backend()))
-        {
-            succp = true;
-        }
-    }
-    else if (TARGET_IS_SLAVE(route_target))
-    {
-        if ((target = handle_slave_is_target(command, info.stmt_id())))
-        {
-            succp = true;
-
-            if (command == MXS_COM_QUERY || command == MXS_COM_STMT_EXECUTE)
-            {
-                target->select_started();
-
-                if (m_config.retry_failed_reads)
-                {
-                    store_stmt = true;
-                }
-            }
-        }
-    }
-    else if (TARGET_IS_MASTER(route_target))
-    {
-        if (m_config.causal_reads != CausalReads::NONE)
-        {
-            gwbuf_set_type(querybuf, GWBUF_TYPE_TRACK_STATE);
-        }
-
-        succp = handle_master_is_target(&target);
-
-        if (!succp && should_migrate_trx(target))
-        {
-            return start_trx_migration(target, querybuf);
-        }
+        route_target = TARGET_LAST_USED;
     }
 
-    if (succp && target)
+    RWBackend* target;
+    bool ok;
+    std::tie(ok, target) = get_target(querybuf, route_target);
+
+    if (ok && target)
     {
         // We have a valid target, reset retry duration
         m_retry_duration = 0;
@@ -368,7 +322,7 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
         if (!prepare_target(target, route_target))
         {
             // The connection to target was down and we failed to reconnect
-            succp = false;
+            ok = false;
         }
         else if (target->has_session_commands())
         {
@@ -379,13 +333,17 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
         else
         {
             // Target server was found and is in the correct state
-            succp = handle_got_target(querybuf, target, store_stmt);
+            ok = handle_got_target(querybuf, target, store_stmt);
         }
+    }
+    else if (!ok && TARGET_IS_MASTER(route_target) && should_migrate_trx(target))
+    {
+        ok = start_trx_migration(target, querybuf);
     }
     else if (can_retry_query() || can_continue_trx_replay())
     {
         retry_query(gwbuf_clone(querybuf));
-        succp = true;
+        ok = true;
         MXS_INFO("Delaying routing: %s", extract_sql(querybuf).c_str());
     }
     else if (m_config.master_failure_mode != RW_ERROR_ON_WRITE)
@@ -394,7 +352,50 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
                   "connection.", route_target_to_string(route_target));
     }
 
-    return succp;
+    return ok;
+}
+
+std::pair<bool, RWBackend*> RWSplitSession::get_target(GWBUF* querybuf, route_target_t route_target)
+{
+    const QueryClassifier::RouteInfo& info = m_qc.current_route_info();
+    RWBackend* target = nullptr;
+    bool ok = false;
+
+    switch (route_target)
+    {
+    case TARGET_NAMED_SERVER:
+    case TARGET_RLAG_MAX:
+        if ((target = handle_hinted_target(querybuf, route_target)))
+        {
+            ok = true;
+        }
+        break;
+
+    case TARGET_LAST_USED:
+        if ((target = get_last_used_backend()))
+        {
+            ok = true;
+        }
+        break;
+
+    case TARGET_SLAVE:
+        if ((target = handle_slave_is_target(info.command(), info.stmt_id())))
+        {
+            ok = true;
+        }
+        break;
+
+    case TARGET_MASTER:
+        ok = handle_master_is_target(&target);
+        break;
+
+    default:
+        mxb_assert(!true);
+        MXS_ERROR("Unexpected target type: %s", route_target_to_string(route_target));
+        break;
+    }
+
+    return {ok, target};
 }
 
 /**
@@ -1103,6 +1104,10 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool 
         // The storage for causal reads is done inside add_prefix_wait_gtid
         store = false;
     }
+    else if (m_config.causal_reads != CausalReads::NONE && target->is_master())
+    {
+        gwbuf_set_type(querybuf, GWBUF_TYPE_TRACK_STATE);
+    }
 
     if (m_qc.load_data_state() != QueryClassifier::LOAD_DATA_ACTIVE
         && !m_qc.large_query() && mxs_mysql_command_will_respond(cmd))
@@ -1153,6 +1158,12 @@ bool RWSplitSession::handle_got_target(GWBUF* querybuf, RWBackend* target, bool 
         mxb::atomic::add(&m_router->stats().n_queries, 1, mxb::atomic::RELAXED);
         mxb::atomic::add(&target->target()->stats().packets, 1, mxb::atomic::RELAXED);
         m_server_stats[target->target()].inc_total();
+
+        if (TARGET_IS_SLAVE(m_qc.current_route_info().target())
+            && (cmd == MXS_COM_QUERY || cmd == MXS_COM_STMT_EXECUTE))
+        {
+            target->select_started();
+        }
 
         if (!m_qc.large_query() && response == mxs::Backend::EXPECT_RESPONSE)
         {

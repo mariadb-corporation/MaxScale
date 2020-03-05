@@ -160,6 +160,9 @@ private:
     mxs::RWBackend* get_target_backend(backend_type_t btype, const char* name, int max_rlag);
     mxs::RWBackend* get_root_master();
 
+    // The main target selection function
+    std::pair<bool, mxs::RWBackend*> get_target(GWBUF* querybuf, route_target_t route_target);
+
     bool            handle_target_is_all(GWBUF* querybuf);
     mxs::RWBackend* handle_hinted_target(GWBUF* querybuf, route_target_t route_target);
     mxs::RWBackend* handle_slave_is_target(uint8_t cmd, uint32_t stmt_id);
