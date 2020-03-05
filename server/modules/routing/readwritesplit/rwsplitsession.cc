@@ -1119,6 +1119,11 @@ bool RWSplitSession::lock_to_master()
     {
         m_target_node = m_current_master;
         rv = true;
+
+        if (m_config.strict_multi_stmt || m_config.strict_sp_calls)
+        {
+            m_locked_to_master = true;
+        }
     }
 
     return rv;

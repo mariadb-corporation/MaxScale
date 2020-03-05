@@ -85,6 +85,16 @@ void RWSplitSession::process_sescmd_response(RWBackend* backend, GWBUF** ppPacke
                 /** Store the master's response so that the slave responses can be compared to it */
                 m_sescmd_responses[id] = std::make_pair(backend, reply.error());
 
+                constexpr const char* LEVEL = "SERIALIZABLE";
+
+                if (reply.get_variable("trx_characteristics").find(LEVEL) != std::string::npos
+                    || reply.get_variable("tx_isolation").find(LEVEL) != std::string::npos)
+                {
+                    MXS_INFO("Transaction isolation level set to %s, locking session to master", LEVEL);
+                    m_locked_to_master = true;
+                    lock_to_master();
+                }
+
                 if (reply.error())
                 {
                     MXS_INFO("Session command no. %lu returned an error: %s",

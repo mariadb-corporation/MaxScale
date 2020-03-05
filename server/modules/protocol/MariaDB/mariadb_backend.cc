@@ -1937,12 +1937,10 @@ void MariaDBBackendConnection::process_ok_packet(Iter it, Iter end)
     m_reply.set_num_warnings(warnings);
 
     if (rcap_type_required(m_session->service->capabilities(), RCAP_TYPE_SESSION_STATE_TRACKING)
-        && (status & SERVER_SESSION_STATE_CHANGED) && m_track_state)
+        && (status & SERVER_SESSION_STATE_CHANGED))
     {
-        // TODO: Expose the need for session state tracking in a less intrusive way than passing it as a flag
-        // in a GWBUF. It might even be feasible to always process the results but that incurs a cost that we
-        // don't want to always pay.
-
+        // TODO: Benchmark the extra cost of always processing the session tracking variables and see if it's
+        // too much.
         mxb_assert(server_capabilities & GW_MYSQL_CAPABILITIES_SESSION_TRACK);
 
         skip_encoded_str(it);   // Skip human-readable info

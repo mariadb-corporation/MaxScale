@@ -391,6 +391,7 @@ private:
     MXS_SESSION*     m_session;                 /**< The client session */
     uint64_t         m_sescmd_count;            /**< Number of executed session commands (starts from 1) */
     int              m_expected_responses;      /**< Number of expected responses to the current query */
+    bool             m_locked_to_master {false};/**< Whether session is permanently locked to the master */
 
     maxbase::TimePoint m_last_keepalive_check;      /**< When the last ping was done */
 

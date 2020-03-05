@@ -953,10 +953,9 @@ bool RWSplitSession::handle_master_is_target(RWBackend** dest)
         log_master_routing_failure(succp, m_current_master, target);
     }
 
-    if (!m_config.strict_multi_stmt && !m_config.strict_sp_calls
-        && m_target_node == m_current_master)
+    if (!m_locked_to_master && m_target_node == m_current_master)
     {
-        /** Reset the forced node as we're in relaxed multi-statement mode */
+        // Reset the forced node as we're not permanently locked to it
         m_target_node = nullptr;
     }
 
