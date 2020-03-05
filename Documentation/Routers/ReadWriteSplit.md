@@ -804,6 +804,19 @@ replication lag, then statements will be routed to the _Master_. (There might be
 other similar configuration parameters in the future which limit the number of
 statements that will be routed to slaves.)
 
+#### Transaction Isolation Level Tracking
+
+If either `session_track_transaction_info=CHARACTERISTICS` or
+`session_track_system_variables=tx_isolation` is configured for the MariaDB
+server, readwritesplit will track the transaction isolation level and lock the
+session to the master when the isolation level is set to serializable. This
+retains the correctness of the isolation level which can otherwise cause
+problems.
+
+For example, if transaction isolation level tracking cannot be done and an
+autocommit SELECT is routed to a slave, it no longer behaves in a serializable
+manner. This can also have an effect on the replication in the slave server.
+
 ### Routing to Slaves
 
 The ability to route some statements to slaves is important because it also
