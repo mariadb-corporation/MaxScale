@@ -1,5 +1,7 @@
 add_subdirectory(routing)
 add_subdirectory(protocol)
 add_subdirectory(monitor)
-add_subdirectory(filter)
+if (BUILD_FILTERS)
+  add_subdirectory(filter)
+endif()
 add_subdirectory(authenticator)
