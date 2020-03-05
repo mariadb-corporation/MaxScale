@@ -63,14 +63,23 @@ param_duration_2(&specification,
 
 enum Enum
 {
-    ENUM_ONE,
-    ENUM_TWO
+    ENUM_ONE = 1,
+    ENUM_TWO = 2
 };
 
 config::ParamEnum<Enum>
 param_enum(&specification,
            "enum_parameter",
            "Specifies a range of values.",
+{
+    {ENUM_ONE, "one"},
+    {ENUM_TWO, "two"}
+});
+
+config::ParamEnumMask<Enum>
+param_enummask(&specification,
+               "enummask_parameter",
+               "Specifies a subset of values.",
 {
     {ENUM_ONE, "one"},
     {ENUM_TWO, "two"}
@@ -241,6 +250,23 @@ int test_enum(config::Enum<Enum>& value)
         {"one",  true, ENUM_ONE},
         {"two",  true, ENUM_TWO},
 
+        {"one, two", false},
+        {"blah", false},
+        {"1",    false},
+        {"ones", false}
+    };
+
+    return test(value, entries, elements_in_array(entries));
+}
+
+int test_enummask(config::EnumMask<Enum>& value)
+{
+    static const TestEntry<uint32_t> entries[] =
+    {
+        {"one",      true, ENUM_ONE},
+        {"two",      true, ENUM_TWO},
+        {"one, two", true, ENUM_ONE | ENUM_TWO },
+
         {"blah", false},
         {"1",    false},
         {"ones", false}
@@ -386,6 +412,9 @@ int main()
 
     config::Enum<Enum> value_enum(&configuration, &param_enum);
     nErrors += test_enum(value_enum);
+
+    config::EnumMask<Enum> value_enummask(&configuration, &param_enummask);
+    nErrors += test_enummask(value_enummask);
 
     config::Integer value_integer(&configuration, &param_integer);
     nErrors += test_integer(value_integer);

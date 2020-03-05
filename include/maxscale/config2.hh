@@ -724,6 +724,62 @@ private:
 };
 
 /**
+ * ParamEnumMask
+ */
+template<class T>
+class ParamEnumMask : public ConcreteParam<ParamEnumMask<T>, uint32_t>
+{
+public:
+    using value_type = uint32_t;
+
+    ParamEnumMask(Specification* pSpecification,
+                  const char* zName,
+                  const char* zDescription,
+                  const std::vector<std::pair<T, const char*>>& enumeration,
+                  Param::Modifiable modifiable = Param::Modifiable::AT_STARTUP)
+        : ParamEnumMask(pSpecification, zName, zDescription, modifiable, Param::MANDATORY,
+                        enumeration, value_type())
+    {
+    }
+
+    ParamEnumMask(Specification* pSpecification,
+                  const char* zName,
+                  const char* zDescription,
+                  const std::vector<std::pair<T, const char*>>& enumeration,
+                  value_type default_value,
+                  Param::Modifiable modifiable = Param::Modifiable::AT_STARTUP)
+        : ParamEnumMask(pSpecification, zName, zDescription, modifiable, Param::OPTIONAL,
+                        enumeration, default_value)
+    {
+    }
+
+    std::string type() const override;
+
+    std::string to_string(value_type value) const;
+    bool        from_string(const std::string& value, value_type* pValue,
+                            std::string* pMessage = nullptr) const;
+
+    json_t* to_json(value_type value) const;
+    bool    from_json(const json_t* pJson, value_type* pValue,
+                      std::string* pMessage = nullptr) const;
+
+    void populate(MXS_MODULE_PARAM& param) const;
+
+private:
+    ParamEnumMask(Specification* pSpecification,
+                  const char* zName,
+                  const char* zDescription,
+                  Param::Modifiable modifiable,
+                  Param::Kind kind,
+                  const std::vector<std::pair<T, const char*>>& enumeration,
+                  value_type default_value);
+
+private:
+    std::vector<std::pair<T, const char*>> m_enumeration;
+    std::vector<MXS_ENUM_VALUE>            m_enum_values;
+};
+
+/**
  * ParamPath
  */
 class ParamPath : public ConcreteParam<ParamPath, std::string>
@@ -1590,6 +1646,12 @@ template<class T>
 using Enum = ConcreteType<ParamEnum<T>>;
 
 /**
+ * EnumMask
+ */
+template<class T>
+using EnumMask = ConcreteType<ParamEnumMask<T>>;
+
+/**
  * Path
  */
 using Path = ConcreteType<ParamPath>;
@@ -1858,7 +1920,177 @@ void ParamEnum<T>::populate(MXS_MODULE_PARAM& param) const
     Param::populate(param);
 
     param.accepted_values = &m_enum_values[0];
+    param.options = MXS_MODULE_OPT_ENUM_UNIQUE;
 }
+
+template<class T>
+ParamEnumMask<T>::ParamEnumMask(Specification* pSpecification,
+                                const char* zName,
+                                const char* zDescription,
+                                Param::Modifiable modifiable,
+                                Param::Kind kind,
+                                const std::vector<std::pair<T, const char*>>& enumeration,
+                                value_type default_value)
+    : ConcreteParam<ParamEnumMask<T>, uint32_t>(pSpecification, zName, zDescription,
+                                                modifiable, kind, MXS_MODULE_PARAM_ENUM, default_value)
+    , m_enumeration(enumeration)
+{
+    m_enum_values.reserve(m_enumeration.size() + 1);
+
+    for (const auto& entry : enumeration)
+    {
+        MXS_ENUM_VALUE x {};
+        x.name = entry.second;
+        x.enum_value = entry.first;
+
+        m_enum_values.emplace_back(x);
+    }
+
+    MXS_ENUM_VALUE end {NULL};
+    m_enum_values.emplace_back(end);
+}
+
+template<class T>
+std::string ParamEnumMask<T>::type() const
+{
+    std::string s("enumeration:[");
+
+    bool first = true;
+    for (const auto& p : m_enumeration)
+    {
+        if (first)
+        {
+            first = false;
+        }
+        else
+        {
+            s += ", ";
+        }
+
+        s += p.second;
+    }
+
+    s += "]";
+
+    return s;
+}
+
+template<class T>
+std::string ParamEnumMask<T>::to_string(value_type value) const
+{
+    std::vector<std::string> values;
+
+    for (const auto& entry : m_enumeration)
+    {
+        if (value & entry.first)
+        {
+            values.push_back(entry.second);
+        }
+    }
+
+    return mxb::join(values, ",");
+}
+
+template<class T>
+bool ParamEnumMask<T>::from_string(const std::string& value_as_string,
+                                   value_type* pValue,
+                                   std::string* pMessage) const
+{
+    bool rv = true;
+
+    value_type value = 0;
+
+    auto enum_values = mxb::strtok(value_as_string, ",");
+
+    for (auto enum_value : enum_values)
+    {
+        mxb::trim(enum_value);
+
+        auto it = std::find_if(m_enumeration.begin(), m_enumeration.end(),
+                               [enum_value](const std::pair<T, const char*>& elem) {
+                                   return enum_value == elem.second;
+                               });
+
+        if (it != m_enumeration.end())
+        {
+            value |= it->first;
+        }
+        else
+        {
+            rv = false;
+            break;
+        }
+    }
+
+    if (rv)
+    {
+        *pValue = value;
+    }
+    else if (pMessage)
+    {
+        std::string s;
+        for (size_t i = 0; i < m_enumeration.size(); ++i)
+        {
+            s += "'";
+            s += m_enumeration[i].second;
+            s += "'";
+
+            if (i == m_enumeration.size() - 2)
+            {
+                s += " and ";
+            }
+            else if (i != m_enumeration.size() - 1)
+            {
+                s += ", ";
+            }
+        }
+
+        *pMessage = "Invalid enumeration value: ";
+        *pMessage += value_as_string;
+        *pMessage += ", valid values are a combination of: ";
+        *pMessage += s;
+        *pMessage += ".";
+    }
+
+    return rv;
+}
+
+template<class T>
+json_t* ParamEnumMask<T>::to_json(value_type value) const
+{
+    return json_string(to_string(value).c_str());
+}
+
+template<class T>
+bool ParamEnumMask<T>::from_json(const json_t* pJson, value_type* pValue,
+                                 std::string* pMessage) const
+{
+    bool rv = false;
+
+    if (json_is_string(pJson))
+    {
+        const char* z = json_string_value(pJson);
+
+        rv = from_string(z, pValue, pMessage);
+    }
+    else
+    {
+        *pMessage = "Expected a json string, but got a json ";
+        *pMessage += mxs::json_type_to_string(pJson);
+        *pMessage += ".";
+    }
+
+    return rv;
+}
+
+template<class T>
+void ParamEnumMask<T>::populate(MXS_MODULE_PARAM& param) const
+{
+    Param::populate(param);
+
+    param.accepted_values = &m_enum_values[0];
+}
+
 
 template<class ParamType>
 void Configuration::add_native(typename ParamType::value_type* pValue,
