@@ -349,8 +349,8 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
         }
         else if (m_config.master_failure_mode != RW_ERROR_ON_WRITE)
         {
-            MXS_ERROR("Could not find valid server for target type %s, closing "
-                      "connection.", route_target_to_string(route_target));
+            MXS_ERROR("Could not find valid server for target type %s, closing connection.\n%s",
+                      route_target_to_string(route_target), get_verbose_status().c_str());
             ok = false;
         }
     }
@@ -573,12 +573,6 @@ RWBackend* RWSplitSession::get_master_backend()
         if (is_valid_for_master(master))
         {
             rval = master;
-        }
-        else
-        {
-            MXS_ERROR("Cannot choose server '%s' as the master because it is not "
-                      "in use and a new connection to it cannot be created. Connection status: %s",
-                      master->name(), get_verbose_status().c_str());
         }
     }
 
