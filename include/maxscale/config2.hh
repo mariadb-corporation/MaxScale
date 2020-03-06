@@ -908,6 +908,17 @@ public:
     {
     }
 
+    ParamRegex(Specification* pSpecification,
+               const char* zName,
+               const char* zDescription,
+               const char* zRegex,
+               Modifiable modifiable = Modifiable::AT_STARTUP)
+        : ConcreteParam<ParamRegex, RegexValue>(pSpecification, zName, zDescription,
+                                                modifiable, Param::OPTIONAL, MXS_MODULE_PARAM_REGEX,
+                                                create_default(zRegex))
+    {
+    }
+
     uint32_t options() const
     {
         return m_options;
@@ -929,6 +940,8 @@ public:
                       std::string* pMessage = nullptr) const;
 
 private:
+    static RegexValue create_default(const char* zRegex);
+
     uint32_t m_options = 0;
 };
 

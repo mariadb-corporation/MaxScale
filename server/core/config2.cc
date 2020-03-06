@@ -789,18 +789,20 @@ std::string ParamRegex::to_string(const value_type& type) const
     return type.text;
 }
 
-bool ParamRegex::from_string(const std::string& value_as_string,
-                             value_type* pValue,
-                             std::string* pMessage) const
+namespace
+{
+
+bool regex_from_string(const std::string& value_as_string,
+                       uint32_t options,
+                       RegexValue* pValue,
+                       std::string* pMessage = nullptr)
 {
     bool rv = false;
 
     if (value_as_string.empty())
     {
-        if (pMessage)
-        {
-            *pMessage = "An empty string is not a valid regular expression.";
-        }
+        *pValue = RegexValue();
+        rv = true;
     }
     else
     {
@@ -825,18 +827,28 @@ bool ParamRegex::from_string(const std::string& value_as_string,
         pcre2_config(PCRE2_CONFIG_JIT, &jit_available);
 
         uint32_t ovec_size;
-        std::unique_ptr<pcre2_code> sCode(compile_regex_string(text.c_str(), jit_available, m_options, &ovec_size));
+        std::unique_ptr<pcre2_code> sCode(compile_regex_string(text.c_str(),
+                                                               jit_available, options, &ovec_size));
 
         if (sCode)
         {
-            RegexValue value(value_as_string, std::move(sCode), m_options, ovec_size);
+            RegexValue value(value_as_string, std::move(sCode), ovec_size, options);
 
-            *pValue = std::move(value);
+            *pValue = value;
             rv = true;
         }
     }
 
     return rv;
+}
+
+}
+
+bool ParamRegex::from_string(const std::string& value_as_string,
+                             value_type* pValue,
+                             std::string* pMessage) const
+{
+    return regex_from_string(value_as_string, m_options, pValue, pMessage);
 }
 
 json_t* ParamRegex::to_json(const value_type& value) const
@@ -864,6 +876,16 @@ bool ParamRegex::from_json(const json_t* pJson,
     }
 
     return rv;
+}
+
+RegexValue ParamRegex::create_default(const char* zRegex)
+{
+    RegexValue value;
+
+    MXB_AT_DEBUG(bool rv =) regex_from_string(zRegex, 0, &value);
+    mxb_assert(rv);
+
+    return value;
 }
 
 /**
