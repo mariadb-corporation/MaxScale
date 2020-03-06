@@ -182,13 +182,14 @@ void MariaDBBackendConnection::finish_connection()
 bool MariaDBBackendConnection::reuse_connection(BackendDCB* dcb, mxs::Component* upstream)
 {
     bool rv = false;
-    mxb_assert(dcb->session() && !dcb->readq() && !m_delayed_packets.empty() && !dcb->writeq());
+    mxb_assert(dcb->session() && !dcb->readq() && !dcb->writeq());
     mxb_assert(m_ignore_replies >= 0);
 
-    if (dcb->state() != DCB::State::POLLING || m_state != State::ROUTING)
+    if (dcb->state() != DCB::State::POLLING || m_state != State::ROUTING || !m_delayed_packets.empty())
     {
-        MXS_INFO("DCB and protocol state do not qualify for pooling: %s, %s",
-                 mxs::to_string(dcb->state()), to_string(m_state).c_str());
+        MXS_INFO("DCB and protocol state do not qualify for pooling: %s, %s, %s",
+                 mxs::to_string(dcb->state()), to_string(m_state).c_str(),
+                 m_delayed_packets.empty() ? "no packets" : "stored packets");
     }
     else
     {
