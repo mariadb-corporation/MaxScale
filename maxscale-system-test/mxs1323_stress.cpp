@@ -18,8 +18,8 @@ void* async_query(void* data)
 
         for (int i = 0; i < 50 && running && test->global_result == 0; i++)
         {
-            const char* query = "SET @a = (SELECT SLEEP(1))";
-            test->try_query(conn, "%s", query);
+            test->try_query(conn, "SET @a = (SELECT SLEEP(0.1))");
+            test->try_query(conn, "SELECT SLEEP(1)");
         }
 
         mysql_close(conn);
