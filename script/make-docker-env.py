@@ -41,7 +41,7 @@ class File(Enum):
 # default_user and default_passwd in order to make life simpler (TODO?).
 default_user="maxskysql"
 default_passwd="skysql"
-db_image="mariadb:10.3"
+db_image="mariadb:10.4"
 root_passwd="mariadb"
 
 help_text = '''
