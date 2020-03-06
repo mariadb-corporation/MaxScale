@@ -2657,30 +2657,12 @@ static uint32_t dcb_process_poll_events(DCB* dcb, uint32_t events)
 
     if ((events & EPOLLOUT) && (dcb->n_close == 0))
     {
-        int eno = 0;
-        eno = gw_getsockerrno(dcb->fd);
+        rc |= MXB_POLL_WRITE;
 
-        if (eno == 0)
+        if (dcb_session_check(dcb, "write_ready"))
         {
-            rc |= MXB_POLL_WRITE;
-
-            if (dcb_session_check(dcb, "write_ready"))
-            {
-                DCB_EH_NOTICE("Calling dcb->func.write_ready(%p)", dcb);
-                dcb->func.write_ready(dcb);
-            }
-        }
-        else
-        {
-            char errbuf[MXS_STRERROR_BUFLEN];
-            MXS_DEBUG("%lu [poll_waitevents] "
-                      "EPOLLOUT due %d, %s. "
-                      "dcb %p, fd %i",
-                      pthread_self(),
-                      eno,
-                      strerror_r(eno, errbuf, sizeof(errbuf)),
-                      dcb,
-                      dcb->fd);
+            DCB_EH_NOTICE("Calling dcb->func.write_ready(%p)", dcb);
+            dcb->func.write_ready(dcb);
         }
     }
     if ((events & EPOLLIN) && (dcb->n_close == 0))
@@ -2712,16 +2694,6 @@ static uint32_t dcb_process_poll_events(DCB* dcb, uint32_t events)
     }
     if ((events & EPOLLERR) && (dcb->n_close == 0))
     {
-        int eno = gw_getsockerrno(dcb->fd);
-        if (eno != 0)
-        {
-            char errbuf[MXS_STRERROR_BUFLEN];
-            MXS_DEBUG("%lu [poll_waitevents] "
-                      "EPOLLERR due %d, %s.",
-                      pthread_self(),
-                      eno,
-                      strerror_r(eno, errbuf, sizeof(errbuf)));
-        }
         rc |= MXB_POLL_ERROR;
 
         if (dcb_session_check(dcb, "error"))
@@ -2733,16 +2705,6 @@ static uint32_t dcb_process_poll_events(DCB* dcb, uint32_t events)
 
     if ((events & EPOLLHUP) && (dcb->n_close == 0))
     {
-        MXB_AT_DEBUG(int eno = gw_getsockerrno(dcb->fd));
-        MXB_AT_DEBUG(char errbuf[MXS_STRERROR_BUFLEN]);
-        MXS_DEBUG("%lu [poll_waitevents] "
-                  "EPOLLHUP on dcb %p, fd %d. "
-                  "Errno %d, %s.",
-                  pthread_self(),
-                  dcb,
-                  dcb->fd,
-                  eno,
-                  strerror_r(eno, errbuf, sizeof(errbuf)));
         rc |= MXB_POLL_HUP;
 
         if (!dcb->dcb_errhandle_called)
@@ -2760,16 +2722,6 @@ static uint32_t dcb_process_poll_events(DCB* dcb, uint32_t events)
 #ifdef EPOLLRDHUP
     if ((events & EPOLLRDHUP) && (dcb->n_close == 0))
     {
-        MXB_AT_DEBUG(int eno = gw_getsockerrno(dcb->fd));
-        MXB_AT_DEBUG(char errbuf[MXS_STRERROR_BUFLEN]);
-        MXS_DEBUG("%lu [poll_waitevents] "
-                  "EPOLLRDHUP on dcb %p, fd %d. "
-                  "Errno %d, %s.",
-                  pthread_self(),
-                  dcb,
-                  dcb->fd,
-                  eno,
-                  strerror_r(eno, errbuf, sizeof(errbuf)));
         rc |= MXB_POLL_HUP;
 
         if (!dcb->dcb_errhandle_called)

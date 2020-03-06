@@ -1329,29 +1329,15 @@ static int gw_error_backend_event(DCB* dcb)
         if (dcb->persistentstart == 0)
         {
             /** Not a persistent connection, something is wrong. */
-            MXS_ERROR("EPOLLERR event on a non-persistent DCB with no session. "
-                      "Closing connection.");
+            MXS_ERROR("EPOLLERR event on a non-persistent DCB with no session. Closing connection.");
         }
         dcb_close(dcb);
     }
     else if (dcb->state != DCB_STATE_POLLING || session->state != SESSION_STATE_STARTED)
     {
-        int error;
-        int len = sizeof(error);
-
-        if (getsockopt(dcb->fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t*) &len) == 0 && error != 0)
+        if (auto err = gw_getsockerrno(dcb->fd))
         {
-            if (dcb->state != DCB_STATE_POLLING)
-            {
-                MXS_ERROR("DCB in state %s got error '%s'.",
-                          STRDCBSTATE(dcb->state),
-                          mxs_strerror(errno));
-            }
-            else
-            {
-                MXS_ERROR("Error '%s' in session that is not ready for routing.",
-                          mxs_strerror(errno));
-            }
+            MXS_ERROR("DCB in state %s got error '%s'.", STRDCBSTATE(dcb->state), mxs_strerror(err));
         }
     }
     else
@@ -1381,15 +1367,11 @@ static int gw_backend_hangup(DCB* dcb)
     {
         if (session->state != SESSION_STATE_STARTED)
         {
-            int error;
-            int len = sizeof(error);
-            if (getsockopt(dcb->fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t*) &len) == 0)
+            if (session->state != SESSION_STATE_STOPPING)
             {
-                if (error != 0 && session->state != SESSION_STATE_STOPPING)
+                if (auto err = gw_getsockerrno(dcb->fd))
                 {
-                    MXS_ERROR("Hangup in session that is not ready for routing, "
-                              "Error reported is '%s'.",
-                              mxs_strerror(errno));
+                    MXS_ERROR("Hangup in session that is not ready for routing: %s", mxs_strerror(err));
                 }
             }
         }
