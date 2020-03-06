@@ -444,18 +444,17 @@ static void sigfatal_handler(int i)
         }
     }
 
-    thread_local char msg[4096] = "";
-    msg[0] = '\0';
+    thread_local std::string msg;
 
     auto cb = [](const char* symbol, const char* cmd) {
             char buf[512];
             snprintf(buf, sizeof(buf), "  %s: %s\n", symbol, cmd);
-            strcat(msg, buf);
+            msg += buf;
         };
 
     mxb::dump_stacktrace(cb);
 
-    MXS_ALERT("\n%s", msg);
+    MXS_ALERT("\n%s", msg.c_str());
 
     /* re-raise signal to enforce core dump */
     print_alert("Writing core dump.");
