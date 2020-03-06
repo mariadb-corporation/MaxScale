@@ -1223,6 +1223,24 @@ bool setup_signals()
     return rv;
 }
 
+/**
+ * Restore default signals
+ */
+void restore_signals()
+{
+    configure_signal(SIGHUP, "SIGHUP", SIG_DFL);
+    configure_signal(SIGUSR1, "SIGUSR1", SIG_DFL);
+    configure_signal(SIGTERM, "SIGTERM", SIG_DFL);
+    configure_signal(SIGINT, "SIGINT", SIG_DFL);
+    configure_signal(SIGSEGV, "SIGSEGV", SIG_DFL);
+    configure_signal(SIGABRT, "SIGABRT", SIG_DFL);
+    configure_signal(SIGILL, "SIGILL", SIG_DFL);
+    configure_signal(SIGFPE, "SIGFPE", SIG_DFL);
+#ifdef SIGBUS
+    configure_signal(SIGBUS, "SIGBUS", SIG_DFL);
+#endif
+}
+
 bool set_runtime_dirs(const char* basedir)
 {
     bool rv = true;
@@ -1351,6 +1369,7 @@ public:
 
         log_exit_status();
         config_finish();
+        restore_signals();
     }
 
 private:
