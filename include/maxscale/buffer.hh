@@ -541,7 +541,7 @@ public:
          */
         void advance(int i)
         {
-            mxb_assert(m_i != m_end);
+            mxb_assert(m_i != m_end || i == 0);
             mxb_assert(i >= 0);
 
             while (m_i && m_i + i >= m_end)
