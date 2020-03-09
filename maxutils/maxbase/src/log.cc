@@ -761,12 +761,9 @@ int mxb_log_message(int priority,
 
             int modname_len = modname ? strlen(modname) + 3 : 0;    // +3 due to "[...] "
 
-            // If we know the actual object name, use that instead
-            if (auto scope = mxb::LogScope::current_scope())
-            {
-                modname_len = strlen(scope) + 3;
-                modname = scope;
-            }
+            // If we know the actual object name, add that also
+            auto scope = mxb::LogScope::current_scope();
+            int scope_len = scope ? strlen(scope) + 3 : 0;      // +3 due to "(...) "
 
             static const char SUPPRESSION[] =
                 " (subsequent similar messages suppressed for %lu milliseconds)";
@@ -813,6 +810,7 @@ int mxb_log_message(int priority,
                 buffer_len += prefix.len;
                 buffer_len += context_len;
                 buffer_len += modname_len;
+                buffer_len += scope_len;
                 buffer_len += augmentation_len;
                 buffer_len += message_len;
                 buffer_len += suppression_len;
@@ -822,7 +820,7 @@ int mxb_log_message(int priority,
                     message_len -= (buffer_len - MAX_LOGSTRLEN);
                     buffer_len = MAX_LOGSTRLEN;
 
-                    assert(prefix.len + context_len + modname_len
+                    assert(prefix.len + context_len + modname_len + scope_len
                            + augmentation_len + message_len + suppression_len == buffer_len);
                 }
 
@@ -831,7 +829,8 @@ int mxb_log_message(int priority,
                 char* prefix_text = buffer;
                 char* context_text = prefix_text + prefix.len;
                 char* modname_text = context_text + context_len;
-                char* augmentation_text = modname_text + modname_len;
+                char* scope_text = modname_text + modname_len;
+                char* augmentation_text = scope_text + scope_len;
                 char* message_text = augmentation_text + augmentation_len;
                 char* suppression_text = message_text + message_len;
 
@@ -849,6 +848,13 @@ int mxb_log_message(int priority,
                     strcpy(modname_text, "[");
                     strcat(modname_text, modname);
                     strcat(modname_text, "] ");
+                }
+
+                if (scope_len)
+                {
+                    strcpy(scope_text, "(");
+                    strcat(scope_text, scope);
+                    strcat(scope_text, ") ");
                 }
 
                 if (augmentation_len)
