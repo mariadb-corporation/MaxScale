@@ -282,8 +282,7 @@ static void set_integer(json_t* pObject, const char* zName, size_t value)
 
     if (pValue)
     {
-        json_object_set(pObject, zName, pValue);
-        json_decref(pValue);
+        json_object_set_new(pObject, zName, pValue);
     }
 }
 
