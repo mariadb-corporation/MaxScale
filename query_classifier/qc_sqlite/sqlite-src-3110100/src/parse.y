@@ -1887,6 +1887,7 @@ expr(A) ::= LP(B) expr(X) RP(E). {A.pExpr = X.pExpr; spanSet(&A,&B,&E);}
 %endif
 %ifdef MAXSCALE
 %type exprs {ExprSpan}
+%destructor exprs {sqlite3ExprDelete(pParse->db, $$.pExpr);}
 exprs(A) ::= expr(X). { A = X; }
 exprs(A) ::= exprs(X) COMMA(OP) expr(Y). {spanBinaryExpr(&A,pParse,@OP,&X,&Y);}
 expr(A) ::= LP(B) exprs(X) RP(E). {A.pExpr = X.pExpr; spanSet(&A,&B,&E);}
@@ -2917,6 +2918,7 @@ cmd ::= DROP DATABASE ifexists id(X). {
 cmd ::= call.
 
 %type call_args_opt {ExprList*}
+%destructor call_args_opt {sqlite3ExprListDelete(pParse->db, $$);}
 call_args_opt(A) ::= . {A=0;}
 call_args_opt(A) ::= LP exprlist(X) RP. {A=X;}
 
@@ -3508,6 +3510,7 @@ cmd ::= optimize(X). {
 }
 
 %type optimize {SrcList*}
+%destructor optimize {sqlite3SrcListDelete(pParse->db, $$);}
 
 optimize_arg1_opt ::= .
 optimize_arg1_opt ::= LOCAL.
