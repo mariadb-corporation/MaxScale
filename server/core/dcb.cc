@@ -2654,44 +2654,6 @@ static uint32_t dcb_process_poll_events(DCB* dcb, uint32_t events)
      * Any of these callbacks might close the DCB. Hence, the value of 'n_close'
      * must be checked after each callback invocation.
      */
-
-    if ((events & EPOLLOUT) && (dcb->n_close == 0))
-    {
-        rc |= MXB_POLL_WRITE;
-
-        if (dcb_session_check(dcb, "write_ready"))
-        {
-            DCB_EH_NOTICE("Calling dcb->func.write_ready(%p)", dcb);
-            dcb->func.write_ready(dcb);
-        }
-    }
-    if ((events & EPOLLIN) && (dcb->n_close == 0))
-    {
-        MXS_DEBUG("%lu [poll_waitevents] "
-                  "Read in dcb %p fd %d",
-                  pthread_self(),
-                  dcb,
-                  dcb->fd);
-        rc |= MXB_POLL_READ;
-
-        if (dcb_session_check(dcb, "read"))
-        {
-            int return_code = 1;
-            /** SSL authentication is still going on, we need to call dcb_accept_SSL
-             * until it return 1 for success or -1 for error */
-            if (dcb->ssl_state == SSL_HANDSHAKE_REQUIRED)
-            {
-                return_code = (DCB::Role::CLIENT == dcb->role) ?
-                    dcb_accept_SSL(dcb) :
-                    dcb_connect_SSL(dcb);
-            }
-            if (1 == return_code)
-            {
-                DCB_EH_NOTICE("Calling dcb->func.read(%p)", dcb);
-                dcb->func.read(dcb);
-            }
-        }
-    }
     if ((events & EPOLLERR) && (dcb->n_close == 0))
     {
         rc |= MXB_POLL_ERROR;
@@ -2736,6 +2698,40 @@ static uint32_t dcb_process_poll_events(DCB* dcb, uint32_t events)
         }
     }
 #endif
+
+    if ((events & EPOLLOUT) && (dcb->n_close == 0))
+    {
+        rc |= MXB_POLL_WRITE;
+
+        if (dcb_session_check(dcb, "write_ready"))
+        {
+            DCB_EH_NOTICE("Calling dcb->func.write_ready(%p)", dcb);
+            dcb->func.write_ready(dcb);
+        }
+    }
+
+    if ((events & EPOLLIN) && (dcb->n_close == 0))
+    {
+        rc |= MXB_POLL_READ;
+
+        if (dcb_session_check(dcb, "read"))
+        {
+            int return_code = 1;
+            /** SSL authentication is still going on, we need to call dcb_accept_SSL
+             * until it return 1 for success or -1 for error */
+            if (dcb->ssl_state == SSL_HANDSHAKE_REQUIRED)
+            {
+                return_code = (DCB::Role::CLIENT == dcb->role) ?
+                    dcb_accept_SSL(dcb) :
+                    dcb_connect_SSL(dcb);
+            }
+            if (1 == return_code)
+            {
+                DCB_EH_NOTICE("Calling dcb->func.read(%p)", dcb);
+                dcb->func.read(dcb);
+            }
+        }
+    }
 
     return rc;
 }
