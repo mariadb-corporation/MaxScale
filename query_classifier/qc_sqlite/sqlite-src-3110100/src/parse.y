@@ -3510,6 +3510,7 @@ cmd ::= optimize(X). {
 }
 
 %type optimize {SrcList*}
+%destructor optimize {sqlite3SrcListDelete(pParse->db, $$);}
 
 optimize_arg1_opt ::= .
 optimize_arg1_opt ::= LOCAL.
