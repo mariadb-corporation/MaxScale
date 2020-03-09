@@ -79,8 +79,6 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 
     MXS_NOTICE("Masking module %s initialized.", VERSION_STRING);
 
-    typedef MaskingFilter::Config Config;
-
     static MXS_MODULE info =
     {
         MXS_MODULE_API_FILTER,
@@ -94,66 +92,15 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,   /* Process finish. */
         NULL,   /* Thread init. */
         NULL,   /* Thread finish. */
-        {
-            {
-                Config::rules_name,
-                MXS_MODULE_PARAM_STRING,
-                NULL,
-                MXS_MODULE_OPT_REQUIRED
-            },
-            {
-                Config::warn_type_mismatch_name,
-                MXS_MODULE_PARAM_ENUM,
-                Config::warn_type_mismatch_default,
-                MXS_MODULE_OPT_NONE,
-                Config::warn_type_mismatch_values
-            },
-            {
-                Config::large_payload_name,
-                MXS_MODULE_PARAM_ENUM,
-                Config::large_payload_default,
-                MXS_MODULE_OPT_NONE,
-                Config::large_payload_values
-            },
-            {
-                Config::prevent_function_usage_name,
-                MXS_MODULE_PARAM_BOOL,
-                Config::prevent_function_usage_default,
-                MXS_MODULE_OPT_NONE,
-            },
-            {
-                Config::check_user_variables_name,
-                MXS_MODULE_PARAM_BOOL,
-                Config::check_user_variables_default,
-                MXS_MODULE_OPT_NONE,
-            },
-            {
-                Config::check_unions_name,
-                MXS_MODULE_PARAM_BOOL,
-                Config::check_unions_default,
-                MXS_MODULE_OPT_NONE,
-            },
-            {
-                Config::check_subqueries_name,
-                MXS_MODULE_PARAM_BOOL,
-                Config::check_subqueries_default,
-                MXS_MODULE_OPT_NONE,
-            },
-            {
-                Config::require_fully_parsed_name,
-                MXS_MODULE_PARAM_BOOL,
-                Config::require_fully_parsed_default,
-                MXS_MODULE_OPT_NONE,
-            },
-            {
-                Config::treat_string_arg_as_field_name,
-                MXS_MODULE_PARAM_BOOL,
-                Config::treat_string_arg_as_field_default,
-                MXS_MODULE_OPT_NONE
-            },
-            {MXS_END_MODULE_PARAMS}
-        }
     };
+
+    static bool populated = false;
+
+    if (!populated)
+    {
+        MaskingFilterConfig::populate(info);
+        populated = true;
+    }
 
     return &info;
 }
@@ -162,8 +109,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 // MaskingFilter
 //
 
-MaskingFilter::MaskingFilter(const Config& config, auto_ptr<MaskingRules> sRules)
-    : m_config(config)
+MaskingFilter::MaskingFilter(Config&& config, auto_ptr<MaskingRules> sRules)
+    : m_config(std::move(config))
     , m_sRules(sRules.release())
 {
     MXS_NOTICE("Masking filter [%s] created.", m_config.name().c_str());
@@ -178,27 +125,30 @@ MaskingFilter* MaskingFilter::create(const char* zName, mxs::ConfigParameters* p
 {
     MaskingFilter* pFilter = NULL;
 
-    Config config(zName, pParams);
+    Config config(zName);
 
-    auto_ptr<MaskingRules> sRules = MaskingRules::load(config.rules().c_str());
-
-    if (sRules.get())
+    if (config.configure(*pParams))
     {
-        pFilter = new MaskingFilter(config, sRules);
+        auto_ptr<MaskingRules> sRules = MaskingRules::load(config.rules().c_str());
 
-        if (config.treat_string_arg_as_field())
+        if (sRules.get())
         {
-            QC_CACHE_PROPERTIES cache_properties;
-            qc_get_cache_properties(&cache_properties);
+            pFilter = new MaskingFilter(std::move(config), sRules);
 
-            if (cache_properties.max_size != 0)
+            if (config.treat_string_arg_as_field())
             {
-                MXS_NOTICE("The parameter 'treat_string_arg_as_field' is enabled for %s, "
-                           "disabling the query classifier cache.",
-                           zName);
+                QC_CACHE_PROPERTIES cache_properties;
+                qc_get_cache_properties(&cache_properties);
 
-                cache_properties.max_size = 0;
-                qc_set_cache_properties(&cache_properties);
+                if (cache_properties.max_size != 0)
+                {
+                    MXS_NOTICE("The parameter 'treat_string_arg_as_field' is enabled for %s, "
+                               "disabling the query classifier cache.",
+                               zName);
+
+                    cache_properties.max_size = 0;
+                    qc_set_cache_properties(&cache_properties);
+                }
             }
         }
     }

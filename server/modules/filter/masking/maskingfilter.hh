@@ -46,7 +46,7 @@ public:
     SMaskingRules rules() const;
 
 private:
-    MaskingFilter(const Config& config, std::auto_ptr<MaskingRules> sRules);
+    MaskingFilter(Config&& config, std::auto_ptr<MaskingRules> sRules);
 
     MaskingFilter(const MaskingFilter&);
     MaskingFilter& operator=(const MaskingFilter&);

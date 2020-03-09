@@ -17,157 +17,99 @@
 namespace
 {
 
-const char config_name_check_subqueries[] = "check_subqueries";
-const char config_name_check_unions[] = "check_unions";
-const char config_name_check_user_variables[] = "check_user_variables";
-const char config_name_large_payload[] = "large_payload";
-const char config_name_prevent_function_usage[] = "prevent_function_usage";
-const char config_name_require_fully_parsed[] = "require_fully_parsed";
-const char config_name_rules[] = "rules";
-const char config_name_warn_type_mismatch[] = "warn_type_mismatch";
-const char config_name_treat_string_arg_as_field[] = "treat_string_arg_as_field";
+namespace masking
+{
 
+namespace config = mxs::config;
 
-const char config_value_abort[] = "abort";
-const char config_value_always[] = "always";
-const char config_value_ignore[] = "ignore";
-const char config_value_never[] = "never";
+config::Specification specification(MXS_MODULE_NAME, config::Specification::FILTER);
 
-const char config_value_true[] = "true";
+config::ParamEnum<MaskingFilterConfig::large_payload_t> large_payload(
+    &specification,
+    "large_payload",
+    "How large, i.e. larger than 16MB, payloads should be handled.",
+    {
+        { MaskingFilterConfig::LARGE_IGNORE, "ignore" },
+        { MaskingFilterConfig::LARGE_ABORT,  "abort" }
+    },
+    MaskingFilterConfig::LARGE_ABORT);
+
+config::ParamPath rules(
+    &specification,
+    "rules",
+    "Specifies the path of the file where the masking rules are stored.",
+    MXS_MODULE_OPT_PATH_R_OK);
+
+config::ParamEnum<MaskingFilterConfig::warn_type_mismatch_t> warn_type_mismatch(
+    &specification,
+    "warn_type_mismatch",
+    "Log warning if rule matches a column that is not of expected type.",
+    {
+        { MaskingFilterConfig::WARN_NEVER, "never" },
+        { MaskingFilterConfig::WARN_ALWAYS, "always" }
+    },
+    MaskingFilterConfig::WARN_NEVER);
+
+config::ParamBool prevent_function_usage(
+    &specification,
+    "prevent_function_usage",
+    "If true, then statements containing functions referring to masked "
+    "columns will be blocked.",
+    true);
+
+config::ParamBool check_user_variables(
+    &specification,
+    "check_user_variables",
+    "If true, then SET statemens that are defined using SELECT referring to "
+    "masked columns will be blocked.",
+    true);
+
+config::ParamBool check_unions(
+    &specification,
+    "check_unions",
+    "If true, then if the second SELECT in a UNION refers to a masked colums "
+    "the statement will be blocked.",
+    true);
+
+config::ParamBool check_subqueries(
+    &specification,
+    "check_subqueries",
+    "If true, then if a subquery refers to masked columns the statement will be blocked.",
+    true);
+
+config::ParamBool require_fully_parsed(
+    &specification,
+    "require_fully_parsed",
+    "If true, then statements that cannot be fully parsed will be blocked.",
+    true);
+
+config::ParamBool treat_string_arg_as_field(
+    &specification,
+    "treat_string_arg_as_field",
+    "If true, then strings given as arguments to function will be handles "
+    "as if they were names.",
+    true);
+
 }
 
-/*
- * PARAM large_payload
- */
-
-// static
-const char* MaskingFilterConfig::large_payload_name = config_name_large_payload;
-
-// static
-const MXS_ENUM_VALUE MaskingFilterConfig::large_payload_values[] =
-{
-    {config_value_abort,  MaskingFilterConfig::LARGE_ABORT   },
-    {config_value_ignore, MaskingFilterConfig::LARGE_IGNORE  },
-    {NULL}
-};
-
-// static
-const char* MaskingFilterConfig::large_payload_default = config_value_abort;
-
-/*
- * PARAM rules
- */
-
-// static
-const char* MaskingFilterConfig::rules_name = config_name_rules;
-
-/*
- * PARAM warn_type_mismatch
- */
-
-const char* MaskingFilterConfig::warn_type_mismatch_name = config_name_warn_type_mismatch;
-const char* MaskingFilterConfig::warn_type_mismatch_default = config_value_never;
-
-const MXS_ENUM_VALUE MaskingFilterConfig::warn_type_mismatch_values[] =
-{
-    {config_value_never,  MaskingFilterConfig::WARN_NEVER   },
-    {config_value_always, MaskingFilterConfig::WARN_ALWAYS  },
-    {NULL}
-};
-
-/*
- * PARAM prevent_function_usage
- */
-const char* MaskingFilterConfig::prevent_function_usage_name = config_name_prevent_function_usage;
-const char* MaskingFilterConfig::prevent_function_usage_default = config_value_true;
-
-/*
- * PARAM check_user_variables
- */
-const char* MaskingFilterConfig::check_user_variables_name = config_name_check_user_variables;
-const char* MaskingFilterConfig::check_user_variables_default = config_value_true;
-
-/*
- * PARAM check_unions
- */
-const char* MaskingFilterConfig::check_unions_name = config_name_check_unions;
-const char* MaskingFilterConfig::check_unions_default = config_value_true;
-
-/*
- * PARAM check_subqueries
- */
-const char* MaskingFilterConfig::check_subqueries_name = config_name_check_subqueries;
-const char* MaskingFilterConfig::check_subqueries_default = config_value_true;
-
-/*
- * PARAM require_fully_parsed
- */
-const char* MaskingFilterConfig::require_fully_parsed_name = config_name_require_fully_parsed;
-const char* MaskingFilterConfig::require_fully_parsed_default = config_name_require_fully_parsed;
-
-/*
- * PARAM treat_string_arg_as_field
- */
-const char* MaskingFilterConfig::treat_string_arg_as_field_name = config_name_treat_string_arg_as_field;
-const char* MaskingFilterConfig::treat_string_arg_as_field_default = config_value_true;
-/*
- * MaskingFilterConfig
- */
-
-// static
-MaskingFilterConfig::large_payload_t MaskingFilterConfig::get_large_payload(
-    const mxs::ConfigParameters* pParams)
-{
-    int value = pParams->get_enum(large_payload_name, large_payload_values);
-    return static_cast<large_payload_t>(value);
 }
 
-// static
-std::string MaskingFilterConfig::get_rules(const mxs::ConfigParameters* pParams)
+MaskingFilterConfig::MaskingFilterConfig(const char* zName)
+    : mxs::config::Configuration(zName, &masking::specification)
 {
-    return pParams->get_string(rules_name);
+    add_native(&m_large_payload, &masking::large_payload);
+    add_native(&m_rules, &masking::rules);
+    add_native(&m_warn_type_mismatch, &masking::warn_type_mismatch);
+    add_native(&m_prevent_function_usage, &masking::prevent_function_usage);
+    add_native(&m_check_user_variables, &masking::check_user_variables);
+    add_native(&m_check_unions, &masking::check_unions);
+    add_native(&m_check_subqueries, &masking::check_subqueries);
+    add_native(&m_require_fully_parsed, &masking::require_fully_parsed);
+    add_native(&m_treat_string_arg_as_field, &masking::treat_string_arg_as_field);
 }
 
-// static
-MaskingFilterConfig::warn_type_mismatch_t MaskingFilterConfig::get_warn_type_mismatch(
-    const mxs::ConfigParameters* pParams)
+//static
+void MaskingFilterConfig::populate(MXS_MODULE& info)
 {
-    int value = pParams->get_enum(warn_type_mismatch_name, warn_type_mismatch_values);
-    return static_cast<warn_type_mismatch_t>(value);
-}
-
-// static
-bool MaskingFilterConfig::get_prevent_function_usage(const mxs::ConfigParameters* pParams)
-{
-    return pParams->get_bool(prevent_function_usage_name);
-}
-
-// static
-bool MaskingFilterConfig::get_check_user_variables(const mxs::ConfigParameters* pParams)
-{
-    return pParams->get_bool(check_user_variables_name);
-}
-
-// static
-bool MaskingFilterConfig::get_check_unions(const mxs::ConfigParameters* pParams)
-{
-    return pParams->get_bool(check_unions_name);
-}
-
-// static
-bool MaskingFilterConfig::get_check_subqueries(const mxs::ConfigParameters* pParams)
-{
-    return pParams->get_bool(check_subqueries_name);
-}
-
-// static
-bool MaskingFilterConfig::get_require_fully_parsed(const mxs::ConfigParameters* pParams)
-{
-    return pParams->get_bool(require_fully_parsed_name);
-}
-
-// static
-bool MaskingFilterConfig::get_treat_string_arg_as_field(const mxs::ConfigParameters* pParams)
-{
-    return pParams->get_bool(treat_string_arg_as_field_name);
+    masking::specification.populate(info);
 }
