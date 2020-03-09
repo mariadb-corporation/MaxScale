@@ -64,4 +64,4 @@ else
     res=1
 fi
 
-echo $res
+exit $res
