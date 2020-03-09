@@ -45,17 +45,19 @@ public:
 
     enum class Type
     {
-        MARIADB,
-        MYSQL,
-        CLUSTRIX
+        UNKNOWN,    /**< Not connected yet */
+        MYSQL,      /**< MySQL 5.5 or later. */
+        MARIADB,    /**< MariaDB 5.5 or later */
+        CLUSTRIX,   /**< Clustrix node */
+        BLR         /**< Binlog router */
     };
 
     struct Version
     {
-        uint64_t total = 0;     /**< The version number received from server */
-        uint32_t major = 0;     /**< Major version */
-        uint32_t minor = 0;     /**< Minor version */
-        uint32_t patch = 0;     /**< Patch version */
+        uint64_t total {0};     /**< Total version number received from server */
+        uint32_t major {0};     /**< Major version */
+        uint32_t minor {0};     /**< Minor version */
+        uint32_t patch {0};     /**< Patch version */
     };
 
     struct PoolStats
@@ -164,11 +166,12 @@ public:
     virtual void set_version(uint64_t version_num, const std::string& version_str) = 0;
 
     /**
-     * Get numeric version information.
+     * Get numeric version information. The contents of the referenced struct may change at any time,
+     * although in practice this is rare.
      *
-     * @return Major, minor and patch numbers
+     * @return Total, major, minor and patch numbers
      */
-    virtual Version version() const = 0;
+    virtual const Version& version() const = 0;
 
     /**
      * Get the type of the server.
@@ -182,7 +185,7 @@ public:
      *
      * @return Version string
      */
-    virtual std::string version_string() const = 0;
+    virtual const char* version_string() const = 0;
 
     /**
      * Update server address.

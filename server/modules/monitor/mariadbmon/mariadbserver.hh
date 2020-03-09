@@ -87,14 +87,6 @@ public:
         std::string status;     /**< Status of the event */
     };
 
-    enum class server_type
-    {
-        UNKNOWN,            /* Totally unknown. Server has not been connected to yet. */
-        NORMAL,             /* A normal MariaDB/MySQL server, possibly supported. */
-        BINLOG_ROUTER,      /* MaxScale binlog server. Requires special handling. */
-        CLUSTRIX            /* Clustrix server. Requires special handling. */
-    };
-
     enum class BinlogMode
     {
         BINLOG_ON,
@@ -105,9 +97,9 @@ public:
     class Capabilities
     {
     public:
-        bool basic_support = false;         // Is the server version supported by the monitor at all?
-        bool gtid = false;                  // Supports MariaDB gtid? Required for failover etc.
-        bool max_statement_time = false;    // Supports max_statement_time?
+        bool basic_support {false};         // Is the server version supported by the monitor at all?
+        bool gtid {false};                  // Supports MariaDB gtid? Required for failover etc.
+        bool max_statement_time {false};    // Supports max_statement_time?
     };
 
     // This class groups some miscellaneous replication related settings together.
@@ -145,7 +137,6 @@ public:
     /* What position this server has in the monitor config? Used for tiebreaking between servers. */
     int m_config_index = 0;
 
-    server_type  m_srv_type = server_type::UNKNOWN; /* Server type. */
     Capabilities m_capabilities;                    /* Server capabilities */
 
     int64_t m_server_id = SERVER_ID_UNKNOWN;        /* Value of @@server_id. Valid values are
@@ -573,6 +564,8 @@ public:
     ServerLock lock_status(LockType lock_type) const;
 
     bool marked_as_master(std::string* why_not = nullptr) const;
+
+    SERVER::Type server_type() const;
 
 private:
     using EventManipulator = std::function<void (const EventInfo& event, json_t** error_out)>;

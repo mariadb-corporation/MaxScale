@@ -49,6 +49,12 @@ public:
         // TODO: add more
     };
 
+    struct VersionInfo
+    {
+        std::string info;
+        uint64_t    version {0};
+    };
+
     static constexpr unsigned int INTERNAL_ERROR = 1;
     static constexpr unsigned int USER_ERROR = 2;
 
@@ -101,6 +107,8 @@ public:
      * @return Connection settings reference
      */
     ConnectionSettings& connection_settings();
+
+    VersionInfo version_info() const;
 
 private:
     void clear_errors();

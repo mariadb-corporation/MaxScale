@@ -288,6 +288,18 @@ vector<unique_ptr<QueryResult>> MariaDB::multiquery(const vector<string>& querie
     return rval;
 }
 
+MariaDB::VersionInfo MariaDB::version_info() const
+{
+    const char* info = nullptr;
+    unsigned long version = 0;
+    if (m_conn)
+    {
+        info = mysql_get_server_info(m_conn);
+        version = mysql_get_server_version(m_conn);
+    }
+    return VersionInfo {info ? info : "", version};
+}
+
 MariaDBQueryResult::MariaDBQueryResult(MYSQL_RES* resultset)
     : QueryResult(column_names(resultset))
     , m_resultset(resultset)

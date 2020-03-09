@@ -232,11 +232,7 @@ bool MariaDBServer::do_show_slave_status(string* errmsg_out)
     unsigned int columns = 0;
     string query;
     bool all_slaves_status = false;
-    if (m_srv_type == server_type::CLUSTRIX)
-    {
-        return false;
-    }
-    else if (m_capabilities.gtid || m_srv_type == server_type::BINLOG_ROUTER)
+    if (m_capabilities.gtid)
     {
         // Versions with gtid also support the extended slave status query.
         columns = 42;
@@ -808,29 +804,16 @@ bool MariaDBServer::run_sql_from_file(const string& path, json_t** error_out)
 void MariaDBServer::monitor_server()
 {
     string errmsg;
-    bool query_ok = false;
     /* Query different things depending on server version/type. */
-    if (m_srv_type == server_type::BINLOG_ROUTER)
+    // TODO: Handle binlog router?
+    bool query_ok = read_server_variables(&errmsg) && update_slave_status(&errmsg);
+    if (query_ok && m_capabilities.gtid)
     {
-        // TODO: Add special version of server variable query.
-        query_ok = update_slave_status(&errmsg);
+        query_ok = update_gtids(&errmsg);
     }
-    else if (m_capabilities.basic_support)
+    if (query_ok && m_settings.handle_event_scheduler)
     {
-        query_ok = read_server_variables(&errmsg) && update_slave_status(&errmsg);
-        if (query_ok && m_capabilities.gtid)
-        {
-            query_ok = update_gtids(&errmsg);
-        }
-        if (query_ok && m_settings.handle_event_scheduler)
-        {
-            query_ok = update_enabled_events();
-        }
-    }
-    else
-    {
-        // Not a binlog server and no normal support, don't update.
-        query_ok = true;
+        query_ok = update_enabled_events();
     }
 
     if (query_ok)
@@ -845,7 +828,6 @@ void MariaDBServer::monitor_server()
         MXS_WARNING("Error during monitor update of server '%s': %s", name(), errmsg.c_str());
         m_print_update_errormsg = false;
     }
-    return;
 }
 
 /**
@@ -872,35 +854,22 @@ void MariaDBServer::update_server_version()
     auto srv = server;
     mxs_mysql_update_server_version(srv, conn);
 
-    m_srv_type = server_type::UNKNOWN;      // TODO: Use type information in SERVER directly
-    auto base_server_type = srv->type();
-    MYSQL_RES* result;
-    if (base_server_type == SERVER::Type::CLUSTRIX)
-    {
-        m_srv_type = server_type::CLUSTRIX;
-    }
-    // Check whether this server is a MaxScale Binlog Server.
-    else if (mxs_mysql_query(conn, "SELECT @@maxscale_version") == 0
-             && (result = mysql_store_result(conn)) != NULL)
-    {
-        m_srv_type = server_type::BINLOG_ROUTER;
-        mysql_free_result(result);
-    }
-    else
+    m_capabilities = Capabilities();
+    auto type = srv->type();
+
+    if (type == SERVER::Type::MARIADB || type == SERVER::Type::MYSQL)
     {
         /* Not a binlog server, check version number and supported features. */
-        m_srv_type = server_type::NORMAL;
-        m_capabilities = Capabilities();
-        SERVER::Version info = srv->version();
-        auto major = info.major;
-        auto minor = info.minor;
-        auto patch = info.patch;
+        auto& srv_version = srv->version();
+        auto major = srv_version.major;
+        auto minor = srv_version.minor;
+        auto patch = srv_version.patch;
         // MariaDB/MySQL 5.5 is the oldest supported version. MySQL 6 and later are treated as 5.5.
         if ((major == 5 && minor >= 5) || major > 5)
         {
             m_capabilities.basic_support = true;
             // For more specific features, at least MariaDB 10.X is needed.
-            if (base_server_type == SERVER::Type::MARIADB && major >= 10)
+            if (type == SERVER::Type::MARIADB && major >= 10)
             {
                 // 10.0.2 or 10.1.X or greater than 10
                 if (((minor == 0 && patch >= 2) || minor >= 1) || major > 10)
@@ -914,11 +883,24 @@ void MariaDBServer::update_server_version()
                 }
             }
         }
-        else
+    }
+    else if (type == SERVER::Type::BLR)
+    {
+        m_capabilities.basic_support = true;
+        m_capabilities.gtid = true;
+    }
+
+    if (m_capabilities.basic_support)
+    {
+        if (!m_capabilities.gtid)
         {
-            MXS_ERROR("MariaDB/MySQL version of '%s' (%s) is less than 5.5, which is not supported. "
-                      "The server is ignored by the monitor.", name(), srv->version_string().c_str());
+            MXB_WARNING("Server '%s' (%s) does not support MariDB GTID.", name(), srv->version_string());
         }
+    }
+    else
+    {
+        MXB_ERROR("Server '%s' (%s) is unsupported. The server is ignored by the monitor.",
+                  name(), srv->version_string());
     }
 }
 
@@ -2184,7 +2166,7 @@ void MariaDBServer::update_server(bool time_to_update_disk_space)
             clear_locks_info();     // Lock expired due to lost connection.
         }
 
-        if (m_capabilities.basic_support || m_srv_type == MariaDBServer::server_type::BINLOG_ROUTER)
+        if (m_capabilities.basic_support)
         {
             // Check permissions if permissions failed last time or if this is a new connection.
             if (had_status(SERVER_AUTH_ERROR) || new_connection)
@@ -2548,4 +2530,9 @@ ServerLock MariaDBServer::serverlock_status() const
 ServerLock MariaDBServer::lock_status(LockType locktype) const
 {
     return (locktype == LockType::SERVER) ? m_serverlock : m_masterlock;
+}
+
+SERVER::Type MariaDBServer::server_type() const
+{
+    return server->type();
 }

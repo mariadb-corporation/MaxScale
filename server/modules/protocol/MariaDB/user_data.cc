@@ -317,7 +317,15 @@ bool MariaDBUserManager::update_users()
             }
             auto load_result = LoadResult::QUERY_FAILED;
 
+            // If server version is unknown (no monitor), set the version here.
             auto srv_type = srv->type();
+            if (srv_type == SERVER::Type::UNKNOWN)
+            {
+                auto version_info = con.version_info();
+                srv->set_version(version_info.version, version_info.info);
+                srv_type = srv->type();
+            }
+
             switch (srv_type)
             {
             case SERVER::Type::MYSQL:
@@ -327,6 +335,11 @@ bool MariaDBUserManager::update_users()
 
             case SERVER::Type::CLUSTRIX:
                 load_result = load_users_clustrix(con, srv, &temp_userdata);
+                break;
+
+            case SERVER::Type::UNKNOWN:
+            case SERVER::Type::BLR:
+                // Cannot query these types.
                 break;
             }
 

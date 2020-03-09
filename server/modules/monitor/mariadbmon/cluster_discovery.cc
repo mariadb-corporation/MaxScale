@@ -689,7 +689,7 @@ void MariaDBMonitor::assign_slave_and_relay_master(MariaDBServer* start_node)
         }
         // If the node is a binlog relay, remove any slave bits that may have been set.
         // Relay master bit can stay.
-        if (parent->m_srv_type == MariaDBServer::server_type::BINLOG_ROUTER)
+        if (parent->server_type() == SERVER::Type::BLR)
         {
             parent->clear_status(SERVER_SLAVE);
         }

@@ -743,7 +743,7 @@ uint64_t Server::gtid_pos(uint32_t domain) const
 
 void Server::set_version(uint64_t version_num, const std::string& version_str)
 {
-    if (version_str != version_string())
+    if (version_str != m_info.version_string())
     {
         MXS_NOTICE("Server '%s' version: %s", name(), version_str.c_str());
     }
@@ -771,7 +771,7 @@ json_t* Server::json_attributes() const
     string stat = status_string();
     json_object_set_new(attr, CN_STATE, json_string(stat.c_str()));
 
-    json_object_set_new(attr, CN_VERSION_STRING, json_string(version_string().c_str()));
+    json_object_set_new(attr, CN_VERSION_STRING, json_string(version_string()));
     json_object_set_new(attr, "replication_lag", json_integer(replication_lag()));
 
     cleanup_persistent_connections();
@@ -802,35 +802,43 @@ json_t* Server::to_json_data(const char* host) const
 
 void Server::VersionInfo::set(uint64_t version, const std::string& version_str)
 {
+    uint32_t major = version / 10000;
+    uint32_t minor = (version - major * 10000) / 100;
+    uint32_t patch = version - major * 10000 - minor * 100;
+
+    Type new_type = Type::UNKNOWN;
+    auto version_strz = version_str.c_str();
+    if (strcasestr(version_strz, "mariadb"))
+    {
+        new_type = Type::MARIADB;
+    }
+    else if (strcasestr(version_strz, "clustrix"))
+    {
+        new_type = Type::CLUSTRIX;
+    }
+    else if (strcasestr(version_strz, "binlog_router"))     // TODO: not yet finalized
+    {
+        new_type = Type::BLR;
+    }
+    else if (!version_str.empty())
+    {
+        new_type = Type::MYSQL;     // Used for any unrecognized server types.
+    }
+
     /* This only protects against concurrent writing which could result in garbled values. Reads are not
      * synchronized. Since writing is rare, this is an unlikely issue. Readers should be prepared to
      * sometimes get inconsistent values. */
     Guard lock(m_lock);
 
-    mxb::atomic::store(&m_version_num.total, version, mxb::atomic::RELAXED);
-    uint32_t major = version / 10000;
-    uint32_t minor = (version - major * 10000) / 100;
-    uint32_t patch = version - major * 10000 - minor * 100;
+    m_type = new_type;
+    m_version_num.total = version;
     m_version_num.major = major;
     m_version_num.minor = minor;
     m_version_num.patch = patch;
-
     careful_strcpy(m_version_str, MAX_VERSION_LEN, version_str);
-    if (strcasestr(version_str.c_str(), "clustrix") != NULL)
-    {
-        m_type = Type::CLUSTRIX;
-    }
-    else if (strcasestr(version_str.c_str(), "mariadb") != NULL)
-    {
-        m_type = Type::MARIADB;
-    }
-    else
-    {
-        m_type = Type::MYSQL;
-    }
 }
 
-Server::Version Server::VersionInfo::version_num() const
+const Server::Version& Server::VersionInfo::version_num() const
 {
     return m_version_num;
 }
@@ -840,7 +848,7 @@ Server::Type Server::VersionInfo::type() const
     return m_type;
 }
 
-std::string Server::VersionInfo::version_string() const
+const char* Server::VersionInfo::version_string() const
 {
     return m_version_str;
 }

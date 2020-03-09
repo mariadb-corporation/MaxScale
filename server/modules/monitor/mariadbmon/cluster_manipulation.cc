@@ -1563,19 +1563,19 @@ void MariaDBMonitor::check_cluster_operations_support()
     // Gtid-replication is required, and a server version which supports it.
     for (MariaDBServer* server : servers())
     {
-        // Need to accept unknown versions here. Otherwise servers which are down when the monitor starts
-        // would deactivate failover.
-        if (server->m_srv_type != MariaDBServer::server_type::UNKNOWN && !server->m_capabilities.gtid)
+        // Check capabilities of running servers.
+        if (server->is_usable())
         {
-            supported = false;
-            auto reason = string_printf("The version of '%s' (%s) is not supported. Failover/switchover "
-                                        "requires MariaDB 10.0.2 or later.",
-                                        server->name(), server->server->version_string().c_str());
-            printer.cat(all_reasons, reason);
-        }
+            auto srv_type = server->server_type();
+            if (srv_type != SERVER::Type::MARIADB || !server->m_capabilities.gtid)
+            {
+                supported = false;
+                auto reason = string_printf("The version of '%s' (%s) is not supported. Failover/switchover "
+                                            "requires MariaDB 10.0.2 or later.",
+                                            server->name(), server->server->version_string());
+                printer.cat(all_reasons, reason);
+            }
 
-        if (server->is_usable() && !server->m_slave_status.empty())
-        {
             for (const auto& slave_conn : server->m_slave_status)
             {
                 if (slave_conn.slave_io_running == SlaveStatus::SLAVE_IO_YES
@@ -1761,7 +1761,7 @@ void MariaDBMonitor::enforce_read_only_on_slaves()
     for (MariaDBServer* server : servers())
     {
         if (server->is_slave() && !server->is_read_only()
-            && (server->m_srv_type != MariaDBServer::server_type::BINLOG_ROUTER))
+            && (server->server_type() == SERVER::Type::MARIADB))
         {
             MYSQL* conn = server->con;
             if (mxs_mysql_query(conn, QUERY) == 0)

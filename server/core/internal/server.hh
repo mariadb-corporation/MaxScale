@@ -131,7 +131,7 @@ public:
 
     void set_version(uint64_t version_num, const std::string& version_str) override;
 
-    Version version() const override
+    const Version& version() const override
     {
         return m_info.version_num();
     }
@@ -141,7 +141,7 @@ public:
         return m_info.type();
     }
 
-    std::string version_string() const override
+    const char* version_string() const override
     {
         return m_info.version_string();
     }
@@ -410,7 +410,8 @@ private:
 
     /**
      * Stores server version info. Encodes/decodes to/from the version number received from the server.
-     * Also stores the version string and parses information from it. */
+     * Also stores the version string and parses information from it. Assumed to rarely change, so reads
+     * are not synchronized. */
     class VersionInfo
     {
     public:
@@ -423,16 +424,17 @@ private:
          */
         void set(uint64_t version_num, const std::string& version_string);
 
-        Version     version_num() const;
-        Type        type() const;
-        std::string version_string() const;
+        const Version& version_num() const;
+        Type           type() const;
+        const char*    version_string() const;
 
     private:
         mutable std::mutex m_lock;      /**< Protects against concurrent writing */
 
-        Version m_version_num;                              /**< Numeric version */
-        Type    m_type = Type::MARIADB;                     /**< Server type */
-        char    m_version_str[MAX_VERSION_LEN + 1] = {'\0'};/**< Server version string */
+        Version m_version_num;          /**< Numeric version */
+        Type    m_type {Type::UNKNOWN}; /**< Server type */
+
+        char m_version_str[MAX_VERSION_LEN + 1] {'\0'};     /**< Server version string */
     };
 
     const std::string m_name;       /**< Server config name */
@@ -456,8 +458,8 @@ private:
 
     struct GTID
     {
-        std::atomic<int64_t>  domain{-1};
-        std::atomic<uint64_t> sequence{0};
+        std::atomic<int64_t>  domain {-1};
+        std::atomic<uint64_t> sequence {0};
     };
 
     mxs::WorkerGlobal<std::unordered_map<uint32_t, uint64_t>> m_gtids;
