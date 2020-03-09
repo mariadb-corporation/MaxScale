@@ -494,6 +494,7 @@ function pingCluster(hosts) {
         hosts.forEach(function(i) {
             args = {}
             args.uri = getUri(i, this.argv.secure, '')
+            args.auth = {user: argv.u, pass: argv.p}
             args.json = true
             setTlsCerts(args)
             promises.push(request(args))

@@ -2698,10 +2698,15 @@ const char* param_type_to_str(const MXS_MODULE_PARAM* params, const char* name)
             case MXS_MODULE_PARAM_PATH:
                 return "a path to a file";
 
-            default:
-                mxb_assert_message(!true, "Unknown parameter type");
-                return "<unknown parameter type>";
+            case MXS_MODULE_PARAM_DURATION:
+                return "a duration";
             }
+
+            mxb_assert_message(!true,
+                               "Unknown parameter type: dec %d hex %x",
+                               params[i].type,
+                               params[i].type);
+            return "<unknown parameter type>";
         }
     }
 

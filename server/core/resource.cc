@@ -883,6 +883,7 @@ HttpResponse cb_modulecmd(const HttpRequest& request)
             if (args)
             {
                 rval = modulecmd_call_command(cmd, args, &output);
+                modulecmd_arg_free(args);
             }
 
             for (int i = 0; i < n_opts; i++)

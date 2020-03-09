@@ -1241,15 +1241,9 @@ uint32_t DCB::process_events(uint32_t events)
     {
         mxb_assert(m_handler);
 
-        int eno = 0;
-        eno = gw_getsockerrno(m_fd);
+        rc |= MXB_POLL_WRITE;
 
-        if (eno == 0)
-        {
-            rc |= MXB_POLL_WRITE;
-
-            m_handler->write_ready(this);
-        }
+        m_handler->write_ready(this);
     }
 
     if ((events & EPOLLIN) && (m_nClose == 0))

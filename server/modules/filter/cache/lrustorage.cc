@@ -406,8 +406,7 @@ cache_result_t LRUStorage::do_get_info(uint32_t what,
         {
             m_stats.fill(pLru);
 
-            json_object_set(*ppInfo, "lru", pLru);
-            json_decref(pLru);
+            json_object_set_new(*ppInfo, "lru", pLru);
         }
 
         json_t* pStorage_info;
@@ -416,8 +415,7 @@ cache_result_t LRUStorage::do_get_info(uint32_t what,
 
         if (CACHE_RESULT_IS_OK(result))
         {
-            json_object_set(*ppInfo, "real_storage", pStorage_info);
-            json_decref(pStorage_info);
+            json_object_set_new(*ppInfo, "real_storage", pStorage_info);
         }
     }
 
@@ -1031,8 +1029,7 @@ static void set_integer(json_t* pObject, const char* zName, size_t value)
 
     if (pValue)
     {
-        json_object_set(pObject, zName, pValue);
-        json_decref(pValue);
+        json_object_set_new(pObject, zName, pValue);
     }
 }
 

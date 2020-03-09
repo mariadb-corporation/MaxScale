@@ -98,8 +98,7 @@ json_t* CacheSimple::do_get_info(uint32_t what) const
 
         if (CACHE_RESULT_IS_OK(result))
         {
-            json_object_set(pInfo, "storage", pStorageInfo);
-            json_decref(pStorageInfo);
+            json_object_set_new(pInfo, "storage", pStorageInfo);
         }
     }
 
