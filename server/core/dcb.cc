@@ -1237,38 +1237,6 @@ uint32_t DCB::process_events(uint32_t events)
      * must be checked after each callback invocation.
      */
 
-    if ((events & EPOLLOUT) && (m_nClose == 0))
-    {
-        mxb_assert(m_handler);
-
-        rc |= MXB_POLL_WRITE;
-
-        m_handler->write_ready(this);
-    }
-
-    if ((events & EPOLLIN) && (m_nClose == 0))
-    {
-        mxb_assert(m_handler);
-
-        rc |= MXB_POLL_READ;
-
-        int return_code = 1;
-        /** SSL authentication is still going on, we need to call DCB::ssl_handehake
-         * until it return 1 for success or -1 for error */
-        if (m_encryption.state == SSLState::HANDSHAKE_REQUIRED)
-        {
-            return_code = ssl_handshake();
-        }
-        if (1 == return_code)
-        {
-            m_handler->ready_for_reading(this);
-        }
-        else if (-1 == return_code)
-        {
-            m_handler->error(this);
-        }
-    }
-
     if ((events & EPOLLERR) && (m_nClose == 0))
     {
         mxb_assert(m_handler);
@@ -1307,6 +1275,38 @@ uint32_t DCB::process_events(uint32_t events)
         }
     }
 #endif
+
+    if ((events & EPOLLOUT) && (m_nClose == 0))
+    {
+        mxb_assert(m_handler);
+
+        rc |= MXB_POLL_WRITE;
+
+        m_handler->write_ready(this);
+    }
+
+    if ((events & EPOLLIN) && (m_nClose == 0))
+    {
+        mxb_assert(m_handler);
+
+        rc |= MXB_POLL_READ;
+
+        int return_code = 1;
+        /** SSL authentication is still going on, we need to call DCB::ssl_handehake
+         * until it return 1 for success or -1 for error */
+        if (m_encryption.state == SSLState::HANDSHAKE_REQUIRED)
+        {
+            return_code = ssl_handshake();
+        }
+        if (1 == return_code)
+        {
+            m_handler->ready_for_reading(this);
+        }
+        else if (-1 == return_code)
+        {
+            m_handler->error(this);
+        }
+    }
 
     if (m_session)
     {
