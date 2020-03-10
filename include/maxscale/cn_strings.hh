@@ -37,7 +37,6 @@ constexpr char CN_ATTRIBUTES[] = "attributes";
 constexpr char CN_AUTHENTICATOR[] = "authenticator";
 constexpr char CN_AUTHENTICATOR_DIAGNOSTICS[] = "authenticator_diagnostics";
 constexpr char CN_AUTHENTICATOR_OPTIONS[] = "authenticator_options";
-constexpr char CN_AUTH_ALL_SERVERS[] = "auth_all_servers";
 constexpr char CN_AUTH_CONNECT_TIMEOUT[] = "auth_connect_timeout";
 constexpr char CN_AUTH_READ_TIMEOUT[] = "auth_read_timeout";
 constexpr char CN_AUTH_WRITE_TIMEOUT[] = "auth_write_timeout";

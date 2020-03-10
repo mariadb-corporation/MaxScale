@@ -39,7 +39,7 @@ public:
     using StringSetMap = std::map<std::string, StringSet>;
 
     void   add_entry(const std::string& username, const mariadb::UserEntry& entry);
-    void   set_dbs_and_roles(StringSetMap&& db_grants, StringSetMap&& roles_mapping);
+    void   add_dbs_and_roles(StringSetMap&& db_grants, StringSetMap&& roles_mapping);
     void   add_proxy_grant(const std::string& user, const std::string& host);
     void   add_database_name(const std::string& db_name);
     void   clear();
@@ -165,6 +165,7 @@ public:
     void update_user_accounts() override;
     void set_credentials(const std::string& user, const std::string& pw) override;
     void set_backends(const std::vector<SERVER*>& backends) override;
+    void set_union_over_backends(bool union_over_backends) override;
     void set_service(SERVICE* service) override;
     bool can_update_immediately() const;
 
@@ -219,12 +220,15 @@ private:
 
     mxb::Semaphore m_thread_started;    /* Communicates that the updater thread has properly started. */
 
-    // Settings and options. Access to most is protected by the mutex.
+    // Settings and options. Access to arraylike fields is protected by the mutex.
     std::mutex           m_settings_lock;
     std::string          m_username;
     std::string          m_password;
     std::vector<SERVER*> m_backends;
     SERVICE*             m_service {nullptr};   /**< Service using this account data manager */
+
+    /** Fetch users from all backends and store the union. */
+    std::atomic_bool m_union_over_backends {false};
 
     std::atomic_bool m_can_update {false};      /**< User accounts can or are about to be updated */
     int              m_successful_loads {0};    /**< Successful refreshes */

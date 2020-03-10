@@ -24,6 +24,7 @@
 #include <maxscale/config.hh>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/secrets.hh>
+#include <maxbase/format.hh>
 #include "sqlite_strlike.hh"
 
 using std::string;
@@ -117,6 +118,11 @@ void MariaDBUserManager::set_backends(const std::vector<SERVER*>& backends)
 {
     Guard guard(m_settings_lock);
     m_backends = backends;
+}
+
+void MariaDBUserManager::set_union_over_backends(bool union_over_backends)
+{
+    m_union_over_backends.store(union_over_backends, relaxed);
 }
 
 std::string MariaDBUserManager::protocol_name() const
@@ -251,7 +257,7 @@ bool MariaDBUserManager::update_users()
     MariaDB::ConnectionSettings sett;
     std::vector<SERVER*> backends;
 
-    // Copy all settings under a lock.
+    // Copy all arraylike settings under a lock.
     MutexLock lock(m_settings_lock);
     sett.user = m_username;
     sett.password = m_password;
@@ -268,35 +274,42 @@ bool MariaDBUserManager::update_users()
     {
         sett.local_address = local_address;
     }
+    const bool union_over_backends = m_union_over_backends.load(relaxed);
 
-    bool found_valid_server = false;
-
-    // Order and filter the backends, as we would prefer to load users from the master.
+    // Filter out unusable backends.
     auto is_unusable = [](const SERVER* srv) {
             return !srv->is_active || !srv->is_usable();
         };
     auto erase_iter = std::remove_if(backends.begin(), backends.end(), is_unusable);
     backends.erase(erase_iter, backends.end());
+    if (backends.empty() && m_warn_no_servers)
+    {
+        MXB_ERROR("No valid servers from which to query MariaDB user accounts found.");
+    }
 
+    // Order backends so that the master is checked first.
     auto compare = [](const SERVER* lhs, const SERVER* rhs) {
             return (lhs->is_master() && !rhs->is_master())
                    || (lhs->is_slave() && (!rhs->is_master() && !rhs->is_slave()));
         };
     std::sort(backends.begin(), backends.end(), compare);
 
-    bool update_result = false;
-    auto load_result = LoadResult::QUERY_FAILED;
-    for (size_t i = 0; i < backends.size() && load_result == LoadResult::QUERY_FAILED; i++)
+    bool got_data = false;
+    std::vector<string> source_servernames;
+    UserDatabase temp_userdata;
+
+    for (size_t i = 0; i < backends.size(); i++)
     {
         SERVER* srv = backends[i];
-        found_valid_server = true;
+
+        // Different backends may have different ssl settings so need to update.
         const mxb::SSLConfig* srv_ssl_config = srv->ssl().config();
         sett.ssl = (srv_ssl_config && !srv_ssl_config->empty()) ? *srv_ssl_config : mxb::SSLConfig();
-
         con.set_connection_settings(sett);
+
         if (con.open(srv->address, srv->port))
         {
-            UserDatabase temp_userdata;
+            auto load_result = LoadResult::QUERY_FAILED;
             auto srv_type = srv->type();
             switch (srv_type)
             {
@@ -313,27 +326,9 @@ bool MariaDBUserManager::update_users()
             switch (load_result)
             {
             case LoadResult::SUCCESS:
-                // The comparison is not trivially cheap if there are many user entries,
-                // but it avoids unnecessary user cache updates which would involve copying all
-                // the data multiple times.
-                if (temp_userdata.equal_contents(m_userdb))
-                {
-                    MXB_INFO("Read %lu user@host entries from '%s' for service '%s'. The data was "
-                             "identical to existing user data.",
-                             m_userdb.n_entries(), srv->name(), m_service->name());
-                }
-                else
-                {
-                    // Data changed, update main user db. Cache update message is sent by the caller.
-                    {
-                        Guard guard(m_userdb_lock);
-                        m_userdb = std::move(temp_userdata);
-                        m_userdb_version++;
-                    }
-                    MXB_NOTICE("Read %lu user@host entries from '%s' for service '%s'.",
-                               m_userdb.n_entries(), srv->name(), m_service->name());
-                }
-                update_result = true;
+                // Print successes after iteration is complete.
+                source_servernames.emplace_back(srv->name());
+                got_data = true;
                 break;
 
             case LoadResult::QUERY_FAILED:
@@ -342,8 +337,12 @@ bool MariaDBUserManager::update_users()
                 break;
 
             case LoadResult::INVALID_DATA:
-                MXB_ERROR("Received invalid data from '%s' when querying user accounts.",
-                          srv->name());
+                MXB_ERROR("Received invalid data from '%s' when querying user accounts.", srv->name());
+                break;
+            }
+
+            if (got_data && !union_over_backends)
+            {
                 break;
             }
         }
@@ -353,11 +352,39 @@ bool MariaDBUserManager::update_users()
         }
     }
 
-    if (!found_valid_server && m_warn_no_servers)
+    if (got_data)
     {
-        MXB_ERROR("No valid servers from which to query MariaDB user accounts found.");
+        // Got some data. Update the master database if the contents differ. Usually they don't.
+        string datasource;
+        string delim;
+        for (auto& elem : source_servernames)
+        {
+            datasource += delim;
+            datasource += ("'" + elem + "'");
+            delim = ", ";
+        }
+        string msg = mxb::string_printf("Read %lu user@host entries from %s for service '%s'.",
+                                        temp_userdata.n_entries(), datasource.c_str(), m_service->name());
+
+        // The comparison is not trivially cheap if there are many user entries,
+        // but it avoids unnecessary user cache updates which would involve copying all
+        // the data multiple times.
+        if (temp_userdata.equal_contents(m_userdb))
+        {
+            MXB_INFO("%s The data was identical to existing user data.", msg.c_str());
+        }
+        else
+        {
+            // Data changed, update main user db. Cache update message is sent by the caller.
+            {
+                Guard guard(m_userdb_lock);
+                m_userdb = std::move(temp_userdata);
+                m_userdb_version++;
+            }
+            MXB_NOTICE("%s", msg.c_str());
+        }
     }
-    return update_result;
+    return got_data;
 }
 
 MariaDBUserManager::LoadResult
@@ -527,7 +554,7 @@ void MariaDBUserManager::read_dbs_and_roles(QResult db_grants, QResult roles, Us
         new_roles_mapping = map_builder("role", std::move(roles));
     }
 
-    output->set_dbs_and_roles(std::move(new_db_grants), std::move(new_roles_mapping));
+    output->add_dbs_and_roles(std::move(new_db_grants), std::move(new_roles_mapping));
 }
 
 void MariaDBUserManager::read_proxy_grants(MariaDBUserManager::QResult proxies, UserDatabase* output)
@@ -644,11 +671,14 @@ SERVICE* MariaDBUserManager::service() const
 void UserDatabase::add_entry(const std::string& username, const UserEntry& entry)
 {
     auto& entrylist = m_users[username];
-    // Find the correct spot to insert. Will insert duplicate hostname patterns, although these should
-    // not exist in the source data.
-    auto insert_iter = std::upper_bound(entrylist.begin(), entrylist.end(), entry,
-                                        UserEntry::host_pattern_is_more_specific);
-    entrylist.insert(insert_iter, entry);
+    // Find the correct spot to insert. If the hostname pattern already exists, do nothing. Copies should
+    // only exist when summing users from all servers.
+    auto low_bound = std::lower_bound(entrylist.begin(), entrylist.end(), entry,
+                                      UserEntry::host_pattern_is_more_specific);
+    if (low_bound == entrylist.end() || low_bound->host_pattern != entry.host_pattern)
+    {
+        entrylist.insert(low_bound, entry);
+    }
 }
 
 void UserDatabase::clear()
@@ -705,10 +735,43 @@ size_t UserDatabase::n_entries() const
     return rval;
 }
 
-void UserDatabase::set_dbs_and_roles(StringSetMap&& db_grants, StringSetMap&& roles_mapping)
+void UserDatabase::add_dbs_and_roles(StringSetMap&& db_grants, StringSetMap&& roles_mapping)
 {
-    m_database_grants = std::move(db_grants);
-    m_roles_mapping = std::move(roles_mapping);
+    auto update_mapping = [](StringSetMap& target, StringSetMap&& source) {
+            if (target.empty())
+            {
+                // Typical case when not summing users over all servers.
+                target = move(source);
+            }
+            else
+            {
+                // Need to sum the maps element by element, as this function may be called multiple times
+                // for this UserDatabase.
+                for (auto& source_elem : source)
+                {
+                    const string& userhost = source_elem.first;
+                    if (target.count(userhost) == 0)
+                    {
+                        // If the username does not yet exists, simply assign the set contents.
+                        target[userhost] = move(source_elem.second);
+                    }
+                    else
+                    {
+                        // Sum the string sets element by element.
+                        StringSet& existing_elems = target[userhost];
+                        StringSet& new_elems = source_elem.second;
+                        StringSet union_set;
+                        std::set_union(existing_elems.begin(), existing_elems.end(),
+                                       new_elems.begin(), new_elems.end(),
+                                       std::inserter(union_set, union_set.begin()));
+                        target[userhost] = move(union_set);
+                    }
+                }
+            }
+        };
+
+    update_mapping(m_database_grants, move(db_grants));
+    update_mapping(m_roles_mapping, move(roles_mapping));
 }
 
 bool UserDatabase::check_database_access(const UserEntry& entry, const std::string& db,

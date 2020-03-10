@@ -299,6 +299,8 @@ public:
 
     virtual void set_backends(const std::vector<SERVER*>& backends) = 0;
 
+    virtual void set_union_over_backends(bool union_over_backends) = 0;
+
     /**
      * Which protocol this manager can be used with. Currently, it's assumed that the user data managers
      * do not have listener-specific settings. If multiple listeners with the same protocol name feed
