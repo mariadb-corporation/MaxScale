@@ -39,7 +39,7 @@ MySQLProtocolModule::create_client_protocol(MXS_SESSION* session, mxs::Component
     {
         auto& search_sett = mdb_session->user_search_settings;
         search_sett.listener = m_user_search_settings;
-        auto& service_config = session->service->config();
+        const auto& service_config = *session->service->config();
         search_sett.service.allow_root_user = service_config.enable_root;
         search_sett.service.localhost_match_wildcard_host = service_config.localhost_match_wildcard_host;
 

@@ -820,7 +820,7 @@ bool query_and_process_users(const char* query, MYSQL* con, SERVICE* service, in
 
             while ((row = mysql_fetch_row(result)))
             {
-                if (service->config().strip_db_esc)
+                if (service->config()->strip_db_esc)
                 {
                     strip_escape_chars(row[2]);
                 }
@@ -867,7 +867,8 @@ int MariaDBAuthenticatorModule::get_users_from_server(MYSQL* con, SERVER* server
         category = SERVER_NO_ROLES;
     }
 
-    char* query = get_users_query(server_version, service->config().enable_root, category);
+    bool enable_root = service->config()->enable_root;
+    char* query = get_users_query(server_version, enable_root, category);
 
     int users = 0;
     std::vector<User> userlist;
@@ -882,7 +883,7 @@ int MariaDBAuthenticatorModule::get_users_from_server(MYSQL* con, SERVER* server
          * a 10.1.10 server makes sure CTEs aren't used.
          */
         MXS_FREE(query);
-        query = get_users_query(server_version, service->config().enable_root, SERVER_ROLES);
+        query = get_users_query(server_version, enable_root, SERVER_ROLES);
         rv = query_and_process_users(query, con, service, &users, &userlist, SERVER_ROLES);
     }
 

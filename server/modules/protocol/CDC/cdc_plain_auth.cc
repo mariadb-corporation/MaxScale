@@ -156,7 +156,7 @@ int CDCClientAuthenticator::authenticate(DCB* generic_dcb)
                      dcb->remote().c_str(),
                      m_user);
         }
-        else if (dcb->service()->config().log_auth_warnings)
+        else if (dcb->service()->config()->log_auth_warnings)
         {
             MXS_LOG_EVENT(maxscale::event::AUTHENTICATION_FAILURE,
                           "%s: login attempt for user '%s' from [%s], authentication failed.",

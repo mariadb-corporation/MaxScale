@@ -827,9 +827,9 @@ Session::Session(std::shared_ptr<ListenerSessionData> listener_data,
     , m_down(static_cast<Service&>(listener_data->m_service).get_connection(this, this))
     , m_listener_data(std::move(listener_data))
 {
-    if (service->config().retain_last_statements != -1)         // Explicitly set for the service
+    if (service->config()->retain_last_statements != -1)        // Explicitly set for the service
     {
-        m_retain_last_statements = service->config().retain_last_statements;
+        m_retain_last_statements = service->config()->retain_last_statements;
     }
     else
     {
@@ -1378,7 +1378,7 @@ int32_t Session::clientReply(GWBUF* buffer, mxs::ReplyRoute& down, const mxs::Re
         m_pending_database.clear();
     }
 
-    if (reply.is_ok() && service->config().session_track_trx_state)
+    if (reply.is_ok() && service->config()->session_track_trx_state)
     {
         parse_and_set_trx_state(reply);
     }
@@ -1508,7 +1508,7 @@ void Session::parse_and_set_trx_state(const mxs::Reply& reply)
 
 void Session::tick(int64_t idle)
 {
-    if (auto timeout = service->config().conn_idle_timeout)
+    if (auto timeout = service->config()->conn_idle_timeout)
     {
         if (idle > timeout)
         {
@@ -1518,7 +1518,7 @@ void Session::tick(int64_t idle)
         }
     }
 
-    if (auto net_timeout = service->config().net_write_timeout)
+    if (auto net_timeout = service->config()->net_write_timeout)
     {
         if (idle > net_timeout && client_dcb->writeq_len() > 0)
         {
@@ -1528,7 +1528,7 @@ void Session::tick(int64_t idle)
         }
     }
 
-    if (auto interval = service->config().connection_keepalive)
+    if (auto interval = service->config()->connection_keepalive)
     {
         for (const auto& a : backend_connections())
         {

@@ -175,9 +175,9 @@ public:
         return std::find(m_data->targets.begin(), m_data->targets.end(), target) != m_data->targets.end();
     }
 
-    const Config& config() const override
+    const mxs::WorkerGlobal<Config>& config() const override
     {
-        return *m_config;
+        return m_config;
     }
 
     std::vector<SERVER*> reachable_servers() const final
@@ -568,4 +568,4 @@ void service_remove_server(mxs::Monitor* pMonitor, SERVER* pServer);
 std::unique_ptr<ResultSet> serviceGetList(void);
 std::unique_ptr<ResultSet> serviceGetListenerList(void);
 
-const MXS_MODULE_PARAM*    common_service_params();
+const MXS_MODULE_PARAM* common_service_params();

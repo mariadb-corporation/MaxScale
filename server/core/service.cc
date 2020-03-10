@@ -530,8 +530,8 @@ bool Service::can_be_destroyed() const
 void serviceGetUser(SERVICE* svc, const char** user, const char** auth)
 {
     Service* service = static_cast<Service*>(svc);
-    *user = service->config().user.c_str();
-    *auth = service->config().password.c_str();
+    *user = service->config()->user.c_str();
+    *auth = service->config()->password.c_str();
 }
 
 bool Service::set_filters(const std::vector<std::string>& filters)
@@ -629,7 +629,7 @@ SERVICE* service_find(const char* servname)
 const char* serviceGetWeightingParameter(SERVICE* svc)
 {
     Service* service = static_cast<Service*>(svc);
-    return service->config().weightby.c_str();
+    return service->config()->weightby.c_str();
 }
 
 void service_destroy_instances(void)
@@ -1686,10 +1686,9 @@ void Service::set_start_user_account_manager(SAccountManager user_manager)
     // Message each routingworker to initialize their own user caches. Wait for completion so that
     // the admin thread and workers see the same object.
     mxb::Semaphore sem;
-    auto init_cache = [this]()
-    {
-        *m_usercache = user_account_manager()->create_user_account_cache();
-    };
+    auto init_cache = [this]() {
+            *m_usercache = user_account_manager()->create_user_account_cache();
+        };
     auto n_threads = mxs::RoutingWorker::broadcast(init_cache, &sem, mxb::Worker::EXECUTE_AUTO);
     sem.wait_n(n_threads);
 
@@ -1704,28 +1703,23 @@ void Service::request_user_account_update()
 void Service::sync_user_account_caches()
 {
     // Message each routingworker to update their caches. Do not wait for operation to finish.
-    auto update_cache = [this]()
-    {
-        auto& user_cache = *m_usercache;
-        if (user_cache)
-        {
-            user_cache->update_from_master();
-        }
-        wakeup_sessions_waiting_userdata();
-    };
+    auto update_cache = [this]() {
+            auto& user_cache = *m_usercache;
+            if (user_cache)
+            {
+                user_cache->update_from_master();
+            }
+            wakeup_sessions_waiting_userdata();
+        };
     mxs::RoutingWorker::broadcast(update_cache, nullptr, mxb::Worker::EXECUTE_AUTO);
 }
 
 std::string SERVICE::version_string() const
 {
-    std::string rval;
-    auto& cfg = config();
-    if (!cfg.version_string.empty())
-    {
-        // User-defined version string, use it
-        rval = cfg.version_string;
-    }
-    else
+    // User-defined version string, use it if available
+    std::string rval = config()->version_string;
+
+    if (rval.empty())
     {
         uint64_t smallest_found = UINT64_MAX;
         for (auto server : reachable_servers())

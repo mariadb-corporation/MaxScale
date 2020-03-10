@@ -51,8 +51,8 @@ std::vector<cdc::Server> service_to_servers(SERVICE* service)
                 if (s->is_master())
                 {
                     // TODO: per-server credentials aren't exposed in the public class
-                    servers.push_back({s->address, s->port, service->config().user,
-                                       service->config().password});
+                    const auto& cfg = *service->config();
+                    servers.push_back({s->address, s->port, cfg.user, cfg.password});
                 }
             }
         }, mxs::RoutingWorker::EXECUTE_AUTO);

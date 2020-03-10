@@ -255,7 +255,7 @@ void MariaDBBackendConnection::handle_error_response(DCB* plain_dcb, GWBUF* buff
     BackendDCB* dcb = static_cast<BackendDCB*>(plain_dcb);
     uint16_t errcode = mxs_mysql_get_mysql_errno(buffer);
 
-    if (m_session->service->config().log_auth_warnings)
+    if (m_session->service->config()->log_auth_warnings)
     {
         MXS_ERROR("Invalid authentication message from backend '%s'. Error code: %d, "
                   "Msg : %s", dcb->server()->name(), errcode, mxs::extract_error(buffer).c_str());

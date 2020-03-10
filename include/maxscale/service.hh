@@ -127,7 +127,14 @@ public:
         return m_router_name.c_str();
     }
 
-    virtual const Config& config() const = 0;
+    /**
+     * Get service configuration
+     *
+     * The returned configuration can only be accessed on a RoutingWorker thread.
+     *
+     * @return Reference to the WorkerGlobal configuration object
+     */
+    virtual const mxs::WorkerGlobal<Config>& config() const = 0;
 
     /**
      * Get server version
@@ -189,7 +196,7 @@ public:
      */
     bool has_too_many_connections() const
     {
-        auto limit = config().max_connections;
+        auto limit = config()->max_connections;
         return limit && mxb::atomic::load(&stats().n_current, mxb::atomic::RELAXED) >= limit;
     }
 

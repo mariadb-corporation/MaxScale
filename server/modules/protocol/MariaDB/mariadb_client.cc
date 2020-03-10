@@ -1238,7 +1238,7 @@ bool MariaDBClientConnection::route_statement(mxs::Buffer&& buffer)
         {
             auto capabilities = service_get_capabilities(m_session->service);
             if (rcap_type_required(capabilities, RCAP_TYPE_TRANSACTION_TRACKING)
-                && !session->service->config().session_track_trx_state
+                && !session->service->config()->session_track_trx_state
                 && !session_is_load_active(session))
             {
                 track_transaction_state(session, packetbuf);
@@ -2204,7 +2204,7 @@ void MariaDBClientConnection::send_authetication_error(AuthErrorType error, cons
     }
 
     // Also log an authentication failure event.
-    if (m_session->service->config().log_auth_warnings)
+    if (m_session->service->config()->log_auth_warnings)
     {
         string total_msg = mxb::string_printf("Authentication failed for user '%s'@[%s] to service '%s'. "
                                               "Originating listener: '%s'. MariaDB error: '%s'.",

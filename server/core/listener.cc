@@ -777,7 +777,7 @@ ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const 
         {
             // TODO: If connections can be queued, this is the place to put the
             // TODO: connection on that queue.
-            pProtocol->connlimit(m_service->config().max_connections);
+            pProtocol->connlimit(m_service->config()->max_connections);
 
             // TODO: This is never used as the client connection is not up yet
             client_dcb->session()->close_reason = SESSION_CLOSE_TOO_MANY_CONNECTIONS;
