@@ -1083,11 +1083,27 @@ private:
 class ParamString : public ConcreteParam<ParamString, std::string>
 {
 public:
+    enum Quotes
+    {
+        REQUIRED, // The string *must* be surrounded by quotes.
+        DESIRED,  // If there are no surrounding quotes, a warning is logged.
+        IGNORED,  // The string may, but need not be surrounded by quotes. No warning.
+    };
+
     ParamString(Specification* pSpecification,
                 const char* zName,
                 const char* zDescription,
                 Modifiable modifiable = Modifiable::AT_STARTUP)
-        : ParamString(pSpecification, zName, zDescription, modifiable, Param::MANDATORY, value_type())
+        : ParamString(pSpecification, zName, zDescription, DESIRED, modifiable, Param::MANDATORY, value_type())
+    {
+    }
+
+    ParamString(Specification* pSpecification,
+                const char* zName,
+                const char* zDescription,
+                Quotes quotes,
+                Modifiable modifiable = Modifiable::AT_STARTUP)
+        : ParamString(pSpecification, zName, zDescription, quotes, modifiable, Param::MANDATORY, value_type())
     {
     }
 
@@ -1096,7 +1112,17 @@ public:
                 const char* zDescription,
                 value_type default_value,
                 Modifiable modifiable = Modifiable::AT_STARTUP)
-        : ParamString(pSpecification, zName, zDescription, modifiable, Param::OPTIONAL, default_value)
+        : ParamString(pSpecification, zName, zDescription, DESIRED, modifiable, Param::OPTIONAL, default_value)
+    {
+    }
+
+    ParamString(Specification* pSpecification,
+                const char* zName,
+                const char* zDescription,
+                value_type default_value,
+                Quotes quotes,
+                Modifiable modifiable = Modifiable::AT_STARTUP)
+        : ParamString(pSpecification, zName, zDescription, quotes, modifiable, Param::OPTIONAL, default_value)
     {
     }
 
@@ -1114,13 +1140,21 @@ private:
     ParamString(Specification* pSpecification,
                 const char* zName,
                 const char* zDescription,
+                Quotes quotes,
                 Modifiable modifiable,
                 Kind kind,
                 value_type default_value)
         : ConcreteParam<ParamString, std::string>(pSpecification, zName, zDescription,
-                                                  modifiable, kind, MXS_MODULE_PARAM_STRING, default_value)
+                                                  modifiable, kind,
+                                                  quotes != REQUIRED
+                                                  ? MXS_MODULE_PARAM_STRING
+                                                  : MXS_MODULE_PARAM_QUOTEDSTRING,
+                                                  default_value)
+        , m_quotes(quotes)
     {
     }
+
+    Quotes m_quotes;
 };
 
 /**

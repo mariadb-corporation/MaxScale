@@ -1123,33 +1123,56 @@ bool ParamString::from_string(const std::string& value_as_string,
 
     if (b != '"' && b != '\'')
     {
-        if (pMessage)
+        static const char zDesired[] = "The string value should be enclosed in quotes: ";
+        static const char zRequired[] = "The string value must be enclosed in quotes: ";
+
+        const char* zMessage = nullptr;
+
+        switch (m_quotes)
         {
-            *pMessage = "A string value should be enclosed in quotes: ";
-            *pMessage += value_as_string;
+        case REQUIRED:
+            zMessage = zRequired;
+            valid = false;
+            break;
+
+        case DESIRED:
+            zMessage = zDesired;
+            break;
+
+        case IGNORED:
+            break;
         }
-    }
 
-    string s = value_as_string;
-
-    if (b == '"' || b == '\'')
-    {
-        valid = (b == e);
-
-        if (valid)
+        if (pMessage && zMessage)
         {
-            s = s.substr(1, s.length() - 2);
-        }
-        else if (pMessage)
-        {
-            *pMessage = "A quoted string must end with the same quote: ";
+            *pMessage = zMessage;
             *pMessage += value_as_string;
         }
     }
 
     if (valid)
     {
-        *pValue = s;
+        string s = value_as_string;
+
+        if (b == '"' || b == '\'')
+        {
+            valid = (b == e);
+
+            if (valid)
+            {
+                s = s.substr(1, s.length() - 2);
+            }
+            else if (pMessage)
+            {
+                *pMessage = "A quoted string must end with the same quote: ";
+                *pMessage += value_as_string;
+            }
+        }
+
+        if (valid)
+        {
+            *pValue = s;
+        }
     }
 
     return valid;
