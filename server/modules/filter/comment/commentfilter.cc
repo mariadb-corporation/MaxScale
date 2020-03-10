@@ -17,12 +17,7 @@
 #include "commentfilter.hh"
 #include <string>
 #include <cstring>
-
-namespace
-{
-
-const char CN_INJECT[] = "inject";
-}
+#include "commentconfig.hh"
 
 // This declares a module in MaxScale
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
@@ -35,26 +30,30 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "A comment filter that can inject comments in sql queries",
         "V1.0.0",
         RCAP_TYPE_NONE,
-        &CommentFilter::s_object,                                   // This is defined in the MaxScale filter
-                                                                    // template
-        NULL,                                                       /* Process init. */
-        NULL,                                                       /* Process finish. */
-        NULL,                                                       /* Thread init. */
-        NULL,                                                       /* Thread finish. */
-        {
-            {CN_INJECT,                                            MXS_MODULE_PARAM_QUOTEDSTRING,NULL, MXS_MODULE_OPT_REQUIRED},
-            {MXS_END_MODULE_PARAMS}
-        }
+        &CommentFilter::s_object, // This is defined in the MaxScale filter template
+        NULL,                     /* Process init. */
+        NULL,                     /* Process finish. */
+        NULL,                     /* Thread init. */
+        NULL,                     /* Thread finish. */
     };
+
+    static bool populated = false;
+
+    if (!populated)
+    {
+        CommentConfig::populate(info);
+        populated = true;
+    }
 
     return &info;
 }
 
-CommentFilter::CommentFilter(std::string comment)
-    : m_comment(comment)
+CommentFilter::CommentFilter(CommentConfig&& config)
+    : m_config(std::move(config))
 {
-    MXS_INFO("Comment filter with comment [%s] created.", m_comment.c_str());
+    MXS_INFO("Comment filter with comment [%s] created.", m_config.inject.c_str());
 }
+
 
 CommentFilter::~CommentFilter()
 {
@@ -63,7 +62,15 @@ CommentFilter::~CommentFilter()
 // static
 CommentFilter* CommentFilter::create(const char* zName, mxs::ConfigParameters* pParams)
 {
-    return new CommentFilter(pParams->get_string(CN_INJECT));
+    CommentFilter* filter = nullptr;
+    CommentConfig config(zName);
+
+    if (config.configure(*pParams))
+    {
+        filter = new CommentFilter(std::move(config));
+    }
+
+    return filter;
 }
 
 CommentFilterSession* CommentFilter::newSession(MXS_SESSION* pSession, SERVICE* pService)
@@ -75,7 +82,7 @@ CommentFilterSession* CommentFilter::newSession(MXS_SESSION* pSession, SERVICE* 
 json_t* CommentFilter::diagnostics() const
 {
     json_t* rval = json_object();
-    json_object_set_new(rval, "Comment", json_string(m_comment.c_str()));
+    m_config.fill(rval);
     return rval;
 }
 

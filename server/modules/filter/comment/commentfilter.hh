@@ -16,6 +16,7 @@
 #include <maxscale/filter.hh>
 #include "commentfiltersession.hh"
 #include <string>
+#include "commentconfig.hh"
 
 class CommentFilter : public maxscale::Filter<CommentFilter, CommentFilterSession>
 {
@@ -37,13 +38,15 @@ public:
 
     // Get filter capabilities
     uint64_t getCapabilities();
-    std::string comment() const
+
+    const CommentConfig& config() const
     {
-        return m_comment;
+        return m_config;
     }
 
 private:
-    std::string m_comment;
     // Used in the create function
-    CommentFilter(std::string comment);
+    CommentFilter(CommentConfig&& config);
+
+    CommentConfig m_config;
 };

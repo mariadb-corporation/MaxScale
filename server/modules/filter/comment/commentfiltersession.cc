@@ -51,7 +51,7 @@ int CommentFilterSession::routeQuery(GWBUF* pPacket)
     if (modutil_is_SQL(pPacket))
     {
         string sql = mxs::extract_sql(pPacket);
-        string comment = parseComment(m_filter.comment());
+        string comment = parseComment(m_filter.config().inject);
         string newsql = string("/* ").append(comment).append(" */").append(sql);
         pPacket = modutil_replace_SQL(pPacket, (char*)newsql.c_str());
         // maxscale expects contiguous memory to arrive from client so we must make the buffer contiguous
