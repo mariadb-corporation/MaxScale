@@ -271,8 +271,8 @@ make
 sudo make install
 popd
 
-wget --quiet https://nodejs.org/dist/v6.11.2/node-v6.11.2-linux-x64.tar.xz
-tar -axf node-v6.11.2-linux-x64.tar.xz
-sudo cp -t /usr -r node-v6.11.2-linux-x64/*
+wget --quiet https://nodejs.org/dist/v6.17.1/node-v6.17.1-linux-x64.tar.xz
+tar -axf node-v6.17.1-linux-x64.tar.xz
+sudo cp -t /usr -r node-v6.17.1-linux-x64/*
 
 sudo rm -rf $tmpdir
