@@ -1276,7 +1276,8 @@ static const char* column_type_to_avro_type(const std::string& type)
     };
 
     const std::unordered_set<std::string> bytes_types = {
-        "tinyblob", "blob", "mediumblob", "longblob"
+        "tinyblob", "blob", "mediumblob", "longblob",
+        "tinytext", "text", "mediumtext", "longtext"
     };
 
     if (int_types.count(str))
