@@ -29,7 +29,7 @@
 #include <maxscale/hint.h>
 
 /*< Return the byte at offset byte from the start of the unconsumed portion of the buffer */
-#define GWBUF_DATA_CHAR(b, byte) (GWBUF_LENGTH(b) < ((byte) + 1) ? -1 : *(((char*)(b)->start) + 4))
+#define GWBUF_DATA_CHAR(b, byte) (GWBUF_LENGTH(b) < ((byte) + 1) ? -1 : * (((char*)(b)->start) + 4))
 
 /*< Check that the data in a buffer has the SQL marker*/
 #define GWBUF_IS_SQL(b) (0x03 == GWBUF_DATA_CHAR(b, 4))

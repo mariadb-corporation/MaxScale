@@ -97,14 +97,14 @@ config::ParamPath
                config::ParamPath::F);
 
 config::ParamRegex
-param_regex(&specification,
-            "regex_parameter",
-            "Specifies a regular expression.");
+    param_regex(&specification,
+                "regex_parameter",
+                "Specifies a regular expression.");
 
 config::ParamServer
-param_server(&specification,
-             "server_parameter",
-             "Specifies a server.");
+    param_server(&specification,
+                 "server_parameter",
+                 "Specifies a server.");
 
 config::ParamSize
     param_size(&specification,
@@ -247,13 +247,13 @@ int test_enum(config::Enum<Enum>& value)
 {
     static const TestEntry<Enum> entries[] =
     {
-        {"one",  true, ENUM_ONE},
-        {"two",  true, ENUM_TWO},
+        {"one",      true, ENUM_ONE},
+        {"two",      true, ENUM_TWO},
 
         {"one, two", false},
-        {"blah", false},
-        {"1",    false},
-        {"ones", false}
+        {"blah",     false},
+        {"1",        false},
+        {"ones",     false}
     };
 
     return test(value, entries, elements_in_array(entries));
@@ -263,13 +263,13 @@ int test_enummask(config::EnumMask<Enum>& value)
 {
     static const TestEntry<uint32_t> entries[] =
     {
-        {"one",      true, ENUM_ONE},
-        {"two",      true, ENUM_TWO},
-        {"one, two", true, ENUM_ONE | ENUM_TWO },
+        {"one",      true, ENUM_ONE           },
+        {"two",      true, ENUM_TWO           },
+        {"one, two", true, ENUM_ONE | ENUM_TWO},
 
-        {"blah", false},
-        {"1",    false},
-        {"ones", false}
+        {"blah",     false},
+        {"1",        false},
+        {"ones",     false}
     };
 
     return test(value, entries, elements_in_array(entries));
@@ -279,13 +279,13 @@ int test_integer(config::Integer& value)
 {
     static const TestEntry<config::Integer::value_type> entries[] =
     {
-        {"0",                    true, 0},
-        {"-1",                   true, -1},
-        {"1",                    true, 1},
-        {"-2147483648",          true, -2147483648},
-        {"2147483647",           true, 2147483647},
-        {"-9223372036854775807", true, -9223372036854775807}, // Should be ...8, but compiler whines.
-        {"9223372036854775807",  true, 9223372036854775807},
+        {"0",                    true, 0                   },
+        {"-1",                   true, -1                  },
+        {"1",                    true, 1                   },
+        {"-2147483648",          true, -2147483648         },
+        {"2147483647",           true, 2147483647          },
+        {"-9223372036854775807", true, -9223372036854775807},   // Should be ...8, but compiler whines.
+        {"9223372036854775807",  true, 9223372036854775807 },
 
         {"-9223372036854775809", false},
         {"9223372036854775808",  false},
@@ -315,9 +315,9 @@ int test_regex(config::Regex& value)
 {
     static TestEntry<config::Regex::value_type> entries[] =
     {
-        { "^hello$",   true },
-        { "/^hello$/", true },
-        { "",          false },
+        {"^hello$",   true },
+        {"/^hello$/", true },
+        {"",          false},
     };
 
     config::RegexValue* pValue;
@@ -345,8 +345,8 @@ int test_server(config::Server& value)
 
     const TestEntry<config::Server::value_type> entries[] =
     {
-        { "TheServer1", true, sServer1.get() },
-        { "TheServer0", false },
+        {"TheServer1", true, sServer1.get()},
+        {"TheServer0", false},
     };
 
     return test(value, entries, elements_in_array(entries));
