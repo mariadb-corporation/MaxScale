@@ -1141,8 +1141,8 @@ public:
     using const_iterator = ValuesByName::const_iterator;
     using value_type = ValuesByName::value_type;
 
-    Configuration(Configuration&& rhs) = default;
-    Configuration& operator=(Configuration&& rhs) = default;
+    Configuration(Configuration&& rhs);
+    Configuration& operator=(Configuration&& rhs);
 
     /**
      * Constructor
@@ -1345,6 +1345,8 @@ public:
 
 protected:
     Type(Configuration* pConfiguration, const Param* pParam);
+
+    friend Configuration;
 
     Configuration* m_pConfiguration;
     const Param*   m_pParam;

@@ -346,6 +346,41 @@ Configuration::Configuration(const std::string& name, const config::Specificatio
 {
 }
 
+Configuration::Configuration(Configuration&& rhs)
+    : m_name(std::move(rhs.m_name))
+    , m_pSpecification(std::move(rhs.m_pSpecification))
+    , m_values(std::move(rhs.m_values))
+    , m_natives(std::move(rhs.m_natives))
+{
+    for (auto& kv : m_values)
+    {
+        Type* pType = kv.second;
+
+        pType->m_pConfiguration = this;
+    }
+}
+
+
+Configuration& Configuration::operator=(Configuration&& rhs)
+{
+    if (this != &rhs)
+    {
+        std::move(rhs.m_name);
+        std::move(rhs.m_pSpecification);
+        std::move(rhs.m_values);
+        std::move(rhs.m_natives);
+
+        for (auto& kv : m_values)
+        {
+            Type* pType = kv.second;
+
+            pType->m_pConfiguration = this;
+        }
+    }
+
+    return *this;
+}
+
 const std::string& Configuration::name() const
 {
     return m_name;
