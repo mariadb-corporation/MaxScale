@@ -132,13 +132,18 @@ then
     sudo yum -y install centos-release-scl || \
         sudo yum-config-manager --enable rhui-REGION-rhel-server-rhscl
 
-    sudo yum -y install devtoolset-7-gcc-c++
+    # Install newer compiler for CentOS 7 and 6
+    grep "release [67]" /etc/redhat-release
+    if [ $? -eq 0 ]
+    then
+        sudo yum -y install devtoolset-7-gcc-c++
 
-    # Enable it by default
-    echo "source /opt/rh/devtoolset-7/enable" >> ~/.bashrc
+        # Enable it by default
+        echo "source /opt/rh/devtoolset-7/enable" >> ~/.bashrc
+    fi
 
-    grep "release 6" /etc/redhat-release
-    if [ $? -ne 0 ]
+    grep "release [78]" /etc/redhat-release
+    if [ $? -eq 0 ]
     then
         # EPEL is installed for GCOV report generation (lcov)
         sudo yum -y install epel-release
