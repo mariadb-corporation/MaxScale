@@ -56,9 +56,15 @@ int main(int argc, char** argv)
     TestConnections test(argc, argv);
 
     test.tprintf("Starting Kafka container");
-    test.maxscales->ssh_output(
+    auto res = test.maxscales->ssh_output(
         "sudo docker run -d -e ADVERTISED_HOST="s + test.maxscales->IP[0]
         + " --network=host --name=kafka spotify/kafka");
+
+    if (res.first != 0)
+    {
+        test.tprintf("Failed to start docker container: %s", res.second.c_str());
+        return 1;
+    }
 
     test.repl->stop_slaves();
     auto conn = test.repl->get_connection(0);
