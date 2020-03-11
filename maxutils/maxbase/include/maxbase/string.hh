@@ -189,6 +189,7 @@ inline std::vector<std::string> strtok(std::string str, const char* delim)
  * @param container Container that provides iterators, stored value must support writing to ostream with
  *                  operator<<
  * @param separator Value used as the separator
+ * @param quotation Quotation marker used to quote the values
  *
  * @return String created by joining all values and delimiting them with `separator` (no trailing delimiter)
  */
@@ -286,5 +287,4 @@ inline bool get_int(const std::string& s, int* value)
 {
     return get_int(s.c_str(), 10, value);
 }
-
 }
