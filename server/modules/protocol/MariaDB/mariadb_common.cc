@@ -495,7 +495,7 @@ bool UserEntry::operator==(const UserEntry& rhs) const
 {
     return username == rhs.username && host_pattern == rhs.host_pattern && plugin == rhs.plugin
            && password == rhs.password && auth_string == rhs.auth_string && ssl == rhs.ssl
-           && global_db_priv == rhs.global_db_priv && proxy_grant == rhs.proxy_grant && is_role == rhs.is_role
+           && global_db_priv == rhs.global_db_priv && proxy_priv == rhs.proxy_priv && is_role == rhs.is_role
            && default_role == rhs.default_role;
 }
 

@@ -2012,8 +2012,16 @@ bool MariaDBClientConnection::start_change_user(mxs::Buffer&& buffer)
 bool MariaDBClientConnection::complete_change_user()
 {
     // Finalize results by writing session-level objects and routing the original change-user packet.
-    MXB_INFO("COM_CHANGE_USER from %s to '%s' succeeded.",
-             m_session->user_and_host().c_str(), m_change_user.session->user.c_str());
+    if (m_change_user.session->user_entry.entry.super_priv && mxs::Config::get().log_warn_super_users)
+    {
+        MXB_WARNING("COM_CHANGE_USER from %s to super user '%s'.",
+                    m_session->user_and_host().c_str(), m_change_user.session->user.c_str());
+    }
+    else
+    {
+        MXB_INFO("COM_CHANGE_USER from %s to '%s' succeeded.",
+                 m_session->user_and_host().c_str(), m_change_user.session->user.c_str());
+    }
     m_session_data = static_cast<MYSQL_session*>(m_session->protocol_data());
     // The old session data must be overwritten in-place, as other connections etc may have
     // saved pointers to it.
@@ -2297,7 +2305,9 @@ void MariaDBClientConnection::perform_check_token(AuthType auth_type)
 {
     // If the user entry didn't exist in the first place, don't check token and just fail.
     // TODO: server likely checks some random token to spend time, could add it later.
-    const auto entrytype = m_session_data->user_entry.type;
+    const auto& user_entry = m_session_data->user_entry;
+    const auto entrytype = user_entry.type;
+
     if (entrytype == UserEntryType::USER_NOT_FOUND)
     {
         send_authetication_error(AuthErrorType::ACCESS_DENIED);
@@ -2305,13 +2315,25 @@ void MariaDBClientConnection::perform_check_token(AuthType auth_type)
     }
     else
     {
-        auto auth_val = m_authenticator->authenticate(&m_session_data->user_entry.entry, m_session_data);
+        auto auth_val = m_authenticator->authenticate(&user_entry.entry, m_session_data);
         if (auth_val.status == AuthRes::Status::SUCCESS)
         {
             if (entrytype == UserEntryType::USER_ACCOUNT_OK)
             {
-                m_auth_state = (auth_type == AuthType::NORMAL_AUTH) ? AuthState::START_SESSION :
-                    AuthState::CHANGE_USER_OK;
+                // Authentication succeeded. If the user has super privileges, print a warning. The change-
+                // user equivalent is printed elsewhere.
+                if (auth_type == AuthType::NORMAL_AUTH)
+                {
+                    m_auth_state = AuthState::START_SESSION;
+                    if (user_entry.entry.super_priv && mxs::Config::get().log_warn_super_users)
+                    {
+                        MXB_WARNING("Super user %s logged in.", m_session_data->user_and_host().c_str());
+                    }
+                }
+                else
+                {
+                    m_auth_state = AuthState::CHANGE_USER_OK;
+                }
             }
             else
             {

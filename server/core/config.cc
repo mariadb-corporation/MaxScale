@@ -442,6 +442,12 @@ config::ParamBool Config::s_load_persisted_configs(
     CN_LOAD_PERSISTED_CONFIGS,
     "Specifies whether persisted configuration files should be loaded on startup.",
     true);
+
+config::ParamBool Config::s_log_warn_super_users(
+    &Config::s_specification,
+    "log_warn_super_users",
+    "Log a warning when a user with super privileges logs in.",
+    false);
 }
 
 namespace
@@ -552,6 +558,7 @@ Config::Config()
     add_native(&admin_ssl_ca_cert, &s_admin_ssl_ca_cert);
     add_native(&local_address, &s_local_address);
     add_native(&load_persisted_configs, &s_load_persisted_configs);
+    add_native(&log_warn_super_users, &s_log_warn_super_users);
 
     this->qc_cache_properties.max_size = get_total_memory() * 0.15;
 

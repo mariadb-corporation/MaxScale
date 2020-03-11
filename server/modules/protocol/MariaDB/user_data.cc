@@ -463,6 +463,7 @@ bool MariaDBUserManager::read_users_mariadb(QResult users, UserDatabase* output)
     auto ind_ins_priv = users->get_col_index("Insert_priv");
     auto ind_upd_priv = users->get_col_index("Update_priv");
     auto ind_del_priv = users->get_col_index("Delete_priv");
+    auto ind_super_priv = users->get_col_index("Super_priv");
     auto ind_ssl = users->get_col_index("ssl_type");
     auto ind_plugin = users->get_col_index("plugin");
     auto ind_pw = users->get_col_index("Password");
@@ -472,7 +473,8 @@ bool MariaDBUserManager::read_users_mariadb(QResult users, UserDatabase* output)
 
     bool has_required_fields = (ind_user >= 0) && (ind_host >= 0)
         && (ind_sel_priv >= 0) && (ind_ins_priv >= 0) && (ind_upd_priv >= 0) && (ind_del_priv >= 0)
-        && (ind_ssl >= 0) && (ind_plugin >= 0) && (ind_pw >= 0) && (ind_auth_str >= 0);
+        && (ind_super_priv >= 0) && (ind_ssl >= 0) && (ind_plugin >= 0) && (ind_pw >= 0)
+        && (ind_auth_str >= 0);
 
     bool error = false;
     if (has_required_fields)
@@ -489,6 +491,8 @@ bool MariaDBUserManager::read_users_mariadb(QResult users, UserDatabase* output)
             // exists.
             new_entry.global_db_priv = get_bool_enum(ind_sel_priv) || get_bool_enum(ind_ins_priv)
                 || get_bool_enum(ind_upd_priv) || get_bool_enum(ind_del_priv);
+
+            new_entry.super_priv = get_bool_enum(ind_super_priv);
 
             // Require SSL if the entry is not empty.
             new_entry.ssl = !users->get_string(ind_ssl).empty();
@@ -1179,7 +1183,7 @@ void UserDatabase::add_proxy_grant(const std::string& user, const std::string& h
                                            UserEntry::host_pattern_is_more_specific);
         if (entry_iter != entries.end() && entry_iter->host_pattern == host)
         {
-            entry_iter->proxy_grant = true;
+            entry_iter->proxy_priv = true;
         }
     }
 }
@@ -1199,10 +1203,11 @@ json_t* UserDatabase::users_to_json() const
     {
         for (auto& elem : elem_outer.second)
         {
-            auto entry = json_pack("{s:s, s:s, s:s, s:b, s:b, s:b, s:s}",
+            auto entry = json_pack("{s:s, s:s, s:s, s:b, s:b, s:b, s:b, s:s}",
                                    "user", elem.username.c_str(), "host", elem.host_pattern.c_str(),
-                                   "plugin", elem.plugin.c_str(), "global priv", elem.global_db_priv,
-                                   "ssl", elem.ssl, "proxy grant", elem.proxy_grant,
+                                   "plugin", elem.plugin.c_str(), "ssl", elem.ssl,
+                                   "super priv", elem.super_priv, "global priv", elem.global_db_priv,
+                                   "proxy_priv", elem.proxy_priv,
                                    "default_role", elem.default_role.cend());
             json_array_append_new(rval, entry);
         }
@@ -1302,7 +1307,7 @@ MariaDBUserCache::find_user(const string& user, const string& host, const string
                          anon_found->username.c_str(), anon_found->host_pattern.c_str(), userz, hostz,
                          requested_db.c_str());
             }
-            else if (!anon_found->proxy_grant)
+            else if (!anon_found->proxy_priv)
             {
                 res.type = UserEntryType::ANON_PROXY_ACCESS_DENIED;
                 MXB_INFO("Found matching anonymous user ''@'%s' for client '%s'@'%s' but user does not have "

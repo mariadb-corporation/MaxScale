@@ -45,8 +45,9 @@ struct UserEntry
     std::string auth_string;    /**< Auth data used by other plugins */
 
     bool ssl {false};           /**< Should the user connect with ssl? */
+    bool super_priv {false};    /**< Does the user have superuser privilege? */
     bool global_db_priv {false};/**< Does the user have access to all databases? */
-    bool proxy_grant {false};   /**< Does the user have proxy grants? */
+    bool proxy_priv {false};    /**< Does the user have proxy grants? */
 
     bool        is_role {false};/**< Is the user a role? */
     std::string default_role;   /**< Default role if any */
