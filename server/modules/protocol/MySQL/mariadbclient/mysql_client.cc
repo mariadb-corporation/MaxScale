@@ -235,17 +235,18 @@ uint8_t get_charset(SERVER_REF* servers)
 
     for (SERVER_REF* s = servers; s; s = s->next)
     {
-        if (server_ref_is_active(s))
+        if (server_ref_is_active(s) && s->server->charset)
         {
+            // The reference is active and we've queried the charset it uses
             if (s->server->is_master())
             {
                 // Master found, stop searching
                 rval = s->server->charset;
                 break;
             }
-            else if (s->server->is_slave() || (s->server->is_running() && rval == 0))
+            else if (s->server->is_slave() || rval == 0)
             {
-                // Slaves precede Running servers
+                // Slaves precede Running servers and server that are Down but whose charset is known
                 rval = s->server->charset;
             }
         }

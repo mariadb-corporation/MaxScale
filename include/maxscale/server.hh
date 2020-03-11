@@ -181,8 +181,10 @@ public:
                                      * routing sessions. */
 
     // Base variables
-    bool    is_active = false;          /**< Server is active and has not been "destroyed" */
-    uint8_t charset = DEFAULT_CHARSET;  /**< Character set. Read from backend and sent to client. */
+    bool    is_active = false;  /**< Server is active and has not been "destroyed" */
+    uint8_t charset = 0;        /**< Character set. Read from backend and sent to client. As no character set
+                                 * has the numeric value of 0, it can be used to detect servers we haven't
+                                 * connected to. */
 
     // Statistics and events
     ConnStats stats;            /**< The server statistics, e.g. number of connections */
@@ -535,7 +537,6 @@ protected:
     }
 
 private:
-    static const int   DEFAULT_CHARSET = 0x08;      /**< The latin1 charset */
     maxbase::EMAverage m_response_time;             /**< Response time calculations for this server */
     std::mutex         m_average_write_mutex;       /**< Protects response time from concurrent writing */
     mxs::SSLProvider   m_ssl_provider;
