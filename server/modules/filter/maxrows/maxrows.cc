@@ -16,6 +16,60 @@
 #include <maxscale/modutil.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 
+namespace
+{
+
+namespace maxrows
+{
+
+namespace config = mxs::config;
+
+config::Specification specification(MXS_MODULE_NAME, config::Specification::FILTER);
+
+config::ParamCount max_resultset_rows(
+    &specification,
+    "max_resultset_rows",
+    "Specifies the maximum number of rows a resultset can have in order to be returned to the user.",
+    std::numeric_limits<uint32_t>::max());
+
+config::ParamSize max_resultset_size(
+    &specification,
+    "max_resultset_size",
+    "Specifies the maximum size a resultset can have in order to be sent to the client.",
+    65536);
+
+config::ParamInteger debug(
+    &specification,
+    "debug",
+    "An integer value, using which the level of debug logging made by the Maxrows "
+    "filter can be controlled.",
+    0,
+    0,
+    3);
+
+config::ParamEnum<Mode> max_resultset_return(
+    &specification,
+    "max_resultset_return",
+    "Specifies what the filter sends to the client when the rows or size limit "
+    "is hit; an empty packet, an error packet or an ok packet.",
+    {
+        { Mode::EMPTY, "empty" },
+        { Mode::ERR,   "error" },
+        { Mode::OK,    "ok" }
+    },
+    Mode::EMPTY);
+}
+}
+
+MaxRowsConfig::MaxRowsConfig(const char* zName)
+    : mxs::config::Configuration(zName, &maxrows::specification)
+{
+    add_native(&this->max_resultset_rows, &maxrows::max_resultset_rows);
+    add_native(&this->max_resultset_size, &maxrows::max_resultset_size);
+    add_native(&this->debug, &maxrows::debug);
+    add_native(&this->mode, &maxrows::max_resultset_return);
+}
+
 int MaxRowsSession::routeQuery(GWBUF* packet)
 {
     return FilterSession::routeQuery(packet);

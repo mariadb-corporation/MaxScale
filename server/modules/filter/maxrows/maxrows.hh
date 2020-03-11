@@ -30,6 +30,25 @@ static const MXS_ENUM_VALUE mode_values[] =
     {NULL}
 };
 
+class MaxRowsConfig : public mxs::config::Configuration
+{
+public:
+    MaxRowsConfig(const MaxRowsConfig&) = delete;
+    MaxRowsConfig& operator = (const MaxRowsConfig&) = delete;
+
+    MaxRowsConfig(const char* zName);
+
+    MaxRowsConfig(MaxRowsConfig&& rhs) = default;
+
+    static void populate(MXS_MODULE& info);
+
+    int64_t max_resultset_rows;
+    int64_t max_resultset_size;
+    int64_t debug;
+    Mode    mode;
+};
+
+
 class MaxRows;
 
 class MaxRowsSession : public maxscale::FilterSession
