@@ -72,7 +72,7 @@ public:
     ~KafkaEventHandler()
     {
         // Wait in order to flush all events to Kafka (make this configurable?)
-        m_producer->flush(60000);
+        m_producer->flush(m_timeout);
     }
 
     static SRowEventHandler create(const std::string& broker,
@@ -109,14 +109,14 @@ public:
             {
                 int64_t high = RdKafka::Topic::OFFSET_INVALID;
                 int64_t low = RdKafka::Topic::OFFSET_INVALID;
-                auto rc = consumer->query_watermark_offsets(m_topic, 0, &low, &high, 10000);
+                auto rc = consumer->query_watermark_offsets(m_topic, 0, &low, &high, m_timeout);
 
                 if (high != RdKafka::Topic::OFFSET_INVALID && high > 0)
                 {
                     std::vector<RdKafka::TopicPartition*> partitions;
                     partitions.push_back(RdKafka::TopicPartition::create(m_topic, 0, high - 1));
                     consumer->assign(partitions);
-                    auto msg = consumer->consume(60000);
+                    auto msg = consumer->consume(m_timeout);
 
                     if (msg->err() == RdKafka::ERR_NO_ERROR)
                     {
@@ -249,6 +249,7 @@ private:
     std::string m_topic;
     SProducer   m_producer;
     json_t*     m_obj;
+    int         m_timeout = 10000;
 
     KafkaEventHandler(SProducer producer, const std::string& broker, const std::string& topic)
         : m_broker(broker)
