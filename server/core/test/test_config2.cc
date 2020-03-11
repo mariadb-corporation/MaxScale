@@ -317,7 +317,8 @@ int test_regex(config::Regex& value)
     {
         {"^hello$",   true },
         {"/^hello$/", true },
-        {"",          false},
+        {"",          true },
+        {"[",         false},
     };
 
     config::RegexValue* pValue;
