@@ -193,18 +193,18 @@ inline std::vector<std::string> strtok(std::string str, const char* delim)
  * @return String created by joining all values and delimiting them with `separator` (no trailing delimiter)
  */
 template<class T>
-std::string join(const T& container, const std::string& separator = ",")
+std::string join(const T& container, const std::string& separator = ",", const std::string& quotation = "")
 {
-    std::stringstream ss;
+    std::ostringstream ss;
     auto it = std::begin(container);
 
     if (it != std::end(container))
     {
-        ss << *it++;
+        ss << quotation << *it++ << quotation;
 
         while (it != std::end(container))
         {
-            ss << separator << *it++;
+            ss << separator << quotation << *it++ << quotation;
         }
     }
 
