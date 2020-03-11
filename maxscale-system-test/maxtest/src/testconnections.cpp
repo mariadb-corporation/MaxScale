@@ -515,13 +515,14 @@ TestConnections::~TestConnections()
         // galera->disable_ssl();
     }
 
+    // stop all Maxscales to detect crashes on exit
+    for (int i = 0; i < maxscales->N; i++)
+    {
+        stop_maxscale(i);
+    }
+
     if (maxscales->use_valgrind)
     {
-        // stop all Maxscales to get proper Valgrind logs
-        for (int i = 0; i < maxscales->N; i++)
-        {
-            stop_maxscale(i);
-        }
         sleep(15);      // sleep to let logs be written do disks
     }
 
