@@ -17,33 +17,21 @@
 #include <maxscale/ccdefs.hh>
 #include <maxscale/filter.hh>
 
-enum Mode
-{
-    EMPTY, ERR, OK
-};
-
-static const MXS_ENUM_VALUE mode_values[] =
-{
-    {"empty", Mode::EMPTY},
-    {"error", Mode::ERR  },
-    {"ok",    Mode::OK   },
-    {NULL}
-};
 
 class MaxRowsConfig : public mxs::config::Configuration
 {
 public:
-    MaxRowsConfig(const MaxRowsConfig&) = delete;
-    MaxRowsConfig& operator = (const MaxRowsConfig&) = delete;
+    enum Mode
+    {
+        EMPTY, ERR, OK
+    };
 
     MaxRowsConfig(const char* zName);
 
     MaxRowsConfig(MaxRowsConfig&& rhs) = default;
 
-    static void populate(MXS_MODULE& info);
-
-    int64_t max_resultset_rows;
-    int64_t max_resultset_size;
+    int64_t max_rows;
+    int64_t max_size;
     int64_t debug;
     Mode    mode;
 };
@@ -88,29 +76,12 @@ public:
     MaxRows(const MaxRows&) = delete;
     MaxRows& operator=(const MaxRows&) = delete;
 
-    struct Config
-    {
-        Config(const mxs::ConfigParameters* params)
-            : max_rows(params->get_integer("max_resultset_rows"))
-            , max_size(params->get_size("max_resultset_size"))
-            , debug(params->get_integer("debug"))
-            , mode(static_cast<Mode>(params->get_enum("max_resultset_return", mode_values)))
-        {
-        }
-
-        uint32_t max_rows;
-        uint32_t max_size;
-        uint32_t debug;
-        Mode     mode;
-    };
+    using Config = MaxRowsConfig;
 
     static constexpr uint64_t CAPABILITIES = RCAP_TYPE_REQUEST_TRACKING;
 
     // Creates a new filter instance
-    static MaxRows* create(const char* name, mxs::ConfigParameters* params)
-    {
-        return new(std::nothrow) MaxRows(name, params);
-    }
+    static MaxRows* create(const char* name, mxs::ConfigParameters* params);
 
     // Creates a new session for this filter
     MaxRowsSession* newSession(MXS_SESSION* session, SERVICE* service)
@@ -137,9 +108,9 @@ public:
     }
 
 private:
-    MaxRows(const char* name, const mxs::ConfigParameters* params)
+    MaxRows(const char* name, Config&& config)
         : m_name(name)
-        , m_config(params)
+        , m_config(std::move(config))
     {
     }
 

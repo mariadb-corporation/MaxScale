@@ -47,25 +47,25 @@ config::ParamInteger debug(
     0,
     3);
 
-config::ParamEnum<Mode> max_resultset_return(
+config::ParamEnum<MaxRowsConfig::Mode> max_resultset_return(
     &specification,
     "max_resultset_return",
     "Specifies what the filter sends to the client when the rows or size limit "
     "is hit; an empty packet, an error packet or an ok packet.",
     {
-        { Mode::EMPTY, "empty" },
-        { Mode::ERR,   "error" },
-        { Mode::OK,    "ok" }
+        { MaxRowsConfig::Mode::EMPTY, "empty" },
+        { MaxRowsConfig::Mode::ERR,   "error" },
+        { MaxRowsConfig::Mode::OK,    "ok" }
     },
-    Mode::EMPTY);
+    MaxRowsConfig::Mode::EMPTY);
 }
 }
 
 MaxRowsConfig::MaxRowsConfig(const char* zName)
     : mxs::config::Configuration(zName, &maxrows::specification)
 {
-    add_native(&this->max_resultset_rows, &maxrows::max_resultset_rows);
-    add_native(&this->max_resultset_size, &maxrows::max_resultset_size);
+    add_native(&this->max_rows, &maxrows::max_resultset_rows);
+    add_native(&this->max_size, &maxrows::max_resultset_size);
     add_native(&this->debug, &maxrows::debug);
     add_native(&this->mode, &maxrows::max_resultset_return);
 }
@@ -85,12 +85,13 @@ int MaxRowsSession::clientReply(GWBUF* data, const mxs::ReplyRoute& down, const 
         // The resultset is stored in an internal buffer until we know whether to send it or to discard it
         m_buffer.append(buffer.release());
 
-        if (reply.rows_read() > m_instance->config().max_rows || reply.size() > m_instance->config().max_size)
+        if (reply.rows_read() > (uint64_t)m_instance->config().max_rows
+            || reply.size() > (uint64_t)m_instance->config().max_size)
         {
             // A limit was exceeded, discard the result and replace it with a fake result
             switch (m_instance->config().mode)
             {
-            case Mode::EMPTY:
+            case MaxRowsConfig::Mode::EMPTY:
                 if (reply.rows_read() > 0)
                 {
                     // We have the start of the resultset with at least one row in it. Truncate the result
@@ -104,16 +105,16 @@ int MaxRowsSession::clientReply(GWBUF* data, const mxs::ReplyRoute& down, const 
                 }
                 break;
 
-            case Mode::ERR:
+            case MaxRowsConfig::Mode::ERR:
                 m_buffer.reset(
                     modutil_create_mysql_err_msg(1, 0, 1226, "42000",
-                                                 reply.rows_read() > m_instance->config().max_rows ?
+                                                 reply.rows_read() > (uint64_t)m_instance->config().max_rows ?
                                                  "Resultset row limit exceeded" :
                                                  "Resultset size limit exceeded"));
                 m_collect = false;
                 break;
 
-            case Mode::OK:
+            case MaxRowsConfig::Mode::OK:
                 m_buffer.reset(modutil_create_ok());
                 m_collect = false;
                 break;
@@ -135,6 +136,21 @@ int MaxRowsSession::clientReply(GWBUF* data, const mxs::ReplyRoute& down, const 
     return rv;
 }
 
+//static
+MaxRows* MaxRows::create(const char* name, mxs::ConfigParameters* params)
+{
+    MaxRows* filter = nullptr;
+    Config config(name);
+
+    if (config.configure(*params))
+    {
+        filter = new(std::nothrow) MaxRows(name, std::move(config));
+    }
+
+    return filter;
+}
+
+
 extern "C"
 {
 MXS_MODULE* MXS_CREATE_MODULE()
@@ -152,33 +168,15 @@ MXS_MODULE* MXS_CREATE_MODULE()
         NULL,       /* Process finish. */
         NULL,       /* Thread init. */
         NULL,       /* Thread finish. */
-        {
-            {
-                "max_resultset_rows",
-                MXS_MODULE_PARAM_COUNT,
-                MXS_MODULE_PARAM_COUNT_MAX
-            },
-            {
-                "max_resultset_size",
-                MXS_MODULE_PARAM_SIZE,
-                "65536"
-            },
-            {
-                "debug",
-                MXS_MODULE_PARAM_COUNT,
-                "0",
-                MXS_MODULE_OPT_DEPRECATED
-            },
-            {
-                "max_resultset_return",
-                MXS_MODULE_PARAM_ENUM,
-                "empty",
-                MXS_MODULE_OPT_ENUM_UNIQUE,
-                mode_values
-            },
-            {MXS_END_MODULE_PARAMS}
-        }
     };
+
+    static bool populated = false;
+
+    if (!populated)
+    {
+        maxrows::specification.populate(info);
+        populated = true;
+    }
 
     return &info;
 }
