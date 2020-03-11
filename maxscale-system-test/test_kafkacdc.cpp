@@ -58,7 +58,7 @@ int main(int argc, char** argv)
     test.tprintf("Starting Kafka container");
     auto res = test.maxscales->ssh_output(
         "sudo docker run -d -e ADVERTISED_HOST="s + test.maxscales->IP[0]
-        + " --network=host --name=kafka spotify/kafka");
+        + " -p 9092:9092 -p 2182:2181 --name=kafka spotify/kafka");
 
     if (res.first != 0)
     {
@@ -101,7 +101,7 @@ int main(int argc, char** argv)
     read_messages(test, 3);
 
     test.tprintf("Stopping Kafka container");
-    test.maxscales->ssh_output("sudo docker ps -aq|xargs sudo docker rm -vf");
+    test.maxscales->ssh_output("sudo docker rm -vf kafka");
     test.repl->fix_replication();
 
     return test.global_result;
