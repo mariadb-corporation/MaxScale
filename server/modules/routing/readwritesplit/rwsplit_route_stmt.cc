@@ -34,16 +34,6 @@ using namespace maxscale;
 
 using std::chrono::seconds;
 
-namespace
-{
-GWBUF* create_readonly_error()
-{
-    return modutil_create_mysql_err_msg(1, 0, ER_OPTION_PREVENTS_STATEMENT, "HY000",
-                                        "The MariaDB server is running with the --read-only"
-                                        " option so it cannot execute this statement");
-}
-}
-
 /**
  * The functions that support the routing of queries to back end
  * servers. All the functions in this module are internal to the read
@@ -181,10 +171,49 @@ bool RWSplitSession::handle_target_is_all(GWBUF* querybuf)
     return result;
 }
 
+bool RWSplitSession::handle_routing_failure(GWBUF* querybuf, route_target_t route_target)
+{
+    bool ok = true;
+    auto next_master = get_master_backend();
+
+    if (should_migrate_trx(next_master))
+    {
+        ok = start_trx_migration(next_master, querybuf);
+    }
+    else if (can_retry_query() || can_continue_trx_replay())
+    {
+        retry_query(gwbuf_clone(querybuf));
+        MXS_INFO("Delaying routing: %s", extract_sql(querybuf).c_str());
+    }
+    else if (m_config.master_failure_mode == RW_ERROR_ON_WRITE)
+    {
+        MXS_INFO("Sending read-only error, no valid target found for %s",
+                 route_target_to_string(route_target));
+        send_readonly_error();
+
+        if (m_current_master && m_current_master->in_use())
+        {
+            m_current_master->close();
+            m_current_master->set_close_reason("The original master is not available");
+        }
+    }
+    else
+    {
+        MXS_ERROR("Could not find valid server for target type %s, closing connection.\n%s",
+                  route_target_to_string(route_target), get_verbose_status().c_str());
+        ok = false;
+    }
+
+    return ok;
+}
+
 void RWSplitSession::send_readonly_error()
 {
+    auto err = modutil_create_mysql_err_msg(1, 0, ER_OPTION_PREVENTS_STATEMENT, "HY000",
+                                            "The MariaDB server is running with the --read-only"
+                                            " option so it cannot execute this statement");
     mxs::ReplyRoute route;
-    RouterSession::clientReply(create_readonly_error(), route, mxs::Reply());
+    RouterSession::clientReply(err, route, mxs::Reply());
 }
 
 bool RWSplitSession::query_not_supported(GWBUF* querybuf)
@@ -211,18 +240,6 @@ bool RWSplitSession::query_not_supported(GWBUF* querybuf)
         err = modutil_create_mysql_err_msg(1, 0, 1064, "42000",
                                            "Routing query to backend failed. "
                                            "See the error log for further details.");
-    }
-    else if (m_config.master_failure_mode == RW_ERROR_ON_WRITE && TARGET_IS_MASTER(route_target)
-             && (!m_current_master || !is_valid_for_master(m_current_master)))
-    {
-        // We are in read-only mode as the master is no longer available or is not valid
-        err = create_readonly_error();
-
-        if (m_current_master && m_current_master->in_use())
-        {
-            m_current_master->close();
-            m_current_master->set_close_reason("The original master is not available");
-        }
     }
 
     if (err)
@@ -336,23 +353,7 @@ bool RWSplitSession::route_single_stmt(GWBUF* querybuf)
     }
     else
     {
-        auto next_master = get_master_backend();
-
-        if (should_migrate_trx(next_master))
-        {
-            ok = start_trx_migration(next_master, querybuf);
-        }
-        else if (can_retry_query() || can_continue_trx_replay())
-        {
-            retry_query(gwbuf_clone(querybuf));
-            MXS_INFO("Delaying routing: %s", extract_sql(querybuf).c_str());
-        }
-        else if (m_config.master_failure_mode != RW_ERROR_ON_WRITE)
-        {
-            MXS_ERROR("Could not find valid server for target type %s, closing connection.\n%s",
-                      route_target_to_string(route_target), get_verbose_status().c_str());
-            ok = false;
-        }
+        ok = handle_routing_failure(querybuf, route_target);
     }
 
     return ok;
