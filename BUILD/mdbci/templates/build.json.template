@@ -3,6 +3,7 @@
   {
         "hostname" : "default",
         "memory_size" : "4096",
+        "cpu_count" : "8",
         "box" : "$box",
         "product" : {
                 "name": "docker"

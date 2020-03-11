@@ -69,5 +69,3 @@ cd $dir
 
 echo "cleaning ${unsorted_repo_dir}/$target/$box"
 rm -rf ${unsorted_repo_dir}/$target/$box
-
-${mdbci_dir}/mdbci generate-product-repositories --product maxscale_ci --product-version $target

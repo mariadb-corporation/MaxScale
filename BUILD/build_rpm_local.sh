@@ -7,10 +7,12 @@ set -x
 
 cd ./MaxScale
 
+NCPU=$(grep -c processor /proc/cpuinfo)
+
 mkdir _build
 cd _build
 cmake ..  $cmake_flags
-make || exit 1
+make -j${NCPU} || exit 1
 
 if [[ "$cmake_flags" =~ "BUILD_TESTS=Y" ]]
 then
@@ -24,7 +26,7 @@ then
     if [ $? -eq 0 ]
     then
         export SKIP_SHUTDOWN=Y
-        make test_rest_api && make test_maxctrl
+        make -j${NCPU} test_rest_api && make -j${NCPU} test_maxctrl
         rc=$?
         #docker ps -aq|xargs docker rm -vf
 
@@ -41,7 +43,7 @@ sudo rm -rf /usr/bin/strip
 sudo touch /usr/bin/strip
 sudo chmod a+x /usr/bin/strip
 
-sudo make package
+sudo make -j${NCPU} package
 res=$?
 if [ $res != 0 ] ; then
 	echo "Make package failed"
@@ -53,7 +55,7 @@ sudo rm CMakeCache.txt
 
 echo "Building tarball..."
 cmake .. $cmake_flags -DTARBALL=Y
-sudo make package
+sudo make -j${NCPU} package
 
 cd ..
 cp _build/*.rpm .
@@ -66,7 +68,7 @@ then
         cd _build
         rm CMakeCache.txt
         cmake ..  $cmake_flags -DTARGET_COMPONENT=$component
-        sudo make package
+        sudo make -j${NCPU} package
         cd ..
         cp _build/*.rpm .
 	    cp _build/*.gz .
@@ -75,7 +77,7 @@ fi
 
 if [ "$BUILD_RABBITMQ" == "yes" ] ; then
   cmake ../rabbitmq_consumer/  $cmake_flags
-  sudo make package
+  sudo make -j${NCPU} package
   res=$?
   if [ $res != 0 ] ; then
         exit $res

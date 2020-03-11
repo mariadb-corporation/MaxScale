@@ -7,6 +7,7 @@ set -x
 
 cd ./MaxScale
 
+NCPU=$(grep -c processor /proc/cpuinfo)
 
 mkdir _build
 cd _build
@@ -23,7 +24,7 @@ then
 fi
 
 export LD_LIBRARY_PATH=$(for i in `find $PWD/ -name '*.so*'`; do echo $(dirname $i); done|sort|uniq|xargs|sed -e 's/[[:space:]]/:/g')
-make package
+make -j${NCPU} package
 res=$?
 if [ $res != 0 ] ; then
         echo "Make package failed"
@@ -35,7 +36,7 @@ sudo rm CMakeCache.txt
 
 echo "Building tarball..."
 cmake .. $cmake_flags -DTARBALL=Y
-sudo make package
+sudo make -j${NCPU} package
 
 
 cp _CPack_Packages/Linux/DEB/*.deb ../
@@ -57,7 +58,7 @@ then
         export LD_LIBRARY_PATH=""
         cmake ..  $cmake_flags -DTARGET_COMPONENT=$component
         export LD_LIBRARY_PATH=$(for i in `find $PWD/ -name '*.so*'`; do echo $(dirname $i); done|sort|uniq|xargs|sed -e 's/[[:space:]]/:/g')
-        make package
+        make -j${NCPU} package
         cp _CPack_Packages/Linux/DEB/*.deb ../
         cd ..
         cp _build/*.deb .
@@ -68,7 +69,7 @@ fi
 
 if [ "$BUILD_RABBITMQ" == "yes" ] ; then
   cmake ../rabbitmq_consumer/  $cmake_flags
-  sudo make package
+  sudo make -j${NCPU} package
   res=$?
   if [ $res != 0 ] ; then
         exit $res
