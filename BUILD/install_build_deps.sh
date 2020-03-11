@@ -147,6 +147,7 @@ then
     # We need zypper here
     sudo zypper -n refresh
     sudo zypper -n update
+    sudo zypper -n remove gettext-runtime-mini
     sudo zypper -n install gcc gcc-c++ ncurses-devel bison glibc-devel libgcc_s1 perl \
          make libtool libopenssl-devel libaio libaio-devel flex \
          pcre-devel git wget tcl tcl-devel libuuid-devel \

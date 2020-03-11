@@ -119,8 +119,3 @@ if [ $build_result -ne 0 ] ; then
         echo "Build FAILED!"
         exit $build_result
 fi
-
-if [ ${run_upgrade_test} == "yes" ] ; then
-	${script_dir}/upgrade_test.sh
-fi
-
