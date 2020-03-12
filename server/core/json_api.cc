@@ -19,13 +19,106 @@
 #include <maxscale/cn_strings.hh>
 #include <maxscale/config.hh>
 
+#include "internal/monitormanager.hh"
+#include "internal/filter.hh"
+
 using std::string;
+using namespace std::literals::string_literals;
 
 namespace
 {
 
 const char DETAIL[] = "detail";
 const char ERRORS[] = "errors";
+
+bool target_validator(const char* str)
+{
+    return mxs::Target::find(str);
+}
+
+bool monitor_validator(const char* str)
+{
+    return MonitorManager::find_monitor(str);
+}
+
+bool filter_validator(const char* str)
+{
+    return filter_find(str).get();
+}
+
+std::unordered_map<std::string, std::function<bool(const char*)>> valid_relationships =
+{
+    {"servers",  target_validator },
+    {"services", target_validator },
+    {"monitors", monitor_validator},
+    {"filters",  filter_validator }
+};
+
+std::string validate_relationships(json_t* json)
+{
+    if (auto rel = mxs_json_pointer(json, MXS_JSON_PTR_RELATIONSHIPS))
+    {
+        if (!json_is_object(rel))
+        {
+            return "Field '"s + MXS_JSON_PTR_RELATIONSHIPS + "' is not an object";
+        }
+
+        const char* key;
+        json_t* j;
+
+        json_object_foreach(rel, key, j)
+        {
+            std::string path = MXS_JSON_PTR_RELATIONSHIPS + "/"s + key;
+            json_t* arr = json_object_get(j, "data");
+
+            if (!json_is_object(j))
+            {
+                return "Field '" + path + "' is not an object";
+            }
+            else if (valid_relationships.count(key) == 0)
+            {
+                return "'"s + key + "' is not a valid MaxScale relationship type";
+            }
+            else if (!json_is_array(arr) && !json_is_null(arr))
+            {
+                return "Field '" + path + "/data' is not an array";
+            }
+
+            size_t i;
+            json_t* value;
+
+            // If the arr is a JSON null, it won't be iterated
+            json_array_foreach(arr, i, value)
+            {
+                auto relpath = path + "/" + std::to_string(i);
+
+                if (!json_is_object(value))
+                {
+                    return "Field '" + relpath + "' is not an object";
+                }
+                else if (!json_is_string(json_object_get(value, "id")))
+                {
+                    return "Field '" + relpath + "/id' is not a string";
+                }
+                else if (!json_is_string(json_object_get(value, "type")))
+                {
+                    return "Field '" + relpath + "/type' is not a string";
+                }
+                else
+                {
+                    const char* name = json_string_value(json_object_get(value, "id"));
+
+                    if (!valid_relationships[key](name))
+                    {
+                        return "'"s + name + "' is not a valid object of type '" + key + "'";
+                    }
+                }
+            }
+        }
+    }
+
+    return "";
+}
 }
 
 static json_t* self_link(const char* host, const char* endpoint)
@@ -45,6 +138,41 @@ json_t* mxs_json_resource(const char* host, const char* self, json_t* data)
     json_object_set_new(rval, CN_LINKS, self_link(host, self));
     json_object_set_new(rval, CN_DATA, data);
     return rval;
+}
+
+std::string mxs_is_valid_json_resource(json_t* json)
+{
+    if (!json_is_object(mxs_json_pointer(json, MXS_JSON_PTR_DATA)))
+    {
+        return "The '"s + MXS_JSON_PTR_DATA + "' field is not an object";
+    }
+
+    for (auto a : {MXS_JSON_PTR_ID, MXS_JSON_PTR_TYPE})
+    {
+        if (auto j = mxs_json_pointer(json, a))
+        {
+            if (!json_is_string(j))
+            {
+                return "The '"s + a + "' field is not a string";
+            }
+        }
+    }
+
+    if (auto parameters = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS))
+    {
+        const char* key;
+        json_t* value;
+
+        json_object_foreach(parameters, key, value)
+        {
+            if (json_is_string(value) && strchr(json_string_value(value), '\n'))
+            {
+                return "Parameter '"s + key + "' contains unescaped newlines";
+            }
+        }
+    }
+
+    return validate_relationships(json);
 }
 
 json_t* mxs_json_metadata(const char* host, const char* self, json_t* data)

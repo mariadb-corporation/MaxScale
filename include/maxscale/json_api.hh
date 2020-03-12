@@ -51,6 +51,13 @@
  */
 json_t* mxs_json_resource(const char* host, const char* self, json_t* data);
 
+/**
+ * Validate the JSON object
+ *
+ * @return An empty string if the given JSON is a valid JSON API resource object. A non-empty string with the
+ *         error description if the JSON is not valid.
+ */
+std::string mxs_is_valid_json_resource(json_t* json);
 
 /**
  * @brief Create a JSON metadata object

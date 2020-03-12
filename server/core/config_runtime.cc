@@ -1481,64 +1481,16 @@ bool is_valid_relationship_body(json_t* json)
  *
  * @return True of the JSON is valid
  */
-bool validate_object_json(json_t* json,
-                          std::vector<std::string> paths,
-                          std::vector<Relationship> relationships)
+bool validate_object_json(json_t* json)
 {
-    bool rval = false;
-    json_t* value;
+    auto err = mxs_is_valid_json_resource(json);
 
-    if (is_valid_resource_body(json))
+    if (!err.empty())
     {
-        if (json_t* parameters = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS))
-        {
-            const char* key;
-            json_t* value;
-
-            json_object_foreach(parameters, key, value)
-            {
-                if (json_is_string(value) && strchr(json_string_value(value), '\n'))
-                {
-                    config_runtime_error("Parameter '%s' contains unescaped newlines", key);
-                    return false;
-                }
-            }
-        }
-
-        if (!(value = mxs_json_pointer(json, MXS_JSON_PTR_ID)))
-        {
-            config_runtime_error("Value not found: '%s'", MXS_JSON_PTR_ID);
-        }
-        else if (!json_is_string(value))
-        {
-            config_runtime_error("Value '%s' is not a string", MXS_JSON_PTR_ID);
-        }
-        else
-        {
-            for (const auto& a : paths)
-            {
-                if (!(value = mxs_json_pointer(json, a.c_str())))
-                {
-                    config_runtime_error("Invalid value for '%s'", a.c_str());
-                }
-                else if (!json_is_string(value))
-                {
-                    config_runtime_error("Value '%s' is not a string", a.c_str());
-                }
-            }
-
-            for (const auto& a : relationships)
-            {
-                StringSet relations;
-                if (extract_relations(json, relations, a))
-                {
-                    rval = true;
-                }
-            }
-        }
+        config_runtime_error("%s", err.c_str());
     }
 
-    return rval;
+    return err.empty();
 }
 
 bool server_relationship_to_parameter(json_t* json, mxs::ConfigParameters* params)
@@ -1875,7 +1827,7 @@ bool validate_maxscale_json(json_t* json)
 
 bool validate_monitor_json(json_t* json)
 {
-    bool rval = validate_object_json(json, {MXS_JSON_PTR_MODULE}, {object_to_server});
+    bool rval = validate_object_json(json);
 
     if (rval)
     {
@@ -1897,13 +1849,12 @@ bool validate_monitor_json(json_t* json)
 
 bool validate_filter_json(json_t* json)
 {
-    return validate_object_json(json, {MXS_JSON_PTR_MODULE}, {filter_to_service});
+    return validate_object_json(json);
 }
 
 bool validate_service_json(json_t* json)
 {
-    return validate_object_json(json, {MXS_JSON_PTR_ROUTER},
-                                {service_to_filter, object_to_server, service_to_service});
+    return validate_object_json(json);
 }
 
 bool ignored_core_parameters(const char* key)
@@ -2467,7 +2418,7 @@ bool runtime_alter_service_from_json(Service* service, json_t* new_json)
     std::unique_ptr<json_t> old_json(service_to_json(service, ""));
     mxb_assert(old_json.get());
 
-    if (is_valid_resource_body(new_json)
+    if (validate_service_json(new_json)
         && object_to_server_relations(service->name(), old_json.get(), new_json)
         && service_to_service_relations(service->name(), old_json.get(), new_json)
         && service_to_filter_relations(service, old_json.get(), new_json))
