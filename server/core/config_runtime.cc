@@ -188,23 +188,20 @@ std::pair<bool, mxs::ConfigParameters> load_defaults(const char* name,
                                                      const char* module_type,
                                                      const char* object_type)
 {
-    bool rval;
+    bool rval = false;
     mxs::ConfigParameters params;
-    CONFIG_CONTEXT ctx = {(char*)""};
 
     if (const MXS_MODULE* mod = get_module(name, module_type))
     {
-        config_add_defaults(&ctx.m_parameters, get_type_parameters(object_type));
-        config_add_defaults(&ctx.m_parameters, mod->parameters);
-        params = ctx.m_parameters;
+        config_add_defaults(&params, get_type_parameters(object_type));
+        config_add_defaults(&params, mod->parameters);
         params.set(get_module_param_name(object_type), name);
         rval = true;
     }
     else
     {
         config_runtime_error("Failed to load module '%s': %s",
-                             name,
-                             errno ? mxs_strerror(errno) : "See MaxScale logs for details");
+                             name, errno ? mxs_strerror(errno) : "See MaxScale logs for details");
     }
 
     return {rval, params};
@@ -1476,7 +1473,7 @@ bool is_valid_relationship_body(json_t* json)
 }
 
 /**
- * @brief Do a coarse validation of the monitor JSON
+ * @brief Do coarse validation of the object JSON
  *
  * @param json          JSON to validate
  * @param paths         List of paths that must be string values
@@ -1600,24 +1597,6 @@ bool link_object_to_targets(const std::string& target, StringSet& relations)
         if (!runtime_link_target(rel, target))
         {
             unlink_target_from_objects(rel, relations);
-            rval = false;
-            break;
-        }
-    }
-
-    return rval;
-}
-
-bool validate_monitor_json(json_t* json)
-{
-    bool rval = true;
-    json_t* params = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
-
-    for (auto a : {CN_USER, CN_PASSWORD})
-    {
-        if (!mxs_json_pointer(params, a))
-        {
-            config_runtime_error("Mandatory parameter '%s' is not defined", a);
             rval = false;
             break;
         }
@@ -1894,6 +1873,39 @@ bool validate_maxscale_json(json_t* json)
     return rval;
 }
 
+bool validate_monitor_json(json_t* json)
+{
+    bool rval = validate_object_json(json, {MXS_JSON_PTR_MODULE}, {object_to_server});
+
+    if (rval)
+    {
+        json_t* params = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
+
+        for (auto a : {CN_USER, CN_PASSWORD})
+        {
+            if (!mxs_json_pointer(params, a))
+            {
+                config_runtime_error("Mandatory parameter '%s' is not defined", a);
+                rval = false;
+                break;
+            }
+        }
+    }
+
+    return rval;
+}
+
+bool validate_filter_json(json_t* json)
+{
+    return validate_object_json(json, {MXS_JSON_PTR_MODULE}, {filter_to_service});
+}
+
+bool validate_service_json(json_t* json)
+{
+    return validate_object_json(json, {MXS_JSON_PTR_ROUTER},
+                                {service_to_filter, object_to_server, service_to_service});
+}
+
 bool ignored_core_parameters(const char* key)
 {
     static const char* params[] =
@@ -1933,6 +1945,19 @@ void config_runtime_error(const char* fmt, ...)
     vsnprintf(errmsg, sizeof(errmsg), fmt, list);
     va_end(list);
     runtime_errmsg.push_back(errmsg);
+}
+
+json_t* runtime_get_json_error()
+{
+    json_t* obj = NULL;
+
+    if (!runtime_errmsg.empty())
+    {
+        obj = mxs_json_error(runtime_errmsg);
+        runtime_errmsg.clear();
+    }
+
+    return obj;
 }
 
 bool runtime_create_server(const char* name, const char* address, const char* port, bool external)
@@ -2276,8 +2301,7 @@ bool runtime_create_monitor_from_json(json_t* json)
 {
     bool rval = false;
 
-    if (validate_object_json(json, {MXS_JSON_PTR_MODULE}, {object_to_server})
-        && validate_monitor_json(json))
+    if (validate_monitor_json(json))
     {
         const char* name = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
         const char* module = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_MODULE));
@@ -2316,7 +2340,7 @@ bool runtime_create_filter_from_json(json_t* json)
 {
     bool rval = false;
 
-    if (validate_object_json(json, {MXS_JSON_PTR_MODULE}, {filter_to_service}))
+    if (validate_filter_json(json))
     {
         const char* name = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
         const char* module = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_MODULE));
@@ -2332,8 +2356,7 @@ bool runtime_create_service_from_json(json_t* json)
 {
     bool rval = false;
 
-    if (validate_object_json(json, {MXS_JSON_PTR_ROUTER},
-                             {service_to_filter, object_to_server, service_to_service}))
+    if (validate_service_json(json))
     {
         const char* name = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
         const char* router = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ROUTER));
@@ -2632,19 +2655,6 @@ bool runtime_create_listener_from_json(Service* service, json_t* json)
     }
 
     return rval;
-}
-
-json_t* runtime_get_json_error()
-{
-    json_t* obj = NULL;
-
-    if (!runtime_errmsg.empty())
-    {
-        obj = mxs_json_error(runtime_errmsg);
-        runtime_errmsg.clear();
-    }
-
-    return obj;
 }
 
 bool runtime_create_user_from_json(json_t* json)
