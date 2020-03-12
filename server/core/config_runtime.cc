@@ -840,47 +840,6 @@ bool runtime_create_filter(const char* name, const char* module, mxs::ConfigPara
     return rval;
 }
 
-bool runtime_create_service(const char* name, const char* router, mxs::ConfigParameters* params)
-{
-    bool rval = false;
-
-    if (Service::find(name) == NULL)
-    {
-        Service* service = NULL;
-        mxs::ConfigParameters parameters;
-        bool ok;
-        tie(ok, parameters) = load_defaults(router, MODULE_ROUTER, CN_SERVICE);
-
-        if (ok)
-        {
-            if (params)
-            {
-                parameters.set_multiple(*params);
-            }
-
-            if ((service = Service::create(name, router, &parameters)) == nullptr)
-            {
-                config_runtime_error("Could not create service '%s' with module '%s'", name, router);
-            }
-            else if (!service->serialize())
-            {
-                config_runtime_error("Failed to serialize service '%s'", name);
-            }
-            else
-            {
-                MXS_NOTICE("Created service '%s'", name);
-                rval = true;
-            }
-        }
-    }
-    else
-    {
-        config_runtime_error("Can't create service '%s', it already exists", name);
-    }
-
-    return rval;
-}
-
 mxs::ConfigParameters extract_parameters_from_json(json_t* json)
 {
     mxs::ConfigParameters rval;
@@ -1859,6 +1818,13 @@ bool validate_service_json(json_t* json)
     return rval;
 }
 
+bool validate_create_service_json(json_t* json)
+{
+    return validate_service_json(json)
+           && mxs_json_pointer(json, MXS_JSON_PTR_ID)
+           && mxs_json_pointer(json, MXS_JSON_PTR_ROUTER);
+}
+
 bool ignored_core_parameters(const char* key)
 {
     static const char* params[] =
@@ -2310,32 +2276,62 @@ bool runtime_create_filter_from_json(json_t* json)
     return rval;
 }
 
+bool update_service_relationships(Service* service, json_t* json)
+{
+    auto old_json = service_to_json(service, "");
+    mxb_assert(old_json);
+
+    bool rval = object_to_server_relations(service->name(), old_json, json)
+        && service_to_service_relations(service->name(), old_json, json)
+        && service_to_filter_relations(service, old_json, json);
+
+    json_decref(old_json);
+
+    return rval;
+}
+
 bool runtime_create_service_from_json(json_t* json)
 {
     bool rval = false;
 
-    if (validate_service_json(json))
+    if (validate_create_service_json(json))
     {
         const char* name = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
-        const char* router = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ROUTER));
-        auto params = extract_parameters_from_json(json);
 
-        if (runtime_create_service(name, router, &params))
+        if (!Service::find(name))
         {
-            auto svc = Service::find(name);
-            mxb_assert(svc);
+            const char* router = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ROUTER));
+            bool ok;
+            mxs::ConfigParameters params;
+            tie(ok, params) = extract_and_validate_params(json, router, MODULE_ROUTER, CN_SERVICE);
 
-            // Performing an alter right after creation takes care of server relationships
-            if (!runtime_alter_service_from_json(svc, json))
+            if (ok)
             {
-                runtime_destroy_service(svc);
+                if (auto service = Service::create(name, router, &params))
+                {
+                    if (update_service_relationships(service, json))
+                    {
+                        if (service->serialize())
+                        {
+                            MXS_NOTICE("Created service '%s'", name);
+                            serviceStart(service);
+                            rval = true;
+                        }
+                        else
+                        {
+                            config_runtime_error("Failed to serialize service '%s'", name);
+                        }
+                    }
+                }
+                else
+                {
+                    config_runtime_error("Could not create service '%s' with module '%s'", name, router);
+                }
             }
-            else
-            {
-                // This function sets the service in the correct state
-                serviceStart(svc);
-                rval = true;
-            }
+        }
+        else
+        {
+            config_runtime_error("Can't create service '%s', it already exists", name);
         }
     }
 
@@ -2389,48 +2385,30 @@ bool runtime_alter_monitor_relationships_from_json(Monitor* monitor, json_t* jso
 bool runtime_alter_service_relationships_from_json(Service* service, const char* type, json_t* json)
 {
     bool rval = false;
-    std::unique_ptr<json_t> old_json(service_to_json(service, ""));
-    mxb_assert(old_json.get());
+    auto new_json = service_to_json(service, "");
+    mxb_assert(new_json);
 
     if (is_valid_relationship_body(json))
     {
-        std::unique_ptr<json_t> j(json_pack("{s: {s: {s: {s: O}}}}",
-                                            "data",
-                                            "relationships",
-                                            type,
-                                            "data",
-                                            json_object_get(json, "data")));
-
-        if (strcmp(type, CN_SERVERS) == 0)
-        {
-            rval = object_to_server_relations(service->name(), old_json.get(), j.get());
-        }
-        else if (strcmp(type, CN_SERVICES) == 0)
-        {
-            rval = service_to_service_relations(service->name(), old_json.get(), j.get());
-        }
-        else
-        {
-            mxb_assert(strcmp(type, CN_FILTERS) == 0);
-            rval = service_to_filter_relations(service, old_json.get(), j.get());
-        }
+        auto rel = mxs_json_pointer(new_json, MXS_JSON_PTR_RELATIONSHIPS);
+        json_object_set(rel, type, json);
+        rval = update_service_relationships(service, new_json);
     }
 
+    json_decref(new_json);
     return rval;
 }
 
 bool runtime_alter_service_from_json(Service* service, json_t* new_json)
 {
     bool rval = false;
-    std::unique_ptr<json_t> old_json(service_to_json(service, ""));
-    mxb_assert(old_json.get());
 
-    if (validate_service_json(new_json)
-        && object_to_server_relations(service->name(), old_json.get(), new_json)
-        && service_to_service_relations(service->name(), old_json.get(), new_json)
-        && service_to_filter_relations(service, old_json.get(), new_json))
+    if (validate_service_json(new_json) && update_service_relationships(service, new_json))
     {
         rval = true;
+        std::unique_ptr<json_t> old_json(service_to_json(service, ""));
+        mxb_assert(old_json.get());
+
         json_t* parameters = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS);
         json_t* old_parameters = mxs_json_pointer(old_json.get(), MXS_JSON_PTR_PARAMETERS);
 
