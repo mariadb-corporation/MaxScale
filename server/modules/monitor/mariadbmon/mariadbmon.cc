@@ -64,7 +64,7 @@ static const char CN_REPLICATION_MASTER_SSL[] = "replication_master_ssl";
 namespace
 {
 
-const char CLUSTER_OP_REQUIRE_LOCKS[] = "cluster_manipulation_require_locks";
+const char CLUSTER_OP_REQUIRE_LOCKS[] = "cooperative_monitoring_locks";
 const MXS_ENUM_VALUE lock_none = {"none", MariaDBMonitor::LOCKS_NONE};
 
 const MXS_ENUM_VALUE require_lock_values[] =

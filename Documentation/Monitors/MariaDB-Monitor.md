@@ -263,6 +263,23 @@ flag must be removed manually:
 maxctrl clear server server2 Maint
 ```
 
+### `cooperative_monitoring_locks`
+
+Using this setting is recommended when multiple MaxScales are monitoring the
+same backend cluster. When enabled, the monitor attempts to acquire exclusive
+locks on the backend servers. The monitor considers itself the primary monitor
+if it has a majority of locks. The majority can be either over all configured
+servers or just over running servers. See
+[Cooperative monitoring](#cooperative-monitoring)
+for more details on how this feature works and which value to use.
+
+Allowed values:
+1. `none` Default value, no locking.
+2. `majority_of_all` Primary monitor requires majority of locks, even counting
+servers which are [Down].
+3. `majority_of_running` Primary monitor requires majority of locks over
+[Running] servers.
+
 ## Cluster manipulation operations
 
 Starting with MaxScale 2.2.1, MariaDB Monitor supports replication cluster
@@ -813,6 +830,95 @@ remember their "ENABLED"-status and run when scheduled. This may happen before
 the monitor rejoins the server and disables the events. This should only be an
 issue for events running more often than the monitor interval or events that run
 immediately after the server has restarted.
+
+## Cooperative monitoring
+
+As of MaxScale 2.5, MariaDB-Monitor supports cooperative monitoring. This means
+that multiple monitors (typically in different MaxScale instances) can monitor
+the same backend server cluster and only one will be the primary monitor. Only
+the primary monitor may perform *switchover*, *failover* or *rejoin* operations.
+The primary also decides which server is the master. Cooperative monitoring is
+enabled with the
+[cooperative_monitoring_locks](#cooperative_monitoring_locks)-setting.
+Even with this setting, only one monitor per server per MaxScale is allowed.
+This limitation can be circumvented by defining multiple copies of a server in
+the configuration file.
+
+Cooperative monitoring uses
+[server locks](#https://mariadb.com/kb/en/get_lock/)
+for coordinating between monitors. When cooperating, the monitor regularly
+checks the status of a lock named *maxscale_mariadbmonitor* on every server and
+acquires it if free. If the monitor acquires a majority of locks, it is the
+primary. If a monitor cannot claim majority locks, it is a secondary monitor.
+
+The primary monitor of a cluster also acquires the lock
+*maxscale_mariadbmonitor_master* on the master server. Secondary monitors check
+which server this lock is taken on and only accept that server as the master.
+This arrangement is required so that multiple monitors can agree on which server
+is the master regardless of replication topology. If a secondary monitor does
+not see the master-lock taken, then it won't mark any server as [Master],
+causing writes to fail.
+
+The lock-setting defines how many locks are required for primary status. Setting
+`cooperative_monitoring_locks=majority_of_all` means that the primary monitor
+needs *n_servers/2 + 1* (rounded down) locks. For example, a cluster of 3
+servers needs 2 locks for majority, a cluster of 4 needs 3, and a cluster of 5
+needs 3. This scheme is resistant against split-brain situations in the sense
+that multiple monitors cannot be primary simultaneously. However, a split may
+cause both monitors to consider themselves secondary, in which case a master
+server won't be detected. Also, if too many servers go down, neither monitor can
+claim lock majority.
+
+Setting `cooperative_monitoring_locks=majority_of_running` changes the way
+*n_servers* is calculated. Instead of using the total number of servers, only
+servers currently [Running] are considered. This scheme adapts to multiple
+servers going down, ensuring that claiming lock majority is always possible.
+However, it can lead to multiple monitors claiming primary status in a
+split-brain situation. As an example, consider a cluster with servers 1 to 4
+with MaxScales A and B. If A can connect to 1 and 2 but not to 3 and 4, while B
+does the opposite, both MaxScales will claim two locks out of two running
+servers. The two MaxScales will then route writes to different servers.
+
+The recommended strategy depends on which failure scenario is more likely and/or
+more destructive. If it's unlikely that multiple servers are ever down
+simultaneously, then *majority_of_all* is likely the safer choice. On the other
+hand, if split-brain is unlikely but multiple servers may be down
+simultaneously, then *majority_of_running* would keep the cluster operational.
+
+### Releasing locks
+
+Monitor cooperation depends on the server locks. The locks are
+connection-specific. The owning connection can manually release a lock, allowing
+another connection to claim it. Also, if the owning connection closes, the
+MariaDB-server process releases the lock. How quickly a lost connection is
+detected affects how quickly the primary monitor status moves from one monitor
+and MaxScale to another.
+
+If the primary MaxScale or its monitor is stopped normally, the monitor
+connections are properly closed, releasing the locks. This allows the secondary
+MaxScale to quickly claim the locks. However, if the primary simply vanishes
+(broken network), the connection may just look idle. In this case, the
+MariaDB-server may take a long time before it considers the monitor connection
+lost. This time ultimately depends on TCP keepalive settings on the machines
+running MariaDB-server.
+
+On MariaDB-server 10.3.3 and later, the TCP keepalive settings can be configured
+for just the server process. See
+[Server System Variables](#https://mariadb.com/kb/en/server-system-variables/#tcp_keepalive_interval)
+for information on settings *tcp_keepalive_interval*, *tcp_keepalive_probes* and
+*tcp_keepalive_time*. These settings can also be set on the operating system
+level, as described
+[here](#http://www.tldp.org/HOWTO/TCP-Keepalive-HOWTO/usingkeepalive.html).
+
+A monitor can also be ordered to manually release its locks via the module
+command *release-locks*. This is useful for manually changing the primary
+monitor. After running the release-command, the monitor will not attempt to
+reacquire the locks for one minute, even if it wasn't the primary monitor to
+begin with. This command can cause the cluster to become temporarily unusable by
+MaxScale. Only use it when there is another monitor ready to claim the locks.
+```
+maxctrl call command mariadbmon release-locks MyMonitor1
+```
 
 ## Troubleshooting
 
