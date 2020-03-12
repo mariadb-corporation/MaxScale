@@ -795,48 +795,6 @@ bool runtime_create_listener(Service* service,
     return rval;
 }
 
-bool runtime_create_monitor(const char* name, const char* module, mxs::ConfigParameters* params)
-{
-    bool rval = false;
-
-    if (MonitorManager::find_monitor(name) == NULL)
-    {
-        mxs::ConfigParameters final_params;
-        bool ok;
-        tie(ok, final_params) = load_defaults(module, MODULE_MONITOR, CN_MONITOR);
-
-        if (ok)
-        {
-            if (params)
-            {
-                final_params.set_multiple(*params);
-            }
-
-            Monitor* monitor = MonitorManager::create_monitor(name, module, &final_params);
-
-            if (!monitor)
-            {
-                config_runtime_error("Could not create monitor '%s' with module '%s'", name, module);
-            }
-            else if (!MonitorManager::monitor_serialize(monitor))
-            {
-                config_runtime_error("Failed to serialize monitor '%s'", name);
-            }
-            else
-            {
-                MXS_NOTICE("Created monitor '%s'", name);
-                rval = true;
-            }
-        }
-    }
-    else
-    {
-        config_runtime_error("Can't create monitor '%s', it already exists", name);
-    }
-
-    return rval;
-}
-
 bool runtime_create_filter(const char* name, const char* module, mxs::ConfigParameters* params)
 {
     bool rval = false;
@@ -1559,6 +1517,30 @@ mxs::ConfigParameters extract_parameters(json_t* json)
     return params;
 }
 
+std::pair<bool, mxs::ConfigParameters> extract_and_validate_params(json_t* json,
+                                                                   const char* module,
+                                                                   const char* module_type,
+                                                                   const char* module_param_name)
+{
+    bool ok = false;
+    mxs::ConfigParameters params;
+
+    if (const MXS_MODULE* mod = get_module(module, module_type))
+    {
+        tie(ok, params) = load_defaults(module, module_type, module_param_name);
+        mxb_assert(ok);
+
+        params.set_multiple(extract_parameters(json));
+        ok = validate_param(get_type_parameters(module_param_name), mod->parameters, &params);
+    }
+    else
+    {
+        config_runtime_error("Unknown module: %s", module);
+    }
+
+    return {ok, params};
+}
+
 bool update_object_relations(const std::string& target,
                              Relationship rel,
                              json_t* old_json,
@@ -2277,30 +2259,35 @@ bool runtime_create_monitor_from_json(json_t* json)
         const char* name = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
         const char* module = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_MODULE));
 
-        if (const MXS_MODULE* mod = get_module(module, MODULE_MONITOR))
+        if (MonitorManager::find_monitor(name))
         {
-            mxs::ConfigParameters params;
-            bool ok;
-            tie(ok, params) = load_defaults(module, MODULE_MONITOR, CN_MONITOR);
-            mxb_assert(ok);
-
-            params.set_multiple(extract_parameters(json));
-
-            if (validate_param(common_monitor_params(), mod->parameters, &params)
-                && server_relationship_to_parameter(json, &params))
-            {
-                if (runtime_create_monitor(name, module, &params))
-                {
-                    auto mon = MonitorManager::find_monitor(name);
-                    mxb_assert(mon);
-                    MonitorManager::start_monitor(mon);
-                    rval = true;
-                }
-            }
+            config_runtime_error("Can't create monitor '%s', it already exists", name);
         }
         else
         {
-            config_runtime_error("Unknown module: %s", module);
+            mxs::ConfigParameters params;
+            bool ok;
+            tie(ok, params) = extract_and_validate_params(json, module, MODULE_MONITOR, CN_MONITOR);
+
+            if (ok && server_relationship_to_parameter(json, &params))
+            {
+                Monitor* monitor = MonitorManager::create_monitor(name, module, &params);
+
+                if (!monitor)
+                {
+                    config_runtime_error("Could not create monitor '%s' with module '%s'", name, module);
+                }
+                else if (!MonitorManager::monitor_serialize(monitor))
+                {
+                    config_runtime_error("Failed to serialize monitor '%s'", name);
+                }
+                else
+                {
+                    MXS_NOTICE("Created monitor '%s'", name);
+                    MonitorManager::start_monitor(monitor);
+                    rval = true;
+                }
+            }
         }
     }
 
