@@ -1842,6 +1842,12 @@ bool validate_monitor_json(json_t* json)
                 break;
             }
         }
+
+        if (!mxs_json_is_type(json, MXS_JSON_PTR_MODULE, JSON_STRING))
+        {
+            config_runtime_error("Field '%s' is not a string", MXS_JSON_PTR_MODULE);
+            rval = false;
+        }
     }
 
     return rval;
@@ -1849,12 +1855,43 @@ bool validate_monitor_json(json_t* json)
 
 bool validate_filter_json(json_t* json)
 {
-    return validate_object_json(json);
+    bool rval = validate_object_json(json);
+
+    if (rval)
+    {
+        if (!mxs_json_is_type(json, MXS_JSON_PTR_MODULE, JSON_STRING))
+        {
+            config_runtime_error("Field '%s' is not a string", MXS_JSON_PTR_MODULE);
+            rval = false;
+        }
+    }
+
+    return rval;
 }
 
 bool validate_service_json(json_t* json)
 {
-    return validate_object_json(json);
+    bool rval = validate_object_json(json);
+
+    if (rval)
+    {
+        auto servers = mxs_json_pointer(json, MXS_JSON_PTR_RELATIONSHIPS_SERVERS);
+        auto services = mxs_json_pointer(json, MXS_JSON_PTR_RELATIONSHIPS_SERVICES);
+        auto monitors = mxs_json_pointer(json, MXS_JSON_PTR_RELATIONSHIPS_MONITORS);
+
+        if (json_array_size(monitors) && (json_array_size(servers) || json_array_size(services)))
+        {
+            config_runtime_error("A service must use either servers and services or monitors, not both");
+            rval = false;
+        }
+        else if (!mxs_json_is_type(json, MXS_JSON_PTR_ROUTER, JSON_STRING))
+        {
+            config_runtime_error("Field '%s' is not a string", MXS_JSON_PTR_ROUTER);
+            rval = false;
+        }
+    }
+
+    return rval;
 }
 
 bool ignored_core_parameters(const char* key)

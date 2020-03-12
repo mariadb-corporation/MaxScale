@@ -115,6 +115,16 @@ json_t* mxs_json_self_link(const char* host, const char* path, const char* id);
  */
 json_t* mxs_json_pointer(json_t* json, const char* json_ptr);
 
+/**
+ * @brief Check if the value at the provided JSON Pointer is of a certain type
+ *
+ * @param json     JSON object
+ * @param json_ptr JSON Pointer to object
+ * @param type     JSON type that is expected
+ *
+ * @return False if the object was found but it was not of the expected type. True in all other cases.
+ */
+bool mxs_json_is_type(json_t* json, const char* json_ptr, json_type type);
 
 /**
  * @brief Return a JSON formatted error

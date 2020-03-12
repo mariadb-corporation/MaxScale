@@ -149,12 +149,9 @@ std::string mxs_is_valid_json_resource(json_t* json)
 
     for (auto a : {MXS_JSON_PTR_ID, MXS_JSON_PTR_TYPE})
     {
-        if (auto j = mxs_json_pointer(json, a))
+        if (!mxs_json_is_type(json, a, JSON_STRING))
         {
-            if (!json_is_string(j))
-            {
-                return "The '"s + a + "' field is not a string";
-            }
+            return "The '"s + a + "' field is not a string";
         }
     }
 
@@ -274,6 +271,18 @@ static json_t* mxs_json_pointer_internal(json_t* json, string str)
 json_t* mxs_json_pointer(json_t* json, const char* json_ptr)
 {
     return mxs_json_pointer_internal(json, json_ptr);
+}
+
+bool mxs_json_is_type(json_t* json, const char* json_ptr, json_type type)
+{
+    bool rval = true;
+
+    if (auto j = mxs_json_pointer(json, json_ptr))
+    {
+        rval = json_typeof(j) == type;
+    }
+
+    return rval;
 }
 
 json_t* mxs_json_self_link(const char* host, const char* path, const char* id)
