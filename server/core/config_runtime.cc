@@ -801,41 +801,32 @@ bool runtime_create_monitor(const char* name, const char* module, mxs::ConfigPar
 
     if (MonitorManager::find_monitor(name) == NULL)
     {
-        std::string reason;
+        mxs::ConfigParameters final_params;
+        bool ok;
+        tie(ok, final_params) = load_defaults(module, MODULE_MONITOR, CN_MONITOR);
 
-        if (config_is_valid_name(name, &reason))
+        if (ok)
         {
-            mxs::ConfigParameters final_params;
-            bool ok;
-            tie(ok, final_params) = load_defaults(module, MODULE_MONITOR, CN_MONITOR);
-
-            if (ok)
+            if (params)
             {
-                if (params)
-                {
-                    final_params.set_multiple(*params);
-                }
-
-                Monitor* monitor = MonitorManager::create_monitor(name, module, &final_params);
-
-                if (!monitor)
-                {
-                    config_runtime_error("Could not create monitor '%s' with module '%s'", name, module);
-                }
-                else if (!MonitorManager::monitor_serialize(monitor))
-                {
-                    config_runtime_error("Failed to serialize monitor '%s'", name);
-                }
-                else
-                {
-                    MXS_NOTICE("Created monitor '%s'", name);
-                    rval = true;
-                }
+                final_params.set_multiple(*params);
             }
-        }
-        else
-        {
-            config_runtime_error("%s", reason.c_str());
+
+            Monitor* monitor = MonitorManager::create_monitor(name, module, &final_params);
+
+            if (!monitor)
+            {
+                config_runtime_error("Could not create monitor '%s' with module '%s'", name, module);
+            }
+            else if (!MonitorManager::monitor_serialize(monitor))
+            {
+                config_runtime_error("Failed to serialize monitor '%s'", name);
+            }
+            else
+            {
+                MXS_NOTICE("Created monitor '%s'", name);
+                rval = true;
+            }
         }
     }
     else
@@ -859,23 +850,14 @@ bool runtime_create_filter(const char* name, const char* module, mxs::ConfigPara
 
         if (ok)
         {
-            std::string reason;
-
-            if (config_is_valid_name(name, &reason))
+            if (params)
             {
-                if (params)
-                {
-                    parameters.set_multiple(*params);
-                }
-
-                if (!(filter = filter_alloc(name, module, &parameters)))
-                {
-                    config_runtime_error("Could not create filter '%s' with module '%s'", name, module);
-                }
+                parameters.set_multiple(*params);
             }
-            else
+
+            if (!(filter = filter_alloc(name, module, &parameters)))
             {
-                config_runtime_error("%s", reason.c_str());
+                config_runtime_error("Could not create filter '%s' with module '%s'", name, module);
             }
         }
 
@@ -913,31 +895,23 @@ bool runtime_create_service(const char* name, const char* router, mxs::ConfigPar
 
         if (ok)
         {
-            std::string reason;
-            if (config_is_valid_name(name, &reason))
+            if (params)
             {
-                if (params)
-                {
-                    parameters.set_multiple(*params);
-                }
+                parameters.set_multiple(*params);
+            }
 
-                if ((service = Service::create(name, router, &parameters)) == nullptr)
-                {
-                    config_runtime_error("Could not create service '%s' with module '%s'", name, router);
-                }
-                else if (!service->serialize())
-                {
-                    config_runtime_error("Failed to serialize service '%s'", name);
-                }
-                else
-                {
-                    MXS_NOTICE("Created service '%s'", name);
-                    rval = true;
-                }
+            if ((service = Service::create(name, router, &parameters)) == nullptr)
+            {
+                config_runtime_error("Could not create service '%s' with module '%s'", name, router);
+            }
+            else if (!service->serialize())
+            {
+                config_runtime_error("Failed to serialize service '%s'", name);
             }
             else
             {
-                config_runtime_error("%s", reason.c_str());
+                MXS_NOTICE("Created service '%s'", name);
+                rval = true;
             }
         }
     }
@@ -952,6 +926,7 @@ bool runtime_create_service(const char* name, const char* router, mxs::ConfigPar
 mxs::ConfigParameters extract_parameters_from_json(json_t* json)
 {
     mxs::ConfigParameters rval;
+
     if (json_t* parameters = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS))
     {
         const char* key;
@@ -961,8 +936,16 @@ mxs::ConfigParameters extract_parameters_from_json(json_t* json)
         {
             if (!json_is_null(value) && !json_is_array(value) && !json_is_object(value))
             {
-                mxb_assert(!mxs::json_to_string(value).empty());
-                rval.set(key, mxs::json_to_string(value));
+                auto strval = mxs::json_to_string(value);
+
+                if (!strval.empty())
+                {
+                    rval.set(key, strval);
+                }
+                else
+                {
+                    mxb_assert_message(json_is_string(value), "Only strings can be empty (%s)", key);
+                }
             }
         }
     }

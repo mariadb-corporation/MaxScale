@@ -155,6 +155,16 @@ std::string mxs_is_valid_json_resource(json_t* json)
         }
     }
 
+    if (auto id = mxs_json_pointer(json, MXS_JSON_PTR_ID))
+    {
+        std::string reason;
+
+        if (!config_is_valid_name(json_string_value(id), &reason))
+        {
+            return reason;
+        }
+    }
+
     if (auto parameters = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS))
     {
         const char* key;
