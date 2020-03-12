@@ -1,5 +1,4 @@
 #include "testconnections.h"
-#include "keepalived_func.h"
 #include "failover_common.cpp"
 #include <string>
 

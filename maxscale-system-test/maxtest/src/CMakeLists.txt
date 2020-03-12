@@ -10,7 +10,6 @@ add_library(maxtest SHARED
         fw_copy_rules.cpp
         get_com_select_insert.cpp
         get_my_ip.cpp
-        keepalived_func.cpp
         labels_table.cpp
         mariadb_func.cpp
         mariadb_nodes.cpp
