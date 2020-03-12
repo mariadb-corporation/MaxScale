@@ -1739,20 +1739,30 @@ std::string SERVICE::version_string() const
 uint8_t SERVICE::charset() const
 {
     uint8_t rval = 0;
+
     for (auto s : reachable_servers())
     {
-        if (s->is_master())
+        if (s->charset)
         {
-            // Master found, stop searching
-            rval = s->charset;
-            break;
-        }
-        else if (s->is_slave() || (s->is_running() && rval == 0))
-        {
-            // Slaves precede Running servers
-            rval = s->charset;
+            if (s->is_master())
+            {
+                // Master found, stop searching
+                rval = s->charset;
+                break;
+            }
+            else if (s->is_slave() || rval == 0)
+            {
+                // Slaves precede Running servers and server that are Down but whose charset is known
+                rval = s->charset;
+            }
         }
     }
+
+    if (rval == 0)
+    {
+        rval = 0x08;    // The default charset: latin1
+    }
+
     return rval;
 }
 

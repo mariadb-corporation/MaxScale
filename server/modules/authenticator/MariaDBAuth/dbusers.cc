@@ -679,9 +679,6 @@ static bool check_server_permissions(SERVICE* service,
         return my_errno != ER_ACCESS_DENIED_ERROR;
     }
 
-    /** Copy the server charset */
-    mxs_update_server_charset(mysql, server);
-
     if (server->version().total == 0)
     {
         mxs_mysql_update_server_version(server, mysql);

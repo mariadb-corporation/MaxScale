@@ -409,7 +409,8 @@ const char* dbg_decode_response(GWBUF* pPacket)
 void mxs_update_server_charset(MYSQL* mysql, SERVER* server)
 {
     const char* CHARSET_QUERY =
-        "SELECT co.id FROM information_schema.collations AS co "
+        "SELECT co.id, @@global.character_set_server "
+        "FROM information_schema.collations AS co "
         "JOIN information_schema.character_sets AS cs "
         "ON (co.collation_name = cs.default_collate_name) "
         "WHERE cs.character_set_name=@@global.character_set_server;";
@@ -422,7 +423,13 @@ void mxs_update_server_charset(MYSQL* mysql, SERVER* server)
             {
                 if (row[0])
                 {
-                    server->charset = atoi(row[0]);
+                    auto charset = atoi(row[0]);
+
+                    if (server->charset != charset)
+                    {
+                        MXS_NOTICE("Server '%s' charset: %s", server->name(), row[1]);
+                        server->charset = charset;
+                    }
                 }
             }
 
