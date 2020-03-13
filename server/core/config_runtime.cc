@@ -774,7 +774,7 @@ bool runtime_create_filter(const char* name, const char* module, mxs::ConfigPara
     return rval;
 }
 
-mxs::ConfigParameters extract_parameters_from_json(json_t* json)
+mxs::ConfigParameters extract_parameters(json_t* json)
 {
     mxs::ConfigParameters rval;
 
@@ -1389,25 +1389,6 @@ bool link_object_to_targets(const std::string& target, StringSet& relations)
     }
 
     return rval;
-}
-
-mxs::ConfigParameters extract_parameters(json_t* json)
-{
-    mxs::ConfigParameters params;
-    json_t* parameters = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
-
-    if (parameters && json_is_object(parameters))
-    {
-        const char* key;
-        json_t* value;
-
-        json_object_foreach(parameters, key, value)
-        {
-            params.set(key, mxs::json_to_string(value));
-        }
-    }
-
-    return params;
 }
 
 std::pair<bool, mxs::ConfigParameters> extract_and_validate_params(json_t* json,
@@ -2056,7 +2037,7 @@ bool runtime_create_server_from_json(json_t* json)
         {
             mxs::ConfigParameters params;
             config_add_defaults(&params, common_server_params());
-            params.set_multiple(extract_parameters_from_json(json));
+            params.set_multiple(extract_parameters(json));
 
             if (params.contains_any({CN_SSL_KEY, CN_SSL_CERT, CN_SSL_CA_CERT}))
             {
@@ -2202,7 +2183,7 @@ bool runtime_create_filter_from_json(json_t* json)
     {
         const char* name = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
         const char* module = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_MODULE));
-        auto params = extract_parameters_from_json(json);
+        auto params = extract_parameters(json);
 
         rval = runtime_create_filter(name, module, &params);
     }
