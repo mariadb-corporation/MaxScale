@@ -961,6 +961,17 @@ public:
     {
     }
 
+    ParamServer(Specification* pSpecification,
+                const char* zName,
+                const char* zDescription,
+                Param::Kind kind,
+                Modifiable modifiable = Modifiable::AT_STARTUP)
+        : ConcreteParam<ParamServer, SERVER*>(pSpecification, zName, zDescription,
+                                              modifiable, kind, MXS_MODULE_PARAM_SERVER,
+                                              nullptr)
+    {
+    }
+
     std::string type() const override;
 
     std::string to_string(value_type value) const;
