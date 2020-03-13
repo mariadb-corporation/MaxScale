@@ -355,14 +355,7 @@ bool MariaDBUserManager::update_users()
     if (got_data)
     {
         // Got some data. Update the master database if the contents differ. Usually they don't.
-        string datasource;
-        string delim;
-        for (auto& elem : source_servernames)
-        {
-            datasource += delim;
-            datasource += ("'" + elem + "'");
-            delim = ", ";
-        }
+        string datasource = mxb::create_list_string(source_servernames, ", ", " and ", "'");
         string msg = mxb::string_printf("Read %lu user@host entries from %s for service '%s'.",
                                         temp_userdata.n_entries(), datasource.c_str(), m_service->name());
 

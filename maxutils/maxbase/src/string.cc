@@ -15,6 +15,8 @@
 #include <ctype.h>
 #include <string.h>
 
+using std::string;
+
 namespace
 {
 
@@ -111,5 +113,44 @@ bool get_int(const char* s, int base, int* value)
     }
 
     return rv;
+}
+
+std::string create_list_string(const std::vector<string>& elements,
+                               const string& delim, const string& last_delim, const std::string& quote)
+{
+    auto n_elems = elements.size();
+    if (n_elems == 0)
+    {
+        return "";
+    }
+    else if (n_elems == 1)
+    {
+        return quote + elements[0] + quote;
+    }
+
+    const string& real_last_delim = last_delim.empty() ? delim : last_delim;
+
+    // Need at least one delimiter. Estimate the size of the resulting string to minimize reallocations.
+    // Need not be exact.
+    auto item_len = std::max(elements[0].length(), elements[1].length())
+        + std::max(delim.length(), real_last_delim.length()) + 2 * quote.length();
+    auto total_len = item_len * n_elems;
+    string rval;
+    rval.reserve(total_len);
+
+    auto add_elem = [&rval, &quote](const string& elem, const string& delim) {
+            rval += delim;
+            rval += quote;
+            rval += elem;
+            rval += quote;
+        };
+
+    add_elem(elements[0], "");      // first element has no delimiter.
+    for (size_t i = 1; i < n_elems - 1; i++)
+    {
+        add_elem(elements[i], delim);
+    }
+    add_elem(elements[n_elems - 1], real_last_delim);
+    return rval;
 }
 }

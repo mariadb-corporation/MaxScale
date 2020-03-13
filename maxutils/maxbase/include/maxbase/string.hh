@@ -287,4 +287,17 @@ inline bool get_int(const std::string& s, int* value)
 {
     return get_int(s.c_str(), 10, value);
 }
+
+/**
+ * Create a human-readable list from the string array. Inserts delimiters between elements.
+ *
+ * @param elements List elements, copied as is.
+ * @param delim Delimiter between elements
+ * @param last_delim Delimiter between last two elements. If left empty, uses the regular delimiter.
+ * @param quote Quotes to insert around each element
+ * @return List as a single string
+ */
+std::string create_list_string(const std::vector<std::string>& elements,
+                               const std::string& delim = ", ", const std::string& last_delim = "",
+                               const std::string& quote = "");
 }
