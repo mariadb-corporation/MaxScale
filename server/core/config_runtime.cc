@@ -3020,6 +3020,7 @@ bool runtime_alter_maxscale_from_json(json_t* new_json)
                 rval = false;
             }
         }
+        json_decref(old_json);
     }
 
     return rval;
