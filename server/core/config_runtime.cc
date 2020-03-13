@@ -553,54 +553,6 @@ bool validate_param(const MXS_MODULE_PARAM* basic,
     return rval;
 }
 
-bool runtime_alter_maxscale(const char* name, json_t* value)
-{
-    mxs::Config& cnf = mxs::Config::get();
-    std::string key = name;
-    bool rval = false;
-    mxs::cfg::Type* item = nullptr;
-    auto valstr = mxs::json_dump(value);
-
-    if ((item = cnf.find_value(name)) != nullptr)
-    {
-        if (item->parameter().is_modifiable_at_runtime())
-        {
-            std::string message;
-            rval = item->set_from_json(value, &message);
-
-            if (rval)
-            {
-                MXS_NOTICE("Value of %s changed to %s", name, valstr.c_str());
-            }
-            else
-            {
-                config_runtime_error("Invalid value for '%s': %s, %s",
-                                     item->parameter().name().c_str(),
-                                     valstr.c_str(), message.c_str());
-            }
-        }
-        else
-        {
-            config_runtime_error("Global parameter '%s' cannot be modified at runtime", name);
-        }
-    }
-    else if (config_can_modify_at_runtime(key.c_str()))
-    {
-        config_runtime_error("Global parameter '%s' cannot be modified at runtime", name);
-    }
-    else
-    {
-        config_runtime_error("Unknown global parameter: %s=%s", name, valstr.c_str());
-    }
-
-    if (rval)
-    {
-        config_global_serialize();
-    }
-
-    return rval;
-}
-
 // Helper for runtime_create_listener
 void set_if_not_null(mxs::ConfigParameters& params, const char* name,
                      const char* value, const char* dflt = nullptr)
@@ -1742,7 +1694,7 @@ bool validate_create_service_json(json_t* json)
 
 bool ignored_core_parameters(const char* key)
 {
-    static const char* params[] =
+    static const std::unordered_set<std::string> params =
     {
         "libdir",
         "datadir",
@@ -1756,18 +1708,10 @@ bool ignored_core_parameters(const char* key)
         "langdir",
         "execdir",
         "connector_plugindir",
-        NULL
+        "thread_stack_size",
     };
 
-    for (int i = 0; params[i]; i++)
-    {
-        if (strcmp(key, params[i]) == 0)
-        {
-            return true;
-        }
-    }
-
-    return false;
+    return params.count(key);
 }
 }
 
@@ -2588,47 +2532,68 @@ bool runtime_alter_user(const std::string& user, const std::string& type, json_t
     return rval;
 }
 
-bool runtime_alter_maxscale_from_json(json_t* new_json)
+bool runtime_alter_maxscale_from_json(json_t* json)
 {
     bool rval = false;
 
-    if (validate_maxscale_json(new_json))
+    if (validate_maxscale_json(json))
     {
         rval = true;
-        json_t* old_json = config_maxscale_to_json("");
-        mxb_assert(old_json);
-
-        json_t* new_param = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS);
-        json_t* old_param = mxs_json_pointer(old_json, MXS_JSON_PTR_PARAMETERS);
-
+        json_t* params = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
         const char* key;
-        json_t* value;
+        json_t* new_val;
 
-        json_object_foreach(new_param, key, value)
+        json_object_foreach(params, key, new_val)
         {
-            json_t* new_val = json_object_get(new_param, key);
-            json_t* old_val = json_object_get(old_param, key);
-
-            if (json_is_object(new_val))
-            {
-                // TODO: Remove this workaround for log_throttling causing a debug assert in
-                // mxs::json_to_string due to the parameter value being an object.
-            }
-            else if (old_val && new_val && mxs::json_to_string(new_val) == mxs::json_to_string(old_val))
-            {
-                /** No change in values */
-            }
-            else if (ignored_core_parameters(key))
+            if (ignored_core_parameters(key))
             {
                 /** We can't change these at runtime */
                 MXS_INFO("Ignoring runtime change to '%s': Cannot be altered at runtime", key);
             }
-            else if (!runtime_alter_maxscale(key, value))
+            else
             {
-                rval = false;
+                mxs::Config& cnf = mxs::Config::get();
+
+                if (auto item = cnf.find_value(key))
+                {
+                    std::unique_ptr<json_t> old_val(item->to_json());
+
+                    if (!json_equal(old_val.get(), new_val))
+                    {
+                        if (item->parameter().is_modifiable_at_runtime())
+                        {
+                            std::string message;
+
+                            if (item->set_from_json(new_val, &message))
+                            {
+                                MXS_NOTICE("Value of %s changed to %s", key, item->to_string().c_str());
+                            }
+                            else
+                            {
+                                config_runtime_error("Invalid value for '%s': %s",
+                                                     key, mxs::json_dump(new_val).c_str());
+                                rval = false;
+                            }
+                        }
+                        else
+                        {
+                            config_runtime_error("Global parameter '%s' cannot be modified at runtime", key);
+                            rval = false;
+                        }
+                    }
+                }
+                else
+                {
+                    config_runtime_error("Unknown global parameter: %s", key);
+                    rval = false;
+                }
             }
         }
-        json_decref(old_json);
+
+        if (rval)
+        {
+            config_global_serialize();
+        }
     }
 
     return rval;
