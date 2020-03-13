@@ -94,6 +94,13 @@ public:
     void update_basic_parameter(const std::string& name, const std::string& value);
 
     /**
+     * Update multiple basic parameters
+     *
+     * @param params Parameters to update
+     */
+    void update_basic_parameters(const mxs::ConfigParameters& params);
+
+    /**
      * Set the list of filters for this service
      *
      * @param filters Filters to set

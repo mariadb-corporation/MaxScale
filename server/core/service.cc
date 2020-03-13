@@ -1222,9 +1222,9 @@ bool Service::is_basic_parameter(const std::string& name)
     return names.find(name) != names.end();
 }
 
-void Service::update_basic_parameter(const std::string& key, const std::string& value)
+void Service::update_basic_parameters(const mxs::ConfigParameters& params)
 {
-    m_params.set(key, value);
+    m_params.set_multiple(params);
     m_config.assign(Config(&m_params));
 
     if (m_config->connection_keepalive)
@@ -1235,15 +1235,15 @@ void Service::update_basic_parameter(const std::string& key, const std::string& 
     // If the parameter affects the user account manager, update its settings.
     if (m_usermanager)
     {
-        if ((key == CN_USER || key == CN_PASSWORD))
-        {
-            m_usermanager->set_credentials(m_config->user, m_config->password);
-        }
-        else if (key == CN_AUTH_ALL_SERVERS)
-        {
-            m_usermanager->set_union_over_backends(m_config->users_from_all);
-        }
+        m_usermanager->set_credentials(m_config->user, m_config->password);
+        m_usermanager->set_union_over_backends(m_config->users_from_all);
     }
+}
+
+void Service::update_basic_parameter(const std::string& key, const std::string& value)
+{
+    m_params.set(key, value);
+    update_basic_parameters(m_params);
 }
 
 const MXS_MODULE_PARAM* common_service_params()
