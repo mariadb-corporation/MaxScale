@@ -472,5 +472,6 @@ std::string extract_error(GWBUF* buffer);
  */
 static inline bool rpl_lag_is_ok(mxs::RWBackend* backend, int max_rlag)
 {
-    return max_rlag == SERVER::RLAG_UNDEFINED || backend->server()->rlag <= max_rlag;
+    auto rlag = backend->server()->rlag;
+    return max_rlag == SERVER::RLAG_UNDEFINED || (rlag != SERVER::RLAG_UNDEFINED && rlag <= max_rlag);
 }
