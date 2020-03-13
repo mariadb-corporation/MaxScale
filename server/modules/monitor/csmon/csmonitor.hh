@@ -12,7 +12,7 @@
  */
 #pragma once
 
-#include <maxscale/ccdefs.hh>
+#include "csmon.hh"
 #include <maxscale/monitor.hh>
 
 class CsMonitor : public maxscale::MonitorWorkerSimple
