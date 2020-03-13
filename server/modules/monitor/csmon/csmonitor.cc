@@ -81,6 +81,7 @@ int get_cs_version(MonitorServer* srv)
 
 CsMonitor::CsMonitor(const std::string& name, const std::string& module)
     : MonitorWorkerSimple(name, module)
+    , m_config(name)
 {
 }
 
@@ -119,7 +120,7 @@ void CsMonitor::update_server_status(MonitorServer* srv)
             }
             else
             {
-                status |= srv->server == m_primary ? SERVER_MASTER : SERVER_SLAVE;
+                status |= srv->server == m_config.pPrimary ? SERVER_MASTER : SERVER_SLAVE;
             }
         }
     }
@@ -129,11 +130,12 @@ void CsMonitor::update_server_status(MonitorServer* srv)
 
 bool CsMonitor::configure(const mxs::ConfigParameters* pParams)
 {
-    if (!MonitorWorkerSimple::configure(pParams))
+    bool rv = false;
+
+    if (MonitorWorkerSimple::configure(pParams))
     {
-        return false;
+        rv = m_config.configure(*pParams);
     }
 
-    m_primary = pParams->get_server("primary");
-    return true;
+    return rv;
 }

@@ -14,6 +14,7 @@
 
 #include "csmon.hh"
 #include <maxscale/monitor.hh>
+#include "csconfig.hh"
 
 class CsMonitor : public maxscale::MonitorWorkerSimple
 {
@@ -32,5 +33,5 @@ private:
     CsMonitor(const std::string& name, const std::string& module);
     bool configure(const mxs::ConfigParameters* pParams) override;
 
-    SERVER* m_primary;
+    CsConfig m_config;
 };

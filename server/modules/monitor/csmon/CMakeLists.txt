@@ -1,4 +1,5 @@
 add_library(csmon SHARED
+  csconfig.cc
   csmon.cc
   csmonitor.cc)
 target_link_libraries(csmon maxscale-common)
