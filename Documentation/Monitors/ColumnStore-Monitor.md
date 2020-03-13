@@ -47,6 +47,45 @@ Note that this parameter is only used when the server does not implement the
 required functionality. Otherwise the parameter is ignored as the information
 from ColumnStore itself is more reliable.
 
+## Commands
+
+The Columnstore monitor provides module commands using which the Columnstore
+cluster can be managed. The commands can be invoked using the REST-API with
+a client such as curl or using maxctrl.
+
+All commands require the monitor instance name as the first parameters.
+Additional parameters must be provided depending on the command.
+
+### _Cluster Start_
+Starts the Columnstore cluster.
+```
+call command csmon cluster-start MyMonitor
+```
+
+### _Cluster Stop_
+Stops the Columnstore cluster.
+```
+call command csmon cluster-stop MyMonitor
+```
+
+### _Cluster Shutdown_
+Shuts down the Columnstore cluster.
+```
+call command csmon cluster-shutdown MyMonitor
+```
+
+### _Cluster Add Node_
+Adds a new node to the Columnstore cluster.
+```
+call command csmon cluster-add-node MyMonitor
+```
+
+### _Cluster Remove Node_
+Removes a node from the Columnstore cluster.
+```
+call command csmon cluster-remove-node MyMonitor
+```
+
 ## Example
 
 The following is an example of a `csmon` configuration.

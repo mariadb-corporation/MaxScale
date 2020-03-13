@@ -139,3 +139,33 @@ bool CsMonitor::configure(const mxs::ConfigParameters* pParams)
 
     return rv;
 }
+
+//static
+bool CsMonitor::cluster_start(const MODULECMD_ARG* argv, json_t** ppOutput)
+{
+    return false;
+}
+
+//static
+bool CsMonitor::cluster_stop(const MODULECMD_ARG* argv, json_t** ppOutput)
+{
+    return false;
+}
+
+//static
+bool CsMonitor::cluster_shutdown(const MODULECMD_ARG* argv, json_t** ppOutput)
+{
+    return false;
+}
+
+//static
+bool CsMonitor::cluster_add_node(const MODULECMD_ARG* argv, json_t** ppOutput)
+{
+    return false;
+}
+
+//static
+bool CsMonitor::cluster_remove_node(const MODULECMD_ARG* argv, json_t** ppOutput)
+{
+    return false;
+}

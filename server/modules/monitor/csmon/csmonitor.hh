@@ -13,6 +13,7 @@
 #pragma once
 
 #include "csmon.hh"
+#include <maxscale/modulecmd.hh>
 #include <maxscale/monitor.hh>
 #include "csconfig.hh"
 
@@ -24,6 +25,15 @@ public:
 
     ~CsMonitor();
     static CsMonitor* create(const std::string& name, const std::string& module);
+
+public:
+    // Only to be called by the module call command mechanism.
+    static bool cluster_start(const MODULECMD_ARG* argv, json_t** ppOutput);
+    static bool cluster_stop(const MODULECMD_ARG* argv, json_t** ppOutput);
+    static bool cluster_shutdown(const MODULECMD_ARG* argv, json_t** ppOutput);
+
+    static bool cluster_add_node(const MODULECMD_ARG* argv, json_t** ppOutput);
+    static bool cluster_remove_node(const MODULECMD_ARG* argv, json_t** ppOutput);
 
 protected:
     bool has_sufficient_permissions();
