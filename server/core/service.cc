@@ -63,6 +63,7 @@
 #include "internal/service.hh"
 #include "internal/maxscale.hh"
 #include "internal/servermanager.hh"
+#include "internal/monitor.hh"
 
 /** This define is needed in CentOS 6 systems */
 #if !defined (UINT64_MAX)
@@ -1050,7 +1051,13 @@ json_t* Service::json_relationships(const char* host) const
         json_object_set_new(rel, CN_FILTERS, filters);
     }
 
-    if (!data.targets.empty())
+    if (m_monitor)
+    {
+        json_t* monitor = mxs_json_relationship(host, MXS_JSON_API_MONITORS);
+        mxs_json_add_relation(monitor, m_monitor->name(), CN_MONITORS);
+        json_object_set_new(rel, CN_MONITORS, monitor);
+    }
+    else if (!data.targets.empty())
     {
         json_t* servers = mxs_json_relationship(host, MXS_JSON_API_SERVERS);
         json_t* services = mxs_json_relationship(host, MXS_JSON_API_SERVICES);
@@ -1139,7 +1146,7 @@ json_t* service_list_to_json(const char* host)
 
 json_t* service_relations_to_filter(const SFilterDef& filter, const char* host)
 {
-    json_t* rel = mxs_json_relationship(host, MXS_JSON_API_SERVICES);
+    json_t* rel = nullptr;
     LockGuard guard(this_unit.lock);
 
     for (Service* service : this_unit.services)
@@ -1148,6 +1155,10 @@ json_t* service_relations_to_filter(const SFilterDef& filter, const char* host)
         {
             if (f == filter)
             {
+                if (!rel)
+                {
+                    rel = mxs_json_relationship(host, MXS_JSON_API_SERVICES);
+                }
                 mxs_json_add_relation(rel, service->name(), CN_SERVICES);
             }
         }
@@ -1156,6 +1167,26 @@ json_t* service_relations_to_filter(const SFilterDef& filter, const char* host)
     return rel;
 }
 
+json_t* service_relations_to_monitor(const mxs::Monitor* monitor, const char* host)
+{
+    json_t* rel = nullptr;
+    LockGuard guard(this_unit.lock);
+
+    for (Service* service : this_unit.services)
+    {
+        if (service->m_monitor == monitor)
+        {
+            if (!rel)
+            {
+                rel = mxs_json_relationship(host, MXS_JSON_API_SERVICES);
+            }
+
+            mxs_json_add_relation(rel, service->name(), CN_SERVICES);
+        }
+    }
+
+    return rel;
+}
 
 json_t* service_relations_to_server(const SERVER* server, const char* host)
 {

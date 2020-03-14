@@ -703,6 +703,11 @@ json_t* Monitor::to_json(const char* host) const
         json_object_set_new(rel, CN_SERVERS, mon_rel);
     }
 
+    if (auto services = service_relations_to_monitor(this, host))
+    {
+        json_object_set_new(rel, CN_SERVICES, services);
+    }
+
     json_object_set_new(rval, CN_RELATIONSHIPS, rel);
     json_object_set_new(rval, CN_ATTRIBUTES, attr);
     json_object_set_new(rval, CN_LINKS, mxs_json_self_link(host, CN_MONITORS, my_name));

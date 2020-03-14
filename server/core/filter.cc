@@ -259,7 +259,11 @@ json_t* filter_json_data(const SFilterDef& filter, const char* host)
 
     /** Store relationships to other objects */
     json_t* rel = json_object();
-    json_object_set_new(rel, CN_SERVICES, service_relations_to_filter(filter, host));
+
+    if (auto services = service_relations_to_filter(filter, host))
+    {
+        json_object_set_new(rel, CN_SERVICES, services);
+    }
 
     json_object_set_new(rval, CN_RELATIONSHIPS, rel);
     json_object_set_new(rval, CN_ATTRIBUTES, attr);

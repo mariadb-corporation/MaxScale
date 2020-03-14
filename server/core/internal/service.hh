@@ -564,6 +564,16 @@ json_t* service_relations_to_server(const SERVER* server, const char* host);
 json_t* service_relations_to_filter(const SFilterDef& filter, const char* host);
 
 /**
+ * @brief Get links to services that relate to a monitor
+ *
+ * @param filter Monitor to inspect
+ * @param host   Hostname of this server
+ *
+ * @return Array of service links or nullptr if no service uses the monitor
+ */
+json_t* service_relations_to_monitor(const mxs::Monitor* monitor, const char* host);
+
+/**
  * @brief Add server to all services associated with a monitor
  *
  * @param monitor  A monitor.
