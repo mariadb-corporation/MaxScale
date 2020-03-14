@@ -361,17 +361,27 @@ HttpResponse cb_alter_monitor(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
 }
 
-HttpResponse cb_alter_monitor_server_relationship(const HttpRequest& request)
+HttpResponse cb_alter_monitor_relationship(const HttpRequest& request, const char* type)
 {
     Monitor* monitor = MonitorManager::find_monitor(request.uri_part(1).c_str());
     mxb_assert(monitor && request.get_json());
 
-    if (runtime_alter_monitor_relationships_from_json(monitor, request.get_json()))
+    if (runtime_alter_monitor_relationships_from_json(monitor, type, request.get_json()))
     {
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
     return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+}
+
+HttpResponse cb_alter_monitor_server_relationship(const HttpRequest& request)
+{
+    return cb_alter_monitor_relationship(request, CN_SERVERS);
+}
+
+HttpResponse cb_alter_monitor_service_relationship(const HttpRequest& request)
+{
+    return cb_alter_monitor_relationship(request, CN_SERVICES);
 }
 
 HttpResponse cb_alter_service(const HttpRequest& request)
@@ -387,43 +397,37 @@ HttpResponse cb_alter_service(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
 }
 
-HttpResponse cb_alter_service_server_relationship(const HttpRequest& request)
+HttpResponse cb_alter_service_relationship(const HttpRequest& request, const char* type)
 {
     Service* service = Service::find(request.uri_part(1).c_str());
     mxb_assert(service && request.get_json());
 
-    if (runtime_alter_service_relationships_from_json(service, CN_SERVERS, request.get_json()))
+    if (runtime_alter_service_relationships_from_json(service, type, request.get_json()))
     {
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
     return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+}
+
+HttpResponse cb_alter_service_server_relationship(const HttpRequest& request)
+{
+    return cb_alter_service_relationship(request, CN_SERVERS);
 }
 
 HttpResponse cb_alter_service_service_relationship(const HttpRequest& request)
 {
-    Service* service = Service::find(request.uri_part(1).c_str());
-    mxb_assert(service && request.get_json());
-
-    if (runtime_alter_service_relationships_from_json(service, CN_SERVICES, request.get_json()))
-    {
-        return HttpResponse(MHD_HTTP_NO_CONTENT);
-    }
-
-    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+    return cb_alter_service_relationship(request, CN_SERVICES);
 }
 
 HttpResponse cb_alter_service_filter_relationship(const HttpRequest& request)
 {
-    Service* service = Service::find(request.uri_part(1).c_str());
-    mxb_assert(service && request.get_json());
+    return cb_alter_service_relationship(request, CN_FILTERS);
+}
 
-    if (runtime_alter_service_relationships_from_json(service, CN_FILTERS, request.get_json()))
-    {
-        return HttpResponse(MHD_HTTP_NO_CONTENT);
-    }
-
-    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+HttpResponse cb_alter_service_monitor_relationship(const HttpRequest& request)
+{
+    return cb_alter_service_relationship(request, CN_MONITORS);
 }
 
 HttpResponse cb_alter_logs(const HttpRequest& request)
@@ -1063,12 +1067,16 @@ public:
                              "servers", ":server", "relationships", "monitors");
         m_patch.emplace_back(cb_alter_monitor_server_relationship,
                              "monitors", ":monitor", "relationships", "servers");
+        m_patch.emplace_back(cb_alter_monitor_service_relationship,
+                             "monitors", ":monitor", "relationships", "services");
         m_patch.emplace_back(cb_alter_service_server_relationship,
                              "services", ":service", "relationships", "servers");
         m_patch.emplace_back(cb_alter_service_service_relationship,
                              "services", ":service", "relationships", "services");
         m_patch.emplace_back(cb_alter_service_filter_relationship,
                              "services", ":service", "relationships", "filters");
+        m_patch.emplace_back(cb_alter_service_monitor_relationship,
+                             "services", ":service", "relationships", "monitors");
 
         /** All patch resources require a request body */
         for (auto& r : m_patch)

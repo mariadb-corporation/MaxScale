@@ -2217,7 +2217,7 @@ bool runtime_alter_monitor_from_json(Monitor* monitor, json_t* new_json)
     return success;
 }
 
-bool runtime_alter_monitor_relationships_from_json(Monitor* monitor, json_t* json)
+bool runtime_alter_monitor_relationships_from_json(Monitor* monitor, const char* type, json_t* json)
 {
     bool rval = false;
     std::unique_ptr<json_t> old_json(MonitorManager::monitor_to_json(monitor, ""));
@@ -2228,7 +2228,7 @@ bool runtime_alter_monitor_relationships_from_json(Monitor* monitor, json_t* jso
         std::unique_ptr<json_t> j(json_pack("{s: {s: {s: {s: O}}}}",
                                             "data",
                                             "relationships",
-                                            "servers",
+                                            type,
                                             "data",
                                             json_object_get(json, "data")));
 

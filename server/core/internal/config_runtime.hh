@@ -188,11 +188,12 @@ bool runtime_alter_monitor_from_json(mxs::Monitor* monitor, json_t* new_json);
  * @brief Alter monitor relationships
  *
  * @param monitor Monitor to alter
- * @param json JSON that defines the new relationships
+ * @param type    Relationship type
+ * @param json    JSON that defines the new relationships
  *
  * @return True if the relationships were successfully modified
  */
-bool runtime_alter_monitor_relationships_from_json(mxs::Monitor* monitor, json_t* json);
+bool runtime_alter_monitor_relationships_from_json(mxs::Monitor* monitor, const char* type, json_t* json);
 
 /**
  * @brief Alter a service using JSON
