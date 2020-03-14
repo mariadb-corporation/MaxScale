@@ -23,6 +23,7 @@
 #include <vector>
 #include <maxbase/alloc.h>
 #include <maxbase/assert.h>
+#include <maxbase/host.hh>
 #include <maxbase/log.hh>
 #include <maxscale/config_common.hh>
 #include <maxscale/modinfo.hh>
@@ -777,6 +778,52 @@ private:
 private:
     std::vector<std::pair<T, const char*>> m_enumeration;
     std::vector<MXS_ENUM_VALUE>            m_enum_values;
+};
+
+/**
+ * ParamHost
+ */
+class ParamHost : public ConcreteParam<ParamHost, maxbase::Host>
+{
+public:
+    ParamHost(Specification* pSpecification,
+              const char* zName,
+              const char* zDescription,
+              Modifiable modifiable = Modifiable::AT_STARTUP)
+        : ParamHost(pSpecification, zName, zDescription, modifiable, Param::MANDATORY, value_type())
+    {
+    }
+
+    ParamHost(Specification* pSpecification,
+              const char* zName,
+              const char* zDescription,
+              value_type default_value,
+              Modifiable modifiable = Modifiable::AT_STARTUP)
+    : ParamHost(pSpecification, zName, zDescription, modifiable, Param::OPTIONAL, default_value)
+    {
+    }
+
+    std::string type() const override;
+
+    std::string to_string(const value_type& value) const;
+    bool        from_string(const std::string& value, value_type* pValue,
+                            std::string* pMessage = nullptr) const;
+
+    json_t* to_json(const value_type& value) const;
+    bool    from_json(const json_t* pJson, value_type* pValue,
+                      std::string* pMessage = nullptr) const;
+
+private:
+    ParamHost(Specification* pSpecification,
+              const char* zName,
+              const char* zDescription,
+              Modifiable modifiable,
+              Kind kind,
+              const value_type& default_value)
+        : ConcreteParam<ParamHost, maxbase::Host>(pSpecification, zName, zDescription,
+                                                  modifiable, kind, MXS_MODULE_PARAM_STRING, default_value)
+    {
+    }
 };
 
 /**
@@ -1710,6 +1757,11 @@ using Enum = ConcreteType<ParamEnum<T>>;
  */
 template<class T>
 using EnumMask = ConcreteType<ParamEnumMask<T>>;
+
+/**
+ * Host
+ */
+using Host = ConcreteType<ParamHost>;
 
 /**
  * Path

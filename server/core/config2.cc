@@ -414,8 +414,7 @@ bool Configuration::configure(const mxs::ConfigParameters& params,
                 string message;
                 if (!pValue->set_from_string(value, &message))
                 {
-                    MXS_ERROR("%s: %s.", m_pSpecification->module().c_str(), message.c_str());
-                    mxb_assert(!true);
+                    MXS_ERROR("%s: %s", m_pSpecification->module().c_str(), message.c_str());
                     configured = false;
                 }
             }
@@ -735,6 +734,66 @@ std::string ParamCount::type() const
 std::string ParamInteger::type() const
 {
     return "integer";
+}
+
+/**
+ * ParamHost
+ */
+std::string ParamHost::type() const
+{
+    return "host";
+}
+
+std::string ParamHost::to_string(const value_type& value) const
+{
+    return value.org_input();
+}
+
+bool ParamHost::from_string(const std::string& value_as_string,
+                            value_type* pValue,
+                            std::string* pMessage) const
+{
+    mxb::Host host = mxb::Host::from_string(value_as_string);
+
+    if (host.is_valid())
+    {
+        *pValue = host;
+    }
+    else if (pMessage)
+    {
+        *pMessage = "'";
+        *pMessage += value_as_string;
+        *pMessage += "' is not a valid host port combination.";
+    }
+
+    return host.is_valid();
+}
+
+json_t* ParamHost::to_json(const value_type& value) const
+{
+    return json_string(to_string(value).c_str());
+}
+
+bool ParamHost::from_json(const json_t* pJson,
+                          value_type* pValue,
+                          std::string* pMessage) const
+{
+    bool rv = false;
+
+    if (json_is_string(pJson))
+    {
+        const char* z = json_string_value(pJson);
+
+        rv = from_string(z, pValue, pMessage);
+    }
+    else
+    {
+        *pMessage = "Expected a json string, but got a json ";
+        *pMessage += mxs::json_type_to_string(pJson);
+        *pMessage += ".";
+    }
+
+    return rv;
 }
 
 /**
