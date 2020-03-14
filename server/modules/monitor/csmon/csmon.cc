@@ -16,50 +16,107 @@
 namespace
 {
 
+bool cluster_start(const MODULECMD_ARG* pArgs, json_t** ppError)
+{
+    mxb_assert((pArgs->argc >= 1) && (pArgs->argc <= 1));
+    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
+
+    auto *pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
+
+    return pMonitor->command_cluster_start(ppError);
+}
+
+bool cluster_stop(const MODULECMD_ARG* pArgs, json_t** ppError)
+{
+    mxb_assert((pArgs->argc >= 1) && (pArgs->argc <= 1));
+    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
+
+    auto *pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
+
+    return pMonitor->command_cluster_stop(ppError);
+}
+
+bool cluster_shutdown(const MODULECMD_ARG* pArgs, json_t** ppError)
+{
+    mxb_assert((pArgs->argc >= 1) && (pArgs->argc <= 1));
+    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
+
+    auto *pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
+
+    return pMonitor->command_cluster_shutdown(ppError);
+}
+
+bool cluster_add_node(const MODULECMD_ARG* pArgs, json_t** ppError)
+{
+    mxb_assert((pArgs->argc >= 1) && (pArgs->argc <= 1));
+    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
+
+    auto *pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
+
+    return pMonitor->command_cluster_add_node(ppError);
+}
+
+bool cluster_remove_node(const MODULECMD_ARG* pArgs, json_t** ppError)
+{
+    mxb_assert((pArgs->argc >= 1) && (pArgs->argc <= 1));
+    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
+
+    auto *pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
+
+    return pMonitor->command_cluster_remove_node(ppError);
+}
+
 void register_commands()
 {
+    static const char ARG_MONITOR_DESC[] = "Monitor name";
+
     static modulecmd_arg_type_t cluster_start_argv[] =
-        {
-        };
+    {
+        { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC }
+    };
 
     modulecmd_register_command(MXS_MODULE_NAME, "cluster-start", MODULECMD_TYPE_ACTIVE,
-                               CsMonitor::cluster_start,
+                               cluster_start,
                                MXS_ARRAY_NELEMS(cluster_start_argv), cluster_start_argv,
                                "Start Columnstore cluster");
 
     static modulecmd_arg_type_t cluster_stop_argv[] =
-        {
-        };
+    {
+        { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC }
+    };
 
     modulecmd_register_command(MXS_MODULE_NAME, "cluster-stop", MODULECMD_TYPE_ACTIVE,
-                               CsMonitor::cluster_stop,
+                               cluster_stop,
                                MXS_ARRAY_NELEMS(cluster_stop_argv), cluster_stop_argv,
                                "Stop Columnstore cluster");
 
     static modulecmd_arg_type_t cluster_shutdown_argv[] =
-        {
-        };
+    {
+        { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC }
+    };
 
     modulecmd_register_command(MXS_MODULE_NAME, "cluster-shutdown", MODULECMD_TYPE_ACTIVE,
-                               CsMonitor::cluster_shutdown,
+                               cluster_shutdown,
                                MXS_ARRAY_NELEMS(cluster_shutdown_argv), cluster_shutdown_argv,
                                "Shutdown Columnstore cluster");
 
     static modulecmd_arg_type_t cluster_add_node_argv[] =
-        {
-        };
+    {
+        { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC }
+    };
 
     modulecmd_register_command(MXS_MODULE_NAME, "cluster-add-node", MODULECMD_TYPE_ACTIVE,
-                               CsMonitor::cluster_add_node,
+                               cluster_add_node,
                                MXS_ARRAY_NELEMS(cluster_add_node_argv), cluster_add_node_argv,
                                "Add a node to Columnstore cluster");
 
     static modulecmd_arg_type_t cluster_remove_node_argv[] =
-        {
-        };
+    {
+        { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC }
+    };
 
     modulecmd_register_command(MXS_MODULE_NAME, "cluster-remove-node", MODULECMD_TYPE_ACTIVE,
-                               CsMonitor::cluster_remove_node,
+                               cluster_remove_node,
                                MXS_ARRAY_NELEMS(cluster_remove_node_argv), cluster_remove_node_argv,
                                "Remove a node from Columnstore cluster");
 }

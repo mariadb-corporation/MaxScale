@@ -140,32 +140,112 @@ bool CsMonitor::configure(const mxs::ConfigParameters* pParams)
     return rv;
 }
 
-//static
-bool CsMonitor::cluster_start(const MODULECMD_ARG* argv, json_t** ppOutput)
+namespace
 {
-    return false;
+
+void reject_not_running(const char* zCmd, json_t** ppError)
+{
+    PRINT_MXS_JSON_ERROR(ppError,
+                         "The Columnstore monitor is not running, cannot "
+                         "execute the command '%s'.", zCmd);
 }
 
-//static
-bool CsMonitor::cluster_stop(const MODULECMD_ARG* argv, json_t** ppOutput)
+void reject_call_failed(const char* zCmd, json_t** ppError)
 {
-    return false;
+    PRINT_MXS_JSON_ERROR(ppError, "Failed to queue the command '%s' for execution.", zCmd);
 }
 
-//static
-bool CsMonitor::cluster_shutdown(const MODULECMD_ARG* argv, json_t** ppOutput)
-{
-    return false;
 }
 
-//static
-bool CsMonitor::cluster_add_node(const MODULECMD_ARG* argv, json_t** ppOutput)
+bool CsMonitor::command_cluster_start(json_t** ppError)
 {
-    return false;
+    auto cmd = [this, ppError] () {
+        cluster_start(ppError);
+    };
+
+    return command("cluster-start", cmd, ppError);
 }
 
-//static
-bool CsMonitor::cluster_remove_node(const MODULECMD_ARG* argv, json_t** ppOutput)
+bool CsMonitor::command_cluster_stop(json_t** ppError)
 {
-    return false;
+    auto cmd = [this, ppError] () {
+        cluster_stop(ppError);
+    };
+
+    return command("cluster-stop", cmd, ppError);
+}
+
+bool CsMonitor::command_cluster_shutdown(json_t** ppError)
+{
+    auto cmd = [this, ppError] () {
+        cluster_shutdown(ppError);
+    };
+
+    return command("cluster-shutdown", cmd, ppError);
+}
+
+bool CsMonitor::command_cluster_add_node(json_t** ppError)
+{
+    auto cmd = [this, ppError] () {
+        cluster_add_node(ppError);
+    };
+
+    return command("cluster-add-node", cmd, ppError);
+}
+
+bool CsMonitor::command_cluster_remove_node(json_t** ppError)
+{
+    auto cmd = [this, ppError] () {
+        cluster_remove_node(ppError);
+    };
+
+    return command("cluster-remove-node", cmd, ppError);
+}
+
+bool CsMonitor::command(const char* zCmd, std::function<void()> cmd, json_t** ppError)
+{
+    bool rv = false;
+
+    if (!is_running())
+    {
+        reject_not_running(zCmd, ppError);
+    }
+    else
+    {
+        if (call(cmd, EXECUTE_QUEUED))
+        {
+            rv = true;
+        }
+        else
+        {
+            reject_call_failed(zCmd, ppError);
+        }
+    }
+
+    return rv;
+}
+
+void CsMonitor::cluster_start(json_t** ppError)
+{
+    PRINT_MXS_JSON_ERROR(ppError, "cluster-start not implemented yet.");
+}
+
+void CsMonitor::cluster_stop(json_t** ppError)
+{
+    PRINT_MXS_JSON_ERROR(ppError, "cluster-stop not implemented yet.");
+}
+
+void CsMonitor::cluster_shutdown(json_t** ppError)
+{
+    PRINT_MXS_JSON_ERROR(ppError, "cluster-shutdown not implemented yet.");
+}
+
+void CsMonitor::cluster_add_node(json_t** ppError)
+{
+    PRINT_MXS_JSON_ERROR(ppError, "cluster-add-node not implemented yet.");
+}
+
+void CsMonitor::cluster_remove_node(json_t** ppError)
+{
+    PRINT_MXS_JSON_ERROR(ppError, "cluster-remove-node not implemented yet.");
 }
