@@ -15,6 +15,9 @@
 namespace
 {
 
+// TODO: Temporary POC server provided by Roman.
+const char REST_PATH_BASE[] = "/drrtuy/cmapi/0.0.1";
+
 namespace config = mxs::config;
 
 namespace csmon
@@ -27,13 +30,30 @@ config::ParamServer primary(
     "primary",
     "For pre-1.2 Columnstore servers, specifies which server is chosen as the master.",
     config::Param::OPTIONAL);
+
+config::ParamHost admin_host(
+    &specification,
+    "admin_host",
+    "The Columnstore administrative host.");
 }
 }
 
 CsConfig::CsConfig(const std::string& name)
     : mxs::config::Configuration(name, &csmon::specification)
 {
-    add_native(&pPrimary, &csmon::primary);
+    add_native(&this->pPrimary, &csmon::primary);
+    add_native(&this->admin_host, &csmon::admin_host);
+}
+
+bool CsConfig::post_configure(const mxs::ConfigParameters&)
+{
+    this->rest_base = "http://";
+    this->rest_base += admin_host.address();
+    this->rest_base += ":";
+    this->rest_base += std::to_string(admin_host.port());
+    this->rest_base += REST_PATH_BASE;
+
+    return true;
 }
 
 //static
