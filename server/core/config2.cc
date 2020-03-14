@@ -940,15 +940,29 @@ bool ParamServer::from_string(const std::string& value_as_string,
                               value_type* pValue,
                               std::string* pMessage) const
 {
-    *pValue = SERVER::find_by_unique_name(value_as_string);
+    bool rv = false;
 
-    if (!*pValue && pMessage)
+    if (value_as_string.empty())
     {
-        *pMessage = "Unknown server: ";
-        *pMessage += value_as_string;
+        *pValue = nullptr;
+        rv = true;
+    }
+    else
+    {
+        *pValue = SERVER::find_by_unique_name(value_as_string);
+
+        if (*pValue)
+        {
+            rv = true;
+        }
+        else if (pMessage)
+        {
+            *pMessage = "Unknown server: ";
+            *pMessage += value_as_string;
+        }
     }
 
-    return *pValue;
+    return rv;
 }
 
 json_t* ParamServer::to_json(value_type value) const
