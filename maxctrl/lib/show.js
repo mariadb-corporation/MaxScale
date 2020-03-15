@@ -138,9 +138,19 @@ const service_fields = [
         description: 'Historical maximum connection count'
     },
     {
+        name: 'Cluster',
+        path: 'relationships.monitors.data[].id',
+        description: 'The cluster that the service uses'
+    },
+    {
         name: 'Servers',
         path: 'relationships.servers.data[].id',
         description: 'Servers that the service uses'
+    },
+    {
+        name: 'Services',
+        path: 'relationships.services.data[].id',
+        description: 'Services that the service uses'
     },
     {
         name: 'Parameters',
