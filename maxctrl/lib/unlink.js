@@ -45,7 +45,8 @@ exports.builder = function(yargs) {
             return yargs.epilog('This command unlinks targets from a service, removing them from ' +
                                 'the list of available targets for that service. New connections to ' +
                                 'the service will not use the unlinked targets but existing ' +
-                                'connections can still use the targets.')
+                                'connections can still use the targets. A target can be ' +
+                                'a server, another service or a cluster (a monitor).')
                 .usage('Usage: unlink service <name> <target...>')
         }, function(argv) {
             removeServer(argv, 'services/' + argv.name, argv.target)

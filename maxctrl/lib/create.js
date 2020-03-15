@@ -198,14 +198,23 @@ exports.builder = function(yargs) {
     // Create service
         .command('service <name> <router> <params...>', 'Create a new service', function(yargs) {
             return yargs.epilog('The last argument to this command is a list of key=value parameters ' +
-                                'given as the service parameters. If the --servers or --filters options ' +
-                                'are used, they must be defined after the service parameters.' +
+                                'given as the service parameters. If the --servers, --services or ' +
+                                '--filters options are used, they must be defined after the service parameters. ' +
+                                'The --cluster option is mutually exclusive with the --servers and --services options.' +
                                 '\n\nNote that the `user` and `password` parameters must be defined.')
                 .usage('Usage: service <name> <router> <params...>')
-                .group(['servers', 'filters'], 'Create service options:')
+                .group(['servers', 'filters', 'services', 'cluster'], 'Create service options:')
                 .option('servers', {
                     describe: 'Link the created service to these servers',
                     type: 'array'
+                })
+                .option('services', {
+                    describe: 'Link the created service to these services',
+                    type: 'array'
+                })
+                .option('cluster', {
+                    describe: 'Link the created service to this cluster (i.e. a monitor)',
+                    type: 'string'
                 })
                 .option('filters', {
                     describe: 'Link the created service to these filters',
@@ -234,6 +243,16 @@ exports.builder = function(yargs) {
                     for (i = 0; i < argv.servers.length; i++) {
                         _.set(service, 'data.relationships.servers.data[' + i + ']', {id: argv.servers[i], type: 'servers'})
                     }
+                }
+
+                if (argv.services) {
+                    for (i = 0; i < argv.services.length; i++) {
+                        _.set(service, 'data.relationships.services.data[' + i + ']', {id: argv.services[i], type: 'services'})
+                    }
+                }
+
+                if (argv.cluster) {
+                    _.set(service, 'data.relationships.monitors.data[0]', {id: argv.cluster, type: 'monitors'})
                 }
 
                 if (argv.filters) {
