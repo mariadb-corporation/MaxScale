@@ -145,7 +145,7 @@ static cfg::ParamSeconds s_max_slave_replication_lag(
 
 static cfg::ParamString s_max_slave_connections(
     &s_spec, "max_slave_connections", "Maximum number of slave connections",
-    std::to_string(SLAVE_MAX), cfg::Param::AT_RUNTIME);
+    std::to_string(SLAVE_MAX), cfg::ParamString::Quotes::IGNORED, cfg::Param::AT_RUNTIME);
 
 static cfg::ParamCount s_slave_connections(
     &s_spec, "slave_connections", "Starting number of slave connections",
