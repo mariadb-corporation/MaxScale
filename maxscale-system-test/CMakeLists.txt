@@ -942,6 +942,9 @@ add_test_executable(mxs2878_monitor_ssl.cpp mxs2878_monitor_ssl mxs2878_monitor_
 # MXS-2939: Test that session commands trigger a reconnection
 add_test_executable(mxs2939_sescmd_reconnect.cpp mxs2939_sescmd_reconnect mxs2939_sescmd_reconnect LABELS REPL_BACKEND readwritesplit)
 
+# MXS-2919: Slaves with broken replication should not be used
+add_test_executable(mxs2919_broken_slaves.cpp mxs2919_broken_slaves mxs2919_broken_slaves LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################

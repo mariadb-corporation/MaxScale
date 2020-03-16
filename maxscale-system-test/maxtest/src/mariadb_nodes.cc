@@ -510,9 +510,29 @@ int Mariadb_nodes::clean_iptables(int node)
     return ssh_node_f(node,
                       true,
                       "while [ \"$(iptables -n -L INPUT 1|grep '%d')\" != \"\" ]; do iptables -D INPUT 1; done;"
-                      "while [ \"$(ip6tables -n -L INPUT 1|grep '%d')\" != \"\" ]; do ip6tables -D INPUT 1; done;",
+                      "while [ \"$(ip6tables -n -L INPUT 1|grep '%d')\" != \"\" ]; do ip6tables -D INPUT 1; done;"
+                      "while [ \"$(iptables -n -L OUTPUT 1|grep '3306')\" != \"\" ]; do iptables -D OUTPUT 1; done;",
                       port[node],
                       port[node]);
+}
+
+
+void Mariadb_nodes::block_node_from_node(int src, int dest)
+{
+    std::ostringstream ss;
+
+    ss << "iptables -I OUTPUT 1 -p tcp -d " << IP[dest] << " --dport 3306 -j DROP;";
+
+    ssh_node_f(src, true, "%s", ss.str().c_str());
+}
+
+void Mariadb_nodes::unblock_node_from_node(int src, int dest)
+{
+    std::ostringstream ss;
+
+    ss << "iptables -D OUTPUT -p tcp -d " << IP[dest] << " --dport 3306 -j DROP;";
+
+    ssh_node_f(src, true, "%s", ss.str().c_str());
 }
 
 std::string Mariadb_nodes::block_command(int node) const
