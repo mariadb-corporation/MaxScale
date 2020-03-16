@@ -43,6 +43,7 @@ namespace cfg = maxscale::config;
 using namespace std::literals::chrono_literals;
 
 constexpr int SLAVE_MAX = 255;
+constexpr int DEFAULT_MAX_SLAVE_REPLICATION_LAG = 2147483647;
 
 enum backend_type_t
 {
@@ -140,7 +141,8 @@ static cfg::ParamEnum<CausalReads> s_causal_reads(
 
 static cfg::ParamSeconds s_max_slave_replication_lag(
     &s_spec, "max_slave_replication_lag", "Maximum allowed slave replication lag",
-    cfg::INTERPRET_AS_SECONDS, 0s, cfg::Param::AT_RUNTIME);
+    cfg::INTERPRET_AS_SECONDS, std::chrono::seconds(DEFAULT_MAX_SLAVE_REPLICATION_LAG),
+    cfg::Param::AT_RUNTIME);
 
 static cfg::ParamString s_max_slave_connections(
     &s_spec, "max_slave_connections", "Maximum number of slave connections",
