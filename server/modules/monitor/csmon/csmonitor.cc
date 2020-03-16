@@ -159,50 +159,60 @@ void reject_call_failed(const char* zCmd, json_t** ppOutput)
 
 bool CsMonitor::command_cluster_start(json_t** ppOutput)
 {
-    auto cmd = [this, ppOutput] () {
-        cluster_start(ppOutput);
+    mxb::Semaphore sem;
+
+    auto cmd = [this, &sem, ppOutput] () {
+        cluster_start(sem, ppOutput);
     };
 
-    return command("cluster-start", cmd, ppOutput);
+    return command("cluster-start", cmd, sem, ppOutput);
 }
 
 bool CsMonitor::command_cluster_stop(json_t** ppOutput)
 {
-    auto cmd = [this, ppOutput] () {
-        cluster_stop(ppOutput);
+    mxb::Semaphore sem;
+
+    auto cmd = [this, &sem, ppOutput] () {
+        cluster_stop(sem, ppOutput);
     };
 
-    return command("cluster-stop", cmd, ppOutput);
+    return command("cluster-stop", cmd, sem, ppOutput);
 }
 
 bool CsMonitor::command_cluster_shutdown(json_t** ppOutput)
 {
-    auto cmd = [this, ppOutput] () {
-        cluster_shutdown(ppOutput);
+    mxb::Semaphore sem;
+
+    auto cmd = [this, &sem, ppOutput] () {
+        cluster_shutdown(sem, ppOutput);
     };
 
-    return command("cluster-shutdown", cmd, ppOutput);
+    return command("cluster-shutdown", cmd, sem, ppOutput);
 }
 
 bool CsMonitor::command_cluster_add_node(json_t** ppOutput)
 {
-    auto cmd = [this, ppOutput] () {
-        cluster_add_node(ppOutput);
+    mxb::Semaphore sem;
+
+    auto cmd = [this, &sem, ppOutput] () {
+        cluster_add_node(sem, ppOutput);
     };
 
-    return command("cluster-add-node", cmd, ppOutput);
+    return command("cluster-add-node", cmd, sem, ppOutput);
 }
 
 bool CsMonitor::command_cluster_remove_node(json_t** ppOutput)
 {
-    auto cmd = [this, ppOutput] () {
-        cluster_remove_node(ppOutput);
+    mxb::Semaphore sem;
+
+    auto cmd = [this, &sem, ppOutput] () {
+        cluster_remove_node(sem, ppOutput);
     };
 
-    return command("cluster-remove-node", cmd, ppOutput);
+    return command("cluster-remove-node", cmd, sem, ppOutput);
 }
 
-bool CsMonitor::command(const char* zCmd, std::function<void()> cmd, json_t** ppOutput)
+bool CsMonitor::command(const char* zCmd, std::function<void()> cmd, mxb::Semaphore& sem, json_t** ppOutput)
 {
     bool rv = false;
 
@@ -212,8 +222,9 @@ bool CsMonitor::command(const char* zCmd, std::function<void()> cmd, json_t** pp
     }
     else
     {
-        if (call(cmd, EXECUTE_QUEUED))
+        if (execute(cmd, EXECUTE_QUEUED))
         {
+            sem.wait();
             rv = true;
         }
         else
@@ -225,27 +236,32 @@ bool CsMonitor::command(const char* zCmd, std::function<void()> cmd, json_t** pp
     return rv;
 }
 
-void CsMonitor::cluster_start(json_t** ppOutput)
+void CsMonitor::cluster_start(mxb::Semaphore& sem, json_t** ppOutput)
 {
     PRINT_MXS_JSON_ERROR(ppOutput, "cluster-start not implemented yet.");
+    sem.post();
 }
 
-void CsMonitor::cluster_stop(json_t** ppOutput)
+void CsMonitor::cluster_stop(mxb::Semaphore& sem, json_t** ppOutput)
 {
     PRINT_MXS_JSON_ERROR(ppOutput, "cluster-stop not implemented yet.");
+    sem.post();
 }
 
-void CsMonitor::cluster_shutdown(json_t** ppOutput)
+void CsMonitor::cluster_shutdown(mxb::Semaphore& sem, json_t** ppOutput)
 {
     PRINT_MXS_JSON_ERROR(ppOutput, "cluster-shutdown not implemented yet.");
+    sem.post();
 }
 
-void CsMonitor::cluster_add_node(json_t** ppOutput)
+void CsMonitor::cluster_add_node(mxb::Semaphore& sem, json_t** ppOutput)
 {
     PRINT_MXS_JSON_ERROR(ppOutput, "cluster-add-node not implemented yet.");
+    sem.post();
 }
 
-void CsMonitor::cluster_remove_node(json_t** ppOutput)
+void CsMonitor::cluster_remove_node(mxb::Semaphore& sem, json_t** ppOutput)
 {
     PRINT_MXS_JSON_ERROR(ppOutput, "cluster-remove-node not implemented yet.");
+    sem.post();
 }

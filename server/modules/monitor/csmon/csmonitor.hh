@@ -13,6 +13,7 @@
 #pragma once
 
 #include "csmon.hh"
+#include <maxbase/semaphore.hh>
 #include <maxscale/modulecmd.hh>
 #include <maxscale/monitor.hh>
 #include "csconfig.hh"
@@ -35,13 +36,13 @@ public:
     bool command_cluster_remove_node(json_t** ppOutput);
 
 private:
-    bool command(const char* zCmd, std::function<void()> cmd, json_t** ppOutput);
+    bool command(const char* zCmd, std::function<void()> cmd, mxb::Semaphore& sem, json_t** ppOutput);
 
-    void cluster_start(json_t** ppOutput);
-    void cluster_stop(json_t** ppOutput);
-    void cluster_shutdown(json_t** ppOutput);
-    void cluster_add_node(json_t** ppOutput);
-    void cluster_remove_node(json_t** ppOutput);
+    void cluster_start(mxb::Semaphore& sem, json_t** ppOutput);
+    void cluster_stop(mxb::Semaphore& sem, json_t** ppOutput);
+    void cluster_shutdown(mxb::Semaphore& sem, json_t** ppOutput);
+    void cluster_add_node(mxb::Semaphore& sem, json_t** ppOutput);
+    void cluster_remove_node(mxb::Semaphore& sem, json_t** ppOutput);
 
     bool has_sufficient_permissions();
     void update_server_status(mxs::MonitorServer* monitored_server);
