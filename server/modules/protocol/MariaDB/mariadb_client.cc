@@ -1997,15 +1997,17 @@ bool MariaDBClientConnection::start_change_user(mxs::Buffer&& buffer)
 bool MariaDBClientConnection::complete_change_user()
 {
     // Finalize results by writing session-level objects and routing the original change-user packet.
-    if (m_change_user.session->user_entry.entry.super_priv && mxs::Config::get().log_warn_super_users)
+    if (m_change_user.session->user_entry.entry.super_priv && mxs::Config::get().log_warn_super_user)
     {
-        MXB_WARNING("COM_CHANGE_USER from %s to super user '%s'.",
-                    m_session->user_and_host().c_str(), m_change_user.session->user.c_str());
+        MXB_WARNING("COM_CHANGE_USER from %s to super user '%s' in service '%s'.",
+                    m_session->user_and_host().c_str(), m_change_user.session->user.c_str(),
+                    m_session->service->name());
     }
     else
     {
-        MXB_INFO("COM_CHANGE_USER from %s to '%s' succeeded.",
-                 m_session->user_and_host().c_str(), m_change_user.session->user.c_str());
+        MXB_INFO("COM_CHANGE_USER from %s to '%s' in service '%s' succeeded.",
+                 m_session->user_and_host().c_str(), m_change_user.session->user.c_str(),
+                 m_session->service->name());
     }
     m_session_data = static_cast<MYSQL_session*>(m_session->protocol_data());
     // The old session data must be overwritten in-place, as other connections etc may have
@@ -2311,9 +2313,10 @@ void MariaDBClientConnection::perform_check_token(AuthType auth_type)
                 if (auth_type == AuthType::NORMAL_AUTH)
                 {
                     m_auth_state = AuthState::START_SESSION;
-                    if (user_entry.entry.super_priv && mxs::Config::get().log_warn_super_users)
+                    if (user_entry.entry.super_priv && mxs::Config::get().log_warn_super_user)
                     {
-                        MXB_WARNING("Super user %s logged in.", m_session_data->user_and_host().c_str());
+                        MXB_WARNING("Super user %s logged in to service '%s'.",
+                                    m_session_data->user_and_host().c_str(), m_session->service->name());
                     }
                 }
                 else

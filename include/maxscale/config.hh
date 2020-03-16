@@ -154,7 +154,7 @@ public:
     std::string   admin_ssl_ca_cert;            /**< Admin SSL CA cert */
     std::string   local_address;                /**< Local address to use when connecting */
     bool          load_persisted_configs;       /**< Load persisted configuration files on startup */
-    bool          log_warn_super_users;         /**< Log a warning if incoming client has super-priv. */
+    bool          log_warn_super_user;          /**< Log a warning if incoming client has super-priv. */
 
     // The following will not be configured via the configuration mechanism.
     bool    config_check;                               /**< Only check config */
@@ -232,6 +232,6 @@ private:
     static config::ParamString              s_admin_ssl_ca_cert;
     static config::ParamString              s_local_address;
     static config::ParamBool                s_load_persisted_configs;
-    static config::ParamBool                s_log_warn_super_users;
+    static config::ParamBool                s_log_warn_super_user;
 };
 }
