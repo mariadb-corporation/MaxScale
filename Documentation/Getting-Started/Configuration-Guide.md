@@ -133,6 +133,7 @@ runtime and can only be defined in a configuration file:
 * `thread_stack_size`
 * `log_to_shm`
 * `log_augmentation`
+* `log_warn_super_user`
 * `logdir`
 * `datadir`
 * `libdir`
@@ -408,7 +409,7 @@ The connection timeout in seconds for the MySQL connections to the backend
 server when user authentication data is fetched. Increasing the value of this
 parameter will cause MariaDB MaxScale to wait longer for a response from the
 backend server before aborting the authentication process. The default is 10
-seconds since MaxScale 2.5.0. Older versions used a default of 3 seconds. 
+seconds since MaxScale 2.5.0. Older versions used a default of 3 seconds.
 
 ```
 auth_connect_timeout=10s
@@ -627,6 +628,15 @@ log_debug=1
 ```
 
 To disable these messages use the value 0 and to enable them use the value 1.
+
+### `log_warn_super_user`
+
+Boolean, default:false. When enabled, a warning is logged whenever a client with
+SUPER-privilege successfully authenticates. This also applies to
+COM_CHANGE_USER-commands. The setting is intended for diagnosing situations
+where a client interferes with a master server switchover. Super-users bypass
+the *read_only*-flag which switchover uses to block writes to the master. This
+setting cannot be modified during runtime.
 
 ### `log_messages`
 
