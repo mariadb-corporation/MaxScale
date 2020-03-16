@@ -20,12 +20,8 @@ class CsConfig : public mxs::config::Configuration
 public:
     CsConfig(const std::string& name);
 
-    bool post_configure(const mxs::ConfigParameters&);
-
     static void populate(MXS_MODULE& info);
 
-    SERVER*     pPrimary;
-    mxb::Host   admin_host;
-
-    std::string rest_base;
+    SERVER* pPrimary;
+    int64_t admin_port;
 };
