@@ -90,7 +90,7 @@ public:
     PoolStats pool_stats;
     int       persistmax = 0;       /**< Maximum pool size actually achieved since startup */
 
-    int           rlag = mxs::Target::RLAG_UNDEFINED;   /**< Replication Lag for Master/Slave replication */
+    int64_t       rlag = mxs::Target::RLAG_UNDEFINED;   /**< Replication Lag for Master/Slave replication */
     unsigned long node_ts = 0;                          /**< Last timestamp set from M/S monitor module */
 
     // Misc fields

@@ -189,8 +189,8 @@ enum class RLagState
 class Target
 {
 public:
-    static constexpr const int64_t RLAG_UNDEFINED = -1;         // Default replication lag value
-    static constexpr const int64_t PING_UNDEFINED = -1;         // Default ping value
+    enum : int64_t { RLAG_UNDEFINED = -1 };     // Default replication lag value
+    enum : int64_t { PING_UNDEFINED = -1 };     // Default ping value
 
     virtual ~Target() = default;
 

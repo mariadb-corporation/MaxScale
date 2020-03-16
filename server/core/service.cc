@@ -1649,7 +1649,7 @@ uint64_t Service::gtid_pos(uint32_t domain) const
 
 int64_t Service::ping() const
 {
-    auto undef = mxs::Target::PING_UNDEFINED;
+    int64_t undef = mxs::Target::PING_UNDEFINED;
     auto rval = undef;
     for (auto a : m_data->targets)
     {

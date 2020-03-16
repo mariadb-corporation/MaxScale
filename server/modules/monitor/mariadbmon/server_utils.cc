@@ -45,7 +45,7 @@ string SlaveStatus::to_string() const
                                           slave_sql_running ? "Yes" : "No");
 
     string rval = string_printf(
-        "  Host: %22s, IO/SQL running: %7s, Master ID: %4" PRId64 ", Gtid_IO_Pos: %s, R.Lag: %d",
+        "  Host: %22s, IO/SQL running: %7s, Master ID: %4" PRId64 ", Gtid_IO_Pos: %s, R.Lag: %ld",
         settings.master_endpoint.to_string().c_str(),
         running_states.c_str(),
         master_server_id,
