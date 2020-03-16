@@ -730,6 +730,37 @@ public:
     }
 
     /**
+     * Push a general-purpose function wrapper for delayed execution.
+     *
+     * @param delay    The delay in milliseconds.
+     * @param f        The function wrapper.
+     *
+     * @return A unique identifier for the delayed call. Using that identifier
+     *         the call can be cancelled.
+     *
+     * @attention When invoked, if @c action is @c Worker::Call::EXECUTE, the
+     *            function should perform the delayed call and return @true, if
+     *            the function should be called again. If the function returns
+     *            @c false, it will not be called again.
+     *
+     *            If @c action is @c Worker::Call::CANCEL, then the function
+     *            should perform whatever canceling actions are needed. In that
+     *            case the return value is ignored and the function will not
+     *            be called again.
+     */
+    uint32_t delayed_call(int32_t delay,
+                          std::function<bool (Worker::Call::action_t action)> f)
+    {
+        return add_delayed_call(new DelayedCallFunctor(delay, next_delayed_call_id(), f));
+    }
+
+    uint32_t delayed_call(const std::chrono::milliseconds& delay,
+                          std::function<bool (Worker::Call::action_t action)> f)
+    {
+        return add_delayed_call(new DelayedCallFunctor(delay.count(), next_delayed_call_id(), f));
+    }
+
+    /**
      * Cancel delayed call.
      *
      * When this function is called, the delayed call in question will be called
@@ -998,6 +1029,30 @@ private:
     private:
         bool (T::* m_pMethod)(Worker::Call::action_t);
         T* m_pT;
+    };
+
+    class DelayedCallFunctor : public DelayedCall
+    {
+        DelayedCallFunctor(const DelayedCallFunctor&) = delete;
+        DelayedCallFunctor& operator=(const DelayedCallFunctor&) = delete;
+
+    public:
+        DelayedCallFunctor(int32_t delay,
+                           int32_t id,
+                           std::function<bool (Worker::Call::action_t)> f)
+            : DelayedCall(delay, id)
+            , m_f(f)
+        {
+        }
+
+    private:
+        bool do_call(Worker::Call::action_t action)
+        {
+            return m_f(action);
+        }
+
+    private:
+        std::function<bool (Worker::Call::action_t)> m_f;
     };
 
     uint32_t add_delayed_call(DelayedCall* pDelayed_call);
