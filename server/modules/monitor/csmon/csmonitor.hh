@@ -28,20 +28,20 @@ public:
 
 public:
     // Only to be called by the module call command mechanism.
-    bool command_cluster_start(json_t** ppError);
-    bool command_cluster_stop(json_t** ppError);
-    bool command_cluster_shutdown(json_t** ppError);
-    bool command_cluster_add_node(json_t** ppError);
-    bool command_cluster_remove_node(json_t** ppError);
+    bool command_cluster_start(json_t** ppOutput);
+    bool command_cluster_stop(json_t** ppOutput);
+    bool command_cluster_shutdown(json_t** ppOutput);
+    bool command_cluster_add_node(json_t** ppOutput);
+    bool command_cluster_remove_node(json_t** ppOutput);
 
 private:
-    bool command(const char* zCmd, std::function<void()> cmd, json_t** ppError);
+    bool command(const char* zCmd, std::function<void()> cmd, json_t** ppOutput);
 
-    void cluster_start(json_t** ppError);
-    void cluster_stop(json_t** ppError);
-    void cluster_shutdown(json_t** ppError);
-    void cluster_add_node(json_t** ppError);
-    void cluster_remove_node(json_t** ppError);
+    void cluster_start(json_t** ppOutput);
+    void cluster_stop(json_t** ppOutput);
+    void cluster_shutdown(json_t** ppOutput);
+    void cluster_add_node(json_t** ppOutput);
+    void cluster_remove_node(json_t** ppOutput);
 
     bool has_sufficient_permissions();
     void update_server_status(mxs::MonitorServer* monitored_server);

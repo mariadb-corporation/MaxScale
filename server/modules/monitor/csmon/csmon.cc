@@ -16,54 +16,54 @@
 namespace
 {
 
-bool cluster_start(const MODULECMD_ARG* pArgs, json_t** ppError)
+bool cluster_start(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 {
     mxb_assert((pArgs->argc >= 1) && (pArgs->argc <= 1));
     mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
 
     auto *pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
 
-    return pMonitor->command_cluster_start(ppError);
+    return pMonitor->command_cluster_start(ppOutput);
 }
 
-bool cluster_stop(const MODULECMD_ARG* pArgs, json_t** ppError)
+bool cluster_stop(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 {
     mxb_assert((pArgs->argc >= 1) && (pArgs->argc <= 1));
     mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
 
     auto *pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
 
-    return pMonitor->command_cluster_stop(ppError);
+    return pMonitor->command_cluster_stop(ppOutput);
 }
 
-bool cluster_shutdown(const MODULECMD_ARG* pArgs, json_t** ppError)
+bool cluster_shutdown(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 {
     mxb_assert((pArgs->argc >= 1) && (pArgs->argc <= 1));
     mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
 
     auto *pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
 
-    return pMonitor->command_cluster_shutdown(ppError);
+    return pMonitor->command_cluster_shutdown(ppOutput);
 }
 
-bool cluster_add_node(const MODULECMD_ARG* pArgs, json_t** ppError)
+bool cluster_add_node(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 {
     mxb_assert((pArgs->argc >= 1) && (pArgs->argc <= 1));
     mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
 
     auto *pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
 
-    return pMonitor->command_cluster_add_node(ppError);
+    return pMonitor->command_cluster_add_node(ppOutput);
 }
 
-bool cluster_remove_node(const MODULECMD_ARG* pArgs, json_t** ppError)
+bool cluster_remove_node(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 {
     mxb_assert((pArgs->argc >= 1) && (pArgs->argc <= 1));
     mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
 
     auto *pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
 
-    return pMonitor->command_cluster_remove_node(ppError);
+    return pMonitor->command_cluster_remove_node(ppOutput);
 }
 
 void register_commands()
