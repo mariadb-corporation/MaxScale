@@ -280,6 +280,11 @@ servers which are [Down].
 3. `majority_of_running` Primary monitor requires majority of locks over
 [Running] servers.
 
+This setting is separate from the global MaxScale setting *passive*. If
+*passive* is set, cluster operations are disabled even if monitor has
+acquired the locks. Generally, it's best not to mix cooperative monitoring with
+the *passive*-setting.
+
 ## Cluster manipulation operations
 
 Starting with MaxScale 2.2.1, MariaDB Monitor supports replication cluster
@@ -884,6 +889,13 @@ more destructive. If it's unlikely that multiple servers are ever down
 simultaneously, then *majority_of_all* is likely the safer choice. On the other
 hand, if split-brain is unlikely but multiple servers may be down
 simultaneously, then *majority_of_running* would keep the cluster operational.
+
+To check if a monitor is primary, fetch monitor diagnostics with `maxctrl show
+monitors` or the REST API. The boolean field **primary** indicates whether the
+monitor has lock majority on the cluster. If cooperative monitoring is disabled,
+the field value is *null*. Lock information for individual servers is listed in
+the server-specific field **lock_held**. Again, *null* indicates that locks are
+not in use or the lock status is unknown.
 
 ### Releasing locks
 

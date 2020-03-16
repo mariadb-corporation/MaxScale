@@ -11,7 +11,7 @@ monitor_interval=1000
 auto_failover=true
 auto_rejoin=true
 failcount=2
-cluster_manipulation_require_locks=majority_of_running
+cooperative_monitoring_locks=majority_of_running
 
 [MariaDB-Monitor2B]
 type=monitor
@@ -23,7 +23,7 @@ monitor_interval=1000
 auto_failover=true
 auto_rejoin=true
 failcount=2
-cluster_manipulation_require_locks=majority_of_all
+cooperative_monitoring_locks=majority_of_all
 
 [RW-Split-Router]
 type=service

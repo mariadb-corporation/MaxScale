@@ -391,8 +391,9 @@ json_t* MariaDBMonitor::to_json() const
                         m_master_gtid_domain == GTID_DOMAIN_UNKNOWN ? json_null() :
                         json_integer(m_master_gtid_domain));
     json_object_set_new(rval, "state", to_json(m_state));
+    json_object_set_new(rval, "primary",
+                        server_locks_in_use() ? json_boolean(m_locks_info.have_lock_majority) : json_null());
 
-    json_object_set_new(rval, "lock_majority", json_boolean(m_locks_info.have_lock_majority));
     json_t* server_info = json_array();
     for (MariaDBServer* server : servers())
     {

@@ -707,8 +707,9 @@ json_t* MariaDBServer::to_json() const
                         "master_group",
                         (m_node.cycle == NodeData::CYCLE_NONE) ? json_null() : json_integer(m_node.cycle));
 
-    bool have_lock = m_serverlock.status() == ServerLock::Status::OWNED_SELF;
-    json_object_set_new(result, "server_lock", json_boolean(have_lock));
+    auto lock = m_serverlock.status();
+    json_object_set_new(result, "lock_held", (lock == ServerLock::Status::UNKNOWN) ? json_null() :
+                        json_boolean(lock == ServerLock::Status::OWNED_SELF));
 
     json_t* slave_connections = json_array();
     for (const auto& sstatus : m_slave_status)

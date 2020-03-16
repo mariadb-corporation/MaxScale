@@ -152,7 +152,7 @@ const MonitorInfo* get_primary_monitor(TestConnections& test)
 bool monitor_is_primary(TestConnections& test, const MonitorInfo& mon_info)
 {
     string cmd = "api get monitors/" + mon_info.name
-        + " data.attributes.monitor_diagnostics.lock_majority";
+        + " data.attributes.monitor_diagnostics.primary";
     int maxscale_ind = mon_info.maxscale_ind;
     auto res = test.maxctrl(cmd, maxscale_ind);
     // If the MaxCtrl-command failed, assume it's because the target MaxScale machine is down.
