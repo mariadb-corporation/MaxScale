@@ -2653,6 +2653,12 @@ static uint32_t dcb_process_poll_events(DCB* dcb, uint32_t events)
     /**
      * Any of these callbacks might close the DCB. Hence, the value of 'n_close'
      * must be checked after each callback invocation.
+     *
+     * The order in which the events are processed is meaningful and should not be changed. EPOLLERR is
+     * handled first to get the best possible error message in the log message in case EPOLLERR is returned
+     * with another event from epoll_wait. EPOLLOUT and EPOLLIN are processed before EPOLLHUP and EPOLLRDHUP
+     * so that all client events are processed in case EPOLLIN and EPOLLRDHUP events arrive in the same
+     * epoll_wait.
      */
     if ((events & EPOLLERR) && (dcb->n_close == 0))
     {
@@ -2662,6 +2668,40 @@ static uint32_t dcb_process_poll_events(DCB* dcb, uint32_t events)
         {
             DCB_EH_NOTICE("Calling dcb->func.error(%p)", dcb);
             dcb->func.error(dcb);
+        }
+    }
+
+    if ((events & EPOLLOUT) && (dcb->n_close == 0))
+    {
+        rc |= MXB_POLL_WRITE;
+
+        if (dcb_session_check(dcb, "write_ready"))
+        {
+            DCB_EH_NOTICE("Calling dcb->func.write_ready(%p)", dcb);
+            dcb->func.write_ready(dcb);
+        }
+    }
+
+    if ((events & EPOLLIN) && (dcb->n_close == 0))
+    {
+        rc |= MXB_POLL_READ;
+
+        if (dcb_session_check(dcb, "read"))
+        {
+            int return_code = 1;
+            /** SSL authentication is still going on, we need to call dcb_accept_SSL
+             * until it return 1 for success or -1 for error */
+            if (dcb->ssl_state == SSL_HANDSHAKE_REQUIRED)
+            {
+                return_code = (DCB::Role::CLIENT == dcb->role) ?
+                    dcb_accept_SSL(dcb) :
+                    dcb_connect_SSL(dcb);
+            }
+            if (1 == return_code)
+            {
+                DCB_EH_NOTICE("Calling dcb->func.read(%p)", dcb);
+                dcb->func.read(dcb);
+            }
         }
     }
 
@@ -2698,40 +2738,6 @@ static uint32_t dcb_process_poll_events(DCB* dcb, uint32_t events)
         }
     }
 #endif
-
-    if ((events & EPOLLOUT) && (dcb->n_close == 0))
-    {
-        rc |= MXB_POLL_WRITE;
-
-        if (dcb_session_check(dcb, "write_ready"))
-        {
-            DCB_EH_NOTICE("Calling dcb->func.write_ready(%p)", dcb);
-            dcb->func.write_ready(dcb);
-        }
-    }
-
-    if ((events & EPOLLIN) && (dcb->n_close == 0))
-    {
-        rc |= MXB_POLL_READ;
-
-        if (dcb_session_check(dcb, "read"))
-        {
-            int return_code = 1;
-            /** SSL authentication is still going on, we need to call dcb_accept_SSL
-             * until it return 1 for success or -1 for error */
-            if (dcb->ssl_state == SSL_HANDSHAKE_REQUIRED)
-            {
-                return_code = (DCB::Role::CLIENT == dcb->role) ?
-                    dcb_accept_SSL(dcb) :
-                    dcb_connect_SSL(dcb);
-            }
-            if (1 == return_code)
-            {
-                DCB_EH_NOTICE("Calling dcb->func.read(%p)", dcb);
-                dcb->func.read(dcb);
-            }
-        }
-    }
 
     return rc;
 }
