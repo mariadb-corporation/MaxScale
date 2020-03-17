@@ -904,29 +904,28 @@ class RegexValue
 public:
     RegexValue() = default;
     RegexValue(const RegexValue&) = default;
-    RegexValue& operator = (const RegexValue&) = default;
+    RegexValue& operator=(const RegexValue&) = default;
 
-    RegexValue(const std::string&          text,
+    RegexValue(const std::string& text,
                std::unique_ptr<pcre2_code> sCode,
-               uint32_t                    ovec_size,
-               uint32_t                    options)
+               uint32_t ovec_size,
+               uint32_t options)
         : text(text)
-        , sCode(std::move(sCode)) // Gets default_delete<pcre2_code> from the unique_ptr.
+        , sCode(std::move(sCode))   // Gets default_delete<pcre2_code> from the unique_ptr.
         , ovec_size(ovec_size)
         , options(options)
     {
     }
 
-    bool operator == (const RegexValue& rhs) const
+    bool operator==(const RegexValue& rhs) const
     {
-        return
-            this->text == rhs.text
-            && this->ovec_size == rhs.ovec_size
-            && this->options == rhs.options
-            && (!this->sCode == !rhs.sCode); // Both NULL, or both valid.
+        return this->text == rhs.text
+               && this->ovec_size == rhs.ovec_size
+               && this->options == rhs.options
+               && (!this->sCode == !rhs.sCode);     // Both NULL, or both valid.
     }
 
-    bool operator != (const RegexValue& rhs) const
+    bool operator!=(const RegexValue& rhs) const
     {
         return !(*this == rhs);
     }
@@ -938,8 +937,8 @@ public:
 
     std::string                 text;
     std::shared_ptr<pcre2_code> sCode;
-    uint32_t                    ovec_size { 0 };
-    uint32_t                    options { 0 };
+    uint32_t                    ovec_size {0};
+    uint32_t                    options {0};
 };
 
 class ParamRegex : public ConcreteParam<ParamRegex, RegexValue>
@@ -1143,16 +1142,17 @@ class ParamString : public ConcreteParam<ParamString, std::string>
 public:
     enum Quotes
     {
-        REQUIRED, // The string *must* be surrounded by quotes.
-        DESIRED,  // If there are no surrounding quotes, a warning is logged.
-        IGNORED,  // The string may, but need not be surrounded by quotes. No warning.
+        REQUIRED,   // The string *must* be surrounded by quotes.
+        DESIRED,    // If there are no surrounding quotes, a warning is logged.
+        IGNORED,    // The string may, but need not be surrounded by quotes. No warning.
     };
 
     ParamString(Specification* pSpecification,
                 const char* zName,
                 const char* zDescription,
                 Modifiable modifiable = Modifiable::AT_STARTUP)
-        : ParamString(pSpecification, zName, zDescription, DESIRED, modifiable, Param::MANDATORY, value_type())
+        : ParamString(pSpecification, zName, zDescription, DESIRED, modifiable, Param::MANDATORY,
+                      value_type())
     {
     }
 
@@ -1170,7 +1170,8 @@ public:
                 const char* zDescription,
                 value_type default_value,
                 Modifiable modifiable = Modifiable::AT_STARTUP)
-        : ParamString(pSpecification, zName, zDescription, DESIRED, modifiable, Param::OPTIONAL, default_value)
+        : ParamString(pSpecification, zName, zDescription, DESIRED, modifiable, Param::OPTIONAL,
+                      default_value)
     {
     }
 
@@ -1204,9 +1205,9 @@ private:
                 value_type default_value)
         : ConcreteParam<ParamString, std::string>(pSpecification, zName, zDescription,
                                                   modifiable, kind,
-                                                  quotes != REQUIRED
-                                                  ? MXS_MODULE_PARAM_STRING
-                                                  : MXS_MODULE_PARAM_QUOTEDSTRING,
+                                                  quotes != REQUIRED ?
+                                                  MXS_MODULE_PARAM_STRING :
+                                                  MXS_MODULE_PARAM_QUOTEDSTRING,
                                                   default_value)
         , m_quotes(quotes)
     {
@@ -2215,7 +2216,7 @@ void Configuration::add_native(typename ParamType::value_type* pValue,
 }
 }
 
-inline std::ostream& operator << (std::ostream& out, const mxs::config::RegexValue& value)
+inline std::ostream& operator<<(std::ostream& out, const mxs::config::RegexValue& value)
 {
     out << value.text;
     return out;
