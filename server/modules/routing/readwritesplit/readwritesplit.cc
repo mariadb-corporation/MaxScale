@@ -502,12 +502,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 MXS_MODULE_OPT_NONE,
                 master_failure_mode_values
             },
-            {
-                "max_slave_replication_lag",
-                MXS_MODULE_PARAM_DURATION,
-                DEFAULT_MAX_SLAVE_REPLICATION_LAG_STR,
-                MXS_MODULE_OPT_DURATION_S
-            },
+            {"max_slave_replication_lag",  MXS_MODULE_PARAM_DURATION,  "0s",   MXS_MODULE_OPT_DURATION_S},
             {"max_slave_connections",      MXS_MODULE_PARAM_STRING,    MAX_SLAVE_COUNT},
             {"retry_failed_reads",         MXS_MODULE_PARAM_BOOL,      "true"},
             {"prune_sescmd_history",       MXS_MODULE_PARAM_BOOL,      "false"},

@@ -11,7 +11,6 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 ## Bug fixes
 
 * [MXS-2921](https://jira.mariadb.org/browse/MXS-2921) Memory leak in `alter maxscale`
-* [MXS-2920](https://jira.mariadb.org/browse/MXS-2920) Cannot set max_slave_replication_lag=0
 * [MXS-2919](https://jira.mariadb.org/browse/MXS-2919) max_slave_replication_lag uses servers with unknown replication lag
 * [MXS-2917](https://jira.mariadb.org/browse/MXS-2917) qc_sqlite leaks memory with complex CREATE TABLE query
 * [MXS-2907](https://jira.mariadb.org/browse/MXS-2907) Logrotate warnings when PID file does not exist
