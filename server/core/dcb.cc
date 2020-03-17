@@ -1235,6 +1235,12 @@ uint32_t DCB::process_events(uint32_t events)
     /**
      * Any of these callbacks might close the DCB. Hence, the value of 'n_close'
      * must be checked after each callback invocation.
+     *
+     * The order in which the events are processed is meaningful and should not be changed. EPOLLERR is
+     * handled first to get the best possible error message in the log message in case EPOLLERR is returned
+     * with another event from epoll_wait. EPOLLOUT and EPOLLIN are processed before EPOLLHUP and EPOLLRDHUP
+     * so that all client events are processed in case EPOLLIN and EPOLLRDHUP events arrive in the same
+     * epoll_wait.
      */
 
     if ((events & EPOLLERR) && (m_nClose == 0))
@@ -1245,36 +1251,6 @@ uint32_t DCB::process_events(uint32_t events)
 
         m_handler->error(this);
     }
-
-    if ((events & EPOLLHUP) && (m_nClose == 0))
-    {
-        mxb_assert(m_handler);
-
-        rc |= MXB_POLL_HUP;
-
-        if (!m_hanged_up)
-        {
-            m_handler->hangup(this);
-
-            m_hanged_up = true;
-        }
-    }
-
-#ifdef EPOLLRDHUP
-    if ((events & EPOLLRDHUP) && (m_nClose == 0))
-    {
-        mxb_assert(m_handler);
-
-        rc |= MXB_POLL_HUP;
-
-        if (!m_hanged_up)
-        {
-            m_handler->hangup(this);
-
-            m_hanged_up = true;
-        }
-    }
-#endif
 
     if ((events & EPOLLOUT) && (m_nClose == 0))
     {
@@ -1307,6 +1283,36 @@ uint32_t DCB::process_events(uint32_t events)
             m_handler->error(this);
         }
     }
+
+    if ((events & EPOLLHUP) && (m_nClose == 0))
+    {
+        mxb_assert(m_handler);
+
+        rc |= MXB_POLL_HUP;
+
+        if (!m_hanged_up)
+        {
+            m_handler->hangup(this);
+
+            m_hanged_up = true;
+        }
+    }
+
+#ifdef EPOLLRDHUP
+    if ((events & EPOLLRDHUP) && (m_nClose == 0))
+    {
+        mxb_assert(m_handler);
+
+        rc |= MXB_POLL_HUP;
+
+        if (!m_hanged_up)
+        {
+            m_handler->hangup(this);
+
+            m_hanged_up = true;
+        }
+    }
+#endif
 
     if (m_session)
     {

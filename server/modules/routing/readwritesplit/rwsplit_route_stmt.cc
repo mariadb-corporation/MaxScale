@@ -634,7 +634,7 @@ int RWSplitSession::get_max_replication_lag()
     int conf_max_rlag = mxs::Target::RLAG_UNDEFINED;
 
     /** if there is no configured value, then longest possible int is used */
-    if (m_config.max_slave_replication_lag != DEFAULT_MAX_SLAVE_REPLICATION_LAG)
+    if (m_config.max_slave_replication_lag > 0)
     {
         conf_max_rlag = m_config.max_slave_replication_lag;
     }
