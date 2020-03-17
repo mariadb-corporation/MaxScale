@@ -64,19 +64,19 @@ describe("Filter Relationships", function() {
         return request.get(base_url + "/filters/" + rel_filter.data.id, { json: true })
             .then((res) => {
                 // The service-filter relationships can't be modified from filters
-                res.data.relationships.services.data.should.have.lengthOf(0)
+                res.data.relationships.should.not.have.keys("services")
             })
     });
 
     it("add relationships with `relationships` endpoint", function() {
-        return request.patch(base_url + "/filters/" + rel_filter.data.id + "/relationships/monitors",
+        return request.patch(base_url + "/filters/" + rel_filter.data.id + "/relationships/services",
                              { json: { data: [ { id: "Read-Connection-Router", type: "services" }]}})
             .should.be.rejected
     });
 
     it("bad request body with `relationships` endpoint should be rejected", function() {
         var body = {data: null}
-        return request.patch(base_url + "/filters/" + rel_filter.data.id + "/relationships/monitors", { json: body })
+        return request.patch(base_url + "/filters/" + rel_filter.data.id + "/relationships/services", { json: body })
             .should.be.rejected
     });
 
