@@ -4420,6 +4420,11 @@ bool get_suffixed_duration(const char* zValue,
         {
             unit = mxs::config::DURATION_IN_MINUTES;
             duration = std::chrono::duration_cast<milliseconds>(std::chrono::minutes(value));
+
+            if ((*(zEnd + 1) == 'i' || *(zEnd + 1) == 'I') && (*(zEnd + 2) == 'n' || *(zEnd + 2) == 'N'))
+            {
+                zEnd += 2;
+            }
         }
         ++zEnd;
         break;

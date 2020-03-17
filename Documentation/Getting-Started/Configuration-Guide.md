@@ -241,13 +241,14 @@ max_size=1T
 ### Durations
 
 A number denoting a duration can be suffixed by one of the case-insensitive
-suffixes `h`, `m`, `s` and `ms`, for specifying durations in hours, minutes,
-seconds and milliseconds, respectively.
+suffixes `h`, `m` or `min`, `s` and `ms`, for specifying durations in hours,
+minutes, seconds and milliseconds, respectively.
 
 For instance, the following entries
 ```
 soft_ttl=1h
 soft_ttl=60m
+soft_ttl=60min
 soft_ttl=3600s
 soft_ttl=3600000ms
 ```
