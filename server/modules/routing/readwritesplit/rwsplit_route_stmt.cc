@@ -105,22 +105,25 @@ bool RWSplitSession::prepare_target(RWBackend* target, route_target_t route_targ
 
 bool RWSplitSession::create_one_connection()
 {
-    mxb_assert(m_config.lazy_connect);
+    mxb_assert(can_recover_servers());
 
-    // Try to first find a master
-    for (auto backend : m_raw_backends)
+    // Try to first find a master if we are allowed to connect to one
+    if (m_config.lazy_connect || m_config.master_reconnection)
     {
-        if (backend->can_connect() && backend->is_master())
+        for (auto backend : m_raw_backends)
         {
-            if (prepare_target(backend, TARGET_MASTER))
+            if (backend->can_connect() && backend->is_master())
             {
-                if (!m_current_master)
+                if (prepare_target(backend, TARGET_MASTER))
                 {
-                    MXS_INFO("Chose '%s' as master due to session write", backend->name());
-                    m_current_master = backend;
-                }
+                    if (!m_current_master)
+                    {
+                        MXS_INFO("Chose '%s' as master due to session write", backend->name());
+                        m_current_master = backend;
+                    }
 
-                return true;
+                    return true;
+                }
             }
         }
     }
@@ -598,8 +601,10 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
         m_sescmd_list.push_back(sescmd);
     }
 
-    if (m_config.lazy_connect && !attempted_write && nsucc == 0)
+    if (!attempted_write && can_recover_servers())
     {
+        mxb_assert(nsucc == 0);
+
         // If no connections are open, create one and execute the session command on it
         if (create_one_connection())
         {
