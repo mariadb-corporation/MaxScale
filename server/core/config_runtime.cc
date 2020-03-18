@@ -49,6 +49,7 @@ typedef std::vector<std::string> StringVector;
 using std::tie;
 using maxscale::Monitor;
 using SListener = std::shared_ptr<Listener>;
+using namespace std::literals::string_literals;
 
 #define RUNTIME_ERRMSG_BUFSIZE 512
 thread_local std::vector<std::string> runtime_errmsg;
@@ -211,17 +212,49 @@ std::string get_cycle_name(mxs::Target* item, mxs::Target* target)
     return rval;
 }
 
+bool link_service_to_monitor(Service* service, mxs::Monitor* monitor)
+{
+    bool ok = service->change_cluster(monitor);
+
+    if (!ok)
+    {
+        std::string err = service->cluster() ?
+            "Service already uses cluster '"s + service->cluster()->name() + "'" :
+            "Service uses targets";
+        config_runtime_error("Service '%s' cannot use cluster '%s': %s",
+                             service->name(), monitor->name(), err.c_str());
+    }
+
+    return ok;
+}
+
+bool unlink_service_from_monitor(Service* service, mxs::Monitor* monitor)
+{
+    bool ok = service->remove_cluster(monitor);
+
+    if (!ok)
+    {
+        config_runtime_error("Service '%s' does not use monitor '%s'", service->name(), monitor->name());
+    }
+
+    return ok;
+}
+
 bool runtime_link_target(const std::string& subject, const std::string& target)
 {
     bool rval = false;
 
     if (auto service = Service::find(target))
     {
-        if (service->uses_cluster())
+        if (auto monitor = MonitorManager::find_monitor(subject.c_str()))
+        {
+            rval = link_service_to_monitor(service, monitor);
+        }
+        else if (auto cluster = service->cluster())
         {
             config_runtime_error("The servers of the service '%s' are defined by the monitor '%s'. "
                                  "Servers cannot explicitly be added to the service.",
-                                 service->name(), service->m_monitor->name());
+                                 service->name(), cluster->name());
         }
         else if (auto tgt = mxs::Target::find(subject))
         {
@@ -270,9 +303,13 @@ bool runtime_link_target(const std::string& subject, const std::string& target)
                 config_runtime_error("%s", error_msg.c_str());
             }
         }
+        else if (auto service = Service::find(subject))
+        {
+            rval = link_service_to_monitor(service, monitor);
+        }
         else
         {
-            config_runtime_error("No server named '%s' found", subject.c_str());
+            config_runtime_error("No server or service named '%s' found", subject.c_str());
         }
     }
     else
@@ -294,11 +331,15 @@ bool runtime_unlink_target(const std::string& subject, const std::string& target
 
     if (auto service = Service::find(target))
     {
-        if (service->uses_cluster())
+        if (auto monitor = MonitorManager::find_monitor(subject.c_str()))
+        {
+            rval = unlink_service_from_monitor(service, monitor);
+        }
+        else if (auto cluster = service->cluster())
         {
             config_runtime_error("The servers of the service '%s' are defined by the monitor '%s'. "
                                  "Servers cannot explicitly be removed from the service.",
-                                 service->name(), service->m_monitor->name());
+                                 service->name(), cluster->name());
         }
         else if (auto tgt = mxs::Target::find(subject))
         {
@@ -325,6 +366,10 @@ bool runtime_unlink_target(const std::string& subject, const std::string& target
             {
                 config_runtime_error("%s", error_msg.c_str());
             }
+        }
+        else if (auto service = Service::find(subject))
+        {
+            rval = unlink_service_from_monitor(service, monitor);
         }
         else
         {
@@ -1439,6 +1484,30 @@ bool service_to_filter_relations(Service* service, json_t* old_json, json_t* new
     return rval;
 }
 
+bool service_to_monitor_relations(const std::string& target, json_t* old_json, json_t* new_json)
+{
+    bool rval = update_object_relations(target, to_monitor_rel, old_json, new_json);
+
+    if (!rval)
+    {
+        config_runtime_error("Could not find the monitor that '%s' relates to", target.c_str());
+    }
+
+    return rval;
+}
+
+bool monitor_to_service_relations(const std::string& target, json_t* old_json, json_t* new_json)
+{
+    bool rval = update_object_relations(target, to_service_rel, old_json, new_json);
+
+    if (!rval)
+    {
+        config_runtime_error("Could not find the service that '%s' relates to", target.c_str());
+    }
+
+    return rval;
+}
+
 /**
  * @brief Check if the service parameter can be altered at runtime
  *
@@ -2089,6 +2158,12 @@ bool runtime_create_monitor_from_json(json_t* json)
                     MXS_NOTICE("Created monitor '%s'", name);
                     MonitorManager::start_monitor(monitor);
                     rval = true;
+
+                    // TODO: Do this with native types instead of JSON comparisons
+                    std::unique_ptr<json_t> old_json(monitor->to_json(""));
+                    MXB_AT_DEBUG(bool rv = )
+                    monitor_to_service_relations(monitor->name(), old_json.get(), json);
+                    mxb_assert(rv);
                 }
             }
         }
@@ -2115,12 +2190,15 @@ bool runtime_create_filter_from_json(json_t* json)
 
 bool update_service_relationships(Service* service, json_t* json)
 {
-    auto old_json = service_to_json(service, "");
+    // Construct only the relationship part of the resource. We don't need the rest and by doing this we avoid
+    // any cross-worker communication (e.g. router diagnostics could cause it).
+    auto old_json = json_pack("{s:{s: o}}", "data", "relationships", service->json_relationships(""));
     mxb_assert(old_json);
 
     bool rval = object_to_server_relations(service->name(), old_json, json)
         && service_to_service_relations(service->name(), old_json, json)
-        && service_to_filter_relations(service, old_json, json);
+        && service_to_filter_relations(service, old_json, json)
+        && service_to_monitor_relations(service->name(), old_json, json);
 
     json_decref(old_json);
 
@@ -2187,7 +2265,8 @@ bool runtime_alter_monitor_from_json(Monitor* monitor, json_t* new_json)
 
     if (is_valid_resource_body(new_json)
         && validate_param(common_monitor_params(), mod->parameters, &params)
-        && server_relationship_to_parameter(new_json, &params))
+        && server_relationship_to_parameter(new_json, &params)
+        && monitor_to_service_relations(monitor->name(), old_json.get(), new_json))
     {
         success = MonitorManager::reconfigure_monitor(monitor, params);
     }
