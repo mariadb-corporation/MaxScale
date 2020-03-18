@@ -43,6 +43,8 @@ using std::ifstream;
 namespace
 {
 
+static char auth_failure_response[] = "{\"errors\": [ { \"detail\": \"Access denied\" } ] }";
+
 static struct ThisUnit
 {
     struct MHD_Daemon* daemon = nullptr;
@@ -251,16 +253,26 @@ size_t Client::request_data_length() const
     return atoi(get_header("Content-Length").c_str());
 }
 
-void Client::send_auth_error() const
+void Client::send_basic_auth_error() const
 {
-    static char error_resp[] = "{\"errors\": [ { \"detail\": \"Access denied\" } ] }";
     MHD_Response* resp =
-        MHD_create_response_from_buffer(sizeof(error_resp) - 1,
-                                        error_resp,
+        MHD_create_response_from_buffer(sizeof(auth_failure_response) - 1,
+                                        auth_failure_response,
                                         MHD_RESPMEM_PERSISTENT);
 
     MHD_queue_basic_auth_fail_response(m_connection, "maxscale", resp);
     MHD_destroy_response(resp);
+}
+
+void Client::send_token_auth_error() const
+{
+    MHD_Response* response =
+        MHD_create_response_from_buffer(sizeof(auth_failure_response) - 1,
+                                        auth_failure_response,
+                                        MHD_RESPMEM_PERSISTENT);
+
+    MHD_queue_response(m_connection, MHD_HTTP_UNAUTHORIZED, response);
+    MHD_destroy_response(response);
 }
 
 void Client::add_cors_headers(MHD_Response* response) const
@@ -348,8 +360,7 @@ int Client::handle(const char* url, const char* method, const char* upload_data,
             }
             else if (state != Client::INIT)
             {
-                // The client has finished uploading data, send an error and close the connection
-                send_auth_error();
+                // No pending upload data, close the connection
                 close();
             }
         }
@@ -460,7 +471,10 @@ bool Client::auth_with_token(const std::string& token)
     }
     catch (const std::exception& e)
     {
-        MXS_ERROR("Failed to validate token: %s", e.what());
+        if (mxs::Config::get().admin_log_auth_failures.get())
+        {
+            MXS_ERROR("Failed to validate token: %s", e.what());
+        }
     }
 
     return rval;
@@ -476,7 +490,11 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
 
         if (token.substr(0, 7) == "Bearer ")
         {
-            rval = auth_with_token(token.substr(7));
+            if (!auth_with_token(token.substr(7)))
+            {
+                send_token_auth_error();
+                rval = false;
+            }
         }
         else
         {
@@ -507,6 +525,11 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
             }
             MXS_FREE(user);
             MXS_FREE(pw);
+
+            if (!rval)
+            {
+                send_basic_auth_error();
+            }
         }
     }
 

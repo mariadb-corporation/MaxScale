@@ -101,7 +101,8 @@ private:
     bool        send_cors_preflight_request(const std::string& verb);
     std::string get_header(const std::string& key) const;
     size_t      request_data_length() const;
-    void        send_auth_error() const;
+    void        send_basic_auth_error() const;
+    void        send_token_auth_error() const;
     void        add_cors_headers(MHD_Response*) const;
 };
 
