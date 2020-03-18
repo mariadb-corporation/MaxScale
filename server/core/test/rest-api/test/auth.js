@@ -127,7 +127,7 @@ describe("JSON Web Tokens", function() {
         var token = ''
         return request.get(base_url + "/auth", {json: true})
             .then((res) => {
-                token = res.token
+                token = res.meta.token
             })
             .then(() => request.get("http://" + host + "/servers", {headers: {'Authorization': 'Bearer ' + token}}))
             .should.be.fulfilled

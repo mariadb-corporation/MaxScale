@@ -65,6 +65,7 @@ describe("Individual Resources", function() {
         "/maxscale/threads/0",
         "/maxscale/logs",
         "/maxscale/modules/readwritesplit",
+        "/auth",
     ]
 
     tests.forEach(function(endpoint) {

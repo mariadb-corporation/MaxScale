@@ -411,7 +411,7 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
             .set_expires_at(now + std::chrono::seconds {28800})
             .sign(jwt::algorithm::hs256 {this_unit.sign_key});
 
-        reply = HttpResponse(MHD_HTTP_OK, json_pack("{s: s}", "token", token.c_str()));
+        reply = HttpResponse(MHD_HTTP_OK, json_pack("{s {s: s}}", "meta", "token", token.c_str()));
     }
     else
     {
