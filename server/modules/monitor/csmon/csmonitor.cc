@@ -377,10 +377,31 @@ void CsMonitor::check_http_result()
 
     case http::Async::READY:
         {
-            for (const auto& result : m_http.results())
+            json_t* pOutput = json_object();
+
+            mxb_assert(servers().size() == m_http.results().size());
+
+            auto it = servers().begin();
+            auto end = servers().end();
+            auto jt = m_http.results().begin();
+
+            while (it != end)
             {
-                MXS_NOTICE("Result: %d, '%s'", result.code, result.body.c_str());
+                auto* pMserver = *it;
+                const auto& result = *jt;
+
+                json_t* pResult = json_object();
+
+                json_object_set_new(pResult, "code", json_integer(result.code));
+                json_object_set_new(pResult, "message", json_string(result.body.c_str()));
+
+                json_object_set_new(pOutput, pMserver->server->name(), pResult);
+
+                ++it;
+                ++jt;
             }
+
+            *m_ppOutput = pOutput;
             m_pSem->post();
         }
         break;
