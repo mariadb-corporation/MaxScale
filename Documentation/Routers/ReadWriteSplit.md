@@ -806,12 +806,16 @@ statements that will be routed to slaves.)
 
 #### Transaction Isolation Level Tracking
 
+Use of the SERIALIZABLE transaction isolation level with readwritesplit is not
+recommended as it somewhat goes against the goals of load balancing.
+
 If either `session_track_transaction_info=CHARACTERISTICS` or
 `session_track_system_variables=tx_isolation` is configured for the MariaDB
 server, readwritesplit will track the transaction isolation level and lock the
 session to the master when the isolation level is set to serializable. This
 retains the correctness of the isolation level which can otherwise cause
-problems.
+problems. Once a session is locked to the master, it will not be unlocked. To
+reinstate the normal routing behavior, a new connection must be created.
 
 For example, if transaction isolation level tracking cannot be done and an
 autocommit SELECT is routed to a slave, it no longer behaves in a serializable
