@@ -11,6 +11,11 @@
   definitions are ignored.
 * Listeners support multiple authenticators.
 
+* The replication lag of a slave server must now be less than
+  [`max_slave_replication_lag`](Routers/ReadWriteSplit.md#max_slave_replication_lag)
+  whereas in older versions the replication lag had to be less than or
+  equal to the configured limit.
+
 ## MariaDB MaxScale 2.4
 
 * A Clustrix specific monitor has been added.

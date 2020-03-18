@@ -54,7 +54,7 @@ bool valid_for_slave(const RWBackend* backend, const RWBackend* master)
  */
 bool rpl_lag_is_ok(mxs::RWBackend* backend, int max_rlag)
 {
-    return max_rlag == mxs::Target::RLAG_UNDEFINED || backend->target()->replication_lag() <= max_rlag;
+    return max_rlag == mxs::Target::RLAG_UNDEFINED || backend->target()->replication_lag() < max_rlag;
 }
 
 bool gtid_pos_is_ok(mxs::RWBackend* backend, RWSplit::gtid gtid_pos)

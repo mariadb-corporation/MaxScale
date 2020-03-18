@@ -99,13 +99,20 @@ lifetime of the client connections is short.
 
 ### `max_slave_replication_lag`
 
-**`max_slave_replication_lag`** specifies how many seconds a slave is allowed to
-be behind the master. If the lag is bigger than the configured value a slave
-can't be used for routing.
+Specify how many seconds a slave is allowed to be behind the master. The lag of
+a slave must be less than the configured value in order for it to be used for
+routing. If set to 0 (the default value), the feature is disabled.
 
-This feature is disabled by default.
+In MaxScale 2.5.0, the slave lag must be less than `max_slave_replication_lag`
+whereas in older versions the slave lag had to be less than or equal to
+`max_slave_replication_lag`. This means that in MaxScale 2.5.0 it is possible to
+define, with `max_slave_replication_lag=1`, that all slaves must be up to date
+in order for them to be used for routing.
 
-	max_slave_replication_lag=<allowed lag>
+Note that this feature does not guarantee that writes done on the master are
+visible for reads done on the slave. This is mainly due to the method of
+replication lag measurement. For a feature that guarantees this, refer to
+[`causal_reads`](#causal_reads).
 
 The lag is specified as documented
 [here](../Getting-Started/Configuration-Guide.md#durations). If no explicit unit
