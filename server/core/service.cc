@@ -162,7 +162,7 @@ void service_add_server(Monitor* pMonitor, SERVER* pServer)
 
     for (Service* pService : this_unit.services)
     {
-        if (pService->m_monitor == pMonitor)
+        if (pService->cluster() == pMonitor)
         {
             pService->add_target(pServer);
         }
@@ -175,7 +175,7 @@ void service_remove_server(Monitor* pMonitor, SERVER* pServer)
 
     for (Service* pService : this_unit.services)
     {
-        if (pService->m_monitor == pMonitor)
+        if (pService->cluster() == pMonitor)
         {
             pService->remove_target(pServer);
         }
@@ -615,7 +615,7 @@ Service* service_uses_monitor(mxs::Monitor* monitor)
 
     for (Service* s : this_unit.services)
     {
-        if (s->m_monitor == monitor)
+        if (s->cluster() == monitor)
         {
             return s;
         }
@@ -1174,7 +1174,7 @@ json_t* service_relations_to_monitor(const mxs::Monitor* monitor, const char* ho
 
     for (Service* service : this_unit.services)
     {
-        if (service->m_monitor == monitor)
+        if (service->cluster() == monitor)
         {
             if (!rel)
             {
@@ -1923,5 +1923,44 @@ bool Service::read_connection_init_sql()
             rval = false;
         }
     }
+    return rval;
+}
+
+void Service::set_cluster(mxs::Monitor* monitor)
+{
+    m_monitor = monitor;
+}
+
+bool Service::change_cluster(mxs::Monitor* monitor)
+{
+    bool rval = false;
+
+    if (m_monitor == nullptr && m_data->targets.empty())
+    {
+        for (auto a : monitor->servers())
+        {
+            m_data->targets.push_back(a->server);
+        }
+
+        targets_updated();
+        m_monitor = monitor;
+        rval = true;
+    }
+
+    return rval;
+}
+
+bool Service::remove_cluster(mxs::Monitor* monitor)
+{
+    bool rval = false;
+
+    if (m_monitor == monitor)
+    {
+        m_data->targets.clear();
+        targets_updated();
+        m_monitor = nullptr;
+        rval = true;
+    }
+
     return rval;
 }

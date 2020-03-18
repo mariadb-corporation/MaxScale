@@ -3399,7 +3399,7 @@ int create_new_service(CONFIG_CONTEXT* obj)
 
             if (pMonitor)
             {
-                service->m_monitor = pMonitor;
+                service->set_cluster(pMonitor);
             }
             else
             {

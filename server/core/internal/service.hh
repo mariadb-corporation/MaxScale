@@ -141,13 +141,20 @@ public:
     // TODO: Make these private
     mutable std::mutex lock;
 
-    // TODO: Make this private.
-    mxs::Monitor* m_monitor {nullptr};      /**< A possibly associated monitor */
-
-    bool uses_cluster() const
+    // Get the current cluster
+    mxs::Monitor* cluster() const
     {
-        return m_monitor != nullptr;
+        return m_monitor;
     }
+
+    // Set the current cluster without updating targets
+    void set_cluster(mxs::Monitor* monitor);
+
+    // Removes the cluster from use (if it's used) and updates the targest
+    bool remove_cluster(mxs::Monitor* monitor);
+
+    // Changes the current cluster and updates the targets
+    bool change_cluster(mxs::Monitor* monitor);
 
     uint64_t get_version(service_version_which_t which) const
     {
@@ -278,6 +285,7 @@ private:
     mxs::WorkerGlobal<Config> m_config;
     std::atomic<int64_t>      m_refcount {1};
     bool                      m_active {true};
+    mxs::Monitor*             m_monitor {nullptr};  /**< A possibly associated monitor */
 
     mxs::ConfigParameters m_params;
 
