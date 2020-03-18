@@ -21,10 +21,16 @@
 #include <maxscale/modinfo.hh>
 #include <maxscale/mysql_utils.hh>
 
+using std::string;
+using std::vector;
 using maxscale::MonitorServer;
+namespace http = mxb::http;
 
 namespace
 {
+
+// TODO: This is just the mockup Columnstore daemon.
+const char REST_BASE[] = "/drrtuy/cmapi/0.0.1/node/";
 
 constexpr const char* alive_query = "SELECT mcsSystemReady() = 1 && mcsSystemReadOnly() <> 2";
 constexpr const char* role_query = "SELECT mcsSystemPrimary()";
@@ -248,10 +254,61 @@ bool CsMonitor::command(const char* zCmd, std::function<void()> cmd, mxb::Semaph
     return rv;
 }
 
+namespace
+{
+
+string create_url(const MonitorServer& mserver, int64_t port, const char* zOperation)
+{
+    string url("http://");
+    url += mserver.server->address;
+    url += ":";
+    url += std::to_string(port);
+    url += REST_BASE;
+
+    url += zOperation;
+
+    MXS_NOTICE("URL: %s", url.c_str());
+
+    return url;
+}
+
+}
+
 void CsMonitor::cluster_start(mxb::Semaphore& sem, json_t** ppOutput)
 {
-    PRINT_MXS_JSON_ERROR(ppOutput, "cluster-start not implemented yet.");
-    sem.post();
+    vector<string> urls;
+
+    for (const MonitorServer* pMserver : servers())
+    {
+        string url { create_url(*pMserver, m_config.admin_port, "start") };
+
+        urls.push_back(url);
+    }
+
+    m_http = http::put_async(urls);
+
+    switch (m_http.status())
+    {
+    case http::Async::PENDING:
+        m_pSem = &sem;
+        m_ppOutput = ppOutput;
+        initiate_delayed_http_check();
+        break;
+
+    case http::Async::ERROR:
+        PRINT_MXS_JSON_ERROR(ppOutput, "Could not initiate operation for starting Columnstore servers.");
+        break;
+
+    case http::Async::READY:
+        m_pSem = &sem;
+        m_ppOutput = ppOutput;
+        check_http_result();
+    }
+
+    if (!m_pSem)
+    {
+        sem.post();
+    }
 }
 
 void CsMonitor::cluster_stop(mxb::Semaphore& sem, json_t** ppOutput)
@@ -276,4 +333,61 @@ void CsMonitor::cluster_remove_node(mxb::Semaphore& sem, json_t** ppOutput)
 {
     PRINT_MXS_JSON_ERROR(ppOutput, "cluster-remove-node not implemented yet.");
     sem.post();
+}
+
+void CsMonitor::initiate_delayed_http_check()
+{
+    mxb_assert(m_dcid == 0);
+
+    long ms = m_http.wait_no_more_than() / 2;
+
+    if (ms == 0)
+    {
+        ms = 1;
+    }
+
+    m_dcid = delayed_call(ms, [this](mxb::Worker::Worker::Call::action_t action) -> bool {
+            mxb_assert(m_pSem);
+            mxb_assert(m_dcid != 0);
+
+            m_dcid = 0;
+
+            if (action == mxb::Worker::Call::EXECUTE)
+            {
+                check_http_result();
+            }
+            else
+            {
+                // CANCEL
+                m_pSem->post();
+                m_pSem = nullptr;
+            }
+
+            return false;
+        });
+}
+
+void CsMonitor::check_http_result()
+{
+    switch (m_http.perform())
+    {
+    case http::Async::PENDING:
+        initiate_delayed_http_check();
+        break;
+
+    case http::Async::READY:
+        {
+            for (const auto& result : m_http.results())
+            {
+                MXS_NOTICE("Result: %d, '%s'", result.code, result.body.c_str());
+            }
+            m_pSem->post();
+        }
+        break;
+
+    case http::Async::ERROR:
+        PRINT_MXS_JSON_ERROR(m_ppOutput, "Fatal HTTP error when attempting to start Columnstore servers.");
+        m_pSem->post();
+        break;
+    }
 }

@@ -13,6 +13,7 @@
 #pragma once
 
 #include "csmon.hh"
+#include <maxbase/http.hh>
 #include <maxbase/semaphore.hh>
 #include <maxscale/modulecmd.hh>
 #include <maxscale/monitor.hh>
@@ -47,9 +48,16 @@ private:
     bool has_sufficient_permissions();
     void update_server_status(mxs::MonitorServer* monitored_server);
 
+    void initiate_delayed_http_check();
+    void check_http_result();
+
 private:
     CsMonitor(const std::string& name, const std::string& module);
     bool configure(const mxs::ConfigParameters* pParams) override;
 
-    CsConfig m_config;
+    CsConfig         m_config;
+    mxb::http::Async m_http;
+    mxb::Semaphore*  m_pSem = nullptr;
+    json_t**         m_ppOutput = nullptr;
+    uint32_t         m_dcid = 0;
 };
