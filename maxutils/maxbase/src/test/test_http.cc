@@ -24,7 +24,7 @@ using namespace std;
 namespace
 {
 
-int test_http()
+int test_http_get()
 {
     cout << __func__ << endl;
 
@@ -99,7 +99,7 @@ int check_results(const vector<string>& urls,
     return rv == EXIT_FAILURE ? 1 : 0;
 }
 
-int test_multi_http()
+int test_multi_http_get()
 {
     cout << __func__ << endl;
 
@@ -112,7 +112,7 @@ int test_multi_http()
     return rv == EXIT_FAILURE ? 1 : 0;
 }
 
-int test_async_http()
+int test_async_http_get()
 {
     cout << __func__ << endl;
 
@@ -148,6 +148,66 @@ int test_async_http()
 
     return rv == EXIT_FAILURE ? 1 : 0;
 }
+
+int test_http_put()
+{
+    cout << __func__ << endl;
+
+    int rv = EXIT_FAILURE;
+
+    auto res = mxb::http::put("http://postman-echo.com/put");
+    cout << "http://postman-echo.com/put responded with: " << res.code << endl;
+    if (res.code == 200)
+    {
+        rv = EXIT_SUCCESS;
+    }
+    else
+    {
+        cout << "error: Exit code not 200 but: " << res.code << endl;
+    }
+
+    return rv == EXIT_FAILURE ? 1 : 0;
+}
+
+int test_async_http_put()
+{
+    cout << __func__ << endl;
+
+    int rv = EXIT_FAILURE;
+
+    vector<string> urls = {"http://postman-echo.com/put",
+                           "http://postman-echo.com/put",
+                           "http://postman-echo.com/put"};
+    vector<bool> expected_successes = {true, true, true};
+    mxb::http::Async http = mxb::http::put_async(urls);
+
+    while (http.perform(0) == mxb::http::Async::PENDING)
+    {
+        long ms = http.wait_no_more_than();
+
+        if (ms > 100)
+        {
+            ms = 100;
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+    }
+
+    if (http.status() == mxb::http::Async::READY)
+    {
+        const vector<mxb::http::Result>& results = http.results();
+
+        rv = check_results(urls, expected_successes, results);
+    }
+    else
+    {
+        cout << "http::Async: " << to_string(http.status()) << endl;
+        rv = EXIT_FAILURE;
+    }
+
+    return rv == EXIT_FAILURE ? 1 : 0;
+}
+
 }
 
 uint64_t time_since_epoch_ms()
@@ -169,19 +229,29 @@ int main()
     mxb::http::Init init;
 
     start = time_since_epoch_ms();
-    rv += test_http();
+    rv += test_http_get();
     stop = time_since_epoch_ms();
-    cout << "Single: " << stop - start << endl;
+    cout << "Single GET: " << stop - start << endl;
 
     start = time_since_epoch_ms();
-    rv += test_multi_http();
+    rv += test_multi_http_get();
     stop = time_since_epoch_ms();
-    cout << "Multi: " << stop - start << endl;
+    cout << "Multi GET: " << stop - start << endl;
 
     start = time_since_epoch_ms();
-    rv += test_async_http();
+    rv += test_async_http_get();
     stop = time_since_epoch_ms();
-    cout << "Async: " << stop - start << endl;
+    cout << "Async GET: " << stop - start << endl;
+
+    start = time_since_epoch_ms();
+    rv += test_http_put();
+    stop = time_since_epoch_ms();
+    cout << "Single PUT: " << stop - start << endl;
+
+    start = time_since_epoch_ms();
+    rv += test_async_http_put();
+    stop = time_since_epoch_ms();
+    cout << "Async PUT: " << stop - start << endl;
 
     return rv;
 }

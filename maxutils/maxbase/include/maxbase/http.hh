@@ -143,6 +143,67 @@ std::vector<Result> get(const std::vector<std::string>& urls,
                         const Config& config = Config());
 
 /**
+ * Do a HTTP PUT, when no user/password is required.
+ *
+ * @param url     The URL to PUT.
+ * @param config  The config to use.
+ *
+ * @note The @c url is assumed to be escaped in case it contain arguments
+ *       that must be escaped.
+ *
+ * @return A @c Result.
+ */
+Result put(const std::string& url, const Config& config = Config());
+
+/**
+ * Do a HTTP PUT
+ *
+ * @param url       The URL to PUT.
+ * @param user      Username to use.
+ * @param password  Password for the user.
+ * @param config    The config to use.
+ *
+ * @note The @c url is assumed to be escaped in case it contain arguments
+ *       that must be escaped, but @c user and @c pass will always be escaped.
+ *
+ * @return A @c Result.
+ */
+Result put(const std::string& url,
+           const std::string& user, const std::string& password,
+           const Config& config = Config());
+
+/**
+ * Do a HTTP PUT, when no user/password is required.
+ *
+ * @param urls    The URLs to PUT.
+ * @param config  The config to use.
+ *
+ * @note The @c urls are assumed to be escaped in case they contain arguments
+ *       that must be escaped.
+ *
+ * @return A @c Result.
+ */
+std::vector<Result> put(const std::vector<std::string>& urls,
+                        const Config& config = Config());
+
+/**
+ * Do a HTTP PUT
+ *
+ * @param urls      The URLs to PUT.
+ * @param user      Username to use.
+ * @param password  Password for the user.
+ * @param config    The config to use.
+ *
+ * @note The @c urls are assumed to be escaped in case they contain arguments
+ *       that must be escaped, but @c user and @c pass will always be escaped.
+ *
+ * @return Vector of @c Results, as many as there were @c urls.
+ */
+std::vector<Result> put(const std::vector<std::string>& urls,
+                        const std::string& user, const std::string& password,
+                        const Config& config = Config());
+
+/**
  * @class mxb::http::Async
  *
  * Class for performing multiple HTTP GETs concurrently and asynchronously.
@@ -317,6 +378,37 @@ Async get_async(const std::vector<std::string>& urls,
  * @return An Async instance using which the operation can be performed.
  */
 Async get_async(const std::vector<std::string>& urls,
+                const std::string& user, const std::string& password,
+                const Config& config = Config());
+
+/**
+ * Do a HTTP PUT, asynchronously.
+ *
+ * @param urls      The URLs to PUT.
+ * @param config    The config to use.
+ *
+ * @note The @c urls are assumed to be escaped in case they contain arguments
+ *       that must be escaped.
+ *
+ * @return An Async instance using which the operation can be performed.
+ */
+Async put_async(const std::vector<std::string>& urls,
+                const Config& config = Config());
+
+/**
+ * Do a HTTP PUT, asynchronously.
+ *
+ * @param urls      The URLs to PUT.
+ * @param user      Username to use.
+ * @param password  Password for the user.
+ * @param config    The config to use.
+ *
+ * @note The @c urls are assumed to be escaped in case they contains arguments
+ *       that must be escaped, but @c user and @c pass will always be escaped.
+ *
+ * @return An Async instance using which the operation can be performed.
+ */
+Async put_async(const std::vector<std::string>& urls,
                 const std::string& user, const std::string& password,
                 const Config& config = Config());
 }
