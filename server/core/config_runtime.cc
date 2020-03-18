@@ -64,27 +64,17 @@ bool object_relation_is_valid(const std::string& type, const std::string& value)
     return type == CN_SERVERS && ServerManager::find_by_unique_name(value);
 }
 
-bool service_to_service_relation_is_valid(const std::string& type, const std::string& value)
+bool service_relation_is_valid(const std::string& type, const std::string& value)
 {
     return type == CN_SERVICES && Service::find(value);
 }
 
-bool server_to_service_relation_is_valid(const std::string& type, const std::string& value)
-{
-    return type == CN_SERVICES && Service::find(value.c_str());
-}
-
-bool server_to_monitor_relation_is_valid(const std::string& type, const std::string& value)
+bool monitor_relation_is_valid(const std::string& type, const std::string& value)
 {
     return type == CN_MONITORS && MonitorManager::find_monitor(value.c_str());
 }
 
-bool filter_to_service_relation_is_valid(const std::string& type, const std::string& value)
-{
-    return type == CN_SERVICES && Service::find(value.c_str());
-}
-
-bool service_to_filter_relation_is_valid(const std::string& type, const std::string& value)
+bool filter_relation_is_valid(const std::string& type, const std::string& value)
 {
     return type == CN_FILTERS && filter_find(value.c_str());
 }
@@ -92,40 +82,28 @@ bool service_to_filter_relation_is_valid(const std::string& type, const std::str
 //
 // Constants for relationship validation
 //
-const Relationship object_to_server
+const Relationship to_server_rel
 {
     MXS_JSON_PTR_RELATIONSHIPS_SERVERS,
     object_relation_is_valid
 };
 
-const Relationship server_to_service
+const Relationship to_service_rel
 {
     MXS_JSON_PTR_RELATIONSHIPS_SERVICES,
-    server_to_service_relation_is_valid
+    service_relation_is_valid
 };
 
-const Relationship server_to_monitor
+const Relationship to_monitor_rel
 {
     MXS_JSON_PTR_RELATIONSHIPS_MONITORS,
-    server_to_monitor_relation_is_valid
+    monitor_relation_is_valid
 };
 
-const Relationship filter_to_service
-{
-    MXS_JSON_PTR_RELATIONSHIPS_SERVICES,
-    filter_to_service_relation_is_valid
-};
-
-const Relationship service_to_filter
+const Relationship to_filter_rel
 {
     MXS_JSON_PTR_RELATIONSHIPS_FILTERS,
-    service_to_filter_relation_is_valid
-};
-
-const Relationship service_to_service
-{
-    MXS_JSON_PTR_RELATIONSHIPS_SERVICES,
-    service_to_service_relation_is_valid
+    filter_relation_is_valid
 };
 
 const MXS_MODULE_PARAM* get_type_parameters(const char* type)
@@ -1197,7 +1175,7 @@ bool server_to_object_relations(Server* server, json_t* old_json, json_t* new_js
     StringSet old_relations;
     StringSet new_relations;
 
-    for (const auto& a : {server_to_service, server_to_monitor})
+    for (const auto& a : {to_service_rel, to_monitor_rel})
     {
         // Extract only changed or deleted relationships
         if (is_null_relation(new_json, a.first) || mxs_json_pointer(new_json, a.first))
@@ -1284,7 +1262,7 @@ bool server_relationship_to_parameter(json_t* json, mxs::ConfigParameters* param
     StringSet relations;
     bool rval = false;
 
-    if (extract_relations(json, relations, object_to_server))
+    if (extract_relations(json, relations, to_server_rel))
     {
         rval = true;
 
@@ -1407,7 +1385,7 @@ bool update_object_relations(const std::string& target,
 
 bool object_to_server_relations(const std::string& target, json_t* old_json, json_t* new_json)
 {
-    bool rval = update_object_relations(target, object_to_server, old_json, new_json);
+    bool rval = update_object_relations(target, to_server_rel, old_json, new_json);
 
     if (!rval)
     {
@@ -1419,7 +1397,7 @@ bool object_to_server_relations(const std::string& target, json_t* old_json, jso
 
 bool service_to_service_relations(const std::string& target, json_t* old_json, json_t* new_json)
 {
-    bool rval = update_object_relations(target, service_to_service, old_json, new_json);
+    bool rval = update_object_relations(target, to_service_rel, old_json, new_json);
 
     if (!rval)
     {
@@ -1442,8 +1420,8 @@ bool service_to_filter_relations(Service* service, json_t* old_json, json_t* new
     StringVector new_relations;
     const char* filter_relation = MXS_JSON_PTR_RELATIONSHIPS_FILTERS;
 
-    if (extract_ordered_relations(old_json, old_relations, service_to_filter)
-        && extract_ordered_relations(new_json, new_relations, service_to_filter))
+    if (extract_ordered_relations(old_json, old_relations, to_filter_rel)
+        && extract_ordered_relations(new_json, new_relations, to_filter_rel))
     {
         if (old_relations == new_relations || service->set_filters(new_relations))
         {
@@ -1967,8 +1945,8 @@ bool runtime_create_server_from_json(json_t* json)
     StringSet relations;
 
     if (is_valid_resource_body(json) && server_contains_required_fields(json)
-        && extract_relations(json, relations, server_to_service)
-        && extract_relations(json, relations, server_to_monitor))
+        && extract_relations(json, relations, to_service_rel)
+        && extract_relations(json, relations, to_monitor_rel))
     {
         const char* name = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
         mxb_assert(name);
