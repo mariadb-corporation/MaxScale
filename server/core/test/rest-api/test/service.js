@@ -114,6 +114,36 @@ describe("Service", function() {
             })
     });
 
+    it("add service→monitor relationship", function() {
+        return request.get(base_url + "/services/RW-Split-Router")
+            .then(function(resp) {
+                var svc = JSON.parse(resp)
+                svc.data.relationships = {monitors: {data: [{id: "MariaDB-Monitor", type: "monitors"}]}, servers: {data: null}, services: {data: null}}
+                return request.patch(base_url + "/services/RW-Split-Router", {json: svc})
+            })
+            .then(() => request.get(base_url + "/services/RW-Split-Router"))
+            .then(function(resp) {
+                var svc = JSON.parse(resp)
+                svc.data.relationships.monitors.data[0].id.should.be.equal("MariaDB-Monitor")
+            })
+    });
+
+    it("remove service→monitor relationship", function() {
+        return request.get(base_url + "/services/RW-Split-Router")
+            .then(function(resp) {
+                var svc = JSON.parse(resp)
+                svc.data.relationships.monitors.data = null
+                return request.patch(base_url + "/services/RW-Split-Router", {json: svc})
+            })
+            .then(function(resp) {
+                return request.get(base_url + "/services/RW-Split-Router")
+            })
+            .then(function(resp) {
+                var svc = JSON.parse(resp)
+                svc.data.relationships.should.not.have.keys("monitors")
+            })
+    });
+
     it("bad request body with `relationships` endpoint should be rejected", function() {
         return request.patch(base_url + "/services/RW-Split-Router/relationships/servers", {json: {servers: null}})
             .should.be.rejected
@@ -178,6 +208,32 @@ describe("Service", function() {
             .then(() => request.get(base_url + "/services/RW-Split-Router", { json: true}))
             .then((res) => {
                 res.data.relationships.services.data.should.be.empty
+            })
+    });
+
+    it("adding service→monitor relationship via `relationships` endpoint should be rejected when other targets are in use", function() {
+        return request.patch(base_url + "/services/RW-Split-Router/relationships/monitors",
+                             { json: {data: [{id: "MariaDB-Monitor", type: "monitors"}]}})
+            .should.be.rejected
+    });
+
+    it("add service→monitor relationship via `relationships` endpoint", function() {
+        var body = { data: {relationships:{services: {data:null}, servers: {data:null}, monitors: {data:null}}}}
+        return request.patch(base_url + "/services/RW-Split-Router/", {json: body})
+            .then(() => request.patch(base_url + "/services/RW-Split-Router/relationships/monitors",
+                                      { json: {data: [{id: "MariaDB-Monitor", type: "monitors"}]}}))
+            .then(() => request.get(base_url + "/services/RW-Split-Router", { json: true}))
+            .then((res) => {
+                res.data.relationships.monitors.data[0].id.should.be.equal("MariaDB-Monitor")
+            })
+    });
+
+    it("remove service→monitor relationship via `relationships` endpoint", function() {
+        return request.patch(base_url + "/services/RW-Split-Router/relationships/monitors",
+                             { json: { data: null}})
+            .then(() => request.get(base_url + "/services/RW-Split-Router", { json: true}))
+            .then((res) => {
+                res.data.relationships.should.not.have.keys("monitors")
             })
     });
 

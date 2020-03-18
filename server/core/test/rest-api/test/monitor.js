@@ -136,6 +136,35 @@ describe("Monitor Relationships", function() {
             })
     });
 
+    it("add service relationships to monitor", function() {
+        var mon = { data: {
+            relationships: {
+                services: {
+                    data:[
+                        {id: "RW-Split-Router", type: "services"}
+                    ]
+                }
+            }}}
+
+        return request.patch(base_url + "/services/RW-Split-Router", {json: {data: {relationships: {services: {data: null}, servers: {data: null}}}}})
+            .then(() => request.patch(base_url + "/monitors/MariaDB-Monitor", {json: mon}))
+            .then(() => request.get(base_url + "/services/RW-Split-Router", { json: true }))
+            .then((res) => {
+                res.data.relationships.monitors.data[0].id.should.be.equal("MariaDB-Monitor")
+                res.data.relationships.should.not.have.keys("servers")
+                res.data.relationships.should.not.have.keys("services")
+            })
+    });
+
+    it("remove service relationships from monitor", function() {
+        var mon = {data: {relationships: {services: {data: null}}}}
+        return request.patch(base_url + "/monitors/MariaDB-Monitor", {json: mon})
+        .then(() => request.get(base_url + "/monitors/MariaDB-Monitor", { json: true }))
+        .then((res) => {
+            res.data.relationships.should.not.have.keys("services")
+        })
+    });
+
     it("add relationships via `relationships` endpoint", function() {
         var old = { data: [
             { id: "server2", type: "servers" },
@@ -182,6 +211,20 @@ describe("Monitor Relationships", function() {
         .then((res) => {
             res.data.relationships.should.not.have.keys("servers")
         })
+    });
+
+    it("add service relationships to monitor via `relationships` endpoint", function() {
+        return request.patch(base_url + "/monitors/MariaDB-Monitor/relationships/servers", {json: {data: null}})
+            .then(() => request.patch(base_url + "/monitors/MariaDB-Monitor/relationships/services",
+                                      {json: {data:[ {id: "RW-Split-Router", type: "services"}]}}))
+            .then(() => request.get(base_url + "/services/RW-Split-Router", { json: true }))
+            .then((res) => res.data.relationships.monitors.data[0].id.should.be.equal("MariaDB-Monitor"))
+    });
+
+    it("remove service relationships from monitor via `relationships` endpoint", function() {
+        return request.patch(base_url + "/monitors/MariaDB-Monitor/relationships/services", {json: {data: null}})
+        .then(() => request.get(base_url + "/monitors/MariaDB-Monitor", { json: true }))
+        .then((res) => res.data.relationships.should.not.have.keys("services"))
     });
 
     it("destroy created monitor", function() {
