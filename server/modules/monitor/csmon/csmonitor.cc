@@ -267,20 +267,18 @@ string create_url(const MonitorServer& mserver, int64_t port, const char* zOpera
 
     url += zOperation;
 
-    MXS_NOTICE("URL: %s", url.c_str());
-
     return url;
 }
 
 }
 
-void CsMonitor::cluster_start(mxb::Semaphore& sem, json_t** ppOutput)
+void CsMonitor::cluster_put(const char* zCmd, mxb::Semaphore& sem, json_t** ppOutput)
 {
     vector<string> urls;
 
     for (const MonitorServer* pMserver : servers())
     {
-        string url { create_url(*pMserver, m_config.admin_port, "start") };
+        string url { create_url(*pMserver, m_config.admin_port, zCmd) };
 
         urls.push_back(url);
     }
@@ -296,7 +294,7 @@ void CsMonitor::cluster_start(mxb::Semaphore& sem, json_t** ppOutput)
         break;
 
     case http::Async::ERROR:
-        PRINT_MXS_JSON_ERROR(ppOutput, "Could not initiate operation for starting Columnstore servers.");
+        PRINT_MXS_JSON_ERROR(ppOutput, "Could not initiate operation '%s' on Columnstore cluster.", zCmd);
         break;
 
     case http::Async::READY:
@@ -311,16 +309,19 @@ void CsMonitor::cluster_start(mxb::Semaphore& sem, json_t** ppOutput)
     }
 }
 
+void CsMonitor::cluster_start(mxb::Semaphore& sem, json_t** ppOutput)
+{
+    cluster_put("start", sem, ppOutput);
+}
+
 void CsMonitor::cluster_stop(mxb::Semaphore& sem, json_t** ppOutput)
 {
-    PRINT_MXS_JSON_ERROR(ppOutput, "cluster-stop not implemented yet.");
-    sem.post();
+    cluster_put("stop", sem, ppOutput);
 }
 
 void CsMonitor::cluster_shutdown(mxb::Semaphore& sem, json_t** ppOutput)
 {
-    PRINT_MXS_JSON_ERROR(ppOutput, "cluster-shutdown not implemented yet.");
-    sem.post();
+    cluster_put("shutdown", sem, ppOutput);
 }
 
 void CsMonitor::cluster_add_node(mxb::Semaphore& sem, json_t** ppOutput)
@@ -407,7 +408,7 @@ void CsMonitor::check_http_result()
         break;
 
     case http::Async::ERROR:
-        PRINT_MXS_JSON_ERROR(m_ppOutput, "Fatal HTTP error when attempting to start Columnstore servers.");
+        PRINT_MXS_JSON_ERROR(m_ppOutput, "Fatal HTTP error when contacting Columnstore.");
         m_pSem->post();
         break;
     }

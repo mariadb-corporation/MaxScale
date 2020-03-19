@@ -39,6 +39,8 @@ public:
 private:
     bool command(const char* zCmd, std::function<void()> cmd, mxb::Semaphore& sem, json_t** ppOutput);
 
+    void cluster_put(const char* zCmd, mxb::Semaphore& sem, json_t** ppOutput);
+
     void cluster_start(mxb::Semaphore& sem, json_t** ppOutput);
     void cluster_stop(mxb::Semaphore& sem, json_t** ppOutput);
     void cluster_shutdown(mxb::Semaphore& sem, json_t** ppOutput);
