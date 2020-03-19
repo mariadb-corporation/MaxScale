@@ -275,22 +275,25 @@ void RWSplitSession::discard_old_history(uint64_t lowest_pos)
 
 bool RWSplitSession::create_one_connection_for_sescmd()
 {
-    mxb_assert(m_config.lazy_connect);
+    mxb_assert(can_recover_servers());
 
-    // Try to first find a master
-    for (auto backend : m_raw_backends)
+    // Try to first find a master if we are allowed to connect to one
+    if (m_config.lazy_connect || m_config.master_reconnection)
     {
-        if (backend->can_connect() && backend->is_master())
+        for (auto backend : m_raw_backends)
         {
-            if (prepare_target(backend, TARGET_MASTER))
+            if (backend->can_connect() && backend->is_master())
             {
-                if (!m_current_master)
+                if (prepare_target(backend, TARGET_MASTER))
                 {
-                    MXS_INFO("Chose '%s' as master due to session write", backend->name());
-                    m_current_master = backend;
-                }
+                    if (!m_current_master)
+                    {
+                        MXS_INFO("Chose '%s' as master due to session write", backend->name());
+                        m_current_master = backend;
+                    }
 
-                return true;
+                    return true;
+                }
             }
         }
     }

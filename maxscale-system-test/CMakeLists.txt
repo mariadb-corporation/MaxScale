@@ -1038,6 +1038,9 @@ add_test_executable(mxs2793_multi_table.cpp mxs2793_multi_table mxs2793_multi_ta
 # MXS-2878: Verify that TLS is required
 add_test_executable(mxs2878_monitor_ssl.cpp mxs2878_monitor_ssl mxs2878_monitor_ssl LABELS REPL_BACKEND)
 
+# MXS-2939: Test that session commands trigger a reconnection
+add_test_executable(mxs2939_sescmd_reconnect.cpp mxs2939_sescmd_reconnect mxs2939_sescmd_reconnect LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################

@@ -373,7 +373,7 @@ _server1_ from the service _RW-Split-Router_.
 Removing a service from a server is analogous to removing the server from the
 service. Both unlink the two objects from each other.
 
-Response to `GET /v1/server/server1`:
+Response to `GET /v1/servers/server1`:
 
 ```javascript
 {
@@ -439,7 +439,7 @@ Response to `GET /v1/server/server1`:
 }
 ```
 
-Request for `PUT /v1/server/server1`:
+Request for `PATCH /v1/servers/server1`:
 
 ```javascript
 {

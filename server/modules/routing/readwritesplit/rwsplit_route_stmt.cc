@@ -420,7 +420,7 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
     uint64_t lowest_pos = id;
 
     // If no connections are open, create one and execute the session command on it
-    if (m_config.lazy_connect && !have_open_connections())
+    if (can_recover_servers() && !have_open_connections())
     {
         create_one_connection_for_sescmd();
     }
@@ -537,7 +537,8 @@ bool RWSplitSession::route_session_write(GWBUF* querybuf, uint8_t command, uint3
     }
     else
     {
-        MXS_ERROR("Could not route session command: %s. Connection status: %s",
+        MXS_ERROR("Could not route session command `%s`: %s. Connection status: %s",
+                  sescmd->to_string().c_str(),
                   attempted_write ? "Write to all backends failed" : "All connections have failed",
                   get_verbose_status().c_str());
     }
