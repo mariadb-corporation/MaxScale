@@ -103,6 +103,7 @@ constexpr char CN_PARSE_RESULT[] = "parse_result";
 constexpr char CN_PASSIVE[] = "passive";
 constexpr char CN_PASSWORD[] = "password";
 constexpr char CN_PORT[] = "port";
+constexpr char CN_PRIORITY[] = "priority";
 constexpr char CN_PROTOCOL[] = "protocol";
 constexpr char CN_QUERY_CLASSIFIER[] = "query_classifier";
 constexpr char CN_QUERY_CLASSIFIER_ARGS[] = "query_classifier_args";

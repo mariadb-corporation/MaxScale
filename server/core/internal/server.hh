@@ -61,6 +61,11 @@ public:
         m_settings.rank = rank;
     }
 
+    void set_priority(int64_t priority)
+    {
+        m_settings.priority = priority;
+    }
+
     bool have_disk_space_limits() const override
     {
         std::lock_guard<std::mutex> guard(m_settings.lock);
@@ -109,6 +114,11 @@ public:
     int64_t rank() const override
     {
         return m_settings.rank;
+    }
+
+    int64_t priority() const override
+    {
+        return m_settings.priority;
     }
 
     /**
@@ -259,6 +269,9 @@ private:
         long persistmaxtime = 0;    /**< Maximum number of seconds connection can live */
 
         int64_t rank;   /*< The ranking of this server, used to prioritize certain servers over others */
+
+        int64_t priority;   /*< The priority of this server, Currently only used by galeramon to pick which
+                             * server is the master. */
 
         /** Disk space thresholds. Can be queried from modules at any time so access must be protected
          *  by mutex. */

@@ -303,6 +303,13 @@ public:
 
     uint64_t gtid_pos(uint32_t domain) const override;
 
+    /**
+     * Get current server priority
+     *
+     * This should be used to decide which server is chosen as a master. Currently only galeramon uses it.
+     */
+    virtual int64_t priority() const = 0;
+
 protected:
     SERVER(std::unique_ptr<mxs::SSLContext> ssl_context)
         : m_ssl_provider{std::move(ssl_context)}

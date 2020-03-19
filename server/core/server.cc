@@ -157,6 +157,7 @@ Server* Server::server_alloc(const char* name, const mxs::ConfigParameters& para
     server->is_active = true;
     server->persistent = persistent;
     server->m_settings.rank = params.get_enum(CN_RANK, rank_values);
+    server->m_settings.priority = params.get_integer(CN_PRIORITY);
     mxb_assert(server->m_settings.rank > 0);
 
     if (!monuser.empty())
@@ -643,6 +644,7 @@ const MXS_MODULE_PARAM* common_server_params()
         {CN_PERSISTPOOLMAX, MXS_MODULE_PARAM_COUNT,    "0"},
         {CN_PERSISTMAXTIME, MXS_MODULE_PARAM_DURATION, "0",       MXS_MODULE_OPT_DURATION_S},
         {CN_PROXY_PROTOCOL, MXS_MODULE_PARAM_BOOL,     "false"},
+        {CN_PRIORITY,       MXS_MODULE_PARAM_COUNT,    "0"},
         {
             CN_SSL, MXS_MODULE_PARAM_ENUM, "false", MXS_MODULE_OPT_ENUM_UNIQUE, ssl_setting_values()
         },

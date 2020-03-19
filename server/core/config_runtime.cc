@@ -498,6 +498,21 @@ bool runtime_alter_server(Server* server, const char* key, const char* value)
                 config_runtime_error("Invalid value for '%s': %s", CN_RANK, value);
             }
         }
+        else if (strcmp(key, CN_PRIORITY) == 0)
+        {
+            char* end;
+            auto v = strtol(value, &end, 10);
+
+            if (*end == '\0' && v >= 0)
+            {
+                server->set_priority(v);
+                setting_changed = true;
+            }
+            else
+            {
+                config_runtime_error("Invalid value for '%s': %s", CN_PRIORITY, value);
+            }
+        }
         else
         {
             // Was a recognized parameter but runtime modification is not supported.
