@@ -59,7 +59,7 @@ describe("Server", function() {
     });
 
     it("update server", function() {
-        server.data.attributes.parameters.weight = 10
+        server.data.attributes.parameters.port = 3333
         return request.patch(base_url + "/servers/" + server.data.id, { json: server})
             .should.be.fulfilled
     });

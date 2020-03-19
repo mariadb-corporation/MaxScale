@@ -38,7 +38,6 @@ static void test1()
     /* Poll tests */
     fprintf(stderr, "Add a DCB");
     mxs::ConfigParameters parameters;
-    parameters.set(CN_MAX_RETRY_INTERVAL, "10s");
     parameters.set(CN_CONNECTION_TIMEOUT, "10s");
     parameters.set(CN_NET_WRITE_TIMEOUT, "10s");
     parameters.set(CN_CONNECTION_KEEPALIVE, "100s");

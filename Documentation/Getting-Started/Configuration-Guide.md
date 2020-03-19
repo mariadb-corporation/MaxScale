@@ -1485,21 +1485,6 @@ since MaxScale 2.0.1. In previous version, the default value was false.
 Some visual database management tools automatically escape some characters and
 this might cause conflicts when MariaDB MaxScale tries to authenticate users.
 
-### `retry_on_failure`
-
-**Note:** This parameter has been removed and is ignored: do not use
-  it. The parameter will be treated as an unknown parameter in the
-  MaxScale 2.6 release. The feature was removed because a failure to start
-  a service is a serious problem that should be solved by the
-  administrator.
-
-The retry_on_failure parameter controls whether MariaDB MaxScale will try to
-restart failed services and accepts a boolean value. This functionality is
-enabled by default to prevent services being permanently disabled if the
-starting of the service failed due to a network outage. Disabling the restarting
-of the failed services will cause them to be permanently disabled if the
-services can't be started when MariaDB MaxScale is started.
-
 ### `log_auth_warnings`
 
 Enable or disable the logging of authentication failures and warnings. This
@@ -1549,28 +1534,6 @@ Example:
 [Test-Service]
 max_connections=100
 ```
-
-### `max_retry_interval`
-
-**Note:** This feature has been removed from MaxScale 2.4. See
-  [`retry_on_failure`](#retry_on_failure) for more details.
-
-Configure the maximum interval between consecutive attempts to bind to an
-interface. The default value for this parameter is 3600 seconds. This
-parameter was introduced in MaxScale 2.2.0.
-
-When a listener fails to bind to the interface it is assigned to, it will
-attempt to bind to the interface again after 10 seconds. If the attempt fails,
-the interval is incremented by 10 seconds and the next attempt will be in 20
-seconds. The interval is incremented until the value of `max_retry_interval` is
-reached at which point the listener attempts to bind to the interface every
-`max_retry_interval` seconds.
-
-The value is specified as documented [here](#durations). If no explicit unit
-is provided, the value is interpreted as seconds in MaxScale 2.4. In subsequent
-versions a value without a unit may be rejected. Note that since the granularity
-of the interval is seconds, an interval specified in milliseconds will be rejected,
-even if the duration is longer than a second.
 
 ### `session_track_trx_state`
 

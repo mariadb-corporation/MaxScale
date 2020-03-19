@@ -216,7 +216,6 @@ Service::Config::Config(mxs::ConfigParameters* params)
     , weightby(params->get_string(CN_WEIGHTBY))
     , version_string(get_version_string(params))
     , max_connections(params->get_integer(CN_MAX_CONNECTIONS))
-    , max_retry_interval(params->get_duration<std::chrono::seconds>(CN_MAX_RETRY_INTERVAL).count())
     , enable_root(params->get_bool(CN_ENABLE_ROOT_USER))
     , localhost_match_wildcard_host(params->get_bool(CN_LOCALHOST_MATCH_WILDCARD_HOST))
     , users_from_all(params->get_bool(CN_AUTH_ALL_SERVERS))
@@ -1238,9 +1237,7 @@ bool Service::is_basic_parameter(const std::string& name)
         CN_LOCALHOST_MATCH_WILDCARD_HOST,
         CN_LOG_AUTH_WARNINGS,
         CN_MAX_CONNECTIONS,
-        CN_MAX_RETRY_INTERVAL,
         CN_PASSWORD,
-        CN_RETRY_ON_FAILURE,
         CN_STRIP_DB_ESC,
         CN_USER,
         CN_VERSION_STRING,
@@ -1282,44 +1279,41 @@ const MXS_MODULE_PARAM* common_service_params()
 {
     static const MXS_MODULE_PARAM config_service_params[] =
     {
-        {CN_TYPE,               MXS_MODULE_PARAM_STRING,   CN_SERVICE, MXS_MODULE_OPT_REQUIRED  },
-        {CN_ROUTER,             MXS_MODULE_PARAM_STRING,   NULL,       MXS_MODULE_OPT_REQUIRED  },
-        {CN_ROUTER_OPTIONS,     MXS_MODULE_PARAM_STRING},
-        {CN_SERVERS,            MXS_MODULE_PARAM_STRING},
-        {CN_TARGETS,            MXS_MODULE_PARAM_STRING},
+        {CN_TYPE,                 MXS_MODULE_PARAM_STRING,   CN_SERVICE, MXS_MODULE_OPT_REQUIRED  },
+        {CN_ROUTER,               MXS_MODULE_PARAM_STRING,   NULL,       MXS_MODULE_OPT_REQUIRED  },
+        {CN_ROUTER_OPTIONS,       MXS_MODULE_PARAM_STRING},
+        {CN_SERVERS,              MXS_MODULE_PARAM_STRING},
+        {CN_TARGETS,              MXS_MODULE_PARAM_STRING},
         // Not mandatory due to RCAP_TYPE_NO_AUTH
-        {CN_USER,               MXS_MODULE_PARAM_STRING},
+        {CN_USER,                 MXS_MODULE_PARAM_STRING},
         // Not mandatory due to RCAP_TYPE_NO_AUTH
-        {CN_PASSWORD,           MXS_MODULE_PARAM_PASSWORD},
-        {CN_ENABLE_ROOT_USER,   MXS_MODULE_PARAM_BOOL,     "false"},
-        {CN_MAX_RETRY_INTERVAL, MXS_MODULE_PARAM_DURATION, "3600s",    MXS_MODULE_OPT_DURATION_S},
-        {CN_MAX_CONNECTIONS,    MXS_MODULE_PARAM_COUNT,    "0"},
-        {CN_CONNECTION_TIMEOUT, MXS_MODULE_PARAM_DURATION, "0",        MXS_MODULE_OPT_DURATION_S},
-        {CN_NET_WRITE_TIMEOUT,  MXS_MODULE_PARAM_DURATION, "0",        MXS_MODULE_OPT_DURATION_S},
-        {CN_AUTH_ALL_SERVERS,   MXS_MODULE_PARAM_BOOL,     "false"},
-        {CN_STRIP_DB_ESC,       MXS_MODULE_PARAM_BOOL,     "true"},
+        {CN_PASSWORD,             MXS_MODULE_PARAM_PASSWORD},
+        {CN_ENABLE_ROOT_USER,     MXS_MODULE_PARAM_BOOL,     "false"},
+        {CN_MAX_CONNECTIONS,      MXS_MODULE_PARAM_COUNT,    "0"},
+        {CN_CONNECTION_TIMEOUT,   MXS_MODULE_PARAM_DURATION, "0",        MXS_MODULE_OPT_DURATION_S},
+        {CN_NET_WRITE_TIMEOUT,    MXS_MODULE_PARAM_DURATION, "0",        MXS_MODULE_OPT_DURATION_S},
+        {CN_AUTH_ALL_SERVERS,     MXS_MODULE_PARAM_BOOL,     "false"},
+        {CN_STRIP_DB_ESC,         MXS_MODULE_PARAM_BOOL,     "true"},
         {
             CN_LOCALHOST_MATCH_WILDCARD_HOST, MXS_MODULE_PARAM_BOOL, "true"
         },
-        {CN_VERSION_STRING,     MXS_MODULE_PARAM_STRING},
-        {CN_FILTERS,            MXS_MODULE_PARAM_STRING},
-        {CN_WEIGHTBY,           MXS_MODULE_PARAM_STRING},
-        {CN_LOG_AUTH_WARNINGS,  MXS_MODULE_PARAM_BOOL,     "true"},
-        {CN_RETRY_ON_FAILURE,   MXS_MODULE_PARAM_BOOL,     "true"},
+        {CN_VERSION_STRING,       MXS_MODULE_PARAM_STRING},
+        {CN_FILTERS,              MXS_MODULE_PARAM_STRING},
+        {CN_LOG_AUTH_WARNINGS,    MXS_MODULE_PARAM_BOOL,     "true"},
         {
             CN_SESSION_TRACK_TRX_STATE, MXS_MODULE_PARAM_BOOL, "false"
         },
         {
             CN_RETAIN_LAST_STATEMENTS, MXS_MODULE_PARAM_INT, "-1"
         },
-        {CN_SESSION_TRACE,      MXS_MODULE_PARAM_BOOL,     "false"},
-        {CN_CLUSTER,            MXS_MODULE_PARAM_STRING},
+        {CN_SESSION_TRACE,        MXS_MODULE_PARAM_BOOL,     "false"},
+        {CN_CLUSTER,              MXS_MODULE_PARAM_STRING},
         {
             CN_RANK, MXS_MODULE_PARAM_ENUM, DEFAULT_RANK, MXS_MODULE_OPT_ENUM_UNIQUE, rank_values
         },
         {CN_CONNECTION_KEEPALIVE, MXS_MODULE_PARAM_DURATION, "300s",     MXS_MODULE_OPT_DURATION_S},
         {
-            CN_CONNECTION_INIT_SQL_FILE, MXS_MODULE_PARAM_PATH,     nullptr,    MXS_MODULE_OPT_PATH_R_OK
+            CN_CONNECTION_INIT_SQL_FILE, MXS_MODULE_PARAM_PATH, nullptr, MXS_MODULE_OPT_PATH_R_OK
         },
         {NULL}
     };

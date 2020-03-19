@@ -285,7 +285,6 @@ int test(FilterModule::Instance& filter_instance, const TEST_CASE& tc)
     static int port = 3306;
 
     mxs::ConfigParameters parameters;
-    parameters.set("max_retry_interval", "10s");
     parameters.set("connection_timeout", "10s");
     parameters.set(CN_NET_WRITE_TIMEOUT, "10s");
     parameters.set(CN_CONNECTION_KEEPALIVE, "100s");

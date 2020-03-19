@@ -768,7 +768,6 @@ int test(FilterModule::Instance& filter_instance, const FW_TEST& t)
             const char* zHost = c.zHost ? c.zHost : DEFAULT_HOST;
 
             mxs::ConfigParameters parameters;
-            parameters.set("max_retry_interval", "10s");
             parameters.set("connection_timeout", "10s");
             parameters.set(CN_NET_WRITE_TIMEOUT, "10s");
             parameters.set(CN_CONNECTION_KEEPALIVE, "100s");

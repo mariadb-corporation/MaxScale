@@ -91,7 +91,6 @@ public:
         std::string weightby;                       /**< Weighting parameter name */
         std::string version_string;                 /**< Version string sent to clients */
         int         max_connections;                /**< Maximum client connections */
-        int         max_retry_interval;             /**< Maximum retry interval */
         bool        enable_root;                    /**< Allow root user  access */
         bool        localhost_match_wildcard_host;  /**< Match localhost against wildcard */
         bool        users_from_all;                 /**< Load users from all servers */

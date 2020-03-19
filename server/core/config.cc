@@ -903,13 +903,13 @@ bool Config::ParamThreadsCount::from_string(const std::string& value_as_string,
 }
 }
 
-static bool        process_config_context(CONFIG_CONTEXT*);
-static bool        process_config_update(CONFIG_CONTEXT*);
-static bool        check_config_objects(CONFIG_CONTEXT* context);
-static int         maxscale_getline(char** dest, int* size, FILE* file);
-static bool        check_first_last_char(const char* string, char expected);
-static void        remove_first_last_char(char* value);
-static bool        test_regex_string_validity(const char* regex_string, const char* key);
+static bool process_config_context(CONFIG_CONTEXT*);
+static bool process_config_update(CONFIG_CONTEXT*);
+static bool check_config_objects(CONFIG_CONTEXT* context);
+static int  maxscale_getline(char** dest, int* size, FILE* file);
+static bool check_first_last_char(const char* string, char expected);
+static void remove_first_last_char(char* value);
+static bool test_regex_string_validity(const char* regex_string, const char* key);
 static bool duration_is_valid(const char* zValue, mxs::config::DurationUnit* pUnit);
 static bool get_seconds(const char* zName, const char* zValue, seconds* pSeconds);
 static bool get_seconds(const char* zName, const char* zValue, time_t* pSeconds);

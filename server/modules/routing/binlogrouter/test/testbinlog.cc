@@ -110,7 +110,6 @@ int main(int argc, char** argv)
 
     CONFIG_CONTEXT ctx {(char*)""};
     config_add_defaults(&ctx.m_parameters, get_module("binlogrouter", MODULE_ROUTER)->parameters);
-    ctx.m_parameters.set(CN_MAX_RETRY_INTERVAL, "10s");
     ctx.m_parameters.set(CN_CONNECTION_TIMEOUT, "10s");
     ctx.m_parameters.set(CN_NET_WRITE_TIMEOUT, "10s");
     ctx.m_parameters.set(CN_CONNECTION_KEEPALIVE, "100s");
