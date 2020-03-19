@@ -37,17 +37,20 @@ public:
     bool command_cluster_shutdown(json_t** ppOutput);
     bool command_cluster_add_node(json_t** ppOutput);
     bool command_cluster_remove_node(json_t** ppOutput);
+    bool command_async(const char* zCommand, json_t** ppOutput);
+    bool command_result(json_t** ppOutput);
+    bool command_cancel(json_t** ppOutput);
 
 private:
     bool command(const char* zCmd, std::function<void()> cmd, mxb::Semaphore& sem, json_t** ppOutput);
 
-    void cluster_put(const char* zCmd, mxb::Semaphore& sem, json_t** ppOutput);
+    void cluster_put(const char* zCmd, mxb::Semaphore* pSem, json_t** ppOutput);
 
-    void cluster_start(mxb::Semaphore& sem, json_t** ppOutput);
-    void cluster_stop(mxb::Semaphore& sem, json_t** ppOutput);
-    void cluster_shutdown(mxb::Semaphore& sem, json_t** ppOutput);
-    void cluster_add_node(mxb::Semaphore& sem, json_t** ppOutput);
-    void cluster_remove_node(mxb::Semaphore& sem, json_t** ppOutput);
+    void cluster_start(mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
+    void cluster_stop(mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
+    void cluster_shutdown(mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
+    void cluster_add_node(mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
+    void cluster_remove_node(mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
 
     bool has_sufficient_permissions();
     void update_server_status(mxs::MonitorServer* monitored_server);

@@ -66,6 +66,38 @@ bool cluster_remove_node(const MODULECMD_ARG* pArgs, json_t** ppOutput)
     return pMonitor->command_cluster_remove_node(ppOutput);
 }
 
+bool async(const MODULECMD_ARG* pArgs, json_t** ppOutput)
+{
+    mxb_assert(pArgs->argc == 2);
+    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
+    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_STRING);
+
+    auto* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
+    const auto* zCommand = pArgs->argv[1].value.string;
+
+    return pMonitor->command_async(zCommand, ppOutput);
+}
+
+bool result(const MODULECMD_ARG* pArgs, json_t** ppOutput)
+{
+    mxb_assert(pArgs->argc == 1);
+    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
+
+    auto* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
+
+    return pMonitor->command_result(ppOutput);
+}
+
+bool cancel(const MODULECMD_ARG* pArgs, json_t** ppOutput)
+{
+    mxb_assert(pArgs->argc == 1);
+    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
+
+    auto* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
+
+    return pMonitor->command_cancel(ppOutput);
+}
+
 void register_commands()
 {
     static const char ARG_MONITOR_DESC[] = "Monitor name";
@@ -119,6 +151,37 @@ void register_commands()
                                cluster_remove_node,
                                MXS_ARRAY_NELEMS(cluster_remove_node_argv), cluster_remove_node_argv,
                                "Remove a node from Columnstore cluster");
+
+    static modulecmd_arg_type_t async_argv[] =
+    {
+        { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
+        { MODULECMD_ARG_STRING, "Command to execute" }
+    };
+
+    modulecmd_register_command(MXS_MODULE_NAME, "async", MODULECMD_TYPE_ACTIVE,
+                               async,
+                               MXS_ARRAY_NELEMS(async_argv), async_argv,
+                               "Execute a command asynchronously");
+
+    static modulecmd_arg_type_t result_argv[] =
+    {
+        { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
+    };
+
+    modulecmd_register_command(MXS_MODULE_NAME, "result", MODULECMD_TYPE_ACTIVE,
+                               result,
+                               MXS_ARRAY_NELEMS(result_argv), result_argv,
+                               "Retrieve result of last command");
+
+    static modulecmd_arg_type_t cancel_argv[] =
+    {
+        { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
+    };
+
+    modulecmd_register_command(MXS_MODULE_NAME, "cancel", MODULECMD_TYPE_ACTIVE,
+                               cancel,
+                               MXS_ARRAY_NELEMS(result_argv), result_argv,
+                               "Cancel on-going command");
 }
 }
 

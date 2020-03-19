@@ -102,15 +102,21 @@ int get_cs_version(MonitorServer* srv)
 class CsMonitor::Command
 {
 public:
+    enum State
+    {
+        RUNNING,
+        READY
+    };
+
     Command(CsMonitor* pMonitor,
             const char* zName,
             vector<string>&& urls,
-            mxb::Semaphore* pSem,
-            json_t** ppOutput)
+            mxb::Semaphore* pSem = nullptr,
+            json_t** ppOutput = nullptr)
         : m_monitor(*pMonitor)
         , m_name(zName)
         , m_urls(std::move(urls))
-        , m_sem(*pSem)
+        , m_pSem(pSem)
         , m_ppOutput(ppOutput)
     {
     }
@@ -121,10 +127,47 @@ public:
         {
             m_monitor.cancel_delayed_call(m_dcid);
         }
+
+        if (m_pOutput)
+        {
+            json_decref(m_pOutput);
+        }
+    }
+
+    const std::string& name() const
+    {
+        return m_name;
+    }
+
+    State state() const
+    {
+        return m_state;
+    }
+
+    bool is_running() const
+    {
+        return m_state == RUNNING;
+    }
+
+    bool is_ready() const
+    {
+        return m_state == READY;
+    }
+
+    void get_result(json_t** ppOutput)
+    {
+        mxb_assert(is_ready());
+
+        json_incref(m_pOutput);
+        *ppOutput = m_pOutput;
     }
 
     virtual void init()
     {
+        mxb_assert(is_ready());
+
+        m_state = RUNNING;
+
         switch (m_http.status())
         {
         case http::Async::PENDING:
@@ -132,9 +175,9 @@ public:
             break;
 
         case http::Async::ERROR:
-            PRINT_MXS_JSON_ERROR(m_ppOutput, "Could not initiate operation '%s' on Columnstore cluster.",
+            PRINT_MXS_JSON_ERROR(&m_pOutput, "Could not initiate operation '%s' on Columnstore cluster.",
                                  m_name.c_str());
-            m_sem.post();
+            finish();
             break;
 
         case http::Async::READY:
@@ -143,6 +186,24 @@ public:
     }
 
 protected:
+    void finish()
+    {
+        if (m_pOutput && m_ppOutput)
+        {
+            json_incref(m_pOutput);
+            *m_ppOutput = m_pOutput;
+        }
+
+        if (m_pSem)
+        {
+            m_pSem->post();
+        }
+
+        m_pSem = nullptr;
+
+        m_state = READY;
+    }
+
     void order_callback()
     {
         mxb_assert(m_dcid == 0);
@@ -166,7 +227,7 @@ protected:
                 else
                 {
                     // CANCEL
-                    m_sem.post();
+                    finish();
                 }
 
                 return false;
@@ -183,7 +244,7 @@ protected:
 
         case http::Async::READY:
             {
-                json_t* pOutput = json_object();
+                m_pOutput = json_object();
 
                 auto& servers = m_monitor.servers();
 
@@ -203,30 +264,31 @@ protected:
                     json_object_set_new(pResult, "code", json_integer(result.code));
                     json_object_set_new(pResult, "message", json_string(result.body.c_str()));
 
-                    json_object_set_new(pOutput, pMserver->server->name(), pResult);
+                    json_object_set_new(m_pOutput, pMserver->server->name(), pResult);
 
                     ++it;
                     ++jt;
                 }
 
-                *m_ppOutput = pOutput;
-                m_sem.post();
+                finish();
             }
             break;
 
         case http::Async::ERROR:
-            PRINT_MXS_JSON_ERROR(m_ppOutput, "Fatal HTTP error when contacting Columnstore.");
-            m_sem.post();
+            PRINT_MXS_JSON_ERROR(&m_pOutput, "Fatal HTTP error when contacting Columnstore.");
+            finish();
             break;
         }
     }
 
 protected:
+    State           m_state = READY;
     CsMonitor&      m_monitor;
     string          m_name;
     vector<string>  m_urls;
-    mxb::Semaphore& m_sem;
-    json_t**        m_ppOutput;
+    mxb::Semaphore* m_pSem;
+    json_t**        m_ppOutput = nullptr;
+    json_t*         m_pOutput = nullptr;
     http::Async     m_http;
     uint32_t        m_dcid = 0;
 };
@@ -324,15 +386,23 @@ void reject_call_failed(const char* zCmd, json_t** ppOutput)
 {
     PRINT_MXS_JSON_ERROR(ppOutput, "Failed to queue the command '%s' for execution.", zCmd);
 }
+
+void reject_command_pending(const char* zCmd, const char* zPending, json_t** ppOutput)
+{
+    PRINT_MXS_JSON_ERROR(ppOutput,
+                         "The command '%s' is running; the command '%s' cannot "
+                         "be started until that has finished. Cancel or wait.", zPending, zCmd);
+}
+
 }
 
 bool CsMonitor::command_cluster_start(json_t** ppOutput)
 {
     mxb::Semaphore sem;
 
-    auto cmd = [this, &sem, ppOutput]() {
-            cluster_start(sem, ppOutput);
-        };
+    auto cmd = [this, &sem, ppOutput] () {
+        cluster_start(&sem, ppOutput);
+    };
 
     return command("cluster-start", cmd, sem, ppOutput);
 }
@@ -341,9 +411,9 @@ bool CsMonitor::command_cluster_stop(json_t** ppOutput)
 {
     mxb::Semaphore sem;
 
-    auto cmd = [this, &sem, ppOutput]() {
-            cluster_stop(sem, ppOutput);
-        };
+    auto cmd = [this, &sem, ppOutput] () {
+        cluster_stop(&sem, ppOutput);
+    };
 
     return command("cluster-stop", cmd, sem, ppOutput);
 }
@@ -352,9 +422,9 @@ bool CsMonitor::command_cluster_shutdown(json_t** ppOutput)
 {
     mxb::Semaphore sem;
 
-    auto cmd = [this, &sem, ppOutput]() {
-            cluster_shutdown(sem, ppOutput);
-        };
+    auto cmd = [this, &sem, ppOutput] () {
+        cluster_shutdown(&sem, ppOutput);
+    };
 
     return command("cluster-shutdown", cmd, sem, ppOutput);
 }
@@ -363,9 +433,9 @@ bool CsMonitor::command_cluster_add_node(json_t** ppOutput)
 {
     mxb::Semaphore sem;
 
-    auto cmd = [this, &sem, ppOutput]() {
-            cluster_add_node(sem, ppOutput);
-        };
+    auto cmd = [this, &sem, ppOutput] () {
+        cluster_add_node(&sem, ppOutput);
+    };
 
     return command("cluster-add-node", cmd, sem, ppOutput);
 }
@@ -374,11 +444,129 @@ bool CsMonitor::command_cluster_remove_node(json_t** ppOutput)
 {
     mxb::Semaphore sem;
 
-    auto cmd = [this, &sem, ppOutput]() {
-            cluster_remove_node(sem, ppOutput);
-        };
+    auto cmd = [this, &sem, ppOutput] () {
+        cluster_remove_node(&sem, ppOutput);
+    };
 
     return command("cluster-remove-node", cmd, sem, ppOutput);
+}
+
+bool CsMonitor::command_async(const char* zCommand, json_t** ppOutput)
+{
+    mxb::Semaphore sem;
+
+    auto cmd = [this, &sem, zCommand, ppOutput] () {
+        if (m_sCommand && !m_sCommand->is_ready())
+        {
+            reject_command_pending(zCommand, m_sCommand->name().c_str(), ppOutput);
+        }
+        else
+        {
+            *ppOutput = nullptr;
+
+            string command(zCommand);
+
+            // TODO: Just temporary solution.
+            if (command == "cluster-start")
+            {
+                cluster_start();
+            }
+            else if (command == "cluster-stop")
+            {
+                cluster_stop();
+            }
+            else if (command == "cluster-shutdown")
+            {
+                cluster_shutdown();
+            }
+            else if (command == "cluster-add-node")
+            {
+                cluster_add_node();
+            }
+            else if (command == "cluster-remove-node")
+            {
+                cluster_remove_node();
+            }
+            else
+            {
+                PRINT_MXS_JSON_ERROR(ppOutput, "'%s' is an unknown command.", zCommand);
+            }
+
+            if (!*ppOutput)
+            {
+                string s("Command '");
+                s += zCommand;
+                s += "' started.";
+
+                *ppOutput = json_string(s.c_str());
+            }
+        }
+        sem.post();
+    };
+
+    return command("async", cmd, sem, ppOutput);
+}
+
+bool CsMonitor::command_result(json_t** ppOutput)
+{
+    mxb::Semaphore sem;
+
+    auto cmd = [this, &sem, ppOutput] () {
+        if (!m_sCommand)
+        {
+            *ppOutput = json_string("No command has been initiated.");
+        }
+        else if (!m_sCommand->is_ready())
+        {
+            string s("The command '");
+            s += m_sCommand->name();
+            s += "' is still running.";
+
+            *ppOutput = json_string(s.c_str());
+        }
+        else
+        {
+            m_sCommand->get_result(ppOutput);
+        }
+
+        sem.post();
+    };
+
+    return command("result", cmd, sem, ppOutput);
+}
+
+bool CsMonitor::command_cancel(json_t** ppOutput)
+{
+    mxb::Semaphore sem;
+
+    auto cmd = [this, &sem, ppOutput] () {
+        if (!m_sCommand)
+        {
+            *ppOutput = json_string("No command has been initiated.");
+        }
+        else if (!m_sCommand->is_running())
+        {
+            string s("The last command '");
+            s += m_sCommand->name();
+            s += "' is no longer running, cannot be cancelled.";
+
+            *ppOutput = json_string(s.c_str());
+        }
+        else
+        {
+            string s("The command '");
+            s += m_sCommand->name();
+            s += "' was cancelled. Note, current cluster state is unknown.";
+
+            m_sCommand.reset();
+
+            *ppOutput = json_string(s.c_str());
+        }
+
+        sem.post();
+    };
+
+    return command("result", cmd, sem, ppOutput);
 }
 
 bool CsMonitor::command(const char* zCmd, std::function<void()> cmd, mxb::Semaphore& sem, json_t** ppOutput)
@@ -423,7 +611,7 @@ string create_url(const MonitorServer& mserver, int64_t port, const char* zOpera
 
 }
 
-void CsMonitor::cluster_put(const char* zCmd, mxb::Semaphore& sem, json_t** ppOutput)
+void CsMonitor::cluster_put(const char* zCmd, mxb::Semaphore* pSem, json_t** ppOutput)
 {
     vector<string> urls;
 
@@ -434,33 +622,33 @@ void CsMonitor::cluster_put(const char* zCmd, mxb::Semaphore& sem, json_t** ppOu
         urls.push_back(url);
     }
 
-    m_sCommand.reset(new PutCommand(this, zCmd, std::move(urls), &sem, ppOutput));
+    m_sCommand.reset(new PutCommand(this, zCmd, std::move(urls), pSem, ppOutput));
     m_sCommand->init();
 }
 
-void CsMonitor::cluster_start(mxb::Semaphore& sem, json_t** ppOutput)
+void CsMonitor::cluster_start(mxb::Semaphore* pSem, json_t** ppOutput)
 {
-    cluster_put("start", sem, ppOutput);
+    cluster_put("start", pSem, ppOutput);
 }
 
-void CsMonitor::cluster_stop(mxb::Semaphore& sem, json_t** ppOutput)
+void CsMonitor::cluster_stop(mxb::Semaphore* pSem, json_t** ppOutput)
 {
-    cluster_put("stop", sem, ppOutput);
+    cluster_put("stop", pSem, ppOutput);
 }
 
-void CsMonitor::cluster_shutdown(mxb::Semaphore& sem, json_t** ppOutput)
+void CsMonitor::cluster_shutdown(mxb::Semaphore* pSem, json_t** ppOutput)
 {
-    cluster_put("shutdown", sem, ppOutput);
+    cluster_put("shutdown", pSem, ppOutput);
 }
 
-void CsMonitor::cluster_add_node(mxb::Semaphore& sem, json_t** ppOutput)
+void CsMonitor::cluster_add_node(mxb::Semaphore* pSem, json_t** ppOutput)
 {
     PRINT_MXS_JSON_ERROR(ppOutput, "cluster-add-node not implemented yet.");
-    sem.post();
+    pSem->post();
 }
 
-void CsMonitor::cluster_remove_node(mxb::Semaphore& sem, json_t** ppOutput)
+void CsMonitor::cluster_remove_node(mxb::Semaphore* pSem, json_t** ppOutput)
 {
     PRINT_MXS_JSON_ERROR(ppOutput, "cluster-remove-node not implemented yet.");
-    sem.post();
+    pSem->post();
 }
