@@ -96,6 +96,157 @@ int get_cs_version(MonitorServer* srv)
     }
     return rval;
 }
+
+}
+
+class CsMonitor::Command
+{
+public:
+    Command(CsMonitor* pMonitor,
+            const char* zName,
+            vector<string>&& urls,
+            mxb::Semaphore* pSem,
+            json_t** ppOutput)
+        : m_monitor(*pMonitor)
+        , m_name(zName)
+        , m_urls(std::move(urls))
+        , m_sem(*pSem)
+        , m_ppOutput(ppOutput)
+    {
+    }
+
+    ~Command()
+    {
+        if (m_dcid)
+        {
+            m_monitor.cancel_delayed_call(m_dcid);
+        }
+    }
+
+    virtual void init()
+    {
+        switch (m_http.status())
+        {
+        case http::Async::PENDING:
+            order_callback();
+            break;
+
+        case http::Async::ERROR:
+            PRINT_MXS_JSON_ERROR(m_ppOutput, "Could not initiate operation '%s' on Columnstore cluster.",
+                                 m_name.c_str());
+            m_sem.post();
+            break;
+
+        case http::Async::READY:
+            check_result();
+        }
+    }
+
+protected:
+    void order_callback()
+    {
+        mxb_assert(m_dcid == 0);
+
+        long ms = m_http.wait_no_more_than() / 2;
+
+        if (ms == 0)
+        {
+            ms = 1;
+        }
+
+        m_dcid = m_monitor.delayed_call(ms, [this](mxb::Worker::Worker::Call::action_t action) -> bool {
+                mxb_assert(m_dcid != 0);
+
+                m_dcid = 0;
+
+                if (action == mxb::Worker::Call::EXECUTE)
+                {
+                    check_result();
+                }
+                else
+                {
+                    // CANCEL
+                    m_sem.post();
+                }
+
+                return false;
+            });
+    }
+
+    void check_result()
+    {
+        switch (m_http.perform())
+        {
+        case http::Async::PENDING:
+            order_callback();
+            break;
+
+        case http::Async::READY:
+            {
+                json_t* pOutput = json_object();
+
+                auto& servers = m_monitor.servers();
+
+                mxb_assert(servers.size() == m_http.results().size());
+
+                auto it = servers.begin();
+                auto end = servers.end();
+                auto jt = m_http.results().begin();
+
+                while (it != end)
+                {
+                    auto* pMserver = *it;
+                    const auto& result = *jt;
+
+                    json_t* pResult = json_object();
+
+                    json_object_set_new(pResult, "code", json_integer(result.code));
+                    json_object_set_new(pResult, "message", json_string(result.body.c_str()));
+
+                    json_object_set_new(pOutput, pMserver->server->name(), pResult);
+
+                    ++it;
+                    ++jt;
+                }
+
+                *m_ppOutput = pOutput;
+                m_sem.post();
+            }
+            break;
+
+        case http::Async::ERROR:
+            PRINT_MXS_JSON_ERROR(m_ppOutput, "Fatal HTTP error when contacting Columnstore.");
+            m_sem.post();
+            break;
+        }
+    }
+
+protected:
+    CsMonitor&      m_monitor;
+    string          m_name;
+    vector<string>  m_urls;
+    mxb::Semaphore& m_sem;
+    json_t**        m_ppOutput;
+    http::Async     m_http;
+    uint32_t        m_dcid = 0;
+};
+
+namespace
+{
+
+class PutCommand : public CsMonitor::Command
+{
+public:
+    using CsMonitor::Command::Command;
+
+    void init() override final
+    {
+        m_http = http::put_async(m_urls);
+
+        Command::init();
+    }
+};
+
 }
 
 CsMonitor::CsMonitor(const std::string& name, const std::string& module)
@@ -283,30 +434,8 @@ void CsMonitor::cluster_put(const char* zCmd, mxb::Semaphore& sem, json_t** ppOu
         urls.push_back(url);
     }
 
-    m_http = http::put_async(urls);
-
-    switch (m_http.status())
-    {
-    case http::Async::PENDING:
-        m_pSem = &sem;
-        m_ppOutput = ppOutput;
-        initiate_delayed_http_check();
-        break;
-
-    case http::Async::ERROR:
-        PRINT_MXS_JSON_ERROR(ppOutput, "Could not initiate operation '%s' on Columnstore cluster.", zCmd);
-        break;
-
-    case http::Async::READY:
-        m_pSem = &sem;
-        m_ppOutput = ppOutput;
-        check_http_result();
-    }
-
-    if (!m_pSem)
-    {
-        sem.post();
-    }
+    m_sCommand.reset(new PutCommand(this, zCmd, std::move(urls), &sem, ppOutput));
+    m_sCommand->init();
 }
 
 void CsMonitor::cluster_start(mxb::Semaphore& sem, json_t** ppOutput)
@@ -334,82 +463,4 @@ void CsMonitor::cluster_remove_node(mxb::Semaphore& sem, json_t** ppOutput)
 {
     PRINT_MXS_JSON_ERROR(ppOutput, "cluster-remove-node not implemented yet.");
     sem.post();
-}
-
-void CsMonitor::initiate_delayed_http_check()
-{
-    mxb_assert(m_dcid == 0);
-
-    long ms = m_http.wait_no_more_than() / 2;
-
-    if (ms == 0)
-    {
-        ms = 1;
-    }
-
-    m_dcid = delayed_call(ms, [this](mxb::Worker::Worker::Call::action_t action) -> bool {
-            mxb_assert(m_pSem);
-            mxb_assert(m_dcid != 0);
-
-            m_dcid = 0;
-
-            if (action == mxb::Worker::Call::EXECUTE)
-            {
-                check_http_result();
-            }
-            else
-            {
-                // CANCEL
-                m_pSem->post();
-                m_pSem = nullptr;
-            }
-
-            return false;
-        });
-}
-
-void CsMonitor::check_http_result()
-{
-    switch (m_http.perform())
-    {
-    case http::Async::PENDING:
-        initiate_delayed_http_check();
-        break;
-
-    case http::Async::READY:
-        {
-            json_t* pOutput = json_object();
-
-            mxb_assert(servers().size() == m_http.results().size());
-
-            auto it = servers().begin();
-            auto end = servers().end();
-            auto jt = m_http.results().begin();
-
-            while (it != end)
-            {
-                auto* pMserver = *it;
-                const auto& result = *jt;
-
-                json_t* pResult = json_object();
-
-                json_object_set_new(pResult, "code", json_integer(result.code));
-                json_object_set_new(pResult, "message", json_string(result.body.c_str()));
-
-                json_object_set_new(pOutput, pMserver->server->name(), pResult);
-
-                ++it;
-                ++jt;
-            }
-
-            *m_ppOutput = pOutput;
-            m_pSem->post();
-        }
-        break;
-
-    case http::Async::ERROR:
-        PRINT_MXS_JSON_ERROR(m_ppOutput, "Fatal HTTP error when contacting Columnstore.");
-        m_pSem->post();
-        break;
-    }
 }
