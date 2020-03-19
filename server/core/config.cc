@@ -2782,15 +2782,10 @@ static bool check_config_objects(CONFIG_CONTEXT* context)
             }
             else
             {
-                // Server's "need" to ignore any unknown parameters as they could
-                // be used as weighting parameters
-                if (!is_server)
-                {
-                    MXS_ERROR("Unknown parameter '%s' for object '%s' of type '%s'. %s",
-                              param_namez, obj->name(), type.c_str(),
-                              closest_matching_parameter(param_namez, param_set, mod->parameters).c_str());
-                    rval = false;
-                }
+                MXS_ERROR("Unknown parameter '%s' for object '%s' of type '%s'. %s",
+                          param_namez, obj->name(), type.c_str(), is_server ? "" :
+                          closest_matching_parameter(param_namez, param_set, mod->parameters).c_str());
+                rval = false;
                 continue;
             }
 
@@ -3416,33 +3411,6 @@ int create_new_service(CONFIG_CONTEXT* obj)
     }
 
     return error_count;
-}
-
-/**
- * Check if a parameter is a default server parameter.
- * @param param Parameter name
- * @return True if it is one of the standard server parameters
- */
-bool is_normal_server_parameter(const char* param)
-{
-    auto server_params = common_server_params();
-    for (int i = 0; server_params[i].name; i++)
-    {
-        if (strcmp(param, server_params[i].name) == 0)
-        {
-            return true;
-        }
-    }
-    // Check if parameter is deprecated
-    for (int i = 0; deprecated_server_params[i]; i++)
-    {
-        if (strcmp(param, deprecated_server_params[i]) == 0)
-        {
-            MXS_WARNING("Server parameter '%s' is deprecated and will be ignored.", param);
-            return true;
-        }
-    }
-    return false;
 }
 
 /**

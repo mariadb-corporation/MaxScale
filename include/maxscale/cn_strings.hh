@@ -158,7 +158,6 @@ constexpr char CN_USERS_REFRESH_INTERVAL[] = "users_refresh_interval";
 constexpr char CN_USERS_REFRESH_TIME[] = "users_refresh_time";
 constexpr char CN_USER[] = "user";
 constexpr char CN_VERSION_STRING[] = "version_string";
-constexpr char CN_WEIGHTBY[] = "weightby";
 constexpr char CN_WRITEQ_HIGH_WATER[] = "writeq_high_water";
 constexpr char CN_WRITEQ_LOW_WATER[] = "writeq_low_water";
 constexpr char CN_YES[] = "yes";

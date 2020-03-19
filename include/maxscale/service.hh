@@ -36,7 +36,6 @@ struct users;
 
 #define MAX_SERVICE_USER_LEN     1024
 #define MAX_SERVICE_PASSWORD_LEN 1024
-#define MAX_SERVICE_WEIGHTBY_LEN 1024
 #define MAX_SERVICE_VERSION_LEN  1024
 
 /** Value of service timeout if timeout checks are disabled */
@@ -88,7 +87,6 @@ public:
 
         std::string user;                           /**< Username */
         std::string password;                       /**< Password */
-        std::string weightby;                       /**< Weighting parameter name */
         std::string version_string;                 /**< Version string sent to clients */
         int         max_connections;                /**< Maximum client connections */
         bool        enable_root;                    /**< Allow root user  access */
@@ -292,9 +290,6 @@ bool serviceStartListener(SERVICE* service, const char* name);
 
 // Used by authenticators
 void serviceGetUser(SERVICE* service, const char** user, const char** auth);
-
-// Used by routers
-const char* serviceGetWeightingParameter(SERVICE* service);
 
 /**
  * Diagnostics

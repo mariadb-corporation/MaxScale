@@ -48,12 +48,6 @@ static int test1()
     Server* server = ServerManager::create_server("uniquename", *params);
     mxb_assert_message(server, "Allocating the server should not fail");
 
-    fprintf(stderr, "\t..done\nTest Parameter for Server.");
-    mxb_assert_message(server->get_custom_parameter("name").empty(),
-                       "Parameter should be empty when not set");
-    server->set_custom_parameter("name", "value");
-    std::string buf = server->get_custom_parameter("name");
-    mxb_assert_message(buf == "value", "Parameter should be returned correctly");
     fprintf(stderr, "\t..done\nTesting Unique Name for Server.");
     mxb_assert_message(NULL == ServerManager::find_by_unique_name("non-existent"),
                        "Should not find non-existent unique name.");

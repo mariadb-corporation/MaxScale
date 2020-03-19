@@ -160,8 +160,6 @@ bool config_global_serialize();
  */
 bool export_config_file(const char* filename);
 
-bool is_normal_server_parameter(const char* param);
-
 /**
  * Generate configuration file contents out of module configuration parameters. Only parameters defined
  * in the parameter definition arrays are printed. Printing is in the order the parameters are given in

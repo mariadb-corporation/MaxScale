@@ -213,7 +213,6 @@ uint64_t Service::status() const
 Service::Config::Config(mxs::ConfigParameters* params)
     : user(params->get_string(CN_USER))
     , password(params->get_string(CN_PASSWORD))
-    , weightby(params->get_string(CN_WEIGHTBY))
     , version_string(get_version_string(params))
     , max_connections(params->get_integer(CN_MAX_CONNECTIONS))
     , enable_root(params->get_bool(CN_ENABLE_ROOT_USER))
@@ -633,17 +632,6 @@ Service* service_uses_monitor(mxs::Monitor* monitor)
 SERVICE* service_find(const char* servname)
 {
     return Service::find(servname);
-}
-
-/**
- * Return the parameter the wervice shoudl use to weight connections
- * by
- * @param service               The Service pointer
- */
-const char* serviceGetWeightingParameter(SERVICE* svc)
-{
-    Service* service = static_cast<Service*>(svc);
-    return service->config()->weightby.c_str();
 }
 
 void service_destroy_instances(void)
@@ -1241,7 +1229,6 @@ bool Service::is_basic_parameter(const std::string& name)
         CN_STRIP_DB_ESC,
         CN_USER,
         CN_VERSION_STRING,
-        CN_WEIGHTBY,
         CN_FILTERS,
         CN_RETAIN_LAST_STATEMENTS,
         CN_CONNECTION_KEEPALIVE,

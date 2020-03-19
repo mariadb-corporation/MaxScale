@@ -146,14 +146,6 @@ public:
     static Server* create_test_server();
 
     /**
-     * Test if name is not a normal server setting name.
-     *
-     * @param name Name to check
-     * @return True if name is not a standard parameter
-     */
-    bool is_custom_parameter(const std::string& name) const;
-
-    /**
      * Print server details to a DCB
      *
      * Designed to be called within a debugger session in order
@@ -169,17 +161,7 @@ public:
      */
     static void dprintPersistentDCBs(DCB*, const Server*);
 
-    /**
-     * Set server custom parameter.
-     *
-     * @param name   Parameter to set
-     * @param value  Value of parameter
-     */
-    void set_custom_parameter(const std::string& name, const std::string& value);
-
-    std::string get_custom_parameter(const std::string& name) const override;
-
-    void set_normal_parameter(const std::string& name, const std::string& value);
+    void set_parameter(const std::string& name, const std::string& value);
 
     /**
      * @brief Serialize a server to a file
@@ -276,10 +258,6 @@ private:
         /** Disk space thresholds. Can be queried from modules at any time so access must be protected
          *  by mutex. */
         DiskSpaceLimits disk_space_limits;
-
-        /** Additional custom parameters which may affect routing decisions or a monitor.
-         *  Can be queried from modules at any time so access must be protected by mutex. */
-        mxs::ConfigParameters custom_parameters;
     };
 
     /**

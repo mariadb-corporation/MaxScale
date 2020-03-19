@@ -397,13 +397,6 @@ json_t* RWSplit::diagnostics() const
     json_object_set_new(rval, "ro_transactions", json_integer(stats().n_ro_trx));
     json_object_set_new(rval, "replayed_transactions", json_integer(stats().n_trx_replay));
 
-    const char* weightby = serviceGetWeightingParameter(service());
-
-    if (*weightby)
-    {
-        json_object_set_new(rval, "weightby", json_string(weightby));
-    }
-
     json_t* arr = json_array();
 
     for (const auto& a : all_server_stats())

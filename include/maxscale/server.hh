@@ -122,14 +122,6 @@ public:
     virtual bool persistent_conns_enabled() const = 0;
 
     /**
-     * Fetch value of custom parameter.
-     *
-     * @param name Parameter name
-     * @return Value of parameter, or empty if not found
-     */
-    virtual std::string get_custom_parameter(const std::string& name) const = 0;
-
-    /**
      * Update server version.
      *
      * @param version_num New numeric version

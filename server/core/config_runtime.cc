@@ -424,118 +424,100 @@ bool runtime_alter_server(Server* server, const char* key, const char* value)
         return false;
     }
 
-    bool is_normal_parameter = !server->is_custom_parameter(key);
-
-    // Only validate known parameters as custom parameters cannot be validated.
-    if (is_normal_parameter)
+    if (!param_is_valid(common_server_params(), nullptr, key, value))
     {
-        if (!param_is_valid(common_server_params(), nullptr, key, value))
-        {
-            config_runtime_error("Invalid value for parameter '%s': %s", key, value);
-            return false;
-        }
+        config_runtime_error("Invalid value for parameter '%s': %s", key, value);
+        return false;
     }
 
     bool setting_changed = false;
-    if (is_normal_parameter)
-    {
-        // Only some normal parameters can be changed runtime. The key/value-combination has already
-        // been checked to be valid.
-        if (strcmp(key, CN_ADDRESS) == 0 || strcmp(key, CN_SOCKET) == 0)
-        {
-            server->server_update_address(value);
-            setting_changed = true;
-        }
-        else if (strcmp(key, CN_PORT) == 0)
-        {
-            if (int ival = get_positive_int(value))
-            {
-                server->update_port(ival);
-                setting_changed = true;
-            }
-        }
-        else if (strcmp(key, CN_EXTRA_PORT) == 0)
-        {
-            server->update_extra_port(atoi(value));
-            setting_changed = true;
-        }
-        else if (strcmp(key, CN_MONITORUSER) == 0)
-        {
-            server->set_monitor_user(value);
-            setting_changed = true;
-        }
-        else if (strcmp(key, CN_MONITORPW) == 0)
-        {
-            server->set_monitor_password(value);
-            setting_changed = true;
-        }
-        else if (strcmp(key, CN_PERSISTPOOLMAX) == 0)
-        {
-            if (is_valid_integer(value))
-            {
-                server->set_persistpoolmax(atoi(value));
-                setting_changed = true;
-            }
-        }
-        else if (strcmp(key, CN_PERSISTMAXTIME) == 0)
-        {
-            if (is_valid_integer(value))
-            {
-                server->set_persistmaxtime(atoi(value));
-                setting_changed = true;
-            }
-        }
-        else if (strcmp(key, CN_RANK) == 0)
-        {
-            auto v = config_enum_to_value(value, rank_values);
-            if (v != MXS_UNKNOWN_ENUM_VALUE)
-            {
-                server->set_rank(v);
-                setting_changed = true;
-            }
-            else
-            {
-                config_runtime_error("Invalid value for '%s': %s", CN_RANK, value);
-            }
-        }
-        else if (strcmp(key, CN_PRIORITY) == 0)
-        {
-            char* end;
-            auto v = strtol(value, &end, 10);
 
-            if (*end == '\0' && v >= 0)
-            {
-                server->set_priority(v);
-                setting_changed = true;
-            }
-            else
-            {
-                config_runtime_error("Invalid value for '%s': %s", CN_PRIORITY, value);
-            }
+    // Only some normal parameters can be changed runtime. The key/value-combination has already
+    // been checked to be valid.
+    if (strcmp(key, CN_ADDRESS) == 0 || strcmp(key, CN_SOCKET) == 0)
+    {
+        server->server_update_address(value);
+        setting_changed = true;
+    }
+    else if (strcmp(key, CN_PORT) == 0)
+    {
+        if (int ival = get_positive_int(value))
+        {
+            server->update_port(ival);
+            setting_changed = true;
+        }
+    }
+    else if (strcmp(key, CN_EXTRA_PORT) == 0)
+    {
+        server->update_extra_port(atoi(value));
+        setting_changed = true;
+    }
+    else if (strcmp(key, CN_MONITORUSER) == 0)
+    {
+        server->set_monitor_user(value);
+        setting_changed = true;
+    }
+    else if (strcmp(key, CN_MONITORPW) == 0)
+    {
+        server->set_monitor_password(value);
+        setting_changed = true;
+    }
+    else if (strcmp(key, CN_PERSISTPOOLMAX) == 0)
+    {
+        if (is_valid_integer(value))
+        {
+            server->set_persistpoolmax(atoi(value));
+            setting_changed = true;
+        }
+    }
+    else if (strcmp(key, CN_PERSISTMAXTIME) == 0)
+    {
+        if (is_valid_integer(value))
+        {
+            server->set_persistmaxtime(atoi(value));
+            setting_changed = true;
+        }
+    }
+    else if (strcmp(key, CN_RANK) == 0)
+    {
+        auto v = config_enum_to_value(value, rank_values);
+        if (v != MXS_UNKNOWN_ENUM_VALUE)
+        {
+            server->set_rank(v);
+            setting_changed = true;
         }
         else
         {
-            // Was a recognized parameter but runtime modification is not supported.
-            config_runtime_error("Server parameter '%s' cannot be modified during runtime. A similar "
-                                 "effect can be produced by destroying the server and recreating it "
-                                 "with the new settings.", key);
+            config_runtime_error("Invalid value for '%s': %s", CN_RANK, value);
         }
+    }
+    else if (strcmp(key, CN_PRIORITY) == 0)
+    {
+        char* end;
+        auto v = strtol(value, &end, 10);
 
-        if (setting_changed)
+        if (*end == '\0' && v >= 0)
         {
-            // Successful modification of a normal parameter, write to text storage.
-            server->set_normal_parameter(key, value);
+            server->set_priority(v);
+            setting_changed = true;
+        }
+        else
+        {
+            config_runtime_error("Invalid value for '%s': %s", CN_PRIORITY, value);
         }
     }
     else
     {
-        // This is a custom parameter and may be used for weighting. Update the weights of services.
-        server->set_custom_parameter(key, value);
-        setting_changed = true;
+        // Was a recognized parameter but runtime modification is not supported.
+        config_runtime_error("Server parameter '%s' cannot be modified during runtime. A similar "
+                             "effect can be produced by destroying the server and recreating it "
+                             "with the new settings.", key);
     }
 
     if (setting_changed)
     {
+        // Successful modification of a normal parameter, write to text storage.
+        server->set_parameter(key, value);
         server->serialize();
         MXS_NOTICE("Updated server '%s': %s=%s", server->name(), key, value);
     }

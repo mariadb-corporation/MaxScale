@@ -168,15 +168,6 @@ Server* Server::server_alloc(const char* name, const mxs::ConfigParameters& para
     }
 
     server->m_settings.all_parameters = params;
-    for (auto p : params)
-    {
-        const string& param_name = p.first;
-        const string& param_value = p.second;
-        if (server->is_custom_parameter(param_name))
-        {
-            server->set_custom_parameter(param_name, param_value);
-        }
-    }
 
     return server;
 }
@@ -306,21 +297,7 @@ string Server::monitor_password() const
     return m_settings.monpw;
 }
 
-void Server::set_custom_parameter(const string& name, const string& value)
-{
-    // Set/add the parameter in both containers.
-    m_settings.all_parameters.set(name, value);
-    Guard guard(m_settings.lock);
-    m_settings.custom_parameters.set(name, value);
-}
-
-string Server::get_custom_parameter(const string& name) const
-{
-    Guard guard(m_settings.lock);
-    return m_settings.custom_parameters.get_string(name);
-}
-
-void Server::set_normal_parameter(const std::string& name, const std::string& value)
+void Server::set_parameter(const std::string& name, const std::string& value)
 {
     m_settings.all_parameters.set(name, value);
 }
@@ -435,16 +412,6 @@ bool Server::create_server_config(const char* filename) const
     string config = generate_config_string(name(), m_settings.all_parameters, common_server_params(),
                                            nullptr);
 
-    // Print custom parameters. The generate_config_string()-call doesn't print them.
-    {
-        Guard guard(m_settings.lock);
-        for (const auto& elem : m_settings.custom_parameters)
-        {
-            config += elem.first + "=" + elem.second + "\n";
-        }
-    }
-
-
     if (dprintf(file, "%s", config.c_str()) == -1)
     {
         MXS_ERROR("Could not write serialized configuration to file '%s': %d, %s",
@@ -494,18 +461,6 @@ json_t* Server::json_attributes() const
         &m_settings.all_parameters, {CN_TYPE}, common_server_params(),
         nullptr,    // no module-specific parameters
         params);
-
-    // Add weighting parameters that weren't added by config_add_module_params_json
-    {
-        Guard guard(m_settings.lock);
-        for (const auto& elem : m_settings.custom_parameters)
-        {
-            if (!json_object_get(params, elem.first.c_str()))
-            {
-                json_object_set_new(params, elem.first.c_str(), json_string(elem.second.c_str()));
-            }
-        }
-    }
 
     json_object_set_new(attr, CN_PARAMETERS, params);
 
@@ -568,19 +523,6 @@ bool Server::set_disk_space_threshold(const string& disk_space_threshold)
         set_disk_space_limits(dst);
     }
     return rv;
-}
-
-bool Server::is_custom_parameter(const string& name) const
-{
-    auto server_params = common_server_params();
-    for (int i = 0; server_params[i].name; i++)
-    {
-        if (server_params[i].name == name)
-        {
-            return false;
-        }
-    }
-    return true;
 }
 
 void Server::VersionInfo::set(uint64_t version, const std::string& version_str)
