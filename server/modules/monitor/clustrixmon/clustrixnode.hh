@@ -163,7 +163,7 @@ public:
         if (mysql_port != m_mysql_port)
         {
             m_mysql_port = mysql_port;
-            m_pServer->update_port(m_mysql_port);
+            m_pServer->set_port(m_mysql_port);
             changed = true;
         }
 

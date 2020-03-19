@@ -446,7 +446,7 @@ EndPoint::EndPoint(const std::string& host, int port)
 }
 
 EndPoint::EndPoint(const SERVER* server)
-    : EndPoint(server->address, server->port)
+    : EndPoint(server->address(), server->port())
 {
 }
 

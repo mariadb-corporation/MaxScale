@@ -71,10 +71,9 @@ public:
         uint64_t n_from_pool = 0;   /**< Times when a connection was available from the pool */
     };
 
-    // Base settings
-    char address[MAX_ADDRESS_LEN + 1] = {'\0'}; /**< Server hostname/IP-address */
-    int  port = -1;                             /**< Server port */
-    int  extra_port = -1;                       /**< Alternative monitor port if normal port fails */
+    virtual const char* address() const = 0;
+    virtual int         port() const = 0;
+    virtual int         extra_port() const = 0;
 
     // Other settings
     bool proxy_protocol = false;    /**< Send proxy-protocol header to backends when connecting
@@ -150,26 +149,26 @@ public:
      */
     virtual std::string version_string() const = 0;
 
-    /*
-     * Update server address. TODO: Move this to internal class once blr is gone.
+    /**
+     * Update server address.
      *
      * @param address       The new address
      */
-    bool server_update_address(const std::string& address);
+    virtual bool set_address(const std::string& address) = 0;
 
     /**
-     * Update the server port. TODO: Move this to internal class once blr is gone.
+     * Update the server port.
      *
      * @param new_port New port. The value is not checked but should generally be 1 -- 65535.
      */
-    void update_port(int new_port);
+    virtual void set_port(int new_port) = 0;
 
     /**
-     * Update the server extra port. TODO: Move this to internal class once blr is gone.
+     * Update the server extra port.
      *
      * @param new_port New port. The value is not checked but should generally be 1 -- 65535.
      */
-    void update_extra_port(int new_port);
+    virtual void set_extra_port(int new_port) = 0;
 
     /**
      * @brief Check if a server points to a local MaxScale service

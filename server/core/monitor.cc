@@ -421,7 +421,7 @@ bool check_disk_space_exhausted(MonitorServer* pMs,
         MXS_ERROR("Disk space on %s at %s is exhausted; %d%% of the the disk "
                   "mounted on the path %s has been used, and the limit it %d%%.",
                   pMs->server->name(),
-                  pMs->server->address,
+                  pMs->server->address(),
                   used_percentage,
                   path.c_str(),
                   max_percentage);
@@ -746,8 +746,8 @@ bool Monitor::test_permissions(const string& query)
                       " checking monitor user credentials and permissions.",
                       name(),
                       mondb->server->name(),
-                      mondb->server->address,
-                      mondb->server->port);
+                      mondb->server->address(),
+                      mondb->server->port());
 
             if (result != ConnectResult::ACCESS_DENIED)
             {
@@ -983,7 +983,7 @@ string Monitor::gen_serverlist(int status, CredentialsApproach approach)
         {
             if (approach == CredentialsApproach::EXCLUDE)
             {
-                rval += separator + mxb::string_printf("[%s]:%i", server->address, server->port);
+                rval += separator + mxb::string_printf("[%s]:%i", server->address(), server->port());
             }
             else
             {
@@ -997,7 +997,7 @@ string Monitor::gen_serverlist(int status, CredentialsApproach approach)
                 }
 
                 rval += separator + mxb::string_printf("%s:%s@[%s]:%d", user.c_str(), password.c_str(),
-                                                       server->address, server->port);
+                                                       server->address(), server->port());
             }
             separator = ",";
         }
@@ -1091,7 +1091,7 @@ std::string Monitor::child_nodes(MonitorServer* parent)
                     ss << ",";
                 }
 
-                ss << "[" << node->server->address << "]:" << node->server->port;
+                ss << "[" << node->server->address() << "]:" << node->server->port();
                 have_content = true;
             }
         }
@@ -1107,7 +1107,7 @@ int Monitor::launch_command(MonitorServer* ptr)
     // A generator function is ran only if the matching substitution keyword is found.
 
     auto gen_initiator = [ptr] {
-            return mxb::string_printf("[%s]:%d", ptr->server->address, ptr->server->port);
+            return mxb::string_printf("[%s]:%d", ptr->server->address(), ptr->server->port());
         };
 
     auto gen_parent = [this, ptr] {
@@ -1115,7 +1115,7 @@ int Monitor::launch_command(MonitorServer* ptr)
             MonitorServer* parent = find_parent_node(ptr);
             if (parent)
             {
-                ss = mxb::string_printf("[%s]:%d", parent->server->address, parent->server->port);
+                ss = mxb::string_printf("[%s]:%d", parent->server->address(), parent->server->port());
             }
             return ss;
         };
@@ -1321,8 +1321,8 @@ void MonitorServer::log_connect_error(ConnectResult rval)
     const char REFUSED[] = "Monitor was unable to connect to server %s[%s:%d] : '%s'";
     MXS_ERROR(rval == ConnectResult::TIMEOUT ? TIMED_OUT : REFUSED,
               server->name(),
-              server->address,
-              server->port,
+              server->address(),
+              server->port(),
               mysql_error(con));
 }
 
@@ -1331,7 +1331,7 @@ void MonitorServer::log_state_change()
     string prev = Target::status_to_string(mon_prev_status, server->stats().n_current);
     string next = server->status_string();
     MXS_NOTICE("Server changed state: %s[%s:%u]: %s. [%s] -> [%s]",
-               server->name(), server->address, server->port,
+               server->name(), server->address(), server->port(),
                get_event_name(),
                prev.c_str(), next.c_str());
 }
@@ -1351,8 +1351,8 @@ void MonitorServer::mon_report_query_error()
 {
     MXS_ERROR("Failed to execute query on server '%s' ([%s]:%d): %s",
               server->name(),
-              server->address,
-              server->port,
+              server->address(),
+              server->port(),
               mysql_error(con));
 }
 
@@ -1734,7 +1734,7 @@ bool Monitor::set_server_status(SERVER* srv, int bit, string* errmsg_out)
     if (!msrv)
     {
         MXS_ERROR("Monitor %s requested to set status of server %s that it does not monitor.",
-                  name(), srv->address);
+                  name(), srv->address());
         return false;
     }
 
@@ -1792,7 +1792,7 @@ bool Monitor::clear_server_status(SERVER* srv, int bit, string* errmsg_out)
     if (!msrv)
     {
         MXS_ERROR("Monitor %s requested to clear status of server %s that it does not monitor.",
-                  name(), srv->address);
+                  name(), srv->address());
         return false;
     }
 
@@ -2032,7 +2032,7 @@ void MonitorServer::update_disk_space_status()
                                 "does not have that.",
                                 path.c_str(),
                                 pMs->server->name(),
-                                pMs->server->address);
+                                pMs->server->address());
                 }
             }
         }
@@ -2074,14 +2074,14 @@ void MonitorServer::update_disk_space_status()
                       "version (%s) is too old, or the DISKS information schema plugin "
                       "has not been installed. Disk space checking has been disabled.",
                       pServer->name(),
-                      pServer->address,
+                      pServer->address(),
                       pServer->version_string().c_str());
         }
         else
         {
             MXS_ERROR("Checking the disk space for %s at %s failed due to: (%d) %s",
                       pServer->name(),
-                      pServer->address,
+                      pServer->address(),
                       mysql_errno(pMs->con),
                       mysql_error(pMs->con));
         }

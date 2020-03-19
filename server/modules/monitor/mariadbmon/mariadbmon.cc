@@ -136,9 +136,9 @@ MariaDBServer* MariaDBMonitor::get_server(const EndPoint& search_ep)
             for (auto server : servers())
             {
                 SERVER* srv = server->server;
-                if (srv->port == search_ep.port())
+                if (srv->port() == search_ep.port())
                 {
-                    auto server_addresses = m_resolver.resolve_server(srv->address);
+                    auto server_addresses = m_resolver.resolve_server(srv->address());
                     // The number of elements in the arrays is rarely over 1.
                     for (auto& address : server_addresses)
                     {
@@ -647,15 +647,15 @@ void MariaDBMonitor::log_master_changes()
                 && !(root_master->pending_status & SERVER_MAINT))
             {
                 MXS_NOTICE("A Master Server is now available: %s:%i",
-                           root_master->server->address,
-                           root_master->server->port);
+                           root_master->server->address(),
+                           root_master->server->port());
             }
         }
         else
         {
             MXS_ERROR("No Master can be determined. Last known was %s:%i",
-                      root_master->server->address,
-                      root_master->server->port);
+                      root_master->server->address(),
+                      root_master->server->port());
         }
         m_log_no_master = true;
     }
@@ -1091,9 +1091,9 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     static const char ARG_MONITOR_DESC[] = "Monitor name";
     static modulecmd_arg_type_t switchover_argv[] =
     {
-        {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC},
-        {MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "New master (optional)"    },
-        {MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Current master (optional)"}
+        {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC           },
+        {MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL,             "New master (optional)"    },
+        {MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL,             "Current master (optional)"}
     };
 
     modulecmd_register_command(MXS_MODULE_NAME, "switchover", MODULECMD_TYPE_ACTIVE,
@@ -1112,7 +1112,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     static modulecmd_arg_type_t rejoin_argv[] =
     {
         {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC},
-        {MODULECMD_ARG_SERVER, "Joining server"}
+        {MODULECMD_ARG_SERVER,                                      "Joining server"}
     };
 
     modulecmd_register_command(MXS_MODULE_NAME, "rejoin", MODULECMD_TYPE_ACTIVE,
@@ -1121,8 +1121,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 
     static modulecmd_arg_type_t reset_gtid_argv[] =
     {
-        {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC},
-        {MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Master server (optional)"}
+        {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC          },
+        {MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL,             "Master server (optional)"}
     };
 
     modulecmd_register_command(MXS_MODULE_NAME, "reset-replication", MODULECMD_TYPE_ACTIVE,

@@ -1820,7 +1820,7 @@ int ClientDCB::port() const
 BackendDCB* BackendDCB::connect(SERVER* server, MXS_SESSION* session, DCB::Manager* manager)
 {
     BackendDCB* rval = nullptr;
-    int fd = connect_socket(server->address, server->port);
+    int fd = connect_socket(server->address(), server->port());
     if (fd >= 0)
     {
         rval = new(std::nothrow) BackendDCB(server, fd, session, manager);
@@ -1977,7 +1977,7 @@ int BackendDCB::ssl_handshake()
 
 BackendDCB::BackendDCB(SERVER* server, int fd, MXS_SESSION* session,
                        DCB::Manager* manager)
-    : DCB(fd, server->address, DCB::Role::BACKEND, session, nullptr, manager)
+    : DCB(fd, server->address(), DCB::Role::BACKEND, session, nullptr, manager)
     , m_server(server)
 {
     mxb_assert(m_server);

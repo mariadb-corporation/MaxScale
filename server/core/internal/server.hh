@@ -36,6 +36,21 @@ public:
 
     ~Server();
 
+    const char* address() const override
+    {
+        return m_settings.address;
+    }
+
+    int port() const override
+    {
+        return m_settings.port;
+    }
+
+    int extra_port() const override
+    {
+        return m_settings.extra_port;
+    }
+
     long persistpoolmax() const
     {
         return m_settings.persistpoolmax;
@@ -229,6 +244,12 @@ public:
         return no_children;
     }
 
+    bool set_address(const std::string& address) override;
+
+    void set_port(int new_port) override;
+
+    void set_extra_port(int new_port) override;
+
     BackendDCB** persistent = nullptr;      /**< List of unused persistent connections to the server */
 
 private:
@@ -243,6 +264,10 @@ private:
         mxs::ConfigParameters all_parameters;
 
         std::string protocol;       /**< Backend protocol module name. Does not change so needs no locking. */
+
+        char address[MAX_ADDRESS_LEN + 1] = {'\0'}; /**< Server hostname/IP-address */
+        int  port = -1;                             /**< Server port */
+        int  extra_port = -1;                       /**< Alternative monitor port if normal port fails */
 
         char monuser[MAX_MONUSER_LEN + 1] = {'\0'}; /**< Monitor username, overrides monitor setting */
         char monpw[MAX_MONPW_LEN + 1] = {'\0'};     /**< Monitor password, overrides monitor setting */

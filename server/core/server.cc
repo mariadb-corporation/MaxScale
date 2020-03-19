@@ -142,15 +142,15 @@ Server* Server::server_alloc(const char* name, const mxs::ConfigParameters& para
     auto address = params.contains(CN_ADDRESS) ?
         params.get_string(CN_ADDRESS) : params.get_string(CN_SOCKET);
 
-    careful_strcpy(server->address, MAX_ADDRESS_LEN, address.c_str());
+    careful_strcpy(server->m_settings.address, MAX_ADDRESS_LEN, address.c_str());
     if (address.length() > MAX_ADDRESS_LEN)
     {
         MXS_WARNING("Truncated server address '%s' to the maximum size of %i characters.",
                     address.c_str(), MAX_ADDRESS_LEN);
     }
 
-    server->port = params.get_integer(CN_PORT);
-    server->extra_port = params.get_integer(CN_EXTRA_PORT);
+    server->m_settings.port = params.get_integer(CN_PORT);
+    server->m_settings.extra_port = params.get_integer(CN_EXTRA_PORT);
     server->m_settings.persistpoolmax = params.get_integer(CN_PERSISTPOOLMAX);
     server->m_settings.persistmaxtime = params.get_duration<std::chrono::seconds>(CN_PERSISTMAXTIME).count();
     server->proxy_protocol = params.get_bool(CN_PROXY_PROTOCOL);
@@ -187,8 +187,8 @@ Server* Server::create_test_server()
 void Server::printServer()
 {
     printf("Server %p\n", this);
-    printf("\tServer:                       %s\n", address);
-    printf("\tPort:                         %d\n", port);
+    printf("\tServer:                       %s\n", address());
+    printf("\tPort:                         %d\n", port());
     printf("\tTotal connections:            %d\n", stats().n_connections);
     printf("\tCurrent connections:          %d\n", stats().n_current);
     printf("\tPersistent connections:       %d\n", pool_stats.n_persistent);
@@ -302,12 +302,12 @@ void Server::set_parameter(const std::string& name, const std::string& value)
     m_settings.all_parameters.set(name, value);
 }
 
-bool SERVER::server_update_address(const string& new_address)
+bool Server::set_address(const string& new_address)
 {
     bool rval = false;
     if (new_address.length() <= MAX_ADDRESS_LEN)
     {
-        careful_strcpy(address, MAX_ADDRESS_LEN, new_address);
+        careful_strcpy(m_settings.address, MAX_ADDRESS_LEN, new_address);
         rval = true;
     }
     else
@@ -317,14 +317,14 @@ bool SERVER::server_update_address(const string& new_address)
     return rval;
 }
 
-void SERVER::update_port(int new_port)
+void Server::set_port(int new_port)
 {
-    mxb::atomic::store(&port, new_port, mxb::atomic::RELAXED);
+    m_settings.port = new_port;
 }
 
-void SERVER::update_extra_port(int new_port)
+void Server::set_extra_port(int new_port)
 {
-    mxb::atomic::store(&extra_port, new_port, mxb::atomic::RELAXED);
+    m_settings.extra_port = new_port;
 }
 
 uint64_t SERVER::status_from_string(const char* str)

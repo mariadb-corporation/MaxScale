@@ -141,19 +141,19 @@ Server* ServerManager::find_by_unique_name(const string& name)
 std::unique_ptr<ResultSet> ServerManager::getList()
 {
     std::unique_ptr<ResultSet> set =
-            ResultSet::create({"Server", "Address", "Port", "Connections", "Status"});
+        ResultSet::create({"Server", "Address", "Port", "Connections", "Status"});
 
     this_unit.foreach_server(
-            [&set](Server* server) {
-                if (server->server_is_active())
-                {
-                    string stat = server->status_string();
-                    set->add_row({server->name(), server->address,
-                                  std::to_string(server->port),
-                                  std::to_string(server->stats().n_current), stat});
-                }
-                return true;
-            });
+        [&set](Server* server) {
+            if (server->server_is_active())
+            {
+                string stat = server->status_string();
+                set->add_row({server->name(), server->address(),
+                              std::to_string(server->port()),
+                              std::to_string(server->stats().n_current), stat});
+            }
+            return true;
+        });
 
     return set;
 }
@@ -216,7 +216,7 @@ json_t* ServerManager::server_to_json_attributes(const Server* server)
         {
             json_object_set(attr, key, iter);
         }
-        json_decref(monitor_attr); // No longer used.
+        json_decref(monitor_attr);      // No longer used.
     }
     return attr;
 }
@@ -242,19 +242,19 @@ bool SERVER::is_mxs_service()
     bool rval = false;
 
     /** Do a coarse check for local server pointing to a MaxScale service */
-    if (address[0] == '/')
+    if (address()[0] == '/')
     {
-        if (service_socket_is_used(address))
+        if (service_socket_is_used(address()))
         {
             rval = true;
         }
     }
-    else if (strcmp(address, "127.0.0.1") == 0
-             || strcmp(address, "::1") == 0
-             || strcmp(address, "localhost") == 0
-             || strcmp(address, "localhost.localdomain") == 0)
+    else if (strcmp(address(), "127.0.0.1") == 0
+             || strcmp(address(), "::1") == 0
+             || strcmp(address(), "localhost") == 0
+             || strcmp(address(), "localhost.localdomain") == 0)
     {
-        if (service_port_is_used(port))
+        if (service_port_is_used(port()))
         {
             rval = true;
         }

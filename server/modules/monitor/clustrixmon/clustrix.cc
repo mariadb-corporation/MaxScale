@@ -219,7 +219,7 @@ bool Clustrix::ping_or_connect_to_hub(const char* zName,
             {
                 MXS_NOTICE("%s: The Clustrix node %s used as hub is part of the quorum, "
                            "but it is being softfailed. Switching to another node.",
-                           zName, server.address);
+                           zName, server.address());
             }
             else
             {
@@ -230,7 +230,7 @@ bool Clustrix::ping_or_connect_to_hub(const char* zName,
     else
     {
         MXS_ERROR("%s: Could either not ping or create connection to %s:%d: %s",
-                  zName, server.address, server.port, mysql_error(*ppCon));
+                  zName, server.address(), server.port(), mysql_error(*ppCon));
     }
 
     return connected;

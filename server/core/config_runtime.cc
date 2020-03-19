@@ -436,20 +436,20 @@ bool runtime_alter_server(Server* server, const char* key, const char* value)
     // been checked to be valid.
     if (strcmp(key, CN_ADDRESS) == 0 || strcmp(key, CN_SOCKET) == 0)
     {
-        server->server_update_address(value);
+        server->set_address(value);
         setting_changed = true;
     }
     else if (strcmp(key, CN_PORT) == 0)
     {
         if (int ival = get_positive_int(value))
         {
-            server->update_port(ival);
+            server->set_port(ival);
             setting_changed = true;
         }
     }
     else if (strcmp(key, CN_EXTRA_PORT) == 0)
     {
-        server->update_extra_port(atoi(value));
+        server->set_extra_port(atoi(value));
         setting_changed = true;
     }
     else if (strcmp(key, CN_MONITORUSER) == 0)
@@ -1810,8 +1810,8 @@ bool runtime_create_server(const char* name, const char* address, const char* po
                 rval = true;
                 MXS_NOTICE("Created server '%s' at %s:%u",
                            server->name(),
-                           server->address,
-                           server->port);
+                           server->address(),
+                           server->port());
             }
             else
             {
@@ -1878,8 +1878,8 @@ bool runtime_destroy_server(Server* server)
         {
             MXS_NOTICE("Destroyed server '%s' at %s:%u",
                        server->name(),
-                       server->address,
-                       server->port);
+                       server->address(),
+                       server->port());
             server->is_active = false;
         }
     }

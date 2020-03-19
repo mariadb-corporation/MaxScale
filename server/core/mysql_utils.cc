@@ -87,18 +87,18 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, const char* user, cons
 
     MYSQL* mysql = nullptr;
 
-    if (server->address[0] == '/')
+    if (server->address()[0] == '/')
     {
-        mysql = mysql_real_connect(con, nullptr, user, passwd, nullptr, 0, server->address, 0);
+        mysql = mysql_real_connect(con, nullptr, user, passwd, nullptr, 0, server->address(), 0);
     }
     else
     {
-        mysql = mysql_real_connect(con, server->address, user, passwd, NULL, server->port, NULL, 0);
-        auto extra_port = mxb::atomic::load(&server->extra_port, mxb::atomic::RELAXED);
+        mysql = mysql_real_connect(con, server->address(), user, passwd, NULL, server->port(), NULL, 0);
+        auto extra_port = server->extra_port();
 
         if (!mysql && extra_port > 0)
         {
-            mysql = mysql_real_connect(con, server->address, user, passwd, NULL, extra_port, NULL, 0);
+            mysql = mysql_real_connect(con, server->address(), user, passwd, NULL, extra_port, NULL, 0);
             MXS_WARNING("Could not connect with normal port to server '%s', using extra_port",
                         server->name());
         }
@@ -367,7 +367,7 @@ const char* dbg_decode_response(GWBUF* pPacket)
                 uint8_t error[payload_len];
                 error[0] = *it;
 
-                end = std::next(it, sizeof(error) - 1); // -1 due to the 1 in 'header' above.
+                end = std::next(it, sizeof(error) - 1);     // -1 due to the 1 in 'header' above.
                 std::copy(it, end, error + 1);
 
                 uint32_t error_code = gw_mysql_get_byte2(&error[1]);

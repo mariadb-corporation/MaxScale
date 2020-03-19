@@ -887,7 +887,7 @@ namespace
 string create_url(const SERVER& server, int64_t port, const char* zOperation)
 {
     string url("http://");
-    url += server.address;
+    url += server.address();
     url += ":";
     url += std::to_string(port);
     url += REST_BASE;

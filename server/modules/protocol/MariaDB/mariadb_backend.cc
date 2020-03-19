@@ -275,7 +275,7 @@ void MariaDBBackendConnection::handle_error_response(DCB* plain_dcb, GWBUF* buff
                   "from MaxScale. Run 'mysqladmin -h %s -P %d flush-hosts' on this server before taking "
                   "this server out of maintenance mode. To avoid this problem in the future, set "
                   "'max_connect_errors' to a larger value in the backend server.",
-                  server->name(), server->address, server->port);
+                  server->name(), server->address(), server->port());
     }
 }
 
@@ -1153,7 +1153,8 @@ GWBUF* MariaDBBackendConnection::create_change_user_packet()
 
                 // Calculate SHA1(CONCAT(scramble, hash2) */
                 uint8_t concat_hash[SHA_DIGEST_LENGTH];
-                gw_sha1_2_str(m_auth_data.scramble, MYSQL_SCRAMBLE_LEN, hash2, SHA_DIGEST_LENGTH, concat_hash);
+                gw_sha1_2_str(m_auth_data.scramble, MYSQL_SCRAMBLE_LEN, hash2, SHA_DIGEST_LENGTH,
+                              concat_hash);
 
                 // SHA1(password) was sent by client and is in binary form.
                 auto& hash1 = m_auth_data.client_data->auth_token_phase2;
@@ -1769,7 +1770,8 @@ uint32_t MariaDBBackendConnection::create_capabilities(bool with_ssl, bool db_sp
     uint32_t final_capabilities;
 
     /** Copy client's flags to backend but with the known capabilities mask */
-    final_capabilities = (m_auth_data.client_data->client_capabilities() & (uint32_t)GW_MYSQL_CAPABILITIES_CLIENT);
+    final_capabilities =
+        (m_auth_data.client_data->client_capabilities() & (uint32_t)GW_MYSQL_CAPABILITIES_CLIENT);
 
     if (with_ssl)
     {

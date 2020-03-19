@@ -171,8 +171,8 @@ void MariaDBMonitor::Test::init_servers(int count)
         if (m_use_hostnames)
         {
             string hostname = create_hostname(id);
-            strcpy(base_server->address, hostname.c_str());
-            base_server->port = id;
+            base_server->set_address(hostname);
+            base_server->set_port(id);
         }
         else
         {

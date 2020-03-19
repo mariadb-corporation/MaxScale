@@ -670,8 +670,8 @@ static bool check_server_permissions(SERVICE* service,
                   " checking authentication user credentials and permissions: %d %s",
                   service->name(),
                   server->name(),
-                  server->address,
-                  server->port,
+                  server->address(),
+                  server->port(),
                   my_errno,
                   mysql_error(mysql));
 

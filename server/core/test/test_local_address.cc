@@ -82,8 +82,8 @@ int test(bool success, const char* zHost, const char* zUser, const char* zPasswo
 
     Server* pServer = Server::create_test_server();
     Server& server = *pServer;
-    strcpy(server.address, zHost);
-    server.port = 3306;
+    server.set_address(zHost);
+    server.set_port(3306);
 
     MYSQL* pMysql = mysql_init(NULL);
 
