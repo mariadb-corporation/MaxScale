@@ -309,6 +309,19 @@ public:
     }
 };
 
+class GetCommand : public CsMonitor::Command
+{
+public:
+    using CsMonitor::Command::Command;
+
+    void init() override final
+    {
+        m_http = http::get_async(m_urls);
+
+        Command::init();
+    }
+};
+
 }
 
 CsMonitor::CsMonitor(const std::string& name, const std::string& module)
@@ -407,17 +420,6 @@ bool CsMonitor::command_cluster_start(json_t** ppOutput)
     return command("cluster-start", cmd, sem, ppOutput);
 }
 
-bool CsMonitor::command_cluster_stop(json_t** ppOutput)
-{
-    mxb::Semaphore sem;
-
-    auto cmd = [this, &sem, ppOutput] () {
-        cluster_stop(&sem, ppOutput);
-    };
-
-    return command("cluster-stop", cmd, sem, ppOutput);
-}
-
 bool CsMonitor::command_cluster_shutdown(json_t** ppOutput)
 {
     mxb::Semaphore sem;
@@ -427,6 +429,28 @@ bool CsMonitor::command_cluster_shutdown(json_t** ppOutput)
     };
 
     return command("cluster-shutdown", cmd, sem, ppOutput);
+}
+
+bool CsMonitor::command_cluster_ping(json_t** ppOutput)
+{
+    mxb::Semaphore sem;
+
+    auto cmd = [this, &sem, ppOutput] () {
+        cluster_ping(&sem, ppOutput);
+    };
+
+    return command("cluster-ping", cmd, sem, ppOutput);
+}
+
+bool CsMonitor::command_cluster_status(json_t** ppOutput)
+{
+    mxb::Semaphore sem;
+
+    auto cmd = [this, &sem, ppOutput] () {
+        cluster_status(&sem, ppOutput);
+    };
+
+    return command("cluster-status", cmd, sem, ppOutput);
 }
 
 bool CsMonitor::command_cluster_add_node(json_t** ppOutput)
@@ -471,13 +495,17 @@ bool CsMonitor::command_async(const char* zCommand, json_t** ppOutput)
             {
                 cluster_start();
             }
-            else if (command == "cluster-stop")
-            {
-                cluster_stop();
-            }
             else if (command == "cluster-shutdown")
             {
                 cluster_shutdown();
+            }
+            else if (command == "cluster-ping")
+            {
+                cluster_ping();
+            }
+            else if (command == "cluster-status")
+            {
+                cluster_status();
             }
             else if (command == "cluster-add-node")
             {
@@ -611,6 +639,21 @@ string create_url(const MonitorServer& mserver, int64_t port, const char* zOpera
 
 }
 
+void CsMonitor::cluster_get(const char* zCmd, mxb::Semaphore* pSem, json_t** ppOutput)
+{
+    vector<string> urls;
+
+    for (const MonitorServer* pMserver : servers())
+    {
+        string url { create_url(*pMserver, m_config.admin_port, zCmd) };
+
+        urls.push_back(url);
+    }
+
+    m_sCommand.reset(new GetCommand(this, zCmd, std::move(urls), pSem, ppOutput));
+    m_sCommand->init();
+}
+
 void CsMonitor::cluster_put(const char* zCmd, mxb::Semaphore* pSem, json_t** ppOutput)
 {
     vector<string> urls;
@@ -631,14 +674,19 @@ void CsMonitor::cluster_start(mxb::Semaphore* pSem, json_t** ppOutput)
     cluster_put("start", pSem, ppOutput);
 }
 
-void CsMonitor::cluster_stop(mxb::Semaphore* pSem, json_t** ppOutput)
-{
-    cluster_put("stop", pSem, ppOutput);
-}
-
 void CsMonitor::cluster_shutdown(mxb::Semaphore* pSem, json_t** ppOutput)
 {
     cluster_put("shutdown", pSem, ppOutput);
+}
+
+void CsMonitor::cluster_ping(mxb::Semaphore* pSem, json_t** ppOutput)
+{
+    cluster_get("ping", pSem, ppOutput);
+}
+
+void CsMonitor::cluster_status(mxb::Semaphore* pSem, json_t** ppOutput)
+{
+    cluster_get("status", pSem, ppOutput);
 }
 
 void CsMonitor::cluster_add_node(mxb::Semaphore* pSem, json_t** ppOutput)

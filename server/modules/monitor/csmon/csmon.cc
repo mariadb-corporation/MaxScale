@@ -26,16 +26,6 @@ bool cluster_start(const MODULECMD_ARG* pArgs, json_t** ppOutput)
     return pMonitor->command_cluster_start(ppOutput);
 }
 
-bool cluster_stop(const MODULECMD_ARG* pArgs, json_t** ppOutput)
-{
-    mxb_assert((pArgs->argc >= 1) && (pArgs->argc <= 1));
-    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
-
-    auto* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
-
-    return pMonitor->command_cluster_stop(ppOutput);
-}
-
 bool cluster_shutdown(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 {
     mxb_assert((pArgs->argc >= 1) && (pArgs->argc <= 1));
@@ -44,6 +34,26 @@ bool cluster_shutdown(const MODULECMD_ARG* pArgs, json_t** ppOutput)
     auto* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
 
     return pMonitor->command_cluster_shutdown(ppOutput);
+}
+
+bool cluster_ping(const MODULECMD_ARG* pArgs, json_t** ppOutput)
+{
+    mxb_assert((pArgs->argc >= 1) && (pArgs->argc <= 1));
+    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
+
+    auto* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
+
+    return pMonitor->command_cluster_ping(ppOutput);
+}
+
+bool cluster_status(const MODULECMD_ARG* pArgs, json_t** ppOutput)
+{
+    mxb_assert((pArgs->argc >= 1) && (pArgs->argc <= 1));
+    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
+
+    auto* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
+
+    return pMonitor->command_cluster_status(ppOutput);
 }
 
 bool cluster_add_node(const MODULECMD_ARG* pArgs, json_t** ppOutput)
@@ -112,16 +122,6 @@ void register_commands()
                                MXS_ARRAY_NELEMS(cluster_start_argv), cluster_start_argv,
                                "Start Columnstore cluster");
 
-    static modulecmd_arg_type_t cluster_stop_argv[] =
-    {
-        {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC}
-    };
-
-    modulecmd_register_command(MXS_MODULE_NAME, "cluster-stop", MODULECMD_TYPE_ACTIVE,
-                               cluster_stop,
-                               MXS_ARRAY_NELEMS(cluster_stop_argv), cluster_stop_argv,
-                               "Stop Columnstore cluster");
-
     static modulecmd_arg_type_t cluster_shutdown_argv[] =
     {
         {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC}
@@ -131,6 +131,26 @@ void register_commands()
                                cluster_shutdown,
                                MXS_ARRAY_NELEMS(cluster_shutdown_argv), cluster_shutdown_argv,
                                "Shutdown Columnstore cluster");
+
+    static modulecmd_arg_type_t cluster_ping_argv[] =
+    {
+        { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC }
+    };
+
+    modulecmd_register_command(MXS_MODULE_NAME, "cluster-ping", MODULECMD_TYPE_ACTIVE,
+                               cluster_ping,
+                               MXS_ARRAY_NELEMS(cluster_ping_argv), cluster_ping_argv,
+                               "Ping Columnstore cluster");
+
+    static modulecmd_arg_type_t cluster_status_argv[] =
+    {
+        { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC }
+    };
+
+    modulecmd_register_command(MXS_MODULE_NAME, "cluster-status", MODULECMD_TYPE_ACTIVE,
+                               cluster_status,
+                               MXS_ARRAY_NELEMS(cluster_ping_argv), cluster_ping_argv,
+                               "Get Columnstore cluster status");
 
     static modulecmd_arg_type_t cluster_add_node_argv[] =
     {

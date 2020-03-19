@@ -33,8 +33,9 @@ public:
 public:
     // Only to be called by the module call command mechanism.
     bool command_cluster_start(json_t** ppOutput);
-    bool command_cluster_stop(json_t** ppOutput);
     bool command_cluster_shutdown(json_t** ppOutput);
+    bool command_cluster_ping(json_t** ppOutput);
+    bool command_cluster_status(json_t** ppOutput);
     bool command_cluster_add_node(json_t** ppOutput);
     bool command_cluster_remove_node(json_t** ppOutput);
     bool command_async(const char* zCommand, json_t** ppOutput);
@@ -44,11 +45,13 @@ public:
 private:
     bool command(const char* zCmd, std::function<void()> cmd, mxb::Semaphore& sem, json_t** ppOutput);
 
+    void cluster_get(const char* zCmd, mxb::Semaphore* pSem, json_t** ppOutput);
     void cluster_put(const char* zCmd, mxb::Semaphore* pSem, json_t** ppOutput);
 
     void cluster_start(mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
-    void cluster_stop(mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
     void cluster_shutdown(mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
+    void cluster_ping(mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
+    void cluster_status(mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
     void cluster_add_node(mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
     void cluster_remove_node(mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
 
