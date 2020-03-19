@@ -216,7 +216,7 @@ must be one of the methods that the requested resource supports.
 #### Allow
 
 All resources return the Allow header with the supported HTTP methods. For
-example the resource `/service` will always return the `Accept: GET, PATCH, PUT`
+example the resource `/services` will always return the `Accept: GET, PATCH, PUT`
 header.
 
 #### Accept-Patch
@@ -320,7 +320,7 @@ representation of the error.
 ```javascript
 {
     "error": {
-        "detail" : "The new `/server/` resource is missing the `port` parameter"
+        "detail" : "The new `/servers/` resource is missing the `port` parameter"
     }
 }
 ```
