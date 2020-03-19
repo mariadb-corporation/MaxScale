@@ -76,6 +76,26 @@ bool cluster_remove_node(const MODULECMD_ARG* pArgs, json_t** ppOutput)
     return pMonitor->command_cluster_remove_node(ppOutput);
 }
 
+bool cluster_config_get(const MODULECMD_ARG* pArgs, json_t** ppOutput)
+{
+    mxb_assert(pArgs->argc == 1);
+    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
+
+    auto* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
+
+    return pMonitor->command_cluster_config_get(ppOutput);
+}
+
+bool cluster_config_put(const MODULECMD_ARG* pArgs, json_t** ppOutput)
+{
+    mxb_assert(pArgs->argc == 1);
+    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
+
+    auto* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
+
+    return pMonitor->command_cluster_config_put(ppOutput);
+}
+
 bool async(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 {
     mxb_assert(pArgs->argc == 2);
@@ -137,7 +157,7 @@ void register_commands()
         { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC }
     };
 
-    modulecmd_register_command(MXS_MODULE_NAME, "cluster-ping", MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXS_MODULE_NAME, "cluster-ping", MODULECMD_TYPE_PASSIVE,
                                cluster_ping,
                                MXS_ARRAY_NELEMS(cluster_ping_argv), cluster_ping_argv,
                                "Ping Columnstore cluster");
@@ -147,10 +167,30 @@ void register_commands()
         { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC }
     };
 
-    modulecmd_register_command(MXS_MODULE_NAME, "cluster-status", MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXS_MODULE_NAME, "cluster-status", MODULECMD_TYPE_PASSIVE,
                                cluster_status,
-                               MXS_ARRAY_NELEMS(cluster_ping_argv), cluster_ping_argv,
+                               MXS_ARRAY_NELEMS(cluster_status_argv), cluster_status_argv,
                                "Get Columnstore cluster status");
+
+    static modulecmd_arg_type_t cluster_config_get_argv[] =
+    {
+        { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC }
+    };
+
+    modulecmd_register_command(MXS_MODULE_NAME, "cluster-config-get", MODULECMD_TYPE_PASSIVE,
+                               cluster_config_get,
+                               MXS_ARRAY_NELEMS(cluster_config_get_argv), cluster_config_get_argv,
+                               "Get Columnstore cluster config");
+
+    static modulecmd_arg_type_t cluster_config_put_argv[] =
+    {
+        { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC }
+    };
+
+    modulecmd_register_command(MXS_MODULE_NAME, "cluster-config-put", MODULECMD_TYPE_PASSIVE,
+                               cluster_config_put,
+                               MXS_ARRAY_NELEMS(cluster_config_put_argv), cluster_config_put_argv,
+                               "Put Columnstore cluster config");
 
     static modulecmd_arg_type_t cluster_add_node_argv[] =
     {

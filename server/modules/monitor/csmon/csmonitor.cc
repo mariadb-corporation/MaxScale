@@ -453,6 +453,28 @@ bool CsMonitor::command_cluster_status(json_t** ppOutput)
     return command("cluster-status", cmd, sem, ppOutput);
 }
 
+bool CsMonitor::command_cluster_config_get(json_t** ppOutput)
+{
+    mxb::Semaphore sem;
+
+    auto cmd = [this, &sem, ppOutput] () {
+        cluster_config_get(&sem, ppOutput);
+    };
+
+    return command("cluster-config-get", cmd, sem, ppOutput);
+}
+
+bool CsMonitor::command_cluster_config_put(json_t** ppOutput)
+{
+    mxb::Semaphore sem;
+
+    auto cmd = [this, &sem, ppOutput] () {
+        cluster_config_put(&sem, ppOutput);
+    };
+
+    return command("cluster-config-put", cmd, sem, ppOutput);
+}
+
 bool CsMonitor::command_cluster_add_node(json_t** ppOutput)
 {
     mxb::Semaphore sem;
@@ -506,6 +528,14 @@ bool CsMonitor::command_async(const char* zCommand, json_t** ppOutput)
             else if (command == "cluster-status")
             {
                 cluster_status();
+            }
+            else if (command == "cluster-config-get")
+            {
+                cluster_config_get();
+            }
+            else if (command == "cluster-config-put")
+            {
+                cluster_config_put();
             }
             else if (command == "cluster-add-node")
             {
@@ -687,6 +717,16 @@ void CsMonitor::cluster_ping(mxb::Semaphore* pSem, json_t** ppOutput)
 void CsMonitor::cluster_status(mxb::Semaphore* pSem, json_t** ppOutput)
 {
     cluster_get("status", pSem, ppOutput);
+}
+
+void CsMonitor::cluster_config_get(mxb::Semaphore* pSem, json_t** ppOutput)
+{
+    cluster_get("config", pSem, ppOutput);
+}
+
+void CsMonitor::cluster_config_put(mxb::Semaphore* pSem, json_t** ppOutput)
+{
+    cluster_put("config", pSem, ppOutput);
 }
 
 void CsMonitor::cluster_add_node(mxb::Semaphore* pSem, json_t** ppOutput)

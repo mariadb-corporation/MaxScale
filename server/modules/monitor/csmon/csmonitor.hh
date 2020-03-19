@@ -36,6 +36,8 @@ public:
     bool command_cluster_shutdown(json_t** ppOutput);
     bool command_cluster_ping(json_t** ppOutput);
     bool command_cluster_status(json_t** ppOutput);
+    bool command_cluster_config_get(json_t** ppOutput);
+    bool command_cluster_config_put(json_t** ppOutput);
     bool command_cluster_add_node(json_t** ppOutput);
     bool command_cluster_remove_node(json_t** ppOutput);
     bool command_async(const char* zCommand, json_t** ppOutput);
@@ -52,6 +54,8 @@ private:
     void cluster_shutdown(mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
     void cluster_ping(mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
     void cluster_status(mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
+    void cluster_config_get(mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
+    void cluster_config_put(mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
     void cluster_add_node(mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
     void cluster_remove_node(mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
 
