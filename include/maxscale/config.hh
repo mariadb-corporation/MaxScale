@@ -64,6 +64,7 @@ public:
         }
         std::string default_to_string() const override final;
         bool        validate(const std::string& value_as_string, std::string* pMessage) const override final;
+        bool        validate(json_t* value_as_json, std::string* pMessage) const override final;
 
         std::string to_string(const value_type& value) const;
         bool        from_string(const std::string& value, value_type* pValue,

@@ -257,6 +257,15 @@ public:
     virtual bool validate(const std::string& value_as_string, std::string* pMessage) const = 0;
 
     /**
+     * Validate JSON.
+     *
+     * @param value_as_json  The JSON to validate.
+     *
+     * @return True, if @c value_as_json can be converted into a value of this type.
+     */
+    virtual bool validate(json_t* value_as_json, std::string* pMessage) const = 0;
+
+    /**
      * Populate a legacy parameter specification with data.
      *
      * @param param  The legacy parameter specification to be populated.
@@ -309,6 +318,12 @@ public:
     {
         value_type value;
         return static_cast<const ParamType*>(this)->from_string(value_as_string, &value, pMessage);
+    }
+
+    bool validate(json_t* value_as_json, std::string* pMessage) const override
+    {
+        value_type value;
+        return static_cast<const ParamType*>(this)->from_json(value_as_json, &value, pMessage);
     }
 
     bool is_valid(const value_type&) const
@@ -799,7 +814,7 @@ public:
               const char* zDescription,
               value_type default_value,
               Modifiable modifiable = Modifiable::AT_STARTUP)
-    : ParamHost(pSpecification, zName, zDescription, modifiable, Param::OPTIONAL, default_value)
+        : ParamHost(pSpecification, zName, zDescription, modifiable, Param::OPTIONAL, default_value)
     {
     }
 
