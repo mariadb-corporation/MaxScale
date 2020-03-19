@@ -32,10 +32,10 @@ public:
 
 public:
     // Only to be called by the module call command mechanism.
-    bool command_cluster_start(json_t** ppOutput);
-    bool command_cluster_shutdown(json_t** ppOutput);
-    bool command_cluster_ping(json_t** ppOutput);
-    bool command_cluster_status(json_t** ppOutput);
+    bool command_cluster_start(SERVER* pServer, json_t** ppOutput);
+    bool command_cluster_shutdown(SERVER* pServer, json_t** ppOutput);
+    bool command_cluster_ping(SERVER* pServer, json_t** ppOutput);
+    bool command_cluster_status(SERVER* pServer, json_t** ppOutput);
     bool command_cluster_config_get(json_t** ppOutput);
     bool command_cluster_config_put(json_t** ppOutput);
     bool command_cluster_add_node(json_t** ppOutput);
@@ -47,13 +47,13 @@ public:
 private:
     bool command(const char* zCmd, std::function<void()> cmd, mxb::Semaphore& sem, json_t** ppOutput);
 
-    void cluster_get(const char* zCmd, mxb::Semaphore* pSem, json_t** ppOutput);
-    void cluster_put(const char* zCmd, mxb::Semaphore* pSem, json_t** ppOutput);
+    void cluster_get(const char* zCmd, SERVER* pServer, mxb::Semaphore* pSem, json_t** ppOutput);
+    void cluster_put(const char* zCmd, SERVER* pServer, mxb::Semaphore* pSem, json_t** ppOutput);
 
-    void cluster_start(mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
-    void cluster_shutdown(mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
-    void cluster_ping(mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
-    void cluster_status(mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
+    void cluster_start(SERVER* pServer, mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
+    void cluster_shutdown(SERVER* pServer, mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
+    void cluster_ping(SERVER* pServer, mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
+    void cluster_status(SERVER* pServer, mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
     void cluster_config_get(mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
     void cluster_config_put(mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
     void cluster_add_node(mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
