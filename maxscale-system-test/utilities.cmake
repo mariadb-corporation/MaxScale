@@ -1,7 +1,7 @@
 
 # Helper function to add a configuration template
 function(add_template name template labels)
-  set(CNF_TEMPLATES "${CNF_TEMPLATES}{\"${name}\",\"${template}\", \"${labels}\"}," CACHE INTERNAL "")
+  set(CNF_TEMPLATES "${CNF_TEMPLATES}{\"${name}\", \"${template}\", \"${labels}\"}," CACHE INTERNAL "")
 endfunction()
 
 

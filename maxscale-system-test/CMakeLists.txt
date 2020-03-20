@@ -13,6 +13,7 @@
 #     BREAKS_REPL
 #     BREAKS_GALERA
 set(CTEST_BUILD_NAME "${BUILDNAME}")
+set(CNF_TEMPLATES "" CACHE INTERNAL "")
 
 set(CMAKE_CXX_FLAGS "-std=c++11 -ggdb -Wall -Wextra -Werror -Wno-format-overflow -Wno-unused-function -Wno-unused-parameter -Werror=format-security")
 set(CMAKE_CXX_FLAGS_DEBUG "-std=c++11 -ggdb -Wall -Werror -Wno-format-overflow -Wno-unused-function")
@@ -29,9 +30,6 @@ include_directories(${CMAKE_SOURCE_DIR}/connectors/cdc-connector)
 include_directories(${CMAKE_BINARY_DIR})
 # Include the CDC connector headers
 include_directories(${CMAKE_SOURCE_DIR}/../connectors/cdc-connector/)
-
-# The core testing library
-add_subdirectory(maxtest)
 include_directories(maxtest/include/maxtest)
 
 # Tool used to check backend state
@@ -1158,4 +1156,6 @@ set_tests_properties(bug471_big PROPERTIES TIMEOUT 3600)
 # DO NOT ADD TESTS AFTER THIS #
 ###############################
 
-configure_file(templates.h.in ${CMAKE_CURRENT_BINARY_DIR}/templates.h @ONLY)
+# The core testing library
+configure_file(maxtest/src/test_info.cc.in maxtest/src/test_info.cc @ONLY)
+add_subdirectory(maxtest)

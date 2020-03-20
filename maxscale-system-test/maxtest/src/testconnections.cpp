@@ -19,6 +19,7 @@
 #include "maxadmin_operations.h"
 #include "sql_t1.h"
 #include "testconnections.h"
+#include "test_info.hh"
 #include "labels_table.h"
 #include "envv.h"
 
@@ -266,7 +267,7 @@ TestConnections::TestConnections(int argc, char* argv[])
         test_name = basename(argv[0]);
     }
 
-    const char * labels_string = NULL;
+    const char* labels_string = "";
     template_name = get_template_name(test_name, &labels_string);
     tprintf("testname: '%s', template: '%s'", test_name, template_name);
     labels = strstr(labels_string, "LABELS;");
@@ -699,25 +700,31 @@ void TestConnections::print_env()
     }
 }
 
-const char * get_template_name(char * test_name, const char ** labels)
+const char* get_template_name(char* test_name, const char** labels)
 {
-    int i = 0;
-    *labels = NULL;
-    while (cnf_templates[i].test_name && strcmp(cnf_templates[i].test_name, test_name) != 0)
+    const TestDefinition* found = nullptr;
+    for (int i = 0; test_definitions[i].name; i++)
     {
-        i++;
+        auto* test = &test_definitions[i];
+        if (strcmp(test->name, test_name) == 0)
+        {
+            found = test;
+            break;
+        }
     }
 
-    if (cnf_templates[i].test_name)
+    if (found)
     {
-        *labels = (char *) cnf_templates[i].test_labels;
-        return cnf_templates[i].test_template;
+        *labels = found->labels;
+        return found->config_template;
+    }
+    else
+    {
+        printf("Failed to find configuration template for test '%s', using default template '%s'.\n",
+               test_name, default_template);
+        return default_template;
     }
 
-    printf("Failed to find configuration template for test '%s', using default template '%s'.\n",
-           test_name,
-           default_template);
-    return default_template;
 }
 
 void TestConnections::process_template(int m, const char* template_name, const char* dest)

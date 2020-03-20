@@ -23,6 +23,7 @@ add_library(maxtest SHARED
         tcp_connection.cpp
         test_binlog_fnc.cpp
         testconnections.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/test_info.cc
         # Include the CDC connector in the core library
         ${CMAKE_SOURCE_DIR}/connectors/cdc-connector/cdc_connector.cpp)
 target_link_libraries(maxtest ${MARIADB_CONNECTOR_LIBRARIES} ${JANSSON_LIBRARIES} z m pthread ssl dl rt crypto crypt maxbase)

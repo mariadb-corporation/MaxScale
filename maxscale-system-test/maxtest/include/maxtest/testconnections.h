@@ -2,7 +2,7 @@
 
 #include "mariadb_nodes.h"
 #include "maxscales.h"
-#include "templates.h"
+#include "test_dir.hh"
 #include <fcntl.h>
 #include <pthread.h>
 #include <sys/time.h>
@@ -736,7 +736,7 @@ std::string dump_status(const StringSet& current, const StringSet& expected);
  * @param labels pointer to string for storing all test labels
  * @return Name of maxscale.cnf file template
  */
-const char *get_template_name(char * test_name, const char **labels);
+const char* get_template_name(char* test_name, const char**labels);
 
 /**
  * @brief readenv_and_set_default Read enviromental variable and set default values if
