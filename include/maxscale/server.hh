@@ -93,8 +93,6 @@ public:
     unsigned long node_ts = 0;                          /**< Last timestamp set from M/S monitor module */
 
     // Misc fields
-    bool master_err_is_logged = false;  /**< If node failed, this indicates whether it is logged. Only
-                                         * used by rwsplit. TODO: Move to rwsplit */
     bool warn_ssl_not_enabled = true;   /**< SSL not used for an SSL enabled server */
 
     virtual ~SERVER() = default;
@@ -192,11 +190,6 @@ public:
         return is_active;
     }
 
-    uint64_t status() const override
-    {
-        return m_status;
-    }
-
     int64_t replication_lag() const override
     {
         return rlag;
@@ -242,20 +235,21 @@ public:
      *
      * @param bit           The bit to set for the server
      */
-    void set_status(uint64_t bit);
+    virtual void set_status(uint64_t bit) = 0;
 
     /**
      * Clear a status bit in the server without locking
      *
      * @param bit           The bit to clear for the server
      */
-    void clear_status(uint64_t bit);
+    virtual void clear_status(uint64_t bit) = 0;
 
-    // Assigns the status
-    void assign_status(uint64_t status)
-    {
-        m_status = status;
-    }
+    /**
+     * Assign server status
+     *
+     * @param status Status to assign
+     */
+    virtual void assign_status(uint64_t status) = 0;
 
     const mxs::SSLProvider& ssl() const
     {
@@ -309,7 +303,6 @@ protected:
 
 private:
     mxs::SSLProvider m_ssl_provider;
-    uint64_t         m_status {0};
 
     /** Server ping measured by monitor, in microseconds */
     std::atomic<int64_t> m_ping {mxs::Target::PING_UNDEFINED};

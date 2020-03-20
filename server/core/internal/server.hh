@@ -250,6 +250,12 @@ public:
 
     void set_extra_port(int new_port) override;
 
+
+    uint64_t status() const override;
+    void     set_status(uint64_t bit) override;
+    void     clear_status(uint64_t bit) override;
+    void     assign_status(uint64_t status) override;
+
     BackendDCB** persistent = nullptr;      /**< List of unused persistent connections to the server */
 
 private:
@@ -315,6 +321,7 @@ private:
     const std::string m_name;               /**< Server config name */
     Settings          m_settings;           /**< Server settings */
     VersionInfo       m_info;               /**< Server version and type information */
+    uint64_t          m_status {0};
 };
 
 // A connection to a server

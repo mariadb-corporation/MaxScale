@@ -231,20 +231,24 @@ static void cleanup_persistent_connections(const Server* server)
     RoutingWorker::execute_concurrently(task);
 }
 
-void SERVER::set_status(uint64_t bit)
+uint64_t Server::status() const
 {
-    m_status |= bit;
-
-    /** clear error logged flag before the next failure */
-    if (is_master())
-    {
-        master_err_is_logged = false;
-    }
+    return m_status;
 }
 
-void SERVER::clear_status(uint64_t bit)
+void Server::set_status(uint64_t bit)
+{
+    m_status |= bit;
+}
+
+void Server::clear_status(uint64_t bit)
 {
     m_status &= ~bit;
+}
+
+void Server::assign_status(uint64_t status)
+{
+    m_status = status;
 }
 
 int64_t SERVER::ping() const
