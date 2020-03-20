@@ -44,6 +44,18 @@ static int value_iterator(void* cls,
     return MHD_YES;
 }
 
+static int value_collector(void* cls,
+                           enum MHD_ValueKind kind,
+                           const char* key,
+                           const char* value)
+{
+    std::map<std::string, std::string>* cmp = (std::map<std::string, std::string>*)cls;
+    std::string k(key);
+    std::transform(k.begin(), k.end(), k.begin(), ::tolower);
+    cmp->emplace(k, value ? value : "");
+    return MHD_YES;
+}
+
 static int value_sum_iterator(void* cls,
                               enum MHD_ValueKind kind,
                               const char* key,
@@ -106,17 +118,21 @@ public:
      *
      * @return Header value or empty string if the header was not found
      */
-    std::string get_header(const std::string& header) const
+    std::string get_header(std::string header) const
     {
-        std::pair<std::string, std::string> p;
-        p.first = header;
+        std::transform(header.begin(), header.end(), header.begin(), ::tolower);
+        auto it = m_headers.find(header);
+        return it != m_headers.end() ? it->second : "";
+    }
 
-        MHD_get_connection_values(m_connection,
-                                  MHD_HEADER_KIND,
-                                  value_iterator,
-                                  &p);
-
-        return p.second;
+    /**
+     * Get all headers
+     *
+     * @return All request headers
+     */
+    const std::map<std::string, std::string>& get_headers() const
+    {
+        return m_headers;
     }
 
     /**
@@ -126,17 +142,21 @@ public:
      *
      * @return Option value or empty string if the option was not found
      */
-    std::string get_option(const std::string& option) const
+    std::string get_option(std::string option) const
     {
-        std::pair<std::string, std::string> p;
-        p.first = option;
+        std::transform(option.begin(), option.end(), option.begin(), ::tolower);
+        auto it = m_options.find(option);
+        return it != m_options.end() ? it->second : "";
+    }
 
-        MHD_get_connection_values(m_connection,
-                                  MHD_GET_ARGUMENT_KIND,
-                                  value_iterator,
-                                  &p);
-
-        return p.second;
+    /**
+     * Get all options
+     *
+     * @return All request options
+     */
+    const std::map<std::string, std::string>& get_options() const
+    {
+        return m_options;
     }
 
     /**
@@ -294,6 +314,7 @@ private:
     static const std::string HTTPS_PREFIX;
 
     std::map<std::string, std::string> m_options;       /**< Request options */
+    std::map<std::string, std::string> m_headers;       /**< Request headers */
     std::unique_ptr<json_t>            m_json;          /**< Request body */
     std::string                        m_json_string;   /**< String version of @c m_json */
     std::string                        m_resource;      /**< Requested resource */

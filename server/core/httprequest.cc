@@ -58,6 +58,9 @@ HttpRequest::HttpRequest(struct MHD_Connection* connection, string url, string m
     , m_verb(method)
     , m_connection(connection)
 {
+    MHD_get_connection_values(m_connection, MHD_GET_ARGUMENT_KIND, value_collector, &m_options);
+    MHD_get_connection_values(m_connection, MHD_HEADER_KIND, value_collector, &m_headers);
+
     process_uri(url, m_resource_parts);
 
     m_hostname = mxs_admin_https_enabled() ? HttpRequest::HTTPS_PREFIX : HttpRequest::HTTP_PREFIX;
