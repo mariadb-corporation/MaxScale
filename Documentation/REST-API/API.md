@@ -149,7 +149,8 @@ in addition to the _self_ link.
 ## Common Request Parameters
 
 All the resources that return JSON content also support the following
-parameters.
+parameters. Parameters are given in the HTTP query string:
+`https://localhost:8989/v1/servers?pretty=true&fields[servers]=state`.
 
 - `pretty`
 
@@ -159,6 +160,23 @@ parameters.
     in a more human readable format. If the parameter is set to `false` then the
     returned objects are formatted in a compact format.  All resources support
     this parameter. The default value for this parameter is `true`.
+
+- `fields[TYPE]=field1,field2...`
+
+  - Return a [Sparse Fieldset](https://jsonapi.org/format/#fetching-sparse-fieldsets)
+
+    This parameter controls which fields are returned in the REST API
+    response. The `TYPE` value in the `fields` parameter must be the resource
+    type that is being retrieved (i.e. the `servers` in `/v1/servers` and
+    `/v1/server/server1`). The value of the parameter must be a comma-separated
+    list of field names to return. Only top-level fields in the `attributes` and
+    `relationships` objects are inspected (e.g. `data.attributes.state` is a
+    top-level attribute whereas `data.attributes.statistics.connections` is
+    not).
+
+    For example, to return only the server state output from the `/servers`
+    endpoint, the `fields[servers]=state` parameter can be used. This would
+    return only the `data.attributes.state` part of the resource.
 
 ## HTTP Headers
 
