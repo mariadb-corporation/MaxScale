@@ -29,8 +29,8 @@ class Server : public SERVER
 {
 public:
     Server(const std::string& name, std::unique_ptr<mxs::SSLContext> ssl = {})
-        : SERVER(std::move(ssl))
-        , m_name(name)
+        : m_name(name)
+        , m_ssl_provider(std::move(ssl))
     {
     }
 
@@ -234,6 +234,14 @@ public:
      */
     json_t* to_json_data(const char* host) const;
 
+    /**
+     * Convert a status string to a status bit. Only converts one status element.
+     *
+     * @param str   String representation
+     * @return bit value or 0 on error
+     */
+    static uint64_t status_from_string(const char* str);
+
     json_t* json_attributes() const;
 
     std::unique_ptr<mxs::Endpoint> get_connection(mxs::Component* upstream, MXS_SESSION* session) override;
@@ -289,6 +297,16 @@ public:
     void     set_status(uint64_t bit) override;
     void     clear_status(uint64_t bit) override;
     void     assign_status(uint64_t status) override;
+
+    const mxs::SSLProvider& ssl() const override;
+    mxs::SSLProvider&       ssl() override;
+
+    void        set_variables(std::unordered_map<std::string, std::string>&& variables) override;
+    std::string get_variable(const std::string& key) const override;
+
+    uint64_t gtid_pos(uint32_t domain) const override;
+    void     set_gtid_list(const std::vector<std::pair<uint32_t, uint64_t>>& positions) override;
+    void     clear_gtid_list() override;
 
     BackendDCB** persistent = nullptr;      /**< List of unused persistent connections to the server */
 
@@ -359,6 +377,20 @@ private:
     bool              m_active {true};
     int64_t           m_rpl_lag {mxs::Target::RLAG_UNDEFINED};  /**< Replication lag in seconds */
     int64_t           m_ping {mxs::Target::PING_UNDEFINED};     /**< Ping in microseconds */
+    mxs::SSLProvider  m_ssl_provider;
+
+    // Server side global variables
+    std::unordered_map<std::string, std::string> m_variables;
+    // Lock that protects m_variables
+    mutable std::mutex m_var_lock;
+
+    struct GTID
+    {
+        std::atomic<int64_t>  domain{-1};
+        std::atomic<uint64_t> sequence{0};
+    };
+
+    mxs::WorkerGlobal<std::unordered_map<uint32_t, uint64_t>> m_gtids;
 };
 
 // A connection to a server

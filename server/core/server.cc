@@ -320,7 +320,30 @@ void Server::set_extra_port(int new_port)
     m_settings.extra_port = new_port;
 }
 
-uint64_t SERVER::status_from_string(const char* str)
+const mxs::SSLProvider& Server::ssl() const
+{
+    return m_ssl_provider;
+}
+
+mxs::SSLProvider& Server::ssl()
+{
+    return m_ssl_provider;
+}
+
+void Server::set_variables(std::unordered_map<std::string, std::string>&& variables)
+{
+    std::lock_guard<std::mutex> guard(m_var_lock);
+    m_variables = variables;
+}
+
+std::string Server::get_variable(const std::string& key) const
+{
+    std::lock_guard<std::mutex> guard(m_var_lock);
+    auto it = m_variables.find(key);
+    return it == m_variables.end() ? "" : it->second;
+}
+
+uint64_t Server::status_from_string(const char* str)
 {
     static std::vector<std::pair<const char*, uint64_t>> status_bits =
     {
@@ -345,7 +368,7 @@ uint64_t SERVER::status_from_string(const char* str)
     return 0;
 }
 
-void SERVER::set_gtid_list(const std::vector<std::pair<uint32_t, uint64_t>>& domains)
+void Server::set_gtid_list(const std::vector<std::pair<uint32_t, uint64_t>>& domains)
 {
     mxs::MainWorker::get()->execute(
         [this, domains]() {
@@ -360,7 +383,7 @@ void SERVER::set_gtid_list(const std::vector<std::pair<uint32_t, uint64_t>>& dom
         }, mxb::Worker::EXECUTE_AUTO);
 }
 
-void SERVER::clear_gtid_list()
+void Server::clear_gtid_list()
 {
     mxs::MainWorker::get()->execute(
         [this]() {
@@ -369,7 +392,7 @@ void SERVER::clear_gtid_list()
         }, mxb::Worker::EXECUTE_AUTO);
 }
 
-uint64_t SERVER::gtid_pos(uint32_t domain) const
+uint64_t Server::gtid_pos(uint32_t domain) const
 {
     const auto& gtids = *m_gtids;
     auto it = gtids.find(domain);

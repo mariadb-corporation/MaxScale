@@ -815,7 +815,7 @@ HttpResponse cb_delete_user(const HttpRequest& request)
 HttpResponse cb_set_server(const HttpRequest& request)
 {
     SERVER* server = ServerManager::find_by_unique_name(request.uri_part(1));
-    int opt = SERVER::status_from_string(request.get_option(CN_STATE).c_str());
+    int opt = Server::status_from_string(request.get_option(CN_STATE).c_str());
 
     if (opt)
     {
@@ -842,7 +842,7 @@ HttpResponse cb_set_server(const HttpRequest& request)
 HttpResponse cb_clear_server(const HttpRequest& request)
 {
     SERVER* server = ServerManager::find_by_unique_name(request.uri_part(1));
-    int opt = SERVER::status_from_string(request.get_option(CN_STATE).c_str());
+    int opt = Server::status_from_string(request.get_option(CN_STATE).c_str());
 
     if (opt)
     {

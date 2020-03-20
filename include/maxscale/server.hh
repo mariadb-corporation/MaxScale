@@ -71,6 +71,24 @@ public:
         uint64_t n_from_pool = 0;   /**< Times when a connection was available from the pool */
     };
 
+    /**
+     * Find a server with the specified name.
+     *
+     * @param name Name of the server
+     * @return The server or NULL if not found
+     */
+    static SERVER* find_by_unique_name(const std::string& name);
+
+    /**
+     * Find several servers with the names specified in an array. The returned array is equal in size
+     * to the server_names-array. If any server name was not found, then the corresponding element
+     * will be NULL.
+     *
+     * @param server_names An array of server names
+     * @return Array of servers
+     */
+    static std::vector<SERVER*> server_find_by_unique_names(const std::vector<std::string>& server_names);
+
     virtual const char* address() const = 0;
     virtual int         port() const = 0;
     virtual int         extra_port() const = 0;
@@ -192,32 +210,6 @@ public:
     virtual void deactivate() = 0;
 
     /**
-     * Find a server with the specified name.
-     *
-     * @param name Name of the server
-     * @return The server or NULL if not found
-     */
-    static SERVER* find_by_unique_name(const std::string& name);
-
-    /**
-     * Find several servers with the names specified in an array. The returned array is equal in size
-     * to the server_names-array. If any server name was not found, then the corresponding element
-     * will be NULL.
-     *
-     * @param server_names An array of server names
-     * @return Array of servers
-     */
-    static std::vector<SERVER*> server_find_by_unique_names(const std::vector<std::string>& server_names);
-
-    /**
-     * Convert a status string to a status bit. Only converts one status element.
-     *
-     * @param str   String representation
-     * @return bit value or 0 on error
-     */
-    static uint64_t status_from_string(const char* str);
-
-    /**
      * Set a status bit in the server without locking
      *
      * @param bit           The bit to set for the server
@@ -238,42 +230,25 @@ public:
      */
     virtual void assign_status(uint64_t status) = 0;
 
-    const mxs::SSLProvider& ssl() const
-    {
-        return m_ssl_provider;
-    }
+    virtual const mxs::SSLProvider& ssl() const = 0;
 
-    mxs::SSLProvider& ssl()
-    {
-        return m_ssl_provider;
-    }
+    virtual mxs::SSLProvider& ssl() = 0;
 
-    void set_variables(std::unordered_map<std::string, std::string>&& variables)
-    {
-        std::lock_guard<std::mutex> guard(m_var_lock);
-        m_variables = variables;
-    }
+    virtual void set_variables(std::unordered_map<std::string, std::string>&& variables) = 0;
 
-    std::string get_variable(const std::string& key) const
-    {
-        std::lock_guard<std::mutex> guard(m_var_lock);
-        auto it = m_variables.find(key);
-        return it == m_variables.end() ? "" : it->second;
-    }
+    virtual std::string get_variable(const std::string& key) const = 0;
 
     /**
      * Set GTID positions
      *
      * @param positions List of pairs for the domain and the GTID position for it
      */
-    void set_gtid_list(const std::vector<std::pair<uint32_t, uint64_t>>& positions);
+    virtual void set_gtid_list(const std::vector<std::pair<uint32_t, uint64_t>>& positions) = 0;
 
     /**
      * Remove all stored GTID positions
      */
-    void clear_gtid_list();
-
-    uint64_t gtid_pos(uint32_t domain) const override;
+    virtual void clear_gtid_list() = 0;
 
     /**
      * Get current server priority
@@ -281,26 +256,4 @@ public:
      * This should be used to decide which server is chosen as a master. Currently only galeramon uses it.
      */
     virtual int64_t priority() const = 0;
-
-protected:
-    SERVER(std::unique_ptr<mxs::SSLContext> ssl_context)
-        : m_ssl_provider{std::move(ssl_context)}
-    {
-    }
-
-private:
-    mxs::SSLProvider m_ssl_provider;
-
-    // Server side global variables
-    std::unordered_map<std::string, std::string> m_variables;
-    // Lock that protects m_variables
-    mutable std::mutex m_var_lock;
-
-    struct GTID
-    {
-        std::atomic<int64_t>  domain{-1};
-        std::atomic<uint64_t> sequence{0};
-    };
-
-    mxs::WorkerGlobal<std::unordered_map<uint32_t, uint64_t>> m_gtids;
 };
