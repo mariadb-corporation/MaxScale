@@ -15,9 +15,10 @@
 
 #include <string>
 #include <sstream>
+#include <sys/time.h>
 
 #include <maxbase/alloc.h>
-#include <sys/time.h>
+#include <maxscale/cn_strings.hh>
 
 #include "internal/admin.hh"
 
@@ -86,4 +87,69 @@ void HttpResponse::add_header(const string& key, const string& value)
 const HttpResponse::Headers& HttpResponse::get_headers() const
 {
     return m_headers;
+}
+
+void HttpResponse::remove_fields_from_object(json_t* obj, const std::unordered_set<std::string>& fields)
+{
+    void* tmp;
+    const char* key;
+    json_t* value;
+
+    json_object_foreach_safe(obj, tmp, key, value)
+    {
+        if (fields.count(key) == 0)
+        {
+            json_object_del(obj, key);
+        }
+    }
+}
+
+void HttpResponse::remove_fields_from_resource(json_t* obj, const std::string& type,
+                                               const std::unordered_set<std::string>& fields)
+{
+    json_t* t = json_object_get(obj, CN_TYPE);
+
+    if (json_is_string(t) && json_string_value(t) == type)
+    {
+        if (auto attr = json_object_get(obj, CN_ATTRIBUTES))
+        {
+            remove_fields_from_object(attr, fields);
+
+            if (json_object_size(attr) == 0)
+            {
+                json_object_del(obj, CN_ATTRIBUTES);
+            }
+        }
+
+        if (auto rel = json_object_get(obj, CN_RELATIONSHIPS))
+        {
+            remove_fields_from_object(rel, fields);
+
+            if (json_object_size(rel) == 0)
+            {
+                json_object_del(obj, CN_RELATIONSHIPS);
+            }
+        }
+    }
+}
+
+void HttpResponse::remove_fields(const std::string& type, const std::unordered_set<std::string>& fields)
+{
+    if (auto data = json_object_get(m_body, CN_DATA))
+    {
+        if (json_is_array(data))
+        {
+            json_t* val;
+            size_t i;
+
+            json_array_foreach(data, i, val)
+            {
+                remove_fields_from_resource(val, type, fields);
+            }
+        }
+        else
+        {
+            remove_fields_from_resource(data, type, fields);
+        }
+    }
 }

@@ -15,6 +15,7 @@
 #include <maxscale/ccdefs.hh>
 
 #include <unordered_map>
+#include <unordered_set>
 #include <string>
 #include <memory>
 #include <microhttpd.h>
@@ -84,8 +85,20 @@ public:
      */
     const Headers& get_headers() const;
 
+    /**
+     * Removes fields from the response
+     *
+     * @param type   The JSON API object type (e.g. services for a single service or a collection of services)
+     * @param fields The fields to include
+     */
+    void remove_fields(const std::string& type, const std::unordered_set<std::string>& fields);
+
 private:
     json_t* m_body;     /**< Message body */
     int     m_code;     /**< The HTTP code for the response */
     Headers m_headers;  /**< Extra headers */
+
+    void remove_fields_from_resource(json_t* obj, const std::string& type,
+                                     const std::unordered_set<std::string>& fields);
+    void remove_fields_from_object(json_t* obj, const std::unordered_set<std::string>& fields);
 };

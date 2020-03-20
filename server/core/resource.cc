@@ -1265,6 +1265,26 @@ static bool request_precondition_met(const HttpRequest& request, HttpResponse& r
     return rval;
 }
 
+static void remove_unwanted_fields(const HttpRequest& request, HttpResponse& response)
+{
+    for (const auto& a : request.get_options())
+    {
+        const char FIELDS[] = "fields[";
+        auto s = a.first.substr(0, sizeof(FIELDS) - 1);
+
+        if (s == FIELDS && a.first.back() == ']')
+        {
+            auto type = a.first.substr(s.size(), a.first.size() - s.size() - 1);
+            auto fields = mxb::strtok(a.second, ",");
+
+            if (!fields.empty())
+            {
+                response.remove_fields(type, {fields.begin(), fields.end()});
+            }
+        }
+    }
+}
+
 static HttpResponse handle_request(const HttpRequest& request)
 {
     MXS_DEBUG("%s %s %s",
@@ -1300,6 +1320,8 @@ static HttpResponse handle_request(const HttpRequest& request)
             rval.add_header(HTTP_RESPONSE_HEADER_LAST_MODIFIED, http_to_date(watcher.last_modified(uri)));
             rval.add_header(HTTP_RESPONSE_HEADER_ETAG, cksum.c_str());
         }
+
+        remove_unwanted_fields(request, rval);
     }
 
     return rval;
