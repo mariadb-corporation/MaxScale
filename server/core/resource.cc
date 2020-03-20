@@ -1229,41 +1229,29 @@ static bool request_reads_data(const string& verb)
 static bool request_precondition_met(const HttpRequest& request, HttpResponse& response,
                                      const std::string& cksum)
 {
-    bool rval = true;
-    string str;
+    bool rval = false;
     const string& uri = request.get_uri();
+    auto if_modified_since = request.get_header(MHD_HTTP_HEADER_IF_MODIFIED_SINCE);
+    auto if_unmodified_since = request.get_header(MHD_HTTP_HEADER_IF_UNMODIFIED_SINCE);
+    auto if_match = request.get_header(MHD_HTTP_HEADER_IF_MATCH);
+    auto if_none_match = request.get_header(MHD_HTTP_HEADER_IF_NONE_MATCH);
 
-    if ((str = request.get_header(MHD_HTTP_HEADER_IF_MODIFIED_SINCE)).length())
+    if ((!if_unmodified_since.empty() && watcher.last_modified(uri) > http_from_date(if_unmodified_since))
+        || (!if_match.empty() && cksum != if_match))
     {
-        if (watcher.last_modified(uri) <= http_from_date(str))
+        response = HttpResponse(MHD_HTTP_PRECONDITION_FAILED);
+    }
+    else if (!if_modified_since.empty() || !if_none_match.empty())
+    {
+        if ((if_modified_since.empty() || watcher.last_modified(uri) <= http_from_date(if_modified_since))
+            && (if_none_match.empty() || cksum == if_none_match))
         {
-            rval = false;
             response = HttpResponse(MHD_HTTP_NOT_MODIFIED);
         }
     }
-    else if ((str = request.get_header(MHD_HTTP_HEADER_IF_UNMODIFIED_SINCE)).length())
+    else
     {
-        if (watcher.last_modified(uri) > http_from_date(str))
-        {
-            rval = false;
-            response = HttpResponse(MHD_HTTP_PRECONDITION_FAILED);
-        }
-    }
-    else if ((str = request.get_header(MHD_HTTP_HEADER_IF_MATCH)).length())
-    {
-        if (cksum != str)
-        {
-            rval = false;
-            response = HttpResponse(MHD_HTTP_PRECONDITION_FAILED);
-        }
-    }
-    else if ((str = request.get_header(MHD_HTTP_HEADER_IF_NONE_MATCH)).length())
-    {
-        if (cksum == str)
-        {
-            rval = false;
-            response = HttpResponse(MHD_HTTP_NOT_MODIFIED);
-        }
+        rval = true;
     }
 
     return rval;
