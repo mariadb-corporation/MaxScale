@@ -41,10 +41,6 @@ extern const char CN_PROXY_PROTOCOL[];
 class SERVER : public mxs::Target
 {
 public:
-    static const int MAX_ADDRESS_LEN = 1024;
-    static const int MAX_MONUSER_LEN = 512;
-    static const int MAX_MONPW_LEN = 512;
-    static const int MAX_VERSION_LEN = 256;
 
     // A mapping from a path to a percentage, e.g.: "/disk" -> 80.
     typedef std::unordered_map<std::string, int32_t> DiskSpaceLimits;
@@ -69,6 +65,7 @@ public:
         int      n_persistent = 0;  /**< Current persistent pool */
         uint64_t n_new_conn = 0;    /**< Times the current pool was empty */
         uint64_t n_from_pool = 0;   /**< Times when a connection was available from the pool */
+        int      persistmax = 0;    /**< Maximum pool size actually achieved since startup */
     };
 
     /**
@@ -89,29 +86,55 @@ public:
      */
     static std::vector<SERVER*> server_find_by_unique_names(const std::vector<std::string>& server_names);
 
-    virtual const char* address() const = 0;
-    virtual int         port() const = 0;
-    virtual int         extra_port() const = 0;
-
-    // Other settings
-    bool proxy_protocol = false;    /**< Send proxy-protocol header to backends when connecting
-                                     * routing sessions. */
-
-    // Base variables
-    uint8_t charset = 0;        /**< Character set. Read from backend and sent to client. As no character set
-                                 * has the numeric value of 0, it can be used to detect servers we haven't
-                                 * connected to. */
-
-    // Statistics and events
-    PoolStats pool_stats;
-    int       persistmax = 0;       /**< Maximum pool size actually achieved since startup */
-
-    unsigned long node_ts = 0;                          /**< Last timestamp set from M/S monitor module */
-
-    // Misc fields
-    bool warn_ssl_not_enabled = true;   /**< SSL not used for an SSL enabled server */
-
     virtual ~SERVER() = default;
+
+    /**
+     * Get server address
+     */
+    virtual const char* address() const = 0;
+
+    /**
+     * Get server port
+     */
+    virtual int port() const = 0;
+
+    /**
+     * Get server extra port
+     */
+    virtual int extra_port() const = 0;
+
+    /**
+     * Is proxy protocol in use?
+     */
+    virtual bool proxy_protocol() const = 0;
+
+    /**
+     * Set proxy protocol
+     *
+     * @param proxy_protocol Whether proxy protocol is used
+     */
+    virtual void set_proxy_protocol(bool proxy_protocol) = 0;
+
+    /**
+     * Get server character set
+     *
+     * @return The numeric character set or 0 if no character set has been read
+     */
+    virtual uint8_t charset() const = 0;
+
+    /**
+     * Set server character set
+     *
+     * @param charset Character set to set
+     */
+    virtual void set_charset(uint8_t charset) = 0;
+
+    /**
+     * Connection pool statistics
+     *
+     * @return A reference to the pool statistics object
+     */
+    virtual PoolStats& pool_stats() = 0;
 
     /**
      * Check if server has disk space threshold settings.
@@ -189,7 +212,7 @@ public:
      *
      * @return True if the server points to a local MaxScale service
      */
-    bool is_mxs_service();
+    virtual bool is_mxs_service() const = 0;
 
     /**
      * Set current ping
@@ -230,12 +253,26 @@ public:
      */
     virtual void assign_status(uint64_t status) = 0;
 
+    /**
+     * Get SSL provider
+     */
     virtual const mxs::SSLProvider& ssl() const = 0;
+    virtual mxs::SSLProvider&       ssl() = 0;
 
-    virtual mxs::SSLProvider& ssl() = 0;
-
+    /**
+     * Set server variables
+     *
+     * @param variables Variables and their values to set
+     */
     virtual void set_variables(std::unordered_map<std::string, std::string>&& variables) = 0;
 
+    /**
+     * Get server variable
+     *
+     * @param key Variable name to get
+     *
+     * @return Variable value or empty string if it was not found
+     */
     virtual std::string get_variable(const std::string& key) const = 0;
 
     /**

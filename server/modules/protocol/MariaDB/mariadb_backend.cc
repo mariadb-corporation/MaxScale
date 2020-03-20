@@ -157,7 +157,7 @@ MariaDBBackendConnection::create(MXS_SESSION* session, mxs::Component* component
 
 bool MariaDBBackendConnection::init_connection()
 {
-    if (m_server.proxy_protocol)
+    if (m_server.proxy_protocol())
     {
         // TODO: The following function needs a return value.
         send_proxy_protocol_header();

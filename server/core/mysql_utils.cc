@@ -111,13 +111,9 @@ MYSQL* mxs_mysql_real_connect(MYSQL* con, SERVER* server, const char* user, cons
 
         if (ssl && mysql_get_ssl_cipher(con) == NULL)
         {
-            if (server->warn_ssl_not_enabled)
-            {
-                server->warn_ssl_not_enabled = false;
-                MXS_ERROR("An encrypted connection to '%s' could not be created, "
-                          "ensure that TLS is enabled on the target server.",
-                          server->name());
-            }
+            MXS_ERROR("An encrypted connection to '%s' could not be created, "
+                      "ensure that TLS is enabled on the target server.",
+                      server->name());
             // Don't close the connection as it is closed elsewhere, just set to NULL
             mysql = NULL;
         }
@@ -425,10 +421,10 @@ void mxs_update_server_charset(MYSQL* mysql, SERVER* server)
                 {
                     auto charset = atoi(row[0]);
 
-                    if (server->charset != charset)
+                    if (server->charset() != charset)
                     {
                         MXS_NOTICE("Server '%s' charset: %s", server->name(), row[1]);
-                        server->charset = charset;
+                        server->set_charset(charset);
                     }
                 }
             }

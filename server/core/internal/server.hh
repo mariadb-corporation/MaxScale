@@ -28,6 +28,11 @@
 class Server : public SERVER
 {
 public:
+    static const int MAX_ADDRESS_LEN = 1024;
+    static const int MAX_MONUSER_LEN = 512;
+    static const int MAX_MONPW_LEN = 512;
+    static const int MAX_VERSION_LEN = 256;
+
     Server(const std::string& name, std::unique_ptr<mxs::SSLContext> ssl = {})
         : m_name(name)
         , m_ssl_provider(std::move(ssl))
@@ -308,6 +313,13 @@ public:
     void     set_gtid_list(const std::vector<std::pair<uint32_t, uint64_t>>& positions) override;
     void     clear_gtid_list() override;
 
+    uint8_t    charset() const override;
+    void       set_charset(uint8_t charset) override;
+    bool       proxy_protocol() const override;
+    void       set_proxy_protocol(bool proxy_protocol) override;
+    PoolStats& pool_stats();
+    bool       is_mxs_service() const override;
+
     BackendDCB** persistent = nullptr;      /**< List of unused persistent connections to the server */
 
 private:
@@ -337,6 +349,9 @@ private:
 
         int64_t priority;   /*< The priority of this server, Currently only used by galeramon to pick which
                              * server is the master. */
+
+        bool proxy_protocol = false;    /**< Send proxy-protocol header to backends when connecting
+                                         * routing sessions. */
 
         /** Disk space thresholds. Can be queried from modules at any time so access must be protected
          *  by mutex. */
@@ -378,6 +393,11 @@ private:
     int64_t           m_rpl_lag {mxs::Target::RLAG_UNDEFINED};  /**< Replication lag in seconds */
     int64_t           m_ping {mxs::Target::PING_UNDEFINED};     /**< Ping in microseconds */
     mxs::SSLProvider  m_ssl_provider;
+    PoolStats         m_pool_stats;
+
+    // Character set. Read from backend and sent to client. As no character set has the numeric value of 0, it
+    // can be used to detect servers we haven't connected to.
+    uint8_t m_charset = 0;
 
     // Server side global variables
     std::unordered_map<std::string, std::string> m_variables;

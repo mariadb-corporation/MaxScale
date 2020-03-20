@@ -237,7 +237,7 @@ std::vector<SERVER*> SERVER::server_find_by_unique_names(const std::vector<strin
     return rval;
 }
 
-bool SERVER::is_mxs_service()
+bool Server::is_mxs_service() const
 {
     bool rval = false;
 

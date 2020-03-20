@@ -165,7 +165,7 @@ bool RoutingWorker::init(mxb::WatchdogNotifier* pNotifier)
         int nWorkers = config_threadcount();
         RoutingWorker** ppWorkers = new(std::nothrow) RoutingWorker* [MXS_MAX_THREADS]();       // 0-inited
                                                                                                 // array
-        AverageN** ppWorker_loads = new (std::nothrow) AverageN* [MXS_MAX_THREADS];
+        AverageN** ppWorker_loads = new(std::nothrow) AverageN* [MXS_MAX_THREADS];
 
         if (ppWorkers && ppWorker_loads)
         {
@@ -503,7 +503,7 @@ BackendDCB* RoutingWorker::get_backend_dcb_from_pool(SERVER* pS,
     {
         pDcb = persistent_entries.front().release_dcb();
         persistent_entries.pop_front();
-        mxb::atomic::add(&pServer->pool_stats.n_persistent, -1);
+        mxb::atomic::add(&pServer->pool_stats().n_persistent, -1);
 
         // Put back the origininal handler.
         pDcb->set_handler(pDcb->protocol());
@@ -512,7 +512,7 @@ BackendDCB* RoutingWorker::get_backend_dcb_from_pool(SERVER* pS,
 
         if (pDcb->protocol()->reuse_connection(pDcb, pUpstream))
         {
-            mxb::atomic::add(&pServer->pool_stats.n_from_pool, 1, mxb::atomic::RELAXED);
+            mxb::atomic::add(&pServer->pool_stats().n_from_pool, 1, mxb::atomic::RELAXED);
         }
         else
         {
@@ -562,7 +562,7 @@ bool RoutingWorker::can_be_destroyed(BackendDCB* pDcb)
             && !pDcb->hanged_up()
             && evict_dcbs(pServer, Evict::EXPIRED) < persistpoolmax)
         {
-            if (mxb::atomic::add_limited(&pServer->pool_stats.n_persistent, 1, persistpoolmax))
+            if (mxb::atomic::add_limited(&pServer->pool_stats().n_persistent, 1, persistpoolmax))
             {
                 pDcb->clear();
                 // Change the handler to one that will close the DCB in case there
@@ -632,7 +632,7 @@ int RoutingWorker::evict_dcbs(SERVER* pS, Evict evict)
         {
             to_be_evicted.push_back(entry.release_dcb());
             j = persistent_entries.erase(j);
-            mxb::atomic::add(&pServer->pool_stats.n_persistent, -1);
+            mxb::atomic::add(&pServer->pool_stats().n_persistent, -1);
         }
         else
         {
@@ -641,7 +641,7 @@ int RoutingWorker::evict_dcbs(SERVER* pS, Evict evict)
         }
     }
 
-    pServer->persistmax = MXS_MAX(pServer->persistmax, count);
+    pServer->pool_stats().persistmax = MXS_MAX(pServer->pool_stats().persistmax, count);
 
     for (BackendDCB* pDcb : to_be_evicted)
     {
@@ -1254,7 +1254,7 @@ void RoutingWorker::register_epoll_tick_func(std::function<void ()> func)
     m_epoll_tick_funcs.push_back(func);
 }
 
-//static
+// static
 void RoutingWorker::collect_worker_load(size_t count)
 {
     for (int i = 0; i < this_unit.nWorkers; ++i)
@@ -1271,7 +1271,7 @@ void RoutingWorker::collect_worker_load(size_t count)
     }
 }
 
-//static
+// static
 bool RoutingWorker::balance_workers()
 {
     bool balancing = false;
@@ -1286,7 +1286,7 @@ bool RoutingWorker::balance_workers()
     return balancing;
 }
 
-//static
+// static
 bool RoutingWorker::balance_workers(int threshold)
 {
     bool balancing = false;
@@ -1348,8 +1348,8 @@ bool RoutingWorker::balance_workers(int threshold)
         mxb_assert(pTo);
 
         if (!pFrom->execute([pFrom, pTo]() {
-                    pFrom->rebalance(pTo);
-                }, Worker::EXECUTE_QUEUED))
+                                pFrom->rebalance(pTo);
+                            }, Worker::EXECUTE_QUEUED))
         {
             MXS_ERROR("Could not post task to worker, worker load balancing will not take place.");
         }

@@ -153,7 +153,7 @@ Server* Server::server_alloc(const char* name, const mxs::ConfigParameters& para
     server->m_settings.extra_port = params.get_integer(CN_EXTRA_PORT);
     server->m_settings.persistpoolmax = params.get_integer(CN_PERSISTPOOLMAX);
     server->m_settings.persistmaxtime = params.get_duration<std::chrono::seconds>(CN_PERSISTMAXTIME).count();
-    server->proxy_protocol = params.get_bool(CN_PROXY_PROTOCOL);
+    server->m_settings.proxy_protocol = params.get_bool(CN_PROXY_PROTOCOL);
     server->persistent = persistent;
     server->m_settings.rank = params.get_enum(CN_RANK, rank_values);
     server->m_settings.priority = params.get_integer(CN_PRIORITY);
@@ -190,8 +190,8 @@ void Server::printServer()
     printf("\tPort:                         %d\n", port());
     printf("\tTotal connections:            %d\n", stats().n_connections);
     printf("\tCurrent connections:          %d\n", stats().n_current);
-    printf("\tPersistent connections:       %d\n", pool_stats.n_persistent);
-    printf("\tPersistent actual max:        %d\n", persistmax);
+    printf("\tPersistent connections:       %d\n", m_pool_stats.n_persistent);
+    printf("\tPersistent actual max:        %d\n", m_pool_stats.persistmax);
 }
 
 /**
@@ -330,6 +330,30 @@ mxs::SSLProvider& Server::ssl()
     return m_ssl_provider;
 }
 
+bool Server::proxy_protocol() const
+{
+    return m_settings.proxy_protocol;
+}
+
+void Server::set_proxy_protocol(bool proxy_protocol)
+{
+    m_settings.proxy_protocol = proxy_protocol;
+}
+
+uint8_t Server::charset() const
+{
+    return m_charset;
+}
+
+void Server::set_charset(uint8_t charset)
+{
+    m_charset = charset;
+}
+
+Server::PoolStats& Server::pool_stats()
+{
+    return m_pool_stats;
+}
 void Server::set_variables(std::unordered_map<std::string, std::string>&& variables)
 {
     std::lock_guard<std::mutex> guard(m_var_lock);
@@ -487,23 +511,10 @@ json_t* Server::json_attributes() const
     json_object_set_new(attr, CN_VERSION_STRING, json_string(version_string().c_str()));
     json_object_set_new(attr, "replication_lag", json_integer(replication_lag()));
 
-    if (node_ts > 0)
-    {
-        struct tm result;
-        char timebuf[30];
-        time_t tim = node_ts;
-        asctime_r(localtime_r(&tim, &result), timebuf);
-        mxb::trim(timebuf);
-
-        json_object_set_new(attr, "last_heartbeat", json_string(timebuf));
-    }
-
-    /** Store statistics */
-
     cleanup_persistent_connections(this);
 
     json_t* statistics = stats().to_json();
-    json_object_set_new(statistics, "persistent_connections", json_integer(pool_stats.n_persistent));
+    json_object_set_new(statistics, "persistent_connections", json_integer(m_pool_stats.n_persistent));
     maxbase::Duration response_ave(response_time_average());
     json_object_set_new(statistics, "adaptive_avg_select_time", json_string(to_string(response_ave).c_str()));
 

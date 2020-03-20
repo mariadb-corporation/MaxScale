@@ -1778,18 +1778,18 @@ uint8_t SERVICE::charset() const
 
     for (auto s : reachable_servers())
     {
-        if (s->charset)
+        if (s->charset())
         {
             if (s->is_master())
             {
                 // Master found, stop searching
-                rval = s->charset;
+                rval = s->charset();
                 break;
             }
             else if (s->is_slave() || rval == 0)
             {
                 // Slaves precede Running servers and server that are Down but whose charset is known
-                rval = s->charset;
+                rval = s->charset();
             }
         }
     }

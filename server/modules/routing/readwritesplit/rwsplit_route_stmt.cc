@@ -789,7 +789,7 @@ void RWSplitSession::log_master_routing_failure(bool found,
                                                 RWBackend* old_master,
                                                 RWBackend* curr_master)
 {
-    char errmsg[SERVER::MAX_ADDRESS_LEN* 2 + 100];      // Extra space for error message
+    char errmsg[1024 * 2 + 100];        // Extra space for error message
 
     if (m_config.delayed_retry && m_retry_duration >= m_config.delayed_retry_timeout)
     {

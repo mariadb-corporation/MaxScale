@@ -349,7 +349,7 @@ RCRSession* RCR::newSession(MXS_SESSION* session, const Endpoints& endpoints)
 /** Log routing failure due to closed session */
 static void log_closed_session(uint8_t mysql_command, mxs::Target* t)
 {
-    char msg[SERVER::MAX_ADDRESS_LEN + 200] = "";   // Extra space for message
+    char msg[1024 + 200] = "";      // Extra space for message
 
     if (t->is_down())
     {
