@@ -122,7 +122,7 @@ Server* ServerManager::find_by_unique_name(const string& name)
     Server* rval = nullptr;
     this_unit.foreach_server(
         [&rval, name](Server* server) {
-            if (server->is_active && server->name() == name)
+            if (server->active() && server->name() == name)
             {
                 rval = server;
                 return false;
@@ -145,7 +145,7 @@ std::unique_ptr<ResultSet> ServerManager::getList()
 
     this_unit.foreach_server(
         [&set](Server* server) {
-            if (server->server_is_active())
+            if (server->active())
             {
                 string stat = server->status_string();
                 set->add_row({server->name(), server->address(),
@@ -163,7 +163,7 @@ json_t* ServerManager::server_list_to_json(const char* host)
     json_t* data = json_array();
     this_unit.foreach_server(
         [data, host](Server* server) {
-            if (server->server_is_active())
+            if (server->active())
             {
                 json_array_append_new(data, server_to_json_data_relations(server, host));
             }

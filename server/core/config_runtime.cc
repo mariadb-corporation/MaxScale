@@ -1880,7 +1880,7 @@ bool runtime_destroy_server(Server* server)
                        server->name(),
                        server->address(),
                        server->port());
-            server->is_active = false;
+            server->deactivate();
         }
     }
 

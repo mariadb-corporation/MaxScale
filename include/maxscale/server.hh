@@ -80,7 +80,6 @@ public:
                                      * routing sessions. */
 
     // Base variables
-    bool    is_active = false;  /**< Server is active and has not been "destroyed" */
     uint8_t charset = 0;        /**< Character set. Read from backend and sent to client. As no character set
                                  * has the numeric value of 0, it can be used to detect servers we haven't
                                  * connected to. */
@@ -89,7 +88,6 @@ public:
     PoolStats pool_stats;
     int       persistmax = 0;       /**< Maximum pool size actually achieved since startup */
 
-    int64_t       rlag = mxs::Target::RLAG_UNDEFINED;   /**< Replication Lag for Master/Slave replication */
     unsigned long node_ts = 0;                          /**< Last timestamp set from M/S monitor module */
 
     // Misc fields
@@ -176,33 +174,22 @@ public:
     bool is_mxs_service();
 
     /**
-     * Is the server valid and active? TODO: Rename once "is_active" is moved to internal class.
+     * Set current ping
      *
-     * @return True if server has not been removed from the runtime configuration.
+     * @param ping Ping in milliseconds
      */
-    bool server_is_active() const
-    {
-        return active();
-    }
+    virtual void set_ping(int64_t ping) = 0;
 
-    bool active() const override
-    {
-        return is_active;
-    }
+    /**
+     * Set replication lag
+     *
+     * @param lag The current replication lag in seconds
+     */
+    virtual void set_replication_lag(int64_t lag) = 0;
 
-    int64_t replication_lag() const override
-    {
-        return rlag;
-    }
-
-    int64_t ping() const override;
-
-    void set_ping(int64_t ping);
-
-    uint64_t capabilities() const override
-    {
-        return 0;
-    }
+    // TODO: Don't expose this to the modules and instead destroy the server
+    //       via ServerManager (currently needed by clustrixmon)
+    virtual void deactivate() = 0;
 
     /**
      * Find a server with the specified name.
@@ -303,9 +290,6 @@ protected:
 
 private:
     mxs::SSLProvider m_ssl_provider;
-
-    /** Server ping measured by monitor, in microseconds */
-    std::atomic<int64_t> m_ping {mxs::Target::PING_UNDEFINED};
 
     // Server side global variables
     std::unordered_map<std::string, std::string> m_variables;

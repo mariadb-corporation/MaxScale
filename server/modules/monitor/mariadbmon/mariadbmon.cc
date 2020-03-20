@@ -515,7 +515,7 @@ void MariaDBMonitor::tick()
     for (auto server : servers())
     {
         SERVER* srv = server->server;
-        srv->rlag = server->m_replication_lag;
+        srv->set_replication_lag(server->m_replication_lag);
         srv->assign_status(server->pending_status);
     }
 

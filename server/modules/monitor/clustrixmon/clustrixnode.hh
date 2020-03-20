@@ -188,7 +188,7 @@ public:
 
     void deactivate_server()
     {
-        m_pServer->is_active = false;
+        m_pServer->deactivate();
         m_persister.unpersist(*this);
     }
 

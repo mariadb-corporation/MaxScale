@@ -154,7 +154,6 @@ Server* Server::server_alloc(const char* name, const mxs::ConfigParameters& para
     server->m_settings.persistpoolmax = params.get_integer(CN_PERSISTPOOLMAX);
     server->m_settings.persistmaxtime = params.get_duration<std::chrono::seconds>(CN_PERSISTMAXTIME).count();
     server->proxy_protocol = params.get_bool(CN_PROXY_PROTOCOL);
-    server->is_active = true;
     server->persistent = persistent;
     server->m_settings.rank = params.get_enum(CN_RANK, rank_values);
     server->m_settings.priority = params.get_integer(CN_PRIORITY);
@@ -249,16 +248,6 @@ void Server::clear_status(uint64_t bit)
 void Server::assign_status(uint64_t status)
 {
     m_status = status;
-}
-
-int64_t SERVER::ping() const
-{
-    return m_ping.load(std::memory_order_relaxed);
-}
-
-void SERVER::set_ping(int64_t ping)
-{
-    m_ping.store(ping, std::memory_order_relaxed);
 }
 
 bool Server::set_monitor_user(const string& username)
@@ -473,11 +462,7 @@ json_t* Server::json_attributes() const
     json_object_set_new(attr, CN_STATE, json_string(stat.c_str()));
 
     json_object_set_new(attr, CN_VERSION_STRING, json_string(version_string().c_str()));
-
-    if (rlag >= 0)
-    {
-        json_object_set_new(attr, "replication_lag", json_integer(rlag));
-    }
+    json_object_set_new(attr, "replication_lag", json_integer(replication_lag()));
 
     if (node_ts > 0)
     {

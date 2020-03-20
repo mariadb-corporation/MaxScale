@@ -278,7 +278,7 @@ bool MariaDBUserManager::update_users()
 
     // Filter out unusable backends.
     auto is_unusable = [](const SERVER* srv) {
-            return !srv->is_active || !srv->is_usable();
+            return !srv->active() || !srv->is_usable();
         };
     auto erase_iter = std::remove_if(backends.begin(), backends.end(), is_unusable);
     backends.erase(erase_iter, backends.end());

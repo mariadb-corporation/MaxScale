@@ -244,12 +244,46 @@ public:
         return no_children;
     }
 
+    uint64_t capabilities() const override
+    {
+        return 0;
+    }
+
+    bool active() const override
+    {
+        return m_active;
+    }
+
+    void deactivate() override
+    {
+        m_active = false;
+    }
+
+    int64_t replication_lag() const override
+    {
+        return m_rpl_lag;
+    }
+
+    void set_replication_lag(int64_t lag) override
+    {
+        m_rpl_lag = lag;
+    }
+
+    int64_t ping() const override
+    {
+        return m_ping;
+    }
+
+    void set_ping(int64_t ping) override
+    {
+        m_ping = ping;
+    }
+
     bool set_address(const std::string& address) override;
 
     void set_port(int new_port) override;
 
     void set_extra_port(int new_port) override;
-
 
     uint64_t status() const override;
     void     set_status(uint64_t bit) override;
@@ -318,10 +352,13 @@ private:
         char    m_version_str[MAX_VERSION_LEN + 1] = {'\0'};/**< Server version string */
     };
 
-    const std::string m_name;               /**< Server config name */
-    Settings          m_settings;           /**< Server settings */
-    VersionInfo       m_info;               /**< Server version and type information */
+    const std::string m_name;       /**< Server config name */
+    Settings          m_settings;   /**< Server settings */
+    VersionInfo       m_info;       /**< Server version and type information */
     uint64_t          m_status {0};
+    bool              m_active {true};
+    int64_t           m_rpl_lag {mxs::Target::RLAG_UNDEFINED};  /**< Replication lag in seconds */
+    int64_t           m_ping {mxs::Target::PING_UNDEFINED};     /**< Ping in microseconds */
 };
 
 // A connection to a server
