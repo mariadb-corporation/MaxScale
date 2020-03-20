@@ -32,32 +32,32 @@ public:
 
 public:
     // Only to be called by the module call command mechanism.
-    bool command_cluster_start(SERVER* pServer, json_t** ppOutput);
-    bool command_cluster_shutdown(SERVER* pServer, json_t** ppOutput);
-    bool command_cluster_ping(SERVER* pServer, json_t** ppOutput);
-    bool command_cluster_status(SERVER* pServer, json_t** ppOutput);
+    bool command_cluster_start(json_t** ppOutput, SERVER* pServer);
+    bool command_cluster_shutdown(json_t** ppOutput, SERVER* pServer);
+    bool command_cluster_ping(json_t** ppOutput, SERVER* pServer);
+    bool command_cluster_status(json_t** ppOutput, SERVER* pServer);
     bool command_cluster_config_get(json_t** ppOutput);
     bool command_cluster_config_put(json_t** ppOutput);
     bool command_cluster_add_node(json_t** ppOutput);
     bool command_cluster_remove_node(json_t** ppOutput);
-    bool command_async(const char* zCommand, json_t** ppOutput);
+    bool command_async(json_t** ppOutput, const char* zCommand);
     bool command_result(json_t** ppOutput);
     bool command_cancel(json_t** ppOutput);
 
 private:
-    bool command(const char* zCmd, std::function<void()> cmd, mxb::Semaphore& sem, json_t** ppOutput);
+    bool command(json_t** ppOutput, mxb::Semaphore& sem, const char* zCmd, std::function<void()> cmd);
 
-    void cluster_get(const char* zCmd, SERVER* pServer, mxb::Semaphore* pSem, json_t** ppOutput);
-    void cluster_put(const char* zCmd, SERVER* pServer, mxb::Semaphore* pSem, json_t** ppOutput);
+    void cluster_get(json_t** ppOutput, mxb::Semaphore* pSem, const char* zCmd, SERVER* pServer);
+    void cluster_put(json_t** ppOutput, mxb::Semaphore* pSem, const char* zCmd, SERVER* pServer);
 
-    void cluster_start(SERVER* pServer, mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
-    void cluster_shutdown(SERVER* pServer, mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
-    void cluster_ping(SERVER* pServer, mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
-    void cluster_status(SERVER* pServer, mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
-    void cluster_config_get(mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
-    void cluster_config_put(mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
-    void cluster_add_node(mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
-    void cluster_remove_node(mxb::Semaphore* pSem = nullptr, json_t** ppOutput = nullptr);
+    void cluster_start(json_t** ppOutput, mxb::Semaphore* pSem = nullptr, SERVER* pServer = nullptr);
+    void cluster_shutdown(json_t** ppOutput, mxb::Semaphore* pSem = nullptr, SERVER* pServer = nullptr);
+    void cluster_ping(json_t** ppOutput, mxb::Semaphore* pSem = nullptr, SERVER* pServer = nullptr);
+    void cluster_status(json_t** ppOutput, mxb::Semaphore* pSem = nullptr, SERVER* pServer = nullptr);
+    void cluster_config_get(json_t** ppOutput, mxb::Semaphore* pSem = nullptr);
+    void cluster_config_put(json_t** ppOutput, mxb::Semaphore* pSem = nullptr);
+    void cluster_add_node(json_t** ppOutput, mxb::Semaphore* pSem = nullptr);
+    void cluster_remove_node(json_t** ppOutput, mxb::Semaphore* pSem = nullptr);
 
     bool has_sufficient_permissions();
     void update_server_status(mxs::MonitorServer* monitored_server);

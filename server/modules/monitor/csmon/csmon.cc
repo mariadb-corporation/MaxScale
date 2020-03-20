@@ -25,7 +25,7 @@ bool cluster_start(const MODULECMD_ARG* pArgs, json_t** ppOutput)
     auto* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
     SERVER* pServer = pArgs->argc == 1 ? nullptr : pArgs->argv[1].value.server;
 
-    return pMonitor->command_cluster_start(pServer, ppOutput);
+    return pMonitor->command_cluster_start(ppOutput, pServer);
 }
 
 bool cluster_shutdown(const MODULECMD_ARG* pArgs, json_t** ppOutput)
@@ -37,7 +37,7 @@ bool cluster_shutdown(const MODULECMD_ARG* pArgs, json_t** ppOutput)
     auto* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
     SERVER* pServer = pArgs->argc == 1 ? nullptr : pArgs->argv[1].value.server;
 
-    return pMonitor->command_cluster_shutdown(pServer, ppOutput);
+    return pMonitor->command_cluster_shutdown(ppOutput, pServer);
 }
 
 bool cluster_ping(const MODULECMD_ARG* pArgs, json_t** ppOutput)
@@ -49,7 +49,7 @@ bool cluster_ping(const MODULECMD_ARG* pArgs, json_t** ppOutput)
     auto* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
     SERVER* pServer = pArgs->argc == 1 ? nullptr : pArgs->argv[1].value.server;
 
-    return pMonitor->command_cluster_ping(pServer, ppOutput);
+    return pMonitor->command_cluster_ping(ppOutput, pServer);
 }
 
 bool cluster_status(const MODULECMD_ARG* pArgs, json_t** ppOutput)
@@ -61,7 +61,7 @@ bool cluster_status(const MODULECMD_ARG* pArgs, json_t** ppOutput)
     auto* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
     SERVER* pServer = pArgs->argc == 1 ? nullptr : pArgs->argv[1].value.server;
 
-    return pMonitor->command_cluster_status(pServer, ppOutput);
+    return pMonitor->command_cluster_status(ppOutput, pServer);
 }
 
 bool cluster_add_node(const MODULECMD_ARG* pArgs, json_t** ppOutput)
@@ -113,7 +113,7 @@ bool async(const MODULECMD_ARG* pArgs, json_t** ppOutput)
     auto* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
     const auto* zCommand = pArgs->argv[1].value.string;
 
-    return pMonitor->command_async(zCommand, ppOutput);
+    return pMonitor->command_async(ppOutput, zCommand);
 }
 
 bool result(const MODULECMD_ARG* pArgs, json_t** ppOutput)
