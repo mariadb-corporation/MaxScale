@@ -594,7 +594,7 @@ void RoutingWorker::evict_dcbs(Evict evict)
     }
 }
 
-int RoutingWorker::evict_dcbs(SERVER* pS, Evict evict)
+int RoutingWorker::evict_dcbs(const SERVER* pS, Evict evict)
 {
     mxb_assert(!m_evicting);
 
@@ -604,7 +604,7 @@ int RoutingWorker::evict_dcbs(SERVER* pS, Evict evict)
 
     time_t now = time(nullptr);
 
-    Server* pServer = static_cast<Server*>(pS);
+    auto pServer = const_cast<Server*>(static_cast<const Server*>(pS));
     PersistentEntries& persistent_entries = m_persistent_entries_by_server[pServer];
 
     vector<BackendDCB*> to_be_evicted;

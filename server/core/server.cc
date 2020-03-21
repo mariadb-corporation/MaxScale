@@ -104,40 +104,29 @@ Server* Server::server_alloc(const char* name, const mxs::ConfigParameters& para
     auto monuser = params.get_string(CN_MONITORUSER);
     auto monpw = params.get_string(CN_MONITORPW);
 
-    const char one_defined_err[] = "'%s is defined for server '%s', '%s' must also be defined.";
-    if (!monuser.empty() && monpw.empty())
+    if (monuser.empty() != monpw.empty())
     {
-        MXS_ERROR(one_defined_err, CN_MONITORUSER, name, CN_MONITORPW);
-        return NULL;
-    }
-    else if (monuser.empty() && !monpw.empty())
-    {
-        MXS_ERROR(one_defined_err, CN_MONITORPW, name, CN_MONITORUSER);
-        return NULL;
+        MXS_ERROR("Server '%s': if '%s is defined, '%s' must also be defined.", name,
+                  !monuser.empty() ? CN_MONITORUSER : CN_MONITORPW,
+                  !monuser.empty() ? CN_MONITORPW : CN_MONITORUSER);
+        return nullptr;
     }
 
-    std::unique_ptr<mxs::SSLContext> ssl(new mxs::SSLContext);
-    if (!ssl || !ssl->read_configuration(name, params, false))
+    auto ssl = std::make_unique<mxs::SSLContext>();
+
+    if (!ssl->read_configuration(name, params, false))
     {
         MXS_ERROR("Unable to initialize SSL for server '%s'", name);
-        return NULL;
+        return nullptr;
     }
-    // An empty ssl config should result in an empty pointer. This can be removed if Server stores SSLContext
-    // as value.
-    if (!ssl->valid())
+    else if (!ssl->valid())
     {
-        ssl = nullptr;
+        // An empty ssl config should result in an empty pointer. This can be removed if Server stores
+        // SSLContext as value.
+        ssl.reset();
     }
 
-    Server* server = new(std::nothrow) Server(name, std::move(ssl));
-    BackendDCB** persistent = (BackendDCB**)MXS_CALLOC(config_threadcount(), sizeof(*persistent));
-
-    if (!server || !persistent)
-    {
-        delete server;
-        MXS_FREE(persistent);
-        return NULL;
-    }
+    Server* server = new Server(name, std::move(ssl));
 
     auto address = params.contains(CN_ADDRESS) ?
         params.get_string(CN_ADDRESS) : params.get_string(CN_SOCKET);
@@ -154,7 +143,6 @@ Server* Server::server_alloc(const char* name, const mxs::ConfigParameters& para
     server->m_settings.persistpoolmax = params.get_integer(CN_PERSISTPOOLMAX);
     server->m_settings.persistmaxtime = params.get_duration<std::chrono::seconds>(CN_PERSISTMAXTIME).count();
     server->m_settings.proxy_protocol = params.get_bool(CN_PROXY_PROTOCOL);
-    server->persistent = persistent;
     server->m_settings.rank = params.get_enum(CN_RANK, rank_values);
     server->m_settings.priority = params.get_integer(CN_PRIORITY);
     mxb_assert(server->m_settings.rank > 0);
@@ -171,11 +159,6 @@ Server* Server::server_alloc(const char* name, const mxs::ConfigParameters& para
     return server;
 }
 
-Server::~Server()
-{
-    MXS_FREE(persistent);
-}
-
 Server* Server::create_test_server()
 {
     static int next_id = 1;
@@ -183,51 +166,12 @@ Server* Server::create_test_server()
     return new Server(name);
 }
 
-void Server::printServer()
+void Server::cleanup_persistent_connections() const
 {
-    printf("Server %p\n", this);
-    printf("\tServer:                       %s\n", address());
-    printf("\tPort:                         %d\n", port());
-    printf("\tTotal connections:            %d\n", stats().n_connections);
-    printf("\tCurrent connections:          %d\n", stats().n_current);
-    printf("\tPersistent connections:       %d\n", m_pool_stats.n_persistent);
-    printf("\tPersistent actual max:        %d\n", m_pool_stats.persistmax);
-}
-
-/**
- * A class for cleaning up persistent connections
- */
-class CleanupTask : public Worker::Task
-{
-public:
-    CleanupTask(const Server* server)
-        : m_server(server)
-    {
-    }
-
-    void execute(Worker& worker)
-    {
-        RoutingWorker& rworker = static_cast<RoutingWorker&>(worker);
-        mxb_assert(&rworker == RoutingWorker::get_current());
-
-        rworker.evict_dcbs(const_cast<Server*>(m_server), RoutingWorker::Evict::EXPIRED);
-    }
-
-private:
-    const Server* m_server;     /**< Server to clean up */
-};
-
-/**
- * @brief Clean up any stale persistent connections
- *
- * This function purges any stale persistent connections from @c server.
- *
- * @param server Server to clean up
- */
-static void cleanup_persistent_connections(const Server* server)
-{
-    CleanupTask task(server);
-    RoutingWorker::execute_concurrently(task);
+    RoutingWorker::execute_concurrently(
+        [this]() {
+            RoutingWorker::get_current()->evict_dcbs(this, RoutingWorker::Evict::EXPIRED);
+        });
 }
 
 uint64_t Server::status() const
@@ -511,7 +455,7 @@ json_t* Server::json_attributes() const
     json_object_set_new(attr, CN_VERSION_STRING, json_string(version_string().c_str()));
     json_object_set_new(attr, "replication_lag", json_integer(replication_lag()));
 
-    cleanup_persistent_connections(this);
+    cleanup_persistent_connections();
 
     json_t* statistics = stats().to_json();
     json_object_set_new(statistics, "persistent_connections", json_integer(m_pool_stats.n_persistent));

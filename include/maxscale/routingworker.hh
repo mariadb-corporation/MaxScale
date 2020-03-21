@@ -476,7 +476,7 @@ public:
     };
 
     void evict_dcbs(Evict evict);
-    int  evict_dcbs(SERVER* server, Evict evict);
+    int  evict_dcbs(const SERVER* server, Evict evict);
 
     /**
      * Register a function to be called every epoll_tick.

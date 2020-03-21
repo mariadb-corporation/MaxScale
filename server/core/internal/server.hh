@@ -39,7 +39,7 @@ public:
     {
     }
 
-    ~Server();
+    ~Server() = default;
 
     const char* address() const override
     {
@@ -226,11 +226,6 @@ public:
     bool set_disk_space_threshold(const std::string& disk_space_threshold);
 
     /**
-     * Print details of an individual server
-     */
-    void printServer();
-
-    /**
      * Convert server to json. This does not add relations to other objects and should only be called from
      * ServerManager::server_to_json_data_relations().
      *
@@ -319,8 +314,6 @@ public:
     void       set_proxy_protocol(bool proxy_protocol) override;
     PoolStats& pool_stats();
     bool       is_mxs_service() const override;
-
-    BackendDCB** persistent = nullptr;      /**< List of unused persistent connections to the server */
 
 private:
     bool create_server_config(const char* filename) const;
@@ -411,6 +404,15 @@ private:
     };
 
     mxs::WorkerGlobal<std::unordered_map<uint32_t, uint64_t>> m_gtids;
+
+    /**
+     * @brief Clean up any stale persistent connections
+     *
+     * This function purges any stale persistent connections from @c server.
+     *
+     * @param server Server to clean up
+     */
+    void cleanup_persistent_connections() const;
 };
 
 // A connection to a server
