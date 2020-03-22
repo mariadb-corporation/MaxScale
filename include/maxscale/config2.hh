@@ -145,6 +145,24 @@ public:
      */
     json_t* to_json() const;
 
+protected:
+
+    /**
+     * Post validation step
+     *
+     * This can be overridden to check dependencies between parameters.
+     *
+     * @param params The set of validated parameters
+     *
+     * @return True, if the post validation check is successful.
+     *
+     * @note The default implementation always returns true
+     */
+    virtual bool post_validate(const mxs::ConfigParameters& params) const
+    {
+        return true;
+    }
+
 private:
     friend Param;
 

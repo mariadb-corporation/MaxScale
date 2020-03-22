@@ -172,6 +172,11 @@ bool Specification::validate(const mxs::ConfigParameters& params,
         }
     }
 
+    if (valid)
+    {
+        valid = post_validate(params);
+    }
+
     return valid;
 }
 
@@ -935,7 +940,6 @@ bool regex_from_string(const std::string& value_as_string,
 
     return rv;
 }
-
 }
 
 bool ParamRegex::from_string(const std::string& value_as_string,
@@ -976,7 +980,7 @@ RegexValue ParamRegex::create_default(const char* zRegex)
 {
     RegexValue value;
 
-    MXB_AT_DEBUG(bool rv =) regex_from_string(zRegex, 0, &value);
+    MXB_AT_DEBUG(bool rv = ) regex_from_string(zRegex, 0, &value);
     mxb_assert(rv);
 
     return value;
