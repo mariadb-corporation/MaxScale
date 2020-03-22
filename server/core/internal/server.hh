@@ -21,6 +21,7 @@
 #include <map>
 #include <mutex>
 #include <maxscale/config.hh>
+#include <maxscale/config2.hh>
 #include <maxscale/server.hh>
 #include <maxscale/resultset.hh>
 
@@ -68,12 +69,12 @@ public:
 
     long persistmaxtime() const
     {
-        return m_settings.persistmaxtime;
+        return m_settings.persistmaxtime.count();
     }
 
     void set_persistmaxtime(long persistmaxtime)
     {
-        m_settings.persistmaxtime = persistmaxtime;
+        m_settings.persistmaxtime = std::chrono::seconds(persistmaxtime);
     }
 
     void set_rank(int64_t rank)
@@ -328,15 +329,15 @@ private:
 
         std::string protocol;       /**< Backend protocol module name. Does not change so needs no locking. */
 
-        char address[MAX_ADDRESS_LEN + 1] = {'\0'}; /**< Server hostname/IP-address */
-        int  port = -1;                             /**< Server port */
-        int  extra_port = -1;                       /**< Alternative monitor port if normal port fails */
+        char    address[MAX_ADDRESS_LEN + 1] = {'\0'};  /**< Server hostname/IP-address */
+        int64_t port = -1;                              /**< Server port */
+        int64_t extra_port = -1;                        /**< Alternative monitor port if normal port fails */
 
         char monuser[MAX_MONUSER_LEN + 1] = {'\0'}; /**< Monitor username, overrides monitor setting */
         char monpw[MAX_MONPW_LEN + 1] = {'\0'};     /**< Monitor password, overrides monitor setting */
 
-        long persistpoolmax = 0;    /**< Maximum size of persistent connections pool */
-        long persistmaxtime = 0;    /**< Maximum number of seconds connection can live */
+        long                 persistpoolmax = 0;/**< Maximum size of persistent connections pool */
+        std::chrono::seconds persistmaxtime {0};/**< Maximum number of seconds connection can live */
 
         int64_t rank;   /*< The ranking of this server, used to prioritize certain servers over others */
 

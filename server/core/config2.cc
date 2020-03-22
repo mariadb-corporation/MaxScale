@@ -48,6 +48,9 @@ bool is_core_param(Specification::Kind kind, const std::string& param)
     case Specification::GLOBAL:
         break;
 
+    case Specification::SERVER:
+        break;
+
     default:
         mxb_assert(!true);
     }

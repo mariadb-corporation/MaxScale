@@ -32,6 +32,7 @@
 #include <maxbase/log.hh>
 
 #include <maxscale/config.hh>
+#include <maxscale/config2.hh>
 #include <maxscale/session.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/poll.hh>
@@ -55,6 +56,9 @@ using maxscale::Monitor;
 
 using std::string;
 using Guard = std::lock_guard<std::mutex>;
+using namespace std::literals::chrono_literals;
+
+namespace cfg = mxs::config;
 
 const char CN_MONITORPW[] = "monitorpw";
 const char CN_MONITORUSER[] = "monitoruser";
@@ -97,6 +101,97 @@ void careful_strcpy(char* dest, size_t max_len, const std::string& source)
     // the necessary null, should the new string be shorter than the old.
     strncpy(dest, source.c_str(), new_len);
 }
+
+class ServerSpec : public cfg::Specification
+{
+public:
+    using cfg::Specification::Specification;
+
+protected:
+    bool post_validate(const mxs::ConfigParameters& params) const;
+};
+
+static const auto NO_QUOTES = cfg::ParamString::IGNORED;
+static const auto AT_RUNTIME = cfg::Param::AT_RUNTIME;
+
+static ServerSpec s_spec("server", cfg::Specification::SERVER);
+
+static cfg::ParamString s_type(&s_spec, CN_TYPE, "Object type", "server", NO_QUOTES);
+static cfg::ParamString s_protocol(&s_spec, CN_PROTOCOL, "Server protocol (deprecated)", "", NO_QUOTES);
+static cfg::ParamString s_authenticator(
+    &s_spec, CN_AUTHENTICATOR, "Server authenticator (deprecated)", "", NO_QUOTES);
+
+static cfg::ParamString s_address(&s_spec, CN_ADDRESS, "Server address", "", NO_QUOTES, AT_RUNTIME);
+static cfg::ParamString s_socket(&s_spec, CN_SOCKET, "Server UNIX socket", "", NO_QUOTES, AT_RUNTIME);
+static cfg::ParamCount s_port(&s_spec, CN_PORT, "Server port", 3306, AT_RUNTIME);
+static cfg::ParamCount s_extra_port(&s_spec, CN_EXTRA_PORT, "Server extra port", 0, AT_RUNTIME);
+static cfg::ParamCount s_priority(&s_spec, CN_PRIORITY, "Server priority", 0, AT_RUNTIME);
+static cfg::ParamString s_monitoruser(&s_spec, CN_MONITORUSER, "Monitor user", "", NO_QUOTES, AT_RUNTIME);
+static cfg::ParamString s_monitorpw(&s_spec, CN_MONITORPW, "Monitor password", "", NO_QUOTES, AT_RUNTIME);
+
+static cfg::ParamCount s_persistpoolmax(
+    &s_spec, CN_PERSISTPOOLMAX, "Maximum size of the persistent connection pool", 0, AT_RUNTIME);
+
+static cfg::ParamSeconds s_persistmaxtime(
+    &s_spec, CN_PERSISTMAXTIME, "Maximum time that a connection can be in the pool",
+    cfg::INTERPRET_AS_SECONDS, 0s, AT_RUNTIME);
+
+static cfg::ParamBool s_proxy_protocol(
+    &s_spec, CN_PROXY_PROTOCOL, "Enable proxy protocol", false, AT_RUNTIME);
+
+// TODO: Add custom type
+static cfg::ParamString s_disk_space_threshold(
+    &s_spec, CN_DISK_SPACE_THRESHOLD, "Server disk space threshold", "", NO_QUOTES, AT_RUNTIME);
+
+static cfg::ParamEnum<int64_t> s_rank(
+    &s_spec, CN_RANK, "Server rank",
+    {
+        {RANK_PRIMARY, "primary"},
+        {RANK_SECONDARY, "secondary"}
+    }, RANK_PRIMARY, AT_RUNTIME);
+
+//
+// TLS parameters, only configurable at server creation time
+//
+
+static cfg::ParamEnum<bool> s_ssl(      // TODO: Deprecate the non-boolean values
+    &s_spec, CN_SSL, "Enable TLS for server",
+    {
+        {true, "required"},
+        {true, "true"},
+        {true, "yes"},
+        {true, "on"},
+        {true, "1"},
+        {false, "disabled"},
+        {false, "false"},
+        {false, "no"},
+        {false, "off"},
+        {false, "0"},
+    }, false);
+
+static cfg::ParamPath s_ssl_cert(&s_spec, CN_SSL_CERT, "TLS public certificate", cfg::ParamPath::R, "");
+static cfg::ParamPath s_ssl_key(&s_spec, CN_SSL_KEY, "TLS private key", cfg::ParamPath::R, "");
+static cfg::ParamPath s_ssl_ca(&s_spec, CN_SSL_CA_CERT, "TLS certificate authority", cfg::ParamPath::R, "");
+
+static cfg::ParamEnum<ssl_method_type_t> s_ssl_version(
+    &s_spec, CN_SSL_VERSION, "Minimum TLS protocol version",
+    {
+        {SERVICE_SSL_TLS_MAX, "MAX"},
+        {SERVICE_TLS10, "TLSv10"},
+        {SERVICE_TLS11, "TLSv11"},
+        {SERVICE_TLS12, "TLSv12"},
+        {SERVICE_TLS13, "TLSv13"}
+    }, SERVICE_SSL_TLS_MAX);
+
+
+static cfg::ParamCount s_ssl_cert_verify_depth(
+    &s_spec, CN_SSL_CERT_VERIFY_DEPTH, "TLS certificate verification depth", 9);
+
+static cfg::ParamBool s_ssl_verify_peer_certificate(
+    &s_spec, CN_SSL_VERIFY_PEER_CERTIFICATE, "Verify TLS peer certificate", false);
+
+static cfg::ParamBool s_ssl_verify_peer_host(
+    &s_spec, CN_SSL_VERIFY_PEER_HOST, "Verify TLS peer host", false);
 }
 
 Server* Server::server_alloc(const char* name, const mxs::ConfigParameters& params)
