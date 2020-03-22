@@ -194,16 +194,98 @@ static cfg::ParamBool s_ssl_verify_peer_host(
     &s_spec, CN_SSL_VERIFY_PEER_HOST, "Verify TLS peer host", false);
 }
 
-Server* Server::server_alloc(const char* name, const mxs::ConfigParameters& params)
+bool ServerSpec::post_validate(const mxs::ConfigParameters& params) const
 {
+    bool rval = true;
     auto monuser = params.get_string(CN_MONITORUSER);
     auto monpw = params.get_string(CN_MONITORPW);
 
     if (monuser.empty() != monpw.empty())
     {
-        MXS_ERROR("Server '%s': if '%s is defined, '%s' must also be defined.", name,
+        MXS_ERROR("If '%s is defined, '%s' must also be defined.",
                   !monuser.empty() ? CN_MONITORUSER : CN_MONITORPW,
                   !monuser.empty() ? CN_MONITORPW : CN_MONITORUSER);
+        rval = false;
+    }
+
+    if (monuser.length() > Server::MAX_MONUSER_LEN)
+    {
+        MXS_ERROR(ERR_TOO_LONG_CONFIG_VALUE, CN_MONITORUSER, Server::MAX_MONUSER_LEN);
+        rval = false;
+    }
+
+    if (monpw.length() > Server::MAX_MONPW_LEN)
+    {
+        MXS_ERROR(ERR_TOO_LONG_CONFIG_VALUE, CN_MONITORPW, Server::MAX_MONPW_LEN);
+        rval = false;
+    }
+
+    bool have_address = params.contains(CN_ADDRESS);
+    bool have_socket = params.contains(CN_SOCKET);
+    auto addr = have_address ? params.get_string(CN_ADDRESS) : params.get_string(CN_SOCKET);
+
+    if (have_socket && have_address)
+    {
+        MXS_ERROR("Both '%s' and '%s' defined: only one of the parameters can be defined",
+                  CN_ADDRESS, CN_SOCKET);
+        rval = false;
+    }
+    else if (!have_address && !have_socket)
+    {
+        MXS_ERROR("Missing a required parameter: either '%s' or '%s' must be defined",
+                  CN_ADDRESS, CN_SOCKET);
+        rval = false;
+    }
+    else if (have_address && addr[0] == '/')
+    {
+        MXS_ERROR("The '%s' parameter is not a valid IP or hostname", CN_ADDRESS);
+        rval = false;
+    }
+    else if (addr.length() > Server::MAX_ADDRESS_LEN)
+    {
+        MXS_ERROR(ERR_TOO_LONG_CONFIG_VALUE, have_address ? CN_ADDRESS : CN_SOCKET, Server::MAX_ADDRESS_LEN);
+        rval = false;
+    }
+
+    return rval;
+}
+
+void Server::configure(const mxs::ConfigParameters& params)
+{
+    auto addr = params.contains(CN_ADDRESS) ? s_address.get(params) : s_socket.get(params);
+
+    careful_strcpy(m_settings.address, MAX_ADDRESS_LEN, addr);
+    careful_strcpy(m_settings.monuser, MAX_MONUSER_LEN, s_monitoruser.get(params));
+    careful_strcpy(m_settings.monpw, MAX_MONPW_LEN, s_monitorpw.get(params));
+
+    m_settings.port = s_port.get(params);
+    m_settings.extra_port = s_extra_port.get(params);
+    m_settings.persistpoolmax = s_persistpoolmax.get(params);
+    m_settings.persistmaxtime = s_persistmaxtime.get(params);
+    m_settings.proxy_protocol = s_proxy_protocol.get(params);
+    m_settings.rank = s_rank.get(params);
+    m_settings.priority = s_priority.get(params);
+
+    m_settings.all_parameters = params;
+}
+
+// static
+cfg::Specification* Server::specification()
+{
+    return &s_spec;
+}
+
+Server* Server::server_alloc(const char* name, const mxs::ConfigParameters& params)
+{
+    mxs::ConfigParameters unknown;
+
+    if (!s_spec.validate(params, &unknown))
+    {
+        for (const auto& a : unknown)
+        {
+            MXS_ERROR("Unknown parameter: %s=%s", a.first.c_str(), a.second.c_str());
+        }
+
         return nullptr;
     }
 
@@ -221,37 +303,11 @@ Server* Server::server_alloc(const char* name, const mxs::ConfigParameters& para
         ssl.reset();
     }
 
-    Server* server = new Server(name, std::move(ssl));
+    auto server = std::make_unique<Server>(name, std::move(ssl));
 
-    auto address = params.contains(CN_ADDRESS) ?
-        params.get_string(CN_ADDRESS) : params.get_string(CN_SOCKET);
+    server->configure(params);
 
-    careful_strcpy(server->m_settings.address, MAX_ADDRESS_LEN, address.c_str());
-    if (address.length() > MAX_ADDRESS_LEN)
-    {
-        MXS_WARNING("Truncated server address '%s' to the maximum size of %i characters.",
-                    address.c_str(), MAX_ADDRESS_LEN);
-    }
-
-    server->m_settings.port = params.get_integer(CN_PORT);
-    server->m_settings.extra_port = params.get_integer(CN_EXTRA_PORT);
-    server->m_settings.persistpoolmax = params.get_integer(CN_PERSISTPOOLMAX);
-    server->m_settings.persistmaxtime = params.get_duration<std::chrono::seconds>(CN_PERSISTMAXTIME).count();
-    server->m_settings.proxy_protocol = params.get_bool(CN_PROXY_PROTOCOL);
-    server->m_settings.rank = params.get_enum(CN_RANK, rank_values);
-    server->m_settings.priority = params.get_integer(CN_PRIORITY);
-    mxb_assert(server->m_settings.rank > 0);
-
-    if (!monuser.empty())
-    {
-        mxb_assert(!monpw.empty());
-        server->set_monitor_user(monuser);
-        server->set_monitor_password(monpw);
-    }
-
-    server->m_settings.all_parameters = params;
-
-    return server;
+    return server.release();
 }
 
 Server* Server::create_test_server()
@@ -327,11 +383,6 @@ string Server::monitor_user() const
 string Server::monitor_password() const
 {
     return m_settings.monpw;
-}
-
-void Server::set_parameter(const std::string& name, const std::string& value)
-{
-    m_settings.all_parameters.set(name, value);
 }
 
 bool Server::set_address(const string& new_address)

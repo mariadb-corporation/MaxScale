@@ -3430,27 +3430,6 @@ int create_new_server(CONFIG_CONTEXT* obj)
 
     config_add_defaults(&obj->m_parameters, common_server_params());
 
-    bool have_address = obj->m_parameters.contains(CN_ADDRESS);
-    bool have_socket = obj->m_parameters.contains(CN_SOCKET);
-
-    if (have_socket && have_address)
-    {
-        MXS_ERROR("Both '%s' and '%s' defined for server '%s': only one of the parameters can be defined",
-                  CN_ADDRESS, CN_SOCKET, obj->name());
-        return 1;
-    }
-    else if (!have_address && !have_socket)
-    {
-        MXS_ERROR("Server '%s' is missing a required parameter: either '%s' or '%s' must be defined",
-                  obj->name(), CN_ADDRESS, CN_SOCKET);
-        return 1;
-    }
-    else if (have_address && obj->m_parameters.get_string(CN_ADDRESS)[0] == '/')
-    {
-        MXS_ERROR("The '%s' parameter for '%s' is not a valid IP or hostname", CN_ADDRESS, obj->name());
-        return 1;
-    }
-
     if (Server* server = ServerManager::create_server(obj->name(), obj->m_parameters))
     {
         auto disk_space_threshold = obj->m_parameters.get_string(CN_DISK_SPACE_THRESHOLD);

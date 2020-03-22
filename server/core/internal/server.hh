@@ -167,6 +167,20 @@ public:
     static Server* create_test_server();
 
     /**
+     * Get server configuration specification
+     */
+    static mxs::config::Specification* specification();
+
+    /**
+     * Configure the server
+     *
+     * Must be done in the admin thread.
+     *
+     * @param params New parameters that have been validated
+     */
+    void configure(const mxs::ConfigParameters& params);
+
+    /**
      * Print server details to a DCB
      *
      * Designed to be called within a debugger session in order
@@ -182,7 +196,14 @@ public:
      */
     static void dprintPersistentDCBs(DCB*, const Server*);
 
-    void set_parameter(const std::string& name, const std::string& value);
+    /**
+     * Get server parameters
+     */
+    mxs::ConfigParameters parameters() const
+    {
+        std::lock_guard<std::mutex> guard(m_settings.lock);
+        return m_settings.all_parameters;
+    }
 
     /**
      * @brief Serialize a server to a file

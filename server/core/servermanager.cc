@@ -87,6 +87,7 @@ ThisUnit this_unit;
 
 Server* ServerManager::create_server(const char* name, const mxs::ConfigParameters& params)
 {
+    mxb::LogScope scope(name);
     Server* server = Server::server_alloc(name, params);
     if (server)
     {
