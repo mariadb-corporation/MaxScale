@@ -577,10 +577,17 @@ const Type* Configuration::find_value(const string& name) const
 
 ostream& Configuration::persist(ostream& out) const
 {
+    out << '[' << m_name << ']' << '\n';
+
     for (const auto& entry : m_values)
     {
         Type* pValue = entry.second;
-        pValue->persist(out) << "\n";
+        auto str = pValue->persist();
+
+        if (!str.empty())
+        {
+            out << str << '\n';
+        }
     }
 
     return out;
@@ -688,10 +695,17 @@ const config::Param& Type::parameter() const
     return *m_pParam;
 }
 
-ostream& Type::persist(ostream& out) const
+std::string Type::persist() const
 {
-    out << m_pParam->name() << "=" << to_string();
-    return out;
+    std::ostringstream out;
+    auto strval = to_string();
+
+    if (!strval.empty())
+    {
+        out << m_pParam->name() << '=' << strval;
+    }
+
+    return out.str();
 }
 
 /**
@@ -1304,9 +1318,14 @@ std::string ParamString::type() const
 
 std::string ParamString::to_string(value_type value) const
 {
-    stringstream ss;
-    ss << "\"" << value << "\"";
-    return ss.str();
+    std::string rval;
+
+    if (!value.empty())
+    {
+        rval = m_quotes == Quotes::IGNORED ? value : '"' + value + '"';
+    }
+
+    return rval;
 }
 
 bool ParamString::from_string(const std::string& value_as_string,

@@ -1494,17 +1494,15 @@ public:
     virtual const Param& parameter() const;
 
     /**
-     * Persist this value to a stream. It will be written as
+     * Persist this value as a string. It will be written as
      *
      *    name=value
      *
      * where @c value will be formatted in the correct way.
      *
-     * @param out  The stream to write to.
-     *
-     * @return @c out.
+     * @return @c The formatted value.
      */
-    std::ostream& persist(std::ostream& out) const;
+    std::string persist() const;
 
     /**
      * Convert this value into its string representation.
