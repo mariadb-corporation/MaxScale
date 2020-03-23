@@ -79,7 +79,7 @@ public:
     }
 
 private:
-    bool post_configure(const mxs::ConfigParameters& params) override;
+    bool post_configure() override;
 
 private:
     static config::Specification s_specification;

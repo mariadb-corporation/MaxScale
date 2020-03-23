@@ -72,10 +72,11 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     return &info;
 }
 
-SmartRouter::Config::Config(const std::string& name)
+SmartRouter::Config::Config(const std::string& name, SmartRouter* router)
     : config::Configuration(name, &smartrouter::specification)
     , m_master(this, &smartrouter::master)
     , m_persist_performance_data(this, &smartrouter::persist_performance_data)
+    , m_router(router)
 {
 }
 
@@ -84,21 +85,19 @@ void SmartRouter::Config::populate(MXS_MODULE& module)
     smartrouter::specification.populate(module);
 }
 
-bool SmartRouter::Config::post_configure(const mxs::ConfigParameters& params)
+bool SmartRouter::Config::post_configure()
 {
     bool rv = true;
-    auto servers = params.get_server_list(CN_SERVERS);
-    auto targets = params.get_target_list(CN_TARGETS);
+    auto targets = m_router->m_pService->get_children();
+    auto servers = m_router->m_pService->reachable_servers();
 
     if (std::find(targets.begin(), targets.end(), m_master.get()) == targets.end()
         && std::find(servers.begin(), servers.end(), m_master.get()) == servers.end())
     {
         rv = false;
         MXS_ERROR("The master server %s of the smartrouter %s, is not one of the "
-                  "servers (%s) or targets (%s) of the service.",
-                  m_master.get()->name(), name().c_str(),
-                  params.get_string(CN_SERVERS).c_str(),
-                  params.get_string(CN_TARGETS).c_str());
+                  "servers or targets of the service.",
+                  m_master.get()->name(), name().c_str());
     }
 
     return rv;
@@ -122,7 +121,7 @@ SERVICE* SmartRouter::service() const
 
 SmartRouter::SmartRouter(SERVICE* service)
     : mxs::Router<SmartRouter, SmartRouterSession>(service)
-    , m_config(service->name())
+    , m_config(service->name(), this)
 {
     using namespace maxscale;
     using namespace maxbase;

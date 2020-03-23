@@ -41,7 +41,7 @@ public:
     class Config : public config::Configuration
     {
     public:
-        Config(const std::string& name);
+        Config(const std::string& name, SmartRouter* router);
 
         Config(const Config&) = delete;
         Config& operator=(const Config&) = delete;
@@ -59,11 +59,12 @@ public:
         }
 
     private:
-        bool post_configure(const mxs::ConfigParameters& params) override;
+        bool post_configure() override;
 
     private:
         config::Target m_master;
         config::Bool   m_persist_performance_data;
+        SmartRouter*   m_router;
     };
 
     static SmartRouter* create(SERVICE* pService, mxs::ConfigParameters* pParams);

@@ -202,7 +202,7 @@ CacheConfig::~CacheConfig()
 {
 }
 
-bool CacheConfig::post_configure(const mxs::ConfigParameters&)
+bool CacheConfig::post_configure()
 {
     bool configured = true;
 

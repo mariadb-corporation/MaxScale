@@ -161,7 +161,7 @@ public:
 private:
     Config();
 
-    bool post_configure(const mxs::ConfigParameters& params) override;
+    bool post_configure() override;
 
 private:
     class Specification : public config::Specification

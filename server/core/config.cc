@@ -671,7 +671,7 @@ bool Config::configure(const mxs::ConfigParameters& params, mxs::ConfigParameter
     return configured;
 }
 
-bool Config::post_configure(const mxs::ConfigParameters& params)
+bool Config::post_configure()
 {
     bool rv = true;
 

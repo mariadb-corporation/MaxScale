@@ -126,7 +126,7 @@ public:
 
     CCRConfig(CCRConfig&& rhs) = default;
 
-    bool post_configure(const mxs::ConfigParameters&)
+    bool post_configure()
     {
         bool rv = true;
 

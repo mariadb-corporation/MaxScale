@@ -513,7 +513,7 @@ bool Configuration::configure(const mxs::ConfigParameters& params,
 
     if (configured)
     {
-        configured = post_configure(params);
+        configured = post_configure();
     }
 
     return configured;
@@ -568,7 +568,7 @@ void Configuration::remove(Type* pValue, const std::string& name)
     m_values.erase(it);
 }
 
-bool Configuration::post_configure(const mxs::ConfigParameters& params)
+bool Configuration::post_configure()
 {
     return true;
 }

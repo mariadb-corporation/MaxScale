@@ -1419,13 +1419,11 @@ protected:
      * Configuration to check any interdependencies between values or to calculate
      * derived ones.
      *
-     * @param params  The parameters the configuration was configured with.
-     *
      * @return True, if everything is ok.
      *
      * @note The default implementation returns true.
      */
-    virtual bool post_configure(const mxs::ConfigParameters& params);
+    virtual bool post_configure();
 
     /**
      * Add a native parameter value:
