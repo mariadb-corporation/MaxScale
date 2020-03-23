@@ -108,7 +108,19 @@ public:
     using cfg::Specification::Specification;
 
 protected:
-    bool post_validate(const mxs::ConfigParameters& params) const;
+
+    template<class Params>
+    bool do_post_validate(Params params) const;
+
+    bool post_validate(const mxs::ConfigParameters& params) const
+    {
+        return do_post_validate(params);
+    }
+
+    bool post_validate(json_t* json) const
+    {
+        return do_post_validate(json);
+    }
 };
 
 static const auto NO_QUOTES = cfg::ParamString::IGNORED;
@@ -194,11 +206,12 @@ static cfg::ParamBool s_ssl_verify_peer_host(
     &s_spec, CN_SSL_VERIFY_PEER_HOST, "Verify TLS peer host", false);
 }
 
-bool ServerSpec::post_validate(const mxs::ConfigParameters& params) const
+template<class Params>
+bool ServerSpec::do_post_validate(Params params) const
 {
     bool rval = true;
-    auto monuser = params.get_string(CN_MONITORUSER);
-    auto monpw = params.get_string(CN_MONITORPW);
+    auto monuser = s_monitoruser.get(params);
+    auto monpw = s_monitorpw.get(params);
 
     if (monuser.empty() != monpw.empty())
     {
@@ -220,9 +233,11 @@ bool ServerSpec::post_validate(const mxs::ConfigParameters& params) const
         rval = false;
     }
 
-    bool have_address = params.contains(CN_ADDRESS);
-    bool have_socket = params.contains(CN_SOCKET);
-    auto addr = have_address ? params.get_string(CN_ADDRESS) : params.get_string(CN_SOCKET);
+    auto address = s_address.get(params);
+    auto socket = s_socket.get(params);
+    bool have_address = !address.empty();
+    bool have_socket = !socket.empty();
+    auto addr = have_address ? address : socket;
 
     if (have_socket && have_address)
     {
