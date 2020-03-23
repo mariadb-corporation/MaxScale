@@ -1932,8 +1932,7 @@ bool runtime_alter_server_from_json(Server* server, json_t* new_json)
     std::unique_ptr<json_t> old_json(ServerManager::server_to_json_resource(server, ""));
     mxb_assert(old_json.get());
 
-    if (is_valid_resource_body(new_json)
-        && server_to_object_relations(server, old_json.get(), new_json))
+    if (is_valid_resource_body(new_json))
     {
         rval = true;
 
@@ -1945,8 +1944,11 @@ bool runtime_alter_server_from_json(Server* server, json_t* new_json)
 
             if (Server::specification()->validate(new_parameters))
             {
-                server->configure(new_parameters);
-                server->serialize();
+                if (server_to_object_relations(server, old_json.get(), new_json))
+                {
+                    server->configure(new_parameters);
+                    server->serialize();
+                }
             }
             else
             {
