@@ -111,6 +111,25 @@ ostream& Specification::document(ostream& out) const
     return out;
 }
 
+bool Specification::mandatory_params_defined(const std::set<std::string>& provided) const
+{
+    bool valid = true;
+
+    for (const auto& entry : m_params)
+    {
+        const Param* pParam = entry.second;
+
+        if (pParam->is_mandatory() && (provided.find(pParam->name()) == provided.end()))
+        {
+            MXS_ERROR("%s: The mandatory parameter '%s' is not provided.",
+                      m_module.c_str(), pParam->name().c_str());
+            valid = false;
+        }
+    }
+
+    return valid;
+}
+
 bool Specification::validate(const mxs::ConfigParameters& params,
                              mxs::ConfigParameters* pUnrecognized) const
 {
@@ -133,6 +152,7 @@ bool Specification::validate(const mxs::ConfigParameters& params,
             if (!pParam->validate(value.c_str(), &message))
             {
                 param_valid = false;
+                valid = false;
             }
 
             if (!message.empty())
@@ -163,21 +183,73 @@ bool Specification::validate(const mxs::ConfigParameters& params,
         }
     }
 
-    for (const auto& entry : m_params)
+    if (valid)
     {
-        const Param* pParam = entry.second;
-
-        if (pParam->is_mandatory() && (provided.find(pParam->name()) == provided.end()))
+        if (mandatory_params_defined(provided))
         {
-            MXS_ERROR("%s: The mandatory parameter '%s' is not provided.",
-                      m_module.c_str(), pParam->name().c_str());
+            valid = post_validate(params);
+        }
+        else
+        {
             valid = false;
+        }
+    }
+
+    return valid;
+}
+
+bool Specification::validate(json_t* json, std::set<std::string>* pUnrecognized) const
+{
+    bool valid = true;
+
+    const char* key;
+    json_t* value;
+    set<string> provided;
+
+    json_object_foreach(json, key, value)
+    {
+        if (const Param* pParam = find_param(key))
+        {
+            string message;
+            bool param_valid = true;
+
+            if (!pParam->validate(value, &message))
+            {
+                param_valid = false;
+                valid = false;
+            }
+
+            if (!message.empty())
+            {
+                MXB_LOG_MESSAGE(param_valid ? LOG_WARNING : LOG_ERR, "%s: %s", key, message.c_str());
+            }
+
+            provided.insert(key);
+        }
+        else if (!is_core_param(m_kind, key))
+        {
+            if (pUnrecognized)
+            {
+                pUnrecognized->insert(key);
+            }
+            else
+            {
+                MXS_WARNING("%s: The parameter '%s' is unrecognized.", m_module.c_str(), key);
+                valid = false;
+            }
         }
     }
 
     if (valid)
     {
-        valid = post_validate(params);
+        if (mandatory_params_defined(provided))
+        {
+            valid = post_validate(json);
+        }
+        else
+        {
+            valid = false;
+        }
     }
 
     return valid;

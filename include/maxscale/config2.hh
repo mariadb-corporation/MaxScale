@@ -86,11 +86,25 @@ public:
      *                       - An unrecognized parameter will not cause the configuring
      *                         to fail.
      *
-     * @return True, if the @params represent valid parameters - all mandatory are
-     *         present, all present ones are of corrent type - for this specification.
+     * @return True, if `params` represent valid parameters - all mandatory are
+     *         present, all present ones are of correct type - for this specification.
      */
     virtual bool validate(const mxs::ConfigParameters& params,
                           mxs::ConfigParameters* pUnrecognized = nullptr) const;
+
+    /**
+     *  Validate JSON
+     *
+     * @param json           JSON parameter object to validate
+     * @param pUnrecognized  If non-null:
+     *                       - Will contain on return object keys that were not used.
+     *                       - An unrecognized parameter will not cause the configuring
+     *                         to fail.
+     *
+     * @return True, if `json` represent valid JSON parameters - all mandatory are
+     *         present, all present ones are of correct type - for this specification.
+     */
+    virtual bool validate(json_t* json, std::set<std::string>* pUnrecognized = nullptr) const;
 
     /**
      * Find given parameter of the specification.
@@ -164,11 +178,29 @@ protected:
         return true;
     }
 
+    /**
+     * Post validation step
+     *
+     * This can be overridden to check dependencies between parameters.
+     *
+     * @param json The JSON parameter object to validate
+     *
+     * @return True, if the post validation check is successful.
+     *
+     * @note The default implementation always returns true
+     */
+    virtual bool post_validate(json_t* json) const
+    {
+        return true;
+    }
+
 private:
     friend Param;
 
     void insert(Param* pParam);
     void remove(Param* pParam);
+
+    bool mandatory_params_defined(const std::set<std::string>& provided) const;
 
 private:
     std::string  m_module;
@@ -357,7 +389,7 @@ public:
      * @note Before calling this member function @params should have been
      *       validated by calling @c Specification::validate(params).
      *
-     * @params The provided configuration params.
+     * @param params The provided configuration parameters.
      *
      * @return The value of this parameter.
      */
@@ -373,6 +405,36 @@ public:
             const ParamType* pThis = static_cast<const ParamType*>(this);
 
             MXB_AT_DEBUG(bool valid = ) pThis->from_string(params.get_string(name()), &rv);
+            mxb_assert(valid);
+        }
+
+        return rv;
+    }
+
+    /**
+     * Get the parameter value from JSON
+     *
+     * @note Before calling this member function the JSON should have been
+     *       validated by calling `Specification::validate(json)`.
+     *
+     * @param json The JSON object that defines the parameters.
+     *
+     * @return The value of this parameter if `json` contains a key with the name of this parameter. The
+     *         default value if no key was found or the key was a JSON null.
+     */
+    value_type get(json_t* json) const
+    {
+        value_type rv {m_default_value};
+
+        json_t* value = json_object_get(json, name().c_str());
+        bool contains = value && !json_is_null(value);
+        mxb_assert(!is_mandatory() || contains);
+
+        if (contains)
+        {
+            const ParamType* pThis = static_cast<const ParamType*>(this);
+
+            MXB_AT_DEBUG(bool valid = ) pThis->from_json(value, &rv);
             mxb_assert(valid);
         }
 
