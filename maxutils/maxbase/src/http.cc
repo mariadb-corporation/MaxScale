@@ -162,6 +162,7 @@ CURL* get_easy_curl(CurlOp op,
                     const Config& config,
                     Result* pRes,
                     char* pErrbuf,
+                    curl_slist* pHeaders,
                     ReadCallbackData* pRcd)
 {
     CURL* pCurl = curl_easy_init();
@@ -185,6 +186,11 @@ CURL* get_easy_curl(CurlOp op,
         checked_curl_setopt(pCurl, CURLOPT_URL, url.c_str());
         checked_curl_setopt(pCurl, CURLOPT_HEADERFUNCTION, header_callback);
         checked_curl_setopt(pCurl, CURLOPT_HEADERDATA, &pRes->headers);
+
+        if (pHeaders)
+        {
+            checked_curl_setopt(pCurl, CURLOPT_HTTPHEADER, pHeaders);
+        }
 
         if (pRcd && pRcd->data.size() != 0)
         {
@@ -214,6 +220,18 @@ CURL* get_easy_curl(CurlOp op,
     }
 
     return pCurl;
+}
+
+curl_slist* create_headers(const std::vector<std::string>& headers)
+{
+    curl_slist* pHeaders = nullptr;
+
+    for (const auto& header : headers)
+    {
+        pHeaders = curl_slist_append(pHeaders, header.c_str());
+    }
+
+    return pHeaders;
 }
 
 using Errbuf = array<char, CURL_ERROR_SIZE + 1>;
@@ -303,6 +321,8 @@ public:
         {
             MXB_ERROR("curl_multi_cleanup() failed: %s", curl_multi_strerror(code));
         }
+
+        curl_slist_free_all(m_pHeaders);
     }
 
     bool initialize(CurlOp op,
@@ -315,6 +335,7 @@ public:
 
         m_urls = urls;
         m_body = body;
+        m_pHeaders = create_headers(config.headers);
 
         m_results.reserve(urls.size());
         m_errbufs.reserve(urls.size());
@@ -337,6 +358,7 @@ public:
 
             CURL* pCurl = get_easy_curl(op, urls[i], user, password, config,
                                         &m_results[i], m_errbufs[i].data(),
+                                        m_pHeaders,
                                         m_body.empty() ? nullptr : &m_rcds[i]);
 
             if (!pCurl || (curl_multi_add_handle(m_pCurlm, pCurl) != CURLM_OK))
@@ -519,7 +541,7 @@ private:
     }
 
 private:
-    CURLM*                                   m_pCurlm;
+    CURLM*                                   m_pCurlm { nullptr };
     Async::status_t                          m_status;
     vector<Result>                           m_results;
     vector<array<char, CURL_ERROR_SIZE + 1>> m_errbufs;
@@ -528,6 +550,7 @@ private:
     long                                     m_wait_no_more_than;
     vector<string>                           m_urls;
     vector<char>                             m_body;
+    curl_slist*                              m_pHeaders { nullptr };
     vector<ReadCallbackData>                 m_rcds;
 };
 }
@@ -645,8 +668,9 @@ Result execute(CurlOp op,
 {
     Result res;
     char errbuf[CURL_ERROR_SIZE + 1] = "";
+    curl_slist* pHeaders = create_headers(config.headers);
     ReadCallbackData rcd(&body);
-    CURL* pCurl = get_easy_curl(op, url, user, password, config, &res, errbuf, &rcd);
+    CURL* pCurl = get_easy_curl(op, url, user, password, config, &res, errbuf, pHeaders, &rcd);
     mxb_assert(pCurl);
 
     CURLcode code = curl_easy_perform(pCurl);
@@ -667,6 +691,7 @@ Result execute(CurlOp op,
     }
 
     curl_easy_cleanup(pCurl);
+    curl_slist_free_all(pHeaders);
 
     return res;
 }

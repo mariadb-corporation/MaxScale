@@ -17,6 +17,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <maxbase/assert.h>
 #include <maxbase/log.hh>
 #include <maxbase/stopwatch.hh>
 
@@ -156,16 +157,62 @@ int test_http_put(const vector<char>& body = vector<char>())
 
     int rv = EXIT_FAILURE;
 
-    auto res = mxb::http::put("http://postman-echo.com/put", body);
+    json_t* pFrom = nullptr;
+
+    if (body.size() != 0)
+    {
+        json_error_t error;
+        pFrom = json_loadb(body.data(), body.size(), JSON_DISABLE_EOF_CHECK, &error);
+        mxb_assert(pFrom);
+    }
+
+    mxb::http::Config config;
+    config.headers.push_back("Content-Type: application/json");
+    config.headers.push_back("Accept: */*");
+    auto res = mxb::http::put("http://postman-echo.com/put", body, config);
     cout << "http://postman-echo.com/put responded with: " << res.code << endl;
     if (res.code == 200)
     {
-        cout << "MESSAGE:" << res.body << endl;
-        rv = EXIT_SUCCESS;
+        cout << "BODY:" << res.body << endl;
+
+        if (pFrom)
+        {
+            json_error_t error;
+            json_t* pBody = json_loads(res.body.c_str(), JSON_DISABLE_EOF_CHECK, &error);
+            mxb_assert(pBody);
+            json_t* pTo = json_object_get(pBody, "data");
+            mxb_assert(pTo);
+
+            if (json_equal(pFrom, pTo))
+            {
+                rv = EXIT_SUCCESS;
+            }
+            else
+            {
+                vector<char> b = body;
+                b.push_back(0);
+                cout << "Sent and returned JSON body not equal; sent = '"
+                     << b.data() << "', received = '"
+                     << res.body
+                     << "'."
+                     << endl;
+            }
+
+            json_decref(pBody);
+        }
+        else
+        {
+            rv = EXIT_SUCCESS;
+        }
     }
     else
     {
         cout << "error: Exit code not 200 but: " << res.code << endl;
+    }
+
+    if (pFrom)
+    {
+        json_decref(pFrom);
     }
 
     return rv == EXIT_FAILURE ? 1 : 0;
@@ -181,7 +228,10 @@ int test_async_http_put(const vector<char>& body = vector<char>())
                            "http://postman-echo.com/put",
                            "http://postman-echo.com/put"};
     vector<bool> expected_successes = {true, true, true};
-    mxb::http::Async http = mxb::http::put_async(urls, body);
+    mxb::http::Config config;
+    config.headers.push_back("Content-Type: application/json");
+    config.headers.push_back("Accept: */*");
+    mxb::http::Async http = mxb::http::put_async(urls, body, config);
 
     while (http.perform(0) == mxb::http::Async::PENDING)
     {

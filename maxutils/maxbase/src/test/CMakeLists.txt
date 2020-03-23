@@ -5,6 +5,7 @@
 #add_executable(test_mxb_http test_http.cc)
 #target_link_libraries(test_mxb_http
 #  maxbase
+#  ${JANSSON_LIBRARIES}
 #  rt
 #)
 #add_test(test_mxb_http test_mxb_http)
