@@ -895,7 +895,8 @@ bool ParamHost::from_string(const std::string& value_as_string,
 
 json_t* ParamHost::to_json(const value_type& value) const
 {
-    return json_string(to_string(value).c_str());
+    auto str = to_string(value);
+    return str.empty() ? json_null() : json_string(str.c_str());
 }
 
 bool ParamHost::from_json(const json_t* pJson,
@@ -955,7 +956,7 @@ bool ParamPath::from_string(const std::string& value_as_string,
 
 json_t* ParamPath::to_json(const value_type& value) const
 {
-    return json_string(value.c_str());
+    return value.empty() ? json_null() : json_string(value.c_str());
 }
 
 bool ParamPath::from_json(const json_t* pJson, value_type* pValue,
@@ -1070,7 +1071,7 @@ bool ParamRegex::from_string(const std::string& value_as_string,
 
 json_t* ParamRegex::to_json(const value_type& value) const
 {
-    return json_string(value.text.c_str());
+    return value.sCode.get() ? json_string(value.text.c_str()) : json_null();
 }
 
 bool ParamRegex::from_json(const json_t* pJson,
@@ -1149,7 +1150,7 @@ bool ParamServer::from_string(const std::string& value_as_string,
 
 json_t* ParamServer::to_json(value_type value) const
 {
-    return value ? json_string(value->name()) : nullptr;
+    return value ? json_string(value->name()) : json_null();
 }
 
 bool ParamServer::from_json(const json_t* pJson, value_type* pValue,
@@ -1208,7 +1209,7 @@ bool ParamTarget::from_string(const std::string& value_as_string,
 
 json_t* ParamTarget::to_json(value_type value) const
 {
-    return value ? json_string(value->name()) : nullptr;
+    return value ? json_string(value->name()) : json_null();
 }
 
 bool ParamTarget::from_json(const json_t* pJson, value_type* pValue,
@@ -1376,7 +1377,7 @@ bool ParamString::from_string(const std::string& value_as_string,
 
 json_t* ParamString::to_json(value_type value) const
 {
-    return json_string(value.c_str());
+    return value.empty() ? json_null() : json_string(value.c_str());
 }
 
 bool ParamString::from_json(const json_t* pJson,
