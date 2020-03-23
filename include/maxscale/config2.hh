@@ -95,16 +95,16 @@ public:
     /**
      *  Validate JSON
      *
-     * @param json           JSON parameter object to validate
+     * @param pJson          JSON parameter object to validate
      * @param pUnrecognized  If non-null:
      *                       - Will contain on return object keys that were not used.
      *                       - An unrecognized parameter will not cause the configuring
      *                         to fail.
      *
-     * @return True, if `json` represent valid JSON parameters - all mandatory are
+     * @return True, if `pJson` represent valid JSON parameters - all mandatory are
      *         present, all present ones are of correct type - for this specification.
      */
-    virtual bool validate(json_t* json, std::set<std::string>* pUnrecognized = nullptr) const;
+    virtual bool validate(json_t* pJson, std::set<std::string>* pUnrecognized = nullptr) const;
 
     /**
      * Find given parameter of the specification.
@@ -1364,6 +1364,19 @@ public:
      */
     virtual bool configure(const mxs::ConfigParameters& params,
                            mxs::ConfigParameters* pUnrecognized = nullptr);
+
+    /**
+     * Configure this configuration
+     *
+     * @param params         The JSON parameter object that should be used, will be validated.
+     * @param pUnrecognized  If non-null:
+     *                       - Will contain on return object keys that were not used.
+     *                       - An unrecognized parameter will not cause the configuring
+     *                         to fail.
+     *
+     * @return True if could be configured.
+     */
+    virtual bool configure(json_t* json, std::set<std::string>* pUnrecognized = nullptr);
 
     /**
      * @param name  The name of the parameter to look up.

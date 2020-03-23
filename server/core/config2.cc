@@ -198,22 +198,22 @@ bool Specification::validate(const mxs::ConfigParameters& params,
     return valid;
 }
 
-bool Specification::validate(json_t* json, std::set<std::string>* pUnrecognized) const
+bool Specification::validate(json_t* pJson, std::set<std::string>* pUnrecognized) const
 {
     bool valid = true;
 
-    const char* key;
-    json_t* value;
+    const char* zKey;
+    json_t* pValue;
     set<string> provided;
 
-    json_object_foreach(json, key, value)
+    json_object_foreach(pJson, zKey, pValue)
     {
-        if (const Param* pParam = find_param(key))
+        if (const Param* pParam = find_param(zKey))
         {
             string message;
             bool param_valid = true;
 
-            if (!pParam->validate(value, &message))
+            if (!pParam->validate(pValue, &message))
             {
                 param_valid = false;
                 valid = false;
@@ -221,20 +221,20 @@ bool Specification::validate(json_t* json, std::set<std::string>* pUnrecognized)
 
             if (!message.empty())
             {
-                MXB_LOG_MESSAGE(param_valid ? LOG_WARNING : LOG_ERR, "%s: %s", key, message.c_str());
+                MXB_LOG_MESSAGE(param_valid ? LOG_WARNING : LOG_ERR, "%s: %s", zKey, message.c_str());
             }
 
-            provided.insert(key);
+            provided.insert(zKey);
         }
-        else if (!is_core_param(m_kind, key))
+        else if (!is_core_param(m_kind, zKey))
         {
             if (pUnrecognized)
             {
-                pUnrecognized->insert(key);
+                pUnrecognized->insert(zKey);
             }
             else
             {
-                MXS_WARNING("%s: The parameter '%s' is unrecognized.", m_module.c_str(), key);
+                MXS_WARNING("%s: The parameter '%s' is unrecognized.", m_module.c_str(), zKey);
                 valid = false;
             }
         }
@@ -244,7 +244,7 @@ bool Specification::validate(json_t* json, std::set<std::string>* pUnrecognized)
     {
         if (mandatory_params_defined(provided))
         {
-            valid = post_validate(json);
+            valid = post_validate(pJson);
         }
         else
         {
@@ -506,6 +506,50 @@ bool Configuration::configure(const mxs::ConfigParameters& params,
             {
                 MXS_ERROR("%s: The parameter '%s' is unrecognized.",
                           m_pSpecification->module().c_str(), name.c_str());
+                configured = false;
+            }
+        }
+    }
+
+    if (configured)
+    {
+        configured = post_configure();
+    }
+
+    return configured;
+}
+
+bool Configuration::configure(json_t* json, std::set<std::string>* pUnrecognized)
+{
+    mxb_assert(m_pSpecification->validate(json));
+    mxb_assert(m_pSpecification->size() == size());
+
+    bool configured = true;
+    const char* key;
+    json_t* value;
+
+    json_object_foreach(json, key, value)
+    {
+        if (auto pValue = find_value(key))
+        {
+            string message;
+
+            if (!pValue->set_from_json(value, &message))
+            {
+                MXS_ERROR("%s: %s", m_pSpecification->module().c_str(), message.c_str());
+                configured = false;
+            }
+        }
+        else if (!is_core_param(m_pSpecification->kind(), key))
+        {
+            if (pUnrecognized)
+            {
+                pUnrecognized->insert(key);
+            }
+            else
+            {
+                MXS_ERROR("%s: The parameter '%s' is unrecognized.",
+                          m_pSpecification->module().c_str(), key);
                 configured = false;
             }
         }
