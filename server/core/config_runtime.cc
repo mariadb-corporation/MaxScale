@@ -212,6 +212,22 @@ std::string get_cycle_name(mxs::Target* item, mxs::Target* target)
     return rval;
 }
 
+// Helper function that removes keys with null values
+void remove_json_nulls_from_object(json_t* json)
+{
+    const char* key;
+    json_t* value;
+    void* tmp;
+
+    json_object_foreach_safe(json, tmp, key, value)
+    {
+        if (json_is_null(value))
+        {
+            json_object_del(json, key);
+        }
+    }
+}
+
 bool link_service_to_monitor(Service* service, mxs::Monitor* monitor)
 {
     bool ok = service->change_cluster(monitor);
@@ -414,114 +430,6 @@ bool is_valid_integer(const char* value)
 {
     char* endptr;
     return strtol(value, &endptr, 10) >= 0 && *value && *endptr == '\0';
-}
-
-bool runtime_alter_server(Server* server, const char* key, const char* value)
-{
-    if (!value[0])
-    {
-        config_runtime_error("Empty value for parameter: %s", key);
-        return false;
-    }
-
-    if (!param_is_valid(common_server_params(), nullptr, key, value))
-    {
-        config_runtime_error("Invalid value for parameter '%s': %s", key, value);
-        return false;
-    }
-
-    bool setting_changed = false;
-
-    // Only some normal parameters can be changed runtime. The key/value-combination has already
-    // been checked to be valid.
-    if (strcmp(key, CN_ADDRESS) == 0 || strcmp(key, CN_SOCKET) == 0)
-    {
-        server->set_address(value);
-        setting_changed = true;
-    }
-    else if (strcmp(key, CN_PORT) == 0)
-    {
-        if (int ival = get_positive_int(value))
-        {
-            server->set_port(ival);
-            setting_changed = true;
-        }
-    }
-    else if (strcmp(key, CN_EXTRA_PORT) == 0)
-    {
-        server->set_extra_port(atoi(value));
-        setting_changed = true;
-    }
-    else if (strcmp(key, CN_MONITORUSER) == 0)
-    {
-        server->set_monitor_user(value);
-        setting_changed = true;
-    }
-    else if (strcmp(key, CN_MONITORPW) == 0)
-    {
-        server->set_monitor_password(value);
-        setting_changed = true;
-    }
-    else if (strcmp(key, CN_PERSISTPOOLMAX) == 0)
-    {
-        if (is_valid_integer(value))
-        {
-            server->set_persistpoolmax(atoi(value));
-            setting_changed = true;
-        }
-    }
-    else if (strcmp(key, CN_PERSISTMAXTIME) == 0)
-    {
-        if (is_valid_integer(value))
-        {
-            server->set_persistmaxtime(atoi(value));
-            setting_changed = true;
-        }
-    }
-    else if (strcmp(key, CN_RANK) == 0)
-    {
-        auto v = config_enum_to_value(value, rank_values);
-        if (v != MXS_UNKNOWN_ENUM_VALUE)
-        {
-            server->set_rank(v);
-            setting_changed = true;
-        }
-        else
-        {
-            config_runtime_error("Invalid value for '%s': %s", CN_RANK, value);
-        }
-    }
-    else if (strcmp(key, CN_PRIORITY) == 0)
-    {
-        char* end;
-        auto v = strtol(value, &end, 10);
-
-        if (*end == '\0' && v >= 0)
-        {
-            server->set_priority(v);
-            setting_changed = true;
-        }
-        else
-        {
-            config_runtime_error("Invalid value for '%s': %s", CN_PRIORITY, value);
-        }
-    }
-    else
-    {
-        // Was a recognized parameter but runtime modification is not supported.
-        config_runtime_error("Server parameter '%s' cannot be modified during runtime. A similar "
-                             "effect can be produced by destroying the server and recreating it "
-                             "with the new settings.", key);
-    }
-
-    if (setting_changed)
-    {
-        // Successful modification of a normal parameter, write to text storage.
-        server->set_parameter(key, value);
-        server->serialize();
-        MXS_NOTICE("Updated server '%s': %s=%s", server->name(), key, value);
-    }
-    return setting_changed;
 }
 
 bool undefined_mandatory_parameter(const MXS_MODULE_PARAM* mod_params,
@@ -1000,46 +908,6 @@ bool is_valid_resource_body(json_t* json)
                 rval = false;
             }
         }
-    }
-
-    return rval;
-}
-
-bool server_alter_fields_are_valid(json_t* json)
-{
-    bool rval = false;
-    json_t* address = mxs_json_pointer(json, MXS_JSON_PTR_PARAM_ADDRESS);
-    json_t* socket = mxs_json_pointer(json, MXS_JSON_PTR_PARAM_SOCKET);
-    json_t* port = mxs_json_pointer(json, MXS_JSON_PTR_PARAM_PORT);
-
-    if (address && socket)
-    {
-        config_runtime_error("Request body defines both of the '%s' and '%s' fields",
-                             MXS_JSON_PTR_PARAM_ADDRESS, MXS_JSON_PTR_PARAM_SOCKET);
-    }
-    else if (address && !json_is_string(address))
-    {
-        config_runtime_error("The '%s' field is not a string", MXS_JSON_PTR_PARAM_ADDRESS);
-    }
-    else if (address && json_is_string(address) && json_string_value(address)[0] == '/')
-    {
-        config_runtime_error("The '%s' field is not a valid address", MXS_JSON_PTR_PARAM_ADDRESS);
-    }
-    else if (socket && !json_is_string(socket))
-    {
-        config_runtime_error("The '%s' field is not a string", MXS_JSON_PTR_PARAM_SOCKET);
-    }
-    else if (port && !json_is_integer(port))
-    {
-        config_runtime_error("The '%s' field is not an integer", MXS_JSON_PTR_PARAM_PORT);
-    }
-    else if (socket && !json_is_string(socket))
-    {
-        config_runtime_error("The '%s' field is not a string", MXS_JSON_PTR_PARAM_SOCKET);
-    }
-    else
-    {
-        rval = true;
     }
 
     return rval;
@@ -2065,33 +1933,25 @@ bool runtime_alter_server_from_json(Server* server, json_t* new_json)
     mxb_assert(old_json.get());
 
     if (is_valid_resource_body(new_json)
-        && server_to_object_relations(server, old_json.get(), new_json)
-        && server_alter_fields_are_valid(new_json))
+        && server_to_object_relations(server, old_json.get(), new_json))
     {
         rval = true;
-        json_t* parameters = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS);
-        json_t* old_parameters = mxs_json_pointer(old_json.get(), MXS_JSON_PTR_PARAMETERS);
 
-        mxb_assert(old_parameters);
-
-        if (parameters)
+        if (json_t* parameters = mxs_json_pointer(new_json, MXS_JSON_PTR_PARAMETERS))
         {
-            const char* key;
-            json_t* value;
+            json_t* new_parameters = mxs_json_pointer(old_json.get(), MXS_JSON_PTR_PARAMETERS);
+            json_object_update(new_parameters, parameters);
+            remove_json_nulls_from_object(new_parameters);
 
-            json_object_foreach(parameters, key, value)
+            if (Server::specification()->validate(new_parameters))
             {
-                json_t* new_val = json_object_get(parameters, key);
-                json_t* old_val = json_object_get(old_parameters, key);
-
-                if (old_val && new_val && mxs::json_to_string(new_val) == mxs::json_to_string(old_val))
-                {
-                    /** No change in values */
-                }
-                else if (!runtime_alter_server(server, key, mxs::json_to_string(value).c_str()))
-                {
-                    rval = false;
-                }
+                server->configure(new_parameters);
+                server->serialize();
+            }
+            else
+            {
+                config_runtime_error("Configuration validation failed, see log for more details.");
+                rval = false;
             }
         }
     }

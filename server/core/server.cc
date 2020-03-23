@@ -252,21 +252,32 @@ bool ServerSpec::post_validate(const mxs::ConfigParameters& params) const
 
 void Server::configure(const mxs::ConfigParameters& params)
 {
-    auto addr = params.contains(CN_ADDRESS) ? s_address.get(params) : s_socket.get(params);
-
-    careful_strcpy(m_settings.address, MAX_ADDRESS_LEN, addr);
-    careful_strcpy(m_settings.monuser, MAX_MONUSER_LEN, s_monitoruser.get(params));
-    careful_strcpy(m_settings.monpw, MAX_MONPW_LEN, s_monitorpw.get(params));
-
-    m_settings.port = s_port.get(params);
-    m_settings.extra_port = s_extra_port.get(params);
-    m_settings.persistpoolmax = s_persistpoolmax.get(params);
-    m_settings.persistmaxtime = s_persistmaxtime.get(params);
-    m_settings.proxy_protocol = s_proxy_protocol.get(params);
-    m_settings.rank = s_rank.get(params);
-    m_settings.priority = s_priority.get(params);
-
+    m_settings.configure(params);
     m_settings.all_parameters = params;
+}
+
+void Server::configure(json_t* params)
+{
+    m_settings.configure(params);
+}
+
+template<class Params>
+void Server::Settings::configure(Params params)
+{
+    auto addr = s_address.get(params);
+    auto sock = s_socket.get(params);
+
+    careful_strcpy(address, MAX_ADDRESS_LEN, !addr.empty() ? addr : sock);
+    careful_strcpy(monuser, MAX_MONUSER_LEN, s_monitoruser.get(params));
+    careful_strcpy(monpw, MAX_MONPW_LEN, s_monitorpw.get(params));
+
+    port = s_port.get(params);
+    extra_port = s_extra_port.get(params);
+    persistpoolmax = s_persistpoolmax.get(params);
+    persistmaxtime = s_persistmaxtime.get(params);
+    proxy_protocol = s_proxy_protocol.get(params);
+    rank = s_rank.get(params);
+    priority = s_priority.get(params);
 }
 
 // static

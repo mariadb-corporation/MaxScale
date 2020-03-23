@@ -181,6 +181,15 @@ public:
     void configure(const mxs::ConfigParameters& params);
 
     /**
+     * Configure the server from JSON
+     *
+     * Must be done in the admin thread.
+     *
+     * @param params JSON parameters that have been validated
+     */
+    void configure(json_t* json);
+
+    /**
      * Print server details to a DCB
      *
      * Designed to be called within a debugger session in order
@@ -371,6 +380,8 @@ private:
         /** Disk space thresholds. Can be queried from modules at any time so access must be protected
          *  by mutex. */
         DiskSpaceLimits disk_space_limits;
+
+        template<class Params> void configure(Params params);
     };
 
     /**
