@@ -13,6 +13,7 @@
 #pragma once
 
 #include <maxbase/ccdefs.hh>
+#include <chrono>
 #include <map>
 #include <memory>
 #include <string>
@@ -55,16 +56,16 @@ public:
     }
 };
 
-enum
-{
-    DEFAULT_CONNECT_TIMEOUT = 10,   // @see https://curl.haxx.se/libcurl/c/CURLOPT_CONNECTTIMEOUT.html
-    DEFAULT_TIMEOUT         = 10    // @see https://curl.haxx.se/libcurl/c/CURLOPT_TIMEOUT.html
-};
+// @see https://curl.haxx.se/libcurl/c/CURLOPT_CONNECTTIMEOUT.html
+static const std::chrono::seconds DEFAULT_CONNECT_TIMEOUT { 10 };
+
+// @see https://curl.haxx.se/libcurl/c/CURLOPT_TIMEOUT.html
+static const std::chrono::seconds DEFAULT_TIMEOUT { 10 };
 
 struct Config
 {
-    int connect_timeout_s = DEFAULT_CONNECT_TIMEOUT;
-    int timeout_s = DEFAULT_TIMEOUT;
+    std::chrono::seconds connect_timeout = DEFAULT_CONNECT_TIMEOUT;
+    std::chrono::seconds timeout         = DEFAULT_TIMEOUT;
 };
 
 struct Result

@@ -177,10 +177,8 @@ CURL* get_easy_curl(CurlOp op,
         }
 
         checked_curl_setopt(pCurl, CURLOPT_NOSIGNAL, 1);
-        checked_curl_setopt(pCurl, CURLOPT_CONNECTTIMEOUT, config.connect_timeout_s);   // For connection
-                                                                                        // phase
-        checked_curl_setopt(pCurl, CURLOPT_TIMEOUT, config.timeout_s);                  // For data transfer
-                                                                                        // phase
+        checked_curl_setopt(pCurl, CURLOPT_CONNECTTIMEOUT, config.connect_timeout.count());// Conn. phase
+        checked_curl_setopt(pCurl, CURLOPT_TIMEOUT, config.timeout.count());               // Data trs phase
         checked_curl_setopt(pCurl, CURLOPT_ERRORBUFFER, pErrbuf);
         checked_curl_setopt(pCurl, CURLOPT_WRITEFUNCTION, write_callback);
         checked_curl_setopt(pCurl, CURLOPT_WRITEDATA, &pRes->body);
@@ -681,7 +679,7 @@ vector<Result> execute(CurlOp op,
 {
     Async http = create_async(op, urls, body, user, password, config);
 
-    long timeout_ms = (config.connect_timeout_s + config.timeout_s) * 1000;
+    long timeout_ms = (config.connect_timeout.count() + config.timeout.count()) * 1000;
     long max_wait_ms = timeout_ms / 10;
 
     long wait_ms = 10;
