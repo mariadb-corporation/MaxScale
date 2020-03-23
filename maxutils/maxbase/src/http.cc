@@ -71,6 +71,42 @@ inline int checked_curl_setopt(CURL* pCurl, CURLoption option, T value)
     return rv == CURLE_OK ? 0 : 1;
 }
 
+struct ReadCallbackData
+{
+public:
+    ReadCallbackData(const std::vector<char>* pData)
+        : data(*pData)
+    {
+    }
+
+    const std::vector<char>& data;
+    size_t                   pos = 0;
+};
+
+// https://curl.haxx.se/libcurl/c/CURLOPT_READFUNCTION.html
+size_t read_callback(char* buffer, size_t size, size_t nitems, void* userdata)
+{
+    ReadCallbackData* pRcd = static_cast<ReadCallbackData*>(userdata);
+
+    size_t nBytes = size * nitems;
+
+    if (pRcd->pos + nBytes > pRcd->data.size())
+    {
+        nBytes = pRcd->data.size() - pRcd->pos;
+    }
+
+    auto b = pRcd->data.begin() + pRcd->pos;
+    auto e = b + nBytes;
+
+    mxb_assert(e <= pRcd->data.end());
+
+    std::copy(b, e, buffer);
+
+    pRcd->pos += nBytes;
+
+    return nBytes;
+}
+
 // https://curl.haxx.se/libcurl/c/CURLOPT_WRITEFUNCTION.html
 size_t write_callback(char* ptr, size_t size, size_t nmemb, void* userdata)
 {
@@ -125,7 +161,8 @@ CURL* get_easy_curl(CurlOp op,
                     const std::string& user, const std::string& password,
                     const Config& config,
                     Result* pRes,
-                    char* pErrbuf)
+                    char* pErrbuf,
+                    ReadCallbackData* pRcd)
 {
     CURL* pCurl = curl_easy_init();
     mxb_assert(pCurl);
@@ -150,6 +187,14 @@ CURL* get_easy_curl(CurlOp op,
         checked_curl_setopt(pCurl, CURLOPT_URL, url.c_str());
         checked_curl_setopt(pCurl, CURLOPT_HEADERFUNCTION, header_callback);
         checked_curl_setopt(pCurl, CURLOPT_HEADERDATA, &pRes->headers);
+
+        if (pRcd && pRcd->data.size() != 0)
+        {
+            checked_curl_setopt(pCurl, CURLOPT_UPLOAD, 1L);
+            checked_curl_setopt(pCurl, CURLOPT_READFUNCTION, read_callback);
+            checked_curl_setopt(pCurl, CURLOPT_READDATA, pRcd);
+            checked_curl_setopt(pCurl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)pRcd->data.size());
+        }
 
         if (!user.empty() && !password.empty())
         {
@@ -264,15 +309,22 @@ public:
 
     bool initialize(CurlOp op,
                     const std::vector<std::string>& urls,
+                    const std::vector<char>& body,
                     const std::string& user, const std::string& password,
                     const Config& config)
     {
         mxb_assert(m_status == Async::ERROR);
 
         m_urls = urls;
+        m_body = body;
 
         m_results.reserve(urls.size());
         m_errbufs.reserve(urls.size());
+
+        if (m_body.size())
+        {
+            m_rcds.reserve(urls.size());
+        }
 
         size_t i;
         for (i = 0; i < urls.size(); ++i)
@@ -280,8 +332,14 @@ public:
             m_results.resize(i + 1);
             m_errbufs.resize(i + 1);
 
+            if (m_body.size())
+            {
+                m_rcds.emplace_back(&m_body);
+            }
+
             CURL* pCurl = get_easy_curl(op, urls[i], user, password, config,
-                                        &m_results[i], m_errbufs[i].data());
+                                        &m_results[i], m_errbufs[i].data(),
+                                        m_body.empty() ? nullptr : &m_rcds[i]);
 
             if (!pCurl || (curl_multi_add_handle(m_pCurlm, pCurl) != CURLM_OK))
             {
@@ -471,6 +529,8 @@ private:
     int                                      m_still_running;
     long                                     m_wait_no_more_than;
     vector<string>                           m_urls;
+    vector<char>                             m_body;
+    vector<ReadCallbackData>                 m_rcds;
 };
 }
 
@@ -532,6 +592,7 @@ namespace
 
 Async create_async(CurlOp op,
                    const std::vector<std::string>& urls,
+                   const std::vector<char>& body,
                    const std::string& user, const std::string& password,
                    const Config& config)
 {
@@ -544,7 +605,7 @@ Async create_async(CurlOp op,
     else
     {
         shared_ptr<HttpImp> sHttp_imp = std::make_shared<HttpImp>();
-        if (sHttp_imp->initialize(op, urls, user, password, config))
+        if (sHttp_imp->initialize(op, urls, body, user, password, config))
         {
             sImp = sHttp_imp;
         }
@@ -560,29 +621,18 @@ Async create_async(CurlOp op,
 }
 
 Async get_async(const std::vector<std::string>& urls,
-                const Config& config)
-{
-    return get_async(urls, "", "", config);
-}
-
-Async get_async(const std::vector<std::string>& urls,
                 const std::string& user, const std::string& password,
                 const Config& config)
 {
-    return create_async(CurlOp::GET, urls, user, password, config);
+    return create_async(CurlOp::GET, urls, vector<char>(), user, password, config);
 }
 
 Async put_async(const std::vector<std::string>& urls,
-                const Config& config)
-{
-    return put_async(urls, "", "", config);
-}
-
-Async put_async(const std::vector<std::string>& urls,
+                const std::vector<char>& body,
                 const std::string& user, const std::string& password,
                 const Config& config)
 {
-    return create_async(CurlOp::PUT, urls, user, password, config);
+    return create_async(CurlOp::PUT, urls, body, user, password, config);
 }
 
 namespace
@@ -590,13 +640,15 @@ namespace
 
 Result execute(CurlOp op,
                const std::string& url,
+               const std::vector<char>& body,
                const std::string& user,
                const std::string& password,
                const Config& config)
 {
     Result res;
     char errbuf[CURL_ERROR_SIZE + 1] = "";
-    CURL* pCurl = get_easy_curl(op, url, user, password, config, &res, errbuf);
+    ReadCallbackData rcd(&body);
+    CURL* pCurl = get_easy_curl(op, url, user, password, config, &res, errbuf, &rcd);
     mxb_assert(pCurl);
 
     CURLcode code = curl_easy_perform(pCurl);
@@ -623,10 +675,11 @@ Result execute(CurlOp op,
 
 vector<Result> execute(CurlOp op,
                        const std::vector<std::string>& urls,
+                       const std::vector<char>& body,
                        const std::string& user, const std::string& password,
                        const Config& config)
 {
-    Async http = create_async(op, urls, user, password, config);
+    Async http = create_async(op, urls, body, user, password, config);
 
     long timeout_ms = (config.connect_timeout_s + config.timeout_s) * 1000;
     long max_wait_ms = timeout_ms / 10;
@@ -654,48 +707,33 @@ vector<Result> execute(CurlOp op,
 
 }
 
-Result get(const std::string& url, const Config& config)
-{
-    return get(url, "", "", config);
-}
-
 Result get(const std::string& url, const std::string& user, const std::string& password, const Config& config)
 {
-    return execute(CurlOp::GET, url, user, password, config);
-}
-
-vector<Result> get(const std::vector<std::string>& urls, const Config& config)
-{
-    return get(urls, "", "", config);
+    return execute(CurlOp::GET, url, std::vector<char>(), user, password, config);
 }
 
 vector<Result> get(const std::vector<std::string>& urls,
                    const std::string& user, const std::string& password,
                    const Config& config)
 {
-    return execute(CurlOp::GET, urls, user, password, config);
+    return execute(CurlOp::GET, urls, std::vector<char>(), user, password, config);
 }
 
-Result put(const std::string& url, const Config& config)
+Result put(const std::string& url,
+           const std::vector<char>& body,
+           const std::string& user,
+           const std::string& password,
+           const Config& config)
 {
-    return put(url, "", "", config);
-}
-
-Result put(const std::string& url, const std::string& user, const std::string& password, const Config& config)
-{
-    return execute(CurlOp::PUT, url, user, password, config);
-}
-
-vector<Result> put(const std::vector<std::string>& urls, const Config& config)
-{
-    return put(urls, "", "", config);
+    return execute(CurlOp::PUT, url, body, user, password, config);
 }
 
 vector<Result> put(const std::vector<std::string>& urls,
+                   const std::vector<char>& body,
                    const std::string& user, const std::string& password,
                    const Config& config)
 {
-    return execute(CurlOp::PUT, urls, user, password, config);
+    return execute(CurlOp::PUT, urls, body, user, password, config);
 }
 
 const char* to_string(Async::status_t status)

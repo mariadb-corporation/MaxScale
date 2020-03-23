@@ -18,6 +18,7 @@
 #include <thread>
 #include <vector>
 #include <maxbase/log.hh>
+#include <maxbase/stopwatch.hh>
 
 using namespace std;
 
@@ -149,16 +150,17 @@ int test_async_http_get()
     return rv == EXIT_FAILURE ? 1 : 0;
 }
 
-int test_http_put()
+int test_http_put(const vector<char>& body = vector<char>())
 {
     cout << __func__ << endl;
 
     int rv = EXIT_FAILURE;
 
-    auto res = mxb::http::put("http://postman-echo.com/put");
+    auto res = mxb::http::put("http://postman-echo.com/put", body);
     cout << "http://postman-echo.com/put responded with: " << res.code << endl;
     if (res.code == 200)
     {
+        cout << "MESSAGE:" << res.body << endl;
         rv = EXIT_SUCCESS;
     }
     else
@@ -169,7 +171,7 @@ int test_http_put()
     return rv == EXIT_FAILURE ? 1 : 0;
 }
 
-int test_async_http_put()
+int test_async_http_put(const vector<char>& body = vector<char>())
 {
     cout << __func__ << endl;
 
@@ -179,7 +181,7 @@ int test_async_http_put()
                            "http://postman-echo.com/put",
                            "http://postman-echo.com/put"};
     vector<bool> expected_successes = {true, true, true};
-    mxb::http::Async http = mxb::http::put_async(urls);
+    mxb::http::Async http = mxb::http::put_async(urls, body);
 
     while (http.perform(0) == mxb::http::Async::PENDING)
     {
@@ -208,50 +210,56 @@ int test_async_http_put()
     return rv == EXIT_FAILURE ? 1 : 0;
 }
 
-}
-
-uint64_t time_since_epoch_ms()
+vector<char> create_body(const string& s)
 {
-    auto now = std::chrono::system_clock::now();
-    auto duration = now.time_since_epoch();
-    return std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+    return vector<char>(s.begin(), s.end());
 }
 
+}
 
 int main()
 {
     int rv = 0;
     mxb::Log log;
 
-    long start;
-    long stop;
-
     mxb::http::Init init;
+    mxb::StopWatch sw;
+    mxb::Duration d;
 
-    start = time_since_epoch_ms();
+    sw.restart();
     rv += test_http_get();
-    stop = time_since_epoch_ms();
-    cout << "Single GET: " << stop - start << endl;
+    d = sw.split();
+    cout << "Single GET: " << d << endl;
 
-    start = time_since_epoch_ms();
+    sw.restart();
     rv += test_multi_http_get();
-    stop = time_since_epoch_ms();
-    cout << "Multi GET: " << stop - start << endl;
+    d = sw.split();
+    cout << "Multi GET: " << d << endl;
 
-    start = time_since_epoch_ms();
+    sw.restart();
     rv += test_async_http_get();
-    stop = time_since_epoch_ms();
-    cout << "Async GET: " << stop - start << endl;
+    d = sw.split();
+    cout << "Async GET: " << d << endl;
 
-    start = time_since_epoch_ms();
+    sw.restart();
     rv += test_http_put();
-    stop = time_since_epoch_ms();
-    cout << "Single PUT: " << stop - start << endl;
+    d = sw.split();
+    cout << "Single PUT (no body): " << d << endl;
 
-    start = time_since_epoch_ms();
+    sw.restart();
+    rv += test_http_put(create_body("{ \"hello\": \"world\" }"));
+    d = sw.split();
+    cout << "Single PUT (with body): " << d << endl;
+
+    sw.restart();
     rv += test_async_http_put();
-    stop = time_since_epoch_ms();
-    cout << "Async PUT: " << stop - start << endl;
+    d = sw.split();
+    cout << "Async PUT: " << d << endl;
+
+    sw.restart();
+    rv += test_async_http_put(create_body("{ \"hello\": \"world\" }"));
+    d = sw.split();
+    cout << "Async PUT (with body): " << d << endl;
 
     return rv;
 }
