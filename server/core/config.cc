@@ -721,23 +721,6 @@ std::string Config::ParamLogThrottling::type() const
     return "throttling";
 }
 
-std::string Config::ParamLogThrottling::default_to_string() const
-{
-    return to_string(m_default_value);
-}
-
-bool Config::ParamLogThrottling::validate(const std::string& value_as_string, std::string* pMessage) const
-{
-    value_type value;
-    return from_string(value_as_string, &value, pMessage);
-}
-
-bool Config::ParamLogThrottling::validate(json_t* value_as_json, std::string* pMessage) const
-{
-    value_type value;
-    return from_json(value_as_json, &value, pMessage);
-}
-
 std::string Config::ParamLogThrottling::to_string(const value_type& value) const
 {
     std::stringstream ss;

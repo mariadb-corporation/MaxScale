@@ -42,7 +42,7 @@ public:
                          std::string* pMessage) const;
     };
 
-    class ParamLogThrottling : public config::Param
+    class ParamLogThrottling : public config::ConcreteParam<ParamLogThrottling, MXS_LOG_THROTTLING>
     {
     public:
         using value_type = MXS_LOG_THROTTLING;
@@ -50,21 +50,15 @@ public:
         ParamLogThrottling(config::Specification* pSpecification,
                            const char* zName,
                            const char* zDescription)
-            : Param(pSpecification, zName, zDescription,
-                    Modifiable::AT_RUNTIME,
-                    Param::OPTIONAL,
-                    MXS_MODULE_PARAM_STRING)
+            : config::ConcreteParam<ParamLogThrottling, MXS_LOG_THROTTLING>(
+                pSpecification, zName, zDescription,
+                Modifiable::AT_RUNTIME,
+                Param::OPTIONAL,
+                MXS_MODULE_PARAM_STRING, MXS_LOG_THROTTLING {0, 0, 0})
         {
         }
 
         std::string type() const override final;
-        value_type default_value() const
-        {
-            return m_default_value;
-        }
-        std::string default_to_string() const override final;
-        bool        validate(const std::string& value_as_string, std::string* pMessage) const override final;
-        bool        validate(json_t* value_as_json, std::string* pMessage) const override final;
 
         std::string to_string(const value_type& value) const;
         bool        from_string(const std::string& value, value_type* pValue,
@@ -72,14 +66,6 @@ public:
 
         json_t* to_json(const value_type& value) const;
         bool    from_json(const json_t* pJson, value_type* pValue, std::string* pMessage = nullptr) const;
-
-        bool is_valid(const value_type&) const
-        {
-            return true;
-        }
-
-    private:
-        const value_type m_default_value = {0, 0, 0};
     };
 
     class LogThrottling : public config::ConcreteType<ParamLogThrottling>
