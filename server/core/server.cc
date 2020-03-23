@@ -268,7 +268,6 @@ bool ServerSpec::do_post_validate(Params params) const
 void Server::configure(const mxs::ConfigParameters& params)
 {
     m_settings.configure(params);
-    m_settings.all_parameters = params;
 }
 
 void Server::configure(json_t* params)
@@ -276,23 +275,43 @@ void Server::configure(json_t* params)
     m_settings.configure(params);
 }
 
-template<class Params>
-void Server::Settings::configure(Params params)
+Server::Settings::Settings(const std::string& name)
+    : mxs::config::Configuration(name, &s_spec)
+    , m_type(this, &s_type)
+    , m_protocol(this, &s_protocol)
+    , m_authenticator(this, &s_authenticator)
+    , m_address(this, &s_address)
+    , m_socket(this, &s_socket)
+    , m_port(this, &s_port)
+    , m_extra_port(this, &s_extra_port)
+    , m_priority(this, &s_priority)
+    , m_monitoruser(this, &s_monitoruser)
+    , m_monitorpw(this, &s_monitorpw)
+    , m_persistpoolmax(this, &s_persistpoolmax)
+    , m_persistmaxtime(this, &s_persistmaxtime)
+    , m_proxy_protocol(this, &s_proxy_protocol)
+    , m_disk_space_threshold(this, &s_disk_space_threshold)
+    , m_rank(this, &s_rank)
+    , m_ssl(this, &s_ssl)
+    , m_ssl_cert(this, &s_ssl_cert)
+    , m_ssl_key(this, &s_ssl_key)
+    , m_ssl_ca(this, &s_ssl_ca)
+    , m_ssl_version(this, &s_ssl_version)
+    , m_ssl_cert_verify_depth(this, &s_ssl_cert_verify_depth)
+    , m_ssl_verify_peer_certificate(this, &s_ssl_verify_peer_certificate)
+    , m_ssl_verify_peer_host(this, &s_ssl_verify_peer_host)
 {
-    auto addr = s_address.get(params);
-    auto sock = s_socket.get(params);
+}
 
-    careful_strcpy(address, MAX_ADDRESS_LEN, !addr.empty() ? addr : sock);
-    careful_strcpy(monuser, MAX_MONUSER_LEN, s_monitoruser.get(params));
-    careful_strcpy(monpw, MAX_MONPW_LEN, s_monitorpw.get(params));
+bool Server::Settings::post_configure()
+{
+    auto addr = !m_address.get().empty() ? m_address.get() : m_socket.get();
 
-    port = s_port.get(params);
-    extra_port = s_extra_port.get(params);
-    persistpoolmax = s_persistpoolmax.get(params);
-    persistmaxtime = s_persistmaxtime.get(params);
-    proxy_protocol = s_proxy_protocol.get(params);
-    rank = s_rank.get(params);
-    priority = s_priority.get(params);
+    careful_strcpy(address, MAX_ADDRESS_LEN, addr);
+    careful_strcpy(monuser, MAX_MONUSER_LEN, m_monitoruser.get());
+    careful_strcpy(monpw, MAX_MONPW_LEN, m_monitorpw.get());
+
+    return true;
 }
 
 // static
@@ -428,12 +447,12 @@ bool Server::set_address(const string& new_address)
 
 void Server::set_port(int new_port)
 {
-    m_settings.port = new_port;
+    m_settings.m_port.set(new_port);
 }
 
 void Server::set_extra_port(int new_port)
 {
-    m_settings.extra_port = new_port;
+    m_settings.m_extra_port.set(new_port);
 }
 
 const mxs::SSLProvider& Server::ssl() const
@@ -448,12 +467,12 @@ mxs::SSLProvider& Server::ssl()
 
 bool Server::proxy_protocol() const
 {
-    return m_settings.proxy_protocol;
+    return m_settings.m_proxy_protocol.get();
 }
 
 void Server::set_proxy_protocol(bool proxy_protocol)
 {
-    m_settings.proxy_protocol = proxy_protocol;
+    m_settings.m_proxy_protocol.set(proxy_protocol);
 }
 
 uint8_t Server::charset() const
@@ -565,10 +584,10 @@ bool Server::create_server_config(const char* filename) const
         return false;
     }
 
-    string config = generate_config_string(name(), m_settings.all_parameters, common_server_params(),
-                                           nullptr);
+    std::ostringstream ss;
+    m_settings.persist(ss);
 
-    if (dprintf(file, "%s", config.c_str()) == -1)
+    if (dprintf(file, "%s", ss.str().c_str()) == -1)
     {
         MXS_ERROR("Could not write serialized configuration to file '%s': %d, %s",
                   filename, errno, mxs_strerror(errno));
@@ -612,11 +631,12 @@ json_t* Server::json_attributes() const
 
     /** Store server parameters in attributes */
     json_t* params = json_object();
+    m_settings.fill(params);
 
-    config_add_module_params_json(
-        &m_settings.all_parameters, {CN_TYPE}, common_server_params(),
-        nullptr,    // no module-specific parameters
-        params);
+    // Remove unwanted parameters
+    json_object_del(params, CN_TYPE);
+    json_object_del(params, CN_AUTHENTICATOR);
+    json_object_del(params, CN_PROTOCOL);
 
     json_object_set_new(attr, CN_PARAMETERS, params);
 

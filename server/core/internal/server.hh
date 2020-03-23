@@ -36,6 +36,7 @@ public:
 
     Server(const std::string& name, std::unique_ptr<mxs::SSLContext> ssl = {})
         : m_name(name)
+        , m_settings(name)
         , m_ssl_provider(std::move(ssl))
     {
     }
@@ -49,42 +50,42 @@ public:
 
     int port() const override
     {
-        return m_settings.port;
+        return m_settings.m_port.get();
     }
 
     int extra_port() const override
     {
-        return m_settings.extra_port;
+        return m_settings.m_extra_port.get();
     }
 
     long persistpoolmax() const
     {
-        return m_settings.persistpoolmax;
+        return m_settings.m_persistpoolmax.get();
     }
 
     void set_persistpoolmax(long persistpoolmax)
     {
-        m_settings.persistpoolmax = persistpoolmax;
+        m_settings.m_persistpoolmax.set(persistpoolmax);
     }
 
     long persistmaxtime() const
     {
-        return m_settings.persistmaxtime.count();
+        return m_settings.m_persistmaxtime.get().count();
     }
 
     void set_persistmaxtime(long persistmaxtime)
     {
-        m_settings.persistmaxtime = std::chrono::seconds(persistmaxtime);
+        m_settings.m_persistmaxtime.set(std::chrono::seconds(persistmaxtime));
     }
 
     void set_rank(int64_t rank)
     {
-        m_settings.rank = rank;
+        m_settings.m_rank.set(rank);
     }
 
     void set_priority(int64_t priority)
     {
-        m_settings.priority = priority;
+        m_settings.m_priority.set(priority);
     }
 
     bool have_disk_space_limits() const override
@@ -107,7 +108,7 @@ public:
 
     bool persistent_conns_enabled() const override
     {
-        return m_settings.persistpoolmax > 0;
+        return m_settings.m_persistpoolmax.get() > 0;
     }
 
     void set_version(uint64_t version_num, const std::string& version_str) override;
@@ -134,12 +135,12 @@ public:
 
     int64_t rank() const override
     {
-        return m_settings.rank;
+        return m_settings.m_rank.get();
     }
 
     int64_t priority() const override
     {
-        return m_settings.priority;
+        return m_settings.m_priority.get();
     }
 
     /**
@@ -204,15 +205,6 @@ public:
      * @param       server  SERVER for which DCBs are to be printed
      */
     static void dprintPersistentDCBs(DCB*, const Server*);
-
-    /**
-     * Get server parameters
-     */
-    mxs::ConfigParameters parameters() const
-    {
-        std::lock_guard<std::mutex> guard(m_settings.lock);
-        return m_settings.all_parameters;
-    }
 
     /**
      * @brief Serialize a server to a file
@@ -349,39 +341,62 @@ public:
 private:
     bool create_server_config(const char* filename) const;
 
-    struct Settings
+    struct Settings : public mxs::config::Configuration
     {
-        mutable std::mutex lock;    /**< Protects array-like settings from concurrent access */
+        Settings(const std::string& name);
 
-        /** All config settings in text form. This is only read and written from the admin thread
-         *  so no need for locking. */
-        mxs::ConfigParameters all_parameters;
-
-        std::string protocol;       /**< Backend protocol module name. Does not change so needs no locking. */
-
-        char    address[MAX_ADDRESS_LEN + 1] = {'\0'};  /**< Server hostname/IP-address */
-        int64_t port = -1;                              /**< Server port */
-        int64_t extra_port = -1;                        /**< Alternative monitor port if normal port fails */
-
+        char address[MAX_ADDRESS_LEN + 1] = {'\0'}; /**< Server hostname/IP-address */
         char monuser[MAX_MONUSER_LEN + 1] = {'\0'}; /**< Monitor username, overrides monitor setting */
         char monpw[MAX_MONPW_LEN + 1] = {'\0'};     /**< Monitor password, overrides monitor setting */
 
-        long                 persistpoolmax = 0;/**< Maximum size of persistent connections pool */
-        std::chrono::seconds persistmaxtime {0};/**< Maximum number of seconds connection can live */
-
-        int64_t rank;   /*< The ranking of this server, used to prioritize certain servers over others */
-
-        int64_t priority;   /*< The priority of this server, Currently only used by galeramon to pick which
-                             * server is the master. */
-
-        bool proxy_protocol = false;    /**< Send proxy-protocol header to backends when connecting
-                                         * routing sessions. */
-
         /** Disk space thresholds. Can be queried from modules at any time so access must be protected
          *  by mutex. */
-        DiskSpaceLimits disk_space_limits;
+        DiskSpaceLimits    disk_space_limits;
+        mutable std::mutex lock;    /**< Protects disk_space_limits */
 
-        template<class Params> void configure(Params params);
+        // Module type, always "server"
+        mxs::config::String m_type;
+        // Module protocol, deprecated
+        mxs::config::String m_protocol;
+        // Authenticator module, deprecated
+        mxs::config::String m_authenticator;
+        // The server address, mutually exclusive with socket. @see address
+        mxs::config::String m_address;
+        // The server socket, mutually exclusive with address
+        mxs::config::String m_socket;
+        // Server port
+        mxs::config::Count m_port;
+        // Alternative monitor port if normal port fails
+        mxs::config::Count m_extra_port;
+        // The priority of this server, Currently only used by galeramon to pick which server is the master
+        mxs::config::Count m_priority;
+        // @see monuser
+        mxs::config::String m_monitoruser;
+        // @see monpw
+        mxs::config::String m_monitorpw;
+        // Maximum size of persistent connections pool
+        mxs::config::Count m_persistpoolmax;
+        // Maximum number of seconds connection can live
+        mxs::config::Seconds m_persistmaxtime;
+        // Send proxy-protocol header to backends when connecting routing sessions
+        mxs::config::Bool m_proxy_protocol;
+        // TODO: Make this a custom type
+        mxs::config::String m_disk_space_threshold;
+        // The ranking of this server, used to prioritize certain servers over others during routing
+        mxs::config::Enum<int64_t> m_rank;
+
+        // TLS configuration parameters
+        mxs::config::Enum<bool>              m_ssl;
+        mxs::config::Path                    m_ssl_cert;
+        mxs::config::Path                    m_ssl_key;
+        mxs::config::Path                    m_ssl_ca;
+        mxs::config::Enum<ssl_method_type_t> m_ssl_version;
+        mxs::config::Count                   m_ssl_cert_verify_depth;
+        mxs::config::Bool                    m_ssl_verify_peer_certificate;
+        mxs::config::Bool                    m_ssl_verify_peer_host;
+
+    protected:
+        bool post_configure() override;
     };
 
     /**
