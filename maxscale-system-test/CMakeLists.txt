@@ -1039,6 +1039,9 @@ add_test_executable(mxs2878_monitor_ssl.cpp mxs2878_monitor_ssl mxs2878_monitor_
 # MXS-2939: Test that session commands trigger a reconnection
 add_test_executable(mxs2939_sescmd_reconnect.cpp mxs2939_sescmd_reconnect mxs2939_sescmd_reconnect LABELS REPL_BACKEND readwritesplit)
 
+# MXS-2145 and MXS-2623
+add_test_executable(connection_init_queries.cc connection_init_queries connection_init_queries LABELS REPL_BACKEND)
+
 ############################################
 # END: Normal tests                        #
 ############################################
