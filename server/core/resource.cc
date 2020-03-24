@@ -1287,6 +1287,15 @@ static void remove_unwanted_fields(const HttpRequest& request, HttpResponse& res
 
 static HttpResponse handle_request(const HttpRequest& request)
 {
+    // Redirect log output into the runtime error message buffer
+    mxb::LogRedirect redirect(
+        [](auto level, const auto& msg) {
+            if (level < LOG_NOTICE)     // Lower is more severe
+            {
+                config_runtime_error("%s", msg.c_str());
+            }
+        });
+
     MXS_DEBUG("%s %s %s",
               request.get_verb().c_str(),
               request.get_uri().c_str(),

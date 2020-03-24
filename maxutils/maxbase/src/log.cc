@@ -908,8 +908,16 @@ int mxb_log_message(int priority,
                     this_unit.in_memory_log(msg.c_str(), msg.length());
                 }
 
-                if (mxb_log_is_priority_enabled(level))
+                if (auto func = mxb::LogRedirect::current_redirect())
                 {
+                    // We only pass the message text to the handler, everything else is extra that's only
+                    // needed by the default logging mechanism.
+                    func(level, message_text);
+                    err = 0;
+                }
+                else if (mxb_log_is_priority_enabled(level))
+                {
+
                     err = this_unit.sLogger->write(msg.c_str(), msg.length()) ? 0 : -1;
                 }
                 else
@@ -935,4 +943,22 @@ int mxb_log_oom(const char* message)
 namespace maxbase
 {
 thread_local LogScope* LogScope::s_current_scope {nullptr};
+thread_local LogRedirect::Func LogRedirect::s_redirect {nullptr};
+
+LogRedirect::LogRedirect(Func func)
+{
+    mxb_assert(s_redirect == nullptr);
+    s_redirect = func;
+}
+
+LogRedirect::~LogRedirect()
+{
+    s_redirect = nullptr;
+}
+
+// static
+LogRedirect::Func LogRedirect::current_redirect()
+{
+    return s_redirect;
+}
 }

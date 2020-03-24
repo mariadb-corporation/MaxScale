@@ -103,4 +103,29 @@ private:
 
     static thread_local LogScope* s_current_scope;
 };
+
+// Class for redirecting the thread-local log message stream to a different handler. Only one of these should
+// be constructed in the callstack.
+class LogRedirect
+{
+public:
+    LogRedirect(const LogRedirect&) = delete;
+    LogRedirect& operator=(const LogRedirect&) = delete;
+
+    /**
+     * The message handler type
+     *
+     * @param level Syslog log level of the message
+     * @param msg   The message itself
+     */
+    using Func = void (*)(int level, const std::string& msg);
+
+    explicit LogRedirect(Func func);
+    ~LogRedirect();
+
+    static Func current_redirect();
+
+private:
+    static thread_local Func s_redirect;
+};
 }
