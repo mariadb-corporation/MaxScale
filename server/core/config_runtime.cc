@@ -1384,6 +1384,15 @@ bool runtime_destroy_service(Service* service)
 
 bool runtime_destroy_monitor(MXS_MONITOR* monitor)
 {
+    monitor_stop(monitor);
+
+    if (monitor->monitored_servers)
+    {
+        monitor_start(monitor, monitor->parameters);
+        config_runtime_error("Cannot destroy monitor '%s', it is monitoring servers.", monitor->name);
+        return false;
+    }
+
     bool rval = false;
     char filename[PATH_MAX];
     snprintf(filename, sizeof(filename), "%s/%s.cnf", get_config_persistdir(), monitor->name);
@@ -1404,12 +1413,7 @@ bool runtime_destroy_monitor(MXS_MONITOR* monitor)
 
     if (rval)
     {
-        monitor_stop(monitor);
-
-        while (monitor->monitored_servers)
-        {
-            monitor_remove_server(monitor, monitor->monitored_servers->server);
-        }
+        mxb_assert(!monitor->monitored_servers);
         monitor_deactivate(monitor);
         MXS_NOTICE("Destroyed monitor '%s'", monitor->name);
     }
