@@ -57,6 +57,7 @@ using maxscale::Monitor;
 using std::string;
 using Guard = std::lock_guard<std::mutex>;
 using namespace std::literals::chrono_literals;
+using namespace std::literals::string_literals;
 
 namespace cfg = mxs::config;
 
@@ -151,9 +152,8 @@ static cfg::ParamSeconds s_persistmaxtime(
 static cfg::ParamBool s_proxy_protocol(
     &s_spec, CN_PROXY_PROTOCOL, "Enable proxy protocol", false, AT_RUNTIME);
 
-// TODO: Add custom type
-static cfg::ParamString s_disk_space_threshold(
-    &s_spec, CN_DISK_SPACE_THRESHOLD, "Server disk space threshold", "", NO_QUOTES, AT_RUNTIME);
+static Server::ParamDiskSpaceLimits s_disk_space_threshold(
+    &s_spec, CN_DISK_SPACE_THRESHOLD, "Server disk space threshold");
 
 static cfg::ParamEnum<int64_t> s_rank(
     &s_spec, CN_RANK, "Server rank",
@@ -265,6 +265,90 @@ bool ServerSpec::do_post_validate(Params params) const
     return rval;
 }
 
+Server::ParamDiskSpaceLimits::ParamDiskSpaceLimits(cfg::Specification* pSpecification,
+                                                   const char* zName, const char* zDescription)
+    : cfg::ConcreteParam<ParamDiskSpaceLimits, Server::DiskSpaceLimits>(
+        pSpecification, zName, zDescription, AT_RUNTIME, OPTIONAL, MXS_MODULE_PARAM_STRING, value_type())
+{
+}
+
+std::string Server::ParamDiskSpaceLimits::type() const
+{
+    return "disk_space_limits";
+}
+
+std::string Server::ParamDiskSpaceLimits::to_string(Server::ParamDiskSpaceLimits::value_type value) const
+{
+    std::vector<std::string> tmp;
+    std::transform(value.begin(), value.end(), std::back_inserter(tmp),
+                   [](const auto& a) {
+                       return a.first + ':' + std::to_string(a.second);
+                   });
+    return mxb::join(tmp, ",");
+}
+
+bool Server::ParamDiskSpaceLimits::from_string(const std::string& value, value_type* pValue,
+                                               std::string* pMessage) const
+{
+    return config_parse_disk_space_threshold(pValue, value.c_str());
+}
+
+json_t* Server::ParamDiskSpaceLimits::to_json(value_type value) const
+{
+    json_t* obj = value.empty() ? json_null() : json_object();
+
+    for (const auto& a : value)
+    {
+        json_object_set_new(obj, a.first.c_str(), json_integer(a.second));
+    }
+
+    return obj;
+}
+
+bool Server::ParamDiskSpaceLimits::from_json(const json_t* pJson, value_type* pValue,
+                                             std::string* pMessage) const
+{
+    bool ok = false;
+
+    if (json_is_object(pJson))
+    {
+        ok = true;
+        const char* key;
+        json_t* value;
+        value_type newval;
+
+        json_object_foreach(const_cast<json_t*>(pJson), key, value)
+        {
+            if (json_is_integer(value))
+            {
+                newval[key] = json_integer_value(value);
+            }
+            else
+            {
+                ok = false;
+                *pMessage = "'"s + key + "' is not a JSON number.";
+                break;
+            }
+        }
+    }
+    else if (json_is_string(pJson))
+    {
+        // Allow conversion from the INI format string to make it easier to configure this via maxctrl:
+        // defining JSON objects with it is not very convenient.
+        ok = from_string(json_string_value(pJson), pValue, pMessage);
+    }
+    else if (json_is_null(pJson))
+    {
+        ok = true;
+    }
+    else
+    {
+        *pMessage = "Not a JSON object or JSON null.";
+    }
+
+    return ok;
+}
+
 void Server::configure(const mxs::ConfigParameters& params)
 {
     m_settings.configure(params);
@@ -310,6 +394,8 @@ bool Server::Settings::post_configure()
     careful_strcpy(address, MAX_ADDRESS_LEN, addr);
     careful_strcpy(monuser, MAX_MONUSER_LEN, m_monitoruser.get());
     careful_strcpy(monpw, MAX_MONPW_LEN, m_monitorpw.get());
+
+    m_have_disk_space_limits.store(!m_disk_space_threshold.get().empty());
 
     return true;
 }
@@ -671,17 +757,6 @@ json_t* Server::to_json_data(const char* host) const
     json_object_set_new(rval, CN_LINKS, mxs_json_self_link(host, CN_SERVERS, name()));
 
     return rval;
-}
-
-bool Server::set_disk_space_threshold(const string& disk_space_threshold)
-{
-    DiskSpaceLimits dst;
-    bool rv = config_parse_disk_space_threshold(&dst, disk_space_threshold.c_str());
-    if (rv)
-    {
-        set_disk_space_limits(dst);
-    }
-    return rv;
 }
 
 void Server::VersionInfo::set(uint64_t version, const std::string& version_str)

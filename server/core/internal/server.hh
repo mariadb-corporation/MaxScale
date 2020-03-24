@@ -34,6 +34,21 @@ public:
     static const int MAX_MONPW_LEN = 512;
     static const int MAX_VERSION_LEN = 256;
 
+    class ParamDiskSpaceLimits : public mxs::config::ConcreteParam<ParamDiskSpaceLimits
+                                                                   , Server::DiskSpaceLimits>
+    {
+    public:
+        ParamDiskSpaceLimits(mxs::config::Specification* pSpecification,
+                             const char* zName, const char* zDescription);
+        std::string type() const override;
+        std::string to_string(value_type value) const;
+        bool        from_string(const std::string& value, value_type* pValue,
+                                std::string* pMessage = nullptr) const;
+        json_t* to_json(value_type value) const;
+        bool    from_json(const json_t* pJson, value_type* pValue, std::string* pMessage = nullptr) const;
+    };
+
+
     Server(const std::string& name, std::unique_ptr<mxs::SSLContext> ssl = {})
         : m_name(name)
         , m_settings(name)
@@ -90,20 +105,12 @@ public:
 
     bool have_disk_space_limits() const override
     {
-        std::lock_guard<std::mutex> guard(m_settings.lock);
-        return !m_settings.disk_space_limits.empty();
+        return m_settings.m_have_disk_space_limits.load(std::memory_order_relaxed);
     }
 
     DiskSpaceLimits get_disk_space_limits() const override
     {
-        std::lock_guard<std::mutex> guard(m_settings.lock);
-        return m_settings.disk_space_limits;
-    }
-
-    void set_disk_space_limits(const DiskSpaceLimits& new_limits)
-    {
-        std::lock_guard<std::mutex> guard(m_settings.lock);
-        m_settings.disk_space_limits = new_limits;
+        return m_settings.m_disk_space_threshold.get();
     }
 
     bool persistent_conns_enabled() const override
@@ -239,16 +246,6 @@ public:
     std::string monitor_password() const;
 
     /**
-     * @brief Set the disk space threshold of the server
-     *
-     * @param server                The server.
-     * @param disk_space_threshold  The disk space threshold as specified in the config file.
-     *
-     * @return True, if the provided string is valid and the threshold could be set.
-     */
-    bool set_disk_space_threshold(const std::string& disk_space_threshold);
-
-    /**
      * Convert server to json. This does not add relations to other objects and should only be called from
      * ServerManager::server_to_json_data_relations().
      *
@@ -349,10 +346,8 @@ private:
         char monuser[MAX_MONUSER_LEN + 1] = {'\0'}; /**< Monitor username, overrides monitor setting */
         char monpw[MAX_MONPW_LEN + 1] = {'\0'};     /**< Monitor password, overrides monitor setting */
 
-        /** Disk space thresholds. Can be queried from modules at any time so access must be protected
-         *  by mutex. */
-        DiskSpaceLimits    disk_space_limits;
-        mutable std::mutex lock;    /**< Protects disk_space_limits */
+        // Used to track whether disk space limits are enabled. Avoids the lock acquisition on the value.
+        std::atomic<bool> m_have_disk_space_limits {false};
 
         // Module type, always "server"
         mxs::config::String m_type;
@@ -380,8 +375,8 @@ private:
         mxs::config::Seconds m_persistmaxtime;
         // Send proxy-protocol header to backends when connecting routing sessions
         mxs::config::Bool m_proxy_protocol;
-        // TODO: Make this a custom type
-        mxs::config::String m_disk_space_threshold;
+        // Disk space limits
+        mxs::config::ConcreteType<ParamDiskSpaceLimits> m_disk_space_threshold;
         // The ranking of this server, used to prioritize certain servers over others during routing
         mxs::config::Enum<int64_t> m_rank;
 

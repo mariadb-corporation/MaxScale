@@ -3413,21 +3413,9 @@ int create_new_server(CONFIG_CONTEXT* obj)
 
     config_add_defaults(&obj->m_parameters, common_server_params());
 
-    if (Server* server = ServerManager::create_server(obj->name(), obj->m_parameters))
+    if (!ServerManager::create_server(obj->name(), obj->m_parameters))
     {
-        auto disk_space_threshold = obj->m_parameters.get_string(CN_DISK_SPACE_THRESHOLD);
-        if (!server->set_disk_space_threshold(disk_space_threshold))
-        {
-            MXS_ERROR("Invalid value for '%s' for server %s: %s",
-                      CN_DISK_SPACE_THRESHOLD,
-                      server->name(),
-                      disk_space_threshold.c_str());
-            error = true;
-        }
-    }
-    else
-    {
-        MXS_ERROR("Failed to create a new server, memory allocation failed.");
+        MXS_ERROR("Failed to create a new server.");
         error = true;
     }
 
