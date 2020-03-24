@@ -66,22 +66,26 @@ bool cluster_status(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 
 bool cluster_add_node(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 {
-    mxb_assert((pArgs->argc >= 1) && (pArgs->argc <= 1));
+    mxb_assert(pArgs->argc == 2);
     mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
+    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_SERVER);
 
     auto* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
+    auto* pServer = pArgs->argv[1].value.server;
 
-    return pMonitor->command_cluster_add_node(ppOutput);
+    return pMonitor->command_cluster_add_node(ppOutput, pServer);
 }
 
 bool cluster_remove_node(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 {
-    mxb_assert((pArgs->argc >= 1) && (pArgs->argc <= 1));
+    mxb_assert(pArgs->argc == 2);
     mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
+    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_SERVER);
 
     auto* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
+    auto* pServer = pArgs->argv[1].value.server;
 
-    return pMonitor->command_cluster_remove_node(ppOutput);
+    return pMonitor->command_cluster_remove_node(ppOutput, pServer);
 }
 
 bool cluster_config_get(const MODULECMD_ARG* pArgs, json_t** ppOutput)
@@ -215,7 +219,8 @@ void register_commands()
 
     static modulecmd_arg_type_t cluster_add_node_argv[] =
     {
-        {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC}
+        { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
+        { MODULECMD_ARG_SERVER, "Server to add to Columnstore cluster" }
     };
 
     modulecmd_register_command(MXS_MODULE_NAME, "cluster-add-node", MODULECMD_TYPE_ACTIVE,
@@ -225,7 +230,8 @@ void register_commands()
 
     static modulecmd_arg_type_t cluster_remove_node_argv[] =
     {
-        {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC}
+        { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
+        { MODULECMD_ARG_SERVER, "Server to remove from Columnstore cluster" }
     };
 
     modulecmd_register_command(MXS_MODULE_NAME, "cluster-remove-node", MODULECMD_TYPE_ACTIVE,

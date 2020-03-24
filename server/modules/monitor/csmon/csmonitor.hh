@@ -38,8 +38,8 @@ public:
     bool command_cluster_status(json_t** ppOutput, SERVER* pServer);
     bool command_cluster_config_get(json_t** ppOutput, SERVER* pServer);
     bool command_cluster_config_put(json_t** ppOutput, const char* zJson, SERVER* pServer);
-    bool command_cluster_add_node(json_t** ppOutput);
-    bool command_cluster_remove_node(json_t** ppOutput);
+    bool command_cluster_add_node(json_t** ppOutput, SERVER* pServer);
+    bool command_cluster_remove_node(json_t** ppOutput, SERVER* pServer);
     bool command_async(json_t** ppOutput, const char* zCommand);
     bool command_result(json_t** ppOutput);
     bool command_cancel(json_t** ppOutput);
@@ -58,8 +58,8 @@ private:
     void cluster_config_get(json_t** ppOutput, mxb::Semaphore* pSem = nullptr, SERVER* pServer = nullptr);
     void cluster_config_put(json_t** ppOutput, mxb::Semaphore* pSem,
                             std::string&& body, SERVER* pServer = nullptr);
-    void cluster_add_node(json_t** ppOutput, mxb::Semaphore* pSem = nullptr);
-    void cluster_remove_node(json_t** ppOutput, mxb::Semaphore* pSem = nullptr);
+    void cluster_add_node(json_t** ppOutput, mxb::Semaphore* pSem, SERVER* pServer);
+    void cluster_remove_node(json_t** ppOutput, mxb::Semaphore* pSem, SERVER* pServer);
 
     bool has_sufficient_permissions();
     void update_server_status(mxs::MonitorServer* monitored_server);

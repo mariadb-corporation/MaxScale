@@ -20,6 +20,7 @@
 
 #include <maxscale/modinfo.hh>
 #include <maxscale/mysql_utils.hh>
+#include "../../../core/internal/monitormanager.hh"
 
 using std::string;
 using std::vector;
@@ -509,26 +510,53 @@ bool CsMonitor::command_cluster_config_put(json_t** ppOutput, const char* zJson,
     return rv;
 }
 
-bool CsMonitor::command_cluster_add_node(json_t** ppOutput)
+bool CsMonitor::command_cluster_add_node(json_t** ppOutput, SERVER* pServer)
 {
-    mxb::Semaphore sem;
+    bool rv = false;
 
-    auto cmd = [this, &sem, ppOutput] () {
-        cluster_add_node(ppOutput, &sem);
-    };
+    if (!MonitorManager::server_is_monitored(pServer))
+    {
+        mxb::Semaphore sem;
 
-    return command(ppOutput, sem, "cluster-add-node", cmd);
+        auto cmd = [this, &sem, ppOutput, pServer] () {
+            cluster_add_node(ppOutput, &sem, pServer);
+        };
+
+        rv = command(ppOutput, sem, "cluster-add-node", cmd);
+    }
+    else
+    {
+        PRINT_MXS_JSON_ERROR(ppOutput,
+                             "The server '%s' is monitored already and can thus "
+                             "not be added to a cluster.", pServer->name());
+    }
+
+    return rv;
 }
 
-bool CsMonitor::command_cluster_remove_node(json_t** ppOutput)
+bool CsMonitor::command_cluster_remove_node(json_t** ppOutput, SERVER* pServer)
 {
-    mxb::Semaphore sem;
+    bool rv = false;
 
-    auto cmd = [this, &sem, ppOutput] () {
-        cluster_remove_node(ppOutput, &sem);
-    };
+    mxs::Monitor* pMonitor = MonitorManager::server_is_monitored(pServer);
 
-    return command(ppOutput, sem, "cluster-remove-node", cmd);
+    if (pMonitor == this)
+    {
+        mxb::Semaphore sem;
+
+        auto cmd = [this, &sem, ppOutput, pServer] () {
+            cluster_remove_node(ppOutput, &sem, pServer);
+        };
+
+        rv = command(ppOutput, sem, "cluster-remove-node", cmd);
+    }
+    else
+    {
+        PRINT_MXS_JSON_ERROR(ppOutput, "The server '%s' is not monitored by this monitor and "
+                             "cannot be removed.", pServer->name());
+    }
+
+    return rv;
 }
 
 bool CsMonitor::command_async(json_t** ppOutput, const char* zCommand)
@@ -571,14 +599,6 @@ bool CsMonitor::command_async(json_t** ppOutput, const char* zCommand)
             {
                 // TODO: This will crash now.
                 cluster_config_put(nullptr, nullptr, string());
-            }
-            else if (command == "cluster-add-node")
-            {
-                cluster_add_node(nullptr);
-            }
-            else if (command == "cluster-remove-node")
-            {
-                cluster_remove_node(nullptr);
             }
             else
             {
@@ -773,14 +793,16 @@ void CsMonitor::cluster_config_put(json_t** ppOutput, mxb::Semaphore* pSem,
     cluster_put(ppOutput, pSem, "config", pServer, std::move(body));
 }
 
-void CsMonitor::cluster_add_node(json_t** ppOutput, mxb::Semaphore* pSem)
+void CsMonitor::cluster_add_node(json_t** ppOutput, mxb::Semaphore* pSem, SERVER* pServer)
 {
+    // TODO: Do whatever needs to be done.
     PRINT_MXS_JSON_ERROR(ppOutput, "cluster-add-node not implemented yet.");
     pSem->post();
 }
 
-void CsMonitor::cluster_remove_node(json_t** ppOutput, mxb::Semaphore* pSem)
+void CsMonitor::cluster_remove_node(json_t** ppOutput, mxb::Semaphore* pSem, SERVER* pServer)
 {
+    // TODO: Do whatever needs to be done.
     PRINT_MXS_JSON_ERROR(ppOutput, "cluster-remove-node not implemented yet.");
     pSem->post();
 }
