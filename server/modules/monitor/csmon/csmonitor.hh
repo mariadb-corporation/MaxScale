@@ -36,8 +36,8 @@ public:
     bool command_cluster_shutdown(json_t** ppOutput, SERVER* pServer);
     bool command_cluster_ping(json_t** ppOutput, SERVER* pServer);
     bool command_cluster_status(json_t** ppOutput, SERVER* pServer);
-    bool command_cluster_config_get(json_t** ppOutput);
-    bool command_cluster_config_put(json_t** ppOutput);
+    bool command_cluster_config_get(json_t** ppOutput, SERVER* pServer);
+    bool command_cluster_config_put(json_t** ppOutput, const char* zJson, SERVER* pServer);
     bool command_cluster_add_node(json_t** ppOutput);
     bool command_cluster_remove_node(json_t** ppOutput);
     bool command_async(json_t** ppOutput, const char* zCommand);
@@ -48,14 +48,16 @@ private:
     bool command(json_t** ppOutput, mxb::Semaphore& sem, const char* zCmd, std::function<void()> cmd);
 
     void cluster_get(json_t** ppOutput, mxb::Semaphore* pSem, const char* zCmd, SERVER* pServer);
-    void cluster_put(json_t** ppOutput, mxb::Semaphore* pSem, const char* zCmd, SERVER* pServer);
+    void cluster_put(json_t** ppOutput, mxb::Semaphore* pSem, const char* zCmd,
+                     SERVER* pServer, std::string&& body = std::string());
 
     void cluster_start(json_t** ppOutput, mxb::Semaphore* pSem = nullptr, SERVER* pServer = nullptr);
     void cluster_shutdown(json_t** ppOutput, mxb::Semaphore* pSem = nullptr, SERVER* pServer = nullptr);
     void cluster_ping(json_t** ppOutput, mxb::Semaphore* pSem = nullptr, SERVER* pServer = nullptr);
     void cluster_status(json_t** ppOutput, mxb::Semaphore* pSem = nullptr, SERVER* pServer = nullptr);
-    void cluster_config_get(json_t** ppOutput, mxb::Semaphore* pSem = nullptr);
-    void cluster_config_put(json_t** ppOutput, mxb::Semaphore* pSem = nullptr);
+    void cluster_config_get(json_t** ppOutput, mxb::Semaphore* pSem = nullptr, SERVER* pServer = nullptr);
+    void cluster_config_put(json_t** ppOutput, mxb::Semaphore* pSem,
+                            std::string&& body, SERVER* pServer = nullptr);
     void cluster_add_node(json_t** ppOutput, mxb::Semaphore* pSem = nullptr);
     void cluster_remove_node(json_t** ppOutput, mxb::Semaphore* pSem = nullptr);
 

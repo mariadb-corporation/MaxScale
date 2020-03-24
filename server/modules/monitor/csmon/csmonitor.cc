@@ -121,6 +121,21 @@ public:
     {
     }
 
+    Command(CsMonitor* pMonitor,
+            const char* zName,
+            vector<string>&& urls,
+            string&& body,
+            mxb::Semaphore* pSem = nullptr,
+            json_t** ppOutput = nullptr)
+        : m_monitor(*pMonitor)
+        , m_name(zName)
+        , m_urls(std::move(urls))
+        , m_body(std::move(body))
+        , m_pSem(pSem)
+        , m_ppOutput(ppOutput)
+    {
+    }
+
     ~Command()
     {
         if (m_dcid)
@@ -286,6 +301,7 @@ protected:
     CsMonitor&      m_monitor;
     string          m_name;
     vector<string>  m_urls;
+    string          m_body;
     mxb::Semaphore* m_pSem;
     json_t**        m_ppOutput = nullptr;
     json_t*         m_pOutput = nullptr;
@@ -453,26 +469,44 @@ bool CsMonitor::command_cluster_status(json_t** ppOutput, SERVER* pServer)
     return command(ppOutput, sem, "cluster-status", cmd);
 }
 
-bool CsMonitor::command_cluster_config_get(json_t** ppOutput)
+bool CsMonitor::command_cluster_config_get(json_t** ppOutput, SERVER* pServer)
 {
     mxb::Semaphore sem;
 
-    auto cmd = [this, &sem, ppOutput] () {
-        cluster_config_get(ppOutput, &sem);
+    auto cmd = [this, &sem, pServer, ppOutput] () {
+        cluster_config_get(ppOutput, &sem, pServer);
     };
 
     return command(ppOutput, sem, "cluster-config-get", cmd);
 }
 
-bool CsMonitor::command_cluster_config_put(json_t** ppOutput)
+bool CsMonitor::command_cluster_config_put(json_t** ppOutput, const char* zJson, SERVER* pServer)
 {
-    mxb::Semaphore sem;
+    bool rv = false;
+    json_error_t error;
+    size_t len = strlen(zJson);
+    json_t* pJson = json_loadb(zJson, len, 0, &error);
 
-    auto cmd = [this, &sem, ppOutput] () {
-        cluster_config_put(ppOutput, &sem);
-    };
+    if (pJson)
+    {
+        json_decref(pJson);
 
-    return command(ppOutput, sem, "cluster-config-put", cmd);
+        mxb::Semaphore sem;
+        string body(zJson, zJson + len);
+
+        auto cmd = [this, ppOutput, &sem, &body, pServer] () {
+            cluster_config_put(ppOutput, &sem, std::move(body), pServer);
+        };
+
+        rv = command(ppOutput, sem, "cluster-config-put", cmd);
+    }
+    else
+    {
+        *ppOutput = mxs_json_error_append(nullptr, "Provided string '%s' is not valid JSON: %s",
+                                          zJson, error.text);
+    }
+
+    return rv;
 }
 
 bool CsMonitor::command_cluster_add_node(json_t** ppOutput)
@@ -535,7 +569,8 @@ bool CsMonitor::command_async(json_t** ppOutput, const char* zCommand)
             }
             else if (command == "cluster-config-put")
             {
-                cluster_config_put(nullptr);
+                // TODO: This will crash now.
+                cluster_config_put(nullptr, nullptr, string());
             }
             else if (command == "cluster-add-node")
             {
@@ -687,7 +722,11 @@ void CsMonitor::cluster_get(json_t** ppOutput, mxb::Semaphore* pSem, const char*
     m_sCommand->init();
 }
 
-void CsMonitor::cluster_put(json_t** ppOutput, mxb::Semaphore* pSem, const char* zCmd, SERVER* pServer)
+void CsMonitor::cluster_put(json_t** ppOutput,
+                            mxb::Semaphore* pSem,
+                            const char* zCmd,
+                            SERVER* pServer,
+                            string&& body)
 {
     vector<string> urls;
 
@@ -695,13 +734,11 @@ void CsMonitor::cluster_put(json_t** ppOutput, mxb::Semaphore* pSem, const char*
     {
         if (!pServer || (pMserver->server == pServer))
         {
-            string url { create_url(*pMserver, m_config.admin_port, zCmd) };
-
-            urls.push_back(url);
+            urls.push_back(create_url(*pMserver, m_config.admin_port, zCmd));
         }
     }
 
-    m_sCommand.reset(new PutCommand(this, zCmd, std::move(urls), pSem, ppOutput));
+    m_sCommand.reset(new PutCommand(this, zCmd, std::move(urls), std::move(body), pSem, ppOutput));
     m_sCommand->init();
 }
 
@@ -725,14 +762,15 @@ void CsMonitor::cluster_status(json_t** ppOutput, mxb::Semaphore* pSem, SERVER* 
     cluster_get(ppOutput, pSem, "status", pServer);
 }
 
-void CsMonitor::cluster_config_get(json_t** ppOutput, mxb::Semaphore* pSem)
+void CsMonitor::cluster_config_get(json_t** ppOutput, mxb::Semaphore* pSem, SERVER* pServer)
 {
-    cluster_get(ppOutput, pSem, "config", nullptr);
+    cluster_get(ppOutput, pSem, "config", pServer);
 }
 
-void CsMonitor::cluster_config_put(json_t** ppOutput, mxb::Semaphore* pSem)
+void CsMonitor::cluster_config_put(json_t** ppOutput, mxb::Semaphore* pSem,
+                                   string&& body, SERVER* pServer)
 {
-    cluster_put(ppOutput, pSem, "config", nullptr);
+    cluster_put(ppOutput, pSem, "config", pServer, std::move(body));
 }
 
 void CsMonitor::cluster_add_node(json_t** ppOutput, mxb::Semaphore* pSem)

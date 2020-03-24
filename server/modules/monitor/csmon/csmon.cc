@@ -86,22 +86,28 @@ bool cluster_remove_node(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 
 bool cluster_config_get(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 {
-    mxb_assert(pArgs->argc == 1);
+    mxb_assert((pArgs->argc >= 1) && (pArgs->argc <= 2));
     mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
+    mxb_assert(pArgs->argc == 1 || MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_SERVER);
 
     auto* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
+    SERVER* pServer = pArgs->argc == 1 ? nullptr : pArgs->argv[1].value.server;
 
-    return pMonitor->command_cluster_config_get(ppOutput);
+    return pMonitor->command_cluster_config_get(ppOutput, pServer);
 }
 
 bool cluster_config_put(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 {
-    mxb_assert(pArgs->argc == 1);
+    mxb_assert(pArgs->argc >= 2 && pArgs->argc <= 3);
     mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
+    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_STRING);
+    mxb_assert(pArgs->argc == 2 || MODULECMD_GET_TYPE(&pArgs->argv[2].type) == MODULECMD_ARG_SERVER);
 
     auto* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
+    const char* zJson = pArgs->argv[1].value.string;
+    SERVER* pServer = pArgs->argc == 2 ? nullptr : pArgs->argv[2].value.server;
 
-    return pMonitor->command_cluster_config_put(ppOutput);
+    return pMonitor->command_cluster_config_put(ppOutput, zJson, pServer);
 }
 
 bool async(const MODULECMD_ARG* pArgs, json_t** ppOutput)
@@ -186,7 +192,8 @@ void register_commands()
 
     static modulecmd_arg_type_t cluster_config_get_argv[] =
     {
-        { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC }
+        { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
+        { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Specific server to to obtain config from" }
     };
 
     modulecmd_register_command(MXS_MODULE_NAME, "cluster-config-get", MODULECMD_TYPE_PASSIVE,
@@ -197,6 +204,8 @@ void register_commands()
     static modulecmd_arg_type_t cluster_config_put_argv[] =
     {
         { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
+        { MODULECMD_ARG_STRING, "Configuration as JSON object" },
+        { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Specific server to configure" }
     };
 
     modulecmd_register_command(MXS_MODULE_NAME, "cluster-config-put", MODULECMD_TYPE_PASSIVE,
