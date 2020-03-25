@@ -2028,7 +2028,7 @@ done. To require peer certificates, use `ssl_verify_peer_certificate`.
 
 A string giving a file path that identifies an existing readable file. The file
 must be a Certificate Revocation List in the PEM format that defines the revoked
-certificates. This parameter is only accepted by services.
+certificates. This parameter is only accepted by listeners.
 
 #### Example SSL enabled server configuration
 
