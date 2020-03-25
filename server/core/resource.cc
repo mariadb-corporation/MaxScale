@@ -88,11 +88,6 @@ static void remove_null_parameters(json_t* json)
 
 HttpResponse Resource::call(const HttpRequest& request) const
 {
-    if (json_t* json = request.get_json())
-    {
-        remove_null_parameters(json);
-    }
-
     return m_cb(request);
 }
 

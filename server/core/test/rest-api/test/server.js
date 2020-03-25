@@ -65,30 +65,65 @@ describe("Server", function() {
     });
 
     it("rejects invalid `address`", function() {
-        server.data.attributes.parameters.address = '/tmp/mysql.sock'
-        return request.patch(base_url + "/servers/" + server.data.id, { json: server})
+        var payload = {
+            data: {
+                attributes: {
+                    parameters: {
+                        address: '/tmp/mysql.sock'
+                    }
+                }
+            }
+        }
+
+        return request.patch(base_url + "/servers/" + server.data.id, { json: payload})
             .should.be.rejected
     });
 
     it("rejects invalid `port`", function() {
-        server.data.attributes.parameters.address = '127.0.0.1'
-        server.data.attributes.parameters.port = '/tmp/server.sock'
-        return request.patch(base_url + "/servers/" + server.data.id, { json: server})
+        var payload = {
+            data: {
+                attributes: {
+                    parameters: {
+                        address: '127.0.0.1',
+                        port: '/tmp/server.sock'
+                    }
+                }
+            }
+        }
+
+        return request.patch(base_url + "/servers/" + server.data.id, { json: payload})
             .should.be.rejected
     });
 
     it("rejects `address` and `socket` in PATCH", function() {
-        server.data.attributes.parameters.address = '127.0.0.1'
-        server.data.attributes.parameters.socket = '/tmp/mysql.sock'
-        return request.patch(base_url + "/servers/" + server.data.id, { json: server})
+        var payload = {
+            data: {
+                attributes: {
+                    parameters: {
+                        address: '127.0.0.1',
+                        socket: '/tmp/server.sock'
+                    }
+                }
+            }
+        }
+
+        return request.patch(base_url + "/servers/" + server.data.id, { json: payload})
             .should.be.rejected
     });
 
     it("alters `address` to `socket` in PATCH", function() {
-        delete server.data.attributes.parameters.address
-        delete server.data.attributes.parameters.port
-        server.data.attributes.parameters.socket = '/tmp/mysql.sock'
-        return request.patch(base_url + "/servers/" + server.data.id, { json: server})
+        var payload = {
+            data: {
+                attributes: {
+                    parameters: {
+                        socket: '/tmp/mysql.sock',
+                        address: null
+                    }
+                }
+            }
+        }
+
+        return request.patch(base_url + "/servers/" + server.data.id, { json: payload})
             .should.be.fulfilled
     });
 
