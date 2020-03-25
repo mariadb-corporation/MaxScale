@@ -13,6 +13,7 @@
 #     BREAKS_REPL
 #     BREAKS_GALERA
 set(CTEST_BUILD_NAME "${BUILDNAME}")
+set(CNF_TEMPLATES "" CACHE INTERNAL "")
 
 # utilities.cmake contains all helper functions and extra tools
 include(utilities.cmake)
@@ -24,9 +25,6 @@ include_directories(${CMAKE_SOURCE_DIR}/connectors/cdc-connector)
 include_directories(${CMAKE_BINARY_DIR})
 # Include the CDC connector headers
 include_directories(${CMAKE_SOURCE_DIR}/../connectors/cdc-connector/)
-
-# The core testing library
-add_subdirectory(maxtest)
 include_directories(maxtest/include/maxtest)
 
 # Tool used to check backend state
@@ -1225,4 +1223,6 @@ add_test_executable(clustrix_distribution.cpp clustrix_distribution clustrix_dis
 # DO NOT ADD TESTS AFTER THIS #
 ###############################
 
-configure_file(templates.h.in ${CMAKE_CURRENT_BINARY_DIR}/templates.h @ONLY)
+# The core testing library
+configure_file(maxtest/src/test_info.cc.in maxtest/src/test_info.cc @ONLY)
+add_subdirectory(maxtest)
