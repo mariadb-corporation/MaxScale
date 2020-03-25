@@ -63,17 +63,31 @@ int get_cs_version(MonitorServer* srv)
     std::string result = do_query(srv, "SELECT @@version_comment");
     auto pos = result.find(prefix);
 
+    auto to_version = [](std::string str) {
+            std::istringstream os(str);
+            int major = 0, minor = 0, patch = 0;
+            char dot;
+            os >> major;
+            os >> dot;
+            os >> minor;
+            os >> dot;
+            os >> patch;
+            return major * 10000 + minor * 100 + patch;
+        };
+
     if (pos != std::string::npos)
     {
-        std::istringstream os(result.substr(pos + prefix.length()));
-        int major = 0, minor = 0, patch = 0;
-        char dot;
-        os >> major;
-        os >> dot;
-        os >> minor;
-        os >> dot;
-        os >> patch;
-        rval = major * 10000 + minor * 100 + patch;
+        rval = to_version(result.substr(pos + prefix.length()));
+    }
+    else
+    {
+        auto cs_version = do_query(srv, "SELECT VARIABLE_VALUE FROM information_schema.GLOBAL_STATUS "
+                                        "WHERE VARIABLE_NAME = 'Columnstore_version'");
+
+        if (!cs_version.empty())
+        {
+            rval = to_version(result.substr(pos + prefix.length()));
+        }
     }
 
     return rval;
