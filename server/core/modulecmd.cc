@@ -147,7 +147,7 @@ static MODULECMD* command_create(const char* identifier,
                                  enum modulecmd_type type,
                                  MODULECMDFN entry_point,
                                  int argc,
-                                 modulecmd_arg_type_t* argv,
+                                 const modulecmd_arg_type_t* argv,
                                  const char* description)
 {
     mxb_assert((argc && argv) || (argc == 0 && argv == NULL));
@@ -430,7 +430,7 @@ bool modulecmd_register_command(const char* domain,
                                 enum modulecmd_type type,
                                 MODULECMDFN entry_point,
                                 int argc,
-                                modulecmd_arg_type_t* argv,
+                                const modulecmd_arg_type_t* argv,
                                 const char* description)
 {
     reset_error();
