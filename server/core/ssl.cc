@@ -11,35 +11,9 @@
  * Public License.
  */
 
-/**
- * @file ssl.c  -  SSL generic functions
- *
- * SSL is intended to be available in conjunction with a variety of protocols
- * on either the client or server side.
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 02/02/16     Martin Brampton         Initial implementation
- *
- * @endverbatim
- */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdbool.h>
-#include <sys/ioctl.h>
 #include <maxscale/cn_strings.hh>
-#include <maxscale/dcb.hh>
-#include <maxscale/poll.hh>
-#include <maxscale/service.hh>
-#include <maxscale/routingworker.hh>
+#include <maxscale/config.hh>
 #include <maxscale/ssl.hh>
-
-
-static RSA* rsa_512 = NULL;
-static RSA* rsa_1024 = NULL;
 
 const MXS_ENUM_VALUE ssl_version_values[] =
 {
@@ -50,6 +24,12 @@ const MXS_ENUM_VALUE ssl_version_values[] =
     {"TLSv13", SERVICE_TLS13      },
     {NULL}
 };
+
+namespace
+{
+
+static RSA* rsa_512 = NULL;
+static RSA* rsa_1024 = NULL;
 
 static RSA* create_rsa(int bits)
 {
@@ -112,6 +92,26 @@ static RSA* tmp_rsa_callback(SSL* s, int is_export, int keylength)
     return rsa_tmp;
 }
 
+static thread_local std::string ssl_errbuf;
+
+static const char* get_ssl_errors()
+{
+    char errbuf[200];   // Enough space according to OpenSSL documentation
+    ssl_errbuf.clear();
+
+    for (int err = ERR_get_error(); err; err = ERR_get_error())
+    {
+        if (!ssl_errbuf.empty())
+        {
+            ssl_errbuf.append(", ");
+        }
+        ssl_errbuf.append(ERR_error_string(err, errbuf));
+    }
+
+    return ssl_errbuf.c_str();
+}
+}
+
 /**
  * Returns an enum ssl_method_type value as string.
  *
@@ -167,31 +167,6 @@ ssl_method_type_t string_to_ssl_method_type(const char* str)
         return SERVICE_TLS13;
     }
     return SERVICE_SSL_UNKNOWN;
-}
-
-// thread-local non-POD types are not supported with older versions of GCC
-static thread_local std::string* ssl_errbuf;
-
-static const char* get_ssl_errors()
-{
-    if (ssl_errbuf == NULL)
-    {
-        ssl_errbuf = new std::string;
-    }
-
-    char errbuf[200];   // Enough space according to OpenSSL documentation
-    ssl_errbuf->clear();
-
-    for (int err = ERR_get_error(); err; err = ERR_get_error())
-    {
-        if (!ssl_errbuf->empty())
-        {
-            ssl_errbuf->append(", ");
-        }
-        ssl_errbuf->append(ERR_error_string(err, errbuf));
-    }
-
-    return ssl_errbuf->c_str();
 }
 
 namespace maxscale
