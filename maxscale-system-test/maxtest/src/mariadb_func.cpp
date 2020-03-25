@@ -12,7 +12,7 @@
 
 
 #include "mariadb_func.h"
-#include "templates.h"
+#include "test_dir.hh"
 #include <ctype.h>
 #include <sstream>
 

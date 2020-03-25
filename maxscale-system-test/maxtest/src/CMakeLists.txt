@@ -23,6 +23,7 @@ add_library(maxtest SHARED
         tcp_connection.cpp
         test_binlog_fnc.cpp
         testconnections.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/test_info.cc
         # Include the CDC connector in the core library
         ${CMAKE_SOURCE_DIR}/connectors/cdc-connector/cdc_connector.cpp)
 

@@ -103,7 +103,9 @@ fi
 if [ ! -z "${named_test}" ] ; then
     eval ${named_test}
 else
-    ctest -VV ${test_set}
+    eval "arguments=(${test_set})"
+    ctest -N "${arguments[@]}"
+    ctest -VV "${arguments[@]}"
 fi
 
 if [[ "$name" =~ '-gcov' ]]

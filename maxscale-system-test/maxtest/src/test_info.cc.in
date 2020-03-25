@@ -1,0 +1,11 @@
+#include "test_info.hh"
+
+const TestDefinition test_definitions_arr[] =
+{
+@CNF_TEMPLATES@{nullptr, nullptr, nullptr}
+};
+
+const TestDefinition* test_definitions = test_definitions_arr;
+const char* default_template = "replication";
+const char* test_dir = "@CMAKE_CURRENT_SOURCE_DIR@";
+
