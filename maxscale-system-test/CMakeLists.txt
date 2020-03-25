@@ -13,7 +13,7 @@
 #     BREAKS_REPL
 #     BREAKS_GALERA
 set(CTEST_BUILD_NAME "${BUILDNAME}")
-set(CNF_TEMPLATES "" CACHE INTERNAL "")
+set(TEST_DEFINITIONS "" CACHE INTERNAL "")
 
 set(CMAKE_CXX_FLAGS "-std=c++11 -ggdb -Wall -Wextra -Werror -Wno-format-overflow -Wno-unused-function -Wno-unused-parameter -Werror=format-security")
 set(CMAKE_CXX_FLAGS_DEBUG "-std=c++11 -ggdb -Wall -Werror -Wno-format-overflow -Wno-unused-function")
@@ -1157,5 +1157,6 @@ set_tests_properties(bug471_big PROPERTIES TIMEOUT 3600)
 ###############################
 
 # The core testing library
+add_linebreaks(TEST_DEFINITIONS TEST_DEFINITIONS)
 configure_file(maxtest/src/test_info.cc.in maxtest/src/test_info.cc @ONLY)
 add_subdirectory(maxtest)

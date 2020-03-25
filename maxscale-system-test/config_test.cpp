@@ -7,6 +7,8 @@
 #include <unistd.h>
 #include "testconnections.h"
 
+using std::string;
+
 const char* bad_configs[] =
 {
     "bug359",
@@ -35,8 +37,9 @@ int main(int argc, char** argv)
 
     for (int i = 0; bad_configs[i]; i++)
     {
-        printf("Testing %s...\n", bad_configs[i]);
-        if (test->test_bad_config(0, bad_configs[i]))
+        string config_file_path = (string)test_dir + "/cnf/maxscale.cnf.template." + bad_configs[i];
+        printf("Testing %s...\n", config_file_path.c_str());
+        if (test->test_bad_config(0, config_file_path))
         {
             printf("FAILED\n");
             rval++;
