@@ -204,7 +204,6 @@ static cfg::ParamBool s_ssl_verify_peer_certificate(
 
 static cfg::ParamBool s_ssl_verify_peer_host(
     &s_spec, CN_SSL_VERIFY_PEER_HOST, "Verify TLS peer host", false);
-}
 
 template<class Params>
 bool ServerSpec::do_post_validate(Params params) const
@@ -241,8 +240,8 @@ bool ServerSpec::do_post_validate(Params params) const
 
     if (have_socket && have_address)
     {
-        MXS_ERROR("Both '%s' and '%s' defined: only one of the parameters can be defined",
-                  CN_ADDRESS, CN_SOCKET);
+        MXS_ERROR("Both '%s=%s' and '%s=%s' defined: only one of the parameters can be defined",
+                  CN_ADDRESS, address.c_str(), CN_SOCKET, socket.c_str());
         rval = false;
     }
     else if (!have_address && !have_socket)
@@ -262,7 +261,36 @@ bool ServerSpec::do_post_validate(Params params) const
         rval = false;
     }
 
+    if (s_ssl.get(params) && s_ssl_cert.get(params).empty() != s_ssl_key.get(params).empty())
+    {
+        MXS_ERROR("Both '%s' and '%s' must be defined", s_ssl_cert.name().c_str(), s_ssl_key.name().c_str());
+        rval = false;
+    }
+
     return rval;
+}
+
+std::pair<bool, std::unique_ptr<mxs::SSLContext>> create_ssl(const char* name,
+                                                             const mxs::ConfigParameters& params)
+{
+    bool ok = true;
+    auto ssl = std::make_unique<mxs::SSLContext>();
+
+    if (!ssl->read_configuration(name, params, false))
+    {
+        MXS_ERROR("Unable to initialize SSL for server '%s'", name);
+        ok = false;
+        ssl.reset();
+    }
+    else if (!ssl->valid())
+    {
+        // An empty ssl config should result in an empty pointer. This can be removed if Server stores
+        // SSLContext as value.
+        ssl.reset();
+    }
+
+    return {ok, std::move(ssl)};
+}
 }
 
 Server::ParamDiskSpaceLimits::ParamDiskSpaceLimits(cfg::Specification* pSpecification,
@@ -406,39 +434,46 @@ cfg::Specification* Server::specification()
     return &s_spec;
 }
 
-Server* Server::server_alloc(const char* name, const mxs::ConfigParameters& params)
+Server* Server::create(const char* name, const mxs::ConfigParameters& params)
 {
-    mxs::ConfigParameters unknown;
+    Server* rval = nullptr;
 
-    if (!s_spec.validate(params, &unknown))
+    if (s_spec.validate(params))
     {
-        for (const auto& a : unknown)
+        auto ssl = create_ssl(name, params);
+
+        if (ssl.first)
         {
-            MXS_ERROR("Unknown parameter: %s=%s", a.first.c_str(), a.second.c_str());
+            if (auto server = std::make_unique<Server>(name, std::move(ssl.second)))
+            {
+                server->configure(params);
+                rval = server.release();
+            }
         }
-
-        return nullptr;
     }
 
-    auto ssl = std::make_unique<mxs::SSLContext>();
+    return rval;
+}
 
-    if (!ssl->read_configuration(name, params, false))
+Server* Server::create(const char* name, json_t* json)
+{
+    Server* rval = nullptr;
+
+    if (s_spec.validate(json))
     {
-        MXS_ERROR("Unable to initialize SSL for server '%s'", name);
-        return nullptr;
+        auto ssl = create_ssl(name, mxs::ConfigParameters::from_json(json));
+
+        if (ssl.first)
+        {
+            if (auto server = std::make_unique<Server>(name, std::move(ssl.second)))
+            {
+                server->configure(json);
+                rval = server.release();
+            }
+        }
     }
-    else if (!ssl->valid())
-    {
-        // An empty ssl config should result in an empty pointer. This can be removed if Server stores
-        // SSLContext as value.
-        ssl.reset();
-    }
 
-    auto server = std::make_unique<Server>(name, std::move(ssl));
-
-    server->configure(params);
-
-    return server.release();
+    return rval;
 }
 
 Server* Server::create_test_server()

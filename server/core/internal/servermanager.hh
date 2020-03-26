@@ -36,6 +36,7 @@ public:
      * @return       The newly created server or NULL if an error occurred
      */
     static Server* create_server(const char* name, const mxs::ConfigParameters& params);
+    static Server* create_server(const char* name, json_t* json);
 
     /**
      * Deallocate the server.

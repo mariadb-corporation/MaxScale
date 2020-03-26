@@ -660,25 +660,7 @@ mxs::ConfigParameters extract_parameters(json_t* json)
 
     if (json_t* parameters = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS))
     {
-        const char* key;
-        json_t* value;
-
-        json_object_foreach(parameters, key, value)
-        {
-            if (!json_is_null(value) && !json_is_array(value) && !json_is_object(value))
-            {
-                auto strval = mxs::json_to_string(value);
-
-                if (!strval.empty())
-                {
-                    rval.set(key, strval);
-                }
-                else
-                {
-                    mxb_assert_message(json_is_string(value), "Only strings can be empty (%s)", key);
-                }
-            }
-        }
+        rval = mxs::ConfigParameters::from_json(parameters);
     }
 
     return rval;
@@ -915,49 +897,16 @@ bool is_valid_resource_body(json_t* json)
 
 bool server_contains_required_fields(json_t* json)
 {
-    json_t* id = mxs_json_pointer(json, MXS_JSON_PTR_ID);
-    json_t* port = mxs_json_pointer(json, MXS_JSON_PTR_PARAM_PORT);
-    json_t* address = mxs_json_pointer(json, MXS_JSON_PTR_PARAM_ADDRESS);
-    json_t* socket = mxs_json_pointer(json, MXS_JSON_PTR_PARAM_SOCKET);
     bool rval = false;
+    auto err = mxs_is_valid_json_resource(json);
 
-    if (!id)
+    if (!err.empty())
     {
-        config_runtime_error("Request body does not define the '%s' field", MXS_JSON_PTR_ID);
+        config_runtime_error("%s", err.c_str());
     }
-    else if (!json_is_string(id))
+    else if (!mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS))
     {
-        config_runtime_error("The '%s' field is not a string", MXS_JSON_PTR_ID);
-    }
-    else if (!address && !socket)
-    {
-        config_runtime_error("Request body does not define '%s' or '%s'",
-                             MXS_JSON_PTR_PARAM_ADDRESS, MXS_JSON_PTR_PARAM_SOCKET);
-    }
-    else if (address && socket)
-    {
-        config_runtime_error("Request body defines both of the '%s' and '%s' fields",
-                             MXS_JSON_PTR_PARAM_ADDRESS, MXS_JSON_PTR_PARAM_SOCKET);
-    }
-    else if (address && !json_is_string(address))
-    {
-        config_runtime_error("The '%s' field is not a string", MXS_JSON_PTR_PARAM_ADDRESS);
-    }
-    else if (address && json_is_string(address) && json_string_value(address)[0] == '/')
-    {
-        config_runtime_error("The '%s' field is not a valid address", MXS_JSON_PTR_PARAM_ADDRESS);
-    }
-    else if (socket && !json_is_string(socket))
-    {
-        config_runtime_error("The '%s' field is not a string", MXS_JSON_PTR_PARAM_SOCKET);
-    }
-    else if (!address && port)
-    {
-        config_runtime_error("Request body does not define the '%s' field", MXS_JSON_PTR_PARAM_PORT);
-    }
-    else if (port && !json_is_integer(port))
-    {
-        config_runtime_error("The '%s' field is not an integer", MXS_JSON_PTR_PARAM_PORT);
+        config_runtime_error("Field '%s' is not defined", MXS_JSON_PTR_PARAMETERS);
     }
     else
     {
@@ -1882,10 +1831,12 @@ bool runtime_create_server_from_json(json_t* json)
     bool rval = false;
     StringSet relations;
 
-    if (is_valid_resource_body(json) && server_contains_required_fields(json)
+    if (server_contains_required_fields(json)
         && extract_relations(json, relations, to_service_rel)
         && extract_relations(json, relations, to_monitor_rel))
     {
+        json_t* params = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS);
+        remove_json_nulls_from_object(params);
         const char* name = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
         mxb_assert(name);
 
@@ -1893,32 +1844,15 @@ bool runtime_create_server_from_json(json_t* json)
         {
             config_runtime_error("Server '%s' already exists", name);
         }
-        else
+        else if (Server* server = ServerManager::create_server(name, params))
         {
-            mxs::ConfigParameters params;
-            config_add_defaults(&params, common_server_params());
-            params.set_multiple(extract_parameters(json));
-
-            if (params.contains_any({CN_SSL_KEY, CN_SSL_CERT, CN_SSL_CA_CERT}))
+            if (link_target_to_objects(server->name(), relations) && server->serialize())
             {
-                params.set(CN_SSL, "true");
+                rval = true;
             }
-
-            if (Server* server = ServerManager::create_server(name, params))
+            else
             {
-                if (link_target_to_objects(server->name(), relations) && server->serialize())
-                {
-                    rval = true;
-                }
-                else
-                {
-                    runtime_destroy_server(server);
-                }
-            }
-
-            if (!rval)
-            {
-                config_runtime_error("Failed to create server '%s', see error log for more details", name);
+                runtime_destroy_server(server);
             }
         }
     }
@@ -1952,7 +1886,6 @@ bool runtime_alter_server_from_json(Server* server, json_t* new_json)
             }
             else
             {
-                config_runtime_error("Configuration validation failed, see log for more details.");
                 rval = false;
             }
         }

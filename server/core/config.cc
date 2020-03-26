@@ -2344,6 +2344,33 @@ std::vector<std::unique_ptr<pcre2_code>> mxs::ConfigParameters::get_compiled_reg
     return rval;
 }
 
+// static
+mxs::ConfigParameters mxs::ConfigParameters::from_json(json_t* json)
+{
+    mxs::ConfigParameters rval;
+    const char* key;
+    json_t* value;
+
+    json_object_foreach(json, key, value)
+    {
+        if (!json_is_null(value) && !json_is_array(value) && !json_is_object(value))
+        {
+            auto strval = mxs::json_to_string(value);
+
+            if (!strval.empty())
+            {
+                rval.set(key, strval);
+            }
+            else
+            {
+                mxb_assert_message(json_is_string(value), "Only strings can be empty (%s)", key);
+            }
+        }
+    }
+
+    return rval;
+}
+
 string mxs::ConfigParameters::get_string(const std::string& key) const
 {
     string rval;

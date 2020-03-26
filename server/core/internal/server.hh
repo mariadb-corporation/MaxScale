@@ -164,7 +164,8 @@ public:
      * @param params Configuration
      * @return The new server or NULL on error
      */
-    static Server* server_alloc(const char* name, const mxs::ConfigParameters& params);
+    static Server* create(const char* name, const mxs::ConfigParameters& params);
+    static Server* create(const char* name, json_t* json);
 
     /**
      * Creates a server without any configuration. This should be used in unit tests in place of

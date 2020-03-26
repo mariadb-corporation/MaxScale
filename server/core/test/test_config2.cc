@@ -340,6 +340,7 @@ int test_server(config::Server& value)
     mxs::ConfigParameters params1;
     params1.set(CN_PERSISTMAXTIME, "0");
     params1.set(CN_RANK, "primary");
+    params1.set(CN_ADDRESS, "localhost");
 
     std::unique_ptr<Server> sServer1(ServerManager::create_server("TheServer1", params1));
     mxb_assert(sServer1.get());

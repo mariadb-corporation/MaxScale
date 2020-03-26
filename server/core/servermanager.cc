@@ -88,7 +88,19 @@ ThisUnit this_unit;
 Server* ServerManager::create_server(const char* name, const mxs::ConfigParameters& params)
 {
     mxb::LogScope scope(name);
-    Server* server = Server::server_alloc(name, params);
+    Server* server = Server::create(name, params);
+    if (server)
+    {
+        // This keeps the order of the servers the same as in 2.2
+        this_unit.insert_front(server);
+    }
+    return server;
+}
+
+Server* ServerManager::create_server(const char* name, json_t* json)
+{
+    mxb::LogScope scope(name);
+    Server* server = Server::create(name, json);
     if (server)
     {
         // This keeps the order of the servers the same as in 2.2

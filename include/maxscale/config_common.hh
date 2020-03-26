@@ -122,6 +122,17 @@ public:
     using ContainerType = std::map<std::string, std::string>;
 
     /**
+     * Convert JSON object into mxs::ConfigParameters
+     *
+     * Only scalar values are converted into their string form.
+     *
+     * @param JSON object to convert
+     *
+     * @return the ConfigParameters representation of the object
+     */
+    static ConfigParameters from_json(json_t* json);
+
+    /**
      * Get value of key as string.
      *
      * @param key Parameter name
