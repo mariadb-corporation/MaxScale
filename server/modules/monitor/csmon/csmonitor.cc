@@ -62,19 +62,32 @@ int get_cs_version(MonitorServer* srv)
     std::string result = do_query(srv, "SELECT @@version_comment");
     auto pos = result.find(prefix);
 
+    auto to_version = [](std::string str) {
+            std::istringstream os(str);
+            int major = 0, minor = 0, patch = 0;
+            char dot;
+            os >> major;
+            os >> dot;
+            os >> minor;
+            os >> dot;
+            os >> patch;
+            return major * 10000 + minor * 100 + patch;
+        };
+
     if (pos != std::string::npos)
     {
-        std::istringstream os(result.substr(pos + prefix.length()));
-        int major = 0, minor = 0, patch = 0;
-        char dot;
-        os >> major;
-        os >> dot;
-        os >> minor;
-        os >> dot;
-        os >> patch;
-        rval = major * 10000 + minor * 100 + patch;
+        rval = to_version(result.substr(pos + prefix.length()));
     }
+    else
+    {
+        auto cs_version = do_query(srv, "SELECT VARIABLE_VALUE FROM information_schema.GLOBAL_STATUS "
+                                        "WHERE VARIABLE_NAME = 'Columnstore_version'");
 
+        if (!cs_version.empty())
+        {
+            rval = to_version(cs_version);
+        }
+    }
     return rval;
 }
 }
@@ -154,16 +167,15 @@ void reject_call_failed(const char* zCmd, json_t** ppOutput)
 {
     PRINT_MXS_JSON_ERROR(ppOutput, "Failed to queue the command '%s' for execution.", zCmd);
 }
-
 }
 
 bool CsMonitor::command_cluster_start(json_t** ppOutput)
 {
     mxb::Semaphore sem;
 
-    auto cmd = [this, &sem, ppOutput] () {
-        cluster_start(sem, ppOutput);
-    };
+    auto cmd = [this, &sem, ppOutput]() {
+            cluster_start(sem, ppOutput);
+        };
 
     return command("cluster-start", cmd, sem, ppOutput);
 }
@@ -172,9 +184,9 @@ bool CsMonitor::command_cluster_stop(json_t** ppOutput)
 {
     mxb::Semaphore sem;
 
-    auto cmd = [this, &sem, ppOutput] () {
-        cluster_stop(sem, ppOutput);
-    };
+    auto cmd = [this, &sem, ppOutput]() {
+            cluster_stop(sem, ppOutput);
+        };
 
     return command("cluster-stop", cmd, sem, ppOutput);
 }
@@ -183,9 +195,9 @@ bool CsMonitor::command_cluster_shutdown(json_t** ppOutput)
 {
     mxb::Semaphore sem;
 
-    auto cmd = [this, &sem, ppOutput] () {
-        cluster_shutdown(sem, ppOutput);
-    };
+    auto cmd = [this, &sem, ppOutput]() {
+            cluster_shutdown(sem, ppOutput);
+        };
 
     return command("cluster-shutdown", cmd, sem, ppOutput);
 }
@@ -194,9 +206,9 @@ bool CsMonitor::command_cluster_add_node(json_t** ppOutput)
 {
     mxb::Semaphore sem;
 
-    auto cmd = [this, &sem, ppOutput] () {
-        cluster_add_node(sem, ppOutput);
-    };
+    auto cmd = [this, &sem, ppOutput]() {
+            cluster_add_node(sem, ppOutput);
+        };
 
     return command("cluster-add-node", cmd, sem, ppOutput);
 }
@@ -205,9 +217,9 @@ bool CsMonitor::command_cluster_remove_node(json_t** ppOutput)
 {
     mxb::Semaphore sem;
 
-    auto cmd = [this, &sem, ppOutput] () {
-        cluster_remove_node(sem, ppOutput);
-    };
+    auto cmd = [this, &sem, ppOutput]() {
+            cluster_remove_node(sem, ppOutput);
+        };
 
     return command("cluster-remove-node", cmd, sem, ppOutput);
 }
