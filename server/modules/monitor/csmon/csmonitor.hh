@@ -33,18 +33,29 @@ public:
 public:
     // Only to be called by the module call command mechanism.
     bool command_cluster_start(json_t** ppOutput, SERVER* pServer);
+    bool command_cluster_start_async(json_t** ppOutput, SERVER* pServer);
     bool command_cluster_shutdown(json_t** ppOutput, SERVER* pServer);
+    bool command_cluster_shutdown_async(json_t** ppOutput, SERVER* pServer);
     bool command_cluster_ping(json_t** ppOutput, SERVER* pServer);
+    bool command_cluster_ping_async(json_t** ppOutput, SERVER* pServer);
     bool command_cluster_status(json_t** ppOutput, SERVER* pServer);
+    bool command_cluster_status_async(json_t** ppOutput, SERVER* pServer);
     bool command_cluster_config_get(json_t** ppOutput, SERVER* pServer);
-    bool command_cluster_config_put(json_t** ppOutput, const char* zJson, SERVER* pServer);
+    bool command_cluster_config_get_async(json_t** ppOutput, SERVER* pServer);
+    bool command_cluster_config_set(json_t** ppOutput, const char* zJson, SERVER* pServer);
+    bool command_cluster_config_set_async(json_t** ppOutput, const char* zJson, SERVER* pServer);
     bool command_cluster_add_node(json_t** ppOutput, SERVER* pServer);
+    bool command_cluster_add_node_async(json_t** ppOutput, SERVER* pServer);
     bool command_cluster_remove_node(json_t** ppOutput, SERVER* pServer);
-    bool command_async(json_t** ppOutput, const char* zCommand);
+    bool command_cluster_remove_node_async(json_t** ppOutput, SERVER* pServer);
+
     bool command_result(json_t** ppOutput);
     bool command_cancel(json_t** ppOutput);
 
 private:
+    bool ready_to_run(json_t** ppOutput) const;
+    static bool is_valid_json(json_t** ppOutput, const char* zJson, size_t len);
+
     bool command(json_t** ppOutput, mxb::Semaphore& sem, const char* zCmd, std::function<void()> cmd);
 
     void cluster_get(json_t** ppOutput, mxb::Semaphore* pSem, const char* zCmd, SERVER* pServer);

@@ -105,6 +105,7 @@ class CsMonitor::Command
 public:
     enum State
     {
+        IDLE,
         RUNNING,
         READY
     };
@@ -160,6 +161,11 @@ public:
         return m_state;
     }
 
+    bool is_idle() const
+    {
+        return m_state == IDLE;
+    }
+
     bool is_running() const
     {
         return m_state == RUNNING;
@@ -176,11 +182,13 @@ public:
 
         json_incref(m_pOutput);
         *ppOutput = m_pOutput;
+
+        m_state = IDLE;
     }
 
     virtual void init()
     {
-        mxb_assert(is_ready());
+        mxb_assert(is_idle());
 
         m_state = RUNNING;
 
@@ -298,7 +306,7 @@ protected:
     }
 
 protected:
-    State           m_state = READY;
+    State           m_state = IDLE;
     CsMonitor&      m_monitor;
     string          m_name;
     vector<string>  m_urls;
@@ -417,11 +425,11 @@ void reject_call_failed(json_t** ppOutput, const char* zCmd)
     PRINT_MXS_JSON_ERROR(ppOutput, "Failed to queue the command '%s' for execution.", zCmd);
 }
 
-void reject_command_pending(json_t** ppOutput, const char* zCmd, const char* zPending)
+void reject_command_pending(json_t** ppOutput, const char* zPending)
 {
     PRINT_MXS_JSON_ERROR(ppOutput,
-                         "The command '%s' is running; the command '%s' cannot "
-                         "be started until that has finished. Cancel or wait.", zPending, zCmd);
+                         "The command '%s' is running; another command cannot "
+                         "be started until that has finished. Cancel or wait.", zPending);
 }
 
 }
@@ -431,10 +439,33 @@ bool CsMonitor::command_cluster_start(json_t** ppOutput, SERVER* pServer)
     mxb::Semaphore sem;
 
     auto cmd = [this, &sem, pServer, ppOutput] () {
-        cluster_start(ppOutput, &sem, pServer);
+        if (ready_to_run(ppOutput))
+        {
+            cluster_start(ppOutput, &sem, pServer);
+        }
+        else
+        {
+            sem.post();
+        }
     };
 
     return command(ppOutput, sem, "cluster-start", cmd);
+}
+
+bool CsMonitor::command_cluster_start_async(json_t** ppOutput, SERVER* pServer)
+{
+    mxb::Semaphore sem;
+
+    auto cmd = [this, &sem, pServer, ppOutput] () {
+        if (ready_to_run(ppOutput))
+        {
+            cluster_start(nullptr, nullptr, pServer);
+        }
+
+        sem.post();
+    };
+
+    return command(ppOutput, sem, "cluster-start-async", cmd);
 }
 
 bool CsMonitor::command_cluster_shutdown(json_t** ppOutput, SERVER* pServer)
@@ -442,10 +473,33 @@ bool CsMonitor::command_cluster_shutdown(json_t** ppOutput, SERVER* pServer)
     mxb::Semaphore sem;
 
     auto cmd = [this, &sem, pServer, ppOutput] () {
-        cluster_shutdown(ppOutput, &sem, pServer);
+        if (ready_to_run(ppOutput))
+        {
+            cluster_shutdown(ppOutput, &sem, pServer);
+        }
+        else
+        {
+            sem.post();
+        }
     };
 
     return command(ppOutput, sem, "cluster-shutdown", cmd);
+}
+
+bool CsMonitor::command_cluster_shutdown_async(json_t** ppOutput, SERVER* pServer)
+{
+    mxb::Semaphore sem;
+
+    auto cmd = [this, &sem, pServer, ppOutput] () {
+        if (ready_to_run(ppOutput))
+        {
+            cluster_shutdown(nullptr, nullptr, pServer);
+        }
+
+        sem.post();
+    };
+
+    return command(ppOutput, sem, "cluster-shutdown-async", cmd);
 }
 
 bool CsMonitor::command_cluster_ping(json_t** ppOutput, SERVER* pServer)
@@ -453,10 +507,33 @@ bool CsMonitor::command_cluster_ping(json_t** ppOutput, SERVER* pServer)
     mxb::Semaphore sem;
 
     auto cmd = [this, &sem, pServer, ppOutput] () {
-        cluster_ping(ppOutput, &sem, pServer);
+        if (ready_to_run(ppOutput))
+        {
+            cluster_ping(ppOutput, &sem, pServer);
+        }
+        else
+        {
+            sem.post();
+        }
     };
 
     return command(ppOutput, sem, "cluster-ping", cmd);
+}
+
+bool CsMonitor::command_cluster_ping_async(json_t** ppOutput, SERVER* pServer)
+{
+    mxb::Semaphore sem;
+
+    auto cmd = [this, &sem, pServer, ppOutput] () {
+        if (ready_to_run(ppOutput))
+        {
+            cluster_ping(nullptr, nullptr, pServer);
+        }
+
+        sem.post();
+    };
+
+    return command(ppOutput, sem, "cluster-ping-async", cmd);
 }
 
 bool CsMonitor::command_cluster_status(json_t** ppOutput, SERVER* pServer)
@@ -464,10 +541,33 @@ bool CsMonitor::command_cluster_status(json_t** ppOutput, SERVER* pServer)
     mxb::Semaphore sem;
 
     auto cmd = [this, &sem, pServer, ppOutput] () {
-        cluster_status(ppOutput, &sem, pServer);
+        if (ready_to_run(ppOutput))
+        {
+            cluster_status(ppOutput, &sem, pServer);
+        }
+        else
+        {
+            sem.post();
+        }
     };
 
     return command(ppOutput, sem, "cluster-status", cmd);
+}
+
+bool CsMonitor::command_cluster_status_async(json_t** ppOutput, SERVER* pServer)
+{
+    mxb::Semaphore sem;
+
+    auto cmd = [this, &sem, pServer, ppOutput] () {
+        if (ready_to_run(ppOutput))
+        {
+            cluster_status(nullptr, nullptr, pServer);
+        }
+
+        sem.post();
+    };
+
+    return command(ppOutput, sem, "cluster-status-async", cmd);
 }
 
 bool CsMonitor::command_cluster_config_get(json_t** ppOutput, SERVER* pServer)
@@ -475,36 +575,82 @@ bool CsMonitor::command_cluster_config_get(json_t** ppOutput, SERVER* pServer)
     mxb::Semaphore sem;
 
     auto cmd = [this, &sem, pServer, ppOutput] () {
-        cluster_config_get(ppOutput, &sem, pServer);
+        if (ready_to_run(ppOutput))
+        {
+            cluster_config_get(ppOutput, &sem, pServer);
+        }
+        else
+        {
+            sem.post();
+        }
     };
 
     return command(ppOutput, sem, "cluster-config-get", cmd);
 }
 
-bool CsMonitor::command_cluster_config_put(json_t** ppOutput, const char* zJson, SERVER* pServer)
+bool CsMonitor::command_cluster_config_get_async(json_t** ppOutput, SERVER* pServer)
+{
+    mxb::Semaphore sem;
+
+    auto cmd = [this, &sem, pServer, ppOutput] () {
+        if (ready_to_run(ppOutput))
+        {
+            cluster_config_get(nullptr, nullptr, pServer);
+        }
+
+        sem.post();
+    };
+
+    return command(ppOutput, sem, "cluster-config-get", cmd);
+}
+
+bool CsMonitor::command_cluster_config_set(json_t** ppOutput, const char* zJson, SERVER* pServer)
 {
     bool rv = false;
-    json_error_t error;
-    size_t len = strlen(zJson);
-    json_t* pJson = json_loadb(zJson, len, 0, &error);
 
-    if (pJson)
+    auto len = strlen(zJson);
+    if (is_valid_json(ppOutput, zJson, len))
     {
-        json_decref(pJson);
-
         mxb::Semaphore sem;
         string body(zJson, zJson + len);
 
         auto cmd = [this, ppOutput, &sem, &body, pServer] () {
-            cluster_config_put(ppOutput, &sem, std::move(body), pServer);
+            if (ready_to_run(ppOutput))
+            {
+                cluster_config_put(ppOutput, &sem, std::move(body), pServer);
+            }
+            else
+            {
+                sem.post();
+            }
         };
 
         rv = command(ppOutput, sem, "cluster-config-put", cmd);
     }
-    else
+
+    return rv;
+}
+
+bool CsMonitor::command_cluster_config_set_async(json_t** ppOutput, const char* zJson, SERVER* pServer)
+{
+    bool rv = false;
+
+    auto len = strlen(zJson);
+    if (is_valid_json(ppOutput, zJson, len))
     {
-        *ppOutput = mxs_json_error_append(nullptr, "Provided string '%s' is not valid JSON: %s",
-                                          zJson, error.text);
+        mxb::Semaphore sem;
+        string body(zJson, zJson + len);
+
+        auto cmd = [this, ppOutput, &sem, &body, pServer] () {
+            if (ready_to_run(ppOutput))
+            {
+                cluster_config_put(nullptr, nullptr, std::move(body), pServer);
+            };
+
+            sem.post();
+        };
+
+        rv = command(ppOutput, sem, "cluster-config-put", cmd);
     }
 
     return rv;
@@ -519,7 +665,14 @@ bool CsMonitor::command_cluster_add_node(json_t** ppOutput, SERVER* pServer)
         mxb::Semaphore sem;
 
         auto cmd = [this, &sem, ppOutput, pServer] () {
-            cluster_add_node(ppOutput, &sem, pServer);
+            if (ready_to_run(ppOutput))
+            {
+                cluster_add_node(ppOutput, &sem, pServer);
+            }
+            else
+            {
+                sem.post();
+            }
         };
 
         rv = command(ppOutput, sem, "cluster-add-node", cmd);
@@ -545,7 +698,14 @@ bool CsMonitor::command_cluster_remove_node(json_t** ppOutput, SERVER* pServer)
         mxb::Semaphore sem;
 
         auto cmd = [this, &sem, ppOutput, pServer] () {
-            cluster_remove_node(ppOutput, &sem, pServer);
+            if (ready_to_run(ppOutput))
+            {
+                cluster_remove_node(ppOutput, &sem, pServer);
+            }
+            else
+            {
+                sem.post();
+            }
         };
 
         rv = command(ppOutput, sem, "cluster-remove-node", cmd);
@@ -557,67 +717,6 @@ bool CsMonitor::command_cluster_remove_node(json_t** ppOutput, SERVER* pServer)
     }
 
     return rv;
-}
-
-bool CsMonitor::command_async(json_t** ppOutput, const char* zCommand)
-{
-    mxb::Semaphore sem;
-
-    auto cmd = [this, &sem, zCommand, ppOutput] () {
-        if (m_sCommand && !m_sCommand->is_ready())
-        {
-            reject_command_pending(ppOutput, zCommand, m_sCommand->name().c_str());
-        }
-        else
-        {
-            *ppOutput = nullptr;
-
-            string command(zCommand);
-
-            // TODO: Just temporary solution.
-            if (command == "cluster-start")
-            {
-                cluster_start(nullptr);
-            }
-            else if (command == "cluster-shutdown")
-            {
-                cluster_shutdown(nullptr);
-            }
-            else if (command == "cluster-ping")
-            {
-                cluster_ping(nullptr);
-            }
-            else if (command == "cluster-status")
-            {
-                cluster_status(nullptr);
-            }
-            else if (command == "cluster-config-get")
-            {
-                cluster_config_get(nullptr);
-            }
-            else if (command == "cluster-config-put")
-            {
-                // TODO: This will crash now.
-                cluster_config_put(nullptr, nullptr, string());
-            }
-            else
-            {
-                PRINT_MXS_JSON_ERROR(ppOutput, "'%s' is an unknown command.", zCommand);
-            }
-
-            if (!*ppOutput)
-            {
-                string s("Command '");
-                s += zCommand;
-                s += "' started.";
-
-                *ppOutput = json_string(s.c_str());
-            }
-        }
-        sem.post();
-    };
-
-    return command(ppOutput, sem, "async", cmd);
 }
 
 bool CsMonitor::command_result(json_t** ppOutput)
@@ -680,6 +779,61 @@ bool CsMonitor::command_cancel(json_t** ppOutput)
     };
 
     return command(ppOutput, sem, "result", cmd);
+}
+
+bool CsMonitor::ready_to_run(json_t** ppOutput) const
+{
+    bool rv = true;
+
+    if (m_sCommand)
+    {
+        switch (m_sCommand->state())
+        {
+        case Command::IDLE:
+            break;
+
+        case Command::READY:
+            PRINT_MXS_JSON_ERROR(ppOutput,
+                                 "The command '%s' is ready; its result must be fetched before "
+                                 "another command can be issued.",
+                                 m_sCommand->name().c_str());
+            rv = false;
+            break;
+
+        case Command::RUNNING:
+            PRINT_MXS_JSON_ERROR(ppOutput,
+                                 "The command '%s' is running; another command cannot "
+                                 "be started until that has finished. Cancel or wait.",
+                                 m_sCommand->name().c_str());
+            rv = false;
+            break;
+        }
+    }
+
+    return rv;
+}
+
+//static
+bool CsMonitor::is_valid_json(json_t** ppOutput, const char* zJson, size_t len)
+{
+    bool rv = false;
+
+    json_error_t error;
+    json_t* pJson = json_loadb(zJson, len, 0, &error);
+
+    if (pJson)
+    {
+        json_decref(pJson);
+        rv = true;
+    }
+    else
+    {
+        *ppOutput = mxs_json_error_append(nullptr, "Provided string '%s' is not valid JSON: %s",
+                                          zJson, error.text);
+
+    }
+
+    return rv;
 }
 
 bool CsMonitor::command(json_t** ppOutput, mxb::Semaphore& sem, const char* zCmd, std::function<void()> cmd)
@@ -748,6 +902,8 @@ void CsMonitor::cluster_put(json_t** ppOutput,
                             SERVER* pServer,
                             string&& body)
 {
+    mxb_assert(!m_sCommand || m_sCommand->is_idle());
+
     vector<string> urls;
 
     for (const MonitorServer* pMserver : servers())
