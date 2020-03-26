@@ -86,7 +86,7 @@ int get_cs_version(MonitorServer* srv)
 
         if (!cs_version.empty())
         {
-            rval = to_version(result.substr(pos + prefix.length()));
+            rval = to_version(cs_version);
         }
     }
 
