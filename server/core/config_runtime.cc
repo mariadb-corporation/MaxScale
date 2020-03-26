@@ -789,7 +789,7 @@ bool runtime_is_string_or_null(json_t* json, const char* path)
     bool rval = true;
     json_t* value = mxs_json_pointer(json, path);
 
-    if (value && !json_is_string(value))
+    if (value && !json_is_string(value) && !json_is_null(value))
     {
         config_runtime_error("Parameter '%s' is not a string but %s", path, json_type_to_string(value));
         rval = false;
@@ -803,7 +803,7 @@ bool runtime_is_bool_or_null(json_t* json, const char* path)
     bool rval = true;
     json_t* value = mxs_json_pointer(json, path);
 
-    if (value && !json_is_boolean(value))
+    if (value && !json_is_boolean(value) && !json_is_null(value))
     {
         config_runtime_error("Parameter '%s' is not a boolean but %s", path, json_type_to_string(value));
         rval = false;
@@ -819,7 +819,7 @@ bool runtime_is_size_or_null(json_t* json, const char* path)
 
     if (value)
     {
-        if (!json_is_integer(value) && !json_is_string(value))
+        if (!json_is_integer(value) && !json_is_string(value) && !json_is_null(value))
         {
             config_runtime_error("Parameter '%s' is not an integer or a string but %s",
                                  path,
@@ -844,12 +844,12 @@ bool runtime_is_count_or_null(json_t* json, const char* path)
 
     if (value)
     {
-        if (!json_is_integer(value))
+        if (!json_is_integer(value) && !json_is_null(value))
         {
             config_runtime_error("Parameter '%s' is not an integer but %s", path, json_type_to_string(value));
             rval = false;
         }
-        else if (json_integer_value(value) < 0)
+        else if (json_is_integer(value) && json_integer_value(value) < 0)
         {
             config_runtime_error("Parameter '%s' is a negative integer", path);
             rval = false;
