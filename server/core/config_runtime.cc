@@ -125,10 +125,6 @@ const MXS_MODULE_PARAM* get_type_parameters(const char* type)
     {
         return config_filter_params;
     }
-    else if (strcmp(type, CN_SERVER) == 0)
-    {
-        return common_server_params();
-    }
 
     MXS_NOTICE("Module type with no default parameters used: %s", type);
     mxb_assert_message(!true, "Module type with no default parameters used");
@@ -1609,7 +1605,7 @@ bool runtime_create_server(const char* name, const char* address, const char* po
         if (!external || config_is_valid_name(name, &reason))
         {
             mxs::ConfigParameters parameters;
-            config_add_defaults(&parameters, common_server_params());
+
             if (address)
             {
                 auto param_name = *address == '/' ? CN_SOCKET : CN_ADDRESS;

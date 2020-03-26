@@ -137,10 +137,8 @@ int main(int argc, char** argv)
     extern const MXS_MODULE_PARAM config_server_params[];
 
     mxs::ConfigParameters params;
-    params.set_from_list({
-        {"address", "_none_"},
-        {"port", "3306"},
-    }, common_server_params());
+    params.set("address", "_none_");
+    params.set("port", "3306");
 
     Server* server = ServerManager::create_server("binlog_router_master_host", params);
     if (server == NULL)

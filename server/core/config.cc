@@ -1754,11 +1754,6 @@ std::pair<const MXS_MODULE_PARAM*, const MXS_MODULE*> get_module_details(const C
         auto name = obj->m_parameters.get_string(CN_PROTOCOL);
         return {common_listener_params(), get_module(name.c_str(), MODULE_PROTOCOL)};
     }
-    else if (type == CN_SERVER)
-    {
-        // Servers do not have an associated module.
-        return {common_server_params(), nullptr};
-    }
     else if (type == CN_MONITOR)
     {
         auto name = obj->m_parameters.get_string(CN_MODULE);
@@ -1809,33 +1804,32 @@ std::unordered_set<CONFIG_CONTEXT*> get_dependencies(const std::vector<CONFIG_CO
                                                      const CONFIG_CONTEXT* obj)
 {
     std::unordered_set<CONFIG_CONTEXT*> rval;
+    std::string type = obj->m_parameters.get_string(CN_TYPE);
+
+    if (type == CN_SERVER)
+    {
+        // Servers are leaf objects in the dependency tree, they never have dependencies
+        return rval;
+    }
+
     const MXS_MODULE_PARAM* common_params = nullptr;
     const MXS_MODULE* module;
     std::tie(common_params, module) = get_module_details(obj);
 
-    std::string type = obj->m_parameters.get_string(CN_TYPE);
-    bool is_server = (type == CN_SERVER);
-    const MXS_MODULE_PARAM* module_params = nullptr;
-    if (!is_server)
+    for (const auto* p : {common_params, module->parameters})
     {
-        module_params = module->parameters;
-    }
+        mxb_assert(p);
 
-    for (const auto* p : {common_params, module_params})
-    {
-        if (p)
+        for (int i = 0; p[i].name; i++)
         {
-            for (int i = 0; p[i].name; i++)
+            if (obj->m_parameters.contains(p[i].name))
             {
-                if (obj->m_parameters.contains(p[i].name))
+                if (p[i].type == MXS_MODULE_PARAM_SERVICE
+                    || p[i].type == MXS_MODULE_PARAM_SERVER
+                    || p[i].type == MXS_MODULE_PARAM_TARGET)
                 {
-                    if (p[i].type == MXS_MODULE_PARAM_SERVICE
-                        || p[i].type == MXS_MODULE_PARAM_SERVER
-                        || p[i].type == MXS_MODULE_PARAM_TARGET)
-                    {
-                        std::string v = obj->m_parameters.get_string(p[i].name);
-                        rval.insert(name_to_object(objects, obj, v));
-                    }
+                    std::string v = obj->m_parameters.get_string(p[i].name);
+                    rval.insert(name_to_object(objects, obj, v));
                 }
             }
         }
@@ -2768,13 +2762,18 @@ static bool check_config_objects(CONFIG_CONTEXT* context)
             continue;
         }
 
+        if (type == CN_SERVER)
+        {
+            // Servers are a special case as they don't have a module and the validation is done as a part of
+            // the creation process.
+            continue;
+        }
+
         const MXS_MODULE_PARAM* param_set = nullptr;
         const MXS_MODULE* mod = nullptr;
         std::tie(param_set, mod) = get_module_details(obj);
 
-        // Servers are a special case as they don't have a module.
-        bool is_server = (type == CN_SERVER);
-        if (!is_server && !mod)     // Error is logged in load_module
+        if (!mod)       // Error is logged in load_module
         {
             rval = false;
             continue;
@@ -2792,14 +2791,14 @@ static bool check_config_objects(CONFIG_CONTEXT* context)
             {
                 fix_params = param_set;
             }
-            else if (!is_server && param_in_set(mod->parameters, param_namez))
+            else if (param_in_set(mod->parameters, param_namez))
             {
                 fix_params = mod->parameters;
             }
             else
             {
                 MXS_ERROR("Unknown parameter '%s' for object '%s' of type '%s'. %s",
-                          param_namez, obj->name(), type.c_str(), is_server ? "" :
+                          param_namez, obj->name(), type.c_str(),
                           closest_matching_parameter(param_namez, param_set, mod->parameters).c_str());
                 rval = false;
                 continue;
@@ -2841,7 +2840,7 @@ static bool check_config_objects(CONFIG_CONTEXT* context)
         }
 
         if (missing_required_parameters(param_set, obj->m_parameters, obj->name())
-            || (!is_server && missing_required_parameters(mod->parameters, obj->m_parameters, obj->name())))
+            || missing_required_parameters(mod->parameters, obj->m_parameters, obj->name()))
         {
             rval = false;
         }
@@ -3437,8 +3436,6 @@ int create_new_service(CONFIG_CONTEXT* obj)
 int create_new_server(CONFIG_CONTEXT* obj)
 {
     bool error = false;
-
-    config_add_defaults(&obj->m_parameters, common_server_params());
 
     if (!ServerManager::create_server(obj->name(), obj->m_parameters))
     {

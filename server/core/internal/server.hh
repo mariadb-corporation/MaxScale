@@ -487,10 +487,3 @@ private:
     MXS_SESSION*    m_session;
     Server*         m_server;
 };
-
-/**
- * Returns parameter definitions shared by all servers.
- *
- * @return Common server parameters.
- */
-const MXS_MODULE_PARAM* common_server_params();

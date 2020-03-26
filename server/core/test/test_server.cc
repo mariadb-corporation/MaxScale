@@ -33,7 +33,7 @@
 #include "../internal/server.hh"
 #include "../internal/servermanager.hh"
 
-static mxs::ConfigParameters* params = new mxs::ConfigParameters;
+static mxs::ConfigParameters params;
 
 /**
  * test1    Allocate a server and do lots of other things
@@ -45,7 +45,7 @@ static int test1()
 
     /* Server tests */
     fprintf(stderr, "testserver : creating server called MyServer");
-    Server* server = ServerManager::create_server("uniquename", *params);
+    Server* server = ServerManager::create_server("uniquename", params);
     mxb_assert_message(server, "Allocating the server should not fail");
 
     fprintf(stderr, "\t..done\nTesting Unique Name for Server.");
@@ -83,7 +83,6 @@ bool test_load_config(const char* input, Server* server)
         {
             CONFIG_CONTEXT* obj = ccontext.m_next;
             mxs::ConfigParameters* param = &obj->m_parameters;
-            config_add_defaults(&obj->m_parameters, common_server_params());
 
             TEST(strcmp(obj->name(), server->name()) == 0, "Server names differ");
             TEST(param->get_string("address") == server->address(), "Server addresses differ");
@@ -105,7 +104,7 @@ bool test_serialize()
     char old_config_name[] = "serialized-server.cnf.old";
     char* persist_dir = MXS_STRDUP_A("./");
     set_config_persistdir(persist_dir);
-    Server* server = ServerManager::create_server(name, *params);
+    Server* server = ServerManager::create_server(name, params);
     TEST(server, "Server allocation failed");
 
     /** Make sure the files don't exist */
@@ -136,6 +135,8 @@ bool test_serialize()
 
 int main(int argc, char** argv)
 {
+    params.set("address", "localhost");
+
     /**
      * Prepare test environment by pre-loading modules. This prevents the server
      * allocation from failing if multiple modules from different directories are
@@ -143,10 +144,6 @@ int main(int argc, char** argv)
      */
     mxs_log_init(NULL, NULL, MXS_LOG_TARGET_STDOUT);
 
-    params->set_from_list({
-        {"address", "127.0.0.1"},
-        {"port", "9876"},
-    }, common_server_params());
     int result = 0;
 
     result += test1();

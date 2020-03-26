@@ -839,52 +839,6 @@ std::string Server::VersionInfo::version_string() const
     return m_version_str;
 }
 
-const MXS_MODULE_PARAM* common_server_params()
-{
-    static const MXS_MODULE_PARAM config_server_params[] =
-    {
-        {CN_TYPE,           MXS_MODULE_PARAM_STRING,   CN_SERVER, MXS_MODULE_OPT_REQUIRED  },
-        {CN_ADDRESS,        MXS_MODULE_PARAM_STRING},
-        {CN_SOCKET,         MXS_MODULE_PARAM_STRING},
-        {CN_PROTOCOL,       MXS_MODULE_PARAM_STRING,   NULL,      MXS_MODULE_OPT_DEPRECATED},
-        {CN_PORT,           MXS_MODULE_PARAM_COUNT,    "3306"},
-        {CN_EXTRA_PORT,     MXS_MODULE_PARAM_COUNT,    "0"},
-        {CN_AUTHENTICATOR,  MXS_MODULE_PARAM_STRING,   NULL,      MXS_MODULE_OPT_DEPRECATED},
-        {CN_MONITORUSER,    MXS_MODULE_PARAM_STRING},
-        {CN_MONITORPW,      MXS_MODULE_PARAM_PASSWORD},
-        {CN_PERSISTPOOLMAX, MXS_MODULE_PARAM_COUNT,    "0"},
-        {CN_PERSISTMAXTIME, MXS_MODULE_PARAM_DURATION, "0",       MXS_MODULE_OPT_DURATION_S},
-        {CN_PROXY_PROTOCOL, MXS_MODULE_PARAM_BOOL,     "false"},
-        {CN_PRIORITY,       MXS_MODULE_PARAM_COUNT,    "0"},
-        {
-            CN_SSL, MXS_MODULE_PARAM_ENUM, "false", MXS_MODULE_OPT_ENUM_UNIQUE, ssl_setting_values()
-        },
-        {CN_SSL_CERT,       MXS_MODULE_PARAM_PATH,     NULL,      MXS_MODULE_OPT_PATH_R_OK },
-        {CN_SSL_KEY,        MXS_MODULE_PARAM_PATH,     NULL,      MXS_MODULE_OPT_PATH_R_OK },
-        {CN_SSL_CA_CERT,    MXS_MODULE_PARAM_PATH,     NULL,      MXS_MODULE_OPT_PATH_R_OK },
-        {
-            CN_SSL_VERSION, MXS_MODULE_PARAM_ENUM, "MAX", MXS_MODULE_OPT_ENUM_UNIQUE, ssl_version_values
-        },
-        {
-            CN_SSL_CERT_VERIFY_DEPTH, MXS_MODULE_PARAM_COUNT, "9"
-        },
-        {
-            CN_SSL_VERIFY_PEER_CERTIFICATE, MXS_MODULE_PARAM_BOOL, "false"
-        },
-        {
-            CN_SSL_VERIFY_PEER_HOST, MXS_MODULE_PARAM_BOOL, "false"
-        },
-        {
-            CN_DISK_SPACE_THRESHOLD, MXS_MODULE_PARAM_STRING
-        },
-        {
-            CN_RANK, MXS_MODULE_PARAM_ENUM, DEFAULT_RANK, MXS_MODULE_OPT_ENUM_UNIQUE, rank_values
-        },
-        {NULL}
-    };
-    return config_server_params;
-}
-
 ServerEndpoint::ServerEndpoint(mxs::Component* up, MXS_SESSION* session, Server* server)
     : m_up(up)
     , m_session(session)

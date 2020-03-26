@@ -177,7 +177,7 @@ bool Specification::validate(const mxs::ConfigParameters& params,
             }
             else
             {
-                MXS_WARNING("%s: The parameter '%s' is unrecognized.", m_module.c_str(), name.c_str());
+                MXS_ERROR("%s: The parameter '%s' is unrecognized.", m_module.c_str(), name.c_str());
                 valid = false;
             }
         }
