@@ -35,7 +35,7 @@ public:
     static const int MAX_VERSION_LEN = 256;
 
     class ParamDiskSpaceLimits : public mxs::config::ConcreteParam<ParamDiskSpaceLimits
-                                                                   , Server::DiskSpaceLimits>
+                                                                   , DiskSpaceLimits>
     {
     public:
         ParamDiskSpaceLimits(mxs::config::Specification* pSpecification,

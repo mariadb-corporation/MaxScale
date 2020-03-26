@@ -267,7 +267,7 @@ bool ServerSpec::do_post_validate(Params params) const
 
 Server::ParamDiskSpaceLimits::ParamDiskSpaceLimits(cfg::Specification* pSpecification,
                                                    const char* zName, const char* zDescription)
-    : cfg::ConcreteParam<ParamDiskSpaceLimits, Server::DiskSpaceLimits>(
+    : cfg::ConcreteParam<ParamDiskSpaceLimits, DiskSpaceLimits>(
         pSpecification, zName, zDescription, AT_RUNTIME, OPTIONAL, MXS_MODULE_PARAM_STRING, value_type())
 {
 }

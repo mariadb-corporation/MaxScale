@@ -1712,7 +1712,7 @@ std::vector<MonitorServer*> Monitor::get_monitored_serverlist(const string& key,
 bool Monitor::set_disk_space_threshold(const string& dst_setting)
 {
     mxb_assert(!is_running());
-    SERVER::DiskSpaceLimits new_dst;
+    DiskSpaceLimits new_dst;
     bool rv = config_parse_disk_space_threshold(&new_dst, dst_setting.c_str());
     if (rv)
     {

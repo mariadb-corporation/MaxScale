@@ -18,8 +18,9 @@
 #include <string>
 #include <unordered_map>
 #include <maxbase/average.hh>
-#include <maxscale/ssl.hh>
+#include <maxscale/config_common.hh>
 #include <maxscale/modinfo.hh>
+#include <maxscale/ssl.hh>
 #include <maxscale/target.hh>
 #include <maxscale/workerlocal.hh>
 
@@ -41,9 +42,6 @@ extern const char CN_PROXY_PROTOCOL[];
 class SERVER : public mxs::Target
 {
 public:
-
-    // A mapping from a path to a percentage, e.g.: "/disk" -> 80.
-    typedef std::unordered_map<std::string, int32_t> DiskSpaceLimits;
 
     enum class Type
     {

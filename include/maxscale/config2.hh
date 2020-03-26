@@ -23,6 +23,7 @@
 #include <vector>
 #include <maxbase/alloc.h>
 #include <maxbase/assert.h>
+#include <maxbase/atomic.hh>
 #include <maxbase/host.hh>
 #include <maxbase/log.hh>
 #include <maxscale/config_common.hh>

@@ -4536,7 +4536,7 @@ static bool get_milliseconds(const char* zName,
     return valid;
 }
 
-bool config_parse_disk_space_threshold(SERVER::DiskSpaceLimits* pDisk_space_threshold,
+bool config_parse_disk_space_threshold(DiskSpaceLimits* pDisk_space_threshold,
                                        const char* zDisk_space_threshold)
 {
     mxb_assert(pDisk_space_threshold);
@@ -4546,7 +4546,7 @@ bool config_parse_disk_space_threshold(SERVER::DiskSpaceLimits* pDisk_space_thre
 
     using namespace std;
 
-    SERVER::DiskSpaceLimits disk_space_threshold;
+    DiskSpaceLimits disk_space_threshold;
     string s(zDisk_space_threshold);
 
     // Somewhat simplified, this is what we expect: [^:]+:[:digit:]+(,[^:]+:[:digit:]+)*

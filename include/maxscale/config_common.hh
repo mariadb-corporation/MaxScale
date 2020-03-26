@@ -31,9 +31,17 @@
 #include <maxscale/modinfo.hh>
 #include <maxscale/pcre2.hh>
 #include <maxscale/query_classifier.hh>
-#include <maxscale/server.hh>
 
 class SERVICE;
+class SERVER;
+
+namespace maxscale
+{
+class Target;
+}
+
+// A mapping from a path to a percentage, e.g.: "/disk" -> 80.
+using DiskSpaceLimits = std::unordered_map<std::string, int32_t>;
 
 /** Default port where the REST API listens */
 #define DEFAULT_ADMIN_HTTP_PORT 8989
@@ -100,7 +108,6 @@ enum DurationUnit
     DURATION_IN_MILLISECONDS,
     DURATION_IN_DEFAULT
 };
-
 }
 
 namespace cfg = config;
@@ -376,7 +383,6 @@ mxs::ConfigParameters::get_duration<std::chrono::seconds>(const std::string& key
     std::chrono::milliseconds ms = get_duration_in_ms(key, mxs::config::INTERPRET_AS_SECONDS);
     return std::chrono::duration_cast<std::chrono::seconds>(ms);
 }
-
 }
 
 
@@ -389,10 +395,10 @@ class CONFIG_CONTEXT
 public:
     CONFIG_CONTEXT(const std::string& section = "");
 
-    std::string           m_name;            /**< The name of the object being configured */
-    mxs::ConfigParameters m_parameters;      /**< The list of parameter values */
-    bool                  m_was_persisted;   /**< True if this object was persisted */
-    CONFIG_CONTEXT*       m_next;            /**< Next pointer in the linked list */
+    std::string           m_name;           /**< The name of the object being configured */
+    mxs::ConfigParameters m_parameters;     /**< The list of parameter values */
+    bool                  m_was_persisted;  /**< True if this object was persisted */
+    CONFIG_CONTEXT*       m_next;           /**< Next pointer in the linked list */
 
     const char* name() const
     {
@@ -516,7 +522,7 @@ bool config_set_writeq_low_water(uint32_t size);
  * @return True, if @ config_value was valid, false otherwise.
  *
  */
-bool config_parse_disk_space_threshold(SERVER::DiskSpaceLimits* disk_space_threshold,
+bool config_parse_disk_space_threshold(DiskSpaceLimits* disk_space_threshold,
                                        const char* config_value);
 
 /**

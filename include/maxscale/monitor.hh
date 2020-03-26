@@ -139,19 +139,19 @@ public:
     class SharedSettings
     {
     public:
-        ConnectionSettings      conn_settings;          /**< Monitor-level connection settings */
-        SERVER::DiskSpaceLimits monitor_disk_limits;    /**< Monitor-level disk space limits */
+        ConnectionSettings conn_settings;       /**< Monitor-level connection settings */
+        DiskSpaceLimits    monitor_disk_limits; /**< Monitor-level disk space limits */
     };
 
     /* Return type of mon_ping_or_connect_to_db(). */
     enum class ConnectResult
     {
-        OLDCONN_OK,    /* Existing connection was ok and server replied to ping. */
-        NEWCONN_OK,    /* No existing connection or no ping reply. New connection created
-                        * successfully. */
-        REFUSED,       /* No existing connection or no ping reply. Server refused new connection. */
-        TIMEOUT,       /* No existing connection or no ping reply. Timeout on new connection. */
-        ACCESS_DENIED  /* Server refused new connection due to authentication failure */
+        OLDCONN_OK,     /* Existing connection was ok and server replied to ping. */
+        NEWCONN_OK,     /* No existing connection or no ping reply. New connection created
+                         * successfully. */
+        REFUSED,        /* No existing connection or no ping reply. Server refused new connection. */
+        TIMEOUT,        /* No existing connection or no ping reply. Timeout on new connection. */
+        ACCESS_DENIED   /* Server refused new connection due to authentication failure */
     };
 
     /** Status change requests */
@@ -166,7 +166,8 @@ public:
 
     // When a monitor detects that a server is down, these bits should be cleared.
     static constexpr uint64_t SERVER_DOWN_CLEAR_BITS {SERVER_RUNNING | SERVER_AUTH_ERROR | SERVER_MASTER
-        | SERVER_SLAVE | SERVER_SLAVE_OF_EXT_MASTER | SERVER_RELAY | SERVER_JOINED};
+                                                      | SERVER_SLAVE | SERVER_SLAVE_OF_EXT_MASTER
+                                                      | SERVER_RELAY | SERVER_JOINED};
 
     /**
      * Ping or connect to a database. If connection does not exist or ping fails, a new connection
@@ -284,8 +285,8 @@ public:
     uint64_t mon_prev_status = -1;      /**< Status before starting the current monitor loop */
     uint64_t pending_status = 0;        /**< Status during current monitor loop */
 
-    int64_t  node_id = -1;         /**< Node id, server_id for M/S or local_index for Galera */
-    int64_t  master_id = -1;       /**< Master server id of this node */
+    int64_t node_id = -1;           /**< Node id, server_id for M/S or local_index for Galera */
+    int64_t master_id = -1;         /**< Master server id of this node */
 
     mxs_monitor_event_t last_event = SERVER_DOWN_EVENT; /**< The last event that occurred on this server */
     int64_t             triggered_at = 0;               /**< Time when the last event was triggered */
@@ -571,7 +572,7 @@ protected:
         MonitorServer::SharedSettings shared;
     };
 
-    const Settings& settings() const;
+    const Settings&                          settings() const;
     const MonitorServer::ConnectionSettings& conn_settings() const;
 
     /**< Number of monitor ticks ran. Derived classes should increment this whenever completing a tick. */
@@ -628,8 +629,8 @@ private:
      */
     std::string gen_serverlist(int status, CredentialsApproach approach = CredentialsApproach::EXCLUDE);
 
-    FILE* open_data_file(Monitor* monitor, char* path);
-    int   get_data_file_path(char* path) const;
+    FILE*   open_data_file(Monitor* monitor, char* path);
+    int     get_data_file_path(char* path) const;
     json_t* parameters_to_json() const;
 
     mxb::StopWatch   m_disk_space_checked;              /**< When was disk space checked the last time */
@@ -638,9 +639,9 @@ private:
 
     std::unique_ptr<ExternalCmd> m_scriptcmd;   /**< External command representing the monitor script */
 
-    ServerVector         m_servers;      /**< Monitored servers */
-    mxs::ConfigParameters m_parameters;   /**< Configuration parameters in text form */
-    Settings             m_settings;     /**< Base class settings */
+    ServerVector          m_servers;    /**< Monitored servers */
+    mxs::ConfigParameters m_parameters; /**< Configuration parameters in text form */
+    Settings              m_settings;   /**< Base class settings */
 };
 
 /**

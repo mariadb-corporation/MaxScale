@@ -241,7 +241,7 @@ struct DISK_SPACE_THRESHOLD_TEST
 
 int dst_report(const DISK_SPACE_THRESHOLD_TEST& test,
                bool parsed,
-               SERVER::DiskSpaceLimits& result)
+               DiskSpaceLimits& result)
 {
     int nErrors = 0;
 
@@ -364,7 +364,7 @@ int test_disk_space_threshold()
     {
         const DISK_SPACE_THRESHOLD_TEST& test = tests[i];
 
-        SERVER::DiskSpaceLimits dst;
+        DiskSpaceLimits dst;
 
         bool parsed = config_parse_disk_space_threshold(&dst, test.zValue);
 

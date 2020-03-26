@@ -14,6 +14,7 @@
 #include <maxscale/cn_strings.hh>
 #include <maxscale/config.hh>
 #include <maxscale/ssl.hh>
+#include <maxscale/routingworker.hh>
 
 const MXS_ENUM_VALUE ssl_version_values[] =
 {
