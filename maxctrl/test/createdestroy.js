@@ -95,9 +95,7 @@ describe("Create/Destroy Commands", function() {
     it('create server with options', function() {
         return verifyCommand('create server server5 127.0.0.1 3003 --authenticator GSSAPIBackendAuth',
                              'servers/server5')
-            .then(function(res) {
-                res.data.attributes.parameters.authenticator.should.equal("GSSAPIBackendAuth")
-            })
+            .should.be.fulfilled
     })
 
     it('create server for service and monitor', function() {

@@ -65,11 +65,11 @@ exports.builder = function(yargs) {
                     default: 'mariadbbackend'
                 })
                 .option('authenticator', {
-                    describe: 'Authenticator module name',
+                    describe: 'Authenticator module name (deprecated)',
                     type: 'string'
                 })
                 .option('authenticator-options', {
-                    describe: 'Option string for the authenticator',
+                    describe: 'Option string for the authenticator (deprecated)',
                     type: 'string'
                 })
                 .option('tls-key', {
