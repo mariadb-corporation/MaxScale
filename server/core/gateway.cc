@@ -160,7 +160,7 @@ static int    ntfw_cb(const char*, const struct stat*, int, struct FTW*);
 static bool   is_file_and_readable(const char* absolute_pathname);
 static bool   path_is_readable(const char* absolute_pathname);
 static bool   path_is_writable(const char* absolute_pathname);
-bool          handle_path_arg(char** dest, const char* path, const char* arg, bool rd, bool wr);
+bool          handle_path_arg(std::string* dest, const char* path, const char* arg, bool rd, bool wr);
 static bool   handle_debug_args(char* args);
 static void   set_log_augmentation(const char* value);
 static void   usage(void);
@@ -1244,46 +1244,46 @@ void restore_signals()
 bool set_runtime_dirs(const char* basedir)
 {
     bool rv = true;
-    char* path;
+    std::string path;
 
     if (rv && (rv = handle_path_arg(&path, basedir, MXS_DEFAULT_SHARE_SUBPATH, true, false)))
     {
-        set_sharedir(path);
+        set_sharedir(path.c_str());
     }
 
     if (rv && (rv = handle_path_arg(&path, basedir, "var/" MXS_DEFAULT_LOG_SUBPATH, true, false)))
     {
-        set_logdir(path);
+        set_logdir(path.c_str());
     }
 
     if (rv && (rv = handle_path_arg(&path, basedir, "var/" MXS_DEFAULT_CACHE_SUBPATH, true, true)))
     {
-        set_cachedir(path);
+        set_cachedir(path.c_str());
     }
 
     if (rv && (rv = handle_path_arg(&path, basedir, MXS_DEFAULT_CONFIG_SUBPATH, true, false)))
     {
-        set_configdir(path);
+        set_configdir(path.c_str());
     }
 
     if (rv && (rv = handle_path_arg(&path, basedir, MXS_DEFAULT_MODULE_CONFIG_SUBPATH, true, false)))
     {
-        set_module_configdir(path);
+        set_module_configdir(path.c_str());
     }
 
     if (rv && (rv = handle_path_arg(&path, basedir, "var/" MXS_DEFAULT_DATA_SUBPATH, true, false)))
     {
-        set_datadir(path);
+        set_datadir(path.c_str());
     }
 
     if (rv && (rv = handle_path_arg(&path, basedir, "var/" MXS_DEFAULT_LANG_SUBPATH, true, false)))
     {
-        set_langdir(path);
+        set_langdir(path.c_str());
     }
 
     if (rv && (rv = handle_path_arg(&path, basedir, "var/" MXS_DEFAULT_PID_SUBPATH, true, true)))
     {
-        set_piddir(path);
+        set_piddir(path.c_str());
     }
 
     if (rv && (rv = handle_path_arg(&path,
@@ -1293,7 +1293,7 @@ bool set_runtime_dirs(const char* basedir)
                                     true,
                                     true)))
     {
-        set_config_persistdir(path);
+        set_config_persistdir(path.c_str());
     }
 
     if (rv && (rv = handle_path_arg(&path,
@@ -1302,7 +1302,7 @@ bool set_runtime_dirs(const char* basedir)
                                     true,
                                     true)))
     {
-        set_connector_plugindir(path);
+        set_connector_plugindir(path.c_str());
     }
 
     return rv;
@@ -1318,18 +1318,18 @@ bool set_runtime_dirs(const char* basedir)
 bool set_dirs(const char* basedir)
 {
     bool rv = true;
-    char* path;
+    std::string path;
 
     rv = set_runtime_dirs(basedir);
 
     if (rv && (rv = handle_path_arg(&path, basedir, MXS_DEFAULT_LIB_SUBPATH, true, false)))
     {
-        set_libdir(path);
+        set_libdir(path.c_str());
     }
 
     if (rv && (rv = handle_path_arg(&path, basedir, MXS_DEFAULT_EXEC_SUBPATH, true, false)))
     {
-        set_execdir(path);
+        set_execdir(path.c_str());
     }
 
     return rv;
@@ -1422,7 +1422,7 @@ int main(int argc, char** argv)
     const char* specified_user = NULL;
     char export_cnf[PATH_MAX + 1] = "";
     string cnf_file_arg;    /*< conf filename from cmd-line arg */
-    char* tmp_path;
+    string tmp_path;
     int opt;
 #ifdef HAVE_GLIBC
     int option_index;
@@ -1512,7 +1512,7 @@ int main(int argc, char** argv)
         case 'L':
             if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
             {
-                set_logdir(tmp_path);
+                set_logdir(tmp_path.c_str());
             }
             else
             {
@@ -1523,7 +1523,7 @@ int main(int argc, char** argv)
         case 'N':
             if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
             {
-                set_langdir(tmp_path);
+                set_langdir(tmp_path.c_str());
             }
             else
             {
@@ -1534,7 +1534,7 @@ int main(int argc, char** argv)
         case 'P':
             if (handle_path_arg(&tmp_path, optarg, NULL, true, true))
             {
-                set_piddir(tmp_path);
+                set_piddir(tmp_path.c_str());
             }
             else
             {
@@ -1552,7 +1552,7 @@ int main(int argc, char** argv)
         case 'C':
             if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
             {
-                set_configdir(tmp_path);
+                set_configdir(tmp_path.c_str());
             }
             else
             {
@@ -1563,7 +1563,7 @@ int main(int argc, char** argv)
         case 'B':
             if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
             {
-                set_libdir(tmp_path);
+                set_libdir(tmp_path.c_str());
             }
             else
             {
@@ -1574,7 +1574,7 @@ int main(int argc, char** argv)
         case 'A':
             if (handle_path_arg(&tmp_path, optarg, NULL, true, true))
             {
-                set_cachedir(tmp_path);
+                set_cachedir(tmp_path.c_str());
             }
             else
             {
@@ -1585,7 +1585,7 @@ int main(int argc, char** argv)
         case 'E':
             if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
             {
-                set_execdir(tmp_path);
+                set_execdir(tmp_path.c_str());
             }
             else
             {
@@ -1596,7 +1596,7 @@ int main(int argc, char** argv)
         case 'H':
             if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
             {
-                set_connector_plugindir(tmp_path);
+                set_connector_plugindir(tmp_path.c_str());
             }
             else
             {
@@ -1607,7 +1607,7 @@ int main(int argc, char** argv)
         case 'F':
             if (handle_path_arg(&tmp_path, optarg, NULL, true, true))
             {
-                set_config_persistdir(tmp_path);
+                set_config_persistdir(tmp_path.c_str());
             }
             else
             {
@@ -1618,7 +1618,7 @@ int main(int argc, char** argv)
         case 'M':
             if (handle_path_arg(&tmp_path, optarg, NULL, true, true))
             {
-                set_module_configdir(tmp_path);
+                set_module_configdir(tmp_path.c_str());
             }
             else
             {
@@ -1629,8 +1629,7 @@ int main(int argc, char** argv)
         case 'R':
             if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
             {
-                succp = set_dirs(tmp_path);
-                free(tmp_path);
+                succp = set_dirs(tmp_path.c_str());
             }
             else
             {
@@ -1641,8 +1640,7 @@ int main(int argc, char** argv)
         case 'r':
             if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
             {
-                succp = set_runtime_dirs(tmp_path);
-                free(tmp_path);
+                succp = set_runtime_dirs(tmp_path.c_str());
             }
             else
             {
@@ -2336,7 +2334,7 @@ static int write_pid_file()
     return 0;
 }
 
-bool handle_path_arg(char** dest, const char* path, const char* arg, bool rd, bool wr)
+bool handle_path_arg(std::string* dest, const char* path, const char* arg, bool rd, bool wr)
 {
     char pathbuffer[PATH_MAX + 2];
     char* errstr;
@@ -2361,7 +2359,7 @@ bool handle_path_arg(char** dest, const char* path, const char* arg, bool rd, bo
 
         if ((errstr = check_dir_access(pathbuffer, rd, wr)) == NULL)
         {
-            *dest = MXS_STRDUP_A(pathbuffer);
+            *dest = pathbuffer;
             rval = true;
         }
         else
@@ -2403,7 +2401,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
 {
     mxs::Config& cnf = mxs::Config::get();
 
-    char* tmp;
+    std::string tmp;
     /** These are read from the configuration file. These will not override
      * command line parameters but will override default values. */
     if (strcasecmp(section, "maxscale") == 0)
@@ -2439,7 +2437,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
             {
                 if (handle_path_arg(&tmp, (char*)value, NULL, true, true))
                 {
-                    set_logdir(tmp);
+                    set_logdir(tmp.c_str());
                 }
                 else
                 {
@@ -2453,7 +2451,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
             {
                 if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
                 {
-                    set_libdir(tmp);
+                    set_libdir(tmp.c_str());
                 }
                 else
                 {
@@ -2467,7 +2465,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
             {
                 if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
                 {
-                    set_sharedir(tmp);
+                    set_sharedir(tmp.c_str());
                 }
                 else
                 {
@@ -2481,7 +2479,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
             {
                 if (handle_path_arg(&tmp, (char*)value, NULL, true, true))
                 {
-                    set_piddir(tmp);
+                    set_piddir(tmp.c_str());
                 }
                 else
                 {
@@ -2495,9 +2493,9 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
             {
                 if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
                 {
-                    snprintf(this_unit.datadir, PATH_MAX, "%s", tmp);
+                    snprintf(this_unit.datadir, PATH_MAX, "%s", tmp.c_str());
                     this_unit.datadir[PATH_MAX] = '\0';
-                    set_datadir(tmp);
+                    set_datadir(tmp.c_str());
                     this_unit.datadir_defined = true;
                 }
                 else
@@ -2510,9 +2508,9 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         {
             if (strcmp(get_cachedir(), MXS_DEFAULT_CACHEDIR) == 0)
             {
-                if (handle_path_arg((char**)&tmp, (char*)value, NULL, true, false))
+                if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
                 {
-                    set_cachedir(tmp);
+                    set_cachedir(tmp.c_str());
                 }
                 else
                 {
@@ -2524,9 +2522,9 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         {
             if (strcmp(get_langdir(), MXS_DEFAULT_LANGDIR) == 0)
             {
-                if (handle_path_arg((char**)&tmp, (char*)value, NULL, true, false))
+                if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
                 {
-                    set_langdir(tmp);
+                    set_langdir(tmp.c_str());
                 }
                 else
                 {
@@ -2538,9 +2536,9 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         {
             if (strcmp(get_execdir(), MXS_DEFAULT_EXECDIR) == 0)
             {
-                if (handle_path_arg((char**)&tmp, (char*)value, NULL, true, false))
+                if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
                 {
-                    set_execdir(tmp);
+                    set_execdir(tmp.c_str());
                 }
                 else
                 {
@@ -2552,9 +2550,9 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         {
             if (strcmp(get_connector_plugindir(), MXS_DEFAULT_CONNECTOR_PLUGINDIR) == 0)
             {
-                if (handle_path_arg((char**)&tmp, (char*)value, NULL, true, false))
+                if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
                 {
-                    set_connector_plugindir(tmp);
+                    set_connector_plugindir(tmp.c_str());
                 }
                 else
                 {
@@ -2566,9 +2564,9 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         {
             if (strcmp(get_config_persistdir(), MXS_DEFAULT_CONFIG_PERSISTDIR) == 0)
             {
-                if (handle_path_arg((char**)&tmp, (char*)value, NULL, true, false))
+                if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
                 {
-                    set_config_persistdir(tmp);
+                    set_config_persistdir(tmp.c_str());
                 }
                 else
                 {
@@ -2580,9 +2578,9 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         {
             if (strcmp(get_module_configdir(), MXS_DEFAULT_MODULE_CONFIGDIR) == 0)
             {
-                if (handle_path_arg((char**)&tmp, (char*)value, NULL, true, false))
+                if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
                 {
-                    set_module_configdir(tmp);
+                    set_module_configdir(tmp.c_str());
                 }
                 else
                 {
