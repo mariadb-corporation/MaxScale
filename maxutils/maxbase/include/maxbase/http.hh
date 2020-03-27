@@ -64,9 +64,9 @@ static const std::chrono::seconds DEFAULT_TIMEOUT { 10 };
 
 struct Config
 {
-    std::vector<std::string> headers;
-    std::chrono::seconds     connect_timeout = DEFAULT_CONNECT_TIMEOUT;
-    std::chrono::seconds     timeout         = DEFAULT_TIMEOUT;
+    std::map<std::string, std::string> headers;
+    std::chrono::seconds               connect_timeout = DEFAULT_CONNECT_TIMEOUT;
+    std::chrono::seconds               timeout         = DEFAULT_TIMEOUT;
 };
 
 struct Result

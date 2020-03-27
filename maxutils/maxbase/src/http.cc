@@ -222,12 +222,13 @@ CURL* get_easy_curl(CurlOp op,
     return pCurl;
 }
 
-curl_slist* create_headers(const std::vector<std::string>& headers)
+curl_slist* create_headers(const std::map<std::string, std::string>& headers)
 {
     curl_slist* pHeaders = nullptr;
 
-    for (const auto& header : headers)
+    for (const auto& kv : headers)
     {
+        string header = kv.first + ":" + kv.second;
         pHeaders = curl_slist_append(pHeaders, header.c_str());
     }
 
