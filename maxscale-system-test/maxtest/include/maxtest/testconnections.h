@@ -51,6 +51,8 @@ typedef std::set<std::string> StringSet;
 class TestConnections
 {
 public:
+    using StringSet = std::set<std::string>;
+
     /**
      * @brief TestConnections constructor: reads environmental variables, copies MaxScale.cnf for MaxScale
      * machine
@@ -197,11 +199,6 @@ public:
      * Also IPv6 addresses go to maxscale.cnf
      */
     bool use_ipv6;
-
-    /**
-     * @brief configured_labels List of lables for which nodes are configured
-     */
-    std::string configured_labels;
 
     /**
      * @brief vm_path Path to the VM Vagrant directory
@@ -609,8 +606,14 @@ private:
 
     std::string m_test_name;            /**< Test name */
     std::string m_cnf_template_path;    /**< MaxScale config file template used by test */
-    std::string m_labels;               /**< Test labels */
-    std::string m_mdbci_labels;         /**< Labels for MDBCI */
+
+    std::string m_test_labels_str;  /**< Test labels as given in CMakeLists.txt and required by the test */
+    StringSet   m_test_labels;      /**< Test labels parsed to a set. */
+
+    StringSet   m_required_mdbci_labels;/**< MDBCI-labels required by test. Subset of test labels. */
+    std::string m_mdbci_labels_str;     /**< MDBCI-labels in string form. Used on the command line. */
+
+    StringSet m_configured_mdbci_labels;    /**< MDBCI-labels already configured on the VM setup */
 
     std::string m_mdbci_config_name;    /**< Name of MDBCI VMs set */
     std::string m_mdbci_vm_path;        /**< Path to directory with MDBCI VMs descriptions */
@@ -640,6 +643,9 @@ private:
 
     /** If true tests do not revert VMs after the test even if test failed (use it for debugging) */
     bool no_vm_revert {true};
+
+    std::string flatten_stringset(const StringSet& set);
+    StringSet   parse_to_stringset(const std::string& source);
 };
 
 /**

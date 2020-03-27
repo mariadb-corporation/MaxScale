@@ -14,6 +14,7 @@
 #include <iostream>
 #include <future>
 #include <maxbase/stacktrace.hh>
+#include <algorithm>
 
 #include "mariadb_func.h"
 #include "maxadmin_operations.h"
@@ -26,6 +27,19 @@ using namespace mxb;
 using std::cout;
 using std::endl;
 using std::string;
+
+namespace
+{
+// These must match the labels recognized by MDBCI.
+const string label_repl_be = "REPL_BACKEND";
+const string label_galera_be = "GALERA_BACKEND";
+const string label_big_be = "BIG_REPL_BACKEND";
+const string label_2nd_mxs = "SECOND_MAXSCALE";
+const string label_cs_be = "COLUMNSTORE_BACKEND";
+
+const StringSet recognized_mdbci_labels =
+{label_repl_be, label_big_be, label_galera_be, label_2nd_mxs, label_cs_be};
+}
 
 namespace maxscale
 {
@@ -254,29 +268,29 @@ TestConnections::TestConnections(int argc, char* argv[])
     m_test_name = (optind < argc) ? argv[optind] : basename(argv[0]);
     set_template_and_labels();
     tprintf("Test: '%s', config template: '%s', labels: '%s'",
-            m_test_name.c_str(), m_cnf_template_path.c_str(), m_labels.c_str());
+            m_test_name.c_str(), m_cnf_template_path.c_str(), m_test_labels_str.c_str());
     set_mdbci_labels();
 
-    std::string delimiter = std::string (",");
-    size_t pos_start = 0, pos_end, delim_len = delimiter.length();
-    std::string label;
-    std::string mdbci_labels_c = m_mdbci_labels + delimiter;
+    StringSet missing_mdbci_labels;
+    std::set_difference(m_required_mdbci_labels.begin(), m_required_mdbci_labels.end(),
+                        m_configured_mdbci_labels.begin(), m_configured_mdbci_labels.end(),
+                        std::inserter(missing_mdbci_labels, missing_mdbci_labels.begin()));
 
     bool mdbci_call_needed = false;
-
-    while ((pos_end = mdbci_labels_c.find (delimiter, pos_start)) != std::string::npos)
+    if (missing_mdbci_labels.empty())
     {
-        label = mdbci_labels_c.substr (pos_start, pos_end - pos_start);
-        pos_start = pos_end + delim_len;
-        if (configured_labels.find(label, 0) == std::string::npos)
+        if (verbose)
         {
-            mdbci_call_needed = true;
-            tprintf("Machines with label '%s' are not running, MDBCI UP call is needed", label.c_str());
+            tprintf("Machines with all required labels '%s' are running, MDBCI UP call is not needed",
+                    m_mdbci_labels_str.c_str());
         }
-        else if (verbose)
-        {
-            tprintf("Machines with label '%s' are running, MDBCI UP call is not needed", label.c_str());
-        }
+    }
+    else
+    {
+        string missing_labels_str = flatten_stringset(missing_mdbci_labels);
+        tprintf("Machines with labels '%s' are not running, MDBCI UP call is needed",
+                missing_labels_str.c_str());
+        mdbci_call_needed = true;
     }
 
     if (mdbci_call_needed)
@@ -288,7 +302,7 @@ TestConnections::TestConnections(int argc, char* argv[])
 
     }
 
-    if (m_mdbci_labels.find(std::string("REPL_BACKEND")) == std::string::npos)
+    if (m_required_mdbci_labels.count(label_repl_be) == 0)
     {
         no_repl = true;
         if (verbose)
@@ -297,7 +311,7 @@ TestConnections::TestConnections(int argc, char* argv[])
         }
     }
 
-    if (m_mdbci_labels.find(std::string("GALERA_BACKEND")) == std::string::npos)
+    if (m_required_mdbci_labels.count(label_galera_be) == 0)
     {
         no_galera = true;
         if (verbose)
@@ -612,7 +626,7 @@ void TestConnections::read_mdbci_info()
         nc_file.open(vm_path + "_configured_labels");
         std::stringstream strStream1;
         strStream1 << nc_file.rdbuf();
-        configured_labels = strStream1.str();
+        m_configured_mdbci_labels = parse_to_stringset(strStream1.str());
         nc_file.close();
     }
     else
@@ -699,19 +713,19 @@ void TestConnections::set_template_and_labels()
     if (found)
     {
         m_cnf_template_path = found->config_template;
-        m_labels = found->labels;
+        m_test_labels_str = found->labels;
     }
     else
     {
-        printf("Failed to find configuration template for test '%s', using default template '%s'.\n",
-               m_test_name.c_str(), default_template);
+        printf("Failed to find configuration template for test '%s', using default template '%s' and "
+               "labels '%s'.\n",
+               m_test_name.c_str(), default_template, label_repl_be.c_str());
         m_cnf_template_path = default_template;
+        m_test_labels_str = label_repl_be;
     }
 
-    if (m_labels.empty())
-    {
-        m_labels = "REPL_BACKEND";
-    }
+    // Parse the labels-string to a set.
+    m_test_labels = parse_to_stringset(m_test_labels_str);
 }
 
 void TestConnections::process_template(int m, const string& cnf_template_path, const char* dest)
@@ -2193,7 +2207,7 @@ int TestConnections::call_mdbci(const char * options)
     if (system((std::string("mdbci up ") +
                m_mdbci_config_name +
                std::string(" --labels ") +
-               m_mdbci_labels +
+               m_mdbci_labels_str +
                std::string(" ") +
                std::string(options)).c_str() ))
     {
@@ -2304,5 +2318,59 @@ int TestConnections::reinstall_maxscales()
 
 bool TestConnections::too_many_maxscales() const
 {
-    return maxscales->N < 2 && m_mdbci_labels.find("SECOND_MAXSCALE") != std::string::npos;
+    return maxscales->N < 2 && m_required_mdbci_labels.count(label_2nd_mxs) > 0;
+}
+
+std::string TestConnections::flatten_stringset(const StringSet& set)
+{
+    string rval;
+    string sep;
+    for (auto& elem : set)
+    {
+        rval += sep;
+        rval += elem;
+        sep = ",";
+    }
+    return rval;
+}
+
+StringSet TestConnections::parse_to_stringset(const string& source)
+{
+    string copy = source;
+    StringSet rval;
+    if (!copy.empty())
+    {
+        char* ptr = &copy[0];
+        char* save_ptr = nullptr;
+        // mdbci uses ',' and cmake uses ';'. Add ' ' as well to ensure trimming.
+        const char delim[] = ",; ";
+        char* token = strtok_r(ptr, delim, &save_ptr);
+        while (token)
+        {
+            rval.insert(token);
+            token = strtok_r(nullptr, delim, &save_ptr);
+        }
+    }
+    return rval;
+}
+
+/**
+ * MDBCI recognizes labels which affect backend configuration. Save those labels to a separate field.
+ * Also save a string version.
+ */
+void TestConnections::set_mdbci_labels()
+{
+    StringSet mdbci_labels;
+    mdbci_labels.insert("MAXSCALE");
+    std::set_intersection(recognized_mdbci_labels.begin(), recognized_mdbci_labels.end(),
+                          m_test_labels.begin(), m_test_labels.end(),
+                          std::inserter(mdbci_labels, mdbci_labels.begin()));
+
+    std::string mdbci_labels_str = flatten_stringset(mdbci_labels);
+    if (TestConnections::verbose)
+    {
+        printf("mdbci-labels: %s\n", mdbci_labels_str.c_str());
+    }
+    m_required_mdbci_labels = mdbci_labels;
+    m_mdbci_labels_str = mdbci_labels_str;
 }

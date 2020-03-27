@@ -11,7 +11,6 @@ add_library(maxtest SHARED
         get_com_select_insert.cpp
         get_my_ip.cpp
         keepalived_func.cpp
-        labels_table.cpp
         mariadb_func.cpp
         mariadb_nodes.cpp
         maxadmin_operations.cpp
