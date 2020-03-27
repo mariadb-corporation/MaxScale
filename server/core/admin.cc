@@ -277,6 +277,13 @@ void init_jwt_sign_key()
     this_unit.sign_key.assign((const char*)key.data(), key.size() * VALUE_SIZE);
     mxb_assert(this_unit.sign_key.size() == KEY_BITS);
 }
+
+void add_extra_headers(MHD_Response* response)
+{
+    MHD_add_response_header(response, "X-Frame-Options", "Deny");
+    MHD_add_response_header(response, "X-XSS-Protection", "1");
+    MHD_add_response_header(response, "Referrer-Policy", "same-origin");
+}
 }
 
 Client::Client(MHD_Connection* connection)
@@ -387,6 +394,8 @@ bool Client::serve_file(const std::string& url) const
             {
                 add_cors_headers(response);
             }
+
+            add_extra_headers(response);
 
             if (MHD_queue_response(m_connection, MHD_HTTP_OK, response) == MHD_YES)
             {
@@ -542,6 +551,8 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
     {
         add_cors_headers(response);
     }
+
+    add_extra_headers(response);
 
     int rval = MHD_queue_response(m_connection, reply.get_code(), response);
     MHD_destroy_response(response);
