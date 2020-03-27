@@ -85,24 +85,6 @@ void SmartRouter::Config::populate(MXS_MODULE& module)
     smartrouter::specification.populate(module);
 }
 
-bool SmartRouter::Config::post_configure()
-{
-    bool rv = true;
-    auto targets = m_router->m_pService->get_children();
-    auto servers = m_router->m_pService->reachable_servers();
-
-    if (std::find(targets.begin(), targets.end(), m_master.get()) == targets.end()
-        && std::find(servers.begin(), servers.end(), m_master.get()) == servers.end())
-    {
-        rv = false;
-        MXS_ERROR("The master server %s of the smartrouter %s, is not one of the "
-                  "servers or targets of the service.",
-                  m_master.get()->name(), name().c_str());
-    }
-
-    return rv;
-}
-
 bool SmartRouter::configure(mxs::ConfigParameters* pParams)
 {
     if (!smartrouter::specification.validate(*pParams))
@@ -110,7 +92,6 @@ bool SmartRouter::configure(mxs::ConfigParameters* pParams)
         return false;
     }
 
-    // Since post_configure() has been overriden, this may fail.
     return m_config.configure(*pParams);
 }
 

@@ -59,9 +59,6 @@ public:
         }
 
     private:
-        bool post_configure() override;
-
-    private:
         config::Target m_master;
         config::Bool   m_persist_performance_data;
         SmartRouter*   m_router;
