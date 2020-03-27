@@ -5,7 +5,6 @@ users_refresh_time=0
 [rwsplit-service]
 type=service
 router=readwritesplit
-weightby=weight
 user=maxskysql
 password=skysql
 
