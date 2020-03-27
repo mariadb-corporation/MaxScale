@@ -1464,7 +1464,6 @@ bool validate_maxscale_json(json_t* json)
         rval = runtime_is_count_or_null(param, CN_AUTH_CONNECT_TIMEOUT)
             && runtime_is_count_or_null(param, CN_AUTH_READ_TIMEOUT)
             && runtime_is_count_or_null(param, CN_AUTH_WRITE_TIMEOUT)
-            && runtime_is_bool_or_null(param, CN_ADMIN_AUTH)
             && runtime_is_bool_or_null(param, CN_ADMIN_LOG_AUTH_FAILURES)
             && runtime_is_size_or_null(param, CN_QUERY_CLASSIFIER_CACHE_SIZE)
             && runtime_is_count_or_null(param, CN_REBALANCE_THRESHOLD);

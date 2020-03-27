@@ -75,6 +75,41 @@ using maxscale::Monitor;
 using std::chrono::milliseconds;
 using std::chrono::seconds;
 
+namespace
+{
+constexpr char CN_ADMIN_AUTH[] = "admin_auth";
+constexpr char CN_ADMIN_ENABLED[] = "admin_enabled";
+constexpr char CN_ADMIN_HOST[] = "admin_host";
+constexpr char CN_ADMIN_PAM_READONLY_SERVICE[] = "admin_pam_readonly_service";
+constexpr char CN_ADMIN_PAM_READWRITE_SERVICE[] = "admin_pam_readwrite_service";
+constexpr char CN_ADMIN_PORT[] = "admin_port";
+constexpr char CN_ADMIN_SSL_CA_CERT[] = "admin_ssl_ca_cert";
+constexpr char CN_ADMIN_SSL_CERT[] = "admin_ssl_cert";
+constexpr char CN_ADMIN_SSL_KEY[] = "admin_ssl_key";
+constexpr char CN_DUMP_LAST_STATEMENTS[] = "dump_last_statements";
+constexpr char CN_GUI[] = "gui";
+constexpr char CN_LOAD_PERSISTED_CONFIGS[] = "load_persisted_configs";
+constexpr char CN_LOCAL_ADDRESS[] = "local_address";
+constexpr char CN_LOG_DEBUG[] = "log_debug";
+constexpr char CN_LOG_INFO[] = "log_info";
+constexpr char CN_LOG_NOTICE[] = "log_notice";
+constexpr char CN_LOG_THROTTLING[] = "log_throttling";
+constexpr char CN_LOG_WARNING[] = "log_warning";
+constexpr char CN_LOG_WARN_SUPER_USER[] = "log_warn_super_user";
+constexpr char CN_MAX_AUTH_ERRORS_UNTIL_BLOCK[] = "max_auth_errors_until_block";
+constexpr char CN_MS_TIMESTAMP[] = "ms_timestamp";
+constexpr char CN_PASSIVE[] = "passive";
+constexpr char CN_QUERY_RETRIES[] = "query_retries";
+constexpr char CN_QUERY_RETRY_TIMEOUT[] = "query_retry_timeout";
+constexpr char CN_REBALANCE_PERIOD[] = "rebalance_period";
+constexpr char CN_REBALANCE_WINDOW[] = "rebalance_window";
+constexpr char CN_SKIP_PERMISSION_CHECKS[] = "skip_permission_checks";
+constexpr char CN_USERS_REFRESH_INTERVAL[] = "users_refresh_interval";
+constexpr char CN_USERS_REFRESH_TIME[] = "users_refresh_time";
+constexpr char CN_WRITEQ_HIGH_WATER[] = "writeq_high_water";
+constexpr char CN_WRITEQ_LOW_WATER[] = "writeq_low_water";
+}
+
 namespace maxscale
 {
 
@@ -445,7 +480,7 @@ config::ParamBool Config::s_load_persisted_configs(
 
 config::ParamBool Config::s_log_warn_super_user(
     &Config::s_specification,
-    "log_warn_super_user",
+    CN_LOG_WARN_SUPER_USER,
     "Log a warning when a user with super privilege logs in.",
     false);
 
