@@ -64,6 +64,7 @@ constexpr char CN_FILTER_DIAGNOSTICS[] = "filter_diagnostics";
 constexpr char CN_FORCE[] = "force";
 constexpr char CN_FUNCTIONS[] = "functions";
 constexpr char CN_GATEWAY[] = "gateway";
+constexpr char CN_GUI[] = "gui";
 constexpr char CN_HAS_WHERE_CLAUSE[] = "has_where_clause";
 constexpr char CN_HITS[] = "hits";
 constexpr char CN_ID[] = "id";

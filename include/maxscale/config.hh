@@ -142,6 +142,7 @@ public:
     std::string   local_address;                /**< Local address to use when connecting */
     bool          load_persisted_configs;       /**< Load persisted configuration files on startup */
     bool          log_warn_super_user;          /**< Log a warning if incoming client has super-priv. */
+    bool          gui;                          /**< Enable admin GUI */
 
     // The following will not be configured via the configuration mechanism.
     bool    config_check;                               /**< Only check config */
@@ -220,5 +221,6 @@ private:
     static config::ParamString              s_local_address;
     static config::ParamBool                s_load_persisted_configs;
     static config::ParamBool                s_log_warn_super_user;
+    static config::ParamBool                s_gui;
 };
 }

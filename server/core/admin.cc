@@ -411,7 +411,7 @@ int Client::handle(const std::string& url, const std::string& method,
     {
         return MHD_YES;
     }
-    else if (method == MHD_HTTP_METHOD_GET && serve_file(url))
+    else if (mxs::Config::get().gui && method == MHD_HTTP_METHOD_GET && serve_file(url))
     {
         return MHD_YES;
     }
