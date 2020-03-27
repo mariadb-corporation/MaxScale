@@ -50,7 +50,8 @@ exports.builder = function(yargs) {
                                 'connection. In this case the [port] argument is ignored.')
                 .usage('Usage: create server <name> <host|socket> [port]')
                 .group(['services', 'monitors', 'protocol', 'authenticator', 'authenticator-options',
-                        'tls-key', 'tls-cert', 'tls-ca-cert', 'tls-version'], 'Create server options:')
+                        'tls', 'tls-key', 'tls-cert', 'tls-ca-cert', 'tls-version',
+                        'tls-cert-verify-depth', 'tls-verify-peer-certificate', 'tls-verify-peer-host'], 'Create server options:')
                 .option('services', {
                     describe: 'Link the created server to these services',
                     type: 'array'
@@ -72,6 +73,10 @@ exports.builder = function(yargs) {
                     describe: 'Option string for the authenticator (deprecated)',
                     type: 'string'
                 })
+                .option('tls', {
+                    describe: 'Enable TLS',
+                    type: 'boolean'
+                })
                 .option('tls-key', {
                     describe: 'Path to TLS key',
                     type: 'string'
@@ -92,7 +97,14 @@ exports.builder = function(yargs) {
                     describe: 'TLS certificate verification depth',
                     type: 'number'
                 })
-
+                .option('tls-verify-peer-certificate', {
+                    describe: 'Enable TLS peer certificate verification',
+                    type: 'boolean'
+                })
+                .option('tls-verify-peer-host', {
+                    describe: 'Enable TLS peer host verification',
+                    type: 'boolean'
+                })
         }, function(argv) {
             var server = {
                 'data': {
@@ -103,11 +115,14 @@ exports.builder = function(yargs) {
                             'protocol': argv.protocol,
                             'authenticator': argv.authenticator,
                             'authenticator_options': argv.auth_options,
+                            'ssl': argv['tls'],
                             'ssl_key': argv['tls-key'],
                             'ssl_cert': argv['tls-cert'],
                             'ssl_ca_cert': argv['tls-ca-cert'],
                             'ssl_version': argv['tls-version'],
-                            'ssl_cert_verify_depth': argv['tls-cert-verify-depth']
+                            'ssl_cert_verify_depth': argv['tls-cert-verify-depth'],
+                            'ssl_verify_peer_certificate': argv['tls-verify-peer-certificate'],
+                            'ssl_verify_peer_host': argv['tls-verify-peer-host'],
                         }
                     }
                 }
@@ -118,6 +133,12 @@ exports.builder = function(yargs) {
             } else {
                 server.data.attributes.parameters.address = argv.host
                 server.data.attributes.parameters.port = argv.port
+            }
+
+            var params = server.data.attributes.parameters
+
+            if (params.ssl_key || params.ssl_cert || params.ssl_ca_cert) {
+                server.data.attributes.parameters.ssl = true
             }
 
             if (argv.services) {
@@ -297,7 +318,8 @@ exports.builder = function(yargs) {
         .command('listener <service> <name> <port>', 'Create a new listener', function(yargs) {
             return yargs.epilog('The new listener will be taken into use immediately.')
                 .usage('Usage: create listener <service> <name> <port>')
-                .group(['interface', , 'protocol', 'authenticator', 'authenticator-options', 'tls-key', 'tls-cert', 'tls-ca-cert', 'tls-version'],
+                .group(['interface', , 'protocol', 'authenticator', 'authenticator-options', 'tls-key', 'tls-cert', 'tls-ca-cert', 'tls-version',
+                        'tls-crl', 'tls-cert-verify-depth', 'tls-verify-peer-certificate', 'tls-verify-peer-host'],
                        'Create listener options:')
                 .option('interface', {
                     describe: 'Interface to listen on',
@@ -333,9 +355,21 @@ exports.builder = function(yargs) {
                     describe: 'TLS version to use',
                     type: 'string'
                 })
+                .option('tls-crl', {
+                    describe: 'TLS CRL to use',
+                    type: 'string'
+                })
                 .option('tls-cert-verify-depth', {
                     describe: 'TLS certificate verification depth',
                     type: 'number'
+                })
+                .option('tls-verify-peer-certificate', {
+                    describe: 'Enable TLS peer certificate verification',
+                    type: 'boolean'
+                })
+                .option('tls-verify-peer-host', {
+                    describe: 'Enable TLS peer host verification',
+                    type: 'boolean'
                 })
 
         }, function(argv) {
@@ -360,11 +394,20 @@ exports.builder = function(yargs) {
                                 'ssl_cert': argv['tls-cert'],
                                 'ssl_ca_cert': argv['tls-ca-cert'],
                                 'ssl_version': argv['tls-version'],
-                                'ssl_cert_verify_depth': argv['tls-cert-verify-depth']
+                                'ssl_cert_verify_depth': argv['tls-cert-verify-depth'],
+                                'ssl_verify_peer_certificate': argv['tls-verify-peer-certificate'],
+                                'ssl_verify_peer_host': argv['tls-verify-peer-host'],
+                                'ssl_crl': argv['tls-crl'],
                             }
                         }
                     }
                 }
+
+            var params = listener.data.attributes.parameters
+
+            if (params.ssl_key || params.ssl_cert || params.ssl_ca_cert) {
+                listener.data.attributes.parameters.ssl = true
+            }
 
                 return doRequest(host, 'services/' + argv.service + '/listeners', null, {method: 'POST', body: listener})
             })
