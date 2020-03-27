@@ -1328,7 +1328,8 @@ bool is_dynamic_param(const std::string& key)
 {
     return key != CN_TYPE
            && key != CN_ROUTER
-           && key != CN_SERVERS;
+           && key != CN_SERVERS
+           && key != CN_FILTERS;
 }
 
 bool validate_logs_json(json_t* json)
