@@ -1037,7 +1037,7 @@ void CsMonitor::cluster_add_node(json_t** ppOutput, mxb::Semaphore* pSem, SERVER
                 }
                 else
                 {
-                    // TODO: Update configuration to include the new node.
+                    // TODO: Update configuration to INCLUDE the new node.
                     // TODO: Change body to string.
                     vector<char> body(results.begin()->body.data(),
                                       results.begin()->body.data() + results.begin()->body.length());
@@ -1076,7 +1076,104 @@ void CsMonitor::cluster_add_node(json_t** ppOutput, mxb::Semaphore* pSem, SERVER
 
 void CsMonitor::cluster_remove_node(json_t** ppOutput, mxb::Semaphore* pSem, SERVER* pServer)
 {
-    // TODO: Do whatever needs to be done.
-    PRINT_MXS_JSON_ERROR(ppOutput, "cluster-remove-node not implemented yet.");
+    /*
+      cluster remove node { nodeid | IP | DNS }  { force }
+      - Sends GET /node/ping to the node to be removed
+      - If force isn’t set then run cluster mode set read-only first.
+        Don’t send this to the target node if ping fail
+      - Sends  PUT /node/shutdown to the removed node with JSON parameters
+        (immediate shutdown) command if the ping call returns.
+      - Sends GET /node/config to { all | only one } of the listed nodes.
+      Uses the config/-s to produce new versions of the configs.
+      - Sends PUT /node/config to the old nodes and to the new node.
+      The previous action forces the restart of the services.
+
+      Currently no force and no read-only mode.
+    */
+
+    *ppOutput = nullptr;
+
+    http::Result ping = http::get(create_url(*pServer, m_config.admin_port, "ping"));
+
+    if (ping.code == 200)
+    {
+        http::Result shutdown = http::get(create_url(*pServer, m_config.admin_port, "shutdown"));
+
+        if (shutdown.code != 200)
+        {
+            // TODO: Perhaps appropriate to ignore error?
+            PRINT_MXS_JSON_ERROR(ppOutput, "Could not shutdown '%s'. Cannot remove the node: %s",
+                                 pServer->name(), shutdown.body.c_str());
+        }
+    }
+
+    if (!*ppOutput)
+    {
+        vector<const MonitorServer*> mservers;
+        vector<string> urls;
+
+        for (const MonitorServer* pMserver : this->servers())
+        {
+            if (pMserver->server != pServer)
+            {
+                mservers.push_back(pMserver);
+                urls.push_back(create_url(*pMserver, m_config.admin_port, "config"));
+            }
+        }
+
+        // TODO Can you remove the last node?
+        if (!urls.empty())
+        {
+            vector<http::Result> results = http::get(urls);
+
+            auto it = find_first_failed(results);
+
+            if (it != results.end())
+            {
+                PRINT_MXS_JSON_ERROR(ppOutput, "Could not get config from server '%s', node cannot "
+                                     "be removed: %s", mservers[it - results.begin()]->server->name(), it->body.c_str());
+            }
+            else
+            {
+                auto it = std::adjacent_find(results.begin(), results.end(), [](const auto& l, const auto& r) {
+                        return l.body != r.body;
+                    });
+
+                if (it != results.end())
+                {
+                    PRINT_MXS_JSON_ERROR(ppOutput, "Configuration of all nodes is not identical. Not "
+                                         "possible to remove a node.");
+                }
+                else
+                {
+                    // TODO: Update configuration to EXCLUDE the removed node.
+                    // TODO: Change body to string.
+                    vector<char> body(results.begin()->body.data(),
+                                      results.begin()->body.data() + results.begin()->body.length());
+
+                    vector<string> urls;
+                    for (const MonitorServer* pMserver : servers())
+                    {
+                        urls.push_back(create_url(*pMserver, m_config.admin_port, "config"));
+                    }
+
+                    vector<http::Result> results = http::put(urls, body);
+
+                    auto it = find_first_failed(results);
+
+                    if (it != results.end())
+                    {
+                        PRINT_MXS_JSON_ERROR(ppOutput, "Could not update configuration of all nodes. Cluster state "
+                                             "is now indeterminate.");
+                    }
+                    else
+                    {
+                        *ppOutput = create_response(servers(), results);
+                    }
+                }
+            }
+        }
+    }
+
     pSem->post();
 }
