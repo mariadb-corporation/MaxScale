@@ -166,20 +166,7 @@ static cfg::ParamEnum<int64_t> s_rank(
 // TLS parameters, only configurable at server creation time
 //
 
-static cfg::ParamEnum<bool> s_ssl(      // TODO: Deprecate the non-boolean values
-    &s_spec, CN_SSL, "Enable TLS for server",
-    {
-        {true, "required"},
-        {true, "true"},
-        {true, "yes"},
-        {true, "on"},
-        {true, "1"},
-        {false, "disabled"},
-        {false, "false"},
-        {false, "no"},
-        {false, "off"},
-        {false, "0"},
-    }, false);
+static Server::ParamSSL s_ssl(&s_spec, CN_SSL, "Enable TLS for server");
 
 static cfg::ParamPath s_ssl_cert(&s_spec, CN_SSL_CERT, "TLS public certificate", cfg::ParamPath::R, "");
 static cfg::ParamPath s_ssl_key(&s_spec, CN_SSL_KEY, "TLS private key", cfg::ParamPath::R, "");
@@ -373,6 +360,77 @@ bool Server::ParamDiskSpaceLimits::from_json(const json_t* pJson, value_type* pV
     {
         *pMessage = "Not a JSON object or JSON null.";
     }
+
+    return ok;
+}
+
+Server::ParamSSL::ParamSSL(cfg::Specification* pSpecification, const char* zName, const char* zDescription)
+    : cfg::ConcreteParam<ParamSSL, bool>(
+        pSpecification, zName, zDescription, AT_STARTUP, OPTIONAL, MXS_MODULE_PARAM_STRING, false)
+{
+}
+
+std::string Server::ParamSSL::type() const
+{
+    return "boolean";
+}
+
+std::string Server::ParamSSL::to_string(Server::ParamSSL::value_type value) const
+{
+    return value ? "true" : "false";
+}
+
+bool Server::ParamSSL::from_string(const std::string& value, value_type* pValue,
+                                   std::string* pMessage) const
+{
+    bool rval = true;
+    int val = config_truth_value(value.c_str());
+
+    if (val != -1)
+    {
+        *pValue = val;
+    }
+    else if (value == "disabled")
+    {
+        *pValue = false;
+    }
+    else if (value == "required")
+    {
+        *pValue = true;
+    }
+    else
+    {
+        *pMessage = "Unknown value: " + value;
+        rval = false;
+    }
+
+    return rval;
+}
+
+json_t* Server::ParamSSL::to_json(value_type value) const
+{
+    return json_boolean(value);
+}
+
+bool Server::ParamSSL::from_json(const json_t* pJson, value_type* pValue,
+                                 std::string* pMessage) const
+{
+    bool ok = false;
+
+    if (json_is_boolean(pJson))
+    {
+        ok = true;
+        *pValue = json_boolean_value(pJson);
+    }
+    else if (json_is_string(pJson))
+    {
+        ok = from_string(json_string_value(pJson), pValue, pMessage);
+    }
+    else
+    {
+        *pMessage = "Expected a JSON boolean or a JSON string";
+    }
+
 
     return ok;
 }
