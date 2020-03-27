@@ -12,246 +12,145 @@
  */
 
 #include <maxscale/paths.h>
+
+#include <string>
+
 #include <maxbase/alloc.h>
-#include <maxscale/utils.h>
+#include <maxscale/utils.hh>
 
-/**
- * Set the configuration file directory
- * @param str Path to directory
- */
-void set_configdir(char* str)
+
+namespace
 {
-    MXS_FREE(configdir);
-    clean_up_pathname(str);
-    configdir = str;
+std::string configdir = MXS_DEFAULT_CONFIGDIR;
+std::string config_persistdir = MXS_DEFAULT_CONFIG_PERSISTDIR;
+std::string module_configdir = MXS_DEFAULT_MODULE_CONFIGDIR;
+std::string logdir = MXS_DEFAULT_LOGDIR;
+std::string libdir = MXS_DEFAULT_LIBDIR;
+std::string cachedir = MXS_DEFAULT_CACHEDIR;
+std::string datadir = MXS_DEFAULT_DATADIR;
+std::string processdatadir = MXS_DEFAULT_DATADIR;
+std::string langdir = MXS_DEFAULT_LANGDIR;
+std::string piddir = MXS_DEFAULT_PIDDIR;
+std::string execdir = MXS_DEFAULT_EXECDIR;
+std::string connector_plugindir = MXS_DEFAULT_CONNECTOR_PLUGINDIR;
 }
 
-/**
- * Set the module configuration file directory
- * @param str Path to directory
- */
-void set_module_configdir(char* str)
+void set_configdir(const char* path)
 {
-    MXS_FREE(module_configdir);
-    clean_up_pathname(str);
-    module_configdir = str;
+    configdir = clean_up_pathname(path);
 }
 
-/**
- * Set the configuration parts file directory
- * @param str Path to directory
- */
-void set_config_persistdir(char* str)
+void set_module_configdir(const char* path)
 {
-    MXS_FREE(config_persistdir);
-    clean_up_pathname(str);
-    config_persistdir = str;
+    module_configdir = clean_up_pathname(path);
 }
 
-/**
- * Set the log file directory
- * @param str Path to directory
- */
-void set_logdir(char* str)
+void set_config_persistdir(const char* path)
 {
-    MXS_FREE(logdir);
-    clean_up_pathname(str);
-    logdir = str;
+    config_persistdir = clean_up_pathname(path);
 }
 
-/**
- * Set the language file directory
- * @param str Path to directory
- */
-void set_langdir(char* str)
+void set_logdir(const char* path)
 {
-    MXS_FREE(langdir);
-    clean_up_pathname(str);
-    langdir = str;
+    logdir = clean_up_pathname(path);
 }
 
-/**
- * Set the PID file directory
- * @param str Path to directory
- */
-void set_piddir(char* str)
+void set_langdir(const char* path)
 {
-    MXS_FREE(piddir);
-    clean_up_pathname(str);
-    piddir = str;
+    langdir = clean_up_pathname(path);
 }
 
-/**
- * Set the cache directory
- * @param str Path to directory
- */
-void set_cachedir(char* param)
+void set_piddir(const char* path)
 {
-    MXS_FREE(cachedir);
-    clean_up_pathname(param);
-    cachedir = param;
+    piddir = clean_up_pathname(path);
 }
 
-/**
- * Set the data directory
- * @param str Path to directory
- */
-void set_datadir(char* param)
+void set_cachedir(const char* path)
 {
-    MXS_FREE(maxscaledatadir);
-    clean_up_pathname(param);
-    maxscaledatadir = param;
+    cachedir = clean_up_pathname(path);
 }
 
-/**
- * Set the data directory
- * @param str Path to directory
- */
-void set_process_datadir(char* param)
+void set_datadir(const char* path)
 {
-    MXS_FREE(processdatadir);
-    clean_up_pathname(param);
-    processdatadir = param;
+    datadir = clean_up_pathname(path);
 }
 
-/**
- * Set the library directory. Modules will be loaded from here.
- * @param str Path to directory
- */
-void set_libdir(char* param)
+void set_process_datadir(const char* path)
 {
-    MXS_FREE(libdir);
-    clean_up_pathname(param);
-    libdir = param;
+    processdatadir = clean_up_pathname(path);
 }
 
-/**
- * Set the executable directory. Internal processes will look for executables
- * from here.
- * @param str Path to directory
- */
-void set_execdir(char* param)
+void set_libdir(const char* path)
 {
-    MXS_FREE(execdir);
-    clean_up_pathname(param);
-    execdir = param;
+    libdir = clean_up_pathname(path);
 }
 
-/**
- * Set the connector plugin directory.
- * @param str Path to directory
- */
-void set_connector_plugindir(char* param)
+void set_execdir(const char* path)
 {
-    MXS_FREE(connector_plugindir);
-    clean_up_pathname(param);
-    connector_plugindir = param;
+    execdir = clean_up_pathname(path);
 }
 
-/**
- * Get the directory with all the modules.
- * @return The module directory
- */
-char* get_libdir()
+void set_connector_plugindir(const char* path)
 {
-    return libdir ? libdir : (char*) default_libdir;
+    connector_plugindir = clean_up_pathname(path);
 }
 
-/**
- * Get the service cache directory
- * @return The path to the cache directory
- */
-char* get_cachedir()
+const char* get_libdir()
 {
-    return cachedir ? cachedir : (char*) default_cachedir;
+    return libdir.c_str();
 }
 
-/**
- * Get the MaxScale data directory
- * @return The path to the data directory
- */
-char* get_datadir()
+const char* get_cachedir()
 {
-    return maxscaledatadir ? maxscaledatadir : (char*) default_datadir;
+    return cachedir.c_str();
 }
 
-/**
- * Get the process specific data directory
- * @return The path to the process specific directory
- */
-char* get_process_datadir()
+const char* get_datadir()
 {
-    return processdatadir ? processdatadir : (char*) default_datadir;
+    return datadir.c_str();
 }
 
-/**
- * Get the configuration file directory
- * @return The path to the configuration file directory
- */
-char* get_configdir()
+const char* get_process_datadir()
 {
-    return configdir ? configdir : (char*) default_configdir;
+    return processdatadir.c_str();
 }
 
-/**
- * Get the module configuration file directory
- * @return The path to the module configuration file directory
- */
-char* get_module_configdir()
+const char* get_configdir()
 {
-    return module_configdir ? module_configdir : (char*) default_module_configdir;
+    return configdir.c_str();
 }
 
-/**
- * Get the configuration file directory
- * @return The path to the configuration file directory
- */
-char* get_config_persistdir()
+const char* get_module_configdir()
 {
-    return config_persistdir ? config_persistdir : (char*) default_config_persistdir;
+    return module_configdir.c_str();
 }
 
-/**
- * Get the PID file directory which contains maxscale.pid
- * @return Path to the PID file directory
- */
-char* get_piddir()
+const char* get_config_persistdir()
 {
-    return piddir ? piddir : (char*) default_piddir;
+    return config_persistdir.c_str();
 }
 
-/**
- * Return the log file directory
- * @return Path to the log file directory
- */
-char* get_logdir()
+const char* get_piddir()
 {
-    return logdir ? logdir : (char*) default_logdir;
+    return piddir.c_str();
 }
 
-/**
- * Path to the directory which contains the errmsg.sys language file
- * @return Path to the language file directory
- */
-char* get_langdir()
+const char* get_logdir()
 {
-    return langdir ? langdir : (char*) default_langdir;
+    return logdir.c_str();
 }
 
-/**
- * Get the directory with the executables.
- * @return The executables directory
- */
-char* get_execdir()
+const char* get_langdir()
 {
-    return execdir ? execdir : (char*) default_execdir;
+    return langdir.c_str();
 }
 
-/**
- * Get connector plugin directory
- * @return The connector plugin directory
- */
-char* get_connector_plugindir()
+const char* get_execdir()
 {
-    return connector_plugindir ? connector_plugindir : (char*) default_connector_plugindir;
+    return execdir.c_str();
+}
+
+const char* get_connector_plugindir()
+{
+    return connector_plugindir.c_str();
 }

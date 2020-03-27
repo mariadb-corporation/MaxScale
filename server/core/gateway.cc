@@ -700,7 +700,7 @@ static bool init_log()
 
     if (!cnf.config_check && mkdir(get_logdir(), 0777) != 0 && errno != EEXIST)
     {
-        print_alert(errno, "Cannot create log directory '%s'", default_logdir);
+        print_alert(errno, "Cannot create log directory '%s'", MXS_DEFAULT_LOGDIR);
     }
     else if (mxs_log_init(NULL, get_logdir(), cnf.log_target))
     {
@@ -1409,7 +1409,7 @@ int main(int argc, char** argv)
 
     maxscale_reset_starttime();
 
-    snprintf(this_unit.datadir, PATH_MAX, "%s", default_datadir);
+    snprintf(this_unit.datadir, PATH_MAX, "%s", MXS_DEFAULT_DATADIR);
     this_unit.datadir[PATH_MAX] = '\0';
 
     // Option string for getopt
@@ -2430,7 +2430,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
 
         if (strcmp(name, CN_LOGDIR) == 0)
         {
-            if (strcmp(get_logdir(), default_logdir) == 0)
+            if (strcmp(get_logdir(), MXS_DEFAULT_LOGDIR) == 0)
             {
                 if (handle_path_arg(&tmp, (char*)value, NULL, true, true))
                 {
@@ -2444,7 +2444,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         }
         else if (strcmp(name, CN_LIBDIR) == 0)
         {
-            if (strcmp(get_libdir(), default_libdir) == 0)
+            if (strcmp(get_libdir(), MXS_DEFAULT_LIBDIR) == 0)
             {
                 if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
                 {
@@ -2458,7 +2458,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         }
         else if (strcmp(name, CN_PIDDIR) == 0)
         {
-            if (strcmp(get_piddir(), default_piddir) == 0)
+            if (strcmp(get_piddir(), MXS_DEFAULT_PIDDIR) == 0)
             {
                 if (handle_path_arg(&tmp, (char*)value, NULL, true, true))
                 {
@@ -2489,7 +2489,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         }
         else if (strcmp(name, CN_CACHEDIR) == 0)
         {
-            if (strcmp(get_cachedir(), default_cachedir) == 0)
+            if (strcmp(get_cachedir(), MXS_DEFAULT_CACHEDIR) == 0)
             {
                 if (handle_path_arg((char**)&tmp, (char*)value, NULL, true, false))
                 {
@@ -2503,7 +2503,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         }
         else if (strcmp(name, CN_LANGUAGE) == 0)
         {
-            if (strcmp(get_langdir(), default_langdir) == 0)
+            if (strcmp(get_langdir(), MXS_DEFAULT_LANGDIR) == 0)
             {
                 if (handle_path_arg((char**)&tmp, (char*)value, NULL, true, false))
                 {
@@ -2517,7 +2517,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         }
         else if (strcmp(name, CN_EXECDIR) == 0)
         {
-            if (strcmp(get_execdir(), default_execdir) == 0)
+            if (strcmp(get_execdir(), MXS_DEFAULT_EXECDIR) == 0)
             {
                 if (handle_path_arg((char**)&tmp, (char*)value, NULL, true, false))
                 {
@@ -2531,7 +2531,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         }
         else if (strcmp(name, CN_CONNECTOR_PLUGINDIR) == 0)
         {
-            if (strcmp(get_connector_plugindir(), default_connector_plugindir) == 0)
+            if (strcmp(get_connector_plugindir(), MXS_DEFAULT_CONNECTOR_PLUGINDIR) == 0)
             {
                 if (handle_path_arg((char**)&tmp, (char*)value, NULL, true, false))
                 {
@@ -2545,7 +2545,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         }
         else if (strcmp(name, CN_PERSISTDIR) == 0)
         {
-            if (strcmp(get_config_persistdir(), default_config_persistdir) == 0)
+            if (strcmp(get_config_persistdir(), MXS_DEFAULT_CONFIG_PERSISTDIR) == 0)
             {
                 if (handle_path_arg((char**)&tmp, (char*)value, NULL, true, false))
                 {
@@ -2559,7 +2559,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         }
         else if (strcmp(name, CN_MODULE_CONFIGDIR) == 0)
         {
-            if (strcmp(get_module_configdir(), default_module_configdir) == 0)
+            if (strcmp(get_module_configdir(), MXS_DEFAULT_MODULE_CONFIGDIR) == 0)
             {
                 if (handle_path_arg((char**)&tmp, (char*)value, NULL, true, false))
                 {

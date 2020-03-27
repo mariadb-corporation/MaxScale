@@ -660,3 +660,12 @@ char* bin2hex(const uint8_t* in, unsigned int len, char* out);
  */
 void bin_bin_xor(const uint8_t* input1, const uint8_t* input2, unsigned int input_len, uint8_t* output);
 }
+
+/**
+ * Remove duplicate and trailing forward slashes from a path.
+ *
+ * @param path Path to clean up
+ *
+ * @return The @c path parameter
+ */
+std::string clean_up_pathname(std::string path);

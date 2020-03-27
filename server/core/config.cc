@@ -2613,8 +2613,7 @@ static void process_path_parameter(std::string* param)
         char new_value[size];
 
         sprintf(new_value, "/%s/%s", mod_dir, param->c_str());
-        clean_up_pathname(new_value);
-        param->assign(new_value);
+        param->assign(clean_up_pathname(new_value));
     }
 }
 
@@ -3569,7 +3568,7 @@ bool config_is_ssl_parameter(const char* key)
         if (*value != '/')
         {
             sprintf(buf, "/%s/%s", get_module_configdir(), value);
-            clean_up_pathname(buf);
+            strcpy(buf, clean_up_pathname(buf).c_str());
         }
         else
         {

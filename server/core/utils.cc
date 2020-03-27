@@ -339,48 +339,21 @@ void bin_bin_xor(const uint8_t* input1, const uint8_t* input2, unsigned int inpu
 }
 }
 
-/**
- * Remove duplicate and trailing forward slashes from a path.
- * @param path Path to clean up
- */
-bool clean_up_pathname(char* path)
+std::string clean_up_pathname(std::string path)
 {
-    char* data = path;
-    size_t len = strlen(path);
+    size_t pos;
 
-    if (len > PATH_MAX)
+    while ((pos = path.find("//")) != std::string::npos)
     {
-        MXS_ERROR("Pathname too long: %s", path);
-        return false;
+        path.erase(pos, 1);
     }
 
-    while (*data != '\0')
+    while (path.back() == '/')
     {
-        if (*data == '/')
-        {
-            if (*(data + 1) == '/')
-            {
-                memmove(data, data + 1, len);
-                len--;
-            }
-            else if (*(data + 1) == '\0' && data != path)
-            {
-                *data = '\0';
-            }
-            else
-            {
-                data++;
-                len--;
-            }
-        }
-        else
-        {
-            data++;
-            len--;
-        }
+        path.pop_back();
     }
 
-    return true;
+    return path.substr(0, PATH_MAX);
 }
 
 /**

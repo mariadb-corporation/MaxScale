@@ -96,7 +96,7 @@ static MAXKEYS* secrets_readKeys(const char* path)
             return NULL;
         }
 
-        clean_up_pathname(secret_file);
+        strcpy(secret_file, clean_up_pathname(secret_file).c_str());
     }
     else
     {
@@ -255,15 +255,15 @@ int secrets_write_keys(const char* dir)
     }
 
     snprintf(secret_file, PATH_MAX + 9, "%s/.secrets", dir);
-    clean_up_pathname(secret_file);
+    strcpy(secret_file, clean_up_pathname(secret_file).c_str());
 
     /* Open for writing | Create | Truncate the file for writing */
     if ((fd = open(secret_file, O_EXCL | O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR)) < 0)
     {
-        if(errno == EEXIST)
+        if (errno == EEXIST)
         {
             fprintf(stderr, "Key [%s] already exists, remove it manually to create a new one. \n",
-                  secret_file);
+                    secret_file);
         }
 
         MXS_ERROR("failed opening secret "
@@ -401,7 +401,12 @@ char* encrypt_password(const char* path, const char* password)
 
     AES_set_encrypt_key(keys->enckey, 8 * MAXSCALE_KEYLEN, &aeskey);
 
-    AES_cbc_encrypt((const unsigned char*) password, encrypted, padded_len, &aeskey, keys->initvector, AES_ENCRYPT);
+    AES_cbc_encrypt((const unsigned char*) password,
+                    encrypted,
+                    padded_len,
+                    &aeskey,
+                    keys->initvector,
+                    AES_ENCRYPT);
     hex_output = (char*) MXS_MALLOC(padded_len * 2 + 1);
     if (hex_output)
     {

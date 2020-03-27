@@ -116,8 +116,6 @@ bool  strip_escape_chars(char*);
 
 bool is_valid_posix_path(char* path);
 
-bool clean_up_pathname(char* path);
-
 bool mxs_mkdir_all(const char* path, int mask);
 
 /**
