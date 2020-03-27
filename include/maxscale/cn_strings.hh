@@ -172,6 +172,7 @@ constexpr char CN_DATADIR[] = "datadir";
 constexpr char CN_EXECDIR[] = "execdir";
 constexpr char CN_LANGUAGE[] = "language";
 constexpr char CN_LIBDIR[] = "libdir";
+constexpr char CN_SHAREDIR[] = "sharedir";
 constexpr char CN_LOGDIR[] = "logdir";
 constexpr char CN_LOG_AUGMENTATION[] = "log_augmentation";
 constexpr char CN_MAXLOG[] = "maxlog";

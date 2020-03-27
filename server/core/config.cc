@@ -943,6 +943,7 @@ const char* config_pre_parse_global_params[] =
 {
     CN_LOGDIR,
     CN_LIBDIR,
+    CN_SHAREDIR,
     CN_PIDDIR,
     CN_DATADIR,
     CN_CACHEDIR,

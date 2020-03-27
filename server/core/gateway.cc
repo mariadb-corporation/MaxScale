@@ -1246,6 +1246,11 @@ bool set_runtime_dirs(const char* basedir)
     bool rv = true;
     char* path;
 
+    if (rv && (rv = handle_path_arg(&path, basedir, MXS_DEFAULT_SHARE_SUBPATH, true, false)))
+    {
+        set_sharedir(path);
+    }
+
     if (rv && (rv = handle_path_arg(&path, basedir, "var/" MXS_DEFAULT_LOG_SUBPATH, true, false)))
     {
         set_logdir(path);
@@ -2449,6 +2454,20 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
                 if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
                 {
                     set_libdir(tmp);
+                }
+                else
+                {
+                    return 0;
+                }
+            }
+        }
+        else if (strcmp(name, CN_SHAREDIR) == 0)
+        {
+            if (strcmp(get_sharedir(), MXS_DEFAULT_SHAREDIR) == 0)
+            {
+                if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
+                {
+                    set_sharedir(tmp);
                 }
                 else
                 {

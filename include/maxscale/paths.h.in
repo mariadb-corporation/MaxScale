@@ -25,6 +25,7 @@ MXS_BEGIN_DECLS
 #define MXS_DEFAULT_LOG_SUBPATH              "@DEFAULT_LOG_SUBPATH@"
 #define MXS_DEFAULT_DATA_SUBPATH             "@DEFAULT_DATA_SUBPATH@"
 #define MXS_DEFAULT_LIB_SUBPATH              "@DEFAULT_LIB_SUBPATH@"
+#define MXS_DEFAULT_SHARE_SUBPATH            "@DEFAULT_SHARE_SUBPATH@"
 #define MXS_DEFAULT_CACHE_SUBPATH            "@DEFAULT_CACHE_SUBPATH@"
 #define MXS_DEFAULT_LANG_SUBPATH             "@DEFAULT_LANG_SUBPATH@"
 #define MXS_DEFAULT_EXEC_SUBPATH             "@DEFAULT_EXEC_SUBPATH@"
@@ -39,6 +40,7 @@ MXS_BEGIN_DECLS
 #define MXS_DEFAULT_LOGDIR              "@DEFAULT_LOGDIR@"
 #define MXS_DEFAULT_DATADIR             "@DEFAULT_DATADIR@"
 #define MXS_DEFAULT_LIBDIR              "@DEFAULT_LIBDIR@"
+#define MXS_DEFAULT_SHAREDIR            "@DEFAULT_SHAREDIR@"
 #define MXS_DEFAULT_CACHEDIR            "@DEFAULT_CACHEDIR@"
 #define MXS_DEFAULT_LANGDIR             "@DEFAULT_LANGDIR@"
 #define MXS_DEFAULT_EXECDIR             "@DEFAULT_EXECDIR@"
@@ -53,6 +55,11 @@ static const char* default_cnf_fname = "maxscale.cnf";
  * Set the library directory. Modules will be loaded from here.
  */
 void set_libdir(const char* param);
+
+/**
+ * Set the share directory
+ */
+void set_sharedir(const char* param);
 
 /**
  * Set the data directory
@@ -114,6 +121,11 @@ void set_connector_plugindir(const char* param);
  * Get the directory with all the modules.
  */
 const char* get_libdir();
+
+/**
+ * Get the share directory
+ */
+const char* get_sharedir();
 
 /**
  * Get the MaxScale data directory

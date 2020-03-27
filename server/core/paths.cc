@@ -26,6 +26,7 @@ std::string config_persistdir = MXS_DEFAULT_CONFIG_PERSISTDIR;
 std::string module_configdir = MXS_DEFAULT_MODULE_CONFIGDIR;
 std::string logdir = MXS_DEFAULT_LOGDIR;
 std::string libdir = MXS_DEFAULT_LIBDIR;
+std::string sharedir = MXS_DEFAULT_SHAREDIR;
 std::string cachedir = MXS_DEFAULT_CACHEDIR;
 std::string datadir = MXS_DEFAULT_DATADIR;
 std::string processdatadir = MXS_DEFAULT_DATADIR;
@@ -85,6 +86,11 @@ void set_libdir(const char* path)
     libdir = clean_up_pathname(path);
 }
 
+void set_sharedir(const char* path)
+{
+    sharedir = clean_up_pathname(path);
+}
+
 void set_execdir(const char* path)
 {
     execdir = clean_up_pathname(path);
@@ -98,6 +104,11 @@ void set_connector_plugindir(const char* path)
 const char* get_libdir()
 {
     return libdir.c_str();
+}
+
+const char* get_sharedir()
+{
+    return sharedir.c_str();
 }
 
 const char* get_cachedir()

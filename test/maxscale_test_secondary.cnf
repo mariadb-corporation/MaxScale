@@ -7,6 +7,7 @@ cachedir=@CMAKE_INSTALL_PREFIX@/secondary/cache/maxscale
 language=@CMAKE_INSTALL_PREFIX@/secondary/lib/maxscale/
 piddir=@CMAKE_INSTALL_PREFIX@/secondary/run/maxscale
 persistdir=@CMAKE_INSTALL_PREFIX@/secondary/lib/maxscale/maxscale.cnf.d/
+sharedir=@CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@
 admin_auth=false
 admin_port=8990
 

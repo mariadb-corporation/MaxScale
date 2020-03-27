@@ -6,6 +6,7 @@ datadir=@CMAKE_INSTALL_PREFIX@/lib/maxscale
 cachedir=@CMAKE_INSTALL_PREFIX@/cache/maxscale
 language=@CMAKE_INSTALL_PREFIX@/lib/maxscale/
 piddir=@CMAKE_INSTALL_PREFIX@/run/maxscale/
+sharedir=@CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@
 
 [server1]
 type=server
