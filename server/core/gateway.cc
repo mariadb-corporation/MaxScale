@@ -130,6 +130,7 @@ static struct option long_options[] =
     {"datadir",             required_argument, 0, 'D'},
     {"execdir",             required_argument, 0, 'E'},
     {"persistdir",          required_argument, 0, 'F'},
+    {"sharedir",            required_argument, 0, 'J'},
     {"module_configdir",    required_argument, 0, 'M'},
     {"language",            required_argument, 0, 'N'},
     {"piddir",              required_argument, 0, 'P'},
@@ -963,6 +964,7 @@ static void usage()
             "  -M, --module_configdir=PATH path to module configuration directory\n"
             "  -H, --connector_plugindir=PATH\n"
             "                              path to MariaDB Connector-C plugin directory\n"
+            "  -J, --sharedir=PATH         path to share directory\n"
             "  -N, --language=PATH         path to errmsg.sys file\n"
             "  -P, --piddir=PATH           path to PID file directory\n"
             "  -R, --basedir=PATH          base path for all other paths\n"
@@ -994,6 +996,7 @@ static void usage()
             "  logdir            : %s\n"
             "  cachedir          : %s\n"
             "  libdir            : %s\n"
+            "  sharedir          : %s\n"
             "  datadir           : %s\n"
             "  execdir           : %s\n"
             "  language          : %s\n"
@@ -1015,6 +1018,7 @@ static void usage()
             get_logdir(),
             get_cachedir(),
             get_libdir(),
+            get_sharedir(),
             get_datadir(),
             get_execdir(),
             get_langdir(),
@@ -1418,7 +1422,7 @@ int main(int argc, char** argv)
     this_unit.datadir[PATH_MAX] = '\0';
 
     // Option string for getopt
-    const char accepted_opts[] = "dnce:f:g:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:H:p";
+    const char accepted_opts[] = "dnce:f:g:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:H:J:p";
     const char* specified_user = NULL;
     char export_cnf[PATH_MAX + 1] = "";
     string cnf_file_arg;    /*< conf filename from cmd-line arg */
@@ -1597,6 +1601,17 @@ int main(int argc, char** argv)
             if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
             {
                 set_connector_plugindir(tmp_path.c_str());
+            }
+            else
+            {
+                succp = false;
+            }
+            break;
+
+        case 'J':
+            if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
+            {
+                set_sharedir(tmp_path.c_str());
             }
             else
             {
