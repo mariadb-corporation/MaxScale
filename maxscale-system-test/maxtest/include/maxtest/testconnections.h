@@ -91,11 +91,6 @@ public:
     int global_result;
 
     /**
-     * @brief test_name Neme of the test
-     */
-    char* test_name;
-
-    /**
      * @brief galera Mariadb_nodes object containing references to Galera setuo
      */
     Galera_nodes * galera;
@@ -289,21 +284,6 @@ public:
      * Also IPv6 addresses go to maxscale.cnf
      */
     bool use_ipv6;
-
-    /**
-     * @brief template_name Name of maxscale.cnf template
-     */
-    const char * template_name;
-
-    /**
-     * @brief labels 'LABELS' string from CMakeLists.txt
-     */
-    const char * labels;
-
-    /**
-     * @brief mdbci_labels labels to be passed to MDBCI
-     */
-    std::string mdbci_labels;
 
     /**
      * @brief configured_labels List of lables for which nodes are configured
@@ -640,7 +620,7 @@ public:
      *
      * @param dest Destination file name for actual configuration file
      */
-    void process_template(int m, const char* src, const char* dest = "/etc/maxscale.cnf");
+    void process_template(int m, const std::string& src, const char* dest = "/etc/maxscale.cnf");
 
     /**
      * Execute a MaxCtrl command
@@ -710,13 +690,22 @@ private:
     void report_result(const char* format, va_list argp);
     void copy_one_mariadb_log(Mariadb_nodes* nrepl, int i, std::string filename);
 
+    void set_template_and_labels();
+    void set_mdbci_labels();
+    bool has_label(std::string labels, std::string label);
+
     bool too_many_maxscales() const
     {
         return maxscales->N < 2
-               && mdbci_labels.find("SECOND_MAXSCALE") != std::string::npos;
+               && m_mdbci_labels.find("SECOND_MAXSCALE") != std::string::npos;
     }
 
     std::vector<std::function<void(void)>> m_on_destroy;
+
+    std::string m_test_name;       /**< Test name */
+    std::string m_config_template; /**< MaxScale config file template used by test */
+    std::string m_labels;          /**< Test labels */
+    std::string m_mdbci_labels;    /**< Labels for MDBCI */
 };
 
 /**
@@ -742,19 +731,3 @@ void* log_copy_thread(void* ptr);
  * @return String form comparison of status sets
  */
 std::string dump_status(const StringSet& current, const StringSet& expected);
-
-/**
- * @brief get_template_name Returns the name of maxscale.cnf template to use for given test
- * @param test_name Name of the test
- * @param labels pointer to string for storing all test labels
- * @return Name of maxscale.cnf file template
- */
-const char* get_template_name(char* test_name, const char**labels);
-
-/**
- * @brief readenv_and_set_default Read enviromental variable and set default values if
- * variable is not defined
- * @param name Name of the environmental variable
- * @param defaultenv Default values to be set
- * @return Envaronmental variable value
- */

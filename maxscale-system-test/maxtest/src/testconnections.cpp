@@ -21,12 +21,12 @@
 #include "sql_t1.h"
 #include "testconnections.h"
 #include "test_info.hh"
-#include "labels_table.h"
 #include "envv.h"
 
 using namespace mxb;
 using std::cout;
 using std::endl;
+using std::string;
 
 namespace maxscale
 {
@@ -280,27 +280,12 @@ TestConnections::TestConnections(int argc, char* argv[])
         }
     }
 
-    if (optind < argc)
-    {
-        test_name = argv[optind];
-    }
-    else
-    {
-        test_name = basename(argv[0]);
-    }
+    m_test_name = (optind < argc) ? argv[optind] : basename(argv[0]);
+    set_template_and_labels();
+    tprintf("testname: '%s', template: '%s'", m_test_name.c_str(), m_config_template.c_str());
+    set_mdbci_labels();
 
-    const char* labels_string = "";
-    template_name = get_template_name(test_name, &labels_string);
-    tprintf("testname: '%s', template: '%s'", test_name, template_name);
-    labels = strstr(labels_string, "LABELS;");
-    if (!labels)
-    {
-        labels = (char* ) "LABELS;REPL_BACKEND";
-    }
-
-    mdbci_labels = get_mdbci_lables(labels);
-
-    if (has_label(std::string(labels), "BACKEND_SSL"))
+    if (has_label(m_labels, "BACKEND_SSL"))
     {
         backend_ssl = true;
         tprintf("Test has BACKEND_SSL label");
@@ -309,7 +294,7 @@ TestConnections::TestConnections(int argc, char* argv[])
     std::string delimiter = std::string (",");
     size_t pos_start = 0, pos_end, delim_len = delimiter.length();
     std::string label;
-    std::string mdbci_labels_c = mdbci_labels + delimiter;
+    std::string mdbci_labels_c = m_mdbci_labels + delimiter;
 
     bool mdbci_call_needed = false;
 
@@ -336,7 +321,7 @@ TestConnections::TestConnections(int argc, char* argv[])
         }
     }
 
-    if (mdbci_labels.find(std::string("REPL_BACKEND")) == std::string::npos)
+    if (m_mdbci_labels.find(std::string("REPL_BACKEND")) == std::string::npos)
     {
         no_repl = true;
         if (verbose)
@@ -345,7 +330,7 @@ TestConnections::TestConnections(int argc, char* argv[])
         }
     }
 
-    if (mdbci_labels.find(std::string("GALERA_BACKEND")) == std::string::npos)
+    if (m_mdbci_labels.find(std::string("GALERA_BACKEND")) == std::string::npos)
     {
         no_galera = true;
         if (verbose)
@@ -354,7 +339,7 @@ TestConnections::TestConnections(int argc, char* argv[])
         }
     }
 
-    if (mdbci_labels.find(std::string("CLUSTRIX_BACKEND")) == std::string::npos)
+    if (m_mdbci_labels.find(std::string("CLUSTRIX_BACKEND")) == std::string::npos)
     {
         no_clustrix = true;
         if (verbose)
@@ -554,7 +539,7 @@ TestConnections::TestConnections(int argc, char* argv[])
     }
 
     char str[1024];
-    sprintf(str, "mkdir -p LOGS/%s", test_name);
+    sprintf(str, "mkdir -p LOGS/%s", m_test_name.c_str());
     call_system(str);
 
     timeout = 999999999;
@@ -762,34 +747,47 @@ void TestConnections::print_env()
     }
 }
 
-const char* get_template_name(char* test_name, const char** labels)
+/**
+ * Set config template file and test labels.
+ */
+void TestConnections::set_template_and_labels()
 {
     const TestDefinition* found = nullptr;
     for (int i = 0; test_definitions[i].name; i++)
     {
         auto* test = &test_definitions[i];
-        if (strcmp(test->name, test_name) == 0)
+        if (test->name == m_test_name)
         {
             found = test;
             break;
         }
     }
 
+    string labels_string;
     if (found)
     {
-        *labels = found->labels;
-        return found->config_template;
+        labels_string = found->labels;
+        m_config_template = found->config_template;
     }
     else
     {
         printf("Failed to find configuration template for test '%s', using default template '%s'.\n",
-               test_name, default_template);
-        return default_template;
+               m_test_name.c_str(), default_template);
+        m_config_template = default_template;
     }
 
+    auto labels_pos = labels_string.find("LABELS;");
+    if (labels_pos != string::npos)
+    {
+        m_labels = labels_string.substr(labels_pos);
+    }
+    else
+    {
+        m_labels = "LABELS;REPL_BACKEND";
+    }
 }
 
-void TestConnections::process_template(int m, const char* template_name, const char* dest)
+void TestConnections::process_template(int m, const string& template_name, const char* dest)
 {
     struct stat stb;
     char str[4096];
@@ -797,7 +795,7 @@ void TestConnections::process_template(int m, const char* template_name, const c
 
     char extended_template_file[1024 + 12];
 
-    sprintf(template_file, "%s/cnf/maxscale.cnf.template.%s", test_dir, template_name);
+    sprintf(template_file, "%s/cnf/maxscale.cnf.template.%s", test_dir, template_name.c_str());
     sprintf(extended_template_file, "%s.%03d", template_file, m);
 
     if (stat((char*)extended_template_file, &stb) == 0)
@@ -897,7 +895,7 @@ void TestConnections::init_maxscales()
 
 void TestConnections::init_maxscale(int m)
 {
-    process_template(m, template_name, maxscales->access_homedir[m]);
+    process_template(m, m_config_template, maxscales->access_homedir[m]);
     if (maxscales->ssh_node_f(m, true, "test -d %s/certs", maxscales->access_homedir[m]))
     {
         tprintf("SSL certificates not found, copying to maxscale");
@@ -978,7 +976,7 @@ int TestConnections::copy_mariadb_logs(Mariadb_nodes* nrepl,
             if (strcmp(nrepl->IP[i], "127.0.0.1") != 0)
             {
                 char str[4096];
-                sprintf(str, "LOGS/%s/%s%d_mariadb_log", test_name, prefix, i);
+                sprintf(str, "LOGS/%s/%s%d_mariadb_log", m_test_name.c_str(), prefix, i);
                 threads.emplace_back(&TestConnections::copy_one_mariadb_log, this, nrepl, i, str);
             }
         }
@@ -992,7 +990,7 @@ int TestConnections::copy_all_logs()
     set_timeout(300);
 
     char str[PATH_MAX + 1];
-    sprintf(str, "mkdir -p LOGS/%s", test_name);
+    sprintf(str, "mkdir -p LOGS/%s", m_test_name.c_str());
     call_system(str);
 
     std::vector<std::thread> threads;
@@ -1024,11 +1022,11 @@ int TestConnections::copy_maxscale_logs(double timestamp)
     char sys[sizeof(log_dir_i) + 1024];
     if (timestamp == 0)
     {
-        sprintf(log_dir, "LOGS/%s", test_name);
+        sprintf(log_dir, "LOGS/%s", m_test_name.c_str());
     }
     else
     {
-        sprintf(log_dir, "LOGS/%s/%04f", test_name, timestamp);
+        sprintf(log_dir, "LOGS/%s/%04f", m_test_name.c_str(), timestamp);
     }
     for (int i = 0; i < maxscales->N; i++)
     {
@@ -2245,7 +2243,7 @@ int TestConnections::call_mdbci(const char * options)
     if (system((std::string("mdbci up ") +
                 std::string(mdbci_config_name) +
                 std::string(" --labels ") +
-                mdbci_labels +
+                m_mdbci_labels +
                 std::string(" ") +
                 std::string(options)).c_str() ))
     {
