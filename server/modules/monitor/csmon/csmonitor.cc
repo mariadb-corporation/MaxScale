@@ -98,6 +98,49 @@ int get_cs_version(MonitorServer* srv)
     return rval;
 }
 
+json_t* create_response(const vector<MonitorServer*>& mservers, const vector<http::Result>& results)
+{
+    mxb_assert(mservers.size() == results.size());
+
+    json_t* pResponse = json_object();
+
+    auto it = mservers.begin();
+    auto end = mservers.end();
+    auto jt = results.begin();
+
+    while (it != end)
+    {
+        auto* pMserver = *it;
+        const auto& result = *jt;
+
+        json_t* pResult = json_object();
+
+        json_object_set_new(pResult, "code", json_integer(result.code));
+        json_object_set_new(pResult, "message", json_string(result.body.c_str()));
+
+        json_object_set_new(pResponse, pMserver->server->name(), pResult);
+
+        ++it;
+        ++jt;
+    }
+
+    return pResponse;
+}
+
+vector<http::Result>::const_iterator find_first_failed(const vector<http::Result>& results)
+{
+    return std::find_if(results.begin(), results.end(), [](const http::Result& result) -> bool {
+            return result.code != 200;
+        });
+}
+
+vector<http::Result>::iterator find_first_failed(vector<http::Result>& results)
+{
+    return std::find_if(results.begin(), results.end(), [](const http::Result& result) -> bool {
+            return result.code != 200;
+        });
+}
+
 }
 
 class CsMonitor::Command
@@ -268,31 +311,7 @@ protected:
 
         case http::Async::READY:
             {
-                m_pOutput = json_object();
-
-                auto& servers = m_monitor.servers();
-
-                mxb_assert(servers.size() == m_http.results().size());
-
-                auto it = servers.begin();
-                auto end = servers.end();
-                auto jt = m_http.results().begin();
-
-                while (it != end)
-                {
-                    auto* pMserver = *it;
-                    const auto& result = *jt;
-
-                    json_t* pResult = json_object();
-
-                    json_object_set_new(pResult, "code", json_integer(result.code));
-                    json_object_set_new(pResult, "message", json_string(result.body.c_str()));
-
-                    json_object_set_new(m_pOutput, pMserver->server->name(), pResult);
-
-                    ++it;
-                    ++jt;
-                }
+                m_pOutput = create_response(m_monitor.servers(), m_http.results());
 
                 finish();
             }
@@ -660,7 +679,9 @@ bool CsMonitor::command_cluster_add_node(json_t** ppOutput, SERVER* pServer)
 {
     bool rv = false;
 
-    if (!MonitorManager::server_is_monitored(pServer))
+    mxs::Monitor* pMonitor = MonitorManager::server_is_monitored(pServer);
+
+    if (pMonitor == this)
     {
         mxb::Semaphore sem;
 
@@ -863,10 +884,10 @@ bool CsMonitor::command(json_t** ppOutput, mxb::Semaphore& sem, const char* zCmd
 namespace
 {
 
-string create_url(const MonitorServer& mserver, int64_t port, const char* zOperation)
+string create_url(const SERVER& server, int64_t port, const char* zOperation)
 {
     string url("http://");
-    url += mserver.server->address;
+    url += server.address;
     url += ":";
     url += std::to_string(port);
     url += REST_BASE;
@@ -874,6 +895,11 @@ string create_url(const MonitorServer& mserver, int64_t port, const char* zOpera
     url += zOperation;
 
     return url;
+}
+
+string create_url(const MonitorServer& mserver, int64_t port, const char* zOperation)
+{
+    return create_url(*mserver.server, port, zOperation);
 }
 
 }
@@ -951,8 +977,100 @@ void CsMonitor::cluster_config_put(json_t** ppOutput, mxb::Semaphore* pSem,
 
 void CsMonitor::cluster_add_node(json_t** ppOutput, mxb::Semaphore* pSem, SERVER* pServer)
 {
-    // TODO: Do whatever needs to be done.
-    PRINT_MXS_JSON_ERROR(ppOutput, "cluster-add-node not implemented yet.");
+    /*
+      cluster add node { IP | DNS }
+      - Sends GET /node/ping to the new node.
+        Fail the command  if the previous call failed.
+      - Sends GET /node/config to { all | only one } of the listed nodes.
+        Uses the config/-s to produce new versions of the configs.
+      - Sends PUT /node/config to the old nodes and to the new node.
+
+      The previous action forces the config reload for all services.
+    */
+
+    http::Result result = http::get(create_url(*pServer, m_config.admin_port, "ping"));
+
+    if (result.code == 200)
+    {
+        vector<const MonitorServer*> mservers;
+        vector<string> urls;
+
+        for (const MonitorServer* pMserver : this->servers())
+        {
+            if (pMserver->server != pServer)
+            {
+                mservers.push_back(pMserver);
+                urls.push_back(create_url(*pMserver, m_config.admin_port, "config"));
+            }
+        }
+
+        if (urls.empty())
+        {
+            // TODO: First node requires additional handling.
+            PRINT_MXS_JSON_ERROR(ppOutput,
+                                 "There are no other nodes in the cluster and thus "
+                                 "no-one from which to ask the configuration. Server '%s' "
+                                 "cannot be added to the cluster, but must be configured "
+                                 "explicitly.", pServer->name());
+        }
+        else
+        {
+            vector<http::Result> results = http::get(urls);
+
+            auto it = find_first_failed(results);
+
+            if (it != results.end())
+            {
+                PRINT_MXS_JSON_ERROR(ppOutput, "Could not get config from server '%s', new node cannot "
+                                     "be added: %s", mservers[it - results.begin()]->server->name(), it->body.c_str());
+            }
+            else
+            {
+                auto it = std::adjacent_find(results.begin(), results.end(), [](const auto& l, const auto& r) {
+                        return l.body != r.body;
+                    });
+
+                if (it != results.end())
+                {
+                    PRINT_MXS_JSON_ERROR(ppOutput, "Configuration of all nodes is not identical. Not "
+                                         "possible to add new node.");
+                }
+                else
+                {
+                    // TODO: Update configuration to include the new node.
+                    // TODO: Change body to string.
+                    vector<char> body(results.begin()->body.data(),
+                                      results.begin()->body.data() + results.begin()->body.length());
+
+                    vector<string> urls;
+                    for (const MonitorServer* pMserver : servers())
+                    {
+                        urls.push_back(create_url(*pMserver, m_config.admin_port, "config"));
+                    }
+
+                    vector<http::Result> results = http::put(urls, body);
+
+                    auto it = find_first_failed(results);
+
+                    if (it != results.end())
+                    {
+                        PRINT_MXS_JSON_ERROR(ppOutput, "Could not update configuration of all nodes. Cluster state "
+                                             "is now indeterminate.");
+                    }
+                    else
+                    {
+                        *ppOutput = create_response(servers(), results);
+                    }
+                }
+            }
+        }
+    }
+    else
+    {
+        PRINT_MXS_JSON_ERROR(ppOutput, "Could not ping server '%s': %s",
+                             pServer->name(), result.body.c_str());
+    }
+
     pSem->post();
 }
 
