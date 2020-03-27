@@ -1,0 +1,1 @@
+add_test_executable_ex(mysqlmon_switchover.cpp mysqlmon_switchover mysqlmon_switchover.cnf LABELS REPL_BACKEND)
