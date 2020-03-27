@@ -90,7 +90,7 @@ exports.builder = function(yargs) {
                 })
                 .option('tls-cert-verify-depth', {
                     describe: 'TLS certificate verification depth',
-                    type: 'string'
+                    type: 'number'
                 })
 
         }, function(argv) {
@@ -335,7 +335,7 @@ exports.builder = function(yargs) {
                 })
                 .option('tls-cert-verify-depth', {
                     describe: 'TLS certificate verification depth',
-                    type: 'string'
+                    type: 'number'
                 })
 
         }, function(argv) {
