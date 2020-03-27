@@ -67,12 +67,11 @@ int main(int argc, char* argv[])
 
     for (int i = 0; i < test->repl->N; i++)
     {
-        config.alter_server(i, "monitoruser", "skysql");
-        config.alter_server(i, "monitorpw", "skysql");
+        config.alter_server(i, "monitoruser", "skysql", "monitorpw", "skysql");
     }
 
     config.restart_monitors();
-    sleep(1);
+    test->maxscales->wait_for_monitor();
     test->check_maxscale_alive(0);
 
     int rval = test->global_result;

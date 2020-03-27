@@ -59,6 +59,13 @@ public:
     void alter_server(int num, const char* key, int value);
     void alter_server(int num, const char* key, float value);
 
+    template<class K, class V, class ...Args>
+    void alter_server(int num, K k, V v, Args... args)
+    {
+        test_->maxscales->ssh_node_f(0, true, "maxctrl alter server server%d %s", num,
+                                     create_alter_server_params(k, v, args...).c_str());
+    }
+
     /**
      * Destroy a server
      * @param num Backend number
@@ -139,4 +146,18 @@ private:
     TestConnections*      test_;
     std::set<int>         created_servers_;
     std::set<std::string> created_monitors_;
+
+    template<class K, class V, class ...Args>
+    std::string create_alter_server_params(K k, V v, Args... args)
+    {
+        std::ostringstream ss;
+        ss << k << " " << v << " ";
+        ss << create_alter_server_params(args...);
+        return ss.str();
+    }
+
+    std::string create_alter_server_params()
+    {
+        return "";
+    }
 };
