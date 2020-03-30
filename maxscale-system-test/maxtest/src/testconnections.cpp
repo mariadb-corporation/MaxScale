@@ -126,21 +126,14 @@ void TestConnections::restart_galera(bool value)
 bool TestConnections::verbose = false;
 
 TestConnections::TestConnections(int argc, char* argv[])
-    : enable_timeouts(true)
-    , global_result(0)
-    , use_snapshots(false)
-    , local_maxscale(false)
-    , no_backend_log_copy(false)
-    , no_maxscale_log_copy(false)
+    : global_result(0)
     , smoke(true)
     , binlog_cmd_option(0)
     , ssl(false)
     , backend_ssl(false)
     , binlog_master_gtid(false)
     , binlog_slave_gtid(false)
-    , no_galera(false)
     , no_clustrix(false)
-    , no_vm_revert(true)
     , threads(4)
     , use_ipv6(false)
 {
@@ -240,7 +233,7 @@ TestConnections::TestConnections(int argc, char* argv[])
             break;
 
         case 'z':
-            enable_timeouts = false;
+            m_enable_timeouts = false;
             break;
 
         case 'y':
@@ -256,9 +249,8 @@ TestConnections::TestConnections(int argc, char* argv[])
                 maxscale::start = false;
                 maxscale::manual_debug = true;
                 maxscale_init = false;
-
-                no_maxscale_log_copy = true;
-                local_maxscale = true;
+                m_no_maxscale_log_copy = true;
+                m_local_maxscale = true;
 
                 std::regex regex1("maxscale_000_network=[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+");
                 std::string replace1("maxscale_000_network=127.0.0.1");
@@ -349,8 +341,8 @@ TestConnections::TestConnections(int argc, char* argv[])
         }
     }
 
-    get_logs_command = (char *) malloc(strlen(test_dir) + 14);
-    sprintf(get_logs_command, "%s/get_logs.sh", test_dir);
+    m_get_logs_command = (char *) malloc(strlen(test_dir) + 14);
+    sprintf(m_get_logs_command, "%s/get_logs.sh", test_dir);
 
     sprintf(ssl_options,
             "--ssl-cert=%s/ssl-cert/client-cert.pem --ssl-key=%s/ssl-cert/client-key.pem",
@@ -372,8 +364,8 @@ TestConnections::TestConnections(int argc, char* argv[])
         repl = new Mariadb_nodes("node", test_dir, verbose, network_config);
         repl->setup();
         repl->use_ipv6 = use_ipv6;
-        repl->take_snapshot_command = take_snapshot_command;
-        repl->revert_snapshot_command = revert_snapshot_command;
+        repl->take_snapshot_command = m_take_snapshot_command;
+        repl->revert_snapshot_command = m_revert_snapshot_command;
         repl_future = std::async(std::launch::async, &Mariadb_nodes::check_nodes, repl);
     }
     else
@@ -386,8 +378,8 @@ TestConnections::TestConnections(int argc, char* argv[])
         galera = new Galera_nodes("galera", test_dir, verbose, network_config);
         galera->setup();
         galera->use_ipv6 = false;
-        galera->take_snapshot_command = take_snapshot_command;
-        galera->revert_snapshot_command = revert_snapshot_command;
+        galera->take_snapshot_command = m_take_snapshot_command;
+        galera->revert_snapshot_command = m_revert_snapshot_command;
         galera_future = std::async(std::launch::async, &Galera_nodes::check_nodes, galera);
     }
     else
@@ -400,8 +392,8 @@ TestConnections::TestConnections(int argc, char* argv[])
         clustrix = new Clustrix_nodes("clustrix", test_dir, verbose, network_config);
         clustrix->setup();
         clustrix->use_ipv6 = false;
-        clustrix->take_snapshot_command = take_snapshot_command;
-        clustrix->revert_snapshot_command = revert_snapshot_command;
+        clustrix->take_snapshot_command = m_take_snapshot_command;
+        clustrix->revert_snapshot_command = m_revert_snapshot_command;
         clustrix->fix_replication();
     }
     else
@@ -435,7 +427,7 @@ TestConnections::TestConnections(int argc, char* argv[])
 
         if (reinstall_maxscales())
         {
-            tprintf("Failed to install Maxscale: target is %s", target);
+            tprintf("Failed to install Maxscale: target is %s", m_target);
             exit(MDBCI_FAUILT);
         }
     }
@@ -655,21 +647,21 @@ bool TestConnections::expect(bool result, const char* format, ...)
 
 void TestConnections::read_mdbci_info()
 {
-    mdbci_vm_path = readenv("MDBCI_VM_PATH", "%s/vms/", getenv("HOME"));
+    m_mdbci_vm_path = readenv("MDBCI_VM_PATH", "%s/vms/", getenv("HOME"));
 
     if (system((std::string("mkdir -p ") +
-                std::string(mdbci_vm_path)).c_str()))
+                std::string(m_mdbci_vm_path)).c_str()))
     {
-        tprintf("Unable to create MDBCI VMs direcory '%s', exiting", mdbci_vm_path);
+        tprintf("Unable to create MDBCI VMs direcory '%s', exiting", m_mdbci_vm_path);
         exit(MDBCI_FAUILT);
     }
-    mdbci_template = readenv("template", "default");
-    target = readenv("target", "develop");
+    m_mdbci_template = readenv("template", "default");
+    m_target = readenv("target", "develop");
 
-    mdbci_config_name = readenv("mdbci_config_name", "local");
-    vm_path = std::string(mdbci_vm_path) + "/" + std::string(mdbci_config_name);
+    m_mdbci_config_name = readenv("mdbci_config_name", "local");
+    vm_path = std::string(m_mdbci_vm_path) + "/" + std::string(m_mdbci_config_name);
 
-    if (mdbci_config_name != NULL)
+    if (m_mdbci_config_name != NULL)
     {
         std::ifstream nc_file;
         nc_file.open(vm_path + "_network_config");
@@ -715,17 +707,17 @@ void TestConnections::read_env()
         maxscale::start = false;
     }
 
-    no_backend_log_copy = readenv_bool("no_backend_log_copy", false);
-    no_maxscale_log_copy = readenv_bool("no_maxscale_log_copy", false);
+    m_no_backend_log_copy = readenv_bool("no_backend_log_copy", false);
+    m_no_maxscale_log_copy = readenv_bool("no_maxscale_log_copy", false);
     use_ipv6 = readenv_bool("use_ipv6", false);
     backend_ssl = readenv_bool("backend_ssl", false);
     smoke = readenv_bool("smoke", true);
     threads = readenv_int("threads", 4);
-    use_snapshots = readenv_bool("use_snapshots", false);
-    take_snapshot_command = readenv("take_snapshot_command",
-                                    "mdbci snapshot take --path-to-nodes %s --snapshot-name ", mdbci_config_name);
-    revert_snapshot_command = readenv("revert_snapshot_command",
-                                      "mdbci snapshot revert --path-to-nodes %s --snapshot-name ", mdbci_config_name);
+    m_use_snapshots = readenv_bool("use_snapshots", false);
+    m_take_snapshot_command = readenv("take_snapshot_command",
+                                      "mdbci snapshot take --path-to-nodes %s --snapshot-name ", m_mdbci_config_name);
+    m_revert_snapshot_command = readenv("revert_snapshot_command",
+                                        "mdbci snapshot revert --path-to-nodes %s --snapshot-name ", m_mdbci_config_name);
     no_vm_revert = readenv_bool("no_vm_revert", true);
 }
 
@@ -995,7 +987,7 @@ int TestConnections::copy_all_logs()
 
     std::vector<std::thread> threads;
 
-    if (!no_backend_log_copy)
+    if (!m_no_backend_log_copy)
     {
         copy_mariadb_logs(repl, "node", threads);
         copy_mariadb_logs(galera, "galera", threads);
@@ -1003,7 +995,7 @@ int TestConnections::copy_all_logs()
 
     int rv = 0;
 
-    if (!no_maxscale_log_copy)
+    if (!m_no_maxscale_log_copy)
     {
         rv = copy_maxscale_logs(0);
     }
@@ -1113,7 +1105,7 @@ int TestConnections::prepare_binlog(int m)
                    "Error editing maxscale.cnf");
     }
 
-    if (!local_maxscale)
+    if (!m_local_maxscale)
     {
         tprintf("Removing all binlog data from Maxscale node");
         add_result(maxscales->ssh_node_f(m, true, "rm -rf %s", maxscales->maxscale_binlog_dir[m]),
@@ -1170,7 +1162,7 @@ int TestConnections::start_binlog(int m)
 
     repl->stop_nodes();
 
-    if (!local_maxscale)
+    if (!m_local_maxscale)
     {
         binlog =
             open_conn_no_db(maxscales->binlog_port[m], maxscales->IP[m], repl->user_name, repl->password,
@@ -1207,7 +1199,7 @@ int TestConnections::start_binlog(int m)
     prepare_binlog(m);
     tprintf("Testing binlog when MariaDB is started with '%s' option\n", cmd_opt);
 
-    if (!local_maxscale)
+    if (!m_local_maxscale)
     {
         tprintf("ls binlog data dir on Maxscale node\n");
         add_result(maxscales->ssh_node_f(m, true, "ls -la %s/", maxscales->maxscale_binlog_dir[m]),
@@ -1243,7 +1235,7 @@ int TestConnections::start_binlog(int m)
         repl->set_slave(repl->nodes[1], repl->IP_private[0], repl->port[0], log_file, log_pos);
     }
 
-    if (!local_maxscale)
+    if (!m_local_maxscale)
     {
         tprintf("Starting back Maxscale\n");
         add_result(maxscales->start_maxscale(m), "Maxscale start failed\n");
@@ -1837,7 +1829,7 @@ int TestConnections::get_client_ip(int m, char* ip)
 
 int TestConnections::set_timeout(long int timeout_seconds)
 {
-    if (enable_timeouts)
+    if (m_enable_timeouts)
     {
         timeout = timeout_seconds;
     }
@@ -2175,15 +2167,15 @@ void TestConnections::check_current_persistent_connections(int m, const std::str
 
 int TestConnections::take_snapshot(char* snapshot_name)
 {
-    char str[strlen(take_snapshot_command) + strlen(snapshot_name) + 2];
-    sprintf(str, "%s %s", take_snapshot_command, snapshot_name);
+    char str[strlen(m_take_snapshot_command) + strlen(snapshot_name) + 2];
+    sprintf(str, "%s %s", m_take_snapshot_command, snapshot_name);
     return call_system(str);
 }
 
 int TestConnections::revert_snapshot(char* snapshot_name)
 {
-    char str[strlen(revert_snapshot_command) + strlen(snapshot_name) + 2];
-    sprintf(str, "%s %s", revert_snapshot_command, snapshot_name);
+    char str[strlen(m_revert_snapshot_command) + strlen(snapshot_name) + 2];
+    sprintf(str, "%s %s", m_revert_snapshot_command, snapshot_name);
     return call_system(str);
 }
 
@@ -2204,7 +2196,7 @@ int TestConnections::call_mdbci(const char * options)
 {
     struct stat buf;
     if (stat(
-                (mdbci_vm_path + std::string("/") + mdbci_config_name).c_str(),
+                (m_mdbci_vm_path + std::string("/") + m_mdbci_config_name).c_str(),
                 &buf)
        )
     {
@@ -2216,7 +2208,7 @@ int TestConnections::call_mdbci(const char * options)
         if (system((std::string("mdbci --override --template ") +
                     vm_path +
                     std::string(".json generate ") +
-                    std::string(mdbci_config_name)).c_str() ))
+                    std::string(m_mdbci_config_name)).c_str() ))
         {
             tprintf("MDBCI failed to generate virtual machines description");
             return 1;
@@ -2233,7 +2225,7 @@ int TestConnections::call_mdbci(const char * options)
     }
 
     if (system((std::string("mdbci up ") +
-                std::string(mdbci_config_name) +
+                std::string(m_mdbci_config_name) +
                 std::string(" --labels ") +
                 m_mdbci_labels +
                 std::string(" ") +
@@ -2247,7 +2239,7 @@ int TestConnections::call_mdbci(const char * options)
     system((std::string("mdbci public_keys --key ") +
             team_keys +
             std::string(" ") +
-            std::string(mdbci_config_name)).c_str() );
+            std::string(m_mdbci_config_name)).c_str() );
     read_env();
     if (repl)
     {
@@ -2289,7 +2281,7 @@ int TestConnections::process_mdbci_template()
 
     std::string name = std::string(test_dir) +
                        std::string("/mdbci/templates/") +
-                       std::string(mdbci_template) +
+                       std::string(m_mdbci_template) +
                        std::string(".json.template");
 
     std::string sys = std::string("envsubst < ") +
@@ -2327,10 +2319,10 @@ std::string dump_status(const StringSet& current, const StringSet& expected)
 }
 int TestConnections::reinstall_maxscales()
 {
-    char sys[strlen(target) +
-                            strlen(mdbci_config_name) +
-                            strlen(maxscales->prefix) +
-                            70];
+    char sys[strlen(m_target) +
+             strlen(m_mdbci_config_name) +
+             strlen(maxscales->prefix) +
+             70];
     for (int i = 0; i < maxscales->N; i++)
     {
         printf("Installing Maxscale on node %d\n", i);
@@ -2339,11 +2331,16 @@ int TestConnections::reinstall_maxscales()
         maxscales->ssh_node(i, "yum clean all", true);
 
         sprintf(sys, "mdbci install_product --product maxscale_ci --product-version %s %s/%s_%03d",
-                target, mdbci_config_name, maxscales->prefix, i);
+                m_target, m_mdbci_config_name, maxscales->prefix, i);
         if (system(sys))
         {
             return 1;
         }
     }
     return 0;
+}
+
+bool TestConnections::too_many_maxscales() const
+{
+    return maxscales->N < 2 && m_mdbci_labels.find("SECOND_MAXSCALE") != std::string::npos;
 }
