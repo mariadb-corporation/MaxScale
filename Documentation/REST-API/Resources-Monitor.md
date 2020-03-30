@@ -366,7 +366,7 @@ Invalid JSON body:
 ### Destroy a monitor
 
 ```
-DELETE /v1/monitors/:name/stop
+DELETE /v1/monitors/:name
 ```
 
 Destroy a created monitor. The monitor must not have relationships to any

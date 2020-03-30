@@ -1976,7 +1976,11 @@ bool runtime_destroy_monitor(Monitor* monitor)
 {
     bool rval = false;
 
-    if (Service* s = service_uses_monitor(monitor))
+    if (!monitor->servers().empty())
+    {
+        config_runtime_error("Cannot destroy monitor '%s', it is monitoring servers.", monitor->name());
+    }
+    else if (Service* s = service_uses_monitor(monitor))
     {
         config_runtime_error("Monitor '%s' cannot be destroyed as it is used by service '%s'",
                              monitor->name(), s->name());

@@ -153,6 +153,11 @@ const service_fields = [
         description: 'Services that the service uses'
     },
     {
+        name: 'Filters',
+        path: 'relationships.filters.data[].id',
+        description: 'Filters that the service uses'
+    },
+    {
         name: 'Parameters',
         path: 'attributes.parameters',
         description: 'Service parameter'
