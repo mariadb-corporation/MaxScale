@@ -142,12 +142,12 @@ public:
     /**
      * @brief make_snapshot_command Command line to create a snapshot of all VMs
      */
-    char* take_snapshot_command;
+    const char* take_snapshot_command;
 
     /**
      * @brief revert_snapshot_command Command line to revert a snapshot of all VMs
      */
-    char* revert_snapshot_command;
+    const char* revert_snapshot_command;
 
     int connect(int i, const std::string& db = "test");
     int connect(const std::string& db = "test");

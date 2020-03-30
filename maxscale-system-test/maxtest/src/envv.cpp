@@ -1,6 +1,9 @@
-#include <string.h>
-#include <string>
 #include "envv.h"
+
+#include <cstring>
+#include <cstdarg>
+
+using std::string;
 
 char * readenv(const char * name, const char *format, ...)
 {
@@ -26,6 +29,35 @@ char * readenv(const char * name, const char *format, ...)
         setenv(name, env, 1);
     }
     return env;
+}
+
+string envvar_read_write_def_str(const char* name, const char* format, ...)
+{
+    string rval;
+    const char* old_value = getenv(name);
+    if (old_value)
+    {
+        rval = old_value;
+    }
+    else if (format)
+    {
+        va_list valist;
+        va_start(valist, format);
+        int bytes_required = vsnprintf(nullptr, 0, format, valist);
+        va_end(valist);
+
+        if (bytes_required >= 0)
+        {
+            int buflen = bytes_required + 1;
+            char buf[buflen];
+            va_start(valist, format);
+            vsnprintf(buf, buflen, format, valist);
+            va_end(valist);
+            setenv(name, buf, 1);
+            rval = buf;
+        }
+    }
+    return rval;
 }
 
 int readenv_int(const char * name, int def)
