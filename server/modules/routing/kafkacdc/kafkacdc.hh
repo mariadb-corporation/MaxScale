@@ -17,7 +17,7 @@
 #include <maxscale/ccdefs.hh>
 #include <maxscale/router.hh>
 #include <maxscale/config2.hh>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 
 #include "../replicator/replicator.hh"
 

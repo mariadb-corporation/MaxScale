@@ -20,7 +20,7 @@
 #include <pwd.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include <maxscale/random.h>
 #include "internal/secrets.hh"
 
@@ -57,7 +57,7 @@ void print_usage(const char* executable, const char* directory)
 
 int main(int argc, char** argv)
 {
-    std::string directory = get_datadir();
+    std::string directory = mxs::datadir();
     std::string username = "maxscale";
 
     int c;

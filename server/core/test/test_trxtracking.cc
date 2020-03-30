@@ -15,7 +15,7 @@
 #include <algorithm>
 #include <iostream>
 #include <maxscale/modutil.hh>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include "../core/internal/query_classifier.hh"
 
@@ -444,13 +444,13 @@ int main(int argc, char* argv[])
             test_target = TEST_ALL;
         }
 
-        set_datadir(strdup("/tmp"));
-        set_langdir(strdup("."));
-        set_process_datadir(strdup("/tmp"));
+        mxs::set_datadir("/tmp");
+        mxs::set_langdir(".");
+        mxs::set_process_datadir("/tmp");
 
         if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
         {
-            set_libdir(strdup("../../../query_classifier/qc_sqlite"));
+            mxs::set_libdir("../../../query_classifier/qc_sqlite");
 
             // We have to setup something in order for the regexes to be compiled.
             if (qc_init(NULL, QC_SQL_MODE_DEFAULT, "qc_sqlite", NULL))

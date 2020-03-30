@@ -30,7 +30,7 @@
 #include <maxscale/clock.h>
 #include <maxscale/jansson.hh>
 #include <maxscale/json_api.hh>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include <maxscale/router.hh>
 #include <maxscale/users.hh>
 
@@ -1662,7 +1662,7 @@ bool runtime_destroy_server(Server* server)
         snprintf(filename,
                  sizeof(filename),
                  "%s/%s.cnf",
-                 get_config_persistdir(),
+                 mxs::config_persistdir(),
                  server->name());
 
         if (unlink(filename) == -1)
@@ -1703,7 +1703,7 @@ bool runtime_destroy_server(Server* server)
 bool runtime_destroy_listener(Service* service, const char* name)
 {
     char filename[PATH_MAX];
-    snprintf(filename, sizeof(filename), "%s/%s.cnf", get_config_persistdir(), name);
+    snprintf(filename, sizeof(filename), "%s/%s.cnf", mxs::config_persistdir(), name);
 
 
     if (unlink(filename) == -1)
@@ -1798,7 +1798,7 @@ bool runtime_destroy_monitor(Monitor* monitor)
     else
     {
         char filename[PATH_MAX];
-        snprintf(filename, sizeof(filename), "%s/%s.cnf", get_config_persistdir(), monitor->name());
+        snprintf(filename, sizeof(filename), "%s/%s.cnf", mxs::config_persistdir(), monitor->name());
 
         if (unlink(filename) == -1 && errno != ENOENT)
         {

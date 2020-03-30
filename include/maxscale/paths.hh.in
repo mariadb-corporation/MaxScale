@@ -16,8 +16,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-MXS_BEGIN_DECLS
-
 /**
  * All of the following DEFAULT_* variables are defined in cmake/install_layout.cmake
  */
@@ -48,9 +46,8 @@ MXS_BEGIN_DECLS
 #define MXS_DEFAULT_MODULE_CONFIGDIR    "@DEFAULT_MODULE_CONFIGDIR@"
 #define MXS_DEFAULT_CONNECTOR_PLUGINDIR "@DEFAULT_CONNECTOR_PLUGINDIR@"
 
-// The default configuration file name
-static const char* default_cnf_fname = "maxscale.cnf";
-
+namespace maxscale
+{
 /**
  * Set the library directory. Modules will be loaded from here.
  */
@@ -120,66 +117,65 @@ void set_connector_plugindir(const char* param);
 /**
  * Get the directory with all the modules.
  */
-const char* get_libdir();
+const char* libdir();
 
 /**
  * Get the share directory
  */
-const char* get_sharedir();
+const char* sharedir();
 
 /**
  * Get the MaxScale data directory
  */
-const char* get_datadir();
+const char* datadir();
 
 /**
  * Get the process specific data directory
  */
-const char* get_process_datadir();
+const char* process_datadir();
 
 /**
  * Get the service cache directory
  */
-const char* get_cachedir();
+const char* cachedir();
 
 /**
  * Get the configuration file directory
  */
-const char* get_configdir();
+const char* configdir();
 
 /**
  * Get the configuration file directory
  */
-const char* get_config_persistdir();
+const char* config_persistdir();
 
 /**
  * Get the module configuration file directory
  */
-const char* get_module_configdir();
+const char* module_configdir();
 
 /**
  * Get the PID file directory which contains maxscale.pid
  */
-const char* get_piddir();
+const char* piddir();
 
 /**
  * Return the log file directory
  */
-const char* get_logdir();
+const char* logdir();
 
 /**
  * Path to the directory which contains the errmsg.sys language file
  */
-const char* get_langdir();
+const char* langdir();
 
 /**
  * Get the directory with the executables.
  */
-const char* get_execdir();
+const char* execdir();
 
 /**
  * Get connector plugin directory
  */
-const char* get_connector_plugindir();
-
-MXS_END_DECLS
+const char* connector_plugindir();
+}

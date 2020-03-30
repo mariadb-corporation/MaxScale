@@ -21,7 +21,7 @@
 #include <maxscale/buffer.hh>
 #include <maxscale/modutil.hh>
 #include <maxscale/query_classifier.hh>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include "storagefactory.hh"
 #include "storage.hh"
 

@@ -13,7 +13,7 @@
 
 #include "kafkacdc.hh"
 
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 
 #include <librdkafka/rdkafkacpp.h>
 
@@ -360,7 +360,7 @@ std::unique_ptr<cdc::Replicator> KafkaCDC::create_replicator(const Config& confi
     {
         cdc::Config cnf;
         cnf.service = service;
-        cnf.statedir = std::string(get_datadir()) + "/" + service->name();
+        cnf.statedir = std::string(mxs::datadir()) + "/" + service->name();
         cnf.timeout = config.timeout;
 
         // Make sure the data directory exists

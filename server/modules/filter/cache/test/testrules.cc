@@ -16,7 +16,7 @@
 #include <iostream>
 #include <maxbase/alloc.h>
 #include <maxscale/config.hh>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/query_classifier.hh>
 
@@ -571,10 +571,10 @@ int main()
         mxs::Config& config = mxs::Config::get();
         config.n_threads = 1;
 
-        set_libdir(MXS_STRDUP_A("../../../../../query_classifier/qc_sqlite/"));
+        mxs::set_libdir("../../../../../query_classifier/qc_sqlite/");
         if (qc_init(NULL, QC_SQL_MODE_DEFAULT, "qc_sqlite", ""))
         {
-            set_libdir(MXS_STRDUP_A("../"));
+            mxs::set_libdir("../");
             rc = test();
 
             qc_end();

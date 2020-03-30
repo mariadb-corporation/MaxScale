@@ -34,7 +34,7 @@
 #include <maxbase/atomic.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/encryption.h>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include <maxscale/router.hh>
 #include <maxscale/secrets.hh>
 #include <maxscale/server.hh>
@@ -259,7 +259,7 @@ int blr_file_init(ROUTER_INSTANCE* router)
 
     if (router->binlogdir == NULL)
     {
-        const char* datadir = get_datadir();
+        const char* datadir = mxs::datadir();
         size_t len = strlen(datadir) + sizeof('/') + strlen(router->service->name());
 
         if (len > PATH_MAX)

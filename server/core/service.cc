@@ -40,7 +40,7 @@
 #include <maxbase/alloc.h>
 #include <maxbase/log.hh>
 #include <maxscale/dcb.hh>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/protocol.hh>
 #include <maxscale/resultset.hh>
@@ -283,7 +283,7 @@ void Service::destroy(Service* service)
     mxb_assert(mxs::MainWorker::is_main_worker());
 
     char filename[PATH_MAX + 1];
-    snprintf(filename, sizeof(filename), "%s/%s.cnf", get_config_persistdir(), service->name());
+    snprintf(filename, sizeof(filename), "%s/%s.cnf", mxs::config_persistdir(), service->name());
 
     if (unlink(filename) == -1 && errno != ENOENT)
     {
@@ -842,7 +842,7 @@ bool Service::serialize() const
     bool rval = false;
     char filename[PATH_MAX];
     snprintf(filename, sizeof(filename), "%s/%s.cnf.tmp",
-             get_config_persistdir(), name());
+             mxs::config_persistdir(), name());
 
     if (unlink(filename) == -1 && errno != ENOENT)
     {

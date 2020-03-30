@@ -22,7 +22,7 @@
 #include <maxscale/json_api.hh>
 #include <maxscale/mainworker.hh>
 #include <maxscale/modulecmd.hh>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include <maxscale/session.hh>
 
 #include "../internal/monitormanager.hh"
@@ -407,8 +407,7 @@ int test_domain_matching(const char* actual_module,
     TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
 
     /** Create a monitor */
-    char* libdir = MXS_STRDUP_A("../../modules/monitor/mariadbmon/");
-    set_libdir(libdir);
+    mxs::set_libdir("../../modules/monitor/mariadbmon/");
     mxs::ConfigParameters params;
     params.set("monitor_interval", "1s");
     params.set("backend_connect_timeout", "1s");

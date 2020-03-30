@@ -18,7 +18,7 @@
 #include <maxscale/authenticator.hh>
 #include <maxscale/event.hh>
 #include <maxscale/poll.hh>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include <maxscale/secrets.hh>
 #include <maxscale/utils.h>
 

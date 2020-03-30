@@ -21,7 +21,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include <maxscale/adminusers.hh>
 #include <maxbase/alloc.h>
 #include <maxscale/utils.h>
@@ -232,10 +232,10 @@ int main(int argc, char** argv)
     char* home, buf[1024];
 
     /** Set datadir to /tmp */
-    set_datadir(MXS_STRDUP_A("/tmp"));
+    mxs::set_datadir("/tmp");
 
     /* Unlink any existing password files before running this test */
-    sprintf(buf, "%s/maxadmin-users", get_datadir());
+    sprintf(buf, "%s/maxadmin-users", mxs::datadir());
     if (!is_valid_posix_path(buf))
     {
         exit(1);
@@ -243,7 +243,7 @@ int main(int argc, char** argv)
 
     unlink(buf);
 
-    sprintf(buf, "%s/passwd", get_datadir());
+    sprintf(buf, "%s/passwd", mxs::datadir());
     if (!is_valid_posix_path(buf))
     {
         exit(1);

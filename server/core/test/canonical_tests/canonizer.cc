@@ -23,7 +23,7 @@
 
 #include <maxscale/query_classifier.hh>
 #include <maxscale/buffer.hh>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include <maxscale/utils.h>
 
 using std::cout;
@@ -42,10 +42,10 @@ int main(int argc, char** argv)
     mxs_log_init(NULL, NULL, MXS_LOG_TARGET_STDOUT);
     atexit(mxs_log_finish);
 
-    set_libdir(strdup("../../../../query_classifier/qc_sqlite/"));
-    set_datadir(strdup("/tmp"));
-    set_langdir(strdup("."));
-    set_process_datadir(strdup("/tmp"));
+    mxs::set_libdir("../../../../query_classifier/qc_sqlite/");
+    mxs::set_datadir("/tmp");
+    mxs::set_langdir(".");
+    mxs::set_process_datadir("/tmp");
 
     if (qc_init(NULL, QC_SQL_MODE_DEFAULT, "qc_sqlite", NULL))
     {

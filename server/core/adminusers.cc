@@ -27,7 +27,7 @@
 #include <maxscale/cn_strings.hh>
 #include <maxscale/users.hh>
 #include <maxbase/pam_utils.hh>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/utils.hh>
 #include <maxscale/event.hh>
@@ -74,12 +74,12 @@ namespace
 {
 bool admin_dump_users(const Users* users, const char* fname)
 {
-    if (access(get_datadir(), F_OK) != 0)
+    if (access(mxs::datadir(), F_OK) != 0)
     {
-        if (mkdir(get_datadir(), S_IRWXU) != 0 && errno != EEXIST)
+        if (mkdir(mxs::datadir(), S_IRWXU) != 0 && errno != EEXIST)
         {
             MXS_ERROR("Failed to create directory '%s': %d, %s",
-                      get_datadir(),
+                      mxs::datadir(),
                       errno,
                       mxs_strerror(errno));
             return false;
@@ -87,7 +87,7 @@ bool admin_dump_users(const Users* users, const char* fname)
     }
 
     bool rval = false;
-    std::string path = std::string(get_datadir()) + "/" + fname;
+    std::string path = std::string(mxs::datadir()) + "/" + fname;
     std::string tmppath = path + ".tmp";
 
     int fd = open(tmppath.c_str(), O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
@@ -322,7 +322,7 @@ bool load_legacy_users(FILE* fp, Users* output)
 bool load_users(const char* fname, Users* output)
 {
     char path[PATH_MAX];
-    snprintf(path, sizeof(path), "%s/%s", get_datadir(), fname);
+    snprintf(path, sizeof(path), "%s/%s", mxs::datadir(), fname);
 
     FILE* fp = fopen(path, "r");
     if (fp)

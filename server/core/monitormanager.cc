@@ -16,7 +16,7 @@
 #include <fcntl.h>
 #include <maxbase/format.hh>
 #include <maxscale/json_api.hh>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include <maxscale/resultset.hh>
 
 #include "internal/config.hh"
@@ -333,7 +333,7 @@ bool MonitorManager::monitor_serialize(const Monitor* monitor)
     snprintf(filename,
              sizeof(filename),
              "%s/%s.cnf.tmp",
-             get_config_persistdir(),
+             mxs::config_persistdir(),
              monitor->name());
 
     if (unlink(filename) == -1 && errno != ENOENT)

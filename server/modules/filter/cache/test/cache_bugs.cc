@@ -16,7 +16,7 @@
 #include <string>
 #include <vector>
 #include <maxbase/log.hh>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include <maxscale/modinfo.hh>
 #include "../cachemt.hh"
 
@@ -57,12 +57,12 @@ int mxs_2727()
     config.thread_model = CACHE_THREAD_MODEL_MT;
     config.enabled = true;
 
-    set_libdir(const_cast<char*>("../storage/storage_inmemory"));
+    mxs::set_libdir("../storage/storage_inmemory");
     Cache* pCache = CacheMT::create("MXS-2727", &config);
     mxb_assert(pCache);
 
     shared_ptr<Cache::Token> sToken;
-    MXB_AT_DEBUG(bool created =) pCache->create_token(&sToken);
+    MXB_AT_DEBUG(bool created = ) pCache->create_token(&sToken);
     mxb_assert(created);
 
     CacheKey key;
@@ -75,7 +75,7 @@ int mxs_2727()
         return 1;
     }
 
-    vector<uint8_t> value(MAX_SIZE - 1); // Less than max size.
+    vector<uint8_t> value(MAX_SIZE - 1);    // Less than max size.
     std::generate(value.begin(), value.end(), random);
 
     GWBUF* pValue = gwbuf_alloc_and_load(value.size(), &value.front());
@@ -107,7 +107,6 @@ int mxs_2727()
 
     return 0;
 }
-
 }
 
 int main()

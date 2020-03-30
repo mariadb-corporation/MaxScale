@@ -58,7 +58,7 @@
 #include <maxscale/mainworker.hh>
 #include <maxscale/maxscale.h>
 #include <maxscale/mysql_utils.hh>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/random.h>
 #include <maxscale/routingworker.hh>
@@ -112,6 +112,9 @@ static struct ThisUnit
 } this_unit;
 
 static const char* maxscale_commit = MAXSCALE_COMMIT;
+
+// The default configuration file name
+static const char* default_cnf_fname = "maxscale.cnf";
 
 #ifdef HAVE_GLIBC
 // getopt_long is a GNU extension
@@ -564,7 +567,7 @@ int ntfw_cb(const char* filename,
             struct FTW* pfwt)
 {
     int rc = 0;
-    int datadir_len = strlen(get_datadir());
+    int datadir_len = strlen(mxs::datadir());
     std::string filename_string(filename + datadir_len);
 
     if (strncmp(filename_string.c_str(), "/data", 5) == 0)
@@ -594,9 +597,9 @@ void cleanup_process_datadir()
 {
     int depth = 1;
     int flags = FTW_CHDIR | FTW_DEPTH | FTW_MOUNT;
-    const char* proc_datadir = get_process_datadir();
+    const char* proc_datadir = mxs::process_datadir();
 
-    if (strcmp(proc_datadir, get_datadir()) != 0 && access(proc_datadir, F_OK) == 0)
+    if (strcmp(proc_datadir, mxs::datadir()) != 0 && access(proc_datadir, F_OK) == 0)
     {
         nftw(proc_datadir, ntfw_cb, depth, flags);
     }
@@ -606,7 +609,7 @@ void cleanup_old_process_datadirs()
 {
     int depth = 1;
     int flags = FTW_CHDIR | FTW_DEPTH | FTW_MOUNT;
-    nftw(get_datadir(), ntfw_cb, depth, flags);
+    nftw(mxs::datadir(), ntfw_cb, depth, flags);
 }
 
 static bool resolve_maxscale_conf_fname(string* cnf_full_path, const string& cnf_file_arg)
@@ -627,7 +630,7 @@ static bool resolve_maxscale_conf_fname(string* cnf_full_path, const string& cnf
     }
     else    /*< default config file name is used */
     {
-        string home_dir = get_configdir();
+        string home_dir = mxs::configdir();
 
         if (home_dir.empty() || home_dir.back() != '/')
         {
@@ -699,11 +702,11 @@ static bool init_log()
     bool rval = false;
     const mxs::Config& cnf = mxs::Config::get();
 
-    if (!cnf.config_check && mkdir(get_logdir(), 0777) != 0 && errno != EEXIST)
+    if (!cnf.config_check && mkdir(mxs::logdir(), 0777) != 0 && errno != EEXIST)
     {
         print_alert(errno, "Cannot create log directory '%s'", MXS_DEFAULT_LOGDIR);
     }
-    else if (mxs_log_init(NULL, get_logdir(), cnf.log_target))
+    else if (mxs_log_init(NULL, mxs::logdir(), cnf.log_target))
     {
         mxs_log_set_syslog_enabled(cnf.syslog.get());
         mxs_log_set_maxlog_enabled(cnf.maxlog.get());
@@ -1012,20 +1015,20 @@ static void usage()
             "'/path/maxscale/etc' and the default config file will be\n"
             "'/path/maxscale/etc/maxscale.cnf'.\n\n"
             "MaxScale documentation: https://mariadb.com/kb/en/mariadb-enterprise/mariadb-maxscale-21/ \n",
-            get_configdir(),
+            mxs::configdir(),
             default_cnf_fname,
-            get_configdir(),
-            get_logdir(),
-            get_cachedir(),
-            get_libdir(),
-            get_sharedir(),
-            get_datadir(),
-            get_execdir(),
-            get_langdir(),
-            get_piddir(),
-            get_config_persistdir(),
-            get_module_configdir(),
-            get_connector_plugindir());
+            mxs::configdir(),
+            mxs::logdir(),
+            mxs::cachedir(),
+            mxs::libdir(),
+            mxs::sharedir(),
+            mxs::datadir(),
+            mxs::execdir(),
+            mxs::langdir(),
+            mxs::piddir(),
+            mxs::config_persistdir(),
+            mxs::module_configdir(),
+            mxs::connector_plugindir());
 }
 
 /**
@@ -1277,12 +1280,12 @@ bool set_runtime_dirs(const char* basedir)
 
     if (rv && (rv = handle_path_arg(&path, basedir, "var/" MXS_DEFAULT_DATA_SUBPATH, true, false)))
     {
-        set_datadir(path.c_str());
+        mxs::set_datadir(path.c_str());
     }
 
     if (rv && (rv = handle_path_arg(&path, basedir, "var/" MXS_DEFAULT_LANG_SUBPATH, true, false)))
     {
-        set_langdir(path.c_str());
+        mxs::set_langdir(path.c_str());
     }
 
     if (rv && (rv = handle_path_arg(&path, basedir, "var/" MXS_DEFAULT_PID_SUBPATH, true, true)))
@@ -1527,7 +1530,7 @@ int main(int argc, char** argv)
         case 'N':
             if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
             {
-                set_langdir(tmp_path.c_str());
+                mxs::set_langdir(tmp_path.c_str());
             }
             else
             {
@@ -1549,7 +1552,7 @@ int main(int argc, char** argv)
         case 'D':
             snprintf(this_unit.datadir, PATH_MAX, "%s", optarg);
             this_unit.datadir[PATH_MAX] = '\0';
-            set_datadir(MXS_STRDUP_A(optarg));
+            mxs::set_datadir(optarg);
             this_unit.datadir_defined = true;
             break;
 
@@ -1893,17 +1896,17 @@ int main(int argc, char** argv)
                 "Module directory   : %s\n"
                 "Service cache      : %s\n\n",
                 cnf_file_path.c_str(),
-                get_logdir(),
-                get_datadir(),
-                get_libdir(),
-                get_cachedir());
+                mxs::logdir(),
+                mxs::datadir(),
+                mxs::libdir(),
+                mxs::cachedir());
     }
 
     MXS_NOTICE("Configuration file: %s", cnf_file_path.c_str());
-    MXS_NOTICE("Log directory: %s", get_logdir());
-    MXS_NOTICE("Data directory: %s", get_datadir());
-    MXS_NOTICE("Module directory: %s", get_libdir());
-    MXS_NOTICE("Service cache: %s", get_cachedir());
+    MXS_NOTICE("Log directory: %s", mxs::logdir());
+    MXS_NOTICE("Data directory: %s", mxs::datadir());
+    MXS_NOTICE("Module directory: %s", mxs::libdir());
+    MXS_NOTICE("Service cache: %s", mxs::cachedir());
 
     if (this_unit.daemon_mode)
     {
@@ -1921,9 +1924,9 @@ int main(int argc, char** argv)
          * Set the data directory. We use a unique directory name to avoid conflicts
          * if multiple instances of MaxScale are being run on the same machine.
          */
-        if (create_datadir(get_datadir(), this_unit.datadir))
+        if (create_datadir(mxs::datadir(), this_unit.datadir))
         {
-            set_process_datadir(this_unit.datadir);
+            mxs::set_process_datadir(this_unit.datadir);
             atexit(cleanup_process_datadir);
         }
         else
@@ -2189,7 +2192,7 @@ bool pid_file_exists()
     pid_t pid;
     bool lock_failed = false;
 
-    snprintf(pathbuf, PATH_MAX, "%s/maxscale.pid", get_piddir());
+    snprintf(pathbuf, PATH_MAX, "%s/maxscale.pid", mxs::piddir());
     pathbuf[PATH_MAX] = '\0';
 
     if (access(pathbuf, F_OK) != 0)
@@ -2289,13 +2292,13 @@ bool pid_file_exists()
 
 static int write_pid_file()
 {
-    if (!mxs_mkdir_all(get_piddir(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH))
+    if (!mxs_mkdir_all(mxs::piddir(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH))
     {
         MXS_ERROR("Failed to create PID directory.");
         return 1;
     }
 
-    snprintf(this_unit.pidfile, PATH_MAX, "%s/maxscale.pid", get_piddir());
+    snprintf(this_unit.pidfile, PATH_MAX, "%s/maxscale.pid", mxs::piddir());
 
     if (this_unit.pidfd == PIDFD_CLOSED)
     {
@@ -2448,7 +2451,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
 
         if (strcmp(name, CN_LOGDIR) == 0)
         {
-            if (strcmp(get_logdir(), MXS_DEFAULT_LOGDIR) == 0)
+            if (strcmp(mxs::logdir(), MXS_DEFAULT_LOGDIR) == 0)
             {
                 if (handle_path_arg(&tmp, (char*)value, NULL, true, true))
                 {
@@ -2462,7 +2465,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         }
         else if (strcmp(name, CN_LIBDIR) == 0)
         {
-            if (strcmp(get_libdir(), MXS_DEFAULT_LIBDIR) == 0)
+            if (strcmp(mxs::libdir(), MXS_DEFAULT_LIBDIR) == 0)
             {
                 if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
                 {
@@ -2476,7 +2479,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         }
         else if (strcmp(name, CN_SHAREDIR) == 0)
         {
-            if (strcmp(get_sharedir(), MXS_DEFAULT_SHAREDIR) == 0)
+            if (strcmp(mxs::sharedir(), MXS_DEFAULT_SHAREDIR) == 0)
             {
                 if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
                 {
@@ -2490,7 +2493,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         }
         else if (strcmp(name, CN_PIDDIR) == 0)
         {
-            if (strcmp(get_piddir(), MXS_DEFAULT_PIDDIR) == 0)
+            if (strcmp(mxs::piddir(), MXS_DEFAULT_PIDDIR) == 0)
             {
                 if (handle_path_arg(&tmp, (char*)value, NULL, true, true))
                 {
@@ -2510,7 +2513,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
                 {
                     snprintf(this_unit.datadir, PATH_MAX, "%s", tmp.c_str());
                     this_unit.datadir[PATH_MAX] = '\0';
-                    set_datadir(tmp.c_str());
+                    mxs::set_datadir(tmp.c_str());
                     this_unit.datadir_defined = true;
                 }
                 else
@@ -2521,7 +2524,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         }
         else if (strcmp(name, CN_CACHEDIR) == 0)
         {
-            if (strcmp(get_cachedir(), MXS_DEFAULT_CACHEDIR) == 0)
+            if (strcmp(mxs::cachedir(), MXS_DEFAULT_CACHEDIR) == 0)
             {
                 if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
                 {
@@ -2535,11 +2538,11 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         }
         else if (strcmp(name, CN_LANGUAGE) == 0)
         {
-            if (strcmp(get_langdir(), MXS_DEFAULT_LANGDIR) == 0)
+            if (strcmp(mxs::langdir(), MXS_DEFAULT_LANGDIR) == 0)
             {
                 if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
                 {
-                    set_langdir(tmp.c_str());
+                    mxs::set_langdir(tmp.c_str());
                 }
                 else
                 {
@@ -2549,7 +2552,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         }
         else if (strcmp(name, CN_EXECDIR) == 0)
         {
-            if (strcmp(get_execdir(), MXS_DEFAULT_EXECDIR) == 0)
+            if (strcmp(mxs::execdir(), MXS_DEFAULT_EXECDIR) == 0)
             {
                 if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
                 {
@@ -2563,7 +2566,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         }
         else if (strcmp(name, CN_CONNECTOR_PLUGINDIR) == 0)
         {
-            if (strcmp(get_connector_plugindir(), MXS_DEFAULT_CONNECTOR_PLUGINDIR) == 0)
+            if (strcmp(mxs::connector_plugindir(), MXS_DEFAULT_CONNECTOR_PLUGINDIR) == 0)
             {
                 if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
                 {
@@ -2577,7 +2580,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         }
         else if (strcmp(name, CN_PERSISTDIR) == 0)
         {
-            if (strcmp(get_config_persistdir(), MXS_DEFAULT_CONFIG_PERSISTDIR) == 0)
+            if (strcmp(mxs::config_persistdir(), MXS_DEFAULT_CONFIG_PERSISTDIR) == 0)
             {
                 if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
                 {
@@ -2591,7 +2594,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         }
         else if (strcmp(name, CN_MODULE_CONFIGDIR) == 0)
         {
-            if (strcmp(get_module_configdir(), MXS_DEFAULT_MODULE_CONFIGDIR) == 0)
+            if (strcmp(mxs::module_configdir(), MXS_DEFAULT_MODULE_CONFIGDIR) == 0)
             {
                 if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
                 {
@@ -2714,11 +2717,11 @@ static bool change_cwd()
 {
     bool rval = true;
 
-    if (chdir(get_logdir()) != 0)
+    if (chdir(mxs::logdir()) != 0)
     {
         MXS_ERROR("Failed to change working directory to '%s': %d, %s. "
                   "Trying to change working directory to '/'.",
-                  get_logdir(),
+                  mxs::logdir(),
                   errno,
                   mxs_strerror(errno));
         if (chdir("/") != 0)
@@ -2731,12 +2734,12 @@ static bool change_cwd()
         else
         {
             MXS_WARNING("Using '/' instead of '%s' as the current working directory.",
-                        get_logdir());
+                        mxs::logdir());
         }
     }
     else
     {
-        MXS_NOTICE("Working directory: %s", get_logdir());
+        MXS_NOTICE("Working directory: %s", mxs::logdir());
     }
 
     return rval;
@@ -3172,7 +3175,7 @@ static bool lock_dir(const std::string& path)
 
 bool lock_directories()
 {
-    std::set<std::string> paths {get_cachedir(), get_datadir()};
+    std::set<std::string> paths {mxs::cachedir(), mxs::datadir()};
     return std::all_of(paths.begin(), paths.end(), lock_dir);
 }
 

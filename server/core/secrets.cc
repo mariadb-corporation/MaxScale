@@ -18,7 +18,7 @@
 #include <sys/stat.h>
 
 #include <maxbase/alloc.h>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/random.h>
 #include <maxscale/utils.hh>
@@ -100,8 +100,8 @@ static MAXKEYS* secrets_readKeys(const char* path)
     }
     else
     {
-        // We assume that get_datadir() returns a path shorter than PATH_MAX.
-        sprintf(secret_file, "%s/%s", get_datadir(), NAME);
+        // We assume that mxs::datadir() returns a path shorter than PATH_MAX.
+        sprintf(secret_file, "%s/%s", mxs::datadir(), NAME);
     }
     /* Try to access secrets file */
     if (access(secret_file, R_OK) == -1)

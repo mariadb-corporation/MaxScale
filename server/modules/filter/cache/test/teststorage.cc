@@ -17,7 +17,7 @@
 #include <iostream>
 
 #include <maxbase/alloc.h>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/utils.h>
 
@@ -100,7 +100,7 @@ int TestStorage::run(int argc, char** argv)
                 char libdir[sizeof(FORMAT) + strlen(zModule)];
                 sprintf(libdir, FORMAT, zModule);
 
-                set_libdir(MXS_STRDUP_A(libdir));
+                mxs::set_libdir(libdir);
 
                 StorageFactory* pFactory = StorageFactory::open(zModule);
 

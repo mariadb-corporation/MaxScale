@@ -16,7 +16,7 @@
 #include <set>
 #include <maxbase/string.hh>
 #include <maxscale/json_api.hh>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include <maxscale/secrets.hh>
 #include <maxscale/sqlite3.h>
 #include "../../../core/internal/config_runtime.hh"
@@ -224,7 +224,7 @@ ClustrixMonitor::~ClustrixMonitor()
 // static
 ClustrixMonitor* ClustrixMonitor::create(const string& name, const string& module)
 {
-    string path = get_datadir();
+    string path = mxs::datadir();
 
     path += "/";
     path += name;

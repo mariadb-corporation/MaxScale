@@ -14,7 +14,7 @@
 #include <stdio.h>
 #include <maxbase/maxbase.hh>
 #include <maxscale/buffer.hh>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include <maxscale/query_classifier.hh>
 
 #define MYSQL_HEADER_LEN 4
@@ -42,7 +42,7 @@ int main()
 
     maxbase::MaxBase init(MXB_LOG_TARGET_FS);
 
-    set_libdir(strdup("../qc_sqlite"));
+    mxs::set_libdir("../qc_sqlite");
 
     if (qc_init(NULL, QC_SQL_MODE_DEFAULT, "qc_sqlite", NULL))
     {

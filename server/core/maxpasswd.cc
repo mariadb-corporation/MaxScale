@@ -22,7 +22,7 @@
 #include <sys/stat.h>
 #include <getopt.h>
 
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include <maxscale/random.h>
 #include <maxbase/alloc.h>
 
@@ -100,7 +100,7 @@ bool path_is_ok(const char* path)
 
 int main(int argc, char** argv)
 {
-    const char* path = get_datadir();
+    const char* path = mxs::datadir();
 
     int c;
 #ifdef HAVE_GLIBC

@@ -14,7 +14,7 @@
 #include <maxscale/ccdefs.hh>
 #include <iomanip>
 #include <iostream>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include "../internal/trxboundaryparser.hh"
 
 using namespace std;
@@ -75,9 +75,9 @@ int main(int argc, char* argv[])
     {
         rc = EXIT_FAILURE;
 
-        set_datadir(strdup("/tmp"));
-        set_langdir(strdup("."));
-        set_process_datadir(strdup("/tmp"));
+        mxs::set_datadir("/tmp");
+        mxs::set_langdir(".");
+        mxs::set_process_datadir("/tmp");
 
         if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
         {

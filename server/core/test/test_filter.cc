@@ -23,7 +23,7 @@
 #include <string.h>
 
 #include <maxbase/alloc.h>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 
 #include "../internal/filter.hh"
 
@@ -136,7 +136,7 @@ static int test3()
 int main(int argc, char** argv)
 {
     int result = 0;
-    set_libdir(MXS_STRDUP_A("../../modules/filter/qlafilter/"));
+    mxs::set_libdir("../../modules/filter/qlafilter/");
     mxs_log_init(NULL, NULL, MXS_LOG_TARGET_STDOUT);
 
     result += test1();

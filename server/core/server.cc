@@ -37,7 +37,7 @@
 #include <maxscale/dcb.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/ssl.hh>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include <maxscale/utils.h>
 #include <maxscale/json_api.hh>
 #include <maxscale/clock.h>
@@ -778,7 +778,7 @@ bool Server::create_server_config(const char* filename) const
 bool Server::serialize() const
 {
     bool rval = false;
-    string final_filename = mxb::string_printf("%s/%s.cnf", get_config_persistdir(), name());
+    string final_filename = mxb::string_printf("%s/%s.cnf", mxs::config_persistdir(), name());
     string temp_filename = final_filename + ".tmp";
     auto zTempFilename = temp_filename.c_str();
 

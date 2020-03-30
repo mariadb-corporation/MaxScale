@@ -17,7 +17,7 @@
 #include <sys/param.h>
 #include <new>
 #include <maxbase/alloc.h>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include "cachefilter.hh"
 #include "lrustoragest.hh"
 #include "lrustoragemt.hh"
@@ -35,7 +35,7 @@ bool open_storage_module(const char* zName,
     bool rv = false;
 
     char path[MAXPATHLEN + 1];
-    sprintf(path, "%s/lib%s.so", get_libdir(), zName);
+    sprintf(path, "%s/lib%s.so", mxs::libdir(), zName);
 
     void* handle = dlopen(path, RTLD_NOW | RTLD_LOCAL);
 

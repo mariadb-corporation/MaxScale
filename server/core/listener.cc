@@ -30,7 +30,7 @@
 #include <unordered_set>
 
 #include <maxbase/log.hh>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include <maxscale/ssl.hh>
 #include <maxscale/protocol2.hh>
 #include <maxbase/alloc.h>
@@ -486,7 +486,7 @@ bool listener_serialize(const SListener& listener)
     snprintf(filename,
              sizeof(filename),
              "%s/%s.cnf.tmp",
-             get_config_persistdir(),
+             mxs::config_persistdir(),
              listener->name());
 
     if (unlink(filename) == -1 && errno != ENOENT)

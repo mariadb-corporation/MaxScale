@@ -29,7 +29,7 @@
 #include <maxscale/dcb.hh>
 #include <maxscale/maxscale.h>
 #include <maxscale/mysql_utils.hh>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/pcre2.hh>
 #include <maxscale/router.hh>
@@ -660,7 +660,7 @@ static bool check_server_permissions(SERVICE* service,
     mysql_optionsv(mysql, MYSQL_OPT_CONNECT_TIMEOUT, &timeout);
     timeout = cnf.auth_write_timeout.get().count();
     mysql_optionsv(mysql, MYSQL_OPT_WRITE_TIMEOUT, &timeout);
-    mysql_optionsv(mysql, MYSQL_PLUGIN_DIR, get_connector_plugindir());
+    mysql_optionsv(mysql, MYSQL_PLUGIN_DIR, mxs::connector_plugindir());
 
     if (mxs_mysql_real_connect(mysql, server, user, password) == NULL)
     {

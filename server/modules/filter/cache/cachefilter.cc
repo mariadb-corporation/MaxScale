@@ -17,7 +17,7 @@
 #include <maxbase/alloc.h>
 #include <maxscale/jansson.hh>
 #include <maxscale/modulecmd.hh>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include <maxscale/utils.h>
 
 #include "cacheconfig.hh"
@@ -160,7 +160,7 @@ CacheFilter* CacheFilter::create(const char* zName, mxs::ConfigParameters* pPara
 {
     CacheFilter* pFilter = nullptr;
 
-    std::unique_ptr<CacheConfig> sConfig(new (std::nothrow) CacheConfig(zName));
+    std::unique_ptr<CacheConfig> sConfig(new(std::nothrow) CacheConfig(zName));
 
     if (sConfig && sConfig->configure(*pParams))
     {
@@ -203,15 +203,15 @@ CacheFilter* CacheFilter::create(const char* zName, mxs::ConfigParameters* pPara
                 sConfig->max_resultset_size = limits.max_value_size;
             }
 
-            pFilter = new (std::nothrow) CacheFilter(std::move(sConfig), unique_ptr<Cache>(pCache));
+            pFilter = new(std::nothrow) CacheFilter(std::move(sConfig), unique_ptr<Cache>(pCache));
         }
     }
 
     return pFilter;
 }
 
-//static
-void CacheFilter::apiFreeSession(MXS_FILTER* , MXS_FILTER_SESSION* pData)
+// static
+void CacheFilter::apiFreeSession(MXS_FILTER*, MXS_FILTER_SESSION* pData)
 {
     CacheFilterSession* pFilter_session = static_cast<CacheFilterSession*>(pData);
 

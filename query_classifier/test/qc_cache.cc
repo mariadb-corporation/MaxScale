@@ -16,7 +16,7 @@
 #include <iostream>
 #include <maxbase/stopwatch.hh>
 #include <maxscale/log.hh>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 
@@ -114,9 +114,9 @@ int main(int argc, char* argv[])
     {
         rv = EXIT_FAILURE;
 
-        set_datadir(strdup("/tmp"));
-        set_langdir(strdup("."));
-        set_process_datadir(strdup("/tmp"));
+        mxs::set_datadir("/tmp");
+        mxs::set_langdir(".");
+        mxs::set_process_datadir("/tmp");
 
         if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
         {

@@ -64,7 +64,7 @@
 #include <maxscale/log.hh>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include <maxscale/utils.h>
 
 #include <stdio.h>
@@ -3645,13 +3645,13 @@ int32_t qc_mysql_process_init(void)
 {
     bool inited = false;
 
-    if (strlen(get_langdir()) >= PATH_MAX)
+    if (strlen(mxs::langdir()) >= PATH_MAX)
     {
-        fprintf(stderr, "MaxScale: error: Language path is too long: %s.", get_langdir());
+        fprintf(stderr, "MaxScale: error: Language path is too long: %s.", mxs::langdir());
     }
     else
     {
-        configure_options(get_process_datadir(), get_langdir());
+        configure_options(mxs::process_datadir(), mxs::langdir());
 
         int argc = N_OPTIONS;
         char** argv = const_cast<char**>(server_options);

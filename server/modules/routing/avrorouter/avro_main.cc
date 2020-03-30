@@ -30,7 +30,7 @@
 #include <maxbase/alloc.h>
 #include <maxscale/dcb.hh>
 #include <maxscale/modulecmd.hh>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/random.h>
 #include <maxscale/router.hh>

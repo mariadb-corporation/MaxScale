@@ -42,7 +42,7 @@
 #include <maxscale/mainworker.hh>
 #include <maxscale/maxscale.h>
 #include <maxscale/mysql_utils.hh>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include <maxscale/pcre2.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/secrets.hh>
@@ -182,7 +182,7 @@ bool rename_tmp_file(Monitor* monitor, const char* src)
 {
     bool rval = true;
     char dest[PATH_MAX + 1];
-    snprintf(dest, sizeof(dest), journal_template, get_datadir(), monitor->name(), journal_name);
+    snprintf(dest, sizeof(dest), journal_template, mxs::datadir(), monitor->name(), journal_name);
 
     if (rename(src, dest) == -1)
     {
@@ -206,7 +206,7 @@ bool rename_tmp_file(Monitor* monitor, const char* src)
  */
 FILE* open_tmp_file(Monitor* monitor, char* path)
 {
-    int nbytes = snprintf(path, PATH_MAX, journal_template, get_datadir(), monitor->name(), "");
+    int nbytes = snprintf(path, PATH_MAX, journal_template, mxs::datadir(), monitor->name(), "");
     int max_bytes = PATH_MAX - (int)sizeof(journal_name);
     FILE* rval = NULL;
 
@@ -1218,7 +1218,7 @@ MonitorServer::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& se
         mysql_optionsv(pConn, MYSQL_OPT_CONNECT_TIMEOUT, &sett.connect_timeout);
         mysql_optionsv(pConn, MYSQL_OPT_READ_TIMEOUT, &sett.read_timeout);
         mysql_optionsv(pConn, MYSQL_OPT_WRITE_TIMEOUT, &sett.write_timeout);
-        mysql_optionsv(pConn, MYSQL_PLUGIN_DIR, get_connector_plugindir());
+        mysql_optionsv(pConn, MYSQL_PLUGIN_DIR, mxs::connector_plugindir());
         auto start = time(NULL);
 
         if (mxs_mysql_real_connect(pConn, &server, uname.c_str(), dpwd.c_str()))
@@ -1420,7 +1420,7 @@ void Monitor::detect_handle_state_changes()
 
 int Monitor::get_data_file_path(char* path) const
 {
-    int rv = snprintf(path, PATH_MAX, journal_template, get_datadir(), name(), journal_name);
+    int rv = snprintf(path, PATH_MAX, journal_template, mxs::datadir(), name(), journal_name);
     return rv;
 }
 

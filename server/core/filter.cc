@@ -31,7 +31,7 @@
 #include <vector>
 
 #include <maxbase/alloc.h>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include <maxscale/session.hh>
 #include <maxscale/service.hh>
 #include <maxscale/filter.hh>
@@ -166,7 +166,7 @@ void filter_destroy(const SFilterDef& filter)
     mxb_assert(filter_can_be_destroyed(filter));
 
     char filename[PATH_MAX + 1];
-    snprintf(filename, sizeof(filename), "%s/%s.cnf", get_config_persistdir(), filter->name.c_str());
+    snprintf(filename, sizeof(filename), "%s/%s.cnf", mxs::config_persistdir(), filter->name.c_str());
 
     if (unlink(filename) == -1 && errno != ENOENT)
     {
@@ -384,7 +384,7 @@ bool filter_serialize(const SFilterDef& filter)
     snprintf(filename,
              sizeof(filename),
              "%s/%s.cnf.tmp",
-             get_config_persistdir(),
+             mxs::config_persistdir(),
              filter->name.c_str());
 
     if (unlink(filename) == -1 && errno != ENOENT)

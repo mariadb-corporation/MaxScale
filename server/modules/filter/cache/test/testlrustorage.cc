@@ -14,7 +14,7 @@
 #include <maxscale/ccdefs.hh>
 #include <iostream>
 #include <maxbase/alloc.h>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include "teststorage.hh"
 #include "testerlrustorage.hh"
 
@@ -48,8 +48,7 @@ private:
 
 int main(int argc, char* argv[])
 {
-    char* libdir = MXS_STRDUP("../../../../../query_classifier/qc_sqlite/");
-    set_libdir(libdir);
+    mxs::set_libdir("../../../../../query_classifier/qc_sqlite/");
 
     TestLRUStorage test(&cout);
     int rv = test.run(argc, argv);

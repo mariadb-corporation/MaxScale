@@ -36,7 +36,7 @@
 #include <maxscale/clock.h>
 #include <maxscale/http.hh>
 #include <maxscale/adminusers.hh>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 
 #include "internal/resource.hh"
 
@@ -173,7 +173,7 @@ std::string get_file(const std::string& file)
 
 std::string get_filename(const HttpRequest& request)
 {
-    std::string sharedir = get_sharedir();
+    std::string sharedir = mxs::sharedir();
     sharedir += "/gui/";
     std::string path = sharedir;
 

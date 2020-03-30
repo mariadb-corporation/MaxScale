@@ -24,7 +24,7 @@
 
 #include <maxbase/alloc.h>
 #include <maxscale/server.hh>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include <maxscale/config.hh>
 
 // This is pretty ugly but it's required to test internal functions
@@ -102,8 +102,7 @@ bool test_serialize()
     char name[] = "serialized-server";
     char config_name[] = "serialized-server.cnf";
     char old_config_name[] = "serialized-server.cnf.old";
-    char* persist_dir = MXS_STRDUP_A("./");
-    set_config_persistdir(persist_dir);
+    mxs::set_config_persistdir("./");
     Server* server = ServerManager::create_server(name, params);
     TEST(server, "Server allocation failed");
 

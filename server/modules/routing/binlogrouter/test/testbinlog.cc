@@ -35,7 +35,7 @@
 #include <maxbase/watchdognotifier.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/mainworker.hh>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include <maxscale/router.hh>
 #include <maxscale/server.hh>
 #include <maxscale/utils.hh>

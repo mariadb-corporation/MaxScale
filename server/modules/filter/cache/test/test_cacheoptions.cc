@@ -415,8 +415,7 @@ int main(int argc, char* argv[])
     if (rv == 0)
     {
         run_unit_test([&]() {
-                          set_libdir(MXS_STRDUP(TEST_DIR
-                                                "/server/modules/filter/cache/storage/storage_inmemory"));
+                          mxs::set_libdir(TEST_DIR "/server/modules/filter/cache/storage/storage_inmemory");
                           preload_module("cache", "server/modules/filter/cache/", MODULE_FILTER);
 
                           rv = run();

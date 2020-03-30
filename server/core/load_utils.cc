@@ -26,7 +26,7 @@
 
 #include <maxscale/modinfo.hh>
 #include <maxscale/version.h>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include <maxbase/alloc.h>
 #include <maxscale/json_api.hh>
 #include <maxscale/modulecmd.hh>
@@ -66,9 +66,9 @@ struct NAME_MAPPING
 
 static NAME_MAPPING name_mappings[] =
 {
-    {MODULE_MONITOR,       "mysqlmon",         "mariadbmon",         false},
-    {MODULE_PROTOCOL,      "mysqlclient",      "mariadbclient",      false},
-    {MODULE_AUTHENTICATOR, "mysqlauth",        "mariadbauth",        false},
+    {MODULE_MONITOR,       "mysqlmon",    "mariadbmon",    false},
+    {MODULE_PROTOCOL,      "mysqlclient", "mariadbclient", false},
+    {MODULE_AUTHENTICATOR, "mysqlauth",   "mariadbauth",   false},
 };
 
 static const size_t N_NAME_MAPPINGS = sizeof(name_mappings) / sizeof(name_mappings[0]);
@@ -214,14 +214,14 @@ void* load_module(const char* module, const char* type)
 
         /** The module is not already loaded, search for the shared object */
         char fname[MAXPATHLEN + 1];
-        snprintf(fname, MAXPATHLEN + 1, "%s/lib%s.so", get_libdir(), lc_module);
+        snprintf(fname, MAXPATHLEN + 1, "%s/lib%s.so", mxs::libdir(), lc_module);
 
         if (access(fname, F_OK) == -1)
         {
             MXS_ERROR("Unable to find library for "
                       "module: %s. Module dir: %s",
                       module,
-                      get_libdir());
+                      mxs::libdir());
             return NULL;
         }
 
@@ -249,7 +249,7 @@ void* load_module(const char* module, const char* type)
             return NULL;
         }
 
-        void* (* entry_point)() = (void*(*)())sym;
+        void* (* entry_point)() = (void* (*)())sym;
         MXS_MODULE* mod_info = (MXS_MODULE*)entry_point();
 
         if (!check_module(mod_info, type, module)

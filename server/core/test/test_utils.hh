@@ -23,7 +23,7 @@
 #include <maxscale/housekeeper.h>
 #include <maxscale/log.hh>
 #include <maxscale/maxscale_test.h>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include <maxscale/query_classifier.hh>
 #include <maxscale/routingworker.hh>
 
@@ -40,13 +40,13 @@
  */
 void preload_module(const char* name, const char* path, const char* type)
 {
-    std::string old_libdir = get_libdir();
+    std::string old_libdir = mxs::libdir();
     std::string fullpath = TEST_DIR;
     fullpath += "/";
     fullpath += path;
-    set_libdir(MXS_STRDUP(fullpath.c_str()));
+    mxs::set_libdir(fullpath.c_str());
     load_module(name, type);
-    set_libdir(MXS_STRDUP(old_libdir.c_str()));
+    mxs::set_libdir(old_libdir.c_str());
 }
 
 static int set_signal(int sig, void (* handler)(int));
@@ -118,14 +118,14 @@ void init_test_env(char* __attribute((unused))path = nullptr, uint32_t init_type
         exit(1);
     }
     atexit(mxs_log_finish);
-    std::string old_libdir = get_libdir();
-    set_libdir(MXS_STRDUP(TEST_DIR "/query_classifier/qc_sqlite/"));
+    std::string old_libdir = mxs::libdir();
+    mxs::set_libdir(TEST_DIR "/query_classifier/qc_sqlite/");
     qc_setup(NULL, QC_SQL_MODE_DEFAULT, NULL, NULL);
     qc_process_init(init_type);
     maxbase::init();
     watchdog_notifier = new mxb::WatchdogNotifier(0);
     maxscale::RoutingWorker::init(watchdog_notifier);
-    set_libdir(MXS_STRDUP(old_libdir.c_str()));
+    mxs::set_libdir(old_libdir.c_str());
 
     preload_module("mariadbclient", "server/modules/protocol/MariaDB/", MODULE_PROTOCOL);
     preload_module("readconnroute", "server/modules/routing/readconnroute/", MODULE_ROUTER);

@@ -19,7 +19,7 @@
 #include <maxscale/buffer.hh>
 #include <mysql.h>
 #include <unistd.h>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include <maxscale/log.hh>
 
 char* append(char* types, const char* type_name, size_t* lenp)
@@ -290,14 +290,13 @@ int main(int argc, char** argv)
     if ((argc == 3) || (argc == 4))
     {
         const char* lib;
-        char* libdir;
         const char* input_name;
         const char* expected_name;
 
         if (argc == 3)
         {
             lib = "qc_mysqlembedded";
-            libdir = strdup("../qc_mysqlembedded");
+            mxs::set_libdir("../qc_mysqlembedded");
             input_name = argv[1];
             expected_name = argv[2];
         }
@@ -311,13 +310,12 @@ int main(int argc, char** argv)
             char buffer[sz + 3 + 1];    // "../" and terminating NULL.
             sprintf(buffer, "../%s", lib);
 
-            libdir = strdup(buffer);
+            mxs::set_libdir(buffer);
         }
 
-        set_libdir(libdir);
-        set_datadir(strdup("/tmp"));
-        set_langdir(strdup("."));
-        set_process_datadir(strdup("/tmp"));
+        mxs::set_datadir("/tmp");
+        mxs::set_langdir(".");
+        mxs::set_process_datadir("/tmp");
 
         if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
         {

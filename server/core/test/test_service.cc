@@ -22,7 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <maxscale/maxscale_test.h>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include <maxbase/alloc.h>
 
 #include "../internal/service.hh"
@@ -41,11 +41,11 @@ static void test1()
     int result;
     int argc = 3;
 
-    set_libdir(MXS_STRDUP_A("../../modules/authenticator/MySQLAuth/"));
+    mxs::set_libdir("../../modules/authenticator/MySQLAuth/");
     load_module("mysqlauth", MODULE_AUTHENTICATOR);
-    set_libdir(MXS_STRDUP_A("../../modules/protocol/MariaDB/mariadbclient/"));
+    mxs::set_libdir("../../modules/protocol/MariaDB/mariadbclient/");
     load_module("mariadbclient", MODULE_PROTOCOL);
-    set_libdir(MXS_STRDUP_A("../../modules/routing/readconnroute/"));
+    mxs::set_libdir("../../modules/routing/readconnroute/");
     load_module("readconnroute", MODULE_ROUTER);
 
     mxs::ConfigParameters parameters;

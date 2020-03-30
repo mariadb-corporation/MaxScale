@@ -17,7 +17,7 @@
 #include <time.h>
 #include <iostream>
 #include <maxscale/buffer.hh>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 
 using namespace std;
 
@@ -352,9 +352,9 @@ int main(int argc, char* argv[])
 
     srand(time(NULL));
 
-    set_datadir(strdup("/tmp"));
-    set_langdir(strdup("."));
-    set_process_datadir(strdup("/tmp"));
+    mxs::set_datadir("/tmp");
+    mxs::set_langdir(".");
+    mxs::set_process_datadir("/tmp");
 
     if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
     {

@@ -49,7 +49,7 @@
 #include <maxscale/users.hh>
 #include <maxscale/utils.h>
 #include <maxscale/utils.hh>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include "../../../core/internal/servermanager.hh"
 
 /* The router entry points */

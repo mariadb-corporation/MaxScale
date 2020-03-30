@@ -51,7 +51,7 @@
 #include <maxscale/limits.h>
 #include <maxscale/log.hh>
 #include <maxscale/maxscale.h>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include <maxscale/pcre2.hh>
 #include <maxscale/router.hh>
 #include <maxscale/secrets.hh>
@@ -1654,7 +1654,7 @@ static bool config_load_and_process(const char* filename, bool (* process_config
             }
 
             /** Create the persisted configuration directory if it doesn't exist */
-            const char* persist_cnf = get_config_persistdir();
+            const char* persist_cnf = mxs::config_persistdir();
             mxs_mkdir_all(persist_cnf, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
             if (mxs::Config::get().load_persisted_configs
@@ -2651,7 +2651,7 @@ static void process_path_parameter(std::string* param)
 {
     if (param->empty() || (*param)[0] != '/')
     {
-        const char* mod_dir = get_module_configdir();
+        const char* mod_dir = mxs::module_configdir();
         size_t size = param->length() + strlen(mod_dir) + 3;
         char new_value[size];
 
@@ -3606,11 +3606,11 @@ bool config_is_ssl_parameter(const char* key)
                            | MXS_MODULE_OPT_PATH_X_OK
                            | MXS_MODULE_OPT_PATH_F_OK))
     {
-        char buf[strlen(get_module_configdir()) + strlen(value) + 3];
+        char buf[strlen(mxs::module_configdir()) + strlen(value) + 3];
 
         if (*value != '/')
         {
-            sprintf(buf, "/%s/%s", get_module_configdir(), value);
+            sprintf(buf, "/%s/%s", mxs::module_configdir(), value);
             strcpy(buf, clean_up_pathname(buf).c_str());
         }
         else
@@ -4031,18 +4031,18 @@ std::vector<string> config_break_list_string(const string& list_string)
 json_t* config_maxscale_to_json(const char* host)
 {
     json_t* param = json_object();
-    json_object_set_new(param, "libdir", json_string(get_libdir()));
-    json_object_set_new(param, "datadir", json_string(get_datadir()));
-    json_object_set_new(param, "process_datadir", json_string(get_process_datadir()));
-    json_object_set_new(param, "cachedir", json_string(get_cachedir()));
-    json_object_set_new(param, "configdir", json_string(get_configdir()));
-    json_object_set_new(param, "config_persistdir", json_string(get_config_persistdir()));
-    json_object_set_new(param, "module_configdir", json_string(get_module_configdir()));
-    json_object_set_new(param, "piddir", json_string(get_piddir()));
-    json_object_set_new(param, "logdir", json_string(get_logdir()));
-    json_object_set_new(param, "langdir", json_string(get_langdir()));
-    json_object_set_new(param, "execdir", json_string(get_execdir()));
-    json_object_set_new(param, "connector_plugindir", json_string(get_connector_plugindir()));
+    json_object_set_new(param, "libdir", json_string(mxs::libdir()));
+    json_object_set_new(param, "datadir", json_string(mxs::datadir()));
+    json_object_set_new(param, "process_datadir", json_string(mxs::process_datadir()));
+    json_object_set_new(param, "cachedir", json_string(mxs::cachedir()));
+    json_object_set_new(param, "configdir", json_string(mxs::configdir()));
+    json_object_set_new(param, "config_persistdir", json_string(mxs::config_persistdir()));
+    json_object_set_new(param, "module_configdir", json_string(mxs::module_configdir()));
+    json_object_set_new(param, "piddir", json_string(mxs::piddir()));
+    json_object_set_new(param, "logdir", json_string(mxs::logdir()));
+    json_object_set_new(param, "langdir", json_string(mxs::langdir()));
+    json_object_set_new(param, "execdir", json_string(mxs::execdir()));
+    json_object_set_new(param, "connector_plugindir", json_string(mxs::connector_plugindir()));
     json_object_set_new(param, CN_THREADS, json_integer(config_threadcount()));
     json_object_set_new(param, CN_THREAD_STACK_SIZE, json_integer(config_thread_stack_size()));
 
@@ -4120,7 +4120,7 @@ bool config_global_serialize()
     snprintf(filename,
              sizeof(filename),
              "%s/%s.cnf.tmp",
-             get_config_persistdir(),
+             mxs::config_persistdir(),
              GLOBAL_CONFIG_NAME);
 
     if (unlink(filename) == -1 && errno != ENOENT)

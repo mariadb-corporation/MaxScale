@@ -20,7 +20,7 @@
 #include <set>
 #include <string>
 #include <sstream>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include <maxscale/log.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/query_classifier.hh>
@@ -38,7 +38,7 @@ using std::ostream;
 using std::string;
 using std::stringstream;
 
-#if !defined(MYSQL_VERSION_MAJOR)
+#if !defined (MYSQL_VERSION_MAJOR)
 #define USING_MARIADB_103
 #else
 #if MYSQL_VERSION_MAJOR == 10 && MYSQL_VERSION_MINOR == 3
@@ -163,7 +163,7 @@ QUERY_CLASSIFIER* load_classifier(const char* name)
 
     sprintf(libdir, "../%s", name);
 
-    set_libdir(strdup(libdir));
+    mxs::set_libdir(libdir);
 
     QUERY_CLASSIFIER* pClassifier = qc_load(name);
 
@@ -1553,9 +1553,9 @@ int main(int argc, char* argv[])
 
         if ((n == 1) || (n == 2))
         {
-            set_datadir(strdup("/tmp"));
-            set_langdir(strdup("."));
-            set_process_datadir(strdup("/tmp"));
+            mxs::set_datadir("/tmp");
+            mxs::set_langdir(".");
+            mxs::set_process_datadir("/tmp");
 
             if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
             {

@@ -21,7 +21,7 @@
 #include <maxscale/protocol/cdc/cdc.hh>
 #include <maxscale/event.hh>
 #include <maxscale/modulecmd.hh>
-#include <maxscale/paths.h>
+#include <maxscale/paths.hh>
 #include <maxscale/secrets.hh>
 #include <maxscale/users.hh>
 #include <maxscale/utils.h>
@@ -63,7 +63,7 @@ bool cdc_add_new_user(const MODULECMD_ARG* args, json_t** output)
 
     SERVICE* service = args->argv[0].value.service;
     char path[PATH_MAX + 1];
-    snprintf(path, PATH_MAX, "%s/%s/", get_datadir(), service->name());
+    snprintf(path, PATH_MAX, "%s/%s/", mxs::datadir(), service->name());
     bool rval = false;
 
     if (mxs_mkdir_all(path, 0777))
@@ -336,7 +336,7 @@ int CDCAuthenticatorModule::load_users(SERVICE* service)
 {
     char path[PATH_MAX + 1];
     snprintf(path, PATH_MAX, "%s/%s/%s",
-             get_datadir(), service->name(), CDC_USERS_FILENAME);
+             mxs::datadir(), service->name(), CDC_USERS_FILENAME);
 
     auto new_users = read_users(path);
     if (!new_users.empty())

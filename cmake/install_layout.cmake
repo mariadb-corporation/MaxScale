@@ -11,7 +11,7 @@ set(MAXSCALE_VARDIR /var CACHE PATH "Data file path (usually /var/)")
 set(MAXSCALE_CONFDIR /etc CACHE PATH "Configuration file installation path (/etc/)")
 
 # Default values for directories and subpaths where files are searched. These
-# are used in `include/maxscale/paths.h.in`.
+# are used in `include/maxscale/paths.hh.in`.
 set(DEFAULT_PID_SUBPATH "run/maxscale" CACHE PATH "Default PID file subpath")
 set(DEFAULT_LOG_SUBPATH "log/maxscale" CACHE PATH "Default log subpath")
 set(DEFAULT_DATA_SUBPATH "lib/maxscale" CACHE PATH "Default datadir subpath")
