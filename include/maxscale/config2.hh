@@ -14,6 +14,7 @@
 
 #include <maxscale/ccdefs.hh>
 
+#include <atomic>
 #include <chrono>
 #include <iostream>
 #include <map>
@@ -1848,7 +1849,97 @@ using Bool = ConcreteType<ParamBool>;
  * Duration
  */
 template<class T>
-using Duration = ConcreteType<ParamDuration<T>>;
+class Duration : public Type
+{
+public:
+    using value_type = T;
+    using ParamType = ParamDuration<T>;
+
+    Duration(Duration&& rhs)
+        : Type(std::forward<Duration &&>(rhs))
+        , m_on_set(std::move(rhs.m_on_set))
+    {
+        m_value.store(rhs.m_value.load(std::memory_order_relaxed), std::memory_order_relaxed);
+    }
+
+    Duration(Configuration* pConfiguration,
+             const ParamType* pParam,
+             std::function<void(value_type)> on_set = nullptr)
+        : Type(pConfiguration, pParam)
+        , m_on_set(on_set)
+    {
+        m_value.store(pParam->default_value().count(), std::memory_order_relaxed);
+    }
+
+    const ParamType& parameter() const override
+    {
+        return static_cast<const ParamType&>(*m_pParam);
+    }
+
+    bool set_from_string(const std::string& value_as_string,
+                         std::string* pMessage = nullptr) override
+    {
+        value_type value;
+        bool rv = parameter().from_string(value_as_string, &value, pMessage);
+
+        if (rv)
+        {
+            rv = set(value);
+        }
+
+        return rv;
+    }
+
+    bool set_from_json(const json_t* pJson,
+                       std::string* pMessage = nullptr) override
+    {
+        value_type value;
+        bool rv = parameter().from_json(pJson, &value, pMessage);
+
+        if (rv)
+        {
+            rv = set(value);
+        }
+
+        return rv;
+    }
+
+    value_type get() const
+    {
+        return value_type(m_value.load(std::memory_order_relaxed));
+    }
+
+    bool set(const value_type& value)
+    {
+        bool rv = parameter().is_valid(value);
+
+        if (rv)
+        {
+            m_value.store(value.count(), std::memory_order_relaxed);
+
+            if (m_on_set)
+            {
+                m_on_set(value);
+            }
+        }
+
+        return rv;
+    }
+
+    std::string to_string() const override
+    {
+        return parameter().to_string(get());
+    }
+
+    json_t* to_json() const override
+    {
+        return parameter().to_json(get());
+    }
+
+protected:
+    std::atomic<int64_t>            m_value;
+    std::function<void(value_type)> m_on_set;
+};
 
 using Milliseconds = Duration<std::chrono::milliseconds>;
 using Seconds = Duration<std::chrono::seconds>;
