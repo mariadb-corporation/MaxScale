@@ -679,9 +679,7 @@ bool CsMonitor::command_cluster_add_node(json_t** ppOutput, SERVER* pServer)
 {
     bool rv = false;
 
-    mxs::Monitor* pMonitor = MonitorManager::server_is_monitored(pServer);
-
-    if (pMonitor == this)
+    if (get_monitored_server(pServer))
     {
         mxb::Semaphore sem;
 
@@ -701,8 +699,8 @@ bool CsMonitor::command_cluster_add_node(json_t** ppOutput, SERVER* pServer)
     else
     {
         PRINT_MXS_JSON_ERROR(ppOutput,
-                             "The server '%s' is monitored already and can thus "
-                             "not be added to a cluster.", pServer->name());
+                             "The server '%s' is monitored not monitored by this monitor and "
+                             "can thus not be added to the cluster.", pServer->name());
     }
 
     return rv;
@@ -712,9 +710,7 @@ bool CsMonitor::command_cluster_remove_node(json_t** ppOutput, SERVER* pServer)
 {
     bool rv = false;
 
-    mxs::Monitor* pMonitor = MonitorManager::server_is_monitored(pServer);
-
-    if (pMonitor == this)
+    if (get_monitored_server(pServer))
     {
         mxb::Semaphore sem;
 
@@ -1131,7 +1127,8 @@ void CsMonitor::cluster_remove_node(json_t** ppOutput, mxb::Semaphore* pSem, SER
             if (it != results.end())
             {
                 PRINT_MXS_JSON_ERROR(ppOutput, "Could not get config from server '%s', node cannot "
-                                     "be removed: %s", mservers[it - results.begin()]->server->name(), it->body.c_str());
+                                     "be removed: %s",
+                                     mservers[it - results.begin()]->server->name(), it->body.c_str());
             }
             else
             {
