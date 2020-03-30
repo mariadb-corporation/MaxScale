@@ -17,8 +17,8 @@
 
 typedef std::set<std::string> StringSet;
 
-#define MDBCI_FAUILT 200 // Exit code for the case when failure caused by MDBCI non-zero exit
-#define BROKEN_VM_FAUILT 201 // Exit code for the case when failure caused by screwed VMs
+#define MDBCI_FAUILT     200// Exit code for the case when failure caused by MDBCI non-zero exit
+#define BROKEN_VM_FAUILT 201// Exit code for the case when failure caused by screwed VMs
 
 /**
  * @brief Class contains references to Master/Slave and Galera test setups
@@ -51,10 +51,6 @@ typedef std::set<std::string> StringSet;
  */
 class TestConnections
 {
-private:
-    /** Whether timeouts are enabled or not */
-    bool enable_timeouts;
-    bool log_matches(int m, const char* pattern);
 public:
     /**
      * @brief TestConnections constructor: reads environmental variables, copies MaxScale.cnf for MaxScale
@@ -93,7 +89,7 @@ public:
     /**
      * @brief galera Mariadb_nodes object containing references to Galera setuo
      */
-    Galera_nodes * galera;
+    Galera_nodes* galera;
 
     /**
      * @brief repl Mariadb_nodes object containing references to Master/Slave setuo
@@ -108,47 +104,6 @@ public:
     Maxscales* maxscales;
 
     /**
-     * @brief mdbci_config_name Name of MDBCI VMs set
-     */
-    char * mdbci_config_name;
-
-    /**
-     * @brief mdbci_vm_path Path to directory with MDBCI VMs descriptions
-     */
-    char * mdbci_vm_path;
-
-    /**
-     * @brief mdbci_temlate Name of mdbci VMs tempate file
-     */
-    char * mdbci_template;
-
-    /**
-     * @brief target Name of Maxscale repository in the CI
-     */
-    char * target;
-
-    /**
-     * @brief GetLogsCommand Command to copy log files from node virtual machines (should handle one
-     * parameter: IP address of virtual machine to kill)
-     */
-    char * get_logs_command;
-
-    /**
-     * @brief make_snapshot_command Command line to create a snapshot of all VMs
-     */
-    char * take_snapshot_command;
-
-    /**
-     * @brief revert_snapshot_command Command line to revert a snapshot of all VMs
-     */
-    char * revert_snapshot_command;
-
-    /**
-     * @brief use_snapshots if TRUE every test is trying to revert snapshot before running the test
-     */
-    bool use_snapshots;
-
-    /**
      * @brief SysbenchDir   path to SysBench directory (sysbanch should be >= 0.5)
      */
     char sysbench_dir[4096];
@@ -161,26 +116,8 @@ public:
      */
     int copy_mariadb_logs(Mariadb_nodes* nrepl, const char* prefix, std::vector<std::thread>& threads);
 
-    /**
-     * @brief MaxScale runs locally, specified using -l.
-     */
-    bool local_maxscale;
+    std::string network_config;     /**< Content of MDBCI network_config file */
 
-    /**
-     * @brief network_config Content of MDBCI network_config file
-     */
-    std::string network_config;
-
-    /**
-     * @brief no_backend_log_copy if true logs from backends are not copied
-     *        (needed if case of Aurora RDS backend or similar)
-     */
-    bool no_backend_log_copy;
-
-    /**
-     * @brief Do not download MaxScale logs.
-     */
-    bool no_maxscale_log_copy;
     /**
      * @brief verbose if true more printing activated
      */
@@ -219,25 +156,9 @@ public:
     bool binlog_slave_gtid;
 
     /**
-     * @brief no_repl Do not check, restart and use Maxster/Slave setup;
-     */
-    bool no_repl;
-
-    /**
-     * @brief no_galera Do not check, restart and use Galera setup; all Galera tests will fail
-     */
-    bool no_galera;
-
-    /**
      * @brief no_clustrix Do not check, restart and use Clustrix setup
      */
     bool no_clustrix;
-
-    /**
-     * @brief no_vm_revert If true tests do not revert VMs after the test even if test failed
-     * (use it for debugging)
-     */
-    bool no_vm_revert;
 
     /**
      * @brief ssl_options string with ssl configuration for command line client
@@ -291,8 +212,8 @@ public:
     std::string configured_labels;
 
     /**
-    * @brief vm_path Path to the VM Vagrant directory
-    */
+     * @brief vm_path Path to the VM Vagrant directory
+     */
     std::string vm_path;
 
     /**
@@ -646,7 +567,6 @@ public:
     void check_current_connections(int m, int value);
     int  stop_maxscale(int m = 0);
     int  start_maxscale(int m = 0);
-    void process_template(const char* src, const char* dest = "/etc/maxscale.cnf");
 
     /**
      * Get the current master server id from the cluster, as seen by rwsplit.
@@ -661,7 +581,7 @@ public:
      *
      * @param func Function to call
      */
-    void on_destroy(std::function<void (void)> func)
+    void on_destroy(std::function<void(void)> func)
     {
         m_on_destroy.push_back(func);
     }
@@ -677,7 +597,7 @@ public:
      * @brief call_mdbci Execute MDBCI to bring up nodes
      * @return 0 if success
      */
-    int call_mdbci(const char *options);
+    int call_mdbci(const char* options);
 
     /**
      * @brief resinstall_maxscales Remove Maxscale form all nodes and installs new ones
@@ -693,19 +613,45 @@ private:
     void set_template_and_labels();
     void set_mdbci_labels();
     bool has_label(std::string labels, std::string label);
+    bool log_matches(int m, const char* pattern);
 
-    bool too_many_maxscales() const
-    {
-        return maxscales->N < 2
-               && m_mdbci_labels.find("SECOND_MAXSCALE") != std::string::npos;
-    }
+    bool too_many_maxscales() const;
 
     std::vector<std::function<void(void)>> m_on_destroy;
 
-    std::string m_test_name;       /**< Test name */
-    std::string m_config_template; /**< MaxScale config file template used by test */
-    std::string m_labels;          /**< Test labels */
-    std::string m_mdbci_labels;    /**< Labels for MDBCI */
+    std::string m_test_name;        /**< Test name */
+    std::string m_config_template;  /**< MaxScale config file template used by test */
+    std::string m_labels;           /**< Test labels */
+    std::string m_mdbci_labels;     /**< Labels for MDBCI */
+
+    char* m_mdbci_config_name;  /**< Name of MDBCI VMs set */
+    char* m_mdbci_vm_path;      /**< Path to directory with MDBCI VMs descriptions */
+    char* m_mdbci_template;     /**< Name of mdbci VMs tempate file */
+    char* m_target;             /**< Name of Maxscale repository in the CI */
+
+    /**
+     * Command to copy log files from node virtual machines (should handle one parameter: IP address of
+     * virtual machine to kill) */
+    char* m_get_logs_command;
+
+    char* m_take_snapshot_command;      /**< Command line to create a snapshot of all VMs */
+    char* m_revert_snapshot_command;    /**< Command line to revert a snapshot of all VMs */
+
+    bool m_enable_timeouts {true};      /**< Whether timeouts are enabled or not */
+    bool m_local_maxscale {false};      /**< MaxScale runs locally, specified using -l. */
+
+    /**< If true, every test is trying to revert snapshot before running the test. Unused for now. */
+    bool m_use_snapshots {false};
+
+    /* If true, logs from backends are not copied (needed if case of Aurora RDS backend or similar) */
+    bool m_no_backend_log_copy {false};
+    bool m_no_maxscale_log_copy {false};    /**< Do not download MaxScale logs. */
+
+    bool no_repl {false};   /**< Do not check, restart and use Master/Slave setup */
+    bool no_galera {false}; /**< Do not check, restart and use Galera setup; all Galera tests will fail */
+
+    /** If true tests do not revert VMs after the test even if test failed (use it for debugging) */
+    bool no_vm_revert {true};
 };
 
 /**
