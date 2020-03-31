@@ -16,6 +16,7 @@
 #include <regex>
 #include <vector>
 #include <string>
+#include <sstream>
 #include <mysql.h>
 
 #include <maxscale/modinfo.hh>
@@ -23,6 +24,7 @@
 #include "../../../core/internal/monitormanager.hh"
 
 using std::string;
+using std::stringstream;
 using std::vector;
 using maxscale::MonitorServer;
 namespace http = mxb::http;
@@ -636,7 +638,7 @@ bool CsMonitor::command_cluster_config_set(json_t** ppOutput, const char* zJson,
         auto cmd = [this, ppOutput, &sem, &body, pServer] () {
             if (ready_to_run(ppOutput))
             {
-                cluster_config_put(ppOutput, &sem, std::move(body), pServer);
+                cluster_config_set(ppOutput, &sem, std::move(body), pServer);
             }
             else
             {
@@ -663,13 +665,64 @@ bool CsMonitor::command_cluster_config_set_async(json_t** ppOutput, const char* 
         auto cmd = [this, ppOutput, &sem, &body, pServer] () {
             if (ready_to_run(ppOutput))
             {
-                cluster_config_put(nullptr, nullptr, std::move(body), pServer);
+                cluster_config_set(nullptr, nullptr, std::move(body), pServer);
             };
 
             sem.post();
         };
 
         rv = command(ppOutput, sem, "cluster-config-put", cmd);
+    }
+
+    return rv;
+}
+
+bool CsMonitor::command_cluster_mode_set(json_t** ppOutput, const char* zMode)
+{
+    bool rv = false;
+    Mode mode;
+
+    if (from_string(zMode, &mode))
+    {
+        mxb::Semaphore sem;
+
+        auto cmd = [this, ppOutput, &sem, mode] () {
+            if (ready_to_run(ppOutput))
+            {
+                // TODO: This is actually only to be sent to the master.
+                cluster_mode_set(ppOutput, &sem, mode);
+            }
+            else
+            {
+                sem.post();
+            }
+        };
+
+        rv = command(ppOutput, sem, "cluster-mode-set", cmd);
+    }
+
+    return rv;
+}
+
+bool CsMonitor::command_cluster_mode_set_async(json_t** ppOutput, const char* zMode)
+{
+    bool rv = false;
+    Mode mode;
+
+    if (from_string(zMode, &mode))
+    {
+        mxb::Semaphore sem;
+
+        auto cmd = [this, ppOutput, &sem, mode] () {
+            if (ready_to_run(ppOutput))
+            {
+                cluster_mode_set(nullptr, nullptr, mode);
+            };
+
+            sem.post();
+        };
+
+        rv = command(ppOutput, sem, "cluster-mode-set", cmd);
     }
 
     return rv;
@@ -796,6 +849,44 @@ bool CsMonitor::command_cancel(json_t** ppOutput)
     };
 
     return command(ppOutput, sem, "result", cmd);
+}
+
+//static
+bool CsMonitor::from_string(const char* zMode, Mode* pMode)
+{
+    bool rv = true;
+
+    if (strcmp("read-only", zMode) == 0)
+    {
+        *pMode = READ_ONLY;
+    }
+    else if (strcmp("read-write", zMode) == 0)
+    {
+        *pMode = READ_WRITE;
+    }
+    else
+    {
+        rv = false;
+    }
+
+    return rv;
+}
+
+//static
+const char* CsMonitor::to_string(Mode mode)
+{
+    switch (mode)
+    {
+    case READ_ONLY:
+        return "read-only";
+
+    case READ_WRITE:
+        return "read-write";
+
+    default:
+        mxb_assert(!true);
+        return "";
+    }
 }
 
 bool CsMonitor::ready_to_run(json_t** ppOutput) const
@@ -965,10 +1056,19 @@ void CsMonitor::cluster_config_get(json_t** ppOutput, mxb::Semaphore* pSem, SERV
     cluster_get(ppOutput, pSem, "config", pServer);
 }
 
-void CsMonitor::cluster_config_put(json_t** ppOutput, mxb::Semaphore* pSem,
+void CsMonitor::cluster_config_set(json_t** ppOutput, mxb::Semaphore* pSem,
                                    string&& body, SERVER* pServer)
 {
     cluster_put(ppOutput, pSem, "config", pServer, std::move(body));
+}
+
+void CsMonitor::cluster_mode_set(json_t** ppOutput, mxb::Semaphore* pSem, Mode mode)
+{
+    stringstream ss;
+    ss << "{ \"mode\":" << "\"" << to_string(mode) << "\" }";
+    string body = ss.str();
+
+    cluster_put(ppOutput, pSem, "config", nullptr, std::move(body));
 }
 
 void CsMonitor::cluster_add_node(json_t** ppOutput, mxb::Semaphore* pSem, SERVER* pServer)
@@ -1018,13 +1118,15 @@ void CsMonitor::cluster_add_node(json_t** ppOutput, mxb::Semaphore* pSem, SERVER
             if (it != results.end())
             {
                 PRINT_MXS_JSON_ERROR(ppOutput, "Could not get config from server '%s', new node cannot "
-                                     "be added: %s", mservers[it - results.begin()]->server->name(), it->body.c_str());
+                                     "be added: %s",
+                                     mservers[it - results.begin()]->server->name(), it->body.c_str());
             }
             else
             {
-                auto it = std::adjacent_find(results.begin(), results.end(), [](const auto& l, const auto& r) {
-                        return l.body != r.body;
-                    });
+                auto it = std::adjacent_find(results.begin(), results.end(),
+                                             [](const auto& l, const auto& r) {
+                                                 return l.body != r.body;
+                                             });
 
                 if (it != results.end())
                 {
@@ -1050,7 +1152,8 @@ void CsMonitor::cluster_add_node(json_t** ppOutput, mxb::Semaphore* pSem, SERVER
 
                     if (it != results.end())
                     {
-                        PRINT_MXS_JSON_ERROR(ppOutput, "Could not update configuration of all nodes. Cluster state "
+                        PRINT_MXS_JSON_ERROR(ppOutput,
+                                             "Could not update configuration of all nodes. Cluster state "
                                              "is now indeterminate.");
                     }
                     else

@@ -18,14 +18,15 @@ namespace
 
 const char ARG_MONITOR_DESC[] = "Monitor name";
 
-const char CLUSTER_START_DESC[]       = "Start Columnstore cluster [or server].";
-const char CLUSTER_SHUTDOWN_DESC[]    = "Shutdown Columnstore cluster [or server].";
-const char CLUSTER_PING_DESC[]        = "Ping Columnstore cluster [or server].";
-const char CLUSTER_STATUS_DESC[]      = "Get Columnstore cluster [or server] status.";
+const char CLUSTER_ADD_NODE_DESC[]    = "Add a node to a Columnstore cluster.";
 const char CLUSTER_CONFIG_GET_DESC[]  = "Get Columnstore cluster [or server] config.";
 const char CLUSTER_CONFIG_SET_DESC[]  = "Set Columnstore cluster [or server] config.";
-const char CLUSTER_ADD_NODE_DESC[]    = "Add a node to a Columnstore cluster.";
+const char CLUSTER_MODE_SET_DESC[]    = "Set Columnstore cluster mode.";
+const char CLUSTER_PING_DESC[]        = "Ping Columnstore cluster [or server].";
 const char CLUSTER_REMOVE_NODE_DESC[] = "Remove a node from a Columnstore cluster.";
+const char CLUSTER_SHUTDOWN_DESC[]    = "Shutdown Columnstore cluster [or server].";
+const char CLUSTER_START_DESC[]       = "Start Columnstore cluster [or server].";
+const char CLUSTER_STATUS_DESC[]      = "Get Columnstore cluster [or server] status.";
 
 const modulecmd_arg_type_t cluster_start_argv[] =
 {
@@ -71,6 +72,12 @@ const modulecmd_arg_type_t cluster_add_node_argv[] =
 };
 
 const modulecmd_arg_type_t cluster_remove_node_argv[] =
+{
+    { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
+    { MODULECMD_ARG_SERVER, "Server to remove from Columnstore cluster" }
+};
+
+const modulecmd_arg_type_t cluster_mode_set_argv[]
 {
     { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
     { MODULECMD_ARG_SERVER, "Server to remove from Columnstore cluster" }
@@ -268,6 +275,30 @@ bool cluster_config_set_async(const MODULECMD_ARG* pArgs, json_t** ppOutput)
     return pMonitor->command_cluster_config_set_async(ppOutput, zJson, pServer);
 }
 
+bool cluster_mode_set(const MODULECMD_ARG* pArgs, json_t** ppOutput)
+{
+    mxb_assert(pArgs->argc == 2);
+    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
+    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_STRING);
+
+    auto* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
+    const char* zEnum = pArgs->argv[1].value.string;
+
+    return pMonitor->command_cluster_mode_set(ppOutput, zEnum);
+}
+
+bool cluster_mode_set_async(const MODULECMD_ARG* pArgs, json_t** ppOutput)
+{
+    mxb_assert(pArgs->argc == 2);
+    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
+    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_STRING);
+
+    auto* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
+    const char* zEnum = pArgs->argv[1].value.string;
+
+    return pMonitor->command_cluster_mode_set_async(ppOutput, zEnum);
+}
+
 bool result(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 {
     mxb_assert(pArgs->argc == 1);
@@ -369,6 +400,11 @@ void register_commands()
                                cancel,
                                MXS_ARRAY_NELEMS(result_argv), result_argv,
                                "Cancel on-going command");
+
+    modulecmd_register_command(MXS_MODULE_NAME, "cluster-mode-set", MODULECMD_TYPE_ACTIVE,
+                               cluster_mode_set,
+                               MXS_ARRAY_NELEMS(cluster_mode_set_argv), cluster_mode_set_argv,
+                               CLUSTER_MODE_SET_DESC);
 }
 }
 

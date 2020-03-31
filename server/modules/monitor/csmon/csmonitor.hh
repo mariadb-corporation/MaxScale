@@ -44,6 +44,9 @@ public:
     bool command_cluster_config_get_async(json_t** ppOutput, SERVER* pServer);
     bool command_cluster_config_set(json_t** ppOutput, const char* zJson, SERVER* pServer);
     bool command_cluster_config_set_async(json_t** ppOutput, const char* zJson, SERVER* pServer);
+    bool command_cluster_mode_set(json_t** ppOutput, const char* zEnum);
+    bool command_cluster_mode_set_async(json_t** ppOutput, const char* zEnum);
+
     bool command_cluster_add_node(json_t** ppOutput, SERVER* pServer);
     bool command_cluster_add_node_async(json_t** ppOutput, SERVER* pServer);
     bool command_cluster_remove_node(json_t** ppOutput, SERVER* pServer);
@@ -53,6 +56,15 @@ public:
     bool command_cancel(json_t** ppOutput);
 
 private:
+    enum Mode
+    {
+        READ_ONLY,
+        READ_WRITE
+    };
+
+    static bool from_string(const char* zEnum, Mode* pMode);
+    static const char* to_string(Mode mode);
+
     bool ready_to_run(json_t** ppOutput) const;
     static bool is_valid_json(json_t** ppOutput, const char* zJson, size_t len);
 
@@ -67,8 +79,9 @@ private:
     void cluster_ping(json_t** ppOutput, mxb::Semaphore* pSem = nullptr, SERVER* pServer = nullptr);
     void cluster_status(json_t** ppOutput, mxb::Semaphore* pSem = nullptr, SERVER* pServer = nullptr);
     void cluster_config_get(json_t** ppOutput, mxb::Semaphore* pSem = nullptr, SERVER* pServer = nullptr);
-    void cluster_config_put(json_t** ppOutput, mxb::Semaphore* pSem,
+    void cluster_config_set(json_t** ppOutput, mxb::Semaphore* pSem,
                             std::string&& body, SERVER* pServer = nullptr);
+    void cluster_mode_set(json_t** ppOuput, mxb::Semaphore* pSem, Mode mode);
     void cluster_add_node(json_t** ppOutput, mxb::Semaphore* pSem, SERVER* pServer);
     void cluster_remove_node(json_t** ppOutput, mxb::Semaphore* pSem, SERVER* pServer);
 
