@@ -193,6 +193,8 @@ add_subdirectory(server)
 add_subdirectory(include/maxscale)
 add_subdirectory(maxctrl)
 add_subdirectory(connectors)
+add_subdirectory(maxgui)
+
 if(BUILD_TESTS)
   add_subdirectory(examples)
 endif()
