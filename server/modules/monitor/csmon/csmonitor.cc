@@ -1263,8 +1263,8 @@ void CsMonitor::cluster_remove_node(json_t** ppOutput, mxb::Semaphore* pSem, SER
 
                     if (it != results.end())
                     {
-                        PRINT_MXS_JSON_ERROR(ppOutput, "Could not update configuration of all nodes. Cluster state "
-                                             "is now indeterminate.");
+                        PRINT_MXS_JSON_ERROR(ppOutput, "Could not update configuration of all nodes. "
+                                             "Cluster state is now indeterminate.");
                     }
                     else
                     {
@@ -1276,4 +1276,10 @@ void CsMonitor::cluster_remove_node(json_t** ppOutput, mxb::Semaphore* pSem, SER
     }
 
     pSem->post();
+}
+
+CsMonitorServer* CsMonitor::create_server(SERVER* pServer,
+                                          const mxs::MonitorServer::SharedSettings& shared)
+{
+    return new CsMonitorServer(pServer, shared, m_config.admin_port);
 }

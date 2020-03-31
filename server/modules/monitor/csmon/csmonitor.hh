@@ -18,10 +18,13 @@
 #include <maxscale/modulecmd.hh>
 #include <maxscale/monitor.hh>
 #include "csconfig.hh"
+#include "csmonitorserver.hh"
 
 class CsMonitor : public maxscale::MonitorWorkerSimple
 {
 public:
+    using Base = mxs::MonitorWorkerSimple;
+
     class Command;
 
     CsMonitor(const CsMonitor&) = delete;
@@ -31,6 +34,20 @@ public:
     static CsMonitor* create(const std::string& name, const std::string& module);
 
 public:
+    using ServerVector = std::vector<CsMonitorServer*>;
+
+    ServerVector get_monitored_serverlist(const std::string& key, bool* error_out)
+    {
+        const auto& sl = Base::get_monitored_serverlist(key, error_out);
+
+        return reinterpret_cast<const ServerVector&>(sl);
+    }
+
+    CsMonitorServer* get_monitored_server(SERVER* search_server)
+    {
+        return static_cast<CsMonitorServer*>(Base::get_monitored_server(search_server));
+    }
+
     // Only to be called by the module call command mechanism.
     bool command_cluster_start(json_t** ppOutput, SERVER* pServer);
     bool command_cluster_start_async(json_t** ppOutput, SERVER* pServer);
@@ -87,6 +104,8 @@ private:
 
     bool has_sufficient_permissions();
     void update_server_status(mxs::MonitorServer* monitored_server);
+
+    CsMonitorServer* create_server(SERVER* server, const mxs::MonitorServer::SharedSettings& shared) override;
 
 private:
     CsMonitor(const std::string& name, const std::string& module);
