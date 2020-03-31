@@ -133,7 +133,7 @@
 
 #define MXS_MODULE_NAME "storage_redis"
 #include "redisstorage.hh"
-#include <hiredis/hiredis.h>
+#include <hiredis.h>
 #include <maxscale/threadpool.hh>
 
 using std::map;

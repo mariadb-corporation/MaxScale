@@ -14,11 +14,17 @@ message(STATUS "Using hiredis version ${HIREDIS_VERSION}")
 ExternalProject_add(hiredis
   GIT_REPOSITORY ${HIREDIS_REPO}
   GIT_TAG ${HIREDIS_TAG}
+  SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/hiredis
   CONFIGURE_COMMAND ""
   BUILD_IN_SOURCE 1
   BUILD_COMMAND make
-  INSTALL_COMMAND make PREFIX=${CMAKE_CURRENT_BINARY_DIR}/hiredis install
+# The install command is intentionally left out: for some strange and
+# unknown reason it causes the library to be installed as a part of the
+# MaxScale package in the location where it would be installed. This is
+# definitely not wanted and in addition to that it can break the generated
+# package by changing the ownership of home directories to root.
+  INSTALL_COMMAND ""
   )
 
-set(HIREDIS_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/hiredis/include CACHE INTERNAL "")
-set(HIREDIS_STATIC_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/hiredis/lib/libhiredis.a)
+set(HIREDIS_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/hiredis CACHE INTERNAL "")
+set(HIREDIS_STATIC_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/hiredis/libhiredis.a)
