@@ -162,12 +162,12 @@ MariaDBServer* MariaDBMonitor::get_server(int64_t id)
     return (found != m_servers_by_id.end()) ? (*found).second : NULL;
 }
 
-MariaDBServer* MariaDBMonitor::get_server(MonitorServer* mon_server)
+MariaDBServer* MariaDBMonitor::get_server(MonitorServer* mon_server) const
 {
     return get_server(mon_server->server);
 }
 
-MariaDBServer* MariaDBMonitor::get_server(SERVER* server)
+MariaDBServer* MariaDBMonitor::get_server(SERVER* server) const
 {
     for (auto iter : servers())
     {
@@ -341,6 +341,13 @@ json_t* MariaDBMonitor::diagnostics() const
 {
     mxb_assert(mxs::MainWorker::is_main_worker());
     return to_json();
+}
+
+json_t* MariaDBMonitor::diagnostics(MonitorServer* srv) const
+{
+    mxb_assert(mxs::MainWorker::is_main_worker());
+    auto server = get_server(srv);
+    return server ? server->to_json() : nullptr;
 }
 
 json_t* MariaDBMonitor::to_json(State op)

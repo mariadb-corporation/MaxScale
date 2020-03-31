@@ -405,6 +405,15 @@ public:
     virtual json_t* diagnostics() const = 0;
 
     /**
+     * Return diagnostic information about a server monitored by the monitor
+     *
+     * @return A JSON object representing the detailed server information
+     *
+     * @note This is combined with the existing "public" server information found in the Server class.
+     */
+    virtual json_t* diagnostics(MonitorServer* server) const = 0;
+
+    /**
      * Set disk space threshold setting.
      *
      * @param dst_setting  The disk space threshold as specified in the config file.
@@ -692,6 +701,19 @@ public:
      * @return An object, if there is information to return, NULL otherwise.
      */
     json_t* diagnostics() const override;
+
+    /**
+     * Obtain diagnostics about a monitored server
+     *
+     * The implementation should return a JSON object with detailed diagnostic information that is amended to
+     * the general server diagnostic information. For example, mariadbmon would return replication
+     * information.
+     *
+     * The default implementation returns an empty JSON object.
+     *
+     * @return JSON object that describes the server or NULL if no information is available
+     */
+    json_t* diagnostics(MonitorServer* server) const override;
 
     /**
      * Get current time from the monotonic clock.

@@ -799,6 +799,7 @@ bool Monitor::test_permissions(const string& query)
 
 json_t* Monitor::monitored_server_json_attributes(const SERVER* srv) const
 {
+    json_t* rval = nullptr;
     auto comp = [srv](MonitorServer* ms) {
             return ms->server == srv;
         };
@@ -807,7 +808,7 @@ json_t* Monitor::monitored_server_json_attributes(const SERVER* srv) const
     if (iter != m_servers.end())
     {
         auto mon_srv = *iter;
-        json_t* rval = json_object();
+        rval = json_object();
         json_object_set_new(rval, "node_id", json_integer(mon_srv->node_id));
         json_object_set_new(rval, "master_id", json_integer(mon_srv->master_id));
 
@@ -815,9 +816,14 @@ json_t* Monitor::monitored_server_json_attributes(const SERVER* srv) const
         time_t t = maxscale_started() + MXS_CLOCK_TO_SEC(mon_srv->triggered_at);
         json_object_set_new(rval, "last_event", json_string(event_name));
         json_object_set_new(rval, "triggered_at", json_string(http_to_date(t).c_str()));
-        return rval;    // TODO: Add derived class calling here for monitor-specific data
+
+        if (auto extra = diagnostics(mon_srv))
+        {
+            json_object_update(rval, extra);
+            json_decref(extra);
+        }
     }
-    return nullptr;
+    return rval;
 }
 
 void MonitorServer::stash_current_status()
@@ -1913,6 +1919,11 @@ void MonitorWorker::do_stop()
 }
 
 json_t* MonitorWorker::diagnostics() const
+{
+    return json_object();
+}
+
+json_t* MonitorWorker::diagnostics(MonitorServer* server) const
 {
     return json_object();
 }

@@ -71,6 +71,11 @@ public:
     json_t* diagnostics() const override;
 
     /**
+     * Return information about a single server
+     */
+    json_t* diagnostics(mxs::MonitorServer* server) const override;
+
+    /**
      * Perform user-activated switchover.
      *
      * @param new_master      The specified new master. If NULL, monitor will autoselect.
@@ -339,8 +344,8 @@ private:
 
     MariaDBServer* get_server(const EndPoint& search_ep);
     MariaDBServer* get_server(int64_t id);
-    MariaDBServer* get_server(mxs::MonitorServer* mon_server);
-    MariaDBServer* get_server(SERVER* server);
+    MariaDBServer* get_server(mxs::MonitorServer* mon_server) const;
+    MariaDBServer* get_server(SERVER* server) const;
 
     // Cluster discovery and status assignment methods, top levels
     void update_topology();

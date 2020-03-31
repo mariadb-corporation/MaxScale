@@ -217,20 +217,14 @@ json_t* ServerManager::server_to_json_data_relations(const Server* server, const
 json_t* ServerManager::server_to_json_attributes(const Server* server)
 {
     json_t* attr = server->json_attributes();
-    // Retrieve additional server-specific attributes from monitor.
-    json_t* monitor_attr = MonitorManager::monitored_server_attributes_json(server);
-    // Append the data.
-    if (monitor_attr)
+
+    // Retrieve additional server-specific attributes from monitor and combine it with the base data.
+    if (auto extra = MonitorManager::monitored_server_attributes_json(server))
     {
-        // Non-monitored servers will not display these.
-        const char* key = nullptr;
-        json_t* iter = nullptr;
-        json_object_foreach(monitor_attr, key, iter)
-        {
-            json_object_set(attr, key, iter);
-        }
-        json_decref(monitor_attr);      // No longer used.
+        json_object_update(attr, extra);
+        json_decref(extra);
     }
+
     return attr;
 }
 
