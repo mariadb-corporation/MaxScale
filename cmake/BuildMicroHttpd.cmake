@@ -15,7 +15,12 @@ ExternalProject_Add(libmicrohttpd
   CONFIGURE_COMMAND ${CMAKE_BINARY_DIR}/libmicrohttpd//configure --prefix=${CMAKE_BINARY_DIR}/libmicrohttpd/ --enable-shared --with-pic --libdir=${CMAKE_BINARY_DIR}/libmicrohttpd/lib/
   BINARY_DIR ${CMAKE_BINARY_DIR}/libmicrohttpd/
   BUILD_COMMAND make
-  INSTALL_COMMAND make install)
+  INSTALL_COMMAND make install
+  LOG_DOWNLOAD 1
+  LOG_UPDATE 1
+  LOG_CONFIGURE 1
+  LOG_BUILD 1
+  LOG_INSTALL 1)
 
 include_directories(${CMAKE_BINARY_DIR}/libmicrohttpd/include/)
 set(MICROHTTPD_LIBRARIES ${CMAKE_BINARY_DIR}/libmicrohttpd/lib/libmicrohttpd.a)

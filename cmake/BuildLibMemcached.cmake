@@ -23,7 +23,12 @@ ExternalProject_Add(libmemcached
   PATCH_COMMAND sed -i "s/opt_servers == false/opt_servers == 0/" ${CMAKE_BINARY_DIR}/libmemcached/clients/memflush.cc
   BINARY_DIR ${CMAKE_BINARY_DIR}/libmemcached/
   BUILD_COMMAND make
-  INSTALL_COMMAND make install)
+  INSTALL_COMMAND make install
+  LOG_DOWNLOAD 1
+  LOG_UPDATE 1
+  LOG_CONFIGURE 1
+  LOG_BUILD 1
+  LOG_INSTALL 1)
 
 set(LIBMEMCACHED_INCLUDE_DIR ${CMAKE_BINARY_DIR}/libmemcached/include CACHE INTERNAL "")
 set(LIBMEMCACHED_LIBRARIES ${CMAKE_BINARY_DIR}/libmemcached/lib/libmemcached.a)

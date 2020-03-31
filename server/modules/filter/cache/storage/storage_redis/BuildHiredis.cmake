@@ -24,6 +24,11 @@ ExternalProject_add(hiredis
 # definitely not wanted and in addition to that it can break the generated
 # package by changing the ownership of home directories to root.
   INSTALL_COMMAND ""
+  LOG_DOWNLOAD 1
+  LOG_UPDATE 1
+  LOG_CONFIGURE 1
+  LOG_BUILD 1
+  LOG_INSTALL 1
   )
 
 set(HIREDIS_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/hiredis CACHE INTERNAL "")

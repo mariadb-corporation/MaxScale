@@ -15,7 +15,12 @@ ExternalProject_Add(librdkafka
   CONFIGURE_COMMAND ${CMAKE_BINARY_DIR}/librdkafka/configure --prefix=${CMAKE_BINARY_DIR}/librdkafka/ --disable-zstd --disable-sasl --disable-lz4-ext
   BUILD_COMMAND make
   INSTALL_COMMAND make install
-  UPDATE_COMMAND "")
+  UPDATE_COMMAND ""
+  LOG_DOWNLOAD 1
+  LOG_UPDATE 1
+  LOG_CONFIGURE 1
+  LOG_BUILD 1
+  LOG_INSTALL 1)
 
 set(RDKAFKA_INCLUDE_DIR ${CMAKE_BINARY_DIR}/librdkafka/include CACHE INTERNAL "")
 set(RDKAFKA_LIBRARIES

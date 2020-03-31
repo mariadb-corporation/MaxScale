@@ -5,7 +5,12 @@ ExternalProject_Add(maxscale_sqlite
   BINARY_DIR ${CMAKE_BINARY_DIR}/sqlite-bld-3110100
   CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/sqlite-src-3110100/configure --with-pic --enable-maxscale
   BUILD_COMMAND make sqlite3.c
-  INSTALL_COMMAND "")
+  INSTALL_COMMAND ""
+  LOG_DOWNLOAD 1
+  LOG_UPDATE 1
+  LOG_CONFIGURE 1
+  LOG_BUILD 1
+  LOG_INSTALL 1)
 
 include_directories(${CMAKE_BINARY_DIR}/sqlite-bld-3110100/tsrc)
 include_directories(${CMAKE_BINARY_DIR}/sqlite-bld-3110100)
