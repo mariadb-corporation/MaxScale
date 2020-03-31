@@ -634,18 +634,18 @@ private:
     std::string m_labels;           /**< Test labels */
     std::string m_mdbci_labels;     /**< Labels for MDBCI */
 
-    char* m_mdbci_config_name;  /**< Name of MDBCI VMs set */
-    char* m_mdbci_vm_path;      /**< Path to directory with MDBCI VMs descriptions */
-    char* m_mdbci_template;     /**< Name of mdbci VMs tempate file */
-    char* m_target;             /**< Name of Maxscale repository in the CI */
+    std::string m_mdbci_config_name;  /**< Name of MDBCI VMs set */
+    std::string m_mdbci_vm_path;      /**< Path to directory with MDBCI VMs descriptions */
+    std::string m_mdbci_template;     /**< Name of mdbci VMs tempate file */
+    std::string m_target;             /**< Name of Maxscale repository in the CI */
 
     /**
      * Command to copy log files from node virtual machines (should handle one parameter: IP address of
      * virtual machine to kill) */
-    char* m_get_logs_command;
+    std::string m_get_logs_command;
 
-    char* m_take_snapshot_command;      /**< Command line to create a snapshot of all VMs */
-    char* m_revert_snapshot_command;    /**< Command line to revert a snapshot of all VMs */
+    std::string m_take_snapshot_command;      /**< Command line to create a snapshot of all VMs */
+    std::string m_revert_snapshot_command;    /**< Command line to revert a snapshot of all VMs */
 
     bool m_enable_timeouts {true};      /**< Whether timeouts are enabled or not */
     bool m_local_maxscale {false};      /**< MaxScale runs locally, specified using -l. */

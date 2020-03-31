@@ -341,8 +341,7 @@ TestConnections::TestConnections(int argc, char* argv[])
         }
     }
 
-    m_get_logs_command = (char *) malloc(strlen(test_dir) + 14);
-    sprintf(m_get_logs_command, "%s/get_logs.sh", test_dir);
+    m_get_logs_command = (string)test_dir + "/get_logs.sh";
 
     sprintf(ssl_options,
             "--ssl-cert=%s/ssl-cert/client-cert.pem --ssl-key=%s/ssl-cert/client-key.pem",
@@ -364,8 +363,8 @@ TestConnections::TestConnections(int argc, char* argv[])
         repl = new Mariadb_nodes("node", test_dir, verbose, network_config);
         repl->setup();
         repl->use_ipv6 = use_ipv6;
-        repl->take_snapshot_command = m_take_snapshot_command;
-        repl->revert_snapshot_command = m_revert_snapshot_command;
+        repl->take_snapshot_command = m_take_snapshot_command.c_str();
+        repl->revert_snapshot_command = m_revert_snapshot_command.c_str();
         repl_future = std::async(std::launch::async, &Mariadb_nodes::check_nodes, repl);
     }
     else
@@ -378,8 +377,8 @@ TestConnections::TestConnections(int argc, char* argv[])
         galera = new Galera_nodes("galera", test_dir, verbose, network_config);
         galera->setup();
         galera->use_ipv6 = false;
-        galera->take_snapshot_command = m_take_snapshot_command;
-        galera->revert_snapshot_command = m_revert_snapshot_command;
+        galera->take_snapshot_command = m_take_snapshot_command.c_str();
+        galera->revert_snapshot_command = m_revert_snapshot_command.c_str();
         galera_future = std::async(std::launch::async, &Galera_nodes::check_nodes, galera);
     }
     else
@@ -392,8 +391,8 @@ TestConnections::TestConnections(int argc, char* argv[])
         clustrix = new Clustrix_nodes("clustrix", test_dir, verbose, network_config);
         clustrix->setup();
         clustrix->use_ipv6 = false;
-        clustrix->take_snapshot_command = m_take_snapshot_command;
-        clustrix->revert_snapshot_command = m_revert_snapshot_command;
+        clustrix->take_snapshot_command = m_take_snapshot_command.c_str();
+        clustrix->revert_snapshot_command = m_revert_snapshot_command.c_str();
         clustrix->fix_replication();
     }
     else
@@ -427,7 +426,7 @@ TestConnections::TestConnections(int argc, char* argv[])
 
         if (reinstall_maxscales())
         {
-            tprintf("Failed to install Maxscale: target is %s", m_target);
+            tprintf("Failed to install Maxscale: target is %s", m_target.c_str());
             exit(MDBCI_FAUILT);
         }
     }
@@ -647,21 +646,21 @@ bool TestConnections::expect(bool result, const char* format, ...)
 
 void TestConnections::read_mdbci_info()
 {
-    m_mdbci_vm_path = readenv("MDBCI_VM_PATH", "%s/vms/", getenv("HOME"));
+    m_mdbci_vm_path = envvar_read_write_def_str("MDBCI_VM_PATH", "%s/vms/", getenv("HOME"));
 
-    if (system((std::string("mkdir -p ") +
-                std::string(m_mdbci_vm_path)).c_str()))
+    string cmd = "mkdir -p " + m_mdbci_vm_path;
+    if (system(cmd.c_str()))
     {
-        tprintf("Unable to create MDBCI VMs direcory '%s', exiting", m_mdbci_vm_path);
+        tprintf("Unable to create MDBCI VMs direcory '%s', exiting", m_mdbci_vm_path.c_str());
         exit(MDBCI_FAUILT);
     }
-    m_mdbci_template = readenv("template", "default");
-    m_target = readenv("target", "develop");
+    m_mdbci_template = envvar_read_write_def_str("template", "default");
+    m_target = envvar_read_write_def_str("target", "develop");
 
-    m_mdbci_config_name = readenv("mdbci_config_name", "local");
-    vm_path = std::string(m_mdbci_vm_path) + "/" + std::string(m_mdbci_config_name);
+    m_mdbci_config_name = envvar_read_write_def_str("mdbci_config_name", "local");
+    vm_path = m_mdbci_vm_path + "/" + m_mdbci_config_name;
 
-    if (m_mdbci_config_name != NULL)
+    if (!m_mdbci_config_name.empty())
     {
         std::ifstream nc_file;
         nc_file.open(vm_path + "_network_config");
@@ -714,10 +713,12 @@ void TestConnections::read_env()
     smoke = readenv_bool("smoke", true);
     threads = readenv_int("threads", 4);
     m_use_snapshots = readenv_bool("use_snapshots", false);
-    m_take_snapshot_command = readenv("take_snapshot_command",
-                                      "mdbci snapshot take --path-to-nodes %s --snapshot-name ", m_mdbci_config_name);
-    m_revert_snapshot_command = readenv("revert_snapshot_command",
-                                        "mdbci snapshot revert --path-to-nodes %s --snapshot-name ", m_mdbci_config_name);
+    m_take_snapshot_command = envvar_read_write_def_str(
+        "take_snapshot_command", "mdbci snapshot take --path-to-nodes %s --snapshot-name ",
+        m_mdbci_config_name.c_str());
+    m_revert_snapshot_command = envvar_read_write_def_str(
+        "revert_snapshot_command", "mdbci snapshot revert --path-to-nodes %s --snapshot-name ",
+        m_mdbci_config_name.c_str());
     no_vm_revert = readenv_bool("no_vm_revert", true);
 }
 
@@ -2167,15 +2168,15 @@ void TestConnections::check_current_persistent_connections(int m, const std::str
 
 int TestConnections::take_snapshot(char* snapshot_name)
 {
-    char str[strlen(m_take_snapshot_command) + strlen(snapshot_name) + 2];
-    sprintf(str, "%s %s", m_take_snapshot_command, snapshot_name);
+    char str[m_take_snapshot_command.length() + strlen(snapshot_name) + 2];
+    sprintf(str, "%s %s", m_take_snapshot_command.c_str(), snapshot_name);
     return call_system(str);
 }
 
 int TestConnections::revert_snapshot(char* snapshot_name)
 {
-    char str[strlen(m_revert_snapshot_command) + strlen(snapshot_name) + 2];
-    sprintf(str, "%s %s", m_revert_snapshot_command, snapshot_name);
+    char str[m_revert_snapshot_command.length() + strlen(snapshot_name) + 2];
+    sprintf(str, "%s %s", m_revert_snapshot_command.c_str(), snapshot_name);
     return call_system(str);
 }
 
@@ -2195,10 +2196,8 @@ bool TestConnections::test_bad_config(int m, const char* config)
 int TestConnections::call_mdbci(const char * options)
 {
     struct stat buf;
-    if (stat(
-                (m_mdbci_vm_path + std::string("/") + m_mdbci_config_name).c_str(),
-                &buf)
-       )
+    string filepath = m_mdbci_vm_path + "/" + m_mdbci_config_name;
+    if (stat(filepath.c_str(), &buf))
     {
         if (process_mdbci_template())
         {
@@ -2208,7 +2207,7 @@ int TestConnections::call_mdbci(const char * options)
         if (system((std::string("mdbci --override --template ") +
                     vm_path +
                     std::string(".json generate ") +
-                    std::string(m_mdbci_config_name)).c_str() ))
+                    m_mdbci_config_name).c_str() ))
         {
             tprintf("MDBCI failed to generate virtual machines description");
             return 1;
@@ -2225,21 +2224,19 @@ int TestConnections::call_mdbci(const char * options)
     }
 
     if (system((std::string("mdbci up ") +
-                std::string(m_mdbci_config_name) +
-                std::string(" --labels ") +
-                m_mdbci_labels +
-                std::string(" ") +
-                std::string(options)).c_str() ))
+               m_mdbci_config_name +
+               std::string(" --labels ") +
+               m_mdbci_labels +
+               std::string(" ") +
+               std::string(options)).c_str() ))
     {
         tprintf("MDBCI failed to bring up virtual machines");
         return 1;
     }
 
     std::string team_keys = readenv("team_keys", "~/.ssh/id_rsa.pub");
-    system((std::string("mdbci public_keys --key ") +
-            team_keys +
-            std::string(" ") +
-            std::string(m_mdbci_config_name)).c_str() );
+    string cmd = "mdbci public_keys --key " + team_keys + " " + m_mdbci_config_name;
+    system(cmd.c_str());
     read_env();
     if (repl)
     {
@@ -2280,9 +2277,9 @@ int TestConnections::process_mdbci_template()
     }
 
     std::string name = std::string(test_dir) +
-                       std::string("/mdbci/templates/") +
-                       std::string(m_mdbci_template) +
-                       std::string(".json.template");
+        std::string("/mdbci/templates/") +
+        m_mdbci_template +
+        std::string(".json.template");
 
     std::string sys = std::string("envsubst < ") +
                       name +
@@ -2319,10 +2316,7 @@ std::string dump_status(const StringSet& current, const StringSet& expected)
 }
 int TestConnections::reinstall_maxscales()
 {
-    char sys[strlen(m_target) +
-             strlen(m_mdbci_config_name) +
-             strlen(maxscales->prefix) +
-             70];
+    char sys[m_target.length() + m_mdbci_config_name.length() + strlen(maxscales->prefix) + 70];
     for (int i = 0; i < maxscales->N; i++)
     {
         printf("Installing Maxscale on node %d\n", i);
@@ -2331,7 +2325,7 @@ int TestConnections::reinstall_maxscales()
         maxscales->ssh_node(i, "yum clean all", true);
 
         sprintf(sys, "mdbci install_product --product maxscale_ci --product-version %s %s/%s_%03d",
-                m_target, m_mdbci_config_name, maxscales->prefix, i);
+                m_target.c_str(), m_mdbci_config_name.c_str(), maxscales->prefix, i);
         if (system(sys))
         {
             return 1;
