@@ -537,14 +537,16 @@ public:
      * @param config Name of the config template
      * @return Always false, the test will time out if the loading is successful
      */
-    bool test_bad_config(int m, const char* config);
+    bool test_bad_config(int m, const std::string& config);
 
     /**
      * @brief Process a template configuration file
      *
+     * @param cnf_template_path Config file template path
      * @param dest Destination file name for actual configuration file
      */
-    void process_template(int m, const std::string& src, const char* dest = "/etc/maxscale.cnf");
+    void process_template(int m, const std::string& cnf_template_path,
+                          const char* dest = "/etc/maxscale.cnf");
 
     /**
      * Execute a MaxCtrl command
@@ -629,23 +631,23 @@ private:
 
     std::vector<std::function<void(void)>> m_on_destroy;
 
-    std::string m_test_name;        /**< Test name */
-    std::string m_config_template;  /**< MaxScale config file template used by test */
-    std::string m_labels;           /**< Test labels */
-    std::string m_mdbci_labels;     /**< Labels for MDBCI */
+    std::string m_test_name;            /**< Test name */
+    std::string m_cnf_template_path;    /**< MaxScale config file template used by test */
+    std::string m_labels;               /**< Test labels */
+    std::string m_mdbci_labels;         /**< Labels for MDBCI */
 
-    std::string m_mdbci_config_name;  /**< Name of MDBCI VMs set */
-    std::string m_mdbci_vm_path;      /**< Path to directory with MDBCI VMs descriptions */
-    std::string m_mdbci_template;     /**< Name of mdbci VMs tempate file */
-    std::string m_target;             /**< Name of Maxscale repository in the CI */
+    std::string m_mdbci_config_name;    /**< Name of MDBCI VMs set */
+    std::string m_mdbci_vm_path;        /**< Path to directory with MDBCI VMs descriptions */
+    std::string m_mdbci_template;       /**< Name of mdbci VMs tempate file */
+    std::string m_target;               /**< Name of Maxscale repository in the CI */
 
     /**
      * Command to copy log files from node virtual machines (should handle one parameter: IP address of
      * virtual machine to kill) */
     std::string m_get_logs_command;
 
-    std::string m_take_snapshot_command;      /**< Command line to create a snapshot of all VMs */
-    std::string m_revert_snapshot_command;    /**< Command line to revert a snapshot of all VMs */
+    std::string m_take_snapshot_command;    /**< Command line to create a snapshot of all VMs */
+    std::string m_revert_snapshot_command;  /**< Command line to revert a snapshot of all VMs */
 
     bool m_enable_timeouts {true};      /**< Whether timeouts are enabled or not */
     bool m_local_maxscale {false};      /**< MaxScale runs locally, specified using -l. */

@@ -13,7 +13,7 @@
 #     BREAKS_REPL
 #     BREAKS_GALERA
 set(CTEST_BUILD_NAME "${BUILDNAME}")
-set(CNF_TEMPLATES "" CACHE INTERNAL "")
+set(TEST_DEFINITIONS "" CACHE INTERNAL "")
 
 # utilities.cmake contains all helper functions and extra tools
 include(utilities.cmake)
@@ -1248,5 +1248,6 @@ add_test_executable(clustrix_distribution.cpp clustrix_distribution clustrix_dis
 ###############################
 
 # The core testing library
+add_linebreaks(TEST_DEFINITIONS TEST_DEFINITIONS)
 configure_file(maxtest/src/test_info.cc.in maxtest/src/test_info.cc @ONLY)
 add_subdirectory(maxtest)

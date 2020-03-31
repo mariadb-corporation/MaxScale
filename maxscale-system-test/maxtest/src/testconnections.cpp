@@ -275,7 +275,8 @@ TestConnections::TestConnections(int argc, char* argv[])
 
     m_test_name = (optind < argc) ? argv[optind] : basename(argv[0]);
     set_template_and_labels();
-    tprintf("testname: '%s', template: '%s'", m_test_name.c_str(), m_config_template.c_str());
+    tprintf("Test: '%s', config template: '%s', labels: '%s'",
+            m_test_name.c_str(), m_cnf_template_path.c_str(), m_labels.c_str());
     set_mdbci_labels();
 
     if (has_label(m_labels, "BACKEND_SSL"))
@@ -755,48 +756,40 @@ void TestConnections::set_template_and_labels()
         }
     }
 
-    string labels_string;
     if (found)
     {
-        labels_string = found->labels;
-        m_config_template = found->config_template;
+        m_cnf_template_path = found->config_template;
+        m_labels = found->labels;
     }
     else
     {
         printf("Failed to find configuration template for test '%s', using default template '%s'.\n",
                m_test_name.c_str(), default_template);
-        m_config_template = default_template;
+        m_cnf_template_path = default_template;
     }
 
-    auto labels_pos = labels_string.find("LABELS;");
-    if (labels_pos != string::npos)
+    if (m_labels.empty())
     {
-        m_labels = labels_string.substr(labels_pos);
-    }
-    else
-    {
-        m_labels = "LABELS;REPL_BACKEND";
+        m_labels = "REPL_BACKEND";
     }
 }
 
-void TestConnections::process_template(int m, const string& template_name, const char* dest)
+void TestConnections::process_template(int m, const string& cnf_template_path, const char* dest)
 {
     struct stat stb;
     char str[4096];
-    char template_file[1024];
+    string template_file = cnf_template_path;
 
     char extended_template_file[1024 + 12];
-
-    sprintf(template_file, "%s/cnf/maxscale.cnf.template.%s", test_dir, template_name.c_str());
-    sprintf(extended_template_file, "%s.%03d", template_file, m);
-
-    if (stat((char*)extended_template_file, &stb) == 0)
+    sprintf(extended_template_file, "%s.%03d", cnf_template_path.c_str(), m);
+    if (stat(extended_template_file, &stb) == 0)
     {
-        strcpy(template_file, extended_template_file);
+        template_file = extended_template_file;
     }
-    tprintf("Template file is %s\n", template_file);
 
-    sprintf(str, "cp %s maxscale.cnf", template_file);
+    tprintf("Template file is %s\n", template_file.c_str());
+
+    sprintf(str, "cp %s maxscale.cnf", template_file.c_str());
     if (verbose)
     {
         tprintf("Executing '%s' command\n", str);
@@ -887,7 +880,7 @@ void TestConnections::init_maxscales()
 
 void TestConnections::init_maxscale(int m)
 {
-    process_template(m, m_config_template, maxscales->access_homedir[m]);
+    process_template(m, m_cnf_template_path, maxscales->access_homedir[m]);
     if (maxscales->ssh_node_f(m, true, "test -d %s/certs", maxscales->access_homedir[m]))
     {
         tprintf("SSL certificates not found, copying to maxscale");
@@ -2180,7 +2173,7 @@ int TestConnections::revert_snapshot(char* snapshot_name)
     return call_system(str);
 }
 
-bool TestConnections::test_bad_config(int m, const char* config)
+bool TestConnections::test_bad_config(int m, const string& config)
 {
     process_template(m, config, "/tmp/");
 
