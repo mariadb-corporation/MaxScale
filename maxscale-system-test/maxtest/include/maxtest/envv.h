@@ -1,16 +1,18 @@
 #pragma once
 
-#include <stdio.h>
-#include <stdarg.h>
-#include <stdlib.h>
+#include <string>
 
 /**
- * @brief readenv Read enviromental variable, if emtpy - set dafault
+ * Read enviroment variable value. If variable is not set, set it to the given default value and return the
+ * written value.
+ *
  * @param name Name of the variable
- * @param format Default value
+ * @param format Default value format string
  * @return Enviromental variable value
  */
 char * readenv(const char * name, const char *format, ...);
+
+std::string envvar_read_write_def_str(const char* name, const char* format, ...);
 
 /**
  * @brief readenv_int Read integer value of enviromental variable, if empty - set dafault
