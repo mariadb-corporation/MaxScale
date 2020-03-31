@@ -284,6 +284,64 @@ void add_extra_headers(MHD_Response* response)
     MHD_add_response_header(response, "X-XSS-Protection", "1");
     MHD_add_response_header(response, "Referrer-Policy", "same-origin");
 }
+
+void add_content_type_header(MHD_Response* response, const std::string& path)
+{
+    static const std::unordered_map<std::string, std::string> content_types =
+    {
+        {".bmp",    "image/bmp"            },
+        {".bz",     "application/x-bzip"   },
+        {".bz2",    "application/x-bzip2"  },
+        {".css",    "text/css"             },
+        {".csv",    "text/csv"             },
+        {".epub",   "application/epub+zip" },
+        {".gz",     "application/gzip"     },
+        {".gif",    "image/gif"            },
+        {".htm",    "text/html"            },
+        {".html",   "text/html"            },
+        {".jpeg",   "image/jpeg"           },
+        {".jpg",    "image/jpeg"           },
+        {".js",     "text/javascript"      },
+        {".json",   "application/json"     },
+        {".jsonld", "application/ld+json"  },
+        {".mjs",    "text/javascript"      },
+        {".mp3",    "audio/mpeg"           },
+        {".mpeg",   "video/mpeg"           },
+        {".otf",    "font/otf"             },
+        {".png",    "image/png"            },
+        {".pdf",    "application/pdf"      },
+        {".php",    "application/php"      },
+        {".rar",    "application/vnd.rar"  },
+        {".rtf",    "application/rtf"      },
+        {".svg",    "image/svg+xml"        },
+        {".tar",    "application/x-tar"    },
+        {".tif",    "image/tiff"           },
+        {".tiff",   "image/tiff"           },
+        {".ts",     "video/mp2t"           },
+        {".ttf",    "font/ttf"             },
+        {".txt",    "text/plain"           },
+        {".wav",    "audio/wav"            },
+        {".weba",   "audio/webm"           },
+        {".webm",   "video/webm"           },
+        {".webp",   "image/webp"           },
+        {".woff",   "font/woff"            },
+        {".woff2",  "font/woff2"           },
+        {".xhtml",  "application/xhtml+xml"},
+        {".xml",    "application/xml"      },
+    };
+
+    auto pos = path.find_last_of('.');
+
+    if (pos != std::string::npos)
+    {
+        auto it = content_types.find(path.substr(pos));
+
+        if (it != content_types.end())
+        {
+            MHD_add_response_header(response, "Content-Type", it->second.c_str());
+        }
+    }
+}
 }
 
 Client::Client(MHD_Connection* connection)
@@ -395,6 +453,7 @@ bool Client::serve_file(const std::string& url) const
                 add_cors_headers(response);
             }
 
+            add_content_type_header(response, path);
             add_extra_headers(response);
 
             if (MHD_queue_response(m_connection, MHD_HTTP_OK, response) == MHD_YES)
