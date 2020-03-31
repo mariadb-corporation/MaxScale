@@ -1143,6 +1143,17 @@ documentation for more details.
 Enable or disable the admin interface. This allows the admin interface to
 be completely disabled to prevent access to it.
 
+### `admin_gui`
+
+Enable or disable the admin graphical user interface. This parameter takes
+a boolean value and is enabled by default.
+
+MaxScale provides a GUI for administrative operations via the REST API. When the
+GUI is enabled, the root REST API resource (i.e. `http://localhost:8989/`) will
+serve the GUI. When disabled, the REST API will respond with a 200 OK to the
+request. By disabling the GUI, the root resource can be used as a low overhead
+health check.
+
 ### `admin_log_auth_failures`
 
 Log authentication failures for the admin interface. This parameter expects a

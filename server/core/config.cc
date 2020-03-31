@@ -79,6 +79,7 @@ namespace
 {
 constexpr char CN_ADMIN_AUTH[] = "admin_auth";
 constexpr char CN_ADMIN_ENABLED[] = "admin_enabled";
+constexpr char CN_ADMIN_GUI[] = "admin_gui";
 constexpr char CN_ADMIN_HOST[] = "admin_host";
 constexpr char CN_ADMIN_PAM_READONLY_SERVICE[] = "admin_pam_readonly_service";
 constexpr char CN_ADMIN_PAM_READWRITE_SERVICE[] = "admin_pam_readwrite_service";
@@ -87,7 +88,6 @@ constexpr char CN_ADMIN_SSL_CA_CERT[] = "admin_ssl_ca_cert";
 constexpr char CN_ADMIN_SSL_CERT[] = "admin_ssl_cert";
 constexpr char CN_ADMIN_SSL_KEY[] = "admin_ssl_key";
 constexpr char CN_DUMP_LAST_STATEMENTS[] = "dump_last_statements";
-constexpr char CN_GUI[] = "gui";
 constexpr char CN_LOAD_PERSISTED_CONFIGS[] = "load_persisted_configs";
 constexpr char CN_LOCAL_ADDRESS[] = "local_address";
 constexpr char CN_LOG_DEBUG[] = "log_debug";
@@ -486,7 +486,7 @@ config::ParamBool Config::s_log_warn_super_user(
 
 config::ParamBool Config::s_gui(
     &Config::s_specification,
-    CN_GUI,
+    CN_ADMIN_GUI,
     "Enable admin GUI.",
     true);
 }
