@@ -2,10 +2,10 @@
 
 const TestDefinition test_definitions_arr[] =
 {
-@CNF_TEMPLATES@{nullptr, nullptr, nullptr}
+@TEST_DEFINITIONS@{nullptr, nullptr, nullptr}
 };
 
 const TestDefinition* test_definitions = test_definitions_arr;
-const char* default_template = "replication";
+const char* default_template = "@CMAKE_CURRENT_SOURCE_DIR@/cnf/maxscale.cnf.template.replication";
 const char* test_dir = "@CMAKE_CURRENT_SOURCE_DIR@";
 
