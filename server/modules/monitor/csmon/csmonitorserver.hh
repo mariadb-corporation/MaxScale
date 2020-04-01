@@ -13,7 +13,7 @@
 #pragma once
 
 #include "csmon.hh"
-#include <maxscale/monitor.hh>
+#include <maxscale/jansson.hh>
 
 class CsMonitorServer : public maxscale::MonitorServer
 {
@@ -26,6 +26,16 @@ public:
                     int64_t admin_port);
     virtual ~CsMonitorServer();
 
+    const char* name() const
+    {
+        return this->server->name();
+    }
+
+    bool refresh_config(json_t** ppOutput = nullptr);
+
+    bool set_config(const std::string& body, json_t** ppOutput = nullptr);
+
 private:
-    int64_t m_admin_port;
+    int64_t                 m_admin_port;
+    std::unique_ptr<json_t> m_sConfig;
 };

@@ -12,6 +12,10 @@
  */
 
 #include "csmonitorserver.hh"
+#include <maxbase/http.hh>
+#include "csrest.hh"
+
+namespace http = mxb::http;
 
 CsMonitorServer::CsMonitorServer(SERVER* pServer,
                                  const SharedSettings& shared,
@@ -23,4 +27,54 @@ CsMonitorServer::CsMonitorServer(SERVER* pServer,
 
 CsMonitorServer::~CsMonitorServer()
 {
+}
+
+bool CsMonitorServer::refresh_config(json_t** ppOutput)
+{
+    bool rv = false;
+    http::Result result = http::get(cs::rest::create_url(*this->server, m_admin_port, cs::rest::CONFIG));
+
+    if (result.code == 200)
+    {
+        rv = set_config(result.body, ppOutput);
+    }
+    else if (ppOutput)
+    {
+        PRINT_MXS_JSON_ERROR(ppOutput,
+                             "Could not fetch config from '%s': %s",
+                             this->server->name(), result.body.c_str());
+    }
+
+    return rv;
+}
+
+bool CsMonitorServer::set_config(const std::string& body, json_t** ppOutput)
+{
+    bool rv = false;
+
+    json_error_t error;
+    json_t* pConfig = json_loadb(body.c_str(), body.length(), 0, &error);
+
+    if (pConfig)
+    {
+        json_t* pColumnstore = json_object_get(pConfig, cs::keys::COLUMNSTORE);
+
+        if (pColumnstore)
+        {
+            // TODO: Parse XML.
+            rv = true;
+        }
+        else if (ppOutput)
+        {
+            PRINT_MXS_JSON_ERROR(ppOutput,
+                                 "Obtained config object, but it does not have a '%s' key.",
+                                 cs::keys::COLUMNSTORE);
+        }
+    }
+    else if (ppOutput)
+    {
+        PRINT_MXS_JSON_ERROR(ppOutput, "Could not parse JSON data from: %s", error.text);
+    }
+
+    return rv;
 }
