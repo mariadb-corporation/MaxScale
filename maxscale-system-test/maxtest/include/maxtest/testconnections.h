@@ -16,9 +16,6 @@
 
 typedef std::set<std::string> StringSet;
 
-#define MDBCI_FAUILT     200// Exit code for the case when failure caused by MDBCI non-zero exit
-#define BROKEN_VM_FAUILT 201// Exit code for the case when failure caused by screwed VMs
-
 /**
  * @brief Class contains references to Master/Slave and Galera test setups
  * Test setup should consist of two setups: one Master/Slave and one Galera.
@@ -85,22 +82,22 @@ public:
     /**
      * @brief global_result Result of test, 0 if PASSED
      */
-    int global_result;
+    int global_result {0};
 
     /**
      * @brief galera Mariadb_nodes object containing references to Galera setuo
      */
-    Galera_nodes* galera;
+    Galera_nodes* galera {nullptr};
 
     /**
      * @brief repl Mariadb_nodes object containing references to Master/Slave setuo
      */
-    Mariadb_nodes* repl;
+    Mariadb_nodes* repl {nullptr};
 
     /**
      * @brief maxscales Maxscale object containing referebces to all Maxscale machines
      */
-    Maxscales* maxscales;
+    Maxscales* maxscales {nullptr};
 
     /**
      * @brief SysbenchDir   path to SysBench directory (sysbanch should be >= 0.5)
@@ -115,8 +112,6 @@ public:
      */
     int copy_mariadb_logs(Mariadb_nodes* nrepl, const char* prefix, std::vector<std::thread>& threads);
 
-    std::string network_config;     /**< Content of MDBCI network_config file */
-
     /**
      * @brief verbose if true more printing activated
      */
@@ -125,44 +120,34 @@ public:
     /**
      * @brief smoke if true all tests are executed in quick mode
      */
-    bool smoke;
+    bool smoke {true};
 
     /**
      * @brief binlog_cmd_option index of mariadb start option
      */
-    int binlog_cmd_option;
+    int binlog_cmd_option {0};
 
     /**
      * @brief ssl if true ssl will be used
      */
-    int ssl;
+    int ssl {false};
 
     /**
      * @brief backend_ssl if true ssl configuratio for all servers will be added
      */
-    bool backend_ssl;
+    bool backend_ssl {false};
 
     /**
      * @brief binlog_master_gtid If true start_binlog() function configures Maxscale
      * binlog router to use GTID to connect to Master
      */
-    bool binlog_master_gtid;
+    bool binlog_master_gtid {false};
 
     /**
      * @brief binlog_slave_gtid If true start_binlog() function configures slaves
      * to use GTID to connect to Maxscale binlog router
      */
-    bool binlog_slave_gtid;
-
-    /**
-     * @brief ssl_options string with ssl configuration for command line client
-     */
-    char ssl_options[1024];
-
-    /**
-     * @brief threads Number of Maxscale threads
-     */
-    int threads;
+    bool binlog_slave_gtid {false};
 
     /**
      * @brief timeout seconds until test termination
@@ -188,30 +173,6 @@ public:
      * @brief log_copy_thread_p pointer to log copying thread
      */
     pthread_t log_copy_thread_p;
-
-    /**
-     * @brief start_time time when test was started (used by printf to print Timestamp)
-     */
-    timeval start_time;
-
-    /**
-     * @brief use_ipv6 If true IPv6 addresses will be used to connect Maxscale and backed
-     * Also IPv6 addresses go to maxscale.cnf
-     */
-    bool use_ipv6;
-
-    /**
-     * @brief vm_path Path to the VM Vagrant directory
-     */
-    std::string vm_path;
-
-    /**
-     * @brief reinstall_maxscale Flag that is set when 'reinstall_maxscale'
-     * option is provided;
-     * if true Maxscale will be removed and re-installed on all Maxscale nodes
-     * Used for 'run_test_snapshot'
-     */
-    bool reinstall_maxscale;
 
     /** Check whether all nodes are in a valid state */
     static void check_nodes(bool value);
@@ -619,6 +580,8 @@ private:
     std::string m_mdbci_vm_path;        /**< Path to directory with MDBCI VMs descriptions */
     std::string m_mdbci_template;       /**< Name of mdbci VMs tempate file */
     std::string m_target;               /**< Name of Maxscale repository in the CI */
+    std::string m_network_config;       /**< Content of MDBCI network_config file */
+    std::string m_vm_path;              /**< Path to the VM Vagrant directory */
 
     /**
      * Command to copy log files from node virtual machines (should handle one parameter: IP address of
@@ -627,6 +590,8 @@ private:
 
     std::string m_take_snapshot_command;    /**< Command line to create a snapshot of all VMs */
     std::string m_revert_snapshot_command;  /**< Command line to revert a snapshot of all VMs */
+
+    char m_ssl_options[1024];       /**< String with ssl configuration for command line client */
 
     bool m_enable_timeouts {true};      /**< Whether timeouts are enabled or not */
     bool m_local_maxscale {false};      /**< MaxScale runs locally, specified using -l. */
@@ -643,6 +608,21 @@ private:
 
     /** If true tests do not revert VMs after the test even if test failed (use it for debugging) */
     bool no_vm_revert {true};
+
+    int m_threads {4};      /**< Number of Maxscale threads */
+
+    timeval m_start_time {0, 0};    /**< time when test was started (used by printf to print Timestamp) */
+
+    /**
+     * If true IPv6 addresses will be used to connect Maxscale and backed Also IPv6 addresses go to
+     * maxscale.cnf. */
+    bool m_use_ipv6 {false};
+
+    /**
+     * Flag that is set when 'reinstall_maxscale'-option is provided. If true, Maxscale will be removed
+     * and re-installed on all Maxscale nodes. Used for 'run_test_snapshot'.
+     */
+    bool m_reinstall_maxscale {false};
 
     std::string flatten_stringset(const StringSet& set);
     StringSet   parse_to_stringset(const std::string& source);
