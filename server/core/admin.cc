@@ -342,6 +342,11 @@ void add_content_type_header(MHD_Response* response, const std::string& path)
         }
     }
 }
+
+bool is_auth_endpoint(const HttpRequest& request)
+{
+    return request.uri_part_count() == 1 && request.uri_segment(0, 1) == "auth";
+}
 }
 
 Client::Client(MHD_Connection* connection)
@@ -564,7 +569,7 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
     request.fix_api_version();
 
 
-    if (request.uri_part_count() == 1 && request.uri_segment(0, 1) == "auth")
+    if (is_auth_endpoint(request))
     {
         auto now = std::chrono::system_clock::now();
         auto token = jwt::create()
@@ -695,7 +700,17 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
 
             if (!rval)
             {
-                send_basic_auth_error();
+                HttpRequest request(m_connection, url, MHD_HTTP_METHOD_GET, nullptr);
+                request.fix_api_version();
+
+                if (is_auth_endpoint(request))
+                {
+                    send_token_auth_error();
+                }
+                else
+                {
+                    send_basic_auth_error();
+                }
             }
         }
     }
