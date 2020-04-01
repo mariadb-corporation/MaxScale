@@ -20,6 +20,16 @@ function(add_template_manual name template)
   add_template(${name} ${template} "CONFIG")
 endfunction()
 
+# Helper function to add a configuration template
+function(add_test_info name cnf_file_path labels)
+  if (NOT EXISTS ${cnf_file_path})
+    message(FATAL_ERROR "Config file ${cnf_file_path} not found.")
+  endif()
+
+  set(new_def "{\"${name}\", \"${cnf_file_path}\", \"${labels}\"}")
+  set(TEST_DEFINITIONS "${TEST_DEFINITIONS}${new_def}," CACHE INTERNAL "")
+endfunction()
+
 # Helper function for adding properties to a test. Adds the default timeout and labels.
 function(add_test_properties name labels)
   list(APPEND labels ${ARGN})
@@ -72,6 +82,17 @@ function(add_test_script name script template labels)
   list(APPEND labels ${ARGN})
   add_template(${name} ${template} "${labels}")
   add_test(NAME ${name} COMMAND non_native_setup ${name} ${script} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+  add_test_properties(${name} ${labels})
+endfunction()
+
+# Same as "add_test_executable" but with a local config template file.
+function(add_test_executable_ex source name config_file labels)
+  list(APPEND labels ${ARGN})
+  set(config_file_path "${CMAKE_CURRENT_SOURCE_DIR}/${config_file}")
+  add_test_info(${name} ${config_file_path} "${labels}")
+  add_executable(${name} ${source})
+  target_link_libraries(${name} maxtest)
+  add_test(NAME ${name} COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${name} ${name} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
   add_test_properties(${name} ${labels})
 endfunction()
 
