@@ -17,6 +17,6 @@ do
 done
 
 # If it wasn't dead before, now it is
-pgrep '^maxscale$' &> /dev/null && pkill -11 '^maxscale$'
+pgrep '^maxscale$' &> /dev/null && pkill -6 '^maxscale$'
 
 exit 0
