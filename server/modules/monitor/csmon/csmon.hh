@@ -16,6 +16,7 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/json_api.hh>
+#include <maxscale/monitor.hh>
 
 /** Utility macros for printing both MXS_ERROR and json error */
 #define PRINT_MXS_JSON_ERROR(pJson, zFormat, ...) \

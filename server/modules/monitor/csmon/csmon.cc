@@ -84,102 +84,194 @@ const modulecmd_arg_type_t cluster_mode_set_argv[]
 };
 
 
-bool cluster_start(const MODULECMD_ARG* pArgs, json_t** ppOutput)
+bool get_args(const MODULECMD_ARG* pArgs,
+              json_t** ppOutput,
+              CsMonitor** ppMonitor,
+              CsMonitorServer** ppServer)
 {
-    mxb_assert((pArgs->argc >= 1) && (pArgs->argc <= 2));
+    bool rv = true;
+
+    mxb_assert(pArgs->argc >= 1);
     mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
     mxb_assert(pArgs->argc == 1 || MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_SERVER);
 
-    auto* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
-    SERVER* pServer = pArgs->argc == 1 ? nullptr : pArgs->argv[1].value.server;
+    CsMonitor* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
+    CsMonitorServer* pServer = nullptr;
 
-    return pMonitor->command_cluster_start(ppOutput, pServer);
+    if (pArgs->argc >= 2)
+    {
+        pServer = pMonitor->get_monitored_server(pArgs->argv[1].value.server);
+
+        if (!pServer)
+        {
+            PRINT_MXS_JSON_ERROR(ppOutput, "The provided server '%s' is not monitored by this monitor.",
+                                 pArgs->argv[1].value.server->name());
+            rv = false;
+        }
+    }
+
+    *ppMonitor = pMonitor;
+    *ppServer = pServer;
+
+    return rv;
 }
 
-bool cluster_shutdown(const MODULECMD_ARG* pArgs, json_t** ppOutput)
+bool get_args(const MODULECMD_ARG* pArgs,
+              json_t** ppOutput,
+              CsMonitor** ppMonitor,
+              const char** pzText,
+              CsMonitorServer** ppServer)
 {
-    mxb_assert((pArgs->argc >= 1) && (pArgs->argc <= 2));
-    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
-    mxb_assert(pArgs->argc == 1 || MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_SERVER);
+    bool rv = true;
 
-    auto* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
-    SERVER* pServer = pArgs->argc == 1 ? nullptr : pArgs->argv[1].value.server;
-
-    return pMonitor->command_cluster_shutdown(ppOutput, pServer);
-}
-
-bool cluster_ping(const MODULECMD_ARG* pArgs, json_t** ppOutput)
-{
-    mxb_assert((pArgs->argc >= 1) && (pArgs->argc <= 2));
-    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
-    mxb_assert(pArgs->argc == 1 || MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_SERVER);
-
-    auto* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
-    SERVER* pServer = pArgs->argc == 1 ? nullptr : pArgs->argv[1].value.server;
-
-    return pMonitor->command_cluster_ping(ppOutput, pServer);
-}
-
-bool cluster_status(const MODULECMD_ARG* pArgs, json_t** ppOutput)
-{
-    mxb_assert((pArgs->argc >= 1) && (pArgs->argc <= 2));
-    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
-    mxb_assert(pArgs->argc == 1 || MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_SERVER);
-
-    auto* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
-    SERVER* pServer = pArgs->argc == 1 ? nullptr : pArgs->argv[1].value.server;
-
-    return pMonitor->command_cluster_status(ppOutput, pServer);
-}
-
-bool cluster_add_node(const MODULECMD_ARG* pArgs, json_t** ppOutput)
-{
-    mxb_assert(pArgs->argc == 2);
-    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
-    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_SERVER);
-
-    auto* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
-    auto* pServer = pArgs->argv[1].value.server;
-
-    return pMonitor->command_cluster_add_node(ppOutput, pServer);
-}
-
-bool cluster_remove_node(const MODULECMD_ARG* pArgs, json_t** ppOutput)
-{
-    mxb_assert(pArgs->argc == 2);
-    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
-    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_SERVER);
-
-    auto* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
-    auto* pServer = pArgs->argv[1].value.server;
-
-    return pMonitor->command_cluster_remove_node(ppOutput, pServer);
-}
-
-bool cluster_config_get(const MODULECMD_ARG* pArgs, json_t** ppOutput)
-{
-    mxb_assert((pArgs->argc >= 1) && (pArgs->argc <= 2));
-    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
-    mxb_assert(pArgs->argc == 1 || MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_SERVER);
-
-    auto* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
-    SERVER* pServer = pArgs->argc == 1 ? nullptr : pArgs->argv[1].value.server;
-
-    return pMonitor->command_cluster_config_get(ppOutput, pServer);
-}
-
-bool cluster_config_set(const MODULECMD_ARG* pArgs, json_t** ppOutput)
-{
-    mxb_assert(pArgs->argc >= 2 && pArgs->argc <= 3);
+    mxb_assert(pArgs->argc >= 2);
     mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
     mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_STRING);
     mxb_assert(pArgs->argc == 2 || MODULECMD_GET_TYPE(&pArgs->argv[2].type) == MODULECMD_ARG_SERVER);
 
-    auto* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
-    const char* zJson = pArgs->argv[1].value.string;
-    SERVER* pServer = pArgs->argc == 2 ? nullptr : pArgs->argv[2].value.server;
+    CsMonitor* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
+    const char* zText = pArgs->argv[1].value.string;
+    CsMonitorServer* pServer = nullptr;
 
-    return pMonitor->command_cluster_config_set(ppOutput, zJson, pServer);
+    if (pArgs->argc >= 3)
+    {
+        pServer = pMonitor->get_monitored_server(pArgs->argv[2].value.server);
+
+        if (!pServer)
+        {
+            PRINT_MXS_JSON_ERROR(ppOutput, "The provided server '%s' is not monitored by this monitor.",
+                                 pArgs->argv[2].value.server->name());
+            rv = false;
+        }
+    }
+
+    *ppMonitor = pMonitor;
+    *pzText = zText;
+    *ppServer = pServer;
+
+    return rv;
+}
+
+
+bool cluster_start(const MODULECMD_ARG* pArgs, json_t** ppOutput)
+{
+    CsMonitor* pMonitor;
+    CsMonitorServer* pServer;
+
+    bool rv = get_args(pArgs, ppOutput, &pMonitor, &pServer);
+
+    if (rv)
+    {
+        rv = pMonitor->command_cluster_start(ppOutput, pServer);
+    }
+
+    return rv;
+}
+
+bool cluster_shutdown(const MODULECMD_ARG* pArgs, json_t** ppOutput)
+{
+    CsMonitor* pMonitor;
+    CsMonitorServer* pServer;
+
+    bool rv = get_args(pArgs, ppOutput, &pMonitor, &pServer);
+
+    if (rv)
+    {
+        rv = pMonitor->command_cluster_shutdown(ppOutput, pServer);
+    }
+
+    return rv;
+}
+
+bool cluster_ping(const MODULECMD_ARG* pArgs, json_t** ppOutput)
+{
+    CsMonitor* pMonitor;
+    CsMonitorServer* pServer;
+
+    bool rv = get_args(pArgs, ppOutput, &pMonitor, &pServer);
+
+    if (rv)
+    {
+        rv = pMonitor->command_cluster_ping(ppOutput, pServer);
+    }
+
+    return rv;
+}
+
+bool cluster_status(const MODULECMD_ARG* pArgs, json_t** ppOutput)
+{
+    CsMonitor* pMonitor;
+    CsMonitorServer* pServer;
+
+    bool rv = get_args(pArgs, ppOutput, &pMonitor, &pServer);
+
+    if (rv)
+    {
+        rv = pMonitor->command_cluster_status(ppOutput, pServer);
+    }
+
+    return rv;
+}
+
+bool cluster_add_node(const MODULECMD_ARG* pArgs, json_t** ppOutput)
+{
+    CsMonitor* pMonitor;
+    CsMonitorServer* pServer;
+
+    bool rv = get_args(pArgs, ppOutput, &pMonitor, &pServer);
+
+    if (rv)
+    {
+        rv = pMonitor->command_cluster_add_node(ppOutput, pServer);
+    }
+
+    return rv;
+}
+
+bool cluster_remove_node(const MODULECMD_ARG* pArgs, json_t** ppOutput)
+{
+    CsMonitor* pMonitor;
+    CsMonitorServer* pServer;
+
+    bool rv = get_args(pArgs, ppOutput, &pMonitor, &pServer);
+
+    if (rv)
+    {
+        rv = pMonitor->command_cluster_remove_node(ppOutput, pServer);
+    }
+
+    return rv;
+}
+
+bool cluster_config_get(const MODULECMD_ARG* pArgs, json_t** ppOutput)
+{
+    CsMonitor* pMonitor;
+    CsMonitorServer* pServer;
+
+    bool rv = get_args(pArgs, ppOutput, &pMonitor, &pServer);
+
+    if (rv)
+    {
+        rv = pMonitor->command_cluster_config_get(ppOutput, pServer);
+    }
+
+    return rv;
+}
+
+bool cluster_config_set(const MODULECMD_ARG* pArgs, json_t** ppOutput)
+{
+    CsMonitor* pMonitor;
+    const char* zJson;
+    CsMonitorServer* pServer;
+
+    bool rv = get_args(pArgs, ppOutput, &pMonitor, &zJson, &pServer);
+
+    if (rv)
+    {
+        rv = pMonitor->command_cluster_config_set(ppOutput, zJson, pServer);
+    }
+
+    return rv;
 }
 
 bool cluster_mode_set(const MODULECMD_ARG* pArgs, json_t** ppOutput)
@@ -188,7 +280,7 @@ bool cluster_mode_set(const MODULECMD_ARG* pArgs, json_t** ppOutput)
     mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
     mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_STRING);
 
-    auto* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
+    CsMonitor* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
     const char* zEnum = pArgs->argv[1].value.string;
 
     return pMonitor->command_cluster_mode_set(ppOutput, zEnum);

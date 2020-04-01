@@ -51,7 +51,7 @@ const char* rest::to_string(rest::Action action)
 std::string rest::create_url(const SERVER& server, int64_t port, rest::Action action)
 {
     string url("https://");
-    url += server.address;
+    url += server.address();
     url += ":";
     url += std::to_string(port);
     url += REST_BASE;
