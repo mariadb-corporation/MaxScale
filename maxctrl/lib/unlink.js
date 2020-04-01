@@ -66,4 +66,5 @@ exports.builder = function(yargs) {
                 return error('Unknown command. See output of `help unlink` for a list of commands.')
             })
         })
+        .wrap(null)
 }

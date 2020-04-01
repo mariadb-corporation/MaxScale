@@ -451,4 +451,5 @@ exports.builder = function(yargs) {
                 return error('Unknown command. See output of `help create` for a list of commands.')
             })
         })
+        .wrap(null)
 }

@@ -217,4 +217,5 @@ exports.builder = function(yargs) {
                 return error('Unknown command. See output of `help alter` for a list of commands.')
             })
         })
+        .wrap(null)
 }
