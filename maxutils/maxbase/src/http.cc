@@ -177,6 +177,16 @@ CURL* get_easy_curl(CurlOp op,
             checked_curl_setopt(pCurl, CURLOPT_CUSTOMREQUEST, "PUT");
         }
 
+        if (!config.ssl_verifypeer)
+        {
+            checked_curl_setopt(pCurl, CURLOPT_SSL_VERIFYPEER, (long)0);
+        }
+
+        if (!config.ssl_verifyhost)
+        {
+            checked_curl_setopt(pCurl, CURLOPT_SSL_VERIFYHOST, (long)0);
+        }
+
         checked_curl_setopt(pCurl, CURLOPT_NOSIGNAL, 1);
         checked_curl_setopt(pCurl, CURLOPT_CONNECTTIMEOUT, config.connect_timeout.count());// Conn. phase
         checked_curl_setopt(pCurl, CURLOPT_TIMEOUT, config.timeout.count());               // Data trs phase
