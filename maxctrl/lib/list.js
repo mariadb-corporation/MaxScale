@@ -265,48 +265,22 @@ exports.builder = function(yargs) {
                     .then((res) => {
 
                         for (var s of res.data) {
-                            // Show the socket instead of the address
                             if (!s.attributes.parameters.address && s.attributes.parameters.socket) {
+                                // Show the socket instead of the address
                                 s.attributes.parameters.address = s.attributes.parameters.socket
                                 s.attributes.parameters.port = ''
                             }
+
+                            if (!s.attributes.gtid_current_pos) {
+                                // Assign an empty value so we always have something to print
+                                s.attributes.gtid_current_pos = ''
+                            }
                         }
 
-                        // Build a set of unique monitors, flatten it into an array of strings and
-                        // filter out any duplicate or undefined values (from servers that aren't
-                        // monitored).
-                        var v = _.uniq(_.flatten(_.getPath(res, 'data[].relationships.monitors.data[].id'))).filter(i => i)
-
-                        // Get the server_info object for each monitor (if it defines one)
-                        var infos = []
-                        var promises = v.map((i) => getJson(host, 'monitors/' + i)
-                                             .then((j) => {
-                                                 info = _.get(j, 'data.attributes.monitor_diagnostics.server_info')
-                                                 if (info) {
-                                                     info.forEach((k) => infos.push(k))
-                                                 }
-                                             }))
-
-                        // Wait for promises to resolve
-                        return Promise.all(promises)
-                            .then(() => {
-                                res.data.forEach((i) => {
-
-                                    // Get the gtid_current_pos value for each server from the server_info list
-                                    var idx = infos.findIndex((info) => info.name == i.id)
-
-                                    if (idx != -1 && infos[idx].gtid_current_pos) {
-                                        // Found the GTID position of this server
-                                        i.attributes.gtid_current_pos = infos[idx].gtid_current_pos
-                                    } else {
-                                        // Assign an empty value so we always have something to print
-                                        i.attributes.gtid_current_pos = ''
-                                    }
-                                })
-                            })
-                            .then(() => filterResource(res, list_servers_fields))
-                            .then((res) => rawCollectionAsTable(res, list_servers_fields))
+                        return res
                     })
+                    .then((res) => filterResource(res, list_servers_fields))
+                    .then((res) => rawCollectionAsTable(res, list_servers_fields))
             })
         })
         .command('services', 'List services', function(yargs) {
