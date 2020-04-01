@@ -199,8 +199,9 @@ bool RWSplitSession::handle_routing_failure(GWBUF* querybuf, route_target_t rout
     }
     else
     {
-        MXS_ERROR("Could not find valid server for target type %s, closing connection.\n%s",
-                  route_target_to_string(route_target), get_verbose_status().c_str());
+        MXS_ERROR("Could not find valid server for target type %s (%s: %s), closing connection.\n%s",
+                  route_target_to_string(route_target), STRPACKETTYPE(GWBUF_DATA(querybuf)[4]),
+                  mxs::extract_sql(querybuf).c_str(), get_verbose_status().c_str());
         ok = false;
     }
 
