@@ -309,12 +309,9 @@ TestConnections::TestConnections(int argc, char* argv[])
     }
 
     m_get_logs_command = (string)test_dir + "/get_logs.sh";
-
-    sprintf(m_ssl_options,
-            "--ssl-cert=%s/ssl-cert/client-cert.pem --ssl-key=%s/ssl-cert/client-key.pem",
-            test_dir,
-            test_dir);
-    setenv("ssl_options", m_ssl_options, 1);
+    m_ssl_options = string_printf("--ssl-cert=%s/ssl-cert/client-cert.pem --ssl-key=%s/ssl-cert/client-key.pem",
+                                  test_dir, test_dir);
+    setenv("ssl_options", m_ssl_options.c_str(), 1);
 
     if (maxscale::require_columnstore)
     {
@@ -588,7 +585,7 @@ void TestConnections::expect(bool result, const char* format, ...)
 
 void TestConnections::read_mdbci_info()
 {
-    m_mdbci_vm_path = envvar_read_write_def_str("MDBCI_VM_PATH", "%s/vms/", getenv("HOME"));
+    m_mdbci_vm_path = envvar_get_set("MDBCI_VM_PATH", "%s/vms/", getenv("HOME"));
 
     string cmd = "mkdir -p " + m_mdbci_vm_path;
     if (system(cmd.c_str()))
@@ -596,10 +593,10 @@ void TestConnections::read_mdbci_info()
         tprintf("Unable to create MDBCI VMs direcory '%s', exiting", m_mdbci_vm_path.c_str());
         exit(MDBCI_FAIL);
     }
-    m_mdbci_template = envvar_read_write_def_str("template", "default");
-    m_target = envvar_read_write_def_str("target", "develop");
+    m_mdbci_template = envvar_get_set("template", "default");
+    m_target = envvar_get_set("target", "develop");
 
-    m_mdbci_config_name = envvar_read_write_def_str("mdbci_config_name", "local");
+    m_mdbci_config_name = envvar_get_set("mdbci_config_name", "local");
     m_vm_path = m_mdbci_vm_path + "/" + m_mdbci_config_name;
 
     if (!m_mdbci_config_name.empty())
@@ -655,10 +652,10 @@ void TestConnections::read_env()
     smoke = readenv_bool("smoke", false);
     m_threads = readenv_int("threads", 4);
     m_use_snapshots = readenv_bool("use_snapshots", false);
-    m_take_snapshot_command = envvar_read_write_def_str(
+    m_take_snapshot_command = envvar_get_set(
         "take_snapshot_command", "mdbci snapshot take --path-to-nodes %s --snapshot-name ",
         m_mdbci_config_name.c_str());
-    m_revert_snapshot_command = envvar_read_write_def_str(
+    m_revert_snapshot_command = envvar_get_set(
         "revert_snapshot_command", "mdbci snapshot revert --path-to-nodes %s --snapshot-name ",
         m_mdbci_config_name.c_str());
     no_vm_revert = readenv_bool("no_vm_revert", true);
@@ -2203,7 +2200,7 @@ int TestConnections::call_mdbci(const char* options)
         return 1;
     }
 
-    std::string team_keys = readenv("team_keys", "~/.ssh/id_rsa.pub");
+    std::string team_keys = envvar_get_set("team_keys", "~/.ssh/id_rsa.pub");
     string cmd = "mdbci public_keys --key " + team_keys + " " + m_mdbci_config_name;
     system(cmd.c_str());
 
@@ -2225,27 +2222,28 @@ int TestConnections::call_mdbci(const char* options)
 
 int TestConnections::process_mdbci_template()
 {
-    char* product = readenv("product", "mariadb");
-    char* box = readenv("box", "centos_7_libvirt");
-    char* __attribute__ ((unused)) backend_box = readenv("backend_box", "%s", box);
-    char* version = readenv("version", "10.3");
-    char* __attribute__ ((unused)) target = readenv("target", "develop");
-    char* __attribute__ ((unused)) vm_memory = readenv("vm_memory", "2048");
-    char* __attribute__ ((unused)) galera_version = readenv("galera_version", "%s", version);
+    string box = envvar_get_set("box", "centos_7_libvirt");
+    envvar_get_set("backend_box", "%s", box.c_str());
+    envvar_get_set("target", "develop");
+    envvar_get_set("vm_memory", "2048");
 
-    if (strcmp(product, "mysql") == 0)
+    string version = envvar_get_set("version", "10.3");
+    envvar_get_set("galera_version", "%s", version.c_str());
+
+    string product = envvar_get_set("product", "mariadb");
+    string cnf_path;
+    if (product == "mysql")
     {
-        setenv("cnf_path",
-               (m_vm_path + "/cnf/mysql56/").c_str(),
-               1);
+        cnf_path = string_printf("%s/cnf/mysql56/", m_vm_path.c_str());
     }
     else
     {
-        setenv("cnf_path", (m_vm_path + "/cnf/").c_str(), 1);
+        cnf_path = string_printf("%s/cnf/", m_vm_path.c_str());
     }
+    setenv("cnf_path", cnf_path.c_str(), 1);
 
-    std::string name = std::string(test_dir) + "/mdbci/templates/" + m_mdbci_template + ".json.template";
-    std::string sys = std::string("envsubst < ") + name + " > " + m_vm_path + ".json";
+    string name = string(test_dir) + "/mdbci/templates/" + m_mdbci_template + ".json.template";
+    string sys = string("envsubst < ") + name + " > " + m_vm_path + ".json";
     if (verbose)
     {
         std::cout << sys << std::endl;

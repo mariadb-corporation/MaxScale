@@ -5,7 +5,7 @@
 
 using std::string;
 
-char * readenv(const char * name, const char *format, ...)
+char* readenv(const char * name, const char *format, ...)
 {
     char * env = getenv(name);
     if (!env)
@@ -31,7 +31,7 @@ char * readenv(const char * name, const char *format, ...)
     return env;
 }
 
-string envvar_read_write_def_str(const char* name, const char* format, ...)
+string envvar_get_set(const char* name, const char* format, ...)
 {
     string rval;
     const char* old_value = getenv(name);
@@ -43,19 +43,9 @@ string envvar_read_write_def_str(const char* name, const char* format, ...)
     {
         va_list valist;
         va_start(valist, format);
-        int bytes_required = vsnprintf(nullptr, 0, format, valist);
+        rval = string_printf(format, valist);
         va_end(valist);
-
-        if (bytes_required >= 0)
-        {
-            int buflen = bytes_required + 1;
-            char buf[buflen];
-            va_start(valist, format);
-            vsnprintf(buf, buflen, format, valist);
-            va_end(valist);
-            setenv(name, buf, 1);
-            rval = buf;
-        }
+        setenv(name, rval.c_str(), 1);
     }
     return rval;
 }
@@ -90,4 +80,32 @@ bool readenv_bool(const char * name, bool def)
         setenv(name, def ? "true" : "false", 1);
         return def;
     }
+}
+
+string string_printf(const char* format, ...)
+{
+    string rval;
+    va_list valist;
+    va_start(valist, format);
+    rval = string_printf(format, valist);
+    va_end(valist);
+    return rval;
+}
+
+std::string string_printf(const char* format, va_list args)
+{
+    va_list args_copy;
+    va_copy(args_copy, args);
+    int bytes_required = vsnprintf(nullptr, 0, format, args_copy);
+    va_end(args_copy);
+
+    string rval;
+    if (bytes_required > 0)
+    {
+        int buflen = bytes_required + 1;
+        char buf[buflen];
+        vsnprintf(buf, buflen, format, args);
+        rval = buf;
+    }
+    return rval;
 }

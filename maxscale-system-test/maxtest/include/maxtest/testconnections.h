@@ -100,11 +100,6 @@ public:
     Maxscales* maxscales {nullptr};
 
     /**
-     * @brief SysbenchDir   path to SysBench directory (sysbanch should be >= 0.5)
-     */
-    char sysbench_dir[4096];
-
-    /**
      * @brief copy_mariadb_logs copies MariaDB logs from backend
      * @param repl Mariadb_nodes object
      * @param prefix file name prefix
@@ -578,7 +573,7 @@ private:
 
     std::string m_mdbci_config_name;    /**< Name of MDBCI VMs set */
     std::string m_mdbci_vm_path;        /**< Path to directory with MDBCI VMs descriptions */
-    std::string m_mdbci_template;       /**< Name of mdbci VMs tempate file */
+    std::string m_mdbci_template;       /**< Name of mdbci VMs template file */
     std::string m_target;               /**< Name of Maxscale repository in the CI */
     std::string m_network_config;       /**< Content of MDBCI network_config file */
     std::string m_vm_path;              /**< Path to the VM Vagrant directory */
@@ -591,7 +586,7 @@ private:
     std::string m_take_snapshot_command;    /**< Command line to create a snapshot of all VMs */
     std::string m_revert_snapshot_command;  /**< Command line to revert a snapshot of all VMs */
 
-    char m_ssl_options[1024];       /**< String with ssl configuration for command line client */
+    std::string m_ssl_options;       /**< String with ssl configuration for command line client */
 
     bool m_enable_timeouts {true};      /**< Whether timeouts are enabled or not */
     bool m_local_maxscale {false};      /**< MaxScale runs locally, specified using -l. */
