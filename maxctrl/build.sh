@@ -18,5 +18,5 @@ fi
 cd $PWD/maxctrl
 
 npm install
-npm install pkg@4.3.4
-node_modules/pkg/lib-es5/bin.js -t node6-linux-x64 .
+npm install pkg@4.4.5
+node_modules/pkg/lib-es5/bin.js -t node10-linux-x64 .
