@@ -473,22 +473,6 @@ bool CsMonitor::command_cluster_start(json_t** ppOutput, SERVER* pServer)
     return command(ppOutput, sem, "cluster-start", cmd);
 }
 
-bool CsMonitor::command_cluster_start_async(json_t** ppOutput, SERVER* pServer)
-{
-    mxb::Semaphore sem;
-
-    auto cmd = [this, &sem, pServer, ppOutput] () {
-        if (ready_to_run(ppOutput))
-        {
-            cluster_start(nullptr, nullptr, pServer);
-        }
-
-        sem.post();
-    };
-
-    return command(ppOutput, sem, "cluster-start-async", cmd);
-}
-
 bool CsMonitor::command_cluster_shutdown(json_t** ppOutput, SERVER* pServer)
 {
     mxb::Semaphore sem;
@@ -505,22 +489,6 @@ bool CsMonitor::command_cluster_shutdown(json_t** ppOutput, SERVER* pServer)
     };
 
     return command(ppOutput, sem, "cluster-shutdown", cmd);
-}
-
-bool CsMonitor::command_cluster_shutdown_async(json_t** ppOutput, SERVER* pServer)
-{
-    mxb::Semaphore sem;
-
-    auto cmd = [this, &sem, pServer, ppOutput] () {
-        if (ready_to_run(ppOutput))
-        {
-            cluster_shutdown(nullptr, nullptr, pServer);
-        }
-
-        sem.post();
-    };
-
-    return command(ppOutput, sem, "cluster-shutdown-async", cmd);
 }
 
 bool CsMonitor::command_cluster_ping(json_t** ppOutput, SERVER* pServer)
@@ -541,22 +509,6 @@ bool CsMonitor::command_cluster_ping(json_t** ppOutput, SERVER* pServer)
     return command(ppOutput, sem, "cluster-ping", cmd);
 }
 
-bool CsMonitor::command_cluster_ping_async(json_t** ppOutput, SERVER* pServer)
-{
-    mxb::Semaphore sem;
-
-    auto cmd = [this, &sem, pServer, ppOutput] () {
-        if (ready_to_run(ppOutput))
-        {
-            cluster_ping(nullptr, nullptr, pServer);
-        }
-
-        sem.post();
-    };
-
-    return command(ppOutput, sem, "cluster-ping-async", cmd);
-}
-
 bool CsMonitor::command_cluster_status(json_t** ppOutput, SERVER* pServer)
 {
     mxb::Semaphore sem;
@@ -575,22 +527,6 @@ bool CsMonitor::command_cluster_status(json_t** ppOutput, SERVER* pServer)
     return command(ppOutput, sem, "cluster-status", cmd);
 }
 
-bool CsMonitor::command_cluster_status_async(json_t** ppOutput, SERVER* pServer)
-{
-    mxb::Semaphore sem;
-
-    auto cmd = [this, &sem, pServer, ppOutput] () {
-        if (ready_to_run(ppOutput))
-        {
-            cluster_status(nullptr, nullptr, pServer);
-        }
-
-        sem.post();
-    };
-
-    return command(ppOutput, sem, "cluster-status-async", cmd);
-}
-
 bool CsMonitor::command_cluster_config_get(json_t** ppOutput, SERVER* pServer)
 {
     mxb::Semaphore sem;
@@ -604,22 +540,6 @@ bool CsMonitor::command_cluster_config_get(json_t** ppOutput, SERVER* pServer)
         {
             sem.post();
         }
-    };
-
-    return command(ppOutput, sem, "cluster-config-get", cmd);
-}
-
-bool CsMonitor::command_cluster_config_get_async(json_t** ppOutput, SERVER* pServer)
-{
-    mxb::Semaphore sem;
-
-    auto cmd = [this, &sem, pServer, ppOutput] () {
-        if (ready_to_run(ppOutput))
-        {
-            cluster_config_get(nullptr, nullptr, pServer);
-        }
-
-        sem.post();
     };
 
     return command(ppOutput, sem, "cluster-config-get", cmd);
@@ -652,31 +572,6 @@ bool CsMonitor::command_cluster_config_set(json_t** ppOutput, const char* zJson,
     return rv;
 }
 
-bool CsMonitor::command_cluster_config_set_async(json_t** ppOutput, const char* zJson, SERVER* pServer)
-{
-    bool rv = false;
-
-    auto len = strlen(zJson);
-    if (is_valid_json(ppOutput, zJson, len))
-    {
-        mxb::Semaphore sem;
-        string body(zJson, zJson + len);
-
-        auto cmd = [this, ppOutput, &sem, &body, pServer] () {
-            if (ready_to_run(ppOutput))
-            {
-                cluster_config_set(nullptr, nullptr, std::move(body), pServer);
-            };
-
-            sem.post();
-        };
-
-        rv = command(ppOutput, sem, "cluster-config-put", cmd);
-    }
-
-    return rv;
-}
-
 bool CsMonitor::command_cluster_mode_set(json_t** ppOutput, const char* zMode)
 {
     bool rv = false;
@@ -696,30 +591,6 @@ bool CsMonitor::command_cluster_mode_set(json_t** ppOutput, const char* zMode)
             {
                 sem.post();
             }
-        };
-
-        rv = command(ppOutput, sem, "cluster-mode-set", cmd);
-    }
-
-    return rv;
-}
-
-bool CsMonitor::command_cluster_mode_set_async(json_t** ppOutput, const char* zMode)
-{
-    bool rv = false;
-    Mode mode;
-
-    if (from_string(zMode, &mode))
-    {
-        mxb::Semaphore sem;
-
-        auto cmd = [this, ppOutput, &sem, mode] () {
-            if (ready_to_run(ppOutput))
-            {
-                cluster_mode_set(nullptr, nullptr, mode);
-            };
-
-            sem.post();
         };
 
         rv = command(ppOutput, sem, "cluster-mode-set", cmd);
@@ -787,68 +658,6 @@ bool CsMonitor::command_cluster_remove_node(json_t** ppOutput, SERVER* pServer)
     }
 
     return rv;
-}
-
-bool CsMonitor::command_result(json_t** ppOutput)
-{
-    mxb::Semaphore sem;
-
-    auto cmd = [this, &sem, ppOutput] () {
-        if (!m_sCommand)
-        {
-            *ppOutput = json_string("No command has been initiated.");
-        }
-        else if (!m_sCommand->is_ready())
-        {
-            string s("The command '");
-            s += m_sCommand->name();
-            s += "' is still running.";
-
-            *ppOutput = json_string(s.c_str());
-        }
-        else
-        {
-            m_sCommand->get_result(ppOutput);
-        }
-
-        sem.post();
-    };
-
-    return command(ppOutput, sem, "result", cmd);
-}
-
-bool CsMonitor::command_cancel(json_t** ppOutput)
-{
-    mxb::Semaphore sem;
-
-    auto cmd = [this, &sem, ppOutput] () {
-        if (!m_sCommand)
-        {
-            *ppOutput = json_string("No command has been initiated.");
-        }
-        else if (!m_sCommand->is_running())
-        {
-            string s("The last command '");
-            s += m_sCommand->name();
-            s += "' is no longer running, cannot be cancelled.";
-
-            *ppOutput = json_string(s.c_str());
-        }
-        else
-        {
-            string s("The command '");
-            s += m_sCommand->name();
-            s += "' was cancelled. Note, current cluster state is unknown.";
-
-            m_sCommand.reset();
-
-            *ppOutput = json_string(s.c_str());
-        }
-
-        sem.post();
-    };
-
-    return command(ppOutput, sem, "result", cmd);
 }
 
 //static
