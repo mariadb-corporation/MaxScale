@@ -22,6 +22,7 @@ public:
 
     static void populate(MXS_MODULE& info);
 
-    SERVER* pPrimary;
-    int64_t admin_port;
+    SERVER*     pPrimary;
+    int64_t     admin_port;
+    std::string api_key;
 };

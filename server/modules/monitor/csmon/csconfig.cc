@@ -32,6 +32,11 @@ config::ParamCount admin_port(
     &specification,
     "admin_port",
     "Port of the Columnstore administrative daemon.");
+
+config::ParamString api_key(
+    &specification,
+    "api_key",
+    "The API key to be used in the communication with the Columnstora admin daemon.");
 }
 }
 
@@ -40,6 +45,7 @@ CsConfig::CsConfig(const std::string& name)
 {
     add_native(&this->pPrimary, &csmon::primary);
     add_native(&this->admin_port, &csmon::admin_port);
+    add_native(&this->api_key, &csmon::api_key);
 }
 
 //static

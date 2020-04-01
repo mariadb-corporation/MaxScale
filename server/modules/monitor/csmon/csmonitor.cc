@@ -623,7 +623,7 @@ bool CsMonitor::command_cluster_add_node(json_t** ppOutput, SERVER* pServer)
     else
     {
         PRINT_MXS_JSON_ERROR(ppOutput,
-                             "The server '%s' is monitored not monitored by this monitor and "
+                             "The server '%s' is not monitored by this monitor and "
                              "can thus not be added to the cluster.", pServer->name());
     }
 
