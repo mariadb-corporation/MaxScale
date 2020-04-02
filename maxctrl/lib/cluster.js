@@ -12,6 +12,7 @@
  */
 require('./common.js')()
 var colors = require('colors/safe')
+var flat = require('flat')
 
 function equalResources(oldVal, newVal) {
     return _.isEqual(_.get(oldVal, 'attributes.parameters'), _.get(newVal, 'attributes.parameters')) &&
@@ -29,11 +30,54 @@ function getDifference(a, b) {
     return _.differenceWith(a, b, sameResource)
 }
 
+// Removes some unwanted properties from the object
+function removeUnwanted(a){
+
+    var relationships = [
+        'relationships.services.data',
+        'relationships.servers.data',
+        'relationships.monitors.data',
+        'relationships.filters.data'
+    ]
+
+    var res = _.pick(a, _.concat(['id', 'attributes.parameters'], relationships))
+
+    for (r of relationships) {
+        var rel = _.get(res, r, [])
+
+        for (o of rel){
+            delete o.type
+        }
+    }
+
+    return res
+}
+
 // Return a list of objects that differ from each other
 function getChangedObjects(a, b) {
-    var ours = _.intersectionWith(a, b, sameResource)
-    var theirs = _.intersectionWith(b, a, sameResource)
-    return _.differenceWith(ours, theirs, equalResources)
+    var ours = _.intersectionWith(a, b, sameResource).sort((a, b) => a.id > b.id)
+    var theirs = _.intersectionWith(b, a, sameResource).sort((a, b) => a.id > b.id)
+
+    var our_changed = _.differenceWith(ours, theirs, equalResources)
+    var their_changed = _.differenceWith(theirs, ours, equalResources)
+
+    var combined = _.zipWith(our_changed, their_changed, function(a, b) {
+        var flat_ours = flat(removeUnwanted(a))
+        var flat_theirs = flat(removeUnwanted(b))
+        var changed_keys = _.pickBy(flat_ours, (v, k) => !_.isEqual(flat(b)[k], v))
+        var res = {}
+
+        for (k of Object.keys(changed_keys)) {
+            res[k] = {
+                ours: _.has(flat_ours, k) ? flat_ours[k] : null,
+                theirs: _.has(flat_theirs, k) ? flat_theirs[k] : null
+            }
+        }
+
+        return [flat_ours.id, res]
+    })
+
+    return _.fromPairs(combined)
 }
 
 // Check if the diffs add or delete services
@@ -157,8 +201,8 @@ exports.builder = function(yargs) {
                                          output.push("Deleted:", i)
                                          output.push(colors.red(JSON.stringify(oldObj, null, 4)))
                                      }
-                                     if (changed.length) {
-                                         output.push("Changed:", i)
+                                     if (!_.isEmpty(changed)) {
+                                         output.push("Changed:")
                                          output.push(colors.yellow(JSON.stringify(changed, null, 4)))
                                      }
                                  })
@@ -166,8 +210,8 @@ exports.builder = function(yargs) {
                                      // Treating the resource endpoints as arrays allows the same functions to be used
                                      // to compare individual resources and resource collections
                                      var changed = getChangedObjects([src[i].data], [dest[i].data])
-                                     if (changed.length) {
-                                         output.push("Changed:", i)
+                                     if (!_.isEmpty(changed)) {
+                                         output.push("Changed:")
                                          output.push(colors.yellow(JSON.stringify(changed, null, 4)))
                                      }
                                  })
