@@ -71,10 +71,6 @@ exports.builder = function(yargs) {
         })
         .usage('Usage: destroy <command>')
         .help()
-        .command('*', 'the default command', {}, function(argv) {
-            maxctrl(argv, function(host) {
-                return error('Unknown command. See output of `help destroy` for a list of commands.')
-            })
-        })
         .wrap(null)
+        .demandCommand(1, helpMsg)
 }

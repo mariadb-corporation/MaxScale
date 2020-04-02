@@ -33,20 +33,23 @@ program
         global: true,
         default: 'admin',
         describe: 'Username to use',
-        type: 'string'
+        type: 'string',
+        requiresArg: true
     })
     .option('p', {
         alias: 'password',
         describe: 'Password for the user. To input the password manually, give -p as the last argument or use --password=\'\'',
         default: 'mariadb',
-        type: 'string'
+        type: 'string',
+        requiresArg: true
     })
     .option('h', {
         alias: 'hosts',
         describe: 'List of MaxScale hosts. The hosts must be in ' +
             'HOST:PORT format and each value must be separated by a comma.',
         default: 'localhost:8989',
-        type: 'string'
+        type: 'string',
+        requiresArg: true
     })
     .option('t', {
         alias: 'timeout',
@@ -117,21 +120,21 @@ program
     .epilog('If no commands are given, maxctrl is started in interactive mode. ' +
             'Use `exit` to exit the interactive mode.')
     .help()
-    .demandCommand(1, 'At least one command is required')
-    .command('*', 'the default command', {}, function(argv) {
+    .command('*', false, {}, function(argv) {
         if (argv._.length == 0) {
             base_opts = ['--user=' + argv.user,
-                        '--password=' + argv.password,
-                        '--hosts=' + argv.hosts,
-                        '--timeout=' + argv.timeout]
+                         '--password=' + argv.password,
+                         '--hosts=' + argv.hosts,
+                         '--timeout=' + argv.timeout]
             return askQuestion()
         } else {
             maxctrl(argv, function() {
                 msg = 'Unknown command ' + JSON.stringify(argv._)
-                return error(msg + '. See output of `help` for a list of commands.')
+                return error(msg + '. See output of `--help` for a list of commands.')
             })
         }
     })
+
 
 function doCommand(argv) {
     return new Promise(function(resolve, reject) {
@@ -149,7 +152,7 @@ function doCommand(argv) {
 module.exports.execute = function(argv, opts) {
     if (opts && opts.extra_args) {
         // Add extra options to the end of the argument list
-        argv = argv.concat(opts.extra_args)
+        argv = opts.extra_args.concat(argv)
     }
 
     return doCommand(argv)

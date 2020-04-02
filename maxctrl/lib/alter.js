@@ -186,7 +186,7 @@ exports.builder = function(yargs) {
                 return updateParams(host, 'maxscale', argv.key, argv.value, argv.params)
             })
         })
-        .command('user <name> <password>', 'Alter admin user passwords', function(yargs) {
+        .command('user <name> <passwd>', 'Alter admin user passwords', function(yargs) {
             return yargs.epilog('Changes the password for a user. To change the user type, destroy the user and then create it again.')
                 .usage('Usage: alter user <name> <password>')
         }, function(argv) {
@@ -197,7 +197,7 @@ exports.builder = function(yargs) {
                         'id': argv.name,
                         'type': 'inet',
                         'attributes': {
-                            'password': argv.password
+                            'password': argv.passwd
                         }
                     }
                 }
@@ -212,10 +212,6 @@ exports.builder = function(yargs) {
                 '    alter server server1 address 127.0.0.1 port 3306\n\n' +
                 'All alter commands except `alter user` and `alter service-filters` support multiple parameters.')
         .help()
-        .command('*', 'the default command', {}, function(argv) {
-            maxctrl(argv, function(host) {
-                return error('Unknown command. See output of `help alter` for a list of commands.')
-            })
-        })
         .wrap(null)
+        .demandCommand(1, helpMsg)
 }

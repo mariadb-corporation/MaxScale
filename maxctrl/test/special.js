@@ -31,9 +31,7 @@ describe("Library invocation", function() {
     it('TSV output', function() {
         var opts = { extra_args: [ '--quiet', '--tsv'] }
         return ctrl.execute('list servers'.split(' '), opts)
-            .then(function() {
-                return ctrl.execute('show server server1'.split(' '), opts)
-            })
+            .then(() => ctrl.execute('show server server1'.split(' '), opts))
             .should.be.fulfilled
     })
 
@@ -65,8 +63,8 @@ describe("Library invocation", function() {
     })
 
     it('command help', function() {
-        var opts = { extra_args: [ '--quitet'] }
-        return ctrl.execute('help list'.split(' '), opts)
+        var opts = { extra_args: [ '--quiet'] }
+        return ctrl.execute('list --help'.split(' '), opts)
             .should.be.fulfilled
     })
 

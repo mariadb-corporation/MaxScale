@@ -48,4 +48,5 @@ exports.builder = function(yargs) {
                 'can be looked up in ' +
                 'https://github.com/mariadb-corporation/MaxScale/blob/2.3/include/maxscale/query_classifier.h')
         .help()
+        .wrap(null)
 }

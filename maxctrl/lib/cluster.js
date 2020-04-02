@@ -284,10 +284,6 @@ exports.builder = function(yargs) {
         })
         .usage('Usage: cluster <command>')
         .help()
-        .command('*', 'the default command', {}, function(argv) {
-            maxctrl(argv, function() {
-                return error('Unknown command. See output of `help cluster` for a list of commands.')
-            })
-        })
         .wrap(null)
+        .demandCommand(1, helpMsg)
 }

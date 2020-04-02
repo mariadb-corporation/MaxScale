@@ -432,6 +432,8 @@ module.exports = function() {
 
         return '\n\n' + t.toString()
     }
+
+    this.helpMsg = 'At least one command is required, see output of `--help` for more information.'
 }
 
 

@@ -12,7 +12,7 @@ pkill '^maxscale$'
 
 for ((i=0;i<100;i++))
 do
-    pgrep '^maxscale$' &> /dev/null || break
+    pgrep '^maxscale$' &> /dev/null || exit 0
     sleep 0.1
 done
 

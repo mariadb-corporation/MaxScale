@@ -195,11 +195,11 @@ describe('Cluster Sync', function() {
 
     it('sync after monitor deletion', function() {
         return doCommand('destroy monitor my-monitor-2 --hosts ' + secondary_host)
-            .then(() => doCommand('show monitor my-monitor-2  --hosts ' + primary_host))
-            .then(() => doCommand('show monitor my-monitor-2  --hosts ' + secondary_host).should.be.rejected)
+            .then(() => doCommand('show monitor my-monitor-2 --hosts ' + primary_host))
+            .then(() => doCommand('show monitor my-monitor-2 --hosts ' + secondary_host).should.be.rejected)
             .then(() => doCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host))
-            .then(() => doCommand('show monitor my-monitor-2  --hosts ' + primary_host).should.be.rejected)
-            .then(() => doCommand('show monitor my-monitor-2  --hosts ' + secondary_host).should.be.rejected)
+            .then(() => doCommand('show monitor my-monitor-2 --hosts ' + primary_host).should.be.rejected)
+            .then(() => doCommand('show monitor my-monitor-2 --hosts ' + secondary_host).should.be.rejected)
     })
 
     it('sync after service alteration', function() {

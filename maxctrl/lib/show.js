@@ -752,10 +752,6 @@ exports.builder = function(yargs) {
         .wrap(null)
         .usage('Usage: show <command>')
         .help()
-        .command('*', 'the default command', {}, function(argv) {
-            maxctrl(argv, function(host) {
-                return error('Unknown command. See output of `help show` for a list of commands.')
-            })
-        })
         .wrap(null)
+        .demandCommand(1, helpMsg)
 }

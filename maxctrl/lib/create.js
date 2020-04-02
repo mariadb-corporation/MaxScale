@@ -412,7 +412,7 @@ exports.builder = function(yargs) {
                 return doRequest(host, 'services/' + argv.service + '/listeners', null, {method: 'POST', body: listener})
             })
         })
-        .command('user <name> <password>', 'Create a new network user', function(yargs) {
+        .command('user <name> <passwd>', 'Create a new network user', function(yargs) {
             return yargs.epilog('The created user can be used with the MaxScale REST API as ' +
                                 'well as the MaxAdmin network interface. By default the created ' +
                                 'user will have read-only privileges. To make the user an ' +
@@ -433,7 +433,7 @@ exports.builder = function(yargs) {
                     'id': argv.name,
                     'type': 'inet',
                     'attributes': {
-                        'password': argv.password,
+                        'password': argv.passwd,
                         'account': argv.type
                     }
                 }
@@ -446,10 +446,6 @@ exports.builder = function(yargs) {
 
         .usage('Usage: create <command>')
         .help()
-        .command('*', 'the default command', {}, function(argv) {
-            maxctrl(argv, function(host) {
-                return error('Unknown command. See output of `help create` for a list of commands.')
-            })
-        })
         .wrap(null)
+        .demandCommand(1, helpMsg)
 }
