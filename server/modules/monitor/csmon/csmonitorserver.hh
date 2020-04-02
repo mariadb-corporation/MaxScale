@@ -38,4 +38,5 @@ public:
 private:
     int64_t                 m_admin_port;
     std::unique_ptr<json_t> m_sConfig;
+    std::unique_ptr<xmlDoc> m_sDoc;
 };

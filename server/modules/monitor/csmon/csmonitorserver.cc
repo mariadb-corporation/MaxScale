@@ -16,6 +16,7 @@
 #include "csrest.hh"
 
 namespace http = mxb::http;
+using std::unique_ptr;
 
 CsMonitorServer::CsMonitorServer(SERVER* pServer,
                                  const SharedSettings& shared,
@@ -53,21 +54,34 @@ bool CsMonitorServer::set_config(const std::string& body, json_t** ppOutput)
     bool rv = false;
 
     json_error_t error;
-    json_t* pConfig = json_loadb(body.c_str(), body.length(), 0, &error);
+    unique_ptr<json_t> sConfig(json_loadb(body.c_str(), body.length(), 0, &error));
 
-    if (pConfig)
+    if (sConfig)
     {
-        json_t* pColumnstore = json_object_get(pConfig, cs::keys::COLUMNSTORE);
+        json_t* pColumnstore = json_object_get(sConfig.get(), cs::keys::COLUMNSTORE);
 
         if (pColumnstore)
         {
-            // TODO: Parse XML.
-            rv = true;
+            unique_ptr<xmlDoc> sDoc(xmlReadMemory(body.c_str(), body.length(), "noname.xml", NULL, 0));
+
+            if (sDoc)
+            {
+                m_sConfig = std::move(sConfig);
+                m_sDoc = std::move(sDoc);
+
+                rv = true;
+            }
+            else if (ppOutput)
+            {
+                PRINT_MXS_JSON_ERROR(ppOutput,
+                                     "Failed to parse XML configuration of '%s'.", name());
+            }
         }
         else if (ppOutput)
         {
             PRINT_MXS_JSON_ERROR(ppOutput,
-                                 "Obtained config object, but it does not have a '%s' key.",
+                                 "Obtained config object from '%s', but it does not have a '%s' key.",
+                                 name(),
                                  cs::keys::COLUMNSTORE);
         }
     }

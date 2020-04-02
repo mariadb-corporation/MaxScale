@@ -15,6 +15,9 @@
 #define MXS_MODULE_NAME "csmon"
 
 #include <maxscale/ccdefs.hh>
+#include <memory>
+#include <libxml/parser.h>
+#include <libxml/tree.h>
 #include <maxscale/json_api.hh>
 #include <maxscale/monitor.hh>
 
@@ -27,3 +30,16 @@
             *pJson = mxs_json_error_append(*pJson, zFormat, ##__VA_ARGS__); \
         } \
     } while (false)
+
+namespace std
+{
+
+template<>
+struct default_delete<xmlDoc>
+{
+    void operator()(xmlDocPtr pDoc)
+    {
+        xmlFreeDoc(pDoc);
+    }
+};
+}
