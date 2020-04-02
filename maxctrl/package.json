@@ -20,7 +20,7 @@
     "cli-table": "^0.3.1",
     "globby": "^8.0.2",
     "inquirer": "^6.2.1",
-    "inquirer-command-prompt": "0.0.8",
+    "inquirer-command-prompt": "0.0.26",
     "lodash": "^4.17.14",
     "lodash-getpath": "^0.2.4",
     "readline-sync": "^1.4.9",
@@ -32,7 +32,7 @@
     "chai": "^3.5.0",
     "chai-as-promised": "^6.0.0",
     "mariadb": "^2.2.0",
-    "mocha": "^5.2.0",
+    "mocha": "^7.1.1",
     "nyc": "^15.0.0"
   },
   "nyc": {
