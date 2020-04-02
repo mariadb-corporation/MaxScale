@@ -22,12 +22,12 @@
 #include <maxscale/monitor.hh>
 
 /** Utility macros for printing both MXS_ERROR and json error */
-#define PRINT_MXS_JSON_ERROR(pJson, zFormat, ...) \
+#define PRINT_MXS_JSON_ERROR(ppJson, zFormat, ...) \
     do { \
         MXS_ERROR(zFormat, ##__VA_ARGS__); \
-        if (pJson) \
+        if (ppJson) \
         { \
-            *pJson = mxs_json_error_append(*pJson, zFormat, ##__VA_ARGS__); \
+            *ppJson = mxs_json_error_append(*ppJson, zFormat, ##__VA_ARGS__); \
         } \
     } while (false)
 

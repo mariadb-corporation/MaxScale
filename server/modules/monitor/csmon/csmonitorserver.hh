@@ -31,9 +31,16 @@ public:
         return this->server->name();
     }
 
-    bool refresh_config(json_t** ppOutput = nullptr);
+    bool ping(json_t** ppError = nullptr);
 
-    bool set_config(const std::string& body, json_t** ppOutput = nullptr);
+    bool refresh_config(json_t** ppError = nullptr);
+
+    bool set_config(const std::string& body, json_t** ppError = nullptr);
+
+    json_t* config() const
+    {
+        return m_sConfig.get();
+    }
 
 private:
     int64_t                 m_admin_port;

@@ -30,18 +30,18 @@ CsMonitorServer::~CsMonitorServer()
 {
 }
 
-bool CsMonitorServer::refresh_config(json_t** ppOutput)
+bool CsMonitorServer::refresh_config(json_t** ppError)
 {
     bool rv = false;
     http::Result result = http::get(cs::rest::create_url(*this->server, m_admin_port, cs::rest::CONFIG));
 
     if (result.code == 200)
     {
-        rv = set_config(result.body, ppOutput);
+        rv = set_config(result.body, ppError);
     }
-    else if (ppOutput)
+    else
     {
-        PRINT_MXS_JSON_ERROR(ppOutput,
+        PRINT_MXS_JSON_ERROR(ppError,
                              "Could not fetch config from '%s': %s",
                              this->server->name(), result.body.c_str());
     }
@@ -49,7 +49,7 @@ bool CsMonitorServer::refresh_config(json_t** ppOutput)
     return rv;
 }
 
-bool CsMonitorServer::set_config(const std::string& body, json_t** ppOutput)
+bool CsMonitorServer::set_config(const std::string& body, json_t** ppError)
 {
     bool rv = false;
 
@@ -58,11 +58,14 @@ bool CsMonitorServer::set_config(const std::string& body, json_t** ppOutput)
 
     if (sConfig)
     {
-        json_t* pColumnstore = json_object_get(sConfig.get(), cs::keys::COLUMNSTORE);
+        json_t* pColumnstore_config = json_object_get(sConfig.get(), cs::keys::CONFIG);
 
-        if (pColumnstore)
+        if (pColumnstore_config)
         {
-            unique_ptr<xmlDoc> sDoc(xmlReadMemory(body.c_str(), body.length(), "noname.xml", NULL, 0));
+            const char* zXml = json_string_value(pColumnstore_config);
+            size_t xml_len = json_string_length(pColumnstore_config);
+
+            unique_ptr<xmlDoc> sDoc(xmlReadMemory(zXml, xml_len, "columnstore.xml", NULL, 0));
 
             if (sDoc)
             {
@@ -71,23 +74,23 @@ bool CsMonitorServer::set_config(const std::string& body, json_t** ppOutput)
 
                 rv = true;
             }
-            else if (ppOutput)
+            else
             {
-                PRINT_MXS_JSON_ERROR(ppOutput,
+                PRINT_MXS_JSON_ERROR(ppError,
                                      "Failed to parse XML configuration of '%s'.", name());
             }
         }
-        else if (ppOutput)
+        else
         {
-            PRINT_MXS_JSON_ERROR(ppOutput,
+            PRINT_MXS_JSON_ERROR(ppError,
                                  "Obtained config object from '%s', but it does not have a '%s' key.",
                                  name(),
-                                 cs::keys::COLUMNSTORE);
+                                 cs::keys::CONFIG);
         }
     }
-    else if (ppOutput)
+    else
     {
-        PRINT_MXS_JSON_ERROR(ppOutput, "Could not parse JSON data from: %s", error.text);
+        PRINT_MXS_JSON_ERROR(ppError, "Could not parse JSON data from: %s", error.text);
     }
 
     return rv;

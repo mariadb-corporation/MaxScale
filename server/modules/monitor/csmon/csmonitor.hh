@@ -65,6 +65,11 @@ public:
     bool command_cluster_add_node(json_t** ppOutput, CsMonitorServer* pServer);
     bool command_cluster_remove_node(json_t** ppOutput, CsMonitorServer* pServer);
 
+    using ResponseHandler = std::function<void(CsMonitorServer*,
+                                               const mxb::http::Result&,
+                                               json_t*)>;
+
+
 private:
     enum Mode
     {
@@ -83,12 +88,33 @@ private:
     void cluster_get(json_t** ppOutput,
                      mxb::Semaphore* pSem,
                      cs::rest::Action action,
-                     CsMonitorServer* pServer);
+                     CsMonitorServer* pServer,
+                     ResponseHandler handler = nullptr);
+
     void cluster_put(json_t** ppOutput,
                      mxb::Semaphore* pSem,
                      cs::rest::Action action,
                      CsMonitorServer* pServer,
-                     std::string&& body = std::string());
+                     std::string&& body,
+                     ResponseHandler handler);
+
+    void cluster_put(json_t** ppOutput,
+                     mxb::Semaphore* pSem,
+                     cs::rest::Action action,
+                     CsMonitorServer* pServer,
+                     std::string&& body = std::string())
+    {
+        return cluster_put(ppOutput, pSem, action, pServer, std::move(body), nullptr);
+    }
+
+    void cluster_put(json_t** ppOutput,
+                     mxb::Semaphore* pSem,
+                     cs::rest::Action action,
+                     CsMonitorServer* pServer,
+                     ResponseHandler handler)
+    {
+        return cluster_put(ppOutput, pSem, action, pServer, std::string(), handler);
+    }
 
     void cluster_start(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer);
     void cluster_shutdown(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer);

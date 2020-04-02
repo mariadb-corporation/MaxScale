@@ -21,7 +21,7 @@ namespace cs
 namespace keys
 {
 
-const char COLUMNSTORE[] = "columnstore";
+const char CONFIG[] = "config";
 
 }
 

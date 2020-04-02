@@ -97,27 +97,35 @@ int get_cs_version(MonitorServer* srv)
     return rval;
 }
 
-json_t* create_response(const vector<CsMonitorServer*>& mservers, const vector<http::Result>& results)
+json_t* create_response(const vector<CsMonitorServer*>& servers,
+                        const vector<http::Result>&     results,
+                        CsMonitor::ResponseHandler      handler = nullptr)
 {
-    mxb_assert(mservers.size() == results.size());
+    mxb_assert(servers.size() == results.size());
 
     json_t* pResponse = json_object();
 
-    auto it = mservers.begin();
-    auto end = mservers.end();
+    auto it = servers.begin();
+    auto end = servers.end();
     auto jt = results.begin();
 
     while (it != end)
     {
-        auto* pMserver = *it;
+        auto* pServer = *it;
         const auto& result = *jt;
 
-        json_t* pResult = json_object();
+        if (handler)
+        {
+            handler(pServer, result, pResponse);
+        }
+        else
+        {
+            json_t* pResult = json_object();
+            json_object_set_new(pResult, "code", json_integer(result.code));
+            json_object_set_new(pResult, "message", json_string(result.body.c_str()));
 
-        json_object_set_new(pResult, "code", json_integer(result.code));
-        json_object_set_new(pResult, "message", json_string(result.body.c_str()));
-
-        json_object_set_new(pResponse, pMserver->server->name(), pResult);
+            json_object_set_new(pResponse, pServer->name(), pResult);
+        }
 
         ++it;
         ++jt;
@@ -154,14 +162,18 @@ public:
 
     Command(CsMonitor* pMonitor,
             cs::rest::Action action,
+            vector<CsMonitorServer*>&& servers,
             vector<string>&& urls,
             const http::Config& config,
+            CsMonitor::ResponseHandler handler,
             mxb::Semaphore* pSem = nullptr,
             json_t** ppOutput = nullptr)
         : m_monitor(*pMonitor)
         , m_name(cs::rest::to_string(action))
         , m_config(config)
+        , m_servers(std::move(servers))
         , m_urls(std::move(urls))
+        , m_handler(handler)
         , m_pSem(pSem)
         , m_ppOutput(ppOutput)
     {
@@ -169,16 +181,20 @@ public:
 
     Command(CsMonitor* pMonitor,
             cs::rest::Action action,
+            vector<CsMonitorServer*>&& servers,
             vector<string>&& urls,
             string&& body,
             const http::Config& config,
+            CsMonitor::ResponseHandler handler,
             mxb::Semaphore* pSem = nullptr,
             json_t** ppOutput = nullptr)
         : m_monitor(*pMonitor)
         , m_name(cs::rest::to_string(action))
         , m_config(config)
+        , m_servers(std::move(servers))
         , m_urls(std::move(urls))
         , m_body(std::move(body))
+        , m_handler(handler)
         , m_pSem(pSem)
         , m_ppOutput(ppOutput)
     {
@@ -267,11 +283,14 @@ protected:
         if (m_pSem)
         {
             m_pSem->post();
+            m_state = IDLE;
+        }
+        else
+        {
+            m_state = READY;
         }
 
         m_pSem = nullptr;
-
-        m_state = READY;
     }
 
     void order_callback()
@@ -314,7 +333,7 @@ protected:
 
         case http::Async::READY:
             {
-                m_pOutput = create_response(m_monitor.servers(), m_http.results());
+                m_pOutput = create_response(m_servers, m_http.results(), m_handler);
 
                 finish();
             }
@@ -328,17 +347,19 @@ protected:
     }
 
 protected:
-    State           m_state = IDLE;
-    CsMonitor&      m_monitor;
-    string          m_name;
-    http::Config    m_config;
-    vector<string>  m_urls;
-    string          m_body;
-    mxb::Semaphore* m_pSem;
-    json_t**        m_ppOutput = nullptr;
-    json_t*         m_pOutput = nullptr;
-    http::Async     m_http;
-    uint32_t        m_dcid = 0;
+    State                      m_state = IDLE;
+    CsMonitor&                 m_monitor;
+    string                     m_name;
+    http::Config               m_config;
+    vector<CsMonitorServer*>   m_servers;
+    vector<string>             m_urls;
+    string                     m_body;
+    CsMonitor::ResponseHandler m_handler;
+    mxb::Semaphore*            m_pSem;
+    json_t**                   m_ppOutput = nullptr;
+    json_t*                    m_pOutput = nullptr;
+    http::Async                m_http;
+    uint32_t                   m_dcid = 0;
 };
 
 namespace
@@ -765,23 +786,28 @@ bool CsMonitor::command(json_t** ppOutput, mxb::Semaphore& sem, const char* zCmd
 void CsMonitor::cluster_get(json_t** ppOutput,
                             mxb::Semaphore* pSem,
                             cs::rest::Action action,
-                            CsMonitorServer* pServer)
+                            CsMonitorServer* pServer,
+                            CsMonitor::ResponseHandler handler)
 {
+    vector<CsMonitorServer*> servers;
     vector<string> urls;
 
     if (pServer)
     {
+        servers.push_back(pServer);
         urls.push_back(cs::rest::create_url(*pServer, m_config.admin_port, action));
     }
     else
     {
-        for (auto* pS : servers())
+        for (auto* pS : this->servers())
         {
+            servers.push_back(pS);
             urls.push_back(cs::rest::create_url(*pS, m_config.admin_port, action));
         }
     }
 
-    m_sCommand.reset(new GetCommand(this, action, std::move(urls), m_http_config, pSem, ppOutput));
+    m_sCommand.reset(new GetCommand(this, action, std::move(servers), std::move(urls),
+                                    m_http_config, handler, pSem, ppOutput));
     m_sCommand->init();
 }
 
@@ -789,26 +815,30 @@ void CsMonitor::cluster_put(json_t** ppOutput,
                             mxb::Semaphore* pSem,
                             cs::rest::Action action,
                             CsMonitorServer* pServer,
-                            string&& body)
+                            string&& body,
+                            CsMonitor::ResponseHandler handler)
 {
     mxb_assert(!m_sCommand || m_sCommand->is_idle());
 
+    vector<CsMonitorServer*> servers;
     vector<string> urls;
 
     if (pServer)
     {
+        servers.push_back(pServer);
         urls.push_back(cs::rest::create_url(*pServer, m_config.admin_port, action));
     }
     else
     {
-        for (auto* pS : servers())
+        for (auto* pS : this->servers())
         {
+            servers.push_back(pS);
             urls.push_back(cs::rest::create_url(*pServer, m_config.admin_port, action));
         }
     }
 
-    m_sCommand.reset(new PutCommand(this, action, std::move(urls),
-                                    std::move(body), m_http_config, pSem, ppOutput));
+    m_sCommand.reset(new PutCommand(this, action, std::move(servers), std::move(urls),
+                                    std::move(body), m_http_config, handler, pSem, ppOutput));
     m_sCommand->init();
 }
 
@@ -834,7 +864,23 @@ void CsMonitor::cluster_status(json_t** ppOutput, mxb::Semaphore* pSem, CsMonito
 
 void CsMonitor::cluster_config_get(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
 {
-    cluster_get(ppOutput, pSem, cs::rest::CONFIG, pServer);
+    cluster_get(ppOutput, pSem, cs::rest::CONFIG, pServer,
+                [](CsMonitorServer* pServer, const http::Result& result, json_t* pResponse)
+                {
+                    mxb_assert(result.ok());
+
+                    json_t* pError = nullptr;
+                    if (pServer->set_config(result.body, &pError))
+                    {
+                        mxb_assert(!pError);
+                        json_object_set(pResponse, pServer->name(), pServer->config());
+                    }
+                    else
+                    {
+                        mxb_assert(pError);
+                        json_object_set_new(pResponse, pServer->name(), pError);
+                    }
+                });
 }
 
 void CsMonitor::cluster_config_set(json_t** ppOutput, mxb::Semaphore* pSem,

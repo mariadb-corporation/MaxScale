@@ -73,12 +73,26 @@ struct Config
 
 struct Result
 {
+    enum Category
+    {
+        INFORMATIONAL = 100,
+        SUCCESS = 200,
+        REDIRECTION = 300,
+        CLIENT_ERROR = 400,
+        SERVER_ERROR = 500
+    };
+
     enum
     {
         ERROR                = -1,  // Some non-specific error occurred.
         COULDNT_RESOLVE_HOST = -2,  // The specified host cold not be resolved.
         OPERATION_TIMEDOUT   = -3   // The operation timed out.
     };
+
+    bool ok() const
+    {
+        return this->code >= SUCCESS && this->code < REDIRECTION;
+    }
 
     int                                code = 0;// HTTP response code
     std::string                        body;    // Response body
