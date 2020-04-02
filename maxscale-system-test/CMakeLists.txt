@@ -28,7 +28,7 @@ include_directories(${CMAKE_SOURCE_DIR}/../connectors/cdc-connector/)
 include_directories(maxtest/include/maxtest)
 
 # Tool used to check backend state
-add_test_executable_notest(check_backend.cpp check_backend check_backend LABELS CONFIG REPL_BACKEND GALERA_BACKEND TWO_MAXSCALES)
+add_test_executable_notest(check_backend.cpp check_backend check_backend LABELS CONFIG REPL_BACKEND GALERA_BACKEND SECOND_MAXSCALE)
 
 # Configuration tests
 add_template_manual(bug359 bug359)
@@ -203,7 +203,7 @@ add_test_executable(mxs2355_wrong_auth.cpp mxs2355_wrong_auth maxctrl LABELS REP
 ############################################
 
 # Configures 'keepalived' on two Maxscale machines and tried failover
-#add_test_executable(keepalived_masterdown.cpp keepalived_masterdown keepalived_masterdown LABELS REPL_BACKEND TWO_MAXSCALES)
+#add_test_executable(keepalived_masterdown.cpp keepalived_masterdown keepalived_masterdown LABELS REPL_BACKEND SECOND_MAXSCALE)
 
 # MySQL Monitor with Multi-master configurations
 add_test_executable(mysqlmon_multimaster.cpp mysqlmon_multimaster mysqlmon_multimaster LABELS mysqlmon REPL_BACKEND BREAKS_REPL)
@@ -851,7 +851,7 @@ add_test_executable(kerberos_setup.cpp kerberos_setup kerberos LABELS HEAVY gssa
 add_test_derived(kerberos_setup_ssl kerberos_setup kerberos_ssl LABELS HEAVY gssapi BACKEND_SSL REPL_BACKEND)
 
 # Configures 'keepalived' on two Maxscale machines and tried failover
-#add_test_executable(keepalived.cpp keepalived keepalived LABELS REPL_BACKEND TWO_MAXSCALES)
+#add_test_executable(keepalived.cpp keepalived keepalived LABELS REPL_BACKEND SECOND_MAXSCALE)
 
 # a tool to delete RDS Aurora cluster
 add_test_executable_notest(delete_rds.cpp delete_rds replication LABELS EXTERN_BACKEND)
