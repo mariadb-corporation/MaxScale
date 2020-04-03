@@ -425,10 +425,7 @@ public:
         switch (m_status)
         {
         case Async::READY:
-            break;
-
         case Async::ERROR:
-            mxb_assert(!true);
             break;
 
         case Async::PENDING:

@@ -134,6 +134,25 @@ json_t* create_response(const vector<CsMonitorServer*>& servers,
     return pResponse;
 }
 
+json_t* create_response(const vector<CsMonitorServer*>& servers,
+                        const http::Async&              result,
+                        CsMonitor::ResponseHandler      handler = nullptr)
+{
+    json_t* pResult = nullptr;
+
+    if (result.status() == http::Async::ERROR)
+    {
+        PRINT_MXS_JSON_ERROR(&pResult, "Fatal HTTP error.");
+    }
+    else
+    {
+        pResult = create_response(servers, result.results(), handler);
+    }
+
+    return pResult;
+}
+
+
 vector<http::Result>::const_iterator find_first_failed(const vector<http::Result>& results)
 {
     return std::find_if(results.begin(), results.end(), [](const http::Result& result) -> bool {
@@ -160,43 +179,33 @@ public:
         READY
     };
 
-    Command(CsMonitor* pMonitor,
-            cs::rest::Action action,
-            vector<CsMonitorServer*>&& servers,
+    using Handler = std::function<json_t* (const http::Async&)>;
+
+    Command(mxb::Worker* pWorker,
+            const string& name,
             vector<string>&& urls,
             const http::Config& config,
-            CsMonitor::ResponseHandler handler,
-            mxb::Semaphore* pSem = nullptr,
-            json_t** ppOutput = nullptr)
-        : m_monitor(*pMonitor)
-        , m_name(cs::rest::to_string(action))
+            Handler handler)
+        : m_worker(*pWorker)
+        , m_name(name)
         , m_config(config)
-        , m_servers(std::move(servers))
         , m_urls(std::move(urls))
         , m_handler(handler)
-        , m_pSem(pSem)
-        , m_ppOutput(ppOutput)
     {
     }
 
-    Command(CsMonitor* pMonitor,
-            cs::rest::Action action,
-            vector<CsMonitorServer*>&& servers,
+    Command(mxb::Worker* pWorker,
+            const string& name,
             vector<string>&& urls,
             string&& body,
             const http::Config& config,
-            CsMonitor::ResponseHandler handler,
-            mxb::Semaphore* pSem = nullptr,
-            json_t** ppOutput = nullptr)
-        : m_monitor(*pMonitor)
-        , m_name(cs::rest::to_string(action))
+            Handler handler)
+        : m_worker(*pWorker)
+        , m_name(name)
         , m_config(config)
-        , m_servers(std::move(servers))
         , m_urls(std::move(urls))
         , m_body(std::move(body))
         , m_handler(handler)
-        , m_pSem(pSem)
-        , m_ppOutput(ppOutput)
     {
     }
 
@@ -204,7 +213,7 @@ public:
     {
         if (m_dcid)
         {
-            m_monitor.cancel_delayed_call(m_dcid);
+            m_worker.cancel_delayed_call(m_dcid);
         }
 
         if (m_pOutput)
@@ -261,36 +270,24 @@ public:
             break;
 
         case http::Async::ERROR:
-            PRINT_MXS_JSON_ERROR(&m_pOutput, "Could not initiate operation '%s' on Columnstore cluster.",
-                                 m_name.c_str());
-            finish();
-            break;
-
         case http::Async::READY:
             check_result();
         }
     }
 
 protected:
-    void finish()
+    void finish(json_t* pOutput = nullptr)
     {
-        if (m_pOutput && m_ppOutput)
-        {
-            json_incref(m_pOutput);
-            *m_ppOutput = m_pOutput;
-        }
+        m_pOutput = pOutput;
 
-        if (m_pSem)
-        {
-            m_pSem->post();
-            m_state = IDLE;
-        }
-        else
+        if (m_pOutput)
         {
             m_state = READY;
         }
-
-        m_pSem = nullptr;
+        else
+        {
+            m_state = IDLE;
+        }
     }
 
     void order_callback()
@@ -304,7 +301,7 @@ protected:
             ms = 1;
         }
 
-        m_dcid = m_monitor.delayed_call(ms, [this](mxb::Worker::Worker::Call::action_t action) -> bool {
+        m_dcid = m_worker.delayed_call(ms, [this](mxb::Worker::Worker::Call::action_t action) -> bool {
                 mxb_assert(m_dcid != 0);
 
                 m_dcid = 0;
@@ -332,34 +329,23 @@ protected:
             break;
 
         case http::Async::READY:
-            {
-                m_pOutput = create_response(m_servers, m_http.results(), m_handler);
-
-                finish();
-            }
-            break;
-
         case http::Async::ERROR:
-            PRINT_MXS_JSON_ERROR(&m_pOutput, "Fatal HTTP error when contacting Columnstore.");
-            finish();
+            finish(m_handler(m_http));
             break;
         }
     }
 
 protected:
-    State                      m_state = IDLE;
-    CsMonitor&                 m_monitor;
-    string                     m_name;
-    http::Config               m_config;
-    vector<CsMonitorServer*>   m_servers;
-    vector<string>             m_urls;
-    string                     m_body;
-    CsMonitor::ResponseHandler m_handler;
-    mxb::Semaphore*            m_pSem;
-    json_t**                   m_ppOutput = nullptr;
-    json_t*                    m_pOutput = nullptr;
-    http::Async                m_http;
-    uint32_t                   m_dcid = 0;
+    State          m_state = IDLE;
+    mxb::Worker&   m_worker;
+    string         m_name;
+    http::Config   m_config;
+    vector<string> m_urls;
+    string         m_body;
+    Handler        m_handler;
+    json_t*        m_pOutput = nullptr;
+    http::Async    m_http;
+    uint32_t       m_dcid = 0;
 };
 
 namespace
@@ -789,6 +775,9 @@ void CsMonitor::cluster_get(json_t** ppOutput,
                             CsMonitorServer* pServer,
                             CsMonitor::ResponseHandler handler)
 {
+    mxb_assert(!m_sCommand || m_sCommand->is_idle());
+    mxb_assert((ppOutput && pSem) || (!ppOutput && !pSem));
+
     vector<CsMonitorServer*> servers;
     vector<string> urls;
 
@@ -806,8 +795,20 @@ void CsMonitor::cluster_get(json_t** ppOutput,
         }
     }
 
-    m_sCommand.reset(new GetCommand(this, action, std::move(servers), std::move(urls),
-                                    m_http_config, handler, pSem, ppOutput));
+    m_sCommand.reset(new GetCommand(this, cs::rest::to_string(action), std::move(urls), m_http_config,
+                                    [ppOutput, pSem, servers, handler](const http::Async& http) {
+                                        json_t* pResponse = create_response(servers, http, handler);
+
+                                        if (ppOutput)
+                                        {
+                                            *ppOutput = pResponse;
+                                            pSem->post();
+
+                                            pResponse = nullptr;
+                                        }
+
+                                        return pResponse;
+                                    }));
     m_sCommand->init();
 }
 
@@ -819,6 +820,7 @@ void CsMonitor::cluster_put(json_t** ppOutput,
                             CsMonitor::ResponseHandler handler)
 {
     mxb_assert(!m_sCommand || m_sCommand->is_idle());
+    mxb_assert((ppOutput && pSem) || (!ppOutput && !pSem));
 
     vector<CsMonitorServer*> servers;
     vector<string> urls;
@@ -837,8 +839,21 @@ void CsMonitor::cluster_put(json_t** ppOutput,
         }
     }
 
-    m_sCommand.reset(new PutCommand(this, action, std::move(servers), std::move(urls),
-                                    std::move(body), m_http_config, handler, pSem, ppOutput));
+    m_sCommand.reset(new PutCommand(this, cs::rest::to_string(action),
+                                    std::move(urls), std::move(body), m_http_config,
+                                    [ppOutput, pSem, servers, handler](const http::Async& http) {
+                                        json_t* pResponse = create_response(servers, http, handler);
+
+                                        if (ppOutput)
+                                        {
+                                            *ppOutput = pResponse;
+                                            pSem->post();
+
+                                            pResponse = nullptr;
+                                        }
+
+                                        return pResponse;
+                                    }));
     m_sCommand->init();
 }
 
