@@ -18,7 +18,7 @@
 #include <maxscale/modulecmd.hh>
 #include "csconfig.hh"
 #include "csmonitorserver.hh"
-#include "csrest.hh"
+#include "columnstore.hh"
 
 class CsMonitor : public maxscale::MonitorWorkerSimple
 {

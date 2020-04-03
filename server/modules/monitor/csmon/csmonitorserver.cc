@@ -13,7 +13,7 @@
 
 #include "csmonitorserver.hh"
 #include <maxbase/http.hh>
-#include "csrest.hh"
+#include "columnstore.hh"
 
 namespace http = mxb::http;
 using std::unique_ptr;

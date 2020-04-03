@@ -21,7 +21,7 @@
 
 #include <maxscale/modinfo.hh>
 #include <maxscale/mysql_utils.hh>
-#include "csrest.hh"
+#include "columnstore.hh"
 
 using std::string;
 using std::stringstream;

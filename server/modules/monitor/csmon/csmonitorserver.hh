@@ -14,7 +14,7 @@
 
 #include "csmon.hh"
 #include <maxscale/jansson.hh>
-#include "csrest.hh"
+#include "columnstore.hh"
 
 class CsMonitorServer : public maxscale::MonitorServer
 {
