@@ -42,6 +42,9 @@ const string label_clx_be = "CLUSTRIX_BACKEND";
 
 const StringSet recognized_mdbci_labels =
 {label_repl_be, label_big_be, label_galera_be, label_2nd_mxs, label_cs_be, label_clx_be};
+
+const int MDBCI_FAIL = 200;      // Exit code when failure caused by MDBCI non-zero exit
+const int BROKEN_VM_FAIL = 201;  // Exit code when failure caused by broken VMs
 }
 
 namespace maxscale
@@ -141,16 +144,7 @@ void TestConnections::restart_galera(bool value)
 bool TestConnections::verbose = false;
 
 TestConnections::TestConnections(int argc, char* argv[])
-    : global_result(0)
-    , smoke(true)
-    , binlog_cmd_option(0)
-    , ssl(false)
-    , backend_ssl(false)
-    , binlog_master_gtid(false)
-    , binlog_slave_gtid(false)
-    , no_clustrix(false)
-    , threads(4)
-    , use_ipv6(false)
+    : no_clustrix(false)
 {
     std::ios::sync_with_stdio(true);
     signal_set(SIGSEGV, sigfatal_handler);
@@ -160,12 +154,7 @@ TestConnections::TestConnections(int argc, char* argv[])
 #ifdef SIGBUS
     signal_set(SIGBUS, sigfatal_handler);
 #endif
-    gettimeofday(&start_time, NULL);
-
-    repl = NULL;
-    galera = NULL;
-    maxscales = NULL;
-    reinstall_maxscale = false;
+    gettimeofday(&m_start_time, NULL);
 
     read_env();
 
@@ -269,17 +258,17 @@ TestConnections::TestConnections(int argc, char* argv[])
 
                 std::regex regex1("maxscale_000_network=[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+");
                 std::string replace1("maxscale_000_network=127.0.0.1");
-                network_config = regex_replace(network_config, regex1, replace1);
+                m_network_config = regex_replace(m_network_config, regex1, replace1);
 
                 std::regex regex2("maxscale_000_private_ip=[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+");
                 std::string replace2("maxscale_000_private_ip=127.0.0.1");
-                network_config = regex_replace(network_config, regex2, replace2);
+                m_network_config = regex_replace(m_network_config, regex2, replace2);
             }
             break;
 
         case 'm':
             printf("Maxscale will be reinstalled");
-            reinstall_maxscale = true;
+            m_reinstall_maxscale = true;
             break;
 
         default:
@@ -326,7 +315,7 @@ TestConnections::TestConnections(int argc, char* argv[])
     {
         if (call_mdbci(""))
         {
-            exit(MDBCI_FAUILT);
+            exit(MDBCI_FAIL);
         }
     }
 
@@ -359,11 +348,11 @@ TestConnections::TestConnections(int argc, char* argv[])
 
     m_get_logs_command = (string)test_dir + "/get_logs.sh";
 
-    sprintf(ssl_options,
+    sprintf(m_ssl_options,
             "--ssl-cert=%s/ssl-cert/client-cert.pem --ssl-key=%s/ssl-cert/client-key.pem",
             test_dir,
             test_dir);
-    setenv("ssl_options", ssl_options, 1);
+    setenv("ssl_options", m_ssl_options, 1);
 
     if (maxscale::require_columnstore)
     {
@@ -376,9 +365,9 @@ TestConnections::TestConnections(int argc, char* argv[])
 
     if (!no_repl)
     {
-        repl = new Mariadb_nodes("node", test_dir, verbose, network_config);
+        repl = new Mariadb_nodes("node", test_dir, verbose, m_network_config);
         repl->setup();
-        repl->use_ipv6 = use_ipv6;
+        repl->use_ipv6 = m_use_ipv6;
         repl->take_snapshot_command = m_take_snapshot_command.c_str();
         repl->revert_snapshot_command = m_revert_snapshot_command.c_str();
         repl_future = std::async(std::launch::async, &Mariadb_nodes::check_nodes, repl);
@@ -390,7 +379,7 @@ TestConnections::TestConnections(int argc, char* argv[])
 
     if (!no_galera)
     {
-        galera = new Galera_nodes("galera", test_dir, verbose, network_config);
+        galera = new Galera_nodes("galera", test_dir, verbose, m_network_config);
         galera->setup();
         galera->use_ipv6 = false;
         galera->take_snapshot_command = m_take_snapshot_command.c_str();
@@ -404,7 +393,7 @@ TestConnections::TestConnections(int argc, char* argv[])
 
     if (!no_clustrix)
     {
-        clustrix = new Clustrix_nodes("clustrix", test_dir, verbose, network_config);
+        clustrix = new Clustrix_nodes("clustrix", test_dir, verbose, m_network_config);
         clustrix->setup();
         clustrix->use_ipv6 = false;
         clustrix->take_snapshot_command = m_take_snapshot_command.c_str();
@@ -416,7 +405,7 @@ TestConnections::TestConnections(int argc, char* argv[])
         clustrix = NULL;
     }
 
-    maxscales = new Maxscales("maxscale", test_dir, verbose, network_config);
+    maxscales = new Maxscales("maxscale", test_dir, verbose, m_network_config);
     maxscales->setup();
 
     bool maxscale_ok = maxscales->check_nodes();
@@ -432,18 +421,18 @@ TestConnections::TestConnections(int argc, char* argv[])
 
         if (call_mdbci("--recreate"))
         {
-            exit(MDBCI_FAUILT);
+            exit(MDBCI_FAIL);
         }
     }
 
-    if (reinstall_maxscale)
+    if (m_reinstall_maxscale)
     {
         initialize = true;
 
         if (reinstall_maxscales())
         {
             tprintf("Failed to install Maxscale: target is %s", m_target.c_str());
-            exit(MDBCI_FAUILT);
+            exit(MDBCI_FAIL);
         }
     }
 
@@ -456,7 +445,7 @@ TestConnections::TestConnections(int argc, char* argv[])
     }
 
 
-    maxscales->use_ipv6 = use_ipv6;
+    maxscales->use_ipv6 = m_use_ipv6;
     maxscales->ssl = ssl;
 
     // Stop MaxScale to prevent it from interfering with the replication setup process
@@ -475,11 +464,11 @@ TestConnections::TestConnections(int argc, char* argv[])
     {
         if (repl && !repl->fix_replication())
         {
-            exit(BROKEN_VM_FAUILT);
+            exit(BROKEN_VM_FAIL);
         }
         if (galera && !galera->fix_replication())
         {
-            exit(BROKEN_VM_FAUILT);
+            exit(BROKEN_VM_FAIL);
         }
     }
 
@@ -552,7 +541,7 @@ TestConnections::TestConnections(int argc, char* argv[])
     pthread_create(&timeout_thread_p, NULL, timeout_thread, this);
     pthread_create(&log_copy_thread_p, NULL, log_copy_thread, this);
     tprintf("Starting test");
-    gettimeofday(&start_time, NULL);
+    gettimeofday(&m_start_time, NULL);
 }
 
 TestConnections::~TestConnections()
@@ -621,8 +610,8 @@ void TestConnections::report_result(const char* format, va_list argp)
 {
     timeval t2;
     gettimeofday(&t2, NULL);
-    double elapsedTime = (t2.tv_sec - start_time.tv_sec);
-    elapsedTime += (double) (t2.tv_usec - start_time.tv_usec) / 1000000.0;
+    double elapsedTime = (t2.tv_sec - m_start_time.tv_sec);
+    elapsedTime += (double) (t2.tv_usec - m_start_time.tv_usec) / 1000000.0;
 
     global_result += 1;
 
@@ -668,24 +657,24 @@ void TestConnections::read_mdbci_info()
     if (system(cmd.c_str()))
     {
         tprintf("Unable to create MDBCI VMs direcory '%s', exiting", m_mdbci_vm_path.c_str());
-        exit(MDBCI_FAUILT);
+        exit(MDBCI_FAIL);
     }
     m_mdbci_template = envvar_read_write_def_str("template", "default");
     m_target = envvar_read_write_def_str("target", "develop");
 
     m_mdbci_config_name = envvar_read_write_def_str("mdbci_config_name", "local");
-    vm_path = m_mdbci_vm_path + "/" + m_mdbci_config_name;
+    m_vm_path = m_mdbci_vm_path + "/" + m_mdbci_config_name;
 
     if (!m_mdbci_config_name.empty())
     {
         std::ifstream nc_file;
-        nc_file.open(vm_path + "_network_config");
+        nc_file.open(m_vm_path + "_network_config");
         std::stringstream strStream;
         strStream << nc_file.rdbuf();
-        network_config = strStream.str();
+        m_network_config = strStream.str();
         nc_file.close();
 
-        nc_file.open(vm_path + "_configured_labels");
+        nc_file.open(m_vm_path + "_configured_labels");
         std::stringstream strStream1;
         strStream1 << nc_file.rdbuf();
         m_configured_mdbci_labels = parse_to_stringset(strStream1.str());
@@ -698,7 +687,7 @@ void TestConnections::read_mdbci_info()
     }
     if (verbose)
     {
-        tprintf(network_config.c_str());
+        tprintf(m_network_config.c_str());
     }
 }
 
@@ -724,10 +713,10 @@ void TestConnections::read_env()
 
     m_no_backend_log_copy = readenv_bool("no_backend_log_copy", false);
     m_no_maxscale_log_copy = readenv_bool("no_maxscale_log_copy", false);
-    use_ipv6 = readenv_bool("use_ipv6", false);
+    m_use_ipv6 = readenv_bool("use_ipv6", false);
     backend_ssl = readenv_bool("backend_ssl", false);
     smoke = readenv_bool("smoke", true);
-    threads = readenv_int("threads", 4);
+    m_threads = readenv_int("threads", 4);
     m_use_snapshots = readenv_bool("use_snapshots", false);
     m_take_snapshot_command = envvar_read_write_def_str(
         "take_snapshot_command", "mdbci snapshot take --path-to-nodes %s --snapshot-name ",
@@ -821,7 +810,7 @@ void TestConnections::process_template(int m, const string& cnf_template_path, c
         system("sed -i \"s|type=server|type=server\\nssl=required\\nssl_cert=/###access_homedir###/certs/client-cert.pem\\nssl_key=/###access_homedir###/certs/client-key.pem\\nssl_ca_cert=/###access_homedir###/certs/ca.pem\\nssl_cert_verify_depth=9\\nssl_version=MAX|g\" maxscale.cnf");
     }
 
-    sprintf(str, "sed -i \"s/###threads###/%d/\"  maxscale.cnf", threads);
+    sprintf(str, "sed -i \"s/###threads###/%d/\"  maxscale.cnf", m_threads);
     system(str);
 
     Mariadb_nodes * mdn[3];
@@ -1089,8 +1078,8 @@ int TestConnections::copy_all_logs_periodic()
 {
     timeval t2;
     gettimeofday(&t2, NULL);
-    double elapsedTime = (t2.tv_sec - start_time.tv_sec);
-    elapsedTime += (double) (t2.tv_usec - start_time.tv_usec) / 1000000.0;
+    double elapsedTime = (t2.tv_sec - m_start_time.tv_sec);
+    elapsedTime += (double) (t2.tv_usec - m_start_time.tv_usec) / 1000000.0;
 
     return copy_maxscale_logs(elapsedTime);
 }
@@ -1862,8 +1851,8 @@ void TestConnections::tprintf(const char* format, ...)
 {
     timeval t2;
     gettimeofday(&t2, NULL);
-    double elapsedTime = (t2.tv_sec - start_time.tv_sec);
-    elapsedTime += (double) (t2.tv_usec - start_time.tv_usec) / 1000000.0;
+    double elapsedTime = (t2.tv_sec - m_start_time.tv_sec);
+    elapsedTime += (double) (t2.tv_usec - m_start_time.tv_usec) / 1000000.0;
 
     struct tm tm_now;
     localtime_r(&t2.tv_sec, &tm_now);
@@ -2212,19 +2201,14 @@ int TestConnections::call_mdbci(const char * options)
             tprintf("Failed to generate MDBCI virtual machines template");
             return 1;
         }
-        if (system((std::string("mdbci --override --template ") +
-                    vm_path +
-                    std::string(".json generate ") +
-                    m_mdbci_config_name).c_str() ))
+        if (system((std::string("mdbci --override --template ") + m_vm_path +
+                    ".json generate " + m_mdbci_config_name).c_str() ))
         {
             tprintf("MDBCI failed to generate virtual machines description");
             return 1;
         }
-        if (system((std::string("cp -r ") +
-                    std::string(test_dir) +
-                    std::string("/mdbci/cnf ") +
-                    std::string(vm_path) +
-                    std::string("/")).c_str()))
+        if (system((std::string("cp -r ") + test_dir + std::string("/mdbci/cnf ") +
+                    m_vm_path + "/").c_str()))
         {
             tprintf("Failed to copy my.cnf files");
             return 1;
@@ -2274,26 +2258,16 @@ int TestConnections::process_mdbci_template()
     if (strcmp(product, "mysql") == 0 )
     {
         setenv("cnf_path",
-               (vm_path + std::string("/cnf/mysql56/")).c_str(),
+               (m_vm_path + "/cnf/mysql56/").c_str(),
                1);
     }
     else
     {
-        setenv("cnf_path",
-               (vm_path + std::string("/cnf/")).c_str(),
-               1);
+        setenv("cnf_path", (m_vm_path + "/cnf/").c_str(), 1);
     }
 
-    std::string name = std::string(test_dir) +
-        std::string("/mdbci/templates/") +
-        m_mdbci_template +
-        std::string(".json.template");
-
-    std::string sys = std::string("envsubst < ") +
-                      name +
-                      std::string(" > ") +
-                      vm_path +
-                      std::string(".json");
+    std::string name = std::string(test_dir) + "/mdbci/templates/" + m_mdbci_template + ".json.template";
+    std::string sys = std::string("envsubst < ") + name + " > " + m_vm_path + ".json";
     if (verbose)
     {
         std::cout << sys << std::endl;
