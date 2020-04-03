@@ -1,1 +1,3 @@
-add_test_executable_ex(mysqlmon_switchover.cpp mysqlmon_switchover mysqlmon_switchover.cnf LABELS REPL_BACKEND)
+# MySQL Monitor switchover
+add_test_executable_ex(NAME mysqlmon_switchover SOURCE mysqlmon_switchover.cpp CONFIG mysqlmon_switchover.cnf
+        VMS repl_backend LABELS switchover)
