@@ -85,15 +85,87 @@ function(add_test_script name script template labels)
   add_test_properties(${name} ${labels})
 endfunction()
 
-# Same as "add_test_executable" but with a local config template file.
-function(add_test_executable_ex source name config_file labels)
-  list(APPEND labels ${ARGN})
+# Same as "add_test_executable" but with a local config template file. Called using named arguments as in
+# add_test_executable_ex(NAME <testname> SOURCE <source.cc> CONFIG <configfile.cnf> VMS <backends setup>
+# LABELS <label list>)
+function(add_test_executable_ex)
+  set(arg_names NAME SOURCE CONFIG LIBS VMS LABELS)
+  set(now_parsing "")
+  foreach(elem ${ARGN})
+    list(FIND arg_names ${elem} arg_names_ind)
+    if (arg_names_ind GREATER -1)
+      set(now_parsing ${elem})
+    else()
+      # Add element to target list depending on last argument name.
+      if (NOT now_parsing)
+        message(FATAL_ERROR "${elem} is not preceded by a valid argument name. Argument names are "
+                "${arg_names}")
+      elseif("${now_parsing}" STREQUAL "NAME")
+        list(APPEND name ${elem})
+      elseif("${now_parsing}" STREQUAL "SOURCE")
+        list(APPEND source_file ${elem})
+      elseif("${now_parsing}" STREQUAL "CONFIG")
+        list(APPEND config_file ${elem})
+      elseif("${now_parsing}" STREQUAL "LIBS")
+        list(APPEND link_libraries ${elem})
+      elseif("${now_parsing}" STREQUAL "VMS")
+        list(APPEND vms_setup ${elem})
+      elseif("${now_parsing}" STREQUAL "LABELS")
+        list(APPEND labels ${elem})
+      endif()
+    endif()
+  endforeach()
+
+  # Check that name, source and config are single-valued.
+  set(errmsg "is not set or has multiple values.")
+
+  list(LENGTH name list_len)
+  if (NOT ${list_len} EQUAL 1)
+    message(FATAL_ERROR "NAME ${errmsg}")
+  endif()
+
+  list(LENGTH source_file list_len)
+  if (NOT ${list_len} EQUAL 1)
+    message(FATAL_ERROR "SOURCE ${errmsg}")
+  endif()
+
+  list(LENGTH config_file list_len)
+  if (NOT ${list_len} EQUAL 1)
+    message(FATAL_ERROR "CONFIG ${errmsg}")
+  endif()
+
+  # VMS may be multivalued. If not using any backends, the value should be "none".
+  list(LENGTH vms_setup list_len)
+  if (${list_len} LESS 1)
+    message(FATAL_ERROR "VMS is not set.")
+  else()
+    # Check that the vms setup is recognized.
+    set(known_vms_setups none repl_backend galera_backend big_repl_backend columnstore_backend second_maxscale)
+    foreach(elem ${vms_setup})
+      list(FIND known_vms_setups ${elem} vms_ind)
+      if (vms_ind GREATER -1)
+        if (NOT ${elem} STREQUAL "none")
+          # MDBCI-labels are in caps.
+          string(TOUPPER ${elem} elem_upper)
+          list(APPEND vms_upper ${elem_upper})
+        endif()
+      else()
+        message(FATAL_ERROR "${elem} is not a valid VM setup. Valid values are " "${known_vms_setups}")
+      endif()
+    endforeach()
+  endif()
+
   set(config_file_path "${CMAKE_CURRENT_SOURCE_DIR}/${config_file}")
-  add_test_info(${name} ${config_file_path} "${labels}")
-  add_executable(${name} ${source})
-  target_link_libraries(${name} maxtest)
+  add_test_info(${name} ${config_file_path} "${vms_upper}")
+  add_executable(${name} ${source_file})
+
+  list(APPEND link_libraries maxtest)
+  target_link_libraries(${name} ${link_libraries})
+
   add_test(NAME ${name} COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${name} ${name} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-  add_test_properties(${name} ${labels})
+
+  list(APPEND ctest_labels ${vms_upper} ${labels})
+  add_test_properties(${name} ${ctest_labels})
 endfunction()
 
 # Label a list of tests as heavy, long running tests
