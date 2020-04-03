@@ -1285,7 +1285,7 @@ static HttpResponse handle_request(const HttpRequest& request)
     // Redirect log output into the runtime error message buffer
     mxb::LogRedirect redirect(
         [](auto level, const auto& msg) {
-            if (level < LOG_NOTICE)     // Lower is more severe
+            if (level < LOG_WARNING)    // Lower is more severe
             {
                 config_runtime_error("%s", msg.c_str());
             }
