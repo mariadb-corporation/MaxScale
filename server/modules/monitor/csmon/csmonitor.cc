@@ -859,7 +859,23 @@ void CsMonitor::cluster_ping(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorS
 
 void CsMonitor::cluster_status(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
 {
-    cluster_get(ppOutput, pSem, cs::rest::STATUS, pServer);
+    cluster_get(ppOutput, pSem, cs::rest::STATUS, pServer,
+                [](CsMonitorServer* pServer, const http::Result& result, json_t* pResponse)
+                {
+                    mxb_assert(result.ok());
+
+                    json_t* pError = nullptr;
+                    if (pServer->set_status(result.body, &pError))
+                    {
+                        mxb_assert(!pError);
+                        json_object_set(pResponse, pServer->name(), pServer->status().sJson.get());
+                    }
+                    else
+                    {
+                        mxb_assert(pError);
+                        json_object_set_new(pResponse, pServer->name(), pError);
+                    }
+                });
 }
 
 void CsMonitor::cluster_config_get(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)

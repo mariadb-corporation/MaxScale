@@ -18,10 +18,30 @@
 namespace cs
 {
 
+enum ClusterMode
+{
+    READ_ONLY,
+    READ_WRITE,
+};
+
+const char* to_string(ClusterMode cluster_mode);
+bool from_string(const char* zCluster_mode, ClusterMode* pCluster_mode);
+
+enum DbrmMode
+{
+    MASTER,
+    SLAVE,
+};
+
+const char* to_string(DbrmMode dbrm_mode);
+bool from_string(const char* zDbrm_mode, DbrmMode* pDbrm_mode);
+
 namespace keys
 {
 
-const char CONFIG[] = "config";
+const char CONFIG[]       = "config";
+const char CLUSTER_MODE[] = "cluster_mode";
+const char DBRM_MODE[]    = "dbrm_mode";
 
 }
 

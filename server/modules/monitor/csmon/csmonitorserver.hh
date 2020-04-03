@@ -14,6 +14,7 @@
 
 #include "csmon.hh"
 #include <maxscale/jansson.hh>
+#include "csrest.hh"
 
 class CsMonitorServer : public maxscale::MonitorServer
 {
@@ -26,24 +27,46 @@ public:
                     int64_t admin_port);
     virtual ~CsMonitorServer();
 
+    class Status
+    {
+    public:
+        explicit operator bool () const
+        {
+            return this->valid;
+        }
+
+        bool                    valid        { false };
+        cs::ClusterMode         cluster_mode { cs::READ_ONLY };
+        cs::DbrmMode            dbrm_mode    { cs::SLAVE };
+        std::unique_ptr<json_t> sJson;
+    };
+
     const char* name() const
     {
         return this->server->name();
     }
-
-    bool ping(json_t** ppError = nullptr);
-
-    bool refresh_config(json_t** ppError = nullptr);
-
-    bool set_config(const std::string& body, json_t** ppError = nullptr);
 
     json_t* config() const
     {
         return m_sConfig.get();
     }
 
+    const Status& status() const
+    {
+        return m_status;
+    }
+
+    bool ping(json_t** ppError = nullptr);
+
+    bool refresh_config(json_t** ppError = nullptr);
+    bool refresh_status(json_t** ppError = nullptr);
+
+    bool set_config(const std::string& body, json_t** ppError = nullptr);
+    bool set_status(const std::string& body, json_t** ppError = nullptr);
+
 private:
     int64_t                 m_admin_port;
     std::unique_ptr<json_t> m_sConfig;
     std::unique_ptr<xmlDoc> m_sDoc;
+    Status                  m_status;
 };

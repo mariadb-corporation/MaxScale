@@ -49,6 +49,25 @@ bool CsMonitorServer::refresh_config(json_t** ppError)
     return rv;
 }
 
+bool CsMonitorServer::refresh_status(json_t** ppError)
+{
+    bool rv = false;
+    http::Result result = http::get(cs::rest::create_url(*this->server, m_admin_port, cs::rest::STATUS));
+
+    if (result.code == 200)
+    {
+        rv = set_status(result.body, ppError);
+    }
+    else
+    {
+        PRINT_MXS_JSON_ERROR(ppError,
+                             "Could not fetch status from '%s': %s",
+                             this->server->name(), result.body.c_str());
+    }
+
+    return rv;
+}
+
 bool CsMonitorServer::set_config(const std::string& body, json_t** ppError)
 {
     bool rv = false;
@@ -58,12 +77,12 @@ bool CsMonitorServer::set_config(const std::string& body, json_t** ppError)
 
     if (sConfig)
     {
-        json_t* pColumnstore_config = json_object_get(sConfig.get(), cs::keys::CONFIG);
+        json_t* pConfig = json_object_get(sConfig.get(), cs::keys::CONFIG);
 
-        if (pColumnstore_config)
+        if (pConfig)
         {
-            const char* zXml = json_string_value(pColumnstore_config);
-            size_t xml_len = json_string_length(pColumnstore_config);
+            const char* zXml = json_string_value(pConfig);
+            size_t xml_len = json_string_length(pConfig);
 
             unique_ptr<xmlDoc> sDoc(xmlReadMemory(zXml, xml_len, "columnstore.xml", NULL, 0));
 
@@ -92,6 +111,60 @@ bool CsMonitorServer::set_config(const std::string& body, json_t** ppError)
     {
         PRINT_MXS_JSON_ERROR(ppError, "Could not parse JSON data from: %s", error.text);
     }
+
+    return rv;
+}
+
+bool CsMonitorServer::set_status(const std::string& body, json_t** ppError)
+{
+    bool rv = false;
+
+    json_error_t error;
+    unique_ptr<json_t> sStatus(json_loadb(body.c_str(), body.length(), 0, &error));
+
+    if (sStatus)
+    {
+        json_t* pCluster_mode = json_object_get(sStatus.get(), cs::keys::CLUSTER_MODE);
+        json_t* pDbrm_mode = json_object_get(sStatus.get(), cs::keys::DBRM_MODE);
+        // TODO: 'dbroots' and 'services'.
+
+        if (pCluster_mode && pDbrm_mode)
+        {
+            cs::ClusterMode cluster_mode;
+            cs::DbrmMode dbrm_mode;
+
+            const char* zCluster_mode = json_string_value(pCluster_mode);
+            const char* zDbrm_mode = json_string_value(pDbrm_mode);
+
+            if (cs::from_string(zCluster_mode, &cluster_mode) && cs::from_string(zDbrm_mode, &dbrm_mode))
+            {
+                m_status.cluster_mode = cluster_mode;
+                m_status.dbrm_mode = dbrm_mode;
+                m_status.sJson = std::move(sStatus);
+                rv = true;
+            }
+            else
+            {
+                PRINT_MXS_JSON_ERROR(ppError,
+                                     "Could not convert '%s' and/or '%s' to actual values.",
+                                     zCluster_mode, zDbrm_mode);
+            }
+        }
+        else
+        {
+            PRINT_MXS_JSON_ERROR(ppError,
+                                 "Obtained status object from '%s', but it does not have the "
+                                 "key '%s' and/or '%s': %s",
+                                 name(),
+                                 cs::keys::CLUSTER_MODE, cs::keys::DBRM_MODE, body.c_str());
+        }
+    }
+    else
+    {
+        PRINT_MXS_JSON_ERROR(ppError, "Could not parse JSON data from: %s", error.text);
+    }
+
+    m_status.valid = rv;
 
     return rv;
 }
