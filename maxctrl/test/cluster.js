@@ -109,47 +109,6 @@ describe('Cluster Command Internals', function() {
         obj.id.should.equal('server1')
         obj.attributes.parameters.port.should.equal(3000)
     })
-
-    it('detect extra services', function() {
-        var a = {
-            'services': {
-                data: [
-                    {
-                        'id': 'CLI',
-                        'type': 'services',
-                        'attributes': {
-                            'parameters': {}
-                        },
-                        'relationships': {},
-                    }
-                ]
-            }
-        }
-
-        var b = {
-            'services': {
-                data: [
-                    a.services.data[0],
-                    {
-                        'id': 'CLI2',
-                        'type': 'services',
-                        'attributes': {
-                            'parameters': {
-
-                            },
-                        },
-                        'relationships': {},
-                    }
-                ]
-            }
-        }
-
-        cluster.haveExtraServices(a, b, 'test1', 'test2').should.be.rejected
-        cluster.haveExtraServices(b, a, 'test2', 'test1').should.be.rejected
-        expect(cluster.haveExtraServices(a, a, 'test1', 'test2')).to.equal(undefined)
-        expect(cluster.haveExtraServices(b, b, 'test1', 'test2')).to.equal(undefined)
-    })
-
 });
 
 
