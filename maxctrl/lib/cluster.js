@@ -154,33 +154,38 @@ exports.builder = function(yargs) {
                                  var src = diffs[0]
                                  var dest = diffs[1]
 
-                                 _.uniq(_.concat(Object.keys(src), Object.keys(dest))).forEach(function(i) {
-                                     var newObj = getDifference(src[i].data, dest[i].data)
-                                     var oldObj = getDifference(dest[i].data, src[i].data)
-                                     var changed = getChangedObjects(src[i].data, dest[i].data)
+                                 var added = {}
+                                 var removed = {}
+                                 var changed = {}
 
-                                     if (newObj.length) {
-                                         output.push("New:", i)
-                                         output.push(colors.green(JSON.stringify(newObj, null, 4)))
-                                     }
-                                     if (oldObj.length) {
-                                         output.push("Deleted:", i)
-                                         output.push(colors.red(JSON.stringify(oldObj, null, 4)))
-                                     }
-                                     if (!_.isEmpty(changed)) {
-                                         output.push("Changed:")
-                                         output.push(colors.yellow(JSON.stringify(changed, null, 4)))
-                                     }
+                                 _.uniq(_.concat(Object.keys(src), Object.keys(dest))).forEach(function(i) {
+                                     added[i] = _.map(getDifference(src[i].data, dest[i].data), (v) => v.id)
+                                     removed[i] = _.map(getDifference(dest[i].data, src[i].data), (v) => v.id)
+                                     _.assign(changed, getChangedObjects(src[i].data, dest[i].data))
                                  })
+
+                                 // Remove empty arrays from the generated result.
+                                 added = _.pickBy(added, (v) => v.length)
+                                 removed = _.pickBy(removed, (v) => v.length)
+
                                  endpoints.forEach(function(i) {
                                      // Treating the resource endpoints as arrays allows the same functions to be used
                                      // to compare individual resources and resource collections
-                                     var changed = getChangedObjects([src[i].data], [dest[i].data])
-                                     if (!_.isEmpty(changed)) {
-                                         output.push("Changed:")
-                                         output.push(colors.yellow(JSON.stringify(changed, null, 4)))
-                                     }
+                                     _.assign(changed, getChangedObjects([src[i].data], [dest[i].data]))
                                  })
+
+                                 if (!_.isEmpty(added)) {
+                                     output.push("New:")
+                                     output.push(colors.green(JSON.stringify(added, null, 4)))
+                                 }
+                                 if (!_.isEmpty(removed)) {
+                                     output.push("Deleted:")
+                                     output.push(colors.red(JSON.stringify(removed, null, 4)))
+                                 }
+                                 if (!_.isEmpty(changed)) {
+                                     output.push("Changed:")
+                                     output.push(colors.yellow(JSON.stringify(changed, null, 4)))
+                                 }
 
                                  return output.join(require('os').EOL)
                              })
@@ -272,8 +277,9 @@ exports.builder = function(yargs) {
                             .then(function() {
                                 var promises = []
                                 // PATCH all remaining resource collections in src from dest apart from the
-                                // user resource as it requires passwords to be entered
-                                _.difference(collections, ['users']).forEach(function(i) {
+                                // user resource, as it requires passwords to be entered, and filters, that
+                                // cannot currently be patched.
+                                _.difference(collections, ['users', 'filters']).forEach(function(i) {
                                     src[i].data.forEach(function(j) {
                                         promises.push(doAsyncRequest(host, i + '/' + j.id, null, {method: 'PATCH', body: {data: j}}))
                                     })

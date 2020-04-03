@@ -105,9 +105,11 @@ describe('Cluster Command Internals', function() {
         cluster.getDifference(b, a).should.be.empty
         cluster.getDifference(a, a).should.be.empty
         cluster.getDifference(b, b).should.be.empty
-        var obj = cluster.getChangedObjects(a, b)[0]
-        obj.id.should.equal('server1')
-        obj.attributes.parameters.port.should.equal(3000)
+        var obj = cluster.getChangedObjects(a, b)
+        obj.should.have.keys('server1')
+        obj.server1.should.have.keys('attributes.parameters.port')
+        obj.server1['attributes.parameters.port'].ours.should.equal(3000)
+        obj.server1['attributes.parameters.port'].theirs.should.equal(3001)
     })
 });
 
@@ -182,10 +184,6 @@ describe('Cluster Sync', function() {
     after(stopDoubleMaxScale)
 })
 
-function isJSON(line) {
-    return line.match(/['',\[\]{}:]/)
-}
-
 function getOperation(line) {
     var op = null
     line = line.trim()
@@ -209,14 +207,18 @@ function parseDiff(str) {
     while (lines.length > 0) {
         // Operation is first line, object type second
         var op = getOperation(lines.shift())
-        var type = lines.shift()
         var obj = ''
 
-        while (lines.length > 0 && isJSON(lines[0]) && getOperation(lines[0]) == null) {
+        while (lines.length > 0) {
             obj += lines.shift().trim()
+            try {
+                var v = JSON.parse(obj)
+                rval[op] = v
+                break
+            } catch (e) {
+                // Still not a full JSON object, keep reading
+            }
         }
-
-        _.set(rval, op + '.' + type, JSON.parse(obj))
     }
 
     return rval
@@ -231,7 +233,7 @@ describe('Cluster Diff', function() {
             .then(function(res) {
                 var d = parseDiff(res)
                 d.removed.servers.length.should.equal(1)
-                d.removed.servers[0].id.should.equal('server5')
+                d.removed.servers[0].should.equal('server5')
             })
             .then(() => doCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host))
     })
@@ -241,8 +243,8 @@ describe('Cluster Diff', function() {
             .then(() => doCommand('cluster diff ' + secondary_host + ' --hosts ' + primary_host))
             .then(function(res) {
                 var d = parseDiff(res)
-                d.changed.servers.length.should.equal(1)
-                d.changed.servers[0].id.should.equal('server2')
+                d.changed.server2['attributes.parameters.port'].ours.should.equal(3001)
+                d.changed.server2['attributes.parameters.port'].theirs.should.equal(3000)
             })
             .then(() => doCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host))
     })
@@ -253,7 +255,7 @@ describe('Cluster Diff', function() {
             .then(function(res) {
                 var d = parseDiff(res)
                 d.added.servers.length.should.equal(1)
-                d.added.servers[0].id.should.equal('server5')
+                d.added.servers[0].should.equal('server5')
             })
             .then(() => doCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host))
     })
