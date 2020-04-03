@@ -209,76 +209,7 @@ add_test_executable(mxs2355_wrong_auth.cpp mxs2355_wrong_auth maxctrl LABELS REP
 # Configures 'keepalived' on two Maxscale machines and tried failover
 #add_test_executable(keepalived_masterdown.cpp keepalived_masterdown keepalived_masterdown LABELS REPL_BACKEND SECOND_MAXSCALE)
 
-# MySQL Monitor with Multi-master configurations
-add_test_executable(mysqlmon_multimaster.cpp mysqlmon_multimaster mysqlmon_multimaster LABELS mysqlmon REPL_BACKEND BREAKS_REPL)
-
-# MySQL Monitor with Multi-master configurations (assume_unique_hostnames=OFF)
-add_test_derived(mysqlmon_multimaster_serverid mysqlmon_multimaster mysqlmon_multimaster_serverid LABELS mysqlmon REPL_BACKEND BREAKS_REPL)
-
-# MySQL Monitor Failover Test
-add_test_executable(mysqlmon_detect_standalone_master.cpp mysqlmon_detect_standalone_master mysqlmon_detect_standalone_master LABELS mysqlmon REPL_BACKEND)
-
-# MySQL Monitor Failover (automatic) Test
-add_test_executable(mysqlmon_failover_auto.cpp mysqlmon_failover_auto mysqlmon_failover_auto LABELS mysqlmon REPL_BACKEND)
-
-# MySQL Monitor Failover (manual) Test
-add_test_executable(mysqlmon_failover_manual.cpp mysqlmon_failover_manual mysqlmon_failover_manual LABELS mysqlmon REPL_BACKEND)
-
-# MySQL Monitor manual failover with many valid candidates
-add_test_executable(mysqlmon_failover_manual2.cpp mysqlmon_failover_manual2_4 mysqlmon_failover_manual2_4 LABELS mysqlmon REPL_BACKEND)
-add_test_executable(mysqlmon_failover_manual2.cpp mysqlmon_failover_manual2_3 mysqlmon_failover_manual2_3 LABELS mysqlmon REPL_BACKEND)
-add_test_executable(mysqlmon_failover_manual2.cpp mysqlmon_failover_manual2_2 mysqlmon_failover_manual2_2 LABELS mysqlmon REPL_BACKEND)
-
 add_subdirectory(mariadbmonitor)
-
-# MySQL Monitor switchover with bad master
-add_test_executable(mysqlmon_switchover_bad_master.cpp mysqlmon_switchover_bad_master mysqlmon_switchover_bad_master LABELS mysqlmon REPL_BACKEND)
-
-# MySQL Monitor manual failover with no valid slaves, uses config of mysqlmon_failover_auto. Also MXS-2652.
-add_test_executable(mysqlmon_failover_no_slaves.cpp mysqlmon_failover_no_slaves mysqlmon_failover_auto LABELS mysqlmon REPL_BACKEND)
-
-# MySQL Monitor Rejoin (good) Test
-add_test_executable(mysqlmon_rejoin_good.cpp mysqlmon_rejoin_good mysqlmon_rejoin_good LABELS mysqlmon REPL_BACKEND)
-
-# MySQL Monitor Rejoin (bad) Test, use template for Rejoin (good)
-add_test_executable(mysqlmon_rejoin_bad.cpp mysqlmon_rejoin_bad mysqlmon_rejoin_good LABELS mysqlmon REPL_BACKEND)
-
-# MySQL Monitor Rejoin (bad2) Test, use template for Rejoin (good)
-add_test_executable(mysqlmon_rejoin_bad2.cpp mysqlmon_rejoin_bad2 mysqlmon_rejoin_good LABELS mysqlmon REPL_BACKEND)
-
-# MySQL Monitor Rejoin tests
-add_test_executable(mysqlmon_rejoin_manual.cpp mysqlmon_rejoin_manual mysqlmon_rejoin_manual LABELS mysqlmon REPL_BACKEND)
-add_test_executable(mysqlmon_rejoin_manual2.cpp mysqlmon_rejoin_manual2 mysqlmon_rejoin_manual LABELS mysqlmon REPL_BACKEND)
-
-# MySQL Monitor rolling master
-add_test_executable(mysqlmon_failover_rolling_master.cpp mysqlmon_failover_rolling_master mysqlmon_failover_rolling_master LABELS mysqlmon REPL_BACKEND)
-
-# MySQL Monitor rejoin old slave
-add_test_executable(mysqlmon_failover_rejoin_old_slave.cpp mysqlmon_failover_rejoin_old_slave mysqlmon_failover_rejoin_old_slave LABELS mysqlmon REPL_BACKEND)
-
-# MySQL Monitor rolling restart slaves
-add_test_executable(mysqlmon_failover_rolling_restart_slaves.cpp mysqlmon_failover_rolling_restart_slaves mysqlmon_failover_rolling_restart_slaves LABELS mysqlmon REPL_BACKEND)
-
-# MySQL Monitor failover stress
-add_test_executable(mysqlmon_failover_stress.cpp mysqlmon_failover_stress mysqlmon_failover_stress LABELS mysqlmon REPL_BACKEND)
-
-# MySQL Monitor switchover stress
-add_test_executable(mysqlmon_switchover_stress.cpp mysqlmon_switchover_stress mysqlmon_switchover_stress LABELS mysqlmon REPL_BACKEND)
-
-# Check monitoring and failover when ignore_external_masters is enabled
-add_test_executable(mysqlmon_external_master.cpp mysqlmon_external_master mysqlmon_external_master LABELS mysqlmon REPL_BACKEND)
-
-# Check failover, switchover and rejoin with scheduled server events, uses config of mysqlmon_rejoin_good
-add_test_executable(mysqlmon_fail_switch_events.cpp mysqlmon_fail_switch_events mysqlmon_rejoin_good LABELS mysqlmon REPL_BACKEND)
-
-# MySQL Monitor reset-replication test, use template for Rejoin (good)
-add_test_executable(mysqlmon_reset_replication.cpp mysqlmon_reset_replication mysqlmon_rejoin_good LABELS mysqlmon REPL_BACKEND)
-
-# MySQL Monitor low disk switchover
-add_test_executable(mysqlmon_switchover_auto.cpp mysqlmon_switchover_auto mysqlmon_switchover_auto LABELS mysqlmon REPL_BACKEND)
-
-# MySQL Monitor series of failovers and rejoins
-add_test_executable(mysqlmon_failover_readonly.cpp mysqlmon_failover_readonly mysqlmon_failover_readonly LABELS mysqlmon REPL_BACKEND)
 
 # MXS-1506: Delayed query retry
 # https://jira.mariadb.org/browse/MXS-1506
@@ -315,10 +246,6 @@ add_test_executable(mxs1778_causal_reads.cpp mxs1778_causal_reads mxs1778_causal
 # MXS-1961: Standalone master loses master status
 # https://jira.mariadb.org/browse/MXS-1961
 add_test_executable(mxs1961_standalone_rejoin.cpp mxs1961_standalone_rejoin mxs1961_standalone_rejoin LABELS REPL_BACKEND)
-
-# MXS-1493: Use replication heartbeat in mysqlmon
-# https://jira.mariadb.org/browse/MXS-1493
-add_test_executable(verify_master_failure.cpp verify_master_failure verify_master_failure LABELS mysqlmon REPL_BACKEND)
 
 ############################################
 # END: Tests that require GTID             #
