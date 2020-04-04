@@ -95,42 +95,81 @@ const endpoints = [
 ]
 
 // Calculate a diff between two MaxScale servers
-function getDiffs(a, b) {
+async function getDiffs(a, b) {
     var src = {}
     var dest = {}
-    var promises = []
 
-    collections.forEach(function(i) {
-        promises.push(doAsyncRequest(b, i, function(res) {
-            dest[i] = res
-        }))
-        promises.push(doAsyncRequest(a, i, function(res) {
-            src[i] = res
-        }))
-    })
+    for (i of _.concat(collections, endpoints)) {
+        dest[i] = await simpleRequest(b, i)
+        src[i] =  await simpleRequest(a, i)
+    }
 
-    endpoints.forEach(function(i) {
-        promises.push(doAsyncRequest(b, i, function(res) {
-            dest[i] = res
-        }))
-        promises.push(doAsyncRequest(a, i, function(res) {
-            src[i] = res
-        }))
-    })
+    for (i of dest.services.data) {
+        dest['services/' + i.id + '/listeners'] = { data: i.attributes.listeners }
+    }
 
-    return Promise.all(promises)
-        .then(function() {
-            // We can get the listeners only after we've requested the services
-            dest.services.data.forEach(function(i) {
-                dest['services/' + i.id + '/listeners'] = { data: i.attributes.listeners }
-            })
-            src.services.data.forEach(function(i) {
-                src['services/' + i.id + '/listeners'] = { data: i.attributes.listeners }
-            })
-        })
-        .then(function() {
-            return Promise.resolve([src, dest])
-        })
+    for (i of src.services.data) {
+        src['services/' + i.id + '/listeners'] = { data: i.attributes.listeners }
+    }
+
+    return [src, dest]
+}
+
+async function syncDiffs(host, src, dest) {
+    // Delete old monitors
+    for (i of getDifference(dest.monitors.data, src.monitors.data)) {
+        var body = { method: 'PATCH', body: _.set({}, 'data.relationships', {})}
+        await simpleRequest(host, 'monitors/' + i.id, body)
+        await simpleRequest(host, 'monitors/' + i.id, {method: 'DELETE'})
+    }
+
+    // Delete old servers
+    for (i of getDifference(dest.servers.data, src.servers.data)) {
+        // The servers must be unlinked from all services and monitors before they can be deleted
+        await simpleRequest(host, 'servers/' + i.id, {method: 'PATCH', body: _.set({}, 'data.relationships', {})})
+        await simpleRequest(host, 'servers/' + i.id, {method: 'DELETE'})
+    }
+
+    // Add new servers first, this way other objects can directly define their relationships
+    for (i of getDifference(src.servers.data, dest.servers.data)) {
+        // Create the servers without relationships, those are generated when services and
+        // monitors are handled
+        var newserv = _.pick(i, ['id', 'type', 'attributes.parameters'])
+        await simpleRequest(host, 'servers', {method: 'POST', body: {data: newserv}})
+    }
+
+    // Add new monitors
+    for (i of getDifference(src.monitors.data, dest.monitors.data)) {
+        await simpleRequest(host, 'monitors', {method: 'POST', body: {data: i}})
+    }
+
+    // Add new and delete old listeners
+    var all_keys = _.concat(Object.keys(src), Object.keys(dest))
+    var unwanted_keys = _.concat(collections, endpoints)
+    var relevant_keys = _.uniq(_.difference(all_keys, unwanted_keys))
+
+    for (i of relevant_keys) {
+        for (j of getDifference(dest[i].data, src[i].data)) {
+            await simpleRequest(host, i + '/' + j.id, {method: 'DELETE'})
+        }
+        for (j of getDifference(src[i].data, dest[i].data)) {
+            await simpleRequest(host, i, {method: 'POST', body: {data: j}})
+        }
+    }
+
+    // PATCH all remaining resource collections in src from dest apart from the
+    // user resource, as it requires passwords to be entered, and filters, that
+    // cannot currently be patched.
+    for (i of _.difference(collections, ['users', 'filters'])) {
+        for (j of src[i].data) {
+            await simpleRequest(host, i + '/' + j.id, {method: 'PATCH', body: {data: j}})
+        }
+    }
+
+    // Do the same for individual resources
+    for (i of endpoints) {
+        await simpleRequest(host, i, {method: 'PATCH', body: dest[i]})
+    }
 }
 
 exports.getDifference = getDifference
@@ -203,94 +242,7 @@ exports.builder = function(yargs) {
         }, function(argv) {
             maxctrl(argv, function(host) {
                 return getDiffs(argv.target, host)
-                    .then(function(diffs) {
-                        var promises = []
-                        var src = diffs[0]
-                        var dest = diffs[1]
-
-                        // Delete old servers
-                        getDifference(dest.servers.data, src.servers.data).forEach(function(i) {
-                            // First unlink the servers from all services and monitors
-                            promises.push(
-                                doAsyncRequest(host, 'servers/' + i.id, null, {method: 'PATCH', body: _.set({}, 'data.relationships', {})})
-                                    .then(function() {
-                                        return doAsyncRequest(host, 'servers/' + i.id, null, {method: 'DELETE'})
-                                    }))
-                        })
-
-                        // Add new servers
-                        getDifference(src.servers.data, dest.servers.data).forEach(function(i) {
-                            // Create the servers without relationships, those are generated when services and
-                            // monitors are updated
-                            var newserv = {
-                                data: {
-                                    id: i.id,
-                                    type: i.type,
-                                    attributes: {
-                                        parameters: i.attributes.parameters
-                                    }
-                                }
-                            }
-                            promises.push(doAsyncRequest(host, 'servers', null, {method: 'POST', body: newserv}))
-                        })
-                        return Promise.all(promises)
-                            .then(function() {
-                                var promises = []
-                                // Delete old monitors
-                                getDifference(dest.monitors.data, src.monitors.data).forEach(function(i) {
-                                    promises.push(
-                                        doAsyncRequest(host, 'monitors/' + i.id, null, {
-                                            method: 'PATCH', body: _.set({}, 'data.relationships', {})
-                                        })
-                                            .then(function() {
-                                                return doAsyncRequest(host, 'monitors/' + i.id, null, {method: 'DELETE'})
-                                            }))
-                                })
-                                return Promise.all(promises)
-                            })
-                            .then(function() {
-                                var promises = []
-                                // Add new monitors
-                                getDifference(src.monitors.data, dest.monitors.data).forEach(function(i) {
-                                    promises.push(doAsyncRequest(host, 'monitors', null, {method: 'POST', body: {data: i}}))
-                                })
-                                return Promise.all(promises)
-                            })
-                            .then(function() {
-                                // Add new and delete old listeners
-                                var promises = []
-                                var all_keys = _.concat(Object.keys(src), Object.keys(dest))
-                                var unwanted_keys = _.concat(collections, endpoints)
-                                var relevant_keys = _.uniq(_.difference(all_keys, unwanted_keys))
-
-                                relevant_keys.forEach(function(i) {
-                                    getDifference(dest[i].data, src[i].data).forEach(function(j) {
-                                        promises.push(doAsyncRequest(host, i + '/' + j.id, null, {method: 'DELETE'}))
-                                    })
-                                    getDifference(src[i].data, dest[i].data).forEach(function(j) {
-                                        promises.push(doAsyncRequest(host, i, null, {method: 'POST', body: {data: j}}))
-                                    })
-                                })
-
-                                return Promise.all(promises)
-                            })
-                            .then(function() {
-                                var promises = []
-                                // PATCH all remaining resource collections in src from dest apart from the
-                                // user resource, as it requires passwords to be entered, and filters, that
-                                // cannot currently be patched.
-                                _.difference(collections, ['users', 'filters']).forEach(function(i) {
-                                    src[i].data.forEach(function(j) {
-                                        promises.push(doAsyncRequest(host, i + '/' + j.id, null, {method: 'PATCH', body: {data: j}}))
-                                    })
-                                })
-                                // Do the same for individual resources
-                                endpoints.forEach(function(i) {
-                                    promises.push(doAsyncRequest(host, i, null, {method: 'PATCH', body: dest[i]}))
-                                })
-                                return Promise.all(promises)
-                            })
-                    })
+                    .then((diffs) => syncDiffs(host, diffs[0], diffs[1]))
             })
         })
         .usage('Usage: cluster <command>')

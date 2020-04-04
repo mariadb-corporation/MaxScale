@@ -351,19 +351,22 @@ module.exports = function() {
         }
     }
 
-
-    // Helper for executing requests and handling their responses, returns a
-    // promise that is fulfilled when all requests successfully complete. The
-    // promise is rejected if any of the requests fails.
-    this.doAsyncRequest = function(host, resource, cb, obj) {
+    this.simpleRequest = function(host, resource, obj) {
         args = obj || {}
         args.uri = getUri(host, this.argv.secure, resource)
         args.auth = {user: argv.u, pass: argv.p}
         args.json = true
         args.timeout = this.argv.timeout
         setTlsCerts(args)
-
         return request(args)
+    }
+
+
+    // Helper for executing requests and handling their responses, returns a
+    // promise that is fulfilled when all requests successfully complete. The
+    // promise is rejected if any of the requests fails.
+    this.doAsyncRequest = function(host, resource, cb, obj) {
+        return simpleRequest(host, resource, obj)
             .then(function(res) {
                 if (res && cb) {
                     // Request OK, returns data
