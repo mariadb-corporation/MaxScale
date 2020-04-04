@@ -116,6 +116,20 @@ async function getDiffs(a, b) {
 }
 
 async function syncDiffs(host, src, dest) {
+    // Delete old services
+    for (i of getDifference(dest.services.data, src.services.data)) {
+        // If the service has listeners, delete those first. Otherwise the deletion will fail.
+        if (i.attributes.listeners) {
+            for (j of i.attributes.listeners) {
+                await simpleRequest(host, 'services/' + i.id + '/listeners/' + j.id, {method: 'DELETE'})
+            }
+        }
+
+        var body = { method: 'PATCH', body: _.set({}, 'data.relationships', {})}
+        await simpleRequest(host, 'services/' + i.id, body)
+        await simpleRequest(host, 'services/' + i.id, {method: 'DELETE'})
+    }
+
     // Delete old monitors
     for (i of getDifference(dest.monitors.data, src.monitors.data)) {
         var body = { method: 'PATCH', body: _.set({}, 'data.relationships', {})}
@@ -143,17 +157,33 @@ async function syncDiffs(host, src, dest) {
         await simpleRequest(host, 'monitors', {method: 'POST', body: {data: i}})
     }
 
-    // Add new and delete old listeners
+    // Add new services
+    for (i of getDifference(src.services.data, dest.services.data)) {
+        await simpleRequest(host, 'services', {method: 'POST', body: {data: i}})
+
+        // Create listeners for the new service right after it is created. This removes the need to update the
+        // diff with the service we created that would otherwise be necessary to do if we were to use the
+        // normal listener creation code.
+        if (i.attributes.listeners) {
+            for (j of i.attributes.listeners) {
+                await simpleRequest(host, 'services/' + i.id + '/listeners', {method: 'POST', body: {data: j}})
+            }
+        }
+    }
+
+    // Add new and delete old listeners for existing services
     var all_keys = _.concat(Object.keys(src), Object.keys(dest))
     var unwanted_keys = _.concat(collections, endpoints)
     var relevant_keys = _.uniq(_.difference(all_keys, unwanted_keys))
 
     for (i of relevant_keys) {
-        for (j of getDifference(dest[i].data, src[i].data)) {
-            await simpleRequest(host, i + '/' + j.id, {method: 'DELETE'})
-        }
-        for (j of getDifference(src[i].data, dest[i].data)) {
-            await simpleRequest(host, i, {method: 'POST', body: {data: j}})
+        if (dest[i] && src[i]) {
+            for (j of getDifference(dest[i].data, src[i].data)) {
+                await simpleRequest(host, i + '/' + j.id, {method: 'DELETE'})
+            }
+            for (j of getDifference(src[i].data, dest[i].data)) {
+                await simpleRequest(host, i, {method: 'POST', body: {data: j}})
+            }
         }
     }
 

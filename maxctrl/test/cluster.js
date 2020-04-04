@@ -163,22 +163,52 @@ describe('Cluster Sync', function() {
             .then(() => doCommand('show monitor my-monitor-2 --hosts ' + secondary_host).should.be.rejected)
     })
 
-    it('sync after service alteration', function() {
-        return doCommand('alter service RW-Split-Router enable_root_user true --hosts ' + secondary_host)
-            .then(() => verifyCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host,
-                                      'services/RW-Split-Router'))
-            .then(function(res) {
-                res.data.attributes.parameters.enable_root_user.should.be.true
-            })
-    })
-
-    // As the listeners cannot be truly deleted, since there's no code for actually closing a socket at runtime,
-    // we do the listener tests last
     it('sync listener creation/deletion', function() {
         return doCommand('create listener RW-Split-Router my-listener-2 5999 --hosts ' + secondary_host)
             .then(() => doCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host))
             .then(() => doCommand('destroy listener RW-Split-Router my-listener-2'))
             .then(() => doCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host))
+    })
+
+    it('sync after service creation', async function() {
+        await doCommand('create service test-service readwritesplit user=maxuser password=maxpwd --hosts ' + secondary_host)
+        await doCommand('show service test-service --hosts ' + secondary_host)
+        await doCommand('show service test-service --hosts ' + primary_host).should.be.rejected
+        await doCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host)
+        await doCommand('show service test-service --hosts ' + secondary_host)
+        await doCommand('show service test-service --hosts ' + primary_host)
+    })
+
+    it('sync after service alteration', async function() {
+        await doCommand('alter service RW-Split-Router enable_root_user true --hosts ' + secondary_host)
+        res = await verifyCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host,
+                            'services/RW-Split-Router')
+        res.data.attributes.parameters.enable_root_user.should.be.true
+    })
+
+    it('sync after service deletion', async function() {
+        await doCommand('destroy service test-service --hosts ' + secondary_host)
+        await doCommand('show service test-service --hosts ' + primary_host)
+        await doCommand('show service test-service --hosts ' + secondary_host).should.be.rejected
+        await doCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host)
+        await doCommand('show service test-service --hosts ' + primary_host).should.be.rejected
+        await doCommand('show service test-service --hosts ' + secondary_host).should.be.rejected
+    })
+
+    it('sync after service and listener creation', async function() {
+        await doCommand('create service test-service readwritesplit user=maxuser password=maxpwd --hosts ' + secondary_host)
+        await doCommand('create listener test-service my-listener-3 6001 --hosts ' + secondary_host)
+        await doCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host)
+        await doCommand('show service test-service --hosts ' + primary_host)
+        res = await doCommand('list listeners test-service --tsv --hosts ' + primary_host)
+        res.should.not.be.empty
+    })
+
+    it('sync after service and listener deletion', async function() {
+        await doCommand('destroy listener test-service my-listener-3 --hosts ' + secondary_host)
+        await doCommand('destroy service test-service --hosts ' + secondary_host)
+        await doCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host)
+        await doCommand('show service test-service --hosts ' + primary_host).should.be.rejected
     })
 
     after(stopDoubleMaxScale)
