@@ -1560,7 +1560,7 @@ void Monitor::load_server_journal(MonitorServer** master)
                                               data + MMB_LEN_SCHEMA_VERSION,
                                               data + size - MMB_LEN_CRC32))
                         {
-                            MXS_NOTICE("Loaded server states from journal file: %s", path);
+                            MXS_INFO("Loaded server states from journal file: %s", path);
                         }
                     }
                     else
