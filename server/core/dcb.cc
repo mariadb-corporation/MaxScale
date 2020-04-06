@@ -37,7 +37,10 @@
 #include <sys/stat.h>
 #include <sys/un.h>
 #include <time.h>
+
+#ifdef OPENSSL_1_1
 #include <openssl/x509v3.h>
+#endif
 
 #include <atomic>
 
@@ -1109,7 +1112,7 @@ bool DCB::create_SSL(const mxs::SSLContext& ssl)
 bool DCB::verify_peer_host()
 {
     bool rval = true;
-
+#ifdef OPENSSL_1_1
     if (m_encryption.verify_host)
     {
         auto r = remote();
@@ -1129,6 +1132,7 @@ bool DCB::verify_peer_host()
             X509_free(cert);
         }
     }
+#endif
 
     return rval;
 }

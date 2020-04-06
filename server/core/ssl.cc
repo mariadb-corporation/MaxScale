@@ -513,6 +513,15 @@ bool SSLContext::configure(const mxs::ConfigParameters& params)
                || access(params.get_string(CN_SSL_KEY).c_str(), F_OK) == 0);
 
     m_cfg = SSLConfig(params);
+
+#ifndef OPENSSL_1_1
+    if (m_cfg.verify_host)
+    {
+        MXS_ERROR("%s is not supported on this system.", CN_SSL_VERIFY_PEER_HOST);
+        return false;
+    }
+#endif
+
     return init();
 }
 }
