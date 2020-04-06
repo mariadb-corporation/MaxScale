@@ -412,8 +412,8 @@ module.exports = function() {
         shortname: 'rdns',
         optionOn: 'rdns=true',
         definition : {
-            describe: 'Reverse DNS on client IP. May slow MaxScale down.',
-            type: 'bool',
+            describe: 'Perform a reverse DNS lookup on client IPs',
+            type: 'boolean',
             default: false
         }
     }

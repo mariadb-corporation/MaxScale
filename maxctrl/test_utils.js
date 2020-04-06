@@ -1,4 +1,6 @@
 var child_process = require("child_process")
+const mariadb = require('mariadb');
+var conn
 
 module.exports = function() {
 
@@ -96,4 +98,17 @@ module.exports = function() {
             }, time)
         })
     }
+
+    this.createConnection = function() {
+        return mariadb.createConnection({host: '127.0.0.1', port: 4006, user: 'maxuser', password: 'maxpwd'})
+            .then(c => {
+                conn = c
+            })
+    }
+
+    this. closeConnection = function() {
+        conn.end()
+        conn = null
+    }
+
 }

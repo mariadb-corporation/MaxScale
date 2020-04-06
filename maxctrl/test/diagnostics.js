@@ -1,18 +1,4 @@
 require('../test_utils.js')()
-const mariadb = require('mariadb');
-var conn
-
-function createConnection() {
-    return mariadb.createConnection({host: '127.0.0.1', port: 4006, user: 'maxuser', password: 'maxpwd'})
-        .then(c => {
-            conn = c
-        })
-}
-
-function closeConnection() {
-    conn.end()
-    conn = null
-}
 
 var tests = [
     'list servers',

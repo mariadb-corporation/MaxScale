@@ -2,6 +2,7 @@ require('../test_utils.js')()
 
 describe("Library invocation", function() {
     before(startMaxScale)
+    before(createConnection)
 
     var ctrl = require('../lib/core.js')
 
@@ -76,5 +77,11 @@ describe("Library invocation", function() {
             })
     })
 
+    it('reverse DNS lookup', async function() {
+        await ctrl.execute('show sessions --rdns'.split(' ')).should.be.fulfilled
+        await ctrl.execute('show session 1 --rdns'.split(' ')).should.be.fulfilled
+    })
+
+    after(closeConnection)
     after(stopMaxScale)
 });
