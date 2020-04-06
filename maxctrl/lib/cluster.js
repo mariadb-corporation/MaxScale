@@ -105,9 +105,18 @@ async function getDiffs(a, b) {
     var src = {}
     var dest = {}
 
-    for (i of _.concat(collections, endpoints)) {
+    for (i of collections) {
         dest[i] = await simpleRequest(b, i)
         src[i] =  await simpleRequest(a, i)
+    }
+
+    for (i of endpoints) {
+        // Treating the resource endpoints as arrays allows the same functions to be used
+        // to compare individual resources and resource collections
+        dest[i] = await simpleRequest(b, i)
+        dest[i].data = [dest[i].data]
+        src[i] =  await simpleRequest(a, i)
+        src[i].data = [src[i].data]
     }
 
     for (i of dest.services.data) {
@@ -199,11 +208,6 @@ async function syncDiffs(host, src, dest) {
             await simpleRequest(host, i + '/' + j.id, {method: 'PATCH', body: {data: j}})
         }
     }
-
-    // Do the same for individual resources
-    for (i of endpoints) {
-        await simpleRequest(host, i, {method: 'PATCH', body: dest[i]})
-    }
 }
 
 exports.getDifference = getDifference
@@ -240,12 +244,6 @@ exports.builder = function(yargs) {
                                  // Remove empty arrays from the generated result.
                                  added = _.pickBy(added, (v) => v.length)
                                  removed = _.pickBy(removed, (v) => v.length)
-
-                                 endpoints.forEach(function(i) {
-                                     // Treating the resource endpoints as arrays allows the same functions to be used
-                                     // to compare individual resources and resource collections
-                                     _.assign(changed, getChangedObjects([src[i].data], [dest[i].data]))
-                                 })
 
                                  if (!_.isEmpty(added)) {
                                      output.push("New:")
