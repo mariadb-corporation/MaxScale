@@ -523,6 +523,7 @@ bool listener_serialize(const SListener& listener)
 
 json_t* Listener::to_json() const
 {
+    const char CN_AUTHENTICATOR_DIAGNOSTICS[] = "authenticator_diagnostics";
     json_t* param = json_object();
 
     const MXS_MODULE* mod = get_module(m_protocol.c_str(), MODULE_PROTOCOL);

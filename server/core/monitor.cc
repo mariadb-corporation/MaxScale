@@ -666,6 +666,9 @@ void Monitor::remove_all_servers()
 
 json_t* Monitor::to_json(const char* host) const
 {
+    const char CN_MONITOR_DIAGNOSTICS[] = "monitor_diagnostics";
+    const char CN_TICKS[] = "ticks";
+
     // This function mostly reads settings-type data, which is only written to by the admin thread,
     // The rest is safe to read without mutexes.
     mxb_assert(Monitor::is_main_worker());

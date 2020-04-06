@@ -43,6 +43,12 @@
 
 namespace
 {
+const char CN_ARG_MAX[] = "arg_max";
+const char CN_ARG_MIN[] = "arg_min";
+const char CN_METHOD[] = "method";
+const char CN_MODULES[] = "modules";
+const char CN_MODULE_COMMAND[] = "module_command";
+
 
 typedef struct loaded_module
 {

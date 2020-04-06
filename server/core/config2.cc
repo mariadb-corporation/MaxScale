@@ -406,6 +406,9 @@ void Param::populate(MXS_MODULE_PARAM& param) const
 
 json_t* Param::to_json() const
 {
+    const char CN_MANDATORY[] = "mandatory";
+    const char CN_MODIFIABLE[] = "modifiable";
+
     json_t* pJson = json_object();
 
     json_object_set_new(pJson, CN_NAME, json_string(m_name.c_str()));

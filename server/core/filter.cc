@@ -236,6 +236,7 @@ json_t* filter_parameters_to_json(const SFilterDef& filter)
 
 json_t* filter_json_data(const SFilterDef& filter, const char* host)
 {
+    const char CN_FILTER_DIAGNOSTICS[] = "filter_diagnostics";
     mxb_assert(filter);
     json_t* rval = json_object();
 

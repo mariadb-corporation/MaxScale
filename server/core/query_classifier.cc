@@ -54,6 +54,18 @@ struct type_name_info
 
 const char DEFAULT_QC_NAME[] = "qc_sqlite";
 const char QC_TRX_PARSE_USING[] = "QC_TRX_PARSE_USING";
+const char CN_ARGUMENTS[] = "arguments";
+const char CN_CACHE[] = "cache";
+const char CN_CACHE_SIZE[] = "cache_size";
+const char CN_CLASSIFICATION[] = "classification";
+const char CN_CLASSIFY[] = "classify";
+const char CN_FIELDS[] = "fields";
+const char CN_FUNCTIONS[] = "functions";
+const char CN_HAS_WHERE_CLAUSE[] = "has_where_clause";
+const char CN_HITS[] = "hits";
+const char CN_OPERATION[] = "operation";
+const char CN_PARSE_RESULT[] = "parse_result";
+const char CN_TYPE_MASK[] = "type_mask";
 
 class ThisUnit
 {

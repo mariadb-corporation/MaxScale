@@ -395,6 +395,8 @@ uint64_t session_get_next_id()
 
 json_t* session_json_data(const Session* session, const char* host, bool rdns)
 {
+    const char CN_SESSIONS[] = "sessions";
+
     json_t* data = json_object();
 
     /** ID must be a string */

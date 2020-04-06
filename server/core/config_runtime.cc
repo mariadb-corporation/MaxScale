@@ -60,6 +60,8 @@ typedef std::pair<const char*, JsonValidator>                        Relationshi
 namespace
 {
 
+const char CN_DEFAULT[] = "default";
+
 bool object_relation_is_valid(const std::string& type, const std::string& value)
 {
     return type == CN_SERVERS && ServerManager::find_by_unique_name(value);

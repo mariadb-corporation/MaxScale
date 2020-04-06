@@ -809,6 +809,9 @@ HttpResponse cb_delete_user(const HttpRequest& request)
 
 HttpResponse cb_set_server(const HttpRequest& request)
 {
+    const char CN_FORCE[] = "force";
+    const char CN_YES[] = "yes";
+
     SERVER* server = ServerManager::find_by_unique_name(request.uri_part(1));
     int opt = Server::status_from_string(request.get_option(CN_STATE).c_str());
 

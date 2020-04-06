@@ -28,6 +28,9 @@ using namespace std::literals::string_literals;
 namespace
 {
 
+const char CN_META[] = "meta";
+const char CN_SELF[] = "self";
+
 const char DETAIL[] = "detail";
 const char ERRORS[] = "errors";
 

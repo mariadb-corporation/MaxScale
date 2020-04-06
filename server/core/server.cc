@@ -61,10 +61,12 @@ using namespace std::literals::string_literals;
 
 namespace cfg = mxs::config;
 
+const char CN_EXTRA_PORT[] = "extra_port";
 const char CN_MONITORPW[] = "monitorpw";
 const char CN_MONITORUSER[] = "monitoruser";
 const char CN_PERSISTMAXTIME[] = "persistmaxtime";
 const char CN_PERSISTPOOLMAX[] = "persistpoolmax";
+const char CN_PRIORITY[] = "priority";
 const char CN_PROXY_PROTOCOL[] = "proxy_protocol";
 
 namespace

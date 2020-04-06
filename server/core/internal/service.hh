@@ -34,6 +34,10 @@ class Listener;
  * @file service.h - MaxScale internal service functions
  */
 
+constexpr char CN_CONNECTION_KEEPALIVE[] = "connection_keepalive";
+constexpr char CN_CONNECTION_TIMEOUT[] = "connection_timeout";
+constexpr char CN_NET_WRITE_TIMEOUT[] = "net_write_timeout";
+
 // The internal service representation
 class Service : public SERVICE
 {

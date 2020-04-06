@@ -87,7 +87,9 @@ constexpr char CN_ADMIN_PORT[] = "admin_port";
 constexpr char CN_ADMIN_SSL_CA_CERT[] = "admin_ssl_ca_cert";
 constexpr char CN_ADMIN_SSL_CERT[] = "admin_ssl_cert";
 constexpr char CN_ADMIN_SSL_KEY[] = "admin_ssl_key";
+constexpr char CN_AUTO[] = "auto";
 constexpr char CN_DUMP_LAST_STATEMENTS[] = "dump_last_statements";
+constexpr char CN_GATEWAY[] = "gateway";
 constexpr char CN_LOAD_PERSISTED_CONFIGS[] = "load_persisted_configs";
 constexpr char CN_LOCAL_ADDRESS[] = "local_address";
 constexpr char CN_LOG_DEBUG[] = "log_debug";
@@ -97,8 +99,10 @@ constexpr char CN_LOG_THROTTLING[] = "log_throttling";
 constexpr char CN_LOG_WARNING[] = "log_warning";
 constexpr char CN_LOG_WARN_SUPER_USER[] = "log_warn_super_user";
 constexpr char CN_MAX_AUTH_ERRORS_UNTIL_BLOCK[] = "max_auth_errors_until_block";
+constexpr char CN_MAXSCALE[] = "maxscale";
 constexpr char CN_MS_TIMESTAMP[] = "ms_timestamp";
 constexpr char CN_PASSIVE[] = "passive";
+constexpr char CN_QUERY_CLASSIFIER_ARGS[] = "query_classifier_args";
 constexpr char CN_QUERY_RETRIES[] = "query_retries";
 constexpr char CN_QUERY_RETRY_TIMEOUT[] = "query_retry_timeout";
 constexpr char CN_REBALANCE_PERIOD[] = "rebalance_period";
@@ -108,6 +112,8 @@ constexpr char CN_USERS_REFRESH_INTERVAL[] = "users_refresh_interval";
 constexpr char CN_USERS_REFRESH_TIME[] = "users_refresh_time";
 constexpr char CN_WRITEQ_HIGH_WATER[] = "writeq_high_water";
 constexpr char CN_WRITEQ_LOW_WATER[] = "writeq_low_water";
+constexpr char CN_SERVER[] = "server";
+constexpr char CN_THREAD_STACK_SIZE[] = "thread_stack_size";
 }
 
 namespace maxscale

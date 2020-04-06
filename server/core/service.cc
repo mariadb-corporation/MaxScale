@@ -85,8 +85,15 @@ struct ThisUnit
     std::vector<Service*> services;
 } this_unit;
 
-const char CN_CONNECTION_INIT_SQL_FILE[] = "connection_init_sql_file";
 const char CN_AUTH_ALL_SERVERS[] = "auth_all_servers";
+const char CN_CONNECTION_INIT_SQL_FILE[] = "connection_init_sql_file";
+const char CN_LOCALHOST_MATCH_WILDCARD_HOST[] = "localhost_match_wildcard_host";
+const char CN_LOG_AUTH_WARNINGS[] = "log_auth_warnings";
+const char CN_MAX_CONNECTIONS[] = "max_connections";
+const char CN_ROUTER_DIAGNOSTICS[] = "router_diagnostics";
+const char CN_ROUTER_OPTIONS[] = "router_options";
+const char CN_SESSION_TRACK_TRX_STATE[] = "session_track_trx_state";
+const char CN_STRIP_DB_ESC[] = "strip_db_esc";
 }
 
 Service* Service::create(const char* name, const char* router, mxs::ConfigParameters* params)
