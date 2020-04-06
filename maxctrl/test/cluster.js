@@ -5,7 +5,7 @@ var stripAnsi = require('strip-ansi')
 describe('Cluster Command Internals', function() {
 
     it('detect added and removed objects', function() {
-        var a = [
+        var a = { data: [
             {
                 'id': 'server1',
                 'type': 'servers',
@@ -16,9 +16,9 @@ describe('Cluster Command Internals', function() {
                     }
                 }
             }
-        ]
+        ]}
 
-        var b = [
+        var b = { data: [
             {
                 'id': 'server1',
                 'type': 'servers',
@@ -39,9 +39,9 @@ describe('Cluster Command Internals', function() {
                     }
                 }
             }
-        ]
+        ]}
 
-        var c = [
+        var c = { data: [
             {
                 'id': 'server1',
                 'type': 'servers',
@@ -62,7 +62,8 @@ describe('Cluster Command Internals', function() {
                     }
                 }
             }
-        ]
+        ]}
+
         cluster.getDifference(b, a)[0].id.should.equal('server2')
         cluster.getDifference(c, a)[0].id.should.equal('server3')
         cluster.getDifference(a, b).should.be.empty
@@ -75,7 +76,7 @@ describe('Cluster Command Internals', function() {
     })
 
     it('detect changes in objects', function() {
-        var a = [
+        var a = { data: [
             {
                 'id': 'server1',
                 'type': 'servers',
@@ -86,9 +87,9 @@ describe('Cluster Command Internals', function() {
                     }
                 }
             }
-        ]
+        ]}
 
-        var b = [
+        var b = { data: [
             {
                 'id': 'server1',
                 'type': 'servers',
@@ -99,7 +100,7 @@ describe('Cluster Command Internals', function() {
                     }
                 }
             }
-        ]
+        ]}
 
         cluster.getDifference(a, b).should.be.empty
         cluster.getDifference(b, a).should.be.empty

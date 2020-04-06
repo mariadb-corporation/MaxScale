@@ -27,7 +27,7 @@ function sameResource(oldVal, newVal) {
 
 // Return objets that are in <a> but not in <b>
 function getDifference(a, b) {
-    return _.differenceWith(a, b, sameResource)
+    return a && b ? _.differenceWith(a.data, b.data, sameResource) : []
 }
 
 // Removes some unwanted properties from the object
@@ -54,7 +54,13 @@ function removeUnwanted(a){
 }
 
 // Return a list of objects that differ from each other
-function getChangedObjects(a, b) {
+function getChangedObjects(src, dest) {
+    if (!src || !dest) {
+        return {}
+    }
+
+    var a = src.data
+    var b = dest.data
     var ours = _.intersectionWith(a, b, sameResource).sort((a, b) => a.id > b.id)
     var theirs = _.intersectionWith(b, a, sameResource).sort((a, b) => a.id > b.id)
 
@@ -117,7 +123,7 @@ async function getDiffs(a, b) {
 
 async function syncDiffs(host, src, dest) {
     // Delete old services
-    for (i of getDifference(dest.services.data, src.services.data)) {
+    for (i of getDifference(dest.services, src.services)) {
         // If the service has listeners, delete those first. Otherwise the deletion will fail.
         if (i.attributes.listeners) {
             for (j of i.attributes.listeners) {
@@ -131,21 +137,21 @@ async function syncDiffs(host, src, dest) {
     }
 
     // Delete old monitors
-    for (i of getDifference(dest.monitors.data, src.monitors.data)) {
+    for (i of getDifference(dest.monitors, src.monitors)) {
         var body = { method: 'PATCH', body: _.set({}, 'data.relationships', {})}
         await simpleRequest(host, 'monitors/' + i.id, body)
         await simpleRequest(host, 'monitors/' + i.id, {method: 'DELETE'})
     }
 
     // Delete old servers
-    for (i of getDifference(dest.servers.data, src.servers.data)) {
+    for (i of getDifference(dest.servers, src.servers)) {
         // The servers must be unlinked from all services and monitors before they can be deleted
         await simpleRequest(host, 'servers/' + i.id, {method: 'PATCH', body: _.set({}, 'data.relationships', {})})
         await simpleRequest(host, 'servers/' + i.id, {method: 'DELETE'})
     }
 
     // Add new servers first, this way other objects can directly define their relationships
-    for (i of getDifference(src.servers.data, dest.servers.data)) {
+    for (i of getDifference(src.servers, dest.servers)) {
         // Create the servers without relationships, those are generated when services and
         // monitors are handled
         var newserv = _.pick(i, ['id', 'type', 'attributes.parameters'])
@@ -153,12 +159,12 @@ async function syncDiffs(host, src, dest) {
     }
 
     // Add new monitors
-    for (i of getDifference(src.monitors.data, dest.monitors.data)) {
+    for (i of getDifference(src.monitors, dest.monitors)) {
         await simpleRequest(host, 'monitors', {method: 'POST', body: {data: i}})
     }
 
     // Add new services
-    for (i of getDifference(src.services.data, dest.services.data)) {
+    for (i of getDifference(src.services, dest.services)) {
         await simpleRequest(host, 'services', {method: 'POST', body: {data: i}})
 
         // Create listeners for the new service right after it is created. This removes the need to update the
@@ -177,13 +183,11 @@ async function syncDiffs(host, src, dest) {
     var relevant_keys = _.uniq(_.difference(all_keys, unwanted_keys))
 
     for (i of relevant_keys) {
-        if (dest[i] && src[i]) {
-            for (j of getDifference(dest[i].data, src[i].data)) {
-                await simpleRequest(host, i + '/' + j.id, {method: 'DELETE'})
-            }
-            for (j of getDifference(src[i].data, dest[i].data)) {
-                await simpleRequest(host, i, {method: 'POST', body: {data: j}})
-            }
+        for (j of getDifference(dest[i], src[i])) {
+            await simpleRequest(host, i + '/' + j.id, {method: 'DELETE'})
+        }
+        for (j of getDifference(src[i], dest[i])) {
+            await simpleRequest(host, i, {method: 'POST', body: {data: j}})
         }
     }
 
@@ -228,9 +232,9 @@ exports.builder = function(yargs) {
                                  var changed = {}
 
                                  _.uniq(_.concat(Object.keys(src), Object.keys(dest))).forEach(function(i) {
-                                     added[i] = _.map(getDifference(src[i].data, dest[i].data), (v) => v.id)
-                                     removed[i] = _.map(getDifference(dest[i].data, src[i].data), (v) => v.id)
-                                     _.assign(changed, getChangedObjects(src[i].data, dest[i].data))
+                                     added[i] = _.map(getDifference(src[i], dest[i]), (v) => v.id)
+                                     removed[i] = _.map(getDifference(dest[i], src[i]), (v) => v.id)
+                                     _.assign(changed, getChangedObjects(src[i], dest[i]))
                                  })
 
                                  // Remove empty arrays from the generated result.
