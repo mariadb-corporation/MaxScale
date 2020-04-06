@@ -1646,7 +1646,11 @@ bool Monitor::journal_is_stale() const
                 is_stale = false;
             }
         }
-        else if (errno != ENOENT)
+        else if (errno == ENOENT)
+        {
+            is_stale = false;
+        }
+        else
         {
             MXS_ERROR("Failed to inspect journal file: %d, %s", errno, mxs_strerror(errno));
         }
