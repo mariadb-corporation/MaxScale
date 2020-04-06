@@ -4,8 +4,8 @@
  */
 
 #include "testconnections.h"
-#include "stopwatch.h"
-#include "appexception.h"
+#include "stopwatch.hh"
+#include "appexception.hh"
 #include <iostream>
 #include <memory>
 #include <sstream>

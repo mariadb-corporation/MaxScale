@@ -1,8 +1,8 @@
-#include "maxscales.h"
+#include "maxscales.hh"
 #include <sstream>
 #include <unordered_map>
 #include <string>
-#include "envv.h"
+#include "envv.hh"
 
 Maxscales::Maxscales(const char *pref, const char *test_cwd, bool verbose,
                      std::string network_config)

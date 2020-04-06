@@ -21,7 +21,7 @@
 #include "sql_t1.h"
 #include "testconnections.h"
 #include "test_info.hh"
-#include "envv.h"
+#include "envv.hh"
 
 using namespace mxb;
 using std::cout;

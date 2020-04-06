@@ -1,4 +1,4 @@
-#include "nodes.h"
+#include "nodes.hh"
 #include <string>
 #include <cstring>
 #include <iostream>
@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <signal.h>
 
-#include "envv.h"
+#include "envv.hh"
 
 Nodes::Nodes()
 {
