@@ -42,6 +42,7 @@ namespace keys
 const char CONFIG[]       = "config";
 const char CLUSTER_MODE[] = "cluster_mode";
 const char DBRM_MODE[]    = "dbrm_mode";
+const char MODE[]         = "mode";
 
 }
 

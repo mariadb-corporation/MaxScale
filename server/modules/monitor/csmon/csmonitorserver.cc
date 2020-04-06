@@ -12,11 +12,15 @@
  */
 
 #include "csmonitorserver.hh"
+#include <sstream>
 #include <maxbase/http.hh>
 #include "columnstore.hh"
 
 namespace http = mxb::http;
+using std::string;
+using std::stringstream;
 using std::unique_ptr;
+using std::vector;
 
 CsMonitorServer::CsMonitorServer(SERVER* pServer,
                                  const SharedSettings& shared,
@@ -68,7 +72,7 @@ bool CsMonitorServer::refresh_status(json_t** ppError)
     return rv;
 }
 
-bool CsMonitorServer::set_config(const std::string& body, json_t** ppError)
+bool CsMonitorServer::set_config(const string& body, json_t** ppError)
 {
     bool rv = false;
 
@@ -115,7 +119,7 @@ bool CsMonitorServer::set_config(const std::string& body, json_t** ppError)
     return rv;
 }
 
-bool CsMonitorServer::set_status(const std::string& body, json_t** ppError)
+bool CsMonitorServer::set_status(const string& body, json_t** ppError)
 {
     bool rv = false;
 
@@ -168,3 +172,130 @@ bool CsMonitorServer::set_status(const std::string& body, json_t** ppError)
 
     return rv;
 }
+
+bool CsMonitorServer::set_status(const http::Result& result, json_t** ppError)
+{
+    bool rv = true;
+
+    if (result.code == 200)
+    {
+        rv = set_status(result.body, ppError);
+    }
+    else
+    {
+        PRINT_MXS_JSON_ERROR(ppError,
+                             "Could not fetch status from '%s': %s",
+                             this->server->name(), result.body.c_str());
+    }
+
+    return rv;
+}
+
+bool CsMonitorServer::update(cs::ClusterMode mode, json_t** ppError)
+{
+    stringstream body;
+    body << "{"
+         << "\"" << cs::keys::MODE << "\": "
+         << "\"" << cs::to_string(mode) << "\""
+         << "}";
+
+    string url = cs::rest::create_url(*this->server, m_admin_port, cs::rest::CONFIG);
+    string s = body.str();
+    vector<char> b;
+    b.resize(s.length());
+    std::copy(s.begin(), s.end(), b.begin());
+    http::Result result = http::put(url, b);
+
+    if (!result.ok())
+    {
+        PRINT_MXS_JSON_ERROR(ppError, "Could not update cluster mode: %s", result.body.c_str());
+    }
+
+    // Whether the operation succeeds or not, the status is marked as being non-valid.
+    m_status.valid = false;
+
+    return result.ok();
+}
+
+//static
+bool CsMonitorServer::refresh_status(const vector<CsMonitorServer*>& servers, json_t** ppError)
+{
+    vector<string> urls;
+
+    for (const auto* pS : servers)
+    {
+        urls.push_back(cs::rest::create_url(*pS, pS->m_admin_port, cs::rest::STATUS));
+    }
+
+    vector<http::Result> results = http::get(urls); // TODO: Config needs to be passed.
+
+    mxb_assert(servers.size() == results.size());
+
+    bool rv = true;
+
+    auto it = servers.begin();
+    auto jt = results.begin();
+
+    while (it != servers.end())
+    {
+        auto* pServer = *it;
+
+        if (!pServer->set_status(*jt, ppError))
+        {
+            rv = false;
+        }
+
+        ++it;
+        ++jt;
+    }
+
+    return rv;
+}
+
+//static
+bool CsMonitorServer::update(const std::vector<CsMonitorServer*>& servers,
+                             cs::ClusterMode mode,
+                             json_t** ppError)
+{
+    bool rv = false;
+
+    if (!CsMonitorServer::refresh_status(servers))
+    {
+        MXS_ERROR("Could not refresh the status of all nodes. Will continue with the mode change "
+                  "if single DBMR master was refreshed.");
+    }
+
+    CsMonitorServer* pMaster = nullptr;
+    int nMasters = 0;
+
+    for (const auto& pServer : servers)
+    {
+        const auto& status = pServer->status();
+        if (status.valid)
+        {
+            if (status.dbrm_mode == cs::MASTER)
+            {
+                ++nMasters;
+                pMaster = pServer;
+            }
+        }
+    }
+
+    if (nMasters == 0)
+    {
+        PRINT_MXS_JSON_ERROR(ppError, "No DBRM master found, mode change cannot be performed.");
+    }
+    else if (nMasters != 1)
+    {
+        PRINT_MXS_JSON_ERROR(ppError,
+                             "%d masters found. Splitbrain situation, mode change cannot be performed.",
+                             nMasters);
+    }
+    else
+    {
+        rv = pMaster->update(mode, ppError);
+    }
+
+    return rv;
+}
+

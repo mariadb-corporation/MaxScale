@@ -592,16 +592,15 @@ bool CsMonitor::command_cluster_config_set(json_t** ppOutput, const char* zJson,
 bool CsMonitor::command_cluster_mode_set(json_t** ppOutput, const char* zMode)
 {
     bool rv = false;
-    Mode mode;
+    cs::ClusterMode mode;
 
-    if (from_string(zMode, &mode))
+    if (cs::from_string(zMode, &mode))
     {
         mxb::Semaphore sem;
 
         auto cmd = [this, ppOutput, &sem, mode] () {
             if (ready_to_run(ppOutput))
             {
-                // TODO: This is actually only to be sent to the master.
                 cluster_mode_set(ppOutput, &sem, mode);
             }
             else
@@ -650,44 +649,6 @@ bool CsMonitor::command_cluster_remove_node(json_t** ppOutput, CsMonitorServer* 
     };
 
     return command(ppOutput, sem, "cluster-remove-node", cmd);
-}
-
-//static
-bool CsMonitor::from_string(const char* zMode, Mode* pMode)
-{
-    bool rv = true;
-
-    if (strcmp("read-only", zMode) == 0)
-    {
-        *pMode = READ_ONLY;
-    }
-    else if (strcmp("read-write", zMode) == 0)
-    {
-        *pMode = READ_WRITE;
-    }
-    else
-    {
-        rv = false;
-    }
-
-    return rv;
-}
-
-//static
-const char* CsMonitor::to_string(Mode mode)
-{
-    switch (mode)
-    {
-    case READ_ONLY:
-        return "read-only";
-
-    case READ_WRITE:
-        return "read-write";
-
-    default:
-        mxb_assert(!true);
-        return "";
-    }
 }
 
 bool CsMonitor::ready_to_run(json_t** ppOutput) const
@@ -920,13 +881,11 @@ void CsMonitor::cluster_config_set(json_t** ppOutput, mxb::Semaphore* pSem,
     cluster_put(ppOutput, pSem, cs::rest::CONFIG, pServer, std::move(body));
 }
 
-void CsMonitor::cluster_mode_set(json_t** ppOutput, mxb::Semaphore* pSem, Mode mode)
+void CsMonitor::cluster_mode_set(json_t** ppOutput, mxb::Semaphore* pSem, cs::ClusterMode mode)
 {
-    stringstream ss;
-    ss << "{ \"mode\":" << "\"" << to_string(mode) << "\" }";
-    string body = ss.str();
+    CsMonitorServer::update(servers(), mode, ppOutput);
 
-    cluster_put(ppOutput, pSem, cs::rest::CONFIG, nullptr, std::move(body));
+    pSem->post();
 }
 
 void CsMonitor::cluster_add_node(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)

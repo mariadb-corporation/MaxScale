@@ -13,6 +13,7 @@
 #pragma once
 
 #include "csmon.hh"
+#include <maxbase/http.hh>
 #include <maxscale/jansson.hh>
 #include "columnstore.hh"
 
@@ -63,6 +64,16 @@ public:
 
     bool set_config(const std::string& body, json_t** ppError = nullptr);
     bool set_status(const std::string& body, json_t** ppError = nullptr);
+
+    bool update(cs::ClusterMode mode, json_t** ppError = nullptr);
+
+    static bool refresh_status(const std::vector<CsMonitorServer*>& servers, json_t** ppError = nullptr);
+    static bool update(const std::vector<CsMonitorServer*>& servers,
+                       cs::ClusterMode mode,
+                       json_t** ppError = nullptr);
+
+private:
+    bool set_status(const mxb::http::Result& result, json_t** ppError);
 
 private:
     int64_t                 m_admin_port;
