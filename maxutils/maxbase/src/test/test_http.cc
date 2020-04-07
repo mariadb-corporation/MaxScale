@@ -151,7 +151,7 @@ int test_async_http_get()
     return rv == EXIT_FAILURE ? 1 : 0;
 }
 
-int test_http_put(const vector<char>& body = vector<char>())
+int test_http_put(const string& body = string())
 {
     cout << __func__ << endl;
 
@@ -167,8 +167,8 @@ int test_http_put(const vector<char>& body = vector<char>())
     }
 
     mxb::http::Config config;
-    config.headers.push_back("Content-Type: application/json");
-    config.headers.push_back("Accept: */*");
+    config.headers["Content-Type"] = "application/json";
+    config.headers["Accept"] = "*/*";
     auto res = mxb::http::put("http://postman-echo.com/put", body, config);
     cout << "http://postman-echo.com/put responded with: " << res.code << endl;
     if (res.code == 200)
@@ -189,10 +189,8 @@ int test_http_put(const vector<char>& body = vector<char>())
             }
             else
             {
-                vector<char> b = body;
-                b.push_back(0);
                 cout << "Sent and returned JSON body not equal; sent = '"
-                     << b.data() << "', received = '"
+                     << body.data() << "', received = '"
                      << res.body
                      << "'."
                      << endl;
@@ -218,7 +216,7 @@ int test_http_put(const vector<char>& body = vector<char>())
     return rv == EXIT_FAILURE ? 1 : 0;
 }
 
-int test_async_http_put(const vector<char>& body = vector<char>())
+int test_async_http_put(const string& body = string())
 {
     cout << __func__ << endl;
 
@@ -229,8 +227,8 @@ int test_async_http_put(const vector<char>& body = vector<char>())
                            "http://postman-echo.com/put"};
     vector<bool> expected_successes = {true, true, true};
     mxb::http::Config config;
-    config.headers.push_back("Content-Type: application/json");
-    config.headers.push_back("Accept: */*");
+    config.headers["Content-Type"] = "application/json";
+    config.headers["Accept"] = "*/*";
     mxb::http::Async http = mxb::http::put_async(urls, body, config);
 
     while (http.perform(0) == mxb::http::Async::PENDING)
@@ -258,11 +256,6 @@ int test_async_http_put(const vector<char>& body = vector<char>())
     }
 
     return rv == EXIT_FAILURE ? 1 : 0;
-}
-
-vector<char> create_body(const string& s)
-{
-    return vector<char>(s.begin(), s.end());
 }
 
 }
@@ -297,7 +290,7 @@ int main()
     cout << "Single PUT (no body): " << d << endl;
 
     sw.restart();
-    rv += test_http_put(create_body("{ \"hello\": \"world\" }"));
+    rv += test_http_put("{ \"hello\": \"world\" }");
     d = sw.split();
     cout << "Single PUT (with body): " << d << endl;
 
@@ -307,7 +300,7 @@ int main()
     cout << "Async PUT: " << d << endl;
 
     sw.restart();
-    rv += test_async_http_put(create_body("{ \"hello\": \"world\" }"));
+    rv += test_async_http_put("{ \"hello\": \"world\" }");
     d = sw.split();
     cout << "Async PUT (with body): " << d << endl;
 

@@ -398,6 +398,8 @@ public:
                 {
                     m_status = Async::READY;
                     m_wait_no_more_than = 0;
+
+                    collect_result();
                 }
                 else
                 {
@@ -482,39 +484,7 @@ public:
 
                 if (m_status == Async::READY)
                 {
-                    mxb_assert(m_still_running == 0);
-                    int nRemaining = 0;
-                    do
-                    {
-                        CURLMsg* pMsg = curl_multi_info_read(m_pCurlm, &nRemaining);
-                        if (pMsg && (pMsg->msg == CURLMSG_DONE))
-                        {
-                            CURL* pCurl = pMsg->easy_handle;
-                            auto it = m_curls.find(pCurl);
-                            mxb_assert(it != m_curls.end());
-
-                            auto& context = it->second;
-                            Result* pResult = context.pResult;
-                            Errbuf* pErrbuf = context.pErrbuf;
-
-                            if (pMsg->data.result == CURLE_OK)
-                            {
-                                long code;
-                                curl_easy_getinfo(pCurl, CURLINFO_RESPONSE_CODE, &code);
-                                pResult->code = code;
-                            }
-                            else
-                            {
-                                pResult->code = translate_curl_code(pMsg->data.result);
-                                pResult->body = pErrbuf->data();
-                            }
-
-                            m_curls.erase(it);
-                            curl_multi_remove_handle(m_pCurlm, pCurl);
-                            curl_easy_cleanup(pCurl);
-                        }
-                    }
-                    while (nRemaining != 0);
+                    collect_result();
                 }
             }
         }
@@ -546,6 +516,45 @@ private:
             // No default value, we'll use 100ms as default.
             m_wait_no_more_than = 100;
         }
+    }
+
+    void collect_result()
+    {
+        mxb_assert(m_status == Async::READY);
+        mxb_assert(m_still_running == 0);
+
+        int nRemaining = 0;
+        do
+        {
+            CURLMsg* pMsg = curl_multi_info_read(m_pCurlm, &nRemaining);
+            if (pMsg && (pMsg->msg == CURLMSG_DONE))
+            {
+                CURL* pCurl = pMsg->easy_handle;
+                auto it = m_curls.find(pCurl);
+                mxb_assert(it != m_curls.end());
+
+                auto& context = it->second;
+                Result* pResult = context.pResult;
+                Errbuf* pErrbuf = context.pErrbuf;
+
+                if (pMsg->data.result == CURLE_OK)
+                {
+                    long code;
+                    curl_easy_getinfo(pCurl, CURLINFO_RESPONSE_CODE, &code);
+                    pResult->code = code;
+                }
+                else
+                {
+                    pResult->code = translate_curl_code(pMsg->data.result);
+                    pResult->body = pErrbuf->data();
+                }
+
+                m_curls.erase(it);
+                curl_multi_remove_handle(m_pCurlm, pCurl);
+                curl_easy_cleanup(pCurl);
+            }
+        }
+        while (nRemaining != 0);
     }
 
 private:
