@@ -183,7 +183,10 @@ exports.builder = function(yargs) {
                                 'command on that instance. Synchronization can be attempted again if a previous ' +
                                 'attempt failed due to a network failure or some other ephemeral error. Any other ' +
                                 'errors require manual synchronization of the MaxScale configuration files and a ' +
-                                'restart of the failed Maxscale.')
+                                'restart of the failed Maxscale.\n\n' +
+                                'Note: New objects created by `cluster sync` will have a placeholder value and ' +
+                                'must be manually updated. Passwords for existing objects will not be updated ' +
+                                'by `cluster sync` and must also be manually updated.')
                 .usage('Usage: cluster sync <target>')
         }, function(argv) {
             maxctrl(argv, function(host) {
@@ -270,6 +273,8 @@ exports.builder = function(yargs) {
                                 // user resource as it requires passwords to be entered
                                 _.difference(collections, ['users']).forEach(function(i) {
                                     src[i].data.forEach(function(j) {
+                                        // Never updates passwords
+                                        j = _.omit(j, ['attributes.parameters.password', 'attributes.parameters.monitorpw'])
                                         promises.push(doAsyncRequest(host, i + '/' + j.id, null, {method: 'PATCH', body: {data: j}}))
                                     })
                                 })
