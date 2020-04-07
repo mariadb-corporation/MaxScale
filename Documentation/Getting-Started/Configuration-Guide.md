@@ -1004,8 +1004,8 @@ REST API. The default credentials for the interface are `admin:mariadb`.
 
 The path to the TLS private key in PEM format for the admin interface.
 
-If the `admin_ssl_key`, `admin_ssl_cert` and `admin_ssl_ca_cert` options are all
-defined, the admin interface will use encrypted HTTPS instead of plain HTTP.
+If the `admin_ssl_key` and `admin_ssl_cert` options are all defined, the admin
+interface will use encrypted HTTPS instead of plain HTTP.
 
 ### `admin_ssl_cert`
 
@@ -1014,8 +1014,9 @@ documentation for more details.
 
 ### `admin_ssl_ca_cert`
 
-The path to the TLS CA certificate in PEM format. See `admin_ssl_key`
-documentation for more details.
+The path to the TLS CA certificate in PEM format. If defined, the client
+certificate, if provided, will be validated against it. This parameter is
+optional starting with MaxScale 2.3.19.
 
 ### `admin_enabled`
 

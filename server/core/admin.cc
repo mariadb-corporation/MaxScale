@@ -352,11 +352,13 @@ static bool load_ssl_certificates()
     const char* cert = config_get_global_options()->admin_ssl_cert;
     const char* ca = config_get_global_options()->admin_ssl_ca_cert;
 
-    if (*key && *cert && *ca)
+    if (*key && *cert)
     {
-        if ((admin_ssl_key = load_cert(key))
-            && (admin_ssl_cert = load_cert(cert))
-            && (admin_ssl_ca_cert = load_cert(ca)))
+        admin_ssl_key = load_cert(key);
+        admin_ssl_cert = load_cert(cert);
+        admin_ssl_ca_cert = load_cert(ca);
+
+        if (admin_ssl_key && admin_ssl_cert)
         {
             rval = true;
         }
@@ -416,7 +418,8 @@ bool mxs_admin_init()
                                        !using_ssl ? MHD_OPTION_END :
                                        MHD_OPTION_HTTPS_MEM_KEY, admin_ssl_key,
                                        MHD_OPTION_HTTPS_MEM_CERT, admin_ssl_cert,
-                                       MHD_OPTION_HTTPS_MEM_TRUST, admin_ssl_cert,
+                                       !admin_ssl_ca_cert ? MHD_OPTION_END :
+                                       MHD_OPTION_HTTPS_MEM_TRUST, admin_ssl_ca_cert,
                                        MHD_OPTION_END);
     }
 
