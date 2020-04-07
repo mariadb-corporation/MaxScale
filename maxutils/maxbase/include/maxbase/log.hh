@@ -144,12 +144,12 @@ private:
                         __func__, "%s", os.str().c_str()); \
     } while (false)
 
-#define MXS_SALERT(mxb_msg_str__)   MXS_STREAM_LOG_HELPER(LOG_ALERT, mxb_msg_str__)
-#define MXS_SERROR(mxb_msg_str__)   MXS_STREAM_LOG_HELPER(LOG_ERR, mxb_msg_str__)
-#define MXS_SWARNING(mxb_msg_str__) MXS_STREAM_LOG_HELPER(LOG_WARNING, mxb_msg_str__)
-#define MXS_SNOTICE(mxb_msg_str__)  MXS_STREAM_LOG_HELPER(LOG_NOTICE, mxb_msg_str__)
-#define MXS_SINFO(mxb_msg_str__)    MXS_STREAM_LOG_HELPER(LOG_INFO, mxb_msg_str__)
-#define MXS_SDEBUG(mxb_msg_str__)   MXS_STREAM_LOG_HELPER(LOG_DEBUG, mxb_msg_str__)
+#define MXB_SALERT(mxb_msg_str__)   MXB_STREAM_LOG_HELPER(LOG_ALERT, mxb_msg_str__)
+#define MXB_SERROR(mxb_msg_str__)   MXB_STREAM_LOG_HELPER(LOG_ERR, mxb_msg_str__)
+#define MXB_SWARNING(mxb_msg_str__) MXB_STREAM_LOG_HELPER(LOG_WARNING, mxb_msg_str__)
+#define MXB_SNOTICE(mxb_msg_str__)  MXB_STREAM_LOG_HELPER(LOG_NOTICE, mxb_msg_str__)
+#define MXB_SINFO(mxb_msg_str__)    MXB_STREAM_LOG_HELPER(LOG_INFO, mxb_msg_str__)
+#define MXB_SDEBUG(mxb_msg_str__)   MXB_STREAM_LOG_HELPER(LOG_DEBUG, mxb_msg_str__)
 
 #define MXS_SALERT   MXB_SALERT
 #define MXS_SERROR   MXB_SERROR
