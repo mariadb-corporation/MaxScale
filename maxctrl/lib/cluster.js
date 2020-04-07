@@ -273,9 +273,29 @@ exports.builder = function(yargs) {
                                         promises.push(doAsyncRequest(host, i + '/' + j.id, null, {method: 'PATCH', body: {data: j}}))
                                     })
                                 })
+
+                                if (src['maxscale']) {
+                                    // TODO: Don't filter the altered parameters on the client side. The REST
+                                    //       API should ignore no-op changes.
+                                    src['maxscale'].data.attributes.parameters = _.pick(
+                                        src['maxscale'].data.attributes.parameters,
+                                        ['auth_connect_timeout',
+                                         'auth_read_timeout',
+                                         'auth_write_timeout',
+                                         'admin_auth',
+                                         'admin_log_auth_failures',
+                                         'passive',
+                                         'ms_timestamp',
+                                         'skip_permission_checks',
+                                         'query_retries',
+                                         'query_retry_timeout',
+                                         'retain_last_statements',
+                                         'dump_last_statements'])
+                                }
+
                                 // Do the same for individual resources
                                 endpoints.forEach(function(i) {
-                                    promises.push(doAsyncRequest(host, i, null, {method: 'PATCH', body: dest[i]}))
+                                    promises.push(doAsyncRequest(host, i, null, {method: 'PATCH', body: src[i]}))
                                 })
                                 return Promise.all(promises)
                             })
