@@ -22,6 +22,7 @@
     "globby": "^8.0.2",
     "inquirer": "^6.2.1",
     "inquirer-command-prompt": "0.0.26",
+    "js-beautify": "^1.11.0",
     "lodash": "^4.17.14",
     "lodash-getpath": "^0.2.4",
     "readline-sync": "^1.4.9",
@@ -34,11 +35,15 @@
     "chai-as-promised": "^6.0.0",
     "mariadb": "^2.2.0",
     "mocha": "^7.1.1",
-    "nyc": "^15.0.0"
+    "nyc": "^15.0.0",
+    "prettier": "^2.0.4"
   },
   "nyc": {
     "include": [
       "lib/*.js"
     ]
+  },
+  "prettier": {
+    "printWidth": 110
   }
 }
