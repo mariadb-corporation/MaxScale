@@ -433,16 +433,14 @@ void CsMonitor::update_server_status(MonitorServer* srv)
 
 bool CsMonitor::configure(const mxs::ConfigParameters* pParams)
 {
-    bool rv = false;
+    bool rv = m_config.configure(*pParams);
 
-    if (MonitorWorkerSimple::configure(pParams))
+    if (rv)
     {
-        rv = m_config.configure(*pParams);
+        m_http_config.headers["X-API-KEY"] = m_config.api_key;
+        m_http_config.headers["Content-Type"] = "application/json";
 
-        if (rv)
-        {
-            m_http_config.headers["X-API-KEY"] = m_config.api_key;
-        }
+        rv = MonitorWorkerSimple::configure(pParams);
     }
 
     return rv;
