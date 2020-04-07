@@ -796,7 +796,7 @@ void CsMonitor::cluster_put(json_t** ppOutput,
         for (auto* pS : this->servers())
         {
             servers.push_back(pS);
-            urls.push_back(cs::rest::create_url(*pServer, m_config.admin_port, action));
+            urls.push_back(cs::rest::create_url(*pS, m_config.admin_port, action));
         }
     }
 
@@ -820,7 +820,9 @@ void CsMonitor::cluster_put(json_t** ppOutput,
 
 void CsMonitor::cluster_start(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
 {
-    cluster_put(ppOutput, pSem, cs::rest::START, pServer);
+    bool rv = CsMonitorServer::start(servers(), m_http_config, ppOutput);
+
+    pSem->post();
 }
 
 void CsMonitor::cluster_shutdown(json_t** ppOutput,

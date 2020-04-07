@@ -75,6 +75,9 @@ public:
                          const std::chrono::seconds& timeout,
                          const mxb::http::Config& config,
                          json_t** ppOutput);
+    static bool start(const std::vector<CsMonitorServer*>& servers,
+                      const mxb::http::Config& config,
+                      json_t** ppOutput);
     static bool update(const std::vector<CsMonitorServer*>& servers,
                        cs::ClusterMode mode,
                        const mxb::http::Config& config,
