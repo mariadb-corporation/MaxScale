@@ -118,6 +118,15 @@ describe('Cluster Command Internals', function() {
 describe('Cluster Sync', function() {
     before(startDoubleMaxScale)
 
+    it('sync global options', function() {
+        return doCommand('alter maxscale auth_connect_timeout 1234 --hosts ' + secondary_host)
+            .then(() => verifyCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host,
+                                      'maxscale'))
+            .then(function(res) {
+                res.data.attributes.parameters.auth_connect_timeout.should.equal(1234)
+            })
+    })
+
     it('sync after server creation', function() {
         return doCommand('create server server5 127.0.0.1 3003 --hosts ' + secondary_host)
             .then(() => verifyCommand('cluster sync ' + secondary_host + ' --hosts ' + primary_host,

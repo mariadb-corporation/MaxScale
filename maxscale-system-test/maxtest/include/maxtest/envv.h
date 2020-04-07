@@ -10,9 +10,10 @@
  * @param format Default value format string
  * @return Enviromental variable value
  */
-char * readenv(const char * name, const char *format, ...);
+char * readenv(const char* name, const char* format, ...) __attribute__ ((format (printf, 2, 3)));
 
-std::string envvar_read_write_def_str(const char* name, const char* format, ...);
+std::string envvar_get_set(const char* name, const char* format, ...)
+__attribute__ ((format (printf, 2, 3)));;
 
 /**
  * @brief readenv_int Read integer value of enviromental variable, if empty - set dafault
@@ -30,3 +31,7 @@ int readenv_int(const char * name, int def);
  * @return Enviromental variable value converted to bool
  */
 bool readenv_bool(const char * name, bool def);
+
+std::string string_printf(const char *format, ...) __attribute__ ((format (printf, 1, 2)));
+
+std::string string_printf(const char *format, va_list args);
