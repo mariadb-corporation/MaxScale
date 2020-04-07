@@ -25,7 +25,8 @@ public:
 
     CsMonitorServer(SERVER* pServer,
                     const SharedSettings& shared,
-                    int64_t admin_port);
+                    int64_t admin_port,
+                    mxb::http::Config* pConfig);
     virtual ~CsMonitorServer();
 
     class Status
@@ -67,17 +68,30 @@ public:
 
     bool update(cs::ClusterMode mode, json_t** ppError = nullptr);
 
-    static bool refresh_status(const std::vector<CsMonitorServer*>& servers, json_t** ppError = nullptr);
+    static bool refresh_status(const std::vector<CsMonitorServer*>& servers,
+                               const mxb::http::Config& config,
+                               json_t** ppError = nullptr);
+    static bool shutdown(const std::vector<CsMonitorServer*>& servers,
+                         const std::chrono::seconds& timeout,
+                         const mxb::http::Config& config,
+                         json_t** ppOutput);
     static bool update(const std::vector<CsMonitorServer*>& servers,
                        cs::ClusterMode mode,
+                       const mxb::http::Config& config,
                        json_t** ppError = nullptr);
 
 private:
     bool set_status(const mxb::http::Result& result, json_t** ppError);
 
+    std::string create_url(cs::rest::Action action, const std::string& tail = std::string());
+    static std::vector<std::string> create_urls(const std::vector<CsMonitorServer*>& servers,
+                                                cs::rest::Action action,
+                                                const std::string& tail = std::string());
+
 private:
-    int64_t                 m_admin_port;
-    std::unique_ptr<json_t> m_sConfig;
-    std::unique_ptr<xmlDoc> m_sDoc;
-    Status                  m_status;
+    int64_t                  m_admin_port;
+    const mxb::http::Config& m_http_config;
+    std::unique_ptr<json_t>  m_sConfig;
+    std::unique_ptr<xmlDoc>  m_sDoc;
+    Status                   m_status;
 };

@@ -24,9 +24,11 @@ using std::vector;
 
 CsMonitorServer::CsMonitorServer(SERVER* pServer,
                                  const SharedSettings& shared,
-                                 int64_t admin_port)
+                                 int64_t admin_port,
+                                 http::Config* pConfig)
     : mxs::MonitorServer(pServer, shared)
     , m_admin_port(admin_port)
+    , m_http_config(*pConfig)
 {
 }
 
@@ -37,7 +39,7 @@ CsMonitorServer::~CsMonitorServer()
 bool CsMonitorServer::refresh_config(json_t** ppError)
 {
     bool rv = false;
-    http::Result result = http::get(cs::rest::create_url(*this->server, m_admin_port, cs::rest::CONFIG));
+    http::Result result = http::get(create_url(cs::rest::CONFIG), m_http_config);
 
     if (result.code == 200)
     {
@@ -56,7 +58,7 @@ bool CsMonitorServer::refresh_config(json_t** ppError)
 bool CsMonitorServer::refresh_status(json_t** ppError)
 {
     bool rv = false;
-    http::Result result = http::get(cs::rest::create_url(*this->server, m_admin_port, cs::rest::STATUS));
+    http::Result result = http::get(create_url(cs::rest::STATUS), m_http_config);
 
     if (result.code == 200)
     {
@@ -199,8 +201,8 @@ bool CsMonitorServer::update(cs::ClusterMode mode, json_t** ppError)
          << "\"" << cs::to_string(mode) << "\""
          << "}";
 
-    string url = cs::rest::create_url(*this->server, m_admin_port, cs::rest::CONFIG);
-    http::Result result = http::put(url, body.str());
+    string url = create_url(cs::rest::CONFIG);
+    http::Result result = http::put(url, body.str(), m_http_config);
 
     if (!result.ok())
     {
@@ -214,16 +216,12 @@ bool CsMonitorServer::update(cs::ClusterMode mode, json_t** ppError)
 }
 
 //static
-bool CsMonitorServer::refresh_status(const vector<CsMonitorServer*>& servers, json_t** ppError)
+bool CsMonitorServer::refresh_status(const vector<CsMonitorServer*>& servers,
+                                     const mxb::http::Config& config,
+                                     json_t** ppError)
 {
-    vector<string> urls;
-
-    for (const auto* pS : servers)
-    {
-        urls.push_back(cs::rest::create_url(*pS, pS->m_admin_port, cs::rest::STATUS));
-    }
-
-    vector<http::Result> results = http::get(urls); // TODO: Config needs to be passed.
+    vector<string> urls = create_urls(servers, cs::rest::STATUS);
+    vector<http::Result> results = http::get(urls, config);
 
     mxb_assert(servers.size() == results.size());
 
@@ -249,13 +247,75 @@ bool CsMonitorServer::refresh_status(const vector<CsMonitorServer*>& servers, js
 }
 
 //static
+bool CsMonitorServer::shutdown(const std::vector<CsMonitorServer*>& servers,
+                               const std::chrono::seconds& timeout,
+                               const mxb::http::Config& config,
+                               json_t** ppOutput)
+{
+    string tail;
+
+    if (timeout.count() != 0)
+    {
+        tail += "timeout=";
+        tail += std::to_string(timeout.count());
+    }
+
+    vector<string> urls = create_urls(servers, cs::rest::SHUTDOWN, tail);
+    vector<http::Result> results = http::put(urls, "{}", config);
+
+    mxb_assert(urls.size() == results.size());
+
+    auto it = servers.begin();
+    auto end = servers.end();
+    auto jt = results.begin();
+
+    json_t* pOutput = json_array();
+
+    bool rv = true;
+
+    while (it != end)
+    {
+        auto* pServer = *it;
+        const auto& result = *jt;
+
+        json_t* pObject = json_object();
+        json_object_set_new(pObject, "name", json_string(pServer->name()));
+        json_object_set_new(pObject, "code", json_integer(result.code));
+
+        if (!result.ok())
+        {
+            json_error_t error;
+            unique_ptr<json_t> sError(json_loadb(result.body.c_str(), result.body.length(), 0, &error));
+
+            if (!sError)
+            {
+                sError.reset(json_string(result.body.c_str()));
+            }
+
+            json_object_set_new(pObject, "error", sError.release());
+            rv = false;
+        }
+
+        json_array_append_new(pOutput, pObject);
+
+        ++it;
+        ++jt;
+    }
+
+    *ppOutput = pOutput;
+
+    return rv;
+}
+
+//static
 bool CsMonitorServer::update(const std::vector<CsMonitorServer*>& servers,
                              cs::ClusterMode mode,
+                             const mxb::http::Config& config,
                              json_t** ppError)
 {
     bool rv = false;
 
-    if (!CsMonitorServer::refresh_status(servers))
+    if (!CsMonitorServer::refresh_status(servers, config))
     {
         MXS_ERROR("Could not refresh the status of all nodes. Will continue with the mode change "
                   "if single DBMR master was refreshed.");
@@ -295,3 +355,38 @@ bool CsMonitorServer::update(const std::vector<CsMonitorServer*>& servers,
     return rv;
 }
 
+string CsMonitorServer::create_url(cs::rest::Action action, const std::string& tail)
+{
+    string url = cs::rest::create_url(*this->server, m_admin_port, action);
+
+    if (!tail.empty())
+    {
+        url += "?";
+        url += tail;
+    }
+
+    return url;
+}
+
+//static
+vector<string> CsMonitorServer::create_urls(const std::vector<CsMonitorServer*>& servers,
+                                            cs::rest::Action action,
+                                            const std::string& tail)
+{
+    vector<string> urls;
+
+    for (const auto* pS : servers)
+    {
+        string url = cs::rest::create_url(*pS, pS->m_admin_port, action);
+
+        if (!tail.empty())
+        {
+            url += "?";
+            url += tail;
+        }
+
+        urls.push_back(url);
+    }
+
+    return urls;
+}

@@ -13,6 +13,7 @@
 #pragma once
 
 #include "csmon.hh"
+#include <chrono>
 #include <maxbase/http.hh>
 #include <maxbase/semaphore.hh>
 #include <maxscale/modulecmd.hh>
@@ -55,7 +56,8 @@ public:
 
     // Only to be called by the module call command mechanism.
     bool command_cluster_start(json_t** ppOutput, CsMonitorServer* pServer);
-    bool command_cluster_shutdown(json_t** ppOutput, CsMonitorServer* pServer);
+    bool command_cluster_shutdown(json_t** ppOutput,
+                                  const std::chrono::seconds& timout, CsMonitorServer* pServer);
     bool command_cluster_ping(json_t** ppOutput, CsMonitorServer* pServer);
     bool command_cluster_status(json_t** ppOutput, CsMonitorServer* pServer);
     bool command_cluster_config_get(json_t** ppOutput, CsMonitorServer* pServer);
@@ -108,7 +110,8 @@ private:
     }
 
     void cluster_start(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer);
-    void cluster_shutdown(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer);
+    void cluster_shutdown(json_t** ppOutput, mxb::Semaphore* pSem,
+                          const std::chrono::seconds& timeout, CsMonitorServer* pServer);
     void cluster_ping(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer);
     void cluster_status(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer);
     void cluster_config_get(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer);

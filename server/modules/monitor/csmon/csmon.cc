@@ -12,6 +12,7 @@
  */
 
 #include "csmonitor.hh"
+#include <chrono>
 
 namespace
 {
@@ -37,6 +38,7 @@ const modulecmd_arg_type_t cluster_start_argv[] =
 const modulecmd_arg_type_t cluster_shutdown_argv[] =
 {
     { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
+    { MODULECMD_ARG_STRING, "Timeout, 0 means no timeout." },
     { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Specific server to shutdown" }
 };
 
@@ -171,13 +173,42 @@ bool cluster_start(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 bool cluster_shutdown(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 {
     CsMonitor* pMonitor;
+    const char* zTimeout;
     CsMonitorServer* pServer;
 
-    bool rv = get_args(pArgs, ppOutput, &pMonitor, &pServer);
+    bool rv = get_args(pArgs, ppOutput, &pMonitor, &zTimeout, &pServer);
 
     if (rv)
     {
-        rv = pMonitor->command_cluster_shutdown(ppOutput, pServer);
+        std::chrono::seconds timeout(0);
+
+        if (strcmp(zTimeout, "0") != 0)
+        {
+            std::chrono::milliseconds duration;
+            mxs::config::DurationUnit unit;
+            rv = get_suffixed_duration(zTimeout, mxs::config::NO_INTERPRETATION, &duration, &unit);
+
+            if (rv)
+            {
+                if (unit == mxs::config::DURATION_IN_MILLISECONDS)
+                {
+                    MXS_WARNING("Duration specified in milliseconds, will be converted to seconds.");
+                }
+
+                timeout = std::chrono::duration_cast<std::chrono::seconds>(duration);
+            }
+            else
+            {
+                PRINT_MXS_JSON_ERROR(ppOutput,
+                                     "The timeout must be 0, or specified with a s, m, or h suffix");
+                rv = false;
+            }
+        }
+
+        if (rv)
+        {
+            rv = pMonitor->command_cluster_shutdown(ppOutput, timeout, pServer);
+        }
     }
 
     return rv;

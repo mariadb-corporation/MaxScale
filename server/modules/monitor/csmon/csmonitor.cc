@@ -488,14 +488,16 @@ bool CsMonitor::command_cluster_start(json_t** ppOutput, CsMonitorServer* pServe
     return command(ppOutput, sem, "cluster-start", cmd);
 }
 
-bool CsMonitor::command_cluster_shutdown(json_t** ppOutput, CsMonitorServer* pServer)
+bool CsMonitor::command_cluster_shutdown(json_t** ppOutput,
+                                         const std::chrono::seconds& timeout,
+                                         CsMonitorServer* pServer)
 {
     mxb::Semaphore sem;
 
-    auto cmd = [this, &sem, pServer, ppOutput] () {
+    auto cmd = [this, &sem, timeout, pServer, ppOutput] () {
         if (ready_to_run(ppOutput))
         {
-            cluster_shutdown(ppOutput, &sem, pServer);
+            cluster_shutdown(ppOutput, &sem, timeout, pServer);
         }
         else
         {
@@ -821,9 +823,25 @@ void CsMonitor::cluster_start(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitor
     cluster_put(ppOutput, pSem, cs::rest::START, pServer);
 }
 
-void CsMonitor::cluster_shutdown(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
+void CsMonitor::cluster_shutdown(json_t** ppOutput,
+                                 mxb::Semaphore* pSem,
+                                 const std::chrono::seconds& timeout,
+                                 CsMonitorServer* pServer)
 {
-    cluster_put(ppOutput, pSem, cs::rest::SHUTDOWN, pServer);
+    bool rv = true;
+
+    if (timeout != std::chrono::seconds(0))
+    {
+        // If there is a timeout, then the cluster must first be made read-only.
+        rv = CsMonitorServer::update(servers(), cs::READ_ONLY, m_http_config, ppOutput);
+    }
+
+    if (rv)
+    {
+        rv = CsMonitorServer::shutdown(servers(), timeout, m_http_config, ppOutput);
+    }
+
+    pSem->post();
 }
 
 void CsMonitor::cluster_ping(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
@@ -881,7 +899,7 @@ void CsMonitor::cluster_config_set(json_t** ppOutput, mxb::Semaphore* pSem,
 
 void CsMonitor::cluster_mode_set(json_t** ppOutput, mxb::Semaphore* pSem, cs::ClusterMode mode)
 {
-    CsMonitorServer::update(servers(), mode, ppOutput);
+    CsMonitorServer::update(servers(), mode, m_http_config, ppOutput);
 
     pSem->post();
 }
@@ -1097,5 +1115,5 @@ void CsMonitor::cluster_remove_node(json_t** ppOutput, mxb::Semaphore* pSem, CsM
 CsMonitorServer* CsMonitor::create_server(SERVER* pServer,
                                           const mxs::MonitorServer::SharedSettings& shared)
 {
-    return new CsMonitorServer(pServer, shared, m_config.admin_port);
+    return new CsMonitorServer(pServer, shared, m_config.admin_port, &m_http_config);
 }
