@@ -200,11 +200,7 @@ bool CsMonitorServer::update(cs::ClusterMode mode, json_t** ppError)
          << "}";
 
     string url = cs::rest::create_url(*this->server, m_admin_port, cs::rest::CONFIG);
-    string s = body.str();
-    vector<char> b;
-    b.resize(s.length());
-    std::copy(s.begin(), s.end(), b.begin());
-    http::Result result = http::put(url, b);
+    http::Result result = http::put(url, body.str());
 
     if (!result.ok())
     {

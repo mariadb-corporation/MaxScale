@@ -953,9 +953,9 @@ void CsMonitor::cluster_add_node(json_t** ppOutput, mxb::Semaphore* pSem, CsMoni
                 else
                 {
                     // TODO: Update configuration to INCLUDE the new node.
-                    // TODO: Change body to string.
-                    vector<char> body(results.begin()->body.data(),
-                                      results.begin()->body.data() + results.begin()->body.length());
+
+                    // Any body would be fine, they are all identical.
+                    const auto& body = results.begin()->body;
 
                     vector<string> urls;
                     for (const auto* pS : servers())
@@ -1065,9 +1065,9 @@ void CsMonitor::cluster_remove_node(json_t** ppOutput, mxb::Semaphore* pSem, CsM
                 else
                 {
                     // TODO: Update configuration to EXCLUDE the removed node.
-                    // TODO: Change body to string.
-                    vector<char> body(results.begin()->body.data(),
-                                      results.begin()->body.data() + results.begin()->body.length());
+
+                    // Any body would be fine, they are all identical.
+                    const auto& body = results.begin()->body;
 
                     vector<string> urls;
                     for (const auto* pS : servers())

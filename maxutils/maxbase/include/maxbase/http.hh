@@ -159,7 +159,7 @@ inline std::vector<Result> get(const std::vector<std::string>& urls,
  * @return A @c Result.
  */
 Result put(const std::string& url,
-           const std::vector<char>& body,
+           const std::string& body,
            const std::string& user, const std::string& password,
            const Config& config = Config());
 
@@ -167,17 +167,17 @@ inline Result put(const std::string& url,
                   const std::string& user, const std::string& password,
                   const Config& config = Config())
 {
-    return put(url, std::vector<char>(), user, password, config);
+    return put(url, std::string(), user, password, config);
 }
 
-inline Result put(const std::string& url, const std::vector<char>& body, const Config& config = Config())
+inline Result put(const std::string& url, const std::string& body, const Config& config = Config())
 {
     return put(url, body, "", "", config);
 }
 
 inline Result put(const std::string& url, const Config& config = Config())
 {
-    return put(url, std::vector<char>(), "", "", config);
+    return put(url, std::string(), "", "", config);
 }
 
 /**
@@ -196,7 +196,7 @@ inline Result put(const std::string& url, const Config& config = Config())
  * @return A @c Result.
  */
 std::vector<Result> put(const std::vector<std::string>& urls,
-                        const std::vector<char>& body,
+                        const std::string& body,
                         const std::string& user, const std::string& password,
                         const Config& config = Config());
 
@@ -204,11 +204,11 @@ inline std::vector<Result> put(const std::vector<std::string>& urls,
                                const std::string& user, const std::string& password,
                                const Config& config = Config())
 {
-    return put(urls, std::vector<char>(), user, password, config);
+    return put(urls, std::string(), user, password, config);
 }
 
 inline std::vector<Result> put(const std::vector<std::string>& urls,
-                               const std::vector<char>& body,
+                               const std::string& body,
                                const Config& config = Config())
 {
     return put(urls, body, "", "", config);
@@ -217,7 +217,7 @@ inline std::vector<Result> put(const std::vector<std::string>& urls,
 inline std::vector<Result> put(const std::vector<std::string>& urls,
                                const Config& config = Config())
 {
-    return put(urls, std::vector<char>(), "", "", config);
+    return put(urls, std::string(), "", "", config);
 }
 
 /**
@@ -371,7 +371,6 @@ const char* to_string(Async::status_t status);
  * Do a HTTP GET, asynchronously.
  *
  * @param urls      The URLs to GET.
- * @param body      The body (optional).
  * @param user      Username to use (optional).
  * @param password  Password for the user (optional).
  * @param config    The config to use (optional).
@@ -386,7 +385,7 @@ Async get_async(const std::vector<std::string>& urls,
                 const Config& config = Config());
 
 inline Async get_async(const std::vector<std::string>& urls,
-                const Config& config = Config())
+                       const Config& config = Config())
 {
     return get_async(urls, "", "", config);
 }
@@ -407,18 +406,18 @@ inline Async get_async(const std::vector<std::string>& urls,
  * @return An Async instance using which the operation can be performed.
  */
 Async put_async(const std::vector<std::string>& urls,
-                const std::vector<char>& body,
+                const std::string& body,
                 const std::string& user, const std::string& password,
                 const Config& config = Config());
 
 inline Async put_async(const std::vector<std::string>& urls,
                        const Config& config = Config())
 {
-    return put_async(urls, std::vector<char>(), "", "", config);
+    return put_async(urls, std::string(), "", "", config);
 }
 
 inline Async put_async(const std::vector<std::string>& urls,
-                       const std::vector<char>& body,
+                       const std::string& body,
                        const Config& config = Config())
 {
     return put_async(urls, body, "", "", config);

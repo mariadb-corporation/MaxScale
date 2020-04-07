@@ -74,13 +74,13 @@ inline int checked_curl_setopt(CURL* pCurl, CURLoption option, T value)
 struct ReadCallbackData
 {
 public:
-    ReadCallbackData(const std::vector<char>* pData)
-        : data(*pData)
+    ReadCallbackData(const std::string* pBody)
+        : body(*pBody)
     {
     }
 
-    const std::vector<char>& data;
-    size_t                   pos = 0;
+    const std::string& body;
+    size_t             pos = 0;
 };
 
 // https://curl.haxx.se/libcurl/c/CURLOPT_READFUNCTION.html
@@ -90,15 +90,15 @@ size_t read_callback(char* buffer, size_t size, size_t nitems, void* userdata)
 
     size_t nBytes = size * nitems;
 
-    if (pRcd->pos + nBytes > pRcd->data.size())
+    if (pRcd->pos + nBytes > pRcd->body.size())
     {
-        nBytes = pRcd->data.size() - pRcd->pos;
+        nBytes = pRcd->body.size() - pRcd->pos;
     }
 
-    auto b = pRcd->data.begin() + pRcd->pos;
+    auto b = pRcd->body.begin() + pRcd->pos;
     auto e = b + nBytes;
 
-    mxb_assert(e <= pRcd->data.end());
+    mxb_assert(e <= pRcd->body.end());
 
     std::copy(b, e, buffer);
 
@@ -202,12 +202,12 @@ CURL* get_easy_curl(CurlOp op,
             checked_curl_setopt(pCurl, CURLOPT_HTTPHEADER, pHeaders);
         }
 
-        if (pRcd && pRcd->data.size() != 0)
+        if (pRcd && pRcd->body.size() != 0)
         {
             checked_curl_setopt(pCurl, CURLOPT_UPLOAD, 1L);
             checked_curl_setopt(pCurl, CURLOPT_READFUNCTION, read_callback);
             checked_curl_setopt(pCurl, CURLOPT_READDATA, pRcd);
-            checked_curl_setopt(pCurl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)pRcd->data.size());
+            checked_curl_setopt(pCurl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)pRcd->body.size());
         }
 
         if (!user.empty() && !password.empty())
@@ -338,7 +338,7 @@ public:
 
     bool initialize(CurlOp op,
                     const std::vector<std::string>& urls,
-                    const std::vector<char>& body,
+                    const std::string& body,
                     const std::string& user, const std::string& password,
                     const Config& config)
     {
@@ -557,7 +557,7 @@ private:
     int                                      m_still_running;
     long                                     m_wait_no_more_than;
     vector<string>                           m_urls;
-    vector<char>                             m_body;
+    string                                   m_body;
     curl_slist*                              m_pHeaders { nullptr };
     vector<ReadCallbackData>                 m_rcds;
 };
@@ -621,7 +621,7 @@ namespace
 
 Async create_async(CurlOp op,
                    const std::vector<std::string>& urls,
-                   const std::vector<char>& body,
+                   const std::string& body,
                    const std::string& user, const std::string& password,
                    const Config& config)
 {
@@ -653,11 +653,11 @@ Async get_async(const std::vector<std::string>& urls,
                 const std::string& user, const std::string& password,
                 const Config& config)
 {
-    return create_async(CurlOp::GET, urls, vector<char>(), user, password, config);
+    return create_async(CurlOp::GET, urls, string(), user, password, config);
 }
 
 Async put_async(const std::vector<std::string>& urls,
-                const std::vector<char>& body,
+                const std::string& body,
                 const std::string& user, const std::string& password,
                 const Config& config)
 {
@@ -669,7 +669,7 @@ namespace
 
 Result execute(CurlOp op,
                const std::string& url,
-               const std::vector<char>& body,
+               const std::string& body,
                const std::string& user,
                const std::string& password,
                const Config& config)
@@ -706,7 +706,7 @@ Result execute(CurlOp op,
 
 vector<Result> execute(CurlOp op,
                        const std::vector<std::string>& urls,
-                       const std::vector<char>& body,
+                       const std::string& body,
                        const std::string& user, const std::string& password,
                        const Config& config)
 {
@@ -740,18 +740,18 @@ vector<Result> execute(CurlOp op,
 
 Result get(const std::string& url, const std::string& user, const std::string& password, const Config& config)
 {
-    return execute(CurlOp::GET, url, std::vector<char>(), user, password, config);
+    return execute(CurlOp::GET, url, std::string(), user, password, config);
 }
 
 vector<Result> get(const std::vector<std::string>& urls,
                    const std::string& user, const std::string& password,
                    const Config& config)
 {
-    return execute(CurlOp::GET, urls, std::vector<char>(), user, password, config);
+    return execute(CurlOp::GET, urls, std::string(), user, password, config);
 }
 
 Result put(const std::string& url,
-           const std::vector<char>& body,
+           const std::string& body,
            const std::string& user,
            const std::string& password,
            const Config& config)
@@ -760,7 +760,7 @@ Result put(const std::string& url,
 }
 
 vector<Result> put(const std::vector<std::string>& urls,
-                   const std::vector<char>& body,
+                   const std::string& body,
                    const std::string& user, const std::string& password,
                    const Config& config)
 {
