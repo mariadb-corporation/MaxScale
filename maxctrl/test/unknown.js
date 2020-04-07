@@ -1,39 +1,37 @@
-require('../test_utils.js')()
+require("../test_utils.js")();
 
-describe("Unknown Commands", function() {
-    before(startMaxScale)
+describe("Unknown Commands", function () {
+  before(startMaxScale);
 
-    var endpoints = [
-        'list',
-        'show',
-        'set',
-        'clear',
-        'enable',
-        'disable',
-        'create',
-        'destroy',
-        'link',
-        'unlink',
-        'start',
-        'stop',
-        'alter',
-        'rotate',
-        'call',
-        'cluster',
-        'drain'
-    ]
+  var endpoints = [
+    "list",
+    "show",
+    "set",
+    "clear",
+    "enable",
+    "disable",
+    "create",
+    "destroy",
+    "link",
+    "unlink",
+    "start",
+    "stop",
+    "alter",
+    "rotate",
+    "call",
+    "cluster",
+    "drain",
+  ];
 
-    endpoints.forEach(function (i) {
-        it('unknown ' + i + ' command', function() {
-            return doCommand(i + ' something')
-                .should.be.rejected
-        })
-    })
+  endpoints.forEach(function (i) {
+    it("unknown " + i + " command", function () {
+      return doCommand(i + " something").should.be.rejected;
+    });
+  });
 
-    it('generic unknown command', function() {
-        return doCommand('something')
-            .should.be.rejected
-    })
+  it("generic unknown command", function () {
+    return doCommand("something").should.be.rejected;
+  });
 
-    after(stopMaxScale)
+  after(stopMaxScale);
 });

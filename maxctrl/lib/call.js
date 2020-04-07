@@ -10,39 +10,48 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-require('./common.js')()
+require("./common.js")();
 
-exports.command = 'call <command>'
-exports.desc = 'Call module commands'
-exports.handler = function() {}
-exports.builder = function(yargs) {
-    yargs
-        .command('command <module> <command> [params...]', 'Call a module command', function(yargs) {
-            return yargs.epilog('To inspect the list of module commands, execute `list commands`')
-                .usage('Usage: call command <module> <command> [params...]')
-        }, function(argv) {
-            // First we have to find the correct method to use
-            maxctrl(argv, function(host) {
-                return doRequest(host, 'maxscale/modules/' + argv.module + '/', function(resp) {
+exports.command = "call <command>";
+exports.desc = "Call module commands";
+exports.handler = function () {};
+exports.builder = function (yargs) {
+  yargs
+    .command(
+      "command <module> <command> [params...]",
+      "Call a module command",
+      function (yargs) {
+        return yargs
+          .epilog("To inspect the list of module commands, execute `list commands`")
+          .usage("Usage: call command <module> <command> [params...]");
+      },
+      function (argv) {
+        // First we have to find the correct method to use
+        maxctrl(argv, function (host) {
+          return doRequest(host, "maxscale/modules/" + argv.module + "/", function (resp) {
+            // A GET request will return the correct error if the command is not found
+            var verb = "GET";
 
-                    // A GET request will return the correct error if the command is not found
-                    var verb = 'GET'
+            resp.data.attributes.commands.forEach(function (i) {
+              if (i.id == argv.command) {
+                verb = i.attributes.method;
+              }
+            });
 
-                    resp.data.attributes.commands.forEach(function(i) {
-                        if (i.id == argv.command) {
-                            verb = i.attributes.method;
-                        }
-                    })
-
-                    return doAsyncRequest(host, 'maxscale/modules/' + argv.module + '/' + argv.command + '?' + argv.params.join('&'),
-                                          function(resp) {
-                                              return JSON.stringify(resp, null, 4)
-                                          }, { method: verb })
-                })
-            })
-        })
-        .usage('Usage: call <command>')
-        .help()
-        .wrap(null)
-        .demandCommand(1, helpMsg)
-}
+            return doAsyncRequest(
+              host,
+              "maxscale/modules/" + argv.module + "/" + argv.command + "?" + argv.params.join("&"),
+              function (resp) {
+                return JSON.stringify(resp, null, 4);
+              },
+              { method: verb }
+            );
+          });
+        });
+      }
+    )
+    .usage("Usage: call <command>")
+    .help()
+    .wrap(null)
+    .demandCommand(1, helpMsg);
+};

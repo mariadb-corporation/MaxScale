@@ -10,53 +10,73 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-require('./common.js')()
+require("./common.js")();
 
-exports.command = 'stop <command>'
-exports.desc = 'Stop objects'
-exports.handler = function() {}
-exports.builder = function(yargs) {
-    yargs
-        .command('service <name>', 'Stop a service', function(yargs) {
-            return yargs.epilog('Stopping a service will prevent all the listeners for that service ' +
-                                'from accepting new connections. Existing connections will still be ' +
-                                'handled normally until they are closed.')
-                .usage('Usage: stop service <name>')
-        }, function(argv) {
-            maxctrl(argv, function(host) {
-                return doRequest(host, 'services/' + argv.name + '/stop', null, {method: 'PUT'})
-            })
-        })
-        .command('monitor <name>', 'Stop a monitor', function(yargs) {
-            return yargs.epilog('Stopping a monitor will pause the monitoring of the servers. ' +
-                                'This can be used to manually control server states with the ' +
-                                '`set server` command.')
-                .usage('Usage: stop monitor <name>')
-        }, function(argv) {
-            maxctrl(argv, function(host) {
-                return doRequest(host, 'monitors/' + argv.name + '/stop', null, {method: 'PUT'})
-            })
-        })
-        .command(['services', 'maxscale'], 'Stop all services', function(yargs) {
-            return yargs.epilog('This command will execute the `stop service` command for ' +
-                                'all services in MaxScale.')
-                .usage('Usage: stop [services|maxscale]')
-        }, function(argv) {
-            maxctrl(argv, function(host) {
-                return doRequest(host, 'services/', function(res) {
-                    var promises = []
+exports.command = "stop <command>";
+exports.desc = "Stop objects";
+exports.handler = function () {};
+exports.builder = function (yargs) {
+  yargs
+    .command(
+      "service <name>",
+      "Stop a service",
+      function (yargs) {
+        return yargs
+          .epilog(
+            "Stopping a service will prevent all the listeners for that service " +
+              "from accepting new connections. Existing connections will still be " +
+              "handled normally until they are closed."
+          )
+          .usage("Usage: stop service <name>");
+      },
+      function (argv) {
+        maxctrl(argv, function (host) {
+          return doRequest(host, "services/" + argv.name + "/stop", null, { method: "PUT" });
+        });
+      }
+    )
+    .command(
+      "monitor <name>",
+      "Stop a monitor",
+      function (yargs) {
+        return yargs
+          .epilog(
+            "Stopping a monitor will pause the monitoring of the servers. " +
+              "This can be used to manually control server states with the " +
+              "`set server` command."
+          )
+          .usage("Usage: stop monitor <name>");
+      },
+      function (argv) {
+        maxctrl(argv, function (host) {
+          return doRequest(host, "monitors/" + argv.name + "/stop", null, { method: "PUT" });
+        });
+      }
+    )
+    .command(
+      ["services", "maxscale"],
+      "Stop all services",
+      function (yargs) {
+        return yargs
+          .epilog("This command will execute the `stop service` command for " + "all services in MaxScale.")
+          .usage("Usage: stop [services|maxscale]");
+      },
+      function (argv) {
+        maxctrl(argv, function (host) {
+          return doRequest(host, "services/", function (res) {
+            var promises = [];
 
-                    res.data.forEach(function(i) {
-                        promises.push(doRequest(host, 'services/' + i.id + '/stop', null, {method: 'PUT'}))
-                    })
+            res.data.forEach(function (i) {
+              promises.push(doRequest(host, "services/" + i.id + "/stop", null, { method: "PUT" }));
+            });
 
-                    return Promise.all(promises)
-                        .then(() => OK())
-                })
-            })
-        })
-        .usage('Usage: stop <command>')
-        .help()
-        .wrap(null)
-        .demandCommand(1, helpMsg)
-}
+            return Promise.all(promises).then(() => OK());
+          });
+        });
+      }
+    )
+    .usage("Usage: stop <command>")
+    .help()
+    .wrap(null)
+    .demandCommand(1, helpMsg);
+};

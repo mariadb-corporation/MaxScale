@@ -10,57 +10,73 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-require('./common.js')()
+require("./common.js")();
 
 function removeServer(argv, path, targets) {
-    maxctrl(argv, function(host) {
-        return doRequest(host, path, function(res) {
-            var servers =_.get(res, 'data.relationships.servers.data', [])
-            var services =_.get(res, 'data.relationships.services.data', [])
+  maxctrl(argv, function (host) {
+    return doRequest(host, path, function (res) {
+      var servers = _.get(res, "data.relationships.servers.data", []);
+      var services = _.get(res, "data.relationships.services.data", []);
 
-            _.remove(servers, function(i) {
-                return targets.indexOf(i.id) != -1
-            })
+      _.remove(servers, function (i) {
+        return targets.indexOf(i.id) != -1;
+      });
 
-            _.remove(services, function(i) {
-                return targets.indexOf(i.id) != -1
-            })
+      _.remove(services, function (i) {
+        return targets.indexOf(i.id) != -1;
+      });
 
-            // Update relationships and remove unnecessary parts
-            _.set(res, 'data.relationships.servers.data', servers)
-            _.set(res, 'data.relationships.services.data', services)
-            delete res.data.attributes
+      // Update relationships and remove unnecessary parts
+      _.set(res, "data.relationships.servers.data", servers);
+      _.set(res, "data.relationships.services.data", services);
+      delete res.data.attributes;
 
-            return doAsyncRequest(host, path, null, {method: 'PATCH', body: res})
-        })
-    })
+      return doAsyncRequest(host, path, null, { method: "PATCH", body: res });
+    });
+  });
 }
 
-exports.command = 'unlink <command>'
-exports.desc = 'Unlink objects'
-exports.handler = function() {}
-exports.builder = function(yargs) {
-    yargs
-        .command('service <name> <target...>', 'Unlink targets from a service', function(yargs) {
-            return yargs.epilog('This command unlinks targets from a service, removing them from ' +
-                                'the list of available targets for that service. New connections to ' +
-                                'the service will not use the unlinked targets but existing ' +
-                                'connections can still use the targets. A target can be ' +
-                                'a server, another service or a cluster (a monitor).')
-                .usage('Usage: unlink service <name> <target...>')
-        }, function(argv) {
-            removeServer(argv, 'services/' + argv.name, argv.target)
-        })
-        .command('monitor <name> <server...>', 'Unlink servers from a monitor', function(yargs) {
-            return yargs.epilog('This command unlinks servers from a monitor, removing them from ' +
-                                'the list of monitored servers. The servers will be left in their ' +
-                                'current state when they are unlinked from a monitor.')
-                .usage('Usage: unlink monitor <name> <server...>')
-        }, function(argv) {
-            removeServer(argv, 'monitors/' + argv.name, argv.server)
-        })
-        .usage('Usage: unlink <command>')
-        .help()
-        .wrap(null)
-        .demandCommand(1, helpMsg)
-}
+exports.command = "unlink <command>";
+exports.desc = "Unlink objects";
+exports.handler = function () {};
+exports.builder = function (yargs) {
+  yargs
+    .command(
+      "service <name> <target...>",
+      "Unlink targets from a service",
+      function (yargs) {
+        return yargs
+          .epilog(
+            "This command unlinks targets from a service, removing them from " +
+              "the list of available targets for that service. New connections to " +
+              "the service will not use the unlinked targets but existing " +
+              "connections can still use the targets. A target can be " +
+              "a server, another service or a cluster (a monitor)."
+          )
+          .usage("Usage: unlink service <name> <target...>");
+      },
+      function (argv) {
+        removeServer(argv, "services/" + argv.name, argv.target);
+      }
+    )
+    .command(
+      "monitor <name> <server...>",
+      "Unlink servers from a monitor",
+      function (yargs) {
+        return yargs
+          .epilog(
+            "This command unlinks servers from a monitor, removing them from " +
+              "the list of monitored servers. The servers will be left in their " +
+              "current state when they are unlinked from a monitor."
+          )
+          .usage("Usage: unlink monitor <name> <server...>");
+      },
+      function (argv) {
+        removeServer(argv, "monitors/" + argv.name, argv.server);
+      }
+    )
+    .usage("Usage: unlink <command>")
+    .help()
+    .wrap(null)
+    .demandCommand(1, helpMsg);
+};

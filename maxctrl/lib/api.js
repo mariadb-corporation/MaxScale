@@ -10,43 +10,52 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-require('./common.js')()
+require("./common.js")();
 
-exports.command = 'api <command>'
-exports.desc = 'Raw REST API access'
-exports.handler = function() {}
-exports.builder = function(yargs) {
-    yargs
-        .group(['sum'], 'API options:')
-        .option('sum', {
-            describe: 'Calculate sum of API result. Only works for arrays of numbers ' +
-                'e.g. `api get --sum servers data[].attributes.statistics.connections`.',
-            type: 'boolean',
-            default: false
-        })
-        .command('get <resource> [path]', 'Get raw JSON', function(yargs) {
-            return yargs.epilog('Perform a raw REST API call. ' +
-                                'The path definition uses JavaScript syntax to extract values. ' +
-                                'For example, the following command extracts all server states ' +
-                                'as an array of JSON values: maxctrl api get servers data[].attributes.state')
-                .usage('Usage: get <resource> [path]')
-        }, function(argv) {
-            maxctrl(argv, function(host) {
-                return doRequest(host, argv.resource, (res) => {
-                    if (argv.path) {
-                        res = _.getPath(res, argv.path)
-                    }
+exports.command = "api <command>";
+exports.desc = "Raw REST API access";
+exports.handler = function () {};
+exports.builder = function (yargs) {
+  yargs
+    .group(["sum"], "API options:")
+    .option("sum", {
+      describe:
+        "Calculate sum of API result. Only works for arrays of numbers " +
+        "e.g. `api get --sum servers data[].attributes.statistics.connections`.",
+      type: "boolean",
+      default: false,
+    })
+    .command(
+      "get <resource> [path]",
+      "Get raw JSON",
+      function (yargs) {
+        return yargs
+          .epilog(
+            "Perform a raw REST API call. " +
+              "The path definition uses JavaScript syntax to extract values. " +
+              "For example, the following command extracts all server states " +
+              "as an array of JSON values: maxctrl api get servers data[].attributes.state"
+          )
+          .usage("Usage: get <resource> [path]");
+      },
+      function (argv) {
+        maxctrl(argv, function (host) {
+          return doRequest(host, argv.resource, (res) => {
+            if (argv.path) {
+              res = _.getPath(res, argv.path);
+            }
 
-                    if (argv.sum && Array.isArray(res) && typeof(res[0]) == 'number') {
-                        res = res.reduce((sum, value) => value ? sum + value : sum)
-                    }
+            if (argv.sum && Array.isArray(res) && typeof res[0] == "number") {
+              res = res.reduce((sum, value) => (value ? sum + value : sum));
+            }
 
-                    return JSON.stringify(res)
-                })
-            })
-        })
-        .usage('Usage: api <command>')
-        .help()
-        .wrap(null)
-        .demandCommand(1, helpMsg)
-}
+            return JSON.stringify(res);
+          });
+        });
+      }
+    )
+    .usage("Usage: api <command>")
+    .help()
+    .wrap(null)
+    .demandCommand(1, helpMsg);
+};

@@ -1,12 +1,11 @@
-require('../test_utils.js')()
+require("../test_utils.js")();
 
-describe("Rotate Commands", function() {
-    before(startMaxScale)
+describe("Rotate Commands", function () {
+  before(startMaxScale);
 
-    it('rotate logs', function() {
-        return doCommand('rotate logs')
-            .should.be.fulfilled
-    });
+  it("rotate logs", function () {
+    return doCommand("rotate logs").should.be.fulfilled;
+  });
 
-    after(stopMaxScale)
+  after(stopMaxScale);
 });
