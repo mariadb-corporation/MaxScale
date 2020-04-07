@@ -271,14 +271,10 @@ public:
     int  version() const;
 
 private:
-    void update_service_user();
     void generate_dummy_entry(const std::string& user, mariadb::UserEntry* output) const;
 
     const MariaDBUserManager& m_master;     /**< User database master copy */
 
     UserDatabase m_userdb;              /**< Local copy of user database */
     int          m_userdb_version {0};  /**< Version of local copy */
-
-    /* Service user entry, used with inject_service_user */
-    std::unique_ptr<mariadb::UserEntry> m_service_entry;
 };

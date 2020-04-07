@@ -30,7 +30,6 @@ struct UserSearchSettings
         bool match_host_pattern {true};
         bool allow_anon_user {false};
         bool case_sensitive_db {true};
-        bool allow_service_user {true};
     };
 
     struct Service

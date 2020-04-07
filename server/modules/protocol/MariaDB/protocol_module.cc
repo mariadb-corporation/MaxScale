@@ -100,7 +100,8 @@ void MySQLProtocolModule::read_authentication_options(mxs::ConfigParameters* par
         params->remove("cache_dir"); // ignored
         if (params->contains(inject))
         {
-            m_user_search_settings.allow_service_user = params->get_bool(inject);
+            MXB_WARNING("Authenticator option '%s' is no longer supported and its value is ignored.",
+                        inject.c_str());
             params->remove(inject);
         }
         if (params->contains(skip_auth))

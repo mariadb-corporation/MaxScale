@@ -1316,27 +1316,11 @@ MariaDBUserCache::find_user(const string& user, const string& host, const string
         }
     }
 
-    if (res.type == UserEntryType::USER_NOT_FOUND)
-    {
-        // Did not find a matching entry. If service user is allowed, try matching to one.
-        // Username match is enough for this stage. The authenticator will check that the password matches.
-        // The service-user has access to all databases.
-        if (sett.listener.allow_service_user && m_service_entry && (user == m_service_entry->username))
-        {
-            res.entry = *m_service_entry;
-            res.type = UserEntryType::USER_ACCOUNT_OK;
-            MXB_INFO("Found matching service user '%s@'%%' for client '%s'@'%s'.",
-                     m_service_entry->username.c_str(), userz, hostz);
-        }
-    }
-
     // If "root" user is being accepted when not allowed, block it now.
-    if (res.type == UserEntryType::USER_ACCOUNT_OK && !sett.service.allow_root_user
-        && user == "root")
+    if (res.type == UserEntryType::USER_ACCOUNT_OK && !sett.service.allow_root_user && user == "root")
     {
         res.type = UserEntryType::ROOT_ACCESS_DENIED;
-        MXB_INFO("Client '%s'@'%s' blocked because '%s' is false.",
-                 userz, hostz, CN_ENABLE_ROOT_USER);
+        MXB_INFO("Client '%s'@'%s' blocked because '%s' is false.", userz, hostz, CN_ENABLE_ROOT_USER);
         return res;
     }
 
@@ -1356,7 +1340,6 @@ void MariaDBUserCache::update_from_master()
         // Master db has updated data, copy it.
         m_master.get_user_database(&m_userdb, &m_userdb_version);
     }
-    update_service_user();
 }
 
 bool MariaDBUserCache::can_update_immediately() const
@@ -1373,34 +1356,6 @@ bool MariaDBUserCache::can_update_immediately() const
 int MariaDBUserCache::version() const
 {
     return m_userdb_version;
-}
-
-void MariaDBUserCache::update_service_user()
-{
-    // If the user database is empty, add the service-user. It will only be used with listeners who have
-    // inject_service_user on.
-    SUserEntry result;
-    if (m_userdb.empty())
-    {
-        const char* service_user = nullptr;
-        const char* service_pw = nullptr;
-        serviceGetUser(m_master.service(), &service_user, &service_pw);
-
-        // The equivalent password in the mysql user entry is HEX(SHA1(SHA1(cleartext_pw))).
-        string cleartext_pw = decrypt_password(service_pw);
-        if (!cleartext_pw.empty())
-        {
-            string hexpass = mxs::create_hex_sha1_sha1_passwd(cleartext_pw.c_str());
-            auto entry = std::make_unique<mariadb::UserEntry>();
-            entry->username = service_user;
-            entry->host_pattern = "%";
-            entry->password = hexpass;
-            // The service-user only works with standard authentication.
-            entry->plugin = mysql_default_auth;
-            result = move(entry);
-        }
-    }
-    m_service_entry = move(result);
 }
 
 void MariaDBUserCache::generate_dummy_entry(const std::string& user, mariadb::UserEntry* output) const
