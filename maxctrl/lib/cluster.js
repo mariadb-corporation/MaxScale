@@ -130,6 +130,13 @@ async function getDiffs(a, b) {
     return [src, dest]
 }
 
+// Returns a set with the parameters that can be modified at runtime.
+async function getModifiableParams(host) {
+    var module = await simpleRequest(host, 'maxscale/modules/core')
+    var modifiable = _.filter(module.data.attributes.parameters, (v) => v.modifiable)
+    return new Set(_.map(modifiable, (v) => v.name))
+}
+
 async function syncDiffs(host, src, dest) {
     // Delete old services
     for (i of getDifference(dest.services, src.services)) {
@@ -206,6 +213,16 @@ async function syncDiffs(host, src, dest) {
     for (i of _.difference(collections, ['users', 'filters'])) {
         for (j of src[i].data) {
             await simpleRequest(host, i + '/' + j.id, {method: 'PATCH', body: {data: j}})
+        }
+    }
+
+    var params = await getModifiableParams(host)
+
+    // Do the same for individual resources
+    for (i of endpoints) {
+        for (j of src[i].data) {
+            j.attributes.parameters =_.pickBy(j.attributes.parameters, (v, k) => params.has(k))
+            await simpleRequest(host, i, {method: 'PATCH', body: {data: j}})
         }
     }
 }
