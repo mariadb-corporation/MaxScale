@@ -124,6 +124,7 @@ program
       "Use `exit` to exit the interactive mode."
   )
   .help()
+  .scriptName("maxctrl")
   .command("*", false, {}, function (argv) {
     if (argv._.length == 0) {
       base_opts = [
