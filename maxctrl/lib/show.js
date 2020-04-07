@@ -543,7 +543,7 @@ exports.builder = function (yargs) {
           .epilog(
             "Show detailed information about a server. The `Parameters` " +
               "field contains the currently configured parameters for this " +
-              "server. See `help alter server` for more details about altering " +
+              "server. See `--help alter server` for more details about altering " +
               "server parameters." +
               fieldDescriptions(server_fields)
           )
@@ -579,7 +579,7 @@ exports.builder = function (yargs) {
           .epilog(
             "Show detailed information about a service. The `Parameters` " +
               "field contains the currently configured parameters for this " +
-              "service. See `help alter service` for more details about altering " +
+              "service. See `--help alter service` for more details about altering " +
               "service parameters." +
               fieldDescriptions(service_fields)
           )
@@ -615,7 +615,7 @@ exports.builder = function (yargs) {
           .epilog(
             "Show detailed information about a monitor. The `Parameters` " +
               "field contains the currently configured parameters for this " +
-              "monitor. See `help alter monitor` for more details about altering " +
+              "monitor. See `--help alter monitor` for more details about altering " +
               "monitor parameters." +
               fieldDescriptions(monitor_fields)
           )
@@ -680,7 +680,7 @@ exports.builder = function (yargs) {
         return yargs
           .epilog(
             "Show detailed information about all sessions. " +
-              "See `help show session` for more details." +
+              "See `--help show session` for more details." +
               fieldDescriptions(session_fields)
           )
           .wrap(null)
@@ -771,7 +771,7 @@ exports.builder = function (yargs) {
       function (yargs) {
         return yargs
           .epilog(
-            "See `help alter maxscale` for more details about altering " +
+            "See `--help alter maxscale` for more details about altering " +
               "MaxScale parameters." +
               fieldDescriptions(show_maxscale_fields)
           )
@@ -820,7 +820,7 @@ exports.builder = function (yargs) {
       function (yargs) {
         return yargs
           .epilog(
-            "See `help alter logging` for more details about altering " +
+            "See `--help alter logging` for more details about altering " +
               "logging parameters." +
               fieldDescriptions(show_logging_fields)
           )
