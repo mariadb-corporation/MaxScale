@@ -219,12 +219,13 @@ bool runtime_alter_service_relationships_from_json(Service* service, const char*
 /**
  * @brief Create a listener from JSON
  *
- * @param service Service where the listener is created
- * @param json JSON definition of the new listener
+ * @param json    JSON definition of the new listener
+ * @param service Service where the listener is created. If null, the service defined in the JSON
+ *                relationships will be used.
  *
  * @return True if the listener was successfully created and started
  */
-bool runtime_create_listener_from_json(Service* service, json_t* json);
+bool runtime_create_listener_from_json(json_t* json, Service* service = nullptr);
 
 /**
  * @brief Alter logging options using JSON

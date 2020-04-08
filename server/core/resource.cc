@@ -337,7 +337,19 @@ HttpResponse cb_create_service_listener(const HttpRequest& request)
     Service* service = Service::find(request.uri_part(1).c_str());
     mxb_assert(service && request.get_json());
 
-    if (runtime_create_listener_from_json(service, request.get_json()))
+    if (runtime_create_listener_from_json(request.get_json(), service))
+    {
+        return HttpResponse(MHD_HTTP_NO_CONTENT);
+    }
+
+    return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+}
+
+HttpResponse cb_create_listener(const HttpRequest& request)
+{
+    mxb_assert(request.get_json());
+
+    if (runtime_create_listener_from_json(request.get_json()))
     {
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
@@ -477,7 +489,7 @@ HttpResponse cb_delete_monitor(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
 }
 
-HttpResponse cb_delete_listener(const HttpRequest& request)
+HttpResponse cb_delete_service_listener(const HttpRequest& request)
 {
 
     Service* service = Service::find(request.uri_part(1).c_str());
@@ -485,6 +497,19 @@ HttpResponse cb_delete_listener(const HttpRequest& request)
     std::string listener = request.uri_part(3);
 
     if (!runtime_destroy_listener(service, listener.c_str()))
+    {
+        return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
+    }
+
+    return HttpResponse(MHD_HTTP_NO_CONTENT);
+}
+
+HttpResponse cb_delete_listener(const HttpRequest& request)
+{
+    auto listener = listener_find(request.uri_part(1).c_str());
+    mxb_assert(listener);
+
+    if (!runtime_destroy_listener(static_cast<Service*>(listener->service()), listener->name()))
     {
         return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
     }
@@ -1035,6 +1060,7 @@ public:
         m_post.emplace_back(cb_create_filter, "filters");
         m_post.emplace_back(cb_create_service, "services");
         m_post.emplace_back(cb_create_service_listener, "services", ":service", "listeners");
+        m_post.emplace_back(cb_create_listener, "listeners");
         m_post.emplace_back(cb_create_user, "users", "inet");
         m_post.emplace_back(cb_create_user, "users", "unix");
 
@@ -1103,7 +1129,8 @@ public:
         m_delete.emplace_back(cb_delete_monitor, "monitors", ":monitor");
         m_delete.emplace_back(cb_delete_service, "services", ":service");
         m_delete.emplace_back(cb_delete_filter, "filters", ":filter");
-        m_delete.emplace_back(cb_delete_listener, "services", ":service", "listeners", ":listener");
+        m_delete.emplace_back(cb_delete_service_listener, "services", ":service", "listeners", ":listener");
+        m_delete.emplace_back(cb_delete_listener, "listeners", ":listener");
 
         m_delete.emplace_back(cb_delete_user, "users", "inet", ":inetuser");
         m_delete.emplace_back(cb_delete_user, "users", "unix", ":unixuser");

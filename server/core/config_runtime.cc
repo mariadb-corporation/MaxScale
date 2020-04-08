@@ -1572,6 +1572,33 @@ bool ignored_core_parameters(const char* key)
 
     return params.count(key);
 }
+
+Service* get_service_from_listener_json(json_t* json)
+{
+    Service* rval = nullptr;
+    const char* ptr = "/data/relationships/services/data/0/id";
+
+    if (auto svc = mxs_json_pointer(json, ptr))
+    {
+        if (json_is_string(svc))
+        {
+            if (!(rval = Service::find(json_string_value(svc))))
+            {
+                MXS_ERROR("'%s' is not a valid service in MaxScale", json_string_value(svc));
+            }
+        }
+        else
+        {
+            MXS_ERROR("Field '%s' is not a string", ptr);
+        }
+    }
+    else
+    {
+        MXS_ERROR("Field '%s' is not defined", ptr);
+    }
+
+    return rval;
+}
 }
 
 void config_runtime_error(const char* fmt, ...)
@@ -2273,9 +2300,14 @@ bool runtime_alter_logs_from_json(json_t* json)
     return rval;
 }
 
-bool runtime_create_listener_from_json(Service* service, json_t* json)
+bool runtime_create_listener_from_json(json_t* json, Service* service)
 {
     bool rval = false;
+
+    if (!service && !(service = get_service_from_listener_json(json)))
+    {
+        return false;
+    }
 
     if (validate_listener_json(json))
     {
