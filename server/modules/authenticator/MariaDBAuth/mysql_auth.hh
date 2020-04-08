@@ -119,8 +119,6 @@ public:
     bool  m_check_permissions {true};
     bool  m_lower_case_table_names {false};     /**< Disable database case-sensitivity */
 
-private:
-    int get_users_from_server(MYSQL* con, SERVER* server, SERVICE* service);
 };
 
 class MariaDBClientAuthenticator : public mariadb::ClientAuthenticatorT<MariaDBAuthenticatorModule>
@@ -172,32 +170,3 @@ private:
     State m_state {State::EXPECT_AUTHSWITCH};   /**< Authentication state */
 };
 
-/**
- * @brief Add new MySQL user to the internal user database
- *
- * @param handle Database handle
- * @param user   Username
- * @param host   Host
- * @param db     Database
- * @param anydb  Global access to databases
- */
-void add_mysql_user(sqlite3* handle,
-                    const char* user,
-                    const char* host,
-                    const char* db,
-                    bool anydb,
-                    const char* pw);
-
-/**
- * @brief Check if the service user has all required permissions to operate properly.
- *
- * This checks for SELECT permissions on mysql.user, mysql.db and mysql.tables_priv
- * tables and for SHOW DATABASES permissions. If permissions are not adequate,
- * an error message is logged and the service is not started.
- *
- * @param service Service to inspect
- *
- * @return True if service permissions are correct on at least one server, false
- * if permissions are missing or if an error occurred.
- */
-bool check_service_permissions(SERVICE* service);

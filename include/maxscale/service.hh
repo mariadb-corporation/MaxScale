@@ -102,7 +102,7 @@ public:
 
         bool strip_db_esc;      /**< Remove the '\' characters from database names when querying them from
                                  * the server. MySQL Workbench seems to escape at least the underscore
-                                 * character. */
+                                 * character. Currently unused as the real use case is unknown. */
 
         int64_t rank;   /*< The ranking of this service */
 
