@@ -2089,7 +2089,7 @@ void MariaDBBackendConnection::process_reply_start(Iter it, Iter end)
         // https://mariadb.com/kb/en/library/com_statistics/#response
         set_reply_state(ReplyState::DONE);
     }
-    else if (m_reply.command() == MXS_COM_FIELD_LIST)
+    else if (m_reply.command() == MXS_COM_FIELD_LIST && *it != MYSQL_REPLY_ERR)
     {
         // COM_FIELD_LIST sends a strange kind of a result set that doesn't have field definitions
         set_reply_state(ReplyState::RSET_ROWS);
