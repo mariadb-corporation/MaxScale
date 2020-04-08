@@ -39,6 +39,7 @@
 #include "internal/servermanager.hh"
 #include "internal/service.hh"
 #include "internal/session.hh"
+#include "internal/listener.hh"
 
 using std::map;
 using std::string;
@@ -103,7 +104,8 @@ bool Resource::matching_variable_path(const string& path, const string& target) 
             || (path == ":monitor" && MonitorManager::find_monitor(target.c_str()))
             || (path == ":module" && (get_module(target.c_str(), NULL) || target == CN_CORE))
             || (path == ":inetuser" && admin_inet_user_exists(target.c_str()))
-            || (path == ":unixuser" && admin_linux_account_enabled(target.c_str())))
+            || (path == ":unixuser" && admin_linux_account_enabled(target.c_str()))
+            || (path == ":listener" && listener_find(target.c_str())))
         {
             rval = true;
         }
@@ -482,11 +484,7 @@ HttpResponse cb_delete_listener(const HttpRequest& request)
     mxb_assert(service);
     std::string listener = request.uri_part(3);
 
-    if (!service_has_named_listener(service, listener.c_str()))
-    {
-        return HttpResponse(MHD_HTTP_NOT_FOUND);
-    }
-    else if (!runtime_destroy_listener(service, listener.c_str()))
+    if (!runtime_destroy_listener(service, listener.c_str()))
     {
         return HttpResponse(MHD_HTTP_FORBIDDEN, runtime_get_json_error());
     }
@@ -554,16 +552,9 @@ HttpResponse cb_get_service_listener(const HttpRequest& request)
     Service* service = Service::find(request.uri_part(1).c_str());
     std::string listener = request.uri_part(3);
     mxb_assert(service);
+    mxb_assert(service_has_named_listener(service, listener.c_str()));
 
-    if (!service_has_named_listener(service, listener.c_str()))
-    {
-        return HttpResponse(MHD_HTTP_NOT_FOUND);
-    }
-
-    return HttpResponse(MHD_HTTP_OK,
-                        service_listener_to_json(service,
-                                                 listener.c_str(),
-                                                 request.host()));
+    return HttpResponse(MHD_HTTP_OK, service_listener_to_json(service, listener.c_str(), request.host()));
 }
 
 HttpResponse cb_all_filters(const HttpRequest& request)
@@ -990,7 +981,7 @@ public:
         m_get.emplace_back(cb_all_services, "services");
         m_get.emplace_back(cb_get_service, "services", ":service");
         m_get.emplace_back(cb_get_all_service_listeners, "services", ":service", "listeners");
-        m_get.emplace_back(cb_get_service_listener, "services", ":service", "listeners", "?");
+        m_get.emplace_back(cb_get_service_listener, "services", ":service", "listeners", ":listener");
 
         m_get.emplace_back(cb_all_filters, "filters");
         m_get.emplace_back(cb_get_filter, "filters", ":filter");
@@ -1098,7 +1089,7 @@ public:
         m_delete.emplace_back(cb_delete_monitor, "monitors", ":monitor");
         m_delete.emplace_back(cb_delete_service, "services", ":service");
         m_delete.emplace_back(cb_delete_filter, "filters", ":filter");
-        m_delete.emplace_back(cb_delete_listener, "services", ":service", "listeners", "?");
+        m_delete.emplace_back(cb_delete_listener, "services", ":service", "listeners", ":listener");
 
         m_delete.emplace_back(cb_delete_user, "users", "inet", ":inetuser");
         m_delete.emplace_back(cb_delete_user, "users", "unix", ":unixuser");
