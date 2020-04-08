@@ -55,23 +55,55 @@ bool CsMonitorServer::refresh_config(json_t** ppError)
     return rv;
 }
 
-bool CsMonitorServer::refresh_status(json_t** ppError)
+CsMonitorServer::Status CsMonitorServer::Status::create(const http::Result& response)
 {
     bool rv = false;
-    http::Result result = http::get(create_url(cs::rest::STATUS), m_http_config);
 
-    if (result.code == 200)
+    cs::ClusterMode cluster_mode = cs::READ_ONLY;
+    cs::DbrmMode dbrm_mode = cs::SLAVE;
+
+    json_error_t error;
+    unique_ptr<json_t> sJson(json_loadb(response.body.c_str(), response.body.length(), 0, &error));
+
+    if (sJson)
     {
-        rv = set_status(result.body, ppError);
+        json_t* pCluster_mode = json_object_get(sJson.get(), cs::keys::CLUSTER_MODE);
+        json_t* pDbrm_mode = json_object_get(sJson.get(), cs::keys::DBRM_MODE);
+        // TODO: 'dbroots' and 'services'.
+
+        if (pCluster_mode && pDbrm_mode)
+        {
+            const char* zCluster_mode = json_string_value(pCluster_mode);
+            const char* zDbrm_mode = json_string_value(pDbrm_mode);
+
+            if (!cs::from_string(zCluster_mode, &cluster_mode) && cs::from_string(zDbrm_mode, &dbrm_mode))
+            {
+                mxb_assert(!true);
+                MXS_ERROR("Could not convert '%s' and/or '%s' to actual values.",
+                          zCluster_mode, zDbrm_mode);
+            }
+        }
+        else
+        {
+            mxb_assert(!true);
+            MXS_ERROR("Obtained status object does not have the keys '%s' and/or '%s': %s",
+                      cs::keys::CLUSTER_MODE, cs::keys::DBRM_MODE, response.body.c_str());
+        }
     }
     else
     {
-        PRINT_MXS_JSON_ERROR(ppError,
-                             "Could not fetch status from '%s': %s",
-                             this->server->name(), result.body.c_str());
+        mxb_assert(!true);
+        MXS_ERROR("Could not parse JSON data from: %s", error.text);
     }
 
-    return rv;
+    return Status(response, cluster_mode, dbrm_mode, std::move(sJson));
+}
+
+CsMonitorServer::Status CsMonitorServer::fetch_status() const
+{
+    http::Result result = http::get(create_url(cs::rest::STATUS), m_http_config);
+
+    return Status::create(result);
 }
 
 bool CsMonitorServer::set_config(const string& body, json_t** ppError)
@@ -121,78 +153,6 @@ bool CsMonitorServer::set_config(const string& body, json_t** ppError)
     return rv;
 }
 
-bool CsMonitorServer::set_status(const string& body, json_t** ppError)
-{
-    bool rv = false;
-
-    json_error_t error;
-    unique_ptr<json_t> sStatus(json_loadb(body.c_str(), body.length(), 0, &error));
-
-    if (sStatus)
-    {
-        json_t* pCluster_mode = json_object_get(sStatus.get(), cs::keys::CLUSTER_MODE);
-        json_t* pDbrm_mode = json_object_get(sStatus.get(), cs::keys::DBRM_MODE);
-        // TODO: 'dbroots' and 'services'.
-
-        if (pCluster_mode && pDbrm_mode)
-        {
-            cs::ClusterMode cluster_mode;
-            cs::DbrmMode dbrm_mode;
-
-            const char* zCluster_mode = json_string_value(pCluster_mode);
-            const char* zDbrm_mode = json_string_value(pDbrm_mode);
-
-            if (cs::from_string(zCluster_mode, &cluster_mode) && cs::from_string(zDbrm_mode, &dbrm_mode))
-            {
-                m_status.cluster_mode = cluster_mode;
-                m_status.dbrm_mode = dbrm_mode;
-                m_status.sJson = std::move(sStatus);
-                rv = true;
-            }
-            else
-            {
-                PRINT_MXS_JSON_ERROR(ppError,
-                                     "Could not convert '%s' and/or '%s' to actual values.",
-                                     zCluster_mode, zDbrm_mode);
-            }
-        }
-        else
-        {
-            PRINT_MXS_JSON_ERROR(ppError,
-                                 "Obtained status object from '%s', but it does not have the "
-                                 "key '%s' and/or '%s': %s",
-                                 name(),
-                                 cs::keys::CLUSTER_MODE, cs::keys::DBRM_MODE, body.c_str());
-        }
-    }
-    else
-    {
-        PRINT_MXS_JSON_ERROR(ppError, "Could not parse JSON data from: %s", error.text);
-    }
-
-    m_status.valid = rv;
-
-    return rv;
-}
-
-bool CsMonitorServer::set_status(const http::Result& result, json_t** ppError)
-{
-    bool rv = true;
-
-    if (result.code == 200)
-    {
-        rv = set_status(result.body, ppError);
-    }
-    else
-    {
-        PRINT_MXS_JSON_ERROR(ppError,
-                             "Could not fetch status from '%s': %s",
-                             this->server->name(), result.body.c_str());
-    }
-
-    return rv;
-}
-
 bool CsMonitorServer::update(cs::ClusterMode mode, json_t** ppError)
 {
     ostringstream body;
@@ -209,41 +169,31 @@ bool CsMonitorServer::update(cs::ClusterMode mode, json_t** ppError)
         PRINT_MXS_JSON_ERROR(ppError, "Could not update cluster mode: %s", result.body.c_str());
     }
 
-    // Whether the operation succeeds or not, the status is marked as being non-valid.
-    m_status.valid = false;
-
     return result.ok();
 }
 
 //static
-size_t CsMonitorServer::refresh_status(const std::vector<CsMonitorServer*>& servers,
-                                       const mxb::http::Config& config,
-                                       json_t** ppError)
+CsMonitorServer::Statuses CsMonitorServer::fetch_statuses(const std::vector<CsMonitorServer*>& servers,
+                                                          const mxb::http::Config& config)
 {
+    size_t n = 0;
+    vector<Status> statuses;
     vector<string> urls = create_urls(servers, cs::rest::STATUS);
     vector<http::Result> results = http::get(urls, config);
 
     mxb_assert(servers.size() == results.size());
 
-    bool rv = true;
-
-    auto it = servers.begin();
-    auto jt = results.begin();
-
-    while (it != servers.end())
+    for (auto& result : results)
     {
-        auto* pServer = *it;
+        statuses.emplace_back(Status::create(result));
 
-        if (!pServer->set_status(*jt, ppError))
+        if (result.ok() && statuses.back().sJson)
         {
-            rv = false;
+            ++n;
         }
-
-        ++it;
-        ++jt;
     }
 
-    return rv;
+    return Statuses(n, std::move(statuses));
 }
 
 //static
@@ -373,19 +323,27 @@ bool CsMonitorServer::update(const std::vector<CsMonitorServer*>& servers,
 {
     bool rv = false;
 
-    if (!CsMonitorServer::refresh_status(servers, config))
+    Statuses statuses = fetch_statuses(servers, config);
+
+    if (statuses.first != servers.size())
     {
-        MXS_ERROR("Could not refresh the status of all nodes. Will continue with the mode change "
+        MXS_ERROR("Could not fetch the status of all servers. Will continue with the mode change "
                   "if single DBMR master was refreshed.");
     }
 
     CsMonitorServer* pMaster = nullptr;
     int nMasters = 0;
 
-    for (auto* pServer : servers)
+    auto it = servers.begin();
+    auto end = servers.end();
+    auto jt = statuses.second.begin();
+
+    while (it != end)
     {
-        const auto& status = pServer->status();
-        if (status.valid)
+        CsMonitorServer* pServer = *it;
+        const Status& status = *jt;
+
+        if (status.is_valid())
         {
             if (status.dbrm_mode == cs::MASTER)
             {
@@ -393,6 +351,9 @@ bool CsMonitorServer::update(const std::vector<CsMonitorServer*>& servers,
                 pMaster = pServer;
             }
         }
+
+        ++it;
+        ++jt;
     }
 
     if (nMasters == 0)
@@ -413,7 +374,7 @@ bool CsMonitorServer::update(const std::vector<CsMonitorServer*>& servers,
     return rv;
 }
 
-string CsMonitorServer::create_url(cs::rest::Action action, const std::string& tail)
+string CsMonitorServer::create_url(cs::rest::Action action, const std::string& tail) const
 {
     string url = cs::rest::create_url(*this->server, m_admin_port, action);
 

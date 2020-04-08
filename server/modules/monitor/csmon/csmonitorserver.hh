@@ -32,16 +32,35 @@ public:
     class Status
     {
     public:
-        explicit operator bool () const
+        static Status create(const mxb::http::Result& response);
+
+        Status(Status&& other) = default;
+        Status& operator=(Status&& rhs) = default;
+
+        bool is_valid() const
         {
-            return this->valid;
+            return response.ok() && sJson;
         }
 
-        bool                    valid        { false };
-        cs::ClusterMode         cluster_mode { cs::READ_ONLY };
-        cs::DbrmMode            dbrm_mode    { cs::SLAVE };
+        mxb::http::Result       response;
+        cs::ClusterMode         cluster_mode;
+        cs::DbrmMode            dbrm_mode;
         std::unique_ptr<json_t> sJson;
+
+    private:
+        Status(const mxb::http::Result& response,
+               cs::ClusterMode cluster_mode,
+               cs::DbrmMode dbrm_mode,
+               std::unique_ptr<json_t>&& sJson)
+            : response(response)
+            , cluster_mode(cluster_mode)
+            , dbrm_mode(dbrm_mode)
+            , sJson(std::move(sJson))
+        {
+        }
     };
+
+    using Statuses = std::pair<size_t, std::vector<Status>>;
 
     const char* name() const
     {
@@ -53,24 +72,17 @@ public:
         return m_sConfig.get();
     }
 
-    const Status& status() const
-    {
-        return m_status;
-    }
-
     bool ping(json_t** ppError = nullptr);
 
     bool refresh_config(json_t** ppError = nullptr);
-    bool refresh_status(json_t** ppError = nullptr);
+    Status fetch_status() const;
 
     bool set_config(const std::string& body, json_t** ppError = nullptr);
-    bool set_status(const std::string& body, json_t** ppError = nullptr);
 
     bool update(cs::ClusterMode mode, json_t** ppError = nullptr);
 
-    static size_t refresh_status(const std::vector<CsMonitorServer*>& servers,
-                                 const mxb::http::Config& config,
-                                 json_t** ppArray = nullptr);
+    static Statuses fetch_statuses(const std::vector<CsMonitorServer*>& servers,
+                                   const mxb::http::Config& config);
     static size_t shutdown(const std::vector<CsMonitorServer*>& servers,
                            const std::chrono::seconds& timeout,
                            const mxb::http::Config& config,
@@ -86,7 +98,7 @@ public:
 private:
     bool set_status(const mxb::http::Result& result, json_t** ppError);
 
-    std::string create_url(cs::rest::Action action, const std::string& tail = std::string());
+    std::string create_url(cs::rest::Action action, const std::string& tail = std::string()) const;
     static std::vector<std::string> create_urls(const std::vector<CsMonitorServer*>& servers,
                                                 cs::rest::Action action,
                                                 const std::string& tail = std::string());
@@ -96,5 +108,4 @@ private:
     const mxb::http::Config& m_http_config;
     std::unique_ptr<json_t>  m_sConfig;
     std::unique_ptr<xmlDoc>  m_sDoc;
-    Status                   m_status;
 };
