@@ -87,7 +87,7 @@ const list_listeners_fields = [
   },
   {
     name: "Host",
-    path: "attributes.parameters.host",
+    path: "attributes.parameters.address",
     description: "The address or socket where the listener listens",
   },
   {
