@@ -477,6 +477,11 @@ exports.builder = function (yargs) {
                   ssl_crl: argv["tls-crl"],
                 },
               },
+              relationships: {
+                services: {
+                  data: [{ id: argv.service, type: "services" }],
+                },
+              },
             },
           };
 
@@ -486,10 +491,7 @@ exports.builder = function (yargs) {
             listener.data.attributes.parameters.ssl = true;
           }
 
-          return doRequest(host, "services/" + argv.service + "/listeners", null, {
-            method: "POST",
-            body: listener,
-          });
+          return doRequest(host, "listeners", null, { method: "POST", body: listener });
         });
       }
     )

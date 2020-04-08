@@ -54,10 +54,10 @@ exports.builder = function (yargs) {
           .usage("Usage: destroy listener <service> <name>");
       },
       function (argv) {
-        maxctrl(argv, function (host) {
-          return doRequest(host, "services/" + argv.service + "/listeners/" + argv.name, null, {
-            method: "DELETE",
-          });
+        maxctrl(argv, async function (host) {
+          // The GET before the DELETE makes sure we're deleting a listener of the given servie
+          await simpleRequest(host, "services/" + argv.service + "/listeners/" + argv.name);
+          return doRequest(host, "listeners/" + argv.name, null, { method: "DELETE" });
         });
       }
     )
