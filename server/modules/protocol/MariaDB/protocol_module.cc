@@ -86,35 +86,77 @@ uint64_t MySQLProtocolModule::capabilities() const
            | mxs::ProtocolModule::CAP_AUTH_MODULES;
 }
 
-void MySQLProtocolModule::read_authentication_options(mxs::ConfigParameters* params)
+bool MySQLProtocolModule::read_authentication_options(mxs::ConfigParameters* params)
 {
+    bool error = false;
     if (!params->empty())
     {
         // Read any values recognized by the protocol itself and remove them. The leftovers are given to
         // authenticators.
+        const string opt_cachedir = "cache_dir";
+        const string opt_inject = "inject_service_user";
+        const string opt_skip_auth = "skip_authentication";
+        const string opt_lower_case = "lower_case_table_names";
+        const char option_is_ignored[] = "Authenticator option '%s' is no longer supported and "
+                                         "its value is ignored.";
 
-        const string inject = "inject_service_user";
-        const string skip_auth = "skip_authentication";
-        const string lower_case = "lower_case_table_names";
+        if (params->contains(opt_cachedir))
+        {
+            MXB_WARNING(option_is_ignored, opt_cachedir.c_str());
+            params->remove(opt_cachedir);
+        }
+        if (params->contains(opt_inject))
+        {
+            MXB_WARNING(option_is_ignored, opt_inject.c_str());
+            params->remove(opt_inject);
+        }
+        if (params->contains(opt_skip_auth))
+        {
+            m_user_search_settings.match_host_pattern = !params->get_bool(opt_skip_auth);
+            params->remove(opt_skip_auth);
+        }
+        if (params->contains(opt_lower_case))
+        {
+            // To match the server, the allowed values should be 0, 1 or 2. For backwards compatibility,
+            // "true" and "false" should also apply, with "true" mapping to 1 and "false" to 0.
+            long lower_case_mode = -1;
+            auto lower_case_mode_str = params->get_string(opt_lower_case);
+            if (lower_case_mode_str == "true")
+            {
+                lower_case_mode = 1;
+            }
+            else if (lower_case_mode_str == "false")
+            {
+                lower_case_mode = 0;
+            }
+            else if (!mxb::get_long(lower_case_mode_str, 10, &lower_case_mode))
+            {
+                lower_case_mode = -1;
+            }
 
-        params->remove("cache_dir"); // ignored
-        if (params->contains(inject))
-        {
-            MXB_WARNING("Authenticator option '%s' is no longer supported and its value is ignored.",
-                        inject.c_str());
-            params->remove(inject);
-        }
-        if (params->contains(skip_auth))
-        {
-            m_user_search_settings.match_host_pattern = !params->get_bool(skip_auth);
-            params->remove(skip_auth);
-        }
-        if (params->contains(lower_case))
-        {
-            m_user_search_settings.case_sensitive_db = !params->get_bool(lower_case);
-            params->remove(lower_case);
+            switch (lower_case_mode)
+            {
+            case 0:
+                m_user_search_settings.db_name_cmp_mode = UserDatabase::DBNameCmpMode::CASE_SENSITIVE;
+                break;
+
+            case 1:
+                m_user_search_settings.db_name_cmp_mode = UserDatabase::DBNameCmpMode::LOWER_CASE;
+                break;
+
+            case 2:
+                m_user_search_settings.db_name_cmp_mode = UserDatabase::DBNameCmpMode::CASE_INSENSITIVE;
+                break;
+
+            default:
+                error = true;
+                MXB_ERROR("Invalid authenticator option value for '%s': '%s'. Expected 0, 1, or 2.",
+                          opt_lower_case.c_str(), lower_case_mode_str.c_str());
+            }
+            params->remove(opt_lower_case);
         }
     }
+    return !error;
 }
 
 mxs::ProtocolModule::AuthenticatorList
@@ -129,15 +171,12 @@ MySQLProtocolModule::create_authenticators(const mxs::ConfigParameters& params)
         auth_names = MXS_MARIADBAUTH_AUTHENTICATOR_NAME;
     }
 
+    // Contains protocol-level authentication options + plugin options.
     mxs::ConfigParameters auth_config;
-    if (parse_auth_options(auth_opts, &auth_config))
+    // Parse all options. Then read in authentication settings which affect the entire listener.
+    if (!parse_auth_options(auth_opts, &auth_config) || !read_authentication_options(&auth_config))
     {
-        // Read authentication settings which affect the entire listener.
-        read_authentication_options(&auth_config);
-    }
-    else
-    {
-        return {}; // error
+        return {};      // error
     }
 
     AuthenticatorList authenticators;

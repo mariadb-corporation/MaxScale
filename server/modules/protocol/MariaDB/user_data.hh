@@ -37,6 +37,7 @@ public:
     // Using normal maps/sets so that entries can be printed in order.
     using StringSet = std::set<std::string>;
     using StringSetMap = std::map<std::string, StringSet>;
+    using DBNameCmpMode = mariadb::UserSearchSettings::DBNameCmpMode;
 
     void   add_entry(const std::string& username, const mariadb::UserEntry& entry);
     void   add_dbs_and_roles(StringSetMap&& db_grants, StringSetMap&& roles_mapping);
@@ -67,7 +68,7 @@ public:
      */
     const mariadb::UserEntry* find_entry(const std::string& username) const;
 
-    bool check_database_exists(const std::string& db) const;
+    bool check_database_exists(const std::string& db, bool case_sensitive_db) const;
 
     /**
      * Check if user entry can access database. The access may be granted with a direct grant or through
@@ -79,7 +80,7 @@ public:
      * @return True if user can access database
      */
     bool check_database_access(const mariadb::UserEntry& entry, const std::string& db,
-                               bool case_sensitive_db = true) const;
+                               bool case_sensitive_db) const;
 
     bool equal_contents(const UserDatabase& rhs) const;
 

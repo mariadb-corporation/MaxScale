@@ -47,6 +47,7 @@ constexpr auto npos = string::npos;
 
 const int ipv4min_len = 7;      // 1.1.1.1
 const string mysql_default_auth = "mysql_native_password";
+const string info_schema = "information_schema";    // Any user can access this even without a grant.
 
 /** How many times users can be successfully loaded before throttling kicks in. */
 const int throttling_start_loads = 5;
@@ -791,27 +792,30 @@ bool UserDatabase::user_can_access_db(const string& user, const string& host_pat
                                       bool case_sensitive_db) const
 {
     string key = user + "@" + host_pattern;
+    bool rval = false;
     auto iter = m_database_grants.find(key);
     if (iter != m_database_grants.end())
     {
-        // If comparing db-names case-insensitively, iterate through the set.
-        if (!case_sensitive_db)
+        // User@host has database grants.
+        if (iter->second.count(db))
         {
+            rval = true;    // found exact match.
+        }
+        else if (!case_sensitive_db)
+        {
+            // If comparing db-names case-insensitively, iterate through the set.
             const StringSet& allowed_dbs = iter->second;
             for (const auto& allowed_db : allowed_dbs)
             {
                 if (strcasecmp(allowed_db.c_str(), db.c_str()) == 0)
                 {
-                    return true;
+                    rval = true;
+                    break;
                 }
             }
         }
-        else
-        {
-            return iter->second.count(db) > 0;
-        }
     }
-    return false;
+    return rval;
 }
 
 bool UserDatabase::user_can_access_role(const std::string& user, const std::string& host_pattern,
@@ -1218,9 +1222,26 @@ void UserDatabase::add_database_name(const std::string& db_name)
     m_database_names.insert(db_name);
 }
 
-bool UserDatabase::check_database_exists(const std::string& db) const
+bool UserDatabase::check_database_exists(const std::string& db, bool case_sensitive_db) const
 {
-    return m_database_names.count(db) > 0;
+    bool rval = false;
+    if (m_database_names.count(db))
+    {
+        rval = true;    // True for either mode.
+    }
+    else if (!case_sensitive_db)
+    {
+        // Check all values. TODO: Can probably optimize this using string ordering but nevermind for now.
+        for (const auto& elem : m_database_names)
+        {
+            if (strcasecmp(elem.c_str(), db.c_str()) == 0)
+            {
+                rval = true;
+                break;
+            }
+        }
+    }
+    return rval;
 }
 
 MariaDBUserCache::MariaDBUserCache(const MariaDBUserManager& master)
@@ -1234,7 +1255,25 @@ MariaDBUserCache::find_user(const string& user, const string& host, const string
 {
     auto userz = user.c_str();
     auto hostz = host.c_str();
+    auto requested_dbz = requested_db.c_str();
 
+    string eff_requested_db;    // Use the requested_db as given by user only for log messages.
+    bool case_sensitive_db = true;
+    switch (sett.listener.db_name_cmp_mode)
+    {
+    case UserDatabase::DBNameCmpMode::CASE_SENSITIVE:
+        eff_requested_db = requested_db;
+        break;
+
+    case UserDatabase::DBNameCmpMode::LOWER_CASE:
+        eff_requested_db = mxb::tolower(requested_db);
+        break;
+
+    case UserDatabase::DBNameCmpMode::CASE_INSENSITIVE:
+        eff_requested_db = requested_db;
+        case_sensitive_db = false;
+        break;
+    }
     /**
      * The result from user account search. Even if the result is an authentication failure, a normal
      * authentication token exchange and check should be carried out to match how the server works.
@@ -1253,24 +1292,30 @@ MariaDBUserCache::find_user(const string& user, const string& host, const string
         res.entry = *found;
         // If trying to access a specific database, check if allowed.
         bool db_ok = true;
-        if (!requested_db.empty())
+        if (!eff_requested_db.empty())
         {
-            if (!m_userdb.check_database_exists(requested_db))
+            if (!m_userdb.check_database_exists(eff_requested_db, case_sensitive_db))
             {
                 db_ok = false;
                 res.type = UserEntryType::BAD_DB;
                 MXB_INFO(bad_db_fmt,
                          found->username.c_str(), found->host_pattern.c_str(), userz, hostz,
-                         requested_db.c_str());
+                         requested_dbz);
             }
-            else if (!m_userdb.check_database_access(*found, requested_db, sett.listener.case_sensitive_db))
+            else if (eff_requested_db == info_schema
+                     || (!case_sensitive_db
+                         && strcasecmp(eff_requested_db.c_str(), info_schema.c_str()) == 0))
+            {
+                // Accessing "information_schema", allow it.
+            }
+            else if (!m_userdb.check_database_access(*found, eff_requested_db, case_sensitive_db))
             {
                 db_ok = false;
                 res.type = UserEntryType::DB_ACCESS_DENIED;
                 MXB_INFO("Found matching user entry '%s'@'%s' for client '%s'@'%s' but user does not have "
                          "access to database '%s'.",
                          found->username.c_str(), found->host_pattern.c_str(), userz, hostz,
-                         requested_db.c_str());
+                         requested_dbz);
             }
         }
 
@@ -1293,12 +1338,13 @@ MariaDBUserCache::find_user(const string& user, const string& host, const string
             res.entry = *anon_found;
             // For anonymous users, do not check database access as the final effective user is unknown.
             // Instead, check that the entry has a proxy grant.
-            if (!requested_db.empty() && !m_userdb.check_database_exists(requested_db))
+            if (!eff_requested_db.empty()
+                && !m_userdb.check_database_exists(eff_requested_db, case_sensitive_db))
             {
                 res.type = UserEntryType::BAD_DB;
                 MXB_INFO(bad_db_fmt,
                          anon_found->username.c_str(), anon_found->host_pattern.c_str(), userz, hostz,
-                         requested_db.c_str());
+                         requested_dbz);
             }
             else if (!anon_found->proxy_priv)
             {

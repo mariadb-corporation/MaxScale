@@ -153,4 +153,12 @@ std::string create_list_string(const std::vector<string>& elements,
     add_elem(elements[n_elems - 1], real_last_delim);
     return rval;
 }
+
+std::string tolower(const std::string& str)
+{
+    string rval;
+    rval.resize(str.length());
+    std::transform(str.begin(), str.end(), rval.begin(), ::tolower);
+    return rval;
+}
 }

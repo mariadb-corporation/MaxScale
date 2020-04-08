@@ -43,7 +43,7 @@ public:
 
 private:
     bool parse_auth_options(const std::string& opts, mxs::ConfigParameters* params_out);
-    void read_authentication_options(mxs::ConfigParameters* params);
+    bool read_authentication_options(mxs::ConfigParameters* params);
 
     /** Partial user search settings. These settings originate from the listener and do not
      * change once set. */

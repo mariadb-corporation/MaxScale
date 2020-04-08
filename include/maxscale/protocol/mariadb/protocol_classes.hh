@@ -24,12 +24,22 @@ using ByteVec = std::vector<uint8_t>;
 // Total user search settings structure.
 struct UserSearchSettings
 {
+    // Matches the settings for server variable 'lower_case_table_names'. For authentication purposes, this
+    // only changes how database names are handled.
+    enum class DBNameCmpMode
+    {
+        CASE_SENSITIVE, // Db-name given by client is compared as-is to stored values.
+        LOWER_CASE,     // Db-name given by client converted to lowercase. Stored values assumed lowercase.
+        CASE_INSENSITIVE// DB-names are compared case-insensitive.
+    };
+
     struct Listener
     {
         // These user search settings are dependant on listener configuration. Stored in the protocol module.
         bool match_host_pattern {true};
         bool allow_anon_user {false};
-        bool case_sensitive_db {true};
+
+        DBNameCmpMode db_name_cmp_mode {DBNameCmpMode::CASE_SENSITIVE};
     };
 
     struct Service
@@ -49,9 +59,9 @@ struct UserSearchSettings
  */
 struct AuthSwitchReqContents
 {
-    bool        success {false}; /**< Was parsing successful */
-    std::string plugin_name;     /**< Plugin name */
-    ByteVec     plugin_data;     /**< Data for plugin */
+    bool        success {false};/**< Was parsing successful */
+    std::string plugin_name;    /**< Plugin name */
+    ByteVec     plugin_data;    /**< Data for plugin */
 };
 
 AuthSwitchReqContents parse_auth_switch_request(const mxs::Buffer& input);

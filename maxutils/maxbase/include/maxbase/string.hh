@@ -300,4 +300,11 @@ inline bool get_int(const std::string& s, int* value)
 std::string create_list_string(const std::vector<std::string>& elements,
                                const std::string& delim = ", ", const std::string& last_delim = "",
                                const std::string& quote = "");
+
+/**
+ * Convert a string to lower case.
+ *
+ * @param str String to convert
+ */
+std::string tolower(const std::string& str);
 }
