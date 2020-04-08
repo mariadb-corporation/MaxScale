@@ -95,6 +95,11 @@ const list_listeners_fields = [
     path: "attributes.state",
     description: "Listener state",
   },
+  {
+    name: "Service",
+    path: "relationships.services.data[].id",
+    description: "Service that this listener points to",
+  },
 ];
 
 const list_monitors_fields = [
@@ -301,21 +306,28 @@ exports.builder = function (yargs) {
       }
     )
     .command(
-      "listeners <service>",
-      "List listeners of a service",
+      "listeners [service]",
+      "List listeners",
       function (yargs) {
         return yargs
-          .epilog("List listeners for a service." + fieldDescriptions(list_listeners_fields))
-          .usage("Usage: list listeners <service>");
+          .epilog(
+            "List listeners of all services. If a service is given, only listeners for that service are listed." +
+              fieldDescriptions(list_listeners_fields)
+          )
+          .usage("Usage: list listeners [service]");
       },
       function (argv) {
         maxctrl(argv, function (host) {
-          return getSubCollection(
-            host,
-            "services/" + argv.service,
-            "attributes.listeners",
-            list_listeners_fields
-          );
+          if (argv.service) {
+            return getSubCollection(
+              host,
+              "services/" + argv.service,
+              "attributes.listeners",
+              list_listeners_fields
+            );
+          } else {
+            return getCollection(host, "listeners", list_listeners_fields);
+          }
         });
       }
     )

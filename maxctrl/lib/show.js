@@ -283,6 +283,24 @@ const filter_fields = [
   },
 ];
 
+const listener_fields = [
+  {
+    name: "Name",
+    path: "id",
+    description: "Listener name",
+  },
+  {
+    name: "Service",
+    path: "relationships.services.data[].id",
+    description: "Services that the listener points to",
+  },
+  {
+    name: "Parameters",
+    path: "attributes.parameters",
+    description: "Listener parameters",
+  },
+];
+
 const module_fields = [
   {
     name: "Module",
@@ -728,6 +746,36 @@ exports.builder = function (yargs) {
       function (argv) {
         maxctrl(argv, function (host) {
           return getCollectionAsResource(host, "filters/", filter_fields);
+        });
+      }
+    )
+    .command(
+      "listener <listener>",
+      "Show listener",
+      function (yargs) {
+        return yargs
+          .epilog(fieldDescriptions(listener_fields))
+          .wrap(null)
+          .usage("Usage: show listener <listener>");
+      },
+      function (argv) {
+        maxctrl(argv, function (host) {
+          return getResource(host, "listeners/" + argv.listener, listener_fields);
+        });
+      }
+    )
+    .command(
+      "listeners",
+      "Show all listeners",
+      function (yargs) {
+        return yargs
+          .epilog("Show detailed information of all filters." + fieldDescriptions(filter_fields))
+          .wrap(null)
+          .usage("Usage: show filters");
+      },
+      function (argv) {
+        maxctrl(argv, function (host) {
+          return getCollectionAsResource(host, "listeners/", listener_fields);
         });
       }
     )
