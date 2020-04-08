@@ -177,7 +177,11 @@ async function syncDiffs(host, src, dest) {
 
   // Add new services
   for (i of getDifference(src.services, dest.services)) {
-    await simpleRequest(host, "services", { method: "POST", body: { data: i } });
+    // We must omit the listeners as they haven't been created yet
+    await simpleRequest(host, "services", {
+      method: "POST",
+      body: { data: _.omit(i, "relationships.listeners") },
+    });
 
     // Create listeners for the new service right after it is created. This removes the need to update the
     // diff with the service we created that would otherwise be necessary to do if we were to use the

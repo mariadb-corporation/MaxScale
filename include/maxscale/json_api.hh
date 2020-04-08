@@ -25,6 +25,7 @@
 /** Resource endpoints */
 #define MXS_JSON_API_SERVERS     "/servers/"
 #define MXS_JSON_API_SERVICES    "/services/"
+#define MXS_JSON_API_LISTENERS   "/listeners/"
 #define MXS_JSON_API_FILTERS     "/filters/"
 #define MXS_JSON_API_MONITORS    "/monitors/"
 #define MXS_JSON_API_SESSIONS    "/sessions/"

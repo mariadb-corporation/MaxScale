@@ -557,6 +557,17 @@ HttpResponse cb_get_service_listener(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_OK, service_listener_to_json(service, listener.c_str(), request.host()));
 }
 
+HttpResponse cb_get_all_listeners(const HttpRequest& request)
+{
+    return HttpResponse(MHD_HTTP_OK, Listener::to_json_collection(request.host()));
+}
+
+HttpResponse cb_get_listener(const HttpRequest& request)
+{
+    auto listener = listener_find(request.uri_part(1).c_str());
+    return HttpResponse(MHD_HTTP_OK, listener->to_json_resource(request.host()));
+}
+
 HttpResponse cb_all_filters(const HttpRequest& request)
 {
     return HttpResponse(MHD_HTTP_OK, filter_list_to_json(request.host()));
@@ -982,6 +993,9 @@ public:
         m_get.emplace_back(cb_get_service, "services", ":service");
         m_get.emplace_back(cb_get_all_service_listeners, "services", ":service", "listeners");
         m_get.emplace_back(cb_get_service_listener, "services", ":service", "listeners", ":listener");
+
+        m_get.emplace_back(cb_get_all_listeners, "listeners");
+        m_get.emplace_back(cb_get_listener, "listeners", ":listener");
 
         m_get.emplace_back(cb_all_filters, "filters");
         m_get.emplace_back(cb_get_filter, "filters", ":filter");

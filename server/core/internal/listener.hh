@@ -113,9 +113,29 @@ public:
     /**
      * Convert to JSON
      *
+     * @param host The hostname of this server
+     *
      * @return JSON representation of the object
      */
-    json_t* to_json() const;
+    json_t* to_json(const char* host) const;
+
+    /**
+     * Get listener as a JSON API resource
+     *
+     * @param host The hostname of this server
+     *
+     * @return JSON API resource representation of the object
+     */
+    json_t* to_json_resource(const char* host) const;
+
+    /**
+     * Get all listeners as a JSON API resource collection
+     *
+     * @param host The hostname of this server
+     *
+     * @return The listeners resource collection
+     */
+    static json_t* to_json_collection(const char* host);
 
     Type type() const
     {
@@ -152,8 +172,8 @@ private:
     // Protocol module. Ownership shared with sessions created from this listener.
     std::shared_ptr<mxs::ProtocolModule> m_proto_module;
 
-    Service*             m_service;         /**< The service to which new sessions are sent */
-    mxs::ConfigParameters m_params;          /**< Configuration parameters */
+    Service*              m_service;        /**< The service to which new sessions are sent */
+    mxs::ConfigParameters m_params;         /**< Configuration parameters */
 
     Type m_type;    /**< The type of the listener */
 

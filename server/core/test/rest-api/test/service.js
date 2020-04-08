@@ -48,7 +48,7 @@ describe("Service", function() {
             })
             .then(function(resp) {
                 var svc = JSON.parse(resp)
-                svc.data.relationships.should.be.empty
+                svc.data.relationships.should.have.keys("listeners")
             })
     });
 

@@ -38,6 +38,7 @@
 #include <maxscale/service.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/routingworker.hh>
+#include <maxscale/json_api.hh>
 
 #include "internal/listener.hh"
 #include "internal/modules.hh"
@@ -521,7 +522,7 @@ bool listener_serialize(const SListener& listener)
     return rval;
 }
 
-json_t* Listener::to_json() const
+json_t* Listener::to_json(const char* host) const
 {
     const char CN_AUTHENTICATOR_DIAGNOSTICS[] = "authenticator_diagnostics";
     json_t* param = json_object();
@@ -548,7 +549,33 @@ json_t* Listener::to_json() const
     json_object_set_new(rval, CN_TYPE, json_string(CN_LISTENERS));
     json_object_set_new(rval, CN_ATTRIBUTES, attr);
 
+    json_t* rel = json_object();
+    json_t* service = mxs_json_relationship(host, MXS_JSON_API_SERVICES);
+    mxs_json_add_relation(service, m_service->name(), CN_SERVICES);
+    json_object_set_new(rel, CN_SERVICES, service);
+    json_object_set_new(rval, CN_RELATIONSHIPS, rel);
+
     return rval;
+}
+
+// static
+json_t* Listener::to_json_collection(const char* host)
+{
+    json_t* arr = json_array();
+    std::lock_guard<std::mutex> guard(listener_lock);
+
+    for (const auto& listener : all_listeners)
+    {
+        json_array_append_new(arr, listener->to_json(host));
+    }
+
+    return mxs_json_resource(host, MXS_JSON_API_LISTENERS, arr);
+}
+
+json_t* Listener::to_json_resource(const char* host) const
+{
+    std::string self = MXS_JSON_API_LISTENERS + m_name;
+    return mxs_json_resource(host, self.c_str(), to_json(host));
 }
 
 const char* Listener::name() const

@@ -965,31 +965,31 @@ json_t* service_parameters_to_json(const SERVICE* service)
     return rval;
 }
 
-static json_t* service_all_listeners_json_data(const SERVICE* service)
+static json_t* service_all_listeners_json_data(const char* host, const SERVICE* service)
 {
     json_t* arr = json_array();
 
     for (const auto& listener : listener_find_by_service(service))
     {
-        json_array_append_new(arr, listener->to_json());
+        json_array_append_new(arr, listener->to_json(host));
     }
 
     return arr;
 }
 
-static json_t* service_listener_json_data(const SERVICE* service, const char* name)
+static json_t* service_listener_json_data(const char* host, const SERVICE* service, const char* name)
 {
     auto listener = listener_find(name);
 
     if (listener && listener->service() == service)
     {
-        return listener->to_json();
+        return listener->to_json(host);
     }
 
     return NULL;
 }
 
-json_t* service_attributes(const SERVICE* service)
+json_t* service_attributes(const char* host, const SERVICE* service)
 {
     json_t* attr = json_object();
 
@@ -1023,7 +1023,7 @@ json_t* service_attributes(const SERVICE* service)
 
     /** Add service parameters and listeners */
     json_object_set_new(attr, CN_PARAMETERS, service_parameters_to_json(service));
-    json_object_set_new(attr, CN_LISTENERS, service_all_listeners_json_data(service));
+    json_object_set_new(attr, CN_LISTENERS, service_all_listeners_json_data(host, service));
 
     return attr;
 }
@@ -1073,6 +1073,20 @@ json_t* Service::json_relationships(const char* host) const
         json_object_set_new(rel, CN_SERVICES, services);
     }
 
+    auto listeners = listener_find_by_service(this);
+
+    if (!listeners.empty())
+    {
+        json_t* l = mxs_json_relationship(host, MXS_JSON_API_LISTENERS);
+
+        for (const auto& a : listeners)
+        {
+            mxs_json_add_relation(l, a->name(), CN_LISTENERS);
+        }
+
+        json_object_set_new(rel, CN_LISTENERS, l);
+    }
+
     return rel;
 }
 
@@ -1084,7 +1098,7 @@ json_t* service_json_data(const SERVICE* svc, const char* host)
 
     json_object_set_new(rval, CN_ID, json_string(service->name()));
     json_object_set_new(rval, CN_TYPE, json_string(CN_SERVICES));
-    json_object_set_new(rval, CN_ATTRIBUTES, service_attributes(service));
+    json_object_set_new(rval, CN_ATTRIBUTES, service_attributes(host, service));
     json_object_set_new(rval, CN_RELATIONSHIPS, service->json_relationships(host));
     json_object_set_new(rval, CN_LINKS, mxs_json_self_link(host, CN_SERVICES, service->name()));
 
@@ -1106,7 +1120,7 @@ json_t* service_listener_list_to_json(const Service* service, const char* host)
     self += service->name();
     self += "/listeners";
 
-    return mxs_json_resource(host, self.c_str(), service_all_listeners_json_data(service));
+    return mxs_json_resource(host, self.c_str(), service_all_listeners_json_data(host, service));
 }
 
 json_t* service_listener_to_json(const Service* service, const char* name, const char* host)
@@ -1118,7 +1132,7 @@ json_t* service_listener_to_json(const Service* service, const char* name, const
     self += "/listeners/";
     self += name;
 
-    return mxs_json_resource(host, self.c_str(), service_listener_json_data(service, name));
+    return mxs_json_resource(host, self.c_str(), service_listener_json_data(host, service, name));
 }
 
 json_t* service_list_to_json(const char* host)

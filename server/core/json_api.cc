@@ -21,6 +21,7 @@
 
 #include "internal/monitormanager.hh"
 #include "internal/filter.hh"
+#include "internal/listener.hh"
 
 using std::string;
 using namespace std::literals::string_literals;
@@ -49,12 +50,18 @@ bool filter_validator(const char* str)
     return filter_find(str).get();
 }
 
+bool listener_validator(const char* str)
+{
+    return listener_find(str).get();
+}
+
 std::unordered_map<std::string, std::function<bool(const char*)>> valid_relationships =
 {
-    {"servers",  target_validator },
-    {"services", target_validator },
-    {"monitors", monitor_validator},
-    {"filters",  filter_validator }
+    {"servers",   target_validator  },
+    {"services",  target_validator  },
+    {"monitors",  monitor_validator },
+    {"filters",   filter_validator  },
+    {"listeners", listener_validator}
 };
 
 std::string validate_relationships(json_t* json)
