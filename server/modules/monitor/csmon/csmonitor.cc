@@ -23,8 +23,8 @@
 #include <maxscale/mysql_utils.hh>
 #include "columnstore.hh"
 
+using std::ostringstream;
 using std::string;
-using std::stringstream;
 using std::vector;
 using maxscale::MonitorServer;
 namespace http = mxb::http;
@@ -820,7 +820,29 @@ void CsMonitor::cluster_put(json_t** ppOutput,
 
 void CsMonitor::cluster_start(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
 {
-    bool rv = CsMonitorServer::start(servers(), m_http_config, ppOutput);
+    json_t* pServers = nullptr;
+    size_t n = CsMonitorServer::start(servers(), m_http_config, &pServers);
+
+    json_t* pOutput = json_object();
+
+    bool success = false;
+    ostringstream message;
+
+    if (n == servers().size())
+    {
+        message << "All servers i ncluster started successfully.";
+        success = true;
+    }
+    else
+    {
+        message << n << " servers out of " << servers().size() << " started successfully.";
+    }
+
+    json_object_set_new(pOutput, "success", json_boolean(success));
+    json_object_set_new(pOutput, "message", json_string(message.str().c_str()));
+    json_object_set_new(pOutput, "servers", pServers);
+
+    *ppOutput = pOutput;
 
     pSem->post();
 }
@@ -832,16 +854,51 @@ void CsMonitor::cluster_shutdown(json_t** ppOutput,
 {
     bool rv = true;
 
+    json_t* pOutput = json_object();
+    json_t* pError = nullptr;
+    json_t* pArray = nullptr;
+
+    bool success = true;
+    ostringstream message;
+
     if (timeout != std::chrono::seconds(0))
     {
         // If there is a timeout, then the cluster must first be made read-only.
-        rv = CsMonitorServer::update(servers(), cs::READ_ONLY, m_http_config, ppOutput);
+        if (CsMonitorServer::update(servers(), cs::READ_ONLY, m_http_config, &pError))
+        {
+            success = false;
+            message << "Could not make cluster readonly.Timed out shutdown is not possible.";
+        }
     }
 
-    if (rv)
+    if (success)
     {
-        rv = CsMonitorServer::shutdown(servers(), timeout, m_http_config, ppOutput);
+        size_t n = CsMonitorServer::shutdown(servers(), timeout, m_http_config, &pArray);
+
+        if (n == servers().size())
+        {
+            message << "Columnstore cluster shut down.";
+        }
+        else
+        {
+            message << n << " servers out of " << servers().size() << " shut down.";
+            success = false;
+        }
     }
+
+    json_object_set_new(pOutput, "success", json_boolean(success));
+    json_object_set_new(pOutput, "message", json_string(message.str().c_str()));
+
+    if (pError)
+    {
+        json_object_set_new(pOutput, "error", pError);
+    }
+    else
+    {
+        json_object_set_new(pOutput, "servers", pArray);
+    }
+
+    *ppOutput = pOutput;
 
     pSem->post();
 }

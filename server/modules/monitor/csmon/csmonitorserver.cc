@@ -18,7 +18,7 @@
 
 namespace http = mxb::http;
 using std::string;
-using std::stringstream;
+using std::ostringstream;
 using std::unique_ptr;
 using std::vector;
 
@@ -195,7 +195,7 @@ bool CsMonitorServer::set_status(const http::Result& result, json_t** ppError)
 
 bool CsMonitorServer::update(cs::ClusterMode mode, json_t** ppError)
 {
-    stringstream body;
+    ostringstream body;
     body << "{"
          << "\"" << cs::keys::MODE << "\": "
          << "\"" << cs::to_string(mode) << "\""
@@ -216,9 +216,9 @@ bool CsMonitorServer::update(cs::ClusterMode mode, json_t** ppError)
 }
 
 //static
-bool CsMonitorServer::refresh_status(const vector<CsMonitorServer*>& servers,
-                                     const mxb::http::Config& config,
-                                     json_t** ppError)
+size_t CsMonitorServer::refresh_status(const std::vector<CsMonitorServer*>& servers,
+                                       const mxb::http::Config& config,
+                                       json_t** ppError)
 {
     vector<string> urls = create_urls(servers, cs::rest::STATUS);
     vector<http::Result> results = http::get(urls, config);
@@ -247,10 +247,10 @@ bool CsMonitorServer::refresh_status(const vector<CsMonitorServer*>& servers,
 }
 
 //static
-bool CsMonitorServer::shutdown(const std::vector<CsMonitorServer*>& servers,
-                               const std::chrono::seconds& timeout,
-                               const mxb::http::Config& config,
-                               json_t** ppOutput)
+size_t CsMonitorServer::shutdown(const std::vector<CsMonitorServer*>& servers,
+                                 const std::chrono::seconds& timeout,
+                                 const mxb::http::Config& config,
+                                 json_t** ppArray)
 {
     string tail;
 
@@ -269,9 +269,9 @@ bool CsMonitorServer::shutdown(const std::vector<CsMonitorServer*>& servers,
     auto end = servers.end();
     auto jt = results.begin();
 
-    json_t* pOutput = json_array();
+    json_t* pArray = json_array();
 
-    bool rv = true;
+    size_t n = 0;
 
     while (it != end)
     {
@@ -282,7 +282,11 @@ bool CsMonitorServer::shutdown(const std::vector<CsMonitorServer*>& servers,
         json_object_set_new(pObject, "name", json_string(pServer->name()));
         json_object_set_new(pObject, "code", json_integer(result.code));
 
-        if (!result.ok())
+        if (result.ok())
+        {
+            ++n;
+        }
+        else
         {
             json_error_t error;
             unique_ptr<json_t> sError(json_loadb(result.body.c_str(), result.body.length(), 0, &error));
@@ -293,24 +297,23 @@ bool CsMonitorServer::shutdown(const std::vector<CsMonitorServer*>& servers,
             }
 
             json_object_set_new(pObject, "error", sError.release());
-            rv = false;
         }
 
-        json_array_append_new(pOutput, pObject);
+        json_array_append_new(pArray, pObject);
 
         ++it;
         ++jt;
     }
 
-    *ppOutput = pOutput;
+    *ppArray = pArray;
 
-    return rv;
+    return n;
 }
 
 //static
-bool CsMonitorServer::start(const std::vector<CsMonitorServer*>& servers,
-                            const mxb::http::Config& config,
-                            json_t** ppOutput)
+size_t CsMonitorServer::start(const std::vector<CsMonitorServer*>& servers,
+                              const mxb::http::Config& config,
+                              json_t** ppArray)
 {
     vector<string> urls = create_urls(servers, cs::rest::START);
     vector<http::Result> results = http::put(urls, "{}", config);
@@ -321,9 +324,9 @@ bool CsMonitorServer::start(const std::vector<CsMonitorServer*>& servers,
     auto end = servers.end();
     auto jt = results.begin();
 
-    json_t* pOutput = json_array();
+    json_t* pArray = json_array();
 
-    bool rv = true;
+    size_t n = 0;
 
     while (it != end)
     {
@@ -334,7 +337,11 @@ bool CsMonitorServer::start(const std::vector<CsMonitorServer*>& servers,
         json_object_set_new(pObject, "name", json_string(pServer->name()));
         json_object_set_new(pObject, "code", json_integer(result.code));
 
-        if (!result.ok())
+        if (result.ok())
+        {
+            ++n;
+        }
+        else
         {
             json_error_t error;
             unique_ptr<json_t> sError(json_loadb(result.body.c_str(), result.body.length(), 0, &error));
@@ -345,18 +352,17 @@ bool CsMonitorServer::start(const std::vector<CsMonitorServer*>& servers,
             }
 
             json_object_set_new(pObject, "error", sError.release());
-            rv = false;
         }
 
-        json_array_append_new(pOutput, pObject);
+        json_array_append_new(pArray, pObject);
 
         ++it;
         ++jt;
     }
 
-    *ppOutput = pOutput;
+    *ppArray = pArray;
 
-    return rv;
+    return n;
 }
 
 //static
@@ -376,7 +382,7 @@ bool CsMonitorServer::update(const std::vector<CsMonitorServer*>& servers,
     CsMonitorServer* pMaster = nullptr;
     int nMasters = 0;
 
-    for (const auto& pServer : servers)
+    for (auto* pServer : servers)
     {
         const auto& status = pServer->status();
         if (status.valid)

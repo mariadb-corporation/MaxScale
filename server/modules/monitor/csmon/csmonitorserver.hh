@@ -68,16 +68,16 @@ public:
 
     bool update(cs::ClusterMode mode, json_t** ppError = nullptr);
 
-    static bool refresh_status(const std::vector<CsMonitorServer*>& servers,
-                               const mxb::http::Config& config,
-                               json_t** ppError = nullptr);
-    static bool shutdown(const std::vector<CsMonitorServer*>& servers,
-                         const std::chrono::seconds& timeout,
-                         const mxb::http::Config& config,
-                         json_t** ppOutput);
-    static bool start(const std::vector<CsMonitorServer*>& servers,
-                      const mxb::http::Config& config,
-                      json_t** ppOutput);
+    static size_t refresh_status(const std::vector<CsMonitorServer*>& servers,
+                                 const mxb::http::Config& config,
+                                 json_t** ppArray = nullptr);
+    static size_t shutdown(const std::vector<CsMonitorServer*>& servers,
+                           const std::chrono::seconds& timeout,
+                           const mxb::http::Config& config,
+                           json_t** ppArray);
+    static size_t start(const std::vector<CsMonitorServer*>& servers,
+                        const mxb::http::Config& config,
+                        json_t** ppArray);
     static bool update(const std::vector<CsMonitorServer*>& servers,
                        cs::ClusterMode mode,
                        const mxb::http::Config& config,
