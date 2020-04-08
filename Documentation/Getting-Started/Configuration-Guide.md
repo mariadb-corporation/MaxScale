@@ -2055,6 +2055,12 @@ TLSv1.3 depending on the OpenSSL library version.
 
 The `TLSv13` value was added in MaxScale 2.3.15 ([MXS-2762](https://jira.mariadb.org/browse/MXS-2762)).
 
+### `ssl_cipher`
+
+Set the list of TLS ciphers. By default, no explicit ciphers are defined and the
+system defaults are used. Note that this parameter does not modify TLSv1.3
+ciphers.
+
 ### `ssl_cert_verify_depth`
 
 The maximum length of the certificate authority chain that will be accepted. The

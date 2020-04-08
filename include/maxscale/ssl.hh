@@ -77,12 +77,13 @@ struct SSLConfig
     // Convert to human readable string representation
     std::string to_string() const;
 
-    std::string       key;                              /**< SSL private key */
-    std::string       cert;                             /**< SSL certificate */
-    std::string       ca;                               /**< SSL CA certificate */
-    ssl_method_type_t version = SERVICE_SSL_TLS_MAX;    /**< Which TLS version to use */
-    int               verify_depth = 9;                 /**< SSL certificate verification depth */
-    bool              verify_peer = true;               /**< Enable peer certificate verification */
+    std::string       key;                          /**< SSL private key */
+    std::string       cert;                         /**< SSL certificate */
+    std::string       ca;                           /**< SSL CA certificate */
+    ssl_method_type_t version = SERVICE_SSL_TLS_MAX;/**< Which TLS version to use */
+    int               verify_depth = 9;             /**< SSL certificate verification depth */
+    bool              verify_peer = true;           /**< Enable peer certificate verification */
+    std::string       cipher;                       /**< Selected TLS cipher */
 };
 
 /**

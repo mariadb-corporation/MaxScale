@@ -196,6 +196,7 @@ extern const char CN_SKIP_PERMISSION_CHECKS[];
 extern const char CN_SOCKET[];
 extern const char CN_SSL_CA_CERT[];
 extern const char CN_SSL_CERT_VERIFY_DEPTH[];
+extern const char CN_SSL_CIPHER[];
 extern const char CN_SSL_CERT[];
 extern const char CN_SSL_KEY[];
 extern const char CN_SSL_VERIFY_PEER_CERTIFICATE[];

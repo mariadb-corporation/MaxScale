@@ -181,6 +181,7 @@ const char CN_SSL[] = "ssl";
 const char CN_SSL_CA_CERT[] = "ssl_ca_cert";
 const char CN_SSL_CERT[] = "ssl_cert";
 const char CN_SSL_CERT_VERIFY_DEPTH[] = "ssl_cert_verify_depth";
+const char CN_SSL_CIPHER[] = "ssl_cipher";
 const char CN_SSL_KEY[] = "ssl_key";
 const char CN_SSL_VERIFY_PEER_CERTIFICATE[] = "ssl_verify_peer_certificate";
 const char CN_SSL_VERSION[] = "ssl_version";
@@ -490,6 +491,10 @@ const MXS_MODULE_PARAM config_listener_params[] =
         MXS_MODULE_PARAM_BOOL,
         "false"
     },
+    {
+        CN_SSL_CIPHER,
+        MXS_MODULE_PARAM_STRING
+    },
     {NULL}
 };
 
@@ -703,6 +708,10 @@ const MXS_MODULE_PARAM config_server_params[] =
         CN_SSL_VERIFY_PEER_CERTIFICATE,
         MXS_MODULE_PARAM_BOOL,
         "false"
+    },
+    {
+        CN_SSL_CIPHER,
+        MXS_MODULE_PARAM_STRING,
     },
     {
         CN_DISK_SPACE_THRESHOLD,
@@ -4173,6 +4182,7 @@ bool config_is_ssl_parameter(const char* key)
         CN_SSL_VERSION,
         CN_SSL_CERT_VERIFY_DEPTH,
         CN_SSL_VERIFY_PEER_CERTIFICATE,
+        CN_SSL_CIPHER,
         NULL
     };
 
