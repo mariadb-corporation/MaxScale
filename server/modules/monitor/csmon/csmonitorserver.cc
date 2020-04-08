@@ -36,29 +36,55 @@ CsMonitorServer::~CsMonitorServer()
 {
 }
 
-bool CsMonitorServer::refresh_config(json_t** ppError)
+CsMonitorServer::Config CsMonitorServer::Config::create(const http::Result& response)
 {
-    bool rv = false;
-    http::Result result = http::get(create_url(cs::rest::CONFIG), m_http_config);
+    unique_ptr<xmlDoc> sXml;
 
-    if (result.code == 200)
+    json_error_t error;
+    unique_ptr<json_t> sJson(json_loadb(response.body.c_str(), response.body.length(), 0, &error));
+
+    if (sJson)
     {
-        rv = set_config(result.body, ppError);
+        json_t* pConfig = json_object_get(sJson.get(), cs::keys::CONFIG);
+
+        if (pConfig)
+        {
+            const char* zXml = json_string_value(pConfig);
+            size_t xml_len = json_string_length(pConfig);
+
+            sXml.reset(xmlReadMemory(zXml, xml_len, "columnstore.xml", NULL, 0));
+
+            if (!sXml)
+            {
+                mxb_assert(!true);
+                MXS_ERROR("Failed to parse XML configuration: '%s'", zXml);
+            }
+        }
+        else
+        {
+            mxb_assert(!true);
+            MXS_ERROR("Obtained config object does not have a '%s' key.",
+                      cs::keys::CONFIG);
+        }
     }
     else
     {
-        PRINT_MXS_JSON_ERROR(ppError,
-                             "Could not fetch config from '%s': %s",
-                             this->server->name(), result.body.c_str());
+        mxb_assert(!true);
+        MXS_ERROR("Could not parse JSON data from: %s", error.text);
     }
 
-    return rv;
+    return Config(response, std::move(sJson), std::move(sXml));
+}
+
+CsMonitorServer::Config CsMonitorServer::fetch_config() const
+{
+    http::Result result = http::get(create_url(cs::rest::CONFIG), m_http_config);
+
+    return Config::create(result);
 }
 
 CsMonitorServer::Status CsMonitorServer::Status::create(const http::Result& response)
 {
-    bool rv = false;
-
     cs::ClusterMode cluster_mode = cs::READ_ONLY;
     cs::DbrmMode dbrm_mode = cs::SLAVE;
 
@@ -106,53 +132,6 @@ CsMonitorServer::Status CsMonitorServer::fetch_status() const
     return Status::create(result);
 }
 
-bool CsMonitorServer::set_config(const string& body, json_t** ppError)
-{
-    bool rv = false;
-
-    json_error_t error;
-    unique_ptr<json_t> sConfig(json_loadb(body.c_str(), body.length(), 0, &error));
-
-    if (sConfig)
-    {
-        json_t* pConfig = json_object_get(sConfig.get(), cs::keys::CONFIG);
-
-        if (pConfig)
-        {
-            const char* zXml = json_string_value(pConfig);
-            size_t xml_len = json_string_length(pConfig);
-
-            unique_ptr<xmlDoc> sDoc(xmlReadMemory(zXml, xml_len, "columnstore.xml", NULL, 0));
-
-            if (sDoc)
-            {
-                m_sConfig = std::move(sConfig);
-                m_sDoc = std::move(sDoc);
-
-                rv = true;
-            }
-            else
-            {
-                PRINT_MXS_JSON_ERROR(ppError,
-                                     "Failed to parse XML configuration of '%s'.", name());
-            }
-        }
-        else
-        {
-            PRINT_MXS_JSON_ERROR(ppError,
-                                 "Obtained config object from '%s', but it does not have a '%s' key.",
-                                 name(),
-                                 cs::keys::CONFIG);
-        }
-    }
-    else
-    {
-        PRINT_MXS_JSON_ERROR(ppError, "Could not parse JSON data from: %s", error.text);
-    }
-
-    return rv;
-}
-
 bool CsMonitorServer::update(cs::ClusterMode mode, json_t** ppError)
 {
     ostringstream body;
@@ -174,12 +153,12 @@ bool CsMonitorServer::update(cs::ClusterMode mode, json_t** ppError)
 
 //static
 CsMonitorServer::Statuses CsMonitorServer::fetch_statuses(const std::vector<CsMonitorServer*>& servers,
-                                                          const mxb::http::Config& config)
+                                                          const mxb::http::Config& http_config)
 {
     size_t n = 0;
     vector<Status> statuses;
     vector<string> urls = create_urls(servers, cs::rest::STATUS);
-    vector<http::Result> results = http::get(urls, config);
+    vector<http::Result> results = http::get(urls, http_config);
 
     mxb_assert(servers.size() == results.size());
 
@@ -194,6 +173,30 @@ CsMonitorServer::Statuses CsMonitorServer::fetch_statuses(const std::vector<CsMo
     }
 
     return Statuses(n, std::move(statuses));
+}
+
+//static
+CsMonitorServer::Configs CsMonitorServer::fetch_configs(const std::vector<CsMonitorServer*>& servers,
+                                                        const mxb::http::Config& http_config)
+{
+    size_t n = 0;
+    vector<Config> configs;
+    vector<string> urls = create_urls(servers, cs::rest::CONFIG);
+    vector<http::Result> results = http::get(urls, http_config);
+
+    mxb_assert(servers.size() == results.size());
+
+    for (auto& result : results)
+    {
+        configs.emplace_back(Config::create(result));
+
+        if (result.ok() && configs.back().sJson)
+        {
+            ++n;
+        }
+    }
+
+    return Configs(n, std::move(configs));
 }
 
 //static

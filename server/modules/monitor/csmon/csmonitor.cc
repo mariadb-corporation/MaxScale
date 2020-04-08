@@ -966,23 +966,58 @@ void CsMonitor::cluster_status(json_t** ppOutput, mxb::Semaphore* pSem, CsMonito
 
 void CsMonitor::cluster_config_get(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
 {
-    cluster_get(ppOutput, pSem, cs::rest::CONFIG, pServer,
-                [](CsMonitorServer* pServer, const http::Result& result, json_t* pResponse)
-                {
-                    mxb_assert(result.ok());
+    CsMonitorServer::Configs configs = CsMonitorServer::fetch_configs(servers(), m_http_config);
 
-                    json_t* pError = nullptr;
-                    if (pServer->set_config(result.body, &pError))
-                    {
-                        mxb_assert(!pError);
-                        json_object_set(pResponse, pServer->name(), pServer->config());
-                    }
-                    else
-                    {
-                        mxb_assert(pError);
-                        json_object_set_new(pResponse, pServer->name(), pError);
-                    }
-                });
+    bool success = configs.first == servers().size();
+    string message;
+
+    if (success)
+    {
+        message = "Fetched the config from all servers.";
+    }
+    else
+    {
+        message = "Could not fetch the config from all servers.";
+    }
+
+    json_t* pArray = json_array();
+
+    auto it = servers().begin();
+    auto end = servers().end();
+    auto jt = configs.second.begin();
+
+    while (it != end)
+    {
+        auto* pServer = *it;
+        const auto& config = *jt;
+
+        json_t* pObject = json_object();
+        json_object_set_new(pObject, "name", json_string(pServer->name()));
+        json_object_set_new(pObject, "code", json_integer(config.response.code));
+
+        if (config.sJson)
+        {
+            json_object_set(pObject, "config", config.sJson.get());
+        }
+        else
+        {
+            json_object_set_new(pObject, "config", json_string(config.response.body.c_str()));
+        }
+
+        json_array_append_new(pArray, pObject);
+
+        ++it;
+        ++jt;
+    }
+
+    json_t* pOutput = json_object();
+    json_object_set_new(pOutput, "success", json_boolean(success));
+    json_object_set_new(pOutput, "message", json_string(message.c_str()));
+    json_object_set_new(pOutput, "servers", pArray);
+
+    *ppOutput = pOutput;
+
+    pSem->post();
 }
 
 void CsMonitor::cluster_config_set(json_t** ppOutput, mxb::Semaphore* pSem,

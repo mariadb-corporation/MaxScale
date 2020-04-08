@@ -60,29 +60,53 @@ public:
         }
     };
 
+    class Config
+    {
+    public:
+        static Config create(const mxb::http::Result& response);
+
+        Config(Config&& other) = default;
+        Config& operator=(Config&& rhs) = default;
+
+        bool is_valid() const
+        {
+            return response.ok() && sJson && sXml;
+        }
+
+        mxb::http::Result       response;
+        std::unique_ptr<json_t> sJson;
+        std::unique_ptr<xmlDoc> sXml;
+
+    private:
+        Config(const mxb::http::Result& response,
+               std::unique_ptr<json_t>&& sJson,
+               std::unique_ptr<xmlDoc>&& sXml)
+            : response(response)
+            , sJson(std::move(sJson))
+            , sXml(std::move(sXml))
+        {
+        }
+    };
+
     using Statuses = std::pair<size_t, std::vector<Status>>;
+    using Configs  = std::pair<size_t, std::vector<Config>>;
 
     const char* name() const
     {
         return this->server->name();
     }
 
-    json_t* config() const
-    {
-        return m_sConfig.get();
-    }
-
     bool ping(json_t** ppError = nullptr);
 
-    bool refresh_config(json_t** ppError = nullptr);
+    Config fetch_config() const;
     Status fetch_status() const;
-
-    bool set_config(const std::string& body, json_t** ppError = nullptr);
 
     bool update(cs::ClusterMode mode, json_t** ppError = nullptr);
 
     static Statuses fetch_statuses(const std::vector<CsMonitorServer*>& servers,
                                    const mxb::http::Config& config);
+    static Configs fetch_configs(const std::vector<CsMonitorServer*>& servers,
+                                 const mxb::http::Config& config);
     static size_t shutdown(const std::vector<CsMonitorServer*>& servers,
                            const std::chrono::seconds& timeout,
                            const mxb::http::Config& config,
@@ -106,6 +130,4 @@ private:
 private:
     int64_t                  m_admin_port;
     const mxb::http::Config& m_http_config;
-    std::unique_ptr<json_t>  m_sConfig;
-    std::unique_ptr<xmlDoc>  m_sDoc;
 };
