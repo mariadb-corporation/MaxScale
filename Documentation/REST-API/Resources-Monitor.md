@@ -5,14 +5,15 @@ more servers.
 
 ## Resource Operations
 
+The _:name_ in all of the URIs must be the name of a monitor in MaxScale.
+
 ### Get a monitor
 
 ```
 GET /v1/monitors/:name
 ```
 
-Get a single monitor. The _:name_ in the URI must be a valid monitor name with
-all whitespace replaced with hyphens. The monitor names are case-sensitive.
+Get a single monitor.
 
 #### Response
 
@@ -46,57 +47,85 @@ all whitespace replaced with hyphens. The monitor names are case-sensitive.
         "attributes": {
             "module": "mariadbmon",
             "state": "Running",
+            "ticks": 1,
             "parameters": {
                 "user": "maxuser",
-                "password": "maxpwd",
-                "monitor_interval": 10000,
+                "password": "*****",
+                "monitor_interval": 5000,
                 "backend_connect_timeout": 3,
                 "backend_read_timeout": 1,
                 "backend_write_timeout": 2,
                 "backend_connect_attempts": 1,
+                "journal_max_age": 28800,
+                "disk_space_threshold": null,
+                "disk_space_check_interval": 0,
+                "script": null,
+                "script_timeout": 90,
+                "events": "all",
                 "detect_replication_lag": false,
                 "detect_stale_master": true,
                 "detect_stale_slave": true,
-                "mysql51_replication": false,
-                "multimaster": false,
-                "detect_standalone_master": false,
+                "detect_standalone_master": true,
                 "failcount": 5,
-                "allow_cluster_recovery": true,
-                "journal_max_age": 28800
+                "ignore_external_masters": false,
+                "auto_failover": false,
+                "failover_timeout": 90,
+                "switchover_timeout": 90,
+                "replication_user": null,
+                "replication_password": null,
+                "replication_master_ssl": false,
+                "verify_master_failure": true,
+                "master_failure_timeout": 10,
+                "auto_rejoin": false,
+                "enforce_read_only_slaves": false,
+                "servers_no_promotion": null,
+                "promotion_sql_file": null,
+                "demotion_sql_file": null,
+                "switchover_on_low_disk_space": false,
+                "maintenance_on_low_disk_space": true,
+                "handle_events": true,
+                "assume_unique_hostnames": true,
+                "enforce_simple_topology": false,
+                "cooperative_monitoring_locks": "none"
             },
             "monitor_diagnostics": {
-                "monitor_id": 0,
-                "detect_stale_master": true,
-                "detect_stale_slave": true,
-                "detect_replication_lag": false,
-                "multimaster": false,
-                "detect_standalone_master": false,
-                "failcount": 5,
-                "allow_cluster_recovery": true,
-                "mysql51_replication": false,
-                "journal_max_age": 28800,
+                "master": "server1",
+                "master_gtid_domain_id": 0,
+                "state": "Idle",
+                "primary": null,
                 "server_info": [
                     {
                         "name": "server1",
-                        "server_id": 0,
-                        "master_id": 0,
+                        "server_id": 3000,
                         "read_only": false,
-                        "slave_configured": false,
-                        "slave_io_running": false,
-                        "slave_sql_running": false,
-                        "master_binlog_file": "",
-                        "master_binlog_position": 0
+                        "gtid_current_pos": "0-3000-24",
+                        "gtid_binlog_pos": "0-3000-24",
+                        "master_group": null,
+                        "lock_held": null,
+                        "slave_connections": []
                     },
                     {
                         "name": "server2",
-                        "server_id": 0,
-                        "master_id": 0,
+                        "server_id": 3001,
                         "read_only": false,
-                        "slave_configured": false,
-                        "slave_io_running": false,
-                        "slave_sql_running": false,
-                        "master_binlog_file": "",
-                        "master_binlog_position": 0
+                        "gtid_current_pos": "0-3000-24",
+                        "gtid_binlog_pos": "0-3000-24",
+                        "master_group": null,
+                        "lock_held": null,
+                        "slave_connections": [
+                            {
+                                "connection_name": "",
+                                "master_host": "127.0.0.1",
+                                "master_port": 3000,
+                                "slave_io_running": "Yes",
+                                "slave_sql_running": "Yes",
+                                "seconds_behind_master": 0,
+                                "master_server_id": 3000,
+                                "last_io_error": "",
+                                "last_sql_error": "",
+                                "gtid_io_pos": ""
+                            }
+                        ]
                     }
                 ]
             }
@@ -149,57 +178,85 @@ Get all monitors.
             "attributes": {
                 "module": "mariadbmon",
                 "state": "Running",
+                "ticks": 13,
                 "parameters": {
                     "user": "maxuser",
-                    "password": "maxpwd",
-                    "monitor_interval": 10000,
+                    "password": "*****",
+                    "monitor_interval": 5000,
                     "backend_connect_timeout": 3,
                     "backend_read_timeout": 1,
                     "backend_write_timeout": 2,
                     "backend_connect_attempts": 1,
+                    "journal_max_age": 28800,
+                    "disk_space_threshold": null,
+                    "disk_space_check_interval": 0,
+                    "script": null,
+                    "script_timeout": 90,
+                    "events": "all",
                     "detect_replication_lag": false,
                     "detect_stale_master": true,
                     "detect_stale_slave": true,
-                    "mysql51_replication": false,
-                    "multimaster": false,
-                    "detect_standalone_master": false,
+                    "detect_standalone_master": true,
                     "failcount": 5,
-                    "allow_cluster_recovery": true,
-                    "journal_max_age": 28800
+                    "ignore_external_masters": false,
+                    "auto_failover": false,
+                    "failover_timeout": 90,
+                    "switchover_timeout": 90,
+                    "replication_user": null,
+                    "replication_password": null,
+                    "replication_master_ssl": false,
+                    "verify_master_failure": true,
+                    "master_failure_timeout": 10,
+                    "auto_rejoin": false,
+                    "enforce_read_only_slaves": false,
+                    "servers_no_promotion": null,
+                    "promotion_sql_file": null,
+                    "demotion_sql_file": null,
+                    "switchover_on_low_disk_space": false,
+                    "maintenance_on_low_disk_space": true,
+                    "handle_events": true,
+                    "assume_unique_hostnames": true,
+                    "enforce_simple_topology": false,
+                    "cooperative_monitoring_locks": "none"
                 },
                 "monitor_diagnostics": {
-                    "monitor_id": 0,
-                    "detect_stale_master": true,
-                    "detect_stale_slave": true,
-                    "detect_replication_lag": false,
-                    "multimaster": false,
-                    "detect_standalone_master": false,
-                    "failcount": 5,
-                    "allow_cluster_recovery": true,
-                    "mysql51_replication": false,
-                    "journal_max_age": 28800,
+                    "master": "server1",
+                    "master_gtid_domain_id": 0,
+                    "state": "Idle",
+                    "primary": null,
                     "server_info": [
                         {
                             "name": "server1",
-                            "server_id": 0,
-                            "master_id": 0,
+                            "server_id": 3000,
                             "read_only": false,
-                            "slave_configured": false,
-                            "slave_io_running": false,
-                            "slave_sql_running": false,
-                            "master_binlog_file": "",
-                            "master_binlog_position": 0
+                            "gtid_current_pos": "0-3000-24",
+                            "gtid_binlog_pos": "0-3000-24",
+                            "master_group": null,
+                            "lock_held": null,
+                            "slave_connections": []
                         },
                         {
                             "name": "server2",
-                            "server_id": 0,
-                            "master_id": 0,
+                            "server_id": 3001,
                             "read_only": false,
-                            "slave_configured": false,
-                            "slave_io_running": false,
-                            "slave_sql_running": false,
-                            "master_binlog_file": "",
-                            "master_binlog_position": 0
+                            "gtid_current_pos": "0-3000-24",
+                            "gtid_binlog_pos": "0-3000-24",
+                            "master_group": null,
+                            "lock_held": null,
+                            "slave_connections": [
+                                {
+                                    "connection_name": "",
+                                    "master_host": "127.0.0.1",
+                                    "master_port": 3000,
+                                    "slave_io_running": "Yes",
+                                    "slave_sql_running": "Yes",
+                                    "seconds_behind_master": 0,
+                                    "master_server_id": 3000,
+                                    "last_io_error": "",
+                                    "last_sql_error": "",
+                                    "gtid_io_pos": ""
+                                }
+                            ]
                         }
                     ]
                 }
@@ -285,9 +342,8 @@ Monitor is created:
 PATCH /v1/monitors/:name
 ```
 
-The :name in the URI must map to a monitor name with all whitespace replaced
-with hyphens. The request body must be a valid JSON document representing the
-modified monitor.
+The request body must be a valid JSON document representing the modified
+monitor.
 
 ### Modifiable Fields
 
@@ -320,9 +376,6 @@ Invalid request body:
 ```
 PATCH /v1/monitors/:name/relationships/servers
 ```
-
-The _:name_ in the URI must map to a monitor name with all whitespace replaced
-with hyphens.
 
 The request body must be a JSON object that defines only the _data_ field. The
 value of the _data_ field must be an array of relationship objects that define
