@@ -74,6 +74,7 @@ the [JSON API](http://jsonapi.org/format/) specification.
 - [maxscale](Resources-MaxScale.md)
 - [services](Resources-Service.md)
 - [servers](Resources-Server.md)
+- [listeners](Resources-Listener.md)
 - [filters](Resources-Filter.md)
 - [monitors](Resources-Monitor.md)
 - [sessions](Resources-Session.md)
@@ -120,9 +121,17 @@ in addition to the _self_ link.
 
     List of servers used by the service
 
+  - `services`
+
+    List of services used by the service
+
   - `filters`
 
     List of filters used by the service
+
+  - `listeners`
+
+    List of listeners used by the service
 
 - `monitors` - Monitor resource
 
@@ -145,6 +154,12 @@ in addition to the _self_ link.
   - `monitors`
 
     List of monitors that use this server
+
+- `listeners` - Listener resource
+
+  - `services`
+
+    The service that the listener points to
 
 ## Common Request Parameters
 
