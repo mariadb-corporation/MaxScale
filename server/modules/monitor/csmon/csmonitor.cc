@@ -874,10 +874,20 @@ void CsMonitor::cluster_start(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitor
     bool success = false;
     ostringstream message;
 
+    json_t* pError = nullptr;
+
     if (n == servers().size())
     {
-        message << "All servers in cluster started successfully.";
-        success = true;
+        if (CsMonitorServer::set_mode(servers(), cs::READ_WRITE, m_http_config, &pError))
+        {
+            message << "All servers in cluster started successfully and cluster made readwrite.";
+            success = true;
+        }
+        else
+        {
+            message << "All servers in cluster started successfully, but cluster could not be "
+                    << "made readwrite.";
+        }
     }
     else
     {
