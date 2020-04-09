@@ -146,6 +146,53 @@ json_t* mxs_json_error(const std::vector<std::string>& errors);
  * @param format Format string
  * @param ...    Variable argument list
  *
- * @return The error added to 'errors' array of the JSON object.
+ * @return @c object if it was non-NULL, otherwise a new object. A new error has been added
+           to the 'errors' array of that object.
  */
 json_t* mxs_json_error_append(json_t* object, const char* format, ...) mxb_attribute((format (printf, 2, 3)));
+
+/**
+ * @brief Append error to existing JSON object.
+ *
+ * @param object Existing json error object, or NULL.
+ * @param error  An error object (assumed to be of correct format).
+ *
+ * @return @c object if it was non-NULL, otherwise a new object. @c object has been appended
+ *         to the 'errors' array of that object.
+ */
+json_t* mxs_json_error_push_back(json_t* object, json_t* error);
+
+/**
+ * @brief Append error to existing JSON object.
+ *
+ * @param object Existing json error object, or NULL.
+ * @param error  An error object (assumed to be of correct format).
+ *               The reference to the object is stolen.
+ *
+ * @return @c object if it was non-NULL, otherwise a new object. @c object has been appended
+ *         to the 'errors' array of that object.
+ */
+json_t* mxs_json_error_push_back_new(json_t* object, json_t* error);
+
+/**
+ * @brief Prepend error to existing JSON object.
+ *
+ * @param object Existing json error object, or NULL.
+ * @param error  An error object (assumed to be of correct format).
+ *
+ * @return @c object if it was non-NULL, otherwise a new object. @c object has been prepended
+ *         to the 'errors' array of that object.
+ */
+json_t* mxs_json_error_push_front(json_t* object, json_t* error);
+
+/**
+ * @brief Prepend error to existing JSON object.
+ *
+ * @param object Existing json error object, or NULL.
+ * @param error  An error object (assumed to be of correct format).
+ *               The reference to the object is stolen.
+ *
+ * @return @c object if it was non-NULL, otherwise a new object. @c object has been prepended
+ *         to the 'errors' array of that object.
+ */
+json_t* mxs_json_error_push_front_new(json_t* object, json_t* error);

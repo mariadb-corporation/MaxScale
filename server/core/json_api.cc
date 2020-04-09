@@ -434,3 +434,62 @@ json_t* mxs_json_error_append(json_t* obj, const char* format, ...)
 
     return obj;
 }
+
+namespace
+{
+enum class Location
+{
+    BACK,
+    FRONT
+};
+
+json_t* json_error_insert_new(json_t* obj, json_t* err, Location location)
+{
+    json_t* arr;
+    if (obj)
+    {
+        arr = json_object_get(obj, ERRORS);
+        mxb_assert(arr);
+        mxb_assert(json_is_array(arr));
+    }
+    else
+    {
+        obj = json_object();
+        arr = json_array();
+        json_object_set_new(obj, ERRORS, arr);
+    }
+
+    if (location == Location::BACK)
+    {
+        json_array_append_new(arr, err);
+    }
+    else
+    {
+        json_array_insert_new(arr, 0, err);
+    }
+
+    return obj;
+}
+}
+
+json_t* mxs_json_error_push_back(json_t* obj, json_t* err)
+{
+    json_incref(err);
+    return mxs_json_error_push_back_new(obj, err);
+}
+
+json_t* mxs_json_error_push_back_new(json_t* obj, json_t* err)
+{
+    return json_error_insert_new(obj, err, Location::BACK);
+}
+
+json_t* mxs_json_error_push_front(json_t* obj, json_t* err)
+{
+    json_incref(err);
+    return mxs_json_error_push_front_new(obj, err);
+}
+
+json_t* mxs_json_error_push_front_new(json_t* obj, json_t* err)
+{
+    return json_error_insert_new(obj, err, Location::FRONT);
+}
