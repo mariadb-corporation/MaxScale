@@ -33,12 +33,6 @@ PamAuthenticatorModule* PamAuthenticatorModule::create(mxs::ConfigParameters* op
     return new(std::nothrow) PamAuthenticatorModule();
 }
 
-json_t* PamAuthenticatorModule::diagnostics()
-{
-    json_t* rval = json_array();
-    return rval;
-}
-
 uint64_t PamAuthenticatorModule::capabilities() const
 {
     return CAP_ANON_USER;

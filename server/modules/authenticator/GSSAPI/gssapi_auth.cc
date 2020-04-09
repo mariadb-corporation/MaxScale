@@ -24,11 +24,6 @@
 
 using AuthRes = mariadb::ClientAuthenticator::AuthRes;
 
-json_t* GSSAPIAuthenticatorModule::diagnostics()
-{
-    return json_array();    // TODO: implement
-}
-
 uint64_t GSSAPIAuthenticatorModule::capabilities() const
 {
     return 0;

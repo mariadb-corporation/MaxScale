@@ -108,16 +108,6 @@ public:
     virtual SBackendAuth create_backend_authenticator(BackendAuthData& auth_data) = 0;
 
     /**
-     * @brief Return diagnostic information about the authenticator
-     *
-     * The authenticator module should return information about its internal
-     * state when this function is called.
-     *
-     * @return JSON representation of the authenticator
-     */
-    virtual json_t* diagnostics() = 0;
-
-    /**
      * List the server authentication plugins this authenticator module supports.
      *
      * @return Supported authenticator plugins

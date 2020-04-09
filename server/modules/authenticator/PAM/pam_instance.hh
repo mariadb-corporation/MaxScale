@@ -27,7 +27,6 @@ public:
 
     static PamAuthenticatorModule* create(mxs::ConfigParameters* options);
 
-    json_t*     diagnostics() override;
     uint64_t    capabilities() const override;
     std::string supported_protocol() const override;
     std::string name() const override;

@@ -59,49 +59,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
 }
 }
 
-static sqlite3* open_instance_database(const char* path)
-{
-    sqlite3* handle;
-
-    // This only opens database in memory if path is exactly ":memory:"
-    // To use the URI filename SQLITE_OPEN_URI flag needs to be used.
-    int rc = sqlite3_open_v2(path, &handle, db_flags, NULL);
-
-    if (rc != SQLITE_OK)
-    {
-        MXS_ERROR("Failed to open SQLite3 handle: %d", rc);
-        return nullptr;
-    }
-
-    char* err;
-
-    if (sqlite3_exec(handle, users_create_sql, NULL, NULL, &err) != SQLITE_OK
-        || sqlite3_exec(handle, databases_create_sql, NULL, NULL, &err) != SQLITE_OK
-        || sqlite3_exec(handle, pragma_sql, NULL, NULL, &err) != SQLITE_OK)
-    {
-        MXS_ERROR("Failed to create database: %s", err);
-        sqlite3_free(err);
-        sqlite3_close_v2(handle);
-        return nullptr;
-    }
-
-    return handle;
-}
-
-sqlite3* MariaDBAuthenticatorModule::get_handle()
-{
-    sqlite3* handle = *m_handle;
-
-    if (!handle)
-    {
-        handle = open_instance_database(":memory:");
-        mxb_assert(handle);
-        *m_handle = handle;
-    }
-
-    return handle;
-}
-
 /**
  * @brief Initialize the authenticator instance
  *
@@ -245,37 +202,6 @@ mariadb::SBackendAuth
 MariaDBAuthenticatorModule::create_backend_authenticator(mariadb::BackendAuthData& auth_data)
 {
     return mariadb::SBackendAuth(new MariaDBBackendSession(auth_data));
-}
-
-int diag_cb_json(void* data, int columns, char** row, char** field_names)
-{
-    json_t* obj = json_object();
-    json_object_set_new(obj, "user", json_string(row[0]));
-    json_object_set_new(obj, "host", json_string(row[1]));
-
-    json_t* arr = (json_t*)data;
-    json_array_append_new(arr, obj);
-    return 0;
-}
-
-json_t* MariaDBAuthenticatorModule::diagnostics()
-{
-    json_t* rval = json_array();
-
-    char* err;
-    sqlite3* handle = get_handle();
-
-    if (sqlite3_exec(handle,
-                     "SELECT user, host FROM " MYSQLAUTH_USERS_TABLE_NAME,
-                     diag_cb_json,
-                     rval,
-                     &err) != SQLITE_OK)
-    {
-        MXS_ERROR("Failed to print users: %s", err);
-        sqlite3_free(err);
-    }
-
-    return rval;
 }
 
 uint64_t MariaDBAuthenticatorModule::capabilities() const

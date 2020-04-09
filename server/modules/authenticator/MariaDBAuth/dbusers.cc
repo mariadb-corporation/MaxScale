@@ -17,17 +17,12 @@
 
 #include "mysql_auth.hh"
 
-#include <ctype.h>
-#include <netdb.h>
 #include <stdio.h>
 
-#include <algorithm>
-#include <vector>
 #include <mysql.h>
 #include <mysqld_error.h>
 #include <maxbase/alloc.h>
 #include <maxscale/dcb.hh>
-#include <maxscale/maxscale.h>
 #include <maxscale/mysql_utils.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
@@ -35,9 +30,7 @@
 #include <maxscale/router.hh>
 #include <maxscale/secrets.hh>
 #include <maxscale/service.hh>
-#include <maxscale/users.hh>
 #include <maxscale/utils.h>
-#include <maxscale/routingworker.hh>
 
 namespace
 {

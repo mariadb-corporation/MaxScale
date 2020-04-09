@@ -83,11 +83,6 @@ static const char insert_database_query[] =
 /** Used for NULL value creation in the INSERT query */
 static const char null_token[] = "NULL";
 
-/** Flags for sqlite3_open_v2() */
-static int db_flags = SQLITE_OPEN_READWRITE
-    | SQLITE_OPEN_CREATE
-    | SQLITE_OPEN_NOMUTEX;
-
 class MariaDBAuthenticatorModule : public mariadb::AuthenticatorModule
 {
 public:
@@ -97,28 +92,14 @@ public:
     mariadb::SClientAuth  create_client_authenticator() override;
     mariadb::SBackendAuth create_backend_authenticator(mariadb::BackendAuthData& auth_data) override;
 
-    json_t*     diagnostics() override;
     uint64_t    capabilities() const override;
     std::string supported_protocol() const override;
     std::string name() const override;
 
     const std::unordered_set<std::string>& supported_plugins() const override;
 
-    /**
-     * @brief Get the thread-specific SQLite handle
-     *
-     * @return The thread-specific handle
-     */
-    sqlite3* get_handle();
-
-    mxs::WorkerLocal<sqlite3*> m_handle;    /**< SQLite3 database handle */
-
-    char* m_cache_dir {nullptr};            /**< Custom cache directory location */
-    bool  m_inject_service_user {true};     /**< Inject the service user into the list of users */
     bool  m_skip_auth {false};              /**< Authentication will always be successful */
     bool  m_check_permissions {true};
-    bool  m_lower_case_table_names {false};     /**< Disable database case-sensitivity */
-
 };
 
 class MariaDBClientAuthenticator : public mariadb::ClientAuthenticatorT<MariaDBAuthenticatorModule>
