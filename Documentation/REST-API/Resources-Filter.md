@@ -5,10 +5,11 @@ services can use the same filter and a single service can use multiple filters.
 
 ## Resource Operations
 
+The _:name_ in all of the URIs must be the name of a filter in MaxScale.
+
 ### Get a filter
 
-Get a single filter. The _:name_ in the URI must be a valid filter name with all
-whitespace replaced with hyphens. The filter names are case-sensitive.
+Get a single filter.
 
 ```
 GET /v1/filters/:name
