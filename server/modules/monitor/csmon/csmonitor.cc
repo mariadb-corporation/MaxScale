@@ -848,8 +848,11 @@ void CsMonitor::cluster_start(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitor
         {
             sResult.reset(json_loadb(result.body.c_str(), result.body.length(), 0, &error));
 
-            MXS_ERROR("Server '%s' returned '%s' that is not valid JSON: %s",
-                      pServer->name(), result.body.c_str(), error.text);
+            if (!sResult)
+            {
+                MXS_ERROR("Server '%s' returned '%s' that is not valid JSON: %s",
+                          pServer->name(), result.body.c_str(), error.text);
+            }
         }
 
         json_t* pObject = json_object();
@@ -904,10 +907,10 @@ void CsMonitor::cluster_shutdown(json_t** ppOutput,
     if (timeout != std::chrono::seconds(0))
     {
         // If there is a timeout, then the cluster must first be made read-only.
-        if (CsMonitorServer::update(servers(), cs::READ_ONLY, m_http_config, &pError))
+        if (CsMonitorServer::set_mode(servers(), cs::READ_ONLY, m_http_config, &pError))
         {
             success = false;
-            message << "Could not make cluster readonly.Timed out shutdown is not possible.";
+            message << "Could not make cluster readonly. Timed out shutdown is not possible.";
         }
     }
 
@@ -1068,7 +1071,28 @@ void CsMonitor::cluster_config_set(json_t** ppOutput, mxb::Semaphore* pSem,
 
 void CsMonitor::cluster_mode_set(json_t** ppOutput, mxb::Semaphore* pSem, cs::ClusterMode mode)
 {
-    CsMonitorServer::update(servers(), mode, m_http_config, ppOutput);
+    json_t* pError = nullptr;
+    bool success = CsMonitorServer::set_mode(servers(), mode, m_http_config, &pError);
+
+    const char* zMessage;
+
+    if (success)
+    {
+        zMessage = "Cluster mode successfully set.";
+    }
+    else
+    {
+        zMessage = "Could not set cluster mode.";
+    }
+
+    json_t* pOutput = json_object();
+    json_object_set_new(pOutput, "success", json_boolean(success));
+    json_object_set_new(pOutput, "message", json_string(zMessage));
+
+    if (pError)
+    {
+        json_object_set_new(pOutput, "error", pError);
+    }
 
     pSem->post();
 }

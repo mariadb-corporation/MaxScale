@@ -102,21 +102,22 @@ public:
     Config fetch_config() const;
     Status fetch_status() const;
 
-    bool update(cs::ClusterMode mode, json_t** ppError = nullptr);
+    bool set_mode(cs::ClusterMode mode, json_t** ppError = nullptr);
 
     static Statuses fetch_statuses(const std::vector<CsMonitorServer*>& servers,
                                    const mxb::http::Config& config);
     static Configs fetch_configs(const std::vector<CsMonitorServer*>& servers,
                                  const mxb::http::Config& config);
-    static HttpResults shutdown(const std::vector<CsMonitorServer*>& servers,
-                                const std::chrono::seconds& timeout,
-                                const mxb::http::Config& config);
+    static size_t shutdown(const std::vector<CsMonitorServer*>& servers,
+                           const std::chrono::seconds& timeout,
+                           const mxb::http::Config& config,
+                           json_t** ppArray = nullptr);
     static HttpResults start(const std::vector<CsMonitorServer*>& servers,
                              const mxb::http::Config& config);
-    static bool update(const std::vector<CsMonitorServer*>& servers,
-                       cs::ClusterMode mode,
-                       const mxb::http::Config& config,
-                       json_t** ppError = nullptr);
+    static bool set_mode(const std::vector<CsMonitorServer*>& servers,
+                         cs::ClusterMode mode,
+                         const mxb::http::Config& config,
+                         json_t** ppError = nullptr);
 
 private:
     bool set_status(const mxb::http::Result& result, json_t** ppError);

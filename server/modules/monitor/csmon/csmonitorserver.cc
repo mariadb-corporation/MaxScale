@@ -132,7 +132,7 @@ CsMonitorServer::Status CsMonitorServer::fetch_status() const
     return Status::create(result);
 }
 
-bool CsMonitorServer::update(cs::ClusterMode mode, json_t** ppError)
+bool CsMonitorServer::set_mode(cs::ClusterMode mode, json_t** ppError)
 {
     ostringstream body;
     body << "{"
@@ -145,7 +145,7 @@ bool CsMonitorServer::update(cs::ClusterMode mode, json_t** ppError)
 
     if (!result.ok())
     {
-        PRINT_MXS_JSON_ERROR(ppError, "Could not update cluster mode: %s", result.body.c_str());
+        PRINT_MXS_JSON_ERROR(ppError, "Could not set cluster mode: %s", result.body.c_str());
     }
 
     return result.ok();
@@ -276,10 +276,10 @@ CsMonitorServer::HttpResults CsMonitorServer::start(const std::vector<CsMonitorS
 }
 
 //static
-bool CsMonitorServer::update(const std::vector<CsMonitorServer*>& servers,
-                             cs::ClusterMode mode,
-                             const mxb::http::Config& config,
-                             json_t** ppError)
+bool CsMonitorServer::set_mode(const std::vector<CsMonitorServer*>& servers,
+                               cs::ClusterMode mode,
+                               const mxb::http::Config& config,
+                               json_t** ppError)
 {
     bool rv = false;
 
@@ -328,7 +328,7 @@ bool CsMonitorServer::update(const std::vector<CsMonitorServer*>& servers,
     }
     else
     {
-        rv = pMaster->update(mode, ppError);
+        rv = pMaster->set_mode(mode, ppError);
     }
 
     return rv;
