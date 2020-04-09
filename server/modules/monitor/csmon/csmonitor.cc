@@ -168,6 +168,110 @@ vector<http::Result>::iterator find_first_failed(vector<http::Result>& results)
         });
 }
 
+int code_from_result(const CsMonitorServer::Config& config)
+{
+    return config.response.code;
+}
+
+int code_from_result(const CsMonitorServer::Status& status)
+{
+    return status.response.code;
+}
+
+int code_from_result(const http::Result& response)
+{
+    return response.code;
+}
+
+json_t* result_to_json(const CsMonitorServer& server, const CsMonitorServer::Config& config)
+{
+    json_t* pResult = nullptr;
+
+    if (config.sJson)
+    {
+        pResult = config.sJson.get();
+        json_incref(pResult);
+    }
+
+    return pResult;
+}
+
+json_t* result_to_json(const CsMonitorServer& server, const CsMonitorServer::Status& status)
+{
+    json_t* pResult = nullptr;
+
+    if (status.sJson)
+    {
+        pResult = status.sJson.get();
+        json_incref(pResult);
+    }
+
+    return pResult;
+}
+
+json_t* result_to_json(const CsMonitorServer& server, const http::Result& result)
+{
+    json_t* pResult = nullptr;
+
+    if (!result.body.empty())
+    {
+        json_error_t error;
+        pResult = json_loadb(result.body.c_str(), result.body.length(), 0, &error);
+
+        if (!pResult)
+        {
+            MXS_ERROR("Server '%s' returned '%s' that is not valid JSON: %s",
+                      server.name(), result.body.c_str(), error.text);
+        }
+    }
+
+    return pResult;
+}
+
+template<class T>
+size_t results_to_json(const vector<CsMonitorServer*>& servers,
+                       const vector<T>& results,
+                       json_t** ppArray)
+{
+    auto it = servers.begin();
+    auto end = servers.end();
+    auto jt = results.begin();
+
+    size_t n = 0;
+
+    json_t* pArray = json_array();
+
+    while (it != end)
+    {
+        auto* pServer = *it;
+        const auto& result = *jt;
+
+        if (result.ok())
+        {
+            ++n;
+        }
+
+        json_t* pResult = result_to_json(*pServer, result);
+
+        json_t* pObject = json_object();
+        json_object_set_new(pObject, "name", json_string(pServer->name()));
+        json_object_set_new(pObject, "code", json_integer(code_from_result(result)));
+        if (pResult)
+        {
+            json_object_set_new(pObject, "result", pResult);
+        }
+
+        json_array_append_new(pArray, pObject);
+
+        ++it;
+        ++jt;
+    }
+
+    *ppArray = pArray;
+
+    return n;
+}
+
 }
 
 class CsMonitor::Command
@@ -823,53 +927,8 @@ void CsMonitor::cluster_start(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitor
 {
     vector<http::Result> results = CsMonitorServer::start(servers(), m_http_config);
 
-    auto it = servers().begin();
-    auto end = servers().end();
-    auto jt = results.begin();
-
-    size_t n = 0;
-
-    json_t* pServers = json_array();
-
-    while (it != end)
-    {
-        auto* pServer = *it;
-        const auto& result = *jt;
-
-        if (result.ok())
-        {
-            ++n;
-        }
-
-        json_error_t error;
-        unique_ptr<json_t> sResult;
-
-        if (!result.body.empty())
-        {
-            sResult.reset(json_loadb(result.body.c_str(), result.body.length(), 0, &error));
-
-            if (!sResult)
-            {
-                MXS_ERROR("Server '%s' returned '%s' that is not valid JSON: %s",
-                          pServer->name(), result.body.c_str(), error.text);
-            }
-        }
-
-        json_t* pObject = json_object();
-        json_object_set_new(pObject, "name", json_string(pServer->name()));
-        json_object_set_new(pObject, "code", json_integer(result.code));
-        if (sResult)
-        {
-            json_object_set_new(pObject, "result", sResult.release());
-        }
-
-        json_array_append_new(pServers, pObject);
-
-        ++it;
-        ++jt;
-    }
-
-    json_t* pOutput = json_object();
+    json_t* pServers = nullptr;
+    size_t n = results_to_json(servers(), results, &pServers);
 
     bool success = false;
     ostringstream message;
@@ -894,8 +953,13 @@ void CsMonitor::cluster_start(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitor
         message << n << " servers out of " << servers().size() << " started successfully.";
     }
 
+    json_t* pOutput = json_object();
     json_object_set_new(pOutput, "success", json_boolean(success));
     json_object_set_new(pOutput, "message", json_string(message.str().c_str()));
+    if (pError)
+    {
+        json_object_set_new(pOutput, "error", pError);
+    }
     json_object_set_new(pOutput, "servers", pServers);
 
     *ppOutput = pOutput;
@@ -912,7 +976,6 @@ void CsMonitor::cluster_shutdown(json_t** ppOutput,
 
     json_t* pOutput = json_object();
     json_t* pError = nullptr;
-    json_t* pArray = nullptr;
 
     bool success = true;
     ostringstream message;
@@ -920,62 +983,20 @@ void CsMonitor::cluster_shutdown(json_t** ppOutput,
     if (timeout != std::chrono::seconds(0))
     {
         // If there is a timeout, then the cluster must first be made read-only.
-        if (CsMonitorServer::set_mode(servers(), cs::READ_ONLY, m_http_config, &pError))
+        if (!CsMonitorServer::set_mode(servers(), cs::READ_ONLY, m_http_config, &pError))
         {
             success = false;
             message << "Could not make cluster readonly. Timed out shutdown is not possible.";
         }
     }
 
+    json_t* pServers = nullptr;
+
     if (success)
     {
         vector<http::Result> results = CsMonitorServer::shutdown(servers(), timeout, m_http_config);
 
-        auto it = servers().begin();
-        auto end = servers().end();
-        auto jt = results.begin();
-
-        size_t n = 0;
-
-        pArray = json_array();
-
-        while (it != end)
-        {
-            auto* pServer = *it;
-            const auto& result = *jt;
-
-            if (result.ok())
-            {
-                ++n;
-            }
-
-            json_error_t error;
-            unique_ptr<json_t> sResult;
-
-            if (!result.body.empty())
-            {
-                sResult.reset(json_loadb(result.body.c_str(), result.body.length(), 0, &error));
-
-                if (!sResult)
-                {
-                    MXS_ERROR("Server '%s' returned '%s' that is not valid JSON: %s",
-                              pServer->name(), result.body.c_str(), error.text);
-                }
-            }
-
-            json_t* pObject = json_object();
-            json_object_set_new(pObject, "name", json_string(pServer->name()));
-            json_object_set_new(pObject, "code", json_integer(result.code));
-            if (sResult)
-            {
-                json_object_set_new(pObject, "result", sResult.release());
-            }
-
-            json_array_append_new(pArray, pObject);
-
-            ++it;
-            ++jt;
-        }
+        size_t n = results_to_json(servers(), results, &pServers);
 
         if (n == servers().size())
         {
@@ -995,9 +1016,9 @@ void CsMonitor::cluster_shutdown(json_t** ppOutput,
     {
         json_object_set_new(pOutput, "error", pError);
     }
-    else if (pArray)
+    else if (pServers)
     {
-        json_object_set_new(pOutput, "servers", pArray);
+        json_object_set_new(pOutput, "servers", pServers);
     }
 
     *ppOutput = pOutput;
@@ -1014,52 +1035,26 @@ void CsMonitor::cluster_status(json_t** ppOutput, mxb::Semaphore* pSem, CsMonito
 {
     CsMonitorServer::Statuses statuses = CsMonitorServer::fetch_statuses(servers(), m_http_config);
 
-    bool success = statuses.first == servers().size();
-    string message;
+    json_t* pServers = nullptr;
+    size_t n = results_to_json(servers(), statuses.second, &pServers);
+
+    bool success = (n == servers().size());
+    ostringstream message;
 
     if (success)
     {
-        message = "Fetched the status from all servers.";
+        message << "Fetched the status from all servers.";
     }
     else
     {
-        message = "Could not fetch the status from all servers.";
-    }
-
-    json_t* pArray = json_array();
-
-    auto it = servers().begin();
-    auto end = servers().end();
-    auto jt = statuses.second.begin();
-
-    while (it != end)
-    {
-        auto* pServer = *it;
-        const auto& status = *jt;
-
-        json_t* pObject = json_object();
-        json_object_set_new(pObject, "name", json_string(pServer->name()));
-        json_object_set_new(pObject, "code", json_integer(status.response.code));
-
-        if (status.sJson)
-        {
-            json_object_set(pObject, "status", status.sJson.get());
-        }
-        else
-        {
-            json_object_set_new(pObject, "status", json_string(status.response.body.c_str()));
-        }
-
-        json_array_append_new(pArray, pObject);
-
-        ++it;
-        ++jt;
+        message << "Successfully fetched status from " << n
+                << " servers out of " << servers().size() << ".";
     }
 
     json_t* pOutput = json_object();
     json_object_set_new(pOutput, "success", json_boolean(success));
-    json_object_set_new(pOutput, "message", json_string(message.c_str()));
-    json_object_set_new(pOutput, "servers", pArray);
+    json_object_set_new(pOutput, "message", json_string(message.str().c_str()));
+    json_object_set_new(pOutput, "servers", pServers);
 
     *ppOutput = pOutput;
 
@@ -1070,52 +1065,26 @@ void CsMonitor::cluster_config_get(json_t** ppOutput, mxb::Semaphore* pSem, CsMo
 {
     CsMonitorServer::Configs configs = CsMonitorServer::fetch_configs(servers(), m_http_config);
 
-    bool success = configs.first == servers().size();
-    string message;
+    json_t* pServers = nullptr;
+    size_t n = results_to_json(servers(), configs.second, &pServers);
+
+    bool success = (n == servers().size());
+    ostringstream message;
 
     if (success)
     {
-        message = "Fetched the config from all servers.";
+        message << "Fetched the config from all servers.";
     }
     else
     {
-        message = "Could not fetch the config from all servers.";
-    }
-
-    json_t* pArray = json_array();
-
-    auto it = servers().begin();
-    auto end = servers().end();
-    auto jt = configs.second.begin();
-
-    while (it != end)
-    {
-        auto* pServer = *it;
-        const auto& config = *jt;
-
-        json_t* pObject = json_object();
-        json_object_set_new(pObject, "name", json_string(pServer->name()));
-        json_object_set_new(pObject, "code", json_integer(config.response.code));
-
-        if (config.sJson)
-        {
-            json_object_set(pObject, "config", config.sJson.get());
-        }
-        else
-        {
-            json_object_set_new(pObject, "config", json_string(config.response.body.c_str()));
-        }
-
-        json_array_append_new(pArray, pObject);
-
-        ++it;
-        ++jt;
+        message << "Successfully fetched config from " << n
+                << " servers out of " << servers().size() << ".";
     }
 
     json_t* pOutput = json_object();
     json_object_set_new(pOutput, "success", json_boolean(success));
-    json_object_set_new(pOutput, "message", json_string(message.c_str()));
-    json_object_set_new(pOutput, "servers", pArray);
+    json_object_set_new(pOutput, "message", json_string(message.str().c_str()));
+    json_object_set_new(pOutput, "servers", pServers);
 
     *ppOutput = pOutput;
 

@@ -102,7 +102,10 @@ CsMonitorServer::Status CsMonitorServer::Status::create(const http::Result& resp
             const char* zCluster_mode = json_string_value(pCluster_mode);
             const char* zDbrm_mode = json_string_value(pDbrm_mode);
 
-            if (!cs::from_string(zCluster_mode, &cluster_mode) && cs::from_string(zDbrm_mode, &dbrm_mode))
+            bool b1 = cs::from_string(zCluster_mode, &cluster_mode);
+            bool b2 = cs::from_string(zDbrm_mode, &dbrm_mode);
+
+            if (!b1 || !b2)
             {
                 mxb_assert(!true);
                 MXS_ERROR("Could not convert '%s' and/or '%s' to actual values.",
@@ -260,7 +263,7 @@ bool CsMonitorServer::set_mode(const std::vector<CsMonitorServer*>& servers,
         CsMonitorServer* pServer = *it;
         const Status& status = *jt;
 
-        if (status.is_valid())
+        if (status.ok())
         {
             if (status.dbrm_mode == cs::MASTER)
             {

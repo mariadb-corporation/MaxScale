@@ -37,7 +37,7 @@ public:
         Status(Status&& other) = default;
         Status& operator=(Status&& rhs) = default;
 
-        bool is_valid() const
+        bool ok() const
         {
             return response.ok() && sJson;
         }
@@ -68,7 +68,7 @@ public:
         Config(Config&& other) = default;
         Config& operator=(Config&& rhs) = default;
 
-        bool is_valid() const
+        bool ok() const
         {
             return response.ok() && sJson && sXml;
         }
