@@ -88,8 +88,9 @@ public:
         }
     };
 
-    using Statuses = std::pair<size_t, std::vector<Status>>;
-    using Configs  = std::pair<size_t, std::vector<Config>>;
+    using Statuses    = std::pair<size_t, std::vector<Status>>;
+    using Configs     = std::pair<size_t, std::vector<Config>>;
+    using HttpResults = std::vector<mxb::http::Result>;
 
     const char* name() const
     {
@@ -107,13 +108,11 @@ public:
                                    const mxb::http::Config& config);
     static Configs fetch_configs(const std::vector<CsMonitorServer*>& servers,
                                  const mxb::http::Config& config);
-    static size_t shutdown(const std::vector<CsMonitorServer*>& servers,
-                           const std::chrono::seconds& timeout,
-                           const mxb::http::Config& config,
-                           json_t** ppArray);
-    static size_t start(const std::vector<CsMonitorServer*>& servers,
-                        const mxb::http::Config& config,
-                        json_t** ppArray);
+    static HttpResults shutdown(const std::vector<CsMonitorServer*>& servers,
+                                const std::chrono::seconds& timeout,
+                                const mxb::http::Config& config);
+    static HttpResults start(const std::vector<CsMonitorServer*>& servers,
+                             const mxb::http::Config& config);
     static bool update(const std::vector<CsMonitorServer*>& servers,
                        cs::ClusterMode mode,
                        const mxb::http::Config& config,

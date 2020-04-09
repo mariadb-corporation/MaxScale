@@ -25,6 +25,7 @@
 
 using std::ostringstream;
 using std::string;
+using std::unique_ptr;
 using std::vector;
 using maxscale::MonitorServer;
 namespace http = mxb::http;
@@ -820,8 +821,47 @@ void CsMonitor::cluster_put(json_t** ppOutput,
 
 void CsMonitor::cluster_start(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
 {
-    json_t* pServers = nullptr;
-    size_t n = CsMonitorServer::start(servers(), m_http_config, &pServers);
+    vector<http::Result> results = CsMonitorServer::start(servers(), m_http_config);
+
+    auto it = servers().begin();
+    auto end = servers().end();
+    auto jt = results.begin();
+
+    size_t n = 0;
+
+    json_t* pServers = json_array();
+
+    while (it != end)
+    {
+        auto* pServer = *it;
+        const auto& result = *jt;
+
+        if (result.ok())
+        {
+            ++n;
+        }
+
+        json_error_t error;
+        unique_ptr<json_t> sResult;
+
+        if (!result.body.empty())
+        {
+            sResult.reset(json_loadb(result.body.c_str(), result.body.length(), 0, &error));
+
+            MXS_ERROR("Server '%s' returned '%s' that is not valid JSON: %s",
+                      pServer->name(), result.body.c_str(), error.text);
+        }
+
+        json_t* pObject = json_object();
+        json_object_set_new(pObject, "name", json_string(pServer->name()));
+        json_object_set_new(pObject, "code", json_integer(result.code));
+        json_object_set_new(pObject, "result", sResult.release());
+
+        json_array_append_new(pServers, pObject);
+
+        ++it;
+        ++jt;
+    }
 
     json_t* pOutput = json_object();
 
@@ -830,7 +870,7 @@ void CsMonitor::cluster_start(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitor
 
     if (n == servers().size())
     {
-        message << "All servers i ncluster started successfully.";
+        message << "All servers in cluster started successfully.";
         success = true;
     }
     else
