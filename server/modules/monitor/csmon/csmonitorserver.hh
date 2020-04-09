@@ -108,10 +108,9 @@ public:
                                    const mxb::http::Config& config);
     static Configs fetch_configs(const std::vector<CsMonitorServer*>& servers,
                                  const mxb::http::Config& config);
-    static size_t shutdown(const std::vector<CsMonitorServer*>& servers,
-                           const std::chrono::seconds& timeout,
-                           const mxb::http::Config& config,
-                           json_t** ppArray = nullptr);
+    static HttpResults shutdown(const std::vector<CsMonitorServer*>& servers,
+                                const std::chrono::seconds& timeout,
+                                const mxb::http::Config& config);
     static HttpResults start(const std::vector<CsMonitorServer*>& servers,
                              const mxb::http::Config& config);
     static bool set_mode(const std::vector<CsMonitorServer*>& servers,

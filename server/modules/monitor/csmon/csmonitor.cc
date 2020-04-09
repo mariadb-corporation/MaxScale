@@ -858,7 +858,10 @@ void CsMonitor::cluster_start(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitor
         json_t* pObject = json_object();
         json_object_set_new(pObject, "name", json_string(pServer->name()));
         json_object_set_new(pObject, "code", json_integer(result.code));
-        json_object_set_new(pObject, "result", sResult.release());
+        if (sResult)
+        {
+            json_object_set_new(pObject, "result", sResult.release());
+        }
 
         json_array_append_new(pServers, pObject);
 
@@ -916,7 +919,53 @@ void CsMonitor::cluster_shutdown(json_t** ppOutput,
 
     if (success)
     {
-        size_t n = CsMonitorServer::shutdown(servers(), timeout, m_http_config, &pArray);
+        vector<http::Result> results = CsMonitorServer::shutdown(servers(), timeout, m_http_config);
+
+        auto it = servers().begin();
+        auto end = servers().end();
+        auto jt = results.begin();
+
+        size_t n = 0;
+
+        pArray = json_array();
+
+        while (it != end)
+        {
+            auto* pServer = *it;
+            const auto& result = *jt;
+
+            if (result.ok())
+            {
+                ++n;
+            }
+
+            json_error_t error;
+            unique_ptr<json_t> sResult;
+
+            if (!result.body.empty())
+            {
+                sResult.reset(json_loadb(result.body.c_str(), result.body.length(), 0, &error));
+
+                if (!sResult)
+                {
+                    MXS_ERROR("Server '%s' returned '%s' that is not valid JSON: %s",
+                              pServer->name(), result.body.c_str(), error.text);
+                }
+            }
+
+            json_t* pObject = json_object();
+            json_object_set_new(pObject, "name", json_string(pServer->name()));
+            json_object_set_new(pObject, "code", json_integer(result.code));
+            if (sResult)
+            {
+                json_object_set_new(pObject, "result", sResult.release());
+            }
+
+            json_array_append_new(pArray, pObject);
+
+            ++it;
+            ++jt;
+        }
 
         if (n == servers().size())
         {
@@ -936,7 +985,7 @@ void CsMonitor::cluster_shutdown(json_t** ppOutput,
     {
         json_object_set_new(pOutput, "error", pError);
     }
-    else
+    else if (pArray)
     {
         json_object_set_new(pOutput, "servers", pArray);
     }

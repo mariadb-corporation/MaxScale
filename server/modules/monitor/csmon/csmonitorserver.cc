@@ -200,10 +200,9 @@ CsMonitorServer::Configs CsMonitorServer::fetch_configs(const std::vector<CsMoni
 }
 
 //static
-size_t CsMonitorServer::shutdown(const std::vector<CsMonitorServer*>& servers,
-                                 const std::chrono::seconds& timeout,
-                                 const mxb::http::Config& config,
-                                 json_t** ppArray)
+CsMonitorServer::HttpResults CsMonitorServer::shutdown(const std::vector<CsMonitorServer*>& servers,
+                                                       const std::chrono::seconds& timeout,
+                                                       const mxb::http::Config& config)
 {
     string tail;
 
@@ -218,49 +217,7 @@ size_t CsMonitorServer::shutdown(const std::vector<CsMonitorServer*>& servers,
 
     mxb_assert(urls.size() == results.size());
 
-    auto it = servers.begin();
-    auto end = servers.end();
-    auto jt = results.begin();
-
-    json_t* pArray = json_array();
-
-    size_t n = 0;
-
-    while (it != end)
-    {
-        auto* pServer = *it;
-        const auto& result = *jt;
-
-        json_t* pObject = json_object();
-        json_object_set_new(pObject, "name", json_string(pServer->name()));
-        json_object_set_new(pObject, "code", json_integer(result.code));
-
-        if (result.ok())
-        {
-            ++n;
-        }
-        else
-        {
-            json_error_t error;
-            unique_ptr<json_t> sError(json_loadb(result.body.c_str(), result.body.length(), 0, &error));
-
-            if (!sError)
-            {
-                sError.reset(json_string(result.body.c_str()));
-            }
-
-            json_object_set_new(pObject, "error", sError.release());
-        }
-
-        json_array_append_new(pArray, pObject);
-
-        ++it;
-        ++jt;
-    }
-
-    *ppArray = pArray;
-
-    return n;
+    return results;
 }
 
 //static
