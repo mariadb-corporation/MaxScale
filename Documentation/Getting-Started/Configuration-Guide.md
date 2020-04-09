@@ -1125,8 +1125,8 @@ For more information, read the [REST API documentation](../REST-API/API.md).
 
 The path to the TLS private key in PEM format for the admin interface.
 
-If the `admin_ssl_key`, `admin_ssl_cert` and `admin_ssl_ca_cert` options are all
-defined, the admin interface will use encrypted HTTPS instead of plain HTTP.
+If the `admin_ssl_key` and `admin_ssl_cert` options are all defined, the admin
+interface will use encrypted HTTPS instead of plain HTTP.
 
 ### `admin_ssl_cert`
 
@@ -1135,8 +1135,9 @@ documentation for more details.
 
 ### `admin_ssl_ca_cert`
 
-The path to the TLS CA certificate in PEM format. See `admin_ssl_key`
-documentation for more details.
+The path to the TLS CA certificate in PEM format. If defined, the client
+certificate, if provided, will be validated against it. This parameter is
+optional starting with MaxScale 2.3.19.
 
 ### `admin_enabled`
 
@@ -2006,6 +2007,12 @@ client and server support. MaxScale supports TLSv1.0, TLSv1.1, TLSv1.2 and
 TLSv1.3 depending on the OpenSSL library version.
 
 The `TLSv13` value was added in MaxScale 2.3.15 ([MXS-2762](https://jira.mariadb.org/browse/MXS-2762)).
+
+### `ssl_cipher`
+
+Set the list of TLS ciphers. By default, no explicit ciphers are defined and the
+system defaults are used. Note that this parameter does not modify TLSv1.3
+ciphers.
 
 ### `ssl_cert_verify_depth`
 

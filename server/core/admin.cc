@@ -210,13 +210,13 @@ static bool load_ssl_certificates()
     const auto& cert = config.admin_ssl_cert;
     const auto& ca = config.admin_ssl_ca_cert;
 
-    if (!key.empty() && !cert.empty() && !ca.empty())
+    if (!key.empty() && !cert.empty())
     {
         this_unit.ssl_key = load_file(key.c_str());
         this_unit.ssl_cert = load_file(cert.c_str());
         this_unit.ssl_ca = load_file(ca.c_str());
 
-        rval = !this_unit.ssl_key.empty() && !this_unit.ssl_cert.empty() && !this_unit.ssl_ca.empty();
+        rval = !this_unit.ssl_key.empty() && !this_unit.ssl_cert.empty();
 
         if (rval)
         {
@@ -753,6 +753,7 @@ bool mxs_admin_init()
                                             !this_unit.using_ssl ? MHD_OPTION_END :
                                             MHD_OPTION_HTTPS_MEM_KEY, this_unit.ssl_key.c_str(),
                                             MHD_OPTION_HTTPS_MEM_CERT, this_unit.ssl_cert.c_str(),
+                                            this_unit.ssl_ca.empty() ? MHD_OPTION_END :
                                             MHD_OPTION_HTTPS_MEM_TRUST, this_unit.ssl_cert.c_str(),
                                             MHD_OPTION_END);
     }

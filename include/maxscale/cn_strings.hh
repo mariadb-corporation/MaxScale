@@ -111,6 +111,7 @@ constexpr char CN_SSL[] = "ssl";
 constexpr char CN_SSL_CA_CERT[] = "ssl_ca_cert";
 constexpr char CN_SSL_CERT[] = "ssl_cert";
 constexpr char CN_SSL_CERT_VERIFY_DEPTH[] = "ssl_cert_verify_depth";
+constexpr char CN_SSL_CIPHER[] = "ssl_cipher";
 constexpr char CN_SSL_CRL[] = "ssl_crl";
 constexpr char CN_SSL_KEY[] = "ssl_key";
 constexpr char CN_SSL_VERIFY_PEER_CERTIFICATE[] = "ssl_verify_peer_certificate";

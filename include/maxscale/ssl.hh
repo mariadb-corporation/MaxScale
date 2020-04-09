@@ -80,6 +80,7 @@ struct SSLConfig : public mxb::SSLConfig
     int               verify_depth = 9;             /**< SSL certificate verification depth */
     bool              verify_peer = true;           /**< Enable peer certificate verification */
     bool              verify_host = true;           /**< Enable peer host verification */
+    std::string       cipher;                       /**< Selected TLS cipher */
 };
 
 /**

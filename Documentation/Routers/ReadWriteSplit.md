@@ -362,7 +362,9 @@ application.
 a useful option to enable if you are using a small number of servers and wish to
 use the master for reads as well.
 
-By default, no reads are sent to the master.
+By default, no reads are sent to the master as long as there is a valid slave
+server available. If no slaves are available, reads are sent to the master
+regardless of the value of `master_accept_reads`.
 
 ```
 # Use the master for reads

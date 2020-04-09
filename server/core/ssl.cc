@@ -181,6 +181,7 @@ SSLConfig::SSLConfig(const mxs::ConfigParameters& params)
     , verify_depth(params.get_integer(CN_SSL_CERT_VERIFY_DEPTH))
     , verify_peer(params.get_bool(CN_SSL_VERIFY_PEER_CERTIFICATE))
     , verify_host(params.get_bool(CN_SSL_VERIFY_PEER_HOST))
+    , cipher(params.get_string(CN_SSL_CIPHER))
 {
 }
 
@@ -385,6 +386,15 @@ bool SSLContext::init()
 
     /* Set the verification depth */
     SSL_CTX_set_verify_depth(m_ctx, m_cfg.verify_depth);
+
+    if (!m_cfg.cipher.empty())
+    {
+        if (SSL_CTX_set_cipher_list(m_ctx, m_cfg.cipher.c_str()) == 0)
+        {
+            MXS_ERROR("Could not set cipher list '%s': %s", m_cfg.cipher.c_str(), get_ssl_errors());
+            return false;
+        }
+    }
 
     return true;
 }

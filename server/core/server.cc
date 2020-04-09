@@ -182,6 +182,7 @@ static cfg::ParamEnum<ssl_method_type_t> s_ssl_version(
         {SERVICE_TLS13, "TLSv13"}
     }, SERVICE_SSL_TLS_MAX);
 
+static cfg::ParamString s_ssl_cipher(&s_spec, CN_SSL_CIPHER, "TLS cipher list", "", NO_QUOTES);
 
 static cfg::ParamCount s_ssl_cert_verify_depth(
     &s_spec, CN_SSL_CERT_VERIFY_DEPTH, "TLS certificate verification depth", 9);
@@ -470,6 +471,7 @@ Server::Settings::Settings(const std::string& name)
     , m_ssl_cert_verify_depth(this, &s_ssl_cert_verify_depth)
     , m_ssl_verify_peer_certificate(this, &s_ssl_verify_peer_certificate)
     , m_ssl_verify_peer_host(this, &s_ssl_verify_peer_host)
+    , m_ssl_cipher(this, &s_ssl_cipher)
 {
 }
 

@@ -401,6 +401,7 @@ private:
         mxs::config::Count                   m_ssl_cert_verify_depth;
         mxs::config::Bool                    m_ssl_verify_peer_certificate;
         mxs::config::Bool                    m_ssl_verify_peer_host;
+        mxs::config::String                  m_ssl_cipher;
 
     protected:
         bool post_configure() override;
