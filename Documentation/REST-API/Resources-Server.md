@@ -4,17 +4,15 @@ A server resource represents a backend database server.
 
 ## Resource Operations
 
+The _:name_ in all of the URIs must be the name of a server in MaxScale.
+
 ### Get a server
 
 ```
 GET /v1/servers/:name
 ```
 
-Get a single server. The _:name_ in the URI must be a valid server name with all
-whitespace replaced with hyphens. The server names are case-insensitive.
-
-**Note**: The _parameters_ field contains all custom parameters for
-  servers, including the server weighting parameters.
+Get a single server.
 
 #### Response
 
@@ -26,14 +24,65 @@ whitespace replaced with hyphens. The server names are case-insensitive.
         "self": "http://localhost:8989/v1/servers/server1"
     },
     "data": {
-        "id": "server1", // Resource identifier
-        "type": "servers", // Resource type
-        "relationships": { // Resource relationships to other resources
-            "services": { // Services that use this server
+        "id": "server1",
+        "type": "servers",
+        "attributes": {
+            "parameters": {
+                "address": "127.0.0.1",
+                "disk_space_threshold": null,
+                "extra_port": 0,
+                "monitorpw": null,
+                "monitoruser": null,
+                "persistmaxtime": 0,
+                "persistpoolmax": 0,
+                "port": 3000,
+                "priority": 0,
+                "proxy_protocol": false,
+                "rank": "primary",
+                "socket": null,
+                "ssl": false,
+                "ssl_ca_cert": null,
+                "ssl_cert": null,
+                "ssl_cert_verify_depth": 9,
+                "ssl_key": null,
+                "ssl_verify_peer_certificate": false,
+                "ssl_verify_peer_host": false,
+                "ssl_version": "MAX"
+            },
+            "state": "Master, Running",
+            "version_string": "10.3.22-MariaDB-1:10.3.22+maria~bionic-log",
+            "replication_lag": 0,
+            "statistics": {
+                "connections": 0,
+                "total_connections": 0,
+                "max_connections": 0,
+                "active_operations": 0,
+                "routed_packets": 0,
+                "persistent_connections": 0,
+                "adaptive_avg_select_time": "0ns"
+            },
+            "node_id": 3000,
+            "master_id": -1,
+            "last_event": "master_up",
+            "triggered_at": "Thu, 09 Apr 2020 07:27:16 GMT",
+            "name": "server1",
+            "server_id": 3000,
+            "read_only": false,
+            "gtid_current_pos": "0-3000-24",
+            "gtid_binlog_pos": "0-3000-24",
+            "master_group": null,
+            "lock_held": null,
+            "slave_connections": []
+        },
+        "links": {
+            "self": "http://localhost:8989/v1/servers/server1"
+        },
+        "relationships": {
+            "services": {
                 "links": {
                     "self": "http://localhost:8989/v1/services/"
                 },
-                "data": [ // References to service resources
+                "data": [
                     {
                         "id": "RW-Split-Router",
                         "type": "services"
@@ -44,46 +93,17 @@ whitespace replaced with hyphens. The server names are case-insensitive.
                     }
                 ]
             },
-            "monitors": { // The monitor that is monitoring this server
+            "monitors": {
                 "links": {
                     "self": "http://localhost:8989/v1/monitors/"
                 },
                 "data": [
                     {
-                        "id": "MySQL-Monitor",
+                        "id": "MariaDB-Monitor",
                         "type": "monitors"
                     }
                 ]
             }
-        },
-        "attributes": { // Resource attributes
-            "parameters": { // Server parameters
-                "address": "127.0.0.1",
-                "port": 3000,
-                "protocol": "MariaDBBackend",
-                "authenticator": "MySQLBackendAuth",
-                "ssl_key": "/etc/certs/client-key.pem",
-                "ssl_cert": "/etc/certs/client-cert.pem",
-                "ssl_ca_cert": "/etc/certs/ca.pem",
-                "ssl_cert_verify_depth": 9,
-                "ssl_version": "MAX"
-            },
-            "state": "Master, Running", // Server state string
-            "version_string": "10.1.22-MariaDB", // Server version
-            "node_id": 3000, // Server node ID i.e. value of @@server_id
-            "master_id": -1,
-            "replication_depth": 0,
-            "slaves": [ // List of slave server IDs
-                3001
-            ],
-            "statistics": { // Server statistics
-                "connections": 0,
-                "total_connections": 0,
-                "active_operations": 0
-            }
-        },
-        "links": { // Link to the server itself
-            "self": "http://localhost:8989/v1/servers/server1"
         }
     }
 }
@@ -106,10 +126,61 @@ Response contains a resource collection with all servers.
     "links": {
         "self": "http://localhost:8989/v1/servers/"
     },
-    "data": [ // List of server resouces
+    "data": [
         {
             "id": "server1",
             "type": "servers",
+            "attributes": {
+                "parameters": {
+                    "address": "127.0.0.1",
+                    "disk_space_threshold": null,
+                    "extra_port": 0,
+                    "monitorpw": null,
+                    "monitoruser": null,
+                    "persistmaxtime": 0,
+                    "persistpoolmax": 0,
+                    "port": 3000,
+                    "priority": 0,
+                    "proxy_protocol": false,
+                    "rank": "primary",
+                    "socket": null,
+                    "ssl": false,
+                    "ssl_ca_cert": null,
+                    "ssl_cert": null,
+                    "ssl_cert_verify_depth": 9,
+                    "ssl_key": null,
+                    "ssl_verify_peer_certificate": false,
+                    "ssl_verify_peer_host": false,
+                    "ssl_version": "MAX"
+                },
+                "state": "Master, Running",
+                "version_string": "10.3.22-MariaDB-1:10.3.22+maria~bionic-log",
+                "replication_lag": 0,
+                "statistics": {
+                    "connections": 0,
+                    "total_connections": 0,
+                    "max_connections": 0,
+                    "active_operations": 0,
+                    "routed_packets": 0,
+                    "persistent_connections": 0,
+                    "adaptive_avg_select_time": "0ns"
+                },
+                "node_id": 3000,
+                "master_id": -1,
+                "last_event": "master_up",
+                "triggered_at": "Thu, 09 Apr 2020 07:27:16 GMT",
+                "name": "server1",
+                "server_id": 3000,
+                "read_only": false,
+                "gtid_current_pos": "0-3000-24",
+                "gtid_binlog_pos": "0-3000-24",
+                "master_group": null,
+                "lock_held": null,
+                "slave_connections": []
+            },
+            "links": {
+                "self": "http://localhost:8989/v1/servers/server1"
+            },
             "relationships": {
                 "services": {
                     "links": {
@@ -132,45 +203,80 @@ Response contains a resource collection with all servers.
                     },
                     "data": [
                         {
-                            "id": "MySQL-Monitor",
+                            "id": "MariaDB-Monitor",
                             "type": "monitors"
                         }
                     ]
                 }
-            },
-            "attributes": {
-                "parameters": {
-                    "address": "127.0.0.1",
-                    "port": 3000,
-                    "protocol": "MariaDBBackend",
-                    "authenticator": "MySQLBackendAuth",
-                    "ssl_key": "/etc/certs/client-key.pem",
-                    "ssl_cert": "/etc/certs/client-cert.pem",
-                    "ssl_ca_cert": "/etc/certs/ca.pem",
-                    "ssl_cert_verify_depth": 9,
-                    "ssl_version": "MAX"
-                },
-                "state": "Master, Running",
-                "version_string": "10.1.22-MariaDB",
-                "node_id": 3000,
-                "master_id": -1,
-                "replication_depth": 0,
-                "slaves": [
-                    3001
-                ],
-                "statistics": {
-                    "connections": 0,
-                    "total_connections": 0,
-                    "active_operations": 0
-                }
-            },
-            "links": {
-                "self": "http://localhost:8989/v1/servers/server1"
             }
         },
         {
             "id": "server2",
             "type": "servers",
+            "attributes": {
+                "parameters": {
+                    "address": "127.0.0.1",
+                    "disk_space_threshold": null,
+                    "extra_port": 0,
+                    "monitorpw": null,
+                    "monitoruser": null,
+                    "persistmaxtime": 0,
+                    "persistpoolmax": 0,
+                    "port": 3001,
+                    "priority": 0,
+                    "proxy_protocol": false,
+                    "rank": "primary",
+                    "socket": null,
+                    "ssl": false,
+                    "ssl_ca_cert": null,
+                    "ssl_cert": null,
+                    "ssl_cert_verify_depth": 9,
+                    "ssl_key": null,
+                    "ssl_verify_peer_certificate": false,
+                    "ssl_verify_peer_host": false,
+                    "ssl_version": "MAX"
+                },
+                "state": "Slave, Running",
+                "version_string": "10.3.22-MariaDB-1:10.3.22+maria~bionic-log",
+                "replication_lag": 0,
+                "statistics": {
+                    "connections": 0,
+                    "total_connections": 0,
+                    "max_connections": 0,
+                    "active_operations": 0,
+                    "routed_packets": 0,
+                    "persistent_connections": 0,
+                    "adaptive_avg_select_time": "0ns"
+                },
+                "node_id": 3001,
+                "master_id": 3000,
+                "last_event": "slave_up",
+                "triggered_at": "Thu, 09 Apr 2020 07:27:16 GMT",
+                "name": "server2",
+                "server_id": 3001,
+                "read_only": false,
+                "gtid_current_pos": "0-3000-24",
+                "gtid_binlog_pos": "0-3000-24",
+                "master_group": null,
+                "lock_held": null,
+                "slave_connections": [
+                    {
+                        "connection_name": "",
+                        "master_host": "127.0.0.1",
+                        "master_port": 3000,
+                        "slave_io_running": "Yes",
+                        "slave_sql_running": "Yes",
+                        "seconds_behind_master": 0,
+                        "master_server_id": 3000,
+                        "last_io_error": "",
+                        "last_sql_error": "",
+                        "gtid_io_pos": ""
+                    }
+                ]
+            },
+            "links": {
+                "self": "http://localhost:8989/v1/servers/server2"
+            },
             "relationships": {
                 "services": {
                     "links": {
@@ -189,37 +295,11 @@ Response contains a resource collection with all servers.
                     },
                     "data": [
                         {
-                            "id": "MySQL-Monitor",
+                            "id": "MariaDB-Monitor",
                             "type": "monitors"
                         }
                     ]
                 }
-            },
-            "attributes": {
-                "parameters": {
-                    "address": "127.0.0.1",
-                    "port": 3001,
-                    "protocol": "MariaDBBackend",
-                    "ssl_key": "/etc/certs/client-key.pem",
-                    "ssl_cert": "/etc/certs/client-cert.pem",
-                    "ssl_ca_cert": "/etc/certs/ca.pem",
-                    "ssl_cert_verify_depth": 9,
-                    "ssl_version": "MAX"
-                },
-                "state": "Slave, Running",
-                "version_string": "10.1.22-MariaDB",
-                "node_id": 3001,
-                "master_id": 3000,
-                "replication_depth": 1,
-                "slaves": [],
-                "statistics": {
-                    "connections": 0,
-                    "total_connections": 0,
-                    "active_operations": 0
-                }
-            },
-            "links": {
-                "self": "http://localhost:8989/v1/servers/server2"
             }
         }
     ]
@@ -240,10 +320,6 @@ least the following fields.
 
 * `data.type`
   * Type of the object, must be `servers`
-
-* `data.attributes.parameters.protocol`
-  * The [`protocol`](../Getting-Started/Configuration-Guide.md#protocol) to use.
-    Must be defined.
 
 * `data.attributes.parameters.address` OR `data.attributes.parameters.socket`
   * The [`address`](../Getting-Started/Configuration-Guide.md#address) or
@@ -311,18 +387,8 @@ new servers to be created and immediately taken into use.
 }
 ```
 
-The following parameters can be defined when a server is being created.
-
-- [address](../Getting-Started/Configuration-Guide.md#address)
-- [port](../Getting-Started/Configuration-Guide.md#port)
-- [protocol](../Getting-Started/Configuration-Guide.md#protocol)
-- [authenticator](../Getting-Started/Configuration-Guide.md#authenticator)
-- [ssl_key](../Getting-Started/Configuration-Guide.md#ssl_key)
-- [ssl_cert](../Getting-Started/Configuration-Guide.md#ssl_cert)
-- [ssl_ca_cert](../Getting-Started/Configuration-Guide.md#ssl_ca_cert)
-- [ssl_version](../Getting-Started/Configuration-Guide.md#ssl_version)
-- [ssl_cert_verify_depth](../Getting-Started/Configuration-Guide.md#ssl_cert_verify_depth)
-- [ssl_verify_peer_certificate](../Getting-Started/Configuration-Guide.md#ssl_verify_peer_certificate)
+Refer to the [Configuration Guide](../Getting-Started/Configuration-Guide.md)
+for a full list of server parameters.
 
 #### Response
 
@@ -340,10 +406,8 @@ Invalid JSON body:
 PATCH /v1/servers/:name
 ```
 
-The _:name_ in the URI must map to a server name with all whitespace replaced
-with hyphens and the request body must be a valid JSON document representing the
-modified server. If the server in question is not found, a 404 Not Found
-response is returned.
+The request body must be a valid JSON document representing the modified
+server.
 
 ### Modifiable Fields
 
@@ -356,12 +420,6 @@ The following standard server parameters can be modified.
 
 Refer to the documentation on these parameters for valid values.
 
-The server weighting parameters can also be added, removed and updated. To
-remove a parameter, define the value of that parameter as the _null_ JSON type
-e.g.  `{ "my-param": null }`. To add a parameter, add a new key-value pair to
-the _parameters_ object with a name that does not conflict with the standard
-parameters. To modify a weighting parameter, simply change the value.
-
 In addition to standard parameters, the _services_ and _monitors_ fields of the
 _relationships_ object can be modified. Removal, addition and modification of
 the links will change which service and monitors use this server.
@@ -373,94 +431,34 @@ _server1_ from the service _RW-Split-Router_.
 Removing a service from a server is analogous to removing the server from the
 service. Both unlink the two objects from each other.
 
-Response to `GET /v1/servers/server1`:
+Request for `PATCH /v1/servers/server1` that modifies the address of the server:
 
 ```javascript
 {
-    "links": {
-        "self": "http://localhost:8989/v1/servers/server1"
-    },
     "data": {
-        "id": "server1",
-        "type": "servers",
-        "relationships": {
-            "services": {
-                "links": {
-                    "self": "http://localhost:8989/v1/services/"
-                },
-                "data": [
-                    {
-                        "id": "RW-Split-Router", // We'll remove this service
-                        "type": "services"
-                    },
-                    {
-                        "id": "Read-Connection-Router",
-                        "type": "services"
-                    }
-                ]
-            },
-            "monitors": {
-                "links": {
-                    "self": "http://localhost:8989/v1/monitors/"
-                },
-                "data": [
-                    {
-                        "id": "MySQL-Monitor",
-                        "type": "monitors"
-                    }
-                ]
-            }
-        },
         "attributes": {
             "parameters": {
-                "address": "127.0.0.1",
-                "port": 3000,
-                "protocol": "MariaDBBackend"
-            },
-            "state": "Master, Running",
-            "version_string": "10.1.22-MariaDB",
-            "node_id": 3000,
-            "master_id": -1,
-            "replication_depth": 0,
-            "slaves": [
-                3001,
-                3002
-            ],
-            "statistics": {
-                "connections": 0,
-                "total_connections": 0,
-                "active_operations": 0
+                "address": "192.168.0.123"
             }
-        },
-        "links": {
-            "self": "http://localhost:8989/v1/servers/server1"
         }
     }
 }
 ```
 
-Request for `PATCH /v1/servers/server1`:
+Request for `PATCH /v1/servers/server1` that modifies the server relationships:
 
 ```javascript
 {
     "data": {
-        "id": "server1",
-        "type": "servers",
         "relationships": {
             "services": {
                 "data": [
-                    {
-                        "id": "Read-Connection-Router",
-                        "type": "services"
-                    }
+                    { "id": "Read-Connection-Router", "type": "services" }
                 ]
             },
             "monitors": {
                 "data": [
-                    {
-                        "id": "MySQL-Monitor",
-                        "type": "monitors"
-                    }
+                    { "id": "MySQL-Monitor", "type": "monitors" }
                 ]
             }
         }
@@ -489,8 +487,7 @@ Invalid JSON body:
 PATCH /v1/servers/:name/relationships/:type
 ```
 
-The _:name_ in the URI must map to a server name with all whitespace replaced
-with hyphens. The _:type_ in the URI must be either _services_, for service
+The _:type_ in the URI must be either _services_, for service
 relationships, or _monitors_, for monitor relationships.
 
 The request body must be a JSON object that defines only the _data_ field. The
@@ -538,10 +535,8 @@ Invalid JSON body:
 DELETE /v1/servers/:name
 ```
 
-The _:name_ in the URI must map to a server name with all whitespace replaced
-with hyphens.
-
-A server can only be deleted if it is not used by any services or monitors.
+A server can only be deleted if it is not used by any services or
+monitors.
 
 #### Response
 
@@ -559,9 +554,8 @@ Server is in use:
 PUT /v1/servers/:name/set
 ```
 
-The _:name_ in the URI must map to a server name with all whitespace replaced
-with hyphens. This endpoint requires that the `state` parameter is passed with
-the request. The value of `state` must be one of the following values.
+This endpoint requires that the `state` parameter is passed with the
+request. The value of `state` must be one of the following values.
 
 |Value      | State Description              |
 |-----------|--------------------------------|
@@ -607,9 +601,8 @@ Missing or invalid parameter:
 PUT /v1/servers/:name/clear
 ```
 
-The _:name_ in the URI must map to a server name with all whitespace replaced
-with hyphens. This endpoint requires that the `state` parameter is passed with
-the request. The value of `state` must be one of the values defined in the
+This endpoint requires that the `state` parameter is passed with the
+request. The value of `state` must be one of the values defined in the
 _set_ endpoint documentation.
 
 #### Response
