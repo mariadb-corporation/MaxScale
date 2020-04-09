@@ -5,14 +5,15 @@ collection of network listeners, filters, a router and a set of backend servers.
 
 ## Resource Operations
 
+The _:name_ in all of the URIs must be the name of a service in MaxScale.
+
 ### Get a service
 
 ```
 GET /v1/services/:name
 ```
 
-Get a single service. The _:name_ in the URI must be a valid service name with
-all whitespace replaced with hyphens. The service names are case-insensitive.
+Get a single service.
 
 #### Response
 
@@ -52,7 +53,7 @@ all whitespace replaced with hyphens. The service names are case-insensitive.
                 "log_auth_warnings": true,
                 "retry_on_failure": true
             },
-            "listeners": [ // Listeners that point to this service
+            "listeners": [ // Listeners that point to this service (deprecated)
                 {
                     "attributes": {
                         "parameters": {
@@ -75,6 +76,17 @@ all whitespace replaced with hyphens. The service names are case-insensitive.
                     {
                         "id": "server1",
                         "type": "servers"
+                    }
+                ]
+            },
+            "listeners": {
+                "links": {
+                    "self": "http://localhost:8989/v1/listeners/"
+                },
+                "data": [ // Listeners that point to this service
+                    {
+                        "id": "Read-Connection-Listener",
+                        "type": "listeners"
                     }
                 ]
             }
@@ -158,66 +170,21 @@ Get all services.
                             "type": "servers"
                         }
                     ]
+                },
+                "listeners": {
+                    "links": {
+                        "self": "http://localhost:8989/v1/listeners/"
+                    },
+                    "data": [
+                        {
+                            "id": "Read-Connection-Listener",
+                            "type": "listeners"
+                        }
+                    ]
                 }
             },
             "links": {
                 "self": "http://localhost:8989/v1/services/Read-Connection-Router"
-            }
-        },
-        {
-            "id": "CLI",
-            "type": "services",
-            "attributes": {
-                "router": "cli",
-                "state": "Started",
-                "started": "Mon May 22 13:00:46 2017",
-                "total_connections": 2,
-                "connections": 2,
-                "parameters": {
-                    "router_options": "",
-                    "user": "",
-                    "password": "",
-                    "enable_root_user": false,
-                    "max_retry_interval": 3600,
-                    "max_connections": 0,
-                    "connection_timeout": 0,
-                    "auth_all_servers": false,
-                    "strip_db_esc": true,
-                    "localhost_match_wildcard_host": true,
-                    "version_string": "",
-                    "log_auth_warnings": true,
-                    "retry_on_failure": true
-                },
-                "listeners": [
-                    {
-                        "attributes": {
-                            "parameters": {
-                                "address": "default",
-                                "port": 0,
-                                "protocol": "maxscaled",
-                                "authenticator": "MaxAdminAuth"
-                            }
-                        },
-                        "id": "CLI-Listener",
-                        "type": "listeners"
-                    },
-                    {
-                        "attributes": {
-                            "parameters": {
-                                "address": "0.0.0.0",
-                                "port": 6603,
-                                "protocol": "maxscaled",
-                                "authenticator": "MaxAdminAuth"
-                            }
-                        },
-                        "id": "CLI-Network-Listener",
-                        "type": "listeners"
-                    }
-                ]
-            },
-            "relationships": {},
-            "links": {
-                "self": "http://localhost:8989/v1/services/CLI"
             }
         }
     ]
@@ -265,7 +232,9 @@ server names into the
 filters, this is equivalent to adding the filters in the
 `data.relationships.filters.data` array to the
 [`filters`](../Getting-Started/Configuration-Guide.md#filters) parameter in the
-order they appear.
+order they appear. For other services, this is equivalent to adding the list of
+server names into the
+[`targets`](../Getting-Started/Configuration-Guide.md#targets) parameter.
 
 The following example defines a new service with both a server and a filter
 relationship.
@@ -313,10 +282,8 @@ Service is created:
 ### Destroy a service
 
 ```
-DELETE /v1/services/:service
+DELETE /v1/services/:name
 ```
-
-In the URI , the _:service_ must map to a service that is destroyed.
 
 A service can only be destroyed if the service uses no servers or filters and
 all the listeners pointing to the service have been destroyed. This means that
@@ -338,152 +305,14 @@ Service is destroyed:
 
 `Status: 204 No Content`
 
-### Get service listeners
-
-Get the listeners of a service. The _:name_ in the URI must be a valid service
-name with all whitespace replaced with hyphens.
-
-```
-GET /v1/services/:name/listeners
-```
-
-#### Response
-
-`Status: 200 OK`
-
-```javascript
-{
-    "links": {
-        "self": "http://localhost:8989/v1/services/Read-Connection-Router/listeners"
-    },
-    "data": [
-        {
-            "attributes": {
-                "parameters": {
-                    "port": 4008,
-                    "protocol": "MariaDBClient",
-                    "authenticator": "MySQLAuth"
-                }
-            },
-            "id": "Read-Connection-Listener",
-            "type": "listeners"
-        }
-    ]
-}
-```
-
-### Get a single service listener
-
-```
-GET /v1/services/:name/listeners/:listener
-```
-
-Get the listeners of a service. The _:name_ in the URI must be a valid service
-name and _:listener_ must be a valid listener name, both with all whitespace
-replaced with hyphens.
-
-#### Response
-
-`Status: 200 OK`
-
-```javascript
-{
-    "links": {
-        "self": "http://localhost:8989/v1/services/RW-Split-Router/listeners/RW-Split-Listener"
-    },
-    "data": {
-        "attributes": {
-            "parameters": {
-                "port": 4006,
-                "protocol": "MariaDBClient",
-                "authenticator": "MySQLAuth"
-            }
-        },
-        "id": "RW-Split-Listener",
-        "type": "listeners"
-    }
-}
-```
-
-### Create a new listener
-
-```
-POST /v1/services/:name/listeners
-```
-
-Create a new listener for a service by defining the resource. The _:name_ in the
-URI must map to a service name with all whitespace replaced with hyphens. The
-posted object must define the _data.id_ field with the name of the server and
-the _data.attributes.parameters.port_ field with the port where the listener
-will listen on. The following is the minimal required JSON object for defining a
-new listener.
-
-```javascript
-{
-    "data": {
-        "id": "my-listener",
-        "type": "listeners",
-        "attributes": {
-            "parameters": {
-                "port": 3306
-            }
-        }
-    }
-}
-```
-
-The following values can be given in the _parameters_ object. If SSL options are
-provided, the _ssl_key_, _ssl_cert_ and _ssl_ca_cert_ parameters must all be
-defined.
-
-- [address](../Getting-Started/Configuration-Guide.md#user-content-address-1)
-- [port](../Getting-Started/Configuration-Guide.md#user-content-port-1)
-- [protocol](../Getting-Started/Configuration-Guide.md#user-content-protocol-1)
-- [authenticator](../Getting-Started/Configuration-Guide.md#user-content-authenticator-1)
-- [authenticator_options](../Getting-Started/Configuration-Guide.md#user-content-authenticator-options-1)
-- [ssl_key](../Getting-Started/Configuration-Guide.md#user-content-ssl_key-1)
-- [ssl_cert](../Getting-Started/Configuration-Guide.md#user-content-ssl_cert-1)
-- [ssl_ca_cert](../Getting-Started/Configuration-Guide.md#user-content-ssl_ca_cert-1)
-- [ssl_version](../Getting-Started/Configuration-Guide.md#user-content-ssl_version-1)
-- [ssl_cert_verify_depth](../Getting-Started/Configuration-Guide.md#user-content-ssl_cert_verify_depth-1)
-
-
-#### Response
-
-Listener is created:
-
-`Status: 204 No Content`
-
-### Destroy a listener
-
-```
-DELETE /v1/services/:service/listeners/:name
-```
-
-In the URI , the _:name_ must map to a listener and the _:service_ must map to a
-service. Both names must have all whitespace replaced with hyphens.
-
-When a listener is destroyed, the network port it listens on is available for
-reuse.
-
-#### Response
-
-Listener is destroyed:
-
-`Status: 204 No Content`
-
-Listener cannot be deleted:
-
-`Status: 403 Forbidden`
-
 ### Update a service
 
 ```
 PATCH /v1/services/:name
 ```
 
-The _:name_ in the URI must map to a service name and the request body must be a
-JSON object which is interpreted as the new definition of the service.
+The request body must be a JSON object which represents a set of new definitions
+for the service.
 
 All standard service parameters can be modified. Refer to the
 [service](../Getting-Started/Configuration-Guide.md#service) documentation on
@@ -520,15 +349,13 @@ Service is modified:
 PATCH /v1/services/:name/relationships/:type
 ```
 
-The _:name_ in the URI must map to a service name with all whitespace replaced
-with hyphens. The _:type_ in the URI must be either _servers_ or _filters_,
+The _:type_ in the URI must be either _servers_, _services_ or _filters_,
 depending on which relationship is being modified.
 
 The request body must be a JSON object that defines only the _data_ field. The
 value of the _data_ field must be an array of relationship objects that define
 the _id_ and _type_ fields of the relationship. This object will replace the
-existing relationships of this type for the service. Both `servers` and
-`filters` relationships can be modified.
+existing relationships of this type for the service.
 
 *Note:* The order of the values in the `filters` relationship will define the
  order the filters are set up in. The order in which the filters appear in the
@@ -550,9 +377,8 @@ PATCH /v1/services/my-rw-service/relationships/servers
 }
 ```
 
-All relationships for a service can be deleted by sending an empty array or a
-`null` value as the _data_ field value. The following example removes all
-servers from a service.
+All relationships for a service can be deleted by sending an empty array as the
+_data_ field value. The following example removes all servers from a service.
 
 ```
 PATCH /v1/services/my-rw-service/relationships/servers
@@ -599,3 +425,38 @@ Starts a stopped service.
 Service is started:
 
 `Status: 204 No Content`
+
+### Get service listeners
+```
+GET /v1/services/:name/listeners
+```
+
+This endpoint is deprecated, use the
+[this](Resource-Listener.md#get-all-listeners) listeners endpoint instead.
+
+### Get a single service listener
+
+```
+GET /v1/services/:name/listeners/:listener
+```
+
+This endpoint is deprecated, use the [this](Resource-Listener.md#get-a-listener)
+listeners endpoint instead.
+
+### Create a new listener
+
+```
+POST /v1/services/:name/listeners
+```
+
+This endpoint is deprecated, use the
+[this](Resource-Listener.md#create-a-new-listener) listeners endpoint instead.
+
+### Destroy a listener
+
+```
+DELETE /v1/services/:service/listeners/:name
+```
+
+This endpoint is deprecated, use the
+[this](Resource-Listener.md#destroy-a-listener) listeners endpoint instead.
