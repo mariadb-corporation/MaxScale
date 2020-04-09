@@ -97,9 +97,9 @@ int main(int argc, char** argv)
     mxs_log_set_priority_enabled(LOG_DEBUG, false);
     mxs_log_set_priority_enabled(LOG_INFO, false);
 
-    set_libdir(MXS_STRDUP_A(".."));
+    mxs::set_libdir(MXS_STRDUP_A(".."));
     load_module("binlogrouter", MODULE_ROUTER);
-    set_libdir(MXS_STRDUP_A("../../../../../query_classifier/qc_sqlite/"));
+    mxs::set_libdir(MXS_STRDUP_A("../../../../../query_classifier/qc_sqlite/"));
     load_module("qc_sqlite", MODULE_QUERY_CLASSIFIER);
 
     maxbase::MaxBase initer;
