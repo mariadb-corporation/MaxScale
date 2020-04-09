@@ -1,103 +1,105 @@
-# Authentication Modules in MaxScale
+# Authentication Modules
 
-This document describes the modular authentication in MaxScale. It contains
-protocol specific information on authentication and how it is handled in
-MaxScale.
+This document describes the general MySQL-protocol authentication in MaxScale.
+For REST-api authentication, see the
+[configuration guide](../Getting-Started/Configuration-Guide.md) and the
+[REST-api guide](../REST-API/API.md).
 
-The constants described in this document are defined in the authenticator.h
-header unless otherwise mentioned.
+Similar to the MariaDB-server, MaxScale uses authentication plugins to implement
+different authentication schemes for incoming clients. The same plugins also
+handle authenticating the clients to backend servers. The authentication plugins
+available in MaxScale are
+[standard MySQL password](MySQL-Authenticator.md),
+[GSSAPI](GSSAPI-Authenticator.md) and
+[pluggable authentication modules (PAM)](PAM-Authenticator.md).
 
-Authenticator modules compatible with MySQL protocol in MaxScale are
-[MySQL](MySQL-Authenticator.md), [GSSAPI](GSSAPI-Authenticator.md) and
-[PAM](PAM-Authenticator.md).
+Most of the authentication process is performed on the protocol level, before
+handing it over to one of the plugins. This shared part is described in this
+document. For information on an individual plugin, see its documentation.
 
-## Authenticator initialization
+## User account management
 
-When the authentication module is first loaded, the `initialize` entry point is
-called. The return value of this function will be passed as the first argument
-to the other entry points.
+Every MaxScale service with a MySQL-protocol listener requires knowledge of the
+user accounts defined on the backend databases. The service maintains this
+information in a component called the *user account manager* (UAM). The UAM
+queries relevant data from the *mysql.user*-database of the backends and stores
+it. The service then uses the stored data to authenticate clients and check
+their database access rights. This results in an authentication process very
+similar to the MariaDB-server itself. Unauthorized users are generally detected
+already at the MaxScale-level instead of the backend servers. This may not apply
+in some cases, for example if MaxScale is using old user account data.
 
-The `loadUsers` entry point of the client side authenticator is called when a
-service starts. The authenticator can load external user data when this entry
-point is called. This entry point is also called when user authentication has
-failed and the external user data needs to be refreshed.
+If authentication fails, the UAM updates its data from a backend. MaxScale may
+attempt authenticating the client again with the refreshed data without
+communicating the failure to client. This transparent user data update does not
+always work, in which case the client should try to log in again.
 
-When a connection is created, the `create` entry point is called to create per
-connection data. The return value of this function is stored in the
-`dcb->authenticator_data` field of the DCB object. This data is freed in the
-`destroy` entry point and the value returned by `create` will be given as the
-first parameter.
+As the UAM is shared between all listeners of a service, its settings are
+defined in the service configuration. For more information, search the
+[configuration guide](../Getting-Started/Configuration-Guide.md)
+for *users_refresh_time*, *users_refresh_interval* and
+*auth_all_servers*. The global settings *auth_connect_timeout* and
+*local_address*, as well as server-level ssl-settings also affect user data
+loading.
 
-# MySQL Authentication Modules
+### Clustrix support
 
-The MySQL protocol authentication starts when the server sends the handshake
-packet to the client to which the client responds with a handshake response
-packet. If the server is using the default *mysql_native_password*
-authentication plugin, the server responds with either an OK packet or an ERR
-packet and the authentication is complete.
+The UAM of the MaxScale MySQL-protocol implementation also supports Clustrix
+servers. If the backends of the service are Clustrix servers, users are fetched
+from the *system.users*-table and database grants from the
+*system.user_acl*-table.
 
-If a different authentication plugin is required to complete the authentication,
-instead of sending an OK or ERR packet, the server responds with an
-AuthSwitchRequest packet. This is where the pluggable authentication in MaxScale
-starts.
+## Authenticator options
 
-## Client authentication in MaxScale
+The listener configuration defines authentication options which only affect the
+listener. *authenticator* defines the authentication plugins to use.
+*authenticator_options* sets various options. These options may affect an
+individual authentication plugin or the authentication as a whole. The latter
+are explained below. Multiple options can be given as a comma-separated list.
 
-The first packet the client side authenticator plugins will receive is the
-client's handshake response packet.
+```
+authenticator_options=skip_authentication=true,lower_case_table_names=1
+```
 
-The client protocol module will call the `extract` entry point of the
-authenticator where the authenticator should extract client information. If the
-`extract` entry point returns MXS_AUTH_SUCCEEDED, the `authenticate` entry point
-will be called.
+### `skip_authentication`
 
-The `authenticate` entry point is where the authenticator plugin should
-authenticate the client. If authentication is successful, the `authenticate`
-entry point should return MXS_AUTH_SUCCEEDED. If authentication is not yet
-complete or if the authentication module should be changed, the `authenticate`
-entry point should return MXS_AUTH_INCOMPLETE.
+This option takes a boolean value which controls whether MaxScale will fully
+authenticate users. This option is disabled by default.
 
-Authenticator plugins which do not use the default *mysql_native_password*
-authentication plugin should send an AuthSwitchRequest packet to the client and
-return MXS_AUTH_INCOMPLETE. When more data is available, the `extract` and
-`authenticate` entry points will be called again.
+Disabling authentication in MaxScale will allow MaxScale to act as a security
+gateway to the server. The authentication of users is offloaded to the backend
+server.
 
-If either of the aforementioned entry points returns one of the following
-constants, the authentication is considered to have failed and the session will
-be closed.
+For example, creating the user `jdoe@%` will allow the user _jdoe_ to connect
+from any IP address. This can be a problem if all traffic needs to go through
+MaxScale. By enabling this option and replacing the user with
+`jdoe@maxscale-IP`, the users can still connect from any client IP but will be
+forced to go through MaxScale.
 
-- MXS_AUTH_FAILED
-- MXS_AUTH_FAILED_DB
-- MXS_AUTH_FAILED_SSL
+```
+authenticator_options=skip_authentication=true
+```
 
-Read the individual authenticator module documentation for more details on the
-authentication process of each authentication plugin.
+### `lower_case_table_names`
 
-## Backend authentication in MaxScale
+Integer, default value is 0. Controls database name matching for authentication,
+when an incoming client logs in to a non-empty database. The parameter functions
+similar to the MariaDB server setting
+[lower_case_table_names](https://mariadb.com/kb/en/library/server-system-variables/#lower_case_table_names)
+and should be set to the value used by the server.
 
-The first packet the authentication plugins in MaxScale will receive is either
-the AuthSwitchRequest packet or, in case of _mysql_native_password_, the OK
-packet. At this point, the protocol plugin will call the `extract` entry point
-of the backend authenticator. If the return value of the call is one of the
-following constants, the protocol plugin will call the `authenticate` entry
-point of the authenticator.
+The parameter accepts the following values:
+0. Case-sensitive matching (default)
+1. Convert the requested database name to lower case before using case-sensitive
+matching. Assumes that database names on the server are stored in lower case.
+2. Use case-insensitive matching.
 
-- MXS_AUTH_SUCCEEDED
-- MXS_AUTH_INCOMPLETE
+*true* and *false* are also accepted for backwards compatibility. These map to 1
+and 0, respectively.
 
-If the `authenticate` entry point returns MXS_AUTH_SUCCEEDED, then
-authentication is complete and any queued queries from the clients will be sent
-to the backend server. If the return value is MXS_AUTH_INCOMPLETE or
-MXS_AUTH_SSL_INCOMPLETE, the protocol module will continue the authentication by
-calling the `extract` entry point once more data is available.
+The identifier names are converted using an ASCII-only function. This means that
+non-ASCII characters will retain their case-sensitivity.
 
-If either of the aforementioned entry points returns one of the following
-constants, the authentication is considered to have failed and the session will
-be closed.
-
-- MXS_AUTH_FAILED
-- MXS_AUTH_FAILED_DB
-- MXS_AUTH_FAILED_SSL
-
-Read the individual authenticator module documentation for more details on the
-authentication process of each authentication plugin.
+```
+authenticator_options=lower_case_table_names=false
+```
