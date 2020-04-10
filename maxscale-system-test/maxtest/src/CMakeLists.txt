@@ -1,29 +1,29 @@
 add_library(maxtest SHARED
-        big_load.cpp
-        big_transaction.cpp
-        blob_test.cpp
+        big_load.cc
+        big_transaction.cc
+        blob_test.cc
         clustrix_nodes.cpp
-        config_operations.cpp
-        different_size.cpp
-        envv.cpp
-        execute_cmd.cpp
-        fw_copy_rules.cpp
-        get_com_select_insert.cpp
-        get_my_ip.cpp
-        keepalived_func.cpp
-        mariadb_func.cpp
-        mariadb_nodes.cpp
-        maxadmin_operations.cpp
-        maxinfo_func.cpp
+        config_operations.cc
+        different_size.cc
+        envv.cc
+        execute_cmd.cc
+        fw_copy_rules.cc
+        get_com_select_insert.cc
+        get_my_ip.cc
+        keepalived_func.cc
+        mariadb_func.cc
+        mariadb_nodes.cc
+        maxadmin_operations.cc
+        maxinfo_func.cc
         maxrest.cc
-        maxscales.cpp
-        nodes.cpp
-        rds_vpc.cpp
-        sql_t1.cpp
-        stopwatch.cpp
-        tcp_connection.cpp
-        test_binlog_fnc.cpp
-        testconnections.cpp
+        maxscales.cc
+        nodes.cc
+        rds_vpc.cc
+        sql_t1.cc
+        stopwatch.cc
+        tcp_connection.cc
+        test_binlog_fnc.cc
+        testconnections.cc
         ${CMAKE_CURRENT_BINARY_DIR}/test_info.cc
         # Include the CDC connector in the core library
         ${CMAKE_SOURCE_DIR}/connectors/cdc-connector/cdc_connector.cpp)

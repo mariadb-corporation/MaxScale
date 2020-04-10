@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string>
-#include "nodes.h"
+#include "nodes.hh"
 #include "mariadb_func.h"
 #include "mariadb_nodes.h"
 

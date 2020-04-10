@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "stopwatch.h"
+#include "stopwatch.hh"
 
 #include <iomanip>
 #include <iostream>

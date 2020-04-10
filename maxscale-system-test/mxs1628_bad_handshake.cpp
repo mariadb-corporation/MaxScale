@@ -1,5 +1,5 @@
 #include "testconnections.h"
-#include "tcp_connection.h"
+#include "tcp_connection.hh"
 
 #include <vector>
 
