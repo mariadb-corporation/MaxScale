@@ -2,7 +2,7 @@
 
 #include "mariadb_nodes.h"
 #include "clustrix_nodes.h"
-#include "maxscales.h"
+#include "maxscales.hh"
 #include "test_dir.hh"
 #include <fcntl.h>
 #include <pthread.h>

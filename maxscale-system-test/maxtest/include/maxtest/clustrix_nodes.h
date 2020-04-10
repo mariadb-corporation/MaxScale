@@ -23,7 +23,7 @@
 
 #include <errno.h>
 #include <string>
-#include "nodes.h"
+#include "nodes.hh"
 #include "mariadb_nodes.h"
 
 #define CLUSTRIX_DEPS_YUM "yum install -y bzip2 wget screen ntp ntpdate vim htop mdadm"

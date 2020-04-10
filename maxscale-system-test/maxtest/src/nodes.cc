@@ -1,4 +1,4 @@
-#include "nodes.h"
+#include "nodes.hh"
 #include <string>
 #include <sstream>
 #include <cstring>
@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <signal.h>
 
-#include "envv.h"
+#include "envv.hh"
 
 Nodes::Nodes(const char* pref,
              const std::string& network_config,
