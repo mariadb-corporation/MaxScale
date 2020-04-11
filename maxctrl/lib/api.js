@@ -17,11 +17,16 @@ exports.desc = "Raw REST API access";
 exports.handler = function () {};
 exports.builder = function (yargs) {
   yargs
-    .group(["sum"], "API options:")
+    .group(["sum", "pretty"], "API options:")
     .option("sum", {
       describe:
         "Calculate sum of API result. Only works for arrays of numbers " +
         "e.g. `api get --sum servers data[].attributes.statistics.connections`.",
+      type: "boolean",
+      default: false,
+    })
+    .option("pretty", {
+      describe: "Pretty-print output.",
       type: "boolean",
       default: false,
     })
@@ -49,7 +54,7 @@ exports.builder = function (yargs) {
               res = res.reduce((sum, value) => (value ? sum + value : sum));
             }
 
-            return JSON.stringify(res);
+            return argv.pretty ? JSON.stringify(res, null, 2) : JSON.stringify(res);
           });
         });
       }
