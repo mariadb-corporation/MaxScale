@@ -1,10 +1,5 @@
 #pragma once
 
-#include <iostream>
-#include <unistd.h>
-
-using namespace std;
-
 /**
  * @brief execute_cmd Execute shell command
  * @param cmd Command line

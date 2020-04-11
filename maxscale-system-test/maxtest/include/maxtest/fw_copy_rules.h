@@ -1,6 +1,6 @@
 #pragma once
 
-#include "testconnections.h"
+class TestConnections;
 
 /**
  * @brief copy_rules Copy rules file for firewall filter to Maxscale machine

@@ -1,4 +1,4 @@
-#include "testconnections.h"
+#include "mariadb_nodes.h"
 
 /**
  *  Reads COM_SELECT and COM_INSERT variables from all nodes and stores into 'selects' and 'inserts'

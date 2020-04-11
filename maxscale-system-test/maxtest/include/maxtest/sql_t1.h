@@ -1,7 +1,6 @@
 #pragma once
 
-#include "mariadb_func.h"
-#include "testconnections.h"
+#include <mysql.h>
 
 /**
  * @brief execute_select_query_and_check Execute query and check that result contains expected number of rows

@@ -1,6 +1,5 @@
 add_library(maxtest SHARED
         big_load.cc
-        big_transaction.cc
         blob_test.cc
         config_operations.cc
         different_size.cc
