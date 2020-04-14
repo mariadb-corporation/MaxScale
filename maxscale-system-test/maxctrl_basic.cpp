@@ -8,8 +8,8 @@ int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
 
-    int rc = test.maxscales->ssh_node_f(0, false, "maxctrl help list servers");
-    test.expect(rc == 0, "`help list servers` should work");
+    int rc = test.maxscales->ssh_node_f(0, false, "maxctrl --help list servers");
+    test.expect(rc == 0, "`--help list servers` should work");
 
     rc = test.maxscales->ssh_node_f(0, false, "maxctrl --tsv list servers|grep 'Master, Running'");
     test.expect(rc == 0, "`list servers` should return at least one row with: Master, Running");
