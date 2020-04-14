@@ -922,7 +922,7 @@ HttpResponse cb_modulecmd(const HttpRequest& request)
 
             int rc;
 
-            if (output && json_object_get(output, "errors") == NULL)
+            if (output)
             {
                 /**
                  * Store the command output in the meta field. This allows
@@ -955,19 +955,7 @@ HttpResponse cb_modulecmd(const HttpRequest& request)
                     else
                     {
                         // Both output and errors
-                        json_t* output_err = json_object_get(output, "errors");
-
-                        if (output_err)
-                        {
-                            // The output already contains an error array and append to it
-                            json_array_append(output_err, json_object_get(err, "errors"));
-                        }
-                        else
-                        {
-                            // No error, we can just assign the error array
-                            json_object_set(output, "errors", json_object_get(err, "errors"));
-                        }
-
+                        json_object_set(output, "errors", json_object_get(err, "errors"));
                         json_decref(err);
                     }
                 }
