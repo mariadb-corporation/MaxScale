@@ -87,6 +87,7 @@ class MariaDBAuthenticatorModule : public mariadb::AuthenticatorModule
 {
 public:
     static MariaDBAuthenticatorModule* create(mxs::ConfigParameters* options);
+    explicit MariaDBAuthenticatorModule(bool log_pw_mismatch);
     ~MariaDBAuthenticatorModule() override = default;
 
     mariadb::SClientAuth  create_client_authenticator() override;
@@ -98,32 +99,31 @@ public:
 
     const std::unordered_set<std::string>& supported_plugins() const override;
 
-    bool  m_skip_auth {false};              /**< Authentication will always be successful */
-    bool  m_check_permissions {true};
+private:
+    bool m_log_pw_mismatch {false};     /**< Print pw hash when authentication fails */
 };
 
-class MariaDBClientAuthenticator : public mariadb::ClientAuthenticatorT<MariaDBAuthenticatorModule>
+class MariaDBClientAuthenticator : public mariadb::ClientAuthenticator
 {
 public:
-    MariaDBClientAuthenticator(MariaDBAuthenticatorModule* module);
+    MariaDBClientAuthenticator(bool log_pw_mismatch);
     ~MariaDBClientAuthenticator() override = default;
 
     ExchRes exchange(GWBUF* buffer, MYSQL_session* session, mxs::Buffer* output_packet) override;
     AuthRes authenticate(const mariadb::UserEntry* entry, MYSQL_session* session) override;
 
 private:
-
     enum class State
     {
         INIT,
-        SENDING_AUTHSWITCH,
         AUTHSWITCH_SENT,
         CHECK_TOKEN
     };
 
-    bool validate_mysql_user(const mariadb::UserEntry* entry, MYSQL_session* session);
+    AuthRes check_password(MYSQL_session* session, const std::string& stored_pw_hash2);
 
     State m_state {State::INIT};
+    bool  m_log_pw_mismatch {false};/**< Print pw hash when authentication fails */
 };
 
 /** Structure representing the authentication state */
@@ -150,4 +150,3 @@ private:
 
     State m_state {State::EXPECT_AUTHSWITCH};   /**< Authentication state */
 };
-

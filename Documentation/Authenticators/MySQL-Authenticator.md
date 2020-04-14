@@ -9,6 +9,14 @@ plugin used by both MariaDB and MySQL.
 The following settings may be given in the *authenticator_options* of the
 listener.
 
+### `log_password_mismatch`
+
+Boolean, default value is "false". The service setting *log_auth_warnings* must
+also be enabled for this setting to have effect. When both settings are enabled,
+password hashes are logged if a client gives a wrong password. This feature may
+be useful when diagnosing authentication issues. It should only be enabled on a
+secure system as the logging of password hashes may be a security risk.
+
 ### `cache_dir`
 
 Deprecated and ignored.
@@ -16,12 +24,3 @@ Deprecated and ignored.
 ### `inject_service_user`
 
 Deprecated and ignored.
-
-### `log_password_mismatch`
-
-This parameter takes a boolean value and is disabled by default. When enabled,
-password hashes are logged in the error messages when authentication fails due
-to a password mismatch between the one stored in MaxScale and the one given by
-the user. This feature should only be used to diagnose authentication issues in
-MaxScale and should be done on a secure system as the logging of the password
-hashes can be considered a security risk.

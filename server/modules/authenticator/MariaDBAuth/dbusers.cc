@@ -31,6 +31,7 @@
 #include <maxscale/secrets.hh>
 #include <maxscale/service.hh>
 #include <maxscale/utils.h>
+#include <maxbase/format.hh>
 
 namespace
 {
@@ -222,17 +223,42 @@ static char* get_clustrix_users_query(bool include_root)
     return rval;
 }
 
-static bool
-check_password(const char* password_entry, MYSQL_session* session)
+/**
+ * Check if auth token sent by client matches the one in the user account entry.
+ *
+ * @param session Client session with auth token
+ * @param stored_pw_hash2 SHA1(SHA1(password)) in hex form, as queried from server.
+ * @return Authentication result
+ */
+AuthRes MariaDBClientAuthenticator::check_password(MYSQL_session* session, const std::string& stored_pw_hash2)
 {
-    uint8_t stored_token[SHA_DIGEST_LENGTH] = {};
-    size_t stored_token_len = sizeof(stored_token);
 
-    if (*password_entry)
+    const auto& auth_token = session->auth_token;   // Hex-form token sent by client.
+
+    bool empty_token = auth_token.empty();
+    bool empty_pw = stored_pw_hash2.empty();
+    if (empty_token || empty_pw)
     {
-        /** Convert the hexadecimal string to binary */
-        mxs::hex2bin(password_entry, strlen(password_entry), stored_token);
+        AuthRes rval;
+        if (empty_token && empty_pw)
+        {
+            // If the user entry has empty password and the client gave no password, accept.
+            rval.status = AuthRes::Status::SUCCESS;
+        }
+        else if (m_log_pw_mismatch)
+        {
+            // Save reason of failure.
+            rval.msg = empty_token ? "Client gave no password when one was expected" :
+                "Client gave a password when none was expected";
+        }
+        return rval;
     }
+
+    uint8_t stored_pw_hash2_bin[SHA_DIGEST_LENGTH] = {};
+    size_t stored_hash_len = sizeof(stored_pw_hash2_bin);
+
+    // Convert the hexadecimal string to binary.
+    mxs::hex2bin(stored_pw_hash2.c_str(), stored_pw_hash2.length(), stored_pw_hash2_bin);
 
     /**
      * The client authentication token is made up of:
@@ -249,42 +275,35 @@ check_password(const char* password_entry, MYSQL_session* session)
      * database. If the values match, the user has sent the right password.
      */
 
-    /** First, calculate the SHA1 of the scramble and the hash stored in the database */
+    // First, calculate the SHA1(scramble + stored pw hash).
     uint8_t step1[SHA_DIGEST_LENGTH];
-    gw_sha1_2_str(session->scramble, sizeof(session->scramble), stored_token, stored_token_len, step1);
+    gw_sha1_2_str(session->scramble, sizeof(session->scramble), stored_pw_hash2_bin, stored_hash_len, step1);
 
-    /** Next, extract the SHA1 of the real password by XOR'ing it with
-     * the output of the previous calculation */
+    // Next, extract SHA1(password) by XOR'ing the auth token sent by client with the previous step result.
     uint8_t step2[SHA_DIGEST_LENGTH] = {};
-    mxs::bin_bin_xor(session->auth_token.data(), step1, session->auth_token.size(), step2);
+    mxs::bin_bin_xor(auth_token.data(), step1, auth_token.size(), step2);
 
-    /** The phase 2 scramble needs to be copied to the shared data structure as it
-     * is required when the backend authentication is done. */
+    // SHA1(password) needs to be copied to the shared data structure as it is required during
+    // backend authentication. */
     session->auth_token_phase2.assign(step2, step2 + SHA_DIGEST_LENGTH);
 
-    /** Finally, calculate the SHA1 of the hashed real password */
+    // Finally, calculate the SHA1(SHA1(password). */
     uint8_t final_step[SHA_DIGEST_LENGTH];
     gw_sha1_str(step2, SHA_DIGEST_LENGTH, final_step);
 
-    /** If the two values match, the client has sent the correct password */
-    return memcmp(final_step, stored_token, stored_token_len) == 0;
-}
-
-/**
- * @brief Verify the user password
- *
- * @param entry        User account entry
- * @param session      Shared MySQL session
- * @return True if password was correct
- */
-bool MariaDBClientAuthenticator::validate_mysql_user(const UserEntry* entry, MYSQL_session* session)
-{
-    // If the user entry has empty password and the client gave no password, accept.
-    if (entry->password.empty() && session->auth_token.empty())
+    // If the two values match, the client has sent the correct password.
+    bool match = (memcmp(final_step, stored_pw_hash2_bin, stored_hash_len) == 0);
+    AuthRes rval;
+    rval.status = match ? AuthRes::Status::SUCCESS : AuthRes::Status::FAIL_WRONG_PW;
+    if (!match && m_log_pw_mismatch)
     {
-        return true;
+        // Convert the SHA1(SHA1(password)) from client to hex before printing.
+        char received_pw[2 * SHA_DIGEST_LENGTH + 1];
+        mxs::bin2hex(final_step, SHA_DIGEST_LENGTH, received_pw);
+        rval.msg = mxb::string_printf("Client gave wrong password. Got hash %s, expected %s",
+                                      received_pw, stored_pw_hash2.c_str());
     }
-    return check_password(entry->password.c_str(), session);
+    return rval;
 }
 
 /**
@@ -531,4 +550,3 @@ struct User
     bool        anydb;
     std::string pw;
 };
-

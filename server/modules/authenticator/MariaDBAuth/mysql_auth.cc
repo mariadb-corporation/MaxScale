@@ -60,14 +60,26 @@ MXS_MODULE* MXS_CREATE_MODULE()
 }
 
 /**
- * @brief Initialize the authenticator instance
+ * Initialize the authenticator instance
  *
  * @param options Authenticator options
- * @return New MYSQL_AUTH instance or NULL on error
+ * @return New authenticator module instance
  */
 MariaDBAuthenticatorModule* MariaDBAuthenticatorModule::create(mxs::ConfigParameters* options)
 {
-    return new(std::nothrow) MariaDBAuthenticatorModule();
+    bool log_pw_mismatch = false;
+    const std::string opt_log_mismatch = "log_password_mismatch";
+    if (options->contains(opt_log_mismatch))
+    {
+        log_pw_mismatch = options->get_bool(opt_log_mismatch);
+        options->remove(opt_log_mismatch);
+    }
+    return new MariaDBAuthenticatorModule(log_pw_mismatch);
+}
+
+MariaDBAuthenticatorModule::MariaDBAuthenticatorModule(bool log_pw_mismatch)
+    : m_log_pw_mismatch(log_pw_mismatch)
+{
 }
 
 static bool is_localhost_address(const struct sockaddr_storage* addr)
@@ -124,8 +136,8 @@ static GWBUF* gen_auth_switch_request_packet(MYSQL_session* client_data)
     return buffer;
 }
 
-MariaDBClientAuthenticator::MariaDBClientAuthenticator(MariaDBAuthenticatorModule* module)
-    : ClientAuthenticatorT(module)
+MariaDBClientAuthenticator::MariaDBClientAuthenticator(bool log_pw_mismatch)
+    : m_log_pw_mismatch(log_pw_mismatch)
 {
 }
 
@@ -192,10 +204,7 @@ MariaDBClientAuthenticator::exchange(GWBUF* buf, MYSQL_session* session, mxs::Bu
 AuthRes MariaDBClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_session* session)
 {
     mxb_assert(m_state == State::CHECK_TOKEN);
-    AuthRes auth_ret;
-    auth_ret.status = validate_mysql_user(entry, session) ? AuthRes::Status::SUCCESS :
-        AuthRes::Status::FAIL_WRONG_PW;
-    return auth_ret;
+    return check_password(session, entry->password);
 }
 
 mariadb::SBackendAuth
@@ -211,7 +220,7 @@ uint64_t MariaDBAuthenticatorModule::capabilities() const
 
 mariadb::SClientAuth MariaDBAuthenticatorModule::create_client_authenticator()
 {
-    return mariadb::SClientAuth(new(std::nothrow) MariaDBClientAuthenticator(this));
+    return mariadb::SClientAuth(new(std::nothrow) MariaDBClientAuthenticator(m_log_pw_mismatch));
 }
 
 std::string MariaDBAuthenticatorModule::supported_protocol() const

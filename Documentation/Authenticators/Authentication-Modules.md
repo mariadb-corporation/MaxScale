@@ -72,8 +72,12 @@ This setting is mainly meant for failure tolerance in situations where the
 password check is performed outside of MaxScale. If, for example, MaxScale
 cannot use an LDAP-server but the backend databases can, enabling this setting
 allows clients to log in. Even with this setting enabled, a user account
-matching the incoming client must exist on the backends for MaxScale to accept
-the client.
+matching the incoming client username and IP must exist on the backends for
+MaxScale to accept the client.
+
+This setting is incompatible with standard MySQL-authentication plugin
+(*mysqlauth* in MaxScale). If enabled, MaxScale cannot authenticate clients to
+backend servers using standard authentication.
 
 ```
 authenticator_options=skip_authentication=true
