@@ -354,5 +354,45 @@
                 "version" : "${target}"
         }
 
+  },
+
+  "clustrix_000" :
+  {
+        "hostname" : "clustrix000",
+        "box" : "centos_7_gcp",
+        "memory_size" : "16192",
+        "labels" : [
+                "CLUSTRIX_BACKEND"
+        ]
+  },
+
+  "clustrix_001" :
+  {
+        "hostname" : "clustrix001",
+        "box" : "centos_7_gcp",
+        "memory_size" : "16192",
+        "labels" : [
+                "CLUSTRIX_BACKEND"
+        ]
+  },
+
+  "clustrix_002" :
+  {
+        "hostname" : "clustrix002",
+        "box" : "centos_7_gcp",
+        "memory_size" : "16192",
+        "labels" : [
+                "CLUSTRIX_BACKEND"
+        ]
+  },
+
+  "clustrix_003" :
+  {
+        "hostname" : "clustrix003",
+        "memory_size" : "16192",
+        "box" : "centos_7_gcp",
+        "labels" : [
+                "CLUSTRIX_BACKEND"
+        ]
   }
 }
