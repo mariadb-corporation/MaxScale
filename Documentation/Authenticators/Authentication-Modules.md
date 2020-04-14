@@ -63,21 +63,37 @@ authenticator_options=skip_authentication=true,lower_case_table_names=1
 
 ### `skip_authentication`
 
-This option takes a boolean value which controls whether MaxScale will fully
-authenticate users. This option is disabled by default.
+Boolean, default value is "false". If enabled, MaxScale will not check the
+passwords of incoming clients and instead just assumes that they are correct.
+Wrong passwords are instead detected when MaxScale tries to authenticate to the
+backend servers.
 
-Disabling authentication in MaxScale will allow MaxScale to act as a security
-gateway to the server. The authentication of users is offloaded to the backend
-server.
-
-For example, creating the user `jdoe@%` will allow the user _jdoe_ to connect
-from any IP address. This can be a problem if all traffic needs to go through
-MaxScale. By enabling this option and replacing the user with
-`jdoe@maxscale-IP`, the users can still connect from any client IP but will be
-forced to go through MaxScale.
+This setting is mainly meant for failure tolerance in situations where the
+password check is performed outside of MaxScale. If, for example, MaxScale
+cannot use an LDAP-server but the backend databases can, enabling this setting
+allows clients to log in. Even with this setting enabled, a user account
+matching the incoming client must exist on the backends for MaxScale to accept
+the client.
 
 ```
 authenticator_options=skip_authentication=true
+```
+
+### `match_host`
+
+Boolean, default value is "true". If disabled, MaxScale does not require that a
+valid user account entry for incoming clients exists on the backends.
+Specifically, only the client username needs to match a user account,
+hostname/IP is ignored.
+
+This setting may be used to force clients to connect through MaxScale. Normally,
+creating the user *jdoe@%* will allow the user *jdoe* to connect from any
+IP-address. By disabling *match_host* and replacing the user with
+*jdoe@maxscale-IP*, the user can still connect from any client IP but will be
+forced to go through MaxScale.
+
+```
+authenticator_options=match_host=false
 ```
 
 ### `lower_case_table_names`

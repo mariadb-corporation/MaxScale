@@ -96,6 +96,7 @@ bool MySQLProtocolModule::read_authentication_options(mxs::ConfigParameters* par
         const string opt_cachedir = "cache_dir";
         const string opt_inject = "inject_service_user";
         const string opt_skip_auth = "skip_authentication";
+        const string opt_match_host = "match_host";
         const string opt_lower_case = "lower_case_table_names";
         const char option_is_ignored[] = "Authenticator option '%s' is no longer supported and "
                                          "its value is ignored.";
@@ -112,9 +113,15 @@ bool MySQLProtocolModule::read_authentication_options(mxs::ConfigParameters* par
         }
         if (params->contains(opt_skip_auth))
         {
-            m_user_search_settings.match_host_pattern = !params->get_bool(opt_skip_auth);
+            m_user_search_settings.check_password = !params->get_bool(opt_skip_auth);
             params->remove(opt_skip_auth);
         }
+        if (params->contains(opt_match_host))
+        {
+            m_user_search_settings.match_host_pattern = params->get_bool(opt_match_host);
+            params->remove(opt_match_host);
+        }
+
         if (params->contains(opt_lower_case))
         {
             // To match the server, the allowed values should be 0, 1 or 2. For backwards compatibility,

@@ -2303,7 +2303,16 @@ void MariaDBClientConnection::perform_check_token(AuthType auth_type)
     }
     else
     {
-        auto auth_val = m_authenticator->authenticate(&user_entry.entry, m_session_data);
+        AuthRes auth_val;
+        if (m_session_data->user_search_settings.listener.check_password)
+        {
+            auth_val = m_authenticator->authenticate(&user_entry.entry, m_session_data);
+        }
+        else
+        {
+            auth_val.status = AuthRes::Status::SUCCESS;
+        }
+
         if (auth_val.status == AuthRes::Status::SUCCESS)
         {
             if (entrytype == UserEntryType::USER_ACCOUNT_OK)
