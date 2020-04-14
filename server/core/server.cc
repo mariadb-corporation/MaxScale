@@ -751,62 +751,6 @@ void Server::set_version(uint64_t version_num, const std::string& version_str)
     m_info.set(version_num, version_str);
 }
 
-/**
- * Creates a server configuration at the location pointed by @c filename
- *
- * @param filename Filename where configuration is written
- * @return True on success, false on error
- */
-bool Server::create_server_config(const char* filename) const
-{
-    int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-    if (file == -1)
-    {
-        MXS_ERROR("Failed to open file '%s' when serializing server '%s': %d, %s",
-                  filename, name(), errno, mxs_strerror(errno));
-        return false;
-    }
-
-    std::ostringstream ss;
-    m_settings.persist(ss);
-
-    if (dprintf(file, "%s", ss.str().c_str()) == -1)
-    {
-        MXS_ERROR("Could not write serialized configuration to file '%s': %d, %s",
-                  filename, errno, mxs_strerror(errno));
-    }
-    close(file);
-    return true;
-}
-
-bool Server::serialize() const
-{
-    bool rval = false;
-    string final_filename = mxb::string_printf("%s/%s.cnf", mxs::config_persistdir(), name());
-    string temp_filename = final_filename + ".tmp";
-    auto zTempFilename = temp_filename.c_str();
-
-    if (unlink(zTempFilename) == -1 && errno != ENOENT)
-    {
-        MXS_ERROR("Failed to remove temporary server configuration at '%s': %d, %s",
-                  zTempFilename, errno, mxs_strerror(errno));
-    }
-    else if (create_server_config(zTempFilename))
-    {
-        if (rename(zTempFilename, final_filename.c_str()) == 0)
-        {
-            rval = true;
-        }
-        else
-        {
-            MXS_ERROR("Failed to rename temporary server configuration at '%s': %d, %s",
-                      zTempFilename, errno, mxs_strerror(errno));
-        }
-    }
-
-    return rval;
-}
-
 json_t* Server::json_attributes() const
 {
     /** Resource attributes */

@@ -131,13 +131,13 @@ public:
     uint64_t status() const override;
 
     /**
-     * Dump service configuration into a file
+     * Persist service configuration into a stream
      *
-     * @param filename File where the configuration should be written
+     * @param filename Stream where the configuration is written
      *
-     * @return True on success
+     * @return The output stream
      */
-    bool dump_config(const char* filename) const;
+    std::ostream& persist(std::ostream& os) const;
 
     // TODO: Make JSON output internal (could iterate over get_filters() but that takes the service lock)
     json_t* json_relationships(const char* host) const;
@@ -224,16 +224,6 @@ public:
     {
         m_params.set(key, value);
     }
-
-    /**
-     * @brief Serialize a service to a file
-     *
-     * This converts @c service into an INI format file.
-     *
-     * @param service Service to serialize
-     * @return False if the serialization of the service fails, true if it was successful
-     */
-    bool serialize() const;
 
     void incref();
 

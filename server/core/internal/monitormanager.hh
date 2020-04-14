@@ -101,14 +101,16 @@ public:
     static std::unique_ptr<ResultSet> monitor_get_list();
 
     /**
-     * @brief Serialize a monitor to a file
+     * @brief Persist monitor configuration into a stream
      *
      * This converts the static configuration of the monitor into an INI format file.
      *
-     * @param monitor Monitor to serialize
-     * @return True if serialization was successful
+     * @param monitor  Monitor to persist
+     * @param filename Stream where the configuration is written
+     *
+     * @return The output stream
      */
-    static bool monitor_serialize(const mxs::Monitor* monitor);
+    static std::ostream& monitor_persist(const mxs::Monitor* monitor, std::ostream& os);
 
     /**
      * Attempt to reconfigure a monitor. If the reconfiguration fails, the old parameters are restored.
@@ -161,8 +163,6 @@ public:
      * @return JSON representation of the monitor
      */
     static json_t* monitor_to_json(const mxs::Monitor* monitor, const char* host);
-
-    static bool create_monitor_config(const mxs::Monitor* monitor, const char* filename);
 
     /**
      * Set a status bit in the server. If the server is monitored, only some bits can be modified,

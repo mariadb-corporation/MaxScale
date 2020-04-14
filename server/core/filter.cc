@@ -164,16 +164,6 @@ void filter_destroy(const SFilterDef& filter)
 {
     mxb_assert(filter);
     mxb_assert(filter_can_be_destroyed(filter));
-
-    char filename[PATH_MAX + 1];
-    snprintf(filename, sizeof(filename), "%s/%s.cnf", mxs::config_persistdir(), filter->name.c_str());
-
-    if (unlink(filename) == -1 && errno != ENOENT)
-    {
-        MXS_ERROR("Failed to remove persisted filter configuration at '%s': %d, %s",
-                  filename, errno, mxs_strerror(errno));
-    }
-
     filter_free(filter);
 }
 
@@ -347,75 +337,13 @@ json_t* FilterSession::diagnostics() const
 }
 }
 
-static bool create_filter_config(const SFilterDef& filter, const char* filename)
+std::ostream& filter_persist(const SFilterDef& filter, std::ostream& os)
 {
     mxb_assert(filter);
-    int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-
-    if (file == -1)
-    {
-        MXS_ERROR("Failed to open file '%s' when serializing filter '%s': %d, %s",
-                  filename,
-                  filter->name.c_str(),
-                  errno,
-                  mxs_strerror(errno));
-        return false;
-    }
-
-    Guard guard(filter->lock);
     const MXS_MODULE* mod = get_module(filter->module.c_str(), NULL);
     mxb_assert(mod);
 
-    string config_str = generate_config_string(filter->name, filter->parameters,
-                                               config_filter_params, mod->parameters);
-    if (dprintf(file, "%s", config_str.c_str()) == -1)
-    {
-        MXS_ERROR("Could not write serialized configuration to file '%s': %d, %s",
-                  filename, errno, mxs_strerror(errno));
-    }
-    close(file);
-    return true;
-}
-
-bool filter_serialize(const SFilterDef& filter)
-{
-    mxb_assert(filter);
-    bool rval = false;
-    char filename[PATH_MAX];
-    snprintf(filename,
-             sizeof(filename),
-             "%s/%s.cnf.tmp",
-             mxs::config_persistdir(),
-             filter->name.c_str());
-
-    if (unlink(filename) == -1 && errno != ENOENT)
-    {
-        MXS_ERROR("Failed to remove temporary filter configuration at '%s': %d, %s",
-                  filename,
-                  errno,
-                  mxs_strerror(errno));
-    }
-    else if (create_filter_config(filter, filename))
-    {
-        char final_filename[PATH_MAX];
-        strcpy(final_filename, filename);
-
-        char* dot = strrchr(final_filename, '.');
-        mxb_assert(dot);
-        *dot = '\0';
-
-        if (rename(filename, final_filename) == 0)
-        {
-            rval = true;
-        }
-        else
-        {
-            MXS_ERROR("Failed to rename temporary filter configuration at '%s': %d, %s",
-                      filename,
-                      errno,
-                      mxs_strerror(errno));
-        }
-    }
-
-    return rval;
+    os << generate_config_string(filter->name, filter->parameters,
+                                 config_filter_params, mod->parameters);
+    return os;
 }

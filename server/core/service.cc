@@ -288,16 +288,6 @@ void Service::destroy(Service* service)
 {
     mxb_assert(service->active());
     mxb_assert(mxs::MainWorker::is_main_worker());
-
-    char filename[PATH_MAX + 1];
-    snprintf(filename, sizeof(filename), "%s/%s.cnf", mxs::config_persistdir(), service->name());
-
-    if (unlink(filename) == -1 && errno != ENOENT)
-    {
-        MXS_ERROR("Failed to remove persisted service configuration at '%s': %d, %s",
-                  filename, errno, mxs_strerror(errno));
-    }
-
     service->m_active = false;
     service->decref();
 }
@@ -778,20 +768,8 @@ bool service_filter_in_use(const SFilterDef& filter)
  * @param filename Filename where configuration is written
  * @return True on success, false on error
  */
-bool Service::dump_config(const char* filename) const
+std::ostream& Service::persist(std::ostream& os) const
 {
-    int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-
-    if (file == -1)
-    {
-        MXS_ERROR("Failed to open file '%s' when serializing service '%s': %d, %s",
-                  filename,
-                  name(),
-                  errno,
-                  mxs_strerror(errno));
-        return false;
-    }
-
     const MXS_MODULE* mod = get_module(router_name(), NULL);
     mxb_assert(mod);
 
@@ -801,82 +779,35 @@ bool Service::dump_config(const char* filename) const
     params_to_print.remove(CN_SERVERS);
     params_to_print.remove(CN_TARGETS);
 
-    string config = generate_config_string(name(), params_to_print, common_service_params(), mod->parameters);
-    if (dprintf(file, "%s", config.c_str()) == -1)
-    {
-        MXS_ERROR("Could not write serialized configuration to file '%s': %d, %s",
-                  filename, errno, mxs_strerror(errno));
-    }
-    /**
-     * TODO: Check for return values on all of the dprintf calls
-     */
+    os << generate_config_string(name(), params_to_print, common_service_params(), mod->parameters);
 
     const auto& data = *m_data;
 
+    std::vector<const char*> names;
+
     if (!data.filters.empty())
     {
-        dprintf(file, "%s=", CN_FILTERS);
-        const char* sep = "";
-
         for (const auto& f : data.filters)
         {
-            dprintf(file, "%s%s", sep, f->name.c_str());
-            sep = "|";
+            names.push_back(f->name.c_str());
         }
 
-        dprintf(file, "\n");
+        os << CN_FILTERS << "=" << mxb::join(names, "|");
+        names.clear();
     }
 
     if (!data.targets.empty())
     {
-        dprintf(file, "%s=", CN_TARGETS);
-        const char* sep = "";
-
         for (const auto& s : data.targets)
         {
-            dprintf(file, "%s%s", sep, s->name());
-            sep = ",";
+            names.push_back(s->name());
         }
-        dprintf(file, "\n");
-    }
-    close(file);
 
-    return true;
-}
-
-bool Service::serialize() const
-{
-    bool rval = false;
-    char filename[PATH_MAX];
-    snprintf(filename, sizeof(filename), "%s/%s.cnf.tmp",
-             mxs::config_persistdir(), name());
-
-    if (unlink(filename) == -1 && errno != ENOENT)
-    {
-        MXS_ERROR("Failed to remove temporary service configuration at '%s': %d, %s",
-                  filename, errno, mxs_strerror(errno));
-    }
-    else if (dump_config(filename))
-    {
-        char final_filename[PATH_MAX];
-        strcpy(final_filename, filename);
-
-        char* dot = strrchr(final_filename, '.');
-        mxb_assert(dot);
-        *dot = '\0';
-
-        if (rename(filename, final_filename) == 0)
-        {
-            rval = true;
-        }
-        else
-        {
-            MXS_ERROR("Failed to rename temporary service configuration at '%s': %d, %s",
-                      filename, errno, mxs_strerror(errno));
-        }
+        os << CN_TARGETS << "=" << mxb::join(names, ",");
+        names.clear();
     }
 
-    return rval;
+    return os;
 }
 
 bool service_port_is_used(int port)

@@ -445,81 +445,17 @@ SListener listener_find_by_address(const std::string& address, unsigned short po
     return rval;
 }
 
-/**
- * Creates a listener configuration at the location pointed by @c filename
- *
- * @param listener Listener to serialize into a configuration
- * @param filename Filename where configuration is written
- * @return True on success, false on error
- */
-bool Listener::create_listener_config(const char* filename)
+std::ostream& Listener::persist(std::ostream& os) const
 {
-    int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-
-    if (file == -1)
-    {
-        MXS_ERROR("Failed to open file '%s' when serializing listener '%s': %d, %s",
-                  filename,
-                  m_name.c_str(),
-                  errno,
-                  mxs_strerror(errno));
-        return false;
-    }
-
-    // TODO: Check for return values on all of the dprintf calls
-    dprintf(file, "[%s]\n", m_name.c_str());
-    dprintf(file, "type=listener\n");
+    os << "[" << m_name << "]\n"
+       << "type=listener\n";
 
     for (const auto& p : m_params)
     {
-        dprintf(file, "%s=%s\n", p.first.c_str(), p.second.c_str());
+        os << p.first << "=" << p.second << "\n";
     }
 
-    ::close(file);
-
-    return true;
-}
-
-bool listener_serialize(const SListener& listener)
-{
-    bool rval = false;
-    char filename[PATH_MAX];
-    snprintf(filename,
-             sizeof(filename),
-             "%s/%s.cnf.tmp",
-             mxs::config_persistdir(),
-             listener->name());
-
-    if (unlink(filename) == -1 && errno != ENOENT)
-    {
-        MXS_ERROR("Failed to remove temporary listener configuration at '%s': %d, %s",
-                  filename,
-                  errno,
-                  mxs_strerror(errno));
-    }
-    else if (listener->create_listener_config(filename))
-    {
-        char final_filename[PATH_MAX];
-        strcpy(final_filename, filename);
-
-        char* dot = strrchr(final_filename, '.');
-        mxb_assert(dot);
-        *dot = '\0';
-
-        if (rename(filename, final_filename) == 0)
-        {
-            rval = true;
-        }
-        else
-        {
-            MXS_ERROR("Failed to rename temporary listener configuration at '%s': %d, %s",
-                      filename,
-                      errno,
-                      mxs_strerror(errno));
-        }
-    }
-
-    return rval;
+    return os;
 }
 
 json_t* Listener::to_json(const char* host) const

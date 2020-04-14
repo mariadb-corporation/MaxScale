@@ -295,77 +295,15 @@ Monitor* MonitorManager::server_is_monitored(const SERVER* server)
     return rval;
 }
 
-bool MonitorManager::create_monitor_config(const Monitor* monitor, const char* filename)
+std::ostream& MonitorManager::monitor_persist(const Monitor* monitor, std::ostream& os)
 {
-    mxb_assert(Monitor::is_main_worker());
-    int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-    if (file == -1)
-    {
-        MXS_ERROR("Failed to open file '%s' when serializing monitor '%s': %d, %s",
-                  filename,
-                  monitor->name(),
-                  errno,
-                  mxs_strerror(errno));
-        return false;
-    }
-
     const MXS_MODULE* mod = get_module(monitor->m_module.c_str(), NULL);
     mxb_assert(mod);
 
-    string config = generate_config_string(monitor->m_name, monitor->parameters(),
-                                           common_monitor_params(), mod->parameters);
+    os << generate_config_string(monitor->m_name, monitor->parameters(),
+                                 common_monitor_params(), mod->parameters);
 
-    if (dprintf(file, "%s", config.c_str()) == -1)
-    {
-        MXS_ERROR("Could not write serialized configuration to file '%s': %d, %s",
-                  filename, errno, mxs_strerror(errno));
-    }
-
-    close(file);
-    return true;
-}
-
-bool MonitorManager::monitor_serialize(const Monitor* monitor)
-{
-    mxb_assert(Monitor::is_main_worker());
-    bool rval = false;
-    char filename[PATH_MAX];
-    snprintf(filename,
-             sizeof(filename),
-             "%s/%s.cnf.tmp",
-             mxs::config_persistdir(),
-             monitor->name());
-
-    if (unlink(filename) == -1 && errno != ENOENT)
-    {
-        MXS_ERROR("Failed to remove temporary monitor configuration at '%s': %d, %s",
-                  filename,
-                  errno,
-                  mxs_strerror(errno));
-    }
-    else if (create_monitor_config(monitor, filename))
-    {
-        char final_filename[PATH_MAX];
-        strcpy(final_filename, filename);
-
-        char* dot = strrchr(final_filename, '.');
-        mxb_assert(dot);
-        *dot = '\0';
-
-        if (rename(filename, final_filename) == 0)
-        {
-            rval = true;
-        }
-        else
-        {
-            MXS_ERROR("Failed to rename temporary monitor configuration at '%s': %d, %s",
-                      filename,
-                      errno,
-                      mxs_strerror(errno));
-        }
-    }
-
-    return rval;
+    return os;
 }
 
 bool MonitorManager::reconfigure_monitor(mxs::Monitor* monitor, const mxs::ConfigParameters& parameters)
@@ -381,12 +319,7 @@ bool MonitorManager::reconfigure_monitor(mxs::Monitor* monitor, const mxs::Confi
         monitor->stop();
     }
 
-    bool success = false;
-    if (monitor->configure(&parameters))
-    {
-        // Serialization must also succeed.
-        success = MonitorManager::monitor_serialize(monitor);
-    }
+    bool success = monitor->configure(&parameters);
 
     if (!success)
     {

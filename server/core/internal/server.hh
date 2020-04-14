@@ -226,15 +226,16 @@ public:
     static void dprintPersistentDCBs(DCB*, const Server*);
 
     /**
-     * @brief Serialize a server to a file
+     * Persist server configuration into a stream
      *
-     * This converts @c server into an INI format file. This allows created servers
-     * to be persisted to disk. This will replace any existing files with the same
-     * name.
+     * @param filename Stream where the configuration is written
      *
-     * @return False if the serialization of the server fails, true if it was successful
+     * @return The output stream
      */
-    bool serialize() const;
+    std::ostream& persist(std::ostream& os) const
+    {
+        return m_settings.persist(os);
+    }
 
     /**
      * Update server-specific monitor username. Does not affect existing monitor connections,

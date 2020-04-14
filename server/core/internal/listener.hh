@@ -142,8 +142,14 @@ public:
         return m_type;
     }
 
-    // Functions that are temporarily public
-    bool create_listener_config(const char* filename);
+    /**
+     * Persist listener configuration into a stream
+     *
+     * @param os Output stream where the listener is persisted
+     *
+     * @return The output stream given as the parameter
+     */
+    std::ostream& persist(std::ostream& os) const;
 
     std::shared_ptr<mxs::ListenerSessionData> shared_data() const
     {
@@ -255,18 +261,6 @@ private:
     // Handler for EPOLL_IN events
     static uint32_t poll_handler(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
 };
-
-/**
- * @brief Serialize a listener to a file
- *
- * This converts @c listener into an INI format file. This allows created listeners
- * to be persisted to disk. This will replace any existing files with the same
- * name.
- *
- * @param listener Listener to serialize
- * @return True if the serialization of the listener was successful, false if it fails
- */
-bool listener_serialize(const std::shared_ptr<Listener>& listener);
 
 /**
  * Find a listener

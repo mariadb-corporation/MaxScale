@@ -36,12 +36,11 @@ struct FilterDef : public MXS_FILTER_DEF
               mxs::ConfigParameters* params);
     ~FilterDef();
 
-    std::string           name;          /**< The Filter name */
-    std::string           module;        /**< The module to load */
-    mxs::ConfigParameters parameters;    /**< The filter parameters */
-    MXS_FILTER*           filter;        /**< The runtime filter */
-    MXS_FILTER_OBJECT*    obj;           /**< The "MODULE_OBJECT" for the filter */
-    mutable std::mutex    lock;
+    std::string           name;         /**< The Filter name */
+    std::string           module;       /**< The module to load */
+    mxs::ConfigParameters parameters;   /**< The filter parameters */
+    MXS_FILTER*           filter;       /**< The runtime filter */
+    MXS_FILTER_OBJECT*    obj;          /**< The "MODULE_OBJECT" for the filter */
 };
 
 typedef std::shared_ptr<FilterDef> SFilterDef;
@@ -77,15 +76,16 @@ void filter_destroy(const SFilterDef& filter);
 void filter_destroy_instances();
 
 /**
- * @brief Serialize a filter to a file
+ * @brief Persist filter configuration into a stream
  *
  * This converts the static configuration of the filter into an INI format file.
  *
- * @param filter Monitor to serialize
+ * @param filter Filter to persist
+ * @param os     Stream where filter is serialized
  *
- * @return True if serialization was successful
+ * @return The output stream
  */
-bool filter_serialize(const SFilterDef& filter);
+std::ostream& filter_persist(const SFilterDef& filter, std::ostream& os);
 
 /**
  * @brief Convert a filter to JSON
