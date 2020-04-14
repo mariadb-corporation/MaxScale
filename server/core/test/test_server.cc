@@ -32,6 +32,7 @@
 #include "../internal/config.hh"
 #include "../internal/server.hh"
 #include "../internal/servermanager.hh"
+#include "../internal/config_runtime.hh"
 
 static mxs::ConfigParameters params;
 
@@ -111,7 +112,9 @@ bool test_serialize()
     unlink(old_config_name);
 
     /** Serialize server to disk */
-    TEST(server->serialize(), "Failed to synchronize original server");
+    std::ostringstream ss;
+    server->persist(ss);
+    TEST(runtime_save_config(server->name(), ss.str()), "Failed to synchronize original server");
 
     /** Load it again */
     TEST(test_load_config(config_name, server), "Failed to load the serialized server");
@@ -121,8 +124,11 @@ bool test_serialize()
 
     rename(config_name, old_config_name);
 
+    ss.str("");
+    created->persist(ss);
+
     /** Serialize the loaded server to disk */
-    TEST(created->serialize(), "Failed to synchronize the copied server");
+    TEST(runtime_save_config(created->name(), ss.str()), "Failed to synchronize the copied server");
 
     /** Check that they serialize to identical files */
     char cmd[1024];

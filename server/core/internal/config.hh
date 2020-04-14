@@ -145,13 +145,6 @@ void fix_object_name(char* name);
 void fix_object_name(std::string& name);
 
 /**
- * @brief Serialize global options
- *
- * @return True if options were serialized successfully
- */
-bool config_global_serialize();
-
-/**
  * Export the configuration to a file
  *
  * @param filename Filename where the configuration will be written

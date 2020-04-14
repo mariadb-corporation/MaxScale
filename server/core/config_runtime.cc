@@ -295,8 +295,10 @@ bool runtime_link_target(const std::string& subject, const std::string& target)
                 else
                 {
                     service->add_target(tgt);
-                    service->serialize();
-                    rval = true;
+
+                    std::ostringstream ss;
+                    service->persist(ss);
+                    rval = runtime_save_config(service->name(), ss.str());
                 }
             }
         }
@@ -361,8 +363,10 @@ bool runtime_unlink_target(const std::string& subject, const std::string& target
         {
 
             service->remove_target(tgt);
-            service->serialize();
-            rval = true;
+
+            std::ostringstream ss;
+            service->persist(ss);
+            rval = runtime_save_config(service->name(), ss.str());
         }
         else
         {
@@ -577,11 +581,12 @@ bool runtime_create_listener(Service* service,
     }
     else if (config_is_valid_name(name, &reason))
     {
-        auto listener = Listener::create(name, proto, params);
-
-        if (listener && listener_serialize(listener))
+        if (auto listener = Listener::create(name, proto, params))
         {
-            if (listener->listen())
+            std::ostringstream ss;
+            listener->persist(ss);
+
+            if (runtime_save_config(listener->name(), ss.str()) && listener->listen())
             {
                 MXS_NOTICE("Created listener '%s' at %s:%u for service '%s'",
                            name, listener->address(), listener->port(), service->name());
@@ -635,14 +640,13 @@ bool runtime_create_filter(const char* name, const char* module, mxs::ConfigPara
 
         if (filter)
         {
-            if (filter_serialize(filter))
+            std::ostringstream ss;
+            filter_persist(filter, ss);
+
+            if (runtime_save_config(filter->name.c_str(), ss.str()))
             {
                 MXS_NOTICE("Created filter '%s'", name);
                 rval = true;
-            }
-            else
-            {
-                config_runtime_error("Failed to serialize filter '%s'", name);
             }
         }
     }
@@ -1647,15 +1651,24 @@ bool runtime_create_server(const char* name, const char* address, const char* po
                 parameters.set(CN_PORT, port);
             }
 
-            Server* server = ServerManager::create_server(name, parameters);
-
-            if (server && (!external || server->serialize()))
+            if (Server* server = ServerManager::create_server(name, parameters))
             {
-                rval = true;
-                MXS_NOTICE("Created server '%s' at %s:%u",
-                           server->name(),
-                           server->address(),
-                           server->port());
+                if (external)
+                {
+                    rval = true;
+                }
+                else
+                {
+                    std::ostringstream ss;
+                    server->persist(ss);
+                    rval = runtime_save_config(server->name(), ss.str());
+                }
+
+                if (rval)
+                {
+                    MXS_NOTICE("Created server '%s' at %s:%u", server->name(),
+                               server->address(), server->port());
+                }
             }
             else
             {
@@ -1687,45 +1700,11 @@ bool runtime_destroy_server(Server* server)
         config_runtime_error(err, server->name());
         MXS_ERROR(err, server->name());
     }
-    else
+    else if (runtime_remove_config(server->name()))
     {
-        char filename[PATH_MAX];
-        snprintf(filename,
-                 sizeof(filename),
-                 "%s/%s.cnf",
-                 mxs::config_persistdir(),
-                 server->name());
-
-        if (unlink(filename) == -1)
-        {
-            if (errno != ENOENT)
-            {
-                MXS_ERROR("Failed to remove persisted server configuration '%s': %d, %s",
-                          filename,
-                          errno,
-                          mxs_strerror(errno));
-            }
-            else
-            {
-                rval = true;
-                MXS_WARNING("Server '%s' was not created at runtime. Remove the "
-                            "server manually from the correct configuration file.",
-                            server->name());
-            }
-        }
-        else
-        {
-            rval = true;
-        }
-
-        if (rval)
-        {
-            MXS_NOTICE("Destroyed server '%s' at %s:%u",
-                       server->name(),
-                       server->address(),
-                       server->port());
-            server->deactivate();
-        }
+        MXS_NOTICE("Destroyed server '%s' at %s:%u", server->name(), server->address(), server->port());
+        server->deactivate();
+        rval = true;
     }
 
     return rval;
@@ -1733,41 +1712,16 @@ bool runtime_destroy_server(Server* server)
 
 bool runtime_destroy_listener(Service* service, const char* name)
 {
-    char filename[PATH_MAX];
-    snprintf(filename, sizeof(filename), "%s/%s.cnf", mxs::config_persistdir(), name);
-
-
-    if (unlink(filename) == -1)
-    {
-        if (errno != ENOENT)
-        {
-            MXS_ERROR("Failed to remove persisted listener configuration '%s': %d, %s",
-                      filename, errno, mxs_strerror(errno));
-            return false;
-        }
-        else
-        {
-            MXS_WARNING("Persisted configuration file for listener '%s' was not found. This means that the "
-                        "listener was not created at runtime. Remove the listener manually from the correct "
-                        "configuration file to permanently destroy the listener.", name);
-        }
-    }
-
     bool rval = false;
 
     if (!service_remove_listener(service, name))
     {
         MXS_ERROR("Failed to destroy listener '%s' for service '%s'", name, service->name());
-        config_runtime_error("Failed to destroy listener '%s' for service '%s'", name, service->name());
     }
-    else
+    else if (runtime_remove_config(name))
     {
         rval = true;
-        MXS_NOTICE("Destroyed listener '%s' for service '%s'. The listener "
-                   "will be removed after the next restart of MaxScale or "
-                   "when the associated service is destroyed.",
-                   name,
-                   service->name());
+        MXS_NOTICE("Destroyed listener '%s' for service '%s'.", name, service->name());
     }
 
     return rval;
@@ -1780,13 +1734,15 @@ bool runtime_destroy_filter(const SFilterDef& filter)
 
     if (filter_can_be_destroyed(filter))
     {
-        filter_destroy(filter);
-        rval = true;
+        if (runtime_remove_config(filter->name.c_str()))
+        {
+            filter_destroy(filter);
+            rval = true;
+        }
     }
     else
     {
-        config_runtime_error("Filter '%s' cannot be destroyed: Remove it from all services "
-                             "first",
+        config_runtime_error("Filter '%s' cannot be destroyed: Remove it from all services first",
                              filter->name.c_str());
     }
 
@@ -1800,8 +1756,11 @@ bool runtime_destroy_service(Service* service)
 
     if (service->can_be_destroyed())
     {
-        Service::destroy(service);
-        rval = true;
+        if (runtime_remove_config(service->name()))
+        {
+            Service::destroy(service);
+            rval = true;
+        }
     }
     else
     {
@@ -1826,28 +1785,11 @@ bool runtime_destroy_monitor(Monitor* monitor)
         config_runtime_error("Monitor '%s' cannot be destroyed as it is used by service '%s'",
                              monitor->name(), s->name());
     }
-    else
-    {
-        char filename[PATH_MAX];
-        snprintf(filename, sizeof(filename), "%s/%s.cnf", mxs::config_persistdir(), monitor->name());
-
-        if (unlink(filename) == -1 && errno != ENOENT)
-        {
-            MXS_ERROR("Failed to remove persisted monitor configuration '%s': %d, %s",
-                      filename,
-                      errno,
-                      mxs_strerror(errno));
-        }
-        else
-        {
-            rval = true;
-        }
-    }
-
-    if (rval)
+    else if (runtime_remove_config(monitor->name()))
     {
         MonitorManager::deactivate_monitor(monitor);
         MXS_NOTICE("Destroyed monitor '%s'", monitor->name());
+        rval = true;
     }
 
     return rval;
@@ -1873,8 +1815,9 @@ bool runtime_create_server_from_json(json_t* json)
         }
         else if (Server* server = ServerManager::create_server(name, params))
         {
-            if (link_target_to_objects(server->name(), relations) && server->serialize())
+            if (link_target_to_objects(server->name(), relations))
             {
+
                 rval = true;
             }
             else
@@ -1908,7 +1851,9 @@ bool runtime_alter_server_from_json(Server* server, json_t* new_json)
                 if (server_to_object_relations(server, old_json.get(), new_json))
                 {
                     server->configure(new_parameters);
-                    server->serialize();
+                    std::ostringstream ss;
+                    server->persist(ss);
+                    runtime_save_config(server->name(), ss.str());
 
                     // Restart the monitor that monitors this server to propagate the configuration changes
                     // forward. This causes the monitor to pick up on new timeouts and addresses immediately.
@@ -1977,27 +1922,27 @@ bool runtime_create_monitor_from_json(json_t* json)
 
             if (ok && server_relationship_to_parameter(json, &params))
             {
-                Monitor* monitor = MonitorManager::create_monitor(name, module, &params);
+                if (auto monitor = MonitorManager::create_monitor(name, module, &params))
+                {
+                    std::ostringstream ss;
+                    MonitorManager::monitor_persist(monitor, ss);
 
-                if (!monitor)
-                {
-                    config_runtime_error("Could not create monitor '%s' with module '%s'", name, module);
-                }
-                else if (!MonitorManager::monitor_serialize(monitor))
-                {
-                    config_runtime_error("Failed to serialize monitor '%s'", name);
+                    if (runtime_save_config(monitor->name(), ss.str()))
+                    {
+                        MXS_NOTICE("Created monitor '%s'", name);
+                        MonitorManager::start_monitor(monitor);
+                        rval = true;
+
+                        // TODO: Do this with native types instead of JSON comparisons
+                        std::unique_ptr<json_t> old_json(monitor->to_json(""));
+                        MXB_AT_DEBUG(bool rv = )
+                        monitor_to_service_relations(monitor->name(), old_json.get(), json);
+                        mxb_assert(rv);
+                    }
                 }
                 else
                 {
-                    MXS_NOTICE("Created monitor '%s'", name);
-                    MonitorManager::start_monitor(monitor);
-                    rval = true;
-
-                    // TODO: Do this with native types instead of JSON comparisons
-                    std::unique_ptr<json_t> old_json(monitor->to_json(""));
-                    MXB_AT_DEBUG(bool rv = )
-                    monitor_to_service_relations(monitor->name(), old_json.get(), json);
-                    mxb_assert(rv);
+                    config_runtime_error("Could not create monitor '%s' with module '%s'", name, module);
                 }
             }
         }
@@ -2060,7 +2005,10 @@ bool runtime_create_service_from_json(json_t* json)
                 {
                     if (update_service_relationships(service, json))
                     {
-                        if (service->serialize())
+                        std::ostringstream ss;
+                        service->persist(ss);
+
+                        if (runtime_save_config(name, ss.str()))
                         {
                             MXS_NOTICE("Created service '%s'", name);
                             serviceStart(service);
@@ -2102,7 +2050,12 @@ bool runtime_alter_monitor_from_json(Monitor* monitor, json_t* new_json)
         && server_relationship_to_parameter(new_json, &params)
         && monitor_to_service_relations(monitor->name(), old_json.get(), new_json))
     {
-        success = MonitorManager::reconfigure_monitor(monitor, params);
+        if (MonitorManager::reconfigure_monitor(monitor, params))
+        {
+            std::ostringstream ss;
+            MonitorManager::monitor_persist(monitor, ss);
+            success = runtime_save_config(monitor->name(), ss.str());
+        }
     }
 
     return success;
@@ -2222,7 +2175,9 @@ bool runtime_alter_service_from_json(Service* service, json_t* new_json)
 
             if (rval)
             {
-                service->serialize();
+                std::ostringstream ss;
+                service->persist(ss);
+                runtime_save_config(service->name(), ss.str());
             }
         }
     }
@@ -2488,7 +2443,9 @@ bool runtime_alter_maxscale_from_json(json_t* json)
 
         if (rval)
         {
-            config_global_serialize();
+            std::ostringstream ss;
+            mxs::Config::get().persist(ss);
+            rval = runtime_save_config("maxscale", ss.str());
         }
     }
 
