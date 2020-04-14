@@ -303,3 +303,9 @@ bool runtime_thread_rebalance(maxscale::RoutingWorker& worker,
  * @return True, if the rebalancing could be initiated.
  */
 bool runtime_threads_rebalance(const std::string& threshold);
+
+// Remove a persisted configuration file
+bool runtime_remove_config(const char* name);
+
+// Persist a configuration file stored in the string
+bool runtime_save_config(const char* name, const std::string& config);

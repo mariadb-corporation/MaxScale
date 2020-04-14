@@ -22,9 +22,11 @@
 #include <set>
 #include <sstream>
 #include <string>
-#include <strings.h>
 #include <tuple>
 #include <vector>
+
+#include <strings.h>
+#include <fcntl.h>
 
 #include <maxbase/atomic.h>
 #include <maxscale/clock.h>
@@ -2565,4 +2567,65 @@ bool runtime_threads_rebalance(const std::string& arg_threshold)
     }
 
     return rv;
+}
+
+bool runtime_remove_config(const char* name)
+{
+    bool rval = true;
+    std::string filename = mxs::config_persistdir() + "/"s + name + ".cnf";
+
+    if (unlink(filename.c_str()) == -1 && errno != ENOENT)
+    {
+        MXS_ERROR("Failed to remove persisted configuration '%s': %d, %s",
+                  filename.c_str(), errno, mxs_strerror(errno));
+        rval = false;
+    }
+
+    return rval;
+}
+
+bool runtime_save_config(const char* name, const std::string& config)
+{
+    bool rval = false;
+    std::string filename = mxs::config_persistdir() + "/"s + name + ".cnf.tmp";
+
+    if (unlink(filename.c_str()) == -1 && errno != ENOENT)
+    {
+        MXS_ERROR("Failed to remove temporary configuration at '%s': %d, %s",
+                  filename.c_str(), errno, mxs_strerror(errno));
+        return false;
+    }
+
+    int fd = open(filename.c_str(), O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+
+    if (fd == -1)
+    {
+        MXS_ERROR("Failed to open file '%s' when serializing '%s': %d, %s",
+                  filename.c_str(), name, errno, mxs_strerror(errno));
+        return false;
+    }
+
+    if (write(fd, config.c_str(), config.size()) == -1)
+    {
+        MXS_ERROR("Failed to serialize file '%s': %d, %s", filename.c_str(), errno, mxs_strerror(errno));
+    }
+    else
+    {
+        // Remove the .tmp suffix
+        auto final_filename = filename.substr(0, filename.size() - 4);
+
+        if (rename(filename.c_str(), final_filename.c_str()) == -1)
+        {
+            MXS_ERROR("Failed to rename temporary configuration at '%s': %d, %s",
+                      filename.c_str(), errno, mxs_strerror(errno));
+        }
+        else
+        {
+            rval = true;
+        }
+    }
+
+    close(fd);
+
+    return rval;
 }
