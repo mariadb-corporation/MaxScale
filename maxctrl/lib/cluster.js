@@ -91,7 +91,7 @@ function getChangedObjects(src, dest) {
 const collections = ["servers", "monitors", "services", "users"];
 
 // Individual resources
-const endpoints = ["maxscale", "maxscale/logs"];
+const endpoints = ["maxscale", "maxscale/logs", "maxscale/query_classifier"];
 
 // Calculate a diff between two MaxScale servers
 async function getDiffs(a, b) {
