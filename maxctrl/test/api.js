@@ -7,6 +7,10 @@ describe("API", function () {
     return doCommand("api get servers").should.be.fulfilled;
   });
 
+  it("pretty-prints resource", function () {
+    return doCommand("api get servers --pretty").should.be.fulfilled;
+  });
+
   it("gets resource with path", function () {
     return doCommand("api get servers data[0].id").then((res) => {
       js = JSON.parse(res);
