@@ -399,13 +399,18 @@ static json_t* json_error_append(json_t* obj, const char* message)
     json_t* err = json_error_detail(message);
 
     json_t* arr = json_object_get(obj, ERRORS);
-    mxb_assert(arr);
-    mxb_assert(json_is_array(arr));
 
-    if (arr)
+    if (!arr)
     {
-        json_array_append_new(arr, err);
+        arr = json_array();
+        json_object_set_new(obj, ERRORS, arr);
     }
+    else
+    {
+        mxb_assert(json_is_array(arr));
+    }
+
+    json_array_append_new(arr, err);
 
     return obj;
 }
