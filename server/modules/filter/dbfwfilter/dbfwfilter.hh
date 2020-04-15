@@ -12,7 +12,9 @@
  */
 #pragma once
 
+#if !defined(MXS_MODULE_NAME)
 #define MXS_MODULE_NAME "dbfwfilter"
+#endif
 #include <maxscale/ccdefs.hh>
 
 #include <time.h>
@@ -27,6 +29,7 @@
 #include <maxscale/filter.hh>
 #include <maxscale/query_classifier.hh>
 
+#include "dbfwconfig.hh"
 #include "dbfwfilter.h"
 
 /**
@@ -103,16 +106,6 @@ static inline fw_op_t qc_op_to_fw_op(qc_query_op_t op)
         return FW_OP_UNDEFINED;
     }
 }
-
-/**
- * Possible actions to take when the query matches a rule
- */
-enum fw_actions
-{
-    FW_ACTION_ALLOW,
-    FW_ACTION_BLOCK,
-    FW_ACTION_IGNORE
-};
 
 /**
  * Logging options for matched queries

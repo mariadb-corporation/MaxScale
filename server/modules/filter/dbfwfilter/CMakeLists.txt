@@ -6,7 +6,7 @@ if(BISON_FOUND AND FLEX_FOUND)
   add_flex_bison_dependency(token ruleparser)
   include_directories(${CMAKE_CURRENT_BINARY_DIR})
   include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-  add_library(dbfwfilter-core STATIC ${BISON_ruleparser_OUTPUTS} ${FLEX_token_OUTPUTS} rules.cc user.cc)
+  add_library(dbfwfilter-core STATIC ${BISON_ruleparser_OUTPUTS} ${FLEX_token_OUTPUTS} rules.cc user.cc dbfwconfig.cc)
 
   # Depends on PCRE2
   add_dependencies(dbfwfilter-core pcre2 connector-c)

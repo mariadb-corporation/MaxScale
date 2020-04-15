@@ -602,43 +602,15 @@ MXS_MODULE* MXS_CREATE_MODULE()
         NULL,           /* Process finish. */
         dbfw_thr_init,  /* Thread init. */
         dbfw_thr_finish,/* Thread finish. */
-        {
-            {
-                "rules",
-                MXS_MODULE_PARAM_PATH,
-                NULL,
-                MXS_MODULE_OPT_REQUIRED | MXS_MODULE_OPT_PATH_R_OK
-            },
-            {
-                "log_match",
-                MXS_MODULE_PARAM_BOOL,
-                "false"
-            },
-            {
-                "log_no_match",
-                MXS_MODULE_PARAM_BOOL,
-                "false"
-            },
-            {
-                "action",
-                MXS_MODULE_PARAM_ENUM,
-                "block",
-                MXS_MODULE_OPT_ENUM_UNIQUE,
-                action_values
-            },
-            {
-                "treat_string_arg_as_field",
-                MXS_MODULE_PARAM_BOOL,
-                "true"
-            },
-            {
-                "treat_string_as_field",
-                MXS_MODULE_PARAM_BOOL,
-                "true"
-            },
-            {MXS_END_MODULE_PARAMS}
-        }
     };
+
+    static bool populated = false;
+
+    if (!populated)
+    {
+        DbfwConfig::populate(info);
+        populated = true;
+    }
 
     return &info;
 }
