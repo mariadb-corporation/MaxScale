@@ -778,6 +778,7 @@ std::ostream& Service::persist(std::ostream& os) const
     params_to_print.remove(CN_FILTERS);
     params_to_print.remove(CN_SERVERS);
     params_to_print.remove(CN_TARGETS);
+    params_to_print.remove(CN_CLUSTER);
 
     os << generate_config_string(name(), params_to_print, common_service_params(), mod->parameters);
 
@@ -796,7 +797,11 @@ std::ostream& Service::persist(std::ostream& os) const
         names.clear();
     }
 
-    if (!data.targets.empty())
+    if (m_monitor)
+    {
+        os << CN_CLUSTER << "=" << m_monitor->name() << '\n';
+    }
+    else if (!data.targets.empty())
     {
         for (const auto& s : data.targets)
         {
