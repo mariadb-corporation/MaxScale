@@ -1696,7 +1696,7 @@ bool runtime_create_server(const char* name, const char* address, const char* po
     return rval;
 }
 
-bool runtime_destroy_server(Server* server)
+bool runtime_destroy_server(Server* server, bool force)
 {
     bool rval = false;
 
@@ -1734,7 +1734,7 @@ bool runtime_destroy_listener(Service* service, const char* name)
     return rval;
 }
 
-bool runtime_destroy_filter(const SFilterDef& filter)
+bool runtime_destroy_filter(const SFilterDef& filter, bool force)
 {
     mxb_assert(filter);
     bool rval = false;
@@ -1756,7 +1756,7 @@ bool runtime_destroy_filter(const SFilterDef& filter)
     return rval;
 }
 
-bool runtime_destroy_service(Service* service)
+bool runtime_destroy_service(Service* service, bool force)
 {
     bool rval = false;
     mxb_assert(service && service->active());
@@ -1779,7 +1779,7 @@ bool runtime_destroy_service(Service* service)
     return rval;
 }
 
-bool runtime_destroy_monitor(Monitor* monitor)
+bool runtime_destroy_monitor(Monitor* monitor, bool force)
 {
     bool rval = false;
 

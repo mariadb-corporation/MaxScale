@@ -46,6 +46,12 @@ using std::string;
 using std::stringstream;
 using maxscale::Monitor;
 
+namespace
+{
+const char CN_FORCE[] = "force";
+const char CN_YES[] = "yes";
+}
+
 bool Resource::match(const HttpRequest& request) const
 {
     bool rval = false;
@@ -468,7 +474,7 @@ HttpResponse cb_delete_server(const HttpRequest& request)
     auto server = ServerManager::find_by_unique_name(request.uri_part(1).c_str());
     mxb_assert(server);
 
-    if (runtime_destroy_server(server))
+    if (runtime_destroy_server(server, request.get_option(CN_FORCE) == CN_YES))
     {
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
@@ -481,7 +487,7 @@ HttpResponse cb_delete_monitor(const HttpRequest& request)
     Monitor* monitor = MonitorManager::find_monitor(request.uri_part(1).c_str());
     mxb_assert(monitor);
 
-    if (runtime_destroy_monitor(monitor))
+    if (runtime_destroy_monitor(monitor, request.get_option(CN_FORCE) == CN_YES))
     {
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
@@ -522,7 +528,7 @@ HttpResponse cb_delete_service(const HttpRequest& request)
     Service* service = Service::find(request.uri_part(1).c_str());
     mxb_assert(service);
 
-    if (runtime_destroy_service(service))
+    if (runtime_destroy_service(service, request.get_option(CN_FORCE) == CN_YES))
     {
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
@@ -535,7 +541,7 @@ HttpResponse cb_delete_filter(const HttpRequest& request)
     auto filter = filter_find(request.uri_part(1).c_str());
     mxb_assert(filter);
 
-    if (runtime_destroy_filter(filter))
+    if (runtime_destroy_filter(filter, request.get_option(CN_FORCE) == CN_YES))
     {
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
@@ -836,9 +842,6 @@ HttpResponse cb_delete_user(const HttpRequest& request)
 
 HttpResponse cb_set_server(const HttpRequest& request)
 {
-    const char CN_FORCE[] = "force";
-    const char CN_YES[] = "yes";
-
     SERVER* server = ServerManager::find_by_unique_name(request.uri_part(1));
     int opt = Server::status_from_string(request.get_option(CN_STATE).c_str());
 

@@ -67,9 +67,11 @@ bool runtime_create_server(const char* name, const char* address, const char* po
  * If the server is not in use.
  *
  * @param server Server to destroy
+ * @param force  Force the destruction of the server
+ *
  * @return True if server was destroyed
  */
-bool runtime_destroy_server(Server* server);
+bool runtime_destroy_server(Server* server, bool force);
 
 /**
  * @brief Destroy a listener
@@ -90,10 +92,11 @@ bool runtime_destroy_listener(Service* service, const char* name);
  * The filter can only be destroyed if no service uses it
  *
  * @param service Filter to destroy
+ * @param force   Force the destruction of the filter
  *
  * @return True if filter was destroyed
  */
-bool runtime_destroy_filter(const SFilterDef& filter);
+bool runtime_destroy_filter(const SFilterDef& filter, bool force);
 
 /**
  * @brief Destroy a monitor
@@ -102,9 +105,11 @@ bool runtime_destroy_filter(const SFilterDef& filter);
  * Destroyed monitor are removed after a restart.
  *
  * @param monitor Monitor to destroy
+ * @param force   Force the destruction of the monitor
+ *
  * @return True if monitor was destroyed
  */
-bool runtime_destroy_monitor(mxs::Monitor* monitor);
+bool runtime_destroy_monitor(mxs::Monitor* monitor, bool force);
 
 /**
  * Destroy a service
@@ -112,10 +117,11 @@ bool runtime_destroy_monitor(mxs::Monitor* monitor);
  * The service can only be destroyed if it uses no servers and has no active listeners.
  *
  * @param service Service to destroy
+ * @param force   Force the destruction of the service
  *
  * @return True if service was destroyed
  */
-bool runtime_destroy_service(Service* service);
+bool runtime_destroy_service(Service* service, bool force);
 
 /**
  * @brief Create a new server from JSON
