@@ -17,6 +17,7 @@ function removeServer(argv, path, targets) {
     return doRequest(host, path, function (res) {
       var servers = _.get(res, "data.relationships.servers.data", []);
       var services = _.get(res, "data.relationships.services.data", []);
+      var monitors = _.get(res, "data.relationships.monitors.data", []);
 
       _.remove(servers, function (i) {
         return targets.indexOf(i.id) != -1;
@@ -26,9 +27,20 @@ function removeServer(argv, path, targets) {
         return targets.indexOf(i.id) != -1;
       });
 
+      _.remove(monitors, function (i) {
+        return targets.indexOf(i.id) != -1;
+      });
+
       // Update relationships and remove unnecessary parts
-      _.set(res, "data.relationships.servers.data", servers);
-      _.set(res, "data.relationships.services.data", services);
+      if (_.has(res, "data.relationships.servers.data")) {
+        _.set(res, "data.relationships.servers.data", servers);
+      }
+      if (_.has(res, "data.relationships.services.data")) {
+        _.set(res, "data.relationships.services.data", services);
+      }
+      if (_.has("data.relationships.monitors.data")) {
+        _.set(res, "data.relationships.monitors.data", monitors);
+      }
       delete res.data.attributes;
 
       return doAsyncRequest(host, path, null, { method: "PATCH", body: res });
