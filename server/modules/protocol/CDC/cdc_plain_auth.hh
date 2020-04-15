@@ -27,7 +27,7 @@ public:
 
     ~CDCAuthenticatorModule() = default;
 
-    int load_users(SERVICE* service);
+    bool load_users(SERVICE* service);
 
     json_t* diagnostics()
     {

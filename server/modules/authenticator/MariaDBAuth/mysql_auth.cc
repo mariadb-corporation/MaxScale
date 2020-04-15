@@ -14,50 +14,13 @@
 #include "mysql_auth.hh"
 
 #include <maxbase/alloc.h>
-#include <maxscale/protocol/mariadb/mysql.hh>
+#include <maxbase/format.hh>
 #include <maxscale/authenticator.hh>
-#include <maxscale/event.hh>
-#include <maxscale/poll.hh>
-#include <maxscale/paths.hh>
-#include <maxscale/secrets.hh>
-#include <maxscale/utils.h>
+#include <maxscale/config_common.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 
 using AuthRes = mariadb::ClientAuthenticator::AuthRes;
 using mariadb::UserEntry;
-
-extern "C"
-{
-/**
- * The module entry point routine. It is this routine that
- * must populate the structure that is referred to as the
- * "module object", this is a structure with the set of
- * external entry points for this module.
- *
- * @return The module object
- */
-MXS_MODULE* MXS_CREATE_MODULE()
-{
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_AUTHENTICATOR,
-        MXS_MODULE_GA,
-        MXS_AUTHENTICATOR_VERSION,
-        "The MySQL client to MaxScale authenticator implementation",
-        "V1.1.0",
-        MXS_NO_MODULE_CAPABILITIES,     // Authenticator capabilities are in the instance object
-        &mxs::AuthenticatorApiGenerator<MariaDBAuthenticatorModule>::s_api,
-        NULL,       /* Process init. */
-        NULL,       /* Process finish. */
-        NULL,       /* Thread init. */
-        NULL,       /* Thread finish. */
-        {
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
-
-    return &info;
-}
-}
 
 /**
  * Initialize the authenticator instance
@@ -82,28 +45,38 @@ MariaDBAuthenticatorModule::MariaDBAuthenticatorModule(bool log_pw_mismatch)
 {
 }
 
-static bool is_localhost_address(const struct sockaddr_storage* addr)
+uint64_t MariaDBAuthenticatorModule::capabilities() const
 {
-    bool rval = false;
+    return 0;
+}
 
-    if (addr->ss_family == AF_INET)
-    {
-        const struct sockaddr_in* ip = (const struct sockaddr_in*)addr;
-        if (ip->sin_addr.s_addr == INADDR_LOOPBACK)
-        {
-            rval = true;
-        }
-    }
-    else if (addr->ss_family == AF_INET6)
-    {
-        const struct sockaddr_in6* ip = (const struct sockaddr_in6*)addr;
-        if (memcmp(&ip->sin6_addr, &in6addr_loopback, sizeof(ip->sin6_addr)) == 0)
-        {
-            rval = true;
-        }
-    }
+std::string MariaDBAuthenticatorModule::supported_protocol() const
+{
+    return MXS_MARIADB_PROTOCOL_NAME;
+}
 
-    return rval;
+std::string MariaDBAuthenticatorModule::name() const
+{
+    return MXS_MODULE_NAME;
+}
+
+const std::unordered_set<std::string>& MariaDBAuthenticatorModule::supported_plugins() const
+{
+    // Support the empty plugin as well, as that means default.
+    static const std::unordered_set<std::string> plugins = {
+        "mysql_native_password", "caching_sha2_password", ""};
+    return plugins;
+}
+
+mariadb::SClientAuth MariaDBAuthenticatorModule::create_client_authenticator()
+{
+    return mariadb::SClientAuth(new(std::nothrow) MariaDBClientAuthenticator(m_log_pw_mismatch));
+}
+
+mariadb::SBackendAuth
+MariaDBAuthenticatorModule::create_backend_authenticator(mariadb::BackendAuthData& auth_data)
+{
+    return mariadb::SBackendAuth(new MariaDBBackendSession(auth_data));
 }
 
 // Helper function for generating an AuthSwitchRequest packet.
@@ -207,38 +180,87 @@ AuthRes MariaDBClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_s
     return check_password(session, entry->password);
 }
 
-mariadb::SBackendAuth
-MariaDBAuthenticatorModule::create_backend_authenticator(mariadb::BackendAuthData& auth_data)
+/**
+ * Check if auth token sent by client matches the one in the user account entry.
+ *
+ * @param session Client session with auth token
+ * @param stored_pw_hash2 SHA1(SHA1(password)) in hex form, as queried from server.
+ * @return Authentication result
+ */
+AuthRes MariaDBClientAuthenticator::check_password(MYSQL_session* session, const std::string& stored_pw_hash2)
 {
-    return mariadb::SBackendAuth(new MariaDBBackendSession(auth_data));
-}
 
-uint64_t MariaDBAuthenticatorModule::capabilities() const
-{
-    return 0;
-}
+    const auto& auth_token = session->auth_token;   // Hex-form token sent by client.
 
-mariadb::SClientAuth MariaDBAuthenticatorModule::create_client_authenticator()
-{
-    return mariadb::SClientAuth(new(std::nothrow) MariaDBClientAuthenticator(m_log_pw_mismatch));
-}
+    bool empty_token = auth_token.empty();
+    bool empty_pw = stored_pw_hash2.empty();
+    if (empty_token || empty_pw)
+    {
+        AuthRes rval;
+        if (empty_token && empty_pw)
+        {
+            // If the user entry has empty password and the client gave no password, accept.
+            rval.status = AuthRes::Status::SUCCESS;
+        }
+        else if (m_log_pw_mismatch)
+        {
+            // Save reason of failure.
+            rval.msg = empty_token ? "Client gave no password when one was expected" :
+                       "Client gave a password when none was expected";
+        }
+        return rval;
+    }
 
-std::string MariaDBAuthenticatorModule::supported_protocol() const
-{
-    return MXS_MARIADB_PROTOCOL_NAME;
-}
+    uint8_t stored_pw_hash2_bin[SHA_DIGEST_LENGTH] = {};
+    size_t stored_hash_len = sizeof(stored_pw_hash2_bin);
 
-std::string MariaDBAuthenticatorModule::name() const
-{
-    return MXS_MODULE_NAME;
-}
+    // Convert the hexadecimal string to binary.
+    mxs::hex2bin(stored_pw_hash2.c_str(), stored_pw_hash2.length(), stored_pw_hash2_bin);
 
-const std::unordered_set<std::string>& MariaDBAuthenticatorModule::supported_plugins() const
-{
-    // Support the empty plugin as well, as that means default.
-    static const std::unordered_set<std::string> plugins = {
-        "mysql_native_password", "caching_sha2_password", ""};
-    return plugins;
+    /**
+     * The client authentication token is made up of:
+     *
+     * XOR( SHA1(real_password), SHA1( CONCAT( scramble, <value of mysql.user.password> ) ) )
+     *
+     * Since we know the scramble and the value stored in mysql.user.password,
+     * we can extract the SHA1 of the real password by doing a XOR of the client
+     * authentication token with the SHA1 of the scramble concatenated with the
+     * value of mysql.user.password.
+     *
+     * Once we have the SHA1 of the original password,  we can create the SHA1
+     * of this hash and compare the value with the one stored in the backend
+     * database. If the values match, the user has sent the right password.
+     */
+
+    // First, calculate the SHA1(scramble + stored pw hash).
+    uint8_t step1[SHA_DIGEST_LENGTH];
+    gw_sha1_2_str(session->scramble, sizeof(session->scramble), stored_pw_hash2_bin, stored_hash_len, step1);
+
+    // Next, extract SHA1(password) by XOR'ing the auth token sent by client with the previous step result.
+    uint8_t step2[SHA_DIGEST_LENGTH] = {};
+    mxs::bin_bin_xor(auth_token.data(), step1, auth_token.size(), step2);
+
+    // SHA1(password) needs to be copied to the shared data structure as it is required during
+    // backend authentication. */
+    session->auth_token_phase2.assign(step2, step2 + SHA_DIGEST_LENGTH);
+
+    // Finally, calculate the SHA1(SHA1(password). */
+    uint8_t final_step[SHA_DIGEST_LENGTH];
+    gw_sha1_str(step2, SHA_DIGEST_LENGTH, final_step);
+
+    // If the two values match, the client has sent the correct password.
+    bool match = (memcmp(final_step, stored_pw_hash2_bin, stored_hash_len) == 0);
+    AuthRes rval;
+    rval.status = match ? AuthRes::Status::SUCCESS : AuthRes::Status::FAIL_WRONG_PW;
+    if (!match && m_log_pw_mismatch)
+    {
+        // Convert the SHA1(SHA1(password)) from client to hex before printing.
+        char received_pw[2 * SHA_DIGEST_LENGTH + 1];
+        mxs::bin2hex(final_step, SHA_DIGEST_LENGTH, received_pw);
+        rval.msg = mxb::string_printf("Client gave wrong password. Got hash %s, expected %s",
+                                      received_pw, stored_pw_hash2.c_str());
+    }
+    return rval;
 }
 
 mariadb::BackendAuthenticator::AuthRes
@@ -306,4 +328,30 @@ mxs::Buffer MariaDBBackendSession::generate_auth_response(int seqno)
 MariaDBBackendSession::MariaDBBackendSession(mariadb::BackendAuthData& shared_data)
     : m_shared_data(shared_data)
 {
+}
+
+extern "C"
+{
+MXS_MODULE* MXS_CREATE_MODULE()
+{
+    static MXS_MODULE info =
+        {
+            MXS_MODULE_API_AUTHENTICATOR,
+            MXS_MODULE_GA,
+            MXS_AUTHENTICATOR_VERSION,
+            "Standard MySQL/MariaDB authentication (mysql_native_password)",
+            "V2.1.0",
+            MXS_NO_MODULE_CAPABILITIES,     // Authenticator capabilities are in the instance object
+            &mxs::AuthenticatorApiGenerator<MariaDBAuthenticatorModule>::s_api,
+            NULL,       /* Process init. */
+            NULL,       /* Process finish. */
+            NULL,       /* Thread init. */
+            NULL,       /* Thread finish. */
+            {
+                {MXS_END_MODULE_PARAMS}
+            }
+        };
+
+    return &info;
+}
 }

@@ -141,8 +141,7 @@ int CDCClientAuthenticator::authenticate(DCB* generic_dcb)
         auth_ret = m_module.cdc_auth_check(m_user, m_auth_data);
 
         /* On failed authentication try to reload users and authenticate again */
-        if (auth_ret != CDC_STATE_AUTH_OK
-            && m_module.load_users(dcb->session()->service) == MXS_AUTH_LOADUSERS_OK)
+        if (auth_ret != CDC_STATE_AUTH_OK && m_module.load_users(dcb->session()->service))
         {
             auth_ret = m_module.cdc_auth_check(m_user, m_auth_data);
         }
@@ -332,7 +331,7 @@ mxs::Users CDCAuthenticatorModule::read_users(char* usersfile)
  *
  * @param service The current service
  */
-int CDCAuthenticatorModule::load_users(SERVICE* service)
+bool CDCAuthenticatorModule::load_users(SERVICE* service)
 {
     char path[PATH_MAX + 1];
     snprintf(path, PATH_MAX, "%s/%s/%s",
@@ -347,5 +346,5 @@ int CDCAuthenticatorModule::load_users(SERVICE* service)
     }
 
     set_service_user(service);
-    return MXS_AUTH_LOADUSERS_OK;
+    return true;
 }

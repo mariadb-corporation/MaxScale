@@ -12,12 +12,6 @@
  */
 #pragma once
 
-/**
- * @file authenticator.hh
- *
- * The authenticator module interface definitions for MaxScale
- */
-
 #include <maxscale/ccdefs.hh>
 #include <memory>
 #include <string>
@@ -28,14 +22,6 @@
  * that define how these numbers should change.
  */
 #define MXS_AUTHENTICATOR_VERSION {3, 0, 0}
-
-/** Maximum number of authenticator options */
-#define AUTHENTICATOR_MAX_OPTIONS 256
-
-/** Return values for the loadusers entry point */
-#define MXS_AUTH_LOADUSERS_OK    0  /**< Users loaded successfully */
-#define MXS_AUTH_LOADUSERS_ERROR 1  /**< Temporary error, service is started */
-#define MXS_AUTH_LOADUSERS_FATAL 2  /**< Fatal error, service is not started */
 
 namespace maxscale
 {

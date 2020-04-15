@@ -39,6 +39,29 @@ using AuthRes = mariadb::ClientAuthenticator::AuthRes;
 using mariadb::UserEntry;
 }
 
+/** The table name where we store the users */
+#define MYSQLAUTH_USERS_TABLE_NAME "mysqlauth_users"
+
+/** Query that checks if there's a grant for the user being authenticated */
+static const char mysqlauth_validate_user_query[] =
+    "SELECT password FROM " MYSQLAUTH_USERS_TABLE_NAME
+    " WHERE user = '%s' AND ( '%s' = host OR '%s' LIKE host)"
+    " AND (anydb = '1' OR '%s' IN ('', 'information_schema') OR '%s' LIKE db)"
+    " LIMIT 1";
+
+/** Query that checks if there's a grant for the user being authenticated */
+static const char mysqlauth_validate_user_query_lower[] =
+    "SELECT password FROM " MYSQLAUTH_USERS_TABLE_NAME
+    " WHERE user = '%s' AND ( '%s' = host OR '%s' LIKE host)"
+    " AND (anydb = '1' OR LOWER('%s') IN ('', 'information_schema') OR LOWER('%s') LIKE LOWER(db))"
+    " LIMIT 1";
+
+/** Query that only checks if there's a matching user */
+static const char mysqlauth_skip_auth_query[] =
+    "SELECT password FROM " MYSQLAUTH_USERS_TABLE_NAME
+    " WHERE user = '%s' AND (anydb = '1' OR '%s' IN ('', 'information_schema') OR '%s' LIKE db)"
+    " LIMIT 1";
+
 // Query used with 10.0 or older
 const char* mariadb_users_query_format =
     "SELECT u.user, u.host, d.db, u.select_priv, u.%s "
@@ -138,13 +161,6 @@ const char* mariadb_101_users_query
         // We only care about users that have a default role assigned
         "WHERE t.default_role = u.user %s;";
 
-enum server_category_t
-{
-    SERVER_NO_ROLES,
-    SERVER_ROLES,
-    SERVER_CLUSTRIX
-};
-
 static char* get_mariadb_102_users_query(bool include_root)
 {
     const char* with_root = include_root ? "" : " WHERE t.user <> 'root'";
@@ -220,89 +236,6 @@ static char* get_clustrix_users_query(bool include_root)
     MXS_ABORT_IF_NULL(rval);
     snprintf(rval, n_bytes + 1, clustrix_users_query_format, with_root);
 
-    return rval;
-}
-
-/**
- * Check if auth token sent by client matches the one in the user account entry.
- *
- * @param session Client session with auth token
- * @param stored_pw_hash2 SHA1(SHA1(password)) in hex form, as queried from server.
- * @return Authentication result
- */
-AuthRes MariaDBClientAuthenticator::check_password(MYSQL_session* session, const std::string& stored_pw_hash2)
-{
-
-    const auto& auth_token = session->auth_token;   // Hex-form token sent by client.
-
-    bool empty_token = auth_token.empty();
-    bool empty_pw = stored_pw_hash2.empty();
-    if (empty_token || empty_pw)
-    {
-        AuthRes rval;
-        if (empty_token && empty_pw)
-        {
-            // If the user entry has empty password and the client gave no password, accept.
-            rval.status = AuthRes::Status::SUCCESS;
-        }
-        else if (m_log_pw_mismatch)
-        {
-            // Save reason of failure.
-            rval.msg = empty_token ? "Client gave no password when one was expected" :
-                "Client gave a password when none was expected";
-        }
-        return rval;
-    }
-
-    uint8_t stored_pw_hash2_bin[SHA_DIGEST_LENGTH] = {};
-    size_t stored_hash_len = sizeof(stored_pw_hash2_bin);
-
-    // Convert the hexadecimal string to binary.
-    mxs::hex2bin(stored_pw_hash2.c_str(), stored_pw_hash2.length(), stored_pw_hash2_bin);
-
-    /**
-     * The client authentication token is made up of:
-     *
-     * XOR( SHA1(real_password), SHA1( CONCAT( scramble, <value of mysql.user.password> ) ) )
-     *
-     * Since we know the scramble and the value stored in mysql.user.password,
-     * we can extract the SHA1 of the real password by doing a XOR of the client
-     * authentication token with the SHA1 of the scramble concatenated with the
-     * value of mysql.user.password.
-     *
-     * Once we have the SHA1 of the original password,  we can create the SHA1
-     * of this hash and compare the value with the one stored in the backend
-     * database. If the values match, the user has sent the right password.
-     */
-
-    // First, calculate the SHA1(scramble + stored pw hash).
-    uint8_t step1[SHA_DIGEST_LENGTH];
-    gw_sha1_2_str(session->scramble, sizeof(session->scramble), stored_pw_hash2_bin, stored_hash_len, step1);
-
-    // Next, extract SHA1(password) by XOR'ing the auth token sent by client with the previous step result.
-    uint8_t step2[SHA_DIGEST_LENGTH] = {};
-    mxs::bin_bin_xor(auth_token.data(), step1, auth_token.size(), step2);
-
-    // SHA1(password) needs to be copied to the shared data structure as it is required during
-    // backend authentication. */
-    session->auth_token_phase2.assign(step2, step2 + SHA_DIGEST_LENGTH);
-
-    // Finally, calculate the SHA1(SHA1(password). */
-    uint8_t final_step[SHA_DIGEST_LENGTH];
-    gw_sha1_str(step2, SHA_DIGEST_LENGTH, final_step);
-
-    // If the two values match, the client has sent the correct password.
-    bool match = (memcmp(final_step, stored_pw_hash2_bin, stored_hash_len) == 0);
-    AuthRes rval;
-    rval.status = match ? AuthRes::Status::SUCCESS : AuthRes::Status::FAIL_WRONG_PW;
-    if (!match && m_log_pw_mismatch)
-    {
-        // Convert the SHA1(SHA1(password)) from client to hex before printing.
-        char received_pw[2 * SHA_DIGEST_LENGTH + 1];
-        mxs::bin2hex(final_step, SHA_DIGEST_LENGTH, received_pw);
-        rval.msg = mxb::string_printf("Client gave wrong password. Got hash %s, expected %s",
-                                      received_pw, stored_pw_hash2.c_str());
-    }
     return rval;
 }
 
