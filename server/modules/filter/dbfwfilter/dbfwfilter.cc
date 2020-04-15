@@ -1220,20 +1220,16 @@ namespace
 int global_version = 1;
 }
 
-Dbfw::Dbfw(mxs::ConfigParameters* params)
-    : m_action((enum fw_actions)params->get_enum("action", action_values))
-    , m_log_match(0)
-    , m_treat_string_as_field(params->get_bool("treat_string_as_field"))
-    , m_treat_string_arg_as_field(params->get_bool("treat_string_arg_as_field"))
-    , m_filename(params->get_string("rules"))
+Dbfw::Dbfw(DbfwConfig&& config)
+    : m_config(std::move(config))
     , m_version(atomic_add(&global_version, 1))
 {
-    if (params->get_bool("log_match"))
+    if (m_config.log_match)
     {
         m_log_match |= FW_LOG_MATCH;
     }
 
-    if (params->get_bool("log_no_match"))
+    if (m_config.log_no_match)
     {
         m_log_match |= FW_LOG_NO_MATCH;
     }
@@ -1246,30 +1242,35 @@ Dbfw::~Dbfw()
 Dbfw* Dbfw::create(const char* zName, mxs::ConfigParameters* pParams)
 {
     Dbfw* rval = NULL;
-    RuleList rules;
-    UserMap users;
-    std::string file = pParams->get_string("rules");
+    DbfwConfig config(zName);
 
-    if (process_rule_file(file, &rules, &users))
+    if (config.configure(*pParams))
     {
-        rval = new(std::nothrow) Dbfw(pParams);
+        RuleList rules;
+        UserMap users;
+        std::string file = config.rules;
 
-        if (rval)
+        if (process_rule_file(file, &rules, &users))
         {
-            if (rval->treat_string_as_field() || rval->treat_string_arg_as_field())
+            rval = new(std::nothrow) Dbfw(std::move(config));
+
+            if (rval)
             {
-                QC_CACHE_PROPERTIES cache_properties;
-                qc_get_cache_properties(&cache_properties);
-
-                if (cache_properties.max_size != 0)
+                if (rval->treat_string_as_field() || rval->treat_string_arg_as_field())
                 {
-                    MXS_NOTICE("The parameter 'treat_string_arg_as_field' or(and) "
-                               "'treat_string_as_field' is enabled for %s, "
-                               "disabling the query classifier cache.",
-                               zName);
+                    QC_CACHE_PROPERTIES cache_properties;
+                    qc_get_cache_properties(&cache_properties);
 
-                    cache_properties.max_size = 0;
-                    qc_set_cache_properties(&cache_properties);
+                    if (cache_properties.max_size != 0)
+                    {
+                        MXS_NOTICE("The parameter 'treat_string_arg_as_field' or(and) "
+                                   "'treat_string_as_field' is enabled for %s, "
+                                   "disabling the query classifier cache.",
+                                   zName);
+
+                        cache_properties.max_size = 0;
+                        qc_set_cache_properties(&cache_properties);
+                    }
                 }
             }
         }
@@ -1285,7 +1286,7 @@ DbfwSession* Dbfw::newSession(MXS_SESSION* session, SERVICE* service)
 
 fw_actions Dbfw::get_action() const
 {
-    return m_action;
+    return m_config.action;
 }
 
 int Dbfw::get_log_bitmask() const
@@ -1296,7 +1297,7 @@ int Dbfw::get_log_bitmask() const
 std::string Dbfw::get_rule_file() const
 {
     std::lock_guard<std::mutex> guard(m_lock);
-    return m_filename;
+    return m_config.rules;
 }
 
 int Dbfw::get_rule_version() const
@@ -1315,7 +1316,7 @@ bool Dbfw::do_reload_rules(std::string filename)
         if (process_rule_file(filename, &rules, &users))
         {
             rval = true;
-            m_filename = filename;
+            m_config.rules = filename;
             atomic_add(&m_version, 1);
             MXS_NOTICE("Reloaded rules from: %s", filename.c_str());
         }

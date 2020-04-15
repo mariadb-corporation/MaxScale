@@ -35,7 +35,6 @@ public:
     DbfwConfig& operator=(const DbfwConfig&) = delete;
 
     DbfwConfig(const std::string& name);
-    ~DbfwConfig();
 
     DbfwConfig(DbfwConfig&& rhs) = default;
 

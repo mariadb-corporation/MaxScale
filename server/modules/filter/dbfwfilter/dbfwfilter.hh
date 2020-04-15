@@ -224,7 +224,7 @@ public:
      */
     bool treat_string_as_field() const
     {
-        return m_treat_string_as_field;
+        return m_config.treat_string_as_field;
     }
 
     /**
@@ -234,7 +234,7 @@ public:
      */
     bool treat_string_arg_as_field() const
     {
-        return m_treat_string_arg_as_field;
+        return m_config.treat_string_arg_as_field;
     }
 
     /**
@@ -277,15 +277,12 @@ public:
     }
 
 private:
-    fw_actions         m_action;    /*< Default operation mode, defaults to deny */
-    int                m_log_match; /*< Log matching and/or non-matching queries */
-    bool               m_treat_string_as_field;
-    bool               m_treat_string_arg_as_field;
-    mutable std::mutex m_lock;      /*< Instance spinlock */
-    std::string        m_filename;  /*< Path to the rule file */
-    int                m_version;   /*< Latest rule file version, incremented on reload */
+    DbfwConfig         m_config;
+    int                m_log_match = 0; /*< Log matching and/or non-matching queries */
+    mutable std::mutex m_lock;          /*< Instance spinlock */
+    int                m_version;       /*< Latest rule file version, incremented on reload */
 
-    Dbfw(mxs::ConfigParameters* param);
+    Dbfw(DbfwConfig&& config);
     bool do_reload_rules(std::string filename);
 };
 
