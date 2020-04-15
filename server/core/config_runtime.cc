@@ -1612,6 +1612,62 @@ Service* get_service_from_listener_json(json_t* json)
 
     return rval;
 }
+
+void prepare_for_destruction(Server* server)
+{
+    if (auto mon = MonitorManager::server_is_monitored(server))
+    {
+        runtime_unlink_target(server->name(), mon->name());
+    }
+
+    for (auto service : service_server_in_use(server))
+    {
+        service->remove_target(server);
+    }
+}
+
+void prepare_for_destruction(const SFilterDef& filter)
+{
+    for (auto service : service_filter_in_use(filter))
+    {
+        service->remove_filter(filter);
+
+        // Save the changes in the filters list
+        std::ostringstream ss;
+        service->persist(ss);
+        runtime_save_config(service->name(), ss.str());
+    }
+}
+
+void prepare_for_destruction(Service* service)
+{
+    if (auto cluster = service->cluster())
+    {
+        service->remove_cluster(cluster);
+    }
+    else
+    {
+        for (const auto& e : service->get_children())
+        {
+            service->remove_target(e);
+        }
+    }
+
+    for (const auto& l : listener_find_by_service(service))
+    {
+        runtime_remove_config(l->name());
+        Listener::destroy(l);
+    }
+
+    service->set_filters({});
+}
+void prepare_for_destruction(Monitor* monitor)
+{
+    for (auto svc : service_uses_monitor(monitor))
+    {
+        runtime_unlink_target(monitor->name(), svc->name());
+    }
+}
 }
 
 void config_runtime_error(const char* fmt, ...)
@@ -1700,7 +1756,12 @@ bool runtime_destroy_server(Server* server, bool force)
 {
     bool rval = false;
 
-    if (service_server_in_use(server) || MonitorManager::server_is_monitored(server))
+    if (force)
+    {
+        prepare_for_destruction(server);
+    }
+
+    if (!service_server_in_use(server).empty() || MonitorManager::server_is_monitored(server))
     {
         const char* err = "Cannot destroy server '%s' as it is used by at least "
                           "one service or monitor";
@@ -1739,7 +1800,12 @@ bool runtime_destroy_filter(const SFilterDef& filter, bool force)
     mxb_assert(filter);
     bool rval = false;
 
-    if (filter_can_be_destroyed(filter))
+    if (force)
+    {
+        prepare_for_destruction(filter);
+    }
+
+    if (service_filter_in_use(filter).empty())
     {
         if (runtime_remove_config(filter->name.c_str()))
         {
@@ -1760,6 +1826,11 @@ bool runtime_destroy_service(Service* service, bool force)
 {
     bool rval = false;
     mxb_assert(service && service->active());
+
+    if (force)
+    {
+        prepare_for_destruction(service);
+    }
 
     if (service->can_be_destroyed())
     {
@@ -1783,14 +1854,18 @@ bool runtime_destroy_monitor(Monitor* monitor, bool force)
 {
     bool rval = false;
 
-    if (!monitor->servers().empty())
+    if (force)
+    {
+        prepare_for_destruction(monitor);
+    }
+
+    if (!monitor->servers().empty() && !force)
     {
         config_runtime_error("Cannot destroy monitor '%s', it is monitoring servers.", monitor->name());
     }
-    else if (Service* s = service_uses_monitor(monitor))
+    else if (!service_uses_monitor(monitor).empty())
     {
-        config_runtime_error("Monitor '%s' cannot be destroyed as it is used by service '%s'",
-                             monitor->name(), s->name());
+        config_runtime_error("Monitor '%s' cannot be destroyed as it is used by services.", monitor->name());
     }
     else if (runtime_remove_config(monitor->name()))
     {
@@ -1829,7 +1904,7 @@ bool runtime_create_server_from_json(json_t* json)
             }
             else
             {
-                runtime_destroy_server(server);
+                runtime_destroy_server(server, false);
             }
         }
     }

@@ -123,6 +123,13 @@ public:
      */
     const FilterList& get_filters() const;
 
+    /**
+     * Remove a filter from a service
+     *
+     * @param filter Filter to remove
+     */
+    void remove_filter(SFilterDef filters);
+
     const std::vector<mxs::Target*>& get_children() const override
     {
         return m_data->targets;
@@ -431,19 +438,21 @@ bool service_isvalid(Service* service);
 
 /**
  * Check if a service uses @c servers
+ *
  * @param server Server that is queried
- * @return True if server is used by at least one service
+ *
+ * @return List of services that use the server
  */
-bool service_server_in_use(const SERVER* server);
+std::vector<Service*> service_server_in_use(const SERVER* server);
 
 /**
  * Check if filter is used by any service
  *
  * @param filter Filter to inspect
  *
- * @return True if at least one service uses the filter
+ * @return List of services that use the filter
  */
-bool service_filter_in_use(const SFilterDef& filter);
+std::vector<Service*> service_filter_in_use(const SFilterDef& filter);
 
 /**
  * @brief Check if a service uses a server
@@ -501,9 +510,9 @@ bool service_has_named_listener(Service* service, const char* name);
  *
  * @param monitor Monitor to look for
  *
- * @return The first service that uses the monitor or nullptr if no service uses it
+ * @return The list of services that use the monitor
  */
-Service* service_uses_monitor(mxs::Monitor* monitor);
+std::vector<Service*> service_uses_monitor(mxs::Monitor* monitor);
 
 /**
  * @brief Convert a service to JSON

@@ -157,7 +157,7 @@ SFilterDef filter_find(const char* name)
 bool filter_can_be_destroyed(const SFilterDef& filter)
 {
     mxb_assert(filter);
-    return !service_filter_in_use(filter);
+    return service_filter_in_use(filter).empty();
 }
 
 void filter_destroy(const SFilterDef& filter)

@@ -589,6 +589,21 @@ const Service::FilterList& Service::get_filters() const
     return m_data->filters;
 }
 
+void Service::remove_filter(SFilterDef filter)
+{
+    std::vector<std::string> new_filters;
+
+    for (const auto& f : get_filters())
+    {
+        if (f != filter)
+        {
+            new_filters.push_back(f->name);
+        }
+    }
+
+    set_filters(new_filters);
+}
+
 // static
 Service* Service::find(const std::string& name)
 {
@@ -605,19 +620,20 @@ Service* Service::find(const std::string& name)
     return nullptr;
 }
 
-Service* service_uses_monitor(mxs::Monitor* monitor)
+std::vector<Service*> service_uses_monitor(mxs::Monitor* monitor)
 {
+    std::vector<Service*> rval;
     LockGuard guard(this_unit.lock);
 
     for (Service* s : this_unit.services)
     {
         if (s->cluster() == monitor)
         {
-            return s;
+            rval.push_back(s);
         }
     }
 
-    return nullptr;
+    return rval;
 }
 
 /**
@@ -724,8 +740,9 @@ bool service_all_services_have_listeners()
     return rval;
 }
 
-bool service_server_in_use(const SERVER* server)
+std::vector<Service*> service_server_in_use(const SERVER* server)
 {
+    std::vector<Service*> rval;
     LockGuard guard(this_unit.lock);
 
     for (Service* service : this_unit.services)
@@ -735,15 +752,16 @@ bool service_server_in_use(const SERVER* server)
 
         if (std::find(targets.begin(), targets.end(), server) != targets.end())
         {
-            return true;
+            rval.push_back(service);
         }
     }
 
-    return false;
+    return rval;
 }
 
-bool service_filter_in_use(const SFilterDef& filter)
+std::vector<Service*> service_filter_in_use(const SFilterDef& filter)
 {
+    std::vector<Service*> rval;
     mxb_assert(filter);
     LockGuard guard(this_unit.lock);
 
@@ -753,12 +771,13 @@ bool service_filter_in_use(const SFilterDef& filter)
         {
             if (filter == f)
             {
-                return true;
+                rval.push_back(service);
+                break;
             }
         }
     }
 
-    return false;
+    return rval;
 }
 
 /**
