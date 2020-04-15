@@ -101,11 +101,20 @@ const char* rest::to_string(rest::Action action)
 {
     switch (action)
     {
+    case BEGIN:
+        return "begin";
+
+    case COMMIT:
+        return "commit";
+
     case CONFIG:
         return "config";
 
     case PING:
         return "ping";
+
+    case ROLLBACK:
+        return "rollback";
 
     case SHUTDOWN:
         return "shutdown";

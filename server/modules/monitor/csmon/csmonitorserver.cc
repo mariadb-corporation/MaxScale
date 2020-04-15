@@ -135,6 +135,73 @@ CsMonitorServer::Status CsMonitorServer::fetch_status() const
     return Status::create(result);
 }
 
+namespace
+{
+
+string begin_body(const std::chrono::seconds& timeout, const std::string& id)
+{
+    ostringstream body;
+    body << "{\"" << cs::keys::TIMEOUT << "\": "
+         << timeout.count()
+         << ", \"" << cs::keys::TXN // MaxScale uses TRX, but Columnstore uses TXN.
+         << "\"" << id << "\""
+         << "}";
+
+    return body.str();
+}
+
+}
+
+mxb::http::Result CsMonitorServer::begin(const std::chrono::seconds& timeout, const std::string& id)
+{
+    if (m_trx_state != TRX_INACTIVE)
+    {
+        mxb_assert(!true);
+        MXS_WARNING("Transaction begin, when transaction state is not inactive.");
+    }
+
+    http::Result result = http::put(create_url(cs::rest::BEGIN), begin_body(timeout, id), m_http_config);
+
+    if (result.ok())
+    {
+        m_trx_state = TRX_ACTIVE;
+    }
+
+    return result;
+}
+
+mxb::http::Result CsMonitorServer::commit()
+{
+    if (m_trx_state != TRX_ACTIVE)
+    {
+        mxb_assert(!true);
+        MXS_WARNING("Transaction commit, when state is not active.");
+    }
+
+    http::Result result = http::get(create_url(cs::rest::COMMIT), m_http_config);
+
+    // Whatever the result, we consider a transaction as not being active.
+    m_trx_state = TRX_ACTIVE;
+
+    return result;
+}
+
+mxb::http::Result CsMonitorServer::rollback()
+{
+    if (m_trx_state != TRX_ACTIVE)
+    {
+        mxb_assert(!true);
+        MXS_WARNING("Transaction rollback, when state is not active.");
+    }
+
+    http::Result result = http::get(create_url(cs::rest::ROLLBACK), m_http_config);
+
+    // Whatever the result, we consider a transaction as not being active.
+    m_trx_state = TRX_ACTIVE;
+
+    return result;
+}
+
 bool CsMonitorServer::set_mode(cs::ClusterMode mode, json_t** ppError)
 {
     ostringstream body;
@@ -212,6 +279,109 @@ CsMonitorServer::Configs CsMonitorServer::fetch_configs(const std::vector<CsMoni
     }
 
     return Configs(n, std::move(configs));
+}
+
+//static
+CsMonitorServer::HttpResults CsMonitorServer::begin(const std::vector<CsMonitorServer*>& servers,
+                                                    const std::chrono::seconds& timeout,
+                                                    const std::string& id,
+                                                    const mxb::http::Config& config)
+{
+    auto it = std::find_if(servers.begin(), servers.end(), [](const CsMonitorServer* pServer) {
+            return pServer->in_trx();
+        });
+
+    if (it != servers.end())
+    {
+        mxb_assert(!true);
+        MXB_WARNING("Transaction begin, when at least '%s' is already in a transaction.",
+                    (*it)->name());
+    }
+
+    vector<string> urls = create_urls(servers, cs::rest::BEGIN);
+    vector<http::Result> results = http::put(urls, begin_body(timeout, id), config);
+
+    mxb_assert(urls.size() == results.size());
+
+    it = servers.begin();
+    auto end = servers.end();
+    auto jt = results.begin();
+
+    while (it != end)
+    {
+        auto* pServer = *it;
+        const auto& result = *jt;
+
+        if (result.ok())
+        {
+            pServer->m_trx_state = TRX_ACTIVE;
+        }
+        else
+        {
+            pServer->m_trx_state = TRX_INACTIVE;
+        }
+
+        ++it;
+        ++jt;
+    }
+
+    return results;
+}
+
+//static
+CsMonitorServer::HttpResults CsMonitorServer::commit(const std::vector<CsMonitorServer*>& servers,
+                                                     const mxb::http::Config& config)
+{
+    auto it = std::find_if(servers.begin(), servers.end(), [](const CsMonitorServer* pServer) {
+            return !pServer->in_trx();
+        });
+
+    if (it != servers.end())
+    {
+        mxb_assert(!true);
+        MXB_WARNING("Transaction commit, when at least '%s' is not in a transaction.",
+                    (*it)->name());
+    }
+
+    vector<string> urls = create_urls(servers, cs::rest::COMMIT);
+    vector<http::Result> results = http::put(urls, "{}", config);
+
+    mxb_assert(urls.size() == results.size());
+
+    for (auto* pServer : servers)
+    {
+        pServer->m_trx_state = TRX_INACTIVE;
+    }
+
+    return results;
+}
+
+//static
+CsMonitorServer::HttpResults CsMonitorServer::rollback(const std::vector<CsMonitorServer*>& servers,
+                                                       const mxb::http::Config& config)
+{
+    auto it = std::find_if(servers.begin(), servers.end(), [](const CsMonitorServer* pServer) {
+            return !pServer->in_trx();
+        });
+
+    if (it != servers.end())
+    {
+        mxb_assert(!true);
+        MXB_WARNING("Transaction rollback, when at least '%s' is not in a transaction.",
+                    (*it)->name());
+    }
+
+    vector<string> urls = create_urls(servers, cs::rest::ROLLBACK);
+    vector<http::Result> results = http::put(urls, "{}", config);
+
+    mxb_assert(urls.size() == results.size());
+
+    for (auto* pServer : servers)
+    {
+        pServer->m_trx_state = TRX_INACTIVE;
+    }
+
+    return results;
 }
 
 //static

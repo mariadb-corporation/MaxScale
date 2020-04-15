@@ -102,12 +102,41 @@ public:
     Config fetch_config() const;
     Status fetch_status() const;
 
+    enum TrxState
+    {
+        TRX_ACTIVE,
+        TRX_INACTIVE
+    };
+
+    TrxState trx_state() const
+    {
+        return m_trx_state;
+    }
+
+    bool in_trx() const
+    {
+        return m_trx_state == TRX_ACTIVE;
+    }
+
+    mxb::http::Result begin(const std::chrono::seconds& timeout, const std::string& id);
+    mxb::http::Result rollback();
+    mxb::http::Result commit();
+
     bool set_mode(cs::ClusterMode mode, json_t** ppError = nullptr);
 
     static Statuses fetch_statuses(const std::vector<CsMonitorServer*>& servers,
                                    const mxb::http::Config& config);
     static Configs fetch_configs(const std::vector<CsMonitorServer*>& servers,
                                  const mxb::http::Config& config);
+
+    static HttpResults begin(const std::vector<CsMonitorServer*>& servers,
+                             const std::chrono::seconds& timeout,
+                             const std::string& id,
+                             const mxb::http::Config& config);
+    static HttpResults commit(const std::vector<CsMonitorServer*>& servers,
+                             const mxb::http::Config& config);
+    static HttpResults rollback(const std::vector<CsMonitorServer*>& servers,
+                                const mxb::http::Config& config);
     static HttpResults shutdown(const std::vector<CsMonitorServer*>& servers,
                                 const std::chrono::seconds& timeout,
                                 const mxb::http::Config& config);
@@ -129,4 +158,5 @@ private:
 private:
     int64_t                  m_admin_port;
     const mxb::http::Config& m_http_config;
+    TrxState                 m_trx_state = TRX_INACTIVE;
 };

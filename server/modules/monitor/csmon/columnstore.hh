@@ -43,17 +43,22 @@ const char CONFIG[]       = "config";
 const char CLUSTER_MODE[] = "cluster_mode";
 const char DBRM_MODE[]    = "dbrm_mode";
 const char MODE[]         = "mode";
+const char TIMEOUT[]      = "timeout";
+const char TXN[]          = "txn";
 
 }
 
 namespace rest
 {
 enum Action {
+    BEGIN,
+    COMMIT,
     CONFIG,
     PING,
+    ROLLBACK,
     SHUTDOWN,
+    START,
     STATUS,
-    START
 };
 
 const char* to_string(Action action);
