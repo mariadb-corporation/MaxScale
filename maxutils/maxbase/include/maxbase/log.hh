@@ -117,8 +117,10 @@ public:
      *
      * @param level Syslog log level of the message
      * @param msg   The message itself
+     *
+     * @return True if the message was consumed (i.e. it should not be logged)
      */
-    using Func = void (*)(int level, const std::string& msg);
+    using Func = bool (*)(int level, const std::string& msg);
 
     explicit LogRedirect(Func func);
     ~LogRedirect();

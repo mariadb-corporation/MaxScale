@@ -1311,7 +1311,10 @@ static HttpResponse handle_request(const HttpRequest& request)
             if (level < LOG_WARNING)    // Lower is more severe
             {
                 config_runtime_error("%s", msg.c_str());
+                return true;
             }
+
+            return false;
         });
 
     MXS_DEBUG("%s %s %s",

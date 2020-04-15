@@ -908,11 +908,13 @@ int mxb_log_message(int priority,
                     this_unit.in_memory_log(msg.c_str(), msg.length());
                 }
 
-                if (auto func = mxb::LogRedirect::current_redirect())
+                auto func = mxb::LogRedirect::current_redirect();
+
+                // We only pass the message text to the handler, everything else is extra that's only
+                // needed by the default logging mechanism. If the handler consumes the message, it won't be
+                // logged.
+                if (func && func(level, message_text))
                 {
-                    // We only pass the message text to the handler, everything else is extra that's only
-                    // needed by the default logging mechanism.
-                    func(level, message_text);
                     err = 0;
                 }
                 else if (mxb_log_is_priority_enabled(level))
