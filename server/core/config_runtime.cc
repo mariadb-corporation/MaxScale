@@ -294,17 +294,21 @@ bool runtime_link_target(const std::string& subject, const std::string& target)
                 }
                 else
                 {
+                    rval = true;
                     service->add_target(tgt);
-
-                    std::ostringstream ss;
-                    service->persist(ss);
-                    rval = runtime_save_config(service->name(), ss.str());
                 }
             }
         }
         else
         {
             config_runtime_error("Could not find target with name '%s'", subject.c_str());
+        }
+
+        if (rval)
+        {
+            std::ostringstream ss;
+            service->persist(ss);
+            rval = runtime_save_config(service->name(), ss.str());
         }
     }
     else if (auto monitor = MonitorManager::find_monitor(target.c_str()))
@@ -361,16 +365,19 @@ bool runtime_unlink_target(const std::string& subject, const std::string& target
         }
         else if (auto tgt = mxs::Target::find(subject))
         {
-
+            rval = true;
             service->remove_target(tgt);
-
-            std::ostringstream ss;
-            service->persist(ss);
-            rval = runtime_save_config(service->name(), ss.str());
         }
         else
         {
             config_runtime_error("Target '%s' not found", subject.c_str());
+        }
+
+        if (rval)
+        {
+            std::ostringstream ss;
+            service->persist(ss);
+            rval = runtime_save_config(service->name(), ss.str());
         }
     }
     else if (auto monitor = MonitorManager::find_monitor(target.c_str()))
