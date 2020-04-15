@@ -148,7 +148,19 @@ bool CsMonitorServer::set_mode(cs::ClusterMode mode, json_t** ppError)
 
     if (!result.ok())
     {
-        PRINT_MXS_JSON_ERROR(ppError, "Could not set cluster mode: %s", result.body.c_str());
+        PRINT_MXS_JSON_ERROR(ppError, "Could not set cluster mode.");
+
+        json_error_t error;
+        unique_ptr<json_t> sError(json_loadb(result.body.c_str(), result.body.length(), 0, &error));
+
+        if (sError)
+        {
+            mxs_json_error_push_back_new(*ppError, sError.release());
+        }
+        else
+        {
+            MXS_ERROR("Body returned by Columnstore is not JSON: %s", result.body.c_str());
+        }
     }
 
     return result.ok();
