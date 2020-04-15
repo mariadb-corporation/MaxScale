@@ -209,6 +209,8 @@ private:
 
     LoadResult read_users_clustrix(QResult users, QResult acl, UserDatabase* output);
 
+    void check_show_dbs_priv(mxq::MariaDB& con, const char* servername);
+
     mutable std::mutex m_userdb_lock;   /**< Protects UserDatabase from concurrent access */
     UserDatabase       m_userdb;        /**< Contains user account info */
 
@@ -241,6 +243,9 @@ private:
     /** Warn if no valid servers to query from. Starts false, as in the beginning monitors may not have
      *  ran yet. */
     bool m_warn_no_servers {false};
+
+    /** Check if service user has "show databases" privilege. If found, not done again. */
+    bool m_check_showdb_priv {true};
 };
 
 class MariaDBUserCache : public mxs::UserAccountCache

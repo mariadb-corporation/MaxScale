@@ -84,6 +84,8 @@ public:
 
     void set_connection_settings(const ConnectionSettings& sett);
 
+    const ConnectionSettings& get_connection_settings() const;
+
 private:
     void clear_errors();
 

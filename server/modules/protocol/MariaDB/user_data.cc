@@ -70,6 +70,7 @@ const string roles_query = "SELECT a.user, a.host, a.role FROM mysql.roles_mappi
 const string proxies_query = "SELECT DISTINCT a.user, a.host FROM mysql.proxies_priv AS a "
                              "WHERE a.proxied_host <> '' AND a.proxied_user <> '';";
 const string db_names_query = "SHOW DATABASES;";
+const string my_grants_query = "SHOW GRANTS;";
 }
 
 namespace clustrix_queries
@@ -310,6 +311,10 @@ bool MariaDBUserManager::update_users()
 
         if (con.open(srv->address(), srv->port()))
         {
+            if (m_check_showdb_priv)
+            {
+                check_show_dbs_priv(con, srv->name());
+            }
             auto load_result = LoadResult::QUERY_FAILED;
             auto srv_type = srv->type();
             switch (srv_type)
@@ -664,6 +669,48 @@ json_t* MariaDBUserManager::users_to_json() const
 SERVICE* MariaDBUserManager::service() const
 {
     return m_service;
+}
+
+void MariaDBUserManager::check_show_dbs_priv(mxq::MariaDB& con, const char* servername)
+{
+    const auto& query = mariadb_queries::my_grants_query;
+    auto res = con.query(query);
+    if (res)
+    {
+        if (res->get_col_count() == 1)
+        {
+            bool found = false;
+            while (res->next_row() && !found)
+            {
+                string grant = res->get_string(0);
+                if (grant.find("SHOW DATABASES") != string::npos)
+                {
+                    found = true;
+                }
+            }
+
+            if (found)
+            {
+                m_check_showdb_priv = false;    // Assume that the privilege is never lost.
+            }
+            else
+            {
+                // This will be printed repeatedly until admin adds the priv.
+                const char msg[] = "Service user '%s' of service '%s' does not have the 'SHOW DATABASES'-"
+                                   "privilege on '%s'. This may cause authentication errors on clients "
+                                   "logging in to a specific database.";
+                MXB_WARNING(msg, con.get_connection_settings().user.c_str(), m_service->name(), servername);
+            }
+        }
+        else
+        {
+            MXB_ERROR("Received invalid data from '%s' to query '%s'.", servername, query.c_str());
+        }
+    }
+    else
+    {
+        MXB_ERROR("Failed to query server '%s' for current user grants. %s", servername, con.error());
+    }
 }
 
 void UserDatabase::add_entry(const std::string& username, const UserEntry& entry)

@@ -200,6 +200,11 @@ void MariaDB::set_connection_settings(const MariaDB::ConnectionSettings& sett)
     m_settings = sett;
 }
 
+const MariaDB::ConnectionSettings& MariaDB::get_connection_settings() const
+{
+    return m_settings;
+}
+
 MariaDBQueryResult::MariaDBQueryResult(MYSQL_RES* resultset)
     : QueryResult(column_names(resultset))
     , m_resultset(resultset)
@@ -244,5 +249,4 @@ std::vector<std::string> MariaDBQueryResult::column_names(MYSQL_RES* resultset) 
     }
     return rval;
 }
-
 }
