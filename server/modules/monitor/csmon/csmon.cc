@@ -82,7 +82,7 @@ const modulecmd_arg_type_t cluster_remove_node_argv[] =
 const modulecmd_arg_type_t cluster_mode_set_argv[]
 {
     { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
-    { MODULECMD_ARG_SERVER, "Server to remove from Columnstore cluster" }
+    { MODULECMD_ARG_STRING, "Cluster mode; readonly or readwrite" }
 };
 
 
@@ -312,9 +312,9 @@ bool cluster_mode_set(const MODULECMD_ARG* pArgs, json_t** ppOutput)
     mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_STRING);
 
     CsMonitor* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
-    const char* zEnum = pArgs->argv[1].value.string;
+    const char* zMode = pArgs->argv[1].value.string;
 
-    return pMonitor->command_cluster_mode_set(ppOutput, zEnum);
+    return pMonitor->command_cluster_mode_set(ppOutput, zMode);
 }
 
 void register_commands()

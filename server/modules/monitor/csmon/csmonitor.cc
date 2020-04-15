@@ -716,6 +716,10 @@ bool CsMonitor::command_cluster_mode_set(json_t** ppOutput, const char* zMode)
 
         rv = command(ppOutput, sem, "cluster-mode-set", cmd);
     }
+    else
+    {
+        PRINT_MXS_JSON_ERROR(ppOutput, "'%s' is not a valid argument.", zMode);
+    }
 
     return rv;
 }
@@ -1099,8 +1103,8 @@ void CsMonitor::cluster_config_set(json_t** ppOutput, mxb::Semaphore* pSem,
 
 void CsMonitor::cluster_mode_set(json_t** ppOutput, mxb::Semaphore* pSem, cs::ClusterMode mode)
 {
-    json_t* pError = nullptr;
-    bool success = CsMonitorServer::set_mode(servers(), mode, m_http_config, &pError);
+    json_t* pOutput = json_object();
+    bool success = CsMonitorServer::set_mode(servers(), mode, m_http_config, &pOutput);
 
     const char* zMessage;
 
@@ -1113,14 +1117,10 @@ void CsMonitor::cluster_mode_set(json_t** ppOutput, mxb::Semaphore* pSem, cs::Cl
         zMessage = "Could not set cluster mode.";
     }
 
-    json_t* pOutput = json_object();
     json_object_set_new(pOutput, "success", json_boolean(success));
     json_object_set_new(pOutput, "message", json_string(zMessage));
 
-    if (pError)
-    {
-        json_object_set_new(pOutput, "error", pError);
-    }
+    *ppOutput = pOutput;
 
     pSem->post();
 }
