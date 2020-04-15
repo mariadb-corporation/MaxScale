@@ -16,10 +16,11 @@ int main(int argc, char* argv[])
     config.create_monitor("mysql-monitor", "mysqlmon", 500);
     config.reset();
 
-    sleep(1);
+    test->maxscales->wait_for_monitor();
 
     test->check_maxscale_alive(0);
 
+    test->maxscales->ssh_node(0, "maxctrl unlink monitor mysql-monitor server{0,1,2,3}", true);
     config.destroy_monitor("mysql-monitor");
 
     test->check_maxscale_alive(0);
@@ -31,7 +32,7 @@ int main(int argc, char* argv[])
     config.create_monitor("mysql-monitor2", "mysqlmon", 500);
     config.add_created_servers("mysql-monitor2");
 
-    sleep(1);
+    test->maxscales->wait_for_monitor();
     test->check_maxscale_alive(0);
 
     /** Try to alter the monitor user */
@@ -44,7 +45,7 @@ int main(int argc, char* argv[])
     config.alter_monitor("mysql-monitor2", "user", "test");
     config.alter_monitor("mysql-monitor2", "password", "test");
 
-    sleep(1);
+    test->maxscales->wait_for_monitor();
     test->check_maxscale_alive(0);
 
     /** Remove the user */
@@ -60,7 +61,7 @@ int main(int argc, char* argv[])
      */
     test->maxscales->ssh_node(0, "for i in 0 1 2 3; do maxadmin clear server server$i running; done", true);
 
-    sleep(1);
+    test->maxscales->wait_for_monitor();
     test->add_result(execute_query_silent(test->maxscales->conn_rwsplit[0], "SELECT 1") == 0,
                      "Query should fail when monitor has wrong credentials");
     test->maxscales->close_maxscale_connections(0);
