@@ -792,7 +792,7 @@ std::ostream& Service::persist(std::ostream& os) const
             names.push_back(f->name.c_str());
         }
 
-        os << CN_FILTERS << "=" << mxb::join(names, "|");
+        os << CN_FILTERS << "=" << mxb::join(names, "|") << '\n';
         names.clear();
     }
 
@@ -803,7 +803,7 @@ std::ostream& Service::persist(std::ostream& os) const
             names.push_back(s->name());
         }
 
-        os << CN_TARGETS << "=" << mxb::join(names, ",");
+        os << CN_TARGETS << "=" << mxb::join(names, ",") << '\n';
         names.clear();
     }
 
