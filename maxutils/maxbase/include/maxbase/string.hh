@@ -172,6 +172,48 @@ inline std::string trimmed_copy(const std::string& original)
 }
 
 /**
+ * @brief lower_case
+ * @param str
+ */
+inline void lower_case(std::string& str)
+{
+    std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+}
+
+/**
+ * @brief upper_case
+ * @param str
+ */
+inline void upper_case(std::string& str)
+{
+    std::transform(str.begin(), str.end(), str.begin(), ::toupper);
+}
+
+/**
+ * @brief lower_case_copy
+ * @param str
+ * @return
+ */
+inline std::string lower_case_copy(const std::string& str)
+{
+    std::string ret(str.size(), 0);
+    std::transform(str.begin(), str.end(), ret.begin(), ::tolower);
+    return ret;
+}
+
+/**
+ * @brief upper_case_copy
+ * @param str
+ * @return
+ */
+inline std::string upper_case_copy(const std::string& str)
+{
+    std::string ret(str.size(), 0);
+    std::transform(str.begin(), str.end(), ret.begin(), ::toupper);
+    return ret;
+}
+
+/**
  * Tokenize a string
  *
  * @param str   String to tokenize
