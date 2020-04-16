@@ -21,6 +21,7 @@ add_subdirectory(readconnroute)
 add_subdirectory(readwritesplit)
 add_subdirectory(schemarouter)
 add_subdirectory(smartrouter)
+add_subdirectory(pinloki)
 
 if (BUILD_MIRROR)
   add_subdirectory(mirror)

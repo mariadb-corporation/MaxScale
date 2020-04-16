@@ -1,0 +1,127 @@
+#pragma once
+
+#include <maxsql/ccdefs.hh>
+#include <maxbase/host.hh>
+#include <maxbase/exception.hh>
+#include "resultset.hh"
+#include "gtid.hh"
+#include "maria_rpl_event.hh"
+
+#include <mariadb/mysql.h>
+
+struct st_mysql;
+struct st_mysql_res;
+
+namespace maxsql
+{
+
+class Connection
+{
+public:
+
+    struct ConnectionDetails
+    {
+        maxbase::Host host;
+        std::string   database; // may be empty
+        std::string   user;
+        std::string   password;
+        unsigned long flags;
+    };
+
+    Connection(const ConnectionDetails& details);
+    Connection(Connection&&) = delete;
+    ~Connection();
+
+    void          start_replication(int server_id, Gtid gtid = Gtid());
+    MariaRplEvent get_rpl_msg();
+
+    /**
+     * @brief ping - ping the server, and return mariadb_error()
+     * @return
+     */
+    uint ping();
+
+    /**
+     * @brief begin_trx
+     */
+    void begin_trx();
+
+    /**
+     * @brief commit_trx
+     */
+    void commit_trx();
+
+    /**
+     * @brief rollback_trx
+     */
+    void rollback_trx();
+
+    /**
+     * @brief nesting_level - begin_trx(); begin_trx; => nesting_level()==2
+     * @return
+     */
+    int nesting_level();
+
+    /**
+     * @brief query
+     * @param sql
+     */
+    void query(const std::string& sql);
+
+    /**
+     * @brief affected_rows
+     * @return
+     */
+    int affected_rows() const;
+
+    /**
+     * @brief result_set
+     * @return
+     */
+    ResultSet result_set();
+
+    /**
+     * @brief discard_result
+     */
+    void discard_result();
+
+    /**
+     * @brief host
+     * @return
+     */
+    maxbase::Host host();
+
+    /**
+     * @brief mariadb_error - will not return an error if the server
+     *                        has timed out.
+     * @return mysql_errno()
+     */
+    uint mariadb_error();
+
+    /**
+     * @brief mariadb_error_str
+     * @return error string, or empty() if there is no error
+     */
+    std::string mariadb_error_str();
+
+    /** Run any Connector/C function. Don't run a function that is explicitely in
+     *  this class's interface.
+     *  Example: mc.call(mysql_select_db, "information_schema");
+     */
+    template<typename R, typename ... Args>
+    R call(R (&foo)(st_mysql*, Args ...), Args ... args) const;
+private:
+    st_mysql*         m_conn {nullptr};
+    st_mariadb_rpl*   m_rpl {nullptr};
+    ConnectionDetails m_details;
+    int               m_nesting_level = 0;
+
+    void _connect();
+};
+
+template<typename R, typename ... Args>
+R Connection::call(R (&foo)(st_mysql*, Args ...), Args... args) const
+{
+    return foo(m_conn, std::forward<Args>(args)...);
+}
+}

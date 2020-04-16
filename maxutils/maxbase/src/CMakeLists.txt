@@ -4,6 +4,7 @@ add_library(maxbase STATIC
   average.cc
   eventcount.cc
   format.cc
+  hexdump.cc
   host.cc
   http.cc
   log.cc
