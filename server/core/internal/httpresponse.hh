@@ -93,6 +93,16 @@ public:
      */
     void remove_fields(const std::string& type, const std::unordered_set<std::string>& fields);
 
+    /**
+     * Removes rows from the response
+     *
+     * Any values to do not compare equal to the given JSON value are discarded.
+     *
+     * @param json_ptr The JSON pointer to use
+     * @param value    The value to compare to
+     */
+    void remove_rows(const std::string& json_ptr, json_t* value);
+
 private:
     json_t* m_body;     /**< Message body */
     int     m_code;     /**< The HTTP code for the response */

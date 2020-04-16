@@ -19,11 +19,21 @@
 
 #include <maxbase/alloc.h>
 #include <maxscale/cn_strings.hh>
+#include <maxscale/json_api.hh>
 
 #include "internal/admin.hh"
 
 using std::string;
 using std::stringstream;
+
+namespace
+{
+bool json_ptr_matches(const std::string& json_ptr, json_t* obj, json_t* rhs)
+{
+    auto lhs = mxs_json_pointer(obj, json_ptr.c_str());
+    return lhs && json_equal(lhs, rhs);
+}
+}
 
 HttpResponse::HttpResponse(int code, json_t* response)
     : m_body(response)
@@ -150,6 +160,29 @@ void HttpResponse::remove_fields(const std::string& type, const std::unordered_s
         else
         {
             remove_fields_from_resource(data, type, fields);
+        }
+    }
+}
+
+void HttpResponse::remove_rows(const std::string& json_ptr, json_t* json)
+{
+    if (auto data = json_object_get(m_body, CN_DATA))
+    {
+        if (json_is_array(data))
+        {
+            json_t* val;
+            size_t i;
+            json_t* new_arr = json_array();
+
+            json_array_foreach(data, i, val)
+            {
+                if (json_ptr_matches(json_ptr, val, json))
+                {
+                    json_array_append_new(new_arr, json_copy(val));
+                }
+            }
+
+            json_object_set_new(m_body, CN_DATA, new_arr);
         }
     }
 }

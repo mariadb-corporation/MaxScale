@@ -206,6 +206,28 @@ parameters. Parameters are given in the HTTP query string:
     endpoint, the `fields[servers]=state` parameter can be used. This would
     return only the `data.attributes.state` part of the resource.
 
+- `filter=json_ptr=json_value`
+
+  - Filter the output of the result
+
+    This parameter controls which rows are returned in a REST API response that
+    returns an array in the `data` member (i.e. a request to a resource
+    collection). Requests to individual resources are not filtered.
+
+    The argument to the filter parameter must be a key-value pair with a valid
+    [JSON Pointer](https://tools.ietf.org/html/rfc6901) as the key and a valid
+    JSON type as the value. The comparison is done for each individual object in
+    the `data` array of the result. For example, if the object stored in
+    `data[0]` has a value pointed by the given JSON pointer and that value
+    compares equal to the given value, the array row is kept in the result.
+
+    A practical use for this parameter is to return only sessions for a
+    particular service. For example, to return sessions for the
+    `RW-Split-Router` service, the
+    `filter=/relationships/services/data/0/id="RW-Split-Router"` parameter can
+    be used. Note the double quotes around the `"RW-Split-Router"`, they are
+    required to correctly convert strings into JSON values.
+
 ## HTTP Headers
 
 ### Request Headers

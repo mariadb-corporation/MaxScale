@@ -1306,6 +1306,28 @@ static void remove_unwanted_fields(const HttpRequest& request, HttpResponse& res
     }
 }
 
+static void remove_unwanted_rows(const HttpRequest& request, HttpResponse& response)
+{
+    auto filter = request.get_option("filter");
+
+    if (!filter.empty())
+    {
+        auto pos = filter.find('=');
+        if (pos != std::string::npos)
+        {
+            auto json_ptr = filter.substr(0, pos);
+            auto value = filter.substr(pos + 1);
+            json_error_t err;
+
+            if (json_t* js = json_loads(value.c_str(), JSON_DECODE_ANY, &err))
+            {
+                response.remove_rows(json_ptr, js);
+                json_decref(js);
+            }
+        }
+    }
+}
+
 static HttpResponse handle_request(const HttpRequest& request)
 {
     // Redirect log output into the runtime error message buffer
@@ -1355,6 +1377,7 @@ static HttpResponse handle_request(const HttpRequest& request)
         }
 
         remove_unwanted_fields(request, rval);
+        remove_unwanted_rows(request, rval);
     }
 
     return rval;
