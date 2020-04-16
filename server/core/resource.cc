@@ -46,10 +46,62 @@ using std::string;
 using std::stringstream;
 using maxscale::Monitor;
 
+using namespace std::literals::string_literals;
+
 namespace
 {
 const char CN_FORCE[] = "force";
 const char CN_YES[] = "yes";
+
+enum class ObjectType
+{
+    SERVICE,
+    SERVER,
+    MONITOR,
+    FILTER,
+    LISTENER,
+};
+
+// Helper for extracting a specific relationship
+HttpResponse get_relationship(const HttpRequest& request, ObjectType type, const std::string& relationship)
+{
+    json_t* json = nullptr;
+    auto name = request.uri_part(1);
+
+    switch (type)
+    {
+    case ObjectType::SERVICE:
+        json = service_to_json(Service::find(name), request.host());
+        break;
+
+    case ObjectType::SERVER:
+        json = ServerManager::server_to_json_resource(
+            ServerManager::find_by_unique_name(name), request.host());
+        break;
+
+    case ObjectType::MONITOR:
+        json = MonitorManager::monitor_to_json(MonitorManager::find_monitor(name.c_str()), request.host());
+        break;
+
+    case ObjectType::FILTER:
+        json = filter_to_json(filter_find(name.c_str()), request.host());
+        break;
+
+    case ObjectType::LISTENER:
+        json = listener_find(name)->to_json_resource(request.host());
+        break;
+
+    default:
+        mxb_assert(!true);
+        return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR);
+    }
+
+    std::string final_path = MXS_JSON_PTR_RELATIONSHIPS + "/"s + relationship;
+    auto rel = json_incref(mxs_json_pointer(json, final_path.c_str()));
+    json_decref(json);
+
+    return HttpResponse(rel ? MHD_HTTP_OK : MHD_HTTP_NOT_FOUND, rel);
+}
 }
 
 bool Resource::match(const HttpRequest& request) const
@@ -645,6 +697,61 @@ HttpResponse cb_get_session(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_NOT_FOUND);
 }
 
+HttpResponse cb_get_server_service_relationship(const HttpRequest& request)
+{
+    return get_relationship(request, ObjectType::SERVER, "services");
+}
+
+HttpResponse cb_get_server_monitor_relationship(const HttpRequest& request)
+{
+    return get_relationship(request, ObjectType::SERVER, "monitors");
+}
+
+HttpResponse cb_get_monitor_server_relationship(const HttpRequest& request)
+{
+    return get_relationship(request, ObjectType::MONITOR, "servers");
+}
+
+HttpResponse cb_get_monitor_service_relationship(const HttpRequest& request)
+{
+    return get_relationship(request, ObjectType::MONITOR, "services");
+}
+
+HttpResponse cb_get_service_server_relationship(const HttpRequest& request)
+{
+    return get_relationship(request, ObjectType::SERVICE, "servers");
+}
+
+HttpResponse cb_get_service_service_relationship(const HttpRequest& request)
+{
+    return get_relationship(request, ObjectType::SERVICE, "services");
+}
+
+HttpResponse cb_get_service_filter_relationship(const HttpRequest& request)
+{
+    return get_relationship(request, ObjectType::SERVICE, "filters");
+}
+
+HttpResponse cb_get_service_monitor_relationship(const HttpRequest& request)
+{
+    return get_relationship(request, ObjectType::SERVICE, "monitors");
+}
+
+HttpResponse cb_get_service_listener_relationship(const HttpRequest& request)
+{
+    return get_relationship(request, ObjectType::SERVICE, "listeners");
+}
+
+HttpResponse cb_get_filter_service_relationship(const HttpRequest& request)
+{
+    return get_relationship(request, ObjectType::FILTER, "services");
+}
+
+HttpResponse cb_get_listener_service_relationship(const HttpRequest& request)
+{
+    return get_relationship(request, ObjectType::LISTENER, "services");
+}
+
 HttpResponse cb_maxscale(const HttpRequest& request)
 {
     return HttpResponse(MHD_HTTP_OK, config_maxscale_to_json(request.host()));
@@ -1021,6 +1128,30 @@ public:
 
         m_get.emplace_back(cb_all_sessions, "sessions");
         m_get.emplace_back(cb_get_session, "sessions", ":session");
+
+        /** Get resource relationships directly */
+        m_get.emplace_back(cb_get_server_service_relationship,
+                           "servers", ":server", "relationships", "services");
+        m_get.emplace_back(cb_get_server_monitor_relationship,
+                           "servers", ":server", "relationships", "monitors");
+        m_get.emplace_back(cb_get_monitor_server_relationship,
+                           "monitors", ":monitor", "relationships", "servers");
+        m_get.emplace_back(cb_get_monitor_service_relationship,
+                           "monitors", ":monitor", "relationships", "services");
+        m_get.emplace_back(cb_get_service_server_relationship,
+                           "services", ":service", "relationships", "servers");
+        m_get.emplace_back(cb_get_service_service_relationship,
+                           "services", ":service", "relationships", "services");
+        m_get.emplace_back(cb_get_service_filter_relationship,
+                           "services", ":service", "relationships", "filters");
+        m_get.emplace_back(cb_get_service_monitor_relationship,
+                           "services", ":service", "relationships", "monitors");
+        m_get.emplace_back(cb_get_service_listener_relationship,
+                           "services", ":service", "relationships", "listeners");
+        m_get.emplace_back(cb_get_filter_service_relationship,
+                           "filters", ":filter", "relationships", "services");
+        m_get.emplace_back(cb_get_listener_service_relationship,
+                           "listeners", ":listener", "relationships", "services");
 
         m_get.emplace_back(cb_maxscale, "maxscale");
         m_get.emplace_back(cb_qc, "maxscale", "query_classifier");
