@@ -20,7 +20,7 @@
 #include "gtid.hh"
 #include "maria_rpl_event.hh"
 
-#include <mariadb/mysql.h>
+#include <mysql.h>
 
 struct st_mysql;
 struct st_mysql_res;

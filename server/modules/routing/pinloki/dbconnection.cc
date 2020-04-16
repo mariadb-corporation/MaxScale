@@ -13,7 +13,6 @@
 
 #include "dbconnection.hh"
 #include <maxbase/log.hh>
-#include <mariadb/mysql.h>
 #include <algorithm>
 #include <cassert>
 #include <iostream>

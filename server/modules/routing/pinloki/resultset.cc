@@ -14,7 +14,6 @@
 #include "resultset.hh"
 #include "strings.h"
 
-#include <mariadb/mysql.h>
 #include <algorithm>
 #include <cassert>
 #include <iostream>

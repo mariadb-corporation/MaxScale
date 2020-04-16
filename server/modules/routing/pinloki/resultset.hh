@@ -15,7 +15,7 @@
 
 #include <maxbase/exception.hh>
 #include <maxbase/string.hh>
-#include <mariadb/mysql.h>
+#include <mysql.h>
 
 struct st_mysql;
 struct st_mysql_res;
