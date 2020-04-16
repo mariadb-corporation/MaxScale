@@ -99,6 +99,8 @@ struct Result
     std::map<std::string, std::string> headers; // Headers attached to the response
 };
 
+using Results = std::vector<Result>;
+
 /**
  * Do a HTTP GET.
  *
@@ -134,12 +136,12 @@ inline Result get(const std::string& url, const Config& config = Config())
  *
  * @return Vector of @c Results, as many as there were @c urls.
  */
-std::vector<Result> get(const std::vector<std::string>& urls,
-                        const std::string& user, const std::string& password,
-                        const Config& config = Config());
+Results get(const std::vector<std::string>& urls,
+            const std::string& user, const std::string& password,
+            const Config& config = Config());
 
-inline std::vector<Result> get(const std::vector<std::string>& urls,
-                               const Config& config = Config())
+inline Results get(const std::vector<std::string>& urls,
+                  const Config& config = Config())
 {
     return get(urls, "", "", config);
 }
@@ -195,27 +197,27 @@ inline Result put(const std::string& url, const Config& config = Config())
  *
  * @return A @c Result.
  */
-std::vector<Result> put(const std::vector<std::string>& urls,
-                        const std::string& body,
-                        const std::string& user, const std::string& password,
-                        const Config& config = Config());
+Results put(const std::vector<std::string>& urls,
+            const std::string& body,
+            const std::string& user, const std::string& password,
+            const Config& config = Config());
 
-inline std::vector<Result> put(const std::vector<std::string>& urls,
-                               const std::string& user, const std::string& password,
-                               const Config& config = Config())
+inline Results put(const std::vector<std::string>& urls,
+                   const std::string& user, const std::string& password,
+                   const Config& config = Config())
 {
     return put(urls, std::string(), user, password, config);
 }
 
-inline std::vector<Result> put(const std::vector<std::string>& urls,
-                               const std::string& body,
-                               const Config& config = Config())
+inline Results put(const std::vector<std::string>& urls,
+                   const std::string& body,
+                   const Config& config = Config())
 {
     return put(urls, body, "", "", config);
 }
 
-inline std::vector<Result> put(const std::vector<std::string>& urls,
-                               const Config& config = Config())
+inline Results put(const std::vector<std::string>& urls,
+                   const Config& config = Config())
 {
     return put(urls, std::string(), "", "", config);
 }
@@ -249,7 +251,7 @@ public:
 
         virtual long wait_no_more_than() const = 0;
 
-        virtual const std::vector<Result>& results() const = 0;
+        virtual const Results& results() const = 0;
 
         virtual const std::vector<std::string>& urls() const = 0;
     };
@@ -333,7 +335,7 @@ public:
      *
      * @return Vector of results.
      */
-    const std::vector<Result>& results() const
+    const Results& results() const
     {
         return m_sImp->results();
     }
