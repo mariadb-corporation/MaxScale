@@ -11,7 +11,6 @@
  */
 
 #include "mariadb_nodes.h"
-#include "sql_const.h"
 #include <climits>
 #include <string>
 #include <sstream>
@@ -28,6 +27,27 @@ using std::endl;
 namespace
 {
 static bool g_require_gtid = false;
+
+const char setup_slave_no_pos[] =
+    "change master to MASTER_HOST='%s', "
+    "MASTER_USER='repl', "
+    "MASTER_PASSWORD='repl', "
+    "MASTER_LOG_FILE='mar-bin.000001', "
+    "MASTER_LOG_POS=4, "
+    "MASTER_PORT=%d";
+
+const char setup_slave[] =
+    "change master to MASTER_HOST='%s', "
+    "MASTER_USER='repl', "
+    "MASTER_PASSWORD='repl', "
+    "MASTER_LOG_FILE='%s', "
+    "MASTER_LOG_POS=%s, "
+    "MASTER_PORT=%d; "
+    "start slave;";
+
+const char create_repl_user[] =
+    "grant replication slave on *.* to repl@'%%' identified by 'repl'; "
+    "FLUSH PRIVILEGES";
 }
 
 void Mariadb_nodes::require_gtid(bool value)

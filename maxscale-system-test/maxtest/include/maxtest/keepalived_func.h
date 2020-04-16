@@ -1,6 +1,6 @@
 #pragma once
 
-#include "testconnections.h"
+class TestConnections;
 
 #define FAILOVER_WAIT_TIME 20
 

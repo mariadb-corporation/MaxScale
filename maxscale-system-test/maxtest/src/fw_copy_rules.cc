@@ -1,5 +1,6 @@
 #include "fw_copy_rules.h"
 #include <sstream>
+#include "testconnections.h"
 
 void copy_rules(TestConnections* Test, const char* rules_name, const char* rules_dir)
 {

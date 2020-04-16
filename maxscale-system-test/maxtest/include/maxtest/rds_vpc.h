@@ -2,10 +2,8 @@
 
 #include <iostream>
 #include <unistd.h>
-#include "testconnections.h"
 #include <jansson.h>
-
-using namespace std;
+#include "testconnections.h"
 
 class RDS
 {

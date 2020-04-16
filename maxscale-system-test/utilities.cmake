@@ -87,9 +87,11 @@ endfunction()
 
 # Same as "add_test_executable" but with a local config template file. Called using named arguments as in
 # add_test_executable_ex(NAME <testname> SOURCE <source.cc> CONFIG <configfile.cnf> VMS <backends setup>
-# LABELS <label list>)
+# LABELS <label list>).
+#
+# If creating a derived test, denote the original test with ORIG_NAME.
 function(add_test_executable_ex)
-  set(arg_names NAME SOURCE CONFIG LIBS VMS LABELS)
+  set(arg_names NAME SOURCE CONFIG LIBS VMS LABELS ORIG_NAME)
   set(now_parsing "")
   foreach(elem ${ARGN})
     list(FIND arg_names ${elem} arg_names_ind)
@@ -112,6 +114,8 @@ function(add_test_executable_ex)
         list(APPEND vms_setup ${elem})
       elseif("${now_parsing}" STREQUAL "LABELS")
         list(APPEND labels ${elem})
+      elseif("${now_parsing}" STREQUAL "ORIG_NAME")
+        list(APPEND orig_name ${elem})
       endif()
     endif()
   endforeach()
@@ -124,8 +128,30 @@ function(add_test_executable_ex)
     message(FATAL_ERROR "NAME ${errmsg}")
   endif()
 
-  list(LENGTH source_file list_len)
-  if (NOT ${list_len} EQUAL 1)
+  # If original name was given, source file should not.
+  list(LENGTH orig_name n_orig_name)
+  list(LENGTH source_file n_source_file)
+
+  if ("${n_orig_name}" GREATER 1)
+    message(FATAL_ERROR "ORIG_NAME has multiple values.")
+  elseif("${n_orig_name}" EQUAL 1)
+
+    if ("${n_source_file}" GREATER 0)
+      message(FATAL_ERROR "Both ORIG_NAME and SOURCE are defined.")
+    endif()
+
+    # Also check link libraries
+    list(LENGTH link_libraries n_link_libraries)
+    if ("${n_link_libraries}" GREATER 0)
+      message(FATAL_ERROR "Both ORIG_NAME and LIBS are defined.")
+    endif()
+
+    get_test_property(${orig_name} TIMEOUT to)
+    if (NOT to)
+      message(FATAL_ERROR "${orig_name} is not an existing test.")
+    endif()
+
+  elseif(NOT ${n_source_file} EQUAL 1)
     message(FATAL_ERROR "SOURCE ${errmsg}")
   endif()
 
@@ -157,12 +183,15 @@ function(add_test_executable_ex)
 
   set(config_file_path "${CMAKE_CURRENT_SOURCE_DIR}/${config_file}")
   add_test_info(${name} ${config_file_path} "${vms_upper}")
-  add_executable(${name} ${source_file})
 
-  list(APPEND link_libraries maxtest)
-  target_link_libraries(${name} ${link_libraries})
-
-  add_test(NAME ${name} COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${name} ${name} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+  if ("${n_source_file}" EQUAL 1)
+    add_executable(${name} ${source_file})
+    list(APPEND link_libraries maxtest)
+    target_link_libraries(${name} ${link_libraries})
+    add_test(NAME ${name} COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${name} ${name} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+  else()
+    add_test(NAME ${name} COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${orig_name} ${name} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+  endif()
 
   list(APPEND ctest_labels ${vms_upper} ${labels})
   add_test_properties(${name} ${ctest_labels})
