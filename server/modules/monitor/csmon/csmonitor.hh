@@ -64,7 +64,8 @@ public:
     bool command_cluster_config_set(json_t** ppOutput, const char* zJson, CsMonitorServer* pServer);
     bool command_cluster_mode_set(json_t** ppOutput, const char* zEnum);
 
-    bool command_cluster_add_node(json_t** ppOutput, CsMonitorServer* pServer);
+    bool command_cluster_add_node(json_t** ppOutput,
+                                  const std::chrono::seconds& timout, CsMonitorServer* pServer);
     bool command_cluster_remove_node(json_t** ppOutput, CsMonitorServer* pServer);
 
     using ResponseHandler = std::function<void(CsMonitorServer*,
@@ -118,7 +119,8 @@ private:
     void cluster_config_set(json_t** ppOutput, mxb::Semaphore* pSem,
                             std::string&& body, CsMonitorServer* pServer);
     void cluster_mode_set(json_t** ppOuput, mxb::Semaphore* pSem, cs::ClusterMode mode);
-    void cluster_add_node(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer);
+    void cluster_add_node(json_t** ppOutput, mxb::Semaphore* pSem,
+                          const std::chrono::seconds& timeout, CsMonitorServer* pServer);
     void cluster_remove_node(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer);
 
     bool has_sufficient_permissions();

@@ -724,14 +724,16 @@ bool CsMonitor::command_cluster_mode_set(json_t** ppOutput, const char* zMode)
     return rv;
 }
 
-bool CsMonitor::command_cluster_add_node(json_t** ppOutput, CsMonitorServer* pServer)
+bool CsMonitor::command_cluster_add_node(json_t** ppOutput,
+                                         const std::chrono::seconds& timeout,
+                                         CsMonitorServer* pServer)
 {
     mxb::Semaphore sem;
 
-    auto cmd = [this, &sem, ppOutput, pServer] () {
+    auto cmd = [this, &sem, timeout, pServer, ppOutput] () {
         if (ready_to_run(ppOutput))
         {
-            cluster_add_node(ppOutput, &sem, pServer);
+            cluster_add_node(ppOutput, &sem, timeout, pServer);
         }
         else
         {
@@ -1125,7 +1127,10 @@ void CsMonitor::cluster_mode_set(json_t** ppOutput, mxb::Semaphore* pSem, cs::Cl
     pSem->post();
 }
 
-void CsMonitor::cluster_add_node(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
+void CsMonitor::cluster_add_node(json_t** ppOutput,
+                                 mxb::Semaphore* pSem,
+                                 const std::chrono::seconds& timeout,
+                                 CsMonitorServer* pServer)
 {
     /*
       cluster add node { IP | DNS }
