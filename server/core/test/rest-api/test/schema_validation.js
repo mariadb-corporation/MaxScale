@@ -136,3 +136,48 @@ describe("Resource Self Links", function() {
     after(closeConnection)
     after(stopMaxScale)
 });
+
+describe("Resource Relationship Self Links", function() {
+    before(startMaxScale)
+    before(createConnection)
+
+    const endpoints = {
+            "servers": [
+                "services", "monitors"
+            ],
+            "services": [
+                "servers", "services", "filters", "monitors"
+            ],
+            "monitors": [
+                "servers", "services"
+            ],
+            "filters": [
+                "services"
+            ],
+            "listeners": [
+                "services"
+            ],
+            "sessions": [
+                "services"
+            ]
+        }
+
+    for (k of Object.keys(endpoints)) {
+        it(k + ': correct resource self link', async function() {
+            const opts = {auth: {user: 'admin', password: 'mariadb'}, json: true}
+            var res = await request.get(base_url + '/' + endpoints[k], opts)
+
+            for (o of res.data) {
+                for (r of endpoints[k]) {
+                    if (o.relationships[r]) {
+                        var self = await request.get(o.relationships[r].links.self, opts)
+                        self.should.be.deep.equal(o.relationships[r])
+                    }
+                }
+            }
+        })
+    }
+
+    after(closeConnection)
+    after(stopMaxScale)
+});
