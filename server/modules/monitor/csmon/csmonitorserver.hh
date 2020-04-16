@@ -90,8 +90,8 @@ public:
 
     using Result   = mxb::http::Result;
     using Results  = mxb::http::Results;
-    using Statuses = std::pair<size_t, std::vector<Status>>;
-    using Configs  = std::pair<size_t, std::vector<Config>>;
+    using Statuses = std::vector<Status>;
+    using Configs  = std::vector<Config>;
 
     const char* name() const
     {
@@ -127,13 +127,25 @@ public:
 
     static Statuses fetch_statuses(const std::vector<CsMonitorServer*>& servers,
                                    const mxb::http::Config& config);
+    static bool fetch_statuses(const std::vector<CsMonitorServer*>& servers,
+                               const mxb::http::Config& config,
+                               Statuses* pStatuses);
+
     static Configs fetch_configs(const std::vector<CsMonitorServer*>& servers,
                                  const mxb::http::Config& config);
+    static bool fetch_configs(const std::vector<CsMonitorServer*>& servers,
+                              const mxb::http::Config& config,
+                              Configs* pConfigs);
 
     static Results begin(const std::vector<CsMonitorServer*>& servers,
                          const std::chrono::seconds& timeout,
                          const std::string& id,
                          const mxb::http::Config& config);
+    static bool begin(const std::vector<CsMonitorServer*>& servers,
+                      const std::chrono::seconds& timeout,
+                      const std::string& id,
+                      const mxb::http::Config& config,
+                      Results* pResults);
     static Results commit(const std::vector<CsMonitorServer*>& servers,
                           const mxb::http::Config& config);
     static Results rollback(const std::vector<CsMonitorServer*>& servers,

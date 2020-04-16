@@ -1042,7 +1042,7 @@ void CsMonitor::cluster_status(json_t** ppOutput, mxb::Semaphore* pSem, CsMonito
     CsMonitorServer::Statuses statuses = CsMonitorServer::fetch_statuses(servers(), m_http_config);
 
     json_t* pServers = nullptr;
-    size_t n = results_to_json(servers(), statuses.second, &pServers);
+    size_t n = results_to_json(servers(), statuses, &pServers);
 
     bool success = (n == servers().size());
     ostringstream message;
@@ -1072,7 +1072,7 @@ void CsMonitor::cluster_config_get(json_t** ppOutput, mxb::Semaphore* pSem, CsMo
     CsMonitorServer::Configs configs = CsMonitorServer::fetch_configs(servers(), m_http_config);
 
     json_t* pServers = nullptr;
-    size_t n = results_to_json(servers(), configs.second, &pServers);
+    size_t n = results_to_json(servers(), configs, &pServers);
 
     bool success = (n == servers().size());
     ostringstream message;
