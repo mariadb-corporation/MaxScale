@@ -251,7 +251,9 @@ json_t* filter_json_data(const SFilterDef& filter, const char* host)
     /** Store relationships to other objects */
     json_t* rel = json_object();
 
-    if (auto services = service_relations_to_filter(filter, host))
+    std::string self = MXS_JSON_API_FILTERS + filter->name + "/relationships/services";
+
+    if (auto services = service_relations_to_filter(filter, host, self))
     {
         json_object_set_new(rel, CN_SERVICES, services);
     }

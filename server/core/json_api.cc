@@ -31,6 +31,7 @@ namespace
 
 const char CN_META[] = "meta";
 const char CN_SELF[] = "self";
+const char CN_RELATED[] = "related";
 
 const char DETAIL[] = "detail";
 const char ERRORS[] = "errors";
@@ -131,12 +132,17 @@ std::string validate_relationships(json_t* json)
 }
 }
 
-static json_t* self_link(const char* host, const char* endpoint)
+static json_t* self_link(const std::string& host, const std::string& self, const std::string& related = "")
 {
     json_t* self_link = json_object();
-    string links = host;
-    links += endpoint;
+    string links = host + self;
     json_object_set_new(self_link, CN_SELF, json_string(links.c_str()));
+
+    if (!related.empty())
+    {
+        string rel = host + related;
+        json_object_set_new(self_link, CN_RELATED, json_string(rel.c_str()));
+    }
 
     return self_link;
 }
@@ -205,12 +211,12 @@ json_t* mxs_json_metadata(const char* host, const char* self, json_t* data)
     return rval;
 }
 
-json_t* mxs_json_relationship(const char* host, const char* endpoint)
+json_t* mxs_json_relationship(const std::string& host, const std::string& self, const std::string& related)
 {
     json_t* rel = json_object();
 
     /** Add the relation self link */
-    json_object_set_new(rel, CN_LINKS, self_link(host, endpoint));
+    json_object_set_new(rel, CN_LINKS, self_link(host, self, related));
 
     /** Add empty array of relations */
     json_object_set_new(rel, CN_DATA, json_array());

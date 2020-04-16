@@ -988,10 +988,11 @@ json_t* Service::json_relationships(const char* host) const
     /** Store relationships to other objects */
     json_t* rel = json_object();
     const auto& data = *m_data;
+    std::string self = std::string(MXS_JSON_API_SERVICES) + name() + "/relationships/";
 
     if (!data.filters.empty())
     {
-        json_t* filters = mxs_json_relationship(host, MXS_JSON_API_FILTERS);
+        json_t* filters = mxs_json_relationship(host, self + "filters", MXS_JSON_API_FILTERS);
 
         for (const auto& f : data.filters)
         {
@@ -1003,14 +1004,14 @@ json_t* Service::json_relationships(const char* host) const
 
     if (m_monitor)
     {
-        json_t* monitor = mxs_json_relationship(host, MXS_JSON_API_MONITORS);
+        json_t* monitor = mxs_json_relationship(host, self + "monitors", MXS_JSON_API_MONITORS);
         mxs_json_add_relation(monitor, m_monitor->name(), CN_MONITORS);
         json_object_set_new(rel, CN_MONITORS, monitor);
     }
     else if (!data.targets.empty())
     {
-        json_t* servers = mxs_json_relationship(host, MXS_JSON_API_SERVERS);
-        json_t* services = mxs_json_relationship(host, MXS_JSON_API_SERVICES);
+        json_t* servers = mxs_json_relationship(host, self + "servers", MXS_JSON_API_SERVERS);
+        json_t* services = mxs_json_relationship(host, self + "services", MXS_JSON_API_SERVICES);
 
         for (const auto& s : data.targets)
         {
@@ -1032,7 +1033,7 @@ json_t* Service::json_relationships(const char* host) const
 
     if (!listeners.empty())
     {
-        json_t* l = mxs_json_relationship(host, MXS_JSON_API_LISTENERS);
+        json_t* l = mxs_json_relationship(host, self + "listeners", MXS_JSON_API_LISTENERS);
 
         for (const auto& a : listeners)
         {
@@ -1108,7 +1109,8 @@ json_t* service_list_to_json(const char* host)
     return mxs_json_resource(host, MXS_JSON_API_SERVICES, arr);
 }
 
-json_t* service_relations_to_filter(const SFilterDef& filter, const char* host)
+json_t* service_relations_to_filter(const SFilterDef& filter, const std::string& host,
+                                    const std::string& self)
 {
     json_t* rel = nullptr;
     LockGuard guard(this_unit.lock);
@@ -1121,7 +1123,7 @@ json_t* service_relations_to_filter(const SFilterDef& filter, const char* host)
             {
                 if (!rel)
                 {
-                    rel = mxs_json_relationship(host, MXS_JSON_API_SERVICES);
+                    rel = mxs_json_relationship(host, self, MXS_JSON_API_SERVICES);
                 }
                 mxs_json_add_relation(rel, service->name(), CN_SERVICES);
             }
@@ -1131,7 +1133,8 @@ json_t* service_relations_to_filter(const SFilterDef& filter, const char* host)
     return rel;
 }
 
-json_t* service_relations_to_monitor(const mxs::Monitor* monitor, const char* host)
+json_t* service_relations_to_monitor(const mxs::Monitor* monitor, const std::string& host,
+                                     const std::string& self)
 {
     json_t* rel = nullptr;
     LockGuard guard(this_unit.lock);
@@ -1142,7 +1145,7 @@ json_t* service_relations_to_monitor(const mxs::Monitor* monitor, const char* ho
         {
             if (!rel)
             {
-                rel = mxs_json_relationship(host, MXS_JSON_API_SERVICES);
+                rel = mxs_json_relationship(host, self, MXS_JSON_API_SERVICES);
             }
 
             mxs_json_add_relation(rel, service->name(), CN_SERVICES);
@@ -1152,7 +1155,7 @@ json_t* service_relations_to_monitor(const mxs::Monitor* monitor, const char* ho
     return rel;
 }
 
-json_t* service_relations_to_server(const SERVER* server, const char* host)
+json_t* service_relations_to_server(const SERVER* server, const std::string& host, const std::string& self)
 {
     std::vector<std::string> names;
     LockGuard guard(this_unit.lock);
@@ -1174,7 +1177,7 @@ json_t* service_relations_to_server(const SERVER* server, const char* host)
 
     if (!names.empty())
     {
-        rel = mxs_json_relationship(host, MXS_JSON_API_SERVICES);
+        rel = mxs_json_relationship(host, self, MXS_JSON_API_SERVICES);
 
         for (const auto& a : names)
         {

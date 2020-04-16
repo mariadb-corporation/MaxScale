@@ -562,7 +562,7 @@ json_t* service_listener_to_json(const Service* service, const char* name, const
  *
  * @return Array of service links or NULL if no relations exist
  */
-json_t* service_relations_to_server(const SERVER* server, const char* host);
+json_t* service_relations_to_server(const SERVER* server, const std::string& host, const std::string& self);
 
 /**
  * @brief Get links to services that relate to a filter
@@ -572,17 +572,20 @@ json_t* service_relations_to_server(const SERVER* server, const char* host);
  *
  * @return Array of service links
  */
-json_t* service_relations_to_filter(const SFilterDef& filter, const char* host);
+json_t* service_relations_to_filter(const SFilterDef& filter, const std::string& host,
+                                    const std::string& self);
 
 /**
  * @brief Get links to services that relate to a monitor
  *
  * @param filter Monitor to inspect
  * @param host   Hostname of this server
+ * @param self   The self link to add to the relationship
  *
  * @return Array of service links or nullptr if no service uses the monitor
  */
-json_t* service_relations_to_monitor(const mxs::Monitor* monitor, const char* host);
+json_t* service_relations_to_monitor(const mxs::Monitor* monitor, const std::string& host,
+                                     const std::string& self);
 
 /**
  * @brief Add server to all services associated with a monitor

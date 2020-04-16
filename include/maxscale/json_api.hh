@@ -77,12 +77,13 @@ json_t* mxs_json_metadata(const char* host, const char* self, json_t* data);
 /**
  * @brief Create an empty relationship object
  *
- * @param host Hostname of this server
- * @param endpoint The endpoint for the resource's collection
+ * @param host    Hostname of this server
+ * @param self    The self link to this relationship
+ * @param related The related resource collection
  *
  * @return New relationship object
  */
-json_t* mxs_json_relationship(const char* host, const char* endpoint);
+json_t* mxs_json_relationship(const std::string& host, const std::string& self, const std::string& related);
 
 /**
  * @brief Add an item to a relationship object

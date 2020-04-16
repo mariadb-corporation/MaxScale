@@ -79,9 +79,13 @@ public:
      *
      * @param server Server to inspect
      * @param host   Hostname of this server
+     * @param self   Self link to the relationship
+     *
      * @return Array of monitor links or NULL if no relations exist
      */
-    static json_t* monitor_relations_to_server(const SERVER* server, const char* host);
+    static json_t* monitor_relations_to_server(const SERVER* server,
+                                               const std::string& host,
+                                               const std::string& self);
 
     /**
      * Convert all monitors to JSON.

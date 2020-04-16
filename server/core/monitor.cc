@@ -696,9 +696,11 @@ json_t* Monitor::to_json(const char* host) const
         }
     }
 
+    std::string self = std::string(MXS_JSON_API_MONITORS) + name() + "/relationships/";
+
     if (!m_servers.empty())
     {
-        json_t* mon_rel = mxs_json_relationship(host, MXS_JSON_API_SERVERS);
+        json_t* mon_rel = mxs_json_relationship(host, self + "servers", MXS_JSON_API_SERVERS);
         for (MonitorServer* db : m_servers)
         {
             mxs_json_add_relation(mon_rel, db->server->name(), CN_SERVERS);
@@ -706,7 +708,7 @@ json_t* Monitor::to_json(const char* host) const
         json_object_set_new(rel, CN_SERVERS, mon_rel);
     }
 
-    if (auto services = service_relations_to_monitor(this, host))
+    if (auto services = service_relations_to_monitor(this, host, self + "services"))
     {
         json_object_set_new(rel, CN_SERVICES, services);
     }

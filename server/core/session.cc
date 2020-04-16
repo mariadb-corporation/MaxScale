@@ -411,7 +411,8 @@ json_t* session_json_data(const Session* session, const char* host, bool rdns)
     json_t* rel = json_object();
 
     /** Service relationship (one-to-one) */
-    json_t* services = mxs_json_relationship(host, MXS_JSON_API_SERVICES);
+    std::string self = std::string(MXS_JSON_API_SESSIONS) + std::to_string(session->id()) + "/relationships/";
+    json_t* services = mxs_json_relationship(host, self + "services", MXS_JSON_API_SERVICES);
     mxs_json_add_relation(services, session->service->name(), CN_SERVICES);
     json_object_set_new(rel, CN_SERVICES, services);
 
@@ -420,7 +421,7 @@ json_t* session_json_data(const Session* session, const char* host, bool rdns)
 
     if (!filter_list.empty())
     {
-        json_t* filters = mxs_json_relationship(host, MXS_JSON_API_FILTERS);
+        json_t* filters = mxs_json_relationship(host, self + "filters", MXS_JSON_API_FILTERS);
 
         for (const auto& f : filter_list)
         {

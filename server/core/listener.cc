@@ -486,7 +486,8 @@ json_t* Listener::to_json(const char* host) const
     json_object_set_new(rval, CN_ATTRIBUTES, attr);
 
     json_t* rel = json_object();
-    json_t* service = mxs_json_relationship(host, MXS_JSON_API_SERVICES);
+    std::string self = std::string(MXS_JSON_API_LISTENERS) + name() + "/relationships/services/";
+    json_t* service = mxs_json_relationship(host, self.c_str(), MXS_JSON_API_SERVICES);
     mxs_json_add_relation(service, m_service->name(), CN_SERVICES);
     json_object_set_new(rel, CN_SERVICES, service);
     json_object_set_new(rval, CN_RELATIONSHIPS, rel);

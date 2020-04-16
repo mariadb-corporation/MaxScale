@@ -389,7 +389,9 @@ json_t* MonitorManager::monitor_list_to_json(const char* host)
     return mxs_json_resource(host, MXS_JSON_API_MONITORS, rval);
 }
 
-json_t* MonitorManager::monitor_relations_to_server(const SERVER* server, const char* host)
+json_t* MonitorManager::monitor_relations_to_server(const SERVER* server,
+                                                    const std::string& host,
+                                                    const std::string& self)
 {
     mxb_assert(Monitor::is_main_worker());
     json_t* rel = nullptr;
@@ -397,7 +399,7 @@ json_t* MonitorManager::monitor_relations_to_server(const SERVER* server, const 
     string mon_name = Monitor::get_server_monitor(server);
     if (!mon_name.empty())
     {
-        rel = mxs_json_relationship(host, MXS_JSON_API_MONITORS);
+        rel = mxs_json_relationship(host, self, MXS_JSON_API_MONITORS);
         mxs_json_add_relation(rel, mon_name.c_str(), CN_MONITORS);
     }
 

@@ -196,13 +196,14 @@ json_t* ServerManager::server_to_json_data_relations(const Server* server, const
 {
     // Add monitor and service info to server json representation.
     json_t* rel = json_object();
-    json_t* service_rel = service_relations_to_server(server, host);
+    std::string self = std::string(MXS_JSON_API_SERVERS) + server->name() + "/relationships/";
+    json_t* service_rel = service_relations_to_server(server, host, self + "services");
     if (service_rel)
     {
         json_object_set_new(rel, CN_SERVICES, service_rel);
     }
 
-    json_t* monitor_rel = MonitorManager::monitor_relations_to_server(server, host);
+    json_t* monitor_rel = MonitorManager::monitor_relations_to_server(server, host, self + "monitors");
     if (monitor_rel)
     {
         json_object_set_new(rel, CN_MONITORS, monitor_rel);
