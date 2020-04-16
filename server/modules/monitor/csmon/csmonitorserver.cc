@@ -152,7 +152,7 @@ string begin_body(const std::chrono::seconds& timeout, const std::string& id)
 
 }
 
-mxb::http::Result CsMonitorServer::begin(const std::chrono::seconds& timeout, const std::string& id)
+http::Result CsMonitorServer::begin(const std::chrono::seconds& timeout, const std::string& id)
 {
     if (m_trx_state != TRX_INACTIVE)
     {
@@ -170,7 +170,7 @@ mxb::http::Result CsMonitorServer::begin(const std::chrono::seconds& timeout, co
     return result;
 }
 
-mxb::http::Result CsMonitorServer::commit()
+http::Result CsMonitorServer::commit()
 {
     if (m_trx_state != TRX_ACTIVE)
     {
@@ -186,7 +186,7 @@ mxb::http::Result CsMonitorServer::commit()
     return result;
 }
 
-mxb::http::Result CsMonitorServer::rollback()
+http::Result CsMonitorServer::rollback()
 {
     if (m_trx_state != TRX_ACTIVE)
     {
@@ -235,7 +235,7 @@ bool CsMonitorServer::set_mode(cs::ClusterMode mode, json_t** ppError)
 
 //static
 CsMonitorServer::Statuses CsMonitorServer::fetch_statuses(const std::vector<CsMonitorServer*>& servers,
-                                                          const mxb::http::Config& http_config)
+                                                          const http::Config& http_config)
 {
     size_t n = 0;
     vector<Status> statuses;
@@ -259,7 +259,7 @@ CsMonitorServer::Statuses CsMonitorServer::fetch_statuses(const std::vector<CsMo
 
 //static
 CsMonitorServer::Configs CsMonitorServer::fetch_configs(const std::vector<CsMonitorServer*>& servers,
-                                                        const mxb::http::Config& http_config)
+                                                        const http::Config& http_config)
 {
     size_t n = 0;
     vector<Config> configs;
@@ -282,10 +282,10 @@ CsMonitorServer::Configs CsMonitorServer::fetch_configs(const std::vector<CsMoni
 }
 
 //static
-CsMonitorServer::HttpResults CsMonitorServer::begin(const std::vector<CsMonitorServer*>& servers,
-                                                    const std::chrono::seconds& timeout,
-                                                    const std::string& id,
-                                                    const mxb::http::Config& config)
+http::Results CsMonitorServer::begin(const std::vector<CsMonitorServer*>& servers,
+                                     const std::chrono::seconds& timeout,
+                                     const std::string& id,
+                                     const http::Config& config)
 {
     auto it = std::find_if(servers.begin(), servers.end(), [](const CsMonitorServer* pServer) {
             return pServer->in_trx();
@@ -329,8 +329,8 @@ CsMonitorServer::HttpResults CsMonitorServer::begin(const std::vector<CsMonitorS
 }
 
 //static
-CsMonitorServer::HttpResults CsMonitorServer::commit(const std::vector<CsMonitorServer*>& servers,
-                                                     const mxb::http::Config& config)
+http::Results CsMonitorServer::commit(const std::vector<CsMonitorServer*>& servers,
+                                      const http::Config& config)
 {
     auto it = std::find_if(servers.begin(), servers.end(), [](const CsMonitorServer* pServer) {
             return !pServer->in_trx();
@@ -357,8 +357,8 @@ CsMonitorServer::HttpResults CsMonitorServer::commit(const std::vector<CsMonitor
 }
 
 //static
-CsMonitorServer::HttpResults CsMonitorServer::rollback(const std::vector<CsMonitorServer*>& servers,
-                                                       const mxb::http::Config& config)
+http::Results CsMonitorServer::rollback(const std::vector<CsMonitorServer*>& servers,
+                                        const http::Config& config)
 {
     auto it = std::find_if(servers.begin(), servers.end(), [](const CsMonitorServer* pServer) {
             return !pServer->in_trx();
@@ -385,9 +385,9 @@ CsMonitorServer::HttpResults CsMonitorServer::rollback(const std::vector<CsMonit
 }
 
 //static
-CsMonitorServer::HttpResults CsMonitorServer::shutdown(const std::vector<CsMonitorServer*>& servers,
-                                                       const std::chrono::seconds& timeout,
-                                                       const mxb::http::Config& config)
+http::Results CsMonitorServer::shutdown(const std::vector<CsMonitorServer*>& servers,
+                                        const std::chrono::seconds& timeout,
+                                        const http::Config& config)
 {
     string tail;
 
@@ -406,8 +406,8 @@ CsMonitorServer::HttpResults CsMonitorServer::shutdown(const std::vector<CsMonit
 }
 
 //static
-CsMonitorServer::HttpResults CsMonitorServer::start(const std::vector<CsMonitorServer*>& servers,
-                                                    const mxb::http::Config& config)
+http::Results CsMonitorServer::start(const std::vector<CsMonitorServer*>& servers,
+                                     const http::Config& config)
 {
     vector<string> urls = create_urls(servers, cs::rest::START);
     vector<http::Result> results = http::put(urls, "{}", config);
@@ -420,7 +420,7 @@ CsMonitorServer::HttpResults CsMonitorServer::start(const std::vector<CsMonitorS
 //static
 bool CsMonitorServer::set_mode(const std::vector<CsMonitorServer*>& servers,
                                cs::ClusterMode mode,
-                               const mxb::http::Config& config,
+                               const http::Config& config,
                                json_t** ppError)
 {
     bool rv = false;

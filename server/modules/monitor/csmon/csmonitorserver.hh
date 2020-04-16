@@ -88,9 +88,10 @@ public:
         }
     };
 
-    using Statuses    = std::pair<size_t, std::vector<Status>>;
-    using Configs     = std::pair<size_t, std::vector<Config>>;
-    using HttpResults = std::vector<mxb::http::Result>;
+    using Result   = mxb::http::Result;
+    using Results  = mxb::http::Results;
+    using Statuses = std::pair<size_t, std::vector<Status>>;
+    using Configs  = std::pair<size_t, std::vector<Config>>;
 
     const char* name() const
     {
@@ -118,9 +119,9 @@ public:
         return m_trx_state == TRX_ACTIVE;
     }
 
-    mxb::http::Result begin(const std::chrono::seconds& timeout, const std::string& id);
-    mxb::http::Result rollback();
-    mxb::http::Result commit();
+    Result begin(const std::chrono::seconds& timeout, const std::string& id);
+    Result rollback();
+    Result commit();
 
     bool set_mode(cs::ClusterMode mode, json_t** ppError = nullptr);
 
@@ -129,19 +130,19 @@ public:
     static Configs fetch_configs(const std::vector<CsMonitorServer*>& servers,
                                  const mxb::http::Config& config);
 
-    static HttpResults begin(const std::vector<CsMonitorServer*>& servers,
-                             const std::chrono::seconds& timeout,
-                             const std::string& id,
-                             const mxb::http::Config& config);
-    static HttpResults commit(const std::vector<CsMonitorServer*>& servers,
-                             const mxb::http::Config& config);
-    static HttpResults rollback(const std::vector<CsMonitorServer*>& servers,
-                                const mxb::http::Config& config);
-    static HttpResults shutdown(const std::vector<CsMonitorServer*>& servers,
-                                const std::chrono::seconds& timeout,
-                                const mxb::http::Config& config);
-    static HttpResults start(const std::vector<CsMonitorServer*>& servers,
-                             const mxb::http::Config& config);
+    static Results begin(const std::vector<CsMonitorServer*>& servers,
+                         const std::chrono::seconds& timeout,
+                         const std::string& id,
+                         const mxb::http::Config& config);
+    static Results commit(const std::vector<CsMonitorServer*>& servers,
+                          const mxb::http::Config& config);
+    static Results rollback(const std::vector<CsMonitorServer*>& servers,
+                            const mxb::http::Config& config);
+    static Results shutdown(const std::vector<CsMonitorServer*>& servers,
+                            const std::chrono::seconds& timeout,
+                            const mxb::http::Config& config);
+    static Results start(const std::vector<CsMonitorServer*>& servers,
+                         const mxb::http::Config& config);
     static bool set_mode(const std::vector<CsMonitorServer*>& servers,
                          cs::ClusterMode mode,
                          const mxb::http::Config& config,
