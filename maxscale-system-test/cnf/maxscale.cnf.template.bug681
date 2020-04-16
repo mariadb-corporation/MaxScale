@@ -16,7 +16,6 @@ user=maxskysql
 password=skysql
 filters=MyLogFilter
 version_string=MariaDBEC-10.0.14
-localhost_match_wildcard_host=1
 max_slave_connections=10%
 
 [Read-Connection-Router]

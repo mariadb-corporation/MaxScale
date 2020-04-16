@@ -65,32 +65,24 @@ continuous_duration = 2000
 type = server
 address = ###node_server_IP_1###
 port = ###node_server_port_1###
-protocol = MariaDBBackend
-localhost_match_wildcard_host = true
 router_options = master
 
 [server2]
 type = server
 address = ###node_server_IP_2###
 port = ###node_server_port_2###
-protocol = MariaDBBackend
-localhost_match_wildcard_host = true
 router_options = slave
 
 [server3]
 type = server
 address = ###node_server_IP_3###
 port = ###node_server_port_3###
-protocol = MariaDBBackend
-localhost_match_wildcard_host = true
 router_options = slave
 
 [server4]
 type = server
 address = ###node_server_IP_4###
 port = ###node_server_port_4###
-protocol = MariaDBBackend
-localhost_match_wildcard_host = true
 router_options = slave
 
 

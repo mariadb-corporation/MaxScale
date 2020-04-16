@@ -223,7 +223,6 @@ Service::Config::Config(mxs::ConfigParameters* params)
     , version_string(get_version_string(params))
     , max_connections(params->get_integer(CN_MAX_CONNECTIONS))
     , enable_root(params->get_bool(CN_ENABLE_ROOT_USER))
-    , localhost_match_wildcard_host(params->get_bool(CN_LOCALHOST_MATCH_WILDCARD_HOST))
     , users_from_all(params->get_bool(CN_AUTH_ALL_SERVERS))
     , log_auth_warnings(params->get_bool(CN_LOG_AUTH_WARNINGS))
     , session_track_trx_state(params->get_bool(CN_SESSION_TRACK_TRX_STATE))
@@ -1261,7 +1260,7 @@ const MXS_MODULE_PARAM* common_service_params()
         {CN_AUTH_ALL_SERVERS,     MXS_MODULE_PARAM_BOOL,     "false"},
         {CN_STRIP_DB_ESC,         MXS_MODULE_PARAM_BOOL,     "true"},
         {
-            CN_LOCALHOST_MATCH_WILDCARD_HOST, MXS_MODULE_PARAM_BOOL, "true"
+            CN_LOCALHOST_MATCH_WILDCARD_HOST, MXS_MODULE_PARAM_BOOL, "true", MXS_MODULE_OPT_DEPRECATED
         },
         {CN_VERSION_STRING,       MXS_MODULE_PARAM_STRING},
         {CN_FILTERS,              MXS_MODULE_PARAM_STRING},

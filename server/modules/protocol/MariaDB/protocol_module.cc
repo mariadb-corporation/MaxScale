@@ -41,7 +41,6 @@ MySQLProtocolModule::create_client_protocol(MXS_SESSION* session, mxs::Component
         search_sett.listener = m_user_search_settings;
         const auto& service_config = *session->service->config();
         search_sett.service.allow_root_user = service_config.enable_root;
-        search_sett.service.localhost_match_wildcard_host = service_config.localhost_match_wildcard_host;
 
         mdb_session->remote = session->client_remote();
         session->set_protocol_data(std::move(mdb_session));

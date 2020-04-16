@@ -1631,7 +1631,6 @@ max_connections               Maximum connection limit
 connection_timeout            Client idle timeout in seconds
 auth_all_servers              Retrieve authentication data from all servers
 strip_db_esc                  Strip escape characters from database names
-localhost_match_wildcard_host Match wildcard host to 'localhost' address
 version_string                The version string given to client connections
 weightby                      Weighting parameter name
 log_auth_warnings             Log authentication warnings

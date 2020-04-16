@@ -1444,13 +1444,7 @@ enable_root_user=true
 
 ### `localhost_match_wildcard_host`
 
-This parameter enables matching of local addresses (i.e. `127.0.0.1`) against
-the wildcard host, `%`, for authentication. This parameter is enabled by
-default.
-
-If this parameter is disabled, in order to authenticate a connection from the
-same machine as the one on which MariaDB MaxScale is running, an explicit
-user@localhost entry will be required in the MySQL user table.
+Deprecated and ignored.
 
 ### `version_string`
 
@@ -2283,44 +2277,6 @@ password *pass1*. User *X* would not however be able to connect from host *b*
 since they would need to provide the password *pass2* in order to connect to
 MariaDB MaxScale, but then MariaDB MaxScale would not be able to connect to the
 backends as it would also use the password *pass2* for these connections.
-
-### Wildcard Hosts
-
-Hostname mapping in MariaDB MaxScale works in exactly the same way as for MariaDB,
-if the wildcard is used for the host then any host other than the localhost
-(127.0.0.1) will match. It is important to consider that the localhost check
-will be performed at the MariaDB MaxScale level and at the MariaDB server level.
-
-If MariaDB MaxScale and the databases are on separate hosts there are two
-important changes in behavior to consider:
-
-1. Clients running on the same machine as the backend database now may access
-the database using the wildcard entry. The localhost check between the client
-and MariaDB MaxScale will allow the use of the wildcard, since the client is not
-running on the MariaDB MaxScale host. Also the wildcard entry can be used on the
-database host as MariaDB MaxScale is making that connection and it is not
-running on the same host as the database.
-
-2. Clients running on the same host as MariaDB MaxScale can not access the
-database via MariaDB MaxScale using the wildcard entry since the connection to
-MariaDB MaxScale will be from the localhost. These clients are able to access
-the database directly, as they will use the wildcard entry. This behavior can be
-configured with the
-[`localhost_match_wildcard_host`](#localhost_match_wildcard_host) option.
-
-If MariaDB MaxScale is running on the same host as one or more of the database
-nodes to which it is routing statements then the wildcard host entries can be
-used to connect to MariaDB MaxScale but not to connect onwards to the database
-running on the same node.
-
-In all these cases the issue may be solved by adding an explicit entry for the
-localhost address that has the same password as the wildcard entry. This may be
-done using a statement as below for each of the databases that are required:
-
-```
-MariaDB [mysql]> GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP ON employee.* 'user1'@'localhost' IDENTIFIED BY 'xxx';
-Query OK, 0 rows affected (0.00 sec)
-```
 
 ## Systemd Watchdog
 

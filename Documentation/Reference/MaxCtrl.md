@@ -2141,7 +2141,6 @@ To display the service parameters, execute `show service <service>`. Some router
     "auth_all_servers",
     "optimize_wildcard",
     "strip_db_esc",
-    "localhost_match_wildcard_host",
     "max_slave_connections",
     "max_slave_replication_lag",
     "retain_last_statements"

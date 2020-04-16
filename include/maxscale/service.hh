@@ -90,7 +90,6 @@ public:
         std::string version_string;                 /**< Version string sent to clients */
         int         max_connections;                /**< Maximum client connections */
         bool        enable_root;                    /**< Allow root user  access */
-        bool        localhost_match_wildcard_host;  /**< Match localhost against wildcard */
         bool        users_from_all;                 /**< Load users from all servers */
         bool        log_auth_warnings;              /**< Log authentication failures and warnings */
         bool        session_track_trx_state;        /**< Get transaction state via session track mechanism */

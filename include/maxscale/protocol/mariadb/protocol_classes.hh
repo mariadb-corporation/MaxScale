@@ -47,7 +47,6 @@ struct UserSearchSettings
     {
         // These user search settings are dependent on service configuration. As services can be reconfigured
         // during runtime, the setting values have to be updated when creating session.
-        bool localhost_match_wildcard_host {true};
         bool allow_root_user {false};
     };
 
