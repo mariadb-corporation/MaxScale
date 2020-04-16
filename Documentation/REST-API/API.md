@@ -109,11 +109,18 @@ _relationships_ field that represents any relations the object has to other
 objects. This closely resembles the JSON API definition of links.
 
 In the _relationships_ objects, all resources have a _self_ link that points to
-the resource itself. This allows for easier updating of resources as the reply
-URL is included in the response itself.
+the resource itself. This allows easy access to the objects pointed by the
+relationships as the reply URL is included in the response itself.
+
+To create a relationship between two objects, define it in the initial POST
+request. To modify the relationships of existing objects, perform a PATCH
+request with the new definition of the relevant relationship. To completely
+remove all relationships from an object, the `data` field of the corresponding
+relationship object must be set to an empty array.
 
 The following lists the resources and the types of links each resource can have
-in addition to the _self_ link.
+in addition to the _self_ link. Examples of these relationships can be seen in
+the resource documentation.
 
 - `services` - Service resource
 
@@ -128,6 +135,9 @@ in addition to the _self_ link.
   - `filters`
 
     List of filters used by the service
+
+    **NOTE:** This is an ordered relationship where the order of the filters
+      defines the order in which they process queries.
 
   - `listeners`
 
@@ -144,6 +154,9 @@ in addition to the _self_ link.
   - `services`
 
     List of services that use this filter
+
+    **NOTE:** This is a one-way relationship that can only be modified from the
+    `services` resource.
 
 - `servers` - Server resource
 
