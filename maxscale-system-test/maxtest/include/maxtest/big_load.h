@@ -1,8 +1,6 @@
 #pragma once
 
-#include "testconnections.h"
-#include "sql_t1.h"
-#include "get_com_select_insert.h"
+class TestConnections;
 
 // pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 typedef struct

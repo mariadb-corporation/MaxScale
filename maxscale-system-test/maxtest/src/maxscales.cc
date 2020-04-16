@@ -1,9 +1,11 @@
 #include "maxscales.hh"
-#include <sstream>
-#include <unordered_map>
 #include <string>
 #include <maxbase/string.hh>
 #include "envv.hh"
+
+#define DEFAULT_MAXSCALE_CNF "/etc/maxscale.cnf"
+#define DEFAULT_MAXSCALE_LOG_DIR "/var/log/maxscale/"
+#define DEFAULT_MAXSCALE_BINLOG_DIR "/var/lib/maxscale/Binlog_Service/"
 
 Maxscales::Maxscales(const char* pref,
                      const char* test_cwd,

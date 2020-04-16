@@ -1,6 +1,6 @@
 #pragma once
 
-#include "testconnections.h"
+class Mariadb_nodes;
 
 /**
  * @brief get_global_status_allnodes Reads COM_SELECT and COM_INSERT variables from all nodes and stores into

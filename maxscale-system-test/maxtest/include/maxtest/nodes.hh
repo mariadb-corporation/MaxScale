@@ -2,13 +2,13 @@
 
 #include <errno.h>
 #include <string>
-#include "mariadb_func.h"
 #include <set>
 #include <vector>
 #include <string>
 
 #include <maxbase/ccdefs.hh>
 #include <maxbase/string.hh>
+#include "mariadb_func.h"
 
 typedef std::set<std::string> StringSet;
 

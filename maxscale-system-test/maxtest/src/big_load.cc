@@ -1,5 +1,10 @@
 #include "big_load.h"
+
 #include <pthread.h>
+#include "testconnections.h"
+#include "sql_t1.h"
+#include "get_com_select_insert.h"
+
 
 void load(long int* new_inserts,
           long int* new_selects,

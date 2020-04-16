@@ -1,6 +1,5 @@
 add_library(maxtest SHARED
         big_load.cc
-        big_transaction.cc
         blob_test.cc
         clustrix_nodes.cpp
         config_operations.cc

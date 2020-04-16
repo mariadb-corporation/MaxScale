@@ -3,7 +3,7 @@ add_test_executable_ex(NAME mysqlmon_multimaster SOURCE mysqlmon_multimaster.cpp
         CONFIG mysqlmon_multimaster.cnf VMS repl_backend LABELS mysqlmon BREAKS_REPL)
 
 # MySQL Monitor with Multi-master configurations (assume_unique_hostnames=OFF)
-add_test_executable_ex(NAME mysqlmon_multimaster_serverid SOURCE mysqlmon_multimaster.cpp
+add_test_executable_ex(NAME mysqlmon_multimaster_serverid ORIG_NAME mysqlmon_multimaster
         CONFIG mysqlmon_multimaster_serverid.cnf VMS repl_backend LABELS mysqlmon BREAKS_REPL)
 
 # MySQL Monitor Failover Test

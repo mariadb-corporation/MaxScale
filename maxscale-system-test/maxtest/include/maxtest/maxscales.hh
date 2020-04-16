@@ -8,10 +8,6 @@
 #include "mariadb_func.h"
 #include "mariadb_nodes.h"
 
-#define DEFAULT_MAXSCALE_CNF "/etc/maxscale.cnf"
-#define DEFAULT_MAXSCALE_LOG_DIR "/var/log/maxscale/"
-#define DEFAULT_MAXSCALE_BINLOG_DIR "/var/lib/maxscale/Binlog_Service/"
-
 class Maxscales: public Nodes
 {
 public:
