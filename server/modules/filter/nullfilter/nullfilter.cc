@@ -17,31 +17,34 @@
 #include <maxscale/utils.h>
 
 using std::string;
-
-namespace
-{
+namespace config = mxs::config;
 
 #define VERSION_STRING "V1.0.0"
 
-const char CAPABILITIES_PARAM[] = "capabilities";
-
-const char* DEFAULT_RCAP_TYPE_NAME = "RCAP_TYPE_NONE";
-const uint64_t DEFAULT_RCAP_TYPE_VALUE = 0;
-
-const MXS_ENUM_VALUE capability_values[] =
+namespace
 {
-    {DEFAULT_RCAP_TYPE_NAME,           DEFAULT_RCAP_TYPE_VALUE       },
-    {"RCAP_TYPE_STMT_INPUT",           RCAP_TYPE_STMT_INPUT          },
-    {"RCAP_TYPE_CONTIGUOUS_INPUT",     RCAP_TYPE_CONTIGUOUS_INPUT    },
-    {"RCAP_TYPE_TRANSACTION_TRACKING", RCAP_TYPE_TRANSACTION_TRACKING},
-    {"RCAP_TYPE_STMT_OUTPUT",          RCAP_TYPE_STMT_OUTPUT         },
-    {"RCAP_TYPE_CONTIGUOUS_OUTPUT",    RCAP_TYPE_CONTIGUOUS_OUTPUT   },
-    {"RCAP_TYPE_RESULTSET_OUTPUT",     RCAP_TYPE_RESULTSET_OUTPUT    },
-    {NULL,                             0                             }
-};
+namespace nullfilter
+{
 
-size_t RCAP_TYPE_NAME_MAXLEN = 30;      // strlen(RCAP_TYPE_TRANSACTION_TRACKING)
-size_t RCAP_TYPE_COUNT = sizeof(capability_values) / sizeof(capability_values[0]);
+config::Specification specification(MXS_MODULE_NAME, config::Specification::FILTER);
+
+config::ParamEnumMask<mxs_routing_capability_t> capabilities(
+    &specification,
+    "capabilities",
+    "Combination of mxs_routing_capabilitiy_t values.",
+    {
+        { RCAP_TYPE_STMT_INPUT, "RCAP_TYPE_STMT_INPUT" },
+        { RCAP_TYPE_CONTIGUOUS_INPUT, "RCAP_TYPE_CONTIGUOUS_INPUT" },
+        { RCAP_TYPE_TRANSACTION_TRACKING, "RCAP_TYPE_TRANSACTION_TRACKING" },
+        { RCAP_TYPE_STMT_OUTPUT, "RCAP_TYPE_STMT_OUTPUT" },
+        { RCAP_TYPE_CONTIGUOUS_OUTPUT, "RCAP_TYPE_CONTIGUOUS_OUTPUT" },
+        { RCAP_TYPE_RESULTSET_OUTPUT, "RCAP_TYPE_RESULTSET_OUTPUT" },
+        { RCAP_TYPE_PACKET_OUTPUT, "RCAP_TYPE_PACKET_OUTPUT" },
+        { RCAP_TYPE_SESSION_STATE_TRACKING, "RCAP_TYPE_SESSION_STATE_TRACKING" },
+        { RCAP_TYPE_REQUEST_TRACKING, "RCAP_TYPE_REQUEST_TRACKING" }
+    },
+    0);
+}
 }
 
 //
@@ -65,17 +68,15 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,   /* Process finish. */
         NULL,   /* Thread init. */
         NULL,   /* Thread finish. */
-        {
-            {
-                CAPABILITIES_PARAM,
-                MXS_MODULE_PARAM_ENUM,
-                DEFAULT_RCAP_TYPE_NAME,
-                MXS_MODULE_OPT_NONE,
-                capability_values
-            },
-            {MXS_END_MODULE_PARAMS}
-        }
     };
+
+    static bool populated = false;
+
+    if (!populated)
+    {
+        nullfilter::specification.populate(info);
+        populated = true;
+    }
 
     return &info;
 }
@@ -84,40 +85,37 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 // NullFilter
 //
 
-NullFilter::NullFilter(const char* zName, uint64_t capabilities)
-    : m_capabilities(capabilities)
+NullFilter::NullFilter::Config::Config(const std::string& name)
+    : config::Configuration(name, &nullfilter::specification)
 {
-    const char format[] = "Null filter [%s] created, capabilities: ";
+    add_native(&capabilities, &nullfilter::capabilities);
+}
 
-    char message[sizeof(format) + strlen(zName) + (RCAP_TYPE_NAME_MAXLEN + 1) * RCAP_TYPE_COUNT + 1];
+NullFilter::NullFilter(Config&& config)
+    : m_config(std::move(config))
+{
+    std::ostringstream os;
 
-    sprintf(message, format, zName);
+    os << "Null filter [" << config.name() << "] created, capabilities:";
 
-    if (m_capabilities)
+    if (m_config.capabilities)
     {
-        const MXS_ENUM_VALUE* i = capability_values;
-        const MXS_ENUM_VALUE* end = i + RCAP_TYPE_COUNT;
+        const auto& values = nullfilter::capabilities.values();
 
-        while (i != end)
+        for (const auto& value : values)
         {
-            if (i->enum_value != 0)
+            if ((m_config.capabilities & value.first) == value.first)
             {
-                if ((m_capabilities & i->enum_value) == i->enum_value)
-                {
-                    strcat(message, " ");
-                    strcat(message, i->name);
-                }
+                os << " " << value.second;
             }
-
-            ++i;
         }
     }
     else
     {
-        strcat(message, " (none)");
+        os << " (none)";
     }
 
-    MXS_NOTICE("%s", message);
+    MXS_NOTICE("%s", os.str().c_str());
 }
 
 NullFilter::~NullFilter()
@@ -129,9 +127,14 @@ NullFilter* NullFilter::create(const char* zName, mxs::ConfigParameters* pParams
 {
     NullFilter* pFilter = NULL;
 
-    uint64_t capabilities = pParams->get_enum(CAPABILITIES_PARAM, capability_values);
+    Config config(zName);
 
-    return new NullFilter(zName, capabilities);
+    if (config.configure(*pParams))
+    {
+        pFilter = new NullFilter(std::move(config));
+    }
+
+    return pFilter;
 }
 
 
@@ -148,5 +151,5 @@ json_t* NullFilter::diagnostics() const
 
 uint64_t NullFilter::getCapabilities()
 {
-    return m_capabilities;
+    return m_config.capabilities;
 }

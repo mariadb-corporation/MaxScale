@@ -19,6 +19,18 @@
 class NullFilter : public maxscale::Filter<NullFilter, NullFilterSession>
 {
 public:
+    NullFilter(const NullFilter&) = delete;
+    NullFilter& operator=(const NullFilter&) = delete;
+
+    class Config : public mxs::config::Configuration
+    {
+    public:
+        Config(const std::string& name);
+        Config(Config&& other) = default;
+
+        uint32_t capabilities;
+    };
+
     ~NullFilter();
     static NullFilter* create(const char* zName, mxs::ConfigParameters* pParams);
 
@@ -29,11 +41,8 @@ public:
     uint64_t getCapabilities();
 
 private:
-    NullFilter(const char* zName, uint64_t m_capabilities);
-
-    NullFilter(const NullFilter&);
-    NullFilter& operator=(const NullFilter&);
+    NullFilter(Config&& config);
 
 private:
-    uint64_t m_capabilities;
+    Config m_config;
 };
