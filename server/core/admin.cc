@@ -341,6 +341,8 @@ void add_content_type_header(MHD_Response* response, const std::string& path)
             MHD_add_response_header(response, "Content-Type", it->second.c_str());
         }
     }
+
+    MHD_add_response_header(response, "Cache-Control", "public, max-age=604800, immutable");
 }
 
 bool is_auth_endpoint(const HttpRequest& request)
@@ -617,6 +619,9 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
     }
 
     add_extra_headers(response);
+
+    // Prevent caching without verification
+    MHD_add_response_header(response, "Cache-Control", "no-cache");
 
     int rval = MHD_queue_response(m_connection, reply.get_code(), response);
     MHD_destroy_response(response);
