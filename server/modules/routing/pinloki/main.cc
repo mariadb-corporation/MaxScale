@@ -46,7 +46,8 @@ using namespace pinloki;
 
 bool writer_mode = true;
 
-void prog_main(const maxsql::GtidList& gtid_list)
+void prog_main(const maxsql::GtidList& gtid_list, const std::string& host,
+               const std::string& user, const std::string& pw)
 {
     // Single domain currently
     maxsql::Gtid gtid;
@@ -57,7 +58,7 @@ void prog_main(const maxsql::GtidList& gtid_list)
 
     if (writer_mode)
     {
-        pinloki::Writer writer;
+        pinloki::Writer writer({maxbase::Host::from_string(host), "", user, pw});
         std::thread wthread;
         wthread = std::thread(&pinloki::Writer::run, &writer);
         wthread.join();
@@ -84,19 +85,27 @@ try
     bool help = false;
     std::string mode;
     maxsql::GtidList override_gtid_list;
+    int port = 3306;
+    std::string host = "127.0.0.1";
+    std::string user = "root";
+    std::string pw = "";
 
     static struct option long_options[] = {
-        {"help",  no_argument,       nullptr, 0},
-        {"mode",  required_argument, nullptr, 0},
-        {"gtid",  required_argument, nullptr, 0},
-        {nullptr, 0,                 nullptr, 0}
+        {"help",     no_argument,       nullptr, '?'},
+        {"mode",     required_argument, nullptr, 'm'},
+        {"gtid",     required_argument, nullptr, 'g'},
+        {"port",     required_argument, nullptr, 'P'},
+        {"host",     required_argument, nullptr, 'h'},
+        {"user",     required_argument, nullptr, 'u'},
+        {"password", required_argument, nullptr, 'p'},
+        {nullptr,    0,                 nullptr, 0  }
     };
 
     while (1)
     {
         int option_index = 0;
 
-        int c = getopt_long(argc, argv, "hm:g:", long_options, &option_index);
+        int c = getopt_long(argc, argv, "?m:g:P:h:u:p:", long_options, &option_index);
         if (c == -1)
         {
             break;
@@ -104,7 +113,7 @@ try
 
         switch (c)
         {
-        case 'h':
+        case '?':
             help = true;
             break;
 
@@ -127,6 +136,22 @@ try
             }
             break;
 
+        case 'P':
+            port = atoi(optarg);
+            break;
+
+        case 'h':
+            host = optarg;
+            break;
+
+        case 'u':
+            user = optarg;
+            break;
+
+        case 'p':
+            pw = optarg;
+            break;
+
         default:
             help = true;
         }
@@ -144,6 +169,11 @@ try
 
         std::cout << "\n-g --gtid\t"
                   << (override_gtid_list.is_valid() ? override_gtid_list.to_string() : "No gtid override");
+
+        std::cout << "\n-h --host\t" << host;
+        std::cout << "\n-P --port\t" << port;
+        std::cout << "\n-u --user\t" << user;
+        std::cout << "\n-p --password\t" << (pw.empty() ? "" : "*****");
         std::cout << std::endl;
 
         return EXIT_SUCCESS;
@@ -155,7 +185,7 @@ try
         ofs << override_gtid_list;
     }
 
-    prog_main(override_gtid_list);
+    prog_main(override_gtid_list, host + ":" + std::to_string(port), user, pw);
 }
 catch (maxbase::Exception& ex)
 {

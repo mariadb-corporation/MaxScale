@@ -35,7 +35,7 @@ using namespace std::literals::string_literals;
 namespace pinloki
 {
 
-Writer::Writer()
+Writer::Writer(const maxsql::Connection::ConnectionDetails& details)
 {
     std::string gtid_list_str;
     std::ifstream ifs(config().gtid_file_path());
@@ -53,9 +53,8 @@ Writer::Writer()
 
     std::cout << "Boot state = " << gtid_list_str << "\n";
 
-    maxbase::Host host = maxbase::Host::from_string("127.0.0.1:4001");
-    m_sConnection.reset(new maxsql::Connection({host, "test", "maxskysql", "skysql"}));
-    m_sConnection->start_replication(42, gtid);
+    m_sConnection.reset(new maxsql::Connection(details));
+    m_sConnection->start_replication(1234, gtid);
 }
 
 void Writer::run()

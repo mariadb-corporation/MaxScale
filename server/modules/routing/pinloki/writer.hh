@@ -28,7 +28,7 @@ public:
     /**
      * @brief Writer
      */
-    Writer();
+    Writer(const maxsql::Connection::ConnectionDetails& details);
     void run();
 private:
     std::unique_ptr<maxsql::Connection> m_sConnection;
