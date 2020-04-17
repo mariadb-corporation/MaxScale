@@ -52,7 +52,7 @@ void Connection::start_replication(unsigned int server_id, maxsql::Gtid gtid)
     // TODO use config
     std::vector<std::string> queries =
     {
-        "SET @master_binlog_checksum = @@binlog_checksum",
+        "SET @master_binlog_checksum = @@global.binlog_checksum",
         "SET @mariadb_slave_capability=4",
         gtid_start_pos.str(),
         // "SET @slave_connect_state='1-1000-30,0-1001-60'",

@@ -22,6 +22,7 @@
 #include <iostream>
 #include <iomanip>
 #include <assert.h>
+#include <zlib.h>
 
 /** Notes.
  * 1.  For the very first file, the server sends only one artifical rotate to end the file,
@@ -75,7 +76,22 @@ void FileWriter::rotate_event(const maxsql::MariaRplEvent& rpl_event)
     bool is_artificial = rpl_event.event().flags & LOG_EVENT_ARTIFICIAL_F;
     auto& rotate = rpl_event.event().event.rotate;
 
-    auto given = std::string(rotate.filename.str, 13);      // TODO rotate.filename.length is incorrect
+    // 19 byte header and 8 bytes of constant data
+    // see: https://mariadb.com/kb/en/rotate_event/
+    const size_t NAME_OFFSET = 19 + 8;
+    auto given = std::string(rpl_event.raw_data() + NAME_OFFSET, rpl_event.raw_data_size() - NAME_OFFSET);
+
+    // This is a very uncomfortable hack around the lack of checksum information we have at this point.
+    // Deducing whether checksums are enabled by calculating it and comparing it to the stored checksum works
+    // in most cases but we can't be sure whether there are edge cases where the valid checksum of the start
+    // of the event results in a checksum that matches the last four bytes of it.
+    uint32_t orig_checksum = *(uint32_t*)(rpl_event.raw_data() + rpl_event.raw_data_size() - 4);
+    uint32_t checksum = crc32(0, (uint8_t*)rpl_event.raw_data(), rpl_event.raw_data_size() - 4);
+
+    if (orig_checksum == checksum)
+    {
+        given = given.substr(0, given.length() - 4);
+    }
 
     std::string file_name = Config::path(given);
 
