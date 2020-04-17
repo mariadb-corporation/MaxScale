@@ -94,7 +94,17 @@ struct Result
         return this->code >= SUCCESS && this->code < REDIRECTION;
     }
 
-    int                                code = 0;// HTTP response code
+    Result(Category category)
+        : code(category)
+    {
+    }
+
+    Result()
+        : code(0)
+    {
+    }
+
+    int                                code;    // HTTP response code
     std::string                        body;    // Response body
     std::map<std::string, std::string> headers; // Headers attached to the response
 };

@@ -164,7 +164,11 @@ http::Result CsMonitorServer::begin(const std::chrono::seconds& timeout, const s
         MXS_WARNING("Transaction begin, when transaction state is not inactive.");
     }
 
+#ifdef TRX_SUPPORTED
     http::Result result = http::put(create_url(cs::rest::BEGIN), begin_body(timeout, id), m_http_config);
+#else
+    http::Result result(http::Result::SUCCESS);
+#endif
 
     if (result.ok())
     {
@@ -182,10 +186,14 @@ http::Result CsMonitorServer::commit()
         MXS_WARNING("Transaction commit, when state is not active.");
     }
 
+#ifdef TRX_SUPPORTED
     http::Result result = http::get(create_url(cs::rest::COMMIT), m_http_config);
+#else
+    http::Result result(http::Result::SUCCESS);
+#endif
 
     // Whatever the result, we consider a transaction as not being active.
-    m_trx_state = TRX_ACTIVE;
+    m_trx_state = TRX_INACTIVE;
 
     return result;
 }
@@ -198,10 +206,14 @@ http::Result CsMonitorServer::rollback()
         MXS_WARNING("Transaction rollback, when state is not active.");
     }
 
+#ifdef TRX_SUPPORTED
     http::Result result = http::get(create_url(cs::rest::ROLLBACK), m_http_config);
+#else
+    http::Result result(http::Result::SUCCESS);
+#endif
 
     // Whatever the result, we consider a transaction as not being active.
-    m_trx_state = TRX_ACTIVE;
+    m_trx_state = TRX_INACTIVE;
 
     return result;
 }
@@ -330,7 +342,16 @@ bool CsMonitorServer::begin(const std::vector<CsMonitorServer*>& servers,
     }
 
     vector<string> urls = create_urls(servers, cs::rest::BEGIN);
+#ifdef TRX_SUPPORTED
     vector<http::Result> results = http::put(urls, begin_body(timeout, id), http_config);
+#else
+    vector<http::Result> results;
+    http::Result result(http::Result::SUCCESS);
+    for (size_t i = 0; i < urls.size(); ++i)
+    {
+        results.push_back(result);
+    }
+#endif
 
     mxb_assert(urls.size() == results.size());
 
@@ -394,7 +415,16 @@ bool CsMonitorServer::commit(const std::vector<CsMonitorServer*>& servers,
     }
 
     vector<string> urls = create_urls(servers, cs::rest::COMMIT);
+#ifdef TRX_SUPPORTED
     vector<http::Result> results = http::put(urls, "{}", http_config);
+#else
+    vector<http::Result> results;
+    http::Result result(http::Result::SUCCESS);
+    for (size_t i = 0; i < urls.size(); ++i)
+    {
+        results.push_back(result);
+    }
+#endif
 
     mxb_assert(urls.size() == results.size());
 
@@ -453,7 +483,16 @@ bool CsMonitorServer::rollback(const std::vector<CsMonitorServer*>& servers,
     }
 
     vector<string> urls = create_urls(servers, cs::rest::ROLLBACK);
+#ifdef TRX_SUPPORTED
     vector<http::Result> results = http::put(urls, "{}", http_config);
+#else
+    vector<http::Result> results;
+    http::Result result(http::Result::SUCCESS);
+    for (size_t i = 0; i < urls.size(); ++i)
+    {
+        results.push_back(result);
+    }
+#endif
 
     mxb_assert(urls.size() == results.size());
 
