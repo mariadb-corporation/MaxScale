@@ -14,6 +14,7 @@
 #include "pam_instance.hh"
 
 #include <string>
+#include <maxscale/config_common.hh>
 #include <maxscale/jansson.hh>
 #include <maxscale/protocol/mariadb/module_names.hh>
 #include <maxscale/secrets.hh>
@@ -21,6 +22,11 @@
 #include "pam_backend_session.hh"
 
 using std::string;
+
+namespace
+{
+const string opt_cleartext_plugin = "pam_use_cleartext_plugin";
+}
 
 /**
  * Create an instance.
@@ -30,7 +36,13 @@ using std::string;
  */
 PamAuthenticatorModule* PamAuthenticatorModule::create(mxs::ConfigParameters* options)
 {
-    return new(std::nothrow) PamAuthenticatorModule();
+    bool cleartext_plugin = false;
+    if (options->contains(opt_cleartext_plugin))
+    {
+        cleartext_plugin = options->get_bool(opt_cleartext_plugin);
+        options->remove(opt_cleartext_plugin);
+    }
+    return new(std::nothrow) PamAuthenticatorModule(cleartext_plugin);
 }
 
 uint64_t PamAuthenticatorModule::capabilities() const
@@ -45,7 +57,7 @@ std::string PamAuthenticatorModule::supported_protocol() const
 
 mariadb::SClientAuth PamAuthenticatorModule::create_client_authenticator()
 {
-    return mariadb::SClientAuth(new(std::nothrow) PamClientAuthenticator());
+    return mariadb::SClientAuth(new(std::nothrow) PamClientAuthenticator(m_cleartext_plugin));
 }
 
 mariadb::SBackendAuth
@@ -65,6 +77,11 @@ const std::unordered_set<std::string>& PamAuthenticatorModule::supported_plugins
     return plugins;
 }
 
+PamAuthenticatorModule::PamAuthenticatorModule(bool cleartext_plugin)
+    : m_cleartext_plugin(cleartext_plugin)
+{
+}
+
 extern "C"
 {
 /**
@@ -73,22 +90,22 @@ extern "C"
 MXS_MODULE* MXS_CREATE_MODULE()
 {
     static MXS_MODULE info =
+    {
+        MXS_MODULE_API_AUTHENTICATOR,
+        MXS_MODULE_GA,
+        MXS_AUTHENTICATOR_VERSION,
+        "PAM authenticator",
+        "V1.0.0",
+        MXS_NO_MODULE_CAPABILITIES,
+        &mxs::AuthenticatorApiGenerator<PamAuthenticatorModule>::s_api,
+        NULL,           /* Process init. */
+        NULL,           /* Process finish. */
+        NULL,           /* Thread init. */
+        NULL,           /* Thread finish. */
         {
-            MXS_MODULE_API_AUTHENTICATOR,
-            MXS_MODULE_GA,
-            MXS_AUTHENTICATOR_VERSION,
-            "PAM authenticator",
-            "V1.0.0",
-            MXS_NO_MODULE_CAPABILITIES,
-            &mxs::AuthenticatorApiGenerator<PamAuthenticatorModule>::s_api,
-            NULL,       /* Process init. */
-            NULL,       /* Process finish. */
-            NULL,       /* Thread init. */
-            NULL,       /* Thread finish. */
-            {
-                {MXS_END_MODULE_PARAMS}
-            }
-        };
+            {MXS_END_MODULE_PARAMS}
+        }
+    };
 
     return &info;
 }

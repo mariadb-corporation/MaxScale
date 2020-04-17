@@ -22,7 +22,7 @@
 class PamClientAuthenticator : public mariadb::ClientAuthenticator
 {
 public:
-    PamClientAuthenticator() = default;
+    explicit PamClientAuthenticator(bool cleartext_plugin);
 
     ExchRes exchange(GWBUF* read_buffer, MYSQL_session* session, mxs::Buffer* output_packet) override;
     AuthRes authenticate(const mariadb::UserEntry* entry, MYSQL_session* session) override;
@@ -38,6 +38,7 @@ private:
         DONE
     };
 
-    State    m_state {State::INIT};   /**< Authentication state */
-    uint8_t  m_sequence {0};          /**< The next packet seqence number */
+    State   m_state {State::INIT};      /**< Authentication state */
+    uint8_t m_sequence {0};             /**< The next packet seqence number */
+    bool    m_cleartext_plugin {false}; /**< Is "pam_use_cleartext_plugin" enabled? */
 };

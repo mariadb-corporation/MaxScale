@@ -142,24 +142,37 @@ PamBackendAuthenticator::exchange(const mxs::Buffer& input, mxs::Buffer* output)
             auto parse_res = mariadb::parse_auth_switch_request(input);
             if (parse_res.success)
             {
-                if (parse_res.plugin_name != DIALOG)
+                // Support both "dialog" and "mysql_clear_password".
+                if (parse_res.plugin_name == DIALOG)
                 {
-                    MXB_ERROR(WRONG_PLUGIN_REQ, m_shared_data.servername, parse_res.plugin_name.c_str(),
-                              m_shared_data.client_data->user_and_host().c_str(), DIALOG.c_str());
+                    if (parse_res.plugin_data.empty())
+                    {
+                        // Just the AuthSwitchRequest, this is ok. The server now expects a password.
+                        *output = generate_pw_packet();
+                        m_state = State::EXCHANGING;
+                        rval = AuthRes::SUCCESS;
+                    }
+                    else if (parse_password_prompt(parse_res.plugin_data))
+                    {
+                        // Got a password prompt, send answer.
+                        *output = generate_pw_packet();
+                        m_state = State::EXCHANGING;
+                        rval = AuthRes::SUCCESS;
+                    }
                 }
-                else if (parse_res.plugin_data.empty())
+                else if (parse_res.plugin_name == CLEAR_PW)
                 {
-                    // Just the AuthSwitchRequest, this is ok. The server now expects a password.
                     *output = generate_pw_packet();
-                    m_state = State::EXCHANGING;
+                    m_state = State::EXCHANGE_DONE;     // Server should not ask for anything else.
                     rval = AuthRes::SUCCESS;
                 }
-                else if (parse_password_prompt(parse_res.plugin_data))
+                else
                 {
-                    // Got a password prompt, send answer.
-                    *output = generate_pw_packet();
-                    m_state = State::EXCHANGING;
-                    rval = AuthRes::SUCCESS;
+                    const char msg[] = "'%s' asked for authentication plugin '%s' when authenticating '%s'. "
+                                       "Only '%s' and '%s' are supported.";
+                    MXB_ERROR(msg, m_shared_data.servername, parse_res.plugin_name.c_str(),
+                              m_shared_data.client_data->user_and_host().c_str(),
+                              DIALOG.c_str(), CLEAR_PW.c_str());
                 }
             }
             else
@@ -188,6 +201,11 @@ PamBackendAuthenticator::exchange(const mxs::Buffer& input, mxs::Buffer* output)
         }
         break;
 
+    case State::EXCHANGE_DONE:
+        // Server is acting weird, error. Likely a misconfigured pam setup.
+        MXB_ERROR("'%s' sent an unexpected message during authentication, possibly due to a misconfigured "
+                  "PAM setup.", m_shared_data.servername);
+        break;
 
     case State::ERROR:
         // Should not get here.

@@ -33,9 +33,11 @@ public:
 
     const std::unordered_set<std::string>& supported_plugins() const override;
 
-    mariadb::SClientAuth create_client_authenticator() override;
+    mariadb::SClientAuth  create_client_authenticator() override;
     mariadb::SBackendAuth create_backend_authenticator(mariadb::BackendAuthData& auth_data) override;
 
 private:
-    PamAuthenticatorModule() = default;
+    explicit PamAuthenticatorModule(bool cleartext_plugin);
+
+    bool m_cleartext_plugin {false};    /**< Is "pam_use_cleartext_plugin" enabled? */
 };

@@ -63,6 +63,7 @@ bool store_client_password(MYSQL_session* session, GWBUF* buffer)
  */
 Buffer PamClientAuthenticator::create_auth_change_packet() const
 {
+    bool dialog = !m_cleartext_plugin;
     /**
      * The AuthSwitchRequest packet:
      * 4 bytes     - Header
@@ -70,19 +71,28 @@ Buffer PamClientAuthenticator::create_auth_change_packet() const
      * string[NUL] - Auth plugin name
      * byte        - Message type
      * string[EOF] - Message
+     *
+     * If using mysql_clear_password, no messages are added.
      */
-    size_t plen = 1 + DIALOG_SIZE + 1 + PASSWORD.length();
+    size_t plen = dialog ? (1 + DIALOG_SIZE + 1 + PASSWORD.length()) : (1 + CLEAR_PW_SIZE);
     size_t buflen = MYSQL_HEADER_LEN + plen;
     uint8_t bufdata[buflen];
     uint8_t* pData = bufdata;
-    gw_mysql_set_byte3(pData, plen);
+    mariadb::set_byte3(pData, plen);
     pData += 3;
     *pData++ = m_sequence;
     *pData++ = MYSQL_REPLY_AUTHSWITCHREQUEST;
-    memcpy(pData, DIALOG.c_str(), DIALOG_SIZE);     // Plugin name. TODO: add support for mysql_clear_password
-    pData += DIALOG_SIZE;
-    *pData++ = DIALOG_ECHO_DISABLED;
-    memcpy(pData, PASSWORD.c_str(), PASSWORD.length());     // First message
+    if (dialog)
+    {
+        memcpy(pData, DIALOG.c_str(), DIALOG_SIZE);     // Plugin name.
+        pData += DIALOG_SIZE;
+        *pData++ = DIALOG_ECHO_DISABLED;
+        memcpy(pData, PASSWORD.c_str(), PASSWORD.length());     // First message
+    }
+    else
+    {
+        memcpy(pData, CLEAR_PW.c_str(), CLEAR_PW_SIZE);
+    }
 
     Buffer buffer(bufdata, buflen);
     return buffer;
@@ -98,7 +108,6 @@ PamClientAuthenticator::exchange(GWBUF* buffer, MYSQL_session* session, mxs::Buf
     {
     case State::INIT:
         {
-            // Change authenticator to "dialog".
             // TODO: what if authenticator was already correct? Could this part be skipped?
             Buffer authbuf = create_auth_change_packet();
             if (authbuf.length())
@@ -160,4 +169,9 @@ AuthRes PamClientAuthenticator::authenticate(const UserEntry* entry, MYSQL_sessi
 
     m_state = State::DONE;
     return rval;
+}
+
+PamClientAuthenticator::PamClientAuthenticator(bool cleartext_plugin)
+    : m_cleartext_plugin(cleartext_plugin)
+{
 }

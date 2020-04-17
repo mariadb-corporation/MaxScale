@@ -16,10 +16,8 @@
  */
 #include "pam_auth_common.hh"
 
-/* PAM client helper plugin name, TODO: add support for "mysql_clear_password" */
 const std::string DIALOG = "dialog";
-/* The total storage required */
 const int DIALOG_SIZE = DIALOG.length() + 1;
-/* First query from server */
+const std::string CLEAR_PW = "mysql_clear_password";
+const int CLEAR_PW_SIZE = CLEAR_PW.length() + 1;
 const std::string PASSWORD = "Password: ";
-

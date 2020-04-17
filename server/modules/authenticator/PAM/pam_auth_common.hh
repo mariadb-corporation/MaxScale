@@ -20,9 +20,12 @@
 #include <maxscale/ccdefs.hh>
 #include <string>
 
-extern const std::string DIALOG;
-extern const std::string PASSWORD;
-extern const int DIALOG_SIZE;
+extern const std::string DIALOG;    /* PAM client helper plugin name */
+extern const int DIALOG_SIZE;       /* The total storage required */
+extern const std::string CLEAR_PW;  /* Alternative plugin */
+extern const int CLEAR_PW_SIZE;
+extern const std::string PASSWORD;      /* First query from server */
+
 
 /* Magic numbers from server source
  * https://github.com/MariaDB/server/blob/10.2/plugin/auth_pam/auth_pam.c */

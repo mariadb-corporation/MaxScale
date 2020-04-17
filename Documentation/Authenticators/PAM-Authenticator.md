@@ -9,43 +9,51 @@ which this document details.
 
 ## Configuration
 
-The MaxScale PAM modules themselves have no configuration. All that is required
-is to change the listener and backend authenticator modules to `PAMAuth` and
-`PAMBackendAuth`, respectively.
+The MaxScale PAM module requires little configuration. All that is required
+is to change the listener authenticator module to "PAMAuth".
 
 ```
 [Read-Write-Listener]
 type=listener
 address=::
 service=Read-Write-Service
-protocol=MariaDBClient
 authenticator=PAMAuth
 
 [Master-Server]
 type=server
 address=123.456.789.10
 port=12345
-protocol=MariaDBBackend
-authenticator=PAMBackendAuth
 ```
 
-The PAM authenticator fetches user entries with `plugin='pam'` from the
-`mysql.user` table of a backend. The user accounts also need to have either the
-global SELECT-privilege or a database or a table-level privilege. Privileges
-through a default role are also detected. The PAM service name of a user is read
-from the `authetication_string`-column. The matching PAM service in the
+MaxScale uses the PAM authenticator plugin to authenticate users with *plugin*
+set to "pam" in the *mysql.user*-table. The PAM service name of a user is read
+from the *authetication_string*-column. The matching PAM service in the
 operating system PAM config is used for authenticating the user. If the
-`authetication_string` for a user is empty, the fallback service `mysql` is
+*authetication_string* for a user is empty, the fallback service "mysql" is
 used.
 
 PAM service configuration is out of the scope of this document, see
-[The Linux-PAM System Administrators' Guide
-](http://www.linux-pam.org/Linux-PAM-html/Linux-PAM_SAG.html) for more
-information. A simple service definition used for testing this module is below.
+[The Linux-PAM System Administrators' Guide](http://www.linux-pam.org/Linux-PAM-html/Linux-PAM_SAG.html)
+for more information. A simple service definition used for testing this module
+is below.
 
 ```
 auth            required        pam_unix.so
 account         required        pam_unix.so
+```
+
+### `pam_use_cleartext_plugin`
+
+Boolean, default value is "false". If enabled, MaxScale communicates with the
+client as if using
+[mysql_clear_password](https://mariadb.com/kb/en/connection/#mysql_clear_password-plugin).
+This setting has no effect on MaxScale-to-backend communication, which adapts to
+either "dialog" or "mysql_clear_password", depeding on which one the backend
+suggests. This setting is meant to be used with the similarly named MariaDB
+Server setting.
+
+```
+authenticator_options=pam_use_cleartext_plugin=1
 ```
 
 ## Anonymous user mapping
@@ -107,21 +115,17 @@ one-time passwords or two-factor authentication.
 The MaxScale PAM authentication module only supports a simple password exchange.
 On the client side, the authentication begins with MaxScale sending an
 AuthSwitchRequest packet. In addition to the command, the packet contains the
-client plugin name `dialog`, a message type byte `4` and the message
-`Password: `. In the next packet, the client should send the password, which
-MaxScale will forward to the PAM API running on the local machine. If the
-password is correct, an OK packet is sent to the client. If the local PAM API
-asks for  additional credentials as is typical in two-factor authentication
-schemes, authentication fails. Informational messages such as password
-expiration notifications are allowed. These are simply printed to the log.
+client plugin name ("dialog" or "mysql_clear_password"), a message type byte (4)
+and the message "Password: ". In the next packet, the client should send the
+password, which MaxScale will forward to the PAM API running on the local
+machine. If the password is correct, an OK packet is sent to the client. If the
+local PAM API asks for  additional credentials as is typical in two-factor
+authentication schemes, authentication fails. Informational messages such as
+password expiration notifications are allowed. These are simply printed to the
+log.
 
 On the backend side, MaxScale expects the servers to act as MaxScale did towards
 the client. The servers should send an AuthSwitchRequest packet as defined
 above, MaxScale responds with the password received by the client authenticator
 and finally backend replies with OK. Informational messages from backends are
 only printed to the info-log.
-
-## Building the module
-
-The PAM authenticator modules require the PAM and SQLite3 development
-libraries (libpam0g-dev and sqlite3-dev on Ubuntu).

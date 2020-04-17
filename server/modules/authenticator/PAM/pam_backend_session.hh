@@ -33,6 +33,7 @@ private:
     {
         EXPECT_AUTHSWITCH,
         EXCHANGING,
+        EXCHANGE_DONE,
         ERROR,
     };
 
