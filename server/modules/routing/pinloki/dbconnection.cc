@@ -44,7 +44,7 @@ Connection::~Connection()
     mysql_close(m_conn);
 }
 
-void Connection::start_replication(int server_id, maxsql::Gtid gtid)
+void Connection::start_replication(unsigned int server_id, maxsql::Gtid gtid)
 {
     std::ostringstream gtid_start_pos;
     gtid_start_pos << "SET @slave_connect_state='" << (gtid.is_valid() ? gtid.to_string() : "") << '\'';
@@ -73,7 +73,7 @@ void Connection::start_replication(int server_id, maxsql::Gtid gtid)
                                                  << mysql_error(m_conn));
     }
 
-    mariadb_rpl_optionsv(m_rpl, MARIADB_RPL_SERVER_ID, &server_id);
+    mariadb_rpl_optionsv(m_rpl, MARIADB_RPL_SERVER_ID, server_id);
     mariadb_rpl_optionsv(m_rpl, MARIADB_RPL_START, 4);
     mariadb_rpl_optionsv(m_rpl, MARIADB_RPL_FLAGS, MARIADB_RPL_BINLOG_SEND_ANNOTATE_ROWS);
 

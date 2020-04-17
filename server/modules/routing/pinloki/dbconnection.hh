@@ -45,7 +45,7 @@ public:
     Connection(Connection&&) = delete;
     ~Connection();
 
-    void          start_replication(int server_id, Gtid gtid = Gtid());
+    void          start_replication(unsigned int server_id, Gtid gtid = Gtid());
     MariaRplEvent get_rpl_msg();
 
     /**
