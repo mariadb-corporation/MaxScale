@@ -203,15 +203,13 @@ GWBUF* create_load_data_command(const char* target)
 }
 }
 
-InsertStream::InsertStream(mxs::ConfigParameters* params)
-    : m_source(params->get_string("source"))
-    , m_user(params->get_string("user"))
+InsertStream::InsertStream()
 {
 }
 
 InsertStream* InsertStream::create(const char* name, mxs::ConfigParameters* params)
 {
-    return new InsertStream(params);
+    return new InsertStream;
 }
 
 InsertStreamSession* InsertStream::newSession(MXS_SESSION* pSession, SERVICE* pService)
@@ -222,16 +220,6 @@ InsertStreamSession* InsertStream::newSession(MXS_SESSION* pSession, SERVICE* pS
 json_t* InsertStream::diagnostics() const
 {
     json_t* rval = json_object();
-
-    if (!m_source.empty())
-    {
-        json_object_set_new(rval, "source", json_string(m_source.c_str()));
-    }
-
-    if (!m_user.empty())
-    {
-        json_object_set_new(rval, "user", json_string(m_user.c_str()));
-    }
 
     return rval;
 }

@@ -39,10 +39,7 @@ public:
     uint64_t             getCapabilities();
 
 private:
-    InsertStream(mxs::ConfigParameters* params);
-
-    std::string m_source;
-    std::string m_user;
+    InsertStream();
 };
 
 class InsertStreamSession : public maxscale::FilterSession
