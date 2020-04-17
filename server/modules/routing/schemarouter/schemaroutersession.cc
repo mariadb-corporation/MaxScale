@@ -949,10 +949,8 @@ bool SchemaRouterSession::handle_default_db()
                 && (backend = get_bref_from_dcb(dcb)))
             {
                 backend->write(buffer);
-                MXS_DEBUG("USE '%s' sent to %s for session %p",
-                          m_connect_db.c_str(),
-                          target->name(),
-                          m_client->session);
+                MXS_INFO("USE '%s' sent to %s for session %p",
+                         m_connect_db.c_str(), target->name(), m_client->session);
                 rval = true;
             }
             else
