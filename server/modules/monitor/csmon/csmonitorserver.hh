@@ -129,6 +129,7 @@ public:
     Result commit();
 
     bool set_mode(cs::ClusterMode mode, json_t** ppError = nullptr);
+    bool set_config(const std::string& body, json_t** ppError = nullptr);
 
     static Statuses fetch_statuses(const std::vector<CsMonitorServer*>& servers,
                                    const mxb::http::Config& config);
@@ -170,6 +171,14 @@ public:
                          cs::ClusterMode mode,
                          const mxb::http::Config& config,
                          json_t** ppError = nullptr);
+
+    static bool set_config(const std::vector<CsMonitorServer*>& servers,
+                           const std::string& body,
+                           const mxb::http::Config& http_config,
+                           Results* pResults);
+    static Results set_config(const std::vector<CsMonitorServer*>& servers,
+                              const std::string& body,
+                              const mxb::http::Config& http_config);
 
 private:
     bool set_status(const mxb::http::Result& result, json_t** ppError);

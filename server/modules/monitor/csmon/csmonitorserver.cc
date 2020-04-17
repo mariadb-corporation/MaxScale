@@ -249,6 +249,31 @@ bool CsMonitorServer::set_mode(cs::ClusterMode mode, json_t** ppError)
     return result.ok();
 }
 
+bool CsMonitorServer::set_config(const std::string& body, json_t** ppError)
+{
+    string url = create_url(cs::rest::CONFIG);
+    http::Result result = http::put(url, body, m_http_config);
+
+    if (!result.ok())
+    {
+        PRINT_MXS_JSON_ERROR(ppError, "Could not update configuration.");
+
+        json_error_t error;
+        unique_ptr<json_t> sError(json_loadb(result.body.c_str(), result.body.length(), 0, &error));
+
+        if (sError)
+        {
+            mxs_json_error_push_back_new(*ppError, sError.release());
+        }
+        else
+        {
+            MXS_ERROR("Body returned by Columnstore is not JSON: %s", result.body.c_str());
+        }
+    }
+
+    return result.ok();
+}
+
 //static
 CsMonitorServer::Statuses CsMonitorServer::fetch_statuses(const std::vector<CsMonitorServer*>& servers,
                                                           const http::Config& http_config)
@@ -624,6 +649,39 @@ bool CsMonitorServer::set_mode(const std::vector<CsMonitorServer*>& servers,
     }
 
     return rv;
+}
+
+//static
+bool CsMonitorServer::set_config(const std::vector<CsMonitorServer*>& servers,
+                                 const std::string& body,
+                                 const mxb::http::Config& http_config,
+                                 Results* pResults)
+{
+    vector<string> urls = create_urls(servers, cs::rest::CONFIG);
+    vector<http::Result> results = http::put(urls, body, http_config);
+
+    bool rv = true;
+
+    for (const auto& result : results)
+    {
+        if (!result.ok())
+        {
+            rv = false;
+            break;
+        }
+    }
+
+    return rv;
+}
+
+//static
+http::Results CsMonitorServer::set_config(const std::vector<CsMonitorServer*>& servers,
+                                          const std::string& body,
+                                          const mxb::http::Config& http_config)
+{
+    Results results;
+    set_config(servers, body, http_config, &results);
+    return results;
 }
 
 string CsMonitorServer::create_url(cs::rest::Action action, const std::string& tail) const
