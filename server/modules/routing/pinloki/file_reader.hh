@@ -15,7 +15,7 @@
 
 #include "gtid.hh"
 #include <maxbase/exception.hh>
-#include "worker.hh"
+#include <maxbase/worker.hh>
 #include "rpl_event.hh"
 
 #include <string>

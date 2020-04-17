@@ -18,6 +18,7 @@
 #include "gtid.hh"
 #include "find_gtid.hh"
 
+#include <maxbase/maxbase.hh>
 #include <maxbase/hexdump.hh>
 #include <maxbase/log.hh>
 #include <maxbase/exception.hh>
@@ -66,16 +67,15 @@ void prog_main(const maxsql::GtidList& gtid_list, const std::string& host,
     else
     {
         pinloki::Reader reader(gtid);
-        std::thread rthread;
-        rthread = std::thread(&pinloki::Reader::run, &reader);
-        rthread.join();
+        reader.start();
+        reader.join();
     }
 }
 
 int main(int argc, char* argv[])
 try
 {
-    mxb_log_init();
+    mxb::MaxBase mxb(MXB_LOG_TARGET_STDOUT);
 
     if (test_it(argc, argv))
     {

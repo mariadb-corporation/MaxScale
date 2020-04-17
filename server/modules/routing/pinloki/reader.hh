@@ -14,13 +14,14 @@
 #pragma once
 
 #include <maxbase/exception.hh>
-#include "worker.hh"
+#include <maxbase/worker.hh>
+
 #include "file_reader.hh"
 
 namespace pinloki
 {
 
-class Reader : public Worker
+class Reader : public mxb::Worker
 {
 public:
     Reader(const maxsql::Gtid& gtid);

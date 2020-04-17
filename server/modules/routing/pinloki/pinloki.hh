@@ -13,9 +13,12 @@
 
 #pragma once
 
+#include <maxscale/ccdefs.hh>
+
 #include <string>
 #include <array>
 #include <maxbase/exception.hh>
+#include <maxscale/router.hh>
 
 namespace pinloki
 {
@@ -27,5 +30,24 @@ struct FileLocation
 {
     std::string file_name;
     long        loc;
+};
+
+class PinlokiSession;
+
+class Pinloki : public mxs::Router<Pinloki, PinlokiSession>
+{
+public:
+    Pinloki(const Pinloki&) = delete;
+    Pinloki& operator=(const Pinloki&) = delete;
+
+    ~Pinloki() = default;
+    static Pinloki* create(SERVICE* pService, mxs::ConfigParameters* pParams);
+    PinlokiSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints);
+    json_t*         diagnostics() const;
+    uint64_t        getCapabilities();
+    bool            configure(mxs::ConfigParameters* pParams);
+
+private:
+    Pinloki(SERVICE* pService);
 };
 }
