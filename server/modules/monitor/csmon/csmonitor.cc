@@ -272,6 +272,13 @@ size_t results_to_json(const vector<CsMonitorServer*>& servers,
     return n;
 }
 
+string next_trx_id()
+{
+    static int64_t id = 1;
+
+    return string("transaction-") + std::to_string(id++);
+}
+
 }
 
 class CsMonitor::Command
@@ -1127,106 +1134,117 @@ void CsMonitor::cluster_mode_set(json_t** ppOutput, mxb::Semaphore* pSem, cs::Cl
     pSem->post();
 }
 
+namespace
+{
+
+bool is_node_part_of_cluster(const CsMonitorServer* pServer)
+{
+    // TODO: Only a node that exists in the MaxScale configuration but *not* in the
+    // TODO: Columnstore configuration can be added.
+    return false;
+}
+
+}
+
 void CsMonitor::cluster_add_node(json_t** ppOutput,
                                  mxb::Semaphore* pSem,
                                  const std::chrono::seconds& timeout,
                                  CsMonitorServer* pServer)
 {
-    /*
-      cluster add node { IP | DNS }
-      - Sends GET /node/ping to the new node.
-        Fail the command  if the previous call failed.
-      - Sends GET /node/config to { all | only one } of the listed nodes.
-        Uses the config/-s to produce new versions of the configs.
-      - Sends PUT /node/config to the old nodes and to the new node.
-
-      The previous action forces the config reload for all services.
-    */
-
-    http::Result result = http::get(cs::rest::create_url(*pServer, m_config.admin_port, cs::rest::PING));
-
-    if (result.code == 200)
+    if (is_node_part_of_cluster(pServer))
     {
-        vector<const CsMonitorServer*> mservers;
-        vector<string> urls;
-
-        for (const auto* pS : this->servers())
+        if (servers().size() == 1)
         {
-            if (pS != pServer)
-            {
-                mservers.push_back(pS);
-                urls.push_back(cs::rest::create_url(*pS, m_config.admin_port, cs::rest::CONFIG));
-            }
-        }
-
-        if (urls.empty())
-        {
-            // TODO: First node requires additional handling.
             PRINT_MXS_JSON_ERROR(ppOutput,
-                                 "There are no other nodes in the cluster and thus "
-                                 "no-one from which to ask the configuration. Server '%s' "
-                                 "cannot be added to the cluster, but must be configured "
-                                 "explicitly.", pServer->name());
+                                 "The node to be added is already the single node of the cluster.");
         }
         else
         {
-            vector<http::Result> results = http::get(urls);
-
-            auto it = find_first_failed(results);
-
-            if (it != results.end())
-            {
-                PRINT_MXS_JSON_ERROR(ppOutput, "Could not get config from server '%s', new node cannot "
-                                     "be added: %s",
-                                     mservers[it - results.begin()]->server->name(), it->body.c_str());
-            }
-            else
-            {
-                auto it = std::adjacent_find(results.begin(), results.end(),
-                                             [](const auto& l, const auto& r) {
-                                                 return l.body != r.body;
-                                             });
-
-                if (it != results.end())
-                {
-                    PRINT_MXS_JSON_ERROR(ppOutput, "Configuration of all nodes is not identical. Not "
-                                         "possible to add new node.");
-                }
-                else
-                {
-                    // TODO: Update configuration to INCLUDE the new node.
-
-                    // Any body would be fine, they are all identical.
-                    const auto& body = results.begin()->body;
-
-                    vector<string> urls;
-                    for (const auto* pS : servers())
-                    {
-                        urls.push_back(cs::rest::create_url(*pS, m_config.admin_port, cs::rest::CONFIG));
-                    }
-
-                    vector<http::Result> results = http::put(urls, body);
-
-                    auto it = find_first_failed(results);
-
-                    if (it != results.end())
-                    {
-                        PRINT_MXS_JSON_ERROR(ppOutput,
-                                             "Could not update configuration of all nodes. Cluster state "
-                                             "is now indeterminate.");
-                    }
-                    else
-                    {
-                        *ppOutput = create_response(servers(), results);
-                    }
-                }
-            }
+            PRINT_MXS_JSON_ERROR(ppOutput,
+                                 "The node to be added is already in the cluster.");
         }
     }
     else
     {
-        PRINT_MXS_JSON_ERROR(ppOutput, "Could not ping server '%s': %s",
-                             pServer->name(), result.body.c_str());
+        bool success = false;
+
+        string trx_id = next_trx_id();
+
+        http::Results results;
+        if (CsMonitorServer::begin(servers(), timeout, trx_id, m_http_config, &results))
+        {
+            auto status = pServer->fetch_status();
+
+            if (status.ok())
+            {
+                ServerVector existing_servers;
+                auto sb = servers().begin();
+                auto se = servers().end();
+
+                std::copy_if(sb, se, std::back_inserter(existing_servers), [pServer](auto* pS) {
+                        return pServer != pS;
+                    });
+
+                CsMonitorServer::Configs configs;
+                if (CsMonitorServer::fetch_configs(existing_servers, m_http_config, &configs))
+                {
+                    auto cb = configs.begin();
+                    auto ce = configs.end();
+
+                    auto it = std::max_element(cb, ce, [](const auto& l, const auto& r) {
+                            return l.timestamp < r.timestamp;
+                        });
+
+                    CsMonitorServer* pSource = *(sb + (it - cb));
+
+                    MXS_NOTICE("Using config of '%s' for configuring '%s'.",
+                               pSource->name(), pServer->name());
+
+                    CsMonitorServer::Config& config = *it;
+
+                    // TODO: Update the config with the new information.
+
+                    json_t* pError = nullptr;
+                    if (pServer->set_config(config.response.body, &pError))
+                    {
+                        if (CsMonitorServer::set_config(servers(),
+                                                        config.response.body,
+                                                        m_http_config,
+                                                        &results))
+                        {
+                            success = true;
+                        }
+                        else
+                        {
+                            PRINT_MXS_JSON_ERROR(ppOutput, "Could not update configs of existing nodes.");
+                        }
+                    }
+                    else
+                    {
+                        PRINT_MXS_JSON_ERROR(ppOutput, "Could not update config of new node.");
+                        mxs_json_error_push_back(*ppOutput, pError);
+                    }
+                }
+                else
+                {
+                    PRINT_MXS_JSON_ERROR(ppOutput, "Could not fetch configs from existing nodes.");
+                }
+            }
+            else
+            {
+                PRINT_MXS_JSON_ERROR(ppOutput, "Could not fetch status from node to be added.");
+            }
+        }
+        else
+        {
+            PRINT_MXS_JSON_ERROR(ppOutput, "Could not start a transaction on all nodes.");
+        }
+
+        if (!success)
+        {
+            // TODO: Collect information.
+            CsMonitorServer::rollback(servers(), m_http_config, &results);
+        }
     }
 
     pSem->post();
