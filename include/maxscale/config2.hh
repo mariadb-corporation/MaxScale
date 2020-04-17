@@ -797,6 +797,10 @@ public:
     }
 
     std::string type() const override;
+    const std::vector<std::pair<T, const char*>>& values() const
+    {
+        return m_enumeration;
+    }
 
     std::string to_string(value_type value) const;
     bool        from_string(const std::string& value, value_type* pValue,
@@ -853,6 +857,10 @@ public:
     }
 
     std::string type() const override;
+    const std::vector<std::pair<T, const char*>>& values() const
+    {
+        return m_enumeration;
+    }
 
     std::string to_string(value_type value) const;
     bool        from_string(const std::string& value, value_type* pValue,
