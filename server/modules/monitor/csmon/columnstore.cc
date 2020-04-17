@@ -131,6 +131,25 @@ const char* rest::to_string(rest::Action action)
     }
 }
 
+bool from_string(const char* zXml, std::unique_ptr<xmlDoc>* psDoc)
+{
+    psDoc->reset(xmlReadMemory(zXml, strlen(zXml), "columnstore.xml", NULL, 0));
+    return *psDoc ? true : false;
+}
+
+bool from_string(const char* zTimestamp, std::chrono::system_clock::time_point* pTimestamp)
+{
+    struct tm tm;
+    bool rv = strptime(zTimestamp, "%Y-%m-%d %H:%M:%S", &tm) != nullptr;
+
+    if (rv)
+    {
+        *pTimestamp = std::chrono::system_clock::from_time_t(std::mktime(&tm));
+    }
+
+    return rv;
+}
+
 std::string rest::create_url(const SERVER& server, int64_t port, rest::Action action)
 {
     string url("https://");

@@ -38,6 +38,7 @@ CsMonitorServer::~CsMonitorServer()
 
 CsMonitorServer::Config CsMonitorServer::Config::create(const http::Result& response)
 {
+    std::chrono::system_clock::time_point timestamp;
     unique_ptr<xmlDoc> sXml;
 
     json_error_t error;
@@ -46,25 +47,28 @@ CsMonitorServer::Config CsMonitorServer::Config::create(const http::Result& resp
     if (sJson)
     {
         json_t* pConfig = json_object_get(sJson.get(), cs::keys::CONFIG);
+        json_t* pTimestamp = json_object_get(sJson.get(), cs::keys::TIMESTAMP);
 
-        if (pConfig)
+        if (pConfig && pTimestamp)
         {
             const char* zXml = json_string_value(pConfig);
-            size_t xml_len = json_string_length(pConfig);
+            const char* zTimestamp = json_string_value(pTimestamp);
 
-            sXml.reset(xmlReadMemory(zXml, xml_len, "columnstore.xml", NULL, 0));
+            bool b1 = cs::from_string(zXml, &sXml);
+            bool b2 = cs::from_string(zTimestamp, &timestamp);
 
-            if (!sXml)
+            if (!b1 || !b2)
             {
                 mxb_assert(!true);
-                MXS_ERROR("Failed to parse XML configuration: '%s'", zXml);
+                MXS_ERROR("Could not convert '%s' and/or '%s' to actual values.",
+                          zXml, zTimestamp);
             }
         }
         else
         {
             mxb_assert(!true);
-            MXS_ERROR("Obtained config object does not have a '%s' key.",
-                      cs::keys::CONFIG);
+            MXS_ERROR("Obtained config object does not have the keys '%s' and/or '%s': %s",
+                      cs::keys::CONFIG, cs::keys::TIMESTAMP, response.body.c_str());
         }
     }
     else
@@ -73,7 +77,7 @@ CsMonitorServer::Config CsMonitorServer::Config::create(const http::Result& resp
         MXS_ERROR("Could not parse JSON data from: %s", error.text);
     }
 
-    return Config(response, std::move(sJson), std::move(sXml));
+    return Config(response, std::move(timestamp), std::move(sJson), std::move(sXml));
 }
 
 CsMonitorServer::Config CsMonitorServer::fetch_config() const
@@ -347,6 +351,8 @@ bool CsMonitorServer::begin(const std::vector<CsMonitorServer*>& servers,
         }
         else
         {
+            MXS_ERROR("Transaction begin on '%s' failed: %s",
+                      pServer->name(), result.body.c_str());
             rv = false;
             pServer->m_trx_state = TRX_INACTIVE;
         }
@@ -372,8 +378,9 @@ http::Results CsMonitorServer::begin(const std::vector<CsMonitorServer*>& server
 }
 
 //static
-http::Results CsMonitorServer::commit(const std::vector<CsMonitorServer*>& servers,
-                                      const http::Config& http_config)
+bool CsMonitorServer::commit(const std::vector<CsMonitorServer*>& servers,
+                             const http::Config& http_config,
+                             Results* pResults)
 {
     auto it = std::find_if(servers.begin(), servers.end(), [](const CsMonitorServer* pServer) {
             return !pServer->in_trx();
@@ -391,17 +398,48 @@ http::Results CsMonitorServer::commit(const std::vector<CsMonitorServer*>& serve
 
     mxb_assert(urls.size() == results.size());
 
-    for (auto* pServer : servers)
+    bool rv = true;
+
+    it = servers.begin();
+    auto end = servers.end();
+    auto jt = results.begin();
+
+    while (it != end)
     {
+        auto* pServer = *it;
+        const auto& result = *jt;
+
+        if (!result.ok())
+        {
+            MXS_ERROR("Committing transaction on '%s' failed: %s",
+                      pServer->name(), result.body.c_str());
+            rv = false;
+        }
+
         pServer->m_trx_state = TRX_INACTIVE;
+
+        ++it;
+        ++jt;
     }
 
+    pResults->swap(results);
+
+    return rv;
+}
+
+//statis
+http::Results CsMonitorServer::commit(const std::vector<CsMonitorServer*>& servers,
+                                      const http::Config& http_config)
+{
+    Results results;
+    commit(servers, http_config, &results);
     return results;
 }
 
 //static
-http::Results CsMonitorServer::rollback(const std::vector<CsMonitorServer*>& servers,
-                                        const http::Config& http_config)
+bool CsMonitorServer::rollback(const std::vector<CsMonitorServer*>& servers,
+                               const http::Config& http_config,
+                               Results* pResults)
 {
     auto it = std::find_if(servers.begin(), servers.end(), [](const CsMonitorServer* pServer) {
             return !pServer->in_trx();
@@ -419,11 +457,41 @@ http::Results CsMonitorServer::rollback(const std::vector<CsMonitorServer*>& ser
 
     mxb_assert(urls.size() == results.size());
 
-    for (auto* pServer : servers)
+    bool rv = true;
+
+    it = servers.begin();
+    auto end = servers.end();
+    auto jt = results.begin();
+
+    while (it != end)
     {
+        auto* pServer = *it;
+        const auto& result = *jt;
+
+        if (!result.ok())
+        {
+            MXS_ERROR("Rollbacking transaction on '%s' failed: %s",
+                      pServer->name(), result.body.c_str());
+            rv = false;
+        }
+
         pServer->m_trx_state = TRX_INACTIVE;
+
+        ++it;
+        ++jt;
     }
 
+    pResults->swap(results);
+
+    return rv;
+}
+
+//static
+http::Results CsMonitorServer::rollback(const std::vector<CsMonitorServer*>& servers,
+                                        const http::Config& http_config)
+{
+    Results results;
+    rollback(servers, http_config, &results);
     return results;
 }
 

@@ -73,15 +73,20 @@ public:
             return response.ok() && sJson && sXml;
         }
 
+        using time_point = std::chrono::system_clock::time_point;
+
         mxb::http::Result       response;
+        time_point              timestamp;
         std::unique_ptr<json_t> sJson;
         std::unique_ptr<xmlDoc> sXml;
 
     private:
         Config(const mxb::http::Result& response,
+               std::chrono::system_clock::time_point&& timestamp,
                std::unique_ptr<json_t>&& sJson,
                std::unique_ptr<xmlDoc>&& sXml)
             : response(response)
+            , timestamp(std::move(timestamp))
             , sJson(std::move(sJson))
             , sXml(std::move(sXml))
         {
@@ -148,8 +153,14 @@ public:
                       Results* pResults);
     static Results commit(const std::vector<CsMonitorServer*>& servers,
                           const mxb::http::Config& config);
+    static bool commit(const std::vector<CsMonitorServer*>& servers,
+                       const mxb::http::Config& config,
+                       Results* pResults);
     static Results rollback(const std::vector<CsMonitorServer*>& servers,
                             const mxb::http::Config& config);
+    static bool rollback(const std::vector<CsMonitorServer*>& servers,
+                         const mxb::http::Config& config,
+                         Results* pResults);
     static Results shutdown(const std::vector<CsMonitorServer*>& servers,
                             const std::chrono::seconds& timeout,
                             const mxb::http::Config& config);
