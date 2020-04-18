@@ -33,7 +33,7 @@ DEFINE_EXCEPTION(BinlogWriteError);
 class FileWriter    // : public Storage
 {
 public:
-    FileWriter(bool have_files);
+    FileWriter(bool have_files, Inventory* inv);
 
     void add_event(const maxsql::MariaRplEvent& rpl_event);
 private:
@@ -52,6 +52,6 @@ private:
     WritePosition m_previous_pos;       // This does not really need to be a member.
     WritePosition m_current_pos;
 
-    Inventory m_inventory;
+    Inventory& m_inventory;
 };
 }

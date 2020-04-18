@@ -20,19 +20,10 @@
 namespace pinloki
 {
 
-std::vector<std::string> Inventory::m_file_names;
-std::mutex Inventory::m_mutex;
-
-Inventory& inventory()
+Inventory::Inventory(const Config& config)
+    : m_config(config)
 {
-    static Inventory the_one_and_only;
-
-    return the_one_and_only;
-}
-
-Inventory::Inventory()
-{
-    std::ifstream ifs(config().inventory_file_path());
+    std::ifstream ifs(m_config.inventory_file_path());
 
     while (ifs.good())
     {
@@ -48,34 +39,34 @@ Inventory::Inventory()
 void Inventory::add(const std::string& file_name)
 {
     std::unique_lock<std::mutex> lock(m_mutex);
-    std::string full_name = Config::path(file_name);
+    std::string full_name = m_config.path(file_name);
 
-    std::ofstream ofs(config().inventory_file_path(), std::ios_base::app);
+    std::ofstream ofs(m_config.inventory_file_path(), std::ios_base::app);
     ofs << full_name << '\n';
     m_file_names.push_back(full_name);
 }
 
-std::vector<std::string> Inventory::file_names()
+std::vector<std::string> Inventory::file_names() const
 {
     std::unique_lock<std::mutex> lock(m_mutex);
     return m_file_names;
 }
 
-int Inventory::count()
+int Inventory::count() const
 {
     return m_file_names.size();
 }
 
-bool Inventory::is_listed(const std::string& file_name)
+bool Inventory::is_listed(const std::string& file_name) const
 {
-    std::string full_name = Config::path(file_name);
+    std::string full_name = m_config.path(file_name);
     std::unique_lock<std::mutex> lock(m_mutex);
     return std::find(begin(m_file_names), end(m_file_names), full_name) != end(m_file_names);
 }
 
-bool Inventory::exists(const std::string& file_name)
+bool Inventory::exists(const std::string& file_name) const
 {
-    std::string full_name = Config::path(file_name);
+    std::string full_name = m_config.path(file_name);
     std::unique_lock<std::mutex> lock(m_mutex);
     if (!is_listed(full_name))
     {

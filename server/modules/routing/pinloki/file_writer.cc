@@ -14,7 +14,6 @@
 #include "pinloki.hh"
 #include "file_writer.hh"
 #include "file_reader.hh"
-#include "inventory.hh"
 #include "config.hh"
 
 #include <mysql.h>
@@ -45,8 +44,9 @@
  */
 namespace pinloki
 {
-FileWriter::FileWriter(bool have_files)
+FileWriter::FileWriter(bool have_files, Inventory* inv)
     : m_sync_with_server(have_files)
+    , m_inventory(*inv)
 {
 }
 
@@ -93,7 +93,7 @@ void FileWriter::rotate_event(const maxsql::MariaRplEvent& rpl_event)
         given = given.substr(0, given.length() - 4);
     }
 
-    std::string file_name = Config::path(given);
+    std::string file_name = m_inventory.config().path(given);
 
     if (m_sync_with_server)
     {

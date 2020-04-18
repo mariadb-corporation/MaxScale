@@ -18,6 +18,8 @@
 #include <vector>
 #include <mutex>
 
+#include "config.hh"
+
 
 namespace pinloki
 {
@@ -29,39 +31,48 @@ namespace pinloki
 class Inventory
 {
 public:
-    Inventory();
+    Inventory(const Config& config);
 
     /**
      * @brief add
      * @param file_name
      */
-    static void add(const std::string& file_name);
+    void add(const std::string& file_name);
 
-    static std::vector<std::string> file_names();
+    std::vector<std::string> file_names() const;
 
-    static int count();
+    int count() const;
 
 
     // Return an fstream positioned at the
     // indicated gtid event. If the gtid is not found,
     // <returned_file>.isgood() == false (and tellg()==0).
-    static std::fstream find_gtid(const maxsql::Gtid& gtid);
+    std::fstream find_gtid(const maxsql::Gtid& gtid) const;
 
     /**
      * @brief is_listed
      * @param file_name
      * @return true if file is listed in inventory
      */
-    static bool is_listed(const std::string& file_name);
+    bool is_listed(const std::string& file_name) const;
 
     /**
      * @brief exists -
      * @param file_name
      * @return true if is_listed(), file exists and is readable.
      */
-    bool exists(const std::string& file_name);
+    bool exists(const std::string& file_name) const;
+
+    const Config& config() const
+    {
+        return m_config;
+    }
+
 private:
-    static std::vector<std::string> m_file_names;
-    static std::mutex               m_mutex;
+    // A copy of the configuration used to create this inventory
+    const Config m_config;
+
+    std::vector<std::string> m_file_names;
+    mutable std::mutex       m_mutex;
 };
 }

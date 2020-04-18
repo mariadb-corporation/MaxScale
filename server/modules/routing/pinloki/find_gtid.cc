@@ -30,13 +30,12 @@ bool search_file(const std::string& file_name,
                  GtidPosition* pos,
                  bool search_in_file);
 
-GtidPosition find_gtid_position(const maxsql::Gtid& gtid)
+GtidPosition find_gtid_position(const maxsql::Gtid& gtid, const Inventory* inv)
 {
     // Simple linear search. If there can be a lot of files, make this a binary search, or
     // if it really becomes slow, create an index
-    Inventory inv;
     GtidPosition pos;
-    const auto& file_names = inv.file_names();
+    const auto& file_names = inv->file_names();
 
     // Search in reverse because the gtid is likely be one of the latest files, and
     // the search can stop as soon as the gtid is greater than the gtid list in the file,

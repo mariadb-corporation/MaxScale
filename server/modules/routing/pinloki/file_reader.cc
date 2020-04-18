@@ -50,8 +50,9 @@ namespace pinloki
 {
 constexpr int HEADER_LEN = 19;
 
-FileReader::FileReader(const maxsql::Gtid& gtid)
+FileReader::FileReader(const maxsql::Gtid& gtid, const Inventory* inv)
     : m_inotify_fd{inotify_init1(IN_NONBLOCK)}
+    , m_inventory(*inv)
 {
     if (m_inotify_fd == -1)
     {
@@ -61,7 +62,7 @@ FileReader::FileReader(const maxsql::Gtid& gtid)
 
     if (gtid.is_valid())
     {
-        auto gtid_pos = find_gtid_position(gtid);
+        auto gtid_pos = find_gtid_position(gtid, inv);
         if (gtid_pos.file_name.empty())
         {
             MXB_THROW(BinlogReadError, "Could not find " << gtid << " in binlogs");
@@ -74,11 +75,8 @@ FileReader::FileReader(const maxsql::Gtid& gtid)
     }
     else
     {
-        Inventory inv;
-        open(inv.file_names().front());
+        open(m_inventory.file_names().front());
     }
-
-    std::vector<char> raw;
 }
 
 void FileReader::open(const std::string& file_name)
@@ -159,7 +157,7 @@ maxsql::RplEvent FileReader::fetch_event()
 
     if (rpl.event_type() == ROTATE_EVENT)
     {
-        auto file_name = config().path(rpl.rotate().file_name);
+        auto file_name = m_inventory.config().path(rpl.rotate().file_name);
         open(file_name);
     }
     else

@@ -28,13 +28,16 @@
 #include <iomanip>
 #include <getopt.h>
 
+pinloki::Config config;
+pinloki::Inventory inv(config);
+
 // for apropos tests
 bool test_it(int argc, char* argv[])
 {
     return false;
 
     auto gtid = maxsql::Gtid::from_string("0-0-9");
-    pinloki::GtidPosition pos = pinloki::find_gtid_position(gtid);
+    pinloki::GtidPosition pos = pinloki::find_gtid_position(gtid, &inv);
 
     std::cout << "pos.file_name = " << pos.file_name << "\n";
     std::cout << "pos.pos = " << pos.file_pos << "\n";
@@ -59,16 +62,14 @@ void prog_main(const maxsql::GtidList& gtid_list, const std::string& host,
 
     if (writer_mode)
     {
-        pinloki::Writer writer({maxbase::Host::from_string(host), "", user, pw});
-        std::thread wthread;
-        wthread = std::thread(&pinloki::Writer::run, &writer);
-        wthread.join();
+        pinloki::Writer writer({maxbase::Host::from_string(host), "", user, pw}, &inv);
     }
     else
     {
-        pinloki::Reader reader(gtid);
-        reader.start();
-        reader.join();
+        mxb::Worker worker;
+        pinloki::Reader reader(&inv, &worker, gtid);
+        worker.start();
+        worker.join();
     }
 }
 
@@ -181,7 +182,7 @@ try
 
     if (override_gtid_list.is_valid())
     {
-        std::ofstream ofs(config().gtid_file_path());
+        std::ofstream ofs(config.gtid_file_path());
         ofs << override_gtid_list;
     }
 

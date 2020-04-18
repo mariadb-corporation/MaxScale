@@ -16,8 +16,12 @@
 #include <maxbase/exception.hh>
 #include "dbconnection.hh"
 #include "gtid.hh"
+#include "config.hh"
+#include "inventory.hh"
 
+#include <atomic>
 #include <memory>
+#include <thread>
 
 namespace pinloki
 {
@@ -25,15 +29,17 @@ namespace pinloki
 class Writer
 {
 public:
-    /**
-     * @brief Writer
-     */
-    Writer(const maxsql::Connection::ConnectionDetails& details);
+    Writer(const maxsql::Connection::ConnectionDetails& details, Inventory* inv);
+    ~Writer();
     void run();
+
 private:
+    Inventory&                          m_inventory;
     std::unique_ptr<maxsql::Connection> m_sConnection;
     bool                                m_is_bootstrap = false;
     maxsql::GtidList                    m_current_gtid_list;
+    std::atomic<bool>                   m_running {true};
+    std::thread                         m_thread;
 
     void save_gtid_list();
 };

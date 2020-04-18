@@ -19,6 +19,8 @@ namespace pinloki
 
 Pinloki::Pinloki(SERVICE* pService)
     : Router<Pinloki, PinlokiSession>(pService)
+    // , m_config(config) // TODO: Pass configuration parameters to Config
+    , m_inventory(m_config)
 {
 }
 // static

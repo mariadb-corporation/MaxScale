@@ -26,19 +26,23 @@
 namespace pinloki
 {
 
-Reader::Reader(const maxsql::Gtid& gtid)
-    : m_reader_poll_data {epoll_update, this}
-    , m_file_reader(gtid)
+Reader::PollData::PollData(Reader* reader, mxb::Worker* worker)
+    : MXB_POLL_DATA{Reader::epoll_update, worker}
+    , reader(reader)
 {
-    add_fd(m_file_reader.fd(), EPOLLIN, &m_reader_poll_data);
+}
 
-    handle_messages();
+Reader::Reader(const Inventory* inv, mxb::Worker* worker, const maxsql::Gtid& gtid)
+    : m_reader_poll_data(this, worker)
+    , m_file_reader(gtid, inv)
+    , m_worker(worker)
+{
+    m_worker->add_fd(m_file_reader.fd(), EPOLLIN, &m_reader_poll_data);
 }
 
 uint32_t Reader::epoll_update(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events)
 {
-    std::cout << "epoll_update\n";
-    Reader* self = static_cast<Reader*>(worker);
+    Reader* self = static_cast<PollData*>(data)->reader;
     self->notify_concrete_reader(events);
 
     return 0;

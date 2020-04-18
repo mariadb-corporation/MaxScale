@@ -20,6 +20,9 @@
 #include <maxbase/exception.hh>
 #include <maxscale/router.hh>
 
+#include "writer.hh"
+#include "config.hh"
+
 namespace pinloki
 {
 DEFINE_EXCEPTION(BinlogReadError);
@@ -47,7 +50,20 @@ public:
     uint64_t        getCapabilities();
     bool            configure(mxs::ConfigParameters* pParams);
 
+    const Config& config() const
+    {
+        return m_config;
+    }
+
+    Inventory* inventory()
+    {
+        return &m_inventory;
+    }
+
 private:
     Pinloki(SERVICE* pService);
+
+    Config    m_config;
+    Inventory m_inventory;
 };
 }

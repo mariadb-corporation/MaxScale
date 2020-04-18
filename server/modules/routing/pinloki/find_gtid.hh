@@ -14,6 +14,8 @@
 #pragma once
 
 #include "gtid.hh"
+#include "inventory.hh"
+
 namespace pinloki
 {
 
@@ -24,5 +26,5 @@ struct GtidPosition
 };
 
 // Default constructed GtidPosition if not found.
-GtidPosition find_gtid_position(const maxsql::Gtid& gtid);
+GtidPosition find_gtid_position(const maxsql::Gtid& gtid, const Inventory* inv);
 }

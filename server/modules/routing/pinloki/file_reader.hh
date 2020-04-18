@@ -13,16 +13,18 @@
 
 #pragma once
 
-#include "gtid.hh"
+#include <array>
+#include <fstream>
+#include <functional>
+#include <string>
+#include <vector>
+
 #include <maxbase/exception.hh>
 #include <maxbase/worker.hh>
-#include "rpl_event.hh"
 
-#include <string>
-#include <fstream>
-#include <vector>
-#include <array>
-#include <functional>
+#include "gtid.hh"
+#include "inventory.hh"
+#include "rpl_event.hh"
 
 namespace pinloki
 {
@@ -34,7 +36,7 @@ namespace pinloki
 class FileReader    // : public Storage
 {
 public:
-    FileReader(const maxsql::Gtid& gtid);
+    FileReader(const maxsql::Gtid& gtid, const Inventory* inv);
     maxsql::RplEvent fetch_event();
 
     /**
@@ -60,10 +62,11 @@ private:
     void open(const std::string& file_name);
     void set_inotify_fd();
 
-    int          m_inotify_fd;
-    int          m_inotify_descriptor = -1;
-    ReadPosition m_read_pos;
-    std::string  m_inotify_file;
-    uint32_t     m_server_id;
+    int              m_inotify_fd;
+    int              m_inotify_descriptor = -1;
+    ReadPosition     m_read_pos;
+    std::string      m_inotify_file;
+    uint32_t         m_server_id;
+    const Inventory& m_inventory;
 };
 }

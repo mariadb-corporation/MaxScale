@@ -22,11 +22,11 @@
 namespace pinloki
 {
 
-std::string Config::path(const std::string& name)
+std::string Config::path(const std::string& name) const
 {
     if (name.find_first_of('/') == std::string::npos)
     {
-        return config().m_binlog_dir + '/' + name;
+        return m_binlog_dir + '/' + name;
     }
 
     return name;
@@ -53,11 +53,5 @@ Config::Config()
         MXB_SINFO("Creating directory ");
         mkdir(d.c_str(), 0700);
     }
-}
-
-Config& config()
-{
-    static Config config;
-    return config;
 }
 }

@@ -35,10 +35,11 @@ using namespace std::literals::string_literals;
 namespace pinloki
 {
 
-Writer::Writer(const maxsql::Connection::ConnectionDetails& details)
+Writer::Writer(const maxsql::Connection::ConnectionDetails& details, Inventory* inv)
+    : m_inventory(*inv)
 {
     std::string gtid_list_str;
-    std::ifstream ifs(config().gtid_file_path());
+    std::ifstream ifs(m_inventory.config().gtid_file_path());
 
     if (ifs.good())
     {
@@ -46,7 +47,7 @@ Writer::Writer(const maxsql::Connection::ConnectionDetails& details)
     }
     else
     {
-        gtid_list_str = config().boot_strap_gtid_list();
+        gtid_list_str = m_inventory.config().boot_strap_gtid_list();
         m_is_bootstrap = true;
     }
     maxsql::Gtid gtid = maxsql::Gtid::from_string(gtid_list_str);
@@ -54,14 +55,21 @@ Writer::Writer(const maxsql::Connection::ConnectionDetails& details)
     std::cout << "Boot state = " << gtid_list_str << "\n";
 
     m_sConnection.reset(new maxsql::Connection(details));
-    m_sConnection->start_replication(1234, gtid);
+    m_sConnection->start_replication(m_inventory.config().server_id(), gtid);
+
+    m_thread = std::thread(&Writer::run, this);
+}
+Writer::~Writer()
+{
+    m_running = false;
+    m_thread.join();
 }
 
 void Writer::run()
 {
-    FileWriter file(!m_is_bootstrap);
+    FileWriter file(!m_is_bootstrap, &m_inventory);
 
-    for (;;)
+    while (m_running)
     {
         std::cout << "******************************\n";
 
@@ -108,7 +116,7 @@ void Writer::save_gtid_list()
 {
     if (m_current_gtid_list.is_valid())
     {
-        std::ofstream ofs(config().gtid_file_path());
+        std::ofstream ofs(m_inventory.config().gtid_file_path());
         ofs << m_current_gtid_list;
         // m_current_gtid_list.clear(); TODO change of logic after gitid => gtid list change
     }

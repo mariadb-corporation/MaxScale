@@ -13,7 +13,10 @@
 
 #pragma once
 
+#include <maxscale/ccdefs.hh>
+
 #include <maxbase/stopwatch.hh>
+#include <maxscale/paths.hh>
 
 #include <string>
 
@@ -34,7 +37,7 @@ public:
     /** Make a full path. This prefixes "name" with m_binlog_dir/,
      *  unless the first character is a forward slash.
      */
-    static std::string path(const std::string& name);
+    std::string path(const std::string& name) const;
 
     std::string binlog_dir_path() const;
     std::string inventory_file_path() const;
@@ -44,9 +47,11 @@ public:
      * @return
      */
     std::string boot_strap_gtid_list() const;
+    uint32_t    server_id() const;
+
 private:
     /** Where the binlog files are stored */
-    std::string m_binlog_dir = "./bdir";
+    std::string m_binlog_dir = mxs::datadir() + std::string("/binlogs");
     /** Name of gtid file */
     std::string m_gtid_file = "rpl_state";
     /** Name of the binlog inventory file. */
@@ -56,9 +61,9 @@ private:
     /** Gtid used if there in no gtid yet */
     std::string m_boot_strap_gtid_list = "";
     /** Where the current master details are stored */
-    std::string m_master_ini_path = m_master_ini_path;
+    std::string m_master_ini_path;
     /** Server id reported to the Master */
-    int m_server_id = 1455;
+    uint32_t m_server_id = 1455;
     /** Server id reported to the slaves */
     int m_master_id = m_server_id;
     /** uuid reported to the server */
@@ -131,5 +136,8 @@ inline std::string Config::boot_strap_gtid_list() const
     return m_boot_strap_gtid_list;
 }
 
-Config& config();
+inline uint32_t Config::server_id() const
+{
+    return m_server_id;
+}
 }
