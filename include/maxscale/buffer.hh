@@ -1060,6 +1060,22 @@ public:
         return *this;
     }
 
+    /**
+     * Appends a vector of bytes to this.
+     *
+     * @param buffer  The std::vector<uint8_t> to append
+     *
+     * @return this
+     *
+     * @attention  Does not invalidate any iterators, but an iterator
+     *             that has reached the end will remain there.
+     */
+    Buffer& append(const std::vector<uint8_t>& data)
+    {
+        m_pBuffer = gwbuf_append(m_pBuffer, gwbuf_alloc_and_load(data.size(), data.data()));
+        return *this;
+    }
+
     iterator erase(const_iterator first, const_iterator last)
     {
         if (first == end())

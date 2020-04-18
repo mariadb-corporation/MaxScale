@@ -19,6 +19,7 @@
 #include <string>
 #include <vector>
 
+#include <maxscale/buffer.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/mysql_binlog.h>
 
@@ -53,16 +54,15 @@ public:
     void write(DCB* dcb);
 
     /**
-     * Write the result set to a DCB as JSON
+     * Convert the resultset into its raw binary form
      *
-     * @param dcb DCB where the result set is written
+     * @return The resultset as a mxs::Buffer
      */
-    void write_as_json(DCB* dcb);
+    mxs::Buffer as_buffer() const;
 
 private:
     std::vector<std::string>              m_columns;
     std::vector<std::vector<std::string>> m_rows;
 
     ResultSet(std::initializer_list<std::string> names);
-    json_t* get_json_value(const std::string& s);
 };

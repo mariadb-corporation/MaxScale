@@ -22,153 +22,113 @@
 #include <maxscale/dcb.hh>
 #include <maxscale/mysql_binlog.h>
 #include <maxscale/protocol/mariadb/mysql.hh>
+#include <maxscale/modutil.hh>
 
-/**
- * Send the field count packet in a response packet sequence.
- *
- * @param dcb           DCB of connection to send result set to
- * @param count         Number of columns in the result set
- * @return              Non-zero on success
- */
-static int mysql_send_fieldcount(DCB* dcb, int count)
+namespace
 {
-    GWBUF* pkt;
-    uint8_t* ptr;
+using Data = std::vector<uint8_t>;
 
-    if ((pkt = gwbuf_alloc(5)) == NULL)
+Data create_leint(size_t value)
+{
+    if (value < 251)
     {
-        return 0;
+        return {(uint8_t)value};
     }
-    ptr = GWBUF_DATA(pkt);
-    *ptr++ = 0x01;                  // Payload length
-    *ptr++ = 0x00;
-    *ptr++ = 0x00;
-    *ptr++ = 0x01;                  // Sequence number in response
-    *ptr++ = count;                 // Length of result string
-    return dcb->protocol_write(pkt);
+    else if (value <= 0xffff)
+    {
+        return {0xfc, (uint8_t)value, (uint8_t)(value >> 8)};
+    }
+    else if (value <= 0xffffff)
+    {
+        return {0xfd, (uint8_t)value, (uint8_t)(value >> 8), (uint8_t)(value >> 16)};
+    }
+    else
+    {
+        Data data(9);
+        data[0] = 0xfe;
+        mariadb::set_byte8(&data[1], value);
+        return data;
+    }
 }
 
-/**
- * Send the column definition packet in a response packet sequence.
- *
- * @param dcb           The DCB of the connection
- * @param name          Name of the column
- * @param type          Column type
- * @param len           Column length
- * @param seqno         Packet sequence number
- * @return              Non-zero on success
- */
-static int mysql_send_columndef(DCB* dcb, const std::string& name, uint8_t seqno)
+Data create_lestr(const std::string& str)
 {
-    GWBUF* pkt = gwbuf_alloc(26 + name.length());
+    Data data = create_leint(str.size());
+    data.insert(data.end(), str.begin(), str.end());
+    return data;
+}
 
-    if (pkt == NULL)
-    {
-        return 0;
-    }
+Data create_header(size_t size, uint8_t seqno)
+{
+    Data data(4);
+    mariadb::set_byte3(&data[0], size);
+    data[3] = seqno;
+    return data;
+}
 
-    int len = 255;      // Column type length e.g. VARCHAR(255)
+Data create_fieldcount(size_t count)
+{
+    auto i = create_leint(count);
+    auto data = create_header(i.size(), 1);
+    data.insert(data.end(), i.begin(), i.end());
+    return data;
+}
 
-    uint8_t* ptr = GWBUF_DATA(pkt);
-    int plen = 22 + name.length();
-    *ptr++ = plen & 0xff;
-    *ptr++ = (plen >> 8) & 0xff;
-    *ptr++ = (plen >> 16) & 0xff;
-    *ptr++ = seqno;                         // Sequence number in response
-    *ptr++ = 3;                             // Catalog is always def
+Data create_columndef(const std::string& name, uint8_t seqno)
+{
+    size_t len = 22 + name.length();
+    auto data = create_header(len, seqno);
+    data.resize(len + data.size());
+
+    uint8_t* ptr = &data[4];
+    *ptr++ = 3;     // Catalog is always def
     *ptr++ = 'd';
     *ptr++ = 'e';
     *ptr++ = 'f';
-    *ptr++ = 0;                             // Schema name length
-    *ptr++ = 0;                             // virtual table name length
-    *ptr++ = 0;                             // Table name length
-    *ptr++ = name.length();                 // Column name length;
+    *ptr++ = 0;             // Schema name length
+    *ptr++ = 0;             // virtual table name length
+    *ptr++ = 0;             // Table name length
+    *ptr++ = name.length(); // Column name length;
     memcpy(ptr, name.c_str(), name.length());
     ptr += name.length();
-    *ptr++ = 0;                             // Original column name
-    *ptr++ = 0x0c;                          // Length of next fields always 12
-    *ptr++ = 0x3f;                          // Character set
+    *ptr++ = 0;     // Original column name
+    *ptr++ = 0x0c;  // Length of next fields always 12
+    *ptr++ = 0x3f;  // Character set
     *ptr++ = 0;
-    *ptr++ = len & 0xff;                    // Length of column
-    *ptr++ = (len >> 8) & 0xff;
-    *ptr++ = (len >> 16) & 0xff;
-    *ptr++ = (len >> 24) & 0xff;
+    mariadb::set_byte4(ptr, 255);   // Length of column
+    ptr += 4;
     *ptr++ = TABLE_COL_TYPE_VARCHAR;
-    *ptr++ = 0x81;                          // Two bytes of flags
+    *ptr++ = 0x81;      // Two bytes of flags
     *ptr++ = 0x00;
     *ptr++ = 0;
     *ptr++ = 0;
     *ptr++ = 0;
-    return dcb->protocol_write(pkt);
+
+    return data;
 }
 
-/**
- * Send an EOF packet in a response packet sequence.
- *
- * @param dcb           The client connection
- * @param seqno         The sequence number of the EOF packet
- * @return              Non-zero on success
- */
-static int mysql_send_eof(DCB* dcb, int seqno)
+Data create_eof(uint8_t seqno)
 {
-    GWBUF* pkt = gwbuf_alloc(9);
-
-    if (pkt == NULL)
-    {
-        return 0;
-    }
-
-    uint8_t* ptr = GWBUF_DATA(pkt);
-    *ptr++ = 0x05;
-    *ptr++ = 0x00;
-    *ptr++ = 0x00;
-    *ptr++ = seqno;                         // Sequence number in response
-    *ptr++ = 0xfe;                          // Length of result string
-    *ptr++ = 0x00;                          // No Errors
-    *ptr++ = 0x00;
-    *ptr++ = 0x02;                          // Autocommit enabled
-    *ptr++ = 0x00;
-    return dcb->protocol_write(pkt);
+    uint8_t eof[] = {0x5, 0x0, 0x0, seqno, 0xfe, 0x0, 0x0, 0x0, 0x0};
+    return {std::begin(eof), std::end(eof)};
 }
 
-/**
- * Send a row packet in a response packet sequence.
- *
- * @param dcb           The client connection
- * @param row           The row to send
- * @param seqno         The sequence number of the EOF packet
- * @return              Non-zero on success
- */
-static int mysql_send_row(DCB* dcb, const std::vector<std::string>& row, int seqno)
+Data create_row(const std::vector<std::string>& row, uint8_t seqno)
 {
-    auto acc = [](int l, const std::string& s) {
-            return l + s.length() + 1;
-        };
+    int len = std::accumulate(row.begin(), row.end(), 0, [](auto l, const auto& s) {
+                                  return l + s.length() + 1;
+                              });
 
-    int len = std::accumulate(row.begin(), row.end(), MYSQL_HEADER_LEN, acc);
-
-    GWBUF* pkt = gwbuf_alloc(len);
-
-    if (pkt == NULL)
-    {
-        return 0;
-    }
-
-    uint8_t* ptr = GWBUF_DATA(pkt);
-    len -= MYSQL_HEADER_LEN;
-    *ptr++ = len & 0xff;
-    *ptr++ = (len >> 8) & 0xff;
-    *ptr++ = (len >> 16) & 0xff;
-    *ptr++ = seqno;
+    auto data = create_header(len, seqno);
 
     for (const auto& a : row)
     {
-        *ptr++ = a.length();
-        memcpy(ptr, a.c_str(), a.length());
-        ptr += a.length();
+        auto r = create_lestr(a);
+        data.insert(data.end(), r.begin(), r.end());
     }
 
-    return dcb->protocol_write(pkt);
+    return data;
+}
 }
 
 ResultSet::ResultSet(std::initializer_list<std::string> names)
@@ -187,64 +147,34 @@ void ResultSet::add_row(std::initializer_list<std::string> values)
     m_rows.emplace_back(values);
 }
 
-void ResultSet::write(DCB* dcb)
+mxs::Buffer ResultSet::as_buffer() const
 {
-    mysql_send_fieldcount(dcb, m_columns.size());
+    mxs::Buffer buf;
+    buf.append(create_fieldcount(m_columns.size()));
 
     uint8_t seqno = 2;      // The second packet after field count
 
     for (const auto& c : m_columns)
     {
-        mysql_send_columndef(dcb, c, seqno++);
+        buf.append(create_columndef(c, seqno++));
     }
 
-    mysql_send_eof(dcb, seqno++);
+    buf.append(create_eof(seqno++));
 
     for (const auto& r : m_rows)
     {
-        mysql_send_row(dcb, r, seqno++);
+        buf.append(create_row(r, seqno++));
     }
 
-    mysql_send_eof(dcb, seqno);
+    buf.append(create_eof(seqno));
+
+    // This allows the data to be sent in one write call
+    buf.make_contiguous();
+
+    return buf;
 }
 
-json_t* ResultSet::get_json_value(const std::string& s)
+void ResultSet::write(DCB* dcb)
 {
-    json_t* js;
-    char* end;
-    long l = strtol(s.c_str(), &end, 10);
-
-    if (end != s.c_str() && *end == '\0')
-    {
-        js = json_integer(l);
-    }
-    else
-    {
-        js = json_string(s.c_str());
-    }
-
-    return js;
-}
-
-void ResultSet::write_as_json(DCB* dcb)
-{
-    json_t* arr = json_array();
-
-    for (const auto& row : m_rows)
-    {
-        json_t* obj = json_object();
-
-        for (size_t i = 0; i < row.size(); i++)
-        {
-            json_object_set_new(obj, m_columns[i].c_str(), get_json_value(row[i]));
-        }
-
-        json_array_append_new(arr, obj);
-    }
-
-    char* js = json_dumps(arr, JSON_INDENT(4));
-    dcb_printf(dcb, "%s", js);
-    MXS_FREE(js);
-
-    json_decref(arr);
+    dcb->protocol_write(as_buffer().release());
 }
