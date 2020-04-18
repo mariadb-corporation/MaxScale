@@ -1392,7 +1392,7 @@ enum route_target get_shard_route_target(uint32_t qtype)
 void SchemaRouterSession::send_databases()
 {
     ServerMap dblist;
-    std::unordered_set<std::string> db_names;
+    std::set<std::string> db_names;
     m_shard.get_content(dblist);
 
     for (auto a : dblist)
