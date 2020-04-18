@@ -815,7 +815,9 @@ bool SchemaRouterSession::send_shards()
         set->add_row({a.first, a.second->name()});
     }
 
-    set->write(m_client->dcb());
+    const mxs::ReplyRoute down;
+    const mxs::Reply reply;
+    mxs::RouterSession::clientReply(set->as_buffer().release(), down, reply);
 
     return true;
 }
@@ -1406,7 +1408,9 @@ void SchemaRouterSession::send_databases()
         set->add_row({name});
     }
 
-    set->write(m_client->dcb());
+    const mxs::ReplyRoute down;
+    const mxs::Reply reply;
+    mxs::RouterSession::clientReply(set->as_buffer().release(), down, reply);
 }
 
 bool SchemaRouterSession::handle_statement(GWBUF* querybuf, SRBackend* bref, uint8_t command, uint32_t type)

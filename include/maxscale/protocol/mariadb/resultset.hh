@@ -47,13 +47,6 @@ public:
     void add_row(std::initializer_list<std::string> values);
 
     /**
-     * Write the result set to a DCB
-     *
-     * @param dcb DCB where the result set is written
-     */
-    void write(DCB* dcb);
-
-    /**
      * Convert the resultset into its raw binary form
      *
      * @return The resultset as a mxs::Buffer

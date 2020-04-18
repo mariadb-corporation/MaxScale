@@ -173,8 +173,3 @@ mxs::Buffer ResultSet::as_buffer() const
 
     return buf;
 }
-
-void ResultSet::write(DCB* dcb)
-{
-    dcb->protocol_write(as_buffer().release());
-}

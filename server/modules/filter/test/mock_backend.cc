@@ -300,7 +300,7 @@ void ResultSetBackend::handle_statement(RouterSession* pSession, GWBUF* pStateme
         std::unique_ptr<ResultSet> set = ResultSet::create({"a"});
         set->add_row({std::to_string(++m_counter)});
         ResultSetDCB dcb(pSession->session());
-        set->write(&dcb);
+        dcb.protocol_write(set->as_buffer().release());
 
         enqueue_response(pSession, dcb.create_response());
     }
