@@ -968,6 +968,9 @@ add_test_executable(mxs2939_sescmd_reconnect.cpp mxs2939_sescmd_reconnect mxs293
 # MXS-2145 and MXS-2623
 add_test_executable(connection_init_queries.cc connection_init_queries connection_init_queries LABELS REPL_BACKEND)
 
+# MXS-2919: Slaves with broken replication should not be used
+add_test_executable(mxs2919_broken_slaves.cpp mxs2919_broken_slaves mxs2919_broken_slaves LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################

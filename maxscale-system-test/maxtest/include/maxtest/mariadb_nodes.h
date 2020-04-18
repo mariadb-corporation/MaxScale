@@ -243,6 +243,16 @@ public:
     void create_users(int node);
 
     /**
+     * Blocks `src` from communicating with `dest`
+     */
+    void block_node_from_node(int src, int dest);
+
+    /**
+     * Unblocks the block added by block_node_from_node
+     */
+    void unblock_node_from_node(int src, int dest);
+
+    /**
      * @param node Index of node to block.
      * @return The command used for blocking a node.
      */
