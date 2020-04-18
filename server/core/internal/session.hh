@@ -21,7 +21,6 @@
 #include <vector>
 
 #include <maxscale/buffer.hh>
-#include <maxscale/resultset.hh>
 #include <maxscale/session.hh>
 #include <maxscale/utils.hh>
 #include <maxscale/target.hh>
@@ -272,5 +271,3 @@ private:
     mutable std::array<int, N_LOAD> m_io_activity {};
     time_t                          m_last_io_activity {0};
 };
-
-std::unique_ptr<ResultSet> sessionGetList();

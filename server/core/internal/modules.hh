@@ -15,7 +15,6 @@
 #include <maxscale/ccdefs.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/modinfo.hh>
-#include <maxscale/resultset.hh>
 
 /* Module types */
 #define MODULE_PROTOCOL         "Protocol"          /**< A protocol module type */
@@ -24,13 +23,6 @@
 #define MODULE_MONITOR          "Monitor"           /**< A database monitor module type */
 #define MODULE_FILTER           "Filter"            /**< A filter module type */
 #define MODULE_QUERY_CLASSIFIER "QueryClassifier"   /**< A query classifier module type */
-
-/**
- * @brief Return a resultset that has the current set of modules in it
- *
- * @return A Result set
- */
-std::unique_ptr<ResultSet> moduleGetList();
 
 /**
  * Calls thread_init on all loaded modules.

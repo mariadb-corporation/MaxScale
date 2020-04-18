@@ -13,7 +13,6 @@
 #pragma once
 
 #include <maxscale/service.hh>
-#include <maxscale/resultset.hh>
 #include <maxscale/router.hh>
 #include <maxscale/workerlocal.hh>
 
@@ -602,8 +601,5 @@ void service_add_server(mxs::Monitor* pMonitor, SERVER* pServer);
  * @param server   A server.
  */
 void service_remove_server(mxs::Monitor* pMonitor, SERVER* pServer);
-
-std::unique_ptr<ResultSet> serviceGetList(void);
-std::unique_ptr<ResultSet> serviceGetListenerList(void);
 
 const MXS_MODULE_PARAM* common_service_params();

@@ -18,6 +18,3 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/poll.hh>
-#include <maxscale/resultset.hh>
-
-std::unique_ptr<ResultSet> eventTimesGetList();

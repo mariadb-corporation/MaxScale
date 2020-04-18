@@ -17,7 +17,6 @@
 #include <maxbase/format.hh>
 #include <maxscale/json_api.hh>
 #include <maxscale/paths.hh>
-#include <maxscale/resultset.hh>
 
 #include "internal/config.hh"
 #include "internal/monitor.hh"
@@ -264,23 +263,6 @@ Monitor* MonitorManager::find_monitor(const char* name)
             return rval == nullptr;
         });
     return rval;
-}
-
-/**
- * Return a resultset that has the current set of monitors in it
- *
- * @return A Result set
- */
-std::unique_ptr<ResultSet> MonitorManager::monitor_get_list()
-{
-    mxb_assert(Monitor::is_main_worker());
-    std::unique_ptr<ResultSet> set = ResultSet::create({"Monitor", "Status"});
-    this_unit.foreach_monitor(
-        [&set](Monitor* ptr) {
-            set->add_row({ptr->m_name, ptr->state_string()});
-            return true;
-        });
-    return set;
 }
 
 Monitor* MonitorManager::server_is_monitored(const SERVER* server)

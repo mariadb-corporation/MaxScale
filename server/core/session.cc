@@ -280,39 +280,6 @@ const char* session_get_user(const MXS_SESSION* session)
     return session ? session->user().c_str() : NULL;
 }
 
-bool dcb_iter_cb(DCB* dcb, void* data)
-{
-    if (dcb->role() == DCB::Role::CLIENT)
-    {
-        ResultSet* set = static_cast<ResultSet*>(data);
-        MXS_SESSION* ses = dcb->session();
-        char buf[20];
-        snprintf(buf, sizeof(buf), "%p", ses);
-
-        set->add_row({buf, ses->client_remote(), ses->service->name(),
-                      session_state_to_string(ses->state())});
-    }
-
-    return true;
-}
-
-/**
- * Return a resultset that has the current set of sessions in it
- *
- * @return A Result set
- */
-/* Lint is not convinced that the new memory for data is always tracked
- * because it does not see what happens within the resultset_create function,
- * so we suppress the warning. In fact, the function call results in return
- * of the set structure which includes a pointer to data
- */
-std::unique_ptr<ResultSet> sessionGetList()
-{
-    std::unique_ptr<ResultSet> set = ResultSet::create({"Session", "Client", "Service", "State"});
-    dcb_foreach(dcb_iter_cb, set.get());
-    return set;
-}
-
 const char* session_trx_state_to_string(uint32_t state)
 {
     if ((state & SESSION_TRX_ACTIVE) == 0)

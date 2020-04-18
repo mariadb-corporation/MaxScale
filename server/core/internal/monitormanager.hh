@@ -14,8 +14,6 @@
 
 #include <maxscale/monitor.hh>
 
-class ResultSet;
-
 /**
  * This class contains internal monitor management functions that should not be exposed in the public
  * monitor class. It's a friend of MXS_MONITOR.
@@ -101,8 +99,6 @@ public:
      * @return The monitor watching this server, or NULL if not monitored
      */
     static mxs::Monitor* server_is_monitored(const SERVER* server);
-
-    static std::unique_ptr<ResultSet> monitor_get_list();
 
     /**
      * @brief Persist monitor configuration into a stream

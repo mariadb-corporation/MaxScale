@@ -23,7 +23,6 @@
 #include <maxscale/config.hh>
 #include <maxscale/config2.hh>
 #include <maxscale/server.hh>
-#include <maxscale/resultset.hh>
 #include <maxscale/workerlocal.hh>
 
 // Private server implementation

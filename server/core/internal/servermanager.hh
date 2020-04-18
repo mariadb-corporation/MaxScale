@@ -58,8 +58,6 @@ public:
      */
     static Server* find_by_unique_name(const std::string& name);
 
-    static std::unique_ptr<ResultSet> getList();
-
     /**
      * Convert all servers into JSON format
      *

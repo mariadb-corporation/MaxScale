@@ -14,7 +14,6 @@
 
 #include <maxscale/ccdefs.hh>
 #include <map>
-#include <maxscale/resultset.hh>
 #include "routersession.hh"
 
 namespace maxscale

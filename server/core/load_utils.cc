@@ -661,37 +661,6 @@ static const char* module_status_to_string(LOADED_MODULE* ptr)
     return "Unknown";
 }
 
-/**
- * Provide a row to the result set that defines the set of modules
- *
- * @param set   The result set
- * @param data  The index of the row to send
- * @return The next row or NULL
- */
-static void moduleRowCallback(std::unique_ptr<ResultSet>& set)
-{
-
-    for (LOADED_MODULE* ptr = registered; ptr; ptr = ptr->next)
-    {
-        char buf[40];
-        snprintf(buf,
-                 sizeof(buf),
-                 "%d.%d.%d",
-                 ptr->info->api_version.major,
-                 ptr->info->api_version.minor,
-                 ptr->info->api_version.patch);
-        set->add_row({ptr->module, ptr->type, ptr->version, buf, module_status_to_string(ptr)});
-    }
-}
-
-std::unique_ptr<ResultSet> moduleGetList()
-{
-    std::unique_ptr<ResultSet> set = ResultSet::create({"Module Name", "Module Type", "Version",
-                                                        "API Version", "Status"});
-    moduleRowCallback(set);
-    return set;
-}
-
 const MXS_MODULE* get_module(const char* name, const char* type)
 {
     name = mxs_module_get_effective_name(name);

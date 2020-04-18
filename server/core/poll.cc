@@ -51,30 +51,3 @@ int64_t poll_get_stat(POLL_STAT what)
 {
     return RoutingWorker::get_one_statistic(what);
 }
-
-/**
- * Return a result set that has the current set of services in it
- *
- * @return A Result set
- */
-std::unique_ptr<ResultSet> eventTimesGetList()
-{
-    std::unique_ptr<ResultSet> set = ResultSet::create({"Duration", "No. Events Queued",
-                                                        "No. Events Executed"});
-    char buf[40];
-    Worker::STATISTICS stats = RoutingWorker::get_statistics();
-
-    set->add_row({"< 100ms", std::to_string(stats.qtimes[0]), std::to_string(stats.exectimes[0])});
-
-    for (int i = 1; i < Worker::STATISTICS::N_QUEUE_TIMES - 1; i++)
-    {
-        snprintf(buf, sizeof(buf), "%2d00 - %2d00ms", i, i + 1);
-        set->add_row({buf, std::to_string(stats.qtimes[i]), std::to_string(stats.exectimes[i])});
-    }
-
-    int idx = Worker::STATISTICS::N_QUEUE_TIMES - 1;
-    snprintf(buf, sizeof(buf), "> %2d00ms", Worker::STATISTICS::N_QUEUE_TIMES);
-    set->add_row({buf, std::to_string(stats.qtimes[idx]), std::to_string(stats.exectimes[idx])});
-
-    return set;
-}

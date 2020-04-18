@@ -43,7 +43,6 @@
 #include <maxscale/paths.hh>
 #include <maxscale/poll.hh>
 #include <maxscale/protocol.hh>
-#include <maxscale/resultset.hh>
 #include <maxscale/router.hh>
 #include <maxscale/server.hh>
 #include <maxscale/session.hh>
@@ -673,49 +672,6 @@ int serviceSessionCountAll()
     }
 
     return rval;
-}
-
-/**
- * Return a resultset that has the current set of services in it
- *
- * @return A Result set
- */
-std::unique_ptr<ResultSet> serviceGetListenerList()
-{
-    std::unique_ptr<ResultSet> set = ResultSet::create({"Service Name", "Protocol Module", "Address", "Port",
-                                                        "State"});
-    LockGuard guard(this_unit.lock);
-
-    for (Service* service : this_unit.services)
-    {
-        for (const auto& listener : listener_find_by_service(service))
-        {
-            set->add_row({service->name(), listener->protocol(), listener->address(),
-                          std::to_string(listener->port()), listener->state()});
-        }
-    }
-
-    return set;
-}
-
-/**
- * Return a result set that has the current set of services in it
- *
- * @return A Result set
- */
-std::unique_ptr<ResultSet> serviceGetList()
-{
-    std::unique_ptr<ResultSet> set = ResultSet::create({"Service Name", "Router Module", "No. Sessions",
-                                                        "Total Sessions"});
-    LockGuard guard(this_unit.lock);
-
-    for (Service* s : this_unit.services)
-    {
-        set->add_row({s->name(), s->router_name(), std::to_string(s->stats().n_current),
-                      std::to_string(s->stats().n_connections)});
-    }
-
-    return set;
 }
 
 /**

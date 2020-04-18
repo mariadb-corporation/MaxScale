@@ -146,31 +146,6 @@ Server* ServerManager::find_by_unique_name(const string& name)
     return rval;
 }
 
-/**
- * Return a resultset that has the current set of servers in it
- *
- * @return A Result set
- */
-std::unique_ptr<ResultSet> ServerManager::getList()
-{
-    std::unique_ptr<ResultSet> set =
-        ResultSet::create({"Server", "Address", "Port", "Connections", "Status"});
-
-    this_unit.foreach_server(
-        [&set](Server* server) {
-            if (server->active())
-            {
-                string stat = server->status_string();
-                set->add_row({server->name(), server->address(),
-                              std::to_string(server->port()),
-                              std::to_string(server->stats().n_current), stat});
-            }
-            return true;
-        });
-
-    return set;
-}
-
 json_t* ServerManager::server_list_to_json(const char* host)
 {
     json_t* data = json_array();
