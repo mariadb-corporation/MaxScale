@@ -168,6 +168,7 @@ namespace mariadb
 void     set_byte2(uint8_t* buffer, uint16_t val);
 void     set_byte3(uint8_t* buffer, uint32_t val);
 void     set_byte4(uint8_t* buffer, uint32_t val);
+void     set_byte8(uint8_t* buffer, uint64_t val);
 uint16_t get_byte2(const uint8_t* buffer);
 uint32_t get_byte3(const uint8_t* buffer);
 uint32_t get_byte4(const uint8_t* buffer);

@@ -611,6 +611,13 @@ void set_byte4(uint8_t* buffer, uint32_t val)
     *ple32 = le32;
 }
 
+void set_byte8(uint8_t* buffer, uint64_t val)
+{
+    uint64_t le64 = htole64(val);
+    auto ple64 = reinterpret_cast<uint64_t*>(buffer);
+    *ple64 = le64;
+}
+
 uint16_t get_byte2(const uint8_t* buffer)
 {
     uint16_t le16 = *(reinterpret_cast<const uint16_t*>(buffer));
