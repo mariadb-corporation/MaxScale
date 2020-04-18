@@ -176,13 +176,31 @@ namespace maxscale
 SSLConfig::SSLConfig(const mxs::ConfigParameters& params)
     : mxb::SSLConfig(params.get_string(CN_SSL_KEY), params.get_string(CN_SSL_CERT),
                      params.get_string(CN_SSL_CA_CERT))
-    , crl(params.get_string(CN_SSL_CRL))
-    , version((ssl_method_type_t)params.get_enum(CN_SSL_VERSION, ssl_version_values))
-    , verify_depth(params.get_integer(CN_SSL_CERT_VERIFY_DEPTH))
-    , verify_peer(params.get_bool(CN_SSL_VERIFY_PEER_CERTIFICATE))
-    , verify_host(params.get_bool(CN_SSL_VERIFY_PEER_HOST))
-    , cipher(params.get_string(CN_SSL_CIPHER))
 {
+    if (params.contains(CN_SSL_CRL))
+    {
+        crl = params.get_string(CN_SSL_CRL);
+    }
+    if (params.contains(CN_SSL_VERSION))
+    {
+        version = (ssl_method_type_t)params.get_enum(CN_SSL_VERSION, ssl_version_values);
+    }
+    if (params.contains(CN_SSL_CERT_VERIFY_DEPTH))
+    {
+        verify_depth = params.get_integer(CN_SSL_CERT_VERIFY_DEPTH);
+    }
+    if (params.contains(CN_SSL_VERIFY_PEER_CERTIFICATE))
+    {
+        verify_peer = params.get_bool(CN_SSL_VERIFY_PEER_CERTIFICATE);
+    }
+    if (params.contains(CN_SSL_VERIFY_PEER_HOST))
+    {
+        verify_host = params.get_bool(CN_SSL_VERIFY_PEER_HOST);
+    }
+    if (params.contains(CN_SSL_CIPHER))
+    {
+        cipher = params.get_string(CN_SSL_CIPHER);
+    }
 }
 
 // static

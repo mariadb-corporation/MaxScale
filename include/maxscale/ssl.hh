@@ -78,8 +78,8 @@ struct SSLConfig : public mxb::SSLConfig
     std::string       crl;                          /** SSL certificate revocation list*/
     ssl_method_type_t version = SERVICE_SSL_TLS_MAX;/**< Which TLS version to use */
     int               verify_depth = 9;             /**< SSL certificate verification depth */
-    bool              verify_peer = true;           /**< Enable peer certificate verification */
-    bool              verify_host = true;           /**< Enable peer host verification */
+    bool              verify_peer = false;          /**< Enable peer certificate verification */
+    bool              verify_host = false;          /**< Enable peer host verification */
     std::string       cipher;                       /**< Selected TLS cipher */
 };
 
