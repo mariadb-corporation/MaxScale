@@ -15,10 +15,12 @@ add_library(pinloki-core
     writer.cc
 )
 
+target_link_libraries(pinloki-core maxbase mariadbclient uuid)
+
 add_library(pinloki SHARED pinloki.cc pinlokisession.cc)
-target_link_libraries(pinloki pinloki-core maxbase mariadbclient maxscale-common)
+target_link_libraries(pinloki pinloki-core maxscale-common)
 set_target_properties(pinloki PROPERTIES VERSION "1.0.0"  LINK_FLAGS -Wl,-z,defs)
 install_module(pinloki core)
 
 add_executable(pinloki_main main.cc)
-target_link_libraries(pinloki_main maxbase mariadbclient pinloki-core)
+target_link_libraries(pinloki_main pinloki-core)

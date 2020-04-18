@@ -17,6 +17,7 @@
 #include <unistd.h>
 #include <maxbase/log.hh>
 #include <sstream>
+#include <uuid/uuid.h>
 
 namespace pinloki
 {
@@ -33,7 +34,13 @@ std::string Config::path(const std::string& name)
 
 std::string gen_uuid()
 {
-    return "42";
+    char uuid_str[36 + 1];
+    uuid_t uuid;
+
+    uuid_generate_time(uuid);
+    uuid_unparse_lower(uuid, uuid_str);
+
+    return uuid_str;
 }
 
 Config::Config()
