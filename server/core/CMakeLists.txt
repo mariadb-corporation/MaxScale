@@ -37,7 +37,6 @@ add_library(maxscale-common SHARED
   random.cc
   resource.cc
   response_stat.cc
-  resultset.cc
   router.cc
   routingworker.cc
   secrets.cc

@@ -17,7 +17,7 @@
 #include <numeric>
 
 #include <maxbase/alloc.h>
-#include <maxscale/resultset.hh>
+#include <maxscale/protocol/mariadb/resultset.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/mysql_binlog.h>
