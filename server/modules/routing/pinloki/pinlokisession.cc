@@ -125,4 +125,22 @@ bool PinlokiSession::handleError(mxs::ErrorType type, GWBUF* pMessage,
     mxb_assert_message(!true, "This should not happen");
     return false;
 }
+
+bool PinlokiSession::send_event(const maxsql::RplEvent& event)
+{
+    mxs::Buffer buffer(5 + event.data().size());
+
+    // Wrap the events in a protocol packet with a command byte of 0x0
+    mariadb::set_byte3(buffer.data(), event.data().size() + 1);
+    buffer.data()[3] = m_seq++;
+    buffer.data()[4] = 0x0;
+    mempcpy(buffer.data() + 5, event.data().data(), event.data().size());
+
+    const mxs::ReplyRoute down;
+    const mxs::Reply reply;
+    mxs::RouterSession::clientReply(buffer.release(), down, reply);
+
+    // TODO: Stop sending events when the network buffer gets full
+    return true;
+}
 }

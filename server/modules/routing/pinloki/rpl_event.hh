@@ -121,6 +121,12 @@ public:
         auto ret = &m_raw.back();
         return ++ret;
     }
+
+    const std::vector<char>& data() const
+    {
+        return m_raw;
+    }
+
 private:
     mariadb_rpl_event m_event_type;
     unsigned int      m_timestamp;

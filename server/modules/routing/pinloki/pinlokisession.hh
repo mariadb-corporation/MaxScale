@@ -16,6 +16,8 @@
 
 #include <maxscale/router.hh>
 
+#include "rpl_event.hh"
+
 namespace pinloki
 {
 
@@ -31,5 +33,10 @@ public:
     void    clientReply(GWBUF* pPacket, const mxs::ReplyRoute& down, const mxs::Reply& reply);
     bool    handleError(mxs::ErrorType type, GWBUF* pMessage,
                         mxs::Endpoint* pProblem, const mxs::Reply& pReply);
+
+private:
+    uint8_t m_seq = 1;      // Packet sequence number, incremented for each sent packet
+
+    bool send_event(const maxsql::RplEvent& event);
 };
 }
