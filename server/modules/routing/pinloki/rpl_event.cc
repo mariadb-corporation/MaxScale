@@ -61,8 +61,7 @@ Rotate RplEvent::rotate() const
     Rotate rot;
     rot.is_fake = m_timestamp == 0;
     rot.is_artifical = m_flags & LOG_EVENT_ARTIFICIAL_F;
-    // rot.file_name = std::string(pBody() + RPL_SEQ_NR_LEN, pEnd() - pBody() - RPL_SEQ_NR_LEN - RPL_CRC_LEN);
-    rot.file_name = std::string(pBody() + RPL_SEQ_NR_LEN, 13);
+    rot.file_name = get_rotate_name(m_raw.data(), m_raw.size());
 
     return rot;
 }

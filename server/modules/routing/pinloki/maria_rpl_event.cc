@@ -18,6 +18,8 @@
 #include <iostream>
 #include <iomanip>
 
+#include <zlib.h>
+
 using namespace std::literals::chrono_literals;
 using namespace std::literals::string_literals;
 
@@ -300,4 +302,27 @@ std::string to_string(mariadb_rpl_event ev)
     }
 
     abort();
+}
+
+std::string get_rotate_name(const char* ptr, size_t len)
+{
+
+    // 19 byte header and 8 bytes of constant data
+    // see: https://mariadb.com/kb/en/rotate_event/
+    const size_t NAME_OFFSET = 19 + 8;
+    auto given = std::string(ptr + NAME_OFFSET, len - NAME_OFFSET);
+
+    // This is a very uncomfortable hack around the lack of checksum information we have at this point.
+    // Deducing whether checksums are enabled by calculating it and comparing it to the stored checksum works
+    // in most cases but we can't be sure whether there are edge cases where the valid checksum of the start
+    // of the event results in a checksum that matches the last four bytes of it.
+    uint32_t orig_checksum = *(const uint32_t*)(ptr + len - 4);
+    uint32_t checksum = crc32(0, (const uint8_t*)ptr, len - 4);
+
+    if (orig_checksum == checksum)
+    {
+        given = given.substr(0, given.length() - 4);
+    }
+
+    return given;
 }

@@ -63,3 +63,6 @@ std::ostream& operator<<(std::ostream& os, const MariaRplEvent& rpl_msg);       
 }
 
 std::string to_string(mariadb_rpl_event ev);
+
+// TODO: Move this inside MariaRplEvent or RplEvent (maybe combine them?)
+std::string get_rotate_name(const char* ptr, size_t len);
