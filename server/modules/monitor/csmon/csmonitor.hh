@@ -70,6 +70,12 @@ public:
                           const std::chrono::seconds& timout, CsMonitorServer* pServer);
     bool command_remove_node(json_t** ppOutput, CsMonitorServer* pServer);
 
+#if defined(CSMON_EXPOSE_TRANSACTIONS)
+    bool command_begin(json_t** ppOutput, const std::chrono::seconds& timeout, CsMonitorServer* pServer);
+    bool command_commit(json_t** ppOutput, CsMonitorServer* pServer);
+    bool command_rollback(json_t** ppOutput, CsMonitorServer* pServer);
+#endif
+
     using ResponseHandler = std::function<void(CsMonitorServer*,
                                                const mxb::http::Result&,
                                                json_t*)>;
@@ -127,6 +133,12 @@ private:
     void cluster_add_node(json_t** ppOutput, mxb::Semaphore* pSem,
                           const std::chrono::seconds& timeout, CsMonitorServer* pServer);
     void cluster_remove_node(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer);
+#if defined(CSMON_EXPOSE_TRANSACTIONS)
+    void cluster_begin(json_t** ppOutput, mxb::Semaphore* pSem,
+                       const std::chrono::seconds& timeout, CsMonitorServer* pServer);
+    void cluster_commit(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer);
+    void cluster_rollback(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer);
+#endif
 
     bool has_sufficient_permissions();
     void update_server_status(mxs::MonitorServer* monitored_server);

@@ -21,6 +21,11 @@
 #include <maxscale/json_api.hh>
 #include <maxscale/monitor.hh>
 
+#if defined(SS_DEBUG)
+// This will expose the begin|commit|rollback as module call commands. Only
+// intended for debugging and testing.
+#define CSMON_EXPOSE_TRANSACTIONS
+#endif
 
 // Since the macro below obviously is expanded in place, the if will cause an
 // "...will never be NULL" error if ppJson is a local variable.

@@ -204,6 +204,10 @@ json_t* result_to_json(const CsMonitorServer& server, const CsMonitorServer::Sta
     {
         pResult = status.sJson.get();
         json_incref(pResult);
+
+#if defined(CSMON_EXPOSE_TRANSACTIONS)
+        json_object_set_new(pResult, "csmon_trx_active", json_boolean(server.in_trx()));
+#endif
     }
 
     return pResult;
@@ -788,6 +792,65 @@ bool CsMonitor::command_remove_node(json_t** ppOutput, CsMonitorServer* pServer)
 
     return command(ppOutput, sem, "remove-node", cmd);
 }
+
+#if defined(CSMON_EXPOSE_TRANSACTIONS)
+bool CsMonitor::command_begin(json_t** ppOutput,
+                              const std::chrono::seconds& timeout,
+                              CsMonitorServer* pServer)
+{
+    mxb::Semaphore sem;
+
+    auto cmd = [this, &sem, timeout, ppOutput, pServer] () {
+        if (ready_to_run(ppOutput))
+        {
+            cluster_begin(ppOutput, &sem, timeout, pServer);
+        }
+        else
+        {
+            sem.post();
+        }
+    };
+
+    return command(ppOutput, sem, "begin", cmd);
+}
+
+bool CsMonitor::command_commit(json_t** ppOutput, CsMonitorServer* pServer)
+{
+    mxb::Semaphore sem;
+
+    auto cmd = [this, &sem, ppOutput, pServer] () {
+        if (ready_to_run(ppOutput))
+        {
+            cluster_commit(ppOutput, &sem, pServer);
+        }
+        else
+        {
+            sem.post();
+        }
+    };
+
+    return command(ppOutput, sem, "commit", cmd);
+}
+
+bool CsMonitor::command_rollback(json_t** ppOutput, CsMonitorServer* pServer)
+{
+    mxb::Semaphore sem;
+
+    auto cmd = [this, &sem, ppOutput, pServer] () {
+        if (ready_to_run(ppOutput))
+        {
+            cluster_rollback(ppOutput, &sem, pServer);
+        }
+        else
+        {
+            sem.post();
+        }
+    };
+
+    return command(ppOutput, sem, "rollback", cmd);
+}
+#endif
+
 
 bool CsMonitor::ready_to_run(json_t** ppOutput) const
 {
@@ -1469,6 +1532,133 @@ void CsMonitor::cluster_remove_node(json_t** ppOutput, mxb::Semaphore* pSem, CsM
 
     pSem->post();
 }
+
+#if defined(CSMON_EXPOSE_TRANSACTIONS)
+void CsMonitor::cluster_begin(json_t** ppOutput,
+                              mxb::Semaphore* pSem,
+                              const std::chrono::seconds& timeout,
+                              CsMonitorServer* pServer)
+{
+    string trx_id = next_trx_id();
+
+    ServerVector sv;
+
+    if (pServer)
+    {
+        sv.push_back(pServer);
+    }
+    else
+    {
+        sv = servers();
+    }
+
+    http::Results results = CsMonitorServer::begin(sv, timeout, trx_id, m_http_config);
+
+    json_t* pServers = nullptr;
+    size_t n = results_to_json(sv, results, &pServers);
+
+    bool success = (n == sv.size());
+    ostringstream message;
+
+    if (success)
+    {
+        message << "Transaction started.";
+    }
+    else
+    {
+        message << "Transaction started on " << n << " servers, out of " << sv.size() << ".";
+    }
+
+    json_t* pOutput = json_object();
+    json_object_set_new(pOutput, "success", json_boolean(success));
+    json_object_set_new(pOutput, "message", json_string(message.str().c_str()));
+    json_object_set_new(pOutput, "servers", pServers);
+
+    *ppOutput = pOutput;
+
+    pSem->post();
+}
+
+void CsMonitor::cluster_commit(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
+{
+    ServerVector sv;
+
+    if (pServer)
+    {
+        sv.push_back(pServer);
+    }
+    else
+    {
+        sv = servers();
+    }
+
+    http::Results results = CsMonitorServer::commit(sv, m_http_config);
+
+    json_t* pServers = nullptr;
+    size_t n = results_to_json(sv, results, &pServers);
+
+    bool success = (n == sv.size());
+    ostringstream message;
+
+    if (success)
+    {
+        message << "Transaction committed.";
+    }
+    else
+    {
+        message << "Transaction committed on " << n << " servers, out of " << sv.size() << ".";
+    }
+
+    json_t* pOutput = json_object();
+    json_object_set_new(pOutput, "success", json_boolean(success));
+    json_object_set_new(pOutput, "message", json_string(message.str().c_str()));
+    json_object_set_new(pOutput, "servers", pServers);
+
+    *ppOutput = pOutput;
+
+    pSem->post();
+}
+
+void CsMonitor::cluster_rollback(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
+{
+    ServerVector sv;
+
+    if (pServer)
+    {
+        sv.push_back(pServer);
+    }
+    else
+    {
+        sv = servers();
+    }
+
+    http::Results results = CsMonitorServer::rollback(sv, m_http_config);
+
+    json_t* pServers = nullptr;
+    size_t n = results_to_json(sv, results, &pServers);
+
+    bool success = (n == sv.size());
+    ostringstream message;
+
+    if (success)
+    {
+        message << "Transaction rolled back.";
+    }
+    else
+    {
+        message << "Transaction rolled back on " << n << " servers, out of " << sv.size() << ".";
+    }
+
+    json_t* pOutput = json_object();
+    json_object_set_new(pOutput, "success", json_boolean(success));
+    json_object_set_new(pOutput, "message", json_string(message.str().c_str()));
+    json_object_set_new(pOutput, "servers", pServers);
+
+    *ppOutput = pOutput;
+
+    pSem->post();
+}
+#endif
 
 CsMonitorServer* CsMonitor::create_server(SERVER* pServer,
                                           const mxs::MonitorServer::SharedSettings& shared)

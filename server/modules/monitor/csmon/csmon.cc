@@ -30,6 +30,7 @@ const char CSMON_SHUTDOWN_DESC[]    = "Shutdown Columnstore cluster [or server].
 const char CSMON_START_DESC[]       = "Start Columnstore cluster [or server].";
 const char CSMON_STATUS_DESC[]      = "Get Columnstore cluster [or server] status.";
 
+
 const modulecmd_arg_type_t csmon_add_node_argv[] =
 {
     { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
@@ -362,6 +363,83 @@ bool csmon_status(const MODULECMD_ARG* pArgs, json_t** ppOutput)
     return rv;
 }
 
+#if defined(CSMON_EXPOSE_TRANSACTIONS)
+const char CSMON_BEGIN_DESC[]    = "Begin a transaction.";
+const char CSMON_COMMIT_DESC[]   = "Commit a transaction.";
+const char CSMON_ROLLBACK_DESC[] = "Rollback a trancation.";
+
+const modulecmd_arg_type_t csmon_begin_argv[] =
+{
+    { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
+    { MODULECMD_ARG_STRING, "Timeout, 0 means no timeout." },
+    { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Specific server to begin transaction on" }
+};
+
+const modulecmd_arg_type_t csmon_commit_argv[] =
+{
+    { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
+    { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Specific server to commit transaction on" }
+};
+
+const modulecmd_arg_type_t csmon_rollback_argv[] =
+{
+    { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
+    { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Specific server to rollback transaction on" }
+};
+
+bool csmon_begin(const MODULECMD_ARG* pArgs, json_t** ppOutput)
+{
+    CsMonitor* pMonitor;
+    const char* zTimeout;
+    CsMonitorServer* pServer;
+
+    bool rv = get_args(pArgs, ppOutput, &pMonitor, &zTimeout, &pServer);
+
+    if (rv)
+    {
+        std::chrono::seconds timeout(0);
+
+        if (get_timeout(zTimeout, &timeout, ppOutput))
+        {
+            rv = pMonitor->command_begin(ppOutput, timeout, pServer);
+        }
+    }
+
+    return rv;
+}
+
+bool csmon_commit(const MODULECMD_ARG* pArgs, json_t** ppOutput)
+{
+    CsMonitor* pMonitor;
+    CsMonitorServer* pServer;
+
+    bool rv = get_args(pArgs, ppOutput, &pMonitor, &pServer);
+
+    if (rv)
+    {
+        rv = pMonitor->command_commit(ppOutput, pServer);
+    }
+
+    return rv;
+}
+
+bool csmon_rollback(const MODULECMD_ARG* pArgs, json_t** ppOutput)
+{
+    CsMonitor* pMonitor;
+    CsMonitorServer* pServer;
+
+    bool rv = get_args(pArgs, ppOutput, &pMonitor, &pServer);
+
+    if (rv)
+    {
+        rv = pMonitor->command_rollback(ppOutput, pServer);
+    }
+
+    return rv;
+}
+
+#endif
+
 
 void register_commands()
 {
@@ -414,6 +492,23 @@ void register_commands()
                                csmon_status,
                                MXS_ARRAY_NELEMS(csmon_status_argv), csmon_status_argv,
                                CSMON_STATUS_DESC);
+
+#if defined(CSMON_EXPOSE_TRANSACTIONS)
+    modulecmd_register_command(MXS_MODULE_NAME, "begin", MODULECMD_TYPE_PASSIVE,
+                               csmon_begin,
+                               MXS_ARRAY_NELEMS(csmon_begin_argv), csmon_begin_argv,
+                               CSMON_BEGIN_DESC);
+
+    modulecmd_register_command(MXS_MODULE_NAME, "commit", MODULECMD_TYPE_PASSIVE,
+                               csmon_commit,
+                               MXS_ARRAY_NELEMS(csmon_commit_argv), csmon_commit_argv,
+                               CSMON_COMMIT_DESC);
+
+    modulecmd_register_command(MXS_MODULE_NAME, "rollback", MODULECMD_TYPE_PASSIVE,
+                               csmon_rollback,
+                               MXS_ARRAY_NELEMS(csmon_rollback_argv), csmon_rollback_argv,
+                               CSMON_ROLLBACK_DESC);
+#endif
 }
 }
 
