@@ -1041,7 +1041,32 @@ void CsMonitor::cluster_shutdown(json_t** ppOutput,
 
 void CsMonitor::cluster_ping(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
 {
-    cluster_get(ppOutput, pSem, cs::rest::PING, pServer);
+    http::Results results = CsMonitorServer::ping(servers(), m_http_config);
+
+    json_t* pServers = nullptr;
+    size_t n = results_to_json(servers(), results, &pServers);
+
+    bool success = (n == servers().size());
+    ostringstream message;
+
+    if (success)
+    {
+        message << "Pinged all servers.";
+    }
+    else
+    {
+        message << "Successfully pinged " << n
+                << " servers out of " << servers().size() << ".";
+    }
+
+    json_t* pOutput = json_object();
+    json_object_set_new(pOutput, "success", json_boolean(success));
+    json_object_set_new(pOutput, "message", json_string(message.str().c_str()));
+    json_object_set_new(pOutput, "servers", pServers);
+
+    *ppOutput = pOutput;
+
+    pSem->post();
 }
 
 void CsMonitor::cluster_status(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)

@@ -492,6 +492,30 @@ http::Results CsMonitorServer::commit(const std::vector<CsMonitorServer*>& serve
 }
 
 //static
+bool CsMonitorServer::ping(const std::vector<CsMonitorServer*>& servers,
+                           const mxb::http::Config& http_config,
+                           Results* pResults)
+{
+    vector<string> urls = create_urls(servers, cs::rest::PING);
+    http::Results results = http::get(urls, http_config);
+
+    bool rv = std::all_of(results.begin(), results.end(), std::mem_fun_ref(&http::Result::ok));
+
+    pResults->swap(results);
+
+    return rv;
+}
+
+//static
+http::Results CsMonitorServer::ping(const std::vector<CsMonitorServer*>& servers,
+                                    const mxb::http::Config& config)
+{
+    Results results;
+    ping(servers, config, &results);
+    return results;
+}
+
+//static
 bool CsMonitorServer::rollback(const std::vector<CsMonitorServer*>& servers,
                                const http::Config& http_config,
                                Results* pResults)

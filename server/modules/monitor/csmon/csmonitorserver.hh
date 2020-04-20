@@ -157,6 +157,11 @@ public:
     static bool commit(const std::vector<CsMonitorServer*>& servers,
                        const mxb::http::Config& config,
                        Results* pResults);
+    static Results ping(const std::vector<CsMonitorServer*>& servers,
+                        const mxb::http::Config& config);
+    static bool ping(const std::vector<CsMonitorServer*>& servers,
+                     const mxb::http::Config& config,
+                     Results* pResults);
     static Results rollback(const std::vector<CsMonitorServer*>& servers,
                             const mxb::http::Config& config);
     static bool rollback(const std::vector<CsMonitorServer*>& servers,
