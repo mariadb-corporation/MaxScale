@@ -889,7 +889,12 @@ add_test_executable(mxs2441_galera_slaves.cpp mxs2441_galera_slaves mxs2441_gale
 # MXS-2414: Block host after repeated authentication failures
 add_test_executable(mxs2414_host_blocking.cpp mxs2414_host_blocking replication LABELS REPL_BACKEND)
 
-# PAM authentication, also tests multiple authenticators on the same listener (MXS-2497)
+# PAM authentication and various other authentication related issues:
+# 1. PAM authentication, normal + roles (MXS-2478)
+# 2. Multiple authenticators on the same listener (MXS-2497)
+# 3. skip_authentication and match_host (MXS-2941)
+# 4. lower_case_table_names
+# 5. log_password_mismatch (MXS-2916)
 add_test_executable(pam_authentication.cpp pam_authentication pam_authentication LABELS REPL_BACKEND)
 
 # MXS-2350: On-demand connection creation

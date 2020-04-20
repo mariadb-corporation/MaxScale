@@ -30,6 +30,30 @@ protocol=MySQLClient
 port=4006
 authenticator=PAMAuth, mysqlauth
 
+[ListenerSKIPAUTH]
+type=listener
+service=RWSplit-Router
+protocol=MySQLClient
+port=4007
+authenticator=PAMAuth, mysqlauth
+authenticator_options=skip_authentication=true
+
+[ListenerNOMATCH]
+type=listener
+service=RWSplit-Router
+protocol=MySQLClient
+port=4008
+authenticator=mysqlauth
+authenticator_options=match_host=false,lower_case_table_names=1
+
+[ListenerNOCASE]
+type=listener
+service=RWSplit-Router
+protocol=MySQLClient
+port=4009
+authenticator=mysqlauth
+authenticator_options=lower_case_table_names=2,log_password_mismatch=true
+
 [server1]
 type=server
 address=###node_server_IP_1###
