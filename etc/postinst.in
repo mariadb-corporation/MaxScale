@@ -12,8 +12,9 @@ mkdir -p @MAXSCALE_VARDIR@/lib/maxscale
 mkdir -p @MAXSCALE_VARDIR@/cache/maxscale
 mkdir -p @MAXSCALE_VARDIR@/run/maxscale
 
-# Create MaxScale user
-if [ -f "/etc/passwd" ] && [ "$(grep -c 'maxscale' /etc/passwd)" -eq 0 ]
+# Create MaxScale user if it doesnt' exist
+getent passwd maxscale > /dev/null
+if [ $? -eq 0 ]
 then
     groupadd -r maxscale
     useradd -r -s /bin/false -g maxscale maxscale
@@ -63,7 +64,9 @@ then
     fi
 
     mkdir -p /etc/systemd/system/maxscale.service.d
-    systemctl enable maxscale.service
+    systemctl enable maxscale.service > /dev/null
+
+    systemctl is-active maxscale.service --quiet && systemctl restart maxscale.service
 else
     if [ -d "/etc/init/" ] && [ -f "@CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/upstart/maxscale.conf" ]
     then
@@ -77,6 +80,8 @@ else
     else
         echo "Could not find init script: @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale" >& 2
     fi
+
+    service maxscale status > /dev/null && service maxscale restart > /dev/null
 fi
 
 # If no maxscale.cnf file is found in /etc, copy the template file there
