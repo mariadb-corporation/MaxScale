@@ -55,6 +55,8 @@ public:
     }
 
     // Only to be called by the module call command mechanism.
+    bool command_cluster_scan(json_t** ppOutput,
+                              const std::chrono::seconds& timeout, CsMonitorServer* pServer);
     bool command_cluster_start(json_t** ppOutput, CsMonitorServer* pServer);
     bool command_cluster_shutdown(json_t** ppOutput,
                                   const std::chrono::seconds& timout, CsMonitorServer* pServer);
@@ -110,6 +112,9 @@ private:
         return cluster_put(ppOutput, pSem, action, pServer, std::string(), handler);
     }
 
+    void cluster_scan(json_t** ppOutput, mxb::Semaphore* pSem,
+                      const std::chrono::seconds& timeout,
+                      CsMonitorServer* pServer);
     void cluster_start(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer);
     void cluster_shutdown(json_t** ppOutput, mxb::Semaphore* pSem,
                           const std::chrono::seconds& timeout, CsMonitorServer* pServer);

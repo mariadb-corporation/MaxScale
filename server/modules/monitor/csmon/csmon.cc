@@ -25,9 +25,17 @@ const char CLUSTER_CONFIG_SET_DESC[]  = "Set Columnstore cluster [or server] con
 const char CLUSTER_MODE_SET_DESC[]    = "Set Columnstore cluster mode.";
 const char CLUSTER_PING_DESC[]        = "Ping Columnstore cluster [or server].";
 const char CLUSTER_REMOVE_NODE_DESC[] = "Remove a node from a Columnstore cluster.";
+const char CLUSTER_SCAN_DESC[]        = "Scan Columnstore cluster [or server].";
 const char CLUSTER_SHUTDOWN_DESC[]    = "Shutdown Columnstore cluster [or server].";
 const char CLUSTER_START_DESC[]       = "Start Columnstore cluster [or server].";
 const char CLUSTER_STATUS_DESC[]      = "Get Columnstore cluster [or server] status.";
+
+const modulecmd_arg_type_t cluster_scan_argv[] =
+{
+    { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
+    { MODULECMD_ARG_STRING, "Timeout, 0 means no timeout." },
+    { MODULECMD_ARG_SERVER, "Server to scan" }
+};
 
 const modulecmd_arg_type_t cluster_start_argv[] =
 {
@@ -239,6 +247,27 @@ bool cluster_ping(const MODULECMD_ARG* pArgs, json_t** ppOutput)
     return rv;
 }
 
+bool cluster_scan(const MODULECMD_ARG* pArgs, json_t** ppOutput)
+{
+    CsMonitor* pMonitor;
+    const char* zTimeout;
+    CsMonitorServer* pServer;
+
+    bool rv = get_args(pArgs, ppOutput, &pMonitor, &zTimeout, &pServer);
+
+    if (rv)
+    {
+        std::chrono::seconds timeout(0);
+
+        if (get_timeout(zTimeout, &timeout, ppOutput))
+        {
+            rv = pMonitor->command_cluster_scan(ppOutput, timeout, pServer);
+        }
+    }
+
+    return rv;
+}
+
 bool cluster_status(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 {
     CsMonitor* pMonitor;
@@ -379,6 +408,11 @@ void register_commands()
                                cluster_mode_set,
                                MXS_ARRAY_NELEMS(cluster_mode_set_argv), cluster_mode_set_argv,
                                CLUSTER_MODE_SET_DESC);
+
+    modulecmd_register_command(MXS_MODULE_NAME, "cluster-scan", MODULECMD_TYPE_ACTIVE,
+                               cluster_scan,
+                               MXS_ARRAY_NELEMS(cluster_scan_argv), cluster_scan_argv,
+                               CLUSTER_SCAN_DESC);
 }
 }
 

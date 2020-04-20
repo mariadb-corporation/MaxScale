@@ -600,6 +600,26 @@ bool CsMonitor::command_cluster_start(json_t** ppOutput, CsMonitorServer* pServe
     return command(ppOutput, sem, "cluster-start", cmd);
 }
 
+bool CsMonitor::command_cluster_scan(json_t** ppOutput,
+                                     const std::chrono::seconds& timeout,
+                                     CsMonitorServer* pServer)
+{
+    mxb::Semaphore sem;
+
+    auto cmd = [this, &sem, timeout, pServer, ppOutput] () {
+        if (ready_to_run(ppOutput))
+        {
+            cluster_scan(ppOutput, &sem, timeout, pServer);
+        }
+        else
+        {
+            sem.post();
+        }
+    };
+
+    return command(ppOutput, sem, "cluster-scan", cmd);
+}
+
 bool CsMonitor::command_cluster_shutdown(json_t** ppOutput,
                                          const std::chrono::seconds& timeout,
                                          CsMonitorServer* pServer)
@@ -934,6 +954,75 @@ void CsMonitor::cluster_put(json_t** ppOutput,
                                         return pResponse;
                                     }));
     m_sCommand->init();
+}
+
+void CsMonitor::cluster_scan(json_t** ppOutput,
+                             mxb::Semaphore* pSem,
+                             const std::chrono::seconds& timeout,
+                             CsMonitorServer* pServer)
+{
+    bool success = false;
+
+    string trx_id = next_trx_id();
+
+    http::Results results;
+    if (CsMonitorServer::begin(servers(), timeout, trx_id, m_http_config, &results))
+    {
+        auto status = pServer->fetch_status();
+        if (status.ok())
+        {
+            auto config = pServer->fetch_config();
+            if (config.ok())
+            {
+                // TODO: Check roots from status.
+                // TODO: Update roots in config accordingly.
+
+                http::Results results;
+                if (CsMonitorServer::set_config(servers(),
+                                                config.response.body,
+                                                m_http_config,
+                                                &results))
+                {
+                    success = true;
+                }
+                else
+                {
+                    PRINT_MXS_JSON_ERROR(ppOutput, "Could not set the configuration to all nodes.");
+                }
+            }
+            else
+            {
+                PRINT_MXS_JSON_ERROR(ppOutput, "Could not fetch the config from '%s'.",
+                                     pServer->name());
+            }
+        }
+        else
+        {
+            PRINT_MXS_JSON_ERROR(ppOutput, "Could not fetch the status of '%s'.",
+                                 pServer->name());
+        }
+    }
+    else
+    {
+        PRINT_MXS_JSON_ERROR(ppOutput, "Could not start a transaction on all nodes.");
+    }
+
+    if (success)
+    {
+        if (!CsMonitorServer::commit(servers(), m_http_config, &results))
+        {
+            PRINT_MXS_JSON_ERROR(ppOutput, "Could not commit changes, will rollback.");
+            success = false;
+        }
+    }
+
+    if (!success)
+    {
+        // TODO: Collect information.
+        CsMonitorServer::rollback(servers(), m_http_config, &results);
+    }
+
+    pSem->post();
 }
 
 void CsMonitor::cluster_start(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
