@@ -19,79 +19,79 @@ namespace
 
 const char ARG_MONITOR_DESC[] = "Monitor name";
 
-const char CLUSTER_ADD_NODE_DESC[]    = "Add a node to a Columnstore cluster.";
-const char CLUSTER_CONFIG_GET_DESC[]  = "Get Columnstore cluster [or server] config.";
-const char CLUSTER_CONFIG_SET_DESC[]  = "Set Columnstore cluster [or server] config.";
-const char CLUSTER_MODE_SET_DESC[]    = "Set Columnstore cluster mode.";
-const char CLUSTER_PING_DESC[]        = "Ping Columnstore cluster [or server].";
-const char CLUSTER_REMOVE_NODE_DESC[] = "Remove a node from a Columnstore cluster.";
-const char CLUSTER_SCAN_DESC[]        = "Scan Columnstore cluster [or server].";
-const char CLUSTER_SHUTDOWN_DESC[]    = "Shutdown Columnstore cluster [or server].";
-const char CLUSTER_START_DESC[]       = "Start Columnstore cluster [or server].";
-const char CLUSTER_STATUS_DESC[]      = "Get Columnstore cluster [or server] status.";
+const char CSMON_ADD_NODE_DESC[]    = "Add a node to a Columnstore cluster.";
+const char CSMON_CONFIG_GET_DESC[]  = "Get Columnstore cluster [or server] config.";
+const char CSMON_CONFIG_SET_DESC[]  = "Set Columnstore cluster [or server] config.";
+const char CSMON_MODE_SET_DESC[]    = "Set Columnstore cluster mode.";
+const char CSMON_PING_DESC[]        = "Ping Columnstore cluster [or server].";
+const char CSMON_REMOVE_NODE_DESC[] = "Remove a node from a Columnstore cluster.";
+const char CSMON_SCAN_DESC[]        = "Scan Columnstore cluster [or server].";
+const char CSMON_SHUTDOWN_DESC[]    = "Shutdown Columnstore cluster [or server].";
+const char CSMON_START_DESC[]       = "Start Columnstore cluster [or server].";
+const char CSMON_STATUS_DESC[]      = "Get Columnstore cluster [or server] status.";
 
-const modulecmd_arg_type_t cluster_scan_argv[] =
-{
-    { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
-    { MODULECMD_ARG_STRING, "Timeout, 0 means no timeout." },
-    { MODULECMD_ARG_SERVER, "Server to scan" }
-};
-
-const modulecmd_arg_type_t cluster_start_argv[] =
-{
-    { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
-    { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Specific server to start" }
-};
-
-const modulecmd_arg_type_t cluster_shutdown_argv[] =
-{
-    { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
-    { MODULECMD_ARG_STRING, "Timeout, 0 means no timeout." },
-    { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Specific server to shutdown" }
-};
-
-const modulecmd_arg_type_t cluster_ping_argv[] =
-{
-    { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
-    { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Specific server to ping" }
-};
-
-const modulecmd_arg_type_t cluster_status_argv[] =
-{
-    { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
-    { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Specific server to query status" }
-};
-
-const modulecmd_arg_type_t cluster_config_get_argv[] =
-{
-    { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
-    { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Specific server to to obtain config from" }
-};
-
-const modulecmd_arg_type_t cluster_config_set_argv[] =
-{
-    { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
-    { MODULECMD_ARG_STRING, "Configuration as JSON object" },
-    { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Specific server to configure" }
-};
-
-const modulecmd_arg_type_t cluster_add_node_argv[] =
+const modulecmd_arg_type_t csmon_add_node_argv[] =
 {
     { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
     { MODULECMD_ARG_STRING, "Timeout, 0 means no timeout." },
     { MODULECMD_ARG_SERVER, "Server to add to Columnstore cluster" }
 };
 
-const modulecmd_arg_type_t cluster_remove_node_argv[] =
+const modulecmd_arg_type_t csmon_config_get_argv[] =
+{
+    { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
+    { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Specific server to to obtain config from" }
+};
+
+const modulecmd_arg_type_t csmon_config_set_argv[] =
+{
+    { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
+    { MODULECMD_ARG_STRING, "Configuration as JSON object" },
+    { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Specific server to configure" }
+};
+
+const modulecmd_arg_type_t csmon_mode_set_argv[]
+{
+    { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
+    { MODULECMD_ARG_STRING, "Cluster mode; readonly or readwrite" }
+};
+
+const modulecmd_arg_type_t csmon_ping_argv[] =
+{
+    { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
+    { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Specific server to ping" }
+};
+
+const modulecmd_arg_type_t csmon_remove_node_argv[] =
 {
     { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
     { MODULECMD_ARG_SERVER, "Server to remove from Columnstore cluster" }
 };
 
-const modulecmd_arg_type_t cluster_mode_set_argv[]
+const modulecmd_arg_type_t csmon_scan_argv[] =
 {
     { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
-    { MODULECMD_ARG_STRING, "Cluster mode; readonly or readwrite" }
+    { MODULECMD_ARG_STRING, "Timeout, 0 means no timeout." },
+    { MODULECMD_ARG_SERVER, "Server to scan" }
+};
+
+const modulecmd_arg_type_t csmon_shutdown_argv[] =
+{
+    { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
+    { MODULECMD_ARG_STRING, "Timeout, 0 means no timeout." },
+    { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Specific server to shutdown" }
+};
+
+const modulecmd_arg_type_t csmon_start_argv[] =
+{
+    { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
+    { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Specific server to start" }
+};
+
+const modulecmd_arg_type_t csmon_status_argv[] =
+{
+    { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
+    { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Specific server to query status" }
 };
 
 
@@ -196,94 +196,7 @@ bool get_timeout(const char* zTimeout, std::chrono::seconds* pTimeout, json_t** 
 }
 
 
-bool cluster_start(const MODULECMD_ARG* pArgs, json_t** ppOutput)
-{
-    CsMonitor* pMonitor;
-    CsMonitorServer* pServer;
-
-    bool rv = get_args(pArgs, ppOutput, &pMonitor, &pServer);
-
-    if (rv)
-    {
-        rv = pMonitor->command_cluster_start(ppOutput, pServer);
-    }
-
-    return rv;
-}
-
-bool cluster_shutdown(const MODULECMD_ARG* pArgs, json_t** ppOutput)
-{
-    CsMonitor* pMonitor;
-    const char* zTimeout;
-    CsMonitorServer* pServer;
-
-    bool rv = get_args(pArgs, ppOutput, &pMonitor, &zTimeout, &pServer);
-
-    if (rv)
-    {
-        std::chrono::seconds timeout(0);
-
-        if (get_timeout(zTimeout, &timeout, ppOutput))
-        {
-            rv = pMonitor->command_cluster_shutdown(ppOutput, timeout, pServer);
-        }
-    }
-
-    return rv;
-}
-
-bool cluster_ping(const MODULECMD_ARG* pArgs, json_t** ppOutput)
-{
-    CsMonitor* pMonitor;
-    CsMonitorServer* pServer;
-
-    bool rv = get_args(pArgs, ppOutput, &pMonitor, &pServer);
-
-    if (rv)
-    {
-        rv = pMonitor->command_cluster_ping(ppOutput, pServer);
-    }
-
-    return rv;
-}
-
-bool cluster_scan(const MODULECMD_ARG* pArgs, json_t** ppOutput)
-{
-    CsMonitor* pMonitor;
-    const char* zTimeout;
-    CsMonitorServer* pServer;
-
-    bool rv = get_args(pArgs, ppOutput, &pMonitor, &zTimeout, &pServer);
-
-    if (rv)
-    {
-        std::chrono::seconds timeout(0);
-
-        if (get_timeout(zTimeout, &timeout, ppOutput))
-        {
-            rv = pMonitor->command_cluster_scan(ppOutput, timeout, pServer);
-        }
-    }
-
-    return rv;
-}
-
-bool cluster_status(const MODULECMD_ARG* pArgs, json_t** ppOutput)
-{
-    CsMonitor* pMonitor;
-    CsMonitorServer* pServer;
-
-    bool rv = get_args(pArgs, ppOutput, &pMonitor, &pServer);
-
-    if (rv)
-    {
-        rv = pMonitor->command_cluster_status(ppOutput, pServer);
-    }
-
-    return rv;
-}
-
-bool cluster_add_node(const MODULECMD_ARG* pArgs, json_t** ppOutput)
+bool csmon_add_node(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 {
     CsMonitor* pMonitor;
     const char* zTimeout;
@@ -304,22 +217,7 @@ bool cluster_add_node(const MODULECMD_ARG* pArgs, json_t** ppOutput)
     return rv;
 }
 
-bool cluster_remove_node(const MODULECMD_ARG* pArgs, json_t** ppOutput)
-{
-    CsMonitor* pMonitor;
-    CsMonitorServer* pServer;
-
-    bool rv = get_args(pArgs, ppOutput, &pMonitor, &pServer);
-
-    if (rv)
-    {
-        rv = pMonitor->command_cluster_remove_node(ppOutput, pServer);
-    }
-
-    return rv;
-}
-
-bool cluster_config_get(const MODULECMD_ARG* pArgs, json_t** ppOutput)
+bool csmon_config_get(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 {
     CsMonitor* pMonitor;
     CsMonitorServer* pServer;
@@ -334,7 +232,7 @@ bool cluster_config_get(const MODULECMD_ARG* pArgs, json_t** ppOutput)
     return rv;
 }
 
-bool cluster_config_set(const MODULECMD_ARG* pArgs, json_t** ppOutput)
+bool csmon_config_set(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 {
     CsMonitor* pMonitor;
     const char* zJson;
@@ -350,7 +248,7 @@ bool cluster_config_set(const MODULECMD_ARG* pArgs, json_t** ppOutput)
     return rv;
 }
 
-bool cluster_mode_set(const MODULECMD_ARG* pArgs, json_t** ppOutput)
+bool csmon_mode_set(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 {
     mxb_assert(pArgs->argc == 2);
     mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
@@ -362,57 +260,160 @@ bool cluster_mode_set(const MODULECMD_ARG* pArgs, json_t** ppOutput)
     return pMonitor->command_cluster_mode_set(ppOutput, zMode);
 }
 
+bool csmon_ping(const MODULECMD_ARG* pArgs, json_t** ppOutput)
+{
+    CsMonitor* pMonitor;
+    CsMonitorServer* pServer;
+
+    bool rv = get_args(pArgs, ppOutput, &pMonitor, &pServer);
+
+    if (rv)
+    {
+        rv = pMonitor->command_cluster_ping(ppOutput, pServer);
+    }
+
+    return rv;
+}
+
+bool csmon_remove_node(const MODULECMD_ARG* pArgs, json_t** ppOutput)
+{
+    CsMonitor* pMonitor;
+    CsMonitorServer* pServer;
+
+    bool rv = get_args(pArgs, ppOutput, &pMonitor, &pServer);
+
+    if (rv)
+    {
+        rv = pMonitor->command_cluster_remove_node(ppOutput, pServer);
+    }
+
+    return rv;
+}
+
+bool csmon_scan(const MODULECMD_ARG* pArgs, json_t** ppOutput)
+{
+    CsMonitor* pMonitor;
+    const char* zTimeout;
+    CsMonitorServer* pServer;
+
+    bool rv = get_args(pArgs, ppOutput, &pMonitor, &zTimeout, &pServer);
+
+    if (rv)
+    {
+        std::chrono::seconds timeout(0);
+
+        if (get_timeout(zTimeout, &timeout, ppOutput))
+        {
+            rv = pMonitor->command_cluster_scan(ppOutput, timeout, pServer);
+        }
+    }
+
+    return rv;
+}
+
+bool csmon_shutdown(const MODULECMD_ARG* pArgs, json_t** ppOutput)
+{
+    CsMonitor* pMonitor;
+    const char* zTimeout;
+    CsMonitorServer* pServer;
+
+    bool rv = get_args(pArgs, ppOutput, &pMonitor, &zTimeout, &pServer);
+
+    if (rv)
+    {
+        std::chrono::seconds timeout(0);
+
+        if (get_timeout(zTimeout, &timeout, ppOutput))
+        {
+            rv = pMonitor->command_cluster_shutdown(ppOutput, timeout, pServer);
+        }
+    }
+
+    return rv;
+}
+
+bool csmon_start(const MODULECMD_ARG* pArgs, json_t** ppOutput)
+{
+    CsMonitor* pMonitor;
+    CsMonitorServer* pServer;
+
+    bool rv = get_args(pArgs, ppOutput, &pMonitor, &pServer);
+
+    if (rv)
+    {
+        rv = pMonitor->command_cluster_start(ppOutput, pServer);
+    }
+
+    return rv;
+}
+
+bool csmon_status(const MODULECMD_ARG* pArgs, json_t** ppOutput)
+{
+    CsMonitor* pMonitor;
+    CsMonitorServer* pServer;
+
+    bool rv = get_args(pArgs, ppOutput, &pMonitor, &pServer);
+
+    if (rv)
+    {
+        rv = pMonitor->command_cluster_status(ppOutput, pServer);
+    }
+
+    return rv;
+}
+
+
 void register_commands()
 {
-    modulecmd_register_command(MXS_MODULE_NAME, "cluster-start", MODULECMD_TYPE_ACTIVE,
-                               cluster_start,
-                               MXS_ARRAY_NELEMS(cluster_start_argv), cluster_start_argv,
-                               CLUSTER_START_DESC);
+    modulecmd_register_command(MXS_MODULE_NAME, "add-node", MODULECMD_TYPE_ACTIVE,
+                               csmon_add_node,
+                               MXS_ARRAY_NELEMS(csmon_add_node_argv), csmon_add_node_argv,
+                               CSMON_ADD_NODE_DESC);
 
-    modulecmd_register_command(MXS_MODULE_NAME, "cluster-shutdown", MODULECMD_TYPE_ACTIVE,
-                               cluster_shutdown,
-                               MXS_ARRAY_NELEMS(cluster_shutdown_argv), cluster_shutdown_argv,
-                               CLUSTER_SHUTDOWN_DESC);
+    modulecmd_register_command(MXS_MODULE_NAME, "config-get", MODULECMD_TYPE_PASSIVE,
+                               csmon_config_get,
+                               MXS_ARRAY_NELEMS(csmon_config_get_argv), csmon_config_get_argv,
+                               CSMON_CONFIG_GET_DESC);
 
-    modulecmd_register_command(MXS_MODULE_NAME, "cluster-ping", MODULECMD_TYPE_PASSIVE,
-                               cluster_ping,
-                               MXS_ARRAY_NELEMS(cluster_ping_argv), cluster_ping_argv,
-                               CLUSTER_PING_DESC);
+    modulecmd_register_command(MXS_MODULE_NAME, "config-set", MODULECMD_TYPE_PASSIVE,
+                               csmon_config_set,
+                               MXS_ARRAY_NELEMS(csmon_config_set_argv), csmon_config_set_argv,
+                               CSMON_CONFIG_SET_DESC);
 
-    modulecmd_register_command(MXS_MODULE_NAME, "cluster-status", MODULECMD_TYPE_PASSIVE,
-                               cluster_status,
-                               MXS_ARRAY_NELEMS(cluster_status_argv), cluster_status_argv,
-                               CLUSTER_STATUS_DESC);
+    modulecmd_register_command(MXS_MODULE_NAME, "mode-set", MODULECMD_TYPE_ACTIVE,
+                               csmon_mode_set,
+                               MXS_ARRAY_NELEMS(csmon_mode_set_argv), csmon_mode_set_argv,
+                               CSMON_MODE_SET_DESC);
 
-    modulecmd_register_command(MXS_MODULE_NAME, "cluster-config-get", MODULECMD_TYPE_PASSIVE,
-                               cluster_config_get,
-                               MXS_ARRAY_NELEMS(cluster_config_get_argv), cluster_config_get_argv,
-                               CLUSTER_CONFIG_GET_DESC);
+    modulecmd_register_command(MXS_MODULE_NAME, "ping", MODULECMD_TYPE_PASSIVE,
+                               csmon_ping,
+                               MXS_ARRAY_NELEMS(csmon_ping_argv), csmon_ping_argv,
+                               CSMON_PING_DESC);
 
-    modulecmd_register_command(MXS_MODULE_NAME, "cluster-config-set", MODULECMD_TYPE_PASSIVE,
-                               cluster_config_set,
-                               MXS_ARRAY_NELEMS(cluster_config_set_argv), cluster_config_set_argv,
-                               CLUSTER_CONFIG_SET_DESC);
+    modulecmd_register_command(MXS_MODULE_NAME, "remove-node", MODULECMD_TYPE_ACTIVE,
+                               csmon_remove_node,
+                               MXS_ARRAY_NELEMS(csmon_remove_node_argv), csmon_remove_node_argv,
+                               CSMON_REMOVE_NODE_DESC);
 
-    modulecmd_register_command(MXS_MODULE_NAME, "cluster-add-node", MODULECMD_TYPE_ACTIVE,
-                               cluster_add_node,
-                               MXS_ARRAY_NELEMS(cluster_add_node_argv), cluster_add_node_argv,
-                               CLUSTER_ADD_NODE_DESC);
+    modulecmd_register_command(MXS_MODULE_NAME, "scan", MODULECMD_TYPE_ACTIVE,
+                               csmon_scan,
+                               MXS_ARRAY_NELEMS(csmon_scan_argv), csmon_scan_argv,
+                               CSMON_SCAN_DESC);
 
-    modulecmd_register_command(MXS_MODULE_NAME, "cluster-remove-node", MODULECMD_TYPE_ACTIVE,
-                               cluster_remove_node,
-                               MXS_ARRAY_NELEMS(cluster_remove_node_argv), cluster_remove_node_argv,
-                               CLUSTER_REMOVE_NODE_DESC);
+    modulecmd_register_command(MXS_MODULE_NAME, "shutdown", MODULECMD_TYPE_ACTIVE,
+                               csmon_shutdown,
+                               MXS_ARRAY_NELEMS(csmon_shutdown_argv), csmon_shutdown_argv,
+                               CSMON_SHUTDOWN_DESC);
 
-    modulecmd_register_command(MXS_MODULE_NAME, "cluster-mode-set", MODULECMD_TYPE_ACTIVE,
-                               cluster_mode_set,
-                               MXS_ARRAY_NELEMS(cluster_mode_set_argv), cluster_mode_set_argv,
-                               CLUSTER_MODE_SET_DESC);
+    modulecmd_register_command(MXS_MODULE_NAME, "start", MODULECMD_TYPE_ACTIVE,
+                               csmon_start,
+                               MXS_ARRAY_NELEMS(csmon_start_argv), csmon_start_argv,
+                               CSMON_START_DESC);
 
-    modulecmd_register_command(MXS_MODULE_NAME, "cluster-scan", MODULECMD_TYPE_ACTIVE,
-                               cluster_scan,
-                               MXS_ARRAY_NELEMS(cluster_scan_argv), cluster_scan_argv,
-                               CLUSTER_SCAN_DESC);
+    modulecmd_register_command(MXS_MODULE_NAME, "status", MODULECMD_TYPE_PASSIVE,
+                               csmon_status,
+                               MXS_ARRAY_NELEMS(csmon_status_argv), csmon_status_argv,
+                               CSMON_STATUS_DESC);
 }
 }
 
