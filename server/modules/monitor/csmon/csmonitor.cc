@@ -79,7 +79,7 @@ int get_cs_version(MonitorServer* srv)
             os >> dot;
             os >> patch;
             return major * 10000 + minor * 100 + patch;
-        };
+    };
 
     if (pos != std::string::npos)
     {
@@ -88,7 +88,7 @@ int get_cs_version(MonitorServer* srv)
     else
     {
         auto cs_version = do_query(srv, "SELECT VARIABLE_VALUE FROM information_schema.GLOBAL_STATUS "
-                                        "WHERE VARIABLE_NAME = 'Columnstore_version'");
+                                   "WHERE VARIABLE_NAME = 'Columnstore_version'");
 
         if (!cs_version.empty())
         {
@@ -582,7 +582,7 @@ void reject_command_pending(json_t** ppOutput, const char* zPending)
 
 }
 
-bool CsMonitor::command_cluster_start(json_t** ppOutput, CsMonitorServer* pServer)
+bool CsMonitor::command_start(json_t** ppOutput, CsMonitorServer* pServer)
 {
     mxb::Semaphore sem;
 
@@ -597,12 +597,12 @@ bool CsMonitor::command_cluster_start(json_t** ppOutput, CsMonitorServer* pServe
         }
     };
 
-    return command(ppOutput, sem, "cluster-start", cmd);
+    return command(ppOutput, sem, "start", cmd);
 }
 
-bool CsMonitor::command_cluster_scan(json_t** ppOutput,
-                                     const std::chrono::seconds& timeout,
-                                     CsMonitorServer* pServer)
+bool CsMonitor::command_scan(json_t** ppOutput,
+                             const std::chrono::seconds& timeout,
+                             CsMonitorServer* pServer)
 {
     mxb::Semaphore sem;
 
@@ -617,12 +617,12 @@ bool CsMonitor::command_cluster_scan(json_t** ppOutput,
         }
     };
 
-    return command(ppOutput, sem, "cluster-scan", cmd);
+    return command(ppOutput, sem, "scan", cmd);
 }
 
-bool CsMonitor::command_cluster_shutdown(json_t** ppOutput,
-                                         const std::chrono::seconds& timeout,
-                                         CsMonitorServer* pServer)
+bool CsMonitor::command_shutdown(json_t** ppOutput,
+                                 const std::chrono::seconds& timeout,
+                                 CsMonitorServer* pServer)
 {
     mxb::Semaphore sem;
 
@@ -637,10 +637,10 @@ bool CsMonitor::command_cluster_shutdown(json_t** ppOutput,
         }
     };
 
-    return command(ppOutput, sem, "cluster-shutdown", cmd);
+    return command(ppOutput, sem, "shutdown", cmd);
 }
 
-bool CsMonitor::command_cluster_ping(json_t** ppOutput, CsMonitorServer* pServer)
+bool CsMonitor::command_ping(json_t** ppOutput, CsMonitorServer* pServer)
 {
     mxb::Semaphore sem;
 
@@ -655,10 +655,10 @@ bool CsMonitor::command_cluster_ping(json_t** ppOutput, CsMonitorServer* pServer
         }
     };
 
-    return command(ppOutput, sem, "cluster-ping", cmd);
+    return command(ppOutput, sem, "ping", cmd);
 }
 
-bool CsMonitor::command_cluster_status(json_t** ppOutput, CsMonitorServer* pServer)
+bool CsMonitor::command_status(json_t** ppOutput, CsMonitorServer* pServer)
 {
     mxb::Semaphore sem;
 
@@ -673,10 +673,10 @@ bool CsMonitor::command_cluster_status(json_t** ppOutput, CsMonitorServer* pServ
         }
     };
 
-    return command(ppOutput, sem, "cluster-status", cmd);
+    return command(ppOutput, sem, "status", cmd);
 }
 
-bool CsMonitor::command_cluster_config_get(json_t** ppOutput, CsMonitorServer* pServer)
+bool CsMonitor::command_config_get(json_t** ppOutput, CsMonitorServer* pServer)
 {
     mxb::Semaphore sem;
 
@@ -691,10 +691,10 @@ bool CsMonitor::command_cluster_config_get(json_t** ppOutput, CsMonitorServer* p
         }
     };
 
-    return command(ppOutput, sem, "cluster-config-get", cmd);
+    return command(ppOutput, sem, "config-get", cmd);
 }
 
-bool CsMonitor::command_cluster_config_set(json_t** ppOutput, const char* zJson, CsMonitorServer* pServer)
+bool CsMonitor::command_config_set(json_t** ppOutput, const char* zJson, CsMonitorServer* pServer)
 {
     bool rv = false;
 
@@ -715,13 +715,13 @@ bool CsMonitor::command_cluster_config_set(json_t** ppOutput, const char* zJson,
             }
         };
 
-        rv = command(ppOutput, sem, "cluster-config-put", cmd);
+        rv = command(ppOutput, sem, "config-put", cmd);
     }
 
     return rv;
 }
 
-bool CsMonitor::command_cluster_mode_set(json_t** ppOutput, const char* zMode)
+bool CsMonitor::command_mode_set(json_t** ppOutput, const char* zMode)
 {
     bool rv = false;
     cs::ClusterMode mode;
@@ -741,7 +741,7 @@ bool CsMonitor::command_cluster_mode_set(json_t** ppOutput, const char* zMode)
             }
         };
 
-        rv = command(ppOutput, sem, "cluster-mode-set", cmd);
+        rv = command(ppOutput, sem, "mode-set", cmd);
     }
     else
     {
@@ -751,9 +751,9 @@ bool CsMonitor::command_cluster_mode_set(json_t** ppOutput, const char* zMode)
     return rv;
 }
 
-bool CsMonitor::command_cluster_add_node(json_t** ppOutput,
-                                         const std::chrono::seconds& timeout,
-                                         CsMonitorServer* pServer)
+bool CsMonitor::command_add_node(json_t** ppOutput,
+                                 const std::chrono::seconds& timeout,
+                                 CsMonitorServer* pServer)
 {
     mxb::Semaphore sem;
 
@@ -768,10 +768,10 @@ bool CsMonitor::command_cluster_add_node(json_t** ppOutput,
         }
     };
 
-    return command(ppOutput, sem, "cluster-add-node", cmd);
+    return command(ppOutput, sem, "add-node", cmd);
 }
 
-bool CsMonitor::command_cluster_remove_node(json_t** ppOutput, CsMonitorServer* pServer)
+bool CsMonitor::command_remove_node(json_t** ppOutput, CsMonitorServer* pServer)
 {
     mxb::Semaphore sem;
 
@@ -786,7 +786,7 @@ bool CsMonitor::command_cluster_remove_node(json_t** ppOutput, CsMonitorServer* 
         }
     };
 
-    return command(ppOutput, sem, "cluster-remove-node", cmd);
+    return command(ppOutput, sem, "remove-node", cmd);
 }
 
 bool CsMonitor::ready_to_run(json_t** ppOutput) const
@@ -1370,9 +1370,9 @@ void CsMonitor::cluster_remove_node(json_t** ppOutput, mxb::Semaphore* pSem, CsM
       cluster remove node { nodeid | IP | DNS }  { force }
       - Sends GET /node/ping to the node to be removed
       - If force isn’t set then run cluster mode set read-only first.
-        Don’t send this to the target node if ping fail
+      Don’t send this to the target node if ping fail
       - Sends  PUT /node/shutdown to the removed node with JSON parameters
-        (immediate shutdown) command if the ping call returns.
+      (immediate shutdown) command if the ping call returns.
       - Sends GET /node/config to { all | only one } of the listed nodes.
       Uses the config/-s to produce new versions of the configs.
       - Sends PUT /node/config to the old nodes and to the new node.

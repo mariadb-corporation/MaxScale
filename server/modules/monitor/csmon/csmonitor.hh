@@ -55,20 +55,20 @@ public:
     }
 
     // Only to be called by the module call command mechanism.
-    bool command_cluster_scan(json_t** ppOutput,
-                              const std::chrono::seconds& timeout, CsMonitorServer* pServer);
-    bool command_cluster_start(json_t** ppOutput, CsMonitorServer* pServer);
-    bool command_cluster_shutdown(json_t** ppOutput,
-                                  const std::chrono::seconds& timout, CsMonitorServer* pServer);
-    bool command_cluster_ping(json_t** ppOutput, CsMonitorServer* pServer);
-    bool command_cluster_status(json_t** ppOutput, CsMonitorServer* pServer);
-    bool command_cluster_config_get(json_t** ppOutput, CsMonitorServer* pServer);
-    bool command_cluster_config_set(json_t** ppOutput, const char* zJson, CsMonitorServer* pServer);
-    bool command_cluster_mode_set(json_t** ppOutput, const char* zEnum);
+    bool command_scan(json_t** ppOutput,
+                      const std::chrono::seconds& timeout, CsMonitorServer* pServer);
+    bool command_start(json_t** ppOutput, CsMonitorServer* pServer);
+    bool command_shutdown(json_t** ppOutput,
+                          const std::chrono::seconds& timout, CsMonitorServer* pServer);
+    bool command_ping(json_t** ppOutput, CsMonitorServer* pServer);
+    bool command_status(json_t** ppOutput, CsMonitorServer* pServer);
+    bool command_config_get(json_t** ppOutput, CsMonitorServer* pServer);
+    bool command_config_set(json_t** ppOutput, const char* zJson, CsMonitorServer* pServer);
+    bool command_mode_set(json_t** ppOutput, const char* zEnum);
 
-    bool command_cluster_add_node(json_t** ppOutput,
-                                  const std::chrono::seconds& timout, CsMonitorServer* pServer);
-    bool command_cluster_remove_node(json_t** ppOutput, CsMonitorServer* pServer);
+    bool command_add_node(json_t** ppOutput,
+                          const std::chrono::seconds& timout, CsMonitorServer* pServer);
+    bool command_remove_node(json_t** ppOutput, CsMonitorServer* pServer);
 
     using ResponseHandler = std::function<void(CsMonitorServer*,
                                                const mxb::http::Result&,

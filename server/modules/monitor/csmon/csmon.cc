@@ -210,7 +210,7 @@ bool csmon_add_node(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 
         if (get_timeout(zTimeout, &timeout, ppOutput))
         {
-            rv = pMonitor->command_cluster_add_node(ppOutput, timeout, pServer);
+            rv = pMonitor->command_add_node(ppOutput, timeout, pServer);
         }
     }
 
@@ -226,7 +226,7 @@ bool csmon_config_get(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 
     if (rv)
     {
-        rv = pMonitor->command_cluster_config_get(ppOutput, pServer);
+        rv = pMonitor->command_config_get(ppOutput, pServer);
     }
 
     return rv;
@@ -242,7 +242,7 @@ bool csmon_config_set(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 
     if (rv)
     {
-        rv = pMonitor->command_cluster_config_set(ppOutput, zJson, pServer);
+        rv = pMonitor->command_config_set(ppOutput, zJson, pServer);
     }
 
     return rv;
@@ -257,7 +257,7 @@ bool csmon_mode_set(const MODULECMD_ARG* pArgs, json_t** ppOutput)
     CsMonitor* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
     const char* zMode = pArgs->argv[1].value.string;
 
-    return pMonitor->command_cluster_mode_set(ppOutput, zMode);
+    return pMonitor->command_mode_set(ppOutput, zMode);
 }
 
 bool csmon_ping(const MODULECMD_ARG* pArgs, json_t** ppOutput)
@@ -269,7 +269,7 @@ bool csmon_ping(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 
     if (rv)
     {
-        rv = pMonitor->command_cluster_ping(ppOutput, pServer);
+        rv = pMonitor->command_ping(ppOutput, pServer);
     }
 
     return rv;
@@ -284,7 +284,7 @@ bool csmon_remove_node(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 
     if (rv)
     {
-        rv = pMonitor->command_cluster_remove_node(ppOutput, pServer);
+        rv = pMonitor->command_remove_node(ppOutput, pServer);
     }
 
     return rv;
@@ -304,7 +304,7 @@ bool csmon_scan(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 
         if (get_timeout(zTimeout, &timeout, ppOutput))
         {
-            rv = pMonitor->command_cluster_scan(ppOutput, timeout, pServer);
+            rv = pMonitor->command_scan(ppOutput, timeout, pServer);
         }
     }
 
@@ -325,7 +325,7 @@ bool csmon_shutdown(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 
         if (get_timeout(zTimeout, &timeout, ppOutput))
         {
-            rv = pMonitor->command_cluster_shutdown(ppOutput, timeout, pServer);
+            rv = pMonitor->command_shutdown(ppOutput, timeout, pServer);
         }
     }
 
@@ -341,7 +341,7 @@ bool csmon_start(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 
     if (rv)
     {
-        rv = pMonitor->command_cluster_start(ppOutput, pServer);
+        rv = pMonitor->command_start(ppOutput, pServer);
     }
 
     return rv;
@@ -356,7 +356,7 @@ bool csmon_status(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 
     if (rv)
     {
-        rv = pMonitor->command_cluster_status(ppOutput, pServer);
+        rv = pMonitor->command_status(ppOutput, pServer);
     }
 
     return rv;
