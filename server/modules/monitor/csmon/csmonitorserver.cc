@@ -91,6 +91,7 @@ CsMonitorServer::Status CsMonitorServer::Status::create(const http::Result& resp
 {
     cs::ClusterMode cluster_mode = cs::READ_ONLY;
     cs::DbrmMode dbrm_mode = cs::SLAVE;
+    vector<int> dbroots;
 
     json_error_t error;
     unique_ptr<json_t> sJson(json_loadb(response.body.c_str(), response.body.length(), 0, &error));
@@ -99,17 +100,19 @@ CsMonitorServer::Status CsMonitorServer::Status::create(const http::Result& resp
     {
         json_t* pCluster_mode = json_object_get(sJson.get(), cs::keys::CLUSTER_MODE);
         json_t* pDbrm_mode = json_object_get(sJson.get(), cs::keys::DBRM_MODE);
-        // TODO: 'dbroots' and 'services'.
+        json_t* pDbroots = json_object_get(sJson.get(), cs::keys::DBROOTS);
+        // TODO: 'services'.
 
-        if (pCluster_mode && pDbrm_mode)
+        if (pCluster_mode && pDbrm_mode && pDbroots)
         {
             const char* zCluster_mode = json_string_value(pCluster_mode);
             const char* zDbrm_mode = json_string_value(pDbrm_mode);
 
             bool b1 = cs::from_string(zCluster_mode, &cluster_mode);
             bool b2 = cs::from_string(zDbrm_mode, &dbrm_mode);
+            bool b3 = cs::dbroots_from_array(pDbroots, &dbroots);
 
-            if (!b1 || !b2)
+            if (!b1 || !b2 || !b3)
             {
                 mxb_assert(!true);
                 MXS_ERROR("Could not convert '%s' and/or '%s' to actual values.",
@@ -119,8 +122,11 @@ CsMonitorServer::Status CsMonitorServer::Status::create(const http::Result& resp
         else
         {
             mxb_assert(!true);
-            MXS_ERROR("Obtained status object does not have the keys '%s' and/or '%s': %s",
-                      cs::keys::CLUSTER_MODE, cs::keys::DBRM_MODE, response.body.c_str());
+            MXS_ERROR("Obtained status object does not have the keys '%s', '%s' or '%s: %s",
+                      cs::keys::CLUSTER_MODE,
+                      cs::keys::DBRM_MODE,
+                      cs::keys::DBROOTS,
+                      response.body.c_str());
         }
     }
     else
@@ -129,7 +135,7 @@ CsMonitorServer::Status CsMonitorServer::Status::create(const http::Result& resp
         MXS_ERROR("Could not parse JSON data from: %s", error.text);
     }
 
-    return Status(response, cluster_mode, dbrm_mode, std::move(sJson));
+    return Status(response, cluster_mode, dbrm_mode, dbroots, std::move(sJson));
 }
 
 CsMonitorServer::Status CsMonitorServer::fetch_status() const

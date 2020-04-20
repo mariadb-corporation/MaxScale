@@ -45,16 +45,19 @@ public:
         mxb::http::Result       response;
         cs::ClusterMode         cluster_mode;
         cs::DbrmMode            dbrm_mode;
+        std::vector<int>        dbroots;
         std::unique_ptr<json_t> sJson;
 
     private:
         Status(const mxb::http::Result& response,
                cs::ClusterMode cluster_mode,
                cs::DbrmMode dbrm_mode,
+               std::vector<int> dbroots,
                std::unique_ptr<json_t>&& sJson)
             : response(response)
             , cluster_mode(cluster_mode)
             , dbrm_mode(dbrm_mode)
+            , dbroots(dbroots)
             , sJson(std::move(sJson))
         {
         }

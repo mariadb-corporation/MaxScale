@@ -13,6 +13,7 @@
 #include "columnstore.hh"
 
 using std::string;
+using std::vector;
 
 namespace
 {
@@ -145,6 +146,25 @@ bool from_string(const char* zTimestamp, std::chrono::system_clock::time_point* 
     if (rv)
     {
         *pTimestamp = std::chrono::system_clock::from_time_t(std::mktime(&tm));
+    }
+
+    return rv;
+}
+
+bool dbroots_from_array(json_t* pArray, std::vector<int>* pDbroots)
+{
+    bool rv = json_is_array(pArray);
+
+    if (rv)
+    {
+        vector<int> dbroots;
+        size_t size = json_array_size(pArray);
+        for (size_t i = 0; i < size; ++i)
+        {
+            dbroots.push_back(json_integer_value(json_array_get(pArray, i)));
+        }
+
+        pDbroots->swap(dbroots);
     }
 
     return rv;

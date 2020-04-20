@@ -38,6 +38,7 @@ bool from_string(const char* zDbrm_mode, DbrmMode* pDbrm_mode);
 
 bool from_string(const char* zTimestamp, std::chrono::system_clock::time_point* pTimestamp);
 bool from_string(const char* zXml, std::unique_ptr<xmlDoc>* psDoc);
+bool dbroots_from_array(json_t* pArray, std::vector<int>* pDbroots);
 
 namespace keys
 {
@@ -45,6 +46,7 @@ namespace keys
 const char CONFIG[]       = "config";
 const char CLUSTER_MODE[] = "cluster_mode";
 const char DBRM_MODE[]    = "dbrm_mode";
+const char DBROOTS[]      = "dbroots";
 const char MODE[]         = "mode";
 const char TIMEOUT[]      = "timeout";
 const char TIMESTAMP[]    = "timestamp";
