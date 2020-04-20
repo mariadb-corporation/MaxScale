@@ -73,6 +73,11 @@ public:
         return m_raw.empty();
     }
 
+    explicit operator bool() const
+    {
+        return !is_empty();
+    }
+
     Rotate        rotate() const;
     GtidEvent     gtid_event() const;
     GtidListEvent gtid_list() const;

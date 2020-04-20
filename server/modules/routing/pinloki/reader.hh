@@ -21,10 +21,12 @@
 namespace pinloki
 {
 
+using Callback = std::function<bool (const maxsql::RplEvent&)>;
+
 class Reader
 {
 public:
-    Reader(const Inventory* inv, mxb::Worker* worker, const maxsql::Gtid& gtid);
+    Reader(Callback cb, const Inventory* inv, mxb::Worker* worker, const maxsql::Gtid& gtid);
 private:
     static uint32_t epoll_update(struct MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
     void            notify_concrete_reader(uint32_t events);
@@ -36,6 +38,7 @@ private:
         Reader* reader;
     };
 
+    Callback     m_cb;
     PollData     m_reader_poll_data;
     FileReader   m_file_reader;
     mxb::Worker* m_worker;

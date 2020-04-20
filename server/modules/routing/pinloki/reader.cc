@@ -32,12 +32,14 @@ Reader::PollData::PollData(Reader* reader, mxb::Worker* worker)
 {
 }
 
-Reader::Reader(const Inventory* inv, mxb::Worker* worker, const maxsql::Gtid& gtid)
-    : m_reader_poll_data(this, worker)
+Reader::Reader(Callback cb, const Inventory* inv, mxb::Worker* worker, const maxsql::Gtid& gtid)
+    : m_cb(cb)
+    , m_reader_poll_data(this, worker)
     , m_file_reader(gtid, inv)
     , m_worker(worker)
 {
     m_worker->add_fd(m_file_reader.fd(), EPOLLIN, &m_reader_poll_data);
+    handle_messages();
 }
 
 uint32_t Reader::epoll_update(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events)
@@ -56,15 +58,11 @@ void Reader::notify_concrete_reader(uint32_t events)
 
 void Reader::handle_messages()
 {
-    maxsql::RplEvent ev;
-    for (;;)
+    while (auto ev = m_file_reader.fetch_event())
     {
-        auto ev = m_file_reader.fetch_event();
-        if (!ev.is_empty())
+        if (!m_cb(ev))
         {
-            maxbase::hexdump(std::cout, ev.pHeader(), ev.pEnd() - ev.pHeader());
-
-            std::cout << maxsql::dump_rpl_msg(ev, maxsql::Verbosity::All) << '\n';
+            break;
         }
     }
 }

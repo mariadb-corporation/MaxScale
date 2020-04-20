@@ -67,7 +67,10 @@ void prog_main(const maxsql::GtidList& gtid_list, const std::string& host,
     else
     {
         mxb::Worker worker;
-        pinloki::Reader reader(&inv, &worker, gtid);
+        pinloki::Reader reader([](const auto& event) {
+                                   std::cout << event << std::endl;
+                                   return true;
+                               }, &inv, &worker, gtid);
         worker.start();
         worker.join();
     }
