@@ -55,20 +55,16 @@ public:
     }
 
     // Only to be called by the module call command mechanism.
-    bool command_scan(json_t** ppOutput,
-                      const std::chrono::seconds& timeout, CsMonitorServer* pServer);
-    bool command_start(json_t** ppOutput, CsMonitorServer* pServer);
-    bool command_shutdown(json_t** ppOutput,
-                          const std::chrono::seconds& timout, CsMonitorServer* pServer);
-    bool command_ping(json_t** ppOutput, CsMonitorServer* pServer);
-    bool command_status(json_t** ppOutput, CsMonitorServer* pServer);
+    bool command_add_node(json_t** ppOutput, const std::chrono::seconds& timout, CsMonitorServer* pServer);
     bool command_config_get(json_t** ppOutput, CsMonitorServer* pServer);
     bool command_config_set(json_t** ppOutput, const char* zJson, CsMonitorServer* pServer);
     bool command_mode_set(json_t** ppOutput, const char* zEnum);
-
-    bool command_add_node(json_t** ppOutput,
-                          const std::chrono::seconds& timout, CsMonitorServer* pServer);
+    bool command_ping(json_t** ppOutput, CsMonitorServer* pServer);
     bool command_remove_node(json_t** ppOutput, CsMonitorServer* pServer);
+    bool command_scan(json_t** ppOutput, const std::chrono::seconds& timeout, CsMonitorServer* pServer);
+    bool command_shutdown(json_t** ppOutput, const std::chrono::seconds& timout, CsMonitorServer* pServer);
+    bool command_start(json_t** ppOutput, CsMonitorServer* pServer);
+    bool command_status(json_t** ppOutput, CsMonitorServer* pServer);
 
 #if defined(CSMON_EXPOSE_TRANSACTIONS)
     bool command_begin(json_t** ppOutput, const std::chrono::seconds& timeout, CsMonitorServer* pServer);
@@ -118,21 +114,21 @@ private:
         return cluster_put(ppOutput, pSem, action, pServer, std::string(), handler);
     }
 
-    void cluster_scan(json_t** ppOutput, mxb::Semaphore* pSem,
-                      const std::chrono::seconds& timeout,
-                      CsMonitorServer* pServer);
-    void cluster_start(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer);
-    void cluster_shutdown(json_t** ppOutput, mxb::Semaphore* pSem,
+    void cluster_add_node(json_t** ppOutput, mxb::Semaphore* pSem,
                           const std::chrono::seconds& timeout, CsMonitorServer* pServer);
-    void cluster_ping(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer);
-    void cluster_status(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer);
     void cluster_config_get(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer);
     void cluster_config_set(json_t** ppOutput, mxb::Semaphore* pSem,
                             std::string&& body, CsMonitorServer* pServer);
     void cluster_mode_set(json_t** ppOuput, mxb::Semaphore* pSem, cs::ClusterMode mode);
-    void cluster_add_node(json_t** ppOutput, mxb::Semaphore* pSem,
-                          const std::chrono::seconds& timeout, CsMonitorServer* pServer);
+    void cluster_ping(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer);
     void cluster_remove_node(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer);
+    void cluster_scan(json_t** ppOutput, mxb::Semaphore* pSem,
+                      const std::chrono::seconds& timeout,
+                      CsMonitorServer* pServer);
+    void cluster_shutdown(json_t** ppOutput, mxb::Semaphore* pSem,
+                          const std::chrono::seconds& timeout, CsMonitorServer* pServer);
+    void cluster_start(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer);
+    void cluster_status(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer);
 #if defined(CSMON_EXPOSE_TRANSACTIONS)
     void cluster_begin(json_t** ppOutput, mxb::Semaphore* pSem,
                        const std::chrono::seconds& timeout, CsMonitorServer* pServer);

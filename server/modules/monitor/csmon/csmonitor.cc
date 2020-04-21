@@ -586,45 +586,7 @@ void reject_command_pending(json_t** ppOutput, const char* zPending)
 
 }
 
-bool CsMonitor::command_start(json_t** ppOutput, CsMonitorServer* pServer)
-{
-    mxb::Semaphore sem;
-
-    auto cmd = [this, &sem, pServer, ppOutput] () {
-        if (ready_to_run(ppOutput))
-        {
-            cluster_start(ppOutput, &sem, pServer);
-        }
-        else
-        {
-            sem.post();
-        }
-    };
-
-    return command(ppOutput, sem, "start", cmd);
-}
-
-bool CsMonitor::command_scan(json_t** ppOutput,
-                             const std::chrono::seconds& timeout,
-                             CsMonitorServer* pServer)
-{
-    mxb::Semaphore sem;
-
-    auto cmd = [this, &sem, timeout, pServer, ppOutput] () {
-        if (ready_to_run(ppOutput))
-        {
-            cluster_scan(ppOutput, &sem, timeout, pServer);
-        }
-        else
-        {
-            sem.post();
-        }
-    };
-
-    return command(ppOutput, sem, "scan", cmd);
-}
-
-bool CsMonitor::command_shutdown(json_t** ppOutput,
+bool CsMonitor::command_add_node(json_t** ppOutput,
                                  const std::chrono::seconds& timeout,
                                  CsMonitorServer* pServer)
 {
@@ -633,7 +595,7 @@ bool CsMonitor::command_shutdown(json_t** ppOutput,
     auto cmd = [this, &sem, timeout, pServer, ppOutput] () {
         if (ready_to_run(ppOutput))
         {
-            cluster_shutdown(ppOutput, &sem, timeout, pServer);
+            cluster_add_node(ppOutput, &sem, timeout, pServer);
         }
         else
         {
@@ -641,43 +603,7 @@ bool CsMonitor::command_shutdown(json_t** ppOutput,
         }
     };
 
-    return command(ppOutput, sem, "shutdown", cmd);
-}
-
-bool CsMonitor::command_ping(json_t** ppOutput, CsMonitorServer* pServer)
-{
-    mxb::Semaphore sem;
-
-    auto cmd = [this, &sem, pServer, ppOutput] () {
-        if (ready_to_run(ppOutput))
-        {
-            cluster_ping(ppOutput, &sem, pServer);
-        }
-        else
-        {
-            sem.post();
-        }
-    };
-
-    return command(ppOutput, sem, "ping", cmd);
-}
-
-bool CsMonitor::command_status(json_t** ppOutput, CsMonitorServer* pServer)
-{
-    mxb::Semaphore sem;
-
-    auto cmd = [this, &sem, pServer, ppOutput] () {
-        if (ready_to_run(ppOutput))
-        {
-            cluster_status(ppOutput, &sem, pServer);
-        }
-        else
-        {
-            sem.post();
-        }
-    };
-
-    return command(ppOutput, sem, "status", cmd);
+    return command(ppOutput, sem, "add-node", cmd);
 }
 
 bool CsMonitor::command_config_get(json_t** ppOutput, CsMonitorServer* pServer)
@@ -755,16 +681,14 @@ bool CsMonitor::command_mode_set(json_t** ppOutput, const char* zMode)
     return rv;
 }
 
-bool CsMonitor::command_add_node(json_t** ppOutput,
-                                 const std::chrono::seconds& timeout,
-                                 CsMonitorServer* pServer)
+bool CsMonitor::command_ping(json_t** ppOutput, CsMonitorServer* pServer)
 {
     mxb::Semaphore sem;
 
-    auto cmd = [this, &sem, timeout, pServer, ppOutput] () {
+    auto cmd = [this, &sem, pServer, ppOutput] () {
         if (ready_to_run(ppOutput))
         {
-            cluster_add_node(ppOutput, &sem, timeout, pServer);
+            cluster_ping(ppOutput, &sem, pServer);
         }
         else
         {
@@ -772,7 +696,7 @@ bool CsMonitor::command_add_node(json_t** ppOutput,
         }
     };
 
-    return command(ppOutput, sem, "add-node", cmd);
+    return command(ppOutput, sem, "ping", cmd);
 }
 
 bool CsMonitor::command_remove_node(json_t** ppOutput, CsMonitorServer* pServer)
@@ -791,6 +715,82 @@ bool CsMonitor::command_remove_node(json_t** ppOutput, CsMonitorServer* pServer)
     };
 
     return command(ppOutput, sem, "remove-node", cmd);
+}
+
+bool CsMonitor::command_scan(json_t** ppOutput,
+                             const std::chrono::seconds& timeout,
+                             CsMonitorServer* pServer)
+{
+    mxb::Semaphore sem;
+
+    auto cmd = [this, &sem, timeout, pServer, ppOutput] () {
+        if (ready_to_run(ppOutput))
+        {
+            cluster_scan(ppOutput, &sem, timeout, pServer);
+        }
+        else
+        {
+            sem.post();
+        }
+    };
+
+    return command(ppOutput, sem, "scan", cmd);
+}
+
+bool CsMonitor::command_shutdown(json_t** ppOutput,
+                                 const std::chrono::seconds& timeout,
+                                 CsMonitorServer* pServer)
+{
+    mxb::Semaphore sem;
+
+    auto cmd = [this, &sem, timeout, pServer, ppOutput] () {
+        if (ready_to_run(ppOutput))
+        {
+            cluster_shutdown(ppOutput, &sem, timeout, pServer);
+        }
+        else
+        {
+            sem.post();
+        }
+    };
+
+    return command(ppOutput, sem, "shutdown", cmd);
+}
+
+bool CsMonitor::command_start(json_t** ppOutput, CsMonitorServer* pServer)
+{
+    mxb::Semaphore sem;
+
+    auto cmd = [this, &sem, pServer, ppOutput] () {
+        if (ready_to_run(ppOutput))
+        {
+            cluster_start(ppOutput, &sem, pServer);
+        }
+        else
+        {
+            sem.post();
+        }
+    };
+
+    return command(ppOutput, sem, "start", cmd);
+}
+
+bool CsMonitor::command_status(json_t** ppOutput, CsMonitorServer* pServer)
+{
+    mxb::Semaphore sem;
+
+    auto cmd = [this, &sem, pServer, ppOutput] () {
+        if (ready_to_run(ppOutput))
+        {
+            cluster_status(ppOutput, &sem, pServer);
+        }
+        else
+        {
+            sem.post();
+        }
+    };
+
+    return command(ppOutput, sem, "status", cmd);
 }
 
 #if defined(CSMON_EXPOSE_TRANSACTIONS)
@@ -1019,298 +1019,6 @@ void CsMonitor::cluster_put(json_t** ppOutput,
     m_sCommand->init();
 }
 
-void CsMonitor::cluster_scan(json_t** ppOutput,
-                             mxb::Semaphore* pSem,
-                             const std::chrono::seconds& timeout,
-                             CsMonitorServer* pServer)
-{
-    bool success = false;
-
-    string trx_id = next_trx_id();
-
-    http::Results results;
-    if (CsMonitorServer::begin(servers(), timeout, trx_id, m_http_config, &results))
-    {
-        auto status = pServer->fetch_status();
-        if (status.ok())
-        {
-            auto config = pServer->fetch_config();
-            if (config.ok())
-            {
-                // TODO: Check roots from status.
-                // TODO: Update roots in config accordingly.
-
-                http::Results results;
-                if (CsMonitorServer::set_config(servers(),
-                                                config.response.body,
-                                                m_http_config,
-                                                &results))
-                {
-                    success = true;
-                }
-                else
-                {
-                    PRINT_MXS_JSON_ERROR(ppOutput, "Could not set the configuration to all nodes.");
-                }
-            }
-            else
-            {
-                PRINT_MXS_JSON_ERROR(ppOutput, "Could not fetch the config from '%s'.",
-                                     pServer->name());
-            }
-        }
-        else
-        {
-            PRINT_MXS_JSON_ERROR(ppOutput, "Could not fetch the status of '%s'.",
-                                 pServer->name());
-        }
-    }
-    else
-    {
-        PRINT_MXS_JSON_ERROR(ppOutput, "Could not start a transaction on all nodes.");
-    }
-
-    if (success)
-    {
-        if (!CsMonitorServer::commit(servers(), m_http_config, &results))
-        {
-            PRINT_MXS_JSON_ERROR(ppOutput, "Could not commit changes, will rollback.");
-            success = false;
-        }
-    }
-
-    if (!success)
-    {
-        // TODO: Collect information.
-        CsMonitorServer::rollback(servers(), m_http_config, &results);
-    }
-
-    pSem->post();
-}
-
-void CsMonitor::cluster_start(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
-{
-    vector<http::Result> results = CsMonitorServer::start(servers(), m_http_config);
-
-    json_t* pServers = nullptr;
-    size_t n = results_to_json(servers(), results, &pServers);
-
-    bool success = false;
-    ostringstream message;
-
-    json_t* pError = nullptr;
-
-    if (n == servers().size())
-    {
-        if (CsMonitorServer::set_mode(servers(), cs::READ_WRITE, m_http_config, &pError))
-        {
-            message << "All servers in cluster started successfully and cluster made readwrite.";
-            success = true;
-        }
-        else
-        {
-            message << "All servers in cluster started successfully, but cluster could not be "
-                    << "made readwrite.";
-        }
-    }
-    else
-    {
-        message << n << " servers out of " << servers().size() << " started successfully.";
-    }
-
-    json_t* pOutput = json_object();
-    json_object_set_new(pOutput, "success", json_boolean(success));
-    json_object_set_new(pOutput, "message", json_string(message.str().c_str()));
-    if (pError)
-    {
-        json_object_set_new(pOutput, "error", pError);
-    }
-    json_object_set_new(pOutput, "servers", pServers);
-
-    *ppOutput = pOutput;
-
-    pSem->post();
-}
-
-void CsMonitor::cluster_shutdown(json_t** ppOutput,
-                                 mxb::Semaphore* pSem,
-                                 const std::chrono::seconds& timeout,
-                                 CsMonitorServer* pServer)
-{
-    bool rv = true;
-
-    json_t* pOutput = json_object();
-    json_t* pError = nullptr;
-
-    bool success = true;
-    ostringstream message;
-
-    if (timeout != std::chrono::seconds(0))
-    {
-        // If there is a timeout, then the cluster must first be made read-only.
-        if (!CsMonitorServer::set_mode(servers(), cs::READ_ONLY, m_http_config, &pError))
-        {
-            success = false;
-            message << "Could not make cluster readonly. Timed out shutdown is not possible.";
-        }
-    }
-
-    json_t* pServers = nullptr;
-
-    if (success)
-    {
-        vector<http::Result> results = CsMonitorServer::shutdown(servers(), timeout, m_http_config);
-
-        size_t n = results_to_json(servers(), results, &pServers);
-
-        if (n == servers().size())
-        {
-            message << "Columnstore cluster shut down.";
-        }
-        else
-        {
-            message << n << " servers out of " << servers().size() << " shut down.";
-            success = false;
-        }
-    }
-
-    json_object_set_new(pOutput, "success", json_boolean(success));
-    json_object_set_new(pOutput, "message", json_string(message.str().c_str()));
-
-    if (pError)
-    {
-        json_object_set_new(pOutput, "error", pError);
-    }
-    else if (pServers)
-    {
-        json_object_set_new(pOutput, "servers", pServers);
-    }
-
-    *ppOutput = pOutput;
-
-    pSem->post();
-}
-
-void CsMonitor::cluster_ping(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
-{
-    http::Results results = CsMonitorServer::ping(servers(), m_http_config);
-
-    json_t* pServers = nullptr;
-    size_t n = results_to_json(servers(), results, &pServers);
-
-    bool success = (n == servers().size());
-    ostringstream message;
-
-    if (success)
-    {
-        message << "Pinged all servers.";
-    }
-    else
-    {
-        message << "Successfully pinged " << n
-                << " servers out of " << servers().size() << ".";
-    }
-
-    json_t* pOutput = json_object();
-    json_object_set_new(pOutput, "success", json_boolean(success));
-    json_object_set_new(pOutput, "message", json_string(message.str().c_str()));
-    json_object_set_new(pOutput, "servers", pServers);
-
-    *ppOutput = pOutput;
-
-    pSem->post();
-}
-
-void CsMonitor::cluster_status(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
-{
-    CsMonitorServer::Statuses statuses = CsMonitorServer::fetch_statuses(servers(), m_http_config);
-
-    json_t* pServers = nullptr;
-    size_t n = results_to_json(servers(), statuses, &pServers);
-
-    bool success = (n == servers().size());
-    ostringstream message;
-
-    if (success)
-    {
-        message << "Fetched the status from all servers.";
-    }
-    else
-    {
-        message << "Successfully fetched status from " << n
-                << " servers out of " << servers().size() << ".";
-    }
-
-    json_t* pOutput = json_object();
-    json_object_set_new(pOutput, "success", json_boolean(success));
-    json_object_set_new(pOutput, "message", json_string(message.str().c_str()));
-    json_object_set_new(pOutput, "servers", pServers);
-
-    *ppOutput = pOutput;
-
-    pSem->post();
-}
-
-void CsMonitor::cluster_config_get(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
-{
-    CsMonitorServer::Configs configs = CsMonitorServer::fetch_configs(servers(), m_http_config);
-
-    json_t* pServers = nullptr;
-    size_t n = results_to_json(servers(), configs, &pServers);
-
-    bool success = (n == servers().size());
-    ostringstream message;
-
-    if (success)
-    {
-        message << "Fetched the config from all servers.";
-    }
-    else
-    {
-        message << "Successfully fetched config from " << n
-                << " servers out of " << servers().size() << ".";
-    }
-
-    json_t* pOutput = json_object();
-    json_object_set_new(pOutput, "success", json_boolean(success));
-    json_object_set_new(pOutput, "message", json_string(message.str().c_str()));
-    json_object_set_new(pOutput, "servers", pServers);
-
-    *ppOutput = pOutput;
-
-    pSem->post();
-}
-
-void CsMonitor::cluster_config_set(json_t** ppOutput, mxb::Semaphore* pSem,
-                                   string&& body, CsMonitorServer* pServer)
-{
-    cluster_put(ppOutput, pSem, cs::rest::CONFIG, pServer, std::move(body));
-}
-
-void CsMonitor::cluster_mode_set(json_t** ppOutput, mxb::Semaphore* pSem, cs::ClusterMode mode)
-{
-    json_t* pOutput = json_object();
-    bool success = CsMonitorServer::set_mode(servers(), mode, m_http_config, &pOutput);
-
-    const char* zMessage;
-
-    if (success)
-    {
-        zMessage = "Cluster mode successfully set.";
-    }
-    else
-    {
-        zMessage = "Could not set cluster mode.";
-    }
-
-    json_object_set_new(pOutput, "success", json_boolean(success));
-    json_object_set_new(pOutput, "message", json_string(zMessage));
-
-    *ppOutput = pOutput;
-
-    pSem->post();
-}
-
 namespace
 {
 
@@ -1427,6 +1135,96 @@ void CsMonitor::cluster_add_node(json_t** ppOutput,
     pSem->post();
 }
 
+void CsMonitor::cluster_config_get(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
+{
+    CsMonitorServer::Configs configs = CsMonitorServer::fetch_configs(servers(), m_http_config);
+
+    json_t* pServers = nullptr;
+    size_t n = results_to_json(servers(), configs, &pServers);
+
+    bool success = (n == servers().size());
+    ostringstream message;
+
+    if (success)
+    {
+        message << "Fetched the config from all servers.";
+    }
+    else
+    {
+        message << "Successfully fetched config from " << n
+                << " servers out of " << servers().size() << ".";
+    }
+
+    json_t* pOutput = json_object();
+    json_object_set_new(pOutput, "success", json_boolean(success));
+    json_object_set_new(pOutput, "message", json_string(message.str().c_str()));
+    json_object_set_new(pOutput, "servers", pServers);
+
+    *ppOutput = pOutput;
+
+    pSem->post();
+}
+
+void CsMonitor::cluster_config_set(json_t** ppOutput, mxb::Semaphore* pSem,
+                                   string&& body, CsMonitorServer* pServer)
+{
+    cluster_put(ppOutput, pSem, cs::rest::CONFIG, pServer, std::move(body));
+}
+
+void CsMonitor::cluster_mode_set(json_t** ppOutput, mxb::Semaphore* pSem, cs::ClusterMode mode)
+{
+    json_t* pOutput = json_object();
+    bool success = CsMonitorServer::set_mode(servers(), mode, m_http_config, &pOutput);
+
+    const char* zMessage;
+
+    if (success)
+    {
+        zMessage = "Cluster mode successfully set.";
+    }
+    else
+    {
+        zMessage = "Could not set cluster mode.";
+    }
+
+    json_object_set_new(pOutput, "success", json_boolean(success));
+    json_object_set_new(pOutput, "message", json_string(zMessage));
+
+    *ppOutput = pOutput;
+
+    pSem->post();
+}
+
+void CsMonitor::cluster_ping(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
+{
+    http::Results results = CsMonitorServer::ping(servers(), m_http_config);
+
+    json_t* pServers = nullptr;
+    size_t n = results_to_json(servers(), results, &pServers);
+
+    bool success = (n == servers().size());
+    ostringstream message;
+
+    if (success)
+    {
+        message << "Pinged all servers.";
+    }
+    else
+    {
+        message << "Successfully pinged " << n
+                << " servers out of " << servers().size() << ".";
+    }
+
+    json_t* pOutput = json_object();
+    json_object_set_new(pOutput, "success", json_boolean(success));
+    json_object_set_new(pOutput, "message", json_string(message.str().c_str()));
+    json_object_set_new(pOutput, "servers", pServers);
+
+    *ppOutput = pOutput;
+
+    pSem->post();
+}
+
 void CsMonitor::cluster_remove_node(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
 {
     /*
@@ -1490,9 +1288,11 @@ void CsMonitor::cluster_remove_node(json_t** ppOutput, mxb::Semaphore* pSem, CsM
             }
             else
             {
-                auto it = std::adjacent_find(results.begin(), results.end(), [](const auto& l, const auto& r) {
-                        return l.body != r.body;
-                    });
+                auto it = std::adjacent_find(results.begin(),
+                                             results.end(),
+                                             [](const auto& l, const auto& r) {
+                                                 return l.body != r.body;
+                                             });
 
                 if (it != results.end())
                 {
@@ -1529,6 +1329,208 @@ void CsMonitor::cluster_remove_node(json_t** ppOutput, mxb::Semaphore* pSem, CsM
             }
         }
     }
+
+    pSem->post();
+}
+
+void CsMonitor::cluster_scan(json_t** ppOutput,
+                             mxb::Semaphore* pSem,
+                             const std::chrono::seconds& timeout,
+                             CsMonitorServer* pServer)
+{
+    bool success = false;
+
+    string trx_id = next_trx_id();
+
+    http::Results results;
+    if (CsMonitorServer::begin(servers(), timeout, trx_id, m_http_config, &results))
+    {
+        auto status = pServer->fetch_status();
+        if (status.ok())
+        {
+            auto config = pServer->fetch_config();
+            if (config.ok())
+            {
+                // TODO: Check roots from status.
+                // TODO: Update roots in config accordingly.
+
+                http::Results results;
+                if (CsMonitorServer::set_config(servers(),
+                                                config.response.body,
+                                                m_http_config,
+                                                &results))
+                {
+                    success = true;
+                }
+                else
+                {
+                    PRINT_MXS_JSON_ERROR(ppOutput, "Could not set the configuration to all nodes.");
+                }
+            }
+            else
+            {
+                PRINT_MXS_JSON_ERROR(ppOutput, "Could not fetch the config from '%s'.",
+                                     pServer->name());
+            }
+        }
+        else
+        {
+            PRINT_MXS_JSON_ERROR(ppOutput, "Could not fetch the status of '%s'.",
+                                 pServer->name());
+        }
+    }
+    else
+    {
+        PRINT_MXS_JSON_ERROR(ppOutput, "Could not start a transaction on all nodes.");
+    }
+
+    if (success)
+    {
+        if (!CsMonitorServer::commit(servers(), m_http_config, &results))
+        {
+            PRINT_MXS_JSON_ERROR(ppOutput, "Could not commit changes, will rollback.");
+            success = false;
+        }
+    }
+
+    if (!success)
+    {
+        // TODO: Collect information.
+        CsMonitorServer::rollback(servers(), m_http_config, &results);
+    }
+
+    pSem->post();
+}
+
+void CsMonitor::cluster_shutdown(json_t** ppOutput,
+                                 mxb::Semaphore* pSem,
+                                 const std::chrono::seconds& timeout,
+                                 CsMonitorServer* pServer)
+{
+    bool rv = true;
+
+    json_t* pOutput = json_object();
+    json_t* pError = nullptr;
+
+    bool success = true;
+    ostringstream message;
+
+    if (timeout != std::chrono::seconds(0))
+    {
+        // If there is a timeout, then the cluster must first be made read-only.
+        if (!CsMonitorServer::set_mode(servers(), cs::READ_ONLY, m_http_config, &pError))
+        {
+            success = false;
+            message << "Could not make cluster readonly. Timed out shutdown is not possible.";
+        }
+    }
+
+    json_t* pServers = nullptr;
+
+    if (success)
+    {
+        vector<http::Result> results = CsMonitorServer::shutdown(servers(), timeout, m_http_config);
+
+        size_t n = results_to_json(servers(), results, &pServers);
+
+        if (n == servers().size())
+        {
+            message << "Columnstore cluster shut down.";
+        }
+        else
+        {
+            message << n << " servers out of " << servers().size() << " shut down.";
+            success = false;
+        }
+    }
+
+    json_object_set_new(pOutput, "success", json_boolean(success));
+    json_object_set_new(pOutput, "message", json_string(message.str().c_str()));
+
+    if (pError)
+    {
+        json_object_set_new(pOutput, "error", pError);
+    }
+    else if (pServers)
+    {
+        json_object_set_new(pOutput, "servers", pServers);
+    }
+
+    *ppOutput = pOutput;
+
+    pSem->post();
+}
+
+void CsMonitor::cluster_start(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
+{
+    vector<http::Result> results = CsMonitorServer::start(servers(), m_http_config);
+
+    json_t* pServers = nullptr;
+    size_t n = results_to_json(servers(), results, &pServers);
+
+    bool success = false;
+    ostringstream message;
+
+    json_t* pError = nullptr;
+
+    if (n == servers().size())
+    {
+        if (CsMonitorServer::set_mode(servers(), cs::READ_WRITE, m_http_config, &pError))
+        {
+            message << "All servers in cluster started successfully and cluster made readwrite.";
+            success = true;
+        }
+        else
+        {
+            message << "All servers in cluster started successfully, but cluster could not be "
+                    << "made readwrite.";
+        }
+    }
+    else
+    {
+        message << n << " servers out of " << servers().size() << " started successfully.";
+    }
+
+    json_t* pOutput = json_object();
+    json_object_set_new(pOutput, "success", json_boolean(success));
+    json_object_set_new(pOutput, "message", json_string(message.str().c_str()));
+    if (pError)
+    {
+        json_object_set_new(pOutput, "error", pError);
+    }
+    json_object_set_new(pOutput, "servers", pServers);
+
+    *ppOutput = pOutput;
+
+    pSem->post();
+}
+
+void CsMonitor::cluster_status(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
+{
+    CsMonitorServer::Statuses statuses = CsMonitorServer::fetch_statuses(servers(), m_http_config);
+
+    json_t* pServers = nullptr;
+    size_t n = results_to_json(servers(), statuses, &pServers);
+
+    bool success = (n == servers().size());
+    ostringstream message;
+
+    if (success)
+    {
+        message << "Fetched the status from all servers.";
+    }
+    else
+    {
+        message << "Successfully fetched status from " << n
+                << " servers out of " << servers().size() << ".";
+    }
+
+    json_t* pOutput = json_object();
+    json_object_set_new(pOutput, "success", json_boolean(success));
+    json_object_set_new(pOutput, "message", json_string(message.str().c_str()));
+    json_object_set_new(pOutput, "servers", pServers);
+
+    *ppOutput = pOutput;
 
     pSem->post();
 }
