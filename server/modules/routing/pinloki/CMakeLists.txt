@@ -13,6 +13,7 @@ add_library(pinloki-core
     resultset.cc
     rpl_event.cc
     writer.cc
+    parser.cc
 )
 
 target_link_libraries(pinloki-core maxbase mariadbclient uuid)
