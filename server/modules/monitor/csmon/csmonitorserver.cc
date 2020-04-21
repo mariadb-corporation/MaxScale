@@ -687,8 +687,7 @@ bool CsMonitorServer::set_config(const std::vector<CsMonitorServer*>& servers,
                                  const mxb::http::Config& http_config,
                                  Results* pResults)
 {
-    vector<string> urls = create_urls(servers, cs::rest::CONFIG);
-    vector<http::Result> results = http::put(urls, body, http_config);
+    Results results = set_config(servers, body, http_config);
 
     bool rv = true;
 
@@ -701,6 +700,8 @@ bool CsMonitorServer::set_config(const std::vector<CsMonitorServer*>& servers,
         }
     }
 
+    pResults->swap(results);
+
     return rv;
 }
 
@@ -709,9 +710,9 @@ http::Results CsMonitorServer::set_config(const std::vector<CsMonitorServer*>& s
                                           const std::string& body,
                                           const mxb::http::Config& http_config)
 {
-    Results results;
-    set_config(servers, body, http_config, &results);
-    return results;
+    vector<string> urls = create_urls(servers, cs::rest::CONFIG);
+
+    return http::put(urls, body, http_config);
 }
 
 string CsMonitorServer::create_url(cs::rest::Action action, const std::string& tail) const

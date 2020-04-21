@@ -1168,7 +1168,32 @@ void CsMonitor::cs_config_get(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitor
 void CsMonitor::cs_config_set(json_t** ppOutput, mxb::Semaphore* pSem,
                               string&& body, CsMonitorServer* pServer)
 {
-    cluster_put(ppOutput, pSem, cs::rest::CONFIG, pServer, std::move(body));
+    http::Results results = CsMonitorServer::set_config(servers(), body, m_http_config);
+
+    json_t* pServers = nullptr;
+    size_t n = results_to_json(servers(), results, &pServers);
+
+    bool success = (n == servers().size());
+    ostringstream message;
+
+    if (success)
+    {
+        message << "Config set on all servers.";
+    }
+    else
+    {
+        message << "Config successfully set on " << n
+                << " servers out of " << servers().size() << ".";
+    }
+
+    json_t* pOutput = json_object();
+    json_object_set_new(pOutput, "success", json_boolean(success));
+    json_object_set_new(pOutput, "message", json_string(message.str().c_str()));
+    json_object_set_new(pOutput, "servers", pServers);
+
+    *ppOutput = pOutput;
+
+    pSem->post();
 }
 
 void CsMonitor::cs_mode_set(json_t** ppOutput, mxb::Semaphore* pSem, cs::ClusterMode mode)
