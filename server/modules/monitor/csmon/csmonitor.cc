@@ -595,7 +595,7 @@ bool CsMonitor::command_add_node(json_t** ppOutput,
     auto cmd = [this, &sem, timeout, pServer, ppOutput] () {
         if (ready_to_run(ppOutput))
         {
-            cluster_add_node(ppOutput, &sem, timeout, pServer);
+            cs_add_node(ppOutput, &sem, timeout, pServer);
         }
         else
         {
@@ -613,7 +613,7 @@ bool CsMonitor::command_config_get(json_t** ppOutput, CsMonitorServer* pServer)
     auto cmd = [this, &sem, pServer, ppOutput] () {
         if (ready_to_run(ppOutput))
         {
-            cluster_config_get(ppOutput, &sem, pServer);
+            cs_config_get(ppOutput, &sem, pServer);
         }
         else
         {
@@ -637,7 +637,7 @@ bool CsMonitor::command_config_set(json_t** ppOutput, const char* zJson, CsMonit
         auto cmd = [this, ppOutput, &sem, &body, pServer] () {
             if (ready_to_run(ppOutput))
             {
-                cluster_config_set(ppOutput, &sem, std::move(body), pServer);
+                cs_config_set(ppOutput, &sem, std::move(body), pServer);
             }
             else
             {
@@ -663,7 +663,7 @@ bool CsMonitor::command_mode_set(json_t** ppOutput, const char* zMode)
         auto cmd = [this, ppOutput, &sem, mode] () {
             if (ready_to_run(ppOutput))
             {
-                cluster_mode_set(ppOutput, &sem, mode);
+                cs_mode_set(ppOutput, &sem, mode);
             }
             else
             {
@@ -688,7 +688,7 @@ bool CsMonitor::command_ping(json_t** ppOutput, CsMonitorServer* pServer)
     auto cmd = [this, &sem, pServer, ppOutput] () {
         if (ready_to_run(ppOutput))
         {
-            cluster_ping(ppOutput, &sem, pServer);
+            cs_ping(ppOutput, &sem, pServer);
         }
         else
         {
@@ -706,7 +706,7 @@ bool CsMonitor::command_remove_node(json_t** ppOutput, CsMonitorServer* pServer)
     auto cmd = [this, &sem, ppOutput, pServer] () {
         if (ready_to_run(ppOutput))
         {
-            cluster_remove_node(ppOutput, &sem, pServer);
+            cs_remove_node(ppOutput, &sem, pServer);
         }
         else
         {
@@ -726,7 +726,7 @@ bool CsMonitor::command_scan(json_t** ppOutput,
     auto cmd = [this, &sem, timeout, pServer, ppOutput] () {
         if (ready_to_run(ppOutput))
         {
-            cluster_scan(ppOutput, &sem, timeout, pServer);
+            cs_scan(ppOutput, &sem, timeout, pServer);
         }
         else
         {
@@ -746,7 +746,7 @@ bool CsMonitor::command_shutdown(json_t** ppOutput,
     auto cmd = [this, &sem, timeout, pServer, ppOutput] () {
         if (ready_to_run(ppOutput))
         {
-            cluster_shutdown(ppOutput, &sem, timeout, pServer);
+            cs_shutdown(ppOutput, &sem, timeout, pServer);
         }
         else
         {
@@ -764,7 +764,7 @@ bool CsMonitor::command_start(json_t** ppOutput, CsMonitorServer* pServer)
     auto cmd = [this, &sem, pServer, ppOutput] () {
         if (ready_to_run(ppOutput))
         {
-            cluster_start(ppOutput, &sem, pServer);
+            cs_start(ppOutput, &sem, pServer);
         }
         else
         {
@@ -782,7 +782,7 @@ bool CsMonitor::command_status(json_t** ppOutput, CsMonitorServer* pServer)
     auto cmd = [this, &sem, pServer, ppOutput] () {
         if (ready_to_run(ppOutput))
         {
-            cluster_status(ppOutput, &sem, pServer);
+            cs_status(ppOutput, &sem, pServer);
         }
         else
         {
@@ -803,7 +803,7 @@ bool CsMonitor::command_begin(json_t** ppOutput,
     auto cmd = [this, &sem, timeout, ppOutput, pServer] () {
         if (ready_to_run(ppOutput))
         {
-            cluster_begin(ppOutput, &sem, timeout, pServer);
+            cs_begin(ppOutput, &sem, timeout, pServer);
         }
         else
         {
@@ -821,7 +821,7 @@ bool CsMonitor::command_commit(json_t** ppOutput, CsMonitorServer* pServer)
     auto cmd = [this, &sem, ppOutput, pServer] () {
         if (ready_to_run(ppOutput))
         {
-            cluster_commit(ppOutput, &sem, pServer);
+            cs_commit(ppOutput, &sem, pServer);
         }
         else
         {
@@ -839,7 +839,7 @@ bool CsMonitor::command_rollback(json_t** ppOutput, CsMonitorServer* pServer)
     auto cmd = [this, &sem, ppOutput, pServer] () {
         if (ready_to_run(ppOutput))
         {
-            cluster_rollback(ppOutput, &sem, pServer);
+            cs_rollback(ppOutput, &sem, pServer);
         }
         else
         {
@@ -1031,10 +1031,10 @@ bool is_node_part_of_cluster(const CsMonitorServer* pServer)
 
 }
 
-void CsMonitor::cluster_add_node(json_t** ppOutput,
-                                 mxb::Semaphore* pSem,
-                                 const std::chrono::seconds& timeout,
-                                 CsMonitorServer* pServer)
+void CsMonitor::cs_add_node(json_t** ppOutput,
+                            mxb::Semaphore* pSem,
+                            const std::chrono::seconds& timeout,
+                            CsMonitorServer* pServer)
 {
     if (is_node_part_of_cluster(pServer))
     {
@@ -1135,7 +1135,7 @@ void CsMonitor::cluster_add_node(json_t** ppOutput,
     pSem->post();
 }
 
-void CsMonitor::cluster_config_get(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
+void CsMonitor::cs_config_get(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
 {
     CsMonitorServer::Configs configs = CsMonitorServer::fetch_configs(servers(), m_http_config);
 
@@ -1165,13 +1165,13 @@ void CsMonitor::cluster_config_get(json_t** ppOutput, mxb::Semaphore* pSem, CsMo
     pSem->post();
 }
 
-void CsMonitor::cluster_config_set(json_t** ppOutput, mxb::Semaphore* pSem,
-                                   string&& body, CsMonitorServer* pServer)
+void CsMonitor::cs_config_set(json_t** ppOutput, mxb::Semaphore* pSem,
+                              string&& body, CsMonitorServer* pServer)
 {
     cluster_put(ppOutput, pSem, cs::rest::CONFIG, pServer, std::move(body));
 }
 
-void CsMonitor::cluster_mode_set(json_t** ppOutput, mxb::Semaphore* pSem, cs::ClusterMode mode)
+void CsMonitor::cs_mode_set(json_t** ppOutput, mxb::Semaphore* pSem, cs::ClusterMode mode)
 {
     json_t* pOutput = json_object();
     bool success = CsMonitorServer::set_mode(servers(), mode, m_http_config, &pOutput);
@@ -1195,7 +1195,7 @@ void CsMonitor::cluster_mode_set(json_t** ppOutput, mxb::Semaphore* pSem, cs::Cl
     pSem->post();
 }
 
-void CsMonitor::cluster_ping(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
+void CsMonitor::cs_ping(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
 {
     http::Results results = CsMonitorServer::ping(servers(), m_http_config);
 
@@ -1225,7 +1225,7 @@ void CsMonitor::cluster_ping(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorS
     pSem->post();
 }
 
-void CsMonitor::cluster_remove_node(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
+void CsMonitor::cs_remove_node(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
 {
     /*
       cluster remove node { nodeid | IP | DNS }  { force }
@@ -1333,10 +1333,10 @@ void CsMonitor::cluster_remove_node(json_t** ppOutput, mxb::Semaphore* pSem, CsM
     pSem->post();
 }
 
-void CsMonitor::cluster_scan(json_t** ppOutput,
-                             mxb::Semaphore* pSem,
-                             const std::chrono::seconds& timeout,
-                             CsMonitorServer* pServer)
+void CsMonitor::cs_scan(json_t** ppOutput,
+                        mxb::Semaphore* pSem,
+                        const std::chrono::seconds& timeout,
+                        CsMonitorServer* pServer)
 {
     bool success = false;
 
@@ -1402,10 +1402,10 @@ void CsMonitor::cluster_scan(json_t** ppOutput,
     pSem->post();
 }
 
-void CsMonitor::cluster_shutdown(json_t** ppOutput,
-                                 mxb::Semaphore* pSem,
-                                 const std::chrono::seconds& timeout,
-                                 CsMonitorServer* pServer)
+void CsMonitor::cs_shutdown(json_t** ppOutput,
+                            mxb::Semaphore* pSem,
+                            const std::chrono::seconds& timeout,
+                            CsMonitorServer* pServer)
 {
     bool rv = true;
 
@@ -1461,7 +1461,7 @@ void CsMonitor::cluster_shutdown(json_t** ppOutput,
     pSem->post();
 }
 
-void CsMonitor::cluster_start(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
+void CsMonitor::cs_start(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
 {
     vector<http::Result> results = CsMonitorServer::start(servers(), m_http_config);
 
@@ -1505,7 +1505,7 @@ void CsMonitor::cluster_start(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitor
     pSem->post();
 }
 
-void CsMonitor::cluster_status(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
+void CsMonitor::cs_status(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
 {
     CsMonitorServer::Statuses statuses = CsMonitorServer::fetch_statuses(servers(), m_http_config);
 
@@ -1536,10 +1536,10 @@ void CsMonitor::cluster_status(json_t** ppOutput, mxb::Semaphore* pSem, CsMonito
 }
 
 #if defined(CSMON_EXPOSE_TRANSACTIONS)
-void CsMonitor::cluster_begin(json_t** ppOutput,
-                              mxb::Semaphore* pSem,
-                              const std::chrono::seconds& timeout,
-                              CsMonitorServer* pServer)
+void CsMonitor::cs_begin(json_t** ppOutput,
+                         mxb::Semaphore* pSem,
+                         const std::chrono::seconds& timeout,
+                         CsMonitorServer* pServer)
 {
     string trx_id = next_trx_id();
 
@@ -1581,7 +1581,7 @@ void CsMonitor::cluster_begin(json_t** ppOutput,
     pSem->post();
 }
 
-void CsMonitor::cluster_commit(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
+void CsMonitor::cs_commit(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
 {
     ServerVector sv;
 
@@ -1621,7 +1621,7 @@ void CsMonitor::cluster_commit(json_t** ppOutput, mxb::Semaphore* pSem, CsMonito
     pSem->post();
 }
 
-void CsMonitor::cluster_rollback(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
+void CsMonitor::cs_rollback(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
 {
     ServerVector sv;
 
