@@ -34,8 +34,8 @@ const char CSMON_STATUS_DESC[]      = "Get Columnstore cluster [or server] statu
 const modulecmd_arg_type_t csmon_add_node_argv[] =
 {
     { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
-    { MODULECMD_ARG_STRING, "Timeout, 0 means no timeout." },
-    { MODULECMD_ARG_SERVER, "Server to add to Columnstore cluster" }
+    { MODULECMD_ARG_SERVER, "Server to add to Columnstore cluster" },
+    { MODULECMD_ARG_STRING, "Timeout, 0 means no timeout." }
 };
 
 const modulecmd_arg_type_t csmon_config_get_argv[] =
@@ -67,14 +67,15 @@ const modulecmd_arg_type_t csmon_remove_node_argv[] =
 {
     { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
     { MODULECMD_ARG_SERVER, "Server to remove from Columnstore cluster" },
+    { MODULECMD_ARG_STRING, "Timeout, 0 means no timeout." },
     { MODULECMD_ARG_BOOLEAN, "Whether force should be in effect or not" }
 };
 
 const modulecmd_arg_type_t csmon_scan_argv[] =
 {
     { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
-    { MODULECMD_ARG_STRING, "Timeout, 0 means no timeout." },
-    { MODULECMD_ARG_SERVER, "Server to scan" }
+    { MODULECMD_ARG_SERVER, "Server to scan" },
+    { MODULECMD_ARG_STRING, "Timeout, 0 means no timeout." }
 };
 
 const modulecmd_arg_type_t csmon_shutdown_argv[] =
@@ -144,46 +145,6 @@ bool get_args(const MODULECMD_ARG* pArgs,
 bool get_args(const MODULECMD_ARG* pArgs,
               json_t** ppOutput,
               CsMonitor** ppMonitor,
-              CsMonitorServer** ppServer,
-              bool* pBool)
-{
-    bool rv = true;
-
-    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
-    mxb_assert(pArgs->argc <= 1 || MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_SERVER);
-    mxb_assert(pArgs->argc <= 2 || MODULECMD_GET_TYPE(&pArgs->argv[2].type) == MODULECMD_ARG_BOOLEAN);
-
-    CsMonitor* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
-    CsMonitorServer* pServer = nullptr;
-    bool boolean = false;
-
-    if (pArgs->argc >= 2)
-    {
-        pServer = pMonitor->get_monitored_server(pArgs->argv[1].value.server);
-
-        if (!pServer)
-        {
-            LOG_APPEND_JSON_ERROR(ppOutput, "The provided server '%s' is not monitored by this monitor.",
-                                  pArgs->argv[1].value.server->name());
-            rv = false;
-        }
-
-        if (pArgs->argc >= 3)
-        {
-            boolean = pArgs->argv[2].value.boolean;
-        }
-    }
-
-    *ppMonitor = pMonitor;
-    *ppServer = pServer;
-    *pBool = boolean;
-
-    return rv;
-}
-
-bool get_args(const MODULECMD_ARG* pArgs,
-              json_t** ppOutput,
-              CsMonitor** ppMonitor,
               const char** pzText)
 {
     bool rv = true;
@@ -209,30 +170,80 @@ bool get_args(const MODULECMD_ARG* pArgs,
 {
     bool rv = true;
 
-    mxb_assert(pArgs->argc >= 2);
     mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
-    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_STRING);
-    mxb_assert(pArgs->argc == 2 || MODULECMD_GET_TYPE(&pArgs->argv[2].type) == MODULECMD_ARG_SERVER);
+    mxb_assert(pArgs->argc <= 1 || MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_STRING);
+    mxb_assert(pArgs->argc <= 2 || MODULECMD_GET_TYPE(&pArgs->argv[2].type) == MODULECMD_ARG_SERVER);
 
     CsMonitor* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
-    const char* zText = pArgs->argv[1].value.string;
+    const char* zText = nullptr;
     CsMonitorServer* pServer = nullptr;
 
-    if (pArgs->argc >= 3)
+    if (pArgs->argc >= 2)
     {
-        pServer = pMonitor->get_monitored_server(pArgs->argv[2].value.server);
+        zText = pArgs->argv[1].value.string;
 
-        if (!pServer)
+        if (pArgs->argc >= 3)
         {
-            LOG_APPEND_JSON_ERROR(ppOutput, "The provided server '%s' is not monitored by this monitor.",
-                                  pArgs->argv[2].value.server->name());
-            rv = false;
+            pServer = pMonitor->get_monitored_server(pArgs->argv[2].value.server);
         }
     }
 
     *ppMonitor = pMonitor;
     *pzText = zText;
     *ppServer = pServer;
+
+    return rv;
+}
+
+bool get_args(const MODULECMD_ARG* pArgs,
+              json_t** ppOutput,
+              CsMonitor** ppMonitor,
+              CsMonitorServer** ppServer,
+              const char** pzText,
+              bool* pBool = nullptr)
+{
+    bool rv = true;
+
+    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
+    mxb_assert(pArgs->argc <= 1 || MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_SERVER);
+    mxb_assert(pArgs->argc <= 2 || MODULECMD_GET_TYPE(&pArgs->argv[2].type) == MODULECMD_ARG_STRING);
+    mxb_assert(pArgs->argc <= 3 || MODULECMD_GET_TYPE(&pArgs->argv[3].type) == MODULECMD_ARG_BOOLEAN);
+
+    CsMonitor* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
+    CsMonitorServer* pServer = nullptr;
+    const char* zText = nullptr;
+    bool boolean = false;
+
+    if (pArgs->argc >= 2)
+    {
+        pServer = pMonitor->get_monitored_server(pArgs->argv[1].value.server);
+
+        if (!pServer)
+        {
+            LOG_APPEND_JSON_ERROR(ppOutput, "The provided server '%s' is not monitored by this monitor.",
+                                  pArgs->argv[1].value.server->name());
+            rv = false;
+        }
+
+        if (pArgs->argc >= 3)
+        {
+            zText = pArgs->argv[2].value.string;
+
+            if (pArgs->argc >= 4)
+            {
+                boolean = pArgs->argv[3].value.boolean;
+            }
+        }
+    }
+
+    *ppMonitor = pMonitor;
+    *ppServer = pServer;
+    *pzText = zText;
+
+    if (pBool)
+    {
+        *pBool = boolean;
+    }
 
     return rv;
 }
@@ -273,10 +284,10 @@ bool get_timeout(const char* zTimeout, std::chrono::seconds* pTimeout, json_t** 
 bool csmon_add_node(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 {
     CsMonitor* pMonitor;
-    const char* zTimeout;
     CsMonitorServer* pServer;
+    const char* zTimeout;
 
-    bool rv = get_args(pArgs, ppOutput, &pMonitor, &zTimeout, &pServer);
+    bool rv = get_args(pArgs, ppOutput, &pMonitor, &pServer, &zTimeout);
 
     if (rv)
     {
@@ -284,7 +295,7 @@ bool csmon_add_node(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 
         if (get_timeout(zTimeout, &timeout, ppOutput))
         {
-            rv = pMonitor->command_add_node(ppOutput, timeout, pServer);
+            rv = pMonitor->command_add_node(ppOutput, pServer, timeout);
         }
     }
 
@@ -356,13 +367,19 @@ bool csmon_remove_node(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 {
     CsMonitor* pMonitor;
     CsMonitorServer* pServer;
+    const char* zTimeout;
     bool force;
 
-    bool rv = get_args(pArgs, ppOutput, &pMonitor, &pServer, &force);
+    bool rv = get_args(pArgs, ppOutput, &pMonitor, &pServer, &zTimeout, &force);
 
     if (rv)
     {
-        rv = pMonitor->command_remove_node(ppOutput, pServer, force);
+        std::chrono::seconds timeout(0);
+
+        if (get_timeout(zTimeout, &timeout, ppOutput))
+        {
+            rv = pMonitor->command_remove_node(ppOutput, pServer, timeout, force);
+        }
     }
 
     return rv;
@@ -371,10 +388,10 @@ bool csmon_remove_node(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 bool csmon_scan(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 {
     CsMonitor* pMonitor;
-    const char* zTimeout;
     CsMonitorServer* pServer;
+    const char* zTimeout;
 
-    bool rv = get_args(pArgs, ppOutput, &pMonitor, &zTimeout, &pServer);
+    bool rv = get_args(pArgs, ppOutput, &pMonitor, &pServer, &zTimeout);
 
     if (rv)
     {
@@ -382,7 +399,7 @@ bool csmon_scan(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 
         if (get_timeout(zTimeout, &timeout, ppOutput))
         {
-            rv = pMonitor->command_scan(ppOutput, timeout, pServer);
+            rv = pMonitor->command_scan(ppOutput, pServer, timeout);
         }
     }
 

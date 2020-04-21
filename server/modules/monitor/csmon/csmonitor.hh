@@ -53,14 +53,15 @@ public:
     }
 
     // Only to be called by the module call command mechanism.
-    bool command_add_node(json_t** ppOutput, const std::chrono::seconds& timout, CsMonitorServer* pServer);
+    bool command_add_node(json_t** ppOutput, CsMonitorServer* pServer, const std::chrono::seconds& timeout);
     bool command_config_get(json_t** ppOutput, CsMonitorServer* pServer);
     bool command_config_set(json_t** ppOutput, const char* zJson, CsMonitorServer* pServer);
     bool command_mode_set(json_t** ppOutput, const char* zEnum);
     bool command_ping(json_t** ppOutput, CsMonitorServer* pServer);
-    bool command_remove_node(json_t** ppOutput, CsMonitorServer* pServer, bool force);
-    bool command_scan(json_t** ppOutput, const std::chrono::seconds& timeout, CsMonitorServer* pServer);
-    bool command_shutdown(json_t** ppOutput, const std::chrono::seconds& timout);
+    bool command_remove_node(json_t** ppOutput,
+                             CsMonitorServer* pServer, const std::chrono::seconds& timeout, bool force);
+    bool command_scan(json_t** ppOutput, CsMonitorServer* pServer, const std::chrono::seconds& timeout);
+    bool command_shutdown(json_t** ppOutput, const std::chrono::seconds& timeout);
     bool command_start(json_t** ppOutput);
     bool command_status(json_t** ppOutput, CsMonitorServer* pServer);
 
@@ -82,16 +83,17 @@ private:
     bool command(json_t** ppOutput, mxb::Semaphore& sem, const char* zCmd, std::function<void()> cmd);
 
     void cs_add_node(json_t** ppOutput, mxb::Semaphore* pSem,
-                     const std::chrono::seconds& timeout, CsMonitorServer* pServer);
+                     CsMonitorServer* pServer, const std::chrono::seconds& timeout);
     void cs_config_get(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer);
     void cs_config_set(json_t** ppOutput, mxb::Semaphore* pSem,
                        std::string&& body, CsMonitorServer* pServer);
     void cs_mode_set(json_t** ppOuput, mxb::Semaphore* pSem, cs::ClusterMode mode);
     void cs_ping(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer);
-    void cs_remove_node(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer, bool force);
+    void cs_remove_node(json_t** ppOutput, mxb::Semaphore* pSem,
+                        CsMonitorServer* pServer, const std::chrono::seconds& timeout, bool force);
     void cs_scan(json_t** ppOutput, mxb::Semaphore* pSem,
-                 const std::chrono::seconds& timeout,
-                 CsMonitorServer* pServer);
+                 CsMonitorServer* pServer,
+                 const std::chrono::seconds& timeout);
     void cs_shutdown(json_t** ppOutput, mxb::Semaphore* pSem, const std::chrono::seconds& timeout);
     void cs_start(json_t** ppOutput, mxb::Semaphore* pSem);
     void cs_status(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer);

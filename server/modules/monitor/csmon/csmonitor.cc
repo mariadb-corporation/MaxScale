@@ -378,15 +378,15 @@ void reject_command_pending(json_t** ppOutput, const char* zPending)
 }
 
 bool CsMonitor::command_add_node(json_t** ppOutput,
-                                 const std::chrono::seconds& timeout,
-                                 CsMonitorServer* pServer)
+                                 CsMonitorServer* pServer,
+                                 const std::chrono::seconds& timeout)
 {
     mxb::Semaphore sem;
 
-    auto cmd = [this, &sem, timeout, pServer, ppOutput] () {
+    auto cmd = [this, &sem, pServer, timeout, ppOutput] () {
         if (ready_to_run(ppOutput))
         {
-            cs_add_node(ppOutput, &sem, timeout, pServer);
+            cs_add_node(ppOutput, &sem, pServer, timeout);
         }
         else
         {
@@ -490,14 +490,17 @@ bool CsMonitor::command_ping(json_t** ppOutput, CsMonitorServer* pServer)
     return command(ppOutput, sem, "ping", cmd);
 }
 
-bool CsMonitor::command_remove_node(json_t** ppOutput, CsMonitorServer* pServer, bool force)
+bool CsMonitor::command_remove_node(json_t** ppOutput,
+                                    CsMonitorServer* pServer,
+                                    const std::chrono::seconds& timeout,
+                                    bool force)
 {
     mxb::Semaphore sem;
 
-    auto cmd = [this, &sem, ppOutput, pServer, force] () {
+    auto cmd = [this, &sem, ppOutput, pServer, timeout, force] () {
         if (ready_to_run(ppOutput))
         {
-            cs_remove_node(ppOutput, &sem, pServer, force);
+            cs_remove_node(ppOutput, &sem, pServer, timeout, force);
         }
         else
         {
@@ -509,15 +512,15 @@ bool CsMonitor::command_remove_node(json_t** ppOutput, CsMonitorServer* pServer,
 }
 
 bool CsMonitor::command_scan(json_t** ppOutput,
-                             const std::chrono::seconds& timeout,
-                             CsMonitorServer* pServer)
+                             CsMonitorServer* pServer,
+                             const std::chrono::seconds& timeout)
 {
     mxb::Semaphore sem;
 
-    auto cmd = [this, &sem, timeout, pServer, ppOutput] () {
+    auto cmd = [this, &sem, pServer, timeout, ppOutput] () {
         if (ready_to_run(ppOutput))
         {
-            cs_scan(ppOutput, &sem, timeout, pServer);
+            cs_scan(ppOutput, &sem, pServer, timeout);
         }
         else
         {
@@ -711,8 +714,8 @@ bool is_node_part_of_cluster(const CsMonitorServer* pServer)
 
 void CsMonitor::cs_add_node(json_t** ppOutput,
                             mxb::Semaphore* pSem,
-                            const std::chrono::seconds& timeout,
-                            CsMonitorServer* pServer)
+                            CsMonitorServer* pServer,
+                            const std::chrono::seconds& timeout)
 {
     json_t* pOutput = json_object();
     bool success = false;
@@ -1013,7 +1016,10 @@ void CsMonitor::cs_ping(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer
     pSem->post();
 }
 
-void CsMonitor::cs_remove_node(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer, bool force)
+void CsMonitor::cs_remove_node(json_t** ppOutput,
+                               mxb::Semaphore* pSem, CsMonitorServer* pServer,
+                               const std::chrono::seconds& timeout,
+                               bool force)
 {
     /*
       cluster remove node { nodeid | IP | DNS }  { force }
@@ -1123,8 +1129,8 @@ void CsMonitor::cs_remove_node(json_t** ppOutput, mxb::Semaphore* pSem, CsMonito
 
 void CsMonitor::cs_scan(json_t** ppOutput,
                         mxb::Semaphore* pSem,
-                        const std::chrono::seconds& timeout,
-                        CsMonitorServer* pServer)
+                        CsMonitorServer* pServer,
+                        const std::chrono::seconds& timeout)
 {
     json_t* pOutput = json_object();
     bool success = false;
