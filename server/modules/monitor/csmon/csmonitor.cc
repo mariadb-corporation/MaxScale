@@ -867,7 +867,16 @@ void CsMonitor::cs_config_get(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitor
     bool success = false;
     ostringstream message;
 
-    const ServerVector& sv = servers();
+    ServerVector sv;
+
+    if (pServer)
+    {
+        sv.push_back(pServer);
+    }
+    else
+    {
+        sv = servers();
+    }
 
     CsMonitorServer::Configs configs = CsMonitorServer::fetch_configs(sv, m_http_config);
 
@@ -901,7 +910,16 @@ void CsMonitor::cs_config_set(json_t** ppOutput, mxb::Semaphore* pSem,
     bool success = false;
     ostringstream message;
 
-    const ServerVector& sv = servers();
+    ServerVector sv;
+
+    if (pServer)
+    {
+        sv.push_back(pServer);
+    }
+    else
+    {
+        sv = servers();
+    }
 
     http::Results results = CsMonitorServer::set_config(sv, body, m_http_config);
 
@@ -961,7 +979,16 @@ void CsMonitor::cs_ping(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer
     bool success = false;
     ostringstream message;
 
-    const ServerVector& sv = servers();
+    ServerVector sv;
+
+    if (pServer)
+    {
+        sv.push_back(pServer);
+    }
+    else
+    {
+        sv = servers();
+    }
 
     http::Results results = CsMonitorServer::ping(sv, m_http_config);
 
@@ -1305,7 +1332,16 @@ void CsMonitor::cs_status(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServ
     bool success = false;
     ostringstream message;
 
-    const ServerVector& sv = servers();
+    ServerVector sv;
+
+    if (pServer)
+    {
+        sv.push_back(pServer);
+    }
+    else
+    {
+        sv = servers();
+    }
 
     CsMonitorServer::Statuses statuses = CsMonitorServer::fetch_statuses(sv, m_http_config);
 
