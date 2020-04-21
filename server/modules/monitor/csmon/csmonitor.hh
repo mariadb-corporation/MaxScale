@@ -26,8 +26,6 @@ class CsMonitor : public maxscale::MonitorWorkerSimple
 public:
     using Base = mxs::MonitorWorkerSimple;
 
-    class Command;
-
     CsMonitor(const CsMonitor&) = delete;
     CsMonitor& operator=(const CsMonitor&) = delete;
 
@@ -83,37 +81,6 @@ private:
 
     bool command(json_t** ppOutput, mxb::Semaphore& sem, const char* zCmd, std::function<void()> cmd);
 
-    void cluster_get(json_t** ppOutput,
-                     mxb::Semaphore* pSem,
-                     cs::rest::Action action,
-                     CsMonitorServer* pServer,
-                     ResponseHandler handler = nullptr);
-
-    void cluster_put(json_t** ppOutput,
-                     mxb::Semaphore* pSem,
-                     cs::rest::Action action,
-                     CsMonitorServer* pServer,
-                     std::string&& body,
-                     ResponseHandler handler);
-
-    void cluster_put(json_t** ppOutput,
-                     mxb::Semaphore* pSem,
-                     cs::rest::Action action,
-                     CsMonitorServer* pServer,
-                     std::string&& body = std::string())
-    {
-        return cluster_put(ppOutput, pSem, action, pServer, std::move(body), nullptr);
-    }
-
-    void cluster_put(json_t** ppOutput,
-                     mxb::Semaphore* pSem,
-                     cs::rest::Action action,
-                     CsMonitorServer* pServer,
-                     ResponseHandler handler)
-    {
-        return cluster_put(ppOutput, pSem, action, pServer, std::string(), handler);
-    }
-
     void cs_add_node(json_t** ppOutput, mxb::Semaphore* pSem,
                      const std::chrono::seconds& timeout, CsMonitorServer* pServer);
     void cs_config_get(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer);
@@ -145,7 +112,6 @@ private:
     CsMonitor(const std::string& name, const std::string& module);
     bool configure(const mxs::ConfigParameters* pParams) override;
 
-    CsConfig                 m_config;
-    mxb::http::Config        m_http_config;
-    std::unique_ptr<Command> m_sCommand;
+    CsConfig          m_config;
+    mxb::http::Config m_http_config;
 };
