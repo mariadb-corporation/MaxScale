@@ -12,9 +12,6 @@
  */
 #include "csconfig.hh"
 
-namespace
-{
-
 namespace config = mxs::config;
 
 namespace csmon
@@ -38,7 +35,7 @@ config::ParamString api_key(
     "api_key",
     "The API key to be used in the communication with the Columnstora admin daemon.");
 }
-}
+
 
 CsConfig::CsConfig(const std::string& name)
     : mxs::config::Configuration(name, &csmon::specification)

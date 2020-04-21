@@ -56,3 +56,13 @@ struct default_delete<xmlDoc>
     }
 };
 }
+
+namespace csmon
+{
+namespace keys
+{
+const char SUCCESS[] = "success";
+const char MESSAGE[] = "message";
+const char SERVERS[] = "servers";
+}
+}

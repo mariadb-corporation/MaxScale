@@ -716,35 +716,42 @@ void CsMonitor::cs_add_node(json_t** ppOutput,
                             const std::chrono::seconds& timeout,
                             CsMonitorServer* pServer)
 {
+    json_t* pOutput = json_object();
+    bool success = false;
+    ostringstream message;
+    json_t* pServers = nullptr;
+
+    const ServerVector& sv = servers();
+
     if (is_node_part_of_cluster(pServer))
     {
-        if (servers().size() == 1)
+        if (sv.size() == 1)
         {
-            PRINT_MXS_JSON_ERROR(ppOutput,
-                                 "The node to be added is already the single node of the cluster.");
+            mxs_json_error_append(pOutput,
+                                  "The server '%s' is the single node of the cluster.",
+                                  pServer->name());
         }
         else
         {
-            PRINT_MXS_JSON_ERROR(ppOutput,
-                                 "The node to be added is already in the cluster.");
+            mxs_json_error_append(pOutput,
+                                  "The server '%s' is already in the cluster.",
+                                  pServer->name());
         }
     }
     else
     {
-        bool success = false;
-
         string trx_id = next_trx_id();
 
         http::Results results;
-        if (CsMonitorServer::begin(servers(), timeout, trx_id, m_http_config, &results))
+        if (CsMonitorServer::begin(sv, timeout, trx_id, m_http_config, &results))
         {
             auto status = pServer->fetch_status();
 
             if (status.ok())
             {
                 ServerVector existing_servers;
-                auto sb = servers().begin();
-                auto se = servers().end();
+                auto sb = sv.begin();
+                auto se = sv.end();
 
                 std::copy_if(sb, se, std::back_inserter(existing_servers), [pServer](auto* pS) {
                         return pServer != pS;
@@ -768,66 +775,111 @@ void CsMonitor::cs_add_node(json_t** ppOutput,
                     CsMonitorServer::Config& config = *it;
 
                     // TODO: Update the config with the new information.
+                    string body = config.response.body;
 
                     json_t* pError = nullptr;
                     if (pServer->set_config(config.response.body, &pError))
                     {
-                        if (CsMonitorServer::set_config(servers(),
-                                                        config.response.body,
-                                                        m_http_config,
-                                                        &results))
+                        if (CsMonitorServer::set_config(sv, body, m_http_config, &results))
                         {
                             success = true;
                         }
                         else
                         {
-                            PRINT_MXS_JSON_ERROR(ppOutput, "Could not update configs of existing nodes.");
+                            PRINT_MXS_JSON_ERROR(&pOutput, "Could not update configs of existing nodes.");
+                            results_to_json(sv, results, &pServers);
                         }
                     }
                     else
                     {
-                        PRINT_MXS_JSON_ERROR(ppOutput, "Could not update config of new node.");
-                        mxs_json_error_push_back(*ppOutput, pError);
+                        PRINT_MXS_JSON_ERROR(&pOutput, "Could not update config of new node.");
+                        mxs_json_error_push_back_new(pOutput, pError);
                     }
                 }
                 else
                 {
-                    PRINT_MXS_JSON_ERROR(ppOutput, "Could not fetch configs from existing nodes.");
+                    PRINT_MXS_JSON_ERROR(&pOutput, "Could not fetch configs from existing nodes.");
+                    results_to_json(sv, configs, &pServers);
                 }
             }
             else
             {
-                PRINT_MXS_JSON_ERROR(ppOutput, "Could not fetch status from node to be added.");
+                PRINT_MXS_JSON_ERROR(&pOutput, "Could not fetch status from node to be added.");
+                if (status.sJson.get())
+                {
+                    mxs_json_error_push_back(pOutput, status.sJson.get());
+                }
             }
         }
         else
         {
-            PRINT_MXS_JSON_ERROR(ppOutput, "Could not start a transaction on all nodes.");
+            PRINT_MXS_JSON_ERROR(&pOutput, "Could not start a transaction on all nodes.");
+            results_to_json(sv, results, &pServers);
+        }
+
+        if (success)
+        {
+            success = CsMonitorServer::commit(sv, m_http_config, &results);
+
+            if (!success)
+            {
+                PRINT_MXS_JSON_ERROR(&pOutput, "Could not commit changes, will attempt rollback.");
+                results_to_json(sv, results, &pServers);
+            }
         }
 
         if (!success)
         {
-            // TODO: Collect information.
-            CsMonitorServer::rollback(servers(), m_http_config, &results);
+            if (!CsMonitorServer::rollback(sv, m_http_config, &results))
+            {
+                PRINT_MXS_JSON_ERROR(&pOutput, "Could not rollback changes, cluster state unknown.");
+                if (pServers)
+                {
+                    json_decref(pServers);
+                }
+                results_to_json(sv, results, &pServers);
+            }
         }
     }
+
+    if (success)
+    {
+        message << "Server '" << pServer->name() << "' added to cluster.";
+    }
+    else
+    {
+        message << "Adding server '" << pServer->name() << "' to cluster failed.";
+    }
+
+    json_object_set_new(pOutput, csmon::keys::SUCCESS, json_boolean(success));
+    json_object_set_new(pOutput, csmon::keys::MESSAGE, json_string(message.str().c_str()));
+    if (pServers)
+    {
+        json_object_set_new(pOutput, csmon::keys::SERVERS, pServers);
+    }
+
+    *ppOutput = pOutput;
 
     pSem->post();
 }
 
 void CsMonitor::cs_config_get(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
 {
-    CsMonitorServer::Configs configs = CsMonitorServer::fetch_configs(servers(), m_http_config);
-
-    json_t* pServers = nullptr;
-    size_t n = results_to_json(servers(), configs, &pServers);
-
-    bool success = (n == servers().size());
+    json_t* pOutput = json_object();
+    bool success = false;
     ostringstream message;
 
-    if (success)
+    const ServerVector& sv = servers();
+
+    CsMonitorServer::Configs configs = CsMonitorServer::fetch_configs(sv, m_http_config);
+
+    json_t* pServers = nullptr;
+    size_t n = results_to_json(sv, configs, &pServers);
+
+    if (n == sv.size())
     {
         message << "Fetched the config from all servers.";
+        success = true;
     }
     else
     {
@@ -835,10 +887,9 @@ void CsMonitor::cs_config_get(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitor
                 << " servers out of " << servers().size() << ".";
     }
 
-    json_t* pOutput = json_object();
-    json_object_set_new(pOutput, "success", json_boolean(success));
-    json_object_set_new(pOutput, "message", json_string(message.str().c_str()));
-    json_object_set_new(pOutput, "servers", pServers);
+    json_object_set_new(pOutput, csmon::keys::SUCCESS, json_boolean(success));
+    json_object_set_new(pOutput, csmon::keys::MESSAGE, json_string(message.str().c_str()));
+    json_object_set_new(pOutput, csmon::keys::SERVERS, pServers);
 
     *ppOutput = pOutput;
 
@@ -848,17 +899,21 @@ void CsMonitor::cs_config_get(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitor
 void CsMonitor::cs_config_set(json_t** ppOutput, mxb::Semaphore* pSem,
                               string&& body, CsMonitorServer* pServer)
 {
-    http::Results results = CsMonitorServer::set_config(servers(), body, m_http_config);
-
-    json_t* pServers = nullptr;
-    size_t n = results_to_json(servers(), results, &pServers);
-
-    bool success = (n == servers().size());
+    json_t* pOutput = json_object();
+    bool success = false;
     ostringstream message;
 
-    if (success)
+    const ServerVector& sv = servers();
+
+    http::Results results = CsMonitorServer::set_config(sv, body, m_http_config);
+
+    json_t* pServers = nullptr;
+    size_t n = results_to_json(sv, results, &pServers);
+
+    if (n == servers().size())
     {
         message << "Config set on all servers.";
+        success = true;
     }
     else
     {
@@ -866,10 +921,9 @@ void CsMonitor::cs_config_set(json_t** ppOutput, mxb::Semaphore* pSem,
                 << " servers out of " << servers().size() << ".";
     }
 
-    json_t* pOutput = json_object();
-    json_object_set_new(pOutput, "success", json_boolean(success));
-    json_object_set_new(pOutput, "message", json_string(message.str().c_str()));
-    json_object_set_new(pOutput, "servers", pServers);
+    json_object_set_new(pOutput, csmon::keys::SUCCESS, json_boolean(success));
+    json_object_set_new(pOutput, csmon::keys::MESSAGE, json_string(message.str().c_str()));
+    json_object_set_new(pOutput, csmon::keys::SERVERS, pServers);
 
     *ppOutput = pOutput;
 
@@ -879,21 +933,24 @@ void CsMonitor::cs_config_set(json_t** ppOutput, mxb::Semaphore* pSem,
 void CsMonitor::cs_mode_set(json_t** ppOutput, mxb::Semaphore* pSem, cs::ClusterMode mode)
 {
     json_t* pOutput = json_object();
-    bool success = CsMonitorServer::set_mode(servers(), mode, m_http_config, &pOutput);
+    bool success = false;
+    ostringstream message;
 
-    const char* zMessage;
+    const ServerVector& sv = servers();
+
+    success = CsMonitorServer::set_mode(sv, mode, m_http_config, &pOutput);
 
     if (success)
     {
-        zMessage = "Cluster mode successfully set.";
+        message << "Cluster mode successfully set.";
     }
     else
     {
-        zMessage = "Could not set cluster mode.";
+        message << "Could not set cluster mode.";
     }
 
-    json_object_set_new(pOutput, "success", json_boolean(success));
-    json_object_set_new(pOutput, "message", json_string(zMessage));
+    json_object_set_new(pOutput, csmon::keys::SUCCESS, json_boolean(success));
+    json_object_set_new(pOutput, csmon::keys::MESSAGE, json_string(message.str().c_str()));
 
     *ppOutput = pOutput;
 
@@ -902,17 +959,21 @@ void CsMonitor::cs_mode_set(json_t** ppOutput, mxb::Semaphore* pSem, cs::Cluster
 
 void CsMonitor::cs_ping(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
 {
-    http::Results results = CsMonitorServer::ping(servers(), m_http_config);
-
-    json_t* pServers = nullptr;
-    size_t n = results_to_json(servers(), results, &pServers);
-
-    bool success = (n == servers().size());
+    json_t* pOutput = json_object();
+    bool success = false;
     ostringstream message;
 
-    if (success)
+    const ServerVector& sv = servers();
+
+    http::Results results = CsMonitorServer::ping(sv, m_http_config);
+
+    json_t* pServers = nullptr;
+    size_t n = results_to_json(sv, results, &pServers);
+
+    if (n == servers().size())
     {
         message << "Pinged all servers.";
+        success = true;
     }
     else
     {
@@ -920,10 +981,9 @@ void CsMonitor::cs_ping(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer
                 << " servers out of " << servers().size() << ".";
     }
 
-    json_t* pOutput = json_object();
-    json_object_set_new(pOutput, "success", json_boolean(success));
-    json_object_set_new(pOutput, "message", json_string(message.str().c_str()));
-    json_object_set_new(pOutput, "servers", pServers);
+    json_object_set_new(pOutput, csmon::keys::SUCCESS, json_boolean(success));
+    json_object_set_new(pOutput, csmon::keys::MESSAGE, json_string(message.str().c_str()));
+    json_object_set_new(pOutput, csmon::keys::SERVERS, pServers);
 
     *ppOutput = pOutput;
 
@@ -1043,12 +1103,17 @@ void CsMonitor::cs_scan(json_t** ppOutput,
                         const std::chrono::seconds& timeout,
                         CsMonitorServer* pServer)
 {
+    json_t* pOutput = json_object();
     bool success = false;
+    ostringstream message;
+    json_t* pServers = nullptr;
+
+    const ServerVector& sv = servers();
 
     string trx_id = next_trx_id();
 
     http::Results results;
-    if (CsMonitorServer::begin(servers(), timeout, trx_id, m_http_config, &results))
+    if (CsMonitorServer::begin(sv, timeout, trx_id, m_http_config, &results))
     {
         auto status = pServer->fetch_status();
         if (status.ok())
@@ -1058,51 +1123,86 @@ void CsMonitor::cs_scan(json_t** ppOutput,
             {
                 // TODO: Check roots from status.
                 // TODO: Update roots in config accordingly.
+                string body = config.response.body;
 
                 http::Results results;
-                if (CsMonitorServer::set_config(servers(),
-                                                config.response.body,
-                                                m_http_config,
-                                                &results))
+                if (CsMonitorServer::set_config(sv, body, m_http_config, &results))
                 {
                     success = true;
                 }
                 else
                 {
-                    PRINT_MXS_JSON_ERROR(ppOutput, "Could not set the configuration to all nodes.");
+                    PRINT_MXS_JSON_ERROR(&pOutput, "Could not set the configuration to all nodes.");
+                    results_to_json(sv, results, &pServers);
                 }
             }
             else
             {
-                PRINT_MXS_JSON_ERROR(ppOutput, "Could not fetch the config from '%s'.",
+                PRINT_MXS_JSON_ERROR(&pOutput, "Could not fetch the config from '%s'.",
                                      pServer->name());
+                if (config.sJson.get())
+                {
+                    mxs_json_error_push_back(pOutput, config.sJson.get());
+                }
             }
         }
         else
         {
             PRINT_MXS_JSON_ERROR(ppOutput, "Could not fetch the status of '%s'.",
                                  pServer->name());
+            if (status.sJson.get())
+            {
+                mxs_json_error_push_back(pOutput, status.sJson.get());
+            }
         }
     }
     else
     {
-        PRINT_MXS_JSON_ERROR(ppOutput, "Could not start a transaction on all nodes.");
+        PRINT_MXS_JSON_ERROR(&pOutput, "Could not start a transaction on all nodes.");
+        results_to_json(sv, results, &pServers);
     }
 
     if (success)
     {
-        if (!CsMonitorServer::commit(servers(), m_http_config, &results))
+        success = CsMonitorServer::commit(sv, m_http_config, &results);
+
+        if (!success)
         {
-            PRINT_MXS_JSON_ERROR(ppOutput, "Could not commit changes, will rollback.");
-            success = false;
+            PRINT_MXS_JSON_ERROR(ppOutput, "Could not commit changes, will attempt rollback.");
+            results_to_json(sv, results, &pServers);
         }
     }
 
     if (!success)
     {
-        // TODO: Collect information.
-        CsMonitorServer::rollback(servers(), m_http_config, &results);
+        if (!CsMonitorServer::rollback(sv, m_http_config, &results))
+        {
+            PRINT_MXS_JSON_ERROR(&pOutput, "Could not rollback changes, cluster state unknown.");
+            if (pServers)
+            {
+                json_decref(pServers);
+            }
+            results_to_json(sv, results, &pServers);
+        }
     }
+
+    if (success)
+    {
+        message << "Scanned '" << pServer->name() << "' for dbroots and updated cluster.";
+    }
+    else
+    {
+        message << "Failed to scan '" << pServer->name() << "' for dbroots and/or to update cluster.";
+    }
+
+    json_object_set_new(pOutput, csmon::keys::SUCCESS, json_boolean(success));
+    json_object_set_new(pOutput, csmon::keys::MESSAGE, json_string(message.str().c_str()));
+    if (pServers)
+    {
+        json_object_set_new(pOutput, csmon::keys::SERVERS, pServers);
+    }
+
+    *ppOutput = pOutput;
 
     pSem->post();
 }
@@ -1112,33 +1212,33 @@ void CsMonitor::cs_shutdown(json_t** ppOutput,
                             const std::chrono::seconds& timeout,
                             CsMonitorServer* pServer)
 {
-    bool rv = true;
-
     json_t* pOutput = json_object();
-    json_t* pError = nullptr;
-
     bool success = true;
     ostringstream message;
+    json_t* pServers = nullptr;
+
+    const ServerVector& sv = servers();
 
     if (timeout != std::chrono::seconds(0))
     {
         // If there is a timeout, then the cluster must first be made read-only.
-        if (!CsMonitorServer::set_mode(servers(), cs::READ_ONLY, m_http_config, &pError))
+        json_t* pError = nullptr;
+        success = CsMonitorServer::set_mode(sv, cs::READ_ONLY, m_http_config, &pError);
+
+        if (!success)
         {
-            success = false;
             message << "Could not make cluster readonly. Timed out shutdown is not possible.";
+            mxs_json_error_push_back_new(pOutput, pError);
         }
     }
 
-    json_t* pServers = nullptr;
-
     if (success)
     {
-        vector<http::Result> results = CsMonitorServer::shutdown(servers(), timeout, m_http_config);
+        vector<http::Result> results = CsMonitorServer::shutdown(sv, timeout, m_http_config);
 
-        size_t n = results_to_json(servers(), results, &pServers);
+        size_t n = results_to_json(sv, results, &pServers);
 
-        if (n == servers().size())
+        if (n == sv.size())
         {
             message << "Columnstore cluster shut down.";
         }
@@ -1149,16 +1249,12 @@ void CsMonitor::cs_shutdown(json_t** ppOutput,
         }
     }
 
-    json_object_set_new(pOutput, "success", json_boolean(success));
-    json_object_set_new(pOutput, "message", json_string(message.str().c_str()));
+    json_object_set_new(pOutput, csmon::keys::SUCCESS, json_boolean(success));
+    json_object_set_new(pOutput, csmon::keys::MESSAGE, json_string(message.str().c_str()));
 
-    if (pError)
+    if (pServers)
     {
-        json_object_set_new(pOutput, "error", pError);
-    }
-    else if (pServers)
-    {
-        json_object_set_new(pOutput, "servers", pServers);
+        json_object_set_new(pOutput, csmon::keys::SERVERS, pServers);
     }
 
     *ppOutput = pOutput;
@@ -1168,27 +1264,31 @@ void CsMonitor::cs_shutdown(json_t** ppOutput,
 
 void CsMonitor::cs_start(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
 {
-    vector<http::Result> results = CsMonitorServer::start(servers(), m_http_config);
-
-    json_t* pServers = nullptr;
-    size_t n = results_to_json(servers(), results, &pServers);
-
+    json_t* pOutput = json_object();
     bool success = false;
     ostringstream message;
 
-    json_t* pError = nullptr;
+    const ServerVector& sv = servers();
 
-    if (n == servers().size())
+    vector<http::Result> results = CsMonitorServer::start(sv, m_http_config);
+
+    json_t* pServers = nullptr;
+    size_t n = results_to_json(sv, results, &pServers);
+
+    if (n == sv.size())
     {
-        if (CsMonitorServer::set_mode(servers(), cs::READ_WRITE, m_http_config, &pError))
+        json_t* pError = nullptr;
+        success = CsMonitorServer::set_mode(sv, cs::READ_WRITE, m_http_config, &pError);
+
+        if (success)
         {
             message << "All servers in cluster started successfully and cluster made readwrite.";
-            success = true;
         }
         else
         {
             message << "All servers in cluster started successfully, but cluster could not be "
                     << "made readwrite.";
+            mxs_json_error_push_back_new(pOutput, pError);
         }
     }
     else
@@ -1196,14 +1296,9 @@ void CsMonitor::cs_start(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServe
         message << n << " servers out of " << servers().size() << " started successfully.";
     }
 
-    json_t* pOutput = json_object();
-    json_object_set_new(pOutput, "success", json_boolean(success));
-    json_object_set_new(pOutput, "message", json_string(message.str().c_str()));
-    if (pError)
-    {
-        json_object_set_new(pOutput, "error", pError);
-    }
-    json_object_set_new(pOutput, "servers", pServers);
+    json_object_set_new(pOutput, csmon::keys::SUCCESS, json_boolean(success));
+    json_object_set_new(pOutput, csmon::keys::MESSAGE, json_string(message.str().c_str()));
+    json_object_set_new(pOutput, csmon::keys::SERVERS, pServers);
 
     *ppOutput = pOutput;
 
@@ -1212,28 +1307,31 @@ void CsMonitor::cs_start(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServe
 
 void CsMonitor::cs_status(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
 {
-    CsMonitorServer::Statuses statuses = CsMonitorServer::fetch_statuses(servers(), m_http_config);
-
-    json_t* pServers = nullptr;
-    size_t n = results_to_json(servers(), statuses, &pServers);
-
-    bool success = (n == servers().size());
+    json_t* pOutput = json_object();
+    bool success = false;
     ostringstream message;
 
-    if (success)
+    const ServerVector& sv = servers();
+
+    CsMonitorServer::Statuses statuses = CsMonitorServer::fetch_statuses(sv, m_http_config);
+
+    json_t* pServers = nullptr;
+    size_t n = results_to_json(sv, statuses, &pServers);
+
+    if (n == servers().size())
     {
         message << "Fetched the status from all servers.";
+        success = true;
     }
     else
     {
         message << "Successfully fetched status from " << n
-                << " servers out of " << servers().size() << ".";
+                << " servers out of " << sv.size() << ".";
     }
 
-    json_t* pOutput = json_object();
-    json_object_set_new(pOutput, "success", json_boolean(success));
-    json_object_set_new(pOutput, "message", json_string(message.str().c_str()));
-    json_object_set_new(pOutput, "servers", pServers);
+    json_object_set_new(pOutput, csmon::keys::SUCCESS, json_boolean(success));
+    json_object_set_new(pOutput, csmon::keys::MESSAGE, json_string(message.str().c_str()));
+    json_object_set_new(pOutput, csmon::keys::SERVERS, pServers);
 
     *ppOutput = pOutput;
 
@@ -1246,7 +1344,9 @@ void CsMonitor::cs_begin(json_t** ppOutput,
                          const std::chrono::seconds& timeout,
                          CsMonitorServer* pServer)
 {
-    string trx_id = next_trx_id();
+    json_t* pOutput = json_object();
+    bool success = false;
+    ostringstream message;
 
     ServerVector sv;
 
@@ -1259,27 +1359,25 @@ void CsMonitor::cs_begin(json_t** ppOutput,
         sv = servers();
     }
 
+    string trx_id = next_trx_id();
     http::Results results = CsMonitorServer::begin(sv, timeout, trx_id, m_http_config);
 
     json_t* pServers = nullptr;
     size_t n = results_to_json(sv, results, &pServers);
 
-    bool success = (n == sv.size());
-    ostringstream message;
-
-    if (success)
+    if (n == sv.size())
     {
         message << "Transaction started.";
+        success = true;
     }
     else
     {
         message << "Transaction started on " << n << " servers, out of " << sv.size() << ".";
     }
 
-    json_t* pOutput = json_object();
-    json_object_set_new(pOutput, "success", json_boolean(success));
-    json_object_set_new(pOutput, "message", json_string(message.str().c_str()));
-    json_object_set_new(pOutput, "servers", pServers);
+    json_object_set_new(pOutput, csmon::keys::SUCCESS, json_boolean(success));
+    json_object_set_new(pOutput, csmon::keys::MESSAGE, json_string(message.str().c_str()));
+    json_object_set_new(pOutput, csmon::keys::SERVERS, pServers);
 
     *ppOutput = pOutput;
 
@@ -1288,6 +1386,10 @@ void CsMonitor::cs_begin(json_t** ppOutput,
 
 void CsMonitor::cs_commit(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
 {
+    json_t* pOutput = json_object();
+    bool success = false;
+    ostringstream message;
+
     ServerVector sv;
 
     if (pServer)
@@ -1304,22 +1406,19 @@ void CsMonitor::cs_commit(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServ
     json_t* pServers = nullptr;
     size_t n = results_to_json(sv, results, &pServers);
 
-    bool success = (n == sv.size());
-    ostringstream message;
-
-    if (success)
+    if (n == sv.size())
     {
         message << "Transaction committed.";
+        success = true;
     }
     else
     {
         message << "Transaction committed on " << n << " servers, out of " << sv.size() << ".";
     }
 
-    json_t* pOutput = json_object();
-    json_object_set_new(pOutput, "success", json_boolean(success));
-    json_object_set_new(pOutput, "message", json_string(message.str().c_str()));
-    json_object_set_new(pOutput, "servers", pServers);
+    json_object_set_new(pOutput, csmon::keys::SUCCESS, json_boolean(success));
+    json_object_set_new(pOutput, csmon::keys::MESSAGE, json_string(message.str().c_str()));
+    json_object_set_new(pOutput, csmon::keys::SERVERS, pServers);
 
     *ppOutput = pOutput;
 
@@ -1328,6 +1427,10 @@ void CsMonitor::cs_commit(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServ
 
 void CsMonitor::cs_rollback(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
 {
+    json_t* pOutput = json_object();
+    bool success = false;
+    ostringstream message;
+
     ServerVector sv;
 
     if (pServer)
@@ -1344,22 +1447,19 @@ void CsMonitor::cs_rollback(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorSe
     json_t* pServers = nullptr;
     size_t n = results_to_json(sv, results, &pServers);
 
-    bool success = (n == sv.size());
-    ostringstream message;
-
-    if (success)
+    if (n == sv.size())
     {
         message << "Transaction rolled back.";
+        success = true;
     }
     else
     {
         message << "Transaction rolled back on " << n << " servers, out of " << sv.size() << ".";
     }
 
-    json_t* pOutput = json_object();
-    json_object_set_new(pOutput, "success", json_boolean(success));
-    json_object_set_new(pOutput, "message", json_string(message.str().c_str()));
-    json_object_set_new(pOutput, "servers", pServers);
+    json_object_set_new(pOutput, csmon::keys::SUCCESS, json_boolean(success));
+    json_object_set_new(pOutput, csmon::keys::MESSAGE, json_string(message.str().c_str()));
+    json_object_set_new(pOutput, csmon::keys::SERVERS, pServers);
 
     *ppOutput = pOutput;
 
