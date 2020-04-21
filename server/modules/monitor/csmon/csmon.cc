@@ -66,7 +66,8 @@ const modulecmd_arg_type_t csmon_ping_argv[] =
 const modulecmd_arg_type_t csmon_remove_node_argv[] =
 {
     { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
-    { MODULECMD_ARG_SERVER, "Server to remove from Columnstore cluster" }
+    { MODULECMD_ARG_SERVER, "Server to remove from Columnstore cluster" },
+    { MODULECMD_ARG_BOOLEAN, "Whether force should be in effect or not" }
 };
 
 const modulecmd_arg_type_t csmon_scan_argv[] =
@@ -100,7 +101,6 @@ bool get_args(const MODULECMD_ARG* pArgs,
 {
     bool rv = true;
 
-    mxb_assert(pArgs->argc >= 1);
     mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
 
     CsMonitor* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
@@ -117,7 +117,6 @@ bool get_args(const MODULECMD_ARG* pArgs,
 {
     bool rv = true;
 
-    mxb_assert(pArgs->argc >= 1);
     mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
     mxb_assert(pArgs->argc == 1 || MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_SERVER);
 
@@ -138,6 +137,46 @@ bool get_args(const MODULECMD_ARG* pArgs,
 
     *ppMonitor = pMonitor;
     *ppServer = pServer;
+
+    return rv;
+}
+
+bool get_args(const MODULECMD_ARG* pArgs,
+              json_t** ppOutput,
+              CsMonitor** ppMonitor,
+              CsMonitorServer** ppServer,
+              bool* pBool)
+{
+    bool rv = true;
+
+    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
+    mxb_assert(pArgs->argc <= 1 || MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_SERVER);
+    mxb_assert(pArgs->argc <= 2 || MODULECMD_GET_TYPE(&pArgs->argv[2].type) == MODULECMD_ARG_BOOLEAN);
+
+    CsMonitor* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
+    CsMonitorServer* pServer = nullptr;
+    bool boolean = false;
+
+    if (pArgs->argc >= 2)
+    {
+        pServer = pMonitor->get_monitored_server(pArgs->argv[1].value.server);
+
+        if (!pServer)
+        {
+            LOG_APPEND_JSON_ERROR(ppOutput, "The provided server '%s' is not monitored by this monitor.",
+                                  pArgs->argv[1].value.server->name());
+            rv = false;
+        }
+
+        if (pArgs->argc >= 3)
+        {
+            boolean = pArgs->argv[2].value.boolean;
+        }
+    }
+
+    *ppMonitor = pMonitor;
+    *ppServer = pServer;
+    *pBool = boolean;
 
     return rv;
 }
@@ -317,12 +356,13 @@ bool csmon_remove_node(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 {
     CsMonitor* pMonitor;
     CsMonitorServer* pServer;
+    bool force;
 
-    bool rv = get_args(pArgs, ppOutput, &pMonitor, &pServer);
+    bool rv = get_args(pArgs, ppOutput, &pMonitor, &pServer, &force);
 
     if (rv)
     {
-        rv = pMonitor->command_remove_node(ppOutput, pServer);
+        rv = pMonitor->command_remove_node(ppOutput, pServer, force);
     }
 
     return rv;

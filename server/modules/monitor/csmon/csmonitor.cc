@@ -490,14 +490,14 @@ bool CsMonitor::command_ping(json_t** ppOutput, CsMonitorServer* pServer)
     return command(ppOutput, sem, "ping", cmd);
 }
 
-bool CsMonitor::command_remove_node(json_t** ppOutput, CsMonitorServer* pServer)
+bool CsMonitor::command_remove_node(json_t** ppOutput, CsMonitorServer* pServer, bool force)
 {
     mxb::Semaphore sem;
 
-    auto cmd = [this, &sem, ppOutput, pServer] () {
+    auto cmd = [this, &sem, ppOutput, pServer, force] () {
         if (ready_to_run(ppOutput))
         {
-            cs_remove_node(ppOutput, &sem, pServer);
+            cs_remove_node(ppOutput, &sem, pServer, force);
         }
         else
         {
@@ -1013,7 +1013,7 @@ void CsMonitor::cs_ping(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer
     pSem->post();
 }
 
-void CsMonitor::cs_remove_node(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
+void CsMonitor::cs_remove_node(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer, bool force)
 {
     /*
       cluster remove node { nodeid | IP | DNS }  { force }
