@@ -143,7 +143,7 @@ json_t* create_response(const vector<CsMonitorServer*>& servers,
 
     if (result.status() == http::Async::ERROR)
     {
-        PRINT_MXS_JSON_ERROR(&pResult, "Fatal HTTP error.");
+        LOG_APPEND_JSON_ERROR(&pResult, "Fatal HTTP error.");
     }
     else
     {
@@ -358,21 +358,21 @@ namespace
 
 void reject_not_running(json_t** ppOutput, const char* zCmd)
 {
-    PRINT_MXS_JSON_ERROR(ppOutput,
-                         "The Columnstore monitor is not running, cannot "
-                         "execute the command '%s'.", zCmd);
+    LOG_APPEND_JSON_ERROR(ppOutput,
+                          "The Columnstore monitor is not running, cannot "
+                          "execute the command '%s'.", zCmd);
 }
 
 void reject_call_failed(json_t** ppOutput, const char* zCmd)
 {
-    PRINT_MXS_JSON_ERROR(ppOutput, "Failed to queue the command '%s' for execution.", zCmd);
+    LOG_APPEND_JSON_ERROR(ppOutput, "Failed to queue the command '%s' for execution.", zCmd);
 }
 
 void reject_command_pending(json_t** ppOutput, const char* zPending)
 {
-    PRINT_MXS_JSON_ERROR(ppOutput,
-                         "The command '%s' is running; another command cannot "
-                         "be started until that has finished. Cancel or wait.", zPending);
+    LOG_APPEND_JSON_ERROR(ppOutput,
+                          "The command '%s' is running; another command cannot "
+                          "be started until that has finished. Cancel or wait.", zPending);
 }
 
 }
@@ -466,7 +466,7 @@ bool CsMonitor::command_mode_set(json_t** ppOutput, const char* zMode)
     }
     else
     {
-        PRINT_MXS_JSON_ERROR(ppOutput, "'%s' is not a valid argument.", zMode);
+        LOG_APPEND_JSON_ERROR(ppOutput, "'%s' is not a valid argument.", zMode);
     }
 
     return rv;
@@ -777,8 +777,7 @@ void CsMonitor::cs_add_node(json_t** ppOutput,
                     // TODO: Update the config with the new information.
                     string body = config.response.body;
 
-                    json_t* pError = nullptr;
-                    if (pServer->set_config(config.response.body, &pError))
+                    if (pServer->set_config(config.response.body, &pOutput))
                     {
                         if (CsMonitorServer::set_config(sv, body, m_http_config, &results))
                         {
@@ -786,25 +785,24 @@ void CsMonitor::cs_add_node(json_t** ppOutput,
                         }
                         else
                         {
-                            PRINT_MXS_JSON_ERROR(&pOutput, "Could not update configs of existing nodes.");
+                            LOG_APPEND_JSON_ERROR(&pOutput, "Could not update configs of existing nodes.");
                             results_to_json(sv, results, &pServers);
                         }
                     }
                     else
                     {
-                        PRINT_MXS_JSON_ERROR(&pOutput, "Could not update config of new node.");
-                        mxs_json_error_push_back_new(pOutput, pError);
+                        LOG_PREPEND_JSON_ERROR(&pOutput, "Could not update config of new node.");
                     }
                 }
                 else
                 {
-                    PRINT_MXS_JSON_ERROR(&pOutput, "Could not fetch configs from existing nodes.");
+                    LOG_APPEND_JSON_ERROR(&pOutput, "Could not fetch configs from existing nodes.");
                     results_to_json(sv, configs, &pServers);
                 }
             }
             else
             {
-                PRINT_MXS_JSON_ERROR(&pOutput, "Could not fetch status from node to be added.");
+                LOG_APPEND_JSON_ERROR(&pOutput, "Could not fetch status from node to be added.");
                 if (status.sJson.get())
                 {
                     mxs_json_error_push_back(pOutput, status.sJson.get());
@@ -813,7 +811,7 @@ void CsMonitor::cs_add_node(json_t** ppOutput,
         }
         else
         {
-            PRINT_MXS_JSON_ERROR(&pOutput, "Could not start a transaction on all nodes.");
+            LOG_APPEND_JSON_ERROR(&pOutput, "Could not start a transaction on all nodes.");
             results_to_json(sv, results, &pServers);
         }
 
@@ -823,7 +821,7 @@ void CsMonitor::cs_add_node(json_t** ppOutput,
 
             if (!success)
             {
-                PRINT_MXS_JSON_ERROR(&pOutput, "Could not commit changes, will attempt rollback.");
+                LOG_APPEND_JSON_ERROR(&pOutput, "Could not commit changes, will attempt rollback.");
                 results_to_json(sv, results, &pServers);
             }
         }
@@ -832,7 +830,7 @@ void CsMonitor::cs_add_node(json_t** ppOutput,
         {
             if (!CsMonitorServer::rollback(sv, m_http_config, &results))
             {
-                PRINT_MXS_JSON_ERROR(&pOutput, "Could not rollback changes, cluster state unknown.");
+                LOG_APPEND_JSON_ERROR(&pOutput, "Could not rollback changes, cluster state unknown.");
                 if (pServers)
                 {
                     json_decref(pServers);
@@ -1019,8 +1017,8 @@ void CsMonitor::cs_remove_node(json_t** ppOutput, mxb::Semaphore* pSem, CsMonito
         if (shutdown.code != 200)
         {
             // TODO: Perhaps appropriate to ignore error?
-            PRINT_MXS_JSON_ERROR(ppOutput, "Could not shutdown '%s'. Cannot remove the node: %s",
-                                 pServer->name(), shutdown.body.c_str());
+            LOG_APPEND_JSON_ERROR(ppOutput, "Could not shutdown '%s'. Cannot remove the node: %s",
+                                  pServer->name(), shutdown.body.c_str());
         }
     }
 
@@ -1047,9 +1045,9 @@ void CsMonitor::cs_remove_node(json_t** ppOutput, mxb::Semaphore* pSem, CsMonito
 
             if (it != results.end())
             {
-                PRINT_MXS_JSON_ERROR(ppOutput, "Could not get config from server '%s', node cannot "
-                                     "be removed: %s",
-                                     mservers[it - results.begin()]->server->name(), it->body.c_str());
+                LOG_APPEND_JSON_ERROR(ppOutput, "Could not get config from server '%s', node cannot "
+                                      "be removed: %s",
+                                      mservers[it - results.begin()]->server->name(), it->body.c_str());
             }
             else
             {
@@ -1061,8 +1059,8 @@ void CsMonitor::cs_remove_node(json_t** ppOutput, mxb::Semaphore* pSem, CsMonito
 
                 if (it != results.end())
                 {
-                    PRINT_MXS_JSON_ERROR(ppOutput, "Configuration of all nodes is not identical. Not "
-                                         "possible to remove a node.");
+                    LOG_APPEND_JSON_ERROR(ppOutput, "Configuration of all nodes is not identical. Not "
+                                          "possible to remove a node.");
                 }
                 else
                 {
@@ -1083,8 +1081,8 @@ void CsMonitor::cs_remove_node(json_t** ppOutput, mxb::Semaphore* pSem, CsMonito
 
                     if (it != results.end())
                     {
-                        PRINT_MXS_JSON_ERROR(ppOutput, "Could not update configuration of all nodes. "
-                                             "Cluster state is now indeterminate.");
+                        LOG_APPEND_JSON_ERROR(ppOutput, "Could not update configuration of all nodes. "
+                                              "Cluster state is now indeterminate.");
                     }
                     else
                     {
@@ -1132,14 +1130,14 @@ void CsMonitor::cs_scan(json_t** ppOutput,
                 }
                 else
                 {
-                    PRINT_MXS_JSON_ERROR(&pOutput, "Could not set the configuration to all nodes.");
+                    LOG_APPEND_JSON_ERROR(&pOutput, "Could not set the configuration to all nodes.");
                     results_to_json(sv, results, &pServers);
                 }
             }
             else
             {
-                PRINT_MXS_JSON_ERROR(&pOutput, "Could not fetch the config from '%s'.",
-                                     pServer->name());
+                LOG_APPEND_JSON_ERROR(&pOutput, "Could not fetch the config from '%s'.",
+                                      pServer->name());
                 if (config.sJson.get())
                 {
                     mxs_json_error_push_back(pOutput, config.sJson.get());
@@ -1148,8 +1146,8 @@ void CsMonitor::cs_scan(json_t** ppOutput,
         }
         else
         {
-            PRINT_MXS_JSON_ERROR(ppOutput, "Could not fetch the status of '%s'.",
-                                 pServer->name());
+            LOG_APPEND_JSON_ERROR(ppOutput, "Could not fetch the status of '%s'.",
+                                  pServer->name());
             if (status.sJson.get())
             {
                 mxs_json_error_push_back(pOutput, status.sJson.get());
@@ -1158,7 +1156,7 @@ void CsMonitor::cs_scan(json_t** ppOutput,
     }
     else
     {
-        PRINT_MXS_JSON_ERROR(&pOutput, "Could not start a transaction on all nodes.");
+        LOG_APPEND_JSON_ERROR(&pOutput, "Could not start a transaction on all nodes.");
         results_to_json(sv, results, &pServers);
     }
 
@@ -1168,7 +1166,7 @@ void CsMonitor::cs_scan(json_t** ppOutput,
 
         if (!success)
         {
-            PRINT_MXS_JSON_ERROR(ppOutput, "Could not commit changes, will attempt rollback.");
+            LOG_APPEND_JSON_ERROR(ppOutput, "Could not commit changes, will attempt rollback.");
             results_to_json(sv, results, &pServers);
         }
     }
@@ -1177,7 +1175,7 @@ void CsMonitor::cs_scan(json_t** ppOutput,
     {
         if (!CsMonitorServer::rollback(sv, m_http_config, &results))
         {
-            PRINT_MXS_JSON_ERROR(&pOutput, "Could not rollback changes, cluster state unknown.");
+            LOG_APPEND_JSON_ERROR(&pOutput, "Could not rollback changes, cluster state unknown.");
             if (pServers)
             {
                 json_decref(pServers);
@@ -1222,13 +1220,11 @@ void CsMonitor::cs_shutdown(json_t** ppOutput,
     if (timeout != std::chrono::seconds(0))
     {
         // If there is a timeout, then the cluster must first be made read-only.
-        json_t* pError = nullptr;
-        success = CsMonitorServer::set_mode(sv, cs::READ_ONLY, m_http_config, &pError);
+        success = CsMonitorServer::set_mode(sv, cs::READ_ONLY, m_http_config, &pOutput);
 
         if (!success)
         {
             message << "Could not make cluster readonly. Timed out shutdown is not possible.";
-            mxs_json_error_push_back_new(pOutput, pError);
         }
     }
 
@@ -1277,8 +1273,7 @@ void CsMonitor::cs_start(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServe
 
     if (n == sv.size())
     {
-        json_t* pError = nullptr;
-        success = CsMonitorServer::set_mode(sv, cs::READ_WRITE, m_http_config, &pError);
+        success = CsMonitorServer::set_mode(sv, cs::READ_WRITE, m_http_config, &pOutput);
 
         if (success)
         {
@@ -1288,7 +1283,6 @@ void CsMonitor::cs_start(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServe
         {
             message << "All servers in cluster started successfully, but cluster could not be "
                     << "made readwrite.";
-            mxs_json_error_push_back_new(pOutput, pError);
         }
     }
     else

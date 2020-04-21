@@ -116,8 +116,8 @@ bool get_args(const MODULECMD_ARG* pArgs,
 
         if (!pServer)
         {
-            PRINT_MXS_JSON_ERROR(ppOutput, "The provided server '%s' is not monitored by this monitor.",
-                                 pArgs->argv[1].value.server->name());
+            LOG_APPEND_JSON_ERROR(ppOutput, "The provided server '%s' is not monitored by this monitor.",
+                                  pArgs->argv[1].value.server->name());
             rv = false;
         }
     }
@@ -151,8 +151,8 @@ bool get_args(const MODULECMD_ARG* pArgs,
 
         if (!pServer)
         {
-            PRINT_MXS_JSON_ERROR(ppOutput, "The provided server '%s' is not monitored by this monitor.",
-                                 pArgs->argv[2].value.server->name());
+            LOG_APPEND_JSON_ERROR(ppOutput, "The provided server '%s' is not monitored by this monitor.",
+                                  pArgs->argv[2].value.server->name());
             rv = false;
         }
     }
@@ -187,8 +187,8 @@ bool get_timeout(const char* zTimeout, std::chrono::seconds* pTimeout, json_t** 
         }
         else
         {
-            PRINT_MXS_JSON_ERROR(ppOutput,
-                                 "The timeout must be 0, or specified with a s, m, or h suffix");
+            LOG_APPEND_JSON_ERROR(ppOutput,
+                                  "The timeout must be 0, or specified with a s, m, or h suffix");
             rv = false;
         }
     }

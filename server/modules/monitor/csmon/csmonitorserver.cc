@@ -237,7 +237,7 @@ bool CsMonitorServer::set_mode(cs::ClusterMode mode, json_t** ppError)
 
     if (!result.ok())
     {
-        PRINT_MXS_JSON_ERROR(ppError, "Could not set cluster mode.");
+        LOG_APPEND_JSON_ERROR(ppError, "Could not set cluster mode.");
 
         json_error_t error;
         unique_ptr<json_t> sError(json_loadb(result.body.c_str(), result.body.length(), 0, &error));
@@ -262,7 +262,7 @@ bool CsMonitorServer::set_config(const std::string& body, json_t** ppError)
 
     if (!result.ok())
     {
-        PRINT_MXS_JSON_ERROR(ppError, "Could not update configuration.");
+        LOG_APPEND_JSON_ERROR(ppError, "Could not update configuration.");
 
         json_error_t error;
         unique_ptr<json_t> sError(json_loadb(result.body.c_str(), result.body.length(), 0, &error));
@@ -665,13 +665,13 @@ bool CsMonitorServer::set_mode(const std::vector<CsMonitorServer*>& servers,
 
     if (nMasters == 0)
     {
-        PRINT_MXS_JSON_ERROR(ppError, "No DBRM master found, mode change cannot be performed.");
+        LOG_APPEND_JSON_ERROR(ppError, "No DBRM master found, mode change cannot be performed.");
     }
     else if (nMasters != 1)
     {
-        PRINT_MXS_JSON_ERROR(ppError,
-                             "%d masters found. Splitbrain situation, mode change cannot be performed.",
-                             nMasters);
+        LOG_APPEND_JSON_ERROR(ppError,
+                              "%d masters found. Splitbrain situation, mode change cannot be performed.",
+                              nMasters);
     }
     else
     {
