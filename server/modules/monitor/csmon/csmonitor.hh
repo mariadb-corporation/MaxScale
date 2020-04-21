@@ -60,8 +60,8 @@ public:
     bool command_ping(json_t** ppOutput, CsMonitorServer* pServer);
     bool command_remove_node(json_t** ppOutput, CsMonitorServer* pServer);
     bool command_scan(json_t** ppOutput, const std::chrono::seconds& timeout, CsMonitorServer* pServer);
-    bool command_shutdown(json_t** ppOutput, const std::chrono::seconds& timout, CsMonitorServer* pServer);
-    bool command_start(json_t** ppOutput, CsMonitorServer* pServer);
+    bool command_shutdown(json_t** ppOutput, const std::chrono::seconds& timout);
+    bool command_start(json_t** ppOutput);
     bool command_status(json_t** ppOutput, CsMonitorServer* pServer);
 
 #if defined(CSMON_EXPOSE_TRANSACTIONS)
@@ -92,9 +92,8 @@ private:
     void cs_scan(json_t** ppOutput, mxb::Semaphore* pSem,
                  const std::chrono::seconds& timeout,
                  CsMonitorServer* pServer);
-    void cs_shutdown(json_t** ppOutput, mxb::Semaphore* pSem,
-                     const std::chrono::seconds& timeout, CsMonitorServer* pServer);
-    void cs_start(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer);
+    void cs_shutdown(json_t** ppOutput, mxb::Semaphore* pSem, const std::chrono::seconds& timeout);
+    void cs_start(json_t** ppOutput, mxb::Semaphore* pSem);
     void cs_status(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer);
 #if defined(CSMON_EXPOSE_TRANSACTIONS)
     void cs_begin(json_t** ppOutput, mxb::Semaphore* pSem,

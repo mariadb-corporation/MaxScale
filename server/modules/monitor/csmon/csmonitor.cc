@@ -528,16 +528,14 @@ bool CsMonitor::command_scan(json_t** ppOutput,
     return command(ppOutput, sem, "scan", cmd);
 }
 
-bool CsMonitor::command_shutdown(json_t** ppOutput,
-                                 const std::chrono::seconds& timeout,
-                                 CsMonitorServer* pServer)
+bool CsMonitor::command_shutdown(json_t** ppOutput, const std::chrono::seconds& timeout)
 {
     mxb::Semaphore sem;
 
-    auto cmd = [this, &sem, timeout, pServer, ppOutput] () {
+    auto cmd = [this, &sem, timeout, ppOutput] () {
         if (ready_to_run(ppOutput))
         {
-            cs_shutdown(ppOutput, &sem, timeout, pServer);
+            cs_shutdown(ppOutput, &sem, timeout);
         }
         else
         {
@@ -548,14 +546,14 @@ bool CsMonitor::command_shutdown(json_t** ppOutput,
     return command(ppOutput, sem, "shutdown", cmd);
 }
 
-bool CsMonitor::command_start(json_t** ppOutput, CsMonitorServer* pServer)
+bool CsMonitor::command_start(json_t** ppOutput)
 {
     mxb::Semaphore sem;
 
-    auto cmd = [this, &sem, pServer, ppOutput] () {
+    auto cmd = [this, &sem, ppOutput] () {
         if (ready_to_run(ppOutput))
         {
-            cs_start(ppOutput, &sem, pServer);
+            cs_start(ppOutput, &sem);
         }
         else
         {
@@ -1234,8 +1232,7 @@ void CsMonitor::cs_scan(json_t** ppOutput,
 
 void CsMonitor::cs_shutdown(json_t** ppOutput,
                             mxb::Semaphore* pSem,
-                            const std::chrono::seconds& timeout,
-                            CsMonitorServer* pServer)
+                            const std::chrono::seconds& timeout)
 {
     json_t* pOutput = json_object();
     bool success = true;
@@ -1285,7 +1282,7 @@ void CsMonitor::cs_shutdown(json_t** ppOutput,
     pSem->post();
 }
 
-void CsMonitor::cs_start(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer)
+void CsMonitor::cs_start(json_t** ppOutput, mxb::Semaphore* pSem)
 {
     json_t* pOutput = json_object();
     bool success = false;

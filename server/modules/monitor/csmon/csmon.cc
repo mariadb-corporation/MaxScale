@@ -79,14 +79,12 @@ const modulecmd_arg_type_t csmon_scan_argv[] =
 const modulecmd_arg_type_t csmon_shutdown_argv[] =
 {
     { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
-    { MODULECMD_ARG_STRING, "Timeout, 0 means no timeout." },
-    { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Specific server to shutdown" }
+    { MODULECMD_ARG_STRING, "Timeout, 0 means no timeout." }
 };
 
 const modulecmd_arg_type_t csmon_start_argv[] =
 {
-    { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
-    { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Specific server to start" }
+    { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC }
 };
 
 const modulecmd_arg_type_t csmon_status_argv[] =
@@ -95,6 +93,22 @@ const modulecmd_arg_type_t csmon_status_argv[] =
     { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Specific server to query status" }
 };
 
+
+bool get_args(const MODULECMD_ARG* pArgs,
+              json_t** ppOutput,
+              CsMonitor** ppMonitor)
+{
+    bool rv = true;
+
+    mxb_assert(pArgs->argc >= 1);
+    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
+
+    CsMonitor* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
+
+    *ppMonitor = pMonitor;
+
+    return rv;
+}
 
 bool get_args(const MODULECMD_ARG* pArgs,
               json_t** ppOutput,
@@ -124,6 +138,26 @@ bool get_args(const MODULECMD_ARG* pArgs,
 
     *ppMonitor = pMonitor;
     *ppServer = pServer;
+
+    return rv;
+}
+
+bool get_args(const MODULECMD_ARG* pArgs,
+              json_t** ppOutput,
+              CsMonitor** ppMonitor,
+              const char** pzText)
+{
+    bool rv = true;
+
+    mxb_assert(pArgs->argc >= 2);
+    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
+    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_STRING);
+
+    CsMonitor* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
+    const char* zText = pArgs->argv[1].value.string;
+
+    *ppMonitor = pMonitor;
+    *pzText = zText;
 
     return rv;
 }
@@ -251,14 +285,17 @@ bool csmon_config_set(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 
 bool csmon_mode_set(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 {
-    mxb_assert(pArgs->argc == 2);
-    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_MONITOR);
-    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_STRING);
+    CsMonitor* pMonitor;
+    const char* zMode;
 
-    CsMonitor* pMonitor = static_cast<CsMonitor*>(pArgs->argv[0].value.monitor);
-    const char* zMode = pArgs->argv[1].value.string;
+    bool rv = get_args(pArgs, ppOutput, &pMonitor, &zMode);
 
-    return pMonitor->command_mode_set(ppOutput, zMode);
+    if (rv)
+    {
+        rv = pMonitor->command_mode_set(ppOutput, zMode);
+    }
+
+    return rv;
 }
 
 bool csmon_ping(const MODULECMD_ARG* pArgs, json_t** ppOutput)
@@ -316,9 +353,8 @@ bool csmon_shutdown(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 {
     CsMonitor* pMonitor;
     const char* zTimeout;
-    CsMonitorServer* pServer;
 
-    bool rv = get_args(pArgs, ppOutput, &pMonitor, &zTimeout, &pServer);
+    bool rv = get_args(pArgs, ppOutput, &pMonitor, &zTimeout);
 
     if (rv)
     {
@@ -326,7 +362,7 @@ bool csmon_shutdown(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 
         if (get_timeout(zTimeout, &timeout, ppOutput))
         {
-            rv = pMonitor->command_shutdown(ppOutput, timeout, pServer);
+            rv = pMonitor->command_shutdown(ppOutput, timeout);
         }
     }
 
@@ -336,13 +372,12 @@ bool csmon_shutdown(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 bool csmon_start(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 {
     CsMonitor* pMonitor;
-    CsMonitorServer* pServer;
 
-    bool rv = get_args(pArgs, ppOutput, &pMonitor, &pServer);
+    bool rv = get_args(pArgs, ppOutput, &pMonitor);
 
     if (rv)
     {
-        rv = pMonitor->command_start(ppOutput, pServer);
+        rv = pMonitor->command_start(ppOutput);
     }
 
     return rv;
