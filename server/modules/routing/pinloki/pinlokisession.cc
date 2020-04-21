@@ -63,38 +63,8 @@ int32_t PinlokiSession::routeQuery(GWBUF* pPacket)
     case MXS_COM_QUERY:
         {
             auto sql = mxs::extract_sql(buf.get());
-            mxb::lower_case(sql);
             MXS_INFO("COM_QUERY: %s", sql.c_str());
-
-            // TODO: Implement a proper SQL parser instead of comparing to hard-coded queries
-            if (sql == "select unix_timestamp()")
-            {
-                response = create_resultset({"UNIX_TIMESTAMP()"}, {std::to_string(time(nullptr))});
-            }
-            else if (sql == "show variables like 'server_id'")
-            {
-                response = create_resultset({"Variable_name", "Value"}, {"server_id", "1"});
-            }
-            else if (sql == "select @master_binlog_checksum")
-            {
-                response = create_resultset({"@master_binlog_checksum"}, {"CRC32"});
-            }
-            else if (sql == "select 1")
-            {
-                response = create_resultset({"1"}, {"1"});
-            }
-            else if (sql == "select @@global.gtid_domain_id")
-            {
-                response = create_resultset({"@@GLOBAL.gtid_domain_id"}, {"0"});
-            }
-            else if (sql.substr(0, 4) == "set ")
-            {
-                response = modutil_create_ok();
-            }
-            else
-            {
-                mxb_assert(!true);
-            }
+            parser::parse(sql, this);
         }
         break;
     }
@@ -136,11 +106,66 @@ bool PinlokiSession::send_event(const maxsql::RplEvent& event)
     buffer.data()[4] = 0x0;
     mempcpy(buffer.data() + 5, event.data().data(), event.data().size());
 
-    const mxs::ReplyRoute down;
-    const mxs::Reply reply;
-    mxs::RouterSession::clientReply(buffer.release(), down, reply);
+    send(buffer.release());
 
     // TODO: Stop sending events when the network buffer gets full
     return true;
+}
+
+void PinlokiSession::send(GWBUF* buffer)
+{
+    const mxs::ReplyRoute down;
+    const mxs::Reply reply;
+    mxs::RouterSession::clientReply(buffer, down, reply);
+}
+
+void PinlokiSession::select(const std::vector<std::string>& values)
+{
+    send(create_resultset({"1"}, {"1"}));
+}
+
+void PinlokiSession::set(const std::string& key, const std::string& value)
+{
+    send(modutil_create_ok());
+}
+
+void PinlokiSession::change_master_to(const parser::MasterConfig& config)
+{
+    send(modutil_create_ok());
+}
+
+void PinlokiSession::start_slave()
+{
+    send(modutil_create_ok());
+}
+
+void PinlokiSession::stop_slave()
+{
+    send(modutil_create_ok());
+}
+
+void PinlokiSession::reset_slave()
+{
+    send(modutil_create_ok());
+}
+
+void PinlokiSession::show_slave_status()
+{
+    send(create_resultset({"1"}, {"1"}));
+}
+
+void PinlokiSession::flush_logs()
+{
+    send(modutil_create_ok());
+}
+
+void PinlokiSession::purge_logs()
+{
+    send(modutil_create_ok());
+}
+
+void PinlokiSession::error(const std::string& err)
+{
+    send(modutil_create_mysql_err_msg(1, 0, 1064, "42000", err.c_str()));
 }
 }
