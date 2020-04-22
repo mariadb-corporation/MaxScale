@@ -14,7 +14,6 @@
 
 #include <maxscale/ccdefs.hh>
 
-#include <initializer_list>
 #include <memory>
 #include <string>
 #include <vector>
@@ -37,14 +36,14 @@ public:
      *
      * @return The new result set
      */
-    static std::unique_ptr<ResultSet> create(std::initializer_list<std::string> names);
+    static std::unique_ptr<ResultSet> create(const std::vector<std::string>& names);
 
     /**
      * Add a row to the result set
      *
      * @param values List of values for the row
      */
-    void add_row(std::initializer_list<std::string> values);
+    void add_row(const std::vector<std::string>& values);
 
     /**
      * Convert the resultset into its raw binary form
@@ -57,5 +56,5 @@ private:
     std::vector<std::string>              m_columns;
     std::vector<std::vector<std::string>> m_rows;
 
-    ResultSet(std::initializer_list<std::string> names);
+    ResultSet(const std::vector<std::string>& names);
 };

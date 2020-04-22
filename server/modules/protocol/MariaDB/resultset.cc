@@ -131,17 +131,17 @@ Data create_row(const std::vector<std::string>& row, uint8_t seqno)
 }
 }
 
-ResultSet::ResultSet(std::initializer_list<std::string> names)
+ResultSet::ResultSet(const std::vector<std::string>& names)
     : m_columns(names)
 {
 }
 
-std::unique_ptr<ResultSet> ResultSet::create(std::initializer_list<std::string> names)
+std::unique_ptr<ResultSet> ResultSet::create(const std::vector<std::string>& names)
 {
     return std::unique_ptr<ResultSet>(new(std::nothrow) ResultSet(names));
 }
 
-void ResultSet::add_row(std::initializer_list<std::string> values)
+void ResultSet::add_row(const std::vector<std::string>& values)
 {
     mxb_assert(values.size() == m_columns.size());
     m_rows.emplace_back(values);
