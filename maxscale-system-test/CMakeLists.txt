@@ -945,6 +945,9 @@ add_test_executable(mxs2939_sescmd_reconnect.cpp mxs2939_sescmd_reconnect mxs293
 # MXS-2919: Slaves with broken replication should not be used
 add_test_executable(mxs2919_broken_slaves.cpp mxs2919_broken_slaves mxs2919_broken_slaves LABELS REPL_BACKEND readwritesplit)
 
+# MXS-2972: Caching of shards must take servers into notice
+add_test_executable(mxs2972_shard_caching.cc mxs2972_shard_caching mxs2972_shard_caching LABELS REPL_BACKEND schemarouter)
+
 ############################################
 # END: Normal tests                        #
 ############################################
