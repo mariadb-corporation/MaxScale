@@ -13,17 +13,24 @@
 
 #include <maxsql/mariadb_connector.hh>
 
+#include <memory>
 #include <mysql.h>
 #include <maxbase/assert.h>
 #include <maxbase/format.hh>
+#include <maxbase/string.hh>
 #include <maxsql/mariadb.hh>
 
 using std::string;
+using std::vector;
+using std::unique_ptr;
 using mxb::string_printf;
+using mxq::QueryResult;
 
 namespace
 {
 const char no_connection[] = "MySQL-connection is not open, cannot perform query.";
+const char query_failed[] = "Query '%s' failed: %s.";
+const char no_data[] = "Query '%s' did not return any data.";
 }
 
 namespace maxsql
@@ -68,6 +75,10 @@ bool MariaDB::open(const std::string& host, unsigned int port, const std::string
     if (!m_settings.local_address.empty())
     {
         mysql_optionsv(newconn, MYSQL_OPT_BIND, m_settings.local_address.c_str());
+    }
+    if (m_settings.multiquery)
+    {
+        mysql_optionsv(newconn, MARIADB_OPT_MULTI_STATEMENTS, 1);
     }
 
     bool connection_success = false;
@@ -141,7 +152,7 @@ bool MariaDB::cmd(const std::string& sql)
         }
         else
         {
-            m_errormsg = string_printf("Query '%s' failed: %s.", sql.c_str(), mysql_error(m_conn));
+            m_errormsg = string_printf(query_failed, sql.c_str(), mysql_error(m_conn));
             m_errornum = mysql_errno(m_conn);
         }
     }
@@ -156,7 +167,6 @@ bool MariaDB::cmd(const std::string& sql)
 
 std::unique_ptr<mxq::QueryResult> MariaDB::query(const std::string& query)
 {
-    using mxq::QueryResult;
     std::unique_ptr<QueryResult> rval;
     if (m_conn)
     {
@@ -170,13 +180,13 @@ std::unique_ptr<mxq::QueryResult> MariaDB::query(const std::string& query)
             }
             else
             {
-                m_errormsg = mxb::string_printf("Query '%s' did not return any data.", query.c_str());
+                m_errormsg = mxb::string_printf(no_data, query.c_str());
                 m_errornum = USER_ERROR;
             }
         }
         else
         {
-            m_errormsg = mxb::string_printf("Query '%s' failed: %s.", query.c_str(), mysql_error(m_conn));
+            m_errormsg = mxb::string_printf(query_failed, query.c_str(), mysql_error(m_conn));
             m_errornum = mysql_errno(m_conn);
         }
     }
@@ -195,14 +205,87 @@ void MariaDB::clear_errors()
     m_errornum = 0;
 }
 
-void MariaDB::set_connection_settings(const MariaDB::ConnectionSettings& sett)
-{
-    m_settings = sett;
-}
-
-const MariaDB::ConnectionSettings& MariaDB::get_connection_settings() const
+MariaDB::ConnectionSettings& MariaDB::connection_settings()
 {
     return m_settings;
+}
+
+vector<unique_ptr<QueryResult>> MariaDB::multiquery(const vector<string>& queries)
+{
+    vector<unique_ptr<QueryResult>> rval;
+    if (m_conn)
+    {
+        string multiquery = mxb::create_list_string(queries, " ");
+        if (mysql_query(m_conn, multiquery.c_str()) == 0)
+        {
+            auto n_queries = queries.size();
+            vector<unique_ptr<QueryResult>> results;
+            results.reserve(n_queries);
+
+            // Fetch all resultsets...
+            bool more_data = true;
+            while (more_data)
+            {
+                std::unique_ptr<QueryResult> new_elem;
+                MYSQL_RES* result = mysql_store_result(m_conn);
+                if (result)
+                {
+                    new_elem = std::make_unique<mxq::MariaDBQueryResult>(result);
+                }
+                results.push_back(move(new_elem));
+                more_data = (mysql_next_result(m_conn) == 0);
+            }
+
+            // and check they all returned results.
+            string errormsg;
+            int errornum = 0;
+            for (size_t i = 0; i < results.size(); i++)
+            {
+                if (results[i] == nullptr)
+                {
+                    auto errored_query = (i < n_queries) ? queries[i].c_str() : "<unknown-query>";
+                    errormsg = string_printf("Multiquery element '%s' did not return any data.",
+                                             errored_query);
+                    errornum = USER_ERROR;
+                    break;
+                }
+            }
+
+            if (errormsg.empty())
+            {
+                if (results.size() == n_queries)
+                {
+                    // success
+                    clear_errors();
+                    rval = move(results);
+                }
+                else
+                {
+                    // If received wrong number of results, return nothing.
+                    m_errormsg = string_printf("Wrong number of resultsets to multiquery '%s'. Got %zi, "
+                                               "expected %zi.",
+                                               multiquery.c_str(), results.size(), n_queries);
+                    m_errornum = USER_ERROR;
+                }
+            }
+            else
+            {
+                m_errormsg = errormsg;
+                m_errornum = errornum;
+            }
+        }
+        else
+        {
+            m_errormsg = string_printf(query_failed, multiquery.c_str(), mysql_error(m_conn));
+            m_errornum = mysql_errno(m_conn);
+        }
+    }
+    else
+    {
+        m_errormsg = no_connection;
+        m_errornum = USER_ERROR;
+    }
+    return rval;
 }
 
 MariaDBQueryResult::MariaDBQueryResult(MYSQL_RES* resultset)
@@ -238,7 +321,7 @@ const char* MariaDBQueryResult::row_elem(int64_t column_ind) const
     return m_rowdata[column_ind];
 }
 
-std::vector<std::string> MariaDBQueryResult::column_names(MYSQL_RES* resultset) const
+std::vector<std::string> MariaDBQueryResult::column_names(MYSQL_RES* resultset)
 {
     std::vector<std::string> rval;
     auto columns = mysql_num_fields(resultset);

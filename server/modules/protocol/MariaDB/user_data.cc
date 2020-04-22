@@ -28,6 +28,7 @@
 #include "sqlite_strlike.hh"
 
 using std::string;
+using std::vector;
 using mxq::MariaDB;
 using MutexLock = std::unique_lock<std::mutex>;
 using Guard = std::lock_guard<std::mutex>;
@@ -66,10 +67,11 @@ const string db_grants_query =
     "(SELECT a.user, a.host, a.db FROM mysql.tables_priv AS a) UNION "
     // and finally combine with column-level privs as db-level privs
     "(SELECT a.user, a.host, a.db FROM mysql.columns_priv AS a) ) AS c;";
-const string roles_query = "SELECT a.user, a.host, a.role FROM mysql.roles_mapping AS a;";
+
 const string proxies_query = "SELECT DISTINCT a.user, a.host FROM mysql.proxies_priv AS a "
                              "WHERE a.proxied_host <> '' AND a.proxied_user <> '';";
 const string db_names_query = "SHOW DATABASES;";
+const string roles_query = "SELECT a.user, a.host, a.role FROM mysql.roles_mapping AS a;";
 const string my_grants_query = "SHOW GRANTS;";
 }
 
@@ -256,8 +258,9 @@ void MariaDBUserManager::updater_thread_function()
 
 bool MariaDBUserManager::update_users()
 {
-    MariaDB::ConnectionSettings sett;
+    mxq::MariaDB con;
     std::vector<SERVER*> backends;
+    auto& sett = con.connection_settings();
 
     // Copy all arraylike settings under a lock.
     MutexLock lock(m_settings_lock);
@@ -267,11 +270,11 @@ bool MariaDBUserManager::update_users()
     lock.unlock();
 
     sett.password = decrypt_password(sett.password);
-    mxq::MariaDB con;
+    sett.multiquery = true;
 
     mxs::Config& glob_config = mxs::Config::get();
     sett.timeout = glob_config.auth_conn_timeout.get().count();
-    auto local_address = glob_config.local_address;
+    auto& local_address = glob_config.local_address;
     if (!local_address.empty())
     {
         sett.local_address = local_address;
@@ -300,14 +303,11 @@ bool MariaDBUserManager::update_users()
     std::vector<string> source_servernames;
     UserDatabase temp_userdata;
 
-    for (size_t i = 0; i < backends.size(); i++)
+    for (auto srv : backends)
     {
-        SERVER* srv = backends[i];
-
         // Different backends may have different ssl settings so need to update.
         const mxb::SSLConfig* srv_ssl_config = srv->ssl().config();
         sett.ssl = (srv_ssl_config && !srv_ssl_config->empty()) ? *srv_ssl_config : mxb::SSLConfig();
-        con.set_connection_settings(sett);
 
         if (con.open(srv->address(), srv->port()))
         {
@@ -316,6 +316,7 @@ bool MariaDBUserManager::update_users()
                 check_show_dbs_priv(con, srv->name());
             }
             auto load_result = LoadResult::QUERY_FAILED;
+
             auto srv_type = srv->type();
             switch (srv_type)
             {
@@ -389,42 +390,40 @@ bool MariaDBUserManager::update_users()
 MariaDBUserManager::LoadResult
 MariaDBUserManager::load_users_mariadb(mxq::MariaDB& con, SERVER* srv, UserDatabase* output)
 {
-    auto rval = LoadResult::QUERY_FAILED;
-    bool got_data = false;
+    using std::move;
+
     // Roles were added in server 10.0.5, default roles in server 10.1.1. Strictly speaking, reading the
     // roles_mapping table for 10.0.5 is not required as they won't be used. Read anyway in case
     // diagnostics prints it.
     auto version = srv->version();
     bool role_support = (version.total >= 100005);
 
-    QResult users_res, db_grants_res, dbs_res, proxies_res, roles_res;
-    // Perform the queries. All must succeed on the same backend.
-    if (((users_res = con.query(mariadb_queries::users_query)) != nullptr)
-        && ((db_grants_res = con.query(mariadb_queries::db_grants_query)) != nullptr)
-        && ((dbs_res = con.query(mariadb_queries::db_names_query)) != nullptr)
-        && ((proxies_res = con.query(mariadb_queries::proxies_query)) != nullptr))
+    // Run the queries as one multiquery.
+    vector<string> multiquery;
+    multiquery.reserve(5);
+    multiquery = {mariadb_queries::users_query,   mariadb_queries::db_grants_query,
+                  mariadb_queries::proxies_query, mariadb_queries::db_names_query};
+    if (role_support)
     {
-        if (role_support)
-        {
-            if ((roles_res = con.query(mariadb_queries::roles_query)) != nullptr)
-            {
-                got_data = true;
-            }
-        }
-        else
-        {
-            got_data = true;
-        }
+        multiquery.push_back(mariadb_queries::roles_query);
     }
 
-    if (got_data)
+    auto rval = LoadResult::QUERY_FAILED;
+    auto multiq_result = con.multiquery(multiquery);
+    if (multiq_result.size() == multiquery.size())
     {
+        QResult users_res = move(multiq_result[0]);
+        QResult db_grants_res = move(multiq_result[1]);
+        QResult proxies_res = move(multiq_result[2]);
+        QResult dbs_res = move(multiq_result[3]);
+        QResult roles_res = role_support ? move(multiq_result[4]) : nullptr;
+
         rval = LoadResult::INVALID_DATA;
-        if (read_users_mariadb(std::move(users_res), output))
+        if (read_users_mariadb(move(users_res), output))
         {
-            read_dbs_and_roles(std::move(db_grants_res), std::move(roles_res), output);
-            read_databases(std::move(dbs_res), output);
-            read_proxy_grants(std::move(proxies_res), output);
+            read_dbs_and_roles(move(db_grants_res), move(roles_res), output);
+            read_proxy_grants(move(proxies_res), output);
+            read_databases(move(dbs_res), output);
             rval = LoadResult::SUCCESS;
         }
     }
@@ -699,7 +698,7 @@ void MariaDBUserManager::check_show_dbs_priv(mxq::MariaDB& con, const char* serv
                 const char msg[] = "Service user '%s' of service '%s' does not have the 'SHOW DATABASES'-"
                                    "privilege on '%s'. This may cause authentication errors on clients "
                                    "logging in to a specific database.";
-                MXB_WARNING(msg, con.get_connection_settings().user.c_str(), m_service->name(), servername);
+                MXB_WARNING(msg, con.connection_settings().user.c_str(), m_service->name(), servername);
             }
         }
         else

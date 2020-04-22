@@ -15,6 +15,7 @@
 #include <maxscale/ccdefs.hh>
 #include <stdlib.h>
 #include <stdint.h>
+#include <mysql.h>
 #include <maxsql/mariadb.hh>
 #include <maxsql/mariadb_connector.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>

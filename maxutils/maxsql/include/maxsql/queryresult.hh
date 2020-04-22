@@ -32,9 +32,7 @@ public:
     QueryResult(const QueryResult&) = delete;
     QueryResult& operator=(const QueryResult&) = delete;
 
-    virtual ~QueryResult()
-    {
-    }
+    virtual ~QueryResult() = default;
 
     /**
      * Advance to next row. Affects all result returning functions.
@@ -127,7 +125,7 @@ public:
     std::string error_string() const;
 
 protected:
-    QueryResult(const std::vector<std::string>& col_names);
+    explicit QueryResult(std::vector<std::string>&& col_names);
 private:
     class ConversionError
     {

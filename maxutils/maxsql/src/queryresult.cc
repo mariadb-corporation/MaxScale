@@ -186,7 +186,7 @@ string QueryResult::error_string() const
     return m_error.to_string();
 }
 
-QueryResult::QueryResult(const std::vector<std::string>& col_names)
+QueryResult::QueryResult(std::vector<std::string>&& col_names)
 {
     for (size_t column_index = 0; column_index < col_names.size(); column_index++)
     {
@@ -241,5 +241,4 @@ bool QueryResult::ConversionError::error() const
 {
     return !m_target_type.empty();
 }
-
 }

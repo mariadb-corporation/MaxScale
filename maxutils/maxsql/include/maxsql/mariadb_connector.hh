@@ -16,9 +16,11 @@
 
 #include <memory>
 #include <string>
-#include <mysql.h>
 #include <maxbase/ssl.hh>
 #include <maxsql/queryresult.hh>
+
+struct st_mysql;
+struct st_mysql_res;
 
 namespace maxsql
 {
@@ -43,6 +45,7 @@ public:
 
         std::string local_address;
         int         timeout {0};
+        bool        multiquery {false};
         // TODO: add more
     };
 
@@ -76,20 +79,33 @@ public:
     std::unique_ptr<mxq::QueryResult> query(const std::string& query);
 
     /**
+     * Run multiple queries as one. Each should return data. Multiqueries should be enabled in connection
+     * settings.
+     *
+     * @param queries Array of queries. Will be executed as a single multiquery. Each individual query
+     * should end in a semicolon.
+     * @return Results from every query. If any kind of error occurs, returns an empty vector.
+     */
+    std::vector<std::unique_ptr<mxq::QueryResult>> multiquery(const std::vector<std::string>& queries);
+
+    /**
      * Get latest error.
      *
      * @return Error string
      */
     const char* error() const;
 
-    void set_connection_settings(const ConnectionSettings& sett);
-
-    const ConnectionSettings& get_connection_settings() const;
+    /**
+     * Get reference to connection settings. The settings are used when opening a connection.
+     *
+     * @return Connection settings reference
+     */
+    ConnectionSettings& connection_settings();
 
 private:
     void clear_errors();
 
-    MYSQL*       m_conn {nullptr};
+    st_mysql*    m_conn {nullptr};
     std::string  m_errormsg;
     unsigned int m_errornum {0};
 
@@ -110,9 +126,9 @@ public:
      *
      * @param resultset The results from mysql_query(). Must not be NULL.
      */
-    MariaDBQueryResult(MYSQL_RES* resultset);
+    explicit MariaDBQueryResult(st_mysql_res* resultset);
 
-    ~MariaDBQueryResult();
+    ~MariaDBQueryResult() override;
 
     /**
      * Advance to next row. Affects all result returning functions.
@@ -136,11 +152,12 @@ public:
     int64_t get_row_count() const override;
 
 private:
-    const char*              row_elem(int64_t column_ind) const override;
-    bool                     advance_row() override;
-    std::vector<std::string> column_names(MYSQL_RES* results) const;
+    const char* row_elem(int64_t column_ind) const override;
+    bool        advance_row() override;
 
-    MYSQL_RES* m_resultset {nullptr};   /**< Underlying result set, freed at dtor */
-    MYSQL_ROW  m_rowdata {nullptr};     /**< Data for current row */
+    static std::vector<std::string> column_names(st_mysql_res* results);
+
+    st_mysql_res*      m_resultset {nullptr};   /**< Underlying result set, freed at dtor */
+    const char* const* m_rowdata {nullptr};     /**< Data for current row */
 };
 }
