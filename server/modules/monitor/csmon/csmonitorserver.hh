@@ -118,6 +118,16 @@ public:
         return this->server->name();
     }
 
+    const char* address() const
+    {
+        return this->server->address();
+    }
+
+    void set_status(uint64_t bit)
+    {
+        this->server->set_status(bit);
+    }
+
     bool ping(json_t** ppError = nullptr);
 
     Config fetch_config() const;
@@ -185,6 +195,10 @@ public:
     static Results shutdown(const std::vector<CsMonitorServer*>& servers,
                             const std::chrono::seconds& timeout,
                             const mxb::http::Config& config);
+    static bool shutdown(const std::vector<CsMonitorServer*>& servers,
+                         const std::chrono::seconds& timeout,
+                         const mxb::http::Config& config,
+                         Results* pResults);
     static Results start(const std::vector<CsMonitorServer*>& servers,
                          const mxb::http::Config& config);
     static bool set_mode(const std::vector<CsMonitorServer*>& servers,

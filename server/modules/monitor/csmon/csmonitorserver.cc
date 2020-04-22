@@ -731,6 +731,30 @@ http::Results CsMonitorServer::shutdown(const std::vector<CsMonitorServer*>& ser
 }
 
 //static
+bool CsMonitorServer::shutdown(const std::vector<CsMonitorServer*>& servers,
+                               const std::chrono::seconds& timeout,
+                               const mxb::http::Config& http_config,
+                               Results* pResults)
+{
+    Results results = shutdown(servers, timeout, http_config);
+
+    bool rv = true;
+
+    for (const auto& result : results)
+    {
+        if (!result.ok())
+        {
+            rv = false;
+            break;
+        }
+    }
+
+    pResults->swap(results);
+
+    return rv;
+}
+
+//static
 http::Results CsMonitorServer::start(const std::vector<CsMonitorServer*>& servers,
                                      const http::Config& http_config)
 {

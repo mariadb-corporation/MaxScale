@@ -104,6 +104,12 @@ private:
     void cs_rollback(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer);
 #endif
 
+    std::string create_add_config(CsMonitorServer::Config& config, CsMonitorServer* pServer);
+    std::string create_remove_config(CsMonitorServer::Config& config,
+                                     CsMonitorServer* pServer,
+                                     bool force,
+                                     bool is_critical);
+
     bool has_sufficient_permissions();
     void update_server_status(mxs::MonitorServer* monitored_server);
 

@@ -276,11 +276,11 @@ size_t results_to_json(const vector<CsMonitorServer*>& servers,
     return n;
 }
 
-string next_trx_id()
+string next_trx_id(const char* zWhat)
 {
     static int64_t id = 1;
 
-    return string("transaction-") + std::to_string(id++);
+    return string("maxscale-") + zWhat + string("-") + std::to_string(id++);
 }
 
 }
@@ -741,7 +741,7 @@ void CsMonitor::cs_add_node(json_t** ppOutput,
     }
     else
     {
-        string trx_id = next_trx_id();
+        string trx_id = next_trx_id("add-node");
 
         http::Results results;
         if (CsMonitorServer::begin(sv, timeout, trx_id, m_http_config, &results))
@@ -775,8 +775,7 @@ void CsMonitor::cs_add_node(json_t** ppOutput,
 
                     CsMonitorServer::Config& config = *it;
 
-                    // TODO: Update the config with the new information.
-                    string body = config.response.body;
+                    string body = create_add_config(config, pServer);
 
                     if (pServer->set_config(config.response.body, &pOutput))
                     {
@@ -1017,112 +1016,139 @@ void CsMonitor::cs_ping(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer
 }
 
 void CsMonitor::cs_remove_node(json_t** ppOutput,
-                               mxb::Semaphore* pSem, CsMonitorServer* pServer,
+                               mxb::Semaphore* pSem, CsMonitorServer* pRemove_server,
                                const std::chrono::seconds& timeout,
                                bool force)
 {
-    /*
-      cluster remove node { nodeid | IP | DNS }  { force }
-      - Sends GET /node/ping to the node to be removed
-      - If force isn’t set then run cluster mode set read-only first.
-      Don’t send this to the target node if ping fail
-      - Sends  PUT /node/shutdown to the removed node with JSON parameters
-      (immediate shutdown) command if the ping call returns.
-      - Sends GET /node/config to { all | only one } of the listed nodes.
-      Uses the config/-s to produce new versions of the configs.
-      - Sends PUT /node/config to the old nodes and to the new node.
-      The previous action forces the restart of the services.
+    json_t* pOutput = json_object();
+    bool success = false;
+    ostringstream message;
+    json_t* pServers = nullptr;
 
-      Currently no force and no read-only mode.
-    */
+    ServerVector sv = servers();
 
-    *ppOutput = nullptr;
+    string trx_id = next_trx_id("remove-node");
 
-    http::Result ping = http::get(cs::rest::create_url(*pServer, m_config.admin_port, cs::rest::PING));
-
-    if (ping.code == 200)
+    http::Results results;
+    if (CsMonitorServer::begin(sv, timeout, trx_id, m_http_config, &results))
     {
-        http::Result shutdown = http::get(cs::rest::create_url(*pServer, m_config.admin_port,
-                                                               cs::rest::SHUTDOWN));
-
-        if (shutdown.code != 200)
+        CsMonitorServer::Statuses statuses;
+        if (CsMonitorServer::fetch_statuses(sv, m_http_config, &statuses))
         {
-            // TODO: Perhaps appropriate to ignore error?
-            LOG_APPEND_JSON_ERROR(ppOutput, "Could not shutdown '%s'. Cannot remove the node: %s",
-                                  pServer->name(), shutdown.body.c_str());
-        }
-    }
-
-    if (!*ppOutput)
-    {
-        vector<const MonitorServer*> mservers;
-        vector<string> urls;
-
-        for (const auto* pS : this->servers())
-        {
-            if (pS != pServer)
+            CsMonitorServer::Configs configs;
+            if (CsMonitorServer::fetch_configs(sv, m_http_config, &configs))
             {
-                mservers.push_back(pS);
-                urls.push_back(cs::rest::create_url(*pS, m_config.admin_port, cs::rest::CONFIG));
-            }
-        }
+                auto it = std::find(sv.begin(), sv.end(), pRemove_server);
+                mxb_assert(it != sv.end());
+                auto offset = it - sv.begin();
 
-        // TODO Can you remove the last node?
-        if (!urls.empty())
-        {
-            vector<http::Result> results = http::get(urls);
+                // Store status and config of server to be removed.
+                auto remove_status = std::move(*(statuses.begin() + offset));
+                auto remove_config = std::move(*(configs.begin() + offset));
 
-            auto it = find_first_failed(results);
+                // Remove corresponding entry from all vectors.
+                sv.erase(sv.begin() + offset);
+                statuses.erase(statuses.begin() + offset);
+                configs.erase(configs.begin() + offset);
 
-            if (it != results.end())
-            {
-                LOG_APPEND_JSON_ERROR(ppOutput, "Could not get config from server '%s', node cannot "
-                                      "be removed: %s",
-                                      mservers[it - results.begin()]->server->name(), it->body.c_str());
-            }
-            else
-            {
-                auto it = std::adjacent_find(results.begin(),
-                                             results.end(),
-                                             [](const auto& l, const auto& r) {
-                                                 return l.body != r.body;
-                                             });
+                // Configs should be the same, but nonetheless the one whose uptime is
+                // the longest should be chosen.
+                auto jt = std::max_element(statuses.begin(), statuses.end(), [](const auto&l, const auto& r)
+                                           {
+                                               return l.uptime < r.uptime;
+                                           });
 
-                if (it != results.end())
+                offset = jt - statuses.begin();
+
+                auto& config = *(configs.begin() + offset);
+
+                string ddlproc_ip;
+                string dmlproc_ip;
+                if (config.get_ddlproc_ip(&ddlproc_ip, pOutput)
+                    && config.get_dmlproc_ip(&dmlproc_ip, pOutput))
                 {
-                    LOG_APPEND_JSON_ERROR(ppOutput, "Configuration of all nodes is not identical. Not "
-                                          "possible to remove a node.");
-                }
-                else
-                {
-                    // TODO: Update configuration to EXCLUDE the removed node.
+                    bool is_critical =
+                        pRemove_server->address() == ddlproc_ip
+                        || pRemove_server->address() == dmlproc_ip;
 
-                    // Any body would be fine, they are all identical.
-                    const auto& body = results.begin()->body;
+                    string body = create_remove_config(config, pRemove_server, force, is_critical);
 
-                    vector<string> urls;
-                    for (const auto* pS : servers())
+                    http::Results results;
+                    if (CsMonitorServer::set_config(sv, body, m_http_config, &results))
                     {
-                        urls.push_back(cs::rest::create_url(*pS, m_config.admin_port, cs::rest::CONFIG));
-                    }
-
-                    vector<http::Result> results = http::put(urls, body);
-
-                    auto it = find_first_failed(results);
-
-                    if (it != results.end())
-                    {
-                        LOG_APPEND_JSON_ERROR(ppOutput, "Could not update configuration of all nodes. "
-                                              "Cluster state is now indeterminate.");
+                        success = true;
                     }
                     else
                     {
-                        *ppOutput = create_response(servers(), results);
+                        LOG_APPEND_JSON_ERROR(&pOutput, "Could not send new config to all servers.");
+                        results_to_json(sv, results, &pServers);
                     }
                 }
+                else
+                {
+                    LOG_PREPEND_JSON_ERROR(&pOutput, "Could not find current DDLProc/DMLProc.");
+                }
+            }
+            else
+            {
+                LOG_APPEND_JSON_ERROR(&pOutput, "Could not fetch configs from nodes.");
+                results_to_json(sv, configs, &pServers);
             }
         }
+        else
+        {
+            LOG_APPEND_JSON_ERROR(&pOutput, "Could not fetch statuses from nodes.");
+            results_to_json(sv, statuses, &pServers);
+        }
     }
+    else
+    {
+        LOG_APPEND_JSON_ERROR(&pOutput, "Could not start a transaction on all nodes.");
+        results_to_json(sv, results, &pServers);
+    }
+
+    if (success)
+    {
+        success = CsMonitorServer::commit(sv, m_http_config, &results);
+
+        if (success)
+        {
+            std::chrono::seconds shutdown_timeout(0);
+            if (!CsMonitorServer::shutdown({pRemove_server}, shutdown_timeout, m_http_config, &results))
+            {
+                MXS_ERROR("Could not shutdown '%s'.", pRemove_server->name());
+            }
+
+            pRemove_server->set_status(SERVER_MAINT);
+        }
+        else
+        {
+            LOG_APPEND_JSON_ERROR(&pOutput, "Could not commit changes, will attempt rollback.");
+            results_to_json(sv, results, &pServers);
+        }
+    }
+
+    if (!success)
+    {
+        if (!CsMonitorServer::rollback(sv, m_http_config, &results))
+        {
+            LOG_APPEND_JSON_ERROR(&pOutput, "Could not rollback changes, cluster state unknown.");
+            if (pServers)
+            {
+                json_decref(pServers);
+            }
+            results_to_json(sv, results, &pServers);
+        }
+    }
+
+    json_object_set_new(pOutput, csmon::keys::SUCCESS, json_boolean(success));
+    json_object_set_new(pOutput, csmon::keys::MESSAGE, json_string(message.str().c_str()));
+    if (pServers)
+    {
+        json_object_set_new(pOutput, csmon::keys::SERVERS, pServers);
+    }
+
+    *ppOutput = pOutput;
 
     pSem->post();
 }
@@ -1139,7 +1165,7 @@ void CsMonitor::cs_scan(json_t** ppOutput,
 
     const ServerVector& sv = servers();
 
-    string trx_id = next_trx_id();
+    string trx_id = next_trx_id("scan");
 
     http::Results results;
     if (CsMonitorServer::begin(sv, timeout, trx_id, m_http_config, &results))
@@ -1392,7 +1418,7 @@ void CsMonitor::cs_begin(json_t** ppOutput,
         sv = servers();
     }
 
-    string trx_id = next_trx_id();
+    string trx_id = next_trx_id("begin");
     http::Results results = CsMonitorServer::begin(sv, timeout, trx_id, m_http_config);
 
     json_t* pServers = nullptr;
@@ -1499,6 +1525,21 @@ void CsMonitor::cs_rollback(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorSe
     pSem->post();
 }
 #endif
+
+string CsMonitor::create_add_config(CsMonitorServer::Config& config, CsMonitorServer* pServer)
+{
+    // TODO: Add relevant information.
+    return config.response.body;
+}
+
+string CsMonitor::create_remove_config(CsMonitorServer::Config& config,
+                                       CsMonitorServer* pServer,
+                                       bool force,
+                                       bool is_critical)
+{
+    // TODO: Remove relevant information
+    return config.response.body;
+}
 
 CsMonitorServer* CsMonitor::create_server(SERVER* pServer,
                                           const mxs::MonitorServer::SharedSettings& shared)
