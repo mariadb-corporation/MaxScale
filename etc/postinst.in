@@ -14,7 +14,7 @@ mkdir -p @MAXSCALE_VARDIR@/run/maxscale
 
 # Create MaxScale user if it doesnt' exist
 getent passwd maxscale > /dev/null
-if [ $? -eq 0 ]
+if [ $? -ne 0 ]
 then
     groupadd -r maxscale
     useradd -r -s /bin/false -g maxscale maxscale
