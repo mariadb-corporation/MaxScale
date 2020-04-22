@@ -54,6 +54,13 @@ const char TXN[]          = "txn";
 
 }
 
+namespace xml
+{
+const char DDLPROC[] = "DDLProc";
+const char DMLPROC[] = "DMLProc";
+const char IPADDR[]  = "IPAddr";
+}
+
 namespace rest
 {
 enum Action {

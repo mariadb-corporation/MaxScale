@@ -22,19 +22,83 @@ using std::ostringstream;
 using std::unique_ptr;
 using std::vector;
 
-CsMonitorServer::CsMonitorServer(SERVER* pServer,
-                                 const SharedSettings& shared,
-                                 int64_t admin_port,
-                                 http::Config* pConfig)
-    : mxs::MonitorServer(pServer, shared)
-    , m_admin_port(admin_port)
-    , m_http_config(*pConfig)
+namespace
 {
+
+xmlNode* get_child_node(xmlNode* pNode, const char* zName)
+{
+    pNode = pNode->xmlChildrenNode;
+
+    while (pNode)
+    {
+        if (pNode->type == XML_ELEMENT_NODE && xmlStrcmp(pNode->name, (const xmlChar*) zName) == 0)
+        {
+            break;
+        }
+
+        pNode = pNode->next;
+    }
+
+    return pNode;
 }
 
-CsMonitorServer::~CsMonitorServer()
+const char* get_child_value(xmlNode* pNode, const char* zName)
 {
+    const char* pValue = nullptr;
+
+    pNode = pNode->xmlChildrenNode;
+
+    if (pNode)
+    {
+        if (pNode->content)
+        {
+            pValue = (const char*)pNode->content;
+        }
+    }
+
+    return pValue;
 }
+
+bool get_value(xmlNode* pNode,
+               const char* zElement_name,
+               const char* zValue_name,
+               string* pValue,
+               json_t* pOutput)
+{
+    bool rv = false;
+
+    pNode = get_child_node(pNode, zElement_name);
+
+    if (pNode)
+    {
+        const char* zValue = get_child_value(pNode, zValue_name);
+
+        if (zValue)
+        {
+            *pValue = zValue;
+            rv = true;
+        }
+        else
+        {
+            LOG_APPEND_JSON_ERROR(&pOutput,
+                                  "The Columnstore config contains the element '%s', but either its "
+                                  "child node '%s' is missing or it lacks a value.",
+                                  zElement_name, zValue_name);
+        }
+    }
+    else
+    {
+        LOG_APPEND_JSON_ERROR(&pOutput, "Columnstore config does not contain the element '%s'.",
+                              zElement_name);
+    }
+
+    return rv;
+}
+
+}
+
+//static
+int64_t CsMonitorServer::Status::s_uptime = 1;
 
 CsMonitorServer::Config CsMonitorServer::Config::create(const http::Result& response)
 {
@@ -78,6 +142,62 @@ CsMonitorServer::Config CsMonitorServer::Config::create(const http::Result& resp
     }
 
     return Config(response, std::move(timestamp), std::move(sJson), std::move(sXml));
+}
+
+bool CsMonitorServer::Config::get_ddlproc_ip(std::string* pIp, json_t* pOutput) const
+{
+    return get_value(cs::xml::DDLPROC, cs::xml::IPADDR, pIp, pOutput);
+}
+
+bool CsMonitorServer::Config::get_dmlproc_ip(std::string* pIp, json_t* pOutput) const
+{
+    return get_value(cs::xml::DMLPROC, cs::xml::IPADDR, pIp, pOutput);
+}
+
+bool CsMonitorServer::Config::get_value(const char* zElement_name,
+                                        const char* zValue_name,
+                                        std::string* pIp,
+                                        json_t* pOutput) const
+{
+    bool rv = false;
+
+    if (ok())
+    {
+        xmlNode* pNode = xmlDocGetRootElement(this->sXml.get());
+
+        if (pNode)
+        {
+            rv = ::get_value(pNode, zElement_name, zValue_name, pIp, pOutput);
+        }
+        else
+        {
+            LOG_APPEND_JSON_ERROR(&pOutput,
+                                  "'%s' of '%s' queried, but Columnstore XML config is empty.",
+                                  zValue_name, zElement_name);
+        }
+    }
+    else
+    {
+        assert(!true);
+        MXS_ERROR("'%s' of '%s' queried of config that is not valid.",
+                  zValue_name, zElement_name);
+    }
+
+    return rv;
+}
+
+CsMonitorServer::CsMonitorServer(SERVER* pServer,
+                                 const SharedSettings& shared,
+                                 int64_t admin_port,
+                                 http::Config* pConfig)
+    : mxs::MonitorServer(pServer, shared)
+    , m_admin_port(admin_port)
+    , m_http_config(*pConfig)
+{
+}
+
+CsMonitorServer::~CsMonitorServer()
+{
 }
 
 CsMonitorServer::Config CsMonitorServer::fetch_config() const

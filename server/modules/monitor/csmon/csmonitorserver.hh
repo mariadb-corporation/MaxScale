@@ -47,8 +47,11 @@ public:
         cs::DbrmMode            dbrm_mode;
         std::vector<int>        dbroots;
         std::unique_ptr<json_t> sJson;
+        std::chrono::seconds    uptime;
 
     private:
+        static int64_t s_uptime;
+
         Status(const mxb::http::Result& response,
                cs::ClusterMode cluster_mode,
                cs::DbrmMode dbrm_mode,
@@ -59,6 +62,7 @@ public:
             , dbrm_mode(dbrm_mode)
             , dbroots(dbroots)
             , sJson(std::move(sJson))
+            , uptime(s_uptime++)
         {
         }
     };
@@ -75,6 +79,9 @@ public:
         {
             return response.ok() && sJson && sXml;
         }
+
+        bool get_ddlproc_ip(std::string* pIp, json_t* pOutput) const;
+        bool get_dmlproc_ip(std::string* pIp, json_t* pOutput) const;
 
         using time_point = std::chrono::system_clock::time_point;
 
@@ -94,6 +101,11 @@ public:
             , sXml(std::move(sXml))
         {
         }
+
+        bool get_value(const char* zElement_name,
+                       const char* zValue_name,
+                       std::string* pIp,
+                       json_t* pOutput) const;
     };
 
     using Result   = mxb::http::Result;
