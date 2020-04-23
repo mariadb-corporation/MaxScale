@@ -105,5 +105,5 @@ else()
   endif()
 
   message(STATUS "You can install startup scripts and system configuration files for MaxScale by running the 'postinst' shell script located at ${CMAKE_INSTALL_PREFIX}.")
-  message(STATUS "To remove these installed files, run the 'postrm' shell script located in the same folder.")
+  message(STATUS "To remove these installed files, run the 'prerm' shell script located in the same folder.")
 endif()
