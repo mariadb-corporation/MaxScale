@@ -45,6 +45,9 @@ public:
     void stop_slave() override;
     void reset_slave() override;
     void show_slave_status() override;
+    void show_master_status() override;
+    void show_binlogs() override;
+    void show_variables(const std::string& like) override;
     void flush_logs()  override;
     void purge_logs() override;
     void error(const std::string& err) override;

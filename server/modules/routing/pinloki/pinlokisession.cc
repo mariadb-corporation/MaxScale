@@ -22,7 +22,12 @@ namespace
 GWBUF* create_resultset(const std::vector<std::string>& columns, const std::vector<std::string>& row)
 {
     auto rset = ResultSet::create(columns);
-    rset->add_row(row);
+
+    if (!row.empty())
+    {
+        rset->add_row(row);
+    }
+
     return rset->as_buffer().release();
 }
 }
@@ -123,9 +128,30 @@ void PinlokiSession::send(GWBUF* buffer)
     mxs::RouterSession::clientReply(buffer, down, reply);
 }
 
-void PinlokiSession::select(const std::vector<std::string>& values)
+void PinlokiSession::select(const std::vector<std::string>& fields)
 {
-    send(create_resultset({"1"}, {"1"}));
+    auto values = fields;
+
+    for (auto& a : values)
+    {
+        auto val = mxb::lower_case_copy(a);
+        if (val == "unix_timestamp()")
+        {
+            a = std::to_string(time(nullptr));
+        }
+        else if (val == "@@global.gtid_domain_id")
+        {
+            // TODO: Get this from either the master or the configuration
+            val = "1";
+        }
+        else if (val == "@master_binlog_checksum")
+        {
+            // TODO: Store the master's response to this
+            val = "CRC32";
+        }
+    }
+
+    send(create_resultset(fields, values));
 }
 
 void PinlokiSession::set(const std::string& key, const std::string& value)
@@ -156,6 +182,32 @@ void PinlokiSession::reset_slave()
 void PinlokiSession::show_slave_status()
 {
     send(create_resultset({"1"}, {"1"}));
+}
+
+void PinlokiSession::show_master_status()
+{
+    // TODO: Read these from the Inventory
+    send(create_resultset({"File", "Position", "Binlog_Do_DB", "Binlog_Ignore_DB"},
+                          {"binlog.000001", "4", "", ""}));
+}
+
+void PinlokiSession::show_binlogs()
+{
+    // TODO: Read these from the Inventory
+    send(create_resultset({"Log_name", "File_size"}, {"binlog.000001", "4"}));
+}
+
+void PinlokiSession::show_variables(const std::string& like)
+{
+    std::vector<std::string> values;
+
+    if (strcasestr(like.c_str(), "server_id") == 0)
+    {
+        // TODO: Get the server_id from the router instance
+        values = {like, "1"};
+    }
+
+    send(create_resultset({"Variable_name", "Value"}, values));
 }
 
 void PinlokiSession::flush_logs()
