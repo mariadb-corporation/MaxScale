@@ -2095,7 +2095,7 @@ void MonitorServer::update_disk_space_status()
                       "has not been installed. Disk space checking has been disabled.",
                       pServer->name(),
                       pServer->address(),
-                      pServer->version_string());
+                      pServer->info().version_string());
         }
         else
         {

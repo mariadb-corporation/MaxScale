@@ -89,7 +89,7 @@ bool supports_extended_caps(SERVICE* service)
 
     for (SERVER* s : service->reachable_servers())
     {
-        if (s->version().total >= 100200)
+        if (s->info().version_num().total >= 100200)
         {
             rval = true;
             break;

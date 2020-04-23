@@ -771,7 +771,7 @@ json_t* Server::json_attributes() const
     string stat = status_string();
     json_object_set_new(attr, CN_STATE, json_string(stat.c_str()));
 
-    json_object_set_new(attr, CN_VERSION_STRING, json_string(version_string()));
+    json_object_set_new(attr, CN_VERSION_STRING, json_string(m_info.version_string()));
     json_object_set_new(attr, "replication_lag", json_integer(replication_lag()));
 
     cleanup_persistent_connections();
@@ -838,12 +838,12 @@ void Server::VersionInfo::set(uint64_t version, const std::string& version_str)
     careful_strcpy(m_version_str, MAX_VERSION_LEN, version_str);
 }
 
-const Server::Version& Server::VersionInfo::version_num() const
+const Server::VersionInfo::Version& Server::VersionInfo::version_num() const
 {
     return m_version_num;
 }
 
-Server::Type Server::VersionInfo::type() const
+Server::VersionInfo::Type Server::VersionInfo::type() const
 {
     return m_type;
 }
@@ -851,6 +851,11 @@ Server::Type Server::VersionInfo::type() const
 const char* Server::VersionInfo::version_string() const
 {
     return m_version_str;
+}
+
+const SERVER::VersionInfo& Server::info() const
+{
+    return m_info;
 }
 
 ServerEndpoint::ServerEndpoint(mxs::Component* up, MXS_SESSION* session, Server* server)

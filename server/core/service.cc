@@ -1561,7 +1561,7 @@ std::pair<uint64_t, uint64_t> Service::get_versions(const std::vector<SERVER*>& 
 
         for (auto s : servers)
         {
-            auto srv_version = s->version().total;
+            auto srv_version = s->info().version_num().total;
             v_min = std::min(srv_version, v_min);
             v_max = std::max(srv_version, v_max);
         }
@@ -1739,11 +1739,12 @@ std::string SERVICE::version_string() const
         uint64_t smallest_found = UINT64_MAX;
         for (auto server : reachable_servers())
         {
-            auto version = server->version();
-            if (version.total > 0 && version.total < smallest_found)
+            auto& info = server->info();
+            auto version = info.version_num().total;
+            if (version > 0 && version < smallest_found)
             {
-                rval = server->version_string();
-                smallest_found = version.total;
+                rval = info.version_string();
+                smallest_found = version;
             }
         }
     }

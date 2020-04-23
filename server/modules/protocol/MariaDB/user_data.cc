@@ -37,6 +37,7 @@ using UserEntryType = mariadb::UserEntryType;
 using SUserEntry = std::unique_ptr<UserEntry>;
 using mariadb::UserSearchSettings;
 using mariadb::UserEntryResult;
+using ServerType = SERVER::VersionInfo::Type;
 
 namespace
 {
@@ -317,28 +318,27 @@ bool MariaDBUserManager::update_users()
             }
             auto load_result = LoadResult::QUERY_FAILED;
 
-            // If server version is unknown (no monitor), set the version here.
-            auto srv_type = srv->type();
-            if (srv_type == SERVER::Type::UNKNOWN)
+            // If server version is unknown (no monitor), update its version info.
+            auto& srv_info = srv->info();
+            if (srv_info.type() == ServerType::UNKNOWN)
             {
-                auto version_info = con.version_info();
-                srv->set_version(version_info.version, version_info.info);
-                srv_type = srv->type();
+                auto new_info = con.version_info();
+                srv->set_version(new_info.version, new_info.info);
             }
 
-            switch (srv_type)
+            switch (srv_info.type())
             {
-            case SERVER::Type::MYSQL:
-            case SERVER::Type::MARIADB:
+            case ServerType::MYSQL:
+            case ServerType::MARIADB:
                 load_result = load_users_mariadb(con, srv, &temp_userdata);
                 break;
 
-            case SERVER::Type::CLUSTRIX:
+            case ServerType::CLUSTRIX:
                 load_result = load_users_clustrix(con, srv, &temp_userdata);
                 break;
 
-            case SERVER::Type::UNKNOWN:
-            case SERVER::Type::BLR:
+            case ServerType::UNKNOWN:
+            case ServerType::BLR:
                 // Cannot query these types.
                 break;
             }
@@ -408,8 +408,8 @@ MariaDBUserManager::load_users_mariadb(mxq::MariaDB& con, SERVER* srv, UserDatab
     // Roles were added in server 10.0.5, default roles in server 10.1.1. Strictly speaking, reading the
     // roles_mapping table for 10.0.5 is not required as they won't be used. Read anyway in case
     // diagnostics prints it.
-    auto version = srv->version();
-    bool role_support = (version.total >= 100005);
+    auto& info = srv->info();
+    bool role_support = (info.version_num().total >= 100005);
 
     // Run the queries as one multiquery.
     vector<string> multiquery;

@@ -297,7 +297,7 @@ MariaDB::VersionInfo MariaDB::version_info() const
         info = mysql_get_server_info(m_conn);
         version = mysql_get_server_version(m_conn);
     }
-    return VersionInfo {info ? info : "", version};
+    return VersionInfo {version, info ? info : ""};
 }
 
 MariaDBQueryResult::MariaDBQueryResult(MYSQL_RES* resultset)

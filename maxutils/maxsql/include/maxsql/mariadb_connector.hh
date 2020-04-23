@@ -51,8 +51,8 @@ public:
 
     struct VersionInfo
     {
-        std::string info;
         uint64_t    version {0};
+        std::string info;
     };
 
     static constexpr unsigned int INTERNAL_ERROR = 1;

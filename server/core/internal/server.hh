@@ -32,7 +32,6 @@ public:
     static const int MAX_ADDRESS_LEN = 1024;
     static const int MAX_MONUSER_LEN = 512;
     static const int MAX_MONPW_LEN = 512;
-    static const int MAX_VERSION_LEN = 256;
 
     class ParamDiskSpaceLimits : public mxs::config::ConcreteParam<ParamDiskSpaceLimits
                                                                    , DiskSpaceLimits>
@@ -131,20 +130,7 @@ public:
 
     void set_version(uint64_t version_num, const std::string& version_str) override;
 
-    const Version& version() const override
-    {
-        return m_info.version_num();
-    }
-
-    Type type() const override
-    {
-        return m_info.type();
-    }
-
-    const char* version_string() const override
-    {
-        return m_info.version_string();
-    }
+    const VersionInfo& info() const override;
 
     const char* name() const override
     {
@@ -406,35 +392,6 @@ private:
 
     protected:
         bool post_configure() override;
-    };
-
-    /**
-     * Stores server version info. Encodes/decodes to/from the version number received from the server.
-     * Also stores the version string and parses information from it. Assumed to rarely change, so reads
-     * are not synchronized. */
-    class VersionInfo
-    {
-    public:
-
-        /**
-         * Reads in version data. Deduces server type from version string.
-         *
-         * @param version_num Version number from server
-         * @param version_string Version string from server
-         */
-        void set(uint64_t version_num, const std::string& version_string);
-
-        const Version& version_num() const;
-        Type           type() const;
-        const char*    version_string() const;
-
-    private:
-        mutable std::mutex m_lock;      /**< Protects against concurrent writing */
-
-        Version m_version_num;          /**< Numeric version */
-        Type    m_type {Type::UNKNOWN}; /**< Server type */
-
-        char m_version_str[MAX_VERSION_LEN + 1] {'\0'};     /**< Server version string */
     };
 
     const std::string m_name;       /**< Server config name */

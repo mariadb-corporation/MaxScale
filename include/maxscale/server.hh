@@ -43,21 +43,52 @@ class SERVER : public mxs::Target
 {
 public:
 
-    enum class Type
+    /**
+     * Stores server version info. Encodes/decodes to/from the version number received from the server.
+     * Also stores the version string and parses information from it. Assumed to rarely change, so reads
+     * are not synchronized. */
+    class VersionInfo
     {
-        UNKNOWN,    /**< Not connected yet */
-        MYSQL,      /**< MySQL 5.5 or later. */
-        MARIADB,    /**< MariaDB 5.5 or later */
-        CLUSTRIX,   /**< Clustrix node */
-        BLR         /**< Binlog router */
-    };
+    public:
 
-    struct Version
-    {
-        uint64_t total {0};     /**< Total version number received from server */
-        uint32_t major {0};     /**< Major version */
-        uint32_t minor {0};     /**< Minor version */
-        uint32_t patch {0};     /**< Patch version */
+        enum class Type
+        {
+            UNKNOWN,    /**< Not connected yet */
+            MYSQL,      /**< MySQL 5.5 or later. */
+            MARIADB,    /**< MariaDB 5.5 or later */
+            CLUSTRIX,   /**< Clustrix node */
+            BLR         /**< Binlog router */
+        };
+
+        struct Version
+        {
+            uint64_t total {0};     /**< Total version number received from server */
+            uint32_t major {0};     /**< Major version */
+            uint32_t minor {0};     /**< Minor version */
+            uint32_t patch {0};     /**< Patch version */
+        };
+
+        /**
+         * Reads in version data. Deduces server type from version string.
+         *
+         * @param version_num Version number from server
+         * @param version_string Version string from server
+         */
+        void set(uint64_t version_num, const std::string& version_string);
+
+        Type           type() const;
+        const Version& version_num() const;
+        const char*    version_string() const;
+
+    private:
+        static const int MAX_VERSION_LEN = 256;
+
+        mutable std::mutex m_lock;      /**< Protects against concurrent writing */
+
+        Version m_version_num;          /**< Numeric version */
+        Type    m_type {Type::UNKNOWN}; /**< Server type */
+
+        char m_version_str[MAX_VERSION_LEN + 1] {'\0'};     /**< Server version string */
     };
 
     struct PoolStats
@@ -166,26 +197,12 @@ public:
     virtual void set_version(uint64_t version_num, const std::string& version_str) = 0;
 
     /**
-     * Get numeric version information. The contents of the referenced struct may change at any time,
+     * Get version information. The contents of the referenced object may change at any time,
      * although in practice this is rare.
      *
-     * @return Total, major, minor and patch numbers
+     * @return Version information
      */
-    virtual const Version& version() const = 0;
-
-    /**
-     * Get the type of the server.
-     *
-     * @return Server type
-     */
-    virtual Type type() const = 0;
-
-    /**
-     * Get version string.
-     *
-     * @return Version string
-     */
-    virtual const char* version_string() const = 0;
+    virtual const VersionInfo& info() const = 0;
 
     /**
      * Update server address.

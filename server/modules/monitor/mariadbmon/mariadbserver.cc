@@ -855,12 +855,13 @@ void MariaDBServer::update_server_version()
     mxs_mysql_update_server_version(srv, conn);
 
     m_capabilities = Capabilities();
-    auto type = srv->type();
+    auto& info = srv->info();
+    auto type = info.type();
 
-    if (type == SERVER::Type::MARIADB || type == SERVER::Type::MYSQL)
+    if (type == ServerType::MARIADB || type == ServerType::MYSQL)
     {
         /* Not a binlog server, check version number and supported features. */
-        auto& srv_version = srv->version();
+        auto& srv_version = info.version_num();
         auto major = srv_version.major;
         auto minor = srv_version.minor;
         auto patch = srv_version.patch;
@@ -869,7 +870,7 @@ void MariaDBServer::update_server_version()
         {
             m_capabilities.basic_support = true;
             // For more specific features, at least MariaDB 10.X is needed.
-            if (type == SERVER::Type::MARIADB && major >= 10)
+            if (type == ServerType::MARIADB && major >= 10)
             {
                 // 10.0.2 or 10.1.X or greater than 10
                 if (((minor == 0 && patch >= 2) || minor >= 1) || major > 10)
@@ -884,7 +885,7 @@ void MariaDBServer::update_server_version()
             }
         }
     }
-    else if (type == SERVER::Type::BLR)
+    else if (type == ServerType::BLR)
     {
         m_capabilities.basic_support = true;
         m_capabilities.gtid = true;
@@ -894,13 +895,13 @@ void MariaDBServer::update_server_version()
     {
         if (!m_capabilities.gtid)
         {
-            MXB_WARNING("Server '%s' (%s) does not support MariDB GTID.", name(), srv->version_string());
+            MXB_WARNING("Server '%s' (%s) does not support MariaDB gtid.", name(), info.version_string());
         }
     }
     else
     {
         MXB_ERROR("Server '%s' (%s) is unsupported. The server is ignored by the monitor.",
-                  name(), srv->version_string());
+                  name(), info.version_string());
     }
 }
 
@@ -2532,7 +2533,7 @@ ServerLock MariaDBServer::lock_status(LockType locktype) const
     return (locktype == LockType::SERVER) ? m_serverlock : m_masterlock;
 }
 
-SERVER::Type MariaDBServer::server_type() const
+SERVER::VersionInfo::Type MariaDBServer::server_type() const
 {
-    return server->type();
+    return server->info().type();
 }

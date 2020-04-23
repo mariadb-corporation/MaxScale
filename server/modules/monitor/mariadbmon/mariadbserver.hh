@@ -24,6 +24,7 @@
 class MariaDBServer;
 // Server pointer array
 typedef std::vector<MariaDBServer*> ServerArray;
+using ServerType = SERVER::VersionInfo::Type;
 
 /**
  * Data required for checking replication topology cycles and other graph algorithms. This data is mostly
@@ -565,7 +566,7 @@ public:
 
     bool marked_as_master(std::string* why_not = nullptr) const;
 
-    SERVER::Type server_type() const;
+    SERVER::VersionInfo::Type server_type() const;
 
 private:
     using EventManipulator = std::function<void (const EventInfo& event, json_t** error_out)>;
