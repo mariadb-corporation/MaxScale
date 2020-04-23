@@ -17,12 +17,9 @@
 #include <mutex>
 #include <string>
 #include <unordered_map>
-#include <maxbase/average.hh>
 #include <maxscale/config_common.hh>
-#include <maxscale/modinfo.hh>
 #include <maxscale/ssl.hh>
 #include <maxscale/target.hh>
-#include <maxscale/workerlocal.hh>
 
 /**
  * Server configuration parameters names

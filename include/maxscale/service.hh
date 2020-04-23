@@ -28,6 +28,7 @@
 #include <maxscale/filter.hh>
 #include <maxscale/server.hh>
 #include <maxscale/target.hh>
+#include <maxscale/workerlocal.hh>
 
 class SERVER;
 struct mxs_router;

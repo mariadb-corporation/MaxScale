@@ -432,7 +432,7 @@ MariaDBUserManager::load_users_mariadb(mxq::MariaDB& con, SERVER* srv, UserDatab
         QResult roles_res = role_support ? move(multiq_result[4]) : nullptr;
 
         rval = LoadResult::INVALID_DATA;
-        if (read_users_mariadb(move(users_res), output))
+        if (read_users_mariadb(move(users_res), info, output))
         {
             read_dbs_and_roles(move(db_grants_res), move(roles_res), output);
             read_proxy_grants(move(proxies_res), output);
@@ -458,12 +458,25 @@ MariaDBUserManager::load_users_clustrix(mxq::MariaDB& con, SERVER* srv, UserData
     return rval;
 }
 
-bool MariaDBUserManager::read_users_mariadb(QResult users, UserDatabase* output)
+/**
+ * Read user fetch results from MariaDB or MySQL server. Clustrix is handled by a different function.
+ *
+ * @param users Results from query
+ * @param srv_info Server version info
+ * @param output Results storage object
+ * @return True on success
+ */
+bool MariaDBUserManager::read_users_mariadb(QResult users, const SERVER::VersionInfo& srv_info,
+                                            UserDatabase* output)
 {
     auto get_bool_enum = [&users](int64_t col_ind) {
             string val = users->get_string(col_ind);
             return val == "Y" || val == "y";
         };
+
+    // MySQL-server 5.7 and later do not have a "Password"-column. The pw is in the
+    // "authentication_string"-column.
+    bool have_pw_column = srv_info.type() == ServerType::MARIADB || srv_info.version_num().total < 50700;
 
     // Get column indexes for the interesting fields. Depending on backend version, they may not all
     // exist. Some of the field name start with a capital and some don't. Should the index search be
@@ -484,7 +497,7 @@ bool MariaDBUserManager::read_users_mariadb(QResult users, UserDatabase* output)
 
     bool has_required_fields = (ind_user >= 0) && (ind_host >= 0)
         && (ind_sel_priv >= 0) && (ind_ins_priv >= 0) && (ind_upd_priv >= 0) && (ind_del_priv >= 0)
-        && (ind_super_priv >= 0) && (ind_ssl >= 0) && (ind_plugin >= 0) && (ind_pw >= 0)
+        && (ind_super_priv >= 0) && (ind_ssl >= 0) && (ind_plugin >= 0) && (!have_pw_column || ind_pw >= 0)
         && (ind_auth_str >= 0);
 
     bool error = false;
@@ -509,7 +522,7 @@ bool MariaDBUserManager::read_users_mariadb(QResult users, UserDatabase* output)
             new_entry.ssl = !users->get_string(ind_ssl).empty();
 
             new_entry.plugin = users->get_string(ind_plugin);
-            new_entry.password = users->get_string(ind_pw);
+            new_entry.password = have_pw_column ? users->get_string(ind_pw) : users->get_string(ind_auth_str);
 
             // Hex-form passwords have a '*' at the beginning, remove it.
             auto& pwd = new_entry.password;

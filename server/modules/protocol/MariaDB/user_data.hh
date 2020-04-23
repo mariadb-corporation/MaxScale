@@ -19,14 +19,12 @@
 #include <map>
 #include <set>
 #include <thread>
-#include <maxbase/stopwatch.hh>
 #include <maxsql/mariadb_connector.hh>
 #include <maxsql/queryresult.hh>
 #include <maxscale/protocol2.hh>
 #include <maxscale/protocol/mariadb/authenticator.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
-
-class SERVER;
+#include <maxscale/server.hh>
 
 /**
  * This class contains user data retrieved from the mysql-database.
@@ -202,7 +200,8 @@ private:
 
     void updater_thread_function();
 
-    bool read_users_mariadb(QResult users, UserDatabase* output);
+    bool read_users_mariadb(QResult users, const SERVER::VersionInfo& srv_info,
+                            UserDatabase* output);
     void read_dbs_and_roles(QResult db_grants, QResult roles, UserDatabase* output);
     void read_proxy_grants(QResult proxies, UserDatabase* output);
     void read_databases(QResult dbs, UserDatabase* output);
