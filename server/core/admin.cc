@@ -48,6 +48,9 @@ namespace
 
 static char auth_failure_response[] = "{\"errors\": [ { \"detail\": \"Access denied\" } ] }";
 
+const std::string TOKEN_BODY = "token_body";
+const std::string TOKEN_SIG = "token_sig";
+
 static struct ThisUnit
 {
     struct MHD_Daemon* daemon = nullptr;
@@ -74,11 +77,37 @@ int header_cb(void* cls,
     return MHD_YES;
 }
 
+int cookie_cb(void* cls,
+              enum MHD_ValueKind kind,
+              const char* key,
+              const char* value)
+{
+    std::pair<std::string, std::string>* res = (std::pair<std::string, std::string>*)cls;
+
+    if (key == TOKEN_BODY)
+    {
+        res->first = value;
+    }
+    else if (key == TOKEN_SIG)
+    {
+        res->second = value;
+    }
+
+    return MHD_YES;
+}
+
 Client::Headers get_headers(MHD_Connection* connection)
 {
     Client::Headers rval;
     MHD_get_connection_values(connection, MHD_HEADER_KIND, header_cb, &rval);
     return rval;
+}
+
+std::string get_cookie_token(MHD_Connection* connection)
+{
+    std::pair<std::string, std::string> token;
+    MHD_get_connection_values(connection, MHD_COOKIE_KIND, cookie_cb, &token);
+    return token.first + token.second;
 }
 
 static bool modifies_data(const string& method)
@@ -570,6 +599,8 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
     MXS_DEBUG("Request:\n%s", request.to_string().c_str());
     request.fix_api_version();
 
+    std::string claim_cookie;
+    std::string sig_cookie;
 
     if (is_auth_endpoint(request))
     {
@@ -580,6 +611,17 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
             .set_issued_at(now)
             .set_expires_at(now + std::chrono::seconds {28800})
             .sign(jwt::algorithm::hs256 {this_unit.sign_key});
+
+        if (request.get_option("persist") == "yes")
+        {
+            // Store the token signature part in a HttpOnly cookie and the claims in a normal one. This allows
+            // the token information to be displayed while preventing the actual token from leaking due to a
+            // CSRF attack.
+            auto pos = token.find_last_of('.');
+            auto cookie_opts = "; SameSite=Strict; Secure; Max-Age=28800";
+            claim_cookie = TOKEN_BODY + "=" + token.substr(0, pos) + cookie_opts;
+            sig_cookie = TOKEN_SIG + "=" + token.substr(pos) + cookie_opts + "; HttpOnly";
+        }
 
         reply = HttpResponse(MHD_HTTP_OK, json_pack("{s {s: s}}", "meta", "token", token.c_str()));
     }
@@ -623,6 +665,12 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
     // Prevent caching without verification
     MHD_add_response_header(response, "Cache-Control", "no-cache");
 
+    if (!claim_cookie.empty() && !sig_cookie.empty())
+    {
+        MHD_add_response_header(response, MHD_HTTP_HEADER_SET_COOKIE, claim_cookie.c_str());
+        MHD_add_response_header(response, MHD_HTTP_HEADER_SET_COOKIE, sig_cookie.c_str());
+    }
+
     int rval = MHD_queue_response(m_connection, reply.get_code(), response);
     MHD_destroy_response(response);
 
@@ -663,9 +711,18 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
 
     if (mxs::Config::get().admin_auth)
     {
+        auto cookie_token = get_cookie_token(m_connection);
         auto token = get_header(MHD_HTTP_HEADER_AUTHORIZATION);
 
-        if (token.substr(0, 7) == "Bearer ")
+        if (!cookie_token.empty())
+        {
+            if (!auth_with_token(cookie_token))
+            {
+                send_token_auth_error();
+                rval = false;
+            }
+        }
+        else if (token.substr(0, 7) == "Bearer ")
         {
             if (!auth_with_token(token.substr(7)))
             {
