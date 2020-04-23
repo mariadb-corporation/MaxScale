@@ -156,37 +156,44 @@ struct error_handler
     }
 };
 
-// Declaration of rule ID types, used to distinguish the rules (maybe?)
-struct number : error_handler {};
-struct str : error_handler {};
-struct sq_str : error_handler {};
-struct dq_str : error_handler {};
-struct field : error_handler {};
-struct variable : error_handler {};
-struct change_master_variable : error_handler {};
-struct generic_key : error_handler {};
-struct select : error_handler {};
-struct set : error_handler {};
-struct change_master : error_handler {};
-struct slave : error_handler {};
-struct logs : error_handler {};
-struct grammar : error_handler {};
 
-// Rule declaractions
-const x3::rule<struct eq> eq = "=";
-const x3::rule<struct number> number = "number";
-const x3::rule<struct str, std::string> str = "string";
-const x3::rule<struct sq_str, std::string> sq_str = "single-quoted string";
-const x3::rule<struct dq_str, std::string> dq_str = "double-quoted string";
-const x3::rule<struct field, Field> field = "field";
-const x3::rule<struct variable, Variable> variable = "key-value";
-const x3::rule<struct change_master_variable, ChangeMasterVariable> change_master_variable = "key-value";
-const x3::rule<struct select, Select> select = "select";
-const x3::rule<struct set, Set> set = "set";
-const x3::rule<struct change_master, ChangeMaster> change_master = "change_master";
-const x3::rule<struct slave, Slave> slave = "slave";
-const x3::rule<struct logs, Logs> logs = "logs";
-const x3::rule<struct grammar, Command> grammar = "grammar";
+/**
+ * Declare a rule with an attribute
+ *
+ * @param id        Rule ID, declared as a variable
+ * @param desc      Rule type description
+ * @param attr_type Rule attribute (i.e. return value)
+ */
+#define DECLARE_ATTR_RULE(id, desc, attr_type) \
+    struct id : public error_handler {}; \
+    const x3::rule<struct id, attr_type> id = desc
+
+/**
+ * Declare a rule
+ *
+ * The rule attribute is deduced using the rule definition.
+ *
+ * @param id        Rule ID, declared as a variable
+ * @param desc      Rule type description
+ */
+#define DECLARE_RULE(id, desc) \
+    struct id : public error_handler {}; \
+    const x3::rule<struct id> id = desc
+
+DECLARE_RULE(eq, "=");
+DECLARE_RULE(number, "number");
+DECLARE_ATTR_RULE(str, "string", std::string);
+DECLARE_ATTR_RULE(sq_str, "string", std::string);
+DECLARE_ATTR_RULE(dq_str, "single-quoted string", std::string);
+DECLARE_ATTR_RULE(field, "field", Field);
+DECLARE_ATTR_RULE(variable, "key-value", Variable);
+DECLARE_ATTR_RULE(change_master_variable, "key-value", ChangeMasterVariable);
+DECLARE_ATTR_RULE(select, "select", Select);
+DECLARE_ATTR_RULE(set, "set", Set);
+DECLARE_ATTR_RULE(change_master, "change master", ChangeMaster);
+DECLARE_ATTR_RULE(slave, "slave", Slave);
+DECLARE_ATTR_RULE(logs, "logs", Logs);
+DECLARE_ATTR_RULE(grammar, "grammar", Command);
 
 //
 // The actual grammar part
