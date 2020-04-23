@@ -19,8 +19,7 @@
 
 namespace
 {
-GWBUF* create_resultset(const std::initializer_list<std::string>& columns,
-                        const std::initializer_list<std::string>& row)
+GWBUF* create_resultset(const std::vector<std::string>& columns, const std::vector<std::string>& row)
 {
     auto rset = ResultSet::create(columns);
     rset->add_row(row);
@@ -65,7 +64,12 @@ int32_t PinlokiSession::routeQuery(GWBUF* pPacket)
             auto sql = mxs::extract_sql(buf.get());
             MXS_INFO("COM_QUERY: %s", sql.c_str());
             parser::parse(sql, this);
+            rval = 1;
         }
+        break;
+
+    case COM_QUIT:
+        rval = 1;
         break;
     }
 

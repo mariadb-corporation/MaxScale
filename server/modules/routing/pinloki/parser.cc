@@ -193,6 +193,7 @@ DECLARE_ATTR_RULE(set, "set", Set);
 DECLARE_ATTR_RULE(change_master, "change master", ChangeMaster);
 DECLARE_ATTR_RULE(slave, "slave", Slave);
 DECLARE_ATTR_RULE(logs, "logs", Logs);
+DECLARE_RULE(end_of_input, "end of input");
 DECLARE_ATTR_RULE(grammar, "grammar", Command);
 
 //
@@ -202,7 +203,7 @@ DECLARE_ATTR_RULE(grammar, "grammar", Command);
 // Basic types
 const auto eq_def = x3::omit['='];
 const auto number_def = x3::int_ | x3::double_ | (x3::lit("0x") >> x3::int_);
-const auto str_def = x3::lexeme[+(x3::ascii::alnum | x3::char_("_@."))];
+const auto str_def = x3::lexeme[+(x3::ascii::alnum | x3::char_("_@.()"))];
 const auto sq_str_def = x3::lexeme[x3::lit('\'') > +(x3::char_ - '\'') > x3::lit('\'')];
 const auto dq_str_def = x3::lexeme[x3::lit('"') > +(x3::char_ - '"') > x3::lit('"')];
 
@@ -211,7 +212,11 @@ const auto field_def = str | sq_str | dq_str | number;
 const auto variable_def = str > eq > field;
 
 // SET and SELECT commands
-const auto select_def = x3::lit("SELECT") > field % ',';
+const auto select_def = x3::lit("SELECT") > field % ','
+    >> -x3::omit[
+    (x3::lit("LIMIT") > number % ',') | (x3::lit("GROUP BY") > str % ',')
+    ];
+
 const auto set_def = x3::lit("SET") > (variable % ',');
 
 // CHANGE MASTER TO, only accepts a limited set of keys
@@ -229,11 +234,11 @@ const auto grammar_def = x3::no_case[
     | set
     | change_master
     | slave
-    | logs];
+    | logs] > end_of_input;
 
 // Boost magic that combines the rule declarations and definitions (definitions _must_ end in a _def suffix)
-BOOST_SPIRIT_DEFINE(number, str, sq_str, dq_str, field, variable, select, set,
-                    change_master_variable, change_master, slave, logs, grammar, eq);
+BOOST_SPIRIT_DEFINE(number, str, sq_str, dq_str, field, variable, select, set, eq,
+                    change_master_variable, change_master, slave, logs, end_of_input, grammar);
 
 
 // The visitor class that does the final processing of the result
