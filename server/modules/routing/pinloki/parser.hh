@@ -48,6 +48,9 @@ struct Handler
     virtual void stop_slave() = 0;
     virtual void reset_slave() = 0;
     virtual void show_slave_status() = 0;
+    virtual void show_master_status() = 0;
+    virtual void show_binlogs() = 0;
+    virtual void show_variables(const std::string& like) = 0;
 
     virtual void flush_logs() = 0;
     virtual void purge_logs() = 0;

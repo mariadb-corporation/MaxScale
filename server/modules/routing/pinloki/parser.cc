@@ -40,6 +40,13 @@ enum class Logs
     PURGE,
 };
 
+enum class Show
+{
+    MASTER_STATUS,
+    SLAVE_STATUS,
+    BINLOGS,
+};
+
 enum ChangeMasterType
 {
     MASTER_HOST,
@@ -139,8 +146,13 @@ struct ChangeMaster
     std::vector<ChangeMasterVariable> values;
 };
 
+struct ShowVariables
+{
+    std::string like;
+};
+
 // The root type that is returned as the result of parsing
-using Command = x3::variant<Select, Set, ChangeMaster, Slave, Logs>;
+using Command = x3::variant<Select, Set, ChangeMaster, Slave, Logs, Show, ShowVariables>;
 
 // Error handler that the rule types must inherit from, allows pretty-printing of errors
 struct error_handler
@@ -185,9 +197,15 @@ DECLARE_RULE(number, "number");
 DECLARE_ATTR_RULE(str, "string", std::string);
 DECLARE_ATTR_RULE(sq_str, "string", std::string);
 DECLARE_ATTR_RULE(dq_str, "single-quoted string", std::string);
+DECLARE_ATTR_RULE(q_str, "quoted string", std::string);
 DECLARE_ATTR_RULE(field, "field", Field);
 DECLARE_ATTR_RULE(variable, "key-value", Variable);
 DECLARE_ATTR_RULE(change_master_variable, "key-value", ChangeMasterVariable);
+DECLARE_ATTR_RULE(show_master, "show master", Show);
+DECLARE_ATTR_RULE(show_slave, "show slave", Show);
+DECLARE_ATTR_RULE(show_binlogs, "binary logs", Show);
+DECLARE_ATTR_RULE(show_variables, "show variables", ShowVariables);
+DECLARE_RULE(show, "show");
 DECLARE_ATTR_RULE(select, "select", Select);
 DECLARE_ATTR_RULE(set, "set", Set);
 DECLARE_ATTR_RULE(change_master, "change master", ChangeMaster);
@@ -206,6 +224,7 @@ const auto number_def = x3::int_ | x3::double_ | (x3::lit("0x") >> x3::int_);
 const auto str_def = x3::lexeme[+(x3::ascii::alnum | x3::char_("_@.()"))];
 const auto sq_str_def = x3::lexeme[x3::lit('\'') > +(x3::char_ - '\'') > x3::lit('\'')];
 const auto dq_str_def = x3::lexeme[x3::lit('"') > +(x3::char_ - '"') > x3::lit('"')];
+const auto q_str_def = sq_str | dq_str;
 
 // Generic fields and key-values
 const auto field_def = str | sq_str | dq_str | number;
@@ -228,16 +247,26 @@ const auto change_master_def = x3::lit("CHANGE") > x3::lit("MASTER") > x3::lit("
 const auto slave_def = slave_sym > "SLAVE";
 const auto logs_def = logs_sym > "LOGS";
 
+// SHOW commands
+const auto show_master_def = x3::lit("MASTER") > x3::lit("STATUS") >> x3::attr(Show::MASTER_STATUS);
+const auto show_slave_def = x3::lit("SLAVE") > x3::lit("STATUS") >> x3::attr(Show::SLAVE_STATUS);
+const auto show_binlogs_def = x3::lit("BINARY") > x3::lit("LOGS") >> x3::attr(Show::BINLOGS);
+const auto show_variables_def = x3::lit("VARIABLES") > x3::lit("LIKE") > q_str;
+const auto show_def = x3::lit("SHOW") > (show_master | show_slave | show_binlogs | show_variables);
+const auto end_of_input_def = x3::eoi;
+
 // The complete grammar, case insensitive
 const auto grammar_def = x3::no_case[
     select
     | set
     | change_master
     | slave
+    | show
     | logs] > end_of_input;
 
 // Boost magic that combines the rule declarations and definitions (definitions _must_ end in a _def suffix)
-BOOST_SPIRIT_DEFINE(number, str, sq_str, dq_str, field, variable, select, set, eq,
+BOOST_SPIRIT_DEFINE(number, str, sq_str, dq_str, field, variable, select, set, eq, q_str,
+                    show_master, show_slave, show_binlogs, show_variables, show,
                     change_master_variable, change_master, slave, logs, end_of_input, grammar);
 
 
@@ -370,6 +399,29 @@ struct ResultVisitor : public boost::static_visitor<>
         }
     }
 
+    void operator()(Show& s)
+    {
+        switch (s)
+        {
+        case Show::MASTER_STATUS:
+            m_handler->show_master_status();
+            break;
+
+        case Show::SLAVE_STATUS:
+            m_handler->show_slave_status();
+            break;
+
+        case Show::BINLOGS:
+            m_handler->show_binlogs();
+            break;
+        }
+    }
+
+    void operator()(ShowVariables& s)
+    {
+        m_handler->show_variables(s.like);
+    }
+
 private:
 
     // This is needed to convert variant types
@@ -405,6 +457,7 @@ BOOST_FUSION_ADAPT_STRUCT(ChangeMasterVariable, key, value);
 BOOST_FUSION_ADAPT_STRUCT(Select, values);
 BOOST_FUSION_ADAPT_STRUCT(Set, values);
 BOOST_FUSION_ADAPT_STRUCT(ChangeMaster, values);
+BOOST_FUSION_ADAPT_STRUCT(ShowVariables, like);
 
 namespace parser
 {
