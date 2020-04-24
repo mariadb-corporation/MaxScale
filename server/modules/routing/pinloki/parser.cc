@@ -42,7 +42,7 @@ enum class Logs
     PURGE,
 };
 
-enum class Show
+enum class ShowType
 {
     MASTER_STATUS,
     SLAVE_STATUS,
@@ -153,8 +153,10 @@ struct ShowVariables
     std::string like;
 };
 
+using Show = x3::variant<ShowType, ShowVariables>;
+
 // The root type that is returned as the result of parsing
-using Command = x3::variant<nullptr_t, Select, Set, ChangeMaster, Slave, Logs, Show, ShowVariables>;
+using Command = x3::variant<nullptr_t, Select, Set, ChangeMaster, Slave, Logs, Show>;
 
 // Error handler that the rule types must inherit from, allows pretty-printing of errors
 struct error_handler
@@ -203,11 +205,11 @@ DECLARE_ATTR_RULE(q_str, "quoted string", std::string);
 DECLARE_ATTR_RULE(field, "field", Field);
 DECLARE_ATTR_RULE(variable, "key-value", Variable);
 DECLARE_ATTR_RULE(change_master_variable, "key-value", ChangeMasterVariable);
-DECLARE_ATTR_RULE(show_master, "show master", Show);
-DECLARE_ATTR_RULE(show_slave, "show slave", Show);
-DECLARE_ATTR_RULE(show_binlogs, "binary logs", Show);
+DECLARE_ATTR_RULE(show_master, "show master", ShowType);
+DECLARE_ATTR_RULE(show_slave, "show slave", ShowType);
+DECLARE_ATTR_RULE(show_binlogs, "binary logs", ShowType);
 DECLARE_ATTR_RULE(show_variables, "show variables", ShowVariables);
-DECLARE_RULE(show, "show");
+DECLARE_ATTR_RULE(show, "show", Show);
 DECLARE_ATTR_RULE(select, "select", Select);
 DECLARE_ATTR_RULE(set, "set", Set);
 DECLARE_ATTR_RULE(change_master, "change master", ChangeMaster);
@@ -250,9 +252,9 @@ const auto slave_def = slave_sym > "SLAVE";
 const auto logs_def = logs_sym > "LOGS";
 
 // SHOW commands
-const auto show_master_def = x3::lit("MASTER") > x3::lit("STATUS") >> x3::attr(Show::MASTER_STATUS);
-const auto show_slave_def = x3::lit("SLAVE") > x3::lit("STATUS") >> x3::attr(Show::SLAVE_STATUS);
-const auto show_binlogs_def = x3::lit("BINARY") > x3::lit("LOGS") >> x3::attr(Show::BINLOGS);
+const auto show_master_def = x3::lit("MASTER") > x3::lit("STATUS") >> x3::attr(ShowType::MASTER_STATUS);
+const auto show_slave_def = x3::lit("SLAVE") > x3::lit("STATUS") >> x3::attr(ShowType::SLAVE_STATUS);
+const auto show_binlogs_def = x3::lit("BINARY") > x3::lit("LOGS") >> x3::attr(ShowType::BINLOGS);
 const auto show_variables_def = x3::lit("VARIABLES") > x3::lit("LIKE") > q_str;
 const auto show_def = x3::lit("SHOW") > (show_master | show_slave | show_binlogs | show_variables);
 const auto end_of_input_def = x3::eoi;
@@ -401,19 +403,19 @@ struct ResultVisitor : public boost::static_visitor<>
         }
     }
 
-    void operator()(Show& s)
+    void operator()(ShowType& s)
     {
         switch (s)
         {
-        case Show::MASTER_STATUS:
+        case ShowType::MASTER_STATUS:
             m_handler->show_master_status();
             break;
 
-        case Show::SLAVE_STATUS:
+        case ShowType::SLAVE_STATUS:
             m_handler->show_slave_status();
             break;
 
-        case Show::BINLOGS:
+        case ShowType::BINLOGS:
             m_handler->show_binlogs();
             break;
         }
@@ -422,6 +424,13 @@ struct ResultVisitor : public boost::static_visitor<>
     void operator()(ShowVariables& s)
     {
         m_handler->show_variables(s.like);
+    }
+
+    void operator()(Show& s)
+    {
+        // For some reason boost doesn't expand the `show` rule into the correct type which is why a
+        // x3::variant is used. This in turn requires the result to be processed twice with the same visitor.
+        boost::apply_visitor(*this, s);
     }
 
     void operator()(nullptr_t&)
