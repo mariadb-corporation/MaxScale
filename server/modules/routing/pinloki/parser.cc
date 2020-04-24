@@ -212,6 +212,7 @@ DECLARE_ATTR_RULE(show_variables, "show variables", ShowVariables);
 DECLARE_ATTR_RULE(show, "show", Show);
 DECLARE_ATTR_RULE(select, "select", Select);
 DECLARE_ATTR_RULE(set, "set", Set);
+DECLARE_ATTR_RULE(set_names, "set names", std::vector<Variable>);
 DECLARE_ATTR_RULE(change_master, "change master", ChangeMaster);
 DECLARE_ATTR_RULE(slave, "slave", Slave);
 DECLARE_ATTR_RULE(logs, "logs", Logs);
@@ -240,7 +241,8 @@ const auto select_def = x3::lit("SELECT") > field % ','
     (x3::lit("LIMIT") > number % ',') | (x3::lit("GROUP BY") > str % ',')
     ];
 
-const auto set_def = x3::lit("SET") > (variable % ',');
+const auto set_names_def = x3::lit("NAMES") > x3::omit[(str | q_str)] >> x3::attr(std::vector<Variable> {});
+const auto set_def = x3::lit("SET") > (set_names | (variable % ','));
 
 // CHANGE MASTER TO, only accepts a limited set of keys
 const auto change_master_variable_def = change_master_sym > eq > field;
@@ -270,7 +272,7 @@ const auto grammar_def = x3::no_case[
 
 // Boost magic that combines the rule declarations and definitions (definitions _must_ end in a _def suffix)
 BOOST_SPIRIT_DEFINE(number, str, sq_str, dq_str, field, variable, select, set, eq, q_str,
-                    show_master, show_slave, show_binlogs, show_variables, show,
+                    show_master, show_slave, show_binlogs, show_variables, show, set_names,
                     change_master_variable, change_master, slave, logs, end_of_input, grammar);
 
 

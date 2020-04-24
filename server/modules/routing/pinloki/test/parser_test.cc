@@ -89,6 +89,9 @@ std::vector<std::pair<std::string, std::string>> tests =
         "SET a = 1, b = 2", "SET a=1SET b=2"
     },
     {
+        "SET NAMES latin1", ""      // Ignored
+    },
+    {
         "CHANGE MASTER TO master_host='127.0.0.1', master_port=3306", "CHANGE MASTER TO"
     },
     {
