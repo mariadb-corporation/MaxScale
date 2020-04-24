@@ -144,16 +144,6 @@ CsMonitorServer::Config CsMonitorServer::Config::create(const http::Result& resp
     return Config(response, std::move(timestamp), std::move(sJson), std::move(sXml));
 }
 
-bool CsMonitorServer::Config::get_ddlproc_ip(std::string* pIp, json_t* pOutput) const
-{
-    return get_value(cs::xml::DDLPROC, cs::xml::IPADDR, pIp, pOutput);
-}
-
-bool CsMonitorServer::Config::get_dmlproc_ip(std::string* pIp, json_t* pOutput) const
-{
-    return get_value(cs::xml::DMLPROC, cs::xml::IPADDR, pIp, pOutput);
-}
-
 bool CsMonitorServer::Config::get_value(const char* zElement_name,
                                         const char* zValue_name,
                                         std::string* pIp,
