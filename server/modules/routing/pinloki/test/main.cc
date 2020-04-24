@@ -11,12 +11,12 @@
  * Public License.
  */
 
-#include "writer.hh"
-#include "file_writer.hh"
-#include "reader.hh"
-#include "config.hh"
-#include "gtid.hh"
-#include "find_gtid.hh"
+#include "../writer.hh"
+#include "../file_writer.hh"
+#include "../reader.hh"
+#include "../config.hh"
+#include "../gtid.hh"
+#include "../find_gtid.hh"
 
 #include <maxbase/maxbase.hh>
 #include <maxbase/hexdump.hh>

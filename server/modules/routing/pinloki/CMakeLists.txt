@@ -23,5 +23,6 @@ target_link_libraries(pinloki pinloki-core maxscale-common)
 set_target_properties(pinloki PROPERTIES VERSION "1.0.0"  LINK_FLAGS -Wl,-z,defs)
 install_module(pinloki core)
 
-add_executable(pinloki_main main.cc)
-target_link_libraries(pinloki_main pinloki-core)
+if (BUILD_TESTS)
+  add_subdirectory(test)
+endif()
