@@ -147,6 +147,17 @@ void ResultSet::add_row(const std::vector<std::string>& values)
     m_rows.emplace_back(values);
 }
 
+void ResultSet::add_column(const std::string& name, const std::string& value)
+{
+    m_columns.push_back(name);
+
+    for (auto& a : m_rows)
+    {
+        a.push_back(value);
+        mxb_assert(a.size() == m_columns.size());
+    }
+}
+
 mxs::Buffer ResultSet::as_buffer() const
 {
     mxs::Buffer buf;

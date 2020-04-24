@@ -14,6 +14,8 @@
 #include "pinloki.hh"
 #include "pinlokisession.hh"
 
+#include <maxscale/protocol/mariadb/resultset.hh>
+
 namespace pinloki
 {
 
@@ -31,7 +33,7 @@ Pinloki* Pinloki::create(SERVICE* pService, mxs::ConfigParameters* pParams)
 
 PinlokiSession* Pinloki::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
 {
-    return new PinlokiSession(pSession);
+    return new PinlokiSession(pSession, this);
 }
 
 json_t* Pinloki::diagnostics() const
@@ -47,6 +49,114 @@ uint64_t Pinloki::getCapabilities()
 bool Pinloki::configure(mxs::ConfigParameters* pParams)
 {
     return true;
+}
+
+const Config& Pinloki::config() const
+{
+    return m_config;
+}
+
+Inventory* Pinloki::inventory()
+{
+    return &m_inventory;
+}
+
+void Pinloki::change_master(const MasterConfig& config)
+{
+    std::lock_guard<std::mutex> guard(m_lock);
+    m_master_config = config;
+}
+
+bool Pinloki::is_slave_running() const
+{
+    std::lock_guard<std::mutex> guard(m_lock);
+    return m_writer.get();
+}
+
+void Pinloki::start_slave()
+{
+    std::lock_guard<std::mutex> guard(m_lock);
+    MXS_INFO("Starting slave");
+    // TODO: Create new writer here
+}
+
+void Pinloki::stop_slave()
+{
+    std::lock_guard<std::mutex> guard(m_lock);
+    MXS_INFO("Stopping slave");
+    // TODO: Stop the writer
+}
+
+void Pinloki::reset_slave()
+{
+    std::lock_guard<std::mutex> guard(m_lock);
+    MXS_INFO("Resetting slave");
+    m_master_config = MasterConfig();
+}
+
+GWBUF* Pinloki::show_slave_status() const
+{
+    std::lock_guard<std::mutex> guard(m_lock);
+
+    auto rset = ResultSet::create({});
+    rset->add_row({});
+
+    rset->add_column("Slave_IO_State", "Waiting for master to send event");
+    rset->add_column("Master_Host", m_master_config.host);
+    rset->add_column("Master_User", m_master_config.user);
+    rset->add_column("Master_Port", std::to_string(m_master_config.port));
+    rset->add_column("Connect_Retry", "1");
+    rset->add_column("Master_Log_File", "TODO: Read from writer");
+    rset->add_column("Read_Master_Log_Pos", "TODO: Read from writer");
+    rset->add_column("Relay_Log_File", "mysqld-relay-bin.000001");
+    rset->add_column("Relay_Log_Pos", "4");
+    rset->add_column("Relay_Master_Log_File", "binlog.000001");
+    rset->add_column("Slave_IO_Running", m_writer ? "Yes" : "No");
+    rset->add_column("Slave_SQL_Running", m_writer ? "Yes" : "No");
+    rset->add_column("Replicate_Do_DB", "");
+    rset->add_column("Replicate_Ignore_DB", "");
+    rset->add_column("Replicate_Do_Table", "");
+    rset->add_column("Replicate_Ignore_Table", "");
+    rset->add_column("Replicate_Wild_Do_Table", "");
+    rset->add_column("Replicate_Wild_Ignore_Table", "");
+    rset->add_column("Last_Errno", "0");
+    rset->add_column("Last_Error", "");
+    rset->add_column("Skip_Counter", "0");
+    rset->add_column("Exec_Master_Log_Pos", "TODO: Read from writer");
+    rset->add_column("Relay_Log_Space", "0");
+    rset->add_column("Until_Condition", "None");
+    rset->add_column("Until_Log_File", "");
+    rset->add_column("Until_Log_Pos", "0");
+    rset->add_column("Master_SSL_Allowed", "No");
+    rset->add_column("Master_SSL_CA_File", "");
+    rset->add_column("Master_SSL_CA_Path", "");
+    rset->add_column("Master_SSL_Cert", "");
+    rset->add_column("Master_SSL_Cipher", "");
+    rset->add_column("Master_SSL_Key", "");
+    rset->add_column("Seconds_Behind_Master", "0");
+    rset->add_column("Master_SSL_Verify_Server_Cert", "No");
+    rset->add_column("Last_IO_Errno", "0");
+    rset->add_column("Last_IO_Error", "");
+    rset->add_column("Last_SQL_Errno", "0");
+    rset->add_column("Last_SQL_Error", "");
+    rset->add_column("Replicate_Ignore_Server_Ids", "");
+    rset->add_column("Master_Server_Id", "1");
+    rset->add_column("Master_SSL_Crl", "");
+    rset->add_column("Master_SSL_Crlpath", "");
+    rset->add_column("Using_Gtid", "Slave_Pos");
+    rset->add_column("Gtid_IO_Pos", "0-1-1");
+    rset->add_column("Replicate_Do_Domain_Ids", "");
+    rset->add_column("Replicate_Ignore_Domain_Ids", "");
+    rset->add_column("Parallel_Mode", "conservative");
+    rset->add_column("SQL_Delay", "0");
+    rset->add_column("SQL_Remaining_Delay", "NULL");
+    rset->add_column("Slave_SQL_Running_State",
+                     "Slave has read all relay log; waiting for the slave I/O thread to update it");
+    rset->add_column("Slave_DDL_Groups", "0");
+    rset->add_column("Slave_Non_Transactional_Groups", "0");
+    rset->add_column("Slave_Transactional_Groups", "0");
+
+    return rset->as_buffer().release();
 }
 }
 

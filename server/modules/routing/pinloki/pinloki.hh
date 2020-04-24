@@ -15,13 +15,16 @@
 
 #include <maxscale/ccdefs.hh>
 
-#include <string>
 #include <array>
+#include <mutex>
+#include <string>
+
 #include <maxbase/exception.hh>
 #include <maxscale/router.hh>
 
 #include "writer.hh"
 #include "config.hh"
+#include "master_config.hh"
 
 namespace pinloki
 {
@@ -50,20 +53,23 @@ public:
     uint64_t        getCapabilities();
     bool            configure(mxs::ConfigParameters* pParams);
 
-    const Config& config() const
-    {
-        return m_config;
-    }
+    const Config& config() const;
+    Inventory*    inventory();
 
-    Inventory* inventory()
-    {
-        return &m_inventory;
-    }
+    void   change_master(const MasterConfig& config);
+    bool   is_slave_running() const;
+    void   start_slave();
+    void   stop_slave();
+    void   reset_slave();
+    GWBUF* show_slave_status() const;
 
 private:
     Pinloki(SERVICE* pService);
 
-    Config    m_config;
-    Inventory m_inventory;
+    Config                  m_config;
+    Inventory               m_inventory;
+    std::unique_ptr<Writer> m_writer;
+    MasterConfig            m_master_config;
+    mutable std::mutex      m_lock;
 };
 }

@@ -30,12 +30,20 @@ GWBUF* create_resultset(const std::vector<std::string>& columns, const std::vect
 
     return rset->as_buffer().release();
 }
+
+GWBUF* create_slave_running_error()
+{
+    return modutil_create_mysql_err_msg(
+        1, 0, 1198, "HY000",
+        "This operation cannot be performed as you have a running slave; run STOP SLAVE first");
+}
 }
 
 namespace pinloki
 {
-PinlokiSession::PinlokiSession(MXS_SESSION* pSession)
+PinlokiSession::PinlokiSession(MXS_SESSION* pSession, Pinloki* router)
     : mxs::RouterSession(pSession)
+    , m_router(router)
 {
 }
 
@@ -161,27 +169,53 @@ void PinlokiSession::set(const std::string& key, const std::string& value)
 
 void PinlokiSession::change_master_to(const MasterConfig& config)
 {
-    send(modutil_create_ok());
+    GWBUF* buf = nullptr;
+
+    if (m_router->is_slave_running())
+    {
+        buf = create_slave_running_error();
+    }
+    else
+    {
+        m_router->change_master(config);
+        buf = modutil_create_ok();
+    }
+
+    send(buf);
 }
 
 void PinlokiSession::start_slave()
 {
+    m_router->start_slave();
     send(modutil_create_ok());
 }
 
 void PinlokiSession::stop_slave()
 {
+    m_router->stop_slave();
     send(modutil_create_ok());
 }
 
 void PinlokiSession::reset_slave()
 {
-    send(modutil_create_ok());
+    GWBUF* buf = nullptr;
+
+    if (m_router->is_slave_running())
+    {
+        buf = create_slave_running_error();
+    }
+    else
+    {
+        m_router->reset_slave();
+        buf = modutil_create_ok();
+    }
+
+    send(buf);
 }
 
 void PinlokiSession::show_slave_status()
 {
-    send(create_resultset({"1"}, {"1"}));
+    send(m_router->show_slave_status());
 }
 
 void PinlokiSession::show_master_status()

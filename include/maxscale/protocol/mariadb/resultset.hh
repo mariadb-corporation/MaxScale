@@ -46,6 +46,17 @@ public:
     void add_row(const std::vector<std::string>& values);
 
     /**
+     * Add a column and set it to a value in all rows
+     *
+     * If no rows have been added, the returned resultset will be empty. To create a single row resultset with
+     * this function, first push an empty row into the resultset.
+     *
+     * @param name  Column name
+     * @param value Column value
+     */
+    void add_column(const std::string& name, const std::string& value);
+
+    /**
      * Convert the resultset into its raw binary form
      *
      * @return The resultset as a mxs::Buffer

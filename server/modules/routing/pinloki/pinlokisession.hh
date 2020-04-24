@@ -19,6 +19,7 @@
 #include "rpl_event.hh"
 #include "parser.hh"
 #include "master_config.hh"
+#include "pinloki.hh"
 
 namespace pinloki
 {
@@ -29,7 +30,7 @@ public:
     PinlokiSession(const PinlokiSession&) = delete;
     PinlokiSession& operator=(const PinlokiSession&) = delete;
 
-    PinlokiSession(MXS_SESSION* pSession);
+    PinlokiSession(MXS_SESSION* pSession, Pinloki* router);
     virtual ~PinlokiSession() = default;
 
     void    close();
@@ -54,7 +55,8 @@ public:
     void error(const std::string& err) override;
 
 private:
-    uint8_t m_seq = 1;      // Packet sequence number, incremented for each sent packet
+    uint8_t  m_seq = 1;     // Packet sequence number, incremented for each sent packet
+    Pinloki* m_router;
 
     bool send_event(const maxsql::RplEvent& event);
     void send(GWBUF* buffer);
