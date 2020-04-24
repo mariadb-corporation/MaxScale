@@ -18,6 +18,9 @@
 #include <unordered_map>
 #include <microhttpd.h>
 
+#include "httprequest.hh"
+#include "httpresponse.hh"
+
 class Client
 {
 public:
@@ -107,13 +110,14 @@ private:
     std::string     m_user;         /**< The user account */
     Headers         m_headers;
 
-    bool        auth_with_token(const std::string& token);
-    bool        send_cors_preflight_request(const std::string& verb);
-    std::string get_header(const std::string& key) const;
-    size_t      request_data_length() const;
-    void        send_basic_auth_error() const;
-    void        send_token_auth_error() const;
-    void        add_cors_headers(MHD_Response*) const;
+    HttpResponse generate_token(const HttpRequest& request);
+    bool         auth_with_token(const std::string& token);
+    bool         send_cors_preflight_request(const std::string& verb);
+    std::string  get_header(const std::string& key) const;
+    size_t       request_data_length() const;
+    void         send_basic_auth_error() const;
+    void         send_token_auth_error() const;
+    void         add_cors_headers(MHD_Response*) const;
 };
 
 /**

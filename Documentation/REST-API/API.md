@@ -55,8 +55,12 @@ the following form.
 }
 ```
 
-The generated tokens are valid for 8 hours. If MaxScale is restarted, all
-generated tokens are invalidated.
+If the token is used to authenticate users in a web browser, the token can be
+optionally stored in cookies. This can be enabled with the `persist` parameter.
+
+By default, the generated tokens are valid for 8 hours. The token validity
+period can be set with the `max-age` request parameter. If MaxScale is
+restarted, all generated tokens are invalidated.
 
 To use the token for authentication, the generated token must be presented in
 the Authorization header with the Bearer authentication scheme. For example, the
@@ -65,6 +69,31 @@ token above would be used in the following manner:
 ```
 Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhZG1pbiIsImV4cCI6MTU4MzI1NDE1MSwiaWF0IjoxNTgzMjI1MzUxLCJpc3MiOiJtYXhzY2FsZSJ9.B1BqhjjKaCWKe3gVXLszpOPfeu8cLiwSb4CMIJAoyqw
 ```
+
+#### `/auth` Request Parameters
+
+The `/auth` endpoint supports the following request parameters that must be
+given in the HTTP query string.
+
+- `max-age`
+
+  - Sets the token maximum age in seconds. The default is `max-age=28800`.
+
+- `persist`
+
+  - Store the generated token in cookies instead of returning it as the response body.
+
+    This parameter expects only one value, `yes`, as its argument. When
+    `persist=yes` is set, the token is stored in two cookies, `token_body` and
+    `token_sig`, and the response is 204 No Content instead of 200 OK.
+
+    The `token_body` cookie contains the JWT header and claims sections
+    (i.e. the token body before the second period). This can be accessed by
+    JavaScript.
+
+    The `token_sig` part contains the rest of the token. The cookie is stored as
+    a HttpOnly cookie which prevents access to from JavaScript. This is done to
+    mitigate any attacks that might leak the token.
 
 ## Resources
 

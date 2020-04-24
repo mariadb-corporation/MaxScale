@@ -604,26 +604,7 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
 
     if (is_auth_endpoint(request))
     {
-        auto now = std::chrono::system_clock::now();
-        auto token = jwt::create()
-            .set_issuer("maxscale")
-            .set_audience(m_user)
-            .set_issued_at(now)
-            .set_expires_at(now + std::chrono::seconds {28800})
-            .sign(jwt::algorithm::hs256 {this_unit.sign_key});
-
-        if (request.get_option("persist") == "yes")
-        {
-            // Store the token signature part in a HttpOnly cookie and the claims in a normal one. This allows
-            // the token information to be displayed while preventing the actual token from leaking due to a
-            // CSRF attack.
-            auto pos = token.find_last_of('.');
-            auto cookie_opts = "; SameSite=Strict; Secure; Max-Age=28800";
-            claim_cookie = TOKEN_BODY + "=" + token.substr(0, pos) + cookie_opts;
-            sig_cookie = TOKEN_SIG + "=" + token.substr(pos) + cookie_opts + "; HttpOnly";
-        }
-
-        reply = HttpResponse(MHD_HTTP_OK, json_pack("{s {s: s}}", "meta", "token", token.c_str()));
+        reply = generate_token(request);
     }
     else
     {
@@ -665,10 +646,9 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
     // Prevent caching without verification
     MHD_add_response_header(response, "Cache-Control", "no-cache");
 
-    if (!claim_cookie.empty() && !sig_cookie.empty())
+    for (const auto& c : reply.cookies())
     {
-        MHD_add_response_header(response, MHD_HTTP_HEADER_SET_COOKIE, claim_cookie.c_str());
-        MHD_add_response_header(response, MHD_HTTP_HEADER_SET_COOKIE, sig_cookie.c_str());
+        MHD_add_response_header(response, MHD_HTTP_HEADER_SET_COOKIE, c.c_str());
     }
 
     int rval = MHD_queue_response(m_connection, reply.get_code(), response);
@@ -677,6 +657,52 @@ int Client::process(string url, string method, const char* upload_data, size_t* 
     MXS_DEBUG("Response: HTTP %d", reply.get_code());
 
     return rval;
+}
+
+HttpResponse Client::generate_token(const HttpRequest& request)
+{
+    int token_age = 28800;
+    auto max_age = request.get_option("max-age");
+
+    if (!max_age.empty())
+    {
+        char* end;
+        auto l = strtol(max_age.c_str(), &end, 10);
+
+        if (l > 0 && *end == '\0')
+        {
+            token_age = l;
+        }
+    }
+
+    auto now = std::chrono::system_clock::now();
+    auto token = jwt::create()
+        .set_issuer("maxscale")
+        .set_audience(m_user)
+        .set_issued_at(now)
+        .set_expires_at(now + std::chrono::seconds {token_age})
+        .sign(jwt::algorithm::hs256 {this_unit.sign_key});
+
+    if (request.get_option("persist") == "yes")
+    {
+        // Store the token signature part in a HttpOnly cookie and the claims in a normal one. This allows
+        // the token information to be displayed while preventing the actual token from leaking due to a
+        // CSRF attack. This also prevents JavaScript from ever accessing the token which completely prevents
+        // the token from leaking.
+        HttpResponse reply = HttpResponse(MHD_HTTP_NO_CONTENT);
+
+        auto pos = token.find_last_of('.');
+        auto cookie_opts = "; SameSite=Strict; Secure; Max-Age=" + std::to_string(token_age);
+        reply.add_cookie(TOKEN_BODY + "=" + token.substr(0, pos) + cookie_opts);
+        reply.add_cookie(TOKEN_SIG + "=" + token.substr(pos) + cookie_opts + "; HttpOnly");
+
+        return reply;
+    }
+    else
+    {
+        // Normal auth, return token as JSON
+        return HttpResponse(MHD_HTTP_OK, json_pack("{s {s: s}}", "meta", "token", token.c_str()));
+    }
 }
 
 bool Client::auth_with_token(const std::string& token)

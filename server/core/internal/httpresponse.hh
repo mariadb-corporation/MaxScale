@@ -86,6 +86,26 @@ public:
     const Headers& get_headers() const;
 
     /**
+     * Returns cookies added to the response
+     *
+     * @return The cookies that have been set
+     */
+    const std::vector<std::string>& cookies() const
+    {
+        return m_cookies;
+    }
+
+    /**
+     * Add a cookie to the response
+     *
+     * @param cookie Cookie to add, the value in `Set-Cookie: <value>`
+     */
+    void add_cookie(const std::string& cookie)
+    {
+        m_cookies.push_back(cookie);
+    }
+
+    /**
      * Removes fields from the response
      *
      * @param type   The JSON API object type (e.g. services for a single service or a collection of services)
@@ -107,6 +127,8 @@ private:
     json_t* m_body;     /**< Message body */
     int     m_code;     /**< The HTTP code for the response */
     Headers m_headers;  /**< Extra headers */
+
+    std::vector<std::string> m_cookies;
 
     void remove_fields_from_resource(json_t* obj, const std::string& type,
                                      const std::unordered_set<std::string>& fields);
