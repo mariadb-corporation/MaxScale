@@ -22,6 +22,8 @@
 #include <boost/spirit/home/x3/support/utility/annotate_on_success.hpp>
 #include <boost/spirit/home/x3/support/utility/error_reporting.hpp>
 
+#include <maxbase/assert.h>
+
 using namespace boost::spirit;
 
 namespace
@@ -152,7 +154,7 @@ struct ShowVariables
 };
 
 // The root type that is returned as the result of parsing
-using Command = x3::variant<Select, Set, ChangeMaster, Slave, Logs, Show, ShowVariables>;
+using Command = x3::variant<nullptr_t, Select, Set, ChangeMaster, Slave, Logs, Show, ShowVariables>;
 
 // Error handler that the rule types must inherit from, allows pretty-printing of errors
 struct error_handler
@@ -420,6 +422,11 @@ struct ResultVisitor : public boost::static_visitor<>
     void operator()(ShowVariables& s)
     {
         m_handler->show_variables(s.like);
+    }
+
+    void operator()(nullptr_t&)
+    {
+        assert(!true);
     }
 
 private:
