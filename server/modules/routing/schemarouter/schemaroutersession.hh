@@ -135,6 +135,7 @@ private:
     void                 synchronize_shards();
     void                 handle_mapping_reply(SRBackend* bref, GWBUF** pPacket);
     bool                 handle_statement(GWBUF* querybuf, SRBackend* bref, uint8_t command, uint32_t type);
+    std::string          get_cache_key() const;
 
     /** Member variables */
     bool                     m_closed;          /**< True if session closed */

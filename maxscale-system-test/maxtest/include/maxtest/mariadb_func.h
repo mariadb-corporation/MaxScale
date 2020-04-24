@@ -360,6 +360,11 @@ public:
         m_pw = pw;
     }
 
+    void set_database(const std::string& db)
+    {
+        m_db = db;
+    }
+
     uint32_t thread_id() const
     {
         return mysql_thread_id(m_conn);

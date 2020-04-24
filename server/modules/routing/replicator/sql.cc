@@ -94,7 +94,7 @@ bool SQL::replicate(int server_id)
         return false;
     }
 
-    mariadb_rpl_optionsv(m_rpl, MARIADB_RPL_SERVER_ID, &server_id);
+    mariadb_rpl_optionsv(m_rpl, MARIADB_RPL_SERVER_ID, server_id);
 
     if (mariadb_rpl_open(m_rpl))
     {

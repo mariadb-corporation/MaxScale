@@ -14,269 +14,109 @@
 #include "testconnections.h"
 #include "sql_t1.h"
 
-typedef struct
+#include <atomic>
+
+std::atomic<bool> keep_running {true};
+
+void query_thread_master(TestConnections& test)
 {
-    int              exit_flag;
-    int              thread_id;
-    long             i;
-    int              rwsplit_only;
-    TestConnections* Test;
-    MYSQL*           conn1;
-    MYSQL*           conn2;
-    MYSQL*           conn3;
-} openclose_thread_data;
+    auto conn = test.repl->get_connection(0);
 
-void* query_thread1(void* ptr);
-void* query_thread_master(void* ptr);
+    std::vector<char> sql;
+    sql.reserve(1000000);
+    create_insert_string(&sql[0], 5000, 2);
 
-int main(int argc, char* argv[])
-{
-    TestConnections* Test = new TestConnections(argc, argv);
-    Test->maxscales->ssh_node_f(0,
-                                true,
-                                "sysctl net.ipv4.tcp_tw_reuse=1 net.ipv4.tcp_tw_recycle=1 "
-                                "net.core.somaxconn=10000 net.ipv4.tcp_max_syn_backlog=10000");
-    Test->set_timeout(20);
+    test.expect(conn.connect(), "Connection should work: %s", conn.error());
 
-    int threads_num = 40;
-    openclose_thread_data data[threads_num];
-
-    int master_load_threads_num = 3;
-    openclose_thread_data data_master[master_load_threads_num];
-
-    int i;
-
-    int run_time = 300;
-
-    if (Test->smoke)
+    while (keep_running && test.ok())
     {
-        run_time = 10;
+        test.expect(conn.query(sql.data()), "Query failed: %s", conn.error());
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
-
-    for (i = 0; i < threads_num; i++)
-    {
-        data[i].i = 0;
-        data[i].exit_flag = 0;
-        data[i].Test = Test;
-        data[i].rwsplit_only = 1;
-        data[i].thread_id = i;
-        data[i].conn1 = NULL;
-        data[i].conn2 = NULL;
-        data[i].conn3 = NULL;
-    }
-
-
-    for (i = 0; i < master_load_threads_num; i++)
-    {
-        data_master[i].i = 0;
-        data_master[i].exit_flag = 0;
-        data_master[i].Test = Test;
-        data_master[i].rwsplit_only = 1;
-        data_master[i].thread_id = i;
-        data_master[i].conn1 = NULL;
-        data_master[i].conn2 = NULL;
-        data_master[i].conn3 = NULL;
-    }
-
-    pthread_t thread1[threads_num];
-
-    pthread_t thread_master[master_load_threads_num];
-
-    Test->repl->connect();
-    Test->maxscales->connect_maxscale(0);
-    create_t1(Test->maxscales->conn_rwsplit[0]);
-    Test->repl->execute_query_all_nodes((char*) "set global max_connections = 2000;");
-    Test->repl->sync_slaves();
-
-    Test->tprintf("Creating user 'user' \n");
-    execute_query(Test->maxscales->conn_rwsplit[0], (char*) "DROP USER IF EXISTS user@'%%'");
-    execute_query(Test->maxscales->conn_rwsplit[0], (char*) "CREATE USER user@'%%' IDENTIFIED BY 'pass2'");
-    execute_query(Test->maxscales->conn_rwsplit[0], (char*) "GRANT SELECT ON test.* TO user@'%%'");
-    execute_query(Test->maxscales->conn_rwsplit[0], (char*) "DROP TABLE IF EXISTS test.t1");
-    execute_query(Test->maxscales->conn_rwsplit[0], (char*) "CREATE TABLE test.t1 (x1 int, fl int)");
-    Test->repl->sync_slaves();
-
-    /* Create independent threads each of them will create some load on Master */
-    for (i = 0; i < master_load_threads_num; i++)
-    {
-        pthread_create(&thread_master[i], NULL, query_thread_master, &data_master[i]);
-    }
-
-    /* Create independent threads each of them will execute function */
-    for (i = 0; i < threads_num; i++)
-    {
-        pthread_create(&thread1[i], NULL, query_thread1, &data[i]);
-    }
-
-    Test->tprintf("Threads are running %d seconds \n", run_time);
-
-    for (i = 0; i < threads_num; i++)
-    {
-        data[i].rwsplit_only = 1;
-    }
-
-    Test->set_timeout(run_time + 60);
-    sleep(run_time);
-
-    Test->repl->flush_hosts();
-
-    Test->tprintf("all maxscales->routers[0] are involved, threads are running %d seconds more\n", run_time);
-    Test->set_timeout(run_time + 100);
-
-    for (i = 0; i < threads_num; i++)
-    {
-        data[i].rwsplit_only = 0;
-    }
-
-    sleep(run_time);
-    Test->set_timeout(120);
-    Test->tprintf("Waiting for all threads exit\n");
-
-    for (i = 0; i < threads_num; i++)
-    {
-        data[i].exit_flag = 1;
-        pthread_join(thread1[i], NULL);
-    }
-
-    Test->tprintf("Waiting for all master load threads exit\n");
-
-    for (i = 0; i < master_load_threads_num; i++)
-    {
-        data_master[i].exit_flag = 1;
-        pthread_join(thread_master[i], NULL);
-    }
-
-    Test->tprintf("Flushing backend hosts\n");
-    Test->set_timeout(60);
-    Test->repl->flush_hosts();
-
-    Test->tprintf("Dropping tables and users\n");
-    Test->set_timeout(60);
-    execute_query(Test->maxscales->conn_rwsplit[0], (char*) "DROP TABLE test.t1;");
-    execute_query(Test->maxscales->conn_rwsplit[0], (char*) "DROP USER user@'%%'");
-    Test->maxscales->close_maxscale_connections(0);
-
-    Test->set_timeout(160);
-    Test->tprintf("Trying to connect Maxscale\n");
-    Test->maxscales->connect_maxscale(0);
-    Test->tprintf("Closing Maxscale connections\n");
-    Test->maxscales->close_maxscale_connections(0);
-    Test->tprintf("Checking if Maxscale alive\n");
-    Test->check_maxscale_alive(0);
-    Test->tprintf("Checking log for unwanted errors\n");
-    Test->log_excludes(0, "due to authentication failure");
-    Test->log_excludes(0, "due to handshake failure");
-
-    // We need to wait for the TCP connections in TIME_WAIT state so that
-    // later tests don't fail due to a lack of file descriptors
-    Test->tprintf("Waiting for network connections to die");
-    sleep(30);
-
-    int rval = Test->global_result;
-    delete Test;
-    return rval;
 }
 
-void* query_thread1(void* ptr)
+void query_thread(TestConnections& test)
 {
-    openclose_thread_data* data = (openclose_thread_data*) ptr;
-
-    while (data->exit_flag == 0)
+    while (keep_running && test.ok())
     {
-        data->conn1 = data->Test->maxscales->open_rwsplit_connection(0);
+        std::vector<Connection> conns;
+        conns.emplace_back(test.maxscales->rwsplit());
+        conns.emplace_back(test.maxscales->readconn_master());
+        conns.emplace_back(test.maxscales->readconn_slave());
 
-        if (data->conn1 != NULL)
+        for (auto& conn : conns)
         {
-            if (mysql_errno(data->conn1) == 0)
+            if (conn.connect())
             {
-                mysql_change_user(data->conn1, (char*) "user", (char*) "pass2", (char*) "test");
-                mysql_change_user(data->conn1,
-                                  data->Test->repl->user_name,
-                                  data->Test->repl->password,
-                                  (char*) "test");
+                test.expect(conn.change_user("user", "pass2"), "Change user to user:pass2 should work");
+                test.expect(conn.reset_connection(), "Change user back should work");
             }
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
-        if (data->rwsplit_only == 0)
-        {
-            data->conn2 = data->Test->maxscales->open_readconn_master_connection(0);
-
-            if (data->conn2 != NULL)
-            {
-                if (mysql_errno(data->conn2) == 0)
-                {
-                    mysql_change_user(data->conn2, (char*) "user", (char*) "pass2", (char*) "test");
-                    mysql_change_user(data->conn2,
-                                      data->Test->repl->user_name,
-                                      data->Test->repl->password,
-                                      (char*) "test");
-                }
-            }
-
-            data->conn3 = data->Test->maxscales->open_readconn_slave_connection(0);
-
-            if (data->conn3 != NULL)
-            {
-                if (mysql_errno(data->conn3) == 0)
-                {
-                    mysql_change_user(data->conn3, (char*) "user", (char*) "pass2", (char*) "test");
-                    mysql_change_user(data->conn3,
-                                      data->Test->repl->user_name,
-                                      data->Test->repl->password,
-                                      (char*) "test");
-                }
-            }
-        }
-
-        if (data->conn1 != NULL)
-        {
-            mysql_close(data->conn1);
-            data->conn1 = NULL;
-        }
-
-        if (data->rwsplit_only == 0)
-        {
-            if (data->conn2 != NULL)
-            {
-                mysql_close(data->conn2);
-                data->conn2 = NULL;
-            }
-
-            if (data->conn3 != NULL)
-            {
-                mysql_close(data->conn3);
-                data->conn3 = NULL;
-            }
-        }
-
-        data->i++;
     }
-
-    return NULL;
 }
 
-void* query_thread_master(void* ptr)
+int main(int argc, char** argv)
 {
-    openclose_thread_data* data = (openclose_thread_data*) ptr;
-    char sql[1000000];
-    data->conn1 = open_conn(data->Test->repl->port[0],
-                            data->Test->repl->IP[0],
-                            data->Test->repl->user_name,
-                            data->Test->repl->password,
-                            false);
-    create_insert_string(sql, 5000, 2);
+    TestConnections test(argc, argv);
+    test.set_timeout(20);
 
-    if (data->conn1 != NULL)
+    test.repl->connect();
+    test.maxscales->connect_maxscale(0);
+    create_t1(test.maxscales->conn_rwsplit[0]);
+    test.repl->execute_query_all_nodes("set global max_connections = 2000;");
+    test.repl->sync_slaves();
+
+    test.tprintf("Creating user 'user' ");
+    test.try_query(test.maxscales->conn_rwsplit[0], "DROP USER IF EXISTS user@'%%'");
+    test.try_query(test.maxscales->conn_rwsplit[0], "CREATE USER user@'%%' IDENTIFIED BY 'pass2'");
+    test.try_query(test.maxscales->conn_rwsplit[0], "GRANT SELECT ON test.* TO user@'%%'");
+    test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE IF EXISTS test.t1");
+    test.try_query(test.maxscales->conn_rwsplit[0], "CREATE TABLE test.t1 (x1 int, fl int)");
+    test.repl->sync_slaves();
+
+    std::vector<std::thread> threads;
+    test.stop_timeout();
+
+    for (int i = 0; i < 3; i++)
     {
-        while (data->exit_flag == 0)
-        {
-            data->Test->try_query(data->conn1, "%s", sql);
-            data->i++;
-        }
-    }
-    else
-    {
-        data->Test->add_result(1, "Error creating MYSQL struct for Master conn\n");
+        threads.emplace_back(query_thread_master, std::ref(test));
     }
 
-    return NULL;
+    for (int i = 0; i < 40; i++)
+    {
+        threads.emplace_back(query_thread, std::ref(test));
+    }
+
+    const int RUN_TIME = 10;
+    test.tprintf("Threads are running %d seconds ", RUN_TIME);
+
+    sleep(RUN_TIME);
+    keep_running = false;
+
+    test.set_timeout(120);
+    test.tprintf("Waiting for all threads to exit");
+
+    for (auto& a : threads)
+    {
+        a.join();
+    }
+
+    test.tprintf("Flushing backend hosts");
+    test.set_timeout(60);
+    test.repl->flush_hosts();
+
+    test.tprintf("Dropping tables and users");
+    test.set_timeout(60);
+    test.try_query(test.maxscales->conn_rwsplit[0], "DROP TABLE test.t1;");
+    test.try_query(test.maxscales->conn_rwsplit[0], "DROP USER user@'%%'");
+    test.maxscales->close_maxscale_connections(0);
+
+    test.set_timeout(160);
+    test.check_maxscale_alive(0);
+    test.log_excludes(0, "due to authentication failure");
+    test.log_excludes(0, "due to handshake failure");
+
+    return test.global_result;
 }

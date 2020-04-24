@@ -49,7 +49,7 @@ SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session,
     , m_backends(std::move(backends))
     , m_config(router->m_config)
     , m_router(router)
-    , m_shard(m_router->m_shard_manager.get_shard(session->user(), m_config->refresh_min_interval))
+    , m_shard(m_router->m_shard_manager.get_shard(get_cache_key(), m_config->refresh_min_interval))
     , m_state(0)
     , m_sent_sescmd(0)
     , m_replied_sescmd(0)
@@ -618,7 +618,7 @@ bool SchemaRouterSession::handleError(mxs::ErrorType type,
 void SchemaRouterSession::synchronize_shards()
 {
     m_router->m_stats.shmap_cache_miss++;
-    m_router->m_shard_manager.update_shard(m_shard, m_pSession->user());
+    m_router->m_shard_manager.update_shard(m_shard, get_cache_key());
 }
 
 /**
@@ -1537,5 +1537,20 @@ mxs::Target* SchemaRouterSession::get_ps_target(GWBUF* buffer, uint32_t qtype, q
         }
     }
     return rval;
+}
+
+std::string SchemaRouterSession::get_cache_key() const
+{
+    std::string key = m_pSession->user();
+
+    for (const auto& b : m_backends)
+    {
+        if (b->in_use())
+        {
+            key += b->name();
+        }
+    }
+
+    return key;
 }
 }
