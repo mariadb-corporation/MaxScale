@@ -300,7 +300,7 @@ struct ResultVisitor : public boost::static_visitor<>
 
     void operator()(ChangeMaster& s)
     {
-        parser::MasterConfig master;
+        MasterConfig master;
 
         for (const auto& a : s.values)
         {

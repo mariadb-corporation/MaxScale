@@ -18,6 +18,7 @@
 
 #include "rpl_event.hh"
 #include "parser.hh"
+#include "master_config.hh"
 
 namespace pinloki
 {
@@ -40,7 +41,7 @@ public:
     // parser::Handler API
     void select(const std::vector<std::string>& values) override;
     void set(const std::string& key, const std::string& value) override;
-    void change_master_to(const parser::MasterConfig& config) override;
+    void change_master_to(const MasterConfig& config) override;
     void start_slave() override;
     void stop_slave() override;
     void reset_slave() override;

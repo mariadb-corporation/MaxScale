@@ -17,27 +17,10 @@
 #include <string>
 #include <vector>
 
+#include "master_config.hh"
+
 namespace parser
 {
-struct MasterConfig
-{
-    std::string host;
-    int         port = 0;
-    std::string user;
-    std::string password;
-    bool        use_gtid = false;
-
-    bool        ssl = false;
-    std::string ssl_ca;
-    std::string ssl_capath;
-    std::string ssl_cert;
-    std::string ssl_crl;
-    std::string ssl_crlpath;
-    std::string ssl_key;
-    std::string ssl_cipher;
-    bool        ssl_verify_server_cert;
-};
-
 struct Handler
 {
     virtual void select(const std::vector<std::string>& values) = 0;

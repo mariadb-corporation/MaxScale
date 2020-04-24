@@ -159,7 +159,7 @@ void PinlokiSession::set(const std::string& key, const std::string& value)
     send(modutil_create_ok());
 }
 
-void PinlokiSession::change_master_to(const parser::MasterConfig& config)
+void PinlokiSession::change_master_to(const MasterConfig& config)
 {
     send(modutil_create_ok());
 }
