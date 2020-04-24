@@ -52,6 +52,7 @@ HttpResponse::HttpResponse(const HttpResponse& response)
     : m_body(json_incref(response.m_body))
     , m_code(response.m_code)
     , m_headers(response.m_headers)
+    , m_cookies(response.m_cookies)
 {
 }
 
@@ -61,6 +62,7 @@ HttpResponse& HttpResponse::operator=(const HttpResponse& response)
     m_body = json_incref(response.m_body);
     m_code = response.m_code;
     m_headers = response.m_headers;
+    m_cookies = response.m_cookies;
     json_decref(body);
     return *this;
 }
