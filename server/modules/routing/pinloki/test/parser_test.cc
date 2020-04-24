@@ -5,7 +5,7 @@
 
 std::ostringstream result;
 
-struct DebugHandler : public parser::Handler
+struct DebugHandler : public pinloki::parser::Handler
 {
 
     void select(const std::vector<std::string>& values) override
@@ -18,7 +18,7 @@ struct DebugHandler : public parser::Handler
         result << "SET " << key << "=" << value;
     }
 
-    void change_master_to(const MasterConfig& config) override
+    void change_master_to(const pinloki::parser::ChangeMasterValues& values) override
     {
         result << "CHANGE MASTER TO";
     }
@@ -129,7 +129,7 @@ int main(int argc, char** argv)
 
     for (const auto& t : tests)
     {
-        parser::parse(t.first, &handler);
+        pinloki::parser::parse(t.first, &handler);
 
         if (result.str() != t.second)
         {

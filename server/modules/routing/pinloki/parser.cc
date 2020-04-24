@@ -25,6 +25,7 @@
 #include <maxbase/assert.h>
 
 using namespace boost::spirit;
+using CMT = pinloki::ChangeMasterType;
 
 namespace
 {
@@ -49,24 +50,6 @@ enum class ShowType
     BINLOGS,
 };
 
-enum ChangeMasterType
-{
-    MASTER_HOST,
-    MASTER_PORT,
-    MASTER_USER,
-    MASTER_PASSWORD,
-    MASTER_USE_GTID,
-    MASTER_SSL,
-    MASTER_SSL_CA,
-    MASTER_SSL_CAPATH,
-    MASTER_SSL_CERT,
-    MASTER_SSL_CRL,
-    MASTER_SSL_CRLPATH,
-    MASTER_SSL_KEY,
-    MASTER_SSL_CIPHER,
-    MASTER_SSL_VERIFY_SERVER_CERT,
-};
-
 // SLAVE command mapping
 struct SlaveSymbols : x3::symbols<Slave>
 {
@@ -89,24 +72,24 @@ struct LogsSymbols : x3::symbols<Logs>
 } logs_sym;
 
 // CHANGE MASTER argument types
-struct ChangeMasterSymbols : x3::symbols<ChangeMasterType>
+struct ChangeMasterSymbols : x3::symbols<CMT>
 {
     ChangeMasterSymbols()
     {
-        add("MASTER_HOST", MASTER_HOST);
-        add("MASTER_PORT", MASTER_PORT);
-        add("MASTER_USER", MASTER_USER);
-        add("MASTER_PASSWORD", MASTER_PASSWORD);
-        add("MASTER_USE_GTID", MASTER_USE_GTID);
-        add("MASTER_SSL", MASTER_SSL);
-        add("MASTER_SSL_CA", MASTER_SSL_CA);
-        add("MASTER_SSL_CAPATH", MASTER_SSL_CAPATH);
-        add("MASTER_SSL_CERT", MASTER_SSL_CERT);
-        add("MASTER_SSL_CRL", MASTER_SSL_CRL);
-        add("MASTER_SSL_CRLPATH", MASTER_SSL_CRLPATH);
-        add("MASTER_SSL_KEY", MASTER_SSL_KEY);
-        add("MASTER_SSL_CIPHER", MASTER_SSL_CIPHER);
-        add("MASTER_SSL_VERIFY_SERVER_CERT", MASTER_SSL_VERIFY_SERVER_CERT);
+        add("MASTER_HOST", CMT::MASTER_HOST);
+        add("MASTER_PORT", CMT::MASTER_PORT);
+        add("MASTER_USER", CMT::MASTER_USER);
+        add("MASTER_PASSWORD", CMT::MASTER_PASSWORD);
+        add("MASTER_USE_GTID", CMT::MASTER_USE_GTID);
+        add("MASTER_SSL", CMT::MASTER_SSL);
+        add("MASTER_SSL_CA", CMT::MASTER_SSL_CA);
+        add("MASTER_SSL_CAPATH", CMT::MASTER_SSL_CAPATH);
+        add("MASTER_SSL_CERT", CMT::MASTER_SSL_CERT);
+        add("MASTER_SSL_CRL", CMT::MASTER_SSL_CRL);
+        add("MASTER_SSL_CRLPATH", CMT::MASTER_SSL_CRLPATH);
+        add("MASTER_SSL_KEY", CMT::MASTER_SSL_KEY);
+        add("MASTER_SSL_CIPHER", CMT::MASTER_SSL_CIPHER);
+        add("MASTER_SSL_VERIFY_SERVER_CERT", CMT::MASTER_SSL_VERIFY_SERVER_CERT);
     }
 } change_master_sym;
 
@@ -127,8 +110,8 @@ struct Variable
 // A key-value with a limited set of accepted keys
 struct ChangeMasterVariable
 {
-    ChangeMasterType key;
-    Field            value;
+    CMT   key;
+    Field value;
 };
 
 // SELECT is a list of fields
@@ -279,7 +262,7 @@ BOOST_SPIRIT_DEFINE(number, str, sq_str, dq_str, field, variable, select, set, e
 // The visitor class that does the final processing of the result
 struct ResultVisitor : public boost::static_visitor<>
 {
-    ResultVisitor(parser::Handler* handler)
+    ResultVisitor(pinloki::parser::Handler* handler)
         : m_handler(handler)
     {
     }
@@ -306,71 +289,14 @@ struct ResultVisitor : public boost::static_visitor<>
 
     void operator()(ChangeMaster& s)
     {
-        MasterConfig master;
+        pinloki::parser::ChangeMasterValues changes;
 
         for (const auto& a : s.values)
         {
-            switch (a.key)
-            {
-            case MASTER_HOST:
-                master.host = get<std::string>(a.value);
-                break;
-
-            case MASTER_PORT:
-                master.port = get<int>(a.value);
-                break;
-
-            case MASTER_USER:
-                master.user = get<std::string>(a.value);
-                break;
-
-            case MASTER_PASSWORD:
-                master.password = get<std::string>(a.value);
-                break;
-
-            case MASTER_USE_GTID:
-                master.use_gtid = strcasecmp(get<std::string>(a.value).c_str(), "slave_pos") == 0;
-                break;
-
-            case MASTER_SSL:
-                master.ssl = get<int>(a.value);
-                break;
-
-            case MASTER_SSL_CA:
-                master.ssl_ca = get<std::string>(a.value);
-                break;
-
-            case MASTER_SSL_CAPATH:
-                master.ssl_capath = get<std::string>(a.value);
-                break;
-
-            case MASTER_SSL_CERT:
-                master.ssl_cert = get<std::string>(a.value);
-                break;
-
-            case MASTER_SSL_CRL:
-                master.ssl_crl = get<std::string>(a.value);
-                break;
-
-            case MASTER_SSL_CRLPATH:
-                master.ssl_crlpath = get<std::string>(a.value);
-                break;
-
-            case MASTER_SSL_KEY:
-                master.ssl_key = get<std::string>(a.value);
-                break;
-
-            case MASTER_SSL_CIPHER:
-                master.ssl_cipher = get<std::string>(a.value);
-                break;
-
-            case MASTER_SSL_VERIFY_SERVER_CERT:
-                master.ssl_verify_server_cert = get<int>(a.value);
-                break;
-            }
+            changes.emplace(a.key, get<std::string>(a.value));
         }
 
-        m_handler->change_master_to(master);
+        m_handler->change_master_to(changes);
     }
 
     void operator()(Slave& s)
@@ -464,7 +390,7 @@ private:
         return visitor.value;
     }
 
-    parser::Handler* m_handler;
+    pinloki::parser::Handler* m_handler;
 };
 }
 
@@ -477,6 +403,8 @@ BOOST_FUSION_ADAPT_STRUCT(Set, values);
 BOOST_FUSION_ADAPT_STRUCT(ChangeMaster, values);
 BOOST_FUSION_ADAPT_STRUCT(ShowVariables, like);
 
+namespace pinloki
+{
 namespace parser
 {
 void parse(const std::string& line, Handler* handler)
@@ -509,5 +437,6 @@ void parse(const std::string& line, Handler* handler)
     {
         handler->error(err.str());
     }
+}
 }
 }

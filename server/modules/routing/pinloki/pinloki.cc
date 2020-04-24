@@ -61,10 +61,73 @@ Inventory* Pinloki::inventory()
     return &m_inventory;
 }
 
-void Pinloki::change_master(const MasterConfig& config)
+void Pinloki::change_master(const parser::ChangeMasterValues& values)
 {
     std::lock_guard<std::mutex> guard(m_lock);
-    m_master_config = config;
+
+    using CMT = pinloki::ChangeMasterType;
+
+    for (const auto& a : values)
+    {
+        switch (a.first)
+        {
+        case CMT::MASTER_HOST:
+            m_master_config.host = a.second;
+            break;
+
+        case CMT::MASTER_PORT:
+            m_master_config.port = atoi(a.second.c_str());
+            break;
+
+        case CMT::MASTER_USER:
+            m_master_config.user = a.second;
+            break;
+
+        case CMT::MASTER_PASSWORD:
+            m_master_config.password = a.second;
+            break;
+
+        case CMT::MASTER_USE_GTID:
+            m_master_config.use_gtid = strcasecmp(a.second.c_str(), "slave_pos") == 0;
+            break;
+
+        case CMT::MASTER_SSL:
+            m_master_config.ssl = a.second.front() != '0';
+            break;
+
+        case CMT::MASTER_SSL_CA:
+            m_master_config.ssl_ca = a.second;
+            break;
+
+        case CMT::MASTER_SSL_CAPATH:
+            m_master_config.ssl_capath = a.second;
+            break;
+
+        case CMT::MASTER_SSL_CERT:
+            m_master_config.ssl_cert = a.second;
+            break;
+
+        case CMT::MASTER_SSL_CRL:
+            m_master_config.ssl_crl = a.second;
+            break;
+
+        case CMT::MASTER_SSL_CRLPATH:
+            m_master_config.ssl_crlpath = a.second;
+            break;
+
+        case CMT::MASTER_SSL_KEY:
+            m_master_config.ssl_key = a.second;
+            break;
+
+        case CMT::MASTER_SSL_CIPHER:
+            m_master_config.ssl_cipher = a.second;
+            break;
+
+        case CMT::MASTER_SSL_VERIFY_SERVER_CERT:
+            m_master_config.ssl_verify_server_cert = a.second.front() != '0';
+            break;
+        }
+    }
 }
 
 bool Pinloki::is_slave_running() const

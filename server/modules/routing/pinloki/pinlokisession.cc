@@ -167,7 +167,7 @@ void PinlokiSession::set(const std::string& key, const std::string& value)
     send(modutil_create_ok());
 }
 
-void PinlokiSession::change_master_to(const MasterConfig& config)
+void PinlokiSession::change_master_to(const parser::ChangeMasterValues& values)
 {
     GWBUF* buf = nullptr;
 
@@ -177,7 +177,7 @@ void PinlokiSession::change_master_to(const MasterConfig& config)
     }
     else
     {
-        m_router->change_master(config);
+        m_router->change_master(values);
         buf = modutil_create_ok();
     }
 

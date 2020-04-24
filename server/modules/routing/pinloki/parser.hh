@@ -16,17 +16,41 @@
 
 #include <string>
 #include <vector>
+#include <unordered_map>
 
-#include "master_config.hh"
+namespace pinloki
+{
+
+// CHANGE MASTER TO values that are parsed
+enum class ChangeMasterType
+{
+    MASTER_HOST,
+    MASTER_PORT,
+    MASTER_USER,
+    MASTER_PASSWORD,
+    MASTER_USE_GTID,
+    MASTER_SSL,
+    MASTER_SSL_CA,
+    MASTER_SSL_CAPATH,
+    MASTER_SSL_CERT,
+    MASTER_SSL_CRL,
+    MASTER_SSL_CRLPATH,
+    MASTER_SSL_KEY,
+    MASTER_SSL_CIPHER,
+    MASTER_SSL_VERIFY_SERVER_CERT,
+};
 
 namespace parser
 {
+
+using ChangeMasterValues = std::unordered_map<ChangeMasterType, std::string>;
+
 struct Handler
 {
     virtual void select(const std::vector<std::string>& values) = 0;
     virtual void set(const std::string& key, const std::string& value) = 0;
 
-    virtual void change_master_to(const MasterConfig& config) = 0;
+    virtual void change_master_to(const ChangeMasterValues& values) = 0;
     virtual void start_slave() = 0;
     virtual void stop_slave() = 0;
     virtual void reset_slave() = 0;
@@ -42,4 +66,5 @@ struct Handler
 };
 
 void parse(const std::string& line, Handler* handler);
+}
 }

@@ -24,7 +24,7 @@
 namespace pinloki
 {
 
-class PinlokiSession : public mxs::RouterSession, public parser::Handler
+class PinlokiSession : public mxs::RouterSession, public pinloki::parser::Handler
 {
 public:
     PinlokiSession(const PinlokiSession&) = delete;
@@ -39,10 +39,10 @@ public:
     bool    handleError(mxs::ErrorType type, GWBUF* pMessage,
                         mxs::Endpoint* pProblem, const mxs::Reply& pReply);
 
-    // parser::Handler API
+    // pinloki::parser::Handler API
     void select(const std::vector<std::string>& values) override;
     void set(const std::string& key, const std::string& value) override;
-    void change_master_to(const MasterConfig& config) override;
+    void change_master_to(const parser::ChangeMasterValues& values) override;
     void start_slave() override;
     void stop_slave() override;
     void reset_slave() override;

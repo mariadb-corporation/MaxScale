@@ -24,7 +24,7 @@
 
 #include "writer.hh"
 #include "config.hh"
-#include "master_config.hh"
+#include "parser.hh"
 
 namespace pinloki
 {
@@ -56,7 +56,7 @@ public:
     const Config& config() const;
     Inventory*    inventory();
 
-    void   change_master(const MasterConfig& config);
+    void   change_master(const parser::ChangeMasterValues& values);
     bool   is_slave_running() const;
     void   start_slave();
     void   stop_slave();
@@ -65,6 +65,25 @@ public:
 
 private:
     Pinloki(SERVICE* pService);
+
+    struct MasterConfig
+    {
+        std::string host;
+        int         port = 0;
+        std::string user;
+        std::string password;
+        bool        use_gtid = false;
+
+        bool        ssl = false;
+        std::string ssl_ca;
+        std::string ssl_capath;
+        std::string ssl_cert;
+        std::string ssl_crl;
+        std::string ssl_crlpath;
+        std::string ssl_key;
+        std::string ssl_cipher;
+        bool        ssl_verify_server_cert;
+    };
 
     Config                  m_config;
     Inventory               m_inventory;
