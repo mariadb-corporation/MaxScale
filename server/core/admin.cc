@@ -243,7 +243,11 @@ static bool load_ssl_certificates()
     {
         this_unit.ssl_key = load_file(key.c_str());
         this_unit.ssl_cert = load_file(cert.c_str());
-        this_unit.ssl_ca = load_file(ca.c_str());
+
+        if (!ca.empty())
+        {
+            this_unit.ssl_ca = load_file(ca.c_str());
+        }
 
         rval = !this_unit.ssl_key.empty() && !this_unit.ssl_cert.empty();
 
