@@ -20,6 +20,7 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxbase/jansson.h>
+#include <maxscale/json.hh>
 #include <vector>
 
 /** Resource endpoints */
@@ -106,27 +107,6 @@ void mxs_json_add_relation(json_t* rel, const char* id, const char* type);
  * @return New self link object
  */
 json_t* mxs_json_self_link(const char* host, const char* path, const char* id);
-
-/**
- * @brief Return value at provided JSON Pointer
- *
- * @param json     JSON object
- * @param json_ptr JSON Pointer to object
- *
- * @return Pointed value or NULL if no value is found
- */
-json_t* mxs_json_pointer(json_t* json, const char* json_ptr);
-
-/**
- * @brief Check if the value at the provided JSON Pointer is of a certain type
- *
- * @param json     JSON object
- * @param json_ptr JSON Pointer to object
- * @param type     JSON type that is expected
- *
- * @return False if the object was found but it was not of the expected type. True in all other cases.
- */
-bool mxs_json_is_type(json_t* json, const char* json_ptr, json_type type);
 
 /**
  * @brief Return a JSON formatted error
