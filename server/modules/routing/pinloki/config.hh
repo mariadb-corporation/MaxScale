@@ -115,29 +115,4 @@ private:
      */
     maxbase::Duration m_connect_retry_tmo = 60s;
 };
-
-inline std::string Config::binlog_dir_path() const
-{
-    return m_binlog_dir;
-}
-
-inline std::string Config::gtid_file_path() const
-{
-    return path(m_gtid_file);
-}
-
-inline std::string Config::inventory_file_path() const
-{
-    return path(m_binlog_inventory_file);
-}
-
-inline std::string Config::boot_strap_gtid_list() const
-{
-    return m_boot_strap_gtid_list;
-}
-
-inline uint32_t Config::server_id() const
-{
-    return m_server_id;
-}
 }
