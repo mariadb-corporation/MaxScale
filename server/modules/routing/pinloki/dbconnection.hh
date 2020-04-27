@@ -38,7 +38,7 @@ public:
         std::string   database; // may be empty
         std::string   user;
         std::string   password;
-        unsigned long flags;
+        unsigned long flags = 0;
     };
 
     Connection(const ConnectionDetails& details);

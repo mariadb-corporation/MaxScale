@@ -54,6 +54,7 @@ Writer::Writer(const maxsql::Connection::ConnectionDetails& details, Inventory* 
 
     std::cout << "Boot state = " << gtid_list_str << "\n";
 
+    // TODO: Move this to the writer thread so that reconnections work
     m_sConnection.reset(new maxsql::Connection(details));
     m_sConnection->start_replication(m_inventory.config().server_id(), gtid);
 

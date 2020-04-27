@@ -164,7 +164,7 @@ GWBUF* Pinloki::show_slave_status() const
     auto rset = ResultSet::create({});
     rset->add_row({});
 
-    rset->add_column("Slave_IO_State", "Waiting for master to send event");
+    rset->add_column("Slave_IO_State", m_writer ? "Waiting for master to send event" : "");
     rset->add_column("Master_Host", m_master_config.host);
     rset->add_column("Master_User", m_master_config.user);
     rset->add_column("Master_Port", std::to_string(m_master_config.port));
