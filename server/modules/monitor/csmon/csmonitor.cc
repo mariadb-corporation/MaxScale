@@ -95,6 +95,8 @@ int get_cs_version(MonitorServer* srv)
             rval = to_version(cs_version);
         }
     }
+    // TODO: Temporary fix, the mock server does not return the right version.
+    rval = 10500;
     return rval;
 }
 
@@ -353,9 +355,6 @@ bool CsMonitor::has_sufficient_permissions()
         }
         else
         {
-            // TODO: Temporary fix, the mock server does not return the right version.
-            m_version = 10500;
-
             MXS_NOTICE("Columnstore monitor will adjust its behaviour according to version %d.",
                        m_version);
         }
@@ -432,32 +431,72 @@ bool CsMonitor::has_sufficient_permissions()
     return rv;
 }
 
-void CsMonitor::update_server_status(MonitorServer* srv)
+void CsMonitor::update_server_status(MonitorServer* pS)
 {
-    srv->clear_pending_status(SERVER_MASTER | SERVER_SLAVE | SERVER_RUNNING);
-    int status = 0;
+    CsMonitorServer* pServer = static_cast<CsMonitorServer*>(pS);
 
-    if (do_query(srv, alive_query) == "1")
+    pServer->clear_pending_status(SERVER_MASTER | SERVER_SLAVE | SERVER_RUNNING);
+    int status_mask = 0;
+
+    if (do_query(pServer, alive_query) == "1")
     {
-        auto version = get_cs_version(srv);
-
-        if (version >= 0)
+        if (m_version >= 0)
         {
-            status |= SERVER_RUNNING;
+            status_mask |= SERVER_RUNNING;
 
-            if (version >= 10200)
+            if (m_version >= 10500)
+            {
+                auto status = pServer->fetch_status();
+
+                int status_bit = 0;
+
+                if (status.ok())
+                {
+                    if (!status.services.empty())
+                    {
+                        // Seems to be running.
+                        if (status.dbrm_mode == cs::MASTER)
+                        {
+                            status_bit |= SERVER_MASTER;
+                        }
+                        else
+                        {
+                            status_bit |= SERVER_SLAVE;
+                        }
+                    }
+                    else
+                    {
+                        MXS_ERROR("Columnstore daemon on '%s' replied, but with no services so "
+                                  "result cannot be trusted.", pServer->name());
+                    }
+                }
+                else
+                {
+                    MXS_ERROR("Could not fetch status using REST-API from '%s': (%d) %s",
+                              pServer->name(), status.response.code, status.response.body.c_str());
+                }
+
+                if (status_bit == 0)
+                {
+                    MXS_NOTICE("Could not get server status using REST-API, reverting to SQL.");
+                    status_bit = do_query(pServer, role_query) == "1" ? SERVER_MASTER : SERVER_SLAVE;
+                }
+
+                status_mask |= status_bit;
+            }
+            else if (m_version >= 10200)
             {
                 // 1.2 supports the mcsSystemPrimary function
-                status |= do_query(srv, role_query) == "1" ? SERVER_MASTER : SERVER_SLAVE;
+                status_mask |= do_query(pServer, role_query) == "1" ? SERVER_MASTER : SERVER_SLAVE;
             }
             else
             {
-                status |= srv->server == m_config.pPrimary ? SERVER_MASTER : SERVER_SLAVE;
+                status_mask |= pServer->server == m_config.pPrimary ? SERVER_MASTER : SERVER_SLAVE;
             }
         }
     }
 
-    srv->set_pending_status(status);
+    pServer->set_pending_status(status_mask);
 }
 
 bool CsMonitor::configure(const mxs::ConfigParameters* pParams)
