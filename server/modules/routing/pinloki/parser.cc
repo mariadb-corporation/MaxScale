@@ -13,6 +13,9 @@
 
 #include "parser.hh"
 
+// This prevents automatic rule name deduction, helps keep the error messages cleaner.
+#define BOOST_SPIRIT_X3_NO_RTTI
+
 #include <boost/fusion/adapted/struct/adapt_struct.hpp>
 #include <boost/fusion/include/adapt_struct.hpp>
 #include <boost/lexical_cast.hpp>
@@ -149,7 +152,17 @@ struct error_handler
                                       Exception const& x, Context const& context)
     {
         auto& error_handler = x3::get<x3::error_handler_tag>(context).get();
-        std::string message = "Error! Expecting `" + x.which() + "`:";
+        std::string message;
+
+        if (x.which() == "undefined")
+        {
+            message = "Syntax error.";
+        }
+        else
+        {
+            message = "Error! Expecting `" + x.which() + "`:";
+        }
+
         error_handler(x.where(), message);
         return x3::error_handler_result::fail;
     }
@@ -185,15 +198,18 @@ DECLARE_ATTR_RULE(str, "string", std::string);
 DECLARE_ATTR_RULE(sq_str, "string", std::string);
 DECLARE_ATTR_RULE(dq_str, "single-quoted string", std::string);
 DECLARE_ATTR_RULE(q_str, "quoted string", std::string);
-DECLARE_ATTR_RULE(field, "field", Field);
+DECLARE_ATTR_RULE(field, "intentifier, string or number", Field);
 DECLARE_ATTR_RULE(variable, "key-value", Variable);
 DECLARE_ATTR_RULE(change_master_variable, "key-value", ChangeMasterVariable);
 DECLARE_ATTR_RULE(show_master, "show master", ShowType);
 DECLARE_ATTR_RULE(show_slave, "show slave", ShowType);
 DECLARE_ATTR_RULE(show_binlogs, "binary logs", ShowType);
 DECLARE_ATTR_RULE(show_variables, "show variables", ShowVariables);
+DECLARE_ATTR_RULE(show_options, "MASTER, SLAVE, BINLOGS or VARIABLES", Show);
 DECLARE_ATTR_RULE(show, "show", Show);
 DECLARE_ATTR_RULE(select, "select", Select);
+DECLARE_RULE(global_or_session, "GLOBAL or SESSION");
+DECLARE_ATTR_RULE(names_or_variable, "NAMES or key-value", Set);
 DECLARE_ATTR_RULE(set, "set", Set);
 DECLARE_ATTR_RULE(set_names, "set names", std::vector<Variable>);
 DECLARE_ATTR_RULE(change_master, "change master", ChangeMaster);
@@ -210,8 +226,8 @@ DECLARE_ATTR_RULE(grammar, "grammar", Command);
 const auto eq_def = x3::omit['='];
 const auto number_def = x3::int_ | x3::double_ | (x3::lit("0x") >> x3::int_);
 const auto str_def = x3::lexeme[+(x3::ascii::alnum | x3::char_("_@.()"))];
-const auto sq_str_def = x3::lexeme[x3::lit('\'') > +(x3::char_ - '\'') > x3::lit('\'')];
-const auto dq_str_def = x3::lexeme[x3::lit('"') > +(x3::char_ - '"') > x3::lit('"')];
+const auto sq_str_def = x3::lexeme[x3::lit('\'') > *(x3::char_ - '\'') > x3::lit('\'')];
+const auto dq_str_def = x3::lexeme[x3::lit('"') > *(x3::char_ - '"') > x3::lit('"')];
 const auto q_str_def = sq_str | dq_str;
 
 // Generic fields and key-values
@@ -225,7 +241,9 @@ const auto select_def = x3::lit("SELECT") > field % ','
     ];
 
 const auto set_names_def = x3::lit("NAMES") > x3::omit[(str | q_str)] >> x3::attr(std::vector<Variable> {});
-const auto set_def = x3::lit("SET") > (set_names | (variable % ','));
+const auto global_or_session_def = -x3::omit[x3::lit("GLOBAL") | x3::lit("SESSION")];
+const auto names_or_variable_def = set_names | (variable % ',');
+const auto set_def = x3::lit("SET") > global_or_session > names_or_variable;
 
 // CHANGE MASTER TO, only accepts a limited set of keys
 const auto change_master_variable_def = change_master_sym > eq > field;
@@ -241,7 +259,8 @@ const auto show_master_def = x3::lit("MASTER") > x3::lit("STATUS") >> x3::attr(S
 const auto show_slave_def = x3::lit("SLAVE") > x3::lit("STATUS") >> x3::attr(ShowType::SLAVE_STATUS);
 const auto show_binlogs_def = x3::lit("BINARY") > x3::lit("LOGS") >> x3::attr(ShowType::BINLOGS);
 const auto show_variables_def = x3::lit("VARIABLES") > x3::lit("LIKE") > q_str;
-const auto show_def = x3::lit("SHOW") > (show_master | show_slave | show_binlogs | show_variables);
+const auto show_options_def = (show_master | show_slave | show_binlogs | show_variables);
+const auto show_def = x3::lit("SHOW") > show_options;
 const auto end_of_input_def = x3::eoi;
 
 // The complete grammar, case insensitive
@@ -256,6 +275,7 @@ const auto grammar_def = x3::no_case[
 // Boost magic that combines the rule declarations and definitions (definitions _must_ end in a _def suffix)
 BOOST_SPIRIT_DEFINE(number, str, sq_str, dq_str, field, variable, select, set, eq, q_str,
                     show_master, show_slave, show_binlogs, show_variables, show, set_names,
+                    global_or_session, names_or_variable, show_options,
                     change_master_variable, change_master, slave, logs, end_of_input, grammar);
 
 
