@@ -96,3 +96,63 @@ bool mxs_json_is_type(json_t* json, const char* json_ptr, json_type type)
 
     return rval;
 }
+
+namespace maxscale
+{
+
+bool get_json_string(json_t* json, const char* ptr, std::string* out)
+{
+    auto val = mxs_json_pointer(json, ptr);
+    bool rval = false;
+
+    if (json_is_string(val))
+    {
+        *out = json_string_value(val);
+        rval = true;
+    }
+
+    return rval;
+}
+
+bool get_json_int(json_t* json, const char* ptr, int64_t* out)
+{
+    auto val = mxs_json_pointer(json, ptr);
+    bool rval = false;
+
+    if (json_is_integer(val))
+    {
+        *out = json_integer_value(val);
+        rval = true;
+    }
+
+    return rval;
+}
+
+bool get_json_float(json_t* json, const char* ptr, double* out)
+{
+    auto val = mxs_json_pointer(json, ptr);
+    bool rval = false;
+
+    if (json_is_real(val))
+    {
+        *out = json_real_value(val);
+        rval = true;
+    }
+
+    return rval;
+}
+
+bool get_json_bool(json_t* json, const char* ptr, bool* out)
+{
+    auto val = mxs_json_pointer(json, ptr);
+    bool rval = false;
+
+    if (json_is_boolean(val))
+    {
+        *out = json_boolean_value(val);
+        rval = true;
+    }
+
+    return rval;
+}
+}
