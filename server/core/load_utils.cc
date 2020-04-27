@@ -40,6 +40,9 @@
 
 #include "internal/modules.hh"
 #include "internal/config.hh"
+#include "internal/monitor.hh"
+#include "internal/service.hh"
+#include "internal/listener.hh"
 
 namespace
 {
@@ -473,6 +476,33 @@ bool modulecmd_cb(const MODULECMD* cmd, void* data)
     return true;
 }
 
+static json_t* module_param_to_json(const MXS_MODULE_PARAM& param)
+{
+    json_t* p = json_object();
+
+    json_object_set_new(p, CN_NAME, json_string(param.name));
+    json_object_set_new(p, CN_TYPE, json_string(mxs_module_param_type_to_string(param.type)));
+
+    if (param.default_value)
+    {
+        json_object_set_new(p, "default_value", json_string(param.default_value));
+    }
+
+    if (param.type == MXS_MODULE_PARAM_ENUM && param.accepted_values)
+    {
+        json_t* arr = json_array();
+
+        for (int x = 0; param.accepted_values[x].name; x++)
+        {
+            json_array_append_new(arr, json_string(param.accepted_values[x].name));
+        }
+
+        json_object_set_new(p, "enum_values", arr);
+    }
+
+    return p;
+}
+
 static json_t* module_json_data(const LOADED_MODULE* mod, const char* host)
 {
     json_t* obj = json_object();
@@ -495,32 +525,44 @@ static json_t* module_json_data(const LOADED_MODULE* mod, const char* host)
 
     for (int i = 0; mod->info->parameters[i].name; i++)
     {
-        json_t* p = json_object();
+        json_array_append_new(params, module_param_to_json(mod->info->parameters[i]));
+    }
 
-        json_object_set_new(p, CN_NAME, json_string(mod->info->parameters[i].name));
-        json_object_set_new(p,
-                            CN_TYPE,
-                            json_string(mxs_module_param_type_to_string(mod->info->parameters[i].type)));
+    const MXS_MODULE_PARAM* extra = nullptr;
+    std::set<std::string> ignored;
 
-        if (mod->info->parameters[i].default_value)
+    switch (mod->info->modapi)
+    {
+    case MXS_MODULE_API_FILTER:
+    case MXS_MODULE_API_AUTHENTICATOR:
+    case MXS_MODULE_API_QUERY_CLASSIFIER:
+        break;
+
+    case MXS_MODULE_API_PROTOCOL:
+        extra = common_listener_params();
+        ignored = {CN_SERVICE, CN_TYPE, CN_MODULE};
+        break;
+
+    case MXS_MODULE_API_ROUTER:
+        extra = common_service_params();
+        ignored = {CN_SERVERS, CN_TARGETS, CN_ROUTER, CN_TYPE, CN_CLUSTER, CN_FILTERS};
+        break;
+
+    case MXS_MODULE_API_MONITOR:
+        extra = common_monitor_params();
+        ignored = {CN_SERVERS, CN_TYPE, CN_MODULE};
+        break;
+    }
+
+    if (extra)
+    {
+        for (int i = 0; extra[i].name; i++)
         {
-            json_object_set_new(p, "default_value", json_string(mod->info->parameters[i].default_value));
-        }
-
-        if (mod->info->parameters[i].type == MXS_MODULE_PARAM_ENUM
-            && mod->info->parameters[i].accepted_values)
-        {
-            json_t* arr = json_array();
-
-            for (int x = 0; mod->info->parameters[i].accepted_values[x].name; x++)
+            if (ignored.count(extra[i].name) == 0)
             {
-                json_array_append_new(arr, json_string(mod->info->parameters[i].accepted_values[x].name));
+                json_array_append_new(params, module_param_to_json(extra[i]));
             }
-
-            json_object_set_new(p, "enum_values", arr);
         }
-
-        json_array_append_new(params, p);
     }
 
     json_object_set_new(attr, "commands", commands);
