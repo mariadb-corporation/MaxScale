@@ -151,20 +151,46 @@ bool from_string(const char* zTimestamp, std::chrono::system_clock::time_point* 
     return rv;
 }
 
-bool dbroots_from_array(json_t* pArray, std::vector<int>* pDbroots)
+bool dbroots_from_array(json_t* pArray, DbRoots* pDbroots)
 {
     bool rv = json_is_array(pArray);
 
     if (rv)
     {
-        vector<int> dbroots;
-        size_t size = json_array_size(pArray);
-        for (size_t i = 0; i < size; ++i)
+        DbRoots dbroots;
+
+        size_t i;
+        json_t* pValue;
+        json_array_foreach(pArray, i, pValue)
         {
             dbroots.push_back(json_integer_value(json_array_get(pArray, i)));
         }
 
         pDbroots->swap(dbroots);
+    }
+
+    return rv;
+}
+
+bool services_from_array(json_t* pArray, Services* pServices)
+{
+    bool rv = json_is_array(pArray);
+
+    if (rv)
+    {
+        Services services;
+
+        size_t i;
+        json_t* pService;
+        json_array_foreach(pArray, i, pService)
+        {
+            const char* zName = json_string_value(json_object_get(pService, keys::NAME));
+            int pid = json_integer_value(json_object_get(pService, keys::PID));
+
+            services.emplace_back(zName, pid);
+        }
+
+        pServices->swap(services);
     }
 
     return rv;

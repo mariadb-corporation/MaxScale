@@ -45,7 +45,8 @@ public:
         mxb::http::Result       response;
         cs::ClusterMode         cluster_mode;
         cs::DbrmMode            dbrm_mode;
-        std::vector<int>        dbroots;
+        cs::DbRoots             dbroots;
+        cs::Services            services;
         std::unique_ptr<json_t> sJson;
         std::chrono::seconds    uptime;
 
@@ -55,12 +56,14 @@ public:
         Status(const mxb::http::Result& response,
                cs::ClusterMode cluster_mode,
                cs::DbrmMode dbrm_mode,
-               std::vector<int> dbroots,
+               cs::DbRoots&& dbroots,
+               cs::Services&& services,
                std::unique_ptr<json_t>&& sJson)
             : response(response)
             , cluster_mode(cluster_mode)
             , dbrm_mode(dbrm_mode)
-            , dbroots(dbroots)
+            , dbroots(std::move(dbroots))
+            , services(std::move(services))
             , sJson(std::move(sJson))
             , uptime(s_uptime++)
         {

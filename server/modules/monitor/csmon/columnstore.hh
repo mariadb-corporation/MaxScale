@@ -13,6 +13,7 @@
 #pragma once
 
 #include "csmon.hh"
+#include <vector>
 
 
 namespace cs
@@ -36,9 +37,13 @@ enum DbrmMode
 const char* to_string(DbrmMode dbrm_mode);
 bool from_string(const char* zDbrm_mode, DbrmMode* pDbrm_mode);
 
+using DbRoots = std::vector<int>;
+using Services = std::vector<std::pair<std::string,int>>;
+
 bool from_string(const char* zTimestamp, std::chrono::system_clock::time_point* pTimestamp);
 bool from_string(const char* zXml, std::unique_ptr<xmlDoc>* psDoc);
-bool dbroots_from_array(json_t* pArray, std::vector<int>* pDbroots);
+bool dbroots_from_array(json_t* pArray, DbRoots* pDbroots);
+bool services_from_array(json_t* pArray, Services* pServices);
 
 namespace keys
 {
@@ -48,6 +53,9 @@ const char CLUSTER_MODE[] = "cluster_mode";
 const char DBRM_MODE[]    = "dbrm_mode";
 const char DBROOTS[]      = "dbroots";
 const char MODE[]         = "mode";
+const char NAME[]         = "name";
+const char PID[]          = "pid";
+const char SERVICES[]     = "services";
 const char TIMEOUT[]      = "timeout";
 const char TIMESTAMP[]    = "timestamp";
 const char TXN[]          = "txn";
