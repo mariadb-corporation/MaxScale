@@ -145,6 +145,23 @@ public:
     Config fetch_config() const;
     Status fetch_status() const;
 
+    enum State
+    {
+        MULTI_NODE,  // The server is configured for a multi-node cluster.
+        SINGLE_NODE, // The server is not configured for a multi-node cluster.
+        UNKNOWN      // We do not know or care what the server is configured for.
+    };
+
+    State state() const
+    {
+        return m_state;
+    }
+
+    void set_state(State state)
+    {
+        m_state = state;
+    }
+
     enum TrxState
     {
         TRX_ACTIVE,
@@ -235,6 +252,7 @@ private:
                                                 const std::string& tail = std::string());
 
 private:
+    State                    m_state = UNKNOWN;
     int64_t                  m_admin_port;
     const mxb::http::Config& m_http_config;
     TrxState                 m_trx_state = TRX_INACTIVE;

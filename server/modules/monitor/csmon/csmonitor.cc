@@ -307,7 +307,129 @@ CsMonitor* CsMonitor::create(const std::string& name, const std::string& module)
 
 bool CsMonitor::has_sufficient_permissions()
 {
-    return test_permissions(alive_query);
+    bool rv = test_permissions(alive_query);
+
+    if (rv)
+    {
+        CsMonitorServer* pSmallest_server = nullptr;
+        m_version = 0;
+
+        const auto& sv = servers();
+        for (auto* pServer : sv)
+        {
+            auto result = pServer->ping_or_connect();
+
+            if (connection_is_ok(result))
+            {
+                auto version = get_cs_version(pServer);
+
+                if (m_version == 0)
+                {
+                    m_version = version;
+                }
+                else if (version != m_version)
+                {
+                    MXS_WARNING("Version %d of '%s' is at least different than version %d of '%s'.",
+                                version, pServer->name(), m_version, pSmallest_server->name());
+
+                    if (version < m_version)
+                    {
+                        m_version = version;
+                        pSmallest_server = pServer;
+                    }
+                }
+            }
+            else
+            {
+                // This should not happen as test_permissions() succeeded.
+                MXS_ERROR("Could not connect to '%s'.", pServer->name());
+            }
+        }
+
+        if (m_version == 0)
+        {
+            MXS_WARNING("Could not connect to any server. The Columnstore monitor will "
+                        "initially assume nothing of the cluster.");
+        }
+        else
+        {
+            // TODO: Temporary fix, the mock server does not return the right version.
+            m_version = 10500;
+
+            MXS_NOTICE("Columnstore monitor will adjust its behaviour according to version %d.",
+                       m_version);
+        }
+
+        if (m_version >= 10500)
+        {
+            auto configs = CsMonitorServer::fetch_configs(sv, m_http_config);
+
+            auto it = sv.begin();
+            auto end = sv.end();
+            auto jt = configs.begin();
+
+            size_t n = 0;
+
+            while (it != end)
+            {
+                auto* pServer = *it;
+                const auto& config = *jt;
+
+                if (config.ok())
+                {
+                    string ip;
+                    if (config.get_dbrm_controller_ip(&ip))
+                    {
+                        if (ip == "127.0.0.1")
+                        {
+                            pServer->set_state(CsMonitorServer::SINGLE_NODE);
+
+                            if (sv.size() > 1)
+                            {
+                                MXS_WARNING("Server '%s' must be added as a node to the cluster "
+                                            "before MaxScale can use it.",
+                                            pServer->name());
+                                ++n;
+                            }
+                        }
+                        else if (ip == pServer->address())
+                        {
+                            pServer->set_state(CsMonitorServer::MULTI_NODE);
+                        }
+                        else
+                        {
+                            MXS_ERROR("MaxScale thinks the IP address of the server '%s' is %s, "
+                                      "while the server itself thinks it is %s.",
+                                      pServer->name(), pServer->address(), ip.c_str());
+                            rv = false;
+                        }
+                    }
+                    else
+                    {
+                        MXS_ERROR("Could not get DMRM_Controller IP of '%s'.", pServer->name());
+                        rv = false;
+                    }
+                }
+                else
+                {
+                    MXS_ERROR("Could not fetch config from '%s': (%d) %s",
+                              pServer->name(), config.response.code, config.response.body.c_str());
+                    rv = false;
+                }
+
+                ++it;
+                ++jt;
+            }
+
+            if (n == sv.size())
+            {
+                MXS_WARNING("No servers are properly configured. They must be added as nodes "
+                            "to the cluster.");
+            }
+        }
+    }
+
+    return rv;
 }
 
 void CsMonitor::update_server_status(MonitorServer* srv)

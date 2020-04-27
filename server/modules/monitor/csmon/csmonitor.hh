@@ -121,4 +121,5 @@ private:
 
     CsConfig          m_config;
     mxb::http::Config m_http_config;
+    int               m_version  { 0 };
 };
