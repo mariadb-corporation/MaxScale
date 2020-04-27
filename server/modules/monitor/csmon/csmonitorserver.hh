@@ -80,17 +80,17 @@ public:
             return response.ok() && sJson && sXml;
         }
 
-        bool get_dbrm_controller_ip(std::string* pIp, json_t* pOutput) const
+        bool get_dbrm_controller_ip(std::string* pIp, json_t* pOutput = nullptr) const
         {
             return get_value(cs::xml::DBRM_CONTROLLER, cs::xml::IPADDR, pIp, pOutput);
         }
 
-        bool get_ddlproc_ip(std::string* pIp, json_t* pOutput) const
+        bool get_ddlproc_ip(std::string* pIp, json_t* pOutput = nullptr) const
         {
             return get_value(cs::xml::DDLPROC, cs::xml::IPADDR, pIp, pOutput);
         }
 
-        bool get_dmlproc_ip(std::string* pIp, json_t* pOutput) const
+        bool get_dmlproc_ip(std::string* pIp, json_t* pOutput = nullptr) const
         {
             return get_value(cs::xml::DMLPROC, cs::xml::IPADDR, pIp, pOutput);
         }

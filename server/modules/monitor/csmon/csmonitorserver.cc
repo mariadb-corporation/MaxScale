@@ -46,13 +46,18 @@ const char* get_child_value(xmlNode* pNode, const char* zName)
 {
     const char* pValue = nullptr;
 
-    pNode = pNode->xmlChildrenNode;
+    pNode = get_child_node(pNode, zName);
 
     if (pNode)
     {
-        if (pNode->content)
+        pNode = pNode->xmlChildrenNode;
+
+        if (pNode)
         {
-            pValue = (const char*)pNode->content;
+            if (pNode->content)
+            {
+                pValue = (const char*)pNode->content;
+            }
         }
     }
 
@@ -80,10 +85,16 @@ bool get_value(xmlNode* pNode,
         }
         else
         {
-            LOG_APPEND_JSON_ERROR(&pOutput,
-                                  "The Columnstore config contains the element '%s', but either its "
-                                  "child node '%s' is missing or it lacks a value.",
-                                  zElement_name, zValue_name);
+            static const char FORMAT[] =
+                "The Columnstore config contains the element '%s', but either its "
+                "child node '%s' is missing or it lacks a value.";
+
+            MXS_ERROR(FORMAT, zElement_name, zValue_name);
+
+            if (pOutput)
+            {
+                mxs_json_error_append(pOutput, FORMAT, zElement_name, zValue_name);
+            }
         }
     }
     else
@@ -161,9 +172,14 @@ bool CsMonitorServer::Config::get_value(const char* zElement_name,
         }
         else
         {
-            LOG_APPEND_JSON_ERROR(&pOutput,
-                                  "'%s' of '%s' queried, but Columnstore XML config is empty.",
-                                  zValue_name, zElement_name);
+            const char FORMAT[] = "'%s' of '%s' queried, but Columnstore XML config is empty.";
+
+            if (pOutput)
+            {
+                mxs_json_error_append(pOutput, FORMAT, zValue_name, zElement_name);
+            }
+
+            MXS_ERROR(FORMAT, zValue_name, zElement_name);
         }
     }
     else
