@@ -443,6 +443,29 @@ public:
         return rv;
     }
 
+    json_t* to_json() const
+    {
+        auto rv = Param::to_json();
+
+        if (kind() == Kind::OPTIONAL)
+        {
+            auto self = static_cast<const ParamType*>(this);
+            auto val = self->to_json(m_default_value);
+
+            if (json_is_null(val))
+            {
+                // "empty" default values aren't added
+                json_decref(val);
+            }
+            else
+            {
+                json_object_set_new(rv, "default_value", val);
+            }
+        }
+
+        return rv;
+    }
+
 protected:
     ConcreteParam(Specification* pSpecification,
                   const char* zName,
@@ -810,6 +833,8 @@ public:
     bool    from_json(const json_t* pJson, value_type* pValue,
                       std::string* pMessage = nullptr) const;
 
+    json_t* to_json() const override;
+
     void populate(MXS_MODULE_PARAM& param) const;
 
 private:
@@ -869,6 +894,8 @@ public:
     json_t* to_json(value_type value) const;
     bool    from_json(const json_t* pJson, value_type* pValue,
                       std::string* pMessage = nullptr) const;
+
+    json_t* to_json() const override;
 
     void populate(MXS_MODULE_PARAM& param) const;
 
@@ -2123,26 +2150,23 @@ ParamEnum<T>::ParamEnum(Specification* pSpecification,
 template<class T>
 std::string ParamEnum<T>::type() const
 {
-    std::string s("enumeration:[");
+    return "enum";
+}
 
-    bool first = true;
-    for (const auto& p : m_enumeration)
+template<class T>
+json_t* ParamEnum<T>::to_json() const
+{
+    auto rv = ConcreteParam<ParamEnum<T>, T>::to_json();
+    auto arr = json_array();
+
+    for (const auto& a : m_enumeration)
     {
-        if (first)
-        {
-            first = false;
-        }
-        else
-        {
-            s += ", ";
-        }
-
-        s += p.second;
+        json_array_append_new(arr, json_string(a.second));
     }
 
-    s += "]";
+    json_object_set_new(rv, "enum_values", arr);
 
-    return s;
+    return rv;
 }
 
 template<class T>
@@ -2271,26 +2295,23 @@ ParamEnumMask<T>::ParamEnumMask(Specification* pSpecification,
 template<class T>
 std::string ParamEnumMask<T>::type() const
 {
-    std::string s("enumeration:[");
+    return "enum";
+}
 
-    bool first = true;
-    for (const auto& p : m_enumeration)
+template<class T>
+json_t* ParamEnumMask<T>::to_json() const
+{
+    auto rv = ConcreteParam<ParamEnumMask<T>, uint32_t>::to_json();
+    auto arr = json_array();
+
+    for (const auto& a : m_enumeration)
     {
-        if (first)
-        {
-            first = false;
-        }
-        else
-        {
-            s += ", ";
-        }
-
-        s += p.second;
+        json_array_append_new(arr, json_string(a.second));
     }
 
-    s += "]";
+    json_object_set_new(rv, "enum_values", arr);
 
-    return s;
+    return rv;
 }
 
 template<class T>

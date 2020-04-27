@@ -716,7 +716,7 @@ std::string Type::persist() const
  */
 std::string ParamBool::type() const
 {
-    return "boolean";
+    return "bool";
 }
 
 string ParamBool::to_string(value_type value) const
@@ -874,7 +874,7 @@ std::string ParamCount::type() const
  */
 std::string ParamInteger::type() const
 {
-    return "integer";
+    return "int";
 }
 
 /**
