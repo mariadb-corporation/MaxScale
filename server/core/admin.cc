@@ -696,7 +696,13 @@ HttpResponse Client::generate_token(const HttpRequest& request)
         HttpResponse reply = HttpResponse(MHD_HTTP_NO_CONTENT);
 
         auto pos = token.find_last_of('.');
-        auto cookie_opts = "; SameSite=Strict; Secure; Max-Age=" + std::to_string(token_age);
+        std::string cookie_opts = "; SameSite=Strict; Secure";
+
+        if (!max_age.empty())
+        {
+            cookie_opts += "; Max-Age=" + std::to_string(token_age);
+        }
+
         reply.add_cookie(TOKEN_BODY + "=" + token.substr(0, pos) + cookie_opts);
         reply.add_cookie(TOKEN_SIG + "=" + token.substr(pos) + cookie_opts + "; HttpOnly");
 
