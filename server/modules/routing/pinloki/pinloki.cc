@@ -15,6 +15,7 @@
 #include "pinlokisession.hh"
 
 #include <maxscale/protocol/mariadb/resultset.hh>
+#include <maxscale/json.hh>
 
 namespace pinloki
 {
@@ -220,6 +221,78 @@ GWBUF* Pinloki::show_slave_status() const
     rset->add_column("Slave_Transactional_Groups", "0");
 
     return rset->as_buffer().release();
+}
+
+void Pinloki::MasterConfig::save(const Config& config) const
+{
+    auto js = json_pack(
+        "{"
+        "s: s,"     // host
+        "s: i,"     // port
+        "s: s,"     // user
+        "s: s,"     // password
+        "s: b,"     // use_gtid
+        "s: b,"     // ssl
+        "s: s,"     // ssl_ca
+        "s: s,"     // ssl_capath
+        "s: s,"     // ssl_cert
+        "s: s,"     // ssl_crl
+        "s: s,"     // ssl_crlpath
+        "s: s,"     // ssl_key
+        "s: s,"     // ssl_cipher
+        "s: b"      // ssl_verify_server_cert
+        "}",
+        "host", host.c_str(),
+        "port", port,
+        "user", user.c_str(),
+        "password", password.c_str(),   // TODO: Encrypt this
+        "use_gtid", use_gtid,
+        "ssl", ssl,
+        "ssl_ca", ssl_ca.c_str(),
+        "ssl_capath", ssl_capath.c_str(),
+        "ssl_cert", ssl_cert.c_str(),
+        "ssl_crl", ssl_crl.c_str(),
+        "ssl_crlpath", ssl_crlpath.c_str(),
+        "ssl_key", ssl_key.c_str(),
+        "ssl_cipher", ssl_cipher.c_str(),
+        "ssl_verify_server_cert", ssl_verify_server_cert);
+
+    mxb_assert(js);
+    json_dump_file(js, config.master_info_file().c_str(), JSON_COMPACT);
+    json_decref(js);
+}
+
+bool Pinloki::MasterConfig::load(const Config& config)
+{
+    bool rval = false;
+    json_error_t err;
+    auto js = json_load_file(config.master_info_file().c_str(), 0, &err);
+
+    if (js)
+    {
+        rval = true;
+
+        mxs::get_json_string(js, "host", &host);
+        mxs::get_json_int(js, "port", &port);
+        mxs::get_json_string(js, "user", &user);
+        mxs::get_json_string(js, "password", &password);
+        mxs::get_json_bool(js, "use_gtid", &use_gtid);
+        mxs::get_json_bool(js, "ssl", &ssl);
+        mxs::get_json_string(js, "ssl_ca", &ssl_ca);
+        mxs::get_json_string(js, "ssl_capath", &ssl_capath);
+        mxs::get_json_string(js, "ssl_cert", &ssl_cert);
+        mxs::get_json_string(js, "ssl_crl", &ssl_crl);
+        mxs::get_json_string(js, "ssl_crlpath", &ssl_crlpath);
+        mxs::get_json_string(js, "ssl_key", &ssl_key);
+        mxs::get_json_string(js, "ssl_cipher", &ssl_cipher);
+        mxs::get_json_bool(js, "ssl_verify_server_cert", &ssl_verify_server_cert);
+    }
+    else
+    {
+        MXS_INFO("Failed to load master info JSON file: %s", err.text);
+    }
+
+    return rval;
 }
 }
 

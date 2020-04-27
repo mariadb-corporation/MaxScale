@@ -69,7 +69,7 @@ private:
     struct MasterConfig
     {
         std::string host;
-        int         port = 0;
+        int64_t     port = 0;
         std::string user;
         std::string password;
         bool        use_gtid = false;
@@ -83,6 +83,9 @@ private:
         std::string ssl_key;
         std::string ssl_cipher;
         bool        ssl_verify_server_cert;
+
+        void save(const Config& config) const;
+        bool load(const Config& config);
     };
 
     Config                  m_config;

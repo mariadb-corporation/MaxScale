@@ -42,6 +42,7 @@ public:
     std::string binlog_dir_path() const;
     std::string inventory_file_path() const;
     std::string gtid_file_path() const;
+    std::string master_info_file() const;
     /**
      * @brief boot_strap_gtid_list - a.k.a replication state
      * @return
@@ -54,6 +55,8 @@ private:
     std::string m_binlog_dir = mxs::datadir() + std::string("/binlogs");
     /** Name of gtid file */
     std::string m_gtid_file = "rpl_state";
+    /** Master configuration file name */
+    std::string m_master_info_file = "master-info.json";
     /** Name of the binlog inventory file. */
     std::string m_binlog_inventory_file = "binlog.index";
     /* Hashing directory (properly indexing, but the word is already in use) */

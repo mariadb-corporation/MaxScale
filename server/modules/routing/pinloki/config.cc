@@ -42,6 +42,11 @@ std::string Config::gtid_file_path() const
     return path(m_gtid_file);
 }
 
+std::string Config::master_info_file() const
+{
+    return path(m_master_info_file);
+}
+
 std::string Config::inventory_file_path() const
 {
     return path(m_binlog_inventory_file);
