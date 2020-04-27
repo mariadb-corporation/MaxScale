@@ -16,6 +16,7 @@
 
 #include <maxscale/protocol/mariadb/resultset.hh>
 #include <maxscale/json.hh>
+#include <fstream>
 
 namespace pinloki
 {
@@ -25,6 +26,10 @@ Pinloki::Pinloki(SERVICE* pService)
     // , m_config(config) // TODO: Pass configuration parameters to Config
     , m_inventory(m_config)
 {
+    if (m_master_config.load(m_config) && m_master_config.slave_running)
+    {
+        start_slave();
+    }
 }
 // static
 Pinloki* Pinloki::create(SERVICE* pService, mxs::ConfigParameters* pParams)
@@ -129,6 +134,8 @@ void Pinloki::change_master(const parser::ChangeMasterValues& values)
             break;
         }
     }
+
+    m_master_config.save(m_config);
 }
 
 bool Pinloki::is_slave_running() const
@@ -137,18 +144,38 @@ bool Pinloki::is_slave_running() const
     return m_writer.get();
 }
 
-void Pinloki::start_slave()
+bool Pinloki::start_slave()
 {
+    bool rval = false;
     std::lock_guard<std::mutex> guard(m_lock);
-    MXS_INFO("Starting slave");
-    // TODO: Create new writer here
+    const auto& cfg = m_master_config;
+
+    if (!cfg.host.empty() && cfg.port && !cfg.user.empty() && !cfg.password.empty())
+    {
+        MXS_INFO("Starting slave");
+
+        maxsql::Connection::ConnectionDetails details;
+        details.host = mxb::Host(m_master_config.host, m_master_config.port);
+        details.user = m_master_config.user;
+        details.password = m_master_config.password;
+
+        m_writer = std::make_unique<Writer>(details, inventory());
+        rval = true;
+
+        m_master_config.slave_running = true;
+        m_master_config.save(m_config);
+    }
+
+    return rval;
 }
 
 void Pinloki::stop_slave()
 {
     std::lock_guard<std::mutex> guard(m_lock);
     MXS_INFO("Stopping slave");
-    // TODO: Stop the writer
+    m_writer.reset();
+    m_master_config.slave_running = false;
+    m_master_config.save(m_config);
 }
 
 void Pinloki::reset_slave()
@@ -227,6 +254,7 @@ void Pinloki::MasterConfig::save(const Config& config) const
 {
     auto js = json_pack(
         "{"
+        "s: b,"     // slave_running
         "s: s,"     // host
         "s: i,"     // port
         "s: s,"     // user
@@ -242,6 +270,7 @@ void Pinloki::MasterConfig::save(const Config& config) const
         "s: s,"     // ssl_cipher
         "s: b"      // ssl_verify_server_cert
         "}",
+        "slave_running", slave_running,
         "host", host.c_str(),
         "port", port,
         "user", user.c_str(),
@@ -272,6 +301,7 @@ bool Pinloki::MasterConfig::load(const Config& config)
     {
         rval = true;
 
+        mxs::get_json_bool(js, "slave_running", &slave_running);
         mxs::get_json_string(js, "host", &host);
         mxs::get_json_int(js, "port", &port);
         mxs::get_json_string(js, "user", &user);

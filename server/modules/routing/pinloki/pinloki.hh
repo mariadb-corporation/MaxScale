@@ -58,7 +58,7 @@ public:
 
     void   change_master(const parser::ChangeMasterValues& values);
     bool   is_slave_running() const;
-    void   start_slave();
+    bool   start_slave();
     void   stop_slave();
     void   reset_slave();
     GWBUF* show_slave_status() const;
@@ -68,6 +68,7 @@ private:
 
     struct MasterConfig
     {
+        bool        slave_running = false;
         std::string host;
         int64_t     port = 0;
         std::string user;

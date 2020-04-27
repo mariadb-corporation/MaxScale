@@ -186,8 +186,22 @@ void PinlokiSession::change_master_to(const parser::ChangeMasterValues& values)
 
 void PinlokiSession::start_slave()
 {
-    m_router->start_slave();
-    send(modutil_create_ok());
+    GWBUF* buf = nullptr;
+
+    if (m_router->start_slave())
+    {
+        buf = modutil_create_ok();
+    }
+    else
+    {
+        // Slave not configured
+        buf = modutil_create_mysql_err_msg(
+            1, 0, 1200, "HY000",
+            "Misconfigured slave: MASTER_HOST was not set; Fix in config file or with CHANGE MASTER TO");
+    }
+
+
+    send(buf);
 }
 
 void PinlokiSession::stop_slave()
