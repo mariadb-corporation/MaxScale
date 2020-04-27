@@ -77,7 +77,9 @@ given in the HTTP query string.
 
 - `max-age`
 
-  - Sets the token maximum age in seconds. The default is `max-age=28800`.
+  - Sets the token maximum age in seconds. The default is `max-age=28800`. Only
+    positive values are accepted and if a non-positive or a non-integer value is
+    found, the parameter is ignored.
 
 - `persist`
 
