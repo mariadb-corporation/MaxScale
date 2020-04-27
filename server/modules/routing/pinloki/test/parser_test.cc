@@ -77,10 +77,25 @@ struct DebugHandler : public pinloki::parser::Handler
 std::vector<std::pair<std::string, std::string>> tests =
 {
     {
+        "SELECT hello", "SELECT hello"
+    },
+    {
+        "SELECT 'hello'", "SELECT hello"
+    },
+    {
+        "SELECT \"hello\"", "SELECT hello"
+    },
+    {
         "SELECT 1", "SELECT 1"
     },
     {
+        "SELECT 1.5", "SELECT 1.5"
+    },
+    {
         "SELECT 1, 2", "SELECT 1,2"
+    },
+    {
+        "SELECT unix_timestamp()", "SELECT unix_timestamp()"
     },
     {
         "SET a  =  1", "SET a=1"

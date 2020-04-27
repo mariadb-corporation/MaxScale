@@ -193,12 +193,12 @@ struct error_handler
     const x3::rule<struct id> id = desc
 
 DECLARE_RULE(eq, "=");
-DECLARE_RULE(number, "number");
 DECLARE_ATTR_RULE(str, "string", std::string);
 DECLARE_ATTR_RULE(sq_str, "string", std::string);
 DECLARE_ATTR_RULE(dq_str, "single-quoted string", std::string);
 DECLARE_ATTR_RULE(q_str, "quoted string", std::string);
-DECLARE_ATTR_RULE(field, "intentifier, string or number", Field);
+DECLARE_ATTR_RULE(func, "function", std::string);
+DECLARE_ATTR_RULE(field, "intentifier, function, string or number", Field);
 DECLARE_ATTR_RULE(variable, "key-value", Variable);
 DECLARE_ATTR_RULE(change_master_variable, "key-value", ChangeMasterVariable);
 DECLARE_ATTR_RULE(show_master, "show master", ShowType);
@@ -224,20 +224,22 @@ DECLARE_ATTR_RULE(grammar, "grammar", Command);
 
 // Basic types
 const auto eq_def = x3::omit['='];
-const auto number_def = x3::int_ | x3::double_ | (x3::lit("0x") >> x3::int_);
-const auto str_def = x3::lexeme[+(x3::ascii::alnum | x3::char_("_@.()"))];
+const auto str_def = x3::lexeme[+(x3::ascii::alnum | x3::char_("_@."))];
+const auto func_def = str
+    > x3::lit("(") > x3::omit[*(x3::ascii::char_ - ')')] > x3::lit(")")
+    >> x3::attr(std::string("()"));     // Must be std::string, otherwise the null character is included
 const auto sq_str_def = x3::lexeme[x3::lit('\'') > *(x3::char_ - '\'') > x3::lit('\'')];
 const auto dq_str_def = x3::lexeme[x3::lit('"') > *(x3::char_ - '"') > x3::lit('"')];
 const auto q_str_def = sq_str | dq_str;
 
 // Generic fields and key-values
-const auto field_def = str | sq_str | dq_str | number;
+const auto field_def = sq_str | dq_str | x3::double_ | x3::int_ | func | str;
 const auto variable_def = str > eq > field;
 
 // SET and SELECT commands
 const auto select_def = x3::lit("SELECT") > field % ','
     >> -x3::omit[
-    (x3::lit("LIMIT") > number % ',') | (x3::lit("GROUP BY") > str % ',')
+    (x3::lit("LIMIT") > x3::int_ % ',') | (x3::lit("GROUP BY") > str % ',')
     ];
 
 const auto set_names_def = x3::lit("NAMES") > x3::omit[(str | q_str)] >> x3::attr(std::vector<Variable> {});
@@ -273,9 +275,9 @@ const auto grammar_def = x3::no_case[
     | logs] > end_of_input;
 
 // Boost magic that combines the rule declarations and definitions (definitions _must_ end in a _def suffix)
-BOOST_SPIRIT_DEFINE(number, str, sq_str, dq_str, field, variable, select, set, eq, q_str,
+BOOST_SPIRIT_DEFINE(str, sq_str, dq_str, field, variable, select, set, eq, q_str,
                     show_master, show_slave, show_binlogs, show_variables, show, set_names,
-                    global_or_session, names_or_variable, show_options,
+                    global_or_session, names_or_variable, show_options, func,
                     change_master_variable, change_master, slave, logs, end_of_input, grammar);
 
 
