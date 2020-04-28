@@ -1,6 +1,7 @@
 [maxscale]
 threads=###threads###
 log_info=1
+users_refresh_time=2
 
 [MySQL-Monitor]
 type=monitor
@@ -53,6 +54,14 @@ protocol=MySQLClient
 port=4009
 authenticator=mysqlauth
 authenticator_options=lower_case_table_names=2,log_password_mismatch=true
+
+[ListenerClearText]
+type=listener
+service=RWSplit-Router
+protocol=MySQLClient
+port=4010
+authenticator=pamauth
+authenticator_options=pam_use_cleartext_plugin=true
 
 [server1]
 type=server

@@ -30,6 +30,9 @@ int main(int argc, char** argv)
     test.repl->connect();
     delete_slave_binlogs(test);
 
+    const char install_plugin[] = "INSTALL SONAME 'auth_pam';";
+    const char uninstall_plugin[] = "UNINSTALL SONAME 'auth_pam';";
+
     const char pam_user[] = "dduck";
     const char pam_pw[] = "313";
     const char pam_config_name[] = "duckburg";
@@ -66,7 +69,7 @@ int main(int argc, char** argv)
     for (int i = 0; i < test.repl->N; i++)
     {
         MYSQL* conn = test.repl->nodes[i];
-        test.try_query(conn, "INSTALL SONAME 'auth_pam';");
+        test.try_query(conn, install_plugin);
         test.repl->ssh_node_f(i, true, "%s", add_user_cmd.c_str());
         test.repl->ssh_node_f(i, true, "%s", add_pw_cmd.c_str());
         test.repl->ssh_node_f(i, true, "%s", read_shadow.c_str());
@@ -95,15 +98,15 @@ int main(int argc, char** argv)
 
     auto expect_server_status = [&test](const string& server_name, const string& status) {
             auto set_to_string = [](const StringSet& str_set) -> string {
-                string rval;
-                string sep;
-                for (const string& elem : str_set)
-                {
-                    rval += elem + sep;
-                    sep = ", ";
-                }
-                return rval;
-            };
+                    string rval;
+                    string sep;
+                    for (const string& elem : str_set)
+                    {
+                        rval += elem + sep;
+                        sep = ", ";
+                    }
+                    return rval;
+                };
 
             auto status_set = test.maxscales->get_server_status(server_name.c_str());
             string status_str = set_to_string(status_set);
@@ -129,16 +132,16 @@ int main(int argc, char** argv)
 
     // Helper function for checking PAM-login. If db is empty, log to null database.
     auto try_log_in = [&test](const string& user, const string& pass, const string& database) {
-        int port = test.maxscales->rwsplit_port[0];
-        if (!test_pam_login(test, port, user, pass, database))
-        {
-            test.expect(false, "PAM login failed.");
-        }
-    };
+            int port = test.maxscales->rwsplit_port[0];
+            if (!test_pam_login(test, port, user, pass, database))
+            {
+                test.expect(false, "PAM login failed.");
+            }
+        };
 
     auto update_users = [&test]() {
-        test.maxscales->restart();
-    };
+            test.maxscales->restart();
+        };
 
     const char create_pam_user_fmt[] = "CREATE OR REPLACE USER '%s'@'%%' IDENTIFIED VIA pam USING '%s';";
     if (test.ok())
@@ -184,7 +187,7 @@ int main(int argc, char** argv)
         test.try_query(conn, create_pam_user_fmt, "", pam_config_name);
         test.repl->ssh_node_f(0, true, "echo \"GRANT PROXY ON '%s'@'%%' TO ''@'%%'; FLUSH PRIVILEGES;\" | "
                                        "mysql --user=root",
-                                       dummy_user);
+                              dummy_user);
         sleep(1);
         test.repl->sync_slaves();
         update_users();
@@ -259,20 +262,19 @@ int main(int argc, char** argv)
         mysql_close(maxconn);
     }
 
-    // Cleanup: remove the linux users on the MaxScale node.
+    // Remove the linux user from the MaxScale node. Required for next test cases.
     test.maxscales->ssh_node_f(0, true, "%s", remove_user_cmd.c_str());
-    test.maxscales->ssh_node_f(0, true, "%s", read_shadow_off.c_str());
-    test.maxscales->ssh_node_f(0, true, "%s", delete_pam_conf_cmd.c_str());
-    test.maxscales->ssh_node_f(0, true, "%s", delete_pam_message_cmd.c_str());
 
     int normal_port = test.maxscales->rwsplit_port[0];
     int skip_auth_port = 4007;
     int nomatch_port = 4008;
     int caseless_port = 4009;
+    int cleartext_port = 4010;
 
     const char login_failed_msg[] = "Login to port %i failed.";
     if (test.ok())
     {
+        cout << "\n";
         // Recreate the pam user.
         MYSQL* conn = test.repl->nodes[0];
         test.try_query(conn, create_pam_user_fmt, pam_user, pam_config_name);
@@ -281,8 +283,9 @@ int main(int argc, char** argv)
 
         bool login_success = test_pam_login(test, normal_port, pam_user, pam_pw, "");
         test.expect(!login_success, "Normal login succeeded when it should not have.");
-        login_success = test_pam_login(test, skip_auth_port, pam_user, pam_pw, "");
+
         cout << "Testing listener with skip_authentication.\n";
+        login_success = test_pam_login(test, skip_auth_port, pam_user, pam_pw, "");
         test.expect(login_success, login_failed_msg, skip_auth_port);
         if (test.ok())
         {
@@ -294,6 +297,7 @@ int main(int argc, char** argv)
     const char create_fmt[] = "CREATE OR REPLACE USER '%s'@'%s' IDENTIFIED BY '%s';";
     if (test.ok())
     {
+        cout << "\n";
         // Create a user which can only connect from MaxScale IP. This should work with the listener with
         // authenticator_options=match_host=false.
         string user = "maxhost_user";
@@ -311,6 +315,7 @@ int main(int argc, char** argv)
             test.expect(!login_success, unexpected, normal_port);
             login_success = test_normal_login(test, skip_auth_port, user, pass);
             test.expect(!login_success, unexpected, normal_port);
+
             cout << "Testing listener with match_host=false.\n";
             login_success = test_normal_login(test, nomatch_port, user, pass);
             test.expect(login_success, login_failed_msg, normal_port);
@@ -344,19 +349,18 @@ int main(int argc, char** argv)
         test.try_query(conn, create_db_fmt, test_db2);
         test.try_query(conn, grant_sel_fmt, test_db2, userz, host);
 
-        auto test_normal_login_short = [&test, &user, pass](int port, const string& db)
-        {
-            auto host = test.maxscales->IP[0];
-            MYSQL* maxconn = nullptr;
-            maxconn = open_conn_db(port, host, db, user, pass);
-            auto err = mysql_error(maxconn);
-            bool rval = (*err == '\0');
-            if (*err)
-            {
-                test.tprintf("Could not log in: '%s'", err);
-            }
-            return rval;
-        };
+        auto test_normal_login_short = [&test, &user, pass](int port, const string& db) {
+                auto host = test.maxscales->IP[0];
+                MYSQL* maxconn = nullptr;
+                maxconn = open_conn_db(port, host, db, user, pass);
+                auto err = mysql_error(maxconn);
+                bool rval = (*err == '\0');
+                if (*err)
+                {
+                    test.tprintf("Could not log in: '%s'", err);
+                }
+                return rval;
+            };
 
         const string login_db1 = "TeSt_dB1";
         const string login_db2 = "tESt_Db2";
@@ -365,6 +369,7 @@ int main(int argc, char** argv)
 
         if (test.ok())
         {
+            cout << "\n";
             // Should not work, as requested db is not equal to real db.
             bool login_success = test_normal_login_short(normal_port, login_db1);
             test.expect(!login_success, unexpected_login, login_db1.c_str());
@@ -377,6 +382,7 @@ int main(int argc, char** argv)
             {
                 cout << "lower_case_table_names=1 works.\n";
             }
+            cout << "\n";
 
             // Should not work, as target db is not lower case.
             login_success = test_normal_login_short(nomatch_port, login_db2);
@@ -390,6 +396,7 @@ int main(int argc, char** argv)
             {
                 cout << "lower_case_table_names=2 works.\n";
             }
+            cout << "\n";
 
             // Check that log_password_mismatch works.
             login_success = test_normal_login(test, caseless_port, user, "wrong_pw");
@@ -399,12 +406,92 @@ int main(int argc, char** argv)
             {
                 cout << "log_password_mismatch works.\n";
             }
+            cout << "\n";
         }
 
         test.try_query(conn, "DROP USER '%s'@'%s';", user.c_str(), host);
         test.try_query(conn, "DROP DATABASE %s;", test_db1);
         test.try_query(conn, "DROP DATABASE %s;", test_db2);
     }
+
+    if (test.ok())
+    {
+        const string setting_name = "pam_use_cleartext_plugin";
+        const string setting_val = setting_name + "=1";
+
+        // Helper function for enabling/disabling the setting and checking its value.
+        auto alter_setting = [&](int node, bool enable) {
+                // disabling end enabling the plugin causes server to reload config file.
+                MYSQL* conn = test.repl->nodes[node];
+                test.try_query(conn, "%s", uninstall_plugin);
+                if (enable)
+                {
+                    test.repl->stash_server_settings(node);
+                    test.repl->add_server_setting(node, setting_val.c_str());
+                }
+                else
+                {
+                    test.repl->reset_server_settings(node);
+                }
+                test.try_query(conn, "%s", install_plugin);
+
+                // Check that the setting is in effect.
+                string field_name = "@@" + setting_name;
+                string query = "select " + field_name + ";";
+                char value[10];
+                string expected_value = enable ? "1" : "0";
+                if (find_field(conn, query.c_str(), field_name.c_str(), value) == 0)
+                {
+                    test.expect(value == expected_value, "%s on node %i has value %s when %s expected",
+                                field_name.c_str(), node, value, expected_value.c_str());
+                }
+                else
+                {
+                    test.expect(false, "Could not read value of %s", field_name.c_str());
+                }
+            };
+
+        // Test pam_use_cleartext_plugin. Enable the setting on all backends.
+        cout << "Enabling " << setting_val << " on all backends.\n";
+        for (int i = 0; i < test.repl->N; i++)
+        {
+            alter_setting(i, true);
+        }
+
+        if (test.ok())
+        {
+            // The user needs to be recreated on the MaxScale node.
+            test.maxscales->ssh_node_f(0, true, "%s", add_user_cmd.c_str());
+            test.maxscales->ssh_node_f(0, true, "%s", add_pw_cmd.c_str());
+
+            cout << "Testing listener with " << setting_val << "\n";
+            MYSQL* conn = test.repl->nodes[0];
+            test.try_query(conn, create_pam_user_fmt, pam_user, "passwd");
+            // Try to login with wrong pw to ensure user data is updated.
+            bool login_success = test_pam_login(test, cleartext_port, "wrong", "wrong", "");
+            test.expect(!login_success, "Login succeeded when it should not have.");
+
+            login_success = test_pam_login(test, cleartext_port, pam_user, pam_pw, "");
+            test.expect(login_success, "Login with %s failed", setting_name.c_str());
+            if (test.ok())
+            {
+                cout << setting_name << " works.\n";
+            }
+            test.try_query(conn, "DROP USER '%s'@'%%';", pam_user);
+        }
+
+        cout << "Disabling " << setting_val << " on all backends.\n";
+        for (int i = 0; i < test.repl->N; i++)
+        {
+            alter_setting(i, false);
+        }
+    }
+
+    // Cleanup: remove linux user and files from the MaxScale node.
+    test.maxscales->ssh_node_f(0, true, "%s", remove_user_cmd.c_str());
+    test.maxscales->ssh_node_f(0, true, "%s", read_shadow_off.c_str());
+    test.maxscales->ssh_node_f(0, true, "%s", delete_pam_conf_cmd.c_str());
+    test.maxscales->ssh_node_f(0, true, "%s", delete_pam_message_cmd.c_str());
 
     // Cleanup: remove the linux users on the backends, unload pam plugin.
     for (int i = 0; i < test.repl->N; i++)
@@ -424,7 +511,8 @@ int main(int argc, char** argv)
 
 // Helper function for checking PAM-login. If db is empty, log to null database.
 bool test_pam_login(TestConnections& test, int port, const string& user, const string& pass,
-                    const string& database) {
+                    const string& database)
+{
     const char* host = test.maxscales->IP[0];
     const char* db = nullptr;
     if (!database.empty())
