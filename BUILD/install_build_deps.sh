@@ -171,6 +171,11 @@ then
     then
       sudo zypper -n install libedit-devel
     fi
+
+    # Install a newer compiler
+    sudo zypper -n install gcc8 gcc8-c++
+    echo "export CC=/usr/bin/gcc-8" >> ~/.bashrc
+    echo "export CXX=/usr/bin/g++-8" >> ~/.bashrc
 fi
 
 # cmake
