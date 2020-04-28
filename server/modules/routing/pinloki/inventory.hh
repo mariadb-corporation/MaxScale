@@ -69,8 +69,8 @@ public:
     }
 
 private:
-    // A copy of the configuration used to create this inventory
-    const Config m_config;
+    // The configuration used to create this inventory
+    const Config& m_config;
 
     std::vector<std::string> m_file_names;
     mutable std::mutex       m_mutex;

@@ -17,6 +17,7 @@
 
 #include <maxbase/stopwatch.hh>
 #include <maxscale/paths.hh>
+#include <maxscale/config2.hh>
 
 #include <string>
 
@@ -28,11 +29,12 @@ std::string gen_uuid();
 using namespace std::literals::chrono_literals;
 using namespace std::literals::string_literals;
 
-
-class Config
+class Config : public mxs::config::Configuration
 {
 public:
-    Config();
+    Config(const std::string& name);
+
+    static mxs::config::Specification& spec();
 
     /** Make a full path. This prefixes "name" with m_binlog_dir/,
      *  unless the first character is a forward slash.
@@ -52,7 +54,7 @@ public:
 
 private:
     /** Where the binlog files are stored */
-    std::string m_binlog_dir = mxs::datadir() + std::string("/binlogs");
+    std::string m_binlog_dir;
     /** Name of gtid file */
     std::string m_gtid_file = "rpl_state";
     /** Master configuration file name */
@@ -66,9 +68,7 @@ private:
     /** Where the current master details are stored */
     std::string m_master_ini_path;
     /** Server id reported to the Master */
-    uint32_t m_server_id = 1455;
-    /** Server id reported to the slaves */
-    int m_master_id = m_server_id;
+    int64_t m_server_id;
     /** uuid reported to the server */
     std::string m_uuid = gen_uuid();
     /** uuid reported to the slaves */

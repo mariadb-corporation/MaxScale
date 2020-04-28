@@ -64,7 +64,7 @@ public:
     GWBUF* show_slave_status() const;
 
 private:
-    Pinloki(SERVICE* pService);
+    Pinloki(SERVICE* pService, Config&& config);
 
     struct MasterConfig
     {

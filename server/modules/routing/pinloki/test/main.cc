@@ -28,7 +28,7 @@
 #include <iomanip>
 #include <getopt.h>
 
-pinloki::Config config;
+pinloki::Config config("test");
 pinloki::Inventory inv(config);
 
 // for apropos tests

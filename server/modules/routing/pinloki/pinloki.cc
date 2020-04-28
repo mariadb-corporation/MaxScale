@@ -21,9 +21,9 @@
 namespace pinloki
 {
 
-Pinloki::Pinloki(SERVICE* pService)
+Pinloki::Pinloki(SERVICE* pService, Config&& config)
     : Router<Pinloki, PinlokiSession>(pService)
-    // , m_config(config) // TODO: Pass configuration parameters to Config
+    , m_config(std::move(config))
     , m_inventory(m_config)
 {
     if (m_master_config.load(m_config) && m_master_config.slave_running)
@@ -34,7 +34,15 @@ Pinloki::Pinloki(SERVICE* pService)
 // static
 Pinloki* Pinloki::create(SERVICE* pService, mxs::ConfigParameters* pParams)
 {
-    return new Pinloki(pService);
+    Pinloki* rval = nullptr;
+    Config config(pService->name());
+
+    if (config.configure(*pParams))
+    {
+        rval = new Pinloki(pService, std::move(config));
+    }
+
+    return rval;
 }
 
 PinlokiSession* Pinloki::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
@@ -342,6 +350,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL,
         NULL
     };
+
+    pinloki::Config::spec().populate(info);
 
     return &info;
 }

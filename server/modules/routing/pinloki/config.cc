@@ -19,8 +19,29 @@
 #include <sstream>
 #include <uuid/uuid.h>
 
+namespace
+{
+namespace cfg = maxscale::config;
+
+cfg::Specification s_spec("pinloki", cfg::Specification::ROUTER);
+
+cfg::ParamPath s_datadir(
+    &s_spec, "datadir", "Directory where binlog files are stored",
+    cfg::ParamPath::C | cfg::ParamPath::W | cfg::ParamPath::R | cfg::ParamPath::X,
+    mxs::datadir() + std::string("/binlogs/"));
+
+cfg::ParamCount s_server_id(
+    &s_spec, "server_id", "Server ID sent to both slaves and the master", 1234);
+}
+
 namespace pinloki
 {
+
+// static
+mxs::config::Specification& Config::spec()
+{
+    return s_spec;
+}
 
 std::string Config::path(const std::string& name) const
 {
@@ -61,6 +82,7 @@ uint32_t Config::server_id() const
 {
     return m_server_id;
 }
+
 std::string gen_uuid()
 {
     char uuid_str[36 + 1];
@@ -72,15 +94,10 @@ std::string gen_uuid()
     return uuid_str;
 }
 
-Config::Config()
+Config::Config(const std::string& name)
+    : cfg::Configuration(name, &s_spec)
 {
-    const auto& d = binlog_dir_path();
-    struct stat st = {0};
-
-    if (stat(d.c_str(), &st) == -1)
-    {
-        MXB_SINFO("Creating directory ");
-        mkdir(d.c_str(), 0700);
-    }
+    add_native(&m_binlog_dir, &s_datadir);
+    add_native(&m_server_id, &s_server_id);
 }
 }
