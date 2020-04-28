@@ -413,8 +413,7 @@ exports.builder = function (yargs) {
       function (yargs) {
         return yargs
           .epilog(
-            "List network the users that can be used to connect to the MaxScale REST API" +
-              " as well as enabled local accounts." +
+            "List network the users that can be used to connect to the MaxScale REST API." +
               fieldDescriptions(list_users_fields)
           )
           .usage("Usage: list users");

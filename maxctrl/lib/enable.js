@@ -39,36 +39,6 @@ exports.builder = function (yargs) {
         }
       }
     )
-    .group(["type"], "Enable account options:")
-    .option("type", {
-      describe: "Type of user to create",
-      type: "string",
-      default: "basic",
-      choices: ["admin", "basic"],
-    })
-    .command(
-      "account <name>",
-      "Activate a Linux user account for administrative use",
-      function (yargs) {
-        return yargs
-          .epilog("The Linux user accounts are used by the MaxAdmin UNIX Domain Socket interface")
-          .usage("Usage: enable account <name>");
-      },
-      function (argv) {
-        var req_body = {
-          data: {
-            id: argv.name,
-            type: "unix",
-            attributes: {
-              account: argv.type,
-            },
-          },
-        };
-        maxctrl(argv, function (host) {
-          return doRequest(host, "users/unix", null, { method: "POST", body: req_body });
-        });
-      }
-    )
     .usage("Usage: enable <command>")
     .help()
     .wrap(null)

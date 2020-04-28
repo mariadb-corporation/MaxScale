@@ -43,19 +43,7 @@ static const char *ADMIN_ERR_DELLASTUSER      = "Deleting the last user is forbi
 static const char *ADMIN_ERR_DELROOT          = "Deleting the default admin user is forbidden";
 static const char *ADMIN_SUCCESS              = NULL;
 
-/** User types */
-enum user_type
-{
-    USER_TYPE_ALL,  // Type that matches all users
-    USER_TYPE_INET, // Network users
-    USER_TYPE_UNIX  // Linux accounts
-};
-
 void admin_users_init();
-
-const char* admin_enable_linux_account(const char *uname, mxs::user_account_type type);
-const char* admin_disable_linux_account(const char *uname);
-bool admin_linux_account_enabled(const char *uname);
 
 const char* admin_add_inet_user(const char *uname, const char *password, mxs::user_account_type type);
 const char* admin_alter_inet_user(const char* uname, const char* password);
@@ -63,7 +51,6 @@ const char* admin_remove_inet_user(const char* uname);
 bool admin_inet_user_exists(const char *uname);
 bool admin_verify_inet_user(const char *uname, const char *password);
 bool admin_user_is_inet_admin(const char* username, const char *password);
-bool admin_user_is_unix_admin(const char* username);
 bool admin_have_admin();
 bool admin_is_last_admin(const char* user);
 
@@ -71,23 +58,20 @@ bool admin_is_last_admin(const char* user);
  * @brief Convert all admin users to JSON
  *
  * @param host Hostname of this server
- * @param type USER_TYPE_INET for networks users, USER_TYPE_UNIX for unix accounts
- *             or USER_TYPE_ALL for all users
  *
  * @return Collection of users resources
  */
-json_t* admin_all_users_to_json(const char* host, enum user_type type);
+json_t* admin_all_users_to_json(const char* host);
 
 /**
  * @brief Convert an admin user into JSON
  *
  * @param host Hostname of this server
  * @param user Username to convert
- * @param type The type of user, either USER_TYPE_INET or USER_TYPE_UNIX
  *
  * @return The user converted to JSON
  */
-json_t* admin_user_to_json(const char* host, const char* user, enum user_type type);
+json_t* admin_user_to_json(const char* host, const char* user);
 
 /**
  * Check if user credentials are accepted by any of the configured REST API PAM services. By default, both

@@ -162,7 +162,6 @@ bool Resource::matching_variable_path(const string& path, const string& target) 
             || (path == ":monitor" && MonitorManager::find_monitor(target.c_str()))
             || (path == ":module" && (get_module(target.c_str(), NULL) || target == CN_CORE))
             || (path == ":inetuser" && admin_inet_user_exists(target.c_str()))
-            || (path == ":unixuser" && admin_linux_account_enabled(target.c_str()))
             || (path == ":listener" && listener_find(target.c_str())))
         {
             rval = true;
@@ -877,29 +876,24 @@ HttpResponse cb_module(const HttpRequest& request)
 
 HttpResponse cb_all_users(const HttpRequest& request)
 {
-    return HttpResponse(MHD_HTTP_OK, admin_all_users_to_json(request.host(), USER_TYPE_ALL));
+    return HttpResponse(MHD_HTTP_OK, admin_all_users_to_json(request.host()));
 }
 
 HttpResponse cb_all_inet_users(const HttpRequest& request)
 {
-    return HttpResponse(MHD_HTTP_OK, admin_all_users_to_json(request.host(), USER_TYPE_INET));
+    return HttpResponse(MHD_HTTP_OK, admin_all_users_to_json(request.host()));
 }
 
 HttpResponse cb_all_unix_users(const HttpRequest& request)
 {
-    return HttpResponse(MHD_HTTP_OK, admin_all_users_to_json(request.host(), USER_TYPE_UNIX));
+    return HttpResponse(MHD_HTTP_OK,
+                        mxs_json_resource(request.host(), MXS_JSON_API_USERS "unix", json_array()));
 }
 
 HttpResponse cb_inet_user(const HttpRequest& request)
 {
     string user = request.uri_part(2);
-    return HttpResponse(MHD_HTTP_OK, admin_user_to_json(request.host(), user.c_str(), USER_TYPE_INET));
-}
-
-HttpResponse cb_unix_user(const HttpRequest& request)
-{
-    string user = request.uri_part(2);
-    return HttpResponse(MHD_HTTP_OK, admin_user_to_json(request.host(), user.c_str(), USER_TYPE_UNIX));
+    return HttpResponse(MHD_HTTP_OK, admin_user_to_json(request.host(), user.c_str()));
 }
 
 HttpResponse cb_monitor_wait(const HttpRequest& request)
@@ -938,8 +932,7 @@ HttpResponse cb_delete_user(const HttpRequest& request)
     string user = request.last_uri_part();
     string type = request.uri_part(1);
 
-    if ((type == CN_INET && runtime_remove_user(user.c_str(), USER_TYPE_INET))
-        || (type == CN_UNIX && runtime_remove_user(user.c_str(), USER_TYPE_UNIX)))
+    if (type == CN_INET && runtime_remove_user(user.c_str()))
     {
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
@@ -1169,9 +1162,8 @@ public:
 
         m_get.emplace_back(cb_all_users, "users");
         m_get.emplace_back(cb_all_inet_users, "users", "inet");
-        m_get.emplace_back(cb_all_unix_users, "users", "unix");
+        m_get.emplace_back(cb_all_unix_users, "users", "unix"); // For backward compatibility.
         m_get.emplace_back(cb_inet_user, "users", "inet", ":inetuser");
-        m_get.emplace_back(cb_unix_user, "users", "unix", ":unixuser");
 
         /** Debug utility endpoints */
         m_get.emplace_back(cb_monitor_wait, "maxscale", "debug", "monitor_wait");
@@ -1255,7 +1247,6 @@ public:
         m_delete.emplace_back(cb_delete_listener, "listeners", ":listener");
 
         m_delete.emplace_back(cb_delete_user, "users", "inet", ":inetuser");
-        m_delete.emplace_back(cb_delete_user, "users", "unix", ":unixuser");
     }
 
     ~RootResource()

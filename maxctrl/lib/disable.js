@@ -39,20 +39,6 @@ exports.builder = function (yargs) {
         }
       }
     )
-    .command(
-      "account <name>",
-      "Disable a Linux user account from administrative use",
-      function (yargs) {
-        return yargs
-          .epilog("The Linux user accounts are used by the MaxAdmin UNIX Domain Socket interface")
-          .usage("Usage: disable account <name>");
-      },
-      function (argv) {
-        maxctrl(argv, function (host) {
-          return doRequest(host, "users/unix/" + argv.name, null, { method: "DELETE" });
-        });
-      }
-    )
     .usage("Usage: disable <command>")
     .help()
     .wrap(null)

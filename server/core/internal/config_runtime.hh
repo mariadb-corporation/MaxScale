@@ -262,11 +262,10 @@ bool runtime_create_user_from_json(json_t* json);
  * @brief Remove admin user
  *
  * @param id   Username of the network user
- * @param type USER_TYPE_INET for network user and USER_TYPE_UNIX for enabled accounts
  *
  * @return True if user was successfully removed
  */
-bool runtime_remove_user(const char* id, enum user_type type);
+bool runtime_remove_user(const char* id);
 
 /**
  * @brief Alter admin user password

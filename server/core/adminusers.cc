@@ -44,12 +44,10 @@ using mxs::USER_ACCOUNT_BASIC;
 
 namespace
 {
-Users linux_users;
 Users inet_users;
 
 bool load_users(const char* fname, Users* output);
 
-const char LINUX_USERS_FILE_NAME[] = "maxadmin-users";
 const char INET_USERS_FILE_NAME[] = "passwd";
 const int LINELEN = 80;
 }
@@ -59,11 +57,6 @@ const int LINELEN = 80;
  */
 void admin_users_init()
 {
-    if (!load_users(LINUX_USERS_FILE_NAME, &linux_users))
-    {
-        admin_enable_linux_account(DEFAULT_ADMIN_USER, USER_ACCOUNT_ADMIN);
-    }
-
     if (!load_users(INET_USERS_FILE_NAME, &inet_users))
     {
         admin_add_inet_user(INET_DEFAULT_USERNAME, INET_DEFAULT_PASSWORD, USER_ACCOUNT_ADMIN);
@@ -173,11 +166,9 @@ const char* admin_remove_user(Users* users, const char* fname, const char* uname
 }
 static json_t* admin_user_json_data(const char* host,
                                     const char* user,
-                                    enum user_type user_type,
                                     enum user_account_type account)
 {
-    mxb_assert(user_type != USER_TYPE_ALL);
-    const char* type = user_type == USER_TYPE_INET ? CN_INET : CN_UNIX;
+    const char* type = CN_INET;
 
     json_t* entry = json_object();
     json_object_set_new(entry, CN_ID, json_string(user));
@@ -196,7 +187,7 @@ static json_t* admin_user_json_data(const char* host,
 
 namespace
 {
-void user_types_to_json(Users* users, json_t* arr, const char* host, user_type type)
+void user_types_to_json(Users* users, json_t* arr, const char* host)
 {
     json_t* json = users->diagnostics();
     size_t index;
@@ -206,58 +197,38 @@ void user_types_to_json(Users* users, json_t* arr, const char* host, user_type t
     {
         const char* user = json_string_value(json_object_get(value, CN_NAME));
         enum user_account_type account = json_to_account_type(json_object_get(value, CN_ACCOUNT));
-        json_array_append_new(arr, admin_user_json_data(host, user, type, account));
+        json_array_append_new(arr, admin_user_json_data(host, user, account));
     }
 
     json_decref(json);
 }
 }
 
-static std::string path_from_type(enum user_type type)
-{
-    std::string path = MXS_JSON_API_USERS;
-
-    if (type == USER_TYPE_INET)
-    {
-        path += CN_INET;
-    }
-    else if (type == USER_TYPE_UNIX)
-    {
-        path += CN_UNIX;
-    }
-
-    return path;
-}
-
-json_t* admin_user_to_json(const char* host, const char* user, enum user_type type)
+json_t* admin_user_to_json(const char* host, const char* user)
 {
     user_account_type account = USER_ACCOUNT_BASIC;
-    if ((type == USER_TYPE_INET && admin_user_is_inet_admin(user, nullptr))
-        || (type == USER_TYPE_UNIX && admin_user_is_unix_admin(user)))
+    if (admin_user_is_inet_admin(user, nullptr))
     {
         account = USER_ACCOUNT_ADMIN;
     }
 
-    std::string path = path_from_type(type);
+    std::string path = MXS_JSON_API_USERS;
+    path += CN_INET;
     path += "/";
     path += user;
 
-    return mxs_json_resource(host, path.c_str(), admin_user_json_data(host, user, type, account));
+    return mxs_json_resource(host, path.c_str(), admin_user_json_data(host, user, account));
 }
 
-json_t* admin_all_users_to_json(const char* host, enum user_type type)
+json_t* admin_all_users_to_json(const char* host)
 {
     json_t* arr = json_array();
-    std::string path = path_from_type(type);
+    std::string path = MXS_JSON_API_USERS;
+    path += CN_INET;
 
-    if (!inet_users.empty() && (type == USER_TYPE_ALL || type == USER_TYPE_INET))
+    if (!inet_users.empty())
     {
-        user_types_to_json(&inet_users, arr, host, USER_TYPE_INET);
-    }
-
-    if (!linux_users.empty() && (type == USER_TYPE_ALL || type == USER_TYPE_UNIX))
-    {
-        user_types_to_json(&linux_users, arr, host, USER_TYPE_UNIX);
+        user_types_to_json(&inet_users, arr, host);
     }
 
     return mxs_json_resource(host, path.c_str(), arr);
@@ -378,42 +349,6 @@ bool load_users(const char* fname, Users* output)
 }
 
 /**
- * Enable Linux account
- *
- * @param uname Name of Linux user
- *
- * @return NULL on success or an error string on failure.
- */
-const char* admin_enable_linux_account(const char* uname, enum user_account_type type)
-{
-    return admin_add_user(&linux_users, LINUX_USERS_FILE_NAME, uname, NULL, type);
-}
-
-/**
- * Disable Linux account
- *
- * @param uname Name of Linux user
- *
- * @return NULL on success or an error string on failure.
- */
-const char* admin_disable_linux_account(const char* uname)
-{
-    return admin_remove_user(&linux_users, LINUX_USERS_FILE_NAME, uname);
-}
-
-/**
- * Check whether Linux account is enabled
- *
- * @param uname The user name
- *
- * @return True if the account is enabled, false otherwise.
- */
-bool admin_linux_account_enabled(const char* uname)
-{
-    return linux_users.get(uname);
-}
-
-/**
  * Add insecure remote (network) basic user.
  *
  * @param uname    Name of the new user.
@@ -502,20 +437,15 @@ bool admin_user_is_inet_admin(const char* username, const char* password)
     return is_admin;
 }
 
-bool admin_user_is_unix_admin(const char* username)
-{
-    return users_is_admin(&linux_users, username, nullptr);
-}
-
 bool admin_have_admin()
 {
-    return inet_users.admin_count() > 0 || linux_users.admin_count() > 0;
+    return inet_users.admin_count() > 0;
 }
 
 bool admin_is_last_admin(const char* user)
 {
-    return (admin_user_is_inet_admin(user, nullptr) || admin_user_is_unix_admin(user))
-           && ((inet_users.admin_count() + linux_users.admin_count()) == 1);
+    return admin_user_is_inet_admin(user, nullptr)
+           && (inet_users.admin_count() == 1);
 }
 
 bool admin_user_is_pam_account(const std::string& username, const std::string& password,

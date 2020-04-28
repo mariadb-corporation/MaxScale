@@ -2403,11 +2403,6 @@ bool runtime_create_user_from_json(json_t* json)
             MXS_NOTICE("Create network user '%s'", user);
             rval = true;
         }
-        else if (strtype == CN_UNIX && (err = admin_enable_linux_account(user, type)) == ADMIN_SUCCESS)
-        {
-            MXS_NOTICE("Enabled account '%s'", user);
-            rval = true;
-        }
         else if (err)
         {
             config_runtime_error("Failed to add user '%s': %s", user, err);
@@ -2417,19 +2412,14 @@ bool runtime_create_user_from_json(json_t* json)
     return rval;
 }
 
-bool runtime_remove_user(const char* id, enum user_type type)
+bool runtime_remove_user(const char* id)
 {
     bool rval = false;
-    const char* err = type == USER_TYPE_INET ?
-        admin_remove_inet_user(id) :
-        admin_disable_linux_account(id);
+    const char* err = admin_remove_inet_user(id);
 
     if (err == ADMIN_SUCCESS)
     {
-        MXS_NOTICE("%s '%s'",
-                   type == USER_TYPE_INET ?
-                   "Deleted network user" : "Disabled account",
-                   id);
+        MXS_NOTICE("Deleted network user '%s'", id);
         rval = true;
     }
     else
@@ -2451,7 +2441,7 @@ bool runtime_alter_user(const std::string& user, const std::string& type, json_t
     }
     else if (type != CN_INET)
     {
-        config_runtime_error("Users of type '%s' cannot be altered", type.c_str());
+        config_runtime_error("Users of type '%s' are not supported", type.c_str());
     }
     else if (const char* err = admin_alter_inet_user(user.c_str(), password))
     {
