@@ -35,3 +35,10 @@ add_dependencies(maxbase pcre2 jansson)
 set_target_properties(maxbase PROPERTIES VERSION "1.0.0" LINK_FLAGS -Wl,-z,defs)
 target_link_libraries(maxbase ${CURL_LIBRARIES} ${PAM_LIBRARIES} pthread rt)
 add_subdirectory(test)
+
+if(BUILD_TOOLS)
+  # Tool for testing local PAM config.
+  add_executable(test_pam_login test_pam_login.cc)
+  target_link_libraries(test_pam_login maxbase)
+  install_executable(test_pam_login core)
+endif()
