@@ -747,26 +747,36 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
 
     if (mxs::Config::get().admin_auth)
     {
-        auto cookie_token = get_cookie_token(m_connection);
-        auto token = get_header(MHD_HTTP_HEADER_AUTHORIZATION);
+        bool done = false;
 
-        if (!cookie_token.empty())
+        if (!is_auth_endpoint(HttpRequest(connection, url, method, nullptr)))
         {
-            if (!auth_with_token(cookie_token))
+            auto cookie_token = get_cookie_token(m_connection);
+            auto token = get_header(MHD_HTTP_HEADER_AUTHORIZATION);
+
+            if (!cookie_token.empty())
             {
-                send_token_auth_error();
-                rval = false;
+                done = true;
+
+                if (!auth_with_token(cookie_token))
+                {
+                    send_token_auth_error();
+                    rval = false;
+                }
+            }
+            else if (token.substr(0, 7) == "Bearer ")
+            {
+                done = true;
+
+                if (!auth_with_token(token.substr(7)))
+                {
+                    send_token_auth_error();
+                    rval = false;
+                }
             }
         }
-        else if (token.substr(0, 7) == "Bearer ")
-        {
-            if (!auth_with_token(token.substr(7)))
-            {
-                send_token_auth_error();
-                rval = false;
-            }
-        }
-        else
+
+        if (!done)
         {
             rval = false;
             char* pw = NULL;
