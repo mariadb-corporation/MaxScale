@@ -53,6 +53,8 @@ public:
     void        set_boot_strap_gtid_list(const std::string& gtid);
     uint32_t    server_id() const;
 
+    // Network timeout
+    std::chrono::seconds net_timeout() const;
 private:
     /** Where the binlog files are stored */
     std::string m_binlog_dir;
@@ -118,5 +120,7 @@ private:
      *  Master connection retyr timout. Default 60s.
      */
     maxbase::Duration m_connect_retry_tmo = 60s;
+
+    std::chrono::seconds m_net_timeout;
 };
 }

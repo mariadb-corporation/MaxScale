@@ -22,6 +22,7 @@
 namespace
 {
 namespace cfg = maxscale::config;
+using namespace std::literals::chrono_literals;
 
 cfg::Specification s_spec("pinloki", cfg::Specification::ROUTER);
 
@@ -32,6 +33,9 @@ cfg::ParamPath s_datadir(
 
 cfg::ParamCount s_server_id(
     &s_spec, "server_id", "Server ID sent to both slaves and the master", 1234);
+
+cfg::ParamSeconds s_net_timeout(
+    &s_spec, "net_timeout", "Network timeout", cfg::INTERPRET_AS_SECONDS, 30s);
 }
 
 namespace pinloki
@@ -88,6 +92,11 @@ uint32_t Config::server_id() const
     return m_server_id;
 }
 
+std::chrono::seconds Config::net_timeout() const
+{
+    return m_net_timeout;
+}
+
 std::string gen_uuid()
 {
     char uuid_str[36 + 1];
@@ -104,5 +113,6 @@ Config::Config(const std::string& name)
 {
     add_native(&m_binlog_dir, &s_datadir);
     add_native(&m_server_id, &s_server_id);
+    add_native(&m_net_timeout, &s_net_timeout);
 }
 }

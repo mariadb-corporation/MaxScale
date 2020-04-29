@@ -173,6 +173,7 @@ bool Pinloki::start_slave()
         details.host = mxb::Host(m_master_config.host, m_master_config.port);
         details.user = m_master_config.user;
         details.password = m_master_config.password;
+        details.timeout = m_config.net_timeout();
 
         m_writer = std::make_unique<Writer>(details, inventory());
         rval = true;

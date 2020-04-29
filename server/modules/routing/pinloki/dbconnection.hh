@@ -22,6 +22,8 @@
 
 #include <mysql.h>
 
+#include <chrono>
+
 struct st_mysql;
 struct st_mysql_res;
 
@@ -34,11 +36,12 @@ public:
 
     struct ConnectionDetails
     {
-        maxbase::Host host;
-        std::string   database; // may be empty
-        std::string   user;
-        std::string   password;
-        unsigned long flags = 0;
+        maxbase::Host        host;
+        std::string          database;  // may be empty
+        std::string          user;
+        std::string          password;
+        unsigned long        flags = 0;
+        std::chrono::seconds timeout = std::chrono::seconds(30);
     };
 
     Connection(const ConnectionDetails& details);

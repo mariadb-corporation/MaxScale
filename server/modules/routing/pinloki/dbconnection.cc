@@ -55,7 +55,6 @@ void Connection::start_replication(unsigned int server_id, maxsql::Gtid gtid)
         "SET @master_binlog_checksum = @@global.binlog_checksum",
         "SET @mariadb_slave_capability=4",
         gtid_start_pos.str(),
-        // "SET @slave_connect_state='1-1000-30,0-1001-60'",
         "SET @slave_gtid_strict_mode=1",
         "SET @slave_gtid_ignore_duplicates=1",
         "SET NAMES latin1"
@@ -175,6 +174,11 @@ void Connection::_connect()
     {
         MXB_THROW(DatabaseError, "mysql_init failed.");
     }
+
+    unsigned int timeout = m_details.timeout.count();
+    mysql_optionsv(m_conn, MYSQL_OPT_READ_TIMEOUT, &timeout);
+    mysql_optionsv(m_conn, MYSQL_OPT_WRITE_TIMEOUT, &timeout);
+    mysql_optionsv(m_conn, MYSQL_OPT_CONNECT_TIMEOUT, &timeout);
 
     // mysql_options(m_conn, MYSQL_OPT_NONBLOCK, 0);
 

@@ -37,6 +37,8 @@ class FileReader    // : public Storage
 {
 public:
     FileReader(const maxsql::Gtid& gtid, const Inventory* inv);
+    ~FileReader();
+
     maxsql::RplEvent fetch_event();
 
     /**

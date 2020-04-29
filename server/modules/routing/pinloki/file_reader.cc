@@ -79,6 +79,11 @@ FileReader::FileReader(const maxsql::Gtid& gtid, const Inventory* inv)
     }
 }
 
+FileReader::~FileReader()
+{
+    close(m_inotify_fd);
+}
+
 void FileReader::open(const std::string& file_name)
 {
     m_read_pos.file.close();
