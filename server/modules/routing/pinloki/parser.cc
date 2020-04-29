@@ -126,7 +126,7 @@ struct Select
 // SET is a list of key-value pairs
 struct Set
 {
-    std::vector<Variable> values;
+    x3::variant<Variable, std::vector<Variable>> values;
 };
 
 struct ChangeMaster
@@ -209,9 +209,8 @@ DECLARE_ATTR_RULE(show_options, "MASTER, SLAVE, BINLOGS or VARIABLES", Show);
 DECLARE_ATTR_RULE(show, "show", Show);
 DECLARE_ATTR_RULE(select, "select", Select);
 DECLARE_RULE(global_or_session, "GLOBAL or SESSION");
-DECLARE_ATTR_RULE(names_or_variable, "NAMES or key-value", Set);
 DECLARE_ATTR_RULE(set, "set", Set);
-DECLARE_ATTR_RULE(set_names, "set names", std::vector<Variable>);
+DECLARE_ATTR_RULE(set_names, "set names", Variable);
 DECLARE_ATTR_RULE(change_master, "change master", ChangeMaster);
 DECLARE_ATTR_RULE(slave, "slave", Slave);
 DECLARE_ATTR_RULE(logs, "logs", Logs);
@@ -242,10 +241,9 @@ const auto select_def = x3::lit("SELECT") > field % ','
     (x3::lit("LIMIT") > x3::int_ % ',') | (x3::lit("GROUP BY") > str % ',')
     ];
 
-const auto set_names_def = x3::lit("NAMES") > x3::omit[(str | q_str)] >> x3::attr(std::vector<Variable> {});
+const auto set_names_def = x3::string("NAMES") > (str | q_str);
 const auto global_or_session_def = -x3::omit[x3::lit("GLOBAL") | x3::lit("SESSION")];
-const auto names_or_variable_def = set_names | (variable % ',');
-const auto set_def = x3::lit("SET") > global_or_session > names_or_variable;
+const auto set_def = x3::lit("SET") > global_or_session > (set_names | (variable % ','));
 
 // CHANGE MASTER TO, only accepts a limited set of keys
 const auto change_master_variable_def = change_master_sym > eq > field;
@@ -277,7 +275,7 @@ const auto grammar_def = x3::no_case[
 // Boost magic that combines the rule declarations and definitions (definitions _must_ end in a _def suffix)
 BOOST_SPIRIT_DEFINE(str, sq_str, dq_str, field, variable, select, set, eq, q_str,
                     show_master, show_slave, show_binlogs, show_variables, show, set_names,
-                    global_or_session, names_or_variable, show_options, func,
+                    global_or_session, show_options, func,
                     change_master_variable, change_master, slave, logs, end_of_input, grammar);
 
 
@@ -301,12 +299,22 @@ struct ResultVisitor : public boost::static_visitor<>
         m_handler->select(values);
     }
 
-    void operator()(Set& s)
+    void operator()(Variable& a)
     {
-        for (const auto& a : s.values)
+        m_handler->set(a.key, get<std::string>(a.value));
+    }
+
+    void operator()(std::vector<Variable>& s)
+    {
+        for (const auto& a : s)
         {
             m_handler->set(a.key, get<std::string>(a.value));
         }
+    }
+
+    void operator()(Set& s)
+    {
+        boost::apply_visitor(*this, s.values);
     }
 
     void operator()(ChangeMaster& s)
