@@ -501,8 +501,7 @@ exports.builder = function (yargs) {
       function (yargs) {
         return yargs
           .epilog(
-            "The created user can be used with the MaxScale REST API as " +
-              "well as the MaxAdmin network interface. By default the created " +
+            "By default the created " +
               "user will have read-only privileges. To make the user an " +
               "administrative user, use the `--type=admin` option. " +
               "Basic users can only perform `list` and `show` commands."

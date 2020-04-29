@@ -252,8 +252,8 @@ the message will be logged on the notice level. Whitespace before, after or
 between the keyword and the colon is ignored and the matching is
 case-insensitive.
 
-Currently, the script must not execute any of the following MaxCtrl and/or
-MaxAdmin calls as they cause a deadlock:
+Currently, the script must not execute any of the following MaxCtrl
+calls as they cause a deadlock:
 
 * `alter monitor` to the monitor executing the script
 * `stop monitor` to the monitor executing the script

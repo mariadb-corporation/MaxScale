@@ -629,7 +629,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE();
 MXS_MODULE* MXS_CREATE_MODULE()
 {
     /* Register a custom command */
-    if (!modulecmd_register_command("rrrouter",
+    if (!modulecmd_register_command("roundrobinrouter",
                                     "test_command",
                                     MODULECMD_TYPE_ACTIVE,
                                     custom_cmd_example,

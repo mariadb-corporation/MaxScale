@@ -446,7 +446,7 @@ and *write_backend*-lines should be configured according to the actual backend
 configuration.
 
 ```
-[RR Service]
+[RR-Service]
 type=service
 router=roundrobinrouter
 servers=LocalMaster1,LocalSlave1,LocalSlave2
@@ -458,9 +458,9 @@ write_backend=LocalMaster1
 print_on_routing=true
 dummy_setting=two
 
-[RR Listener]
+[RR-Listener]
 type=listener
-service=RR Service
+service=RR-Service
 protocol=MariaDBClient
 port=4009
 ```
@@ -506,26 +506,69 @@ Service cache      : /var/cache/maxscale
 2017-02-21 10:37:37   notice : [RoundRobinRouter] Replied to client.
 ```
 
-**Step 5** Connect with MaxAdmin, print diagnostics and call a custom command.
+**Step 5** Connect with MaxCtrl, print diagnostics and call a custom command.
 ```
-$sudo maxadmin
-MaxScale> show service "RR Service"
-	Service:                             RR Service
-	Router:                              roundrobinrouter
-	State:                               Started
-		Queries routed successfully: 37
-		Failed routing attempts:     0
-		Client replies routed:       38
-	Started:                             Tue Feb 21 11:52:08 2017
-	Root user access:                    Disabled
-	Filter chain:                MyLogFilter1
-	Backend databases:
-		127.0.0.1:3001    Protocol: MariaDBBackend    Name: LocalMaster1
-		127.0.0.1:3002    Protocol: MariaDBBackend    Name: LocalSlave1
-		127.0.0.1:3003    Protocol: MariaDBBackend    Name: LocalSlave2
-	Total connections:                   2
-	Currently connected:                 2
-MaxScale> call command rrrouter test_command "one" 0
+$ maxctrl
+maxctrl show service RR-Service
+┌─────────────────────┬────────────────────────────────────────────┐
+│ Service             │ RR-Service                                 │
+├─────────────────────┼────────────────────────────────────────────┤
+│ Router              │ roundrobinrouter                           │
+├─────────────────────┼────────────────────────────────────────────┤
+│ State               │ Started                                    │
+├─────────────────────┼────────────────────────────────────────────┤
+│ Started At          │ Tue Apr 28 08:45:19 2020                   │
+├─────────────────────┼────────────────────────────────────────────┤
+│ Current Connections │ 0                                          │
+├─────────────────────┼────────────────────────────────────────────┤
+│ Total Connections   │ 0                                          │
+├─────────────────────┼────────────────────────────────────────────┤
+│ Max Connections     │ 0                                          │
+├─────────────────────┼────────────────────────────────────────────┤
+│ Cluster             │                                            │
+├─────────────────────┼────────────────────────────────────────────┤
+│ Servers             │ Server1                                    │
+├─────────────────────┼────────────────────────────────────────────┤
+│ Services            │                                            │
+├─────────────────────┼────────────────────────────────────────────┤
+│ Filters             │                                            │
+├─────────────────────┼────────────────────────────────────────────┤
+│ Parameters          │ {                                          │
+│                     │     "router_options": null,                │
+│                     │     "targets": null,                       │
+│                     │     "user": "maxskysql",                   │
+│                     │     "password": "*****",                   │
+│                     │     "enable_root_user": false,             │
+│                     │     "max_connections": 0,                  │
+│                     │     "connection_timeout": 0,               │
+│                     │     "net_write_timeout": 0,                │
+│                     │     "auth_all_servers": false,             │
+│                     │     "strip_db_esc": true,                  │
+│                     │     "localhost_match_wildcard_host": true, │
+│                     │     "version_string": null,                │
+│                     │     "log_auth_warnings": true,             │
+│                     │     "session_track_trx_state": false,      │
+│                     │     "retain_last_statements": -1,          │
+│                     │     "session_trace": false,                │
+│                     │     "cluster": null,                       │
+│                     │     "rank": "primary",                     │
+│                     │     "connection_keepalive": 300,           │
+│                     │     "connection_init_sql_file": null,      │
+│                     │     "max_backends": 0,                     │
+│                     │     "print_on_routing": false,             │
+│                     │     "write_backend": null,                 │
+│                     │     "dummy_setting": "the_answer"          │
+│                     │ }                                          │
+├─────────────────────┼────────────────────────────────────────────┤
+│ Router Diagnostics  │ {                                          │
+│                     │     "queries_ok": 0,                       │
+│                     │     "queries_failed": 0,                   │
+│                     │     "replies": 0                           │
+│                     │ }                                          │
+└─────────────────────┴────────────────────────────────────────────┘
+maxctrl
+
+MaxScale> call command roundrobinrouter test_command "one" 0
 ```
 
 The result of the `test_command "one" 0` is printed to the terminal MaxScale is

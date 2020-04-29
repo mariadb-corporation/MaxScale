@@ -24,7 +24,6 @@
 ## Reference
 
  - [MaxCtrl - Command Line Admin Interface](Reference/MaxCtrl.md)
- - [MaxAdmin - Legacy Admin Interface](Reference/MaxAdmin.md)
  - [Routing Hints](Reference/Hint-Syntax.md)
  - [MaxBinlogCheck](Reference/MaxBinlogCheck.md)
  - [MaxScale REST API](REST-API/API.md)
@@ -72,11 +71,6 @@ of their use.
  - [Read Write Split](Routers/ReadWriteSplit.md)
  - [Schemarouter](Routers/SchemaRouter.md)
  - [SmartRouter](Routers/SmartRouter.md)
-
-The legacy diagnostic routing module MaxAdmin has been deprecated: avoid using
-it.
-
- - [CLI](Routers/CLI.md)
 
 ## Filters
 

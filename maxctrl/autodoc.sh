@@ -25,8 +25,8 @@ cat <<EOF > ../Documentation/Reference/MaxCtrl.md
 # MaxCtrl
 
 MaxCtrl is a command line administrative client for MaxScale which uses
-the MaxScale REST API for communication. It is intended to be the
-replacement software for the legacy MaxAdmin command line client.
+the MaxScale REST API for communication. It has replaced the legacy MaxAdmin
+command line client that is no longer supported or included.
 
 By default, the MaxScale REST API listens on port 8989 on the local host. The
 default credentials for the REST API are \`admin:mariadb\`. The users used by the
