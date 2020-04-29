@@ -164,6 +164,11 @@ void PinlokiSession::select(const std::vector<std::string>& fields)
 
 void PinlokiSession::set(const std::string& key, const std::string& value)
 {
+    if (key == "gtid_slave_pos")
+    {
+        m_router->set_gtid(mxq::GtidList::from_string(value));
+    }
+
     send(modutil_create_ok());
 }
 

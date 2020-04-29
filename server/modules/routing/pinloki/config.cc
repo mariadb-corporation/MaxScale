@@ -78,6 +78,11 @@ std::string Config::boot_strap_gtid_list() const
     return m_boot_strap_gtid_list;
 }
 
+void Config::set_boot_strap_gtid_list(const std::string& gtid)
+{
+    m_boot_strap_gtid_list = gtid;
+}
+
 uint32_t Config::server_id() const
 {
     return m_server_id;

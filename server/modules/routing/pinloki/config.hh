@@ -50,6 +50,7 @@ public:
      * @return
      */
     std::string boot_strap_gtid_list() const;
+    void        set_boot_strap_gtid_list(const std::string& gtid);
     uint32_t    server_id() const;
 
 private:

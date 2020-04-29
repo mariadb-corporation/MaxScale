@@ -62,6 +62,7 @@ public:
     void   stop_slave();
     void   reset_slave();
     GWBUF* show_slave_status() const;
+    void   set_gtid(const mxq::GtidList& gtid);
 
 private:
     Pinloki(SERVICE* pService, Config&& config);

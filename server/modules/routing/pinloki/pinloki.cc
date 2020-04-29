@@ -26,6 +26,13 @@ Pinloki::Pinloki(SERVICE* pService, Config&& config)
     , m_config(std::move(config))
     , m_inventory(m_config)
 {
+    if (auto ifs = std::ifstream(m_config.gtid_file_path()))
+    {
+        std::string gtid_list_str;
+        ifs >> gtid_list_str;
+        m_config.set_boot_strap_gtid_list(gtid_list_str);
+    }
+
     if (m_master_config.load(m_config) && m_master_config.slave_running)
     {
         start_slave();
@@ -256,6 +263,11 @@ GWBUF* Pinloki::show_slave_status() const
     rset->add_column("Slave_Transactional_Groups", "0");
 
     return rset->as_buffer().release();
+}
+
+void Pinloki::set_gtid(const mxq::GtidList& gtid)
+{
+    m_config.set_boot_strap_gtid_list(gtid.to_string());
 }
 
 void Pinloki::MasterConfig::save(const Config& config) const
