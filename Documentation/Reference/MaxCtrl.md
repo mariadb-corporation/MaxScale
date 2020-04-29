@@ -1,8 +1,8 @@
 # MaxCtrl
 
 MaxCtrl is a command line administrative client for MaxScale which uses
-the MaxScale REST API for communication. It is intended to be the
-replacement software for the legacy MaxAdmin command line client.
+the MaxScale REST API for communication. It has replaced the legacy MaxAdmin
+command line client that is no longer supported or included.
 
 By default, the MaxScale REST API listens on port 8989 on the local host. The
 default credentials for the REST API are `admin:mariadb`. The users used by the
@@ -98,7 +98,7 @@ List all services and the servers they use.
 ### list listeners
 
 ```
-Usage: list listeners <service>
+Usage: list listeners [service]
 
 Global Options:
   -u, --user      Username to use  [string] [default: "admin"]
@@ -120,15 +120,16 @@ Options:
   --version  Show version number  [boolean]
   --help     Show help  [boolean]
 
-List listeners for a service.
+List listeners of all services. If a service is given, only listeners for that service are listed.
 
 
-  Field | Description
-  ----- | -----------
-  Name  | Listener name
-  Port  | The port where the listener listens
-  Host  | The address or socket where the listener listens
-  State | Listener state
+  Field   | Description
+  -----   | -----------
+  Name    | Listener name
+  Port    | The port where the listener listens
+  Host    | The address or socket where the listener listens
+  State   | Listener state
+  Service | Service that this listener points to
 ```
 
 ### list monitors
@@ -775,6 +776,77 @@ The list of services that use this filter is show in the `Services` field.
 ```
 
 ### show filters
+
+```
+Usage: show filters
+
+Global Options:
+  -u, --user      Username to use  [string] [default: "admin"]
+  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
+  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -q, --quiet     Silence all output  [boolean] [default: false]
+  --tsv           Print tab separated output  [boolean] [default: false]
+
+HTTPS/TLS Options:
+  -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
+  --tls-key                     Path to TLS private key  [string]
+  --tls-passphrase              Password for the TLS private key  [string]
+  --tls-cert                    Path to TLS public certificate  [string]
+  --tls-ca-cert                 Path to TLS CA certificate  [string]
+  -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
+
+Options:
+  --version  Show version number  [boolean]
+  --help     Show help  [boolean]
+
+Show detailed information of all filters.
+
+
+  Field      | Description
+  -----      | -----------
+  Filter     | Filter name
+  Module     | The module that the filter uses
+  Services   | Services that use the filter
+  Parameters | Filter parameters
+```
+
+### show listener
+
+```
+Usage: show listener <listener>
+
+Global Options:
+  -u, --user      Username to use  [string] [default: "admin"]
+  -p, --password  Password for the user. To input the password manually, give -p as the last argument or use --password=''  [string] [default: "mariadb"]
+  -h, --hosts     List of MaxScale hosts. The hosts must be in HOST:PORT format and each value must be separated by a comma.  [string] [default: "localhost:8989"]
+  -t, --timeout   Request timeout in milliseconds  [number] [default: 10000]
+  -q, --quiet     Silence all output  [boolean] [default: false]
+  --tsv           Print tab separated output  [boolean] [default: false]
+
+HTTPS/TLS Options:
+  -s, --secure                  Enable HTTPS requests  [boolean] [default: false]
+  --tls-key                     Path to TLS private key  [string]
+  --tls-passphrase              Password for the TLS private key  [string]
+  --tls-cert                    Path to TLS public certificate  [string]
+  --tls-ca-cert                 Path to TLS CA certificate  [string]
+  -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
+
+Options:
+  --version  Show version number  [boolean]
+  --help     Show help  [boolean]
+
+
+
+
+                                                           Field      | Description
+                                                           -----      | -----------
+                                                           Name       | Listener name
+                                                           Service    | Services that the listener points to
+                                                           Parameters | Listener parameters
+```
+
+### show listeners
 
 ```
 Usage: show filters
@@ -1586,7 +1658,7 @@ Options:
   --version  Show version number  [boolean]
   --help     Show help  [boolean]
 
-The created user can be used with the MaxScale REST API as well as the MaxAdmin network interface. By default the created user will have read-only privileges. To make the user an administrative user, use the `--type=admin` option. Basic users can only perform `list` and `show` commands.
+By default the created user will have read-only privileges. To make the user an administrative user, use the `--type=admin` option. Basic users can only perform `list` and `show` commands.
 ```
 
 ## destroy
@@ -1615,6 +1687,7 @@ HTTPS/TLS Options:
 Options:
   --version  Show version number  [boolean]
   --help     Show help  [boolean]
+  --force    Remove the server from monitors and services before destroying it  [boolean] [default: false]
 
 The server must be unlinked from all services and monitor before it can be destroyed.
 ```
@@ -1643,6 +1716,7 @@ HTTPS/TLS Options:
 Options:
   --version  Show version number  [boolean]
   --help     Show help  [boolean]
+  --force    Remove monitored servers from the monitor before destroying it  [boolean] [default: false]
 
 The monitor must be unlinked from all servers before it can be destroyed.
 ```
@@ -1699,6 +1773,7 @@ HTTPS/TLS Options:
 Options:
   --version  Show version number  [boolean]
   --help     Show help  [boolean]
+  --force    Remove filters, listeners and servers from service before destroying it  [boolean] [default: false]
 
 The service must be unlinked from all servers and filters. All listeners for the service must be destroyed before the service itself can be destroyed.
 ```
@@ -1727,6 +1802,7 @@ HTTPS/TLS Options:
 Options:
   --version  Show version number  [boolean]
   --help     Show help  [boolean]
+  --force    Automatically remove the filter from all services before destroying it  [boolean] [default: false]
 
 The filter must not be used by any service when it is destroyed.
 ```
@@ -2420,7 +2496,8 @@ HTTPS/TLS Options:
   -n, --tls-verify-server-cert  Whether to verify server TLS certificates  [boolean] [default: true]
 
 API options:
-  --sum  Calculate sum of API result. Only works for arrays of numbers e.g. `api get --sum servers data[].attributes.statistics.connections`.  [boolean] [default: false]
+  --sum     Calculate sum of API result. Only works for arrays of numbers e.g. `api get --sum servers data[].attributes.statistics.connections`.  [boolean] [default: false]
+  --pretty  Pretty-print output.  [boolean] [default: false]
 
 Options:
   --version  Show version number  [boolean]
