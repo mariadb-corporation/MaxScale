@@ -56,16 +56,16 @@ FileReader::FileReader(const maxsql::Gtid& gtid, const Inventory* inv)
 {
     if (m_inotify_fd == -1)
     {
-        perror("inotify_init");
-        exit(EXIT_FAILURE);
+        MXB_THROW(BinlogReadError, "inotify_init failed: " << errno << ", " << mxb_strerror(errno));
     }
 
     if (gtid.is_valid())
     {
         auto gtid_pos = find_gtid_position(gtid, inv);
+
         if (gtid_pos.file_name.empty())
         {
-            MXB_THROW(BinlogReadError, "Could not find " << gtid << " in binlogs");
+            MXB_THROW(GtidNotFoundError, "Could not find '" << gtid << "' in any of the binlogs");
         }
 
         // This is where the initial events need to be generated. I deque of events will be fine.
@@ -90,7 +90,8 @@ void FileReader::open(const std::string& file_name)
     m_read_pos.file.open(file_name, std::ios_base::in | std::ios_base::binary);
     if (!m_read_pos.file.good())
     {
-        MXB_THROW(BinlogReadError, "Could not open " << file_name << " for reading");
+        MXB_THROW(BinlogReadError,
+                  "Could not open " << file_name << " for reading: " << errno << ", " << mxb_strerror(errno));
     }
     m_read_pos.next_pos = PINLOKI_MAGIC.size();     // should check that it really is PINLOKI_MAGIC
     m_read_pos.name = file_name;
@@ -104,25 +105,18 @@ void FileReader::fd_notify(uint32_t events)
 
     ssize_t len = read(m_inotify_fd, buf, SZ);
 
+#ifdef SS_DEBUG
     inotify_event* event = nullptr;
     for (auto ptr = buf; ptr < buf + len; ptr += sizeof(inotify_event) + event->len)
     {
         event = reinterpret_cast<inotify_event*>(ptr);
-        if (!(event->mask & IN_MODIFY))
-        {
-            std::cerr << "Unexpected inotify event. event->mask = "
-                      << "0x" << std::hex << event->mask << '\n';
-        }
+        mxb_assert(event->mask & IN_MODIFY);
     }
+#endif
 
-    if (len == -1)
+    if (len == -1 && errno != EAGAIN)
     {
-        if (errno != EAGAIN)
-        {
-            perror("read");
-            exit(EXIT_FAILURE);
-        }
-        return;
+        MXB_THROW(BinlogReadError, "Failed to read inotify fd: " << errno << ", " << mxb_strerror(errno));
     }
 }
 
@@ -191,10 +185,10 @@ void FileReader::set_inotify_fd()
 
     m_inotify_file = m_read_pos.name;
     m_inotify_descriptor = inotify_add_watch(m_inotify_fd, m_read_pos.name.c_str(), IN_MODIFY);
+
     if (m_inotify_descriptor == -1)
     {
-        perror("inotify_add_watch");
-        exit(EXIT_FAILURE);
+        MXB_THROW (BinlogReadError, "inotify_add_watch failed:" << errno << ", " << mxb_strerror(errno));
     }
 }
 }

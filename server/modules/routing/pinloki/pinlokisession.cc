@@ -69,11 +69,23 @@ int32_t PinlokiSession::routeQuery(GWBUF* pPacket)
     case MXS_COM_BINLOG_DUMP:
         // Start dumping binlogs
         MXS_INFO("COM_BINLOG_DUMP");
-        rval = 1;
-        m_reader = std::make_unique<Reader>(
-            [this](const auto& event) {
-                return send_event(event);
-            }, m_router->inventory(), mxs::RoutingWorker::get_current(), m_gtid);
+        try
+        {
+            m_reader = std::make_unique<Reader>(
+                [this](const auto& event) {
+                    return send_event(event);
+                }, m_router->inventory(), mxs::RoutingWorker::get_current(), m_gtid);
+            rval = 1;
+        }
+        catch (const GtidNotFoundError& err)
+        {
+            send(modutil_create_mysql_err_msg(1, 0, 1236, "HY000", err.what()));
+            rval = 1;
+        }
+        catch (const BinlogReadError& err)
+        {
+            MXS_ERROR("%s", err.what());
+        }
         break;
 
     case MXS_COM_QUERY:
@@ -96,10 +108,6 @@ int32_t PinlokiSession::routeQuery(GWBUF* pPacket)
         const mxs::Reply reply;
         mxs::RouterSession::clientReply(response, down, reply);
         rval = 1;
-    }
-    else
-    {
-        mxb_assert(rval == 1);
     }
 
     return rval;
