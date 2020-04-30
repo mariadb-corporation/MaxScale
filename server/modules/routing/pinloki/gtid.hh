@@ -14,6 +14,7 @@
 #pragma once
 
 #include <maxbase/ccdefs.hh>
+#include <maxsql/ccdefs.hh>
 #include <sstream>
 #include <string>
 #include <vector>

@@ -15,6 +15,7 @@
 
 #include <maxbase/exception.hh>
 #include <maxbase/string.hh>
+#include <maxsql/ccdefs.hh>
 #include <mysql.h>
 
 struct st_mysql;

@@ -127,18 +127,27 @@ bool PinlokiSession::handleError(mxs::ErrorType type, GWBUF* pMessage,
 
 bool PinlokiSession::send_event(const maxsql::RplEvent& event)
 {
-    mxs::Buffer buffer(5 + event.data().size());
+    // Not the prettiest way of detecting a full network buffer but it should work
+    bool can_write = m_pSession->client_dcb->writeq() == nullptr;
 
-    // Wrap the events in a protocol packet with a command byte of 0x0
-    mariadb::set_byte3(buffer.data(), event.data().size() + 1);
-    buffer.data()[3] = m_seq++;
-    buffer.data()[4] = 0x0;
-    mempcpy(buffer.data() + 5, event.data().data(), event.data().size());
+    if (can_write)
+    {
+        mxs::Buffer buffer(5 + event.data().size());
 
-    send(buffer.release());
+        // Wrap the events in a protocol packet with a command byte of 0x0
+        mariadb::set_byte3(buffer.data(), event.data().size() + 1);
+        buffer.data()[3] = m_seq++;
+        buffer.data()[4] = 0x0;
+        mempcpy(buffer.data() + 5, event.data().data(), event.data().size());
 
-    // TODO: Stop sending events when the network buffer gets full
-    return true;
+        send(buffer.release());
+    }
+    else
+    {
+        MXS_DEBUG("Buffer full, %u bytes buffered", gwbuf_length(m_pSession->client_dcb->writeq()));
+    }
+
+    return can_write;
 }
 
 void PinlokiSession::send(GWBUF* buffer)

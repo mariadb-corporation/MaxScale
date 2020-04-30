@@ -42,6 +42,14 @@ Reader::Reader(Callback cb, const Inventory* inv, mxb::Worker* worker, const max
     handle_messages();
 }
 
+Reader::~Reader()
+{
+    if (m_dcid)
+    {
+        m_worker->cancel_delayed_call(m_dcid);
+    }
+}
+
 uint32_t Reader::epoll_update(MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events)
 {
     Reader* self = static_cast<PollData*>(data)->reader;
@@ -58,12 +66,45 @@ void Reader::notify_concrete_reader(uint32_t events)
 
 void Reader::handle_messages()
 {
-    while (auto ev = m_file_reader.fetch_event())
+    if (m_dcid == 0)
     {
-        if (!m_cb(ev))
+        while ((m_event = m_file_reader.fetch_event()))
         {
-            break;
+            if (!m_cb(m_event))
+            {
+                // Note: This is a very crude, albeit simple, form of flow control. Installing event handlers
+                // that deal with the outbound network buffer being full would be far more efficient.
+                m_dcid = m_worker->delayed_call(10, &Reader::resend_event, this);
+                break;
+            }
         }
     }
+}
+
+bool Reader::resend_event(mxb::Worker::Call::action_t action)
+{
+    bool call_again = false;
+
+    if (action == mxb::Worker::Call::EXECUTE)
+    {
+        mxb_assert(m_event);
+
+        // Try to process the event we failed to process earlier
+        if (m_cb(m_event))
+        {
+            // Event successfully processed, try to continue event processing. Clearing out m_dcid before the
+            // call allows handle_messages to install a new delayed call in case we have more data than we can
+            // send in one go.
+            m_dcid = 0;
+            handle_messages();
+        }
+        else
+        {
+            // Event still cannot be processed, keep retrying.
+            call_again = true;
+        }
+    }
+
+    return call_again;
 }
 }

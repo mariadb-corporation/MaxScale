@@ -13,6 +13,8 @@
 
 #pragma once
 
+#include <maxsql/ccdefs.hh>
+
 #include "gtid.hh"
 
 #include <string>

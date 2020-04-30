@@ -17,6 +17,7 @@
 #include <maxbase/worker.hh>
 
 #include "file_reader.hh"
+#include "rpl_event.hh"
 
 namespace pinloki
 {
@@ -27,10 +28,14 @@ class Reader
 {
 public:
     Reader(Callback cb, const Inventory* inv, mxb::Worker* worker, const maxsql::Gtid& gtid);
+    ~Reader();
+
 private:
     static uint32_t epoll_update(struct MXB_POLL_DATA* data, MXB_WORKER* worker, uint32_t events);
     void            notify_concrete_reader(uint32_t events);
     void            handle_messages();
+
+    bool resend_event(mxb::Worker::Call::action_t);
 
     struct PollData : public MXB_POLL_DATA
     {
@@ -38,9 +43,11 @@ private:
         Reader* reader;
     };
 
-    Callback     m_cb;
-    PollData     m_reader_poll_data;
-    FileReader   m_file_reader;
-    mxb::Worker* m_worker;
+    Callback      m_cb;
+    PollData      m_reader_poll_data;
+    FileReader    m_file_reader;
+    mxb::Worker*  m_worker;
+    uint32_t      m_dcid = 0;
+    mxq::RplEvent m_event;      // Stores the latest event that hasn't been processed
 };
 }
