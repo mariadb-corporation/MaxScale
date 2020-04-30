@@ -20,4 +20,7 @@ target_link_libraries(maxbase systemd)
 endif()
 
 set_target_properties(maxbase PROPERTIES VERSION "1.0.0" LINK_FLAGS -Wl,-z,defs)
-add_subdirectory(test)
+
+if (BUILD_TESTS)
+  add_subdirectory(test)
+endif()
