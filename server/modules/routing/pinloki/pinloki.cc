@@ -315,32 +315,36 @@ void Pinloki::MasterConfig::save(const Config& config) const
 bool Pinloki::MasterConfig::load(const Config& config)
 {
     bool rval = false;
-    json_error_t err;
-    auto js = json_load_file(config.master_info_file().c_str(), 0, &err);
 
-    if (js)
+    if (access(config.master_info_file().c_str(), F_OK) == 0)
     {
-        rval = true;
+        json_error_t err;
+        auto js = json_load_file(config.master_info_file().c_str(), 0, &err);
 
-        mxs::get_json_bool(js, "slave_running", &slave_running);
-        mxs::get_json_string(js, "host", &host);
-        mxs::get_json_int(js, "port", &port);
-        mxs::get_json_string(js, "user", &user);
-        mxs::get_json_string(js, "password", &password);
-        mxs::get_json_bool(js, "use_gtid", &use_gtid);
-        mxs::get_json_bool(js, "ssl", &ssl);
-        mxs::get_json_string(js, "ssl_ca", &ssl_ca);
-        mxs::get_json_string(js, "ssl_capath", &ssl_capath);
-        mxs::get_json_string(js, "ssl_cert", &ssl_cert);
-        mxs::get_json_string(js, "ssl_crl", &ssl_crl);
-        mxs::get_json_string(js, "ssl_crlpath", &ssl_crlpath);
-        mxs::get_json_string(js, "ssl_key", &ssl_key);
-        mxs::get_json_string(js, "ssl_cipher", &ssl_cipher);
-        mxs::get_json_bool(js, "ssl_verify_server_cert", &ssl_verify_server_cert);
-    }
-    else
-    {
-        MXS_INFO("Failed to load master info JSON file: %s", err.text);
+        if (js)
+        {
+            rval = true;
+
+            mxs::get_json_bool(js, "slave_running", &slave_running);
+            mxs::get_json_string(js, "host", &host);
+            mxs::get_json_int(js, "port", &port);
+            mxs::get_json_string(js, "user", &user);
+            mxs::get_json_string(js, "password", &password);
+            mxs::get_json_bool(js, "use_gtid", &use_gtid);
+            mxs::get_json_bool(js, "ssl", &ssl);
+            mxs::get_json_string(js, "ssl_ca", &ssl_ca);
+            mxs::get_json_string(js, "ssl_capath", &ssl_capath);
+            mxs::get_json_string(js, "ssl_cert", &ssl_cert);
+            mxs::get_json_string(js, "ssl_crl", &ssl_crl);
+            mxs::get_json_string(js, "ssl_crlpath", &ssl_crlpath);
+            mxs::get_json_string(js, "ssl_key", &ssl_key);
+            mxs::get_json_string(js, "ssl_cipher", &ssl_cipher);
+            mxs::get_json_bool(js, "ssl_verify_server_cert", &ssl_verify_server_cert);
+        }
+        else
+        {
+            MXS_INFO("Failed to load master info JSON file: %s", err.text);
+        }
     }
 
     return rval;
