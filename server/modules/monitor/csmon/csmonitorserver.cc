@@ -44,24 +44,16 @@ xmlNode* get_child_node(xmlNode* pNode, const char* zName)
 
 const char* get_child_value(xmlNode* pNode, const char* zName)
 {
-    const char* pValue = nullptr;
+    const char* zValue = nullptr;
 
     pNode = get_child_node(pNode, zName);
 
     if (pNode)
     {
-        pNode = pNode->xmlChildrenNode;
-
-        if (pNode)
-        {
-            if (pNode->content)
-            {
-                pValue = (const char*)pNode->content;
-            }
-        }
+        zValue = reinterpret_cast<const char*>(xmlNodeGetContent(pNode));
     }
 
-    return pValue;
+    return zValue;
 }
 
 bool get_value(xmlNode* pNode,
