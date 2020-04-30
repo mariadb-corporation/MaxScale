@@ -104,6 +104,13 @@ private:
     void cs_rollback(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorServer* pServer);
 #endif
 
+    bool cs_add_first_multi_node(json_t* pOutput,
+                                 CsMonitorServer* pServer,
+                                 const std::chrono::seconds& timeout);
+    bool cs_add_additional_multi_node(json_t* pOutput,
+                                      CsMonitorServer* pServer,
+                                      const std::chrono::seconds& timeout);
+
     std::string create_add_config(CsMonitorServer::Config& config, CsMonitorServer* pServer);
     std::string create_remove_config(CsMonitorServer::Config& config,
                                      CsMonitorServer* pServer,

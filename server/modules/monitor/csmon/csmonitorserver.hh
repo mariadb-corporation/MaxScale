@@ -165,6 +165,16 @@ public:
         m_state = state;
     }
 
+    bool is_multi_node() const
+    {
+        return m_state == MULTI_NODE;
+    }
+
+    bool is_single_node() const
+    {
+        return m_state == SINGLE_NODE;
+    }
+
     enum TrxState
     {
         TRX_ACTIVE,

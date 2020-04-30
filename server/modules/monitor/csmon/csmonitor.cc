@@ -885,120 +885,19 @@ void CsMonitor::cs_add_node(json_t** ppOutput,
 
     const ServerVector& sv = servers();
 
-    if (is_node_part_of_cluster(pServer))
+    if (pServer->is_multi_node())
     {
-        if (sv.size() == 1)
-        {
-            mxs_json_error_append(pOutput,
-                                  "The server '%s' is the single node of the cluster.",
-                                  pServer->name());
-        }
-        else
-        {
-            mxs_json_error_append(pOutput,
-                                  "The server '%s' is already in the cluster.",
-                                  pServer->name());
-        }
+        mxs_json_error_append(pOutput,
+                              "The server '%s' is already a node in a cluster.",
+                              pServer->name());
+    }
+    else if (sv.size() == 1)
+    {
+        success = cs_add_first_multi_node(pOutput, pServer, timeout);
     }
     else
     {
-        string trx_id = next_trx_id("add-node");
-
-        http::Results results;
-        if (CsMonitorServer::begin(sv, timeout, trx_id, m_http_config, &results))
-        {
-            auto status = pServer->fetch_status();
-
-            if (status.ok())
-            {
-                ServerVector existing_servers;
-                auto sb = sv.begin();
-                auto se = sv.end();
-
-                std::copy_if(sb, se, std::back_inserter(existing_servers), [pServer](auto* pS) {
-                        return pServer != pS;
-                    });
-
-                CsMonitorServer::Configs configs;
-                if (CsMonitorServer::fetch_configs(existing_servers, m_http_config, &configs))
-                {
-                    auto cb = configs.begin();
-                    auto ce = configs.end();
-
-                    auto it = std::max_element(cb, ce, [](const auto& l, const auto& r) {
-                            return l.timestamp < r.timestamp;
-                        });
-
-                    CsMonitorServer* pSource = *(sb + (it - cb));
-
-                    MXS_NOTICE("Using config of '%s' for configuring '%s'.",
-                               pSource->name(), pServer->name());
-
-                    CsMonitorServer::Config& config = *it;
-
-                    string body = create_add_config(config, pServer);
-
-                    if (pServer->set_config(config.response.body, &pOutput))
-                    {
-                        if (CsMonitorServer::set_config(sv, body, m_http_config, &results))
-                        {
-                            success = true;
-                        }
-                        else
-                        {
-                            LOG_APPEND_JSON_ERROR(&pOutput, "Could not update configs of existing nodes.");
-                            results_to_json(sv, results, &pServers);
-                        }
-                    }
-                    else
-                    {
-                        LOG_PREPEND_JSON_ERROR(&pOutput, "Could not update config of new node.");
-                    }
-                }
-                else
-                {
-                    LOG_APPEND_JSON_ERROR(&pOutput, "Could not fetch configs from existing nodes.");
-                    results_to_json(sv, configs, &pServers);
-                }
-            }
-            else
-            {
-                LOG_APPEND_JSON_ERROR(&pOutput, "Could not fetch status from node to be added.");
-                if (status.sJson.get())
-                {
-                    mxs_json_error_push_back(pOutput, status.sJson.get());
-                }
-            }
-        }
-        else
-        {
-            LOG_APPEND_JSON_ERROR(&pOutput, "Could not start a transaction on all nodes.");
-            results_to_json(sv, results, &pServers);
-        }
-
-        if (success)
-        {
-            success = CsMonitorServer::commit(sv, m_http_config, &results);
-
-            if (!success)
-            {
-                LOG_APPEND_JSON_ERROR(&pOutput, "Could not commit changes, will attempt rollback.");
-                results_to_json(sv, results, &pServers);
-            }
-        }
-
-        if (!success)
-        {
-            if (!CsMonitorServer::rollback(sv, m_http_config, &results))
-            {
-                LOG_APPEND_JSON_ERROR(&pOutput, "Could not rollback changes, cluster state unknown.");
-                if (pServers)
-                {
-                    json_decref(pServers);
-                }
-                results_to_json(sv, results, &pServers);
-            }
-        }
+        success = cs_add_additional_multi_node(pOutput, pServer, timeout);
     }
 
     if (success)
@@ -1012,10 +911,6 @@ void CsMonitor::cs_add_node(json_t** ppOutput,
 
     json_object_set_new(pOutput, csmon::keys::SUCCESS, json_boolean(success));
     json_object_set_new(pOutput, csmon::keys::MESSAGE, json_string(message.str().c_str()));
-    if (pServers)
-    {
-        json_object_set_new(pOutput, csmon::keys::SERVERS, pServers);
-    }
 
     *ppOutput = pOutput;
 
@@ -1686,6 +1581,149 @@ void CsMonitor::cs_rollback(json_t** ppOutput, mxb::Semaphore* pSem, CsMonitorSe
     pSem->post();
 }
 #endif
+
+bool CsMonitor::cs_add_first_multi_node(json_t* pOutput,
+                                        CsMonitorServer* pServer,
+                                        const std::chrono::seconds& timeout)
+{
+    bool success = false;
+
+    mxb_assert(pServer->is_single_node());
+    mxb_assert(servers().size() == 1);
+    mxb_assert(servers().front() == pServer);
+
+    auto config = pServer->fetch_config();
+
+    if (config.ok())
+    {
+        //TODO: Configure single node.
+    }
+    else
+    {
+        mxs_json_error_append(pOutput, "Could not fetch config of '%s'.", pServer->name());
+        if (config.sJson.get())
+        {
+            mxs_json_error_push_back(pOutput, config.sJson.get());
+        }
+    }
+
+    return success;
+}
+
+bool CsMonitor::cs_add_additional_multi_node(json_t* pOutput,
+                                             CsMonitorServer* pServer,
+                                             const std::chrono::seconds& timeout)
+{
+    bool success = false;
+    json_t* pServers = nullptr;
+
+    const ServerVector& sv = servers();
+
+    string trx_id = next_trx_id("add-node");
+
+    http::Results results;
+    if (CsMonitorServer::begin(sv, timeout, trx_id, m_http_config, &results))
+    {
+        auto status = pServer->fetch_status();
+
+        if (status.ok())
+        {
+            ServerVector existing_servers;
+            auto sb = sv.begin();
+            auto se = sv.end();
+
+            std::copy_if(sb, se, std::back_inserter(existing_servers), [pServer](auto* pS) {
+                    return pServer != pS;
+                });
+
+            CsMonitorServer::Configs configs;
+            if (CsMonitorServer::fetch_configs(existing_servers, m_http_config, &configs))
+            {
+                auto cb = configs.begin();
+                auto ce = configs.end();
+
+                auto it = std::max_element(cb, ce, [](const auto& l, const auto& r) {
+                        return l.timestamp < r.timestamp;
+                    });
+
+                CsMonitorServer* pSource = *(sb + (it - cb));
+
+                MXS_NOTICE("Using config of '%s' for configuring '%s'.",
+                           pSource->name(), pServer->name());
+
+                CsMonitorServer::Config& config = *it;
+
+                string body = create_add_config(config, pServer);
+
+                if (pServer->set_config(config.response.body, &pOutput))
+                {
+                    if (CsMonitorServer::set_config(sv, body, m_http_config, &results))
+                    {
+                        success = true;
+                    }
+                    else
+                    {
+                        LOG_APPEND_JSON_ERROR(&pOutput, "Could not update configs of existing nodes.");
+                        results_to_json(sv, results, &pServers);
+                    }
+                }
+                else
+                {
+                    LOG_PREPEND_JSON_ERROR(&pOutput, "Could not update config of new node.");
+                }
+            }
+            else
+            {
+                LOG_APPEND_JSON_ERROR(&pOutput, "Could not fetch configs from existing nodes.");
+                results_to_json(sv, configs, &pServers);
+            }
+        }
+        else
+        {
+            LOG_APPEND_JSON_ERROR(&pOutput, "Could not fetch status from node to be added.");
+            if (status.sJson.get())
+            {
+                mxs_json_error_push_back(pOutput, status.sJson.get());
+            }
+        }
+    }
+    else
+    {
+        LOG_APPEND_JSON_ERROR(&pOutput, "Could not start a transaction on all nodes.");
+        results_to_json(sv, results, &pServers);
+    }
+
+    if (success)
+    {
+        success = CsMonitorServer::commit(sv, m_http_config, &results);
+
+        if (!success)
+        {
+            LOG_APPEND_JSON_ERROR(&pOutput, "Could not commit changes, will attempt rollback.");
+            results_to_json(sv, results, &pServers);
+        }
+    }
+
+    if (!success)
+    {
+        if (!CsMonitorServer::rollback(sv, m_http_config, &results))
+        {
+            LOG_APPEND_JSON_ERROR(&pOutput, "Could not rollback changes, cluster state unknown.");
+            if (pServers)
+            {
+                json_decref(pServers);
+            }
+            results_to_json(sv, results, &pServers);
+        }
+    }
+
+    if (pServers)
+    {
+        json_object_set_new(pOutput, csmon::keys::SERVERS, pServers);
+    }
+
+    return success;
+}
 
 string CsMonitor::create_add_config(CsMonitorServer::Config& config, CsMonitorServer* pServer)
 {
