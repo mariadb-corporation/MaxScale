@@ -11,6 +11,7 @@
  * Public License.
  */
 #include "columnstore.hh"
+#include <libxml/xpath.h>
 
 using std::string;
 using std::vector;
@@ -194,6 +195,105 @@ bool services_from_array(json_t* pArray, Services* pServices)
     }
 
     return rv;
+}
+
+namespace
+{
+
+int replace_if(xmlNodeSet* pNodes, const char* zNew_value, const char* zIf_value)
+{
+    int n = 0;
+    int nNodes = pNodes ? pNodes->nodeNr : 0;
+
+    // From the XML sample.
+    /*
+     * NOTE: the nodes are processed in reverse order, i.e. reverse document
+     *       order because xmlNodeSetContent can actually free up descendant
+     *       of the node and such nodes may have been selected too ! Handling
+     *       in reverse order ensure that descendant are accessed first, before
+     *       they get removed. Mixing XPath and modifications on a tree must be
+     *       done carefully !
+     */
+
+    for (int i = nNodes - 1; i >= 0; --i)
+    {
+        const char* zValue = nullptr;
+        auto* pNode = pNodes->nodeTab[i];
+
+        if (zIf_value)
+        {
+            zValue = reinterpret_cast<const char*>(xmlNodeGetContent(pNode));
+        }
+
+        if (!zIf_value || (zValue && strcmp(zIf_value, zValue) == 0))
+        {
+            ++n;
+            xmlNodeSetContent(pNode, reinterpret_cast<const xmlChar*>(zNew_value));
+
+            // From the XML sample.
+            /*
+             * All the elements returned by an XPath query are pointers to
+             * elements from the tree *except* namespace nodes where the XPath
+             * semantic is different from the implementation in libxml2 tree.
+             * As a result when a returned node set is freed when
+             * xmlXPathFreeObject() is called, that routine must check the
+             * element type. But node from the returned set may have been removed
+             * by xmlNodeSetContent() resulting in access to freed data.
+             * This can be exercised by running
+             *       valgrind xpath2 test3.xml '//discarded' discarded
+             * There is 2 ways around it:
+             *   - make a copy of the pointers to the nodes from the result set
+             *     then call xmlXPathFreeObject() and then modify the nodes
+             * or
+             *   - remove the reference to the modified nodes from the node set
+             *     as they are processed, if they are not namespace nodes.
+             */
+            if (pNode->type != XML_NAMESPACE_DECL)
+            {
+                pNodes->nodeTab[i] = NULL;
+            }
+        }
+    }
+
+    return n;
+}
+
+int replace_if(xmlXPathContext& xpathContext,
+               const char* zXpath,
+               const char* zNew_value,
+               const char* zIf_value)
+{
+    int n = -1;
+
+    xmlXPathObject* pXpath_object = xmlXPathEvalExpression(reinterpret_cast<const xmlChar*>(zXpath),
+                                                           &xpathContext);
+    mxb_assert(pXpath_object);
+
+    if (pXpath_object)
+    {
+        n = replace_if(pXpath_object->nodesetval, zNew_value, zIf_value);
+        xmlXPathFreeObject(pXpath_object);
+    }
+
+    return n;
+}
+
+}
+
+int replace_if(xmlDoc& xmlDoc, const char* zXpath, const char* zNew_value, const char* zIf_value)
+{
+    int n = -1;
+
+    xmlXPathContext* pXpath_context = xmlXPathNewContext(&xmlDoc);
+    mxb_assert(pXpath_context);
+
+    if (pXpath_context)
+    {
+        n = replace_if(*pXpath_context, zXpath, zNew_value, zIf_value);
+        xmlXPathFreeContext(pXpath_context);
+    }
+
+    return n;
 }
 
 std::string rest::create_url(const SERVER& server, int64_t port, rest::Action action)

@@ -45,6 +45,19 @@ bool from_string(const char* zXml, std::unique_ptr<xmlDoc>* psDoc);
 bool dbroots_from_array(json_t* pArray, DbRoots* pDbroots);
 bool services_from_array(json_t* pArray, Services* pServices);
 
+/**
+ * Replace value of key(s) in XML document.
+ *
+ * @param xmlDoc      The XML document.
+ * @param zXpath      The XML path that identifies the key(s).
+ * @param zNew_value  The new value.
+ * @param zIf_value   If non-NULL, what the previous value must be for the replacement to be done.
+ *
+ * @return -1 in case of some low-level error (that outside development should not occur), otherwise
+ *         the number of replacements made.
+ */
+int replace_if(xmlDoc& xmlDoc, const char* zXpath, const char* zNew_value, const char* zIf_value = nullptr);
+
 namespace keys
 {
 
