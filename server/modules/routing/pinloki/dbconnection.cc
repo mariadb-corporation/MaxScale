@@ -93,8 +93,7 @@ MariaRplEvent Connection::get_rpl_msg()
     auto ptr = mariadb_rpl_fetch(m_rpl, nullptr);
     if (!ptr)
     {
-        std::cerr << "OK " << mariadb_error_str() << '\n';
-        throw std::runtime_error("dammit");
+        throw std::runtime_error(mariadb_error_str());
     }
 
     return MariaRplEvent {ptr, m_rpl};

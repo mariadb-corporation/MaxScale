@@ -63,7 +63,7 @@ void Writer::run()
             {
                 auto rpl_msg = conn.get_rpl_msg();
                 const auto& rpl_event = rpl_msg.event();
-                MXB_SNOTICE(rpl_msg);
+                MXB_SDEBUG(rpl_msg);
 
                 switch (rpl_event.event_type)
                 {
@@ -71,11 +71,8 @@ void Writer::run()
                     {
                         save_gtid_list();
 
-                        auto& egtid = rpl_event.event.gtid;     // TODO, make
-
+                        auto& egtid = rpl_event.event.gtid;
                         auto gtid = maxsql::Gtid(egtid.domain_id, rpl_event.server_id, egtid.sequence_nr);
-                        std::cout << "XXX egtid = " << gtid << "\n";
-
                         m_current_gtid_list.replace(gtid);
                     }
                     break;

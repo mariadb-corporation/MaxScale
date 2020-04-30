@@ -164,8 +164,6 @@ maxsql::RplEvent FileReader::fetch_event()
         m_read_pos.next_pos = rpl.next_event_pos();
     }
 
-    std::cout.flush();
-
     return rpl;
 }
 
@@ -181,14 +179,12 @@ void FileReader::set_inotify_fd()
         inotify_rm_watch(m_inotify_fd, m_inotify_descriptor);
     }
 
-    std::cout << "Set inotify file " << m_read_pos.name << std::endl;
-
     m_inotify_file = m_read_pos.name;
     m_inotify_descriptor = inotify_add_watch(m_inotify_fd, m_read_pos.name.c_str(), IN_MODIFY);
 
     if (m_inotify_descriptor == -1)
     {
-        MXB_THROW (BinlogReadError, "inotify_add_watch failed:" << errno << ", " << mxb_strerror(errno));
+        MXB_THROW(BinlogReadError, "inotify_add_watch failed:" << errno << ", " << mxb_strerror(errno));
     }
 }
 }
