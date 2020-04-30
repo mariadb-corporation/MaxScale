@@ -1,5 +1,7 @@
 # PAM Authenticator
 
+[TOC]
+
 Pluggable authentication module (PAM) is a general purpose authentication API.
 An application using PAM can authenticate a user without knowledge about the
 underlying authentication implementation. The actual authentication scheme is
@@ -129,3 +131,11 @@ the client. The servers should send an AuthSwitchRequest packet as defined
 above, MaxScale responds with the password received by the client authenticator
 and finally backend replies with OK. Informational messages from backends are
 only printed to the info-log.
+
+## Test tool
+
+MaxScale binary directory contains the *test_pam_login*-executable. This simple
+program asks for a username, password and PAM service and then uses the given
+credentials to login to the given service. *test_pam_login* uses the same code
+as MaxScale itself to communicate with the OS PAM interface and may be useful
+for diagnosing PAM login issues.

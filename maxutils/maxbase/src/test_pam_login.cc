@@ -23,11 +23,11 @@ using PamResult = mxb::PamResult::Result;
 
 int main()
 {
-    mxb::Log log;
+    mxb::Log log(MXB_LOG_TARGET_STDOUT);
     string username, password, service;
 
     cout << "Username:\n";
-    cin >> username;
+    std::getline(cin, username);
 
     // Disable echo when reading password.
     termios orig_flags {0};
@@ -40,8 +40,8 @@ int main()
     bool tc_error = (tcsetattr(fd, TCSANOW, &new_flags) != 0);
     if (!tc_error)
     {
-        cout << "Password (no echo):\n";
-        cin >> password;
+        cout << "Password:\n";
+        std::getline(cin, password);
         // Re-enable echo.
         tc_error = (tcsetattr(fd, TCSANOW, &orig_flags) != 0);
     }
@@ -53,7 +53,7 @@ int main()
     }
 
     cout << "PAM service:\n";
-    cin >> service;
+    std::getline(cin, service);
 
     int rval = EXIT_FAILURE;
     auto res = mxb::pam_authenticate(username, password, service);
