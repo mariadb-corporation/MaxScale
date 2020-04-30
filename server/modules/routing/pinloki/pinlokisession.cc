@@ -67,9 +67,13 @@ int32_t PinlokiSession::routeQuery(GWBUF* pPacket)
         break;
 
     case MXS_COM_BINLOG_DUMP:
-        // Start dumping binlogs (not yet implemented)
+        // Start dumping binlogs
         MXS_INFO("COM_BINLOG_DUMP");
         rval = 1;
+        m_reader = std::make_unique<Reader>(
+            [this](const auto& event) {
+                return send_event(event);
+            }, m_router->inventory(), mxs::RoutingWorker::get_current(), m_gtid);
         break;
 
     case MXS_COM_QUERY:
@@ -164,7 +168,11 @@ void PinlokiSession::select(const std::vector<std::string>& fields)
 
 void PinlokiSession::set(const std::string& key, const std::string& value)
 {
-    if (key == "gtid_slave_pos")
+    if (key == "@slave_connect_state")
+    {
+        m_gtid = mxq::Gtid::from_string(value);
+    }
+    else if (key == "gtid_slave_pos")
     {
         m_router->set_gtid(mxq::GtidList::from_string(value));
     }
