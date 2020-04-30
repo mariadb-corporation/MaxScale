@@ -77,6 +77,8 @@ FileReader::FileReader(const maxsql::Gtid& gtid, const Inventory* inv)
     {
         open(m_inventory.file_names().front());
     }
+
+    set_inotify_fd();
 }
 
 FileReader::~FileReader()
