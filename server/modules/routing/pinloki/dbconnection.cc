@@ -49,9 +49,13 @@ void Connection::start_replication(unsigned int server_id, maxsql::Gtid gtid)
     std::ostringstream gtid_start_pos;
     gtid_start_pos << "SET @slave_connect_state='" << (gtid.is_valid() ? gtid.to_string() : "") << '\'';
 
+    // The heartbeat period is in nanoseconds
+    auto hb = "SET @master_heartbeat_period=" + std::to_string((m_details.timeout.count() * 1000000000) / 2);
+
     // TODO use config
     std::vector<std::string> queries =
     {
+        hb,
         "SET @master_binlog_checksum = @@global.binlog_checksum",
         "SET @mariadb_slave_capability=4",
         gtid_start_pos.str(),
