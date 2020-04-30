@@ -1592,19 +1592,86 @@ bool CsMonitor::cs_add_first_multi_node(json_t* pOutput,
     mxb_assert(servers().size() == 1);
     mxb_assert(servers().front() == pServer);
 
-    auto config = pServer->fetch_config();
+    string trx_id = next_trx_id("add-node");
 
-    if (config.ok())
+    auto result = pServer->begin(timeout, trx_id);
+
+    if (result.ok())
     {
-        //TODO: Configure single node.
+        const char* zTrx_id = trx_id.c_str();
+        const char* zName = pServer->name();
+
+        MXS_NOTICE("%s: Started transaction on '%s'.", zTrx_id, zName);
+        auto config = pServer->fetch_config();
+
+        if (config.ok())
+        {
+            MXS_NOTICE("%s: Fetched current config from '%s'.", zTrx_id, zName);
+
+            // TODO: Add ClusterManager to config.
+            int n = cs::replace_if(*config.sXml, "//IPAddr", pServer->address(), "127.0.0.1");
+            mxb_assert(n >= 0);
+
+            xmlChar* pConfig = nullptr;
+            int size = 0;
+
+            xmlDocDumpMemory(config.sXml.get(), &pConfig, &size);
+
+            json_t* pBody = json_object();
+            json_object_set_new(pBody, cs::keys::CONFIG,
+                                json_stringn(reinterpret_cast<const char*>(pConfig), size));
+            xmlFree(pConfig);
+
+            char* zBody = json_dumps(pBody, 0);
+            json_decref(pBody);
+
+            if (pServer->set_config(zBody, &pOutput))
+            {
+                MXS_NOTICE("%s: Updated config on '%s'.", zTrx_id, zName);
+
+                result = pServer->commit();
+
+                if (result.ok())
+                {
+                    MXS_NOTICE("%s: Committed changes on '%s'.", zTrx_id, zName);
+                    success = true;
+                }
+                else
+                {
+                    LOG_APPEND_JSON_ERROR(&pOutput, "Could not commit changes to '%s': %s",
+                                          pServer->name(),
+                                          result.body.c_str());
+                }
+            }
+            else
+            {
+                LOG_PREPEND_JSON_ERROR(&pOutput, "Could not set new config of '%s'.", zName);
+            }
+
+            MXS_FREE(zBody);
+        }
+        else
+        {
+            mxs_json_error_append(pOutput, "Could not fetch config of '%s'.", zName);
+            if (config.sJson.get())
+            {
+                mxs_json_error_push_back(pOutput, config.sJson.get());
+            }
+        }
+
+        if (!success)
+        {
+            result = pServer->rollback();
+
+            if (!result.ok())
+            {
+                MXS_ERROR("Could not perform a rollback on '%s': %s", zName, result.body.c_str());
+            }
+        }
     }
     else
     {
-        mxs_json_error_append(pOutput, "Could not fetch config of '%s'.", pServer->name());
-        if (config.sJson.get())
-        {
-            mxs_json_error_push_back(pOutput, config.sJson.get());
-        }
+        LOG_APPEND_JSON_ERROR(&pOutput, "Could not start a transaction on '%s'.", pServer->name());
     }
 
     return success;
