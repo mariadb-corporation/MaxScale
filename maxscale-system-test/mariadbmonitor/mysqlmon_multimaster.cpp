@@ -19,22 +19,32 @@
 
 
 #include <iostream>
+#include <string>
+#include <set>
 #include "testconnections.h"
 
 #include "sql_t1.h"
 #include <jansson.h>
-#include <string>
 #include <maxbase/string.hh>
 
 using std::cout;
 using std::string;
+using std::set;
 
-void check_status(TestConnections& test, const char* server, const char* status)
+void check_status(TestConnections& test, const string& server, const set<string>& expected_status)
 {
     auto srv_status = test.get_server_status(server);
-    test.expect(srv_status.count(status),
-                "Test failed, server '%s' status is '%s', expected '%s'",
-                server, mxb::join(srv_status, ", ").c_str(), status);
+    if (srv_status.empty())
+    {
+        test.expect(false, "MaxCtrl execution error\n");
+    }
+    else if (srv_status != expected_status)
+    {
+        auto status_joined = mxb::join(srv_status, ", ");
+        auto expected_joined = mxb::join(expected_status, ", ");
+        test.expect(false, "Wrong states for '%s'. Got '%s', expected '%s'.",
+                    server.c_str(), status_joined.c_str(), expected_joined.c_str());
+    }
 }
 
 json_t* get_json_data(TestConnections& test, const char* query)
@@ -87,7 +97,9 @@ json_t* find_array_elem_json(TestConnections& test, json_t* object,
             json_t* arr_elem = json_array_get(object, i);
             json_t* elem_val = json_object_get(arr_elem, key.c_str());
             bool is_string = json_is_string(elem_val);
-            test.expect(is_string, "Key %s was not found in json data or the data is not string.\n", key.c_str());
+            test.expect(is_string,
+                        "Key %s was not found in json data or the data is not string.\n",
+                        key.c_str());
             if (is_string)
             {
                 std::string elem_field = json_string_value(elem_val);
@@ -152,7 +164,7 @@ void check_rlag(TestConnections& test, const char* server, int min_rlag, int max
     }
 }
 
-void change_master(TestConnections& test ,int slave, int master, const string& conn_name = "",
+void change_master(TestConnections& test, int slave, int master, const string& conn_name = "",
                    int replication_delay = 0)
 {
     const char query[] = "CHANGE MASTER '%s' TO master_host='%s', master_port=%d, "
@@ -160,20 +172,25 @@ void change_master(TestConnections& test ,int slave, int master, const string& c
                          "master_user='repl', master_password='repl', master_delay=%d; "
                          "START SLAVE '%s';";
     test.try_query(test.repl->nodes[slave], query, conn_name.c_str(),
-           test.repl->IP_private[master], test.repl->port[master],
+                   test.repl->IP_private[master], test.repl->port[master],
                    replication_delay, conn_name.c_str());
 }
 
 int main(int argc, char* argv[])
 {
-    const char mm_master_states[] = "Master, Running";
-    const char mm_slave_states[] = "Relay Master, Slave, Running";
-    const char slave_states[] = "Slave, Running";
-    const char running_state[] = "Running";
+    string master = "Master";
+    string running = "Running";
+    string slave = "Slave";
+
+    set<string> mm_master_states = {master, running};
+    set<string> mm_slave_states = {"Relay Master", slave, running};
+    set<string> slave_states = {slave, running};
+    set<string> running_state = {running};
+
     const char reset_query[] = "STOP SLAVE; RESET SLAVE ALL; RESET MASTER; SET GLOBAL read_only='OFF'";
     const char readonly_on_query[] = "SET GLOBAL read_only='ON'";
 
-    TestConnections::require_repl_version("10.2.3"); // Delayed replication needs this.
+    TestConnections::require_repl_version("10.2.3");    // Delayed replication needs this.
     TestConnections test(argc, argv);
 
     test.tprintf("Test 1 - Configure all servers into a multi-master ring with one slave");
@@ -225,15 +242,20 @@ int main(int argc, char* argv[])
     test.tprintf("Test 3 - Configure nodes 1 and 2 into a master-master pair, make node 0 "
                  "a slave of node 1 and node 3 a slave of node 2");
 
+    test.maxscales->stop_maxscale();
     test.set_timeout(120);
     test.repl->execute_query_all_nodes(reset_query);
     test.repl->connect();
+
     change_master(test, 0, 1);
     change_master(test, 1, 2);
     change_master(test, 2, 1, "", max_rlag);
     change_master(test, 3, 2);
 
+    test.maxscales->start_maxscale();
+    sleep(2);
     test.maxscales->wait_for_monitor(1);
+
     maxconn = test.maxscales->open_rwsplit_connection();
     test.try_query(maxconn, "FLUSH TABLES;");
     mysql_close(maxconn);
@@ -266,14 +288,18 @@ int main(int argc, char* argv[])
 
     test.tprintf("Test 5 - Create two distinct groups");
 
+    test.maxscales->stop_maxscale();
     test.set_timeout(120);
     test.repl->execute_query_all_nodes(reset_query);
     test.repl->connect();
+
     change_master(test, 0, 1);
     change_master(test, 1, 0);
     change_master(test, 2, 3);
     change_master(test, 3, 2);
 
+    test.maxscales->start_maxscale();
+    sleep(2);
     test.maxscales->wait_for_monitor(1);
 
     // Even though the servers are in two distinct groups, only one of them
@@ -318,7 +344,8 @@ int main(int argc, char* argv[])
     test.maxscales->wait_for_monitor(1);
     maxconn = test.maxscales->open_rwsplit_connection();
     test.try_query(maxconn, "FLUSH TABLES;");
-    test.maxscales->wait_for_monitor(1);
+    test.maxscales->wait_for_monitor(2);
+    test.try_query(maxconn, "SHOW DATABASES;");
 
     check_status(test, "server1", slave_states);
     check_status(test, "server2", mm_slave_states);
@@ -334,7 +361,7 @@ int main(int argc, char* argv[])
 
     const char remove_delay[] = "STOP SLAVE '%s'; CHANGE MASTER '%s' TO master_delay=0; START SLAVE '%s';";
     test.try_query(test.repl->nodes[0], remove_delay, "a", "a", "a");
-    test.maxscales->wait_for_monitor(1);
+    test.maxscales->wait_for_monitor(2);
 
     check_status(test, "server1", slave_states);
     check_rlag(test, "server1", 0, 0);
