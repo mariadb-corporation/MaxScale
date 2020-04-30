@@ -34,12 +34,12 @@ public:
     void run();
 
 private:
-    Inventory&                          m_inventory;
-    std::unique_ptr<maxsql::Connection> m_sConnection;
-    bool                                m_is_bootstrap = false;
-    maxsql::GtidList                    m_current_gtid_list;
-    std::atomic<bool>                   m_running {true};
-    std::thread                         m_thread;
+    Inventory&                         m_inventory;
+    bool                               m_is_bootstrap = false;
+    maxsql::GtidList                   m_current_gtid_list;
+    std::atomic<bool>                  m_running {true};
+    mxq::Connection::ConnectionDetails m_details;
+    std::thread                        m_thread;
 
     void save_gtid_list();
 };

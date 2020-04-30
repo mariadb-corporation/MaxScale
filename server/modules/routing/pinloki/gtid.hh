@@ -87,7 +87,9 @@ class GtidList
 public:
     GtidList() = default;
     GtidList(GtidList&&) = default;
+    GtidList(const GtidList&) = default;
     GtidList& operator=(GtidList&&) = default;
+    GtidList& operator=(const GtidList&) = default;
     GtidList(const std::vector<Gtid>&& gtids);
 
     void clear();

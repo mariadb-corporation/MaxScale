@@ -44,7 +44,7 @@ Connection::~Connection()
     mysql_close(m_conn);
 }
 
-void Connection::start_replication(unsigned int server_id, maxsql::Gtid gtid)
+void Connection::start_replication(unsigned int server_id, maxsql::GtidList gtid)
 {
     std::ostringstream gtid_start_pos;
     gtid_start_pos << "SET @slave_connect_state='" << (gtid.is_valid() ? gtid.to_string() : "") << '\'';

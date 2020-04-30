@@ -37,29 +37,12 @@ namespace pinloki
 
 Writer::Writer(const maxsql::Connection::ConnectionDetails& details, Inventory* inv)
     : m_inventory(*inv)
+    , m_current_gtid_list(mxq::GtidList::from_string(m_inventory.config().boot_strap_gtid_list()))
+    , m_details(details)
 {
-    std::string gtid_list_str;
-    std::ifstream ifs(m_inventory.config().gtid_file_path());
-
-    if (ifs.good())
-    {
-        ifs >> gtid_list_str;
-    }
-    else
-    {
-        gtid_list_str = m_inventory.config().boot_strap_gtid_list();
-        m_is_bootstrap = true;
-    }
-    maxsql::Gtid gtid = maxsql::Gtid::from_string(gtid_list_str);
-
-    std::cout << "Boot state = " << gtid_list_str << "\n";
-
-    // TODO: Move this to the writer thread so that reconnections work
-    m_sConnection.reset(new maxsql::Connection(details));
-    m_sConnection->start_replication(m_inventory.config().server_id(), gtid);
-
     m_thread = std::thread(&Writer::run, this);
 }
+
 Writer::~Writer()
 {
     m_running = false;
@@ -68,48 +51,52 @@ Writer::~Writer()
 
 void Writer::run()
 {
-    FileWriter file(!m_is_bootstrap, &m_inventory);
-
     while (m_running)
     {
-        std::cout << "******************************\n";
-
-        auto rpl_msg = m_sConnection->get_rpl_msg();
-        auto& rpl_event = rpl_msg.event();
-
-        maxbase::hexdump(std::cout, rpl_msg.raw_data(), rpl_msg.raw_data_size());
-
-        switch (rpl_event.event_type)
+        try
         {
-        case GTID_EVENT:
+            FileWriter file(&m_inventory);
+            mxq::Connection conn(m_details);
+            conn.start_replication(m_inventory.config().server_id(), m_current_gtid_list);
+
+            while (m_running)
             {
-                save_gtid_list();
+                auto rpl_msg = conn.get_rpl_msg();
+                const auto& rpl_event = rpl_msg.event();
+                MXB_SNOTICE(rpl_msg);
 
-                auto& egtid = rpl_event.event.gtid;     // TODO, make
+                switch (rpl_event.event_type)
+                {
+                case GTID_EVENT:
+                    {
+                        save_gtid_list();
 
-                auto gtid = maxsql::Gtid(egtid.domain_id, rpl_event.server_id, egtid.sequence_nr);
-                std::cout << "XXX egtid = " << gtid << "\n";
+                        auto& egtid = rpl_event.event.gtid;     // TODO, make
 
-                m_current_gtid_list.replace(gtid);
+                        auto gtid = maxsql::Gtid(egtid.domain_id, rpl_event.server_id, egtid.sequence_nr);
+                        std::cout << "XXX egtid = " << gtid << "\n";
+
+                        m_current_gtid_list.replace(gtid);
+                    }
+                    break;
+
+                // TODO, which events can be commits?
+                case QUERY_EVENT:
+                case XID_EVENT:
+                    save_gtid_list();
+                    break;
+
+                default:
+                    break;
+                }
+
+                file.add_event(rpl_msg);
             }
-            break;
-
-        // TODO, which events can be commits?
-        case QUERY_EVENT:
-        case XID_EVENT:
-            save_gtid_list();
-            break;
-
-        default:
-            // pass
-            ;
         }
-
-        std::cout << rpl_msg << std::endl;
-
-        file.add_event(rpl_msg);
-
-        std::cout.flush();
+        catch (const std::exception& x)
+        {
+            MXS_ERROR("%s", x.what());
+        }
     }
 }
 
