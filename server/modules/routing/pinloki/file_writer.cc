@@ -43,28 +43,27 @@
  */
 namespace pinloki
 {
-FileWriter::FileWriter(bool have_files, Inventory* inv)
-    : m_sync_with_server(have_files)
-    , m_inventory(*inv)
+FileWriter::FileWriter(Inventory* inv)
+    : m_inventory(*inv)
 {
 }
 
 void FileWriter::add_event(const maxsql::MariaRplEvent& rpl_event)
 {
     bool is_artificial = rpl_event.event().flags & LOG_EVENT_ARTIFICIAL_F;      // MariaRplEvent::is_artificial
-    if (rpl_event.event().event_type == ROTATE_EVENT)
+    if (rpl_event.event().event_type == HEARTBEAT_LOG_EVENT)
+    {
+        MXS_INFO("Replication heartbeat event");
+    }
+    else if (rpl_event.event().event_type == ROTATE_EVENT)
     {
         rotate_event(rpl_event);
     }
     else if (is_artificial)
     {
         m_current_pos.write_pos = rpl_event.event().next_event_pos;
-        if (m_sync_with_server && rpl_event.event().event_type == GTID_LIST_EVENT)
-        {
-            m_sync_with_server = false;     // sync done
-        }
     }
-    else if (!m_sync_with_server)
+    else if (rpl_event.event().next_event_pos > m_sync_pos)
     {
         write_to_file(m_current_pos, rpl_event);
     }
@@ -78,19 +77,13 @@ void FileWriter::rotate_event(const maxsql::MariaRplEvent& rpl_event)
     auto name = get_rotate_name(rpl_event.raw_data(), rpl_event.raw_data_size());
     std::string file_name = m_inventory.config().path(name);
 
-    if (m_sync_with_server)
+    if (m_inventory.is_listed(file_name))
     {
         open_existing_file(file_name);
-        // m_sync_with_server stays true until we get the artificial GTD_LIST
     }
-    else if ((is_artificial && m_inventory.count() <= 1) || !is_artificial)
+    else
     {
-
-        if (m_inventory.is_listed(file_name))
-        {
-            MXB_THROW(BinlogWriteError, file_name << " already listed in index!");
-        }
-
+        m_sync_pos = 0;
         m_previous_pos = std::move(m_current_pos);
 
         m_current_pos.name = file_name;
@@ -115,11 +108,15 @@ void FileWriter::open_existing_file(const std::string& file_name)
     m_current_pos.file.open(m_current_pos.name, std::ios_base::in
                             | std::ios_base::out
                             | std::ios_base::binary);
-    m_current_pos.write_pos = PINLOKI_MAGIC.size();
+    m_current_pos.file.seekp(0, std::ios_base::end);
+    m_sync_pos = m_current_pos.file.tellp();
+    m_current_pos.write_pos = m_sync_pos;
 
     if (!m_current_pos.file.good())
     {
-        MXB_THROW(BinlogWriteError, "Could not open " << m_current_pos.name << " for read/write");
+        MXB_THROW(BinlogWriteError,
+                  "Could not open " << m_current_pos.name << " for read/write: "
+                                    << errno << ", " << mxb_strerror(errno));
     }
 }
 

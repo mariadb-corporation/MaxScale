@@ -33,7 +33,7 @@ DEFINE_EXCEPTION(BinlogWriteError);
 class FileWriter    // : public Storage
 {
 public:
-    FileWriter(bool have_files, Inventory* inv);
+    FileWriter(Inventory* inv);
 
     void add_event(const maxsql::MariaRplEvent& rpl_event);
 private:
@@ -48,9 +48,12 @@ private:
     void write_to_file(WritePosition& fn, const maxsql::MariaRplEvent& rpl_event);
     void open_existing_file(const std::string& file_name);
 
-    bool          m_sync_with_server;
     WritePosition m_previous_pos;       // This does not really need to be a member.
     WritePosition m_current_pos;
+
+    // Set to the end-of-file position whenever an existing file is opened. This prevents events in an
+    // existing binlog from being overwritten due to reconnections.
+    int64_t m_sync_pos = 0;
 
     Inventory& m_inventory;
 };
