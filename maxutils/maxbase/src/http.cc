@@ -611,6 +611,52 @@ void finish()
     }
 }
 
+//static
+const char* Result::to_string(int code)
+{
+    if (code < 0)
+    {
+        switch (code)
+        {
+        case ERROR:
+            return "Unspecified HTTP error.";
+
+        case COULDNT_RESOLVE_HOST:
+            return "Could not resolve host.";
+
+        case OPERATION_TIMEDOUT:
+            return "Operation timed out.";
+
+        default:
+            return "Unknown error.";
+        }
+    }
+    else if (code < INFORMATIONAL)
+    {
+        return "Unknown HTTP response code.";
+    }
+    else if (code < SUCCESS)
+    {
+        return "Informational response.";
+    }
+    else if (code < REDIRECTION)
+    {
+        return "Successful response.";
+    }
+    else if (code < CLIENT_ERROR)
+    {
+        return "Redirection.";
+    }
+    else if (code < SERVER_ERROR)
+    {
+        return "Client error.";
+    }
+    else
+    {
+        return "Server error";
+    }
+}
+
 Async::Imp::~Imp()
 {
 }

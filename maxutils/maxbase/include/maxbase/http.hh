@@ -82,7 +82,7 @@ struct Result
         SERVER_ERROR = 500
     };
 
-    enum
+    enum Error
     {
         ERROR                = -1,  // Some non-specific error occurred.
         COULDNT_RESOLVE_HOST = -2,  // The specified host cold not be resolved.
@@ -103,6 +103,8 @@ struct Result
         : code(0)
     {
     }
+
+    static const char* to_string(int code);
 
     int                                code;    // HTTP response code
     std::string                        body;    // Response body
