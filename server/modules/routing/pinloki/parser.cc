@@ -231,7 +231,7 @@ const auto select_def = x3::lit("SELECT") > field % ','
     ];
 
 const auto set_names_def = x3::string("NAMES") > (str | q_str);
-const auto global_or_session_def = -x3::omit[x3::lit("GLOBAL") | x3::lit("SESSION")];
+const auto global_or_session_def = -x3::omit[x3::lit("GLOBAL") | x3::lit("SESSION") | x3::lit("@@global.")];
 const auto set_def = x3::lit("SET") > global_or_session > (set_names | (variable % ','));
 
 // CHANGE MASTER TO, only accepts a limited set of keys

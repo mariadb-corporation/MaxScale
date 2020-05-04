@@ -99,6 +99,12 @@ std::vector<std::pair<std::string, std::string>> tests =
         "SET a = 1, b = 2", "SET a=1SET b=2"
     },
     {
+        "SET GLOBAL gtid_slave_pos = '1-1-1'", "SET gtid_slave_pos=1-1-1"
+    },
+    {
+        "SET @@global.gtid_slave_pos = '1-1-1'", "SET gtid_slave_pos=1-1-1"
+    },
+    {
         "SET NAMES latin1", "SET NAMES=latin1"
     },
     {
