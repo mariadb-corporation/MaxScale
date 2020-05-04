@@ -24,10 +24,10 @@ const char* to_string(ClusterMode cluster_mode)
     switch (cluster_mode)
     {
     case READ_ONLY:
-        return "read-only";
+        return "readonly";
 
     case READ_WRITE:
-        return "read-write";
+        return "readwrite";
 
     default:
         mxb_assert(!true);
@@ -39,13 +39,15 @@ bool from_string(const char* zCluster_mode, ClusterMode* pCluster_mode)
 {
     bool rv = true;
 
-    if (strcmp(zCluster_mode, "read-only") == 0
-        || strcmp(zCluster_mode, "read_only") == 0)
+    if (strcmp(zCluster_mode, "readonly") == 0
+        || strcmp(zCluster_mode, "read_only") == 0
+        || strcmp(zCluster_mode, "readonly") == 0)
     {
         *pCluster_mode = READ_ONLY;
     }
     else if (strcmp(zCluster_mode, "read-write") == 0
-             || strcmp(zCluster_mode, "read_write") == 0)
+             || strcmp(zCluster_mode, "read_write") == 0
+             || strcmp(zCluster_mode, "readwrite") == 0)
     {
         *pCluster_mode = READ_WRITE;
     }

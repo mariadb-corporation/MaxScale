@@ -130,9 +130,9 @@ CsMonitorServer::Config CsMonitorServer::Config::create(const http::Result& resp
 
                 if (!b1 || !b2)
                 {
-                    mxb_assert(!true);
                     MXS_ERROR("Could not convert '%s' and/or '%s' to actual values.",
                               zXml, zTimestamp);
+                    mxb_assert(!true);
                 }
             }
             else
@@ -254,10 +254,10 @@ CsMonitorServer::Status CsMonitorServer::Status::create(const http::Result& resp
 
                 if (!b1 || !b2 || !b3 || !b4)
                 {
-                    mxb_assert(!true);
                     MXS_ERROR("Could not convert values '%s' and/or '%s', and/or arrays '%s' and/or '%s' "
                               "to actual values.",
                               zCluster_mode, zDbrm_mode, cs::keys::DBROOTS, cs::keys::SERVICES);
+                    mxb_assert(!true);
                 }
             }
             else
@@ -322,8 +322,8 @@ http::Result CsMonitorServer::begin(const std::chrono::seconds& timeout, const s
 {
     if (m_trx_state != TRX_INACTIVE)
     {
-        mxb_assert(!true);
         MXS_WARNING("Transaction begin, when transaction state is not inactive.");
+        mxb_assert(!true);
     }
 
 #ifdef TRX_SUPPORTED
@@ -344,8 +344,8 @@ http::Result CsMonitorServer::commit()
 {
     if (m_trx_state != TRX_ACTIVE)
     {
-        mxb_assert(!true);
         MXS_WARNING("Transaction commit, when state is not active.");
+        mxb_assert(!true);
     }
 
 #ifdef TRX_SUPPORTED
@@ -364,8 +364,8 @@ http::Result CsMonitorServer::rollback()
 {
     if (m_trx_state != TRX_ACTIVE)
     {
-        mxb_assert(!true);
         MXS_WARNING("Transaction rollback, when state is not active.");
+        mxb_assert(!true);
     }
 
 #ifdef TRX_SUPPORTED
@@ -523,9 +523,9 @@ bool CsMonitorServer::begin(const std::vector<CsMonitorServer*>& servers,
 
     if (it != servers.end())
     {
-        mxb_assert(!true);
         MXB_WARNING("Transaction begin, when at least '%s' is already in a transaction.",
                     (*it)->name());
+        mxb_assert(!true);
     }
 
     vector<string> urls = create_urls(servers, cs::rest::BEGIN);
@@ -596,9 +596,9 @@ bool CsMonitorServer::commit(const std::vector<CsMonitorServer*>& servers,
 
     if (it != servers.end())
     {
-        mxb_assert(!true);
         MXB_WARNING("Transaction commit, when at least '%s' is not in a transaction.",
                     (*it)->name());
+        mxb_assert(!true);
     }
 
     vector<string> urls = create_urls(servers, cs::rest::COMMIT);
@@ -688,9 +688,9 @@ bool CsMonitorServer::rollback(const std::vector<CsMonitorServer*>& servers,
 
     if (it != servers.end())
     {
-        mxb_assert(!true);
         MXB_WARNING("Transaction rollback, when at least '%s' is not in a transaction.",
                     (*it)->name());
+        mxb_assert(!true);
     }
 
     vector<string> urls = create_urls(servers, cs::rest::ROLLBACK);
