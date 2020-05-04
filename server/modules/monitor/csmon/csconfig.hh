@@ -24,5 +24,6 @@ public:
 
     SERVER*     pPrimary;
     int64_t     admin_port;
+    std::string admin_base_path;
     std::string api_key;
 };

@@ -17,6 +17,8 @@
 #include <maxscale/jansson.hh>
 #include "columnstore.hh"
 
+class CsConfig;
+
 class CsMonitorServer : public maxscale::MonitorServer
 {
 public:
@@ -25,8 +27,8 @@ public:
 
     CsMonitorServer(SERVER* pServer,
                     const SharedSettings& shared,
-                    int64_t admin_port,
-                    mxb::http::Config* pConfig);
+                    const CsConfig* pCs_config,
+                    mxb::http::Config* pHttp_config);
     virtual ~CsMonitorServer();
 
     class Status
@@ -266,7 +268,7 @@ private:
 
 private:
     State                    m_state = UNKNOWN;
-    int64_t                  m_admin_port;
+    const CsConfig&          m_cs_config;
     const mxb::http::Config& m_http_config;
     TrxState                 m_trx_state = TRX_INACTIVE;
 };

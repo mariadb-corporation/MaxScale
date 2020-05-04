@@ -15,6 +15,7 @@
 #include <sstream>
 #include <maxbase/http.hh>
 #include "columnstore.hh"
+#include "csconfig.hh"
 
 namespace http = mxb::http;
 using std::string;
@@ -202,11 +203,11 @@ bool CsMonitorServer::Config::get_value(const char* zElement_name,
 
 CsMonitorServer::CsMonitorServer(SERVER* pServer,
                                  const SharedSettings& shared,
-                                 int64_t admin_port,
-                                 http::Config* pConfig)
+                                 const CsConfig* pCs_config,
+                                 http::Config* pHttp_config)
     : mxs::MonitorServer(pServer, shared)
-    , m_admin_port(admin_port)
-    , m_http_config(*pConfig)
+    , m_cs_config(*pCs_config)
+    , m_http_config(*pHttp_config)
 {
 }
 
@@ -896,7 +897,10 @@ http::Results CsMonitorServer::set_config(const std::vector<CsMonitorServer*>& s
 
 string CsMonitorServer::create_url(cs::rest::Action action, const std::string& tail) const
 {
-    string url = cs::rest::create_url(*this->server, m_admin_port, action);
+    string url = cs::rest::create_url(*this->server,
+                                      m_cs_config.admin_port,
+                                      m_cs_config.admin_base_path,
+                                      action);
 
     if (!tail.empty())
     {
@@ -916,7 +920,10 @@ vector<string> CsMonitorServer::create_urls(const std::vector<CsMonitorServer*>&
 
     for (const auto* pS : servers)
     {
-        string url = cs::rest::create_url(*pS, pS->m_admin_port, action);
+        string url = cs::rest::create_url(*pS,
+                                          pS->m_cs_config.admin_port,
+                                          pS->m_cs_config.admin_base_path,
+                                          action);
 
         if (!tail.empty())
         {

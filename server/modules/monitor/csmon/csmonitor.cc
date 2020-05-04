@@ -1822,5 +1822,5 @@ string CsMonitor::create_remove_config(CsMonitorServer::Config& config,
 CsMonitorServer* CsMonitor::create_server(SERVER* pServer,
                                           const mxs::MonitorServer::SharedSettings& shared)
 {
-    return new CsMonitorServer(pServer, shared, m_config.admin_port, &m_http_config);
+    return new CsMonitorServer(pServer, shared, &m_config, &m_http_config);
 }

@@ -16,12 +16,6 @@
 using std::string;
 using std::vector;
 
-namespace
-{
-// TODO: This is just the mockup Columnstore daemon.
-const char REST_BASE[] = "/drrtuy/cmapi/0.0.2/node/";
-}
-
 namespace cs
 {
 
@@ -296,13 +290,17 @@ int replace_if(xmlDoc& xmlDoc, const char* zXpath, const char* zNew_value, const
     return n;
 }
 
-std::string rest::create_url(const SERVER& server, int64_t port, rest::Action action)
+std::string rest::create_url(const SERVER& server,
+                             int64_t port,
+                             const std::string& rest_base,
+                             rest::Action action)
 {
     string url("https://");
     url += server.address();
     url += ":";
     url += std::to_string(port);
-    url += REST_BASE;
+    url += rest_base;
+    url += "/node/";
 
     url += to_string(action);
 
