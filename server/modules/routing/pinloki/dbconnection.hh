@@ -30,6 +30,17 @@ struct st_mysql_res;
 namespace maxsql
 {
 
+// https://mariadb.com/kb/en/gtid_event/#flags
+enum GtidFlags
+{
+    F_STANDALONE      = 1,
+    F_GROUP_COMMIT_ID = 2,
+    F_TRANSACTIONAL   = 4,
+    F_ALLOW_PARALLEL  = 8,
+    F_WAITED          = 16,
+    F_DDL             = 32,
+};
+
 class Connection
 {
 public:

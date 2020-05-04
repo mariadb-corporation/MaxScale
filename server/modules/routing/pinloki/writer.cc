@@ -29,19 +29,6 @@
 
 using namespace std::literals::string_literals;
 
-namespace
-{
-enum GtidFlags
-{
-    F_STANDALONE      = 1,
-    F_GROUP_COMMIT_ID = 2,
-    F_TRANSACTIONAL   = 4,
-    F_ALLOW_PARALLEL  = 8,
-    F_WAITED          = 16,
-    F_DDL             = 32,
-};
-}
-
 // TODO multidomain is not handled, except for the state of replication (or m_current_gtid_list).
 //      Incidentally this works with multidomain, as long as the master and any new master have
 //      the same exact binlogs.
@@ -86,7 +73,7 @@ void Writer::run()
                         auto gtid = maxsql::Gtid(egtid.domain_id, rpl_event.server_id, egtid.sequence_nr);
                         m_current_gtid_list.replace(gtid);
 
-                        if (egtid.flags & F_STANDALONE)
+                        if (egtid.flags & mxq::F_STANDALONE)
                         {
                             m_commit_on_query = true;
                         }

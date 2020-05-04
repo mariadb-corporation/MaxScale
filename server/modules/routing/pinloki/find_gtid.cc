@@ -78,7 +78,23 @@ long search_gtid_in_file(std::ifstream& file, long file_pos, const maxsql::Gtid&
             if (event.gtid.domain_id() == gtid.domain_id()
                 && event.gtid.sequence_nr() == gtid.sequence_nr())
             {
-                found_pos = this_pos;
+                if (event.flags & mxq::F_STANDALONE)
+                {
+                    // Skip the next event
+                    rpl = maxsql::read_event(file, &file_pos);
+                    found_pos = rpl.next_event_pos();
+                }
+                else
+                {
+                    do
+                    {
+                        rpl = maxsql::read_event(file, &file_pos);
+                    }
+                    while (rpl.event_type() != XID_EVENT
+                           && strcasecmp(rpl.query_event_sql().c_str(), "COMMIT") != 0);
+
+                    found_pos = rpl.next_event_pos();
+                }
             }
         }
     }

@@ -14,6 +14,8 @@
 #include "rpl_event.hh"
 #include "dbconnection.hh"
 
+#include <maxscale/protocol/mariadb/mysql.hh>
+
 #include <chrono>
 #include <iostream>
 #include <iomanip>
@@ -64,6 +66,28 @@ Rotate RplEvent::rotate() const
     rot.file_name = get_rotate_name(m_raw.data(), m_raw.size());
 
     return rot;
+}
+
+std::string RplEvent::query_event_sql() const
+{
+    std::string sql;
+
+    if (event_type() == QUERY_EVENT)
+    {
+        constexpr int DBNM_OFF = 8;                 // Database name offset
+        constexpr int VBLK_OFF = 4 + 4 + 1 + 2;     // Varblock offset
+        constexpr int PHDR_OFF = 4 + 4 + 1 + 2 + 2; // Post-header offset
+        constexpr int BINLOG_HEADER_LEN = 19;
+
+        const uint8_t* ptr = (const uint8_t*)this->m_raw.data();
+        int dblen = ptr[DBNM_OFF];
+        int vblklen = mariadb::get_byte2(ptr + VBLK_OFF);
+
+        int len = event_length() - BINLOG_HEADER_LEN - (PHDR_OFF + vblklen + 1 + dblen);
+        sql.assign((const char*) ptr + PHDR_OFF + vblklen + 1 + dblen, len);
+    }
+
+    return sql;
 }
 
 std::ostream& operator<<(std::ostream& os, const Rotate& rot)

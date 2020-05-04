@@ -82,6 +82,8 @@ public:
     GtidEvent     gtid_event() const;
     GtidListEvent gtid_list() const;
 
+    std::string query_event_sql() const;
+
     auto event_type() const
     {
         return m_event_type;
