@@ -40,12 +40,6 @@ enum class Slave
     RESET,
 };
 
-enum class Logs
-{
-    FLUSH,
-    PURGE,
-};
-
 enum class ShowType
 {
     MASTER_STATUS,
@@ -63,16 +57,6 @@ struct SlaveSymbols : x3::symbols<Slave>
         add("RESET", Slave::RESET);
     }
 } slave_sym;
-
-// LOGS command mapping
-struct LogsSymbols : x3::symbols<Logs>
-{
-    LogsSymbols()
-    {
-        add("FLUSH", Logs::FLUSH);
-        add("PURGE", Logs::PURGE);
-    }
-} logs_sym;
 
 // CHANGE MASTER argument types
 struct ChangeMasterSymbols : x3::symbols<CMT>
@@ -139,10 +123,15 @@ struct ShowVariables
     std::string like;
 };
 
+struct PurgeLogs
+{
+    std::string up_to;
+};
+
 using Show = x3::variant<ShowType, ShowVariables>;
 
 // The root type that is returned as the result of parsing
-using Command = x3::variant<nullptr_t, Select, Set, ChangeMaster, Slave, Logs, Show>;
+using Command = x3::variant<nullptr_t, Select, Set, ChangeMaster, Slave, PurgeLogs, Show>;
 
 // Error handler that the rule types must inherit from, allows pretty-printing of errors
 struct error_handler
@@ -213,7 +202,7 @@ DECLARE_ATTR_RULE(set, "set", Set);
 DECLARE_ATTR_RULE(set_names, "set names", Variable);
 DECLARE_ATTR_RULE(change_master, "change master", ChangeMaster);
 DECLARE_ATTR_RULE(slave, "slave", Slave);
-DECLARE_ATTR_RULE(logs, "logs", Logs);
+DECLARE_ATTR_RULE(purge_logs, "purge logs", PurgeLogs);
 DECLARE_RULE(end_of_input, "end of input");
 DECLARE_ATTR_RULE(grammar, "grammar", Command);
 
@@ -250,9 +239,12 @@ const auto change_master_variable_def = change_master_sym > eq > field;
 const auto change_master_def = x3::lit("CHANGE") > x3::lit("MASTER") > x3::lit("TO")
     > (change_master_variable % ',');
 
-// START SLAVE et al. and FLUSH and PURGE LOGS
+// START SLAVE et al.
 const auto slave_def = slave_sym > "SLAVE";
-const auto logs_def = logs_sym > "LOGS";
+
+// PURGE {BINARY | MASTER} LOGS TO '<binlog name>'
+const auto purge_logs_def = x3::lit("PURGE") > (x3::lit("BINARY") | x3::lit("MASTER")) > x3::lit("LOGS")
+    > x3::lit("TO") > q_str;
 
 // SHOW commands
 const auto show_master_def = x3::lit("MASTER") > x3::lit("STATUS") >> x3::attr(ShowType::MASTER_STATUS);
@@ -270,13 +262,13 @@ const auto grammar_def = x3::no_case[
     | change_master
     | slave
     | show
-    | logs] > end_of_input;
+    | purge_logs] > end_of_input;
 
 // Boost magic that combines the rule declarations and definitions (definitions _must_ end in a _def suffix)
 BOOST_SPIRIT_DEFINE(str, sq_str, dq_str, field, variable, select, set, eq, q_str,
                     show_master, show_slave, show_binlogs, show_variables, show, set_names,
                     global_or_session, show_options, func,
-                    change_master_variable, change_master, slave, logs, end_of_input, grammar);
+                    change_master_variable, change_master, slave, purge_logs, end_of_input, grammar);
 
 
 // The visitor class that does the final processing of the result
@@ -347,18 +339,9 @@ struct ResultVisitor : public boost::static_visitor<>
         }
     }
 
-    void operator()(Logs& s)
+    void operator()(PurgeLogs& s)
     {
-        switch (s)
-        {
-        case Logs::FLUSH:
-            m_handler->flush_logs();
-            break;
-
-        case Logs::PURGE:
-            m_handler->purge_logs();
-            break;
-        }
+        m_handler->purge_logs(s.up_to);
     }
 
     void operator()(ShowType& s)
@@ -432,6 +415,7 @@ BOOST_FUSION_ADAPT_STRUCT(Select, values);
 BOOST_FUSION_ADAPT_STRUCT(Set, values);
 BOOST_FUSION_ADAPT_STRUCT(ChangeMaster, values);
 BOOST_FUSION_ADAPT_STRUCT(ShowVariables, like);
+BOOST_FUSION_ADAPT_STRUCT(PurgeLogs, up_to);
 
 namespace pinloki
 {

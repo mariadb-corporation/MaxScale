@@ -33,11 +33,11 @@ class Inventory
 public:
     Inventory(const Config& config);
 
-    /**
-     * @brief add
-     * @param file_name
-     */
+    // Adds a file to the inventory
     void add(const std::string& file_name);
+
+    // Removes a file from the inventory (the file itself is not removed)
+    void remove(const std::string& file_name);
 
     std::vector<std::string> file_names() const;
 

@@ -46,6 +46,13 @@ void Inventory::add(const std::string& file_name)
     m_file_names.push_back(full_name);
 }
 
+void Inventory::remove(const std::string& file_name)
+{
+    std::unique_lock<std::mutex> lock(m_mutex);
+    std::string full_name = m_config.path(file_name);
+    m_file_names.erase(std::remove(m_file_names.begin(), m_file_names.end(), full_name), m_file_names.end());
+}
+
 std::vector<std::string> Inventory::file_names() const
 {
     std::unique_lock<std::mutex> lock(m_mutex);

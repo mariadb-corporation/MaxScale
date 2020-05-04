@@ -59,8 +59,7 @@ struct Handler
     virtual void show_binlogs() = 0;
     virtual void show_variables(const std::string& like) = 0;
 
-    virtual void flush_logs() = 0;
-    virtual void purge_logs() = 0;
+    virtual void purge_logs(const std::string& up_to) = 0;
 
     virtual void error(const std::string& err) = 0;
 };

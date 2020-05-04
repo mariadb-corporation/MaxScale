@@ -58,14 +58,9 @@ struct DebugHandler : public pinloki::parser::Handler
         result << "SHOW VARIABLES" << (like.empty() ? "" : " LIKE ") << like;
     }
 
-    void flush_logs() override
+    void purge_logs(const std::string& up_to) override
     {
-        result << "FLUSH LOGS";
-    }
-
-    void purge_logs() override
-    {
-        result << "PURGE LOGS";
+        result << "PURGE BINARY LOGS TO " << up_to;
     }
 
     void error(const std::string& err) override
@@ -134,10 +129,10 @@ std::vector<std::pair<std::string, std::string>> tests =
         "RESET SLAVE ''", "ERROR"
     },
     {
-        "FLUSH LOGS", "FLUSH LOGS"
+        "PURGE MASTER LOGS TO 'binlog.000001'", "PURGE BINARY LOGS TO binlog.000001"
     },
     {
-        "PURGE LOGS", "PURGE LOGS"
+        "PURGE BINARY LOGS TO 'binlog.000001'", "PURGE BINARY LOGS TO binlog.000001"
     },
 };
 

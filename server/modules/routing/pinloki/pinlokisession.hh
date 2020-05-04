@@ -51,8 +51,7 @@ public:
     void show_master_status() override;
     void show_binlogs() override;
     void show_variables(const std::string& like) override;
-    void flush_logs()  override;
-    void purge_logs() override;
+    void purge_logs(const std::string& up_to) override;
     void error(const std::string& err) override;
 
 private:

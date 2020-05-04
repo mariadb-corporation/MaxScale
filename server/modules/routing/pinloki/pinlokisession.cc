@@ -288,13 +288,21 @@ void PinlokiSession::show_variables(const std::string& like)
     send(create_resultset({"Variable_name", "Value"}, values));
 }
 
-void PinlokiSession::flush_logs()
+void PinlokiSession::purge_logs(const std::string& up_to)
 {
-    send(modutil_create_ok());
-}
+    auto files = m_router->inventory()->file_names();
 
-void PinlokiSession::purge_logs()
-{
+    auto it = std::find(files.begin(), files.end(), up_to);
+
+    if (it != files.end())
+    {
+        for (auto start = files.begin(); start != it; start++)
+        {
+            m_router->inventory()->remove(*start);
+            remove(start->c_str());
+        }
+    }
+
     send(modutil_create_ok());
 }
 
