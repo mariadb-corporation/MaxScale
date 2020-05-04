@@ -40,6 +40,7 @@ private:
     std::atomic<bool>                  m_running {true};
     mxq::Connection::ConnectionDetails m_details;
     std::thread                        m_thread;
+    bool                               m_commit_on_query = false;
 
     void save_gtid_list();
 };
