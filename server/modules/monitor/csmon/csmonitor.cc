@@ -235,6 +235,18 @@ json_t* result_to_json(const CsMonitorServer& server, const http::Result& result
 }
 
 template<class T>
+inline bool is_ok(const T& t)
+{
+    return t.ok();
+}
+
+inline bool is_ok(const http::Result& result)
+{
+    return result.is_success();
+}
+
+
+template<class T>
 size_t results_to_json(const vector<CsMonitorServer*>& servers,
                        const vector<T>& results,
                        json_t** ppArray)
@@ -252,7 +264,7 @@ size_t results_to_json(const vector<CsMonitorServer*>& servers,
         auto* pServer = *it;
         const auto& result = *jt;
 
-        if (result.ok())
+        if (is_ok(result))
         {
             ++n;
         }
@@ -1596,7 +1608,7 @@ bool CsMonitor::cs_add_first_multi_node(json_t* pOutput,
 
     auto result = pServer->begin(timeout, trx_id);
 
-    if (result.ok())
+    if (result.is_success())
     {
         const char* zTrx_id = trx_id.c_str();
         const char* zName = pServer->name();
@@ -1631,7 +1643,7 @@ bool CsMonitor::cs_add_first_multi_node(json_t* pOutput,
 
                 result = pServer->commit();
 
-                if (result.ok())
+                if (result.is_success())
                 {
                     MXS_NOTICE("%s: Committed changes on '%s'.", zTrx_id, zName);
                     success = true;
@@ -1663,7 +1675,7 @@ bool CsMonitor::cs_add_first_multi_node(json_t* pOutput,
         {
             result = pServer->rollback();
 
-            if (!result.ok())
+            if (!result.is_success())
             {
                 MXS_ERROR("Could not perform a rollback on '%s': %s", zName, result.body.c_str());
             }

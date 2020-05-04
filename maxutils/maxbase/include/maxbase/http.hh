@@ -89,9 +89,14 @@ struct Result
         OPERATION_TIMEDOUT   = -3   // The operation timed out.
     };
 
-    bool ok() const
+    bool is_success() const
     {
         return this->code >= SUCCESS && this->code < REDIRECTION;
+    }
+
+    bool is_error() const
+    {
+        return this->code < 0;
     }
 
     Result(Category category)

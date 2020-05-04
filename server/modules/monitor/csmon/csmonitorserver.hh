@@ -39,7 +39,7 @@ public:
 
         bool ok() const
         {
-            return response.ok() && sJson;
+            return response.is_success() && sJson;
         }
 
         mxb::http::Result       response;
@@ -80,7 +80,7 @@ public:
 
         bool ok() const
         {
-            return response.ok() && sJson && sXml;
+            return response.is_success() && sJson && sXml;
         }
 
         bool get_dbrm_controller_ip(std::string* pIp, json_t* pOutput = nullptr) const

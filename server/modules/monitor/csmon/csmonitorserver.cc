@@ -106,42 +106,58 @@ int64_t CsMonitorServer::Status::s_uptime = 1;
 CsMonitorServer::Config CsMonitorServer::Config::create(const http::Result& response)
 {
     std::chrono::system_clock::time_point timestamp;
+    unique_ptr<json_t> sJson;
     unique_ptr<xmlDoc> sXml;
 
-    json_error_t error;
-    unique_ptr<json_t> sJson(json_loadb(response.body.c_str(), response.body.length(), 0, &error));
-
-    if (sJson)
+    if (response.is_success())
     {
-        json_t* pConfig = json_object_get(sJson.get(), cs::keys::CONFIG);
-        json_t* pTimestamp = json_object_get(sJson.get(), cs::keys::TIMESTAMP);
+        json_error_t error;
+        sJson.reset(json_loadb(response.body.c_str(), response.body.length(), 0, &error));
 
-        if (pConfig && pTimestamp)
+        if (sJson)
         {
-            const char* zXml = json_string_value(pConfig);
-            const char* zTimestamp = json_string_value(pTimestamp);
+            json_t* pConfig = json_object_get(sJson.get(), cs::keys::CONFIG);
+            json_t* pTimestamp = json_object_get(sJson.get(), cs::keys::TIMESTAMP);
 
-            bool b1 = cs::from_string(zXml, &sXml);
-            bool b2 = cs::from_string(zTimestamp, &timestamp);
-
-            if (!b1 || !b2)
+            if (pConfig && pTimestamp)
             {
+                const char* zXml = json_string_value(pConfig);
+                const char* zTimestamp = json_string_value(pTimestamp);
+
+                bool b1 = cs::from_string(zXml, &sXml);
+                bool b2 = cs::from_string(zTimestamp, &timestamp);
+
+                if (!b1 || !b2)
+                {
+                    mxb_assert(!true);
+                    MXS_ERROR("Could not convert '%s' and/or '%s' to actual values.",
+                              zXml, zTimestamp);
+                }
+            }
+            else
+            {
+                MXS_ERROR("Obtained config object does not have the keys '%s' and/or '%s': %s",
+                          cs::keys::CONFIG, cs::keys::TIMESTAMP, response.body.c_str());
                 mxb_assert(!true);
-                MXS_ERROR("Could not convert '%s' and/or '%s' to actual values.",
-                          zXml, zTimestamp);
             }
         }
         else
         {
+            MXS_ERROR("Could not parse returned response '%s' as JSON: %s",
+                      response.body.c_str(),
+                      error.text);
             mxb_assert(!true);
-            MXS_ERROR("Obtained config object does not have the keys '%s' and/or '%s': %s",
-                      cs::keys::CONFIG, cs::keys::TIMESTAMP, response.body.c_str());
         }
+    }
+    else if (response.is_error())
+    {
+        MXS_ERROR("REST-API call failed: (%d) %s",
+                  response.code, http::Result::to_string(response.code));
     }
     else
     {
-        mxb_assert(!true);
-        MXS_ERROR("Could not parse JSON data from: %s", error.text);
+        MXS_ERROR("Unexpected response from server: (%d) %s",
+                  response.code, http::Result::to_string(response.code));
     }
 
     return Config(response, std::move(timestamp), std::move(sJson), std::move(sXml));
@@ -211,50 +227,66 @@ CsMonitorServer::Status CsMonitorServer::Status::create(const http::Result& resp
     cs::DbrmMode dbrm_mode = cs::SLAVE;
     cs::DbRoots dbroots;
     cs::Services services;
+    unique_ptr<json_t> sJson;
 
-    json_error_t error;
-    unique_ptr<json_t> sJson(json_loadb(response.body.c_str(), response.body.length(), 0, &error));
-
-    if (sJson)
+    if (response.is_success())
     {
-        json_t* pCluster_mode = json_object_get(sJson.get(), cs::keys::CLUSTER_MODE);
-        json_t* pDbrm_mode = json_object_get(sJson.get(), cs::keys::DBRM_MODE);
-        json_t* pDbroots = json_object_get(sJson.get(), cs::keys::DBROOTS);
-        json_t* pServices = json_object_get(sJson.get(), cs::keys::SERVICES);
+        json_error_t error;
+        sJson.reset(json_loadb(response.body.c_str(), response.body.length(), 0, &error));
 
-        if (pCluster_mode && pDbrm_mode && pDbroots && pServices)
+        if (sJson)
         {
-            const char* zCluster_mode = json_string_value(pCluster_mode);
-            const char* zDbrm_mode = json_string_value(pDbrm_mode);
+            json_t* pCluster_mode = json_object_get(sJson.get(), cs::keys::CLUSTER_MODE);
+            json_t* pDbrm_mode = json_object_get(sJson.get(), cs::keys::DBRM_MODE);
+            json_t* pDbroots = json_object_get(sJson.get(), cs::keys::DBROOTS);
+            json_t* pServices = json_object_get(sJson.get(), cs::keys::SERVICES);
 
-            bool b1 = cs::from_string(zCluster_mode, &cluster_mode);
-            bool b2 = cs::from_string(zDbrm_mode, &dbrm_mode);
-            bool b3 = cs::dbroots_from_array(pDbroots, &dbroots);
-            bool b4 = cs::services_from_array(pServices, &services);
-
-            if (!b1 || !b2 || !b3 || !b4)
+            if (pCluster_mode && pDbrm_mode && pDbroots && pServices)
             {
+                const char* zCluster_mode = json_string_value(pCluster_mode);
+                const char* zDbrm_mode = json_string_value(pDbrm_mode);
+
+                bool b1 = cs::from_string(zCluster_mode, &cluster_mode);
+                bool b2 = cs::from_string(zDbrm_mode, &dbrm_mode);
+                bool b3 = cs::dbroots_from_array(pDbroots, &dbroots);
+                bool b4 = cs::services_from_array(pServices, &services);
+
+                if (!b1 || !b2 || !b3 || !b4)
+                {
+                    mxb_assert(!true);
+                    MXS_ERROR("Could not convert values '%s' and/or '%s', and/or arrays '%s' and/or '%s' "
+                              "to actual values.",
+                              zCluster_mode, zDbrm_mode, cs::keys::DBROOTS, cs::keys::SERVICES);
+                }
+            }
+            else
+            {
+                MXS_ERROR("Obtained status object does not have the keys '%s', '%s', '%s' or '%s: %s",
+                          cs::keys::CLUSTER_MODE,
+                          cs::keys::DBRM_MODE,
+                          cs::keys::DBROOTS,
+                          cs::keys::SERVICES,
+                          response.body.c_str());
                 mxb_assert(!true);
-                MXS_ERROR("Could not convert values '%s' and/or '%s', and/or arrays '%s' and/or '%s' "
-                          "to actual values.",
-                          zCluster_mode, zDbrm_mode, cs::keys::DBROOTS, cs::keys::SERVICES);
             }
         }
         else
         {
+            MXS_ERROR("Could not parse returned response '%s' as JSON: %s",
+                      response.body.c_str(),
+                      error.text);
             mxb_assert(!true);
-            MXS_ERROR("Obtained status object does not have the keys '%s', '%s', '%s' or '%s: %s",
-                      cs::keys::CLUSTER_MODE,
-                      cs::keys::DBRM_MODE,
-                      cs::keys::DBROOTS,
-                      cs::keys::SERVICES,
-                      response.body.c_str());
         }
+    }
+    else if (response.is_error())
+    {
+        MXS_ERROR("REST-API call failed: (%d) %s",
+                  response.code, http::Result::to_string(response.code));
     }
     else
     {
-        mxb_assert(!true);
-        MXS_ERROR("Could not parse JSON data from: %s", error.text);
+        MXS_ERROR("Unexpected response from server: (%d) %s",
+                  response.code, http::Result::to_string(response.code));
     }
 
     return Status(response, cluster_mode, dbrm_mode,
@@ -299,7 +331,7 @@ http::Result CsMonitorServer::begin(const std::chrono::seconds& timeout, const s
     http::Result result(http::Result::SUCCESS);
 #endif
 
-    if (result.ok())
+    if (result.is_success())
     {
         m_trx_state = TRX_ACTIVE;
     }
@@ -358,7 +390,7 @@ bool CsMonitorServer::set_mode(cs::ClusterMode mode, json_t** ppError)
     string url = create_url(cs::rest::CONFIG);
     http::Result result = http::put(url, body.str(), m_http_config);
 
-    if (!result.ok())
+    if (!result.is_success())
     {
         LOG_APPEND_JSON_ERROR(ppError, "Could not set cluster mode.");
 
@@ -375,7 +407,7 @@ bool CsMonitorServer::set_mode(cs::ClusterMode mode, json_t** ppError)
         }
     }
 
-    return result.ok();
+    return result.is_success();
 }
 
 bool CsMonitorServer::set_config(const std::string& body, json_t** ppError)
@@ -383,7 +415,7 @@ bool CsMonitorServer::set_config(const std::string& body, json_t** ppError)
     string url = create_url(cs::rest::CONFIG);
     http::Result result = http::put(url, body, m_http_config);
 
-    if (!result.ok())
+    if (!result.is_success())
     {
         LOG_APPEND_JSON_ERROR(ppError, "Could not update configuration.");
 
@@ -400,7 +432,7 @@ bool CsMonitorServer::set_config(const std::string& body, json_t** ppError)
         }
     }
 
-    return result.ok();
+    return result.is_success();
 }
 
 //static
@@ -429,7 +461,7 @@ bool CsMonitorServer::fetch_statuses(const std::vector<CsMonitorServer*>& server
     {
         statuses.emplace_back(Status::create(result));
 
-        if (!result.ok() || !statuses.back().sJson)
+        if (!result.is_success() || !statuses.back().sJson)
         {
             rv = false;
         }
@@ -466,7 +498,7 @@ bool CsMonitorServer::fetch_configs(const std::vector<CsMonitorServer*>& servers
     {
         configs.emplace_back(Config::create(result));
 
-        if (!result.ok() || !configs.back().sJson)
+        if (!result.is_success() || !configs.back().sJson)
         {
             rv = false;
         }
@@ -520,7 +552,7 @@ bool CsMonitorServer::begin(const std::vector<CsMonitorServer*>& servers,
         auto* pServer = *it;
         const auto& result = *jt;
 
-        if (result.ok())
+        if (result.is_success())
         {
             pServer->m_trx_state = TRX_ACTIVE;
         }
@@ -593,7 +625,7 @@ bool CsMonitorServer::commit(const std::vector<CsMonitorServer*>& servers,
         auto* pServer = *it;
         const auto& result = *jt;
 
-        if (!result.ok())
+        if (!result.is_success())
         {
             MXS_ERROR("Committing transaction on '%s' failed: %s",
                       pServer->name(), result.body.c_str());
@@ -628,7 +660,7 @@ bool CsMonitorServer::ping(const std::vector<CsMonitorServer*>& servers,
     vector<string> urls = create_urls(servers, cs::rest::PING);
     http::Results results = http::get(urls, http_config);
 
-    bool rv = std::all_of(results.begin(), results.end(), std::mem_fun_ref(&http::Result::ok));
+    bool rv = std::all_of(results.begin(), results.end(), std::mem_fun_ref(&http::Result::is_success));
 
     pResults->swap(results);
 
@@ -685,7 +717,7 @@ bool CsMonitorServer::rollback(const std::vector<CsMonitorServer*>& servers,
         auto* pServer = *it;
         const auto& result = *jt;
 
-        if (!result.ok())
+        if (!result.is_success())
         {
             MXS_ERROR("Rollbacking transaction on '%s' failed: %s",
                       pServer->name(), result.body.c_str());
@@ -745,7 +777,7 @@ bool CsMonitorServer::shutdown(const std::vector<CsMonitorServer*>& servers,
 
     for (const auto& result : results)
     {
-        if (!result.ok())
+        if (!result.is_success())
         {
             rv = false;
             break;
@@ -840,7 +872,7 @@ bool CsMonitorServer::set_config(const std::vector<CsMonitorServer*>& servers,
 
     for (const auto& result : results)
     {
-        if (!result.ok())
+        if (!result.is_success())
         {
             rv = false;
             break;
