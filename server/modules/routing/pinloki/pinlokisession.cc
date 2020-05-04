@@ -17,6 +17,10 @@
 #include <maxscale//protocol/mariadb/resultset.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
 namespace
 {
 GWBUF* create_resultset(const std::vector<std::string>& columns, const std::vector<std::string>& row)
@@ -36,6 +40,30 @@ GWBUF* create_slave_running_error()
     return modutil_create_mysql_err_msg(
         1, 0, 1198, "HY000",
         "This operation cannot be performed as you have a running slave; run STOP SLAVE first");
+}
+
+std::pair<std::string, std::string> get_file_name_and_size(const std::string& filepath)
+{
+    std::string file = filepath;
+    std::string size = "0";
+
+    if (!file.empty())
+    {
+        auto pos = file.find_last_of('/');
+
+        if (pos != std::string::npos)
+        {
+            file = file.substr(pos + 1);
+        }
+
+        struct stat st;
+        if (stat(filepath.c_str(), &st) == 0)
+        {
+            size = std::to_string(st.st_size);
+        }
+    }
+
+    return {file, size};
 }
 }
 
@@ -264,15 +292,29 @@ void PinlokiSession::show_slave_status()
 
 void PinlokiSession::show_master_status()
 {
-    // TODO: Read these from the Inventory
-    send(create_resultset({"File", "Position", "Binlog_Do_DB", "Binlog_Ignore_DB"},
-                          {"binlog.000001", "4", "", ""}));
+    auto files = m_router->inventory()->file_names();
+    auto rset = ResultSet::create({"File", "Position", "Binlog_Do_DB", "Binlog_Ignore_DB"});
+
+    if (!files.empty())
+    {
+        auto a = get_file_name_and_size(files.back());
+        rset->add_row({a.first, a.second, "", ""});
+    }
+
+    send(rset->as_buffer().release());
 }
 
 void PinlokiSession::show_binlogs()
 {
-    // TODO: Read these from the Inventory
-    send(create_resultset({"Log_name", "File_size"}, {"binlog.000001", "4"}));
+    auto rset = ResultSet::create({"Log_name", "File_size"});
+
+    for (const auto& file : m_router->inventory()->file_names())
+    {
+        auto a = get_file_name_and_size(file);
+        rset->add_row({a.first, a.second});
+    }
+
+    send(rset->as_buffer().release());
 }
 
 void PinlokiSession::show_variables(const std::string& like)
@@ -281,8 +323,7 @@ void PinlokiSession::show_variables(const std::string& like)
 
     if (strcasestr(like.c_str(), "server_id") == 0)
     {
-        // TODO: Get the server_id from the router instance
-        values = {like, "1"};
+        values = {like, std::to_string(m_router->config().server_id())};
     }
 
     send(create_resultset({"Variable_name", "Value"}, values));
