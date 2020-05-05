@@ -14,6 +14,7 @@
 #pragma once
 
 #include <maxbase/exception.hh>
+#include <maxbase/worker.hh>
 #include "dbconnection.hh"
 #include "gtid.hh"
 #include "config.hh"
@@ -29,19 +30,24 @@ namespace pinloki
 class Writer
 {
 public:
-    Writer(const maxsql::Connection::ConnectionDetails& details, Inventory* inv);
+    // Used to generate the connection details used for replication
+    using Generator = std::function<maxsql::Connection::ConnectionDetails()>;
+
+    Writer(Generator generator, mxb::Worker* worker, Inventory* inv);
     ~Writer();
     void run();
 
 private:
-    Inventory&                         m_inventory;
-    bool                               m_is_bootstrap = false;
-    maxsql::GtidList                   m_current_gtid_list;
-    std::atomic<bool>                  m_running {true};
-    mxq::Connection::ConnectionDetails m_details;
-    std::thread                        m_thread;
-    bool                               m_commit_on_query = false;
+    Generator         m_generator;
+    mxb::Worker*      m_worker;
+    Inventory&        m_inventory;
+    bool              m_is_bootstrap = false;
+    bool              m_commit_on_query = false;
+    maxsql::GtidList  m_current_gtid_list;
+    std::atomic<bool> m_running {true};
+    std::thread       m_thread;
 
-    void save_gtid_list();
+    void                                  save_gtid_list();
+    maxsql::Connection::ConnectionDetails get_connection_details();
 };
 }

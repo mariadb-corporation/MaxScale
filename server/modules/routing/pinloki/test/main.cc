@@ -60,13 +60,19 @@ void prog_main(const maxsql::GtidList& gtid_list, const std::string& host,
         gtid = gtid_list.gtids()[0];
     }
 
+    mxb::Worker worker;
+    mxq::Connection::ConnectionDetails details = {maxbase::Host::from_string(host), "", user, pw};
+
     if (writer_mode)
     {
-        pinloki::Writer writer({maxbase::Host::from_string(host), "", user, pw}, &inv);
+        pinloki::Writer writer([&]() {
+                                   return details;
+                               }, &worker, &inv);
+        worker.start();
+        worker.join();
     }
     else
     {
-        mxb::Worker worker;
         pinloki::Reader reader([](const auto& event) {
                                    std::cout << event << std::endl;
                                    return true;

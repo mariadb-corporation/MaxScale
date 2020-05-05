@@ -35,10 +35,11 @@ using namespace std::literals::string_literals;
 namespace pinloki
 {
 
-Writer::Writer(const maxsql::Connection::ConnectionDetails& details, Inventory* inv)
-    : m_inventory(*inv)
+Writer::Writer(Generator generator, mxb::Worker* worker, Inventory* inv)
+    : m_generator(generator)
+    , m_worker(worker)
+    , m_inventory(*inv)
     , m_current_gtid_list(mxq::GtidList::from_string(m_inventory.config().boot_strap_gtid_list()))
-    , m_details(details)
 {
     m_thread = std::thread(&Writer::run, this);
 }
@@ -49,6 +50,17 @@ Writer::~Writer()
     m_thread.join();
 }
 
+mxq::Connection::ConnectionDetails Writer::get_connection_details()
+{
+    mxq::Connection::ConnectionDetails details;
+
+    m_worker->call([&]() {
+                       details = m_generator();
+                   }, mxb::Worker::EXECUTE_AUTO);
+
+    return details;
+}
+
 void Writer::run()
 {
     while (m_running)
@@ -56,7 +68,7 @@ void Writer::run()
         try
         {
             FileWriter file(&m_inventory);
-            mxq::Connection conn(m_details);
+            mxq::Connection conn(get_connection_details());
             conn.start_replication(m_inventory.config().server_id(), m_current_gtid_list);
 
             while (m_running)

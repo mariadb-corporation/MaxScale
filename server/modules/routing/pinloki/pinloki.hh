@@ -68,6 +68,8 @@ public:
 private:
     Pinloki(SERVICE* pService, Config&& config);
 
+    maxsql::Connection::ConnectionDetails generate_details();
+
     struct MasterConfig
     {
         bool        slave_running = false;

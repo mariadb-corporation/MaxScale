@@ -159,6 +159,16 @@ bool Pinloki::is_slave_running() const
     return m_writer.get();
 }
 
+maxsql::Connection::ConnectionDetails Pinloki::generate_details()
+{
+    maxsql::Connection::ConnectionDetails details;
+    details.host = mxb::Host(m_master_config.host, m_master_config.port);
+    details.user = m_master_config.user;
+    details.password = m_master_config.password;
+    details.timeout = m_config.net_timeout();
+    return details;
+}
+
 bool Pinloki::start_slave()
 {
     bool rval = false;
@@ -169,13 +179,8 @@ bool Pinloki::start_slave()
     {
         MXS_INFO("Starting slave");
 
-        maxsql::Connection::ConnectionDetails details;
-        details.host = mxb::Host(m_master_config.host, m_master_config.port);
-        details.user = m_master_config.user;
-        details.password = m_master_config.password;
-        details.timeout = m_config.net_timeout();
-
-        m_writer = std::make_unique<Writer>(details, inventory());
+        Writer::Generator generator = std::bind(&Pinloki::generate_details, this);
+        m_writer = std::make_unique<Writer>(generator, mxs::RoutingWorker::get_current(), inventory());
         rval = true;
 
         m_master_config.slave_running = true;
