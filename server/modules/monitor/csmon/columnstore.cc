@@ -181,10 +181,13 @@ bool services_from_array(json_t* pArray, Services* pServices)
         json_t* pService;
         json_array_foreach(pArray, i, pService)
         {
-            const char* zName = json_string_value(json_object_get(pService, keys::NAME));
-            int pid = json_integer_value(json_object_get(pService, keys::PID));
-
-            services.emplace_back(zName, pid);
+            const char* zName;
+            json_t* pPid;
+            json_object_foreach(pService, zName, pPid)
+            {
+                int pid = json_integer_value(pPid);
+                services.emplace_back(zName, pid);
+            }
         }
 
         pServices->swap(services);

@@ -118,7 +118,10 @@ private:
                                      bool is_critical);
 
     bool has_sufficient_permissions();
-    void update_server_status(mxs::MonitorServer* monitored_server);
+    void update_server_status(mxs::MonitorServer* pServer);
+    int update_10_server_status(CsMonitorServer* pServer);
+    int update_12_server_status(CsMonitorServer* pServer);
+    int update_15_server_status(CsMonitorServer* pServer);
 
     CsMonitorServer* create_server(SERVER* server, const mxs::MonitorServer::SharedSettings& shared) override;
 
@@ -126,7 +129,9 @@ private:
     CsMonitor(const std::string& name, const std::string& module);
     bool configure(const mxs::ConfigParameters* pParams) override;
 
-    CsConfig          m_config;
-    mxb::http::Config m_http_config;
-    int               m_version  { 0 };
+    CsConfig                 m_config;
+    mxb::http::Config        m_http_config;
+    CsMonitorServer::Version m_version  { CsMonitorServer::CS_UNKNOWN };
+    int                      m_version_number { -1 };
+    const char*              m_zAlive_query { nullptr };
 };

@@ -27,6 +27,15 @@
 #define CSMON_EXPOSE_TRANSACTIONS
 #endif
 
+#define DEBUG_CSMON
+//#undef DEBUG_CSMON
+
+#if defined(DEBUG_CSMON)
+#define CS_DEBUG(format, ...) MXS_NOTICE(format, ##__VA_ARGS__)
+#else
+#define CS_DEBUG(format, ...)
+#endif
+
 // Since the macro below obviously is expanded in place, the if will cause an
 // "...will never be NULL" error if ppJson is a local variable.
 inline bool cs_is_not_null_workaround(json_t** ppJson)

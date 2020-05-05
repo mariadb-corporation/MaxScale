@@ -125,6 +125,14 @@ public:
                        json_t* pOutput) const;
     };
 
+    enum Version
+    {
+        CS_UNKNOWN,
+        CS_10,
+        CS_12,
+        CS_15
+    };
+
     using Result   = mxb::http::Result;
     using Results  = mxb::http::Results;
     using Statuses = std::vector<Status>;
@@ -138,6 +146,38 @@ public:
     const char* address() const
     {
         return this->server->address();
+    }
+
+    Version version() const
+    {
+        return m_version;
+    }
+
+    int version_number() const
+    {
+        return m_version_number;
+    }
+
+    void set_version_number(int vn)
+    {
+        if (vn >= 10500)
+        {
+            m_version = CS_15;
+        }
+        else if (vn >= 10200)
+        {
+            m_version = CS_12;
+        }
+        else if (vn > 10000)
+        {
+            m_version = CS_10;
+        }
+        else
+        {
+            m_version = CS_UNKNOWN;
+        }
+
+        m_version_number = vn;
     }
 
     void set_status(uint64_t bit)
@@ -271,4 +311,6 @@ private:
     const CsConfig&          m_cs_config;
     const mxb::http::Config& m_http_config;
     TrxState                 m_trx_state = TRX_INACTIVE;
+    Version                  m_version = CS_UNKNOWN;
+    int                      m_version_number = -1;
 };

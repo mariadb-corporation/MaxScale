@@ -33,8 +33,33 @@ namespace http = mxb::http;
 namespace
 {
 
-constexpr const char* alive_query = "SELECT mcsSystemReady() = 1 && mcsSystemReadOnly() <> 2";
-constexpr const char* role_query = "SELECT mcsSystemPrimary()";
+constexpr const char* ZALIVE_QUERY_10 = "SELECT mcsSystemReady() = 1 && mcsSystemReadOnly() <> 2";
+constexpr const char* ZALIVE_QUERY_12 = ZALIVE_QUERY_10;
+constexpr const char* ZALIVE_QUERY_15 = "SELECT 1";
+
+constexpr const char* ZROLE_QUERY_12 = "SELECT mcsSystemPrimary()";
+
+constexpr const char* get_alive_query(CsMonitorServer::Version version)
+{
+    switch (version)
+    {
+    case CsMonitorServer::CS_10:
+        return ZALIVE_QUERY_10;
+
+    case CsMonitorServer::CS_12:
+        return ZALIVE_QUERY_12;
+
+    case CsMonitorServer::CS_15:
+        return ZALIVE_QUERY_15;
+
+    case CsMonitorServer::CS_UNKNOWN:
+        return nullptr;
+
+    default:
+        mxb_assert(!true);
+        return nullptr;
+    }
+}
 
 // Helper for extracting string results from queries
 static std::string do_query(MonitorServer* srv, const char* query)
@@ -95,9 +120,49 @@ int get_cs_version(MonitorServer* srv)
             rval = to_version(cs_version);
         }
     }
-    // TODO: Temporary fix, the mock server does not return the right version.
-    rval = 10500;
+
     return rval;
+}
+
+int get_cs_version(const vector<CsMonitorServer*>& servers)
+{
+    int cluster_version = 0;
+
+    if (!servers.empty())
+    {
+        CsMonitorServer* pCurrent = nullptr;
+        for (auto* pServer : servers)
+        {
+            auto result = pServer->ping_or_connect();
+
+            if (mxs::Monitor::connection_is_ok(result))
+            {
+                auto version = get_cs_version(pServer);
+
+                pServer->set_version_number(version);
+
+                CS_DEBUG("Version of '%s': %d", pServer->name(), version);
+
+                if (!pCurrent)
+                {
+                    cluster_version = version;
+                    pCurrent = pServer;
+                }
+                else if (version != cluster_version)
+                {
+                    MXS_ERROR("Version %d of server '%s' is at least different than version %d of '%s'.",
+                              version, pServer->name(), cluster_version, pCurrent->name());
+                    cluster_version = -1;
+                }
+            }
+            else
+            {
+                MXS_ERROR("Could not connect to '%s'.", pServer->name());
+            }
+        }
+    }
+
+    return cluster_version;
 }
 
 json_t* create_response(const vector<CsMonitorServer*>& servers,
@@ -319,124 +384,128 @@ CsMonitor* CsMonitor::create(const std::string& name, const std::string& module)
     return new CsMonitor(name, module);
 }
 
-bool CsMonitor::has_sufficient_permissions()
+namespace
 {
-    bool rv = test_permissions(alive_query);
 
-    if (rv)
+bool check_15_server_states(const char* zName,
+                            const vector<CsMonitorServer*>& servers,
+                            const http::Config& http_config)
+{
+    bool rv = true;
+
+    auto configs = CsMonitorServer::fetch_configs(servers, http_config);
+
+    auto it = servers.begin();
+    auto end = servers.end();
+    auto jt = configs.begin();
+
+    size_t n = 0;
+
+    while (it != end)
     {
-        CsMonitorServer* pSmallest_server = nullptr;
-        m_version = 0;
+        auto* pServer = *it;
+        const auto& config = *jt;
 
-        const auto& sv = servers();
-        for (auto* pServer : sv)
+        if (config.ok())
         {
-            auto result = pServer->ping_or_connect();
-
-            if (connection_is_ok(result))
+            string ip;
+            if (config.get_dbrm_controller_ip(&ip))
             {
-                auto version = get_cs_version(pServer);
-
-                if (m_version == 0)
+                if (ip == "127.0.0.1")
                 {
-                    m_version = version;
+                    pServer->set_state(CsMonitorServer::SINGLE_NODE);
+
+                    MXS_WARNING("Server '%s' configured as a single node. It must be added "
+                                "'maxctrl call command add-node %s %s' before it can be used "
+                                "in a multi-node cluster.",
+                                pServer->name(), zName, pServer->name());
+                    ++n;
                 }
-                else if (version != m_version)
+                else if (ip == pServer->address())
                 {
-                    MXS_WARNING("Version %d of '%s' is at least different than version %d of '%s'.",
-                                version, pServer->name(), m_version, pSmallest_server->name());
-
-                    if (version < m_version)
-                    {
-                        m_version = version;
-                        pSmallest_server = pServer;
-                    }
+                    pServer->set_state(CsMonitorServer::MULTI_NODE);
+                }
+                else
+                {
+                    MXS_ERROR("MaxScale thinks the IP address of the server '%s' is %s, "
+                              "while the server itself thinks it is %s.",
+                              pServer->name(), pServer->address(), ip.c_str());
+                    rv = false;
                 }
             }
             else
             {
-                // This should not happen as test_permissions() succeeded.
-                MXS_ERROR("Could not connect to '%s'.", pServer->name());
+                MXS_ERROR("Could not get DMRM_Controller IP of '%s'.", pServer->name());
+                rv = false;
             }
-        }
-
-        if (m_version == 0)
-        {
-            MXS_WARNING("Could not connect to any server. The Columnstore monitor will "
-                        "initially assume nothing of the cluster.");
         }
         else
         {
-            MXS_NOTICE("Columnstore monitor will adjust its behaviour according to version %d.",
-                       m_version);
+            MXS_ERROR("Could not fetch config from '%s': (%d) %s",
+                      pServer->name(), config.response.code, config.response.body.c_str());
+            rv = false;
         }
 
-        if (m_version >= 10500)
+        ++it;
+        ++jt;
+    }
+
+    if (n == servers.size())
+    {
+        MXS_WARNING("No server is configured as multi-node.");
+    }
+
+    return rv;
+}
+
+}
+
+bool CsMonitor::has_sufficient_permissions()
+{
+    bool rv = true;
+
+    // We have to do this here, before we call test_permissions(), because the query
+    // to use depends upon the version.
+    m_version_number = get_cs_version(servers());
+
+    if (m_version_number == -1)
+    {
+        MXS_ERROR("The version of the servers is not identical, monitoring is not possible.");
+        m_version = CsMonitorServer::CS_UNKNOWN;
+        rv = false;
+    }
+    else if (m_version_number == 0)
+    {
+        MXS_WARNING("%s: The cluster version could not be established as either there are not "
+                    "servers defined or no server could be contacted.", name());
+        m_version = CsMonitorServer::CS_UNKNOWN;
+    }
+    else if (m_version_number >= 10500)
+    {
+        m_version = CsMonitorServer::CS_15;
+    }
+    else if (m_version_number >= 10200)
+    {
+        m_version = CsMonitorServer::CS_12;
+    }
+    else
+    {
+        m_version = CsMonitorServer::CS_10;
+    }
+
+    CS_DEBUG("Cluster version is: %d", m_version_number);
+
+    m_zAlive_query = get_alive_query(m_version);
+
+    // m_zAlive_query will be null if we could not figure out the version.
+    // In that case we just allow the monitor to start.
+    if (rv && m_zAlive_query)
+    {
+        rv = test_permissions(m_zAlive_query);
+
+        if (m_version == CsMonitorServer::CS_15)
         {
-            auto configs = CsMonitorServer::fetch_configs(sv, m_http_config);
-
-            auto it = sv.begin();
-            auto end = sv.end();
-            auto jt = configs.begin();
-
-            size_t n = 0;
-
-            while (it != end)
-            {
-                auto* pServer = *it;
-                const auto& config = *jt;
-
-                if (config.ok())
-                {
-                    string ip;
-                    if (config.get_dbrm_controller_ip(&ip))
-                    {
-                        if (ip == "127.0.0.1")
-                        {
-                            pServer->set_state(CsMonitorServer::SINGLE_NODE);
-
-                            if (sv.size() > 1)
-                            {
-                                MXS_WARNING("Server '%s' must be added as a node to the cluster "
-                                            "before MaxScale can use it.",
-                                            pServer->name());
-                                ++n;
-                            }
-                        }
-                        else if (ip == pServer->address())
-                        {
-                            pServer->set_state(CsMonitorServer::MULTI_NODE);
-                        }
-                        else
-                        {
-                            MXS_ERROR("MaxScale thinks the IP address of the server '%s' is %s, "
-                                      "while the server itself thinks it is %s.",
-                                      pServer->name(), pServer->address(), ip.c_str());
-                            rv = false;
-                        }
-                    }
-                    else
-                    {
-                        MXS_ERROR("Could not get DMRM_Controller IP of '%s'.", pServer->name());
-                        rv = false;
-                    }
-                }
-                else
-                {
-                    MXS_ERROR("Could not fetch config from '%s': (%d) %s",
-                              pServer->name(), config.response.code, config.response.body.c_str());
-                    rv = false;
-                }
-
-                ++it;
-                ++jt;
-            }
-
-            if (n == sv.size())
-            {
-                MXS_WARNING("No servers are properly configured. They must be added as nodes "
-                            "to the cluster.");
-            }
+            rv = check_15_server_states(name(), servers(), m_http_config);
         }
     }
 
@@ -448,67 +517,137 @@ void CsMonitor::update_server_status(MonitorServer* pS)
     CsMonitorServer* pServer = static_cast<CsMonitorServer*>(pS);
 
     pServer->clear_pending_status(SERVER_MASTER | SERVER_SLAVE | SERVER_RUNNING);
-    int status_mask = 0;
 
-    if (do_query(pServer, alive_query) == "1")
+    if (pServer->version() == CsMonitorServer::CS_UNKNOWN)
     {
-        if (m_version >= 0)
+        MXS_WARNING("Version of '%s' is not known, trying to find out.", pServer->name());
+
+        int version = get_cs_version(pServer);
+
+        if (version == -1)
         {
-            status_mask |= SERVER_RUNNING;
-
-            if (m_version >= 10500)
-            {
-                auto status = pServer->fetch_status();
-
-                int status_bit = 0;
-
-                if (status.ok())
-                {
-                    if (!status.services.empty())
-                    {
-                        // Seems to be running.
-                        if (status.dbrm_mode == cs::MASTER)
-                        {
-                            status_bit |= SERVER_MASTER;
-                        }
-                        else
-                        {
-                            status_bit |= SERVER_SLAVE;
-                        }
-                    }
-                    else
-                    {
-                        MXS_ERROR("Columnstore daemon on '%s' replied, but with no services so "
-                                  "result cannot be trusted.", pServer->name());
-                    }
-                }
-                else
-                {
-                    MXS_ERROR("Could not fetch status using REST-API from '%s': (%d) %s",
-                              pServer->name(), status.response.code, status.response.body.c_str());
-                }
-
-                if (status_bit == 0)
-                {
-                    MXS_NOTICE("Could not get server status using REST-API, reverting to SQL.");
-                    status_bit = do_query(pServer, role_query) == "1" ? SERVER_MASTER : SERVER_SLAVE;
-                }
-
-                status_mask |= status_bit;
-            }
-            else if (m_version >= 10200)
-            {
-                // 1.2 supports the mcsSystemPrimary function
-                status_mask |= do_query(pServer, role_query) == "1" ? SERVER_MASTER : SERVER_SLAVE;
-            }
-            else
-            {
-                status_mask |= pServer->server == m_config.pPrimary ? SERVER_MASTER : SERVER_SLAVE;
-            }
+            MXS_ERROR("Could not find out version of '%s'.", pServer->name());
+        }
+        else
+        {
+            pServer->set_version_number(version);
         }
     }
 
+    // If at startup we failed to establish the version, we pick the version of the
+    // first server as the cluster version.
+    if (m_version == CsMonitorServer::CS_UNKNOWN)
+    {
+        m_version = pServer->version();
+
+        m_zAlive_query = get_alive_query(m_version);
+    }
+
+    mxb_assert(m_version == CsMonitorServer::CS_UNKNOWN || m_zAlive_query != nullptr);
+
+    int status_mask = 0;
+
+    if (m_version != CsMonitorServer::CS_UNKNOWN)
+    {
+        if (pServer->version() != m_version)
+        {
+            MXS_ERROR("Version of '%s' is different from the cluster version; server will be ignored.",
+                      pServer->name());
+        }
+        else
+        {
+            if (do_query(pServer, m_zAlive_query) == "1")
+            {
+                if (m_version == CsMonitorServer::CS_15)
+                {
+                    status_mask = update_15_server_status(pServer);
+                }
+                else
+                {
+                    CS_DEBUG("'%s' is alive.", pServer->name());
+                    status_mask |= SERVER_RUNNING;
+
+                    switch (m_version)
+                    {
+                    case CsMonitorServer::CS_10:
+                        status_mask |= update_10_server_status(pServer);
+                        break;
+
+                    case CsMonitorServer::CS_12:
+                        status_mask |= update_12_server_status(pServer);
+                        break;
+
+                    case CsMonitorServer::CS_15:
+                    default:
+                        mxb_assert(!true);
+                    }
+                }
+            }
+            else
+            {
+                CS_DEBUG("'%s' is not alive.", pServer->name());
+            }
+        }
+    }
+    else
+    {
+        MXS_ERROR("Cluster version not known, not possible to monitor server '%s'.",
+                  pServer->name());
+    }
+
     pServer->set_pending_status(status_mask);
+}
+
+int CsMonitor::update_10_server_status(CsMonitorServer* pServer)
+{
+    return pServer->server == m_config.pPrimary ? SERVER_MASTER : SERVER_SLAVE;
+}
+
+int CsMonitor::update_12_server_status(CsMonitorServer* pServer)
+{
+    return do_query(pServer, ZROLE_QUERY_12) == "1" ? SERVER_MASTER : SERVER_SLAVE;
+}
+
+int CsMonitor::update_15_server_status(CsMonitorServer* pServer)
+{
+    int status_mask = 0;
+
+    // A server may be single-node if it has recently been added. In has_sufficient_permissions()
+    // we logged that it needs to be added to the cluster, so we won't log anything here as that
+    // would be spamming.
+    if (pServer->is_multi_node())
+    {
+        auto status = pServer->fetch_status();
+
+        if (status.ok())
+        {
+            CS_DEBUG("'%s' is tentatively alive.", pServer->name());
+
+            // If services are empty, it is an indication that Columnstore actually
+            // is not running _even_ if we were able to connect to the MariaDB server.
+            if (!status.services.empty())
+            {
+                status_mask |= SERVER_RUNNING;
+
+                // Seems to be running.
+                if (status.dbrm_mode == cs::MASTER)
+                {
+                    status_mask |= SERVER_MASTER;
+                }
+                else
+                {
+                    status_mask |= SERVER_SLAVE;
+                }
+            }
+        }
+        else
+        {
+            MXS_ERROR("Could not fetch status using REST-API from '%s': (%d) %s",
+                      pServer->name(), status.response.code, status.response.body.c_str());
+        }
+    }
+
+    return status_mask;
 }
 
 bool CsMonitor::configure(const mxs::ConfigParameters* pParams)
