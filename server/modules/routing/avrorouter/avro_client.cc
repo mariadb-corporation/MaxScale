@@ -35,6 +35,7 @@
 #include <maxscale/buffer.hh>
 #include <maxscale/utils.hh>
 #include <maxscale/routingworker.hh>
+#include <maxbase/format.hh>
 
 std::pair<std::string, std::string> get_avrofile_and_gtid(std::string file);
 
@@ -61,7 +62,7 @@ int AvroSession::routeQuery(GWBUF* queue)
         if (do_registration(queue) == 0)
         {
             state = AVRO_CLIENT_ERRORED;
-            dcb_printf(dcb, "ERR, code 12, msg: Registration failed\n");
+            m_client->write("ERR, code 12, msg: Registration failed");
             /* force disconnection */
             DCB::close(dcb);
             rval = 0;
@@ -69,12 +70,12 @@ int AvroSession::routeQuery(GWBUF* queue)
         else
         {
             /* Send OK ack to client */
-            dcb_printf(dcb, "OK\n");
+            m_client->write("OK");
 
             state = AVRO_CLIENT_REGISTERED;
             MXS_INFO("%s: Client [%s] has completed REGISTRATION action",
-                     dcb->service()->name(),
-                     dcb->remote().c_str());
+                     m_session->service->name(),
+                     m_session->client_remote().c_str());
         }
         break;
 
@@ -337,11 +338,12 @@ void AvroSession::process_command(GWBUF* queue)
 
             if (avro_binfile.empty())
             {
-                dcb_printf(dcb, "ERR NO-FILE Filename not specified.\n");
+                m_client->write("ERR NO-FILE Filename not specified.");
             }
             else if (!file_in_dir(router->avrodir.c_str(), avro_binfile.c_str()))
             {
-                dcb_printf(dcb, "ERR NO-FILE File '%s' not found.\n", avro_binfile.c_str());
+                auto msg = mxb::string_printf("ERR NO-FILE File '%s' not found.", avro_binfile.c_str());
+                m_client->write(msg.c_str());
             }
             else
             {
@@ -350,14 +352,14 @@ void AvroSession::process_command(GWBUF* queue)
         }
         else
         {
-            dcb_printf(dcb, "ERR REQUEST-DATA with no data\n");
+            m_client->write("ERR REQUEST-DATA with no data.");
         }
     }
     else
     {
         const char err[] = "ERR: Unknown command\n";
         GWBUF* reply = gwbuf_alloc_and_load(sizeof(err), err);
-        dcb->protocol_write(reply);
+        m_client->write(reply);
     }
 }
 
@@ -445,7 +447,7 @@ bool AvroSession::stream_binary()
         bytes += file_handle->buffer_size;
         if ((buffer = maxavro_record_read_binary(file_handle)))
         {
-            rc = dcb->protocol_write(buffer);
+            rc = m_client->write(buffer);
         }
         else
         {
@@ -501,8 +503,8 @@ bool AvroSession::seek_to_gtid()
                                  gtid.domain,
                                  gtid.server_id,
                                  gtid.seq,
-                                 dcb->session()->user().c_str(),
-                                 dcb->remote().c_str());
+                                 m_session->user().c_str(),
+                                 m_session->client_remote().c_str());
                         seeking = false;
                     }
                 }
@@ -577,7 +579,7 @@ bool AvroSession::stream_data()
     }
     else
     {
-        dcb_printf(dcb, "ERR avro file not specified\n");
+        m_client->write("ERR avro file not specified");
     }
 
     return read_more;
@@ -652,8 +654,8 @@ void AvroSession::rotate_avro_file(std::string fullname)
     else
     {
         MXS_INFO("Rotated '%s'@'%s' to file: %s",
-                 dcb->session()->user().c_str(),
-                 dcb->remote().c_str(),
+                 m_session->user().c_str(),
+                 m_session->client_remote().c_str(),
                  fullname.c_str());
     }
 }
@@ -720,7 +722,7 @@ void AvroSession::client_callback()
 
         if (schema)
         {
-            dcb->protocol_write(schema);
+            m_client->write(schema);
         }
     }
 
@@ -768,7 +770,9 @@ AvroSession* AvroSession::create(Avro* inst, MXS_SESSION* session)
 }
 
 AvroSession::AvroSession(Avro* instance, MXS_SESSION* session)
-    : dcb(session->client_connection()->dcb())
+    : m_session(session)
+    , m_client(static_cast<CDCClientConnection*>(m_session->client_connection()))
+    , dcb(m_client->dcb())
     , state(AVRO_CLIENT_UNREGISTERED)
     , format(AVRO_FORMAT_UNDEFINED)
     , router(instance)

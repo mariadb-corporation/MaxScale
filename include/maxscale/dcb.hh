@@ -831,16 +831,6 @@ void printAllDCBs();
 void printDCB(DCB*);
 
 /**
- * A  DCB based wrapper for printf. Allows formatting printing to
- * a descriptor control block.
- *
- * @param dcb   Descriptor to write to
- * @param fmt   A printf format string
- * @param ...   Variable arguments for the print format
- */
-void dcb_printf(DCB*, const char*, ...) __attribute__ ((format(printf, 2, 3)));
-
-/**
  * Return DCB counts filtered by role
  *
  * @param role   What kind of DCBs should be counted.

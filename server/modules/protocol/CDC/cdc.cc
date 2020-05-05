@@ -42,36 +42,7 @@
 #include <maxscale/dcb.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/session.hh>
-#include <maxscale/protocol2.hh>
 #include "cdc_plain_auth.hh"
-
-/**
- * CDC protocol
- */
-class CDCClientConnection : public mxs::ClientConnectionBase
-{
-public:
-    CDCClientConnection(CDCAuthenticatorModule& auth_module);
-    ~CDCClientConnection() = default;
-
-    void ready_for_reading(DCB* dcb) override;
-    void write_ready(DCB* dcb) override;
-    void error(DCB* dcb) override;
-    void hangup(DCB* dcb) override;
-
-    int32_t write(GWBUF* buffer) override;
-
-    bool init_connection() override;
-    void finish_connection() override;
-
-private:
-    int m_state {CDC_STATE_WAIT_FOR_AUTH};      /*< CDC protocol state */
-
-    CDCClientAuthenticator m_authenticator;     /**< Client authentication data */
-
-    void write_auth_ack();
-    void write_auth_err();
-};
 
 class CDCProtocolModule : public mxs::ProtocolModule
 {
@@ -308,4 +279,16 @@ void CDCClientConnection::write_auth_err()
     const char msg[] = "ERROR: Authentication failed\n";
     auto buf = gwbuf_alloc_and_load(sizeof(msg) - 1, msg);
     write(buf);
+}
+
+bool CDCClientConnection::write(const char* msg)
+{
+    // CDC-protocol messages end in \n. The ending 0-char need not be written.
+    auto len = strlen(msg);
+    auto buf = gwbuf_alloc(len + 1);
+    auto* ptr = GWBUF_DATA(buf);
+    memcpy(ptr, msg, len);
+    ptr += len;
+    *ptr = '\n';
+    return write(buf);
 }

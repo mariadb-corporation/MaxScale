@@ -124,6 +124,9 @@ public:
     static AvroSession* create(Avro* router, MXS_SESSION* session);
     ~AvroSession();
 
+    MXS_SESSION*           m_session {nullptr}; /**< Generic session */
+    CDCClientConnection*   m_client {nullptr};  /**< Client connection */
+
     DCB*                  dcb;          /*< The client DCB */
     int                   state;        /*< The state of this client */
     enum avro_data_format format;       /*< Stream JSON or Avro data */

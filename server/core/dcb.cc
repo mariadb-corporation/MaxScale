@@ -2078,27 +2078,6 @@ const char* to_string(DCB::State state)
 }
 }
 
-void dcb_printf(DCB* dcb, const char* fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    int n = vsnprintf(nullptr, 0, fmt, args);
-    va_end(args);
-
-    GWBUF* buf = gwbuf_alloc(n + 1);
-
-    if (buf)
-    {
-        va_start(args, fmt);
-        vsnprintf((char*)GWBUF_DATA(buf), n + 1, fmt, args);
-        va_end(args);
-
-        // Remove the trailing null character
-        GWBUF_RTRIM(buf, 1);
-        dcb->protocol_write(buf);
-    }
-}
-
 int dcb_count_by_role(DCB::Role role)
 {
     struct dcb_role_count val = {};

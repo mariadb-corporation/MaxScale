@@ -14,7 +14,7 @@
  */
 
 #include <maxscale/ccdefs.hh>
-
+#include <maxscale/protocol2.hh>
 #include <openssl/sha.h>
 
 #define CDC_SMALL_BUFFER       1024
@@ -38,3 +38,68 @@
 
 #define CDC_UUID_LEN 32
 #define CDC_TYPE_LEN 16
+
+class CDCAuthenticatorModule;
+
+class CDCClientAuthenticator
+{
+public:
+    CDCClientAuthenticator(CDCAuthenticatorModule& module)
+        : m_module(module)
+    {
+    }
+
+    ~CDCClientAuthenticator() = default;
+    bool extract(DCB* client, GWBUF* buffer);
+
+    bool ssl_capable(DCB* client)
+    {
+        return false;
+    }
+
+    int authenticate(DCB* client);
+
+private:
+    bool set_client_data(uint8_t* client_auth_packet, int client_auth_packet_size);
+
+    char    m_user[CDC_USER_MAXLEN + 1] {'\0'}; /*< username for authentication */
+    uint8_t m_auth_data[SHA_DIGEST_LENGTH] {0}; /*< Password Hash               */
+
+    CDCAuthenticatorModule& m_module;
+};
+
+/**
+ * CDC protocol
+ */
+class CDCClientConnection : public mxs::ClientConnectionBase
+{
+public:
+    CDCClientConnection(CDCAuthenticatorModule& auth_module);
+    ~CDCClientConnection() = default;
+
+    void ready_for_reading(DCB* dcb) override;
+    void write_ready(DCB* dcb) override;
+    void error(DCB* dcb) override;
+    void hangup(DCB* dcb) override;
+
+    int32_t write(GWBUF* buffer) override;
+
+    /**
+     * Write a string.
+     *
+     * @param msg String to write
+     * @return True on success
+     */
+    bool write(const char* msg);
+
+    bool init_connection() override;
+    void finish_connection() override;
+
+private:
+    int m_state {CDC_STATE_WAIT_FOR_AUTH};      /*< CDC protocol state */
+
+    CDCClientAuthenticator m_authenticator;     /**< Client authentication data */
+
+    void write_auth_ack();
+    void write_auth_err();
+};

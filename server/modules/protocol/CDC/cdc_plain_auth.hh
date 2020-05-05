@@ -51,31 +51,4 @@ private:
     mxs::Users m_userdata; // lock-protected user-info
 };
 
-class CDCClientAuthenticator
-{
-public:
-    CDCClientAuthenticator(CDCAuthenticatorModule& module)
-        : m_module(module)
-    {
-    }
-
-    ~CDCClientAuthenticator() = default;
-    bool extract(DCB* client, GWBUF* buffer);
-
-    bool ssl_capable(DCB* client)
-    {
-        return false;
-    }
-
-    int authenticate(DCB* client);
-
-private:
-    bool set_client_data(uint8_t* client_auth_packet, int client_auth_packet_size);
-
-    char    m_user[CDC_USER_MAXLEN + 1] {'\0'}; /*< username for authentication */
-    uint8_t m_auth_data[SHA_DIGEST_LENGTH] {0}; /*< Password Hash               */
-
-    CDCAuthenticatorModule& m_module;
-};
-
 bool cdc_add_new_user(const MODULECMD_ARG* args, json_t** output);
