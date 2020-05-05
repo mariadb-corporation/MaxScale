@@ -59,7 +59,7 @@ private:
     Pinloki*                m_router;
     mxq::Gtid               m_gtid;
     std::unique_ptr<Reader> m_reader;
-    uint32_t                m_dcid = 0;
+    int64_t                 m_heartbeat_period = 0;
 
     bool send_event(const maxsql::RplEvent& event);
     void send(GWBUF* buffer);

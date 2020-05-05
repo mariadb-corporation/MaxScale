@@ -70,7 +70,7 @@ void prog_main(const maxsql::GtidList& gtid_list, const std::string& host,
         pinloki::Reader reader([](const auto& event) {
                                    std::cout << event << std::endl;
                                    return true;
-                               }, &inv, &worker, gtid);
+                               }, &inv, &worker, gtid, 30s);
         worker.start();
         worker.join();
     }

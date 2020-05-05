@@ -32,14 +32,22 @@ Reader::PollData::PollData(Reader* reader, mxb::Worker* worker)
 {
 }
 
-Reader::Reader(Callback cb, const Inventory* inv, mxb::Worker* worker, const maxsql::Gtid& gtid)
+Reader::Reader(Callback cb, const Inventory* inv, mxb::Worker* worker, const maxsql::Gtid& gtid,
+               const std::chrono::seconds& heartbeat_interval)
     : m_cb(cb)
     , m_reader_poll_data(this, worker)
     , m_file_reader(gtid, inv)
     , m_worker(worker)
+    , m_heartbeat_interval(heartbeat_interval)
+    , m_last_event(std::chrono::steady_clock::now())
 {
     m_worker->add_fd(m_file_reader.fd(), EPOLLIN, &m_reader_poll_data);
     handle_messages();
+
+    if (heartbeat_interval.count())
+    {
+        m_heartbeat_dcid = worker->delayed_call(1000, &Reader::generate_heartbeats, this);
+    }
 }
 
 Reader::~Reader()
@@ -47,6 +55,11 @@ Reader::~Reader()
     if (m_dcid)
     {
         m_worker->cancel_delayed_call(m_dcid);
+    }
+
+    if (m_heartbeat_dcid)
+    {
+        m_worker->cancel_delayed_call(m_heartbeat_dcid);
     }
 }
 
@@ -77,6 +90,8 @@ void Reader::handle_messages()
                 m_dcid = m_worker->delayed_call(10, &Reader::resend_event, this);
                 break;
             }
+
+            m_last_event = std::chrono::steady_clock::now();
         }
     }
 }
@@ -106,5 +121,26 @@ bool Reader::resend_event(mxb::Worker::Call::action_t action)
     }
 
     return call_again;
+}
+
+bool Reader::generate_heartbeats(mxb::Worker::Call::action_t action)
+{
+    auto now = std::chrono::steady_clock::now();
+
+    // Only send heartbeats if the connection is idle and no data is buffered.
+    if (action == mxb::Worker::Call::EXECUTE
+        && now - m_last_event >= m_heartbeat_interval && m_dcid == 0)
+    {
+        // TODO: Figure out why inotify doesn't seem to always work
+        handle_messages();
+
+        if (now - m_last_event >= m_heartbeat_interval && m_dcid == 0)
+        {
+            m_cb(m_file_reader.create_heartbeat_event());
+            m_last_event = now;
+        }
+    }
+
+    return true;
 }
 }

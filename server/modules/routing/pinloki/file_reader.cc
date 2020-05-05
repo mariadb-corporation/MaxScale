@@ -26,6 +26,8 @@
 #include <sys/inotify.h>
 #include <unistd.h>
 
+#include <maxscale/protocol/mariadb/mysql.hh>
+
 using namespace std::literals::chrono_literals;
 
 // TODO: case with no files. Can't setup inotify because the file name is not
@@ -188,5 +190,46 @@ void FileReader::set_inotify_fd()
     {
         MXB_THROW(BinlogReadError, "inotify_add_watch failed:" << errno << ", " << mxb_strerror(errno));
     }
+}
+
+mxq::RplEvent FileReader::create_heartbeat_event() const
+{
+    auto pos = m_read_pos.name.find_last_of('/');
+    mxb_assert(pos != std::string::npos);
+    auto filename = m_read_pos.name.substr(pos + 1);
+    std::vector<char> data(HEADER_LEN + filename.size() + 4);
+    uint8_t* ptr = (uint8_t*)&data[0];
+
+    // Timestamp, always zero
+    mariadb::set_byte4(ptr, 0);
+    ptr += 4;
+
+    // This is a heartbeat type event
+    *ptr++ = HEARTBEAT_LOG_EVENT;
+
+    // server_id
+    mariadb::set_byte4(ptr, m_inventory.config().server_id());
+    ptr += 4;
+
+    // Event length
+    mariadb::set_byte4(ptr, data.size());
+    ptr += 4;
+
+    // Next position is the current next_pos value
+    mariadb::set_byte4(ptr, m_read_pos.next_pos);
+    ptr += 4;
+
+    // This is an artificial event
+    mariadb::set_byte2(ptr, LOG_EVENT_ARTIFICIAL_F);
+    ptr += 2;
+
+    // The binlog name as the payload (not null-terminated)
+    memcpy(ptr, filename.c_str(), filename.size());
+    ptr += filename.size();
+
+    // Checksum of the whole event
+    mariadb::set_byte4(ptr, crc32(0, (uint8_t*)data.data(), data.size() - 4));
+
+    return mxq::RplEvent(std::move(data));
 }
 }

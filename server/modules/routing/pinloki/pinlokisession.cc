@@ -102,7 +102,8 @@ int32_t PinlokiSession::routeQuery(GWBUF* pPacket)
             m_reader = std::make_unique<Reader>(
                 [this](const auto& event) {
                     return send_event(event);
-                }, m_router->inventory(), mxs::RoutingWorker::get_current(), m_gtid);
+                }, m_router->inventory(), mxs::RoutingWorker::get_current(), m_gtid,
+                std::chrono::seconds(m_heartbeat_period));
             rval = 1;
         }
         catch (const GtidNotFoundError& err)
@@ -216,6 +217,10 @@ void PinlokiSession::set(const std::string& key, const std::string& value)
     if (key == "@slave_connect_state")
     {
         m_gtid = mxq::Gtid::from_string(value);
+    }
+    else if (key == "@master_heartbeat_period")
+    {
+        m_heartbeat_period = strtol(value.c_str(), nullptr, 10) / 1000000000;
     }
     else if (key == "gtid_slave_pos")
     {

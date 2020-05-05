@@ -41,6 +41,9 @@ public:
 
     maxsql::RplEvent fetch_event();
 
+    // Artificial replication heartbeat event
+    maxsql::RplEvent create_heartbeat_event() const;
+
     /**
      * @brief fd - file descriptor that this reader want's to epoll
      * @return file descriptor
