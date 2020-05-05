@@ -55,6 +55,7 @@ add_subdirectory(cdc_datatypes)
 add_test_executable(cooperative_monitoring.cpp cooperative_monitoring cooperative_monitoring LABELS REPL_BACKEND SECOND_MAXSCALE)
 
 add_subdirectory(mariadbmonitor)
+add_subdirectory(pinloki)
 
 # MXS-1506: Delayed query retry
 # https://jira.mariadb.org/browse/MXS-1506
