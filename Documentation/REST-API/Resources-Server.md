@@ -563,14 +563,14 @@ The _:name_ in the URI must map to a server name with all whitespace replaced
 with hyphens. This endpoint requires that the `state` parameter is passed with
 the request. The value of `state` must be one of the following values.
 
-|Value      | State Description              |
-|-----------|--------------------------------|
-|master     | Server is a Master             |
-|slave      | Server is a Slave              |
-|maintenance| Server is put into maintenance |
-|running    | Server is up and running       |
-|synced     | Server is a Galera node        |
-|stale      | Server is a stale Master       |
+|Value      | State Description                |
+|-----------|----------------------------------|
+|master     | Server is a Master               |
+|slave      | Server is a Slave                |
+|maintenance| Server is put into maintenance   |
+|running    | Server is up and running         |
+|synced     | Server is a Galera node          |
+|drain      | Server is drained of connections |
 
 For example, to set the server _db-server-1_ into maintenance mode, a request to
 the following URL must be made:
