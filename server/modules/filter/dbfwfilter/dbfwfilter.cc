@@ -465,36 +465,6 @@ bool dbfw_reload_rules(const MODULECMD_ARG* argv, json_t** output)
     return inst->reload_rules(filename);
 }
 
-bool dbfw_show_rules(const MODULECMD_ARG* argv, json_t** output)
-{
-    DCB* dcb = argv->argv[0].value.dcb;
-    MXS_FILTER_DEF* filter = argv->argv[1].value.filter;
-    Dbfw* inst = (Dbfw*)filter_def_get_instance(filter);
-
-    dcb_printf(dcb, "Rule, Type, Times Matched\n");
-
-    RuleList& rules = this_thread->rules(inst);
-    UserMap& users = this_thread->users(inst);
-
-    if (rules.empty() || users.empty())
-    {
-        if (!replace_rules(inst))
-        {
-            return 0;
-        }
-    }
-
-    for (RuleList::const_iterator it = rules.begin(); it != rules.end(); it++)
-    {
-        const SRule& rule = *it;
-        char buf[rule->name().length() + 200];      // Some extra space
-        print_rule(rule.get(), buf);
-        dcb_printf(dcb, "%s\n", buf);
-    }
-
-    return true;
-}
-
 bool dbfw_show_rules_json(const MODULECMD_ARG* argv, json_t** output)
 {
     MXS_FILTER_DEF* filter = argv->argv[0].value.filter;

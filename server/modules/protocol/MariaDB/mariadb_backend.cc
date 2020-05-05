@@ -738,7 +738,7 @@ int MariaDBBackendConnection::normal_read()
         if (result == MYSQL_REPLY_OK)
         {
             MXS_INFO("Response to COM_CHANGE_USER is OK, writing stored query");
-            rval = query ? dcb->protocol_write(query) : 1;
+            rval = query ? write(query) : 1;
         }
         else if (auth_change_requested(reply))
         {
@@ -1392,57 +1392,6 @@ int64_t MariaDBBackendConnection::seconds_idle() const
 json_t* MariaDBBackendConnection::diagnostics() const
 {
     return json_pack("{siss}", "connection_id", m_thread_id, "server", m_server.name());
-}
-
-int MariaDBBackendConnection::mysql_send_com_quit(DCB* dcb, int packet_number, GWBUF* bufparam)
-{
-    mxb_assert(packet_number <= 255);
-
-    int nbytes = 0;
-    GWBUF* buf = bufparam ? bufparam : mysql_create_com_quit(NULL, packet_number);
-    if (buf)
-    {
-        nbytes = dcb->protocol_write(buf);
-    }
-    return nbytes;
-}
-
-/**
- * @brief Read a complete packet from a DCB
- *
- * Read a complete packet from a connected DCB. If data was read, @c readbuf
- * will point to the head of the read data. If no data was read, @c readbuf will
- * be set to NULL.
- *
- * @param dcb DCB to read from
- * @param readbuf Pointer to a buffer where the data is stored
- * @return True on success, false if an error occurred while data was being read
- */
-bool MariaDBBackendConnection::read_complete_packet(DCB* dcb, GWBUF** readbuf)
-{
-    bool rval = false;
-    GWBUF* localbuf = NULL;
-
-    if (dcb->read(&localbuf, 0) >= 0)
-    {
-        rval = true;
-        GWBUF* packets = modutil_get_complete_packets(&localbuf);
-
-        if (packets)
-        {
-            /** A complete packet was read */
-            *readbuf = packets;
-        }
-
-        if (localbuf)
-        {
-            /** Store any extra data in the DCB's readqueue */
-
-            dcb->readq_append(localbuf);
-        }
-    }
-
-    return rval;
 }
 
 /**

@@ -447,38 +447,6 @@ GWBUF* modutil_create_mysql_err_msg(int packet_number,
     return errbuf;
 }
 
-/**
- * modutil_send_mysql_err_packet
- *
- * Send a MySQL protocol Generic ERR message, to the dcb
- *
- * @param dcb                   The DCB to send the packet
- * @param packet_number         MySQL protocol sequence number in the packet
- * @param in_affected_rows      MySQL affected rows
- * @param mysql_errno           The MySQL errno
- * @param sqlstate_msg          The MySQL State Message
- * @param mysql_message         The Error Message
- * @return      0 for successful dcb write or 1 on failure
- *
- */
-int modutil_send_mysql_err_packet(DCB* dcb,
-                                  int packet_number,
-                                  int in_affected_rows,
-                                  int mysql_errno,
-                                  const char* sqlstate_msg,
-                                  const char* mysql_message)
-{
-    GWBUF* buf;
-
-    buf = modutil_create_mysql_err_msg(packet_number,
-                                       in_affected_rows,
-                                       mysql_errno,
-                                       sqlstate_msg,
-                                       mysql_message);
-
-    return dcb->protocol_write(buf);
-}
-
 // Helper function for debug assertions
 static bool only_one_packet(GWBUF* buffer)
 {

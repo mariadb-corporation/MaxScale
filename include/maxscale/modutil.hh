@@ -41,7 +41,6 @@ extern int    modutil_MySQL_Query(GWBUF*, char**, int*, int*);
 extern char*  modutil_get_SQL(GWBUF*);
 extern GWBUF* modutil_replace_SQL(GWBUF*, char*);
 extern char*  modutil_get_query(GWBUF* buf);
-extern int    modutil_send_mysql_err_packet(DCB*, int, int, int, const char*, const char*);
 GWBUF*        modutil_get_next_MySQL_packet(GWBUF** p_readbuf);
 GWBUF*        modutil_get_complete_packets(GWBUF** p_readbuf);
 int           modutil_MySQL_query_len(GWBUF* buf, int* nbytes_missing);

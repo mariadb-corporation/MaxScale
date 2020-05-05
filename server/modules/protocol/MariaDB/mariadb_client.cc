@@ -604,8 +604,8 @@ MariaDBClientConnection::process_authentication(AuthType auth_type)
             else
             {
                 // Send internal error, as in this case the client has done nothing wrong.
-                modutil_send_mysql_err_packet(m_dcb, m_session_data->next_sequence, 0, 1815, "HY000",
-                                              "Internal error: Session creation failed");
+                send_mysql_err_packet(m_session_data->next_sequence, 0, 1815, "HY000",
+                                      "Internal error: Session creation failed");
                 MXB_ERROR("Failed to create session for %s.", m_session->user_and_host().c_str());
                 m_auth_state = AuthState::FAIL;
             }
@@ -1506,7 +1506,7 @@ void MariaDBClientConnection::hangup(DCB* event_dcb)
             seqno = 3;
         }
 
-        modutil_send_mysql_err_packet(m_dcb, seqno, 0, 1927, "08S01", errmsg.c_str());
+        send_mysql_err_packet(seqno, 0, 1927, "08S01", errmsg.c_str());
     }
 
     // We simply close the DCB, this will propagate the closure to any
@@ -2078,16 +2078,15 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handsh
                     }
                     else
                     {
-                        modutil_send_mysql_err_packet(
-                            m_dcb, next_seq, 0, er_bad_handshake, sql_errstate, "Bad SSL handshake");
+                        send_mysql_err_packet(next_seq, 0, er_bad_handshake, sql_errstate,
+                                              "Bad SSL handshake");
                         MXB_ERROR("Client (%s) sent an invalid SSLRequest.", m_dcb->remote().c_str());
                         m_handshake_state = HSState::FAIL;
                     }
                 }
                 else
                 {
-                    modutil_send_mysql_err_packet(
-                        m_dcb, next_seq, 0, er_out_of_order, sql_errstate, packets_ooo);
+                    send_mysql_err_packet(next_seq, 0, er_out_of_order, sql_errstate, packets_ooo);
                     MXB_ERROR(wrong_sequence, m_session_data->remote.c_str(), 1, m_sequence);
                     m_handshake_state = HSState::FAIL;
                 }
@@ -2130,8 +2129,8 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handsh
                     }
                     else
                     {
-                        modutil_send_mysql_err_packet(
-                            m_dcb, next_seq, 0, er_bad_handshake, sql_errstate, "Bad handshake");
+                        send_mysql_err_packet(next_seq, 0, er_bad_handshake, sql_errstate,
+                                              "Bad handshake");
                         MXB_ERROR("Client (%s) sent an invalid HandShakeResponse.",
                                   m_session_data->remote.c_str());
                         m_handshake_state = HSState::FAIL;
@@ -2139,8 +2138,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handsh
                 }
                 else
                 {
-                    modutil_send_mysql_err_packet(
-                        m_dcb, next_seq, 0, er_out_of_order, sql_errstate, packets_ooo);
+                    send_mysql_err_packet(next_seq, 0, er_out_of_order, sql_errstate, packets_ooo);
                     MXB_ERROR(wrong_sequence, m_session_data->remote.c_str(), expected_seq, m_sequence);
                     m_handshake_state = HSState::FAIL;
                 }
@@ -2179,23 +2177,23 @@ void MariaDBClientConnection::send_authetication_error(AuthErrorType error, cons
         mariadb_msg = mxb::string_printf("Access denied for user '%s'@'%s' (using password: %s)",
                                          ses->user.c_str(), ses->remote.c_str(),
                                          ses->auth_token.empty() ? "NO" : "YES");
-        modutil_send_mysql_err_packet(m_dcb, ses->next_sequence, 0, 1045, "28000", mariadb_msg.c_str());
+        send_mysql_err_packet(ses->next_sequence, 0, 1045, "28000", mariadb_msg.c_str());
         break;
 
     case AuthErrorType::DB_ACCESS_DENIED:
         mariadb_msg = mxb::string_printf("Access denied for user '%s'@'%s' to database '%s'",
                                          ses->user.c_str(), ses->remote.c_str(), ses->db.c_str());
-        modutil_send_mysql_err_packet(m_dcb, ses->next_sequence, 0, 1044, "42000", mariadb_msg.c_str());
+        send_mysql_err_packet(ses->next_sequence, 0, 1044, "42000", mariadb_msg.c_str());
         break;
 
     case AuthErrorType::BAD_DB:
         mariadb_msg = mxb::string_printf("Unknown database '%s'", ses->db.c_str());
-        modutil_send_mysql_err_packet(m_dcb, ses->next_sequence, 0, 1049, "42000", mariadb_msg.c_str());
+        send_mysql_err_packet(ses->next_sequence, 0, 1049, "42000", mariadb_msg.c_str());
         break;
 
     case AuthErrorType::NO_PLUGIN:
         mariadb_msg = mxb::string_printf("Plugin '%s' is not loaded", ses->user_entry.entry.plugin.c_str());
-        modutil_send_mysql_err_packet(m_dcb, ses->next_sequence, 0, 1524, "HY000", mariadb_msg.c_str());
+        send_mysql_err_packet(ses->next_sequence, 0, 1524, "HY000", mariadb_msg.c_str());
         break;
     }
 
@@ -2218,7 +2216,7 @@ void MariaDBClientConnection::send_authetication_error(AuthErrorType error, cons
 
 void MariaDBClientConnection::send_misc_error(const std::string& msg)
 {
-    modutil_send_mysql_err_packet(m_dcb, m_session_data->next_sequence, 0, 1105, "HY000", msg.c_str());
+    send_mysql_err_packet(m_session_data->next_sequence, 0, 1105, "HY000", msg.c_str());
 }
 
 /**
@@ -2422,4 +2420,13 @@ bool MariaDBClientConnection::process_normal_packet(mxs::Buffer&& buffer)
 void MariaDBClientConnection::write_ok_packet(int sequence, uint8_t affected_rows, const char* message)
 {
     write(mxs_mysql_create_ok(sequence, affected_rows, message));
+}
+
+bool MariaDBClientConnection::send_mysql_err_packet(int packet_number, int in_affected_rows,
+                                                    int mysql_errno, const char* sqlstate_msg,
+                                                    const char* mysql_message)
+{
+    GWBUF* buf = modutil_create_mysql_err_msg(packet_number, in_affected_rows, mysql_errno,
+                                              sqlstate_msg, mysql_message);
+    return write(buf);
 }

@@ -34,23 +34,16 @@
 #define MXS_MODULE_NAME MXS_CDC_PROTOCOL_NAME
 
 #include <maxscale/ccdefs.hh>
-#include <stdio.h>
-#include <string.h>
+#include <cstdio>
+#include <cstring>
 #include <maxbase/alloc.h>
 #include <maxscale/protocol/cdc/cdc.hh>
 #include <maxscale/modinfo.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/buffer.hh>
-#include <maxscale/service.hh>
 #include <maxscale/session.hh>
 #include <maxscale/protocol2.hh>
 #include "cdc_plain_auth.hh"
-
-#define ISspace(x) isspace((int)(x))
-#define CDC_SERVER_STRING "MaxScale(c) v.1.0.0"
-
-static void write_auth_ack(DCB* dcb);
-static void write_auth_err(DCB* dcb);
 
 /**
  * CDC protocol
@@ -72,9 +65,12 @@ public:
     void finish_connection() override;
 
 private:
-    int  m_state {CDC_STATE_WAIT_FOR_AUTH}; /*< CDC protocol state */
+    int m_state {CDC_STATE_WAIT_FOR_AUTH};      /*< CDC protocol state */
 
-    CDCClientAuthenticator m_authenticator;  /**< Client authentication data */
+    CDCClientAuthenticator m_authenticator;     /**< Client authentication data */
+
+    void write_auth_ack();
+    void write_auth_err();
 };
 
 class CDCProtocolModule : public mxs::ProtocolModule
@@ -84,7 +80,7 @@ public:
 
     static CDCProtocolModule* create()
     {
-        return new (std::nothrow) CDCProtocolModule();
+        return new(std::nothrow) CDCProtocolModule();
     }
 
     std::unique_ptr<mxs::ClientConnection>
@@ -160,7 +156,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
 void CDCClientConnection::ready_for_reading(DCB* event_dcb)
 {
-    mxb_assert(m_dcb == event_dcb); // The protocol should only handle its own events.
+    mxb_assert(m_dcb == event_dcb);     // The protocol should only handle its own events.
     auto dcb = m_dcb;
 
     MXS_SESSION* session = dcb->session();
@@ -189,7 +185,7 @@ void CDCClientConnection::ready_for_reading(DCB* event_dcb)
                 {
                     protocol->m_state = CDC_STATE_HANDLE_REQUEST;
 
-                    write_auth_ack(dcb);
+                    write_auth_ack();
                 }
                 else
                 {
@@ -201,7 +197,7 @@ void CDCClientConnection::ready_for_reading(DCB* event_dcb)
             {
                 protocol->m_state = CDC_STATE_AUTH_ERR;
 
-                write_auth_err(dcb);
+                write_auth_err();
                 /* force the client connection close */
                 DCB::close(dcb);
             }
@@ -295,23 +291,21 @@ CDCClientConnection::CDCClientConnection(CDCAuthenticatorModule& auth_module)
 }
 
 /**
- * Writes Authentication ACK, success
- *
- * @param dcb    Current client DCB
- *
+ * Writes Authentication ACK, success.
  */
-static void write_auth_ack(DCB* dcb)
+void CDCClientConnection::write_auth_ack()
 {
-    dcb_printf(dcb, "OK\n");
+    const char msg[] = "OK\n";
+    auto buf = gwbuf_alloc_and_load(sizeof(msg) - 1, msg);
+    write(buf);
 }
 
 /**
- * Writes Authentication ERROR
- *
- * @param dcb    Current client DCB
- *
+ * Writes Authentication ERROR.
  */
-static void write_auth_err(DCB* dcb)
+void CDCClientConnection::write_auth_err()
 {
-    dcb_printf(dcb, "ERROR: Authentication failed\n");
+    const char msg[] = "ERROR: Authentication failed\n";
+    auto buf = gwbuf_alloc_and_load(sizeof(msg) - 1, msg);
+    write(buf);
 }

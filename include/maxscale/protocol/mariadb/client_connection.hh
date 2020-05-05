@@ -210,4 +210,17 @@ private:
 
     bool m_user_update_wakeup {false};      /**< Waking up because of user account update? */
     int  m_previous_userdb_version {0};     /**< Userdb version used for first user account search */
+
+    /**
+     * Send an error packet to the client.
+     *
+     * @param packet_number Sequence number
+     * @param in_affected_rows Affected rows
+     * @param mysql_errno Error number
+     * @param sqlstate_msg MySQL state message
+     * @param mysql_message Error message
+     * @return True on success
+     */
+    bool send_mysql_err_packet(int packet_number, int in_affected_rows,
+                               int mysql_errno, const char* sqlstate_msg, const char* mysql_message);
 };

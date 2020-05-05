@@ -128,9 +128,8 @@ private:
     GWBUF* create_change_user_packet();
     void   do_handle_error(DCB* dcb, const std::string& errmsg,
                            mxs::ErrorType type = mxs::ErrorType::TRANSIENT);
-    void   prepare_for_write(GWBUF* buffer);
-    int    mysql_send_com_quit(DCB* dcb, int sequence, GWBUF* buf);
-    bool   read_complete_packet(DCB* dcb, GWBUF** readbuf);
+    void prepare_for_write(GWBUF* buffer);
+
     GWBUF* track_response(GWBUF** buffer);
     bool   mxs_mysql_is_result_set(GWBUF* buffer);
     bool   read_backend_handshake(mxs::Buffer&& buffer);
