@@ -11,3 +11,8 @@ add_library(csmon SHARED
 target_link_libraries(csmon maxscale-common ${LIBXML2_LIBRARIES})
 set_target_properties(csmon PROPERTIES VERSION "1.0.0" LINK_FLAGS -Wl,-z,defs)
 install_module(csmon core)
+
+if (BUILD_TOOLS)
+  add_executable(csxml csxml.cc)
+  target_link_libraries(csxml csmon maxscale-common ${LIBXML2_LIBRARIES})
+endif()
