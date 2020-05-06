@@ -11,6 +11,8 @@
  * Public License.
  */
 
+#define BOOST_ERROR_CODE_HEADER_ONLY 1
+
 #include "gtid.hh"
 #include <maxbase/string.hh>
 #include <maxbase/log.hh>

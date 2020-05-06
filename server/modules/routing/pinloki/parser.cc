@@ -11,6 +11,8 @@
  * Public License.
  */
 
+#define BOOST_ERROR_CODE_HEADER_ONLY 1
+
 #include "parser.hh"
 
 // This prevents automatic rule name deduction, helps keep the error messages cleaner.
