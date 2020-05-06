@@ -39,6 +39,13 @@
 using std::string;
 using std::ifstream;
 
+enum class LoadResult
+{
+    OK,
+    IGNORE,
+    ERROR
+};
+
 static struct MHD_Daemon* http_daemon = NULL;
 
 /** In-memory certificates in PEM format */
@@ -336,34 +343,48 @@ static char* load_cert(const char* file)
 
         if (!infile.good())
         {
-            MXS_ERROR("Failed to load certificate file: %s", file);
             delete rval;
             rval = NULL;
         }
     }
 
+    if (!rval)
+    {
+        MXS_ERROR("Failed to load certificate file '%s': %d, %s", file, errno, mxb_strerror(errno));
+    }
+
     return rval;
 }
 
-static bool load_ssl_certificates()
+static LoadResult load_ssl_certificates()
 {
-    bool rval = false;
+    LoadResult rval = LoadResult::IGNORE;
     const char* key = config_get_global_options()->admin_ssl_key;
     const char* cert = config_get_global_options()->admin_ssl_cert;
     const char* ca = config_get_global_options()->admin_ssl_ca_cert;
 
-    if (*key && *cert)
+    if (!*key != !*cert)
+    {
+        MXS_ERROR("Both the admin TLS certificate and private key must be defined.");
+        rval = LoadResult::ERROR;
+    }
+    else if (*key && *cert)
     {
         admin_ssl_key = load_cert(key);
         admin_ssl_cert = load_cert(cert);
-        admin_ssl_ca_cert = load_cert(ca);
 
-        if (admin_ssl_key && admin_ssl_cert)
+        if (*ca)
         {
-            rval = true;
+            admin_ssl_ca_cert = load_cert(ca);
+        }
+
+        if (admin_ssl_key && admin_ssl_cert && (!*ca || admin_ssl_ca_cert))
+        {
+            rval = LoadResult::OK;
         }
         else
         {
+            rval = LoadResult::ERROR;
             delete admin_ssl_key;
             delete admin_ssl_cert;
             delete admin_ssl_ca_cert;
@@ -404,10 +425,17 @@ bool mxs_admin_init()
             options |= MHD_USE_DUAL_STACK;
         }
 
-        if (load_ssl_certificates())
+        auto ssl_res = load_ssl_certificates();
+
+        if (ssl_res == LoadResult::OK)
         {
             using_ssl = true;
             options |= MHD_USE_SSL;
+            MXS_NOTICE("The REST API will be encrypted, all requests must use HTTPS.");
+        }
+        else if (ssl_res == LoadResult::ERROR)
+        {
+            return false;
         }
 
         // The port argument is ignored and the port in the struct sockaddr is used instead
