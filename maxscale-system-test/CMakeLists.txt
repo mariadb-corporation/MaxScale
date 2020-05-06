@@ -56,12 +56,6 @@ add_test_executable(cooperative_monitoring.cpp cooperative_monitoring cooperativ
 
 add_subdirectory(mariadbmonitor)
 
-# MariaDB-Monitor enforce_simple_topology
-add_test_executable(mysqlmon_enforce_simple.cpp mysqlmon_enforce_simple mysqlmon_enforce_simple LABELS mysqlmon REPL_BACKEND)
-
-# MariaDB-Monitor multimaster failover/switchover
-add_test_executable(mysqlmon_fail_switch_multi.cpp mysqlmon_fail_switch_multi mysqlmon_fail_switch_multi LABELS mysqlmon REPL_BACKEND)
-
 # MXS-1506: Delayed query retry
 # https://jira.mariadb.org/browse/MXS-1506
 add_test_executable(mxs1506_delayed_retry.cpp mxs1506_delayed_retry mxs1506_delayed_retry LABELS readwritesplit REPL_BACKEND)
