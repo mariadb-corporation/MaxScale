@@ -3,7 +3,7 @@ threads=###threads###
 
 ###server###
 
-[MySQL-Monitor]
+[mariadb-cluster]
 type=monitor
 module=mariadbmon
 servers=###server_line###
@@ -16,10 +16,10 @@ type=service
 router=pinloki
 user=maxskysql
 password=skysql
+cluster=mariadb-cluster
 
 [pinloki-listener]
 type=listener
 service=pinloki-service
-protocol=mysqlclient
-cluster=mariadb-cluster
+protocol=mariadbclient
 port=4006
