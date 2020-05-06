@@ -51,7 +51,7 @@ int AvroSession::routeQuery(GWBUF* queue)
 {
     int rval = 1;
 
-    switch (state)
+    switch (m_state)
     {
     case AVRO_CLIENT_ERRORED:
         /* force disconnection */
@@ -61,10 +61,10 @@ int AvroSession::routeQuery(GWBUF* queue)
     case AVRO_CLIENT_UNREGISTERED:
         if (do_registration(queue) == 0)
         {
-            state = AVRO_CLIENT_ERRORED;
+            m_state = AVRO_CLIENT_ERRORED;
             m_client->write("ERR, code 12, msg: Registration failed");
             /* force disconnection */
-            DCB::close(dcb);
+            m_session->kill();
             rval = 0;
         }
         else
@@ -72,7 +72,7 @@ int AvroSession::routeQuery(GWBUF* queue)
             /* Send OK ack to client */
             m_client->write("OK");
 
-            state = AVRO_CLIENT_REGISTERED;
+            m_state = AVRO_CLIENT_REGISTERED;
             MXS_INFO("%s: Client [%s] has completed REGISTRATION action",
                      m_session->service->name(),
                      m_session->client_remote().c_str());
@@ -81,9 +81,9 @@ int AvroSession::routeQuery(GWBUF* queue)
 
     case AVRO_CLIENT_REGISTERED:
     case AVRO_CLIENT_REQUEST_DATA:
-        if (state == AVRO_CLIENT_REGISTERED)
+        if (m_state == AVRO_CLIENT_REGISTERED)
         {
-            state = AVRO_CLIENT_REQUEST_DATA;
+            m_state = AVRO_CLIENT_REQUEST_DATA;
         }
 
         /* Process command from client */
@@ -92,7 +92,7 @@ int AvroSession::routeQuery(GWBUF* queue)
         break;
 
     default:
-        state = AVRO_CLIENT_ERRORED;
+        m_state = AVRO_CLIENT_ERRORED;
         rval = 0;
         break;
     }
@@ -146,7 +146,7 @@ int AvroSession::do_registration(GWBUF* data)
 
         uuid_len = strlen(client_uuid);
 
-        uuid = client_uuid;
+        m_uuid = client_uuid;
 
         if (data_len > 0)
         {
@@ -157,14 +157,14 @@ int AvroSession::do_registration(GWBUF* data)
                 if (memcmp(tmp_ptr + 5, "AVRO", 4) == 0)
                 {
                     ret = 1;
-                    state = AVRO_CLIENT_REGISTERED;
-                    format = AVRO_FORMAT_AVRO;
+                    m_state = AVRO_CLIENT_REGISTERED;
+                    m_format = AVRO_FORMAT_AVRO;
                 }
                 else if (memcmp(tmp_ptr + 5, "JSON", 4) == 0)
                 {
                     ret = 1;
-                    state = AVRO_CLIENT_REGISTERED;
-                    format = AVRO_FORMAT_JSON;
+                    m_state = AVRO_CLIENT_REGISTERED;
+                    m_format = AVRO_FORMAT_JSON;
                 }
                 else
                 {
@@ -247,7 +247,7 @@ void AvroSession::queue_client_callback()
 {
     mxs::RoutingWorker::get_current()->execute(
         [this]() {
-            if (state == AVRO_CLIENT_REQUEST_DATA)
+            if (m_state == AVRO_CLIENT_REQUEST_DATA)
             {
                 client_callback();
             }
@@ -329,20 +329,20 @@ void AvroSession::process_command(GWBUF* queue)
 
             if (!file_and_gtid.second.empty())
             {
-                requested_gtid = true;
-                extract_gtid_request(&gtid, file_and_gtid.second.c_str(), file_and_gtid.second.size());
-                memcpy(&gtid_start, &gtid, sizeof(gtid_start));
+                m_requested_gtid = true;
+                extract_gtid_request(&m_gtid, file_and_gtid.second.c_str(), file_and_gtid.second.size());
+                memcpy(&m_gtid_start, &m_gtid, sizeof(m_gtid_start));
             }
 
-            avro_binfile = file_and_gtid.first;
+            m_avro_binfile = file_and_gtid.first;
 
-            if (avro_binfile.empty())
+            if (m_avro_binfile.empty())
             {
                 m_client->write("ERR NO-FILE Filename not specified.");
             }
-            else if (!file_in_dir(router->avrodir.c_str(), avro_binfile.c_str()))
+            else if (!file_in_dir(m_router->avrodir.c_str(), m_avro_binfile.c_str()))
             {
-                auto msg = mxb::string_printf("ERR NO-FILE File '%s' not found.", avro_binfile.c_str());
+                auto msg = mxb::string_printf("ERR NO-FILE File '%s' not found.", m_avro_binfile.c_str());
                 m_client->write(msg.c_str());
             }
             else
@@ -363,7 +363,7 @@ void AvroSession::process_command(GWBUF* queue)
     }
 }
 
-static int send_row(DCB* dcb, json_t* row)
+int AvroSession::send_row(json_t* row)
 {
     char* json = json_dumps(row, JSON_PRESERVE_ORDER);
     size_t len = strlen(json);
@@ -375,7 +375,7 @@ static int send_row(DCB* dcb, json_t* row)
         uint8_t* data = GWBUF_DATA(buf);
         memcpy(data, json, len);
         data[len] = '\n';
-        rc = dcb->protocol_write(buf);
+        rc = m_client->write(buf);
     }
     else
     {
@@ -390,15 +390,15 @@ void AvroSession::set_current_gtid(json_t* row)
 {
     json_t* obj = json_object_get(row, avro_sequence);
     mxb_assert(json_is_integer(obj));
-    gtid.seq = json_integer_value(obj);
+    m_gtid.seq = json_integer_value(obj);
 
     obj = json_object_get(row, avro_server_id);
     mxb_assert(json_is_integer(obj));
-    gtid.server_id = json_integer_value(obj);
+    m_gtid.server_id = json_integer_value(obj);
 
     obj = json_object_get(row, avro_domain);
     mxb_assert(json_is_integer(obj));
-    gtid.domain = json_integer_value(obj);
+    m_gtid.domain = json_integer_value(obj);
 }
 
 /**
@@ -416,15 +416,15 @@ bool AvroSession::stream_json()
     {
         json_t* row;
         int rc = 1;
-        while (rc > 0 && (row = maxavro_record_read_json(file_handle)))
+        while (rc > 0 && (row = maxavro_record_read_json(m_file_handle)))
         {
-            rc = send_row(dcb, row);
+            rc = send_row(row);
             set_current_gtid(row);
             json_decref(row);
         }
-        bytes += file_handle->buffer_size;
+        bytes += m_file_handle->buffer_size;
     }
-    while (maxavro_next_block(file_handle) && bytes < AVRO_DATA_BURST_SIZE);
+    while (maxavro_next_block(m_file_handle) && bytes < AVRO_DATA_BURST_SIZE);
 
     return bytes >= AVRO_DATA_BURST_SIZE;
 }
@@ -444,8 +444,8 @@ bool AvroSession::stream_binary()
 
     while (rc > 0 && bytes < AVRO_DATA_BURST_SIZE)
     {
-        bytes += file_handle->buffer_size;
-        if ((buffer = maxavro_record_read_binary(file_handle)))
+        bytes += m_file_handle->buffer_size;
+        if ((buffer = maxavro_record_read_binary(m_file_handle)))
         {
             rc = m_client->write(buffer);
         }
@@ -478,31 +478,31 @@ bool AvroSession::seek_to_gtid()
     do
     {
         json_t* row;
-        while ((row = maxavro_record_read_json(file_handle)))
+        while ((row = maxavro_record_read_json(m_file_handle)))
         {
             json_t* obj = json_object_get(row, avro_sequence);
             mxb_assert(json_is_integer(obj));
             uint64_t value = json_integer_value(obj);
 
             /** If a larger GTID is found, use that */
-            if (value >= gtid.seq)
+            if (value >= m_gtid.seq)
             {
                 obj = json_object_get(row, avro_server_id);
                 mxb_assert(json_is_integer(obj));
                 value = json_integer_value(obj);
 
-                if (value == gtid.server_id)
+                if (value == m_gtid.server_id)
                 {
                     obj = json_object_get(row, avro_domain);
                     mxb_assert(json_is_integer(obj));
                     value = json_integer_value(obj);
 
-                    if (value == gtid.domain)
+                    if (value == m_gtid.domain)
                     {
                         MXS_INFO("Found GTID %lu-%lu-%lu for %s@%s",
-                                 gtid.domain,
-                                 gtid.server_id,
-                                 gtid.seq,
+                                 m_gtid.domain,
+                                 m_gtid.server_id,
+                                 m_gtid.seq,
                                  m_session->user().c_str(),
                                  m_session->client_remote().c_str());
                         seeking = false;
@@ -514,13 +514,13 @@ bool AvroSession::seek_to_gtid()
              * read the row into memory */
             if (!seeking)
             {
-                send_row(dcb, row);
+                send_row(row);
             }
 
             json_decref(row);
         }
     }
-    while (seeking && maxavro_next_block(file_handle));
+    while (seeking && maxavro_next_block(m_file_handle));
 
     return !seeking;
 }
@@ -534,25 +534,25 @@ bool AvroSession::stream_data()
 {
     bool read_more = false;
 
-    if (!avro_binfile.empty())
+    if (!m_avro_binfile.empty())
     {
         bool ok = true;
-        std::string filename = router->avrodir + '/' + avro_binfile;
+        std::string filename = m_router->avrodir + '/' + m_avro_binfile;
 
-        if (!file_handle && !(file_handle = maxavro_file_open(filename.c_str())))
+        if (!m_file_handle && !(m_file_handle = maxavro_file_open(filename.c_str())))
         {
             ok = false;
         }
 
         if (ok)
         {
-            switch (format)
+            switch (m_format)
             {
             case AVRO_FORMAT_JSON:
                 /** Currently only JSON format supports seeking to a GTID */
-                if (requested_gtid && seek_to_gtid())
+                if (m_requested_gtid && seek_to_gtid())
                 {
-                    requested_gtid = false;
+                    m_requested_gtid = false;
                 }
 
                 read_more = stream_json();
@@ -563,18 +563,18 @@ bool AvroSession::stream_data()
                 break;
 
             default:
-                MXS_ERROR("Unexpected format: %d", format);
+                MXS_ERROR("Unexpected format: %d", m_format);
                 break;
             }
 
 
-            if (maxavro_get_error(file_handle) != MAXAVRO_ERR_NONE)
+            if (maxavro_get_error(m_file_handle) != MAXAVRO_ERR_NONE)
             {
                 MXS_ERROR("Reading Avro file failed with error '%s'.",
-                          maxavro_get_error_string(file_handle));
+                          maxavro_get_error_string(m_file_handle));
             }
 
-            last_sent_pos = file_handle->records_read;
+            m_last_sent_pos = m_file_handle->records_read;
         }
     }
     else
@@ -642,12 +642,12 @@ void AvroSession::rotate_avro_file(std::string fullname)
 {
     auto pos = fullname.find_last_of('/');
     mxb_assert(pos != std::string::npos);
-    avro_binfile = fullname.substr(pos + 1);
-    last_sent_pos = 0;
+    m_avro_binfile = fullname.substr(pos + 1);
+    m_last_sent_pos = 0;
 
-    maxavro_file_close(file_handle);
+    maxavro_file_close(m_file_handle);
 
-    if ((file_handle = maxavro_file_open(fullname.c_str())) == NULL)
+    if ((m_file_handle = maxavro_file_open(fullname.c_str())) == NULL)
     {
         MXS_ERROR("Failed to open file: %s", fullname.c_str());
     }
@@ -695,28 +695,28 @@ static std::string get_next_filename(std::string file, std::string dir)
 
 void AvroSession::client_callback()
 {
-    mxb_assert(state == AVRO_CLIENT_REQUEST_DATA);
+    mxb_assert(m_state == AVRO_CLIENT_REQUEST_DATA);
 
-    if (last_sent_pos == 0)
+    if (m_last_sent_pos == 0)
     {
         // TODO: Don't use DCB callbacks to stream the data
-        last_sent_pos = 1;
+        m_last_sent_pos = 1;
 
         /** Send the schema of the current file */
         GWBUF* schema = NULL;
 
-        switch (format)
+        switch (m_format)
         {
         case AVRO_FORMAT_JSON:
-            schema = read_avro_json_schema(avro_binfile, router->avrodir);
+            schema = read_avro_json_schema(m_avro_binfile, m_router->avrodir);
             break;
 
         case AVRO_FORMAT_AVRO:
-            schema = read_avro_binary_schema(avro_binfile, router->avrodir);
+            schema = read_avro_binary_schema(m_avro_binfile, m_router->avrodir);
             break;
 
         default:
-            MXS_ERROR("Unknown client format: %d", format);
+            MXS_ERROR("Unknown client format: %d", m_format);
             break;
         }
 
@@ -728,8 +728,8 @@ void AvroSession::client_callback()
 
     /** Stream the data to the client */
     bool read_more = stream_data();
-    mxb_assert(!avro_binfile.empty() && strstr(avro_binfile.c_str(), ".avro"));
-    std::string filename = get_next_filename(avro_binfile, router->avrodir);
+    mxb_assert(!m_avro_binfile.empty() && strstr(m_avro_binfile.c_str(), ".avro"));
+    std::string filename = get_next_filename(m_avro_binfile, m_router->avrodir);
 
     bool next_file;
     /** If the next file is available, send it to the client */
@@ -755,7 +755,7 @@ void AvroSession::notify_all_clients(SERVICE* service)
             {
                 MXS_INFO("%p", a);
 
-                if (a->router->service == service)
+                if (a->m_router->service == service)
                 {
                     a->queue_client_callback();
                 }
@@ -772,14 +772,13 @@ AvroSession* AvroSession::create(Avro* inst, MXS_SESSION* session)
 AvroSession::AvroSession(Avro* instance, MXS_SESSION* session)
     : m_session(session)
     , m_client(static_cast<CDCClientConnection*>(m_session->client_connection()))
-    , dcb(m_client->dcb())
-    , state(AVRO_CLIENT_UNREGISTERED)
-    , format(AVRO_FORMAT_UNDEFINED)
-    , router(instance)
-    , file_handle(NULL)
-    , last_sent_pos(0)
-    , connect_time(time(NULL))
-    , requested_gtid(false)
+    , m_state(AVRO_CLIENT_UNREGISTERED)
+    , m_format(AVRO_FORMAT_UNDEFINED)
+    , m_router(instance)
+    , m_file_handle(NULL)
+    , m_last_sent_pos(0)
+    , m_connect_time(time(NULL))
+    , m_requested_gtid(false)
 {
     client_sessions.push_back(this);
 }
@@ -787,5 +786,5 @@ AvroSession::AvroSession(Avro* instance, MXS_SESSION* session)
 AvroSession::~AvroSession()
 {
     client_sessions.erase(std::find(client_sessions.begin(), client_sessions.end(), this));
-    maxavro_file_close(file_handle);
+    maxavro_file_close(m_file_handle);
 }

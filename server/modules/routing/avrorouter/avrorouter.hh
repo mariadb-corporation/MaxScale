@@ -124,22 +124,6 @@ public:
     static AvroSession* create(Avro* router, MXS_SESSION* session);
     ~AvroSession();
 
-    MXS_SESSION*           m_session {nullptr}; /**< Generic session */
-    CDCClientConnection*   m_client {nullptr};  /**< Client connection */
-
-    DCB*                  dcb;          /*< The client DCB */
-    int                   state;        /*< The state of this client */
-    enum avro_data_format format;       /*< Stream JSON or Avro data */
-    std::string           uuid;         /*< Client UUID */
-    Avro*                 router;       /*< Pointer to the owning router */
-    MAXAVRO_FILE*         file_handle;  /*< Current open file handle */
-    uint64_t              last_sent_pos;/*< The last record we sent */
-    time_t                connect_time; /*< Connect time of slave */
-    std::string           avro_binfile;
-    bool                  requested_gtid;   /*< If the client requested */
-    gtid_pos_t            gtid;             /*< Current/requested GTID */
-    gtid_pos_t            gtid_start;       /*< First sent GTID */
-
     /**
      * Process a client request
      *
@@ -154,6 +138,21 @@ public:
     static void notify_all_clients(SERVICE* router);
 
 private:
+    MXS_SESSION*         m_session {nullptr};   /**< Generic session */
+    CDCClientConnection* m_client {nullptr};    /**< Client connection */
+
+    int              m_state;           /*< The state of this client */
+    avro_data_format m_format;          /*< Stream JSON or Avro data */
+    std::string      m_uuid;            /*< Client UUID */
+    Avro*            m_router;          /*< Pointer to the owning router */
+    MAXAVRO_FILE*    m_file_handle;     /*< Current open file handle */
+    uint64_t         m_last_sent_pos;   /*< The last record we sent */
+    time_t           m_connect_time;    /*< Connect time of slave */
+    std::string      m_avro_binfile;
+    bool             m_requested_gtid;  /*< If the client requested */
+    gtid_pos_t       m_gtid;            /*< Current/requested GTID */
+    gtid_pos_t       m_gtid_start;      /*< First sent GTID */
+
     AvroSession(Avro* instance, MXS_SESSION* session);
 
     int  do_registration(GWBUF* data);
@@ -166,6 +165,7 @@ private:
     bool stream_data();
     void rotate_avro_file(std::string fullname);
     void client_callback();
+    int  send_row(json_t* row);
 };
 
 bool              avro_open_binlog(const char* binlogdir, const char* file, int* fd);
