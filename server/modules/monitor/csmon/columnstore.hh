@@ -46,7 +46,7 @@ bool dbroots_from_array(json_t* pArray, DbRoots* pDbroots);
 bool services_from_array(json_t* pArray, Services* pServices);
 
 /**
- * Replace value of key(s) in XML document.
+ * Update value of key(s) in XML document.
  *
  * @param xmlDoc      The XML document.
  * @param zXpath      The XML path that identifies the key(s).
@@ -56,7 +56,46 @@ bool services_from_array(json_t* pArray, Services* pServices);
  * @return -1 in case of some low-level error (that outside development should not occur), otherwise
  *         the number of replacements made.
  */
-int replace_if(xmlDoc& xmlDoc, const char* zXpath, const char* zNew_value, const char* zIf_value = nullptr);
+int update_if(xmlDoc& xmlDoc, const char* zXpath, const char* zNew_value, const char* zIf_value = nullptr);
+
+enum class XmlLocation
+{
+    AT_BEGINNING,
+    AT_END
+};
+
+/**
+ * Insert new key/value to XML document.
+ *
+ * @param xmlDoc   The XML document.
+ * @param zKey     The key.
+ * @param zValue   The value.
+ * @param location Where the element should be added.
+ *
+ * @return True, whether the value could be added.
+ */
+bool insert(xmlDoc& xmlDoc,
+            const char* zKey,
+            const char* zValue,
+            XmlLocation location = XmlLocation::AT_BEGINNING);
+
+/**
+ * Update or insert a key/value to XML document.
+ *
+ * @param xmlDoc   The XML document.
+ * @param zXpath   The XML path identifying the key(s).
+ * @param zValue   The value.
+ * @param location If inserted, where the element should be added.
+ *
+ * If an existing key is not found, the new key is deduced from @c zXpath.
+ *
+ * @return -1 in case of some low-level error (that outside development should not occur), otherwise
+ *         the number of updates/inserts made.
+ */
+int upsert(xmlDoc& xmlDoc,
+           const char* zXpath,
+           const char* zValue,
+           XmlLocation location = XmlLocation::AT_BEGINNING);
 
 namespace keys
 {

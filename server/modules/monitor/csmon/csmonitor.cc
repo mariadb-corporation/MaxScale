@@ -1621,7 +1621,7 @@ bool CsMonitor::cs_add_first_multi_node(json_t* pOutput,
             MXS_NOTICE("%s: Fetched current config from '%s'.", zTrx_id, zName);
 
             // TODO: Add ClusterManager to config.
-            int n = cs::replace_if(*config.sXml, "//IPAddr", pServer->address(), "127.0.0.1");
+            int n = cs::update_if(*config.sXml, "//IPAddr", pServer->address(), "127.0.0.1");
             mxb_assert(n >= 0);
 
             xmlChar* pConfig = nullptr;

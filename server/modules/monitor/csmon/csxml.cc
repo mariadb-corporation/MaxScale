@@ -15,6 +15,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <getopt.h>
 #include <libxml/tree.h>
 #include <libxml/parser.h>
 #include <libxml/xpath.h>
@@ -25,28 +26,68 @@ using namespace std;
 namespace
 {
 
-void print_usage_and_exit(const char* zProg)
+void print_usage_and_exit()
 {
-    cout << "usage: " << zProg << " xml-file xpath-expr new_value [if_value]" << endl;
+    cout << "usage: csxml xml-file ...\n"
+         << "insert key value\n"
+         << "    Unconditionally insert new key/value pair.\n"
+         << "\n"
+         << "update xpath-expr new_value [if_value]\n"
+         << "    Update value at path, optionally only if existing value matches specified value\n"
+         << "\n"
+         << "upsert xpath-expr new_value\n"
+         << "    Update value of matching key(s), or insert new value.\n"
+         << endl;
+    exit(EXIT_FAILURE);
 }
 
-int replace_if(const string& xml, const char* zXpath, const char* zNew_value, const char* zIf_value)
+void insert(xmlDoc& xml, int argc, char* argv[])
 {
-    int rv = EXIT_FAILURE;
-    unique_ptr<xmlDoc> sDoc(xmlReadMemory(xml.c_str(), xml.length(), "columnstore.xml", NULL, 0));
-
-    if (sDoc)
+    if (argc < 2)
     {
-        cs::replace_if(*sDoc.get(), zXpath, zNew_value, zIf_value);
-        xmlDocDump(stdout, sDoc.get());
-    }
-    else
-    {
-        cerr << "error: Could not parse document." << endl;
+        print_usage_and_exit();
     }
 
-    return rv;
+    const char* zKey = argv[0];
+    const char* zValue = argv[1];
+
+    cs::insert(xml, zKey, zValue);
 }
+
+void replace(xmlDoc& xml, int argc, char* argv[])
+{
+    if (argc < 2)
+    {
+        print_usage_and_exit();
+    }
+
+    const char* zXpath = argv[0];
+    const char* zNew_value = argv[1];
+    const char* zIf_value = argc == 3 ? argv[2] : nullptr;
+
+    cs::update_if(xml, zXpath, zNew_value, zIf_value);
+}
+
+void upsert(xmlDoc& xml, int argc, char* argv[])
+{
+    if (argc < 2)
+    {
+        print_usage_and_exit();
+    }
+
+    const char* zXpath = argv[0];
+    const char* zValue = argv[1];
+
+    cs::upsert(xml, zXpath, zValue);
+}
+
+
+map<string, void (*)(xmlDoc&, int, char**)> commands =
+{
+    { "insert", &insert },
+    { "update", &replace },
+    { "upsert", &upsert }
+};
 
 }
 
@@ -54,31 +95,49 @@ int main(int argc, char* argv[])
 {
     int rv = EXIT_FAILURE;
 
-    if (argc < 4)
+    if (argc < 3)
     {
-        print_usage_and_exit(argv[0]);
-        exit(rv);
+        print_usage_and_exit();
     }
 
-    const char* zFile = argv[1];
-    const char* zXpath = argv[2];
-    const char* zNew_value = argv[3];
-    const char* zIf_value = argc == 5 ? argv[4] : nullptr;
+    const char* zCmd = argv[1];
+    const char* zFile = argv[2];
 
-    ifstream in(zFile);
+    auto it = commands.find(zCmd);
 
-    if (in)
+    if (it != commands.end())
     {
-        auto begin = std::istreambuf_iterator<char>(in);
-        auto end = std::istreambuf_iterator<char>();
+        auto command = it->second;
+        ifstream in(zFile);
 
-        string s(begin, end);
+        if (in)
+        {
+            auto begin = std::istreambuf_iterator<char>(in);
+            auto end = std::istreambuf_iterator<char>();
 
-        rv = replace_if(s, zXpath, zNew_value, zIf_value);
+            string xml(begin, end);
+
+            unique_ptr<xmlDoc> sDoc(xmlReadMemory(xml.c_str(), xml.length(), "columnstore.xml", NULL, 0));
+
+            if (sDoc)
+            {
+                command(*sDoc.get(), argc - 3, &argv[3]);
+                xmlDocDump(stdout, sDoc.get());
+                rv = EXIT_SUCCESS;
+            }
+            else
+            {
+                cerr << "error: Could not parse document." << endl;
+            }
+        }
+        else
+        {
+            cerr << "error: Could not open '" << zFile << "'." << endl;
+        }
     }
     else
     {
-        cerr << "error: Could not open '" << zFile << "'." << endl;
+        cerr << "error: Unknown command '" << zCmd << "'" << endl;
     }
 
     return rv;

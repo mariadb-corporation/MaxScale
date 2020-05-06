@@ -196,7 +196,7 @@ bool services_from_array(json_t* pArray, Services* pServices)
 namespace
 {
 
-int replace_if(xmlNodeSet* pNodes, const char* zNew_value, const char* zIf_value)
+int update_if(xmlNodeSet* pNodes, const char* zNew_value, const char* zIf_value)
 {
     int n = 0;
     int nNodes = pNodes ? pNodes->nodeNr : 0;
@@ -254,10 +254,10 @@ int replace_if(xmlNodeSet* pNodes, const char* zNew_value, const char* zIf_value
     return n;
 }
 
-int replace_if(xmlXPathContext& xpathContext,
-               const char* zXpath,
-               const char* zNew_value,
-               const char* zIf_value)
+int update_if(xmlXPathContext& xpathContext,
+              const char* zXpath,
+              const char* zNew_value,
+              const char* zIf_value)
 {
     int n = -1;
 
@@ -267,7 +267,7 @@ int replace_if(xmlXPathContext& xpathContext,
 
     if (pXpath_object)
     {
-        n = replace_if(pXpath_object->nodesetval, zNew_value, zIf_value);
+        n = update_if(pXpath_object->nodesetval, zNew_value, zIf_value);
         xmlXPathFreeObject(pXpath_object);
     }
 
@@ -276,7 +276,7 @@ int replace_if(xmlXPathContext& xpathContext,
 
 }
 
-int replace_if(xmlDoc& xmlDoc, const char* zXpath, const char* zNew_value, const char* zIf_value)
+int update_if(xmlDoc& xmlDoc, const char* zXpath, const char* zNew_value, const char* zIf_value)
 {
     int n = -1;
 
@@ -285,12 +285,74 @@ int replace_if(xmlDoc& xmlDoc, const char* zXpath, const char* zNew_value, const
 
     if (pXpath_context)
     {
-        n = replace_if(*pXpath_context, zXpath, zNew_value, zIf_value);
+        n = update_if(*pXpath_context, zXpath, zNew_value, zIf_value);
         xmlXPathFreeContext(pXpath_context);
     }
 
     return n;
 }
+
+bool insert(xmlDoc& xmlDoc, const char* zKey, const char* zValue, XmlLocation location)
+{
+    bool rv = false;
+
+    xmlNode* pRoot = xmlDocGetRootElement(&xmlDoc);
+
+    if (pRoot)
+    {
+        xmlNode* pChild = xmlNewNode(NULL, reinterpret_cast<const xmlChar*>(zKey));
+        xmlNode* pContent = xmlNewText(reinterpret_cast<const xmlChar*>(zValue));
+        xmlAddChild(pChild, pContent);
+
+        xmlNode* pSibling = pRoot->xmlChildrenNode;
+
+        if (location == XmlLocation::AT_BEGINNING && pSibling)
+        {
+            xmlAddPrevSibling(pSibling, pChild);
+            // TODO: Sniff the indentation from the document.
+            xmlNode* pLinebreak = xmlNewText(reinterpret_cast<const xmlChar*>("\n    "));
+            xmlAddPrevSibling(pChild, pLinebreak);
+        }
+        else
+        {
+            // TODO: Sniff the indentation from the document.
+            xmlNode* pSpace = xmlNewText(reinterpret_cast<const xmlChar*>("    "));
+            xmlNode* pLinebreak = xmlNewText(reinterpret_cast<const xmlChar*>("\n"));
+            xmlAddChild(pRoot, pChild);
+            xmlAddPrevSibling(pChild, pSpace);
+            xmlAddNextSibling(pChild, pLinebreak);
+        }
+
+        rv = true;
+    }
+
+    return rv;
+}
+
+int upsert(xmlDoc& xmlDoc, const char* zXpath, const char* zValue, XmlLocation location)
+{
+    int rv = update_if(xmlDoc, zXpath, zValue);
+
+    if (rv == 0)
+    {
+        // We assume zXPath is like "/key" or "//key".
+        string key(zXpath);
+        auto pos = key.find_last_of("/");
+
+        if (pos != string::npos)
+        {
+            key = key.substr(pos);
+        }
+
+        if (insert(xmlDoc, key.c_str(), zValue, location))
+        {
+            rv = 1;
+        }
+    }
+
+    return rv;
+}
+
 
 std::string rest::create_url(const SERVER& server,
                              int64_t port,
