@@ -227,10 +227,7 @@ const auto field_def = sq_str | dq_str | x3::double_ | x3::int_ | func | str;
 const auto variable_def = str > eq > field;
 
 // SET and SELECT commands
-const auto select_def = x3::lit("SELECT") > field % ','
-    >> -x3::omit[
-    (x3::lit("LIMIT") > x3::int_ % ',') | (x3::lit("GROUP BY") > str % ',')
-    ];
+const auto select_def = x3::lit("SELECT") > field % ',' >> -x3::omit[x3::lit("LIMIT") > x3::int_ % ','];
 
 const auto set_names_def = x3::string("NAMES") > (str | q_str);
 const auto global_or_session_def = -x3::omit[x3::lit("GLOBAL") | x3::lit("SESSION") | x3::lit("@@global.")];
