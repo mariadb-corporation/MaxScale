@@ -14,32 +14,8 @@
 
 #include <maxscale/ccdefs.hh>
 
-#include <cstdint>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <cerrno>
-#include <fcntl.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <sys/un.h>
-#include <unistd.h>
-#include <openssl/crypto.h>
-#include <openssl/err.h>
-#include <openssl/sha.h>
-#include <openssl/ssl.h>
 #include <maxscale/buffer.hh>
-#include <maxscale/dcb.hh>
-#include <maxscale/session.hh>
-#include <maxscale/version.h>
-#include <maxscale/protocol2.hh>
 #include <maxscale/protocol/mariadb/common_constants.hh>
-
-// Default version string sent to clients
-#define DEFAULT_VERSION_STRING "5.5.5-10.2.12 " MAXSCALE_VERSION "-maxscale"
 
 #define MYSQL_HEADER_LEN         4
 #define MYSQL_CHECKSUM_LEN       4
@@ -93,13 +69,11 @@
 /** Maximum length of a MySQL packet */
 #define MYSQL_PACKET_LENGTH_MAX 0x00ffffff
 
-
 /* Max length of fields in the mysql.user table */
 #define MYSQL_PASSWORD_LEN 41
 #define MYSQL_HOST_MAXLEN  60
 #define MYSQL_TABLE_MAXLEN 64
 
-#define GW_NOINTR_CALL(A) do {errno = 0; A;} while (errno == EINTR)
 #define COM_QUIT_PACKET_SIZE (4 + 1)
 
 /** Defines for response codes */
@@ -108,11 +82,6 @@
 #define MYSQL_REPLY_EOF               0xfe
 #define MYSQL_REPLY_LOCAL_INFILE      0xfb
 #define MYSQL_REPLY_AUTHSWITCHREQUEST 0xfe      /**< Only sent during authentication */
-
-#define MYSQL_GET_ERRCODE(payload)       (gw_mysql_get_byte2(&payload[5]))
-#define MYSQL_GET_STMTOK_NPARAM(payload) (gw_mysql_get_byte2(&payload[9]))
-#define MYSQL_GET_STMTOK_NATTR(payload)  (gw_mysql_get_byte2(&payload[11]))
-#define MYSQL_GET_NATTR(payload)         ((int)payload[4])
 
 class DCB;
 class BackendDCB;
@@ -415,30 +384,6 @@ bool mxs_mysql_is_prep_stmt_ok(GWBUF* buffer);
  * @return True if the command is a binary protocol command
  */
 bool mxs_mysql_is_ps_command(uint8_t cmd);
-
-/**
- * @brief Check if the OK packet is followed by another result
- *
- * @param buffer Buffer to check
- *
- * @return True if more results are expected
- */
-bool mxs_mysql_more_results_after_ok(GWBUF* buffer);
-
-/** Get current command for a session */
-mxs_mysql_cmd_t mxs_mysql_current_command(MXS_SESSION* session);
-/**
- * @brief Calculate how many packets a session command will receive
- *
- * @param buf Buffer containing the response
- * @param cmd Command that was executed
- * @param npackets Pointer where the number of packets is stored
- * @param nbytes Pointer where number of bytes is stored
- */
-void mysql_num_response_packets(GWBUF* buf,
-                                uint8_t cmd,
-                                int* npackets,
-                                size_t* nbytes);
 
 /**
  * @brief Get the command byte

@@ -93,7 +93,7 @@ bool RWBackend::write(GWBUF* buffer, response_type type)
         {
             /** Replace the client handle with the real PS handle */
             uint8_t* ptr = GWBUF_DATA(buffer) + MYSQL_PS_ID_OFFSET;
-            gw_mysql_set_byte4(ptr, it->second);
+            mariadb::set_byte4(ptr, it->second);
 
             if (cmd == MXS_COM_STMT_CLOSE)
             {

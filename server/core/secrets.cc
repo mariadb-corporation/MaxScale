@@ -14,12 +14,11 @@
 #include <maxscale/secrets.hh>
 
 #include <cctype>
+#include <fcntl.h>
 #include <openssl/aes.h>
 #include <sys/stat.h>
-
 #include <maxbase/alloc.h>
 #include <maxscale/paths.hh>
-#include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/random.h>
 #include <maxscale/utils.hh>
 

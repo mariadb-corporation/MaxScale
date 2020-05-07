@@ -19,10 +19,9 @@
 #include <maxscale/query_classifier.hh>
 
 #include <blr_constants.hh>
-#include <glob.h>
+#include <fcntl.h>
 #include <ini.h>
 #include <stdlib.h>
-#include <sys/stat.h>
 
 #include <maxbase/alloc.h>
 #include <maxscale/maxscale.h>

@@ -44,6 +44,7 @@
 #include <maxscale/utils.h>
 #include <maxbase/format.hh>
 #include <maxscale/event.hh>
+#include <maxscale/version.h>
 
 #include "setparser.hh"
 #include "sqlmodeparser.hh"
@@ -65,22 +66,25 @@ const int SSL_REQUEST_PACKET_SIZE = MYSQL_HEADER_LEN + CLIENT_CAPABILITIES_LEN;
 const int NORMAL_HS_RESP_MIN_SIZE = MYSQL_AUTH_PACKET_BASE_SIZE + 2;
 const int MAX_PACKET_SIZE = MYSQL_PACKET_LENGTH_MAX + MYSQL_HEADER_LEN;
 
-std::string get_version_string(SERVICE* service)
+// Default version string sent to clients
+const string default_version = "5.5.5-10.2.12 " MAXSCALE_VERSION "-maxscale";
+
+string get_version_string(SERVICE* service)
 {
-    std::string rval = service->version_string();
-    if (rval.empty())
+    string service_vrs = service->version_string();
+    if (service_vrs.empty())
     {
-        rval = DEFAULT_VERSION_STRING;
+        return default_version;
     }
 
     // Older applications don't understand versions other than 5 and cause strange problems.
-    // TODO: Is this still necessary?
-    if (rval[0] != '5')
+    // The MariaDB Server also prepends 5.5.5- to its version strings, and this is not shown by clients.
+    if (service_vrs[0] != '5')
     {
         const char prefix[] = "5.5.5-";
-        rval = prefix + rval;
+        service_vrs = prefix + service_vrs;
     }
-    return rval;
+    return service_vrs;
 }
 
 bool supports_extended_caps(SERVICE* service)
@@ -112,7 +116,7 @@ uint32_t parse_packet_length(GWBUF* buffer)
         // The header is split between multiple chunks.
         uint8_t header[MYSQL_HEADER_LEN];
         gwbuf_copy_data(buffer, 0, MYSQL_HEADER_LEN, header);
-        prot_packet_len = gw_mysql_get_byte3(header) + MYSQL_HEADER_LEN;
+        prot_packet_len = mariadb::get_byte3(header) + MYSQL_HEADER_LEN;
     }
     return prot_packet_len;
 }
@@ -369,7 +373,7 @@ int MariaDBClientConnection::send_mysql_client_handshake()
 
     // Send the session id as the server thread id. Only the low 32bits are sent in the handshake.
     auto thread_id = m_session->id();
-    gw_mysql_set_byte4(mysql_thread_id_num, (uint32_t)(thread_id));
+    mariadb::set_byte4(mysql_thread_id_num, (uint32_t)(thread_id));
     memcpy(mysql_scramble_buf, server_scramble, 8);
 
     memcpy(mysql_plugin_data, server_scramble + 8, 12);
@@ -402,7 +406,7 @@ int MariaDBClientConnection::send_mysql_client_handshake()
     uint8_t* outbuf = GWBUF_DATA(buf);
 
     // write packet header with mysql_payload_size
-    gw_mysql_set_byte3(mysql_packet_header, mysql_payload_size);
+    mariadb::set_byte3(mysql_packet_header, mysql_payload_size);
 
     // write packet number, now is 0
     mysql_packet_header[3] = mysql_packet_id;
@@ -1149,7 +1153,7 @@ MariaDBClientConnection::process_special_commands(GWBUF* read_buffer, uint8_t cm
     }
     else if (cmd == MXS_COM_PROCESS_KILL)
     {
-        uint64_t process_id = gw_mysql_get_byte4(GWBUF_DATA(read_buffer) + MYSQL_HEADER_LEN + 1);
+        uint64_t process_id = mariadb::get_byte4(GWBUF_DATA(read_buffer) + MYSQL_HEADER_LEN + 1);
         mxs_mysql_execute_kill(process_id, KT_CONNECTION);
         write_ok_packet(1);
         rval = SpecialCmdRes::END;
@@ -1569,7 +1573,7 @@ int MariaDBClientConnection::send_auth_error(int packet_number, const char* mysq
     mysql_state = "28000";
 
     field_count = 0xff;
-    gw_mysql_set_byte2(mysql_err,    /*mysql_errno */ 1045);
+    mariadb::set_byte2(mysql_err,    /*mysql_errno */ 1045);
     mysql_statemsg[0] = '#';
     memcpy(mysql_statemsg + 1, mysql_state, 5);
 
@@ -1590,7 +1594,7 @@ int MariaDBClientConnection::send_auth_error(int packet_number, const char* mysq
     outbuf = GWBUF_DATA(buf);
 
     // write packet header with packet number
-    gw_mysql_set_byte3(mysql_packet_header, mysql_payload_size);
+    mariadb::set_byte3(mysql_packet_header, mysql_payload_size);
     mysql_packet_header[3] = packet_number;
 
     // write header
@@ -1672,7 +1676,7 @@ GWBUF* MariaDBClientConnection::create_standard_error(int packet_number, int err
     outbuf = GWBUF_DATA(buf);
 
     // write packet header with mysql_payload_size
-    gw_mysql_set_byte3(mysql_packet_header, mysql_payload_size);
+    mariadb::set_byte3(mysql_packet_header, mysql_payload_size);
 
     // write packet number, now is 0
     mysql_packet_header[3] = packet_number;
@@ -1686,7 +1690,7 @@ GWBUF* MariaDBClientConnection::create_standard_error(int packet_number, int err
     mysql_handshake_payload++;
 
     // write error number
-    gw_mysql_set_byte2(mysql_handshake_payload, error_number);
+    mariadb::set_byte2(mysql_handshake_payload, error_number);
     mysql_handshake_payload += 2;
 
     // write error message

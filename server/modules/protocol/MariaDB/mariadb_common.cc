@@ -76,7 +76,7 @@ GWBUF* mysql_create_custom_error(int packet_number, int affected_rows, uint16_t 
     uint8_t mysql_statemsg[6];
     const char* mysql_state = "HY000";
 
-    gw_mysql_set_byte2(mysql_err, errnum);
+    mariadb::set_byte2(mysql_err, errnum);
     mysql_statemsg[0] = '#';
     memcpy(mysql_statemsg + 1, mysql_state, 5);
 
@@ -92,7 +92,7 @@ GWBUF* mysql_create_custom_error(int packet_number, int affected_rows, uint16_t 
     uint8_t* outbuf = GWBUF_DATA(errbuf);
 
     /** write packet header and packet number */
-    gw_mysql_set_byte3(mysql_packet_header, mysql_payload_size);
+    mariadb::set_byte3(mysql_packet_header, mysql_payload_size);
     mysql_packet_header[3] = packet_number;
 
     /** write header */
@@ -151,7 +151,7 @@ GWBUF* mxs_mysql_create_ok(int sequence, uint8_t affected_rows, const char* mess
     outbuf = GWBUF_DATA(buf);
 
     // write packet header with packet number
-    gw_mysql_set_byte3(mysql_packet_header, mysql_payload_size);
+    mariadb::set_byte3(mysql_packet_header, mysql_payload_size);
     mysql_packet_header[3] = sequence;
 
     // write header
@@ -308,7 +308,7 @@ uint16_t mxs_mysql_get_mysql_errno(GWBUF* buffer)
         uint8_t buf[2];
         // First two bytes after the 0xff byte are the error code
         gwbuf_copy_data(buffer, MYSQL_HEADER_LEN + 1, 2, buf);
-        rval = gw_mysql_get_byte2(buf);
+        rval = mariadb::get_byte2(buf);
     }
 
     return rval;
@@ -345,31 +345,6 @@ bool mxs_mysql_is_ps_command(uint8_t cmd)
            || cmd == MXS_COM_STMT_RESET;
 }
 
-bool mxs_mysql_more_results_after_ok(GWBUF* buffer)
-{
-    bool rval = false;
-
-    // Copy the header
-    uint8_t header[MYSQL_HEADER_LEN + 1];
-    gwbuf_copy_data(buffer, 0, sizeof(header), header);
-
-    if (header[4] == MYSQL_REPLY_OK)
-    {
-        // Copy the payload without the command byte
-        size_t len = gw_mysql_get_byte3(header);
-        uint8_t data[len - 1];
-        gwbuf_copy_data(buffer, MYSQL_HEADER_LEN + 1, sizeof(data), data);
-
-        uint8_t* ptr = data;
-        ptr += mxq::leint_bytes(ptr);
-        ptr += mxq::leint_bytes(ptr);
-        uint16_t* status = (uint16_t*)ptr;
-        rval = (*status) & SERVER_MORE_RESULTS_EXIST;
-    }
-
-    return rval;
-}
-
 bool mxs_mysql_extract_ps_response(GWBUF* buffer, MXS_PS_RESPONSE* out)
 {
     bool rval = false;
@@ -383,10 +358,10 @@ bool mxs_mysql_extract_ps_response(GWBUF* buffer, MXS_PS_RESPONSE* out)
         && gwbuf_copy_data(buffer, MYSQL_PS_PARAMS_OFFSET, sizeof(params), params) == sizeof(params)
         && gwbuf_copy_data(buffer, MYSQL_PS_WARN_OFFSET, sizeof(warnings), warnings) == sizeof(warnings))
     {
-        out->id = gw_mysql_get_byte4(id);
-        out->columns = gw_mysql_get_byte2(cols);
-        out->parameters = gw_mysql_get_byte2(params);
-        out->warnings = gw_mysql_get_byte2(warnings);
+        out->id = mariadb::get_byte4(id);
+        out->columns = mariadb::get_byte2(cols);
+        out->parameters = mariadb::get_byte2(params);
+        out->warnings = mariadb::get_byte2(warnings);
         rval = true;
     }
 
@@ -400,7 +375,7 @@ uint32_t mxs_mysql_extract_ps_id(GWBUF* buffer)
 
     if (gwbuf_copy_data(buffer, MYSQL_PS_ID_OFFSET, sizeof(id), id) == sizeof(id))
     {
-        rval = gw_mysql_get_byte4(id);
+        rval = mariadb::get_byte4(id);
     }
 
     return rval;

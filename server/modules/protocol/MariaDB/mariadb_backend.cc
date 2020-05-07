@@ -13,6 +13,7 @@
 
 #include <maxscale/protocol/mariadb/backend_connection.hh>
 
+#include <arpa/inet.h>
 #include <mysql.h>
 #include <mysqld_error.h>
 #include <maxbase/alloc.h>
@@ -497,27 +498,6 @@ bool MariaDBBackendConnection::complete_ps_response(GWBUF* buffer)
     }
 
     return rval;
-}
-
-/**
- * Helpers for checking OK and ERR packets specific to COM_CHANGE_USER
- */
-static inline bool not_ok_packet(const GWBUF* buffer)
-{
-    const uint8_t* data = GWBUF_DATA(buffer);
-
-    return data[4] != MYSQL_REPLY_OK
-           ||   // Should be more than 7 bytes of payload
-           gw_mysql_get_byte3(data) < MYSQL_OK_PACKET_MIN_LEN - MYSQL_HEADER_LEN
-           ||   // Should have no affected rows
-           data[5] != 0
-           ||   // Should not generate an insert ID
-           data[6] != 0;
-}
-
-static inline bool not_err_packet(const GWBUF* buffer)
-{
-    return GWBUF_DATA(buffer)[4] != MYSQL_REPLY_ERR;
 }
 
 static inline bool auth_change_requested(GWBUF* buf)
@@ -1484,7 +1464,7 @@ int MariaDBBackendConnection::send_mysql_native_password_response(DCB* dcb, GWBU
 
     GWBUF* buffer = gwbuf_alloc(MYSQL_HEADER_LEN + GW_MYSQL_SCRAMBLE_SIZE);
     uint8_t* data = GWBUF_DATA(buffer);
-    gw_mysql_set_byte3(data, GW_MYSQL_SCRAMBLE_SIZE);
+    mariadb::set_byte3(data, GW_MYSQL_SCRAMBLE_SIZE);
     data[3] = seqno;    // This is the third packet after the COM_CHANGE_USER
     mxs_mysql_calculate_hash(m_auth_data.scramble, curr_passwd, data + MYSQL_HEADER_LEN);
 
@@ -1526,7 +1506,7 @@ int MariaDBBackendConnection::gw_decode_mysql_server_handshake(uint8_t* payload)
     payload = server_version_end + 1;
 
     // get ThreadID: 4 bytes
-    uint32_t tid = gw_mysql_get_byte4(payload);
+    uint32_t tid = mariadb::get_byte4(payload);
 
     MXS_INFO("Connected to '%s' with thread id %u", m_server.name(), tid);
 
@@ -1543,12 +1523,12 @@ int MariaDBBackendConnection::gw_decode_mysql_server_handshake(uint8_t* payload)
     // 1 filler
     payload++;
 
-    mysql_server_capabilities_one = gw_mysql_get_byte2(payload);
+    mysql_server_capabilities_one = mariadb::get_byte2(payload);
 
     // Get capabilities_part 1 (2 bytes) + 1 language + 2 server_status
     payload += 5;
 
-    mysql_server_capabilities_two = gw_mysql_get_byte2(payload);
+    mysql_server_capabilities_two = mariadb::get_byte2(payload);
 
     conn->server_capabilities = mysql_server_capabilities_one | mysql_server_capabilities_two << 16;
 
@@ -1603,7 +1583,7 @@ GWBUF* MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool s
     }
 
     uint32_t capabilities = create_capabilities(with_ssl, client_data->db[0], service_capabilities);
-    gw_mysql_set_byte4(client_capabilities, capabilities);
+    mariadb::set_byte4(client_capabilities, capabilities);
 
     /**
      * Use the default authentication plugin name. If the server is using a
@@ -1633,7 +1613,7 @@ GWBUF* MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool s
     memset(payload, '\0', bytes);
 
     // put here the paylod size: bytes to write - 4 bytes packet header
-    gw_mysql_set_byte3(payload, (bytes - 4));
+    mariadb::set_byte3(payload, (bytes - 4));
 
     // set packet # = 1
     payload[3] = ssl_established ? '\x02' : '\x01';
@@ -1644,7 +1624,7 @@ GWBUF* MariaDBBackendConnection::gw_generate_auth_response(bool with_ssl, bool s
 
     // set now the max-packet size
     payload += 4;
-    gw_mysql_set_byte4(payload, 16777216);
+    mariadb::set_byte4(payload, 16777216);
 
     // set the charset
     payload += 4;

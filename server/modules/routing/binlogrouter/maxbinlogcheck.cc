@@ -21,6 +21,7 @@
 
 #include "blr.hh"
 
+#include <fcntl.h>
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
