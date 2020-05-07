@@ -2053,7 +2053,7 @@ template<class T>
 std::string ParamDuration<T>::to_string(const value_type& value) const
 {
     std::stringstream ss;
-    ss << value.count() << DurationSuffix::of(value);
+    ss << std::chrono::duration_cast<std::chrono::milliseconds>(value).count() << "ms";
     return ss.str();
 }
 
