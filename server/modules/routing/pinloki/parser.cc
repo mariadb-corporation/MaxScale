@@ -130,10 +130,16 @@ struct PurgeLogs
     std::string up_to;
 };
 
+struct MasterGtidWait
+{
+    std::string gtid;
+    int         timeout = 0;
+};
+
 using Show = x3::variant<ShowType, ShowVariables>;
 
 // The root type that is returned as the result of parsing
-using Command = x3::variant<nullptr_t, Select, Set, ChangeMaster, Slave, PurgeLogs, Show>;
+using Command = x3::variant<nullptr_t, Select, Set, ChangeMaster, Slave, PurgeLogs, Show, MasterGtidWait>;
 
 // Error handler that the rule types must inherit from, allows pretty-printing of errors
 struct error_handler
@@ -190,6 +196,7 @@ DECLARE_ATTR_RULE(dq_str, "single-quoted string", std::string);
 DECLARE_ATTR_RULE(q_str, "quoted string", std::string);
 DECLARE_ATTR_RULE(func, "function", std::string);
 DECLARE_ATTR_RULE(field, "intentifier, function, string or number", Field);
+DECLARE_ATTR_RULE(master_gtid_wait, "MASTER_GTID_WAIT", MasterGtidWait);
 DECLARE_ATTR_RULE(variable, "key-value", Variable);
 DECLARE_ATTR_RULE(change_master_variable, "key-value", ChangeMasterVariable);
 DECLARE_ATTR_RULE(show_master, "show master", ShowType);
@@ -226,6 +233,15 @@ const auto q_str_def = sq_str | dq_str;
 const auto field_def = sq_str | dq_str | x3::double_ | x3::int_ | func | str;
 const auto variable_def = str > eq > field;
 
+// Preliminary SELECT MASTER_GTID_WAIT support. This isn't the prettiest solution but it allows testing
+// without modifications to the SELECT grammar.
+//
+// TODO: Evaluate whether adding it to the SELECT grammar is worth it.
+const auto master_gtid_wait_def = x3::lit("SELECT") > x3::lit("MASTER_GTID_WAIT")
+    > x3::lit("(")
+    > q_str > -(x3::lit(",") > x3::int_)
+    > x3::lit(")");
+
 // SET and SELECT commands
 const auto select_def = x3::lit("SELECT") > field % ',' >> -x3::omit[x3::lit("LIMIT") > x3::int_ % ','];
 
@@ -256,7 +272,8 @@ const auto end_of_input_def = x3::eoi;
 
 // The complete grammar, case insensitive
 const auto grammar_def = x3::no_case[
-    select
+    master_gtid_wait
+    | select
     | set
     | change_master
     | slave
@@ -266,7 +283,7 @@ const auto grammar_def = x3::no_case[
 // Boost magic that combines the rule declarations and definitions (definitions _must_ end in a _def suffix)
 BOOST_SPIRIT_DEFINE(str, sq_str, dq_str, field, variable, select, set, eq, q_str,
                     show_master, show_slave, show_binlogs, show_variables, show, set_names,
-                    global_or_session, show_options, func,
+                    global_or_session, show_options, func, master_gtid_wait,
                     change_master_variable, change_master, slave, purge_logs, end_of_input, grammar);
 
 
@@ -373,6 +390,11 @@ struct ResultVisitor : public boost::static_visitor<>
         boost::apply_visitor(*this, s);
     }
 
+    void operator()(MasterGtidWait& s)
+    {
+        m_handler->master_gtid_wait(s.gtid, s.timeout);
+    }
+
     void operator()(nullptr_t&)
     {
         assert(!true);
@@ -415,6 +437,7 @@ BOOST_FUSION_ADAPT_STRUCT(Set, values);
 BOOST_FUSION_ADAPT_STRUCT(ChangeMaster, values);
 BOOST_FUSION_ADAPT_STRUCT(ShowVariables, like);
 BOOST_FUSION_ADAPT_STRUCT(PurgeLogs, up_to);
+BOOST_FUSION_ADAPT_STRUCT(MasterGtidWait, gtid, timeout);
 
 namespace pinloki
 {

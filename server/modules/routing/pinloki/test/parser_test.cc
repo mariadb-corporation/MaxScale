@@ -58,6 +58,11 @@ struct DebugHandler : public pinloki::parser::Handler
         result << "SHOW VARIABLES" << (like.empty() ? "" : " LIKE ") << like;
     }
 
+    void master_gtid_wait(const std::string& gtid, int timeout) override
+    {
+        result << "MASTER_GTID_WAIT " << gtid << " " << timeout;
+    }
+
     void purge_logs(const std::string& up_to) override
     {
         result << "PURGE BINARY LOGS TO " << up_to;
@@ -139,6 +144,12 @@ std::vector<std::pair<std::string, std::string>> tests =
     },
     {
         "PURGE BINARY LOGS TO 'binlog.000001'", "PURGE BINARY LOGS TO binlog.000001"
+    },
+    {
+        "SELECT MASTER_GTID_WAIT('0-1-1', 10)", "MASTER_GTID_WAIT 0-1-1 10"
+    },
+    {
+        "SELECT MASTER_GTID_WAIT('0-1-1')", "MASTER_GTID_WAIT 0-1-1 0"
     },
 };
 

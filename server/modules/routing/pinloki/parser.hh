@@ -58,6 +58,7 @@ struct Handler
     virtual void show_master_status() = 0;
     virtual void show_binlogs() = 0;
     virtual void show_variables(const std::string& like) = 0;
+    virtual void master_gtid_wait(const std::string& gtid, int timeout) = 0;
 
     virtual void purge_logs(const std::string& up_to) = 0;
 

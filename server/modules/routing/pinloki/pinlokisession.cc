@@ -362,6 +362,13 @@ void PinlokiSession::show_variables(const std::string& like)
     send(create_resultset({"Variable_name", "Value"}, values));
 }
 
+void PinlokiSession::master_gtid_wait(const std::string& gtid, int timeout)
+{
+    std::ostringstream ss;
+    ss << "master_gtid_wait('" << gtid << "', " << timeout << ")";
+    send(create_resultset({ss.str()}, {"1"}));
+}
+
 void PinlokiSession::purge_logs(const std::string& up_to)
 {
     auto files = m_router->inventory()->file_names();
