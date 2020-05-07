@@ -74,6 +74,7 @@ const string proxies_query = "SELECT DISTINCT a.user, a.host FROM mysql.proxies_
 const string db_names_query = "SHOW DATABASES;";
 const string roles_query = "SELECT a.user, a.host, a.role FROM mysql.roles_mapping AS a;";
 const string my_grants_query = "SHOW GRANTS;";
+const string current_user_query = "SELECT current_user();";
 }
 
 namespace clustrix_queries
@@ -312,10 +313,6 @@ bool MariaDBUserManager::update_users()
 
         if (con.open(srv->address(), srv->port()))
         {
-            if (m_check_showdb_priv)
-            {
-                check_show_dbs_priv(con, srv->name());
-            }
             auto load_result = LoadResult::QUERY_FAILED;
 
             // If server version is unknown (no monitor), update its version info.
@@ -349,6 +346,10 @@ bool MariaDBUserManager::update_users()
                 // Print successes after iteration is complete.
                 source_servernames.emplace_back(srv->name());
                 got_data = true;
+                if (m_check_showdb_priv)
+                {
+                    check_show_dbs_priv(con, temp_userdata, srv->name());
+                }
                 break;
 
             case LoadResult::QUERY_FAILED:
@@ -696,45 +697,86 @@ SERVICE* MariaDBUserManager::service() const
     return m_service;
 }
 
-void MariaDBUserManager::check_show_dbs_priv(mxq::MariaDB& con, const char* servername)
+/**
+ * Check if current user can see all databases. Needs either a "show databases"-grant or a global privilege
+ * such as "SELECT ON *.*".
+ *
+ * @param con Connection to use
+ * @param servername Servername, for logging
+ * @param userdata Fetched user account data
+ */
+void MariaDBUserManager::check_show_dbs_priv(mxq::MariaDB& con, const UserDatabase& userdata,
+                                             const char* servername)
 {
-    const auto& query = mariadb_queries::my_grants_query;
-    auto res = con.query(query);
-    if (res)
+    const char invalid_data_fmt[] = "Received invalid data from '%s' to query '%s'.";
+    vector<string> queries = {mariadb_queries::my_grants_query, mariadb_queries::current_user_query};
+    auto results = con.multiquery(queries);
+    if (results.size() != 2)
     {
-        if (res->get_col_count() == 1)
-        {
-            bool found = false;
-            while (res->next_row() && !found)
-            {
-                string grant = res->get_string(0);
-                if (grant.find("SHOW DATABASES") != string::npos)
-                {
-                    found = true;
-                }
-            }
-
-            if (found)
-            {
-                m_check_showdb_priv = false;    // Assume that the privilege is never lost.
-            }
-            else
-            {
-                // This will be printed repeatedly until admin adds the priv.
-                const char msg[] = "Service user '%s' of service '%s' does not have the 'SHOW DATABASES'-"
-                                   "privilege on '%s'. This may cause authentication errors on clients "
-                                   "logging in to a specific database.";
-                MXB_WARNING(msg, con.connection_settings().user.c_str(), m_service->name(), servername);
-            }
-        }
-        else
-        {
-            MXB_ERROR("Received invalid data from '%s' to query '%s'.", servername, query.c_str());
-        }
+        MXB_ERROR("Failed to query server '%s' for current user grants. %s", servername, con.error());
     }
     else
     {
-        MXB_ERROR("Failed to query server '%s' for current user grants. %s", servername, con.error());
+        bool grant_found = false;
+        bool invalid_data = false;
+        {
+            auto& res = results[0];
+            if (res->get_col_count() == 1)
+            {
+                while (res->next_row())
+                {
+                    string grant = res->get_string(0);
+                    if (grant.find("SHOW DATABASES") != string::npos)
+                    {
+                        grant_found = true;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                MXB_ERROR(invalid_data_fmt, servername, queries[0].c_str());
+                invalid_data = true;
+            }
+        }
+
+        if (!invalid_data && !grant_found)
+        {
+            auto& res = results[1];
+            if (res->get_col_count() == 1 && res->next_row())
+            {
+                string userhost = res->get_string(0);
+                auto pos = userhost.find('@');
+                if (pos != string::npos && pos < userhost.length() - 1)
+                {
+                    string username = userhost.substr(0, pos);
+                    string hostpattern = userhost.substr(pos + 1);
+                    auto my_entry = userdata.find_entry_equal(username, hostpattern);
+                    if (my_entry && my_entry->global_db_priv)
+                    {
+                        grant_found = true;
+                    }
+                }
+            }
+            else
+            {
+                MXB_ERROR(invalid_data_fmt, servername, queries[1].c_str());
+                invalid_data = true;
+            }
+        }
+
+        if (grant_found)
+        {
+            m_check_showdb_priv = false;    // Assume that the privilege is never lost.
+        }
+        else if (!invalid_data)
+        {
+            // This will be printed repeatedly until admin adds the priv.
+            const char msg[] = "Service user '%s' of service '%s' does not have 'SHOW DATABASES' or "
+                               "a similar global privilege on '%s'. This may cause authentication errors on "
+                               "clients logging in to a specific database.";
+            MXB_WARNING(msg, con.connection_settings().user.c_str(), m_service->name(), servername);
+        }
     }
 }
 
@@ -766,6 +808,12 @@ const mariadb::UserEntry* UserDatabase::find_entry(const std::string& username) 
     return find_entry(username, "", HostPatternMode::SKIP);
 }
 
+const mariadb::UserEntry*
+UserDatabase::find_entry_equal(const string& username, const string& host_pattern) const
+{
+    return find_entry(username, host_pattern, HostPatternMode::EQUAL);
+}
+
 const UserEntry* UserDatabase::find_entry(const std::string& username, const std::string& host,
                                           HostPatternMode mode) const
 {
@@ -779,11 +827,29 @@ const UserEntry* UserDatabase::find_entry(const std::string& username, const std
         {
             // The entry must not be a role (they should have empty hostnames in any case) and the hostname
             // pattern should match the host.
-            if (!entry.is_role
-                && (mode == HostPatternMode::SKIP || address_matches_host_pattern(host, entry.host_pattern)))
+            if (!entry.is_role)
             {
-                rval = &entry;
-                break;
+                bool found_match = false;
+                switch (mode)
+                {
+                case HostPatternMode::SKIP:
+                    found_match = true;
+                    break;
+
+                case HostPatternMode::MATCH:
+                    found_match = address_matches_host_pattern(host, entry.host_pattern);
+                    break;
+
+                case HostPatternMode::EQUAL:
+                    found_match = (host == entry.host_pattern);
+                    break;
+                }
+
+                if (found_match)
+                {
+                    rval = &entry;
+                    break;
+                }
             }
         }
     }

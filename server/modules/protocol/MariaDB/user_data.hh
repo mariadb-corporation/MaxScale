@@ -66,6 +66,17 @@ public:
      */
     const mariadb::UserEntry* find_entry(const std::string& username) const;
 
+    /**
+     * Find a user entry with matching user & host pattern.
+     *
+     * @param username Client username. This must match exactly with the entry.
+     * @param host Client address. This must match exactly the entry host pattern.
+     * @return The found entry, or null if not found. The pointer should not be saved, as the
+     * contents may go invalid after a refresh.
+     */
+    const mariadb::UserEntry*
+    find_entry_equal(const std::string& username, const std::string& host_pattern) const;
+
     bool check_database_exists(const std::string& db, bool case_sensitive_db) const;
 
     /**
@@ -103,6 +114,7 @@ private:
     {
         SKIP,
         MATCH,
+        EQUAL,
     };
 
     const mariadb::UserEntry*
@@ -208,7 +220,8 @@ private:
 
     LoadResult read_users_clustrix(QResult users, QResult acl, UserDatabase* output);
 
-    void check_show_dbs_priv(mxq::MariaDB& con, const char* servername);
+    void check_show_dbs_priv(mxq::MariaDB& con, const UserDatabase& userdata,
+                             const char* servername);
 
     mutable std::mutex m_userdb_lock;   /**< Protects UserDatabase from concurrent access */
     UserDatabase       m_userdb;        /**< Contains user account info */
