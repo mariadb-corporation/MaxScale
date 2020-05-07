@@ -99,11 +99,14 @@ int32_t PinlokiSession::routeQuery(GWBUF* pPacket)
         MXS_INFO("COM_BINLOG_DUMP");
         try
         {
-            m_reader = std::make_unique<Reader>(
-                [this](const auto& event) {
+            pinloki::Callback cb = [this](const mxq::RplEvent& event) {
                     return send_event(event);
-                }, m_router->inventory(), mxs::RoutingWorker::get_current(), m_gtid,
-                std::chrono::seconds(m_heartbeat_period));
+                };
+
+            m_reader = std::make_unique<Reader>(
+                cb, m_router->inventory(),
+                mxs::RoutingWorker::get_current(),
+                m_gtid, std::chrono::seconds(m_heartbeat_period));
             rval = 1;
         }
         catch (const GtidNotFoundError& err)
