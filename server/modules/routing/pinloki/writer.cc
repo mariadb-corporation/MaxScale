@@ -61,6 +61,18 @@ mxq::Connection::ConnectionDetails Writer::get_connection_details()
     return details;
 }
 
+mxq::GtidList Writer::get_gtid_io_pos() const
+{
+    std::lock_guard<std::mutex> guard(m_lock);
+    return m_current_gtid_list;
+}
+
+void Writer::update_gtid_list(const mxq::Gtid& gtid)
+{
+    std::lock_guard<std::mutex> guard(m_lock);
+    m_current_gtid_list.replace(gtid);
+}
+
 void Writer::run()
 {
     while (m_running)
@@ -83,7 +95,7 @@ void Writer::run()
                     {
                         auto& egtid = rpl_event.event.gtid;
                         auto gtid = maxsql::Gtid(egtid.domain_id, rpl_event.server_id, egtid.sequence_nr);
-                        m_current_gtid_list.replace(gtid);
+                        update_gtid_list(gtid);
 
                         if (egtid.flags & mxq::F_STANDALONE)
                         {

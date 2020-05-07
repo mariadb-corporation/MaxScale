@@ -37,17 +37,22 @@ public:
     ~Writer();
     void run();
 
-private:
-    Generator         m_generator;
-    mxb::Worker*      m_worker;
-    Inventory&        m_inventory;
-    bool              m_is_bootstrap = false;
-    bool              m_commit_on_query = false;
-    maxsql::GtidList  m_current_gtid_list;
-    std::atomic<bool> m_running {true};
-    std::thread       m_thread;
+    mxq::GtidList get_gtid_io_pos() const;
 
-    void                                  save_gtid_list();
-    maxsql::Connection::ConnectionDetails get_connection_details();
+private:
+    Generator          m_generator;
+    mxb::Worker*       m_worker;
+    Inventory&         m_inventory;
+    bool               m_is_bootstrap = false;
+    bool               m_commit_on_query = false;
+    maxsql::GtidList   m_current_gtid_list;
+    std::atomic<bool>  m_running {true};
+    std::thread        m_thread;
+    mutable std::mutex m_lock;
+
+    void save_gtid_list();
+    void update_gtid_list(const mxq::Gtid& gtid);
+
+    mxq::Connection::ConnectionDetails get_connection_details();
 };
 }

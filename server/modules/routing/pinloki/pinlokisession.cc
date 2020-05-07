@@ -23,6 +23,7 @@
 
 namespace
 {
+
 GWBUF* create_resultset(const std::vector<std::string>& columns, const std::vector<std::string>& row)
 {
     auto rset = ResultSet::create(columns);
@@ -191,6 +192,16 @@ void PinlokiSession::send(GWBUF* buffer)
 
 void PinlokiSession::select(const std::vector<std::string>& fields)
 {
+    static const std::set<std::string> gtid_pos_sel_var =
+    {
+        "@@gtid_slave_pos",
+        "@@global.gtid_slave_pos",
+        "@@gtid_current_pos",
+        "@@global.gtid_current_pos",
+        "@@gtid_binlog_pos",
+        "@@global.gtid_binlog_pos"
+    };
+
     auto values = fields;
 
     for (auto& a : values)
@@ -203,12 +214,16 @@ void PinlokiSession::select(const std::vector<std::string>& fields)
         else if (val == "@@global.gtid_domain_id")
         {
             // TODO: Get this from either the master or the configuration
-            val = "1";
+            a = "1";
         }
         else if (val == "@master_binlog_checksum")
         {
             // TODO: Store the master's response to this
-            val = "CRC32";
+            a = "CRC32";
+        }
+        else if (gtid_pos_sel_var.count(val))
+        {
+            a = m_router->gtid_io_pos();
         }
     }
 
@@ -327,11 +342,21 @@ void PinlokiSession::show_binlogs()
 
 void PinlokiSession::show_variables(const std::string& like)
 {
+    static const std::set<std::string> gtid_pos_var = {
+        "gtid_slave_pos", "gtid_current_pos", "gtid_binlog_pos"
+    };
+
     std::vector<std::string> values;
 
-    if (strcasestr(like.c_str(), "server_id") == 0)
+    auto val = mxb::lower_case_copy(like);
+
+    if (val == "server_id")
     {
         values = {like, std::to_string(m_router->config().server_id())};
+    }
+    else if (gtid_pos_var.count(val))
+    {
+        values = {like, m_router->gtid_io_pos()};
     }
 
     send(create_resultset({"Variable_name", "Value"}, values));
