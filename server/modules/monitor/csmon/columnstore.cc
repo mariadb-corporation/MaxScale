@@ -19,6 +19,28 @@ using std::vector;
 namespace cs
 {
 
+const char* to_string(Version version)
+{
+    switch (version)
+    {
+    case CS_10:
+        return "1.0";
+
+    case CS_12:
+        return "1.2";
+
+    case CS_15:
+        return "1.5";
+
+    case CS_UNKNOWN:
+        return "unknown";
+
+    default:
+        mxb_assert(!true);
+        return "unknown";
+    }
+}
+
 const char* to_string(ClusterMode cluster_mode)
 {
     switch (cluster_mode)

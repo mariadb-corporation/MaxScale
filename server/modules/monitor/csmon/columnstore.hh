@@ -27,6 +27,8 @@ enum Version
     CS_15
 };
 
+const char* to_string(Version version);
+
 enum ClusterMode
 {
     READ_ONLY,

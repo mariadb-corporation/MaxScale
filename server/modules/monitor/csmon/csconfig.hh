@@ -14,6 +14,7 @@
 
 #include "csmon.hh"
 #include <maxscale/config2.hh>
+#include "columnstore.hh"
 
 class CsConfig : public mxs::config::Configuration
 {
@@ -22,8 +23,15 @@ public:
 
     static void populate(MXS_MODULE& info);
 
-    SERVER*     pPrimary;
-    int64_t     admin_port;
-    std::string admin_base_path;
-    std::string api_key;
+    cs::Version version;
+    SERVER*     pPrimary;        // Mandatory for 1.0, invalid for 1.2 and 1.5.
+    int64_t     admin_port;      // Mandatory for 1.5, invalid for 1.0 and 1.2.
+    std::string admin_base_path; // Mandatory for 1.5, invalid for 1.0 and 1.2.
+    std::string api_key;         // Mandatory for 1.5, invalid for 1.0 and 1.2.
+
+private:
+    bool post_configure();
+
+    bool check_invalid();
+    bool check_mandatory();
 };
