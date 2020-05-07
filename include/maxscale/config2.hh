@@ -765,6 +765,7 @@ public:
                             std::string* pMessage = nullptr) const;
 
     json_t* to_json(const value_type& value) const;
+    json_t* to_json() const override;
     bool    from_json(const json_t* pJson, value_type* pValue,
                       std::string* pMessage = nullptr) const;
 
@@ -2094,6 +2095,16 @@ template<class T>
 json_t* ParamDuration<T>::to_json(const value_type& value) const
 {
     return json_integer(std::chrono::duration_cast<std::chrono::milliseconds>(value).count());
+}
+
+template<class T>
+json_t* ParamDuration<T>::to_json() const
+{
+    auto rv = ConcreteParam<ParamDuration<T>, T>::to_json();
+
+    json_object_set_new(rv, "unit", json_string("ms"));
+
+    return rv;
 }
 
 template<class T>

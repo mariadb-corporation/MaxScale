@@ -499,6 +499,11 @@ static json_t* module_param_to_json(const MXS_MODULE_PARAM& param)
 
         json_object_set_new(p, "enum_values", arr);
     }
+    else if (param.type == MXS_MODULE_PARAM_DURATION)
+    {
+        const char* value_unit = param.options & MXS_MODULE_OPT_DURATION_S ? "s" : "ms";
+        json_object_set_new(p, "unit", json_string(value_unit));
+    }
 
     return p;
 }
