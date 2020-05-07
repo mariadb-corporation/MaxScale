@@ -20,8 +20,6 @@
 #include <sstream>
 #include <mysql.h>
 #include <mariadb_rpl.h>
-#include <boost/fusion/include/std_tuple.hpp>
-#include <boost/spirit/home/x3.hpp>
 #include <iostream>
 #include <iomanip>
 
@@ -43,18 +41,11 @@ std::string Gtid::to_string() const
 
 Gtid Gtid::from_string(const std::string& gtid_str)
 {
-    namespace x3 = boost::spirit::x3;
+    auto values = mxb::strtok(gtid_str, "-");
 
-    const auto gtid_parser = x3::uint32 >> '-' >> x3::uint32 >> '-' >> x3::uint64;
-
-    std::tuple<uint32_t, uint32_t, uint64_t> result;    // intermediary to avoid boost-fusionizing Gtid.
-    auto first = begin(gtid_str);
-
-    auto success = parse(first, end(gtid_str), gtid_parser, result);
-
-    if (success && first == end(gtid_str))
+    if (values.size() == 3)
     {
-        return Gtid(result);
+        return Gtid(std::stoul(values[0]), std::stoul(values[1]), std::stoul(values[2]));
     }
     else
     {
