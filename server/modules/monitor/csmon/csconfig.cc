@@ -20,6 +20,7 @@ namespace csmon
 const config::ParamCount::value_type  DEFAULT_ADMIN_PORT      = 8630;
 const config::ParamString::value_type DEFAULT_ADMIN_BASE_PATH = "/cmapi/0.3.0";
 const config::ParamString::value_type DEFAULT_API_KEY         = "";
+const config::ParamString::value_type DEFAULT_LOCAL_ADDRESS   = "";
 const config::ParamServer::value_type DEFAULT_PRIMARY         = nullptr;
 
 config::Specification specification(MXS_MODULE_NAME, config::Specification::MONITOR);
@@ -60,6 +61,13 @@ config::ParamString api_key(
     "api_key",
     "The API key to be used in the communication with the Columnstora admin daemon.",
     DEFAULT_API_KEY);
+
+config::ParamString local_address(
+    &specification,
+    "local_address",
+    "Local address to provide as IP of MaxScale to Columnstore cluster. Need not be "
+    "specified if global 'local_address' has been set.",
+    DEFAULT_LOCAL_ADDRESS);
 }
 
 
@@ -71,6 +79,7 @@ CsConfig::CsConfig(const std::string& name)
     add_native(&this->admin_port, &csmon::admin_port);
     add_native(&this->admin_base_path, &csmon::admin_base_path);
     add_native(&this->api_key, &csmon::api_key);
+    add_native(&this->local_address, &csmon::local_address);
 }
 
 //static
@@ -138,6 +147,22 @@ bool CsConfig::check_mandatory()
             complain_mandatory(this->version, csmon::api_key.name());
             rv = false;
         }
+
+        if (this->local_address == csmon::DEFAULT_LOCAL_ADDRESS)
+        {
+            std::string local_address = mxs::Config::get().local_address;
+
+            if (!local_address.empty())
+            {
+                this->local_address = local_address;
+            }
+            else
+            {
+                MXS_ERROR("'local_address' has been specified neither for %s, nor globally.",
+                          name().c_str());
+                rv = false;
+            }
+        }
         break;
 
     case cs::CS_UNKNOWN:
@@ -180,6 +205,12 @@ bool CsConfig::check_invalid()
         if (this->api_key != csmon::DEFAULT_API_KEY)
         {
             complain_invalid(this->version, csmon::api_key.name());
+            rv = false;
+        }
+
+        if (this->local_address != csmon::DEFAULT_LOCAL_ADDRESS)
+        {
+            complain_invalid(this->version, csmon::local_address.name());
             rv = false;
         }
         break;
