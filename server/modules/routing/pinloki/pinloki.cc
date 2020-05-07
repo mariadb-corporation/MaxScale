@@ -194,6 +194,11 @@ void Pinloki::stop_slave()
 {
     std::lock_guard<std::mutex> guard(m_lock);
     MXS_INFO("Stopping slave");
+
+    // The current GTID position must be stored so that subsequent START SLAVE commands know to resume
+    // replication from the correct position.
+    set_gtid(m_writer->get_gtid_io_pos());
+
     m_writer.reset();
     m_master_config.slave_running = false;
     m_master_config.save(m_config);

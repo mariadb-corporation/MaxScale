@@ -49,8 +49,8 @@ void Connection::start_replication(unsigned int server_id, maxsql::GtidList gtid
     std::ostringstream gtid_start_pos;
     gtid_start_pos << "SET @slave_connect_state='" << (gtid.is_valid() ? gtid.to_string() : "") << '\'';
 
-    // The heartbeat period is in nanoseconds
-    auto hb = "SET @master_heartbeat_period=" + std::to_string((m_details.timeout.count() * 1000000000) / 2);
+    // The heartbeat period is in nanoseconds. We need frequent updates to keep get_rpl_msg responsive.
+    auto hb = "SET @master_heartbeat_period=1000000000";
 
     // TODO use config
     std::vector<std::string> queries =
