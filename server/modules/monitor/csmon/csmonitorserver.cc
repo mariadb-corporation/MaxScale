@@ -294,6 +294,39 @@ CsMonitorServer::Status CsMonitorServer::Status::create(const http::Result& resp
                   std::move(dbroots), std::move(services), std::move(sJson));
 }
 
+bool CsMonitorServer::update_state(const Config& config, json_t* pOutput)
+{
+    bool rv = true;
+    mxb_assert(config.ok());
+
+    string ip;
+    if (config.get_dbrm_controller_ip(&ip))
+    {
+        if (ip == "127.0.0.1")
+        {
+            set_state(CsMonitorServer::SINGLE_NODE);
+        }
+        else if (ip == address())
+        {
+            set_state(CsMonitorServer::MULTI_NODE);
+        }
+        else
+        {
+            MXS_ERROR("MaxScale thinks the IP address of the server '%s' is %s, "
+                      "while the server itself thinks it is %s.",
+                      name(), address(), ip.c_str());
+            rv = false;
+        }
+    }
+    else
+    {
+        MXS_ERROR("Could not get DMRM_Controller IP of '%s'.", name());
+        rv = false;
+    }
+
+    return rv;
+}
+
 CsMonitorServer::Status CsMonitorServer::fetch_status() const
 {
     http::Result result = http::get(create_url(cs::rest::STATUS), m_http_config);

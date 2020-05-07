@@ -1018,7 +1018,20 @@ void CsMonitor::cs_add_node(json_t** ppOutput,
     ostringstream message;
     json_t* pServers = nullptr;
 
-    const ServerVector& sv = servers();
+    if (pServer->is_unknown_mode())
+    {
+        auto config = pServer->fetch_config();
+        // TODO: Propagate any errors to caller.
+        success = config.ok() && pServer->update_state(config, pOutput);
+
+        if (!success)
+        {
+            json_t* pError = mxs_json_error("Can't establish whether server '%s' has been configured "
+                                            "already. It cannot be added to the cluster.",
+                                            pServer->name());
+            mxs_json_error_push_front(pOutput, pError);
+        }
+    }
 
     if (pServer->is_multi_node())
     {
@@ -1026,13 +1039,20 @@ void CsMonitor::cs_add_node(json_t** ppOutput,
                               "The server '%s' is already a node in a cluster.",
                               pServer->name());
     }
-    else if (sv.size() == 1)
+    else if (pServer->is_single_node())
     {
-        success = cs_add_first_multi_node(pOutput, pServer, timeout);
-    }
-    else
-    {
-        success = cs_add_additional_multi_node(pOutput, pServer, timeout);
+        const auto& sv = servers();
+
+        auto it = std::find_if(sv.begin(), sv.end(), std::mem_fun(&CsMonitorServer::is_multi_node));
+
+        if (it == sv.end())
+        {
+            success = cs_add_first_multi_node(pOutput, pServer, timeout);
+        }
+        else
+        {
+            success = cs_add_additional_multi_node(pOutput, pServer, timeout);
+        }
     }
 
     if (success)
@@ -1724,8 +1744,6 @@ bool CsMonitor::cs_add_first_multi_node(json_t* pOutput,
     bool success = false;
 
     mxb_assert(pServer->is_single_node());
-    mxb_assert(servers().size() == 1);
-    mxb_assert(servers().front() == pServer);
 
     string trx_id = next_trx_id("add-node");
 
@@ -1736,14 +1754,14 @@ bool CsMonitor::cs_add_first_multi_node(json_t* pOutput,
         const char* zTrx_id = trx_id.c_str();
         const char* zName = pServer->name();
 
-        MXS_NOTICE("%s: Started transaction on '%s'.", zTrx_id, zName);
+        CS_DEBUG("%s: Started transaction on '%s'.", zTrx_id, zName);
         auto config = pServer->fetch_config();
 
         if (config.ok())
         {
-            MXS_NOTICE("%s: Fetched current config from '%s'.", zTrx_id, zName);
+            CS_DEBUG("%s: Fetched current config from '%s'.", zTrx_id, zName);
 
-            // TODO: Add ClusterManager to config.
+            cs::upsert(*config.sXml, "ClusterManager", m_config.local_address.c_str());
             int n = cs::update_if(*config.sXml, "//IPAddr", pServer->address(), "127.0.0.1");
             mxb_assert(n >= 0);
 

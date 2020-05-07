@@ -199,6 +199,8 @@ public:
         m_state = state;
     }
 
+    bool update_state(const Config& config, json_t* pOutput);
+
     bool is_multi_node() const
     {
         return m_state == MULTI_NODE;
@@ -207,6 +209,11 @@ public:
     bool is_single_node() const
     {
         return m_state == SINGLE_NODE;
+    }
+
+    bool is_unknown_mode() const
+    {
+        return m_state == UNKNOWN;
     }
 
     enum TrxState
