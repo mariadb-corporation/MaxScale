@@ -39,20 +39,20 @@ constexpr const char* ZALIVE_QUERY_15 = "SELECT 1";
 
 constexpr const char* ZROLE_QUERY_12 = "SELECT mcsSystemPrimary()";
 
-constexpr const char* get_alive_query(CsMonitorServer::Version version)
+constexpr const char* get_alive_query(cs::Version version)
 {
     switch (version)
     {
-    case CsMonitorServer::CS_10:
+    case cs::CS_10:
         return ZALIVE_QUERY_10;
 
-    case CsMonitorServer::CS_12:
+    case cs::CS_12:
         return ZALIVE_QUERY_12;
 
-    case CsMonitorServer::CS_15:
+    case cs::CS_15:
         return ZALIVE_QUERY_15;
 
-    case CsMonitorServer::CS_UNKNOWN:
+    case cs::CS_UNKNOWN:
         return nullptr;
 
     default:
@@ -471,26 +471,26 @@ bool CsMonitor::has_sufficient_permissions()
     if (m_version_number == -1)
     {
         MXS_ERROR("The version of the servers is not identical, monitoring is not possible.");
-        m_version = CsMonitorServer::CS_UNKNOWN;
+        m_version = cs::CS_UNKNOWN;
         rv = false;
     }
     else if (m_version_number == 0)
     {
         MXS_WARNING("%s: The cluster version could not be established as either there are not "
                     "servers defined or no server could be contacted.", name());
-        m_version = CsMonitorServer::CS_UNKNOWN;
+        m_version = cs::CS_UNKNOWN;
     }
     else if (m_version_number >= 10500)
     {
-        m_version = CsMonitorServer::CS_15;
+        m_version = cs::CS_15;
     }
     else if (m_version_number >= 10200)
     {
-        m_version = CsMonitorServer::CS_12;
+        m_version = cs::CS_12;
     }
     else
     {
-        m_version = CsMonitorServer::CS_10;
+        m_version = cs::CS_10;
     }
 
     CS_DEBUG("Cluster version is: %d", m_version_number);
@@ -503,7 +503,7 @@ bool CsMonitor::has_sufficient_permissions()
     {
         rv = test_permissions(m_zAlive_query);
 
-        if (m_version == CsMonitorServer::CS_15)
+        if (m_version == cs::CS_15)
         {
             rv = check_15_server_states(name(), servers(), m_http_config);
         }
@@ -518,7 +518,7 @@ void CsMonitor::update_server_status(MonitorServer* pS)
 
     pServer->clear_pending_status(SERVER_MASTER | SERVER_SLAVE | SERVER_RUNNING);
 
-    if (pServer->version() == CsMonitorServer::CS_UNKNOWN)
+    if (pServer->version() == cs::CS_UNKNOWN)
     {
         MXS_WARNING("Version of '%s' is not known, trying to find out.", pServer->name());
 
@@ -536,18 +536,18 @@ void CsMonitor::update_server_status(MonitorServer* pS)
 
     // If at startup we failed to establish the version, we pick the version of the
     // first server as the cluster version.
-    if (m_version == CsMonitorServer::CS_UNKNOWN)
+    if (m_version == cs::CS_UNKNOWN)
     {
         m_version = pServer->version();
 
         m_zAlive_query = get_alive_query(m_version);
     }
 
-    mxb_assert(m_version == CsMonitorServer::CS_UNKNOWN || m_zAlive_query != nullptr);
+    mxb_assert(m_version == cs::CS_UNKNOWN || m_zAlive_query != nullptr);
 
     int status_mask = 0;
 
-    if (m_version != CsMonitorServer::CS_UNKNOWN)
+    if (m_version != cs::CS_UNKNOWN)
     {
         if (pServer->version() != m_version)
         {
@@ -558,7 +558,7 @@ void CsMonitor::update_server_status(MonitorServer* pS)
         {
             if (do_query(pServer, m_zAlive_query) == "1")
             {
-                if (m_version == CsMonitorServer::CS_15)
+                if (m_version == cs::CS_15)
                 {
                     status_mask = update_15_server_status(pServer);
                 }
@@ -569,15 +569,15 @@ void CsMonitor::update_server_status(MonitorServer* pS)
 
                     switch (m_version)
                     {
-                    case CsMonitorServer::CS_10:
+                    case cs::CS_10:
                         status_mask |= update_10_server_status(pServer);
                         break;
 
-                    case CsMonitorServer::CS_12:
+                    case cs::CS_12:
                         status_mask |= update_12_server_status(pServer);
                         break;
 
-                    case CsMonitorServer::CS_15:
+                    case cs::CS_15:
                     default:
                         mxb_assert(!true);
                     }

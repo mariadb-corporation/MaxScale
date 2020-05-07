@@ -19,6 +19,14 @@
 namespace cs
 {
 
+enum Version
+{
+    CS_UNKNOWN,
+    CS_10,
+    CS_12,
+    CS_15
+};
+
 enum ClusterMode
 {
     READ_ONLY,

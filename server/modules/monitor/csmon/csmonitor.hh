@@ -129,9 +129,9 @@ private:
     CsMonitor(const std::string& name, const std::string& module);
     bool configure(const mxs::ConfigParameters* pParams) override;
 
-    CsConfig                 m_config;
-    mxb::http::Config        m_http_config;
-    CsMonitorServer::Version m_version  { CsMonitorServer::CS_UNKNOWN };
-    int                      m_version_number { -1 };
-    const char*              m_zAlive_query { nullptr };
+    CsConfig          m_config;
+    mxb::http::Config m_http_config;
+    cs::Version       m_version  { cs::CS_UNKNOWN };
+    int               m_version_number { -1 };
+    const char*       m_zAlive_query { nullptr };
 };
