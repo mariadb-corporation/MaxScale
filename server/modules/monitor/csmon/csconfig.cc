@@ -29,9 +29,9 @@ config::ParamEnum<cs::Version> version(
     "version",
     "The version of the Columnstore cluster that is monitored. Default is 'CS_15'.",
     {
-        { cs::CS_10, "CS_10" },
-        { cs::CS_12, "CS_12" },
-        { cs::CS_15, "CS_15" }
+        { cs::CS_10, cs::CS_10_CONFIG_STRING },
+        { cs::CS_12, cs::CS_12_CONFIG_STRING },
+        { cs::CS_15, cs::CS_15_CONFIG_STRING }
     },
     cs::CS_15);
 
@@ -86,14 +86,14 @@ void complain_invalid(cs::Version version, const std::string& param)
 {
     MXS_ERROR("When csmon is configured for Columnstore %s, "
               "the parameter '%s' is invalid.",
-              cs::to_string(version), param.c_str());
+              cs::to_version_string(version), param.c_str());
 }
 
 void complain_mandatory(cs::Version version, const std::string& param)
 {
     MXS_ERROR("When csmon is configured for Columnstore %s, "
               "the parameter '%s' is mandatory.",
-              cs::to_string(version), param.c_str());
+              cs::to_version_string(version), param.c_str());
 }
 
 }

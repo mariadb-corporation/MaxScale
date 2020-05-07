@@ -119,9 +119,9 @@ private:
 
     bool has_sufficient_permissions();
     void update_server_status(mxs::MonitorServer* pServer);
-    int update_10_server_status(CsMonitorServer* pServer);
-    int update_12_server_status(CsMonitorServer* pServer);
-    int update_15_server_status(CsMonitorServer* pServer);
+    int get_10_server_status(CsMonitorServer* pServer);
+    int get_12_server_status(CsMonitorServer* pServer);
+    int get_15_server_status(CsMonitorServer* pServer);
 
     CsMonitorServer* create_server(SERVER* server, const mxs::MonitorServer::SharedSettings& shared) override;
 
@@ -131,7 +131,4 @@ private:
 
     CsConfig          m_config;
     mxb::http::Config m_http_config;
-    cs::Version       m_version  { cs::CS_UNKNOWN };
-    int               m_version_number { -1 };
-    const char*       m_zAlive_query { nullptr };
 };

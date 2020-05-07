@@ -19,6 +19,10 @@
 namespace cs
 {
 
+const char CS_10_CONFIG_STRING[] = "Columnstore_10";
+const char CS_12_CONFIG_STRING[] = "Columnstore_12";
+const char CS_15_CONFIG_STRING[] = "Columnstore_15";
+
 enum Version
 {
     CS_UNKNOWN,
@@ -27,7 +31,10 @@ enum Version
     CS_15
 };
 
-const char* to_string(Version version);
+const char* to_version_string(Version version);
+const char* to_config_string(Version version);
+
+int get_minor_version(int full_version);
 
 enum ClusterMode
 {

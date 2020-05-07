@@ -19,7 +19,7 @@ using std::vector;
 namespace cs
 {
 
-const char* to_string(Version version)
+const char* to_version_string(Version version)
 {
     switch (version)
     {
@@ -31,6 +31,28 @@ const char* to_string(Version version)
 
     case CS_15:
         return "1.5";
+
+    case CS_UNKNOWN:
+        return "unknown";
+
+    default:
+        mxb_assert(!true);
+        return "unknown";
+    }
+}
+
+const char* to_config_string(Version version)
+{
+    switch (version)
+    {
+    case CS_10:
+        return CS_10_CONFIG_STRING;
+
+    case CS_12:
+        return CS_12_CONFIG_STRING;
+
+    case CS_15:
+        return CS_15_CONFIG_STRING;
 
     case CS_UNKNOWN:
         return "unknown";

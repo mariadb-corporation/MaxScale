@@ -87,7 +87,7 @@ static std::string do_query(MonitorServer* srv, const char* query)
 }
 
 // Returns a numeric version similar to mysql_get_server_version
-int get_cs_version(MonitorServer* srv)
+int get_full_version(MonitorServer* srv)
 {
     int rval = -1;
     std::string prefix = "Columnstore ";
@@ -124,9 +124,11 @@ int get_cs_version(MonitorServer* srv)
     return rval;
 }
 
-int get_cs_version(const vector<CsMonitorServer*>& servers)
+bool get_minor_version(const vector<CsMonitorServer*>& servers, cs::Version* pMinor_version)
 {
-    int cluster_version = 0;
+    bool rv = true;
+
+    cs::Version minor_version = cs::CS_UNKNOWN;
 
     if (!servers.empty())
     {
@@ -137,22 +139,24 @@ int get_cs_version(const vector<CsMonitorServer*>& servers)
 
             if (mxs::Monitor::connection_is_ok(result))
             {
-                auto version = get_cs_version(pServer);
+                auto version_number = get_full_version(pServer);
 
-                pServer->set_version_number(version);
+                pServer->set_version_number(version_number);
 
-                CS_DEBUG("Version of '%s': %d", pServer->name(), version);
+                CS_DEBUG("Version of '%s': %d", pServer->name(), version_number);
 
-                if (!pCurrent)
+                if (minor_version == cs::CS_UNKNOWN)
                 {
-                    cluster_version = version;
+                    minor_version = pServer->minor_version();
                     pCurrent = pServer;
                 }
-                else if (version != cluster_version)
+                else if (pServer->minor_version() != minor_version)
                 {
-                    MXS_ERROR("Version %d of server '%s' is at least different than version %d of '%s'.",
-                              version, pServer->name(), cluster_version, pCurrent->name());
-                    cluster_version = -1;
+                    MXS_ERROR("Minor version %s of '%s' is at least different than minor version %s "
+                              "of '%s'.",
+                              cs::to_version_string(pServer->minor_version()), pServer->name(),
+                              cs::to_version_string(pCurrent->minor_version()), pCurrent->name());
+                    rv = false;
                 }
             }
             else
@@ -162,7 +166,12 @@ int get_cs_version(const vector<CsMonitorServer*>& servers)
         }
     }
 
-    return cluster_version;
+    if (rv)
+    {
+        *pMinor_version = minor_version;
+    }
+
+    return rv;
 }
 
 json_t* create_response(const vector<CsMonitorServer*>& servers,
@@ -462,50 +471,43 @@ bool check_15_server_states(const char* zName,
 
 bool CsMonitor::has_sufficient_permissions()
 {
-    bool rv = true;
+    bool rv = test_permissions(get_alive_query(m_config.version));
 
-    // We have to do this here, before we call test_permissions(), because the query
-    // to use depends upon the version.
-    m_version_number = get_cs_version(servers());
+    if (rv)
+    {
+        cs::Version version;
+        rv = get_minor_version(servers(), &version);
 
-    if (m_version_number == -1)
-    {
-        MXS_ERROR("The version of the servers is not identical, monitoring is not possible.");
-        m_version = cs::CS_UNKNOWN;
-        rv = false;
-    }
-    else if (m_version_number == 0)
-    {
-        MXS_WARNING("%s: The cluster version could not be established as either there are not "
-                    "servers defined or no server could be contacted.", name());
-        m_version = cs::CS_UNKNOWN;
-    }
-    else if (m_version_number >= 10500)
-    {
-        m_version = cs::CS_15;
-    }
-    else if (m_version_number >= 10200)
-    {
-        m_version = cs::CS_12;
-    }
-    else
-    {
-        m_version = cs::CS_10;
-    }
-
-    CS_DEBUG("Cluster version is: %d", m_version_number);
-
-    m_zAlive_query = get_alive_query(m_version);
-
-    // m_zAlive_query will be null if we could not figure out the version.
-    // In that case we just allow the monitor to start.
-    if (rv && m_zAlive_query)
-    {
-        rv = test_permissions(m_zAlive_query);
-
-        if (m_version == cs::CS_15)
+        if (rv)
         {
-            rv = check_15_server_states(name(), servers(), m_http_config);
+            if (version == m_config.version)
+            {
+                if (m_config.version == cs::CS_15)
+                {
+                    rv = check_15_server_states(name(), servers(), m_http_config);
+                }
+            }
+            else if (version == cs::CS_UNKNOWN)
+            {
+                // If we cannot establish the actual version, we give the cluster the benefit of the
+                // doubt and assume it is the one expected. In update_server_status() it will eventually
+                // be revealed anyway.
+            }
+            else
+            {
+                MXS_ERROR("%s: The monitor is configured for Columnstore %s, but the cluster "
+                          "is Columnstore %s. You need specify 'version=%s' in the configuration "
+                          "file.",
+                          name(),
+                          cs::to_version_string(m_config.version),
+                          cs::to_version_string(version),
+                          cs::to_config_string(version));
+                rv = false;
+            }
+        }
+        else
+        {
+            MXS_ERROR("The minor version of the servers is not identical, monitoring is not possible.");
         }
     }
 
@@ -518,97 +520,79 @@ void CsMonitor::update_server_status(MonitorServer* pS)
 
     pServer->clear_pending_status(SERVER_MASTER | SERVER_SLAVE | SERVER_RUNNING);
 
-    if (pServer->version() == cs::CS_UNKNOWN)
+    if (pServer->minor_version() == cs::CS_UNKNOWN)
     {
         MXS_WARNING("Version of '%s' is not known, trying to find out.", pServer->name());
 
-        int version = get_cs_version(pServer);
+        int version_number = get_full_version(pServer);
 
-        if (version == -1)
+        if (version_number == -1)
         {
             MXS_ERROR("Could not find out version of '%s'.", pServer->name());
         }
         else
         {
-            pServer->set_version_number(version);
+            pServer->set_version_number(version_number);
+
+            if (pServer->minor_version() != m_config.version)
+            {
+                MXS_ERROR("Version of '%s' is different from the cluster version; server will be ignored.",
+                          pServer->name());
+            }
         }
     }
-
-    // If at startup we failed to establish the version, we pick the version of the
-    // first server as the cluster version.
-    if (m_version == cs::CS_UNKNOWN)
-    {
-        m_version = pServer->version();
-
-        m_zAlive_query = get_alive_query(m_version);
-    }
-
-    mxb_assert(m_version == cs::CS_UNKNOWN || m_zAlive_query != nullptr);
 
     int status_mask = 0;
 
-    if (m_version != cs::CS_UNKNOWN)
+    if (pServer->minor_version() == m_config.version)
     {
-        if (pServer->version() != m_version)
+        if (do_query(pServer, get_alive_query(m_config.version)) == "1")
         {
-            MXS_ERROR("Version of '%s' is different from the cluster version; server will be ignored.",
-                      pServer->name());
-        }
-        else
-        {
-            if (do_query(pServer, m_zAlive_query) == "1")
+            if (m_config.version == cs::CS_15)
             {
-                if (m_version == cs::CS_15)
-                {
-                    status_mask = update_15_server_status(pServer);
-                }
-                else
-                {
-                    CS_DEBUG("'%s' is alive.", pServer->name());
-                    status_mask |= SERVER_RUNNING;
-
-                    switch (m_version)
-                    {
-                    case cs::CS_10:
-                        status_mask |= update_10_server_status(pServer);
-                        break;
-
-                    case cs::CS_12:
-                        status_mask |= update_12_server_status(pServer);
-                        break;
-
-                    case cs::CS_15:
-                    default:
-                        mxb_assert(!true);
-                    }
-                }
+                status_mask = get_15_server_status(pServer);
             }
             else
             {
-                CS_DEBUG("'%s' is not alive.", pServer->name());
+                CS_DEBUG("'%s' is alive.", pServer->name());
+                status_mask |= SERVER_RUNNING;
+
+                switch (m_config.version)
+                {
+                case cs::CS_10:
+                    status_mask |= get_10_server_status(pServer);
+                    break;
+
+                case cs::CS_12:
+                    status_mask |= get_12_server_status(pServer);
+                    break;
+
+                case cs::CS_15:
+                default:
+                    mxb_assert(!true);
+                }
             }
         }
-    }
-    else
-    {
-        MXS_ERROR("Cluster version not known, not possible to monitor server '%s'.",
-                  pServer->name());
+        else
+        {
+            CS_DEBUG("'%s' is not alive.", pServer->name());
+        }
     }
 
     pServer->set_pending_status(status_mask);
 }
 
-int CsMonitor::update_10_server_status(CsMonitorServer* pServer)
+int CsMonitor::get_10_server_status(CsMonitorServer* pServer)
 {
     return pServer->server == m_config.pPrimary ? SERVER_MASTER : SERVER_SLAVE;
 }
 
-int CsMonitor::update_12_server_status(CsMonitorServer* pServer)
+int CsMonitor::get_12_server_status(CsMonitorServer* pServer)
 {
     return do_query(pServer, ZROLE_QUERY_12) == "1" ? SERVER_MASTER : SERVER_SLAVE;
 }
 
-int CsMonitor::update_15_server_status(CsMonitorServer* pServer)
+int CsMonitor::get_15_server_status(CsMonitorServer* pServer)
 {
     int status_mask = 0;
 

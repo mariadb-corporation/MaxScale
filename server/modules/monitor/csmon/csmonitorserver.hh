@@ -140,9 +140,9 @@ public:
         return this->server->address();
     }
 
-    cs::Version version() const
+    cs::Version minor_version() const
     {
-        return m_version;
+        return m_minor_version;
     }
 
     int version_number() const
@@ -154,19 +154,19 @@ public:
     {
         if (vn >= 10500)
         {
-            m_version = cs::CS_15;
+            m_minor_version = cs::CS_15;
         }
         else if (vn >= 10200)
         {
-            m_version = cs::CS_12;
+            m_minor_version = cs::CS_12;
         }
         else if (vn > 10000)
         {
-            m_version = cs::CS_10;
+            m_minor_version = cs::CS_10;
         }
         else
         {
-            m_version = cs::CS_UNKNOWN;
+            m_minor_version = cs::CS_UNKNOWN;
         }
 
         m_version_number = vn;
@@ -303,6 +303,6 @@ private:
     const CsConfig&          m_cs_config;
     const mxb::http::Config& m_http_config;
     TrxState                 m_trx_state = TRX_INACTIVE;
-    cs::Version              m_version = cs::CS_UNKNOWN;
+    cs::Version              m_minor_version = cs::CS_UNKNOWN;
     int                      m_version_number = -1;
 };
