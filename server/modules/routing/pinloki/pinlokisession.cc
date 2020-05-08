@@ -43,6 +43,13 @@ GWBUF* create_slave_running_error()
         "This operation cannot be performed as you have a running slave; run STOP SLAVE first");
 }
 
+GWBUF* create_select_master_error()
+{
+    return modutil_create_mysql_err_msg(
+        1, 0, 1198, "HY000",
+        "Manual master configuration is not possible when `select_master=true` is used.");
+}
+
 std::pair<std::string, std::string> get_file_name_and_size(const std::string& filepath)
 {
     std::string file = filepath;
@@ -252,7 +259,11 @@ void PinlokiSession::change_master_to(const parser::ChangeMasterValues& values)
 {
     GWBUF* buf = nullptr;
 
-    if (m_router->is_slave_running())
+    if (m_router->config().select_master())
+    {
+        buf = create_select_master_error();
+    }
+    else if (m_router->is_slave_running())
     {
         buf = create_slave_running_error();
     }
@@ -298,6 +309,10 @@ void PinlokiSession::reset_slave()
     if (m_router->is_slave_running())
     {
         buf = create_slave_running_error();
+    }
+    else if (m_router->config().select_master())
+    {
+        buf = create_select_master_error();
     }
     else
     {

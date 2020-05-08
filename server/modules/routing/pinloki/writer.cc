@@ -41,6 +41,7 @@ Writer::Writer(Generator generator, mxb::Worker* worker, Inventory* inv)
     , m_inventory(*inv)
     , m_current_gtid_list(mxq::GtidList::from_string(m_inventory.config().boot_strap_gtid_list()))
 {
+    mxb_assert(m_worker);
     m_thread = std::thread(&Writer::run, this);
 }
 

@@ -33,7 +33,14 @@ Pinloki::Pinloki(SERVICE* pService, Config&& config)
         m_config.set_boot_strap_gtid_list(gtid_list_str);
     }
 
-    if (m_master_config.load(m_config) && m_master_config.slave_running)
+    if (m_master_config.load(m_config))
+    {
+        if (m_master_config.slave_running)
+        {
+            start_slave();
+        }
+    }
+    else if (m_config.select_master())
     {
         start_slave();
     }
@@ -162,10 +169,28 @@ bool Pinloki::is_slave_running() const
 maxsql::Connection::ConnectionDetails Pinloki::generate_details()
 {
     maxsql::Connection::ConnectionDetails details;
-    details.host = mxb::Host(m_master_config.host, m_master_config.port);
-    details.user = m_master_config.user;
-    details.password = m_master_config.password;
     details.timeout = m_config.net_timeout();
+
+    if (m_config.select_master())
+    {
+        for (auto srv : m_pService->reachable_servers())
+        {
+            if (srv->is_master())
+            {
+                details.host = mxb::Host(srv->address(), srv->port());
+                details.user = m_pService->config()->user;
+                details.password = m_pService->config()->password;
+                break;
+            }
+        }
+    }
+    else
+    {
+        details.host = mxb::Host(m_master_config.host, m_master_config.port);
+        details.user = m_master_config.user;
+        details.password = m_master_config.password;
+    }
+
     return details;
 }
 
@@ -175,12 +200,13 @@ bool Pinloki::start_slave()
     std::lock_guard<std::mutex> guard(m_lock);
     const auto& cfg = m_master_config;
 
-    if (!cfg.host.empty() && cfg.port && !cfg.user.empty() && !cfg.password.empty())
+    if ((!cfg.host.empty() && cfg.port && !cfg.user.empty() && !cfg.password.empty())
+        || m_config.select_master())
     {
         MXS_INFO("Starting slave");
 
         Writer::Generator generator = std::bind(&Pinloki::generate_details, this);
-        m_writer = std::make_unique<Writer>(generator, mxs::RoutingWorker::get_current(), inventory());
+        m_writer = std::make_unique<Writer>(generator, mxs::MainWorker::get(), inventory());
         rval = true;
 
         m_master_config.slave_running = true;

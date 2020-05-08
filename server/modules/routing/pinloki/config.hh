@@ -55,6 +55,8 @@ public:
 
     // Network timeout
     std::chrono::seconds net_timeout() const;
+    // Automatic master selection
+    bool select_master() const;
 private:
     /** Where the binlog files are stored */
     std::string m_binlog_dir;
@@ -122,5 +124,6 @@ private:
     maxbase::Duration m_connect_retry_tmo = 60s;
 
     std::chrono::seconds m_net_timeout;
+    bool                 m_select_master;
 };
 }

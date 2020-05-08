@@ -36,6 +36,9 @@ cfg::ParamCount s_server_id(
 
 cfg::ParamSeconds s_net_timeout(
     &s_spec, "net_timeout", "Network timeout", cfg::INTERPRET_AS_SECONDS, 30s);
+
+cfg::ParamBool s_select_master(
+    &s_spec, "select_master", "Automatically select the master server", false);
 }
 
 namespace pinloki
@@ -97,6 +100,11 @@ std::chrono::seconds Config::net_timeout() const
     return m_net_timeout;
 }
 
+bool Config::select_master() const
+{
+    return m_select_master;
+}
+
 std::string gen_uuid()
 {
     char uuid_str[36 + 1];
@@ -114,5 +122,6 @@ Config::Config(const std::string& name)
     add_native(&m_binlog_dir, &s_datadir);
     add_native(&m_server_id, &s_server_id);
     add_native(&m_net_timeout, &s_net_timeout);
+    add_native(&m_select_master, &s_select_master);
 }
 }
