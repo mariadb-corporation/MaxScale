@@ -108,7 +108,13 @@ int64_t CsMonitorServer::Status::s_uptime = 1;
 CsMonitorServer::Result::Result(const http::Response& response)
     : response(response)
 {
-    mxb_assert(!response.is_client_error());
+#if defined(SS_DEBUG)
+    if (response.is_client_error())
+    {
+        MXS_ERROR("HTTP client error %d: %s", response.code, response.body.c_str());
+        mxb_assert(!true);
+    }
+#endif
 
     if (!response.body.empty())
     {
@@ -321,13 +327,13 @@ Status CsMonitorServer::fetch_status() const
 namespace
 {
 
-string begin_body(const std::chrono::seconds& timeout, const std::string& id)
+string begin_body(const std::chrono::seconds& timeout, int id)
 {
     ostringstream body;
     body << "{\"" << cs::keys::TIMEOUT << "\": "
          << timeout.count()
-         << ", \"" << cs::keys::TXN // MaxScale uses TRX, but Columnstore uses TXN.
-         << "\"" << id << "\""
+         << ", \"" << cs::keys::ID << "\": "
+         << id
          << "}";
 
     return body.str();
@@ -335,7 +341,7 @@ string begin_body(const std::chrono::seconds& timeout, const std::string& id)
 
 }
 
-Result CsMonitorServer::begin(const std::chrono::seconds& timeout, const std::string& id)
+Result CsMonitorServer::begin(const std::chrono::seconds& timeout, json_t* pOutput)
 {
     if (m_trx_state != TRX_INACTIVE)
     {
@@ -343,7 +349,8 @@ Result CsMonitorServer::begin(const std::chrono::seconds& timeout, const std::st
         mxb_assert(!true);
     }
 
-    http::Response response = http::put(create_url(cs::rest::BEGIN), begin_body(timeout, id),
+    http::Response response = http::put(create_url(cs::rest::BEGIN),
+                                        begin_body(timeout, m_context.next_trx_id()),
                                         m_context.http_config());
 
     if (response.is_success())
@@ -351,10 +358,17 @@ Result CsMonitorServer::begin(const std::chrono::seconds& timeout, const std::st
         m_trx_state = TRX_ACTIVE;
     }
 
-    return Result(response);
+    Result result(response);
+
+    if (!result.ok() && pOutput && result.sJson)
+    {
+        mxs_json_error_push_back(pOutput, result.sJson.get());
+    }
+
+    return result;
 }
 
-Result CsMonitorServer::commit()
+Result CsMonitorServer::commit(json_t* pOutput)
 {
     if (m_trx_state != TRX_ACTIVE)
     {
@@ -367,10 +381,17 @@ Result CsMonitorServer::commit()
     // Whatever the response, we consider a transaction as not being active.
     m_trx_state = TRX_INACTIVE;
 
-    return Result(response);
+    Result result(response);
+
+    if (!result.ok() && pOutput && result.sJson)
+    {
+        mxs_json_error_push_back(pOutput, result.sJson.get());
+    }
+
+    return result;
 }
 
-Result CsMonitorServer::rollback()
+Result CsMonitorServer::rollback(json_t* pOutput)
 {
     // Always ok to send a rollback.
     http::Response response = http::put(create_url(cs::rest::ROLLBACK), "{}", m_context.http_config());
@@ -378,15 +399,26 @@ Result CsMonitorServer::rollback()
     // Whatever the response, we consider a transaction as not being active.
     m_trx_state = TRX_INACTIVE;
 
-    return Result(response);
+    Result result(response);
+
+    if (!result.ok() && pOutput && result.sJson)
+    {
+        mxs_json_error_push_back(pOutput, result.sJson.get());
+    }
+
+    return result;
 }
 
-bool CsMonitorServer::set_mode(cs::ClusterMode mode, json_t** ppError)
+bool CsMonitorServer::set_cluster_mode(cs::ClusterMode mode,
+                                       const std::chrono::seconds& timeout,
+                                       json_t* pOutput)
 {
     ostringstream body;
     body << "{"
-         << "\"" << cs::keys::MODE << "\": "
-         << "\"" << cs::to_string(mode) << "\""
+         << "\"" << cs::keys::CLUSTER_MODE << "\": " << "\"" << cs::to_string(mode) << "\", "
+         << "\"" << cs::keys::REVISION << "\": " << m_context.revision() << ","
+         << "\"" << cs::keys::TIMEOUT << "\": " << timeout.count() << ","
+         << "\"" << cs::keys::MANAGER << "\": " << "\"" << m_context.manager() << "\""
          << "}";
 
     string url = create_url(cs::rest::CONFIG);
@@ -394,18 +426,11 @@ bool CsMonitorServer::set_mode(cs::ClusterMode mode, json_t** ppError)
 
     if (!response.is_success())
     {
-        LOG_APPEND_JSON_ERROR(ppError, "Could not set cluster mode.");
+        Result result(response);
 
-        json_error_t error;
-        unique_ptr<json_t> sError(json_loadb(response.body.c_str(), response.body.length(), 0, &error));
-
-        if (sError)
+        if (result.sJson)
         {
-            mxs_json_error_push_back_new(*ppError, sError.release());
-        }
-        else
-        {
-            MXS_ERROR("Body returned by Columnstore is not JSON: %s", response.body.c_str());
+            mxs_json_error_push_back(pOutput, result.sJson.get());
         }
     }
 
@@ -518,7 +543,6 @@ bool CsMonitorServer::fetch_configs(const std::vector<CsMonitorServer*>& servers
 //static
 bool CsMonitorServer::begin(const std::vector<CsMonitorServer*>& servers,
                             const std::chrono::seconds& timeout,
-                            const std::string& id,
                             CsContext& context,
                             Results* pResults)
 {
@@ -534,7 +558,9 @@ bool CsMonitorServer::begin(const std::vector<CsMonitorServer*>& servers,
     }
 
     vector<string> urls = create_urls(servers, cs::rest::BEGIN);
-    vector<http::Response> responses = http::put(urls, begin_body(timeout, id), context.http_config());
+    vector<http::Response> responses = http::put(urls,
+                                                 begin_body(timeout, context.next_trx_id()),
+                                                 context.http_config());
 
     mxb_assert(urls.size() == responses.size());
 
@@ -578,11 +604,10 @@ bool CsMonitorServer::begin(const std::vector<CsMonitorServer*>& servers,
 //static
 Results CsMonitorServer::begin(const std::vector<CsMonitorServer*>& servers,
                                const std::chrono::seconds& timeout,
-                               const std::string& id,
                                CsContext& context)
 {
     Results rv;
-    begin(servers, timeout, id, context, &rv);
+    begin(servers, timeout, context, &rv);
     return rv;
 }
 
@@ -724,6 +749,23 @@ Results CsMonitorServer::shutdown(const std::vector<CsMonitorServer*>& servers,
     return rv;
 }
 
+namespace
+{
+
+string shutdown_body(const std::chrono::seconds& timeout)
+{
+    ostringstream body;
+    body << "{";
+
+    body << "\"" << cs::keys::TIMEOUT << "\": " << timeout.count();
+
+    body << "}";
+
+    return body.str();
+}
+
+}
+
 //static
 bool CsMonitorServer::shutdown(const std::vector<CsMonitorServer*>& servers,
                                const std::chrono::seconds& timeout,
@@ -732,15 +774,8 @@ bool CsMonitorServer::shutdown(const std::vector<CsMonitorServer*>& servers,
 {
     bool rv = true;
 
-    string tail;
-    if (timeout.count() != 0)
-    {
-        tail += "timeout=";
-        tail += std::to_string(timeout.count());
-    }
-
-    vector<string> urls = create_urls(servers, cs::rest::SHUTDOWN, tail);
-    vector<http::Response> responses = http::put(urls, "{}", context.http_config());
+    vector<string> urls = create_urls(servers, cs::rest::SHUTDOWN);
+    vector<http::Response> responses = http::put(urls, shutdown_body(timeout), context.http_config());
 
     mxb_assert(urls.size() == responses.size());
 
@@ -802,22 +837,65 @@ bool CsMonitorServer::start(const std::vector<CsMonitorServer*>& servers,
 }
 
 //static
-bool CsMonitorServer::set_mode(const std::vector<CsMonitorServer*>& servers,
-                               cs::ClusterMode mode,
-                               CsContext& context,
-                               json_t** ppError)
+bool CsMonitorServer::set_cluster_mode(const std::vector<CsMonitorServer*>& servers,
+                                       cs::ClusterMode mode,
+                                       const std::chrono::seconds& timeout,
+                                       CsContext& context,
+                                       json_t* pOutput)
 {
     bool rv = false;
 
-    Statuses statuses;
+    CsMonitorServer* pMaster = get_master(servers, context, pOutput);
 
+    if (pMaster)
+    {
+        Result result = pMaster->begin(timeout, pOutput);
+
+        if (result.ok())
+        {
+            if (pMaster->set_cluster_mode(cs::READWRITE, timeout, pOutput))
+            {
+                rv = true;
+            }
+
+            if (rv)
+            {
+                result = pMaster->commit(pOutput);
+
+                if (!result.ok())
+                {
+                    rv = false;
+                }
+            }
+
+            if (!rv)
+            {
+                result = pMaster->rollback(pOutput);
+                if (!result.ok())
+                {
+                    MXS_ERROR("Could not rollback transaction.");
+                }
+            }
+        }
+    }
+
+    return rv;
+}
+
+//static
+CsMonitorServer* CsMonitorServer::get_master(const std::vector<CsMonitorServer*>& servers,
+                                             CsContext& context,
+                                             json_t* pOutput)
+{
+    CsMonitorServer* pMaster = nullptr;
+
+    Statuses statuses;
     if (!fetch_statuses(servers, context, &statuses))
     {
         MXS_ERROR("Could not fetch the status of all servers. Will continue with the mode change "
                   "if single DBMR master was refreshed.");
     }
 
-    CsMonitorServer* pMaster = nullptr;
     int nMasters = 0;
 
     auto it = servers.begin();
@@ -844,20 +922,16 @@ bool CsMonitorServer::set_mode(const std::vector<CsMonitorServer*>& servers,
 
     if (nMasters == 0)
     {
-        LOG_APPEND_JSON_ERROR(ppError, "No DBRM master found, mode change cannot be performed.");
+        LOG_APPEND_JSON_ERROR(&pOutput, "No DBRM master found, mode change cannot be performed.");
     }
     else if (nMasters != 1)
     {
-        LOG_APPEND_JSON_ERROR(ppError,
+        LOG_APPEND_JSON_ERROR(&pOutput,
                               "%d masters found. Splitbrain situation, mode change cannot be performed.",
                               nMasters);
     }
-    else
-    {
-        rv = pMaster->set_mode(mode, ppError);
-    }
 
-    return rv;
+    return pMaster;
 }
 
 //static

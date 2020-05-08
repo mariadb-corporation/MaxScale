@@ -195,6 +195,11 @@ public:
         return m_state == UNKNOWN;
     }
 
+    void set_mode(State state)
+    {
+        m_state = state;
+    }
+
     enum TrxState
     {
         TRX_ACTIVE,
@@ -211,11 +216,13 @@ public:
         return m_trx_state == TRX_ACTIVE;
     }
 
-    Result begin(const std::chrono::seconds& timeout, const std::string& id);
-    Result rollback();
-    Result commit();
+    Result begin(const std::chrono::seconds& timeout, json_t* pOutput = nullptr);
+    Result rollback(json_t* pOutput = nullptr);
+    Result commit(json_t* pOutput = nullptr);
 
-    bool set_mode(cs::ClusterMode mode, json_t** ppError = nullptr);
+    bool set_cluster_mode(cs::ClusterMode mode,
+                          const std::chrono::seconds& timeout,
+                          json_t* pOutput = nullptr);
     bool set_config(const std::string& body, json_t** ppError = nullptr);
 
     static Statuses fetch_statuses(const std::vector<CsMonitorServer*>& servers,
@@ -232,11 +239,9 @@ public:
 
     static Results begin(const std::vector<CsMonitorServer*>& servers,
                          const std::chrono::seconds& timeout,
-                         const std::string& id,
                          CsContext& context);
     static bool begin(const std::vector<CsMonitorServer*>& servers,
                       const std::chrono::seconds& timeout,
-                      const std::string& id,
                       CsContext& context,
                       Results* pResults);
     static Results commit(const std::vector<CsMonitorServer*>& servers,
@@ -261,10 +266,14 @@ public:
     static bool start(const std::vector<CsMonitorServer*>& servers,
                       CsContext& context,
                       Results* pResults);
-    static bool set_mode(const std::vector<CsMonitorServer*>& servers,
-                         cs::ClusterMode mode,
-                         CsContext& context,
-                         json_t** ppError = nullptr);
+    static bool set_cluster_mode(const std::vector<CsMonitorServer*>& servers,
+                                 cs::ClusterMode mode,
+                                 const std::chrono::seconds& timeout,
+                                 CsContext& context,
+                                 json_t* pOutput = nullptr);
+    static CsMonitorServer* get_master(const std::vector<CsMonitorServer*>& servers,
+                                       CsContext& context,
+                                       json_t* pOutput = nullptr);
 
     static bool set_config(const std::vector<CsMonitorServer*>& servers,
                            const std::string& body,

@@ -267,13 +267,6 @@ size_t results_to_json(const vector<CsMonitorServer*>& servers,
     return n;
 }
 
-string next_trx_id(const char* zWhat)
-{
-    static int64_t id = 1;
-
-    return string("maxscale-") + zWhat + string("-") + std::to_string(id++);
-}
-
 }
 
 
@@ -1044,7 +1037,8 @@ void CsMonitor::cs_mode_set(json_t** ppOutput, mxb::Semaphore* pSem, cs::Cluster
 
     const ServerVector& sv = servers();
 
-    success = CsMonitorServer::set_mode(sv, mode, m_context, &pOutput);
+    std::chrono::seconds timeout {1};
+    success = CsMonitorServer::set_cluster_mode(sv, mode, timeout, m_context, pOutput);
 
     if (success)
     {
@@ -1075,10 +1069,8 @@ void CsMonitor::cs_remove_node(json_t** ppOutput,
 
     ServerVector sv = servers();
 
-    string trx_id = next_trx_id("remove-node");
-
     Results results;
-    if (CsMonitorServer::begin(sv, timeout, trx_id, m_context, &results))
+    if (CsMonitorServer::begin(sv, timeout, m_context, &results))
     {
         CsMonitorServer::Statuses statuses;
         if (CsMonitorServer::fetch_statuses(sv, m_context, &statuses))
@@ -1099,42 +1091,73 @@ void CsMonitor::cs_remove_node(json_t** ppOutput,
                 statuses.erase(statuses.begin() + offset);
                 configs.erase(configs.begin() + offset);
 
-                // Configs should be the same, but nonetheless the one whose uptime is
-                // the longest should be chosen.
-                auto jt = std::max_element(statuses.begin(), statuses.end(), [](const auto&l, const auto& r)
-                                           {
-                                               return l.uptime < r.uptime;
-                                           });
-
-                offset = jt - statuses.begin();
-
-                auto& config = *(configs.begin() + offset);
-
-                string ddlproc_ip;
-                string dmlproc_ip;
-                if (config.get_ddlproc_ip(&ddlproc_ip, pOutput)
-                    && config.get_dmlproc_ip(&dmlproc_ip, pOutput))
+                if (sv.size() != 0)
                 {
-                    bool is_critical =
-                        pRemove_server->address() == ddlproc_ip
-                        || pRemove_server->address() == dmlproc_ip;
+                    // Configs should be the same, but nonetheless the one whose uptime is
+                    // the longest should be chosen.
+                    auto jt = std::max_element(statuses.begin(), statuses.end(),
+                                               [](const auto&l, const auto& r)
+                                               {
+                                                   return l.uptime < r.uptime;
+                                               });
 
-                    string body = create_remove_config(config, pRemove_server, force, is_critical);
+                    offset = jt - statuses.begin();
 
-                    Results results;
-                    if (CsMonitorServer::set_config(sv, body, m_context, &results))
+                    auto& config = *(configs.begin() + offset);
+
+                    string ddlproc_ip;
+                    string dmlproc_ip;
+                    if (config.get_ddlproc_ip(&ddlproc_ip, pOutput)
+                        && config.get_dmlproc_ip(&dmlproc_ip, pOutput))
                     {
-                        success = true;
+                        bool is_critical =
+                            pRemove_server->address() == ddlproc_ip
+                            || pRemove_server->address() == dmlproc_ip;
+
+                        string body = create_remove_config(config, pRemove_server, force, is_critical);
+
+                        Results results;
+                        if (CsMonitorServer::set_config(sv, body, m_context, &results))
+                        {
+                            success = true;
+                        }
+                        else
+                        {
+                            LOG_APPEND_JSON_ERROR(&pOutput, "Could not send new config to all servers.");
+                            results_to_json(sv, results, &pServers);
+                        }
                     }
                     else
                     {
-                        LOG_APPEND_JSON_ERROR(&pOutput, "Could not send new config to all servers.");
-                        results_to_json(sv, results, &pServers);
+                        LOG_PREPEND_JSON_ERROR(&pOutput, "Could not find current DDLProc/DMLProc.");
                     }
                 }
-                else
+
+                if (success)
                 {
-                    LOG_PREPEND_JSON_ERROR(&pOutput, "Could not find current DDLProc/DMLProc.");
+                    int n;
+                    n = cs::remove(*remove_config.sXml.get(), "//ClusterManager");
+                    mxb_assert(n == 1);
+                    n = cs::update_if_not(*remove_config.sXml.get(), "//IPAddr", "127.0.0.1", "0.0.0.0");
+                    mxb_assert(n >= 0);
+
+                    xmlChar* pConfig = nullptr;
+                    int size = 0;
+
+                    xmlDocDumpMemory(remove_config.sXml.get(), &pConfig, &size);
+
+                    json_t* pBody = json_object();
+                    json_object_set_new(pBody, cs::keys::CONFIG,
+                                        json_stringn(reinterpret_cast<const char*>(pConfig), size));
+                    xmlFree(pConfig);
+
+                    char* zBody = json_dumps(pBody, 0);
+                    json_decref(pBody);
+
+                    if (pRemove_server->set_config(zBody, &pOutput))
+                    {
+                        MXS_NOTICE("Updated config on '%s'.", pRemove_server->name());
+                    }
                 }
             }
             else
@@ -1154,6 +1177,8 @@ void CsMonitor::cs_remove_node(json_t** ppOutput,
         LOG_APPEND_JSON_ERROR(&pOutput, "Could not start a transaction on all nodes.");
         results_to_json(sv, results, &pServers);
     }
+
+    sv = servers();
 
     if (success)
     {
@@ -1213,10 +1238,8 @@ void CsMonitor::cs_scan(json_t** ppOutput,
 
     const ServerVector& sv = servers();
 
-    string trx_id = next_trx_id("scan");
-
     Results results;
-    if (CsMonitorServer::begin(sv, timeout, trx_id, m_context, &results))
+    if (CsMonitorServer::begin(sv, timeout, m_context, &results))
     {
         auto status = pServer->fetch_status();
         if (status.ok())
@@ -1324,7 +1347,7 @@ void CsMonitor::cs_shutdown(json_t** ppOutput,
     if (timeout != std::chrono::seconds(0))
     {
         // If there is a timeout, then the cluster must first be made read-only.
-        success = CsMonitorServer::set_mode(sv, cs::READONLY, m_context, &pOutput);
+        success = CsMonitorServer::set_cluster_mode(sv, cs::READONLY, timeout, m_context, pOutput);
 
         if (!success)
         {
@@ -1340,7 +1363,7 @@ void CsMonitor::cs_shutdown(json_t** ppOutput,
 
         if (n == sv.size())
         {
-            message << "Columnstore cluster shut down.";
+            message << "Cluster shut down.";
         }
         else
         {
@@ -1377,21 +1400,22 @@ void CsMonitor::cs_start(json_t** ppOutput, mxb::Semaphore* pSem, const std::chr
 
     if (n == sv.size())
     {
-        success = CsMonitorServer::set_mode(sv, cs::READWRITE, m_context, &pOutput);
+        message << "Cluster started successfully, ";
 
-        if (success)
+        if (CsMonitorServer::set_cluster_mode(sv, cs::READWRITE, timeout, m_context, pOutput))
         {
-            message << "All servers in cluster started successfully and cluster made readwrite.";
+            success = true;
+            message << "and made readwrite.";
         }
         else
         {
-            message << "All servers in cluster started successfully, but cluster could not be "
-                    << "made readwrite.";
+            message << "but could not be made readwrite.";
         }
     }
     else
     {
-        message << n << " servers out of " << servers().size() << " started successfully.";
+        message << n << " servers out of " << servers().size() << " started successfully, "
+                << "cluster left in a readonly state.";
     }
 
     json_object_set_new(pOutput, csmon::keys::SUCCESS, json_boolean(success));
@@ -1466,8 +1490,7 @@ void CsMonitor::cs_begin(json_t** ppOutput,
         sv = servers();
     }
 
-    string trx_id = next_trx_id("begin");
-    Results results = CsMonitorServer::begin(sv, timeout, trx_id, m_context);
+    Results results = CsMonitorServer::begin(sv, timeout, m_context);
 
     json_t* pServers = nullptr;
     size_t n = results_to_json(sv, results, &pServers);
@@ -1582,21 +1605,18 @@ bool CsMonitor::cs_add_first_multi_node(json_t* pOutput,
 
     mxb_assert(pServer->is_single_node());
 
-    string trx_id = next_trx_id("add-node");
-
-    auto result = pServer->begin(timeout, trx_id);
+    auto result = pServer->begin(timeout);
 
     if (result.ok())
     {
-        const char* zTrx_id = trx_id.c_str();
         const char* zName = pServer->name();
 
-        CS_DEBUG("%s: Started transaction on '%s'.", zTrx_id, zName);
+        CS_DEBUG("Started transaction on '%s'.", zName);
         auto config = pServer->fetch_config();
 
         if (config.ok())
         {
-            CS_DEBUG("%s: Fetched current config from '%s'.", zTrx_id, zName);
+            CS_DEBUG("Fetched current config from '%s'.", zName);
 
             cs::upsert(*config.sXml, "ClusterManager", m_context.config().local_address.c_str());
             int n = cs::update_if(*config.sXml, "//IPAddr", pServer->address(), "127.0.0.1");
@@ -1610,6 +1630,10 @@ bool CsMonitor::cs_add_first_multi_node(json_t* pOutput,
             json_t* pBody = json_object();
             json_object_set_new(pBody, cs::keys::CONFIG,
                                 json_stringn(reinterpret_cast<const char*>(pConfig), size));
+            json_object_set_new(pBody, cs::keys::REVISION, json_integer(1));
+            json_object_set_new(pBody, cs::keys::MANAGER, json_string("MaxScale"));
+            json_object_set_new(pBody, cs::keys::TIMEOUT, json_integer(timeout.count()));
+
             xmlFree(pConfig);
 
             char* zBody = json_dumps(pBody, 0);
@@ -1617,13 +1641,13 @@ bool CsMonitor::cs_add_first_multi_node(json_t* pOutput,
 
             if (pServer->set_config(zBody, &pOutput))
             {
-                MXS_NOTICE("%s: Updated config on '%s'.", zTrx_id, zName);
+                MXS_NOTICE("Updated config on '%s'.", zName);
 
                 result = pServer->commit();
 
                 if (result.ok())
                 {
-                    MXS_NOTICE("%s: Committed changes on '%s'.", zTrx_id, zName);
+                    MXS_NOTICE("Committed changes on '%s'.", zName);
                     success = true;
                 }
                 else
@@ -1649,7 +1673,11 @@ bool CsMonitor::cs_add_first_multi_node(json_t* pOutput,
             }
         }
 
-        if (!success)
+        if (success)
+        {
+            pServer->set_mode(CsMonitorServer::MULTI_NODE);
+        }
+        else
         {
             result = pServer->rollback();
 
@@ -1661,7 +1689,8 @@ bool CsMonitor::cs_add_first_multi_node(json_t* pOutput,
     }
     else
     {
-        LOG_APPEND_JSON_ERROR(&pOutput, "Could not start a transaction on '%s'.", pServer->name());
+        LOG_APPEND_JSON_ERROR(&pOutput, "Could not start a transaction on '%s': %s",
+                              pServer->name(), result.response.body.c_str());
     }
 
     return success;
@@ -1676,10 +1705,8 @@ bool CsMonitor::cs_add_additional_multi_node(json_t* pOutput,
 
     const ServerVector& sv = servers();
 
-    string trx_id = next_trx_id("add-node");
-
     Results results;
-    if (CsMonitorServer::begin(sv, timeout, trx_id, m_context, &results))
+    if (CsMonitorServer::begin(sv, timeout, m_context, &results))
     {
         auto status = pServer->fetch_status();
 

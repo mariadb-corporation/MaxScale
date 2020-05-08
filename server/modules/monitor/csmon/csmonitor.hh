@@ -126,6 +126,7 @@ private:
 
 private:
     CsMonitor(const std::string& name, const std::string& module);
+
     bool configure(const mxs::ConfigParameters* pParams) override;
 
     CsContext m_context;

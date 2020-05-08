@@ -241,4 +241,3 @@ bool CsConfig::check_invalid()
 
     return rv;
 }
-
