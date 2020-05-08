@@ -36,8 +36,11 @@ void print_usage_and_exit()
          << "remove xpath-expr\n"
          << "    Remove key(s)\n"
          << "\n"
-         << "update xpath-expr new_value [if_value]\n"
+         << "update_if xpath-expr new_value [if_value]\n"
          << "    Update value at path, optionally only if existing value matches specified value\n"
+         << "\n"
+         << "update_if_not xpath-expr new_value [if_value]\n"
+         << "    Update value at path, optionally only if existing value does not match specified value\n"
          << "\n"
          << "upsert xpath-expr new_value\n"
          << "    Update value of matching key(s), or insert new value.\n"
@@ -70,7 +73,7 @@ void remove(xmlDoc& xml, int argc, char* argv[])
     cs::remove(xml, zXpath);
 }
 
-void update(xmlDoc& xml, int argc, char* argv[])
+void update_if(xmlDoc& xml, int argc, char* argv[])
 {
     if (argc < 2)
     {
@@ -82,6 +85,20 @@ void update(xmlDoc& xml, int argc, char* argv[])
     const char* zIf_value = argc == 3 ? argv[2] : nullptr;
 
     cs::update_if(xml, zXpath, zNew_value, zIf_value);
+}
+
+void update_if_not(xmlDoc& xml, int argc, char* argv[])
+{
+    if (argc < 2)
+    {
+        print_usage_and_exit();
+    }
+
+    const char* zXpath = argv[0];
+    const char* zNew_value = argv[1];
+    const char* zIf_value = argc == 3 ? argv[2] : nullptr;
+
+    cs::update_if_not(xml, zXpath, zNew_value, zIf_value);
 }
 
 void upsert(xmlDoc& xml, int argc, char* argv[])
@@ -102,7 +119,8 @@ map<string, void (*)(xmlDoc&, int, char**)> commands =
 {
     { "insert", &insert },
     { "remove", &remove },
-    { "update", &update },
+    { "update_if", &update_if },
+    { "update_if_not", &update_if_not },
     { "upsert", &upsert }
 };
 

@@ -243,7 +243,13 @@ bool services_from_array(json_t* pArray, Services* pServices)
 namespace
 {
 
-int update_if(xmlNodeSet* pNodes, const char* zNew_value, const char* zIf_value)
+enum class UpdateWhen
+{
+    IF,
+    IF_NOT
+};
+
+int update(xmlNodeSet* pNodes, const char* zNew_value, const char* zIf_value, UpdateWhen update_when)
 {
     int n = 0;
     int nNodes = pNodes ? pNodes->nodeNr : 0;
@@ -268,7 +274,18 @@ int update_if(xmlNodeSet* pNodes, const char* zNew_value, const char* zIf_value)
             zValue = reinterpret_cast<const char*>(xmlNodeGetContent(pNode));
         }
 
-        if (!zIf_value || (zValue && strcmp(zIf_value, zValue) == 0))
+        bool do_update = false;
+
+        if (update_when == UpdateWhen::IF)
+        {
+            do_update = !zIf_value || (zValue && strcmp(zIf_value, zValue) == 0);
+        }
+        else
+        {
+            do_update = !zIf_value || (!zValue || strcmp(zIf_value, zValue) != 0);
+        }
+
+        if (do_update)
         {
             ++n;
             xmlNodeSetContent(pNode, reinterpret_cast<const xmlChar*>(zNew_value));
@@ -301,10 +318,11 @@ int update_if(xmlNodeSet* pNodes, const char* zNew_value, const char* zIf_value)
     return n;
 }
 
-int update_if(xmlXPathContext& xpathContext,
-              const char* zXpath,
-              const char* zNew_value,
-              const char* zIf_value)
+int update(xmlXPathContext& xpathContext,
+           const char* zXpath,
+           const char* zNew_value,
+           const char* zIf_value,
+           UpdateWhen update_when)
 {
     int n = -1;
 
@@ -314,7 +332,7 @@ int update_if(xmlXPathContext& xpathContext,
 
     if (pXpath_object)
     {
-        n = update_if(pXpath_object->nodesetval, zNew_value, zIf_value);
+        n = update(pXpath_object->nodesetval, zNew_value, zIf_value, update_when);
         xmlXPathFreeObject(pXpath_object);
     }
 
@@ -332,7 +350,23 @@ int update_if(xmlDoc& xmlDoc, const char* zXpath, const char* zNew_value, const 
 
     if (pXpath_context)
     {
-        n = update_if(*pXpath_context, zXpath, zNew_value, zIf_value);
+        n = update(*pXpath_context, zXpath, zNew_value, zIf_value, UpdateWhen::IF);
+        xmlXPathFreeContext(pXpath_context);
+    }
+
+    return n;
+}
+
+int update_if_not(xmlDoc& xmlDoc, const char* zXpath, const char* zNew_value, const char* zIf_value)
+{
+    int n = -1;
+
+    xmlXPathContext* pXpath_context = xmlXPathNewContext(&xmlDoc);
+    mxb_assert(pXpath_context);
+
+    if (pXpath_context)
+    {
+        n = update(*pXpath_context, zXpath, zNew_value, zIf_value, UpdateWhen::IF_NOT);
         xmlXPathFreeContext(pXpath_context);
     }
 
