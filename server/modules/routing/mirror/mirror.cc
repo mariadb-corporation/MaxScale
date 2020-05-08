@@ -119,7 +119,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 CN_EXPORTER,
                 MXS_MODULE_PARAM_ENUM,
                 nullptr,
-                MXS_MODULE_OPT_REQUIRED,
+                MXS_MODULE_OPT_REQUIRED | MXS_MODULE_OPT_ENUM_UNIQUE,
                 exporter_type_values
             },
             {

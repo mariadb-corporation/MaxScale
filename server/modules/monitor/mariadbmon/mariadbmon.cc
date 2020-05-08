@@ -1241,7 +1241,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             {
                 CLUSTER_OP_REQUIRE_LOCKS,            MXS_MODULE_PARAM_ENUM,
                 lock_none.name,
-                MXS_MODULE_OPT_NONE,                 require_lock_values
+                MXS_MODULE_OPT_ENUM_UNIQUE,          require_lock_values
             },
             {MXS_END_MODULE_PARAMS}
         }

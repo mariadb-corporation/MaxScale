@@ -2306,7 +2306,7 @@ ParamEnumMask<T>::ParamEnumMask(Specification* pSpecification,
 template<class T>
 std::string ParamEnumMask<T>::type() const
 {
-    return "enum";
+    return "enum_mask";
 }
 
 template<class T>

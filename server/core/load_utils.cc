@@ -479,9 +479,19 @@ bool modulecmd_cb(const MODULECMD* cmd, void* data)
 static json_t* module_param_to_json(const MXS_MODULE_PARAM& param)
 {
     json_t* p = json_object();
+    const char* type;
+
+    if (param.type == MXS_MODULE_PARAM_ENUM && param.options & MXS_MODULE_OPT_ENUM_UNIQUE)
+    {
+        type = "enum_mask";
+    }
+    else
+    {
+        mxs_module_param_type_to_string(param.type);
+    }
 
     json_object_set_new(p, CN_NAME, json_string(param.name));
-    json_object_set_new(p, CN_TYPE, json_string(mxs_module_param_type_to_string(param.type)));
+    json_object_set_new(p, CN_TYPE, json_string(type));
 
     if (param.default_value)
     {
