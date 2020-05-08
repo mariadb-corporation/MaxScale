@@ -382,7 +382,7 @@ int upsert(xmlDoc& xmlDoc, const char* zXpath, const char* zValue, XmlLocation l
 
     if (rv == 0)
     {
-        // We assume zXPath is like "/key" or "//key".
+        // We assume zXpath is like "/key" or "//key".
         string key(zXpath);
         auto pos = key.find_last_of("/");
 
@@ -400,6 +400,73 @@ int upsert(xmlDoc& xmlDoc, const char* zXpath, const char* zValue, XmlLocation l
     return rv;
 }
 
+namespace
+{
+
+int remove(xmlNodeSet* pNodes)
+{
+    int nNodes = pNodes ? pNodes->nodeNr : 0;
+
+    // From the XML sample.
+    /*
+     * NOTE: the nodes are processed in reverse order, i.e. reverse document
+     *       order because xmlNodeSetContent can actually free up descendant
+     *       of the node and such nodes may have been selected too ! Handling
+     *       in reverse order ensure that descendant are accessed first, before
+     *       they get removed. Mixing XPath and modifications on a tree must be
+     *       done carefully !
+     */
+
+    for (int i = nNodes - 1; i >= 0; --i)
+    {
+        const char* zValue = nullptr;
+        auto* pNode = pNodes->nodeTab[i];
+
+        if (pNode->type != XML_NAMESPACE_DECL)
+        {
+            pNodes->nodeTab[i] = NULL;
+        }
+
+        xmlUnlinkNode(pNode);
+        xmlFreeNode(pNode);
+    }
+
+    return nNodes;
+}
+
+int remove(xmlXPathContext& xpathContext, const char* zXpath)
+{
+    int n = -1;
+
+    xmlXPathObject* pXpath_object = xmlXPathEvalExpression(reinterpret_cast<const xmlChar*>(zXpath),
+                                                           &xpathContext);
+    mxb_assert(pXpath_object);
+
+    if (pXpath_object)
+    {
+        n = remove(pXpath_object->nodesetval);
+        xmlXPathFreeObject(pXpath_object);
+    }
+
+    return n;
+}
+
+}
+
+int remove(xmlDoc& xmlDoc, const char* zXpath)
+{
+    int n = -1;
+    xmlXPathContext* pXpath_context = xmlXPathNewContext(&xmlDoc);
+    mxb_assert(pXpath_context);
+
+    if (pXpath_context)
+    {
+        n = remove(*pXpath_context, zXpath);
+        xmlXPathFreeContext(pXpath_context);
+    }
+
+    return n;
+}
 
 std::string rest::create_url(const SERVER& server,
                              int64_t port,

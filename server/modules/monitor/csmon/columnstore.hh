@@ -114,6 +114,17 @@ int upsert(xmlDoc& xmlDoc,
            const char* zValue,
            XmlLocation location = XmlLocation::AT_BEGINNING);
 
+/**
+ * Remove key(s)
+ *
+ * @param xmlDoc   The XML document.
+ * @param zXpath   The XML path identifying the key(s).
+ *
+ * @return -1 in case of some low-level error (that outside development should not occur), otherwise
+ *         the number of removed keys.
+ */
+int remove(xmlDoc& xmlDoc, const char* zXPath);
+
 namespace keys
 {
 

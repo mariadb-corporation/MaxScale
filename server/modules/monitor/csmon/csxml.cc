@@ -32,6 +32,10 @@ void print_usage_and_exit()
          << "insert key value\n"
          << "    Unconditionally insert new key/value pair.\n"
          << "\n"
+         << "\n"
+         << "remove xpath-expr\n"
+         << "    Remove key(s)\n"
+         << "\n"
          << "update xpath-expr new_value [if_value]\n"
          << "    Update value at path, optionally only if existing value matches specified value\n"
          << "\n"
@@ -54,7 +58,19 @@ void insert(xmlDoc& xml, int argc, char* argv[])
     cs::insert(xml, zKey, zValue);
 }
 
-void replace(xmlDoc& xml, int argc, char* argv[])
+void remove(xmlDoc& xml, int argc, char* argv[])
+{
+    if (argc < 1)
+    {
+        print_usage_and_exit();
+    }
+
+    const char* zXpath = argv[0];
+
+    cs::remove(xml, zXpath);
+}
+
+void update(xmlDoc& xml, int argc, char* argv[])
 {
     if (argc < 2)
     {
@@ -85,7 +101,8 @@ void upsert(xmlDoc& xml, int argc, char* argv[])
 map<string, void (*)(xmlDoc&, int, char**)> commands =
 {
     { "insert", &insert },
-    { "update", &replace },
+    { "remove", &remove },
+    { "update", &update },
     { "upsert", &upsert }
 };
 
