@@ -209,6 +209,13 @@ void PinlokiSession::select(const std::vector<std::string>& fields)
         "@@global.gtid_binlog_pos"
     };
 
+    static const std::set<std::string> version_vars =
+    {
+        "version()",
+        "@@version",
+        "@@global.version"
+    };
+
     auto values = fields;
 
     for (auto& a : values)
@@ -217,6 +224,14 @@ void PinlokiSession::select(const std::vector<std::string>& fields)
         if (val == "unix_timestamp()")
         {
             a = std::to_string(time(nullptr));
+        }
+        else if (version_vars.count(val))
+        {
+            a = m_pSession->service->version_string();
+        }
+        else if (val == "@@version_comment")
+        {
+            a = "";     // No version comment
         }
         else if (val == "@@global.gtid_domain_id")
         {
