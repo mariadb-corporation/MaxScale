@@ -116,6 +116,17 @@ public:
     {
         return m_is_valid;
     }
+
+    /**
+     * Is the given GTID behind this GTID
+     *
+     * @param other The other GTID to compare to
+     *
+     * @return True if all GTID domains in `other` are present and all sequences in
+     *         those domains compare less than or equal.
+     */
+    bool is_included(const GtidList& other) const;
+
 private:
     void sort();
 

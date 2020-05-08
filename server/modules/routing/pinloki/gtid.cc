@@ -121,6 +121,24 @@ void GtidList::sort()
               });
 }
 
+bool GtidList::is_included(const GtidList& other) const
+{
+    for (const auto& gtid : other.gtids())
+    {
+        auto it = std::find_if(
+            m_gtids.begin(), m_gtids.end(), [&](const Gtid& g) {
+                return g.domain_id() == gtid.domain_id();
+            });
+
+        if (it == m_gtids.end() || it->sequence_nr() < gtid.sequence_nr())
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 std::ostream& operator<<(std::ostream& os, const GtidList& lst)
 {
     os << lst.to_string();

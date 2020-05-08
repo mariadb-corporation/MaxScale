@@ -287,7 +287,7 @@ GWBUF* Pinloki::show_slave_status() const
     rset->add_column("Master_SSL_Crl", "");
     rset->add_column("Master_SSL_Crlpath", "");
     rset->add_column("Using_Gtid", "Slave_Pos");
-    rset->add_column("Gtid_IO_Pos", gtid_io_pos());
+    rset->add_column("Gtid_IO_Pos", gtid_io_pos().to_string());
     rset->add_column("Replicate_Do_Domain_Ids", "");
     rset->add_column("Replicate_Ignore_Domain_Ids", "");
     rset->add_column("Parallel_Mode", "conservative");
@@ -307,9 +307,10 @@ void Pinloki::set_gtid(const mxq::GtidList& gtid)
     m_config.set_boot_strap_gtid_list(gtid.to_string());
 }
 
-std::string Pinloki::gtid_io_pos() const
+mxq::GtidList Pinloki::gtid_io_pos() const
 {
-    return m_writer ? m_writer->get_gtid_io_pos().to_string() : "";
+    return m_writer ? m_writer->get_gtid_io_pos() :
+           mxq::GtidList::from_string(m_config.boot_strap_gtid_list());
 }
 
 void Pinloki::MasterConfig::save(const Config& config) const

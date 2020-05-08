@@ -21,6 +21,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+using std::chrono::duration_cast;
+using std::chrono::seconds;
+using std::chrono::steady_clock;
+
 namespace
 {
 
@@ -245,7 +249,7 @@ void PinlokiSession::select(const std::vector<std::string>& fields)
         }
         else if (gtid_pos_sel_var.count(val))
         {
-            a = m_router->gtid_io_pos();
+            a = m_router->gtid_io_pos().to_string();
         }
     }
 
@@ -386,7 +390,7 @@ void PinlokiSession::show_variables(const std::string& like)
     }
     else if (gtid_pos_var.count(val))
     {
-        values = {like, m_router->gtid_io_pos()};
+        values = {like, m_router->gtid_io_pos().to_string()};
     }
 
     send(create_resultset({"Variable_name", "Value"}, values));
@@ -394,9 +398,43 @@ void PinlokiSession::show_variables(const std::string& like)
 
 void PinlokiSession::master_gtid_wait(const std::string& gtid, int timeout)
 {
-    std::ostringstream ss;
-    ss << "master_gtid_wait('" << gtid << "', " << timeout << ")";
-    send(create_resultset({ss.str()}, {"1"}));
+    auto header = "master_gtid_wait('" + gtid + "', " + std::to_string(timeout) + ")";
+    auto target = mxq::GtidList::from_string(gtid);
+    auto start = steady_clock::now();
+
+    auto cb = [this, start, target, timeout, header](auto action) {
+            bool again = false;
+
+            if (action == mxb::Worker::Call::EXECUTE)
+            {
+                if (m_router->gtid_io_pos().is_included(target))
+                {
+                    send(create_resultset({header}, {"0"}));
+                }
+                else if (duration_cast<seconds>(steady_clock::now() - start).count() > timeout)
+                {
+                    send(create_resultset({header}, {"-1"}));
+                }
+                else
+                {
+                    again = true;
+                }
+            }
+
+            return again;
+        };
+
+    if (target.is_valid())
+    {
+        if (cb(mxb::Worker::Call::EXECUTE))
+        {
+            mxs::RoutingWorker::get_current()->delayed_call(1000, cb);
+        }
+    }
+    else
+    {
+        send(create_resultset({header}, {"-1"}));
+    }
 }
 
 void PinlokiSession::purge_logs(const std::string& up_to)
