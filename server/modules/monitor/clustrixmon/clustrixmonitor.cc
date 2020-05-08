@@ -192,6 +192,13 @@ sqlite3* open_or_create_db(const std::string& path)
 
     return pDb;
 }
+
+void run_in_mainworker(const function<void(void)>& func)
+{
+    auto mw = mxs::MainWorker::get();
+    // Using the semaphore-version of 'execute' to wait until completion causes deadlock. Reason unclear.
+    mw->execute(func, mxb::Worker::EXECUTE_AUTO);
+}
 }
 
 ClustrixMonitor::Config::Config(const std::string& name)
@@ -659,10 +666,7 @@ bool ClustrixMonitor::refresh_nodes(MYSQL* pHub_con)
                             // New node.
                             mxb_assert(!SERVER::find_by_unique_name(server_name));
 
-                            if (runtime_create_server(server_name.c_str(),
-                                                      ip.c_str(),
-                                                      std::to_string(mysql_port).c_str(),
-                                                      false))
+                            if (runtime_create_volatile_server(server_name, ip, mysql_port))
                             {
                                 SERVER* pServer = SERVER::find_by_unique_name(server_name);
                                 mxb_assert(pServer);
@@ -684,7 +688,9 @@ bool ClustrixMonitor::refresh_nodes(MYSQL* pHub_con)
 
                                     // New server, so it needs to be added to all services that
                                     // use this monitor for defining its cluster of servers.
-                                    service_add_server(this, pServer);
+                                    run_in_mainworker([this, pServer]() {
+                                                          service_add_server(this, pServer);
+                                                      });
                                 }
                                 else
                                 {
@@ -1009,7 +1015,9 @@ void ClustrixMonitor::populate_from_bootstrap_servers()
 
         // New server, so it needs to be added to all services that
         // use this monitor for defining its cluster of servers.
-        service_add_server(this, pServer);
+        run_in_mainworker([this, pServer]() {
+                              service_add_server(this, pServer);
+                          });
     }
 
     update_http_urls();
@@ -1111,7 +1119,7 @@ bool ClustrixMonitor::check_http(Call::action_t action)
 
                 for (const auto& response : responses)
                 {
-                    bool running = (response.code == 200);    // HTTP OK
+                    bool running = (response.code == 200);      // HTTP OK
 
                     ClustrixNode& node = it->second;
 

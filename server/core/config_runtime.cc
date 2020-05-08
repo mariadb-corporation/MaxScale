@@ -1706,60 +1706,33 @@ json_t* runtime_get_json_error()
     return obj;
 }
 
-bool runtime_create_server(const char* name, const char* address, const char* port, bool external)
+bool runtime_create_volatile_server(const std::string& name, const std::string& address, int port)
 {
     bool rval = false;
-
-    if (ServerManager::find_by_unique_name(name) == NULL)
+    if (ServerManager::find_by_unique_name(name) == nullptr)
     {
-        std::string reason;
-        if (!external || config_is_valid_name(name, &reason))
+        mxs::ConfigParameters parameters;
+        if (!address.empty())
         {
-            mxs::ConfigParameters parameters;
+            auto param_name = address[0] == '/' ? CN_SOCKET : CN_ADDRESS;
+            parameters.set(param_name, address);
+        }
+        parameters.set(CN_PORT, std::to_string(port));
 
-            if (address)
-            {
-                auto param_name = *address == '/' ? CN_SOCKET : CN_ADDRESS;
-                parameters.set(param_name, address);
-            }
-            if (port)
-            {
-                parameters.set(CN_PORT, port);
-            }
-
-            if (Server* server = ServerManager::create_server(name, parameters))
-            {
-                if (external)
-                {
-                    rval = true;
-                }
-                else
-                {
-                    std::ostringstream ss;
-                    server->persist(ss);
-                    rval = runtime_save_config(server->name(), ss.str());
-                }
-
-                if (rval)
-                {
-                    MXS_NOTICE("Created server '%s' at %s:%u", server->name(),
-                               server->address(), server->port());
-                }
-            }
-            else
-            {
-                config_runtime_error("Failed to create server '%s', see error log for more details",
-                                     name);
-            }
+        if (Server* server = ServerManager::create_server(name.c_str(), parameters))
+        {
+            rval = true;
+            MXS_NOTICE("Created server '%s' at %s:%u", server->name(), server->address(), server->port());
         }
         else
         {
-            config_runtime_error("%s", reason.c_str());
+            config_runtime_error("Failed to create server '%s', see error log for more details",
+                                 name.c_str());
         }
     }
     else
     {
-        config_runtime_error("Server '%s' already exists", name);
+        config_runtime_error("Server '%s' already exists", name.c_str());
     }
 
     return rval;

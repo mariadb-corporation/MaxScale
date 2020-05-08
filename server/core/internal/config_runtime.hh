@@ -44,21 +44,15 @@ class RoutingWorker;
 void config_runtime_error(const char* fmt, ...) mxs_attribute((format (printf, 1, 2)));
 
 /**
- * @brief Create a new server
- *
- * This function creates a new, persistent server by first allocating a new
- * server and then storing the resulting configuration file on disk. This
- * function should be used only from administrative interface modules and internal
- * modules should use server_alloc() instead.
+ * This function creates a new "volatile" server. Such servers are not persisted to any config files and are
+ * lost on MaxScale exit. Currently only used by Clustrix monitor when discovering new servers.
  *
  * @param name          Server name
  * @param address       Network address
  * @param port          Network port
- * @param external      If true, the name will be validated and the created server
- *                      serialized.
  * @return True on success, false if an error occurred
  */
-bool runtime_create_server(const char* name, const char* address, const char* port, bool external = true);
+bool runtime_create_volatile_server(const std::string& name, const std::string& address, int port);
 
 /**
  * @brief Destroy a server
