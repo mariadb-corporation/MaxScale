@@ -35,6 +35,11 @@ public:
 public:
     using ServerVector = std::vector<CsMonitorServer*>;
 
+    const CsConfig& config() const
+    {
+        return m_config;
+    }
+
     ServerVector get_monitored_serverlist(const std::string& key, bool* error_out)
     {
         const auto& sl = Base::get_monitored_serverlist(key, error_out);

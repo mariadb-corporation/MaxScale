@@ -280,6 +280,19 @@ bool get_timeout(const char* zTimeout, std::chrono::seconds* pTimeout, json_t** 
     return rv;
 }
 
+#define CALL_IF_CS_15(expression)\
+    do\
+        if (pMonitor->config().version == cs::CS_15)\
+        {\
+            rv = expression;\
+        }\
+        else\
+        {\
+            LOG_APPEND_JSON_ERROR(ppOutput, "The call command is supported only with Columnstore %s.",\
+                                  cs::to_version_string(cs::CS_15));\
+            rv = false;\
+        }\
+    while (false)
 
 bool csmon_add_node(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 {
@@ -295,7 +308,7 @@ bool csmon_add_node(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 
         if (get_timeout(zTimeout, &timeout, ppOutput))
         {
-            rv = pMonitor->command_add_node(ppOutput, pServer, timeout);
+            CALL_IF_CS_15(pMonitor->command_add_node(ppOutput, pServer, timeout));
         }
     }
 
@@ -311,7 +324,7 @@ bool csmon_config_get(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 
     if (rv)
     {
-        rv = pMonitor->command_config_get(ppOutput, pServer);
+        CALL_IF_CS_15(pMonitor->command_config_get(ppOutput, pServer));
     }
 
     return rv;
@@ -327,7 +340,7 @@ bool csmon_config_set(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 
     if (rv)
     {
-        rv = pMonitor->command_config_set(ppOutput, zJson, pServer);
+        CALL_IF_CS_15(pMonitor->command_config_set(ppOutput, zJson, pServer));
     }
 
     return rv;
@@ -342,7 +355,7 @@ bool csmon_mode_set(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 
     if (rv)
     {
-        rv = pMonitor->command_mode_set(ppOutput, zMode);
+        CALL_IF_CS_15(pMonitor->command_mode_set(ppOutput, zMode));
     }
 
     return rv;
@@ -357,7 +370,7 @@ bool csmon_ping(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 
     if (rv)
     {
-        rv = pMonitor->command_ping(ppOutput, pServer);
+        CALL_IF_CS_15(pMonitor->command_ping(ppOutput, pServer));
     }
 
     return rv;
@@ -378,7 +391,7 @@ bool csmon_remove_node(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 
         if (get_timeout(zTimeout, &timeout, ppOutput))
         {
-            rv = pMonitor->command_remove_node(ppOutput, pServer, timeout, force);
+            CALL_IF_CS_15(pMonitor->command_remove_node(ppOutput, pServer, timeout, force));
         }
     }
 
@@ -399,7 +412,7 @@ bool csmon_scan(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 
         if (get_timeout(zTimeout, &timeout, ppOutput))
         {
-            rv = pMonitor->command_scan(ppOutput, pServer, timeout);
+            CALL_IF_CS_15(pMonitor->command_scan(ppOutput, pServer, timeout));
         }
     }
 
@@ -419,7 +432,7 @@ bool csmon_shutdown(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 
         if (get_timeout(zTimeout, &timeout, ppOutput))
         {
-            rv = pMonitor->command_shutdown(ppOutput, timeout);
+            CALL_IF_CS_15(pMonitor->command_shutdown(ppOutput, timeout));
         }
     }
 
@@ -434,7 +447,7 @@ bool csmon_start(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 
     if (rv)
     {
-        rv = pMonitor->command_start(ppOutput);
+        CALL_IF_CS_15(pMonitor->command_start(ppOutput));
     }
 
     return rv;
@@ -449,7 +462,7 @@ bool csmon_status(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 
     if (rv)
     {
-        rv = pMonitor->command_status(ppOutput, pServer);
+        CALL_IF_CS_15(pMonitor->command_status(ppOutput, pServer));
     }
 
     return rv;
@@ -493,7 +506,7 @@ bool csmon_begin(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 
         if (get_timeout(zTimeout, &timeout, ppOutput))
         {
-            rv = pMonitor->command_begin(ppOutput, timeout, pServer);
+            CALL_IF_CS_15(pMonitor->command_begin(ppOutput, timeout, pServer));
         }
     }
 
@@ -509,7 +522,7 @@ bool csmon_commit(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 
     if (rv)
     {
-        rv = pMonitor->command_commit(ppOutput, pServer);
+        CALL_IF_CS_15(pMonitor->command_commit(ppOutput, pServer));
     }
 
     return rv;
@@ -524,7 +537,7 @@ bool csmon_rollback(const MODULECMD_ARG* pArgs, json_t** ppOutput)
 
     if (rv)
     {
-        rv = pMonitor->command_rollback(ppOutput, pServer);
+        CALL_IF_CS_15(pMonitor->command_rollback(ppOutput, pServer));
     }
 
     return rv;
