@@ -487,7 +487,7 @@ static json_t* module_param_to_json(const MXS_MODULE_PARAM& param)
     }
     else
     {
-        mxs_module_param_type_to_string(param.type);
+        type = mxs_module_param_type_to_string(param.type);
     }
 
     json_object_set_new(p, CN_NAME, json_string(param.name));
