@@ -104,12 +104,9 @@ bool get_value(xmlNode* pNode,
 //static
 int64_t CsMonitorServer::Status::s_uptime = 1;
 
-CsMonitorServer::Config CsMonitorServer::Config::create(const http::Result& response)
+CsMonitorServer::Config::Config(const http::Result& response)
+    : response(response)
 {
-    std::chrono::system_clock::time_point timestamp;
-    unique_ptr<json_t> sJson;
-    unique_ptr<xmlDoc> sXml;
-
     if (response.is_success())
     {
         json_error_t error;
@@ -160,8 +157,6 @@ CsMonitorServer::Config CsMonitorServer::Config::create(const http::Result& resp
         MXS_ERROR("Unexpected response from server: (%d) %s",
                   response.code, http::Result::to_string(response.code));
     }
-
-    return Config(response, std::move(timestamp), std::move(sJson), std::move(sXml));
 }
 
 bool CsMonitorServer::Config::get_value(const char* zElement_name,
@@ -219,17 +214,12 @@ CsMonitorServer::Config CsMonitorServer::fetch_config() const
 {
     http::Result result = http::get(create_url(cs::rest::CONFIG), m_http_config);
 
-    return Config::create(result);
+    return Config(result);
 }
 
-CsMonitorServer::Status CsMonitorServer::Status::create(const http::Result& response)
+CsMonitorServer::Status::Status(const http::Result& response)
+    : response(response)
 {
-    cs::ClusterMode cluster_mode = cs::READ_ONLY;
-    cs::DbrmMode dbrm_mode = cs::SLAVE;
-    cs::DbRoots dbroots;
-    cs::Services services;
-    unique_ptr<json_t> sJson;
-
     if (response.is_success())
     {
         json_error_t error;
@@ -289,9 +279,6 @@ CsMonitorServer::Status CsMonitorServer::Status::create(const http::Result& resp
         MXS_ERROR("Unexpected response from server: (%d) %s",
                   response.code, http::Result::to_string(response.code));
     }
-
-    return Status(response, cluster_mode, dbrm_mode,
-                  std::move(dbroots), std::move(services), std::move(sJson));
 }
 
 bool CsMonitorServer::update_state(const Config& config, json_t* pOutput)
@@ -331,7 +318,7 @@ CsMonitorServer::Status CsMonitorServer::fetch_status() const
 {
     http::Result result = http::get(create_url(cs::rest::STATUS), m_http_config);
 
-    return Status::create(result);
+    return Status(result);
 }
 
 namespace
@@ -476,7 +463,7 @@ bool CsMonitorServer::fetch_statuses(const std::vector<CsMonitorServer*>& server
     vector<Status> statuses;
     for (auto& result : results)
     {
-        statuses.emplace_back(Status::create(result));
+        statuses.emplace_back(Status(result));
 
         if (!result.is_success() || !statuses.back().sJson)
         {
@@ -513,7 +500,7 @@ bool CsMonitorServer::fetch_configs(const std::vector<CsMonitorServer*>& servers
     vector<Config> configs;
     for (auto& result : results)
     {
-        configs.emplace_back(Config::create(result));
+        configs.emplace_back(Config(result));
 
         if (!result.is_success() || !configs.back().sJson)
         {

@@ -34,7 +34,7 @@ public:
     class Status
     {
     public:
-        static Status create(const mxb::http::Result& response);
+        Status(const mxb::http::Result& response);
 
         Status(Status&& other) = default;
         Status& operator=(Status&& rhs) = default;
@@ -45,8 +45,8 @@ public:
         }
 
         mxb::http::Result       response;
-        cs::ClusterMode         cluster_mode;
-        cs::DbrmMode            dbrm_mode;
+        cs::ClusterMode         cluster_mode = cs::READ_ONLY;
+        cs::DbrmMode            dbrm_mode = cs::SLAVE;
         cs::DbRoots             dbroots;
         cs::Services            services;
         std::unique_ptr<json_t> sJson;
@@ -54,28 +54,12 @@ public:
 
     private:
         static int64_t s_uptime;
-
-        Status(const mxb::http::Result& response,
-               cs::ClusterMode cluster_mode,
-               cs::DbrmMode dbrm_mode,
-               cs::DbRoots&& dbroots,
-               cs::Services&& services,
-               std::unique_ptr<json_t>&& sJson)
-            : response(response)
-            , cluster_mode(cluster_mode)
-            , dbrm_mode(dbrm_mode)
-            , dbroots(std::move(dbroots))
-            , services(std::move(services))
-            , sJson(std::move(sJson))
-            , uptime(s_uptime++)
-        {
-        }
     };
 
     class Config
     {
     public:
-        static Config create(const mxb::http::Result& response);
+        Config(const mxb::http::Result& response);
 
         Config(Config&& other) = default;
         Config& operator=(Config&& rhs) = default;
@@ -108,17 +92,6 @@ public:
         std::unique_ptr<xmlDoc> sXml;
 
     private:
-        Config(const mxb::http::Result& response,
-               std::chrono::system_clock::time_point&& timestamp,
-               std::unique_ptr<json_t>&& sJson,
-               std::unique_ptr<xmlDoc>&& sXml)
-            : response(response)
-            , timestamp(std::move(timestamp))
-            , sJson(std::move(sJson))
-            , sXml(std::move(sXml))
-        {
-        }
-
         bool get_value(const char* zElement_name,
                        const char* zValue_name,
                        std::string* pIp,
