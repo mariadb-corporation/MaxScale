@@ -37,9 +37,9 @@ public:
     using StringSetMap = std::map<std::string, StringSet>;
     using DBNameCmpMode = mariadb::UserSearchSettings::DBNameCmpMode;
 
-    void   add_entry(const std::string& username, const mariadb::UserEntry& entry);
-    void   add_dbs_and_roles(StringSetMap&& db_grants, StringSetMap&& roles_mapping);
-    void   add_proxy_grant(const std::string& user, const std::string& host);
+    void add_entry(const std::string& username, mariadb::UserEntry&& entry);
+    void add_dbs_and_roles(StringSetMap&& db_grants, StringSetMap&& roles_mapping);
+
     void   add_database_name(const std::string& db_name);
     void   clear();
     size_t n_usernames() const;
@@ -76,6 +76,18 @@ public:
      */
     const mariadb::UserEntry*
     find_entry_equal(const std::string& username, const std::string& host_pattern) const;
+
+    /**
+     * Find a mutable entry with exact matching user & host pattern. This should only be used when
+     * constructing the UserDatabase. Modifying the contents after data has been made available to routing
+     * workers is unsafe. Also, fields which affect ordering in the container should not be modified.
+     *
+     * @param username Username to find
+     * @param host_pattern Host pattern to find. Must match exactly.
+     * @return Entry, or null of not found
+     */
+    mariadb::UserEntry*
+    find_mutable_entry_equal(const std::string& username, const std::string& host_pattern);
 
     bool check_database_exists(const std::string& db, bool case_sensitive_db) const;
 
@@ -214,11 +226,12 @@ private:
 
     bool read_users_mariadb(QResult users, const SERVER::VersionInfo& srv_info,
                             UserDatabase* output);
-    void read_dbs_and_roles(QResult db_grants, QResult roles, UserDatabase* output);
+    void read_dbs_and_roles_mariadb(QResult db_grants, QResult roles, UserDatabase* output);
     void read_proxy_grants(QResult proxies, UserDatabase* output);
     void read_databases(QResult dbs, UserDatabase* output);
 
-    LoadResult read_users_clustrix(QResult users, QResult acl, UserDatabase* output);
+    bool read_users_clustrix(QResult users, UserDatabase* output);
+    void read_db_privs_clustrix(QResult acl, UserDatabase* output);
 
     void check_show_dbs_priv(mxq::MariaDB& con, const UserDatabase& userdata,
                              const char* servername);

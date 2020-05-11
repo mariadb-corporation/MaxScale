@@ -481,12 +481,23 @@ bool UserEntry::host_pattern_is_more_specific(const UserEntry& lhs, const UserEn
     bool lwc = (lwc_pos != string::npos);
     bool rwc = (rwc_pos != string::npos);
 
+    bool rval;
     // The host without wc:s sorts earlier than the one with them,
-    return (!lwc && rwc)
-            // ... and if both have wc:s, the one with the later wc wins (ties broken by strcmp),
-           || (lwc && rwc && ((lwc_pos > rwc_pos) || (lwc_pos == rwc_pos && lhost < rhost)))
-            // ... and if neither have wildcards, use string order.
-           || (!lwc && !rwc && lhost < rhost);
+    if (lwc != rwc)
+    {
+        rval = !lwc;
+    }
+    // ... and if both have wc:s, the one with the later wc wins (ties broken by strcmp),
+    else if (lwc)
+    {
+        rval = ((lwc_pos > rwc_pos) || (lwc_pos == rwc_pos && lhost < rhost));
+    }
+    // ... and if neither have wildcards, use string order.
+    else
+    {
+        rval = (lhost < rhost);
+    }
+    return rval;
 }
 
 /**

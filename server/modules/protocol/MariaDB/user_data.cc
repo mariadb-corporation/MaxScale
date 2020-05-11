@@ -17,7 +17,6 @@
 #include <arpa/inet.h>
 #include <maxbase/host.hh>
 #include <maxsql/mariadb_connector.hh>
-#include <maxsql/mariadb.hh>
 #include <maxscale/server.hh>
 #include <maxscale/service.hh>
 #include <maxscale/protocol/mariadb/module_names.hh>
@@ -79,9 +78,9 @@ const string current_user_query = "SELECT current_user();";
 
 namespace clustrix_queries
 {
-const string users_query = "SELECT *, IF(a.privileges & 1048576, 'Y', 'N') AS global_priv "
-                           "FROM system.users AS u LEFT JOIN system.user_acl AS a ON (u.username = a.role);";
-const string db_grants_query = "SELECT * FROM system.user_acl;";
+const string users_query = "SELECT * FROM system.users;";
+const string db_grants_query = "SELECT u.username, u.host, a.dbname, a.privileges FROM system.user_acl AS a "
+                               "LEFT JOIN system.users AS u ON (u.user = a.role);";
 }
 }
 
@@ -435,7 +434,7 @@ MariaDBUserManager::load_users_mariadb(mxq::MariaDB& con, SERVER* srv, UserDatab
         rval = LoadResult::INVALID_DATA;
         if (read_users_mariadb(move(users_res), info, output))
         {
-            read_dbs_and_roles(move(db_grants_res), move(roles_res), output);
+            read_dbs_and_roles_mariadb(move(db_grants_res), move(roles_res), output);
             read_proxy_grants(move(proxies_res), output);
             read_databases(move(dbs_res), output);
             rval = LoadResult::SUCCESS;
@@ -447,14 +446,24 @@ MariaDBUserManager::load_users_mariadb(mxq::MariaDB& con, SERVER* srv, UserDatab
 MariaDBUserManager::LoadResult
 MariaDBUserManager::load_users_clustrix(mxq::MariaDB& con, SERVER* srv, UserDatabase* output)
 {
+    using std::move;
+    vector<string> multiquery = {clustrix_queries::users_query, clustrix_queries::db_grants_query,
+                                 mariadb_queries::db_names_query};
     auto rval = LoadResult::QUERY_FAILED;
-    QResult users_res, acl_res, dbs_res;
-    if (((users_res = con.query(clustrix_queries::users_query)) != nullptr)
-        && ((acl_res = con.query(clustrix_queries::db_grants_query)) != nullptr)
-        && ((dbs_res = con.query(mariadb_queries::db_names_query)) != nullptr))
+    auto multiq_result = con.multiquery(multiquery);
+    if (multiq_result.size() == multiquery.size())
     {
-        rval = read_users_clustrix(std::move(users_res), std::move(acl_res), output);
-        read_databases(std::move(dbs_res), output);
+        QResult users_res = move(multiq_result[0]);
+        QResult acl_res = move(multiq_result[1]);
+        QResult dbs_res = move(multiq_result[2]);
+
+        rval = LoadResult::INVALID_DATA;
+        if (read_users_clustrix(move(users_res), output))
+        {
+            read_db_privs_clustrix(move(acl_res), output);
+            read_databases(move(dbs_res), output);
+            rval = LoadResult::SUCCESS;
+        }
     }
     return rval;
 }
@@ -501,7 +510,6 @@ bool MariaDBUserManager::read_users_mariadb(QResult users, const SERVER::Version
         && (ind_super_priv >= 0) && (ind_ssl >= 0) && (ind_plugin >= 0) && (!have_pw_column || ind_pw >= 0)
         && (ind_auth_str >= 0);
 
-    bool error = false;
     if (has_required_fields)
     {
         while (users->next_row())
@@ -543,17 +551,13 @@ bool MariaDBUserManager::read_users_mariadb(QResult users, const SERVER::Version
                 new_entry.default_role = users->get_string(ind_def_role);
             }
 
-            output->add_entry(username, new_entry);
+            output->add_entry(username, std::move(new_entry));
         }
     }
-    else
-    {
-        error = true;
-    }
-    return !error;
+    return has_required_fields;
 }
 
-void MariaDBUserManager::read_dbs_and_roles(QResult db_grants, QResult roles, UserDatabase* output)
+void MariaDBUserManager::read_dbs_and_roles_mariadb(QResult db_grants, QResult roles, UserDatabase* output)
 {
     using StringSetMap = UserDatabase::StringSetMap;
 
@@ -596,7 +600,12 @@ void MariaDBUserManager::read_proxy_grants(MariaDBUserManager::QResult proxies, 
         {
             while (proxies->next_row())
             {
-                output->add_proxy_grant(proxies->get_string(ind_user), proxies->get_string(ind_host));
+                auto entry = output->find_mutable_entry_equal(proxies->get_string(ind_user),
+                                                              proxies->get_string(ind_host));
+                if (entry)
+                {
+                    entry->proxy_priv = true;
+                }
             }
         }
     }
@@ -615,37 +624,97 @@ void MariaDBUserManager::read_databases(MariaDBUserManager::QResult dbs, UserDat
     }
 }
 
-MariaDBUserManager::LoadResult
-MariaDBUserManager::read_users_clustrix(QResult users, QResult acl, UserDatabase* output)
+bool MariaDBUserManager::read_users_clustrix(QResult users, UserDatabase* output)
 {
+    // Clustrix users are listed different from MariaDB/MySQL. The users-table does not have privilege
+    // information and may have multiple rows for the same username&host. Multiple rows with the same
+    // username&host need to be combined with the matching rows in the user_acl-table (with the
+    // "user"-column) to get all database grants for a given user account. Also, privileges are coded into
+    // a bitfield.
+
+    // First, go through the system.users-table and add users. An empty password is overwritten by a
+    // non-empty password, but not the other way around.
     auto ind_user = users->get_col_index("username");
     auto ind_host = users->get_col_index("host");
     auto ind_pw = users->get_col_index("password");
     auto ind_plugin = users->get_col_index("plugin");
-    auto ind_priv = acl->get_col_index("global_priv");
+    bool has_required_fields = (ind_user >= 0) && (ind_host >= 0) && (ind_pw >= 0) && (ind_plugin >= 0);
 
-    bool has_required_fields = (ind_user >= 0) && (ind_host >= 0) && (ind_pw >= 0) && (ind_plugin >= 0)
-        && (ind_priv >= 0) && (ind_priv >= 0);
-
-    auto rval = LoadResult::INVALID_DATA;
     if (has_required_fields)
     {
         while (users->next_row())
         {
             auto username = users->get_string(ind_user);
+            auto host = users->get_string(ind_host);
+            auto pw = users->get_string(ind_pw);
 
-            UserEntry new_entry;
-            new_entry.username = username;
-            new_entry.host_pattern = users->get_string(ind_host);
-            new_entry.password = users->get_string(ind_pw);
-            new_entry.plugin = users->get_string(ind_plugin);
-            new_entry.global_db_priv = (acl->get_string(ind_priv) == "Y");
-            output->add_entry(username, new_entry);
+            auto existing_entry = output->find_mutable_entry_equal(username, host);
+            if (existing_entry)
+            {
+                // Entry exists, but password may be empty due to how Clustrix handles user data.
+                if (existing_entry->password.empty() && !pw.empty())
+                {
+                    existing_entry->password = pw;
+                }
+            }
+            else
+            {
+                // New entry, insert it.
+                UserEntry new_entry;
+                new_entry.username = username;
+                new_entry.host_pattern = host;
+                new_entry.password = pw;
+                new_entry.plugin = users->get_string(ind_plugin);
+                output->add_entry(username, std::move(new_entry));
+            }
         }
-        // TODO: read database privileges
-        rval = LoadResult::SUCCESS;
     }
-    return rval;
+
+    return has_required_fields;
+}
+
+void MariaDBUserManager::read_db_privs_clustrix(QResult acl, UserDatabase* output)
+{
+    auto ind_user = acl->get_col_index("username");
+    auto ind_host = acl->get_col_index("host");
+    auto ind_dbname = acl->get_col_index("dbname");
+    auto ind_privs = acl->get_col_index("privileges");
+    bool have_required_fields = (ind_user >= 0) && (ind_host >= 0) && (ind_dbname >= 0) && (ind_privs >= 0);
+
+    if (have_required_fields)
+    {
+        UserDatabase::StringSetMap result;
+        while (acl->next_row())
+        {
+            // Have two types of rows: global rows and db/table/column-specific rows. Global rows affect
+            // the main user entry, others add to the database grants set.
+            auto user = acl->get_string(ind_user);
+            auto host = acl->get_string(ind_host);
+            auto dbname = acl->get_string(ind_dbname);
+            auto privs = acl->get_int(ind_privs);   // TODO: add 64bit uint
+
+            if (dbname.empty())
+            {
+                // Global privilege. Add it to a matching user in the main user info container.
+                auto existing_entry = output->find_mutable_entry_equal(user, host);
+                if (existing_entry)
+                {
+                    const unsigned int sel_priv = 1 << 20;      // 1048576
+                    const unsigned int insert_priv = 1 << 13;   // 8192
+                    const unsigned int update_priv = 1 << 25;   // 33554432
+                    if (privs & (sel_priv | insert_priv | update_priv))
+                    {
+                        existing_entry->global_db_priv = true;
+                    }
+                }
+            }
+            else
+            {
+                string key = user + "@" + host;
+                result[key].insert(dbname);
+            }
+        }
+    }
 }
 
 std::unique_ptr<mxs::UserAccountCache> MariaDBUserManager::create_user_account_cache()
@@ -780,13 +849,14 @@ void MariaDBUserManager::check_show_dbs_priv(mxq::MariaDB& con, const UserDataba
     }
 }
 
-void UserDatabase::add_entry(const std::string& username, const UserEntry& entry)
+void UserDatabase::add_entry(const std::string& username, UserEntry&& entry)
 {
     auto& entrylist = m_users[username];
     // Find the correct spot to insert. If the hostname pattern already exists, do nothing. Copies should
-    // only exist when summing users from all servers.
+    // only exist when summing users from all servers or when processing Clustrix users.
     auto low_bound = std::lower_bound(entrylist.begin(), entrylist.end(), entry,
                                       UserEntry::host_pattern_is_more_specific);
+    // lower_bound is the first valid (not "smaller") position to insert. It can be equal to the new element.
     if (low_bound == entrylist.end() || low_bound->host_pattern != entry.host_pattern)
     {
         entrylist.insert(low_bound, entry);
@@ -851,6 +921,25 @@ const UserEntry* UserDatabase::find_entry(const std::string& username, const std
                     break;
                 }
             }
+        }
+    }
+    return rval;
+}
+
+mariadb::UserEntry* UserDatabase::find_mutable_entry_equal(const string& username, const string& host_pattern)
+{
+    mariadb::UserEntry* rval = nullptr;
+    auto iter = m_users.find(username);
+    if (iter != m_users.end())
+    {
+        EntryList& entries = iter->second;
+        UserEntry needle;
+        needle.host_pattern = host_pattern;
+        auto low_bound = std::lower_bound(entries.begin(), entries.end(), needle,
+                                          UserEntry::host_pattern_is_more_specific);
+        if (low_bound != entries.end() && low_bound->host_pattern == needle.host_pattern)
+        {
+            rval = &(*low_bound);
         }
     }
     return rval;
@@ -1304,23 +1393,6 @@ UserDatabase::PatternType UserDatabase::parse_pattern_type(const std::string& ho
         }
     }
     return patterntype;
-}
-
-void UserDatabase::add_proxy_grant(const std::string& user, const std::string& host)
-{
-    auto user_iter = m_users.find(user);
-    if (user_iter != m_users.end())
-    {
-        EntryList& entries = user_iter->second;
-        UserEntry needle;
-        needle.host_pattern = host;
-        auto entry_iter = std::lower_bound(entries.begin(), entries.end(), needle,
-                                           UserEntry::host_pattern_is_more_specific);
-        if (entry_iter != entries.end() && entry_iter->host_pattern == host)
-        {
-            entry_iter->proxy_priv = true;
-        }
-    }
 }
 
 bool UserDatabase::equal_contents(const UserDatabase& rhs) const
