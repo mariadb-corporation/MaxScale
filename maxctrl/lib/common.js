@@ -361,7 +361,12 @@ module.exports = function() {
         args.auth = {user: argv.u, pass: argv.p}
         args.json = true
         args.timeout = this.argv.timeout
-        setTlsCerts(args)
+
+        try {
+            setTlsCerts(args)
+        } catch (err) {
+            return error('Failed to set TLS certificates: ' + JSON.stringify(err, null, 4))
+        }
 
         return request(args)
             .then(function(res) {
