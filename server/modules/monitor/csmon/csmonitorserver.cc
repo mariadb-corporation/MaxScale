@@ -377,7 +377,7 @@ http::Result CsMonitorServer::commit()
         mxb_assert(!true);
     }
 
-    http::Result result = http::get(create_url(cs::rest::COMMIT), m_http_config);
+    http::Result result = http::put(create_url(cs::rest::COMMIT), "{}", m_http_config);
 
     // Whatever the result, we consider a transaction as not being active.
     m_trx_state = TRX_INACTIVE;
@@ -387,13 +387,8 @@ http::Result CsMonitorServer::commit()
 
 http::Result CsMonitorServer::rollback()
 {
-    if (m_trx_state != TRX_ACTIVE)
-    {
-        MXS_WARNING("Transaction rollback, when state is not active.");
-        mxb_assert(!true);
-    }
-
-    http::Result result = http::get(create_url(cs::rest::ROLLBACK), m_http_config);
+    // Always ok to send a rollback.
+    http::Result result = http::put(create_url(cs::rest::ROLLBACK), "{}", m_http_config);
 
     // Whatever the result, we consider a transaction as not being active.
     m_trx_state = TRX_INACTIVE;
