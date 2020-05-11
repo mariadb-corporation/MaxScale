@@ -249,7 +249,8 @@ static bool load_ssl_certificates()
             this_unit.ssl_ca = load_file(ca.c_str());
         }
 
-        rval = !this_unit.ssl_key.empty() && !this_unit.ssl_cert.empty();
+        rval = !this_unit.ssl_key.empty() && !this_unit.ssl_cert.empty()
+            && (ca.empty() || !this_unit.ssl_ca.empty());
 
         if (rval)
         {
@@ -851,6 +852,7 @@ bool mxs_admin_init()
         if (this_unit.using_ssl)
         {
             options |= MHD_USE_SSL;
+            MXS_NOTICE("The REST API will be encrypted, all requests must use HTTPS.");
         }
 
         // The port argument is ignored and the port in the struct sockaddr is used instead

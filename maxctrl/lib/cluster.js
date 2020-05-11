@@ -292,9 +292,8 @@ exports.builder = function (yargs) {
         return yargs
           .epilog(
             "This command will alter all MaxScale instances given in the --hosts " +
-              "option to represent the <target> MaxScale. If the synchronization of " +
-              "a MaxScale instance fails, it will be disabled by executing the `stop maxscale` " +
-              "command on that instance. Synchronization can be attempted again if a previous " +
+              "option to represent the <target> MaxScale. Value of <target> " +
+              "must be in HOST:PORT format. Synchronization can be attempted again if a previous " +
               "attempt failed due to a network failure or some other ephemeral error. Any other " +
               "errors require manual synchronization of the MaxScale configuration files and a " +
               "restart of the failed Maxscale.\n\n" +

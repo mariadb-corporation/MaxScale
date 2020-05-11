@@ -1014,7 +1014,7 @@ static void usage()
             "dir will be '/path/maxscale/var/log/maxscale', the config dir will be\n"
             "'/path/maxscale/etc' and the default config file will be\n"
             "'/path/maxscale/etc/maxscale.cnf'.\n\n"
-            "MaxScale documentation: https://mariadb.com/kb/en/mariadb-enterprise/mariadb-maxscale-21/ \n",
+            "MaxScale documentation: https://mariadb.com/kb/en/maxscale/ \n",
             mxs::configdir(),
             default_cnf_fname,
             mxs::configdir(),

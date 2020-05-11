@@ -61,7 +61,7 @@ program
   })
   .option("q", {
     alias: "quiet",
-    describe: "Silence all output",
+    describe: "Silence all output. This option is not used in the interactive mode.",
     default: false,
     type: "boolean",
   })
@@ -132,7 +132,19 @@ program
         "--password=" + argv.password,
         "--hosts=" + argv.hosts,
         "--timeout=" + argv.timeout,
+        "--tsv=" + argv.tsv,
+        "--secure=" + argv.secure,
+        "--tls-verify-server-cert=" + argv["tls-verify-server-cert"],
       ];
+
+      // Only set the string options if they are defined, otherwise we'll end up with the value as
+      // the string 'undefined'
+      for (i of ["tls-key", "tls-cert", "tls-passphrase", "tls-ca-cert"]) {
+        if (argv[i]) {
+          base_opts.push("--" + i + "=" + argv[i]);
+        }
+      }
+
       return askQuestion();
     } else {
       maxctrl(argv, function () {
