@@ -77,7 +77,7 @@ public:
 #endif
 
     using ResponseHandler = std::function<void(CsMonitorServer*,
-                                               const mxb::http::Result&,
+                                               const mxb::http::Response&,
                                                json_t*)>;
 
 

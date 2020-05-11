@@ -52,13 +52,13 @@ int translate_curl_code(CURLcode code)
         return 0;
 
     case CURLE_COULDNT_RESOLVE_HOST:
-        return Result::COULDNT_RESOLVE_HOST;
+        return Response::COULDNT_RESOLVE_HOST;
 
     case CURLE_OPERATION_TIMEDOUT:
-        return Result::OPERATION_TIMEDOUT;
+        return Response::OPERATION_TIMEDOUT;
 
     default:
-        return Result::ERROR;
+        return Response::ERROR;
     }
 }
 
@@ -160,7 +160,7 @@ CURL* get_easy_curl(CurlOp op,
                     const std::string& url,
                     const std::string& user, const std::string& password,
                     const Config& config,
-                    Result* pRes,
+                    Response* pRes,
                     char* pErrbuf,
                     curl_slist* pHeaders,
                     ReadCallbackData* pRcd)
@@ -249,15 +249,15 @@ using Errbuf = array<char, CURL_ERROR_SIZE + 1>;
 
 struct Context
 {
-    Context(Result* pResult,
+    Context(Response* pResponse,
             Errbuf* pErrbuf)
-        : pResult(pResult)
+        : pResponse(pResponse)
         , pErrbuf(pErrbuf)
     {
     }
 
-    mxb::http::Result* pResult;
-    Errbuf*            pErrbuf;
+    mxb::http::Response* pResponse;
+    Errbuf*              pErrbuf;
 };
 
 class ReadyImp : public Async::Imp
@@ -283,9 +283,9 @@ public:
         return 0;
     }
 
-    const vector<Result>& results() const
+    const vector<Response>& responses() const
     {
-        return m_results;
+        return m_responses;
     }
 
     const vector<string>& urls() const
@@ -294,9 +294,9 @@ public:
     }
 
 private:
-    Async::status_t m_status;
-    vector<Result>  m_results;
-    vector<string>  m_urls;
+    Async::status_t  m_status;
+    vector<Response> m_responses;
+    vector<string>   m_urls;
 };
 
 class HttpImp : public Async::Imp
@@ -348,7 +348,7 @@ public:
         m_body = body;
         m_pHeaders = create_headers(config.headers);
 
-        m_results.reserve(urls.size());
+        m_responses.reserve(urls.size());
         m_errbufs.reserve(urls.size());
 
         if (m_body.size())
@@ -359,7 +359,7 @@ public:
         size_t i;
         for (i = 0; i < urls.size(); ++i)
         {
-            m_results.resize(i + 1);
+            m_responses.resize(i + 1);
             m_errbufs.resize(i + 1);
 
             if (m_body.size())
@@ -368,7 +368,7 @@ public:
             }
 
             CURL* pCurl = get_easy_curl(op, urls[i], user, password, config,
-                                        &m_results[i], m_errbufs[i].data(),
+                                        &m_responses[i], m_errbufs[i].data(),
                                         m_pHeaders,
                                         m_body.empty() ? nullptr : &m_rcds[i]);
 
@@ -379,16 +379,16 @@ public:
                 {
                     curl_easy_cleanup(pCurl);
                 }
-                m_results.resize(m_results.size() - 1);
+                m_responses.resize(m_responses.size() - 1);
                 break;
             }
             else
             {
-                m_curls.insert(std::make_pair(pCurl, Context(&m_results[i], &m_errbufs[i])));
+                m_curls.insert(std::make_pair(pCurl, Context(&m_responses[i], &m_errbufs[i])));
             }
         }
 
-        if (m_results.size() == urls.size())
+        if (m_responses.size() == urls.size())
         {
             CURLMcode rv = curl_multi_perform(m_pCurlm, &m_still_running);
 
@@ -399,7 +399,7 @@ public:
                     m_status = Async::READY;
                     m_wait_no_more_than = 0;
 
-                    collect_result();
+                    collect_response();
                 }
                 else
                 {
@@ -484,7 +484,7 @@ public:
 
                 if (m_status == Async::READY)
                 {
-                    collect_result();
+                    collect_response();
                 }
             }
         }
@@ -497,9 +497,9 @@ public:
         return m_wait_no_more_than;
     }
 
-    const vector<Result>& results() const
+    const vector<Response>& responses() const
     {
-        return m_results;
+        return m_responses;
     }
 
     const vector<string>& urls() const
@@ -518,7 +518,7 @@ private:
         }
     }
 
-    void collect_result()
+    void collect_response()
     {
         mxb_assert(m_status == Async::READY);
         mxb_assert(m_still_running == 0);
@@ -534,19 +534,19 @@ private:
                 mxb_assert(it != m_curls.end());
 
                 auto& context = it->second;
-                Result* pResult = context.pResult;
+                Response* pResponse = context.pResponse;
                 Errbuf* pErrbuf = context.pErrbuf;
 
                 if (pMsg->data.result == CURLE_OK)
                 {
                     long code;
                     curl_easy_getinfo(pCurl, CURLINFO_RESPONSE_CODE, &code);
-                    pResult->code = code;
+                    pResponse->code = code;
                 }
                 else
                 {
-                    pResult->code = translate_curl_code(pMsg->data.result);
-                    pResult->body = pErrbuf->data();
+                    pResponse->code = translate_curl_code(pMsg->data.result);
+                    pResponse->body = pErrbuf->data();
                 }
 
                 m_curls.erase(it);
@@ -560,7 +560,7 @@ private:
 private:
     CURLM*                                   m_pCurlm { nullptr };
     Async::status_t                          m_status;
-    vector<Result>                           m_results;
+    vector<Response>                         m_responses;
     vector<array<char, CURL_ERROR_SIZE + 1>> m_errbufs;
     unordered_map<CURL*, Context>            m_curls;
     int                                      m_still_running;
@@ -612,7 +612,7 @@ void finish()
 }
 
 //static
-const char* Result::to_string(int code)
+const char* Response::to_string(int code)
 {
     if (code < 0)
     {
@@ -722,14 +722,14 @@ Async put_async(const std::vector<std::string>& urls,
 namespace
 {
 
-Result execute(CurlOp op,
-               const std::string& url,
-               const std::string& body,
-               const std::string& user,
-               const std::string& password,
-               const Config& config)
+Response execute(CurlOp op,
+                 const std::string& url,
+                 const std::string& body,
+                 const std::string& user,
+                 const std::string& password,
+                 const Config& config)
 {
-    Result res;
+    Response res;
     char errbuf[CURL_ERROR_SIZE + 1] = "";
     curl_slist* pHeaders = create_headers(config.headers);
     ReadCallbackData rcd(&body);
@@ -759,11 +759,11 @@ Result execute(CurlOp op,
     return res;
 }
 
-vector<Result> execute(CurlOp op,
-                       const std::vector<std::string>& urls,
-                       const std::string& body,
-                       const std::string& user, const std::string& password,
-                       const Config& config)
+vector<Response> execute(CurlOp op,
+                         const std::vector<std::string>& urls,
+                         const std::string& body,
+                         const std::string& user, const std::string& password,
+                         const Config& config)
 {
     Async http = create_async(op, urls, body, user, password, config);
 
@@ -781,43 +781,46 @@ vector<Result> execute(CurlOp op,
         }
     }
 
-    vector<Result> results(http.results());
+    vector<Response> responses(http.responses());
 
-    if (results.size() != urls.size())
+    if (responses.size() != urls.size())
     {
-        results.resize(urls.size());
+        responses.resize(urls.size());
     }
 
-    return results;
+    return responses;
 }
 
 }
 
-Result get(const std::string& url, const std::string& user, const std::string& password, const Config& config)
+Response get(const std::string& url,
+             const std::string& user,
+             const std::string& password,
+             const Config& config)
 {
     return execute(CurlOp::GET, url, std::string(), user, password, config);
 }
 
-vector<Result> get(const std::vector<std::string>& urls,
-                   const std::string& user, const std::string& password,
-                   const Config& config)
+vector<Response> get(const std::vector<std::string>& urls,
+                     const std::string& user, const std::string& password,
+                     const Config& config)
 {
     return execute(CurlOp::GET, urls, std::string(), user, password, config);
 }
 
-Result put(const std::string& url,
-           const std::string& body,
-           const std::string& user,
-           const std::string& password,
-           const Config& config)
+Response put(const std::string& url,
+             const std::string& body,
+             const std::string& user,
+             const std::string& password,
+             const Config& config)
 {
     return execute(CurlOp::PUT, url, body, user, password, config);
 }
 
-vector<Result> put(const std::vector<std::string>& urls,
-                   const std::string& body,
-                   const std::string& user, const std::string& password,
-                   const Config& config)
+vector<Response> put(const std::vector<std::string>& urls,
+                     const std::string& body,
+                     const std::string& user, const std::string& password,
+                     const Config& config)
 {
     return execute(CurlOp::PUT, urls, body, user, password, config);
 }

@@ -1102,16 +1102,16 @@ bool ClustrixMonitor::check_http(Call::action_t action)
         case http::Async::READY:
             {
                 mxb_assert(m_health_urls == m_http.urls());
-                // There are as many results as there are nodes,
-                // and the results are in node order.
-                const vector<http::Result>& results = m_http.results();
-                mxb_assert(results.size() == m_nodes_by_id.size());
+                // There are as many responses as there are nodes,
+                // and the responses are in node order.
+                const vector<http::Response>& responses = m_http.responses();
+                mxb_assert(responses.size() == m_nodes_by_id.size());
 
                 auto it = m_nodes_by_id.begin();
 
-                for (const auto& result : results)
+                for (const auto& response : responses)
                 {
-                    bool running = (result.code == 200);    // HTTP OK
+                    bool running = (response.code == 200);    // HTTP OK
 
                     ClustrixNode& node = it->second;
 

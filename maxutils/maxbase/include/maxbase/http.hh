@@ -71,7 +71,7 @@ struct Config
     std::chrono::seconds               timeout         = DEFAULT_TIMEOUT;
 };
 
-struct Result
+struct Response
 {
     enum Category
     {
@@ -99,12 +99,12 @@ struct Result
         return this->code < 0;
     }
 
-    Result(Category category)
+    Response(Category category)
         : code(category)
     {
     }
 
-    Result()
+    Response()
         : code(0)
     {
     }
@@ -116,7 +116,7 @@ struct Result
     std::map<std::string, std::string> headers; // Headers attached to the response
 };
 
-using Results = std::vector<Result>;
+using Responses = std::vector<Response>;
 
 /**
  * Do a HTTP GET.
@@ -129,13 +129,13 @@ using Results = std::vector<Result>;
  * @note The @c url is assumed to be escaped in case it contain arguments
  *       that must be escaped.
  *
- * @return A @c Result.
+ * @return A @c Response.
  */
-Result get(const std::string& url,
-           const std::string& user, const std::string& password,
-           const Config& config = Config());
+Response get(const std::string& url,
+             const std::string& user, const std::string& password,
+             const Config& config = Config());
 
-inline Result get(const std::string& url, const Config& config = Config())
+inline Response get(const std::string& url, const Config& config = Config())
 {
     return get(url, "", "", config);
 }
@@ -151,14 +151,14 @@ inline Result get(const std::string& url, const Config& config = Config())
  * @note The @c urls are assumed to be escaped in case they contain arguments
  *       that must be escaped, but @c user and @c pass will always be escaped.
  *
- * @return Vector of @c Results, as many as there were @c urls.
+ * @return Vector of @c Responses, as many as there were @c urls.
  */
-Results get(const std::vector<std::string>& urls,
-            const std::string& user, const std::string& password,
-            const Config& config = Config());
+Responses get(const std::vector<std::string>& urls,
+              const std::string& user, const std::string& password,
+              const Config& config = Config());
 
-inline Results get(const std::vector<std::string>& urls,
-                  const Config& config = Config())
+inline Responses get(const std::vector<std::string>& urls,
+                     const Config& config = Config())
 {
     return get(urls, "", "", config);
 }
@@ -175,26 +175,26 @@ inline Results get(const std::vector<std::string>& urls,
  * @note The @c url is assumed to be escaped in case it contain arguments
  *       that must be escaped.
  *
- * @return A @c Result.
+ * @return A @c Response.
  */
-Result put(const std::string& url,
-           const std::string& body,
-           const std::string& user, const std::string& password,
-           const Config& config = Config());
+Response put(const std::string& url,
+             const std::string& body,
+             const std::string& user, const std::string& password,
+             const Config& config = Config());
 
-inline Result put(const std::string& url,
-                  const std::string& user, const std::string& password,
-                  const Config& config = Config())
+inline Response put(const std::string& url,
+                    const std::string& user, const std::string& password,
+                    const Config& config = Config())
 {
     return put(url, std::string(), user, password, config);
 }
 
-inline Result put(const std::string& url, const std::string& body, const Config& config = Config())
+inline Response put(const std::string& url, const std::string& body, const Config& config = Config())
 {
     return put(url, body, "", "", config);
 }
 
-inline Result put(const std::string& url, const Config& config = Config())
+inline Response put(const std::string& url, const Config& config = Config())
 {
     return put(url, std::string(), "", "", config);
 }
@@ -212,29 +212,29 @@ inline Result put(const std::string& url, const Config& config = Config())
  * @note The @c urls are assumed to be escaped in case they contain arguments
  *       that must be escaped.
  *
- * @return A @c Result.
+ * @return A @c Response.
  */
-Results put(const std::vector<std::string>& urls,
-            const std::string& body,
-            const std::string& user, const std::string& password,
-            const Config& config = Config());
+Responses put(const std::vector<std::string>& urls,
+              const std::string& body,
+              const std::string& user, const std::string& password,
+              const Config& config = Config());
 
-inline Results put(const std::vector<std::string>& urls,
-                   const std::string& user, const std::string& password,
-                   const Config& config = Config())
+inline Responses put(const std::vector<std::string>& urls,
+                     const std::string& user, const std::string& password,
+                     const Config& config = Config())
 {
     return put(urls, std::string(), user, password, config);
 }
 
-inline Results put(const std::vector<std::string>& urls,
-                   const std::string& body,
-                   const Config& config = Config())
+inline Responses put(const std::vector<std::string>& urls,
+                     const std::string& body,
+                     const Config& config = Config())
 {
     return put(urls, body, "", "", config);
 }
 
-inline Results put(const std::vector<std::string>& urls,
-                   const Config& config = Config())
+inline Responses put(const std::vector<std::string>& urls,
+                     const Config& config = Config())
 {
     return put(urls, std::string(), "", "", config);
 }
@@ -253,7 +253,7 @@ class Async
 public:
     enum status_t
     {
-        READY,      // The result is ready.
+        READY,      // The response is ready.
         ERROR,      // The operation has failed.
         PENDING     // The operation is pending.
     };
@@ -268,7 +268,7 @@ public:
 
         virtual long wait_no_more_than() const = 0;
 
-        virtual const Results& results() const = 0;
+        virtual const Responses& responses() const = 0;
 
         virtual const std::vector<std::string>& urls() const = 0;
     };
@@ -347,14 +347,14 @@ public:
     }
 
     /**
-     * The result of each operation. This function should not be called
+     * The response of each operation. This function should not be called
      * before the status is READY.
      *
-     * @return Vector of results.
+     * @return Vector of responses.
      */
-    const Results& results() const
+    const Responses& responses() const
     {
-        return m_sImp->results();
+        return m_sImp->responses();
     }
 
     /**
