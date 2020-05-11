@@ -481,7 +481,7 @@ static json_t* module_param_to_json(const MXS_MODULE_PARAM& param)
     json_t* p = json_object();
     const char* type;
 
-    if (param.type == MXS_MODULE_PARAM_ENUM && param.options & MXS_MODULE_OPT_ENUM_UNIQUE)
+    if (param.type == MXS_MODULE_PARAM_ENUM && (param.options & MXS_MODULE_OPT_ENUM_UNIQUE) == 0)
     {
         type = "enum_mask";
     }
