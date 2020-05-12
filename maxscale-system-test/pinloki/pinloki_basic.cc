@@ -1,73 +1,55 @@
 #include <testconnections.h>
+#include "test_base.hh"
 
-std::string change_master_sql(const char* host, int port)
+class BasicTest : public TestCase
 {
-    const char* user = "maxskysql";
-    const char* password = "skysql";
-    std::ostringstream ss;
+public:
+    using TestCase::TestCase;
 
-    ss << "CHANGE MASTER TO MASTER_HOST='" << host << "', MASTER_PORT=" << port
-       << ", MASTER_USER='" << user << "', MASTER_PASSWORD='" << password << "', MASTER_USE_GTID=SLAVE_POS";
+    void pre() override
+    {
+        // Create a table with one row
+        test.expect(master.query("CREATE TABLE test.t1(id INT)"), "CREATE failed: %s", master.error());
+        test.expect(master.query("INSERT INTO test.t1 VALUES (1)"), "INSERT failed: %s", master.error());
+        test.expect(master.query("FLUSH LOGS"), "FLUSH failed: %s", master.error());
+        test.expect(master.query("CREATE TABLE test.t2 (id INT)"), "CREATE failed: %s", master.error());
+        test.expect(master.query("INSERT INTO test.t2 VALUES (1)"), "INSERT failed: %s", master.error());
+        sync(master, maxscale);
+        sync(maxscale, slave);
+    }
 
-    return ss.str();
-}
+    void run() override
+    {
+        // test.t1 should contain one row
+        auto result = slave.field("SELECT COUNT(*) FROM test.t1");
+        test.expect(result == "1", "`test`.`t1` should have one row.");
 
-void sync_slave(Connection& master, Connection& slave)
-{
-    slave.field("SELECT MASTER_GTID_WAIT('" + master.field("SELECT @@gtid_current_pos") + "', 120)");
-}
+        result = slave.field("SELECT COUNT(*) FROM test.t2");
+        test.expect(result == "1", "`test`.`t2` should have one row.");
+
+        // All servers should be at the same GTID
+        check_gtid();
+
+        // The master and MaxScale should be at the same file and position
+        auto orig_master_status = master.rows("SHOW MASTER STATUS");
+        auto mxs_master_status = maxscale.rows("SHOW MASTER STATUS");
+        test.expect(orig_master_status == mxs_master_status,
+                    "Master and MaxScale are at different binlog positions: %s != %s",
+                    mxb::join(orig_master_status[0]).c_str(),
+                    mxb::join(mxs_master_status[0]).c_str());
+    }
+
+    void post() override
+    {
+        test.expect(master.query("DROP TABLE test.t1"), "DROP failed: %s", master.error());
+    }
+
+private:
+};
 
 int main(int argc, char** argv)
 {
+    Mariadb_nodes::require_gtid(true);
     TestConnections test(argc, argv);
-
-    auto conn = test.maxscales->rwsplit();
-    auto master = test.repl->get_connection(0);
-    auto slave = test.repl->get_connection(1);
-    test.expect(conn.connect(), "Pinloki connection should work: %s", conn.error());
-    test.expect(master.connect(), "Master connection should work: %s", master.error());
-    test.expect(slave.connect(), "Slave connection should work: %s", slave.error());
-
-    // Stop the slave while we configure pinloki
-    slave.query("STOP SLAVE; RESET SLAVE ALL;");
-
-    // Insert some data
-    test.expect(master.query("CREATE OR REPLACE TABLE test.t1(id INT)"),
-                "CREATE should work: %s", master.error());
-    test.expect(master.query("INSERT INTO test.t1 VALUES (1)"),
-                "INSERT should work: %s", master.error());
-
-    // Start replicating from the master
-    conn.query(change_master_sql(test.repl->ip(0), test.repl->port[0]));
-    conn.query("START SLAVE");
-
-    // Sync MaxScale with the master
-    test.set_timeout(60);
-    sync_slave(master, conn);
-
-    // Configure the slave to replicate from MaxScale and sync it
-    test.set_timeout(60);
-    slave.query(change_master_sql(test.maxscales->ip(0), test.maxscales->rwsplit_port[0]));
-    slave.query("START SLAVE");
-    sync_slave(conn, slave);
-
-    // The end result should be that test.t1 contains one row and that all three servers are at the same GTID.
-    auto result = slave.field("SELECT COUNT(*) FROM test.t1");
-    test.expect(result == "1", "`test`.`t1` should have one row.");
-    auto master_pos = master.field("SELECT @@gtid_current_pos");
-    auto slave_pos = slave.field("SELECT @@gtid_current_pos");
-    auto maxscale_pos = conn.field("SELECT @@gtid_current_pos");
-
-    test.expect(maxscale_pos == master_pos,
-                "MaxScale GTID (%s) is not the same as Master GTID (%s)",
-                maxscale_pos.c_str(), master_pos.c_str());
-
-    test.expect(slave_pos == maxscale_pos,
-                "Slave GTID (%s) is not the same as MaxScale GTID (%s)",
-                slave_pos.c_str(), maxscale_pos.c_str());
-
-    master.query("DROP TABLE test.t1");
-
-    test.repl->fix_replication();
-    return test.global_result;
+    return BasicTest(test).result();
 }
