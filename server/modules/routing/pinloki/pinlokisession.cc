@@ -317,7 +317,11 @@ void PinlokiSession::start_slave()
 
 void PinlokiSession::stop_slave()
 {
-    m_router->stop_slave();
+    if (m_router->is_slave_running())
+    {
+        m_router->stop_slave();
+    }
+
     send(modutil_create_ok());
 }
 
