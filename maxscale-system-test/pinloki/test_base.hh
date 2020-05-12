@@ -18,8 +18,13 @@ public:
     {
         setup();
         pre();
-        run();
-        post();
+
+        if (test.ok())
+        {
+            run();
+            post();
+        }
+
         teardown();
         return test.global_result;
     }

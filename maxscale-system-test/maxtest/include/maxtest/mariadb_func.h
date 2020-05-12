@@ -25,6 +25,7 @@
 #include <vector>
 
 #include <maxbase/ccdefs.hh>
+#include <maxbase/string.hh>
 
 typedef std::vector<std::string> Row;
 typedef std::vector<Row>         Result;
@@ -337,6 +338,18 @@ public:
     Result rows(const std::string& q) const
     {
         return get_result(m_conn, q);
+    }
+
+    std::string pretty_rows(const std::string& q) const
+    {
+        std::string rval;
+
+        for (const auto& a : rows(q))
+        {
+            rval += mxb::join(a) + '\n';
+        }
+
+        return rval;
     }
 
     std::string field(std::string q, int idx = 0)
