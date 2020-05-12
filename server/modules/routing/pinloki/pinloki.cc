@@ -383,6 +383,8 @@ bool Pinloki::MasterConfig::load(const Config& config)
             mxs::get_json_string(js, "ssl_key", &ssl_key);
             mxs::get_json_string(js, "ssl_cipher", &ssl_cipher);
             mxs::get_json_bool(js, "ssl_verify_server_cert", &ssl_verify_server_cert);
+
+            json_decref(js);
         }
         else
         {
