@@ -691,7 +691,7 @@ void MariaDBUserManager::read_db_privs_clustrix(QResult acl, UserDatabase* outpu
             auto user = acl->get_string(ind_user);
             auto host = acl->get_string(ind_host);
             auto dbname = acl->get_string(ind_dbname);
-            auto privs = acl->get_int(ind_privs);   // TODO: add 64bit uint
+            auto privs = acl->get_uint(ind_privs);
 
             if (dbname.empty())
             {
@@ -699,9 +699,9 @@ void MariaDBUserManager::read_db_privs_clustrix(QResult acl, UserDatabase* outpu
                 auto existing_entry = output->find_mutable_entry_equal(user, host);
                 if (existing_entry)
                 {
-                    const unsigned int sel_priv = 1 << 20;      // 1048576
-                    const unsigned int insert_priv = 1 << 13;   // 8192
-                    const unsigned int update_priv = 1 << 25;   // 33554432
+                    const uint64_t sel_priv = 1u << 20u;        // 1048576
+                    const uint64_t insert_priv = 1u << 13u;     // 8192
+                    const uint64_t update_priv = 1u << 25u;     // 33554432
                     if (privs & (sel_priv | insert_priv | update_priv))
                     {
                         existing_entry->global_db_priv = true;

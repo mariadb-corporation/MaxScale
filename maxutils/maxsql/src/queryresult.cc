@@ -21,6 +21,12 @@
 using std::string;
 using mxb::string_printf;
 
+namespace
+{
+const string type_integer = "integer";
+const string type_uinteger = "unsigned integer";
+const string type_boolean = "boolean";
+}
 namespace maxsql
 {
 
@@ -69,7 +75,22 @@ string QueryResult::get_string(const std::string& name) const
 
 int64_t QueryResult::get_int(int64_t column_ind) const
 {
-    return parse_integer(column_ind, "integer");
+    int64_t rval = 0;
+    auto int_parser = [&rval](const char* data_elem) {
+            bool success = false;
+            errno = 0;
+            char* endptr = nullptr;
+            auto parsed = strtoll(data_elem, &endptr, 10);
+            if (errno == 0 && *endptr == '\0')
+            {
+                rval = parsed;
+                success = true;
+            }
+            return success;
+        };
+
+    call_parser(int_parser, column_ind, type_integer);
+    return rval;
 }
 
 int64_t QueryResult::get_int(const std::string& name) const
@@ -82,55 +103,45 @@ int64_t QueryResult::get_int(const std::string& name) const
     return 0;
 }
 
-/**
- * Parse a 64bit integer. On parse error an error flag is set.
- *
- * @param column_ind Column index
- * @param target_type The final conversion target type.
- * @return Conversion result
- */
-int64_t QueryResult::parse_integer(int64_t column_ind, const std::string& target_type) const
+uint64_t QueryResult::get_uint(int64_t column_ind) const
 {
-    mxb_assert(column_ind < get_col_count() && column_ind >= 0);
-    int64_t rval = 0;
-    auto data_elem = row_elem(column_ind);
-    if (data_elem == nullptr)
-    {
-        set_error(column_ind, target_type);
-    }
-    else
-    {
-        errno = 0;
-        char* endptr = nullptr;
-        auto parsed = strtoll(data_elem, &endptr, 10);
-        if (errno == 0 && *endptr == '\0')
-        {
-            rval = parsed;
-        }
-        else
-        {
-            set_error(column_ind, target_type);
-        }
-    }
+    uint64_t rval = 0;
+    auto uint_parser = [&rval](const char* data_elem) {
+            bool success = false;
+            errno = 0;
+            char* endptr = nullptr;
+            auto parsed = strtoull(data_elem, &endptr, 10);
+            if (errno == 0 && *endptr == '\0')
+            {
+                rval = parsed;
+                success = true;
+            }
+            return success;
+        };
+
+    call_parser(uint_parser, column_ind, type_uinteger);
     return rval;
 }
 
 bool QueryResult::get_bool(int64_t column_ind) const
 {
-    const string target_type = "boolean";
     bool rval = false;
-    auto val = parse_integer(column_ind, target_type);
-    if (!error())
-    {
-        if (val < 0 || val > 1)
-        {
-            set_error(column_ind, target_type);
-        }
-        else
-        {
-            rval = (val == 1);
-        }
-    }
+    auto bool_parser = [&rval](const char* data_elem) {
+            bool success = false;
+            char c = *data_elem;
+            if (c == '1' || c == 'Y' || c == 'y')
+            {
+                rval = true;
+                success = true;
+            }
+            else if (c == '0' || c == 'N' || c == 'n')
+            {
+                success = true;
+            }
+            return success;
+        };
+
+    call_parser(bool_parser, column_ind, type_boolean);
     return rval;
 }
 
@@ -142,6 +153,17 @@ bool QueryResult::get_bool(const std::string& name) const
         return get_bool(idx);
     }
     return 0;
+}
+
+void QueryResult::call_parser(const std::function<bool(const char*)>& parser, int64_t column_ind,
+                              const std::string& target_type) const
+{
+    mxb_assert(column_ind < get_col_count() && column_ind >= 0);
+    auto data_elem = row_elem(column_ind);
+    if (data_elem == nullptr || !parser(data_elem))
+    {
+        set_error(column_ind, target_type);
+    }
 }
 
 bool QueryResult::field_is_null(int64_t column_ind) const

@@ -14,6 +14,7 @@
 #pragma once
 
 #include <maxsql/ccdefs.hh>
+#include <functional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -90,6 +91,8 @@ public:
     int64_t get_int(int64_t column_ind) const;
 
     int64_t get_int(const std::string& name) const;
+
+    uint64_t get_uint(int64_t column_ind) const;
 
     /**
      * Check if field is null.
@@ -183,8 +186,10 @@ private:
      */
     virtual bool advance_row() = 0;
 
-    int64_t parse_integer(int64_t column_ind, const std::string& target_type) const;
-    void    set_error(int64_t column_ind, const std::string& target_type) const;
+    void call_parser(const std::function<bool(const char*)>& parser, int64_t column_ind,
+                     const std::string& target_type) const;
+
+    void set_error(int64_t column_ind, const std::string& target_type) const;
 
     int64_t m_current_row_ind = -1;     /**< Index of current row */
 
