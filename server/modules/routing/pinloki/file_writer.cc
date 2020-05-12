@@ -53,7 +53,7 @@ void FileWriter::add_event(const maxsql::MariaRplEvent& rpl_event)
     bool is_artificial = rpl_event.event().flags & LOG_EVENT_ARTIFICIAL_F;      // MariaRplEvent::is_artificial
     if (rpl_event.event().event_type == HEARTBEAT_LOG_EVENT)
     {
-        MXS_INFO("Replication heartbeat event");
+        // Heartbeat event, don't process it
     }
     else if (rpl_event.event().event_type == ROTATE_EVENT)
     {
