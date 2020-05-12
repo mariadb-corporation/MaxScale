@@ -1899,8 +1899,9 @@ bool runtime_create_server_from_json(json_t* json)
         {
             if (link_target_to_objects(server->name(), relations))
             {
-
-                rval = true;
+                std::ostringstream ss;
+                server->persist(ss);
+                rval = runtime_save_config(server->name(), ss.str());
             }
             else
             {
